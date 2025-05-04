@@ -3,7 +3,7 @@ use std::ffi::c_char;
 use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
 
-use super::{MediumLevelILBlock, MediumLevelILInstruction, MediumLevelInstructionIndex};
+use super::{Instruction, MediumLevelILBlock, MediumLevelInstructionIndex};
 use crate::architecture::CoreArchitecture;
 use crate::basic_block::BasicBlock;
 use crate::confidence::Conf;
@@ -33,8 +33,8 @@ impl MediumLevelILFunction {
         Ref::new(Self::from_raw(handle))
     }
 
-    pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<MediumLevelILInstruction> {
-        Some(MediumLevelILInstruction::new(
+    pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<Instruction> {
+        Some(Instruction::new(
             self.to_owned(),
             self.instruction_index_at(loc)?,
         ))
@@ -61,25 +61,22 @@ impl MediumLevelILFunction {
     pub fn instruction_from_index(
         &self,
         index: MediumLevelInstructionIndex,
-    ) -> Option<MediumLevelILInstruction> {
+    ) -> Option<Instruction> {
         if index.0 >= self.instruction_count() {
             None
         } else {
-            Some(MediumLevelILInstruction::new(self.to_owned(), index))
+            Some(Instruction::new(self.to_owned(), index))
         }
     }
 
     pub fn instruction_from_expr_index(
         &self,
         expr_index: MediumLevelInstructionIndex,
-    ) -> Option<MediumLevelILInstruction> {
+    ) -> Option<Instruction> {
         if expr_index.0 >= self.expression_count() {
             None
         } else {
-            Some(MediumLevelILInstruction::new_expr(
-                self.to_owned(),
-                expr_index,
-            ))
+            Some(Instruction::new_expr(self.to_owned(), expr_index))
         }
     }
 
@@ -113,7 +110,7 @@ impl MediumLevelILFunction {
         unsafe { Array::new(blocks, count, context) }
     }
 
-    pub fn var_definitions(&self, var: &Variable) -> Array<MediumLevelILInstruction> {
+    pub fn var_definitions(&self, var: &Variable) -> Array<Instruction> {
         let mut count = 0;
         let raw_var = BNVariable::from(var);
         let raw_instr_idxs =
@@ -407,7 +404,7 @@ impl MediumLevelILFunction {
 
     /// Returns the [`BasicBlock`] at the given instruction `index`.
     ///
-    /// You can also retrieve this using [`MediumLevelILInstruction::basic_block`].
+    /// You can also retrieve this using [`Instruction::basic_block`].
     pub fn basic_block_containing_index(
         &self,
         index: MediumLevelInstructionIndex,
@@ -466,10 +463,7 @@ impl MediumLevelILFunction {
     ///
     /// Since SSA variables can only be defined once, this will return the single instruction where that occurs.
     /// For SSA variable version 0s, which don't have definitions, this will return `None` instead.
-    pub fn ssa_variable_definition(
-        &self,
-        ssa_variable: &SSAVariable,
-    ) -> Option<MediumLevelILInstruction> {
+    pub fn ssa_variable_definition(&self, ssa_variable: &SSAVariable) -> Option<Instruction> {
         let raw_var = BNVariable::from(ssa_variable.variable);
         let result = unsafe {
             BNGetMediumLevelILSSAVarDefinition(self.handle, &raw_var, ssa_variable.version)
@@ -478,14 +472,14 @@ impl MediumLevelILFunction {
         self.instruction_from_index(MediumLevelInstructionIndex(result))
     }
 
-    pub fn ssa_memory_definition(&self, version: usize) -> Option<MediumLevelILInstruction> {
+    pub fn ssa_memory_definition(&self, version: usize) -> Option<Instruction> {
         let result = unsafe { BNGetMediumLevelILSSAMemoryDefinition(self.handle, version) };
         // TODO: Does this return the expression or instruction index? Also we dont diff and this prob doesnt work.
         self.instruction_from_index(MediumLevelInstructionIndex(result))
     }
 
     /// Gets all the instructions that use the given SSA variable.
-    pub fn ssa_variable_uses(&self, ssa_variable: &SSAVariable) -> Array<MediumLevelILInstruction> {
+    pub fn ssa_variable_uses(&self, ssa_variable: &SSAVariable) -> Array<Instruction> {
         let mut count = 0;
         let raw_var = BNVariable::from(ssa_variable.variable);
         let uses = unsafe {
@@ -495,7 +489,7 @@ impl MediumLevelILFunction {
         unsafe { Array::new(uses, count, self.to_owned()) }
     }
 
-    pub fn ssa_memory_uses(&self, version: usize) -> Array<MediumLevelILInstruction> {
+    pub fn ssa_memory_uses(&self, version: usize) -> Array<Instruction> {
         let mut count = 0;
         let uses = unsafe { BNGetMediumLevelILSSAMemoryUses(self.handle, version, &mut count) };
         assert!(!uses.is_null());
@@ -508,7 +502,7 @@ impl MediumLevelILFunction {
         unsafe { BNIsMediumLevelILSSAVarLive(self.handle, &raw_var, ssa_variable.version) }
     }
 
-    pub fn variable_definitions(&self, variable: &Variable) -> Array<MediumLevelILInstruction> {
+    pub fn variable_definitions(&self, variable: &Variable) -> Array<Instruction> {
         let mut count = 0;
         let raw_var = BNVariable::from(variable);
         let defs =
@@ -516,7 +510,7 @@ impl MediumLevelILFunction {
         unsafe { Array::new(defs, count, self.to_owned()) }
     }
 
-    pub fn variable_uses(&self, variable: &Variable) -> Array<MediumLevelILInstruction> {
+    pub fn variable_uses(&self, variable: &Variable) -> Array<Instruction> {
         let mut count = 0;
         let raw_var = BNVariable::from(variable);
         let uses = unsafe { BNGetMediumLevelILVariableUses(self.handle, &raw_var, &mut count) };
@@ -534,7 +528,7 @@ impl MediumLevelILFunction {
         &self,
         variable: &Variable,
         include_last_user: bool,
-    ) -> Array<MediumLevelILInstruction> {
+    ) -> Array<Instruction> {
         let mut count = 0;
         let raw_var = BNVariable::from(variable);
         let uses = unsafe {

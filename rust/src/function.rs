@@ -2128,7 +2128,7 @@ impl Function {
 
     /// Splits a variable at the definition site. The given `var` must be the
     /// variable unique to the definition and should be obtained by using
-    /// [crate::medium_level_il::MediumLevelILInstruction::get_split_var_for_definition] at the definition site.
+    /// [crate::medium_level_il::Instruction::get_split_var_for_definition] at the definition site.
     ///
     /// This function is not meant to split variables that have been previously merged. Use
     /// [Function::unmerge_variables] to split previously merged variables.
@@ -2151,7 +2151,7 @@ impl Function {
 
     /// Undoes variable splitting performed with [Function::split_variable]. The given `var`
     /// must be the variable unique to the definition and should be obtained by using
-    /// [crate::medium_level_il::MediumLevelILInstruction::get_split_var_for_definition] at the definition site.
+    /// [crate::medium_level_il::Instruction::get_split_var_for_definition] at the definition site.
     ///
     /// * `var` - variable to unsplit
     pub fn unsplit_variable(&self, var: &Variable) {

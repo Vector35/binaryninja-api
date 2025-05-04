@@ -42,16 +42,16 @@ impl Display for MediumLevelInstructionIndex {
 }
 
 #[derive(Clone)]
-pub struct MediumLevelILInstruction {
+pub struct Instruction {
     pub function: Ref<MediumLevelILFunction>,
     pub address: u64,
     // TODO; Because this structure is incorrectly named instruction, we want to make it clear that we actually have the expression index.
     pub expr_index: MediumLevelInstructionIndex,
     pub size: usize,
-    pub kind: MediumLevelILInstructionKind,
+    pub kind: InstructionKind,
 }
 
-impl MediumLevelILInstruction {
+impl Instruction {
     pub(crate) fn new(
         function: Ref<MediumLevelILFunction>,
         index: MediumLevelInstructionIndex,
@@ -69,7 +69,7 @@ impl MediumLevelILInstruction {
         // TODO: If op.sourceOperation == BN_INVALID_OPERAND && op.operation == MLIL_NOP return None
         let op = unsafe { BNGetMediumLevelILByIndex(function.handle, expr_index.0) };
         use BNMediumLevelILOperation::*;
-        use MediumLevelILInstructionKind as Op;
+        use InstructionKind as Op;
         let kind = match op.operation {
             MLIL_NOP => Op::Nop,
             MLIL_NORET => Op::Noret,
@@ -624,7 +624,7 @@ impl MediumLevelILInstruction {
     }
 
     pub fn lift(&self) -> MediumLevelILLiftedInstruction {
-        use MediumLevelILInstructionKind::*;
+        use InstructionKind::*;
         use MediumLevelILLiftedInstructionKind as Lifted;
 
         let kind = match self.kind {
@@ -970,7 +970,7 @@ impl MediumLevelILInstruction {
         unsafe { BNGetMediumLevelILExprValue(self.function.handle, self.expr_index.0) }.into()
     }
 
-    /// Returns the [`BasicBlock`] containing the given [`MediumLevelILInstruction`].
+    /// Returns the [`BasicBlock`] containing the given [`Instruction`].
     pub fn basic_block(&self) -> Option<Ref<BasicBlock<MediumLevelILBlock>>> {
         // TODO: We might be able to .expect this if we guarantee that self.index is valid.
         self.function.basic_block_containing_index(self.expr_index)
@@ -1057,7 +1057,7 @@ impl MediumLevelILInstruction {
         unsafe { Array::new(deps, count, self.function.clone()) }
     }
 
-    pub fn branch_dependence_at(&self, instruction: MediumLevelILInstruction) -> BranchDependence {
+    pub fn branch_dependence_at(&self, instruction: Instruction) -> BranchDependence {
         let deps = unsafe {
             BNGetMediumLevelILBranchDependence(
                 self.function.handle,
@@ -1377,7 +1377,7 @@ impl MediumLevelILInstruction {
         Variable::new(var.ty, index, var.storage)
     }
 
-    /// alias for [MediumLevelILInstruction::split_var_for_definition]
+    /// alias for [Instruction::split_var_for_definition]
     #[inline]
     pub fn get_split_var_for_definition(&self, var: &Variable) -> Variable {
         self.split_var_for_definition(var)
@@ -1466,7 +1466,7 @@ impl MediumLevelILInstruction {
     }
 }
 
-impl Debug for MediumLevelILInstruction {
+impl Debug for Instruction {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("MediumLevelILInstruction")
             .field("address", &self.address)
@@ -1477,13 +1477,13 @@ impl Debug for MediumLevelILInstruction {
     }
 }
 
-impl CoreArrayProvider for MediumLevelILInstruction {
+impl CoreArrayProvider for Instruction {
     type Raw = usize;
     type Context = Ref<MediumLevelILFunction>;
     type Wrapped<'a> = Self;
 }
 
-unsafe impl CoreArrayProviderInner for MediumLevelILInstruction {
+unsafe impl CoreArrayProviderInner for Instruction {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeILInstructionList(raw)
     }
@@ -1498,7 +1498,7 @@ unsafe impl CoreArrayProviderInner for MediumLevelILInstruction {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum MediumLevelILInstructionKind {
+pub enum InstructionKind {
     Nop,
     Noret,
     Bp,
@@ -1661,7 +1661,7 @@ fn get_call_output(function: &MediumLevelILFunction, idx: usize) -> impl Iterato
 fn get_call_params(
     function: &MediumLevelILFunction,
     idx: usize,
-) -> impl Iterator<Item = MediumLevelILInstruction> {
+) -> impl Iterator<Item = Instruction> {
     let op = get_raw_operation(function, idx);
     assert_eq!(op.operation, BNMediumLevelILOperation::MLIL_CALL_PARAM);
     OperandIter::new(function, op.operands[1] as usize, op.operands[0] as usize).exprs()
@@ -1679,7 +1679,7 @@ fn get_call_output_ssa(
 fn get_call_params_ssa(
     function: &MediumLevelILFunction,
     idx: usize,
-) -> impl Iterator<Item = MediumLevelILInstruction> {
+) -> impl Iterator<Item = Instruction> {
     let op = get_raw_operation(function, idx);
     assert_eq!(op.operation, BNMediumLevelILOperation::MLIL_CALL_PARAM_SSA);
     OperandIter::new(function, op.operands[2] as usize, op.operands[1] as usize).exprs()
@@ -1687,7 +1687,7 @@ fn get_call_params_ssa(
 
 /// Conditional branching instruction and an expected conditional result
 pub struct BranchDependence {
-    pub instruction: MediumLevelILInstruction,
+    pub instruction: Instruction,
     pub dependence: ILBranchDependence,
 }
 
@@ -1704,10 +1704,7 @@ unsafe impl CoreArrayProviderInner for BranchDependence {
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         Self {
-            instruction: MediumLevelILInstruction::new(
-                context.clone(),
-                MediumLevelInstructionIndex(raw.branch),
-            ),
+            instruction: Instruction::new(context.clone(), MediumLevelInstructionIndex(raw.branch)),
             dependence: raw.dependence,
         }
     }

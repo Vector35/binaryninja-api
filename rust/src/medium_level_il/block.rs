@@ -2,18 +2,18 @@ use crate::basic_block::{BasicBlock, BlockContext};
 use crate::rc::Ref;
 use std::ops::Range;
 
-use super::{MediumLevelILFunction, MediumLevelILInstruction, MediumLevelInstructionIndex};
+use super::{Instruction, MediumLevelILFunction, MediumLevelInstructionIndex};
 
 pub struct MediumLevelILBlock {
     pub(crate) function: Ref<MediumLevelILFunction>,
 }
 
 impl BlockContext for MediumLevelILBlock {
-    type Instruction = MediumLevelILInstruction;
+    type Instruction = Instruction;
     type InstructionIndex = MediumLevelInstructionIndex;
     type Iter = MediumLevelILBlockIter;
 
-    fn start(&self, block: &BasicBlock<Self>) -> MediumLevelILInstruction {
+    fn start(&self, block: &BasicBlock<Self>) -> Instruction {
         // TODO: instruction_from_index says that it is not mapped and will do the call
         // TODO: What if this IS already MAPPED!?!?!?
         self.function
@@ -51,7 +51,7 @@ pub struct MediumLevelILBlockIter {
 }
 
 impl Iterator for MediumLevelILBlockIter {
-    type Item = MediumLevelILInstruction;
+    type Item = Instruction;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.range

@@ -7,7 +7,7 @@ use crate::high_level_il::{
     HighLevelILFunction, HighLevelInstructionIndex, Instruction as HighLevelILInstruction,
 };
 use crate::medium_level_il::{
-    MediumLevelILFunction, MediumLevelILInstruction, MediumLevelInstructionIndex,
+    Instruction as MediumLevelILInstruction, MediumLevelILFunction, MediumLevelInstructionIndex,
 };
 use crate::rc::{Ref, RefCountable};
 use crate::variable::{SSAVariable, Variable};

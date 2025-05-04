@@ -1,6 +1,6 @@
 use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::headless::Session;
-use binaryninja::medium_level_il::{MediumLevelILInstructionKind, MediumLevelInstructionIndex};
+use binaryninja::medium_level_il::{InstructionKind, MediumLevelInstructionIndex};
 use std::path::PathBuf;
 
 #[test]
@@ -23,7 +23,7 @@ fn test_mlil_info() {
     assert_eq!(instr_0.address, image_base + 0x00025f10);
     println!("{:?}", instr_0.kind);
     match instr_0.kind {
-        MediumLevelILInstructionKind::SetVar(op) => {
+        InstructionKind::SetVar(op) => {
             assert_eq!(op.dest.index, 524288);
             assert_eq!(op.src, 0);
         }
@@ -35,7 +35,7 @@ fn test_mlil_info() {
     assert_eq!(instr_1.address, image_base + 0x00025f15);
     println!("{:?}", instr_1.kind);
     match instr_1.kind {
-        MediumLevelILInstructionKind::SetVar(op) => {
+        InstructionKind::SetVar(op) => {
             assert_eq!(op.dest.index, 5);
             assert_eq!(op.src, 2);
         }
@@ -47,7 +47,7 @@ fn test_mlil_info() {
     assert_eq!(instr_2.address, image_base + 0x00025f18);
     println!("{:?}", instr_2.kind);
     match instr_2.kind {
-        MediumLevelILInstructionKind::SetVar(op) => {
+        InstructionKind::SetVar(op) => {
             assert_eq!(op.dest.index, 8);
             assert_eq!(op.src, 4);
         }
@@ -59,7 +59,7 @@ fn test_mlil_info() {
     assert_eq!(instr_3.address, image_base + 0x00025f19);
     println!("{:?}", instr_3.kind);
     match instr_3.kind {
-        MediumLevelILInstructionKind::Call(op) => {
+        InstructionKind::Call(op) => {
             assert_eq!(op.first_output, 8);
             assert_eq!(op.num_outputs, 1);
             assert_eq!(op.dest, 7);
@@ -74,7 +74,7 @@ fn test_mlil_info() {
     assert_eq!(instr_4.address, image_base + 0x00025f22);
     println!("{:?}", instr_4.kind);
     match instr_4.kind {
-        MediumLevelILInstructionKind::Ret(op) => {
+        InstructionKind::Ret(op) => {
             assert_eq!(op.first_operand, 12);
             assert_eq!(op.num_operands, 1);
         }

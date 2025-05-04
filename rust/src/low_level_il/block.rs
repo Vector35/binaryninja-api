@@ -33,11 +33,11 @@ where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    type Instruction = LowLevelILInstruction<'func, M, F>;
+    type Instruction = Instruction<'func, M, F>;
     type InstructionIndex = LowLevelInstructionIndex;
     type Iter = LowLevelILBlockIter<'func, M, F>;
 
-    fn start(&self, block: &BasicBlock<Self>) -> LowLevelILInstruction<'func, M, F> {
+    fn start(&self, block: &BasicBlock<Self>) -> Instruction<'func, M, F> {
         self.function
             .instruction_from_index(block.start_index())
             .unwrap()
@@ -90,7 +90,7 @@ where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    type Item = LowLevelILInstruction<'func, M, F>;
+    type Item = Instruction<'func, M, F>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.range

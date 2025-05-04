@@ -712,15 +712,15 @@ where
         )
     }
 
-    pub fn true_target(&self) -> LowLevelILInstruction<'func, M, F> {
-        LowLevelILInstruction::new(
+    pub fn true_target(&self) -> Instruction<'func, M, F> {
+        Instruction::new(
             self.function,
             LowLevelInstructionIndex(self.op.operands[1] as usize),
         )
     }
 
-    pub fn false_target(&self) -> LowLevelILInstruction<'func, M, F> {
-        LowLevelILInstruction::new(
+    pub fn false_target(&self) -> Instruction<'func, M, F> {
+        Instruction::new(
             self.function,
             LowLevelInstructionIndex(self.op.operands[2] as usize),
         )
@@ -749,8 +749,8 @@ where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    pub fn target(&self) -> LowLevelILInstruction<'func, M, F> {
-        LowLevelILInstruction::new(
+    pub fn target(&self) -> Instruction<'func, M, F> {
+        Instruction::new(
             self.function,
             LowLevelInstructionIndex(self.op.operands[0] as usize),
         )

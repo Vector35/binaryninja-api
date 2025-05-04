@@ -40,10 +40,9 @@ pub type LiftedILFunction = LowLevelILFunction<Finalized, NonSSA<LiftedNonSSA>>;
 pub type MutableLiftedILExpr<'a, ReturnType> =
     LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, ReturnType>;
 pub type RegularLowLevelILFunction = LowLevelILFunction<Finalized, NonSSA<RegularNonSSA>>;
-pub type RegularLowLevelILInstruction<'a> =
-    LowLevelILInstruction<'a, Finalized, NonSSA<RegularNonSSA>>;
+pub type RegularLowLevelILInstruction<'a> = Instruction<'a, Finalized, NonSSA<RegularNonSSA>>;
 pub type RegularLowLevelILInstructionKind<'a> =
-    LowLevelILInstructionKind<'a, Finalized, NonSSA<RegularNonSSA>>;
+    InstructionKind<'a, Finalized, NonSSA<RegularNonSSA>>;
 pub type RegularLowLevelILExpression<'a, ReturnType> =
     LowLevelILExpression<'a, Finalized, NonSSA<RegularNonSSA>, ReturnType>;
 pub type RegularLowLevelILExpressionKind<'a> =

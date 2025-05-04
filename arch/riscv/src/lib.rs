@@ -38,7 +38,7 @@ use binaryninja::architecture::{BranchKind, IntrinsicId, RegisterId};
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
 use binaryninja::logger::Logger;
 use binaryninja::low_level_il::expression::{LowLevelILExpressionKind, ValueExpr};
-use binaryninja::low_level_il::instruction::LowLevelILInstructionKind;
+use binaryninja::low_level_il::instruction::InstructionKind;
 use binaryninja::low_level_il::lifting::{
     LiftableLowLevelIL, LiftableLowLevelILWithSize, LowLevelILLabel,
 };
@@ -2866,7 +2866,7 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         // Match instruction that fetches PC-relative PLT address range
         let auipc = next_llil_instr.next().unwrap().kind();
         let (auipc_dest, plt_base) = match auipc {
-            LowLevelILInstructionKind::SetReg(r) => {
+            InstructionKind::SetReg(r) => {
                 let value = match r.source_expr().kind() {
                     LowLevelILExpressionKind::Const(v) | LowLevelILExpressionKind::ConstPtr(v) => {
                         v.value()
@@ -2881,7 +2881,7 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         // Match load instruction that loads the imported address
         let load = next_llil_instr.next().unwrap().kind();
         let (mut entry, mut target_reg) = match load {
-            LowLevelILInstructionKind::SetReg(r) => match r.source_expr().kind() {
+            InstructionKind::SetReg(r) => match r.source_expr().kind() {
                 LowLevelILExpressionKind::Load(l) => {
                     let target_reg = r.dest_reg();
                     let entry = match l.source_mem_expr().kind() {
@@ -2943,7 +2943,7 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         // (OPTIONAL) Check if we are storing in temp0, adjust target reg if so
         let mut temp_reg_inst = next_llil_instr.next().unwrap().kind();
         match &temp_reg_inst {
-            LowLevelILInstructionKind::SetReg(r) if llil.instruction_count() >= 5 => {
+            InstructionKind::SetReg(r) if llil.instruction_count() >= 5 => {
                 match r.source_expr().kind() {
                     LowLevelILExpressionKind::Reg(op) if target_reg == op.source_reg() => {
                         // Update the target_reg to the temp reg.
@@ -2959,7 +2959,7 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         // Match instruction that stores the next instruction address into a register
         let next_pc_inst = temp_reg_inst;
         let (next_pc_dest, next_pc, cur_pc) = match next_pc_inst {
-            LowLevelILInstructionKind::SetReg(r) => {
+            InstructionKind::SetReg(r) => {
                 let value = match r.source_expr().kind() {
                     LowLevelILExpressionKind::Const(v) | LowLevelILExpressionKind::ConstPtr(v) => {
                         v.value()
@@ -2977,13 +2977,13 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         // Match tail call at the end and make sure it is going to the import
         let jump = next_llil_instr.next().unwrap().kind();
         match jump {
-            LowLevelILInstructionKind::TailCall(j) => {
+            InstructionKind::TailCall(j) => {
                 match j.target().kind() {
                     LowLevelILExpressionKind::Reg(r) if r.source_reg() == target_reg => (),
                     _ => return false,
                 };
             }
-            LowLevelILInstructionKind::Jump(j) => {
+            InstructionKind::Jump(j) => {
                 match j.target().kind() {
                     LowLevelILExpressionKind::Reg(r) if r.source_reg() == target_reg => (),
                     _ => return false,

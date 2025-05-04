@@ -105,11 +105,8 @@ where
         }
     }
 
-    pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<LowLevelILInstruction<M, F>> {
-        Some(LowLevelILInstruction::new(
-            self,
-            self.instruction_index_at(loc)?,
-        ))
+    pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<Instruction<M, F>> {
+        Some(Instruction::new(self, self.instruction_index_at(loc)?))
     }
 
     pub fn instruction_index_at<L: Into<Location>>(
@@ -132,11 +129,11 @@ where
     pub fn instruction_from_index(
         &self,
         index: LowLevelInstructionIndex,
-    ) -> Option<LowLevelILInstruction<M, F>> {
+    ) -> Option<Instruction<M, F>> {
         if index.0 >= self.instruction_count() {
             None
         } else {
-            Some(LowLevelILInstruction::new(self, index))
+            Some(Instruction::new(self, index))
         }
     }
 

@@ -49,13 +49,12 @@ impl Display for LowLevelInstructionIndex {
     }
 }
 
-// TODO: Probably want to rename this with a LowLevelIL prefix to avoid collisions when we add handlers for other ILs
 pub trait InstructionHandler<'func, M, F>
 where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    fn kind(&self) -> LowLevelILInstructionKind<'func, M, F>;
+    fn kind(&self) -> InstructionKind<'func, M, F>;
 
     /// Visit the sub expressions of this instruction.
     ///
@@ -65,7 +64,7 @@ where
         T: FnMut(&LowLevelILExpression<'func, M, F, ValueExpr>) -> VisitorAction;
 }
 
-pub struct LowLevelILInstruction<'func, M, F>
+pub struct Instruction<'func, M, F>
 where
     M: FunctionMutability,
     F: FunctionForm,
@@ -74,7 +73,7 @@ where
     pub index: LowLevelInstructionIndex,
 }
 
-impl<'func, M, F> LowLevelILInstruction<'func, M, F>
+impl<'func, M, F> Instruction<'func, M, F>
 where
     M: FunctionMutability,
     F: FunctionForm,
@@ -100,7 +99,7 @@ where
     }
 }
 
-impl<'func, M, F> Debug for LowLevelILInstruction<'func, M, F>
+impl<'func, M, F> Debug for Instruction<'func, M, F>
 where
     M: FunctionMutability,
     F: FunctionForm,
@@ -114,11 +113,11 @@ where
     }
 }
 
-impl<'func, M> InstructionHandler<'func, M, SSA> for LowLevelILInstruction<'func, M, SSA>
+impl<'func, M> InstructionHandler<'func, M, SSA> for Instruction<'func, M, SSA>
 where
     M: FunctionMutability,
 {
-    fn kind(&self) -> LowLevelILInstructionKind<'func, M, SSA> {
+    fn kind(&self) -> InstructionKind<'func, M, SSA> {
         #[allow(unused_imports)]
         use binaryninjacore_sys::BNLowLevelILOperation::*;
         let raw_op = self.into_raw();
@@ -126,9 +125,7 @@ where
         match raw_op.operation {
             // Any invalid ops for Non-Lifted IL will be checked here.
             // SAFETY: We have checked for illegal operations.
-            _ => unsafe {
-                LowLevelILInstructionKind::from_raw(self.function, self.expr_idx(), raw_op)
-            },
+            _ => unsafe { InstructionKind::from_raw(self.function, self.expr_idx(), raw_op) },
         }
     }
 
@@ -142,11 +139,11 @@ where
 }
 
 impl<'func, M> InstructionHandler<'func, M, NonSSA<LiftedNonSSA>>
-    for LowLevelILInstruction<'func, M, NonSSA<LiftedNonSSA>>
+    for Instruction<'func, M, NonSSA<LiftedNonSSA>>
 where
     M: FunctionMutability,
 {
-    fn kind(&self) -> LowLevelILInstructionKind<'func, M, NonSSA<LiftedNonSSA>> {
+    fn kind(&self) -> InstructionKind<'func, M, NonSSA<LiftedNonSSA>> {
         #[allow(unused_imports)]
         use binaryninjacore_sys::BNLowLevelILOperation::*;
         let raw_op = self.into_raw();
@@ -154,9 +151,7 @@ where
         match raw_op.operation {
             // Any invalid ops for Non-Lifted IL will be checked here.
             // SAFETY: We have checked for illegal operations.
-            _ => unsafe {
-                LowLevelILInstructionKind::from_raw(self.function, self.expr_idx(), raw_op)
-            },
+            _ => unsafe { InstructionKind::from_raw(self.function, self.expr_idx(), raw_op) },
         }
     }
 
@@ -170,11 +165,11 @@ where
 }
 
 impl<'func, M> InstructionHandler<'func, M, NonSSA<RegularNonSSA>>
-    for LowLevelILInstruction<'func, M, NonSSA<RegularNonSSA>>
+    for Instruction<'func, M, NonSSA<RegularNonSSA>>
 where
     M: FunctionMutability,
 {
-    fn kind(&self) -> LowLevelILInstructionKind<'func, M, NonSSA<RegularNonSSA>> {
+    fn kind(&self) -> InstructionKind<'func, M, NonSSA<RegularNonSSA>> {
         #[allow(unused_imports)]
         use binaryninjacore_sys::BNLowLevelILOperation::*;
         let raw_op = self.into_raw();
@@ -182,9 +177,7 @@ where
         match raw_op.operation {
             // Any invalid ops for Non-Lifted IL will be checked here.
             // SAFETY: We have checked for illegal operations.
-            _ => unsafe {
-                LowLevelILInstructionKind::from_raw(self.function, self.expr_idx(), raw_op)
-            },
+            _ => unsafe { InstructionKind::from_raw(self.function, self.expr_idx(), raw_op) },
         }
     }
 
@@ -200,7 +193,7 @@ where
 }
 
 #[derive(Debug)]
-pub enum LowLevelILInstructionKind<'func, M, F>
+pub enum InstructionKind<'func, M, F>
 where
     M: FunctionMutability,
     F: FunctionForm,
@@ -237,7 +230,7 @@ where
     Value(LowLevelILExpression<'func, M, F, ValueExpr>),
 }
 
-impl<'func, M, F> LowLevelILInstructionKind<'func, M, F>
+impl<'func, M, F> InstructionKind<'func, M, F>
 where
     M: FunctionMutability,
     F: FunctionForm,
@@ -250,51 +243,47 @@ where
         use binaryninjacore_sys::BNLowLevelILOperation::*;
 
         match op.operation {
-            LLIL_NOP => LowLevelILInstructionKind::Nop(Operation::new(function, op)),
+            LLIL_NOP => InstructionKind::Nop(Operation::new(function, op)),
             LLIL_SET_REG | LLIL_SET_REG_SSA => {
-                LowLevelILInstructionKind::SetReg(Operation::new(function, op))
+                InstructionKind::SetReg(Operation::new(function, op))
             }
             LLIL_SET_REG_SPLIT | LLIL_SET_REG_SPLIT_SSA => {
-                LowLevelILInstructionKind::SetRegSplit(Operation::new(function, op))
+                InstructionKind::SetRegSplit(Operation::new(function, op))
             }
             LLIL_SET_FLAG | LLIL_SET_FLAG_SSA => {
-                LowLevelILInstructionKind::SetFlag(Operation::new(function, op))
+                InstructionKind::SetFlag(Operation::new(function, op))
             }
-            LLIL_STORE | LLIL_STORE_SSA => {
-                LowLevelILInstructionKind::Store(Operation::new(function, op))
-            }
-            LLIL_PUSH => LowLevelILInstructionKind::Push(Operation::new(function, op)),
+            LLIL_STORE | LLIL_STORE_SSA => InstructionKind::Store(Operation::new(function, op)),
+            LLIL_PUSH => InstructionKind::Push(Operation::new(function, op)),
 
-            LLIL_REG_STACK_PUSH => {
-                LowLevelILInstructionKind::RegStackPush(Operation::new(function, op))
-            }
+            LLIL_REG_STACK_PUSH => InstructionKind::RegStackPush(Operation::new(function, op)),
 
-            LLIL_JUMP => LowLevelILInstructionKind::Jump(Operation::new(function, op)),
-            LLIL_JUMP_TO => LowLevelILInstructionKind::JumpTo(Operation::new(function, op)),
+            LLIL_JUMP => InstructionKind::Jump(Operation::new(function, op)),
+            LLIL_JUMP_TO => InstructionKind::JumpTo(Operation::new(function, op)),
 
             LLIL_CALL | LLIL_CALL_STACK_ADJUST | LLIL_CALL_SSA => {
-                LowLevelILInstructionKind::Call(Operation::new(function, op))
+                InstructionKind::Call(Operation::new(function, op))
             }
             LLIL_TAILCALL | LLIL_TAILCALL_SSA => {
-                LowLevelILInstructionKind::TailCall(Operation::new(function, op))
+                InstructionKind::TailCall(Operation::new(function, op))
             }
 
-            LLIL_RET => LowLevelILInstructionKind::Ret(Operation::new(function, op)),
-            LLIL_NORET => LowLevelILInstructionKind::NoRet(Operation::new(function, op)),
+            LLIL_RET => InstructionKind::Ret(Operation::new(function, op)),
+            LLIL_NORET => InstructionKind::NoRet(Operation::new(function, op)),
 
-            LLIL_IF => LowLevelILInstructionKind::If(Operation::new(function, op)),
-            LLIL_GOTO => LowLevelILInstructionKind::Goto(Operation::new(function, op)),
+            LLIL_IF => InstructionKind::If(Operation::new(function, op)),
+            LLIL_GOTO => InstructionKind::Goto(Operation::new(function, op)),
 
             LLIL_SYSCALL | LLIL_SYSCALL_SSA => {
-                LowLevelILInstructionKind::Syscall(Operation::new(function, op))
+                InstructionKind::Syscall(Operation::new(function, op))
             }
             LLIL_INTRINSIC | LLIL_INTRINSIC_SSA => {
-                LowLevelILInstructionKind::Intrinsic(Operation::new(function, op))
+                InstructionKind::Intrinsic(Operation::new(function, op))
             }
-            LLIL_BP => LowLevelILInstructionKind::Bp(Operation::new(function, op)),
-            LLIL_TRAP => LowLevelILInstructionKind::Trap(Operation::new(function, op)),
-            LLIL_UNDEF => LowLevelILInstructionKind::Undef(Operation::new(function, op)),
-            _ => LowLevelILInstructionKind::Value(LowLevelILExpression::new(function, expr_index)),
+            LLIL_BP => InstructionKind::Bp(Operation::new(function, op)),
+            LLIL_TRAP => InstructionKind::Trap(Operation::new(function, op)),
+            LLIL_UNDEF => InstructionKind::Undef(Operation::new(function, op)),
+            _ => InstructionKind::Value(LowLevelILExpression::new(function, expr_index)),
         }
     }
 
@@ -302,7 +291,7 @@ where
     where
         T: FnMut(&LowLevelILExpression<'func, M, F, ValueExpr>) -> VisitorAction,
     {
-        use LowLevelILInstructionKind::*;
+        use InstructionKind::*;
 
         macro_rules! visit {
             ($expr:expr) => {

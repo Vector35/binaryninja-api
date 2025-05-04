@@ -13,9 +13,7 @@ use binaryninja::low_level_il::expression::{ExpressionHandler, LowLevelILExpress
 use binaryninja::low_level_il::function::{
     FunctionMutability, LowLevelILFunction, NonSSA, RegularNonSSA,
 };
-use binaryninja::low_level_il::instruction::{
-    InstructionHandler, LowLevelILInstruction, LowLevelILInstructionKind,
-};
+use binaryninja::low_level_il::instruction::{Instruction, InstructionHandler, InstructionKind};
 use binaryninja::low_level_il::{LowLevelILRegisterKind, VisitorAction};
 use binaryninja::rc::Ref as BNRef;
 use std::path::PathBuf;
@@ -98,10 +96,10 @@ pub fn basic_block_guid<M: FunctionMutability>(
     let max_instr_len = arch.max_instr_len();
 
     // NOPs and useless moves are blacklisted to allow for hot-patchable functions.
-    let is_blacklisted_instr = |instr: &LowLevelILInstruction<M, NonSSA<RegularNonSSA>>| {
+    let is_blacklisted_instr = |instr: &Instruction<M, NonSSA<RegularNonSSA>>| {
         match instr.kind() {
-            LowLevelILInstructionKind::Nop(_) => true,
-            LowLevelILInstructionKind::SetReg(op) => {
+            InstructionKind::Nop(_) => true,
+            InstructionKind::SetReg(op) => {
                 match op.source_expr().kind() {
                     LowLevelILExpressionKind::Reg(source_op)
                         if op.dest_reg() == source_op.source_reg() =>
@@ -126,7 +124,7 @@ pub fn basic_block_guid<M: FunctionMutability>(
         }
     };
 
-    let is_variant_instr = |instr: &LowLevelILInstruction<M, NonSSA<RegularNonSSA>>| {
+    let is_variant_instr = |instr: &Instruction<M, NonSSA<RegularNonSSA>>| {
         let is_variant_expr = |expr: &LowLevelILExpressionKind<M, NonSSA<RegularNonSSA>>| {
             // TODO: Checking the section here is slow, we should gather all section ranges outside of this.
             match expr {

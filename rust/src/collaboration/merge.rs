@@ -1,5 +1,4 @@
 use binaryninjacore_sys::*;
-use std::ffi::c_char;
 use std::ptr::NonNull;
 
 use crate::database::{snapshot::Snapshot, Database};
@@ -52,10 +51,7 @@ impl MergeConflict {
     pub fn path_item_string<S: AsCStr>(&self, path: S) -> Result<BnString, ()> {
         let path = path.to_cstr();
         let result = unsafe {
-            BNAnalysisMergeConflictGetPathItemString(
-                self.handle.as_ptr(),
-                path.as_ref().as_ptr() as *const c_char,
-            )
+            BNAnalysisMergeConflictGetPathItemString(self.handle.as_ptr(), path.as_ptr())
         };
         (!result.is_null())
             .then(|| unsafe { BnString::from_raw(result) })
@@ -125,24 +121,16 @@ impl MergeConflict {
     /// Call this when you've resolved the conflict to save the result
     pub fn success<S: AsCStr>(&self, value: S) -> Result<(), ()> {
         let value = value.to_cstr();
-        let success = unsafe {
-            BNAnalysisMergeConflictSuccess(
-                self.handle.as_ptr(),
-                value.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let success =
+            unsafe { BNAnalysisMergeConflictSuccess(self.handle.as_ptr(), value.as_ptr()) };
         success.then_some(()).ok_or(())
     }
 
     // TODO: Make a safe version of this that checks the path and if it holds a number
     pub unsafe fn get_path_item_number<S: AsCStr>(&self, path_key: S) -> Option<u64> {
         let path_key = path_key.to_cstr();
-        let value = unsafe {
-            BNAnalysisMergeConflictGetPathItem(
-                self.handle.as_ptr(),
-                path_key.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let value =
+            unsafe { BNAnalysisMergeConflictGetPathItem(self.handle.as_ptr(), path_key.as_ptr()) };
         match value.is_null() {
             // SAFETY: The path must be a number.
             false => Some(value as u64),
@@ -153,10 +141,7 @@ impl MergeConflict {
     pub unsafe fn get_path_item_string<S: AsCStr>(&self, path_key: S) -> Option<BnString> {
         let path_key = path_key.to_cstr();
         let value = unsafe {
-            BNAnalysisMergeConflictGetPathItemString(
-                self.handle.as_ptr(),
-                path_key.as_ref().as_ptr() as *const c_char,
-            )
+            BNAnalysisMergeConflictGetPathItemString(self.handle.as_ptr(), path_key.as_ptr())
         };
         match value.is_null() {
             false => Some(unsafe { BnString::from_raw(value) }),

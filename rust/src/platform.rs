@@ -85,7 +85,7 @@ impl Platform {
     pub fn by_name<S: AsCStr>(name: S) -> Option<Ref<Self>> {
         let raw_name = name.to_cstr();
         unsafe {
-            let res = BNGetPlatformByName(raw_name.as_ref().as_ptr() as *mut _);
+            let res = BNGetPlatformByName(raw_name.as_ptr());
 
             if res.is_null() {
                 None
@@ -118,7 +118,7 @@ impl Platform {
 
         unsafe {
             let mut count = 0;
-            let handles = BNGetPlatformListByOS(raw_name.as_ref().as_ptr() as *mut _, &mut count);
+            let handles = BNGetPlatformListByOS(raw_name.as_ptr(), &mut count);
 
             Array::new(handles, count, ())
         }
@@ -129,11 +129,8 @@ impl Platform {
 
         unsafe {
             let mut count = 0;
-            let handles = BNGetPlatformListByOSAndArchitecture(
-                raw_name.as_ref().as_ptr() as *mut _,
-                arch.handle,
-                &mut count,
-            );
+            let handles =
+                BNGetPlatformListByOSAndArchitecture(raw_name.as_ptr(), arch.handle, &mut count);
 
             Array::new(handles, count, ())
         }
@@ -151,7 +148,7 @@ impl Platform {
     pub fn new<A: Architecture, S: AsCStr>(arch: &A, name: S) -> Ref<Self> {
         let name = name.to_cstr();
         unsafe {
-            let handle = BNCreatePlatform(arch.as_ref().handle, name.as_ref().as_ptr() as *mut _);
+            let handle = BNCreatePlatform(arch.as_ref().handle, name.as_ptr());
             assert!(!handle.is_null());
             Ref::new(Self { handle })
         }
@@ -179,13 +176,8 @@ impl Platform {
     pub fn get_type_libraries_by_name<T: AsCStr>(&self, name: T) -> Array<TypeLibrary> {
         let mut count = 0;
         let name = name.to_cstr();
-        let result = unsafe {
-            BNGetPlatformTypeLibrariesByName(
-                self.handle,
-                name.as_ref().as_ptr() as *mut _,
-                &mut count,
-            )
-        };
+        let result =
+            unsafe { BNGetPlatformTypeLibrariesByName(self.handle, name.as_ptr(), &mut count) };
         assert!(!result.is_null());
         unsafe { Array::new(result, count, ()) }
     }
@@ -194,7 +186,7 @@ impl Platform {
         let os = os.to_cstr();
 
         unsafe {
-            BNRegisterPlatform(os.as_ref().as_ptr() as *mut _, self.handle);
+            BNRegisterPlatform(os.as_ptr(), self.handle);
         }
     }
 

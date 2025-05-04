@@ -32,14 +32,13 @@ pub fn demangle_generic<S: AsCStr>(
     view: Option<&BinaryView>,
     simplify: bool,
 ) -> Option<(QualifiedName, Option<Ref<Type>>)> {
-    let mangled_name_bwn = mangled_name.to_cstr();
-    let mangled_name_ptr = mangled_name_bwn.as_ref();
+    let mangled_name = mangled_name.to_cstr();
     let mut out_type: *mut BNType = std::ptr::null_mut();
     let mut out_name = BNQualifiedName::default();
     let res = unsafe {
         BNDemangleGeneric(
             arch.handle,
-            mangled_name_ptr.as_ptr() as *const c_char,
+            mangled_name.as_ptr(),
             &mut out_type,
             &mut out_name,
             view.map(|v| v.handle).unwrap_or(std::ptr::null_mut()),
@@ -59,13 +58,12 @@ pub fn demangle_generic<S: AsCStr>(
 }
 
 pub fn demangle_llvm<S: AsCStr>(mangled_name: S, simplify: bool) -> Option<QualifiedName> {
-    let mangled_name_bwn = mangled_name.to_cstr();
-    let mangled_name_ptr = mangled_name_bwn.as_ref();
+    let mangled_name = mangled_name.to_cstr();
     let mut out_name: *mut *mut std::os::raw::c_char = std::ptr::null_mut();
     let mut out_size: usize = 0;
     let res = unsafe {
         BNDemangleLLVM(
-            mangled_name_ptr.as_ptr() as *const c_char,
+            mangled_name.as_ptr(),
             &mut out_name,
             &mut out_size,
             simplify,
@@ -92,15 +90,14 @@ pub fn demangle_gnu3<S: AsCStr>(
     mangled_name: S,
     simplify: bool,
 ) -> Option<(QualifiedName, Option<Ref<Type>>)> {
-    let mangled_name_bwn = mangled_name.to_cstr();
-    let mangled_name_ptr = mangled_name_bwn.as_ref();
+    let mangled_name = mangled_name.to_cstr();
     let mut out_type: *mut BNType = std::ptr::null_mut();
     let mut out_name: *mut *mut std::os::raw::c_char = std::ptr::null_mut();
     let mut out_size: usize = 0;
     let res = unsafe {
         BNDemangleGNU3(
             arch.handle,
-            mangled_name_ptr.as_ptr() as *const c_char,
+            mangled_name.as_ptr(),
             &mut out_type,
             &mut out_name,
             &mut out_size,
@@ -133,16 +130,14 @@ pub fn demangle_ms<S: AsCStr>(
     mangled_name: S,
     simplify: bool,
 ) -> Option<(QualifiedName, Option<Ref<Type>>)> {
-    let mangled_name_bwn = mangled_name.to_cstr();
-    let mangled_name_ptr = mangled_name_bwn.as_ref();
-
+    let mangled_name = mangled_name.to_cstr();
     let mut out_type: *mut BNType = std::ptr::null_mut();
     let mut out_name: *mut *mut std::os::raw::c_char = std::ptr::null_mut();
     let mut out_size: usize = 0;
     let res = unsafe {
         BNDemangleMS(
             arch.handle,
-            mangled_name_ptr.as_ptr() as *const c_char,
+            mangled_name.as_ptr(),
             &mut out_type,
             &mut out_name,
             &mut out_size,
@@ -309,7 +304,7 @@ impl Demangler {
         }
 
         let name = name.to_cstr();
-        let name_ptr = name.as_ref().as_ptr() as *mut _;
+        let name_ptr = name.as_ptr();
         let ctxt = Box::into_raw(Box::new(demangler));
 
         let callbacks = BNDemanglerCallbacks {

@@ -140,13 +140,8 @@ impl TypeContainer {
     pub fn rename_type<T: Into<QualifiedName>, S: AsCStr>(&self, name: T, type_id: S) -> bool {
         let type_id = type_id.to_cstr();
         let raw_name = QualifiedName::into_raw(name.into());
-        let success = unsafe {
-            BNTypeContainerRenameType(
-                self.handle.as_ptr(),
-                type_id.as_ref().as_ptr() as *const c_char,
-                &raw_name,
-            )
-        };
+        let success =
+            unsafe { BNTypeContainerRenameType(self.handle.as_ptr(), type_id.as_ptr(), &raw_name) };
         QualifiedName::free_raw(raw_name);
         success
     }
@@ -157,12 +152,7 @@ impl TypeContainer {
     /// Returns true if the type was deleted.
     pub fn delete_type<S: AsCStr>(&self, type_id: S) -> bool {
         let type_id = type_id.to_cstr();
-        unsafe {
-            BNTypeContainerDeleteType(
-                self.handle.as_ptr(),
-                type_id.as_ref().as_ptr() as *const c_char,
-            )
-        }
+        unsafe { BNTypeContainerDeleteType(self.handle.as_ptr(), type_id.as_ptr()) }
     }
 
     /// Get the unique id of the type in the Type Container with the given name.
@@ -184,11 +174,7 @@ impl TypeContainer {
         let type_id = type_id.to_cstr();
         let mut result = BNQualifiedName::default();
         let success = unsafe {
-            BNTypeContainerGetTypeName(
-                self.handle.as_ptr(),
-                type_id.as_ref().as_ptr() as *const c_char,
-                &mut result,
-            )
+            BNTypeContainerGetTypeName(self.handle.as_ptr(), type_id.as_ptr(), &mut result)
         };
         success.then(|| QualifiedName::from_owned_raw(result))
     }
@@ -200,11 +186,7 @@ impl TypeContainer {
         let type_id = type_id.to_cstr();
         let mut result = std::ptr::null_mut();
         let success = unsafe {
-            BNTypeContainerGetTypeById(
-                self.handle.as_ptr(),
-                type_id.as_ref().as_ptr() as *const c_char,
-                &mut result,
-            )
+            BNTypeContainerGetTypeById(self.handle.as_ptr(), type_id.as_ptr(), &mut result)
         };
         success.then(|| unsafe { Type::ref_from_raw(result) })
     }
@@ -313,7 +295,7 @@ impl TypeContainer {
         let success = unsafe {
             BNTypeContainerParseTypeString(
                 self.handle.as_ptr(),
-                source.as_ref().as_ptr() as *const c_char,
+                source.as_ptr(),
                 import_dependencies,
                 &mut result,
                 &mut errors,
@@ -358,18 +340,13 @@ impl TypeContainer {
         let source = source.to_cstr();
         let filename = filename.to_cstr();
         let options: Vec<_> = options.into_iter().map(|o| o.to_cstr()).collect();
-        let options_raw: Vec<*const c_char> = options
-            .iter()
-            .map(|o| o.as_ref().as_ptr() as *const c_char)
-            .collect();
+        let options_raw: Vec<*const c_char> = options.iter().map(|o| o.as_ptr()).collect();
         let include_directories: Vec<_> = include_directories
             .into_iter()
             .map(|d| d.to_cstr())
             .collect();
-        let include_directories_raw: Vec<*const c_char> = include_directories
-            .iter()
-            .map(|d| d.as_ref().as_ptr() as *const c_char)
-            .collect();
+        let include_directories_raw: Vec<*const c_char> =
+            include_directories.iter().map(|d| d.as_ptr()).collect();
         let auto_type_source = auto_type_source.to_cstr();
         let mut raw_result = BNTypeParserResult::default();
         let mut errors = std::ptr::null_mut();
@@ -377,13 +354,13 @@ impl TypeContainer {
         let success = unsafe {
             BNTypeContainerParseTypesFromSource(
                 self.handle.as_ptr(),
-                source.as_ref().as_ptr() as *const c_char,
-                filename.as_ref().as_ptr() as *const c_char,
+                source.as_ptr(),
+                filename.as_ptr(),
                 options_raw.as_ptr(),
                 options_raw.len(),
                 include_directories_raw.as_ptr(),
                 include_directories_raw.len(),
-                auto_type_source.as_ref().as_ptr() as *const c_char,
+                auto_type_source.as_ptr(),
                 import_dependencies,
                 &mut raw_result,
                 &mut errors,

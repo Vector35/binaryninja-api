@@ -8,7 +8,7 @@ use crate::linear_view::{LinearDisassemblyLine, LinearDisassemblyLineType, Linea
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
 use crate::string::AsCStr;
 use binaryninjacore_sys::*;
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 use std::ptr::NonNull;
 
 /// The state in which the [`RenderLayer`] will be registered with.
@@ -73,13 +73,9 @@ pub fn register_render_layer<S: AsCStr, T: RenderLayer>(
         applyToLinearViewObject: Some(cb_apply_to_linear_view_object::<T>),
         freeLines: Some(cb_free_lines),
     };
-    let result = unsafe {
-        BNRegisterRenderLayer(
-            name.to_cstr().as_ref().as_ptr() as *const _,
-            &mut callback,
-            default_state.into(),
-        )
-    };
+    let name = name.to_cstr();
+    let result =
+        unsafe { BNRegisterRenderLayer(name.as_ptr(), &mut callback, default_state.into()) };
     let core = CoreRenderLayer::from_raw(NonNull::new(result).unwrap());
     (render_layer, core)
 }
@@ -305,7 +301,7 @@ impl CoreRenderLayer {
 
     pub fn render_layer_by_name<S: AsCStr>(name: S) -> Option<CoreRenderLayer> {
         let name_raw = name.to_cstr();
-        let result = unsafe { BNGetRenderLayerByName(name_raw.as_ref().as_ptr() as *const c_char) };
+        let result = unsafe { BNGetRenderLayerByName(name_raw.as_ptr()) };
         NonNull::new(result).map(Self::from_raw)
     }
 

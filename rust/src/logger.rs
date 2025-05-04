@@ -35,7 +35,7 @@ use binaryninjacore_sys::{
 };
 
 use crate::rc::{Ref, RefCountable};
-use crate::string::BnString;
+use crate::string::{AsCStr, BnString};
 use log;
 use log::LevelFilter;
 use std::ffi::{CStr, CString};
@@ -139,12 +139,12 @@ impl log::Log for Ref<Logger> {
 
         if let Ok(msg) = CString::new(format!("{}", record.args())) {
             let percent_s = CString::new("%s").expect("'%s' has no null bytes");
-            let logger_name = self.name();
+            let logger_name = self.name().to_cstr();
             unsafe {
                 BNLog(
                     self.session_id(),
                     level,
-                    logger_name.as_ptr() as *const c_char,
+                    logger_name.as_ptr(),
                     0,
                     percent_s.as_ptr(),
                     msg.as_ptr(),

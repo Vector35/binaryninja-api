@@ -129,8 +129,8 @@ where
     let name = name.to_cstr();
     let desc = desc.to_cstr();
 
-    let name_ptr = name.as_ref().as_ptr() as *mut _;
-    let desc_ptr = desc.as_ref().as_ptr() as *mut _;
+    let name_ptr = name.as_ptr();
+    let desc_ptr = desc.as_ptr();
 
     let ctxt = Box::into_raw(Box::new(command));
 
@@ -230,8 +230,8 @@ where
     let name = name.to_cstr();
     let desc = desc.to_cstr();
 
-    let name_ptr = name.as_ref().as_ptr() as *mut _;
-    let desc_ptr = desc.as_ref().as_ptr() as *mut _;
+    let name_ptr = name.as_ptr();
+    let desc_ptr = desc.as_ptr();
 
     let ctxt = Box::into_raw(Box::new(command));
 
@@ -337,8 +337,8 @@ where
     let name = name.to_cstr();
     let desc = desc.to_cstr();
 
-    let name_ptr = name.as_ref().as_ptr() as *mut _;
-    let desc_ptr = desc.as_ref().as_ptr() as *mut _;
+    let name_ptr = name.as_ptr();
+    let desc_ptr = desc.as_ptr();
 
     let ctxt = Box::into_raw(Box::new(command));
 
@@ -449,8 +449,8 @@ where
     let name = name.to_cstr();
     let desc = desc.to_cstr();
 
-    let name_ptr = name.as_ref().as_ptr() as *mut _;
-    let desc_ptr = desc.as_ref().as_ptr() as *mut _;
+    let name_ptr = name.as_ptr();
+    let desc_ptr = desc.as_ptr();
 
     let ctxt = Box::into_raw(Box::new(command));
 

@@ -9,7 +9,6 @@ use binaryninjacore_sys::{
     BNNewKeyValueStoreReference, BNSetKeyValueStoreBuffer,
 };
 use std::collections::HashMap;
-use std::ffi::c_char;
 use std::fmt::Debug;
 use std::ptr::NonNull;
 
@@ -44,7 +43,7 @@ impl KeyValueStore {
     /// Get the value for a single key
     pub fn value<S: AsCStr>(&self, key: S) -> Option<DataBuffer> {
         let key_raw = key.to_cstr();
-        let key_ptr = key_raw.as_ref().as_ptr() as *const c_char;
+        let key_ptr = key_raw.as_ptr();
         let result = unsafe { BNGetKeyValueStoreBuffer(self.handle.as_ptr(), key_ptr) };
         NonNull::new(result).map(|_| DataBuffer::from_raw(result))
     }
@@ -52,7 +51,7 @@ impl KeyValueStore {
     /// Set the value for a single key
     pub fn set_value<S: AsCStr>(&self, key: S, value: &DataBuffer) -> bool {
         let key_raw = key.to_cstr();
-        let key_ptr = key_raw.as_ref().as_ptr() as *const c_char;
+        let key_ptr = key_raw.as_ptr();
         unsafe { BNSetKeyValueStoreBuffer(self.handle.as_ptr(), key_ptr, value.as_raw()) }
     }
 
@@ -66,7 +65,7 @@ impl KeyValueStore {
     /// Begin storing new keys into a namespace
     pub fn begin_namespace<S: AsCStr>(&self, name: S) {
         let name_raw = name.to_cstr();
-        let name_ptr = name_raw.as_ref().as_ptr() as *const c_char;
+        let name_ptr = name_raw.as_ptr();
         unsafe { BNBeginKeyValueStoreNamespace(self.handle.as_ptr(), name_ptr) }
     }
 

@@ -79,7 +79,7 @@ impl FileMetadata {
         let name = name.to_cstr();
 
         unsafe {
-            BNSetFilename(self.handle, name.as_ref().as_ptr() as *mut _);
+            BNSetFilename(self.handle, name.as_ptr());
         }
     }
 
@@ -275,7 +275,7 @@ impl FileMetadata {
 
     pub fn open_database<S: AsCStr>(&self, filename: S) -> Result<Ref<BinaryView>, ()> {
         let filename = filename.to_cstr();
-        let filename_ptr = filename.as_ref().as_ptr() as *mut _;
+        let filename_ptr = filename.as_ptr();
 
         let view = unsafe { BNOpenExistingDatabase(self.handle, filename_ptr) };
 
@@ -292,7 +292,7 @@ impl FileMetadata {
         mut progress: P,
     ) -> Result<Ref<BinaryView>, ()> {
         let filename = filename.to_cstr();
-        let filename_ptr = filename.as_ref().as_ptr() as *mut _;
+        let filename_ptr = filename.as_ptr();
 
         let view = unsafe {
             BNOpenExistingDatabaseWithProgress(

@@ -8,7 +8,7 @@ use binaryninjacore_sys::{
     BNProjectFolderGetName, BNProjectFolderGetParent, BNProjectFolderGetProject,
     BNProjectFolderSetDescription, BNProjectFolderSetName, BNProjectFolderSetParent,
 };
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 use std::fmt::Debug;
 use std::ptr::{null_mut, NonNull};
 
@@ -48,12 +48,7 @@ impl ProjectFolder {
     /// Set the name of this folder
     pub fn set_name<S: AsCStr>(&self, value: S) -> bool {
         let value_raw = value.to_cstr();
-        unsafe {
-            BNProjectFolderSetName(
-                self.handle.as_ptr(),
-                value_raw.as_ref().as_ptr() as *const c_char,
-            )
-        }
+        unsafe { BNProjectFolderSetName(self.handle.as_ptr(), value_raw.as_ptr()) }
     }
 
     /// Get the description of this folder
@@ -64,12 +59,7 @@ impl ProjectFolder {
     /// Set the description of this folder
     pub fn set_description<S: AsCStr>(&self, value: S) -> bool {
         let value_raw = value.to_cstr();
-        unsafe {
-            BNProjectFolderSetDescription(
-                self.handle.as_ptr(),
-                value_raw.as_ref().as_ptr() as *const c_char,
-            )
-        }
+        unsafe { BNProjectFolderSetDescription(self.handle.as_ptr(), value_raw.as_ptr()) }
     }
 
     /// Get the folder that contains this folder
@@ -107,7 +97,7 @@ impl ProjectFolder {
         let success = unsafe {
             BNProjectFolderExport(
                 self.handle.as_ptr(),
-                dest_raw.as_ref().as_ptr() as *const c_char,
+                dest_raw.as_ptr(),
                 &mut progress as *mut P as *mut c_void,
                 Some(P::cb_progress_callback),
             )

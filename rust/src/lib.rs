@@ -285,7 +285,7 @@ pub fn bundled_plugin_directory() -> Result<PathBuf, ()> {
 
 pub fn set_bundled_plugin_directory(new_dir: impl AsRef<Path>) {
     let new_dir = new_dir.as_ref().to_cstr();
-    unsafe { BNSetBundledPluginDirectory(new_dir.as_ptr() as *const c_char) };
+    unsafe { BNSetBundledPluginDirectory(new_dir.as_ptr()) };
 }
 
 pub fn user_directory() -> PathBuf {
@@ -330,7 +330,7 @@ pub fn save_last_run() {
 pub fn path_relative_to_bundled_plugin_directory(path: impl AsRef<Path>) -> Result<PathBuf, ()> {
     let path_raw = path.as_ref().to_cstr();
     let s: *mut c_char =
-        unsafe { BNGetPathRelativeToBundledPluginDirectory(path_raw.as_ptr() as *const c_char) };
+        unsafe { BNGetPathRelativeToBundledPluginDirectory(path_raw.as_ptr()) };
     if s.is_null() {
         return Err(());
     }
@@ -340,7 +340,7 @@ pub fn path_relative_to_bundled_plugin_directory(path: impl AsRef<Path>) -> Resu
 pub fn path_relative_to_user_plugin_directory(path: impl AsRef<Path>) -> Result<PathBuf, ()> {
     let path_raw = path.as_ref().to_cstr();
     let s: *mut c_char =
-        unsafe { BNGetPathRelativeToUserPluginDirectory(path_raw.as_ptr() as *const c_char) };
+        unsafe { BNGetPathRelativeToUserPluginDirectory(path_raw.as_ptr()) };
     if s.is_null() {
         return Err(());
     }
@@ -350,7 +350,7 @@ pub fn path_relative_to_user_plugin_directory(path: impl AsRef<Path>) -> Result<
 pub fn path_relative_to_user_directory(path: impl AsRef<Path>) -> Result<PathBuf, ()> {
     let path_raw = path.as_ref().to_cstr();
     let s: *mut c_char =
-        unsafe { BNGetPathRelativeToUserDirectory(path_raw.as_ptr() as *const c_char) };
+        unsafe { BNGetPathRelativeToUserDirectory(path_raw.as_ptr()) };
     if s.is_null() {
         return Err(());
     }
@@ -475,7 +475,7 @@ impl VersionInfo {
 
     pub fn from_string<S: AsCStr>(string: S) -> Self {
         let string = string.to_cstr();
-        let result = unsafe { BNParseVersionString(string.as_ref().as_ptr() as *const c_char) };
+        let result = unsafe { BNParseVersionString(string.as_ptr()) };
         Self::from_owned_raw(result)
     }
 }
@@ -534,8 +534,7 @@ pub fn license_count() -> i32 {
 #[cfg(not(feature = "demo"))]
 pub fn set_license<S: AsCStr + Default>(license: Option<S>) {
     let license = license.unwrap_or_default().to_cstr();
-    let license_slice = license.as_ref();
-    unsafe { BNSetLicense(license_slice.as_ptr() as *const c_char) }
+    unsafe { BNSetLicense(license.as_ptr()) }
 }
 
 #[cfg(feature = "demo")]
@@ -560,8 +559,7 @@ pub fn is_ui_enabled() -> bool {
 
 pub fn is_database<S: AsCStr>(filename: S) -> bool {
     let filename = filename.to_cstr();
-    let filename_slice = filename.as_ref();
-    unsafe { BNIsDatabase(filename_slice.as_ptr() as *const c_char) }
+    unsafe { BNIsDatabase(filename.as_ptr()) }
 }
 
 pub fn plugin_abi_version() -> u32 {
@@ -589,11 +587,13 @@ pub fn plugin_ui_abi_minimum_version() -> u32 {
 }
 
 pub fn add_required_plugin_dependency<S: AsCStr>(name: S) {
-    unsafe { BNAddRequiredPluginDependency(name.to_cstr().as_ref().as_ptr() as *const c_char) };
+    let raw_name = name.to_cstr();
+    unsafe { BNAddRequiredPluginDependency(raw_name.as_ptr()) };
 }
 
 pub fn add_optional_plugin_dependency<S: AsCStr>(name: S) {
-    unsafe { BNAddOptionalPluginDependency(name.to_cstr().as_ref().as_ptr() as *const c_char) };
+    let raw_name = name.to_cstr();
+    unsafe { BNAddOptionalPluginDependency(raw_name.as_ptr()) };
 }
 
 // Provide ABI version automatically so that the core can verify binary compatibility

@@ -117,7 +117,7 @@ impl DebugInfoParser {
     /// Returns debug info parser of the given name, if it exists
     pub fn from_name<S: AsCStr>(name: S) -> Result<Ref<Self>, ()> {
         let name = name.to_cstr();
-        let parser = unsafe { BNGetDebugInfoParserByName(name.as_ref().as_ptr() as *mut _) };
+        let parser = unsafe { BNGetDebugInfoParserByName(name.as_ptr()) };
 
         if parser.is_null() {
             Err(())
@@ -260,7 +260,7 @@ impl DebugInfoParser {
         }
 
         let name = name.to_cstr();
-        let name_ptr = name.as_ref().as_ptr() as *mut _;
+        let name_ptr = name.as_ptr();
         let ctxt = Box::into_raw(Box::new(parser_callbacks));
 
         unsafe {
@@ -421,13 +421,8 @@ impl DebugInfo {
         let parser_name = parser_name.to_cstr();
 
         let mut count: usize = 0;
-        let debug_types_ptr = unsafe {
-            BNGetDebugTypes(
-                self.handle,
-                parser_name.as_ref().as_ptr() as *mut _,
-                &mut count,
-            )
-        };
+        let debug_types_ptr =
+            unsafe { BNGetDebugTypes(self.handle, parser_name.as_ptr(), &mut count) };
         let result: Vec<_> = unsafe {
             std::slice::from_raw_parts_mut(debug_types_ptr, count)
                 .iter()
@@ -459,13 +454,8 @@ impl DebugInfo {
         let parser_name = parser_name.to_cstr();
 
         let mut count: usize = 0;
-        let functions_ptr = unsafe {
-            BNGetDebugFunctions(
-                self.handle,
-                parser_name.as_ref().as_ptr() as *mut _,
-                &mut count,
-            )
-        };
+        let functions_ptr =
+            unsafe { BNGetDebugFunctions(self.handle, parser_name.as_ptr(), &mut count) };
 
         let result: Vec<DebugFunctionInfo> = unsafe {
             std::slice::from_raw_parts_mut(functions_ptr, count)
@@ -502,13 +492,8 @@ impl DebugInfo {
         let parser_name = parser_name.to_cstr();
 
         let mut count: usize = 0;
-        let data_variables_ptr = unsafe {
-            BNGetDebugDataVariables(
-                self.handle,
-                parser_name.as_ref().as_ptr() as *mut _,
-                &mut count,
-            )
-        };
+        let data_variables_ptr =
+            unsafe { BNGetDebugDataVariables(self.handle, parser_name.as_ptr(), &mut count) };
 
         let result: Vec<NamedDataVariableWithType> = unsafe {
             std::slice::from_raw_parts_mut(data_variables_ptr, count)
@@ -541,13 +526,8 @@ impl DebugInfo {
         let parser_name = parser_name.to_cstr();
         let name = name.to_cstr();
 
-        let result = unsafe {
-            BNGetDebugTypeByName(
-                self.handle,
-                parser_name.as_ref().as_ptr() as *mut _,
-                name.as_ref().as_ptr() as *mut _,
-            )
-        };
+        let result =
+            unsafe { BNGetDebugTypeByName(self.handle, parser_name.as_ptr(), name.as_ptr()) };
         if !result.is_null() {
             Some(unsafe { Type::ref_from_raw(result) })
         } else {
@@ -566,8 +546,8 @@ impl DebugInfo {
         unsafe {
             if BNGetDebugDataVariableByName(
                 self.handle,
-                parser_name.as_ref().as_ptr() as *mut _,
-                name.as_ref().as_ptr() as *mut _,
+                parser_name.as_ptr(),
+                name.as_ptr(),
                 &mut dv,
             ) {
                 Some(NamedDataVariableWithType::from_owned_raw(dv))
@@ -585,12 +565,8 @@ impl DebugInfo {
         let parser_name = parser_name.to_cstr();
         let mut dv = BNDataVariableAndName::default();
         unsafe {
-            if BNGetDebugDataVariableByAddress(
-                self.handle,
-                parser_name.as_ref().as_ptr() as *mut _,
-                address,
-                &mut dv,
-            ) {
+            if BNGetDebugDataVariableByAddress(self.handle, parser_name.as_ptr(), address, &mut dv)
+            {
                 Some(NamedDataVariableWithType::from_owned_raw(dv))
             } else {
                 None
@@ -602,9 +578,8 @@ impl DebugInfo {
     pub fn get_types_by_name<S: AsCStr>(&self, name: S) -> Vec<NameAndType> {
         let mut count: usize = 0;
         let name = name.to_cstr();
-        let raw_names_and_types_ptr = unsafe {
-            BNGetDebugTypesByName(self.handle, name.as_ref().as_ptr() as *mut _, &mut count)
-        };
+        let raw_names_and_types_ptr =
+            unsafe { BNGetDebugTypesByName(self.handle, name.as_ptr(), &mut count) };
 
         let raw_names_and_types: &[BNNameAndType] =
             unsafe { std::slice::from_raw_parts(raw_names_and_types_ptr, count) };
@@ -623,9 +598,8 @@ impl DebugInfo {
         let name = name.to_cstr();
 
         let mut count: usize = 0;
-        let raw_variables_and_names = unsafe {
-            BNGetDebugDataVariablesByName(self.handle, name.as_ref().as_ptr() as *mut _, &mut count)
-        };
+        let raw_variables_and_names =
+            unsafe { BNGetDebugDataVariablesByName(self.handle, name.as_ptr(), &mut count) };
 
         let variables_and_names: &[*mut BNDataVariableAndName] =
             unsafe { std::slice::from_raw_parts(raw_variables_and_names as *mut _, count) };
@@ -674,66 +648,44 @@ impl DebugInfo {
     pub fn remove_parser_info<S: AsCStr>(&self, parser_name: S) -> bool {
         let parser_name = parser_name.to_cstr();
 
-        unsafe { BNRemoveDebugParserInfo(self.handle, parser_name.as_ref().as_ptr() as *mut _) }
+        unsafe { BNRemoveDebugParserInfo(self.handle, parser_name.as_ptr()) }
     }
 
     pub fn remove_parser_types<S: AsCStr>(&self, parser_name: S) -> bool {
         let parser_name = parser_name.to_cstr();
 
-        unsafe { BNRemoveDebugParserTypes(self.handle, parser_name.as_ref().as_ptr() as *mut _) }
+        unsafe { BNRemoveDebugParserTypes(self.handle, parser_name.as_ptr()) }
     }
 
     pub fn remove_parser_functions<S: AsCStr>(&self, parser_name: S) -> bool {
         let parser_name = parser_name.to_cstr();
 
-        unsafe {
-            BNRemoveDebugParserFunctions(self.handle, parser_name.as_ref().as_ptr() as *mut _)
-        }
+        unsafe { BNRemoveDebugParserFunctions(self.handle, parser_name.as_ptr()) }
     }
 
     pub fn remove_parser_data_variables<S: AsCStr>(&self, parser_name: S) -> bool {
         let parser_name = parser_name.to_cstr();
 
-        unsafe {
-            BNRemoveDebugParserDataVariables(self.handle, parser_name.as_ref().as_ptr() as *mut _)
-        }
+        unsafe { BNRemoveDebugParserDataVariables(self.handle, parser_name.as_ptr()) }
     }
 
     pub fn remove_type_by_name<S: AsCStr>(&self, parser_name: S, name: S) -> bool {
         let parser_name = parser_name.to_cstr();
         let name = name.to_cstr();
 
-        unsafe {
-            BNRemoveDebugTypeByName(
-                self.handle,
-                parser_name.as_ref().as_ptr() as *mut _,
-                name.as_ref().as_ptr() as *mut _,
-            )
-        }
+        unsafe { BNRemoveDebugTypeByName(self.handle, parser_name.as_ptr(), name.as_ptr()) }
     }
 
     pub fn remove_function_by_index<S: AsCStr>(&self, parser_name: S, index: usize) -> bool {
         let parser_name = parser_name.to_cstr();
 
-        unsafe {
-            BNRemoveDebugFunctionByIndex(
-                self.handle,
-                parser_name.as_ref().as_ptr() as *mut _,
-                index,
-            )
-        }
+        unsafe { BNRemoveDebugFunctionByIndex(self.handle, parser_name.as_ptr(), index) }
     }
 
     pub fn remove_data_variable_by_address<S: AsCStr>(&self, parser_name: S, address: u64) -> bool {
         let parser_name = parser_name.to_cstr();
 
-        unsafe {
-            BNRemoveDebugDataVariableByAddress(
-                self.handle,
-                parser_name.as_ref().as_ptr() as *mut _,
-                address,
-            )
-        }
+        unsafe { BNRemoveDebugDataVariableByAddress(self.handle, parser_name.as_ptr(), address) }
     }
 
     /// Adds a type scoped under the current parser's name to the debug info
@@ -745,7 +697,7 @@ impl DebugInfo {
         unsafe {
             BNAddDebugType(
                 self.handle,
-                name.as_ref().as_ptr() as *mut _,
+                name.as_ptr(),
                 new_type.handle,
                 raw_components.as_ptr() as *mut _,
                 components.len(),
@@ -776,7 +728,8 @@ impl DebugInfo {
 
         unsafe {
             for component in &new_func.components {
-                components_array.push(BNAllocString(component.clone().to_cstr().as_ptr() as _));
+                let component = component.to_cstr();
+                components_array.push(BNAllocString(component.as_ptr()));
             }
 
             for local_variable in &new_func.local_variables {
@@ -839,7 +792,7 @@ impl DebugInfo {
                         self.handle,
                         address,
                         t.handle,
-                        name.as_ref().as_ptr() as *mut _,
+                        name.as_ptr(),
                         components.as_ptr() as _,
                         components.len(),
                     )

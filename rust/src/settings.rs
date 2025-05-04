@@ -47,7 +47,7 @@ impl Settings {
     pub fn new_with_id<S: AsCStr>(instance_id: S) -> Ref<Self> {
         let instance_id = instance_id.to_cstr();
         unsafe {
-            let handle = BNCreateSettings(instance_id.as_ref().as_ptr() as *mut _);
+            let handle = BNCreateSettings(instance_id.as_ptr());
             debug_assert!(!handle.is_null());
             Ref::new(Self { handle })
         }
@@ -55,7 +55,7 @@ impl Settings {
 
     pub fn set_resource_id<S: AsCStr>(&self, resource_id: S) {
         let resource_id = resource_id.to_cstr();
-        unsafe { BNSettingsSetResourceId(self.handle, resource_id.as_ref().as_ptr() as *mut _) };
+        unsafe { BNSettingsSetResourceId(self.handle, resource_id.as_ptr()) };
     }
 
     pub fn serialize_schema(&self) -> String {
@@ -72,20 +72,13 @@ impl Settings {
         scope: SettingsScope,
     ) -> bool {
         let schema = schema.to_cstr();
-        unsafe {
-            BNSettingsDeserializeSchema(
-                self.handle,
-                schema.as_ref().as_ptr() as *mut _,
-                scope,
-                true,
-            )
-        }
+        unsafe { BNSettingsDeserializeSchema(self.handle, schema.as_ptr(), scope, true) }
     }
 
     pub fn contains<S: AsCStr>(&self, key: S) -> bool {
         let key = key.to_cstr();
 
-        unsafe { BNSettingsContains(self.handle, key.as_ref().as_ptr() as *mut _) }
+        unsafe { BNSettingsContains(self.handle, key.as_ptr()) }
     }
 
     pub fn keys(&self) -> Array<BnString> {
@@ -114,7 +107,7 @@ impl Settings {
         unsafe {
             BNSettingsGetBool(
                 self.handle,
-                key.as_ref().as_ptr() as *mut _,
+                key.as_ptr(),
                 view_ptr,
                 func_ptr,
                 &mut options.scope,
@@ -139,7 +132,7 @@ impl Settings {
         unsafe {
             BNSettingsGetDouble(
                 self.handle,
-                key.as_ref().as_ptr() as *mut _,
+                key.as_ptr(),
                 view_ptr,
                 func_ptr,
                 &mut options.scope,
@@ -164,7 +157,7 @@ impl Settings {
         unsafe {
             BNSettingsGetUInt64(
                 self.handle,
-                key.as_ref().as_ptr() as *mut _,
+                key.as_ptr(),
                 view_ptr,
                 func_ptr,
                 &mut options.scope,
@@ -189,7 +182,7 @@ impl Settings {
         unsafe {
             BnString::into_string(BNSettingsGetString(
                 self.handle,
-                key.as_ref().as_ptr() as *mut _,
+                key.as_ptr(),
                 view_ptr,
                 func_ptr,
                 &mut options.scope,
@@ -220,7 +213,7 @@ impl Settings {
             Array::new(
                 BNSettingsGetStringList(
                     self.handle,
-                    key.as_ref().as_ptr() as *mut _,
+                    key.as_ptr(),
                     view_ptr,
                     func_ptr,
                     &mut options.scope,
@@ -249,7 +242,7 @@ impl Settings {
         unsafe {
             BnString::into_string(BNSettingsGetJson(
                 self.handle,
-                key.as_ref().as_ptr() as *mut _,
+                key.as_ptr(),
                 view_ptr,
                 func_ptr,
                 &mut options.scope,
@@ -277,7 +270,7 @@ impl Settings {
                 view_ptr,
                 func_ptr,
                 options.scope,
-                key.as_ref().as_ptr() as *mut _,
+                key.as_ptr(),
                 value,
             );
         }
@@ -302,7 +295,7 @@ impl Settings {
                 view_ptr,
                 func_ptr,
                 options.scope,
-                key.as_ref().as_ptr() as *mut _,
+                key.as_ptr(),
                 value,
             );
         }
@@ -328,7 +321,7 @@ impl Settings {
                 view_ptr,
                 func_ptr,
                 options.scope,
-                key.as_ref().as_ptr() as *mut _,
+                key.as_ptr(),
                 value,
             );
         }
@@ -360,8 +353,8 @@ impl Settings {
                 view_ptr,
                 func_ptr,
                 options.scope,
-                key.as_ref().as_ptr() as *mut _,
-                value.as_ref().as_ptr() as *mut _,
+                key.as_ptr(),
+                value.as_ptr(),
             );
         }
     }
@@ -382,10 +375,7 @@ impl Settings {
     ) -> bool {
         let key = key.to_cstr();
         let raw_list: Vec<_> = value.map(|s| s.to_cstr()).collect();
-        let mut raw_list_ptr: Vec<_> = raw_list
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect();
+        let mut raw_list_ptr: Vec<_> = raw_list.iter().map(|s| s.as_ptr()).collect();
 
         let view_ptr = match options.view.as_ref() {
             Some(view) => view.handle,
@@ -401,7 +391,7 @@ impl Settings {
                 view_ptr,
                 func_ptr,
                 options.scope,
-                key.as_ref().as_ptr() as *mut _,
+                key.as_ptr(),
                 raw_list_ptr.as_mut_ptr(),
                 raw_list_ptr.len(),
             )
@@ -434,8 +424,8 @@ impl Settings {
                 view_ptr,
                 func_ptr,
                 options.scope,
-                key.as_ref().as_ptr() as *mut _,
-                value.as_ref().as_ptr() as *mut _,
+                key.as_ptr(),
+                value.as_ptr(),
             )
         }
     }
@@ -446,8 +436,8 @@ impl Settings {
         unsafe {
             BnString::into_string(BNSettingsQueryPropertyString(
                 self.handle,
-                key.as_ref().as_ptr() as *mut _,
-                property.as_ref().as_ptr() as *mut _,
+                key.as_ptr(),
+                property.as_ptr(),
             ))
         }
     }
@@ -460,8 +450,8 @@ impl Settings {
             Array::new(
                 BNSettingsQueryPropertyStringList(
                     self.handle,
-                    key.as_ref().as_ptr() as *mut _,
-                    property.as_ref().as_ptr() as *mut _,
+                    key.as_ptr(),
+                    property.as_ptr(),
                     &mut size,
                 ) as *mut *mut c_char,
                 size,
@@ -474,12 +464,7 @@ impl Settings {
         let key = key.to_cstr();
         let property = property.to_cstr();
         unsafe {
-            BNSettingsUpdateBoolProperty(
-                self.handle,
-                key.as_ref().as_ptr() as *mut _,
-                property.as_ref().as_ptr() as *mut _,
-                value,
-            );
+            BNSettingsUpdateBoolProperty(self.handle, key.as_ptr(), property.as_ptr(), value);
         }
     }
 
@@ -487,12 +472,7 @@ impl Settings {
         let key = key.to_cstr();
         let property = property.to_cstr();
         unsafe {
-            BNSettingsUpdateUInt64Property(
-                self.handle,
-                key.as_ref().as_ptr() as *mut _,
-                property.as_ref().as_ptr() as *mut _,
-                value,
-            );
+            BNSettingsUpdateUInt64Property(self.handle, key.as_ptr(), property.as_ptr(), value);
         }
     }
 
@@ -500,12 +480,7 @@ impl Settings {
         let key = key.to_cstr();
         let property = property.to_cstr();
         unsafe {
-            BNSettingsUpdateDoubleProperty(
-                self.handle,
-                key.as_ref().as_ptr() as *mut _,
-                property.as_ref().as_ptr() as *mut _,
-                value,
-            );
+            BNSettingsUpdateDoubleProperty(self.handle, key.as_ptr(), property.as_ptr(), value);
         }
     }
 
@@ -516,9 +491,9 @@ impl Settings {
         unsafe {
             BNSettingsUpdateStringProperty(
                 self.handle,
-                key.as_ref().as_ptr() as *mut _,
-                property.as_ref().as_ptr() as *mut _,
-                value.as_ref().as_ptr() as *mut _,
+                key.as_ptr(),
+                property.as_ptr(),
+                value.as_ptr(),
             );
         }
     }
@@ -532,16 +507,13 @@ impl Settings {
         let key = key.to_cstr();
         let property = property.to_cstr();
         let raw_list: Vec<_> = value.map(|s| s.to_cstr()).collect();
-        let mut raw_list_ptr: Vec<_> = raw_list
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect();
+        let mut raw_list_ptr: Vec<_> = raw_list.iter().map(|s| s.as_ptr()).collect();
 
         unsafe {
             BNSettingsUpdateStringListProperty(
                 self.handle,
-                key.as_ref().as_ptr() as *mut _,
-                property.as_ref().as_ptr() as *mut _,
+                key.as_ptr(),
+                property.as_ptr(),
                 raw_list_ptr.as_mut_ptr(),
                 raw_list_ptr.len(),
             );
@@ -552,26 +524,14 @@ impl Settings {
         let group = group.to_cstr();
         let title = title.to_cstr();
 
-        unsafe {
-            BNSettingsRegisterGroup(
-                self.handle,
-                group.as_ref().as_ptr() as *mut _,
-                title.as_ref().as_ptr() as *mut _,
-            )
-        }
+        unsafe { BNSettingsRegisterGroup(self.handle, group.as_ptr(), title.as_ptr()) }
     }
 
     pub fn register_setting_json<S1: AsCStr, S2: AsCStr>(&self, group: S1, properties: S2) -> bool {
         let group = group.to_cstr();
         let properties = properties.to_cstr();
 
-        unsafe {
-            BNSettingsRegisterSetting(
-                self.handle,
-                group.as_ref().as_ptr() as *mut _,
-                properties.as_ref().as_ptr() as *mut _,
-            )
-        }
+        unsafe { BNSettingsRegisterSetting(self.handle, group.as_ptr(), properties.as_ptr()) }
     }
 
     // TODO: register_setting but type-safely turn it into json

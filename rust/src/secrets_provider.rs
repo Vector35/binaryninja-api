@@ -37,7 +37,7 @@ impl CoreSecretsProvider {
             deleteData: Some(cb_delete_data::<C>),
         };
         let result =
-            unsafe { BNRegisterSecretsProvider(name.as_ptr() as *const c_char, &mut callbacks) };
+            unsafe { BNRegisterSecretsProvider(name.as_ptr(), &mut callbacks) };
         unsafe { Self::from_raw(NonNull::new(result).unwrap()) }
     }
 
@@ -52,7 +52,7 @@ impl CoreSecretsProvider {
     /// Retrieve a provider by name
     pub fn by_name<S: AsCStr>(name: S) -> Option<CoreSecretsProvider> {
         let name = name.to_cstr();
-        let result = unsafe { BNGetSecretsProviderByName(name.as_ref().as_ptr() as *const c_char) };
+        let result = unsafe { BNGetSecretsProviderByName(name.as_ptr()) };
         NonNull::new(result).map(|h| unsafe { Self::from_raw(h) })
     }
 
@@ -65,17 +65,13 @@ impl CoreSecretsProvider {
     /// Check if data for a specific key exists, but do not retrieve it
     pub fn has_data<S: AsCStr>(&self, key: S) -> bool {
         let key = key.to_cstr();
-        unsafe {
-            BNSecretsProviderHasData(self.handle.as_ptr(), key.as_ref().as_ptr() as *const c_char)
-        }
+        unsafe { BNSecretsProviderHasData(self.handle.as_ptr(), key.as_ptr()) }
     }
 
     /// Retrieve data for the given key, if it exists
     pub fn get_data<S: AsCStr>(&self, key: S) -> String {
         let key = key.to_cstr();
-        let result = unsafe {
-            BNGetSecretsProviderData(self.handle.as_ptr(), key.as_ref().as_ptr() as *const c_char)
-        };
+        let result = unsafe { BNGetSecretsProviderData(self.handle.as_ptr(), key.as_ptr()) };
         unsafe { BnString::into_string(result) }
     }
 
@@ -83,24 +79,13 @@ impl CoreSecretsProvider {
     pub fn store_data<K: AsCStr, V: AsCStr>(&self, key: K, value: V) -> bool {
         let key = key.to_cstr();
         let value = value.to_cstr();
-        unsafe {
-            BNStoreSecretsProviderData(
-                self.handle.as_ptr(),
-                key.as_ref().as_ptr() as *const c_char,
-                value.as_ref().as_ptr() as *const c_char,
-            )
-        }
+        unsafe { BNStoreSecretsProviderData(self.handle.as_ptr(), key.as_ptr(), value.as_ptr()) }
     }
 
     /// Delete stored data with the given key
     pub fn delete_data<S: AsCStr>(&self, key: S) -> bool {
         let key = key.to_cstr();
-        unsafe {
-            BNDeleteSecretsProviderData(
-                self.handle.as_ptr(),
-                key.as_ref().as_ptr() as *const c_char,
-            )
-        }
+        unsafe { BNDeleteSecretsProviderData(self.handle.as_ptr(), key.as_ptr()) }
     }
 }
 

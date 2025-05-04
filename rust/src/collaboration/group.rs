@@ -2,7 +2,6 @@ use super::Remote;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{AsCStr, BnString};
 use binaryninjacore_sys::*;
-use std::ffi::c_char;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ptr::NonNull;
@@ -52,12 +51,7 @@ impl RemoteGroup {
     /// You will need to push the group to update the Remote.
     pub fn set_name<U: AsCStr>(&self, name: U) {
         let name = name.to_cstr();
-        unsafe {
-            BNCollaborationGroupSetName(
-                self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const c_char,
-            )
-        }
+        unsafe { BNCollaborationGroupSetName(self.handle.as_ptr(), name.as_ptr()) }
     }
 
     /// Get list of users in the group
@@ -93,10 +87,7 @@ impl RemoteGroup {
         I::Item: AsCStr,
     {
         let usernames: Vec<_> = usernames.into_iter().map(|u| u.to_cstr()).collect();
-        let mut usernames_raw: Vec<_> = usernames
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect();
+        let mut usernames_raw: Vec<_> = usernames.iter().map(|s| s.as_ptr()).collect();
         // TODO: This should only fail if collaboration is not supported.
         // TODO: Because you should not have a RemoteGroup at that point we can ignore?
         // TODO: Do you need any permissions to do this?
@@ -113,12 +104,7 @@ impl RemoteGroup {
     /// Test if a group has a user with the given username
     pub fn contains_user<U: AsCStr>(&self, username: U) -> bool {
         let username = username.to_cstr();
-        unsafe {
-            BNCollaborationGroupContainsUser(
-                self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const c_char,
-            )
-        }
+        unsafe { BNCollaborationGroupContainsUser(self.handle.as_ptr(), username.as_ptr()) }
     }
 }
 

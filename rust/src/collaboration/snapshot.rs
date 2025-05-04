@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 use std::ptr::NonNull;
 use std::time::SystemTime;
 
@@ -237,7 +237,7 @@ impl RemoteSnapshot {
                 self.handle.as_ptr(),
                 parent.is_some(),
                 parent.unwrap_or(0),
-                data.as_ref().as_ptr() as *const c_char,
+                data.as_ptr(),
             )
         };
         let handle = NonNull::new(value).ok_or(())?;

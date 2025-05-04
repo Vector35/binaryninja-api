@@ -14,7 +14,7 @@ use binaryninjacore_sys::{
     BNReadSnapshotDataWithProgress, BNSetSnapshotName, BNSnapshot, BNSnapshotHasAncestor,
     BNSnapshotHasContents, BNSnapshotHasUndo, BNSnapshotStoreData,
 };
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
 use std::ptr::NonNull;
@@ -52,7 +52,7 @@ impl Snapshot {
     /// Set the displayed snapshot name
     pub fn set_name<S: AsCStr>(&self, value: S) {
         let value_raw = value.to_cstr();
-        let value_ptr = value_raw.as_ref().as_ptr() as *const c_char;
+        let value_ptr = value_raw.as_ptr();
         unsafe { BNSetSnapshotName(self.handle.as_ptr(), value_ptr) }
     }
 

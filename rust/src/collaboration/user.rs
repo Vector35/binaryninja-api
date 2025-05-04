@@ -1,6 +1,5 @@
 use super::Remote;
 use binaryninjacore_sys::*;
-use std::ffi::c_char;
 use std::ptr::NonNull;
 
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
@@ -51,12 +50,8 @@ impl RemoteUser {
     /// Set user's username. You will need to push the user to update the Remote
     pub fn set_username<U: AsCStr>(&self, username: U) -> Result<(), ()> {
         let username = username.to_cstr();
-        let result = unsafe {
-            BNCollaborationUserSetUsername(
-                self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let result =
+            unsafe { BNCollaborationUserSetUsername(self.handle.as_ptr(), username.as_ptr()) };
         if result {
             Ok(())
         } else {
@@ -74,12 +69,8 @@ impl RemoteUser {
     /// Set user's email. You will need to push the user to update the Remote
     pub fn set_email<U: AsCStr>(&self, email: U) -> Result<(), ()> {
         let username = email.to_cstr();
-        let result = unsafe {
-            BNCollaborationUserSetEmail(
-                self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let result =
+            unsafe { BNCollaborationUserSetEmail(self.handle.as_ptr(), username.as_ptr()) };
         if result {
             Ok(())
         } else {

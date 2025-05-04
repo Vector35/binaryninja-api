@@ -7,7 +7,6 @@ use binaryninjacore_sys::{
     BNRepositoryManagerAddRepository, BNRepositoryManagerCheckForUpdates,
     BNRepositoryManagerGetDefaultRepository, BNRepositoryManagerGetRepositories,
 };
-use std::ffi::c_char;
 use std::fmt::Debug;
 use std::ptr::NonNull;
 
@@ -31,8 +30,7 @@ impl RepositoryManager {
 
     pub fn new<S: AsCStr>(plugins_path: S) -> Ref<Self> {
         let plugins_path = plugins_path.to_cstr();
-        let result =
-            unsafe { BNCreateRepositoryManager(plugins_path.as_ref().as_ptr() as *const c_char) };
+        let result = unsafe { BNCreateRepositoryManager(plugins_path.as_ptr()) };
         unsafe { Self::ref_from_raw(NonNull::new(result).unwrap()) }
     }
 
@@ -65,22 +63,14 @@ impl RepositoryManager {
         let url = url.to_cstr();
         let repo_path = repository_path.to_cstr();
         unsafe {
-            BNRepositoryManagerAddRepository(
-                self.handle.as_ptr(),
-                url.as_ref().as_ptr() as *const c_char,
-                repo_path.as_ref().as_ptr() as *const c_char,
-            )
+            BNRepositoryManagerAddRepository(self.handle.as_ptr(), url.as_ptr(), repo_path.as_ptr())
         }
     }
 
     pub fn repository_by_path<P: AsCStr>(&self, path: P) -> Option<Repository> {
         let path = path.to_cstr();
-        let result = unsafe {
-            BNRepositoryGetRepositoryByPath(
-                self.handle.as_ptr(),
-                path.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let result =
+            unsafe { BNRepositoryGetRepositoryByPath(self.handle.as_ptr(), path.as_ptr()) };
         NonNull::new(result).map(|raw| unsafe { Repository::from_raw(raw) })
     }
 

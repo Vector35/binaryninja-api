@@ -23,6 +23,7 @@ use std::hash::{Hash, Hasher};
 use std::mem;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
+use crate::type_archive::TypeArchiveSnapshotId;
 
 // TODO: Remove or refactor this.
 pub(crate) fn raw_to_string(ptr: *const c_char) -> Option<String> {
@@ -289,6 +290,14 @@ unsafe impl AsCStr for &Path {
         CString::new(self.as_os_str().as_encoded_bytes())
             .expect("can't pass paths with internal nul bytes to core!")
     }
+}
+
+unsafe impl AsCStr for TypeArchiveSnapshotId {
+    type Result = CString;
+    
+    fn to_cstr(self) -> Self::Result {
+        self.to_string().to_cstr()
+    }   
 }
 
 pub trait IntoJson {

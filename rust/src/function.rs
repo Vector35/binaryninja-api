@@ -376,7 +376,7 @@ impl Function {
         let raw = comment.to_cstr();
 
         unsafe {
-            BNSetFunctionComment(self.handle, raw.as_ref().as_ptr() as *mut _);
+            BNSetFunctionComment(self.handle, raw.as_ptr());
         }
     }
 
@@ -398,7 +398,7 @@ impl Function {
         let raw = comment.to_cstr();
 
         unsafe {
-            BNSetCommentForAddress(self.handle, addr, raw.as_ref().as_ptr() as *mut _);
+            BNSetCommentForAddress(self.handle, addr, raw.as_ptr());
         }
     }
 
@@ -1712,7 +1712,7 @@ impl Function {
         let arch = arch.unwrap_or_else(|| self.arch());
         let enum_display_typeid = enum_display_typeid.map(AsCStr::to_cstr);
         let enum_display_typeid_ptr = enum_display_typeid
-            .map(|x| x.as_ref().as_ptr() as *const c_char)
+            .map(|x| x.as_ptr())
             .unwrap_or(std::ptr::null());
         unsafe {
             BNSetIntegerConstantDisplayType(

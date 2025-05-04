@@ -34,12 +34,8 @@ pub fn register_type_printer<S: AsCStr, T: TypePrinter>(
         freeString: Some(cb_free_string),
         freeLines: Some(cb_free_lines),
     };
-    let result = unsafe {
-        BNRegisterTypePrinter(
-            name.to_cstr().as_ref().as_ptr() as *const c_char,
-            &mut callback,
-        )
-    };
+    let raw_name = name.to_cstr();
+    let result = unsafe { BNRegisterTypePrinter(raw_name.as_ptr(), &mut callback) };
     let core = unsafe { CoreTypePrinter::from_raw(NonNull::new(result).unwrap()) };
     (parser, core)
 }
@@ -63,7 +59,7 @@ impl CoreTypePrinter {
 
     pub fn printer_by_name<S: AsCStr>(name: S) -> Option<CoreTypePrinter> {
         let name_raw = name.to_cstr();
-        let result = unsafe { BNGetTypePrinterByName(name_raw.as_ref().as_ptr() as *const c_char) };
+        let result = unsafe { BNGetTypePrinterByName(name_raw.as_ptr()) };
         NonNull::new(result).map(|x| unsafe { Self::from_raw(x) })
     }
 

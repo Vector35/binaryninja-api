@@ -1404,7 +1404,8 @@ impl CoreArchitecture {
     }
 
     pub fn by_name(name: &str) -> Option<Self> {
-        let handle = unsafe { BNGetArchitectureByName(name.to_cstr().as_ptr() as *mut _) };
+        let name = name.to_cstr();
+        let handle = unsafe { BNGetArchitectureByName(name.as_ptr()) };
         match handle.is_null() {
             false => Some(CoreArchitecture { handle }),
             true => None,
@@ -1955,9 +1956,7 @@ pub trait ArchitectureExt: Architecture {
     fn register_by_name<S: AsCStr>(&self, name: S) -> Option<Self::Register> {
         let name = name.to_cstr();
 
-        match unsafe {
-            BNGetArchitectureRegisterByName(self.as_ref().handle, name.as_ref().as_ptr() as *mut _)
-        } {
+        match unsafe { BNGetArchitectureRegisterByName(self.as_ref().handle, name.as_ptr()) } {
             0xffff_ffff => None,
             reg => self.register_from_id(reg.into()),
         }
@@ -3220,8 +3219,7 @@ where
     };
 
     unsafe {
-        let res =
-            BNRegisterArchitecture(name.as_ref().as_ptr() as *mut _, &mut custom_arch as *mut _);
+        let res = BNRegisterArchitecture(name.as_ptr(), &mut custom_arch as *mut _);
 
         assert!(!res.is_null());
 

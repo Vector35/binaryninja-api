@@ -86,14 +86,8 @@ impl CoreWebsocketClient {
             .into_iter()
             .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
             .unzip();
-        let header_keys: Vec<*const c_char> = header_keys
-            .iter()
-            .map(|k| k.as_ref().as_ptr() as *const c_char)
-            .collect();
-        let header_values: Vec<*const c_char> = header_values
-            .iter()
-            .map(|v| v.as_ref().as_ptr() as *const c_char)
-            .collect();
+        let header_keys: Vec<*const c_char> = header_keys.iter().map(|k| k.as_ptr()).collect();
+        let header_values: Vec<*const c_char> = header_values.iter().map(|v| v.as_ptr()).collect();
         // SAFETY: This context will only be live for the duration of BNConnectWebsocketClient
         // SAFETY: Any subsequent call to BNConnectWebsocketClient will write over the context.
         let mut output_callbacks = BNWebsocketClientOutputCallbacks {
@@ -106,7 +100,7 @@ impl CoreWebsocketClient {
         unsafe {
             BNConnectWebsocketClient(
                 self.handle.as_ptr(),
-                url.as_ptr() as *const c_char,
+                url.as_ptr(),
                 header_keys.len().try_into().unwrap(),
                 header_keys.as_ptr(),
                 header_values.as_ptr(),
@@ -131,7 +125,7 @@ impl CoreWebsocketClient {
     pub fn notify_error(&self, msg: &str) {
         let error = msg.to_cstr();
         unsafe {
-            BNNotifyWebsocketClientError(self.handle.as_ptr(), error.as_ptr() as *const c_char)
+            BNNotifyWebsocketClientError(self.handle.as_ptr(), error.as_ptr())
         }
     }
 

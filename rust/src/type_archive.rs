@@ -66,7 +66,7 @@ impl TypeArchive {
     /// Open the Type Archive at the given path, if it exists.
     pub fn open(path: impl AsRef<Path>) -> Option<Ref<TypeArchive>> {
         let raw_path = path.as_ref().to_cstr();
-        let handle = unsafe { BNOpenTypeArchive(raw_path.as_ptr() as *const c_char) };
+        let handle = unsafe { BNOpenTypeArchive(raw_path.as_ptr()) };
         NonNull::new(handle).map(|handle| unsafe { TypeArchive::ref_from_raw(handle) })
     }
 
@@ -76,7 +76,7 @@ impl TypeArchive {
     pub fn create(path: impl AsRef<Path>, platform: &Platform) -> Option<Ref<TypeArchive>> {
         let raw_path = path.as_ref().to_cstr();
         let handle =
-            unsafe { BNCreateTypeArchive(raw_path.as_ptr() as *const c_char, platform.handle) };
+            unsafe { BNCreateTypeArchive(raw_path.as_ptr(), platform.handle) };
         NonNull::new(handle).map(|handle| unsafe { TypeArchive::ref_from_raw(handle) })
     }
 
@@ -90,20 +90,15 @@ impl TypeArchive {
     ) -> Option<Ref<TypeArchive>> {
         let raw_path = path.as_ref().to_cstr();
         let id = id.to_cstr();
-        let handle = unsafe {
-            BNCreateTypeArchiveWithId(
-                raw_path.as_ptr() as *const c_char,
-                platform.handle,
-                id.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let handle =
+            unsafe { BNCreateTypeArchiveWithId(raw_path.as_ptr(), platform.handle, id.as_ptr()) };
         NonNull::new(handle).map(|handle| unsafe { TypeArchive::ref_from_raw(handle) })
     }
 
     /// Get a reference to the Type Archive with the known id, if one exists.
     pub fn lookup_by_id<S: AsCStr>(id: S) -> Option<Ref<TypeArchive>> {
         let id = id.to_cstr();
-        let handle = unsafe { BNLookupTypeArchiveById(id.as_ref().as_ptr() as *const c_char) };
+        let handle = unsafe { BNLookupTypeArchiveById(id.as_ptr()) };
         NonNull::new(handle).map(|handle| unsafe { TypeArchive::ref_from_raw(handle) })
     }
 
@@ -238,13 +233,8 @@ impl TypeArchive {
     pub fn rename_type_by_id<S: AsCStr>(&self, id: S, new_name: QualifiedName) -> bool {
         let id = id.to_cstr();
         let raw_name = QualifiedName::into_raw(new_name);
-        let result = unsafe {
-            BNRenameTypeArchiveType(
-                self.handle.as_ptr(),
-                id.as_ref().as_ptr() as *const c_char,
-                &raw_name,
-            )
-        };
+        let result =
+            unsafe { BNRenameTypeArchiveType(self.handle.as_ptr(), id.as_ptr(), &raw_name) };
         QualifiedName::free_raw(raw_name);
         result
     }
@@ -261,9 +251,7 @@ impl TypeArchive {
     /// Delete an existing type in the type archive.
     pub fn delete_type_by_id<S: AsCStr>(&self, id: S) -> bool {
         let id = id.to_cstr();
-        let result = unsafe {
-            BNDeleteTypeArchiveType(self.handle.as_ptr(), id.as_ref().as_ptr() as *const c_char)
-        };
+        let result = unsafe { BNDeleteTypeArchiveType(self.handle.as_ptr(), id.as_ptr()) };
         result
     }
 
@@ -315,7 +303,7 @@ impl TypeArchive {
         let result = unsafe {
             BNGetTypeArchiveTypeById(
                 self.handle.as_ptr(),
-                id.as_ref().as_ptr() as *const c_char,
+                id.as_ptr(),
                 snapshot.0.as_ptr() as *const c_char,
             )
         };
@@ -342,7 +330,7 @@ impl TypeArchive {
         let result = unsafe {
             BNGetTypeArchiveTypeName(
                 self.handle.as_ptr(),
-                id.as_ref().as_ptr() as *const c_char,
+                id.as_ptr(),
                 snapshot.0.as_ptr() as *const c_char,
             )
         };
@@ -497,7 +485,7 @@ impl TypeArchive {
         let result = unsafe {
             BNGetTypeArchiveOutgoingDirectTypeReferences(
                 self.handle.as_ptr(),
-                id.as_ref().as_ptr() as *const c_char,
+                id.as_ptr(),
                 snapshot.0.as_ptr() as *const c_char,
                 &mut count,
             )
@@ -527,7 +515,7 @@ impl TypeArchive {
         let result = unsafe {
             BNGetTypeArchiveOutgoingRecursiveTypeReferences(
                 self.handle.as_ptr(),
-                id.as_ref().as_ptr() as *const c_char,
+                id.as_ptr(),
                 snapshot.0.as_ptr() as *const c_char,
                 &mut count,
             )
@@ -557,7 +545,7 @@ impl TypeArchive {
         let result = unsafe {
             BNGetTypeArchiveIncomingDirectTypeReferences(
                 self.handle.as_ptr(),
-                id.as_ref().as_ptr() as *const c_char,
+                id.as_ptr(),
                 snapshot.0.as_ptr() as *const c_char,
                 &mut count,
             )
@@ -587,7 +575,7 @@ impl TypeArchive {
         let result = unsafe {
             BNGetTypeArchiveIncomingRecursiveTypeReferences(
                 self.handle.as_ptr(),
-                id.as_ref().as_ptr() as *const c_char,
+                id.as_ptr(),
                 snapshot.0.as_ptr() as *const c_char,
                 &mut count,
             )
@@ -599,9 +587,7 @@ impl TypeArchive {
     /// Look up a metadata entry in the archive
     pub fn query_metadata<S: AsCStr>(&self, key: S) -> Option<Ref<Metadata>> {
         let key = key.to_cstr();
-        let result = unsafe {
-            BNTypeArchiveQueryMetadata(self.handle.as_ptr(), key.as_ref().as_ptr() as *const c_char)
-        };
+        let result = unsafe { BNTypeArchiveQueryMetadata(self.handle.as_ptr(), key.as_ptr()) };
         (!result.is_null()).then(|| unsafe { Metadata::ref_from_raw(result) })
     }
 
@@ -611,25 +597,15 @@ impl TypeArchive {
     /// * `md` - object to store.
     pub fn store_metadata<S: AsCStr>(&self, key: S, md: &Metadata) {
         let key = key.to_cstr();
-        let result = unsafe {
-            BNTypeArchiveStoreMetadata(
-                self.handle.as_ptr(),
-                key.as_ref().as_ptr() as *const c_char,
-                md.handle,
-            )
-        };
+        let result =
+            unsafe { BNTypeArchiveStoreMetadata(self.handle.as_ptr(), key.as_ptr(), md.handle) };
         assert!(result);
     }
 
     /// Delete a given metadata entry in the archive from the `key`
     pub fn remove_metadata<S: AsCStr>(&self, key: S) -> bool {
         let key = key.to_cstr();
-        unsafe {
-            BNTypeArchiveRemoveMetadata(
-                self.handle.as_ptr(),
-                key.as_ref().as_ptr() as *const c_char,
-            )
-        }
+        unsafe { BNTypeArchiveRemoveMetadata(self.handle.as_ptr(), key.as_ptr()) }
     }
 
     /// Turn a given `snapshot` id into a data stream
@@ -708,7 +684,7 @@ impl TypeArchive {
     /// Determine if `file` is a Type Archive
     pub fn is_type_archive<P: AsCStr>(file: P) -> bool {
         let file = file.to_cstr();
-        unsafe { BNIsTypeArchive(file.as_ref().as_ptr() as *const c_char) }
+        unsafe { BNIsTypeArchive(file.as_ptr()) }
     }
 
     ///// Get the TypeContainer interface for this Type Archive, presenting types
@@ -840,9 +816,9 @@ impl TypeArchive {
         let success = unsafe {
             BNTypeArchiveMergeSnapshots(
                 self.handle.as_ptr(),
-                base_snapshot.as_ref().as_ptr() as *const c_char,
-                first_snapshot.as_ref().as_ptr() as *const c_char,
-                second_snapshot.as_ref().as_ptr() as *const c_char,
+                base_snapshot.as_ptr(),
+                first_snapshot.as_ptr(),
+                second_snapshot.as_ptr(),
                 merge_keys_raw,
                 merge_values_raw,
                 merge_keys.len(),
@@ -1169,12 +1145,7 @@ impl TypeArchiveMergeConflict {
     // TODO: This needs documentation!
     pub fn success<S: AsCStr>(&self, value: S) -> bool {
         let value = value.to_cstr();
-        unsafe {
-            BNTypeArchiveMergeConflictSuccess(
-                self.handle.as_ptr(),
-                value.as_ref().as_ptr() as *const c_char,
-            )
-        }
+        unsafe { BNTypeArchiveMergeConflictSuccess(self.handle.as_ptr(), value.as_ptr()) }
     }
 }
 

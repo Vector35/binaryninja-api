@@ -1,10 +1,10 @@
 #![allow(dead_code)]
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
-use crate::string::{raw_to_string, BnString};
+use crate::string::{raw_to_string, AsCStr, BnString};
 use binaryninjacore_sys::*;
 
 pub type UpdateResult = BNUpdateResult;
@@ -96,8 +96,9 @@ impl UpdateChannel {
     pub fn versions(&self) -> Result<Array<UpdateVersion>, BnString> {
         let mut count = 0;
         let mut errors = std::ptr::null_mut();
+        let name = self.name.clone().to_cstr();
         let result = unsafe {
-            BNGetUpdateChannelVersions(self.name.as_ptr() as *const c_char, &mut count, &mut errors)
+            BNGetUpdateChannelVersions(name.as_ptr(), &mut count, &mut errors)
         };
         if !errors.is_null() {
             Err(unsafe { BnString::from_raw(errors) })
@@ -122,9 +123,10 @@ impl UpdateChannel {
     /// Whether updates are available
     pub fn updates_available(&self) -> Result<bool, BnString> {
         let mut errors = std::ptr::null_mut();
+        let name = self.name.clone().to_cstr();
         let result = unsafe {
             BNAreUpdatesAvailable(
-                self.name.as_ptr() as *const c_char,
+                name.as_ptr(),
                 std::ptr::null_mut(),
                 std::ptr::null_mut(),
                 &mut errors,
@@ -147,9 +149,10 @@ impl UpdateChannel {
     ) -> Result<UpdateResult, BnString> {
         let mut errors = std::ptr::null_mut();
 
+        let name = self.name.clone().to_cstr();
         let result = unsafe {
             BNUpdateToLatestVersion(
-                self.name.as_ptr() as *const c_char,
+                name.as_ptr(),
                 &mut errors,
                 Some(P::cb_progress_callback),
                 &mut progress as *mut P as *mut c_void,
@@ -174,10 +177,12 @@ impl UpdateChannel {
     ) -> Result<UpdateResult, BnString> {
         let mut errors = std::ptr::null_mut();
 
+        let name = self.name.clone().to_cstr();
+        let version = version.version.clone().to_cstr();
         let result = unsafe {
             BNUpdateToVersion(
-                self.name.as_ptr() as *const c_char,
-                version.version.as_ptr() as *const c_char,
+                name.as_ptr(),
+                version.as_ptr(),
                 &mut errors,
                 Some(P::cb_progress_callback),
                 &mut progress as *mut P as *mut c_void,

@@ -1,5 +1,4 @@
 use binaryninjacore_sys::*;
-use std::ffi::c_char;
 use std::ptr::NonNull;
 
 use super::{RemoteFile, RemoteUser};
@@ -68,12 +67,7 @@ impl Changeset {
     /// Set the name of the changeset, e.g. in a name changeset function.
     pub fn set_name<S: AsCStr>(&self, value: S) -> bool {
         let value = value.to_cstr();
-        unsafe {
-            BNCollaborationChangesetSetName(
-                self.handle.as_ptr(),
-                value.as_ref().as_ptr() as *const c_char,
-            )
-        }
+        unsafe { BNCollaborationChangesetSetName(self.handle.as_ptr(), value.as_ptr()) }
     }
 }
 

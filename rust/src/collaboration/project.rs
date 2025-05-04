@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 use std::ptr::NonNull;
 use std::time::SystemTime;
 
@@ -138,12 +138,7 @@ impl RemoteProject {
     /// Set the description of the file. You will need to push the file to update the remote version.
     pub fn set_name<S: AsCStr>(&self, name: S) -> Result<(), ()> {
         let name = name.to_cstr();
-        let success = unsafe {
-            BNRemoteProjectSetName(
-                self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let success = unsafe { BNRemoteProjectSetName(self.handle.as_ptr(), name.as_ptr()) };
         success.then_some(()).ok_or(())
     }
 
@@ -157,12 +152,8 @@ impl RemoteProject {
     /// Set the description of the file. You will need to push the file to update the remote version.
     pub fn set_description<S: AsCStr>(&self, description: S) -> Result<(), ()> {
         let description = description.to_cstr();
-        let success = unsafe {
-            BNRemoteProjectSetDescription(
-                self.handle.as_ptr(),
-                description.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let success =
+            unsafe { BNRemoteProjectSetDescription(self.handle.as_ptr(), description.as_ptr()) };
         success.then_some(()).ok_or(())
     }
 
@@ -236,9 +227,7 @@ impl RemoteProject {
             self.pull_files()?;
         }
         let id = id.to_cstr();
-        let result = unsafe {
-            BNRemoteProjectGetFileById(self.handle.as_ptr(), id.as_ref().as_ptr() as *const c_char)
-        };
+        let result = unsafe { BNRemoteProjectGetFileById(self.handle.as_ptr(), id.as_ptr()) };
         Ok(NonNull::new(result).map(|handle| unsafe { RemoteFile::ref_from_raw(handle) }))
     }
 
@@ -252,12 +241,7 @@ impl RemoteProject {
             self.pull_files()?;
         }
         let id = name.to_cstr();
-        let result = unsafe {
-            BNRemoteProjectGetFileByName(
-                self.handle.as_ptr(),
-                id.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let result = unsafe { BNRemoteProjectGetFileByName(self.handle.as_ptr(), id.as_ptr()) };
         Ok(NonNull::new(result).map(|handle| unsafe { RemoteFile::ref_from_raw(handle) }))
     }
 
@@ -360,11 +344,11 @@ impl RemoteProject {
         let file_ptr = unsafe {
             BNRemoteProjectCreateFile(
                 self.handle.as_ptr(),
-                filename.as_ref().as_ptr() as *const c_char,
+                filename.as_ptr(),
                 contents.as_ptr() as *mut _,
                 contents.len(),
-                name.as_ref().as_ptr() as *const c_char,
-                description.as_ref().as_ptr() as *const c_char,
+                name.as_ptr(),
+                description.as_ptr(),
                 folder_handle,
                 file_type,
                 Some(P::cb_progress_callback),
@@ -393,14 +377,8 @@ impl RemoteProject {
             .into_iter()
             .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
             .unzip();
-        let mut keys_raw = keys
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect::<Vec<_>>();
-        let mut values_raw = values
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect::<Vec<_>>();
+        let mut keys_raw = keys.iter().map(|s| s.as_ptr()).collect::<Vec<_>>();
+        let mut values_raw = values.iter().map(|s| s.as_ptr()).collect::<Vec<_>>();
         let success = unsafe {
             BNRemoteProjectPushFile(
                 self.handle.as_ptr(),
@@ -449,12 +427,7 @@ impl RemoteProject {
             self.pull_folders()?;
         }
         let id = id.to_cstr();
-        let result = unsafe {
-            BNRemoteProjectGetFolderById(
-                self.handle.as_ptr(),
-                id.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let result = unsafe { BNRemoteProjectGetFolderById(self.handle.as_ptr(), id.as_ptr()) };
         Ok(NonNull::new(result).map(|handle| unsafe { RemoteFolder::ref_from_raw(handle) }))
     }
 
@@ -534,8 +507,8 @@ impl RemoteProject {
         let file_ptr = unsafe {
             BNRemoteProjectCreateFolder(
                 self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const c_char,
-                description.as_ref().as_ptr() as *const c_char,
+                name.as_ptr(),
+                description.as_ptr(),
                 folder_handle,
                 Some(P::cb_progress_callback),
                 &mut progress as *mut P as *mut c_void,
@@ -566,14 +539,8 @@ impl RemoteProject {
             .into_iter()
             .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
             .unzip();
-        let mut keys_raw = keys
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect::<Vec<_>>();
-        let mut values_raw = values
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect::<Vec<_>>();
+        let mut keys_raw = keys.iter().map(|s| s.as_ptr()).collect::<Vec<_>>();
+        let mut values_raw = values.iter().map(|s| s.as_ptr()).collect::<Vec<_>>();
         let success = unsafe {
             BNRemoteProjectPushFolder(
                 self.handle.as_ptr(),
@@ -761,7 +728,7 @@ impl RemoteProject {
         let value = unsafe {
             BNRemoteProjectCreateUserPermission(
                 self.handle.as_ptr(),
-                user_id.as_ref().as_ptr() as *const c_char,
+                user_id.as_ptr(),
                 level,
                 Some(F::cb_progress_callback),
                 &mut progress as *mut F as *mut c_void,
@@ -793,14 +760,8 @@ impl RemoteProject {
             .into_iter()
             .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
             .unzip();
-        let mut keys_raw = keys
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect::<Vec<_>>();
-        let mut values_raw = values
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect::<Vec<_>>();
+        let mut keys_raw = keys.iter().map(|s| s.as_ptr()).collect::<Vec<_>>();
+        let mut values_raw = values.iter().map(|s| s.as_ptr()).collect::<Vec<_>>();
 
         let success = unsafe {
             BNRemoteProjectPushPermission(
@@ -829,12 +790,7 @@ impl RemoteProject {
     /// * `username` - Username of user to check
     pub fn can_user_view<S: AsCStr>(&self, username: S) -> bool {
         let username = username.to_cstr();
-        unsafe {
-            BNRemoteProjectCanUserView(
-                self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const c_char,
-            )
-        }
+        unsafe { BNRemoteProjectCanUserView(self.handle.as_ptr(), username.as_ptr()) }
     }
 
     /// Determine if a user is in any of the edit/admin groups.
@@ -844,12 +800,7 @@ impl RemoteProject {
     /// * `username` - Username of user to check
     pub fn can_user_edit<S: AsCStr>(&self, username: S) -> bool {
         let username = username.to_cstr();
-        unsafe {
-            BNRemoteProjectCanUserEdit(
-                self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const c_char,
-            )
-        }
+        unsafe { BNRemoteProjectCanUserEdit(self.handle.as_ptr(), username.as_ptr()) }
     }
 
     /// Determine if a user is in the admin group.
@@ -859,12 +810,7 @@ impl RemoteProject {
     /// * `username` - Username of user to check
     pub fn can_user_admin<S: AsCStr>(&self, username: S) -> bool {
         let username = username.to_cstr();
-        unsafe {
-            BNRemoteProjectCanUserAdmin(
-                self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const c_char,
-            )
-        }
+        unsafe { BNRemoteProjectCanUserAdmin(self.handle.as_ptr(), username.as_ptr()) }
     }
 
     /// Get the default directory path for a remote Project. This is based off

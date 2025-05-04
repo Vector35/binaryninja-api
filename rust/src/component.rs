@@ -166,12 +166,7 @@ impl Component {
 
     pub fn set_name<S: AsCStr>(&self, name: S) {
         let name = name.to_cstr();
-        unsafe {
-            BNComponentSetName(
-                self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const c_char,
-            )
-        }
+        unsafe { BNComponentSetName(self.handle.as_ptr(), name.as_ptr()) }
     }
 
     /// The component that contains this component, if it exists.

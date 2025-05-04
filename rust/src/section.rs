@@ -14,7 +14,6 @@
 
 //! Sections are [crate::segment::Segment]s that are loaded into memory at run time
 
-use std::ffi::c_char;
 use std::fmt;
 use std::ops::Range;
 
@@ -282,29 +281,29 @@ impl SectionBuilder {
             if self.is_auto {
                 BNAddAutoSection(
                     view.handle,
-                    name.as_ptr() as *const c_char,
+                    name.as_ptr(),
                     start,
                     len,
                     self.semantics.into(),
-                    ty.as_ptr() as *const c_char,
+                    ty.as_ptr(),
                     self.align,
                     self.entry_size,
-                    linked_section.as_ptr() as *const c_char,
-                    info_section.as_ptr() as *const c_char,
+                    linked_section.as_ptr(),
+                    info_section.as_ptr(),
                     self.info_data,
                 );
             } else {
                 BNAddUserSection(
                     view.handle,
-                    name.as_ptr() as *const c_char,
+                    name.as_ptr(),
                     start,
                     len,
                     self.semantics.into(),
-                    ty.as_ptr() as *const c_char,
+                    ty.as_ptr(),
                     self.align,
                     self.entry_size,
-                    linked_section.as_ptr() as *const c_char,
-                    info_section.as_ptr() as *const c_char,
+                    linked_section.as_ptr(),
+                    info_section.as_ptr(),
                     self.info_data,
                 );
             }

@@ -3,7 +3,6 @@ use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCounta
 use crate::string::{AsCStr, BnString};
 use crate::symbol::Symbol;
 use binaryninjacore_sys::*;
-use std::ffi::c_char;
 use std::fmt::Debug;
 use std::ptr::NonNull;
 
@@ -168,10 +167,15 @@ impl ExternalLocation {
     /// Set the symbol pointed to by this ExternalLocation.
     /// ExternalLocations must have a valid target address and/or symbol set.
     pub fn set_target_symbol<S: AsCStr>(&self, symbol: Option<S>) -> bool {
-        let symbol = symbol
-            .map(|x| x.to_cstr().as_ref().as_ptr() as *const c_char)
-            .unwrap_or(std::ptr::null_mut());
-        unsafe { BNExternalLocationSetTargetSymbol(self.handle.as_ptr(), symbol) }
+        match symbol {
+            Some(sym) => {
+                let raw_sym = sym.to_cstr();
+                unsafe { BNExternalLocationSetTargetSymbol(self.handle.as_ptr(), raw_sym.as_ptr()) }
+            }
+            None => unsafe {
+                BNExternalLocationSetTargetSymbol(self.handle.as_ptr(), std::ptr::null())
+            },
+        }
     }
 }
 

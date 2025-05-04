@@ -29,9 +29,8 @@ pub fn register_type_parser<S: AsCStr, T: TypeParser>(
         freeResult: Some(cb_free_result),
         freeErrorList: Some(cb_free_error_list),
     };
-    let result = unsafe {
-        BNRegisterTypeParser(name.to_cstr().as_ref().as_ptr() as *const _, &mut callback)
-    };
+    let name = name.to_cstr();
+    let result = unsafe { BNRegisterTypeParser(name.as_ptr(), &mut callback) };
     let core = unsafe { CoreTypeParser::from_raw(NonNull::new(result).unwrap()) };
     (parser, core)
 }
@@ -54,7 +53,7 @@ impl CoreTypeParser {
 
     pub fn parser_by_name<S: AsCStr>(name: S) -> Option<CoreTypeParser> {
         let name_raw = name.to_cstr();
-        let result = unsafe { BNGetTypeParserByName(name_raw.as_ref().as_ptr() as *const c_char) };
+        let result = unsafe { BNGetTypeParserByName(name_raw.as_ptr()) };
         NonNull::new(result).map(|x| unsafe { Self::from_raw(x) })
     }
 

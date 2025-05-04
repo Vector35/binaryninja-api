@@ -54,12 +54,7 @@ impl Repository {
 
     pub fn plugin_by_path<S: AsCStr>(&self, path: S) -> Option<Ref<RepositoryPlugin>> {
         let path = path.to_cstr();
-        let result = unsafe {
-            BNRepositoryGetPluginByPath(
-                self.handle.as_ptr(),
-                path.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let result = unsafe { BNRepositoryGetPluginByPath(self.handle.as_ptr(), path.as_ptr()) };
         NonNull::new(result).map(|h| unsafe { RepositoryPlugin::ref_from_raw(h) })
     }
 

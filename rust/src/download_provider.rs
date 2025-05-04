@@ -14,9 +14,8 @@ pub struct DownloadProvider {
 
 impl DownloadProvider {
     pub fn get<S: AsCStr>(name: S) -> Option<DownloadProvider> {
-        let result = unsafe {
-            BNGetDownloadProviderByName(name.to_cstr().as_ref().as_ptr() as *const c_char)
-        };
+        let name = name.to_cstr();
+        let result = unsafe { BNGetDownloadProviderByName(name.as_ptr()) };
         if result.is_null() {
             return None;
         }
@@ -145,10 +144,11 @@ impl DownloadInstance {
             progressContext: callbacks as *mut c_void,
         };
 
+        let url_raw = url.to_cstr();
         let result = unsafe {
             BNPerformDownloadRequest(
                 self.handle,
-                url.to_cstr().as_ref().as_ptr() as *const c_char,
+                url_raw.as_ptr(),
                 &mut cbs as *mut BNDownloadInstanceOutputCallbacks,
             )
         };
@@ -225,8 +225,8 @@ impl DownloadInstance {
         let mut header_value_ptrs = vec![];
 
         for (key, value) in header_keys.iter().zip(header_values.iter()) {
-            header_key_ptrs.push(key.as_ref().as_ptr() as *const c_char);
-            header_value_ptrs.push(value.as_ref().as_ptr() as *const c_char);
+            header_key_ptrs.push(key.as_ptr());
+            header_value_ptrs.push(value.as_ptr());
         }
 
         let callbacks = Box::into_raw(Box::new(callbacks));
@@ -241,11 +241,13 @@ impl DownloadInstance {
 
         let mut response: *mut BNDownloadInstanceResponse = null_mut();
 
+        let method_raw = method.to_cstr();
+        let url_raw = url.to_cstr();
         let result = unsafe {
             BNPerformCustomRequest(
                 self.handle,
-                method.to_cstr().as_ref().as_ptr() as *const c_char,
-                url.to_cstr().as_ref().as_ptr() as *const c_char,
+                method_raw.as_ptr(),
+                url_raw.as_ptr(),
                 header_key_ptrs.len() as u64,
                 header_key_ptrs.as_ptr(),
                 header_value_ptrs.as_ptr(),

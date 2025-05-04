@@ -3,7 +3,7 @@ use crate::string::{AsCStr, BnString};
 use crate::websocket::client;
 use crate::websocket::client::{CoreWebsocketClient, WebsocketClient};
 use binaryninjacore_sys::*;
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 use std::mem::MaybeUninit;
 use std::ptr::NonNull;
 
@@ -17,7 +17,7 @@ where
     let leaked_provider = Box::leak(Box::new(provider_uninit));
     let result = unsafe {
         BNRegisterWebsocketProvider(
-            name.as_ptr() as *const c_char,
+            name.as_ptr(),
             &mut BNWebsocketProviderCallbacks {
                 context: leaked_provider as *mut _ as *mut c_void,
                 createClient: Some(cb_create_client::<W>),
@@ -82,8 +82,7 @@ impl CoreWebsocketProvider {
 
     pub fn by_name<S: AsCStr>(name: S) -> Option<CoreWebsocketProvider> {
         let name = name.to_cstr();
-        let result =
-            unsafe { BNGetWebsocketProviderByName(name.as_ref().as_ptr() as *const c_char) };
+        let result = unsafe { BNGetWebsocketProviderByName(name.as_ptr()) };
         NonNull::new(result).map(|h| unsafe { Self::from_raw(h) })
     }
 

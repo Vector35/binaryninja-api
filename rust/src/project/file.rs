@@ -8,7 +8,6 @@ use binaryninjacore_sys::{
     BNProjectFileGetPathOnDisk, BNProjectFileGetProject, BNProjectFileSetDescription,
     BNProjectFileSetFolder, BNProjectFileSetName,
 };
-use std::ffi::c_char;
 use std::fmt::Debug;
 use std::ptr::{null_mut, NonNull};
 use std::time::SystemTime;
@@ -59,12 +58,7 @@ impl ProjectFile {
     /// Set the name of this file
     pub fn set_name<S: AsCStr>(&self, value: S) -> bool {
         let value_raw = value.to_cstr();
-        unsafe {
-            BNProjectFileSetName(
-                self.handle.as_ptr(),
-                value_raw.as_ref().as_ptr() as *const c_char,
-            )
-        }
+        unsafe { BNProjectFileSetName(self.handle.as_ptr(), value_raw.as_ptr()) }
     }
 
     /// Get the description of this file
@@ -75,12 +69,7 @@ impl ProjectFile {
     /// Set the description of this file
     pub fn set_description<S: AsCStr>(&self, value: S) -> bool {
         let value_raw = value.to_cstr();
-        unsafe {
-            BNProjectFileSetDescription(
-                self.handle.as_ptr(),
-                value_raw.as_ref().as_ptr() as *const c_char,
-            )
-        }
+        unsafe { BNProjectFileSetDescription(self.handle.as_ptr(), value_raw.as_ptr()) }
     }
 
     /// Get the file creation time
@@ -106,12 +95,7 @@ impl ProjectFile {
     /// * `dest` - Destination path for the exported contents
     pub fn export<S: AsCStr>(&self, dest: S) -> bool {
         let dest_raw = dest.to_cstr();
-        unsafe {
-            BNProjectFileExport(
-                self.handle.as_ptr(),
-                dest_raw.as_ref().as_ptr() as *const c_char,
-            )
-        }
+        unsafe { BNProjectFileExport(self.handle.as_ptr(), dest_raw.as_ptr()) }
     }
 }
 

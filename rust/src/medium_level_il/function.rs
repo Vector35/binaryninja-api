@@ -1,5 +1,4 @@
 use binaryninjacore_sys::*;
-use std::ffi::c_char;
 use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
 
@@ -135,7 +134,7 @@ impl MediumLevelILFunction {
                 self.function().handle,
                 offset,
                 &mut owned_raw_var_ty,
-                name.as_ref().as_ptr() as *const c_char,
+                name.as_ptr(),
             )
         }
     }
@@ -282,13 +281,12 @@ impl MediumLevelILFunction {
     ) {
         let mut owned_raw_var_ty = Conf::<&Type>::into_raw(var_type.into());
         let name = name.to_cstr();
-        let name_c_str = name.as_ref();
         unsafe {
             BNCreateAutoStackVariable(
                 self.function().handle,
                 offset,
                 &mut owned_raw_var_ty,
-                name_c_str.as_ptr() as *const c_char,
+                name.as_ptr(),
             )
         }
     }
@@ -307,13 +305,12 @@ impl MediumLevelILFunction {
         let raw_var = BNVariable::from(var);
         let mut owned_raw_var_ty = Conf::<&Type>::into_raw(var_type.into());
         let name = name.to_cstr();
-        let name_c_str = name.as_ref();
         unsafe {
             BNCreateAutoVariable(
                 self.function().handle,
                 &raw_var,
                 &mut owned_raw_var_ty,
-                name_c_str.as_ptr() as *const c_char,
+                name.as_ptr(),
                 ignore_disjoint_uses,
             )
         }

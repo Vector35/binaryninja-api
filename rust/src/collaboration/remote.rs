@@ -1,5 +1,5 @@
 use binaryninjacore_sys::*;
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 use std::ptr::NonNull;
 
 use super::{sync, GroupId, RemoteGroup, RemoteProject, RemoteUser};
@@ -30,12 +30,7 @@ impl Remote {
     pub fn new<N: AsCStr, A: AsCStr>(name: N, address: A) -> Ref<Self> {
         let name = name.to_cstr();
         let address = address.to_cstr();
-        let result = unsafe {
-            BNCollaborationCreateRemote(
-                name.as_ref().as_ptr() as *const c_char,
-                address.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let result = unsafe { BNCollaborationCreateRemote(name.as_ptr(), address.as_ptr()) };
         unsafe { Self::ref_from_raw(NonNull::new(result).unwrap()) }
     }
 
@@ -178,8 +173,8 @@ impl Remote {
         let token = unsafe {
             BNRemoteRequestAuthenticationToken(
                 self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const c_char,
-                password.as_ref().as_ptr() as *const c_char,
+                username.as_ptr(),
+                password.as_ptr(),
             )
         };
         if token.is_null() {
@@ -230,10 +225,8 @@ impl Remote {
             }
         };
         let username = options.username.to_cstr();
-        let username_ptr = username.as_ptr() as *const c_char;
         let token = token.to_cstr();
-        let token_ptr = token.as_ptr() as *const c_char;
-        let success = unsafe { BNRemoteConnect(self.handle.as_ptr(), username_ptr, token_ptr) };
+        let success = unsafe { BNRemoteConnect(self.handle.as_ptr(), username.as_ptr(), token.as_ptr()) };
         success.then_some(()).ok_or(())
     }
 
@@ -287,9 +280,7 @@ impl Remote {
         }
 
         let id = id.to_cstr();
-        let value = unsafe {
-            BNRemoteGetProjectById(self.handle.as_ptr(), id.as_ref().as_ptr() as *const c_char)
-        };
+        let value = unsafe { BNRemoteGetProjectById(self.handle.as_ptr(), id.as_ptr()) };
         Ok(NonNull::new(value).map(|handle| unsafe { RemoteProject::ref_from_raw(handle) }))
     }
 
@@ -305,12 +296,7 @@ impl Remote {
         }
 
         let name = name.to_cstr();
-        let value = unsafe {
-            BNRemoteGetProjectByName(
-                self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let value = unsafe { BNRemoteGetProjectByName(self.handle.as_ptr(), name.as_ptr()) };
         Ok(NonNull::new(value).map(|handle| unsafe { RemoteProject::ref_from_raw(handle) }))
     }
 
@@ -358,11 +344,7 @@ impl Remote {
         let name = name.to_cstr();
         let description = description.to_cstr();
         let value = unsafe {
-            BNRemoteCreateProject(
-                self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const c_char,
-                description.as_ref().as_ptr() as *const c_char,
-            )
+            BNRemoteCreateProject(self.handle.as_ptr(), name.as_ptr(), description.as_ptr())
         };
         NonNull::new(value)
             .map(|handle| unsafe { RemoteProject::ref_from_raw(handle) })
@@ -407,14 +389,8 @@ impl Remote {
             .into_iter()
             .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
             .unzip();
-        let mut keys_raw = keys
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect::<Vec<_>>();
-        let mut values_raw = values
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect::<Vec<_>>();
+        let mut keys_raw = keys.iter().map(|s| s.as_ptr()).collect::<Vec<_>>();
+        let mut values_raw = values.iter().map(|s| s.as_ptr()).collect::<Vec<_>>();
 
         let success = unsafe {
             BNRemotePushProject(
@@ -475,12 +451,7 @@ impl Remote {
         }
 
         let name = name.to_cstr();
-        let value = unsafe {
-            BNRemoteGetGroupByName(
-                self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let value = unsafe { BNRemoteGetGroupByName(self.handle.as_ptr(), name.as_ptr()) };
 
         Ok(NonNull::new(value).map(|handle| unsafe { RemoteGroup::ref_from_raw(handle) }))
     }
@@ -502,7 +473,7 @@ impl Remote {
         let success = unsafe {
             BNRemoteSearchGroups(
                 self.handle.as_ptr(),
-                prefix.as_ref().as_ptr() as *const c_char,
+                prefix.as_ptr(),
                 &mut group_ids,
                 &mut group_names,
                 &mut count,
@@ -560,15 +531,12 @@ impl Remote {
     {
         let name = name.to_cstr();
         let usernames: Vec<_> = usernames.into_iter().map(|s| s.to_cstr()).collect();
-        let mut username_ptrs: Vec<_> = usernames
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect();
+        let mut username_ptrs: Vec<_> = usernames.iter().map(|s| s.as_ptr()).collect();
 
         let value = unsafe {
             BNRemoteCreateGroup(
                 self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const c_char,
+                name.as_ptr(),
                 username_ptrs.as_mut_ptr(),
                 username_ptrs.len(),
             )
@@ -595,14 +563,8 @@ impl Remote {
             .into_iter()
             .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
             .unzip();
-        let mut keys_raw: Vec<_> = keys
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect();
-        let mut values_raw: Vec<_> = values
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect();
+        let mut keys_raw: Vec<_> = keys.iter().map(|s| s.as_ptr()).collect();
+        let mut values_raw: Vec<_> = values.iter().map(|s| s.as_ptr()).collect();
 
         let success = unsafe {
             BNRemotePushGroup(
@@ -659,9 +621,7 @@ impl Remote {
             self.pull_users()?;
         }
         let id = id.to_cstr();
-        let value = unsafe {
-            BNRemoteGetUserById(self.handle.as_ptr(), id.as_ref().as_ptr() as *const c_char)
-        };
+        let value = unsafe { BNRemoteGetUserById(self.handle.as_ptr(), id.as_ptr()) };
         Ok(NonNull::new(value).map(|handle| unsafe { RemoteUser::ref_from_raw(handle) }))
     }
 
@@ -682,12 +642,7 @@ impl Remote {
             self.pull_users()?;
         }
         let username = username.to_cstr();
-        let value = unsafe {
-            BNRemoteGetUserByUsername(
-                self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let value = unsafe { BNRemoteGetUserByUsername(self.handle.as_ptr(), username.as_ptr()) };
         Ok(NonNull::new(value).map(|handle| unsafe { RemoteUser::ref_from_raw(handle) }))
     }
 
@@ -720,7 +675,7 @@ impl Remote {
         let success = unsafe {
             BNRemoteSearchUsers(
                 self.handle.as_ptr(),
-                prefix.as_ref().as_ptr() as *const c_char,
+                prefix.as_ptr(),
                 &mut user_ids,
                 &mut usernames,
                 &mut count,
@@ -790,10 +745,10 @@ impl Remote {
         let value = unsafe {
             BNRemoteCreateUser(
                 self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const c_char,
-                email.as_ref().as_ptr() as *const c_char,
+                username.as_ptr(),
+                email.as_ptr(),
                 is_active,
-                password.as_ref().as_ptr() as *const c_char,
+                password.as_ptr(),
                 group_ids.as_ptr(),
                 group_ids.len(),
                 user_permission_ids.as_ptr(),
@@ -823,14 +778,8 @@ impl Remote {
             .into_iter()
             .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
             .unzip();
-        let mut keys_raw: Vec<_> = keys
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect();
-        let mut values_raw: Vec<_> = values
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect();
+        let mut keys_raw: Vec<_> = keys.iter().map(|s| s.as_ptr()).collect();
+        let mut values_raw: Vec<_> = values.iter().map(|s| s.as_ptr()).collect();
         let success = unsafe {
             BNRemotePushUser(
                 self.handle.as_ptr(),

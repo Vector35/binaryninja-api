@@ -413,7 +413,7 @@ where
     };
 
     unsafe {
-        let cc_name = name.as_ref().as_ptr() as *mut _;
+        let cc_name = name.as_ptr();
         let result = BNCreateCallingConvention(arch.as_ref().handle, cc_name, &mut cc);
 
         assert!(!result.is_null());

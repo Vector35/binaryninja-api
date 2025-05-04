@@ -63,7 +63,7 @@ pub fn download_file_with_progress<S: AsCStr, F: ProgressCallback>(
     let result = unsafe {
         BNCollaborationDownloadFile(
             file.handle.as_ptr(),
-            db_path.as_ref().as_ptr() as *const c_char,
+            db_path.as_ptr(),
             Some(F::cb_progress_callback),
             &mut progress as *mut F as *mut c_void,
         )
@@ -239,7 +239,7 @@ where
     let success = unsafe {
         BNCollaborationDownloadDatabaseForFile(
             file.handle.as_ptr(),
-            db_path.as_ref().as_ptr() as *const c_char,
+            db_path.as_ptr(),
             force,
             Some(F::cb_progress_callback),
             &mut progress as *mut _ as *mut c_void,
@@ -485,7 +485,7 @@ pub fn set_snapshot_author<S: AsCStr>(
         BNCollaborationSetSnapshotAuthor(
             database.handle.as_ptr(),
             snapshot.handle.as_ptr(),
-            author.as_ref().as_ptr() as *const c_char,
+            author.as_ptr(),
         )
     };
     success.then_some(()).ok_or(())
@@ -658,7 +658,7 @@ pub fn get_remote_snapshot_from_local_type_archive<S: AsCStr>(
     let value = unsafe {
         BNCollaborationGetRemoteSnapshotFromLocalTypeArchive(
             type_archive.handle.as_ptr(),
-            snapshot_id.as_ref().as_ptr() as *const c_char,
+            snapshot_id.as_ptr(),
         )
     };
     NonNull::new(value).map(|handle| unsafe { RemoteSnapshot::ref_from_raw(handle) })
@@ -687,7 +687,7 @@ pub fn is_type_archive_snapshot_ignored<S: AsCStr>(
     unsafe {
         BNCollaborationIsTypeArchiveSnapshotIgnored(
             type_archive.handle.as_ptr(),
-            snapshot_id.as_ref().as_ptr() as *const c_char,
+            snapshot_id.as_ptr(),
         )
     }
 }
@@ -713,7 +713,7 @@ pub fn download_type_archive_with_progress<S: AsCStr, F: ProgressCallback>(
     let success = unsafe {
         BNCollaborationDownloadTypeArchive(
             file.handle.as_ptr(),
-            db_path.as_ref().as_ptr() as *const c_char,
+            db_path.as_ptr(),
             Some(F::cb_progress_callback),
             &mut progress as *mut F as *mut c_void,
             &mut value,

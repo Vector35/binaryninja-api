@@ -75,22 +75,21 @@ pub fn known_remotes() -> Array<Remote> {
 /// Get Remote by unique `id`
 pub fn get_remote_by_id<S: AsCStr>(id: S) -> Option<Ref<Remote>> {
     let id = id.to_cstr();
-    let value = unsafe { BNCollaborationGetRemoteById(id.as_ref().as_ptr() as *const c_char) };
+    let value = unsafe { BNCollaborationGetRemoteById(id.as_ptr()) };
     NonNull::new(value).map(|h| unsafe { Remote::ref_from_raw(h) })
 }
 
 /// Get Remote by `address`
 pub fn get_remote_by_address<S: AsCStr>(address: S) -> Option<Ref<Remote>> {
     let address = address.to_cstr();
-    let value =
-        unsafe { BNCollaborationGetRemoteByAddress(address.as_ref().as_ptr() as *const c_char) };
+    let value = unsafe { BNCollaborationGetRemoteByAddress(address.as_ptr()) };
     NonNull::new(value).map(|h| unsafe { Remote::ref_from_raw(h) })
 }
 
 /// Get Remote by `name`
 pub fn get_remote_by_name<S: AsCStr>(name: S) -> Option<Ref<Remote>> {
     let name = name.to_cstr();
-    let value = unsafe { BNCollaborationGetRemoteByName(name.as_ref().as_ptr() as *const c_char) };
+    let value = unsafe { BNCollaborationGetRemoteByName(name.as_ptr()) };
     NonNull::new(value).map(|h| unsafe { Remote::ref_from_raw(h) })
 }
 
@@ -116,17 +115,11 @@ where
         .into_iter()
         .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
         .unzip();
-    let data_keys_ptr: Box<[*const c_char]> = data_keys
-        .iter()
-        .map(|k| k.as_ref().as_ptr() as *const c_char)
-        .collect();
-    let data_values_ptr: Box<[*const c_char]> = data_values
-        .iter()
-        .map(|v| v.as_ref().as_ptr() as *const c_char)
-        .collect();
+    let data_keys_ptr: Box<[*const c_char]> = data_keys.iter().map(|k| k.as_ptr()).collect();
+    let data_values_ptr: Box<[*const c_char]> = data_values.iter().map(|v| v.as_ptr()).collect();
     unsafe {
         BNCollaborationStoreDataInKeychain(
-            key.as_ref().as_ptr() as *const c_char,
+            key.as_ptr(),
             data_keys_ptr.as_ptr() as *mut _,
             data_values_ptr.as_ptr() as *mut _,
             data_keys.len(),
@@ -136,20 +129,14 @@ where
 
 pub fn has_data_in_keychain<K: AsCStr>(key: K) -> bool {
     let key = key.to_cstr();
-    unsafe { BNCollaborationHasDataInKeychain(key.as_ref().as_ptr() as *const c_char) }
+    unsafe { BNCollaborationHasDataInKeychain(key.as_ptr()) }
 }
 
 pub fn get_data_from_keychain<K: AsCStr>(key: K) -> Option<(Array<BnString>, Array<BnString>)> {
     let key = key.to_cstr();
     let mut keys = std::ptr::null_mut();
     let mut values = std::ptr::null_mut();
-    let count = unsafe {
-        BNCollaborationGetDataFromKeychain(
-            key.as_ref().as_ptr() as *const c_char,
-            &mut keys,
-            &mut values,
-        )
-    };
+    let count = unsafe { BNCollaborationGetDataFromKeychain(key.as_ptr(), &mut keys, &mut values) };
     let keys = (!keys.is_null()).then(|| unsafe { Array::new(keys, count, ()) });
     let values = (!values.is_null()).then(|| unsafe { Array::new(values, count, ()) });
     keys.zip(values)
@@ -157,5 +144,5 @@ pub fn get_data_from_keychain<K: AsCStr>(key: K) -> Option<(Array<BnString>, Arr
 
 pub fn delete_data_from_keychain<K: AsCStr>(key: K) -> bool {
     let key = key.to_cstr();
-    unsafe { BNCollaborationDeleteDataFromKeychain(key.as_ref().as_ptr() as *const c_char) }
+    unsafe { BNCollaborationDeleteDataFromKeychain(key.as_ptr()) }
 }

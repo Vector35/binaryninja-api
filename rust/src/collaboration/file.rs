@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 use std::fmt::{Debug, Formatter};
 use std::ptr::NonNull;
 use std::time::SystemTime;
@@ -96,12 +96,7 @@ impl RemoteFile {
 
     pub fn set_metadata<S: AsCStr>(&self, folder: S) -> Result<(), ()> {
         let folder_raw = folder.to_cstr();
-        let success = unsafe {
-            BNRemoteFileSetMetadata(
-                self.handle.as_ptr(),
-                folder_raw.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let success = unsafe { BNRemoteFileSetMetadata(self.handle.as_ptr(), folder_raw.as_ptr()) };
         success.then_some(()).ok_or(())
     }
 
@@ -192,12 +187,7 @@ impl RemoteFile {
     /// Set the description of the file. You will need to push the file to update the remote version.
     pub fn set_name<S: AsCStr>(&self, name: S) -> Result<(), ()> {
         let name = name.to_cstr();
-        let success = unsafe {
-            BNRemoteFileSetName(
-                self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let success = unsafe { BNRemoteFileSetName(self.handle.as_ptr(), name.as_ptr()) };
         success.then_some(()).ok_or(())
     }
 
@@ -211,12 +201,8 @@ impl RemoteFile {
     /// Set the description of the file. You will need to push the file to update the remote version.
     pub fn set_description<S: AsCStr>(&self, description: S) -> Result<(), ()> {
         let description = description.to_cstr();
-        let success = unsafe {
-            BNRemoteFileSetDescription(
-                self.handle.as_ptr(),
-                description.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let success =
+            unsafe { BNRemoteFileSetDescription(self.handle.as_ptr(), description.as_ptr()) };
         success.then_some(()).ok_or(())
     }
 
@@ -269,9 +255,7 @@ impl RemoteFile {
             self.pull_snapshots()?;
         }
         let id = id.to_cstr();
-        let result = unsafe {
-            BNRemoteFileGetSnapshotById(self.handle.as_ptr(), id.as_ref().as_ptr() as *const c_char)
-        };
+        let result = unsafe { BNRemoteFileGetSnapshotById(self.handle.as_ptr(), id.as_ptr()) };
         Ok(NonNull::new(result).map(|handle| unsafe { RemoteSnapshot::ref_from_raw(handle) }))
     }
 
@@ -350,14 +334,11 @@ impl RemoteFile {
     {
         let name = name.to_cstr();
         let parent_ids: Vec<_> = parent_ids.into_iter().map(|id| id.to_cstr()).collect();
-        let mut parent_ids_raw: Vec<_> = parent_ids
-            .iter()
-            .map(|x| x.as_ref().as_ptr() as *const c_char)
-            .collect();
+        let mut parent_ids_raw: Vec<_> = parent_ids.iter().map(|x| x.as_ptr()).collect();
         let result = unsafe {
             BNRemoteFileCreateSnapshot(
                 self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const c_char,
+                name.as_ptr(),
                 contents.as_mut_ptr(),
                 contents.len(),
                 analysis_cache_contexts.as_mut_ptr(),

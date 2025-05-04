@@ -1,6 +1,6 @@
 use crate::string::AsCStr;
 use binaryninjacore_sys::*;
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 
 pub struct WorkerThreadActionExecutor {
     func: Box<dyn Fn()>,
@@ -25,7 +25,7 @@ pub fn execute_on_worker_thread<F: Fn() + 'static, S: AsCStr>(name: S, f: F) {
         BNWorkerEnqueueNamed(
             raw_executor as *mut c_void,
             Some(WorkerThreadActionExecutor::cb_execute),
-            name.as_ref().as_ptr() as *const c_char,
+            name.as_ptr(),
         )
     }
 }
@@ -38,7 +38,7 @@ pub fn execute_on_worker_thread_priority<F: Fn() + 'static, S: AsCStr>(name: S, 
         BNWorkerPriorityEnqueueNamed(
             raw_executor as *mut c_void,
             Some(WorkerThreadActionExecutor::cb_execute),
-            name.as_ref().as_ptr() as *const c_char,
+            name.as_ptr(),
         )
     }
 }
@@ -51,7 +51,7 @@ pub fn execute_on_worker_thread_interactive<F: Fn() + 'static, S: AsCStr>(name: 
         BNWorkerInteractiveEnqueueNamed(
             raw_executor as *mut c_void,
             Some(WorkerThreadActionExecutor::cb_execute),
-            name.as_ref().as_ptr() as *const c_char,
+            name.as_ptr(),
         )
     }
 }

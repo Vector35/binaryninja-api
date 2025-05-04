@@ -15,7 +15,6 @@
 //! An interface for providing your own [BinaryView]s to Binary Ninja.
 
 use binaryninjacore_sys::*;
-use std::ffi::c_char;
 
 pub use binaryninjacore_sys::BNModificationStatus as ModificationStatus;
 
@@ -150,10 +149,10 @@ where
     }
 
     let name = name.to_cstr();
-    let name_ptr = name.as_ref().as_ptr() as *mut _;
+    let name_ptr = name.as_ptr();
 
     let long_name = long_name.to_cstr();
-    let long_name_ptr = long_name.as_ref().as_ptr() as *mut _;
+    let long_name_ptr = long_name.as_ptr();
 
     let ctxt = Box::leak(Box::new(MaybeUninit::zeroed()));
 
@@ -878,9 +877,10 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
             save: Some(cb_save::<V>),
         };
 
+        let view_name = view_name.to_cstr();
         unsafe {
             let res = BNCreateCustomBinaryView(
-                view_name.as_ptr() as *const c_char,
+                view_name.as_ptr(),
                 file.handle,
                 parent.handle,
                 &mut bn_obj,

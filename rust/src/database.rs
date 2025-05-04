@@ -4,7 +4,7 @@ pub mod undo;
 
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 use std::fmt::Debug;
 use std::ptr::NonNull;
 
@@ -94,7 +94,7 @@ impl Database {
         P: ProgressCallback,
     {
         let name_raw = name.to_cstr();
-        let name_ptr = name_raw.as_ref().as_ptr() as *const c_char;
+        let name_ptr = name_raw.as_ptr();
 
         let new_id = unsafe {
             BNWriteDatabaseSnapshotData(
@@ -135,8 +135,7 @@ impl Database {
     }
     pub fn has_global<S: AsCStr>(&self, key: S) -> bool {
         let key_raw = key.to_cstr();
-        let key_ptr = key_raw.as_ref().as_ptr() as *const c_char;
-        unsafe { BNDatabaseHasGlobal(self.handle.as_ptr(), key_ptr) != 0 }
+        unsafe { BNDatabaseHasGlobal(self.handle.as_ptr(), key_raw.as_ptr()) != 0 }
     }
 
     /// Get a list of keys for all globals in the database
@@ -158,33 +157,28 @@ impl Database {
     /// Get a specific global by key
     pub fn read_global<S: AsCStr>(&self, key: S) -> Option<BnString> {
         let key_raw = key.to_cstr();
-        let key_ptr = key_raw.as_ref().as_ptr() as *const c_char;
-        let result = unsafe { BNReadDatabaseGlobal(self.handle.as_ptr(), key_ptr) };
+        let result = unsafe { BNReadDatabaseGlobal(self.handle.as_ptr(), key_raw.as_ptr()) };
         unsafe { NonNull::new(result).map(|_| BnString::from_raw(result)) }
     }
 
     /// Write a global into the database
     pub fn write_global<K: AsCStr, V: AsCStr>(&self, key: K, value: V) -> bool {
         let key_raw = key.to_cstr();
-        let key_ptr = key_raw.as_ref().as_ptr() as *const c_char;
         let value_raw = value.to_cstr();
-        let value_ptr = value_raw.as_ref().as_ptr() as *const c_char;
-        unsafe { BNWriteDatabaseGlobal(self.handle.as_ptr(), key_ptr, value_ptr) }
+        unsafe { BNWriteDatabaseGlobal(self.handle.as_ptr(), key_raw.as_ptr(), value_raw.as_ptr()) }
     }
 
     /// Get a specific global by key, as a binary buffer
     pub fn read_global_data<S: AsCStr>(&self, key: S) -> Option<DataBuffer> {
         let key_raw = key.to_cstr();
-        let key_ptr = key_raw.as_ref().as_ptr() as *const c_char;
-        let result = unsafe { BNReadDatabaseGlobalData(self.handle.as_ptr(), key_ptr) };
+        let result = unsafe { BNReadDatabaseGlobalData(self.handle.as_ptr(), key_raw.as_ptr()) };
         NonNull::new(result).map(|_| DataBuffer::from_raw(result))
     }
 
     /// Write a binary buffer into a global in the database
     pub fn write_global_data<K: AsCStr>(&self, key: K, value: &DataBuffer) -> bool {
         let key_raw = key.to_cstr();
-        let key_ptr = key_raw.as_ref().as_ptr() as *const c_char;
-        unsafe { BNWriteDatabaseGlobalData(self.handle.as_ptr(), key_ptr, value.as_raw()) }
+        unsafe { BNWriteDatabaseGlobalData(self.handle.as_ptr(), key_raw.as_ptr(), value.as_raw()) }
     }
 
     /// Get the owning FileMetadata

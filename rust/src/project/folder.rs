@@ -93,17 +93,14 @@ impl ProjectFolder {
         P: ProgressCallback,
     {
         let dest_raw = dest.to_cstr();
-
-        let success = unsafe {
+        unsafe {
             BNProjectFolderExport(
                 self.handle.as_ptr(),
                 dest_raw.as_ptr(),
                 &mut progress as *mut P as *mut c_void,
                 Some(P::cb_progress_callback),
             )
-        };
-
-        success
+        }
     }
 }
 

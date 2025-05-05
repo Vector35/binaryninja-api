@@ -255,10 +255,10 @@ impl MainThreadHandler for HeadlessMainThreadSender {
 }
 
 fn is_enterprise_product() -> bool {
-    match crate::product().as_str() {
-        "Binary Ninja Enterprise Client" | "Binary Ninja Ultimate" => true,
-        _ => false,
-    }
+    matches!(
+        crate::product().as_str(),
+        "Binary Ninja Enterprise Client" | "Binary Ninja Ultimate"
+    )
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]

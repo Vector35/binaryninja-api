@@ -189,7 +189,7 @@ pub unsafe trait AsCStr {
     fn to_cstr(self) -> Self::Result;
 }
 
-unsafe impl<'a> AsCStr for &'a CStr {
+unsafe impl AsCStr for &CStr {
     type Result = Self;
 
     fn to_cstr(self) -> Self::Result {

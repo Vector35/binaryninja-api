@@ -250,8 +250,7 @@ impl TypeArchive {
     /// Delete an existing type in the type archive.
     pub fn delete_type_by_id<S: AsCStr>(&self, id: S) -> bool {
         let id = id.to_cstr();
-        let result = unsafe { BNDeleteTypeArchiveType(self.handle.as_ptr(), id.as_ptr()) };
-        result
+        unsafe { BNDeleteTypeArchiveType(self.handle.as_ptr(), id.as_ptr()) }
     }
 
     /// Retrieve a stored type in the archive

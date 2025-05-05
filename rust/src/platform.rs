@@ -334,7 +334,7 @@ impl Platform {
             assert!(!error_string.is_null());
             Err(TypeParserError::new(
                 TypeParserErrorSeverity::FatalSeverity,
-                unsafe { BnString::from_raw(error_string) }.to_string(),
+                unsafe { BnString::into_string(error_string) },
                 filename.to_string(),
                 0,
                 0,

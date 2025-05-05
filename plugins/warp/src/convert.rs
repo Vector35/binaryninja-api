@@ -35,7 +35,7 @@ use warp::symbol::{Symbol, SymbolModifiers};
 pub fn from_bn_symbol(raw_symbol: &BNSymbol) -> Symbol {
     // TODO: Use this?
     let _is_export = raw_symbol.external();
-    let symbol_name = raw_symbol.raw_name().to_string();
+    let symbol_name = raw_symbol.raw_name().to_string_lossy().to_string();
     match raw_symbol.sym_type() {
         BNSymbolType::ImportAddress => {
             Symbol::new(

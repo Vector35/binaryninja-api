@@ -117,7 +117,7 @@ pub(crate) fn parse_function_entry<R: ReaderType>(
                 if let Ok(demangled) = sym.demangle(demangle_options) {
                     let cleaned = abi_regex.replace_all(&demangled, "");
                     let simplified = simplify_str_to_str(&cleaned);
-                    full_name = Some(simplified.to_string());
+                    full_name = Some(simplified.to_string_lossy().to_string());
                 }
             }
         }

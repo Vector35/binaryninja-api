@@ -213,7 +213,7 @@ impl Metadata {
         }
     }
 
-    pub fn get_value_store(&self) -> Result<HashMap<BnString, Ref<Metadata>>, ()> {
+    pub fn get_value_store(&self) -> Result<HashMap<String, Ref<Metadata>>, ()> {
         match self.get_type() {
             MetadataType::KeyValueDataType => {
                 let ptr: *mut BNMetadataValueStore =
@@ -230,7 +230,7 @@ impl Metadata {
 
                 let mut map = HashMap::new();
                 for i in 0..size {
-                    let key = unsafe { BnString::from_raw(keys[i]) };
+                    let key = unsafe { BnString::into_string(keys[i]) };
 
                     let value = unsafe {
                         Ref::<Metadata>::new(Self {
@@ -589,7 +589,7 @@ impl TryFrom<&Metadata> for String {
     type Error = ();
 
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
-        value.get_string().map(|s| s.to_string())
+        value.get_string().map(|s| s.to_string_lossy().to_string())
     }
 }
 
@@ -637,9 +637,11 @@ impl TryFrom<&Metadata> for Vec<String> {
     type Error = ();
 
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
-        value
-            .get_string_list()
-            .map(|v| v.into_iter().map(|s| s.to_string()).collect())
+        value.get_string_list().map(|v| {
+            v.into_iter()
+                .map(|s| s.to_string_lossy().to_string())
+                .collect()
+        })
     }
 }
 
@@ -659,21 +661,11 @@ impl TryFrom<&Metadata> for Array<Metadata> {
     }
 }
 
-impl TryFrom<&Metadata> for HashMap<BnString, Ref<Metadata>> {
-    type Error = ();
-
-    fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
-        value.get_value_store()
-    }
-}
-
 impl TryFrom<&Metadata> for HashMap<String, Ref<Metadata>> {
     type Error = ();
 
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
-        value
-            .get_value_store()
-            .map(|m| m.into_iter().map(|(k, v)| (k.to_string(), v)).collect())
+        value.get_value_store()
     }
 }
 

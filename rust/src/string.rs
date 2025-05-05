@@ -15,6 +15,7 @@
 //! String wrappers for core-owned strings and strings being passed to the core
 
 use crate::rc::*;
+use crate::type_archive::TypeArchiveSnapshotId;
 use crate::types::QualifiedName;
 use std::borrow::Cow;
 use std::ffi::{c_char, CStr, CString};
@@ -23,7 +24,6 @@ use std::hash::{Hash, Hasher};
 use std::mem;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
-use crate::type_archive::TypeArchiveSnapshotId;
 
 // TODO: Remove or refactor this.
 pub(crate) fn raw_to_string(ptr: *const c_char) -> Option<String> {
@@ -72,7 +72,7 @@ impl BnString {
     ///
     /// This expects the passed raw string to be owned, as in, freed by us.
     pub unsafe fn into_string(raw: *mut c_char) -> String {
-        Self::from_raw(raw).to_string()
+        Self::from_raw(raw).to_string_lossy().to_string()
     }
 
     /// Construct a BnString from an owned const char* allocated by BNAllocString
@@ -160,15 +160,9 @@ impl PartialEq for BnString {
 
 impl Eq for BnString {}
 
-impl fmt::Display for BnString {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.to_string_lossy())
-    }
-}
-
 impl fmt::Debug for BnString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.to_string_lossy().fmt(f)
+        write!(f, "{}", self.to_string_lossy())
     }
 }
 
@@ -294,10 +288,10 @@ unsafe impl AsCStr for &Path {
 
 unsafe impl AsCStr for TypeArchiveSnapshotId {
     type Result = CString;
-    
+
     fn to_cstr(self) -> Self::Result {
         self.to_string().to_cstr()
-    }   
+    }
 }
 
 pub trait IntoJson {

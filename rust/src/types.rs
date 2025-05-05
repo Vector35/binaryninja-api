@@ -430,7 +430,7 @@ impl TypeBuilder {
 impl Display for TypeBuilder {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", unsafe {
-            BnString::from_raw(BNGetTypeBuilderString(self.handle, std::ptr::null_mut()))
+            BnString::into_string(BNGetTypeBuilderString(self.handle, std::ptr::null_mut()))
         })
     }
 }
@@ -944,7 +944,7 @@ impl Type {
 impl Display for Type {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", unsafe {
-            BnString::from_raw(BNGetTypeString(
+            BnString::into_string(BNGetTypeString(
                 self.handle,
                 std::ptr::null_mut(),
                 BNTokenEscapingType::NoTokenEscapingType,
@@ -1893,15 +1893,15 @@ impl NamedTypeReference {
         QualifiedName::from_owned_raw(raw_name)
     }
 
-    pub fn id(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetTypeReferenceId(self.handle)) }
+    pub fn id(&self) -> String {
+        unsafe { BnString::into_string(BNGetTypeReferenceId(self.handle)) }
     }
 
     pub fn class(&self) -> NamedTypeReferenceClass {
         unsafe { BNGetTypeReferenceClass(self.handle) }
     }
 
-    fn target_helper(&self, bv: &BinaryView, visited: &mut HashSet<BnString>) -> Option<Ref<Type>> {
+    fn target_helper(&self, bv: &BinaryView, visited: &mut HashSet<String>) -> Option<Ref<Type>> {
         let ty = bv.type_by_id(self.id())?;
         match ty.type_class() {
             TypeClass::NamedTypeReferenceClass => {

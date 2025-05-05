@@ -36,8 +36,7 @@ impl CoreSecretsProvider {
             storeData: Some(cb_store_data::<C>),
             deleteData: Some(cb_delete_data::<C>),
         };
-        let result =
-            unsafe { BNRegisterSecretsProvider(name.as_ptr(), &mut callbacks) };
+        let result = unsafe { BNRegisterSecretsProvider(name.as_ptr(), &mut callbacks) };
         unsafe { Self::from_raw(NonNull::new(result).unwrap()) }
     }
 

@@ -75,8 +75,7 @@ impl TypeArchive {
     /// If the file has already been created and is not a valid type archive this will return `None`.
     pub fn create(path: impl AsRef<Path>, platform: &Platform) -> Option<Ref<TypeArchive>> {
         let raw_path = path.as_ref().to_cstr();
-        let handle =
-            unsafe { BNCreateTypeArchive(raw_path.as_ptr(), platform.handle) };
+        let handle = unsafe { BNCreateTypeArchive(raw_path.as_ptr(), platform.handle) };
         NonNull::new(handle).map(|handle| unsafe { TypeArchive::ref_from_raw(handle) })
     }
 

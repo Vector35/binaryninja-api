@@ -622,7 +622,7 @@ impl DebugInfoBuilder {
                                 .items
                                 .len()
                         {
-                            func.full_name = Some(symbol_full_name.to_string());
+                            func.full_name = Some(symbol_full_name.to_string_lossy().to_string());
                         }
                     }
                 }

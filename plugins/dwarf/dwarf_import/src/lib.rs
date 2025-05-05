@@ -234,6 +234,7 @@ fn recover_names_internal<R: ReaderType>(
                                 .collect::<Vec<String>>()
                                 .join("::"),
                         )
+                        .to_string_lossy()
                         .to_string(),
                     );
                 }
@@ -251,6 +252,7 @@ fn recover_names_internal<R: ReaderType>(
                                     .collect::<Vec<String>>()
                                     .join("::"),
                             )
+                            .to_string_lossy()
                             .to_string(),
                         );
                     }

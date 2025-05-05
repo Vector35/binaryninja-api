@@ -319,6 +319,7 @@ unsafe impl CoreArrayProviderInner for DebugInfoParser {
 ///
 /// Functions will not be created if an address is not provided, but will be able to be queried from debug info for later user analysis.
 pub struct DebugFunctionInfo {
+    // TODO: These need to be BnString if we want to support invalid UTF-8
     short_name: Option<String>,
     full_name: Option<String>,
     raw_name: Option<String>,

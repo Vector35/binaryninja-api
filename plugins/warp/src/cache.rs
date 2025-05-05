@@ -439,7 +439,7 @@ pub struct TypeRefID(u64);
 impl From<&BNNamedTypeReference> for TypeRefID {
     fn from(value: &BNNamedTypeReference) -> Self {
         let mut hasher = DefaultHasher::new();
-        hasher.write(value.id().to_bytes());
+        hasher.write(value.id().as_bytes());
         Self(hasher.finish())
     }
 }

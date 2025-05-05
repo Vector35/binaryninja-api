@@ -147,10 +147,10 @@ impl Database {
     }
 
     /// Get a dictionary of all globals
-    pub fn globals(&self) -> HashMap<String, String> {
+    pub fn globals(&self) -> HashMap<String, BnString> {
         self.global_keys()
             .iter()
-            .filter_map(|key| Some((key.to_string(), self.read_global(key)?.to_string())))
+            .filter_map(|key| Some((key.to_string(), self.read_global(key)?)))
             .collect()
     }
 

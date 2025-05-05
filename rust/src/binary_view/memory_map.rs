@@ -21,13 +21,13 @@ impl MemoryMap {
     /// JSON string representation of the base [`MemoryMap`], consisting of unresolved auto and user segments.
     pub fn base_description(&self) -> String {
         let desc_raw = unsafe { BNGetBaseMemoryMapDescription(self.view.handle) };
-        unsafe { BnString::from_raw(desc_raw) }.to_string()
+        unsafe { BnString::into_string(desc_raw) }
     }
 
     /// JSON string representation of the [`MemoryMap`].
     pub fn description(&self) -> String {
         let desc_raw = unsafe { BNGetMemoryMapDescription(self.view.handle) };
-        unsafe { BnString::from_raw(desc_raw) }.to_string()
+        unsafe { BnString::into_string(desc_raw) }
     }
 
     // When enabled, the memory map will present a simplified, logical view that merges and abstracts virtual memory

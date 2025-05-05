@@ -124,9 +124,7 @@ impl CoreWebsocketClient {
     /// Call the error callback function
     pub fn notify_error(&self, msg: &str) {
         let error = msg.to_cstr();
-        unsafe {
-            BNNotifyWebsocketClientError(self.handle.as_ptr(), error.as_ptr())
-        }
+        unsafe { BNNotifyWebsocketClientError(self.handle.as_ptr(), error.as_ptr()) }
     }
 
     /// Call the read callback function, forward the callback returned value

@@ -167,7 +167,7 @@ impl Remote {
         &self,
         username: U,
         password: P,
-    ) -> Option<BnString> {
+    ) -> Option<String> {
         let username = username.to_cstr();
         let password = password.to_cstr();
         let token = unsafe {
@@ -180,7 +180,7 @@ impl Remote {
         if token.is_null() {
             None
         } else {
-            Some(unsafe { BnString::from_raw(token) })
+            Some(unsafe { BnString::into_string(token) })
         }
     }
 
@@ -226,7 +226,8 @@ impl Remote {
         };
         let username = options.username.to_cstr();
         let token = token.to_cstr();
-        let success = unsafe { BNRemoteConnect(self.handle.as_ptr(), username.as_ptr(), token.as_ptr()) };
+        let success =
+            unsafe { BNRemoteConnect(self.handle.as_ptr(), username.as_ptr(), token.as_ptr()) };
         success.then_some(()).ok_or(())
     }
 

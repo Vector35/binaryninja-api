@@ -329,8 +329,7 @@ pub fn save_last_run() {
 
 pub fn path_relative_to_bundled_plugin_directory(path: impl AsRef<Path>) -> Result<PathBuf, ()> {
     let path_raw = path.as_ref().to_cstr();
-    let s: *mut c_char =
-        unsafe { BNGetPathRelativeToBundledPluginDirectory(path_raw.as_ptr()) };
+    let s: *mut c_char = unsafe { BNGetPathRelativeToBundledPluginDirectory(path_raw.as_ptr()) };
     if s.is_null() {
         return Err(());
     }
@@ -339,8 +338,7 @@ pub fn path_relative_to_bundled_plugin_directory(path: impl AsRef<Path>) -> Resu
 
 pub fn path_relative_to_user_plugin_directory(path: impl AsRef<Path>) -> Result<PathBuf, ()> {
     let path_raw = path.as_ref().to_cstr();
-    let s: *mut c_char =
-        unsafe { BNGetPathRelativeToUserPluginDirectory(path_raw.as_ptr()) };
+    let s: *mut c_char = unsafe { BNGetPathRelativeToUserPluginDirectory(path_raw.as_ptr()) };
     if s.is_null() {
         return Err(());
     }
@@ -349,8 +347,7 @@ pub fn path_relative_to_user_plugin_directory(path: impl AsRef<Path>) -> Result<
 
 pub fn path_relative_to_user_directory(path: impl AsRef<Path>) -> Result<PathBuf, ()> {
     let path_raw = path.as_ref().to_cstr();
-    let s: *mut c_char =
-        unsafe { BNGetPathRelativeToUserDirectory(path_raw.as_ptr()) };
+    let s: *mut c_char = unsafe { BNGetPathRelativeToUserDirectory(path_raw.as_ptr()) };
     if s.is_null() {
         return Err(());
     }

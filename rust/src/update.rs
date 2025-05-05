@@ -97,9 +97,7 @@ impl UpdateChannel {
         let mut count = 0;
         let mut errors = std::ptr::null_mut();
         let name = self.name.clone().to_cstr();
-        let result = unsafe {
-            BNGetUpdateChannelVersions(name.as_ptr(), &mut count, &mut errors)
-        };
+        let result = unsafe { BNGetUpdateChannelVersions(name.as_ptr(), &mut count, &mut errors) };
         if !errors.is_null() {
             Err(unsafe { BnString::from_raw(errors) })
         } else {

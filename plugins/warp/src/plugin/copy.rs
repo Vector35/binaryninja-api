@@ -14,8 +14,8 @@ impl FunctionCommand for CopyFunctionGUID {
         };
         let guid = cached_function_guid(func, &llil);
         log::info!(
-            "Function GUID for {}... {}",
-            func.symbol().short_name().to_string(),
+            "Function GUID for {:?}... {}",
+            func.symbol().short_name(),
             guid
         );
         if let Ok(mut clipboard) = arboard::Clipboard::new() {

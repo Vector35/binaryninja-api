@@ -56,19 +56,19 @@ static bool GetNextFunctionAfterAddress(Ref<BinaryView> data, Ref<Platform> plat
 }
 
 
-void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BNBasicBlockAnalysisContext* context)
+void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnalysisContext& context)
 {
 	auto data = function.GetView();
 	queue<ArchAndAddr> blocksToProcess;
 	map<ArchAndAddr, Ref<BasicBlock>> instrBlocks;
 	set<ArchAndAddr> seenBlocks;
 	map<ArchAndAddr, set<ArchAndAddr>> indirectBranches;
-	for (size_t i = 0; i < context->indirectBranchesCount; i++)
+	for (size_t i = 0; i < context.indirectBranchesCount; i++)
 	{
-		auto sourceLocation = ArchAndAddr(new CoreArchitecture(context->indirectBranches[i].sourceArch),
-			context->indirectBranches[i].sourceAddr);
-		auto destLocation = ArchAndAddr(new CoreArchitecture(context->indirectBranches[i].destArch),
-			context->indirectBranches[i].destAddr);
+		auto sourceLocation = ArchAndAddr(new CoreArchitecture(context.indirectBranches[i].sourceArch),
+			context.indirectBranches[i].sourceAddr);
+		auto destLocation = ArchAndAddr(new CoreArchitecture(context.indirectBranches[i].destArch),
+			context.indirectBranches[i].destAddr);
 		indirectBranches[sourceLocation].insert(destLocation);
 	}
 
@@ -148,7 +148,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BNBasicBlockAna
 	}
 
 	uint64_t totalSize = 0;
-	uint64_t maxSize = context->maxFunctionSize;
+	uint64_t maxSize = context.maxFunctionSize;
 	while (blocksToProcess.size() != 0)
 	{
 		if (data->AnalysisIsAborted())
@@ -356,7 +356,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BNBasicBlockAna
 							function.AddDirectCodeReference(location, info.branchTarget[i]);
 
 							auto otherFunc = function.GetCalleeForAnalysis(targetPlatform, target.address, true);
-							if (context->translateTailCalls && targetPlatform && otherFunc && (otherFunc->GetStart() != function.GetStart()))
+							if (context.translateTailCalls && targetPlatform && otherFunc && (otherFunc->GetStart() != function.GetStart()))
 							{
 								calledFunctions.insert(otherFunc);
 								if (info.branchType[i] == UnconditionalBranch)
@@ -371,7 +371,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BNBasicBlockAna
 									break;
 								}
 							}
-							else if (context->disallowBranchToString && data->GetStringAtAddress(location.address, strRef) && targetExceedsByteLimit(strRef))
+							else if (context.disallowBranchToString && data->GetStringAtAddress(location.address, strRef) && targetExceedsByteLimit(strRef))
 							{
 								BNLogInfo("Not adding branch target from 0x%" PRIx64 " to string at 0x%" PRIx64
 									" length:%zu",
@@ -503,7 +503,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BNBasicBlockAna
 									targetPlatform = funcPlatform->GetRelatedPlatform(branch.arch);
 
 								// Normal analysis should not inline indirect targets that are function starts
-								if (context->translateTailCalls && data->GetAnalysisFunction(targetPlatform, branch.address))
+								if (context.translateTailCalls && data->GetAnalysisFunction(targetPlatform, branch.address))
 									continue;
 
 								block->AddPendingOutgoingEdge(IndirectBranch, branch.address, branch.arch);
@@ -590,10 +590,10 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BNBasicBlockAna
 			// We prefer to allow disassembly when function analysis is disabled, but only up to the maximum size.
 			// The log message and tag are generated in ProcessAnalysisSkip
 			totalSize += info.length;
-			if (context->analysisSkipOverride == NeverSkipFunctionAnalysis)
+			if (context.analysisSkipOverride == NeverSkipFunctionAnalysis)
 				maxSize = 0;
-			else if (!maxSize && (context->analysisSkipOverride == AlwaysSkipFunctionAnalysis))
-				maxSize = context->maxFunctionSize;
+			else if (!maxSize && (context.analysisSkipOverride == AlwaysSkipFunctionAnalysis))
+				maxSize = context.maxFunctionSize;
 			if (maxSize && (totalSize > maxSize))
 				break;
 
@@ -609,7 +609,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BNBasicBlockAna
 				delayInstructionEndsBlock = endsBlock;
 			}
 
-			if (block->CanExit() && context->translateTailCalls && !delaySlotCount && hasNextFunc && (location.address == nextFuncAddr))
+			if (block->CanExit() && context.translateTailCalls && !delaySlotCount && hasNextFunc && (location.address == nextFuncAddr))
 			{
 				// Falling through into another function.  Don't consider this a tail call if the current block
 				// called the function, as this indicates a get PC construct.
@@ -644,5 +644,5 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BNBasicBlockAna
 void Architecture::DefaultAnalyzeBasicBlocksCallback(BNFunction* function, BNBasicBlockAnalysisContext* context)
 {
 	Ref<Function> func(new Function(BNNewFunctionReference(function)));
-	Architecture::DefaultAnalyzeBasicBlocks(*func, context);
+	Architecture::DefaultAnalyzeBasicBlocks(*func, *context);
 }

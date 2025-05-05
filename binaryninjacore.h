@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 105
+#define BN_CURRENT_CORE_ABI_VERSION 106
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -4811,7 +4811,7 @@ extern "C"
 	BINARYNINJACOREAPI BNBasicBlockEdge* BNGetBasicBlockIncomingEdges(BNBasicBlock* block, size_t* count);
 	BINARYNINJACOREAPI void BNFreeBasicBlockEdgeList(BNBasicBlockEdge* edges, size_t count);
 	BINARYNINJACOREAPI bool BNBasicBlockHasUndeterminedOutgoingEdges(BNBasicBlock* block);
-	BINARYNINJACOREAPI void BNBasicBlockAddPendingOutgoingEdge(BNBasicBlock* block, BNBranchType type, 
+	BINARYNINJACOREAPI void BNBasicBlockAddPendingOutgoingEdge(BNBasicBlock* block, BNBranchType type,
 	    uint64_t addr, BNArchitecture* arch, bool fallThrough);
 	BINARYNINJACOREAPI BNPendingBasicBlockEdge* BNGetBasicBlockPendingOutgoingEdges(BNBasicBlock* block, size_t* count);
 	BINARYNINJACOREAPI void BNFreePendingBasicBlockEdgeList(BNPendingBasicBlockEdge* edges);

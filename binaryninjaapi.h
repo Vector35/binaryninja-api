@@ -8064,6 +8064,7 @@ namespace BinaryNinja {
 	class RelocationHandler;
 
 	typedef size_t ExprId;
+	typedef BNBasicBlockAnalysisContext BasicBlockAnalysisContext;
 
 	/*! The Architecture class is the base class for all CPU architectures. This provides disassembly, assembly,
 	    patching, and IL translation lifting for a given architecture.
@@ -8172,7 +8173,7 @@ namespace BinaryNinja {
 			\param function Function to analyze
 			\param context Context for the analysis
 		*/
-		static void DefaultAnalyzeBasicBlocks(Function& function, BNBasicBlockAnalysisContext* context);
+		static void DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnalysisContext& context);
 
 		/*! Get an Architecture by name
 
@@ -8277,7 +8278,7 @@ namespace BinaryNinja {
 			\param function Function to analyze
 			\param context Context for the analysis
 		*/
-		virtual void AnalyzeBasicBlocks(Function& function, BNBasicBlockAnalysisContext* context);
+		virtual void AnalyzeBasicBlocks(Function& function, BasicBlockAnalysisContext& context);
 
 		/*! Gets a register name from a register index.
 
@@ -8672,7 +8673,7 @@ namespace BinaryNinja {
 		    const uint8_t* data, uint64_t addr, size_t& len, std::vector<InstructionTextToken>& result) override;
 		virtual bool GetInstructionLowLevelIL(
 		    const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override;
-		virtual void AnalyzeBasicBlocks(Function& function, BNBasicBlockAnalysisContext* context) override;
+		virtual void AnalyzeBasicBlocks(Function& function, BasicBlockAnalysisContext& context) override;
 		virtual std::string GetRegisterName(uint32_t reg) override;
 		virtual std::string GetFlagName(uint32_t flag) override;
 		virtual std::string GetFlagWriteTypeName(uint32_t flags) override;

@@ -313,7 +313,7 @@ void Architecture::AnalyzeBasicBlocksCallback(void *ctxt, BNFunction* function,
 {
 	CallbackRef<Architecture> arch(ctxt);
 	Ref<Function> func(new Function(BNNewFunctionReference(function)));
-	arch->AnalyzeBasicBlocks(*func, context);
+	arch->AnalyzeBasicBlocks(*func, *context);
 }
 
 
@@ -936,7 +936,7 @@ bool Architecture::GetInstructionLowLevelIL(const uint8_t*, uint64_t, size_t&, L
 }
 
 
-void Architecture::AnalyzeBasicBlocks(Function& function, BNBasicBlockAnalysisContext* context)
+void Architecture::AnalyzeBasicBlocks(Function& function, BasicBlockAnalysisContext& context)
 {
 	DefaultAnalyzeBasicBlocks(function, context);
 }
@@ -1502,9 +1502,9 @@ bool CoreArchitecture::GetInstructionLowLevelIL(const uint8_t* data, uint64_t ad
 }
 
 
-void CoreArchitecture::AnalyzeBasicBlocks(Function& function, BNBasicBlockAnalysisContext* context)
+void CoreArchitecture::AnalyzeBasicBlocks(Function& function, BasicBlockAnalysisContext& context)
 {
-	BNArchitectureAnalyzeBasicBlocks(m_object, function.GetObject(), context);
+	BNArchitectureAnalyzeBasicBlocks(m_object, function.GetObject(), &context);
 }
 
 

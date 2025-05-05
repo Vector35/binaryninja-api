@@ -21,7 +21,7 @@ use std::path::PathBuf;
 
 use crate::binary_view::BinaryView;
 use crate::rc::Ref;
-use crate::string::{AsCStr, BnString};
+use crate::string::{BnString, IntoCStr};
 
 pub type MessageBoxButtonSet = BNMessageBoxButtonSet;
 pub type MessageBoxIcon = BNMessageBoxIcon;

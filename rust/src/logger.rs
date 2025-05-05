@@ -35,7 +35,7 @@ use binaryninjacore_sys::{
 };
 
 use crate::rc::{Ref, RefCountable};
-use crate::string::{AsCStr, BnString};
+use crate::string::{BnString, IntoCStr};
 use log;
 use log::LevelFilter;
 use std::ffi::{CStr, CString};

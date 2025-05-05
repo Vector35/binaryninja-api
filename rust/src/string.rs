@@ -62,7 +62,7 @@ pub struct BnString {
 }
 
 impl BnString {
-    pub fn new<S: AsCStr>(s: S) -> Self {
+    pub fn new<S: IntoCStr>(s: S) -> Self {
         use binaryninjacore_sys::BNAllocString;
         let raw = s.to_cstr();
         unsafe { Self::from_raw(BNAllocString(raw.as_ptr())) }
@@ -183,13 +183,13 @@ unsafe impl CoreArrayProviderInner for BnString {
     }
 }
 
-pub unsafe trait AsCStr {
+pub unsafe trait IntoCStr {
     type Result: Deref<Target = CStr>;
 
     fn to_cstr(self) -> Self::Result;
 }
 
-unsafe impl AsCStr for &CStr {
+unsafe impl IntoCStr for &CStr {
     type Result = Self;
 
     fn to_cstr(self) -> Self::Result {
@@ -197,7 +197,7 @@ unsafe impl AsCStr for &CStr {
     }
 }
 
-unsafe impl AsCStr for BnString {
+unsafe impl IntoCStr for BnString {
     type Result = Self;
 
     fn to_cstr(self) -> Self::Result {
@@ -205,7 +205,7 @@ unsafe impl AsCStr for BnString {
     }
 }
 
-unsafe impl AsCStr for &BnString {
+unsafe impl IntoCStr for &BnString {
     type Result = BnString;
 
     fn to_cstr(self) -> Self::Result {
@@ -213,7 +213,7 @@ unsafe impl AsCStr for &BnString {
     }
 }
 
-unsafe impl AsCStr for CString {
+unsafe impl IntoCStr for CString {
     type Result = Self;
 
     fn to_cstr(self) -> Self::Result {
@@ -221,7 +221,7 @@ unsafe impl AsCStr for CString {
     }
 }
 
-unsafe impl AsCStr for &str {
+unsafe impl IntoCStr for &str {
     type Result = CString;
 
     fn to_cstr(self) -> Self::Result {
@@ -229,7 +229,7 @@ unsafe impl AsCStr for &str {
     }
 }
 
-unsafe impl AsCStr for String {
+unsafe impl IntoCStr for String {
     type Result = CString;
 
     fn to_cstr(self) -> Self::Result {
@@ -237,7 +237,7 @@ unsafe impl AsCStr for String {
     }
 }
 
-unsafe impl AsCStr for &String {
+unsafe impl IntoCStr for &String {
     type Result = CString;
 
     fn to_cstr(self) -> Self::Result {
@@ -245,7 +245,7 @@ unsafe impl AsCStr for &String {
     }
 }
 
-unsafe impl<'a> AsCStr for &'a Cow<'a, str> {
+unsafe impl<'a> IntoCStr for &'a Cow<'a, str> {
     type Result = CString;
 
     fn to_cstr(self) -> Self::Result {
@@ -253,7 +253,7 @@ unsafe impl<'a> AsCStr for &'a Cow<'a, str> {
     }
 }
 
-unsafe impl AsCStr for Cow<'_, str> {
+unsafe impl IntoCStr for Cow<'_, str> {
     type Result = CString;
 
     fn to_cstr(self) -> Self::Result {
@@ -261,7 +261,7 @@ unsafe impl AsCStr for Cow<'_, str> {
     }
 }
 
-unsafe impl AsCStr for &QualifiedName {
+unsafe impl IntoCStr for &QualifiedName {
     type Result = CString;
 
     fn to_cstr(self) -> Self::Result {
@@ -269,7 +269,7 @@ unsafe impl AsCStr for &QualifiedName {
     }
 }
 
-unsafe impl AsCStr for PathBuf {
+unsafe impl IntoCStr for PathBuf {
     type Result = CString;
 
     fn to_cstr(self) -> Self::Result {
@@ -277,7 +277,7 @@ unsafe impl AsCStr for PathBuf {
     }
 }
 
-unsafe impl AsCStr for &Path {
+unsafe impl IntoCStr for &Path {
     type Result = CString;
 
     fn to_cstr(self) -> Self::Result {
@@ -286,7 +286,7 @@ unsafe impl AsCStr for &Path {
     }
 }
 
-unsafe impl AsCStr for TypeArchiveSnapshotId {
+unsafe impl IntoCStr for TypeArchiveSnapshotId {
     type Result = CString;
 
     fn to_cstr(self) -> Self::Result {
@@ -295,12 +295,12 @@ unsafe impl AsCStr for TypeArchiveSnapshotId {
 }
 
 pub trait IntoJson {
-    type Output: AsCStr;
+    type Output: IntoCStr;
 
     fn get_json_string(self) -> Result<Self::Output, ()>;
 }
 
-impl<S: AsCStr> IntoJson for S {
+impl<S: IntoCStr> IntoJson for S {
     type Output = S;
 
     fn get_json_string(self) -> Result<Self::Output, ()> {

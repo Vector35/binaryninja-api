@@ -11,7 +11,7 @@
 use crate::platform::Platform;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::rc::{Array, Ref};
-use crate::string::{raw_to_string, AsCStr, BnString};
+use crate::string::{raw_to_string, BnString, IntoCStr};
 use crate::type_parser::{TypeParserError, TypeParserResult};
 use crate::types::{QualifiedName, QualifiedNameAndType, Type};
 use binaryninjacore_sys::*;
@@ -137,7 +137,7 @@ impl TypeContainer {
     /// (by id) to use the new name.
     ///
     /// Returns true if the type was renamed.
-    pub fn rename_type<T: Into<QualifiedName>, S: AsCStr>(&self, name: T, type_id: S) -> bool {
+    pub fn rename_type<T: Into<QualifiedName>, S: IntoCStr>(&self, name: T, type_id: S) -> bool {
         let type_id = type_id.to_cstr();
         let raw_name = QualifiedName::into_raw(name.into());
         let success =
@@ -150,7 +150,7 @@ impl TypeContainer {
     /// not specified and you may end up with broken references if any still exist.
     ///
     /// Returns true if the type was deleted.
-    pub fn delete_type<S: AsCStr>(&self, type_id: S) -> bool {
+    pub fn delete_type<S: IntoCStr>(&self, type_id: S) -> bool {
         let type_id = type_id.to_cstr();
         unsafe { BNTypeContainerDeleteType(self.handle.as_ptr(), type_id.as_ptr()) }
     }
@@ -170,7 +170,7 @@ impl TypeContainer {
     /// Get the unique name of the type in the Type Container with the given id.
     ///
     /// If no type with that id exists, returns None.
-    pub fn type_name<S: AsCStr>(&self, type_id: S) -> Option<QualifiedName> {
+    pub fn type_name<S: IntoCStr>(&self, type_id: S) -> Option<QualifiedName> {
         let type_id = type_id.to_cstr();
         let mut result = BNQualifiedName::default();
         let success = unsafe {
@@ -182,7 +182,7 @@ impl TypeContainer {
     /// Get the definition of the type in the Type Container with the given id.
     ///
     /// If no type with that id exists, returns None.
-    pub fn type_by_id<S: AsCStr>(&self, type_id: S) -> Option<Ref<Type>> {
+    pub fn type_by_id<S: IntoCStr>(&self, type_id: S) -> Option<Ref<Type>> {
         let type_id = type_id.to_cstr();
         let mut result = std::ptr::null_mut();
         let success = unsafe {
@@ -283,7 +283,7 @@ impl TypeContainer {
     ///
     /// * `source` - Source code to parse
     /// * `import_dependencies` - If Type Library / Type Archive types should be imported during parsing
-    pub fn parse_type_string<S: AsCStr>(
+    pub fn parse_type_string<S: IntoCStr>(
         &self,
         source: S,
         import_dependencies: bool,
@@ -329,13 +329,13 @@ impl TypeContainer {
         import_dependencies: bool,
     ) -> Result<TypeParserResult, Array<TypeParserError>>
     where
-        S: AsCStr,
-        F: AsCStr,
+        S: IntoCStr,
+        F: IntoCStr,
         O: IntoIterator,
-        O::Item: AsCStr,
+        O::Item: IntoCStr,
         D: IntoIterator,
-        D::Item: AsCStr,
-        A: AsCStr,
+        D::Item: IntoCStr,
+        A: IntoCStr,
     {
         let source = source.to_cstr();
         let filename = filename.to_cstr();

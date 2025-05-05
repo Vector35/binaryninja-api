@@ -1,6 +1,6 @@
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::settings::Settings;
-use crate::string::{AsCStr, BnString};
+use crate::string::{BnString, IntoCStr};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
 use std::ffi::{c_void, CStr};
@@ -13,7 +13,7 @@ pub struct DownloadProvider {
 }
 
 impl DownloadProvider {
-    pub fn get<S: AsCStr>(name: S) -> Option<DownloadProvider> {
+    pub fn get<S: IntoCStr>(name: S) -> Option<DownloadProvider> {
         let name = name.to_cstr();
         let result = unsafe { BNGetDownloadProviderByName(name.as_ptr()) };
         if result.is_null() {
@@ -131,7 +131,7 @@ impl DownloadInstance {
         }
     }
 
-    pub fn perform_request<S: AsCStr>(
+    pub fn perform_request<S: IntoCStr>(
         &mut self,
         url: S,
         callbacks: DownloadInstanceOutputCallbacks,
@@ -202,11 +202,11 @@ impl DownloadInstance {
     }
 
     pub fn perform_custom_request<
-        M: AsCStr,
-        U: AsCStr,
-        HK: AsCStr,
-        HV: AsCStr,
-        I: IntoIterator<Item = (HK, HV)>,
+        M: IntoCStr,
+        U: IntoCStr,
+        HK: IntoCStr,
+        HV: IntoCStr,
+        I: Iterator<Item = (HK, HV)>,
     >(
         &mut self,
         method: M,

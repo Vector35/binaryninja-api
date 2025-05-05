@@ -6,7 +6,7 @@ use crate::flowgraph::FlowGraph;
 use crate::function::{Function, NativeBlock};
 use crate::linear_view::{LinearDisassemblyLine, LinearDisassemblyLineType, LinearViewObject};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
-use crate::string::AsCStr;
+use crate::string::IntoCStr;
 use binaryninjacore_sys::*;
 use std::ffi::c_void;
 use std::ptr::NonNull;
@@ -61,7 +61,7 @@ impl Default for RenderLayerDefaultState {
 }
 
 /// Register a [`RenderLayer`] with the API.
-pub fn register_render_layer<S: AsCStr, T: RenderLayer>(
+pub fn register_render_layer<S: IntoCStr, T: RenderLayer>(
     name: S,
     render_layer: T,
     default_state: RenderLayerDefaultState,
@@ -299,7 +299,7 @@ impl CoreRenderLayer {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn render_layer_by_name<S: AsCStr>(name: S) -> Option<CoreRenderLayer> {
+    pub fn render_layer_by_name<S: IntoCStr>(name: S) -> Option<CoreRenderLayer> {
         let name_raw = name.to_cstr();
         let result = unsafe { BNGetRenderLayerByName(name_raw.as_ptr()) };
         NonNull::new(result).map(Self::from_raw)

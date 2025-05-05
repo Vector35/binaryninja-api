@@ -10,7 +10,7 @@ use crate::data_buffer::DataBuffer;
 use crate::metadata::Metadata;
 use crate::platform::Platform;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{raw_to_string, AsCStr, BnString};
+use crate::string::{raw_to_string, BnString, IntoCStr};
 use crate::type_container::TypeContainer;
 use crate::types::{QualifiedName, QualifiedNameAndType, QualifiedNameTypeAndId, Type};
 
@@ -82,7 +82,7 @@ impl TypeArchive {
     /// Create a Type Archive at the given path and id, returning None if it could not be created.
     ///
     /// If the file has already been created and is not a valid type archive this will return `None`.
-    pub fn create_with_id<I: AsCStr>(
+    pub fn create_with_id<I: IntoCStr>(
         path: impl AsRef<Path>,
         id: I,
         platform: &Platform,
@@ -95,7 +95,7 @@ impl TypeArchive {
     }
 
     /// Get a reference to the Type Archive with the known id, if one exists.
-    pub fn lookup_by_id<S: AsCStr>(id: S) -> Option<Ref<TypeArchive>> {
+    pub fn lookup_by_id<S: IntoCStr>(id: S) -> Option<Ref<TypeArchive>> {
         let id = id.to_cstr();
         let handle = unsafe { BNLookupTypeArchiveById(id.as_ptr()) };
         NonNull::new(handle).map(|handle| unsafe { TypeArchive::ref_from_raw(handle) })
@@ -150,7 +150,7 @@ impl TypeArchive {
     }
 
     /// Get the ids of the parents to the given snapshot
-    pub fn get_snapshot_parent_ids<S: AsCStr>(
+    pub fn get_snapshot_parent_ids<S: IntoCStr>(
         &self,
         snapshot: &TypeArchiveSnapshotId,
     ) -> Option<Array<BnString>> {
@@ -166,7 +166,7 @@ impl TypeArchive {
     }
 
     /// Get the ids of the children to the given snapshot
-    pub fn get_snapshot_child_ids<S: AsCStr>(
+    pub fn get_snapshot_child_ids<S: IntoCStr>(
         &self,
         snapshot: &TypeArchiveSnapshotId,
     ) -> Option<Array<BnString>> {
@@ -229,7 +229,7 @@ impl TypeArchive {
     ///
     /// * `id` - Old id of type in archive
     /// * `new_name` - New type name
-    pub fn rename_type_by_id<S: AsCStr>(&self, id: S, new_name: QualifiedName) -> bool {
+    pub fn rename_type_by_id<S: IntoCStr>(&self, id: S, new_name: QualifiedName) -> bool {
         let id = id.to_cstr();
         let raw_name = QualifiedName::into_raw(new_name);
         let result =
@@ -248,7 +248,7 @@ impl TypeArchive {
     }
 
     /// Delete an existing type in the type archive.
-    pub fn delete_type_by_id<S: AsCStr>(&self, id: S) -> bool {
+    pub fn delete_type_by_id<S: IntoCStr>(&self, id: S) -> bool {
         let id = id.to_cstr();
         unsafe { BNDeleteTypeArchiveType(self.handle.as_ptr(), id.as_ptr()) }
     }
@@ -256,7 +256,7 @@ impl TypeArchive {
     /// Retrieve a stored type in the archive
     ///
     /// * `name` - Type name
-    pub fn get_type_by_name<S: AsCStr>(&self, name: QualifiedName) -> Option<Ref<Type>> {
+    pub fn get_type_by_name<S: IntoCStr>(&self, name: QualifiedName) -> Option<Ref<Type>> {
         self.get_type_by_name_from_snapshot(name, &TypeArchiveSnapshotId::unset())
     }
 
@@ -284,7 +284,7 @@ impl TypeArchive {
     /// Retrieve a stored type in the archive by id
     ///
     /// * `id` - Type id
-    pub fn get_type_by_id<I: AsCStr>(&self, id: I) -> Option<Ref<Type>> {
+    pub fn get_type_by_id<I: IntoCStr>(&self, id: I) -> Option<Ref<Type>> {
         self.get_type_by_id_from_snapshot(id, &TypeArchiveSnapshotId::unset())
     }
 
@@ -292,7 +292,7 @@ impl TypeArchive {
     ///
     /// * `id` - Type id
     /// * `snapshot` - Snapshot id to search for types
-    pub fn get_type_by_id_from_snapshot<I: AsCStr>(
+    pub fn get_type_by_id_from_snapshot<I: IntoCStr>(
         &self,
         id: I,
         snapshot: &TypeArchiveSnapshotId,
@@ -311,7 +311,7 @@ impl TypeArchive {
     /// Retrieve a type's name by its id
     ///
     /// * `id` - Type id
-    pub fn get_type_name_by_id<I: AsCStr>(&self, id: I) -> QualifiedName {
+    pub fn get_type_name_by_id<I: IntoCStr>(&self, id: I) -> QualifiedName {
         self.get_type_name_by_id_from_snapshot(id, &TypeArchiveSnapshotId::unset())
     }
 
@@ -319,7 +319,7 @@ impl TypeArchive {
     ///
     /// * `id` - Type id
     /// * `snapshot` - Snapshot id to search for types
-    pub fn get_type_name_by_id_from_snapshot<I: AsCStr>(
+    pub fn get_type_name_by_id_from_snapshot<I: IntoCStr>(
         &self,
         id: I,
         snapshot: &TypeArchiveSnapshotId,
@@ -465,7 +465,7 @@ impl TypeArchive {
     /// Get all types a given type references directly
     ///
     /// * `id` - Source type id
-    pub fn get_outgoing_direct_references<I: AsCStr>(&self, id: I) -> Array<BnString> {
+    pub fn get_outgoing_direct_references<I: IntoCStr>(&self, id: I) -> Array<BnString> {
         self.get_outgoing_direct_references_from_snapshot(id, &TypeArchiveSnapshotId::unset())
     }
 
@@ -473,7 +473,7 @@ impl TypeArchive {
     ///
     /// * `id` - Source type id
     /// * `snapshot` - Snapshot id to search for types
-    pub fn get_outgoing_direct_references_from_snapshot<I: AsCStr>(
+    pub fn get_outgoing_direct_references_from_snapshot<I: IntoCStr>(
         &self,
         id: I,
         snapshot: &TypeArchiveSnapshotId,
@@ -495,7 +495,7 @@ impl TypeArchive {
     /// Get all types a given type references, and any types that the referenced types reference
     ///
     /// * `id` - Source type id
-    pub fn get_outgoing_recursive_references<I: AsCStr>(&self, id: I) -> Array<BnString> {
+    pub fn get_outgoing_recursive_references<I: IntoCStr>(&self, id: I) -> Array<BnString> {
         self.get_outgoing_recursive_references_from_snapshot(id, &TypeArchiveSnapshotId::unset())
     }
 
@@ -503,7 +503,7 @@ impl TypeArchive {
     ///
     /// * `id` - Source type id
     /// * `snapshot` - Snapshot id to search for types
-    pub fn get_outgoing_recursive_references_from_snapshot<I: AsCStr>(
+    pub fn get_outgoing_recursive_references_from_snapshot<I: IntoCStr>(
         &self,
         id: I,
         snapshot: &TypeArchiveSnapshotId,
@@ -525,7 +525,7 @@ impl TypeArchive {
     /// Get all types that reference a given type
     ///
     /// * `id` - Target type id
-    pub fn get_incoming_direct_references<I: AsCStr>(&self, id: I) -> Array<BnString> {
+    pub fn get_incoming_direct_references<I: IntoCStr>(&self, id: I) -> Array<BnString> {
         self.get_incoming_direct_references_with_snapshot(id, &TypeArchiveSnapshotId::unset())
     }
 
@@ -533,7 +533,7 @@ impl TypeArchive {
     ///
     /// * `id` - Target type id
     /// * `snapshot` - Snapshot id to search for types
-    pub fn get_incoming_direct_references_with_snapshot<I: AsCStr>(
+    pub fn get_incoming_direct_references_with_snapshot<I: IntoCStr>(
         &self,
         id: I,
         snapshot: &TypeArchiveSnapshotId,
@@ -555,7 +555,7 @@ impl TypeArchive {
     /// Get all types that reference a given type, and all types that reference them, recursively
     ///
     /// * `id` - Target type id
-    pub fn get_incoming_recursive_references<I: AsCStr>(&self, id: I) -> Array<BnString> {
+    pub fn get_incoming_recursive_references<I: IntoCStr>(&self, id: I) -> Array<BnString> {
         self.get_incoming_recursive_references_with_snapshot(id, &TypeArchiveSnapshotId::unset())
     }
 
@@ -563,7 +563,7 @@ impl TypeArchive {
     ///
     /// * `id` - Target type id
     /// * `snapshot` - Snapshot id to search for types, or empty string to search the latest snapshot
-    pub fn get_incoming_recursive_references_with_snapshot<I: AsCStr>(
+    pub fn get_incoming_recursive_references_with_snapshot<I: IntoCStr>(
         &self,
         id: I,
         snapshot: &TypeArchiveSnapshotId,
@@ -583,7 +583,7 @@ impl TypeArchive {
     }
 
     /// Look up a metadata entry in the archive
-    pub fn query_metadata<S: AsCStr>(&self, key: S) -> Option<Ref<Metadata>> {
+    pub fn query_metadata<S: IntoCStr>(&self, key: S) -> Option<Ref<Metadata>> {
         let key = key.to_cstr();
         let result = unsafe { BNTypeArchiveQueryMetadata(self.handle.as_ptr(), key.as_ptr()) };
         (!result.is_null()).then(|| unsafe { Metadata::ref_from_raw(result) })
@@ -593,7 +593,7 @@ impl TypeArchive {
     ///
     /// * `key` - key value to associate the Metadata object with
     /// * `md` - object to store.
-    pub fn store_metadata<S: AsCStr>(&self, key: S, md: &Metadata) {
+    pub fn store_metadata<S: IntoCStr>(&self, key: S, md: &Metadata) {
         let key = key.to_cstr();
         let result =
             unsafe { BNTypeArchiveStoreMetadata(self.handle.as_ptr(), key.as_ptr(), md.handle) };
@@ -601,13 +601,13 @@ impl TypeArchive {
     }
 
     /// Delete a given metadata entry in the archive from the `key`
-    pub fn remove_metadata<S: AsCStr>(&self, key: S) -> bool {
+    pub fn remove_metadata<S: IntoCStr>(&self, key: S) -> bool {
         let key = key.to_cstr();
         unsafe { BNTypeArchiveRemoveMetadata(self.handle.as_ptr(), key.as_ptr()) }
     }
 
     /// Turn a given `snapshot` id into a data stream
-    pub fn serialize_snapshot<S: AsCStr>(&self, snapshot: &TypeArchiveSnapshotId) -> DataBuffer {
+    pub fn serialize_snapshot<S: IntoCStr>(&self, snapshot: &TypeArchiveSnapshotId) -> DataBuffer {
         let result = unsafe {
             BNTypeArchiveSerializeSnapshot(
                 self.handle.as_ptr(),
@@ -680,7 +680,7 @@ impl TypeArchive {
 
     // TODO: Make this AsRef<Path>?
     /// Determine if `file` is a Type Archive
-    pub fn is_type_archive<P: AsCStr>(file: P) -> bool {
+    pub fn is_type_archive<P: IntoCStr>(file: P) -> bool {
         let file = file.to_cstr();
         unsafe { BNIsTypeArchive(file.as_ptr()) }
     }
@@ -705,7 +705,7 @@ impl TypeArchive {
         parents: &[TypeArchiveSnapshotId],
     ) -> TypeArchiveSnapshotId
     where
-        P: AsCStr,
+        P: IntoCStr,
         F: FnMut(&TypeArchiveSnapshotId) -> bool,
     {
         unsafe extern "C" fn cb_callback<F: FnMut(&TypeArchiveSnapshotId) -> bool>(
@@ -752,12 +752,12 @@ impl TypeArchive {
         merge_conflicts: M,
     ) -> Result<BnString, Array<BnString>>
     where
-        B: AsCStr,
-        F: AsCStr,
-        S: AsCStr,
+        B: IntoCStr,
+        F: IntoCStr,
+        S: IntoCStr,
         M: IntoIterator<Item = (MI, MK)>,
-        MI: AsCStr,
-        MK: AsCStr,
+        MI: IntoCStr,
+        MK: IntoCStr,
     {
         self.merge_snapshots_with_progress(
             base_snapshot,
@@ -787,12 +787,12 @@ impl TypeArchive {
         mut progress: P,
     ) -> Result<BnString, Array<BnString>>
     where
-        B: AsCStr,
-        F: AsCStr,
-        S: AsCStr,
+        B: IntoCStr,
+        F: IntoCStr,
+        S: IntoCStr,
         M: IntoIterator<Item = (MI, MK)>,
-        MI: AsCStr,
-        MK: AsCStr,
+        MI: IntoCStr,
+        MK: IntoCStr,
         P: ProgressCallback,
     {
         let base_snapshot = base_snapshot.to_cstr();
@@ -1141,7 +1141,7 @@ impl TypeArchiveMergeConflict {
     }
 
     // TODO: This needs documentation!
-    pub fn success<S: AsCStr>(&self, value: S) -> bool {
+    pub fn success<S: IntoCStr>(&self, value: S) -> bool {
         let value = value.to_cstr();
         unsafe { BNTypeArchiveMergeConflictSuccess(self.handle.as_ptr(), value.as_ptr()) }
     }

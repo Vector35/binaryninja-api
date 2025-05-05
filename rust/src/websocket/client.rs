@@ -1,5 +1,5 @@
 use crate::rc::{Ref, RefCountable};
-use crate::string::{AsCStr, BnString};
+use crate::string::{BnString, IntoCStr};
 use binaryninjacore_sys::*;
 use std::ffi::{c_char, c_void, CStr};
 use std::ptr::NonNull;
@@ -21,8 +21,8 @@ pub trait WebsocketClient: Sync + Send {
     fn connect<I, K, V>(&self, host: &str, headers: I) -> bool
     where
         I: IntoIterator<Item = (K, V)>,
-        K: AsCStr,
-        V: AsCStr;
+        K: IntoCStr,
+        V: IntoCStr;
 
     fn write(&self, data: &[u8]) -> bool;
 
@@ -77,8 +77,8 @@ impl CoreWebsocketClient {
     ) -> bool
     where
         I: IntoIterator<Item = (K, V)>,
-        K: AsCStr,
-        V: AsCStr,
+        K: IntoCStr,
+        V: IntoCStr,
         C: WebsocketClientCallback,
     {
         let url = host.to_cstr();

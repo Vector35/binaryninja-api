@@ -1,6 +1,6 @@
 use crate::project::{systime_from_bntime, Project, ProjectFolder};
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{AsCStr, BnString};
+use crate::string::{BnString, IntoCStr};
 use binaryninjacore_sys::{
     BNFreeProjectFile, BNFreeProjectFileList, BNNewProjectFileReference, BNProjectFile,
     BNProjectFileExistsOnDisk, BNProjectFileExport, BNProjectFileGetCreationTimestamp,
@@ -56,7 +56,7 @@ impl ProjectFile {
     }
 
     /// Set the name of this file
-    pub fn set_name<S: AsCStr>(&self, value: S) -> bool {
+    pub fn set_name<S: IntoCStr>(&self, value: S) -> bool {
         let value_raw = value.to_cstr();
         unsafe { BNProjectFileSetName(self.handle.as_ptr(), value_raw.as_ptr()) }
     }
@@ -67,7 +67,7 @@ impl ProjectFile {
     }
 
     /// Set the description of this file
-    pub fn set_description<S: AsCStr>(&self, value: S) -> bool {
+    pub fn set_description<S: IntoCStr>(&self, value: S) -> bool {
         let value_raw = value.to_cstr();
         unsafe { BNProjectFileSetDescription(self.handle.as_ptr(), value_raw.as_ptr()) }
     }
@@ -93,7 +93,7 @@ impl ProjectFile {
     /// Export this file to disk, `true' if the export succeeded
     ///
     /// * `dest` - Destination path for the exported contents
-    pub fn export<S: AsCStr>(&self, dest: S) -> bool {
+    pub fn export<S: IntoCStr>(&self, dest: S) -> bool {
         let dest_raw = dest.to_cstr();
         unsafe { BNProjectFileExport(self.handle.as_ptr(), dest_raw.as_ptr()) }
     }

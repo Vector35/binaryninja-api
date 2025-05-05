@@ -1,6 +1,6 @@
 use crate::project::file::ProjectFile;
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{AsCStr, BnString};
+use crate::string::{BnString, IntoCStr};
 use crate::symbol::Symbol;
 use binaryninjacore_sys::*;
 use std::fmt::Debug;
@@ -166,7 +166,7 @@ impl ExternalLocation {
 
     /// Set the symbol pointed to by this ExternalLocation.
     /// ExternalLocations must have a valid target address and/or symbol set.
-    pub fn set_target_symbol<S: AsCStr>(&self, symbol: Option<S>) -> bool {
+    pub fn set_target_symbol<S: IntoCStr>(&self, symbol: Option<S>) -> bool {
         match symbol {
             Some(sym) => {
                 let raw_sym = sym.to_cstr();

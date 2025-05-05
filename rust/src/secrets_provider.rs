@@ -4,7 +4,7 @@ use std::fmt::Debug;
 use std::ptr::NonNull;
 
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
-use crate::string::{AsCStr, BnString};
+use crate::string::{BnString, IntoCStr};
 
 pub trait SecretsProvider {
     fn has_data(&mut self, key: &str) -> bool;
@@ -49,7 +49,7 @@ impl CoreSecretsProvider {
     }
 
     /// Retrieve a provider by name
-    pub fn by_name<S: AsCStr>(name: S) -> Option<CoreSecretsProvider> {
+    pub fn by_name<S: IntoCStr>(name: S) -> Option<CoreSecretsProvider> {
         let name = name.to_cstr();
         let result = unsafe { BNGetSecretsProviderByName(name.as_ptr()) };
         NonNull::new(result).map(|h| unsafe { Self::from_raw(h) })
@@ -62,27 +62,27 @@ impl CoreSecretsProvider {
     }
 
     /// Check if data for a specific key exists, but do not retrieve it
-    pub fn has_data<S: AsCStr>(&self, key: S) -> bool {
+    pub fn has_data<S: IntoCStr>(&self, key: S) -> bool {
         let key = key.to_cstr();
         unsafe { BNSecretsProviderHasData(self.handle.as_ptr(), key.as_ptr()) }
     }
 
     /// Retrieve data for the given key, if it exists
-    pub fn get_data<S: AsCStr>(&self, key: S) -> String {
+    pub fn get_data<S: IntoCStr>(&self, key: S) -> String {
         let key = key.to_cstr();
         let result = unsafe { BNGetSecretsProviderData(self.handle.as_ptr(), key.as_ptr()) };
         unsafe { BnString::into_string(result) }
     }
 
     /// Store data with the given key
-    pub fn store_data<K: AsCStr, V: AsCStr>(&self, key: K, value: V) -> bool {
+    pub fn store_data<K: IntoCStr, V: IntoCStr>(&self, key: K, value: V) -> bool {
         let key = key.to_cstr();
         let value = value.to_cstr();
         unsafe { BNStoreSecretsProviderData(self.handle.as_ptr(), key.as_ptr(), value.as_ptr()) }
     }
 
     /// Delete stored data with the given key
-    pub fn delete_data<S: AsCStr>(&self, key: S) -> bool {
+    pub fn delete_data<S: IntoCStr>(&self, key: S) -> bool {
         let key = key.to_cstr();
         unsafe { BNDeleteSecretsProviderData(self.handle.as_ptr(), key.as_ptr()) }
     }

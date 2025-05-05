@@ -10,7 +10,7 @@ use crate::disassembly::DisassemblySettings;
 use crate::flowgraph::FlowGraph;
 use crate::function::{Function, Location};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable};
-use crate::string::AsCStr;
+use crate::string::IntoCStr;
 use crate::types::Type;
 use crate::variable::{PossibleValueSet, RegisterValue, SSAVariable, UserVariableValue, Variable};
 
@@ -121,7 +121,7 @@ impl MediumLevelILFunction {
         unsafe { Array::new(raw_instr_idxs, count, self.to_owned()) }
     }
 
-    pub fn create_user_stack_var<'a, S: AsCStr, C: Into<Conf<&'a Type>>>(
+    pub fn create_user_stack_var<'a, S: IntoCStr, C: Into<Conf<&'a Type>>>(
         self,
         offset: i64,
         var_type: C,
@@ -143,7 +143,7 @@ impl MediumLevelILFunction {
         unsafe { BNDeleteUserStackVariable(self.function().handle, offset) }
     }
 
-    pub fn create_user_var<'a, S: AsCStr, C: Into<Conf<&'a Type>>>(
+    pub fn create_user_var<'a, S: IntoCStr, C: Into<Conf<&'a Type>>>(
         &self,
         var: &Variable,
         var_type: C,
@@ -273,7 +273,7 @@ impl MediumLevelILFunction {
         Ok(())
     }
 
-    pub fn create_auto_stack_var<'a, T: Into<Conf<&'a Type>>, S: AsCStr>(
+    pub fn create_auto_stack_var<'a, T: Into<Conf<&'a Type>>, S: IntoCStr>(
         &self,
         offset: i64,
         var_type: T,
@@ -295,7 +295,7 @@ impl MediumLevelILFunction {
         unsafe { BNDeleteAutoStackVariable(self.function().handle, offset) }
     }
 
-    pub fn create_auto_var<'a, S: AsCStr, C: Into<Conf<&'a Type>>>(
+    pub fn create_auto_var<'a, S: IntoCStr, C: Into<Conf<&'a Type>>>(
         &self,
         var: &Variable,
         var_type: C,

@@ -1,6 +1,6 @@
 use binaryninja::headless::Session;
 use binaryninja::rc::Ref;
-use binaryninja::string::AsCStr;
+use binaryninja::string::IntoCStr;
 use binaryninja::websocket::{
     register_websocket_provider, CoreWebsocketClient, CoreWebsocketProvider, WebsocketClient,
     WebsocketClientCallback, WebsocketProvider,
@@ -34,8 +34,8 @@ impl WebsocketClient for MyWebsocketClient {
     fn connect<I, K, V>(&self, host: &str, _headers: I) -> bool
     where
         I: IntoIterator<Item = (K, V)>,
-        K: AsCStr,
-        V: AsCStr,
+        K: IntoCStr,
+        V: IntoCStr,
     {
         assert_eq!(host, "url");
         true

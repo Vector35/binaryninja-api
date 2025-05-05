@@ -22,7 +22,7 @@ use crate::function::{Location, NativeBlock};
 use crate::high_level_il as hlil;
 use crate::low_level_il as llil;
 use crate::medium_level_il as mlil;
-use crate::string::AsCStr;
+use crate::string::IntoCStr;
 use crate::string::{raw_to_string, strings_to_string_list, BnString};
 
 use crate::rc::*;
@@ -1242,7 +1242,7 @@ impl DisassemblyTextRenderer {
         unsafe { Array::new(tokens, count, ()) }
     }
 
-    pub fn wrap_comment<S1: AsCStr, S2: AsCStr, S3: AsCStr>(
+    pub fn wrap_comment<S1: IntoCStr, S2: IntoCStr, S3: IntoCStr>(
         &self,
         cur_line: DisassemblyTextLine,
         comment: S1,

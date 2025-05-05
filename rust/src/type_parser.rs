@@ -6,7 +6,7 @@ use std::ptr::NonNull;
 
 use crate::platform::Platform;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
-use crate::string::{raw_to_string, AsCStr, BnString};
+use crate::string::{raw_to_string, BnString, IntoCStr};
 use crate::type_container::TypeContainer;
 use crate::types::{QualifiedName, QualifiedNameAndType, Type};
 
@@ -14,7 +14,7 @@ pub type TypeParserErrorSeverity = BNTypeParserErrorSeverity;
 pub type TypeParserOption = BNTypeParserOption;
 
 /// Register a custom parser with the API
-pub fn register_type_parser<S: AsCStr, T: TypeParser>(
+pub fn register_type_parser<S: IntoCStr, T: TypeParser>(
     name: S,
     parser: T,
 ) -> (&'static mut T, CoreTypeParser) {
@@ -51,7 +51,7 @@ impl CoreTypeParser {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn parser_by_name<S: AsCStr>(name: S) -> Option<CoreTypeParser> {
+    pub fn parser_by_name<S: IntoCStr>(name: S) -> Option<CoreTypeParser> {
         let name_raw = name.to_cstr();
         let result = unsafe { BNGetTypeParserByName(name_raw.as_ptr()) };
         NonNull::new(result).map(|x| unsafe { Self::from_raw(x) })

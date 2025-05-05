@@ -42,7 +42,7 @@ impl Tag {
         Ref::new(Self { handle })
     }
 
-    pub fn new<S: AsCStr>(t: &TagType, data: S) -> Ref<Self> {
+    pub fn new<S: IntoCStr>(t: &TagType, data: S) -> Ref<Self> {
         let data = data.to_cstr();
         unsafe { Self::ref_from_raw(BNCreateTag(t.handle, data.as_ptr())) }
     }
@@ -59,7 +59,7 @@ impl Tag {
         unsafe { TagType::ref_from_raw(BNTagGetType(self.handle)) }
     }
 
-    pub fn set_data<S: AsCStr>(&self, data: S) {
+    pub fn set_data<S: IntoCStr>(&self, data: S) {
         let data = data.to_cstr();
         unsafe {
             BNTagSetData(self.handle, data.as_ptr());
@@ -134,7 +134,7 @@ impl TagType {
         Ref::new(Self { handle })
     }
 
-    pub fn create<N: AsCStr, I: AsCStr>(view: &BinaryView, name: N, icon: I) -> Ref<Self> {
+    pub fn create<N: IntoCStr, I: IntoCStr>(view: &BinaryView, name: N, icon: I) -> Ref<Self> {
         let tag_type = unsafe { Self::ref_from_raw(BNCreateTagType(view.handle)) };
         tag_type.set_name(name);
         tag_type.set_icon(icon);
@@ -149,7 +149,7 @@ impl TagType {
         unsafe { BnString::into_string(BNTagTypeGetIcon(self.handle)) }
     }
 
-    pub fn set_icon<S: AsCStr>(&self, icon: S) {
+    pub fn set_icon<S: IntoCStr>(&self, icon: S) {
         let icon = icon.to_cstr();
         unsafe {
             BNTagTypeSetIcon(self.handle, icon.as_ptr());
@@ -160,7 +160,7 @@ impl TagType {
         unsafe { BnString::into_string(BNTagTypeGetName(self.handle)) }
     }
 
-    pub fn set_name<S: AsCStr>(&self, name: S) {
+    pub fn set_name<S: IntoCStr>(&self, name: S) {
         let name = name.to_cstr();
         unsafe {
             BNTagTypeSetName(self.handle, name.as_ptr());
@@ -179,7 +179,7 @@ impl TagType {
         unsafe { BNTagTypeGetType(self.handle) }
     }
 
-    pub fn set_type<S: AsCStr>(&self, t: S) {
+    pub fn set_type<S: IntoCStr>(&self, t: S) {
         let t = t.to_cstr();
         unsafe {
             BNTagTypeSetName(self.handle, t.as_ptr());

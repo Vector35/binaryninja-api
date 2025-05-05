@@ -4,7 +4,7 @@ use crate::binary_view::BinaryView;
 use crate::disassembly::InstructionTextToken;
 use crate::platform::Platform;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
-use crate::string::{raw_to_string, AsCStr, BnString};
+use crate::string::{raw_to_string, BnString, IntoCStr};
 use crate::type_container::TypeContainer;
 use crate::types::{NamedTypeReference, QualifiedName, QualifiedNameAndType, Type};
 use binaryninjacore_sys::*;
@@ -15,7 +15,7 @@ pub type TokenEscapingType = BNTokenEscapingType;
 pub type TypeDefinitionLineType = BNTypeDefinitionLineType;
 
 /// Register a custom parser with the API
-pub fn register_type_printer<S: AsCStr, T: TypePrinter>(
+pub fn register_type_printer<S: IntoCStr, T: TypePrinter>(
     name: S,
     parser: T,
 ) -> (&'static mut T, CoreTypePrinter) {
@@ -57,7 +57,7 @@ impl CoreTypePrinter {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn printer_by_name<S: AsCStr>(name: S) -> Option<CoreTypePrinter> {
+    pub fn printer_by_name<S: IntoCStr>(name: S) -> Option<CoreTypePrinter> {
         let name_raw = name.to_cstr();
         let result = unsafe { BNGetTypePrinterByName(name_raw.as_ptr()) };
         NonNull::new(result).map(|x| unsafe { Self::from_raw(x) })

@@ -58,7 +58,7 @@ pub trait CallingConvention: Sync {
 pub fn register_calling_convention<A, N, C>(arch: &A, name: N, cc: C) -> Ref<CoreCallingConvention>
 where
     A: Architecture,
-    N: AsCStr,
+    N: IntoCStr,
     C: 'static + CallingConvention,
 {
     struct CustomCallingConventionContext<C>

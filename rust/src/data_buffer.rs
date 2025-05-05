@@ -19,7 +19,7 @@ use binaryninjacore_sys::*;
 use std::ffi::c_void;
 use std::slice;
 
-use crate::string::{AsCStr, BnString};
+use crate::string::{BnString, IntoCStr};
 
 pub struct DataBuffer(*mut BNDataBuffer);
 

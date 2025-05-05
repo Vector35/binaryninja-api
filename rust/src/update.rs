@@ -4,7 +4,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
-use crate::string::{raw_to_string, AsCStr, BnString};
+use crate::string::{raw_to_string, BnString, IntoCStr};
 use binaryninjacore_sys::*;
 
 pub type UpdateResult = BNUpdateResult;

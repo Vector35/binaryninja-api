@@ -30,7 +30,7 @@ pub use user::*;
 use binaryninjacore_sys::*;
 
 use crate::rc::{Array, Ref};
-use crate::string::{AsCStr, BnString};
+use crate::string::{BnString, IntoCStr};
 
 // TODO: Should we pull metadata and information required to call a function? Or should we add documentation
 // TODO: on what functions need to have been called prior? I feel like we should make the user have to pull
@@ -73,21 +73,21 @@ pub fn known_remotes() -> Array<Remote> {
 }
 
 /// Get Remote by unique `id`
-pub fn get_remote_by_id<S: AsCStr>(id: S) -> Option<Ref<Remote>> {
+pub fn get_remote_by_id<S: IntoCStr>(id: S) -> Option<Ref<Remote>> {
     let id = id.to_cstr();
     let value = unsafe { BNCollaborationGetRemoteById(id.as_ptr()) };
     NonNull::new(value).map(|h| unsafe { Remote::ref_from_raw(h) })
 }
 
 /// Get Remote by `address`
-pub fn get_remote_by_address<S: AsCStr>(address: S) -> Option<Ref<Remote>> {
+pub fn get_remote_by_address<S: IntoCStr>(address: S) -> Option<Ref<Remote>> {
     let address = address.to_cstr();
     let value = unsafe { BNCollaborationGetRemoteByAddress(address.as_ptr()) };
     NonNull::new(value).map(|h| unsafe { Remote::ref_from_raw(h) })
 }
 
 /// Get Remote by `name`
-pub fn get_remote_by_name<S: AsCStr>(name: S) -> Option<Ref<Remote>> {
+pub fn get_remote_by_name<S: IntoCStr>(name: S) -> Option<Ref<Remote>> {
     let name = name.to_cstr();
     let value = unsafe { BNCollaborationGetRemoteByName(name.as_ptr()) };
     NonNull::new(value).map(|h| unsafe { Remote::ref_from_raw(h) })
@@ -105,10 +105,10 @@ pub fn save_remotes() {
 
 pub fn store_data_in_keychain<K, I, DK, DV>(key: K, data: I) -> bool
 where
-    K: AsCStr,
+    K: IntoCStr,
     I: IntoIterator<Item = (DK, DV)>,
-    DK: AsCStr,
-    DV: AsCStr,
+    DK: IntoCStr,
+    DV: IntoCStr,
 {
     let key = key.to_cstr();
     let (data_keys, data_values): (Vec<DK::Result>, Vec<DV::Result>) = data
@@ -127,12 +127,12 @@ where
     }
 }
 
-pub fn has_data_in_keychain<K: AsCStr>(key: K) -> bool {
+pub fn has_data_in_keychain<K: IntoCStr>(key: K) -> bool {
     let key = key.to_cstr();
     unsafe { BNCollaborationHasDataInKeychain(key.as_ptr()) }
 }
 
-pub fn get_data_from_keychain<K: AsCStr>(key: K) -> Option<(Array<BnString>, Array<BnString>)> {
+pub fn get_data_from_keychain<K: IntoCStr>(key: K) -> Option<(Array<BnString>, Array<BnString>)> {
     let key = key.to_cstr();
     let mut keys = std::ptr::null_mut();
     let mut values = std::ptr::null_mut();
@@ -142,7 +142,7 @@ pub fn get_data_from_keychain<K: AsCStr>(key: K) -> Option<(Array<BnString>, Arr
     keys.zip(values)
 }
 
-pub fn delete_data_from_keychain<K: AsCStr>(key: K) -> bool {
+pub fn delete_data_from_keychain<K: IntoCStr>(key: K) -> bool {
     let key = key.to_cstr();
     unsafe { BNCollaborationDeleteDataFromKeychain(key.as_ptr()) }
 }

@@ -6,7 +6,7 @@ use super::HighLevelILLiftedInstruction;
 use crate::architecture::CoreIntrinsic;
 use crate::function::Function;
 use crate::rc::Ref;
-use crate::string::{AsCStr, BnString};
+use crate::string::{BnString, IntoCStr};
 use crate::variable::{ConstantData, SSAVariable, Variable};
 
 #[derive(Clone, PartialEq, Eq)]
@@ -20,7 +20,7 @@ impl GotoLabel {
         unsafe { BnString::into_string(BNGetGotoLabelName(self.function.handle, self.target)) }
     }
 
-    fn set_name<S: AsCStr>(&self, name: S) {
+    fn set_name<S: IntoCStr>(&self, name: S) {
         let raw = name.to_cstr();
         unsafe {
             BNSetUserGotoLabelName(
@@ -327,7 +327,7 @@ impl LiftedLabel {
         self.target.name()
     }
 
-    pub fn set_name<S: AsCStr>(&self, name: S) {
+    pub fn set_name<S: IntoCStr>(&self, name: S) {
         self.target.set_name(name)
     }
 }

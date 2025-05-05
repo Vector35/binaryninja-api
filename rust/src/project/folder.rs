@@ -1,7 +1,7 @@
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::Project;
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{AsCStr, BnString};
+use crate::string::{BnString, IntoCStr};
 use binaryninjacore_sys::{
     BNFreeProjectFolder, BNFreeProjectFolderList, BNNewProjectFolderReference, BNProjectFolder,
     BNProjectFolderExport, BNProjectFolderGetDescription, BNProjectFolderGetId,
@@ -46,7 +46,7 @@ impl ProjectFolder {
     }
 
     /// Set the name of this folder
-    pub fn set_name<S: AsCStr>(&self, value: S) -> bool {
+    pub fn set_name<S: IntoCStr>(&self, value: S) -> bool {
         let value_raw = value.to_cstr();
         unsafe { BNProjectFolderSetName(self.handle.as_ptr(), value_raw.as_ptr()) }
     }
@@ -57,7 +57,7 @@ impl ProjectFolder {
     }
 
     /// Set the description of this folder
-    pub fn set_description<S: AsCStr>(&self, value: S) -> bool {
+    pub fn set_description<S: IntoCStr>(&self, value: S) -> bool {
         let value_raw = value.to_cstr();
         unsafe { BNProjectFolderSetDescription(self.handle.as_ptr(), value_raw.as_ptr()) }
     }
@@ -78,7 +78,7 @@ impl ProjectFolder {
     /// Recursively export this folder to disk, returns `true' if the export succeeded
     ///
     /// * `dest` - Destination path for the exported contents
-    pub fn export<S: AsCStr>(&self, dest: S) -> bool {
+    pub fn export<S: IntoCStr>(&self, dest: S) -> bool {
         self.export_with_progress(dest, NoProgressCallback)
     }
 
@@ -89,7 +89,7 @@ impl ProjectFolder {
     /// * `progress` - [`ProgressCallback`] that will be called as contents are exporting
     pub fn export_with_progress<S, P>(&self, dest: S, mut progress: P) -> bool
     where
-        S: AsCStr,
+        S: IntoCStr,
         P: ProgressCallback,
     {
         let dest_raw = dest.to_cstr();

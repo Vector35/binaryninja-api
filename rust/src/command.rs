@@ -42,7 +42,7 @@ use std::os::raw::c_void;
 
 use crate::binary_view::BinaryView;
 use crate::function::Function;
-use crate::string::AsCStr;
+use crate::string::IntoCStr;
 
 /// The trait required for generic commands.  See [register_command] for example usage.
 pub trait Command: 'static + Sync {
@@ -95,7 +95,7 @@ where
 /// ```
 pub fn register_command<S, C>(name: S, desc: S, command: C)
 where
-    S: AsCStr,
+    S: IntoCStr,
     C: Command,
 {
     extern "C" fn cb_action<C>(ctxt: *mut c_void, view: *mut BNBinaryView)
@@ -196,7 +196,7 @@ where
 /// ```
 pub fn register_command_for_address<S, C>(name: S, desc: S, command: C)
 where
-    S: AsCStr,
+    S: IntoCStr,
     C: AddressCommand,
 {
     extern "C" fn cb_action<C>(ctxt: *mut c_void, view: *mut BNBinaryView, addr: u64)
@@ -298,7 +298,7 @@ where
 /// ```
 pub fn register_command_for_range<S, C>(name: S, desc: S, command: C)
 where
-    S: AsCStr,
+    S: IntoCStr,
     C: RangeCommand,
 {
     extern "C" fn cb_action<C>(ctxt: *mut c_void, view: *mut BNBinaryView, addr: u64, len: u64)
@@ -405,7 +405,7 @@ where
 /// ```
 pub fn register_command_for_function<S, C>(name: S, desc: S, command: C)
 where
-    S: AsCStr,
+    S: IntoCStr,
     C: FunctionCommand,
 {
     extern "C" fn cb_action<C>(ctxt: *mut c_void, view: *mut BNBinaryView, func: *mut BNFunction)

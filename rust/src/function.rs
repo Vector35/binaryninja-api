@@ -372,7 +372,7 @@ impl Function {
         unsafe { BnString::into_string(BNGetFunctionComment(self.handle)) }
     }
 
-    pub fn set_comment<S: AsCStr>(&self, comment: S) {
+    pub fn set_comment<S: IntoCStr>(&self, comment: S) {
         let raw = comment.to_cstr();
 
         unsafe {
@@ -394,7 +394,7 @@ impl Function {
         unsafe { BnString::into_string(BNGetCommentForAddress(self.handle, addr)) }
     }
 
-    pub fn set_comment_at<S: AsCStr>(&self, addr: u64, comment: S) {
+    pub fn set_comment_at<S: IntoCStr>(&self, addr: u64, comment: S) {
         let raw = comment.to_cstr();
 
         unsafe {
@@ -1103,7 +1103,7 @@ impl Function {
     /// let crash = bv.create_tag_type("Crashes", "🎯");
     /// fun.add_tag(&crash, "Nullpointer dereference", Some(0x1337), false, None);
     /// ```
-    pub fn add_tag<S: AsCStr>(
+    pub fn add_tag<S: IntoCStr>(
         &self,
         tag_type: &TagType,
         data: S,
@@ -1707,10 +1707,10 @@ impl Function {
         operand: usize,
         display_type: IntegerDisplayType,
         arch: Option<CoreArchitecture>,
-        enum_display_typeid: Option<impl AsCStr>,
+        enum_display_typeid: Option<impl IntoCStr>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let enum_display_typeid = enum_display_typeid.map(AsCStr::to_cstr);
+        let enum_display_typeid = enum_display_typeid.map(IntoCStr::to_cstr);
         let enum_display_typeid_ptr = enum_display_typeid
             .map(|x| x.as_ptr())
             .unwrap_or(std::ptr::null());

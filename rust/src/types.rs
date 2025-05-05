@@ -24,7 +24,7 @@ use crate::{
     binary_view::{BinaryView, BinaryViewExt},
     calling_convention::CoreCallingConvention,
     rc::*,
-    string::{AsCStr, BnString},
+    string::{BnString, IntoCStr},
 };
 
 use crate::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
@@ -258,7 +258,7 @@ impl TypeBuilder {
         }
     }
 
-    pub fn named_int<S: AsCStr>(width: usize, is_signed: bool, alt_name: S) -> Self {
+    pub fn named_int<S: IntoCStr>(width: usize, is_signed: bool, alt_name: S) -> Self {
         let mut is_signed = Conf::new(is_signed, MAX_CONFIDENCE).into();
         // let alt_name = BnString::new(alt_name);
         let alt_name = alt_name.to_cstr(); // This segfaulted once, so the above version is there if we need to change to it, but in theory this is copied into a `const string&` on the C++ side; I'm just not 100% confident that a constant reference copies data
@@ -281,7 +281,7 @@ impl TypeBuilder {
         }
     }
 
-    pub fn named_float<S: AsCStr>(width: usize, alt_name: S) -> Self {
+    pub fn named_float<S: IntoCStr>(width: usize, alt_name: S) -> Self {
         // let alt_name = BnString::new(alt_name);
         let alt_name = alt_name.to_cstr(); // See same line in `named_int` above
 
@@ -649,7 +649,7 @@ impl Type {
         }
     }
 
-    pub fn named_int<S: AsCStr>(width: usize, is_signed: bool, alt_name: S) -> Ref<Self> {
+    pub fn named_int<S: IntoCStr>(width: usize, is_signed: bool, alt_name: S) -> Ref<Self> {
         let mut is_signed = Conf::new(is_signed, MAX_CONFIDENCE).into();
         // let alt_name = BnString::new(alt_name);
         let alt_name = alt_name.to_cstr(); // This segfaulted once, so the above version is there if we need to change to it, but in theory this is copied into a `const string&` on the C++ side; I'm just not 100% confident that a constant reference copies data
@@ -672,7 +672,7 @@ impl Type {
         }
     }
 
-    pub fn named_float<S: AsCStr>(width: usize, alt_name: S) -> Ref<Self> {
+    pub fn named_float<S: IntoCStr>(width: usize, alt_name: S) -> Ref<Self> {
         // let alt_name = BnString::new(alt_name);
         let alt_name = alt_name.to_cstr(); // See same line in `named_int` above
 
@@ -1217,7 +1217,7 @@ impl EnumerationBuilder {
         unsafe { Enumeration::ref_from_raw(BNFinalizeEnumerationBuilder(self.handle)) }
     }
 
-    pub fn append<S: AsCStr>(&mut self, name: S) -> &mut Self {
+    pub fn append<S: IntoCStr>(&mut self, name: S) -> &mut Self {
         let name = name.to_cstr();
         unsafe {
             BNAddEnumerationBuilderMember(self.handle, name.as_ref().as_ptr() as _);
@@ -1225,7 +1225,7 @@ impl EnumerationBuilder {
         self
     }
 
-    pub fn insert<S: AsCStr>(&mut self, name: S, value: u64) -> &mut Self {
+    pub fn insert<S: IntoCStr>(&mut self, name: S, value: u64) -> &mut Self {
         let name = name.to_cstr();
         unsafe {
             BNAddEnumerationBuilderMemberWithValue(self.handle, name.as_ref().as_ptr() as _, value);
@@ -1233,7 +1233,7 @@ impl EnumerationBuilder {
         self
     }
 
-    pub fn replace<S: AsCStr>(&mut self, id: usize, name: S, value: u64) -> &mut Self {
+    pub fn replace<S: IntoCStr>(&mut self, id: usize, name: S, value: u64) -> &mut Self {
         let name = name.to_cstr();
         unsafe {
             BNReplaceEnumerationBuilderMember(self.handle, id, name.as_ref().as_ptr() as _, value);
@@ -1476,7 +1476,7 @@ impl StructureBuilder {
         self
     }
 
-    pub fn append<'a, S: AsCStr, T: Into<Conf<&'a Type>>>(
+    pub fn append<'a, S: IntoCStr, T: Into<Conf<&'a Type>>>(
         &mut self,
         ty: T,
         name: S,
@@ -1513,7 +1513,7 @@ impl StructureBuilder {
         self
     }
 
-    pub fn insert<'a, S: AsCStr, T: Into<Conf<&'a Type>>>(
+    pub fn insert<'a, S: IntoCStr, T: Into<Conf<&'a Type>>>(
         &mut self,
         ty: T,
         name: S,
@@ -1538,7 +1538,7 @@ impl StructureBuilder {
         self
     }
 
-    pub fn replace<'a, S: AsCStr, T: Into<Conf<&'a Type>>>(
+    pub fn replace<'a, S: IntoCStr, T: Into<Conf<&'a Type>>>(
         &mut self,
         index: usize,
         ty: T,
@@ -1870,7 +1870,7 @@ impl NamedTypeReference {
     /// You should not assign type ids yourself: if you use this to reference a type you are going
     /// to create but have not yet created, you may run into problems when giving your types to
     /// a BinaryView.
-    pub fn new_with_id<T: Into<QualifiedName>, S: AsCStr>(
+    pub fn new_with_id<T: Into<QualifiedName>, S: IntoCStr>(
         type_class: NamedTypeReferenceClass,
         type_id: S,
         name: T,

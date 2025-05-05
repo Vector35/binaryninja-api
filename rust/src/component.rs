@@ -1,7 +1,7 @@
 use crate::binary_view::{BinaryView, BinaryViewExt};
 use crate::function::Function;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{AsCStr, BnString};
+use crate::string::{BnString, IntoCStr};
 use crate::types::ComponentReferencedType;
 use std::ffi::c_char;
 use std::fmt::Debug;
@@ -164,7 +164,7 @@ impl Component {
         unsafe { BnString::into_string(result) }
     }
 
-    pub fn set_name<S: AsCStr>(&self, name: S) {
+    pub fn set_name<S: IntoCStr>(&self, name: S) {
         let name = name.to_cstr();
         unsafe { BNComponentSetName(self.handle.as_ptr(), name.as_ptr()) }
     }

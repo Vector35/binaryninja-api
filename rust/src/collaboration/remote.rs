@@ -10,7 +10,7 @@ use crate::enterprise;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::Project;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{AsCStr, BnString};
+use crate::string::{BnString, IntoCStr};
 
 #[repr(transparent)]
 pub struct Remote {
@@ -27,7 +27,7 @@ impl Remote {
     }
 
     /// Create a Remote and add it to the list of known remotes (saved to Settings)
-    pub fn new<N: AsCStr, A: AsCStr>(name: N, address: A) -> Ref<Self> {
+    pub fn new<N: IntoCStr, A: IntoCStr>(name: N, address: A) -> Ref<Self> {
         let name = name.to_cstr();
         let address = address.to_cstr();
         let result = unsafe { BNCollaborationCreateRemote(name.as_ptr(), address.as_ptr()) };
@@ -163,7 +163,7 @@ impl Remote {
     }
 
     /// Requests an authentication token using a username and password.
-    pub fn request_authentication_token<U: AsCStr, P: AsCStr>(
+    pub fn request_authentication_token<U: IntoCStr, P: IntoCStr>(
         &self,
         username: U,
         password: P,
@@ -275,7 +275,7 @@ impl Remote {
     /// Gets a specific project in the Remote by its id.
     ///
     /// NOTE: If projects have not been pulled, they will be pulled upon calling this.
-    pub fn get_project_by_id<S: AsCStr>(&self, id: S) -> Result<Option<Ref<RemoteProject>>, ()> {
+    pub fn get_project_by_id<S: IntoCStr>(&self, id: S) -> Result<Option<Ref<RemoteProject>>, ()> {
         if !self.has_pulled_projects() {
             self.pull_projects()?;
         }
@@ -288,7 +288,7 @@ impl Remote {
     /// Gets a specific project in the Remote by its name.
     ///
     /// NOTE: If projects have not been pulled, they will be pulled upon calling this.
-    pub fn get_project_by_name<S: AsCStr>(
+    pub fn get_project_by_name<S: IntoCStr>(
         &self,
         name: S,
     ) -> Result<Option<Ref<RemoteProject>>, ()> {
@@ -331,7 +331,7 @@ impl Remote {
     ///
     /// * `name` - Project name
     /// * `description` - Project description
-    pub fn create_project<N: AsCStr, D: AsCStr>(
+    pub fn create_project<N: IntoCStr, D: IntoCStr>(
         &self,
         name: N,
         description: D,
@@ -383,8 +383,8 @@ impl Remote {
     pub fn push_project<I, K, V>(&self, project: &RemoteProject, extra_fields: I) -> Result<(), ()>
     where
         I: Iterator<Item = (K, V)>,
-        K: AsCStr,
-        V: AsCStr,
+        K: IntoCStr,
+        V: IntoCStr,
     {
         let (keys, values): (Vec<_>, Vec<_>) = extra_fields
             .into_iter()
@@ -446,7 +446,7 @@ impl Remote {
     ///
     /// If groups have not been pulled, they will be pulled upon calling this.
     /// This function is only available to accounts with admin status on the Remote.
-    pub fn get_group_by_name<S: AsCStr>(&self, name: S) -> Result<Option<Ref<RemoteGroup>>, ()> {
+    pub fn get_group_by_name<S: IntoCStr>(&self, name: S) -> Result<Option<Ref<RemoteGroup>>, ()> {
         if !self.has_pulled_groups() {
             self.pull_groups()?;
         }
@@ -462,7 +462,7 @@ impl Remote {
     /// # Arguments
     ///
     /// * `prefix` - Prefix of name for groups
-    pub fn search_groups<S: AsCStr>(
+    pub fn search_groups<S: IntoCStr>(
         &self,
         prefix: S,
     ) -> Result<(Array<GroupId>, Array<BnString>), ()> {
@@ -526,9 +526,9 @@ impl Remote {
     /// * `usernames` - List of usernames of users in the group
     pub fn create_group<N, I>(&self, name: N, usernames: I) -> Result<Ref<RemoteGroup>, ()>
     where
-        N: AsCStr,
+        N: IntoCStr,
         I: IntoIterator,
-        I::Item: AsCStr,
+        I::Item: IntoCStr,
     {
         let name = name.to_cstr();
         let usernames: Vec<_> = usernames.into_iter().map(|s| s.to_cstr()).collect();
@@ -557,8 +557,8 @@ impl Remote {
     pub fn push_group<I, K, V>(&self, group: &RemoteGroup, extra_fields: I) -> Result<(), ()>
     where
         I: IntoIterator<Item = (K, V)>,
-        K: AsCStr,
-        V: AsCStr,
+        K: IntoCStr,
+        V: IntoCStr,
     {
         let (keys, values): (Vec<_>, Vec<_>) = extra_fields
             .into_iter()
@@ -617,7 +617,7 @@ impl Remote {
     /// # Arguments
     ///
     /// * `id` - The identifier of the user to retrieve.
-    pub fn get_user_by_id<S: AsCStr>(&self, id: S) -> Result<Option<Ref<RemoteUser>>, ()> {
+    pub fn get_user_by_id<S: IntoCStr>(&self, id: S) -> Result<Option<Ref<RemoteUser>>, ()> {
         if !self.has_pulled_users() {
             self.pull_users()?;
         }
@@ -635,7 +635,7 @@ impl Remote {
     /// # Arguments
     ///
     /// * `username` - The username of the user to retrieve.
-    pub fn get_user_by_username<S: AsCStr>(
+    pub fn get_user_by_username<S: IntoCStr>(
         &self,
         username: S,
     ) -> Result<Option<Ref<RemoteUser>>, ()> {
@@ -665,7 +665,7 @@ impl Remote {
     /// # Arguments
     ///
     /// * `prefix` - The prefix to search for in usernames.
-    pub fn search_users<S: AsCStr>(
+    pub fn search_users<S: IntoCStr>(
         &self,
         prefix: S,
     ) -> Result<(Array<BnString>, Array<BnString>), ()> {
@@ -730,7 +730,7 @@ impl Remote {
     /// # Arguments
     ///
     /// * Various details about the new user to be created.
-    pub fn create_user<U: AsCStr, E: AsCStr, P: AsCStr>(
+    pub fn create_user<U: IntoCStr, E: IntoCStr, P: IntoCStr>(
         &self,
         username: U,
         email: E,
@@ -772,8 +772,8 @@ impl Remote {
     pub fn push_user<I, K, V>(&self, user: &RemoteUser, extra_fields: I) -> Result<(), ()>
     where
         I: Iterator<Item = (K, V)>,
-        K: AsCStr,
-        V: AsCStr,
+        K: IntoCStr,
+        V: IntoCStr,
     {
         let (keys, values): (Vec<_>, Vec<_>) = extra_fields
             .into_iter()

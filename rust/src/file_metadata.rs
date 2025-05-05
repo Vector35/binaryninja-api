@@ -52,7 +52,7 @@ impl FileMetadata {
         Self::ref_from_raw(unsafe { BNCreateFileMetadata() })
     }
 
-    pub fn with_filename<S: AsCStr>(name: S) -> Ref<Self> {
+    pub fn with_filename<S: IntoCStr>(name: S) -> Ref<Self> {
         let ret = FileMetadata::new();
         ret.set_filename(name);
         ret
@@ -75,7 +75,7 @@ impl FileMetadata {
         }
     }
 
-    pub fn set_filename<S: AsCStr>(&self, name: S) {
+    pub fn set_filename<S: IntoCStr>(&self, name: S) {
         let name = name.to_cstr();
 
         unsafe {
@@ -107,7 +107,7 @@ impl FileMetadata {
         self.is_database_backed_for_view_type("")
     }
 
-    pub fn is_database_backed_for_view_type<S: AsCStr>(&self, view_type: S) -> bool {
+    pub fn is_database_backed_for_view_type<S: IntoCStr>(&self, view_type: S) -> bool {
         let view_type = view_type.to_cstr();
 
         unsafe { BNIsBackedByDatabase(self.handle, view_type.as_ref().as_ptr() as *const _) }
@@ -135,14 +135,14 @@ impl FileMetadata {
         unsafe { BnString::into_string(BNBeginUndoActions(self.handle, anonymous_allowed)) }
     }
 
-    pub fn commit_undo_actions<S: AsCStr>(&self, id: S) {
+    pub fn commit_undo_actions<S: IntoCStr>(&self, id: S) {
         let id = id.to_cstr();
         unsafe {
             BNCommitUndoActions(self.handle, id.as_ref().as_ptr() as *const _);
         }
     }
 
-    pub fn revert_undo_actions<S: AsCStr>(&self, id: S) {
+    pub fn revert_undo_actions<S: IntoCStr>(&self, id: S) {
         let id = id.to_cstr();
         unsafe {
             BNRevertUndoActions(self.handle, id.as_ref().as_ptr() as *const _);
@@ -169,7 +169,7 @@ impl FileMetadata {
         unsafe { BNGetCurrentOffset(self.handle) }
     }
 
-    pub fn navigate_to<S: AsCStr>(&self, view: S, offset: u64) -> Result<(), ()> {
+    pub fn navigate_to<S: IntoCStr>(&self, view: S, offset: u64) -> Result<(), ()> {
         let view = view.to_cstr();
 
         unsafe {
@@ -181,7 +181,7 @@ impl FileMetadata {
         }
     }
 
-    pub fn view_of_type<S: AsCStr>(&self, view: S) -> Option<Ref<BinaryView>> {
+    pub fn view_of_type<S: IntoCStr>(&self, view: S) -> Option<Ref<BinaryView>> {
         let view = view.to_cstr();
 
         unsafe {
@@ -226,7 +226,7 @@ impl FileMetadata {
     }
 
     // TODO: Pass settings?
-    pub fn create_database_with_progress<S: AsCStr, P: ProgressCallback>(
+    pub fn create_database_with_progress<S: IntoCStr, P: ProgressCallback>(
         &self,
         file_path: impl AsRef<Path>,
         mut progress: P,
@@ -256,7 +256,7 @@ impl FileMetadata {
         unsafe { BNSaveAutoSnapshot(raw_view.handle, ptr::null_mut() as *mut _) }
     }
 
-    pub fn open_database_for_configuration<S: AsCStr>(
+    pub fn open_database_for_configuration<S: IntoCStr>(
         &self,
         filename: S,
     ) -> Result<Ref<BinaryView>, ()> {
@@ -273,7 +273,7 @@ impl FileMetadata {
         }
     }
 
-    pub fn open_database<S: AsCStr>(&self, filename: S) -> Result<Ref<BinaryView>, ()> {
+    pub fn open_database<S: IntoCStr>(&self, filename: S) -> Result<Ref<BinaryView>, ()> {
         let filename = filename.to_cstr();
         let filename_ptr = filename.as_ptr();
 
@@ -286,7 +286,7 @@ impl FileMetadata {
         }
     }
 
-    pub fn open_database_with_progress<S: AsCStr, P: ProgressCallback>(
+    pub fn open_database_with_progress<S: IntoCStr, P: ProgressCallback>(
         &self,
         filename: S,
         mut progress: P,

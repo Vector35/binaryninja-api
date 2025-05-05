@@ -4,7 +4,7 @@ use std::ptr::NonNull;
 use crate::database::{snapshot::Snapshot, Database};
 use crate::file_metadata::FileMetadata;
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{AsCStr, BnString};
+use crate::string::{BnString, IntoCStr};
 
 pub type MergeConflictDataType = BNMergeConflictDataType;
 
@@ -48,7 +48,7 @@ impl MergeConflict {
         NonNull::new(result).map(|handle| unsafe { Snapshot::from_raw(handle) })
     }
 
-    pub fn path_item_string<S: AsCStr>(&self, path: S) -> Result<BnString, ()> {
+    pub fn path_item_string<S: IntoCStr>(&self, path: S) -> Result<BnString, ()> {
         let path = path.to_cstr();
         let result = unsafe {
             BNAnalysisMergeConflictGetPathItemString(self.handle.as_ptr(), path.as_ptr())
@@ -119,7 +119,7 @@ impl MergeConflict {
     }
 
     /// Call this when you've resolved the conflict to save the result
-    pub fn success<S: AsCStr>(&self, value: S) -> Result<(), ()> {
+    pub fn success<S: IntoCStr>(&self, value: S) -> Result<(), ()> {
         let value = value.to_cstr();
         let success =
             unsafe { BNAnalysisMergeConflictSuccess(self.handle.as_ptr(), value.as_ptr()) };
@@ -127,7 +127,7 @@ impl MergeConflict {
     }
 
     // TODO: Make a safe version of this that checks the path and if it holds a number
-    pub unsafe fn get_path_item_number<S: AsCStr>(&self, path_key: S) -> Option<u64> {
+    pub unsafe fn get_path_item_number<S: IntoCStr>(&self, path_key: S) -> Option<u64> {
         let path_key = path_key.to_cstr();
         let value =
             unsafe { BNAnalysisMergeConflictGetPathItem(self.handle.as_ptr(), path_key.as_ptr()) };
@@ -138,7 +138,7 @@ impl MergeConflict {
         }
     }
 
-    pub unsafe fn get_path_item_string<S: AsCStr>(&self, path_key: S) -> Option<BnString> {
+    pub unsafe fn get_path_item_string<S: IntoCStr>(&self, path_key: S) -> Option<BnString> {
         let path_key = path_key.to_cstr();
         let value = unsafe {
             BNAnalysisMergeConflictGetPathItemString(self.handle.as_ptr(), path_key.as_ptr())

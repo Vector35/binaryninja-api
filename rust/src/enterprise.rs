@@ -1,5 +1,5 @@
 use crate::rc::Array;
-use crate::string::{AsCStr, BnString};
+use crate::string::{BnString, IntoCStr};
 use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -120,7 +120,7 @@ pub fn server_url() -> String {
     unsafe { BnString::into_string(binaryninjacore_sys::BNGetEnterpriseServerUrl()) }
 }
 
-pub fn set_server_url<S: AsCStr>(url: S) -> Result<(), ()> {
+pub fn set_server_url<S: IntoCStr>(url: S) -> Result<(), ()> {
     let url = url.to_cstr();
     let result = unsafe {
         binaryninjacore_sys::BNSetEnterpriseServerUrl(
@@ -185,8 +185,8 @@ pub fn is_server_license_still_activated() -> bool {
 
 pub fn authenticate_server_with_credentials<U, P>(username: U, password: P, remember: bool) -> bool
 where
-    U: AsCStr,
-    P: AsCStr,
+    U: IntoCStr,
+    P: IntoCStr,
 {
     let username = username.to_cstr();
     let password = password.to_cstr();
@@ -199,7 +199,7 @@ where
     }
 }
 
-pub fn authenticate_server_with_method<S: AsCStr>(method: S, remember: bool) -> bool {
+pub fn authenticate_server_with_method<S: IntoCStr>(method: S, remember: bool) -> bool {
     let method = method.to_cstr();
     unsafe {
         binaryninjacore_sys::BNAuthenticateEnterpriseServerWithMethod(

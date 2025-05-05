@@ -27,7 +27,7 @@ use crate::{
     platform::Platform,
     rc::*,
     relocation::CoreRelocationHandler,
-    string::AsCStr,
+    string::IntoCStr,
     string::*,
     types::{NameAndType, Type},
     Endianness,
@@ -1953,7 +1953,7 @@ macro_rules! cc_func {
 
 /// Contains helper methods for all types implementing 'Architecture'
 pub trait ArchitectureExt: Architecture {
-    fn register_by_name<S: AsCStr>(&self, name: S) -> Option<Self::Register> {
+    fn register_by_name<S: IntoCStr>(&self, name: S) -> Option<Self::Register> {
         let name = name.to_cstr();
 
         match unsafe { BNGetArchitectureRegisterByName(self.as_ref().handle, name.as_ptr()) } {
@@ -2031,7 +2031,7 @@ pub trait ArchitectureExt: Architecture {
 
     fn register_relocation_handler<S, R, F>(&self, name: S, func: F)
     where
-        S: AsCStr,
+        S: IntoCStr,
         R: 'static
             + RelocationHandler<Handle = CustomRelocationHandlerHandle<R>>
             + Send
@@ -2054,7 +2054,7 @@ impl<T: Architecture> ArchitectureExt for T {}
 
 pub fn register_architecture<S, A, F>(name: S, func: F) -> &'static A
 where
-    S: AsCStr,
+    S: IntoCStr,
     A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync + Sized,
     F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
 {

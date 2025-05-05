@@ -6,7 +6,7 @@ use super::{RemoteFile, RemoteUser};
 use crate::database::snapshot::SnapshotId;
 use crate::database::Database;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{AsCStr, BnString};
+use crate::string::{BnString, IntoCStr};
 
 /// A collection of snapshots in a local database
 #[repr(transparent)]
@@ -65,7 +65,7 @@ impl Changeset {
     }
 
     /// Set the name of the changeset, e.g. in a name changeset function.
-    pub fn set_name<S: AsCStr>(&self, value: S) -> bool {
+    pub fn set_name<S: IntoCStr>(&self, value: S) -> bool {
         let value = value.to_cstr();
         unsafe { BNCollaborationChangesetSetName(self.handle.as_ptr(), value.as_ptr()) }
     }

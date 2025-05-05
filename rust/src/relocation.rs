@@ -1,6 +1,6 @@
 use crate::low_level_il::RegularLowLevelILFunction;
 use crate::rc::Guard;
-use crate::string::AsCStr;
+use crate::string::IntoCStr;
 use crate::{
     architecture::CoreArchitecture,
     binary_view::BinaryView,
@@ -404,7 +404,7 @@ unsafe impl RefCountable for CoreRelocationHandler {
 
 pub(crate) fn register_relocation_handler<S, R, F>(arch: &CoreArchitecture, name: S, func: F)
 where
-    S: AsCStr,
+    S: IntoCStr,
     R: 'static + RelocationHandler<Handle = CustomRelocationHandlerHandle<R>> + Send + Sync + Sized,
     F: FnOnce(CustomRelocationHandlerHandle<R>, CoreRelocationHandler) -> R,
 {

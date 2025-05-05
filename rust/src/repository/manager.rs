@@ -1,6 +1,6 @@
 use crate::rc::{Array, Ref, RefCountable};
 use crate::repository::Repository;
-use crate::string::AsCStr;
+use crate::string::IntoCStr;
 use binaryninjacore_sys::{
     BNCreateRepositoryManager, BNFreeRepositoryManager, BNGetRepositoryManager,
     BNNewRepositoryManagerReference, BNRepositoryGetRepositoryByPath, BNRepositoryManager,
@@ -28,7 +28,7 @@ impl RepositoryManager {
         Ref::new(Self { handle })
     }
 
-    pub fn new<S: AsCStr>(plugins_path: S) -> Ref<Self> {
+    pub fn new<S: IntoCStr>(plugins_path: S) -> Ref<Self> {
         let plugins_path = plugins_path.to_cstr();
         let result = unsafe { BNCreateRepositoryManager(plugins_path.as_ptr()) };
         unsafe { Self::ref_from_raw(NonNull::new(result).unwrap()) }
@@ -59,7 +59,7 @@ impl RepositoryManager {
     /// * `repository_path` - path to where the repository will be stored on disk locally
     ///
     /// Returns true if the repository was successfully added, false otherwise.
-    pub fn add_repository<U: AsCStr, P: AsCStr>(&self, url: U, repository_path: P) -> bool {
+    pub fn add_repository<U: IntoCStr, P: IntoCStr>(&self, url: U, repository_path: P) -> bool {
         let url = url.to_cstr();
         let repo_path = repository_path.to_cstr();
         unsafe {
@@ -67,7 +67,7 @@ impl RepositoryManager {
         }
     }
 
-    pub fn repository_by_path<P: AsCStr>(&self, path: P) -> Option<Repository> {
+    pub fn repository_by_path<P: IntoCStr>(&self, path: P) -> Option<Repository> {
         let path = path.to_cstr();
         let result =
             unsafe { BNRepositoryGetRepositoryByPath(self.handle.as_ptr(), path.as_ptr()) };

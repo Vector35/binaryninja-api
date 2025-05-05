@@ -11,7 +11,7 @@ use crate::file_metadata::FileMetadata;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::file::ProjectFile;
 use crate::rc::Ref;
-use crate::string::{raw_to_string, AsCStr, BnString};
+use crate::string::{raw_to_string, BnString, IntoCStr};
 use crate::type_archive::{TypeArchive, TypeArchiveMergeConflict};
 
 // TODO: PathBuf
@@ -43,7 +43,7 @@ pub fn default_file_path(file: &RemoteFile) -> Result<BnString, ()> {
 ///
 /// * `file` - Remote File to download and open
 /// * `db_path` - File path for saved database
-pub fn download_file<S: AsCStr>(file: &RemoteFile, db_path: S) -> Result<Ref<FileMetadata>, ()> {
+pub fn download_file<S: IntoCStr>(file: &RemoteFile, db_path: S) -> Result<Ref<FileMetadata>, ()> {
     download_file_with_progress(file, db_path, NoProgressCallback)
 }
 
@@ -54,7 +54,7 @@ pub fn download_file<S: AsCStr>(file: &RemoteFile, db_path: S) -> Result<Ref<Fil
 /// * `file` - Remote File to download and open
 /// * `db_path` - File path for saved database
 /// * `progress` - Function to call for progress updates
-pub fn download_file_with_progress<S: AsCStr, F: ProgressCallback>(
+pub fn download_file_with_progress<S: IntoCStr, F: ProgressCallback>(
     file: &RemoteFile,
     db_path: S,
     mut progress: F,
@@ -220,7 +220,7 @@ pub fn get_local_snapshot_for_remote(
 
 pub fn download_database<S>(file: &RemoteFile, location: S, force: bool) -> Result<(), ()>
 where
-    S: AsCStr,
+    S: IntoCStr,
 {
     download_database_with_progress(file, location, force, NoProgressCallback)
 }
@@ -232,7 +232,7 @@ pub fn download_database_with_progress<S, F>(
     mut progress: F,
 ) -> Result<(), ()>
 where
-    S: AsCStr,
+    S: IntoCStr,
     F: ProgressCallback,
 {
     let db_path = location.to_cstr();
@@ -475,7 +475,7 @@ pub fn get_snapshot_author(
 /// * `database` - Parent database
 /// * `snapshot` - Snapshot to edit
 /// * `author` - Target author
-pub fn set_snapshot_author<S: AsCStr>(
+pub fn set_snapshot_author<S: IntoCStr>(
     database: &Database,
     snapshot: &Snapshot,
     author: S,
@@ -650,7 +650,7 @@ pub fn get_remote_file_for_local_type_archive(database: &TypeArchive) -> Option<
 }
 
 /// Get the remote snapshot associated with a local snapshot (if it exists) in a Type Archive
-pub fn get_remote_snapshot_from_local_type_archive<S: AsCStr>(
+pub fn get_remote_snapshot_from_local_type_archive<S: IntoCStr>(
     type_archive: &TypeArchive,
     snapshot_id: S,
 ) -> Option<Ref<RemoteSnapshot>> {
@@ -679,7 +679,7 @@ pub fn get_local_snapshot_from_remote_type_archive(
 }
 
 /// Test if a snapshot is ignored from the archive
-pub fn is_type_archive_snapshot_ignored<S: AsCStr>(
+pub fn is_type_archive_snapshot_ignored<S: IntoCStr>(
     type_archive: &TypeArchive,
     snapshot_id: S,
 ) -> bool {
@@ -694,7 +694,7 @@ pub fn is_type_archive_snapshot_ignored<S: AsCStr>(
 
 /// Download a type archive from its remote, saving all snapshots to an archive in the
 /// specified `location`. Returns a [`TypeArchive`] for using later.
-pub fn download_type_archive<S: AsCStr>(
+pub fn download_type_archive<S: IntoCStr>(
     file: &RemoteFile,
     location: S,
 ) -> Result<Option<Ref<TypeArchive>>, ()> {
@@ -703,7 +703,7 @@ pub fn download_type_archive<S: AsCStr>(
 
 /// Download a type archive from its remote, saving all snapshots to an archive in the
 /// specified `location`. Returns a [`TypeArchive`] for using later.
-pub fn download_type_archive_with_progress<S: AsCStr, F: ProgressCallback>(
+pub fn download_type_archive_with_progress<S: IntoCStr, F: ProgressCallback>(
     file: &RemoteFile,
     location: S,
     mut progress: F,

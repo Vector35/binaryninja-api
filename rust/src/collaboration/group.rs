@@ -1,6 +1,6 @@
 use super::Remote;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{AsCStr, BnString};
+use crate::string::{BnString, IntoCStr};
 use binaryninjacore_sys::*;
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -49,7 +49,7 @@ impl RemoteGroup {
 
     /// Set group name
     /// You will need to push the group to update the Remote.
-    pub fn set_name<U: AsCStr>(&self, name: U) {
+    pub fn set_name<U: IntoCStr>(&self, name: U) {
         let name = name.to_cstr();
         unsafe { BNCollaborationGroupSetName(self.handle.as_ptr(), name.as_ptr()) }
     }
@@ -84,7 +84,7 @@ impl RemoteGroup {
     pub fn set_users<I>(&self, usernames: I) -> Result<(), ()>
     where
         I: IntoIterator,
-        I::Item: AsCStr,
+        I::Item: IntoCStr,
     {
         let usernames: Vec<_> = usernames.into_iter().map(|u| u.to_cstr()).collect();
         let mut usernames_raw: Vec<_> = usernames.iter().map(|s| s.as_ptr()).collect();
@@ -102,7 +102,7 @@ impl RemoteGroup {
     }
 
     /// Test if a group has a user with the given username
-    pub fn contains_user<U: AsCStr>(&self, username: U) -> bool {
+    pub fn contains_user<U: IntoCStr>(&self, username: U) -> bool {
         let username = username.to_cstr();
         unsafe { BNCollaborationGroupContainsUser(self.handle.as_ptr(), username.as_ptr()) }
     }

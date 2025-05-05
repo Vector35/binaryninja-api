@@ -4,7 +4,7 @@ use crate::database::undo::UndoEntry;
 use crate::database::Database;
 use crate::progress::ProgressCallback;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{AsCStr, BnString};
+use crate::string::{BnString, IntoCStr};
 use binaryninjacore_sys::{
     BNCollaborationFreeSnapshotIdList, BNFreeSnapshot, BNFreeSnapshotList, BNGetSnapshotChildren,
     BNGetSnapshotDatabase, BNGetSnapshotFileContents, BNGetSnapshotFileContentsHash,
@@ -50,7 +50,7 @@ impl Snapshot {
     }
 
     /// Set the displayed snapshot name
-    pub fn set_name<S: AsCStr>(&self, value: S) {
+    pub fn set_name<S: IntoCStr>(&self, value: S) {
         let value_raw = value.to_cstr();
         let value_ptr = value_raw.as_ptr();
         unsafe { BNSetSnapshotName(self.handle.as_ptr(), value_ptr) }

@@ -83,7 +83,7 @@ use crate::{
     binary_view::BinaryView,
     platform::Platform,
     rc::*,
-    string::{raw_to_string, AsCStr, BnString},
+    string::{raw_to_string, BnString, IntoCStr},
     types::{NameAndType, Type},
 };
 
@@ -115,7 +115,7 @@ impl DebugInfoParser {
     }
 
     /// Returns debug info parser of the given name, if it exists
-    pub fn from_name<S: AsCStr>(name: S) -> Result<Ref<Self>, ()> {
+    pub fn from_name<S: IntoCStr>(name: S) -> Result<Ref<Self>, ()> {
         let name = name.to_cstr();
         let parser = unsafe { BNGetDebugInfoParserByName(name.as_ptr()) };
 
@@ -209,7 +209,7 @@ impl DebugInfoParser {
     // Registers a DebugInfoParser. See `binaryninja::debuginfo::DebugInfoParser` for more details.
     pub fn register<S, C>(name: S, parser_callbacks: C) -> Ref<Self>
     where
-        S: AsCStr,
+        S: IntoCStr,
         C: CustomDebugInfoParser,
     {
         extern "C" fn cb_is_valid<C>(ctxt: *mut c_void, view: *mut BNBinaryView) -> bool
@@ -418,7 +418,7 @@ impl DebugInfo {
     }
 
     /// Returns all types within the parser
-    pub fn types_by_name<S: AsCStr>(&self, parser_name: S) -> Vec<NameAndType> {
+    pub fn types_by_name<S: IntoCStr>(&self, parser_name: S) -> Vec<NameAndType> {
         let parser_name = parser_name.to_cstr();
 
         let mut count: usize = 0;
@@ -451,7 +451,7 @@ impl DebugInfo {
     }
 
     /// Returns all functions within the parser
-    pub fn functions_by_name<S: AsCStr>(&self, parser_name: S) -> Vec<DebugFunctionInfo> {
+    pub fn functions_by_name<S: IntoCStr>(&self, parser_name: S) -> Vec<DebugFunctionInfo> {
         let parser_name = parser_name.to_cstr();
 
         let mut count: usize = 0;
@@ -486,7 +486,7 @@ impl DebugInfo {
     }
 
     /// Returns all data variables within the parser
-    pub fn data_variables_by_name<S: AsCStr>(
+    pub fn data_variables_by_name<S: IntoCStr>(
         &self,
         parser_name: S,
     ) -> Vec<NamedDataVariableWithType> {
@@ -523,7 +523,7 @@ impl DebugInfo {
         result
     }
 
-    pub fn type_by_name<S: AsCStr>(&self, parser_name: S, name: S) -> Option<Ref<Type>> {
+    pub fn type_by_name<S: IntoCStr>(&self, parser_name: S, name: S) -> Option<Ref<Type>> {
         let parser_name = parser_name.to_cstr();
         let name = name.to_cstr();
 
@@ -536,7 +536,7 @@ impl DebugInfo {
         }
     }
 
-    pub fn get_data_variable_by_name<S: AsCStr>(
+    pub fn get_data_variable_by_name<S: IntoCStr>(
         &self,
         parser_name: S,
         name: S,
@@ -558,7 +558,7 @@ impl DebugInfo {
         }
     }
 
-    pub fn get_data_variable_by_address<S: AsCStr>(
+    pub fn get_data_variable_by_address<S: IntoCStr>(
         &self,
         parser_name: S,
         address: u64,
@@ -576,7 +576,7 @@ impl DebugInfo {
     }
 
     /// Returns a list of [`NameAndType`] where the `name` is the parser the type originates from.
-    pub fn get_types_by_name<S: AsCStr>(&self, name: S) -> Vec<NameAndType> {
+    pub fn get_types_by_name<S: IntoCStr>(&self, name: S) -> Vec<NameAndType> {
         let mut count: usize = 0;
         let name = name.to_cstr();
         let raw_names_and_types_ptr =
@@ -595,7 +595,10 @@ impl DebugInfo {
     }
 
     // The tuple is (DebugInfoParserName, address, type)
-    pub fn get_data_variables_by_name<S: AsCStr>(&self, name: S) -> Vec<(String, u64, Ref<Type>)> {
+    pub fn get_data_variables_by_name<S: IntoCStr>(
+        &self,
+        name: S,
+    ) -> Vec<(String, u64, Ref<Type>)> {
         let name = name.to_cstr();
 
         let mut count: usize = 0;
@@ -646,51 +649,55 @@ impl DebugInfo {
         result
     }
 
-    pub fn remove_parser_info<S: AsCStr>(&self, parser_name: S) -> bool {
+    pub fn remove_parser_info<S: IntoCStr>(&self, parser_name: S) -> bool {
         let parser_name = parser_name.to_cstr();
 
         unsafe { BNRemoveDebugParserInfo(self.handle, parser_name.as_ptr()) }
     }
 
-    pub fn remove_parser_types<S: AsCStr>(&self, parser_name: S) -> bool {
+    pub fn remove_parser_types<S: IntoCStr>(&self, parser_name: S) -> bool {
         let parser_name = parser_name.to_cstr();
 
         unsafe { BNRemoveDebugParserTypes(self.handle, parser_name.as_ptr()) }
     }
 
-    pub fn remove_parser_functions<S: AsCStr>(&self, parser_name: S) -> bool {
+    pub fn remove_parser_functions<S: IntoCStr>(&self, parser_name: S) -> bool {
         let parser_name = parser_name.to_cstr();
 
         unsafe { BNRemoveDebugParserFunctions(self.handle, parser_name.as_ptr()) }
     }
 
-    pub fn remove_parser_data_variables<S: AsCStr>(&self, parser_name: S) -> bool {
+    pub fn remove_parser_data_variables<S: IntoCStr>(&self, parser_name: S) -> bool {
         let parser_name = parser_name.to_cstr();
 
         unsafe { BNRemoveDebugParserDataVariables(self.handle, parser_name.as_ptr()) }
     }
 
-    pub fn remove_type_by_name<S: AsCStr>(&self, parser_name: S, name: S) -> bool {
+    pub fn remove_type_by_name<S: IntoCStr>(&self, parser_name: S, name: S) -> bool {
         let parser_name = parser_name.to_cstr();
         let name = name.to_cstr();
 
         unsafe { BNRemoveDebugTypeByName(self.handle, parser_name.as_ptr(), name.as_ptr()) }
     }
 
-    pub fn remove_function_by_index<S: AsCStr>(&self, parser_name: S, index: usize) -> bool {
+    pub fn remove_function_by_index<S: IntoCStr>(&self, parser_name: S, index: usize) -> bool {
         let parser_name = parser_name.to_cstr();
 
         unsafe { BNRemoveDebugFunctionByIndex(self.handle, parser_name.as_ptr(), index) }
     }
 
-    pub fn remove_data_variable_by_address<S: AsCStr>(&self, parser_name: S, address: u64) -> bool {
+    pub fn remove_data_variable_by_address<S: IntoCStr>(
+        &self,
+        parser_name: S,
+        address: u64,
+    ) -> bool {
         let parser_name = parser_name.to_cstr();
 
         unsafe { BNRemoveDebugDataVariableByAddress(self.handle, parser_name.as_ptr(), address) }
     }
 
     /// Adds a type scoped under the current parser's name to the debug info
-    pub fn add_type<S: AsCStr>(&self, name: S, new_type: &Type, components: &[&str]) -> bool {
+    pub fn add_type<S: IntoCStr>(&self, name: S, new_type: &Type, components: &[&str]) -> bool {
         // SAFETY: Lifetime of `components` will live long enough, so passing as_ptr is safe.
         let raw_components: Vec<_> = components.iter().map(|&c| c.as_ptr()).collect();
 
@@ -772,7 +779,7 @@ impl DebugInfo {
     }
 
     /// Adds a data variable scoped under the current parser's name to the debug info
-    pub fn add_data_variable<S: AsCStr>(
+    pub fn add_data_variable<S: IntoCStr>(
         &self,
         address: u64,
         t: &Type,

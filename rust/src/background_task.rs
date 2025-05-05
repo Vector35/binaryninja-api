@@ -43,7 +43,7 @@ impl BackgroundTask {
         Self { handle }
     }
 
-    pub fn new<S: AsCStr>(initial_text: S, can_cancel: bool) -> Ref<Self> {
+    pub fn new<S: IntoCStr>(initial_text: S, can_cancel: bool) -> Ref<Self> {
         let text = initial_text.to_cstr();
         let handle = unsafe { BNBeginBackgroundTask(text.as_ptr(), can_cancel) };
         // We should always be returned a valid task.
@@ -75,7 +75,7 @@ impl BackgroundTask {
         unsafe { BnString::into_string(BNGetBackgroundTaskProgressText(self.handle)) }
     }
 
-    pub fn set_progress_text<S: AsCStr>(&self, text: S) {
+    pub fn set_progress_text<S: IntoCStr>(&self, text: S) {
         let progress_text = text.to_cstr();
         unsafe { BNSetBackgroundTaskProgressText(self.handle, progress_text.as_ptr()) }
     }

@@ -1,5 +1,5 @@
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{AsCStr, BnString, IntoJson};
+use crate::string::{BnString, IntoCStr, IntoJson};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
 use std::os::raw::c_char;
@@ -267,7 +267,7 @@ impl Metadata {
         Ok(Some(unsafe { Self::ref_from_raw(ptr) }))
     }
 
-    pub fn get<S: AsCStr>(&self, key: S) -> Result<Option<Ref<Metadata>>, ()> {
+    pub fn get<S: IntoCStr>(&self, key: S) -> Result<Option<Ref<Metadata>>, ()> {
         if self.get_type() != MetadataType::KeyValueDataType {
             return Err(());
         }
@@ -287,7 +287,7 @@ impl Metadata {
         Ok(())
     }
 
-    pub fn insert<S: AsCStr>(&self, key: S, value: &Metadata) -> Result<(), ()> {
+    pub fn insert<S: IntoCStr>(&self, key: S, value: &Metadata) -> Result<(), ()> {
         if self.get_type() != MetadataType::KeyValueDataType {
             return Err(());
         }
@@ -305,7 +305,7 @@ impl Metadata {
         Ok(())
     }
 
-    pub fn remove_key<S: AsCStr>(&self, key: S) -> Result<(), ()> {
+    pub fn remove_key<S: IntoCStr>(&self, key: S) -> Result<(), ()> {
         if self.get_type() != MetadataType::KeyValueDataType {
             return Err(());
         }
@@ -424,7 +424,7 @@ impl From<&Array<Metadata>> for Ref<Metadata> {
     }
 }
 
-impl<S: AsCStr> From<HashMap<S, Ref<Metadata>>> for Ref<Metadata> {
+impl<S: IntoCStr> From<HashMap<S, Ref<Metadata>>> for Ref<Metadata> {
     fn from(value: HashMap<S, Ref<Metadata>>) -> Self {
         let data: Vec<(S::Result, Ref<Metadata>)> =
             value.into_iter().map(|(k, v)| (k.to_cstr(), v)).collect();
@@ -443,7 +443,7 @@ impl<S: AsCStr> From<HashMap<S, Ref<Metadata>>> for Ref<Metadata> {
 
 impl<S, T> From<&[(S, T)]> for Ref<Metadata>
 where
-    S: AsCStr + Copy,
+    S: IntoCStr + Copy,
     for<'a> &'a T: Into<Ref<Metadata>>,
 {
     fn from(value: &[(S, T)]) -> Self {
@@ -464,7 +464,7 @@ where
 
 impl<S, T, const N: usize> From<[(S, T); N]> for Ref<Metadata>
 where
-    S: AsCStr + Copy,
+    S: IntoCStr + Copy,
     for<'a> &'a T: Into<Ref<Metadata>>,
 {
     fn from(value: [(S, T); N]) -> Self {
@@ -518,7 +518,7 @@ impl From<&Vec<f64>> for Ref<Metadata> {
     }
 }
 
-impl<S: AsCStr> From<Vec<S>> for Ref<Metadata> {
+impl<S: IntoCStr> From<Vec<S>> for Ref<Metadata> {
     fn from(value: Vec<S>) -> Self {
         let mut refs = vec![];
         for v in value {

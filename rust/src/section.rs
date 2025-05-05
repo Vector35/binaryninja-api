@@ -89,8 +89,8 @@ impl Section {
         SectionBuilder::new(name, range)
     }
 
-    pub fn name(&self) -> String {
-        unsafe { BnString::into_string(BNSectionGetName(self.handle)) }
+    pub fn name(&self) -> BnString {
+        unsafe { BnString::from_raw(BNSectionGetName(self.handle)) }
     }
 
     pub fn section_type(&self) -> String {

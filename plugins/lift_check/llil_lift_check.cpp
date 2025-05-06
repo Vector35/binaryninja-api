@@ -157,27 +157,36 @@ static std::unordered_map<BNLowLevelILOperation, int> g_instructionValidity = {{
 	{ LLIL_MEM_PHI,                                      ValidInSSA |                 ValidAsChild }
 }};
 
-LowLevelILVerifier::LowLevelILVerifier(Ref<LowLevelILFunction> function): m_il(function)
+
+LowLevelILVerifier::LowLevelILVerifier(
+	BNFunctionGraphType graphType,
+	BinaryNinja::Ref<BinaryNinja::LowLevelILFunction> function
+):
+	ILVerifier(graphType)
 {
-	m_logger = new Logger("LiftCheck");
+	m_il = function;
 	m_arch = m_il->GetArchitecture();
 }
 
 
-bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::optional<size_t> requiredSize)
+LowLevelILVerifier::LowLevelILVerifier(Ref<LowLevelILFunction> function):
+	LowLevelILVerifier(LowLevelILFunctionGraph, function)
+{
+}
+
+
+void LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::optional<size_t> requiredSize)
 {
 #define CHECK(condition, message, ...)                                                    \
 	do                                                                                    \
 	{                                                                                     \
 		if (!(condition))                                                                 \
 		{                                                                                 \
-			m_logger->LogErrorF("{:#x} {:?} {} " message, m_il->GetFunction()->GetStart(), expr, #condition, ## __VA_ARGS__ );   \
-			result = false;                                                               \
+			m_diagnostics.push_back(Diagnostic::Error(this, expr, fmt::format("{} " message, #condition, ## __VA_ARGS__)));   \
 		}                                                                                 \
 	}                                                                                     \
 	while (false)
 
-	bool result = true;
 	switch (expr.operation)
 	{
 	case LLIL_NOP:
@@ -193,7 +202,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 
 			if (expr.size < *requiredSize)
 			{
-				m_logger->LogDebugF("{:?} loading only {:#x} bytes out of {:#x} byte memory", expr, expr.size, *requiredSize);
+				m_diagnostics.push_back(Diagnostic::Diag(NoteSeverity, this, expr, fmt::format("loading only {:#x} bytes out of {:#x} byte memory", expr.size, *requiredSize)));
 			}
 			else
 			{
@@ -202,7 +211,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		}
 		CHECK(expr.size != 0, "op should have a size");
 		// TODO: Is this correct for eg arm64_32
-		result &= CheckExprSize(expr.GetSourceExpr<LLIL_LOAD>(), m_arch->GetAddressSize());
+		CheckExprSize(expr.GetSourceExpr<LLIL_LOAD>(), m_arch->GetAddressSize());
 		break;
 	}
 	case LLIL_POP:
@@ -233,7 +242,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 			//  nightmare semantics on the upper 96 bits + 128 bits
 			if (expr.size < info.size)
 			{
-				m_logger->LogDebugF("{:?} loading only {:#x} bytes out of {:#x} byte register {}", expr, expr.size, info.size, m_arch->GetRegisterName(reg));
+				m_diagnostics.push_back(Diagnostic::Diag(NoteSeverity, this, expr, fmt::format("loading only {:#x} bytes out of {:#x} byte register {}", expr.size, info.size, m_arch->GetRegisterName(reg))));
 			}
 			else
 			{
@@ -336,6 +345,24 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		CHECK(bit < bitWidth, "trying to set bit {} on a {} bit result value", bit, bitWidth);
 		break;
 	}
+	case LLIL_FLAG_COND:
+	{
+		if (requiredSize.has_value() && *requiredSize != 0)
+		{
+			CHECK(expr.size == *requiredSize, "op producing boolean (0 size) value where {:#x} bytes are expected", *requiredSize);
+		}
+		CHECK(expr.size == 0, "op should be boolean (0 size) but is {:#x} size", expr.size);
+		break;
+	}
+	case LLIL_FLAG_GROUP:
+	{
+		if (requiredSize.has_value() && *requiredSize != 0)
+		{
+			CHECK(expr.size == *requiredSize, "op producing boolean (0 size) value where {:#x} bytes are expected", *requiredSize);
+		}
+		CHECK(expr.size == 0, "op should be boolean (0 size) but is {:#x} size", expr.size);
+		break;
+	}
 	case LLIL_TEST_BIT:
 	{
 		// Like LLIL_CMP_xx, LLIL_TEST_BIT's size is the size of its inputs, producing a 0-size value
@@ -344,12 +371,22 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 			CHECK(expr.size == *requiredSize, "op producing boolean (0 size) value where {:#x} bytes are expected", *requiredSize);
 		}
 		CHECK(expr.size != 0, "op should have a size");
-		result &= CheckExprSize(expr.GetLeftExpr<LLIL_TEST_BIT>(), expr.size);
-		result &= CheckExprSize(expr.GetRightExpr<LLIL_TEST_BIT>(), std::nullopt);
+		CheckExprSize(expr.GetLeftExpr<LLIL_TEST_BIT>(), expr.size);
+		CheckExprSize(expr.GetRightExpr<LLIL_TEST_BIT>(), std::nullopt);
 		break;
 	}
 	case LLIL_CMP_E:
 	case LLIL_CMP_NE:
+	{
+		if (requiredSize.has_value() && *requiredSize != 0)
+		{
+			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where boolean (0 size) is expected", *requiredSize);
+		}
+		// CMP_E and CMP_NE can operate on flags and therefore can be a boolean (0 size)
+		CheckExprSize(expr.GetLeftExpr(), expr.size);
+		CheckExprSize(expr.GetRightExpr(), expr.size);
+		break;
+	}
 	case LLIL_CMP_SLE:
 	case LLIL_CMP_ULE:
 	case LLIL_CMP_SLT:
@@ -372,8 +409,8 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where boolean (0 size) is expected", *requiredSize);
 		}
 		CHECK(expr.size != 0, "op should have a size");
-		result &= CheckExprSize(expr.GetLeftExpr(), expr.size);
-		result &= CheckExprSize(expr.GetRightExpr(), expr.size);
+		CheckExprSize(expr.GetLeftExpr(), expr.size);
+		CheckExprSize(expr.GetRightExpr(), expr.size);
 		break;
 	}
 	case LLIL_ADC:
@@ -384,9 +421,9 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
 		CHECK(expr.size != 0, "op should have a size");
-		result &= CheckExprSize(expr.GetLeftExpr(), expr.size);
-		result &= CheckExprSize(expr.GetRightExpr(), expr.size);
-		result &= CheckExprSize(expr.GetCarryExpr(), 0);
+		CheckExprSize(expr.GetLeftExpr(), expr.size);
+		CheckExprSize(expr.GetRightExpr(), expr.size);
+		CheckExprSize(expr.GetCarryExpr(), 0);
 		break;
 	}
 	case LLIL_RLC:
@@ -401,9 +438,9 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		// rotate amounts just need to be >= 1 byte
 		CHECK(expr.GetRightExpr().size != 0, "can't rotate by a 0 byte expression");
 
-		result &= CheckExprSize(expr.GetLeftExpr(), expr.size);
-		result &= CheckExprSize(expr.GetRightExpr(), std::nullopt);
-		result &= CheckExprSize(expr.GetCarryExpr(), 0);
+		CheckExprSize(expr.GetLeftExpr(), expr.size);
+		CheckExprSize(expr.GetRightExpr(), std::nullopt);
+		CheckExprSize(expr.GetCarryExpr(), 0);
 		break;
 	}
 	case LLIL_ADD:
@@ -424,8 +461,8 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
 		CHECK(expr.size != 0, "op should have a size");
-		result &= CheckExprSize(expr.GetLeftExpr(), expr.size);
-		result &= CheckExprSize(expr.GetRightExpr(), expr.size);
+		CheckExprSize(expr.GetLeftExpr(), expr.size);
+		CheckExprSize(expr.GetRightExpr(), expr.size);
 		break;
 	}
 	case LLIL_AND:
@@ -437,8 +474,8 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
 		// 0 size is a boolean operation, allowed
-		result &= CheckExprSize(expr.GetLeftExpr(), expr.size);
-		result &= CheckExprSize(expr.GetRightExpr(), expr.size);
+		CheckExprSize(expr.GetLeftExpr(), expr.size);
+		CheckExprSize(expr.GetRightExpr(), expr.size);
 		break;
 	}
 	case LLIL_LSL:
@@ -456,8 +493,8 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		// rotate amounts just need to be >= 1 byte
 		CHECK(expr.GetRightExpr().size != 0, "can't rotate by a 0 byte expression");
 
-		result &= CheckExprSize(expr.GetLeftExpr(), expr.size);
-		result &= CheckExprSize(expr.GetRightExpr(), std::nullopt);
+		CheckExprSize(expr.GetLeftExpr(), expr.size);
+		CheckExprSize(expr.GetRightExpr(), std::nullopt);
 		break;
 	}
 	case LLIL_MULS_DP:
@@ -468,8 +505,8 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 			CHECK(expr.size * 2 == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size * 2, *requiredSize);
 		}
 		CHECK(expr.size != 0, "op should have a size");
-		result &= CheckExprSize(expr.GetLeftExpr(), expr.size);
-		result &= CheckExprSize(expr.GetRightExpr(), expr.size);
+		CheckExprSize(expr.GetLeftExpr(), expr.size);
+		CheckExprSize(expr.GetRightExpr(), expr.size);
 		break;
 	}
 	case LLIL_DIVS_DP:
@@ -482,8 +519,8 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
 		CHECK(expr.size != 0, "op should have a size");
-		result &= CheckExprSize(expr.GetLeftExpr(), expr.size * 2);
-		result &= CheckExprSize(expr.GetRightExpr(), expr.size);
+		CheckExprSize(expr.GetLeftExpr(), expr.size * 2);
+		CheckExprSize(expr.GetRightExpr(), expr.size);
 		break;
 	}
 	case LLIL_NEG:
@@ -500,7 +537,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
 		CHECK(expr.size != 0, "op should have a size");
-		result &= CheckExprSize(expr.GetSourceExpr(), expr.size);
+		CheckExprSize(expr.GetSourceExpr(), expr.size);
 		break;
 	}
 	case LLIL_NOT:
@@ -510,7 +547,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
 		// 0 size is a boolean operation, allowed
-		result &= CheckExprSize(expr.GetSourceExpr(), expr.size);
+		CheckExprSize(expr.GetSourceExpr(), expr.size);
 		break;
 	}
 	case LLIL_SX:
@@ -525,7 +562,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		size_t srcSize = expr.GetSourceExpr().size;
 		CHECK(srcSize <= expr.size, "expanding op to {:#x} bytes is invalid; source is already {:#x} bytes", expr.size, srcSize);
 
-		result &= CheckExprSize(expr.GetSourceExpr(), std::nullopt);
+		CheckExprSize(expr.GetSourceExpr(), std::nullopt);
 		break;
 	}
 	case LLIL_LOW_PART:
@@ -539,7 +576,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		size_t srcSize = expr.GetSourceExpr().size;
 		CHECK(srcSize >= expr.size, "truncating op to {:#x} bytes is invalid; source is already {:#x} bytes", expr.size, srcSize);
 
-		result &= CheckExprSize(expr.GetSourceExpr(), std::nullopt);
+		CheckExprSize(expr.GetSourceExpr(), std::nullopt);
 		break;
 	}
 	case LLIL_BOOL_TO_INT:
@@ -550,7 +587,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		}
 		CHECK(expr.size != 0, "op should have a size");
 
-		result &= CheckExprSize(expr.GetSourceExpr(), 0);
+		CheckExprSize(expr.GetSourceExpr(), 0);
 		break;
 	}
 	case LLIL_FLOAT_TO_INT:
@@ -562,7 +599,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		}
 		CHECK(expr.size != 0, "op should have a size");
 		// Expr size is result size, input size is anything
-		result &= CheckExprSize(expr.GetSourceExpr(), std::nullopt);
+		CheckExprSize(expr.GetSourceExpr(), std::nullopt);
 		break;
 	}
 	case LLIL_FLOAT_CONV:
@@ -573,7 +610,7 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		}
 		CHECK(expr.size != 0, "op should have a size");
 		// Expr size is result size, input size is anything
-		result &= CheckExprSize(expr.GetSourceExpr(), std::nullopt);
+		CheckExprSize(expr.GetSourceExpr(), std::nullopt);
 		break;
 	}
 	case LLIL_UNDEF:
@@ -587,34 +624,31 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
 
-		result &= CheckExprSize(expr.GetSourceExpr(), std::nullopt);
+		CheckExprSize(expr.GetSourceExpr(), std::nullopt);
 		break;
 	}
 	default:
 	{
-		m_logger->LogInfoF("Unhandled expr operation: {:?}", expr);
+		m_diagnostics.push_back(Diagnostic::Diag(RemarkSeverity, this, "Unhandled expr operation"));
 		break;
 	}
 	}
-	return result;
 #undef CHECK
 }
 
 
-bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
+void LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 {
 #define CHECK(condition, message, ...)                                                    \
 	do                                                                                    \
 	{                                                                                     \
 		if (!(condition))                                                                 \
 		{                                                                                 \
-			m_logger->LogErrorF("{:#x} {:?} {} " message, m_il->GetFunction()->GetStart(), instr, #condition, ## __VA_ARGS__ );  \
-			result = false;                                                               \
+			m_diagnostics.push_back(Diagnostic::Error(this, instr, fmt::format("{} " message, #condition, ## __VA_ARGS__)));   \
 		}                                                                                 \
 	}                                                                                     \
 	while (false)
 
-	bool result = true;
 
 	switch (instr.operation)
 	{
@@ -634,7 +668,7 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 			//  nightmare semantics on the upper 96 bits + 128 bits
 			if (info.size > instr.size)
 			{
-				m_logger->LogDebugF("{:?} setting {:#x} byte register {} to {:#x} byte value", instr, info.size, m_arch->GetRegisterName(reg), instr.size);
+				m_diagnostics.push_back(Diagnostic::Diag(NoteSeverity, this, instr, fmt::format("setting {:#x} byte register {} to {:#x} byte value", info.size, m_arch->GetRegisterName(reg), instr.size)));
 			}
 			else
 			{
@@ -642,7 +676,7 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 			}
 		}
 
-		result &= CheckExprSize(instr.GetSourceExpr<LLIL_SET_REG>(), instr.size);
+		CheckExprSize(instr.GetSourceExpr<LLIL_SET_REG>(), instr.size);
 		break;
 	}
 	case LLIL_SET_REG_SPLIT:
@@ -661,13 +695,13 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 			CHECK(info.size == instr.size, "setting {:#x} byte lo register {} to {:#x} byte value", info.size, m_arch->GetRegisterName(lo), instr.size);
 		}
 
-		result &= CheckExprSize(instr.GetSourceExpr<LLIL_SET_REG_SPLIT>(), instr.size * 2);
+		CheckExprSize(instr.GetSourceExpr<LLIL_SET_REG_SPLIT>(), instr.size * 2);
 		break;
 	}
 	case LLIL_SET_FLAG:
 	{
 		CHECK(instr.size == 0, "set flag size should be zero, is {:#x}", instr.size);
-		result &= CheckExprSize(instr.GetSourceExpr<LLIL_SET_FLAG>(), 0);
+		CheckExprSize(instr.GetSourceExpr<LLIL_SET_FLAG>(), 0);
 		break;
 	}
 	case LLIL_SET_REG_STACK_REL:
@@ -679,8 +713,8 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 		CHECK(firstInfo.size == instr.size, "setting {:#x} byte register stack {} with {:#x} byte value", firstInfo.size, m_arch->GetRegisterStackName(regStack), instr.size);
 
 		// TODO: Check relative offset in stack?
-		result &= CheckExprSize(instr.GetDestExpr<LLIL_SET_REG_STACK_REL>(), std::nullopt);
-		result &= CheckExprSize(instr.GetSourceExpr<LLIL_SET_REG_STACK_REL>(), instr.size);
+		CheckExprSize(instr.GetDestExpr<LLIL_SET_REG_STACK_REL>(), std::nullopt);
+		CheckExprSize(instr.GetSourceExpr<LLIL_SET_REG_STACK_REL>(), instr.size);
 		break;
 	}
 	case LLIL_REG_STACK_PUSH:
@@ -691,7 +725,7 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 		auto firstInfo = m_arch->GetRegisterInfo(firstReg);
 		CHECK(firstInfo.size == instr.size, "pushing {:#x} byte register stack {} with {:#x} byte value", firstInfo.size, m_arch->GetRegisterStackName(regStack), instr.size);
 
-		result &= CheckExprSize(instr.GetSourceExpr<LLIL_REG_STACK_PUSH>(), instr.size);
+		CheckExprSize(instr.GetSourceExpr<LLIL_REG_STACK_PUSH>(), instr.size);
 		break;
 	}
 	case LLIL_ASSERT:
@@ -703,42 +737,42 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 		CHECK(instr.size != 0, "storing a zero byte value");
 
 		// TODO: Is this correct for eg arm64_32
-		result &= CheckExprSize(instr.GetDestExpr<LLIL_STORE>(), m_arch->GetAddressSize());
-		result &= CheckExprSize(instr.GetSourceExpr<LLIL_STORE>(), instr.size);
+		CheckExprSize(instr.GetDestExpr<LLIL_STORE>(), m_arch->GetAddressSize());
+		CheckExprSize(instr.GetSourceExpr<LLIL_STORE>(), instr.size);
 		break;
 	}
 	case LLIL_PUSH:
 		CHECK(instr.size != 0, "pushing a 0 byte value");
-		result &= CheckExprSize(instr.GetSourceExpr<LLIL_PUSH>(), instr.size);
+		CheckExprSize(instr.GetSourceExpr<LLIL_PUSH>(), instr.size);
 		break;
 	case LLIL_REG_STACK_FREE_REG:
 		break;
 	case LLIL_REG_STACK_FREE_REL:
 		// TODO: Check relative offset in stack?
-		result &= CheckExprSize(instr.GetDestExpr<LLIL_REG_STACK_FREE_REL>(), std::nullopt);
+		CheckExprSize(instr.GetDestExpr<LLIL_REG_STACK_FREE_REL>(), std::nullopt);
 		break;
 	case LLIL_JUMP:
-		result &= CheckExprSize(instr.GetDestExpr<LLIL_JUMP>(), std::nullopt);
+		CheckExprSize(instr.GetDestExpr<LLIL_JUMP>(), std::nullopt);
 		break;
 	case LLIL_JUMP_TO:
-		result &= CheckExprSize(instr.GetDestExpr<LLIL_JUMP_TO>(), std::nullopt);
+		CheckExprSize(instr.GetDestExpr<LLIL_JUMP_TO>(), std::nullopt);
 		break;
 	case LLIL_CALL:
-		result &= CheckExprSize(instr.GetDestExpr<LLIL_CALL>(), std::nullopt);
+		CheckExprSize(instr.GetDestExpr<LLIL_CALL>(), std::nullopt);
 		break;
 	case LLIL_CALL_STACK_ADJUST:
-		result &= CheckExprSize(instr.GetDestExpr<LLIL_CALL_STACK_ADJUST>(), std::nullopt);
+		CheckExprSize(instr.GetDestExpr<LLIL_CALL_STACK_ADJUST>(), std::nullopt);
 		break;
 	case LLIL_TAILCALL:
-		result &= CheckExprSize(instr.GetDestExpr<LLIL_TAILCALL>(), std::nullopt);
+		CheckExprSize(instr.GetDestExpr<LLIL_TAILCALL>(), std::nullopt);
 		break;
 	case LLIL_RET:
-		result &= CheckExprSize(instr.GetDestExpr<LLIL_RET>(), std::nullopt);
+		CheckExprSize(instr.GetDestExpr<LLIL_RET>(), std::nullopt);
 		break;
 	case LLIL_NORET:
 		break;
 	case LLIL_IF:
-		result &= CheckExprSize(instr.GetConditionExpr<LLIL_IF>(), 0);
+		CheckExprSize(instr.GetConditionExpr<LLIL_IF>(), 0);
 		break;
 	case LLIL_GOTO:
 		break;
@@ -778,31 +812,25 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 		CheckExprSize(instr.GetSourceExpr<LLIL_UNIMPL_MEM>(), std::nullopt);
 		break;
 	default:
-		m_logger->LogDebugF("Unexpected root instruction: {:?}", instr);
 		CheckExprSize(instr, std::nullopt);
 		break;
 	}
-	return result;
 #undef CHECK
 }
 
 
-bool LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruction& expr)
+void LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruction& expr)
 {
 #define CHECK(condition, message, ...)                                                    \
 	do                                                                                    \
 	{                                                                                     \
 		if (!(condition))                                                                 \
 		{                                                                                 \
-			m_logger->LogErrorF("{:#x} {:?} {} " message, m_il->GetFunction()->GetStart(), expr, #condition, ## __VA_ARGS__ );   \
-			result = false;                                                               \
+			m_diagnostics.push_back(Diagnostic::Error(this, expr, fmt::format("{} " message, #condition, ## __VA_ARGS__)));   \
 		}                                                                                 \
 	}                                                                                     \
 	while (false)
 
-
-#undef CHECEK
-	bool result = true;
 	switch (expr.operation)
 	{
 	case LLIL_NOP: break;
@@ -814,7 +842,7 @@ bool LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruct
 			auto name = m_arch->GetRegisterName(reg);
 			CHECK(!name.empty(), "unknown register index {}", reg);
 		}
-		result &= CheckExprOperands(expr.GetSourceExpr<LLIL_SET_REG>());
+		CheckExprOperands(expr.GetSourceExpr<LLIL_SET_REG>());
 		break;
 	}
 	case LLIL_SET_REG_SPLIT:
@@ -831,7 +859,7 @@ bool LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruct
 			auto name = m_arch->GetRegisterName(lo);
 			CHECK(!name.empty(), "unknown low register index {}", lo);
 		}
-		result &= CheckExprOperands(expr.GetSourceExpr<LLIL_SET_REG_SPLIT>());
+		CheckExprOperands(expr.GetSourceExpr<LLIL_SET_REG_SPLIT>());
 		break;
 	}
 	case LLIL_SET_FLAG:
@@ -839,7 +867,7 @@ bool LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruct
 		auto flag = expr.GetDestFlag<LLIL_SET_FLAG>();
 		auto name = m_arch->GetFlagName(flag);
 		CHECK(!name.empty(), "unknown flag index {}", flag);
-		result &= CheckExprOperands(expr.GetSourceExpr<LLIL_SET_FLAG>());
+		CheckExprOperands(expr.GetSourceExpr<LLIL_SET_FLAG>());
 		break;
 	}
 	case LLIL_SET_REG_STACK_REL:
@@ -847,8 +875,8 @@ bool LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruct
 		auto regStack = expr.GetDestRegisterStack<LLIL_SET_REG_STACK_REL>();
 		auto name = m_arch->GetRegisterStackName(regStack);
 		CHECK(!name.empty(), "unknown register stack index {}", regStack);
-		result &= CheckExprOperands(expr.GetDestExpr<LLIL_SET_REG_STACK_REL>());
-		result &= CheckExprOperands(expr.GetSourceExpr<LLIL_SET_REG_STACK_REL>());
+		CheckExprOperands(expr.GetDestExpr<LLIL_SET_REG_STACK_REL>());
+		CheckExprOperands(expr.GetSourceExpr<LLIL_SET_REG_STACK_REL>());
 		break;
 	}
 	case LLIL_REG_STACK_PUSH:
@@ -856,7 +884,7 @@ bool LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruct
 		auto regStack = expr.GetDestRegisterStack<LLIL_REG_STACK_PUSH>();
 		auto name = m_arch->GetRegisterStackName(regStack);
 		CHECK(!name.empty(), "unknown register stack index {}", regStack);
-		result &= CheckExprOperands(expr.GetSourceExpr<LLIL_REG_STACK_PUSH>());
+		CheckExprOperands(expr.GetSourceExpr<LLIL_REG_STACK_PUSH>());
 		break;
 	}
 	case LLIL_ASSERT:
@@ -883,11 +911,11 @@ bool LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruct
 		break;
 	}
 	case LLIL_STORE:
-		result &= CheckExprOperands(expr.GetDestExpr<LLIL_STORE>());
-		result &= CheckExprOperands(expr.GetSourceExpr<LLIL_STORE>());
+		CheckExprOperands(expr.GetDestExpr<LLIL_STORE>());
+		CheckExprOperands(expr.GetSourceExpr<LLIL_STORE>());
 		break;
 	case LLIL_PUSH:
-		result &= CheckExprOperands(expr.GetSourceExpr<LLIL_PUSH>());
+		CheckExprOperands(expr.GetSourceExpr<LLIL_PUSH>());
 		break;
 	case LLIL_REG_STACK_FREE_REG:
 	{
@@ -904,11 +932,11 @@ bool LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruct
 		auto regStack = expr.GetDestRegisterStack<LLIL_REG_STACK_FREE_REL>();
 		auto name = m_arch->GetRegisterStackName(regStack);
 		CHECK(!name.empty(), "unknown register stack index {}", regStack);
-		result &= CheckExprOperands(expr.GetDestExpr<LLIL_REG_STACK_FREE_REL>());
+		CheckExprOperands(expr.GetDestExpr<LLIL_REG_STACK_FREE_REL>());
 		break;
 	}
 	case LLIL_JUMP:
-		result &= CheckExprOperands(expr.GetDestExpr<LLIL_JUMP>());
+		CheckExprOperands(expr.GetDestExpr<LLIL_JUMP>());
 		break;
 	case LLIL_JUMP_TO:
 	{
@@ -919,20 +947,18 @@ bool LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruct
 		{
 			if (!seenValues.insert(value).second)
 			{
-				m_logger->LogErrorF("{:?} {} duplicate jump target value {}", expr, value);
-				result = false;
+				m_diagnostics.push_back(Diagnostic::Error(this, expr, fmt::format("{} duplicate jump target value {}", value)));
 			}
 			if (!seenDests.insert(dest).second)
 			{
-				m_logger->LogErrorF("{:?} {} duplicate jump target dest {}", expr, dest);
-				result = false;
+				m_diagnostics.push_back(Diagnostic::Error(this, expr, fmt::format("{} duplicate jump target dest {}", dest)));
 			}
 		}
-		result &= CheckExprOperands(expr.GetDestExpr<LLIL_JUMP_TO>());
+		CheckExprOperands(expr.GetDestExpr<LLIL_JUMP_TO>());
 		break;
 	}
 	case LLIL_CALL:
-		result &= CheckExprOperands(expr.GetDestExpr<LLIL_CALL>());
+		CheckExprOperands(expr.GetDestExpr<LLIL_CALL>());
 		break;
 	case LLIL_CALL_STACK_ADJUST:
 	{
@@ -941,14 +967,14 @@ bool LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruct
 			auto name = m_arch->GetRegisterStackName(regStack);
 			CHECK(!name.empty(), "unknown register stack index {}", regStack);
 		}
-		result &= CheckExprOperands(expr.GetDestExpr<LLIL_CALL_STACK_ADJUST>());
+		CheckExprOperands(expr.GetDestExpr<LLIL_CALL_STACK_ADJUST>());
 		break;
 	}
 	case LLIL_TAILCALL:
-		result &= CheckExprOperands(expr.GetDestExpr<LLIL_TAILCALL>());
+		CheckExprOperands(expr.GetDestExpr<LLIL_TAILCALL>());
 		break;
 	case LLIL_RET:
-		result &= CheckExprOperands(expr.GetDestExpr<LLIL_RET>());
+		CheckExprOperands(expr.GetDestExpr<LLIL_RET>());
 		break;
 	case LLIL_NORET:
 		break;
@@ -959,7 +985,7 @@ bool LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruct
 		size_t falseTarget = expr.GetFalseTarget<LLIL_IF>();
 		CHECK(trueTarget < instrCount, "true target {} out of range of function with {} instructions", trueTarget, instrCount);
 		CHECK(falseTarget < instrCount, "false target {} out of range of function with {} instructions", falseTarget, instrCount);
-		result &= CheckExprOperands(expr.GetConditionExpr<LLIL_IF>());
+		CheckExprOperands(expr.GetConditionExpr<LLIL_IF>());
 		break;
 	}
 	case LLIL_GOTO:
@@ -993,7 +1019,7 @@ bool LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruct
 
 		for (auto& input: actualInputs)
 		{
-			result &= CheckExprOperands(input);
+			CheckExprOperands(input);
 		}
 		for (auto& output: actualOutputs)
 		{
@@ -1015,10 +1041,10 @@ bool LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruct
 	case LLIL_UNIMPL:
 		break;
 	case LLIL_UNIMPL_MEM:
-		result &= CheckExprOperands(expr.GetSourceExpr<LLIL_UNIMPL_MEM>());
+		CheckExprOperands(expr.GetSourceExpr<LLIL_UNIMPL_MEM>());
 		break;
 	case LLIL_LOAD:
-		result &= CheckExprOperands(expr.GetSourceExpr<LLIL_LOAD>());
+		CheckExprOperands(expr.GetSourceExpr<LLIL_LOAD>());
 		break;
 	case LLIL_POP:
 		break;
@@ -1053,7 +1079,7 @@ bool LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruct
 		auto regStack = expr.GetSourceRegisterStack<LLIL_REG_STACK_REL>();
 		auto name = m_arch->GetRegisterStackName(regStack);
 		CHECK(!name.empty(), "unknown register stack index {}", regStack);
-		result &= CheckExprOperands(expr.GetSourceExpr<LLIL_REG_STACK_REL>());
+		CheckExprOperands(expr.GetSourceExpr<LLIL_REG_STACK_REL>());
 		break;
 	}
 	case LLIL_REG_STACK_POP:
@@ -1082,6 +1108,22 @@ bool LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruct
 		CHECK(!name.empty(), "unknown flag index {}", flag);
 		break;
 	}
+	case LLIL_FLAG_COND:
+	{
+		auto condition = expr.GetFlagCondition<LLIL_FLAG_COND>();
+		CHECK(condition <= LLFC_FUO, "unknown flag condition {}", condition);
+		auto semClass = expr.GetSemanticFlagClass<LLIL_FLAG_COND>();
+		auto name = m_arch->GetSemanticFlagClassName(semClass);
+		CHECK(!name.empty(), "unknown semantic flag class {}", semClass);
+		break;
+	}
+	case LLIL_FLAG_GROUP:
+	{
+		auto semGroup = expr.GetSemanticFlagGroup<LLIL_FLAG_GROUP>();
+		auto name = m_arch->GetSemanticFlagGroupName(semGroup);
+		CHECK(!name.empty(), "unknown semantic flag group {}", semGroup);
+		break;
+	}
 	case LLIL_NEG:
 	case LLIL_NOT:
 	case LLIL_FSQRT:
@@ -1099,7 +1141,7 @@ bool LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruct
 	case LLIL_INT_TO_FLOAT: // int->float
 	case LLIL_FLOAT_CONV: // float->float, rounding unspecified (x86 lifter uses for cvtsd2ss and that depends on FPU status word)
 		// TODO: do we want to check inputs look like ints / floats where relevant
-		result &= CheckExprOperands(expr.GetSourceExpr());
+		CheckExprOperands(expr.GetSourceExpr());
 		break;
 	case LLIL_TEST_BIT:
 	case LLIL_CMP_E:
@@ -1147,25 +1189,26 @@ bool LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruct
 	case LLIL_MODS_DP:
 	case LLIL_MODU_DP:
 		// TODO: do we want to check inputs look like ints / floats where relevant
-		result &= CheckExprOperands(expr.GetLeftExpr());
-		result &= CheckExprOperands(expr.GetRightExpr());
+		CheckExprOperands(expr.GetLeftExpr());
+		CheckExprOperands(expr.GetRightExpr());
 		break;
 	case LLIL_ADC:
 	case LLIL_SBB:
 	case LLIL_RLC:
 	case LLIL_RRC:
-		result &= CheckExprOperands(expr.GetLeftExpr());
-		result &= CheckExprOperands(expr.GetRightExpr());
-		result &= CheckExprOperands(expr.GetCarryExpr());
+		CheckExprOperands(expr.GetLeftExpr());
+		CheckExprOperands(expr.GetRightExpr());
+		CheckExprOperands(expr.GetCarryExpr());
 		break;
 	default:
-		m_logger->LogErrorF("Unhandled expr operation: {:?}", expr);
+		m_diagnostics.push_back(Diagnostic::Error(this, expr, "Unhandled expr operation"));
 		break;
 	}
-	return result;
+#undef CHECK
 }
 
-bool LowLevelILVerifier::Verify()
+
+void LowLevelILVerifier::Verify()
 {
 	/*
 		Invariants:
@@ -1179,12 +1222,12 @@ bool LowLevelILVerifier::Verify()
 		     (this feels like a bug, but it's apparently desired behavior)
 		-[x] Child expressions are of a limited subset of operations (eg NOT goto)
 		-[x] Expression parameters are in valid range
+			-[x] JUMP_TO has unique targets
 		-[-] Each expression has as most 1 parent
 		     (flags resolver breaks this)
 		-[x] Expr address aligns with instruction
 		-[x] Nothing in the flags attr except on lifted IL
 		     (apparently broken in x86 for x87.pop)
-		-[x] JUMP_TO has unique targets
 		(low priority)
 		-[ ] suspiciously long expr tree
 		     (not actually a bug, just sus)
@@ -1193,22 +1236,21 @@ bool LowLevelILVerifier::Verify()
 	if (!m_il->GetFunction())
 	{
 		// Bare ILs don't matter
-		return true;
+		m_diagnostics.push_back(Diagnostic::Error(this, "Not applicable to bare IL functions"));
+		return;
 	}
 	if (m_il == m_il->GetSSAForm())
 	{
 		// TODO: SSA form
-		return true;
+		m_diagnostics.push_back(Diagnostic::Error(this, "Not applicable to SSA forms"));
+		return;
 	}
-
-	bool result = true;
 
 	// Check block layout
 	auto entryBlock = m_il->GetBasicBlockForInstruction(0);
 	if (!entryBlock)
 	{
-		m_logger->LogWarnF("no entry block for function");
-		result = false;
+		m_diagnostics.push_back(Diagnostic::Diag(WarningSeverity, this, "no entry block for function"));
 	}
 	for (auto& bb: m_il->GetBasicBlocks())
 	{
@@ -1217,26 +1259,8 @@ bool LowLevelILVerifier::Verify()
 			// TODO: This is currently valid but we want this to eventually be lifted as a tailcall
 			if (outgoing.target == entryBlock)
 			{
-				m_logger->LogDebugF("block {:#x} jumps to entry block", bb->GetStart());
-//				result = false;
+				m_diagnostics.push_back(Diagnostic::Diag(WarningSeverity, this, fmt::format("block {:#x} jumps to entry block", bb->GetStart())));
 			}
-		}
-	}
-
-	// Check exprs don't set flags
-	for (auto& bb: m_il->GetBasicBlocks())
-	{
-		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex++)
-		{
-			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
-			instr.VisitExprs([&](const LowLevelILInstruction& expr) {
-				if (expr.flags != 0)
-				{
-					LogErrorF("Found flags set by LLIL expression (should only be set on Lifted IL): {:?}", expr);
-					result = false;
-				}
-				return true;
-			});
 		}
 	}
 
@@ -1246,34 +1270,7 @@ bool LowLevelILVerifier::Verify()
 		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex++)
 		{
 			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
-			result &= CheckInstrSize(instr);
-		}
-	}
-
-	// Check exprs have addresses
-	for (auto& bb: m_il->GetBasicBlocks())
-	{
-		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex++)
-		{
-			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
-			instr.VisitExprs([&](const LowLevelILInstruction& expr) {
-				if (expr.address == 0)
-				{
-					LogErrorF("Found expr with no address: {:?}", expr);
-					result = false;
-				}
-				return true;
-			});
-		}
-	}
-
-	// Check expr operands
-	for (auto& bb: m_il->GetBasicBlocks())
-	{
-		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex++)
-		{
-			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
-			result &= CheckExprOperands(instr);
+			CheckInstrSize(instr);
 		}
 	}
 
@@ -1289,8 +1286,7 @@ bool LowLevelILVerifier::Verify()
 					// We always check Non-SSA form (only the core generates SSA forms and I'd *like* to believe it is correct)
 					if ((found->second & ValidInNonSSA) == 0)
 					{
-						result = false;
-						m_logger->LogErrorF("Instruction {:?} is not valid in non-ssa form", expr);
+						m_diagnostics.push_back(Diagnostic::Error(this, expr, "Expression is not valid in non-ssa form"));
 					}
 					if (expr.exprIndex == instr.exprIndex)
 					{
@@ -1300,26 +1296,33 @@ bool LowLevelILVerifier::Verify()
 						//  rss used the example of "pop + pop"
 						if ((found->second & ValidAsParent) == 0)
 						{
-							result = false;
-							m_logger->LogDebugF("Instruction {:?} is not expected to be parent instruction", expr);
+							m_diagnostics.push_back(Diagnostic::Diag(NoteSeverity, this, expr, "Expression is not expected to be parent instruction"));
 						}
 					}
 					else
 					{
 						if ((found->second & ValidAsChild) == 0)
 						{
-							result = false;
-							m_logger->LogErrorF("Instruction {:?} is not valid as child instruction", expr);
+							m_diagnostics.push_back(Diagnostic::Error(this, expr, "Instruction is not valid as child expression"));
 						}
 					}
 				}
 				else
 				{
-					result = false;
-					m_logger->LogErrorF("Unknown instruction operation {:?}", expr);
+					m_diagnostics.push_back(Diagnostic::Error(this, expr, "Unknown expression operation"));
 				}
 				return true;
 			});
+		}
+	}
+
+	// Check expr operands
+	for (auto& bb: m_il->GetBasicBlocks())
+	{
+		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex++)
+		{
+			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
+			CheckExprOperands(instr);
 		}
 	}
 
@@ -1335,13 +1338,42 @@ bool LowLevelILVerifier::Verify()
 				{
 					// TODO: This is sometimes due to a bug in FlagsResolver
 					//  where it doesn't duplicate the expressions used in the condition
-					result = false;
-					m_logger->LogDebugF("Expression {:?} used more than once", expr);
+					m_diagnostics.push_back(Diagnostic::Diag(NoteSeverity, this, expr, "Expression used more than once"));
 				}
 				return true;
 			});
 		}
 	}
 
-	return result;
+	// Check exprs have addresses
+	for (auto& bb: m_il->GetBasicBlocks())
+	{
+		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex++)
+		{
+			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
+			instr.VisitExprs([&](const LowLevelILInstruction& expr) {
+				if (expr.address == 0)
+				{
+					m_diagnostics.push_back(Diagnostic::Error(this, expr, "Found expression with no address"));
+				}
+				return true;
+			});
+		}
+	}
+
+	// Check exprs don't set flags
+	for (auto& bb: m_il->GetBasicBlocks())
+	{
+		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex++)
+		{
+			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
+			instr.VisitExprs([&](const LowLevelILInstruction& expr) {
+				if (expr.flags != 0)
+				{
+					m_diagnostics.push_back(Diagnostic::Error(this,  expr, "Found flags set by LLIL expression (should only be set on Lifted IL)"));
+				}
+				return true;
+			});
+		}
+	}
 }

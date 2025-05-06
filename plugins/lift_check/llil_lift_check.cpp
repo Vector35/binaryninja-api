@@ -232,7 +232,25 @@ void LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		CHECK(expr.size != 0, "op should have a size");
 
 		auto reg = expr.GetSourceRegister<LLIL_REG>();
-		if (!LLIL_REG_IS_TEMP(reg))
+		if (LLIL_REG_IS_TEMP(reg))
+		{
+			if (auto found = m_tempRegSizes.find(reg); found != m_tempRegSizes.end())
+			{
+				CHECK(
+					found->second.width == expr.size,
+					"attempting to load {:#x} bytes out of {:#x} byte temporary register temp{} (first seen at {:?})",
+					expr.size,
+					found->second.width,
+					LLIL_GET_TEMP_REG_INDEX(reg),
+					m_il->GetExpr(found->second.seenExpr)
+				);
+			}
+			else
+			{
+				m_diagnostics.push_back(Diagnostic::Error(this, expr, fmt::format("Using unknown/yet unseen temporary register temp{}", LLIL_GET_TEMP_REG_INDEX(reg))));
+			}
+		}
+		else
 		{
 			auto info = m_arch->GetRegisterInfo(reg);
 
@@ -260,13 +278,49 @@ void LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		CHECK(expr.size != 0, "op should have a size");
 
 		auto hi = expr.GetHighRegister<LLIL_REG_SPLIT>();
-		if (!LLIL_REG_IS_TEMP(hi))
+		if (LLIL_REG_IS_TEMP(hi))
+		{
+			if (auto found = m_tempRegSizes.find(hi); found != m_tempRegSizes.end())
+			{
+				CHECK(
+					found->second.width == expr.size,
+					"attempting to load {:#x} bytes out of {:#x} byte temporary register temp{} (first seen at {:?})",
+					expr.size,
+					found->second.width,
+					LLIL_GET_TEMP_REG_INDEX(hi),
+					m_il->GetExpr(found->second.seenExpr)
+				);
+			}
+			else
+			{
+				m_diagnostics.push_back(Diagnostic::Error(this, expr, fmt::format("Using unknown/yet unseen temporary register temp{}", LLIL_GET_TEMP_REG_INDEX(hi))));
+			}
+		}
+		else
 		{
 			auto info = m_arch->GetRegisterInfo(hi);
 			CHECK(expr.size == info.size, "attempting to load {:#x} bytes out of a {:#x} byte hi register", expr.size, info.size);
 		}
 		auto lo = expr.GetLowRegister<LLIL_REG_SPLIT>();
-		if (!LLIL_REG_IS_TEMP(lo))
+		if (LLIL_REG_IS_TEMP(lo))
+		{
+			if (auto found = m_tempRegSizes.find(lo); found != m_tempRegSizes.end())
+			{
+				CHECK(
+					found->second.width == expr.size,
+					"attempting to load {:#x} bytes out of {:#x} byte temporary register temp{} (first seen at {:?})",
+					expr.size,
+					found->second.width,
+					LLIL_GET_TEMP_REG_INDEX(lo),
+					m_il->GetExpr(found->second.seenExpr)
+				);
+			}
+			else
+			{
+				m_diagnostics.push_back(Diagnostic::Error(this, expr, fmt::format("Using unknown/yet unseen temporary register temp{}", LLIL_GET_TEMP_REG_INDEX(lo))));
+			}
+		}
+		else
 		{
 			auto info = m_arch->GetRegisterInfo(lo);
 			CHECK(expr.size == info.size, "attempting to load {:#x} bytes out of a {:#x} byte lo register", expr.size, info.size);
@@ -347,18 +401,18 @@ void LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 	}
 	case LLIL_FLAG_COND:
 	{
-		if (requiredSize.has_value() && *requiredSize != 0)
+		if (requiredSize.has_value())
 		{
-			CHECK(expr.size == *requiredSize, "op producing boolean (0 size) value where {:#x} bytes are expected", *requiredSize);
+			CHECK(*requiredSize == 0, "op expecting to produce {:#x} byte value but should be producing boolean (0 size)", *requiredSize);
 		}
 		CHECK(expr.size == 0, "op should be boolean (0 size) but is {:#x} size", expr.size);
 		break;
 	}
 	case LLIL_FLAG_GROUP:
 	{
-		if (requiredSize.has_value() && *requiredSize != 0)
+		if (requiredSize.has_value())
 		{
-			CHECK(expr.size == *requiredSize, "op producing boolean (0 size) value where {:#x} bytes are expected", *requiredSize);
+			CHECK(*requiredSize == 0, "op expecting to produce {:#x} byte value but should be producing boolean (0 size)", *requiredSize);
 		}
 		CHECK(expr.size == 0, "op should be boolean (0 size) but is {:#x} size", expr.size);
 		break;
@@ -656,9 +710,32 @@ void LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 		break;
 	case LLIL_SET_REG:
 	{
-		// TODO: how to do sanity checking for temp registers?
+		CHECK(instr.size != 0, "op should have a size");
+
 		auto reg = instr.GetDestRegister<LLIL_SET_REG>();
-		if (!LLIL_REG_IS_TEMP(reg))
+		if (LLIL_REG_IS_TEMP(reg))
+		{
+			if (auto found = m_tempRegSizes.find(reg); found != m_tempRegSizes.end())
+			{
+				CHECK(
+					found->second.width == instr.size,
+					"setting {:#x} byte temporary register temp{} to {:#x} bytes (first seen at {:?})",
+					found->second.width,
+					LLIL_GET_TEMP_REG_INDEX(reg),
+					instr.size,
+					m_il->GetExpr(found->second.seenExpr)
+				);
+			}
+			else
+			{
+				TempRegisterInfo info;
+				info.reg = reg;
+				info.width = instr.size;
+				info.seenExpr = instr.exprIndex;
+				m_tempRegSizes.insert({ reg, info });
+			}
+		}
+		else
 		{
 			auto info = m_arch->GetRegisterInfo(reg);
 
@@ -681,15 +758,60 @@ void LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 	}
 	case LLIL_SET_REG_SPLIT:
 	{
-		// TODO: how to do sanity checking for temp registers?
+		CHECK(instr.size != 0, "op should have a size");
 		auto hi = instr.GetHighRegister<LLIL_SET_REG_SPLIT>();
-		if (!LLIL_REG_IS_TEMP(hi))
+		if (LLIL_REG_IS_TEMP(hi))
+		{
+			if (auto found = m_tempRegSizes.find(hi); found != m_tempRegSizes.end())
+			{
+				CHECK(
+					found->second.width == instr.size,
+					"setting {:#x} byte temporary register temp{} to {:#x} bytes (first seen at {:?})",
+					found->second.width,
+					LLIL_GET_TEMP_REG_INDEX(hi),
+					instr.size,
+					m_il->GetExpr(found->second.seenExpr)
+				);
+			}
+			else
+			{
+				TempRegisterInfo info;
+				info.reg = hi;
+				info.width = instr.size;
+				info.seenExpr = instr.exprIndex;
+				m_tempRegSizes.insert({ hi, info });
+			}
+		}
+		else
 		{
 			auto info = m_arch->GetRegisterInfo(hi);
 			CHECK(info.size == instr.size, "setting {:#x} byte hi register {} to {:#x} byte value", info.size, m_arch->GetRegisterName(hi), instr.size);
 		}
 		auto lo = instr.GetHighRegister<LLIL_SET_REG_SPLIT>();
-		if (!LLIL_REG_IS_TEMP(lo))
+		if (LLIL_REG_IS_TEMP(lo))
+		{
+			if (auto found = m_tempRegSizes.find(lo); found != m_tempRegSizes.end())
+			{
+				CHECK(
+					found->second.width == instr.size,
+					"setting {:#x} byte temporary register temp{} to {:#x} bytes (first seen at {:?})",
+					found->second.width,
+					LLIL_GET_TEMP_REG_INDEX(lo),
+					instr.size,
+					m_il->GetExpr(found->second.seenExpr)
+				);
+			}
+			else
+			{
+				TempRegisterInfo info;
+				info.reg = lo;
+				info.width = instr.size;
+				info.seenExpr = instr.exprIndex;
+				m_tempRegSizes.insert({ lo, info });
+			}
+
+		}
+		else
 		{
 			auto info = m_arch->GetRegisterInfo(lo);
 			CHECK(info.size == instr.size, "setting {:#x} byte lo register {} to {:#x} byte value", info.size, m_arch->GetRegisterName(lo), instr.size);
@@ -706,6 +828,7 @@ void LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 	}
 	case LLIL_SET_REG_STACK_REL:
 	{
+		CHECK(instr.size != 0, "op should have a size");
 		auto regStack = instr.GetDestRegisterStack<LLIL_SET_REG_STACK_REL>();
 		auto info = m_arch->GetRegisterStackInfo(regStack);
 		auto firstReg = info.firstStorageReg;
@@ -719,6 +842,7 @@ void LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 	}
 	case LLIL_REG_STACK_PUSH:
 	{
+		CHECK(instr.size != 0, "op should have a size");
 		auto regStack = instr.GetDestRegisterStack<LLIL_REG_STACK_PUSH>();
 		auto info = m_arch->GetRegisterStackInfo(regStack);
 		auto firstReg = info.firstStorageReg;
@@ -1113,8 +1237,11 @@ void LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruct
 		auto condition = expr.GetFlagCondition<LLIL_FLAG_COND>();
 		CHECK(condition <= LLFC_FUO, "unknown flag condition {}", condition);
 		auto semClass = expr.GetSemanticFlagClass<LLIL_FLAG_COND>();
-		auto name = m_arch->GetSemanticFlagClassName(semClass);
-		CHECK(!name.empty(), "unknown semantic flag class {}", semClass);
+		if (semClass != 0)
+		{
+			auto name = m_arch->GetSemanticFlagClassName(semClass);
+			CHECK(!name.empty(), "unknown semantic flag class {}", semClass);
+		}
 		break;
 	}
 	case LLIL_FLAG_GROUP:
@@ -1216,6 +1343,7 @@ void LowLevelILVerifier::Verify()
 		     (n/i for now)
 		-[-] No jumping to entry block
 		     (currently allowed)
+		-[x] All blocks have source blocks
 		-[x] Sizes of expressions are consistent
 		-[-] Base level instructions are of a limited subset of operations (setreg, call, etc)
 		     (they can technically be value expressions, e.g. subtractions, for setting flags)
@@ -1256,10 +1384,16 @@ void LowLevelILVerifier::Verify()
 	{
 		for (auto& outgoing: bb->GetOutgoingEdges())
 		{
+			auto source = bb->GetSourceBlock();
+			if (!source)
+			{
+				m_diagnostics.push_back(Diagnostic::Error(this, fmt::format("block {}->{} has no source block? (probably need to call Finalize again or something)", bb->GetStart(), bb->GetEnd())));
+				source = bb;
+			}
 			// TODO: This is currently valid but we want this to eventually be lifted as a tailcall
 			if (outgoing.target == entryBlock)
 			{
-				m_diagnostics.push_back(Diagnostic::Diag(WarningSeverity, this, fmt::format("block {:#x} jumps to entry block", bb->GetStart())));
+				m_diagnostics.push_back(Diagnostic::Diag(WarningSeverity, this, fmt::format("block {:#x}->{:#x} jumps to entry block (probably a bug in core's Finalize)", source->GetStart(), source->GetEnd())));
 			}
 		}
 	}
@@ -1338,7 +1472,7 @@ void LowLevelILVerifier::Verify()
 				{
 					// TODO: This is sometimes due to a bug in FlagsResolver
 					//  where it doesn't duplicate the expressions used in the condition
-					m_diagnostics.push_back(Diagnostic::Diag(NoteSeverity, this, expr, "Expression used more than once"));
+					m_diagnostics.push_back(Diagnostic::Diag(NoteSeverity, this, expr, "Expression used more than once (probably a bug in core's FlagsResolver)"));
 				}
 				return true;
 			});

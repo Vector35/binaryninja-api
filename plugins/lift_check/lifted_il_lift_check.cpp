@@ -239,7 +239,7 @@ void LiftedILVerifier::Verify()
 				{
 					if ((found->second & ValidAsParent) == 0 && expr.flags == 0)
 					{
-						m_diagnostics.push_back(Diagnostic::Error(this, expr, "Expression is not expected to be parent instruction"));
+						m_diagnostics.push_back(Diagnostic::Diag(WarningSeverity, this, expr, "Expression is not expected to be parent instruction without setting flags"));
 					}
 				}
 				else

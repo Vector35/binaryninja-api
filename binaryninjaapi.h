@@ -10033,6 +10033,12 @@ namespace BinaryNinja {
 		*/
 		Ref<Function> GetFunction();
 
+		/*! Get the lifted IL function for the current AnalysisContext
+
+			\return The Lifted IL LowLevelILFunction for the current context
+		*/
+		Ref<LowLevelILFunction> GetLiftedILFunction();
+
 		/*! Get the low level IL function for the current AnalysisContext
 
 			\return The LowLevelILFunction for the current context

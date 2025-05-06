@@ -187,9 +187,9 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		if (requiredSize.has_value())
 		{
 			// TODO: There is a bug in our x86 lifter that stems from having incomplete sub-register support
-			// As per discussion with rss, this is actually the "best" behavior in certain circumstances,
-			// namely x86's vmulss which operates on the low 32 bits of a 256 bit register and does
-			// nightmare semantics on the upper 96 bits + 128 bits
+			//  As per discussion with rss, this is actually the "best" behavior in certain circumstances,
+			//  namely x86's vmulss which operates on the low 32 bits of a 256 bit register and does
+			//  nightmare semantics on the upper 96 bits + 128 bits
 
 			if (expr.size < *requiredSize)
 			{
@@ -228,9 +228,9 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 			auto info = m_arch->GetRegisterInfo(reg);
 
 			// TODO: There is a bug in our x86 lifter that stems from having incomplete sub-register support
-			// As per discussion with rss, this is actually the "best" behavior in certain circumstances,
-			// namely x86's vmulss which operates on the low 32 bits of a 256 bit register and does
-			// nightmare semantics on the upper 96 bits + 128 bits
+			//  As per discussion with rss, this is actually the "best" behavior in certain circumstances,
+			//  namely x86's vmulss which operates on the low 32 bits of a 256 bit register and does
+			//  nightmare semantics on the upper 96 bits + 128 bits
 			if (expr.size < info.size)
 			{
 				m_logger->LogDebugF("{:?} loading only {:#x} bytes out of {:#x} byte register {}", expr, expr.size, info.size, m_arch->GetRegisterName(reg));
@@ -408,9 +408,6 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 	}
 	case LLIL_ADD:
 	case LLIL_SUB:
-	case LLIL_AND:
-	case LLIL_OR:
-	case LLIL_XOR:
 	case LLIL_MUL:
 	case LLIL_DIVU:
 	case LLIL_DIVS:
@@ -427,6 +424,19 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
 		CHECK(expr.size != 0, "op should have a size");
+		result &= CheckExprSize(expr.GetLeftExpr(), expr.size);
+		result &= CheckExprSize(expr.GetRightExpr(), expr.size);
+		break;
+	}
+	case LLIL_AND:
+	case LLIL_OR:
+	case LLIL_XOR:
+	{
+		if (requiredSize.has_value())
+		{
+			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
+		}
+		// 0 size is a boolean operation, allowed
 		result &= CheckExprSize(expr.GetLeftExpr(), expr.size);
 		result &= CheckExprSize(expr.GetRightExpr(), expr.size);
 		break;
@@ -477,7 +487,6 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		break;
 	}
 	case LLIL_NEG:
-	case LLIL_NOT:
 	case LLIL_FSQRT:
 	case LLIL_FNEG:
 	case LLIL_FABS:
@@ -491,6 +500,16 @@ bool LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
 		}
 		CHECK(expr.size != 0, "op should have a size");
+		result &= CheckExprSize(expr.GetSourceExpr(), expr.size);
+		break;
+	}
+	case LLIL_NOT:
+	{
+		if (requiredSize.has_value())
+		{
+			CHECK(expr.size == *requiredSize, "op producing {:#x} byte value where {:#x} bytes are expected", expr.size, *requiredSize);
+		}
+		// 0 size is a boolean operation, allowed
 		result &= CheckExprSize(expr.GetSourceExpr(), expr.size);
 		break;
 	}
@@ -610,9 +629,9 @@ bool LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 			auto info = m_arch->GetRegisterInfo(reg);
 
 			// TODO: There is a bug in our x86 lifter that stems from having incomplete sub-register support
-			// As per discussion with rss, this is actually the "best" behavior in certain circumstances,
-			// namely x86's vmulss which operates on the low 32 bits of a 256 bit register and does
-			// nightmare semantics on the upper 96 bits + 128 bits
+			//  As per discussion with rss, this is actually the "best" behavior in certain circumstances,
+			//  namely x86's vmulss which operates on the low 32 bits of a 256 bit register and does
+			//  nightmare semantics on the upper 96 bits + 128 bits
 			if (info.size > instr.size)
 			{
 				m_logger->LogDebugF("{:?} setting {:#x} byte register {} to {:#x} byte value", instr, info.size, m_arch->GetRegisterName(reg), instr.size);
@@ -1150,27 +1169,26 @@ bool LowLevelILVerifier::Verify()
 {
 	/*
 		Invariants:
-		-[ ] All blocks either branch to existing blocks or terminate
-		-[x] No jumping to entry block
+		-[-] All blocks either branch to existing blocks or terminate
+		     (n/i for now)
+		-[-] No jumping to entry block
+		     (currently allowed)
 		-[x] Sizes of expressions are consistent
-		-[x] Base level instructions are of a limited subset of operations (setreg, call, etc)
+		-[-] Base level instructions are of a limited subset of operations (setreg, call, etc)
+		     (they can technically be value expressions, e.g. subtractions, for setting flags)
+		     (this feels like a bug, but it's apparently desired behavior)
 		-[x] Child expressions are of a limited subset of operations (eg NOT goto)
 		-[x] Expression parameters are in valid range
-		-[x] Each expression has as most 1 parent
-		-[ ] Expr address aligns with instruction
+		-[-] Each expression has as most 1 parent
+		     (flags resolver breaks this)
+		-[x] Expr address aligns with instruction
 		-[x] Nothing in the flags attr except on lifted IL
-		-[ ] JUMP_TO has unique targets
-		-[ ] Lifted IL: not more than 1 pop per tree
-		-[ ] Lifted IL: no conflicting flag writes in the same tree (dont have two subs in same instr)
-		-[ ] (not possible through API) GetFlagWriteLowLevelIL when it resolves a flag calls the arch to get the value for a flag and that expr must not set flags
-
+		     (apparently broken in x86 for x87.pop)
+		-[x] JUMP_TO has unique targets
 		(low priority)
 		-[ ] suspiciously long expr tree
-		-[ ] SSA should not version a subregister (no REG_SSA with subreg)
-
-		(mlil)
-		all register parameters to a call need to be in the llil ssa call param list
-	 */
+		     (not actually a bug, just sus)
+		*/
 
 	if (!m_il->GetFunction())
 	{
@@ -1232,6 +1250,23 @@ bool LowLevelILVerifier::Verify()
 		}
 	}
 
+	// Check exprs have addresses
+	for (auto& bb: m_il->GetBasicBlocks())
+	{
+		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex++)
+		{
+			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
+			instr.VisitExprs([&](const LowLevelILInstruction& expr) {
+				if (expr.address == 0)
+				{
+					LogErrorF("Found expr with no address: {:?}", expr);
+					result = false;
+				}
+				return true;
+			});
+		}
+	}
+
 	// Check expr operands
 	for (auto& bb: m_il->GetBasicBlocks())
 	{
@@ -1260,9 +1295,9 @@ bool LowLevelILVerifier::Verify()
 					if (expr.exprIndex == instr.exprIndex)
 					{
 						// TODO: In practice this happens due to bugs in the core's flags resolver
-						// You get LLIL_FSUB as a root expression because we cannot determine that it is free of side effects
-						// Also, apparently this could apply to basically _any_ expr operation because any expr could have side effects
-						// rss used the example of "pop + pop"
+						//  You get LLIL_FSUB as a root expression because we cannot determine that it is free of side effects
+						//  Also, apparently this could apply to basically _any_ expr operation because any expr could have side effects
+						//  rss used the example of "pop + pop"
 						if ((found->second & ValidAsParent) == 0)
 						{
 							result = false;
@@ -1298,8 +1333,10 @@ bool LowLevelILVerifier::Verify()
 			instr.VisitExprs([&](const LowLevelILInstruction& expr) {
 				if (seenExprs.insert(expr.exprIndex).second == false)
 				{
+					// TODO: This is sometimes due to a bug in FlagsResolver
+					//  where it doesn't duplicate the expressions used in the condition
 					result = false;
-					m_logger->LogErrorF("Expression {:?} used more than once", expr);
+					m_logger->LogDebugF("Expression {:?} used more than once", expr);
 				}
 				return true;
 			});

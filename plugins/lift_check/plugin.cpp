@@ -26,7 +26,9 @@ extern "C" {
 			"name": "analysis.llil.liftCheck",
 			"description": "This analysis step checks various conditions on LLIL functions.",
 			"eligibility": {
-				"auto": {}
+				"auto": {
+					"default": false
+				}
 			}
 		})~", checkActivityFn);
 		newFunctionMetaWorkflow->Insert("core.function.generateMediumLevelIL", "analysis.llil.liftCheck");

@@ -834,12 +834,13 @@ class Function:
 		Function.add_tag, you'll create an "address tag". These are good for labeling
 		specific instructions.
 
-		For tagging arbitrary data, consider :py:func:`~binaryninja.binaryview.add_tag`.
+		For tagging arbitrary data, consider :py:func:`~binaryninja.binaryview.BinaryView.add_tag`.
 
-		:param str tag_type_name: The name of the tag type for this Tag
+		:param str tag_type: The name of the tag type for this Tag
 		:param str data: additional data for the Tag
 		:param int addr: address at which to add the tag
-		:param bool user: Whether or not a user tag
+		:param bool auto: Whether or not an auto tag
+		:param Architecture arch: Architecture for the block in which the Tag is added (optional)
 		:Example:
 
 			>>> current_function.add_tag("Important", "I think this is the main function")

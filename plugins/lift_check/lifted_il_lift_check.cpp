@@ -195,6 +195,11 @@ void LiftedILVerifier::Verify()
 {
 	/*
 		Invariants:
+		-[-] All blocks either branch to existing blocks or terminate
+		     (n/i for now)
+		-[-] No jumping to entry block
+		     (currently allowed)
+		-[x] All blocks have source blocks
 		-[x] Sizes of expressions are consistent
 		-[x] Base level instructions are of a limited subset of operations (setreg, call, etc) or set flags
 		-[x] Child expressions are of a limited subset of operations (eg NOT goto)
@@ -216,99 +221,144 @@ void LiftedILVerifier::Verify()
 		return;
 	}
 
-	// Check expr sizes
-	for (size_t instrIndex = 0; instrIndex < m_il->GetInstructionCount(); instrIndex++)
+	// Check block layout
+	auto entryBlock = m_il->GetBasicBlockForInstruction(0);
+	if (!entryBlock)
 	{
-		LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
-		CheckInstrSize(instr);
+		m_diagnostics.push_back(Diagnostic::Diag(WarningSeverity, this, "no entry block for function"));
+	}
+	for (auto& bb: m_il->GetBasicBlocks())
+	{
+		for (auto& outgoing: bb->GetOutgoingEdges())
+		{
+			auto source = bb->GetSourceBlock();
+			if (!source)
+			{
+				m_diagnostics.push_back(Diagnostic::Error(this, fmt::format("block {}->{} has no source block? (probably need to call Finalize again or something)", bb->GetStart(), bb->GetEnd())));
+				source = bb;
+			}
+			// TODO: This is currently valid but we want this to eventually be lifted as a tailcall
+			if (outgoing.target == entryBlock)
+			{
+				m_diagnostics.push_back(Diagnostic::Diag(WarningSeverity, this, fmt::format("block {:#x}->{:#x} jumps to entry block (probably a bug in core's Finalize)", source->GetStart(), source->GetEnd())));
+			}
+		}
+	}
+
+	// Check expr sizes
+	for (auto& bb: m_il->GetBasicBlocks())
+	{
+		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex++)
+		{
+			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
+			CheckInstrSize(instr);
+		}
 	}
 
 	// Check exprs are where we expect them to be
-	for (size_t instrIndex = 0; instrIndex < m_il->GetInstructionCount(); instrIndex ++)
+	for (auto& bb: m_il->GetBasicBlocks())
 	{
-		LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
-		instr.VisitExprs([&](const LowLevelILInstruction& expr) {
-			if (auto found = g_instructionValidity.find(expr.operation); found != g_instructionValidity.end())
-			{
-				// We always check Non-SSA form (no Lifted IL SSA)
-				if ((found->second & ValidInNonSSA) == 0)
+		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex++)
+		{
+			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
+			instr.VisitExprs([&](const LowLevelILInstruction& expr) {
+				if (auto found = g_instructionValidity.find(expr.operation); found != g_instructionValidity.end())
 				{
-					m_diagnostics.push_back(Diagnostic::Error(this, expr, "Expression is not valid in non-ssa form"));
-				}
-				if (expr.exprIndex == instr.exprIndex)
-				{
-					if ((found->second & ValidAsParent) == 0 && expr.flags == 0)
+					// We always check Non-SSA form (no Lifted IL SSA)
+					if ((found->second & ValidInNonSSA) == 0)
 					{
-						m_diagnostics.push_back(Diagnostic::Diag(WarningSeverity, this, expr, "Expression is not expected to be parent instruction without setting flags"));
+						m_diagnostics.push_back(Diagnostic::Error(this, expr, "Expression is not valid in non-ssa form"));
+					}
+					if (expr.exprIndex == instr.exprIndex)
+					{
+						if ((found->second & ValidAsParent) == 0 && expr.flags == 0)
+						{
+							m_diagnostics.push_back(Diagnostic::Diag(WarningSeverity, this, expr, "Expression is not expected to be parent instruction without setting flags"));
+						}
+					}
+					else
+					{
+						if ((found->second & ValidAsChild) == 0)
+						{
+							m_diagnostics.push_back(Diagnostic::Error(this, expr, "Instruction is not valid as child expression"));
+						}
 					}
 				}
 				else
 				{
-					if ((found->second & ValidAsChild) == 0)
-					{
-						m_diagnostics.push_back(Diagnostic::Error(this, expr, "Instruction is not valid as child expression"));
-					}
+					m_diagnostics.push_back(Diagnostic::Error(this, expr, "Unknown expression operation"));
 				}
-			}
-			else
-			{
-				m_diagnostics.push_back(Diagnostic::Error(this, expr, "Unknown expression operation"));
-			}
-			return true;
-		});
+				return true;
+			});
+		}
 	}
 
 	// Check expr operands
-	for (size_t instrIndex = 0; instrIndex < m_il->GetInstructionCount(); instrIndex++)
+	for (auto& bb: m_il->GetBasicBlocks())
 	{
-		LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
-		CheckExprOperands(instr);
+		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex++)
+		{
+			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
+			CheckExprOperands(instr);
+		}
 	}
 
 	// Check exprs are used at most once
 	std::unordered_set<size_t> seenExprs;
-	for (size_t instrIndex = 0; instrIndex < m_il->GetInstructionCount(); instrIndex++)
+	for (auto& bb: m_il->GetBasicBlocks())
 	{
-		LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
-		instr.VisitExprs([&](const LowLevelILInstruction& expr) {
-			if (seenExprs.insert(expr.exprIndex).second == false)
-			{
-				m_diagnostics.push_back(Diagnostic::Error(this, expr, "Expression used more than once"));
-			}
-			return true;
-		});
+		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex++)
+		{
+			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
+			instr.VisitExprs([&](const LowLevelILInstruction& expr) {
+				if (seenExprs.insert(expr.exprIndex).second == false)
+				{
+					m_diagnostics.push_back(Diagnostic::Error(this, expr, "Expression used more than once"));
+				}
+				return true;
+			});
+		}
 	}
 
 	// Check exprs have addresses
-	for (size_t instrIndex = 0; instrIndex < m_il->GetInstructionCount(); instrIndex++)
+	for (auto& bb: m_il->GetBasicBlocks())
 	{
-		LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
-		instr.VisitExprs([&](const LowLevelILInstruction& expr) {
-			if (expr.address == 0)
-			{
-				m_diagnostics.push_back(Diagnostic::Error(this, expr, "Found expression with no address"));
-			}
-			return true;
-		});
+		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex++)
+		{
+			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
+			instr.VisitExprs([&](const LowLevelILInstruction& expr) {
+				if (expr.address == 0)
+				{
+					m_diagnostics.push_back(Diagnostic::Error(this, expr, "Found expression with no address"));
+				}
+				return true;
+			});
+		}
 	}
 
 	// Check not more than 1 pop per tree
-	for (size_t instrIndex = 0; instrIndex < m_il->GetInstructionCount(); instrIndex++)
+	for (auto& bb: m_il->GetBasicBlocks())
 	{
-		LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
-		if (GetTreePopCount(instr) > 1)
+		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex++)
 		{
-			m_diagnostics.push_back(Diagnostic::Error(this, instr, "Found more than 1 pop in instruction"));
+			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
+			if (GetTreePopCount(instr) > 1)
+			{
+				m_diagnostics.push_back(Diagnostic::Error(this, instr, "Found more than 1 pop in instruction"));
+			}
 		}
 	}
 
 	// Check not more than 1 flag write per tree
-	for (size_t instrIndex = 0; instrIndex < m_il->GetInstructionCount(); instrIndex++)
+	for (auto& bb: m_il->GetBasicBlocks())
 	{
-		LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
-		if (GetTreeFlagWriteCount(instr) > 1)
+		for (size_t instrIndex = bb->GetStart(); instrIndex != bb->GetEnd(); instrIndex++)
 		{
-			m_diagnostics.push_back(Diagnostic::Error(this, instr, "Found more than 1 flag write in instruction"));
+			LowLevelILInstruction instr = m_il->GetInstruction(instrIndex);
+			if (GetTreeFlagWriteCount(instr) > 1)
+			{
+				m_diagnostics.push_back(Diagnostic::Error(this, instr, "Found more than 1 flag write in instruction"));
+			}
 		}
 	}
 }

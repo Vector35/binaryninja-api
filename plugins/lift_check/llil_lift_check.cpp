@@ -1117,6 +1117,8 @@ void LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruct
 		size_t instrCount = m_il->GetInstructionCount();
 		size_t target = expr.GetTarget<LLIL_GOTO>();
 		CHECK(target < instrCount, "target {} out of range of function with {} instructions", target, instrCount);
+		auto targetBlock = m_il->GetBasicBlockForInstruction(target);
+		CHECK(targetBlock != nullptr, "target {} has no basic block? (probably need to call Finalize again)", target);
 		break;
 	}
 	case LLIL_SYSCALL:

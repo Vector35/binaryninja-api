@@ -546,7 +546,7 @@ impl DebugInfoBuilder {
             assert!(debug_info.add_data_variable(
                 address,
                 &self.get_type(*type_uid).unwrap().ty,
-                name.clone(),
+                name.as_deref(),
                 &[] // TODO : Components
             ));
         }

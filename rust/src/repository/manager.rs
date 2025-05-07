@@ -8,6 +8,7 @@ use binaryninjacore_sys::{
     BNRepositoryManagerGetDefaultRepository, BNRepositoryManagerGetRepositories,
 };
 use std::fmt::Debug;
+use std::path::Path;
 use std::ptr::NonNull;
 
 /// Keeps track of all the repositories and keeps the `enabled_plugins.json`
@@ -28,7 +29,7 @@ impl RepositoryManager {
         Ref::new(Self { handle })
     }
 
-    pub fn new<S: IntoCStr>(plugins_path: S) -> Ref<Self> {
+    pub fn new(plugins_path: &str) -> Ref<Self> {
         let plugins_path = plugins_path.to_cstr();
         let result = unsafe { BNCreateRepositoryManager(plugins_path.as_ptr()) };
         unsafe { Self::ref_from_raw(NonNull::new(result).unwrap()) }
@@ -59,7 +60,7 @@ impl RepositoryManager {
     /// * `repository_path` - path to where the repository will be stored on disk locally
     ///
     /// Returns true if the repository was successfully added, false otherwise.
-    pub fn add_repository<U: IntoCStr, P: IntoCStr>(&self, url: U, repository_path: P) -> bool {
+    pub fn add_repository(&self, url: &str, repository_path: &Path) -> bool {
         let url = url.to_cstr();
         let repo_path = repository_path.to_cstr();
         unsafe {
@@ -67,7 +68,7 @@ impl RepositoryManager {
         }
     }
 
-    pub fn repository_by_path<P: IntoCStr>(&self, path: P) -> Option<Repository> {
+    pub fn repository_by_path(&self, path: &Path) -> Option<Repository> {
         let path = path.to_cstr();
         let result =
             unsafe { BNRepositoryGetRepositoryByPath(self.handle.as_ptr(), path.as_ptr()) };

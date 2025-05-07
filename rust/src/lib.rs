@@ -469,11 +469,18 @@ impl VersionInfo {
     pub(crate) fn free_raw(value: BNVersionInfo) {
         unsafe { BnString::free_raw(value.channel) };
     }
+}
 
-    pub fn from_string<S: IntoCStr>(string: S) -> Self {
-        let string = string.to_cstr();
+impl TryFrom<&str> for VersionInfo {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let string = value.to_cstr();
         let result = unsafe { BNParseVersionString(string.as_ptr()) };
-        Self::from_owned_raw(result)
+        if result.build == 0 && result.channel.is_null() && result.major == 0 && result.minor == 0 {
+            return Err(());
+        }
+        Ok(Self::from_owned_raw(result))
     }
 }
 
@@ -529,13 +536,13 @@ pub fn license_count() -> i32 {
 /// 1. Check the BN_LICENSE environment variable
 /// 2. Check the Binary Ninja user directory for license.dat
 #[cfg(not(feature = "demo"))]
-pub fn set_license<S: IntoCStr + Default>(license: Option<S>) {
+pub fn set_license(license: Option<&str>) {
     let license = license.unwrap_or_default().to_cstr();
     unsafe { BNSetLicense(license.as_ptr()) }
 }
 
 #[cfg(feature = "demo")]
-pub fn set_license<S: IntoCStr + Default>(_license: Option<S>) {}
+pub fn set_license(_license: Option<&str>) {}
 
 pub fn product() -> String {
     unsafe { BnString::into_string(BNGetProduct()) }
@@ -554,8 +561,8 @@ pub fn is_ui_enabled() -> bool {
     unsafe { BNIsUIEnabled() }
 }
 
-pub fn is_database<S: IntoCStr>(filename: S) -> bool {
-    let filename = filename.to_cstr();
+pub fn is_database(file: &Path) -> bool {
+    let filename = file.to_cstr();
     unsafe { BNIsDatabase(filename.as_ptr()) }
 }
 
@@ -583,12 +590,12 @@ pub fn plugin_ui_abi_minimum_version() -> u32 {
     BN_MINIMUM_UI_ABI_VERSION
 }
 
-pub fn add_required_plugin_dependency<S: IntoCStr>(name: S) {
+pub fn add_required_plugin_dependency(name: &str) {
     let raw_name = name.to_cstr();
     unsafe { BNAddRequiredPluginDependency(raw_name.as_ptr()) };
 }
 
-pub fn add_optional_plugin_dependency<S: IntoCStr>(name: S) {
+pub fn add_optional_plugin_dependency(name: &str) {
     let raw_name = name.to_cstr();
     unsafe { BNAddOptionalPluginDependency(raw_name.as_ptr()) };
 }

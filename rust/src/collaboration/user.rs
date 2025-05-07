@@ -48,7 +48,7 @@ impl RemoteUser {
     }
 
     /// Set user's username. You will need to push the user to update the Remote
-    pub fn set_username<U: IntoCStr>(&self, username: U) -> Result<(), ()> {
+    pub fn set_username(&self, username: &str) -> Result<(), ()> {
         let username = username.to_cstr();
         let result =
             unsafe { BNCollaborationUserSetUsername(self.handle.as_ptr(), username.as_ptr()) };
@@ -67,7 +67,7 @@ impl RemoteUser {
     }
 
     /// Set user's email. You will need to push the user to update the Remote
-    pub fn set_email<U: IntoCStr>(&self, email: U) -> Result<(), ()> {
+    pub fn set_email(&self, email: &str) -> Result<(), ()> {
         let username = email.to_cstr();
         let result =
             unsafe { BNCollaborationUserSetEmail(self.handle.as_ptr(), username.as_ptr()) };

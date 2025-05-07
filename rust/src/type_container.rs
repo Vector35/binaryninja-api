@@ -137,7 +137,7 @@ impl TypeContainer {
     /// (by id) to use the new name.
     ///
     /// Returns true if the type was renamed.
-    pub fn rename_type<T: Into<QualifiedName>, S: IntoCStr>(&self, name: T, type_id: S) -> bool {
+    pub fn rename_type<T: Into<QualifiedName>>(&self, name: T, type_id: &str) -> bool {
         let type_id = type_id.to_cstr();
         let raw_name = QualifiedName::into_raw(name.into());
         let success =
@@ -150,7 +150,7 @@ impl TypeContainer {
     /// not specified and you may end up with broken references if any still exist.
     ///
     /// Returns true if the type was deleted.
-    pub fn delete_type<S: IntoCStr>(&self, type_id: S) -> bool {
+    pub fn delete_type(&self, type_id: &str) -> bool {
         let type_id = type_id.to_cstr();
         unsafe { BNTypeContainerDeleteType(self.handle.as_ptr(), type_id.as_ptr()) }
     }
@@ -158,19 +158,19 @@ impl TypeContainer {
     /// Get the unique id of the type in the Type Container with the given name.
     ///
     /// If no type with that name exists, returns None.
-    pub fn type_id<T: Into<QualifiedName>>(&self, name: T) -> Option<BnString> {
+    pub fn type_id<T: Into<QualifiedName>>(&self, name: T) -> Option<String> {
         let mut result = std::ptr::null_mut();
         let raw_name = QualifiedName::into_raw(name.into());
         let success =
             unsafe { BNTypeContainerGetTypeId(self.handle.as_ptr(), &raw_name, &mut result) };
         QualifiedName::free_raw(raw_name);
-        success.then(|| unsafe { BnString::from_raw(result) })
+        success.then(|| unsafe { BnString::into_string(result) })
     }
 
     /// Get the unique name of the type in the Type Container with the given id.
     ///
     /// If no type with that id exists, returns None.
-    pub fn type_name<S: IntoCStr>(&self, type_id: S) -> Option<QualifiedName> {
+    pub fn type_name(&self, type_id: &str) -> Option<QualifiedName> {
         let type_id = type_id.to_cstr();
         let mut result = BNQualifiedName::default();
         let success = unsafe {
@@ -182,7 +182,7 @@ impl TypeContainer {
     /// Get the definition of the type in the Type Container with the given id.
     ///
     /// If no type with that id exists, returns None.
-    pub fn type_by_id<S: IntoCStr>(&self, type_id: S) -> Option<Ref<Type>> {
+    pub fn type_by_id(&self, type_id: &str) -> Option<Ref<Type>> {
         let type_id = type_id.to_cstr();
         let mut result = std::ptr::null_mut();
         let success = unsafe {
@@ -283,9 +283,9 @@ impl TypeContainer {
     ///
     /// * `source` - Source code to parse
     /// * `import_dependencies` - If Type Library / Type Archive types should be imported during parsing
-    pub fn parse_type_string<S: IntoCStr>(
+    pub fn parse_type_string(
         &self,
-        source: S,
+        source: &str,
         import_dependencies: bool,
     ) -> Result<QualifiedNameAndType, Array<TypeParserError>> {
         let source = source.to_cstr();
@@ -319,23 +319,18 @@ impl TypeContainer {
     /// * `include_dirs` - List of directories to include in the header search path
     /// * `auto_type_source` - Source of types if used for automatically generated types
     /// * `import_dependencies` - If Type Library / Type Archive types should be imported during parsing
-    pub fn parse_types_from_source<S, F, O, D, A>(
+    pub fn parse_types_from_source<O, I>(
         &self,
-        source: S,
-        filename: F,
+        source: &str,
+        filename: &str,
         options: O,
-        include_directories: D,
-        auto_type_source: A,
+        include_directories: I,
+        auto_type_source: &str,
         import_dependencies: bool,
     ) -> Result<TypeParserResult, Array<TypeParserError>>
     where
-        S: IntoCStr,
-        F: IntoCStr,
-        O: IntoIterator,
-        O::Item: IntoCStr,
-        D: IntoIterator,
-        D::Item: IntoCStr,
-        A: IntoCStr,
+        O: IntoIterator<Item = String>,
+        I: IntoIterator<Item = String>,
     {
         let source = source.to_cstr();
         let filename = filename.to_cstr();

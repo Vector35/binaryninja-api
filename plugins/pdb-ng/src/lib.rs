@@ -13,7 +13,6 @@
 // limitations under the License.
 #![allow(dead_code)]
 
-use std::collections::HashMap;
 use std::env::{current_dir, current_exe, temp_dir};
 use std::io::Cursor;
 use std::path::PathBuf;
@@ -31,7 +30,6 @@ use binaryninja::download_provider::{DownloadInstanceInputOutputCallbacks, Downl
 use binaryninja::interaction::{MessageBoxButtonResult, MessageBoxButtonSet};
 use binaryninja::logger::Logger;
 use binaryninja::settings::{QueryOptions, Settings};
-use binaryninja::string::BnString;
 use binaryninja::{interaction, user_directory};
 use parser::PDBParserInstance;
 
@@ -196,7 +194,7 @@ fn read_from_sym_store(bv: &BinaryView, path: &str) -> Result<(bool, Vec<u8>)> {
         .perform_custom_request(
             "GET",
             path,
-            HashMap::<BnString, BnString>::new(),
+            vec![],
             DownloadInstanceInputOutputCallbacks {
                 read: None,
                 write: Some(Box::new(write)),
@@ -278,21 +276,21 @@ fn search_sym_store(
 }
 
 fn parse_pdb_info(view: &BinaryView) -> Option<PDBInfo> {
-    match view.get_metadata::<u64, _>("DEBUG_INFO_TYPE") {
+    match view.get_metadata::<u64>("DEBUG_INFO_TYPE") {
         Some(Ok(0x53445352 /* 'SDSR' */)) => {}
         _ => return None,
     }
 
     // This is stored in the BV by the PE loader
-    let file_path = match view.get_metadata::<String, _>("PDB_FILENAME") {
+    let file_path = match view.get_metadata::<String>("PDB_FILENAME") {
         Some(Ok(md)) => md,
         _ => return None,
     };
-    let mut guid = match view.get_metadata::<Vec<u8>, _>("PDB_GUID") {
+    let mut guid = match view.get_metadata::<Vec<u8>>("PDB_GUID") {
         Some(Ok(md)) => md,
         _ => return None,
     };
-    let age = match view.get_metadata::<u64, _>("PDB_AGE") {
+    let age = match view.get_metadata::<u64>("PDB_AGE") {
         Some(Ok(md)) => md as u32,
         _ => return None,
     };

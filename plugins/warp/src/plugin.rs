@@ -52,7 +52,7 @@ pub fn on_matched_function(function: &Function, matched: &WarpFunction) {
     // TODO: Add metadata. (both binja metadata and warp metadata)
     function.add_tag(
         &get_warp_tag_type(&view),
-        matched.guid.to_string(),
+        &matched.guid.to_string(),
         None,
         true,
         None,

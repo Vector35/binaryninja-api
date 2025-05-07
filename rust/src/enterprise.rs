@@ -66,7 +66,7 @@ pub fn checkout_license(
                     .map_err(|_| EnterpriseCheckoutError::NoUsername)?;
                 let password = std::env::var("BN_ENTERPRISE_PASSWORD")
                     .map_err(|_| EnterpriseCheckoutError::NoPassword)?;
-                if !authenticate_server_with_credentials(username, password, true) {
+                if !authenticate_server_with_credentials(&username, &password, true) {
                     return Err(EnterpriseCheckoutError::NotAuthenticated);
                 }
             }
@@ -120,7 +120,7 @@ pub fn server_url() -> String {
     unsafe { BnString::into_string(binaryninjacore_sys::BNGetEnterpriseServerUrl()) }
 }
 
-pub fn set_server_url<S: IntoCStr>(url: S) -> Result<(), ()> {
+pub fn set_server_url(url: &str) -> Result<(), ()> {
     let url = url.to_cstr();
     let result = unsafe {
         binaryninjacore_sys::BNSetEnterpriseServerUrl(
@@ -183,11 +183,11 @@ pub fn is_server_license_still_activated() -> bool {
     unsafe { binaryninjacore_sys::BNIsEnterpriseServerLicenseStillActivated() }
 }
 
-pub fn authenticate_server_with_credentials<U, P>(username: U, password: P, remember: bool) -> bool
-where
-    U: IntoCStr,
-    P: IntoCStr,
-{
+pub fn authenticate_server_with_credentials(
+    username: &str,
+    password: &str,
+    remember: bool,
+) -> bool {
     let username = username.to_cstr();
     let password = password.to_cstr();
     unsafe {
@@ -199,7 +199,7 @@ where
     }
 }
 
-pub fn authenticate_server_with_method<S: IntoCStr>(method: S, remember: bool) -> bool {
+pub fn authenticate_server_with_method(method: &str, remember: bool) -> bool {
     let method = method.to_cstr();
     unsafe {
         binaryninjacore_sys::BNAuthenticateEnterpriseServerWithMethod(

@@ -41,7 +41,7 @@ impl KeyValueStore {
     }
 
     /// Get the value for a single key
-    pub fn value<S: IntoCStr>(&self, key: S) -> Option<DataBuffer> {
+    pub fn value(&self, key: &str) -> Option<DataBuffer> {
         let key_raw = key.to_cstr();
         let key_ptr = key_raw.as_ptr();
         let result = unsafe { BNGetKeyValueStoreBuffer(self.handle.as_ptr(), key_ptr) };
@@ -49,7 +49,7 @@ impl KeyValueStore {
     }
 
     /// Set the value for a single key
-    pub fn set_value<S: IntoCStr>(&self, key: S, value: &DataBuffer) -> bool {
+    pub fn set_value(&self, key: &str, value: &DataBuffer) -> bool {
         let key_raw = key.to_cstr();
         let key_ptr = key_raw.as_ptr();
         unsafe { BNSetKeyValueStoreBuffer(self.handle.as_ptr(), key_ptr, value.as_raw()) }
@@ -63,7 +63,7 @@ impl KeyValueStore {
     }
 
     /// Begin storing new keys into a namespace
-    pub fn begin_namespace<S: IntoCStr>(&self, name: S) {
+    pub fn begin_namespace(&self, name: &str) {
         let name_raw = name.to_cstr();
         let name_ptr = name_raw.as_ptr();
         unsafe { BNBeginKeyValueStoreNamespace(self.handle.as_ptr(), name_ptr) }

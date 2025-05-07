@@ -108,7 +108,7 @@ impl AnalysisContext {
         }
     }
 
-    pub fn inform<S: IntoCStr>(&self, request: S) -> bool {
+    pub fn inform(&self, request: &str) -> bool {
         let request = request.to_cstr();
         unsafe { BNAnalysisContextInform(self.handle.as_ptr(), request.as_ptr()) }
     }
@@ -161,7 +161,7 @@ impl Activity {
         Ref::new(Self { handle })
     }
 
-    pub fn new<S: IntoCStr>(config: S) -> Ref<Self> {
+    pub fn new(config: &str) -> Ref<Self> {
         unsafe extern "C" fn cb_action_nop(_: *mut c_void, _: *mut BNAnalysisContext) {}
         let config = config.to_cstr();
         let result =
@@ -169,9 +169,8 @@ impl Activity {
         unsafe { Activity::ref_from_raw(NonNull::new(result).unwrap()) }
     }
 
-    pub fn new_with_action<S, F>(config: S, mut action: F) -> Ref<Self>
+    pub fn new_with_action<F>(config: &str, mut action: F) -> Ref<Self>
     where
-        S: IntoCStr,
         F: FnMut(&AnalysisContext),
     {
         unsafe extern "C" fn cb_action<F: FnMut(&AnalysisContext)>(
@@ -240,7 +239,7 @@ impl Workflow {
     /// Create a new unregistered [Workflow] with no activities.
     ///
     /// To get a copy of an existing registered [Workflow] use [Workflow::clone_to].
-    pub fn new<S: IntoCStr>(name: S) -> Ref<Self> {
+    pub fn new(name: &str) -> Ref<Self> {
         let name = name.to_cstr();
         let result = unsafe { BNCreateWorkflow(name.as_ptr()) };
         unsafe { Workflow::ref_from_raw(NonNull::new(result).unwrap()) }
@@ -250,7 +249,7 @@ impl Workflow {
     ///
     /// * `name` - the name for the new [Workflow]
     #[must_use]
-    pub fn clone_to<S: IntoCStr + Clone>(&self, name: S) -> Ref<Workflow> {
+    pub fn clone_to(&self, name: &str) -> Ref<Workflow> {
         self.clone_to_with_root(name, "")
     }
 
@@ -259,11 +258,7 @@ impl Workflow {
     /// * `name` - the name for the new [Workflow]
     /// * `root_activity` - perform the clone operation with this activity as the root
     #[must_use]
-    pub fn clone_to_with_root<S: IntoCStr, A: IntoCStr>(
-        &self,
-        name: S,
-        root_activity: A,
-    ) -> Ref<Workflow> {
+    pub fn clone_to_with_root(&self, name: &str, root_activity: &str) -> Ref<Workflow> {
         let raw_name = name.to_cstr();
         let activity = root_activity.to_cstr();
         unsafe {
@@ -278,7 +273,7 @@ impl Workflow {
         }
     }
 
-    pub fn instance<S: IntoCStr>(name: S) -> Ref<Workflow> {
+    pub fn instance(name: &str) -> Ref<Workflow> {
         let name = name.to_cstr();
         let result = unsafe { BNWorkflowInstance(name.as_ptr()) };
         unsafe { Workflow::ref_from_raw(NonNull::new(result).unwrap()) }
@@ -306,7 +301,7 @@ impl Workflow {
     /// Register this [Workflow], making it immutable and available for use.
     ///
     /// * `configuration` - a JSON representation of the workflow configuration
-    pub fn register_with_config<S: IntoCStr>(&self, config: S) -> Result<(), ()> {
+    pub fn register_with_config(&self, config: &str) -> Result<(), ()> {
         let config = config.to_cstr();
         if unsafe { BNRegisterWorkflow(self.handle.as_ptr(), config.as_ptr()) } {
             Ok(())
@@ -351,7 +346,7 @@ impl Workflow {
     }
 
     /// Determine if an Activity exists in this [Workflow].
-    pub fn contains<A: IntoCStr>(&self, activity: A) -> bool {
+    pub fn contains(&self, activity: &str) -> bool {
         let activity = activity.to_cstr();
         unsafe { BNWorkflowContains(self.handle.as_ptr(), activity.as_ptr()) }
     }
@@ -365,7 +360,7 @@ impl Workflow {
     /// [Workflow], just for the given `activity`.
     ///
     /// `activity` - return the configuration for the `activity`
-    pub fn configuration_with_activity<A: IntoCStr>(&self, activity: A) -> String {
+    pub fn configuration_with_activity(&self, activity: &str) -> String {
         let activity = activity.to_cstr();
         let result = unsafe { BNWorkflowGetConfiguration(self.handle.as_ptr(), activity.as_ptr()) };
         assert!(!result.is_null());
@@ -382,7 +377,7 @@ impl Workflow {
     }
 
     /// Retrieve the Activity object for the specified `name`.
-    pub fn activity<A: IntoCStr>(&self, name: A) -> Option<Ref<Activity>> {
+    pub fn activity(&self, name: &str) -> Option<Ref<Activity>> {
         let name = name.to_cstr();
         let result = unsafe { BNWorkflowGetActivity(self.handle.as_ptr(), name.as_ptr()) };
         NonNull::new(result).map(|a| unsafe { Activity::ref_from_raw(a) })
@@ -392,7 +387,7 @@ impl Workflow {
     /// specified just for the given `activity`.
     ///
     /// * `activity` - if specified, return the roots for the `activity`
-    pub fn activity_roots<A: IntoCStr>(&self, activity: A) -> Array<BnString> {
+    pub fn activity_roots(&self, activity: &str) -> Array<BnString> {
         let activity = activity.to_cstr();
         let mut count = 0;
         let result = unsafe {
@@ -406,7 +401,7 @@ impl Workflow {
     ///
     /// * `activity` - if specified, return the direct children and optionally the descendants of the `activity` (includes `activity`)
     /// * `immediate` - whether to include only direct children of `activity` or all descendants
-    pub fn subactivities<A: IntoCStr>(&self, activity: A, immediate: bool) -> Array<BnString> {
+    pub fn subactivities(&self, activity: &str, immediate: bool) -> Array<BnString> {
         let activity = activity.to_cstr();
         let mut count = 0;
         let result = unsafe {
@@ -425,9 +420,8 @@ impl Workflow {
     ///
     /// * `activity` - the Activity node to assign children
     /// * `activities` - the list of Activities to assign
-    pub fn assign_subactivities<A, I>(&self, activity: A, activities: I) -> bool
+    pub fn assign_subactivities<I>(&self, activity: &str, activities: I) -> bool
     where
-        A: IntoCStr,
         I: IntoIterator,
         I::Item: IntoCStr,
     {
@@ -453,9 +447,8 @@ impl Workflow {
     ///
     /// * `activity` - the Activity node for which to insert `activities` before
     /// * `activities` - the list of Activities to insert
-    pub fn insert<A, I>(&self, activity: A, activities: I) -> bool
+    pub fn insert<I>(&self, activity: &str, activities: I) -> bool
     where
-        A: IntoCStr,
         I: IntoIterator,
         I::Item: IntoCStr,
     {
@@ -476,9 +469,8 @@ impl Workflow {
     ///
     /// * `activity` - the Activity node for which to insert `activities` after
     /// * `activities` - the list of Activities to insert
-    pub fn insert_after<A, I>(&self, activity: A, activities: I) -> bool
+    pub fn insert_after<I>(&self, activity: &str, activities: I) -> bool
     where
-        A: IntoCStr,
         I: IntoIterator,
         I::Item: IntoCStr,
     {
@@ -496,7 +488,7 @@ impl Workflow {
     }
 
     /// Remove the specified `activity`
-    pub fn remove<A: IntoCStr>(&self, activity: A) -> bool {
+    pub fn remove(&self, activity: &str) -> bool {
         let activity = activity.to_cstr();
         unsafe { BNWorkflowRemove(self.handle.as_ptr(), activity.as_ptr()) }
     }
@@ -505,7 +497,7 @@ impl Workflow {
     ///
     /// * `activity` - the Activity to replace
     /// * `new_activity` - the replacement Activity
-    pub fn replace<A: IntoCStr, N: IntoCStr>(&self, activity: A, new_activity: N) -> bool {
+    pub fn replace(&self, activity: &str, new_activity: &str) -> bool {
         let activity = activity.to_cstr();
         let new_activity = new_activity.to_cstr();
         unsafe {
@@ -521,11 +513,7 @@ impl Workflow {
     ///
     /// * `activity` - if specified, generate the Flowgraph using `activity` as the root
     /// * `sequential` - whether to generate a **Composite** or **Sequential** style graph
-    pub fn graph<A: IntoCStr>(
-        &self,
-        activity: A,
-        sequential: Option<bool>,
-    ) -> Option<Ref<FlowGraph>> {
+    pub fn graph(&self, activity: &str, sequential: Option<bool>) -> Option<Ref<FlowGraph>> {
         let sequential = sequential.unwrap_or(false);
         let activity = activity.to_cstr();
         let graph =

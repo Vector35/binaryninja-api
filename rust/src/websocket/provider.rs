@@ -80,7 +80,7 @@ impl CoreWebsocketProvider {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn by_name<S: IntoCStr>(name: S) -> Option<CoreWebsocketProvider> {
+    pub fn by_name(name: &str) -> Option<CoreWebsocketProvider> {
         let name = name.to_cstr();
         let result = unsafe { BNGetWebsocketProviderByName(name.as_ptr()) };
         NonNull::new(result).map(|h| unsafe { Self::from_raw(h) })

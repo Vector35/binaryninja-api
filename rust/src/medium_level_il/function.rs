@@ -121,11 +121,11 @@ impl MediumLevelILFunction {
         unsafe { Array::new(raw_instr_idxs, count, self.to_owned()) }
     }
 
-    pub fn create_user_stack_var<'a, S: IntoCStr, C: Into<Conf<&'a Type>>>(
+    pub fn create_user_stack_var<'a, C: Into<Conf<&'a Type>>>(
         self,
         offset: i64,
         var_type: C,
-        name: S,
+        name: &str,
     ) {
         let mut owned_raw_var_ty = Conf::<&Type>::into_raw(var_type.into());
         let name = name.to_cstr();
@@ -143,11 +143,11 @@ impl MediumLevelILFunction {
         unsafe { BNDeleteUserStackVariable(self.function().handle, offset) }
     }
 
-    pub fn create_user_var<'a, S: IntoCStr, C: Into<Conf<&'a Type>>>(
+    pub fn create_user_var<'a, C: Into<Conf<&'a Type>>>(
         &self,
         var: &Variable,
         var_type: C,
-        name: S,
+        name: &str,
         ignore_disjoint_uses: bool,
     ) {
         let raw_var = BNVariable::from(var);
@@ -273,11 +273,11 @@ impl MediumLevelILFunction {
         Ok(())
     }
 
-    pub fn create_auto_stack_var<'a, T: Into<Conf<&'a Type>>, S: IntoCStr>(
+    pub fn create_auto_stack_var<'a, T: Into<Conf<&'a Type>>>(
         &self,
         offset: i64,
         var_type: T,
-        name: S,
+        name: &str,
     ) {
         let mut owned_raw_var_ty = Conf::<&Type>::into_raw(var_type.into());
         let name = name.to_cstr();
@@ -295,11 +295,11 @@ impl MediumLevelILFunction {
         unsafe { BNDeleteAutoStackVariable(self.function().handle, offset) }
     }
 
-    pub fn create_auto_var<'a, S: IntoCStr, C: Into<Conf<&'a Type>>>(
+    pub fn create_auto_var<'a, C: Into<Conf<&'a Type>>>(
         &self,
         var: &Variable,
         var_type: C,
-        name: S,
+        name: &str,
         ignore_disjoint_uses: bool,
     ) {
         let raw_var = BNVariable::from(var);

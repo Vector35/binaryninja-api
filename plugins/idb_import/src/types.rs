@@ -335,7 +335,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
                 format!("bitfield_{}_{}", offset + start_idx, offset + (i - 1))
             };
             let field = field_from_bytes(bytes);
-            struct_builder.append(&field, name, MemberAccess::NoAccess, MemberScope::NoScope);
+            struct_builder.append(&field, &name, MemberAccess::NoAccess, MemberScope::NoScope);
         };
 
         for (i, member) in members {
@@ -423,7 +423,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
                 .as_ref()
                 .map(|name| name.as_utf8_lossy().to_string())
                 .unwrap_or_else(|| format!("member_{i}"));
-            structure.append(&mem, name, MemberAccess::NoAccess, MemberScope::NoScope);
+            structure.append(&mem, &name, MemberAccess::NoAccess, MemberScope::NoScope);
         }
         if let Some(start_idx) = first_bitfield_seq {
             let members_bitrange = &ty_struct.members[start_idx..];
@@ -470,7 +470,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
                 .as_ref()
                 .map(|name| name.as_utf8_lossy().to_string())
                 .unwrap_or_else(|| format!("member_{i}"));
-            structure.append(&mem, name, MemberAccess::NoAccess, MemberScope::NoScope);
+            structure.append(&mem, &name, MemberAccess::NoAccess, MemberScope::NoScope);
         }
         let str_ref = structure.finalize();
 
@@ -492,7 +492,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
                 .as_ref()
                 .map(|name| name.as_utf8_lossy().to_string())
                 .unwrap_or_else(|| format!("member_{i}"));
-            eb.insert(name, member.value);
+            eb.insert(&name, member.value);
         }
         Type::enumeration(
             &eb.finalize(),

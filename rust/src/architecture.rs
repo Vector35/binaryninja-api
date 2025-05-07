@@ -1953,7 +1953,7 @@ macro_rules! cc_func {
 
 /// Contains helper methods for all types implementing 'Architecture'
 pub trait ArchitectureExt: Architecture {
-    fn register_by_name<S: IntoCStr>(&self, name: S) -> Option<Self::Register> {
+    fn register_by_name(&self, name: &str) -> Option<Self::Register> {
         let name = name.to_cstr();
 
         match unsafe { BNGetArchitectureRegisterByName(self.as_ref().handle, name.as_ptr()) } {
@@ -2029,9 +2029,8 @@ pub trait ArchitectureExt: Architecture {
         }
     }
 
-    fn register_relocation_handler<S, R, F>(&self, name: S, func: F)
+    fn register_relocation_handler<R, F>(&self, name: &str, func: F)
     where
-        S: IntoCStr,
         R: 'static
             + RelocationHandler<Handle = CustomRelocationHandlerHandle<R>>
             + Send
@@ -2052,9 +2051,8 @@ pub trait ArchitectureExt: Architecture {
 
 impl<T: Architecture> ArchitectureExt for T {}
 
-pub fn register_architecture<S, A, F>(name: S, func: F) -> &'static A
+pub fn register_architecture<A, F>(name: &str, func: F) -> &'static A
 where
-    S: IntoCStr,
     A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync + Sized,
     F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
 {

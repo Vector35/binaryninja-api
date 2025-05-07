@@ -17,7 +17,7 @@ impl WorkerThreadActionExecutor {
     }
 }
 
-pub fn execute_on_worker_thread<F: Fn() + 'static, S: IntoCStr>(name: S, f: F) {
+pub fn execute_on_worker_thread<F: Fn() + 'static>(name: &str, f: F) {
     let boxed_executor = Box::new(WorkerThreadActionExecutor { func: Box::new(f) });
     let raw_executor = Box::into_raw(boxed_executor);
     let name = name.to_cstr();
@@ -30,7 +30,7 @@ pub fn execute_on_worker_thread<F: Fn() + 'static, S: IntoCStr>(name: S, f: F) {
     }
 }
 
-pub fn execute_on_worker_thread_priority<F: Fn() + 'static, S: IntoCStr>(name: S, f: F) {
+pub fn execute_on_worker_thread_priority<F: Fn() + 'static>(name: &str, f: F) {
     let boxed_executor = Box::new(WorkerThreadActionExecutor { func: Box::new(f) });
     let raw_executor = Box::into_raw(boxed_executor);
     let name = name.to_cstr();
@@ -43,7 +43,7 @@ pub fn execute_on_worker_thread_priority<F: Fn() + 'static, S: IntoCStr>(name: S
     }
 }
 
-pub fn execute_on_worker_thread_interactive<F: Fn() + 'static, S: IntoCStr>(name: S, f: F) {
+pub fn execute_on_worker_thread_interactive<F: Fn() + 'static>(name: &str, f: F) {
     let boxed_executor = Box::new(WorkerThreadActionExecutor { func: Box::new(f) });
     let raw_executor = Box::into_raw(boxed_executor);
     let name = name.to_cstr();

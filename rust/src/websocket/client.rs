@@ -18,11 +18,9 @@ pub trait WebsocketClient: Sync + Send {
     /// Called to construct this client object with the given core object.
     fn from_core(core: Ref<CoreWebsocketClient>) -> Self;
 
-    fn connect<I, K, V>(&self, host: &str, headers: I) -> bool
+    fn connect<I>(&self, host: &str, headers: I) -> bool
     where
-        I: IntoIterator<Item = (K, V)>,
-        K: IntoCStr,
-        V: IntoCStr;
+        I: IntoIterator<Item = (String, String)>;
 
     fn write(&self, data: &[u8]) -> bool;
 
@@ -69,20 +67,13 @@ impl CoreWebsocketClient {
     /// * `host` - Full url with scheme, domain, optionally port, and path
     /// * `headers` - HTTP header keys and values
     /// * `callback` - Callbacks for various websocket events
-    pub fn initialize_connection<I, K, V, C>(
-        &self,
-        host: &str,
-        headers: I,
-        callbacks: &mut C,
-    ) -> bool
+    pub fn initialize_connection<I, C>(&self, host: &str, headers: I, callbacks: &mut C) -> bool
     where
-        I: IntoIterator<Item = (K, V)>,
-        K: IntoCStr,
-        V: IntoCStr,
+        I: IntoIterator<Item = (String, String)>,
         C: WebsocketClientCallback,
     {
         let url = host.to_cstr();
-        let (header_keys, header_values): (Vec<K::Result>, Vec<V::Result>) = headers
+        let (header_keys, header_values): (Vec<_>, Vec<_>) = headers
             .into_iter()
             .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
             .unzip();
@@ -187,8 +178,10 @@ pub(crate) unsafe extern "C" fn cb_connect<W: WebsocketClient>(
     let header_count = usize::try_from(header_count).unwrap();
     let header_keys = core::slice::from_raw_parts(header_keys as *const BnString, header_count);
     let header_values = core::slice::from_raw_parts(header_values as *const BnString, header_count);
-    let header_keys_str = header_keys.iter().map(|s| s.to_string_lossy());
-    let header_values_str = header_values.iter().map(|s| s.to_string_lossy());
+    let header_keys_str = header_keys.iter().map(|s| s.to_string_lossy().to_string());
+    let header_values_str = header_values
+        .iter()
+        .map(|s| s.to_string_lossy().to_string());
     let header = header_keys_str.zip(header_values_str);
     ctxt.connect(&host.to_string_lossy(), header)
 }

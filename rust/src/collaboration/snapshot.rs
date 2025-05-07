@@ -226,10 +226,10 @@ impl RemoteSnapshot {
     }
 
     /// Create a new Undo Entry in this snapshot.
-    pub fn create_undo_entry<S: IntoCStr>(
+    pub fn create_undo_entry(
         &self,
         parent: Option<u64>,
-        data: S,
+        data: &str,
     ) -> Result<Ref<RemoteUndoEntry>, ()> {
         let data = data.to_cstr();
         let value = unsafe {

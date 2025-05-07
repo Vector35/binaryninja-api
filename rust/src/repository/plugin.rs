@@ -5,6 +5,7 @@ use crate::VersionInfo;
 use binaryninjacore_sys::*;
 use std::ffi::c_char;
 use std::fmt::Debug;
+use std::path::PathBuf;
 use std::ptr::NonNull;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -112,17 +113,19 @@ impl RepositoryPlugin {
     }
 
     /// Relative path from the base of the repository to the actual plugin
-    pub fn path(&self) -> String {
+    pub fn path(&self) -> PathBuf {
         let result = unsafe { BNPluginGetPath(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::into_string(result as *mut c_char) }
+        let result_str = unsafe { BnString::into_string(result as *mut c_char) };
+        PathBuf::from(result_str)
     }
 
     /// Optional sub-directory the plugin code lives in as a relative path from the plugin root
-    pub fn subdir(&self) -> String {
+    pub fn subdir(&self) -> PathBuf {
         let result = unsafe { BNPluginGetSubdir(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::into_string(result as *mut c_char) }
+        let result_str = unsafe { BnString::into_string(result as *mut c_char) };
+        PathBuf::from(result_str)
     }
 
     /// Dependencies required for installing this plugin

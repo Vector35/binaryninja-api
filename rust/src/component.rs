@@ -164,7 +164,7 @@ impl Component {
         unsafe { BnString::into_string(result) }
     }
 
-    pub fn set_name<S: IntoCStr>(&self, name: S) {
+    pub fn set_name(&self, name: &str) {
         let name = name.to_cstr();
         unsafe { BNComponentSetName(self.handle.as_ptr(), name.as_ptr()) }
     }

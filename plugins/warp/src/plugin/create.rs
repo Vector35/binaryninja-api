@@ -31,7 +31,7 @@ impl Command for CreateSignatureFile {
             let total_functions = view.functions().len();
             let done_functions = AtomicUsize::default();
             let background_task = binaryninja::background_task::BackgroundTask::new(
-                format!("Generating signatures... ({}/{})", 0, total_functions),
+                &format!("Generating signatures... ({}/{})", 0, total_functions),
                 true,
             );
 
@@ -43,7 +43,7 @@ impl Command for CreateSignatureFile {
                     .par_iter()
                     .inspect(|_| {
                         done_functions.fetch_add(1, Relaxed);
-                        background_task.set_progress_text(format!(
+                        background_task.set_progress_text(&format!(
                             "Generating signatures... ({}/{})",
                             done_functions.load(Relaxed),
                             total_functions

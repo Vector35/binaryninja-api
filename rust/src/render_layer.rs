@@ -61,8 +61,8 @@ impl Default for RenderLayerDefaultState {
 }
 
 /// Register a [`RenderLayer`] with the API.
-pub fn register_render_layer<S: IntoCStr, T: RenderLayer>(
-    name: S,
+pub fn register_render_layer<T: RenderLayer>(
+    name: &str,
     render_layer: T,
     default_state: RenderLayerDefaultState,
 ) -> (&'static mut T, CoreRenderLayer) {
@@ -299,7 +299,7 @@ impl CoreRenderLayer {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn render_layer_by_name<S: IntoCStr>(name: S) -> Option<CoreRenderLayer> {
+    pub fn render_layer_by_name(name: &str) -> Option<CoreRenderLayer> {
         let name_raw = name.to_cstr();
         let result = unsafe { BNGetRenderLayerByName(name_raw.as_ptr()) };
         NonNull::new(result).map(Self::from_raw)

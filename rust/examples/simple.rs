@@ -17,7 +17,7 @@ fn main() {
     println!("Function count: {}", bv.functions().len());
 
     for func in &bv.functions() {
-        println!("{}:", func.symbol().full_name());
+        println!("{:?}:", func.symbol().full_name());
         for basic_block in &func.basic_blocks() {
             // TODO : This is intended to be refactored to be more nice to work with soon(TM)
             for addr in basic_block.as_ref() {

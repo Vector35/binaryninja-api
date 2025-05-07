@@ -212,7 +212,7 @@ pub fn init_with_opts(options: InitializationOptions) -> Result<(), Initializati
         }
     }
 
-    if let Some(license) = options.license {
+    if let Some(license) = &options.license {
         // We were given a license override, use it!
         set_license(Some(license));
     }

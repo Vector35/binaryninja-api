@@ -65,7 +65,7 @@ impl Changeset {
     }
 
     /// Set the name of the changeset, e.g. in a name changeset function.
-    pub fn set_name<S: IntoCStr>(&self, value: S) -> bool {
+    pub fn set_name(&self, value: &str) -> bool {
         let value = value.to_cstr();
         unsafe { BNCollaborationChangesetSetName(self.handle.as_ptr(), value.as_ptr()) }
     }

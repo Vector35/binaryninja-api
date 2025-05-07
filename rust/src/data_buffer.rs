@@ -120,7 +120,8 @@ impl DataBuffer {
         }
     }
 
-    pub fn from_escaped_string(value: &BnString) -> Self {
+    pub fn from_escaped_string(value: &str) -> Self {
+        let value = value.to_cstr();
         Self(unsafe { BNDecodeEscapedString(value.as_ptr()) })
     }
 

@@ -27,7 +27,7 @@ impl Command for FindFunctionFromGUID {
         let funcs = view.functions();
         thread::spawn(move || {
             let background_task = binaryninja::background_task::BackgroundTask::new(
-                format!("Searching functions for GUID... {}", searched_guid),
+                &format!("Searching functions for GUID... {}", searched_guid),
                 false,
             );
 

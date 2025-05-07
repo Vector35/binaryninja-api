@@ -65,7 +65,7 @@ fn add_type_to_view() {
     empty_view.define_auto_type("test", "me", &test_type);
     assert!(empty_view.type_by_name("test").is_some());
     empty_view.undefine_auto_type(
-        empty_view
+        &empty_view
             .type_id_by_name("test")
             .expect("Failed to get type id"),
     );

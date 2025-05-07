@@ -215,8 +215,8 @@ fn do_structure_parse<R: ReaderType>(
                     });
 
                     structure_builder.insert(
-                        child_type.as_ref(),
-                        child_name,
+                        &child_type,
+                        &child_name,
                         struct_offset,
                         false,
                         MemberAccess::NoAccess, // TODO : Resolve actual scopes, if possible
@@ -224,8 +224,8 @@ fn do_structure_parse<R: ReaderType>(
                     );
                 } else {
                     structure_builder.append(
-                        child_type.as_ref(),
-                        child_name,
+                        &child_type,
+                        &child_name,
                         MemberAccess::NoAccess,
                         MemberScope::NoScope,
                     );

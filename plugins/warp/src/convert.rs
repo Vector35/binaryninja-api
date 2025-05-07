@@ -431,7 +431,7 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
                             let base_struct_ntr = match c.guid {
                                 Some(guid) => BNNamedTypeReference::new_with_id(
                                     NamedTypeReferenceClass::UnknownNamedTypeClass,
-                                    guid.to_string(),
+                                    &guid.to_string(),
                                     base_struct_ntr_name,
                                 ),
                                 None => BNNamedTypeReference::new(
@@ -475,7 +475,7 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
                 // TODO: Add default name?
                 let member_name = member.name.to_owned().unwrap_or("enum_VAL".into());
                 let member_value = member.constant;
-                builder.insert(member_name, member_value);
+                builder.insert(&member_name, member_value);
             }
             // TODO: Warn if enumeration has no size.
             let width = bits_to_bytes(c.member_type.size().unwrap()) as usize;
@@ -545,7 +545,7 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
                     let ntr_name = c.name.to_owned().unwrap_or(guid_str.clone());
                     NamedTypeReference::new_with_id(
                         NamedTypeReferenceClass::UnknownNamedTypeClass,
-                        guid_str,
+                        &guid_str,
                         ntr_name,
                     )
                 }

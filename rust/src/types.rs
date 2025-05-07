@@ -258,7 +258,7 @@ impl TypeBuilder {
         }
     }
 
-    pub fn named_int<S: IntoCStr>(width: usize, is_signed: bool, alt_name: S) -> Self {
+    pub fn named_int(width: usize, is_signed: bool, alt_name: &str) -> Self {
         let mut is_signed = Conf::new(is_signed, MAX_CONFIDENCE).into();
         // let alt_name = BnString::new(alt_name);
         let alt_name = alt_name.to_cstr(); // This segfaulted once, so the above version is there if we need to change to it, but in theory this is copied into a `const string&` on the C++ side; I'm just not 100% confident that a constant reference copies data
@@ -273,24 +273,12 @@ impl TypeBuilder {
     }
 
     pub fn float(width: usize) -> Self {
-        unsafe {
-            Self::from_raw(BNCreateFloatTypeBuilder(
-                width,
-                BnString::new("").as_ptr() as *mut _,
-            ))
-        }
+        unsafe { Self::from_raw(BNCreateFloatTypeBuilder(width, c"".as_ptr())) }
     }
 
-    pub fn named_float<S: IntoCStr>(width: usize, alt_name: S) -> Self {
-        // let alt_name = BnString::new(alt_name);
-        let alt_name = alt_name.to_cstr(); // See same line in `named_int` above
-
-        unsafe {
-            Self::from_raw(BNCreateFloatTypeBuilder(
-                width,
-                alt_name.as_ref().as_ptr() as _,
-            ))
-        }
+    pub fn named_float(width: usize, alt_name: &str) -> Self {
+        let alt_name = alt_name.to_cstr();
+        unsafe { Self::from_raw(BNCreateFloatTypeBuilder(width, alt_name.as_ptr())) }
     }
 
     pub fn array<'a, T: Into<Conf<&'a Type>>>(ty: T, count: u64) -> Self {
@@ -630,53 +618,34 @@ impl Type {
     }
 
     pub fn wide_char(width: usize) -> Ref<Self> {
-        unsafe {
-            Self::ref_from_raw(BNCreateWideCharType(
-                width,
-                BnString::new("").as_ptr() as *mut _,
-            ))
-        }
+        unsafe { Self::ref_from_raw(BNCreateWideCharType(width, c"".as_ptr())) }
     }
 
     pub fn int(width: usize, is_signed: bool) -> Ref<Self> {
         let mut is_signed = Conf::new(is_signed, MAX_CONFIDENCE).into();
-        unsafe {
-            Self::ref_from_raw(BNCreateIntegerType(
-                width,
-                &mut is_signed,
-                BnString::new("").as_ptr() as *mut _,
-            ))
-        }
+        unsafe { Self::ref_from_raw(BNCreateIntegerType(width, &mut is_signed, c"".as_ptr())) }
     }
 
-    pub fn named_int<S: IntoCStr>(width: usize, is_signed: bool, alt_name: S) -> Ref<Self> {
+    pub fn named_int(width: usize, is_signed: bool, alt_name: &str) -> Ref<Self> {
         let mut is_signed = Conf::new(is_signed, MAX_CONFIDENCE).into();
-        // let alt_name = BnString::new(alt_name);
-        let alt_name = alt_name.to_cstr(); // This segfaulted once, so the above version is there if we need to change to it, but in theory this is copied into a `const string&` on the C++ side; I'm just not 100% confident that a constant reference copies data
+        let alt_name = alt_name.to_cstr();
 
         unsafe {
             Self::ref_from_raw(BNCreateIntegerType(
                 width,
                 &mut is_signed,
-                alt_name.as_ref().as_ptr() as _,
+                alt_name.as_ptr(),
             ))
         }
     }
 
     pub fn float(width: usize) -> Ref<Self> {
-        unsafe {
-            Self::ref_from_raw(BNCreateFloatType(
-                width,
-                BnString::new("").as_ptr() as *mut _,
-            ))
-        }
+        unsafe { Self::ref_from_raw(BNCreateFloatType(width, c"".as_ptr())) }
     }
 
-    pub fn named_float<S: IntoCStr>(width: usize, alt_name: S) -> Ref<Self> {
-        // let alt_name = BnString::new(alt_name);
-        let alt_name = alt_name.to_cstr(); // See same line in `named_int` above
-
-        unsafe { Self::ref_from_raw(BNCreateFloatType(width, alt_name.as_ref().as_ptr() as _)) }
+    pub fn named_float(width: usize, alt_name: &str) -> Ref<Self> {
+        let alt_name = alt_name.to_cstr();
+        unsafe { Self::ref_from_raw(BNCreateFloatType(width, alt_name.as_ptr())) }
     }
 
     pub fn array<'a, T: Into<Conf<&'a Type>>>(ty: T, count: u64) -> Ref<Self> {
@@ -1217,7 +1186,7 @@ impl EnumerationBuilder {
         unsafe { Enumeration::ref_from_raw(BNFinalizeEnumerationBuilder(self.handle)) }
     }
 
-    pub fn append<S: IntoCStr>(&mut self, name: S) -> &mut Self {
+    pub fn append(&mut self, name: &str) -> &mut Self {
         let name = name.to_cstr();
         unsafe {
             BNAddEnumerationBuilderMember(self.handle, name.as_ref().as_ptr() as _);
@@ -1225,7 +1194,7 @@ impl EnumerationBuilder {
         self
     }
 
-    pub fn insert<S: IntoCStr>(&mut self, name: S, value: u64) -> &mut Self {
+    pub fn insert(&mut self, name: &str, value: u64) -> &mut Self {
         let name = name.to_cstr();
         unsafe {
             BNAddEnumerationBuilderMemberWithValue(self.handle, name.as_ref().as_ptr() as _, value);
@@ -1233,7 +1202,7 @@ impl EnumerationBuilder {
         self
     }
 
-    pub fn replace<S: IntoCStr>(&mut self, id: usize, name: S, value: u64) -> &mut Self {
+    pub fn replace(&mut self, id: usize, name: &str, value: u64) -> &mut Self {
         let name = name.to_cstr();
         unsafe {
             BNReplaceEnumerationBuilderMember(self.handle, id, name.as_ref().as_ptr() as _, value);
@@ -1476,10 +1445,10 @@ impl StructureBuilder {
         self
     }
 
-    pub fn append<'a, S: IntoCStr, T: Into<Conf<&'a Type>>>(
+    pub fn append<'a, T: Into<Conf<&'a Type>>>(
         &mut self,
         ty: T,
-        name: S,
+        name: &str,
         access: MemberAccess,
         scope: MemberScope,
     ) -> &mut Self {
@@ -1504,7 +1473,7 @@ impl StructureBuilder {
     ) -> &mut Self {
         self.insert(
             &member.ty,
-            member.name,
+            &member.name,
             member.offset,
             overwrite_existing,
             member.access,
@@ -1513,10 +1482,10 @@ impl StructureBuilder {
         self
     }
 
-    pub fn insert<'a, S: IntoCStr, T: Into<Conf<&'a Type>>>(
+    pub fn insert<'a, T: Into<Conf<&'a Type>>>(
         &mut self,
         ty: T,
-        name: S,
+        name: &str,
         offset: u64,
         overwrite_existing: bool,
         access: MemberAccess,
@@ -1538,11 +1507,11 @@ impl StructureBuilder {
         self
     }
 
-    pub fn replace<'a, S: IntoCStr, T: Into<Conf<&'a Type>>>(
+    pub fn replace<'a, T: Into<Conf<&'a Type>>>(
         &mut self,
         index: usize,
         ty: T,
-        name: S,
+        name: &str,
         overwrite_existing: bool,
     ) -> &mut Self {
         let name = name.to_cstr();
@@ -1870,9 +1839,9 @@ impl NamedTypeReference {
     /// You should not assign type ids yourself: if you use this to reference a type you are going
     /// to create but have not yet created, you may run into problems when giving your types to
     /// a BinaryView.
-    pub fn new_with_id<T: Into<QualifiedName>, S: IntoCStr>(
+    pub fn new_with_id<T: Into<QualifiedName>>(
         type_class: NamedTypeReferenceClass,
-        type_id: S,
+        type_id: &str,
         name: T,
     ) -> Ref<Self> {
         let type_id = type_id.to_cstr();
@@ -1902,7 +1871,7 @@ impl NamedTypeReference {
     }
 
     fn target_helper(&self, bv: &BinaryView, visited: &mut HashSet<String>) -> Option<Ref<Type>> {
-        let ty = bv.type_by_id(self.id())?;
+        let ty = bv.type_by_id(&self.id())?;
         match ty.type_class() {
             TypeClass::NamedTypeReferenceClass => {
                 // Recurse into the NTR type until we get the target type.

@@ -1,5 +1,6 @@
 use std::ffi::c_void;
 use std::fmt::{Debug, Formatter};
+use std::path::Path;
 use std::ptr::NonNull;
 use std::time::SystemTime;
 
@@ -94,7 +95,7 @@ impl RemoteFile {
         success.then_some(()).ok_or(())
     }
 
-    pub fn set_metadata<S: IntoCStr>(&self, folder: S) -> Result<(), ()> {
+    pub fn set_metadata(&self, folder: &str) -> Result<(), ()> {
         let folder_raw = folder.to_cstr();
         let success = unsafe { BNRemoteFileSetMetadata(self.handle.as_ptr(), folder_raw.as_ptr()) };
         success.then_some(()).ok_or(())
@@ -185,7 +186,7 @@ impl RemoteFile {
     }
 
     /// Set the description of the file. You will need to push the file to update the remote version.
-    pub fn set_name<S: IntoCStr>(&self, name: S) -> Result<(), ()> {
+    pub fn set_name(&self, name: &str) -> Result<(), ()> {
         let name = name.to_cstr();
         let success = unsafe { BNRemoteFileSetName(self.handle.as_ptr(), name.as_ptr()) };
         success.then_some(()).ok_or(())
@@ -199,7 +200,7 @@ impl RemoteFile {
     }
 
     /// Set the description of the file. You will need to push the file to update the remote version.
-    pub fn set_description<S: IntoCStr>(&self, description: S) -> Result<(), ()> {
+    pub fn set_description(&self, description: &str) -> Result<(), ()> {
         let description = description.to_cstr();
         let success =
             unsafe { BNRemoteFileSetDescription(self.handle.as_ptr(), description.as_ptr()) };
@@ -249,7 +250,7 @@ impl RemoteFile {
     /// Get a specific Snapshot in the File by its id
     ///
     /// NOTE: If snapshots have not been pulled, they will be pulled upon calling this.
-    pub fn snapshot_by_id<S: IntoCStr>(&self, id: S) -> Result<Option<Ref<RemoteSnapshot>>, ()> {
+    pub fn snapshot_by_id(&self, id: &str) -> Result<Option<Ref<RemoteSnapshot>>, ()> {
         // TODO: This sync should be removed?
         if !self.has_pulled_snapshots() {
             self.pull_snapshots()?;
@@ -286,18 +287,16 @@ impl RemoteFile {
     /// * `analysis_cache_contents` - Contents of analysis cache of snapshot
     /// * `file` - New file contents (if contents changed)
     /// * `parent_ids` - List of ids of parent snapshots (or empty if this is a root snapshot)
-    pub fn create_snapshot<S, I>(
+    pub fn create_snapshot<I>(
         &self,
-        name: S,
+        name: &str,
         contents: &mut [u8],
         analysis_cache_contexts: &mut [u8],
         file: &mut [u8],
         parent_ids: I,
     ) -> Result<Ref<RemoteSnapshot>, ()>
     where
-        S: IntoCStr,
-        I: IntoIterator,
-        I::Item: IntoCStr,
+        I: IntoIterator<Item = String>,
     {
         self.create_snapshot_with_progress(
             name,
@@ -317,9 +316,9 @@ impl RemoteFile {
     /// * `file` - New file contents (if contents changed)
     /// * `parent_ids` - List of ids of parent snapshots (or empty if this is a root snapshot)
     /// * `progress` - Function to call on progress updates
-    pub fn create_snapshot_with_progress<S, I, P>(
+    pub fn create_snapshot_with_progress<I, P>(
         &self,
-        name: S,
+        name: &str,
         contents: &mut [u8],
         analysis_cache_contexts: &mut [u8],
         file: &mut [u8],
@@ -327,10 +326,8 @@ impl RemoteFile {
         mut progress: P,
     ) -> Result<Ref<RemoteSnapshot>, ()>
     where
-        S: IntoCStr,
+        I: IntoIterator<Item = String>,
         P: ProgressCallback,
-        I: IntoIterator,
-        I::Item: IntoCStr,
     {
         let name = name.to_cstr();
         let parent_ids: Vec<_> = parent_ids.into_iter().map(|id| id.to_cstr()).collect();
@@ -403,10 +400,7 @@ impl RemoteFile {
     ///
     /// * `db_path` - File path for saved database
     /// * `progress_function` - Function to call for progress updates
-    pub fn download<S>(&self, db_path: S) -> Result<Ref<FileMetadata>, ()>
-    where
-        S: IntoCStr,
-    {
+    pub fn download(&self, db_path: &Path) -> Result<Ref<FileMetadata>, ()> {
         sync::download_file(self, db_path)
     }
 
@@ -416,20 +410,19 @@ impl RemoteFile {
     ///
     /// * `db_path` - File path for saved database
     /// * `progress_function` - Function to call for progress updates
-    pub fn download_with_progress<S, F>(
+    pub fn download_with_progress<F>(
         &self,
-        db_path: S,
+        db_path: &Path,
         progress_function: F,
     ) -> Result<Ref<FileMetadata>, ()>
     where
-        S: IntoCStr,
         F: ProgressCallback,
     {
         sync::download_file_with_progress(self, db_path, progress_function)
     }
 
     /// Download a remote file and save it to a BNDB at the given `path`, returning the associated [`FileMetadata`].
-    pub fn download_database<S: IntoCStr>(&self, path: S) -> Result<Ref<FileMetadata>, ()> {
+    pub fn download_database(&self, path: &Path) -> Result<Ref<FileMetadata>, ()> {
         let file = self.download(path)?;
         let database = file.database().ok_or(())?;
         self.sync(&database, DatabaseConflictHandlerFail, NoNameChangeset)?;
@@ -437,11 +430,10 @@ impl RemoteFile {
     }
 
     // TODO: This might be a bad helper... maybe remove...
-    // TODO: AsRef<Path>
     /// Download a remote file and save it to a BNDB at the given `path`.
-    pub fn download_database_with_progress<S: IntoCStr>(
+    pub fn download_database_with_progress(
         &self,
-        path: S,
+        path: &Path,
         progress: impl ProgressCallback,
     ) -> Result<Ref<FileMetadata>, ()> {
         let mut progress = progress.split(&[50, 50]);

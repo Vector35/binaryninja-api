@@ -3,6 +3,7 @@ mod plugin;
 
 use std::ffi::c_char;
 use std::fmt::Debug;
+use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
 
 use binaryninjacore_sys::*;
@@ -38,10 +39,11 @@ impl Repository {
     }
 
     /// String local path to store the given plugin repository
-    pub fn path(&self) -> String {
+    pub fn path(&self) -> PathBuf {
         let result = unsafe { BNRepositoryGetRepoPath(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::into_string(result as *mut c_char) }
+        let result_str = unsafe { BnString::into_string(result as *mut c_char) };
+        PathBuf::from(result_str)
     }
 
     /// List of RepoPlugin objects contained within this repository
@@ -52,18 +54,18 @@ impl Repository {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn plugin_by_path<S: IntoCStr>(&self, path: S) -> Option<Ref<RepositoryPlugin>> {
+    pub fn plugin_by_path(&self, path: &Path) -> Option<Ref<RepositoryPlugin>> {
         let path = path.to_cstr();
         let result = unsafe { BNRepositoryGetPluginByPath(self.handle.as_ptr(), path.as_ptr()) };
         NonNull::new(result).map(|h| unsafe { RepositoryPlugin::ref_from_raw(h) })
     }
 
-    // TODO: Make this a PathBuf?
     /// String full path the repository
-    pub fn full_path(&self) -> String {
+    pub fn full_path(&self) -> PathBuf {
         let result = unsafe { BNRepositoryGetPluginsPath(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::into_string(result as *mut c_char) }
+        let result_str = unsafe { BnString::into_string(result as *mut c_char) };
+        PathBuf::from(result_str)
     }
 }
 

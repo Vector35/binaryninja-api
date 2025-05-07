@@ -13,7 +13,7 @@ pub struct DownloadProvider {
 }
 
 impl DownloadProvider {
-    pub fn get<S: IntoCStr>(name: S) -> Option<DownloadProvider> {
+    pub fn get(name: &str) -> Option<DownloadProvider> {
         let name = name.to_cstr();
         let result = unsafe { BNGetDownloadProviderByName(name.as_ptr()) };
         if result.is_null() {
@@ -37,7 +37,7 @@ impl DownloadProvider {
     pub fn try_default() -> Result<DownloadProvider, ()> {
         let s = Settings::new();
         let dp_name = s.get_string("network.downloadProviderName");
-        Self::get(dp_name).ok_or(())
+        Self::get(&dp_name).ok_or(())
     }
 
     pub(crate) fn from_raw(handle: *mut BNDownloadProvider) -> DownloadProvider {
@@ -131,9 +131,9 @@ impl DownloadInstance {
         }
     }
 
-    pub fn perform_request<S: IntoCStr>(
+    pub fn perform_request(
         &mut self,
-        url: S,
+        url: &str,
         callbacks: DownloadInstanceOutputCallbacks,
     ) -> Result<(), String> {
         let callbacks = Box::into_raw(Box::new(callbacks));
@@ -201,19 +201,16 @@ impl DownloadInstance {
         }
     }
 
-    pub fn perform_custom_request<
-        M: IntoCStr,
-        U: IntoCStr,
-        HK: IntoCStr,
-        HV: IntoCStr,
-        I: Iterator<Item = (HK, HV)>,
-    >(
+    pub fn perform_custom_request<I>(
         &mut self,
-        method: M,
-        url: U,
+        method: &str,
+        url: &str,
         headers: I,
         callbacks: DownloadInstanceInputOutputCallbacks,
-    ) -> Result<DownloadResponse, String> {
+    ) -> Result<DownloadResponse, String>
+    where
+        I: IntoIterator<Item = (String, String)>,
+    {
         let mut header_keys = vec![];
         let mut header_values = vec![];
         for (key, value) in headers {

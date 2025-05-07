@@ -32,7 +32,7 @@ impl LoadSettings {
         });
         bn_settings.register_setting_json(
             Self::ADD_BACKING_REGIONS_SETTING,
-            add_backing_region_props.to_string(),
+            &add_backing_region_props.to_string(),
         );
 
         let add_bitfields_props = json!({
@@ -41,8 +41,10 @@ impl LoadSettings {
             "default" : Self::ADD_BITFIELDS_DEFAULT,
             "description" : "Whether to add bitfields. Bitfields are not supported by Binary Ninja, so this is a workaround using unions.",
         });
-        bn_settings
-            .register_setting_json(Self::ADD_BITFIELDS_SETTING, add_bitfields_props.to_string());
+        bn_settings.register_setting_json(
+            Self::ADD_BITFIELDS_SETTING,
+            &add_bitfields_props.to_string(),
+        );
 
         let add_comments_props = json!({
             "title" : "Add Comments",
@@ -51,7 +53,7 @@ impl LoadSettings {
             "description" : "Whether to add comments. If you see comment placement is off, try disabling this.",
         });
         bn_settings
-            .register_setting_json(Self::ADD_COMMENTS_SETTING, add_comments_props.to_string());
+            .register_setting_json(Self::ADD_COMMENTS_SETTING, &add_comments_props.to_string());
 
         let file_props = json!({
             "title" : "SVD File",
@@ -60,7 +62,7 @@ impl LoadSettings {
             "description" : "The SVD File to automatically load when opening the view.",
             "uiSelectionAction" : "file"
         });
-        bn_settings.register_setting_json(Self::AUTO_LOAD_FILE_SETTING, file_props.to_string());
+        bn_settings.register_setting_json(Self::AUTO_LOAD_FILE_SETTING, &file_props.to_string());
     }
 
     pub fn from_view_settings(view: &BinaryView) -> Self {

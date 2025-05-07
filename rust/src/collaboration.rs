@@ -73,21 +73,21 @@ pub fn known_remotes() -> Array<Remote> {
 }
 
 /// Get Remote by unique `id`
-pub fn get_remote_by_id<S: IntoCStr>(id: S) -> Option<Ref<Remote>> {
+pub fn get_remote_by_id(id: &str) -> Option<Ref<Remote>> {
     let id = id.to_cstr();
     let value = unsafe { BNCollaborationGetRemoteById(id.as_ptr()) };
     NonNull::new(value).map(|h| unsafe { Remote::ref_from_raw(h) })
 }
 
 /// Get Remote by `address`
-pub fn get_remote_by_address<S: IntoCStr>(address: S) -> Option<Ref<Remote>> {
+pub fn get_remote_by_address(address: &str) -> Option<Ref<Remote>> {
     let address = address.to_cstr();
     let value = unsafe { BNCollaborationGetRemoteByAddress(address.as_ptr()) };
     NonNull::new(value).map(|h| unsafe { Remote::ref_from_raw(h) })
 }
 
 /// Get Remote by `name`
-pub fn get_remote_by_name<S: IntoCStr>(name: S) -> Option<Ref<Remote>> {
+pub fn get_remote_by_name(name: &str) -> Option<Ref<Remote>> {
     let name = name.to_cstr();
     let value = unsafe { BNCollaborationGetRemoteByName(name.as_ptr()) };
     NonNull::new(value).map(|h| unsafe { Remote::ref_from_raw(h) })
@@ -103,15 +103,12 @@ pub fn save_remotes() {
     unsafe { BNCollaborationSaveRemotes() }
 }
 
-pub fn store_data_in_keychain<K, I, DK, DV>(key: K, data: I) -> bool
+pub fn store_data_in_keychain<I>(key: &str, data: I) -> bool
 where
-    K: IntoCStr,
-    I: IntoIterator<Item = (DK, DV)>,
-    DK: IntoCStr,
-    DV: IntoCStr,
+    I: IntoIterator<Item = (String, String)>,
 {
     let key = key.to_cstr();
-    let (data_keys, data_values): (Vec<DK::Result>, Vec<DV::Result>) = data
+    let (data_keys, data_values): (Vec<_>, Vec<_>) = data
         .into_iter()
         .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
         .unzip();
@@ -127,12 +124,12 @@ where
     }
 }
 
-pub fn has_data_in_keychain<K: IntoCStr>(key: K) -> bool {
+pub fn has_data_in_keychain(key: &str) -> bool {
     let key = key.to_cstr();
     unsafe { BNCollaborationHasDataInKeychain(key.as_ptr()) }
 }
 
-pub fn get_data_from_keychain<K: IntoCStr>(key: K) -> Option<(Array<BnString>, Array<BnString>)> {
+pub fn get_data_from_keychain(key: &str) -> Option<(Array<BnString>, Array<BnString>)> {
     let key = key.to_cstr();
     let mut keys = std::ptr::null_mut();
     let mut values = std::ptr::null_mut();
@@ -142,7 +139,7 @@ pub fn get_data_from_keychain<K: IntoCStr>(key: K) -> Option<(Array<BnString>, A
     keys.zip(values)
 }
 
-pub fn delete_data_from_keychain<K: IntoCStr>(key: K) -> bool {
+pub fn delete_data_from_keychain(key: &str) -> bool {
     let key = key.to_cstr();
     unsafe { BNCollaborationDeleteDataFromKeychain(key.as_ptr()) }
 }

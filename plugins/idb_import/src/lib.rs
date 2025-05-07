@@ -198,7 +198,7 @@ pub fn import_til_section(
         if let TranslateTypeResult::Translated(bn_ty)
         | TranslateTypeResult::PartiallyTranslated(bn_ty, _) = &ty.ty
         {
-            if !debug_info.add_type(ty.name.as_utf8_lossy(), bn_ty, &[/* TODO */]) {
+            if !debug_info.add_type(&ty.name.as_utf8_lossy(), bn_ty, &[/* TODO */]) {
                 error!("Unable to add type `{}`", ty.name.as_utf8_lossy())
             }
         }
@@ -209,7 +209,7 @@ pub fn import_til_section(
         if let TranslateTypeResult::Translated(bn_ty)
         | TranslateTypeResult::PartiallyTranslated(bn_ty, _) = &ty.ty
         {
-            if !debug_info.add_type(ty.name.as_utf8_lossy(), bn_ty, &[/* TODO */]) {
+            if !debug_info.add_type(&ty.name.as_utf8_lossy(), bn_ty, &[/* TODO */]) {
                 error!("Unable to fix type `{}`", ty.name.as_utf8_lossy())
             }
         }
@@ -239,10 +239,7 @@ fn parse_id0_section_info(
         } = info;
         // TODO set comments to address here
         for function in &bv.functions_containing(addr) {
-            function.set_comment_at(
-                addr,
-                String::from_utf8_lossy(&comments.join(&b"\n"[..])).to_string(),
-            );
+            function.set_comment_at(addr, &String::from_utf8_lossy(&comments.join(&b"\n"[..])));
         }
 
         let bnty = ty

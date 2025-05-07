@@ -14,7 +14,7 @@
 
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
-use std::{collections::HashMap, ops::Deref, str::FromStr, sync::mpsc};
+use std::{ops::Deref, str::FromStr, sync::mpsc};
 
 use crate::{DebugInfoBuilderContext, ReaderType};
 use binaryninja::binary_view::BinaryViewBase;
@@ -450,8 +450,8 @@ pub(crate) fn download_debug_info(
         let result = inst
             .perform_custom_request(
                 "GET",
-                artifact_url,
-                HashMap::<String, String>::new(),
+                &artifact_url,
+                vec![],
                 DownloadInstanceInputOutputCallbacks {
                     read: None,
                     write: Some(Box::new(write)),

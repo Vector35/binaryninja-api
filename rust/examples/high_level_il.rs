@@ -16,7 +16,7 @@ fn main() {
     println!("Function count: {}", bv.functions().len());
 
     for func in &bv.functions() {
-        println!("{}:", func.symbol().full_name());
+        println!("{:?}:", func.symbol().full_name());
 
         let Ok(il) = func.high_level_il(true) else {
             continue;

@@ -9,6 +9,7 @@ use binaryninjacore_sys::{
     BNProjectFileSetFolder, BNProjectFileSetName,
 };
 use std::fmt::Debug;
+use std::path::Path;
 use std::ptr::{null_mut, NonNull};
 use std::time::SystemTime;
 
@@ -56,7 +57,7 @@ impl ProjectFile {
     }
 
     /// Set the name of this file
-    pub fn set_name<S: IntoCStr>(&self, value: S) -> bool {
+    pub fn set_name(&self, value: &str) -> bool {
         let value_raw = value.to_cstr();
         unsafe { BNProjectFileSetName(self.handle.as_ptr(), value_raw.as_ptr()) }
     }
@@ -67,7 +68,7 @@ impl ProjectFile {
     }
 
     /// Set the description of this file
-    pub fn set_description<S: IntoCStr>(&self, value: S) -> bool {
+    pub fn set_description(&self, value: &str) -> bool {
         let value_raw = value.to_cstr();
         unsafe { BNProjectFileSetDescription(self.handle.as_ptr(), value_raw.as_ptr()) }
     }
@@ -92,8 +93,8 @@ impl ProjectFile {
 
     /// Export this file to disk, `true' if the export succeeded
     ///
-    /// * `dest` - Destination path for the exported contents
-    pub fn export<S: IntoCStr>(&self, dest: S) -> bool {
+    /// * `dest` - Destination file path for the exported contents, passing a directory will append the file name.
+    pub fn export(&self, dest: &Path) -> bool {
         let dest_raw = dest.to_cstr();
         unsafe { BNProjectFileExport(self.handle.as_ptr(), dest_raw.as_ptr()) }
     }

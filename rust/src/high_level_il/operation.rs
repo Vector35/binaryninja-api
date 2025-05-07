@@ -20,7 +20,7 @@ impl GotoLabel {
         unsafe { BnString::into_string(BNGetGotoLabelName(self.function.handle, self.target)) }
     }
 
-    fn set_name<S: IntoCStr>(&self, name: S) {
+    fn set_name(&self, name: &str) {
         let raw = name.to_cstr();
         unsafe {
             BNSetUserGotoLabelName(
@@ -327,7 +327,7 @@ impl LiftedLabel {
         self.target.name()
     }
 
-    pub fn set_name<S: IntoCStr>(&self, name: S) {
+    pub fn set_name(&self, name: &str) {
         self.target.set_name(name)
     }
 }

@@ -372,7 +372,7 @@ impl Function {
         unsafe { BnString::into_string(BNGetFunctionComment(self.handle)) }
     }
 
-    pub fn set_comment<S: IntoCStr>(&self, comment: S) {
+    pub fn set_comment(&self, comment: &str) {
         let raw = comment.to_cstr();
 
         unsafe {
@@ -394,7 +394,7 @@ impl Function {
         unsafe { BnString::into_string(BNGetCommentForAddress(self.handle, addr)) }
     }
 
-    pub fn set_comment_at<S: IntoCStr>(&self, addr: u64, comment: S) {
+    pub fn set_comment_at(&self, addr: u64, comment: &str) {
         let raw = comment.to_cstr();
 
         unsafe {
@@ -1103,10 +1103,10 @@ impl Function {
     /// let crash = bv.create_tag_type("Crashes", "🎯");
     /// fun.add_tag(&crash, "Nullpointer dereference", Some(0x1337), false, None);
     /// ```
-    pub fn add_tag<S: IntoCStr>(
+    pub fn add_tag(
         &self,
         tag_type: &TagType,
-        data: S,
+        data: &str,
         addr: Option<u64>,
         user: bool,
         arch: Option<CoreArchitecture>,
@@ -1707,7 +1707,7 @@ impl Function {
         operand: usize,
         display_type: IntegerDisplayType,
         arch: Option<CoreArchitecture>,
-        enum_display_typeid: Option<impl IntoCStr>,
+        enum_display_typeid: Option<&str>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
         let enum_display_typeid = enum_display_typeid.map(IntoCStr::to_cstr);

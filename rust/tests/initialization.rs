@@ -23,7 +23,7 @@ fn test_license_validation() {
         Err(e) => panic!("Unexpected error: {:?}", e),
     }
     // Reset the license so that it actually can validate license.
-    set_license::<String>(None);
+    set_license(None);
     // Actually make sure we can initialize.
     init().expect("Failed to initialize, make sure you have a license before trying to run tests!");
     // Open an empty binary and make sure it succeeds.

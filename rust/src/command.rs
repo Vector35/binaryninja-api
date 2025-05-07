@@ -93,11 +93,7 @@ where
 ///     true
 /// }
 /// ```
-pub fn register_command<S, C>(name: S, desc: S, command: C)
-where
-    S: IntoCStr,
-    C: Command,
-{
+pub fn register_command<C: Command>(name: &str, desc: &str, command: C) {
     extern "C" fn cb_action<C>(ctxt: *mut c_void, view: *mut BNBinaryView)
     where
         C: Command,
@@ -194,11 +190,7 @@ where
 ///     true
 /// }
 /// ```
-pub fn register_command_for_address<S, C>(name: S, desc: S, command: C)
-where
-    S: IntoCStr,
-    C: AddressCommand,
-{
+pub fn register_command_for_address<C: AddressCommand>(name: &str, desc: &str, command: C) {
     extern "C" fn cb_action<C>(ctxt: *mut c_void, view: *mut BNBinaryView, addr: u64)
     where
         C: AddressCommand,
@@ -296,9 +288,8 @@ where
 ///     true
 /// }
 /// ```
-pub fn register_command_for_range<S, C>(name: S, desc: S, command: C)
+pub fn register_command_for_range<C>(name: &str, desc: &str, command: C)
 where
-    S: IntoCStr,
     C: RangeCommand,
 {
     extern "C" fn cb_action<C>(ctxt: *mut c_void, view: *mut BNBinaryView, addr: u64, len: u64)
@@ -403,11 +394,7 @@ where
 ///     true
 /// }
 /// ```
-pub fn register_command_for_function<S, C>(name: S, desc: S, command: C)
-where
-    S: IntoCStr,
-    C: FunctionCommand,
-{
+pub fn register_command_for_function<C: FunctionCommand>(name: &str, desc: &str, command: C) {
     extern "C" fn cb_action<C>(ctxt: *mut c_void, view: *mut BNBinaryView, func: *mut BNFunction)
     where
         C: FunctionCommand,

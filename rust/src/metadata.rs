@@ -267,7 +267,7 @@ impl Metadata {
         Ok(Some(unsafe { Self::ref_from_raw(ptr) }))
     }
 
-    pub fn get<S: IntoCStr>(&self, key: S) -> Result<Option<Ref<Metadata>>, ()> {
+    pub fn get(&self, key: &str) -> Result<Option<Ref<Metadata>>, ()> {
         if self.get_type() != MetadataType::KeyValueDataType {
             return Err(());
         }
@@ -287,7 +287,7 @@ impl Metadata {
         Ok(())
     }
 
-    pub fn insert<S: IntoCStr>(&self, key: S, value: &Metadata) -> Result<(), ()> {
+    pub fn insert(&self, key: &str, value: &Metadata) -> Result<(), ()> {
         if self.get_type() != MetadataType::KeyValueDataType {
             return Err(());
         }
@@ -305,7 +305,7 @@ impl Metadata {
         Ok(())
     }
 
-    pub fn remove_key<S: IntoCStr>(&self, key: S) -> Result<(), ()> {
+    pub fn remove_key(&self, key: &str) -> Result<(), ()> {
         if self.get_type() != MetadataType::KeyValueDataType {
             return Err(());
         }

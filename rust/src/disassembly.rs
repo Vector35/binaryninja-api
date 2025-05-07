@@ -1242,13 +1242,13 @@ impl DisassemblyTextRenderer {
         unsafe { Array::new(tokens, count, ()) }
     }
 
-    pub fn wrap_comment<S1: IntoCStr, S2: IntoCStr, S3: IntoCStr>(
+    pub fn wrap_comment(
         &self,
         cur_line: DisassemblyTextLine,
-        comment: S1,
+        comment: &str,
         has_auto_annotations: bool,
-        leading_spaces: S2,
-        indent_spaces: S3,
+        leading_spaces: &str,
+        indent_spaces: &str,
     ) -> Array<DisassemblyTextLine> {
         let cur_line_raw = DisassemblyTextLine::into_raw(cur_line);
         let comment_raw = comment.to_cstr();

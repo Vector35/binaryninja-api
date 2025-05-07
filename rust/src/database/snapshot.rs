@@ -50,7 +50,7 @@ impl Snapshot {
     }
 
     /// Set the displayed snapshot name
-    pub fn set_name<S: IntoCStr>(&self, value: S) {
+    pub fn set_name(&self, value: &str) {
         let value_raw = value.to_cstr();
         let value_ptr = value_raw.as_ptr();
         unsafe { BNSetSnapshotName(self.handle.as_ptr(), value_ptr) }

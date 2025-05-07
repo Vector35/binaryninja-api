@@ -44,7 +44,7 @@ impl Command for RunMatcher {
                 .for_each(|function| cached_function_matcher(&function));
             log::info!("Function matching took {:?}", start.elapsed());
             background_task.finish();
-            view.file().commit_undo_actions(undo_id);
+            view.file().commit_undo_actions(&undo_id);
             // Now we want to trigger re-analysis.
             view.update_analysis();
         });
@@ -66,7 +66,7 @@ pub fn insert_workflow() {
             .for_each(|function| cached_function_matcher(&function));
         log::info!("Function matching took {:?}", start.elapsed());
         background_task.finish();
-        view.file().commit_undo_actions(undo_id);
+        view.file().commit_undo_actions(&undo_id);
         // Now we want to trigger re-analysis.
         view.update_analysis();
     };

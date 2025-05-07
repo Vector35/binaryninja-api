@@ -55,10 +55,9 @@ pub trait CallingConvention: Sync {
     fn are_argument_registers_used_for_var_args(&self) -> bool;
 }
 
-pub fn register_calling_convention<A, N, C>(arch: &A, name: N, cc: C) -> Ref<CoreCallingConvention>
+pub fn register_calling_convention<A, C>(arch: &A, name: &str, cc: C) -> Ref<CoreCallingConvention>
 where
     A: Architecture,
-    N: IntoCStr,
     C: 'static + CallingConvention,
 {
     struct CustomCallingConventionContext<C>

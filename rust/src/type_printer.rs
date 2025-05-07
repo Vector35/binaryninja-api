@@ -15,8 +15,8 @@ pub type TokenEscapingType = BNTokenEscapingType;
 pub type TypeDefinitionLineType = BNTypeDefinitionLineType;
 
 /// Register a custom parser with the API
-pub fn register_type_printer<S: IntoCStr, T: TypePrinter>(
-    name: S,
+pub fn register_type_printer<T: TypePrinter>(
+    name: &str,
     parser: T,
 ) -> (&'static mut T, CoreTypePrinter) {
     let parser = Box::leak(Box::new(parser));
@@ -57,7 +57,7 @@ impl CoreTypePrinter {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn printer_by_name<S: IntoCStr>(name: S) -> Option<CoreTypePrinter> {
+    pub fn printer_by_name(name: &str) -> Option<CoreTypePrinter> {
         let name_raw = name.to_cstr();
         let result = unsafe { BNGetTypePrinterByName(name_raw.as_ptr()) };
         NonNull::new(result).map(|x| unsafe { Self::from_raw(x) })
@@ -363,7 +363,7 @@ impl Default for CoreTypePrinter {
         // TODO: Remove this entirely, there is no "default", its view specific lets not make this some defined behavior.
         let default_settings = crate::settings::Settings::new();
         let name = default_settings.get_string("analysis.types.printerName");
-        Self::printer_by_name(name).unwrap()
+        Self::printer_by_name(&name).unwrap()
     }
 }
 

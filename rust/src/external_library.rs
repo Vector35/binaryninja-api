@@ -166,7 +166,7 @@ impl ExternalLocation {
 
     /// Set the symbol pointed to by this ExternalLocation.
     /// ExternalLocations must have a valid target address and/or symbol set.
-    pub fn set_target_symbol<S: IntoCStr>(&self, symbol: Option<S>) -> bool {
+    pub fn set_target_symbol(&self, symbol: Option<&str>) -> bool {
         match symbol {
             Some(sym) => {
                 let raw_sym = sym.to_cstr();

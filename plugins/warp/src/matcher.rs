@@ -159,7 +159,7 @@ impl Matcher {
                     if let Some(ref_guid) = c.guid {
                         // NOTE: We do not need to check for cyclic reference here because
                         // NOTE: GUID references are unable to be referenced by themselves.
-                        if view.type_by_id(ref_guid.to_string()).is_none() {
+                        if view.type_by_id(&ref_guid.to_string()).is_none() {
                             // Add the referrer to the view if it is in the Matcher types
                             if let Some(ref_ty) = matcher.types.get(&ref_guid) {
                                 inner_add_type_to_view(matcher, view, arch, visited_refs, &ref_ty);
@@ -186,7 +186,7 @@ impl Matcher {
                     // All nested types _should_ be added now, we can add this type.
                     // TODO: Do we want to make unnamed types visible? I think we should, but some people might be opposed.
                     let ty_name = ty.name.to_owned().unwrap_or_else(|| ty_id_str.clone());
-                    view.define_auto_type_with_id(ty_name, ty_id_str, &to_bn_type(arch, ty));
+                    view.define_auto_type_with_id(ty_name, &ty_id_str, &to_bn_type(arch, ty));
                 }
                 _ => {}
             }
@@ -409,7 +409,7 @@ impl MatcherSettings {
         });
         bn_settings.register_setting_json(
             Self::TRIVIAL_FUNCTION_LEN_SETTING,
-            trivial_function_len_props.to_string(),
+            &trivial_function_len_props.to_string(),
         );
 
         let minimum_function_len_props = json!({
@@ -421,7 +421,7 @@ impl MatcherSettings {
         });
         bn_settings.register_setting_json(
             Self::MINIMUM_FUNCTION_LEN_SETTING,
-            minimum_function_len_props.to_string(),
+            &minimum_function_len_props.to_string(),
         );
 
         let maximum_function_len_props = json!({
@@ -433,7 +433,7 @@ impl MatcherSettings {
         });
         bn_settings.register_setting_json(
             Self::MAXIMUM_FUNCTION_LEN_SETTING,
-            maximum_function_len_props.to_string(),
+            &maximum_function_len_props.to_string(),
         );
 
         let minimum_matched_constraints_props = json!({
@@ -445,7 +445,7 @@ impl MatcherSettings {
         });
         bn_settings.register_setting_json(
             Self::MINIMUM_MATCHED_CONSTRAINTS_SETTING,
-            minimum_matched_constraints_props.to_string(),
+            &minimum_matched_constraints_props.to_string(),
         );
 
         let trivial_function_adjacent_allowed_props = json!({
@@ -457,7 +457,7 @@ impl MatcherSettings {
         });
         bn_settings.register_setting_json(
             Self::TRIVIAL_FUNCTION_ADJACENT_ALLOWED_SETTING,
-            trivial_function_adjacent_allowed_props.to_string(),
+            &trivial_function_adjacent_allowed_props.to_string(),
         );
     }
 

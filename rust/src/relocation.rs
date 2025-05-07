@@ -402,9 +402,8 @@ unsafe impl RefCountable for CoreRelocationHandler {
     }
 }
 
-pub(crate) fn register_relocation_handler<S, R, F>(arch: &CoreArchitecture, name: S, func: F)
+pub(crate) fn register_relocation_handler<R, F>(arch: &CoreArchitecture, name: &str, func: F)
 where
-    S: IntoCStr,
     R: 'static + RelocationHandler<Handle = CustomRelocationHandlerHandle<R>> + Send + Sync + Sized,
     F: FnOnce(CustomRelocationHandlerHandle<R>, CoreRelocationHandler) -> R,
 {

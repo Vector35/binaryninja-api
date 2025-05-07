@@ -69,7 +69,7 @@ fn test_debug_info() {
         let func = view
             .function_at(&view.default_platform().unwrap(), 0x3b440)
             .expect("Debug info test function exists");
-        assert_eq!(func.symbol().raw_name().to_string(), "test_func");
+        assert_eq!(func.symbol().raw_name().to_string_lossy(), "test_func");
         view.file().close();
     }
 

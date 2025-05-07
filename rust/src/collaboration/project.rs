@@ -1,4 +1,5 @@
 use std::ffi::c_void;
+use std::path::PathBuf;
 use std::ptr::NonNull;
 use std::time::SystemTime;
 
@@ -136,7 +137,7 @@ impl RemoteProject {
     }
 
     /// Set the description of the file. You will need to push the file to update the remote version.
-    pub fn set_name<S: IntoCStr>(&self, name: S) -> Result<(), ()> {
+    pub fn set_name(&self, name: &str) -> Result<(), ()> {
         let name = name.to_cstr();
         let success = unsafe { BNRemoteProjectSetName(self.handle.as_ptr(), name.as_ptr()) };
         success.then_some(()).ok_or(())
@@ -150,7 +151,7 @@ impl RemoteProject {
     }
 
     /// Set the description of the file. You will need to push the file to update the remote version.
-    pub fn set_description<S: IntoCStr>(&self, description: S) -> Result<(), ()> {
+    pub fn set_description(&self, description: &str) -> Result<(), ()> {
         let description = description.to_cstr();
         let success =
             unsafe { BNRemoteProjectSetDescription(self.handle.as_ptr(), description.as_ptr()) };
@@ -169,7 +170,7 @@ impl RemoteProject {
 
     /// Get the default directory path for a remote Project. This is based off the Setting for
     /// collaboration.directory, the project's id, and the project's remote's id.
-    pub fn default_path(&self) -> Result<BnString, ()> {
+    pub fn default_path(&self) -> Result<PathBuf, ()> {
         sync::default_project_path(self)
     }
 
@@ -221,7 +222,7 @@ impl RemoteProject {
     ///
     /// NOTE: If the project has not been opened, it will be opened upon calling this.
     /// NOTE: If files have not been pulled, they will be pulled upon calling this.
-    pub fn get_file_by_id<S: IntoCStr>(&self, id: S) -> Result<Option<Ref<RemoteFile>>, ()> {
+    pub fn get_file_by_id(&self, id: &str) -> Result<Option<Ref<RemoteFile>>, ()> {
         // TODO: This sync should be removed?
         if !self.has_pulled_files() {
             self.pull_files()?;
@@ -235,7 +236,7 @@ impl RemoteProject {
     ///
     /// NOTE: If the project has not been opened, it will be opened upon calling this.
     /// NOTE: If files have not been pulled, they will be pulled upon calling this.
-    pub fn get_file_by_name<S: IntoCStr>(&self, name: S) -> Result<Option<Ref<RemoteFile>>, ()> {
+    pub fn get_file_by_name(&self, name: &str) -> Result<Option<Ref<RemoteFile>>, ()> {
         // TODO: This sync should be removed?
         if !self.has_pulled_files() {
             self.pull_files()?;
@@ -282,20 +283,15 @@ impl RemoteProject {
     /// * `description` - File description
     /// * `parent_folder` - Folder that will contain the file
     /// * `file_type` - Type of File to create
-    pub fn create_file<F, N, D>(
+    pub fn create_file(
         &self,
-        filename: F,
+        filename: &str,
         contents: &[u8],
-        name: N,
-        description: D,
+        name: &str,
+        description: &str,
         parent_folder: Option<&RemoteFolder>,
         file_type: RemoteFileType,
-    ) -> Result<Ref<RemoteFile>, ()>
-    where
-        F: IntoCStr,
-        N: IntoCStr,
-        D: IntoCStr,
-    {
+    ) -> Result<Ref<RemoteFile>, ()> {
         self.create_file_with_progress(
             filename,
             contents,
@@ -318,20 +314,17 @@ impl RemoteProject {
     /// * `parent_folder` - Folder that will contain the file
     /// * `file_type` - Type of File to create
     /// * `progress` - Function to call on upload progress updates
-    pub fn create_file_with_progress<F, N, D, P>(
+    pub fn create_file_with_progress<P>(
         &self,
-        filename: F,
+        filename: &str,
         contents: &[u8],
-        name: N,
-        description: D,
+        name: &str,
+        description: &str,
         parent_folder: Option<&RemoteFolder>,
         file_type: RemoteFileType,
         mut progress: P,
     ) -> Result<Ref<RemoteFile>, ()>
     where
-        F: IntoCStr,
-        N: IntoCStr,
-        D: IntoCStr,
         P: ProgressCallback,
     {
         // TODO: This sync should be removed?
@@ -364,11 +357,9 @@ impl RemoteProject {
     /// Push an updated File object to the Remote
     ///
     /// NOTE: If the project has not been opened, it will be opened upon calling this.
-    pub fn push_file<I, K, V>(&self, file: &RemoteFile, extra_fields: I) -> Result<(), ()>
+    pub fn push_file<I>(&self, file: &RemoteFile, extra_fields: I) -> Result<(), ()>
     where
-        I: Iterator<Item = (K, V)>,
-        K: IntoCStr,
-        V: IntoCStr,
+        I: IntoIterator<Item = (String, String)>,
     {
         // TODO: This sync should be removed?
         self.open()?;
@@ -421,7 +412,7 @@ impl RemoteProject {
     ///
     /// NOTE: If the project has not been opened, it will be opened upon calling this.
     /// NOTE: If folders have not been pulled, they will be pulled upon calling this.
-    pub fn get_folder_by_id<S: IntoCStr>(&self, id: S) -> Result<Option<Ref<RemoteFolder>>, ()> {
+    pub fn get_folder_by_id(&self, id: &str) -> Result<Option<Ref<RemoteFolder>>, ()> {
         // TODO: This sync should be removed?
         if !self.has_pulled_folders() {
             self.pull_folders()?;
@@ -465,16 +456,12 @@ impl RemoteProject {
     /// * `name` - Displayed folder name
     /// * `description` - Folder description
     /// * `parent` - Parent folder (optional)
-    pub fn create_folder<N, D>(
+    pub fn create_folder(
         &self,
-        name: N,
-        description: D,
+        name: &str,
+        description: &str,
         parent_folder: Option<&RemoteFolder>,
-    ) -> Result<Ref<RemoteFolder>, ()>
-    where
-        N: IntoCStr,
-        D: IntoCStr,
-    {
+    ) -> Result<Ref<RemoteFolder>, ()> {
         self.create_folder_with_progress(name, description, parent_folder, NoProgressCallback)
     }
 
@@ -486,16 +473,14 @@ impl RemoteProject {
     /// * `description` - Folder description
     /// * `parent` - Parent folder (optional)
     /// * `progress` - Function to call on upload progress updates
-    pub fn create_folder_with_progress<N, D, P>(
+    pub fn create_folder_with_progress<P>(
         &self,
-        name: N,
-        description: D,
+        name: &str,
+        description: &str,
         parent_folder: Option<&RemoteFolder>,
         mut progress: P,
     ) -> Result<Ref<RemoteFolder>, ()>
     where
-        N: IntoCStr,
-        D: IntoCStr,
         P: ProgressCallback,
     {
         // TODO: This sync should be removed?
@@ -526,11 +511,9 @@ impl RemoteProject {
     ///
     /// * `folder` - Folder object which has been updated
     /// * `extra_fields` - Extra HTTP fields to send with the update
-    pub fn push_folder<I, K, V>(&self, folder: &RemoteFolder, extra_fields: I) -> Result<(), ()>
+    pub fn push_folder<I>(&self, folder: &RemoteFolder, extra_fields: I) -> Result<(), ()>
     where
-        I: Iterator<Item = (K, V)>,
-        K: IntoCStr,
-        V: IntoCStr,
+        I: IntoIterator<Item = (String, String)>,
     {
         // TODO: This sync should be removed?
         self.open()?;
@@ -598,7 +581,7 @@ impl RemoteProject {
     /// Get a specific permission in the Project by its id.
     ///
     /// NOTE: If group or user permissions have not been pulled, they will be pulled upon calling this.
-    pub fn get_permission_by_id<S: IntoCStr>(&self, id: S) -> Result<Option<Ref<Permission>>, ()> {
+    pub fn get_permission_by_id(&self, id: &str) -> Result<Option<Ref<Permission>>, ()> {
         // TODO: This sync should be removed?
         if !self.has_pulled_user_permissions() {
             self.pull_user_permissions()?;
@@ -703,9 +686,9 @@ impl RemoteProject {
     ///
     /// * `user_id` - User id
     /// * `level` - Permission level
-    pub fn create_user_permission<S: IntoCStr>(
+    pub fn create_user_permission(
         &self,
-        user_id: S,
+        user_id: &str,
         level: CollaborationPermissionLevel,
     ) -> Result<Ref<Permission>, ()> {
         self.create_user_permission_with_progress(user_id, level, NoProgressCallback)
@@ -718,9 +701,9 @@ impl RemoteProject {
     /// * `user_id` - User id
     /// * `level` - Permission level
     /// * `progress` - The progress callback to call
-    pub fn create_user_permission_with_progress<S: IntoCStr, F: ProgressCallback>(
+    pub fn create_user_permission_with_progress<F: ProgressCallback>(
         &self,
-        user_id: S,
+        user_id: &str,
         level: CollaborationPermissionLevel,
         mut progress: F,
     ) -> Result<Ref<Permission>, ()> {
@@ -746,15 +729,9 @@ impl RemoteProject {
     ///
     /// * `permission` - Permission object which has been updated
     /// * `extra_fields` - Extra HTTP fields to send with the update
-    pub fn push_permission<I, K, V>(
-        &self,
-        permission: &Permission,
-        extra_fields: I,
-    ) -> Result<(), ()>
+    pub fn push_permission<I>(&self, permission: &Permission, extra_fields: I) -> Result<(), ()>
     where
-        I: Iterator<Item = (K, V)>,
-        K: IntoCStr,
-        V: IntoCStr,
+        I: IntoIterator<Item = (String, String)>,
     {
         let (keys, values): (Vec<_>, Vec<_>) = extra_fields
             .into_iter()
@@ -788,7 +765,7 @@ impl RemoteProject {
     /// # Arguments
     ///
     /// * `username` - Username of user to check
-    pub fn can_user_view<S: IntoCStr>(&self, username: S) -> bool {
+    pub fn can_user_view(&self, username: &str) -> bool {
         let username = username.to_cstr();
         unsafe { BNRemoteProjectCanUserView(self.handle.as_ptr(), username.as_ptr()) }
     }
@@ -798,7 +775,7 @@ impl RemoteProject {
     /// # Arguments
     ///
     /// * `username` - Username of user to check
-    pub fn can_user_edit<S: IntoCStr>(&self, username: S) -> bool {
+    pub fn can_user_edit(&self, username: &str) -> bool {
         let username = username.to_cstr();
         unsafe { BNRemoteProjectCanUserEdit(self.handle.as_ptr(), username.as_ptr()) }
     }
@@ -808,7 +785,7 @@ impl RemoteProject {
     /// # Arguments
     ///
     /// * `username` - Username of user to check
-    pub fn can_user_admin<S: IntoCStr>(&self, username: S) -> bool {
+    pub fn can_user_admin(&self, username: &str) -> bool {
         let username = username.to_cstr();
         unsafe { BNRemoteProjectCanUserAdmin(self.handle.as_ptr(), username.as_ptr()) }
     }

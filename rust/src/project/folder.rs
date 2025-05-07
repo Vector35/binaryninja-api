@@ -10,6 +10,7 @@ use binaryninjacore_sys::{
 };
 use std::ffi::c_void;
 use std::fmt::Debug;
+use std::path::Path;
 use std::ptr::{null_mut, NonNull};
 
 #[repr(transparent)]
@@ -46,7 +47,7 @@ impl ProjectFolder {
     }
 
     /// Set the name of this folder
-    pub fn set_name<S: IntoCStr>(&self, value: S) -> bool {
+    pub fn set_name(&self, value: &str) -> bool {
         let value_raw = value.to_cstr();
         unsafe { BNProjectFolderSetName(self.handle.as_ptr(), value_raw.as_ptr()) }
     }
@@ -57,7 +58,7 @@ impl ProjectFolder {
     }
 
     /// Set the description of this folder
-    pub fn set_description<S: IntoCStr>(&self, value: S) -> bool {
+    pub fn set_description(&self, value: &str) -> bool {
         let value_raw = value.to_cstr();
         unsafe { BNProjectFolderSetDescription(self.handle.as_ptr(), value_raw.as_ptr()) }
     }
@@ -74,22 +75,19 @@ impl ProjectFolder {
         unsafe { BNProjectFolderSetParent(self.handle.as_ptr(), folder_handle) }
     }
 
-    // TODO: Take Path?
     /// Recursively export this folder to disk, returns `true' if the export succeeded
     ///
     /// * `dest` - Destination path for the exported contents
-    pub fn export<S: IntoCStr>(&self, dest: S) -> bool {
+    pub fn export(&self, dest: &Path) -> bool {
         self.export_with_progress(dest, NoProgressCallback)
     }
 
-    // TODO: Take Path?
     /// Recursively export this folder to disk, returns `true' if the export succeeded
     ///
     /// * `dest` - Destination path for the exported contents
     /// * `progress` - [`ProgressCallback`] that will be called as contents are exporting
-    pub fn export_with_progress<S, P>(&self, dest: S, mut progress: P) -> bool
+    pub fn export_with_progress<P>(&self, dest: &Path, mut progress: P) -> bool
     where
-        S: IntoCStr,
         P: ProgressCallback,
     {
         let dest_raw = dest.to_cstr();

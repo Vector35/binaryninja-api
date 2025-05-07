@@ -39,9 +39,8 @@ use crate::Endianness;
 /// the core. The `BinaryViewType` argument passed to `constructor` is the object that the
 /// `AsRef<BinaryViewType>`
 /// implementation of the `CustomBinaryViewType` must return.
-pub fn register_view_type<S, T, F>(name: S, long_name: S, constructor: F) -> &'static T
+pub fn register_view_type<T, F>(name: &str, long_name: &str, constructor: F) -> &'static T
 where
-    S: IntoCStr,
     T: CustomBinaryViewType,
     F: FnOnce(BinaryViewType) -> T,
 {
@@ -359,7 +358,7 @@ impl BinaryViewType {
     }
 
     /// Looks up a BinaryViewType by its short name
-    pub fn by_name<N: IntoCStr>(name: N) -> Result<Self> {
+    pub fn by_name(name: &str) -> Result<Self> {
         let bytes = name.to_cstr();
         let handle = unsafe { BNGetBinaryViewTypeByName(bytes.as_ref().as_ptr() as *const _) };
         match handle.is_null() {

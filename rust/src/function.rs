@@ -467,6 +467,15 @@ impl Function {
         }
     }
 
+    pub fn variable_type(&self, var: &Variable) -> Option<Conf<Ref<Type>>> {
+        let raw_var = BNVariable::from(var);
+        let result = unsafe { BNGetVariableType(self.handle, &raw_var) };
+        match result.type_.is_null() {
+            false => Some(Conf::<Ref<Type>>::from_owned_raw(result)),
+            true => None,
+        }
+    }
+
     pub fn high_level_il(&self, full_ast: bool) -> Result<Ref<HighLevelILFunction>, ()> {
         unsafe {
             let hlil_ptr = BNGetFunctionHighLevelIL(self.handle);

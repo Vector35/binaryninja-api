@@ -30,9 +30,11 @@ impl LoadSettings {
             "default" : Self::ADD_BACKING_REGIONS_DEFAULT,
             "description" : "Whether to add backing regions. Backing regions allow you to write to the underlying memory of a view, but will take up space in the BNDB.",
         });
-        bn_settings
-            .register_setting_json(Self::ADD_BACKING_REGIONS_SETTING, add_backing_region_props.to_string());
-        
+        bn_settings.register_setting_json(
+            Self::ADD_BACKING_REGIONS_SETTING,
+            add_backing_region_props.to_string(),
+        );
+
         let add_bitfields_props = json!({
             "title" : "Add Bitfields",
             "type" : "boolean",

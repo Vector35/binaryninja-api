@@ -174,7 +174,7 @@ impl DeviceMapper {
                 &data_memory,
                 Some(memory_info.segment_flags),
             );
-            
+
             if !added_memory {
                 log::error!(
                     "Failed to add memory for peripheral block! {} @ 0x{:x}",
@@ -183,7 +183,7 @@ impl DeviceMapper {
                 );
             }
         }
-        
+
         view.add_segment(memory_info.segment);
         view.add_section(memory_info.section);
 

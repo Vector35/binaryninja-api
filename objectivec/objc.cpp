@@ -955,6 +955,7 @@ void ObjCProcessor::ReadMethodList(ObjCReader* reader, ClassBase& cls, std::stri
 				DefineObjCSymbol(DataSymbol, Type::PointerType(m_data->GetAddressSize(), selType),
 					"selRef_" + method.name, meth.name, true);
 			}
+
 			// workflow objc support
 			if (selAddr)
 				m_selToImplementations[selAddr].push_back(meth.imp);
@@ -967,6 +968,11 @@ void ObjCProcessor::ReadMethodList(ObjCReader* reader, ClassBase& cls, std::stri
 			method.imp = meth.imp;
 			cls.methodList[cursor] = method;
 			m_localMethods[cursor] = method;
+
+			if (selAddr)
+				m_data->AddUserDataReference(selAddr, meth.imp);
+			if (selRefAddr)
+				m_data->AddUserDataReference(selRefAddr, meth.imp);
 		}
 		catch (...)
 		{

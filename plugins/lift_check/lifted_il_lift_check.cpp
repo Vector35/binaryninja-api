@@ -210,8 +210,8 @@ void LiftedILVerifier::Verify()
 		(low priority)
 		-[ ] suspiciously long expr tree
 		     (not actually a bug, just sus)
-		-[ ] Lifted IL: not more than 1 pop per tree
-		-[ ] Lifted IL: no conflicting flag writes in the same tree (don't have two subs in same instr)
+		-[x] not more than 1 pop per tree
+		-[x] no conflicting flag writes in the same tree (don't have two subs in same instr)
 		-[ ] (not possible through API) GetFlagWriteLowLevelIL when it resolves a flag calls the arch to get the value for a flag and that expr must not set flags
 	*/
 	if (!m_il->GetFunction())

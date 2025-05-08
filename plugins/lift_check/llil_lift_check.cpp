@@ -175,6 +175,218 @@ LowLevelILVerifier::LowLevelILVerifier(Ref<LowLevelILFunction> function):
 }
 
 
+bool LowLevelILVerifier::GetTemporaryRegisterSize(
+	const BinaryNinja::LowLevelILInstruction& expr,
+	uint32_t reg,
+	size_t& outSize
+)
+{
+	auto ssa = m_il->GetSSAForm();
+	if (!ssa)
+	{
+		m_diagnostics.push_back(Diagnostic::Diag(NoteSeverity, this, expr, "No SSA form available"));
+		return false;
+	}
+
+	SSARegister usedSSAReg;
+	auto usedSSARegExpr = expr.GetSSAForm();
+	if (usedSSARegExpr.operation == LLIL_REG_SSA)
+	{
+		usedSSAReg = usedSSARegExpr.GetSourceSSARegister<LLIL_REG_SSA>();
+		if (usedSSAReg.reg != reg)
+		{
+			m_diagnostics.push_back(Diagnostic::Diag(NoteSeverity, this, expr, "Expected SSA form of the register to be the same register"));
+			return false;
+		}
+	}
+	else if (usedSSARegExpr.operation == LLIL_REG_SPLIT_SSA)
+	{
+		auto hi = usedSSARegExpr.GetHighSSARegister<LLIL_REG_SPLIT_SSA>();
+		auto lo = usedSSARegExpr.GetLowSSARegister<LLIL_REG_SPLIT_SSA>();
+		if (hi.reg == reg)
+		{
+			usedSSAReg = hi;
+		}
+		else if (lo.reg == reg)
+		{
+			usedSSAReg = lo;
+		}
+		else
+		{
+			m_diagnostics.push_back(Diagnostic::Diag(NoteSeverity, this, expr, "SSA split reg neither is the expected reg"));
+			return false;
+		}
+	}
+	else
+	{
+		m_diagnostics.push_back(Diagnostic::Diag(NoteSeverity, this, expr, "Expected SSA form of LLIL_REG to be LLIL_REG_SSA or LLIL_REG_SPLIT_SSA"));
+		return false;
+	}
+
+	// Find all uses and defs of the SSA Register:
+	// - Traverse all phis and find all other versions of this register that flow into it
+	// - Then find all uses and defs of THOSE
+
+	std::unordered_set<SSARegister> ssaRegs;
+	std::deque<SSARegister> workList({ usedSSAReg });
+
+	while (!workList.empty())
+	{
+		auto ssaReg = workList.front();
+		workList.pop_front();
+		ssaRegs.insert(ssaReg);
+		auto defIndex = ssa->GetSSARegisterDefinition(ssaReg);
+		if (defIndex == BN_INVALID_EXPR)
+			continue;
+		auto def = ssa->GetInstruction(defIndex);
+		if (def.operation == LLIL_REG_PHI)
+		{
+			for (auto& src: def.GetSourceSSARegisters<LLIL_REG_PHI>())
+			{
+				// Make sure src actually has uses before recursing it, because LLIL SSA doesn't
+				// eliminate dead uses and could give us phis with previous versions that would
+				// normally look conflicting but actually are irrelevant
+				if (ssa->GetSSARegisterUses(src).empty())
+					continue;
+				if (ssaRegs.find(src) == ssaRegs.end())
+				{
+					workList.push_back(src);
+				}
+			}
+		}
+		else if (def.operation == LLIL_FORCE_VER_SSA)
+		{
+			// Follow force ver through to the new version
+			auto dest = def.GetDestSSARegister<LLIL_FORCE_VER_SSA>();
+			if (ssaRegs.find(dest) == ssaRegs.end())
+			{
+				workList.push_back(dest);
+			}
+		}
+	}
+
+	std::unordered_map<size_t, std::unordered_set<size_t>> defExprs;
+	std::unordered_map<size_t, std::unordered_set<size_t>> useExprs;
+	std::unordered_set<size_t> seenSizes;
+	for (auto& ssaReg: ssaRegs)
+	{
+		auto defIndex = ssa->GetSSARegisterDefinition(ssaReg);
+		auto useIndices = ssa->GetSSARegisterUses(ssaReg);
+
+		if (defIndex != BN_INVALID_EXPR)
+		{
+			auto def = ssa->GetInstruction(defIndex);
+			switch (def.operation)
+			{
+			case LLIL_SET_REG_SSA:
+			case LLIL_SET_REG_SPLIT_SSA:
+			case LLIL_SET_REG_SSA_PARTIAL:
+				seenSizes.insert(def.size);
+				defExprs[def.size].insert(def.exprIndex);
+				break;
+			case LLIL_INTRINSIC_SSA:
+			case LLIL_MEMORY_INTRINSIC_SSA:
+			case LLIL_CALL_SSA:
+			case LLIL_SYSCALL_SSA:
+			case LLIL_TAILCALL_SSA:
+				// These don't specify the size of their output(s)
+				break;
+			case LLIL_REG_PHI:
+			case LLIL_FORCE_VER_SSA:
+				// Phis handled above
+				break;
+			default:
+				// Everything else is not able to cause an SSA register def
+				break;
+			}
+		}
+
+		for (auto& useIndex: useIndices)
+		{
+			auto use = ssa->GetInstruction(useIndex);
+			use.VisitExprs([&](const BinaryNinja::LowLevelILInstruction& useExpr) {
+				switch (useExpr.operation)
+				{
+				case LLIL_REG_SSA:
+					if (useExpr.GetSourceSSARegister<LLIL_REG_SSA>().reg == reg)
+					{
+						seenSizes.insert(useExpr.size);
+						useExprs[useExpr.size].insert(useExpr.exprIndex);
+					}
+					break;
+				case LLIL_REG_SPLIT_SSA:
+					if (useExpr.GetLowSSARegister<LLIL_REG_SPLIT_SSA>().reg == reg || useExpr.GetHighSSARegister<LLIL_REG_SPLIT_SSA>().reg == reg)
+					{
+						seenSizes.insert(useExpr.size);
+						useExprs[useExpr.size].insert(useExpr.exprIndex);
+					}
+					break;
+				case LLIL_REG_PHI:
+				case LLIL_FORCE_VER_SSA:
+					// Phis handled above
+					break;
+				case LLIL_CALL_SSA:
+				case LLIL_SYSCALL_SSA:
+				case LLIL_TAILCALL_SSA:
+					// These don't specify the size of their use of the stack pointer
+					// It's _probably_ always the same as address width, but hard to say
+					break;
+				case LLIL_REG_SSA_PARTIAL:
+					// Technically this means you're taking the low couple bytes of a temporary
+					// ... is this even possible?
+					// Instruction size doesn't give us any useful information about the size of
+					// the whole temporary register, though. Wack.
+					break;
+				case LLIL_REG_STACK_REL_SSA:
+				case LLIL_REG_STACK_FREE_REL_SSA:
+				case LLIL_SET_REG_STACK_REL_SSA:
+					// Temporary as the top of a register stack is a bonkers concept, and I'm not handling it
+					if (useExpr.GetTopSSARegister().reg == reg)
+					{
+						m_diagnostics.push_back(Diagnostic::Diag(WarningSeverity, this, expr, fmt::format("Using a temporary as the top of a register stack... this isn't a warning about your use of a register size any more, it's a warning about whatever cursed behavior you think you're doing {:?}", useExpr)));
+					}
+					break;
+				case LLIL_ASSERT_SSA:
+					// This is unsized
+					break;
+				default:
+					// Everything else is not able to cause an SSA register use
+					break;
+				}
+				return true;
+			});
+		}
+	}
+
+	if (seenSizes.size() > 1)
+	{
+		m_diagnostics.push_back(Diagnostic::Error(this, expr, fmt::format("Temporary register temp{} has multiple definitions/usages of different sizes", LLIL_GET_TEMP_REG_INDEX(reg))));
+		for (auto& [defSize, defSizeExprs]: defExprs)
+		{
+			for (auto& defExpr: defSizeExprs)
+			{
+				m_diagnostics.push_back(Diagnostic::Diag(NoteSeverity, this, expr, fmt::format("    SSA Definition of size {} at {:?}", defSize, ssa->GetExpr(defExpr))));
+			}
+		}
+		for (auto& [useSize, useSizeExprs]: useExprs)
+		{
+			for (auto& useExpr: useSizeExprs)
+			{
+				m_diagnostics.push_back(Diagnostic::Diag(NoteSeverity, this, expr, fmt::format("    SSA Use of size {} at {:?}", useSize, ssa->GetExpr(useExpr))));
+			}
+		}
+		return false;
+	}
+	if (seenSizes.size() == 0)
+	{
+		m_diagnostics.push_back(Diagnostic::Diag(NoteSeverity, this, expr, fmt::format("Temporary register temp{} has no instructions that reference it which have a size", LLIL_GET_TEMP_REG_INDEX(reg))));
+		return false;
+	}
+	outSize = *seenSizes.begin();
+	return true;
+}
+
+
 void LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::optional<size_t> requiredSize)
 {
 #define CHECK(condition, message, ...)                                                    \
@@ -234,20 +446,24 @@ void LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		auto reg = expr.GetSourceRegister<LLIL_REG>();
 		if (LLIL_REG_IS_TEMP(reg))
 		{
-			if (auto found = m_tempRegSizes.find(reg); found != m_tempRegSizes.end())
+			// Lifted IL functions get a pass for this, we can't check them because they don't have SSA forms
+			if (m_ilType != LiftedILFunctionGraph)
 			{
-				CHECK(
-					found->second.width == expr.size,
-					"attempting to load {:#x} bytes out of {:#x} byte temporary register temp{} (first seen at {:?})",
-					expr.size,
-					found->second.width,
-					LLIL_GET_TEMP_REG_INDEX(reg),
-					m_il->GetExpr(found->second.seenExpr)
-				);
-			}
-			else
-			{
-				m_diagnostics.push_back(Diagnostic::Error(this, expr, fmt::format("Using unknown/yet unseen temporary register temp{}", LLIL_GET_TEMP_REG_INDEX(reg))));
+				size_t tempSize = 0;
+				if (GetTemporaryRegisterSize(expr, reg, tempSize))
+				{
+					CHECK(
+						tempSize == expr.size,
+						"attempting to load {:#x} bytes out of {:#x} byte temporary register temp{}",
+						expr.size,
+						tempSize,
+						LLIL_GET_TEMP_REG_INDEX(reg)
+					);
+				}
+				else
+				{
+					m_diagnostics.push_back(Diagnostic::Error(this, expr, fmt::format("Could not resolve temporary register size for temp{} (enable lift check debug to see reasons)", LLIL_GET_TEMP_REG_INDEX(reg))));
+				}
 			}
 		}
 		else
@@ -269,7 +485,7 @@ void LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		}
 		break;
 	}
-	case LLIL_REG_SPLIT:
+	case LLIL_REG_SPLIT: // size is equal to one of the registers, so half of the total being read
 	{
 		if (requiredSize.has_value())
 		{
@@ -280,20 +496,24 @@ void LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		auto hi = expr.GetHighRegister<LLIL_REG_SPLIT>();
 		if (LLIL_REG_IS_TEMP(hi))
 		{
-			if (auto found = m_tempRegSizes.find(hi); found != m_tempRegSizes.end())
+			// Lifted IL functions get a pass for this, we can't check them because they don't have SSA forms
+			if (m_ilType != LiftedILFunctionGraph)
 			{
-				CHECK(
-					found->second.width == expr.size,
-					"attempting to load {:#x} bytes out of {:#x} byte temporary register temp{} (first seen at {:?})",
-					expr.size,
-					found->second.width,
-					LLIL_GET_TEMP_REG_INDEX(hi),
-					m_il->GetExpr(found->second.seenExpr)
-				);
-			}
-			else
-			{
-				m_diagnostics.push_back(Diagnostic::Error(this, expr, fmt::format("Using unknown/yet unseen temporary register temp{}", LLIL_GET_TEMP_REG_INDEX(hi))));
+				size_t tempSize = 0;
+				if (GetTemporaryRegisterSize(expr, hi, tempSize))
+				{
+					CHECK(
+						tempSize == expr.size,
+						"attempting to load {:#x} bytes out of {:#x} byte temporary register temp{}",
+						expr.size,
+						tempSize,
+						LLIL_GET_TEMP_REG_INDEX(hi)
+					);
+				}
+				else
+				{
+					m_diagnostics.push_back(Diagnostic::Error(this, expr, fmt::format("Could not resolve temporary register size for temp{} (enable lift check debug to see reasons)", LLIL_GET_TEMP_REG_INDEX(hi))));
+				}
 			}
 		}
 		else
@@ -304,20 +524,24 @@ void LowLevelILVerifier::CheckExprSize(const LowLevelILInstruction& expr, std::o
 		auto lo = expr.GetLowRegister<LLIL_REG_SPLIT>();
 		if (LLIL_REG_IS_TEMP(lo))
 		{
-			if (auto found = m_tempRegSizes.find(lo); found != m_tempRegSizes.end())
+			// Lifted IL functions get a pass for this, we can't check them because they don't have SSA forms
+			if (m_ilType != LiftedILFunctionGraph)
 			{
-				CHECK(
-					found->second.width == expr.size,
-					"attempting to load {:#x} bytes out of {:#x} byte temporary register temp{} (first seen at {:?})",
-					expr.size,
-					found->second.width,
-					LLIL_GET_TEMP_REG_INDEX(lo),
-					m_il->GetExpr(found->second.seenExpr)
-				);
-			}
-			else
-			{
-				m_diagnostics.push_back(Diagnostic::Error(this, expr, fmt::format("Using unknown/yet unseen temporary register temp{}", LLIL_GET_TEMP_REG_INDEX(lo))));
+				size_t tempSize = 0;
+				if (GetTemporaryRegisterSize(expr, lo, tempSize))
+				{
+					CHECK(
+						tempSize == expr.size,
+						"attempting to load {:#x} bytes out of {:#x} byte temporary register temp{}",
+						expr.size,
+						tempSize,
+						LLIL_GET_TEMP_REG_INDEX(lo)
+					);
+				}
+				else
+				{
+					m_diagnostics.push_back(Diagnostic::Error(this, expr, fmt::format("Could not resolve temporary register size for temp{} (enable lift check debug to see reasons)", LLIL_GET_TEMP_REG_INDEX(lo))));
+				}
 			}
 		}
 		else
@@ -713,29 +937,8 @@ void LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 		CHECK(instr.size != 0, "op should have a size");
 
 		auto reg = instr.GetDestRegister<LLIL_SET_REG>();
-		if (LLIL_REG_IS_TEMP(reg))
-		{
-			if (auto found = m_tempRegSizes.find(reg); found != m_tempRegSizes.end())
-			{
-				CHECK(
-					found->second.width == instr.size,
-					"setting {:#x} byte temporary register temp{} to {:#x} bytes (first seen at {:?})",
-					found->second.width,
-					LLIL_GET_TEMP_REG_INDEX(reg),
-					instr.size,
-					m_il->GetExpr(found->second.seenExpr)
-				);
-			}
-			else
-			{
-				TempRegisterInfo info;
-				info.reg = reg;
-				info.width = instr.size;
-				info.seenExpr = instr.exprIndex;
-				m_tempRegSizes.insert({ reg, info });
-			}
-		}
-		else
+		// Temporaries are checked at use site (see LLIL_REG)
+		if (!LLIL_REG_IS_TEMP(reg))
 		{
 			auto info = m_arch->GetRegisterInfo(reg);
 
@@ -756,62 +959,19 @@ void LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 		CheckExprSize(instr.GetSourceExpr<LLIL_SET_REG>(), instr.size);
 		break;
 	}
-	case LLIL_SET_REG_SPLIT:
+	case LLIL_SET_REG_SPLIT: // size is equal to one of the registers, so half of the total being written
 	{
 		CHECK(instr.size != 0, "op should have a size");
 		auto hi = instr.GetHighRegister<LLIL_SET_REG_SPLIT>();
-		if (LLIL_REG_IS_TEMP(hi))
-		{
-			if (auto found = m_tempRegSizes.find(hi); found != m_tempRegSizes.end())
-			{
-				CHECK(
-					found->second.width == instr.size,
-					"setting {:#x} byte temporary register temp{} to {:#x} bytes (first seen at {:?})",
-					found->second.width,
-					LLIL_GET_TEMP_REG_INDEX(hi),
-					instr.size,
-					m_il->GetExpr(found->second.seenExpr)
-				);
-			}
-			else
-			{
-				TempRegisterInfo info;
-				info.reg = hi;
-				info.width = instr.size;
-				info.seenExpr = instr.exprIndex;
-				m_tempRegSizes.insert({ hi, info });
-			}
-		}
-		else
+		// Temporaries are checked at use site (see LLIL_REG_SPLIT)
+		if (!LLIL_REG_IS_TEMP(hi))
 		{
 			auto info = m_arch->GetRegisterInfo(hi);
 			CHECK(info.size == instr.size, "setting {:#x} byte hi register {} to {:#x} byte value", info.size, m_arch->GetRegisterName(hi), instr.size);
 		}
 		auto lo = instr.GetHighRegister<LLIL_SET_REG_SPLIT>();
-		if (LLIL_REG_IS_TEMP(lo))
-		{
-			if (auto found = m_tempRegSizes.find(lo); found != m_tempRegSizes.end())
-			{
-				CHECK(
-					found->second.width == instr.size,
-					"setting {:#x} byte temporary register temp{} to {:#x} bytes (first seen at {:?})",
-					found->second.width,
-					LLIL_GET_TEMP_REG_INDEX(lo),
-					instr.size,
-					m_il->GetExpr(found->second.seenExpr)
-				);
-			}
-			else
-			{
-				TempRegisterInfo info;
-				info.reg = lo;
-				info.width = instr.size;
-				info.seenExpr = instr.exprIndex;
-				m_tempRegSizes.insert({ lo, info });
-			}
-
-		}
-		else
+		// Temporaries are checked at use site (see LLIL_REG_SPLIT)
+		if (!LLIL_REG_IS_TEMP(lo))
 		{
 			auto info = m_arch->GetRegisterInfo(lo);
 			CHECK(info.size == instr.size, "setting {:#x} byte lo register {} to {:#x} byte value", info.size, m_arch->GetRegisterName(lo), instr.size);
@@ -922,9 +1082,22 @@ void LowLevelILVerifier::CheckInstrSize(const LowLevelILInstruction& instr)
 		}
 		for (size_t i = 0; i < (std::min)(actualOutputs.size(), expectOutputs.size()); i++)
 		{
-			auto expectSize = expectOutputs[i]->GetWidth();
-			auto actualSize = actualOutputs[i].isFlag ? 0 : m_arch->GetRegisterInfo(actualOutputs[i].index).size;
-			CHECK(expectSize == actualSize, "intrinsic output {} size expects {:#x} but is {:#x}", i, expectSize, actualSize);
+			if (actualOutputs[i].isFlag)
+			{
+				CHECK(expectOutputs[i]->IsBool(), "intrinsic output flag {} size expects boolean type but is {}", i, expectOutputs[i]->GetClass());
+			}
+			else
+			{
+				// Temporaries are checked at use site (see LLIL_REG)
+				if (!LLIL_REG_IS_TEMP(actualOutputs[i].index))
+				{
+					auto name = m_arch->GetRegisterName(actualOutputs[i].index);
+					CHECK(!name.empty(), "intrinsic output {} to unknown register {}", i, actualOutputs[i].index);
+					auto expectSize = expectOutputs[i]->GetWidth();
+					auto actualSize = m_arch->GetRegisterInfo(actualOutputs[i].index).size;
+					CHECK(expectSize == actualSize, "intrinsic output {} size expects {:#x} but is {:#x}", i, expectSize, actualSize);
+				}
+			}
 		}
 		break;
 	}
@@ -1371,7 +1544,8 @@ void LowLevelILVerifier::Verify()
 	}
 	if (m_il == m_il->GetSSAForm())
 	{
-		// TODO: SSA form
+		// Not checking SSA forms, because they cannot be modified by customer code
+		// and are our internal problem to deal with :)
 		m_diagnostics.push_back(Diagnostic::Error(this, "Not applicable to SSA forms"));
 		return;
 	}

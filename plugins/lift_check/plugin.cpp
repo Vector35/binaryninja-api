@@ -9,71 +9,81 @@ static Ref<Logger> g_logger;
 
 void ReportVerifier(Ref<AnalysisContext> context, ILVerifier& verifier)
 {
-	std::vector<ILVerifier::Diagnostic> notes;
-	std::vector<ILVerifier::Diagnostic> remarks;
-	std::vector<ILVerifier::Diagnostic> warnings;
-	std::vector<ILVerifier::Diagnostic> errors;
+	auto diags = verifier.GetDiagnostics();
+	size_t notes = 0;
+	size_t remarks = 0;
+	size_t warnings = 0;
+	size_t errors = 0;
 
-	for (auto& diag: verifier.GetDiagnostics())
+	for (auto& diag: diags)
 	{
 		switch (diag.severity)
 		{
 		case IgnoredSeverity:
 			break;
 		case NoteSeverity:
-			notes.push_back(diag);
+			notes += 1;
 			break;
 		case RemarkSeverity:
-			remarks.push_back(diag);
+			remarks += 1;
 			break;
 		case WarningSeverity:
-			warnings.push_back(diag);
+			warnings += 1;
 			break;
 		case ErrorSeverity:
 		case FatalSeverity:
-			errors.push_back(diag);
+			errors += 1;
 			break;
 		}
 	}
 
 	bool debug = Settings::Instance()->Get<bool>("analysis.liftCheck.debug", context->GetBinaryView());
 
-	if (errors.size() > 0)
+	if (errors > 0)
 	{
 		g_logger->LogErrorF(
 			"{:#x} failed: {} errors, {} warnings",
 			context->GetFunction()->GetStart(),
-			errors.size(),
-			warnings.size()
+			errors,
+			warnings
 		);
 	}
-	else if (warnings.size() > 0 || (debug && notes.size() > 0 && remarks.size() > 0))
+	else if (warnings > 0 || (debug && notes > 0 && remarks > 0))
 	{
 		g_logger->LogErrorF(
 			"{:#x} passed: {} errors, {} warnings",
 			context->GetFunction()->GetStart(),
-			errors.size(),
-			warnings.size()
+			errors,
+			warnings
 		);
 	}
-	if (debug)
+	for (auto& diag: diags)
 	{
-		for (auto& diag: notes)
+		switch (diag.severity)
 		{
-			g_logger->LogInfoF("    {}", diag.message);
+		case IgnoredSeverity:
+			break;
+		case NoteSeverity:
+			if (debug)
+			{
+				g_logger->LogInfoF("    {}", diag.message);
+			}
+			break;
+		case RemarkSeverity:
+			if (debug)
+			{
+				g_logger->LogInfoF("    {}", diag.message);
+			}
+			break;
+		case WarningSeverity:
+			g_logger->LogWarnF("    {}", diag.message);
+			break;
+		case ErrorSeverity:
+		case FatalSeverity:
+			g_logger->LogErrorF("    {}", diag.message);
+			break;
+
 		}
-		for (auto& diag: remarks)
-		{
-			g_logger->LogInfoF("    {}", diag.message);
-		}
-	}
-	for (auto& diag: warnings)
-	{
-		g_logger->LogWarnF("    {}", diag.message);
-	}
-	for (auto& diag: errors)
-	{
-		g_logger->LogErrorF("    {}", diag.message);
 	}
 }
 

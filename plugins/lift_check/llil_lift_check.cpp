@@ -1190,10 +1190,11 @@ void LowLevelILVerifier::CheckExprOperands(const BinaryNinja::LowLevelILInstruct
 		// rss says: technically you can assert on a temp, but only if the definition
 		// of the temp register dominates the assert
 		// he also says that you have to do this on the SSA form (because dominators)
-		// so TODO: that, maybe
-		CHECK(!LLIL_REG_IS_TEMP(reg), "cannot assert on temp register {}", reg);
-		auto name = m_arch->GetRegisterName(reg);
-		CHECK(!name.empty(), "unknown register index {}", reg);
+		if (!LLIL_REG_IS_TEMP(reg))
+		{
+			auto name = m_arch->GetRegisterName(reg);
+			CHECK(!name.empty(), "unknown register index {}", reg);
+		}
 		// todo: probably no way to check that a PossibleValueSet is valid
 //		auto constraint = expr.GetConstraint<LLIL_ASSERT>();
 		break;

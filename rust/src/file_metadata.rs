@@ -113,6 +113,16 @@ impl FileMetadata {
         unsafe { BNIsBackedByDatabase(self.handle, view_type.as_ref().as_ptr() as *const _) }
     }
 
+    /// Runs a failable function where the failure state will revert any undo actions that occurred
+    /// during the time of the function's execution.
+    ///
+    /// NOTE: This will commit or undo any actions that occurred on **any** thread as this state is not thread local.
+    ///
+    /// NOTE: This is **NOT** thread safe, if you are holding any locks that might be held by both the main thread
+    /// and the thread executing this function, you can deadlock. You should also never call this function
+    /// on multiple threads at a time. See the following issues:
+    ///  - https://github.com/Vector35/binaryninja-api/issues/6289
+    ///  - https://github.com/Vector35/binaryninja-api/issues/6325
     pub fn run_undoable_transaction<F: FnOnce() -> Result<T, E>, T, E>(
         &self,
         func: F,
@@ -131,10 +141,24 @@ impl FileMetadata {
         }
     }
 
+    /// Creates a new undo entry, any undo actions after this will be added to this entry.
+    ///
+    /// NOTE: This is **NOT** thread safe, if you are holding any locks that might be held by both the main thread
+    /// and the thread executing this function, you can deadlock. You should also never call this function
+    /// on multiple threads at a time. See the following issues:
+    ///  - https://github.com/Vector35/binaryninja-api/issues/6289
+    ///  - https://github.com/Vector35/binaryninja-api/issues/6325
     pub fn begin_undo_actions(&self, anonymous_allowed: bool) -> String {
         unsafe { BnString::into_string(BNBeginUndoActions(self.handle, anonymous_allowed)) }
     }
 
+    /// Commits the undo entry with the id to the undo buffer.
+    ///
+    /// NOTE: This is **NOT** thread safe, if you are holding any locks that might be held by both the main thread
+    /// and the thread executing this function, you can deadlock. You should also never call this function
+    /// on multiple threads at a time. See the following issues:
+    ///  - https://github.com/Vector35/binaryninja-api/issues/6289
+    ///  - https://github.com/Vector35/binaryninja-api/issues/6325
     pub fn commit_undo_actions(&self, id: &str) {
         let id = id.to_cstr();
         unsafe {
@@ -142,6 +166,13 @@ impl FileMetadata {
         }
     }
 
+    /// Reverts the undo actions committed in the undo entry.
+    ///
+    /// NOTE: This is **NOT** thread safe, if you are holding any locks that might be held by both the main thread
+    /// and the thread executing this function, you can deadlock. You should also never call this function
+    /// on multiple threads at a time. See the following issues:
+    ///  - https://github.com/Vector35/binaryninja-api/issues/6289
+    ///  - https://github.com/Vector35/binaryninja-api/issues/6325
     pub fn revert_undo_actions(&self, id: &str) {
         let id = id.to_cstr();
         unsafe {

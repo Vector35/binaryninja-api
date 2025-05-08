@@ -334,3 +334,26 @@ impl SectionBuilder {
         }
     }
 }
+
+impl<T: AsRef<Section>> From<T> for SectionBuilder {
+    fn from(value: T) -> Self {
+        let value = value.as_ref();
+        let name = value.name().to_string_lossy().to_string();
+        let ty = value.section_type().to_string();
+        let linked_section = value.linked_section().to_string_lossy().to_string();
+        let info_section = value.info_section().to_string_lossy().to_string();
+
+        Self {
+            is_auto: value.auto_defined(),
+            name,
+            range: value.address_range(),
+            semantics: value.semantics(),
+            ty,
+            align: value.align(),
+            entry_size: value.entry_size() as u64,
+            linked_section,
+            info_section,
+            info_data: value.info_data(),
+        }
+    }
+}

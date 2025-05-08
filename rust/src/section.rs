@@ -121,12 +121,12 @@ impl Section {
         unsafe { BNSectionGetSemantics(self.handle).into() }
     }
 
-    pub fn linked_section(&self) -> String {
-        unsafe { BnString::into_string(BNSectionGetLinkedSection(self.handle)) }
+    pub fn linked_section(&self) -> BnString {
+        unsafe { BnString::from_raw(BNSectionGetLinkedSection(self.handle)) }
     }
 
-    pub fn info_section(&self) -> String {
-        unsafe { BnString::into_string(BNSectionGetInfoSection(self.handle)) }
+    pub fn info_section(&self) -> BnString {
+        unsafe { BnString::from_raw(BNSectionGetInfoSection(self.handle)) }
     }
 
     pub fn info_data(&self) -> u64 {

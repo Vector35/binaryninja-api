@@ -871,7 +871,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         section.create(self.as_ref());
     }
 
-    fn remove_auto_section(&self, name: &str) {
+    fn remove_auto_section(&self, name: impl IntoCStr) {
         let raw_name = name.to_cstr();
         let raw_name_ptr = raw_name.as_ptr();
         unsafe {
@@ -879,7 +879,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn remove_user_section(&self, name: &str) {
+    fn remove_user_section(&self, name: impl IntoCStr) {
         let raw_name = name.to_cstr();
         let raw_name_ptr = raw_name.as_ptr();
         unsafe {
@@ -887,7 +887,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn section_by_name(&self, name: &str) -> Option<Ref<Section>> {
+    fn section_by_name(&self, name: impl IntoCStr) -> Option<Ref<Section>> {
         unsafe {
             let raw_name = name.to_cstr();
             let name_ptr = raw_name.as_ptr();

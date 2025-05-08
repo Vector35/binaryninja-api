@@ -1,6 +1,6 @@
 use crate::binary_view::BinaryView;
 use crate::data_buffer::DataBuffer;
-use crate::file_accessor::FileAccessor;
+use crate::file_accessor::{Accessor, FileAccessor};
 use crate::rc::Ref;
 use crate::segment::SegmentFlags;
 use crate::string::{BnString, IntoCStr};
@@ -59,6 +59,9 @@ impl MemoryMap {
         }
     }
 
+    /// Adds the memory region using a [`DataBuffer`].
+    ///
+    /// This will add the contents of the [`DataBuffer`] to the database.
     pub fn add_data_memory_region(
         &mut self,
         name: &str,
@@ -78,11 +81,20 @@ impl MemoryMap {
         }
     }
 
-    pub fn add_remote_memory_region(
+    // TODO: This really cant be safe until BNFileAccessor is ARC'd and can be freed. Probably need another thing
+    // TODO: Ontop of a file accessor in the core that would manage it. (I.e. BNFileAccessorHandle) or something.
+    /// Adds the memory region using a [`FileAccessor`].
+    ///
+    /// This does not add the region contents to the database, instead accesses to the contents
+    /// are done "remotely" to a [`FileAccessor`].
+    ///
+    /// NOTE: The [`FileAccessor`] MUST live as long as the region is available, currently there is no gurentee by
+    /// the type checker that the file accessor is tied to that of the memory region.
+    pub fn add_remote_memory_region<A: Accessor>(
         &mut self,
         name: &str,
         start: u64,
-        accessor: &mut FileAccessor,
+        accessor: &mut FileAccessor<A>,
         segment_flags: Option<SegmentFlags>,
     ) -> bool {
         let name_raw = name.to_cstr();
@@ -91,7 +103,7 @@ impl MemoryMap {
                 self.view.handle,
                 name_raw.as_ptr(),
                 start,
-                &mut accessor.api_object,
+                &mut accessor.raw,
                 segment_flags.unwrap_or_default().into_raw(),
             )
         }

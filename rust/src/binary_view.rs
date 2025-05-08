@@ -32,7 +32,7 @@ use crate::confidence::Conf;
 use crate::data_buffer::DataBuffer;
 use crate::debuginfo::DebugInfo;
 use crate::external_library::{ExternalLibrary, ExternalLocation};
-use crate::file_accessor::FileAccessor;
+use crate::file_accessor::{Accessor, FileAccessor};
 use crate::file_metadata::FileMetadata;
 use crate::flowgraph::FlowGraph;
 use crate::function::{Function, NativeBlock};
@@ -1832,8 +1832,11 @@ impl BinaryView {
         unsafe { Ok(Ref::new(Self { handle })) }
     }
 
-    pub fn from_accessor(meta: &FileMetadata, file: &mut FileAccessor) -> Result<Ref<Self>> {
-        let handle = unsafe { BNCreateBinaryDataViewFromFile(meta.handle, &mut file.api_object) };
+    pub fn from_accessor<A: Accessor>(
+        meta: &FileMetadata,
+        file: &mut FileAccessor<A>,
+    ) -> Result<Ref<Self>> {
+        let handle = unsafe { BNCreateBinaryDataViewFromFile(meta.handle, &mut file.raw) };
 
         if handle.is_null() {
             return Err(());
@@ -1875,8 +1878,8 @@ impl BinaryView {
     ///
     /// To avoid the above issue use [`crate::main_thread::execute_on_main_thread_and_wait`] to verify there
     /// are no queued up main thread actions.
-    pub fn save_to_accessor(&self, file: &mut FileAccessor) -> bool {
-        unsafe { BNSaveToFile(self.handle, &mut file.api_object) }
+    pub fn save_to_accessor<A: Accessor>(&self, file: &mut FileAccessor<A>) -> bool {
+        unsafe { BNSaveToFile(self.handle, &mut file.raw) }
     }
 }
 

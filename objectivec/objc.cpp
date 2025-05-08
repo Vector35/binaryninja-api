@@ -583,7 +583,8 @@ void ObjCProcessor::LoadCategories(ObjCReader* reader, Ref<Section> classPtrSect
 		}
 		else if (const auto symbol = GetSymbol(cat.cls))
 		{
-			if (symbol->GetType() == ImportedDataSymbol || symbol->GetType() == ImportAddressSymbol || symbol->GetType() == DataSymbol)
+			if (symbol->GetType() == ImportedDataSymbol || symbol->GetType() == ImportAddressSymbol
+				|| symbol->GetType() == DataSymbol || symbol->GetType() == ExternalSymbol)
 			{
 				// Symbols named `_OBJC_CLASS_$_` are references to external classes.
 				// Symbols named `cls_` are classes defined in a loaded image other than
@@ -601,7 +602,7 @@ void ObjCProcessor::LoadCategories(ObjCReader* reader, Ref<Section> classPtrSect
 			m_logger->LogInfo(
 				"[SharedCache.ObjC] Using base address as stand-in classname for category at 0x%llx",
 				catLocation);
-			categoryBaseClassName = std::to_string(catLocation);
+			categoryBaseClassName = fmt::format("{:x}", catLocation);
 		}
 		try
 		{
@@ -613,7 +614,7 @@ void ObjCProcessor::LoadCategories(ObjCReader* reader, Ref<Section> classPtrSect
 			m_logger->LogWarn(
 				"Failed to read category name for category at 0x%llx. Using base address as stand-in category name",
 				catLocation);
-			categoryAdditionsName = std::to_string(catLocation);
+			categoryAdditionsName = fmt::format("{:x}", catLocation);
 		}
 		category.name = categoryBaseClassName + " (" + categoryAdditionsName + ")";
 		DefineObjCSymbol(BNSymbolType::DataSymbol, ptrType, "categoryPtr_" + category.name, i, true);
@@ -699,7 +700,7 @@ void ObjCProcessor::LoadProtocols(ObjCReader* reader, Ref<Section> listSection)
 			m_logger->LogError(
 				"Failed to read protocol name for protocol at 0x%llx. Using base address as stand-in protocol name",
 				protocolLocation);
-			protocolName = std::to_string(protocolLocation);
+			protocolName = fmt::format("{:x}", protocolLocation);
 		}
 
 		Protocol protocolClass;

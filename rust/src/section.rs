@@ -15,6 +15,7 @@
 //! Sections are [crate::segment::Segment]s that are loaded into memory at run time
 
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::ops::Range;
 
 use binaryninjacore_sys::*;
@@ -61,7 +62,6 @@ impl From<Semantics> for BNSectionSemantics {
     }
 }
 
-#[derive(PartialEq, Eq, Hash)]
 pub struct Section {
     handle: *mut BNSection,
 }
@@ -158,6 +158,30 @@ impl fmt::Debug for Section {
             .field("entry_size", &self.entry_size())
             .field("auto_defined", &self.auto_defined())
             .finish()
+    }
+}
+
+impl PartialEq for Section {
+    fn eq(&self, other: &Self) -> bool {
+        // TODO: Do we want to make this complete match like this?
+        self.name() == other.name()
+            && self.address_range() == other.address_range()
+            && self.semantics() == other.semantics()
+            && self.linked_section() == other.linked_section()
+            && self.info_section() == other.info_section()
+            && self.info_data() == other.info_data()
+            && self.align() == other.align()
+            && self.entry_size() == other.entry_size()
+            && self.auto_defined() == other.auto_defined()
+    }
+}
+
+impl Eq for Section {}
+
+impl Hash for Section {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+        self.address_range().hash(state);
     }
 }
 

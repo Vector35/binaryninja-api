@@ -485,12 +485,7 @@ impl Function {
         language: &str,
     ) -> Option<Ref<CoreLanguageRepresentationFunction>> {
         let lang_name = language.to_cstr();
-        let repr = unsafe {
-            BNGetFunctionLanguageRepresentation(
-                self.handle,
-                lang_name.as_ptr(),
-            )
-        };
+        let repr = unsafe { BNGetFunctionLanguageRepresentation(self.handle, lang_name.as_ptr()) };
         NonNull::new(repr)
             .map(|handle| unsafe { CoreLanguageRepresentationFunction::ref_from_raw(handle) })
     }
@@ -504,10 +499,7 @@ impl Function {
     ) -> Option<Ref<CoreLanguageRepresentationFunction>> {
         let lang_name = language.to_cstr();
         let repr = unsafe {
-            BNGetFunctionLanguageRepresentationIfAvailable(
-                self.handle,
-                lang_name.as_ptr(),
-            )
+            BNGetFunctionLanguageRepresentationIfAvailable(self.handle, lang_name.as_ptr())
         };
         NonNull::new(repr)
             .map(|handle| unsafe { CoreLanguageRepresentationFunction::ref_from_raw(handle) })

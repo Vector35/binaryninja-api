@@ -14,9 +14,7 @@
 
 //! String wrappers for core-owned strings and strings being passed to the core
 
-use crate::rc::*;
-use crate::type_archive::TypeArchiveSnapshotId;
-use crate::types::QualifiedName;
+use binaryninjacore_sys::*;
 use std::borrow::Cow;
 use std::ffi::{c_char, CStr, CString};
 use std::fmt;
@@ -24,6 +22,10 @@ use std::hash::{Hash, Hasher};
 use std::mem;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
+
+use crate::rc::*;
+use crate::type_archive::TypeArchiveSnapshotId;
+use crate::types::QualifiedName;
 
 // TODO: Remove or refactor this.
 pub(crate) fn raw_to_string(ptr: *const c_char) -> Option<String> {
@@ -66,8 +68,7 @@ pub struct BnString {
 }
 
 impl BnString {
-    pub fn new<S: IntoCStr>(s: S) -> Self {
-        use binaryninjacore_sys::BNAllocString;
+    pub fn new(s: impl IntoCStr) -> Self {
         let raw = s.to_cstr();
         unsafe { Self::from_raw(BNAllocString(raw.as_ptr())) }
     }
@@ -79,14 +80,13 @@ impl BnString {
         Self::from_raw(raw).to_string_lossy().to_string()
     }
 
-    /// Construct a BnString from an owned const char* allocated by BNAllocString
+    /// Construct a BnString from an owned const char* allocated by [`BNAllocString`].
     pub(crate) unsafe fn from_raw(raw: *mut c_char) -> Self {
         Self { raw }
     }
 
-    /// Free a raw string allocated by BNAllocString.
+    /// Free a raw string allocated by [`BNAllocString`].
     pub(crate) unsafe fn free_raw(raw: *mut c_char) {
-        use binaryninjacore_sys::BNFreeString;
         if !raw.is_null() {
             BNFreeString(raw);
         }
@@ -115,7 +115,6 @@ impl Drop for BnString {
 
 impl Clone for BnString {
     fn clone(&self) -> Self {
-        use binaryninjacore_sys::BNAllocString;
         unsafe {
             Self {
                 raw: BNAllocString(self.raw),
@@ -178,7 +177,6 @@ impl CoreArrayProvider for BnString {
 
 unsafe impl CoreArrayProviderInner for BnString {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        use binaryninjacore_sys::BNFreeStringList;
         BNFreeStringList(raw, count);
     }
 
@@ -187,13 +185,13 @@ unsafe impl CoreArrayProviderInner for BnString {
     }
 }
 
-pub unsafe trait IntoCStr {
+pub trait IntoCStr {
     type Result: Deref<Target = CStr>;
 
     fn to_cstr(self) -> Self::Result;
 }
 
-unsafe impl IntoCStr for &CStr {
+impl IntoCStr for &CStr {
     type Result = Self;
 
     fn to_cstr(self) -> Self::Result {
@@ -201,7 +199,7 @@ unsafe impl IntoCStr for &CStr {
     }
 }
 
-unsafe impl IntoCStr for BnString {
+impl IntoCStr for BnString {
     type Result = Self;
 
     fn to_cstr(self) -> Self::Result {
@@ -209,7 +207,7 @@ unsafe impl IntoCStr for BnString {
     }
 }
 
-unsafe impl IntoCStr for &BnString {
+impl IntoCStr for &BnString {
     type Result = BnString;
 
     fn to_cstr(self) -> Self::Result {
@@ -217,7 +215,7 @@ unsafe impl IntoCStr for &BnString {
     }
 }
 
-unsafe impl IntoCStr for CString {
+impl IntoCStr for CString {
     type Result = Self;
 
     fn to_cstr(self) -> Self::Result {
@@ -225,7 +223,7 @@ unsafe impl IntoCStr for CString {
     }
 }
 
-unsafe impl IntoCStr for &str {
+impl IntoCStr for &str {
     type Result = CString;
 
     fn to_cstr(self) -> Self::Result {
@@ -233,7 +231,7 @@ unsafe impl IntoCStr for &str {
     }
 }
 
-unsafe impl IntoCStr for String {
+impl IntoCStr for String {
     type Result = CString;
 
     fn to_cstr(self) -> Self::Result {
@@ -241,7 +239,7 @@ unsafe impl IntoCStr for String {
     }
 }
 
-unsafe impl IntoCStr for &String {
+impl IntoCStr for &String {
     type Result = CString;
 
     fn to_cstr(self) -> Self::Result {
@@ -249,7 +247,7 @@ unsafe impl IntoCStr for &String {
     }
 }
 
-unsafe impl<'a> IntoCStr for &'a Cow<'a, str> {
+impl<'a> IntoCStr for &'a Cow<'a, str> {
     type Result = CString;
 
     fn to_cstr(self) -> Self::Result {
@@ -257,7 +255,7 @@ unsafe impl<'a> IntoCStr for &'a Cow<'a, str> {
     }
 }
 
-unsafe impl IntoCStr for Cow<'_, str> {
+impl IntoCStr for Cow<'_, str> {
     type Result = CString;
 
     fn to_cstr(self) -> Self::Result {
@@ -265,7 +263,7 @@ unsafe impl IntoCStr for Cow<'_, str> {
     }
 }
 
-unsafe impl IntoCStr for &QualifiedName {
+impl IntoCStr for &QualifiedName {
     type Result = CString;
 
     fn to_cstr(self) -> Self::Result {
@@ -273,7 +271,7 @@ unsafe impl IntoCStr for &QualifiedName {
     }
 }
 
-unsafe impl IntoCStr for PathBuf {
+impl IntoCStr for PathBuf {
     type Result = CString;
 
     fn to_cstr(self) -> Self::Result {
@@ -281,7 +279,7 @@ unsafe impl IntoCStr for PathBuf {
     }
 }
 
-unsafe impl IntoCStr for &Path {
+impl IntoCStr for &Path {
     type Result = CString;
 
     fn to_cstr(self) -> Self::Result {
@@ -290,7 +288,7 @@ unsafe impl IntoCStr for &Path {
     }
 }
 
-unsafe impl IntoCStr for TypeArchiveSnapshotId {
+impl IntoCStr for TypeArchiveSnapshotId {
     type Result = CString;
 
     fn to_cstr(self) -> Self::Result {

@@ -12,7 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use binaryninjacore_sys::{BNGetLowLevelILByIndex, BNLowLevelILInstruction};
+use binaryninjacore_sys::{
+    BNGetLowLevelILByIndex, BNLowLevelILFreeOperandList, BNLowLevelILGetOperandList,
+    BNLowLevelILInstruction,
+};
 
 use super::*;
 use crate::architecture::{
@@ -32,6 +35,7 @@ where
 {
     pub(crate) function: &'func LowLevelILFunction<M, F>,
     pub(crate) op: BNLowLevelILInstruction,
+    pub(crate) expr_idx: LowLevelExpressionIndex,
     _args: PhantomData<O>,
 }
 
@@ -44,16 +48,34 @@ where
     pub(crate) fn new(
         function: &'func LowLevelILFunction<M, F>,
         op: BNLowLevelILInstruction,
+        expr_idx: LowLevelExpressionIndex,
     ) -> Self {
         Self {
             function,
             op,
+            expr_idx,
             _args: PhantomData,
         }
     }
 
     pub fn address(&self) -> u64 {
         self.op.address
+    }
+
+    pub fn get_operand_list(&self, operand_idx: usize) -> Vec<u64> {
+        let mut count = 0;
+        let raw_list_ptr = unsafe {
+            BNLowLevelILGetOperandList(
+                self.function.handle,
+                self.expr_idx.0,
+                operand_idx,
+                &mut count,
+            )
+        };
+        assert!(!raw_list_ptr.is_null());
+        let list = unsafe { std::slice::from_raw_parts(raw_list_ptr, count).to_vec() };
+        unsafe { BNLowLevelILFreeOperandList(raw_list_ptr) };
+        list
     }
 }
 
@@ -109,7 +131,7 @@ where
     }
 }
 
-// LLIL_SYSCALL, LLIL_SYSCALL_SSA
+// LLIL_SYSCALL
 pub struct Syscall;
 
 impl<M, F> Debug for Operation<'_, M, F, Syscall>
@@ -119,6 +141,59 @@ where
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("Syscall").finish()
+    }
+}
+
+// LLIL_SYSCALL_SSA
+pub struct SyscallSsa;
+
+impl<'func, M, F> Operation<'func, M, F, SyscallSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    /// Get the output expression of the call.
+    ///
+    /// NOTE: This is currently always [`CallOutputSsa`].
+    pub fn output_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[0] as usize),
+        )
+    }
+
+    /// Get the parameter expression of the call.
+    ///
+    /// NOTE: This is currently always [`CallParamSsa`].
+    pub fn param_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[2] as usize),
+        )
+    }
+
+    /// Get the stack expression of the call.
+    ///
+    /// NOTE: This is currently always [`CallStackSsa`].
+    pub fn stack_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[1] as usize),
+        )
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, SyscallSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SyscallSsa")
+            .field("output_expr", &self.output_expr())
+            .field("param_expr", &self.param_expr())
+            .field("stack_expr", &self.stack_expr())
+            .finish()
     }
 }
 
@@ -150,7 +225,7 @@ where
     }
 }
 
-// LLIL_SET_REG, LLIL_SET_REG_SSA, LLIL_SET_REG_PARTIAL_SSA
+// LLIL_SET_REG
 pub struct SetReg;
 
 impl<'func, M, F> Operation<'func, M, F, SetReg>
@@ -190,7 +265,96 @@ where
     }
 }
 
-// LLIL_SET_REG_SPLIT, LLIL_SET_REG_SPLIT_SSA
+// LLIL_SET_REG_SSA
+pub struct SetRegSsa;
+
+impl<'func, M, F> Operation<'func, M, F, SetRegSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn size(&self) -> usize {
+        self.op.size
+    }
+
+    pub fn dest_reg(&self) -> LowLevelILSSARegisterKind<CoreRegister> {
+        let raw_id = RegisterId(self.op.operands[0] as u32);
+        let reg_kind = LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id)
+            .expect("Bad register ID");
+        let version = self.op.operands[1] as u32;
+        LowLevelILSSARegisterKind::new_full(reg_kind, version)
+    }
+
+    pub fn source_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[2] as usize),
+        )
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, SetRegSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SetRegSsa")
+            .field("address", &self.address())
+            .field("size", &self.size())
+            .field("dest_reg", &self.dest_reg())
+            .field("source_expr", &self.source_expr())
+            .finish()
+    }
+}
+
+// LLIL_SET_REG_PARTIAL_SSA
+pub struct SetRegPartialSsa;
+
+impl<'func, M, F> Operation<'func, M, F, SetRegPartialSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn size(&self) -> usize {
+        self.op.size
+    }
+
+    pub fn dest_reg(&self) -> LowLevelILSSARegisterKind<CoreRegister> {
+        let full_raw_id = RegisterId(self.op.operands[0] as u32);
+        let version = self.op.operands[1] as u32;
+        let partial_raw_id = RegisterId(self.op.operands[2] as u32);
+        let full_reg =
+            CoreRegister::new(self.function.arch(), full_raw_id).expect("Bad register ID");
+        let partial_reg =
+            CoreRegister::new(self.function.arch(), partial_raw_id).expect("Bad register ID");
+        LowLevelILSSARegisterKind::new_partial(full_reg, partial_reg, version)
+    }
+
+    pub fn source_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[3] as usize),
+        )
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, SetRegPartialSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SetRegPartialSsa")
+            .field("address", &self.address())
+            .field("size", &self.size())
+            .field("dest_reg", &self.dest_reg())
+            .field("source_expr", &self.source_expr())
+            .finish()
+    }
+}
+
+// LLIL_SET_REG_SPLIT
 pub struct SetRegSplit;
 
 impl<'func, M, F> Operation<'func, M, F, SetRegSplit>
@@ -236,7 +400,63 @@ where
     }
 }
 
-// LLIL_SET_FLAG, LLIL_SET_FLAG_SSA
+// LLIL_SET_REG_SPLIT_SSA
+pub struct SetRegSplitSsa;
+
+impl<'func, M, F> Operation<'func, M, F, SetRegSplitSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn size(&self) -> usize {
+        self.op.size
+    }
+
+    /// Because of the fixed operand list size we use another expression for the dest high register.
+    ///
+    /// NOTE: This should always be an expression of [`RegSsa`].
+    pub fn dest_expr_high(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[0] as usize),
+        )
+    }
+
+    /// Because of the fixed operand list size we use another expression for the dest low register.
+    ///
+    /// NOTE: This should always be an expression of [`RegSsa`].
+    pub fn dest_expr_low(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[1] as usize),
+        )
+    }
+
+    pub fn source_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[2] as usize),
+        )
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, SetRegSplitSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SetRegSplitSsa")
+            .field("address", &self.address())
+            .field("size", &self.size())
+            .field("dest_expr_high", &self.dest_expr_high())
+            .field("dest_expr_low", &self.dest_expr_low())
+            .field("source_expr", &self.source_expr())
+            .finish()
+    }
+}
+
+// LLIL_SET_FLAG
 pub struct SetFlag;
 
 impl<'func, M, F> Operation<'func, M, F, SetFlag>
@@ -245,12 +465,10 @@ where
     F: FunctionForm,
 {
     pub fn dest_flag(&self) -> CoreFlag {
-        // TODO: Error handling?
-        // TODO: Test this.
         self.function
             .arch()
             .flag_from_id(FlagId(self.op.operands[0] as u32))
-            .unwrap()
+            .expect("Bad flag ID")
     }
 
     pub fn source_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
@@ -275,7 +493,46 @@ where
     }
 }
 
-// LLIL_LOAD, LLIL_LOAD_SSA
+// LLIL_SET_FLAG_SSA
+pub struct SetFlagSsa;
+
+impl<'func, M, F> Operation<'func, M, F, SetFlagSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn dest_flag(&self) -> LowLevelILSSAFlag<CoreFlag> {
+        let flag = self
+            .function
+            .arch()
+            .flag_from_id(FlagId(self.op.operands[0] as u32))
+            .expect("Bad flag ID");
+        let version = self.op.operands[1] as u32;
+        LowLevelILSSAFlag::new(flag, version)
+    }
+
+    pub fn source_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[2] as usize),
+        )
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, SetFlagSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SetFlagSsa")
+            .field("address", &self.address())
+            .field("dest_flag", &self.dest_flag())
+            .field("source_expr", &self.source_expr())
+            .finish()
+    }
+}
+// LLIL_LOAD
 pub struct Load;
 
 impl<'func, M, F> Operation<'func, M, F, Load>
@@ -287,7 +544,7 @@ where
         self.op.size
     }
 
-    pub fn source_mem_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+    pub fn source_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[0] as usize),
@@ -304,12 +561,50 @@ where
         f.debug_struct("Load")
             .field("address", &self.address())
             .field("size", &self.size())
-            .field("source_mem_expr", &self.source_mem_expr())
+            .field("source_expr", &self.source_expr())
             .finish()
     }
 }
 
-// LLIL_STORE, LLIL_STORE_SSA
+// LLIL_LOAD_SSA
+pub struct LoadSsa;
+
+impl<'func, M, F> Operation<'func, M, F, LoadSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn size(&self) -> usize {
+        self.op.size
+    }
+
+    pub fn source_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[0] as usize),
+        )
+    }
+
+    pub fn source_memory_version(&self) -> u64 {
+        self.op.operands[1]
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, LoadSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("LoadSsa")
+            .field("address", &self.address())
+            .field("size", &self.size())
+            .field("source_expr", &self.source_expr())
+            .finish()
+    }
+}
+
+// LLIL_STORE
 pub struct Store;
 
 impl<'func, M, F> Operation<'func, M, F, Store>
@@ -321,7 +616,7 @@ where
         self.op.size
     }
 
-    pub fn dest_mem_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+    pub fn dest_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
         LowLevelILExpression::new(
             self.function,
             LowLevelExpressionIndex(self.op.operands[0] as usize),
@@ -345,13 +640,63 @@ where
         f.debug_struct("Store")
             .field("address", &self.address())
             .field("size", &self.size())
-            .field("dest_mem_expr", &self.dest_mem_expr())
+            .field("dest_expr", &self.dest_expr())
             .field("source_expr", &self.source_expr())
             .finish()
     }
 }
 
-// LLIL_REG, LLIL_REG_SSLLIL_REG_SSA_PARTIAL
+// LLIL_STORE_SSA
+pub struct StoreSsa;
+
+impl<'func, M, F> Operation<'func, M, F, StoreSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn size(&self) -> usize {
+        self.op.size
+    }
+
+    pub fn dest_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[0] as usize),
+        )
+    }
+
+    pub fn dest_memory_version(&self) -> u64 {
+        self.op.operands[1]
+    }
+
+    pub fn source_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[3] as usize),
+        )
+    }
+
+    pub fn source_memory_version(&self) -> u64 {
+        self.op.operands[2]
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, StoreSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("StoreSsa")
+            .field("address", &self.address())
+            .field("size", &self.size())
+            .field("dest_expr", &self.dest_expr())
+            .field("source_expr", &self.source_expr())
+            .finish()
+    }
+}
+
+// LLIL_REG
 pub struct Reg;
 
 impl<M, F> Operation<'_, M, F, Reg>
@@ -383,7 +728,80 @@ where
     }
 }
 
-// LLIL_REG_SPLIT, LLIL_REG_SPLIT_SSA
+// LLIL_REG_SSA
+pub struct RegSsa;
+
+impl<M, F> Operation<'_, M, F, RegSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn size(&self) -> usize {
+        self.op.size
+    }
+
+    pub fn source_reg(&self) -> LowLevelILSSARegisterKind<CoreRegister> {
+        let raw_id = RegisterId(self.op.operands[0] as u32);
+        let reg_kind = LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id)
+            .expect("Bad register ID");
+        let version = self.op.operands[1] as u32;
+        LowLevelILSSARegisterKind::new_full(reg_kind, version)
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, RegSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RegSsa")
+            .field("address", &self.address())
+            .field("size", &self.size())
+            .field("source_reg", &self.source_reg())
+            .finish()
+    }
+}
+
+// LLIL_REG_SSA_PARTIAL
+pub struct RegPartialSsa;
+
+impl<M, F> Operation<'_, M, F, RegPartialSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn size(&self) -> usize {
+        self.op.size
+    }
+
+    pub fn source_reg(&self) -> LowLevelILSSARegisterKind<CoreRegister> {
+        let full_raw_id = RegisterId(self.op.operands[0] as u32);
+        let version = self.op.operands[1] as u32;
+        let partial_raw_id = RegisterId(self.op.operands[2] as u32);
+        let full_reg =
+            CoreRegister::new(self.function.arch(), full_raw_id).expect("Bad register ID");
+        let partial_reg =
+            CoreRegister::new(self.function.arch(), partial_raw_id).expect("Bad register ID");
+        LowLevelILSSARegisterKind::new_partial(full_reg, partial_reg, version)
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, RegPartialSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RegPartialSsa")
+            .field("address", &self.address())
+            .field("size", &self.size())
+            .field("source_reg", &self.source_reg())
+            .finish()
+    }
+}
+
+// LLIL_REG_SPLIT
 pub struct RegSplit;
 
 impl<M, F> Operation<'_, M, F, RegSplit>
@@ -413,6 +831,50 @@ where
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("RegSplit")
+            .field("address", &self.address())
+            .field("size", &self.size())
+            .field("low_reg", &self.low_reg())
+            .field("high_reg", &self.high_reg())
+            .finish()
+    }
+}
+
+// LLIL_REG_SPLIT_SSA
+pub struct RegSplitSsa;
+
+impl<M, F> Operation<'_, M, F, RegSplitSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn size(&self) -> usize {
+        self.op.size
+    }
+
+    pub fn low_reg(&self) -> LowLevelILSSARegisterKind<CoreRegister> {
+        let raw_id = RegisterId(self.op.operands[0] as u32);
+        let reg_kind = LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id)
+            .expect("Bad register ID");
+        let version = self.op.operands[1] as u32;
+        LowLevelILSSARegisterKind::new_full(reg_kind, version)
+    }
+
+    pub fn high_reg(&self) -> LowLevelILSSARegisterKind<CoreRegister> {
+        let raw_id = RegisterId(self.op.operands[2] as u32);
+        let reg_kind = LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id)
+            .expect("Bad register ID");
+        let version = self.op.operands[3] as u32;
+        LowLevelILSSARegisterKind::new_full(reg_kind, version)
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, RegSplitSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RegSplitSsa")
             .field("address", &self.address())
             .field("size", &self.size())
             .field("low_reg", &self.low_reg())
@@ -630,7 +1092,7 @@ where
     }
 }
 
-// LLIL_CALL, LLIL_CALL_SSA
+// LLIL_CALL, LLIL_CALL_STACK_ADJUST
 pub struct Call;
 
 impl<'func, M, F> Operation<'func, M, F, Call>
@@ -665,6 +1127,165 @@ where
         f.debug_struct("Call")
             .field("target", &self.target())
             .field("stack_adjust", &self.stack_adjust())
+            .finish()
+    }
+}
+
+// LLIL_CALL_SSA
+pub struct CallSsa;
+
+impl<'func, M, F> Operation<'func, M, F, CallSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn target(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[1] as usize),
+        )
+    }
+
+    /// Get the output expression of the call.
+    ///
+    /// NOTE: This is currently always [`CallOutputSsa`].
+    pub fn output_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[0] as usize),
+        )
+    }
+
+    /// Get the parameter expression of the call.
+    ///
+    /// NOTE: This is currently always [`CallParamSsa`].
+    pub fn param_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[3] as usize),
+        )
+    }
+
+    /// Get the stack expression of the call.
+    ///
+    /// NOTE: This is currently always [`CallStackSsa`].
+    pub fn stack_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[2] as usize),
+        )
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, CallSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CallSsa")
+            .field("target", &self.target())
+            .field("output_expr", &self.output_expr())
+            .field("param_expr", &self.param_expr())
+            .field("stack_expr", &self.stack_expr())
+            .finish()
+    }
+}
+
+// LLIL_CALL_OUTPUT_SSA
+pub struct CallOutputSsa;
+
+impl<M, F> Operation<'_, M, F, CallOutputSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn dest_regs(&self) -> Vec<LowLevelILSSARegisterKind<CoreRegister>> {
+        let operand_list = self.get_operand_list(1);
+
+        // The operand list contains a list of ([0: reg, 1: version], ...).
+        let paired_ssa_reg = |paired: &[u64]| {
+            let raw_id = RegisterId(paired[0] as u32);
+            let version = paired[1] as u32;
+            let reg_kind = LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id)
+                .expect("Bad register ID");
+            LowLevelILSSARegisterKind::new_full(reg_kind, version)
+        };
+
+        operand_list.chunks_exact(2).map(paired_ssa_reg).collect()
+    }
+
+    pub fn dest_memory_version(&self) -> u64 {
+        self.op.operands[0]
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, CallOutputSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CallOutputSsa")
+            .field("dest_regs", &self.dest_regs())
+            .finish()
+    }
+}
+
+// LLIL_CALL_PARAM_SSA
+pub struct CallParamSsa;
+
+impl<'func, M, F> Operation<'func, M, F, CallParamSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn param_exprs(&self) -> Vec<LowLevelILExpression<'func, M, F, ValueExpr>> {
+        self.get_operand_list(0)
+            .into_iter()
+            .map(|val| LowLevelExpressionIndex(val as usize))
+            .map(|expr_idx| LowLevelILExpression::new(self.function, expr_idx))
+            .collect()
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, CallParamSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CallParamSsa")
+            .field("param_exprs", &self.param_exprs())
+            .finish()
+    }
+}
+
+// LLIL_CALL_STACK_SSA
+pub struct CallStackSsa;
+
+impl<M, F> Operation<'_, M, F, CallStackSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn source_reg(&self) -> LowLevelILSSARegisterKind<CoreRegister> {
+        let raw_id = RegisterId(self.op.operands[0] as u32);
+        let reg_kind = LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id)
+            .expect("Bad register ID");
+        let version = self.op.operands[1] as u32;
+        LowLevelILSSARegisterKind::new_full(reg_kind, version)
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, CallStackSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CallStackSsa")
+            .field("source_reg", &self.source_reg())
             .finish()
     }
 }
@@ -1256,14 +1877,24 @@ pub trait OperationArguments: 'static {}
 impl OperationArguments for NoArgs {}
 impl OperationArguments for Pop {}
 impl OperationArguments for Syscall {}
+impl OperationArguments for SyscallSsa {}
 impl OperationArguments for Intrinsic {}
 impl OperationArguments for SetReg {}
+impl OperationArguments for SetRegSsa {}
+impl OperationArguments for SetRegPartialSsa {}
 impl OperationArguments for SetRegSplit {}
+impl OperationArguments for SetRegSplitSsa {}
 impl OperationArguments for SetFlag {}
+impl OperationArguments for SetFlagSsa {}
 impl OperationArguments for Load {}
+impl OperationArguments for LoadSsa {}
 impl OperationArguments for Store {}
+impl OperationArguments for StoreSsa {}
 impl OperationArguments for Reg {}
+impl OperationArguments for RegSsa {}
+impl OperationArguments for RegPartialSsa {}
 impl OperationArguments for RegSplit {}
+impl OperationArguments for RegSplitSsa {}
 impl OperationArguments for RegStackPush {}
 impl OperationArguments for RegStackPop {}
 impl OperationArguments for Flag {}
@@ -1271,6 +1902,10 @@ impl OperationArguments for FlagBit {}
 impl OperationArguments for Jump {}
 impl OperationArguments for JumpTo {}
 impl OperationArguments for Call {}
+impl OperationArguments for CallSsa {}
+impl OperationArguments for CallOutputSsa {}
+impl OperationArguments for CallParamSsa {}
+impl OperationArguments for CallStackSsa {}
 impl OperationArguments for Ret {}
 impl OperationArguments for If {}
 impl OperationArguments for Goto {}

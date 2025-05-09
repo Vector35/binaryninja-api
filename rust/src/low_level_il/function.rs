@@ -12,14 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use binaryninjacore_sys::BNFreeLowLevelILFunction;
-use binaryninjacore_sys::BNGetLowLevelILOwnerFunction;
-use binaryninjacore_sys::BNLowLevelILFunction;
-use binaryninjacore_sys::BNNewLowLevelILFunctionReference;
-
 use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
+
+use binaryninjacore_sys::*;
 
 use crate::architecture::CoreArchitecture;
 use crate::basic_block::BasicBlock;
@@ -160,13 +157,8 @@ where
             Function::ref_from_raw(func)
         }
     }
-}
 
-// LLIL basic blocks are not available until the function object
-// is finalized, so ensure we can't try requesting basic blocks
-// during lifting
-impl<F: FunctionForm> LowLevelILFunction<Finalized, F> {
-    pub fn basic_blocks(&self) -> Array<BasicBlock<LowLevelILBlock<Finalized, F>>> {
+    pub fn basic_blocks(&self) -> Array<BasicBlock<LowLevelILBlock<M, F>>> {
         use binaryninjacore_sys::BNGetLowLevelILBasicBlockList;
 
         unsafe {
@@ -175,6 +167,17 @@ impl<F: FunctionForm> LowLevelILFunction<Finalized, F> {
             let context = LowLevelILBlock { function: self };
             Array::new(blocks, count, context)
         }
+    }
+}
+
+impl<M: FunctionMutability, V: NonSSAVariant> LowLevelILFunction<M, NonSSA<V>> {
+    /// Retrieve the SSA form of the function.
+    pub fn ssa_form(&self) -> Option<Ref<LowLevelILFunction<M, SSA>>> {
+        let handle = unsafe { BNGetLowLevelILSSAForm(self.handle) };
+        if handle.is_null() {
+            return None;
+        }
+        Some(unsafe { LowLevelILFunction::ref_from_raw(handle) })
     }
 }
 
@@ -201,7 +204,6 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
 
     pub fn generate_ssa_form(&self) {
         use binaryninjacore_sys::BNGenerateLowLevelILSSAForm;
-
         unsafe { BNGenerateLowLevelILSSAForm(self.handle) };
     }
 }

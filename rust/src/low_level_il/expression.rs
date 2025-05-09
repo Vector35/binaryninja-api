@@ -99,8 +99,7 @@ where
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, self.index.0) };
-        // SAFETY: This is safe we are not exposing the expression kind to the caller.
-        let kind = unsafe { LowLevelILExpressionKind::from_raw(self.function, op) };
+        let kind = LowLevelILExpressionKind::from_raw(self.function, op, self.index);
         kind.fmt(f)
     }
 }
@@ -117,7 +116,7 @@ where
         match op.operation {
             // Any invalid ops for SSA will be checked here.
             // SAFETY: We have checked for illegal operations.
-            _ => unsafe { LowLevelILExpressionKind::from_raw(self.function, op) },
+            _ => LowLevelILExpressionKind::from_raw(self.function, op, self.index),
         }
     }
 
@@ -149,7 +148,7 @@ where
         match op.operation {
             // Any invalid ops for Lifted IL will be checked here.
             // SAFETY: We have checked for illegal operations.
-            _ => unsafe { LowLevelILExpressionKind::from_raw(self.function, op) },
+            _ => LowLevelILExpressionKind::from_raw(self.function, op, self.index),
         }
     }
 
@@ -181,7 +180,7 @@ where
             LLIL_FLAG_COND => unreachable!("LLIL_FLAG_COND is only valid in Lifted IL"),
             LLIL_FLAG_GROUP => unreachable!("LLIL_FLAG_GROUP is only valid in Lifted IL"),
             // SAFETY: We have checked for illegal operations.
-            _ => unsafe { LowLevelILExpressionKind::from_raw(self.function, op) },
+            _ => LowLevelILExpressionKind::from_raw(self.function, op, self.index),
         }
     }
 
@@ -216,9 +215,13 @@ where
     F: FunctionForm,
 {
     Load(Operation<'func, M, F, operation::Load>),
+    LoadSsa(Operation<'func, M, F, operation::LoadSsa>),
     Pop(Operation<'func, M, F, operation::Pop>),
     Reg(Operation<'func, M, F, operation::Reg>),
+    RegSsa(Operation<'func, M, F, operation::RegSsa>),
+    RegPartialSsa(Operation<'func, M, F, operation::RegPartialSsa>),
     RegSplit(Operation<'func, M, F, operation::RegSplit>),
+    RegSplitSsa(Operation<'func, M, F, operation::RegSplitSsa>),
     Const(Operation<'func, M, F, operation::Const>),
     ConstPtr(Operation<'func, M, F, operation::Const>),
     Flag(Operation<'func, M, F, operation::Flag>),
@@ -226,6 +229,10 @@ where
     ExternPtr(Operation<'func, M, F, operation::Extern>),
 
     RegStackPop(Operation<'func, M, F, operation::RegStackPop>),
+
+    CallOutputSsa(Operation<'func, M, F, operation::CallOutputSsa>),
+    CallParamSsa(Operation<'func, M, F, operation::CallParamSsa>),
+    CallStackSsa(Operation<'func, M, F, operation::CallStackSsa>),
 
     Add(Operation<'func, M, F, operation::BinaryOp>),
     Adc(Operation<'func, M, F, operation::BinaryOpCarry>),
@@ -319,116 +326,146 @@ where
     M: FunctionMutability,
     F: FunctionForm,
 {
-    // TODO: Document what "unchecked" means and how to consume this safely.
-    pub(crate) unsafe fn from_raw(
+    pub(crate) fn from_raw(
         function: &'func LowLevelILFunction<M, F>,
         op: BNLowLevelILInstruction,
+        index: LowLevelExpressionIndex,
     ) -> Self {
         use binaryninjacore_sys::BNLowLevelILOperation::*;
 
         match op.operation {
-            LLIL_LOAD | LLIL_LOAD_SSA => {
-                LowLevelILExpressionKind::Load(Operation::new(function, op))
+            LLIL_LOAD => LowLevelILExpressionKind::Load(Operation::new(function, op, index)),
+            LLIL_LOAD_SSA => LowLevelILExpressionKind::LoadSsa(Operation::new(function, op, index)),
+            LLIL_POP => LowLevelILExpressionKind::Pop(Operation::new(function, op, index)),
+            LLIL_REG => LowLevelILExpressionKind::Reg(Operation::new(function, op, index)),
+            LLIL_REG_SSA => LowLevelILExpressionKind::RegSsa(Operation::new(function, op, index)),
+            LLIL_REG_SSA_PARTIAL => {
+                LowLevelILExpressionKind::RegPartialSsa(Operation::new(function, op, index))
             }
-            LLIL_POP => LowLevelILExpressionKind::Pop(Operation::new(function, op)),
-            LLIL_REG | LLIL_REG_SSA | LLIL_REG_SSA_PARTIAL => {
-                LowLevelILExpressionKind::Reg(Operation::new(function, op))
+            LLIL_REG_SPLIT => {
+                LowLevelILExpressionKind::RegSplit(Operation::new(function, op, index))
             }
-            LLIL_REG_SPLIT | LLIL_REG_SPLIT_SSA => {
-                LowLevelILExpressionKind::RegSplit(Operation::new(function, op))
+            LLIL_REG_SPLIT_SSA => {
+                LowLevelILExpressionKind::RegSplitSsa(Operation::new(function, op, index))
             }
-            LLIL_CONST => LowLevelILExpressionKind::Const(Operation::new(function, op)),
-            LLIL_CONST_PTR => LowLevelILExpressionKind::ConstPtr(Operation::new(function, op)),
+            LLIL_CONST => LowLevelILExpressionKind::Const(Operation::new(function, op, index)),
+            LLIL_CONST_PTR => {
+                LowLevelILExpressionKind::ConstPtr(Operation::new(function, op, index))
+            }
             LLIL_FLAG | LLIL_FLAG_SSA => {
-                LowLevelILExpressionKind::Flag(Operation::new(function, op))
+                LowLevelILExpressionKind::Flag(Operation::new(function, op, index))
             }
             LLIL_FLAG_BIT | LLIL_FLAG_BIT_SSA => {
-                LowLevelILExpressionKind::FlagBit(Operation::new(function, op))
+                LowLevelILExpressionKind::FlagBit(Operation::new(function, op, index))
             }
-            LLIL_EXTERN_PTR => LowLevelILExpressionKind::ExternPtr(Operation::new(function, op)),
+            LLIL_EXTERN_PTR => {
+                LowLevelILExpressionKind::ExternPtr(Operation::new(function, op, index))
+            }
 
             LLIL_REG_STACK_POP => {
-                LowLevelILExpressionKind::RegStackPop(Operation::new(function, op))
+                LowLevelILExpressionKind::RegStackPop(Operation::new(function, op, index))
             }
 
-            LLIL_ADD => LowLevelILExpressionKind::Add(Operation::new(function, op)),
-            LLIL_ADC => LowLevelILExpressionKind::Adc(Operation::new(function, op)),
-            LLIL_SUB => LowLevelILExpressionKind::Sub(Operation::new(function, op)),
-            LLIL_SBB => LowLevelILExpressionKind::Sbb(Operation::new(function, op)),
-            LLIL_AND => LowLevelILExpressionKind::And(Operation::new(function, op)),
-            LLIL_OR => LowLevelILExpressionKind::Or(Operation::new(function, op)),
-            LLIL_XOR => LowLevelILExpressionKind::Xor(Operation::new(function, op)),
-            LLIL_LSL => LowLevelILExpressionKind::Lsl(Operation::new(function, op)),
-            LLIL_LSR => LowLevelILExpressionKind::Lsr(Operation::new(function, op)),
-            LLIL_ASR => LowLevelILExpressionKind::Asr(Operation::new(function, op)),
-            LLIL_ROL => LowLevelILExpressionKind::Rol(Operation::new(function, op)),
-            LLIL_RLC => LowLevelILExpressionKind::Rlc(Operation::new(function, op)),
-            LLIL_ROR => LowLevelILExpressionKind::Ror(Operation::new(function, op)),
-            LLIL_RRC => LowLevelILExpressionKind::Rrc(Operation::new(function, op)),
-            LLIL_MUL => LowLevelILExpressionKind::Mul(Operation::new(function, op)),
+            LLIL_CALL_OUTPUT_SSA => {
+                LowLevelILExpressionKind::CallOutputSsa(Operation::new(function, op, index))
+            }
+            LLIL_CALL_PARAM => {
+                LowLevelILExpressionKind::CallParamSsa(Operation::new(function, op, index))
+            }
+            LLIL_CALL_STACK_SSA => {
+                LowLevelILExpressionKind::CallStackSsa(Operation::new(function, op, index))
+            }
 
-            LLIL_MULU_DP => LowLevelILExpressionKind::MuluDp(Operation::new(function, op)),
-            LLIL_MULS_DP => LowLevelILExpressionKind::MulsDp(Operation::new(function, op)),
+            LLIL_ADD => LowLevelILExpressionKind::Add(Operation::new(function, op, index)),
+            LLIL_ADC => LowLevelILExpressionKind::Adc(Operation::new(function, op, index)),
+            LLIL_SUB => LowLevelILExpressionKind::Sub(Operation::new(function, op, index)),
+            LLIL_SBB => LowLevelILExpressionKind::Sbb(Operation::new(function, op, index)),
+            LLIL_AND => LowLevelILExpressionKind::And(Operation::new(function, op, index)),
+            LLIL_OR => LowLevelILExpressionKind::Or(Operation::new(function, op, index)),
+            LLIL_XOR => LowLevelILExpressionKind::Xor(Operation::new(function, op, index)),
+            LLIL_LSL => LowLevelILExpressionKind::Lsl(Operation::new(function, op, index)),
+            LLIL_LSR => LowLevelILExpressionKind::Lsr(Operation::new(function, op, index)),
+            LLIL_ASR => LowLevelILExpressionKind::Asr(Operation::new(function, op, index)),
+            LLIL_ROL => LowLevelILExpressionKind::Rol(Operation::new(function, op, index)),
+            LLIL_RLC => LowLevelILExpressionKind::Rlc(Operation::new(function, op, index)),
+            LLIL_ROR => LowLevelILExpressionKind::Ror(Operation::new(function, op, index)),
+            LLIL_RRC => LowLevelILExpressionKind::Rrc(Operation::new(function, op, index)),
+            LLIL_MUL => LowLevelILExpressionKind::Mul(Operation::new(function, op, index)),
 
-            LLIL_DIVU => LowLevelILExpressionKind::Divu(Operation::new(function, op)),
-            LLIL_DIVS => LowLevelILExpressionKind::Divs(Operation::new(function, op)),
+            LLIL_MULU_DP => LowLevelILExpressionKind::MuluDp(Operation::new(function, op, index)),
+            LLIL_MULS_DP => LowLevelILExpressionKind::MulsDp(Operation::new(function, op, index)),
 
-            LLIL_DIVU_DP => LowLevelILExpressionKind::DivuDp(Operation::new(function, op)),
-            LLIL_DIVS_DP => LowLevelILExpressionKind::DivsDp(Operation::new(function, op)),
+            LLIL_DIVU => LowLevelILExpressionKind::Divu(Operation::new(function, op, index)),
+            LLIL_DIVS => LowLevelILExpressionKind::Divs(Operation::new(function, op, index)),
 
-            LLIL_MODU => LowLevelILExpressionKind::Modu(Operation::new(function, op)),
-            LLIL_MODS => LowLevelILExpressionKind::Mods(Operation::new(function, op)),
+            LLIL_DIVU_DP => LowLevelILExpressionKind::DivuDp(Operation::new(function, op, index)),
+            LLIL_DIVS_DP => LowLevelILExpressionKind::DivsDp(Operation::new(function, op, index)),
 
-            LLIL_MODU_DP => LowLevelILExpressionKind::ModuDp(Operation::new(function, op)),
-            LLIL_MODS_DP => LowLevelILExpressionKind::ModsDp(Operation::new(function, op)),
+            LLIL_MODU => LowLevelILExpressionKind::Modu(Operation::new(function, op, index)),
+            LLIL_MODS => LowLevelILExpressionKind::Mods(Operation::new(function, op, index)),
 
-            LLIL_NEG => LowLevelILExpressionKind::Neg(Operation::new(function, op)),
-            LLIL_NOT => LowLevelILExpressionKind::Not(Operation::new(function, op)),
+            LLIL_MODU_DP => LowLevelILExpressionKind::ModuDp(Operation::new(function, op, index)),
+            LLIL_MODS_DP => LowLevelILExpressionKind::ModsDp(Operation::new(function, op, index)),
 
-            LLIL_SX => LowLevelILExpressionKind::Sx(Operation::new(function, op)),
-            LLIL_ZX => LowLevelILExpressionKind::Zx(Operation::new(function, op)),
-            LLIL_LOW_PART => LowLevelILExpressionKind::LowPart(Operation::new(function, op)),
+            LLIL_NEG => LowLevelILExpressionKind::Neg(Operation::new(function, op, index)),
+            LLIL_NOT => LowLevelILExpressionKind::Not(Operation::new(function, op, index)),
 
-            LLIL_CMP_E => LowLevelILExpressionKind::CmpE(Operation::new(function, op)),
-            LLIL_CMP_NE => LowLevelILExpressionKind::CmpNe(Operation::new(function, op)),
-            LLIL_CMP_SLT => LowLevelILExpressionKind::CmpSlt(Operation::new(function, op)),
-            LLIL_CMP_ULT => LowLevelILExpressionKind::CmpUlt(Operation::new(function, op)),
-            LLIL_CMP_SLE => LowLevelILExpressionKind::CmpSle(Operation::new(function, op)),
-            LLIL_CMP_ULE => LowLevelILExpressionKind::CmpUle(Operation::new(function, op)),
-            LLIL_CMP_SGE => LowLevelILExpressionKind::CmpSge(Operation::new(function, op)),
-            LLIL_CMP_UGE => LowLevelILExpressionKind::CmpUge(Operation::new(function, op)),
-            LLIL_CMP_SGT => LowLevelILExpressionKind::CmpSgt(Operation::new(function, op)),
-            LLIL_CMP_UGT => LowLevelILExpressionKind::CmpUgt(Operation::new(function, op)),
+            LLIL_SX => LowLevelILExpressionKind::Sx(Operation::new(function, op, index)),
+            LLIL_ZX => LowLevelILExpressionKind::Zx(Operation::new(function, op, index)),
+            LLIL_LOW_PART => LowLevelILExpressionKind::LowPart(Operation::new(function, op, index)),
 
-            LLIL_BOOL_TO_INT => LowLevelILExpressionKind::BoolToInt(Operation::new(function, op)),
+            LLIL_CMP_E => LowLevelILExpressionKind::CmpE(Operation::new(function, op, index)),
+            LLIL_CMP_NE => LowLevelILExpressionKind::CmpNe(Operation::new(function, op, index)),
+            LLIL_CMP_SLT => LowLevelILExpressionKind::CmpSlt(Operation::new(function, op, index)),
+            LLIL_CMP_ULT => LowLevelILExpressionKind::CmpUlt(Operation::new(function, op, index)),
+            LLIL_CMP_SLE => LowLevelILExpressionKind::CmpSle(Operation::new(function, op, index)),
+            LLIL_CMP_ULE => LowLevelILExpressionKind::CmpUle(Operation::new(function, op, index)),
+            LLIL_CMP_SGE => LowLevelILExpressionKind::CmpSge(Operation::new(function, op, index)),
+            LLIL_CMP_UGE => LowLevelILExpressionKind::CmpUge(Operation::new(function, op, index)),
+            LLIL_CMP_SGT => LowLevelILExpressionKind::CmpSgt(Operation::new(function, op, index)),
+            LLIL_CMP_UGT => LowLevelILExpressionKind::CmpUgt(Operation::new(function, op, index)),
 
-            LLIL_FADD => LowLevelILExpressionKind::Fadd(Operation::new(function, op)),
-            LLIL_FSUB => LowLevelILExpressionKind::Fsub(Operation::new(function, op)),
-            LLIL_FMUL => LowLevelILExpressionKind::Fmul(Operation::new(function, op)),
-            LLIL_FDIV => LowLevelILExpressionKind::Fdiv(Operation::new(function, op)),
+            LLIL_BOOL_TO_INT => {
+                LowLevelILExpressionKind::BoolToInt(Operation::new(function, op, index))
+            }
 
-            LLIL_FSQRT => LowLevelILExpressionKind::Fsqrt(Operation::new(function, op)),
-            LLIL_FNEG => LowLevelILExpressionKind::Fneg(Operation::new(function, op)),
-            LLIL_FABS => LowLevelILExpressionKind::Fabs(Operation::new(function, op)),
-            LLIL_FLOAT_TO_INT => LowLevelILExpressionKind::FloatToInt(Operation::new(function, op)),
-            LLIL_INT_TO_FLOAT => LowLevelILExpressionKind::IntToFloat(Operation::new(function, op)),
-            LLIL_FLOAT_CONV => LowLevelILExpressionKind::FloatConv(Operation::new(function, op)),
-            LLIL_ROUND_TO_INT => LowLevelILExpressionKind::RoundToInt(Operation::new(function, op)),
-            LLIL_FLOOR => LowLevelILExpressionKind::Floor(Operation::new(function, op)),
-            LLIL_CEIL => LowLevelILExpressionKind::Ceil(Operation::new(function, op)),
-            LLIL_FTRUNC => LowLevelILExpressionKind::Ftrunc(Operation::new(function, op)),
+            LLIL_FADD => LowLevelILExpressionKind::Fadd(Operation::new(function, op, index)),
+            LLIL_FSUB => LowLevelILExpressionKind::Fsub(Operation::new(function, op, index)),
+            LLIL_FMUL => LowLevelILExpressionKind::Fmul(Operation::new(function, op, index)),
+            LLIL_FDIV => LowLevelILExpressionKind::Fdiv(Operation::new(function, op, index)),
 
-            LLIL_FCMP_E => LowLevelILExpressionKind::FcmpE(Operation::new(function, op)),
-            LLIL_FCMP_NE => LowLevelILExpressionKind::FcmpNE(Operation::new(function, op)),
-            LLIL_FCMP_LT => LowLevelILExpressionKind::FcmpLT(Operation::new(function, op)),
-            LLIL_FCMP_LE => LowLevelILExpressionKind::FcmpLE(Operation::new(function, op)),
-            LLIL_FCMP_GT => LowLevelILExpressionKind::FcmpGT(Operation::new(function, op)),
-            LLIL_FCMP_GE => LowLevelILExpressionKind::FcmpGE(Operation::new(function, op)),
-            LLIL_FCMP_O => LowLevelILExpressionKind::FcmpO(Operation::new(function, op)),
-            LLIL_FCMP_UO => LowLevelILExpressionKind::FcmpUO(Operation::new(function, op)),
+            LLIL_FSQRT => LowLevelILExpressionKind::Fsqrt(Operation::new(function, op, index)),
+            LLIL_FNEG => LowLevelILExpressionKind::Fneg(Operation::new(function, op, index)),
+            LLIL_FABS => LowLevelILExpressionKind::Fabs(Operation::new(function, op, index)),
+            LLIL_FLOAT_TO_INT => {
+                LowLevelILExpressionKind::FloatToInt(Operation::new(function, op, index))
+            }
+            LLIL_INT_TO_FLOAT => {
+                LowLevelILExpressionKind::IntToFloat(Operation::new(function, op, index))
+            }
+            LLIL_FLOAT_CONV => {
+                LowLevelILExpressionKind::FloatConv(Operation::new(function, op, index))
+            }
+            LLIL_ROUND_TO_INT => {
+                LowLevelILExpressionKind::RoundToInt(Operation::new(function, op, index))
+            }
+            LLIL_FLOOR => LowLevelILExpressionKind::Floor(Operation::new(function, op, index)),
+            LLIL_CEIL => LowLevelILExpressionKind::Ceil(Operation::new(function, op, index)),
+            LLIL_FTRUNC => LowLevelILExpressionKind::Ftrunc(Operation::new(function, op, index)),
 
-            LLIL_UNIMPL => LowLevelILExpressionKind::Unimpl(Operation::new(function, op)),
-            LLIL_UNIMPL_MEM => LowLevelILExpressionKind::UnimplMem(Operation::new(function, op)),
+            LLIL_FCMP_E => LowLevelILExpressionKind::FcmpE(Operation::new(function, op, index)),
+            LLIL_FCMP_NE => LowLevelILExpressionKind::FcmpNE(Operation::new(function, op, index)),
+            LLIL_FCMP_LT => LowLevelILExpressionKind::FcmpLT(Operation::new(function, op, index)),
+            LLIL_FCMP_LE => LowLevelILExpressionKind::FcmpLE(Operation::new(function, op, index)),
+            LLIL_FCMP_GT => LowLevelILExpressionKind::FcmpGT(Operation::new(function, op, index)),
+            LLIL_FCMP_GE => LowLevelILExpressionKind::FcmpGE(Operation::new(function, op, index)),
+            LLIL_FCMP_O => LowLevelILExpressionKind::FcmpO(Operation::new(function, op, index)),
+            LLIL_FCMP_UO => LowLevelILExpressionKind::FcmpUO(Operation::new(function, op, index)),
+
+            LLIL_UNIMPL => LowLevelILExpressionKind::Unimpl(Operation::new(function, op, index)),
+            LLIL_UNIMPL_MEM => {
+                LowLevelILExpressionKind::UnimplMem(Operation::new(function, op, index))
+            }
 
             // TODO TEST_BIT ADD_OVERFLOW LLIL_REG_STACK_PUSH LLIL_REG_STACK_POP
             _ => {
@@ -439,7 +476,7 @@ where
                     op.address
                 );
 
-                LowLevelILExpressionKind::Undef(Operation::new(function, op))
+                LowLevelILExpressionKind::Undef(Operation::new(function, op, index))
             }
         }
     }
@@ -585,12 +622,21 @@ where
                 visit!(op.mem_expr());
             }
             Load(ref op) => {
-                visit!(op.source_mem_expr());
+                visit!(op.source_expr());
+            }
+            LoadSsa(ref op) => {
+                visit!(op.source_expr());
+            }
+            CallParamSsa(ref op) => {
+                for param_expr in op.param_exprs() {
+                    visit!(param_expr);
+                }
             }
             // Do not have any sub expressions.
-            Pop(_) | Reg(_) | RegSplit(_) | Const(_) | ConstPtr(_) | Flag(_) | FlagBit(_)
-            | ExternPtr(_) | FlagCond(_) | FlagGroup(_) | Unimpl(_) | Undef(_) | RegStackPop(_) => {
-            }
+            Pop(_) | Reg(_) | RegSsa(_) | RegPartialSsa(_) | RegSplit(_) | RegSplitSsa(_)
+            | Const(_) | ConstPtr(_) | Flag(_) | FlagBit(_) | ExternPtr(_) | FlagCond(_)
+            | FlagGroup(_) | Unimpl(_) | Undef(_) | RegStackPop(_) | CallOutputSsa(_)
+            | CallStackSsa(_) => {}
         }
 
         VisitorAction::Sibling
@@ -614,11 +660,19 @@ where
 
             Load(ref op) => &op.op,
 
+            LoadSsa(ref op) => &op.op,
+
             Pop(ref op) => &op.op,
 
             Reg(ref op) => &op.op,
 
+            RegSsa(ref op) => &op.op,
+
+            RegPartialSsa(ref op) => &op.op,
+
             RegSplit(ref op) => &op.op,
+
+            RegSplitSsa(ref op) => &op.op,
 
             Flag(ref op) => &op.op,
 
@@ -629,6 +683,10 @@ where
             ExternPtr(ref op) => &op.op,
 
             RegStackPop(ref op) => &op.op,
+
+            CallOutputSsa(ref op) => &op.op,
+            CallParamSsa(ref op) => &op.op,
+            CallStackSsa(ref op) => &op.op,
 
             Adc(ref op) | Sbb(ref op) | Rlc(ref op) | Rrc(ref op) => &op.op,
 
@@ -670,11 +728,19 @@ impl LowLevelILExpressionKind<'_, Mutable, NonSSA<LiftedNonSSA>> {
 
             Load(ref op) => op.flag_write(),
 
+            LoadSsa(ref op) => op.flag_write(),
+
             Pop(ref op) => op.flag_write(),
 
             Reg(ref op) => op.flag_write(),
 
+            RegSsa(ref op) => op.flag_write(),
+
+            RegPartialSsa(ref op) => op.flag_write(),
+
             RegSplit(ref op) => op.flag_write(),
+
+            RegSplitSsa(ref op) => op.flag_write(),
 
             Flag(ref op) => op.flag_write(),
 
@@ -685,6 +751,10 @@ impl LowLevelILExpressionKind<'_, Mutable, NonSSA<LiftedNonSSA>> {
             ExternPtr(ref op) => op.flag_write(),
 
             RegStackPop(ref op) => op.flag_write(),
+
+            CallOutputSsa(ref op) => op.flag_write(),
+            CallParamSsa(ref op) => op.flag_write(),
+            CallStackSsa(ref op) => op.flag_write(),
 
             Adc(ref op) | Sbb(ref op) | Rlc(ref op) | Rrc(ref op) => op.flag_write(),
 

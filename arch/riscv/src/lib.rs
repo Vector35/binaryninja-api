@@ -2884,7 +2884,7 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
             LowLevelILInstructionKind::SetReg(r) => match r.source_expr().kind() {
                 LowLevelILExpressionKind::Load(l) => {
                     let target_reg = r.dest_reg();
-                    let entry = match l.source_mem_expr().kind() {
+                    let entry = match l.source_expr().kind() {
                         LowLevelILExpressionKind::Reg(lr) if lr.source_reg() == auipc_dest => {
                             plt_base
                         }

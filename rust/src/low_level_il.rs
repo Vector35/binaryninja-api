@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::borrow::Cow;
 use std::fmt;
 
 // TODO : provide some way to forbid emitting register reads for certain registers
@@ -20,7 +21,7 @@ use std::fmt;
 // requirements on load/store memory address sizes?
 // can reg/set_reg be used with sizes that differ from what is in BNRegisterInfo?
 
-use crate::architecture::{Architecture, RegisterId};
+use crate::architecture::{Architecture, Flag, RegisterId};
 use crate::architecture::{CoreRegister, Register as ArchReg};
 use crate::function::Location;
 
@@ -125,10 +126,17 @@ impl<R: ArchReg> LowLevelILRegisterKind<R> {
         LowLevelILRegisterKind::Temp(temp.into())
     }
 
-    fn id(&self) -> RegisterId {
+    pub fn id(&self) -> RegisterId {
         match *self {
             LowLevelILRegisterKind::Arch(ref r) => r.id(),
             LowLevelILRegisterKind::Temp(temp) => temp.id(),
+        }
+    }
+
+    pub fn name(&self) -> Cow<str> {
+        match *self {
+            LowLevelILRegisterKind::Arch(ref r) => r.name(),
+            LowLevelILRegisterKind::Temp(temp) => Cow::Owned(format!("temp{}", temp.temp_id)),
         }
     }
 }
@@ -149,16 +157,48 @@ impl From<LowLevelILTempRegister> for LowLevelILRegisterKind<CoreRegister> {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub enum LowLevelILSSARegister<R: ArchReg> {
-    Full(LowLevelILRegisterKind<R>, u32), // no such thing as partial access to a temp register, I think
-    Partial(R, u32, R), // partial accesses only possible for arch registers, I think
+pub enum LowLevelILSSARegisterKind<R: ArchReg> {
+    Full {
+        kind: LowLevelILRegisterKind<R>,
+        version: u32,
+    },
+    Partial {
+        full_reg: CoreRegister,
+        partial_reg: CoreRegister,
+        version: u32,
+    },
 }
 
-impl<R: ArchReg> LowLevelILSSARegister<R> {
+impl<R: ArchReg> LowLevelILSSARegisterKind<R> {
+    pub fn new_full(kind: LowLevelILRegisterKind<R>, version: u32) -> Self {
+        Self::Full { kind, version }
+    }
+
+    pub fn new_partial(full_reg: CoreRegister, partial_reg: CoreRegister, version: u32) -> Self {
+        Self::Partial {
+            full_reg,
+            partial_reg,
+            version,
+        }
+    }
+
     pub fn version(&self) -> u32 {
         match *self {
-            LowLevelILSSARegister::Full(_, ver) | LowLevelILSSARegister::Partial(_, ver, _) => ver,
+            LowLevelILSSARegisterKind::Full { version, .. }
+            | LowLevelILSSARegisterKind::Partial { version, .. } => version,
         }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct LowLevelILSSAFlag<F: Flag> {
+    pub flag: F,
+    pub version: u32,
+}
+
+impl<F: Flag> LowLevelILSSAFlag<F> {
+    pub fn new(flag: F, version: u32) -> Self {
+        Self { flag, version }
     }
 }
 

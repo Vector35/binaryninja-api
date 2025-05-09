@@ -21,14 +21,15 @@ std::optional<std::string> RTTI::DemangleNameGNU3(BinaryView* view, bool allowMa
 
     std::string adjustedMangledName = mangledName;
     // For some reason some of the names that start with ZN are not prefixed by `_`.
-    if (adjustedMangledName.find("ZN") == 0)
+    if (adjustedMangledName.rfind("ZN", 0) == 0)
         adjustedMangledName = "_" + adjustedMangledName;
-    // Sometimes some std types will have a * prefixed, IDK what it means, but we need to remove it to demangle.
-    if (adjustedMangledName.find("*N") == 0)
+    // GCC emits a leading * to indicate that the type info is internal and its
+    // name can be compared via pointer equality. It is not part of the type name.
+    if (adjustedMangledName.rfind("*", 0) == 0)
         adjustedMangledName = adjustedMangledName.substr(1);
     // All types at this point should have a _Z prefix, if not, we likely need to just call the demangler directly, as this
     // function is specific to dealing with mangled _type_ names.
-    if (adjustedMangledName.find("_Z") != 0)
+    if (adjustedMangledName.rfind("_Z", 0) != 0)
         adjustedMangledName = "_Z" + adjustedMangledName;
 
     if (!DemangleGNU3(view->GetDefaultArchitecture(), adjustedMangledName, outType, demangledName, true))

@@ -1062,7 +1062,7 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
         &self,
         data: &[u8],
         addr: u64,
-        il: &mut MutableLiftedILFunction,
+        il: &MutableLiftedILFunction,
     ) -> Option<(usize, bool)> {
         let max_width = self.default_integer_size();
 

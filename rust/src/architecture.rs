@@ -863,6 +863,7 @@ impl Debug for CoreRegister {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CoreRegister")
             .field("id", &self.id)
+            .field("name", &self.name())
             .finish()
     }
 }

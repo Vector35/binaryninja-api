@@ -50,11 +50,11 @@ impl HighLevelILTokenEmitter {
         };
     }
 
-    pub fn has_collapsable_regions(&self) -> bool {
+    pub fn has_collapsible_regions(&self) -> bool {
         unsafe { BNHighLevelILTokenEmitterHasCollapsableRegions(self.handle.as_ptr()) }
     }
 
-    pub fn set_has_collapsable_regions(&self, state: bool) {
+    pub fn set_has_collapsible_regions(&self, state: bool) {
         unsafe { BNHighLevelILTokenEmitterSetHasCollapsableRegions(self.handle.as_ptr(), state) };
     }
 

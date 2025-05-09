@@ -23,3 +23,6 @@ thiserror = "2.0"
 rstest = "0.24"
 tempfile = "3.15"
 serial_test = "3.2"
+
+[package.metadata.typos]
+default.extend-ignore-re = ["Collapsable"]

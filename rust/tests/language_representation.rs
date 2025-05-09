@@ -91,7 +91,7 @@ impl LanguageRepresentationFunction for MyLangRepr {
             Unimpl | Unreachable | Undef => panic!(),
             _kind => {
                 tokens.append(InstructionTextToken::new(
-                    format!("other instr {:x}\n", instr.address),
+                    format!("other instr 0x{:x}\n", instr.address),
                     InstructionTextTokenKind::Text,
                 ));
             }
@@ -155,32 +155,32 @@ fn test_custom_language_representation() {
     assert_eq!(
         format!("{output}"),
         "block 26
-other instr 36775
-other instr 3679e
-other instr 3679e
-other instr 367ba
-other instr 367e6
-other instr 3682f
-other instr 3682f
-other instr 36834
-other instr 3683e
-other instr 3684e
-other instr 36867
-other instr 36881
-other instr 36881
-other instr 36881
-other instr 36896
-other instr 368a0
-other instr 368bb
-other instr 368d2
-other instr 3694a
-other instr 36960
-other instr 369e1
-other instr 369ec
-other instr 36a2e
-other instr 36ab5
-other instr 36abd
-other instr 36ac2
+other instr 0x36775
+other instr 0x3679e
+other instr 0x3679e
+other instr 0x367ba
+other instr 0x367e6
+other instr 0x3682f
+other instr 0x3682f
+other instr 0x36834
+other instr 0x3683e
+other instr 0x3684e
+other instr 0x36867
+other instr 0x36881
+other instr 0x36881
+other instr 0x36881
+other instr 0x36896
+other instr 0x368a0
+other instr 0x368bb
+other instr 0x368d2
+other instr 0x3694a
+other instr 0x36960
+other instr 0x369e1
+other instr 0x369ec
+other instr 0x36a2e
+other instr 0x36ab5
+other instr 0x36abd
+other instr 0x36ac2
 "
     );
 }

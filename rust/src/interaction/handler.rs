@@ -264,17 +264,17 @@ impl InteractionHandlerTask {
         };
 
         let progress_ctxt = progress as *mut P as *mut c_void;
-        ffi_wrap!("custom_interation_run_progress_dialog", unsafe {
+        ffi_wrap!("custom_interaction_run_progress_dialog", unsafe {
             task(
                 self.ctxt,
-                Some(cb_custom_interation_handler_task::<P>),
+                Some(cb_custom_interaction_handler_task::<P>),
                 progress_ctxt,
             )
         })
     }
 }
 
-unsafe extern "C" fn cb_custom_interation_handler_task<P: FnMut(usize, usize) -> bool>(
+unsafe extern "C" fn cb_custom_interaction_handler_task<P: FnMut(usize, usize) -> bool>(
     ctxt: *mut c_void,
     cur: usize,
     max: usize,

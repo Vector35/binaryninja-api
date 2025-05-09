@@ -291,6 +291,32 @@ Ref<Type> VMIClassTypeInfoType(BinaryView *view, uint64_t baseCount)
     return TypeBuilder::StructureType(structureBuilder.Finalize()).Finalize();
 }
 
+static Ref<Symbol> DetectPotentialCopyRelocatedVTable(BinaryView* view, uint64_t address)
+{
+    // 32-bit ELF binaries that are dynamically linked to the C++ runtime may use a
+    // copy relocation for the vtable. The vtable itself will be defined in the .bss
+    // section, and the copy relocation will cause the dynamic linker to populate it
+    // at load time from the C++ runtime library.
+    //
+    // Detect this by looking for a symbol pointing to the start of the vtable data,
+    // two pointers before the vtable address.
+
+    int64_t vtableSymbolOffset = -(view->GetAddressSize() * 2);
+    if (!view->IsValidOffset(address) || !view->IsValidOffset(address + vtableSymbolOffset))
+        return nullptr;
+
+    // ELFView does not add a relocation record for RELOC_COPY so we use hueristics here.
+    if (view->IsOffsetBackedByFile(address))
+        return nullptr;
+    if (!view->IsOffsetWritableSemantics(address))
+        return nullptr;
+
+    auto sym = view->GetSymbolByAddress(address + vtableSymbolOffset);
+    if (!sym || sym->GetShortName().find("__cxxabiv1") == std::string::npos)
+        return nullptr;
+
+    return sym;
+}
 
 std::optional<TypeInfoVariant> ReadTypeInfoVariant(BinaryView *view, uint64_t objectAddr)
 {
@@ -300,6 +326,9 @@ std::optional<TypeInfoVariant> ReadTypeInfoVariant(BinaryView *view, uint64_t ob
 
     // If there is a symbol at objectAddr pointing to a symbol starting with "vtable for __cxxabiv1"
     Ref<Symbol> baseSym = GetRealSymbol(view, objectAddr, typeInfo->base);
+
+    if (!baseSym)
+        baseSym = DetectPotentialCopyRelocatedVTable(view, typeInfo->base);
 
     if (baseSym == nullptr)
     {

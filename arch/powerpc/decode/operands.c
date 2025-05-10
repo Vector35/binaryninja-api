@@ -222,10 +222,15 @@ static void FillBranchLikelyHint(Instruction* instruction, uint32_t word32)
 	}
 }
 
+static void PushMemRAOffset(Instruction* instruction, uint32_t word32, int32_t offset)
+{
+	PushMem(instruction, PPC_OP_MEM_RA, Gpr(GetA(word32)), offset);
+}
+
+// Default of d=lower 16 bits
 static void PushMemRA(Instruction* instruction, uint32_t word32)
 {
-	int32_t offset = (int32_t)((int16_t)(word32 & 0xffff));
-	PushMem(instruction, PPC_OP_MEM_RA, Gpr(GetA(word32)), offset);
+	PushMemRAOffset(instruction, word32, (int32_t)((int16_t)(word32 & 0xffff)));
 }
 
 static void PushVsxA(Instruction* instruction, uint32_t word32, VsxWidth width)
@@ -2938,6 +2943,139 @@ void FillOperands32(Instruction* instruction, uint32_t word32, uint64_t address)
 			PushRegister(instruction, PPC_OP_REG_CRFS, Crf(crfs));
 			break;
 		}
+
+		// PAIRED-SINGLE INSTRUCTIONS
+
+		// op[.] frD, frA, frB
+		case PPC_ID_PAIREDSINGLE_PS_ADDx:
+		case PPC_ID_PAIREDSINGLE_PS_DIVx:
+		case PPC_ID_PAIREDSINGLE_PS_MERGE00x:
+		case PPC_ID_PAIREDSINGLE_PS_MERGE01x:
+		case PPC_ID_PAIREDSINGLE_PS_MERGE10x:
+		case PPC_ID_PAIREDSINGLE_PS_MERGE11x:
+		case PPC_ID_PAIREDSINGLE_PS_SUBx:
+			PushFRD(instruction, word32);
+			PushFRA(instruction, word32);
+			PushFRB(instruction, word32);
+
+			instruction->flags.rc = word32 & 0x1;
+			break;
+
+		// op[.] frD, frA, frC
+		case PPC_ID_PAIREDSINGLE_PS_MULx:
+		case PPC_ID_PAIREDSINGLE_PS_MULS0x:
+		case PPC_ID_PAIREDSINGLE_PS_MULS1x:
+			PushFRD(instruction, word32);
+			PushFRA(instruction, word32);
+			PushFRC(instruction, word32);
+
+			instruction->flags.rc = word32 & 0x1;
+			break;
+
+		// op[.] frD, frB
+		case PPC_ID_PAIREDSINGLE_PS_ABSx:
+		case PPC_ID_PAIREDSINGLE_PS_MRx:
+		case PPC_ID_PAIREDSINGLE_PS_NABSx:
+		case PPC_ID_PAIREDSINGLE_PS_NEGx:
+		case PPC_ID_PAIREDSINGLE_PS_RESx:
+		case PPC_ID_PAIREDSINGLE_PS_RSQRTEx:
+			PushFRD(instruction, word32);
+			PushFRB(instruction, word32);
+
+			instruction->flags.rc = word32 & 0x1;
+			break;
+
+		// op[.] frD, frA, frC, frB
+		// (take care not to use frD, frA, frB, frC)
+		case PPC_ID_PAIREDSINGLE_PS_MADDx:
+		case PPC_ID_PAIREDSINGLE_PS_MADDS0x:
+		case PPC_ID_PAIREDSINGLE_PS_MADDS1x:
+		case PPC_ID_PAIREDSINGLE_PS_MSUBx:
+		case PPC_ID_PAIREDSINGLE_PS_NMADDx:
+		case PPC_ID_PAIREDSINGLE_PS_NMSUBx:
+		case PPC_ID_PAIREDSINGLE_PS_SELx:
+		case PPC_ID_PAIREDSINGLE_PS_SUM0x:
+		case PPC_ID_PAIREDSINGLE_PS_SUM1x:
+			PushFRD(instruction, word32);
+			PushFRA(instruction, word32);
+			PushFRC(instruction, word32);
+			PushFRB(instruction, word32);
+
+			instruction->flags.rc = word32 & 0x1;
+			break;
+
+		// op crfD, frA, frB
+		case PPC_ID_PAIREDSINGLE_PS_CMPO0:
+		case PPC_ID_PAIREDSINGLE_PS_CMPO1:
+		case PPC_ID_PAIREDSINGLE_PS_CMPU0:
+		case PPC_ID_PAIREDSINGLE_PS_CMPU1:
+			PushCRFDImplyCR0(instruction, word32);
+			PushFRA(instruction, word32);
+			PushFRB(instruction, word32);
+			break;
+
+		// load-stores
+		case PPC_ID_PAIREDSINGLE_PSQ_L:
+		case PPC_ID_PAIREDSINGLE_PSQ_LU:
+		{
+			uint32_t w = (word32 >> 15) & 0x1;
+			uint32_t i = (word32 >> 12) & 0x7;
+			uint32_t d = word32 & 0xfff;
+
+			PushFRD(instruction, word32);
+			PushMemRAOffset(instruction, word32, sign_extend(d, 12));
+			PushUIMMValue(instruction, w);
+			PushUIMMValue(instruction, i);
+			break;
+		}
+
+		case PPC_ID_PAIREDSINGLE_PSQ_LUX:
+		case PPC_ID_PAIREDSINGLE_PSQ_LX:
+		{
+			uint32_t w = (word32 >> 10) & 0x1;
+			uint32_t i = (word32 >> 7) & 0x7;
+
+			PushFRD(instruction, word32);
+			PushRA(instruction, word32);
+			PushRB(instruction, word32);
+			PushUIMMValue(instruction, w);
+			PushUIMMValue(instruction, i);
+			break;
+		}
+
+		case PPC_ID_PAIREDSINGLE_PSQ_ST:
+		case PPC_ID_PAIREDSINGLE_PSQ_STU:
+		{
+			uint32_t w = (word32 >> 15) & 0x1;
+			uint32_t i = (word32 >> 12) & 0x7;
+			uint32_t d = word32 & 0xfff;
+
+			PushFRS(instruction, word32);
+			PushMemRAOffset(instruction, word32, sign_extend(d, 12));
+			PushUIMMValue(instruction, w);
+			PushUIMMValue(instruction, i);
+			break;
+		}
+
+		case PPC_ID_PAIREDSINGLE_PSQ_STX:
+		case PPC_ID_PAIREDSINGLE_PSQ_STUX:
+		{
+			uint32_t w = (word32 >> 10) & 0x1;
+			uint32_t i = (word32 >> 7) & 0x7;
+
+			PushFRS(instruction, word32);
+			PushRA(instruction, word32);
+			PushRB(instruction, word32);
+			PushUIMMValue(instruction, w);
+			PushUIMMValue(instruction, i);
+			break;
+		}
+
+		// dcbz_l rA, rB
+		case PPC_ID_PAIREDSINGLE_DCBZ_L:
+			PushRAor0(instruction, word32);
+			PushRB(instruction, word32);
+			break;
 
 		default:
 			break;

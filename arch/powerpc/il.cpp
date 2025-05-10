@@ -1974,7 +1974,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			il.AddInstruction(ei0);
 			break;
 
-		case PPC_ID_PSQ_ST:
+		case PPC_ID_PAIREDSINGLE_PSQ_ST:
 			REQUIRE4OPS
 		    MYLOG("0x%08x psq_st args f%d r%d[%d] w:%lldd gcqr:%lld\n",
 		      (uint32_t)addr, oper0->reg - PPC_REG_F0, oper1->mem.base - PPC_REG_R0, oper1->mem.disp, oper2->imm,
@@ -2012,7 +2012,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			// }
 			break;
 
-		case PPC_ID_PSQ_L:
+		case PPC_ID_PAIREDSINGLE_PSQ_L:
 			REQUIRE4OPS
 		    // w_l = oper2->imm;
 

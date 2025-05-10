@@ -1,4 +1,4 @@
-use crate::low_level_il::RegularLowLevelILFunction;
+use crate::low_level_il::LowLevelILRegularFunction;
 use crate::rc::Guard;
 use crate::string::IntoCStr;
 use crate::{
@@ -265,7 +265,7 @@ pub trait RelocationHandler: 'static + Sized + AsRef<CoreRelocationHandler> {
         _data: &[u8],
         _addr: u64,
         // TODO: Are we sure this is not a liftedilfunction?
-        _il: &RegularLowLevelILFunction,
+        _il: &LowLevelILRegularFunction,
         _reloc: &Relocation,
     ) -> RelocationOperand {
         RelocationOperand::AutocoerceExternPtr
@@ -363,7 +363,7 @@ impl RelocationHandler for CoreRelocationHandler {
         &self,
         data: &[u8],
         addr: u64,
-        il: &RegularLowLevelILFunction,
+        il: &LowLevelILRegularFunction,
         reloc: &Relocation,
     ) -> RelocationOperand {
         unsafe {
@@ -495,7 +495,7 @@ where
             return RelocationOperand::Invalid.into();
         }
         let arch = unsafe { CoreArchitecture::from_raw(arch) };
-        let il = unsafe { RegularLowLevelILFunction::from_raw_with_arch(il, Some(arch)) };
+        let il = unsafe { LowLevelILRegularFunction::from_raw_with_arch(il, Some(arch)) };
 
         custom_handler
             .get_operand_for_external_relocation(data, addr, &il, &reloc)

@@ -12,7 +12,7 @@ use msp430_asm::single_operand::SingleOperand;
 use msp430_asm::two_operand::TwoOperand;
 
 use binaryninja::low_level_il::expression::ValueExpr;
-use binaryninja::low_level_il::{MutableLiftedILExpr, MutableLiftedILFunction};
+use binaryninja::low_level_il::{LowLevelILMutableExpression, LowLevelILMutableFunction};
 use log::info;
 
 macro_rules! auto_increment {
@@ -163,7 +163,7 @@ macro_rules! conditional_jump {
     };
 }
 
-pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &MutableLiftedILFunction) {
+pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMutableFunction) {
     match inst {
         Instruction::Rrc(inst) => {
             let size = match inst.operand_width() {
@@ -623,8 +623,8 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &MutableLifted
 fn lift_source_operand<'a>(
     operand: &Operand,
     size: usize,
-    il: &'a MutableLiftedILFunction,
-) -> MutableLiftedILExpr<'a, ValueExpr> {
+    il: &'a LowLevelILMutableFunction,
+) -> LowLevelILMutableExpression<'a, ValueExpr> {
     match operand {
         Operand::RegisterDirect(r) => il.reg(size, Register::try_from(*r as u32).unwrap()),
         Operand::Indexed((r, offset)) => il

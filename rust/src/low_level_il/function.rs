@@ -36,22 +36,13 @@ impl FunctionMutability for Mutable {}
 impl FunctionMutability for Finalized {}
 
 #[derive(Copy, Clone, Debug)]
-pub struct LiftedNonSSA;
-#[derive(Copy, Clone, Debug)]
-pub struct RegularNonSSA;
-
-pub trait NonSSAVariant: 'static + Debug {}
-impl NonSSAVariant for LiftedNonSSA {}
-impl NonSSAVariant for RegularNonSSA {}
-
-#[derive(Copy, Clone, Debug)]
 pub struct SSA;
 #[derive(Copy, Clone, Debug)]
-pub struct NonSSA<V: NonSSAVariant>(V);
+pub struct NonSSA;
 
 pub trait FunctionForm: 'static + Debug {}
 impl FunctionForm for SSA {}
-impl<V: NonSSAVariant> FunctionForm for NonSSA<V> {}
+impl FunctionForm for NonSSA {}
 
 pub struct LowLevelILFunction<M: FunctionMutability, F: FunctionForm> {
     pub(crate) handle: *mut BNLowLevelILFunction,
@@ -170,7 +161,7 @@ where
     }
 }
 
-impl<M: FunctionMutability, V: NonSSAVariant> LowLevelILFunction<M, NonSSA<V>> {
+impl<M: FunctionMutability> LowLevelILFunction<M, NonSSA> {
     /// Retrieve the SSA form of the function.
     pub fn ssa_form(&self) -> Option<Ref<LowLevelILFunction<M, SSA>>> {
         let handle = unsafe { BNGetLowLevelILSSAForm(self.handle) };
@@ -182,7 +173,7 @@ impl<M: FunctionMutability, V: NonSSAVariant> LowLevelILFunction<M, NonSSA<V>> {
 }
 
 // Allow instantiating Lifted IL functions for querying Lifted IL from Architectures
-impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
+impl LowLevelILFunction<Mutable, NonSSA> {
     // TODO: Document what happens when you pass None for `source_func`.
     // TODO: Doing so would construct a LowLevelILFunction with no basic blocks
     // TODO: Document why you would want to do that.
@@ -205,6 +196,16 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
     pub fn generate_ssa_form(&self) {
         use binaryninjacore_sys::BNGenerateLowLevelILSSAForm;
         unsafe { BNGenerateLowLevelILSSAForm(self.handle) };
+    }
+}
+
+impl Ref<LowLevelILFunction<Mutable, NonSSA>> {
+    pub fn finalized(self) -> Ref<LowLevelILFunction<Finalized, NonSSA>> {
+        unsafe {
+            BNFinalizeLowLevelILFunction(self.handle);
+            // Now that we have finalized return the function as is so the caller can reference the "finalized function".
+            LowLevelILFunction::from_raw(self.handle).to_owned()
+        }
     }
 }
 

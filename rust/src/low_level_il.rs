@@ -36,19 +36,20 @@ use self::expression::*;
 use self::function::*;
 use self::instruction::*;
 
-pub type MutableLiftedILFunction = LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>>;
-pub type LiftedILFunction = LowLevelILFunction<Finalized, NonSSA<LiftedNonSSA>>;
-pub type MutableLiftedILExpr<'a, ReturnType> =
-    LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, ReturnType>;
-pub type RegularLowLevelILFunction = LowLevelILFunction<Finalized, NonSSA<RegularNonSSA>>;
-pub type RegularLowLevelILInstruction<'a> =
-    LowLevelILInstruction<'a, Finalized, NonSSA<RegularNonSSA>>;
-pub type RegularLowLevelILInstructionKind<'a> =
-    LowLevelILInstructionKind<'a, Finalized, NonSSA<RegularNonSSA>>;
-pub type RegularLowLevelILExpression<'a, ReturnType> =
-    LowLevelILExpression<'a, Finalized, NonSSA<RegularNonSSA>, ReturnType>;
-pub type RegularLowLevelILExpressionKind<'a> =
-    LowLevelILExpressionKind<'a, Finalized, NonSSA<RegularNonSSA>>;
+/// Regular low-level IL, if you are not modifying the functions IL or needing SSA, use this.
+pub type LowLevelILRegularFunction = LowLevelILFunction<Finalized, NonSSA>;
+pub type LowLevelILRegularInstruction<'a> = LowLevelILInstruction<'a, Finalized, NonSSA>;
+pub type LowLevelILRegularInstructionKind<'a> = LowLevelILInstructionKind<'a, Finalized, NonSSA>;
+pub type LowLevelILRegularExpression<'a, ReturnType> =
+    LowLevelILExpression<'a, Finalized, NonSSA, ReturnType>;
+pub type LowLevelILRegularExpressionKind<'a> = LowLevelILExpressionKind<'a, Finalized, NonSSA>;
+
+/// Mutable low-level IL, used when lifting in architectures and modifying IL in workflow activities.
+pub type LowLevelILMutableFunction = LowLevelILFunction<Mutable, NonSSA>;
+pub type LowLevelILMutableExpression<'a, ReturnType> =
+    LowLevelILExpression<'a, Mutable, NonSSA, ReturnType>;
+
+/// SSA Variant of low-level IL, this can never be mutated directly.
 pub type LowLevelILSSAFunction = LowLevelILFunction<Finalized, SSA>;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]

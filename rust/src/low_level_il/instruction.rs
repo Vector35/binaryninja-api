@@ -141,12 +141,11 @@ where
     }
 }
 
-impl<'func, M> InstructionHandler<'func, M, NonSSA<LiftedNonSSA>>
-    for LowLevelILInstruction<'func, M, NonSSA<LiftedNonSSA>>
+impl<'func, M> InstructionHandler<'func, M, NonSSA> for LowLevelILInstruction<'func, M, NonSSA>
 where
     M: FunctionMutability,
 {
-    fn kind(&self) -> LowLevelILInstructionKind<'func, M, NonSSA<LiftedNonSSA>> {
+    fn kind(&self) -> LowLevelILInstructionKind<'func, M, NonSSA> {
         #[allow(unused_imports)]
         use binaryninjacore_sys::BNLowLevelILOperation::*;
         let raw_op = self.into_raw();
@@ -162,37 +161,7 @@ where
 
     fn visit_tree<T>(&self, f: &mut T) -> VisitorAction
     where
-        T: FnMut(&LowLevelILExpression<'func, M, NonSSA<LiftedNonSSA>, ValueExpr>) -> VisitorAction,
-    {
-        // Recursively visit sub expressions.
-        self.kind().visit_sub_expressions(|e| e.visit_tree(f))
-    }
-}
-
-impl<'func, M> InstructionHandler<'func, M, NonSSA<RegularNonSSA>>
-    for LowLevelILInstruction<'func, M, NonSSA<RegularNonSSA>>
-where
-    M: FunctionMutability,
-{
-    fn kind(&self) -> LowLevelILInstructionKind<'func, M, NonSSA<RegularNonSSA>> {
-        #[allow(unused_imports)]
-        use binaryninjacore_sys::BNLowLevelILOperation::*;
-        let raw_op = self.into_raw();
-        #[allow(clippy::match_single_binding)]
-        match raw_op.operation {
-            // Any invalid ops for Non-Lifted IL will be checked here.
-            // SAFETY: We have checked for illegal operations.
-            _ => unsafe {
-                LowLevelILInstructionKind::from_raw(self.function, self.expr_idx(), raw_op)
-            },
-        }
-    }
-
-    fn visit_tree<T>(&self, f: &mut T) -> VisitorAction
-    where
-        T: FnMut(
-            &LowLevelILExpression<'func, M, NonSSA<RegularNonSSA>, ValueExpr>,
-        ) -> VisitorAction,
+        T: FnMut(&LowLevelILExpression<'func, M, NonSSA, ValueExpr>) -> VisitorAction,
     {
         // Recursively visit sub expressions.
         self.kind().visit_sub_expressions(|e| e.visit_tree(f))

@@ -135,12 +135,12 @@ where
     }
 }
 
-impl<'func, M> ExpressionHandler<'func, M, NonSSA<LiftedNonSSA>>
-    for LowLevelILExpression<'func, M, NonSSA<LiftedNonSSA>, ValueExpr>
+impl<'func, M> ExpressionHandler<'func, M, NonSSA>
+    for LowLevelILExpression<'func, M, NonSSA, ValueExpr>
 where
     M: FunctionMutability,
 {
-    fn kind(&self) -> LowLevelILExpressionKind<'func, M, NonSSA<LiftedNonSSA>> {
+    fn kind(&self) -> LowLevelILExpressionKind<'func, M, NonSSA> {
         #[allow(unused_imports)]
         use binaryninjacore_sys::BNLowLevelILOperation::*;
         let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, self.index.0) };
@@ -154,41 +154,7 @@ where
 
     fn visit_tree<T>(&self, f: &mut T) -> VisitorAction
     where
-        T: FnMut(&LowLevelILExpression<'func, M, NonSSA<LiftedNonSSA>, ValueExpr>) -> VisitorAction,
-    {
-        // Visit the current expression.
-        match f(self) {
-            VisitorAction::Descend => {
-                // Recursively visit sub expressions.
-                self.kind().visit_sub_expressions(|e| e.visit_tree(f))
-            }
-            action => action,
-        }
-    }
-}
-
-impl<'func, M> ExpressionHandler<'func, M, NonSSA<RegularNonSSA>>
-    for LowLevelILExpression<'func, M, NonSSA<RegularNonSSA>, ValueExpr>
-where
-    M: FunctionMutability,
-{
-    fn kind(&self) -> LowLevelILExpressionKind<'func, M, NonSSA<RegularNonSSA>> {
-        use binaryninjacore_sys::BNLowLevelILOperation::*;
-        let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, self.index.0) };
-        match op.operation {
-            // Any invalid ops for Non-Lifted IL will be checked here.
-            LLIL_FLAG_COND => unreachable!("LLIL_FLAG_COND is only valid in Lifted IL"),
-            LLIL_FLAG_GROUP => unreachable!("LLIL_FLAG_GROUP is only valid in Lifted IL"),
-            // SAFETY: We have checked for illegal operations.
-            _ => LowLevelILExpressionKind::from_raw(self.function, op, self.index),
-        }
-    }
-
-    fn visit_tree<T>(&self, f: &mut T) -> VisitorAction
-    where
-        T: FnMut(
-            &LowLevelILExpression<'func, M, NonSSA<RegularNonSSA>, ValueExpr>,
-        ) -> VisitorAction,
+        T: FnMut(&LowLevelILExpression<'func, M, NonSSA, ValueExpr>) -> VisitorAction,
     {
         // Visit the current expression.
         match f(self) {
@@ -272,9 +238,9 @@ where
     LowPart(Operation<'func, M, F, operation::UnaryOp>),
 
     // Valid only in Lifted IL
-    FlagCond(Operation<'func, M, NonSSA<LiftedNonSSA>, operation::FlagCond>),
+    FlagCond(Operation<'func, M, F, operation::FlagCond>),
     // Valid only in Lifted IL
-    FlagGroup(Operation<'func, M, NonSSA<LiftedNonSSA>, operation::FlagGroup>),
+    FlagGroup(Operation<'func, M, F, operation::FlagGroup>),
 
     CmpE(Operation<'func, M, F, operation::Condition>),
     CmpNe(Operation<'func, M, F, operation::Condition>),
@@ -708,7 +674,7 @@ where
     }
 }
 
-impl LowLevelILExpressionKind<'_, Mutable, NonSSA<LiftedNonSSA>> {
+impl LowLevelILExpressionKind<'_, Mutable, NonSSA> {
     pub fn flag_write(&self) -> Option<CoreFlagWrite> {
         use self::LowLevelILExpressionKind::*;
 

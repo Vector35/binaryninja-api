@@ -41,7 +41,7 @@ fn example_activity(analysis_context: &AnalysisContext) {
                 }
             }
         }
-        analysis_context.set_lifted_il_function(&llil);
+        analysis_context.set_llil_function(&llil.finalized());
     }
 }
 

@@ -90,11 +90,14 @@ where
     }
 }
 
-impl<M, O> Operation<'_, M, NonSSA<LiftedNonSSA>, O>
+impl<M, O> Operation<'_, M, NonSSA, O>
 where
     M: FunctionMutability,
     O: OperationArguments,
 {
+    /// Get the [`CoreFlagWrite`] for the operation.
+    ///
+    /// NOTE: This is only expected to be present for lifted IL.
     pub fn flag_write(&self) -> Option<CoreFlagWrite> {
         match self.op.flags {
             0 => None,
@@ -1419,9 +1422,10 @@ where
 // Valid only in Lifted IL
 pub struct FlagGroup;
 
-impl<M> Operation<'_, M, NonSSA<LiftedNonSSA>, FlagGroup>
+impl<M, F> Operation<'_, M, F, FlagGroup>
 where
     M: FunctionMutability,
+    F: FunctionForm,
 {
     pub fn flag_group(&self) -> CoreFlagGroup {
         let id = self.op.operands[0] as u32;
@@ -1432,23 +1436,15 @@ where
     }
 }
 
-impl<M> Debug for Operation<'_, M, NonSSA<LiftedNonSSA>, FlagGroup>
+impl<M, F> Debug for Operation<'_, M, F, FlagGroup>
 where
     M: FunctionMutability,
+    F: FunctionForm,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("FlagGroup")
             .field("flag_group", &self.flag_group())
             .finish()
-    }
-}
-
-impl<M> Debug for Operation<'_, M, SSA, FlagGroup>
-where
-    M: FunctionMutability,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FlagGroup").finish()
     }
 }
 

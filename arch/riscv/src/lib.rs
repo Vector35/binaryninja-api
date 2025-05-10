@@ -43,8 +43,8 @@ use binaryninja::low_level_il::lifting::{
     LiftableLowLevelIL, LiftableLowLevelILWithSize, LowLevelILLabel,
 };
 use binaryninja::low_level_il::{
-    expression::ExpressionHandler, instruction::InstructionHandler, LowLevelILRegisterKind,
-    MutableLiftedILExpr, MutableLiftedILFunction, RegularLowLevelILFunction,
+    expression::ExpressionHandler, instruction::InstructionHandler, LowLevelILMutableExpression,
+    LowLevelILMutableFunction, LowLevelILRegisterKind, LowLevelILRegularFunction,
 };
 use riscv_dis::{
     FloatReg, FloatRegType, Instr, IntRegType, Op, RegFile, Register as RiscVRegister,
@@ -207,7 +207,10 @@ impl<D: RiscVDisassembler> architecture::Register for Register<D> {
 impl<'a, D: RiscVDisassembler> LiftableLowLevelIL<'a> for Register<D> {
     type Result = ValueExpr;
 
-    fn lift(il: &'a MutableLiftedILFunction, reg: Self) -> MutableLiftedILExpr<'a, Self::Result> {
+    fn lift(
+        il: &'a LowLevelILMutableFunction,
+        reg: Self,
+    ) -> LowLevelILMutableExpression<'a, Self::Result> {
         match reg.reg_type() {
             RegType::Integer(0) => il.const_int(reg.size(), 0),
             RegType::Integer(_) => il.reg(reg.size(), reg),
@@ -218,10 +221,10 @@ impl<'a, D: RiscVDisassembler> LiftableLowLevelIL<'a> for Register<D> {
 
 impl<'a, D: RiscVDisassembler> LiftableLowLevelILWithSize<'a> for Register<D> {
     fn lift_with_size(
-        il: &'a MutableLiftedILFunction,
+        il: &'a LowLevelILMutableFunction,
         reg: Self,
         size: usize,
-    ) -> MutableLiftedILExpr<'a, ValueExpr> {
+    ) -> LowLevelILMutableExpression<'a, ValueExpr> {
         #[cfg(debug_assertions)]
         {
             if reg.size() < size {
@@ -1062,7 +1065,7 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
         &self,
         data: &[u8],
         addr: u64,
-        il: &MutableLiftedILFunction,
+        il: &LowLevelILMutableFunction,
     ) -> Option<(usize, bool)> {
         let max_width = self.default_integer_size();
 
@@ -1306,41 +1309,41 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
             Op::Ebreak => il.bp().append(),
             Op::Uret => {
                 il.intrinsic(
-                    MutableLiftedILFunction::NO_OUTPUTS,
+                    LowLevelILMutableFunction::NO_OUTPUTS,
                     RiscVIntrinsic::<D>::from(Intrinsic::Uret),
-                    MutableLiftedILFunction::NO_INPUTS,
+                    LowLevelILMutableFunction::NO_INPUTS,
                 )
                 .append();
                 il.no_ret().append();
             }
             Op::Sret => {
                 il.intrinsic(
-                    MutableLiftedILFunction::NO_OUTPUTS,
+                    LowLevelILMutableFunction::NO_OUTPUTS,
                     RiscVIntrinsic::<D>::from(Intrinsic::Sret),
-                    MutableLiftedILFunction::NO_INPUTS,
+                    LowLevelILMutableFunction::NO_INPUTS,
                 )
                 .append();
                 il.no_ret().append();
             }
             Op::Mret => {
                 il.intrinsic(
-                    MutableLiftedILFunction::NO_OUTPUTS,
+                    LowLevelILMutableFunction::NO_OUTPUTS,
                     RiscVIntrinsic::<D>::from(Intrinsic::Mret),
-                    MutableLiftedILFunction::NO_INPUTS,
+                    LowLevelILMutableFunction::NO_INPUTS,
                 )
                 .append();
                 il.no_ret().append();
             }
             Op::Wfi => il
                 .intrinsic(
-                    MutableLiftedILFunction::NO_OUTPUTS,
+                    LowLevelILMutableFunction::NO_OUTPUTS,
                     RiscVIntrinsic::<D>::from(Intrinsic::Wfi),
-                    MutableLiftedILFunction::NO_INPUTS,
+                    LowLevelILMutableFunction::NO_INPUTS,
                 )
                 .append(),
             Op::Fence(i) => il
                 .intrinsic(
-                    MutableLiftedILFunction::NO_OUTPUTS,
+                    LowLevelILMutableFunction::NO_OUTPUTS,
                     RiscVIntrinsic::<D>::from(Intrinsic::Fence),
                     [il.const_int(4, i.imm() as u32 as u64)],
                 )
@@ -1353,7 +1356,7 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
 
                 if i.rd().id() == 0 {
                     il.intrinsic(
-                        MutableLiftedILFunction::NO_OUTPUTS,
+                        LowLevelILMutableFunction::NO_OUTPUTS,
                         RiscVIntrinsic::<D>::from(Intrinsic::Csrwr),
                         [csr, rs1],
                     )
@@ -1404,7 +1407,7 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
 
                 if i.rd().id() == 0 {
                     il.intrinsic(
-                        MutableLiftedILFunction::NO_OUTPUTS,
+                        LowLevelILMutableFunction::NO_OUTPUTS,
                         RiscVIntrinsic::<D>::from(Intrinsic::Csrwr),
                         [csr, imm],
                     )
@@ -2848,7 +2851,7 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         &self,
         bv: &BinaryView,
         func: &Function,
-        llil: &RegularLowLevelILFunction,
+        llil: &LowLevelILRegularFunction,
     ) -> bool {
         // Look for the following code pattern:
         // t3 = plt

@@ -1,5 +1,5 @@
 use crate::low_level_il::function::LowLevelILFunction;
-use crate::low_level_il::RegularLowLevelILFunction;
+use crate::low_level_il::LowLevelILRegularFunction;
 use crate::medium_level_il::MediumLevelILFunction;
 use crate::{architecture::CoreArchitecture, binary_view::BinaryView, function::Function};
 use binaryninjacore_sys::*;
@@ -10,7 +10,7 @@ pub trait FunctionRecognizer {
         &self,
         _bv: &BinaryView,
         _func: &Function,
-        _llil: &RegularLowLevelILFunction,
+        _llil: &LowLevelILRegularFunction,
     ) -> bool {
         false
     }

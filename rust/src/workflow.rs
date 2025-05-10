@@ -5,8 +5,7 @@ use crate::binary_view::BinaryView;
 use crate::flowgraph::FlowGraph;
 use crate::function::{Function, NativeBlock};
 use crate::high_level_il::HighLevelILFunction;
-use crate::low_level_il::function::{LowLevelILFunction, Mutable, NonSSA, NonSSAVariant};
-use crate::low_level_il::MutableLiftedILFunction;
+use crate::low_level_il::{LowLevelILMutableFunction, LowLevelILRegularFunction};
 use crate::medium_level_il::MediumLevelILFunction;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnString, IntoCStr};
@@ -45,41 +44,32 @@ impl AnalysisContext {
         unsafe { Function::ref_from_raw(result) }
     }
 
-    /// [`LowLevelILFunction`] used to represent Low Level IL
-    pub unsafe fn lifted_il_function(&self) -> Option<Ref<MutableLiftedILFunction>> {
+    /// [`LowLevelILMutableFunction`] used to represent Lifted Level IL
+    pub unsafe fn lifted_il_function(&self) -> Option<Ref<LowLevelILMutableFunction>> {
         let func = self.function();
         let result = unsafe { BNGetFunctionLiftedIL(func.handle) };
         unsafe {
-            Some(LowLevelILFunction::ref_from_raw(
+            Some(LowLevelILMutableFunction::ref_from_raw(
                 NonNull::new(result)?.as_ptr(),
             ))
         }
     }
 
-    pub fn set_lifted_il_function(&self, value: &MutableLiftedILFunction) {
+    pub fn set_lifted_il_function(&self, value: &LowLevelILRegularFunction) {
         unsafe { BNSetLiftedILFunction(self.handle.as_ptr(), value.handle) }
     }
 
-    // TODO: This returns LiftedNonSSA because the lifting code was written before we could patch the IL
-    // TODO: At some point we need to take the lifting code and make it available to regular IL.
-    /// [`LowLevelILFunction`] used to represent Low Level IL
-    pub unsafe fn llil_function<V: NonSSAVariant>(
-        &self,
-    ) -> Option<Ref<LowLevelILFunction<Mutable, NonSSA<V>>>> {
+    /// [`LowLevelILMutableFunction`] used to represent Low Level IL
+    pub unsafe fn llil_function(&self) -> Option<Ref<LowLevelILMutableFunction>> {
         let result = unsafe { BNAnalysisContextGetLowLevelILFunction(self.handle.as_ptr()) };
         unsafe {
-            Some(LowLevelILFunction::ref_from_raw(
+            Some(LowLevelILMutableFunction::ref_from_raw(
                 NonNull::new(result)?.as_ptr(),
             ))
         }
     }
 
-    // TODO: This returns LiftedNonSSA because the lifting code was written before we could patch the IL
-    // TODO: At some point we need to take the lifting code and make it available to regular IL.
-    pub fn set_llil_function<V: NonSSAVariant>(
-        &self,
-        value: &LowLevelILFunction<Mutable, NonSSA<V>>,
-    ) {
+    pub fn set_llil_function(&self, value: &LowLevelILRegularFunction) {
         unsafe { BNSetLowLevelILFunction(self.handle.as_ptr(), value.handle) }
     }
 

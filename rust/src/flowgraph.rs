@@ -17,7 +17,7 @@
 use binaryninjacore_sys::*;
 
 use crate::high_level_il::HighLevelILFunction;
-use crate::low_level_il::RegularLowLevelILFunction;
+use crate::low_level_il::LowLevelILRegularFunction;
 use crate::medium_level_il::MediumLevelILFunction;
 use crate::rc::*;
 use crate::render_layer::CoreRenderLayer;
@@ -58,11 +58,11 @@ impl FlowGraph {
         unsafe { Array::new(nodes_ptr, count, ()) }
     }
 
-    pub fn low_level_il(&self) -> Result<Ref<RegularLowLevelILFunction>, ()> {
+    pub fn low_level_il(&self) -> Result<Ref<LowLevelILRegularFunction>, ()> {
         unsafe {
             let llil_ptr = BNGetFlowGraphLowLevelILFunction(self.handle);
             match llil_ptr.is_null() {
-                false => Ok(RegularLowLevelILFunction::ref_from_raw(llil_ptr)),
+                false => Ok(LowLevelILRegularFunction::ref_from_raw(llil_ptr)),
                 true => Err(()),
             }
         }

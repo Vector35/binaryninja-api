@@ -29,17 +29,17 @@ pub trait LiftableLowLevelIL<'func> {
     type Result: ExpressionResultType;
 
     fn lift(
-        il: &'func MutableLiftedILFunction,
+        il: &'func LowLevelILMutableFunction,
         expr: Self,
-    ) -> MutableLiftedILExpr<'func, Self::Result>;
+    ) -> LowLevelILMutableExpression<'func, Self::Result>;
 }
 
 pub trait LiftableLowLevelILWithSize<'func>: LiftableLowLevelIL<'func, Result = ValueExpr> {
     fn lift_with_size(
-        il: &'func MutableLiftedILFunction,
+        il: &'func LowLevelILMutableFunction,
         expr: Self,
         size: usize,
-    ) -> MutableLiftedILExpr<'func, ValueExpr>;
+    ) -> LowLevelILMutableExpression<'func, ValueExpr>;
 }
 
 #[derive(Copy, Clone)]
@@ -459,8 +459,8 @@ pub fn get_default_flag_write_llil<'func, A>(
     arch: &A,
     role: FlagRole,
     op: LowLevelILFlagWriteOp<A::Register>,
-    il: &'func MutableLiftedILFunction,
-) -> MutableLiftedILExpr<'func, ValueExpr>
+    il: &'func LowLevelILMutableFunction,
+) -> LowLevelILMutableExpression<'func, ValueExpr>
 where
     A: 'func + Architecture,
 {
@@ -487,8 +487,8 @@ pub fn get_default_flag_cond_llil<'func, A>(
     arch: &A,
     cond: FlagCondition,
     class: Option<A::FlagClass>,
-    il: &'func MutableLiftedILFunction,
-) -> MutableLiftedILExpr<'func, ValueExpr>
+    il: &'func LowLevelILMutableFunction,
+) -> LowLevelILMutableExpression<'func, ValueExpr>
 where
     A: 'func + Architecture,
 {
@@ -512,16 +512,16 @@ macro_rules! prim_int_lifter {
         impl<'a> LiftableLowLevelIL<'a> for $x {
             type Result = ValueExpr;
 
-            fn lift(il: &'a MutableLiftedILFunction, val: Self)
-                -> MutableLiftedILExpr<'a, Self::Result>
+            fn lift(il: &'a LowLevelILMutableFunction, val: Self)
+                -> LowLevelILMutableExpression<'a, Self::Result>
             {
                 il.const_int(std::mem::size_of::<Self>(), val as i64 as u64)
             }
         }
 
         impl<'a> LiftableLowLevelILWithSize<'a> for $x {
-            fn lift_with_size(il: &'a MutableLiftedILFunction, val: Self, size: usize)
-                -> MutableLiftedILExpr<'a, ValueExpr>
+            fn lift_with_size(il: &'a LowLevelILMutableFunction, val: Self, size: usize)
+                -> LowLevelILMutableExpression<'a, ValueExpr>
             {
                 let raw = val as i64;
 
@@ -560,7 +560,10 @@ where
 {
     type Result = ValueExpr;
 
-    fn lift(il: &'a MutableLiftedILFunction, reg: Self) -> MutableLiftedILExpr<'a, Self::Result> {
+    fn lift(
+        il: &'a LowLevelILMutableFunction,
+        reg: Self,
+    ) -> LowLevelILMutableExpression<'a, Self::Result> {
         match reg {
             LowLevelILRegisterKind::Arch(r) => R::lift(il, r),
             LowLevelILRegisterKind::Temp(t) => il.reg(
@@ -576,10 +579,10 @@ where
     R: LiftableLowLevelILWithSize<'a> + Into<LowLevelILRegisterKind<R>> + ArchReg,
 {
     fn lift_with_size(
-        il: &'a MutableLiftedILFunction,
+        il: &'a LowLevelILMutableFunction,
         reg: Self,
         size: usize,
-    ) -> MutableLiftedILExpr<'a, ValueExpr> {
+    ) -> LowLevelILMutableExpression<'a, ValueExpr> {
         match reg {
             LowLevelILRegisterKind::Arch(r) => R::lift_with_size(il, r, size),
             LowLevelILRegisterKind::Temp(t) => il.reg(size, LowLevelILRegisterKind::<R>::Temp(t)),
@@ -595,7 +598,10 @@ where
 {
     type Result = ValueExpr;
 
-    fn lift(il: &'a MutableLiftedILFunction, reg: Self) -> MutableLiftedILExpr<'a, Self::Result> {
+    fn lift(
+        il: &'a LowLevelILMutableFunction,
+        reg: Self,
+    ) -> LowLevelILMutableExpression<'a, Self::Result> {
         match reg {
             LowLevelILRegisterOrConstant::Register(size, r) => {
                 LowLevelILRegisterKind::<R>::lift_with_size(il, r, size)
@@ -612,10 +618,10 @@ where
     R: LiftableLowLevelILWithSize<'a> + Into<LowLevelILRegisterKind<R>> + ArchReg,
 {
     fn lift_with_size(
-        il: &'a MutableLiftedILFunction,
+        il: &'a LowLevelILMutableFunction,
         reg: Self,
         size: usize,
-    ) -> MutableLiftedILExpr<'a, ValueExpr> {
+    ) -> LowLevelILMutableExpression<'a, ValueExpr> {
         // TODO ensure requested size is compatible with size of this constant
         match reg {
             LowLevelILRegisterOrConstant::Register(_, r) => {
@@ -628,26 +634,27 @@ where
     }
 }
 
-impl<'a, R> LiftableLowLevelIL<'a> for LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, R>
+impl<'a, R> LiftableLowLevelIL<'a> for LowLevelILExpression<'a, Mutable, NonSSA, R>
 where
     R: ExpressionResultType,
 {
     type Result = R;
 
-    fn lift(il: &'a MutableLiftedILFunction, expr: Self) -> MutableLiftedILExpr<'a, Self::Result> {
+    fn lift(
+        il: &'a LowLevelILMutableFunction,
+        expr: Self,
+    ) -> LowLevelILMutableExpression<'a, Self::Result> {
         debug_assert!(expr.function.handle == il.handle);
         expr
     }
 }
 
-impl<'a> LiftableLowLevelILWithSize<'a>
-    for LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, ValueExpr>
-{
+impl<'a> LiftableLowLevelILWithSize<'a> for LowLevelILExpression<'a, Mutable, NonSSA, ValueExpr> {
     fn lift_with_size(
-        il: &'a MutableLiftedILFunction,
+        il: &'a LowLevelILMutableFunction,
         expr: Self,
         _size: usize,
-    ) -> MutableLiftedILExpr<'a, Self::Result> {
+    ) -> LowLevelILMutableExpression<'a, Self::Result> {
         #[cfg(debug_assertions)]
         {
             use crate::low_level_il::ExpressionHandler;
@@ -667,7 +674,7 @@ impl<'a> LiftableLowLevelILWithSize<'a>
     }
 }
 
-impl<R> LowLevelILExpression<'_, Mutable, NonSSA<LiftedNonSSA>, R>
+impl<R> LowLevelILExpression<'_, Mutable, NonSSA, R>
 where
     R: ExpressionResultType,
 {
@@ -686,7 +693,7 @@ pub struct ExpressionBuilder<'func, R>
 where
     R: ExpressionResultType,
 {
-    function: &'func LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>>,
+    function: &'func LowLevelILFunction<Mutable, NonSSA>,
     op: BNLowLevelILOperation,
     size: usize,
     flag_write: FlagWriteId,
@@ -701,7 +708,7 @@ impl<'a, R> ExpressionBuilder<'a, R>
 where
     R: ExpressionResultType,
 {
-    pub fn from_expr(expr: LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, R>) -> Self {
+    pub fn from_expr(expr: LowLevelILExpression<'a, Mutable, NonSSA, R>) -> Self {
         use binaryninjacore_sys::BNGetLowLevelILByIndex;
 
         let instr = unsafe { BNGetLowLevelILByIndex(expr.function.handle, expr.index.0) };
@@ -725,7 +732,7 @@ where
         self
     }
 
-    pub fn build(self) -> LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, R> {
+    pub fn build(self) -> LowLevelILExpression<'a, Mutable, NonSSA, R> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
 
         let expr_idx = unsafe {
@@ -744,10 +751,7 @@ where
         LowLevelILExpression::new(self.function, LowLevelExpressionIndex(expr_idx))
     }
 
-    pub fn with_source_operand(
-        self,
-        op: u32,
-    ) -> LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, R> {
+    pub fn with_source_operand(self, op: u32) -> LowLevelILExpression<'a, Mutable, NonSSA, R> {
         self.build().with_source_operand(op)
     }
 
@@ -763,7 +767,10 @@ where
 {
     type Result = R;
 
-    fn lift(il: &'a MutableLiftedILFunction, expr: Self) -> MutableLiftedILExpr<'a, Self::Result> {
+    fn lift(
+        il: &'a LowLevelILMutableFunction,
+        expr: Self,
+    ) -> LowLevelILMutableExpression<'a, Self::Result> {
         debug_assert!(expr.function.handle == il.handle);
 
         expr.build()
@@ -772,10 +779,10 @@ where
 
 impl<'a> LiftableLowLevelILWithSize<'a> for ExpressionBuilder<'a, ValueExpr> {
     fn lift_with_size(
-        il: &'a MutableLiftedILFunction,
+        il: &'a LowLevelILMutableFunction,
         expr: Self,
         _size: usize,
-    ) -> MutableLiftedILExpr<'a, ValueExpr> {
+    ) -> LowLevelILMutableExpression<'a, ValueExpr> {
         #[cfg(debug_assertions)]
         {
             use binaryninjacore_sys::BNLowLevelILOperation::{LLIL_UNIMPL, LLIL_UNIMPL_MEM};
@@ -796,7 +803,7 @@ impl<'a> LiftableLowLevelILWithSize<'a> for ExpressionBuilder<'a, ValueExpr> {
 
 macro_rules! no_arg_lifter {
     ($name:ident, $op:ident, $result:ty) => {
-        pub fn $name(&self) -> LowLevelILExpression<Mutable, NonSSA<LiftedNonSSA>, $result> {
+        pub fn $name(&self) -> LowLevelILExpression<Mutable, NonSSA, $result> {
             use binaryninjacore_sys::BNLowLevelILAddExpr;
             use binaryninjacore_sys::BNLowLevelILOperation::$op;
 
@@ -829,10 +836,7 @@ macro_rules! sized_no_arg_lifter {
 
 macro_rules! unsized_unary_op_lifter {
     ($name:ident, $op:ident, $result:ty) => {
-        pub fn $name<'a, E>(
-            &'a self,
-            expr: E,
-        ) -> LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, $result>
+        pub fn $name<'a, E>(&'a self, expr: E) -> LowLevelILExpression<'a, Mutable, NonSSA, $result>
         where
             E: LiftableLowLevelIL<'a, Result = ValueExpr>,
         {
@@ -967,14 +971,14 @@ macro_rules! binary_op_carry_lifter {
     };
 }
 
-impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
+impl LowLevelILMutableFunction {
     pub const NO_INPUTS: [ExpressionBuilder<'static, ValueExpr>; 0] = [];
     pub const NO_OUTPUTS: [LowLevelILRegisterKind<CoreRegister>; 0] = [];
 
     pub fn expression<'a, E: LiftableLowLevelIL<'a>>(
         &'a self,
         expr: E,
-    ) -> LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, E::Result> {
+    ) -> LowLevelILExpression<'a, Mutable, NonSSA, E::Result> {
         E::lift(self, expr)
     }
 
@@ -1002,11 +1006,7 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
         true
     }
 
-    pub fn const_int(
-        &self,
-        size: usize,
-        val: u64,
-    ) -> LowLevelILExpression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+    pub fn const_int(&self, size: usize, val: u64) -> LowLevelILMutableExpression<ValueExpr> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CONST;
 
@@ -1016,11 +1016,7 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
         LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
     }
 
-    pub fn const_ptr_sized(
-        &self,
-        size: usize,
-        val: u64,
-    ) -> LowLevelILExpression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+    pub fn const_ptr_sized(&self, size: usize, val: u64) -> LowLevelILMutableExpression<ValueExpr> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_CONST_PTR;
 
@@ -1030,14 +1026,11 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
         LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
     }
 
-    pub fn const_ptr(
-        &self,
-        val: u64,
-    ) -> LowLevelILExpression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+    pub fn const_ptr(&self, val: u64) -> LowLevelILMutableExpression<ValueExpr> {
         self.const_ptr_sized(self.arch().address_size(), val)
     }
 
-    pub fn trap(&self, val: u64) -> LowLevelILExpression<Mutable, NonSSA<LiftedNonSSA>, VoidExpr> {
+    pub fn trap(&self, val: u64) -> LowLevelILExpression<Mutable, NonSSA, VoidExpr> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_TRAP;
 
@@ -1064,7 +1057,7 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
         cond: C,
         true_label: &'b mut LowLevelILLabel,
         false_label: &'b mut LowLevelILLabel,
-    ) -> LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, VoidExpr>
+    ) -> LowLevelILExpression<'a, Mutable, NonSSA, VoidExpr>
     where
         C: LiftableLowLevelIL<'b, Result = ValueExpr>,
     {
@@ -1104,7 +1097,7 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
     pub fn goto<'a: 'b, 'b>(
         &'a self,
         label: &'b mut LowLevelILLabel,
-    ) -> LowLevelILExpression<'a, Mutable, NonSSA<LiftedNonSSA>, VoidExpr> {
+    ) -> LowLevelILExpression<'a, Mutable, NonSSA, VoidExpr> {
         use binaryninjacore_sys::BNLowLevelILGoto;
 
         let mut raw_label = BNLowLevelILLabel::from(*label);
@@ -1125,7 +1118,7 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
         &self,
         size: usize,
         reg: LR,
-    ) -> LowLevelILExpression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+    ) -> LowLevelILMutableExpression<ValueExpr> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_REG;
 
@@ -1143,7 +1136,7 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
         size: usize,
         hi_reg: LR,
         lo_reg: LR,
-    ) -> LowLevelILExpression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+    ) -> LowLevelILMutableExpression<ValueExpr> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_REG_SPLIT;
 
@@ -1232,10 +1225,7 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
         }
     }
 
-    pub fn flag(
-        &self,
-        flag: impl Flag,
-    ) -> LowLevelILExpression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+    pub fn flag(&self, flag: impl Flag) -> LowLevelILMutableExpression<ValueExpr> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FLAG;
 
@@ -1247,10 +1237,7 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
         LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
     }
 
-    pub fn flag_cond(
-        &self,
-        cond: FlagCondition,
-    ) -> LowLevelILExpression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+    pub fn flag_cond(&self, cond: FlagCondition) -> LowLevelILMutableExpression<ValueExpr> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FLAG_COND;
 
@@ -1261,10 +1248,7 @@ impl LowLevelILFunction<Mutable, NonSSA<LiftedNonSSA>> {
         LowLevelILExpression::new(self, LowLevelExpressionIndex(expr_idx))
     }
 
-    pub fn flag_group(
-        &self,
-        group: impl FlagGroup,
-    ) -> LowLevelILExpression<Mutable, NonSSA<LiftedNonSSA>, ValueExpr> {
+    pub fn flag_group(&self, group: impl FlagGroup) -> LowLevelILMutableExpression<ValueExpr> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILOperation::LLIL_FLAG_GROUP;
 

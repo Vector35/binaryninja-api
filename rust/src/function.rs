@@ -41,7 +41,7 @@ use crate::architecture::RegisterId;
 use crate::confidence::Conf;
 use crate::high_level_il::HighLevelILFunction;
 use crate::language_representation::CoreLanguageRepresentationFunction;
-use crate::low_level_il::{LiftedILFunction, RegularLowLevelILFunction};
+use crate::low_level_il::LowLevelILRegularFunction;
 use crate::medium_level_il::MediumLevelILFunction;
 use crate::variable::{
     IndirectBranchInfo, MergedVariable, NamedVariableWithType, RegisterValue, RegisterValueType,
@@ -558,38 +558,38 @@ impl Function {
         }
     }
 
-    pub fn low_level_il(&self) -> Result<Ref<RegularLowLevelILFunction>, ()> {
+    pub fn low_level_il(&self) -> Result<Ref<LowLevelILRegularFunction>, ()> {
         unsafe {
             let llil_ptr = BNGetFunctionLowLevelIL(self.handle);
             match llil_ptr.is_null() {
-                false => Ok(RegularLowLevelILFunction::ref_from_raw(llil_ptr)),
+                false => Ok(LowLevelILRegularFunction::ref_from_raw(llil_ptr)),
                 true => Err(()),
             }
         }
     }
 
-    pub fn low_level_il_if_available(&self) -> Option<Ref<RegularLowLevelILFunction>> {
+    pub fn low_level_il_if_available(&self) -> Option<Ref<LowLevelILRegularFunction>> {
         let llil_ptr = unsafe { BNGetFunctionLowLevelILIfAvailable(self.handle) };
         match llil_ptr.is_null() {
-            false => Some(unsafe { RegularLowLevelILFunction::ref_from_raw(llil_ptr) }),
+            false => Some(unsafe { LowLevelILRegularFunction::ref_from_raw(llil_ptr) }),
             true => None,
         }
     }
 
-    pub fn lifted_il(&self) -> Result<Ref<LiftedILFunction>, ()> {
+    pub fn lifted_il(&self) -> Result<Ref<LowLevelILRegularFunction>, ()> {
         unsafe {
             let llil_ptr = BNGetFunctionLiftedIL(self.handle);
             match llil_ptr.is_null() {
-                false => Ok(LiftedILFunction::ref_from_raw(llil_ptr)),
+                false => Ok(LowLevelILRegularFunction::ref_from_raw(llil_ptr)),
                 true => Err(()),
             }
         }
     }
 
-    pub fn lifted_il_if_available(&self) -> Option<Ref<LiftedILFunction>> {
+    pub fn lifted_il_if_available(&self) -> Option<Ref<LowLevelILRegularFunction>> {
         let llil_ptr = unsafe { BNGetFunctionLiftedILIfAvailable(self.handle) };
         match llil_ptr.is_null() {
-            false => Some(unsafe { LiftedILFunction::ref_from_raw(llil_ptr) }),
+            false => Some(unsafe { LowLevelILRegularFunction::ref_from_raw(llil_ptr) }),
             true => None,
         }
     }

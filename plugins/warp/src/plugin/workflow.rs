@@ -3,7 +3,6 @@ use crate::matcher::cached_function_matcher;
 use binaryninja::background_task::BackgroundTask;
 use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::Command;
-use binaryninja::low_level_il::function::RegularNonSSA;
 use binaryninja::workflow::{Activity, AnalysisContext, Workflow};
 use std::time::Instant;
 
@@ -74,7 +73,7 @@ pub fn insert_workflow() {
     let guid_activity = |ctx: &AnalysisContext| {
         let function = ctx.function();
         // TODO: Returning RegularNonSSA means we cant modify the il (the lifting code was written just for lifted il, that needs to be fixed)
-        if let Some(llil) = unsafe { ctx.llil_function::<RegularNonSSA>() } {
+        if let Some(llil) = unsafe { ctx.llil_function() } {
             cached_function_guid(&function, &llil);
         }
     };

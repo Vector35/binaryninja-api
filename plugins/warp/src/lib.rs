@@ -10,9 +10,7 @@ use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::confidence::MAX_CONFIDENCE;
 use binaryninja::function::{Function as BNFunction, NativeBlock};
 use binaryninja::low_level_il::expression::{ExpressionHandler, LowLevelILExpressionKind};
-use binaryninja::low_level_il::function::{
-    FunctionMutability, LowLevelILFunction, NonSSA, RegularNonSSA,
-};
+use binaryninja::low_level_il::function::{FunctionMutability, LowLevelILFunction, NonSSA};
 use binaryninja::low_level_il::instruction::{
     InstructionHandler, LowLevelILInstruction, LowLevelILInstructionKind,
 };
@@ -46,7 +44,7 @@ pub fn user_signature_dir() -> PathBuf {
 
 pub fn build_function<M: FunctionMutability>(
     func: &BNFunction,
-    llil: &LowLevelILFunction<M, NonSSA<RegularNonSSA>>,
+    llil: &LowLevelILFunction<M, NonSSA>,
 ) -> Function {
     let bn_fn_ty = func.function_type();
     Function {
@@ -78,7 +76,7 @@ pub fn sorted_basic_blocks(func: &BNFunction) -> Vec<BNRef<BNBasicBlock<NativeBl
 
 pub fn function_guid<M: FunctionMutability>(
     func: &BNFunction,
-    llil: &LowLevelILFunction<M, NonSSA<RegularNonSSA>>,
+    llil: &LowLevelILFunction<M, NonSSA>,
 ) -> FunctionGUID {
     let basic_blocks = sorted_basic_blocks(func);
     let basic_block_guids = basic_blocks
@@ -90,7 +88,7 @@ pub fn function_guid<M: FunctionMutability>(
 
 pub fn basic_block_guid<M: FunctionMutability>(
     basic_block: &BNBasicBlock<NativeBlock>,
-    llil: &LowLevelILFunction<M, NonSSA<RegularNonSSA>>,
+    llil: &LowLevelILFunction<M, NonSSA>,
 ) -> BasicBlockGUID {
     let func = basic_block.function();
     let view = func.view();
@@ -98,7 +96,7 @@ pub fn basic_block_guid<M: FunctionMutability>(
     let max_instr_len = arch.max_instr_len();
 
     // NOPs and useless moves are blacklisted to allow for hot-patchable functions.
-    let is_blacklisted_instr = |instr: &LowLevelILInstruction<M, NonSSA<RegularNonSSA>>| {
+    let is_blacklisted_instr = |instr: &LowLevelILInstruction<M, NonSSA>| {
         match instr.kind() {
             LowLevelILInstructionKind::Nop(_) => true,
             LowLevelILInstructionKind::SetReg(op) => {
@@ -126,8 +124,8 @@ pub fn basic_block_guid<M: FunctionMutability>(
         }
     };
 
-    let is_variant_instr = |instr: &LowLevelILInstruction<M, NonSSA<RegularNonSSA>>| {
-        let is_variant_expr = |expr: &LowLevelILExpressionKind<M, NonSSA<RegularNonSSA>>| {
+    let is_variant_instr = |instr: &LowLevelILInstruction<M, NonSSA>| {
+        let is_variant_expr = |expr: &LowLevelILExpressionKind<M, NonSSA>| {
             // TODO: Checking the section here is slow, we should gather all section ranges outside of this.
             match expr {
                 LowLevelILExpressionKind::ConstPtr(op)

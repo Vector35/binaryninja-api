@@ -240,6 +240,10 @@ where
     Bp(Operation<'func, M, F, operation::NoArgs>),
     Trap(Operation<'func, M, F, operation::Trap>),
     Undef(Operation<'func, M, F, operation::NoArgs>),
+    Assert(Operation<'func, M, F, operation::Assert>),
+    AssertSsa(Operation<'func, M, F, operation::AssertSsa>),
+    ForceVersion(Operation<'func, M, F, operation::ForceVersion>),
+    ForceVersionSsa(Operation<'func, M, F, operation::ForceVersionSsa>),
 
     /// The instruction is an expression.
     Value(LowLevelILExpression<'func, M, F, ValueExpr>),
@@ -332,6 +336,18 @@ where
             LLIL_UNDEF => {
                 LowLevelILInstructionKind::Undef(Operation::new(function, op, expr_index))
             }
+            LLIL_ASSERT => {
+                LowLevelILInstructionKind::Assert(Operation::new(function, op, expr_index))
+            }
+            LLIL_ASSERT_SSA => {
+                LowLevelILInstructionKind::AssertSsa(Operation::new(function, op, expr_index))
+            }
+            LLIL_FORCE_VER => {
+                LowLevelILInstructionKind::ForceVersion(Operation::new(function, op, expr_index))
+            }
+            LLIL_FORCE_VER_SSA => {
+                LowLevelILInstructionKind::ForceVersionSsa(Operation::new(function, op, expr_index))
+            }
             _ => LowLevelILInstructionKind::Value(LowLevelILExpression::new(function, expr_index)),
         }
     }
@@ -384,7 +400,8 @@ where
             }
             Value(e) => visit!(e),
             // Do not have any sub expressions.
-            Nop(_) | NoRet(_) | Goto(_) | Syscall(_) | Bp(_) | Trap(_) | Undef(_) => {}
+            Nop(_) | NoRet(_) | Goto(_) | Syscall(_) | Bp(_) | Trap(_) | Undef(_) | Assert(_)
+            | AssertSsa(_) | ForceVersion(_) | ForceVersionSsa(_) => {}
         }
 
         VisitorAction::Sibling

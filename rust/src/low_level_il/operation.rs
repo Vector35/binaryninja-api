@@ -13,8 +13,8 @@
 // limitations under the License.
 
 use binaryninjacore_sys::{
-    BNGetLowLevelILByIndex, BNLowLevelILFreeOperandList, BNLowLevelILGetOperandList,
-    BNLowLevelILInstruction,
+    BNGetCachedLowLevelILPossibleValueSet, BNGetLowLevelILByIndex, BNLowLevelILFreeOperandList,
+    BNLowLevelILGetOperandList, BNLowLevelILInstruction,
 };
 
 use super::*;
@@ -22,6 +22,7 @@ use crate::architecture::{
     CoreFlag, CoreFlagGroup, CoreFlagWrite, CoreIntrinsic, CoreRegister, CoreRegisterStack,
     FlagGroupId, FlagId, FlagWriteId, IntrinsicId, RegisterStackId,
 };
+use crate::variable::PossibleValueSet;
 use std::collections::BTreeMap;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
@@ -62,7 +63,7 @@ where
         self.op.address
     }
 
-    pub fn get_operand_list(&self, operand_idx: usize) -> Vec<u64> {
+    fn get_operand_list(&self, operand_idx: usize) -> Vec<u64> {
         let mut count = 0;
         let raw_list_ptr = unsafe {
             BNLowLevelILGetOperandList(
@@ -76,6 +77,16 @@ where
         let list = unsafe { std::slice::from_raw_parts(raw_list_ptr, count).to_vec() };
         unsafe { BNLowLevelILFreeOperandList(raw_list_ptr) };
         list
+    }
+
+    fn get_constraint(&self, operand_idx: usize) -> PossibleValueSet {
+        let raw_pvs = unsafe {
+            BNGetCachedLowLevelILPossibleValueSet(
+                self.function.handle,
+                self.op.operands[operand_idx] as usize,
+            )
+        };
+        PossibleValueSet::from_owned_raw(raw_pvs)
     }
 }
 
@@ -1870,6 +1881,155 @@ where
     }
 }
 
+// LLIL_ASSERT
+pub struct Assert;
+
+impl<M, F> Operation<'_, M, F, Assert>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn size(&self) -> usize {
+        self.op.size
+    }
+
+    pub fn source_reg(&self) -> LowLevelILRegisterKind<CoreRegister> {
+        let raw_id = RegisterId(self.op.operands[0] as u32);
+        LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id).expect("Bad register ID")
+    }
+
+    pub fn constraint(&self) -> PossibleValueSet {
+        self.get_constraint(1)
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, Assert>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Assert")
+            .field("size", &self.size())
+            .field("source_reg", &self.source_reg())
+            .field("constraint", &self.constraint())
+            .finish()
+    }
+}
+
+// LLIL_ASSERT_SSA
+pub struct AssertSsa;
+
+impl<M, F> Operation<'_, M, F, AssertSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn size(&self) -> usize {
+        self.op.size
+    }
+
+    pub fn source_reg(&self) -> LowLevelILSSARegisterKind<CoreRegister> {
+        let raw_id = RegisterId(self.op.operands[0] as u32);
+        let reg_kind = LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id)
+            .expect("Bad register ID");
+        let version = self.op.operands[1] as u32;
+        LowLevelILSSARegisterKind::new_full(reg_kind, version)
+    }
+
+    pub fn constraint(&self) -> PossibleValueSet {
+        self.get_constraint(2)
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, AssertSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AssertSsa")
+            .field("size", &self.size())
+            .field("source_reg", &self.source_reg())
+            .field("constraint", &self.constraint())
+            .finish()
+    }
+}
+
+// LLIL_FORCE_VER
+pub struct ForceVersion;
+
+impl<M, F> Operation<'_, M, F, ForceVersion>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn size(&self) -> usize {
+        self.op.size
+    }
+
+    pub fn dest_reg(&self) -> LowLevelILRegisterKind<CoreRegister> {
+        let raw_id = RegisterId(self.op.operands[0] as u32);
+        LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id).expect("Bad register ID")
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, ForceVersion>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ForceVersion")
+            .field("size", &self.size())
+            .field("dest_reg", &self.dest_reg())
+            .finish()
+    }
+}
+
+// LLIL_FORCE_VER_SSA
+pub struct ForceVersionSsa;
+
+impl<M, F> Operation<'_, M, F, ForceVersionSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn size(&self) -> usize {
+        self.op.size
+    }
+
+    pub fn dest_reg(&self) -> LowLevelILSSARegisterKind<CoreRegister> {
+        let raw_id = RegisterId(self.op.operands[0] as u32);
+        let reg_kind = LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id)
+            .expect("Bad register ID");
+        let version = self.op.operands[1] as u32;
+        LowLevelILSSARegisterKind::new_full(reg_kind, version)
+    }
+
+    pub fn source_reg(&self) -> LowLevelILSSARegisterKind<CoreRegister> {
+        let raw_id = RegisterId(self.op.operands[2] as u32);
+        let reg_kind = LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id)
+            .expect("Bad register ID");
+        let version = self.op.operands[3] as u32;
+        LowLevelILSSARegisterKind::new_full(reg_kind, version)
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, ForceVersionSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ForceVersionSsa")
+            .field("size", &self.size())
+            .field("dest_reg", &self.dest_reg())
+            .field("source_reg", &self.source_reg())
+            .finish()
+    }
+}
+
 // TODO TEST_BIT
 
 pub trait OperationArguments: 'static {}
@@ -1923,3 +2083,7 @@ impl OperationArguments for DoublePrecDivOp {}
 impl OperationArguments for UnaryOp {}
 impl OperationArguments for Condition {}
 impl OperationArguments for UnimplMem {}
+impl OperationArguments for Assert {}
+impl OperationArguments for AssertSsa {}
+impl OperationArguments for ForceVersion {}
+impl OperationArguments for ForceVersionSsa {}

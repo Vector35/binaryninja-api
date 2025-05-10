@@ -99,7 +99,7 @@ if(NOT HEADLESS)
         if(BinaryNinjaUI_FOUND)
             # Precompiled ui library
             add_library(binaryninjaui INTERFACE)
-            target_link_libraries(binaryninjaui INTERFACE ${BinaryNinjaUI_LIBRARIES})
+            target_link_libraries(binaryninjaui INTERFACE binaryninjaapi ${BinaryNinjaUI_LIBRARIES})
             target_link_directories(binaryninjaui INTERFACE ${BinaryNinjaUI_LIBRARY_DIRS})
             target_compile_definitions(binaryninjaui INTERFACE ${BinaryNinjaUI_DEFINITIONS})
 

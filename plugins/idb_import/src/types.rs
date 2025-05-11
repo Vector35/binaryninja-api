@@ -20,6 +20,7 @@ use idb_rs::til::{
     TypeVariant as TILTypeVariant,
 };
 use idb_rs::IDBString;
+use log::warn;
 
 #[derive(Debug, Clone)]
 pub enum BnTypeError {
@@ -80,7 +81,7 @@ impl std::fmt::Display for BnTypeError {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub enum TranslateTypeResult {
     #[default]
     NotYet,
@@ -106,32 +107,180 @@ pub struct TranslatesIDBType<'a> {
     pub name: IDBString,
     // the result, if converted
     pub ty: TranslateTypeResult,
+    pub og_til: &'a TILSection,
     pub og_ty: &'a TILTypeInfo,
     pub is_symbol: bool,
 }
 
-pub struct TranslateIDBTypes<'a, F: Fn(usize, usize) -> Result<(), ()>> {
+pub struct TranslateIDBTypes<'a, F> {
     pub arch: CoreArchitecture,
     pub progress: F,
-    pub til: &'a TILSection,
-    // note it's mapped 1:1 with the same index from til types.chain(symbols)
+    // key til addr and type idx
+    pub types_by_idx: HashMap<(usize, usize), usize>,
+    pub types_by_ord: HashMap<u64, usize>,
+    pub types_by_name: HashMap<&'a [u8], usize>,
+    pub tils: &'a [TILSection],
     pub types: Vec<TranslatesIDBType<'a>>,
 }
 
-impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
-    fn find_typedef_by_name(&self, name: &[u8]) -> Option<TranslateTypeResult> {
+impl<'a, F> TranslateIDBTypes<'a, F>
+where
+    F: Fn(usize, usize) -> Result<(), ()>,
+{
+    pub fn from_types(arch: CoreArchitecture, tils: &'a [TILSection], progress: F) -> Result<Self> {
+        let all_types = tils.iter().flat_map(|til| {
+            core::iter::repeat(til).zip(til.types.iter().enumerate().zip(core::iter::repeat(false)))
+            // TODO: it's unclear how the demangle symbols and types names/ord, for now only parse types
+            //.chain(til.symbols.iter().zip(core::iter::repeat(true)))
+        });
+        let total = all_types.clone().count();
+        let mut types = Vec::with_capacity(total);
+        let mut types_by_idx = HashMap::with_capacity(total);
+        let mut types_by_ord = HashMap::with_capacity(total);
+        let mut types_by_name = HashMap::with_capacity(total);
+        for (i, (til, ((ty_idx, ty), is_symbol))) in all_types.enumerate() {
+            // TODO sanitized the input
+            // TODO find out how the namespaces used by TIL works
+            types.push(TranslatesIDBType {
+                name: ty.name.clone(),
+                is_symbol,
+                og_til: til,
+                og_ty: ty,
+                ty: TranslateTypeResult::NotYet,
+            });
+            types_by_idx.insert((til as *const _ as usize, ty_idx), i);
+            if ty.ordinal != 0 && !is_symbol {
+                let dup1 = types_by_ord.insert(ty.ordinal, i);
+                if let Some(old) = dup1 {
+                    let old_type = &types[old];
+                    let new_type = types.last().unwrap();
+                    return Err(anyhow!(
+                        "dup ord {}:{} {}:\n{:?}\n{:?}",
+                        old_type.is_symbol,
+                        new_type.is_symbol,
+                        ty.ordinal,
+                        &old_type.og_ty,
+                        &new_type.og_ty,
+                    ));
+                }
+            }
+            if !ty.name.as_bytes().is_empty() {
+                // TODO duplicated names are known to happen.
+                // For now just prioritize the first one found
+                types_by_name.entry(ty.name.as_bytes()).or_insert(i);
+                //let dup2 = types_by_name.insert(ty.name.as_bytes(), i);
+                //if let Some(old) = dup2 {
+                //    let old_type = &types[old];
+                //    let new_type = types.last().unwrap();
+                //    return Err(anyhow!(
+                //        "dup name {}:{}: {}:\n{:?}\n{:?}",
+                //        old_type.is_symbol,
+                //        new_type.is_symbol,
+                //        &ty.name.as_utf8_lossy(),
+                //        &old_type.og_ty,
+                //        &new_type.og_ty,
+                //    ));
+                //}
+            }
+        }
+
+        Ok(TranslateIDBTypes {
+            arch,
+            progress,
+            tils,
+            types,
+            types_by_idx,
+            types_by_ord,
+            types_by_name,
+        })
+    }
+
+    fn resolve(&mut self) -> Result<()> {
+        if (self.progress)(0, self.types.len()).is_err() {
+            return Err(anyhow!("IDB import aborted"));
+        }
+
+        // solve types until there is nothing else that can be solved
+        loop {
+            // if something was solved, mark this variable as true
+            let mut did_something = false;
+            let mut num_translated = 0usize;
+            let mut all_done = true;
+            for i in 0..self.types.len() {
+                let til = self.types[i].og_til;
+                match &self.types[i].ty {
+                    TranslateTypeResult::NotYet => {
+                        let result = self.translate_type(til, &self.types[i].og_ty.tinfo);
+                        did_something |= !matches!(&result, TranslateTypeResult::NotYet);
+                        self.types[i].ty = result;
+                    }
+                    TranslateTypeResult::PartiallyTranslated(_, None) => {
+                        let result = self.translate_type(til, &self.types[i].og_ty.tinfo);
+                        // don't allow regress, it can goes from PartiallyTranslated to any state other then NotYet
+                        assert!(!matches!(&result, TranslateTypeResult::NotYet));
+                        did_something |=
+                            !matches!(&result, TranslateTypeResult::PartiallyTranslated(_, None));
+                        self.types[i].ty = result;
+                        // don't need to add again they will be fixed on the loop below
+                    }
+                    // if an error was produced, there is no point in try again
+                    TranslateTypeResult::PartiallyTranslated(_, Some(_)) => {}
+                    // NOTE for now we are just accumulating errors, just try to translate the max number
+                    // of types as possible
+                    TranslateTypeResult::Error(_) => {}
+                    // already translated, nothing do to here
+                    TranslateTypeResult::Translated(_) => {}
+                }
+
+                // count the number of finished types
+                let was_translated =
+                    matches!(&self.types[i].ty, TranslateTypeResult::Translated(_));
+                if was_translated {
+                    num_translated += 1;
+                }
+                all_done &= was_translated;
+            }
+
+            if (self.progress)(num_translated, self.types.len()).is_err() {
+                // error means the user aborted the progress
+                return Err(anyhow!("User aborted during processing"));
+            }
+
+            if all_done {
+                return Ok(());
+            }
+
+            if !did_something {
+                warn!("Some types could not be converted");
+                // means we acomplilshed nothing during this loop, there is no
+                // point in trying again
+                return Ok(());
+            }
+        }
+    }
+
+    fn find_typedef_by_name(&self, til: &TILSection, name: &[u8]) -> Option<TranslateTypeResult> {
         if name.is_empty() {
             // TODO this is my assumption, maybe an empty names Typedef means something else.
             return Some(TranslateTypeResult::Translated(Type::void()));
+        }
+
+        // Used if reference between dependency
+        if let Some(found) = self.types_by_name.get(name) {
+            return Some(self.types[*found].ty.clone());
         }
 
         // check for types that ar usually not defined directly
         match name {
             b"Unkown" | b"uint8_t" => Some(TranslateTypeResult::Translated(Type::int(1, false))),
             b"IUnkown" | b"int8_t" => Some(TranslateTypeResult::Translated(Type::int(1, true))),
-            b"SHORT" | b"USHORT" => Some(TranslateTypeResult::Translated(Type::int(
-                self.til.sizeof_short().get().into(),
-                name == b"SHORT",
+            b"SHORT" => Some(TranslateTypeResult::Translated(Type::int(
+                til.sizeof_short().get().into(),
+                true,
+            ))),
+            b"USHORT" => Some(TranslateTypeResult::Translated(Type::int(
+                til.sizeof_short().get().into(),
+                false,
             ))),
             b"int16_t" => Some(TranslateTypeResult::Translated(Type::int(2, true))),
             b"uint16_t" => Some(TranslateTypeResult::Translated(Type::int(2, false))),
@@ -143,6 +292,13 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
             b"uint128_t" => Some(TranslateTypeResult::Translated(Type::int(16, false))),
             _ => None,
         }
+    }
+
+    fn find_typedef_by_ord(&self, ord: u64) -> Option<TranslateTypeResult> {
+        // Used if reference between dependency
+        self.types_by_ord
+            .get(&ord)
+            .map(|found| self.types[*found].ty.clone())
     }
 
     fn find_typedef(&self, ty: &TranslatesIDBType) -> TranslateTypeResult {
@@ -167,8 +323,8 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
         }
     }
 
-    fn translate_pointer(&self, ty: &TILPointer) -> TranslateTypeResult {
-        match self.translate_type(&ty.typ) {
+    fn translate_pointer(&self, til: &TILSection, ty: &TILPointer) -> TranslateTypeResult {
+        match self.translate_type(til, &ty.typ) {
             TranslateTypeResult::Translated(trans) => {
                 TranslateTypeResult::Translated(self.inner_translate_pointer(ty, &trans))
             }
@@ -195,11 +351,11 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
         Type::pointer_with_options(&self.arch, trans, ty.typ.is_const, ty.typ.is_volatile, None)
     }
 
-    fn translate_function(&self, fun: &TILFunction) -> TranslateTypeResult {
+    fn translate_function(&self, til: &TILSection, fun: &TILFunction) -> TranslateTypeResult {
         let mut is_partial = false;
         let mut errors: BnTypeFunctionError = Default::default();
         // funtions are always 0 len, so it's translated or partial(void)
-        let return_ty = match self.translate_type(&fun.ret) {
+        let return_ty = match self.translate_type(til, &fun.ret) {
             TranslateTypeResult::Translated(trans) => trans,
             TranslateTypeResult::PartiallyTranslated(trans, error) => {
                 is_partial |= true;
@@ -220,7 +376,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
         let mut partial_error_args = vec![];
         let mut bn_args = Vec::with_capacity(fun.args.len());
         for (i, fun_arg) in fun.args.iter().enumerate() {
-            let arg = match self.translate_type(&fun_arg.ty) {
+            let arg = match self.translate_type(til, &fun_arg.ty) {
                 TranslateTypeResult::Translated(trans) => trans,
                 TranslateTypeResult::PartiallyTranslated(trans, error) => {
                     is_partial = true;
@@ -283,8 +439,8 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
     }
 
     // TODO can binja handle 0 sized array? There is a better translation?
-    fn translate_array(&self, array: &TILArray) -> TranslateTypeResult {
-        match self.translate_type(&array.elem_type) {
+    fn translate_array(&self, til: &TILSection, array: &TILArray) -> TranslateTypeResult {
+        match self.translate_type(til, &array.elem_type) {
             TranslateTypeResult::NotYet => TranslateTypeResult::NotYet,
             TranslateTypeResult::Translated(ty) => TranslateTypeResult::Translated(Type::array(
                 &ty,
@@ -365,7 +521,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
         }
     }
 
-    fn translate_struct(&self, ty_struct: &TILStruct) -> TranslateTypeResult {
+    fn translate_struct(&self, til: &TILSection, ty_struct: &TILStruct) -> TranslateTypeResult {
         if ty_struct.members.is_empty() {
             // binary ninja crashes if you create an empty struct, because it divide by 0
             return TranslateTypeResult::Translated(Type::void());
@@ -402,7 +558,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
                 (_, None) => {}
             }
 
-            let mem = match self.translate_type(&member.member_type) {
+            let mem = match self.translate_type(til, &member.member_type) {
                 TranslateTypeResult::Translated(ty) => ty,
                 TranslateTypeResult::PartiallyTranslated(partial_ty, error) => {
                     is_partial |= true;
@@ -439,7 +595,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
         }
     }
 
-    fn translate_union(&self, ty_union: &TILUnion) -> TranslateTypeResult {
+    fn translate_union(&self, til: &TILSection, ty_union: &TILUnion) -> TranslateTypeResult {
         let mut is_partial = false;
         let mut structure = StructureBuilder::new();
         structure.structure_type(StructureType::UnionStructureType);
@@ -448,7 +604,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
             // bitfields can be translated into complete fields
             let mem = match &member.ty.type_variant {
                 TILTypeVariant::Bitfield(field) => field_from_bytes(field.nbytes.get().into()),
-                _ => match self.translate_type(&member.ty) {
+                _ => match self.translate_type(til, &member.ty) {
                     TranslateTypeResult::Translated(ty) => ty,
                     TranslateTypeResult::Error(error) => {
                         errors.push((i, error));
@@ -484,7 +640,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
         }
     }
 
-    fn translate_enum(&self, ty_enum: &TILEnum) -> Ref<Type> {
+    fn translate_enum(&self, til: &TILSection, ty_enum: &TILEnum) -> Ref<Type> {
         let mut eb = EnumerationBuilder::new();
         for (i, member) in ty_enum.members.iter().enumerate() {
             let name = member
@@ -501,22 +657,22 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
             ty_enum
                 .storage_size
                 .map(|x| x.into())
-                .or(self.til.header.size_enum.map(|x| x.into()))
+                .or(til.header.size_enum.map(|x| x.into()))
                 .unwrap_or(4.try_into().unwrap()),
             ty_enum.is_signed,
         )
     }
 
-    fn translate_basic(&self, mdata: &idb_rs::til::Basic) -> Ref<Type> {
+    fn translate_basic(&self, til: &TILSection, mdata: &idb_rs::til::Basic) -> Ref<Type> {
         match *mdata {
             idb_rs::til::Basic::Void => Type::void(),
             idb_rs::til::Basic::Unknown { bytes: 0 } => Type::void(),
             idb_rs::til::Basic::Unknown { bytes } => Type::array(&Type::char(), bytes.into()),
-            idb_rs::til::Basic::Bool if self.til.header.size_bool.get() == 1 => Type::bool(),
+            idb_rs::til::Basic::Bool if til.header.size_bool.get() == 1 => Type::bool(),
             idb_rs::til::Basic::BoolSized { bytes } if bytes.get() == 1 => Type::bool(),
             // NOTE Binja don't have any representation for bool other then the default
             idb_rs::til::Basic::BoolSized { bytes } => Type::int(bytes.get().into(), false),
-            idb_rs::til::Basic::Bool /*if self.til.header.size_bool.get() != 1*/ => Type::int(self.til.header.size_bool.get().into(), false),
+            idb_rs::til::Basic::Bool /*if self.til.header.size_bool.get() != 1*/ => Type::int(til.header.size_bool.get().into(), false),
             idb_rs::til::Basic::Char => Type::char(),
             // TODO what exacly is Segment Register?
             idb_rs::til::Basic::SegReg => Type::char(),
@@ -527,44 +683,50 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
             }
             idb_rs::til::Basic::Int { is_signed } => {
                 let is_signed = is_signed.as_ref().copied().unwrap_or(true);
-                Type::int(self.til.header.size_int.get().into(), is_signed)
+                Type::int(til.header.size_int.get().into(), is_signed)
             },
             idb_rs::til::Basic::Short { is_signed } => {
                 let is_signed = is_signed.as_ref().copied().unwrap_or(true);
-                Type::int(self.til.sizeof_short().get().into(), is_signed)
+                Type::int(til.sizeof_short().get().into(), is_signed)
             },
             idb_rs::til::Basic::Long { is_signed } => {
                 let is_signed = is_signed.as_ref().copied().unwrap_or(true);
-                Type::int(self.til.sizeof_long().get().into(), is_signed)
+                Type::int(til.sizeof_long().get().into(), is_signed)
             },
             idb_rs::til::Basic::LongLong { is_signed } => {
                 let is_signed = is_signed.as_ref().copied().unwrap_or(true);
-                Type::int(self.til.sizeof_long_long().get().into(), is_signed)
+                Type::int(til.sizeof_long_long().get().into(), is_signed)
             },
             idb_rs::til::Basic::LongDouble => {
                 // TODO is size_long_double architecture dependent?
-                Type::float(self.til.header.size_long_double.map(NonZeroU8::get).unwrap_or(8).into())
+                Type::float(til.header.size_long_double.map(NonZeroU8::get).unwrap_or(8).into())
             },
             idb_rs::til::Basic::Float { bytes } => Type::float(bytes.get().into()),
         }
     }
 
-    pub fn translate_type(&self, ty: &TILType) -> TranslateTypeResult {
+    pub fn translate_type(&self, til: &TILSection, ty: &TILType) -> TranslateTypeResult {
         match &ty.type_variant {
             // types that are always translatable
             TILTypeVariant::Basic(meta) => {
-                TranslateTypeResult::Translated(self.translate_basic(meta))
+                TranslateTypeResult::Translated(self.translate_basic(til, meta))
             }
             TILTypeVariant::Bitfield(bit) => {
                 TranslateTypeResult::Translated(field_from_bytes(bit.nbytes.get().into()))
             }
             TILTypeVariant::Enum(ty_enum) => {
-                TranslateTypeResult::Translated(self.translate_enum(ty_enum))
+                TranslateTypeResult::Translated(self.translate_enum(til, ty_enum))
             }
             TILTypeVariant::Typeref(typeref) => match &typeref.typeref_value {
-                idb_rs::til::TyperefValue::Ref(idx) => self.find_typedef(&self.types[*idx]),
+                idb_rs::til::TyperefValue::Ref(idx) => {
+                    let ty_idx = self
+                        .types_by_idx
+                        .get(&(til as *const _ as usize, *idx))
+                        .unwrap();
+                    self.find_typedef(&self.types[*ty_idx])
+                }
                 idb_rs::til::TyperefValue::UnsolvedName(name) => self
-                    .find_typedef_by_name(name.as_ref().map(|x| x.as_bytes()).unwrap_or(&[]))
+                    .find_typedef_by_name(til, name.as_ref().map(|x| x.as_bytes()).unwrap_or(&[]))
                     .unwrap_or_else(|| {
                         TranslateTypeResult::Error(BnTypeError::NameNotFound(
                             name.as_ref()
@@ -573,17 +735,19 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
                         ))
                     }),
                 idb_rs::til::TyperefValue::UnsolvedOrd(ord) => {
-                    TranslateTypeResult::Error(BnTypeError::OrdinalNotFound(*ord))
+                    self.find_typedef_by_ord((*ord).into()).unwrap_or_else(|| {
+                        TranslateTypeResult::Error(BnTypeError::OrdinalNotFound(*ord))
+                    })
                 }
             },
 
-            TILTypeVariant::Pointer(ty) => self.translate_pointer(ty),
-            TILTypeVariant::Function(fun) => self.translate_function(fun),
+            TILTypeVariant::Pointer(ty) => self.translate_pointer(til, ty),
+            TILTypeVariant::Function(fun) => self.translate_function(til, fun),
 
             // can only be partially solved if all fields are solved or partially solved
-            TILTypeVariant::Array(array) => self.translate_array(array),
-            TILTypeVariant::Struct(ty_struct) => self.translate_struct(ty_struct),
-            TILTypeVariant::Union(ty_union) => self.translate_union(ty_union),
+            TILTypeVariant::Array(array) => self.translate_array(til, array),
+            TILTypeVariant::Struct(ty_struct) => self.translate_struct(til, ty_struct),
+            TILTypeVariant::Union(ty_union) => self.translate_union(til, ty_union),
         }
     }
 }
@@ -595,129 +759,28 @@ pub fn translate_ephemeral_type(debug_file: &BinaryView, ty: &TILType) -> Transl
         arch: debug_file.default_arch().unwrap(/* TODO */),
         progress: |_, _| Ok(()),
         // TODO it's unclear what to do here
-        til: &TILSection {
+        tils: &[TILSection {
             header,
             symbols: vec![],
             types: vec![],
             macros: None,
-        },
+        }],
         types: vec![],
+        types_by_idx: HashMap::new(),
+        types_by_ord: HashMap::new(),
+        types_by_name: HashMap::new(),
     };
 
-    translator.translate_type(ty)
+    translator.translate_type(&translator.tils[0], ty)
 }
 
 pub fn translate_til_types(
     arch: CoreArchitecture,
-    til: &TILSection,
+    tils: &[TILSection],
     progress: impl Fn(usize, usize) -> Result<(), ()>,
-) -> Result<Vec<TranslatesIDBType>> {
-    let total = til.symbols.len() + til.types.len();
-    let mut types = Vec::with_capacity(total);
-    let mut types_by_ord = HashMap::with_capacity(total);
-    let mut types_by_name = HashMap::with_capacity(total);
-    let all_types = til.types.iter().zip(core::iter::repeat(false));
-    // TODO: it's unclear how the demangle symbols and types names/ord, for now only parse types
-    //let all_types = all_types.chain(til.symbols.iter().zip(core::iter::repeat(true)));
-    for (i, (ty, is_symbol)) in all_types.enumerate() {
-        // TODO sanitized the input
-        // TODO find out how the namespaces used by TIL works
-        types.push(TranslatesIDBType {
-            name: ty.name.clone(),
-            is_symbol,
-            og_ty: ty,
-            ty: TranslateTypeResult::NotYet,
-        });
-        if ty.ordinal != 0 && !is_symbol {
-            let dup1 = types_by_ord.insert(ty.ordinal, i);
-            if let Some(old) = dup1 {
-                let old_type = &types[old];
-                let new_type = types.last().unwrap();
-                // TODO error?
-                panic!(
-                    "dup ord {}:{} {}:\n{:?}\n{:?}",
-                    old_type.is_symbol,
-                    new_type.is_symbol,
-                    ty.ordinal,
-                    &old_type.og_ty,
-                    &new_type.og_ty,
-                )
-            }
-        }
-        if !ty.name.as_bytes().is_empty() {
-            let dup2 = types_by_name.insert(ty.name.as_bytes().to_owned(), i);
-            if let Some(old) = dup2 {
-                let old_type = &types[old];
-                let new_type = types.last().unwrap();
-                // TODO error?
-                panic!(
-                    "dup name {}:{}: {}:\n{:?}\n{:?}",
-                    old_type.is_symbol,
-                    new_type.is_symbol,
-                    &ty.name.as_utf8_lossy(),
-                    &old_type.og_ty,
-                    &new_type.og_ty,
-                )
-            }
-        }
-    }
-
-    let mut translator = TranslateIDBTypes {
-        arch,
-        progress,
-        til,
-        types,
-    };
-    if (translator.progress)(0, total).is_err() {
-        return Err(anyhow!("IDB import aborted"));
-    }
-
-    // solve types until there is nothing else that can be solved
-    loop {
-        // if something was solved, mark this variable as true
-        let mut did_something = false;
-        let mut num_translated = 0usize;
-        for i in 0..translator.types.len() {
-            match &translator.types[i].ty {
-                TranslateTypeResult::NotYet => {
-                    let result = translator.translate_type(&translator.types[i].og_ty.tinfo);
-                    did_something |= !matches!(&result, TranslateTypeResult::NotYet);
-                    translator.types[i].ty = result;
-                }
-                TranslateTypeResult::PartiallyTranslated(_, None) => {
-                    let result = translator.translate_type(&translator.types[i].og_ty.tinfo);
-                    // don't allow regress, it can goes from PartiallyTranslated to any state other then NotYet
-                    assert!(!matches!(&result, TranslateTypeResult::NotYet));
-                    did_something |=
-                        !matches!(&result, TranslateTypeResult::PartiallyTranslated(_, None));
-                    translator.types[i].ty = result;
-                    // don't need to add again they will be fixed on the loop below
-                }
-                // if an error was produced, there is no point in try again
-                TranslateTypeResult::PartiallyTranslated(_, Some(_)) => {}
-                // NOTE for now we are just accumulating errors, just try to translate the max number
-                // of types as possible
-                TranslateTypeResult::Error(_) => {}
-                // already translated, nothing do to here
-                TranslateTypeResult::Translated(_) => {}
-            }
-
-            // count the number of finished types
-            if let TranslateTypeResult::Translated(_) = &translator.types[i].ty {
-                num_translated += 1
-            }
-        }
-
-        if !did_something {
-            // means we acomplilshed nothing during this loop, there is no point in trying again
-            break;
-        }
-        if (translator.progress)(num_translated, total).is_err() {
-            // error means the user aborted the progress
-            break;
-        }
-    }
-
+) -> Result<Vec<TranslatesIDBType<'_>>> {
+    let mut translator = TranslateIDBTypes::from_types(arch, tils, progress)?;
+    translator.resolve()?;
     Ok(translator.types)
 }
 

@@ -1376,12 +1376,6 @@ impl MediumLevelILInstruction {
         Variable::new(var.ty, index, var.storage)
     }
 
-    /// alias for [MediumLevelILInstruction::split_var_for_definition]
-    #[inline]
-    pub fn get_split_var_for_definition(&self, var: &Variable) -> Variable {
-        self.split_var_for_definition(var)
-    }
-
     fn lift_operand(&self, expr_idx: usize) -> Box<MediumLevelILLiftedInstruction> {
         // TODO: UGH, if your gonna call it expr_idx, call the instruction and expression!!!!!
         // TODO: We dont even need to say instruction in the type!

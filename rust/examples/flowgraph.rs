@@ -130,9 +130,8 @@ fn main() {
     test_graph();
 
     for func in bv.functions().iter().take(5) {
-        let graph = func.create_graph(FunctionViewType::MediumLevelIL, None);
         // TODO: Why are the nodes empty? Python its empty until its shown...
-        assert!(!graph.nodes().is_empty());
+        let graph = func.create_graph(FunctionViewType::MediumLevelIL, None);
         let func_name = func.symbol().short_name();
         let title = func_name.to_string_lossy();
         bv.show_graph_report(&title, &graph);

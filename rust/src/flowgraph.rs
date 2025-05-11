@@ -25,6 +25,9 @@ use crate::render_layer::CoreRenderLayer;
 pub mod edge;
 pub mod node;
 
+use crate::binary_view::BinaryView;
+use crate::function::Function;
+use crate::string::IntoCStr;
 pub use edge::EdgeStyle;
 pub use edge::FlowGraphEdge;
 pub use node::FlowGraphNode;
@@ -52,38 +55,101 @@ impl FlowGraph {
         unsafe { FlowGraph::ref_from_raw(BNCreateFlowGraph()) }
     }
 
+    pub fn has_updates(&self) -> bool {
+        let query_mode = unsafe { BNFlowGraphUpdateQueryMode(self.handle) };
+        match query_mode {
+            true => unsafe { BNFlowGraphHasUpdates(self.handle) },
+            false => false,
+        }
+    }
+
+    pub fn update(&self) -> Option<Ref<Self>> {
+        let new_graph = unsafe { BNUpdateFlowGraph(self.handle) };
+        if new_graph.is_null() {
+            return None;
+        }
+        Some(unsafe { FlowGraph::ref_from_raw(new_graph) })
+    }
+
+    pub fn show(&self, title: &str) {
+        let raw_title = title.to_cstr();
+        match self.view() {
+            None => unsafe {
+                BNShowGraphReport(std::ptr::null_mut(), raw_title.as_ptr(), self.handle);
+            },
+            Some(view) => unsafe {
+                BNShowGraphReport(view.handle, raw_title.as_ptr(), self.handle);
+            },
+        }
+    }
+
+    /// Whether flow graph layout is complete.
+    pub fn is_layout_complete(&self) -> bool {
+        unsafe { BNIsFlowGraphLayoutComplete(self.handle) }
+    }
+
     pub fn nodes(&self) -> Array<FlowGraphNode> {
         let mut count: usize = 0;
         let nodes_ptr = unsafe { BNGetFlowGraphNodes(self.handle, &mut count as *mut usize) };
         unsafe { Array::new(nodes_ptr, count, ()) }
     }
 
-    pub fn low_level_il(&self) -> Result<Ref<LowLevelILRegularFunction>, ()> {
+    pub fn function(&self) -> Option<Ref<Function>> {
+        unsafe {
+            let func_ptr = BNGetFunctionForFlowGraph(self.handle);
+            match func_ptr.is_null() {
+                false => Some(Function::ref_from_raw(func_ptr)),
+                true => None,
+            }
+        }
+    }
+
+    pub fn set_function(&self, func: Option<&Function>) {
+        let func_ptr = func.map(|f| f.handle).unwrap_or(std::ptr::null_mut());
+        unsafe { BNSetFunctionForFlowGraph(self.handle, func_ptr) }
+    }
+
+    pub fn view(&self) -> Option<Ref<BinaryView>> {
+        unsafe {
+            let view_ptr = BNGetViewForFlowGraph(self.handle);
+            match view_ptr.is_null() {
+                false => Some(BinaryView::ref_from_raw(view_ptr)),
+                true => None,
+            }
+        }
+    }
+
+    pub fn set_view(&self, view: Option<&BinaryView>) {
+        let view_ptr = view.map(|v| v.handle).unwrap_or(std::ptr::null_mut());
+        unsafe { BNSetViewForFlowGraph(self.handle, view_ptr) }
+    }
+
+    pub fn low_level_il(&self) -> Option<Ref<LowLevelILRegularFunction>> {
         unsafe {
             let llil_ptr = BNGetFlowGraphLowLevelILFunction(self.handle);
             match llil_ptr.is_null() {
-                false => Ok(LowLevelILRegularFunction::ref_from_raw(llil_ptr)),
-                true => Err(()),
+                false => Some(LowLevelILRegularFunction::ref_from_raw(llil_ptr)),
+                true => None,
             }
         }
     }
 
-    pub fn medium_level_il(&self) -> Result<Ref<MediumLevelILFunction>, ()> {
+    pub fn medium_level_il(&self) -> Option<Ref<MediumLevelILFunction>> {
         unsafe {
             let mlil_ptr = BNGetFlowGraphMediumLevelILFunction(self.handle);
             match mlil_ptr.is_null() {
-                false => Ok(MediumLevelILFunction::ref_from_raw(mlil_ptr)),
-                true => Err(()),
+                false => Some(MediumLevelILFunction::ref_from_raw(mlil_ptr)),
+                true => None,
             }
         }
     }
 
-    pub fn high_level_il(&self, full_ast: bool) -> Result<Ref<HighLevelILFunction>, ()> {
+    pub fn high_level_il(&self, full_ast: bool) -> Option<Ref<HighLevelILFunction>> {
         unsafe {
             let hlil_ptr = BNGetFlowGraphHighLevelILFunction(self.handle);
             match hlil_ptr.is_null() {
-                false => Ok(HighLevelILFunction::ref_from_raw(hlil_ptr, full_ast)),
-                true => Err(()),
+                false => Some(HighLevelILFunction::ref_from_raw(hlil_ptr, full_ast)),
+                true => None,
             }
         }
     }
@@ -103,6 +169,25 @@ impl FlowGraph {
 
     pub fn has_nodes(&self) -> bool {
         unsafe { BNFlowGraphHasNodes(self.handle) }
+    }
+
+    /// Returns the graph size in width, height form.
+    pub fn size(&self) -> (i32, i32) {
+        let width = unsafe { BNGetFlowGraphWidth(self.handle) };
+        let height = unsafe { BNGetFlowGraphHeight(self.handle) };
+        (width, height)
+    }
+
+    /// Returns the graph margins between nodes.
+    pub fn node_margins(&self) -> (i32, i32) {
+        let horizontal = unsafe { BNGetHorizontalFlowGraphNodeMargin(self.handle) };
+        let vertical = unsafe { BNGetVerticalFlowGraphNodeMargin(self.handle) };
+        (horizontal, vertical)
+    }
+
+    /// Sets the graph margins between nodes.
+    pub fn set_node_margins(&self, horizontal: i32, vertical: i32) {
+        unsafe { BNSetFlowGraphNodeMargins(self.handle, horizontal, vertical) };
     }
 
     pub fn append(&self, node: &FlowGraphNode) -> usize {

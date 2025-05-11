@@ -15,7 +15,7 @@ use binaryninja::{
 pub struct GraphPrinter;
 
 impl GraphPrinter {
-    pub fn print_graph(&self, _view: &BinaryView, graph: &FlowGraph) {
+    pub fn print_graph(&self, graph: &FlowGraph) {
         println!("Printing flow graph:");
         for node in &graph.nodes() {
             // Print all disassembly lines in the node
@@ -60,16 +60,16 @@ impl InteractionHandler for GraphPrinter {
         false
     }
 
-    fn show_plain_text_report(&mut self, _view: &BinaryView, title: &str, contents: &str) {
+    fn show_plain_text_report(&mut self, _view: Option<&BinaryView>, title: &str, contents: &str) {
         println!("Plain text report");
         println!("Title: {}", title);
         println!("Contents: {}", contents);
     }
 
-    fn show_graph_report(&mut self, view: &BinaryView, title: &str, graph: &FlowGraph) {
+    fn show_graph_report(&mut self, _view: Option<&BinaryView>, title: &str, graph: &FlowGraph) {
         println!("Graph report");
         println!("Title: {}", title);
-        self.print_graph(view, graph);
+        self.print_graph(graph);
     }
 
     fn get_form_input(&mut self, _form: &mut Form) -> bool {
@@ -77,7 +77,7 @@ impl InteractionHandler for GraphPrinter {
     }
 }
 
-fn test_graph(view: &BinaryView) {
+fn test_graph() {
     let graph = FlowGraph::new();
 
     let disassembly_lines_a = vec![DisassemblyTextLine::new(vec![
@@ -110,7 +110,7 @@ fn test_graph(view: &BinaryView) {
         EdgeStyle::default(),
     );
 
-    view.show_graph_report("Rust Graph Title", &graph);
+    graph.show("Rust Example Graph");
 }
 
 fn main() {
@@ -127,10 +127,11 @@ fn main() {
     // Register the interaction handler so we can see the graph report headlessly.
     register_interaction_handler(GraphPrinter);
 
-    test_graph(&bv);
+    test_graph();
 
     for func in bv.functions().iter().take(5) {
         let graph = func.create_graph(FunctionViewType::MediumLevelIL, None);
+        // TODO: Why are the nodes empty? Python its empty until its shown...
         assert!(!graph.nodes().is_empty());
         let func_name = func.symbol().short_name();
         let title = func_name.to_string_lossy();

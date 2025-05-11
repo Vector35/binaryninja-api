@@ -46,9 +46,12 @@ impl ReportCollection {
         Report::new(self, i)
     }
 
-    fn view(&self, i: usize) -> Ref<BinaryView> {
+    fn view(&self, i: usize) -> Option<Ref<BinaryView>> {
         let raw = unsafe { BNGetReportView(self.handle.as_ptr(), i) };
-        unsafe { BinaryView::ref_from_raw(raw) }
+        if raw.is_null() {
+            return None;
+        }
+        Some(unsafe { BinaryView::ref_from_raw(raw) })
     }
 
     fn title(&self, i: usize) -> String {
@@ -190,7 +193,7 @@ impl<'a> Report<'a> {
         }
     }
 
-    pub fn view(&self) -> Ref<BinaryView> {
+    pub fn view(&self) -> Option<Ref<BinaryView>> {
         self._inner().view()
     }
 
@@ -253,7 +256,7 @@ impl ReportInner<'_> {
         self.collection.report_type(self.index)
     }
 
-    fn view(&self) -> Ref<BinaryView> {
+    fn view(&self) -> Option<Ref<BinaryView>> {
         self.collection.view(self.index)
     }
 

@@ -36,11 +36,16 @@ impl InteractionHandler for MyInteractionHandler {
         todo!()
     }
 
-    fn show_plain_text_report(&mut self, _view: &BinaryView, _title: &str, _contents: &str) {
+    fn show_plain_text_report(
+        &mut self,
+        _view: Option<&BinaryView>,
+        _title: &str,
+        _contents: &str,
+    ) {
         todo!()
     }
 
-    fn show_graph_report(&mut self, _view: &BinaryView, _title: &str, _graph: &FlowGraph) {
+    fn show_graph_report(&mut self, _view: Option<&BinaryView>, _title: &str, _graph: &FlowGraph) {
         todo!()
     }
 

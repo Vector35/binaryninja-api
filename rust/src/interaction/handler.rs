@@ -53,13 +53,13 @@ pub trait InteractionHandler: Sync + Send + 'static {
         task: &InteractionHandlerTask,
     ) -> bool;
 
-    fn show_plain_text_report(&mut self, view: &BinaryView, title: &str, contents: &str);
+    fn show_plain_text_report(&mut self, view: Option<&BinaryView>, title: &str, contents: &str);
 
-    fn show_graph_report(&mut self, view: &BinaryView, title: &str, graph: &FlowGraph);
+    fn show_graph_report(&mut self, view: Option<&BinaryView>, title: &str, graph: &FlowGraph);
 
     fn show_markdown_report(
         &mut self,
-        view: &BinaryView,
+        view: Option<&BinaryView>,
         title: &str,
         _contents: &str,
         plain_text: &str,
@@ -69,7 +69,7 @@ pub trait InteractionHandler: Sync + Send + 'static {
 
     fn show_html_report(
         &mut self,
-        view: &BinaryView,
+        view: Option<&BinaryView>,
         title: &str,
         _contents: &str,
         plain_text: &str,
@@ -80,24 +80,28 @@ pub trait InteractionHandler: Sync + Send + 'static {
     fn show_report_collection(&mut self, _title: &str, reports: &ReportCollection) {
         for report in reports {
             match &report {
-                Report::PlainText(rpt) => {
-                    self.show_plain_text_report(&report.view(), &report.title(), &rpt.contents())
-                }
+                Report::PlainText(rpt) => self.show_plain_text_report(
+                    report.view().as_deref(),
+                    &report.title(),
+                    &rpt.contents(),
+                ),
                 Report::Markdown(rm) => self.show_markdown_report(
-                    &report.view(),
+                    report.view().as_deref(),
                     &report.title(),
                     &rm.contents(),
                     &rm.plaintext(),
                 ),
                 Report::Html(rh) => self.show_html_report(
-                    &report.view(),
+                    report.view().as_deref(),
                     &report.title(),
                     &rh.contents(),
                     &rh.plaintext(),
                 ),
-                Report::FlowGraph(rfg) => {
-                    self.show_graph_report(&report.view(), &report.title(), &rfg.flow_graph())
-                }
+                Report::FlowGraph(rfg) => self.show_graph_report(
+                    report.view().as_deref(),
+                    &report.title(),
+                    &rfg.flow_graph(),
+                ),
             }
         }
     }
@@ -292,7 +296,11 @@ unsafe extern "C" fn cb_show_plain_text_report<R: InteractionHandler>(
     let ctxt = ctxt as *mut R;
     let title = raw_to_string(title).unwrap();
     let contents = raw_to_string(contents).unwrap();
-    (*ctxt).show_plain_text_report(&BinaryView::from_raw(view), &title, &contents)
+    let view = match !view.is_null() {
+        true => Some(BinaryView::from_raw(view)),
+        false => None,
+    };
+    (*ctxt).show_plain_text_report(view.as_ref(), &title, &contents)
 }
 
 unsafe extern "C" fn cb_show_markdown_report<R: InteractionHandler>(
@@ -306,7 +314,11 @@ unsafe extern "C" fn cb_show_markdown_report<R: InteractionHandler>(
     let title = raw_to_string(title).unwrap();
     let contents = raw_to_string(contents).unwrap();
     let plaintext = raw_to_string(plaintext).unwrap();
-    (*ctxt).show_markdown_report(&BinaryView::from_raw(view), &title, &contents, &plaintext)
+    let view = match !view.is_null() {
+        true => Some(BinaryView::from_raw(view)),
+        false => None,
+    };
+    (*ctxt).show_markdown_report(view.as_ref(), &title, &contents, &plaintext)
 }
 
 unsafe extern "C" fn cb_show_html_report<R: InteractionHandler>(
@@ -320,7 +332,11 @@ unsafe extern "C" fn cb_show_html_report<R: InteractionHandler>(
     let title = raw_to_string(title).unwrap();
     let contents = raw_to_string(contents).unwrap();
     let plaintext = raw_to_string(plaintext).unwrap();
-    (*ctxt).show_html_report(&BinaryView::from_raw(view), &title, &contents, &plaintext)
+    let view = match !view.is_null() {
+        true => Some(BinaryView::from_raw(view)),
+        false => None,
+    };
+    (*ctxt).show_html_report(view.as_ref(), &title, &contents, &plaintext)
 }
 
 unsafe extern "C" fn cb_show_graph_report<R: InteractionHandler>(
@@ -331,11 +347,11 @@ unsafe extern "C" fn cb_show_graph_report<R: InteractionHandler>(
 ) {
     let ctxt = ctxt as *mut R;
     let title = raw_to_string(title).unwrap();
-    (*ctxt).show_graph_report(
-        &BinaryView::from_raw(view),
-        &title,
-        &FlowGraph::from_raw(graph),
-    )
+    let view = match !view.is_null() {
+        true => Some(BinaryView::from_raw(view)),
+        false => None,
+    };
+    (*ctxt).show_graph_report(view.as_ref(), &title, &FlowGraph::from_raw(graph))
 }
 
 unsafe extern "C" fn cb_show_report_collection<R: InteractionHandler>(

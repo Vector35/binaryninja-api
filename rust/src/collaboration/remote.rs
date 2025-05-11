@@ -1,8 +1,8 @@
+use super::{sync, GroupId, RemoteGroup, RemoteProject, RemoteUser};
 use binaryninjacore_sys::*;
+use std::env::VarError;
 use std::ffi::c_void;
 use std::ptr::NonNull;
-
-use super::{sync, GroupId, RemoteGroup, RemoteProject, RemoteUser};
 
 use crate::binary_view::BinaryView;
 use crate::database::Database;
@@ -10,6 +10,8 @@ use crate::enterprise;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::Project;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
+use crate::secrets_provider::CoreSecretsProvider;
+use crate::settings::Settings;
 use crate::string::{BnString, IntoCStr};
 
 #[repr(transparent)]
@@ -185,20 +187,22 @@ impl Remote {
     /// Use [Remote::connect_with_opts] if you cannot otherwise automatically connect using enterprise.
     ///
     /// WARNING: This is currently **not** thread safe, if you try and connect/disconnect to a remote on
-    /// multiple threads you will be subject to race conditions. To avoid this wrap the [`Remote`] in
-    /// a synchronization primitive, and pass that to your threads. Or don't try and connect on multiple threads.
+    /// multiple threads, you will be subject to race conditions. To avoid this, wrap the [`Remote`] in
+    /// a synchronization primitive and pass that to your threads. Or don't try and connect on multiple threads.
     pub fn connect(&self) -> Result<(), ()> {
-        // TODO: implement SecretsProvider
         if self.is_enterprise()? && enterprise::is_server_authenticated() {
             self.connect_with_opts(ConnectionOptions::from_enterprise()?)
         } else {
-            // TODO: Make this error instead.
-            let username =
-                std::env::var("BN_ENTERPRISE_USERNAME").expect("No username for connection!");
-            let password =
-                std::env::var("BN_ENTERPRISE_PASSWORD").expect("No password for connection!");
-            let connection_opts = ConnectionOptions::new_with_password(username, password);
-            self.connect_with_opts(connection_opts)
+            // Try to load from env vars.
+            match ConnectionOptions::from_env_variables() {
+                Ok(connection_opts) => self.connect_with_opts(connection_opts),
+                Err(_) => {
+                    // Try to load from the enterprise secrets provider.
+                    let secrets_connection_opts =
+                        ConnectionOptions::from_secrets_provider(&self.address())?;
+                    self.connect_with_opts(secrets_connection_opts)
+                }
+            }
         }
     }
 
@@ -870,11 +874,31 @@ impl ConnectionOptions {
         // TODO: Check if enterprise is initialized and error if not.
         let username = enterprise::server_username();
         let token = enterprise::server_token();
+        Ok(Self::new_with_token(username, token))
+    }
+
+    /// Retrieves the [`ConnectionOptions`] for the given address.
+    ///
+    /// NOTE: Uses the secret's provider specified by the setting "enterprise.secretsProvider".
+    pub fn from_secrets_provider(address: &str) -> Result<Self, ()> {
+        let secrets_provider_name = Settings::new().get_string("enterprise.secretsProvider");
+        let provider = CoreSecretsProvider::by_name(&secrets_provider_name).ok_or(())?;
+        let cred_data_str = provider.get_data(address);
+        if cred_data_str.is_empty() {
+            return Err(());
+        }
+        let cred_data: serde_json::Value = serde_json::from_str(&cred_data_str).map_err(|_| ())?;
+        let username = cred_data["username"].as_str().ok_or(())?;
+        let token = cred_data["token"].as_str().ok_or(())?;
         Ok(Self::new_with_token(
             username.to_string(),
             token.to_string(),
         ))
     }
 
-    // TODO: from_secrets_provider
+    pub fn from_env_variables() -> Result<Self, VarError> {
+        let username = std::env::var("BN_ENTERPRISE_USERNAME")?;
+        let password = std::env::var("BN_ENTERPRISE_PASSWORD")?;
+        Ok(ConnectionOptions::new_with_password(username, password))
+    }
 }

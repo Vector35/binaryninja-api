@@ -175,6 +175,9 @@ pub enum MediumLevelILLiftedInstructionKind {
     VarSsaField(VarSsaField),
     VarAliasedField(VarSsaField),
     Trap(Trap),
+    // A placeholder for instructions that the Rust bindings do not yet support.
+    // Distinct from `Unimpl` as that is a valid instruction.
+    NotYetImplemented,
 }
 
 impl MediumLevelILLiftedInstruction {
@@ -186,6 +189,7 @@ impl MediumLevelILLiftedInstruction {
             Bp => "Bp",
             Undef => "Undef",
             Unimpl => "Unimpl",
+            NotYetImplemented => "NotYetImplemented",
             If(_) => "If",
             FloatConst(_) => "FloatConst",
             Const(_) => "Const",
@@ -318,7 +322,7 @@ impl MediumLevelILLiftedInstruction {
         use MediumLevelILLiftedInstructionKind::*;
         use MediumLevelILLiftedOperand as Operand;
         match &self.kind {
-            Nop | Noret | Bp | Undef | Unimpl => vec![],
+            Nop | Noret | Bp | Undef | Unimpl | NotYetImplemented => vec![],
             If(op) => vec![
                 ("condition", Operand::Expr(*op.condition.clone())),
                 ("dest_true", Operand::InstructionIndex(op.dest_true)),

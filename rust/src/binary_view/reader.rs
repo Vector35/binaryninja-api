@@ -68,12 +68,12 @@ impl BinaryReader {
         unsafe { BNSetBinaryReaderVirtualBase(self.handle, virtual_base_addr) }
     }
 
-    /// Prefer using [crate::binary_reader::BinaryReader::seek] over this.
+    /// Prefer using [crate::reader::BinaryReader::seek] over this.
     pub fn seek_to_offset(&mut self, offset: u64) {
         unsafe { BNSeekBinaryReader(self.handle, offset) }
     }
 
-    /// Prefer using [crate::binary_reader::BinaryReader::seek] over this.
+    /// Prefer using [crate::reader::BinaryReader::seek] over this.
     pub fn seek_to_relative_offset(&mut self, offset: i64) {
         unsafe { BNSeekBinaryReaderRelative(self.handle, offset) }
     }

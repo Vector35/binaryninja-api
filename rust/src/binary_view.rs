@@ -26,7 +26,6 @@ use binaryninjacore_sys::*;
 use crate::architecture::{Architecture, CoreArchitecture};
 use crate::base_detection::BaseAddressDetection;
 use crate::basic_block::BasicBlock;
-use crate::binary_view::memory_map::MemoryMap;
 use crate::component::Component;
 use crate::confidence::Conf;
 use crate::data_buffer::DataBuffer;
@@ -66,6 +65,12 @@ use std::{result, slice};
 // TODO : general reorg of modules related to bv
 
 pub mod memory_map;
+pub mod reader;
+pub mod writer;
+
+pub use memory_map::MemoryMap;
+pub use reader::BinaryReader;
+pub use writer::BinaryWriter;
 
 pub type Result<R> = result::Result<R, ()>;
 pub type BinaryViewEventType = BNBinaryViewEventType;

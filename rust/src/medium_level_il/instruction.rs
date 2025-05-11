@@ -609,9 +609,7 @@ impl MediumLevelILInstruction {
             | MLIL_CALL_PARAM_SSA
             | MLIL_CALL_OUTPUT_SSA
             | MLIL_MEMORY_INTRINSIC_OUTPUT_SSA
-            | MLIL_MEMORY_INTRINSIC_SSA => {
-                unimplemented!()
-            }
+            | MLIL_MEMORY_INTRINSIC_SSA => Op::NotYetImplemented,
         };
 
         Self {
@@ -633,6 +631,7 @@ impl MediumLevelILInstruction {
             Bp => Lifted::Bp,
             Undef => Lifted::Undef,
             Unimpl => Lifted::Unimpl,
+            NotYetImplemented => Lifted::NotYetImplemented,
             If(op) => Lifted::If(LiftedIf {
                 condition: self.lift_operand(op.condition),
                 dest_true: op.dest_true,
@@ -1629,6 +1628,9 @@ pub enum MediumLevelILInstructionKind {
     VarSsaField(VarSsaField),
     VarAliasedField(VarSsaField),
     Trap(Trap),
+    // A placeholder for instructions that the Rust bindings do not yet support.
+    // Distinct from `Unimpl` as that is a valid instruction.
+    NotYetImplemented,
 }
 
 fn get_float(value: u64, size: usize) -> f64 {

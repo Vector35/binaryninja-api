@@ -1,6 +1,6 @@
 use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::headless::Session;
-use binaryninja::medium_level_il::{MediumLevelILInstructionKind, MediumLevelInstructionIndex};
+use binaryninja::medium_level_il::{MediumLevelILInstructionKind, MediumLevelILLiftedInstructionKind, MediumLevelInstructionIndex};
 use std::path::PathBuf;
 
 #[test]
@@ -65,6 +65,14 @@ fn test_mlil_info() {
             assert_eq!(op.dest, 7);
             assert_eq!(op.first_param, 9);
             assert_eq!(op.num_params, 1);
+        }
+        _ => panic!("Expected Call"),
+    }
+    match instr_3.lift().kind {
+        MediumLevelILLiftedInstructionKind::Call(lifted_call) => {
+            assert_eq!(lifted_call.dest.index, MediumLevelInstructionIndex(7));
+            assert_eq!(lifted_call.output.len(), 1);
+            assert_eq!(lifted_call.params.len(), 1);
         }
         _ => panic!("Expected Call"),
     }

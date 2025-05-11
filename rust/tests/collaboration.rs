@@ -20,13 +20,6 @@ fn temp_project_scope<T: Fn(&RemoteProject)>(remote: &Remote, project_name: &str
         // TODO: have connected by the time this errors out. Maybe?
         let _ = remote.connect();
     }
-
-    if let Ok(home_dir) = env::var("HOME").or_else(|_| env::var("USERPROFILE")) {
-        eprintln!("Current user directory: {}", home_dir);
-    } else {
-        eprintln!("Unable to determine the current user directory.");
-    }
-
     let project = remote
         .create_project(project_name, "Test project for test purposes")
         .expect("Failed to create project");

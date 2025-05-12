@@ -7,7 +7,6 @@ use super::{HighLevelILFunction, HighLevelILLiftedInstruction, HighLevelILLifted
 use crate::architecture::{CoreIntrinsic, IntrinsicId};
 use crate::confidence::Conf;
 use crate::disassembly::DisassemblyTextLine;
-use crate::operand_iter::OperandIter;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::types::Type;
 use crate::variable::{ConstantData, RegisterValue, SSAVariable, Variable};
@@ -552,6 +551,38 @@ impl HighLevelILInstruction {
         }
     }
 
+    fn get_operand_list(&self, operand_idx: usize) -> Vec<u64> {
+        let mut count = 0;
+        let raw_list_ptr = unsafe {
+            BNHighLevelILGetOperandList(
+                self.function.handle,
+                self.expr_index.0,
+                operand_idx,
+                &mut count,
+            )
+        };
+        assert!(!raw_list_ptr.is_null());
+        let list = unsafe { std::slice::from_raw_parts(raw_list_ptr, count).to_vec() };
+        unsafe { BNHighLevelILFreeOperandList(raw_list_ptr) };
+        list
+    }
+
+    fn get_ssa_var_list(&self, operand_idx: usize) -> Vec<SSAVariable> {
+        self.get_operand_list(operand_idx)
+            .chunks(2)
+            .map(|chunk| (Variable::from_identifier(chunk[0]), chunk[1] as usize))
+            .map(|(var, version)| SSAVariable::new(var, version))
+            .collect()
+    }
+
+    fn get_expr_list(&self, operand_idx: usize) -> Vec<HighLevelILInstruction> {
+        self.get_operand_list(operand_idx)
+            .into_iter()
+            .map(|val| HighLevelInstructionIndex(val as usize))
+            .filter_map(|idx| self.function.instruction_from_expr_index(idx))
+            .collect()
+    }
+
     pub fn lift(&self) -> HighLevelILLiftedInstruction {
         use HighLevelILInstructionKind::*;
         use HighLevelILLiftedInstructionKind as Lifted;
@@ -630,7 +661,11 @@ impl HighLevelILInstruction {
                 src: self.lift_operand(op.src),
             }),
             AssignUnpack(op) => Lifted::AssignUnpack(LiftedAssignUnpack {
-                dest: self.lift_instruction_list(op.first_dest, op.num_dests),
+                dest: self
+                    .get_expr_list(0)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
                 src: self.lift_operand(op.src),
             }),
             AssignMemSsa(op) => Lifted::AssignMemSsa(LiftedAssignMemSsa {
@@ -640,26 +675,42 @@ impl HighLevelILInstruction {
                 src_memory: op.src_memory,
             }),
             AssignUnpackMemSsa(op) => Lifted::AssignUnpackMemSsa(LiftedAssignUnpackMemSsa {
-                dest: self.lift_instruction_list(op.first_dest, op.num_dests),
+                dest: self
+                    .get_expr_list(0)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
                 dest_memory: op.dest_memory,
                 src: self.lift_operand(op.src),
                 src_memory: op.src_memory,
             }),
-            Block(op) => Lifted::Block(LiftedBlock {
-                body: self.lift_instruction_list(op.first_param, op.num_params),
+            Block(_op) => Lifted::Block(LiftedBlock {
+                body: self
+                    .get_expr_list(0)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
             }),
 
             Call(op) => Lifted::Call(self.lift_call(op)),
             Tailcall(op) => Lifted::Tailcall(self.lift_call(op)),
             CallSsa(op) => Lifted::CallSsa(LiftedCallSsa {
                 dest: self.lift_operand(op.dest),
-                params: self.lift_instruction_list(op.first_param, op.num_params),
+                params: self
+                    .get_expr_list(1)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
                 dest_memory: op.dest_memory,
                 src_memory: op.src_memory,
             }),
 
             Case(op) => Lifted::Case(LiftedCase {
-                values: self.lift_instruction_list(op.first_value, op.num_values),
+                values: self
+                    .get_expr_list(0)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
                 body: self.lift_operand(op.body),
             }),
             Const(op) => Lifted::Const(op),
@@ -740,7 +791,11 @@ impl HighLevelILInstruction {
                     IntrinsicId(op.intrinsic),
                 )
                 .expect("Invalid intrinsic"),
-                params: self.lift_instruction_list(op.first_param, op.num_params),
+                params: self
+                    .get_expr_list(1)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
             }),
             IntrinsicSsa(op) => Lifted::IntrinsicSsa(LiftedIntrinsicSsa {
                 intrinsic: CoreIntrinsic::new(
@@ -748,7 +803,11 @@ impl HighLevelILInstruction {
                     IntrinsicId(op.intrinsic),
                 )
                 .expect("Invalid intrinsic"),
-                params: self.lift_instruction_list(op.first_param, op.num_params),
+                params: self
+                    .get_expr_list(1)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
                 dest_memory: op.dest_memory,
                 src_memory: op.src_memory,
             }),
@@ -757,10 +816,14 @@ impl HighLevelILInstruction {
             }),
             MemPhi(op) => Lifted::MemPhi(LiftedMemPhi {
                 dest: op.dest,
-                src: OperandIter::new(&*self.function, op.first_src, op.num_srcs).collect(),
+                src: self.get_operand_list(1),
             }),
-            Ret(op) => Lifted::Ret(LiftedRet {
-                src: self.lift_instruction_list(op.first_src, op.num_srcs),
+            Ret(_op) => Lifted::Ret(LiftedRet {
+                src: self
+                    .get_expr_list(0)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
             }),
             Split(op) => Lifted::Split(LiftedSplit {
                 high: self.lift_operand(op.high),
@@ -771,13 +834,25 @@ impl HighLevelILInstruction {
             Switch(op) => Lifted::Switch(LiftedSwitch {
                 condition: self.lift_operand(op.condition),
                 default: self.lift_operand(op.default),
-                cases: self.lift_instruction_list(op.first_case, op.num_cases),
+                cases: self
+                    .get_expr_list(2)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
             }),
-            Syscall(op) => Lifted::Syscall(LiftedSyscall {
-                params: self.lift_instruction_list(op.first_param, op.num_params),
+            Syscall(_op) => Lifted::Syscall(LiftedSyscall {
+                params: self
+                    .get_expr_list(0)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
             }),
             SyscallSsa(op) => Lifted::SyscallSsa(LiftedSyscallSsa {
-                params: self.lift_instruction_list(op.first_param, op.num_params),
+                params: self
+                    .get_expr_list(0)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
                 dest_memory: op.dest_memory,
                 src_memory: op.src_memory,
             }),
@@ -794,9 +869,7 @@ impl HighLevelILInstruction {
             }),
             VarPhi(op) => Lifted::VarPhi(LiftedVarPhi {
                 dest: op.dest,
-                src: OperandIter::new(&*self.function, op.first_src, op.num_srcs)
-                    .ssa_vars()
-                    .collect(),
+                src: self.get_ssa_var_list(2),
             }),
             VarSsa(op) => Lifted::VarSsa(op),
 
@@ -907,8 +980,9 @@ impl HighLevelILInstruction {
     fn lift_call(&self, op: Call) -> LiftedCall {
         LiftedCall {
             dest: self.lift_operand(op.dest),
-            params: OperandIter::new(&*self.function, op.first_param, op.num_params)
-                .exprs()
+            params: self
+                .get_expr_list(1)
+                .iter()
                 .map(|expr| expr.lift())
                 .collect(),
         }
@@ -935,17 +1009,6 @@ impl HighLevelILInstruction {
             offset: op.offset,
             member_index: op.member_index,
         }
-    }
-
-    fn lift_instruction_list(
-        &self,
-        first_instruction: usize,
-        num_instructions: usize,
-    ) -> Vec<HighLevelILLiftedInstruction> {
-        OperandIter::new(&*self.function, first_instruction, num_instructions)
-            .exprs()
-            .map(|expr| expr.lift())
-            .collect()
     }
 }
 

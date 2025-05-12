@@ -621,6 +621,54 @@ impl MediumLevelILInstruction {
         }
     }
 
+    fn get_operand_list(&self, operand_idx: usize) -> Vec<u64> {
+        let mut count = 0;
+        let raw_list_ptr = unsafe {
+            BNMediumLevelILGetOperandList(
+                self.function.handle,
+                self.expr_index.0,
+                operand_idx,
+                &mut count,
+            )
+        };
+        assert!(!raw_list_ptr.is_null());
+        let list = unsafe { std::slice::from_raw_parts(raw_list_ptr, count).to_vec() };
+        unsafe { BNMediumLevelILFreeOperandList(raw_list_ptr) };
+        list
+    }
+
+    fn get_var_list(&self, operand_idx: usize) -> Vec<Variable> {
+        self.get_operand_list(operand_idx)
+            .into_iter()
+            .map(Variable::from_identifier)
+            .collect()
+    }
+
+    fn get_ssa_var_list(&self, operand_idx: usize) -> Vec<SSAVariable> {
+        self.get_operand_list(operand_idx)
+            .chunks(2)
+            .map(|chunk| (Variable::from_identifier(chunk[0]), chunk[1] as usize))
+            .map(|(var, version)| SSAVariable::new(var, version))
+            .collect()
+    }
+
+    fn get_expr_list(&self, operand_idx: usize) -> Vec<MediumLevelILInstruction> {
+        self.get_operand_list(operand_idx)
+            .into_iter()
+            .map(|val| MediumLevelInstructionIndex(val as usize))
+            .filter_map(|idx| self.function.instruction_from_expr_index(idx))
+            .collect()
+    }
+
+    fn get_target_map(&self, operand_idx: usize) -> BTreeMap<u64, MediumLevelInstructionIndex> {
+        self.get_operand_list(operand_idx)
+            .chunks(2)
+            // TODO: This filter is kinda redundant.
+            .filter_map(|chunk| chunk.get(0..2))
+            .map(|chunk| (chunk[0], MediumLevelInstructionIndex(chunk[1] as usize)))
+            .collect()
+    }
+
     pub fn lift(&self) -> MediumLevelILLiftedInstruction {
         use MediumLevelILInstructionKind::*;
         use MediumLevelILLiftedInstructionKind as Lifted;
@@ -690,12 +738,7 @@ impl MediumLevelILInstruction {
             }),
             JumpTo(op) => Lifted::JumpTo(LiftedJumpTo {
                 dest: self.lift_operand(op.dest),
-                targets: OperandIter::new(&*self.function, op.first_operand, op.num_operands)
-                    .pairs()
-                    .map(|(addr, instr_idx)| {
-                        (addr, MediumLevelInstructionIndex(instr_idx as usize))
-                    })
-                    .collect(),
+                targets: self.get_target_map(1),
             }),
             Goto(op) => Lifted::Goto(op),
             FreeVarSlot(op) => Lifted::FreeVarSlot(op),
@@ -732,14 +775,12 @@ impl MediumLevelILInstruction {
             }),
             VarPhi(op) => Lifted::VarPhi(LiftedVarPhi {
                 dest: op.dest,
-                src: OperandIter::new(&*self.function, op.first_operand, op.num_operands)
-                    .ssa_vars()
-                    .collect(),
+                src: self.get_ssa_var_list(2),
             }),
             MemPhi(op) => Lifted::MemPhi(LiftedMemPhi {
                 dest_memory: op.dest_memory,
-                src_memory: OperandIter::new(&*self.function, op.first_operand, op.num_operands)
-                    .collect(),
+                // TODO: Make a stronger type for this.
+                src_memory: self.get_operand_list(0),
             }),
             VarSplit(op) => Lifted::VarSplit(op),
             SetVarSplit(op) => Lifted::SetVarSplit(LiftedSetVarSplit {
@@ -809,42 +850,59 @@ impl MediumLevelILInstruction {
             Tailcall(op) => Lifted::Tailcall(self.lift_call(op)),
 
             Intrinsic(op) => Lifted::Intrinsic(LiftedIntrinsic {
-                output: OperandIter::new(&*self.function, op.first_output, op.num_outputs)
-                    .vars()
-                    .collect(),
+                output: self.get_var_list(0),
                 intrinsic: CoreIntrinsic::new(
                     self.function.function().arch(),
                     IntrinsicId(op.intrinsic),
                 )
                 .expect("Valid intrinsic"),
-                params: OperandIter::new(&*self.function, op.first_param, op.num_params)
-                    .exprs()
+                params: self
+                    .get_expr_list(3)
+                    .iter()
                     .map(|expr| expr.lift())
                     .collect(),
             }),
-            Syscall(op) => Lifted::Syscall(LiftedSyscallCall {
-                output: OperandIter::new(&*self.function, op.first_output, op.num_outputs)
-                    .vars()
-                    .collect(),
-                params: OperandIter::new(&*self.function, op.first_param, op.num_params)
-                    .exprs()
+            Syscall(_op) => Lifted::Syscall(LiftedSyscallCall {
+                output: self.get_var_list(0),
+                params: self
+                    .get_expr_list(2)
+                    .iter()
                     .map(|expr| expr.lift())
                     .collect(),
             }),
             IntrinsicSsa(op) => Lifted::IntrinsicSsa(LiftedIntrinsicSsa {
-                output: OperandIter::new(&*self.function, op.first_output, op.num_outputs)
-                    .ssa_vars()
-                    .collect(),
+                output: self.get_ssa_var_list(0),
                 intrinsic: CoreIntrinsic::new(
                     self.function.function().arch(),
                     IntrinsicId(op.intrinsic),
                 )
                 .expect("Valid intrinsic"),
-                params: OperandIter::new(&*self.function, op.first_param, op.num_params)
-                    .exprs()
+                params: self
+                    .get_expr_list(3)
+                    .iter()
                     .map(|expr| expr.lift())
                     .collect(),
             }),
+            MemoryIntrinsicSsa(op) => Lifted::MemoryIntrinsicSsa(LiftedMemoryIntrinsicSsa {
+                output: self.lift_operand(op.output),
+                intrinsic: CoreIntrinsic::new(
+                    self.function.function().arch(),
+                    IntrinsicId(op.intrinsic),
+                )
+                .expect("Valid intrinsic"),
+                params: self
+                    .get_expr_list(3)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
+                src_memory: op.src_memory,
+            }),
+            MemoryIntrinsicOutputSsa(op) => {
+                Lifted::MemoryIntrinsicOutputSsa(LiftedMemoryIntrinsicOutputSsa {
+                    dest_memory: op.dest_memory,
+                    output: self.get_ssa_var_list(1),
+                })
+            }
 
             CallSsa(op) => Lifted::CallSsa(self.lift_call_ssa(op)),
             TailcallSsa(op) => Lifted::TailcallSsa(self.lift_call_ssa(op)),
@@ -853,28 +911,46 @@ impl MediumLevelILInstruction {
             TailcallUntypedSsa(op) => Lifted::TailcallUntypedSsa(self.lift_call_untyped_ssa(op)),
 
             SyscallSsa(op) => Lifted::SyscallSsa(LiftedSyscallSsa {
-                output: get_call_output_ssa(&self.function, op.output).collect(),
-                params: OperandIter::new(&*self.function, op.first_param, op.num_params)
-                    .exprs()
+                output: get_call_output_ssa(&MediumLevelILInstruction::new(
+                    self.function.clone(),
+                    MediumLevelInstructionIndex(op.output),
+                )),
+                params: self
+                    .get_expr_list(1)
+                    .iter()
                     .map(|expr| expr.lift())
                     .collect(),
                 src_memory: op.src_memory,
             }),
             SyscallUntypedSsa(op) => Lifted::SyscallUntypedSsa(LiftedSyscallUntypedSsa {
-                output: get_call_output_ssa(&self.function, op.output).collect(),
-                params: get_call_params_ssa(&self.function, op.params)
-                    .map(|param| param.lift())
-                    .collect(),
+                output: get_call_output_ssa(&MediumLevelILInstruction::new(
+                    self.function.clone(),
+                    MediumLevelInstructionIndex(op.output),
+                )),
+                params: get_call_params_ssa(&MediumLevelILInstruction::new(
+                    self.function.clone(),
+                    MediumLevelInstructionIndex(op.params),
+                ))
+                .iter()
+                .map(|param| param.lift())
+                .collect(),
                 stack: self.lift_operand(op.stack),
             }),
 
             CallUntyped(op) => Lifted::CallUntyped(self.lift_call_untyped(op)),
             TailcallUntyped(op) => Lifted::TailcallUntyped(self.lift_call_untyped(op)),
             SyscallUntyped(op) => Lifted::SyscallUntyped(LiftedSyscallUntyped {
-                output: get_call_output(&self.function, op.output).collect(),
-                params: get_call_params(&self.function, op.params)
-                    .map(|param| param.lift())
-                    .collect(),
+                output: get_call_output(&MediumLevelILInstruction::new(
+                    self.function.clone(),
+                    MediumLevelInstructionIndex(op.output),
+                )),
+                params: get_call_params(&MediumLevelILInstruction::new(
+                    self.function.clone(),
+                    MediumLevelInstructionIndex(op.params),
+                ))
+                .iter()
+                .map(|param| param.lift())
+                .collect(),
                 stack: self.lift_operand(op.stack),
             }),
 
@@ -910,21 +986,24 @@ impl MediumLevelILInstruction {
                 src: self.lift_operand(op.src),
                 src_memory: op.src_memory,
             }),
-            Ret(op) => Lifted::Ret(LiftedRet {
-                src: OperandIter::new(&*self.function, op.first_operand, op.num_operands)
-                    .exprs()
+            Ret(_op) => Lifted::Ret(LiftedRet {
+                src: self
+                    .get_expr_list(0)
+                    .iter()
                     .map(|expr| expr.lift())
                     .collect(),
             }),
-            SeparateParamList(op) => Lifted::SeparateParamList(LiftedSeparateParamList {
-                params: OperandIter::new(&*self.function, op.first_param, op.num_params)
-                    .exprs()
+            SeparateParamList(_op) => Lifted::SeparateParamList(LiftedSeparateParamList {
+                params: self
+                    .get_expr_list(0)
+                    .iter()
                     .map(|expr| expr.lift())
                     .collect(),
             }),
-            SharedParamSlot(op) => Lifted::SharedParamSlot(LiftedSharedParamSlot {
-                params: OperandIter::new(&*self.function, op.first_param, op.num_params)
-                    .exprs()
+            SharedParamSlot(_op) => Lifted::SharedParamSlot(LiftedSharedParamSlot {
+                params: self
+                    .get_expr_list(0)
+                    .iter()
                     .map(|expr| expr.lift())
                     .collect(),
             }),
@@ -1413,12 +1492,11 @@ impl MediumLevelILInstruction {
 
     fn lift_call(&self, op: Call) -> LiftedCall {
         LiftedCall {
-            output: OperandIter::new(&*self.function, op.first_output, op.num_outputs)
-                .vars()
-                .collect(),
+            output: self.get_var_list(0),
             dest: self.lift_operand(op.dest),
-            params: OperandIter::new(&*self.function, op.first_param, op.num_params)
-                .exprs()
+            params: self
+                .get_expr_list(3)
+                .iter()
                 .map(|expr| expr.lift())
                 .collect(),
         }
@@ -1426,21 +1504,32 @@ impl MediumLevelILInstruction {
 
     fn lift_call_untyped(&self, op: CallUntyped) -> LiftedCallUntyped {
         LiftedCallUntyped {
-            output: get_call_output(&self.function, op.output).collect(),
+            output: get_call_output(&MediumLevelILInstruction::new(
+                self.function.clone(),
+                MediumLevelInstructionIndex(op.output),
+            )),
             dest: self.lift_operand(op.dest),
-            params: get_call_params(&self.function, op.params)
-                .map(|expr| expr.lift())
-                .collect(),
+            params: get_call_params(&MediumLevelILInstruction::new(
+                self.function.clone(),
+                MediumLevelInstructionIndex(op.params),
+            ))
+            .iter()
+            .map(|expr| expr.lift())
+            .collect(),
             stack: self.lift_operand(op.stack),
         }
     }
 
     fn lift_call_ssa(&self, op: CallSsa) -> LiftedCallSsa {
         LiftedCallSsa {
-            output: get_call_output_ssa(&self.function, op.output).collect(),
+            output: get_call_output_ssa(&MediumLevelILInstruction::new(
+                self.function.clone(),
+                MediumLevelInstructionIndex(op.output),
+            )),
             dest: self.lift_operand(op.dest),
-            params: OperandIter::new(&*self.function, op.first_param, op.num_params)
-                .exprs()
+            params: self
+                .get_expr_list(2)
+                .iter()
                 .map(|expr| expr.lift())
                 .collect(),
             src_memory: op.src_memory,
@@ -1449,11 +1538,18 @@ impl MediumLevelILInstruction {
 
     fn lift_call_untyped_ssa(&self, op: CallUntypedSsa) -> LiftedCallUntypedSsa {
         LiftedCallUntypedSsa {
-            output: get_call_output_ssa(&self.function, op.output).collect(),
+            output: get_call_output_ssa(&MediumLevelILInstruction::new(
+                self.function.clone(),
+                MediumLevelInstructionIndex(op.output),
+            )),
             dest: self.lift_operand(op.dest),
-            params: get_call_params_ssa(&self.function, op.params)
-                .map(|param| param.lift())
-                .collect(),
+            params: get_call_params_ssa(&MediumLevelILInstruction::new(
+                self.function.clone(),
+                MediumLevelInstructionIndex(op.params),
+            ))
+            .iter()
+            .map(|param| param.lift())
+            .collect(),
             stack: self.lift_operand(op.stack),
         }
     }
@@ -1636,10 +1732,6 @@ fn get_float(value: u64, size: usize) -> f64 {
     }
 }
 
-fn get_raw_operation(function: &MediumLevelILFunction, idx: usize) -> BNMediumLevelILInstruction {
-    unsafe { BNGetMediumLevelILByIndex(function.handle, idx) }
-}
-
 fn get_var(id: u64) -> Variable {
     Variable::from_identifier(id)
 }
@@ -1648,37 +1740,32 @@ fn get_var_ssa(id: u64, version: usize) -> SSAVariable {
     SSAVariable::new(get_var(id), version)
 }
 
-fn get_call_output(function: &MediumLevelILFunction, idx: usize) -> impl Iterator<Item = Variable> {
-    let op = get_raw_operation(function, idx);
-    assert_eq!(op.operation, BNMediumLevelILOperation::MLIL_CALL_OUTPUT);
-    OperandIter::new(function, op.operands[1] as usize, op.operands[0] as usize).vars()
+fn get_call_output(instr: &MediumLevelILInstruction) -> Vec<Variable> {
+    match instr.kind {
+        MediumLevelILInstructionKind::CallOutput(_op) => instr.get_var_list(0),
+        _ => vec![],
+    }
 }
 
-fn get_call_params(
-    function: &MediumLevelILFunction,
-    idx: usize,
-) -> impl Iterator<Item = MediumLevelILInstruction> {
-    let op = get_raw_operation(function, idx);
-    assert_eq!(op.operation, BNMediumLevelILOperation::MLIL_CALL_PARAM);
-    OperandIter::new(function, op.operands[1] as usize, op.operands[0] as usize).exprs()
+fn get_call_params(instr: &MediumLevelILInstruction) -> Vec<MediumLevelILInstruction> {
+    match instr.kind {
+        MediumLevelILInstructionKind::CallParam(_op) => instr.get_expr_list(0),
+        _ => vec![],
+    }
 }
 
-fn get_call_output_ssa(
-    function: &MediumLevelILFunction,
-    idx: usize,
-) -> impl Iterator<Item = SSAVariable> {
-    let op = get_raw_operation(function, idx);
-    assert_eq!(op.operation, BNMediumLevelILOperation::MLIL_CALL_OUTPUT_SSA);
-    OperandIter::new(function, op.operands[2] as usize, op.operands[1] as usize).ssa_vars()
+fn get_call_output_ssa(instr: &MediumLevelILInstruction) -> Vec<SSAVariable> {
+    match instr.kind {
+        MediumLevelILInstructionKind::CallOutputSsa(_op) => instr.get_ssa_var_list(1),
+        _ => vec![],
+    }
 }
 
-fn get_call_params_ssa(
-    function: &MediumLevelILFunction,
-    idx: usize,
-) -> impl Iterator<Item = MediumLevelILInstruction> {
-    let op = get_raw_operation(function, idx);
-    assert_eq!(op.operation, BNMediumLevelILOperation::MLIL_CALL_PARAM_SSA);
-    OperandIter::new(function, op.operands[2] as usize, op.operands[1] as usize).exprs()
+fn get_call_params_ssa(instr: &MediumLevelILInstruction) -> Vec<MediumLevelILInstruction> {
+    match instr.kind {
+        MediumLevelILInstructionKind::CallParamSsa(_op) => instr.get_expr_list(1),
+        _ => vec![],
+    }
 }
 
 /// Conditional branching instruction and an expected conditional result

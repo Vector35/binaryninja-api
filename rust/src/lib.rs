@@ -26,7 +26,6 @@
 
 #[macro_use]
 mod ffi;
-mod operand_iter;
 
 pub mod architecture;
 pub mod background_task;

@@ -165,7 +165,7 @@ impl Eq for BnString {}
 
 impl fmt::Debug for BnString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.to_string_lossy())
+        self.to_string_lossy().fmt(f)
     }
 }
 

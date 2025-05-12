@@ -133,9 +133,8 @@ impl TypeArchive {
 
     /// Revert the type archive's current snapshot to the given snapshot
     pub fn set_current_snapshot_id(&self, id: &TypeArchiveSnapshotId) {
-        unsafe {
-            BNSetTypeArchiveCurrentSnapshot(self.handle.as_ptr(), id.0.as_ptr() as *const c_char)
-        }
+        let snapshot = id.clone().to_cstr();
+        unsafe { BNSetTypeArchiveCurrentSnapshot(self.handle.as_ptr(), snapshot.as_ptr()) }
     }
 
     /// Get a list of every snapshot's id
@@ -152,12 +151,9 @@ impl TypeArchive {
         snapshot: &TypeArchiveSnapshotId,
     ) -> Option<Array<BnString>> {
         let mut count = 0;
+        let snapshot = snapshot.clone().to_cstr();
         let result = unsafe {
-            BNGetTypeArchiveSnapshotParentIds(
-                self.handle.as_ptr(),
-                snapshot.0.as_ptr() as *const c_char,
-                &mut count,
-            )
+            BNGetTypeArchiveSnapshotParentIds(self.handle.as_ptr(), snapshot.as_ptr(), &mut count)
         };
         (!result.is_null()).then(|| unsafe { Array::new(result, count, ()) })
     }
@@ -168,12 +164,9 @@ impl TypeArchive {
         snapshot: &TypeArchiveSnapshotId,
     ) -> Option<Array<BnString>> {
         let mut count = 0;
+        let snapshot = snapshot.clone().to_cstr();
         let result = unsafe {
-            BNGetTypeArchiveSnapshotChildIds(
-                self.handle.as_ptr(),
-                snapshot.0.as_ptr() as *const c_char,
-                &mut count,
-            )
+            BNGetTypeArchiveSnapshotChildIds(self.handle.as_ptr(), snapshot.as_ptr(), &mut count)
         };
         (!result.is_null()).then(|| unsafe { Array::new(result, count, ()) })
     }
@@ -267,12 +260,9 @@ impl TypeArchive {
         snapshot: &TypeArchiveSnapshotId,
     ) -> Option<Ref<Type>> {
         let raw_name = QualifiedName::into_raw(name);
+        let snapshot = snapshot.clone().to_cstr();
         let result = unsafe {
-            BNGetTypeArchiveTypeByName(
-                self.handle.as_ptr(),
-                &raw_name,
-                snapshot.0.as_ptr() as *const c_char,
-            )
+            BNGetTypeArchiveTypeByName(self.handle.as_ptr(), &raw_name, snapshot.as_ptr())
         };
         QualifiedName::free_raw(raw_name);
         (!result.is_null()).then(|| unsafe { Type::ref_from_raw(result) })
@@ -295,12 +285,9 @@ impl TypeArchive {
         snapshot: &TypeArchiveSnapshotId,
     ) -> Option<Ref<Type>> {
         let id = id.to_cstr();
+        let snapshot = snapshot.clone().to_cstr();
         let result = unsafe {
-            BNGetTypeArchiveTypeById(
-                self.handle.as_ptr(),
-                id.as_ptr(),
-                snapshot.0.as_ptr() as *const c_char,
-            )
+            BNGetTypeArchiveTypeById(self.handle.as_ptr(), id.as_ptr(), snapshot.as_ptr())
         };
         (!result.is_null()).then(|| unsafe { Type::ref_from_raw(result) })
     }
@@ -322,12 +309,9 @@ impl TypeArchive {
         snapshot: &TypeArchiveSnapshotId,
     ) -> QualifiedName {
         let id = id.to_cstr();
+        let snapshot = snapshot.clone().to_cstr();
         let result = unsafe {
-            BNGetTypeArchiveTypeName(
-                self.handle.as_ptr(),
-                id.as_ptr(),
-                snapshot.0.as_ptr() as *const c_char,
-            )
+            BNGetTypeArchiveTypeName(self.handle.as_ptr(), id.as_ptr(), snapshot.as_ptr())
         };
         QualifiedName::from_owned_raw(result)
     }
@@ -349,13 +333,9 @@ impl TypeArchive {
         snapshot: &TypeArchiveSnapshotId,
     ) -> Option<String> {
         let raw_name = QualifiedName::into_raw(name);
-        let result = unsafe {
-            BNGetTypeArchiveTypeId(
-                self.handle.as_ptr(),
-                &raw_name,
-                snapshot.0.as_ptr() as *const c_char,
-            )
-        };
+        let snapshot = snapshot.clone().to_cstr();
+        let result =
+            unsafe { BNGetTypeArchiveTypeId(self.handle.as_ptr(), &raw_name, snapshot.as_ptr()) };
         QualifiedName::free_raw(raw_name);
         (!result.is_null()).then(|| unsafe { BnString::into_string(result) })
     }
@@ -373,13 +353,9 @@ impl TypeArchive {
         snapshot: &TypeArchiveSnapshotId,
     ) -> Array<QualifiedNameTypeAndId> {
         let mut count = 0;
-        let result = unsafe {
-            BNGetTypeArchiveTypes(
-                self.handle.as_ptr(),
-                snapshot.0.as_ptr() as *const c_char,
-                &mut count,
-            )
-        };
+        let snapshot = snapshot.clone().to_cstr();
+        let result =
+            unsafe { BNGetTypeArchiveTypes(self.handle.as_ptr(), snapshot.as_ptr(), &mut count) };
         assert!(!result.is_null());
         unsafe { Array::new(result, count, ()) }
     }
@@ -394,13 +370,9 @@ impl TypeArchive {
     /// * `snapshot` - Snapshot id to search for types
     pub fn get_type_ids_from_snapshot(&self, snapshot: &TypeArchiveSnapshotId) -> Array<BnString> {
         let mut count = 0;
-        let result = unsafe {
-            BNGetTypeArchiveTypeIds(
-                self.handle.as_ptr(),
-                snapshot.0.as_ptr() as *const c_char,
-                &mut count,
-            )
-        };
+        let snapshot = snapshot.clone().to_cstr();
+        let result =
+            unsafe { BNGetTypeArchiveTypeIds(self.handle.as_ptr(), snapshot.as_ptr(), &mut count) };
         assert!(!result.is_null());
         unsafe { Array::new(result, count, ()) }
     }
@@ -418,12 +390,9 @@ impl TypeArchive {
         snapshot: &TypeArchiveSnapshotId,
     ) -> Array<QualifiedName> {
         let mut count = 0;
+        let snapshot = snapshot.clone().to_cstr();
         let result = unsafe {
-            BNGetTypeArchiveTypeNames(
-                self.handle.as_ptr(),
-                snapshot.0.as_ptr() as *const c_char,
-                &mut count,
-            )
+            BNGetTypeArchiveTypeNames(self.handle.as_ptr(), snapshot.as_ptr(), &mut count)
         };
         assert!(!result.is_null());
         unsafe { Array::new(result, count, ()) }
@@ -442,12 +411,13 @@ impl TypeArchive {
         snapshot: &TypeArchiveSnapshotId,
     ) -> (Array<QualifiedName>, Array<BnString>) {
         let mut count = 0;
+        let snapshot = snapshot.clone().to_cstr();
         let mut names = std::ptr::null_mut();
         let mut ids = std::ptr::null_mut();
         let result = unsafe {
             BNGetTypeArchiveTypeNamesAndIds(
                 self.handle.as_ptr(),
-                snapshot.0.as_ptr() as *const c_char,
+                snapshot.as_ptr(),
                 &mut names,
                 &mut ids,
                 &mut count,
@@ -476,12 +446,13 @@ impl TypeArchive {
         snapshot: &TypeArchiveSnapshotId,
     ) -> Array<BnString> {
         let id = id.to_cstr();
+        let snapshot = snapshot.clone().to_cstr();
         let mut count = 0;
         let result = unsafe {
             BNGetTypeArchiveOutgoingDirectTypeReferences(
                 self.handle.as_ptr(),
                 id.as_ptr(),
-                snapshot.0.as_ptr() as *const c_char,
+                snapshot.as_ptr(),
                 &mut count,
             )
         };
@@ -506,12 +477,13 @@ impl TypeArchive {
         snapshot: &TypeArchiveSnapshotId,
     ) -> Array<BnString> {
         let id = id.to_cstr();
+        let snapshot = snapshot.clone().to_cstr();
         let mut count = 0;
         let result = unsafe {
             BNGetTypeArchiveOutgoingRecursiveTypeReferences(
                 self.handle.as_ptr(),
                 id.as_ptr(),
-                snapshot.0.as_ptr() as *const c_char,
+                snapshot.as_ptr(),
                 &mut count,
             )
         };
@@ -536,12 +508,13 @@ impl TypeArchive {
         snapshot: &TypeArchiveSnapshotId,
     ) -> Array<BnString> {
         let id = id.to_cstr();
+        let snapshot = snapshot.clone().to_cstr();
         let mut count = 0;
         let result = unsafe {
             BNGetTypeArchiveIncomingDirectTypeReferences(
                 self.handle.as_ptr(),
                 id.as_ptr(),
-                snapshot.0.as_ptr() as *const c_char,
+                snapshot.as_ptr(),
                 &mut count,
             )
         };
@@ -566,12 +539,13 @@ impl TypeArchive {
         snapshot: &TypeArchiveSnapshotId,
     ) -> Array<BnString> {
         let id = id.to_cstr();
+        let snapshot = snapshot.clone().to_cstr();
         let mut count = 0;
         let result = unsafe {
             BNGetTypeArchiveIncomingRecursiveTypeReferences(
                 self.handle.as_ptr(),
                 id.as_ptr(),
-                snapshot.0.as_ptr() as *const c_char,
+                snapshot.as_ptr(),
                 &mut count,
             )
         };
@@ -605,12 +579,9 @@ impl TypeArchive {
 
     /// Turn a given `snapshot` id into a data stream
     pub fn serialize_snapshot(&self, snapshot: &TypeArchiveSnapshotId) -> DataBuffer {
-        let result = unsafe {
-            BNTypeArchiveSerializeSnapshot(
-                self.handle.as_ptr(),
-                snapshot.0.as_ptr() as *const c_char,
-            )
-        };
+        let snapshot = snapshot.clone().to_cstr();
+        let result =
+            unsafe { BNTypeArchiveSerializeSnapshot(self.handle.as_ptr(), snapshot.as_ptr()) };
         assert!(!result.is_null());
         DataBuffer::from_raw(result)
     }
@@ -712,15 +683,14 @@ impl TypeArchive {
             fun(&TypeArchiveSnapshotId(id_str))
         }
 
-        // SAFETY TypeArchiveSnapshotId and `*const c_char` are transparent
-        let parents_raw = parents.as_ptr() as *const *const c_char;
-
+        let parents_cstr: Vec<_> = parents.iter().map(|p| p.clone().to_cstr()).collect();
+        let parents_raw: Vec<_> = parents_cstr.iter().map(|p| p.as_ptr()).collect();
         let result = unsafe {
             BNTypeArchiveNewSnapshotTransaction(
                 self.handle.as_ptr(),
                 Some(cb_callback::<F>),
                 &mut function as *mut F as *mut c_void,
-                parents_raw,
+                parents_raw.as_ptr(),
                 parents.len(),
             )
         };

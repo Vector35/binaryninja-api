@@ -1634,10 +1634,10 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNAddBinaryViewTypeLibrary(self.as_ref().handle, library.as_raw()) }
     }
 
-    fn type_library_by_name(&self, name: &str) -> Option<TypeLibrary> {
+    fn type_library_by_name(&self, name: &str) -> Option<Ref<TypeLibrary>> {
         let name = name.to_cstr();
         let result = unsafe { BNGetBinaryViewTypeLibrary(self.as_ref().handle, name.as_ptr()) };
-        NonNull::new(result).map(|h| unsafe { TypeLibrary::from_raw(h) })
+        NonNull::new(result).map(|h| unsafe { TypeLibrary::ref_from_raw(h) })
     }
 
     /// Should be called by custom py:py:class:`BinaryView` implementations
@@ -1782,7 +1782,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         &self,
         addr: u64,
         platform: &Platform,
-    ) -> Option<(TypeLibrary, QualifiedName)> {
+    ) -> Option<(Ref<TypeLibrary>, QualifiedName)> {
         let mut result_lib = std::ptr::null_mut();
         let mut result_name = BNQualifiedName::default();
         let success = unsafe {
@@ -1797,7 +1797,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         if !success {
             return None;
         }
-        let lib = unsafe { TypeLibrary::from_raw(NonNull::new(result_lib)?) };
+        let lib = unsafe { TypeLibrary::ref_from_raw(NonNull::new(result_lib)?) };
         let name = QualifiedName::from_owned_raw(result_name);
         Some((lib, name))
     }
@@ -1808,7 +1808,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     fn lookup_imported_type_library<T: Into<QualifiedName>>(
         &self,
         name: T,
-    ) -> Option<(TypeLibrary, QualifiedName)> {
+    ) -> Option<(Ref<TypeLibrary>, QualifiedName)> {
         let raw_name = QualifiedName::into_raw(name.into());
         let mut result_lib = std::ptr::null_mut();
         let mut result_name = BNQualifiedName::default();
@@ -1824,7 +1824,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         if !success {
             return None;
         }
-        let lib = unsafe { TypeLibrary::from_raw(NonNull::new(result_lib)?) };
+        let lib = unsafe { TypeLibrary::ref_from_raw(NonNull::new(result_lib)?) };
         let name = QualifiedName::from_owned_raw(result_name);
         Some((lib, name))
     }

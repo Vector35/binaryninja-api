@@ -1,4 +1,3 @@
-use std::ffi::c_char;
 use std::ptr::NonNull;
 
 use binaryninjacore_sys::*;
@@ -81,8 +80,8 @@ impl ReportCollection {
             BNAddPlainTextReportToCollection(
                 self.handle.as_ptr(),
                 view.handle,
-                title.as_ref().as_ptr() as *const c_char,
-                contents.as_ref().as_ptr() as *const c_char,
+                title.as_ptr(),
+                contents.as_ptr(),
             )
         }
     }
@@ -95,9 +94,9 @@ impl ReportCollection {
             BNAddMarkdownReportToCollection(
                 self.handle.as_ptr(),
                 view.handle,
-                title.as_ref().as_ptr() as *const c_char,
-                contents.as_ref().as_ptr() as *const c_char,
-                plaintext.as_ref().as_ptr() as *const c_char,
+                title.as_ptr(),
+                contents.as_ptr(),
+                plaintext.as_ptr(),
             )
         }
     }
@@ -110,9 +109,9 @@ impl ReportCollection {
             BNAddHTMLReportToCollection(
                 self.handle.as_ptr(),
                 view.handle,
-                title.as_ref().as_ptr() as *const c_char,
-                contents.as_ref().as_ptr() as *const c_char,
-                plaintext.as_ref().as_ptr() as *const c_char,
+                title.as_ptr(),
+                contents.as_ptr(),
+                plaintext.as_ptr(),
             )
         }
     }
@@ -123,7 +122,7 @@ impl ReportCollection {
             BNAddGraphReportToCollection(
                 self.handle.as_ptr(),
                 view.handle,
-                title.as_ref().as_ptr() as *const c_char,
+                title.as_ptr(),
                 graph.handle,
             )
         }

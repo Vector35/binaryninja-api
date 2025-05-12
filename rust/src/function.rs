@@ -48,10 +48,11 @@ use crate::variable::{
     StackVariableReference, Variable,
 };
 use crate::workflow::Workflow;
+use std::ffi::CStr;
 use std::fmt::{Debug, Formatter};
 use std::ptr::NonNull;
 use std::time::Duration;
-use std::{ffi::c_char, hash::Hash, ops::Range};
+use std::{hash::Hash, ops::Range};
 
 /// Used to describe a location within a [`Function`].
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -2213,17 +2214,17 @@ impl Function {
     ///
     /// * `name` - Name of the debug report
     pub fn request_debug_report(&self, name: &str) {
-        const DEBUG_REPORT_ALIAS: &[(&str, &str)] = &[
-            ("stack", "stack_adjust_graph\x00"),
-            ("mlil", "mlil_translator\x00"),
-            ("hlil", "high_level_il\x00"),
+        const DEBUG_REPORT_ALIAS: &[(&str, &CStr)] = &[
+            ("stack", c"stack_adjust_graph"),
+            ("mlil", c"mlil_translator"),
+            ("hlil", c"high_level_il"),
         ];
 
         if let Some(alias_idx) = DEBUG_REPORT_ALIAS
             .iter()
             .position(|(alias, _value)| *alias == name)
         {
-            let name = DEBUG_REPORT_ALIAS[alias_idx].1.as_ptr() as *const c_char;
+            let name = DEBUG_REPORT_ALIAS[alias_idx].1.as_ptr();
             unsafe { BNRequestFunctionDebugReport(self.handle, name) }
         } else {
             let name = std::ffi::CString::new(name.to_string()).unwrap();

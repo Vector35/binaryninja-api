@@ -329,6 +329,54 @@ pub struct LiftedCall {
     pub params: Vec<MediumLevelILLiftedInstruction>,
 }
 
+// CALL_OUTPUT
+#[derive(Debug, Copy, Clone)]
+pub struct CallOutput {
+    pub first_output: usize,
+    pub num_outputs: usize,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedCallOutput {
+    pub output: Vec<Variable>,
+}
+
+// CALL_PARAM_SSA
+#[derive(Debug, Copy, Clone)]
+pub struct CallParam {
+    pub first_param: usize,
+    pub num_params: usize,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedCallParam {
+    pub params: Vec<MediumLevelILLiftedInstruction>,
+}
+
+// CALL_OUTPUT_SSA
+#[derive(Debug, Copy, Clone)]
+pub struct CallOutputSsa {
+    pub dest_memory: u64,
+    pub first_output: usize,
+    pub num_outputs: usize,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedCallOutputSsa {
+    pub dest_memory: u64,
+    pub output: Vec<SSAVariable>,
+}
+
+// CALL_PARAM_SSA
+#[derive(Debug, Copy, Clone)]
+pub struct CallParamSsa {
+    pub src_memory: u64,
+    pub first_param: usize,
+    pub num_params: usize,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedCallParamSsa {
+    pub src_memory: u64,
+    pub params: Vec<MediumLevelILLiftedInstruction>,
+}
+
 // SYSCALL
 #[derive(Debug, Copy, Clone)]
 pub struct Syscall {
@@ -373,6 +421,36 @@ pub struct LiftedIntrinsicSsa {
     pub output: Vec<SSAVariable>,
     pub intrinsic: CoreIntrinsic,
     pub params: Vec<MediumLevelILLiftedInstruction>,
+}
+
+// MEMORY_INTRINSIC_SSA
+#[derive(Debug, Copy, Clone)]
+pub struct MemoryIntrinsicSsa {
+    pub output: usize,
+    pub intrinsic: u32,
+    pub first_param: usize,
+    pub num_params: usize,
+    pub src_memory: u64,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedMemoryIntrinsicSsa {
+    pub output: Box<MediumLevelILLiftedInstruction>,
+    pub intrinsic: CoreIntrinsic,
+    pub params: Vec<MediumLevelILLiftedInstruction>,
+    pub src_memory: u64,
+}
+
+// MEMORY_INTRINSIC_OUTPUT_SSA
+#[derive(Debug, Copy, Clone)]
+pub struct MemoryIntrinsicOutputSsa {
+    pub dest_memory: u64,
+    pub first_output: usize,
+    pub num_outputs: usize,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedMemoryIntrinsicOutputSsa {
+    pub dest_memory: u64,
+    pub output: Vec<SSAVariable>,
 }
 
 // CALL_SSA, TAILCALL_SSA

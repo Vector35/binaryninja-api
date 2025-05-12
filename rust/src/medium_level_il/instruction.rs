@@ -5,12 +5,12 @@ use crate::architecture::{CoreIntrinsic, FlagId, IntrinsicId, RegisterId};
 use crate::basic_block::BasicBlock;
 use crate::confidence::Conf;
 use crate::disassembly::InstructionTextToken;
-use crate::operand_iter::OperandIter;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::types::Type;
 use crate::variable::{ConstantData, PossibleValueSet, RegisterValue, SSAVariable, Variable};
 use crate::{DataFlowQueryOption, ILBranchDependence};
 use binaryninjacore_sys::*;
+use std::collections::BTreeMap;
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -411,6 +411,24 @@ impl MediumLevelILInstruction {
                 num_params: op.operands[3] as usize,
                 first_param: op.operands[4] as usize,
             }),
+            MLIL_CALL_OUTPUT => Op::CallOutput(CallOutput {
+                first_output: op.operands[0] as usize,
+                num_outputs: op.operands[1] as usize,
+            }),
+            MLIL_CALL_PARAM => Op::CallParam(CallParam {
+                first_param: op.operands[0] as usize,
+                num_params: op.operands[1] as usize,
+            }),
+            MLIL_CALL_OUTPUT_SSA => Op::CallOutputSsa(CallOutputSsa {
+                dest_memory: op.operands[0],
+                num_outputs: op.operands[1] as usize,
+                first_output: op.operands[2] as usize,
+            }),
+            MLIL_CALL_PARAM_SSA => Op::CallParamSsa(CallParamSsa {
+                src_memory: op.operands[0],
+                num_params: op.operands[1] as usize,
+                first_param: op.operands[2] as usize,
+            }),
             MLIL_TAILCALL => Op::Tailcall(Call {
                 num_outputs: op.operands[0] as usize,
                 first_output: op.operands[1] as usize,
@@ -438,6 +456,20 @@ impl MediumLevelILInstruction {
                 num_params: op.operands[3] as usize,
                 first_param: op.operands[4] as usize,
             }),
+            MLIL_MEMORY_INTRINSIC_SSA => Op::MemoryIntrinsicSsa(MemoryIntrinsicSsa {
+                output: op.operands[0] as usize,
+                intrinsic: op.operands[1] as u32,
+                num_params: op.operands[2] as usize,
+                first_param: op.operands[3] as usize,
+                src_memory: op.operands[4],
+            }),
+            MLIL_MEMORY_INTRINSIC_OUTPUT_SSA => {
+                Op::MemoryIntrinsicOutputSsa(MemoryIntrinsicOutputSsa {
+                    dest_memory: op.operands[0],
+                    first_output: op.operands[1] as usize,
+                    num_outputs: op.operands[2] as usize,
+                })
+            }
             MLIL_CALL_SSA => Op::CallSsa(CallSsa {
                 output: op.operands[0] as usize,
                 dest: op.operands[1] as usize,
@@ -602,14 +634,6 @@ impl MediumLevelILInstruction {
             MLIL_TRAP => Op::Trap(Trap {
                 vector: op.operands[0],
             }),
-            // translated directly into a list for Expression or Variables
-            // TODO MLIL_MEMORY_INTRINSIC_SSA needs to be handled properly
-            MLIL_CALL_OUTPUT
-            | MLIL_CALL_PARAM
-            | MLIL_CALL_PARAM_SSA
-            | MLIL_CALL_OUTPUT_SSA
-            | MLIL_MEMORY_INTRINSIC_OUTPUT_SSA
-            | MLIL_MEMORY_INTRINSIC_SSA => Op::NotYetImplemented,
         };
 
         Self {
@@ -847,6 +871,21 @@ impl MediumLevelILInstruction {
             Rrc(op) => Lifted::Rrc(self.lift_binary_op_carry(op)),
 
             Call(op) => Lifted::Call(self.lift_call(op)),
+            CallOutput(_op) => Lifted::CallOutput(LiftedCallOutput {
+                output: self.get_var_list(0),
+            }),
+            CallParam(_op) => Lifted::CallParam(LiftedCallParam {
+                params: self.get_expr_list(0).iter().map(|i| i.lift()).collect(),
+            }),
+            CallOutputSsa(op) => Lifted::CallOutputSsa(LiftedCallOutputSsa {
+                dest_memory: op.dest_memory,
+                output: self.get_ssa_var_list(1),
+            }),
+            CallParamSsa(op) => Lifted::CallParamSsa(LiftedCallParamSsa {
+                src_memory: op.src_memory,
+                params: self.get_expr_list(1).iter().map(|i| i.lift()).collect(),
+            }),
+
             Tailcall(op) => Lifted::Tailcall(self.lift_call(op)),
 
             Intrinsic(op) => Lifted::Intrinsic(LiftedIntrinsic {
@@ -1672,10 +1711,16 @@ pub enum MediumLevelILInstructionKind {
     Rlc(BinaryOpCarry),
     Rrc(BinaryOpCarry),
     Call(Call),
+    CallOutput(CallOutput),
+    CallParam(CallParam),
+    CallOutputSsa(CallOutputSsa),
+    CallParamSsa(CallParamSsa),
     Tailcall(Call),
     Syscall(Syscall),
     Intrinsic(Intrinsic),
     IntrinsicSsa(IntrinsicSsa),
+    MemoryIntrinsicSsa(MemoryIntrinsicSsa),
+    MemoryIntrinsicOutputSsa(MemoryIntrinsicOutputSsa),
     CallSsa(CallSsa),
     TailcallSsa(CallSsa),
     CallUntypedSsa(CallUntypedSsa),

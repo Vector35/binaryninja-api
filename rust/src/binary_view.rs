@@ -1163,7 +1163,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         if settings_handle.is_null() {
             Err(())
         } else {
-            Ok(unsafe { Settings::from_raw(settings_handle) })
+            Ok(unsafe { Settings::ref_from_raw(settings_handle) })
         }
     }
 

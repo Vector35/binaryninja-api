@@ -200,7 +200,7 @@ pub trait BinaryViewTypeBase: AsRef<BinaryViewType> {
         if settings_handle.is_null() {
             None
         } else {
-            unsafe { Some(Settings::from_raw(settings_handle)) }
+            unsafe { Some(Settings::ref_from_raw(settings_handle)) }
         }
     }
 
@@ -388,7 +388,7 @@ impl BinaryViewTypeBase for BinaryViewType {
         if settings_handle.is_null() {
             None
         } else {
-            unsafe { Some(Settings::from_raw(settings_handle)) }
+            unsafe { Some(Settings::ref_from_raw(settings_handle)) }
         }
     }
 }

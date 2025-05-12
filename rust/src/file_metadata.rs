@@ -121,8 +121,8 @@ impl FileMetadata {
     /// NOTE: This is **NOT** thread safe, if you are holding any locks that might be held by both the main thread
     /// and the thread executing this function, you can deadlock. You should also never call this function
     /// on multiple threads at a time. See the following issues:
-    ///  - https://github.com/Vector35/binaryninja-api/issues/6289
-    ///  - https://github.com/Vector35/binaryninja-api/issues/6325
+    ///  - <https://github.com/Vector35/binaryninja-api/issues/6289>
+    ///  - <https://github.com/Vector35/binaryninja-api/issues/6325>
     pub fn run_undoable_transaction<F: FnOnce() -> Result<T, E>, T, E>(
         &self,
         func: F,
@@ -146,8 +146,8 @@ impl FileMetadata {
     /// NOTE: This is **NOT** thread safe, if you are holding any locks that might be held by both the main thread
     /// and the thread executing this function, you can deadlock. You should also never call this function
     /// on multiple threads at a time. See the following issues:
-    ///  - https://github.com/Vector35/binaryninja-api/issues/6289
-    ///  - https://github.com/Vector35/binaryninja-api/issues/6325
+    ///  - <https://github.com/Vector35/binaryninja-api/issues/6289>
+    ///  - <https://github.com/Vector35/binaryninja-api/issues/6325>
     pub fn begin_undo_actions(&self, anonymous_allowed: bool) -> String {
         unsafe { BnString::into_string(BNBeginUndoActions(self.handle, anonymous_allowed)) }
     }
@@ -157,8 +157,8 @@ impl FileMetadata {
     /// NOTE: This is **NOT** thread safe, if you are holding any locks that might be held by both the main thread
     /// and the thread executing this function, you can deadlock. You should also never call this function
     /// on multiple threads at a time. See the following issues:
-    ///  - https://github.com/Vector35/binaryninja-api/issues/6289
-    ///  - https://github.com/Vector35/binaryninja-api/issues/6325
+    ///  - <https://github.com/Vector35/binaryninja-api/issues/6289>
+    ///  - <https://github.com/Vector35/binaryninja-api/issues/6325>
     pub fn commit_undo_actions(&self, id: &str) {
         let id = id.to_cstr();
         unsafe {
@@ -171,8 +171,8 @@ impl FileMetadata {
     /// NOTE: This is **NOT** thread safe, if you are holding any locks that might be held by both the main thread
     /// and the thread executing this function, you can deadlock. You should also never call this function
     /// on multiple threads at a time. See the following issues:
-    ///  - https://github.com/Vector35/binaryninja-api/issues/6289
-    ///  - https://github.com/Vector35/binaryninja-api/issues/6325
+    ///  - <https://github.com/Vector35/binaryninja-api/issues/6289>
+    ///  - <https://github.com/Vector35/binaryninja-api/issues/6325>
     pub fn revert_undo_actions(&self, id: &str) {
         let id = id.to_cstr();
         unsafe {

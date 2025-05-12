@@ -35,7 +35,7 @@ pub struct Settings {
 }
 
 impl Settings {
-    pub(crate) unsafe fn from_raw(handle: *mut BNSettings) -> Ref<Self> {
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNSettings) -> Ref<Self> {
         debug_assert!(!handle.is_null());
         Ref::new(Self { handle })
     }
@@ -46,11 +46,7 @@ impl Settings {
 
     pub fn new_with_id(instance_id: &str) -> Ref<Self> {
         let instance_id = instance_id.to_cstr();
-        unsafe {
-            let handle = BNCreateSettings(instance_id.as_ptr());
-            debug_assert!(!handle.is_null());
-            Ref::new(Self { handle })
-        }
+        unsafe { Self::ref_from_raw(BNCreateSettings(instance_id.as_ptr())) }
     }
 
     pub fn set_resource_id(&self, resource_id: &str) {
@@ -83,8 +79,6 @@ impl Settings {
         assert!(!result.is_null());
         unsafe { Array::new(result as *mut *mut c_char, count, ()) }
     }
-
-    // TODO Update the settings API to take an optional BinaryView or Function. Separate functions or...?
 
     pub fn get_bool(&self, key: &str) -> bool {
         self.get_bool_with_opts(key, &mut QueryOptions::default())

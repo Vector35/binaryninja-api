@@ -1,4 +1,5 @@
 use binaryninjacore_sys::*;
+use std::fmt::{Debug, Formatter};
 
 use crate::rc::{Guard, RefCountable};
 use crate::{
@@ -71,13 +72,20 @@ impl TypeLibrary {
 
     /// Looks up the first type library found with a matching name. Keep in mind that names are not
     /// necessarily unique.
+    ///
+    /// NOTE: If the type library architecture's associated platform has not been initialized, this will
+    /// return `None`. To make sure that the platform has been initialized, one should instead get the type
+    /// libraries through [`Platform::get_type_libraries_by_name`].
     pub fn from_name(arch: CoreArchitecture, name: &str) -> Option<Ref<TypeLibrary>> {
         let name = name.to_cstr();
         let handle = unsafe { BNLookupTypeLibraryByName(arch.handle, name.as_ptr()) };
         NonNull::new(handle).map(|h| unsafe { TypeLibrary::ref_from_raw(h) })
     }
 
-    /// Attempts to grab a type library associated with the provided Architecture and GUID pair
+    /// Attempts to grab a type library associated with the provided Architecture and GUID pair.
+    ///
+    /// NOTE: If the associated platform for the architecture has not been initialized,  
+    /// this will return `None`. Avoid calling this outside of a view context.
     pub fn from_guid(arch: CoreArchitecture, guid: &str) -> Option<Ref<TypeLibrary>> {
         let guid = guid.to_cstr();
         let handle = unsafe { BNLookupTypeLibraryByGuid(arch.handle, guid.as_ptr()) };
@@ -92,9 +100,10 @@ impl TypeLibrary {
     }
 
     /// The primary name associated with this type library
-    pub fn name(&self) -> Option<BnString> {
+    pub fn name(&self) -> String {
         let result = unsafe { BNGetTypeLibraryName(self.as_raw()) };
-        (!result.is_null()).then(|| unsafe { BnString::from_raw(result) })
+        assert!(!result.is_null());
+        unsafe { BnString::into_string(result) }
     }
 
     /// Sets the name of a type library instance that has not been finalized
@@ -108,9 +117,10 @@ impl TypeLibrary {
     /// dependencies on it recorded as "libc_generic", allowing a type library to be used across
     /// multiple platforms where each has a specific libc that also provides the name "libc_generic"
     /// as an `alternate_name`.
-    pub fn dependency_name(&self) -> Option<BnString> {
+    pub fn dependency_name(&self) -> String {
         let result = unsafe { BNGetTypeLibraryDependencyName(self.as_raw()) };
-        (!result.is_null()).then(|| unsafe { BnString::from_raw(result) })
+        assert!(!result.is_null());
+        unsafe { BnString::into_string(result) }
     }
 
     /// Sets the dependency name of a type library instance that has not been finalized
@@ -120,9 +130,10 @@ impl TypeLibrary {
     }
 
     /// Returns the GUID associated with the type library
-    pub fn guid(&self) -> Option<BnString> {
+    pub fn guid(&self) -> String {
         let result = unsafe { BNGetTypeLibraryGuid(self.as_raw()) };
-        (!result.is_null()).then(|| unsafe { BnString::from_raw(result) })
+        assert!(!result.is_null());
+        unsafe { BnString::into_string(result) }
     }
 
     /// Sets the GUID of a type library instance that has not been finalized
@@ -179,10 +190,10 @@ impl TypeLibrary {
     }
 
     /// Retrieves a metadata associated with the given key stored in the type library
-    pub fn query_metadata(&self, key: &str) -> Option<Metadata> {
+    pub fn query_metadata(&self, key: &str) -> Option<Ref<Metadata>> {
         let key = key.to_cstr();
         let result = unsafe { BNTypeLibraryQueryMetadata(self.as_raw(), key.as_ptr()) };
-        (!result.is_null()).then(|| unsafe { Metadata::from_raw(result) })
+        (!result.is_null()).then(|| unsafe { Metadata::ref_from_raw(result) })
     }
 
     /// Stores an object for the given key in the current type library. Objects stored using
@@ -208,10 +219,10 @@ impl TypeLibrary {
     }
 
     /// Retrieves the metadata associated with the current type library.
-    pub fn metadata(&self) -> Metadata {
+    pub fn metadata(&self) -> Ref<Metadata> {
         let md_handle = unsafe { BNTypeLibraryGetMetadata(self.as_raw()) };
         assert!(!md_handle.is_null());
-        unsafe { Metadata::from_raw(md_handle) }
+        unsafe { Metadata::ref_from_raw(md_handle) }
     }
 
     // TODO: implement TypeContainer
@@ -297,6 +308,23 @@ impl TypeLibrary {
         let result = unsafe { BNGetTypeLibraryNamedTypes(self.as_raw(), &mut count) };
         assert!(!result.is_null());
         unsafe { Array::new(result, count, ()) }
+    }
+}
+
+impl Debug for TypeLibrary {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TypeLibrary")
+            .field("name", &self.name())
+            .field("dependency_name", &self.dependency_name())
+            .field("arch", &self.arch())
+            .field("guid", &self.guid())
+            .field("alternate_names", &self.alternate_names().to_vec())
+            .field("platform_names", &self.platform_names().to_vec())
+            .field("metadata", &self.metadata())
+            // These two are too verbose.
+            // .field("named_objects", &self.named_objects().to_vec())
+            // .field("named_types", &self.named_types().to_vec())
+            .finish()
     }
 }
 

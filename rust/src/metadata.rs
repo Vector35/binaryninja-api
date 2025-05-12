@@ -2,6 +2,7 @@ use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, Re
 use crate::string::{raw_to_string, BnString, IntoCStr, IntoJson};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
+use std::fmt::{Debug, Display, Formatter};
 use std::os::raw::c_char;
 use std::slice;
 
@@ -308,6 +309,83 @@ impl Metadata {
         let raw_key = key.to_cstr();
         unsafe { BNMetadataRemoveKey(self.handle, raw_key.as_ptr()) };
         Ok(())
+    }
+}
+
+impl Debug for Metadata {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Metadata")
+            .field("type", &self.get_type())
+            .field("len", &self.len())
+            // Display will give you the metadata value as a string.
+            .field("value", &self.to_string())
+            .finish()
+    }
+}
+
+impl Display for Metadata {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        // Display will give you the metadata value as a string.
+        match self.get_type() {
+            MetadataType::BooleanDataType => match self.get_boolean() {
+                Some(val) => write!(f, "{}", val),
+                None => write!(f, "null"),
+            },
+            MetadataType::UnsignedIntegerDataType => match self.get_unsigned_integer() {
+                Some(val) => write!(f, "{}", val),
+                None => write!(f, "null"),
+            },
+            MetadataType::SignedIntegerDataType => match self.get_signed_integer() {
+                Some(val) => write!(f, "{}", val),
+                None => write!(f, "null"),
+            },
+            MetadataType::DoubleDataType => match self.get_double() {
+                Some(val) => write!(f, "{}", val),
+                None => write!(f, "null"),
+            },
+            MetadataType::StringDataType => match self.get_string() {
+                Some(val) => write!(f, "{}", val.to_string_lossy()),
+                None => write!(f, "null"),
+            },
+            MetadataType::ArrayDataType => {
+                match self.get_array() {
+                    Some(array) => {
+                        // TODO: This is extremely ugly
+                        write!(f, "[")?;
+                        for (i, val) in array.iter().enumerate() {
+                            if i > 0 {
+                                write!(f, ", ")?;
+                            }
+                            write!(f, "{}", *val)?;
+                        }
+                        write!(f, "]")?;
+                        Ok(())
+                    }
+                    None => write!(f, "null"),
+                }
+            }
+            MetadataType::InvalidDataType => {
+                write!(f, "null")
+            }
+            MetadataType::KeyValueDataType => match self.get_value_store() {
+                Some(map) => {
+                    write!(f, "{{")?;
+                    for (i, (key, val)) in map.iter().enumerate() {
+                        if i > 0 {
+                            write!(f, ", ")?;
+                        }
+                        write!(f, "{}: {}", key, val)?;
+                    }
+                    write!(f, "}}")?;
+                    Ok(())
+                }
+                None => write!(f, "null"),
+            },
+            MetadataType::RawDataType => match self.get_raw() {
+                Some(val) => write!(f, "{:x?}", val),
+                None => write!(f, "null"),
+            },
+        }
     }
 }
 

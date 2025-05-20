@@ -1332,7 +1332,7 @@ bool Type::EnumerateTypesForAccess(BinaryView* data, uint64_t offset, size_t siz
 
 
 std::vector<TypeDefinitionLine> Type::GetLines(const TypeContainer& types, const std::string& name,
-	int paddingCols, bool collapsed, BNTokenEscapingType escaping)
+	int paddingCols, bool collapsed, BNTokenEscapingType escaping) const
 {
 	size_t count;
 	BNTypeDefinitionLine* list =
@@ -3110,3 +3110,36 @@ bool BinaryNinja::PreprocessSource(
 	delete[] includeDirList;
 	return result;
 }
+
+
+fmt::format_context::iterator fmt::formatter<BinaryNinja::Type>::format(
+	const Type& obj,
+	fmt::format_context& ctx
+) const
+{
+	if (presentation == '?')
+	{
+		auto tc = TypeContainer::GetEmptyTypeContainer();
+		auto lines = obj.GetLines(tc, "");
+
+		string result = "";
+		for (auto& line: lines)
+		{
+			string lineStr = "";
+			for (auto& token: line.tokens)
+			{
+				lineStr += token.text;
+			}
+			result += lineStr + "\n";
+		}
+		// Remove trailing newline
+		if (!result.empty())
+			result.erase(result.size() - 1);
+		return fmt::format_to(ctx.out(), "{}", result);
+	}
+	else
+	{
+		return fmt::format_to(ctx.out(), "{}{}", obj.GetStringBeforeName(), obj.GetStringAfterName());
+	}
+}
+

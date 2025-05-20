@@ -9400,7 +9400,7 @@ namespace BinaryNinja {
 		bool EnumerateTypesForAccess(BinaryView* data, uint64_t offset, size_t size, uint8_t baseConfidence,
 			const std::function<void(const Confidence<Ref<Type>>& type, FieldResolutionInfo* path)>& terminal);
 		std::vector<TypeDefinitionLine> GetLines(const TypeContainer& types, const std::string& name,
-			int paddingCols = 64, bool collapsed = false, BNTokenEscapingType escaping = NoTokenEscapingType);
+			int paddingCols = 64, bool collapsed = false, BNTokenEscapingType escaping = NoTokenEscapingType) const;
 
 		static std::string GetSizeSuffix(size_t size);
 	};
@@ -21001,7 +21001,6 @@ template<> struct fmt::formatter<BinaryNinja::NameList>
 	constexpr auto parse(format_parse_context& ctx) -> format_parse_context::iterator { return ctx.begin(); }
 };
 
-
 template<> struct fmt::formatter<BinaryNinja::StringRef> : fmt::formatter<std::string_view>
 {
 	format_context::iterator format(const BinaryNinja::StringRef& obj, format_context& ctx) const
@@ -21051,3 +21050,18 @@ struct fmt::formatter<T, char, std::enable_if_t<std::is_enum_v<T>, void>>
 		return it;
 	}
 };
+
+template<> struct fmt::formatter<BinaryNinja::Type>
+{
+	// s -> short, ? -> full
+	char presentation = 's';
+	format_context::iterator format(const BinaryNinja::Type& obj, format_context& ctx) const;
+	constexpr auto parse(format_parse_context& ctx) -> format_parse_context::iterator
+	{
+		auto it = ctx.begin(), end = ctx.end();
+		if (it != end && *it == '?') presentation = *it++;
+		if (it != end && *it != '}') report_error("invalid format");
+		return it;
+	}
+};
+

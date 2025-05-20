@@ -42,7 +42,8 @@ void ReportVerifier(Ref<AnalysisContext> context, ILVerifier& verifier)
 	if (errors > 0)
 	{
 		g_logger->LogErrorF(
-			"{:#x} failed: {} errors, {} warnings",
+			"{} {:#x} failed: {} errors, {} warnings",
+			verifier.GetILType(),
 			context->GetFunction()->GetStart(),
 			errors,
 			warnings

@@ -159,7 +159,7 @@ static std::unordered_map<BNLowLevelILOperation, int> g_instructionValidity = {{
 LiftedILVerifier::LiftedILVerifier(BinaryNinja::Ref<BinaryNinja::LowLevelILFunction> function):
 	LowLevelILVerifier(function)
 {
-
+	m_ilType = LiftedILFunctionGraph;
 }
 
 

@@ -9,8 +9,6 @@
 class ILVerifier
 {
 public:
-	BNFunctionGraphType m_ilType;
-
 	struct Diagnostic
 	{
 		BNTypeParserErrorSeverity severity;
@@ -136,6 +134,7 @@ public:
 	};
 
 protected:
+	BNFunctionGraphType m_ilType;
 	std::vector<Diagnostic> m_diagnostics;
 
 public:
@@ -143,5 +142,6 @@ public:
 	virtual ~ILVerifier() = default;
 	virtual void Verify() = 0;
 
+	BNFunctionGraphType GetILType() const { return m_ilType; }
 	std::vector<Diagnostic>&& GetDiagnostics() { return std::move(m_diagnostics); }
 };

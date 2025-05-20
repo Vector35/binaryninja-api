@@ -42,6 +42,12 @@ impl TypeContainer {
         }
     }
 
+    /// Get an empty type container that contains no types (immutable)
+    pub fn empty() -> TypeContainer {
+        let result = unsafe { BNGetEmptyTypeContainer() };
+        unsafe { Self::from_raw(NonNull::new(result).unwrap()) }
+    }
+
     /// Get an id string for the Type Container. This will be unique within a given
     /// analysis session, but may not be globally unique.
     pub fn id(&self) -> String {

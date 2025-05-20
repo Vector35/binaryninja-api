@@ -93,6 +93,13 @@ TypeContainer& TypeContainer::operator=(TypeContainer&& other)
 }
 
 
+TypeContainer TypeContainer::GetEmptyTypeContainer()
+{
+	auto* container = BNGetEmptyTypeContainer();
+	return TypeContainer(container);
+}
+
+
 std::string TypeContainer::GetId() const
 {
 	char* id = BNTypeContainerGetId(m_object);

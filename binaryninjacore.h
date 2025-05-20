@@ -3280,6 +3280,7 @@ extern "C"
 		TypeArchiveTypeContainerType,
 		DebugInfoTypeContainerType,
 		PlatformTypeContainerType,
+		EmptyTypeContainerType,
 		OtherTypeContainerType
 	} BNTypeContainerType;
 
@@ -5305,6 +5306,7 @@ extern "C"
 		const char* autoTypeSource, bool importDepencencies, BNTypeParserResult* result,
 		BNTypeParserError** errors, size_t* errorCount
 	);
+	BINARYNINJACOREAPI BNTypeContainer* BNGetEmptyTypeContainer();
 
 	BINARYNINJACOREAPI BNTagType* BNCreateTagType(BNBinaryView* view);
 	BINARYNINJACOREAPI BNTagType* BNNewTagTypeReference(BNTagType* tagType);

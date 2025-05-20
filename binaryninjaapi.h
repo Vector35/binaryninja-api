@@ -18576,6 +18576,12 @@ namespace BinaryNinja {
 
 		BNTypeContainer* GetObject() const { return m_object; }
 
+		/*! Get an empty type container which contains no types (immutable)
+
+			\return Empty type container
+		 */
+		static TypeContainer GetEmptyTypeContainer();
+
 		/*! Get an id string for the Type Container. This will be unique within a given
 			analysis session, but may not be globally unique.
 

@@ -66,6 +66,16 @@ class TypeContainer:
 	def __repr__(self):
 		return f"<type container {self.name}>"
 
+	@classmethod
+	def empty(cls):
+		"""
+		Get an empty Type Container which contains no types (immutable)
+		Useful when a function requires a Type Container but you don't have one.
+		:return: Empty type container
+		"""
+		handle = core.BNGetEmptyTypeContainer()
+		return TypeContainer(handle=handle)
+
 	@property
 	def id(self) -> str:
 		"""

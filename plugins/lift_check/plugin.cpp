@@ -2,6 +2,7 @@
 #include "binaryninjaapi.h"
 #include "lifted_il_lift_check.h"
 #include "llil_lift_check.h"
+#include "mlil_lift_check.h"
 
 using namespace BinaryNinja;
 
@@ -117,6 +118,13 @@ extern "C" {
 			verifier.Verify();
 			ReportVerifier(context, verifier);
 		};
+		auto checkMLILFunction = [](Ref<AnalysisContext> context) {
+			if (!context->GetMediumLevelILFunction())
+				return;
+			auto verifier = MediumLevelILVerifier(context->GetMediumLevelILFunction());
+			verifier.Verify();
+			ReportVerifier(context, verifier);
+		};
 
 		Ref<Workflow> oldFunctionMetaWorkflow = Workflow::Instance("core.function.metaAnalysis");
 		Ref<Workflow> newFunctionMetaWorkflow = oldFunctionMetaWorkflow->Clone("core.function.metaAnalysis");
@@ -140,8 +148,19 @@ extern "C" {
 				}
 			}
 		})~", checkLLILFunction);
+		newFunctionMetaWorkflow->RegisterActivity(R"~({
+			"title": "MLIL Lift Check",
+			"name": "analysis.liftCheck.mlil",
+			"description": "This analysis step checks various conditions on MLIL functions.",
+			"eligibility": {
+				"auto": {
+					"default": false
+				}
+			}
+		})~", checkMLILFunction);
 		newFunctionMetaWorkflow->Insert("core.function.analyzeAndExpandFlags", "analysis.liftCheck.liftedIL");
 		newFunctionMetaWorkflow->Insert("core.function.generateMediumLevelIL", "analysis.liftCheck.llil");
+		newFunctionMetaWorkflow->Insert("core.function.generateHighLevelIL", "analysis.liftCheck.mlil");
 		Workflow::RegisterWorkflow(newFunctionMetaWorkflow);
 		return true;
 	}

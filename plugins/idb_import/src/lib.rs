@@ -1,4 +1,5 @@
 mod types;
+use idb_rs::{IDAKind, IDAUsize};
 use types::*;
 mod addr_info;
 use addr_info::*;
@@ -82,7 +83,7 @@ impl std::io::Read for BinaryViewReader<'_> {
         if !self.bv.offset_valid(self.offset) {
             return Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, ""));
         }
-        let len = self.bv.read(buf, self.offset);
+        let len = BinaryView::read(&self.bv, buf, self.offset);
         self.offset += u64::try_from(len).unwrap();
         Ok(len)
     }
@@ -118,7 +119,7 @@ fn parse_idb_info(
     };
     trace!("Parsing a IDB file");
     let file = std::io::BufReader::new(file);
-    let mut parser = idb_rs::IDBParser::new(file)?;
+    let mut parser = idb_rs::IDBParserVariants::new(file)?;
     if let Some(til_section) = parser.til_section_offset() {
         trace!("Parsing the TIL section");
         let til = parser.read_til_section(til_section)?;
@@ -130,7 +131,14 @@ fn parse_idb_info(
         trace!("Parsing the ID0 section");
         let id0 = parser.read_id0_section(id0_section)?;
         // progress 50%-100%
-        parse_id0_section_info(debug_info, bv, debug_file, &id0)?;
+        match id0 {
+            idb_rs::IDAVariants::IDA32(id0) => {
+                parse_id0_section_info::<idb_rs::IDA32>(debug_info, bv, debug_file, &id0)?
+            }
+            idb_rs::IDAVariants::IDA64(id0) => {
+                parse_id0_section_info::<idb_rs::IDA64>(debug_info, bv, debug_file, &id0)?
+            }
+        }
     }
 
     Ok(())
@@ -148,7 +156,7 @@ fn parse_til_info(
     };
     let mut file = std::io::BufReader::new(file);
     trace!("Parsing the TIL section");
-    let til = TILSection::read(&mut file, idb_rs::IDBSectionCompression::None)?;
+    let til = TILSection::read(&mut file)?;
     import_til_section(debug_info, debug_file, &til, progress)
 }
 
@@ -218,11 +226,11 @@ pub fn import_til_section(
     Ok(())
 }
 
-fn parse_id0_section_info(
+fn parse_id0_section_info<K: IDAKind>(
     debug_info: &mut DebugInfo,
     bv: &BinaryView,
     debug_file: &BinaryView,
-    id0: &ID0Section,
+    id0: &ID0Section<K>,
 ) -> Result<()> {
     let version = match id0.ida_info()? {
         idb_rs::id0::IDBParam::V1(IDBParam1 { version, .. })
@@ -238,8 +246,11 @@ fn parse_id0_section_info(
             ty,
         } = info;
         // TODO set comments to address here
-        for function in &bv.functions_containing(addr) {
-            function.set_comment_at(addr, &String::from_utf8_lossy(&comments.join(&b"\n"[..])));
+        for function in &bv.functions_containing(addr.into_u64()) {
+            function.set_comment_at(
+                addr.into_u64(),
+                &String::from_utf8_lossy(&comments.join(&b"\n"[..])),
+            );
         }
 
         let bnty = ty
@@ -262,16 +273,16 @@ fn parse_id0_section_info(
             });
 
         match (label, &ty, bnty) {
-            (_, Some(ty), bnty) if matches!(&ty.type_variant, TILTypeVariant::Function(_)) => {
+            (label, Some(ty), bnty) if matches!(&ty.type_variant, TILTypeVariant::Function(_)) => {
                 if bnty.is_none() {
                     error!("Unable to convert the function type at {addr:#x}",)
                 }
                 if !debug_info.add_function(&DebugFunctionInfo::new(
                     None,
                     None,
-                    label.map(str::to_string),
+                    label.map(|x| x.to_string()),
                     bnty,
-                    Some(addr),
+                    Some(addr.into_u64()),
                     None,
                     vec![],
                     vec![],
@@ -279,20 +290,21 @@ fn parse_id0_section_info(
                     error!("Unable to add the function at {addr:#x}")
                 }
             }
-            (_, Some(_ty), Some(bnty)) => {
-                if !debug_info.add_data_variable(addr, &bnty, label, &[]) {
+            (label, Some(_ty), Some(bnty)) => {
+                let label: Option<&str> = label.as_ref().map(|x| x.as_ref());
+                if !debug_info.add_data_variable(addr.into_u64(), &bnty, label, &[]) {
                     error!("Unable to add the type at {addr:#x}")
                 }
             }
-            (_, Some(_ty), None) => {
+            (label, Some(_ty), None) => {
                 // TODO types come from the TIL sections, can we make all types be just NamedTypes?
                 error!("Unable to convert type {addr:#x}");
                 // TODO how to add a label without a type associacted with it?
                 if let Some(name) = label {
                     if !debug_info.add_data_variable(
-                        addr,
+                        addr.into_u64(),
                         &binaryninja::types::Type::void(),
-                        Some(name),
+                        Some(&name),
                         &[],
                     ) {
                         error!("Unable to add the label at {addr:#x}")
@@ -302,9 +314,9 @@ fn parse_id0_section_info(
             (Some(name), None, None) => {
                 // TODO how to add a label without a type associacted with it?
                 if !debug_info.add_data_variable(
-                    addr,
+                    addr.into_u64(),
                     &binaryninja::types::Type::void(),
-                    Some(name),
+                    Some(&name),
                     &[],
                 ) {
                     error!("Unable to add the label at {addr:#x}")

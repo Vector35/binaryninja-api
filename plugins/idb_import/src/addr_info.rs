@@ -1,30 +1,32 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 use anyhow::Result;
 
 use idb_rs::id0::ID0Section;
-use idb_rs::til;
+use idb_rs::{til, IDAKind};
 
 #[derive(Default)]
 pub struct AddrInfo<'a> {
     // TODO does binja diferenciate comments types on the API?
     pub comments: Vec<&'a [u8]>,
-    pub label: Option<&'a str>,
+    pub label: Option<Cow<'a, str>>,
     // TODO make this a ref
     pub ty: Option<til::Type>,
 }
 
-pub fn get_info(id0: &ID0Section, version: u16) -> Result<HashMap<u64, AddrInfo<'_>>> {
-    let mut addr_info: HashMap<u64, AddrInfo> = HashMap::new();
+pub fn get_info<K: IDAKind>(
+    id0: &ID0Section<K>,
+    version: u16,
+) -> Result<HashMap<K::Usize, AddrInfo<'_>>> {
+    use idb_rs::id0::FunctionsAndComments::*;
+    let mut addr_info: HashMap<K::Usize, AddrInfo> = HashMap::new();
 
     // the old style comments, most likely empty on new versions
-    let old_comments = id0.functions_and_comments()?.filter_map(|fc| {
-        use idb_rs::id0::FunctionsAndComments::*;
-        match fc {
-            Err(e) => Some(Err(e)),
-            Ok(Comment { address, comment }) => Some(Ok((address, comment))),
-            Ok(Name | Function(_) | Unknown { .. }) => None,
-        }
+    let old_comments = id0.functions_and_comments()?.filter_map(|fc| match fc {
+        Err(e) => Some(Err(e)),
+        Ok(Comment { address, comment }) => Some(Ok((address, comment))),
+        Ok(Name | Function(_) | Unknown { .. }) => None,
     });
     for old_comment in old_comments {
         let (addr, comment) = old_comment?;
@@ -50,6 +52,7 @@ pub fn get_info(id0: &ID0Section, version: u16) -> Result<HashMap<u64, AddrInfo<
                 }
             }
             Other { .. } => {}
+            DefinedStruct(_) => {}
         }
     }
 

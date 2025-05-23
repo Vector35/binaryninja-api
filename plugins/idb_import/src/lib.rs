@@ -460,7 +460,7 @@ pub extern "C" fn CorePluginInit() -> bool {
         c"Convert and import a TIL file into a TypeLibrary",
         LoadTilFile,
     );
-    DebugInfoParser::register(c"idb_parser", IDBDebugInfoParser);
-    DebugInfoParser::register(c"til_parser", TILDebugInfoParser);
+    DebugInfoParser::register(c"IDB Parser", IDBDebugInfoParser);
+    DebugInfoParser::register(c"TIL Parser", TILDebugInfoParser);
     true
 }

@@ -209,6 +209,57 @@ impl Ref<LowLevelILFunction<Mutable, NonSSA>> {
     }
 }
 
+impl<M: FunctionMutability> Ref<LowLevelILFunction<M, SSA>> {
+    /// Return a vector of all instructions that use the given SSA register.
+    #[must_use]
+    pub fn get_ssa_register_uses<R: ArchReg>(
+        &self,
+        reg: LowLevelILSSARegisterKind<R>,
+    ) -> Vec<LowLevelILInstruction<M, SSA>> {
+        use binaryninjacore_sys::BNGetLowLevelILSSARegisterUses;
+        let register_id = match reg {
+            LowLevelILSSARegisterKind::Full { kind, .. } => kind.id(),
+            LowLevelILSSARegisterKind::Partial { partial_reg, .. } => partial_reg.id(),
+        };
+        let mut count = 0;
+        let instrs = unsafe {
+            BNGetLowLevelILSSARegisterUses(
+                self.handle,
+                register_id.into(),
+                reg.version() as usize,
+                &mut count,
+            )
+        };
+        let result = unsafe { std::slice::from_raw_parts(instrs, count) }
+            .iter()
+            .map(|idx| LowLevelILInstruction::new(self, LowLevelInstructionIndex(*idx)))
+            .collect();
+        unsafe { BNFreeILInstructionList(instrs) };
+        result
+    }
+
+    /// Returns the instruction that defines the given SSA register.
+    #[must_use]
+    pub fn get_ssa_register_definition<R: ArchReg>(
+        &self,
+        reg: &LowLevelILSSARegisterKind<R>,
+    ) -> Option<LowLevelILInstruction<M, SSA>> {
+        use binaryninjacore_sys::BNGetLowLevelILSSARegisterDefinition;
+        let register_id = match reg {
+            LowLevelILSSARegisterKind::Full { kind, .. } => kind.id(),
+            LowLevelILSSARegisterKind::Partial { partial_reg, .. } => partial_reg.id(),
+        };
+        let instr_idx = unsafe {
+            BNGetLowLevelILSSARegisterDefinition(
+                self.handle,
+                register_id.into(),
+                reg.version() as usize,
+            )
+        };
+        self.instruction_from_index(LowLevelInstructionIndex(instr_idx))
+    }
+}
+
 impl<M, F> ToOwned for LowLevelILFunction<M, F>
 where
     M: FunctionMutability,

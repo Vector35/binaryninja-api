@@ -19,7 +19,7 @@ use crate::basic_block::{BasicBlock, BlockContext};
 
 use super::*;
 
-#[derive(Copy)]
+#[derive(Copy, Clone)]
 pub struct LowLevelILBlock<'func, M, F>
 where
     M: FunctionMutability,
@@ -60,18 +60,6 @@ where
         f.debug_struct("LowLevelILBlock")
             .field("function", &self.function)
             .finish()
-    }
-}
-
-impl<M, F> Clone for LowLevelILBlock<'_, M, F>
-where
-    M: FunctionMutability,
-    F: FunctionForm,
-{
-    fn clone(&self) -> Self {
-        LowLevelILBlock {
-            function: self.function,
-        }
     }
 }
 

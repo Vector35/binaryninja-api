@@ -104,6 +104,36 @@ where
     }
 }
 
+impl<M, R> LowLevelILExpression<'_, M, SSA, R>
+where
+    M: FunctionMutability,
+    R: ExpressionResultType,
+{
+    pub fn non_ssa_form<'func>(
+        &self,
+        non_ssa: &'func LowLevelILFunction<M, NonSSA>,
+    ) -> LowLevelILExpression<'func, M, NonSSA, R> {
+        use binaryninjacore_sys::BNGetLowLevelILNonSSAExprIndex;
+        let idx = unsafe { BNGetLowLevelILNonSSAExprIndex(self.function.handle, self.index.0) };
+        LowLevelILExpression::new(non_ssa, LowLevelExpressionIndex(idx))
+    }
+}
+
+impl<M, R> LowLevelILExpression<'_, M, NonSSA, R>
+where
+    M: FunctionMutability,
+    R: ExpressionResultType,
+{
+    pub fn ssa_form<'func>(
+        &self,
+        ssa: &'func LowLevelILFunction<M, SSA>,
+    ) -> LowLevelILExpression<'func, M, SSA, R> {
+        use binaryninjacore_sys::BNGetLowLevelILSSAExprIndex;
+        let idx = unsafe { BNGetLowLevelILSSAExprIndex(self.function.handle, self.index.0) };
+        LowLevelILExpression::new(ssa, LowLevelExpressionIndex(idx))
+    }
+}
+
 impl<'func, M> ExpressionHandler<'func, M, SSA> for LowLevelILExpression<'func, M, SSA, ValueExpr>
 where
     M: FunctionMutability,

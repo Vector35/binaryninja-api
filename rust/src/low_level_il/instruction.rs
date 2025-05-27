@@ -100,6 +100,48 @@ where
     }
 }
 
+impl<'func, M> LowLevelILInstruction<'func, M, NonSSA>
+where
+    M: FunctionMutability,
+{
+    pub fn ssa_form(
+        &self,
+        ssa: &'func LowLevelILFunction<M, SSA>,
+    ) -> LowLevelILInstruction<'func, M, SSA> {
+        use binaryninjacore_sys::BNGetLowLevelILSSAInstructionIndex;
+        let idx = unsafe { BNGetLowLevelILSSAInstructionIndex(self.function.handle, self.index.0) };
+        LowLevelILInstruction::new(ssa, LowLevelInstructionIndex(idx))
+    }
+}
+
+impl<'func, M> LowLevelILInstruction<'func, M, SSA>
+where
+    M: FunctionMutability,
+{
+    pub fn non_ssa_form(
+        &self,
+        non_ssa: &'func LowLevelILFunction<M, NonSSA>,
+    ) -> LowLevelILInstruction<'func, M, NonSSA> {
+        use binaryninjacore_sys::BNGetLowLevelILNonSSAInstructionIndex;
+        let idx =
+            unsafe { BNGetLowLevelILNonSSAInstructionIndex(self.function.handle, self.index.0) };
+        LowLevelILInstruction::new(non_ssa, LowLevelInstructionIndex(idx))
+    }
+}
+
+impl<M, F> Clone for LowLevelILInstruction<'_, M, F>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn clone(&self) -> Self {
+        Self {
+            function: self.function,
+            index: self.index,
+        }
+    }
+}
+
 impl<M, F> Debug for LowLevelILInstruction<'_, M, F>
 where
     M: FunctionMutability,

@@ -301,6 +301,33 @@ DEFINE_SUBMNEM_ROUND2ODD(SubMnemXSSQRTQPx, "xssqrtqp");
 DEFINE_SUBMNEM_ROUND2ODD(SubMnemXSSUBQPx, "xssubqp");
 DEFINE_SUBMNEM_INEXACT(SubMnemXSRQPIx, "xsrqpi");
 
+// PAIREDSINGLE MNEMONICS
+DEFINE_SUBMNEM_RC(SubMnemPS_ABSx, "ps_abs");
+DEFINE_SUBMNEM_RC(SubMnemPS_ADDx, "ps_add");
+DEFINE_SUBMNEM_RC(SubMnemPS_DIVx, "ps_div");
+DEFINE_SUBMNEM_RC(SubMnemPS_MADDx, "ps_madd");
+DEFINE_SUBMNEM_RC(SubMnemPS_MADDS0x, "ps_madds0");
+DEFINE_SUBMNEM_RC(SubMnemPS_MADDS1x, "ps_madds1");
+DEFINE_SUBMNEM_RC(SubMnemPS_MERGE00x, "ps_merge00");
+DEFINE_SUBMNEM_RC(SubMnemPS_MERGE01x, "ps_merge01");
+DEFINE_SUBMNEM_RC(SubMnemPS_MERGE10x, "ps_merge10");
+DEFINE_SUBMNEM_RC(SubMnemPS_MERGE11x, "ps_merge11");
+DEFINE_SUBMNEM_RC(SubMnemPS_MRx, "ps_mr");
+DEFINE_SUBMNEM_RC(SubMnemPS_MSUBx, "ps_msub");
+DEFINE_SUBMNEM_RC(SubMnemPS_MULx, "ps_mul");
+DEFINE_SUBMNEM_RC(SubMnemPS_MULS0x, "ps_muls0");
+DEFINE_SUBMNEM_RC(SubMnemPS_MULS1x, "ps_muls1");
+DEFINE_SUBMNEM_RC(SubMnemPS_NABSx, "ps_nabs");
+DEFINE_SUBMNEM_RC(SubMnemPS_NEGx, "ps_neg");
+DEFINE_SUBMNEM_RC(SubMnemPS_NMADDx, "ps_nmadd");
+DEFINE_SUBMNEM_RC(SubMnemPS_NMSUBx, "ps_nmsub");
+DEFINE_SUBMNEM_RC(SubMnemPS_RESx, "ps_res");
+DEFINE_SUBMNEM_RC(SubMnemPS_RSQRTEx, "ps_rsqrte");
+DEFINE_SUBMNEM_RC(SubMnemPS_SELx, "ps_sel");
+DEFINE_SUBMNEM_RC(SubMnemPS_SUBx, "ps_sub");
+DEFINE_SUBMNEM_RC(SubMnemPS_SUM0x, "ps_sum0");
+DEFINE_SUBMNEM_RC(SubMnemPS_SUM1x, "ps_sum1");
+
 static const char* RcMnemonic(const Instruction* instruction, const char* names[2])
 {
 	return names[instruction->flags.rc];
@@ -1597,6 +1624,45 @@ const char* GetMnemonic(const Instruction* instruction)
 		case PPC_ID_PSQ_STU: return "psq_stu";
 		case PPC_ID_PSQ_STUX: return "psq_stux";
 		case PPC_ID_PSQ_STX: return "psq_stx";
+
+		case PPC_ID_PAIREDSINGLE_DCBZ_L: return "dcbz_l";
+		case PPC_ID_PAIREDSINGLE_PS_ABSx: return RcMnemonic(instruction, SubMnemPS_ABSx);
+		case PPC_ID_PAIREDSINGLE_PS_ADDx: return RcMnemonic(instruction, SubMnemPS_ADDx);
+		case PPC_ID_PAIREDSINGLE_PS_CMPO0: return "ps_cmpo0";
+		case PPC_ID_PAIREDSINGLE_PS_CMPO1: return "ps_cmpo1";
+		case PPC_ID_PAIREDSINGLE_PS_CMPU0: return "ps_cmpu0";
+		case PPC_ID_PAIREDSINGLE_PS_CMPU1: return "ps_cmpu1";
+		case PPC_ID_PAIREDSINGLE_PS_DIVx: return RcMnemonic(instruction, SubMnemPS_DIVx);
+		case PPC_ID_PAIREDSINGLE_PS_MADDx: return RcMnemonic(instruction, SubMnemPS_MADDx);
+		case PPC_ID_PAIREDSINGLE_PS_MADDS0x: return RcMnemonic(instruction, SubMnemPS_MADDS0x);
+		case PPC_ID_PAIREDSINGLE_PS_MADDS1x: return RcMnemonic(instruction, SubMnemPS_MADDS1x);
+		case PPC_ID_PAIREDSINGLE_PS_MERGE00x: return RcMnemonic(instruction, SubMnemPS_MERGE00x);
+		case PPC_ID_PAIREDSINGLE_PS_MERGE01x: return RcMnemonic(instruction, SubMnemPS_MERGE01x);
+		case PPC_ID_PAIREDSINGLE_PS_MERGE10x: return RcMnemonic(instruction, SubMnemPS_MERGE10x);
+		case PPC_ID_PAIREDSINGLE_PS_MERGE11x: return RcMnemonic(instruction, SubMnemPS_MERGE11x);
+		case PPC_ID_PAIREDSINGLE_PS_MRx: return RcMnemonic(instruction, SubMnemPS_MRx);
+		case PPC_ID_PAIREDSINGLE_PS_MSUBx: return RcMnemonic(instruction, SubMnemPS_MSUBx);
+		case PPC_ID_PAIREDSINGLE_PS_MULx: return RcMnemonic(instruction, SubMnemPS_MULx);
+		case PPC_ID_PAIREDSINGLE_PS_MULS0x: return RcMnemonic(instruction, SubMnemPS_MULS0x);
+		case PPC_ID_PAIREDSINGLE_PS_MULS1x: return RcMnemonic(instruction, SubMnemPS_MULS1x);
+		case PPC_ID_PAIREDSINGLE_PS_NABSx: return RcMnemonic(instruction, SubMnemPS_NABSx);
+		case PPC_ID_PAIREDSINGLE_PS_NEGx: return RcMnemonic(instruction, SubMnemPS_NEGx);
+		case PPC_ID_PAIREDSINGLE_PS_NMADDx: return RcMnemonic(instruction, SubMnemPS_NMADDx);
+		case PPC_ID_PAIREDSINGLE_PS_NMSUBx: return RcMnemonic(instruction, SubMnemPS_NMSUBx);
+		case PPC_ID_PAIREDSINGLE_PS_RESx: return RcMnemonic(instruction, SubMnemPS_RESx);
+		case PPC_ID_PAIREDSINGLE_PS_RSQRTEx: return RcMnemonic(instruction, SubMnemPS_RSQRTEx);
+		case PPC_ID_PAIREDSINGLE_PS_SELx: return RcMnemonic(instruction, SubMnemPS_SELx);
+		case PPC_ID_PAIREDSINGLE_PS_SUBx: return RcMnemonic(instruction, SubMnemPS_SUBx);
+		case PPC_ID_PAIREDSINGLE_PS_SUM0x: return RcMnemonic(instruction, SubMnemPS_SUM0x);
+		case PPC_ID_PAIREDSINGLE_PS_SUM1x: return RcMnemonic(instruction, SubMnemPS_SUM1x);
+		case PPC_ID_PAIREDSINGLE_PSQ_L: return "psq_l";
+		case PPC_ID_PAIREDSINGLE_PSQ_LU: return "psq_lu";
+		case PPC_ID_PAIREDSINGLE_PSQ_LUX: return "psq_lux";
+		case PPC_ID_PAIREDSINGLE_PSQ_LX: return "psq_lx";
+		case PPC_ID_PAIREDSINGLE_PSQ_ST: return "psq_st";
+		case PPC_ID_PAIREDSINGLE_PSQ_STU: return "psq_stu";
+		case PPC_ID_PAIREDSINGLE_PSQ_STUX: return "psq_stux";
+		case PPC_ID_PAIREDSINGLE_PSQ_STX: return "psq_stx";
 
 		case PPC_ID_SPE_BRINC: return "brinc";
 		case PPC_ID_SPE_EFDABS: return "efdabs";

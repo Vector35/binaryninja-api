@@ -2063,6 +2063,203 @@ static InstructionId DecodeSpe0x04(uint32_t word32, uint32_t decodeFlags)
 	}
 }
 
+static InstructionId DecodePairedSingle0x04(uint32_t word32, uint32_t decodeFlags)
+{
+	uint32_t a = GetA(word32);
+	uint32_t b = GetB(word32);
+	uint32_t c = GetC(word32);
+	uint32_t d = GetD(word32);
+
+	// see IBM Broadway RISC Microprocessor User's Manual,
+	// Tables A-30, A-31, and A-32
+	uint32_t subop = (word32 >> 1) & 0x1f;
+	switch (subop)
+	{
+		case 10:
+			return PPC_ID_PAIREDSINGLE_PS_SUM0x;
+
+		case 11:
+			return PPC_ID_PAIREDSINGLE_PS_SUM1x;
+
+		case 12:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_PS_MULS0x;
+
+		case 13:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_PS_MULS1x;
+
+		case 14:
+			return PPC_ID_PAIREDSINGLE_PS_MADDS0x;
+
+		case 15:
+			return PPC_ID_PAIREDSINGLE_PS_MADDS1x;
+
+		case 18:
+			if (c != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_PS_DIVx;
+
+		case 20:
+			if (c != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_PS_SUBx;
+
+		case 21:
+			if (c != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_PS_ADDx;
+
+		case 23:
+			return PPC_ID_PAIREDSINGLE_PS_SELx;
+
+		case 24:
+			if ((a != 0) || (c != 0))
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_PS_RESx;
+
+		case 25:
+			if (b != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_PS_MULx;
+
+		case 26:
+			if ((a != 0) || (c != 0))
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_PS_RSQRTEx;
+
+		case 28:
+			return PPC_ID_PAIREDSINGLE_PS_MSUBx;
+
+		case 29:
+			return PPC_ID_PAIREDSINGLE_PS_MADDx;
+
+		case 30:
+			return PPC_ID_PAIREDSINGLE_PS_NMSUBx;
+
+		case 31:
+			return PPC_ID_PAIREDSINGLE_PS_NMADDx;
+
+		default:
+			;
+	}
+
+	subop = (word32 >> 1) & 0x3f;
+	switch (subop)
+	{
+		case 6:
+			if ((word32 & 0x1) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_PSQ_LX;
+
+		case 7:
+			if ((word32 & 0x1) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_PSQ_STX;
+
+		case 38:
+			if ((word32 & 0x1) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_PSQ_LUX;
+
+		case 39:
+			if ((word32 & 0x1) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_PSQ_STUX;
+
+		default:
+			;
+	}
+
+	subop = (word32 >> 1) & 0x3ff;
+	switch (subop)
+	{
+		case 0:
+			if ((word32 & 0x00600001) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_PS_CMPU0;
+
+		case 32:
+			if ((word32 & 0x00600001) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_PS_CMPO0;
+
+		case 40:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_PS_NEGx;
+
+		case 64:
+			if ((word32 & 0x00600001) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_PS_CMPU1;
+
+		case 72:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_PS_MRx;
+
+		case 96:
+			if ((word32 & 0x00600001) != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_PS_CMPO1;
+
+		case 136:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_PS_NABSx;
+
+		case 264:
+			if (a != 0)
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_PS_ABSx;
+
+		case 528:
+			return PPC_ID_PAIREDSINGLE_PS_MERGE00x;
+
+		case 560:
+			return PPC_ID_PAIREDSINGLE_PS_MERGE01x;
+
+		case 592:
+			return PPC_ID_PAIREDSINGLE_PS_MERGE10x;
+
+		case 624:
+			return PPC_ID_PAIREDSINGLE_PS_MERGE11x;
+
+		case 1014:
+			if ((d != 0) || ((word32 & 0x1) != 0))
+				return PPC_ID_INVALID;
+
+			return PPC_ID_PAIREDSINGLE_DCBZ_L;
+
+		default:
+			return PPC_ID_INVALID;
+	}
+
+}
+
 static InstructionId Decode0x13(uint32_t word32, uint32_t decodeFlags)
 {
 	uint32_t a = GetA(word32);
@@ -5537,6 +5734,8 @@ static InstructionId Decode32(uint32_t word32, uint32_t decodeFlags)
 				return DecodeAltivec0x04(word32, decodeFlags);
 			else if ((decodeFlags & DECODE_FLAGS_SPE))
 				return DecodeSpe0x04(word32, decodeFlags);
+			else if ((decodeFlags & DECODE_FLAGS_PS))
+				return DecodePairedSingle0x04(word32, decodeFlags);
 			else
 				return PPC_ID_INVALID;
 		}
@@ -5757,9 +5956,17 @@ static InstructionId Decode32(uint32_t word32, uint32_t decodeFlags)
 		case 0x37:
 			return PPC_ID_STFDU;
 
+		case 0x38:
+			if ((decodeFlags & DECODE_FLAGS_PS) != 0)
+				return PPC_ID_PAIREDSINGLE_PSQ_L;
+			else
+				return PPC_ID_INVALID;
+
 		case 0x39:
 			if ((decodeFlags & DECODE_FLAGS_VSX) != 0)
 				return DecodeVsx0x39(word32, decodeFlags);
+			else if ((decodeFlags & DECODE_FLAGS_PS) != 0)
+				return PPC_ID_PAIREDSINGLE_PSQ_LU;
 			else
 				return PPC_ID_INVALID;
 
@@ -5781,12 +5988,16 @@ static InstructionId Decode32(uint32_t word32, uint32_t decodeFlags)
 		case 0x3c:
 			if ((decodeFlags & DECODE_FLAGS_VSX) != 0)
 				return DecodeVsx0x3C(word32, decodeFlags);
+			else if ((decodeFlags & DECODE_FLAGS_PS) != 0)
+				return PPC_ID_PAIREDSINGLE_PSQ_ST;
 			else
 				return PPC_ID_INVALID;
 
 		case 0x3d:
 			if ((decodeFlags & DECODE_FLAGS_VSX) != 0)
 				return DecodeVsx0x3D(word32, decodeFlags);
+			else if ((decodeFlags & DECODE_FLAGS_PS) != 0)
+				return PPC_ID_PAIREDSINGLE_PSQ_STU;
 			else
 				return PPC_ID_INVALID;
 

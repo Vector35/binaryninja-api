@@ -65,6 +65,7 @@ where
         T: FnMut(&LowLevelILExpression<'func, M, F, ValueExpr>) -> VisitorAction;
 }
 
+#[derive(Copy, Clone)]
 pub struct LowLevelILInstruction<'func, M, F>
 where
     M: FunctionMutability,

@@ -59,6 +59,7 @@ where
         T: FnMut(&LowLevelILExpression<'func, M, F, ValueExpr>) -> VisitorAction;
 }
 
+#[derive(Copy)]
 pub struct LowLevelILExpression<'func, M, F, R>
 where
     M: FunctionMutability,
@@ -70,6 +71,21 @@ where
 
     // tag the 'return' type of this expression
     pub(crate) _ty: PhantomData<R>,
+}
+
+impl<M, F, R> Clone for LowLevelILExpression<'_, M, F, R>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+    R: ExpressionResultType,
+{
+    fn clone(&self) -> Self {
+        Self {
+            function: self.function,
+            index: self.index,
+            _ty: PhantomData,
+        }
+    }
 }
 
 impl<'func, M, F, R> LowLevelILExpression<'func, M, F, R>

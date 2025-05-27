@@ -1475,6 +1475,35 @@ where
 
 // LLIL_REG_PHI
 pub struct RegPhi;
+impl<M, F> Operation<'_, M, F, RegPhi>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn dest_reg(&self) -> LowLevelILSSARegisterKind<CoreRegister> {
+        let raw_id = RegisterId(self.op.operands[0] as u32);
+        let reg_kind = LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id)
+            .expect("Bad register ID");
+        let version = self.op.operands[1] as u32;
+        LowLevelILSSARegisterKind::new_full(reg_kind, version)
+    }
+
+    pub fn source_regs(&self) -> Vec<LowLevelILSSARegisterKind<CoreRegister>> {
+        let operand_list = self.get_operand_list(2);
+        let arch = self.function.arch();
+        operand_list
+            .chunks_exact(2)
+            .map(|chunk| {
+                let (register, version) = (chunk[0], chunk[1]);
+                LowLevelILSSARegisterKind::new_full(
+                    LowLevelILRegisterKind::from_raw(&arch, RegisterId(register as u32))
+                        .expect("Bad register ID"),
+                    version as u32,
+                )
+            })
+            .collect()
+    }
+}
 
 impl<M, F> Debug for Operation<'_, M, F, RegPhi>
 where
@@ -1482,12 +1511,47 @@ where
     F: FunctionForm,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_struct("RegPhi").finish()
+        f.debug_struct("RegPhi")
+            .field("dest_reg", &self.dest_reg())
+            .field("source_regs", &self.source_regs())
+            .finish()
     }
 }
 
 // LLIL_FLAG_PHI
 pub struct FlagPhi;
+
+impl<M, F> Operation<'_, M, F, FlagPhi>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn dest_flag(&self) -> LowLevelILSSAFlag<CoreFlag> {
+        let flag = self
+            .function
+            .arch()
+            .flag_from_id(FlagId(self.op.operands[0] as u32))
+            .expect("Bad flag ID");
+        let version = self.op.operands[1] as u32;
+        LowLevelILSSAFlag::new(flag, version)
+    }
+
+    pub fn source_flags(&self) -> Vec<LowLevelILSSAFlag<CoreFlag>> {
+        let operand_list = self.get_operand_list(2);
+        operand_list
+            .chunks_exact(2)
+            .map(|chunk| {
+                let (flag, version) = (chunk[0], chunk[1]);
+                let flag = self
+                    .function
+                    .arch()
+                    .flag_from_id(FlagId(flag as u32))
+                    .expect("Bad flag ID");
+                LowLevelILSSAFlag::new(flag, version as u32)
+            })
+            .collect()
+    }
+}
 
 impl<M, F> Debug for Operation<'_, M, F, FlagPhi>
 where
@@ -1495,12 +1559,30 @@ where
     F: FunctionForm,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FlagPhi").finish()
+        f.debug_struct("FlagPhi")
+            .field("dest_flag", &self.dest_flag())
+            .field("source_flags", &self.source_flags())
+            .finish()
     }
 }
 
 // LLIL_MEM_PHI
 pub struct MemPhi;
+
+impl<M, F> Operation<'_, M, F, MemPhi>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn dest_memory_version(&self) -> usize {
+        self.op.operands[0] as usize
+    }
+
+    pub fn source_memory_versions(&self) -> Vec<usize> {
+        let operand_list = self.get_operand_list(1);
+        operand_list.into_iter().map(|op| op as usize).collect()
+    }
+}
 
 impl<M, F> Debug for Operation<'_, M, F, MemPhi>
 where
@@ -1508,7 +1590,10 @@ where
     F: FunctionForm,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_struct("MemPhi").finish()
+        f.debug_struct("MemPhi")
+            .field("dest_memory_version", &self.dest_memory_version())
+            .field("source_memory_versions", &self.source_memory_versions())
+            .finish()
     }
 }
 

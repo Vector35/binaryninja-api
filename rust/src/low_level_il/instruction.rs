@@ -214,6 +214,10 @@ where
     ForceVersion(Operation<'func, M, F, operation::ForceVersion>),
     ForceVersionSsa(Operation<'func, M, F, operation::ForceVersionSsa>),
 
+    RegPhi(Operation<'func, M, F, operation::RegPhi>),
+    FlagPhi(Operation<'func, M, F, operation::FlagPhi>),
+    MemPhi(Operation<'func, M, F, operation::MemPhi>),
+
     /// The instruction is an expression.
     Value(LowLevelILExpression<'func, M, F, ValueExpr>),
 }
@@ -317,6 +321,16 @@ where
             LLIL_FORCE_VER_SSA => {
                 LowLevelILInstructionKind::ForceVersionSsa(Operation::new(function, op, expr_index))
             }
+            LLIL_REG_PHI => {
+                LowLevelILInstructionKind::RegPhi(Operation::new(function, op, expr_index))
+            }
+            LLIL_MEM_PHI => {
+                LowLevelILInstructionKind::MemPhi(Operation::new(function, op, expr_index))
+            }
+            LLIL_FLAG_PHI => {
+                LowLevelILInstructionKind::FlagPhi(Operation::new(function, op, expr_index))
+            }
+
             _ => LowLevelILInstructionKind::Value(LowLevelILExpression::new(function, expr_index)),
         }
     }
@@ -370,7 +384,8 @@ where
             Value(e) => visit!(e),
             // Do not have any sub expressions.
             Nop(_) | NoRet(_) | Goto(_) | Syscall(_) | Bp(_) | Trap(_) | Undef(_) | Assert(_)
-            | AssertSsa(_) | ForceVersion(_) | ForceVersionSsa(_) => {}
+            | AssertSsa(_) | ForceVersion(_) | ForceVersionSsa(_) | RegPhi(_) | FlagPhi(_)
+            | MemPhi(_) => {}
         }
 
         VisitorAction::Sibling

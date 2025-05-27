@@ -2111,6 +2111,35 @@ where
     }
 }
 
+// LLIL_SEPARATE_PARAM_LIST_SSA
+pub struct SeparateParamListSsa;
+
+impl<'func, M, F> Operation<'func, M, F, SeparateParamListSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn param_exprs(&self) -> Vec<LowLevelILExpression<'func, M, F, ValueExpr>> {
+        self.get_operand_list(0)
+            .into_iter()
+            .map(|val| LowLevelExpressionIndex(val as usize))
+            .map(|expr_idx| LowLevelILExpression::new(self.function, expr_idx))
+            .collect()
+    }
+}
+
+impl<M, F> Debug for Operation<'_, M, F, SeparateParamListSsa>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SeparateParamListSsa")
+            .field("param_exprs", &self.param_exprs())
+            .finish()
+    }
+}
+
 // TODO TEST_BIT
 
 pub trait OperationArguments: 'static {}
@@ -2168,3 +2197,4 @@ impl OperationArguments for Assert {}
 impl OperationArguments for AssertSsa {}
 impl OperationArguments for ForceVersion {}
 impl OperationArguments for ForceVersionSsa {}
+impl OperationArguments for SeparateParamListSsa {}

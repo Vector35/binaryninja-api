@@ -434,6 +434,8 @@ where
                 LowLevelILExpressionKind::SeparateParamListSsa(Operation::new(function, op, index))
             }
 
+            LLIL_UNDEF => LowLevelILExpressionKind::Undef(Operation::new(function, op, index)),
+
             LLIL_UNIMPL => LowLevelILExpressionKind::Unimpl(Operation::new(function, op, index)),
             LLIL_UNIMPL_MEM => {
                 LowLevelILExpressionKind::UnimplMem(Operation::new(function, op, index))

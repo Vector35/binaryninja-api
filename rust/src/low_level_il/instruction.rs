@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::basic_block::BasicBlock;
+use crate::rc::Ref;
+
+use super::block::LowLevelILBlock;
 use super::operation;
 use super::operation::Operation;
 use super::VisitorAction;
@@ -97,6 +101,12 @@ where
 
     pub fn into_raw(&self) -> BNLowLevelILInstruction {
         unsafe { BNGetLowLevelILByIndex(self.function.handle, self.expr_idx().0) }
+    }
+
+    /// Returns the [`BasicBlock`] containing the given [`LowLevelILInstruction`].
+    pub fn basic_block(&self) -> Option<Ref<BasicBlock<LowLevelILBlock<'func, M, F>>>> {
+        // TODO: We might be able to .expect this if we guarantee that self.index is valid.
+        self.function.basic_block_containing_index(self.index)
     }
 }
 

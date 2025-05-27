@@ -159,6 +159,21 @@ where
             Array::new(blocks, count, context)
         }
     }
+
+    /// Returns the [`BasicBlock`] at the given instruction `index`.
+    ///
+    /// You can also retrieve this using [`LowLevelILInstruction::basic_block`].
+    pub fn basic_block_containing_index(
+        &self,
+        index: LowLevelInstructionIndex,
+    ) -> Option<Ref<BasicBlock<LowLevelILBlock<M, F>>>> {
+        let block = unsafe { BNGetLowLevelILBasicBlockForInstruction(self.handle, index.0) };
+        if block.is_null() {
+            None
+        } else {
+            Some(unsafe { BasicBlock::ref_from_raw(block, LowLevelILBlock { function: self }) })
+        }
+    }
 }
 
 impl<M: FunctionMutability> LowLevelILFunction<M, NonSSA> {

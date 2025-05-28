@@ -4625,7 +4625,7 @@ int decode_scratchpad(context* ctx, Instruction* instr)
 		case ENC_BFI_BFM_32M_BITFIELD:
 		case ENC_SBFIZ_SBFM_32M_BITFIELD:
 		case ENC_UBFIZ_UBFM_32M_BITFIELD:
-			lsb = -(int64_t)IMMR % 32;
+			lsb = -IMMR % 32;
 			width = IMMS + 1;
 			break;
 		default:

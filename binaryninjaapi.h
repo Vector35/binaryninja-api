@@ -11430,6 +11430,9 @@ namespace BinaryNinja {
 		BNExprFolding GetExprFolding(uint64_t addr);
 		void SetExprFolding(uint64_t addr, BNExprFolding mode);
 
+		bool IsConditionInverted(uint64_t addr);
+		void SetConditionInverted(uint64_t addr, bool invert);
+
 		std::map<Variable, std::set<Variable>> GetMergedVariables();
 		void MergeVariables(const Variable& target, const std::set<Variable>& sources);
 		void UnmergeVariables(const Variable& target, const std::set<Variable>& sources);

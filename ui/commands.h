@@ -97,6 +97,7 @@ TypeRef GetFunctionType(BinaryViewRef data, TypeRef type);
 
 std::optional<uint64_t> getFoldableExprAddress(
 	BinaryNinja::HighLevelILFunction* hlil, const HighlightTokenState& highlight);
+std::optional<uint64_t> getInvertableConditionAddress(BinaryNinja::HighLevelILFunction* hlil, size_t instrIndex);
 
 /*!
     @}

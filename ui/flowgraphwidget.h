@@ -168,6 +168,8 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	BNDeadStoreElimination getCurrentVariableDeadStoreElimination();
 	std::optional<uint64_t> getCurrentFoldableExprAddress();
 	BNExprFolding getCurrentExprFolding();
+	std::optional<uint64_t> getCurrentInvertableConditionAddress();
+	bool getCurrentConditionInverted();
 	std::optional<std::pair<BinaryNinja::Variable, BinaryNinja::Variable>> getMergeVariablesAtCurrentLocation();
 
   protected:
@@ -398,6 +400,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 
 	void setCurrentVariableDeadStoreElimination(BNDeadStoreElimination elimination);
 	void setCurrentExprFolding(BNExprFolding folding);
+	void toggleConditionInverted();
 	void splitToNewTabAndNavigateFromCursorPosition();
 	void splitToNewWindowAndNavigateFromCursorPosition();
 	void splitToNewPaneAndNavigateFromCursorPosition();

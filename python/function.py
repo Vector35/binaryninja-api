@@ -3466,6 +3466,16 @@ class Function:
 			addr = addr.address
 		core.BNSetExprFolding(self.handle, addr, value)
 
+	def is_condition_inverted(self, addr: Union[int, highlevelil.HighLevelILInstruction]) -> bool:
+		if isinstance(addr, highlevelil.HighLevelILInstruction):
+			addr = addr.address
+		return core.BNIsConditionInverted(self.handle, addr)
+
+	def set_condition_inverted(self, addr: Union[int, highlevelil.HighLevelILInstruction], invert: bool):
+		if isinstance(addr, highlevelil.HighLevelILInstruction):
+			addr = addr.address
+		core.BNSetConditionInverted(self.handle, addr, invert)
+
 
 class AdvancedFunctionAnalysisDataRequestor:
 	def __init__(self, func: Optional['Function'] = None):

@@ -8,6 +8,7 @@ import platform
 core = None
 core_platform = platform.system()
 
+from binaryninja._binaryninjacore import BNFreeString, BNFreeStringList, BNAllocString
 from binaryninja import Settings
 if Settings().get_bool("corePlugins.view.kernelCache"):
     from binaryninja._binaryninjacore import BNGetBundledPluginDirectory

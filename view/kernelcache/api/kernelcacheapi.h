@@ -254,7 +254,7 @@ namespace KernelCacheAPI {
 		static BNKCViewLoadProgress GetLoadProgress(Ref<BinaryView> view);
 		static uint64_t FastGetImageCount(Ref<BinaryView> view);
 
-		bool LoadImageWithInstallName(std::string installName);
+		bool LoadImageWithInstallName(const std::string& installName);
 		bool LoadImageContainingAddress(uint64_t addr);
 		std::vector<std::string> GetAvailableImages();
 
@@ -268,7 +268,7 @@ namespace KernelCacheAPI {
 		std::vector<KCImage> GetImages();
 		std::vector<KCImage> GetLoadedImages();
 
-		std::optional<KernelCacheMachOHeader> GetMachOHeaderForImage(std::string name);
+		std::optional<KernelCacheMachOHeader> GetMachOHeaderForImage(const std::string& name);
 		std::optional<KernelCacheMachOHeader> GetMachOHeaderForAddress(uint64_t address);
 	};
 }

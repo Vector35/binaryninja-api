@@ -106,7 +106,7 @@ extern "C"
 
 	KERNELCACHE_FFI_API char** BNKCViewGetInstallNames(BNKernelCache* cache, size_t* count);
 
-	KERNELCACHE_FFI_API bool BNKCViewLoadImageWithInstallName(BNKernelCache* cache, char* name);
+	KERNELCACHE_FFI_API bool BNKCViewLoadImageWithInstallName(BNKernelCache* cache, const char* name);
 	KERNELCACHE_FFI_API bool BNKCViewLoadImageContainingAddress(BNKernelCache* cache, uint64_t address);
 
 	KERNELCACHE_FFI_API bool BNKCViewIsImageLoaded(BNKernelCache* cache, uint64_t address);
@@ -128,7 +128,7 @@ extern "C"
 	KERNELCACHE_FFI_API void BNKCViewFreeLoadedImages(BNKCImage* images, size_t count);
 
 	KERNELCACHE_FFI_API char* BNKCViewGetImageHeaderForAddress(BNKernelCache* cache, uint64_t address);
-	KERNELCACHE_FFI_API char* BNKCViewGetImageHeaderForName(BNKernelCache* cache, char* name);
+	KERNELCACHE_FFI_API char* BNKCViewGetImageHeaderForName(BNKernelCache* cache, const char* name);
 
 #ifdef __cplusplus
 }

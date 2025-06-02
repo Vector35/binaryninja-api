@@ -93,7 +93,7 @@ void KCTriageView::loadImagesWithAddr(const std::vector<uint64_t>& addresses) {
 		{
 			if (imageLoadTask.IsCancelled())
 				break;
-			std::string newLoad = fmt::format("Loading images... ({}/{})", loadedImages++, images.size());
+			const std::string newLoad = fmt::format("Loading images... ({}/{})", loadedImages++, images.size());
 			imageLoadTask.SetProgressText(newLoad);
 			if (m_cache->LoadImageWithInstallName(imageName))
 				setImageLoaded(addr);

@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 109
+#define BN_CURRENT_CORE_ABI_VERSION 110
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -1027,6 +1027,9 @@ extern "C"
 
 		// HLIL condition can be displayed as the inverse
 		HLILInvertableCondition = 0x200,
+
+		// HLIL condition can be rewritten as an early return
+		HLILEarlyReturnPossible = 0x400,
 	} BNILInstructionAttribute;
 
 	typedef enum BNIntrinsicClass
@@ -3241,6 +3244,15 @@ extern "C"
 		AllowExprFolding
 	} BNExprFolding;
 
+	typedef enum BNEarlyReturn
+	{
+		DefaultEarlyReturn,
+		PreventEarlyReturn,
+		SmallestSideEarlyReturn,
+		TrueSideEarlyReturn,
+		FalseSideEarlyReturn
+	} BNEarlyReturn;
+
 	typedef struct BNDebugFunctionInfo
 	{
 		char* shortName;
@@ -4998,6 +5010,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetExprFolding(BNFunction* func, uint64_t addr, BNExprFolding mode);
 	BINARYNINJACOREAPI bool BNIsConditionInverted(BNFunction* func, uint64_t addr);
 	BINARYNINJACOREAPI void BNSetConditionInverted(BNFunction* func, uint64_t addr, bool invert);
+	BINARYNINJACOREAPI BNEarlyReturn BNGetEarlyReturn(BNFunction* func, uint64_t addr);
+	BINARYNINJACOREAPI void BNSetEarlyReturn(BNFunction* func, uint64_t addr, BNEarlyReturn mode);
 	BINARYNINJACOREAPI BNMergedVariable* BNGetMergedVariables(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI void BNFreeMergedVariableList(BNMergedVariable* vars, size_t count);
 	BINARYNINJACOREAPI void BNMergeVariables(BNFunction* func, const BNVariable* target, const BNVariable* sources,

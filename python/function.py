@@ -29,7 +29,7 @@ from . import _binaryninjacore as core
 from .enums import (
 	AnalysisSkipReason, FunctionGraphType, SymbolType, InstructionTextTokenType, HighlightStandardColor,
 	HighlightColorStyle, DisassemblyOption, IntegerDisplayType, FunctionAnalysisSkipOverride, FunctionUpdateType,
-	BuiltinType, ExprFolding
+	BuiltinType, ExprFolding, EarlyReturn
 )
 
 from . import associateddatastore  # Required in the main scope due to being an argument for _FunctionAssociatedDataStore
@@ -3475,6 +3475,16 @@ class Function:
 		if isinstance(addr, highlevelil.HighLevelILInstruction):
 			addr = addr.address
 		core.BNSetConditionInverted(self.handle, addr, invert)
+
+	def get_early_return(self, addr: Union[int, highlevelil.HighLevelILInstruction]) -> EarlyReturn:
+		if isinstance(addr, highlevelil.HighLevelILInstruction):
+			addr = addr.address
+		return EarlyReturn(core.BNGetEarlyReturn(self.handle, addr))
+
+	def set_early_return(self, addr: Union[int, highlevelil.HighLevelILInstruction], value: EarlyReturn):
+		if isinstance(addr, highlevelil.HighLevelILInstruction):
+			addr = addr.address
+		core.BNSetEarlyReturn(self.handle, addr, value)
 
 
 class AdvancedFunctionAnalysisDataRequestor:

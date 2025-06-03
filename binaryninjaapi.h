@@ -11433,6 +11433,9 @@ namespace BinaryNinja {
 		bool IsConditionInverted(uint64_t addr);
 		void SetConditionInverted(uint64_t addr, bool invert);
 
+		BNEarlyReturn GetEarlyReturn(uint64_t addr);
+		void SetEarlyReturn(uint64_t addr, BNEarlyReturn mode);
+
 		std::map<Variable, std::set<Variable>> GetMergedVariables();
 		void MergeVariables(const Variable& target, const std::set<Variable>& sources);
 		void UnmergeVariables(const Variable& target, const std::set<Variable>& sources);

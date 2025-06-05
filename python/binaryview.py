@@ -4761,6 +4761,8 @@ class BinaryView:
 			raise Exception("Default platform not set in BinaryView")
 		if plat is None:
 			plat = self.platform
+		if self.platform is None:
+			self.platform = plat
 		if not isinstance(plat, _platform.Platform):
 			raise ValueError("Provided platform is not of type `Platform`")
 
@@ -4789,6 +4791,8 @@ class BinaryView:
 			raise Exception("Default platform not set in BinaryView")
 		if plat is None:
 			plat = self.platform
+		if self.platform is None:
+			self.platform = plat
 		if not isinstance(plat, _platform.Platform):
 			raise ValueError("Provided platform is not of type `Platform`")
 		core.BNAddEntryPointForAnalysis(self.handle, plat.handle, addr)
@@ -4846,6 +4850,8 @@ class BinaryView:
 			if self.platform is None:
 				raise Exception("Attempting to call create_user_function with no specified platform")
 			plat = self.platform
+		if self.platform is None:
+			self.platform = plat
 		func = core.BNCreateUserFunction(self.handle, plat.handle, addr)
 		if func is None:
 			return None

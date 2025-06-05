@@ -924,31 +924,40 @@ pub trait BinaryViewExt: BinaryViewBase {
         MemoryMap::new(self.as_ref().to_owned())
     }
 
-    fn add_auto_function(&self, plat: &Platform, addr: u64) -> Option<Ref<Function>> {
-        unsafe {
-            let handle = BNAddFunctionForAnalysis(
-                self.as_ref().handle,
-                plat.handle,
-                addr,
-                false,
-                std::ptr::null_mut(),
-            );
-
-            if handle.is_null() {
-                return None;
-            }
-
-            Some(Function::ref_from_raw(handle))
-        }
+    /// Add an auto function at the given `address` with the views default platform.
+    ///
+    /// NOTE: The default platform **must** be set for this view!
+    fn add_auto_function(&self, address: u64) -> Option<Ref<Function>> {
+        let platform = self.default_platform()?;
+        self.add_auto_function_with_platform(address, &platform)
     }
 
-    fn add_function_with_type(
+    /// Add an auto function at the given `address` with the `platform`.
+    ///
+    /// NOTE: If the view's default platform is not set, this will set it to `platform`.
+    fn add_auto_function_with_platform(
         &self,
-        plat: &Platform,
-        addr: u64,
-        auto_discovered: bool,
+        address: u64,
+        platform: &Platform,
+    ) -> Option<Ref<Function>> {
+        self.add_auto_function_ext(address, platform, None)
+    }
+
+    /// Add an auto function at the given `address` with the `platform` and function type.
+    ///
+    /// NOTE: If the view's default platform is not set, this will set it to `platform`.
+    fn add_auto_function_ext(
+        &self,
+        address: u64,
+        platform: &Platform,
         func_type: Option<&Type>,
     ) -> Option<Ref<Function>> {
+        // If the view does not have a default platform, we must set it.
+        // The core expects there to be one before it can create a function.
+        if self.default_platform().is_none() {
+            self.set_default_platform(platform);
+        }
+
         unsafe {
             let func_type = match func_type {
                 Some(func_type) => func_type.handle,
@@ -957,9 +966,9 @@ pub trait BinaryViewExt: BinaryViewBase {
 
             let handle = BNAddFunctionForAnalysis(
                 self.as_ref().handle,
-                plat.handle,
-                addr,
-                auto_discovered,
+                platform.handle,
+                address,
+                true,
                 func_type,
             );
 
@@ -971,26 +980,83 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn add_entry_point(&self, plat: &Platform, addr: u64) {
+    /// Remove an auto function from the view.
+    ///
+    /// Pass `true` for `update_refs` to update all references of the function.
+    ///
+    /// NOTE: Unlike [`BinaryViewExt::remove_user_function`], this will NOT prohibit the function from
+    /// being re-added in the future, use [`BinaryViewExt::remove_user_function`] to blacklist the
+    /// function from being automatically created.
+    fn remove_auto_function(&self, func: &Function, update_refs: bool) {
         unsafe {
-            BNAddEntryPointForAnalysis(self.as_ref().handle, plat.handle, addr);
+            BNRemoveAnalysisFunction(self.as_ref().handle, func.handle, update_refs);
         }
     }
 
-    fn create_user_function(&self, plat: &Platform, addr: u64) -> Result<Ref<Function>> {
-        unsafe {
-            let func = BNCreateUserFunction(self.as_ref().handle, plat.handle, addr);
+    /// Add a user function at the given `address` with the views default platform.
+    ///
+    /// NOTE: The default platform **must** be set for this view!
+    fn add_user_function(&self, addr: u64) -> Option<Ref<Function>> {
+        let platform = self.default_platform()?;
+        self.add_user_function_with_platform(addr, &platform)
+    }
 
-            if func.is_null() {
-                return Err(());
-            }
-
-            Ok(Function::ref_from_raw(func))
+    /// Add an auto function at the given `address` with the `platform`.
+    ///
+    /// NOTE: If the view's default platform is not set, this will set it to `platform`.
+    fn add_user_function_with_platform(
+        &self,
+        addr: u64,
+        platform: &Platform,
+    ) -> Option<Ref<Function>> {
+        // If the view does not have a default platform, we must set it.
+        // The core expects there to be one before it can create a function.
+        if self.default_platform().is_none() {
+            self.set_default_platform(platform);
         }
+
+        unsafe {
+            let func = BNCreateUserFunction(self.as_ref().handle, platform.handle, addr);
+            if func.is_null() {
+                return None;
+            }
+            Some(Function::ref_from_raw(func))
+        }
+    }
+
+    /// Removes the function from the view and blacklists it from being created automatically.
+    ///
+    /// NOTE: If you call [`BinaryViewExt::add_user_function`], it will override the blacklist.
+    fn remove_user_function(&self, func: &Function) {
+        unsafe { BNRemoveUserFunction(self.as_ref().handle, func.handle) }
     }
 
     fn has_functions(&self) -> bool {
         unsafe { BNHasFunctions(self.as_ref().handle) }
+    }
+
+    /// Add an entry point at the given `address` with the view's default platform.
+    ///
+    /// NOTE: The default platform **must** be set for this view!
+    fn add_entry_point(&self, addr: u64) {
+        if let Some(platform) = self.default_platform() {
+            self.add_entry_point_with_platform(addr, &platform);
+        }
+    }
+
+    /// Add an entry point at the given `address` with the `platform`.
+    ///
+    /// NOTE: If the view's default platform is not set, this will set it to `platform`.
+    fn add_entry_point_with_platform(&self, addr: u64, platform: &Platform) {
+        // If the view does not have a default platform, we must set it.
+        // The core expects there to be one before it can create a function.
+        if self.default_platform().is_none() {
+            self.set_default_platform(platform);
+        }
+
+        unsafe {
+            BNAddEntryPointForAnalysis(self.as_ref().handle, platform.handle, addr);
+        }
     }
 
     fn entry_point_function(&self) -> Option<Ref<Function>> {

@@ -222,9 +222,9 @@ impl FileMetadata {
     }
 
     /// Get the [`BinaryView`] for the view type.
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// ```no_run
     /// use binaryninja::file_metadata::FileMetadata;
     /// # let file: FileMetadata = unimplemented!();

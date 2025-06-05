@@ -4846,6 +4846,8 @@ class BinaryView:
 			if self.platform is None:
 				raise Exception("Attempting to call create_user_function with no specified platform")
 			plat = self.platform
+		if self.platform is None:
+			self.platform = plat
 		func = core.BNCreateUserFunction(self.handle, plat.handle, addr)
 		if func is None:
 			return None

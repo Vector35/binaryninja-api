@@ -56,6 +56,8 @@ class BINARYNINJAUIAPI ProjectItemModel: public QStandardItemModel, public Binar
 
 	std::unordered_map<std::string, QStandardItem*> m_itemsById;
 
+	bool m_globalShowFullFileSize;
+
 	QHash<QString, QString> m_pathMimeTypeCache;
 	QHash<QString, size_t> m_pathSizeCache;
 	QHash<QString, QIcon> m_pathIconCache;
@@ -95,6 +97,9 @@ public:
 
 	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 	virtual bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole) override;
+
+	virtual void toggleGlobalShowFileSize();
+	virtual bool isGlobalShowFileSize() const;
 
 	enum {
 		TypeRole = Qt::UserRole,

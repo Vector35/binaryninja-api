@@ -485,29 +485,26 @@ class DirectoryNameField:
 	def result(self, value):
 		self._result = value
 
-class CheckBoxField:
+class CheckboxField:
 	"""
-	``CheckBoxField`` prompts the user to choose a yes/no option in a checkbox.
+	``CheckboxField`` prompts the user to choose a yes/no option in a checkbox.
 	Result is stored in self.result as a boolean value.
 
 	:param str prompt: Prompt to be presented to the user
-	:param Optional[bool]: Optional boolean value for the default setting of the checkbox. \
-						   by default set to 'false'
 	"""
 	def __init__(self, prompt, default=None):
 		self._prompt = prompt
-		self._default = default
 		self._result = None
 
 	def _fill_core_struct(self, value):
-		value.type = FormInputFieldType.CheckBoxFormField
+		value.type = FormInputFieldType.CheckboxFormField
 		value.prompt = self._prompt
-		value.hasDefault = self._default is not None
-		if self._default is not None:
-			value.boolDefault = self._default
 
 	def _fill_core_result(self, value):
-		self._boolResult = value.result
+		value.intResult = self._result
+
+	def _get_result(self, value):
+		self._result = value.intResult
 
 	@property
 	def prompt(self):
@@ -524,14 +521,6 @@ class CheckBoxField:
 	@result.setter
 	def result(self, value):
 		self._result = value
-
-	@property
-	def default(self):
-		return self._default
-
-	@default.setter
-	def default(self, value):
-		self._default = value
 
 
 class InteractionHandler:
@@ -699,6 +688,16 @@ class InteractionHandler:
 		except:
 			log_error(traceback.format_exc())
 
+	def _get_checkbox_input(self, ctxt, result, prompt):
+		try:
+			value = self.get_checkbox_input(prompt)
+			if value is None:
+				return False
+			result[0] = value
+			return True
+		except:
+			log_error(traceback.format_exc())
+
 	def _get_form_input(self, ctxt, fields, count, title):
 		try:
 			field_objs = []
@@ -763,10 +762,10 @@ class InteractionHandler:
 					        default=fields[i].stringDefault if fields[i].hasDefault else None
 					    )
 					)
-				elif fields[i].type == FormInputFieldType.CheckBoxFormField:
+				elif fields[i].type == FormInputFieldType.CheckboxFormField:
 					field_objs.append(
-					    CheckBoxField(
-					        fields[i].prompt, default=fields[i].boolDefault if fields[i].hasDefault else None
+					    CheckboxField(
+					        fields[i].prompt
 					    )
 					)
 				else:
@@ -849,6 +848,9 @@ class InteractionHandler:
 
 	def get_directory_name_input(self, prompt, default_name):
 		return get_text_line_input(prompt, "Select Directory")
+
+	def get_checkbox_input(self, prompt):
+		return get_checkbox_input(prompt, "Choose Option(s)")
 
 	def get_form_input(self, fields, title):
 		return False
@@ -1418,10 +1420,10 @@ def get_directory_name_input(prompt: str, default_name: str = ""):
 
 def get_checkbox_input(prompt: str, title: str):
 	"""
-	``get_checkbox_input`` prompts the user for a checkbox input, and returns True if the checkbox is checked, otherwise returns False.
+	``get_checkbox_input`` prompts the user for a checkbox input
 	:param prompt: String to prompt with
 	:param title: Title of the window when executed in the UI
-	:rtype: bool indicating the state of the checkbox
+	:rtype: int indicating the state of the checkbox
 	"""
 	value = ctypes.c_bool()
 	if not core.BNGetCheckboxInput(value, prompt, title):
@@ -1450,6 +1452,7 @@ def get_form_input(fields, title):
 	OpenFileNameField     Prompt for file to open
 	SaveFileNameField     Prompt for file to save to
 	DirectoryNameField    Prompt for directory name
+	CheckboxFormField     Prompt for a checkbox
 	===================== ===================================================
 
 	This API is flexible and works both in the UI via a pop-up dialog and on the command-line.

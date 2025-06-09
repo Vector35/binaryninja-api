@@ -246,6 +246,23 @@ pub trait InteractionHandler: Sync + Send + 'static {
         form.get_field_with_name(prompt)
             .and_then(|f| f.try_value_string())
     }
+
+    fn get_choicebox_input(
+        &mut self,
+        prompt: &str,
+        title: &str,
+    ) -> Option<i64> {
+        let mut form = Form::new(title.to_owned());
+        form.add_field(FormInputField::Checkbox {
+            prompt: prompt.to_string(),
+            value: false,
+            default: None,
+        });
+        if !self.get_form_input(&mut form) {
+            return None;
+        }
+        form.get_field_with_name(prompt).and_then(|f| f.try_value_int())
+    }
 }
 
 pub struct InteractionHandlerTask {

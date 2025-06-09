@@ -112,6 +112,11 @@ pub enum FormInputField {
         default: Option<String>,
         value: Option<String>,
     },
+    Checkbox {
+        prompt: String,
+        default: Option<bool>,
+        value: bool,
+    }
 }
 
 impl FormInputField {
@@ -186,6 +191,11 @@ impl FormInputField {
                 default: string_default,
                 value: string_result,
             },
+            BNFormInputFieldType::CheckboxFormField => Self::Checkbox {
+                prompt,
+                default: value.hasDefault.then_some(value.intResult != 0),
+                value: value.intResult != 0,
+            },
         }
     }
 
@@ -258,6 +268,7 @@ impl FormInputField {
             FormInputField::OpenFileName { .. } => BNFormInputFieldType::OpenFileNameFormField,
             FormInputField::SaveFileName { .. } => BNFormInputFieldType::SaveFileNameFormField,
             FormInputField::DirectoryName { .. } => BNFormInputFieldType::DirectoryNameFormField,
+            FormInputField::Checkbox { .. } => BNFormInputFieldType::CheckboxFormField,
         }
     }
 
@@ -274,6 +285,7 @@ impl FormInputField {
             FormInputField::OpenFileName { prompt, .. } => Some(prompt.clone()),
             FormInputField::SaveFileName { prompt, .. } => Some(prompt.clone()),
             FormInputField::DirectoryName { prompt, .. } => Some(prompt.clone()),
+            FormInputField::Checkbox { prompt, .. } => Some(prompt.clone()),
         }
     }
 
@@ -325,6 +337,7 @@ impl FormInputField {
             FormInputField::OpenFileName { default, .. } => Some(default.is_some()),
             FormInputField::SaveFileName { default, .. } => Some(default.is_some()),
             FormInputField::DirectoryName { default, .. } => Some(default.is_some()),
+            FormInputField::Checkbox { default, .. } => Some(default.is_some()),
         }
     }
 

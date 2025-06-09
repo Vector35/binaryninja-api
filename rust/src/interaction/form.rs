@@ -112,6 +112,11 @@ pub enum FormInputField {
         default: Option<String>,
         value: Option<String>,
     },
+    Checkbox {
+        prompt: String,
+        default: Option<bool>,
+        value: bool,
+    },
 }
 
 impl FormInputField {
@@ -130,6 +135,7 @@ impl FormInputField {
         let int_default = value.hasDefault.then_some(value.intDefault);
         let address_default = value.hasDefault.then_some(value.addressDefault);
         let index_default = value.hasDefault.then_some(value.indexDefault);
+        let bool_default = value.hasDefault.then_some(value.intResult != 0);
         let extension = raw_to_string(value.ext);
         let current_address = value.currentAddress;
         let string_result = raw_to_string(value.stringResult);
@@ -185,6 +191,11 @@ impl FormInputField {
                 default_name: name_default,
                 default: string_default,
                 value: string_result,
+            },
+            BNFormInputFieldType::CheckboxFormField => Self::Checkbox {
+                prompt,
+                default: bool_default,
+                value: value.intResult != 0,
             },
         }
     }
@@ -258,6 +269,7 @@ impl FormInputField {
             FormInputField::OpenFileName { .. } => BNFormInputFieldType::OpenFileNameFormField,
             FormInputField::SaveFileName { .. } => BNFormInputFieldType::SaveFileNameFormField,
             FormInputField::DirectoryName { .. } => BNFormInputFieldType::DirectoryNameFormField,
+            FormInputField::Checkbox { .. } => BNFormInputFieldType::CheckboxFormField,
         }
     }
 
@@ -274,6 +286,7 @@ impl FormInputField {
             FormInputField::OpenFileName { prompt, .. } => Some(prompt.clone()),
             FormInputField::SaveFileName { prompt, .. } => Some(prompt.clone()),
             FormInputField::DirectoryName { prompt, .. } => Some(prompt.clone()),
+            FormInputField::Checkbox { prompt, .. } => Some(prompt.clone()),
         }
     }
 
@@ -325,6 +338,7 @@ impl FormInputField {
             FormInputField::OpenFileName { default, .. } => Some(default.is_some()),
             FormInputField::SaveFileName { default, .. } => Some(default.is_some()),
             FormInputField::DirectoryName { default, .. } => Some(default.is_some()),
+            FormInputField::Checkbox { default, .. } => Some(default.is_some()),
         }
     }
 

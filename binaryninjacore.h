@@ -3037,7 +3037,8 @@ extern "C"
 		ChoiceFormField,
 		OpenFileNameFormField,
 		SaveFileNameFormField,
-		DirectoryNameFormField
+		DirectoryNameFormField,
+		CheckboxFormField
 	} BNFormInputFieldType;
 
 	typedef struct BNFormInputField
@@ -3083,6 +3084,7 @@ extern "C"
 		bool (*getSaveFileNameInput)(
 		    void* ctxt, char** result, const char* prompt, const char* ext, const char* defaultName);
 		bool (*getDirectoryNameInput)(void* ctxt, char** result, const char* prompt, const char* defaultName);
+		bool (*getCheckboxInput)(void* ctxt, int64_t* result, const char* prompt, const char* title, const int64_t* defaultChoice);
 		bool (*getFormInput)(void* ctxt, BNFormInputField* fields, size_t count, const char* title);
 		BNMessageBoxButtonResult (*showMessageBox)(
 		    void* ctxt, const char* title, const char* text, BNMessageBoxButtonSet buttons, BNMessageBoxIcon icon);
@@ -7312,6 +7314,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNGetSaveFileNameInput(
 	    char** result, const char* prompt, const char* ext, const char* defaultName);
 	BINARYNINJACOREAPI bool BNGetDirectoryNameInput(char** result, const char* prompt, const char* defaultName);
+	BINARYNINJACOREAPI bool BNGetCheckboxInput(int64_t* result, const char* prompt, const char* title, const int64_t* defaultChoice);
 	BINARYNINJACOREAPI bool BNGetFormInput(BNFormInputField* fields, size_t count, const char* title);
 	BINARYNINJACOREAPI void BNFreeFormInputResults(BNFormInputField* fields, size_t count);
 	BINARYNINJACOREAPI BNMessageBoxButtonResult BNShowMessageBox(

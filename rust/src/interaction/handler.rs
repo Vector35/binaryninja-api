@@ -27,6 +27,7 @@ pub fn register_interaction_handler<R: InteractionHandler>(custom: R) {
         getOpenFileNameInput: Some(cb_get_open_file_name_input::<R>),
         getSaveFileNameInput: Some(cb_get_save_file_name_input::<R>),
         getDirectoryNameInput: Some(cb_get_directory_name_input::<R>),
+        getCheckboxInput: Some(cb_get_checkbox_input::<R>),
         getFormInput: Some(cb_get_form_input::<R>),
         showMessageBox: Some(cb_show_message_box::<R>),
         openUrl: Some(cb_open_url::<R>),
@@ -244,6 +245,26 @@ pub trait InteractionHandler: Sync + Send + 'static {
         }
         form.get_field_with_name(prompt)
             .and_then(|f| f.try_value_string())
+    }
+
+    fn get_checkbox_input(
+        &mut self,
+        prompt: &str,
+        title: &str,
+        default: Option<i64>,
+    ) -> Option<i64> {
+        let mut form = Form::new(title.to_owned());
+        form.add_field(FormInputField::Checkbox {
+            prompt: prompt.to_string(),
+            default: default.map(|b| b == 1),
+            value: default.map(|b| b == 1)?,
+        });
+        if !self.get_form_input(&mut form) {
+            return None;
+        }
+        form.get_field_with_name(prompt)
+            .and_then(|f| f.try_value_int())
+            .map(|b| if b != 0 { 1 } else { 0 })
     }
 }
 
@@ -539,6 +560,27 @@ unsafe extern "C" fn cb_get_directory_name_input<R: InteractionHandler>(
         true
     } else {
         unsafe { *result_ffi = ptr::null_mut() };
+        false
+    }
+}
+
+unsafe extern "C" fn cb_get_checkbox_input<R: InteractionHandler>(
+    ctxt: *mut c_void,
+    result_ffi: *mut i64,
+    prompt: *const c_char,
+    title: *const c_char,
+    default_choice: *const i64,
+) -> bool {
+    let ctxt = ctxt as *mut R;
+    let prompt = raw_to_string(prompt).unwrap();
+    let title = raw_to_string(title).unwrap();
+    let default = (!default_choice.is_null()).then(|| *default_choice);
+    let result = (*ctxt).get_checkbox_input(&prompt, &title, default);
+    if let Some(result) = result {
+        unsafe { *result_ffi = result };
+        true
+    } else {
+        unsafe { *result_ffi = 0 };
         false
     }
 }

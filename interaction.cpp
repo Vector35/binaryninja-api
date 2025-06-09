@@ -112,6 +112,17 @@ FormInputField FormInputField::DirectoryName(const string& prompt, const string&
 }
 
 
+FormInputField FormInputField::Checkbox(const string& prompt, const bool& defaultChoice)
+{
+	FormInputField result;
+	result.type = CheckboxFormField;
+	result.prompt = prompt;
+	result.intDefault = defaultChoice;
+	result.hasDefault = true;
+	return result;
+}
+
+
 void InteractionHandler::ShowMarkdownReport(
     Ref<BinaryView> view, const string& title, const string& contents, const string& plainText)
 {
@@ -186,6 +197,12 @@ bool InteractionHandler::GetSaveFileNameInput(string& result, const string& prom
 bool InteractionHandler::GetDirectoryNameInput(string& result, const string& prompt, const string&)
 {
 	return GetTextLineInput(result, prompt, "Select Directory");
+}
+
+
+bool InteractionHandler::GetCheckboxInput(int64_t& result, const std::string& prompt, const std::string& title, const int64_t& defaultChoice)
+{
+	return BinaryNinja::GetCheckboxInput(result, prompt, "Select an option", defaultChoice);
 }
 
 
@@ -310,6 +327,13 @@ static bool GetDirectoryNameInputCallback(void* ctxt, char** result, const char*
 }
 
 
+static bool GetCheckboxInputCallback(void* ctxt, int64_t* result, const char* prompt, const char* title, const int64_t* defaultChoice)
+{
+	InteractionHandler* handler = (InteractionHandler*)ctxt;
+	return handler->GetCheckboxInput(*result, prompt, title, *defaultChoice);
+}
+
+
 static bool GetFormInputCallback(void* ctxt, BNFormInputField* fieldBuf, size_t count, const char* title)
 {
 	InteractionHandler* handler = (InteractionHandler*)ctxt;
@@ -353,6 +377,9 @@ static bool GetFormInputCallback(void* ctxt, BNFormInputField* fieldBuf, size_t 
 		case DirectoryNameFormField:
 			fields.push_back(FormInputField::DirectoryName(fieldBuf[i].prompt, fieldBuf[i].defaultName));
 			break;
+		case CheckboxFormField:
+			fields.push_back(FormInputField::Checkbox(fieldBuf[i].prompt, fieldBuf[i].intDefault));
+			break;
 		default:
 			fields.push_back(FormInputField::Label(fieldBuf[i].prompt));
 			break;
@@ -369,6 +396,7 @@ static bool GetFormInputCallback(void* ctxt, BNFormInputField* fieldBuf, size_t 
 			case DirectoryNameFormField:
 				fields.back().stringDefault = fieldBuf[i].stringDefault;
 				break;
+			case CheckboxFormField:
 			case IntegerFormField:
 				fields.back().intDefault = fieldBuf[i].intDefault;
 				break;
@@ -399,6 +427,7 @@ static bool GetFormInputCallback(void* ctxt, BNFormInputField* fieldBuf, size_t 
 		case DirectoryNameFormField:
 			fieldBuf[i].stringResult = BNAllocString(fields[i].stringResult.c_str());
 			break;
+		case CheckboxFormField:
 		case IntegerFormField:
 			fieldBuf[i].intResult = fields[i].intResult;
 			break;
@@ -460,6 +489,7 @@ void BinaryNinja::RegisterInteractionHandler(InteractionHandler* handler)
 	cb.getOpenFileNameInput = GetOpenFileNameInputCallback;
 	cb.getSaveFileNameInput = GetSaveFileNameInputCallback;
 	cb.getDirectoryNameInput = GetDirectoryNameInputCallback;
+	cb.getCheckboxInput = GetCheckboxInputCallback;
 	cb.getFormInput = GetFormInputCallback;
 	cb.showMessageBox = ShowMessageBoxCallback;
 	cb.openUrl = OpenUrlCallback;
@@ -590,6 +620,12 @@ bool BinaryNinja::GetDirectoryNameInput(string& result, const string& prompt, co
 }
 
 
+bool BinaryNinja::GetCheckboxInput(int64_t& result, const std::string& prompt, const std::string& title, const int64_t& defaultChoice)
+{
+	return BNGetCheckboxInput(&result, prompt.c_str(), title.c_str(), &defaultChoice);
+}
+
+
 bool BinaryNinja::GetFormInput(vector<FormInputField>& fields, const string& title)
 {
 	// Construct field list in core format
@@ -635,6 +671,8 @@ bool BinaryNinja::GetFormInput(vector<FormInputField>& fields, const string& tit
 			case DirectoryNameFormField:
 				fieldBuf[i].stringDefault = fields[i].stringDefault.c_str();
 				break;
+			case CheckboxFormField:
+				fieldBuf[i].intDefault = fields[i].intDefault;
 			case IntegerFormField:
 				fieldBuf[i].intDefault = fields[i].intDefault;
 				break;
@@ -678,6 +716,7 @@ bool BinaryNinja::GetFormInput(vector<FormInputField>& fields, const string& tit
 		case DirectoryNameFormField:
 			fields[i].stringResult = fieldBuf[i].stringResult;
 			break;
+		case CheckboxFormField:
 		case IntegerFormField:
 			fields[i].intResult = fieldBuf[i].intResult;
 			break;

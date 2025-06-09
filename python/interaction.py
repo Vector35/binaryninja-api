@@ -486,6 +486,56 @@ class DirectoryNameField:
 		self._result = value
 
 
+class CheckboxField:
+	"""
+	``CheckboxField`` prompts the user to choose a yes/no option in a checkbox.
+	Result is stored in self.result as a boolean value.
+
+	:param str prompt: Prompt to be presented to the user
+	:param bool default: Default state of the checkbox (False == unchecked, True == checked)
+	"""
+	def __init__(self, prompt, default):
+		self._prompt = prompt
+		self._result = None
+		self._default = default
+
+	def _fill_core_struct(self, value):
+		value.type = FormInputFieldType.CheckboxFormField
+		value.prompt = self._prompt
+		value.hasDefault = True
+		value.intDefault = 1 if self._default else 0
+
+	def _fill_core_result(self, value):
+		value.intResult = 1 if self.result else 0
+
+	def _get_result(self, value):
+		self._result = value.intResult != 0
+
+	@property
+	def prompt(self):
+		return self._prompt
+
+	@prompt.setter
+	def prompt(self, value):
+		self._prompt = value
+
+	@property
+	def result(self):
+		return self._result
+
+	@result.setter
+	def result(self, value):
+		self._result = value
+
+	@property
+	def default(self):
+		return self._default
+
+	@default.setter
+	def default(self, value):
+		self._default = value
+
+
 class InteractionHandler:
 	_interaction_handler = None
 
@@ -505,6 +555,7 @@ class InteractionHandler:
 		self._cb.getOpenFileNameInput = self._cb.getOpenFileNameInput.__class__(self._get_open_filename_input)
 		self._cb.getSaveFileNameInput = self._cb.getSaveFileNameInput.__class__(self._get_save_filename_input)
 		self._cb.getDirectoryNameInput = self._cb.getDirectoryNameInput.__class__(self._get_directory_name_input)
+		self._cb.getCheckboxInput = self._cb.getCheckboxInput.__class__(self._get_checkbox_input)
 		self._cb.getFormInput = self._cb.getFormInput.__class__(self._get_form_input)
 		self._cb.showMessageBox = self._cb.showMessageBox.__class__(self._show_message_box)
 		self._cb.openUrl = self._cb.openUrl.__class__(self._open_url)
@@ -650,6 +701,16 @@ class InteractionHandler:
 		except:
 			log_error(traceback.format_exc())
 
+	def _get_checkbox_input(self, ctxt, result, prompt, default_choice):
+		try:
+			value = self.get_checkbox_input(prompt, default_choice)
+			if value is None:
+				return False
+			result[0] = value
+			return True
+		except:
+			log_error(traceback.format_exc())
+
 	def _get_form_input(self, ctxt, fields, count, title):
 		try:
 			field_objs = []
@@ -712,6 +773,14 @@ class InteractionHandler:
 					    DirectoryNameField(
 					        fields[i].prompt, fields[i].defaultName,
 					        default=fields[i].stringDefault if fields[i].hasDefault else None
+					    )
+					)
+				elif fields[i].type == FormInputFieldType.CheckboxFormField:
+					log_error(fields[i].hasDefault)
+					field_objs.append(
+					    CheckboxField(
+					        fields[i].prompt,
+							default=fields[i].intDefault != 0 if fields[i].hasDefault else None
 					    )
 					)
 				else:
@@ -794,6 +863,9 @@ class InteractionHandler:
 
 	def get_directory_name_input(self, prompt, default_name):
 		return get_text_line_input(prompt, "Select Directory")
+
+	def get_checkbox_input(self, prompt, default_choice):
+		return get_checkbox_input(prompt, "Choose Option(s)", default_choice)
 
 	def get_form_input(self, fields, title):
 		return False
@@ -1361,6 +1433,22 @@ def get_directory_name_input(prompt: str, default_name: str = ""):
 	core.free_string(value)
 	return result.decode("utf-8")
 
+def get_checkbox_input(prompt: str, title: str, default: bool = False):
+	"""
+	``get_checkbox_input`` prompts the user for a checkbox input
+	:param prompt: String to prompt with
+	:param title: Title of the window when executed in the UI
+	:param default: Optional default state for the checkbox (false == unchecked, true == checked), False if not set.
+	:rtype: bool indicating the state of the checkbox
+	"""
+	default_state = ctypes.c_int64()
+	default_state.value = 1 if default else 0
+	value = ctypes.c_int64()
+	if not core.BNGetCheckboxInput(value, prompt, title, default_state):
+		return None
+	result = value.value
+	assert result is not None
+	return result != 0
 
 def get_form_input(fields, title):
 	"""
@@ -1382,6 +1470,7 @@ def get_form_input(fields, title):
 	OpenFileNameField     Prompt for file to open
 	SaveFileNameField     Prompt for file to save to
 	DirectoryNameField    Prompt for directory name
+	CheckboxFormField     Prompt for a checkbox
 	===================== ===================================================
 
 	This API is flexible and works both in the UI via a pop-up dialog and on the command-line.

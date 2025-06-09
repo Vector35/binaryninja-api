@@ -2049,6 +2049,22 @@ namespace BinaryNinja {
 	*/
 	bool GetDirectoryNameInput(std::string& result, const std::string& prompt, const std::string& defaultName = "");
 
+	/*! Prompts the user for a checkbox input
+		\ingroup interaction
+
+		\param[out] result Reference to the integer the result will be copied to
+		\param[in] prompt Prompt for the dialog
+		\param[in] title Title for the input popup when used in UI
+		\param[in] defaultChoice Default checkbox state (0 == unchecked, 1 == checked)
+		\return Whether a checkbox input was successfully received
+	*/
+	bool GetCheckboxInput(
+		int64_t& result,
+		const std::string& prompt,
+		const std::string& title,
+		const int64_t& defaultChoice
+	);
+
 	/*! Prompts the user for a set of inputs specified in `fields` with given title.
 		The fields parameter is a list containing FieldInputFields
 
@@ -17027,6 +17043,7 @@ namespace BinaryNinja {
 		static FormInputField SaveFileName(
 		    const std::string& prompt, const std::string& ext, const std::string& defaultName = "");
 		static FormInputField DirectoryName(const std::string& prompt, const std::string& defaultName = "");
+		static FormInputField Checkbox(const std::string& prompt, const bool& defaultChoice = false);
 	};
 
 	/*!
@@ -17086,6 +17103,13 @@ namespace BinaryNinja {
 		    const std::string& defaultName = "");
 		virtual bool GetDirectoryNameInput(
 		    std::string& result, const std::string& prompt, const std::string& defaultName = "");
+		virtual bool GetCheckboxInput(
+			int64_t& result,
+			const std::string& prompt,
+			const std::string& title,
+			const int64_t
+			& defaultChoice = 0
+		);
 		virtual bool GetFormInput(std::vector<FormInputField>& fields, const std::string& title) = 0;
 
 		virtual BNMessageBoxButtonResult ShowMessageBox(const std::string& title, const std::string& text,

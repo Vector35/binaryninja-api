@@ -27,6 +27,7 @@ pub fn register_interaction_handler<R: InteractionHandler>(custom: R) {
         getOpenFileNameInput: Some(cb_get_open_file_name_input::<R>),
         getSaveFileNameInput: Some(cb_get_save_file_name_input::<R>),
         getDirectoryNameInput: Some(cb_get_directory_name_input::<R>),
+        getCheckboxInput: None,
         getFormInput: Some(cb_get_form_input::<R>),
         showMessageBox: Some(cb_show_message_box::<R>),
         openUrl: Some(cb_open_url::<R>),

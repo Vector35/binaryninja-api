@@ -188,6 +188,12 @@ bool InteractionHandler::GetDirectoryNameInput(string& result, const string& pro
 	return GetTextLineInput(result, prompt, "Select Directory");
 }
 
+bool InteractionHandler::GetCheckboxInput(bool& result, const std::string& prompt, const std::string& title)
+{
+	return GetCheckboxInput(result, prompt, "Select an option");
+}
+
+
 
 static void ShowPlainTextReportCallback(void* ctxt, BNBinaryView* view, const char* title, const char* contents)
 {
@@ -307,6 +313,12 @@ static bool GetDirectoryNameInputCallback(void* ctxt, char** result, const char*
 		return false;
 	*result = BNAllocString(value.c_str());
 	return true;
+}
+
+static bool GetCheckboxInputCallback(void* ctxt, bool* result, const char* prompt, const char* title)
+{
+	InteractionHandler* handler = (InteractionHandler*)ctxt;
+	return handler->GetCheckboxInput(*result, prompt, title);
 }
 
 
@@ -460,6 +472,7 @@ void BinaryNinja::RegisterInteractionHandler(InteractionHandler* handler)
 	cb.getOpenFileNameInput = GetOpenFileNameInputCallback;
 	cb.getSaveFileNameInput = GetSaveFileNameInputCallback;
 	cb.getDirectoryNameInput = GetDirectoryNameInputCallback;
+	cb.getCheckboxInput = GetCheckboxInputCallback;
 	cb.getFormInput = GetFormInputCallback;
 	cb.showMessageBox = ShowMessageBoxCallback;
 	cb.openUrl = OpenUrlCallback;
@@ -586,6 +599,15 @@ bool BinaryNinja::GetDirectoryNameInput(string& result, const string& prompt, co
 		return false;
 	result = value;
 	BNFreeString(value);
+	return true;
+}
+
+bool BinaryNinja::GetCheckboxInput(bool& result, const std::string& prompt, const std::string& title)
+{
+	bool* value = nullptr;
+	if (!BNGetCheckboxInput(value, prompt.c_str(), title.c_str()))
+		return false;
+	result = value;
 	return true;
 }
 

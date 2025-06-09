@@ -56,6 +56,7 @@ class BINARYNINJAUIAPI StringsListModel : public QAbstractItemModel, public Bina
 	enum {
 		COL_ADDRESS = 0,
 		COL_TYPE,
+		COL_LENGTH,
 		COL_VALUE,
 		COLUMN_COUNT,
 	};

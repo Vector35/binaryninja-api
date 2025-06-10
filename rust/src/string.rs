@@ -36,7 +36,7 @@ pub(crate) fn raw_to_string(ptr: *const c_char) -> Option<String> {
     }
 }
 
-pub(crate) fn strings_to_string_list<I, S>(strings: I) -> *mut *mut c_char
+pub fn strings_to_string_list<I, S>(strings: I) -> *mut *mut c_char
 where
     I: IntoIterator<Item = S>,
     // TODO make `S: BnStrCompatible,`

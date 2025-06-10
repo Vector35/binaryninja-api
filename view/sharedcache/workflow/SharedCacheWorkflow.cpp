@@ -87,7 +87,7 @@ void IdentifyStub(BinaryView& view, const SharedCacheController& controller, uin
 	if (!symbol.has_value())
 		return;
 
-	// Demangle if possible, the type pulled will be used, however type library will take precedence.
+	// TODO: The demangled type here is almost always wrong so we omit it for now.
 	auto [demangledName, demangledType] = symbol->DemangledName(view);
 	auto rawName = STUB_PREFIX + symbol->name;
 	auto shortName = STUB_PREFIX + demangledName;
@@ -97,13 +97,16 @@ void IdentifyStub(BinaryView& view, const SharedCacheController& controller, uin
 	{
 		// NOTE: The type library name is expected to be the image name currently.
 		// Try and pull the type from the associated type library (if there is one)
-		Ref<Type> selectedType = demangledType;
+		// TODO: The demangled type here is missing a param
+		// Ref<Type> selectedType = demangledType;
+		Ref<Type> selectedType = nullptr;
 		if (const auto image = controller.GetImageContaining(symbolAddr))
 			if (auto typeLib = TypeLibraryFromName(view, image->name))
-				selectedType = view.ImportTypeLibraryObject(typeLib, {symbol->name});
+				if (Ref<Type> libraryType = view.ImportTypeLibraryObject(typeLib, {symbol->name}); libraryType)
+					selectedType = libraryType;
 
-		if (selectedType)
-			targetFunc->SetAutoType(selectedType);
+		if (selectedType != nullptr)
+			targetFunc->ApplyAutoDiscoveredType(selectedType);
 	}
 
 	// Define the new symbol!
@@ -167,6 +170,8 @@ void AnalyzeStubFunction(Ref<Function> func, Ref<MediumLevelILFunction> mlil, Sh
 				if (defInstr.operation != MLIL_SET_VAR_SSA)
 					return;
 				expr = defInstr.GetSourceExpr<MLIL_SET_VAR_SSA>();
+				if (expr.operation != MLIL_LOAD_SSA)
+					return;
 				// Fallthrough to MLIL_LOAD_SSA.
 			}
 		case MLIL_LOAD_SSA:

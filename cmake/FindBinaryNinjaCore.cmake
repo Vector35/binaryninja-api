@@ -20,6 +20,7 @@ if(NOT BN_INTERNAL_BUILD)
         list(APPEND PATH_HINTS "C:\\Program Files\\Vector35\\BinaryNinja")
         # User install
         list(APPEND PATH_HINTS "$ENV{LocalAppData}\\Vector35\\BinaryNinja")
+        list(APPEND PATH_HINTS "$ENV{LocalAppData}\\Programs\\Vector35\\BinaryNinja")
     elseif(APPLE)
         list(APPEND PATH_HINTS "$ENV{BN_INSTALL_DIR}/Contents/MacOS")
         list(APPEND PATH_HINTS "/Applications/Binary Ninja.app/Contents/MacOS")

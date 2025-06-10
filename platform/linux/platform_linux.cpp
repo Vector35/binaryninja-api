@@ -3,6 +3,8 @@
 using namespace BinaryNinja;
 using namespace std;
 
+Ref<Platform> g_linuxX32;
+#define EM_X86_64 62 // AMD x86-64 architecture
 
 class LinuxX86Platform: public Platform
 {
@@ -99,6 +101,50 @@ public:
 	virtual bool GetFallbackEnabled() override
 	{
 		return false;
+	}
+};
+
+
+class LinuxX32Platform: public Platform
+{
+	public:
+	LinuxX32Platform(Architecture* arch): Platform(arch, "linux-x32")
+	{
+		Ref<CallingConvention> cc;
+		cc = arch->GetCallingConventionByName("sysv");
+		if (cc)
+		{
+			RegisterDefaultCallingConvention(cc);
+			RegisterCdeclCallingConvention(cc);
+			RegisterFastcallCallingConvention(cc);
+			RegisterStdcallCallingConvention(cc);
+		}
+
+		cc = arch->GetCallingConventionByName("linux-syscall");
+		if (cc)
+			SetSystemCallConvention(cc);
+	}
+
+	virtual size_t GetAddressSize() const override
+	{
+		return 4;
+	}
+
+	static Ref<Platform> Recognize(BinaryView* view, Metadata* metadata)
+	{
+		Ref<Metadata> fileClass = metadata->Get("EI_CLASS");
+
+		if (!fileClass || !fileClass->IsUnsignedInteger())
+			return nullptr;
+
+		Ref<Metadata> machine = metadata->Get("e_machine");
+		if (!machine || !machine->IsUnsignedInteger())
+			return nullptr;
+
+		if (fileClass->GetUnsignedInteger() == 1 && machine->GetUnsignedInteger() == EM_X86_64)
+			return g_linuxX32;
+
+		return nullptr;
 	}
 };
 
@@ -314,13 +360,20 @@ extern "C"
 		Ref<Architecture> x64 = Architecture::GetByName("x86_64");
 		if (x64)
 		{
-			Ref<Platform> platform;
+			Ref<Platform> x64Platform = new LinuxX64Platform(x64);
+			g_linuxX32 = new LinuxX32Platform(x64);
 
-			platform = new LinuxX64Platform(x64);
-			Platform::Register("linux", platform);
+			Platform::Register("linux", x64Platform);
+			Platform::Register("linux", g_linuxX32);
+
 			// Linux binaries sometimes have an OS identifier of zero, even though 3 is the correct one
-			BinaryViewType::RegisterPlatform("ELF", 0, platform);
-			BinaryViewType::RegisterPlatform("ELF", 3, platform);
+			BinaryViewType::RegisterPlatform("ELF", 0, x64, x64Platform);
+			BinaryViewType::RegisterPlatform("ELF", 3, x64, x64Platform);
+
+
+			Ref<BinaryViewType> elf = BinaryViewType::GetByName("ELF");
+			if (elf)
+				elf->RegisterPlatformRecognizer(EM_X86_64, LittleEndian, LinuxX32Platform::Recognize);
 		}
 
 		Ref<Architecture> armv7 = Architecture::GetByName("armv7");

@@ -2998,13 +2998,15 @@ class BinaryView:
 	def mlil_basic_blocks(self) -> Generator['mediumlevelil.MediumLevelILBasicBlock', None, None]:
 		"""A generator of all MediumLevelILBasicBlock objects in the BinaryView"""
 		for func in self.mlil_functions():
-			yield from func.basic_blocks
+			if func is not None:
+				yield from func.basic_blocks
 
 	@property
 	def hlil_basic_blocks(self) -> Generator['highlevelil.HighLevelILBasicBlock', None, None]:
 		"""A generator of all HighLevelILBasicBlock objects in the BinaryView"""
 		for func in self.hlil_functions():
-			yield from func.basic_blocks
+			if func is not None:
+				yield from func.basic_blocks
 
 	@property
 	def instructions(self) -> InstructionsType:
@@ -8919,7 +8921,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 
 	def find_next_text(
 	    self, start: int, text: str, settings: Optional[_function.DisassemblySettings] = None,
-	    flags: FindFlag = FindFlag.FindCaseSensitive,
+	    flags: int = FindFlag.FindCaseSensitive,
 	    graph_type: _function.FunctionViewTypeOrName = FunctionGraphType.NormalFunctionGraph
 	) -> Optional[int]:
 		"""
@@ -8929,13 +8931,14 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		:param int start: virtual address to start searching from.
 		:param str text: text to search for
 		:param DisassemblySettings settings: disassembly settings
-		:param FindFlag flags: (optional) defaults to case-insensitive data search
+		:param FindFlag flags: (optional) bit-flags list of options, defaults to case-insensitive data search
 
 			==================== ============================
 			FindFlag             Description
 			==================== ============================
 			FindCaseSensitive    Case-sensitive search
 			FindCaseInsensitive  Case-insensitive search
+			FindIgnoreWhitespace Ignore whitespace characters
 			==================== ============================
 		:param FunctionViewType graph_type: the IL to search within
 		"""
@@ -9085,13 +9088,14 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		:param str text: text to search for
 		:param DisassemblySettings settings: DisassemblySettings object used to render the text \
 		to be searched
-		:param FindFlag flags: (optional) defaults to case-insensitive data search
+		:param FindFlag flags: (optional) bit-flags list of options, defaults to case-insensitive data search
 
 			==================== ============================
 			FindFlag             Description
 			==================== ============================
 			FindCaseSensitive    Case-sensitive search
 			FindCaseInsensitive  Case-insensitive search
+			FindIgnoreWhitespace Ignore whitespace characters
 			==================== ============================
 		:param FunctionViewType graph_type: the IL to search within
 		:param callback progress_func: optional function to be called with the current progress \

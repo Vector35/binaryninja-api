@@ -2145,11 +2145,9 @@ extern "C"
 		cache->object->ReleaseAPIRef();
 	}
 
-	bool BNKCViewLoadImageWithInstallName(BNKernelCache* cache, char* name)
+	bool BNKCViewLoadImageWithInstallName(BNKernelCache* cache, const char* name)
 	{
 		std::string imageName = std::string(name);
-		// FIXME !!!!!!!! BNFreeString(name);
-
 		if (cache->object)
 			return cache->object->LoadImageWithInstallName(imageName);
 
@@ -2321,10 +2319,9 @@ extern "C"
 		return nullptr;
 	}
 
-	char* BNKCViewGetImageHeaderForName(BNKernelCache* cache, char* name)
+	char* BNKCViewGetImageHeaderForName(BNKernelCache* cache, const char* name)
 	{
 		std::string imageName = std::string(name);
-		BNFreeString(name);
 		if (cache->object)
 		{
 			auto header = cache->object->SerializedImageHeaderForName(imageName);

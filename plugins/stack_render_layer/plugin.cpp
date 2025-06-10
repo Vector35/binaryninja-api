@@ -57,7 +57,7 @@ public:
 				// (but negative because that is how other tools do it)
 				line.tokens.emplace(
 					line.tokens.begin() + sep + 1,
-					IntegerToken,
+					AnnotationToken,
 					fmt::format("{:4x}", -stackOffset.value),
 					-stackOffset.value
 				);
@@ -67,7 +67,7 @@ public:
 				// Stack pointer is not resolved, show ??
 				line.tokens.emplace(
 					line.tokens.begin() + sep + 1,
-					IntegerToken,
+					AnnotationToken,
 					"  ??",
 					0
 				);
@@ -77,7 +77,7 @@ public:
 			{
 				line.tokens.emplace(
 					line.tokens.begin() + sep + 2,
-					TextToken,
+					AnnotationToken,
 					"* "
 				);
 			}
@@ -85,7 +85,7 @@ public:
 			{
 				line.tokens.emplace(
 					line.tokens.begin() + sep + 2,
-					TextToken,
+					AnnotationToken,
 					"  "
 				);
 			}

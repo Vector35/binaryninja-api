@@ -20,10 +20,9 @@ namespace KernelCacheAPI {
 		return BNKCViewFastGetImageCount(view->GetObject());
 	}
 
-	bool KernelCache::LoadImageWithInstallName(std::string installName)
+	bool KernelCache::LoadImageWithInstallName(const std::string& installName)
 	{
-		char* str = BNAllocString(installName.c_str());
-		return BNKCViewLoadImageWithInstallName(m_object, str);
+		return BNKCViewLoadImageWithInstallName(m_object, installName.c_str());
 	}
 
 	bool KernelCache::LoadImageContainingAddress(uint64_t addr)
@@ -161,10 +160,9 @@ namespace KernelCacheAPI {
 		return result;
 	}
 
-	std::optional<KernelCacheMachOHeader> KernelCache::GetMachOHeaderForImage(std::string name)
+	std::optional<KernelCacheMachOHeader> KernelCache::GetMachOHeaderForImage(const std::string& name)
 	{
-		char* str = BNAllocString(name.c_str());
-		char* outputStr = BNKCViewGetImageHeaderForName(m_object, str);
+		char* outputStr = BNKCViewGetImageHeaderForName(m_object, name.c_str());
 		if (outputStr == nullptr)
 			return {};
 		std::string output = outputStr;

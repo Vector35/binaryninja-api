@@ -48,6 +48,7 @@
 #include "binaryninjacore.h"
 #include "exceptions.h"
 #include "json/json.h"
+#include "rapidjsonwrapper.h"
 #include "vendor/nlohmann/json.hpp"
 #include <fmt/format.h>
 #include <fmt/ranges.h>
@@ -3175,14 +3176,14 @@ namespace BinaryNinja {
 
 		/*! Get the BinaryView for a specific View type
 
-		    \param name View name. e.g. ``Linear:ELF``, ``Graph:PE``
+		    \param name View type. e.g. ``ELF``, ``PE``
 		    \return The BinaryView, if it exists
 		*/
 		BinaryNinja::Ref<BinaryNinja::BinaryView> GetViewOfType(const std::string& name);
 
-		/*! List of View names that exist within the current file
+		/*! List of View types that exist within the current file
 
-		    \return List of View Names
+		    \return List of View Types
 		*/
 		std::vector<std::string> GetExistingViews() const;
 
@@ -10014,12 +10015,8 @@ namespace BinaryNinja {
 	/*!
 		\ingroup workflow
 	*/
-	class AnalysisContext :
-	    public CoreRefCountObject<BNAnalysisContext, BNNewAnalysisContextReference, BNFreeAnalysisContext>
+	class AnalysisContext : public CoreRefCountObject<BNAnalysisContext, BNNewAnalysisContextReference, BNFreeAnalysisContext>
 	{
-		std::unique_ptr<Json::CharReader> m_reader;
-		Json::StreamWriterBuilder m_builder;
-
 	  public:
 		AnalysisContext(BNAnalysisContext* analysisContext);
 		virtual ~AnalysisContext();
@@ -10084,27 +10081,34 @@ namespace BinaryNinja {
 		*/
 		void SetHighLevelILFunction(Ref<HighLevelILFunction> highLevelIL);
 
+		bool Inform(const char* request);
 		bool Inform(const std::string& request);
 
-#if ((__cplusplus >= 201403L) || (_MSVC_LANG >= 201703L))
 		template <typename... Args>
 		bool Inform(Args... args)
 		{
-			// using T = std::variant<Args...>; // FIXME: remove type duplicates
-			using T = std::variant<std::string, const char*, uint64_t, Ref<Architecture>>;
-			std::vector<T> unpackedArgs {args...};
-			Json::Value request(Json::arrayValue);
-			for (auto& arg : unpackedArgs)
-				std::visit(overload {[&](Ref<Architecture> arch) { request.append(Json::Value(arch->GetName())); },
-				               [&](uint64_t val) { request.append(Json::Value(val)); },
-				               [&](auto& val) {
-					               request.append(Json::Value(std::forward<decltype(val)>(val)));
-				               }},
-				    arg);
-
-			return Inform(Json::writeString(m_builder, request));
+			rapidjson::Document request(rapidjson::kArrayType);
+			rapidjson::Document::AllocatorType& allocator = request.GetAllocator();
+			request.Reserve(sizeof...(args), allocator);
+			([&] {
+				using T = std::decay_t<decltype(args)>;
+				if constexpr (std::is_same_v<T, Ref<Architecture>>)
+				{
+					auto archName = args->GetName();
+					request.PushBack(rapidjson::Value(archName.c_str(), archName.length(), allocator), allocator);
+				}
+				else if constexpr (std::is_same_v<T, std::string>)
+					request.PushBack(rapidjson::Value(args.c_str(), args.length(), allocator), allocator);
+				else if constexpr (std::is_same_v<T, const char*>)
+					request.PushBack(rapidjson::Value(args, allocator), allocator);
+				else
+					request.PushBack(rapidjson::Value(args), allocator);
+			}(), ...);
+			rapidjson::StringBuffer buffer;
+			rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+			request.Accept(writer);
+			return Inform(buffer.GetString());
 		}
-#endif
 	};
 
 	/*!
@@ -11425,6 +11429,12 @@ namespace BinaryNinja {
 
 		BNExprFolding GetExprFolding(uint64_t addr);
 		void SetExprFolding(uint64_t addr, BNExprFolding mode);
+
+		bool IsConditionInverted(uint64_t addr);
+		void SetConditionInverted(uint64_t addr, bool invert);
+
+		BNEarlyReturn GetEarlyReturn(uint64_t addr);
+		void SetEarlyReturn(uint64_t addr, BNEarlyReturn mode);
 
 		std::map<Variable, std::set<Variable>> GetMergedVariables();
 		void MergeVariables(const Variable& target, const std::set<Variable>& sources);
@@ -15589,6 +15599,7 @@ namespace BinaryNinja {
 		static void InitViewCallback(void* ctxt, BNBinaryView* view);
 		static uint32_t* GetGlobalRegistersCallback(void* ctxt, size_t* count);
 		static void FreeRegisterListCallback(void* ctxt, uint32_t* regs, size_t count);
+		static size_t GetAddressSizeCallback(void* ctxt);
 		static BNType* GetGlobalRegisterTypeCallback(void* ctxt, uint32_t reg);
 		static void AdjustTypeParserInputCallback(
 			void* ctxt,
@@ -15773,6 +15784,12 @@ namespace BinaryNinja {
 		 */
 		virtual Ref<Type> GetGlobalRegisterType(uint32_t reg);
 
+		/*! Get the address size for this platform
+
+			\return The address size for this platform
+		*/
+		virtual size_t GetAddressSize() const;
+
 		/*! Modify the input passed to the Type Parser with Platform-specific features.
 
 			\param[in] parser Type Parser instance
@@ -15900,6 +15917,7 @@ namespace BinaryNinja {
 			std::vector<std::string>& arguments,
 			std::vector<std::pair<std::string, std::string>>& sourceFiles
 		) override;
+		virtual size_t GetAddressSize() const override;
 	};
 
 	/*!

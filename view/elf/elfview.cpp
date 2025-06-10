@@ -54,7 +54,7 @@ ElfView::ElfView(BinaryView* data, bool parseOnly): BinaryView("ELF", data->GetF
 	CreateLogger("BinaryView");
 	m_logger = CreateLogger("BinaryView.ElfView");
 	m_elf32 = m_ident.fileClass == 1;
-	m_addressSize = (m_ident.fileClass == 1) ? 4 : 8;
+	m_addressSize = (m_ident.fileClass == 1 || (m_plat && m_plat->GetName() == "linux-32")) ? 4 : 8;
 	m_endian = endian;
 	m_relocatable = m_commonHeader.type == ET_DYN || m_commonHeader.type == ET_REL;
 	m_objectFile = m_commonHeader.type == ET_REL;
@@ -2531,8 +2531,7 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 		{
 			QualifiedName demangledName;
 			Ref<Type> demangledType;
-			bool simplify = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", this);
-			if (DemangleGeneric(m_arch, rawName, demangledType, demangledName, this, simplify))
+			if (DemangleGeneric(m_arch, rawName, demangledType, demangledName, this, m_simplifyTemplates))
 			{
 				shortName = demangledName.GetString();
 				fullName = shortName;
@@ -2873,16 +2872,6 @@ uint64_t ElfViewType::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonH
 	commonHeader.type = reader.Read16();
 	commonHeader.arch = reader.Read16();
 	commonHeader.version = reader.Read32();
-
-	// Promote the file class to 64-bit
-	// TODO potentially add a setting to allow the user to override header interpretation
-	if ((commonHeader.type == ET_EXEC) && (commonHeader.arch == EM_X86_64) && (ident.fileClass == 1))
-	{
-		ident.fileClass = 2;
-		m_logger->LogWarn(
-			"Executable file claims to be 32-bit but specifies a 64-bit architecture. It is likely malformed or "
-			"malicious. Treating it as 64-bit.");
-	}
 
 	// parse Elf64Header
 	if (ident.fileClass == 1) // 32-bit ELF

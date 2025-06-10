@@ -69,7 +69,7 @@ namespace DSCObjC {
 		BinaryNinja::Ref<BinaryNinja::Section> GetSectionWithName(const char *sectionName) override;
 
 	public:
-		SharedCacheObjCProcessor(BinaryNinja::BinaryView* data, bool isBackedByDatabase, uint64_t imageAddress);
+		SharedCacheObjCProcessor(BinaryNinja::BinaryView* data, uint64_t imageAddress);
 
 		uint64_t GetObjCRelativeMethodBaseAddress(BinaryNinja::ObjCReader* reader) override;
 	};

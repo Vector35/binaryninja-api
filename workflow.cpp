@@ -1,5 +1,4 @@
 #include "binaryninjaapi.h"
-#include "json/json.h"
 #include "rapidjsonwrapper.h"
 #include <string>
 #include <variant>
@@ -8,12 +7,10 @@ using namespace BinaryNinja;
 using namespace std;
 
 
-AnalysisContext::AnalysisContext(BNAnalysisContext* analysisContext) :
-    m_reader(Json::CharReaderBuilder().newCharReader())
+AnalysisContext::AnalysisContext(BNAnalysisContext* analysisContext)
 {
 	// LogError("API-Side AnalysisContext Constructed!");
 	m_object = analysisContext;
-	m_builder["indentation"] = "";
 }
 
 
@@ -101,6 +98,12 @@ void AnalysisContext::SetMediumLevelILFunction(Ref<MediumLevelILFunction> medium
 void AnalysisContext::SetHighLevelILFunction(Ref<HighLevelILFunction> highLevelIL)
 {
 	BNSetHighLevelILFunction(m_object, highLevelIL->m_object);
+}
+
+
+bool AnalysisContext::Inform(const char* request)
+{
+	return BNAnalysisContextInform(m_object, request);
 }
 
 

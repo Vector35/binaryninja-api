@@ -59,6 +59,7 @@ where
         T: FnMut(&LowLevelILExpression<'func, M, F, ValueExpr>) -> VisitorAction;
 }
 
+#[derive(Copy)]
 pub struct LowLevelILExpression<'func, M, F, R>
 where
     M: FunctionMutability,
@@ -70,6 +71,21 @@ where
 
     // tag the 'return' type of this expression
     pub(crate) _ty: PhantomData<R>,
+}
+
+impl<M, F, R> Clone for LowLevelILExpression<'_, M, F, R>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+    R: ExpressionResultType,
+{
+    fn clone(&self) -> Self {
+        Self {
+            function: self.function,
+            index: self.index,
+            _ty: PhantomData,
+        }
+    }
 }
 
 impl<'func, M, F, R> LowLevelILExpression<'func, M, F, R>
@@ -101,6 +117,36 @@ where
         let op = unsafe { BNGetLowLevelILByIndex(self.function.handle, self.index.0) };
         let kind = LowLevelILExpressionKind::from_raw(self.function, op, self.index);
         kind.fmt(f)
+    }
+}
+
+impl<M, R> LowLevelILExpression<'_, M, SSA, R>
+where
+    M: FunctionMutability,
+    R: ExpressionResultType,
+{
+    pub fn non_ssa_form<'func>(
+        &self,
+        non_ssa: &'func LowLevelILFunction<M, NonSSA>,
+    ) -> LowLevelILExpression<'func, M, NonSSA, R> {
+        use binaryninjacore_sys::BNGetLowLevelILNonSSAExprIndex;
+        let idx = unsafe { BNGetLowLevelILNonSSAExprIndex(self.function.handle, self.index.0) };
+        LowLevelILExpression::new(non_ssa, LowLevelExpressionIndex(idx))
+    }
+}
+
+impl<M, R> LowLevelILExpression<'_, M, NonSSA, R>
+where
+    M: FunctionMutability,
+    R: ExpressionResultType,
+{
+    pub fn ssa_form<'func>(
+        &self,
+        ssa: &'func LowLevelILFunction<M, SSA>,
+    ) -> LowLevelILExpression<'func, M, SSA, R> {
+        use binaryninjacore_sys::BNGetLowLevelILSSAExprIndex;
+        let idx = unsafe { BNGetLowLevelILSSAExprIndex(self.function.handle, self.index.0) };
+        LowLevelILExpression::new(ssa, LowLevelExpressionIndex(idx))
     }
 }
 
@@ -280,6 +326,8 @@ where
     FcmpO(Operation<'func, M, F, operation::Condition>),
     FcmpUO(Operation<'func, M, F, operation::Condition>),
 
+    SeparateParamListSsa(Operation<'func, M, F, operation::SeparateParamListSsa>),
+
     // TODO ADD_OVERFLOW
     Unimpl(Operation<'func, M, F, operation::NoArgs>),
     UnimplMem(Operation<'func, M, F, operation::UnimplMem>),
@@ -427,6 +475,12 @@ where
             LLIL_FCMP_GE => LowLevelILExpressionKind::FcmpGE(Operation::new(function, op, index)),
             LLIL_FCMP_O => LowLevelILExpressionKind::FcmpO(Operation::new(function, op, index)),
             LLIL_FCMP_UO => LowLevelILExpressionKind::FcmpUO(Operation::new(function, op, index)),
+
+            LLIL_SEPARATE_PARAM_LIST_SSA => {
+                LowLevelILExpressionKind::SeparateParamListSsa(Operation::new(function, op, index))
+            }
+
+            LLIL_UNDEF => LowLevelILExpressionKind::Undef(Operation::new(function, op, index)),
 
             LLIL_UNIMPL => LowLevelILExpressionKind::Unimpl(Operation::new(function, op, index)),
             LLIL_UNIMPL_MEM => {
@@ -598,6 +652,11 @@ where
                     visit!(param_expr);
                 }
             }
+            SeparateParamListSsa(ref op) => {
+                for param_expr in op.param_exprs() {
+                    visit!(param_expr);
+                }
+            }
             // Do not have any sub expressions.
             Pop(_) | Reg(_) | RegSsa(_) | RegPartialSsa(_) | RegSplit(_) | RegSplitSsa(_)
             | Const(_) | ConstPtr(_) | Flag(_) | FlagBit(_) | ExternPtr(_) | FlagCond(_)
@@ -668,6 +727,8 @@ where
             | FloatToInt(ref op) | IntToFloat(ref op) | FloatConv(ref op) | RoundToInt(ref op)
             | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => &op.op,
 
+            SeparateParamListSsa(ref op) => &op.op,
+
             UnimplMem(ref op) => &op.op,
             //TestBit(Operation<'func, M, F, operation::TestBit>), // TODO
         }
@@ -737,6 +798,8 @@ impl LowLevelILExpressionKind<'_, Mutable, NonSSA> {
             | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op)
             | FloatToInt(ref op) | IntToFloat(ref op) | FloatConv(ref op) | RoundToInt(ref op)
             | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => op.flag_write(),
+
+            SeparateParamListSsa(ref op) => op.flag_write(),
 
             UnimplMem(ref op) => op.flag_write(),
             //TestBit(Operation<'func, M, F, operation::TestBit>), // TODO

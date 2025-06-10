@@ -976,73 +976,11 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 		break;
 
 	case HLIL_CALL:
-		[&]() {
-			const auto destExpr = instr.GetDestExpr<HLIL_CALL>();
-			const auto parameterExprs = instr.GetParameterExprs<HLIL_CALL>();
-
-			GetExprTextInternal(destExpr, tokens, settings, MemberAndFunctionOperatorPrecedence);
-			tokens.AppendOpenParen();
-
-			vector<FunctionParameter> namedParams;
-			Ref<Type> functionType = instr.GetDestExpr<HLIL_CALL>().GetType();
-			if (functionType && (functionType->GetClass() == PointerTypeClass)
-				&& (functionType->GetChildType()->GetClass() == FunctionTypeClass))
-				namedParams = functionType->GetChildType()->GetParameters();
-
-			for (size_t index{}; index < parameterExprs.size(); index++)
-			{
-				const auto& parameterExpr = parameterExprs[index];
-				if (index != 0) tokens.Append(TextToken, ", ");
-
-				// If the type of the parameter is known to be a pointer to a string, then we directly render it as a
-				// string, regardless of its length
-				bool renderedAsString = false;
-				if (index < namedParams.size() && parameterExprs[index].operation == HLIL_CONST_PTR)
-				{
-					auto exprType = namedParams[index].type;
-					if (exprType && (exprType->GetClass() == PointerTypeClass))
-					{
-						if (auto child = exprType->GetChildType(); child)
-						{
-							if ((child->IsInteger() && child->IsSigned() && child->GetWidth() == 1)
-								|| child->IsWideChar())
-							{
-								tokens.AppendPointerTextToken(parameterExprs[index],
-									parameterExprs[index].GetConstant<HLIL_CONST_PTR>(), settings, AddressOfDataSymbols,
-									precedence, true);
-								renderedAsString = true;
-							}
-						}
-					}
-				}
-
-				if (!renderedAsString)
-					GetExprText(parameterExpr, tokens, settings);
-			}
-			tokens.AppendCloseParen();
-			if (statement)
-				tokens.AppendSemicolon();
-		}();
+		GetExpr_CALL_OR_TAILCALL(instr, tokens, settings, precedence, statement);
 		break;
 
 	case HLIL_IMPORT:
-		[&]() {
-			const auto constant = instr.GetConstant<HLIL_IMPORT>();
-			auto symbol = GetHighLevelILFunction()->GetFunction()->GetView()->GetSymbolByAddress(constant);
-			const auto symbolType = symbol->GetType();
-
-			if (symbol && (symbolType == ImportedDataSymbol || symbolType == ImportAddressSymbol))
-			{
-				symbol = Symbol::ImportedFunctionFromImportAddressSymbol(symbol, constant);
-				const auto symbolShortName = symbol->GetShortName();
-				tokens.Append(IndirectImportToken, NoTokenContext, symbolShortName, instr.address, constant, instr.size, instr.sourceOperand);
-				return;
-			}
-
-			tokens.AppendPointerTextToken(instr, constant, settings, DereferenceNonDataSymbols, precedence);
-			if (statement)
-				tokens.AppendSemicolon();
-		}();
+		GetExpr_IMPORT(instr, tokens, settings, precedence, statement);
 		break;
 
 	case HLIL_ARRAY_INDEX:
@@ -1288,12 +1226,7 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 		break;
 
 	case HLIL_CONST_PTR:
-		[&]() {
-			tokens.AppendPointerTextToken(
-				instr, instr.GetConstant<HLIL_CONST_PTR>(), settings, AddressOfDataSymbols, precedence);
-			if (statement)
-				tokens.AppendSemicolon();
-		}();
+		GetExpr_CONST_PTR(instr, tokens, settings, precedence, statement);
 		break;
 
 	case HLIL_VAR:
@@ -1766,17 +1699,8 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 			tokens.Append(AnnotationToken, "/* tailcall */");
 			tokens.NewLine();
 			tokens.Append(KeywordToken, "return ");
-			GetExprTextInternal(destExpr, tokens, settings, MemberAndFunctionOperatorPrecedence);
-			tokens.AppendOpenParen();
-			for (size_t index{}; index < parameterExprs.size(); index++)
-			{
-				const auto& parameterExpr = parameterExprs[index];
-				if (index != 0) tokens.Append(TextToken, ", ");
-				GetExprTextInternal(parameterExpr, tokens, settings);
-			}
-			tokens.AppendCloseParen();
-			if (statement)
-				tokens.AppendSemicolon();
+
+			GetExpr_CALL_OR_TAILCALL(instr, tokens, settings, precedence, statement);
 		}();
 		break;
 
@@ -2829,6 +2753,87 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 	}
 }
 
+void PseudoCFunction::GetExpr_CALL_OR_TAILCALL(const BinaryNinja::HighLevelILInstruction& instr,
+	BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
+	BNOperatorPrecedence precedence, bool statement)
+{
+	const auto destExpr = instr.GetDestExpr();
+	const auto parameterExprs = instr.GetParameterExprs();
+
+	vector<FunctionParameter> namedParams;
+	Ref<Type> functionType = destExpr.GetType();
+	if (functionType && (functionType->GetClass() == PointerTypeClass)
+		&& (functionType->GetChildType()->GetClass() == FunctionTypeClass))
+		namedParams = functionType->GetChildType()->GetParameters();
+
+	GetExprTextInternal(destExpr, tokens, settings, MemberAndFunctionOperatorPrecedence);
+	tokens.AppendOpenParen();
+
+	for (size_t index {}; index < parameterExprs.size(); index++)
+	{
+		const auto& parameterExpr = parameterExprs[index];
+		if (index != 0)
+			tokens.Append(TextToken, ", ");
+
+		// If the type of the parameter is known to be a pointer to a string, then we directly render it as a
+		// string, regardless of its length
+		bool renderedAsString = false;
+		if (index < namedParams.size() && parameterExprs[index].operation == HLIL_CONST_PTR)
+		{
+			auto exprType = namedParams[index].type;
+			if (exprType && (exprType->GetClass() == PointerTypeClass))
+			{
+				if (auto child = exprType->GetChildType(); child)
+				{
+					if ((child->IsInteger() && child->IsSigned() && child->GetWidth() == 1) || child->IsWideChar())
+					{
+						tokens.AppendPointerTextToken(parameterExprs[index],
+							parameterExprs[index].GetConstant<HLIL_CONST_PTR>(), settings, AddressOfDataSymbols,
+							precedence, true);
+						renderedAsString = true;
+					}
+				}
+			}
+		}
+
+		if (!renderedAsString)
+			GetExprText(parameterExpr, tokens, settings);
+	}
+	tokens.AppendCloseParen();
+	if (statement)
+		tokens.AppendSemicolon();
+}
+
+void PseudoCFunction::GetExpr_CONST_PTR(const BinaryNinja::HighLevelILInstruction& instr,
+	BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
+	BNOperatorPrecedence precedence, bool statement)
+{
+	tokens.AppendPointerTextToken(
+		instr, instr.GetConstant<HLIL_CONST_PTR>(), settings, AddressOfDataSymbols, precedence);
+	if (statement)
+		tokens.AppendSemicolon();
+}
+
+void PseudoCFunction::GetExpr_IMPORT(const BinaryNinja::HighLevelILInstruction& instr,
+	BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
+	BNOperatorPrecedence precedence, bool statement)
+{
+	const auto constant = instr.GetConstant<HLIL_IMPORT>();
+	auto symbol = GetHighLevelILFunction()->GetFunction()->GetView()->GetSymbolByAddress(constant);
+	const auto symbolType = symbol->GetType();
+
+	if (symbol && (symbolType == ImportedDataSymbol || symbolType == ImportAddressSymbol))
+	{
+		symbol = Symbol::ImportedFunctionFromImportAddressSymbol(symbol, constant);
+		const auto symbolShortName = symbol->GetShortName();
+		tokens.Append(IndirectImportToken, NoTokenContext, symbolShortName, instr.address, constant, instr.size, instr.sourceOperand);
+		return;
+	}
+
+	tokens.AppendPointerTextToken(instr, constant, settings, DereferenceNonDataSymbols, precedence);
+	if (statement)
+		tokens.AppendSemicolon();
+}
 
 string PseudoCFunction::GetAnnotationStartString() const
 {
@@ -2848,32 +2853,10 @@ PseudoCFunctionType::PseudoCFunctionType(): LanguageRepresentationFunctionType("
 {
 }
 
+PseudoCFunctionType::PseudoCFunctionType(const string& name) : LanguageRepresentationFunctionType(name) {}
 
 Ref<LanguageRepresentationFunction> PseudoCFunctionType::Create(Architecture* arch, Function* owner,
 	HighLevelILFunction* highLevelILFunction)
 {
 	return new PseudoCFunction(this, arch, owner, highLevelILFunction);
-}
-
-
-extern "C"
-{
-	BN_DECLARE_CORE_ABI_VERSION
-
-#ifndef DEMO_EDITION
-	BINARYNINJAPLUGIN void CorePluginDependencies()
-	{
-	}
-#endif
-
-#ifdef DEMO_EDITION
-	bool PseudoCPluginInit()
-#else
-	BINARYNINJAPLUGIN bool CorePluginInit()
-#endif
-	{
-		LanguageRepresentationFunctionType* type = new PseudoCFunctionType();
-		LanguageRepresentationFunctionType::Register(type);
-		return true;
-	}
 }

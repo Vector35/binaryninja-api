@@ -207,15 +207,10 @@ class KernelCache:
 		"""
 		Return a KernelCacheMachOHeader for the image with the given install name.
 		"""
-		s = BNAllocString(name)
-		outputStr = kccore.BNKCViewGetImageHeaderForName(self.handle, s)
+		outputStr = kccore.BNKCViewGetImageHeaderForName(self.handle, name)
 		if outputStr is None:
 			return None
-		output = outputStr
-		BNFreeString(outputStr)
-		if output == "":
-			return None
-		return KernelCacheMachOHeader.LoadFromString(output)
+		return KernelCacheMachOHeader.LoadFromString(outputStr)
 
 	def get_macho_header_for_address(self, address: int):
 		"""
@@ -224,11 +219,7 @@ class KernelCache:
 		outputStr = kccore.BNKCViewGetImageHeaderForAddress(self.handle, address)
 		if outputStr is None:
 			return None
-		output = outputStr
-		BNFreeString(outputStr)
-		if output == "":
-			return None
-		return KernelCacheMachOHeader.LoadFromString(output)
+		return KernelCacheMachOHeader.LoadFromString(outputStr)
 
 	@property
 	def state(self):

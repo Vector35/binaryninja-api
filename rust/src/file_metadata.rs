@@ -200,6 +200,15 @@ impl FileMetadata {
         unsafe { BNGetCurrentOffset(self.handle) }
     }
 
+    /// Navigate to an offset for a specific view.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use binaryninja::file_metadata::FileMetadata;
+    /// # let file: FileMetadata = unimplemented!();
+    /// file.navigate_to("Linear:Raw", 0x0).expect("Linear:Raw should always be present");
+    /// ```
     pub fn navigate_to(&self, view: &str, offset: u64) -> Result<(), ()> {
         let view = view.to_cstr();
 
@@ -212,6 +221,15 @@ impl FileMetadata {
         }
     }
 
+    /// Get the [`BinaryView`] for the view type.
+    /// 
+    /// # Example
+    /// 
+    /// ```no_run
+    /// use binaryninja::file_metadata::FileMetadata;
+    /// # let file: FileMetadata = unimplemented!();
+    /// file.view_of_type("Raw").expect("Raw type should always be present");
+    /// ```
     pub fn view_of_type(&self, view: &str) -> Option<Ref<BinaryView>> {
         let view = view.to_cstr();
 

@@ -4,6 +4,12 @@
 #include <stdint.h>
 #include <string.h>
 
+#if defined(_MSC_VER)
+// Disable warning: Unary minus operator applied to unsigned type, result still unsigned.
+// This warning is treated as an error with the /sdl flag.
+#pragma warning(disable:4146)
+#endif
+
 //-----------------------------------------------------------------------------
 // registers
 //-----------------------------------------------------------------------------

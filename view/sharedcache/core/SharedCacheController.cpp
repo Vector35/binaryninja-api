@@ -227,7 +227,7 @@ bool SharedCacheController::ApplyImage(BinaryView& view, const CacheImage& image
 		view.SetFunctionAnalysisUpdateDisabled(prevDisabledState);
 
 		// Load objective-c information.
-		auto objcProcessor = DSCObjC::SharedCacheObjCProcessor(&view, false, image.headerAddress);
+		auto objcProcessor = DSCObjC::SharedCacheObjCProcessor(&view, image.headerAddress);
 		try
 		{
 			if (m_processObjC)

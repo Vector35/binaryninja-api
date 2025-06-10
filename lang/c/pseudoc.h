@@ -52,6 +52,16 @@ protected:
 	void EndLines(
 		const BinaryNinja::HighLevelILInstruction& instr, BinaryNinja::HighLevelILTokenEmitter& tokens) override;
 
+	virtual void GetExpr_CALL_OR_TAILCALL(const BinaryNinja::HighLevelILInstruction& instr,
+		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
+		BNOperatorPrecedence precedence, bool statement);
+	virtual void GetExpr_CONST_PTR(const BinaryNinja::HighLevelILInstruction& instr,
+		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
+		BNOperatorPrecedence precedence, bool statement);
+	virtual void GetExpr_IMPORT(const BinaryNinja::HighLevelILInstruction& instr,
+		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
+		BNOperatorPrecedence precedence, bool statement);
+
 public:
 	PseudoCFunction(BinaryNinja::LanguageRepresentationFunctionType* type, BinaryNinja::Architecture* arch,
 		BinaryNinja::Function* owner, BinaryNinja::HighLevelILFunction* highLevelILFunction);
@@ -66,4 +76,7 @@ public:
 	PseudoCFunctionType();
 	BinaryNinja::Ref<BinaryNinja::LanguageRepresentationFunction> Create(BinaryNinja::Architecture* arch,
 		BinaryNinja::Function* owner, BinaryNinja::HighLevelILFunction* highLevelILFunction) override;
+
+protected:
+	PseudoCFunctionType(const std::string& name);
 };

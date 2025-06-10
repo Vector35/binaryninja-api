@@ -87,7 +87,7 @@ bool MachoObjCProcessor::ViewHasObjCMetadata(BinaryView* data)
 		|| data->GetSectionByName("__objc_protolist"));
 }
 
-MachoObjCProcessor::MachoObjCProcessor(BinaryView* data, bool isBackedByDatabase) :
-	ObjCProcessor(data, "macho.objc", isBackedByDatabase)
+MachoObjCProcessor::MachoObjCProcessor(BinaryView* data) :
+	ObjCProcessor(data, "macho.objc")
 {
 }

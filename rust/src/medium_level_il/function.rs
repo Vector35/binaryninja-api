@@ -2,7 +2,10 @@ use binaryninjacore_sys::*;
 use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
 
-use super::{MediumLevelILBlock, MediumLevelILInstruction, MediumLevelInstructionIndex};
+use super::{
+    MediumLevelExpressionIndex, MediumLevelILBlock, MediumLevelILInstruction,
+    MediumLevelInstructionIndex,
+};
 use crate::architecture::CoreArchitecture;
 use crate::basic_block::BasicBlock;
 use crate::confidence::Conf;
@@ -33,7 +36,7 @@ impl MediumLevelILFunction {
     }
 
     pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<MediumLevelILInstruction> {
-        Some(MediumLevelILInstruction::new(
+        Some(MediumLevelILInstruction::from_instr_index(
             self.to_owned(),
             self.instruction_index_at(loc)?,
         ))
@@ -44,11 +47,10 @@ impl MediumLevelILFunction {
         loc: L,
     ) -> Option<MediumLevelInstructionIndex> {
         let loc: Location = loc.into();
-        let arch = loc
-            .arch
-            .map(|a| a.handle)
-            .unwrap_or_else(std::ptr::null_mut);
-        let instr_idx = unsafe { BNMediumLevelILGetInstructionStart(self.handle, arch, loc.addr) };
+        // If the location does not specify an architecture, use the function's architecture.
+        let arch = loc.arch.unwrap_or_else(|| self.function().arch());
+        let instr_idx =
+            unsafe { BNMediumLevelILGetInstructionStart(self.handle, arch.handle, loc.addr) };
         // `instr_idx` will equal self.instruction_count() if the instruction is not valid.
         if instr_idx >= self.instruction_count() {
             None
@@ -64,18 +66,21 @@ impl MediumLevelILFunction {
         if index.0 >= self.instruction_count() {
             None
         } else {
-            Some(MediumLevelILInstruction::new(self.to_owned(), index))
+            Some(MediumLevelILInstruction::from_instr_index(
+                self.to_owned(),
+                index,
+            ))
         }
     }
 
     pub fn instruction_from_expr_index(
         &self,
-        expr_index: MediumLevelInstructionIndex,
+        expr_index: MediumLevelExpressionIndex,
     ) -> Option<MediumLevelILInstruction> {
         if expr_index.0 >= self.expression_count() {
             None
         } else {
-            Some(MediumLevelILInstruction::new_expr(
+            Some(MediumLevelILInstruction::from_expr_index(
                 self.to_owned(),
                 expr_index,
             ))
@@ -177,7 +182,7 @@ impl MediumLevelILFunction {
     /// Allows the user to specify a PossibleValueSet value for an MLIL
     /// variable at its definition site.
     ///
-    /// .. warning:: Setting the variable value, triggers a reanalysis of the
+    /// WARNING: Setting the variable value, triggers a reanalysis of the
     /// function and allows the dataflow to compute and propagate values which
     /// depend on the current variable. This implies that branch conditions
     /// whose values can be determined statically will be computed, leading to
@@ -206,23 +211,15 @@ impl MediumLevelILFunction {
         value: PossibleValueSet,
         after: bool,
     ) -> Result<(), ()> {
-        let Some(_def_site) = self
-            .var_definitions(var)
-            .iter()
-            .find(|def| def.address == addr)
-        else {
-            // Error "No definition for Variable found at given address"
-            return Err(());
-        };
         let function = self.function();
         let def_site = BNArchitectureAndAddress {
             arch: function.arch().handle,
             address: addr,
         };
         let raw_var = BNVariable::from(var);
-        let raw_value = PossibleValueSet::into_raw(value);
+        let raw_value = PossibleValueSet::into_rust_raw(value);
         unsafe { BNSetUserVariableValue(function.handle, &raw_var, &def_site, after, &raw_value) }
-        PossibleValueSet::free_owned_raw(raw_value);
+        PossibleValueSet::free_rust_raw(raw_value);
         Ok(())
     }
 
@@ -402,7 +399,7 @@ impl MediumLevelILFunction {
         unsafe { BNMediumLevelILSetCurrentAddress(self.handle, arch, location.addr) }
     }
 
-    /// Returns the [`BasicBlock`] at the given instruction `index`.
+    /// Returns the [`BasicBlock`] at the given instruction `index`. Function must be finalized.
     ///
     /// You can also retrieve this using [`MediumLevelILInstruction::basic_block`].
     pub fn basic_block_containing_index(

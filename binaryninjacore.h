@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 107
+#define BN_CURRENT_CORE_ABI_VERSION 110
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -1024,6 +1024,12 @@ extern "C"
 
 		// HLIL expression can be folded into other expressions or has been folded
 		HLILFoldableExpr = 0x100,
+
+		// HLIL condition can be displayed as the inverse
+		HLILInvertableCondition = 0x200,
+
+		// HLIL condition can be rewritten as an early return
+		HLILEarlyReturnPossible = 0x400,
 	} BNILInstructionAttribute;
 
 	typedef enum BNIntrinsicClass
@@ -1935,6 +1941,8 @@ extern "C"
 
 		BNType* (*getGlobalRegisterType)(void* ctxt, uint32_t reg);
 
+		size_t (*getAddressSize)(void* ctxt);
+
 		void (*adjustTypeParserInput)(
 			void* ctxt,
 			BNTypeParser* parser,
@@ -2774,7 +2782,8 @@ extern "C"
 	typedef enum BNFindFlag
 	{
 		FindCaseSensitive = 0,
-		FindCaseInsensitive = 1
+		FindCaseInsensitive = 1,
+		FindIgnoreWhitespace = 2,
 	} BNFindFlag;
 
 	typedef enum BNFindRangeType
@@ -3235,6 +3244,15 @@ extern "C"
 		PreventExprFolding,
 		AllowExprFolding
 	} BNExprFolding;
+
+	typedef enum BNEarlyReturn
+	{
+		DefaultEarlyReturn,
+		PreventEarlyReturn,
+		SmallestSideEarlyReturn,
+		TrueSideEarlyReturn,
+		FalseSideEarlyReturn
+	} BNEarlyReturn;
 
 	typedef struct BNDebugFunctionInfo
 	{
@@ -4991,6 +5009,10 @@ extern "C"
 	    BNFunction* func, const BNVariable* var, BNDeadStoreElimination mode);
 	BINARYNINJACOREAPI BNExprFolding BNGetExprFolding(BNFunction* func, uint64_t addr);
 	BINARYNINJACOREAPI void BNSetExprFolding(BNFunction* func, uint64_t addr, BNExprFolding mode);
+	BINARYNINJACOREAPI bool BNIsConditionInverted(BNFunction* func, uint64_t addr);
+	BINARYNINJACOREAPI void BNSetConditionInverted(BNFunction* func, uint64_t addr, bool invert);
+	BINARYNINJACOREAPI BNEarlyReturn BNGetEarlyReturn(BNFunction* func, uint64_t addr);
+	BINARYNINJACOREAPI void BNSetEarlyReturn(BNFunction* func, uint64_t addr, BNEarlyReturn mode);
 	BINARYNINJACOREAPI BNMergedVariable* BNGetMergedVariables(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI void BNFreeMergedVariableList(BNMergedVariable* vars, size_t count);
 	BINARYNINJACOREAPI void BNMergeVariables(BNFunction* func, const BNVariable* target, const BNVariable* sources,
@@ -6972,6 +6994,7 @@ extern "C"
 
 	BINARYNINJACOREAPI uint32_t* BNGetPlatformGlobalRegisters(BNPlatform* platform, size_t* count);
 	BINARYNINJACOREAPI BNType* BNGetPlatformGlobalRegisterType(BNPlatform* platform, uint32_t reg);
+	BINARYNINJACOREAPI size_t BNGetPlatformAddressSize(BNPlatform* platform);
 	BINARYNINJACOREAPI void BNPlatformAdjustTypeParserInput(
 		BNPlatform* platform,
 		BNTypeParser* parser,

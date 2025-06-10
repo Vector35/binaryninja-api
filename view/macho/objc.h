@@ -31,7 +31,7 @@ namespace BinaryNinja {
 		std::shared_ptr<ObjCReader> GetReader() override;
 		
 	public:
-		MachoObjCProcessor(BinaryView* data, bool isBackedByDatabase);
+		MachoObjCProcessor(BinaryView* data);
 
 		static bool ViewHasObjCMetadata(BinaryView* data);
 	};

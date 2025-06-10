@@ -59,7 +59,9 @@ class LinearDisassemblyLine:
 			if obj.identifier.name == "HLIL Function Body":
 				il_func = function.hlil
 			elif obj.identifier.name == "HLIL SSA Function Body":
-				il_func = function.hlil.ssa_form
+				func_hlil = function.hlil
+				if func_hlil is not None:
+					il_func = func_hlil.ssa_form
 			elif obj.identifier.name == "Language Representation Function Body":
 				il_func = function.hlil
 

@@ -31,7 +31,7 @@ pub struct Mutable;
 #[derive(Copy, Clone, Debug)]
 pub struct Finalized;
 
-pub trait FunctionMutability: 'static + Debug {}
+pub trait FunctionMutability: 'static + Debug + Copy {}
 impl FunctionMutability for Mutable {}
 impl FunctionMutability for Finalized {}
 
@@ -40,7 +40,7 @@ pub struct SSA;
 #[derive(Copy, Clone, Debug)]
 pub struct NonSSA;
 
-pub trait FunctionForm: 'static + Debug {}
+pub trait FunctionForm: 'static + Debug + Copy {}
 impl FunctionForm for SSA {}
 impl FunctionForm for NonSSA {}
 
@@ -106,7 +106,8 @@ where
     ) -> Option<LowLevelInstructionIndex> {
         use binaryninjacore_sys::BNLowLevelILGetInstructionStart;
         let loc: Location = loc.into();
-        let arch = loc.arch.unwrap_or_else(|| *self.arch().as_ref());
+        // If the location does not specify an architecture, use the function's architecture.
+        let arch = loc.arch.unwrap_or_else(|| self.arch());
         let instr_idx =
             unsafe { BNLowLevelILGetInstructionStart(self.handle, arch.handle, loc.addr) };
         // `instr_idx` will equal self.instruction_count() if the instruction is not valid.
@@ -159,6 +160,21 @@ where
             Array::new(blocks, count, context)
         }
     }
+
+    /// Returns the [`BasicBlock`] at the given instruction `index`.
+    ///
+    /// You can also retrieve this using [`LowLevelILInstruction::basic_block`].
+    pub fn basic_block_containing_index(
+        &self,
+        index: LowLevelInstructionIndex,
+    ) -> Option<Ref<BasicBlock<LowLevelILBlock<M, F>>>> {
+        let block = unsafe { BNGetLowLevelILBasicBlockForInstruction(self.handle, index.0) };
+        if block.is_null() {
+            None
+        } else {
+            Some(unsafe { BasicBlock::ref_from_raw(block, LowLevelILBlock { function: self }) })
+        }
+    }
 }
 
 impl<M: FunctionMutability> LowLevelILFunction<M, NonSSA> {
@@ -206,6 +222,57 @@ impl Ref<LowLevelILFunction<Mutable, NonSSA>> {
             // Now that we have finalized return the function as is so the caller can reference the "finalized function".
             LowLevelILFunction::from_raw(self.handle).to_owned()
         }
+    }
+}
+
+impl<M: FunctionMutability> Ref<LowLevelILFunction<M, SSA>> {
+    /// Return a vector of all instructions that use the given SSA register.
+    #[must_use]
+    pub fn get_ssa_register_uses<R: ArchReg>(
+        &self,
+        reg: LowLevelILSSARegisterKind<R>,
+    ) -> Vec<LowLevelILInstruction<M, SSA>> {
+        use binaryninjacore_sys::BNGetLowLevelILSSARegisterUses;
+        let register_id = match reg {
+            LowLevelILSSARegisterKind::Full { kind, .. } => kind.id(),
+            LowLevelILSSARegisterKind::Partial { partial_reg, .. } => partial_reg.id(),
+        };
+        let mut count = 0;
+        let instrs = unsafe {
+            BNGetLowLevelILSSARegisterUses(
+                self.handle,
+                register_id.into(),
+                reg.version() as usize,
+                &mut count,
+            )
+        };
+        let result = unsafe { std::slice::from_raw_parts(instrs, count) }
+            .iter()
+            .map(|idx| LowLevelILInstruction::new(self, LowLevelInstructionIndex(*idx)))
+            .collect();
+        unsafe { BNFreeILInstructionList(instrs) };
+        result
+    }
+
+    /// Returns the instruction that defines the given SSA register.
+    #[must_use]
+    pub fn get_ssa_register_definition<R: ArchReg>(
+        &self,
+        reg: &LowLevelILSSARegisterKind<R>,
+    ) -> Option<LowLevelILInstruction<M, SSA>> {
+        use binaryninjacore_sys::BNGetLowLevelILSSARegisterDefinition;
+        let register_id = match reg {
+            LowLevelILSSARegisterKind::Full { kind, .. } => kind.id(),
+            LowLevelILSSARegisterKind::Partial { partial_reg, .. } => partial_reg.id(),
+        };
+        let instr_idx = unsafe {
+            BNGetLowLevelILSSARegisterDefinition(
+                self.handle,
+                register_id.into(),
+                reg.version() as usize,
+            )
+        };
+        self.instruction_from_index(LowLevelInstructionIndex(instr_idx))
     }
 }
 

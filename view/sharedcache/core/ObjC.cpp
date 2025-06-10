@@ -187,8 +187,8 @@ Ref<Section> SharedCacheObjCProcessor::GetSectionWithName(const char *sectionNam
 	return nullptr;
 }
 
-SharedCacheObjCProcessor::SharedCacheObjCProcessor(BinaryView *data, bool isBackedByDatabase, uint64_t imageAddress)
-	: ObjCProcessor(data, "SharedCache.ObjC", isBackedByDatabase, true)
+SharedCacheObjCProcessor::SharedCacheObjCProcessor(BinaryView *data, uint64_t imageAddress)
+	: ObjCProcessor(data, "SharedCache.ObjC", true)
 {
 	m_imageAddress = imageAddress;
 }

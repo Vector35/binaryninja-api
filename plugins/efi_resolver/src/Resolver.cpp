@@ -44,11 +44,11 @@ static string GetBundledEfiPath()
 {
 	string path = GetBundledPluginDirectory();
 #if defined(_WIN32)
-	return path + "..\\types\\efi.c";
+	return path + "\\..\\types\\efi.c";
 #elif defined(__APPLE__)
 	return path + "/../../Resources/types/efi.c";
 #else
-	return path + "../types/efi.c";
+	return path + "/../types/efi.c";
 #endif
 }
 

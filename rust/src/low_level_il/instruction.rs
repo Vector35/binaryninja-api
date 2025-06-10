@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::basic_block::BasicBlock;
+use crate::rc::Ref;
+
+use super::block::LowLevelILBlock;
 use super::operation;
 use super::operation::Operation;
 use super::VisitorAction;
@@ -65,6 +69,7 @@ where
         T: FnMut(&LowLevelILExpression<'func, M, F, ValueExpr>) -> VisitorAction;
 }
 
+#[derive(Copy, Clone)]
 pub struct LowLevelILInstruction<'func, M, F>
 where
     M: FunctionMutability,
@@ -97,6 +102,41 @@ where
 
     pub fn into_raw(&self) -> BNLowLevelILInstruction {
         unsafe { BNGetLowLevelILByIndex(self.function.handle, self.expr_idx().0) }
+    }
+
+    /// Returns the [`BasicBlock`] containing the given [`LowLevelILInstruction`].
+    pub fn basic_block(&self) -> Option<Ref<BasicBlock<LowLevelILBlock<'func, M, F>>>> {
+        // TODO: We might be able to .expect this if we guarantee that self.index is valid.
+        self.function.basic_block_containing_index(self.index)
+    }
+}
+
+impl<'func, M> LowLevelILInstruction<'func, M, NonSSA>
+where
+    M: FunctionMutability,
+{
+    pub fn ssa_form(
+        &self,
+        ssa: &'func LowLevelILFunction<M, SSA>,
+    ) -> LowLevelILInstruction<'func, M, SSA> {
+        use binaryninjacore_sys::BNGetLowLevelILSSAInstructionIndex;
+        let idx = unsafe { BNGetLowLevelILSSAInstructionIndex(self.function.handle, self.index.0) };
+        LowLevelILInstruction::new(ssa, LowLevelInstructionIndex(idx))
+    }
+}
+
+impl<'func, M> LowLevelILInstruction<'func, M, SSA>
+where
+    M: FunctionMutability,
+{
+    pub fn non_ssa_form(
+        &self,
+        non_ssa: &'func LowLevelILFunction<M, NonSSA>,
+    ) -> LowLevelILInstruction<'func, M, NonSSA> {
+        use binaryninjacore_sys::BNGetLowLevelILNonSSAInstructionIndex;
+        let idx =
+            unsafe { BNGetLowLevelILNonSSAInstructionIndex(self.function.handle, self.index.0) };
+        LowLevelILInstruction::new(non_ssa, LowLevelInstructionIndex(idx))
     }
 }
 
@@ -214,6 +254,10 @@ where
     ForceVersion(Operation<'func, M, F, operation::ForceVersion>),
     ForceVersionSsa(Operation<'func, M, F, operation::ForceVersionSsa>),
 
+    RegPhi(Operation<'func, M, F, operation::RegPhi>),
+    FlagPhi(Operation<'func, M, F, operation::FlagPhi>),
+    MemPhi(Operation<'func, M, F, operation::MemPhi>),
+
     /// The instruction is an expression.
     Value(LowLevelILExpression<'func, M, F, ValueExpr>),
 }
@@ -317,6 +361,16 @@ where
             LLIL_FORCE_VER_SSA => {
                 LowLevelILInstructionKind::ForceVersionSsa(Operation::new(function, op, expr_index))
             }
+            LLIL_REG_PHI => {
+                LowLevelILInstructionKind::RegPhi(Operation::new(function, op, expr_index))
+            }
+            LLIL_MEM_PHI => {
+                LowLevelILInstructionKind::MemPhi(Operation::new(function, op, expr_index))
+            }
+            LLIL_FLAG_PHI => {
+                LowLevelILInstructionKind::FlagPhi(Operation::new(function, op, expr_index))
+            }
+
             _ => LowLevelILInstructionKind::Value(LowLevelILExpression::new(function, expr_index)),
         }
     }
@@ -370,7 +424,8 @@ where
             Value(e) => visit!(e),
             // Do not have any sub expressions.
             Nop(_) | NoRet(_) | Goto(_) | Syscall(_) | Bp(_) | Trap(_) | Undef(_) | Assert(_)
-            | AssertSsa(_) | ForceVersion(_) | ForceVersionSsa(_) => {}
+            | AssertSsa(_) | ForceVersion(_) | ForceVersionSsa(_) | RegPhi(_) | FlagPhi(_)
+            | MemPhi(_) => {}
         }
 
         VisitorAction::Sibling

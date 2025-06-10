@@ -1,5 +1,5 @@
 use super::operation::*;
-use super::{MediumLevelILFunction, MediumLevelInstructionIndex};
+use super::{MediumLevelExpressionIndex, MediumLevelILFunction, MediumLevelInstructionIndex};
 use crate::architecture::CoreIntrinsic;
 use crate::rc::Ref;
 use crate::variable::{ConstantData, SSAVariable, Variable};
@@ -27,7 +27,8 @@ pub enum MediumLevelILLiftedOperand {
 pub struct MediumLevelILLiftedInstruction {
     pub function: Ref<MediumLevelILFunction>,
     pub address: u64,
-    pub index: MediumLevelInstructionIndex,
+    pub instr_index: MediumLevelInstructionIndex,
+    pub expr_index: MediumLevelExpressionIndex,
     pub size: usize,
     pub kind: MediumLevelILLiftedInstructionKind,
 }
@@ -36,7 +37,8 @@ impl Debug for MediumLevelILLiftedInstruction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MediumLevelILLiftedInstruction")
             .field("address", &self.address)
-            .field("index", &self.index)
+            .field("instr_index", &self.instr_index)
+            .field("expr_index", &self.expr_index)
             .field("size", &self.size)
             .field("kind", &self.kind)
             .finish()

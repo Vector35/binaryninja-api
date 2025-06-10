@@ -90,8 +90,11 @@ void ApplySymbol(Ref<BinaryView> view, Ref<TypeLibrary> typeLib, Ref<Symbol> sym
 		// Make sure to check for already added function from the function table.
 		// Unless we have retrieved a type here we don't need to make a new function.
 		func = view->GetAnalysisFunction(targetPlatform, symbolAddress);
-		if (!func || selectedType)
+		if (!func || selectedType != nullptr)
 			func = view->AddFunctionForAnalysis(targetPlatform, symbolAddress, false, selectedType);
+		// The above function might be overwritten so we also want to apply the type here.
+		if (func && selectedType != nullptr)
+			func->ApplyAutoDiscoveredType(selectedType);
 	}
 	else
 	{

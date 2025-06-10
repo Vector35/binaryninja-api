@@ -764,6 +764,7 @@ from binaryninja import *
 			return ""
 
 		def run(self):
+			core.BNSetThreadName("PythonInterpreterThread")
 			while not self.exit:
 				self.event.wait()
 				self.event.clear()

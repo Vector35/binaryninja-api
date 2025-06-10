@@ -20,6 +20,72 @@ using namespace std;
 #define snprintf _snprintf
 #endif
 
+static Ref<Enumeration> get_msr_op_enum()
+{
+	EnumerationBuilder builder;
+	builder.AddMemberWithValue("msp", REGS_MSP);
+	builder.AddMemberWithValue("psp", REGS_PSP);
+	builder.AddMemberWithValue("basepri", REGS_BASEPRI);
+	builder.AddMemberWithValue("basepri_max", REGS_BASEPRI_MAX);
+	builder.AddMemberWithValue("primask", REGS_PRIMASK);
+	builder.AddMemberWithValue("faultmask", REGS_FAULTMASK);
+	builder.AddMemberWithValue("control", REGS_CONTROL);
+	builder.AddMemberWithValue("ipsr", REGS_IPSR);
+	builder.AddMemberWithValue("epsr", REGS_EPSR);
+	builder.AddMemberWithValue("iepsr", REGS_IEPSR);
+	builder.AddMemberWithValue("apsr", REGS_APSR);
+	builder.AddMemberWithValue("apsr_g", REGS_APSR_G);
+	builder.AddMemberWithValue("apsr_nzcvq", REGS_APSR_NZCVQ);
+	builder.AddMemberWithValue("apsr_nzcvqg", REGS_APSR_NZCVQG);
+	builder.AddMemberWithValue("iapsr", REGS_IAPSR);
+	builder.AddMemberWithValue("iapsr_g", REGS_IAPSR_G);
+	builder.AddMemberWithValue("iapsr_nzcvq", REGS_IAPSR_NZCVQ);
+	builder.AddMemberWithValue("iapsr_nzcvqg", REGS_IAPSR_NZCVQG);
+	builder.AddMemberWithValue("eapsr", REGS_EAPSR);
+	builder.AddMemberWithValue("eapsr_g", REGS_EAPSR_G);
+	builder.AddMemberWithValue("eapsr_nzcvq", REGS_EAPSR_NZCVQ);
+	builder.AddMemberWithValue("eapsr_nzcvqg", REGS_EAPSR_NZCVQG);
+	builder.AddMemberWithValue("xpsr", REGS_XPSR);
+	builder.AddMemberWithValue("xpsr_g", REGS_XPSR_G);
+	builder.AddMemberWithValue("xpsr_nzcvq", REGS_XPSR_NZCVQ);
+	builder.AddMemberWithValue("xpsr_nzcvqg", REGS_XPSR_NZCVQG);
+	builder.AddMemberWithValue("cpsr", REGS_CPSR);
+	builder.AddMemberWithValue("cpsr_c", REGS_CPSR_C);
+	builder.AddMemberWithValue("cpsr_x", REGS_CPSR_X);
+	builder.AddMemberWithValue("cpsr_xc", REGS_CPSR_XC);
+	builder.AddMemberWithValue("cpsr_s", REGS_CPSR_S);
+	builder.AddMemberWithValue("cpsr_sc", REGS_CPSR_SC);
+	builder.AddMemberWithValue("cpsr_sx", REGS_CPSR_SX);
+	builder.AddMemberWithValue("cpsr_sxc", REGS_CPSR_SXC);
+	builder.AddMemberWithValue("cpsr_f", REGS_CPSR_F);
+	builder.AddMemberWithValue("cpsr_fc", REGS_CPSR_FC);
+	builder.AddMemberWithValue("cpsr_fx", REGS_CPSR_FX);
+	builder.AddMemberWithValue("cpsr_fxc", REGS_CPSR_FXC);
+	builder.AddMemberWithValue("cpsr_fs", REGS_CPSR_FS);
+	builder.AddMemberWithValue("cpsr_fsc", REGS_CPSR_FSC);
+	builder.AddMemberWithValue("cpsr_fsx", REGS_CPSR_FSX);
+	builder.AddMemberWithValue("cpsr_fsxc", REGS_CPSR_FSXC);
+	builder.AddMemberWithValue("spsr", REGS_SPSR);
+	builder.AddMemberWithValue("spsr_c", REGS_SPSR_C);
+	builder.AddMemberWithValue("spsr_x", REGS_SPSR_X);
+	builder.AddMemberWithValue("spsr_xc", REGS_SPSR_XC);
+	builder.AddMemberWithValue("spsr_s", REGS_SPSR_S);
+	builder.AddMemberWithValue("spsr_sc", REGS_SPSR_SC);
+	builder.AddMemberWithValue("spsr_sx", REGS_SPSR_SX);
+	builder.AddMemberWithValue("spsr_sxc", REGS_SPSR_SXC);
+	builder.AddMemberWithValue("spsr_f", REGS_SPSR_F);
+	builder.AddMemberWithValue("spsr_fc", REGS_SPSR_FC);
+	builder.AddMemberWithValue("spsr_fx", REGS_SPSR_FX);
+	builder.AddMemberWithValue("spsr_fxc", REGS_SPSR_FXC);
+	builder.AddMemberWithValue("spsr_fs", REGS_SPSR_FS);
+	builder.AddMemberWithValue("spsr_fsc", REGS_SPSR_FSC);
+	builder.AddMemberWithValue("spsr_fsx", REGS_SPSR_FSX);
+	builder.AddMemberWithValue("spsr_fsxc", REGS_SPSR_FSXC);
+	builder.AddMemberWithValue("apsr_nzcv", REGS_APSR_NZCV);
+	Ref<Enumeration> _enum = builder.Finalize();
+	return _enum;
+}
+
 /* class Architecture from binaryninjaapi.h */
 class Thumb2Architecture: public ArmCommonArchitecture
 {
@@ -1177,7 +1243,7 @@ public:
 				if(reg == 15)
 					result.emplace_back(RegisterToken, "apsr_nzcv");
 				else {
-					snprintf(regname, sizeof(regname), "R%d", reg);
+					get_reg_name(REG_R0 + reg, regname);
 					result.emplace_back(RegisterToken, regname);
 				}
 				break;
@@ -1217,27 +1283,62 @@ public:
 					}
 					/* application level form */
 					else {
-						uint32_t tmp = (decomp.fields[FIELD_write_nzcvq] << 1) | decomp.fields[FIELD_write_g];
+						uint32_t mask = (decomp.fields[FIELD_write_nzcvq] << 1) | decomp.fields[FIELD_write_g];
 						uint8_t sysm = decomp.fields[FIELD_SYSm];
+						bool xPSR = ((sysm >> 2) & 1) == 1;
 						switch (sysm >> 3) {
 							case 0: /* xPSR access */
-								switch(tmp) {
+							{
+								string reg_name = "";
+								string reg_bits = "";
+								if (xPSR)
+									switch (sysm & 7) {
+									case 5: // '101' == IPSR
+										result.emplace_back(RegisterToken, "ipsr");
+										break;
+									case 6: // '110' == EPSR
+										result.emplace_back(RegisterToken, "epsr");
+										break;
+									case 7: // '111' == IEPSR
+										result.emplace_back(RegisterToken, "iepsr");
+										break;
+									}
+								else
+								{
+									switch (sysm & 3)
+									{
+									case 0:
+										reg_name = "apsr";
+										break;
+									case 1:
+										reg_name = "iapsr";
+										break;
+									case 2:
+										reg_name = "eapsr";
+										break;
+									case 3:
+										reg_name = "xpsr";
+										break;
+									}
+									switch(mask) {
 									case 0: // unpredictable
 										break;
 									case 1: // '01' == write_g
 										/* aka CPSR_f */
-										result.emplace_back(RegisterToken, "apsr_g");
+										result.emplace_back(RegisterToken, reg_name + "_g");
 										break;
 									case 2:	// '10' == write_nzcvq
 										/* aka CPSR_s */
-										result.emplace_back(RegisterToken, "apsr_nzcvq");
+										result.emplace_back(RegisterToken, reg_name + "_nzcvq");
 										break;
 									case 3: // '11' == write_nzcvq | write_g
 										/* aka CPSR_fs */
-										result.emplace_back(RegisterToken, "apsr_nzcvqg");
+										result.emplace_back(RegisterToken, reg_name + "_nzcvqg");
 										break;
+									}
 								}
 								break;
+							}
 							case 1: /* SP access */
 								switch (sysm & 7) {
 									case 0:
@@ -1255,8 +1356,10 @@ public:
 										result.emplace_back(RegisterToken, "primask");
 										break;
 									case 1:
-									case 2:
 										result.emplace_back(RegisterToken, "basepri");
+										break;
+									case 2:
+										result.emplace_back(RegisterToken, "basepri_max");
 										break;
 									case 3:
 										result.emplace_back(RegisterToken, "faultmask");
@@ -1278,7 +1381,30 @@ public:
 						uint8_t sysm = decomp.fields[FIELD_SYSm];
 						switch (sysm >> 3) {
 							case 0: /* xPSR access */
-								result.emplace_back(RegisterToken, "apsr");
+								switch (sysm & 7)
+								{
+								case 0:
+									result.emplace_back(RegisterToken, "apsr");
+									break;
+								case 1:
+									result.emplace_back(RegisterToken, "iapsr");
+									break;
+								case 2:
+									result.emplace_back(RegisterToken, "eapsr");
+									break;
+								case 3:
+									result.emplace_back(RegisterToken, "xpsr");
+									break;
+								case 5: // '101' == IPSR
+									result.emplace_back(RegisterToken, "ipsr");
+									break;
+								case 6: // '110' == EPSR
+									result.emplace_back(RegisterToken, "epsr");
+									break;
+								case 7: // '111' == IEPSR
+									result.emplace_back(RegisterToken, "iepsr");
+									break;
+								}
 								break;
 							case 1: /* SP access */
 								switch (sysm & 7) {
@@ -1347,6 +1473,14 @@ public:
 	{
 		switch (intrinsic)
 		{
+		case ARMV7_INTRIN_COPROC_GETONEWORD:
+			return "Coproc_GetOneWord";
+		case ARMV7_INTRIN_COPROC_GETTWOWORDS:
+			return "Coproc_GetTwoWords";
+		case ARMV7_INTRIN_COPROC_SENDONEWORD:
+			return "Coproc_SendOneWord";
+		case ARMV7_INTRIN_COPROC_SENDTWOWORDS:
+			return "Coproc_SendTwoWords";
 		case ARMV7_INTRIN_DBG:
 			return "__dbg";
 		case ARMV7_INTRIN_DMB_SY:
@@ -1395,6 +1529,10 @@ public:
 			return "__wfi";
 		case ARM_M_INTRIN_SET_BASEPRI:
 			return "__set_BASEPRI";
+		case ARMV7_INTRIN_RBIT:
+			return "__rbit";
+		case ARMV7_INTRIN_CLZ:
+			return "__clz";
 		default:
 			return "";
 		}
@@ -1403,6 +1541,10 @@ public:
 	virtual vector<uint32_t> GetAllIntrinsics() override
 	{
 		return vector<uint32_t> {
+			ARMV7_INTRIN_COPROC_GETONEWORD,
+			ARMV7_INTRIN_COPROC_GETTWOWORDS,
+			ARMV7_INTRIN_COPROC_SENDONEWORD,
+			ARMV7_INTRIN_COPROC_SENDTWOWORDS,
 			ARMV7_INTRIN_DBG,
 			ARMV7_INTRIN_DMB_SY,
 			ARMV7_INTRIN_DMB_ST,
@@ -1433,10 +1575,48 @@ public:
 	{
 		switch (intrinsic)
 		{
+		case ARMV7_INTRIN_COPROC_GETONEWORD:
+			return {
+				NameAndType("cp", Type::IntegerType(1, false)),
+				NameAndType(Type::IntegerType(1, false)),
+				NameAndType("n", Type::IntegerType(1, false)),
+				NameAndType("m", Type::IntegerType(1, false)),
+				NameAndType(Type::IntegerType(1, false)),
+			};
+		case ARMV7_INTRIN_COPROC_GETTWOWORDS:
+			return {
+				NameAndType("cp", Type::IntegerType(1, false)),
+				NameAndType(Type::IntegerType(1, false)),
+				NameAndType("m", Type::IntegerType(1, false)),
+			};
+		case ARMV7_INTRIN_COPROC_SENDONEWORD:
+			return {
+				NameAndType(Type::IntegerType(4, false)),
+				NameAndType("cp", Type::IntegerType(1, false)),
+				NameAndType(Type::IntegerType(1, false)),
+				NameAndType("n", Type::IntegerType(1, false)),
+				NameAndType("m", Type::IntegerType(1, false)),
+				NameAndType(Type::IntegerType(1, false)),
+			};
+		case ARMV7_INTRIN_COPROC_SENDTWOWORDS:
+			return {
+				NameAndType(Type::IntegerType(4, false)),
+				NameAndType(Type::IntegerType(4, false)),
+				NameAndType("cp", Type::IntegerType(1, false)),
+				NameAndType(Type::IntegerType(1, false)),
+				NameAndType("m", Type::IntegerType(1, false)),
+			};
 		case ARMV7_INTRIN_MRS:
-			return {NameAndType(Type::IntegerType(4, false))};
+			// return {NameAndType(Type::IntegerType(4, false))};
+			return {
+				NameAndType("msr", Confidence<Ref<Type>>(Type::EnumerationType(this, get_msr_op_enum(), 4, false), BN_FULL_CONFIDENCE))
+			};
 		case ARMV7_INTRIN_MSR:
-			return {NameAndType(Type::IntegerType(4, false))};
+			// return {NameAndType(Type::IntegerType(4, false))};
+			return {
+				NameAndType("msr", Confidence<Ref<Type>>(Type::EnumerationType(this, get_msr_op_enum(), 4, false), BN_FULL_CONFIDENCE)),
+				NameAndType(Type::IntegerType(4, false))
+			};
 		case ARMV7_INTRIN_DBG:
 			return {NameAndType(Type::IntegerType(1, false))};
 		default:
@@ -1448,10 +1628,15 @@ public:
 	{
 		switch (intrinsic)
 		{
+		case ARMV7_INTRIN_COPROC_GETONEWORD:
+			return { Type::IntegerType(4, false) };
+		case ARMV7_INTRIN_COPROC_GETTWOWORDS:
+			return { Type::IntegerType(4, false), Type::IntegerType(4, false) };
 		case ARMV7_INTRIN_MRS:
 			return {Type::IntegerType(4, false)};
 		case ARMV7_INTRIN_MSR:
-			return {Type::IntegerType(4, false)};
+			// return {Type::IntegerType(4, false)};
+			return {};
 		default:
 			return vector<Confidence<Ref<Type>>>();
 		}

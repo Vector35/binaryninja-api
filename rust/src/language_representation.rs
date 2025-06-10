@@ -10,7 +10,7 @@ use crate::binary_view::BinaryView;
 use crate::disassembly::{DisassemblySettings, DisassemblyTextLine};
 use crate::function::{Function, HighlightColor};
 use crate::high_level_il::token_emitter::HighLevelILTokenEmitter;
-use crate::high_level_il::{HighLevelILFunction, HighLevelInstructionIndex};
+use crate::high_level_il::{HighLevelExpressionIndex, HighLevelILFunction};
 use crate::line_formatter::CoreLineFormatter;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable};
 use crate::string::{BnString, IntoCStr};
@@ -57,7 +57,7 @@ pub trait LanguageRepresentationFunction: Send + Sync {
     fn expr_text(
         &self,
         il: &HighLevelILFunction,
-        expr_index: HighLevelInstructionIndex,
+        expr_index: HighLevelExpressionIndex,
         tokens: &HighLevelILTokenEmitter,
         settings: &DisassemblySettings,
         as_full_ast: bool,
@@ -68,14 +68,14 @@ pub trait LanguageRepresentationFunction: Send + Sync {
     fn begin_lines(
         &self,
         il: &HighLevelILFunction,
-        expr_index: HighLevelInstructionIndex,
+        expr_index: HighLevelExpressionIndex,
         tokens: &HighLevelILTokenEmitter,
     );
 
     fn end_lines(
         &self,
         il: &HighLevelILFunction,
-        expr_index: HighLevelInstructionIndex,
+        expr_index: HighLevelExpressionIndex,
         tokens: &HighLevelILTokenEmitter,
     );
 
@@ -281,7 +281,7 @@ impl CoreLanguageRepresentationFunction {
     pub fn expr_text(
         &self,
         il: &HighLevelILFunction,
-        expr_index: HighLevelInstructionIndex,
+        expr_index: HighLevelExpressionIndex,
         settings: &DisassemblySettings,
         as_full_ast: bool,
         precedence: OperatorPrecedence,
@@ -306,7 +306,7 @@ impl CoreLanguageRepresentationFunction {
     pub fn linear_lines(
         &self,
         il: &HighLevelILFunction,
-        expr_index: HighLevelInstructionIndex,
+        expr_index: HighLevelExpressionIndex,
         settings: &DisassemblySettings,
         as_full_ast: bool,
     ) -> Array<DisassemblyTextLine> {

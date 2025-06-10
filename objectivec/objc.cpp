@@ -1,7 +1,62 @@
 #include "objc.h"
 #include "inttypes.h"
+#include <optional>
 
 using namespace BinaryNinja;
+
+namespace {
+
+	// Attempt to recover an Objective-C class name from the symbol's name.
+	// Note: classes defined in the current image should be looked up in m_classes
+	// rather than using this function.
+	std::optional<std::string> ClassNameFromSymbolName(const Ref<Symbol>& symbol)
+	{
+		std::string_view symbolName = symbol->GetFullNameRef();
+
+		// Symbols named `_OBJC_CLASS_$_` are references to external classes.
+		if (symbolName.size() > 14 && symbolName.rfind("_OBJC_CLASS_$_", 0) == 0)
+			return std::string(symbolName.substr(14));
+
+		// Symbols named `cls_` are classes defined in a loaded image other than
+		// the image currently being analyzed.
+		if (symbolName.size() > 4 && symbolName.rfind("cls_", 0) == 0)
+			return std::string(symbolName.substr(4));
+
+		return std::nullopt;
+	}
+
+	// Given a selector component such as `initWithPath' and a prefix of `initWith`, returns `path`.
+	std::optional<std::string> SelectorComponentWithoutPrefix(std::string_view prefix, std::string_view component)
+	{
+		if (component.size() <= prefix.size() || component.rfind(prefix.data(), 0) != 0
+			|| !isupper(component[prefix.size()]))
+		{
+			return std::nullopt;
+		}
+
+		std::string result(component.substr(prefix.size()));
+
+		// Lowercase the first character if the second character is not also uppercase.
+		// This ensures we leave initialisms such as `URL` alone.
+		if (result.size() > 1 && islower(result[1]))
+			result[0] = tolower(result[0]);
+
+		return result;
+	}
+
+	std::string ArgumentNameFromSelectorComponent(std::string component)
+	{
+		// TODO: Handle other common patterns such as <do some action>With<arg>: and <do some action>For<arg>:
+		for (const auto& prefix : {"initWith", "with", "and", "using", "set", "read", "to", "for"})
+		{
+			if (auto argumentName = SelectorComponentWithoutPrefix(prefix, component); argumentName.has_value())
+				return std::move(*argumentName);
+		}
+
+		return component;
+	}
+
+}
 
 Ref<Metadata> ObjCProcessor::SerializeMethod(uint64_t loc, const Method& method)
 {
@@ -288,43 +343,38 @@ void ObjCProcessor::DefineObjCSymbol(
 			new Symbol(type, shortName, fullName, name, addr, LocalBinding, nameSpace), typeRef);
 	};
 
-	if (deferred)
-	{
-		m_symbolQueue->Append(process, [this, addr = addr](Symbol* symbol, Type* type) {
-			// Armv7/Thumb: This will rewrite the symbol's address.
-			// e.g. We pass in 0xc001, it will rewrite it to 0xc000 and create the function w/ the "thumb2" arch.
-			if (Ref<Symbol> existingSymbol = m_data->GetSymbolByAddress(addr))
-				m_data->UndefineAutoSymbol(existingSymbol);
-			auto funcSym = m_data->DefineAutoSymbolAndVariableOrFunction(m_data->GetDefaultPlatform(), symbol, type);
-			if (funcSym->GetType() == FunctionSymbol)
-			{
-				uint64_t target = symbol->GetAddress();
-				Ref<Platform> targetPlatform =
-					m_data->GetDefaultPlatform()->GetAssociatedPlatformByAddress(target);  // rewrites target.
-				if (Ref<Function> targetFunction = m_data->GetAnalysisFunction(targetPlatform, target))
-				{
-					if (!m_isBackedByDatabase)
-						targetFunction->SetUserType(type);
-				}
-			}
-		});
-		return;
-	}
-
-	if (Ref<Symbol> existingSymbol = m_data->GetSymbolByAddress(addr))
-		m_data->UndefineAutoSymbol(existingSymbol);
-	auto result = process();
-	auto sym = m_data->DefineAutoSymbolAndVariableOrFunction(m_data->GetDefaultPlatform(), result.first, result.second);
-	if (sym->GetType() == FunctionSymbol)
-	{
-		uint64_t target = result.first->GetAddress();
-		Ref<Platform> targetPlatform = m_data->GetDefaultPlatform()->GetAssociatedPlatformByAddress(target);  // rewrites
-		                                                                                                      // target.
-		if (Ref<Function> targetFunction = m_data->GetAnalysisFunction(targetPlatform, target))
+	auto defineSymbol = [this](Ref<Symbol> symbol, Ref<Type> type) {
+		uint64_t symbolAddress = symbol->GetAddress();
+		// Armv7/Thumb: This will rewrite the symbol's address.
+		// e.g. We pass in 0xc001, it will rewrite it to 0xc000 and create the function w/ the "thumb2" arch.
+		if (Ref<Symbol> existingSymbol = m_data->GetSymbolByAddress(symbolAddress))
+			m_data->UndefineAutoSymbol(existingSymbol);
+		Ref<Platform> targetPlatform = m_data->GetDefaultPlatform()->GetAssociatedPlatformByAddress(symbolAddress);
+		if (symbol->GetType() == FunctionSymbol)
 		{
-			if (!m_isBackedByDatabase)
-				targetFunction->SetUserType(result.second);
+			// For thumb2 we want to get the adjusted address, we can do that using the target function.
+			Ref<Function> targetFunction = m_data->GetAnalysisFunction(targetPlatform, symbolAddress);
+			if (targetFunction && type)
+				targetFunction->ApplyAutoDiscoveredType(type);
+
+			auto adjustedSym = new Symbol(FunctionSymbol, symbol->GetShortName(), symbol->GetFullName(), symbol->GetRawName(), symbolAddress);
+			m_data->DefineAutoSymbol(adjustedSym);
 		}
+		else
+		{
+			// Other symbol types can just use this, they don't need to worry about linear sweep removing them.
+			m_data->DefineAutoSymbolAndVariableOrFunction(targetPlatform, symbol, type);
+		}
+	};
+
+	if (!deferred)
+	{
+		m_symbolQueue->Append(process, defineSymbol);
+	}
+	else
+	{
+		auto [symbol, type]  = process();
+		defineSymbol(symbol, type);
 	}
 }
 
@@ -535,6 +585,39 @@ void ObjCProcessor::LoadClasses(ObjCReader* reader, Ref<Section> classPtrSection
 	}
 }
 
+std::optional<std::string> ObjCProcessor::ClassNameForTargetOfPointerAt(ObjCReader* reader, uint64_t offset)
+{
+	auto savedOffset = reader->GetOffset();
+	reader->Seek(offset);
+	auto target = ReadPointerAccountingForRelocations(reader);
+	reader->Seek(savedOffset);
+
+	if (target) {
+		// Classes defined in the current image must be looked up in m_classes
+		// as adding their symbol may be deferred.
+		if (auto it = m_classes.find(target); it != m_classes.end())
+			return it->second.name;
+
+		// Classes defined in other images are looked up by their symbol name.
+		// This is common for cross-image references in the shared cache.
+		if (auto symbol = GetSymbol(target))
+		{
+			if (auto className = ClassNameFromSymbolName(symbol))
+				return *className;
+		}
+	}
+
+	// If there's no target, or we can't find a symbol for it, check whether the pointer has a relocation
+	// that contains a symbol. This is the case for cross-image references outside of the shared cache.
+	for (const auto& relocation : m_data->GetRelocationsAt(offset))
+	{
+		if (auto symbol = relocation->GetSymbol())
+			return ClassNameFromSymbolName(symbol);
+	}
+
+	return std::nullopt;
+}
+
 void ObjCProcessor::LoadCategories(ObjCReader* reader, Ref<Section> classPtrSection)
 {
 	if (!classPtrSection)
@@ -574,29 +657,9 @@ void ObjCProcessor::LoadCategories(ObjCReader* reader, Ref<Section> classPtrSect
 		}
 
 		std::string categoryAdditionsName;
-		std::string categoryBaseClassName;
+		std::string categoryBaseClassName =
+			ClassNameForTargetOfPointerAt(reader, catLocation + ptrSize).value_or(std::string());
 
-		if (const auto& it = m_classes.find(cat.cls); it != m_classes.end())
-		{
-			categoryBaseClassName = it->second.name;
-			category.associatedName = it->second.associatedName;
-		}
-		else if (const auto symbol = GetSymbol(cat.cls))
-		{
-			if (symbol->GetType() == ImportedDataSymbol || symbol->GetType() == ImportAddressSymbol
-				|| symbol->GetType() == DataSymbol || symbol->GetType() == ExternalSymbol)
-			{
-				// Symbols named `_OBJC_CLASS_$_` are references to external classes.
-				// Symbols named `cls_` are classes defined in a loaded image other than
-				// the image currently being analyzed. Classes from the current image
-				// are found via `m_classes`.
-				const std::string_view symbolName = symbol->GetFullNameRef();
-				if (symbolName.size() > 14 && symbolName.rfind("_OBJC_CLASS_$_", 0) == 0)
-					categoryBaseClassName = symbolName.substr(14);
-				else if (symbolName.size() > 4 && symbolName.rfind("cls_", 0) == 0)
-					categoryBaseClassName = symbolName.substr(4);
-			}
-		}
 		if (categoryBaseClassName.empty())
 		{
 			m_logger->LogInfo("Using base address as stand-in classname for category at 0x%llx", catLocation);
@@ -892,6 +955,7 @@ void ObjCProcessor::ReadMethodList(ObjCReader* reader, ClassBase& cls, std::stri
 				DefineObjCSymbol(DataSymbol, Type::PointerType(m_data->GetAddressSize(), selType),
 					"selRef_" + method.name, meth.name, true);
 			}
+
 			// workflow objc support
 			if (selAddr)
 				m_selToImplementations[selAddr].push_back(meth.imp);
@@ -904,6 +968,11 @@ void ObjCProcessor::ReadMethodList(ObjCReader* reader, ClassBase& cls, std::stri
 			method.imp = meth.imp;
 			cls.methodList[cursor] = method;
 			m_localMethods[cursor] = method;
+
+			if (selAddr)
+				m_data->AddUserDataReference(selAddr, meth.imp);
+			if (selRefAddr)
+				m_data->AddUserDataReference(selRefAddr, meth.imp);
 		}
 		catch (...)
 		{
@@ -1098,10 +1167,13 @@ bool ObjCProcessor::ApplyMethodType(Class& cls, Method& method, bool isInstanceM
 
 	for (size_t i = 3; i < typeTokens.size(); i++)
 	{
-		std::string suffix;
+		std::string name;
+		if (selectorTokens.size() > i - 3)
+			name = ArgumentNameFromSelectorComponent(selectorTokens[i - 3]);
+		else
+			name = "arg";
 
-		params.push_back({selectorTokens.size() > i - 3 ? selectorTokens[i - 3] : "arg",
-			typeForQualifiedNameOrType(typeTokens[i]), true, BinaryNinja::Variable()});
+		params.push_back({std::move(name), typeForQualifiedNameOrType(typeTokens[i]), true, BinaryNinja::Variable()});
 	}
 
 	auto funcType = BinaryNinja::Type::FunctionType(retType, cc, params);
@@ -1171,15 +1243,8 @@ void ObjCProcessor::PostProcessObjCSections(ObjCReader* reader)
 		auto type = Type::PointerType(ptrSize, Type::NamedType(m_data, m_typeNames.cls));
 		for (view_ptr_t i = start; i < end; i += ptrSize)
 		{
-			reader->Seek(i);
-			auto clsLoc = ReadPointerAccountingForRelocations(reader);
-			if (const auto& it = m_classes.find(clsLoc); it != m_classes.end())
-			{
-				auto& cls = it->second;
-				std::string name = cls.name;
-				if (!name.empty())
-					DefineObjCSymbol(DataSymbol, type, "clsRef_" + name, i, true);
-			}
+			if (auto className = ClassNameForTargetOfPointerAt(reader, i))
+				DefineObjCSymbol(DataSymbol, type, "clsRef_" + *className, i, true);
 		}
 	}
 	if (auto superRefs = GetSectionWithName("__objc_superrefs"))
@@ -1243,8 +1308,8 @@ uint64_t ObjCProcessor::ReadPointerAccountingForRelocations(ObjCReader* reader)
 }
 
 
-ObjCProcessor::ObjCProcessor(BinaryView* data, const char* loggerName, bool isBackedByDatabase, bool skipClassBaseProtocols) :
-	m_isBackedByDatabase(isBackedByDatabase), m_skipClassBaseProtocols(skipClassBaseProtocols), m_data(data)
+ObjCProcessor::ObjCProcessor(BinaryView* data, const char* loggerName, bool skipClassBaseProtocols) :
+	 m_skipClassBaseProtocols(skipClassBaseProtocols), m_data(data)
 {
 	m_logger = m_data->CreateLogger(loggerName);
 }
@@ -1264,9 +1329,6 @@ void ObjCProcessor::ProcessObjCData()
 	m_symbolQueue = new SymbolQueue();
 	auto addrSize = m_data->GetAddressSize();
 
-	m_typeNames.relativePtr = defineTypedef(m_data, {"rptr_t"}, Type::IntegerType(4, true));
-	auto rptr_t = Type::NamedType(m_data, m_typeNames.relativePtr);
-
 	m_typeNames.id = defineTypedef(m_data, {"id"}, Type::PointerType(addrSize, Type::VoidType()));
 	m_typeNames.sel = defineTypedef(m_data, {"SEL"}, Type::PointerType(addrSize, Type::IntegerType(1, false)));
 
@@ -1275,17 +1337,27 @@ void ObjCProcessor::ProcessObjCData()
 	m_typeNames.nsuInteger = defineTypedef(m_data, {"NSUInteger"}, Type::IntegerType(addrSize, false));
 	m_typeNames.cgFloat = defineTypedef(m_data, {"CGFloat"}, Type::FloatType(addrSize));
 
-	Ref<Type> relativeSelectorPtr;
+	BNPointerBaseType relativeSelectorBaseType = RelativeToVariableAddressPointerBaseType;
+	uint64_t relativeSelectorBaseOffset = 0;
 	auto reader = GetReader();
 	if (auto objCRelativeMethodsBaseAddr = GetObjCRelativeMethodBaseAddress(reader.get())) {
 		m_logger->LogDebug("RelativeMethodSelector Base: 0x%llx", objCRelativeMethodsBaseAddr);
-
-		auto type = TypeBuilder::PointerType(4, Type::PointerType(addrSize, Type::IntegerType(1, false)))
-			.SetPointerBase(RelativeToConstantPointerBaseType, objCRelativeMethodsBaseAddr)
-			.Finalize();
-		auto relativeSelectorPtrName = defineTypedef(m_data, {"relative_SEL"}, type);
-		relativeSelectorPtr = Type::NamedType(m_data, relativeSelectorPtrName);
+		relativeSelectorBaseType = RelativeToConstantPointerBaseType;
+		relativeSelectorBaseOffset = objCRelativeMethodsBaseAddr;
 	}
+
+	auto relativeSelectorPtrName = defineTypedef(m_data, {"rel_SEL"},
+		TypeBuilder::PointerType(4, Type::PointerType(addrSize, Type::IntegerType(1, false)))
+			.SetPointerBase(relativeSelectorBaseType, relativeSelectorBaseOffset)
+			.Finalize());
+	auto relativeCharPtrName = defineTypedef(m_data, {"rel_cstr"},
+		TypeBuilder::PointerType(4, Type::PointerType(addrSize, Type::IntegerType(1, false)))
+			.SetPointerBase(RelativeToVariableAddressPointerBaseType, 0)
+			.Finalize());
+	auto relativeIMPPtrName = defineTypedef(m_data, {"rel_IMP"},
+		TypeBuilder::PointerType(4, Type::VoidType())
+			.SetPointerBase(RelativeToVariableAddressPointerBaseType, 0)
+			.Finalize());
 
 	// https://github.com/apple-oss-distributions/objc4/blob/196363c165b175ed925ef6b9b99f558717923c47/runtime/objc-abi.h
 	EnumerationBuilder imageInfoFlagBuilder;
@@ -1322,9 +1394,9 @@ void ObjCProcessor::ProcessObjCData()
 	m_typeNames.imageInfo = imageInfoType.first;
 
 	StructureBuilder methodEntry;
-	methodEntry.AddMember(relativeSelectorPtr ? relativeSelectorPtr : rptr_t, "name");
-	methodEntry.AddMember(rptr_t, "types");
-	methodEntry.AddMember(rptr_t, "imp");
+	methodEntry.AddMember(Type::NamedType(m_data, relativeSelectorPtrName), "name");
+	methodEntry.AddMember(Type::NamedType(m_data, relativeCharPtrName), "types");
+	methodEntry.AddMember(Type::NamedType(m_data, relativeIMPPtrName), "imp");
 	auto type = finalizeStructureBuilder(m_data, methodEntry, "objc_method_entry_t");
 	m_typeNames.methodEntry = type.first;
 
@@ -1448,11 +1520,9 @@ void ObjCProcessor::ProcessObjCData()
 
 	PostProcessObjCSections(reader.get());
 
-	auto id = m_data->BeginUndoActions();
 	m_symbolQueue->Process();
 	m_data->EndBulkModifySymbols();
 	delete m_symbolQueue;
-	m_data->ForgetUndoActions(id);
 
 	auto meta = SerializeMetadata();
 	m_data->StoreMetadata("Objective-C", meta, true);
@@ -1570,12 +1640,10 @@ void ObjCProcessor::ProcessCFStrings()
 				DefineObjCSymbol(DataSymbol, Type::NamedType(m_data, m_typeNames.cfString), "cfstr_" + str, i, true);
 			}
 		}
-		auto id = m_data->BeginUndoActions();
 		m_symbolQueue->Process();
 		m_data->EndBulkModifySymbols();
-		m_data->ForgetUndoActions(id);
+		delete m_symbolQueue;
 	}
-	delete m_symbolQueue;
 }
 
 void ObjCProcessor::AddRelocatedPointer(uint64_t location, uint64_t rewrite)

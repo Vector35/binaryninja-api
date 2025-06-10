@@ -113,6 +113,7 @@ class Platform(metaclass=_PlatformMetaClass):
 			self._cb.getGlobalRegisters = self._cb.getGlobalRegisters.__class__(self._get_global_regs)
 			self._cb.freeRegisterList = self._cb.freeRegisterList.__class__(self._free_register_list)
 			self._cb.getGlobalRegisterType = self._cb.getGlobalRegisterType.__class__(self._get_global_reg_type)
+			self._cb.getAddressSize = self._cb.getAddressSize.__class__(self._get_address_size)
 			self._cb.adjustTypeParserInput = self._cb.adjustTypeParserInput.__class__(self._adjust_type_parser_input)
 			self._cb.freeTypeParserInput = self._cb.freeTypeParserInput.__class__(self._free_type_parser_input)
 			self._pending_reg_lists = {}
@@ -149,6 +150,7 @@ class Platform(metaclass=_PlatformMetaClass):
 		self.handle: ctypes.POINTER(core.BNPlatform) = _handle
 		self._arch = _arch
 		self._name = None
+		self._address_size = core.BNGetPlatformAddressSize(_handle)
 
 	def _init(self, ctxt):
 		pass
@@ -195,6 +197,12 @@ class Platform(metaclass=_PlatformMetaClass):
 		except:
 			log_error(traceback.format_exc())
 			return None
+
+	def _get_address_size(self, ctxt):
+		try:
+			return self.address_size
+		except:
+			return self.arch.address_size
 
 	def _adjust_type_parser_input(
 			self,
@@ -327,6 +335,10 @@ class Platform(metaclass=_PlatformMetaClass):
 		if self._name is None:
 			self._name = core.BNGetPlatformName(self.handle)
 		return self._name
+
+	@property
+	def address_size(self) -> int:
+		return self._address_size
 
 	@classmethod
 	@property

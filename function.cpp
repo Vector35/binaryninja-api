@@ -2825,6 +2825,30 @@ void Function::SetExprFolding(uint64_t addr, BNExprFolding mode)
 }
 
 
+bool Function::IsConditionInverted(uint64_t addr)
+{
+	return BNIsConditionInverted(m_object, addr);
+}
+
+
+void Function::SetConditionInverted(uint64_t addr, bool invert)
+{
+	BNSetConditionInverted(m_object, addr, invert);
+}
+
+
+BNEarlyReturn Function::GetEarlyReturn(uint64_t addr)
+{
+	return BNGetEarlyReturn(m_object, addr);
+}
+
+
+void Function::SetEarlyReturn(uint64_t addr, BNEarlyReturn mode)
+{
+	BNSetEarlyReturn(m_object, addr, mode);
+}
+
+
 std::map<Variable, std::set<Variable>> Function::GetMergedVariables()
 {
 	size_t count;

@@ -2180,7 +2180,10 @@ TypeBuilder DemangleGNU3::DemangleSymbol(QualifiedName& varName)
 			else if (ext == ".eh_frame") ext = "exception handler frame";
 			else if (ext == ".eh_frame_hdr") ext = "exception handler frame header";
 			else if (ext == ".debug_frame") ext = "debug frame";
-			varName.back() += ext;
+
+			// On the off chance some invalid mangled string is passed in.
+			if (varName.size() > 0)
+				varName.back() += ext;
 			break;
 		}
 

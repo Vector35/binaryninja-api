@@ -8,7 +8,7 @@ use binaryninja::disassembly::{
 use binaryninja::function::Function;
 use binaryninja::headless::Session;
 use binaryninja::high_level_il::token_emitter::HighLevelILTokenEmitter;
-use binaryninja::high_level_il::{HighLevelILFunction, HighLevelInstructionIndex};
+use binaryninja::high_level_il::{HighLevelExpressionIndex, HighLevelILFunction};
 use binaryninja::language_representation::{
     register_language_representation_function_type, CoreLanguageRepresentationFunction,
     CoreLanguageRepresentationFunctionType, LanguageRepresentationFunction,
@@ -60,7 +60,7 @@ impl LanguageRepresentationFunction for MyLangRepr {
     fn expr_text(
         &self,
         il: &HighLevelILFunction,
-        expr_index: HighLevelInstructionIndex,
+        expr_index: HighLevelExpressionIndex,
         tokens: &HighLevelILTokenEmitter,
         _settings: &DisassemblySettings,
         _as_full_ast: bool,
@@ -101,7 +101,7 @@ impl LanguageRepresentationFunction for MyLangRepr {
     fn begin_lines(
         &self,
         _il: &HighLevelILFunction,
-        _expr_index: HighLevelInstructionIndex,
+        _expr_index: HighLevelExpressionIndex,
         _tokens: &HighLevelILTokenEmitter,
     ) {
     }
@@ -109,7 +109,7 @@ impl LanguageRepresentationFunction for MyLangRepr {
     fn end_lines(
         &self,
         _il: &HighLevelILFunction,
-        _expr_index: HighLevelInstructionIndex,
+        _expr_index: HighLevelExpressionIndex,
         _tokens: &HighLevelILTokenEmitter,
     ) {
     }
@@ -149,7 +149,7 @@ fn test_custom_language_representation() {
     let il = func.high_level_il(false).unwrap();
 
     let settings = DisassemblySettings::new();
-    let root_idx = il.root_instruction_index();
+    let root_idx = il.root_expression_index();
     let result = _repr.linear_lines(&il, root_idx, &settings, false);
     let output: String = result.iter().map(|dis| dis.to_string()).collect();
     assert_eq!(

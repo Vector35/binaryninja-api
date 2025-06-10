@@ -956,6 +956,10 @@ bool SharedCacheView::InitController()
 	m_logger->LogDebug("Loading images using pattern: %s", autoLoadPattern.c_str());
 
 	{
+		// TODO: Refusing to add undo action "Added section libsystem_c.dylib::__macho_header", there is literally
+		// TODO: no way around this warning as undo actions are implicit with user sections, for more detail see:
+		// TODO:	- https://github.com/Vector35/binaryninja-api/issues/6742
+		// TODO:	- https://github.com/Vector35/binaryninja-api/issues/6289
 		// Load all images that match the `autoLoadPattern`.
 		auto startTime = std::chrono::high_resolution_clock::now();
 		size_t loadedImages = 0;

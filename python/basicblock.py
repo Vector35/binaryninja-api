@@ -252,19 +252,23 @@ class BasicBlock:
 		elif il_type == _function.FunctionGraphType.LiftedILFunctionGraph:
 			return func.lifted_il
 		elif il_type == _function.FunctionGraphType.LowLevelILSSAFormFunctionGraph:
-			return func.low_level_il.ssa_form
+			func_llil = func.low_level_il
+			return func_llil.ssa_form if func_llil is not None else None
 		elif il_type == _function.FunctionGraphType.MediumLevelILFunctionGraph:
 			return func.medium_level_il
 		elif il_type == _function.FunctionGraphType.MediumLevelILSSAFormFunctionGraph:
-			return func.medium_level_il.ssa_form
+			func_mlil = func.medium_level_il
+			return func_mlil.ssa_form if func_mlil is not None else None
 		elif il_type == _function.FunctionGraphType.MappedMediumLevelILFunctionGraph:
 			return func.mapped_medium_level_il
 		elif il_type == _function.FunctionGraphType.MappedMediumLevelILSSAFormFunctionGraph:
-			return func.mapped_medium_level_il.ssa_form
+			func_mmlil = func.mapped_medium_level_il
+			return func_mmlil.ssa_form if func_mmlil is not None else None
 		elif il_type == _function.FunctionGraphType.HighLevelILFunctionGraph:
 			return func.high_level_il
 		elif il_type == _function.FunctionGraphType.HighLevelILSSAFormFunctionGraph:
-			return func.high_level_il.ssa_form
+			func_hlil = func.high_level_il
+			return func_hlil.ssa_form if func_hlil is not None else None
 		elif il_type == _function.FunctionGraphType.HighLevelLanguageRepresentationFunctionGraph:
 			return func.high_level_il
 		else:

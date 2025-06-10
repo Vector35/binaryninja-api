@@ -3,7 +3,9 @@ use std::hash::{Hash, Hasher};
 
 use binaryninjacore_sys::*;
 
-use super::{HighLevelILBlock, HighLevelILInstruction, HighLevelInstructionIndex};
+use super::{
+    HighLevelExpressionIndex, HighLevelILBlock, HighLevelILInstruction, HighLevelInstructionIndex,
+};
 use crate::basic_block::BasicBlock;
 use crate::function::{Function, Location};
 use crate::rc::{Array, Ref, RefCountable};
@@ -35,31 +37,34 @@ impl HighLevelILFunction {
         if index.0 >= self.instruction_count() {
             None
         } else {
-            Some(HighLevelILInstruction::new(self.to_owned(), index))
+            Some(HighLevelILInstruction::from_instr_index(
+                self.to_owned(),
+                index,
+            ))
         }
     }
 
     pub fn instruction_from_expr_index(
         &self,
-        expr_index: HighLevelInstructionIndex,
+        expr_index: HighLevelExpressionIndex,
     ) -> Option<HighLevelILInstruction> {
         if expr_index.0 >= self.expression_count() {
             None
         } else {
-            Some(HighLevelILInstruction::new_expr(
+            Some(HighLevelILInstruction::from_expr_index(
                 self.to_owned(),
                 expr_index,
             ))
         }
     }
 
-    // TODO: This returns an expression index!
-    pub fn root_instruction_index(&self) -> HighLevelInstructionIndex {
-        HighLevelInstructionIndex(unsafe { BNGetHighLevelILRootExpr(self.handle) })
+    pub fn root_expression_index(&self) -> HighLevelExpressionIndex {
+        HighLevelExpressionIndex(unsafe { BNGetHighLevelILRootExpr(self.handle) })
     }
 
     pub fn root(&self) -> HighLevelILInstruction {
-        HighLevelILInstruction::new_expr(self.as_ast(), self.root_instruction_index())
+        self.instruction_from_expr_index(self.root_expression_index())
+            .expect("Invalid root expression index")
     }
 
     pub fn set_root(&self, new_root: &HighLevelILInstruction) {

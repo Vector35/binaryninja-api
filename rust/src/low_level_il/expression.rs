@@ -12,14 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use binaryninjacore_sys::BNGetLowLevelILByIndex;
 use binaryninjacore_sys::BNLowLevelILInstruction;
+use binaryninjacore_sys::{
+    BNGetLowLevelILByIndex, BNGetLowLevelILExprValue, BNGetLowLevelILPossibleExprValues,
+};
 
 use super::operation;
 use super::operation::Operation;
 use super::VisitorAction;
 use super::*;
 use crate::architecture::CoreFlagWrite;
+use crate::variable::{PossibleValueSet, RegisterValue};
+use crate::DataFlowQueryOption;
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
@@ -213,11 +217,38 @@ where
     }
 }
 
-impl<F> LowLevelILExpression<'_, Finalized, F, ValueExpr>
+impl<M, F> LowLevelILExpression<'_, M, F, ValueExpr>
 where
+    M: FunctionMutability,
     F: FunctionForm,
 {
-    // TODO possible values
+    /// Value of expression if constant or a known value.
+    ///
+    /// NOTE: If a value is expressed but not concrete, use [`LowLevelILExpression::possible_values`].
+    pub fn value(&self) -> RegisterValue {
+        let value = unsafe { BNGetLowLevelILExprValue(self.function.handle, self.index.0) };
+        RegisterValue::from(value)
+    }
+
+    /// Possible values of expression using path-sensitive static data flow analysis
+    pub fn possible_values(&self) -> PossibleValueSet {
+        self.possible_values_with_opts(&[])
+    }
+
+    /// Possible values of expression using path-sensitive static data flow analysis
+    pub fn possible_values_with_opts(&self, options: &[DataFlowQueryOption]) -> PossibleValueSet {
+        let value = unsafe {
+            BNGetLowLevelILPossibleExprValues(
+                self.function.handle,
+                self.index.0,
+                options.as_ptr() as *mut _,
+                options.len(),
+            )
+        };
+        PossibleValueSet::from_owned_core_raw(value)
+    }
+
+    // TODO: Possible register, stack and flag values.
 }
 
 #[derive(Debug)]

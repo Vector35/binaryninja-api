@@ -25,6 +25,11 @@ pub mod form;
 pub mod handler;
 pub mod report;
 
+// Re-export the public items from the submodules, for convenience.
+pub use report::*;
+pub use form::*;
+pub use handler::*;
+
 pub type MessageBoxButtonSet = BNMessageBoxButtonSet;
 pub type MessageBoxIcon = BNMessageBoxIcon;
 pub type MessageBoxButtonResult = BNMessageBoxButtonResult;

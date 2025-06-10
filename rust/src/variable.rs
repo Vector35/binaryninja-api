@@ -590,9 +590,9 @@ impl From<ValueRange<i64>> for BNValueRange {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LookupTableEntry {
     /// The set of integers that correspond with [`Self::to`].
-    from: HashSet<i64>,
+    pub from: HashSet<i64>,
     /// The associated "mapped" value.
-    to: i64,
+    pub to: i64,
 }
 
 impl LookupTableEntry {

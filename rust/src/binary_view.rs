@@ -1968,7 +1968,7 @@ pub struct BinaryView {
 }
 
 impl BinaryView {
-    pub(crate) unsafe fn from_raw(handle: *mut BNBinaryView) -> Self {
+    pub unsafe fn from_raw(handle: *mut BNBinaryView) -> Self {
         debug_assert!(!handle.is_null());
         Self { handle }
     }

@@ -35,5 +35,5 @@ fn main() {
         TokenEscapingType::NoTokenEscapingType,
     );
 
-    println!("{}", printed_types.unwrap());
+    println!("{:?}", printed_types.unwrap());
 }

@@ -4,7 +4,7 @@ use crate::binary_view::BinaryView;
 use crate::disassembly::InstructionTextToken;
 use crate::platform::Platform;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
-use crate::string::{raw_to_string, BnStrCompatible, BnString};
+use crate::string::{raw_to_string, BnString, IntoCStr};
 use crate::type_container::TypeContainer;
 use crate::types::{NamedTypeReference, QualifiedName, QualifiedNameAndType, Type};
 use binaryninjacore_sys::*;
@@ -15,8 +15,8 @@ pub type TokenEscapingType = BNTokenEscapingType;
 pub type TypeDefinitionLineType = BNTypeDefinitionLineType;
 
 /// Register a custom parser with the API
-pub fn register_type_printer<S: BnStrCompatible, T: TypePrinter>(
-    name: S,
+pub fn register_type_printer<T: TypePrinter>(
+    name: &str,
     parser: T,
 ) -> (&'static mut T, CoreTypePrinter) {
     let parser = Box::leak(Box::new(parser));
@@ -34,19 +34,15 @@ pub fn register_type_printer<S: BnStrCompatible, T: TypePrinter>(
         freeString: Some(cb_free_string),
         freeLines: Some(cb_free_lines),
     };
-    let result = unsafe {
-        BNRegisterTypePrinter(
-            name.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
-            &mut callback,
-        )
-    };
+    let raw_name = name.to_cstr();
+    let result = unsafe { BNRegisterTypePrinter(raw_name.as_ptr(), &mut callback) };
     let core = unsafe { CoreTypePrinter::from_raw(NonNull::new(result).unwrap()) };
     (parser, core)
 }
 
 #[repr(transparent)]
 pub struct CoreTypePrinter {
-    handle: NonNull<BNTypePrinter>,
+    pub(crate) handle: NonNull<BNTypePrinter>,
 }
 
 impl CoreTypePrinter {
@@ -61,16 +57,16 @@ impl CoreTypePrinter {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn printer_by_name<S: BnStrCompatible>(name: S) -> Option<CoreTypePrinter> {
-        let name_raw = name.into_bytes_with_nul();
-        let result = unsafe { BNGetTypePrinterByName(name_raw.as_ref().as_ptr() as *const c_char) };
+    pub fn printer_by_name(name: &str) -> Option<CoreTypePrinter> {
+        let name_raw = name.to_cstr();
+        let result = unsafe { BNGetTypePrinterByName(name_raw.as_ptr()) };
         NonNull::new(result).map(|x| unsafe { Self::from_raw(x) })
     }
 
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNGetTypePrinterName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     pub fn get_type_tokens<T: Into<QualifiedName>>(
@@ -367,7 +363,7 @@ impl Default for CoreTypePrinter {
         // TODO: Remove this entirely, there is no "default", its view specific lets not make this some defined behavior.
         let default_settings = crate::settings::Settings::new();
         let name = default_settings.get_string("analysis.types.printerName");
-        Self::printer_by_name(name).unwrap()
+        Self::printer_by_name(&name).unwrap()
     }
 }
 
@@ -951,7 +947,7 @@ unsafe extern "C" fn cb_print_all_types<T: TypePrinter>(
 
 unsafe extern "C" fn cb_free_string(_ctxt: *mut c_void, string: *mut c_char) {
     // SAFETY: The returned string is just BnString
-    let _ = BnString::from_raw(string);
+    BnString::free_raw(string);
 }
 
 unsafe extern "C" fn cb_free_tokens(

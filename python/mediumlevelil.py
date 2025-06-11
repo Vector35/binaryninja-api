@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2024 Vector 35 Inc
+# Copyright (c) 2018-2025 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -5193,17 +5193,26 @@ class MediumLevelILFunction:
 		"""
 		return self.expr(MediumLevelILOperation.MLIL_FCMP_UO, a, b, size=size, source_location=loc)
 
-	def goto(self, label: MediumLevelILLabel) -> ExpressionIndex:
+	def goto(
+		self, label: MediumLevelILLabel, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
 		"""
 		``goto`` returns a goto expression which jumps to the provided MediumLevelILLabel.
 
 		:param MediumLevelILLabel label: Label to jump to
+		:param ILSourceLocation loc: location of returned expression
 		:return: the ExpressionIndex that jumps to the provided label
 		:rtype: ExpressionIndex
 		"""
-		return ExpressionIndex(core.BNMediumLevelILGoto(self.handle, label.handle))
+		if loc is not None:
+			return ExpressionIndex(core.BNMediumLevelILGotoWithLocation(self.handle, label.handle, loc.address, loc.source_operand))
+		else:
+			return ExpressionIndex(core.BNMediumLevelILGoto(self.handle, label.handle))
 
-	def if_expr(self, operand: ExpressionIndex, t: MediumLevelILLabel, f: MediumLevelILLabel) -> ExpressionIndex:
+	def if_expr(
+		self, operand: ExpressionIndex, t: MediumLevelILLabel, f: MediumLevelILLabel,
+		loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
 		"""
 		``if_expr`` returns the ``if`` expression which depending on condition ``operand`` jumps to the MediumLevelILLabel
 		``t`` when the condition expression ``operand`` is non-zero and ``f`` when it's zero.
@@ -5211,10 +5220,14 @@ class MediumLevelILFunction:
 		:param ExpressionIndex operand: comparison expression to evaluate.
 		:param MediumLevelILLabel t: Label for the true branch
 		:param MediumLevelILLabel f: Label for the false branch
+		:param ILSourceLocation loc: location of returned expression
 		:return: the ExpressionIndex for the if expression
 		:rtype: ExpressionIndex
 		"""
-		return ExpressionIndex(core.BNMediumLevelILIf(self.handle, operand, t.handle, f.handle))
+		if loc is not None:
+			return ExpressionIndex(core.BNMediumLevelILIfWithLocation(self.handle, operand, t.handle, f.handle, loc.address, loc.source_operand))
+		else:
+			return ExpressionIndex(core.BNMediumLevelILIf(self.handle, operand, t.handle, f.handle))
 
 	def mark_label(self, label: MediumLevelILLabel) -> None:
 		"""

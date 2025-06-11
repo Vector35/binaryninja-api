@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright (c) 2015-2024 Vector 35 Inc
+# Copyright (c) 2015-2025 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -47,7 +47,7 @@ from .enums import (
     TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, RegisterValueType, DisassemblyOption,
 	RelocationType
 )
-from .exceptions import RelocationWriteException, ILException, ExternalLinkException
+from .exceptions import RelocationWriteException, ExternalLinkException
 
 from . import associateddatastore  # required for _BinaryViewAssociatedDataStore
 from .log import log_warn, log_error, Logger
@@ -2381,6 +2381,11 @@ class MemoryMap:
 		"""
 		core.BNSetLogicalMemoryMapEnabled(self.handle, enabled)
 
+	@property
+	def is_activated(self):
+		"""Whether the memory map is activated for the associated view."""
+		return core.BNIsMemoryMapActivated(self.handle)
+
 	def add_memory_region(self, name: str, start: int, source: Union['os.PathLike', str, bytes, bytearray, 'BinaryView', 'databuffer.DataBuffer', 'fileaccessor.FileAccessor'], flags: SegmentFlag = 0) -> bool:
 		"""
 		Adds a memory region to the memory map. Depending on the source parameter, the memory region is created as one of the following types:
@@ -2605,18 +2610,25 @@ class BinaryView:
 		self._platform = None
 		self._endianness = None
 
-	def __enter__(self) -> 'BinaryView':
-		return self
-
-	def __exit__(self, type, value, traceback):
-		self.file.close()
-
-	def __del__(self):
+	def _cleanup(self):
 		if core is None:
 			return
 		for i in self._notifications.values():
 			i._unregister()
-		core.BNFreeBinaryView(self.handle)
+		self._notifications.clear()
+		if self.handle is not None:
+			core.BNFreeBinaryView(self.handle)
+			self.handle = None
+
+	def __enter__(self) -> 'BinaryView':
+		return self
+
+	def __exit__(self, type, value, traceback):
+		self._cleanup()
+		self.file.close()
+
+	def __del__(self):
+		self._cleanup()
 
 	def __repr__(self):
 		start = self.start
@@ -2986,13 +2998,15 @@ class BinaryView:
 	def mlil_basic_blocks(self) -> Generator['mediumlevelil.MediumLevelILBasicBlock', None, None]:
 		"""A generator of all MediumLevelILBasicBlock objects in the BinaryView"""
 		for func in self.mlil_functions():
-			yield from func.basic_blocks
+			if func is not None:
+				yield from func.basic_blocks
 
 	@property
 	def hlil_basic_blocks(self) -> Generator['highlevelil.HighLevelILBasicBlock', None, None]:
 		"""A generator of all HighLevelILBasicBlock objects in the BinaryView"""
 		for func in self.hlil_functions():
-			yield from func.basic_blocks
+			if func is not None:
+				yield from func.basic_blocks
 
 	@property
 	def instructions(self) -> InstructionsType:
@@ -3181,10 +3195,7 @@ class BinaryView:
 		for func in AdvancedILFunctionList(
 		    self, self.preload_limit if preload_limit is None else preload_limit, function_generator
 		):
-			try:
-				yield func.mlil
-			except ILException:
-				pass
+			yield func.mlil
 
 	def hlil_functions(
 	    self, preload_limit: Optional[int] = None,
@@ -3197,10 +3208,7 @@ class BinaryView:
 		for func in AdvancedILFunctionList(
 		    self, self.preload_limit if preload_limit is None else preload_limit, function_generator
 		):
-			try:
-				yield func.hlil
-			except ILException:
-				pass
+			yield func.hlil
 
 	@property
 	def has_functions(self) -> bool:
@@ -3375,7 +3383,12 @@ class BinaryView:
 	def analysis_progress(self) -> AnalysisProgress:
 		"""Status of current analysis (read-only)"""
 		result = core.BNGetAnalysisProgress(self.handle)
-		return AnalysisProgress(result.state, result.count, result.total)
+		return AnalysisProgress(AnalysisState(result.state), result.count, result.total)
+
+	@property
+	def analysis_state(self) -> AnalysisState:
+		"""State of current analysis (read-only)"""
+		return AnalysisState(core.BNGetAnalysisState(self.handle))
 
 	@property
 	def linear_disassembly(self) -> Iterator['lineardisassembly.LinearDisassemblyLine']:
@@ -3677,6 +3690,21 @@ class BinaryView:
 			return [(ranges[i].start, ranges[i].end) for i in range(count.value)]
 		finally:
 			core.BNFreeRelocationRanges(ranges)
+
+	def finalize_new_segments(self) -> bool:
+		"""
+		Performs "finalization" on segments added after initial Finalization (performed after an Init() has completed).
+
+		Finalizing a segment involves optimizing the relocation info stored in that segment, so if a segment is added
+			and relocations are defined for that segment by some automated process, this function should be called afterwards.
+
+		An example of this can be seen in the KernelCache plugin, in `KernelCache::LoadImageWithInstallName`.
+			After we load an image, map new segments, and define relocations for all of them, we call this function
+			to let core know it is now safe to finalize the new segments
+
+		:return: Whether finalization was successful
+		"""
+		return core.BNBinaryViewFinalizeNewSegments(self.handle)
 
 	def range_contains_relocation(self, addr: int, size: int) -> bool:
 		"""Checks if the specified range overlaps with a relocation"""
@@ -4184,6 +4212,8 @@ class BinaryView:
 		"""
 		``create_database`` writes the current database (.bndb) out to the specified file.
 
+		.. warning:: This API will only save a database, NOT the original file from a view. To save the original file, use :py:func:`save`. To update a database, use :py:func:`save_auto_snapshot`
+
 		:param str filename: path and filename to write the bndb to, this string `should` have ".bndb" appended to it.
 		:param callback progress_func: optional function to be called with the current progress and total count.
 		:param SaveSettings settings: optional argument for special save options.
@@ -4671,6 +4701,8 @@ class BinaryView:
 		"""
 		``save`` saves the original binary file to the provided destination ``dest`` along with any modifications.
 
+		.. warning:: This API will only save the original file from a view. To save a database, use :py:func:`create_database`.
+
 		:param str dest: destination path and filename of file to be written
 		:return: True on success, False on failure
 		:rtype: bool
@@ -4931,9 +4963,8 @@ class BinaryView:
 
 	def abort_analysis(self) -> None:
 		"""
-		``abort_analysis`` will abort the currently running analysis.
-
-		.. warning:: This method should be considered non-recoverable and generally only used when shutdown is imminent after stopping.
+		``abort_analysis`` aborts analysis and suspends the workflow machine. This operation is recoverable, and the workflow machine
+		can be re-enabled via the ``enable`` API on WorkflowMachine.
 
 		:rtype: None
 		"""
@@ -8890,7 +8921,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 
 	def find_next_text(
 	    self, start: int, text: str, settings: Optional[_function.DisassemblySettings] = None,
-	    flags: FindFlag = FindFlag.FindCaseSensitive,
+	    flags: int = FindFlag.FindCaseSensitive,
 	    graph_type: _function.FunctionViewTypeOrName = FunctionGraphType.NormalFunctionGraph
 	) -> Optional[int]:
 		"""
@@ -8900,13 +8931,14 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		:param int start: virtual address to start searching from.
 		:param str text: text to search for
 		:param DisassemblySettings settings: disassembly settings
-		:param FindFlag flags: (optional) defaults to case-insensitive data search
+		:param FindFlag flags: (optional) bit-flags list of options, defaults to case-insensitive data search
 
 			==================== ============================
 			FindFlag             Description
 			==================== ============================
 			FindCaseSensitive    Case-sensitive search
 			FindCaseInsensitive  Case-insensitive search
+			FindIgnoreWhitespace Ignore whitespace characters
 			==================== ============================
 		:param FunctionViewType graph_type: the IL to search within
 		"""
@@ -9056,13 +9088,14 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		:param str text: text to search for
 		:param DisassemblySettings settings: DisassemblySettings object used to render the text \
 		to be searched
-		:param FindFlag flags: (optional) defaults to case-insensitive data search
+		:param FindFlag flags: (optional) bit-flags list of options, defaults to case-insensitive data search
 
 			==================== ============================
 			FindFlag             Description
 			==================== ============================
 			FindCaseSensitive    Case-sensitive search
 			FindCaseInsensitive  Case-insensitive search
+			FindIgnoreWhitespace Ignore whitespace characters
 			==================== ============================
 		:param FunctionViewType graph_type: the IL to search within
 		:param callback progress_func: optional function to be called with the current progress \
@@ -9532,9 +9565,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		seg = core.BNGetSegmentAt(self.handle, addr)
 		if not seg:
 			return None
-		segment_handle = core.BNNewSegmentReference(seg)
-		assert segment_handle is not None, "core.BNNewSegmentReference returned None"
-		return Segment(segment_handle)
+		return Segment(seg)
 
 	def get_address_for_data_offset(self, offset: int) -> Optional[int]:
 		"""
@@ -9626,9 +9657,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		section = core.BNGetSectionByName(self.handle, name)
 		if section is None:
 			return None
-		section_handle = core.BNNewSectionReference(section)
-		assert section_handle is not None, "core.BNNewSectionReference returned None"
-		result = Section(section_handle)
+		result = Section(section)
 		return result
 
 	def get_unique_section_names(self, name_list: List[str]) -> List[str]:
@@ -9701,9 +9730,8 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 	def debug_info(self) -> "debuginfo.DebugInfo":
 		"""The current debug info object for this binary view"""
 		debug_handle = core.BNGetDebugInfo(self.handle)
-		debug_ref = core.BNNewDebugInfoReference(debug_handle)
-		assert debug_ref is not None, "core.BNNewDebugInfoReference returned None"
-		return debuginfo.DebugInfo(debug_ref)
+		assert debug_handle is not None, "core.BNGetDebugInfo returned None"
+		return debuginfo.DebugInfo(debug_handle)
 
 	@debug_info.setter
 	def debug_info(self, value: "debuginfo.DebugInfo") -> None:

@@ -152,7 +152,7 @@ fn modify_project() {
         .unwrap();
 
     assert_eq!(project.folders().unwrap().len(), 5);
-    let last_folder = project.folder_by_id(folder_5.id()).unwrap();
+    let last_folder = project.folder_by_id(&folder_5.id()).unwrap();
     project.delete_folder(&last_folder).unwrap();
     assert_eq!(project.folders().unwrap().len(), 4);
     drop(folder_5);
@@ -245,8 +245,8 @@ fn modify_project() {
     .unwrap();
 
     assert_eq!(project.files().len(), 10);
-    let file_a = project.file_by_id(file_8.id()).unwrap();
-    let file_b = project.file_by_path(file_7.path_on_disk()).unwrap();
+    let file_a = project.file_by_id(&file_8.id()).unwrap();
+    let file_b = project.file_by_path(&file_7.path_on_disk()).unwrap();
     project.delete_file(&file_a);
     project.delete_file(&file_b);
     assert_eq!(project.files().len(), 8);

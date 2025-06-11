@@ -48,7 +48,38 @@ There are two distinct types of Workflows:
 
 ### **Activity**
 
-An **Activity** is an individual analysis or action within a Workflow, serving as the fundamental building block of the analysis process. Each Activity is responsible for a specific task and can be configured to define its execution behavior, dependencies, and eligibility criteria. Activities work together within the Workflow to carry out complex analysis tasks, with roles and configurations determining how they interact and execute. The Activity operates on an `AnalysisContext`, providing access to the binary data, analysis state, and transformation utilities.
+An **Activity** represents a fundamental unit of work within a Workflow. Activities are configurable components that form the building blocks of complex analysis pipelines. Activities can:
+  - Execute specific tasks through callbacks
+  - Make dynamic decisions
+  - Manage dependencies and eligibility
+  - Control concurrency and synchronization
+
+Each Activity operates on an `AnalysisContext`, providing access to binary data, analysis state, and APIs for generating and modifying the intermediate language (IL) stack.
+
+#### Activity Roles
+
+Activities can have different **roles** that define their behavior and how they interact within the Workflow. The following table summarizes the different roles available for Activities:
+
+| Role | Purpose |
+|------|---------|
+| `action` | Executes a specific callback or operation immediately within the current execution context |
+| `selector` | Dynamically chooses which child activities to execute based on configurable eligibility criteria |
+| `subflow` | Creates a new Task object and asynchronously processes a subgraph, synchronizing concurrent actions after completion |
+| `task` | Enqueues a subgraph into an existing Task object for concurrent execution |
+
+#### Eligibility Control
+
+Activities provide fine-grained execution control through:
+* Static configuration via JSON settings
+* Dynamic eligibility functions
+* Continuation and run-once behaviors
+
+#### Continuation Support
+
+Activities can be configured with `continuation` eligibility, allowing them to:
+  - Remain on the execution stack after processing
+  - Execute repeatedly until becoming ineligible
+  - Build iterative processing patterns
 
 ### Workflow Machine
 
@@ -145,7 +176,7 @@ You can query the list of all registered workflows or filter them by type using 
 # List all Module and Function workflows
 list(Workflow)
 [<Workflow: core.function.baseAnalysis>,
-<Workflow: core.function.dsc>,
+<Workflow: core.function.sharedCache>,
 <Workflow: core.function.metaAnalysis>,
 <Workflow: core.function.objectiveC>,
 <Workflow: core.module.baseAnalysis>,
@@ -157,7 +188,7 @@ Settings().query_property_string_list("analysis.workflows.moduleWorkflow", "enum
 
 # List all function workflows from the Settings API
 >>> Settings().query_property_string_list("analysis.workflows.functionWorkflow", "enum")
-['core.function.baseAnalysis', 'core.function.dsc', 'core.function.metaAnalysis', 'core.function.objectiveC']
+['core.function.baseAnalysis', 'core.function.sharedCache', 'core.function.metaAnalysis', 'core.function.objectiveC']
 ```
 
 Once you've queried the available workflows, you can create your own by cloning and modifying an existing workflow. Below are some simple examples that demonstrate how to modify module-level analysis.
@@ -331,11 +362,11 @@ Activities can have different roles, defining their behavior and how they intera
 
 - `action`: The default role; performs a specific task.
 - `selector`: Contains child activities and uses an eligibility handler to determine which child activities to execute. This enables the ability to have a dynamic and reactive execution pipeline.
-- `subflow`: Creates a new task context and asynchronously processes its workflow sub-graph on a new thread within the workflow machine. The subflow executes asynchronously from the requestor, allowing the original thread to return immediately. Within this context, multiple task actions can be enqueued, enabling extensive parallel processing. After completing its workflow sub-graph, it enters a Stall state, waiting for all its asynchronous task actions to complete. If the `continuation` property is set to true, the subflow re-evaluates its dependencies upon finishing all task actions and re-executes. This facilitates complex iterative processes that continue until convergence is achieved.
+- `subflow`: Creates a new task context and asynchronously processes its workflow sub-graph on a new thread within the workflow machine. The subflow executes asynchronously from the requestor, allowing the original thread to return immediately. Within this context, multiple task actions can be enqueued, enabling extensive parallel processing. After completing its workflow sub-graph, it enters a Stall state, waiting for all its asynchronous task actions to complete.
 - `task`: Asynchronously processes the workflow graph on a new thread within the workflow machine. `task` activities enable the pipeline to execute asynchronously from its requestor. `task` activities require a task context to be present; if no task context exists, they execute immediately in the current thread.
 
 !!! note
-	Nested task contexts are not currently supported. We may consider adding this feature in the future if the need arises. Stated more simply, you may not embed a `subflow` within another `subflow`.
+	Activities with the `subflow` role are only permitted in Module workflows. Subflows are not supported within Function workflows.
 
 #### Activity Eligibility
 
@@ -520,9 +551,6 @@ The **Workflow Machine** includes an override system that allows you to manually
 The **Workflow Machine** is the core engine that manages and executes workflows. It controls the flow of analysis, ensuring that activities are executed in the correct order and respecting their dependencies. The Workflow Machine also handles activity eligibility, state transitions, and execution semantics, providing a robust and flexible framework for analysis.
 
 There is an API to interact directly with the Workflow Machine, allowing you to issue commands, query state, and control activity eligibility.
-
-!!! note
-	This API is only available in **Commercial** and above product editions. However, the Workflow Machine API is not required for the general use case of authoring or using workflows.
 
 ### WorkflowMachine CLI Commands
 

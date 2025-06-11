@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2024 Vector 35 Inc
+# Copyright (c) 2015-2025 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -65,6 +65,16 @@ class TypeContainer:
 
 	def __repr__(self):
 		return f"<type container {self.name}>"
+
+	@classmethod
+	def empty(cls):
+		"""
+		Get an empty Type Container which contains no types (immutable)
+		Useful when a function requires a Type Container but you don't have one.
+		:return: Empty type container
+		"""
+		handle = core.BNGetEmptyTypeContainer()
+		return TypeContainer(handle=handle)
 
 	@property
 	def id(self) -> str:

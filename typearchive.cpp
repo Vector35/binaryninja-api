@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2023 Vector 35 Inc
+// Copyright (c) 2015-2025 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -576,7 +576,7 @@ std::optional<std::string> TypeArchive::MergeSnapshots(
 	const std::string& secondSnapshot,
 	const std::unordered_map<std::string, std::string>& mergeConflictsIn,
 	std::unordered_set<std::string>& mergeConflictsOut,
-	std::function<bool(size_t, size_t)> progress
+	ProgressFunction progress
 )
 {
 	std::vector<const char*> mergeConflictKeysIn;

@@ -1,4 +1,4 @@
-// Copyright 2021-2024 Vector 35 Inc.
+// Copyright 2021-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,9 +43,9 @@ impl BackgroundTask {
         Self { handle }
     }
 
-    pub fn new<S: BnStrCompatible>(initial_text: S, can_cancel: bool) -> Ref<Self> {
-        let text = initial_text.into_bytes_with_nul();
-        let handle = unsafe { BNBeginBackgroundTask(text.as_ref().as_ptr() as *mut _, can_cancel) };
+    pub fn new(initial_text: &str, can_cancel: bool) -> Ref<Self> {
+        let text = initial_text.to_cstr();
+        let handle = unsafe { BNBeginBackgroundTask(text.as_ptr(), can_cancel) };
         // We should always be returned a valid task.
         assert!(!handle.is_null());
         unsafe { Ref::new(Self { handle }) }
@@ -71,15 +71,13 @@ impl BackgroundTask {
         unsafe { BNFinishBackgroundTask(self.handle) }
     }
 
-    pub fn progress_text(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetBackgroundTaskProgressText(self.handle)) }
+    pub fn progress_text(&self) -> String {
+        unsafe { BnString::into_string(BNGetBackgroundTaskProgressText(self.handle)) }
     }
 
-    pub fn set_progress_text<S: BnStrCompatible>(&self, text: S) {
-        let progress_text = text.into_bytes_with_nul();
-        unsafe {
-            BNSetBackgroundTaskProgressText(self.handle, progress_text.as_ref().as_ptr() as *mut _)
-        }
+    pub fn set_progress_text(&self, text: &str) {
+        let progress_text = text.to_cstr();
+        unsafe { BNSetBackgroundTaskProgressText(self.handle, progress_text.as_ptr()) }
     }
 
     pub fn running_tasks() -> Array<BackgroundTask> {

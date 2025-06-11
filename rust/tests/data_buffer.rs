@@ -13,7 +13,7 @@ fn get_slice() {
 #[test]
 fn set_len_write() {
     let mut data = DataBuffer::default();
-    assert_eq!(data.get_data(), &[]);
+    assert!(data.get_data().is_empty());
     unsafe { data.set_len(DUMMY_DATA_0.len()) };
     assert_eq!(data.len(), DUMMY_DATA_0.len());
     let mut contents = DUMMY_DATA_0.to_vec();
@@ -29,7 +29,7 @@ fn set_len_write() {
     assert_eq!(data.get_data(), &DUMMY_DATA_0[..13]);
 
     data.clear();
-    assert_eq!(data.get_data(), &[]);
+    assert!(data.get_data().is_empty());
 }
 
 #[test]

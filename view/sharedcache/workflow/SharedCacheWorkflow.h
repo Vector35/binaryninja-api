@@ -1,18 +1,8 @@
-
-#include "binaryninjaapi.h"
-
-using namespace BinaryNinja;
-
-
-#ifndef SHAREDCACHE_SHAREDCACHEWORKFLOW_H
-#define SHAREDCACHE_SHAREDCACHEWORKFLOW_H
-
+#pragma once
 
 class SharedCacheWorkflow
 {
 public:
-	static void ProcessOffImageCall(Ref<AnalysisContext> ctx, Ref<Function> func, Ref<MediumLevelILFunction> il, const MediumLevelILInstruction instr, ExprId exprIndex, bool applySymbolIfFoundToCurrentFunction = false);
-	static void FixupStubs(Ref<AnalysisContext> ctx);
 	static void Register();
 };
 
@@ -23,5 +13,3 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-
-#endif //SHAREDCACHE_SHAREDCACHEWORKFLOW_H

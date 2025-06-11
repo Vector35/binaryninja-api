@@ -21,7 +21,7 @@ def normalize(instxt):
     instxt = instxt.strip()
 
     # collapse runs of whitespace to one space character
-    instxt = re.sub('\s+', ' ', instxt)
+    instxt = re.sub(r'\s+', ' ', instxt)
 
     # remove comments
     if ' //' in instxt:

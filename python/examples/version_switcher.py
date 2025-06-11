@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) 2015-2024 Vector 35 Inc
+# Copyright (c) 2015-2025 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -22,7 +22,7 @@
 import sys
 
 from binaryninja.update import UpdateChannel, are_auto_updates_enabled, set_auto_updates_enabled, is_update_installation_pending, install_pending_update
-from binaryninja import core_version
+from binaryninja import core_version_info, get_install_directory, user_directory
 import datetime
 from six.moves import input
 
@@ -72,11 +72,11 @@ def select(version):
 				if are_auto_updates_enabled():
 					print("Disabling automatic updates.")
 					set_auto_updates_enabled(False)
-			if (version.version == core_version()):
+			if (version.version == core_version_info()):
 				print("Already running %s" % version.version)
 			else:
 				print("version.version %s" % version.version)
-				print("core_version %s" % core_version())
+				print("core_version %s" % core_version_info())
 				print("Downloading...")
 				print(version.update())
 				print("Installing...")
@@ -120,8 +120,10 @@ def main():
 	load_channel(chandefault)
 	while not done:
 		print("\n\tBinary Ninja Version Switcher")
+		print("\t\tCurrent Install:\t%s" % get_install_directory())
+		print("\t\tCurrent User Path:\t%s" % user_directory())
 		print("\t\tCurrent Channel:\t%s" % channel.name)
-		print("\t\tCurrent Version:\t%s" % core_version())
+		print("\t\tCurrent Version:\t%s" % core_version_info())
 		print("\t\tAuto-Updates On:\t%s\n" % are_auto_updates_enabled())
 		for index, version in enumerate(versions):
 			date = datetime.datetime.fromtimestamp(version.time).strftime('%c')

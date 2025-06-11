@@ -1,14 +1,14 @@
 use crate::rc::{Array, Ref, RefCountable};
 use crate::repository::Repository;
-use crate::string::BnStrCompatible;
+use crate::string::IntoCStr;
 use binaryninjacore_sys::{
     BNCreateRepositoryManager, BNFreeRepositoryManager, BNGetRepositoryManager,
     BNNewRepositoryManagerReference, BNRepositoryGetRepositoryByPath, BNRepositoryManager,
     BNRepositoryManagerAddRepository, BNRepositoryManagerCheckForUpdates,
     BNRepositoryManagerGetDefaultRepository, BNRepositoryManagerGetRepositories,
 };
-use std::ffi::c_char;
 use std::fmt::Debug;
+use std::path::Path;
 use std::ptr::NonNull;
 
 /// Keeps track of all the repositories and keeps the `enabled_plugins.json`
@@ -29,10 +29,9 @@ impl RepositoryManager {
         Ref::new(Self { handle })
     }
 
-    pub fn new<S: BnStrCompatible>(plugins_path: S) -> Ref<Self> {
-        let plugins_path = plugins_path.into_bytes_with_nul();
-        let result =
-            unsafe { BNCreateRepositoryManager(plugins_path.as_ref().as_ptr() as *const c_char) };
+    pub fn new(plugins_path: &str) -> Ref<Self> {
+        let plugins_path = plugins_path.to_cstr();
+        let result = unsafe { BNCreateRepositoryManager(plugins_path.as_ptr()) };
         unsafe { Self::ref_from_raw(NonNull::new(result).unwrap()) }
     }
 
@@ -61,30 +60,18 @@ impl RepositoryManager {
     /// * `repository_path` - path to where the repository will be stored on disk locally
     ///
     /// Returns true if the repository was successfully added, false otherwise.
-    pub fn add_repository<U: BnStrCompatible, P: BnStrCompatible>(
-        &self,
-        url: U,
-        repository_path: P,
-    ) -> bool {
-        let url = url.into_bytes_with_nul();
-        let repo_path = repository_path.into_bytes_with_nul();
+    pub fn add_repository(&self, url: &str, repository_path: &Path) -> bool {
+        let url = url.to_cstr();
+        let repo_path = repository_path.to_cstr();
         unsafe {
-            BNRepositoryManagerAddRepository(
-                self.handle.as_ptr(),
-                url.as_ref().as_ptr() as *const c_char,
-                repo_path.as_ref().as_ptr() as *const c_char,
-            )
+            BNRepositoryManagerAddRepository(self.handle.as_ptr(), url.as_ptr(), repo_path.as_ptr())
         }
     }
 
-    pub fn repository_by_path<P: BnStrCompatible>(&self, path: P) -> Option<Repository> {
-        let path = path.into_bytes_with_nul();
-        let result = unsafe {
-            BNRepositoryGetRepositoryByPath(
-                self.handle.as_ptr(),
-                path.as_ref().as_ptr() as *const c_char,
-            )
-        };
+    pub fn repository_by_path(&self, path: &Path) -> Option<Repository> {
+        let path = path.to_cstr();
+        let result =
+            unsafe { BNRepositoryGetRepositoryByPath(self.handle.as_ptr(), path.as_ptr()) };
         NonNull::new(result).map(|raw| unsafe { Repository::from_raw(raw) })
     }
 

@@ -1,4 +1,4 @@
-// Copyright 2021-2024 Vector 35 Inc.
+// Copyright 2021-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -47,19 +47,19 @@ pub(crate) fn handle_base_type<R: ReaderType>(
                 constants::DW_ATE_address => None,
                 constants::DW_ATE_boolean => Some(Type::bool()),
                 constants::DW_ATE_complex_float => None,
-                constants::DW_ATE_float => Some(Type::named_float(size, name)),
-                constants::DW_ATE_signed => Some(Type::named_int(size, true, name)),
-                constants::DW_ATE_signed_char => Some(Type::named_int(size, true, name)),
-                constants::DW_ATE_unsigned => Some(Type::named_int(size, false, name)),
-                constants::DW_ATE_unsigned_char => Some(Type::named_int(size, false, name)),
+                constants::DW_ATE_float => Some(Type::named_float(size, &name)),
+                constants::DW_ATE_signed => Some(Type::named_int(size, true, &name)),
+                constants::DW_ATE_signed_char => Some(Type::named_int(size, true, &name)),
+                constants::DW_ATE_unsigned => Some(Type::named_int(size, false, &name)),
+                constants::DW_ATE_unsigned_char => Some(Type::named_int(size, false, &name)),
                 constants::DW_ATE_imaginary_float => None,
                 constants::DW_ATE_packed_decimal => None,
                 constants::DW_ATE_numeric_string => None,
                 constants::DW_ATE_edited => None,
                 constants::DW_ATE_signed_fixed => None,
                 constants::DW_ATE_unsigned_fixed => None,
-                constants::DW_ATE_decimal_float => Some(Type::named_float(size, name)),
-                constants::DW_ATE_UTF => Some(Type::named_int(size, false, name)), // TODO : Verify
+                constants::DW_ATE_decimal_float => Some(Type::named_float(size, &name)),
+                constants::DW_ATE_UTF => Some(Type::named_int(size, false, &name)), // TODO : Verify
                 constants::DW_ATE_UCS => None,
                 constants::DW_ATE_ASCII => None, // Some sort of array?
                 constants::DW_ATE_lo_user => None,
@@ -114,7 +114,7 @@ pub(crate) fn handle_enum<R: ReaderType>(
             match &child.entry().attr(constants::DW_AT_const_value) {
                 Ok(Some(attr)) => {
                     if let Some(value) = get_attr_as_u64(attr) {
-                        enumeration_builder.insert(name, value);
+                        enumeration_builder.insert(&name, value);
                     } else {
                         // Somehow the child entry is not a const value.
                         log::error!("Unhandled enum member value type for `{}`", name);

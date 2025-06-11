@@ -3,7 +3,9 @@ use std::hash::{Hash, Hasher};
 
 use binaryninjacore_sys::*;
 
-use super::{HighLevelILBlock, HighLevelILInstruction, HighLevelInstructionIndex};
+use super::{
+    HighLevelExpressionIndex, HighLevelILBlock, HighLevelILInstruction, HighLevelInstructionIndex,
+};
 use crate::basic_block::BasicBlock;
 use crate::function::{Function, Location};
 use crate::rc::{Array, Ref, RefCountable};
@@ -15,12 +17,17 @@ pub struct HighLevelILFunction {
 }
 
 impl HighLevelILFunction {
+    pub(crate) unsafe fn from_raw(handle: *mut BNHighLevelILFunction, full_ast: bool) -> Self {
+        debug_assert!(!handle.is_null());
+        Self { handle, full_ast }
+    }
+
     pub(crate) unsafe fn ref_from_raw(
         handle: *mut BNHighLevelILFunction,
         full_ast: bool,
     ) -> Ref<Self> {
         debug_assert!(!handle.is_null());
-        Self { handle, full_ast }.to_owned()
+        Ref::new(Self { handle, full_ast })
     }
 
     pub fn instruction_from_index(
@@ -30,31 +37,34 @@ impl HighLevelILFunction {
         if index.0 >= self.instruction_count() {
             None
         } else {
-            Some(HighLevelILInstruction::new(self.to_owned(), index))
+            Some(HighLevelILInstruction::from_instr_index(
+                self.to_owned(),
+                index,
+            ))
         }
     }
 
     pub fn instruction_from_expr_index(
         &self,
-        expr_index: HighLevelInstructionIndex,
+        expr_index: HighLevelExpressionIndex,
     ) -> Option<HighLevelILInstruction> {
         if expr_index.0 >= self.expression_count() {
             None
         } else {
-            Some(HighLevelILInstruction::new_expr(
+            Some(HighLevelILInstruction::from_expr_index(
                 self.to_owned(),
                 expr_index,
             ))
         }
     }
 
-    // TODO: This returns an expression index!
-    pub fn root_instruction_index(&self) -> HighLevelInstructionIndex {
-        HighLevelInstructionIndex(unsafe { BNGetHighLevelILRootExpr(self.handle) })
+    pub fn root_expression_index(&self) -> HighLevelExpressionIndex {
+        HighLevelExpressionIndex(unsafe { BNGetHighLevelILRootExpr(self.handle) })
     }
 
     pub fn root(&self) -> HighLevelILInstruction {
-        HighLevelILInstruction::new_expr(self.as_ast(), self.root_instruction_index())
+        self.instruction_from_expr_index(self.root_expression_index())
+            .expect("Invalid root expression index")
     }
 
     pub fn set_root(&self, new_root: &HighLevelILInstruction) {
@@ -69,13 +79,10 @@ impl HighLevelILFunction {
         unsafe { BNGetHighLevelILExprCount(self.handle) }
     }
 
-    pub fn ssa_form(&self) -> HighLevelILFunction {
+    pub fn ssa_form(&self) -> Ref<HighLevelILFunction> {
         let ssa = unsafe { BNGetHighLevelILSSAForm(self.handle) };
         assert!(!ssa.is_null());
-        HighLevelILFunction {
-            handle: ssa,
-            full_ast: self.full_ast,
-        }
+        unsafe { HighLevelILFunction::ref_from_raw(ssa, self.full_ast) }
     }
 
     pub fn function(&self) -> Ref<Function> {

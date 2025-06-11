@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2024 Vector 35 Inc
+// Copyright (c) 2015-2025 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -454,7 +454,7 @@ bool BinaryNinja::Collaboration::NameChangesetCallback(void* ctxt, BNCollaborati
 };
 
 
-void BinaryNinja::Collaboration::SyncDatabase(Ref<Database> database, Ref<RemoteFile> file, std::function<bool(const std::unordered_map<std::string, Ref<AnalysisMergeConflict>>& conflicts)> conflictHandler, std::function<bool(size_t, size_t)> progress, NameChangesetFunction nameChangeset)
+void BinaryNinja::Collaboration::SyncDatabase(Ref<Database> database, Ref<RemoteFile> file, std::function<bool(const std::unordered_map<std::string, Ref<AnalysisMergeConflict>>& conflicts)> conflictHandler, ProgressFunction progress, NameChangesetFunction nameChangeset)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -762,7 +762,7 @@ Ref<RemoteProject> Remote::GetProjectByName(const std::string& name)
 }
 
 
-void Remote::PullProjects(std::function<bool(size_t, size_t)> progress)
+void Remote::PullProjects(ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -779,7 +779,7 @@ Ref<RemoteProject> Remote::CreateProject(const std::string& name, const std::str
 }
 
 
-Ref<RemoteProject> Remote::ImportLocalProject(Ref<Project> localProject, std::function<bool(size_t, size_t)> progress)
+Ref<RemoteProject> Remote::ImportLocalProject(Ref<Project> localProject, ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -867,7 +867,7 @@ std::vector<std::pair<uint64_t, std::string>> Remote::SearchGroups(const std::st
 }
 
 
-void Remote::PullGroups(std::function<bool(size_t, size_t)> progress)
+void Remote::PullGroups(ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -977,7 +977,7 @@ std::vector<std::pair<std::string, std::string>> Remote::SearchUsers(const std::
 }
 
 
-void Remote::PullUsers(std::function<bool(size_t, size_t)> progress)
+void Remote::PullUsers(ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -1168,7 +1168,7 @@ bool RemoteProject::IsOpen()
 }
 
 
-bool RemoteProject::Open(std::function<bool(size_t, size_t)> progress)
+bool RemoteProject::Open(ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -1336,7 +1336,7 @@ Ref<RemoteFile> RemoteProject::GetFileByName(const std::string& name)
 }
 
 
-void RemoteProject::PullFiles(std::function<bool(size_t, size_t)> progress)
+void RemoteProject::PullFiles(ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -1344,7 +1344,7 @@ void RemoteProject::PullFiles(std::function<bool(size_t, size_t)> progress)
 }
 
 
-void RemoteProject::PullFolders(std::function<bool(size_t, size_t)> progress)
+void RemoteProject::PullFolders(ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -1353,7 +1353,7 @@ void RemoteProject::PullFolders(std::function<bool(size_t, size_t)> progress)
 }
 
 
-Ref<RemoteFile> RemoteProject::CreateFile(const std::string& filename, std::vector<uint8_t>& contents, const std::string& name, const std::string& description, Ref<RemoteFolder> folder, BNRemoteFileType type, std::function<bool(size_t, size_t)> progress, Ref<ProjectFile> coreFile)
+Ref<RemoteFile> RemoteProject::CreateFile(const std::string& filename, std::vector<uint8_t>& contents, const std::string& name, const std::string& description, Ref<RemoteFolder> folder, BNRemoteFileType type, ProgressFunction progress, Ref<ProjectFile> coreFile)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -1364,7 +1364,7 @@ Ref<RemoteFile> RemoteProject::CreateFile(const std::string& filename, std::vect
 }
 
 
-Ref<RemoteFolder> RemoteProject::CreateFolder(const std::string& name, const std::string& description, Ref<RemoteFolder> parent, std::function<bool(size_t, size_t)> progress, Ref<ProjectFolder> coreFolder)
+Ref<RemoteFolder> RemoteProject::CreateFolder(const std::string& name, const std::string& description, Ref<RemoteFolder> parent, ProgressFunction progress, Ref<ProjectFolder> coreFolder)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -1473,7 +1473,7 @@ Ref<CollabPermission> RemoteProject::GetPermissionById(const std::string& id)
 }
 
 
-void RemoteProject::PullGroupPermissions(std::function<bool(size_t, size_t)> progress)
+void RemoteProject::PullGroupPermissions(ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -1481,7 +1481,7 @@ void RemoteProject::PullGroupPermissions(std::function<bool(size_t, size_t)> pro
 }
 
 
-void RemoteProject::PullUserPermissions(std::function<bool(size_t, size_t)> progress)
+void RemoteProject::PullUserPermissions(ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -1489,7 +1489,7 @@ void RemoteProject::PullUserPermissions(std::function<bool(size_t, size_t)> prog
 }
 
 
-Ref<CollabPermission> RemoteProject::CreateGroupPermission(int groupId, BNCollaborationPermissionLevel level, std::function<bool(size_t, size_t)> progress)
+Ref<CollabPermission> RemoteProject::CreateGroupPermission(int groupId, BNCollaborationPermissionLevel level, ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -1500,7 +1500,7 @@ Ref<CollabPermission> RemoteProject::CreateGroupPermission(int groupId, BNCollab
 }
 
 
-Ref<CollabPermission> RemoteProject::CreateUserPermission(const std::string& userId, BNCollaborationPermissionLevel level, std::function<bool(size_t, size_t)> progress)
+Ref<CollabPermission> RemoteProject::CreateUserPermission(const std::string& userId, BNCollaborationPermissionLevel level, ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -1777,7 +1777,7 @@ Ref<CollabSnapshot> RemoteFile::GetSnapshotById(const std::string& id)
 }
 
 
-void RemoteFile::PullSnapshots(std::function<bool(size_t, size_t)> progress)
+void RemoteFile::PullSnapshots(ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -1785,7 +1785,7 @@ void RemoteFile::PullSnapshots(std::function<bool(size_t, size_t)> progress)
 }
 
 
-Ref<CollabSnapshot> RemoteFile::CreateSnapshot(std::string name, std::vector<uint8_t> contents, std::vector<uint8_t> analysisCacheContents, std::optional<std::vector<uint8_t>> fileContents, std::vector<std::string> parentIds, std::function<bool(size_t, size_t)> progress)
+Ref<CollabSnapshot> RemoteFile::CreateSnapshot(std::string name, std::vector<uint8_t> contents, std::vector<uint8_t> analysisCacheContents, std::optional<std::vector<uint8_t>> fileContents, std::vector<std::string> parentIds, ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -1825,7 +1825,7 @@ void RemoteFile::DeleteSnapshot(const Ref<CollabSnapshot> snapshot)
 }
 
 
-std::vector<uint8_t> RemoteFile::Download(std::function<bool(size_t, size_t)> progress)
+std::vector<uint8_t> RemoteFile::Download(ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -2600,7 +2600,7 @@ Ref<CollabUndoEntry> CollabSnapshot::GetUndoEntryById(uint64_t id)
 }
 
 
-void CollabSnapshot::PullUndoEntries(std::function<bool(size_t, size_t)> progress)
+void CollabSnapshot::PullUndoEntries(ProgressFunction progress)
 {
 		ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -2623,7 +2623,7 @@ void CollabSnapshot::Finalize()
 }
 
 
-std::vector<uint8_t> CollabSnapshot::DownloadSnapshotFile(std::function<bool(size_t, size_t)> progress)
+std::vector<uint8_t> CollabSnapshot::DownloadSnapshotFile(ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -2640,7 +2640,7 @@ std::vector<uint8_t> CollabSnapshot::DownloadSnapshotFile(std::function<bool(siz
 }
 
 
-std::vector<uint8_t> CollabSnapshot::Download(std::function<bool(size_t, size_t)> progress)
+std::vector<uint8_t> CollabSnapshot::Download(ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -2657,7 +2657,7 @@ std::vector<uint8_t> CollabSnapshot::Download(std::function<bool(size_t, size_t)
 }
 
 
-std::vector<uint8_t> CollabSnapshot::DownloadAnalysisCache(std::function<bool(size_t, size_t)> progress)
+std::vector<uint8_t> CollabSnapshot::DownloadAnalysisCache(ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;

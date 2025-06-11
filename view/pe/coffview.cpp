@@ -197,6 +197,7 @@ bool COFFView::Init()
 		m_is64 = m_arch->GetAddressSize() == 8;
 
 		m_imageBase = 0; // 0 for COFF? opt.imageBase;
+		bool platformSetByUser = false;
 		settings = GetLoadSettings(GetTypeName());
 		if (settings)
 		{
@@ -205,16 +206,12 @@ bool COFFView::Init()
 
 			if (settings->Contains("loader.platform"))
 			{
-				auto platformName = settings->Get<string>("loader.platform", this);
-				platform = Platform::GetByName(platformName);
+				BNSettingsScope scope = SettingsAutoScope;
+				Ref<Platform> platform = Platform::GetByName(settings->Get<string>("loader.platform", this, &scope));
 				if (platform)
 				{
 					m_arch = platform->GetArchitecture();
-					m_logger->LogDebug("COFF: loader.platform override (%#x, arch: %s): %s", header.machine, m_arch->GetName().c_str(), platformName.c_str());
-				}
-				else
-				{
-					m_logger->LogError("COFF: Cannot find platform \"%s\" specified in loader.platform override", platformName.c_str());
+					platformSetByUser = (scope == SettingsResourceScope);
 				}
 			}
 		}
@@ -489,7 +486,9 @@ bool COFFView::Init()
 			m_logger->LogDebug("COFF: initial platform (%#x, arch: %s): %s", header.machine, m_arch->GetName().c_str(), platform->GetName().c_str());
 		}
 
-		platform = platform->GetAssociatedPlatformByAddress(entryPointAddress);
+		if (!platformSetByUser)
+			platform = platform->GetAssociatedPlatformByAddress(entryPointAddress);
+
 		entryPointAddress = m_entryPoint;
 		m_logger->LogDebug("COFF: entry point %#" PRIx64 " associated platform (%#x, arch: %s): %s", entryPointAddress, header.machine, m_arch->GetName().c_str(), platform->GetName().c_str());
 
@@ -1532,8 +1531,7 @@ void COFFView::AddCOFFSymbol(BNSymbolType type, const string& dll, const string&
 	{
 		QualifiedName demangledName;
 		Ref<Type> demangledType;
-		bool simplify = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", this);
-		if (DemangleGeneric(m_arch, rawName, demangledType, demangledName, this, simplify))
+		if (DemangleGeneric(m_arch, rawName, demangledType, demangledName, nullptr, m_simplifyTemplates))
 		{
 			shortName = demangledName.GetString();
 			fullName = shortName;

@@ -1,4 +1,4 @@
-// Copyright 2021-2024 Vector 35 Inc.
+// Copyright 2021-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -546,7 +546,7 @@ impl DebugInfoBuilder {
             assert!(debug_info.add_data_variable(
                 address,
                 &self.get_type(*type_uid).unwrap().ty,
-                name.clone(),
+                name.as_deref(),
                 &[] // TODO : Components
             ));
         }
@@ -581,7 +581,7 @@ impl DebugInfoBuilder {
         for function in self.functions() {
             // let calling_convention: Option<Ref<CallingConvention<CoreArchitecture>>> = None;
 
-            debug_info.add_function(DebugFunctionInfo::new(
+            debug_info.add_function(&DebugFunctionInfo::new(
                 function.full_name.clone(),
                 function.full_name.clone(), // TODO : This should eventually be changed, but the "full_name" should probably be the unsimplified version, and the "short_name" should be the simplified version...currently the symbols view shows the full version, so changing it here too makes it look bad in the UI
                 function.raw_name.clone(),
@@ -608,7 +608,7 @@ impl DebugInfoBuilder {
                     if func.address.is_none() && func.raw_name.is_some() {
                         // DWARF doesn't contain GOT info, so remove any entries there...they will be wrong (relying on Binja's mechanisms for the GOT is good )
                         if symbol.sym_type() != SymbolType::ImportAddress {
-                            func.address = Some(symbol.address());
+                            func.address = Some(symbol.address() - bv.start());
                         }
                     }
 
@@ -622,7 +622,7 @@ impl DebugInfoBuilder {
                                 .items
                                 .len()
                         {
-                            func.full_name = Some(symbol_full_name.to_string());
+                            func.full_name = Some(symbol_full_name.to_string_lossy().to_string());
                         }
                     }
                 }

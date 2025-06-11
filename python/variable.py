@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright (c) 2015-2024 Vector 35 Inc
+# Copyright (c) 2015-2025 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -713,11 +713,11 @@ class VariableNameAndType(CoreVariable):
 	@classmethod
 	def from_identifier(cls, identifier, name, type):
 		var = core.BNFromVariableIdentifier(identifier)
-		return cls(name, type, var.type, var.index, var.storage)
+		return cls(var.type, var.index, var.storage, name, type)
 
 	@classmethod
 	def from_core_variable(cls, var, name, type):
-		return cls(name, type, var.type, var.index, var.storage)
+		return cls(var.type, var.index, var.storage, name, type)
 
 
 class Variable(CoreVariable):

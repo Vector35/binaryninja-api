@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2024 Vector 35 Inc
+// Copyright (c) 2015-2025 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -85,6 +85,7 @@ void RenderLayer::Register(RenderLayer* layer, BNRenderLayerDefaultEnableState e
 	cb.applyToLinearViewObject = ApplyToLinearViewObjectCallback;
 	cb.freeLines = FreeLinesCallback;
 	layer->m_object = BNRegisterRenderLayer(layer->m_nameForRegister.c_str(), &cb, enableState);
+	layer->AddRefForRegistration();
 	g_registeredInstances[layer->m_object] = layer;
 }
 

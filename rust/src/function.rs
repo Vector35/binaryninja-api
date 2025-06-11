@@ -1,4 +1,4 @@
-// Copyright 2021-2024 Vector 35 Inc.
+// Copyright 2021-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,17 +40,20 @@ pub use binaryninjacore_sys::BNHighlightStandardColor as HighlightStandardColor;
 use crate::architecture::RegisterId;
 use crate::confidence::Conf;
 use crate::high_level_il::HighLevelILFunction;
-use crate::low_level_il::{LiftedILFunction, RegularLowLevelILFunction};
+use crate::language_representation::CoreLanguageRepresentationFunction;
+use crate::low_level_il::LowLevelILRegularFunction;
 use crate::medium_level_il::MediumLevelILFunction;
+use crate::metadata::Metadata;
 use crate::variable::{
     IndirectBranchInfo, MergedVariable, NamedVariableWithType, RegisterValue, RegisterValueType,
     StackVariableReference, Variable,
 };
 use crate::workflow::Workflow;
+use std::ffi::CStr;
 use std::fmt::{Debug, Formatter};
 use std::ptr::NonNull;
 use std::time::Duration;
-use std::{ffi::c_char, hash::Hash, ops::Range};
+use std::{hash::Hash, ops::Range};
 
 /// Used to describe a location within a [`Function`].
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -259,7 +262,7 @@ impl FunctionViewType {
     }
 
     pub(crate) fn free_raw(value: BNFunctionViewType) {
-        let _ = unsafe { BnString::from_raw(value.name as *mut _) };
+        unsafe { BnString::free_raw(value.name as *mut _) };
     }
 }
 
@@ -368,15 +371,15 @@ impl Function {
         }
     }
 
-    pub fn comment(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetFunctionComment(self.handle)) }
+    pub fn comment(&self) -> String {
+        unsafe { BnString::into_string(BNGetFunctionComment(self.handle)) }
     }
 
-    pub fn set_comment<S: BnStrCompatible>(&self, comment: S) {
-        let raw = comment.into_bytes_with_nul();
+    pub fn set_comment(&self, comment: &str) {
+        let raw = comment.to_cstr();
 
         unsafe {
-            BNSetFunctionComment(self.handle, raw.as_ref().as_ptr() as *mut _);
+            BNSetFunctionComment(self.handle, raw.as_ptr());
         }
     }
 
@@ -390,15 +393,15 @@ impl Function {
         unsafe { BNSetUserFunctionCanReturn(self.handle, &mut bool_with_confidence) }
     }
 
-    pub fn comment_at(&self, addr: u64) -> BnString {
-        unsafe { BnString::from_raw(BNGetCommentForAddress(self.handle, addr)) }
+    pub fn comment_at(&self, addr: u64) -> String {
+        unsafe { BnString::into_string(BNGetCommentForAddress(self.handle, addr)) }
     }
 
-    pub fn set_comment_at<S: BnStrCompatible>(&self, addr: u64, comment: S) {
-        let raw = comment.into_bytes_with_nul();
+    pub fn set_comment_at(&self, addr: u64, comment: &str) {
+        let raw = comment.to_cstr();
 
         unsafe {
-            BNSetCommentForAddress(self.handle, addr, raw.as_ref().as_ptr() as *mut _);
+            BNSetCommentForAddress(self.handle, addr, raw.as_ptr());
         }
     }
 
@@ -459,12 +462,49 @@ impl Function {
         unsafe { Array::new(lines, count, ()) }
     }
 
-    pub fn variable_name(&self, var: &Variable) -> BnString {
+    pub fn variable_name(&self, var: &Variable) -> String {
         unsafe {
             let raw_var = BNVariable::from(var);
             let raw_name = BNGetVariableName(self.handle, &raw_var);
-            BnString::from_raw(raw_name)
+            BnString::into_string(raw_name)
         }
+    }
+
+    pub fn variable_type(&self, var: &Variable) -> Option<Conf<Ref<Type>>> {
+        let raw_var = BNVariable::from(var);
+        let result = unsafe { BNGetVariableType(self.handle, &raw_var) };
+        match result.type_.is_null() {
+            false => Some(Conf::<Ref<Type>>::from_owned_raw(result)),
+            true => None,
+        }
+    }
+
+    /// Get the language representation of the function.
+    ///
+    ///  * `language` - The language representation, ex. "Pseudo C".
+    pub fn language_representation(
+        &self,
+        language: &str,
+    ) -> Option<Ref<CoreLanguageRepresentationFunction>> {
+        let lang_name = language.to_cstr();
+        let repr = unsafe { BNGetFunctionLanguageRepresentation(self.handle, lang_name.as_ptr()) };
+        NonNull::new(repr)
+            .map(|handle| unsafe { CoreLanguageRepresentationFunction::ref_from_raw(handle) })
+    }
+
+    /// Get the language representation of the function, if available.
+    ///
+    ///  * `language` - The language representation, ex. "Pseudo C".
+    pub fn language_representation_if_available(
+        &self,
+        language: &str,
+    ) -> Option<Ref<CoreLanguageRepresentationFunction>> {
+        let lang_name = language.to_cstr();
+        let repr = unsafe {
+            BNGetFunctionLanguageRepresentationIfAvailable(self.handle, lang_name.as_ptr())
+        };
+        NonNull::new(repr)
+            .map(|handle| unsafe { CoreLanguageRepresentationFunction::ref_from_raw(handle) })
     }
 
     pub fn high_level_il(&self, full_ast: bool) -> Result<Ref<HighLevelILFunction>, ()> {
@@ -520,45 +560,38 @@ impl Function {
         }
     }
 
-    pub fn low_level_il(&self) -> Result<Ref<RegularLowLevelILFunction<CoreArchitecture>>, ()> {
+    pub fn low_level_il(&self) -> Result<Ref<LowLevelILRegularFunction>, ()> {
         unsafe {
             let llil_ptr = BNGetFunctionLowLevelIL(self.handle);
             match llil_ptr.is_null() {
-                false => Ok(RegularLowLevelILFunction::ref_from_raw(
-                    self.arch(),
-                    llil_ptr,
-                )),
+                false => Ok(LowLevelILRegularFunction::ref_from_raw(llil_ptr)),
                 true => Err(()),
             }
         }
     }
 
-    pub fn low_level_il_if_available(
-        &self,
-    ) -> Option<Ref<RegularLowLevelILFunction<CoreArchitecture>>> {
+    pub fn low_level_il_if_available(&self) -> Option<Ref<LowLevelILRegularFunction>> {
         let llil_ptr = unsafe { BNGetFunctionLowLevelILIfAvailable(self.handle) };
         match llil_ptr.is_null() {
-            false => {
-                Some(unsafe { RegularLowLevelILFunction::ref_from_raw(self.arch(), llil_ptr) })
-            }
+            false => Some(unsafe { LowLevelILRegularFunction::ref_from_raw(llil_ptr) }),
             true => None,
         }
     }
 
-    pub fn lifted_il(&self) -> Result<Ref<LiftedILFunction<CoreArchitecture>>, ()> {
+    pub fn lifted_il(&self) -> Result<Ref<LowLevelILRegularFunction>, ()> {
         unsafe {
             let llil_ptr = BNGetFunctionLiftedIL(self.handle);
             match llil_ptr.is_null() {
-                false => Ok(LiftedILFunction::ref_from_raw(self.arch(), llil_ptr)),
+                false => Ok(LowLevelILRegularFunction::ref_from_raw(llil_ptr)),
                 true => Err(()),
             }
         }
     }
 
-    pub fn lifted_il_if_available(&self) -> Option<Ref<LiftedILFunction<CoreArchitecture>>> {
+    pub fn lifted_il_if_available(&self) -> Option<Ref<LowLevelILRegularFunction>> {
         let llil_ptr = unsafe { BNGetFunctionLiftedILIfAvailable(self.handle) };
         match llil_ptr.is_null() {
-            false => Some(unsafe { LiftedILFunction::ref_from_raw(self.arch(), llil_ptr) }),
+            false => Some(unsafe { LowLevelILRegularFunction::ref_from_raw(llil_ptr) }),
             true => None,
         }
     }
@@ -1101,10 +1134,10 @@ impl Function {
     /// let crash = bv.create_tag_type("Crashes", "🎯");
     /// fun.add_tag(&crash, "Nullpointer dereference", Some(0x1337), false, None);
     /// ```
-    pub fn add_tag<S: BnStrCompatible>(
+    pub fn add_tag(
         &self,
         tag_type: &TagType,
-        data: S,
+        data: &str,
         addr: Option<u64>,
         user: bool,
         arch: Option<CoreArchitecture>,
@@ -1705,12 +1738,12 @@ impl Function {
         operand: usize,
         display_type: IntegerDisplayType,
         arch: Option<CoreArchitecture>,
-        enum_display_typeid: Option<impl BnStrCompatible>,
+        enum_display_typeid: Option<&str>,
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
-        let enum_display_typeid = enum_display_typeid.map(BnStrCompatible::into_bytes_with_nul);
+        let enum_display_typeid = enum_display_typeid.map(IntoCStr::to_cstr);
         let enum_display_typeid_ptr = enum_display_typeid
-            .map(|x| x.as_ref().as_ptr() as *const c_char)
+            .map(|x| x.as_ptr())
             .unwrap_or(std::ptr::null());
         unsafe {
             BNSetIntegerConstantDisplayType(
@@ -1739,10 +1772,10 @@ impl Function {
         value: u64,
         operand: usize,
         arch: Option<CoreArchitecture>,
-    ) -> BnString {
+    ) -> String {
         let arch = arch.unwrap_or_else(|| self.arch());
         unsafe {
-            BnString::from_raw(BNGetIntegerConstantDisplayTypeEnumerationType(
+            BnString::into_string(BNGetIntegerConstantDisplayTypeEnumerationType(
                 self.handle,
                 arch.handle,
                 instr_addr,
@@ -1764,7 +1797,7 @@ impl Function {
         value: u64,
         operand: usize,
         arch: Option<CoreArchitecture>,
-    ) -> (IntegerDisplayType, BnString) {
+    ) -> (IntegerDisplayType, String) {
         let arch = arch.unwrap_or_else(|| self.arch());
         let name = self.int_enum_display_typeid(instr_addr, value, operand, Some(arch));
         let display = self.int_display_type(instr_addr, value, operand, Some(arch));
@@ -1920,7 +1953,7 @@ impl Function {
         addr: u64,
         offset: i64,
         arch: Option<CoreArchitecture>,
-    ) -> Option<(Variable, BnString, Conf<Ref<Type>>)> {
+    ) -> Option<NamedVariableWithType> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut found_value = BNVariableNameAndType::default();
         let found = unsafe {
@@ -1935,13 +1968,7 @@ impl Function {
         if !found {
             return None;
         }
-        let var = Variable::from(found_value.var);
-        let name = unsafe { BnString::from_raw(found_value.name) };
-        let var_type = Conf::new(
-            unsafe { Type::ref_from_raw(found_value.type_) },
-            found_value.typeConfidence,
-        );
-        Some((var, name, var_type))
+        Some(NamedVariableWithType::from_owned_raw(found_value))
     }
 
     pub fn stack_var_at_frame_offset_after_instruction(
@@ -1949,7 +1976,7 @@ impl Function {
         addr: u64,
         offset: i64,
         arch: Option<CoreArchitecture>,
-    ) -> Option<(Variable, BnString, Conf<Ref<Type>>)> {
+    ) -> Option<NamedVariableWithType> {
         let arch = arch.unwrap_or_else(|| self.arch());
         let mut found_value = BNVariableNameAndType::default();
         let found = unsafe {
@@ -1964,13 +1991,7 @@ impl Function {
         if !found {
             return None;
         }
-        let var = Variable::from(found_value.var);
-        let name = unsafe { BnString::from_raw(found_value.name) };
-        let var_type = Conf::new(
-            unsafe { Type::ref_from_raw(found_value.type_) },
-            found_value.typeConfidence,
-        );
-        Some((var, name, var_type))
+        Some(NamedVariableWithType::from_owned_raw(found_value))
     }
 
     pub fn stack_variables_referenced_by(
@@ -2135,7 +2156,7 @@ impl Function {
 
     /// Splits a variable at the definition site. The given `var` must be the
     /// variable unique to the definition and should be obtained by using
-    /// [crate::medium_level_il::MediumLevelILInstruction::get_split_var_for_definition] at the definition site.
+    /// [crate::medium_level_il::MediumLevelILInstruction::split_var_for_definition] at the definition site.
     ///
     /// This function is not meant to split variables that have been previously merged. Use
     /// [Function::unmerge_variables] to split previously merged variables.
@@ -2158,12 +2179,17 @@ impl Function {
 
     /// Undoes variable splitting performed with [Function::split_variable]. The given `var`
     /// must be the variable unique to the definition and should be obtained by using
-    /// [crate::medium_level_il::MediumLevelILInstruction::get_split_var_for_definition] at the definition site.
+    /// [crate::medium_level_il::MediumLevelILInstruction::split_var_for_definition] at the definition site.
     ///
     /// * `var` - variable to unsplit
     pub fn unsplit_variable(&self, var: &Variable) {
         let raw_var = BNVariable::from(var);
         unsafe { BNUnsplitVariable(self.handle, &raw_var) }
+    }
+
+    /// Causes this function to be analyzed if it's out of date. This function does not wait for the analysis to finish.
+    pub fn analyze(&self) {
+        unsafe { BNAnalyzeFunction(self.handle) }
     }
 
     /// Causes this function to be reanalyzed. This function does not wait for the analysis to finish.
@@ -2189,17 +2215,17 @@ impl Function {
     ///
     /// * `name` - Name of the debug report
     pub fn request_debug_report(&self, name: &str) {
-        const DEBUG_REPORT_ALIAS: &[(&str, &str)] = &[
-            ("stack", "stack_adjust_graph\x00"),
-            ("mlil", "mlil_translator\x00"),
-            ("hlil", "high_level_il\x00"),
+        const DEBUG_REPORT_ALIAS: &[(&str, &CStr)] = &[
+            ("stack", c"stack_adjust_graph"),
+            ("mlil", c"mlil_translator"),
+            ("hlil", c"high_level_il"),
         ];
 
         if let Some(alias_idx) = DEBUG_REPORT_ALIAS
             .iter()
             .position(|(alias, _value)| *alias == name)
         {
-            let name = DEBUG_REPORT_ALIAS[alias_idx].1.as_ptr() as *const c_char;
+            let name = DEBUG_REPORT_ALIAS[alias_idx].1.as_ptr();
             unsafe { BNRequestFunctionDebugReport(self.handle, name) }
         } else {
             let name = std::ffi::CString::new(name.to_string()).unwrap();
@@ -2341,8 +2367,8 @@ impl Function {
     /// Returns a string representing the provenance. This portion of the API
     /// is under development. Currently the provenance information is
     /// undocumented, not persistent, and not saved to a database.
-    pub fn provenance(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetProvenanceString(self.handle)) }
+    pub fn provenance(&self) -> String {
+        unsafe { BnString::into_string(BNGetProvenanceString(self.handle)) }
     }
 
     /// Get registers that are used for the return value
@@ -2402,6 +2428,48 @@ impl Function {
             unsafe { BNGetFunctionParentComponents(self.view().handle, self.handle, &mut count) };
         assert!(!result.is_null());
         unsafe { Array::new(result, count, ()) }
+    }
+
+    pub fn query_metadata(&self, key: &str) -> Option<Ref<Metadata>> {
+        let key = key.to_cstr();
+        let value: *mut BNMetadata = unsafe { BNFunctionQueryMetadata(self.handle, key.as_ptr()) };
+        if value.is_null() {
+            None
+        } else {
+            Some(unsafe { Metadata::ref_from_raw(value) })
+        }
+    }
+
+    pub fn get_metadata(&self) -> Option<Ref<Metadata>> {
+        let value: *mut BNMetadata = unsafe { BNFunctionGetMetadata(self.handle) };
+        if value.is_null() {
+            None
+        } else {
+            Some(unsafe { Metadata::ref_from_raw(value) })
+        }
+    }
+
+    pub fn get_auto_metadata(&self) -> Option<Ref<Metadata>> {
+        let value: *mut BNMetadata = unsafe { BNFunctionGetAutoMetadata(self.handle) };
+        if value.is_null() {
+            None
+        } else {
+            Some(unsafe { Metadata::ref_from_raw(value) })
+        }
+    }
+
+    pub fn store_metadata<V>(&self, key: &str, value: V, is_auto: bool)
+    where
+        V: Into<Ref<Metadata>>,
+    {
+        let md = value.into();
+        let key = key.to_cstr();
+        unsafe { BNFunctionStoreMetadata(self.handle, key.as_ptr(), md.as_ref().handle, is_auto) };
+    }
+
+    pub fn remove_metadata(&self, key: &str) {
+        let key = key.to_cstr();
+        unsafe { BNFunctionRemoveMetadata(self.handle, key.as_ptr()) };
     }
 }
 
@@ -2525,22 +2593,38 @@ pub struct PerformanceInfo {
     pub seconds: Duration,
 }
 
-impl From<BNPerformanceInfo> for PerformanceInfo {
-    fn from(value: BNPerformanceInfo) -> Self {
+#[allow(unused)]
+impl PerformanceInfo {
+    pub fn new(name: String, seconds: Duration) -> Self {
         Self {
-            name: unsafe { BnString::from_raw(value.name) }.to_string(),
+            name: name.to_string(),
+            seconds,
+        }
+    }
+
+    pub(crate) fn from_raw(value: &BNPerformanceInfo) -> Self {
+        Self {
+            name: raw_to_string(value.name as *mut _).unwrap(),
             seconds: Duration::from_secs_f64(value.seconds),
         }
     }
-}
 
-impl From<&BNPerformanceInfo> for PerformanceInfo {
-    fn from(value: &BNPerformanceInfo) -> Self {
-        Self {
-            // TODO: Name will be freed by this. FIX!
-            name: unsafe { BnString::from_raw(value.name) }.to_string(),
-            seconds: Duration::from_secs_f64(value.seconds),
+    pub(crate) fn from_owned_raw(value: BNPerformanceInfo) -> Self {
+        let owned = Self::from_raw(&value);
+        Self::free_raw(value);
+        owned
+    }
+
+    pub(crate) fn into_raw(value: Self) -> BNPerformanceInfo {
+        let bn_name = BnString::new(value.name);
+        BNPerformanceInfo {
+            name: BnString::into_raw(bn_name),
+            seconds: value.seconds.as_secs_f64(),
         }
+    }
+
+    pub(crate) fn free_raw(value: BNPerformanceInfo) {
+        unsafe { BnString::free_raw(value.name) };
     }
 }
 
@@ -2556,8 +2640,7 @@ unsafe impl CoreArrayProviderInner for PerformanceInfo {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        // TODO: Swap this to the ref version.
-        Self::from(*raw)
+        Self::from_raw(raw)
     }
 }
 
@@ -2773,7 +2856,7 @@ impl Default for HighlightColor {
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Comment {
     pub addr: u64,
-    pub comment: BnString,
+    pub comment: String,
 }
 
 impl CoreArrayProvider for Comment {

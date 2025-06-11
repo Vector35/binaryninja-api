@@ -7,7 +7,6 @@ use super::{HighLevelILFunction, HighLevelILLiftedInstruction, HighLevelILLifted
 use crate::architecture::{CoreIntrinsic, IntrinsicId};
 use crate::confidence::Conf;
 use crate::disassembly::DisassemblyTextLine;
-use crate::operand_iter::OperandIter;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::types::Type;
 use crate::variable::{ConstantData, RegisterValue, SSAVariable, Variable};
@@ -39,28 +38,76 @@ impl Display for HighLevelInstructionIndex {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct HighLevelExpressionIndex(pub usize);
+
+impl HighLevelExpressionIndex {
+    pub fn next(&self) -> Self {
+        Self(self.0 + 1)
+    }
+}
+
+impl From<usize> for HighLevelExpressionIndex {
+    fn from(index: usize) -> Self {
+        Self(index)
+    }
+}
+
+impl From<u64> for HighLevelExpressionIndex {
+    fn from(index: u64) -> Self {
+        Self(index as usize)
+    }
+}
+
+impl Display for HighLevelExpressionIndex {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_fmt(format_args!("{}", self.0))
+    }
+}
+
 #[derive(Clone)]
 pub struct HighLevelILInstruction {
     pub function: Ref<HighLevelILFunction>,
     pub address: u64,
-    pub expr_index: HighLevelInstructionIndex,
+    pub instr_index: HighLevelInstructionIndex,
+    pub expr_index: HighLevelExpressionIndex,
     pub size: usize,
     pub kind: HighLevelILInstructionKind,
 }
 
 impl HighLevelILInstruction {
-    pub(crate) fn new(
+    pub(crate) fn from_instr_index(
         function: Ref<HighLevelILFunction>,
-        index: HighLevelInstructionIndex,
+        instr_index: HighLevelInstructionIndex,
     ) -> Self {
-        let expr_index = unsafe { BNGetHighLevelILIndexForInstruction(function.handle, index.0) };
-        Self::new_expr(function, HighLevelInstructionIndex(expr_index))
+        // Get the associated expression index for the top-level instruction.
+        let expr_index_raw =
+            unsafe { BNGetHighLevelILIndexForInstruction(function.handle, instr_index.0) };
+        Self::new(
+            function,
+            instr_index,
+            HighLevelExpressionIndex(expr_index_raw),
+        )
     }
 
-    // TODO: I need HighLevelILExpression YESTERDAY!!!!
-    pub(crate) fn new_expr(
+    pub(crate) fn from_expr_index(
         function: Ref<HighLevelILFunction>,
-        expr_index: HighLevelInstructionIndex,
+        expr_index: HighLevelExpressionIndex,
+    ) -> Self {
+        // Get the associated top-level instruction index for the expression.
+        let instr_index_raw =
+            unsafe { BNGetHighLevelILInstructionForExpr(function.handle, expr_index.0) };
+        Self::new(
+            function,
+            HighLevelInstructionIndex(instr_index_raw),
+            expr_index,
+        )
+    }
+
+    pub(crate) fn new(
+        function: Ref<HighLevelILFunction>,
+        instr_index: HighLevelInstructionIndex,
+        expr_index: HighLevelExpressionIndex,
     ) -> Self {
         let op =
             unsafe { BNGetHighLevelILByIndex(function.handle, expr_index.0, function.full_ast) };
@@ -77,234 +124,234 @@ impl HighLevelILInstruction {
             HLIL_FORCE_VER | HLIL_FORCE_VER_SSA | HLIL_ASSERT | HLIL_ASSERT_SSA => Op::Undef,
             HLIL_UNIMPL => Op::Unimpl,
             HLIL_ADC => Op::Adc(BinaryOpCarry {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-                carry: op.operands[2] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
+                carry: HighLevelExpressionIndex::from(op.operands[2]),
             }),
             HLIL_SBB => Op::Sbb(BinaryOpCarry {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-                carry: op.operands[2] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
+                carry: HighLevelExpressionIndex::from(op.operands[2]),
             }),
             HLIL_RLC => Op::Rlc(BinaryOpCarry {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-                carry: op.operands[2] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
+                carry: HighLevelExpressionIndex::from(op.operands[2]),
             }),
             HLIL_RRC => Op::Rrc(BinaryOpCarry {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
-                carry: op.operands[2] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
+                carry: HighLevelExpressionIndex::from(op.operands[2]),
             }),
             HLIL_ADD => Op::Add(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_SUB => Op::Sub(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_AND => Op::And(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_OR => Op::Or(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_XOR => Op::Xor(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_LSL => Op::Lsl(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_LSR => Op::Lsr(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_ASR => Op::Asr(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_ROL => Op::Rol(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_ROR => Op::Ror(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_MUL => Op::Mul(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_MULU_DP => Op::MuluDp(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_MULS_DP => Op::MulsDp(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_DIVU => Op::Divu(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_DIVU_DP => Op::DivuDp(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_DIVS => Op::Divs(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_DIVS_DP => Op::DivsDp(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_MODU => Op::Modu(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_MODU_DP => Op::ModuDp(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_MODS => Op::Mods(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_MODS_DP => Op::ModsDp(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_CMP_E => Op::CmpE(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_CMP_NE => Op::CmpNe(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_CMP_SLT => Op::CmpSlt(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_CMP_ULT => Op::CmpUlt(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_CMP_SLE => Op::CmpSle(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_CMP_ULE => Op::CmpUle(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_CMP_SGE => Op::CmpSge(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_CMP_UGE => Op::CmpUge(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_CMP_SGT => Op::CmpSgt(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_CMP_UGT => Op::CmpUgt(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_TEST_BIT => Op::TestBit(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_ADD_OVERFLOW => Op::AddOverflow(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_FADD => Op::Fadd(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_FSUB => Op::Fsub(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_FMUL => Op::Fmul(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_FDIV => Op::Fdiv(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_FCMP_E => Op::FcmpE(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_FCMP_NE => Op::FcmpNe(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_FCMP_LT => Op::FcmpLt(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_FCMP_LE => Op::FcmpLe(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_FCMP_GE => Op::FcmpGe(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_FCMP_GT => Op::FcmpGt(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_FCMP_O => Op::FcmpO(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_FCMP_UO => Op::FcmpUo(BinaryOp {
-                left: op.operands[0] as usize,
-                right: op.operands[1] as usize,
+                left: HighLevelExpressionIndex::from(op.operands[0]),
+                right: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_ARRAY_INDEX => Op::ArrayIndex(ArrayIndex {
-                src: op.operands[0] as usize,
-                index: op.operands[1] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
+                index: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_ARRAY_INDEX_SSA => Op::ArrayIndexSsa(ArrayIndexSsa {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
                 src_memory: op.operands[1],
-                index: op.operands[2] as usize,
+                index: HighLevelExpressionIndex::from(op.operands[2]),
             }),
             HLIL_ASSIGN => Op::Assign(Assign {
-                dest: op.operands[0] as usize,
-                src: op.operands[1] as usize,
+                dest: HighLevelExpressionIndex::from(op.operands[0]),
+                src: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_ASSIGN_MEM_SSA => Op::AssignMemSsa(AssignMemSsa {
-                dest: op.operands[0] as usize,
+                dest: HighLevelExpressionIndex::from(op.operands[0]),
                 dest_memory: op.operands[1],
-                src: op.operands[2] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[2]),
                 src_memory: op.operands[3],
             }),
             HLIL_ASSIGN_UNPACK => Op::AssignUnpack(AssignUnpack {
                 num_dests: op.operands[0] as usize,
                 first_dest: op.operands[1] as usize,
-                src: op.operands[2] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[2]),
             }),
             HLIL_ASSIGN_UNPACK_MEM_SSA => Op::AssignUnpackMemSsa(AssignUnpackMemSsa {
                 num_dests: op.operands[0] as usize,
                 first_dest: op.operands[1] as usize,
                 dest_memory: op.operands[2],
-                src: op.operands[3] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[3]),
                 src_memory: op.operands[4],
             }),
             HLIL_BLOCK => Op::Block(Block {
@@ -312,17 +359,17 @@ impl HighLevelILInstruction {
                 first_param: op.operands[1] as usize,
             }),
             HLIL_CALL => Op::Call(Call {
-                dest: op.operands[0] as usize,
+                dest: HighLevelExpressionIndex::from(op.operands[0]),
                 num_params: op.operands[1] as usize,
                 first_param: op.operands[2] as usize,
             }),
             HLIL_TAILCALL => Op::Tailcall(Call {
-                dest: op.operands[0] as usize,
+                dest: HighLevelExpressionIndex::from(op.operands[0]),
                 num_params: op.operands[1] as usize,
                 first_param: op.operands[2] as usize,
             }),
             HLIL_CALL_SSA => Op::CallSsa(CallSsa {
-                dest: op.operands[0] as usize,
+                dest: HighLevelExpressionIndex::from(op.operands[0]),
                 num_params: op.operands[1] as usize,
                 first_param: op.operands[2] as usize,
                 dest_memory: op.operands[3],
@@ -331,7 +378,7 @@ impl HighLevelILInstruction {
             HLIL_CASE => Op::Case(Case {
                 num_values: op.operands[0] as usize,
                 first_value: op.operands[1] as usize,
-                body: op.operands[2] as usize,
+                body: HighLevelExpressionIndex::from(op.operands[2]),
             }),
             HLIL_CONST => Op::Const(Const {
                 constant: op.operands[0],
@@ -348,70 +395,70 @@ impl HighLevelILInstruction {
                 size: op.size,
             }),
             HLIL_DEREF => Op::Deref(UnaryOp {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_ADDRESS_OF => Op::AddressOf(UnaryOp {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_NEG => Op::Neg(UnaryOp {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_NOT => Op::Not(UnaryOp {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_SX => Op::Sx(UnaryOp {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_ZX => Op::Zx(UnaryOp {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_LOW_PART => Op::LowPart(UnaryOp {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_BOOL_TO_INT => Op::BoolToInt(UnaryOp {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_UNIMPL_MEM => Op::UnimplMem(UnaryOp {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_FSQRT => Op::Fsqrt(UnaryOp {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_FNEG => Op::Fneg(UnaryOp {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_FABS => Op::Fabs(UnaryOp {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_FLOAT_TO_INT => Op::FloatToInt(UnaryOp {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_INT_TO_FLOAT => Op::IntToFloat(UnaryOp {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_FLOAT_CONV => Op::FloatConv(UnaryOp {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_ROUND_TO_INT => Op::RoundToInt(UnaryOp {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_FLOOR => Op::Floor(UnaryOp {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_CEIL => Op::Ceil(UnaryOp {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_FTRUNC => Op::Ftrunc(UnaryOp {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_DEREF_FIELD_SSA => Op::DerefFieldSsa(DerefFieldSsa {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
                 src_memory: op.operands[1],
                 offset: op.operands[2],
                 member_index: get_member_index(op.operands[3]),
             }),
             HLIL_DEREF_SSA => Op::DerefSsa(DerefSsa {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
                 src_memory: op.operands[1],
             }),
             HLIL_EXTERN_PTR => Op::ExternPtr(ExternPtr {
@@ -422,17 +469,17 @@ impl HighLevelILInstruction {
                 constant: get_float(op.operands[0], op.size),
             }),
             HLIL_FOR => Op::For(ForLoop {
-                init: op.operands[0] as usize,
-                condition: op.operands[1] as usize,
-                update: op.operands[2] as usize,
-                body: op.operands[3] as usize,
+                init: HighLevelExpressionIndex::from(op.operands[0]),
+                condition: HighLevelExpressionIndex::from(op.operands[1]),
+                update: HighLevelExpressionIndex::from(op.operands[2]),
+                body: HighLevelExpressionIndex::from(op.operands[3]),
             }),
             HLIL_FOR_SSA => Op::ForSsa(ForLoopSsa {
-                init: op.operands[0] as usize,
-                condition_phi: op.operands[1] as usize,
-                condition: op.operands[2] as usize,
-                update: op.operands[3] as usize,
-                body: op.operands[4] as usize,
+                init: HighLevelExpressionIndex::from(op.operands[0]),
+                condition_phi: HighLevelExpressionIndex::from(op.operands[1]),
+                condition: HighLevelExpressionIndex::from(op.operands[2]),
+                update: HighLevelExpressionIndex::from(op.operands[3]),
+                body: HighLevelExpressionIndex::from(op.operands[4]),
             }),
             HLIL_GOTO => Op::Goto(Label {
                 target: op.operands[0],
@@ -441,9 +488,9 @@ impl HighLevelILInstruction {
                 target: op.operands[0],
             }),
             HLIL_IF => Op::If(If {
-                condition: op.operands[0] as usize,
-                cond_true: op.operands[1] as usize,
-                cond_false: op.operands[2] as usize,
+                condition: HighLevelExpressionIndex::from(op.operands[0]),
+                cond_true: HighLevelExpressionIndex::from(op.operands[1]),
+                cond_false: HighLevelExpressionIndex::from(op.operands[2]),
             }),
             HLIL_INTRINSIC => Op::Intrinsic(Intrinsic {
                 intrinsic: op.operands[0] as u32,
@@ -458,7 +505,7 @@ impl HighLevelILInstruction {
                 src_memory: op.operands[4],
             }),
             HLIL_JUMP => Op::Jump(Jump {
-                dest: op.operands[0] as usize,
+                dest: HighLevelExpressionIndex::from(op.operands[0]),
             }),
             HLIL_MEM_PHI => Op::MemPhi(MemPhi {
                 dest: op.operands[0],
@@ -470,22 +517,22 @@ impl HighLevelILInstruction {
                 first_src: op.operands[1] as usize,
             }),
             HLIL_SPLIT => Op::Split(Split {
-                high: op.operands[0] as usize,
-                low: op.operands[1] as usize,
+                high: HighLevelExpressionIndex::from(op.operands[0]),
+                low: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_STRUCT_FIELD => Op::StructField(StructField {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
                 offset: op.operands[1],
                 member_index: get_member_index(op.operands[2]),
             }),
             HLIL_DEREF_FIELD => Op::DerefField(StructField {
-                src: op.operands[0] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[0]),
                 offset: op.operands[1],
                 member_index: get_member_index(op.operands[2]),
             }),
             HLIL_SWITCH => Op::Switch(Switch {
-                condition: op.operands[0] as usize,
-                default: op.operands[1] as usize,
+                condition: HighLevelExpressionIndex::from(op.operands[0]),
+                default: HighLevelExpressionIndex::from(op.operands[1]),
                 num_cases: op.operands[2] as usize,
                 first_case: op.operands[3] as usize,
             }),
@@ -510,11 +557,11 @@ impl HighLevelILInstruction {
             }),
             HLIL_VAR_INIT => Op::VarInit(VarInit {
                 dest: get_var(op.operands[0]),
-                src: op.operands[1] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_VAR_INIT_SSA => Op::VarInitSsa(VarInitSsa {
                 dest: get_var_ssa((op.operands[0], op.operands[1] as usize)),
-                src: op.operands[2] as usize,
+                src: HighLevelExpressionIndex::from(op.operands[2]),
             }),
             HLIL_VAR_PHI => Op::VarPhi(VarPhi {
                 dest: get_var_ssa((op.operands[0], op.operands[1] as usize)),
@@ -525,31 +572,64 @@ impl HighLevelILInstruction {
                 var: get_var_ssa((op.operands[0], op.operands[1] as usize)),
             }),
             HLIL_WHILE => Op::While(While {
-                condition: op.operands[0] as usize,
-                body: op.operands[1] as usize,
+                condition: HighLevelExpressionIndex::from(op.operands[0]),
+                body: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_DO_WHILE => Op::DoWhile(While {
-                body: op.operands[0] as usize,
-                condition: op.operands[1] as usize,
+                body: HighLevelExpressionIndex::from(op.operands[0]),
+                condition: HighLevelExpressionIndex::from(op.operands[1]),
             }),
             HLIL_WHILE_SSA => Op::WhileSsa(WhileSsa {
-                condition_phi: op.operands[0] as usize,
-                condition: op.operands[1] as usize,
-                body: op.operands[2] as usize,
+                condition_phi: HighLevelExpressionIndex::from(op.operands[0]),
+                condition: HighLevelExpressionIndex::from(op.operands[1]),
+                body: HighLevelExpressionIndex::from(op.operands[2]),
             }),
             HLIL_DO_WHILE_SSA => Op::DoWhileSsa(WhileSsa {
-                condition_phi: op.operands[0] as usize,
-                condition: op.operands[1] as usize,
-                body: op.operands[2] as usize,
+                condition_phi: HighLevelExpressionIndex::from(op.operands[0]),
+                condition: HighLevelExpressionIndex::from(op.operands[1]),
+                body: HighLevelExpressionIndex::from(op.operands[2]),
             }),
         };
         Self {
             function,
             address: op.address,
+            instr_index,
             expr_index,
             size: op.size,
             kind,
         }
+    }
+
+    fn get_operand_list(&self, operand_idx: usize) -> Vec<u64> {
+        let mut count = 0;
+        let raw_list_ptr = unsafe {
+            BNHighLevelILGetOperandList(
+                self.function.handle,
+                self.expr_index.0,
+                operand_idx,
+                &mut count,
+            )
+        };
+        assert!(!raw_list_ptr.is_null());
+        let list = unsafe { std::slice::from_raw_parts(raw_list_ptr, count).to_vec() };
+        unsafe { BNHighLevelILFreeOperandList(raw_list_ptr) };
+        list
+    }
+
+    fn get_ssa_var_list(&self, operand_idx: usize) -> Vec<SSAVariable> {
+        self.get_operand_list(operand_idx)
+            .chunks(2)
+            .map(|chunk| (Variable::from_identifier(chunk[0]), chunk[1] as usize))
+            .map(|(var, version)| SSAVariable::new(var, version))
+            .collect()
+    }
+
+    fn get_expr_list(&self, operand_idx: usize) -> Vec<HighLevelILInstruction> {
+        self.get_operand_list(operand_idx)
+            .into_iter()
+            .map(|val| HighLevelExpressionIndex(val as usize))
+            .filter_map(|idx| self.function.instruction_from_expr_index(idx))
+            .collect()
     }
 
     pub fn lift(&self) -> HighLevelILLiftedInstruction {
@@ -630,7 +710,11 @@ impl HighLevelILInstruction {
                 src: self.lift_operand(op.src),
             }),
             AssignUnpack(op) => Lifted::AssignUnpack(LiftedAssignUnpack {
-                dest: self.lift_instruction_list(op.first_dest, op.num_dests),
+                dest: self
+                    .get_expr_list(0)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
                 src: self.lift_operand(op.src),
             }),
             AssignMemSsa(op) => Lifted::AssignMemSsa(LiftedAssignMemSsa {
@@ -640,26 +724,42 @@ impl HighLevelILInstruction {
                 src_memory: op.src_memory,
             }),
             AssignUnpackMemSsa(op) => Lifted::AssignUnpackMemSsa(LiftedAssignUnpackMemSsa {
-                dest: self.lift_instruction_list(op.first_dest, op.num_dests),
+                dest: self
+                    .get_expr_list(0)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
                 dest_memory: op.dest_memory,
                 src: self.lift_operand(op.src),
                 src_memory: op.src_memory,
             }),
-            Block(op) => Lifted::Block(LiftedBlock {
-                body: self.lift_instruction_list(op.first_param, op.num_params),
+            Block(_op) => Lifted::Block(LiftedBlock {
+                body: self
+                    .get_expr_list(0)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
             }),
 
             Call(op) => Lifted::Call(self.lift_call(op)),
             Tailcall(op) => Lifted::Tailcall(self.lift_call(op)),
             CallSsa(op) => Lifted::CallSsa(LiftedCallSsa {
                 dest: self.lift_operand(op.dest),
-                params: self.lift_instruction_list(op.first_param, op.num_params),
+                params: self
+                    .get_expr_list(1)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
                 dest_memory: op.dest_memory,
                 src_memory: op.src_memory,
             }),
 
             Case(op) => Lifted::Case(LiftedCase {
-                values: self.lift_instruction_list(op.first_value, op.num_values),
+                values: self
+                    .get_expr_list(0)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
                 body: self.lift_operand(op.body),
             }),
             Const(op) => Lifted::Const(op),
@@ -740,7 +840,11 @@ impl HighLevelILInstruction {
                     IntrinsicId(op.intrinsic),
                 )
                 .expect("Invalid intrinsic"),
-                params: self.lift_instruction_list(op.first_param, op.num_params),
+                params: self
+                    .get_expr_list(1)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
             }),
             IntrinsicSsa(op) => Lifted::IntrinsicSsa(LiftedIntrinsicSsa {
                 intrinsic: CoreIntrinsic::new(
@@ -748,7 +852,11 @@ impl HighLevelILInstruction {
                     IntrinsicId(op.intrinsic),
                 )
                 .expect("Invalid intrinsic"),
-                params: self.lift_instruction_list(op.first_param, op.num_params),
+                params: self
+                    .get_expr_list(1)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
                 dest_memory: op.dest_memory,
                 src_memory: op.src_memory,
             }),
@@ -757,10 +865,14 @@ impl HighLevelILInstruction {
             }),
             MemPhi(op) => Lifted::MemPhi(LiftedMemPhi {
                 dest: op.dest,
-                src: OperandIter::new(&*self.function, op.first_src, op.num_srcs).collect(),
+                src: self.get_operand_list(1),
             }),
-            Ret(op) => Lifted::Ret(LiftedRet {
-                src: self.lift_instruction_list(op.first_src, op.num_srcs),
+            Ret(_op) => Lifted::Ret(LiftedRet {
+                src: self
+                    .get_expr_list(0)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
             }),
             Split(op) => Lifted::Split(LiftedSplit {
                 high: self.lift_operand(op.high),
@@ -771,13 +883,25 @@ impl HighLevelILInstruction {
             Switch(op) => Lifted::Switch(LiftedSwitch {
                 condition: self.lift_operand(op.condition),
                 default: self.lift_operand(op.default),
-                cases: self.lift_instruction_list(op.first_case, op.num_cases),
+                cases: self
+                    .get_expr_list(2)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
             }),
-            Syscall(op) => Lifted::Syscall(LiftedSyscall {
-                params: self.lift_instruction_list(op.first_param, op.num_params),
+            Syscall(_op) => Lifted::Syscall(LiftedSyscall {
+                params: self
+                    .get_expr_list(0)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
             }),
             SyscallSsa(op) => Lifted::SyscallSsa(LiftedSyscallSsa {
-                params: self.lift_instruction_list(op.first_param, op.num_params),
+                params: self
+                    .get_expr_list(0)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
                 dest_memory: op.dest_memory,
                 src_memory: op.src_memory,
             }),
@@ -794,9 +918,7 @@ impl HighLevelILInstruction {
             }),
             VarPhi(op) => Lifted::VarPhi(LiftedVarPhi {
                 dest: op.dest,
-                src: OperandIter::new(&*self.function, op.first_src, op.num_srcs)
-                    .ssa_vars()
-                    .collect(),
+                src: self.get_ssa_var_list(2),
             }),
             VarSsa(op) => Lifted::VarSsa(op),
 
@@ -809,6 +931,7 @@ impl HighLevelILInstruction {
         HighLevelILLiftedInstruction {
             function: self.function.clone(),
             address: self.address,
+            instr_index: self.instr_index,
             expr_index: self.expr_index,
             size: self.size,
             kind,
@@ -859,18 +982,11 @@ impl HighLevelILInstruction {
         SSAVariable::new(variable, version)
     }
 
-    fn lift_operand(&self, expr_idx: usize) -> Box<HighLevelILLiftedInstruction> {
-        // TODO: UGH, if your gonna call it expr_idx, call the instruction and expression!!!!!
-        // TODO: We dont even need to say instruction in the type!
-        // TODO: IF you want to have an instruction type, there needs to be a separate expression type
-        // TODO: See the lowlevelil module.
-        let expr_idx_is_really_instr_idx = HighLevelInstructionIndex(expr_idx);
-        // TODO: Ugh, this is so dumb..... i want HighLevelILLiftedExpression yesterday!!!
-        let operand_instr = self
-            .function
-            .instruction_from_expr_index(expr_idx_is_really_instr_idx)
-            .unwrap();
-        // TODO: Why box it here??!?!?! insane.
+    fn lift_operand(
+        &self,
+        expr_idx: HighLevelExpressionIndex,
+    ) -> Box<HighLevelILLiftedInstruction> {
+        let operand_instr = self.function.instruction_from_expr_index(expr_idx).unwrap();
         Box::new(operand_instr.lift())
     }
 
@@ -907,8 +1023,9 @@ impl HighLevelILInstruction {
     fn lift_call(&self, op: Call) -> LiftedCall {
         LiftedCall {
             dest: self.lift_operand(op.dest),
-            params: OperandIter::new(&*self.function, op.first_param, op.num_params)
-                .exprs()
+            params: self
+                .get_expr_list(1)
+                .iter()
                 .map(|expr| expr.lift())
                 .collect(),
         }
@@ -936,17 +1053,6 @@ impl HighLevelILInstruction {
             member_index: op.member_index,
         }
     }
-
-    fn lift_instruction_list(
-        &self,
-        first_instruction: usize,
-        num_instructions: usize,
-    ) -> Vec<HighLevelILLiftedInstruction> {
-        OperandIter::new(&*self.function, first_instruction, num_instructions)
-            .exprs()
-            .map(|expr| expr.lift())
-            .collect()
-    }
 }
 
 impl CoreArrayProvider for HighLevelILInstruction {
@@ -961,7 +1067,9 @@ unsafe impl CoreArrayProviderInner for HighLevelILInstruction {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::new(context.clone(), HighLevelInstructionIndex(*raw))
+        context
+            .instruction_from_index(HighLevelInstructionIndex(*raw))
+            .unwrap()
     }
 }
 

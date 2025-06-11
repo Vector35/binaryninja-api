@@ -1,5 +1,6 @@
 #![allow(unused)]
 
+use crate::architecture::{Architecture, CoreArchitecture, CoreRegister, RegisterId};
 use crate::confidence::Conf;
 use crate::function::{Function, Location};
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Ref};
@@ -12,7 +13,8 @@ use binaryninjacore_sys::{
     BNFreeVariableList, BNFreeVariableNameAndTypeList, BNFromVariableIdentifier,
     BNIndirectBranchInfo, BNLookupTableEntry, BNMergedVariable, BNPossibleValueSet,
     BNRegisterValue, BNRegisterValueType, BNStackVariableReference, BNToVariableIdentifier,
-    BNUserVariableValue, BNValueRange, BNVariable, BNVariableNameAndType, BNVariableSourceType,
+    BNTypeWithConfidence, BNUserVariableValue, BNValueRange, BNVariable, BNVariableNameAndType,
+    BNVariableSourceType,
 };
 use std::collections::HashSet;
 
@@ -186,7 +188,7 @@ impl NamedVariableWithType {
 
     pub(crate) fn free_raw(value: BNVariableNameAndType) {
         let _ = unsafe { Type::ref_from_raw(value.type_) };
-        let _ = unsafe { BnString::from_raw(value.name) };
+        unsafe { BnString::free_raw(value.name) };
     }
 
     pub fn new(variable: Variable, ty: Conf<Ref<Type>>, name: String, auto_defined: bool) -> Self {
@@ -238,7 +240,9 @@ impl UserVariableValue {
             var: value.variable.into(),
             defSite: value.def_site.into(),
             after: value.after,
-            value: PossibleValueSet::into_raw(value.value),
+            // TODO: This returns a rust allocated value, we should at some point provide allocators for the
+            // TODO: internal state of BNPossibleValueSet, so we can store rust created object in core objects.
+            value: PossibleValueSet::into_rust_raw(value.value),
         }
     }
 }
@@ -307,7 +311,7 @@ impl StackVariableReference {
 
     pub(crate) fn free_raw(value: BNStackVariableReference) {
         let _ = unsafe { Type::ref_from_raw(value.type_) };
-        let _ = unsafe { BnString::from_raw(value.name) };
+        unsafe { BnString::free_raw(value.name) };
     }
 }
 
@@ -383,6 +387,16 @@ impl Variable {
     pub fn to_identifier(&self) -> u64 {
         let raw = BNVariable::from(*self);
         unsafe { BNToVariableIdentifier(&raw) }
+    }
+
+    pub fn to_register(&self, arch: CoreArchitecture) -> Option<CoreRegister> {
+        match self.ty {
+            VariableSourceType::RegisterVariableSourceType => {
+                arch.register_from_id(RegisterId(self.storage as u32))
+            }
+            VariableSourceType::StackVariableSourceType => None,
+            VariableSourceType::FlagVariableSourceType => None,
+        }
     }
 }
 
@@ -590,6 +604,28 @@ impl LookupTableEntry {
             to: value.toValue,
         }
     }
+
+    pub(crate) fn from_owned_raw(value: BNLookupTableEntry) -> Self {
+        let owned = Self::from_raw(&value);
+        Self::free_raw(value);
+        owned
+    }
+
+    pub(crate) fn into_raw(value: Self) -> BNLookupTableEntry {
+        let from_values: Box<[i64]> = value.from.into_iter().collect();
+        let from_values_len = from_values.len();
+        BNLookupTableEntry {
+            // Freed in [`Self::free_raw`]
+            fromValues: Box::leak(from_values).as_mut_ptr(),
+            fromCount: from_values_len,
+            toValue: value.to,
+        }
+    }
+
+    pub(crate) fn free_raw(value: BNLookupTableEntry) {
+        let raw_from = unsafe { std::slice::from_raw_parts_mut(value.fromValues, value.fromCount) };
+        let boxed_from = unsafe { Box::from_raw(raw_from) };
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -724,15 +760,14 @@ impl PossibleValueSet {
         }
     }
 
-    /// Take ownership over an "owned" core allocated value. Do not call this for a rust allocated value.
-    pub(crate) fn from_owned_raw(mut value: BNPossibleValueSet) -> Self {
+    /// Take ownership over an "owned" **core allocated** value. Do not call this for a rust allocated value.
+    pub(crate) fn from_owned_core_raw(mut value: BNPossibleValueSet) -> Self {
         let owned = Self::from_raw(&value);
-        // TODO: This entire function is a little wonky.
-        Self::free_raw(&mut value);
+        Self::free_core_raw(&mut value);
         owned
     }
 
-    pub(crate) fn into_raw(value: Self) -> BNPossibleValueSet {
+    pub(crate) fn into_rust_raw(value: Self) -> BNPossibleValueSet {
         let mut raw = BNPossibleValueSet {
             state: value.value_type(),
             ..Default::default()
@@ -758,31 +793,39 @@ impl PossibleValueSet {
             PossibleValueSet::ReturnAddressValue => {}
             PossibleValueSet::ImportedAddressValue => {}
             PossibleValueSet::SignedRangeValue { value, ranges } => {
+                let boxed_raw_ranges: Box<[BNValueRange]> =
+                    ranges.into_iter().map(BNValueRange::from).collect();
                 raw.value = value;
-                // TODO: raw.ranges
-                // TODO: requires core allocation and freeing.
-                // TODO: See `BNFreePossibleValueSet` for why this sucks.
+                raw.count = boxed_raw_ranges.len();
+                // NOTE: We are allocating this in rust, meaning core MUST NOT free this.
+                raw.ranges = Box::leak(boxed_raw_ranges).as_mut_ptr();
             }
             PossibleValueSet::UnsignedRangeValue { value, ranges } => {
+                let boxed_raw_ranges: Box<[BNValueRange]> =
+                    ranges.into_iter().map(BNValueRange::from).collect();
                 raw.value = value;
-                // TODO: raw.ranges
-                // TODO: requires core allocation and freeing.
-                // TODO: See `BNFreePossibleValueSet` for why this sucks.
+                raw.count = boxed_raw_ranges.len();
+                // NOTE: We are allocating this in rust, meaning core MUST NOT free this.
+                raw.ranges = Box::leak(boxed_raw_ranges).as_mut_ptr();
             }
             PossibleValueSet::LookupTableValue { table } => {
-                // TODO: raw.table
-                // TODO: requires core allocation and freeing.
-                // TODO: See `BNFreePossibleValueSet` for why this sucks.
+                let boxed_raw_entries: Box<[BNLookupTableEntry]> =
+                    table.into_iter().map(LookupTableEntry::into_raw).collect();
+                raw.count = boxed_raw_entries.len();
+                // NOTE: We are allocating this in rust, meaning core MUST NOT free this.
+                raw.table = Box::leak(boxed_raw_entries).as_mut_ptr();
             }
             PossibleValueSet::InSetOfValues { values } => {
-                // TODO: raw.valueSet
-                // TODO: requires core allocation and freeing.
-                // TODO: See `BNFreePossibleValueSet` for why this sucks.
+                let boxed_raw_values: Box<[i64]> = values.into_iter().collect();
+                raw.count = boxed_raw_values.len();
+                // NOTE: We are allocating this in rust, meaning core MUST NOT free this.
+                raw.valueSet = Box::leak(boxed_raw_values).as_mut_ptr();
             }
             PossibleValueSet::NotInSetOfValues { values } => {
-                // TODO: raw.valueSet
-                // TODO: requires core allocation and freeing.
-                // TODO: See `BNFreePossibleValueSet` for why this sucks.
+                let boxed_raw_values: Box<[i64]> = values.into_iter().collect();
+                raw.count = boxed_raw_values.len();
+                // NOTE: We are allocating this in rust, meaning core MUST NOT free this.
+                raw.valueSet = Box::leak(boxed_raw_values).as_mut_ptr();
             }
             PossibleValueSet::ConstantDataValue { value, size } => {
                 raw.value = value;
@@ -804,14 +847,28 @@ impl PossibleValueSet {
         raw
     }
 
-    /// Free a CORE ALLOCATED possible value set. Do not use this with [Self::into_raw] values.
-    pub(crate) fn free_raw(value: &mut BNPossibleValueSet) {
+    /// Free a CORE ALLOCATED possible value set. Do not use this with [Self::into_rust_raw] values.
+    pub(crate) fn free_core_raw(value: &mut BNPossibleValueSet) {
         unsafe { BNFreePossibleValueSet(value) }
     }
 
     /// Free a RUST ALLOCATED possible value set. Do not use this with CORE ALLOCATED values.
-    pub(crate) fn free_owned_raw(value: BNPossibleValueSet) {
-        // TODO: Once we fill out allocation of the possible value set then we should fill this out as well.
+    pub(crate) fn free_rust_raw(value: BNPossibleValueSet) {
+        // Free the range list
+        if !value.ranges.is_null() {
+            let raw_ranges = unsafe { std::slice::from_raw_parts_mut(value.ranges, value.count) };
+            let boxed_ranges = unsafe { Box::from_raw(raw_ranges) };
+        }
+
+        if !value.table.is_null() {
+            unsafe { LookupTableEntry::free_raw(*value.table) };
+        }
+
+        if !value.valueSet.is_null() {
+            let raw_value_set =
+                unsafe { std::slice::from_raw_parts_mut(value.valueSet, value.count) };
+            let boxed_value_set = unsafe { Box::from_raw(raw_value_set) };
+        }
     }
 
     pub fn value_type(&self) -> RegisterValueType {

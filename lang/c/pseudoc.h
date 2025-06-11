@@ -35,6 +35,8 @@ class PseudoCFunction: public BinaryNinja::LanguageRepresentationFunction
 		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings);
 	void AppendFieldTextTokens(const BinaryNinja::HighLevelILInstruction& var, uint64_t offset, size_t memberIndex, size_t size,
 		BinaryNinja::HighLevelILTokenEmitter& tokens, bool deref, bool displayDeref = true);
+	void AppendDefaultSplitExpr(const BinaryNinja::HighLevelILInstruction& instr, BinaryNinja::HighLevelILTokenEmitter& tokens,
+		BinaryNinja::DisassemblySettings* settings, BNOperatorPrecedence precedence);
 	void GetExprTextInternal(const BinaryNinja::HighLevelILInstruction& instr,
 		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
 		BNOperatorPrecedence precedence = TopLevelOperatorPrecedence, bool statement = false,
@@ -50,6 +52,16 @@ protected:
 	void EndLines(
 		const BinaryNinja::HighLevelILInstruction& instr, BinaryNinja::HighLevelILTokenEmitter& tokens) override;
 
+	virtual void GetExpr_CALL_OR_TAILCALL(const BinaryNinja::HighLevelILInstruction& instr,
+		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
+		BNOperatorPrecedence precedence, bool statement);
+	virtual void GetExpr_CONST_PTR(const BinaryNinja::HighLevelILInstruction& instr,
+		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
+		BNOperatorPrecedence precedence, bool statement);
+	virtual void GetExpr_IMPORT(const BinaryNinja::HighLevelILInstruction& instr,
+		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
+		BNOperatorPrecedence precedence, bool statement);
+
 public:
 	PseudoCFunction(BinaryNinja::LanguageRepresentationFunctionType* type, BinaryNinja::Architecture* arch,
 		BinaryNinja::Function* owner, BinaryNinja::HighLevelILFunction* highLevelILFunction);
@@ -64,4 +76,7 @@ public:
 	PseudoCFunctionType();
 	BinaryNinja::Ref<BinaryNinja::LanguageRepresentationFunction> Create(BinaryNinja::Architecture* arch,
 		BinaryNinja::Function* owner, BinaryNinja::HighLevelILFunction* highLevelILFunction) override;
+
+protected:
+	PseudoCFunctionType(const std::string& name);
 };

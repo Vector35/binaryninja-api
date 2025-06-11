@@ -18,7 +18,7 @@ pub struct CreateSignatureFile;
 impl Command for CreateSignatureFile {
     fn action(&self, view: &BinaryView) {
         let is_function_named = |f: &Guard<Function>| {
-            !f.symbol().short_name().as_str().contains("sub_") || f.has_user_annotations()
+            !f.symbol().short_name().to_string_lossy().contains("sub_") || f.has_user_annotations()
         };
         let mut signature_dir = user_signature_dir();
         if let Some(default_plat) = view.default_platform() {
@@ -31,7 +31,7 @@ impl Command for CreateSignatureFile {
             let total_functions = view.functions().len();
             let done_functions = AtomicUsize::default();
             let background_task = binaryninja::background_task::BackgroundTask::new(
-                format!("Generating signatures... ({}/{})", 0, total_functions),
+                &format!("Generating signatures... ({}/{})", 0, total_functions),
                 true,
             );
 
@@ -43,7 +43,7 @@ impl Command for CreateSignatureFile {
                     .par_iter()
                     .inspect(|_| {
                         done_functions.fetch_add(1, Relaxed);
-                        background_task.set_progress_text(format!(
+                        background_task.set_progress_text(&format!(
                             "Generating signatures... ({}/{})",
                             done_functions.load(Relaxed),
                             total_functions

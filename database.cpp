@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2024 Vector 35 Inc
+// Copyright (c) 2015-2025 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -310,7 +310,7 @@ vector<Ref<UndoEntry>> Snapshot::GetUndoEntries()
 }
 
 
-vector<Ref<UndoEntry>> Snapshot::GetUndoEntries(const std::function<bool(size_t, size_t)>& progress)
+vector<Ref<UndoEntry>> Snapshot::GetUndoEntries(const ProgressFunction& progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -339,7 +339,7 @@ Ref<KeyValueStore> Snapshot::ReadData()
 }
 
 
-Ref<KeyValueStore> Snapshot::ReadData(const std::function<bool(size_t, size_t)>& progress)
+Ref<KeyValueStore> Snapshot::ReadData(const ProgressFunction& progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -352,7 +352,7 @@ Ref<KeyValueStore> Snapshot::ReadData(const std::function<bool(size_t, size_t)>&
 }
 
 
-bool Snapshot::StoreData(const Ref<KeyValueStore>& data, const std::function<bool(size_t, size_t)>& progress)
+bool Snapshot::StoreData(const Ref<KeyValueStore>& data, const ProgressFunction& progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -413,7 +413,7 @@ Ref<Snapshot> Database::GetCurrentSnapshot()
 
 
 int64_t Database::WriteSnapshotData(std::vector<int64_t> parents, Ref<BinaryView> file, const std::string& name,
-    const Ref<KeyValueStore>& data, bool autoSave, const std::function<bool(size_t, size_t)>& progress)
+    const Ref<KeyValueStore>& data, bool autoSave, const ProgressFunction& progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;

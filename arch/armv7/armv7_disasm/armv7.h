@@ -697,16 +697,34 @@ enum Register
 	REGS_FPEXC, // 8
 	REGS_FPINST, // 9
 	REGS_FPINST2, //10
-	REGS_MSP,
-	REGS_PSP,
 
 	// these are M-profile only (special)
 	// but are here in ARM common (general)
 	// TODO: implement "microarchitecture support"
+	REGS_MSP,
+	REGS_PSP,
 	REGS_PRIMASK,
 	REGS_BASEPRI,
 	REGS_FAULTMASK,
 	REGS_CONTROL,
+	REGS_BASEPRI_MAX,
+	REGS_IPSR,
+	REGS_EPSR,
+	REGS_IEPSR,
+
+	REGS_IAPSR,
+	REGS_IAPSR_G,
+	REGS_IAPSR_NZCVQ,
+	REGS_IAPSR_NZCVQG,
+	REGS_EAPSR,
+	REGS_EAPSR_G,
+	REGS_EAPSR_NZCVQ,
+	REGS_EAPSR_NZCVQG,
+	REGS_XPSR,
+	REGS_XPSR_G,
+	REGS_XPSR_NZCVQ,
+	REGS_XPSR_NZCVQG,
+
 
 	REG_INVALID,
 };

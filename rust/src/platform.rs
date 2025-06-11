@@ -1,4 +1,4 @@
-// Copyright 2021-2024 Vector 35 Inc.
+// Copyright 2021-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -82,10 +82,10 @@ impl Platform {
         Ref::new(Self { handle })
     }
 
-    pub fn by_name<S: BnStrCompatible>(name: S) -> Option<Ref<Self>> {
-        let raw_name = name.into_bytes_with_nul();
+    pub fn by_name(name: &str) -> Option<Ref<Self>> {
+        let raw_name = name.to_cstr();
         unsafe {
-            let res = BNGetPlatformByName(raw_name.as_ref().as_ptr() as *mut _);
+            let res = BNGetPlatformByName(raw_name.as_ptr());
 
             if res.is_null() {
                 None
@@ -113,30 +113,24 @@ impl Platform {
         }
     }
 
-    pub fn list_by_os<S: BnStrCompatible>(name: S) -> Array<Platform> {
-        let raw_name = name.into_bytes_with_nul();
+    pub fn list_by_os(name: &str) -> Array<Platform> {
+        let raw_name = name.to_cstr();
 
         unsafe {
             let mut count = 0;
-            let handles = BNGetPlatformListByOS(raw_name.as_ref().as_ptr() as *mut _, &mut count);
+            let handles = BNGetPlatformListByOS(raw_name.as_ptr(), &mut count);
 
             Array::new(handles, count, ())
         }
     }
 
-    pub fn list_by_os_and_arch<S: BnStrCompatible>(
-        name: S,
-        arch: &CoreArchitecture,
-    ) -> Array<Platform> {
-        let raw_name = name.into_bytes_with_nul();
+    pub fn list_by_os_and_arch(name: &str, arch: &CoreArchitecture) -> Array<Platform> {
+        let raw_name = name.to_cstr();
 
         unsafe {
             let mut count = 0;
-            let handles = BNGetPlatformListByOSAndArchitecture(
-                raw_name.as_ref().as_ptr() as *mut _,
-                arch.handle,
-                &mut count,
-            );
+            let handles =
+                BNGetPlatformListByOSAndArchitecture(raw_name.as_ptr(), arch.handle, &mut count);
 
             Array::new(handles, count, ())
         }
@@ -151,19 +145,19 @@ impl Platform {
         }
     }
 
-    pub fn new<A: Architecture, S: BnStrCompatible>(arch: &A, name: S) -> Ref<Self> {
-        let name = name.into_bytes_with_nul();
+    pub fn new<A: Architecture>(arch: &A, name: &str) -> Ref<Self> {
+        let name = name.to_cstr();
         unsafe {
-            let handle = BNCreatePlatform(arch.as_ref().handle, name.as_ref().as_ptr() as *mut _);
+            let handle = BNCreatePlatform(arch.as_ref().handle, name.as_ptr());
             assert!(!handle.is_null());
             Ref::new(Self { handle })
         }
     }
 
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         unsafe {
             let raw_name = BNGetPlatformName(self.handle);
-            BnString::from_raw(raw_name)
+            BnString::into_string(raw_name)
         }
     }
 
@@ -179,25 +173,34 @@ impl Platform {
         unsafe { TypeContainer::from_raw(type_container_ptr.unwrap()) }
     }
 
-    pub fn get_type_libraries_by_name<T: BnStrCompatible>(&self, name: T) -> Array<TypeLibrary> {
+    /// Get all the type libraries that have been registered with the name.
+    ///
+    /// NOTE: This is a list because libraries can have `alternate_names`, use [`Platform::get_type_library_by_name`]
+    /// if you want to get _the_ type library with that name, skipping alternate names.
+    pub fn get_type_libraries_by_name(&self, name: &str) -> Array<TypeLibrary> {
         let mut count = 0;
-        let name = name.into_bytes_with_nul();
-        let result = unsafe {
-            BNGetPlatformTypeLibrariesByName(
-                self.handle,
-                name.as_ref().as_ptr() as *mut _,
-                &mut count,
-            )
-        };
+        let name = name.to_cstr();
+        let result =
+            unsafe { BNGetPlatformTypeLibrariesByName(self.handle, name.as_ptr(), &mut count) };
         assert!(!result.is_null());
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn register_os<S: BnStrCompatible>(&self, os: S) {
-        let os = os.into_bytes_with_nul();
+    /// Get the type library with the given name.
+    ///
+    /// NOTE: This finds the first type library that has the given name, skipping alternate names.
+    pub fn get_type_library_by_name(&self, name: &str) -> Option<Ref<TypeLibrary>> {
+        let libraries = self.get_type_libraries_by_name(name);
+        libraries
+            .iter()
+            .find(|lib| lib.name() == name)
+            .map(|lib| lib.to_owned())
+    }
 
+    pub fn register_os(&self, os: &str) {
+        let os = os.to_cstr();
         unsafe {
-            BNRegisterPlatform(os.as_ref().as_ptr() as *mut _, self.handle);
+            BNRegisterPlatform(os.as_ptr(), self.handle);
         }
     }
 
@@ -301,7 +304,7 @@ impl Platform {
             assert!(!error_string.is_null());
             Err(TypeParserError::new(
                 TypeParserErrorSeverity::FatalSeverity,
-                unsafe { BnString::from_raw(error_string) }.to_string(),
+                unsafe { BnString::into_string(error_string) },
                 file_name.to_string(),
                 0,
                 0,
@@ -345,7 +348,7 @@ impl Platform {
             assert!(!error_string.is_null());
             Err(TypeParserError::new(
                 TypeParserErrorSeverity::FatalSeverity,
-                unsafe { BnString::from_raw(error_string) }.to_string(),
+                unsafe { BnString::into_string(error_string) },
                 filename.to_string(),
                 0,
                 0,
@@ -386,7 +389,7 @@ impl Platform {
             assert!(!error_string.is_null());
             Err(TypeParserError::new(
                 TypeParserErrorSeverity::FatalSeverity,
-                unsafe { BnString::from_raw(error_string) }.to_string(),
+                unsafe { BnString::into_string(error_string) },
                 filename.to_string(),
                 0,
                 0,

@@ -1,5 +1,5 @@
 use crate::low_level_il::function::LowLevelILFunction;
-use crate::low_level_il::RegularLowLevelILFunction;
+use crate::low_level_il::LowLevelILRegularFunction;
 use crate::medium_level_il::MediumLevelILFunction;
 use crate::{architecture::CoreArchitecture, binary_view::BinaryView, function::Function};
 use binaryninjacore_sys::*;
@@ -10,7 +10,7 @@ pub trait FunctionRecognizer {
         &self,
         _bv: &BinaryView,
         _func: &Function,
-        _llil: &RegularLowLevelILFunction<CoreArchitecture>,
+        _llil: &LowLevelILRegularFunction,
     ) -> bool {
         false
     }
@@ -49,7 +49,7 @@ where
         let context = unsafe { &*(ctxt as *mut FunctionRecognizerHandlerContext<R>) };
         let bv = unsafe { BinaryView::from_raw(bv).to_owned() };
         let func = unsafe { Function::from_raw(func).to_owned() };
-        let llil = unsafe { LowLevelILFunction::from_raw(func.arch(), llil).to_owned() };
+        let llil = unsafe { LowLevelILFunction::from_raw(llil).to_owned() };
         context.recognizer.recognize_low_level_il(&bv, &func, &llil)
     }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2024 Vector 35 Inc
+// Copyright (c) 2015-2025 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -1634,7 +1634,7 @@ bool BinaryView::CreateDatabase(const string& path, Ref<SaveSettings> settings)
 
 
 bool BinaryView::CreateDatabase(const string& path,
-    const function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings)
+    const ProgressFunction& progressCallback, Ref<SaveSettings> settings)
 {
 	auto parent = GetParentView();
 	if (parent)
@@ -1650,7 +1650,7 @@ bool BinaryView::SaveAutoSnapshot(Ref<SaveSettings> settings)
 
 
 bool BinaryView::SaveAutoSnapshot(
-    const function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings)
+    const ProgressFunction& progressCallback, Ref<SaveSettings> settings)
 {
 	return m_file->SaveAutoSnapshot(this, progressCallback, settings);
 }
@@ -1789,6 +1789,11 @@ uint64_t BinaryView::GetEnd() const
 bool BinaryView::Save(const string& path)
 {
 	return BNSaveToFilename(m_object, path.c_str());
+}
+
+bool BinaryView::FinalizeNewSegments()
+{
+	return BNBinaryViewFinalizeNewSegments(m_object);
 }
 
 
@@ -3818,13 +3823,19 @@ BNAnalysisProgress BinaryView::GetAnalysisProgress()
 }
 
 
+BNAnalysisState BinaryView::GetAnalysisState()
+{
+	return BNGetAnalysisState(m_object);
+}
+
+
 Ref<BackgroundTask> BinaryView::GetBackgroundAnalysisTask()
 {
 	BNBackgroundTask* task = BNGetBackgroundAnalysisTask(m_object);
 	if (!task)
 		return nullptr;
 
-	return new BackgroundTask(BNNewBackgroundTaskReference(task));
+	return new BackgroundTask(task);
 }
 
 
@@ -4206,7 +4217,7 @@ void BinaryView::DefineUserType(const QualifiedName& name, Ref<Type> type)
 }
 
 
-std::unordered_map<std::string, QualifiedName> BinaryView::DefineTypes(const vector<pair<string, QualifiedNameAndType>>& types, std::function<bool(size_t, size_t)> progress)
+std::unordered_map<std::string, QualifiedName> BinaryView::DefineTypes(const vector<pair<string, QualifiedNameAndType>>& types, ProgressFunction progress)
 {
 	BNQualifiedNameTypeAndId* apiTypes = new BNQualifiedNameTypeAndId[types.size()];
 	for (size_t i = 0; i < types.size(); i++)
@@ -4244,7 +4255,7 @@ std::unordered_map<std::string, QualifiedName> BinaryView::DefineTypes(const vec
 }
 
 
-void BinaryView::DefineUserTypes(const vector<QualifiedNameAndType>& types, std::function<bool(size_t, size_t)> progress)
+void BinaryView::DefineUserTypes(const vector<QualifiedNameAndType>& types, ProgressFunction progress)
 {
 	BNQualifiedNameAndType* apiTypes = new BNQualifiedNameAndType[types.size()];
 	for (size_t i = 0; i < types.size(); i++)
@@ -4265,7 +4276,7 @@ void BinaryView::DefineUserTypes(const vector<QualifiedNameAndType>& types, std:
 }
 
 
-void BinaryView::DefineUserTypes(const vector<ParsedType>& types, std::function<bool(size_t, size_t)> progress)
+void BinaryView::DefineUserTypes(const vector<ParsedType>& types, ProgressFunction progress)
 {
 	BNQualifiedNameAndType* apiTypes = new BNQualifiedNameAndType[types.size()];
 	for (size_t i = 0; i < types.size(); i++)
@@ -4724,7 +4735,7 @@ static bool MatchCallbackForConstant(void* ctxt, uint64_t addr, BNLinearDisassem
 
 
 bool BinaryView::FindNextData(uint64_t start, uint64_t end, const DataBuffer& data, uint64_t& addr, BNFindFlag flags,
-    const std::function<bool(size_t current, size_t total)>& progress)
+    const ProgressFunction& progress)
 {
 	ProgressContext fp;
 	fp.callback = progress;
@@ -4735,7 +4746,7 @@ bool BinaryView::FindNextData(uint64_t start, uint64_t end, const DataBuffer& da
 
 bool BinaryView::FindNextText(uint64_t start, uint64_t end, const std::string& data, uint64_t& addr,
     Ref<DisassemblySettings> settings, BNFindFlag flags, const FunctionViewType& viewType,
-    const std::function<bool(size_t current, size_t total)>& progress)
+    const ProgressFunction& progress)
 {
 	ProgressContext fp;
 	fp.callback = progress;
@@ -4746,7 +4757,7 @@ bool BinaryView::FindNextText(uint64_t start, uint64_t end, const std::string& d
 
 bool BinaryView::FindNextConstant(uint64_t start, uint64_t end, uint64_t constant, uint64_t& addr,
     Ref<DisassemblySettings> settings, const FunctionViewType& viewType,
-    const std::function<bool(size_t current, size_t total)>& progress)
+    const ProgressFunction& progress)
 {
 	ProgressContext fp;
 	fp.callback = progress;
@@ -4756,7 +4767,7 @@ bool BinaryView::FindNextConstant(uint64_t start, uint64_t end, uint64_t constan
 
 
 bool BinaryView::FindAllData(uint64_t start, uint64_t end, const DataBuffer& data, BNFindFlag flags,
-    const std::function<bool(size_t current, size_t total)>& progress,
+    const ProgressFunction& progress,
     const std::function<bool(uint64_t addr, const DataBuffer& match)>& matchCallback)
 {
 	ProgressContext fp;
@@ -4769,7 +4780,7 @@ bool BinaryView::FindAllData(uint64_t start, uint64_t end, const DataBuffer& dat
 
 
 bool BinaryView::FindAllText(uint64_t start, uint64_t end, const std::string& data, Ref<DisassemblySettings> settings,
-    BNFindFlag flags, const FunctionViewType& viewType, const std::function<bool(size_t current, size_t total)>& progress,
+    BNFindFlag flags, const FunctionViewType& viewType, const ProgressFunction& progress,
     const std::function<bool(uint64_t addr, const std::string& match, const LinearDisassemblyLine& line)>&
         matchCallback)
 {
@@ -4783,7 +4794,7 @@ bool BinaryView::FindAllText(uint64_t start, uint64_t end, const std::string& da
 
 
 bool BinaryView::FindAllConstant(uint64_t start, uint64_t end, uint64_t constant, Ref<DisassemblySettings> settings,
-    const FunctionViewType& viewType, const std::function<bool(size_t current, size_t total)>& progress,
+    const FunctionViewType& viewType, const ProgressFunction& progress,
     const std::function<bool(uint64_t addr, const LinearDisassemblyLine& line)>& matchCallback)
 {
 	ProgressContext fp;
@@ -4795,7 +4806,16 @@ bool BinaryView::FindAllConstant(uint64_t start, uint64_t end, uint64_t constant
 }
 
 
-bool BinaryView::Search(const string& query, const std::function<bool(size_t current, size_t total)>& progressCallback, const std::function<bool(uint64_t offset, const DataBuffer& buffer)>& matchCallback)
+string BinaryView::DetectSearchMode(const string& query)
+{
+	char* searchMode = BNDetectSearchMode(query.c_str());
+	string result = searchMode;
+	BNFreeString(searchMode);
+	return result;
+}
+
+
+bool BinaryView::Search(const string& query, const ProgressFunction& progressCallback, const std::function<bool(uint64_t offset, const DataBuffer& buffer)>& matchCallback)
 {
 	ProgressContext fp;
 	fp.callback = progressCallback;
@@ -4934,7 +4954,7 @@ Ref<Segment> BinaryView::GetSegmentAt(uint64_t addr)
 	if (!segment)
 		return nullptr;
 
-	return new Segment(BNNewSegmentReference(segment));
+	return new Segment(segment);
 }
 
 
@@ -5023,7 +5043,7 @@ Ref<Section> BinaryView::GetSectionByName(const string& name)
 {
 	BNSection* section = BNGetSectionByName(m_object, name.c_str());
 	if (section)
-		return new Section(BNNewSectionReference(section));
+		return new Section(section);
 	return nullptr;
 }
 
@@ -5366,7 +5386,7 @@ Ref<ExternalLibrary> BinaryView::AddExternalLibrary(const std::string& name, Ref
 	BNExternalLibrary* lib = BNBinaryViewAddExternalLibrary(m_object, name.c_str(), backingFile ? backingFile->m_object : nullptr, isAuto);
 	if (!lib)
 		return nullptr;
-	return new ExternalLibrary(BNNewExternalLibraryReference(lib));
+	return new ExternalLibrary(lib);
 }
 
 
@@ -5578,14 +5598,14 @@ Ref<BinaryData> BinaryData::CreateFromFile(FileMetadata* file, FileAccessor* acc
 
 
 Ref<BinaryView> BinaryNinja::Load(const std::string& filename, bool updateAnalysis,
-	std::function<bool(size_t, size_t)> progress, Ref<Metadata> options)
+	ProgressFunction progress, Ref<Metadata> options)
 {
 	return Load(filename, updateAnalysis, options->GetJsonString(), progress);
 }
 
 
 Ref<BinaryView> BinaryNinja::Load(
-	const DataBuffer& rawData, bool updateAnalysis, std::function<bool(size_t, size_t)> progress, Ref<Metadata> options)
+	const DataBuffer& rawData, bool updateAnalysis, ProgressFunction progress, Ref<Metadata> options)
 {
 	Ref<FileMetadata> file = new FileMetadata();
 	Ref<BinaryView> view = new BinaryData(file, rawData);
@@ -5594,13 +5614,13 @@ Ref<BinaryView> BinaryNinja::Load(
 
 
 Ref<BinaryView> BinaryNinja::Load(Ref<BinaryView> view, bool updateAnalysis,
-	std::function<bool(size_t, size_t)> progress, Ref<Metadata> options, bool isDatabase)
+	ProgressFunction progress, Ref<Metadata> options, bool isDatabase)
 {
 	return Load(view, updateAnalysis, options->GetJsonString(), progress);
 }
 
 
-Ref<BinaryView> BinaryNinja::Load(const std::string& filename, bool updateAnalysis, const std::string& options, std::function<bool(size_t, size_t)> progress)
+Ref<BinaryView> BinaryNinja::Load(const std::string& filename, bool updateAnalysis, const std::string& options, ProgressFunction progress)
 {
 	ProgressContext cb;
 	cb.callback = progress;
@@ -5611,7 +5631,7 @@ Ref<BinaryView> BinaryNinja::Load(const std::string& filename, bool updateAnalys
 }
 
 
-Ref<BinaryView> BinaryNinja::Load(const DataBuffer& rawData, bool updateAnalysis, const std::string& options, std::function<bool(size_t, size_t)> progress)
+Ref<BinaryView> BinaryNinja::Load(const DataBuffer& rawData, bool updateAnalysis, const std::string& options, ProgressFunction progress)
 {
 	Ref<FileMetadata> file = new FileMetadata();
 	Ref<BinaryView> view = new BinaryData(file, rawData);
@@ -5619,7 +5639,7 @@ Ref<BinaryView> BinaryNinja::Load(const DataBuffer& rawData, bool updateAnalysis
 }
 
 
-Ref<BinaryView> BinaryNinja::Load(Ref<BinaryView> view, bool updateAnalysis, const std::string& options, std::function<bool(size_t, size_t)> progress)
+Ref<BinaryView> BinaryNinja::Load(Ref<BinaryView> view, bool updateAnalysis, const std::string& options, ProgressFunction progress)
 {
 	ProgressContext cb;
 	cb.callback = progress;
@@ -5630,7 +5650,7 @@ Ref<BinaryView> BinaryNinja::Load(Ref<BinaryView> view, bool updateAnalysis, con
 }
 
 
-Ref<BinaryView> BinaryNinja::Load(Ref<ProjectFile> projectFile, bool updateAnalysis, const std::string& options, std::function<bool(size_t, size_t)> progress)
+Ref<BinaryView> BinaryNinja::Load(Ref<ProjectFile> projectFile, bool updateAnalysis, const std::string& options, ProgressFunction progress)
 {
 	ProgressContext cb;
 	cb.callback = progress;

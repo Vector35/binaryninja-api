@@ -4,6 +4,7 @@ mod function;
 mod instruction;
 mod lift;
 pub mod operation;
+pub mod token_emitter;
 
 pub use self::block::*;
 pub use self::function::*;

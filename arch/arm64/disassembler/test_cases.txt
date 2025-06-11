@@ -5335,6 +5335,23 @@ EA42106B ands x11, x3, x2, lsr #0x4
 D50B795C sys #0x3, c7, c9, #0x2, x28
 D50E79D8 sys #0x6, c7, c9, #0x6, x24
 D508792A at s1e1wp, x10
+D5087815 at S1E1R, x21
+D5087835 at S1E1W, x21
+D5087855 at S1E0R, x21
+D5087875 at S1E0W, x21
+D5087915 at S1E1RP, x21
+D5087935 at S1E1WP, x21
+D5087955 at S1E1A, x21
+D50C7815 at S1E2R, x21
+D50C7835 at S1E2W, x21
+D50C7895 at S12E1R, x21
+D50C78B5 at S12E1W, x21
+D50C78D5 at S12E0R, x21
+D50C78F5 at S12E0W, x21
+D50C7955 at S1E2A, x21
+D50E7815 at S1E3R, x21
+D50E7835 at S1E3W, x21
+D50E7955 at S1E3A, x21
 D50A7842 sys #0x2, c7, c8, #0x2, x2
 D50B782D sys #0x3, c7, c8, #0x1, x13
 D50C7976 sys #0x4, c7, c9, #0x3, x22
@@ -31575,8 +31592,340 @@ B66AB3D1 tbz x17, #0x2d, 0x800000000000567c
 B6EA934F tbz x15, #0x3d, 0x800000000000526c
 3675FE02 tbz w2, #0xe, 0x7fffffffffffbfc4
 36A72E4D tbz w13, #0x14, 0x7fffffffffffe5cc
-// TLBI_SYS_CR_systeminstrs 1101010100001xxx1000xxxxxxxxxxxx
+// TLBI_SYS_CR_systeminstrs 1101010100001xxxxxxxxxxxxxxxxxxx
 D50E871F tlbi alle3
+D5088115 tlbi vmalle1os, x21
+D5088135 tlbi vae1os, x21
+D5088155 tlbi aside1os, x21
+D5088175 tlbi vaae1os, x21
+D50881B5 tlbi vale1os, x21
+D50881F5 tlbi vaale1os, x21
+D5088235 tlbi rvae1is, x21
+D5088275 tlbi rvaae1is, x21
+D50882B5 tlbi rvale1is, x21
+D50882F5 tlbi rvaale1is, x21
+D5088315 tlbi vmalle1is, x21
+D5088335 tlbi vae1is, x21
+D5088355 tlbi aside1is, x21
+D5088375 tlbi vaae1is, x21
+D50883B5 tlbi vale1is, x21
+D50883F5 tlbi vaale1is, x21
+D5088535 tlbi rvae1os, x21
+D5088575 tlbi rvaae1os, x21
+D50885B5 tlbi rvale1os, x21
+D50885F5 tlbi rvaale1os, x21
+D5088635 tlbi rvae1, x21
+D5088675 tlbi rvaae1, x21
+D50886B5 tlbi rvale1, x21
+D50886F5 tlbi rvaale1, x21
+D5088715 tlbi vmalle1, x21
+D5088735 tlbi vae1, x21
+D5088755 tlbi aside1, x21
+D5088775 tlbi vaae1, x21
+D50887B5 tlbi vale1, x21
+D50887F5 tlbi vaale1, x21
+D5089115 tlbi vmalle1osnxs, x21
+D5089135 tlbi vae1osnxs, x21
+D5089155 tlbi aside1osnxs, x21
+D5089175 tlbi vaae1osnxs, x21
+D50891B5 tlbi vale1osnxs, x21
+D50891F5 tlbi vaale1osnxs, x21
+D5089235 tlbi rvae1isnxs, x21
+D5089275 tlbi rvaae1isnxs, x21
+D50892B5 tlbi rvale1isnxs, x21
+D50892F5 tlbi rvaale1isnxs, x21
+D5089315 tlbi vmalle1isnxs, x21
+D5089335 tlbi vae1isnxs, x21
+D5089355 tlbi aside1isnxs, x21
+D5089375 tlbi vaae1isnxs, x21
+D50893B5 tlbi vale1isnxs, x21
+D50893F5 tlbi vaale1isnxs, x21
+D5089535 tlbi rvae1osnxs, x21
+D5089575 tlbi rvaae1osnxs, x21
+D50895B5 tlbi rvale1osnxs, x21
+D50895F5 tlbi rvaale1osnxs, x21
+D5089635 tlbi rvae1nxs, x21
+D5089675 tlbi rvaae1nxs, x21
+D50896B5 tlbi rvale1nxs, x21
+D50896F5 tlbi rvaale1nxs, x21
+D5089715 tlbi vmalle1nxs, x21
+D5089735 tlbi vae1nxs, x21
+D5089755 tlbi aside1nxs, x21
+D5089775 tlbi vaae1nxs, x21
+D50897B5 tlbi vale1nxs, x21
+D50897F5 tlbi vaale1nxs, x21
+D50C8035 tlbi ipas2e1is, x21
+D50C8055 tlbi ripas2e1is, x21
+D50C80B5 tlbi ipas2le1is, x21
+D50C80D5 tlbi ripas2le1is, x21
+D50C8115 tlbi alle2os, x21
+D50C8135 tlbi vae2os, x21
+D50C8195 tlbi alle1os, x21
+D50C81B5 tlbi vale2os, x21
+D50C81D5 tlbi vmalls12e1os, x21
+D50C8235 tlbi rvae2is, x21
+D50C8255 tlbi vmallws2e1is, x21
+D50C82B5 tlbi rvale2is, x21
+D50C8315 tlbi alle2is, x21
+D50C8335 tlbi vae2is, x21
+D50C8395 tlbi alle1is, x21
+D50C83B5 tlbi vale2is, x21
+D50C83D5 tlbi vmalls12e1is, x21
+D50C8415 tlbi ipas2e1os, x21
+D50C8435 tlbi ipas2e1, x21
+D50C8455 tlbi ripas2e1, x21
+D50C8475 tlbi ripas2e1os, x21
+D50C8495 tlbi ipas2le1os, x21
+D50C84B5 tlbi ipas2le1, x21
+D50C84D5 tlbi ripas2le1, x21
+D50C84F5 tlbi ripas2le1os, x21
+D50C8535 tlbi rvae2os, x21
+D50C8555 tlbi vmallws2e1os, x21
+D50C85B5 tlbi rvale2os, x21
+D50C8635 tlbi rvae2, x21
+D50C8655 tlbi vmallws2e1, x21
+D50C86B5 tlbi rvale2, x21
+D50C8715 tlbi alle2, x21
+D50C8735 tlbi vae2, x21
+D50C8795 tlbi alle1, x21
+D50C87B5 tlbi vale2, x21
+D50C87D5 tlbi vmalls12e1, x21
+D50C9035 tlbi ipas2e1isnxs, x21
+D50C9055 tlbi ripas2e1isnxs, x21
+D50C90B5 tlbi ipas2le1isnxs, x21
+D50C90D5 tlbi ripas2le1isnxs, x21
+D50C9115 tlbi alle2osnxs, x21
+D50C9135 tlbi vae2osnxs, x21
+D50C9195 tlbi alle1osnxs, x21
+D50C91B5 tlbi vale2osnxs, x21
+D50C91D5 tlbi vmalls12e1osnxs, x21
+D50C9235 tlbi rvae2isnxs, x21
+D50C9255 tlbi vmallws2e1isnxs, x21
+D50C92B5 tlbi rvale2isnxs, x21
+D50C9315 tlbi alle2isnxs, x21
+D50C9335 tlbi vae2isnxs, x21
+D50C9395 tlbi alle1isnxs, x21
+D50C93B5 tlbi vale2isnxs, x21
+D50C93D5 tlbi vmalls12e1isnxs, x21
+D50C9415 tlbi ipas2e1osnxs, x21
+D50C9435 tlbi ipas2e1nxs, x21
+D50C9455 tlbi ripas2e1nxs, x21
+D50C9475 tlbi ripas2e1osnxs, x21
+D50C9495 tlbi ipas2le1osnxs, x21
+D50C94B5 tlbi ipas2le1nxs, x21
+D50C94D5 tlbi ripas2le1nxs, x21
+D50C94F5 tlbi ripas2le1osnxs, x21
+D50C9535 tlbi rvae2osnxs, x21
+D50C9555 tlbi vmallws2e1osnxs, x21
+D50C95B5 tlbi rvale2osnxs, x21
+D50C9635 tlbi rvae2nxs, x21
+D50C9655 tlbi vmallws2e1nxs, x21
+D50C96B5 tlbi rvale2nxs, x21
+D50C9715 tlbi alle2nxs, x21
+D50C9735 tlbi vae2nxs, x21
+D50C9795 tlbi alle1nxs, x21
+D50C97B5 tlbi vale2nxs, x21
+D50C97D5 tlbi vmalls12e1nxs, x21
+D50E8115 tlbi alle3os, x21
+D50E8135 tlbi vae3os, x21
+D50E8195 tlbi paallos, x21
+D50E81B5 tlbi vale3os, x21
+D50E8235 tlbi rvae3is, x21
+D50E82B5 tlbi rvale3is, x21
+D50E8315 tlbi alle3is, x21
+D50E8335 tlbi vae3is, x21
+D50E83B5 tlbi vale3is, x21
+D50E8475 tlbi rpaos, x21
+D50E84F5 tlbi rpalos, x21
+D50E8535 tlbi rvae3os, x21
+D50E85B5 tlbi rvale3os, x21
+D50E8635 tlbi rvae3, x21
+D50E86B5 tlbi rvale3, x21
+D50E8715 tlbi alle3, x21
+D50E8735 tlbi vae3, x21
+D50E8795 tlbi paall, x21
+D50E87B5 tlbi vale3, x21
+D50E9115 tlbi alle3osnxs, x21
+D50E9135 tlbi vae3osnxs, x21
+D50E91B5 tlbi vale3osnxs, x21
+D50E9235 tlbi rvae3isnxs, x21
+D50E92B5 tlbi rvale3isnxs, x21
+D50E9315 tlbi alle3isnxs, x21
+D50E9335 tlbi vae3isnxs, x21
+D50E93B5 tlbi vale3isnxs, x21
+D50E9535 tlbi rvae3osnxs, x21
+D50E95B5 tlbi rvale3osnxs, x21
+D50E9635 tlbi rvae3nxs, x21
+D50E96B5 tlbi rvale3nxs, x21
+D50E9715 tlbi alle3nxs, x21
+D50E9735 tlbi vae3nxs, x21
+D50E97B5 tlbi vale3nxs, x21
+D508811F tlbi vmalle1os
+D508813F tlbi vae1os
+D508815F tlbi aside1os
+D508817F tlbi vaae1os
+D50881BF tlbi vale1os
+D50881FF tlbi vaale1os
+D508823F tlbi rvae1is
+D508827F tlbi rvaae1is
+D50882BF tlbi rvale1is
+D50882FF tlbi rvaale1is
+D508831F tlbi vmalle1is
+D508833F tlbi vae1is
+D508835F tlbi aside1is
+D508837F tlbi vaae1is
+D50883BF tlbi vale1is
+D50883FF tlbi vaale1is
+D508853F tlbi rvae1os
+D508857F tlbi rvaae1os
+D50885BF tlbi rvale1os
+D50885FF tlbi rvaale1os
+D508863F tlbi rvae1
+D508867F tlbi rvaae1
+D50886BF tlbi rvale1
+D50886FF tlbi rvaale1
+D508871F tlbi vmalle1
+D508873F tlbi vae1
+D508875F tlbi aside1
+D508877F tlbi vaae1
+D50887BF tlbi vale1
+D50887FF tlbi vaale1
+D508911F tlbi vmalle1osnxs
+D508913F tlbi vae1osnxs
+D508915F tlbi aside1osnxs
+D508917F tlbi vaae1osnxs
+D50891BF tlbi vale1osnxs
+D50891FF tlbi vaale1osnxs
+D508923F tlbi rvae1isnxs
+D508927F tlbi rvaae1isnxs
+D50892BF tlbi rvale1isnxs
+D50892FF tlbi rvaale1isnxs
+D508931F tlbi vmalle1isnxs
+D508933F tlbi vae1isnxs
+D508935F tlbi aside1isnxs
+D508937F tlbi vaae1isnxs
+D50893BF tlbi vale1isnxs
+D50893FF tlbi vaale1isnxs
+D508953F tlbi rvae1osnxs
+D508957F tlbi rvaae1osnxs
+D50895BF tlbi rvale1osnxs
+D50895FF tlbi rvaale1osnxs
+D508963F tlbi rvae1nxs
+D508967F tlbi rvaae1nxs
+D50896BF tlbi rvale1nxs
+D50896FF tlbi rvaale1nxs
+D508971F tlbi vmalle1nxs
+D508973F tlbi vae1nxs
+D508975F tlbi aside1nxs
+D508977F tlbi vaae1nxs
+D50897BF tlbi vale1nxs
+D50897FF tlbi vaale1nxs
+D50C803F tlbi ipas2e1is
+D50C805F tlbi ripas2e1is
+D50C80BF tlbi ipas2le1is
+D50C80DF tlbi ripas2le1is
+D50C811F tlbi alle2os
+D50C813F tlbi vae2os
+D50C819F tlbi alle1os
+D50C81BF tlbi vale2os
+D50C81DF tlbi vmalls12e1os
+D50C823F tlbi rvae2is
+D50C825F tlbi vmallws2e1is
+D50C82BF tlbi rvale2is
+D50C831F tlbi alle2is
+D50C833F tlbi vae2is
+D50C839F tlbi alle1is
+D50C83BF tlbi vale2is
+D50C83DF tlbi vmalls12e1is
+D50C841F tlbi ipas2e1os
+D50C843F tlbi ipas2e1
+D50C845F tlbi ripas2e1
+D50C847F tlbi ripas2e1os
+D50C849F tlbi ipas2le1os
+D50C84BF tlbi ipas2le1
+D50C84DF tlbi ripas2le1
+D50C84FF tlbi ripas2le1os
+D50C853F tlbi rvae2os
+D50C855F tlbi vmallws2e1os
+D50C85BF tlbi rvale2os
+D50C863F tlbi rvae2
+D50C865F tlbi vmallws2e1
+D50C86BF tlbi rvale2
+D50C871F tlbi alle2
+D50C873F tlbi vae2
+D50C879F tlbi alle1
+D50C87BF tlbi vale2
+D50C87DF tlbi vmalls12e1
+D50C903F tlbi ipas2e1isnxs
+D50C905F tlbi ripas2e1isnxs
+D50C90BF tlbi ipas2le1isnxs
+D50C90DF tlbi ripas2le1isnxs
+D50C911F tlbi alle2osnxs
+D50C913F tlbi vae2osnxs
+D50C919F tlbi alle1osnxs
+D50C91BF tlbi vale2osnxs
+D50C91DF tlbi vmalls12e1osnxs
+D50C923F tlbi rvae2isnxs
+D50C925F tlbi vmallws2e1isnxs
+D50C92BF tlbi rvale2isnxs
+D50C931F tlbi alle2isnxs
+D50C933F tlbi vae2isnxs
+D50C939F tlbi alle1isnxs
+D50C93BF tlbi vale2isnxs
+D50C93DF tlbi vmalls12e1isnxs
+D50C941F tlbi ipas2e1osnxs
+D50C943F tlbi ipas2e1nxs
+D50C945F tlbi ripas2e1nxs
+D50C947F tlbi ripas2e1osnxs
+D50C949F tlbi ipas2le1osnxs
+D50C94BF tlbi ipas2le1nxs
+D50C94DF tlbi ripas2le1nxs
+D50C94FF tlbi ripas2le1osnxs
+D50C953F tlbi rvae2osnxs
+D50C955F tlbi vmallws2e1osnxs
+D50C95BF tlbi rvale2osnxs
+D50C963F tlbi rvae2nxs
+D50C965F tlbi vmallws2e1nxs
+D50C96BF tlbi rvale2nxs
+D50C971F tlbi alle2nxs
+D50C973F tlbi vae2nxs
+D50C979F tlbi alle1nxs
+D50C97BF tlbi vale2nxs
+D50C97DF tlbi vmalls12e1nxs
+D50E811F tlbi alle3os
+D50E813F tlbi vae3os
+D50E819F tlbi paallos
+D50E81BF tlbi vale3os
+D50E823F tlbi rvae3is
+D50E82BF tlbi rvale3is
+D50E831F tlbi alle3is
+D50E833F tlbi vae3is
+D50E83BF tlbi vale3is
+D50E847F tlbi rpaos
+D50E84FF tlbi rpalos
+D50E853F tlbi rvae3os
+D50E85BF tlbi rvale3os
+D50E863F tlbi rvae3
+D50E86BF tlbi rvale3
+D50E871F tlbi alle3
+D50E873F tlbi vae3
+D50E879F tlbi paall
+D50E87BF tlbi vale3
+D50E911F tlbi alle3osnxs
+D50E913F tlbi vae3osnxs
+D50E91BF tlbi vale3osnxs
+D50E923F tlbi rvae3isnxs
+D50E92BF tlbi rvale3isnxs
+D50E931F tlbi alle3isnxs
+D50E933F tlbi vae3isnxs
+D50E93BF tlbi vale3isnxs
+D50E953F tlbi rvae3osnxs
+D50E95BF tlbi rvale3osnxs
+D50E963F tlbi rvae3nxs
+D50E96BF tlbi rvale3nxs
+D50E971F tlbi alle3nxs
+D50E973F tlbi vae3nxs
+D50E97BF tlbi vale3nxs
 D50D892E sys #0x5, c8, c9, #0x1, x14
 D50B8962 sys #0x3, c8, c9, #0x3, x2
 D50D8D10 sys #0x5, c8, c13, #0x0, x16

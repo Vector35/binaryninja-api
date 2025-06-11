@@ -39,6 +39,8 @@ def connect():
 	"""
 	Connect to the Enterprise Server.
 	"""
+	if not is_initialized():
+		initialize()
 	if not core.BNConnectEnterpriseServer():
 		raise RuntimeError(last_error())
 

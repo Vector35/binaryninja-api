@@ -1,10 +1,9 @@
 use super::Remote;
 use binaryninjacore_sys::*;
-use std::ffi::c_char;
 use std::ptr::NonNull;
 
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{BnString, IntoCStr};
 
 #[repr(transparent)]
 pub struct RemoteUser {
@@ -28,35 +27,31 @@ impl RemoteUser {
     }
 
     /// Web api endpoint url
-    pub fn url(&self) -> BnString {
+    pub fn url(&self) -> String {
         let value = unsafe { BNCollaborationUserGetUrl(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// Unique id
-    pub fn id(&self) -> BnString {
+    pub fn id(&self) -> String {
         let value = unsafe { BNCollaborationUserGetId(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// User's login username
-    pub fn username(&self) -> BnString {
+    pub fn username(&self) -> String {
         let value = unsafe { BNCollaborationUserGetUsername(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// Set user's username. You will need to push the user to update the Remote
-    pub fn set_username<U: BnStrCompatible>(&self, username: U) -> Result<(), ()> {
-        let username = username.into_bytes_with_nul();
-        let result = unsafe {
-            BNCollaborationUserSetUsername(
-                self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const c_char,
-            )
-        };
+    pub fn set_username(&self, username: &str) -> Result<(), ()> {
+        let username = username.to_cstr();
+        let result =
+            unsafe { BNCollaborationUserSetUsername(self.handle.as_ptr(), username.as_ptr()) };
         if result {
             Ok(())
         } else {
@@ -65,21 +60,17 @@ impl RemoteUser {
     }
 
     /// User's email address
-    pub fn email(&self) -> BnString {
+    pub fn email(&self) -> String {
         let value = unsafe { BNCollaborationUserGetEmail(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// Set user's email. You will need to push the user to update the Remote
-    pub fn set_email<U: BnStrCompatible>(&self, email: U) -> Result<(), ()> {
-        let username = email.into_bytes_with_nul();
-        let result = unsafe {
-            BNCollaborationUserSetEmail(
-                self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const c_char,
-            )
-        };
+    pub fn set_email(&self, email: &str) -> Result<(), ()> {
+        let username = email.to_cstr();
+        let result =
+            unsafe { BNCollaborationUserSetEmail(self.handle.as_ptr(), username.as_ptr()) };
         if result {
             Ok(())
         } else {
@@ -88,10 +79,10 @@ impl RemoteUser {
     }
 
     /// String representing the last date the user logged in
-    pub fn last_login(&self) -> BnString {
+    pub fn last_login(&self) -> String {
         let value = unsafe { BNCollaborationUserGetLastLogin(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// If the user account is active and can log in

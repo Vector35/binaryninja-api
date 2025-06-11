@@ -6,7 +6,7 @@ use std::ptr::NonNull;
 
 use crate::platform::Platform;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
-use crate::string::{raw_to_string, BnStrCompatible, BnString};
+use crate::string::{raw_to_string, BnString, IntoCStr};
 use crate::type_container::TypeContainer;
 use crate::types::{QualifiedName, QualifiedNameAndType, Type};
 
@@ -14,8 +14,8 @@ pub type TypeParserErrorSeverity = BNTypeParserErrorSeverity;
 pub type TypeParserOption = BNTypeParserOption;
 
 /// Register a custom parser with the API
-pub fn register_type_parser<S: BnStrCompatible, T: TypeParser>(
-    name: S,
+pub fn register_type_parser<T: TypeParser>(
+    name: &str,
     parser: T,
 ) -> (&'static mut T, CoreTypeParser) {
     let parser = Box::leak(Box::new(parser));
@@ -29,19 +29,15 @@ pub fn register_type_parser<S: BnStrCompatible, T: TypeParser>(
         freeResult: Some(cb_free_result),
         freeErrorList: Some(cb_free_error_list),
     };
-    let result = unsafe {
-        BNRegisterTypeParser(
-            name.into_bytes_with_nul().as_ref().as_ptr() as *const _,
-            &mut callback,
-        )
-    };
+    let name = name.to_cstr();
+    let result = unsafe { BNRegisterTypeParser(name.as_ptr(), &mut callback) };
     let core = unsafe { CoreTypeParser::from_raw(NonNull::new(result).unwrap()) };
     (parser, core)
 }
 
 #[repr(transparent)]
 pub struct CoreTypeParser {
-    handle: NonNull<BNTypeParser>,
+    pub(crate) handle: NonNull<BNTypeParser>,
 }
 
 impl CoreTypeParser {
@@ -55,34 +51,29 @@ impl CoreTypeParser {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn parser_by_name<S: BnStrCompatible>(name: S) -> Option<CoreTypeParser> {
-        let name_raw = name.into_bytes_with_nul();
-        let result = unsafe { BNGetTypeParserByName(name_raw.as_ref().as_ptr() as *const c_char) };
+    pub fn parser_by_name(name: &str) -> Option<CoreTypeParser> {
+        let name_raw = name.to_cstr();
+        let result = unsafe { BNGetTypeParserByName(name_raw.as_ptr()) };
         NonNull::new(result).map(|x| unsafe { Self::from_raw(x) })
     }
 
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNGetTypeParserName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 }
 
 impl TypeParser for CoreTypeParser {
     fn get_option_text(&self, option: TypeParserOption, value: &str) -> Option<String> {
         let mut output = std::ptr::null_mut();
-        let value_cstr = BnString::new(value);
+        let value_ptr = std::ptr::null_mut();
         let result = unsafe {
-            BNGetTypeParserOptionText(
-                self.handle.as_ptr(),
-                option,
-                value_cstr.as_ptr(),
-                &mut output,
-            )
+            BNGetTypeParserOptionText(self.handle.as_ptr(), option, value_ptr, &mut output)
         };
         result.then(|| {
             assert!(!output.is_null());
-            value_cstr.to_string()
+            unsafe { BnString::into_string(value_ptr) }
         })
     }
 
@@ -118,8 +109,8 @@ impl TypeParser for CoreTypeParser {
         };
         if success {
             assert!(!result.is_null());
-            let bn_result = unsafe { BnString::from_raw(result) };
-            Ok(bn_result.to_string())
+            let bn_result = unsafe { BnString::into_string(result) };
+            Ok(bn_result)
         } else {
             let errors: Array<TypeParserError> = unsafe { Array::new(errors, error_count, ()) };
             Err(errors.to_vec())
@@ -323,8 +314,8 @@ impl TypeParserError {
     }
 
     pub(crate) fn free_raw(value: BNTypeParserError) {
-        let _ = unsafe { BnString::from_raw(value.message) };
-        let _ = unsafe { BnString::from_raw(value.fileName) };
+        unsafe { BnString::free_raw(value.message) };
+        unsafe { BnString::free_raw(value.fileName) };
     }
 
     pub fn new(
@@ -677,7 +668,7 @@ unsafe extern "C" fn cb_parse_type_string<T: TypeParser>(
 
 unsafe extern "C" fn cb_free_string(_ctxt: *mut c_void, string: *mut c_char) {
     // SAFETY: The returned string is just BnString
-    let _ = BnString::from_raw(string);
+    BnString::free_raw(string);
 }
 
 unsafe extern "C" fn cb_free_result(_ctxt: *mut c_void, result: *mut BNTypeParserResult) {

@@ -18,7 +18,6 @@
 
 TriageView::TriageView(QWidget* parent, BinaryViewRef data) : QScrollArea(parent)
 {
-	setBinaryDataNavigable(true);
 	setupView(this);
 	m_data = data;
 	m_currentOffset = m_data->GetEntryPoint();
@@ -138,6 +137,7 @@ TriageView::TriageView(QWidget* parent, BinaryViewRef data) : QScrollArea(parent
 		buttonLayout->addWidget(m_fullAnalysisButton);
 		layout->addLayout(buttonLayout);
 		layout->addStretch(1);
+		m_byteView = nullptr;
 	}
 	else
 	{
@@ -145,6 +145,7 @@ TriageView::TriageView(QWidget* parent, BinaryViewRef data) : QScrollArea(parent
 		layout->addWidget(m_byteView, 1);
 	}
 
+	setBinaryDataNavigable(m_byteView ? true : false);
 	container->setLayout(layout);
 	setWidgetResizable(true);
 	setWidget(container);
@@ -289,7 +290,9 @@ int TriageViewType::getPriority(BinaryViewRef data, const QString&)
 		return 100;
 	if (data->GetLength() > 0)
 	{
-		if (alwaysPrefer || data->IsExecutable() || preferForRaw)
+		if (alwaysPrefer || preferForRaw)
+			return 35;
+		if (data->IsExecutable())
 			return 25;
 		return 1;
 	}

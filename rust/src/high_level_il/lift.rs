@@ -1,5 +1,5 @@
 use super::operation::*;
-use super::{HighLevelILFunction, HighLevelInstructionIndex};
+use super::{HighLevelExpressionIndex, HighLevelILFunction, HighLevelInstructionIndex};
 use std::fmt::{Debug, Formatter};
 
 use crate::architecture::CoreIntrinsic;
@@ -30,8 +30,8 @@ pub enum HighLevelILLiftedOperand {
 pub struct HighLevelILLiftedInstruction {
     pub function: Ref<HighLevelILFunction>,
     pub address: u64,
-    // TODO: Please i need expression
-    pub expr_index: HighLevelInstructionIndex,
+    pub instr_index: HighLevelInstructionIndex,
+    pub expr_index: HighLevelExpressionIndex,
     pub size: usize,
     pub kind: HighLevelILLiftedInstructionKind,
 }

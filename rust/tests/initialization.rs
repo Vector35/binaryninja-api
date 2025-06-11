@@ -11,8 +11,8 @@ use binaryninja::set_license;
 
 #[test]
 fn test_license_validation() {
-    // Release floating license if we already have one, otherwise the failure will succeed.
-    release_license();
+    // Release the floating license if we already have one, otherwise the failure will succeed.
+    release_license(true);
     // Make sure we properly report invalid license.
     let options = InitializationOptions::default()
         .with_license_checkout(false)
@@ -23,7 +23,7 @@ fn test_license_validation() {
         Err(e) => panic!("Unexpected error: {:?}", e),
     }
     // Reset the license so that it actually can validate license.
-    set_license::<String>(None);
+    set_license(None);
     // Actually make sure we can initialize.
     init().expect("Failed to initialize, make sure you have a license before trying to run tests!");
     // Open an empty binary and make sure it succeeds.

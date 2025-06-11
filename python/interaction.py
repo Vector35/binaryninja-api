@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2024 Vector 35 Inc
+# Copyright (c) 2015-2025 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -267,10 +267,11 @@ class ChoiceField:
 	``ChoiceField`` prompts the user to choose from the list of strings provided in ``choices``. Result is stored \
 	in self.result as an index in to the choices array.
 
-	:attr str prompt: prompt to be presented to the user
-	:attr list(str) choices: list of choices to choose from
+	:param str prompt: Prompt to be presented to the user
+	:param list(str) choices: List of choices to choose from
+	:param Optional[int] default: Optional index into choices that will be selected by default
 	"""
-	def __init__(self, prompt: str, choices: List[str], default: Optional[str] = None):
+	def __init__(self, prompt: str, choices: List[str], default: Optional[int] = None):
 		self._prompt = prompt
 		self._choices = choices
 		self._default = default
@@ -295,27 +296,35 @@ class ChoiceField:
 		self._result = value.indexResult
 
 	@property
-	def prompt(self):
+	def prompt(self) -> str:
 		return self._prompt
 
 	@prompt.setter
-	def prompt(self, value):
+	def prompt(self, value: str):
 		self._prompt = value
 
 	@property
-	def choices(self):
+	def choices(self) -> List[str]:
 		return self._choices
 
 	@choices.setter
-	def choices(self, value):
+	def choices(self, value: List[str]):
 		self._choices = value
 
 	@property
-	def result(self):
+	def default(self) -> Optional[int]:
+		return self._default
+
+	@default.setter
+	def default(self, value: Optional[int]):
+		self._default = value
+
+	@property
+	def result(self) -> Optional[int]:
 		return self._result
 
 	@result.setter
-	def result(self, value):
+	def result(self, value: int):
 		self._result = value
 
 

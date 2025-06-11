@@ -159,11 +159,28 @@ But what if the code takes multiple paths and could have different values depend
 
 Binary Ninja uses this capability internally for its own value set analysis and constant dataflow propagation but plugins can also leverage this information to great effect. For example, want to find an uninitialized value? Simply look for an SSA variable being read from with a version of zero that isn't in the list of arguments to the function. Want to implement your own inter-procedural data-flow system? Binary Ninja does not for performance reasons, but in instances where you can prevent the state space explosion problem, you can build on top of the existing SSA forms to implement exactly this. A simple example might look for vulnerable function calls like printf() where the first argument is user-data. While most trivial cases of this type of flaw tend to be found quickly, it's often the case that subtler versions with functions that wrap functions that wrap functions that call a printf with user data are more tedious to identify. However, using an SSA-based script, it's super easy to see that, for example, the first parameter to a `printf` call originated in a calling function as the second parameter, and THAT function was called with input that came directly from some sort of user input. While one or two layers might be easy to check by hand with few cross-references, with a large embedded firmware, there might be hundreds or thousands of potential locations to check out, and a script using SSA can dramatically reduce the number of cases to investigate. 
 
+### When IL APIs Return None
+
+Binary Ninja automatically maintains a cache of recent generated IL (configurable with the [`analysis.limits.cacheSize`](https://docs.binary.ninja/guide/settings.html#analysis.limits.cacheSize) setting). Normally, when accessing properties such as `current_function.llil`, if the analysis is not currently available, it will be transparently generated and returned. However, in some cases, such as when analysis limits are triggered, `None` will be returned instead.
+
+Alternatively, the property `current_function.llil_if_available` will immediately return existing IL only if it is already generated and in the cache.
+
+Even in cases where `.llil` returns `None`, it is possible to override the analysis limits by using the [`analysis_skip_override`](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.analysis_skip_override) setter.
+
+???+ Danger "Warning"
+    Overriding analysis limits is DANGEROUS! These limits exist for a reason. Whether they are because the function is too large, because analysis was taking too long, or whatever the reason, you override these limits at your own risk.
+
+It's possible to query the reason for the override by querying the [`analysis_skip_reason`](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.analysis_skip_reason) property.
+
+
 ## Memory Permissions Impact on Analysis
 
 Memory permissions and annotations directly impact Binary Ninja's analysis. The system employs a **most-specific-wins** strategy for memory granularity.
 
-So, for example, an annotation such as `const` takes precedence over a memory [section](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.Section) with [ReadWriteDataSectionSemantics](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SectionSemantics). Additionally, a section with ReadOnlyDataSectionSemantics over a [segment](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.Segment) with a [SegmentExecutable](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SegmentFlag) flag will still block linear sweep from creating functions in that region of memory.
+So, for example, an annotation such as **`const`** takes precedence over a memory [section](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.Section) with [ReadWriteDataSectionSemantics](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SectionSemantics), while an annotation such as **`volatile`** takes precedence over a memory [section](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.Section) with [ReadOnlyDataSectionSemantics](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SectionSemantics). Additionally, a section with [ReadOnlyDataSectionSemantics](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SectionSemantics) over a [segment](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.Segment) with a [SegmentExecutable](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SegmentFlag) flag will still block linear sweep from creating functions in that region of memory.
+
+???+ Note "Note"
+    If both **`const`** and **`volatile`** annotations are applied, the **`volatile`** annotation will take precedence. This means that analysis treats the data as mutable, ignoring the immutability implied by **`const`**.
 
 This is most notable for how the data flow system works and for how linear sweep/code identification works.
 
@@ -176,14 +193,19 @@ Binary Ninja utilizes two distinct data flow systems that are influenced by memo
 2. **Possible Value Set System:** This more computationally expensive system is executed on-demand and is used to identify switch statement targets in cases of indirect control flow, among other uses. It constructs possible value sets for variables to determine potential execution paths.
 
 The distinction between readable and writable values affects how data flow analysis is performed:
+
 - **Readable Values:** Variables marked as readable are analyzed primarily for the flow of data without modification, aiding in tracking data dependencies.
 - **Writable Values:** Writable variables are treated as mutable and thus no assumptions are made about the values being the same in a given function. 
 
-By overriding variable annotations or memory flags, you can alter Binary Ninja's assumptions about data. For instance, marking a writable variable as `const` forces the analysis to treat its value as immutable, potentially simplifying the data flow but risking misinterpretation if the assumption is incorrect.
+By overriding variable annotations or memory flags, you can alter Binary Ninja's assumptions about data:
+
+- Marking a writable variable as **`const`** forces the analysis to treat its value as immutable, potentially simplifying the data flow but risking misinterpretation if the assumption is incorrect. 
+- Marking a constant variable as **`volatile`** forces the analysis to treat its value as mutable, safeguarding against data flow making assumptions about the value, this is particularly useful when dealing with data variables in sections marked with [ReadOnlyDataSectionSemantics](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SectionSemantics).
 
 ## Permissions Impact on Linear Sweep
 
 Memory permissions at the segment or section level directly influence how the linear sweep analysis operates:
+
 - **Executable Segments:** Segments marked as executable ([SegmentExecutable](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SegmentFlag)) allow the linear sweep to interpret the region as code, enabling function creation and disassembly.
 - **Non-Executable Segments:** If a segment is marked as non-executable, linear sweep will not create functions within that region. If the initial segment analysis is incorrect, or is changed at runtime and you want to mirror that, you can [override](../guide/index.md#memory-map) it by creating a new section.
 - **Read-Only vs Read-Write Sections:** Sections with [ReadOnlyCodeSectionSemantics](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SectionSemantics) allow for the creation of functions, while any other semantics will not.
@@ -196,7 +218,7 @@ There are several ways to create UI elements in Binary Ninja. The first is to us
 
 The second and more powerful (but more complicated) mechanism is to leverage the _binaryninjaui_ module. Additional documentation is forthcoming, but there are several examples ([1](https://github.com/Vector35/kaitai), [2](https://github.com/Vector35/snippets), [3](https://github.com/Vector35/binaryninja-api/tree/dev/python/examples/triage)), and most of the APIs are backed by the [documented C++ headers](https://api.binary.ninja/cpp). Additionally, the generated _binaryninjaui_ module is shipped with each build of binaryninja and the usual python `dir()` instructions are helpful for exploring its capabilities.
 
-When calling native UI methods, please make sure to use the [execute_on_main_thread](https://api.binary.ninja/binaryninja.mainthread-module.html#binaryninja.mainthread.execute_on_main_thread) method (or the [`_and_wait`](https://api.binary.ninja/binaryninja.mainthread-module.html#binaryninja.mainthread.execute_on_main_thread_and_wait) variant). By default, python actions are not run on the main thread to prevent blocking the UI, however, due to [thread-safety issues](https://doc.qt.io/qt-6/threads-reentrancy.html) around accessing QT from multple threads, UI actions should always make use of these APIs.
+When calling native UI methods, please make sure to use the [execute_on_main_thread](https://api.binary.ninja/binaryninja.mainthread-module.html#binaryninja.mainthread.execute_on_main_thread) method (or the [`_and_wait`](https://api.binary.ninja/binaryninja.mainthread-module.html#binaryninja.mainthread.execute_on_main_thread_and_wait) variant). By default, python actions are not run on the main thread to prevent blocking the UI, however, due to [thread-safety issues](https://doc.qt.io/qt-6/threads-reentrancy.html) around accessing QT from multiple threads, UI actions should always make use of these APIs.
 
 ## Function Starts, Sizes, and Ending
 

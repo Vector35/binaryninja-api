@@ -1,6 +1,6 @@
 use crate::project::{systime_from_bntime, Project, ProjectFolder};
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{BnString, IntoCStr};
 use binaryninjacore_sys::{
     BNFreeProjectFile, BNFreeProjectFileList, BNNewProjectFileReference, BNProjectFile,
     BNProjectFileExistsOnDisk, BNProjectFileExport, BNProjectFileGetCreationTimestamp,
@@ -8,8 +8,8 @@ use binaryninjacore_sys::{
     BNProjectFileGetPathOnDisk, BNProjectFileGetProject, BNProjectFileSetDescription,
     BNProjectFileSetFolder, BNProjectFileSetName,
 };
-use std::ffi::c_char;
 use std::fmt::Debug;
+use std::path::Path;
 use std::ptr::{null_mut, NonNull};
 use std::time::SystemTime;
 
@@ -37,8 +37,8 @@ impl ProjectFile {
     }
 
     /// Get the path on disk to this file's contents
-    pub fn path_on_disk(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectFileGetPathOnDisk(self.handle.as_ptr())) }
+    pub fn path_on_disk(&self) -> String {
+        unsafe { BnString::into_string(BNProjectFileGetPathOnDisk(self.handle.as_ptr())) }
     }
 
     /// Check if this file's contents exist on disk
@@ -47,40 +47,30 @@ impl ProjectFile {
     }
 
     /// Get the unique id of this file
-    pub fn id(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectFileGetId(self.handle.as_ptr())) }
+    pub fn id(&self) -> String {
+        unsafe { BnString::into_string(BNProjectFileGetId(self.handle.as_ptr())) }
     }
 
     /// Get the name of this file
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectFileGetName(self.handle.as_ptr())) }
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNProjectFileGetName(self.handle.as_ptr())) }
     }
 
     /// Set the name of this file
-    pub fn set_name<S: BnStrCompatible>(&self, value: S) -> bool {
-        let value_raw = value.into_bytes_with_nul();
-        unsafe {
-            BNProjectFileSetName(
-                self.handle.as_ptr(),
-                value_raw.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn set_name(&self, value: &str) -> bool {
+        let value_raw = value.to_cstr();
+        unsafe { BNProjectFileSetName(self.handle.as_ptr(), value_raw.as_ptr()) }
     }
 
     /// Get the description of this file
-    pub fn description(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectFileGetDescription(self.handle.as_ptr())) }
+    pub fn description(&self) -> String {
+        unsafe { BnString::into_string(BNProjectFileGetDescription(self.handle.as_ptr())) }
     }
 
     /// Set the description of this file
-    pub fn set_description<S: BnStrCompatible>(&self, value: S) -> bool {
-        let value_raw = value.into_bytes_with_nul();
-        unsafe {
-            BNProjectFileSetDescription(
-                self.handle.as_ptr(),
-                value_raw.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn set_description(&self, value: &str) -> bool {
+        let value_raw = value.to_cstr();
+        unsafe { BNProjectFileSetDescription(self.handle.as_ptr(), value_raw.as_ptr()) }
     }
 
     /// Get the file creation time
@@ -103,15 +93,10 @@ impl ProjectFile {
 
     /// Export this file to disk, `true' if the export succeeded
     ///
-    /// * `dest` - Destination path for the exported contents
-    pub fn export<S: BnStrCompatible>(&self, dest: S) -> bool {
-        let dest_raw = dest.into_bytes_with_nul();
-        unsafe {
-            BNProjectFileExport(
-                self.handle.as_ptr(),
-                dest_raw.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    /// * `dest` - Destination file path for the exported contents, passing a directory will append the file name.
+    pub fn export(&self, dest: &Path) -> bool {
+        let dest_raw = dest.to_cstr();
+        unsafe { BNProjectFileExport(self.handle.as_ptr(), dest_raw.as_ptr()) }
     }
 }
 

@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Vector 35 Inc.
+// Copyright 2022-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -168,7 +168,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
     ) -> Result<()> {
         self.parse_types(Self::split_progress(&progress, 0, &[1.0, 3.0, 0.5, 0.5]))?;
         for (name, ty) in self.named_types.iter() {
-            self.debug_info.add_type(name, ty.as_ref(), &[]); // TODO : Components
+            self.debug_info
+                .add_type(&name.to_string(), ty.as_ref(), &[]); // TODO : Components
         }
 
         info!(
@@ -261,7 +262,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                                 address, &name.raw_name, type_
                             )
                         });
-                        self.debug_info.add_function(DebugFunctionInfo::new(
+                        self.debug_info.add_function(&DebugFunctionInfo::new(
                             Some(name.short_name.unwrap_or(name.raw_name.clone())),
                             Some(name.full_name.unwrap_or(name.raw_name.clone())),
                             Some(name.raw_name),
@@ -406,7 +407,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             match class {
                 NamedTypeReferenceClass::UnknownNamedTypeClass
                 | NamedTypeReferenceClass::TypedefNamedTypeClass => {
-                    self.debug_info.add_type(&name, Type::void().as_ref(), &[]);
+                    self.debug_info
+                        .add_type(&name.to_string(), Type::void().as_ref(), &[]);
                     // TODO : Components
                 }
                 NamedTypeReferenceClass::ClassNamedTypeClass
@@ -429,7 +431,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     structure.alignment(1);
 
                     self.debug_info.add_type(
-                        &name,
+                        &name.to_string(),
                         Type::structure(structure.finalize().as_ref()).as_ref(),
                         &[], // TODO : Components
                     );
@@ -437,7 +439,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 NamedTypeReferenceClass::EnumNamedTypeClass => {
                     let enumeration = EnumerationBuilder::new();
                     self.debug_info.add_type(
-                        &name,
+                        &name.to_string(),
                         Type::enumeration(
                             enumeration.finalize().as_ref(),
                             self.arch.default_integer_size().try_into()?,

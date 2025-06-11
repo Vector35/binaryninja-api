@@ -145,6 +145,5 @@ wf.register_activity(Activity(
 
 # This action is run right after generateLiftedIL so we can poke the IL before LLIL flag and stack
 # adjustment resolution happens.
-# core.function.generateLiftedIL -> (this) -> core.function.resetIndirectBranchesOnFullUpdate
-wf.insert("core.function.resetIndirectBranchesOnFullUpdate", ["extension.rewrite_push_pop.rewrite_action"])
+wf.insert_after("core.function.generateLiftedIL", ["extension.rewrite_push_pop.rewrite_action"])
 wf.register()

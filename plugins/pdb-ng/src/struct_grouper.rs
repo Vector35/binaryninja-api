@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Vector 35 Inc.
+// Copyright 2022-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -361,7 +361,7 @@ pub fn group_structure(
             for member in members {
                 structure.insert(
                     &member.ty,
-                    member.name.clone(),
+                    &member.name,
                     member.offset,
                     false,
                     member.access,
@@ -390,7 +390,7 @@ fn apply_groups(
                 if offset > member.offset {
                     structure.insert(
                         &member.ty,
-                        member.name.clone(),
+                        &member.name,
                         0,
                         false,
                         member.access,
@@ -399,7 +399,7 @@ fn apply_groups(
                 } else {
                     structure.insert(
                         &member.ty,
-                        member.name.clone(),
+                        &member.name,
                         member.offset - offset,
                         false,
                         member.access,
@@ -412,7 +412,7 @@ fn apply_groups(
                 apply_groups(members, &mut inner, children, inner_offset);
                 structure.insert(
                     &Conf::new(Type::structure(inner.finalize().as_ref()), MAX_CONFIDENCE),
-                    format!("__inner{}", i),
+                    &format!("__inner{}", i),
                     inner_offset - offset,
                     false,
                     MemberAccess::PublicAccess,
@@ -425,7 +425,7 @@ fn apply_groups(
                 apply_groups(members, &mut inner, children, inner_offset);
                 structure.insert(
                     &Conf::new(Type::structure(inner.finalize().as_ref()), MAX_CONFIDENCE),
-                    format!("__inner{}", i),
+                    &format!("__inner{}", i),
                     inner_offset - offset,
                     false,
                     MemberAccess::PublicAccess,

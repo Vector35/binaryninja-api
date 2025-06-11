@@ -448,7 +448,7 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 							sect.flags,
 							sect.reserved1,
 							sect.reserved2);
-						if (!strncmp(sect.sectname, "__mod_init_func", 15))
+						if (!strncmp(sect.sectname, "__mod_init_func", 15) || !strncmp(sect.sectname, "__init_offsets", 14))
 							header.moduleInitSections.push_back(sect);
 						if ((sect.flags & (S_ATTR_SELF_MODIFYING_CODE | S_SYMBOL_STUBS)) == (S_ATTR_SELF_MODIFYING_CODE | S_SYMBOL_STUBS))
 							header.symbolStubSections.push_back(sect);
@@ -551,7 +551,7 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 							sect.reserved1,
 							sect.reserved2,
 							sect.reserved3);
-						if (!strncmp(sect.sectname, "__mod_init_func", 15))
+						if (!strncmp(sect.sectname, "__mod_init_func", 15) || !strncmp(sect.sectname, "__init_offsets", 14))
 							header.moduleInitSections.push_back(sect);
 						if ((sect.flags & (S_ATTR_SELF_MODIFYING_CODE | S_SYMBOL_STUBS)) == (S_ATTR_SELF_MODIFYING_CODE | S_SYMBOL_STUBS))
 							header.symbolStubSections.push_back(sect);
@@ -750,7 +750,7 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 							break;
 						case MachOAarch64:
 						case MachOAarch6432:
-							m_logger->LogDebug("Aarch64 Thread state\n");
+							m_logger->LogDebug("AArch64 Thread state\n");
 							if (thread.flavor != _ARM_THREAD_STATE64)
 							{
 								reader.SeekRelative(thread.count * sizeof(uint32_t));
@@ -1093,6 +1093,7 @@ bool MachoView::Init()
 
 	SetOriginalImageBase(initialImageBase);
 	uint64_t preferredImageBase = initialImageBase;
+	bool platformSetByUser = false;
 	if (settings)
 	{
 		if (settings->Contains("loader.imageBase"))
@@ -1100,11 +1101,13 @@ bool MachoView::Init()
 
 		if (settings->Contains("loader.platform"))
 		{
-			Ref<Platform> platform = Platform::GetByName(settings->Get<string>("loader.platform", this));
+			BNSettingsScope scope = SettingsAutoScope;
+			Ref<Platform> platform = Platform::GetByName(settings->Get<string>("loader.platform", this, &scope));
 			if (platform)
 			{
 				m_plat = platform;
 				m_arch = platform->GetArchitecture();
+				platformSetByUser = (scope == SettingsResourceScope);
 			}
 		}
 	}
@@ -1528,12 +1531,12 @@ bool MachoView::Init()
 	Ref<Type> filesetEntryCommandType = Type::StructureType(filesetEntryCommandStruct);
 	m_typeNames.filesetEntryCommandQualName = DefineType(filesetEntryCommandTypeId, filesetEntryCommandName, filesetEntryCommandType);
 
-	if (!InitializeHeader(m_header, true, preferredImageBase, preferredImageBaseDesc))
+	if (!InitializeHeader(m_header, true, preferredImageBase, preferredImageBaseDesc, platformSetByUser))
 		return false;
 
 	for (auto& it : m_subHeaders)
 	{
-		if (!InitializeHeader(it.second, false, it.first, ""))
+		if (!InitializeHeader(it.second, false, it.first, "", platformSetByUser))
 			return false;
 	}
 
@@ -1544,7 +1547,8 @@ bool MachoView::Init()
 }
 
 
-bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_t preferredImageBase, std::string preferredImageBaseDesc)
+bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_t preferredImageBase,
+	std::string preferredImageBaseDesc, bool platformSetByUser)
 {
 	Ref<Settings> settings = GetLoadSettings(GetTypeName());
 
@@ -1636,7 +1640,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 		string type;
 		BNSectionSemantics semantics = DefaultSectionSemantics;
-		switch (header.sections[i].flags & 0xff)
+		switch (header.sections[i].flags & SECTION_TYPE)
 		{
 		case S_REGULAR:
 			if (header.sections[i].flags & S_ATTR_PURE_INSTRUCTIONS)
@@ -1727,6 +1731,10 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		case S_THREAD_LOCAL_INIT_FUNCTION_POINTERS:
 			type = "THREAD_LOCAL_INIT_FUNCTION_POINTERS";
 			break;
+		case S_INIT_FUNC_OFFSETS:
+			type = "INIT_FUNC_OFFSETS";
+			semantics = ReadOnlyDataSectionSemantics;
+			break;
 		default:
 			type = "UNKNOWN";
 			break;
@@ -1814,7 +1822,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		if (!platform)
 			platform = m_arch->GetStandalonePlatform();
 
-		if (header.m_entryPoints.size() > 0)
+		if (header.m_entryPoints.size() > 0 && !platformSetByUser)
 			platform = platform->GetAssociatedPlatformByAddress(header.m_entryPoints[0]);
 
 		SetDefaultPlatform(platform);
@@ -1840,13 +1848,13 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		parseObjCStructs = settings->Get<bool>("loader.macho.processObjectiveC", this);
 	if (settings && settings->Contains("loader.macho.processCFStrings"))
 		parseCFStrings = settings->Get<bool>("loader.macho.processCFStrings", this);
-	if (!ObjCProcessor::ViewHasObjCMetadata(this))
+	if (!MachoObjCProcessor::ViewHasObjCMetadata(this))
 		parseObjCStructs = false;
 	if (!GetSectionByName("__cfstring"))
 		parseCFStrings = false;
 	if (parseObjCStructs || parseCFStrings)
 	{
-		m_objcProcessor = new ObjCProcessor(this, m_backedByDatabase);
+		m_objcProcessor = new MachoObjCProcessor(this);
 	}
 	if (parseObjCStructs)
 	{
@@ -1893,30 +1901,55 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		if (find(threadStarts.begin(), threadStarts.end(), moduleInitSection.offset) != threadStarts.end())
 			continue;
 
-		// The mod_init section contains a list of function pointers called at initialization
-		// if we don't have a defined entrypoint then use the first one in the list as the entrypoint
 		size_t i = 0;
 		reader.Seek(moduleInitSection.offset);
-		for (; i < (moduleInitSection.size / m_addressSize); i++)
-		{
-			uint64_t target = (m_addressSize == 4) ? reader.Read32() : reader.Read64();
-			target += m_imageBaseAdjustment;
-			if (m_header.ident.filetype == MH_FILESET)
-			{
-				// FIXME: This isn't a super robust way of detagging,
-				// 	  should look into xnu source and the tools used to build this cache (if they're public)
-				//	  and see if anything better can be done
 
-				// mask out top 8 bits
-				uint64_t tag = 0xFFFFFFFF00000000 & header.textBase;
-				// and combine them with bottom 8 of the original entry
-				target = tag | (target & 0xFFFFFFFF);
+		if (!strncmp(moduleInitSection.sectname, "__mod_init_func", 15))
+		{
+			// The mod_init section contains a list of function pointers called at initialization
+			// if we don't have a defined entrypoint then use the first one in the list as the entrypoint
+			for (; i < (moduleInitSection.size / m_addressSize); i++)
+			{
+				uint64_t target = (m_addressSize == 4) ? reader.Read32() : reader.Read64();
+				target += m_imageBaseAdjustment;
+				if (m_header.ident.filetype == MH_FILESET)
+				{
+					// FIXME: This isn't a super robust way of detagging,
+					// 	  should look into xnu source and the tools used to build this cache (if they're public)
+					//	  and see if anything better can be done
+
+					// mask out top 8 bits
+					uint64_t tag = 0xFFFFFFFF00000000 & header.textBase;
+					// and combine them with bottom 8 of the original entry
+					target = tag | (target & 0xFFFFFFFF);
+				}
+				Ref<Platform> targetPlatform = GetDefaultPlatform()->GetAssociatedPlatformByAddress(target);
+				auto name = "mod_init_func_" + to_string(modInitFuncCnt++);
+				AddEntryPointForAnalysis(targetPlatform, target);
+				auto symbol = new Symbol(FunctionSymbol, name, target, GlobalBinding);
+				DefineAutoSymbol(symbol);
 			}
-			Ref<Platform> targetPlatform = GetDefaultPlatform()->GetAssociatedPlatformByAddress(target);
-			auto name = "mod_init_func_" + to_string(modInitFuncCnt++);
-			AddEntryPointForAnalysis(targetPlatform, target);
-			auto symbol = new Symbol(FunctionSymbol, name, target, GlobalBinding);
-			DefineAutoSymbol(symbol);
+		}
+		else if (!strncmp(moduleInitSection.sectname, "__init_offsets", 14))
+		{
+			// The init_offsets section contains a list of 32-bit RVA offsets to functions called at initialization
+			// if we don't have a defined entrypoint then use the first one in the list as the entrypoint
+			for (; i < (moduleInitSection.size / 4); i++)
+			{
+				uint64_t target = reader.Read32();
+				target += header.textBase;
+				Ref<Platform> targetPlatform = GetDefaultPlatform()->GetAssociatedPlatformByAddress(target);
+				auto name = "mod_init_func_" + to_string(modInitFuncCnt++);
+				AddEntryPointForAnalysis(targetPlatform, target);
+				auto symbol = new Symbol(FunctionSymbol, name, target, GlobalBinding);
+				DefineAutoSymbol(symbol);
+
+				// FIXME: i don't know how to define proper pointer type at this stage of analysis
+				Ref<Type> pointerVar = TypeBuilder::PointerType(4, Type::VoidType())
+						.SetPointerBase(RelativeToConstantPointerBaseType, header.textBase)
+						.Finalize();
+				DefineDataVariable(GetStart() + reader.GetOffset() - 4, pointerVar);
+			}
 		}
 	}
 
@@ -2428,8 +2461,7 @@ Ref<Symbol> MachoView::DefineMachoSymbol(
 		{
 			QualifiedName demangledName;
 			Ref<Type> demangledType;
-			bool simplify = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", this);
-			if (DemangleGeneric(m_arch, rawName, demangledType, demangledName, this, simplify))
+			if (DemangleGeneric(m_arch, rawName, demangledType, demangledName, nullptr, m_simplifyTemplates))
 			{
 				shortName = demangledName.GetString();
 				fullName = shortName;
@@ -2437,10 +2469,6 @@ Ref<Symbol> MachoView::DefineMachoSymbol(
 					fullName += demangledType->GetStringAfterName();
 				if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
 					typeRef = demangledType;
-			}
-			else
-			{
-				m_logger->LogDebug("Failed to demangle name: '%s'\n", rawName.c_str());
 			}
 		}
 
@@ -2494,57 +2522,170 @@ bool MachoView::GetSectionPermissions(MachOHeader& header, uint64_t address, uin
 	return false;
 }
 
+
+bool MachoView::AddExportTerminalSymbol(
+	const std::string& symbolName, uint64_t symbolFlags, uint64_t imageOffset)
+{
+	if (symbolFlags & EXPORT_SYMBOL_FLAGS_REEXPORT)
+	{
+		m_logger->LogTrace("Export symbol is a re-export, not supported: %s", symbolName.c_str());
+		return false;
+	}
+
+	uint64_t symbolAddress = GetStart() + imageOffset;
+	if (symbolName.empty() || symbolAddress == 0)
+	{
+		m_logger->LogTrace("Export symbol is malformed: %s", symbolName.c_str());
+		return false;
+	}
+
+	// Tries to get the symbol type based off the section containing it.
+	auto sectionSymbolType = [&]() -> BNSymbolType {
+		uint32_t sectionFlags = 0;
+		for (const auto& section : m_allSections)
+		{
+			if (symbolAddress >= section.addr && symbolAddress < section.addr + section.size)
+			{
+				// Take the flags from the first containing section.
+				sectionFlags = section.flags;
+				break;
+			}
+		}
+
+		// TODO: Is this enough to determine a function symbol?
+		// TODO: Might be the cause of https://github.com/Vector35/binaryninja-api/issues/6526
+		// Check the sections flags to see if we actually have a function symbol instead.
+		if (sectionFlags & S_ATTR_PURE_INSTRUCTIONS || sectionFlags & S_ATTR_SOME_INSTRUCTIONS)
+			return FunctionSymbol;
+
+		// FIXME: See above, no it is not. Fallback on old logic here to avoid breaking export symbols in __text on regular Mach-Os.
+		auto symbolType = GetAnalysisFunctionsForAddress(GetStart() + imageOffset).size() ? FunctionSymbol : DataSymbol;
+		return symbolType;
+	};
+
+	switch (symbolFlags & EXPORT_SYMBOL_FLAGS_KIND_MASK)
+	{
+	case EXPORT_SYMBOL_FLAGS_KIND_REGULAR:
+	case EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL:
+		m_logger->LogTrace("Export symbol is a regular or thread local symbol: %d %s", sectionSymbolType(), symbolName.c_str());
+		DefineMachoSymbol(sectionSymbolType(), symbolName, symbolAddress, GlobalBinding, false);
+		break;
+	case EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE:
+		m_logger->LogTrace("Export symbol is an absolute symbol: %s", symbolName.c_str());
+		DefineMachoSymbol(DataSymbol, symbolName, symbolAddress, GlobalBinding, false);
+		break;
+	default:
+		m_logger->LogWarn("Unhandled export symbol kind: %llx", symbolFlags & EXPORT_SYMBOL_FLAGS_KIND_MASK);
+		return false;
+	}
+
+	m_logger->LogTrace("Successfully added export symbol: %s", symbolName.c_str());
+
+	return true;
+}
+
 void MachoView::ParseExportTrie(BinaryReader& reader, linkedit_data_command exportTrie)
 {
 	try {
 		uint32_t endGuard = exportTrie.datasize;
-		DataBuffer buffer = GetParentView()->ReadBuffer(m_universalImageOffset + exportTrie.dataoff, exportTrie.datasize);
+		DataBuffer buffer = GetParentView()
+								->ReadBuffer(m_universalImageOffset + exportTrie.dataoff, exportTrie.datasize);
 
-		ReadExportNode(GetStart(), buffer, "", 0, endGuard);
+		struct Node
+		{
+			uint64_t cursor;
+			std::string text;
+		};
+		std::vector<Node> stack;
+		stack.reserve(64);
+		stack.push_back({ /* cursor */ 0, /* text */ "" });
+
+		while (!stack.empty())
+		{
+			m_logger->LogTrace("Export Trie: Processing node %s with cursor %llu", stack.back().text.c_str(), stack.back().cursor);
+			Node node = std::move(stack.back());
+			stack.pop_back();
+
+			uint64_t cursor = node.cursor;
+			const std::string currentText = std::move(node.text);
+
+			if (cursor > endGuard)
+			{
+				m_logger->LogError("Export Trie: Cursor left trie during initial bounds check");
+				throw ReadException();
+			}
+
+			size_t localCursor = cursor;
+			uint64_t terminalSize = readValidULEB128(buffer, localCursor);
+			uint64_t childOffset = localCursor + terminalSize;
+
+			// If there's terminal data, define the symbol
+			if (terminalSize != 0)
+			{
+				uint64_t flags = readValidULEB128(buffer, localCursor);
+				uint64_t imageOffset = readValidULEB128(buffer, localCursor);
+				m_logger->LogTrace("Export Trie: Found terminal node %s with flags %llx and image offset %llx", currentText.c_str(), flags, imageOffset);
+
+				AddExportTerminalSymbol(currentText, flags, imageOffset);
+			}
+
+			localCursor = childOffset;
+			if (localCursor > endGuard)
+			{
+				m_logger->LogError("Export Trie: Cursor left trie while moving to child offset");
+				throw ReadException();
+			}
+
+			uint8_t childCount = buffer[localCursor++];
+			if (localCursor > endGuard)
+			{
+				m_logger->LogError("Export Trie: Cursor left trie while reading child count");
+				throw ReadException();
+			}
+
+			std::vector<Node> children;
+			children.reserve(childCount);
+			for (uint8_t i = 0; i < childCount; ++i)
+			{
+				if (localCursor > endGuard)
+				{
+					m_logger->LogError("Export Trie: Cursor left trie while reading child count");
+					throw ReadException();
+				}
+
+				std::string childText;
+				while (localCursor <= endGuard && buffer[localCursor] != 0) {
+					childText.push_back(buffer[localCursor++]);
+				}
+				localCursor++;  // skip the `\0`
+				if (localCursor > endGuard)
+				{
+					m_logger->LogError("Export Trie: Cursor left trie while reading child text");
+					throw ReadException();
+				}
+
+				uint64_t nextOffset = readValidULEB128(buffer, localCursor);
+				if (nextOffset == 0)
+				{
+					m_logger->LogError("Export Trie: Child offset is zero");
+					throw ReadException();
+				}
+
+				children.push_back({ nextOffset, currentText + childText });
+			}
+
+			// Push in reverse so that the first child is processed next
+			for (auto it = children.rbegin(); it != children.rend(); ++it)
+			{
+				stack.push_back(*it);
+			}
+		}
 	}
 	catch (ReadException&)
 	{
-		m_logger->LogError("Error while parsing Export Trie");
+		m_logger->LogError("Export trie is malformed. Could not load Exported symbol names.");
 	}
 }
-
-void MachoView::ReadExportNode(uint64_t viewStart, DataBuffer& buffer, const std::string& currentText, size_t cursor, uint32_t endGuard)
-{
-	if (cursor > endGuard)
-		throw ReadException();
-
-	uint64_t terminalSize = readValidULEB128(buffer, cursor);
-	uint64_t childOffset = cursor + terminalSize;
-	if (terminalSize != 0) {
-		uint64_t imageOffset = 0;
-		uint64_t flags = readValidULEB128(buffer, cursor);
-		if (!(flags & EXPORT_SYMBOL_FLAGS_REEXPORT))
-		{
-			imageOffset = readValidULEB128(buffer, cursor);
-			auto symbolType = GetAnalysisFunctionsForAddress(viewStart + imageOffset).size() ? FunctionSymbol : DataSymbol;
-			DefineMachoSymbol(symbolType, currentText, imageOffset + viewStart, GlobalBinding, true);
-		}
-	}
-	cursor = childOffset;
-	uint8_t childCount = buffer[cursor];
-	cursor++;
-	if (cursor > endGuard)
-		throw ReadException();
-	for (uint8_t i = 0; i < childCount; ++i)
-	{
-		std::string childText;
-		while (buffer[cursor] != 0 & cursor <= endGuard)
-			childText.push_back(buffer[cursor++]);
-		cursor++;
-		if (cursor > endGuard)
-			throw ReadException();
-		auto next = readValidULEB128(buffer, cursor);
-		if (next == 0)
-			throw ReadException();
-		ReadExportNode(viewStart, buffer, currentText + childText, next, endGuard);
-	}
-}
-
 
 void MachoView::ParseRebaseTable(BinaryReader& reader, MachOHeader& header, uint32_t tableOffset, uint32_t tableSize)
 {
@@ -2759,8 +2900,6 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 					if (name == NULL)
 						throw MachoFormatException();
 
-					DefineMachoSymbol(symtype, string(name), address, binding, true);
-
 					memset(&externReloc, 0, sizeof(externReloc));
 					externReloc.nativeType = BINARYNINJA_MANUAL_RELOCATION;
 					externReloc.address = address;
@@ -2774,8 +2913,6 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 				case BindOpcodeDoBindAddAddressULEB:
 					if (name == NULL)
 						throw MachoFormatException();
-
-					DefineMachoSymbol(symtype, string(name), address, binding, true);
 
 					memset(&externReloc, 0, sizeof(externReloc));
 					externReloc.nativeType = BINARYNINJA_MANUAL_RELOCATION;
@@ -2791,8 +2928,6 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 				case BindOpcodeDoBindAddAddressImmediateScaled:
 					if (name == NULL)
 						throw MachoFormatException();
-
-					DefineMachoSymbol(symtype, string(name), address, binding, true);
 
 					memset(&externReloc, 0, sizeof(externReloc));
 					externReloc.nativeType = BINARYNINJA_MANUAL_RELOCATION;
@@ -2813,8 +2948,6 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 					uint64_t skip = readLEB128(table, tableSize, i);
 					for (; count > 0; count--)
 					{
-						DefineMachoSymbol(symtype, string(name), address, binding, true);
-
 						memset(&externReloc, 0, sizeof(externReloc));
 						externReloc.nativeType = BINARYNINJA_MANUAL_RELOCATION;
 						externReloc.address = address;
@@ -3114,6 +3247,32 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 		std::vector<import_entry> importTable;
 		parentReader.Seek(importsAddress);
 
+		auto processChainedImport =
+			[symbolsAddress, &importTable](
+				uint64_t ordinal, uint64_t addend, uint32_t nameOffset, bool weak, auto& reader) {
+				import_entry entry;
+				entry.lib_ordinal = ordinal;
+				entry.addend = addend;
+				entry.weak = weak;
+
+				auto nextEntryAddress = reader.GetOffset();
+				size_t symNameAddr = symbolsAddress + nameOffset;
+
+				reader.Seek(symNameAddr);
+				try
+				{
+					string symbolName = reader.ReadCString();
+					entry.name = symbolName;
+				}
+				catch (ReadException& ex)
+				{
+					entry.name = "";
+				}
+
+				importTable.push_back(entry);
+				reader.Seek(nextEntryAddress);
+			};
+
 		switch (fixupsHeader.imports_format)
 		{
 			case DYLD_CHAINED_IMPORT:
@@ -3121,38 +3280,34 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 				for (size_t i = 0; i < fixupsHeader.imports_count; i++)
 				{
 					uint32_t importEntry = parentReader.Read32();
-					uint64_t nextEntryAddress = parentReader.GetOffset();
-
 					dyld_chained_import import = *(reinterpret_cast<dyld_chained_import*>(&importEntry));
-
-					import_entry entry;
-
-					entry.lib_ordinal = (uint64_t)import.lib_ordinal;
-					entry.addend = 0;
-					entry.weak = (import.weak_import == 1);
-
-					size_t symNameAddr = symbolsAddress + import.name_offset;
-
-					parentReader.Seek(symNameAddr);
-					try {
-						string symbolName = parentReader.ReadCString();
-						entry.name = symbolName;
-					}
-					catch (ReadException& ex)
-					{
-						entry.name = "";
-					}
-
-					importTable.push_back(entry);
-					parentReader.Seek(nextEntryAddress);
+					processChainedImport(import.lib_ordinal, 0, import.name_offset, import.weak_import, parentReader);
 				}
 				break;
 			}
 			case DYLD_CHAINED_IMPORT_ADDEND:
+			{
+				for (size_t i = 0; i < fixupsHeader.imports_count; i++)
+				{
+					dyld_chained_import_addend import;
+					parentReader.Read(&import, sizeof(import));
+					processChainedImport(import.lib_ordinal, import.addend, import.name_offset, import.weak_import, parentReader);
+				}
+				break;
+			}
 			case DYLD_CHAINED_IMPORT_ADDEND64:
+			{
+				for (size_t i = 0; i < fixupsHeader.imports_count; i++)
+				{
+					dyld_chained_import_addend64 import;
+					parentReader.Read(&import, sizeof(import));
+					processChainedImport(import.lib_ordinal, import.addend, import.name_offset, import.weak_import, parentReader);
+				}
+				break;
+			}
 			default:
 			{
-				m_logger->LogWarn("Chained Fixups: Unknown import binding format");
+				m_logger->LogWarn("Chained Fixups: Unknown import binding format %d", fixupsHeader.imports_format);
 				processBinds = false; // We can still handle rebases.
 				break;
 			}
@@ -3203,7 +3358,6 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 			// case DYLD_CHAINED_PTR_ARM64E_FIRMWARE: Unsupported.
 			case DYLD_CHAINED_PTR_64:
 			case DYLD_CHAINED_PTR_64_OFFSET:
-			case DYLD_CHAINED_PTR_64_KERNEL_CACHE:
 				strideSize = 4;
 				format = Generic64FixupFormat;
 				break;
@@ -3216,9 +3370,13 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 				strideSize = 4;
 				format = Firmware32FixupFormat;
 				break;
+			case DYLD_CHAINED_PTR_64_KERNEL_CACHE:
+				strideSize = 4;
+				format = Kernel64Format;
+				break;
 			case DYLD_CHAINED_PTR_X86_64_KERNEL_CACHE:
 				strideSize = 1;
-				format = Generic64FixupFormat;
+				format = Kernel64Format;
 				break;
 			default:
 			{
@@ -3313,6 +3471,10 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 							nextEntryStrideCount = pointer.firmware32.next;
 							bind = false;
 							break;
+						case Kernel64Format:
+							nextEntryStrideCount = pointer.kernel64.next;
+							bind = false;
+							break;
 						}
 
 						m_logger->LogTrace("Chained Fixups: @ 0x%llx ( 0x%llx ) - %d 0x%llx", chainEntryAddress,
@@ -3343,6 +3505,8 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 							case DYLD_CHAINED_PTR_32:
 								ordinal = pointer.generic32.bind.ordinal;
 								break;
+							case DYLD_CHAINED_PTR_64_KERNEL_CACHE: // no binding
+							case DYLD_CHAINED_PTR_X86_64_KERNEL_CACHE: // ''
 							default:
 								m_logger->LogWarn("Chained Fixups: Unknown Bind Pointer Format at %llx",
 									GetStart() + (chainEntryAddress - m_universalImageOffset));
@@ -3368,9 +3532,6 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 								if (!entry.name.empty())
 								{
 									reloc.address = targetAddress;
-									DefineMachoSymbol(ImportAddressSymbol, entry.name,
-										targetAddress,
-										entry.weak ? WeakBinding : GlobalBinding, true);
 
 									BNRelocationInfo externReloc;
 									memset(&externReloc, 0, sizeof(externReloc));
@@ -3379,6 +3540,7 @@ void MachoView::ParseChainedFixups(MachOHeader& header, linkedit_data_command ch
 									externReloc.size = m_addressSize;
 									externReloc.pcRelative = false;
 									externReloc.external = true;
+									externReloc.addend = entry.addend;
 									header.externalRelocations.emplace_back(externReloc, entry.name);
 								}
 								else
@@ -3573,6 +3735,9 @@ void MachoView::ParseChainedStarts(MachOHeader& header, section_64 chainedStarts
 					nextEntryStrideCount = pointer.firmware32.next;
 					bind = false;
 					break;
+				case Kernel64Format:
+					nextEntryStrideCount = pointer.kernel64.next;
+					bind = false;
 				}
 
 				m_logger->LogTrace("Chained Starts: @ 0x%llx ( 0x%llx ) - %d 0x%llx", chainEntryAddress,
@@ -3714,18 +3879,40 @@ Ref<BinaryView> MachoViewType::Parse(BinaryView* data)
 bool MachoViewType::IsTypeValidForData(BinaryView* data)
 {
 	if (!data)
+	{
+		// Can't be valid if we don't have any data
 		return false;
+	}
 
-	DataBuffer sig = data->ReadBuffer(data->GetStart(), 4);
-	if (sig.GetLength() != 4)
+	DataBuffer header = data->ReadBuffer(data->GetStart(), sizeof(mach_header));
+	if (header.GetLength() < sizeof(mach_header))
+	{
+		// Can't be valid if we don't have enough data for a header
 		return false;
+	}
 
-	uint32_t magic = *(uint32_t*)sig.GetData();
-	if (magic == MH_CIGAM || magic == MH_CIGAM_64 || magic == MH_MAGIC || magic == MH_MAGIC_64)
+	auto mh = (const mach_header*)header.GetData();
+	if (mh->magic == MH_MAGIC || mh->magic == MH_MAGIC_64)
+	{
+		// MH_FILESET is now handled by the KernelCache view instead
+		if (mh->filetype != MH_FILESET)
+			return true;
+		else
+			return false;
+	}
+	else if (mh->magic == MH_CIGAM || mh->magic == MH_CIGAM_64)
+	{
+		// MH_FILESET is now handled by the KernelCache view instead
+		if (ToBE32(mh->filetype) != MH_FILESET)
+			return true;
+		else
+			return false;
+	}
+	else if (ToBE32(mh->magic) == FAT_MAGIC || ToBE32(mh->magic) == FAT_MAGIC_64)
+	{
+		// Fat Mach-O files are valid, but have different parsing logic
 		return true;
-	magic = ToBE32(magic);
-	if ((magic == FAT_MAGIC) || (magic == FAT_MAGIC_64))
-		return true;
+	}
 
 	return data->GetLoadSettings(GetName()) ? true : false;
 }
@@ -3873,7 +4060,7 @@ Ref<Settings> MachoViewType::GetLoadSettingsForData(BinaryView* data)
 			settings->UpdateProperty(override, "readOnly", false);
 	}
 
-	if (ObjCProcessor::ViewHasObjCMetadata(viewRef))
+	if (MachoObjCProcessor::ViewHasObjCMetadata(viewRef))
 	{
 		settings->RegisterSetting("loader.macho.processObjectiveC",
 			R"({

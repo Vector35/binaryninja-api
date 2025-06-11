@@ -1,4 +1,4 @@
-// Copyright 2021-2024 Vector 35 Inc.
+// Copyright 2021-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -55,10 +55,9 @@ pub trait CallingConvention: Sync {
     fn are_argument_registers_used_for_var_args(&self) -> bool;
 }
 
-pub fn register_calling_convention<A, N, C>(arch: &A, name: N, cc: C) -> Ref<CoreCallingConvention>
+pub fn register_calling_convention<A, C>(arch: &A, name: &str, cc: C) -> Ref<CoreCallingConvention>
 where
     A: Architecture,
-    N: BnStrCompatible,
     C: 'static + CallingConvention,
 {
     struct CustomCallingConventionContext<C>
@@ -377,7 +376,7 @@ where
         )
     }
 
-    let name = name.into_bytes_with_nul();
+    let name = name.to_cstr();
     let raw = Box::into_raw(Box::new(CustomCallingConventionContext {
         raw_handle: std::ptr::null_mut(),
         cc,
@@ -413,7 +412,7 @@ where
     };
 
     unsafe {
-        let cc_name = name.as_ref().as_ptr() as *mut _;
+        let cc_name = name.as_ptr();
         let result = BNCreateCallingConvention(arch.as_ref().handle, cc_name, &mut cc);
 
         assert!(!result.is_null());
@@ -455,8 +454,8 @@ impl CoreCallingConvention {
         })
     }
 
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetCallingConventionName(self.handle)) }
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNGetCallingConventionName(self.handle)) }
     }
 
     pub fn variables_for_parameters(

@@ -1,4 +1,4 @@
-// Copyright 2021-2024 Vector 35 Inc.
+// Copyright 2021-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ pub fn create_section_reader<'a, Endian: 'a + Endianity>(
         if let Some(symbol) = view
             .symbols()
             .iter()
-            .find(|symbol| symbol.full_name().as_str() == "__elf_section_headers")
+            .find(|symbol| symbol.full_name().to_string_lossy() == "__elf_section_headers")
         {
             if let Some(data_var) = view
                 .data_variables()
@@ -179,9 +179,10 @@ pub fn create_section_reader<'a, Endian: 'a + Endianity>(
         }
     }
     // Truncate Mach-O section names to 16 bytes
-    else if let Some(section) =
-        view.section_by_name("__".to_string() + &section_name[1..section_name.len().min(15)])
-    {
+    else if let Some(section) = view.section_by_name(&format!(
+        "__{}",
+        &section_name[1..section_name.len().min(15)]
+    )) {
         Ok(EndianRcSlice::new(
             Rc::from(view.read_vec(section.start(), section.len()).as_slice()),
             endian,

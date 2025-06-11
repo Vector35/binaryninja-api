@@ -40,18 +40,14 @@ class BaseAddressDetectionThread : public QThread
 {
 	Q_OBJECT
 	BinaryNinja::Ref<BinaryNinja::BinaryView> m_view;
-	BinaryNinja::BaseAddressDetection* m_baseDetection;
+	BinaryNinja::BaseAddressDetection* m_baseDetection = nullptr;
 	BaseAddressDetectionQtInputs* m_inputs {};
 	void run() override;
 
 public:
-	BaseAddressDetectionThread(BaseAddressDetectionQtInputs* widgetInputs, BinaryNinja::Ref<BinaryNinja::BinaryView> bv)
-	{
-		m_inputs = widgetInputs;
-		m_view = bv;
-		m_baseDetection = new BinaryNinja::BaseAddressDetection(m_view);
-	}
-
+	BaseAddressDetectionThread(BaseAddressDetectionQtInputs* widgetInputs,
+		BinaryNinja::Ref<BinaryNinja::BinaryView> bv);
+	~BaseAddressDetectionThread();
 	void Abort() { m_baseDetection->Abort(); }
 	bool IsAborted() { return m_baseDetection->IsAborted(); }
 

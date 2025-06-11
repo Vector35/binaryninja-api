@@ -60,7 +60,21 @@ impl Command for LoadSVDFile {
 
 #[no_mangle]
 #[allow(non_snake_case)]
+#[cfg(not(feature = "demo"))]
 pub extern "C" fn CorePluginInit() -> bool {
+    plugin_init();
+    true
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+#[cfg(feature = "demo")]
+pub extern "C" fn SVDPluginInit() -> bool {
+    plugin_init();
+    true
+}
+
+fn plugin_init() {
     Logger::new("SVD").with_level(LevelFilter::Debug).init();
 
     binaryninja::command::register_command(
@@ -100,13 +114,11 @@ pub extern "C" fn CorePluginInit() -> bool {
 
     // Register new workflow activity to load svd information.
     let old_module_meta_workflow = Workflow::instance("core.module.metaAnalysis");
-    let module_meta_workflow = old_module_meta_workflow.clone("core.module.metaAnalysis");
+    let module_meta_workflow = old_module_meta_workflow.clone_to("core.module.metaAnalysis");
     let loader_activity = Activity::new_with_action(LOADER_ACTIVITY_CONFIG, loader_activity);
     module_meta_workflow
         .register_activity(&loader_activity)
         .unwrap();
     module_meta_workflow.insert("core.module.loadDebugInfo", [LOADER_ACTIVITY_NAME]);
     module_meta_workflow.register().unwrap();
-
-    true
 }

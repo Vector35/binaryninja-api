@@ -8,11 +8,8 @@ if((NOT BN_API_PATH) AND (NOT BN_INTERNAL_BUILD))
         message(FATAL_ERROR "Provide path to Binary Ninja API source in BN_API_PATH")
     endif()
 endif()
-file(GLOB COMMON_SOURCES
-        *.cpp
-        *.h
-        )
-set(SOURCES ${COMMON_SOURCES})
+
+file(GLOB_RECURSE SOURCES *.cpp *.h ../../../objectivec/*)
 
 add_library(sharedcachecore OBJECT ${SOURCES})
 

@@ -1,4 +1,4 @@
-// Copyright 2021-2024 Vector 35 Inc.
+// Copyright 2021-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ impl FileMetadata {
         Self::ref_from_raw(unsafe { BNCreateFileMetadata() })
     }
 
-    pub fn with_filename<S: BnStrCompatible>(name: S) -> Ref<Self> {
+    pub fn with_filename(name: &str) -> Ref<Self> {
         let ret = FileMetadata::new();
         ret.set_filename(name);
         ret
@@ -68,18 +68,18 @@ impl FileMetadata {
         unsafe { BNFileMetadataGetSessionId(self.handle) }
     }
 
-    pub fn filename(&self) -> BnString {
+    pub fn filename(&self) -> String {
         unsafe {
             let raw = BNGetFilename(self.handle);
-            BnString::from_raw(raw)
+            BnString::into_string(raw)
         }
     }
 
-    pub fn set_filename<S: BnStrCompatible>(&self, name: S) {
-        let name = name.into_bytes_with_nul();
+    pub fn set_filename(&self, name: &str) {
+        let name = name.to_cstr();
 
         unsafe {
-            BNSetFilename(self.handle, name.as_ref().as_ptr() as *mut _);
+            BNSetFilename(self.handle, name.as_ptr());
         }
     }
 
@@ -107,12 +107,22 @@ impl FileMetadata {
         self.is_database_backed_for_view_type("")
     }
 
-    pub fn is_database_backed_for_view_type<S: BnStrCompatible>(&self, view_type: S) -> bool {
-        let view_type = view_type.into_bytes_with_nul();
+    pub fn is_database_backed_for_view_type(&self, view_type: &str) -> bool {
+        let view_type = view_type.to_cstr();
 
         unsafe { BNIsBackedByDatabase(self.handle, view_type.as_ref().as_ptr() as *const _) }
     }
 
+    /// Runs a failable function where the failure state will revert any undo actions that occurred
+    /// during the time of the function's execution.
+    ///
+    /// NOTE: This will commit or undo any actions that occurred on **any** thread as this state is not thread local.
+    ///
+    /// NOTE: This is **NOT** thread safe, if you are holding any locks that might be held by both the main thread
+    /// and the thread executing this function, you can deadlock. You should also never call this function
+    /// on multiple threads at a time. See the following issues:
+    ///  - <https://github.com/Vector35/binaryninja-api/issues/6289>
+    ///  - <https://github.com/Vector35/binaryninja-api/issues/6325>
     pub fn run_undoable_transaction<F: FnOnce() -> Result<T, E>, T, E>(
         &self,
         func: F,
@@ -121,29 +131,50 @@ impl FileMetadata {
         let result = func();
         match result {
             Ok(t) => {
-                self.commit_undo_actions(undo);
+                self.commit_undo_actions(&undo);
                 Ok(t)
             }
             Err(e) => {
-                self.revert_undo_actions(undo);
+                self.revert_undo_actions(&undo);
                 Err(e)
             }
         }
     }
 
-    pub fn begin_undo_actions(&self, anonymous_allowed: bool) -> BnString {
-        unsafe { BnString::from_raw(BNBeginUndoActions(self.handle, anonymous_allowed)) }
+    /// Creates a new undo entry, any undo actions after this will be added to this entry.
+    ///
+    /// NOTE: This is **NOT** thread safe, if you are holding any locks that might be held by both the main thread
+    /// and the thread executing this function, you can deadlock. You should also never call this function
+    /// on multiple threads at a time. See the following issues:
+    ///  - <https://github.com/Vector35/binaryninja-api/issues/6289>
+    ///  - <https://github.com/Vector35/binaryninja-api/issues/6325>
+    pub fn begin_undo_actions(&self, anonymous_allowed: bool) -> String {
+        unsafe { BnString::into_string(BNBeginUndoActions(self.handle, anonymous_allowed)) }
     }
 
-    pub fn commit_undo_actions<S: BnStrCompatible>(&self, id: S) {
-        let id = id.into_bytes_with_nul();
+    /// Commits the undo entry with the id to the undo buffer.
+    ///
+    /// NOTE: This is **NOT** thread safe, if you are holding any locks that might be held by both the main thread
+    /// and the thread executing this function, you can deadlock. You should also never call this function
+    /// on multiple threads at a time. See the following issues:
+    ///  - <https://github.com/Vector35/binaryninja-api/issues/6289>
+    ///  - <https://github.com/Vector35/binaryninja-api/issues/6325>
+    pub fn commit_undo_actions(&self, id: &str) {
+        let id = id.to_cstr();
         unsafe {
             BNCommitUndoActions(self.handle, id.as_ref().as_ptr() as *const _);
         }
     }
 
-    pub fn revert_undo_actions<S: BnStrCompatible>(&self, id: S) {
-        let id = id.into_bytes_with_nul();
+    /// Reverts the undo actions committed in the undo entry.
+    ///
+    /// NOTE: This is **NOT** thread safe, if you are holding any locks that might be held by both the main thread
+    /// and the thread executing this function, you can deadlock. You should also never call this function
+    /// on multiple threads at a time. See the following issues:
+    ///  - <https://github.com/Vector35/binaryninja-api/issues/6289>
+    ///  - <https://github.com/Vector35/binaryninja-api/issues/6325>
+    pub fn revert_undo_actions(&self, id: &str) {
+        let id = id.to_cstr();
         unsafe {
             BNRevertUndoActions(self.handle, id.as_ref().as_ptr() as *const _);
         }
@@ -161,16 +192,25 @@ impl FileMetadata {
         }
     }
 
-    pub fn current_view(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetCurrentView(self.handle)) }
+    pub fn current_view(&self) -> String {
+        unsafe { BnString::into_string(BNGetCurrentView(self.handle)) }
     }
 
     pub fn current_offset(&self) -> u64 {
         unsafe { BNGetCurrentOffset(self.handle) }
     }
 
-    pub fn navigate_to<S: BnStrCompatible>(&self, view: S, offset: u64) -> Result<(), ()> {
-        let view = view.into_bytes_with_nul();
+    /// Navigate to an offset for a specific view.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use binaryninja::file_metadata::FileMetadata;
+    /// # let file: FileMetadata = unimplemented!();
+    /// file.navigate_to("Linear:Raw", 0x0).expect("Linear:Raw should always be present");
+    /// ```
+    pub fn navigate_to(&self, view: &str, offset: u64) -> Result<(), ()> {
+        let view = view.to_cstr();
 
         unsafe {
             if BNNavigate(self.handle, view.as_ref().as_ptr() as *const _, offset) {
@@ -181,8 +221,17 @@ impl FileMetadata {
         }
     }
 
-    pub fn view_of_type<S: BnStrCompatible>(&self, view: S) -> Option<Ref<BinaryView>> {
-        let view = view.into_bytes_with_nul();
+    /// Get the [`BinaryView`] for the view type.
+    /// 
+    /// # Example
+    /// 
+    /// ```no_run
+    /// use binaryninja::file_metadata::FileMetadata;
+    /// # let file: FileMetadata = unimplemented!();
+    /// file.view_of_type("Raw").expect("Raw type should always be present");
+    /// ```
+    pub fn view_of_type(&self, view: &str) -> Option<Ref<BinaryView>> {
+        let view = view.to_cstr();
 
         unsafe {
             let raw_view_ptr = BNGetFileViewOfType(self.handle, view.as_ref().as_ptr() as *const _);
@@ -215,7 +264,7 @@ impl FileMetadata {
             return false;
         };
 
-        let file_path = file_path.as_ref().into_bytes_with_nul();
+        let file_path = file_path.as_ref().to_cstr();
         unsafe {
             BNCreateDatabase(
                 raw_view.handle,
@@ -226,7 +275,7 @@ impl FileMetadata {
     }
 
     // TODO: Pass settings?
-    pub fn create_database_with_progress<S: BnStrCompatible, P: ProgressCallback>(
+    pub fn create_database_with_progress<P: ProgressCallback>(
         &self,
         file_path: impl AsRef<Path>,
         mut progress: P,
@@ -235,7 +284,7 @@ impl FileMetadata {
         let Some(raw_view) = self.view_of_type("Raw") else {
             return false;
         };
-        let file_path = file_path.as_ref().into_bytes_with_nul();
+        let file_path = file_path.as_ref().to_cstr();
         unsafe {
             BNCreateDatabaseWithProgress(
                 raw_view.handle,
@@ -256,14 +305,11 @@ impl FileMetadata {
         unsafe { BNSaveAutoSnapshot(raw_view.handle, ptr::null_mut() as *mut _) }
     }
 
-    pub fn open_database_for_configuration<S: BnStrCompatible>(
-        &self,
-        filename: S,
-    ) -> Result<Ref<BinaryView>, ()> {
-        let filename = filename.into_bytes_with_nul();
+    pub fn open_database_for_configuration(&self, file: &Path) -> Result<Ref<BinaryView>, ()> {
+        let file = file.to_cstr();
         unsafe {
             let bv =
-                BNOpenDatabaseForConfiguration(self.handle, filename.as_ref().as_ptr() as *const _);
+                BNOpenDatabaseForConfiguration(self.handle, file.as_ref().as_ptr() as *const _);
 
             if bv.is_null() {
                 Err(())
@@ -273,11 +319,9 @@ impl FileMetadata {
         }
     }
 
-    pub fn open_database<S: BnStrCompatible>(&self, filename: S) -> Result<Ref<BinaryView>, ()> {
-        let filename = filename.into_bytes_with_nul();
-        let filename_ptr = filename.as_ref().as_ptr() as *mut _;
-
-        let view = unsafe { BNOpenExistingDatabase(self.handle, filename_ptr) };
+    pub fn open_database(&self, file: &Path) -> Result<Ref<BinaryView>, ()> {
+        let file = file.to_cstr();
+        let view = unsafe { BNOpenExistingDatabase(self.handle, file.as_ptr()) };
 
         if view.is_null() {
             Err(())
@@ -286,18 +330,17 @@ impl FileMetadata {
         }
     }
 
-    pub fn open_database_with_progress<S: BnStrCompatible, P: ProgressCallback>(
+    pub fn open_database_with_progress<P: ProgressCallback>(
         &self,
-        filename: S,
+        file: &Path,
         mut progress: P,
     ) -> Result<Ref<BinaryView>, ()> {
-        let filename = filename.into_bytes_with_nul();
-        let filename_ptr = filename.as_ref().as_ptr() as *mut _;
+        let file = file.to_cstr();
 
         let view = unsafe {
             BNOpenExistingDatabaseWithProgress(
                 self.handle,
-                filename_ptr,
+                file.as_ptr(),
                 &mut progress as *mut P as *mut c_void,
                 Some(P::cb_progress_callback),
             )

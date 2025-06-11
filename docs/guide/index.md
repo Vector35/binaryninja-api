@@ -2,16 +2,6 @@
 
 Welcome to the Binary Ninja User Guide. You'll notice two menus here. On the right is the table of contents for this main page of the user manual. On the left are links to larger topics that have their own pages, including:
 
-- [Plugins](plugins.md)
-- [Settings](settings.md)
-- [Projects](projects.md)
-- [Troubleshooting](troubleshooting.md)
-- [Objective-C](objectivec.md)
-- [Debugger](debugger/index.md)
-- [Migration Guide](migration/index.md)
-- [Types](types/index.md)
-[comment]: <> (When changing this list, make sure to update mkdocs.yml as well)
-
 ## Directories
 
 Binary Ninja stores information in two primary locations. The first is the binary path (wherever Binary Ninja is installed) and the second is the user folder for user-installed content.
@@ -161,7 +151,7 @@ A "Compact Mode" exists which presents only file paths. This can be enabled and 
 
 Recent files can be opened on double click. They can also be navigated using the arrow keys, and opened via pressing enter. Opening a recent file using `[SHIFT+ENTER]` will open that file with the Open With Options dialog.
 
-The Recent files list can be cleared via using the Command Palette (`[CTRL] + P`) action `Clear Recently Opened`.
+The Recent files list can be cleared via using the Command Palette (`[CTRL] + P`) action `Clear All Recent Files`.
 
 Hotkeys (macOS: `[CMD] + 0` - `[CMD] + 9`, Windows/Linux: `[CTRL] + 0` - `[CTRL + 9]`) can also be used to quickly open a file. The hotkey for a given entry will be shown on the right.
 
@@ -433,7 +423,7 @@ The Stack sidebar panel shows the currently selected function's stack layout. Yo
 
 The History sidebar panel shows all annotations made during the history of a database. Note that even changes made prior to the introduction of the UI will be shown. This not only makes it easier to see what changes have been made, but allows you to right-click and revert to a particular point in analysis. Additionally, the right-click menu includes a toggle to hide or show the date of the change.
 
-Note that when plugins or the UI batch multiple changes in one action, they wil be summarized with a count of actions but no further details are possible. 
+Note that when plugins or the UI batch multiple changes in one action, they wil be summarized with a count of actions but no further details are possible.
 
 There is currently no support for branching/forking style of history at this time.
 
@@ -660,7 +650,7 @@ Note that you can cancel the analysis at any time and the current results will b
 large files or files with many pointers being analyzed.
 
 If the file format has a header that can be identified before analysis that may help BASE identify the proper load
-address, otherwise the alignment would need to account for the header. 
+address, otherwise the alignment would need to account for the header.
 
 |Setting|Description|Default|
 |--- |--- |--- |
@@ -679,7 +669,7 @@ libraries linked will be listed in this section and are available in the [API as
 ### 6. Imports / Exports
 
 The Imports and Exports sections show any imports and exports. The lists are sortable by clicking
-the table headers. 
+the table headers.
 
 ### 7. Sections
 
@@ -690,37 +680,6 @@ clickable to navigate to the virtual address.
 
 Strings can be double clicked to navigate to them, and the table can be sorted or the list filtered by
 typing in the search box.
-
-## Dyld Shared Cache Triage (Alpha)
-
-The Dyld Shared Cache Triage View (or DSCView) allows loading dyld shared cache files from macOS and iOS. You can selectively load specific images, search for specific symbols, and follow analysis between specific images, search for specific symbols, and follow analysis references between any loaded images in one view.
-
-!!! note "Dyld Shared Cache Tabs"
-
-    === "Image List"
-
-        ![Dyld Shared Cache Image List](../img/dsc/images.png "Dyld Shared Cache Image List"){ width="800" }
-
-        The image list shows a list of all images within the dyld shared cache and their virtual addresses. Double clicking on an image will load the image and begin analyzing it.
-
-    === "Symbol Search"
-
-        ![Dyld Shared Cache Symbol Search](../img/dsc/symbols.png "Dyld Shared Cache Symbol List"){ width="800" }
-
-        All symbols exported by each of the shared libraries in the cache can be searched from this view. Double clicking any line will prompt the user whether to load the associated library for that symbol.
-
-    === "Cache"
-
-        ![Dyld Shared Cache Cache](../img/dsc/cache.png "Dyld Shared Cache Cache"){ width="800" }
-
-        The cache view shows currently loaded shared objects and is informational only.
-
-    === "Alpha"
-
-        ![Dyld Shared Cache Alpha](../img/dsc/alpha.png "Dyld Shared Cache Alpha"){ width="800" }
-
-        The current DSCView is considered an Alpha feature and more details on the limitations and known-issues is included in this tab. As the DSCView leaves alpha state, this tab will be removed.
-
 
 ## Byte Overview
 
@@ -848,6 +807,28 @@ Performing this action on both variables in the example results in the following
 
 ![Dead Store Elimination Results](../img/dead-store-after.png "Dead Store Elimination Results"){ width="500" }
 
+## Expression Folding
+
+Binary Ninja automatically performs optimization passes on high level code. One of these optimizations is to fold
+assignments with a single use into the statement that uses it. An example of a function call being folded into another
+is shown below:
+
+![Expression Folding](../img/folding-before.png "Expression Folding"){ width="500" }
+
+Binary Ninja uses heuristics to determine if this will improve readability, but sometimes it doesn't make the preferred
+choice. You can override the heuristic by right-clicking an expression and choosing "Allow" or "Prevent" from the
+"Expression Folding" submenu.
+
+![Expression Folding Menu](../img/folding-menu.png "Expression Folding Menu"){ width="500" }
+
+This option will only appear if the expression can be folded. If Binary Ninja's analysis determines that it is not sound
+to fold an expression, the submenu will not be present.
+
+Choosing "Prevent" from the "Expression Folding" menu on the call to `_strlen` in the example above results in the
+following output:
+
+![Expression Folding Results](../img/folding-after.png "Expression Folding Results"){ width="500" }
+
 ## Merging and Splitting Variables
 
 Binary Ninja automatically splits all variables that the analysis determines to be safely splittable. This allows the user to assign different types to different uses of the same register or memory location. Sometimes, however, the code is more clear if two or more of these variables are merged together into a single variable.
@@ -931,6 +912,9 @@ The scripting console is not a full IDE, but it has several convenience features
 - `<CTRL>-R` allows for reverse-searching your console history
 - `<UP>` and `<DOWN>` can be used to view the command-history
 
+???+ Tip "Tip"
+    All scripting consoles share a single python instance. This is an intentional design choice and has the following benefits: you can create variables in one tab/window and then access it in another. The downside is that if you run a long-running script for example, the console will still be blocked in other tabs and windows. This is a known trade-off and not expected to change.
+
 ### Magic Console Variables
 
 The interactive python prompt also has several built-in "magic" functions and variables. Some are read-only, and some are writable to provide convenient interactivity between the UI and console:
@@ -994,7 +978,6 @@ Any variables or functions defined globally within the script will be available 
 ### Python Debugging
 See the [plugin development guide](../dev/plugins.md#debugging-using-other-ides).
 
-Note
 ???+ Tip "Tip"
     The current script console only supports Python at the moment, but it's fully extensible for other programming languages for advanced users who wish to implement their own bindings.
 
@@ -1035,6 +1018,18 @@ The PDB loader comes with a couple configuration options which enable and disabl
 * **Generate Virtual Table Structures (default on)**: This generates structures for virtual tables found on classes in the PDB's types. Due to limitations of Binary Ninja's C++ type handling, these virtual table structures are just structures of function pointers, and may have incorrect behavior for types with multiple or virtual inheritance.
 * **Load Global Module Symbols (default on)**: The global module in a PDB contains a list of all the functions with no type information beyond a C++ mangled name. Generally, this information is less accurate than a full symbol type, but stripped PDBs from Microsoft's official PDB server (and ones created via the `/PDBSTRIPPED` link.exe flag) will only have information in this module. In the event that a symbol has both a defined type and a global module mangled name, the defined type will be used.
 * **Cache Downloaded PDBs in Local Store (default on)**: When a PDB is downloaded from a PDB server, or loaded from a file, a copy of it will be saved in the local symbol store (as defined by #4 [above](#loading-pdbs)). This is useful when working with large PDBs that you want to save, but will use extra disk space.
+
+## Launching Binary Ninja from the command line (CLI)
+
+When you launch Binary Ninja from the command-line, you can control whether or not a new window is launched or an existing window is used.
+
+* Running Binary Ninja from the command line will try to find a running instance of the same version in which to open any files or URLs passed on the command line, or activate the main window if no arguments are provided.
+* For users whose workflow involves running Binary Ninja from a shell, just running `binaryninja` will try to activate a running instance, and if it does, return you to your shell. Otherwise it will launch a new instance of Binary Ninja.
+* Running `binaryninja` with a file path (or paths), like `binaryninja /bin/ls /bin/cat`, will
+    1. Try to activate and focus existing tabs for those files in a running instance, or failing that,
+    2. Try to open those files in new tabs in a running instance, or failing that,
+    3. Open those files in a new instance of Binary Ninja.
+* Passing the `-n` or `--new-instance` command line argument will cause a new Binary Ninja application to be launched and any files or URLs on the command line will be opened in the new instance.
 
 ## Debugger
 

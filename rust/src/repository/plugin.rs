@@ -5,6 +5,7 @@ use crate::VersionInfo;
 use binaryninjacore_sys::*;
 use std::ffi::c_char;
 use std::fmt::Debug;
+use std::path::PathBuf;
 use std::ptr::NonNull;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -31,31 +32,31 @@ impl RepositoryPlugin {
     }
 
     /// String of the plugin author
-    pub fn author(&self) -> BnString {
+    pub fn author(&self) -> String {
         let result = unsafe { BNPluginGetAuthor(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result as *mut c_char) }
+        unsafe { BnString::into_string(result as *mut c_char) }
     }
 
     /// String short description of the plugin
-    pub fn description(&self) -> BnString {
+    pub fn description(&self) -> String {
         let result = unsafe { BNPluginGetDescription(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result as *mut c_char) }
+        unsafe { BnString::into_string(result as *mut c_char) }
     }
 
     /// String complete license text for the given plugin
-    pub fn license_text(&self) -> BnString {
+    pub fn license_text(&self) -> String {
         let result = unsafe { BNPluginGetLicenseText(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result as *mut c_char) }
+        unsafe { BnString::into_string(result as *mut c_char) }
     }
 
     /// String long description of the plugin
-    pub fn long_description(&self) -> BnString {
+    pub fn long_description(&self) -> String {
         let result = unsafe { BNPluginGetLongdescription(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result as *mut c_char) }
+        unsafe { BnString::into_string(result as *mut c_char) }
     }
 
     /// Minimum version info the plugin was tested on
@@ -71,65 +72,67 @@ impl RepositoryPlugin {
     }
 
     /// String plugin name
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNPluginGetName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result as *mut c_char) }
+        unsafe { BnString::into_string(result as *mut c_char) }
     }
 
     /// String URL of the plugin's git repository
-    pub fn project_url(&self) -> BnString {
+    pub fn project_url(&self) -> String {
         let result = unsafe { BNPluginGetProjectUrl(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result as *mut c_char) }
+        unsafe { BnString::into_string(result as *mut c_char) }
     }
 
     /// String URL of the plugin's git repository
-    pub fn package_url(&self) -> BnString {
+    pub fn package_url(&self) -> String {
         let result = unsafe { BNPluginGetPackageUrl(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result as *mut c_char) }
+        unsafe { BnString::into_string(result as *mut c_char) }
     }
 
     /// String URL of the plugin author's url
-    pub fn author_url(&self) -> BnString {
+    pub fn author_url(&self) -> String {
         let result = unsafe { BNPluginGetAuthorUrl(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result as *mut c_char) }
+        unsafe { BnString::into_string(result as *mut c_char) }
     }
     /// String version of the plugin
-    pub fn version(&self) -> BnString {
+    pub fn version(&self) -> String {
         let result = unsafe { BNPluginGetVersion(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result as *mut c_char) }
+        unsafe { BnString::into_string(result as *mut c_char) }
     }
 
     /// String of the commit of this plugin git repository
-    pub fn commit(&self) -> BnString {
+    pub fn commit(&self) -> String {
         let result = unsafe { BNPluginGetCommit(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result as *mut c_char) }
+        unsafe { BnString::into_string(result as *mut c_char) }
     }
 
     /// Relative path from the base of the repository to the actual plugin
-    pub fn path(&self) -> BnString {
+    pub fn path(&self) -> PathBuf {
         let result = unsafe { BNPluginGetPath(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result as *mut c_char) }
+        let result_str = unsafe { BnString::into_string(result as *mut c_char) };
+        PathBuf::from(result_str)
     }
 
     /// Optional sub-directory the plugin code lives in as a relative path from the plugin root
-    pub fn subdir(&self) -> BnString {
+    pub fn subdir(&self) -> PathBuf {
         let result = unsafe { BNPluginGetSubdir(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result as *mut c_char) }
+        let result_str = unsafe { BnString::into_string(result as *mut c_char) };
+        PathBuf::from(result_str)
     }
 
     /// Dependencies required for installing this plugin
-    pub fn dependencies(&self) -> BnString {
+    pub fn dependencies(&self) -> String {
         let result = unsafe { BNPluginGetDependencies(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result as *mut c_char) }
+        unsafe { BnString::into_string(result as *mut c_char) }
     }
 
     /// true if the plugin is installed, false otherwise
@@ -190,10 +193,10 @@ impl RepositoryPlugin {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn repository(&self) -> BnString {
+    pub fn repository(&self) -> String {
         let result = unsafe { BNPluginGetRepository(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result as *mut c_char) }
+        unsafe { BnString::into_string(result as *mut c_char) }
     }
 
     /// Boolean status indicating that the plugin is being deleted
@@ -237,10 +240,10 @@ impl RepositoryPlugin {
     }
 
     /// Gets a json object of the project data field
-    pub fn project_data(&self) -> BnString {
+    pub fn project_data(&self) -> String {
         let result = unsafe { BNPluginGetProjectData(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Returns a datetime object representing the plugins last update

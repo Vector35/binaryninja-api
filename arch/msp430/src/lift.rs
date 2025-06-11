@@ -1,7 +1,6 @@
 use crate::architecture::offset_to_absolute;
 use crate::flag::{Flag, FlagWrite};
 use crate::register::Register;
-use crate::Msp430;
 
 use binaryninja::{architecture::FlagCondition, low_level_il::lifting::LowLevelILLabel};
 
@@ -13,7 +12,7 @@ use msp430_asm::single_operand::SingleOperand;
 use msp430_asm::two_operand::TwoOperand;
 
 use binaryninja::low_level_il::expression::ValueExpr;
-use binaryninja::low_level_il::{MutableLiftedILExpr, MutableLiftedILFunction};
+use binaryninja::low_level_il::{LowLevelILMutableExpression, LowLevelILMutableFunction};
 use log::info;
 
 macro_rules! auto_increment {
@@ -164,11 +163,7 @@ macro_rules! conditional_jump {
     };
 }
 
-pub(crate) fn lift_instruction(
-    inst: &Instruction,
-    addr: u64,
-    il: &MutableLiftedILFunction<Msp430>,
-) {
+pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMutableFunction) {
     match inst {
         Instruction::Rrc(inst) => {
             let size = match inst.operand_width() {
@@ -628,8 +623,8 @@ pub(crate) fn lift_instruction(
 fn lift_source_operand<'a>(
     operand: &Operand,
     size: usize,
-    il: &'a MutableLiftedILFunction<Msp430>,
-) -> MutableLiftedILExpr<'a, Msp430, ValueExpr> {
+    il: &'a LowLevelILMutableFunction,
+) -> LowLevelILMutableExpression<'a, ValueExpr> {
     match operand {
         Operand::RegisterDirect(r) => il.reg(size, Register::try_from(*r as u32).unwrap()),
         Operand::Indexed((r, offset)) => il

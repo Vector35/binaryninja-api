@@ -15,6 +15,7 @@
 #include "uicontext.h"
 #include "instructionedit.h"
 #include "ilchooser.h"
+#include "commands.h"
 #include <assembledialog.h>
 
 #define LINEAR_VIEW_UPDATE_CHECK_INTERVAL 200
@@ -244,6 +245,8 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 
 	std::set<std::string> m_layers;
 
+	FieldResolutionState m_fieldResolution;
+
 	void setTopToAddress(uint64_t addr);
 	void setTopToOrderingIndex(uint64_t idx);
 	void refreshLines(size_t lineOffset = 0, bool refreshUIContext = true);
@@ -313,6 +316,12 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 		TypeRef resType, uint64_t baseAddr, uint64_t& begin, uint64_t& end, bool singleLine, std::set<TypeRef>& seen);
 
 	BNDeadStoreElimination getCurrentVariableDeadStoreElimination();
+	std::optional<uint64_t> getCurrentFoldableExprAddress();
+	BNExprFolding getCurrentExprFolding();
+	std::optional<uint64_t> getCurrentInvertableConditionAddress();
+	bool getCurrentConditionInverted();
+	std::optional<uint64_t> getCurrentEarlyReturnAddress();
+	BNEarlyReturn getCurrentEarlyReturn();
 
 	void setDataButtonVisible(bool visible);
 	std::optional<std::pair<BinaryNinja::Variable, BinaryNinja::Variable>> getMergeVariablesAtCurrentLocation();
@@ -403,6 +412,9 @@ private Q_SLOTS:
 	std::optional<uint64_t> addressForCall();
 
 	void setCurrentVariableDeadStoreElimination(BNDeadStoreElimination elimination);
+	void setCurrentExprFolding(BNExprFolding folding);
+	void toggleConditionInverted();
+	void setCurrentEarlyReturn(BNEarlyReturn earlyReturn);
 
 Q_SIGNALS:
 	void notifyResizeEvent(int width, int height);
@@ -504,6 +516,8 @@ public:
 
 	virtual bool goToReference(FunctionRef func, uint64_t source, uint64_t target) override;
 	QFont getFont() override { return m_render.getFont(); }
+
+	virtual void refreshContents() override;
 
 	virtual void clearRelatedHighlights() override;
 	virtual void setRelatedIndexHighlights(FunctionRef func, const std::set<size_t>& related) override;

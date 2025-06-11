@@ -225,6 +225,7 @@ map<string, info> lookup = {
 {              "addi GPR , GPR , NUM",{0x38010000,0x03FFFFFF}}, // 001110xxxxxxxxxxxxxxxxxxxxxxxxxx  addi r0, r1, 0
 {                     "lis GPR , NUM",{0x3C000000,0x03E0FFFF}}, // 001111xxxxx00000xxxxxxxxxxxxxxxx  lis r0, 0
 {             "addis GPR , GPR , NUM",{0x3C010000,0x03FFFFFF}}, // 001111xxxxxxxxxxxxxxxxxxxxxxxxxx  addis r0, r1, 0
+{             "subis GPR , GPR , NUM",{0x3C010000,0x03FFFFFF}}, // 001111xxxxxxxxxxxxxxxxxxxxxxxxxx  subis r0, r1, 0
 {                        "bdnzf FLAG",{0x40000000,0x00230000}}, // 0100000000x000xx0000000000000000  bdnzf lt
 {                       "bdnzfl FLAG",{0x40000001,0x00230000}}, // 0100000000x000xx0000000000000001  bdnzfl lt
 {                       "bdnzfa FLAG",{0x40000002,0x00230000}}, // 0100000000x000xx0000000000000010  bdnzfa lt
@@ -2798,6 +2799,11 @@ int assemble_single(string src, uint32_t addr, uint8_t *result, string& err,
 	  toks_src.back().type == TT_NUM) {
 		toks_src.back().ival -= addr;
 		addr = 0;
+	}
+	else if(!strncmp("subis", toks_src[0].sval.c_str(), 6) &&
+	  toks_src.back().type == TT_NUM) {
+		toks_src.back().ival = -toks_src.back().ival;
+		toks_src[0].sval = "addis";
 	}
 
 	/* start with the parent */

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2024 Vector 35 Inc
+// Copyright (c) 2015-2025 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -166,7 +166,7 @@ bool FileMetadata::CreateDatabase(const string& name, BinaryView* data, Ref<Save
 
 
 bool FileMetadata::CreateDatabase(const string& name, BinaryView* data,
-    const function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings)
+    const ProgressFunction& progressCallback, Ref<SaveSettings> settings)
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;
@@ -185,7 +185,7 @@ Ref<BinaryView> FileMetadata::OpenExistingDatabase(const string& path)
 
 
 Ref<BinaryView> FileMetadata::OpenExistingDatabase(
-    const string& path, const function<bool(size_t progress, size_t total)>& progressCallback)
+    const string& path, const ProgressFunction& progressCallback)
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;
@@ -212,7 +212,7 @@ bool FileMetadata::SaveAutoSnapshot(BinaryView* data, Ref<SaveSettings> settings
 
 
 bool FileMetadata::SaveAutoSnapshot(
-    BinaryView* data, const function<bool(size_t progress, size_t total)>& progressCallback, Ref<SaveSettings> settings)
+    BinaryView* data, const ProgressFunction& progressCallback, Ref<SaveSettings> settings)
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;
@@ -222,7 +222,7 @@ bool FileMetadata::SaveAutoSnapshot(
 
 
 void FileMetadata::GetSnapshotData(
-    Ref<KeyValueStore> data, Ref<KeyValueStore> cache, const std::function<bool(size_t, size_t)>& progress)
+    Ref<KeyValueStore> data, Ref<KeyValueStore> cache, const ProgressFunction& progress)
 {
 	ProgressContext cb;
 	cb.callback = progress;
@@ -231,7 +231,7 @@ void FileMetadata::GetSnapshotData(
 
 
 void FileMetadata::ApplySnapshotData(BinaryView* file, Ref<KeyValueStore> data, Ref<KeyValueStore> cache,
-    const std::function<bool(size_t, size_t)>& progress, bool openForConfiguration, bool restoreRawView)
+    const ProgressFunction& progress, bool openForConfiguration, bool restoreRawView)
 {
 	ProgressContext cb;
 	cb.callback = progress;
@@ -256,7 +256,7 @@ bool FileMetadata::Rebase(BinaryView* data, uint64_t address)
 
 
 bool FileMetadata::Rebase(
-    BinaryView* data, uint64_t address, const function<bool(size_t progress, size_t total)>& progressCallback)
+    BinaryView* data, uint64_t address, const ProgressFunction& progressCallback)
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;
@@ -271,7 +271,7 @@ bool FileMetadata::CreateSnapshotedView(BinaryView *data, const std::string &vie
 
 
 bool FileMetadata::CreateSnapshotedView(BinaryView* data, const std::string& viewName,
-										const function<bool(size_t progress, size_t total)>& progressCallback)
+										const ProgressFunction& progressCallback)
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;

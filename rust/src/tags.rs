@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Vector 35 Inc.
+// Copyright 2022-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,27 +42,27 @@ impl Tag {
         Ref::new(Self { handle })
     }
 
-    pub fn new<S: BnStrCompatible>(t: &TagType, data: S) -> Ref<Self> {
-        let data = data.into_bytes_with_nul();
-        unsafe { Self::ref_from_raw(BNCreateTag(t.handle, data.as_ref().as_ptr() as *mut _)) }
+    pub fn new(t: &TagType, data: &str) -> Ref<Self> {
+        let data = data.to_cstr();
+        unsafe { Self::ref_from_raw(BNCreateTag(t.handle, data.as_ptr())) }
     }
 
-    pub fn id(&self) -> BnString {
-        unsafe { BnString::from_raw(BNTagGetId(self.handle)) }
+    pub fn id(&self) -> String {
+        unsafe { BnString::into_string(BNTagGetId(self.handle)) }
     }
 
-    pub fn data(&self) -> BnString {
-        unsafe { BnString::from_raw(BNTagGetData(self.handle)) }
+    pub fn data(&self) -> String {
+        unsafe { BnString::into_string(BNTagGetData(self.handle)) }
     }
 
     pub fn ty(&self) -> Ref<TagType> {
         unsafe { TagType::ref_from_raw(BNTagGetType(self.handle)) }
     }
 
-    pub fn set_data<S: BnStrCompatible>(&self, data: S) {
-        let data = data.into_bytes_with_nul();
+    pub fn set_data(&self, data: &str) {
+        let data = data.to_cstr();
         unsafe {
-            BNTagSetData(self.handle, data.as_ref().as_ptr() as *mut _);
+            BNTagSetData(self.handle, data.as_ptr());
         }
     }
 }
@@ -134,40 +134,36 @@ impl TagType {
         Ref::new(Self { handle })
     }
 
-    pub fn create<N: BnStrCompatible, I: BnStrCompatible>(
-        view: &BinaryView,
-        name: N,
-        icon: I,
-    ) -> Ref<Self> {
+    pub fn create(view: &BinaryView, name: &str, icon: &str) -> Ref<Self> {
         let tag_type = unsafe { Self::ref_from_raw(BNCreateTagType(view.handle)) };
         tag_type.set_name(name);
         tag_type.set_icon(icon);
         tag_type
     }
 
-    pub fn id(&self) -> BnString {
-        unsafe { BnString::from_raw(BNTagTypeGetId(self.handle)) }
+    pub fn id(&self) -> String {
+        unsafe { BnString::into_string(BNTagTypeGetId(self.handle)) }
     }
 
-    pub fn icon(&self) -> BnString {
-        unsafe { BnString::from_raw(BNTagTypeGetIcon(self.handle)) }
+    pub fn icon(&self) -> String {
+        unsafe { BnString::into_string(BNTagTypeGetIcon(self.handle)) }
     }
 
-    pub fn set_icon<S: BnStrCompatible>(&self, icon: S) {
-        let icon = icon.into_bytes_with_nul();
+    pub fn set_icon(&self, icon: &str) {
+        let icon = icon.to_cstr();
         unsafe {
-            BNTagTypeSetIcon(self.handle, icon.as_ref().as_ptr() as *mut _);
+            BNTagTypeSetIcon(self.handle, icon.as_ptr());
         }
     }
 
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNTagTypeGetName(self.handle)) }
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNTagTypeGetName(self.handle)) }
     }
 
-    pub fn set_name<S: BnStrCompatible>(&self, name: S) {
-        let name = name.into_bytes_with_nul();
+    pub fn set_name(&self, name: &str) {
+        let name = name.to_cstr();
         unsafe {
-            BNTagTypeSetName(self.handle, name.as_ref().as_ptr() as *mut _);
+            BNTagTypeSetName(self.handle, name.as_ptr());
         }
     }
 
@@ -183,10 +179,10 @@ impl TagType {
         unsafe { BNTagTypeGetType(self.handle) }
     }
 
-    pub fn set_type<S: BnStrCompatible>(&self, t: S) {
-        let t = t.into_bytes_with_nul();
+    pub fn set_type(&self, t: &str) {
+        let t = t.to_cstr();
         unsafe {
-            BNTagTypeSetName(self.handle, t.as_ref().as_ptr() as *mut _);
+            BNTagTypeSetName(self.handle, t.as_ptr());
         }
     }
 

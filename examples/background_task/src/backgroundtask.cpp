@@ -41,7 +41,7 @@ uint64_t InspireWriteCallback(uint8_t *data, uint64_t len, void *ctxt)
 	return len;
 }
 
-bool InspireProgressCallback(void *ctxt, uint64_t progress, uint64_t total)
+bool InspireProgressCallback(void *ctxt, size_t progress, size_t total)
 {
 	// Close connection on cancellation
 	return !inspireBackgroundTask->IsCancelled();

@@ -88,7 +88,7 @@ class BINARYNINJAUIAPI ProgressDialog : public QDialog
  	\code{.cpp}
 	// Starts task
 	ProgressTask* task = new ProgressTask("Long Operation", "Long Operation", "Cancel",
-		[](std::function<bool(size_t, size_t)> progress) {
+		[](ProgressFunction progress) {
 			doLongOperationWithProgress(progress);
 
 			// Report progress by calling the progress function
@@ -107,7 +107,7 @@ class BINARYNINJAUIAPI ProgressTask : public QObject
 	Q_OBJECT
 
 	ProgressDialog* m_dialog;
-	std::function<void(std::function<bool(size_t, size_t)>)> m_func;
+	std::function<void(BinaryNinja::ProgressFunction)> m_func;
 	std::thread m_thread;
 	std::mutex m_mutex;
 	std::condition_variable m_cv;
@@ -133,7 +133,7 @@ class BINARYNINJAUIAPI ProgressTask : public QObject
 	   cancellation.
 	 */
 	ProgressTask(QWidget* parent, const QString& name, const QString& text, const QString& cancel,
-	    std::function<void(std::function<bool(size_t, size_t)>)> func);
+	    std::function<void(BinaryNinja::ProgressFunction)> func);
 	virtual ~ProgressTask();
 
 	/*!
@@ -202,9 +202,17 @@ std::function<QVariant(QVariant)> convertToQVariantFunction(Func&& func);
     \b Example:
     \code{.cpp}
         // Passing `this` into create() will make the thread stop if `this` is deleted before it finishes.
+        // Though note that `this` could still be deleted during a background action,
+        // and the thread will only be stopped *after* the action is done, so you must be
+        // sure to always guard data accessed in background actions with something like
+        // a std::shared_ptr<T>.
         BackgroundThread::create(this)
         // Do actions serially in the background
-        ->thenBackground([this](QVariant) {
+        ->thenBackground([state = m_sharedPtrState](QVariant) {
+            // Note that state should be accessed through a shared pointer-like structure
+            // In case our parent gets deleted while we're doing background processing.
+
+            // Do our task background here
             bool success = SomeLongNetworkOperation();
             // Return value will be passed to next action's QVariant parameter
             return success;
@@ -217,7 +225,7 @@ std::function<QVariant(QVariant)> convertToQVariantFunction(Func&& func);
             // You don't have to return anything (next QVariant param will be QVariant())
         })
         // You can also combine with a ProgressTask for showing a progress dialog
-        ->thenBackgroundWithProgress(m_window, "Doing Task", "Please wait...", "Cancel", [this](QVariant var,
+        ->thenBackgroundWithProgress(m_window, "Doing Task", "Please wait...", "Cancel", [state = m_sharedPtrState](QVariant var,
    ProgressTask* task, ProgressFunction progress) {
             progress(0, 0);
             DoTask1WithProgress(SplitProgress(progress, 0, 1));
@@ -244,7 +252,7 @@ std::function<QVariant(QVariant)> convertToQVariantFunction(Func&& func);
             }
         })
         // You can also catch in the background
-        ->catchBackground([this](std::exception_ptr exc) {
+        ->catchBackground([state = m_sharedPtrState](std::exception_ptr exc) {
             ...
         })
         // Finally-actions will be run after all then-actions are finished
@@ -257,7 +265,7 @@ std::function<QVariant(QVariant)> convertToQVariantFunction(Func&& func);
             }
         })
         // You can also have finally-actions in the background
-        ->finallyBackground([this](bool success) {
+        ->finallyBackground([state = m_sharedPtrState](bool success) {
             ...
         })
         // Call start to start the thread
@@ -271,7 +279,7 @@ class BINARYNINJAUIAPI BackgroundThread : public QObject
 	Q_OBJECT
 
   public:
-	typedef std::function<bool(size_t, size_t)> ProgressFunction;
+	typedef BinaryNinja::ProgressFunction ProgressFunction;
 
 	typedef std::function<QVariant(QVariant value)> ThenFunction;
 	typedef std::function<void(std::exception_ptr exc)> CatchFunction;

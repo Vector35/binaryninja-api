@@ -291,7 +291,7 @@ impl FloatRegType for () {}
 impl FloatRegType for f32 {}
 impl FloatRegType for f64 {}
 
-pub trait RegFile: Debug + Sized + Copy + Clone {
+pub trait RegFile: Debug + Sized + Copy + Clone + Send + Sync + 'static {
     type Int: IntRegType;
     type Float: FloatRegType;
 
@@ -2331,7 +2331,7 @@ impl StandardExtension for ExtensionSupported {
     }
 }
 
-pub trait RiscVDisassembler: Debug + Sized + Copy + Clone {
+pub trait RiscVDisassembler: 'static + Debug + Sized + Copy + Clone + Send + Sync {
     type RegFile: RegFile;
     type MulDivExtension: StandardExtension;
     type AtomicExtension: StandardExtension;
@@ -3175,6 +3175,7 @@ pub trait RiscVDisassembler: Debug + Sized + Copy + Clone {
 
 #[derive(Copy, Clone, Debug)]
 pub struct RiscVIMACDisassembler<RF: RegFile>(PhantomData<RF>);
+
 impl<RF: RegFile> RiscVDisassembler for RiscVIMACDisassembler<RF> {
     type RegFile = RF;
     type MulDivExtension = ExtensionSupported;

@@ -1,4 +1,4 @@
-// Copyright 2021-2024 Vector 35 Inc.
+// Copyright 2021-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ use crate::function::{Location, NativeBlock};
 use crate::high_level_il as hlil;
 use crate::low_level_il as llil;
 use crate::medium_level_il as mlil;
-use crate::string::BnStrCompatible;
+use crate::string::IntoCStr;
 use crate::string::{raw_to_string, strings_to_string_list, BnString};
 
 use crate::rc::*;
@@ -302,9 +302,7 @@ impl InstructionTextToken {
     }
 
     pub(crate) fn free_raw(value: BNInstructionTextToken) {
-        if !value.text.is_null() {
-            unsafe { BNFreeString(value.text) };
-        }
+        unsafe { BnString::free_raw(value.text) };
         if !value.typeNames.is_null() {
             unsafe { BNFreeStringList(value.typeNames, value.namesCount) };
         }
@@ -1022,8 +1020,8 @@ impl DisassemblyTextRenderer {
         unsafe { Self::ref_from_raw(NonNull::new(result).unwrap()) }
     }
 
-    pub fn from_llil<A: Architecture, M: FunctionMutability, F: FunctionForm>(
-        func: &LowLevelILFunction<A, M, F>,
+    pub fn from_llil<M: FunctionMutability, F: FunctionForm>(
+        func: &LowLevelILFunction<M, F>,
         settings: Option<&DisassemblySettings>,
     ) -> Ref<Self> {
         let settings_ptr = settings.map(|s| s.handle).unwrap_or(ptr::null_mut());
@@ -1058,14 +1056,11 @@ impl DisassemblyTextRenderer {
         unsafe { Function::ref_from_raw(result) }
     }
 
-    pub fn llil<M: FunctionMutability, F: FunctionForm>(
-        &self,
-    ) -> Ref<LowLevelILFunction<CoreArchitecture, M, F>> {
-        let arch = self.arch();
+    pub fn llil<M: FunctionMutability, F: FunctionForm>(&self) -> Ref<LowLevelILFunction<M, F>> {
         let result =
             unsafe { BNGetDisassemblyTextRendererLowLevelILFunction(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { LowLevelILFunction::ref_from_raw(arch.handle(), result) }
+        unsafe { LowLevelILFunction::ref_from_raw(result) }
     }
 
     pub fn mlil(&self) -> Ref<MediumLevelILFunction> {
@@ -1247,18 +1242,18 @@ impl DisassemblyTextRenderer {
         unsafe { Array::new(tokens, count, ()) }
     }
 
-    pub fn wrap_comment<S1: BnStrCompatible, S2: BnStrCompatible, S3: BnStrCompatible>(
+    pub fn wrap_comment(
         &self,
         cur_line: DisassemblyTextLine,
-        comment: S1,
+        comment: &str,
         has_auto_annotations: bool,
-        leading_spaces: S2,
-        indent_spaces: S3,
+        leading_spaces: &str,
+        indent_spaces: &str,
     ) -> Array<DisassemblyTextLine> {
         let cur_line_raw = DisassemblyTextLine::into_raw(cur_line);
-        let comment_raw = comment.into_bytes_with_nul();
-        let leading_spaces_raw = leading_spaces.into_bytes_with_nul();
-        let indent_spaces_raw = indent_spaces.into_bytes_with_nul();
+        let comment_raw = comment.to_cstr();
+        let leading_spaces_raw = leading_spaces.to_cstr();
+        let indent_spaces_raw = indent_spaces.to_cstr();
         let mut count = 0;
         let lines = unsafe {
             BNDisassemblyTextRendererWrapComment(

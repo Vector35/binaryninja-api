@@ -242,25 +242,37 @@ bool TEView::Init()
 			{
 			case IMAGE_FILE_MACHINE_I386:
 				platform = Platform::GetByName("efi-x86");
+				m_addressSize = 4;
 				break;
 			case IMAGE_FILE_MACHINE_AMD64:
 				platform = Platform::GetByName("efi-x86_64");
+				m_addressSize = 8;
 				break;
 			case IMAGE_FILE_MACHINE_ARM64:
 				platform = Platform::GetByName("efi-aarch64");
+				m_addressSize = 8;
 				break;
 			case IMAGE_FILE_MACHINE_ARM:
 				platform = Platform::GetByName("efi-armv7");
+				m_addressSize = 4;
 				break;
 			case IMAGE_FILE_MACHINE_THUMB:
 				platform = Platform::GetByName("efi-thumb2");
+				m_addressSize = 4;
 				break;
 			default:
 				LogError("TE platform '0x%x' is not supported", header.machine);
+				m_addressSize = 4;
 				if (!m_parseOnly)
 					m_logger->LogWarn("Unable to determine architecture. Please open the file with options and select a valid architecture.");
 				return false;
 			}
+		}
+
+		if (!platform)
+		{
+			LogError("Platform not supported by this version of Binary Ninja");
+			return false;
 		}
 
 		m_arch = platform->GetArchitecture();
@@ -269,6 +281,8 @@ bool TEView::Init()
 			LogError("Architecture not supported by this version of Binary Ninja");
 			return false;
 		}
+
+		m_addressSize = m_arch->GetAddressSize();
 
 		SetDefaultPlatform(platform);
 		SetDefaultArchitecture(m_arch);
@@ -303,7 +317,7 @@ uint64_t TEView::PerformGetEntryPoint() const
 
 size_t TEView::PerformGetAddressSize() const
 {
-	return m_arch->GetAddressSize();
+	return m_addressSize;
 }
 
 TEViewType::TEViewType() : BinaryViewType("TE", "TE")

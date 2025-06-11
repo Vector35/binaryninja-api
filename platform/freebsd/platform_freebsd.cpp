@@ -113,7 +113,7 @@ extern "C"
 
 			platform = new FreeBSDX86Platform(x86);
 			Platform::Register("freebsd", platform);
-			BinaryViewType::RegisterPlatform("ELF", 9, x86, platform);
+			BinaryViewType::RegisterPlatform("ELF", 9, platform);
 		}
 
 		Ref<Architecture> x64 = Architecture::GetByName("x86_64");
@@ -123,7 +123,7 @@ extern "C"
 
 			platform = new FreeBSDX64Platform(x64);
 			Platform::Register("freebsd", platform);
-			BinaryViewType::RegisterPlatform("ELF", 9, x64, platform);
+			BinaryViewType::RegisterPlatform("ELF", 9, platform);
 		}
 
 		Ref<Architecture> armv7 = Architecture::GetByName("armv7");
@@ -138,7 +138,7 @@ extern "C"
 			thumbPlatform->AddRelatedPlatform(armv7, armPlatform);
 			Platform::Register("freebsd", armPlatform);
 			Platform::Register("freebsd", thumbPlatform);
-			BinaryViewType::RegisterPlatform("ELF", 9, armv7, armPlatform);
+			BinaryViewType::RegisterPlatform("ELF", 9, armPlatform);
 		}
 
 		Ref<Architecture> arm64 = Architecture::GetByName("aarch64");
@@ -148,7 +148,7 @@ extern "C"
 
 			platform = new FreeBSDArm64Platform(arm64);
 			Platform::Register("freebsd", platform);
-			BinaryViewType::RegisterPlatform("ELF", 9, arm64, platform);
+			BinaryViewType::RegisterPlatform("ELF", 9, platform);
 		}
 
 		return true;

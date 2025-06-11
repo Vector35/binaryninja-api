@@ -6,9 +6,9 @@ use crate::flowgraph::FlowGraph;
 use crate::function::{Function, NativeBlock};
 use crate::linear_view::{LinearDisassemblyLine, LinearDisassemblyLineType, LinearViewObject};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
-use crate::string::BnStrCompatible;
+use crate::string::IntoCStr;
 use binaryninjacore_sys::*;
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 use std::ptr::NonNull;
 
 /// The state in which the [`RenderLayer`] will be registered with.
@@ -61,8 +61,8 @@ impl Default for RenderLayerDefaultState {
 }
 
 /// Register a [`RenderLayer`] with the API.
-pub fn register_render_layer<S: BnStrCompatible, T: RenderLayer>(
-    name: S,
+pub fn register_render_layer<T: RenderLayer>(
+    name: &str,
     render_layer: T,
     default_state: RenderLayerDefaultState,
 ) -> (&'static mut T, CoreRenderLayer) {
@@ -73,13 +73,9 @@ pub fn register_render_layer<S: BnStrCompatible, T: RenderLayer>(
         applyToLinearViewObject: Some(cb_apply_to_linear_view_object::<T>),
         freeLines: Some(cb_free_lines),
     };
-    let result = unsafe {
-        BNRegisterRenderLayer(
-            name.into_bytes_with_nul().as_ref().as_ptr() as *const _,
-            &mut callback,
-            default_state.into(),
-        )
-    };
+    let name = name.to_cstr();
+    let result =
+        unsafe { BNRegisterRenderLayer(name.as_ptr(), &mut callback, default_state.into()) };
     let core = CoreRenderLayer::from_raw(NonNull::new(result).unwrap());
     (render_layer, core)
 }
@@ -297,15 +293,15 @@ impl CoreRenderLayer {
         Self { handle }
     }
 
-    pub fn render_layers() -> Array<CoreRenderLayer> {
+    pub fn all() -> Array<CoreRenderLayer> {
         let mut count = 0;
         let result = unsafe { BNGetRenderLayerList(&mut count) };
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn render_layer_by_name<S: BnStrCompatible>(name: S) -> Option<CoreRenderLayer> {
-        let name_raw = name.into_bytes_with_nul();
-        let result = unsafe { BNGetRenderLayerByName(name_raw.as_ref().as_ptr() as *const c_char) };
+    pub fn from_name(name: &str) -> Option<CoreRenderLayer> {
+        let name_raw = name.to_cstr();
+        let result = unsafe { BNGetRenderLayerByName(name_raw.as_ptr()) };
         NonNull::new(result).map(Self::from_raw)
     }
 

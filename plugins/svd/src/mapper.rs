@@ -163,24 +163,29 @@ impl DeviceMapper {
         let memory_info =
             self.peripheral_block_memory_info(peripheral, address_block, block_name.clone());
 
-        // Add the block segment, section and backing memory.
-        let data_memory = DataBuffer::new(&vec![0; address_block.size as usize]).unwrap();
-        let added_memory = view.memory_map().add_data_memory_region(
-            &block_name,
-            block_addr,
-            &data_memory,
-            Some(memory_info.segment_flags),
-        );
+        // Add the block segment, section and backing memory (optional).
+        if self.settings.add_backing_regions {
+            // Because adding a memory region will add a possibly large memory buffer in the BNDB, this
+            // is optional. if a user disables this, they cannot write to the segment until they add a backing memory region.
+            let data_memory = DataBuffer::new(&vec![0; address_block.size as usize]).unwrap();
+            let added_memory = view.memory_map().add_data_memory_region(
+                &block_name,
+                block_addr,
+                &data_memory,
+                Some(memory_info.segment_flags),
+            );
+
+            if !added_memory {
+                log::error!(
+                    "Failed to add memory for peripheral block! {} @ 0x{:x}",
+                    block_name,
+                    block_addr
+                );
+            }
+        }
+
         view.add_segment(memory_info.segment);
         view.add_section(memory_info.section);
-
-        if !added_memory {
-            log::error!(
-                "Failed to add memory for peripheral block! {} @ 0x{:x}",
-                block_name,
-                block_addr
-            );
-        }
 
         // Handle usage specific stuff like adding registers.
         match address_block.usage {
@@ -200,7 +205,7 @@ impl DeviceMapper {
                 let peripheral_ty_id = format!("SVD:{}", peripheral.name);
                 let id = view.define_auto_type_with_id(
                     &peripheral.name,
-                    peripheral_ty_id,
+                    &peripheral_ty_id,
                     &peripheral_ty,
                 );
                 let ntr =
@@ -219,14 +224,14 @@ impl DeviceMapper {
                 view.define_auto_symbol(&symbol);
                 view.set_comment_at(
                     block_addr,
-                    format!("Buffer block with size {}", address_block.size),
+                    &format!("Buffer block with size {}", address_block.size),
                 );
             }
             AddressBlockUsage::Reserved => {
                 // TODO: What to do for reserved blocks?
                 view.set_comment_at(
                     block_addr,
-                    format!("Reserved block with size {}", address_block.size),
+                    &format!("Reserved block with size {}", address_block.size),
                 );
             }
         }
@@ -281,11 +286,11 @@ impl DeviceMapper {
 
                 for (field_addr, comments) in unaligned_comments {
                     let comment = comments.join("\n");
-                    view.set_comment_at(field_addr, comment);
+                    view.set_comment_at(field_addr, &comment);
                 }
             }
         }
-        view.file().commit_undo_actions(undo_id);
+        view.file().commit_undo_actions(&undo_id);
     }
 
     pub fn peripheral_block_memory_info(
@@ -657,7 +662,7 @@ impl DeviceMapper {
             current_value = enumerated_value.value.unwrap_or(current_value + 1);
             // TODO: The Rust API needs to expose this...
             let _is_default = enumerated_value.is_default.unwrap_or(false);
-            enum_builder.insert(enumerated_value.name.to_owned(), current_value);
+            enum_builder.insert(&enumerated_value.name, current_value);
         }
 
         let enum_width = NonZeroUsize::new(byte_aligned_width as usize).unwrap();

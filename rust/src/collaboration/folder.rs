@@ -1,11 +1,10 @@
 use super::{Remote, RemoteProject};
 use binaryninjacore_sys::*;
-use std::ffi::c_char;
 use std::ptr::NonNull;
 
 use crate::project::folder::ProjectFolder;
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{BnString, IntoCStr};
 
 #[repr(transparent)]
 pub struct RemoteFolder {
@@ -76,17 +75,17 @@ impl RemoteFolder {
     }
 
     /// Get web API endpoint URL.
-    pub fn url(&self) -> BnString {
+    pub fn url(&self) -> String {
         let result = unsafe { BNRemoteFolderGetUrl(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Get unique ID.
-    pub fn id(&self) -> BnString {
+    pub fn id(&self) -> String {
         let result = unsafe { BNRemoteFolderGetId(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Unique id of parent folder, if there is a parent. None, otherwise
@@ -97,40 +96,31 @@ impl RemoteFolder {
     }
 
     /// Displayed name of folder
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNRemoteFolderGetName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Set the display name of the folder. You will need to push the folder to update the remote version.
-    pub fn set_name<S: BnStrCompatible>(&self, name: S) -> Result<(), ()> {
-        let name = name.into_bytes_with_nul();
-        let success = unsafe {
-            BNRemoteFolderSetName(
-                self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const c_char,
-            )
-        };
+    pub fn set_name(&self, name: &str) -> Result<(), ()> {
+        let name = name.to_cstr();
+        let success = unsafe { BNRemoteFolderSetName(self.handle.as_ptr(), name.as_ptr()) };
         success.then_some(()).ok_or(())
     }
 
     /// Description of the folder
-    pub fn description(&self) -> BnString {
+    pub fn description(&self) -> String {
         let result = unsafe { BNRemoteFolderGetDescription(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Set the description of the folder. You will need to push the folder to update the remote version.
-    pub fn set_description<S: BnStrCompatible>(&self, description: S) -> Result<(), ()> {
-        let description = description.into_bytes_with_nul();
-        let success = unsafe {
-            BNRemoteFolderSetDescription(
-                self.handle.as_ptr(),
-                description.as_ref().as_ptr() as *const c_char,
-            )
-        };
+    pub fn set_description(&self, description: &str) -> Result<(), ()> {
+        let description = description.to_cstr();
+        let success =
+            unsafe { BNRemoteFolderSetDescription(self.handle.as_ptr(), description.as_ptr()) };
         success.then_some(()).ok_or(())
     }
 }

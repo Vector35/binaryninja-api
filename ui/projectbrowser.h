@@ -87,7 +87,7 @@ public:
 
 	QStandardItem* ItemForId(const std::string& id);
 
-	void reloadData(const std::function<bool(size_t, size_t)>& progress = [](size_t, size_t){ return true; });
+	void reloadData(const BinaryNinja::ProgressFunction& progress = [](size_t, size_t){ return true; });
 
 	virtual QMimeData* mimeData(const QModelIndexList& indexes) const override;
 	virtual bool dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) override;

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2024 Vector 35 Inc
+// Copyright (c) 2015-2025 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -200,6 +200,36 @@ string BinaryNinja::GetVersionString()
 	string result = str;
 	BNFreeString(str);
 	return result;
+}
+
+
+VersionInfo BinaryNinja::GetVersionInfo()
+{
+	BNVersionInfo result = BNGetVersionInfo();
+	VersionInfo info;
+	info.major = result.major;
+	info.minor = result.minor;
+	info.build = result.build;
+	info.channel = "";
+	if (result.channel)
+		info.channel = result.channel;
+	BNFreeString(result.channel);
+	return info;
+}
+
+
+VersionInfo ParseVersionString(const string &version)
+{
+	BNVersionInfo result = BNParseVersionString(version.c_str());
+	VersionInfo info;
+	info.major = result.major;
+	info.minor = result.minor;
+	info.build = result.build;
+	info.channel = "";
+	if (result.channel)
+		info.channel = result.channel;
+	BNFreeString(result.channel);
+	return info;
 }
 
 

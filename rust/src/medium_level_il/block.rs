@@ -14,8 +14,6 @@ impl BlockContext for MediumLevelILBlock {
     type Iter = MediumLevelILBlockIter;
 
     fn start(&self, block: &BasicBlock<Self>) -> MediumLevelILInstruction {
-        // TODO: instruction_from_index says that it is not mapped and will do the call
-        // TODO: What if this IS already MAPPED!?!?!?
         self.function
             .instruction_from_index(block.start_index())
             .unwrap()

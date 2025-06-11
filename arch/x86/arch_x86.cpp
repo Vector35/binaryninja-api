@@ -464,7 +464,7 @@ void X86CommonArchitecture::SetInstructionInfoForInstruction(uint64_t addr, Inst
 	case XED_CATEGORY_UNCOND_BR:
 		if (xed_operand_name(xed_inst_operand(xed_decoded_inst_inst(xedd), 0)) == XED_OPERAND_RELBR)
 			result.AddBranch(UnconditionalBranch, abs_br);
-		else
+		else if (xedd_iClass != XED_ICLASS_XABORT)
 			result.AddBranch(UnresolvedBranch);
 		break;
 
@@ -4761,7 +4761,7 @@ static void InitX86Settings()
 {
 	Ref<Settings> settings = Settings::Instance();
 	settings->RegisterSetting("arch.x86.disassembly.syntax",
-			R"({
+			R"~({
 			"title" : "x86 Disassembly Syntax",
 			"type" : "string",
 			"default" : "BN_INTEL",
@@ -4769,31 +4769,31 @@ static void InitX86Settings()
 			"description" : "Specify disassembly syntax for the x86/x86_64 architectures.",
 			"enum" : ["BN_INTEL", "INTEL", "AT&T"],
 			"enumDescriptions" : [
-				"Sets the disassembly syntax to a simplified Intel format. (TBD) ",
-				"Sets the disassembly syntax to Intel format. (Destination on the left) ",
-				"Sets the disassembly syntax to AT&T format. (Destination on the right) "],
+				"Sets the disassembly syntax to a simplified Intel format.",
+				"Sets the disassembly syntax to Intel format. (Destination on the left)",
+				"Sets the disassembly syntax to AT&T format. (Destination on the right)"],
 			"ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
-			})");
+			})~");
 
 	settings->RegisterSetting("arch.x86.disassembly.separator",
-			R"({
+			R"~({
 			"title" : "x86 Disassembly Separator",
 			"type" : "string",
 			"default" : ", ",
 			"aliases" : ["arch.x86.disassemblySeperator", "arch.x86.disassemblySeparator"],
 			"description" : "Specify the token separator between operands.",
 			"ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
-			})");
+			})~");
 
 	settings->RegisterSetting("arch.x86.disassembly.lowercase",
-			R"({
+			R"~({
 			"title" : "x86 Disassembly Case",
 			"type" : "boolean",
 			"default" : true,
 			"aliases" : ["arch.x86.disassemblyLowercase"],
 			"description" : "Specify the case for opcodes, operands, and registers.",
 			"ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
-			})");
+			})~");
 }
 
 
@@ -4851,6 +4851,7 @@ extern "C"
 		x86->RegisterCallingConvention(conv);
 
 		x86->RegisterRelocationHandler("Mach-O", new x86MachoRelocationHandler());
+		x86->RegisterRelocationHandler("KCView", new x86MachoRelocationHandler());
 		x86->RegisterRelocationHandler("ELF", new x86ElfRelocationHandler());
 		x86->RegisterRelocationHandler("COFF", new CoffRelocationHandler());
 		x86->RegisterRelocationHandler("PE", new PeRelocationHandler());
@@ -4867,6 +4868,7 @@ extern "C"
 		x64->RegisterCallingConvention(conv);
 
 		x64->RegisterRelocationHandler("Mach-O", new x64MachoRelocationHandler());
+		x64->RegisterRelocationHandler("KCView", new x64MachoRelocationHandler());
 		x64->RegisterRelocationHandler("ELF", new x64ElfRelocationHandler());
 		x64->RegisterRelocationHandler("COFF", new CoffRelocationHandler());
 		x64->RegisterRelocationHandler("PE", new PeRelocationHandler());

@@ -9,7 +9,9 @@ One of the best ways to learn a complicated API is to simply find the right exam
 
  That said, most of those examples tend to be more complex and so the following recipes are meant to be simple but useful building-blocks with which to learn useful techniques. Many of them also make use of the built-in Python console's [magic variables](../guide/index.md#magic-console-variables):
 
-## Recipes
+# Recipes
+
+## Navigation / Search
 
 ### Getting all functions in a binary
 
@@ -31,6 +33,20 @@ func = bv.get_function_containing(here)  # Functions that contain the given addr
 # Just a note that using address to work with functions is fine
 # But when working with ILs, addresses are approximate and can change for any given instruction
 ```
+
+### Finding the largest function (by most bytes)
+
+```python
+max(bv.functions, key=lambda x: x.total_bytes)
+```
+
+### Search for a good nop-slide
+
+```python
+bv.find_next_data(0, b"\x90" * 10)
+```
+
+## IL & Decompilation
 
 ### All forms of a function
 
@@ -91,6 +107,8 @@ hlil_inst.llils  # All llil instructions that contributed to this hlil instructi
 ```
 
 
+## Call Graph Analysis
+
 ### All callers of a function
 
 ```python
@@ -120,38 +138,7 @@ As defined by having the highest sum of incoming and outgoing calls. Adjust acco
 ```python
 max(bv.functions, key=lambda x: len(x.callers + x.callees))
 ```
-
-### Finding the largest function (by most bytes)
-
-```python
-max(bv.functions, key=lambda x: x.total_bytes)
-```
-
-### Querying possible values of a function parameter
-
-Is that memcpy length a bit too big?
-
-```python
-for ref in current_function.caller_sites:
-	if isinstance(ref.hlil, Call) and len(ref.hlil.params) >= 3:
-		print(ref.hlil.params[2])
-		# For bonus points, query the range analysis using .possible_values
-```
-
-### Search for a good nop-slide
-
-```python
-bv.find_next_data(0, b"\x90" * 10)
-```
-
-### Change a function's type signature
-
-Make sure to check out the much more in-depth [applying annotations](annotation.md) as well.
-
-```python
-current_function.type = Type.function(Type.void(), [])
-```
-
+j
 ### Accessing cross references
 
 This recipe is useful for iterating over all of the HLIL cross-references of a given interesting function:
@@ -160,6 +147,8 @@ This recipe is useful for iterating over all of the HLIL cross-references of a g
 for ref in current_function.caller_sites:
 	print(ref.hlil)
 ```
+
+## Variables & Parameters
 
 ### Common variable APIs
 
@@ -185,29 +174,15 @@ for func in bv.functions:
   use_insts     = func.hlil.ssa_form.get_ssa_var_uses(ssa_vars[0])        # There's only ever one ssa definition, but potentially many uses
 ```
 
-### Working with Tags
+### Querying possible values of a function parameter
+
+Is that memcpy length a bit too big?
 
 ```python
-# Data tags
-bv.add_tag(here, "Crashes", "Description")
-
-# Function tags
-current_function.add_tag("Important", "Look at this later!")
-
-# Function address tags
-current_function.add_tag("Bug", "I think there's an overflow here?", here)
-```
-
-### Logging
-
-```python
-log.log_debug("Debug logs are hidden by default")
-log.log_info("Info logs are displayed in the console")
-log.log_warn("Warning logs will print in yellow text")
-log.log_error("Errors are red!")
-log.log_alert("This pops up a dialogue box!")
-
-log.log_error("You can add your own filter group easily to any of these APIs", "My Log Group")
+for ref in current_function.caller_sites:
+	if isinstance(ref.hlil, Call) and len(ref.hlil.params) >= 3:
+		print(ref.hlil.params[2])
+		# For bonus points, query the range analysis using .possible_values
 ```
 
 ### Find a variable's definition and all uses using SSA
@@ -245,6 +220,31 @@ Note, don't forget the difference between an MLIL Variable Instruction and the a
 <class 'binaryninja.mediumlevelil.MediumLevelILVarSsa'>
 ```
 
+## Annotations / Types
+
+### Change a function's type signature
+
+Make sure to check out the much more in-depth [applying annotations](annotation.md) as well.
+
+```python
+current_function.type = Type.function(Type.void(), [])
+```
+
+### Working with Tags
+
+```python
+# Data tags
+bv.add_tag(here, "Crashes", "Description")
+
+# Function tags
+current_function.add_tag("Important", "Look at this later!")
+
+# Function address tags
+current_function.add_tag("Bug", "I think there's an overflow here?", here)
+```
+
+## Plugin Development & UI
+
 ### Apply a hotkey to a register_ plugin
 
 There are basically two plugin systems in Binary Ninja. The first and simplest is the [PluginCommand](https://api.binary.ninja/binaryninja.plugin-module.html#binaryninja.plugin.PluginCommand) type. These plugins are very easy to register and are fairly separate from the QT code that powers the UI. Conversely, UIActions can have much more power over the interface. Unfortunately, not only are they not documented in the Python API (instead you have to poke into the [C++ docs](https://api.binary.ninja/cpp/group__action.html#struct_u_i_action)), but they also require a bit more work to get up and running. Here's a simple example showing how to convert a simple `register_for_range` plugin that just logs the selected address and size to one that is triggered via hotkey as a UIAction:
@@ -272,6 +272,7 @@ UIActionHandler.globalActions().bindAction("Trigger Range", UIAction(new_range_a
 
 Menu.mainMenu("Plugins").addAction("Trigger Range", "Plugins")
 ```
+
 ### Invoke plugin from the API
 ```python
 from binaryninja import BinaryView, PluginCommand, PluginCommandContext
@@ -300,4 +301,31 @@ PythonScriptingProvider.register_magic_variable(
     "my_foo",
     get_my_foo
 )
+```
+
+### Opening a new tab
+
+This example also shows how to create a new BinaryView from scratch for that tab.
+
+```python
+from binaryninja.binaryview import BinaryView
+from binaryninjaui import FileContext, UIContext
+
+data = BinaryView.new(b'\x00\x00\x01')
+context = FileContext(data.file, data, '')
+execute_on_main_thread(lambda: UIContext.activeContext().openFileContext(context))
+```
+
+## Debuging & Logging
+
+### Logging
+
+```python
+log.log_debug("Debug logs are hidden by default")
+log.log_info("Info logs are displayed in the console")
+log.log_warn("Warning logs will print in yellow text")
+log.log_error("Errors are red!")
+log.log_alert("This pops up a dialogue box!")
+
+log.log_error("You can add your own filter group easily to any of these APIs", "My Log Group")
 ```

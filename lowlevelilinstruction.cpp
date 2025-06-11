@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2024 Vector 35 Inc
+// Copyright (c) 2015-2025 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -3765,7 +3765,7 @@ fmt::format_context::iterator fmt::formatter<LowLevelILInstruction>::format(cons
 
 		for (auto& token: tokens)
 		{
-			fmt::format_to(ctx.out(), token.text);
+			fmt::format_to(ctx.out(), "{}", token.text);
 		}
 	}
 	else

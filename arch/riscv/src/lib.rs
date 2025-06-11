@@ -43,8 +43,8 @@ use binaryninja::low_level_il::lifting::{
     LiftableLowLevelIL, LiftableLowLevelILWithSize, LowLevelILLabel,
 };
 use binaryninja::low_level_il::{
-    expression::ExpressionHandler, instruction::InstructionHandler, LowLevelILRegister,
-    MutableLiftedILExpr, MutableLiftedILFunction, RegularLowLevelILFunction,
+    expression::ExpressionHandler, instruction::InstructionHandler, LowLevelILMutableExpression,
+    LowLevelILMutableFunction, LowLevelILRegisterKind, LowLevelILRegularFunction,
 };
 use riscv_dis::{
     FloatReg, FloatRegType, Instr, IntRegType, Op, RegFile, Register as RiscVRegister,
@@ -88,18 +88,18 @@ enum Intrinsic {
 }
 
 #[derive(Copy, Clone)]
-struct Register<D: 'static + RiscVDisassembler> {
+struct Register<D: RiscVDisassembler> {
     id: RegisterId,
     _dis: PhantomData<D>,
 }
 
 #[derive(Debug, Copy, Clone)]
-struct RiscVIntrinsic<D: 'static + RiscVDisassembler> {
+struct RiscVIntrinsic<D: RiscVDisassembler> {
     id: Intrinsic,
     _dis: PhantomData<D>,
 }
 
-impl<D: 'static + RiscVDisassembler> Register<D> {
+impl<D: RiscVDisassembler> Register<D> {
     fn new(id: RegisterId) -> Self {
         Self {
             id,
@@ -118,7 +118,7 @@ impl<D: 'static + RiscVDisassembler> Register<D> {
     }
 }
 
-impl<D: 'static + RiscVDisassembler> From<riscv_dis::IntReg<D>> for Register<D> {
+impl<D: RiscVDisassembler> From<riscv_dis::IntReg<D>> for Register<D> {
     fn from(reg: riscv_dis::IntReg<D>) -> Self {
         Self {
             id: RegisterId(reg.id()),
@@ -127,7 +127,7 @@ impl<D: 'static + RiscVDisassembler> From<riscv_dis::IntReg<D>> for Register<D> 
     }
 }
 
-impl<D: 'static + RiscVDisassembler> From<FloatReg<D>> for Register<D> {
+impl<D: RiscVDisassembler> From<FloatReg<D>> for Register<D> {
     fn from(reg: FloatReg<D>) -> Self {
         let int_reg_count = <D::RegFile as RegFile>::int_reg_count();
 
@@ -138,13 +138,13 @@ impl<D: 'static + RiscVDisassembler> From<FloatReg<D>> for Register<D> {
     }
 }
 
-impl<D: 'static + RiscVDisassembler> From<Register<D>> for LowLevelILRegister<Register<D>> {
+impl<D: RiscVDisassembler> From<Register<D>> for LowLevelILRegisterKind<Register<D>> {
     fn from(reg: Register<D>) -> Self {
-        LowLevelILRegister::ArchReg(reg)
+        LowLevelILRegisterKind::Arch(reg)
     }
 }
 
-impl<D: 'static + RiscVDisassembler> RegisterInfo for Register<D> {
+impl<D: RiscVDisassembler> RegisterInfo for Register<D> {
     type RegType = Self;
 
     fn parent(&self) -> Option<Self> {
@@ -166,7 +166,7 @@ impl<D: 'static + RiscVDisassembler> RegisterInfo for Register<D> {
     }
 }
 
-impl<D: 'static + RiscVDisassembler> architecture::Register for Register<D> {
+impl<D: RiscVDisassembler> architecture::Register for Register<D> {
     type InfoType = Self;
 
     fn name(&self) -> Cow<str> {
@@ -204,15 +204,13 @@ impl<D: 'static + RiscVDisassembler> architecture::Register for Register<D> {
     }
 }
 
-impl<'a, D: 'static + RiscVDisassembler + Send + Sync> LiftableLowLevelIL<'a, RiscVArch<D>>
-    for Register<D>
-{
+impl<'a, D: RiscVDisassembler> LiftableLowLevelIL<'a> for Register<D> {
     type Result = ValueExpr;
 
     fn lift(
-        il: &'a MutableLiftedILFunction<RiscVArch<D>>,
+        il: &'a LowLevelILMutableFunction,
         reg: Self,
-    ) -> MutableLiftedILExpr<'a, RiscVArch<D>, Self::Result> {
+    ) -> LowLevelILMutableExpression<'a, Self::Result> {
         match reg.reg_type() {
             RegType::Integer(0) => il.const_int(reg.size(), 0),
             RegType::Integer(_) => il.reg(reg.size(), reg),
@@ -221,14 +219,12 @@ impl<'a, D: 'static + RiscVDisassembler + Send + Sync> LiftableLowLevelIL<'a, Ri
     }
 }
 
-impl<'a, D: 'static + RiscVDisassembler + Send + Sync> LiftableLowLevelILWithSize<'a, RiscVArch<D>>
-    for Register<D>
-{
+impl<'a, D: RiscVDisassembler> LiftableLowLevelILWithSize<'a> for Register<D> {
     fn lift_with_size(
-        il: &'a MutableLiftedILFunction<RiscVArch<D>>,
+        il: &'a LowLevelILMutableFunction,
         reg: Self,
         size: usize,
-    ) -> MutableLiftedILExpr<'a, RiscVArch<D>, ValueExpr> {
+    ) -> LowLevelILMutableExpression<'a, ValueExpr> {
         #[cfg(debug_assertions)]
         {
             if reg.size() < size {
@@ -257,21 +253,21 @@ impl<'a, D: 'static + RiscVDisassembler + Send + Sync> LiftableLowLevelILWithSiz
     }
 }
 
-impl<D: 'static + RiscVDisassembler> Hash for Register<D> {
+impl<D: RiscVDisassembler> Hash for Register<D> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.id.hash(state);
     }
 }
 
-impl<D: 'static + RiscVDisassembler> PartialEq for Register<D> {
+impl<D: RiscVDisassembler> PartialEq for Register<D> {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
 }
 
-impl<D: 'static + RiscVDisassembler> Eq for Register<D> {}
+impl<D: RiscVDisassembler> Eq for Register<D> {}
 
-impl<D: 'static + RiscVDisassembler> fmt::Debug for Register<D> {
+impl<D: RiscVDisassembler> fmt::Debug for Register<D> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(self.name().as_ref())
     }
@@ -636,13 +632,14 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
     }
 }
 
-struct RiscVArch<D: 'static + RiscVDisassembler + Send + Sync> {
+#[derive(Debug)]
+struct RiscVArch<D: RiscVDisassembler> {
     handle: CoreArchitecture,
     custom_handle: CustomArchitectureHandle<RiscVArch<D>>,
     _dis: PhantomData<D>,
 }
 
-impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture for RiscVArch<D> {
+impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
     type Handle = CustomArchitectureHandle<Self>;
 
     type RegisterInfo = Register<D>;
@@ -1068,7 +1065,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
         &self,
         data: &[u8],
         addr: u64,
-        il: &mut MutableLiftedILFunction<Self>,
+        il: &LowLevelILMutableFunction,
     ) -> Option<(usize, bool)> {
         let max_width = self.default_integer_size();
 
@@ -1241,7 +1238,8 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                     (0, _, _) => il.jump(target).append(), // indirect jump
                     (rd_id, rs1_id, _) if rd_id == rs1_id => {
                         // store the target in a temporary register so we don't clobber it when rd == rs1
-                        let tmp_reg: LowLevelILRegister<Register<D>> = LowLevelILRegister::Temp(0);
+                        let tmp_reg: LowLevelILRegisterKind<Register<D>> =
+                            LowLevelILRegisterKind::from_temp(0);
                         il.set_reg(max_width, tmp_reg, target).append();
                         // indirect jump with storage of next address to non-`ra` register
                         il.set_reg(
@@ -1311,42 +1309,42 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             Op::Ebreak => il.bp().append(),
             Op::Uret => {
                 il.intrinsic(
-                    MutableLiftedILFunction::<Self>::NO_OUTPUTS,
-                    Intrinsic::Uret,
-                    MutableLiftedILFunction::<Self>::NO_INPUTS,
+                    LowLevelILMutableFunction::NO_OUTPUTS,
+                    RiscVIntrinsic::<D>::from(Intrinsic::Uret),
+                    LowLevelILMutableFunction::NO_INPUTS,
                 )
                 .append();
                 il.no_ret().append();
             }
             Op::Sret => {
                 il.intrinsic(
-                    MutableLiftedILFunction::<Self>::NO_OUTPUTS,
-                    Intrinsic::Sret,
-                    MutableLiftedILFunction::<Self>::NO_INPUTS,
+                    LowLevelILMutableFunction::NO_OUTPUTS,
+                    RiscVIntrinsic::<D>::from(Intrinsic::Sret),
+                    LowLevelILMutableFunction::NO_INPUTS,
                 )
                 .append();
                 il.no_ret().append();
             }
             Op::Mret => {
                 il.intrinsic(
-                    MutableLiftedILFunction::<Self>::NO_OUTPUTS,
-                    Intrinsic::Mret,
-                    MutableLiftedILFunction::<Self>::NO_INPUTS,
+                    LowLevelILMutableFunction::NO_OUTPUTS,
+                    RiscVIntrinsic::<D>::from(Intrinsic::Mret),
+                    LowLevelILMutableFunction::NO_INPUTS,
                 )
                 .append();
                 il.no_ret().append();
             }
             Op::Wfi => il
                 .intrinsic(
-                    MutableLiftedILFunction::<Self>::NO_OUTPUTS,
-                    Intrinsic::Wfi,
-                    MutableLiftedILFunction::<Self>::NO_INPUTS,
+                    LowLevelILMutableFunction::NO_OUTPUTS,
+                    RiscVIntrinsic::<D>::from(Intrinsic::Wfi),
+                    LowLevelILMutableFunction::NO_INPUTS,
                 )
                 .append(),
             Op::Fence(i) => il
                 .intrinsic(
-                    MutableLiftedILFunction::<Self>::NO_OUTPUTS,
-                    Intrinsic::Fence,
+                    LowLevelILMutableFunction::NO_OUTPUTS,
+                    RiscVIntrinsic::<D>::from(Intrinsic::Fence),
                     [il.const_int(4, i.imm() as u32 as u64)],
                 )
                 .append(),
@@ -1358,13 +1356,14 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
 
                 if i.rd().id() == 0 {
                     il.intrinsic(
-                        MutableLiftedILFunction::<Self>::NO_OUTPUTS,
-                        Intrinsic::Csrwr,
+                        LowLevelILMutableFunction::NO_OUTPUTS,
+                        RiscVIntrinsic::<D>::from(Intrinsic::Csrwr),
                         [csr, rs1],
                     )
                     .append();
                 } else {
-                    il.intrinsic([rd], Intrinsic::Csrrw, [rs1]).append();
+                    il.intrinsic([rd], RiscVIntrinsic::<D>::from(Intrinsic::Csrrw), [rs1])
+                        .append();
                 }
             }
             Op::Csrrs(i) => {
@@ -1373,9 +1372,15 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let csr = il.const_int(4, i.csr() as u64);
 
                 if i.rs1().id() == 0 {
-                    il.intrinsic([rd], Intrinsic::Csrrd, [csr]).append();
+                    il.intrinsic([rd], RiscVIntrinsic::<D>::from(Intrinsic::Csrrd), [csr])
+                        .append();
                 } else {
-                    il.intrinsic([rd], Intrinsic::Csrrs, [csr, rs1]).append();
+                    il.intrinsic(
+                        [rd],
+                        RiscVIntrinsic::<D>::from(Intrinsic::Csrrs),
+                        [csr, rs1],
+                    )
+                    .append();
                 }
             }
             Op::Csrrc(i) => {
@@ -1384,9 +1389,15 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let csr = il.const_int(4, i.csr() as u64);
 
                 if i.rs1().id() == 0 {
-                    il.intrinsic([rd], Intrinsic::Csrrd, [csr]).append();
+                    il.intrinsic([rd], RiscVIntrinsic::<D>::from(Intrinsic::Csrrd), [csr])
+                        .append();
                 } else {
-                    il.intrinsic([rd], Intrinsic::Csrrc, [csr, rs1]).append();
+                    il.intrinsic(
+                        [rd],
+                        RiscVIntrinsic::<D>::from(Intrinsic::Csrrc),
+                        [csr, rs1],
+                    )
+                    .append();
                 }
             }
             Op::CsrrwI(i) => {
@@ -1396,13 +1407,18 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
 
                 if i.rd().id() == 0 {
                     il.intrinsic(
-                        MutableLiftedILFunction::<Self>::NO_OUTPUTS,
-                        Intrinsic::Csrwr,
+                        LowLevelILMutableFunction::NO_OUTPUTS,
+                        RiscVIntrinsic::<D>::from(Intrinsic::Csrwr),
                         [csr, imm],
                     )
                     .append();
                 } else {
-                    il.intrinsic([rd], Intrinsic::Csrrw, [csr, imm]).append();
+                    il.intrinsic(
+                        [rd],
+                        RiscVIntrinsic::<D>::from(Intrinsic::Csrrw),
+                        [csr, imm],
+                    )
+                    .append();
                 }
             }
             Op::CsrrsI(i) => {
@@ -1411,9 +1427,15 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let imm = il.const_int(max_width, i.imm() as u64);
 
                 if i.imm() == 0 {
-                    il.intrinsic([rd], Intrinsic::Csrrd, [csr]).append();
+                    il.intrinsic([rd], RiscVIntrinsic::<D>::from(Intrinsic::Csrrd), [csr])
+                        .append();
                 } else {
-                    il.intrinsic([rd], Intrinsic::Csrrs, [csr, imm]).append();
+                    il.intrinsic(
+                        [rd],
+                        RiscVIntrinsic::<D>::from(Intrinsic::Csrrs),
+                        [csr, imm],
+                    )
+                    .append();
                 }
             }
             Op::CsrrcI(i) => {
@@ -1422,9 +1444,15 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let imm = il.const_int(max_width, i.imm() as u64);
 
                 if i.imm() == 0 {
-                    il.intrinsic([rd], Intrinsic::Csrrd, [csr]).append();
+                    il.intrinsic([rd], RiscVIntrinsic::<D>::from(Intrinsic::Csrrd), [csr])
+                        .append();
                 } else {
-                    il.intrinsic([rd], Intrinsic::Csrrc, [csr, imm]).append();
+                    il.intrinsic(
+                        [rd],
+                        RiscVIntrinsic::<D>::from(Intrinsic::Csrrc),
+                        [csr, imm],
+                    )
+                    .append();
                 }
             }
 
@@ -1443,7 +1471,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let rd = a.rd();
 
                 let dest_reg = match rd.id() {
-                    0 => LowLevelILRegister::Temp(0),
+                    0 => LowLevelILRegisterKind::from_temp(0),
                     _ => Register::from(rd).into(),
                 };
 
@@ -1491,14 +1519,14 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let rs2 = a.rs2();
 
                 let dest_reg = match rd.id() {
-                    0 => LowLevelILRegister::Temp(0),
+                    0 => LowLevelILRegisterKind::from_temp(0),
                     _ => Register::from(rd).into(),
                 };
 
                 let mut next_temp_reg = 1;
                 let mut alloc_reg = |rs: riscv_dis::IntReg<D>| match (rs.id(), rd.id()) {
                     (id, r) if id != 0 && id == r => {
-                        let reg = LowLevelILRegister::Temp(next_temp_reg);
+                        let reg = LowLevelILRegisterKind::from_temp(next_temp_reg);
                         next_temp_reg += 1;
 
                         il.set_reg(max_width, reg, Register::from(rs)).append();
@@ -1578,10 +1606,11 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                     };
                     il.set_reg(width, rd, result).append();
                 } else {
-                    let product = LowLevelILRegister::Temp(0);
+                    let product: LowLevelILRegisterKind<Self::Register> =
+                        LowLevelILRegisterKind::from_temp(0);
                     il.intrinsic(
                         [product],
-                        Intrinsic::Fmul(f.width(), f.rm()),
+                        RiscVIntrinsic::<D>::from(Intrinsic::Fmul(f.width(), f.rm())),
                         [il.reg(width, rs1), il.reg(width, rs2)],
                     )
                     .append();
@@ -1589,21 +1618,21 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                         Op::Fmadd(..) => il
                             .intrinsic(
                                 [rd],
-                                Intrinsic::Fmul(f.width(), f.rm()),
+                                RiscVIntrinsic::<D>::from(Intrinsic::Fmul(f.width(), f.rm())),
                                 [il.reg(width, product), il.reg(width, rs3)],
                             )
                             .append(),
                         Op::Fmsub(..) => il
                             .intrinsic(
                                 [rd],
-                                Intrinsic::Fsub(f.width(), f.rm()),
+                                RiscVIntrinsic::<D>::from(Intrinsic::Fsub(f.width(), f.rm())),
                                 [il.reg(width, product), il.reg(width, rs3)],
                             )
                             .append(),
                         Op::Fnmadd(..) => il
                             .intrinsic(
                                 [rd],
-                                Intrinsic::Fsub(f.width(), f.rm()),
+                                RiscVIntrinsic::<D>::from(Intrinsic::Fsub(f.width(), f.rm())),
                                 [
                                     il.fneg(width, il.reg(width, product)).build(),
                                     il.reg(width, rs3),
@@ -1613,7 +1642,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                         Op::Fnmsub(..) => il
                             .intrinsic(
                                 [rd],
-                                Intrinsic::Fadd(f.width(), f.rm()),
+                                RiscVIntrinsic::<D>::from(Intrinsic::Fadd(f.width(), f.rm())),
                                 [
                                     il.fneg(width, il.reg(width, product)).build(),
                                     il.reg(width, rs3),
@@ -1640,10 +1669,18 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                     il.set_reg(width, rd, result).append();
                 } else {
                     let intrinsic = match op {
-                        Op::Fadd(..) => Intrinsic::Fadd(f.width(), f.rm()),
-                        Op::Fsub(..) => Intrinsic::Fsub(f.width(), f.rm()),
-                        Op::Fmul(..) => Intrinsic::Fmul(f.width(), f.rm()),
-                        Op::Fdiv(..) => Intrinsic::Fdiv(f.width(), f.rm()),
+                        Op::Fadd(..) => {
+                            RiscVIntrinsic::<D>::from(Intrinsic::Fadd(f.width(), f.rm()))
+                        }
+                        Op::Fsub(..) => {
+                            RiscVIntrinsic::<D>::from(Intrinsic::Fsub(f.width(), f.rm()))
+                        }
+                        Op::Fmul(..) => {
+                            RiscVIntrinsic::<D>::from(Intrinsic::Fmul(f.width(), f.rm()))
+                        }
+                        Op::Fdiv(..) => {
+                            RiscVIntrinsic::<D>::from(Intrinsic::Fdiv(f.width(), f.rm()))
+                        }
                         _ => unreachable!(),
                     };
                     il.intrinsic([rd], intrinsic, [il.reg(width, rs1), il.reg(width, rs2)])
@@ -1660,7 +1697,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 } else {
                     il.intrinsic(
                         [rd],
-                        Intrinsic::Fsgnj(f.width()),
+                        RiscVIntrinsic::<D>::from(Intrinsic::Fsgnj(f.width())),
                         [il.reg(width, rs1), il.reg(width, rs2)],
                     )
                     .append();
@@ -1677,7 +1714,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 } else {
                     il.intrinsic(
                         [rd],
-                        Intrinsic::Fsgnjn(f.width()),
+                        RiscVIntrinsic::<D>::from(Intrinsic::Fsgnjn(f.width())),
                         [il.reg(width, rs1), il.reg(width, rs2)],
                     )
                     .append();
@@ -1694,7 +1731,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 } else {
                     il.intrinsic(
                         [rd],
-                        Intrinsic::Fsgnjx(f.width()),
+                        RiscVIntrinsic::<D>::from(Intrinsic::Fsgnjx(f.width())),
                         [il.reg(width, rs1), il.reg(width, rs2)],
                     )
                     .append();
@@ -1714,7 +1751,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let width = f.width() as usize;
                 il.intrinsic(
                     [rd],
-                    Intrinsic::Fmin(f.width()),
+                    RiscVIntrinsic::<D>::from(Intrinsic::Fmin(f.width())),
                     [il.reg(width, rs1), il.reg(width, rs2)],
                 )
                 .append();
@@ -1726,14 +1763,14 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let width = f.width() as usize;
                 il.intrinsic(
                     [rd],
-                    Intrinsic::Fmax(f.width()),
+                    RiscVIntrinsic::<D>::from(Intrinsic::Fmax(f.width())),
                     [il.reg(width, rs1), il.reg(width, rs2)],
                 )
                 .append();
             }
             Op::Fle(f) | Op::Flt(f) | Op::Feq(f) => {
                 let rd = match f.rd().id() {
-                    0 => LowLevelILRegister::Temp(0),
+                    0 => LowLevelILRegisterKind::from_temp(0),
                     _ => Register::from(f.rd()).into(),
                 };
                 let left = Register::from(f.rs1());
@@ -1759,7 +1796,11 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 } else {
                     il.intrinsic(
                         [rd],
-                        Intrinsic::FcvtFToF(f.rs1_width(), f.rd_width(), f.rm()),
+                        RiscVIntrinsic::<D>::from(Intrinsic::FcvtFToF(
+                            f.rs1_width(),
+                            f.rd_width(),
+                            f.rm(),
+                        )),
                         [il.reg(rs1_width, rs1)],
                     )
                     .append();
@@ -1767,7 +1808,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             }
             Op::FcvtToInt(f) => {
                 let rd = match f.rd().id() {
-                    0 => LowLevelILRegister::Temp(0),
+                    0 => LowLevelILRegisterKind::from_temp(0),
                     _ => Register::from(f.rd()).into(),
                 };
                 let rs1 = Register::from(f.rs1());
@@ -1776,14 +1817,22 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 if f.zx() {
                     il.intrinsic(
                         [rd],
-                        Intrinsic::FcvtFToU(f.rs1_width(), f.rd_width(), f.rm()),
+                        RiscVIntrinsic::<D>::from(Intrinsic::FcvtFToU(
+                            f.rs1_width(),
+                            f.rd_width(),
+                            f.rm(),
+                        )),
                         [il.reg(rs1_width, rs1)],
                     )
                     .append();
                 } else if f.rm() != RoundMode::Dynamic {
                     il.intrinsic(
                         [rd],
-                        Intrinsic::FcvtFToI(f.rs1_width(), f.rd_width(), f.rm()),
+                        RiscVIntrinsic::<D>::from(Intrinsic::FcvtFToI(
+                            f.rs1_width(),
+                            f.rd_width(),
+                            f.rm(),
+                        )),
                         [il.reg(rs1_width, rs1)],
                     )
                     .append();
@@ -1806,14 +1855,22 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 if f.zx() {
                     il.intrinsic(
                         [rd],
-                        Intrinsic::FcvtUToF(f.rs1_width(), f.rd_width(), f.rm()),
+                        RiscVIntrinsic::<D>::from(Intrinsic::FcvtUToF(
+                            f.rs1_width(),
+                            f.rd_width(),
+                            f.rm(),
+                        )),
                         [rs1],
                     )
                     .append();
                 } else if f.rm() != RoundMode::Dynamic {
                     il.intrinsic(
                         [rd],
-                        Intrinsic::FcvtIToF(f.rs1_width(), f.rd_width(), f.rm()),
+                        RiscVIntrinsic::<D>::from(Intrinsic::FcvtIToF(
+                            f.rs1_width(),
+                            f.rd_width(),
+                            f.rm(),
+                        )),
                         [rs1],
                     )
                     .append();
@@ -1824,7 +1881,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
             }
             Op::FmvToInt(f) => {
                 let rd = match f.rd().id() {
-                    0 => LowLevelILRegister::Temp(0),
+                    0 => LowLevelILRegisterKind::from_temp(0),
                     _ => Register::from(f.rd()).into(),
                 };
                 let rs1 = Register::from(f.rs1());
@@ -1847,8 +1904,12 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> architecture::Architecture fo
                 let rd = Register::from(f.rd());
                 let rs1 = Register::from(f.rs1());
                 let width = f.width() as usize;
-                il.intrinsic([rd], Intrinsic::Fclass(f.width()), [il.reg(width, rs1)])
-                    .append();
+                il.intrinsic(
+                    [rd],
+                    RiscVIntrinsic::<D>::from(Intrinsic::Fclass(f.width())),
+                    [il.reg(width, rs1)],
+                )
+                .append();
             }
 
             _ => il.unimplemented().append(),
@@ -2652,25 +2713,23 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> RelocationHandler
     }
 }
 
-impl<D: 'static + RiscVDisassembler + Send + Sync> AsRef<CoreRelocationHandler>
-    for RiscVELFRelocationHandler<D>
-{
+impl<D: RiscVDisassembler> AsRef<CoreRelocationHandler> for RiscVELFRelocationHandler<D> {
     fn as_ref(&self) -> &CoreRelocationHandler {
         &self.handle
     }
 }
 
-struct RiscVCC<D: 'static + RiscVDisassembler + Send + Sync> {
+struct RiscVCC<D: RiscVDisassembler> {
     _dis: PhantomData<D>,
 }
 
-impl<D: 'static + RiscVDisassembler + Send + Sync> RiscVCC<D> {
+impl<D: RiscVDisassembler> RiscVCC<D> {
     fn new() -> Self {
         RiscVCC { _dis: PhantomData }
     }
 }
 
-impl<D: 'static + RiscVDisassembler + Send + Sync> CallingConvention for RiscVCC<D> {
+impl<D: RiscVDisassembler> CallingConvention for RiscVCC<D> {
     fn caller_saved_registers(&self) -> Vec<RegisterId> {
         let mut regs = Vec::with_capacity(36);
         let int_reg_count = <D::RegFile as RegFile>::int_reg_count();
@@ -2792,7 +2851,7 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
         &self,
         bv: &BinaryView,
         func: &Function,
-        llil: &RegularLowLevelILFunction<CoreArchitecture>,
+        llil: &LowLevelILRegularFunction,
     ) -> bool {
         // Look for the following code pattern:
         // t3 = plt
@@ -2828,7 +2887,7 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
             LowLevelILInstructionKind::SetReg(r) => match r.source_expr().kind() {
                 LowLevelILExpressionKind::Load(l) => {
                     let target_reg = r.dest_reg();
-                    let entry = match l.source_mem_expr().kind() {
+                    let entry = match l.source_expr().kind() {
                         LowLevelILExpressionKind::Reg(lr) if lr.source_reg() == auipc_dest => {
                             plt_base
                         }

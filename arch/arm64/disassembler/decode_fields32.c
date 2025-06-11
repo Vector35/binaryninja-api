@@ -1626,6 +1626,7 @@ void decode_fields32(enum ENCODING enc, context *ctx, Instruction *instr)
 		case ENC_XAFLAG_M_PSTATE:
 		case ENC_XPACLRI_HI_HINTS:
 		case ENC_YIELD_HI_HINTS:
+		//['19:1101010100000:1101010100000', '16:op1:011', '12:0100:0100', '8:CRm:0111', '5:op2:110', '0:Rt:11111']
 			// xxxxxxxxxx|L=x|op0=xx|op1=xxx|CRn=xxxx|CRm=xxxx|op2=xxx|Rt=xxxxx
 			ctx->L = (insword>>21)&1;
 			ctx->op0 = (insword>>19)&3;

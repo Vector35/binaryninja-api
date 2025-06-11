@@ -47,6 +47,16 @@ bool BINARYNINJAUIAPI eligibleToForceVariableVersion(View* parent, HighlightToke
 bool BINARYNINJAUIAPI clearVariableVersion(View* parent, HighlightTokenState& highlight);
 bool BINARYNINJAUIAPI eligibleToClearVariableVersion(View* parent, HighlightTokenState& highlight);
 
+struct BINARYNINJAUIAPI FieldResolutionState
+{
+	std::vector<std::pair<std::string, FieldResolutionInfoRef>> goodFieldResolutions = {};
+	std::vector<std::pair<std::string, FieldResolutionInfoRef>> badFieldResolutions = {};
+
+	size_t registeredGoodFieldResolutions = 0;
+	size_t registeredBadFieldResolutions = 0;
+
+	void bindDynamicActions(View* view, HighlightTokenState& highlight);
+};
 
 bool BINARYNINJAUIAPI getEnumSelection(QWidget* parent, BinaryViewRef data, FunctionRef func, uint64_t constValue,
 	TypeRef& selectedEnum, bool checkValue, bool canTruncate);
@@ -85,6 +95,11 @@ std::optional<std::string> GetVariableNameFromExpr(BinaryNinja::Function* func,
 // typedef-ed type
 TypeRef GetFunctionType(BinaryViewRef data, TypeRef type);
 
+std::optional<uint64_t> getFoldableExprAddress(
+	BinaryNinja::HighLevelILFunction* hlil, const HighlightTokenState& highlight);
+std::optional<uint64_t> getInvertableConditionAddress(BinaryNinja::HighLevelILFunction* hlil, size_t instrIndex);
+std::optional<uint64_t> getEarlyReturnAddress(BinaryNinja::HighLevelILFunction* hlil, size_t instrIndex);
+
 /*!
-	@}
+    @}
 */

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.9...3.15 FATAL_ERROR)
 
 project(arch_arm64 CXX C)
 
@@ -8,7 +8,8 @@ file(GLOB SOURCES
 	*.h
 	disassembler/decode.c
 	disassembler/format.c
-	disassembler/sysregs.c
+	disassembler/sysregs_gen.c
+	disassembler/sysregs_fmt_gen.c
 	disassembler/regs.c
 	disassembler/encodings_dec.c
 	disassembler/encodings_fmt.c
@@ -20,6 +21,8 @@ file(GLOB SOURCES
 	disassembler/decode_fields32.c
 	disassembler/decode_scratchpad.c
 	disassembler/*.h)
+
+list(FILTER SOURCES EXCLUDE REGEX "sysregs\\.(h|cpp)$")
 
 if(DEMO)
 	add_library(${PROJECT_NAME} STATIC ${SOURCES})

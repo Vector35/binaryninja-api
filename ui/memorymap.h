@@ -10,6 +10,8 @@
 #include <QtWidgets/QStyledItemDelegate>
 #include <QtCore/QSortFilterProxyModel>
 
+#include "binaryninjaapi.h"
+#include "notificationsdispatcher.h"
 #include "render.h"
 #include "sidebar.h"
 #include "uitypes.h"
@@ -31,6 +33,30 @@ class BINARYNINJAUIAPI MemoryMapItemDelegate : public QStyledItemDelegate
 public:
 	MemoryMapItemDelegate(QObject* parent = nullptr): QStyledItemDelegate(parent) {};
 	virtual void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+};
+
+/*!
+
+	\ingroup memorymap
+*/
+class BINARYNINJAUIAPI MemoryRegionDialog : public QDialog
+{
+	QPushButton* m_selectFileButton;
+	QPushButton* m_acceptButton;
+	QPushButton* m_cancelButton;
+	QLineEdit* m_nameField;
+	QLineEdit* m_startField;
+	QLineEdit* m_endField;
+	QLabel* m_contentsLabel;
+
+	BinaryViewRef m_data;
+	SegmentRef m_segment;
+	std::optional<std::string> m_filePath;
+
+	void SelectFile();
+	void Submit();
+public:
+	MemoryRegionDialog(QWidget* parent, BinaryViewRef data, SegmentRef associatedSegment = nullptr);
 };
 
 /*!
@@ -90,11 +116,12 @@ enum class SegmentColumn : int {
 	DATA_LENGTH,
 	FLAGS,
 	SOURCE,
+	REGION,
 	COLUMN_COUNT,
 };
 
 
-class BINARYNINJAUIAPI SegmentModel : public QAbstractItemModel, public BinaryNinja::BinaryDataNotification
+class BINARYNINJAUIAPI SegmentModel : public QAbstractItemModel
 {
 	BinaryViewRef m_data;
 
@@ -118,9 +145,7 @@ public:
 
 	QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
-	virtual void OnSegmentAdded(BinaryNinja::BinaryView* data, BinaryNinja::Segment* segment) override;
-	virtual void OnSegmentUpdated(BinaryNinja::BinaryView* data, BinaryNinja::Segment* segment) override;
-	virtual void OnSegmentRemoved(BinaryNinja::BinaryView* data, BinaryNinja::Segment* segment) override;
+	void updateSegments(std::vector<SegmentRef>&& segments);
 };
 
 /*!
@@ -142,6 +167,7 @@ class BINARYNINJAUIAPI SegmentWidget : public QWidget
 	QMenu* createHeaderContextMenu(const QPoint& p);
 	void restoreDefaults();
 
+	void addMemoryRegion(SegmentRef segment);
 	void addSegment();
 	void editSegment(SegmentRef segment);
 	void disableSegment(SegmentRef segment);
@@ -150,6 +176,8 @@ class BINARYNINJAUIAPI SegmentWidget : public QWidget
 public:
 	SegmentWidget(BinaryViewRef data, QWidget* parent = nullptr);
 	virtual ~SegmentWidget();
+
+	SegmentModel* model() { return m_model; }
 
 	void updateFont();
 	void highlightRelatedSegments(SectionRef section);
@@ -172,7 +200,7 @@ enum class SectionColumn: int
 };
 
 
-class BINARYNINJAUIAPI SectionModel : public QAbstractItemModel, public BinaryNinja::BinaryDataNotification
+class BINARYNINJAUIAPI SectionModel : public QAbstractItemModel
 {
 	BinaryViewRef m_data;
 
@@ -196,9 +224,7 @@ public:
 
 	QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
-	virtual void OnSectionAdded(BinaryNinja::BinaryView* data, BinaryNinja::Section* section) override;
-	virtual void OnSectionUpdated(BinaryNinja::BinaryView* data, BinaryNinja::Section* section) override;
-	virtual void OnSectionRemoved(BinaryNinja::BinaryView* data, BinaryNinja::Section* section) override;
+	void updateSections(std::vector<SectionRef>&& sections);
 };
 
 /*!
@@ -225,6 +251,8 @@ public:
 	SectionWidget(BinaryViewRef data, QWidget* parent = nullptr);
 	virtual ~SectionWidget();
 
+	SectionModel* model() { return m_model; }
+
 	void updateFont();
 	void highlightRelatedSections(SegmentRef segment);
 	void currentRowChanged(const QModelIndex& current, const QModelIndex& previous);
@@ -247,6 +275,7 @@ class BINARYNINJAUIAPI MemoryMapView : public QWidget, public View
 	Q_OBJECT
 
 	BinaryViewRef m_data;
+	std::unique_ptr<NotificationsDispatcher> m_dispatcher = nullptr;
 	MemoryMapContainer* m_container;
 
 	SectionWidget* m_sectionWidget;
@@ -259,6 +288,7 @@ class BINARYNINJAUIAPI MemoryMapView : public QWidget, public View
 
 public:
 	MemoryMapView(BinaryViewRef data, MemoryMapContainer* container);
+	virtual ~MemoryMapView();
 
 	BinaryViewRef getData() override { return m_data; }
 	uint64_t getCurrentOffset() override;

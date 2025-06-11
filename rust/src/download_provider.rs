@@ -1,6 +1,6 @@
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::settings::Settings;
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{BnString, IntoCStr};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
 use std::ffi::{c_void, CStr};
@@ -13,12 +13,9 @@ pub struct DownloadProvider {
 }
 
 impl DownloadProvider {
-    pub fn get<S: BnStrCompatible>(name: S) -> Option<DownloadProvider> {
-        let result = unsafe {
-            BNGetDownloadProviderByName(
-                name.into_bytes_with_nul().as_ref().as_ptr() as *const c_char
-            )
-        };
+    pub fn get(name: &str) -> Option<DownloadProvider> {
+        let name = name.to_cstr();
+        let result = unsafe { BNGetDownloadProviderByName(name.as_ptr()) };
         if result.is_null() {
             return None;
         }
@@ -40,7 +37,7 @@ impl DownloadProvider {
     pub fn try_default() -> Result<DownloadProvider, ()> {
         let s = Settings::new();
         let dp_name = s.get_string("network.downloadProviderName");
-        Self::get(dp_name).ok_or(())
+        Self::get(&dp_name).ok_or(())
     }
 
     pub(crate) fn from_raw(handle: *mut BNDownloadProvider) -> DownloadProvider {
@@ -76,13 +73,13 @@ unsafe impl CoreArrayProviderInner for DownloadProvider {
 
 pub struct DownloadInstanceOutputCallbacks {
     pub write: Option<Box<dyn FnMut(&[u8]) -> usize>>,
-    pub progress: Option<Box<dyn FnMut(u64, u64) -> bool>>,
+    pub progress: Option<Box<dyn FnMut(usize, usize) -> bool>>,
 }
 
 pub struct DownloadInstanceInputOutputCallbacks {
     pub read: Option<Box<dyn FnMut(&mut [u8]) -> Option<isize>>>,
     pub write: Option<Box<dyn FnMut(&[u8]) -> usize>>,
-    pub progress: Option<Box<dyn FnMut(u64, u64) -> bool>>,
+    pub progress: Option<Box<dyn FnMut(usize, usize) -> bool>>,
 }
 
 pub struct DownloadResponse {
@@ -105,9 +102,9 @@ impl DownloadInstance {
         Ref::new(Self::from_raw(handle))
     }
 
-    fn get_error(&self) -> BnString {
+    fn get_error(&self) -> String {
         let err: *mut c_char = unsafe { BNGetErrorForDownloadInstance(self.handle) };
-        unsafe { BnString::from_raw(err) }
+        unsafe { BnString::into_string(err) }
     }
 
     unsafe extern "C" fn o_write_callback(data: *mut u8, len: u64, ctxt: *mut c_void) -> u64 {
@@ -121,7 +118,11 @@ impl DownloadInstance {
         }
     }
 
-    unsafe extern "C" fn o_progress_callback(ctxt: *mut c_void, progress: u64, total: u64) -> bool {
+    unsafe extern "C" fn o_progress_callback(
+        ctxt: *mut c_void,
+        progress: usize,
+        total: usize,
+    ) -> bool {
         let callbacks = ctxt as *mut DownloadInstanceOutputCallbacks;
         if let Some(func) = &mut (*callbacks).progress {
             (func)(progress, total)
@@ -130,11 +131,11 @@ impl DownloadInstance {
         }
     }
 
-    pub fn perform_request<S: BnStrCompatible>(
+    pub fn perform_request(
         &mut self,
-        url: S,
+        url: &str,
         callbacks: DownloadInstanceOutputCallbacks,
-    ) -> Result<(), BnString> {
+    ) -> Result<(), String> {
         let callbacks = Box::into_raw(Box::new(callbacks));
         let mut cbs = BNDownloadInstanceOutputCallbacks {
             writeCallback: Some(Self::o_write_callback),
@@ -143,10 +144,11 @@ impl DownloadInstance {
             progressContext: callbacks as *mut c_void,
         };
 
+        let url_raw = url.to_cstr();
         let result = unsafe {
             BNPerformDownloadRequest(
                 self.handle,
-                url.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                url_raw.as_ptr(),
                 &mut cbs as *mut BNDownloadInstanceOutputCallbacks,
             )
         };
@@ -186,7 +188,11 @@ impl DownloadInstance {
         }
     }
 
-    unsafe extern "C" fn i_progress_callback(ctxt: *mut c_void, progress: u64, total: u64) -> bool {
+    unsafe extern "C" fn i_progress_callback(
+        ctxt: *mut c_void,
+        progress: usize,
+        total: usize,
+    ) -> bool {
         let callbacks = ctxt as *mut DownloadInstanceInputOutputCallbacks;
         if let Some(func) = &mut (*callbacks).progress {
             (func)(progress, total)
@@ -195,32 +201,29 @@ impl DownloadInstance {
         }
     }
 
-    pub fn perform_custom_request<
-        M: BnStrCompatible,
-        U: BnStrCompatible,
-        HK: BnStrCompatible,
-        HV: BnStrCompatible,
-        I: IntoIterator<Item = (HK, HV)>,
-    >(
+    pub fn perform_custom_request<I>(
         &mut self,
-        method: M,
-        url: U,
+        method: &str,
+        url: &str,
         headers: I,
         callbacks: DownloadInstanceInputOutputCallbacks,
-    ) -> Result<DownloadResponse, BnString> {
+    ) -> Result<DownloadResponse, String>
+    where
+        I: IntoIterator<Item = (String, String)>,
+    {
         let mut header_keys = vec![];
         let mut header_values = vec![];
         for (key, value) in headers {
-            header_keys.push(key.into_bytes_with_nul());
-            header_values.push(value.into_bytes_with_nul());
+            header_keys.push(key.to_cstr());
+            header_values.push(value.to_cstr());
         }
 
         let mut header_key_ptrs = vec![];
         let mut header_value_ptrs = vec![];
 
         for (key, value) in header_keys.iter().zip(header_values.iter()) {
-            header_key_ptrs.push(key.as_ref().as_ptr() as *const c_char);
-            header_value_ptrs.push(value.as_ref().as_ptr() as *const c_char);
+            header_key_ptrs.push(key.as_ptr());
+            header_value_ptrs.push(value.as_ptr());
         }
 
         let callbacks = Box::into_raw(Box::new(callbacks));
@@ -235,11 +238,13 @@ impl DownloadInstance {
 
         let mut response: *mut BNDownloadInstanceResponse = null_mut();
 
+        let method_raw = method.to_cstr();
+        let url_raw = url.to_cstr();
         let result = unsafe {
             BNPerformCustomRequest(
                 self.handle,
-                method.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
-                url.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
+                method_raw.as_ptr(),
+                url_raw.as_ptr(),
                 header_key_ptrs.len() as u64,
                 header_key_ptrs.as_ptr(),
                 header_value_ptrs.as_ptr(),

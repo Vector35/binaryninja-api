@@ -3,13 +3,14 @@ mod plugin;
 
 use std::ffi::c_char;
 use std::fmt::Debug;
+use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
 
 use binaryninjacore_sys::*;
 
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::repository::plugin::RepositoryPlugin;
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{BnString, IntoCStr};
 
 pub use manager::RepositoryManager;
 
@@ -31,17 +32,18 @@ impl Repository {
     }
 
     /// String URL of the git repository where the plugin repository's are stored
-    pub fn url(&self) -> BnString {
+    pub fn url(&self) -> String {
         let result = unsafe { BNRepositoryGetUrl(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result as *mut c_char) }
+        unsafe { BnString::into_string(result as *mut c_char) }
     }
 
     /// String local path to store the given plugin repository
-    pub fn path(&self) -> BnString {
+    pub fn path(&self) -> PathBuf {
         let result = unsafe { BNRepositoryGetRepoPath(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result as *mut c_char) }
+        let result_str = unsafe { BnString::into_string(result as *mut c_char) };
+        PathBuf::from(result_str)
     }
 
     /// List of RepoPlugin objects contained within this repository
@@ -52,23 +54,18 @@ impl Repository {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn plugin_by_path<S: BnStrCompatible>(&self, path: S) -> Option<Ref<RepositoryPlugin>> {
-        let path = path.into_bytes_with_nul();
-        let result = unsafe {
-            BNRepositoryGetPluginByPath(
-                self.handle.as_ptr(),
-                path.as_ref().as_ptr() as *const c_char,
-            )
-        };
+    pub fn plugin_by_path(&self, path: &Path) -> Option<Ref<RepositoryPlugin>> {
+        let path = path.to_cstr();
+        let result = unsafe { BNRepositoryGetPluginByPath(self.handle.as_ptr(), path.as_ptr()) };
         NonNull::new(result).map(|h| unsafe { RepositoryPlugin::ref_from_raw(h) })
     }
 
-    // TODO: Make this a PathBuf?
     /// String full path the repository
-    pub fn full_path(&self) -> BnString {
+    pub fn full_path(&self) -> PathBuf {
         let result = unsafe { BNRepositoryGetPluginsPath(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result as *mut c_char) }
+        let result_str = unsafe { BnString::into_string(result as *mut c_char) };
+        PathBuf::from(result_str)
     }
 }
 

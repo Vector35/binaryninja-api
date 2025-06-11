@@ -1,5 +1,5 @@
 use crate::rc::Array;
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{BnString, IntoCStr};
 use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -19,11 +19,23 @@ pub enum EnterpriseCheckoutError {
     RefreshExpiredLicenseFailed(String),
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum EnterpriseCheckoutStatus {
+    /// The UI is managing the enterprise checkout.
+    AlreadyManaged,
+    /// Checkout was successful, attached duration is the duration of the license, if any.
+    Success(Option<Duration>),
+}
+
 /// Initialize the enterprise server connection to check out a floating license.
-pub fn checkout_license(duration: Duration) -> Result<(), EnterpriseCheckoutError> {
+/// Result value is if we actually checked out a license (i.e. Ok(false) means we already have a
+/// license checked out and will not need to release it later)
+pub fn checkout_license(
+    duration: Duration,
+) -> Result<EnterpriseCheckoutStatus, EnterpriseCheckoutError> {
     if crate::is_ui_enabled() {
         // We only need to check out a license if running headlessly.
-        return Ok(());
+        return Ok(EnterpriseCheckoutStatus::AlreadyManaged);
     }
 
     // The disparate core functions we call here might already have mutexes to guard.
@@ -54,7 +66,7 @@ pub fn checkout_license(duration: Duration) -> Result<(), EnterpriseCheckoutErro
                     .map_err(|_| EnterpriseCheckoutError::NoUsername)?;
                 let password = std::env::var("BN_ENTERPRISE_PASSWORD")
                     .map_err(|_| EnterpriseCheckoutError::NoPassword)?;
-                if !authenticate_server_with_credentials(username, password, true) {
+                if !authenticate_server_with_credentials(&username, &password, true) {
                     return Err(EnterpriseCheckoutError::NotAuthenticated);
                 }
             }
@@ -65,7 +77,7 @@ pub fn checkout_license(duration: Duration) -> Result<(), EnterpriseCheckoutErro
     if !is_server_license_still_activated()
         || (!is_server_floating_license() && crate::license_expiration_time() < SystemTime::now())
     {
-        // If the license is expired we should refresh the license.
+        // If the license is expired, we should refresh the license.
         if !update_server_license(duration) {
             let last_error = server_last_error().to_string();
             return Err(EnterpriseCheckoutError::RefreshExpiredLicenseFailed(
@@ -74,10 +86,10 @@ pub fn checkout_license(duration: Duration) -> Result<(), EnterpriseCheckoutErro
         }
     }
 
-    Ok(())
+    Ok(EnterpriseCheckoutStatus::Success(license_duration()))
 }
 
-pub fn release_license() {
+pub fn release_license(release_floating: bool) {
     if !crate::is_ui_enabled() {
         // This might look dumb, why would we want to connect to the server, would that not just mean
         // we don't need to release the license? Well no, you could have run a script, acquired a license for 10 hours
@@ -89,23 +101,27 @@ pub fn release_license() {
         if !is_server_connected() {
             connect_server();
         }
+        // We optionally release floating licenses as users typically want to keep them around.
+        if is_server_floating_license() && !release_floating {
+            return;
+        }
         // We should only release the license if we are running headlessly.
         release_server_license();
     }
 }
 
 // TODO: If "" string return None
-pub fn server_username() -> BnString {
-    unsafe { BnString::from_raw(binaryninjacore_sys::BNGetEnterpriseServerUsername()) }
+pub fn server_username() -> String {
+    unsafe { BnString::into_string(binaryninjacore_sys::BNGetEnterpriseServerUsername()) }
 }
 
 // TODO: If "" string return None
-pub fn server_url() -> BnString {
-    unsafe { BnString::from_raw(binaryninjacore_sys::BNGetEnterpriseServerUrl()) }
+pub fn server_url() -> String {
+    unsafe { BnString::into_string(binaryninjacore_sys::BNGetEnterpriseServerUrl()) }
 }
 
-pub fn set_server_url<S: BnStrCompatible>(url: S) -> Result<(), ()> {
-    let url = url.into_bytes_with_nul();
+pub fn set_server_url(url: &str) -> Result<(), ()> {
+    let url = url.to_cstr();
     let result = unsafe {
         binaryninjacore_sys::BNSetEnterpriseServerUrl(
             url.as_ref().as_ptr() as *const std::os::raw::c_char
@@ -118,28 +134,34 @@ pub fn set_server_url<S: BnStrCompatible>(url: S) -> Result<(), ()> {
     }
 }
 
-pub fn server_name() -> BnString {
-    unsafe { BnString::from_raw(binaryninjacore_sys::BNGetEnterpriseServerName()) }
+pub fn server_name() -> String {
+    unsafe { BnString::into_string(binaryninjacore_sys::BNGetEnterpriseServerName()) }
 }
 
-pub fn server_id() -> BnString {
-    unsafe { BnString::from_raw(binaryninjacore_sys::BNGetEnterpriseServerId()) }
+pub fn server_id() -> String {
+    unsafe { BnString::into_string(binaryninjacore_sys::BNGetEnterpriseServerId()) }
 }
 
 pub fn server_version() -> u64 {
     unsafe { binaryninjacore_sys::BNGetEnterpriseServerVersion() }
 }
 
-pub fn server_build_id() -> BnString {
-    unsafe { BnString::from_raw(binaryninjacore_sys::BNGetEnterpriseServerBuildId()) }
+pub fn server_build_id() -> String {
+    unsafe { BnString::into_string(binaryninjacore_sys::BNGetEnterpriseServerBuildId()) }
 }
 
-pub fn server_token() -> BnString {
-    unsafe { BnString::from_raw(binaryninjacore_sys::BNGetEnterpriseServerToken()) }
+pub fn server_token() -> String {
+    unsafe { BnString::into_string(binaryninjacore_sys::BNGetEnterpriseServerToken()) }
 }
 
-pub fn license_duration() -> Duration {
-    Duration::from_secs(unsafe { binaryninjacore_sys::BNGetEnterpriseServerLicenseDuration() })
+pub fn license_duration() -> Option<Duration> {
+    let duration =
+        Duration::from_secs(unsafe { binaryninjacore_sys::BNGetEnterpriseServerLicenseDuration() });
+    match duration {
+        // If the core returns 0 there is no license duration.
+        Duration::ZERO => None,
+        _ => Some(duration),
+    }
 }
 
 pub fn license_expiration_time() -> SystemTime {
@@ -161,13 +183,13 @@ pub fn is_server_license_still_activated() -> bool {
     unsafe { binaryninjacore_sys::BNIsEnterpriseServerLicenseStillActivated() }
 }
 
-pub fn authenticate_server_with_credentials<U, P>(username: U, password: P, remember: bool) -> bool
-where
-    U: BnStrCompatible,
-    P: BnStrCompatible,
-{
-    let username = username.into_bytes_with_nul();
-    let password = password.into_bytes_with_nul();
+pub fn authenticate_server_with_credentials(
+    username: &str,
+    password: &str,
+    remember: bool,
+) -> bool {
+    let username = username.to_cstr();
+    let password = password.to_cstr();
     unsafe {
         binaryninjacore_sys::BNAuthenticateEnterpriseServerWithCredentials(
             username.as_ref().as_ptr() as *const std::os::raw::c_char,
@@ -177,8 +199,8 @@ where
     }
 }
 
-pub fn authenticate_server_with_method<S: BnStrCompatible>(method: S, remember: bool) -> bool {
-    let method = method.into_bytes_with_nul();
+pub fn authenticate_server_with_method(method: &str, remember: bool) -> bool {
+    let method = method.to_cstr();
     unsafe {
         binaryninjacore_sys::BNAuthenticateEnterpriseServerWithMethod(
             method.as_ref().as_ptr() as *const std::os::raw::c_char,
@@ -223,8 +245,8 @@ pub fn initialize_server() -> bool {
     unsafe { binaryninjacore_sys::BNInitializeEnterpriseServer() }
 }
 
-pub fn server_last_error() -> BnString {
-    unsafe { BnString::from_raw(binaryninjacore_sys::BNGetEnterpriseServerLastError()) }
+pub fn server_last_error() -> String {
+    unsafe { BnString::into_string(binaryninjacore_sys::BNGetEnterpriseServerLastError()) }
 }
 
 pub fn server_authentication_methods() -> (Array<BnString>, Array<BnString>) {

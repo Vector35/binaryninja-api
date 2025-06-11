@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2024 Vector 35 Inc
+# Copyright (c) 2015-2025 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -560,7 +560,7 @@ class Project:
 		"""
 		return core.BNProjectDeleteFolder(self._handle, folder._handle, None, _wrap_progress(progress_func))
 
-	def create_file_from_path(self, path: AsPath, folder: Optional[ProjectFile], name: str, description: str = "", progress_func: ProgressFuncType = _nop) -> ProjectFile:
+	def create_file_from_path(self, path: AsPath, folder: Optional[ProjectFolder], name: str, description: str = "", progress_func: ProgressFuncType = _nop) -> ProjectFile:
 		"""
 		Create a file in the project from a path on disk
 
@@ -586,7 +586,7 @@ class Project:
 
 		return ProjectFile(handle=file_handle)
 
-	def create_file(self, contents: bytes, folder: Optional[ProjectFile], name: str, description: str = "", progress_func: ProgressFuncType = _nop) -> ProjectFile:
+	def create_file(self, contents: bytes, folder: Optional[ProjectFolder], name: str, description: str = "", progress_func: ProgressFuncType = _nop) -> ProjectFile:
 		"""
 		Create a file in the project
 

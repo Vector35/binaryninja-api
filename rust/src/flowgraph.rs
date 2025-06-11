@@ -1,4 +1,4 @@
-// Copyright 2021-2024 Vector 35 Inc.
+// Copyright 2021-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,17 +14,23 @@
 
 //! Interfaces for creating and displaying pretty CFGs in Binary Ninja.
 
-use crate::architecture::CoreArchitecture;
-use crate::disassembly::DisassemblyTextLine;
-use crate::rc::*;
 use binaryninjacore_sys::*;
 
-use crate::basic_block::{BasicBlock, BlockContext};
-use crate::function::HighlightColor;
 use crate::high_level_il::HighLevelILFunction;
-use crate::low_level_il::RegularLowLevelILFunction;
+use crate::low_level_il::LowLevelILRegularFunction;
 use crate::medium_level_il::MediumLevelILFunction;
+use crate::rc::*;
 use crate::render_layer::CoreRenderLayer;
+
+pub mod edge;
+pub mod node;
+
+use crate::binary_view::BinaryView;
+use crate::function::Function;
+use crate::string::IntoCStr;
+pub use edge::EdgeStyle;
+pub use edge::FlowGraphEdge;
+pub use node::FlowGraphNode;
 
 pub type BranchType = BNBranchType;
 pub type EdgePenStyle = BNEdgePenStyle;
@@ -49,44 +55,101 @@ impl FlowGraph {
         unsafe { FlowGraph::ref_from_raw(BNCreateFlowGraph()) }
     }
 
+    pub fn has_updates(&self) -> bool {
+        let query_mode = unsafe { BNFlowGraphUpdateQueryMode(self.handle) };
+        match query_mode {
+            true => unsafe { BNFlowGraphHasUpdates(self.handle) },
+            false => false,
+        }
+    }
+
+    pub fn update(&self) -> Option<Ref<Self>> {
+        let new_graph = unsafe { BNUpdateFlowGraph(self.handle) };
+        if new_graph.is_null() {
+            return None;
+        }
+        Some(unsafe { FlowGraph::ref_from_raw(new_graph) })
+    }
+
+    pub fn show(&self, title: &str) {
+        let raw_title = title.to_cstr();
+        match self.view() {
+            None => unsafe {
+                BNShowGraphReport(std::ptr::null_mut(), raw_title.as_ptr(), self.handle);
+            },
+            Some(view) => unsafe {
+                BNShowGraphReport(view.handle, raw_title.as_ptr(), self.handle);
+            },
+        }
+    }
+
+    /// Whether flow graph layout is complete.
+    pub fn is_layout_complete(&self) -> bool {
+        unsafe { BNIsFlowGraphLayoutComplete(self.handle) }
+    }
+
     pub fn nodes(&self) -> Array<FlowGraphNode> {
         let mut count: usize = 0;
         let nodes_ptr = unsafe { BNGetFlowGraphNodes(self.handle, &mut count as *mut usize) };
         unsafe { Array::new(nodes_ptr, count, ()) }
     }
 
-    pub fn low_level_il(&self) -> Result<Ref<RegularLowLevelILFunction<CoreArchitecture>>, ()> {
+    pub fn function(&self) -> Option<Ref<Function>> {
+        unsafe {
+            let func_ptr = BNGetFunctionForFlowGraph(self.handle);
+            match func_ptr.is_null() {
+                false => Some(Function::ref_from_raw(func_ptr)),
+                true => None,
+            }
+        }
+    }
+
+    pub fn set_function(&self, func: Option<&Function>) {
+        let func_ptr = func.map(|f| f.handle).unwrap_or(std::ptr::null_mut());
+        unsafe { BNSetFunctionForFlowGraph(self.handle, func_ptr) }
+    }
+
+    pub fn view(&self) -> Option<Ref<BinaryView>> {
+        unsafe {
+            let view_ptr = BNGetViewForFlowGraph(self.handle);
+            match view_ptr.is_null() {
+                false => Some(BinaryView::ref_from_raw(view_ptr)),
+                true => None,
+            }
+        }
+    }
+
+    pub fn set_view(&self, view: Option<&BinaryView>) {
+        let view_ptr = view.map(|v| v.handle).unwrap_or(std::ptr::null_mut());
+        unsafe { BNSetViewForFlowGraph(self.handle, view_ptr) }
+    }
+
+    pub fn low_level_il(&self) -> Option<Ref<LowLevelILRegularFunction>> {
         unsafe {
             let llil_ptr = BNGetFlowGraphLowLevelILFunction(self.handle);
             match llil_ptr.is_null() {
-                false => {
-                    let func_ptr = BNGetLowLevelILOwnerFunction(llil_ptr);
-                    let arch_ptr = BNGetFunctionArchitecture(func_ptr);
-                    let arch = CoreArchitecture::from_raw(arch_ptr);
-                    BNFreeFunction(func_ptr);
-                    Ok(RegularLowLevelILFunction::ref_from_raw(arch, llil_ptr))
-                }
-                true => Err(()),
+                false => Some(LowLevelILRegularFunction::ref_from_raw(llil_ptr)),
+                true => None,
             }
         }
     }
 
-    pub fn medium_level_il(&self) -> Result<Ref<MediumLevelILFunction>, ()> {
+    pub fn medium_level_il(&self) -> Option<Ref<MediumLevelILFunction>> {
         unsafe {
             let mlil_ptr = BNGetFlowGraphMediumLevelILFunction(self.handle);
             match mlil_ptr.is_null() {
-                false => Ok(MediumLevelILFunction::ref_from_raw(mlil_ptr)),
-                true => Err(()),
+                false => Some(MediumLevelILFunction::ref_from_raw(mlil_ptr)),
+                true => None,
             }
         }
     }
 
-    pub fn high_level_il(&self, full_ast: bool) -> Result<Ref<HighLevelILFunction>, ()> {
+    pub fn high_level_il(&self, full_ast: bool) -> Option<Ref<HighLevelILFunction>> {
         unsafe {
             let hlil_ptr = BNGetFlowGraphHighLevelILFunction(self.handle);
             match hlil_ptr.is_null() {
-                false => Ok(HighLevelILFunction::ref_from_raw(hlil_ptr, full_ast)),
-                true => Err(()),
+                false => Some(HighLevelILFunction::ref_from_raw(hlil_ptr, full_ast)),
+                true => None,
             }
         }
     }
@@ -106,6 +169,25 @@ impl FlowGraph {
 
     pub fn has_nodes(&self) -> bool {
         unsafe { BNFlowGraphHasNodes(self.handle) }
+    }
+
+    /// Returns the graph size in width, height form.
+    pub fn size(&self) -> (i32, i32) {
+        let width = unsafe { BNGetFlowGraphWidth(self.handle) };
+        let height = unsafe { BNGetFlowGraphHeight(self.handle) };
+        (width, height)
+    }
+
+    /// Returns the graph margins between nodes.
+    pub fn node_margins(&self) -> (i32, i32) {
+        let horizontal = unsafe { BNGetHorizontalFlowGraphNodeMargin(self.handle) };
+        let vertical = unsafe { BNGetVerticalFlowGraphNodeMargin(self.handle) };
+        (horizontal, vertical)
+    }
+
+    /// Sets the graph margins between nodes.
+    pub fn set_node_margins(&self, horizontal: i32, vertical: i32) {
+        unsafe { BNSetFlowGraphNodeMargins(self.handle, horizontal, vertical) };
     }
 
     pub fn append(&self, node: &FlowGraphNode) -> usize {
@@ -167,170 +249,5 @@ impl ToOwned for FlowGraph {
 
     fn to_owned(&self) -> Self::Owned {
         unsafe { RefCountable::inc_ref(self) }
-    }
-}
-
-#[derive(PartialEq, Eq, Hash)]
-pub struct FlowGraphNode {
-    pub(crate) handle: *mut BNFlowGraphNode,
-}
-
-impl FlowGraphNode {
-    pub(crate) unsafe fn from_raw(raw: *mut BNFlowGraphNode) -> Self {
-        Self { handle: raw }
-    }
-
-    pub(crate) unsafe fn ref_from_raw(raw: *mut BNFlowGraphNode) -> Ref<Self> {
-        Ref::new(Self { handle: raw })
-    }
-
-    pub fn new(graph: &FlowGraph) -> Ref<Self> {
-        unsafe { FlowGraphNode::ref_from_raw(BNCreateFlowGraphNode(graph.handle)) }
-    }
-
-    pub fn basic_block<C: BlockContext>(&self, context: C) -> Option<Ref<BasicBlock<C>>> {
-        let block_ptr = unsafe { BNGetFlowGraphBasicBlock(self.handle) };
-        if block_ptr.is_null() {
-            return None;
-        }
-        Some(unsafe { BasicBlock::ref_from_raw(block_ptr, context) })
-    }
-
-    pub fn set_basic_block<C: BlockContext>(&self, block: Option<&BasicBlock<C>>) {
-        match block {
-            Some(block) => unsafe { BNSetFlowGraphBasicBlock(self.handle, block.handle) },
-            None => unsafe { BNSetFlowGraphBasicBlock(self.handle, std::ptr::null_mut()) },
-        }
-    }
-
-    pub fn lines(&self) -> Array<DisassemblyTextLine> {
-        let mut count = 0;
-        let result = unsafe { BNGetFlowGraphNodeLines(self.handle, &mut count) };
-        assert!(!result.is_null());
-        unsafe { Array::new(result, count, ()) }
-    }
-
-    pub fn set_lines(&self, lines: impl IntoIterator<Item = DisassemblyTextLine>) {
-        // NOTE: This will create allocations and increment tag refs, we must call DisassemblyTextLine::free_raw
-        let mut raw_lines: Vec<BNDisassemblyTextLine> = lines
-            .into_iter()
-            .map(DisassemblyTextLine::into_raw)
-            .collect();
-        unsafe {
-            BNSetFlowGraphNodeLines(self.handle, raw_lines.as_mut_ptr(), raw_lines.len());
-            for raw_line in raw_lines {
-                DisassemblyTextLine::free_raw(raw_line);
-            }
-        }
-    }
-
-    /// Returns the graph position of the node in X, Y form.
-    pub fn position(&self) -> (i32, i32) {
-        let pos_x = unsafe { BNGetFlowGraphNodeX(self.handle) };
-        let pos_y = unsafe { BNGetFlowGraphNodeY(self.handle) };
-        (pos_x, pos_y)
-    }
-
-    /// Sets the graph position of the node.
-    pub fn set_position(&self, x: i32, y: i32) {
-        unsafe { BNFlowGraphNodeSetX(self.handle, x) };
-        unsafe { BNFlowGraphNodeSetX(self.handle, y) };
-    }
-
-    pub fn highlight_color(&self) -> HighlightColor {
-        let raw = unsafe { BNGetFlowGraphNodeHighlight(self.handle) };
-        HighlightColor::from(raw)
-    }
-
-    pub fn set_highlight_color(&self, highlight: HighlightColor) {
-        unsafe { BNSetFlowGraphNodeHighlight(self.handle, highlight.into()) };
-    }
-
-    // TODO: Add getters and setters for edges
-
-    pub fn add_outgoing_edge(
-        &self,
-        type_: BranchType,
-        target: &FlowGraphNode,
-        edge_style: EdgeStyle,
-    ) {
-        unsafe {
-            BNAddFlowGraphNodeOutgoingEdge(self.handle, type_, target.handle, edge_style.into())
-        }
-    }
-}
-
-unsafe impl RefCountable for FlowGraphNode {
-    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewFlowGraphNodeReference(handle.handle),
-        })
-    }
-
-    unsafe fn dec_ref(handle: &Self) {
-        BNFreeFlowGraphNode(handle.handle);
-    }
-}
-
-impl ToOwned for FlowGraphNode {
-    type Owned = Ref<Self>;
-
-    fn to_owned(&self) -> Self::Owned {
-        unsafe { RefCountable::inc_ref(self) }
-    }
-}
-
-impl CoreArrayProvider for FlowGraphNode {
-    type Raw = *mut BNFlowGraphNode;
-    type Context = ();
-    type Wrapped<'a> = Guard<'a, FlowGraphNode>;
-}
-
-unsafe impl CoreArrayProviderInner for FlowGraphNode {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, _: &Self::Context) {
-        BNFreeFlowGraphNodeList(raw, count);
-    }
-
-    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Self::from_raw(*raw), context)
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub struct EdgeStyle {
-    style: EdgePenStyle,
-    width: usize,
-    color: ThemeColor,
-}
-
-impl EdgeStyle {
-    pub fn new(style: EdgePenStyle, width: usize, color: ThemeColor) -> Self {
-        Self {
-            style,
-            width,
-            color,
-        }
-    }
-}
-
-impl Default for EdgeStyle {
-    fn default() -> Self {
-        Self::new(EdgePenStyle::SolidLine, 0, ThemeColor::AddressColor)
-    }
-}
-
-impl From<BNEdgeStyle> for EdgeStyle {
-    fn from(style: BNEdgeStyle) -> Self {
-        Self::new(style.style, style.width, style.color)
-    }
-}
-
-impl From<EdgeStyle> for BNEdgeStyle {
-    fn from(style: EdgeStyle) -> Self {
-        Self {
-            style: style.style,
-            width: style.width,
-            color: style.color,
-        }
     }
 }

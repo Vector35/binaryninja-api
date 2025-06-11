@@ -17,7 +17,8 @@ members = [
     "plugins/pdb-ng",
     "plugins/pdb-ng/demo",
     "plugins/warp", 
-    "plugins/svd"
+    "plugins/svd",
+    "plugins/svd/demo"
 ]
 
 [workspace.dependencies]

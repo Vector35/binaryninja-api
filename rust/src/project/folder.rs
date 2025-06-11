@@ -1,15 +1,16 @@
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::Project;
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{BnString, IntoCStr};
 use binaryninjacore_sys::{
     BNFreeProjectFolder, BNFreeProjectFolderList, BNNewProjectFolderReference, BNProjectFolder,
     BNProjectFolderExport, BNProjectFolderGetDescription, BNProjectFolderGetId,
     BNProjectFolderGetName, BNProjectFolderGetParent, BNProjectFolderGetProject,
     BNProjectFolderSetDescription, BNProjectFolderSetName, BNProjectFolderSetParent,
 };
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 use std::fmt::Debug;
+use std::path::Path;
 use std::ptr::{null_mut, NonNull};
 
 #[repr(transparent)]
@@ -36,40 +37,30 @@ impl ProjectFolder {
     }
 
     /// Get the unique id of this folder
-    pub fn id(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectFolderGetId(self.handle.as_ptr())) }
+    pub fn id(&self) -> String {
+        unsafe { BnString::into_string(BNProjectFolderGetId(self.handle.as_ptr())) }
     }
 
     /// Get the name of this folder
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectFolderGetName(self.handle.as_ptr())) }
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNProjectFolderGetName(self.handle.as_ptr())) }
     }
 
     /// Set the name of this folder
-    pub fn set_name<S: BnStrCompatible>(&self, value: S) -> bool {
-        let value_raw = value.into_bytes_with_nul();
-        unsafe {
-            BNProjectFolderSetName(
-                self.handle.as_ptr(),
-                value_raw.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn set_name(&self, value: &str) -> bool {
+        let value_raw = value.to_cstr();
+        unsafe { BNProjectFolderSetName(self.handle.as_ptr(), value_raw.as_ptr()) }
     }
 
     /// Get the description of this folder
-    pub fn description(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectFolderGetDescription(self.handle.as_ptr())) }
+    pub fn description(&self) -> String {
+        unsafe { BnString::into_string(BNProjectFolderGetDescription(self.handle.as_ptr())) }
     }
 
     /// Set the description of this folder
-    pub fn set_description<S: BnStrCompatible>(&self, value: S) -> bool {
-        let value_raw = value.into_bytes_with_nul();
-        unsafe {
-            BNProjectFolderSetDescription(
-                self.handle.as_ptr(),
-                value_raw.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn set_description(&self, value: &str) -> bool {
+        let value_raw = value.to_cstr();
+        unsafe { BNProjectFolderSetDescription(self.handle.as_ptr(), value_raw.as_ptr()) }
     }
 
     /// Get the folder that contains this folder
@@ -84,36 +75,30 @@ impl ProjectFolder {
         unsafe { BNProjectFolderSetParent(self.handle.as_ptr(), folder_handle) }
     }
 
-    // TODO: Take Path?
     /// Recursively export this folder to disk, returns `true' if the export succeeded
     ///
     /// * `dest` - Destination path for the exported contents
-    pub fn export<S: BnStrCompatible>(&self, dest: S) -> bool {
+    pub fn export(&self, dest: &Path) -> bool {
         self.export_with_progress(dest, NoProgressCallback)
     }
 
-    // TODO: Take Path?
     /// Recursively export this folder to disk, returns `true' if the export succeeded
     ///
     /// * `dest` - Destination path for the exported contents
     /// * `progress` - [`ProgressCallback`] that will be called as contents are exporting
-    pub fn export_with_progress<S, P>(&self, dest: S, mut progress: P) -> bool
+    pub fn export_with_progress<P>(&self, dest: &Path, mut progress: P) -> bool
     where
-        S: BnStrCompatible,
         P: ProgressCallback,
     {
-        let dest_raw = dest.into_bytes_with_nul();
-
-        let success = unsafe {
+        let dest_raw = dest.to_cstr();
+        unsafe {
             BNProjectFolderExport(
                 self.handle.as_ptr(),
-                dest_raw.as_ref().as_ptr() as *const c_char,
+                dest_raw.as_ptr(),
                 &mut progress as *mut P as *mut c_void,
                 Some(P::cb_progress_callback),
             )
-        };
-
-        success
+        }
     }
 }
 

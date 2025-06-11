@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2024 Vector 35 Inc
+// Copyright (c) 2015-2025 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -140,7 +140,7 @@ Ref<Function> FirmwareNinjaRelationship::GetPrimaryFunction() const
 	if (!bnFunction)
 		return nullptr;
 
-	return new Function(BNNewFunctionReference(bnFunction));
+	return new Function(bnFunction);
 }
 
 
@@ -245,7 +245,7 @@ Ref<Function> FirmwareNinjaRelationship::GetSecondaryFunction() const
 	if (!bnFunction)
 		return nullptr;
 
-	return new Function(BNNewFunctionReference(bnFunction));
+	return new Function(bnFunction);
 }
 
 
@@ -336,7 +336,7 @@ bool FirmwareNinjaReferenceNode::GetFunction(Ref<Function>& function)
 	if (!bnFunction)
 		return false;
 
-	function = new Function(BNNewFunctionReference(bnFunction));
+	function = new Function(bnFunction);
 	return true;
 }
 

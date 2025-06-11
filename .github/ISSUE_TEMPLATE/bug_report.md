@@ -9,6 +9,7 @@ assignees: ''
 
 **Version and Platform (required):**
 - Binary Ninja Version: [e.g. 4.0.4000-dev] (if version is stable, please also test the latest development build via the "Update Channel" option)
+- Edition: Non-Commercial / Commercial / Ultimate
 - OS: [e.g. Ubuntu Linux]
 - OS Version: [e.g. 22.04]
 - CPU Architecture: [e.g. x64 or M1]
@@ -32,7 +33,7 @@ If applicable, please add screenshots/video recording here to help explain your 
 **Binary:**
 If applicable, please provide us with the binary to help us work with the issue faster. Here are a few options:
 
-1. Upload it privately using the [Binary Ninja Portal file uploader](https://portal.binary.ninja/upload) and add the provided reference phrase here
+1. Upload it privately using the [Binary Ninja Portal file uploader](https://portal.binary.ninja/upload) and add the provided reference phrase here.  If you are uploading malware, please put it in a password-protected ZIP archive and include the password here as well.
 2. Directly attach it to this issue in a ZIP archive
 3. Share a publicly accessible link to it (For malware samples, we do not have access to VirusTotal; [Malshare](https://malshare.com/) is an option)
 4. Email it to binaryninja at vector35.com, or join our [Slack](https://slack.binary.ninja/) and share it with us in private

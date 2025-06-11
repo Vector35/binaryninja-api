@@ -1,6 +1,6 @@
-use crate::low_level_il::RegularLowLevelILFunction;
+use crate::low_level_il::LowLevelILRegularFunction;
 use crate::rc::Guard;
-use crate::string::BnStrCompatible;
+use crate::string::IntoCStr;
 use crate::{
     architecture::CoreArchitecture,
     binary_view::BinaryView,
@@ -83,7 +83,7 @@ impl From<RelocationOperand> for usize {
 }
 
 // TODO: How to handle related relocation linked lists?
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RelocationInfo {
     pub type_: RelocationType,
     pub pc_relative: bool,
@@ -265,7 +265,7 @@ pub trait RelocationHandler: 'static + Sized + AsRef<CoreRelocationHandler> {
         _data: &[u8],
         _addr: u64,
         // TODO: Are we sure this is not a liftedilfunction?
-        _il: &RegularLowLevelILFunction<CoreArchitecture>,
+        _il: &LowLevelILRegularFunction,
         _reloc: &Relocation,
     ) -> RelocationOperand {
         RelocationOperand::AutocoerceExternPtr
@@ -363,7 +363,7 @@ impl RelocationHandler for CoreRelocationHandler {
         &self,
         data: &[u8],
         addr: u64,
-        il: &RegularLowLevelILFunction<CoreArchitecture>,
+        il: &LowLevelILRegularFunction,
         reloc: &Relocation,
     ) -> RelocationOperand {
         unsafe {
@@ -402,9 +402,8 @@ unsafe impl RefCountable for CoreRelocationHandler {
     }
 }
 
-pub(crate) fn register_relocation_handler<S, R, F>(arch: &CoreArchitecture, name: S, func: F)
+pub(crate) fn register_relocation_handler<R, F>(arch: &CoreArchitecture, name: &str, func: F)
 where
-    S: BnStrCompatible,
     R: 'static + RelocationHandler<Handle = CustomRelocationHandlerHandle<R>> + Send + Sync + Sized,
     F: FnOnce(CustomRelocationHandlerHandle<R>, CoreRelocationHandler) -> R,
 {
@@ -496,14 +495,14 @@ where
             return RelocationOperand::Invalid.into();
         }
         let arch = unsafe { CoreArchitecture::from_raw(arch) };
-        let il = unsafe { RegularLowLevelILFunction::from_raw(arch, il) };
+        let il = unsafe { LowLevelILRegularFunction::from_raw_with_arch(il, Some(arch)) };
 
         custom_handler
             .get_operand_for_external_relocation(data, addr, &il, &reloc)
             .into()
     }
 
-    let name = name.into_bytes_with_nul();
+    let name = name.to_cstr();
 
     let raw = Box::leak(Box::new(
         MaybeUninit::<RelocationHandlerBuilder<_>>::zeroed(),

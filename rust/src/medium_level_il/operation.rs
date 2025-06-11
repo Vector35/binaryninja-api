@@ -1,4 +1,6 @@
-use super::{MediumLevelILLiftedInstruction, MediumLevelInstructionIndex};
+use super::{
+    MediumLevelExpressionIndex, MediumLevelILLiftedInstruction, MediumLevelInstructionIndex,
+};
 use crate::architecture::CoreIntrinsic;
 use crate::variable::{ConstantData, SSAVariable, Variable};
 use std::collections::BTreeMap;
@@ -6,7 +8,7 @@ use std::collections::BTreeMap;
 // IF
 #[derive(Debug, Copy, Clone)]
 pub struct MediumLevelILOperationIf {
-    pub condition: usize,
+    pub condition: MediumLevelExpressionIndex,
     pub dest_true: MediumLevelInstructionIndex,
     pub dest_false: MediumLevelInstructionIndex,
 }
@@ -51,7 +53,7 @@ pub struct LiftedConstData {
 // JUMP, RET_HINT
 #[derive(Debug, Copy, Clone)]
 pub struct Jump {
-    pub dest: usize,
+    pub dest: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedJump {
@@ -61,10 +63,10 @@ pub struct LiftedJump {
 // STORE_SSA
 #[derive(Debug, Copy, Clone)]
 pub struct StoreSsa {
-    pub dest: usize,
+    pub dest: MediumLevelExpressionIndex,
     pub dest_memory: u64,
     pub src_memory: u64,
-    pub src: usize,
+    pub src: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedStoreSsa {
@@ -77,11 +79,11 @@ pub struct LiftedStoreSsa {
 // STORE_STRUCT_SSA
 #[derive(Debug, Copy, Clone)]
 pub struct StoreStructSsa {
-    pub dest: usize,
+    pub dest: MediumLevelExpressionIndex,
     pub offset: u64,
     pub dest_memory: u64,
     pub src_memory: u64,
-    pub src: usize,
+    pub src: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedStoreStructSsa {
@@ -95,9 +97,9 @@ pub struct LiftedStoreStructSsa {
 // STORE_STRUCT
 #[derive(Debug, Copy, Clone)]
 pub struct StoreStruct {
-    pub dest: usize,
+    pub dest: MediumLevelExpressionIndex,
     pub offset: u64,
-    pub src: usize,
+    pub src: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedStoreStruct {
@@ -109,8 +111,8 @@ pub struct LiftedStoreStruct {
 // STORE
 #[derive(Debug, Copy, Clone)]
 pub struct Store {
-    pub dest: usize,
-    pub src: usize,
+    pub dest: MediumLevelExpressionIndex,
+    pub src: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedStore {
@@ -121,7 +123,7 @@ pub struct LiftedStore {
 // JUMP_TO
 #[derive(Debug, Copy, Clone)]
 pub struct JumpTo {
-    pub dest: usize,
+    pub dest: MediumLevelExpressionIndex,
     pub first_operand: usize,
     pub num_operands: usize,
 }
@@ -148,7 +150,7 @@ pub struct FreeVarSlot {
 pub struct SetVarField {
     pub dest: Variable,
     pub offset: u64,
-    pub src: usize,
+    pub src: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSetVarField {
@@ -161,8 +163,7 @@ pub struct LiftedSetVarField {
 #[derive(Debug, Copy, Clone)]
 pub struct SetVar {
     pub dest: Variable,
-    // TODO: Expression?
-    pub src: usize,
+    pub src: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSetVar {
@@ -183,7 +184,7 @@ pub struct SetVarSsaField {
     pub dest: SSAVariable,
     pub prev: SSAVariable,
     pub offset: u64,
-    pub src: usize,
+    pub src: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSetVarSsaField {
@@ -198,7 +199,7 @@ pub struct LiftedSetVarSsaField {
 pub struct SetVarAliased {
     pub dest: SSAVariable,
     pub prev: SSAVariable,
-    pub src: usize,
+    pub src: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSetVarAliased {
@@ -211,7 +212,7 @@ pub struct LiftedSetVarAliased {
 #[derive(Debug, Copy, Clone)]
 pub struct SetVarSsa {
     pub dest: SSAVariable,
-    pub src: usize,
+    pub src: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSetVarSsa {
@@ -257,7 +258,7 @@ pub struct VarSplit {
 pub struct SetVarSplit {
     pub high: Variable,
     pub low: Variable,
-    pub src: usize,
+    pub src: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSetVarSplit {
@@ -278,7 +279,7 @@ pub struct VarSplitSsa {
 pub struct SetVarSplitSsa {
     pub high: SSAVariable,
     pub low: SSAVariable,
-    pub src: usize,
+    pub src: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSetVarSplitSsa {
@@ -290,8 +291,8 @@ pub struct LiftedSetVarSplitSsa {
 // ADD, SUB, AND, OR, XOR, LSL, LSR, ASR, ROL, ROR, MUL, MULU_DP, MULS_DP, DIVU, DIVU_DP, DIVS, DIVS_DP, MODU, MODU_DP, MODS, MODS_DP, CMP_E, CMP_NE, CMP_SLT, CMP_ULT, CMP_SLE, CMP_ULE, CMP_SGE, CMP_UGE, CMP_SGT, CMP_UGT, TEST_BIT, ADD_OVERFLOW, FCMP_E, FCMP_NE, FCMP_LT, FCMP_LE, FCMP_GE, FCMP_GT, FCMP_O, FCMP_UO, FADD, FSUB, FMUL, FDIV
 #[derive(Debug, Copy, Clone)]
 pub struct BinaryOp {
-    pub left: usize,
-    pub right: usize,
+    pub left: MediumLevelExpressionIndex,
+    pub right: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedBinaryOp {
@@ -302,9 +303,9 @@ pub struct LiftedBinaryOp {
 // ADC, SBB, RLC, RRC
 #[derive(Debug, Copy, Clone)]
 pub struct BinaryOpCarry {
-    pub left: usize,
-    pub right: usize,
-    pub carry: usize,
+    pub left: MediumLevelExpressionIndex,
+    pub right: MediumLevelExpressionIndex,
+    pub carry: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedBinaryOpCarry {
@@ -318,7 +319,7 @@ pub struct LiftedBinaryOpCarry {
 pub struct Call {
     pub first_output: usize,
     pub num_outputs: usize,
-    pub dest: usize,
+    pub dest: MediumLevelExpressionIndex,
     pub first_param: usize,
     pub num_params: usize,
 }
@@ -326,6 +327,54 @@ pub struct Call {
 pub struct LiftedCall {
     pub output: Vec<Variable>,
     pub dest: Box<MediumLevelILLiftedInstruction>,
+    pub params: Vec<MediumLevelILLiftedInstruction>,
+}
+
+// CALL_OUTPUT
+#[derive(Debug, Copy, Clone)]
+pub struct CallOutput {
+    pub first_output: usize,
+    pub num_outputs: usize,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedCallOutput {
+    pub output: Vec<Variable>,
+}
+
+// CALL_PARAM_SSA
+#[derive(Debug, Copy, Clone)]
+pub struct CallParam {
+    pub first_param: usize,
+    pub num_params: usize,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedCallParam {
+    pub params: Vec<MediumLevelILLiftedInstruction>,
+}
+
+// CALL_OUTPUT_SSA
+#[derive(Debug, Copy, Clone)]
+pub struct CallOutputSsa {
+    pub dest_memory: u64,
+    pub first_output: usize,
+    pub num_outputs: usize,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedCallOutputSsa {
+    pub dest_memory: u64,
+    pub output: Vec<SSAVariable>,
+}
+
+// CALL_PARAM_SSA
+#[derive(Debug, Copy, Clone)]
+pub struct CallParamSsa {
+    pub src_memory: u64,
+    pub first_param: usize,
+    pub num_params: usize,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedCallParamSsa {
+    pub src_memory: u64,
     pub params: Vec<MediumLevelILLiftedInstruction>,
 }
 
@@ -375,11 +424,41 @@ pub struct LiftedIntrinsicSsa {
     pub params: Vec<MediumLevelILLiftedInstruction>,
 }
 
+// MEMORY_INTRINSIC_SSA
+#[derive(Debug, Copy, Clone)]
+pub struct MemoryIntrinsicSsa {
+    pub output: MediumLevelExpressionIndex,
+    pub intrinsic: u32,
+    pub first_param: usize,
+    pub num_params: usize,
+    pub src_memory: u64,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedMemoryIntrinsicSsa {
+    pub output: Box<MediumLevelILLiftedInstruction>,
+    pub intrinsic: CoreIntrinsic,
+    pub params: Vec<MediumLevelILLiftedInstruction>,
+    pub src_memory: u64,
+}
+
+// MEMORY_INTRINSIC_OUTPUT_SSA
+#[derive(Debug, Copy, Clone)]
+pub struct MemoryIntrinsicOutputSsa {
+    pub dest_memory: u64,
+    pub first_output: usize,
+    pub num_outputs: usize,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedMemoryIntrinsicOutputSsa {
+    pub dest_memory: u64,
+    pub output: Vec<SSAVariable>,
+}
+
 // CALL_SSA, TAILCALL_SSA
 #[derive(Debug, Copy, Clone)]
 pub struct CallSsa {
-    pub output: usize,
-    pub dest: usize,
+    pub output: MediumLevelExpressionIndex,
+    pub dest: MediumLevelExpressionIndex,
     pub first_param: usize,
     pub num_params: usize,
     pub src_memory: u64,
@@ -395,10 +474,10 @@ pub struct LiftedCallSsa {
 // CALL_UNTYPED_SSA, TAILCALL_UNTYPED_SSA
 #[derive(Debug, Copy, Clone)]
 pub struct CallUntypedSsa {
-    pub output: usize,
-    pub dest: usize,
-    pub params: usize,
-    pub stack: usize,
+    pub output: MediumLevelExpressionIndex,
+    pub dest: MediumLevelExpressionIndex,
+    pub params: MediumLevelExpressionIndex,
+    pub stack: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedCallUntypedSsa {
@@ -411,7 +490,7 @@ pub struct LiftedCallUntypedSsa {
 // SYSCALL_SSA
 #[derive(Debug, Copy, Clone)]
 pub struct SyscallSsa {
-    pub output: usize,
+    pub output: MediumLevelExpressionIndex,
     pub first_param: usize,
     pub num_params: usize,
     pub src_memory: u64,
@@ -426,9 +505,9 @@ pub struct LiftedSyscallSsa {
 // SYSCALL_UNTYPED_SSA
 #[derive(Debug, Copy, Clone)]
 pub struct SyscallUntypedSsa {
-    pub output: usize,
-    pub params: usize,
-    pub stack: usize,
+    pub output: MediumLevelExpressionIndex,
+    pub params: MediumLevelExpressionIndex,
+    pub stack: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSyscallUntypedSsa {
@@ -440,10 +519,10 @@ pub struct LiftedSyscallUntypedSsa {
 // CALL_UNTYPED, TAILCALL_UNTYPED
 #[derive(Debug, Copy, Clone)]
 pub struct CallUntyped {
-    pub output: usize,
-    pub dest: usize,
-    pub params: usize,
-    pub stack: usize,
+    pub output: MediumLevelExpressionIndex,
+    pub dest: MediumLevelExpressionIndex,
+    pub params: MediumLevelExpressionIndex,
+    pub stack: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedCallUntyped {
@@ -456,9 +535,9 @@ pub struct LiftedCallUntyped {
 // SYSCALL_UNTYPED
 #[derive(Debug, Copy, Clone)]
 pub struct SyscallUntyped {
-    pub output: usize,
-    pub params: usize,
-    pub stack: usize,
+    pub output: MediumLevelExpressionIndex,
+    pub params: MediumLevelExpressionIndex,
+    pub stack: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSyscallUntyped {
@@ -470,7 +549,7 @@ pub struct LiftedSyscallUntyped {
 // NEG, NOT, SX, ZX, LOW_PART, BOOL_TO_INT, UNIMPL_MEM, FSQRT, FNEG, FABS, FLOAT_TO_INT, INT_TO_FLOAT, FLOAT_CONV, ROUND_TO_INT, FLOOR, CEIL, FTRUNC, LOAD
 #[derive(Debug, Copy, Clone)]
 pub struct UnaryOp {
-    pub src: usize,
+    pub src: MediumLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedUnaryOp {
@@ -480,7 +559,7 @@ pub struct LiftedUnaryOp {
 // LOAD_STRUCT
 #[derive(Debug, Copy, Clone)]
 pub struct LoadStruct {
-    pub src: usize,
+    pub src: MediumLevelExpressionIndex,
     pub offset: u64,
 }
 #[derive(Clone, Debug, PartialEq)]
@@ -492,7 +571,7 @@ pub struct LiftedLoadStruct {
 // LOAD_STRUCT_SSA
 #[derive(Debug, Copy, Clone)]
 pub struct LoadStructSsa {
-    pub src: usize,
+    pub src: MediumLevelExpressionIndex,
     pub offset: u64,
     pub src_memory: u64,
 }
@@ -506,7 +585,7 @@ pub struct LiftedLoadStructSsa {
 // LOAD_SSA
 #[derive(Debug, Copy, Clone)]
 pub struct LoadSsa {
-    pub src: usize,
+    pub src: MediumLevelExpressionIndex,
     pub src_memory: u64,
 }
 #[derive(Clone, Debug, PartialEq)]

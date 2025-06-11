@@ -117,17 +117,25 @@ class XrefItem
 	int row() const;
 	bool operator==(const XrefItem& other) const;
 	bool operator!=(const XrefItem& other) const;
-	size_t operator()(const XrefItem& item) const
+};
+
+namespace std
+{
+	template<> struct hash<XrefItem>
 	{
-		size_t hash = std::hash<uint64_t>()(item.addr());
-		hash ^= std::hash<int>()(item.type()) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-		hash ^= std::hash<int>()(item.direction()) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-		hash ^= std::hash<int>()(item.kind()) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-		hash ^= std::hash<size_t>()(item.instrId()) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-		hash ^= std::hash<uint64_t>()(item.func() ? item.func()->GetStart() : 0) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-		hash ^= std::hash<int>()(item.ilType()) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-		return hash;
-	}
+		typedef XrefItem argument_type;
+		size_t operator()(argument_type const& item) const
+		{
+			size_t hash = std::hash<uint64_t>()(item.addr());
+			hash ^= std::hash<int>()(item.type()) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+			hash ^= std::hash<int>()(item.direction()) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+			hash ^= std::hash<int>()(item.kind()) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+			hash ^= std::hash<size_t>()(item.instrId()) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+			hash ^= std::hash<uint64_t>()(item.func() ? item.func()->GetStart() : 0) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+			hash ^= std::hash<int>()(item.ilType()) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+			return hash;
+		}
+	};
 };
 
 /*!
@@ -636,6 +644,7 @@ class BINARYNINJAUIAPI CrossReferenceWidget : public SidebarWidget, public UICon
 	bool m_navToNextOrPrevStarted = false;
 	bool m_pinned;
 	bool m_uiMaxItemsExceeded = false;
+	bool m_hasInitialSelection = false;
 
 	QWidget* m_header = nullptr;
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2024 Vector 35 Inc
+# Copyright (c) 2015-2025 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -59,7 +59,9 @@ class LinearDisassemblyLine:
 			if obj.identifier.name == "HLIL Function Body":
 				il_func = function.hlil
 			elif obj.identifier.name == "HLIL SSA Function Body":
-				il_func = function.hlil.ssa_form
+				func_hlil = function.hlil
+				if func_hlil is not None:
+					il_func = func_hlil.ssa_form
 			elif obj.identifier.name == "Language Representation Function Body":
 				il_func = function.hlil
 

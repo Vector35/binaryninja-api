@@ -1,4 +1,4 @@
-// Copyright 2016-2024 Vector 35 Inc.
+// Copyright 2016-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -2180,7 +2180,10 @@ TypeBuilder DemangleGNU3::DemangleSymbol(QualifiedName& varName)
 			else if (ext == ".eh_frame") ext = "exception handler frame";
 			else if (ext == ".eh_frame_hdr") ext = "exception handler frame header";
 			else if (ext == ".debug_frame") ext = "debug frame";
-			varName.back() += ext;
+
+			// On the off chance some invalid mangled string is passed in.
+			if (varName.size() > 0)
+				varName.back() += ext;
 			break;
 		}
 

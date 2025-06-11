@@ -49,7 +49,7 @@ fn test_add_delete_type() {
         .type_id("mytype")
         .expect("mytype not found");
     assert!(
-        view_type_container.delete_type(my_type_id),
+        view_type_container.delete_type(&my_type_id),
         "Type was deleted!"
     );
     // There should be no type ids if the type was actually deleted

@@ -847,18 +847,15 @@ public:
 				break;
 			case MEM_IMM:
 				result.emplace_back(BeginMemoryOperandToken, "");
-				if (imm != 0)
-				{
-					if (imm < -9)
-						snprintf(operand, sizeof(operand), "-%#x", -imm);
-					else if (imm < 0)
-						snprintf(operand, sizeof(operand), "-%d", -imm);
-					else if (imm < 10)
-						snprintf(operand, sizeof(operand), "%d", imm);
-					else
-						snprintf(operand, sizeof(operand), "%#x", imm);
-					result.emplace_back(IntegerToken, operand, imm);
-				}
+				if (imm < -9)
+					snprintf(operand, sizeof(operand), "-%#x", -imm);
+				else if (imm < 0)
+					snprintf(operand, sizeof(operand), "-%d", -imm);
+				else if (imm < 10)
+					snprintf(operand, sizeof(operand), "%d", imm);
+				else
+					snprintf(operand, sizeof(operand), "%#x", imm);
+				result.emplace_back(IntegerToken, operand, imm);
 				if (instr.operands[i].reg == REG_ZERO)
 					break;
 				result.emplace_back(BraceToken, "(");
@@ -2578,6 +2575,11 @@ public:
 	{
 		return false;
 	}
+
+	virtual bool IsStackReservedForArgumentRegisters() override
+	{
+		return true;
+	}
 };
 
 class MipsLinuxRtlResolveCallingConvention: public CallingConvention
@@ -3193,6 +3195,8 @@ public:
 			case R_MIPS_LO16:
 			case R_MIPS_CALL16:
 			case R_MIPS_GOT16:
+			case R_MIPS_HIGHER:
+			case R_MIPS_HIGHEST:
 				result = BN_NOCOERCE_EXTERN_PTR;
 				break;
 			default:

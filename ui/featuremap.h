@@ -95,9 +95,6 @@ protected:
 	virtual void paintEvent(QPaintEvent* event) override;
 	void scrollTo(int x, int y, bool addHistoryEntry = false);
 
-  Q_SIGNALS:
-	void notifyThemeUpdated();
-
   private Q_SLOTS:
 	void renderAnalysisData();
 	void updateThemeInternal();

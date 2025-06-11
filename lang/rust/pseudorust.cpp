@@ -258,9 +258,15 @@ void PseudoRustFunction::AppendComparison(const string& comparison, const HighLe
 	const auto leftExpr = instr.GetLeftExpr();
 	const auto rightExpr = instr.GetRightExpr();
 
-	GetExprText(leftExpr, emitter, settings, precedence, InnerExpression, signedHint);
+	if (leftExpr.operation == HLIL_SPLIT)
+		AppendDefaultSplitExpr(leftExpr, emitter, settings, precedence);
+	else
+		GetExprText(leftExpr, emitter, settings, precedence, InnerExpression, signedHint);
 	emitter.Append(OperationToken, comparison);
-	GetExprText(rightExpr, emitter, settings, precedence, InnerExpression, signedHint);
+	if (rightExpr.operation == HLIL_SPLIT)
+		AppendDefaultSplitExpr(rightExpr, emitter, settings, precedence);
+	else
+		GetExprText(rightExpr, emitter, settings, precedence, InnerExpression, signedHint);
 }
 
 
@@ -548,6 +554,25 @@ void PseudoRustFunction::AppendFieldTextTokens(const HighLevelILInstruction& var
 
 		default: break;
 	}
+}
+
+
+void PseudoRustFunction::AppendDefaultSplitExpr(const BinaryNinja::HighLevelILInstruction& instr,
+	BinaryNinja::HighLevelILTokenEmitter& tokens, DisassemblySettings* settings, BNOperatorPrecedence precedence)
+{
+	const auto high = instr.GetHighExpr<HLIL_SPLIT>();
+	const auto low = instr.GetLowExpr<HLIL_SPLIT>();
+	if (precedence == EqualityOperatorPrecedence)
+		tokens.AppendOpenParen();
+	tokens.AppendOpenParen();
+	GetExprText(high, tokens, settings, precedence);
+	tokens.Append(OperationToken, " << ");
+	tokens.Append(IntegerToken, std::to_string(low.size * 8));
+	tokens.AppendCloseParen();
+	tokens.Append(OperationToken, " | ");
+	GetExprText(low, tokens, settings, precedence);
+	if (precedence == EqualityOperatorPrecedence)
+		tokens.AppendCloseParen();
 }
 
 
@@ -1371,9 +1396,9 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 			std::optional<string> assignUpdateOperator;
 			std::optional<HighLevelILInstruction> assignUpdateSource;
 			bool assignUpdateNegate = false;
-			const auto isSplit = destExpr.operation == HLIL_SPLIT;
+			const auto destIsSplit = destExpr.operation == HLIL_SPLIT;
 			std::optional<bool> assignSignHint;
-			if (isSplit)
+			if (destIsSplit)
 			{
 				const auto high = destExpr.GetHighExpr<HLIL_SPLIT>();
 				const auto low = destExpr.GetLowExpr<HLIL_SPLIT>();
@@ -1388,6 +1413,14 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 				tokens.AppendSemicolon();
 				tokens.NewLine();
 				GetExprText(low, tokens, settings, precedence);
+			}
+			else if (srcExpr.operation == HLIL_SPLIT)
+			{
+				GetExprText(destExpr, tokens, settings, precedence);
+				tokens.Append(OperationToken, " = ");
+				AppendDefaultSplitExpr(srcExpr, tokens, settings, precedence);
+				tokens.AppendSemicolon();
+				return;
 			}
 			else
 			{
@@ -1515,7 +1548,7 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 				appearsDead = false;
 			}
 
-			if (isSplit)
+			if (destIsSplit)
 			{
 //				const auto high = destExpr.GetHighExpr<HLIL_SPLIT>();
 				const auto low = destExpr.GetLowExpr<HLIL_SPLIT>();
@@ -1545,7 +1578,7 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 				GetExprText(srcExpr, tokens, settings, AssignmentOperatorPrecedence, InnerExpression, assignSignHint);
 			}
 
-			if (isSplit)
+			if (destIsSplit)
 				tokens.AppendCloseParen();
 
 			if (appearsDead)
@@ -1637,7 +1670,38 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 			}
 			else
 			{
-				GetExprText(srcExpr, tokens, settings, MemberAndFunctionOperatorPrecedence);
+				bool castedSrcExpr = false;
+				if ((!settings || settings->IsOptionSet(ShowTypeCasts)) && srcExpr.operation == HLIL_ARRAY_INDEX)
+				{
+					auto arrayIndexExpr = srcExpr.GetSourceExpr<HLIL_ARRAY_INDEX>();
+					if (arrayIndexExpr.operation == HLIL_VAR &&
+						arrayIndexExpr.GetType()->GetChildType()->GetWidth() < instr.size)
+					{
+						tokens.Append(TextToken, "*");
+						tokens.AppendOpenParen();
+						tokens.Append(OperationToken, "&");
+						GetExprText(srcExpr, tokens, settings, MemberAndFunctionOperatorPrecedence);
+						tokens.Append(KeywordToken, " as ");
+						tokens.Append(TextToken, "*");
+						tokens.Append(KeywordToken, "mut ");
+						AppendSizeToken(instr.size, false, tokens);
+						tokens.AppendCloseParen();
+						castedSrcExpr = true;
+					}
+				}
+				else if ((!settings || settings->IsOptionSet(ShowTypeCasts)) && srcExpr.operation == HLIL_VAR)
+				{
+					if (srcExpr.GetType() && srcExpr.GetType()->GetClass() != StructureTypeClass && srcExpr.size > instr.size)
+					{
+						GetExprText(srcExpr, tokens, settings, MemberAndFunctionOperatorPrecedence);
+						tokens.Append(KeywordToken, " as ");
+						AppendSizeToken(instr.size, false, tokens);
+						castedSrcExpr = true;
+					}
+				}
+
+				if (!castedSrcExpr)
+					GetExprText(srcExpr, tokens, settings, MemberAndFunctionOperatorPrecedence);
 			}
 
 			AppendFieldTextTokens(srcExpr, fieldOffset, memberIndex, instr.size, tokens, false);
@@ -1686,7 +1750,7 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 					srcPrecedence = LowUnaryOperatorPrecedence;
 
 				vector<InstructionTextToken> pointerTokens{};
-				if (AppendPointerTextToken(srcExpr, constant, pointerTokens, settings, DereferenceNonDataSymbols, srcPrecedence) == DataSymbolResult)
+				if (AppendPointerTextToken(instr, constant, pointerTokens, settings, DereferenceNonDataSymbols, srcPrecedence) == DataSymbolResult)
 				{
 					if (type && type->GetClass() == PointerTypeClass && instr.size != type->GetChildType()->GetWidth())
 					{

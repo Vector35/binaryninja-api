@@ -98,9 +98,9 @@ Notably, native plugins are built against a specific version of the API, cannot 
 When building native plugins for Binary Ninja, the following toolchains and dependencies are required, based on host OS.
 Older versions may work but are not supported.
 
-- macOS: Xcode 13+
-- Windows: VS 2019 Professional with C/C++ Native Tools package
-- Linux: GCC 9.4+
+- macOS: Xcode 15 or Command Line Tools for macOS 14 (Apple Clang 15.0.0)
+- Windows: VS 2022 Professional with C/C++ Native Tools package, v143 (14.34)
+- Linux: GCC 11.4+
 
 Additionally, Binary Ninja uses C++17 features, and requires a C++17 compatible compiler.
 
@@ -213,7 +213,7 @@ both publishing and using native plugins.
 
 ### UI Plugins
 
-If you want to include UI in your plugin, you can integrate with Binary Ninja's Qt-based UI by linking with Qt and `binaryninjaui`.
+If you want to include a UI in your plugin, you can integrate with Binary Ninja's Qt-based UI by linking with Qt and `binaryninjaui`.
 You will need to use the same version of Qt as Binary Ninja. We provide steps for building it [here](../about/open-source.md#building-qt),
 or you can attempt to use a system-provided copy if you use Linux and like to live dangerously.
 Building it is a bit of a process, but should provide you with a working installation. Once you have a Qt build,

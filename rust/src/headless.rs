@@ -1,4 +1,4 @@
-// Copyright 2021-2024 Vector 35 Inc.
+// Copyright 2021-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 use crate::{
     binary_view, bundled_plugin_directory, enterprise, is_license_validated, is_main_thread,
-    license_path, set_bundled_plugin_directory, set_license, string::IntoJson,
+    is_ui_enabled, license_path, set_bundled_plugin_directory, set_license, string::IntoJson,
 };
 use std::io;
 use std::path::{Path, PathBuf};
@@ -22,7 +22,7 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::SeqCst;
 use thiserror::Error;
 
-use crate::enterprise::release_license;
+use crate::enterprise::EnterpriseCheckoutStatus;
 use crate::main_thread::{MainThreadAction, MainThreadHandler};
 use crate::progress::ProgressCallback;
 use crate::rc::Ref;
@@ -34,7 +34,7 @@ use std::time::Duration;
 
 static MAIN_THREAD_HANDLE: Mutex<Option<JoinHandle<()>>> = Mutex::new(None);
 
-/// Used to prevent shutting down Binary Ninja if there are other [`Session`]'s.
+/// Used to prevent shutting down Binary Ninja if there is another active [`Session`].
 static SESSION_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 #[derive(Error, Debug)]
@@ -47,13 +47,15 @@ pub enum InitializationError {
     InvalidLicense,
     #[error("no license could located, please see `binaryninja::set_license` for details")]
     NoLicenseFound,
+    #[error("initialization already managed by ui")]
+    AlreadyManaged,
 }
 
 /// Loads plugins, core architecture, platform, etc.
 ///
 /// ⚠️ Important! Must be called at the beginning of scripts.  Plugins do not need to call this. ⚠️
 ///
-/// You can instead call this through [`Session`].
+/// The preferred method for core initialization is [`Session`], use that instead of this where possible.
 ///
 /// If you need to customize initialization, use [`init_with_opts`] instead.
 pub fn init() -> Result<(), InitializationError> {
@@ -63,16 +65,16 @@ pub fn init() -> Result<(), InitializationError> {
 
 /// Unloads plugins, stops all worker threads, and closes open logs.
 ///
-/// If the core was initialized using an enterprise license, that will also be freed.
-///
-/// ⚠️ Important! Must be called at the end of scripts. ⚠️
+/// This function does _NOT_ release floating licenses; it is expected that you call [`enterprise::release_license`].
 pub fn shutdown() {
     match crate::product().as_str() {
-        "Binary Ninja Enterprise Client" | "Binary Ninja Ultimate" => enterprise::release_license(),
+        "Binary Ninja Enterprise Client" | "Binary Ninja Ultimate" => {
+            // By default, we do not release floating licenses.
+            enterprise::release_license(false)
+        }
         _ => {}
     }
     unsafe { binaryninjacore_sys::BNShutdown() };
-    release_license();
     // TODO: We might want to drop the main thread here, however that requires getting the handler ctx to drop the sender.
 }
 
@@ -84,9 +86,9 @@ pub fn is_shutdown_requested() -> bool {
 pub struct InitializationOptions {
     /// A license to override with, you can use this to make sure you initialize with a specific license.
     pub license: Option<String>,
-    /// If you need to make sure that you do not check out a license set this to false.
+    /// If you need to make sure that you do not check out a license, set this to false.
     ///
-    /// This is really only useful if you have a headless license but are using an enterprise enabled core.
+    /// This is really only useful if you have a headless license but are using an enterprise-enabled core.
     pub checkout_license: bool,
     /// Whether to register the default main thread handler.
     ///
@@ -98,11 +100,11 @@ pub struct InitializationOptions {
     pub bundled_plugin_directory: PathBuf,
     /// Whether to initialize user plugins.
     ///
-    /// Set this to false if your use might be impacted by a user installed plugin.
+    /// Set this to false if your use might be impacted by a user-installed plugin.
     pub user_plugins: bool,
     /// Whether to initialize repo plugins.
     ///
-    /// Set this to false if your use might be impacted by a repo installed plugin.
+    /// Set this to false if your use might be impacted by a repo-installed plugin.
     pub repo_plugins: bool,
 }
 
@@ -122,9 +124,9 @@ impl InitializationOptions {
         self
     }
 
-    /// If you need to make sure that you do not check out a license set this to false.
+    /// If you need to make sure that you do not check out a license, set this to false.
     ///
-    /// This is really only useful if you have a headless license but are using an enterprise enabled core.
+    /// This is really only useful if you have a headless license but are using an enterprise-enabled core.
     pub fn with_license_checkout(mut self, should_checkout: bool) -> Self {
         self.checkout_license = should_checkout;
         self
@@ -144,13 +146,13 @@ impl InitializationOptions {
         self
     }
 
-    /// Set this to false if your use might be impacted by a user installed plugin.
+    /// Set this to false if your use might be impacted by a user-installed plugin.
     pub fn with_user_plugins(mut self, should_initialize: bool) -> Self {
         self.user_plugins = should_initialize;
         self
     }
 
-    /// Set this to false if your use might be impacted by a repo installed plugin.
+    /// Set this to false if your use might be impacted by a repo-installed plugin.
     pub fn with_repo_plugins(mut self, should_initialize: bool) -> Self {
         self.repo_plugins = should_initialize;
         self
@@ -174,7 +176,11 @@ impl Default for InitializationOptions {
 
 /// This initializes the core with the given [`InitializationOptions`].
 pub fn init_with_opts(options: InitializationOptions) -> Result<(), InitializationError> {
-    // If we are the main thread that means there is no main thread, we should register a main thread handler.
+    if is_ui_enabled() {
+        return Err(InitializationError::AlreadyManaged);
+    }
+
+    // If we are the main thread, that means there is no main thread, we should register a main thread handler.
     if options.register_main_thread_handler && is_main_thread() {
         let mut main_thread_handle = MAIN_THREAD_HANDLE.lock().unwrap();
         if main_thread_handle.is_none() {
@@ -185,7 +191,7 @@ pub fn init_with_opts(options: InitializationOptions) -> Result<(), Initializati
             let join_handle = std::thread::Builder::new()
                 .name("HeadlessMainThread".to_string())
                 .spawn(move || {
-                    // We must register the main thread within said thread.
+                    // We must register the main thread within the thread.
                     main_thread.register();
                     while let Ok(action) = receiver.recv() {
                         action.execute();
@@ -197,17 +203,16 @@ pub fn init_with_opts(options: InitializationOptions) -> Result<(), Initializati
         }
     }
 
-    match crate::product().as_str() {
-        "Binary Ninja Enterprise Client" | "Binary Ninja Ultimate" => {
-            if options.checkout_license {
-                // We are allowed to check out a license, so do it!
-                enterprise::checkout_license(options.floating_license_duration)?;
-            }
+    if is_enterprise_product() && options.checkout_license {
+        // We are allowed to check out a license, so do it!
+        let checkout_status = enterprise::checkout_license(options.floating_license_duration)?;
+        if checkout_status == EnterpriseCheckoutStatus::AlreadyManaged {
+            // Should be impossible, but just in case.
+            return Err(InitializationError::AlreadyManaged);
         }
-        _ => {}
     }
 
-    if let Some(license) = options.license {
+    if let Some(license) = &options.license {
         // We were given a license override, use it!
         set_license(Some(license));
     }
@@ -223,7 +228,7 @@ pub fn init_with_opts(options: InitializationOptions) -> Result<(), Initializati
     }
 
     if !is_license_validated() {
-        // Unfortunately you must have a valid license to use Binary Ninja.
+        // Unfortunately, you must have a valid license to use Binary Ninja.
         Err(InitializationError::InvalidLicense)
     } else {
         Ok(())
@@ -249,20 +254,27 @@ impl MainThreadHandler for HeadlessMainThreadSender {
     }
 }
 
+fn is_enterprise_product() -> bool {
+    matches!(
+        crate::product().as_str(),
+        "Binary Ninja Enterprise Client" | "Binary Ninja Ultimate"
+    )
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum LicenseLocation {
     /// The license used when initializing will be the environment variable `BN_LICENSE`.
     EnvironmentVariable,
     /// The license used when initializing will be the file in the Binary Ninja user directory.
     File,
-    /// The license is retrieved using keychain credentials for `BN_ENTERPRISE_USERNAME`.
+    /// The license is retrieved using keychain credentials, this is only available for floating enterprise licenses.
     Keychain,
 }
 
 /// Attempts to identify the license location type, this follows the same order as core initialization.
 ///
 /// This is useful if you want to know whether the core will use your license. If this returns `None`
-/// you should look setting the `BN_LICENSE` environment variable, or calling [`set_license`].
+/// you should look into setting the `BN_LICENSE` environment variable or calling [`set_license`].
 pub fn license_location() -> Option<LicenseLocation> {
     match std::env::var("BN_LICENSE") {
         Ok(_) => Some(LicenseLocation::EnvironmentVariable),
@@ -270,19 +282,27 @@ pub fn license_location() -> Option<LicenseLocation> {
             // Check the license_path to see if a file is there.
             if license_path().exists() {
                 Some(LicenseLocation::File)
-            } else {
-                // Check to see if we might be authorizing with keychain credentials.
-                match std::env::var("BN_ENTERPRISE_USERNAME") {
-                    Ok(_) => Some(LicenseLocation::Keychain),
-                    Err(_) => None,
+            } else if is_enterprise_product() {
+                // If we can't initialize enterprise, we probably are missing enterprise.server.url
+                // and our license surely is not valid.
+                if !enterprise::is_server_initialized() && !enterprise::initialize_server() {
+                    return None;
                 }
+                // If Enterprise thinks we are using a floating license, then report it will be in the keychain
+                enterprise::is_server_floating_license().then_some(LicenseLocation::Keychain)
+            } else {
+                // If we are not using an enterprise license, we can't check the keychain, nowhere else to check.
+                None
             }
         }
     }
 }
 
 /// Wrapper for [`init`] and [`shutdown`]. Instantiating this at the top of your script will initialize everything correctly and then clean itself up at exit as well.
-pub struct Session {}
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
+pub struct Session {
+    license_duration: Option<Duration>,
+}
 
 impl Session {
     /// Get a registered [`Session`] for use.
@@ -290,7 +310,7 @@ impl Session {
     /// This is required so that we can keep track of the [`SESSION_COUNT`].
     fn registered_session() -> Self {
         let _previous_count = SESSION_COUNT.fetch_add(1, SeqCst);
-        Self {}
+        Self::default()
     }
 
     /// Before calling new you must make sure that the license is retrievable, otherwise the core won't be able to initialize.
@@ -300,11 +320,7 @@ impl Session {
     pub fn new() -> Result<Self, InitializationError> {
         if license_location().is_some() {
             // We were able to locate a license, continue with initialization.
-            // Grab the session before initialization to prevent another thread from initializing
-            // and shutting down before this thread can increment the SESSION_COUNT.
-            let session = Self::registered_session();
-            init()?;
-            Ok(session)
+            Self::new_with_opts(InitializationOptions::default())
         } else {
             // There was no license that could be automatically retrieved, you must call [Self::new_with_license].
             Err(InitializationError::NoLicenseFound)
@@ -314,10 +330,11 @@ impl Session {
     /// Initialize with options, the same rules apply as [`Session::new`], see [`InitializationOptions::default`] for the regular options passed.
     ///
     /// This differs from [`Session::new`] in that it does not check to see if there is a license that the core
-    /// can discover by itself, therefor it is expected that you know where your license is when calling this directly.
+    /// can discover by itself, therefore, it is expected that you know where your license is when calling this directly.
     pub fn new_with_opts(options: InitializationOptions) -> Result<Self, InitializationError> {
+        let session = Self::registered_session();
         init_with_opts(options)?;
-        Ok(Self::registered_session())
+        Ok(session)
     }
 
     /// ```no_run
@@ -413,7 +430,7 @@ impl Drop for Session {
     fn drop(&mut self) {
         let previous_count = SESSION_COUNT.fetch_sub(1, SeqCst);
         if previous_count == 1 {
-            // We were the last session, therefor we can safely shut down.
+            // We were the last session, therefore, we can safely shut down.
             shutdown();
         }
     }

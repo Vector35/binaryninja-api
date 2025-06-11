@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2024 Vector 35 Inc
+// Copyright (c) 2015-2025 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -41,6 +41,7 @@ Platform::Platform(Architecture* arch, const string& name)
 	plat.viewInit = InitViewCallback;
 	plat.getGlobalRegisters = GetGlobalRegistersCallback;
 	plat.freeRegisterList = FreeRegisterListCallback;
+	plat.getAddressSize = GetAddressSizeCallback;
 	plat.getGlobalRegisterType = GetGlobalRegisterTypeCallback;
 	plat.adjustTypeParserInput = AdjustTypeParserInputCallback;
 	plat.freeTypeParserInput = FreeTypeParserInputCallback;
@@ -59,6 +60,7 @@ Platform::Platform(Architecture* arch, const string& name, const string& typeFil
 	plat.getGlobalRegisters = GetGlobalRegistersCallback;
 	plat.freeRegisterList = FreeRegisterListCallback;
 	plat.getGlobalRegisterType = GetGlobalRegisterTypeCallback;
+	plat.getAddressSize = GetAddressSizeCallback;
 	plat.adjustTypeParserInput = AdjustTypeParserInputCallback;
 	plat.freeTypeParserInput = FreeTypeParserInputCallback;
 	plat.getFallbackEnabled = GetFallbackEnabledCallback;
@@ -192,6 +194,14 @@ BNType* Platform::GetGlobalRegisterTypeCallback(void* ctxt, uint32_t reg)
 
 	return BNNewTypeReference(result->GetObject());
 }
+
+
+size_t Platform::GetAddressSizeCallback(void* ctxt)
+{
+	CallbackRef<Platform> plat(ctxt);
+	return plat->GetAddressSize();
+}
+
 
 bool Platform::GetFallbackEnabledCallback(void* ctxt)
 {
@@ -424,6 +434,12 @@ bool Platform::GetFallbackEnabled()
 }
 
 
+size_t Platform::GetAddressSize() const
+{
+	return GetArchitecture()->GetAddressSize();
+}
+
+
 std::vector<uint32_t> CorePlatform::GetGlobalRegisters()
 {
 	size_t count;
@@ -445,6 +461,12 @@ Ref<Type> CorePlatform::GetGlobalRegisterType(uint32_t reg)
 	if (!res)
 		return nullptr;
 	return new Type(res);
+}
+
+
+size_t CorePlatform::GetAddressSize() const
+{
+	return BNGetPlatformAddressSize(m_object);
 }
 
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2024 Vector 35 Inc
+# Copyright (c) 2015-2025 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -464,7 +464,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		finally:
 			core.BNFreeStringList(result, length.value)
 
-	def assign_subactivities(self, activity: Activity, activities: List[str]) -> bool:
+	def assign_subactivities(self, activity: Activity, activities: Union[List[str], str]) -> bool:
 		"""
 		``assign_subactivities`` Assign the list of ``activities`` as the new set of children for the specified ``activity``.
 
@@ -473,6 +473,8 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		:return: True on success, False otherwise
 		:rtype: bool
 		"""
+		if isinstance(activities, str):
+			activities = [activities]
 		input_list = (ctypes.c_char_p * len(activities))()
 		for i in range(0, len(activities)):
 			input_list[i] = str(activities[i]).encode('charmap')
@@ -529,12 +531,12 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		"""
 		return core.BNWorkflowRemove(self.handle, str(activity))
 
-	def replace(self, activity: ActivityType, new_activity: List[str]) -> bool:
+	def replace(self, activity: ActivityType, new_activity: str) -> bool:
 		"""
 		``replace`` Replace the specified ``activity``.
 
 		:param str activity: the Activity to replace
-		:param list[str] new_activity: the replacement Activity
+		:param str new_activity: the replacement Activity
 		:return: True on success, False otherwise
 		:rtype: bool
 		"""
@@ -641,31 +643,27 @@ class WorkflowMachine:
 			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def configure(self, advanced: bool = True, incremental: bool = False):
-		request = json.dumps({"command": "configure", "advanced": advanced, "incremental": incremental})
 		if self.is_function_machine:
+			request = json.dumps({"command": "configure", "advanced": advanced, "incremental": incremental})
 			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
 		else:
+			request = json.dumps({"command": "configure"})
 			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
-	def resume(self):
-		request = json.dumps({"command": "run"})
+	def resume(self, advanced: bool = True, incremental: bool = False):
 		if self.is_function_machine:
+			request = json.dumps({"command": "resume", "advanced": advanced, "incremental": incremental})
 			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
 		else:
+			request = json.dumps({"command": "resume"})
 			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
-	def run(self):
-		status = self.status()
-		if 'machineState' in status and 'state' in status['machineState']:
-			if status['machineState']['state'] == 'Idle':
-				self.configure()
-		else:
-			raise AttributeError("Unknown status response!")
-
-		request = json.dumps({"command": "run"})
+	def run(self, advanced: bool = True, incremental: bool = False):
 		if self.is_function_machine:
+			request = json.dumps({"command": "run", "advanced": advanced, "incremental": incremental})
 			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
 		else:
+			request = json.dumps({"command": "run"})
 			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def halt(self):
@@ -704,6 +702,8 @@ class WorkflowMachine:
 			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def breakpoint_delete(self, activities):
+		if isinstance(activities, str):
+			activities = [activities]
 		request = json.dumps({"command": "breakpoint", "action": "delete", "activities": activities})
 		if self.is_function_machine:
 			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
@@ -718,6 +718,8 @@ class WorkflowMachine:
 			return json.loads(core.BNPostWorkflowRequestForBinaryView(self.handle, request))
 
 	def breakpoint_set(self, activities):
+		if isinstance(activities, str):
+			activities = [activities]
 		request = json.dumps({"command": "breakpoint", "action": "set", "activities": activities})
 		if self.is_function_machine:
 			return json.loads(core.BNPostWorkflowRequestForFunction(self.handle, request))
@@ -777,8 +779,8 @@ class WorkflowMachineCLI(cmd.Cmd):
 		"l": "log",
 		"m": "metrics",
 		"d": "dump",
-		"c": "resume",
 		"r": "run",
+		"c": "resume",
 		"h": "halt",
 		"s": "step",
 		"b": "breakpoint",

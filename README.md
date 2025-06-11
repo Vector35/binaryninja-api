@@ -1,6 +1,5 @@
 [![slack](https://img.shields.io/badge/slack-binaryninja-red.svg?logo=slack)](https://slack.binary.ninja/)
 
-
 # Binary Ninja API
 
 This repository contains documentation and source code of the C++, Python, and Rust APIs for the [Binary Ninja](https://binary.ninja/) reverse engineering platform.
@@ -83,8 +82,10 @@ If you're interested in contributing when you submit your first PR, you'll recei
 This repository contains all of our Platform plugins available here:
 
 * [Windows](https://github.com/Vector35/binaryninja-api/tree/dev/platform/windows)
+* [Windows Kernel](https://github.com/Vector35/binaryninja-api/tree/dev/platform/windows-kernel)
 * [Linux](https://github.com/Vector35/binaryninja-api/tree/dev/platform/linux)
 * [macOS](https://github.com/Vector35/binaryninja-api/tree/dev/platform/mac)
+* [macOS Kernel](https://github.com/Vector35/binaryninja-api/tree/dev/platform/mac-kernel)
 * [FreeBSD](https://github.com/Vector35/binaryninja-api/tree/dev/platform/freebsd)
 * [Decree](https://github.com/Vector35/binaryninja-api/tree/dev/platform/decree)
 * [EFI](https://github.com/Vector35/binaryninja-api/tree/dev/platform/efi)
@@ -92,7 +93,7 @@ This repository contains all of our Platform plugins available here:
 
 ## Architectures
 
-This repository contains all of the Architecture plugins available in Personal and Commercial editions of Binary Ninja. You can find each architecture here:
+This repository contains all the Architecture plugins available in Personal and Commercial editions of Binary Ninja. You can find each architecture here:
 
 * [x86/x86_64](https://github.com/Vector35/binaryninja-api/tree/dev/arch/x86)
 * [ARM64](https://github.com/Vector35/binaryninja-api/tree/dev/arch/arm64)
@@ -111,6 +112,8 @@ This repository contains all of our Binary View Type plugins available here:
 * [ELF](https://github.com/Vector35/binaryninja-api/tree/dev/view/elf)
 * [PE/COFF/TE](https://github.com/Vector35/binaryninja-api/tree/dev/view/pe)
 * [MD1Rom](https://github.com/Vector35/binaryninja-api/tree/dev/view/md1rom)
+* [Shared Cache](https://github.com/Vector35/binaryninja-api/tree/dev/view/sharedcache)
+* [Kernel Cache](https://github.com/Vector35/binaryninja-api/tree/dev/view/kernelcache)
 
 
 ## DebugInfo
@@ -119,6 +122,13 @@ This repository contains all of our Binary View Type plugins available here:
 * [PDB Import](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/pdb-ng)
 * [IDB Import](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/idb_import)
 
+## Other Plugins
+
+* [SVD Loader](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/svd/)
+* [RTTI Analysis](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/rtti/)
+* [WARP Integration](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/warp/)
+* [Stack Render Layer](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/stack_render_layer/)
+* [Triage View](https://github.com/Vector35/binaryninja-api/tree/dev/examples/triage/)
 
 ## Related Repositories
 

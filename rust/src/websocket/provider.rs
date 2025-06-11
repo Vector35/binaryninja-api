@@ -1,9 +1,9 @@
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{BnString, IntoCStr};
 use crate::websocket::client;
 use crate::websocket::client::{CoreWebsocketClient, WebsocketClient};
 use binaryninjacore_sys::*;
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 use std::mem::MaybeUninit;
 use std::ptr::NonNull;
 
@@ -11,13 +11,13 @@ pub fn register_websocket_provider<W>(name: &str) -> &'static mut W
 where
     W: WebsocketProvider,
 {
-    let name = name.into_bytes_with_nul();
+    let name = name.to_cstr();
     let provider_uninit = MaybeUninit::uninit();
     // SAFETY: Websocket provider is never freed
     let leaked_provider = Box::leak(Box::new(provider_uninit));
     let result = unsafe {
         BNRegisterWebsocketProvider(
-            name.as_ptr() as *const c_char,
+            name.as_ptr(),
             &mut BNWebsocketProviderCallbacks {
                 context: leaked_provider as *mut _ as *mut c_void,
                 createClient: Some(cb_create_client::<W>),
@@ -80,17 +80,16 @@ impl CoreWebsocketProvider {
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn by_name<S: BnStrCompatible>(name: S) -> Option<CoreWebsocketProvider> {
-        let name = name.into_bytes_with_nul();
-        let result =
-            unsafe { BNGetWebsocketProviderByName(name.as_ref().as_ptr() as *const c_char) };
+    pub fn by_name(name: &str) -> Option<CoreWebsocketProvider> {
+        let name = name.to_cstr();
+        let result = unsafe { BNGetWebsocketProviderByName(name.as_ptr()) };
         NonNull::new(result).map(|h| unsafe { Self::from_raw(h) })
     }
 
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNGetWebsocketProviderName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 }
 

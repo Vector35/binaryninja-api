@@ -32,5 +32,5 @@ Changing documentation for the API itself is fairly straight forward. Use [doxyg
 [Vector 35]: https://vector35.com/
 [mkdocs]: http://www.mkdocs.org/
 [breathe]: https://github.com/michaeljones/breathe
-[sphinx]: http://www.sphinx-doc.org/en/stable/index.html
+[sphinx]:  https://www.sphinx-doc.org/en/master/
 [doxygen]: https://www.doxygen.nl

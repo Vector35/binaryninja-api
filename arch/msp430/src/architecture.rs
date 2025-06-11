@@ -20,11 +20,12 @@ use binaryninja::architecture::{
     BranchKind, FlagClassId, FlagGroupId, FlagId, FlagWriteId, RegisterId,
 };
 use binaryninja::low_level_il::expression::ValueExpr;
-use binaryninja::low_level_il::{MutableLiftedILExpr, MutableLiftedILFunction};
+use binaryninja::low_level_il::{LowLevelILMutableExpression, LowLevelILMutableFunction};
 use log::error;
 
 const MIN_MNEMONIC: usize = 9;
 
+#[derive(Debug)]
 pub struct Msp430 {
     handle: CoreArchitecture,
     custom_handle: CustomArchitectureHandle<Msp430>,
@@ -193,7 +194,7 @@ impl Architecture for Msp430 {
         &self,
         data: &[u8],
         addr: u64,
-        il: &mut MutableLiftedILFunction<Self>,
+        il: &LowLevelILMutableFunction,
     ) -> Option<(usize, bool)> {
         match msp430_asm::decode(data) {
             Ok(inst) => {
@@ -225,8 +226,8 @@ impl Architecture for Msp430 {
     fn flag_group_llil<'a>(
         &self,
         _group: Self::FlagGroup,
-        _il: &'a mut MutableLiftedILFunction<Self>,
-    ) -> Option<MutableLiftedILExpr<'a, Self, ValueExpr>> {
+        _il: &'a LowLevelILMutableFunction,
+    ) -> Option<LowLevelILMutableExpression<'a, ValueExpr>> {
         None
     }
 

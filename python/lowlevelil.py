@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2024 Vector 35 Inc
+# Copyright (c) 2015-2025 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -4027,7 +4027,7 @@ class LowLevelILFunction:
 			return dest.extern_pointer(expr.size, expr.constant, expr.offset, loc)
 		if expr.operation == LowLevelILOperation.LLIL_FLOAT_CONST:
 			expr: LowLevelILFloatConst
-			return dest.float_const_raw(expr.size, expr.constant, loc)
+			return dest.float_const_raw(expr.size, expr.instr.operands[0], loc)
 		if expr.operation in [
 			LowLevelILOperation.LLIL_POP,
 			LowLevelILOperation.LLIL_NORET,
@@ -4036,7 +4036,7 @@ class LowLevelILFunction:
 			LowLevelILOperation.LLIL_UNDEF,
 			LowLevelILOperation.LLIL_UNIMPL
 		]:
-			expr:Y
+			expr: LowLevelILInstruction
 			return dest.expr(expr.operation, size=expr.size, flags=expr.flags, source_location=loc)
 		if expr.operation in [
 			LowLevelILOperation.LLIL_PUSH,
@@ -4797,15 +4797,17 @@ class LowLevelILFunction:
 	    loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``mult_double_prec_signed`` multiplies signed with double precision expression ``a`` by expression ``b``,
+		``mult_double_prec_signed`` multiplies signed with double (2*size bytes) precision expression ``a`` by expression ``b``,
 		each ``size`` bytes and potentially setting flags ``flags`` and returning an expression of ``2*size`` bytes.
+
+		.. note:: The output expression is ``2*size`` bytes in size, but will be rendered as ``muls.dp.<size>``.
 
 		:param int size: the size of the input operands, in bytes
 		:param ExpressionIndex a: LHS expression
 		:param ExpressionIndex b: RHS expression
 		:param str flags: optional, flags to set
 		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``muls.dp.<2*size>{<flags>}(a, b)``
+		:return: The expression ``muls.dp.<size>{<flags>}(a, b)``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(LowLevelILOperation.LLIL_MULS_DP, a, b, size=size, flags=flags, source_location=loc)
@@ -4815,15 +4817,17 @@ class LowLevelILFunction:
 	    loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``mult_double_prec_unsigned`` multiplies unsigned with double precision expression ``a`` by expression ``b``,
+		``mult_double_prec_unsigned`` multiplies unsigned with double (2*size bytes) precision expression ``a`` by expression ``b``,
 		each ``size`` bytes and potentially setting flags ``flags`` and returning an expression of ``2*size`` bytes.
+
+		.. note:: The output expression is ``2*size`` bytes in size, but will be rendered as ``mulu.dp.<size>``.
 
 		:param int size: the size of the input operands, in bytes
 		:param ExpressionIndex a: LHS expression
 		:param ExpressionIndex b: RHS expression
 		:param str flags: optional, flags to set
 		:param ILSourceLocation loc: location of returned expression
-		:return: The expression ``mulu.dp.<2*size>{<flags>}(a, b)``
+		:return: The expression ``mulu.dp.<size>{<flags>}(a, b)``
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(LowLevelILOperation.LLIL_MULU_DP, a, b, size=size, flags=flags, source_location=loc)

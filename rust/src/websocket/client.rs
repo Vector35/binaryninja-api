@@ -1,5 +1,5 @@
 use crate::rc::{Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{BnString, IntoCStr};
 use binaryninjacore_sys::*;
 use std::ffi::{c_char, c_void, CStr};
 use std::ptr::NonNull;
@@ -18,11 +18,9 @@ pub trait WebsocketClient: Sync + Send {
     /// Called to construct this client object with the given core object.
     fn from_core(core: Ref<CoreWebsocketClient>) -> Self;
 
-    fn connect<I, K, V>(&self, host: &str, headers: I) -> bool
+    fn connect<I>(&self, host: &str, headers: I) -> bool
     where
-        I: IntoIterator<Item = (K, V)>,
-        K: BnStrCompatible,
-        V: BnStrCompatible;
+        I: IntoIterator<Item = (String, String)>;
 
     fn write(&self, data: &[u8]) -> bool;
 
@@ -69,31 +67,18 @@ impl CoreWebsocketClient {
     /// * `host` - Full url with scheme, domain, optionally port, and path
     /// * `headers` - HTTP header keys and values
     /// * `callback` - Callbacks for various websocket events
-    pub fn initialize_connection<I, K, V, C>(
-        &self,
-        host: &str,
-        headers: I,
-        callbacks: &mut C,
-    ) -> bool
+    pub fn initialize_connection<I, C>(&self, host: &str, headers: I, callbacks: &mut C) -> bool
     where
-        I: IntoIterator<Item = (K, V)>,
-        K: BnStrCompatible,
-        V: BnStrCompatible,
+        I: IntoIterator<Item = (String, String)>,
         C: WebsocketClientCallback,
     {
-        let url = host.into_bytes_with_nul();
-        let (header_keys, header_values): (Vec<K::Result>, Vec<V::Result>) = headers
+        let url = host.to_cstr();
+        let (header_keys, header_values): (Vec<_>, Vec<_>) = headers
             .into_iter()
-            .map(|(k, v)| (k.into_bytes_with_nul(), v.into_bytes_with_nul()))
+            .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
             .unzip();
-        let header_keys: Vec<*const c_char> = header_keys
-            .iter()
-            .map(|k| k.as_ref().as_ptr() as *const c_char)
-            .collect();
-        let header_values: Vec<*const c_char> = header_values
-            .iter()
-            .map(|v| v.as_ref().as_ptr() as *const c_char)
-            .collect();
+        let header_keys: Vec<*const c_char> = header_keys.iter().map(|k| k.as_ptr()).collect();
+        let header_values: Vec<*const c_char> = header_values.iter().map(|v| v.as_ptr()).collect();
         // SAFETY: This context will only be live for the duration of BNConnectWebsocketClient
         // SAFETY: Any subsequent call to BNConnectWebsocketClient will write over the context.
         let mut output_callbacks = BNWebsocketClientOutputCallbacks {
@@ -106,7 +91,7 @@ impl CoreWebsocketClient {
         unsafe {
             BNConnectWebsocketClient(
                 self.handle.as_ptr(),
-                url.as_ptr() as *const c_char,
+                url.as_ptr(),
                 header_keys.len().try_into().unwrap(),
                 header_keys.as_ptr(),
                 header_values.as_ptr(),
@@ -129,10 +114,8 @@ impl CoreWebsocketClient {
 
     /// Call the error callback function
     pub fn notify_error(&self, msg: &str) {
-        let error = msg.into_bytes_with_nul();
-        unsafe {
-            BNNotifyWebsocketClientError(self.handle.as_ptr(), error.as_ptr() as *const c_char)
-        }
+        let error = msg.to_cstr();
+        unsafe { BNNotifyWebsocketClientError(self.handle.as_ptr(), error.as_ptr()) }
     }
 
     /// Call the read callback function, forward the callback returned value
@@ -195,8 +178,10 @@ pub(crate) unsafe extern "C" fn cb_connect<W: WebsocketClient>(
     let header_count = usize::try_from(header_count).unwrap();
     let header_keys = core::slice::from_raw_parts(header_keys as *const BnString, header_count);
     let header_values = core::slice::from_raw_parts(header_values as *const BnString, header_count);
-    let header_keys_str = header_keys.iter().map(|s| s.to_string_lossy());
-    let header_values_str = header_values.iter().map(|s| s.to_string_lossy());
+    let header_keys_str = header_keys.iter().map(|s| s.to_string_lossy().to_string());
+    let header_values_str = header_values
+        .iter()
+        .map(|s| s.to_string_lossy().to_string());
     let header = header_keys_str.zip(header_values_str);
     ctxt.connect(&host.to_string_lossy(), header)
 }

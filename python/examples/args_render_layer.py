@@ -97,7 +97,8 @@ def get_param_sites(mlil: MediumLevelILFunction) -> Mapping[LowLevelILInstructio
             if llil not in all_def_sites:
                 all_def_sites[llil] = []
             else:
-                print(f"got two at {llil.instr_index} @ {llil.address:#x} -> {call_site.address:#x}")
+                # print(f"got two at {llil.instr_index} @ {llil.address:#x} -> {call_site.address:#x}")
+                pass
             all_def_sites[llil].append((call_site, param_idx))
 
     return all_def_sites
@@ -196,6 +197,8 @@ class ArgumentsRenderLayer(RenderLayer):
             block: BasicBlock,
             lines: List['DisassemblyTextLine']
     ):
+        if block.function.mlil_if_available is None:
+            return lines
         # Break this out into a helper so we don't have to write it twice
         renderer = DisassemblyTextRenderer(block.function)
         return apply_to_lines(lines, lambda line: block.function.get_llil_at(line.address), renderer)
@@ -205,6 +208,8 @@ class ArgumentsRenderLayer(RenderLayer):
             block: BasicBlock,
             lines: List['DisassemblyTextLine']
     ):
+        if block.function.mlil_if_available is None:
+            return lines
         # Break this out into a helper so we don't have to write it twice
         renderer = DisassemblyTextRenderer(block.function)
         return apply_to_lines(lines, lambda line: line.il_instruction, renderer)

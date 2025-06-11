@@ -7,7 +7,7 @@ using namespace std;
 
 Settings::Settings(BNSettings* settings)
 {
-	m_object = BNNewSettingsReference(settings);
+	m_object = settings;
 }
 
 

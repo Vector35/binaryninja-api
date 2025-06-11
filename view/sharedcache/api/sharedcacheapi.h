@@ -1,285 +1,333 @@
 #pragma once
 
 #include <binaryninjaapi.h>
-#include "../core/MetadataSerializable.hpp"
-#include "view/macho/machoview.h"
 #include "sharedcachecore.h"
 
+template<class T>
+class DSCRefCountObject {
+	void AddRefInternal() { m_refs.fetch_add(1); }
+
+	void ReleaseInternal() {
+		if (m_refs.fetch_sub(1) == 1)
+			delete this;
+	}
+
+public:
+	std::atomic<int> m_refs;
+	T *m_object;
+
+	DSCRefCountObject() : m_refs(0), m_object(nullptr) {}
+
+	virtual ~DSCRefCountObject() = default;
+
+	T *GetObject() const { return m_object; }
+
+	static T *GetObject(DSCRefCountObject *obj) {
+		if (!obj)
+			return nullptr;
+		return obj->GetObject();
+	}
+
+	void AddRef() { AddRefInternal(); }
+
+	void Release() { ReleaseInternal(); }
+
+	void AddRefForRegistration() { AddRefInternal(); }
+};
+
+
+template<class T, T *(*AddObjectReference)(T *), void (*FreeObjectReference)(T *)>
+class DSCCoreRefCountObject {
+	void AddRefInternal() { m_refs.fetch_add(1); }
+
+	void ReleaseInternal() {
+		if (m_refs.fetch_sub(1) == 1) {
+			if (!m_registeredRef)
+				delete this;
+		}
+	}
+
+public:
+	std::atomic<int> m_refs;
+	bool m_registeredRef = false;
+	T *m_object;
+
+	DSCCoreRefCountObject() : m_refs(0), m_object(nullptr) {}
+
+	virtual ~DSCCoreRefCountObject() = default;
+
+	T *GetObject() const { return m_object; }
+
+	static T *GetObject(DSCCoreRefCountObject *obj) {
+		if (!obj)
+			return nullptr;
+		return obj->GetObject();
+	}
+
+	void AddRef() {
+		if (m_object && (m_refs != 0))
+			AddObjectReference(m_object);
+		AddRefInternal();
+	}
+
+	void Release() {
+		if (m_object)
+			FreeObjectReference(m_object);
+		ReleaseInternal();
+	}
+
+	void AddRefForRegistration() { m_registeredRef = true; }
+
+	void ReleaseForRegistration() {
+		m_object = nullptr;
+		m_registeredRef = false;
+		if (m_refs == 0)
+			delete this;
+	}
+};
+
+template <class T>
+class DSCRef
+{
+	T* m_obj;
+#ifdef BN_REF_COUNT_DEBUG
+	void* m_assignmentTrace = nullptr;
+#endif
+
+public:
+	DSCRef() : m_obj(NULL) {}
+
+	DSCRef(T* obj) : m_obj(obj)
+	{
+		if (m_obj)
+		{
+			m_obj->AddRef();
+#ifdef BN_REF_COUNT_DEBUG
+			m_assignmentTrace = BNRegisterObjectRefDebugTrace(typeid(T).name());
+#endif
+		}
+	}
+
+	DSCRef(const DSCRef<T>& obj) : m_obj(obj.m_obj)
+	{
+		if (m_obj)
+		{
+			m_obj->AddRef();
+#ifdef BN_REF_COUNT_DEBUG
+			m_assignmentTrace = BNRegisterObjectRefDebugTrace(typeid(T).name());
+#endif
+		}
+	}
+
+	DSCRef(DSCRef<T>&& other) : m_obj(other.m_obj)
+	{
+		other.m_obj = 0;
+#ifdef BN_REF_COUNT_DEBUG
+		m_assignmentTrace = other.m_assignmentTrace;
+#endif
+	}
+
+	~DSCRef()
+	{
+		if (m_obj)
+		{
+			m_obj->Release();
+#ifdef BN_REF_COUNT_DEBUG
+			BNUnregisterObjectRefDebugTrace(typeid(T).name(), m_assignmentTrace);
+#endif
+		}
+	}
+
+	DSCRef<T>& operator=(const BinaryNinja::Ref<T>& obj)
+	{
+#ifdef BN_REF_COUNT_DEBUG
+		if (m_obj)
+			BNUnregisterObjectRefDebugTrace(typeid(T).name(), m_assignmentTrace);
+		if (obj.m_obj)
+			m_assignmentTrace = BNRegisterObjectRefDebugTrace(typeid(T).name());
+#endif
+		T* oldObj = m_obj;
+		m_obj = obj.m_obj;
+		if (m_obj)
+			m_obj->AddRef();
+		if (oldObj)
+			oldObj->Release();
+		return *this;
+	}
+
+	DSCRef<T>& operator=(DSCRef<T>&& other)
+	{
+		if (m_obj)
+		{
+#ifdef BN_REF_COUNT_DEBUG
+			BNUnregisterObjectRefDebugTrace(typeid(T).name(), m_assignmentTrace);
+#endif
+			m_obj->Release();
+		}
+		m_obj = other.m_obj;
+		other.m_obj = 0;
+#ifdef BN_REF_COUNT_DEBUG
+		m_assignmentTrace = other.m_assignmentTrace;
+#endif
+		return *this;
+	}
+
+	DSCRef<T>& operator=(T* obj)
+	{
+#ifdef BN_REF_COUNT_DEBUG
+		if (m_obj)
+			BNUnregisterObjectRefDebugTrace(typeid(T).name(), m_assignmentTrace);
+		if (obj)
+			m_assignmentTrace = BNRegisterObjectRefDebugTrace(typeid(T).name());
+#endif
+		T* oldObj = m_obj;
+		m_obj = obj;
+		if (m_obj)
+			m_obj->AddRef();
+		if (oldObj)
+			oldObj->Release();
+		return *this;
+	}
+
+	operator T*() const
+	{
+		return m_obj;
+	}
+
+	T* operator->() const
+	{
+		return m_obj;
+	}
+
+	T& operator*() const
+	{
+		return *m_obj;
+	}
+
+	bool operator!() const
+	{
+		return m_obj == NULL;
+	}
+
+	bool operator==(const T* obj) const
+	{
+		return T::GetObject(m_obj) == T::GetObject(obj);
+	}
+
+	bool operator==(const DSCRef<T>& obj) const
+	{
+		return T::GetObject(m_obj) == T::GetObject(obj.m_obj);
+	}
+
+	bool operator!=(const T* obj) const
+	{
+		return T::GetObject(m_obj) != T::GetObject(obj);
+	}
+
+	bool operator!=(const DSCRef<T>& obj) const
+	{
+		return T::GetObject(m_obj) != T::GetObject(obj.m_obj);
+	}
+
+	bool operator<(const T* obj) const
+	{
+		return T::GetObject(m_obj) < T::GetObject(obj);
+	}
+
+	bool operator<(const DSCRef<T>& obj) const
+	{
+		return T::GetObject(m_obj) < T::GetObject(obj.m_obj);
+	}
+
+	T* GetPtr() const
+	{
+		return m_obj;
+	}
+};
+
+
+
+// TODO: replace namespace?
 namespace SharedCacheAPI {
-	template<class T>
-	class SCRefCountObject {
-		void AddRefInternal() { m_refs.fetch_add(1); }
-
-		void ReleaseInternal() {
-			if (m_refs.fetch_sub(1) == 1)
-				delete this;
-		}
-
-	public:
-		std::atomic<int> m_refs;
-		T *m_object;
-
-		SCRefCountObject() : m_refs(0), m_object(nullptr) {}
-
-		virtual ~SCRefCountObject() {}
-
-		T *GetObject() const { return m_object; }
-
-		static T *GetObject(SCRefCountObject *obj) {
-			if (!obj)
-				return nullptr;
-			return obj->GetObject();
-		}
-
-		void AddRef() { AddRefInternal(); }
-
-		void Release() { ReleaseInternal(); }
-
-		void AddRefForRegistration() { AddRefInternal(); }
-	};
-
-
-	template<class T, T *(*AddObjectReference)(T *), void (*FreeObjectReference)(T *)>
-	class SCCoreRefCountObject {
-		void AddRefInternal() { m_refs.fetch_add(1); }
-
-		void ReleaseInternal() {
-			if (m_refs.fetch_sub(1) == 1) {
-				if (!m_registeredRef)
-					delete this;
-			}
-		}
-
-	public:
-		std::atomic<int> m_refs;
-		bool m_registeredRef = false;
-		T *m_object;
-
-		SCCoreRefCountObject() : m_refs(0), m_object(nullptr) {}
-
-		virtual ~SCCoreRefCountObject() {}
-
-		T *GetObject() const { return m_object; }
-
-		static T *GetObject(SCCoreRefCountObject *obj) {
-			if (!obj)
-				return nullptr;
-			return obj->GetObject();
-		}
-
-		void AddRef() {
-			if (m_object && (m_refs != 0))
-				AddObjectReference(m_object);
-			AddRefInternal();
-		}
-
-		void Release() {
-			if (m_object)
-				FreeObjectReference(m_object);
-			ReleaseInternal();
-		}
-
-		void AddRefForRegistration() { m_registeredRef = true; }
-
-		void ReleaseForRegistration() {
-			m_object = nullptr;
-			m_registeredRef = false;
-			if (m_refs == 0)
-				delete this;
-		}
-	};
-
-	struct DSCMemoryRegion {
-		uint64_t vmAddress;
+	struct CacheRegion
+	{
+		BNSharedCacheRegionType type;
+		std::string name;
+		uint64_t start;
 		uint64_t size;
-		std::string prettyName;
+		std::optional<uint64_t> imageStart;
+		BNSegmentFlag flags;
 	};
 
-	struct BackingCacheMapping {
+	std::string GetRegionTypeAsString(const BNSharedCacheRegionType& type);
+
+	struct CacheMappingInfo
+	{
 		uint64_t vmAddress;
 		uint64_t size;
 		uint64_t fileOffset;
 	};
 
-	struct BackingCache {
-		std::string path;
-		BNBackingCacheType cacheType;
-		std::vector<BackingCacheMapping> mappings;
-	};
-
-	struct DSCImageMemoryMapping {
-		std::string filePath;
-		std::string name;
-		uint64_t vmAddress;
-		uint64_t size;
-		bool loaded;
-		uint64_t rawViewOffset;
-	};
-
-	struct DSCImage {
-		std::string name;
+	struct CacheImage
+	{
 		uint64_t headerAddress;
-		std::vector<DSCImageMemoryMapping> mappings;
+		std::string name;
+		std::vector<uint64_t> regionStarts;
 	};
 
-	struct DSCSymbol {
+	struct CacheEntry
+	{
+		std::string path;
+		std::string name;
+		BNSharedCacheEntryType entryType;
+		std::vector<CacheMappingInfo> mappings;
+	};
+
+	struct CacheSymbol
+	{
+		BNSymbolType type;
 		uint64_t address;
-		BinaryNinja::StringRef name;
-		std::string image;
+		std::string name;
+
+		std::pair<std::string, BinaryNinja::Ref<BinaryNinja::Type>> DemangledName(BinaryNinja::BinaryView &view) const;
+		BinaryNinja::Ref<BinaryNinja::Symbol> GetBNSymbol(BinaryNinja::BinaryView& view) const;
 	};
 
-	struct SharedCacheMachOHeader : public SharedCacheCore::MetadataSerializable<SharedCacheMachOHeader> {
-		uint64_t textBase = 0;
-		uint64_t loadCommandOffset = 0;
-		mach_header_64 ident;
-		std::string identifierPrefix;
-		std::string installName;
+	std::string GetSymbolTypeAsString(const BNSymbolType& type);
 
-		std::vector<std::pair<uint64_t, bool>> entryPoints;
-		std::vector<uint64_t> m_entryPoints;  // list of entrypoints
-
-		symtab_command symtab;
-		dysymtab_command dysymtab;
-		dyld_info_command dyldInfo;
-		routines_command_64 routines64;
-		function_starts_command functionStarts;
-		std::vector<section_64> moduleInitSections;
-		linkedit_data_command exportTrie;
-		linkedit_data_command chainedFixups {};
-
-		uint64_t relocationBase;
-		// Section and program headers, internally use 64-bit form as it is a superset of 32-bit
-		std::vector<segment_command_64> segments;  // only three types of sections __TEXT, __DATA, __IMPORT
-		segment_command_64 linkeditSegment;
-		std::vector<section_64> sections;
-		std::vector<std::string> sectionNames;
-
-		std::vector<section_64> symbolStubSections;
-		std::vector<section_64> symbolPointerSections;
-
-		std::vector<std::string> dylibs;
-
-		build_version_command buildVersion;
-		std::vector<build_tool_version> buildToolVersions;
-
-		std::string exportTriePath;
-
-		bool linkeditPresent = false;
-		bool dysymPresent = false;
-		bool dyldInfoPresent = false;
-		bool exportTriePresent = false;
-		bool chainedFixupsPresent = false;
-		bool routinesPresent = false;
-		bool functionStartsPresent = false;
-		bool relocatable = false;
-
-		void Store(SharedCacheCore::SerializationContext& context) const {
-			MSS(textBase);
-			MSS(loadCommandOffset);
-			MSS_SUBCLASS(ident);
-			MSS(identifierPrefix);
-			MSS(installName);
-			MSS(entryPoints);
-			MSS(m_entryPoints);
-			MSS_SUBCLASS(symtab);
-			MSS_SUBCLASS(dysymtab);
-			MSS_SUBCLASS(dyldInfo);
-			MSS_SUBCLASS(routines64);
-			MSS_SUBCLASS(functionStarts);
-			MSS_SUBCLASS(moduleInitSections);
-			MSS_SUBCLASS(exportTrie);
-			MSS_SUBCLASS(chainedFixups);
-			MSS(relocationBase);
-			MSS_SUBCLASS(segments);
-			MSS_SUBCLASS(linkeditSegment);
-			MSS_SUBCLASS(sections);
-			MSS(sectionNames);
-			MSS_SUBCLASS(symbolStubSections);
-			MSS_SUBCLASS(symbolPointerSections);
-			MSS(dylibs);
-			MSS_SUBCLASS(buildVersion);
-			MSS_SUBCLASS(buildToolVersions);
-			MSS(exportTriePath);
-			MSS(linkeditPresent);
-			MSS(dysymPresent);
-			MSS(dyldInfoPresent);
-			MSS(exportTriePresent);
-			MSS(chainedFixupsPresent);
-			MSS(routinesPresent);
-			MSS(functionStartsPresent);
-			MSS(relocatable);
-		}
-
-		static SharedCacheMachOHeader Load(SharedCacheCore::DeserializationContext& context) {
-			SharedCacheMachOHeader header;
-			header.MSL(textBase);
-			header.MSL(loadCommandOffset);
-			header.MSL(ident);
-			header.MSL(identifierPrefix);
-			header.MSL(installName);
-			header.MSL(entryPoints);
-			header.MSL(m_entryPoints);
-			header.MSL(symtab);
-			header.MSL(dysymtab);
-			header.MSL(dyldInfo);
-			header.MSL(routines64);
-			header.MSL(functionStarts);
-			header.MSL(moduleInitSections);
-			header.MSL(exportTrie);
-			header.MSL(chainedFixups);
-			header.MSL(relocationBase);
-			header.MSL(segments);
-			header.MSL(linkeditSegment);
-			header.MSL(sections);
-			header.MSL(sectionNames);
-			header.MSL(symbolStubSections);
-			header.MSL(symbolPointerSections);
-			header.MSL(dylibs);
-			header.MSL(buildVersion);
-			header.MSL(buildToolVersions);
-			header.MSL(exportTriePath);
-			header.MSL(linkeditPresent);
-			header.MSL(dysymPresent);
-			header.MSL(dyldInfoPresent);
-			header.MSL(exportTriePresent);
-			header.MSL(chainedFixupsPresent);
-			header.MSL(routinesPresent);
-			header.MSL(functionStartsPresent);
-			header.MSL(relocatable);
-			return header;
-		}
-	};
-
-
-	class SharedCache : public SCCoreRefCountObject<BNSharedCache, BNNewSharedCacheReference, BNFreeSharedCacheReference> {
+	class SharedCacheController : public DSCCoreRefCountObject<BNSharedCacheController, BNNewSharedCacheControllerReference, BNFreeSharedCacheControllerReference> {
 	public:
-		SharedCache(Ref<BinaryView> view);
+		explicit SharedCacheController(BNSharedCacheController* controller);
+		static DSCRef<SharedCacheController> GetController(BinaryNinja::BinaryView& view);
 
-		BNDSCViewState GetState();
-		static BNDSCViewLoadProgress GetLoadProgress(Ref<BinaryView> view);
-		static uint64_t FastGetBackingCacheCount(Ref<BinaryView> view);
+		bool ApplyRegion(BinaryNinja::BinaryView& view, const CacheRegion& region);
 
-		bool LoadImageWithInstallName(std::string installName, bool skipObjC = false);
-		bool LoadSectionAtAddress(uint64_t addr);
-		bool LoadImageContainingAddress(uint64_t addr, bool skipObjC = false);
-		std::vector<std::string> GetAvailableImages();
-	
-		void ProcessObjCSectionsForImageWithInstallName(std::string installName);
-		void ProcessAllObjCSections();
+		// Attempt to load the given image into the view.
+		//
+		// It is the callers responsibility to run linear sweep and update analysis, as you might want to add
+		// multiple images at a time.
+		bool ApplyImage(BinaryNinja::BinaryView& view, const CacheImage& image);
 
-		std::vector<DSCSymbol> LoadAllSymbolsAndWait();
+		bool IsRegionLoaded(const CacheRegion& region) const;
+		bool IsImageLoaded(const CacheImage& image) const;
 
-		std::string GetNameForAddress(uint64_t address);
-		std::string GetImageNameForAddress(uint64_t address);
+		std::optional<CacheRegion> GetRegionAt(uint64_t address) const;
+		std::optional<CacheRegion> GetRegionContaining(uint64_t address) const;
 
-		std::vector<BackingCache> GetBackingCaches();
-		std::vector<DSCImage> GetImages();
+		std::optional<CacheImage> GetImageAt(uint64_t address) const;
+		std::optional<CacheImage> GetImageContaining(uint64_t address) const;
+		std::optional<CacheImage> GetImageWithName(const std::string& name) const;
 
-		std::optional<SharedCacheMachOHeader> GetMachOHeaderForImage(std::string name);
-		std::optional<SharedCacheMachOHeader> GetMachOHeaderForAddress(uint64_t address);
+		std::vector<std::string> GetImageDependencies(const CacheImage& image) const;
 
-		std::vector<DSCMemoryRegion> GetLoadedMemoryRegions();
+		std::optional<CacheSymbol> GetSymbolAt(uint64_t address) const;
+		std::optional<CacheSymbol> GetSymbolWithName(const std::string& name) const;
 
-		void FindSymbolAtAddrAndApplyToAddr(uint64_t symbolLocation, uint64_t targetLocation, bool triggerReanalysis = true) const;
+		std::vector<CacheEntry> GetEntries() const;
+		std::vector<CacheRegion> GetRegions() const;
+		std::vector<CacheRegion> GetLoadedRegions() const;
+		std::vector<CacheImage> GetImages() const;
+		std::vector<CacheImage> GetLoadedImages() const;
+		std::vector<CacheSymbol> GetSymbols() const;
 	};
 }

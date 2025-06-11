@@ -1,9 +1,8 @@
 use crate::project::file::ProjectFile;
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{BnString, IntoCStr};
 use crate::symbol::Symbol;
 use binaryninjacore_sys::*;
-use std::ffi::c_char;
 use std::fmt::Debug;
 use std::ptr::NonNull;
 
@@ -24,10 +23,10 @@ impl ExternalLibrary {
     }
 
     /// Get the name of this external library
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNExternalLibraryGetName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Get the file backing this external library
@@ -167,11 +166,16 @@ impl ExternalLocation {
 
     /// Set the symbol pointed to by this ExternalLocation.
     /// ExternalLocations must have a valid target address and/or symbol set.
-    pub fn set_target_symbol<S: BnStrCompatible>(&self, symbol: Option<S>) -> bool {
-        let symbol = symbol
-            .map(|x| x.into_bytes_with_nul().as_ref().as_ptr() as *const c_char)
-            .unwrap_or(std::ptr::null_mut());
-        unsafe { BNExternalLocationSetTargetSymbol(self.handle.as_ptr(), symbol) }
+    pub fn set_target_symbol(&self, symbol: Option<&str>) -> bool {
+        match symbol {
+            Some(sym) => {
+                let raw_sym = sym.to_cstr();
+                unsafe { BNExternalLocationSetTargetSymbol(self.handle.as_ptr(), raw_sym.as_ptr()) }
+            }
+            None => unsafe {
+                BNExternalLocationSetTargetSymbol(self.handle.as_ptr(), std::ptr::null())
+            },
+        }
     }
 }
 

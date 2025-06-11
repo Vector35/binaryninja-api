@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2024 Vector 35 Inc
+# Copyright (c) 2015-2025 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -18,7 +18,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import copy
 from typing import Any
 
 
@@ -29,18 +28,22 @@ class _AssociatedDataStore(dict):
 	def set_default(cls, name: str, value: Any):
 		cls._defaults[name] = value
 
+	def get(self, key: Any, default: Any = None) -> Any:
+		if key in self.keys():
+			return self[key]
+		if key in self.__class__._defaults:
+			return self.__class__._defaults[key]
+		return default
+
 	def __getattr__(self, name: str) -> Any:
-		if name in self.__dict__:
-			return self.__dict__[name]
-		if name not in self:
-			if name in self.__class__._defaults:
-				result = copy.copy(self.__class__._defaults[name])
-				self[name] = result
-				return result
+		if name in self.keys():
+			return self[name]
+		if name in self.__class__._defaults:
+			return self.__class__._defaults[name]
 		return self.__getitem__(name)
 
-	def __setattr__(self, name: str, value: Any):
+	def __setattr__(self, name: str, value: Any) -> None:
 		self.__setitem__(name, value)
 
-	def __delattr__(self, name: str):
+	def __delattr__(self, name: str) -> None:
 		self.__delitem__(name)

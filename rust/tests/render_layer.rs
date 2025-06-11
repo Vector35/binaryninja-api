@@ -13,7 +13,7 @@ fn test_render_layer_register() {
     struct EmptyRenderLayer;
     impl RenderLayer for EmptyRenderLayer {}
     register_render_layer("Test Render Layer", EmptyRenderLayer, Default::default());
-    CoreRenderLayer::render_layer_by_name("Test Render Layer").expect("Failed to get render layer");
+    CoreRenderLayer::from_name("Test Render Layer").expect("Failed to get render layer");
 }
 
 #[test]

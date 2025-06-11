@@ -1,11 +1,5 @@
 #pragma once
 
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 #ifdef __GNUC__
 	#ifdef SHAREDCACHE_LIBRARY
 		#define SHAREDCACHE_FFI_API __attribute__((visibility("default")))
@@ -28,137 +22,140 @@ extern "C"
 	#endif  // _MSC_VER
 #endif      // __GNUC__C
 
-#define CORE_ALLOCATED_STRUCT(T)
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
-#define CORE_ALLOCATED_CLASS(T) \
-	public: \
-		CORE_ALLOCATED_STRUCT(T) \
-	private:
+	//	binaryninjacore.h is not included so we must duplicate enum types here.
+#ifdef BN_TYPE_PARSER
+	typedef enum BNSegmentFlag
+	{
+		SegmentExecutable = 1,
+		SegmentWritable = 2,
+		SegmentReadable = 4,
+		SegmentContainsData = 8,
+		SegmentContainsCode = 0x10,
+		SegmentDenyWrite = 0x20,
+		SegmentDenyExecute = 0x40
+	} BNSegmentFlag;
 
-#define DECLARE_SHAREDCACHE_API_OBJECT_INTERNAL(handle, cls, ns) \
-	namespace ns { class cls; } struct handle { ns::cls* object; }
-
-#define DECLARE_SHAREDCACHE_API_OBJECT(handle, cls) DECLARE_SHAREDCACHE_API_OBJECT_INTERNAL(handle, cls, SharedCacheCore)
-
-#define IMPLEMENT_SHAREDCACHE_API_OBJECT(handle) \
-		CORE_ALLOCATED_CLASS(handle) \
-	private: \
-		handle m_apiObject; \
-	public: \
-		typedef handle* APIHandle; \
-		handle* GetAPIObject() { return &m_apiObject; } \
-	private:
-#define INIT_SHAREDCACHE_API_OBJECT() \
-	m_apiObject.object = this;
-
-	typedef enum BNDSCViewState {
-		Unloaded,
-		Loaded,
-		LoadedWithImages,
-	} BNDSCViewState;
-
-	typedef enum BNDSCViewLoadProgress {
-		LoadProgressNotStarted,
-		LoadProgressLoadingCaches,
-		LoadProgressLoadingImages,
-		LoadProgressFinished,
-	} BNDSCViewLoadProgress;
-
-	typedef enum BNBackingCacheType {
-		BackingCacheTypePrimary,
-		BackingCacheTypeSecondary,
-		BackingCacheTypeSymbols,
-	} BNBackingCacheType;
+	typedef enum BNSymbolType
+	{
+		FunctionSymbol = 0,
+		ImportAddressSymbol = 1,
+		ImportedFunctionSymbol = 2,
+		DataSymbol = 3,
+		ImportedDataSymbol = 4,
+		ExternalSymbol = 5,
+		LibraryFunctionSymbol = 6,
+		SymbolicFunctionSymbol = 7,
+		LocalLabelSymbol = 8,
+	} BNSymbolType;
+#endif
 
 	typedef struct BNBinaryView BNBinaryView;
-	typedef struct BNSharedCache BNSharedCache;
-	typedef struct BNStringRef BNStringRef;
+	typedef struct BNSharedCacheController BNSharedCacheController;
 
-	typedef struct BNDSCImageMemoryMapping {
-		char* filePath;
-		char* name;
-		uint64_t vmAddress;
-		uint64_t size;
-		bool loaded;
-		uint64_t rawViewOffset;
-	} BNDSCImageMemoryMapping;
+	typedef enum BNSharedCacheEntryType {
+		SharedCacheEntryTypePrimary,
+		SharedCacheEntryTypeSecondary,
+		SharedCacheEntryTypeSymbols,
+		SharedCacheEntryTypeDyldData,
+		SharedCacheEntryTypeStub,
+	} BNSharedCacheEntryType;
 
-	typedef struct BNDSCImage {
+	typedef enum BNSharedCacheRegionType {
+		SharedCacheRegionTypeImage,
+		SharedCacheRegionTypeStubIsland,
+		SharedCacheRegionTypeDyldData,
+		SharedCacheRegionTypeNonImage,
+	} BNSharedCacheRegionType;
+
+	typedef struct BNSharedCacheImage {
 		char* name;
 		uint64_t headerAddress;
-		BNDSCImageMemoryMapping* mappings;
-		size_t mappingCount;
-	} BNDSCImage;
+		size_t regionStartCount;
+		uint64_t* regionStarts;
+	} BNSharedCacheImage;
 
-	typedef struct BNDSCMappedMemoryRegion {
+	typedef struct BNSharedCacheRegion {
+		BNSharedCacheRegionType regionType;
+		char* name;
 		uint64_t vmAddress;
 		uint64_t size;
-		char* name;
-	} BNDSCMappedMemoryRegion;
+		// NOTE: If not associated with an image this will be zero.
+		uint64_t imageStart;
+		BNSegmentFlag flags;
+	} BNSharedCacheRegion;
 
-	typedef struct BNDSCBackingCacheMapping {
+	typedef struct BNSharedCacheMappingInfo {
 		uint64_t vmAddress;
 		uint64_t size;
 		uint64_t fileOffset;
-	} BNDSCBackingCacheMapping;
+	} BNSharedCacheMappingInfo;
 
-	typedef struct BNDSCBackingCache {
+	typedef struct BNSharedCacheEntry {
 		char* path;
-		BNBackingCacheType cacheType;
-		BNDSCBackingCacheMapping* mappings;
+		char* name;
+		BNSharedCacheEntryType entryType;
 		size_t mappingCount;
-	} BNDSCBackingCache;
+		BNSharedCacheMappingInfo* mappings;
+	} BNSharedCacheEntry;
 
-	typedef struct BNDSCMemoryUsageInfo {
-		uint64_t sharedCacheRefs;
-		uint64_t mmapRefs;
-	} BNDSCMemoryUsageInfo;
-
-	typedef struct BNDSCSymbolRep {
+	typedef struct BNSharedCacheSymbol {
+		BNSymbolType symbolType;
 		uint64_t address;
-		BNStringRef* name;
-		char* image;
-	} BNDSCSymbolRep;
+		char* name;
+	} BNSharedCacheSymbol;
 
-	SHAREDCACHE_FFI_API BNSharedCache* BNGetSharedCache(BNBinaryView* data);
+	SHAREDCACHE_FFI_API BNSharedCacheController* BNGetSharedCacheController(BNBinaryView* data);
 
-	SHAREDCACHE_FFI_API BNSharedCache* BNNewSharedCacheReference(BNSharedCache* cache);
-	SHAREDCACHE_FFI_API void BNFreeSharedCacheReference(BNSharedCache* cache);
+	SHAREDCACHE_FFI_API BNSharedCacheController* BNNewSharedCacheControllerReference(BNSharedCacheController* controller);
+	SHAREDCACHE_FFI_API void BNFreeSharedCacheControllerReference(BNSharedCacheController* controller);
 
-	SHAREDCACHE_FFI_API char** BNDSCViewGetInstallNames(BNSharedCache* cache, size_t* count);
+	SHAREDCACHE_FFI_API bool BNSharedCacheControllerApplyImage(BNSharedCacheController* controller, BNBinaryView* view, BNSharedCacheImage* image);
+	SHAREDCACHE_FFI_API bool BNSharedCacheControllerApplyRegion(BNSharedCacheController* controller, BNBinaryView* view, BNSharedCacheRegion* region);
 
-	SHAREDCACHE_FFI_API bool BNDSCViewLoadImageWithInstallName(BNSharedCache* cache, char* name, bool skipObjC);
-	SHAREDCACHE_FFI_API bool BNDSCViewLoadSectionAtAddress(BNSharedCache* cache, uint64_t name);
-	SHAREDCACHE_FFI_API bool BNDSCViewLoadImageContainingAddress(BNSharedCache* cache, uint64_t address, bool skipObjC);
+	SHAREDCACHE_FFI_API bool BNSharedCacheControllerIsImageLoaded(BNSharedCacheController* controller, BNSharedCacheImage* image);
+	SHAREDCACHE_FFI_API bool BNSharedCacheControllerIsRegionLoaded(BNSharedCacheController* controller, BNSharedCacheRegion* region);
 	
-	SHAREDCACHE_FFI_API void BNDSCViewProcessObjCSectionsForImageWithInstallName(BNSharedCache* cache, char* name, bool deallocName);
-	SHAREDCACHE_FFI_API void BNDSCViewProcessAllObjCSections(BNSharedCache* cache);
+	SHAREDCACHE_FFI_API bool BNSharedCacheControllerGetRegionAt(BNSharedCacheController* controller, uint64_t address, BNSharedCacheRegion* outRegion);
+	SHAREDCACHE_FFI_API bool BNSharedCacheControllerGetRegionContaining(BNSharedCacheController* controller, uint64_t address, BNSharedCacheRegion* region);
 
-	SHAREDCACHE_FFI_API char* BNDSCViewGetNameForAddress(BNSharedCache* cache, uint64_t address);
-	SHAREDCACHE_FFI_API char* BNDSCViewGetImageNameForAddress(BNSharedCache* cache, uint64_t address);
+	SHAREDCACHE_FFI_API BNSharedCacheRegion* BNSharedCacheControllerGetRegions(BNSharedCacheController* controller, size_t* count);
+	SHAREDCACHE_FFI_API BNSharedCacheRegion* BNSharedCacheControllerGetLoadedRegions(BNSharedCacheController* controller, size_t* count);
 
-	SHAREDCACHE_FFI_API BNDSCViewState BNDSCViewGetState(BNSharedCache* cache);
-	SHAREDCACHE_FFI_API BNDSCViewLoadProgress BNDSCViewGetLoadProgress(uint64_t sessionID);
-	SHAREDCACHE_FFI_API uint64_t BNDSCViewFastGetBackingCacheCount(BNBinaryView* view);
+	SHAREDCACHE_FFI_API uint64_t* BNSharedCacheAllocRegionList(uint64_t* list, size_t count);
 
-	SHAREDCACHE_FFI_API BNDSCSymbolRep* BNDSCViewLoadAllSymbolsAndWait(BNSharedCache* cache, size_t* count);
-	SHAREDCACHE_FFI_API void BNDSCViewFreeSymbols(BNDSCSymbolRep* symbols, size_t count);
+	SHAREDCACHE_FFI_API void BNSharedCacheFreeRegion(BNSharedCacheRegion region);
+	SHAREDCACHE_FFI_API void BNSharedCacheFreeRegionList(BNSharedCacheRegion* regions, size_t count);
 
-	SHAREDCACHE_FFI_API BNDSCMappedMemoryRegion* BNDSCViewGetLoadedRegions(BNSharedCache* cache, size_t* count);
-	SHAREDCACHE_FFI_API void BNDSCViewFreeLoadedRegions(BNDSCMappedMemoryRegion* images, size_t count);
+	SHAREDCACHE_FFI_API bool BNSharedCacheControllerGetImageAt(BNSharedCacheController* controller, uint64_t address, BNSharedCacheImage* image);
+	SHAREDCACHE_FFI_API bool BNSharedCacheControllerGetImageContaining(BNSharedCacheController* controller, uint64_t address, BNSharedCacheImage* image);
+	SHAREDCACHE_FFI_API bool BNSharedCacheControllerGetImageWithName(BNSharedCacheController* controller, const char* name, BNSharedCacheImage* image);
 
-	SHAREDCACHE_FFI_API BNDSCImage* BNDSCViewGetAllImages(BNSharedCache* cache, size_t* count);
-	SHAREDCACHE_FFI_API void BNDSCViewFreeAllImages(BNDSCImage* images, size_t count);
+	SHAREDCACHE_FFI_API char** BNSharedCacheControllerGetImageDependencies(BNSharedCacheController* controller, BNSharedCacheImage* image, size_t* count);
 
-	SHAREDCACHE_FFI_API BNDSCBackingCache* BNDSCViewGetBackingCaches(BNSharedCache* cache, size_t* count);
-	SHAREDCACHE_FFI_API void BNDSCViewFreeBackingCaches(BNDSCBackingCache* caches, size_t count);
+	SHAREDCACHE_FFI_API BNSharedCacheImage* BNSharedCacheControllerGetImages(BNSharedCacheController* controller, size_t* count);
+	SHAREDCACHE_FFI_API BNSharedCacheImage* BNSharedCacheControllerGetLoadedImages(BNSharedCacheController* controller, size_t* count);
 
-	SHAREDCACHE_FFI_API void BNDSCFindSymbolAtAddressAndApplyToAddress(BNSharedCache* cache, uint64_t symbolLocation, uint64_t targetLocation, bool triggerReanalysis);
+	SHAREDCACHE_FFI_API void BNSharedCacheFreeImage(BNSharedCacheImage image);
+	SHAREDCACHE_FFI_API void BNSharedCacheFreeImageList(BNSharedCacheImage* images, size_t count);
 
-	SHAREDCACHE_FFI_API char* BNDSCViewGetImageHeaderForAddress(BNSharedCache* cache, uint64_t address);
-	SHAREDCACHE_FFI_API char* BNDSCViewGetImageHeaderForName(BNSharedCache* cache, char* name);
+	SHAREDCACHE_FFI_API bool BNSharedCacheControllerGetSymbolAt(BNSharedCacheController* controller, uint64_t address, BNSharedCacheSymbol* symbol);
+	SHAREDCACHE_FFI_API bool BNSharedCacheControllerGetSymbolWithName(BNSharedCacheController* controller, const char* name, BNSharedCacheSymbol* symbol);
 
-	[[maybe_unused]] SHAREDCACHE_FFI_API BNDSCMemoryUsageInfo BNDSCViewGetMemoryUsageInfo();
+	SHAREDCACHE_FFI_API BNSharedCacheSymbol* BNSharedCacheControllerGetSymbols(BNSharedCacheController* controller, size_t* count);
+
+	SHAREDCACHE_FFI_API void BNSharedCacheFreeSymbol(BNSharedCacheSymbol symbol);
+	SHAREDCACHE_FFI_API void BNSharedCacheFreeSymbolList(BNSharedCacheSymbol* symbols, size_t count);
+
+	SHAREDCACHE_FFI_API BNSharedCacheEntry* BNSharedCacheControllerGetEntries(BNSharedCacheController* controller, size_t* count);
+
+	SHAREDCACHE_FFI_API void BNSharedCacheFreeEntry(BNSharedCacheEntry entry);
+	SHAREDCACHE_FFI_API void BNSharedCacheFreeEntryList(BNSharedCacheEntry* entries, size_t count);
+
 
 #ifdef __cplusplus
 }

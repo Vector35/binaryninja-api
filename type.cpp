@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2024 Vector 35 Inc
+// Copyright (c) 2015-2025 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -512,6 +512,12 @@ void TypeDefinitionLine::FreeTypeDefinitionLineList(BNTypeDefinitionLine* lines,
 		BNFreeString(lines[i].rootTypeName);
 	}
 	delete[] lines;
+}
+
+
+FieldResolutionInfo::FieldResolutionInfo(BNFieldResolutionInfo* info)
+{
+	m_object = info;
 }
 
 
@@ -1274,7 +1280,7 @@ Ref<Type> Type::WithReplacedNamedTypeReference(NamedTypeReference* from, NamedTy
 
 
 bool Type::AddTypeMemberTokens(BinaryView* data, vector<InstructionTextToken>& tokens, int64_t offset,
-    vector<string>& nameList, size_t size, bool indirect)
+    vector<string>& nameList, size_t size, bool indirect, FieldResolutionInfo* info)
 {
 	size_t tokenCount;
 	BNInstructionTextToken* list;
@@ -1282,8 +1288,8 @@ bool Type::AddTypeMemberTokens(BinaryView* data, vector<InstructionTextToken>& t
 	size_t nameCount;
 	char** names = nullptr;
 
-	if (!BNAddTypeMemberTokens(
-	        m_object, data->GetObject(), &list, &tokenCount, offset, &names, &nameCount, size, indirect))
+	if (!BNAddTypeMemberTokens(m_object, data->GetObject(), &list, &tokenCount,
+				offset, &names, &nameCount, size, indirect, info ? info->m_object : nullptr))
 		return false;
 
 	vector<InstructionTextToken> newTokens =
@@ -1300,9 +1306,33 @@ bool Type::AddTypeMemberTokens(BinaryView* data, vector<InstructionTextToken>& t
 	return true;
 }
 
+struct EnumerateTypesForAccessCallbackInfo
+{
+	const std::function<void(const Confidence<Ref<Type>>& type, FieldResolutionInfo* path)>* callback;
+};
+
+
+static void EnumerateTypesForAccessCallback(void* ctxt, BNTypeWithConfidence* tc, BNFieldResolutionInfo* info)
+{
+	EnumerateTypesForAccessCallbackInfo* enumerateFunc = (EnumerateTypesForAccessCallbackInfo *) ctxt;
+
+	Confidence<Ref<Type>> typeRef(tc->type ? new Type(BNNewTypeReference(tc->type)) : nullptr, tc->confidence);
+	Ref<FieldResolutionInfo> path = new FieldResolutionInfo(BNNewFieldResolutionInfoReference(info));
+
+	(*enumerateFunc->callback)(typeRef, path);
+}
+
+bool Type::EnumerateTypesForAccess(BinaryView* data, uint64_t offset, size_t size, uint8_t baseConfidence,
+	const std::function<void(const Confidence<Ref<Type>>& type, FieldResolutionInfo* path)>& terminal)
+{
+	EnumerateTypesForAccessCallbackInfo callbackInfo = { &terminal };
+	return BNEnumerateTypesForAccess(m_object, data->GetObject(), offset, size, baseConfidence,
+		EnumerateTypesForAccessCallback, &callbackInfo);
+}
+
 
 std::vector<TypeDefinitionLine> Type::GetLines(const TypeContainer& types, const std::string& name,
-	int paddingCols, bool collapsed, BNTokenEscapingType escaping)
+	int paddingCols, bool collapsed, BNTokenEscapingType escaping) const
 {
 	size_t count;
 	BNTypeDefinitionLine* list =
@@ -3080,3 +3110,36 @@ bool BinaryNinja::PreprocessSource(
 	delete[] includeDirList;
 	return result;
 }
+
+
+fmt::format_context::iterator fmt::formatter<BinaryNinja::Type>::format(
+	const Type& obj,
+	fmt::format_context& ctx
+) const
+{
+	if (presentation == '?')
+	{
+		auto tc = TypeContainer::GetEmptyTypeContainer();
+		auto lines = obj.GetLines(tc, "");
+
+		string result = "";
+		for (auto& line: lines)
+		{
+			string lineStr = "";
+			for (auto& token: line.tokens)
+			{
+				lineStr += token.text;
+			}
+			result += lineStr + "\n";
+		}
+		// Remove trailing newline
+		if (!result.empty())
+			result.erase(result.size() - 1);
+		return fmt::format_to(ctx.out(), "{}", result);
+	}
+	else
+	{
+		return fmt::format_to(ctx.out(), "{}{}", obj.GetStringBeforeName(), obj.GetStringAfterName());
+	}
+}
+

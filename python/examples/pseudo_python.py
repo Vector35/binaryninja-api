@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Vector 35 Inc
+# Copyright (c) 2024-2025 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -35,10 +35,15 @@ class PseudoPythonFunction(LanguageRepresentationFunction):
     def perform_init_token_emitter(self, emitter):
         # Python never allows braces, even if the user has set the option to show them
         emitter.brace_requirement = BraceRequirement.BracesNotAllowed
+        emitter.has_collapsable_regions = True
 
     def perform_begin_lines(self, instr: HighLevelILInstruction, tokens: HighLevelILTokenEmitter):
         # Ensure that the function body is indented relative to the function declaration
         tokens.increase_indent()
+        tokens.prepend_blank_collapse_indicator()
+
+    def perform_end_lines(self, instr: HighLevelILInstruction, tokens: HighLevelILTokenEmitter):
+        tokens.prepend_blank_collapse_indicator()
 
     def perform_get_expr_text(
             self, instr: HighLevelILInstruction, tokens: HighLevelILTokenEmitter, settings: Optional[DisassemblySettings],
@@ -46,6 +51,8 @@ class PseudoPythonFunction(LanguageRepresentationFunction):
             statement: bool = False
     ):
         with tokens.expr(instr):
+            if instr.as_ast:
+                tokens.prepend_instr_collapse_indicator(self.function, instr)
             if instr.operation == HighLevelILOperation.HLIL_BLOCK:
                 need_separator = False
                 body = instr.body
@@ -71,37 +78,54 @@ class PseudoPythonFunction(LanguageRepresentationFunction):
             elif instr.operation == HighLevelILOperation.HLIL_IF:
                 tokens.append(InstructionTextToken(InstructionTextTokenType.KeywordToken, "if "))
                 self.perform_get_expr_text(instr.condition, tokens, settings)
-                tokens.append(InstructionTextToken(InstructionTextTokenType.KeywordToken, ":\n"))
+                tokens.append(InstructionTextToken(InstructionTextTokenType.KeywordToken, ":"))
                 if instr.as_ast:
-                    # Only display the if body when printing the full AST. When printing basic blocks in graph view,
-                    # the body of the if and the else part are rendered as other nodes in the graph.
-                    tokens.begin_scope(ScopeType.BlockScopeType)
-                    self.perform_get_expr_text(instr.true, tokens, settings,
-                                               OperatorPrecedence.TopLevelOperatorPrecedence, True)
-                    tokens.end_scope(ScopeType.BlockScopeType)
+                    if self.function.is_instruction_collapsed(instr):
+                        tokens.append(InstructionTextToken(InstructionTextTokenType.CollapsedInformationToken, " ..."))
+                        # Python can't put multiple `elif`s on the same line
+                        tokens.new_line()
+                    else:
+                        # Only display the if body when printing the full AST. When printing basic blocks in graph view,
+                        # the body of the if and the else part are rendered as other nodes in the graph.
+                        tokens.begin_scope(ScopeType.BlockScopeType)
+                        self.perform_get_expr_text(instr.true, tokens, settings,
+                                                   OperatorPrecedence.TopLevelOperatorPrecedence, True)
+                        tokens.end_scope(ScopeType.BlockScopeType)
 
                     # Else statements need to be handled as chains, since "else if" in Python should be rendered
                     # as "elif" statements.
                     if_chain = instr.false
+                    idx = 1
                     while if_chain is not None and if_chain.operation not in [HighLevelILOperation.HLIL_NOP,
                                                                               HighLevelILOperation.HLIL_UNREACHABLE]:
                         if if_chain.operation == HighLevelILOperation.HLIL_IF:
+                            tokens.prepend_instr_collapse_indicator(self.function, instr, idx)
                             tokens.append(InstructionTextToken(InstructionTextTokenType.KeywordToken, "elif "))
                             self.perform_get_expr_text(if_chain.condition, tokens, settings)
                             tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, ":"))
-                            tokens.begin_scope(ScopeType.BlockScopeType)
-                            self.perform_get_expr_text(if_chain.true, tokens, settings,
+                            if self.function.is_instruction_collapsed(instr, idx):
+                                tokens.append(InstructionTextToken(InstructionTextTokenType.CollapsedInformationToken, " ..."))
+                                # Python can't put multiple `elif`s on the same line
+                                tokens.new_line()
+                            else:
+                                tokens.begin_scope(ScopeType.BlockScopeType)
+                                self.perform_get_expr_text(if_chain.true, tokens, settings,
                                                        OperatorPrecedence.TopLevelOperatorPrecedence, True)
-                            tokens.end_scope(ScopeType.BlockScopeType)
+                                tokens.end_scope(ScopeType.BlockScopeType)
                             if_chain = if_chain.false
                         else:
+                            tokens.prepend_instr_collapse_indicator(self.function, instr, idx)
                             tokens.append(InstructionTextToken(InstructionTextTokenType.KeywordToken, "else"))
                             tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, ":"))
-                            tokens.begin_scope(ScopeType.BlockScopeType)
-                            self.perform_get_expr_text(if_chain, tokens, settings,
-                                                       OperatorPrecedence.TopLevelOperatorPrecedence, True)
-                            tokens.end_scope(ScopeType.BlockScopeType)
+                            if self.function.is_instruction_collapsed(instr, idx):
+                                tokens.append(InstructionTextToken(InstructionTextTokenType.CollapsedInformationToken, " ..."))
+                            else:
+                                tokens.begin_scope(ScopeType.BlockScopeType)
+                                self.perform_get_expr_text(if_chain, tokens, settings,
+                                                           OperatorPrecedence.TopLevelOperatorPrecedence, True)
+                                tokens.end_scope(ScopeType.BlockScopeType)
                             break
+                        idx += 1
             elif instr.operation == HighLevelILOperation.HLIL_FOR:
                 tokens.append(InstructionTextToken(InstructionTextTokenType.KeywordToken, "for "))
 
@@ -153,27 +177,36 @@ class PseudoPythonFunction(LanguageRepresentationFunction):
                         self.perform_get_expr_text(instr.update, tokens, settings)
                 tokens.append(InstructionTextToken(InstructionTextTokenType.KeywordToken, ":"))
                 if instr.as_ast:
-                    tokens.begin_scope(ScopeType.BlockScopeType)
-                    self.perform_get_expr_text(instr.body, tokens, settings,
-                                               OperatorPrecedence.TopLevelOperatorPrecedence, True)
-                    tokens.end_scope(ScopeType.BlockScopeType)
+                    if self.function.is_instruction_collapsed(instr):
+                        tokens.append(InstructionTextToken(InstructionTextTokenType.CollapsedInformationToken, " ..."))
+                    else:
+                        tokens.begin_scope(ScopeType.BlockScopeType)
+                        self.perform_get_expr_text(instr.body, tokens, settings,
+                                                   OperatorPrecedence.TopLevelOperatorPrecedence, True)
+                        tokens.end_scope(ScopeType.BlockScopeType)
             elif instr.operation == HighLevelILOperation.HLIL_WHILE:
                 tokens.append(InstructionTextToken(InstructionTextTokenType.KeywordToken, "while "))
                 self.perform_get_expr_text(instr.condition, tokens, settings)
                 tokens.append(InstructionTextToken(InstructionTextTokenType.KeywordToken, ":"))
                 if instr.as_ast:
-                    tokens.begin_scope(ScopeType.BlockScopeType)
-                    self.perform_get_expr_text(instr.body, tokens, settings,
-                                               OperatorPrecedence.TopLevelOperatorPrecedence, True)
-                    tokens.end_scope(ScopeType.BlockScopeType)
+                    if self.function.is_instruction_collapsed(instr):
+                        tokens.append(InstructionTextToken(InstructionTextTokenType.CollapsedInformationToken, " ..."))
+                    else:
+                        tokens.begin_scope(ScopeType.BlockScopeType)
+                        self.perform_get_expr_text(instr.body, tokens, settings,
+                                                   OperatorPrecedence.TopLevelOperatorPrecedence, True)
+                        tokens.end_scope(ScopeType.BlockScopeType)
             elif instr.operation == HighLevelILOperation.HLIL_DO_WHILE:
                 if instr.as_ast:
                     tokens.append(InstructionTextToken(InstructionTextTokenType.KeywordToken, "do"))
                     tokens.append(InstructionTextToken(InstructionTextTokenType.KeywordToken, ":"))
-                    tokens.begin_scope(ScopeType.BlockScopeType)
-                    self.perform_get_expr_text(instr.body, tokens, settings,
-                                               OperatorPrecedence.TopLevelOperatorPrecedence, True)
-                    tokens.end_scope(ScopeType.BlockScopeType)
+                    if self.function.is_instruction_collapsed(instr):
+                        tokens.append(InstructionTextToken(InstructionTextTokenType.CollapsedInformationToken, " ..."))
+                    else:
+                        tokens.begin_scope(ScopeType.BlockScopeType)
+                        self.perform_get_expr_text(instr.body, tokens, settings,
+                                                   OperatorPrecedence.TopLevelOperatorPrecedence, True)
+                        tokens.end_scope(ScopeType.BlockScopeType)
                     tokens.append(InstructionTextToken(InstructionTextTokenType.KeywordToken, "while "))
                     self.perform_get_expr_text(instr.condition, tokens, settings)
                 else:
@@ -184,25 +217,32 @@ class PseudoPythonFunction(LanguageRepresentationFunction):
                 tokens.append(InstructionTextToken(InstructionTextTokenType.KeywordToken, "match "))
                 self.perform_get_expr_text(instr.condition, tokens, settings)
                 tokens.append(InstructionTextToken(InstructionTextTokenType.KeywordToken, ":"))
-                tokens.begin_scope(ScopeType.SwitchScopeType)
-
                 if instr.as_ast:
-                    # Output each case
-                    for case in instr.cases:
-                        self.perform_get_expr_text(case, tokens, settings,
-                                                   OperatorPrecedence.TopLevelOperatorPrecedence, True)
-                        tokens.new_line()
+                    if self.function.is_instruction_collapsed(instr):
+                        tokens.append(InstructionTextToken(InstructionTextTokenType.CollapsedInformationToken, " ..."))
+                    else:
+                        tokens.begin_scope(ScopeType.SwitchScopeType)
 
-                    # Check for default case
-                    if instr.default is not None and instr.default.operation not in [HighLevelILOperation.HLIL_NOP,
-                                                                                     HighLevelILOperation.HLIL_UNREACHABLE]:
-                        tokens.append(InstructionTextToken(InstructionTextTokenType.KeywordToken, "default"))
-                        tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, ":"))
-                        tokens.begin_scope(ScopeType.CaseScopeType)
-                        self.perform_get_expr_text(instr.default, tokens, settings,
-                                                   OperatorPrecedence.TopLevelOperatorPrecedence, True)
-                        tokens.end_scope(ScopeType.CaseScopeType)
-                    tokens.end_scope(ScopeType.SwitchScopeType)
+                        # Output each case
+                        for case in instr.cases:
+                            self.perform_get_expr_text(case, tokens, settings,
+                                                       OperatorPrecedence.TopLevelOperatorPrecedence, True)
+                            tokens.new_line()
+
+                        # Check for default case
+                        if instr.default is not None and instr.default.operation not in [HighLevelILOperation.HLIL_NOP,
+                                                                                         HighLevelILOperation.HLIL_UNREACHABLE]:
+                            tokens.prepend_instr_collapse_indicator(self.function, instr, 1)
+                            tokens.append(InstructionTextToken(InstructionTextTokenType.KeywordToken, "default"))
+                            tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, ":"))
+                            if self.function.is_instruction_collapsed(instr, 1):
+                                tokens.append(InstructionTextToken(InstructionTextTokenType.CollapsedInformationToken, " ..."))
+                            else:
+                                tokens.begin_scope(ScopeType.CaseScopeType)
+                                self.perform_get_expr_text(instr.default, tokens, settings,
+                                                           OperatorPrecedence.TopLevelOperatorPrecedence, True)
+                                tokens.end_scope(ScopeType.CaseScopeType)
+                        tokens.end_scope(ScopeType.SwitchScopeType)
             elif instr.operation == HighLevelILOperation.HLIL_CASE:
                 tokens.append(InstructionTextToken(InstructionTextTokenType.KeywordToken, "case "))
                 for (i, value) in enumerate(instr.values):
@@ -210,10 +250,13 @@ class PseudoPythonFunction(LanguageRepresentationFunction):
                         tokens.append(InstructionTextToken(InstructionTextTokenType.OperationToken, " | "))
                     self.perform_get_expr_text(value, tokens, settings)
                 tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, ":"))
-                tokens.begin_scope(ScopeType.CaseScopeType)
-                self.perform_get_expr_text(instr.body, tokens, settings,
-                                           OperatorPrecedence.TopLevelOperatorPrecedence, True)
-                tokens.end_scope(ScopeType.CaseScopeType)
+                if self.function.is_instruction_collapsed(instr):
+                    tokens.append(InstructionTextToken(InstructionTextTokenType.CollapsedInformationToken, " ..."))
+                else:
+                    tokens.begin_scope(ScopeType.CaseScopeType)
+                    self.perform_get_expr_text(instr.body, tokens, settings,
+                                               OperatorPrecedence.TopLevelOperatorPrecedence, True)
+                    tokens.end_scope(ScopeType.CaseScopeType)
             elif instr.operation == HighLevelILOperation.HLIL_BREAK:
                 tokens.append(InstructionTextToken(InstructionTextTokenType.KeywordToken, "break"))
             elif instr.operation == HighLevelILOperation.HLIL_CONTINUE:
@@ -948,11 +991,31 @@ class PseudoPythonFunction(LanguageRepresentationFunction):
                 tokens.append(InstructionTextToken(InstructionTextTokenType.GotoLabelToken, instr.target.name,
                                                    instr.target.label_id))
             elif instr.operation == HighLevelILOperation.HLIL_LABEL:
-                tokens.decrease_indent()
+                # NB: Not using decrease_indent() here because it will mess up the indentation guides
+                # that rely on matched calls to increase_indent()/decrease_indent() to properly set
+                # indentation groupings. Instead, we manually remove the last indent in the tokens
+                tokens.init_line()
+                new_tokens = tokens.current_tokens
+                found_indent = False
+                erased_indent = False
+                for i in range(len(new_tokens)):
+                    token = new_tokens[i]
+                    if token.type == InstructionTextTokenType.IndentationToken:
+                        found_indent = True
+                    elif found_indent:
+                        # We have indents and this is the first non-indent token after all the indents,
+                        # so remove the previous token. It must exist because we will have to have gone through
+                        # the condition above and looped at least once.
+                        new_tokens.pop(i - 1)
+                        erased_indent = True
+                        break
+                if found_indent and not erased_indent:
+                    # Found an indent, but it was the last token, so erase the last token
+                    new_tokens.pop(len(new_tokens) - 1)
+                tokens.current_tokens = new_tokens
                 tokens.append(InstructionTextToken(InstructionTextTokenType.GotoLabelToken, instr.target.name,
                                                    instr.target.label_id))
                 tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, ":"))
-                tokens.increase_indent()
             elif instr.operation == HighLevelILOperation.HLIL_LOW_PART:
                 parens = precedence > OperatorPrecedence.MemberAndFunctionOperatorPrecedence
                 if parens:

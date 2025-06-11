@@ -1,8 +1,7 @@
 use super::Remote;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{BnString, IntoCStr};
 use binaryninjacore_sys::*;
-use std::ffi::c_char;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ptr::NonNull;
@@ -30,10 +29,10 @@ impl RemoteGroup {
     }
 
     /// Web api endpoint url
-    pub fn url(&self) -> BnString {
+    pub fn url(&self) -> String {
         let value = unsafe { BNCollaborationGroupGetUrl(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// Unique id
@@ -42,22 +41,17 @@ impl RemoteGroup {
     }
 
     /// Group name
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let value = unsafe { BNCollaborationGroupGetName(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// Set group name
     /// You will need to push the group to update the Remote.
-    pub fn set_name<U: BnStrCompatible>(&self, name: U) {
-        let name = name.into_bytes_with_nul();
-        unsafe {
-            BNCollaborationGroupSetName(
-                self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn set_name(&self, name: &str) {
+        let name = name.to_cstr();
+        unsafe { BNCollaborationGroupSetName(self.handle.as_ptr(), name.as_ptr()) }
     }
 
     /// Get list of users in the group
@@ -89,17 +83,10 @@ impl RemoteGroup {
     /// You will need to push the group to update the Remote.
     pub fn set_users<I>(&self, usernames: I) -> Result<(), ()>
     where
-        I: IntoIterator,
-        I::Item: BnStrCompatible,
+        I: IntoIterator<Item = String>,
     {
-        let usernames: Vec<_> = usernames
-            .into_iter()
-            .map(|u| u.into_bytes_with_nul())
-            .collect();
-        let mut usernames_raw: Vec<_> = usernames
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect();
+        let usernames: Vec<_> = usernames.into_iter().map(|u| u.to_cstr()).collect();
+        let mut usernames_raw: Vec<_> = usernames.iter().map(|s| s.as_ptr()).collect();
         // TODO: This should only fail if collaboration is not supported.
         // TODO: Because you should not have a RemoteGroup at that point we can ignore?
         // TODO: Do you need any permissions to do this?
@@ -114,14 +101,9 @@ impl RemoteGroup {
     }
 
     /// Test if a group has a user with the given username
-    pub fn contains_user<U: BnStrCompatible>(&self, username: U) -> bool {
-        let username = username.into_bytes_with_nul();
-        unsafe {
-            BNCollaborationGroupContainsUser(
-                self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn contains_user(&self, username: &str) -> bool {
+        let username = username.to_cstr();
+        unsafe { BNCollaborationGroupContainsUser(self.handle.as_ptr(), username.as_ptr()) }
     }
 }
 

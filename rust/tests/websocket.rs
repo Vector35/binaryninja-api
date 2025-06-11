@@ -1,6 +1,5 @@
 use binaryninja::headless::Session;
 use binaryninja::rc::Ref;
-use binaryninja::string::BnStrCompatible;
 use binaryninja::websocket::{
     register_websocket_provider, CoreWebsocketClient, CoreWebsocketProvider, WebsocketClient,
     WebsocketClientCallback, WebsocketProvider,
@@ -31,11 +30,9 @@ impl WebsocketClient for MyWebsocketClient {
         Self { core }
     }
 
-    fn connect<I, K, V>(&self, host: &str, _headers: I) -> bool
+    fn connect<I>(&self, host: &str, _headers: I) -> bool
     where
-        I: IntoIterator<Item = (K, V)>,
-        K: BnStrCompatible,
-        V: BnStrCompatible,
+        I: IntoIterator<Item = (String, String)>,
     {
         assert_eq!(host, "url");
         true
@@ -89,7 +86,11 @@ fn reg_websocket_provider() {
     let provider = register_websocket_provider::<MyWebsocketProvider>("RustWebsocketProvider");
     let client = provider.create_client().unwrap();
     let mut callback = MyClientCallbacks::default();
-    let success = client.initialize_connection("url", [("header", "value")], &mut callback);
+    let success = client.initialize_connection(
+        "url",
+        [("header".to_string(), "value".to_string())],
+        &mut callback,
+    );
     assert!(success, "Failed to initialize connection!");
 }
 
@@ -100,7 +101,11 @@ fn listen_websocket_provider() {
 
     let client = provider.create_client().unwrap();
     let mut callback = MyClientCallbacks::default();
-    client.initialize_connection("url", [("header", "value")], &mut callback);
+    client.initialize_connection(
+        "url",
+        [("header".to_string(), "value".to_string())],
+        &mut callback,
+    );
 
     assert!(client.write("test1".as_bytes()));
     assert!(client.write("test2".as_bytes()));

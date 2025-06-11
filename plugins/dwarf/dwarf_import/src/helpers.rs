@@ -1,4 +1,4 @@
-// Copyright 2021-2024 Vector 35 Inc.
+// Copyright 2021-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
-use std::{collections::HashMap, ops::Deref, str::FromStr, sync::mpsc};
+use std::{ops::Deref, str::FromStr, sync::mpsc};
 
 use crate::{DebugInfoBuilderContext, ReaderType};
 use binaryninja::binary_view::BinaryViewBase;
@@ -221,21 +221,31 @@ pub(crate) fn get_raw_name<R: ReaderType>(
     dwarf: &Dwarf<R>,
     unit: &Unit<R>,
     entry: &DebuggingInformationEntry<R>,
+    debug_info_builder_context: &DebugInfoBuilderContext<R>,
 ) -> Option<String> {
-    if let Ok(Some(attr_val)) = entry.attr_value(constants::DW_AT_linkage_name) {
-        if let Ok(attr_string) = dwarf.attr_string(unit, attr_val.clone()) {
-            if let Ok(attr_string) = attr_string.to_string() {
-                return Some(attr_string.to_string());
-            }
-        } else if let Some(dwarf) = dwarf.sup() {
-            if let Ok(attr_string) = dwarf.attr_string(unit, attr_val) {
-                if let Ok(attr_string) = attr_string.to_string() {
-                    return Some(attr_string.to_string());
+    match resolve_specification(dwarf, unit, entry, debug_info_builder_context) {
+        DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => {
+            if let Ok(Some(attr_val)) = entry_unit
+                .entry(entry_offset)
+                .unwrap()
+                .attr_value(constants::DW_AT_linkage_name)
+            {
+                if let Ok(attr_string) = dwarf.attr_string(entry_unit, attr_val.clone()) {
+                    if let Ok(attr_string) = attr_string.to_string() {
+                        return Some(attr_string.to_string());
+                    }
+                } else if let Some(dwarf) = &dwarf.sup {
+                    if let Ok(attr_string) = dwarf.attr_string(entry_unit, attr_val) {
+                        if let Ok(attr_string) = attr_string.to_string() {
+                            return Some(attr_string.to_string());
+                        }
+                    }
                 }
             }
+            None
         }
+        DieReference::Err => None,
     }
-    None
 }
 
 // Get the size of an object as a usize
@@ -440,8 +450,8 @@ pub(crate) fn download_debug_info(
         let result = inst
             .perform_custom_request(
                 "GET",
-                artifact_url,
-                HashMap::<String, String>::new(),
+                &artifact_url,
+                vec![],
                 DownloadInstanceInputOutputCallbacks {
                     read: None,
                     write: Some(Box::new(write)),

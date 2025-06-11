@@ -44,6 +44,8 @@ class PseudoRustFunction: public BinaryNinja::LanguageRepresentationFunction
 		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings);
 	void AppendFieldTextTokens(const BinaryNinja::HighLevelILInstruction& var, uint64_t offset, size_t memberIndex, size_t size,
 		BinaryNinja::HighLevelILTokenEmitter& tokens, bool deref);
+	void AppendDefaultSplitExpr(const BinaryNinja::HighLevelILInstruction& instr, BinaryNinja::HighLevelILTokenEmitter& tokens,
+		BinaryNinja::DisassemblySettings* settings, BNOperatorPrecedence precedence);
 	bool IsMutable(const BinaryNinja::Variable& var) const;
 
 	void GetExprText(const BinaryNinja::HighLevelILInstruction& instr, BinaryNinja::HighLevelILTokenEmitter& tokens,

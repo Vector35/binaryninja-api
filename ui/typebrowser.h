@@ -474,6 +474,8 @@ public:
 	std::optional<BinaryNinja::TypeContainer> selectedTypeContainer(bool makeSureItHasPlatform = true, bool preferView = false) const;
 	// Same as above, but if it returns nullopt, try again with m_data
 	std::optional<BinaryNinja::TypeContainer> selectedTypeContainerOrMData(bool makeSureItHasPlatform = true, bool preferView = false) const;
+	// Selected type container ids, or containers of selected types
+	std::unordered_set<std::string> selectedTypeContainerIds() const;
 
 	// TA selected or TA relevant to selected types, only if JUST ta stuff is selected and only 1 TA
 	std::optional<TypeArchiveRef> selectedTA() const;
@@ -512,10 +514,17 @@ public:
 
 	bool canSyncSelectedTypes();
 	void syncSelectedTypes();
+	bool pushTypesFromView(BinaryViewRef view, const std::unordered_set<BinaryNinja::QualifiedName>& names);
 	bool canPushSelectedTypes();
 	void pushSelectedTypes();
+	bool canPushAllTypes();
+	void pushAllTypes();
+	bool pullTypesFromView(BinaryViewRef view, const std::unordered_set<BinaryNinja::QualifiedName>& viewTypeNames);
+	bool pullTypesFromArchives(BinaryViewRef view, const std::unordered_map<std::string, std::unordered_set<std::string>>& archiveTypeIdSelection);
 	bool canPullSelectedTypes();
 	void pullSelectedTypes();
+	bool canPullAllTypes();
+	void pullAllTypes();
 	bool canDisassociateSelectedTypes();
 	void disassociateSelectedTypes();
 

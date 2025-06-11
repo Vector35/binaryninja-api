@@ -1,6 +1,6 @@
 # arch-arm64
 
-This is the Aarch64 plugin that ships with Binary Ninja.
+This is the AArch64 plugin that ships with Binary Ninja.
 
 ## What's What
 
@@ -19,7 +19,7 @@ There are three tests:
 Personal Binary Ninja users can test via the built in console:
 
 ```
->>> sys.path.append('C:/users/x/documents/binja/arch-arm64') # Path directory containing arm64test.py
+>>> sys.path.append('C:/users/x/onedrive/documents/binja/binaryninja-api/arch/arm64') # Path directory containing arm64test.py
 >>> from importlib import reload
 >>> import arm64test
 success!

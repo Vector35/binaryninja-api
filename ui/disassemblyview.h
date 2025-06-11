@@ -84,6 +84,8 @@ class BINARYNINJAUIAPI DisassemblyView : public FlowGraphWidget
 	void toggleRenderLayer(const std::string& layer);
 	FlowGraphRef applyRenderLayers(FlowGraphRef graph);
 
+	virtual void refreshContents() override;
+
 	virtual DisassemblySettingsRef getDisassemblySettings() override;
 	virtual void setDisassemblySettings(DisassemblySettingsRef settings) override;
 

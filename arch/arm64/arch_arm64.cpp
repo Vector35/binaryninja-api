@@ -148,7 +148,7 @@ static const char* GetRelocationString(MachoArm64RelocationType rel)
 	{
 		return relocTable[rel];
 	}
-	return "Unknown Aarch64 relocation";
+	return "Unknown AArch64 relocation";
 }
 
 
@@ -179,7 +179,7 @@ static const char* GetRelocationString(PeArm64RelocationType rel)
 	{
 		return relocTable[rel];
 	}
-	return "Unknown Aarch64 relocation";
+	return "Unknown AArch64 relocation";
 }
 
 
@@ -257,7 +257,7 @@ static const char* GetRelocationString(ElfArm64RelocationType rel)
 	if (relocMap.count(rel))
 		return relocMap.at(rel);
 
-	return "Unknown Aarch64 relocation";
+	return "Unknown AArch64 relocation";
 }
 
 
@@ -348,6 +348,7 @@ class Arm64Architecture : public Architecture
 				result.AddBranch(CallDestination, instr.operands[0].immediate);
 			break;
 
+		case ARM64_B_AL:
 		case ARM64_B:
 			if (instr.operands[0].operandClass == LABEL)
 				result.AddBranch(UnconditionalBranch, instr.operands[0].immediate);
@@ -369,9 +370,8 @@ class Arm64Architecture : public Architecture
 		case ARM64_B_LT:
 		case ARM64_B_GT:
 		case ARM64_B_LE:
-		case ARM64_B_AL:
-		case ARM64_B_NV:
 			result.AddBranch(TrueBranch, instr.operands[0].immediate);
+		case ARM64_B_NV:
 			result.AddBranch(FalseBranch, addr + 4);
 			break;
 		case ARM64_TBZ:
@@ -511,9 +511,17 @@ class Arm64Architecture : public Architecture
 		/* case: system registers */
 		if (operand->operandClass == SYS_REG)
 		{
-			snprintf(buf, sizeof(buf), "%s", get_system_register_name((SystemReg)operand->sysreg));
-			result.emplace_back(RegisterToken, buf);
-			return DISASM_SUCCESS;
+			auto name = get_system_register_name((SystemReg)(operand->sysreg));
+			if (name && name[0])
+			{
+				snprintf(buf, sizeof(buf), "%s", get_system_register_name((SystemReg)(operand->sysreg)));
+				result.emplace_back(RegisterToken, buf);
+				return DISASM_SUCCESS;
+			}
+			else
+			{
+				return tokenize_implementation_specific(operand, result);
+			}
 		}
 
 		if (operand->operandClass != REG && operand->operandClass != MULTI_REG)
@@ -941,9 +949,9 @@ class Arm64Architecture : public Architecture
 		case ARM64_INTRIN_WFI:
 			return "__wfi";
 		case ARM64_INTRIN_MSR:
-			return "_WriteStatusReg";
+			return "_WriteMSR";
 		case ARM64_INTRIN_MRS:
-			return "_ReadStatusReg";
+			return "_ReadMSR";
 		case ARM64_INTRIN_HINT_DGH:
 			return "SystemHintOp_DGH";
 		case ARM64_INTRIN_ESB:
@@ -998,6 +1006,10 @@ class Arm64Architecture : public Architecture
 			return "__aesd";
 		case ARM64_INTRIN_AESE:
 			return "__aese";
+		case ARM64_INTRIN_AESIMC:
+			return "__aesimc";
+		case ARM64_INTRIN_AESMC:
+			return "__aesmc";
 		case ARM64_INTRIN_LDXR:
 			return "__ldxr";
 		case ARM64_INTRIN_LDXRB:
@@ -1022,6 +1034,11 @@ class Arm64Architecture : public Architecture
 			return "__stlxrb";
 		case ARM64_INTRIN_STLXRH:
 			return "__stlxrh";
+		case ARM64_INTRIN_TLBI:
+		case ARM64_INTRIN_TLBI_REG:
+			return "__tlbi";
+		case ARM64_INTRIN_AT:
+			return "__at";
 		default:
 			break;
 		}
@@ -1059,10 +1076,16 @@ class Arm64Architecture : public Architecture
 	{
 		switch (intrinsic)
 		{
-		case ARM64_INTRIN_CLZ:        // reads <Xn>
-		case ARM64_INTRIN_DC:         // reads <Xt>
-		case ARM64_INTRIN_MSR:
 		case ARM64_INTRIN_MRS:
+			return {NameAndType("SystemReg", Confidence<Ref<Type>>(Type::EnumerationType(this, get_system_register_enum(), 4, false), BN_FULL_CONFIDENCE))};
+			break;
+		case ARM64_INTRIN_MSR:
+			return {
+				NameAndType("SystemReg", Confidence<Ref<Type>>(Type::EnumerationType(this, get_system_register_enum(), 4, false), BN_FULL_CONFIDENCE)),
+				NameAndType(Type::IntegerType(8, false))
+			};
+			break;
+		case ARM64_INTRIN_CLZ:        // reads <Xn>
 		case ARM64_INTRIN_PRFM:
 		case ARM64_INTRIN_REV:   // reads <Xn>
 		case ARM64_INTRIN_RBIT:  // reads <Xn>
@@ -1077,6 +1100,25 @@ class Arm64Architecture : public Architecture
 		case ARM64_INTRIN_PACIA:      // reads <Xd>, <Xn>
 		case ARM64_INTRIN_PACIB:      // reads <Xd>, <Xn>
 			return {NameAndType(Type::IntegerType(8, false)), NameAndType(Type::IntegerType(8, false))};
+		case ARM64_INTRIN_TLBI:      // reads <tlbi_op>, <Xn>
+			return {
+				NameAndType("tlbi_op", Confidence<Ref<Type>>(Type::EnumerationType(this, get_tlbi_op_enum(), 4, false), BN_FULL_CONFIDENCE))
+			};
+		case ARM64_INTRIN_TLBI_REG:      // reads <tlbi_op>, <Xn>
+			return {
+				NameAndType("tlbi_op", Confidence<Ref<Type>>(Type::EnumerationType(this, get_tlbi_op_enum(), 4, false), BN_FULL_CONFIDENCE)),
+				NameAndType(Type::IntegerType(8, false))
+			};
+		case ARM64_INTRIN_AT:      // reads <at_op>, <Xn>
+			return {
+				NameAndType("at_op", Confidence<Ref<Type>>(Type::EnumerationType(this, get_at_op_enum(), 4, false), BN_FULL_CONFIDENCE)),
+				NameAndType(Type::IntegerType(8, false))
+			};
+		case ARM64_INTRIN_DC:      // reads <dc_op>, <Xn>
+			return {
+				NameAndType("dc_op", Confidence<Ref<Type>>(Type::EnumerationType(this, get_dc_op_enum(), 4, false), BN_FULL_CONFIDENCE)),
+				NameAndType(Type::IntegerType(8, false))
+			};
 		case ARM64_INTRIN_AESD:
 		case ARM64_INTRIN_AESE:
 			return {NameAndType(Type::IntegerType(16, false)), NameAndType(Type::IntegerType(16, false))};
@@ -1093,11 +1135,12 @@ class Arm64Architecture : public Architecture
 		switch (intrinsic)
 		{
 		case ARM64_INTRIN_MSR:
+			return {};
+		case ARM64_INTRIN_MRS:
 		case ARM64_INTRIN_AUTDA:      // writes <Xd>
 		case ARM64_INTRIN_AUTDB:      // writes <Xd>
 		case ARM64_INTRIN_AUTIA:      // writes <Xd>
 		case ARM64_INTRIN_AUTIB:      // writes <Xd>
-		case ARM64_INTRIN_MRS:
 		case ARM64_INTRIN_PACDA:      // writes <Xd>
 		case ARM64_INTRIN_PACDB:      // writes <Xd>
 		case ARM64_INTRIN_PACIA:      // writes <Xd>
@@ -1189,7 +1232,7 @@ class Arm64Architecture : public Architecture
 		uint32_t* value = (uint32_t*)data;
 		// Combine the immediate in the first operand with the unconditional branch opcode to form
 		// an unconditional branch instruction
-		*value = (5 << 26) | (uint32_t)((instr.operands[0].immediate - addr) >> 2);
+		*value = (5 << 26) | (((uint32_t)((instr.operands[0].immediate - addr) >> 2)) & 0x03ffffff);
 		return true;
 	}
 
@@ -1607,7 +1650,7 @@ class Arm64Architecture : public Architecture
 
 	virtual vector<uint32_t> GetFullWidthRegisters() override
 	{
-		return vector<uint32_t>{
+		static vector<uint32_t> r = {
 			REG_X0,   REG_X1,  REG_X2,  REG_X3,   REG_X4,  REG_X5,  REG_X6,  REG_X7,
 			REG_X8,   REG_X9,  REG_X10, REG_X11,  REG_X12, REG_X13, REG_X14, REG_X15,
 			REG_X16,  REG_X17, REG_X18, REG_X19,  REG_X20, REG_X21, REG_X22, REG_X23,
@@ -1623,12 +1666,13 @@ class Arm64Architecture : public Architecture
 			REG_P16,   REG_P17,  REG_P18,  REG_P19,   REG_P20,  REG_P21,  REG_P22,  REG_P23,
 			REG_P24,   REG_P25,  REG_P26,  REG_P27,   REG_P29,  REG_P29,  REG_P30,  REG_P31,
 		};
+		return r;
 	}
 
 
 	virtual vector<uint32_t> GetAllRegisters() override
 	{
-		vector<uint32_t> r = {
+		const static vector<uint32_t> r = {
 			/* regular registers */
 			REG_W0,  REG_W1,  REG_W2,  REG_W3,  REG_W4,  REG_W5,  REG_W6,  REG_W7,
 			REG_W8,  REG_W9,  REG_W10, REG_W11, REG_W12, REG_W13, REG_W14, REG_W15,
@@ -1795,170 +1839,14 @@ class Arm64Architecture : public Architecture
 			REG_P8,  REG_P9,  REG_P10, REG_P11, REG_P12, REG_P13, REG_P14, REG_P15,
 			REG_P16, REG_P17, REG_P18, REG_P19, REG_P20, REG_P21, REG_P22, REG_P23,
 			REG_P24, REG_P25, REG_P26, REG_P27, REG_P28, REG_P29, REG_P30, REG_P31,
-			/* system registers */
-			REG_OSDTRRX_EL1, REG_DBGBVR0_EL1, REG_DBGBCR0_EL1, REG_DBGWVR0_EL1,
-			REG_DBGWCR0_EL1, REG_DBGBVR1_EL1, REG_DBGBCR1_EL1, REG_DBGWVR1_EL1,
-			REG_DBGWCR1_EL1, REG_MDCCINT_EL1, REG_MDSCR_EL1, REG_DBGBVR2_EL1,
-			REG_DBGBCR2_EL1, REG_DBGWVR2_EL1, REG_DBGWCR2_EL1, REG_OSDTRTX_EL1,
-			REG_DBGBVR3_EL1, REG_DBGBCR3_EL1, REG_DBGWVR3_EL1, REG_DBGWCR3_EL1,
-			REG_DBGBVR4_EL1, REG_DBGBCR4_EL1, REG_DBGWVR4_EL1, REG_DBGWCR4_EL1,
-			REG_DBGBVR5_EL1, REG_DBGBCR5_EL1, REG_DBGWVR5_EL1, REG_DBGWCR5_EL1,
-			REG_OSECCR_EL1, REG_DBGBVR6_EL1, REG_DBGBCR6_EL1, REG_DBGWVR6_EL1,
-			REG_DBGWCR6_EL1, REG_DBGBVR7_EL1, REG_DBGBCR7_EL1, REG_DBGWVR7_EL1,
-			REG_DBGWCR7_EL1, REG_DBGBVR8_EL1, REG_DBGBCR8_EL1, REG_DBGWVR8_EL1,
-			REG_DBGWCR8_EL1, REG_DBGBVR9_EL1, REG_DBGBCR9_EL1, REG_DBGWVR9_EL1,
-			REG_DBGWCR9_EL1, REG_DBGBVR10_EL1, REG_DBGBCR10_EL1, REG_DBGWVR10_EL1,
-			REG_DBGWCR10_EL1, REG_DBGBVR11_EL1, REG_DBGBCR11_EL1, REG_DBGWVR11_EL1,
-			REG_DBGWCR11_EL1, REG_DBGBVR12_EL1, REG_DBGBCR12_EL1, REG_DBGWVR12_EL1,
-			REG_DBGWCR12_EL1, REG_DBGBVR13_EL1, REG_DBGBCR13_EL1, REG_DBGWVR13_EL1,
-			REG_DBGWCR13_EL1, REG_DBGBVR14_EL1, REG_DBGBCR14_EL1, REG_DBGWVR14_EL1,
-			REG_DBGWCR14_EL1, REG_DBGBVR15_EL1, REG_DBGBCR15_EL1, REG_DBGWVR15_EL1,
-			REG_DBGWCR15_EL1, REG_OSLAR_EL1, REG_OSDLR_EL1, REG_DBGPRCR_EL1,
-			REG_DBGCLAIMSET_EL1, REG_DBGCLAIMCLR_EL1, REG_TRCTRACEIDR, REG_TRCVICTLR,
-			REG_TRCSEQEVR0, REG_TRCCNTRLDVR0, REG_TRCIMSPEC0, REG_TRCPRGCTLR, REG_TRCQCTLR,
-			REG_TRCVIIECTLR, REG_TRCSEQEVR1, REG_TRCCNTRLDVR1, REG_TRCIMSPEC1,
-			REG_TRCPROCSELR, REG_TRCVISSCTLR, REG_TRCSEQEVR2, REG_TRCCNTRLDVR2,
-			REG_TRCIMSPEC2, REG_TRCVIPCSSCTLR, REG_TRCCNTRLDVR3, REG_TRCIMSPEC3,
-			REG_TRCCONFIGR, REG_TRCCNTCTLR0, REG_TRCIMSPEC4, REG_TRCCNTCTLR1,
-			REG_TRCIMSPEC5, REG_TRCAUXCTLR, REG_TRCSEQRSTEVR, REG_TRCCNTCTLR2,
-			REG_TRCIMSPEC6, REG_TRCSEQSTR, REG_TRCCNTCTLR3, REG_TRCIMSPEC7,
-			REG_TRCEVENTCTL0R, REG_TRCVDCTLR, REG_TRCEXTINSELR, REG_TRCCNTVR0,
-			REG_TRCEVENTCTL1R, REG_TRCVDSACCTLR, REG_TRCEXTINSELR1, REG_TRCCNTVR1,
-			REG_TRCRSR, REG_TRCVDARCCTLR, REG_TRCEXTINSELR2, REG_TRCCNTVR2,
-			REG_TRCSTALLCTLR, REG_TRCEXTINSELR3, REG_TRCCNTVR3, REG_TRCTSCTLR,
-			REG_TRCSYNCPR, REG_TRCCCCTLR, REG_TRCBBCTLR, REG_TRCRSCTLR16, REG_TRCSSCCR0,
-			REG_TRCSSPCICR0, REG_TRCOSLAR, REG_TRCRSCTLR17, REG_TRCSSCCR1, REG_TRCSSPCICR1,
-			REG_TRCRSCTLR2, REG_TRCRSCTLR18, REG_TRCSSCCR2, REG_TRCSSPCICR2,
-			REG_TRCRSCTLR3, REG_TRCRSCTLR19, REG_TRCSSCCR3, REG_TRCSSPCICR3,
-			REG_TRCRSCTLR4, REG_TRCRSCTLR20, REG_TRCSSCCR4, REG_TRCSSPCICR4, REG_TRCPDCR,
-			REG_TRCRSCTLR5, REG_TRCRSCTLR21, REG_TRCSSCCR5, REG_TRCSSPCICR5,
-			REG_TRCRSCTLR6, REG_TRCRSCTLR22, REG_TRCSSCCR6, REG_TRCSSPCICR6,
-			REG_TRCRSCTLR7, REG_TRCRSCTLR23, REG_TRCSSCCR7, REG_TRCSSPCICR7,
-			REG_TRCRSCTLR8, REG_TRCRSCTLR24, REG_TRCSSCSR0, REG_TRCRSCTLR9,
-			REG_TRCRSCTLR25, REG_TRCSSCSR1, REG_TRCRSCTLR10, REG_TRCRSCTLR26,
-			REG_TRCSSCSR2, REG_TRCRSCTLR11, REG_TRCRSCTLR27, REG_TRCSSCSR3,
-			REG_TRCRSCTLR12, REG_TRCRSCTLR28, REG_TRCSSCSR4, REG_TRCRSCTLR13,
-			REG_TRCRSCTLR29, REG_TRCSSCSR5, REG_TRCRSCTLR14, REG_TRCRSCTLR30,
-			REG_TRCSSCSR6, REG_TRCRSCTLR15, REG_TRCRSCTLR31, REG_TRCSSCSR7, REG_TRCACVR0,
-			REG_TRCACVR8, REG_TRCACATR0, REG_TRCACATR8, REG_TRCDVCVR0, REG_TRCDVCVR4,
-			REG_TRCDVCMR0, REG_TRCDVCMR4, REG_TRCACVR1, REG_TRCACVR9, REG_TRCACATR1,
-			REG_TRCACATR9, REG_TRCACVR2, REG_TRCACVR10, REG_TRCACATR2, REG_TRCACATR10,
-			REG_TRCDVCVR1, REG_TRCDVCVR5, REG_TRCDVCMR1, REG_TRCDVCMR5, REG_TRCACVR3,
-			REG_TRCACVR11, REG_TRCACATR3, REG_TRCACATR11, REG_TRCACVR4, REG_TRCACVR12,
-			REG_TRCACATR4, REG_TRCACATR12, REG_TRCDVCVR2, REG_TRCDVCVR6, REG_TRCDVCMR2,
-			REG_TRCDVCMR6, REG_TRCACVR5, REG_TRCACVR13, REG_TRCACATR5, REG_TRCACATR13,
-			REG_TRCACVR6, REG_TRCACVR14, REG_TRCACATR6, REG_TRCACATR14, REG_TRCDVCVR3,
-			REG_TRCDVCVR7, REG_TRCDVCMR3, REG_TRCDVCMR7, REG_TRCACVR7, REG_TRCACVR15,
-			REG_TRCACATR7, REG_TRCACATR15, REG_TRCCIDCVR0, REG_TRCVMIDCVR0,
-			REG_TRCCIDCCTLR0, REG_TRCCIDCCTLR1, REG_TRCCIDCVR1, REG_TRCVMIDCVR1,
-			REG_TRCVMIDCCTLR0, REG_TRCVMIDCCTLR1, REG_TRCCIDCVR2, REG_TRCVMIDCVR2,
-			REG_TRCCIDCVR3, REG_TRCVMIDCVR3, REG_TRCCIDCVR4, REG_TRCVMIDCVR4,
-			REG_TRCCIDCVR5, REG_TRCVMIDCVR5, REG_TRCCIDCVR6, REG_TRCVMIDCVR6,
-			REG_TRCCIDCVR7, REG_TRCVMIDCVR7, REG_TRCITCTRL, REG_TRCCLAIMSET,
-			REG_TRCCLAIMCLR, REG_TRCLAR, REG_TEECR32_EL1, REG_TEEHBR32_EL1, REG_DBGDTR_EL0,
-			REG_DBGDTRTX_EL0, REG_DBGVCR32_EL2, REG_MPIDR_EL1, REG_SCTLR_EL1, REG_ACTLR_EL1,
-			REG_CPACR_EL1, REG_RGSR_EL1, REG_GCR_EL1, REG_TRFCR_EL1, REG_TTBR0_EL1,
-			REG_TTBR1_EL1, REG_TCR_EL1, REG_APIAKEYLO_EL1, REG_APIAKEYHI_EL1,
-			REG_APIBKEYLO_EL1, REG_APIBKEYHI_EL1, REG_APDAKEYLO_EL1, REG_APDAKEYHI_EL1,
-			REG_APDBKEYLO_EL1, REG_APDBKEYHI_EL1, REG_APGAKEYLO_EL1, REG_APGAKEYHI_EL1,
-			REG_SPSR_EL1, REG_ELR_EL1, REG_SP_EL0, REG_SPSEL, REG_CURRENTEL, REG_PAN,
-			REG_UAO, REG_ICC_PMR_EL1, REG_AFSR0_EL1, REG_AFSR1_EL1, REG_ESR_EL1,
-			REG_ERRSELR_EL1, REG_ERXCTLR_EL1, REG_ERXSTATUS_EL1, REG_ERXADDR_EL1,
-			REG_ERXPFGCTL_EL1, REG_ERXPFGCDN_EL1, REG_ERXMISC0_EL1, REG_ERXMISC1_EL1,
-			REG_ERXMISC2_EL1, REG_ERXMISC3_EL1, REG_ERXTS_EL1, REG_TFSR_EL1,
-			REG_TFSRE0_EL1, REG_FAR_EL1, REG_PAR_EL1, REG_PMSCR_EL1, REG_PMSICR_EL1,
-			REG_PMSIRR_EL1, REG_PMSFCR_EL1, REG_PMSEVFR_EL1, REG_PMSLATFR_EL1,
-			REG_PMSIDR_EL1, REG_PMBLIMITR_EL1, REG_PMBPTR_EL1, REG_PMBSR_EL1,
-			REG_PMBIDR_EL1, REG_TRBLIMITR_EL1, REG_TRBPTR_EL1, REG_TRBBASER_EL1,
-			REG_TRBSR_EL1, REG_TRBMAR_EL1, REG_TRBTRG_EL1, REG_PMINTENSET_EL1,
-			REG_PMINTENCLR_EL1, REG_PMMIR_EL1, REG_MAIR_EL1, REG_AMAIR_EL1, REG_LORSA_EL1,
-			REG_LOREA_EL1, REG_LORN_EL1, REG_LORC_EL1, REG_MPAM1_EL1, REG_MPAM0_EL1,
-			REG_VBAR_EL1, REG_RMR_EL1, REG_DISR_EL1, REG_ICC_EOIR0_EL1, REG_ICC_BPR0_EL1,
-			REG_ICC_AP0R0_EL1, REG_ICC_AP0R1_EL1, REG_ICC_AP0R2_EL1, REG_ICC_AP0R3_EL1,
-			REG_ICC_AP1R0_EL1, REG_ICC_AP1R1_EL1, REG_ICC_AP1R2_EL1, REG_ICC_AP1R3_EL1,
-			REG_ICC_DIR_EL1, REG_ICC_SGI1R_EL1, REG_ICC_ASGI1R_EL1, REG_ICC_SGI0R_EL1,
-			REG_ICC_EOIR1_EL1, REG_ICC_BPR1_EL1, REG_ICC_CTLR_EL1, REG_ICC_SRE_EL1,
-			REG_ICC_IGRPEN0_EL1, REG_ICC_IGRPEN1_EL1, REG_ICC_SEIEN_EL1,
-			REG_CONTEXTIDR_EL1, REG_TPIDR_EL1, REG_SCXTNUM_EL1, REG_CNTKCTL_EL1,
-			REG_CSSELR_EL1, REG_NZCV, REG_DAIFSET, REG_DIT, REG_SSBS, REG_TCO, REG_FPCR,
-			REG_FPSR, REG_DSPSR_EL0, REG_DLR_EL0, REG_PMCR_EL0, REG_PMCNTENSET_EL0,
-			REG_PMCNTENCLR_EL0, REG_PMOVSCLR_EL0, REG_PMSWINC_EL0, REG_PMSELR_EL0,
-			REG_PMCCNTR_EL0, REG_PMXEVTYPER_EL0, REG_PMXEVCNTR_EL0, REG_DAIFCLR, REG_PMUSERENR_EL0,
-			REG_PMOVSSET_EL0, REG_TPIDR_EL0, REG_TPIDRRO_EL0, REG_SCXTNUM_EL0,
-			REG_AMCR_EL0, REG_AMUSERENR_EL0, REG_AMCNTENCLR0_EL0, REG_AMCNTENSET0_EL0,
-			REG_AMCNTENCLR1_EL0, REG_AMCNTENSET1_EL0, REG_AMEVCNTR00_EL0,
-			REG_AMEVCNTR01_EL0, REG_AMEVCNTR02_EL0, REG_AMEVCNTR03_EL0, REG_AMEVCNTR10_EL0,
-			REG_AMEVCNTR11_EL0, REG_AMEVCNTR12_EL0, REG_AMEVCNTR13_EL0, REG_AMEVCNTR14_EL0,
-			REG_AMEVCNTR15_EL0, REG_AMEVCNTR16_EL0, REG_AMEVCNTR17_EL0, REG_AMEVCNTR18_EL0,
-			REG_AMEVCNTR19_EL0, REG_AMEVCNTR110_EL0, REG_AMEVCNTR111_EL0,
-			REG_AMEVCNTR112_EL0, REG_AMEVCNTR113_EL0, REG_AMEVCNTR114_EL0,
-			REG_AMEVCNTR115_EL0, REG_AMEVTYPER10_EL0, REG_AMEVTYPER11_EL0,
-			REG_AMEVTYPER12_EL0, REG_AMEVTYPER13_EL0, REG_AMEVTYPER14_EL0,
-			REG_AMEVTYPER15_EL0, REG_AMEVTYPER16_EL0, REG_AMEVTYPER17_EL0,
-			REG_AMEVTYPER18_EL0, REG_AMEVTYPER19_EL0, REG_AMEVTYPER110_EL0,
-			REG_AMEVTYPER111_EL0, REG_AMEVTYPER112_EL0, REG_AMEVTYPER113_EL0,
-			REG_AMEVTYPER114_EL0, REG_AMEVTYPER115_EL0, REG_CNTFRQ_EL0, REG_CNTP_TVAL_EL0,
-			REG_CNTP_CTL_EL0, REG_CNTP_CVAL_EL0, REG_CNTV_TVAL_EL0, REG_CNTV_CTL_EL0,
-			REG_CNTV_CVAL_EL0, REG_PMEVCNTR0_EL0, REG_PMEVCNTR1_EL0, REG_PMEVCNTR2_EL0,
-			REG_PMEVCNTR3_EL0, REG_PMEVCNTR4_EL0, REG_PMEVCNTR5_EL0, REG_PMEVCNTR6_EL0,
-			REG_PMEVCNTR7_EL0, REG_PMEVCNTR8_EL0, REG_PMEVCNTR9_EL0, REG_PMEVCNTR10_EL0,
-			REG_PMEVCNTR11_EL0, REG_PMEVCNTR12_EL0, REG_PMEVCNTR13_EL0, REG_PMEVCNTR14_EL0,
-			REG_PMEVCNTR15_EL0, REG_PMEVCNTR16_EL0, REG_PMEVCNTR17_EL0, REG_PMEVCNTR18_EL0,
-			REG_PMEVCNTR19_EL0, REG_PMEVCNTR20_EL0, REG_PMEVCNTR21_EL0, REG_PMEVCNTR22_EL0,
-			REG_PMEVCNTR23_EL0, REG_PMEVCNTR24_EL0, REG_PMEVCNTR25_EL0, REG_PMEVCNTR26_EL0,
-			REG_PMEVCNTR27_EL0, REG_PMEVCNTR28_EL0, REG_PMEVCNTR29_EL0, REG_PMEVCNTR30_EL0,
-			REG_PMEVTYPER0_EL0, REG_PMEVTYPER1_EL0, REG_PMEVTYPER2_EL0, REG_PMEVTYPER3_EL0,
-			REG_PMEVTYPER4_EL0, REG_PMEVTYPER5_EL0, REG_PMEVTYPER6_EL0, REG_PMEVTYPER7_EL0,
-			REG_PMEVTYPER8_EL0, REG_PMEVTYPER9_EL0, REG_PMEVTYPER10_EL0,
-			REG_PMEVTYPER11_EL0, REG_PMEVTYPER12_EL0, REG_PMEVTYPER13_EL0,
-			REG_PMEVTYPER14_EL0, REG_PMEVTYPER15_EL0, REG_PMEVTYPER16_EL0,
-			REG_PMEVTYPER17_EL0, REG_PMEVTYPER18_EL0, REG_PMEVTYPER19_EL0,
-			REG_PMEVTYPER20_EL0, REG_PMEVTYPER21_EL0, REG_PMEVTYPER22_EL0,
-			REG_PMEVTYPER23_EL0, REG_PMEVTYPER24_EL0, REG_PMEVTYPER25_EL0,
-			REG_PMEVTYPER26_EL0, REG_PMEVTYPER27_EL0, REG_PMEVTYPER28_EL0,
-			REG_PMEVTYPER29_EL0, REG_PMEVTYPER30_EL0, REG_PMCCFILTR_EL0, REG_VPIDR_EL2,
-			REG_VMPIDR_EL2, REG_SCTLR_EL2, REG_ACTLR_EL2, REG_HCR_EL2, REG_MDCR_EL2,
-			REG_CPTR_EL2, REG_HSTR_EL2, REG_HACR_EL2, REG_TRFCR_EL2, REG_SDER32_EL2,
-			REG_TTBR0_EL2, REG_TTBR1_EL2, REG_TCR_EL2, REG_VTTBR_EL2, REG_VTCR_EL2,
-			REG_VNCR_EL2, REG_VSTTBR_EL2, REG_VSTCR_EL2, REG_DACR32_EL2, REG_SPSR_EL2,
-			REG_ELR_EL2, REG_SP_EL1, REG_SPSR_IRQ, REG_SPSR_ABT, REG_SPSR_UND,
-			REG_SPSR_FIQ, REG_IFSR32_EL2, REG_AFSR0_EL2, REG_AFSR1_EL2, REG_ESR_EL2,
-			REG_VSESR_EL2, REG_FPEXC32_EL2, REG_TFSR_EL2, REG_FAR_EL2, REG_HPFAR_EL2,
-			REG_PMSCR_EL2, REG_MAIR_EL2, REG_AMAIR_EL2, REG_MPAMHCR_EL2, REG_MPAMVPMV_EL2,
-			REG_MPAM2_EL2, REG_MPAMVPM0_EL2, REG_MPAMVPM1_EL2, REG_MPAMVPM2_EL2,
-			REG_MPAMVPM3_EL2, REG_MPAMVPM4_EL2, REG_MPAMVPM5_EL2, REG_MPAMVPM6_EL2,
-			REG_MPAMVPM7_EL2, REG_VBAR_EL2, REG_RMR_EL2, REG_VDISR_EL2, REG_ICH_AP0R0_EL2,
-			REG_ICH_AP0R1_EL2, REG_ICH_AP0R2_EL2, REG_ICH_AP0R3_EL2, REG_ICH_AP1R0_EL2,
-			REG_ICH_AP1R1_EL2, REG_ICH_AP1R2_EL2, REG_ICH_AP1R3_EL2, REG_ICH_VSEIR_EL2,
-			REG_ICC_SRE_EL2, REG_ICH_HCR_EL2, REG_ICH_MISR_EL2, REG_ICH_VMCR_EL2,
-			REG_ICH_LR0_EL2, REG_ICH_LR1_EL2, REG_ICH_LR2_EL2, REG_ICH_LR3_EL2,
-			REG_ICH_LR4_EL2, REG_ICH_LR5_EL2, REG_ICH_LR6_EL2, REG_ICH_LR7_EL2,
-			REG_ICH_LR8_EL2, REG_ICH_LR9_EL2, REG_ICH_LR10_EL2, REG_ICH_LR11_EL2,
-			REG_ICH_LR12_EL2, REG_ICH_LR13_EL2, REG_ICH_LR14_EL2, REG_ICH_LR15_EL2,
-			REG_CONTEXTIDR_EL2, REG_TPIDR_EL2, REG_SCXTNUM_EL2, REG_CNTVOFF_EL2,
-			REG_CNTHCTL_EL2, REG_CNTHP_TVAL_EL2, REG_CNTHP_CTL_EL2, REG_CNTHP_CVAL_EL2,
-			REG_CNTHV_TVAL_EL2, REG_CNTHV_CTL_EL2, REG_CNTHV_CVAL_EL2, REG_CNTHVS_TVAL_EL2,
-			REG_CNTHVS_CTL_EL2, REG_CNTHVS_CVAL_EL2, REG_CNTHPS_TVAL_EL2,
-			REG_CNTHPS_CTL_EL2, REG_CNTHPS_CVAL_EL2, REG_SCTLR_EL12, REG_CPACR_EL12,
-			REG_TRFCR_EL12, REG_TTBR0_EL12, REG_TTBR1_EL12, REG_TCR_EL12, REG_SPSR_EL12,
-			REG_ELR_EL12, REG_AFSR0_EL12, REG_AFSR1_EL12, REG_ESR_EL12, REG_TFSR_EL12,
-			REG_FAR_EL12, REG_PMSCR_EL12, REG_MAIR_EL12, REG_AMAIR_EL12, REG_MPAM1_EL12,
-			REG_VBAR_EL12, REG_CONTEXTIDR_EL12, REG_SCXTNUM_EL12, REG_CNTKCTL_EL12,
-			REG_CNTP_TVAL_EL02, REG_CNTP_CTL_EL02, REG_CNTP_CVAL_EL02, REG_CNTV_TVAL_EL02,
-			REG_CNTV_CTL_EL02, REG_CNTV_CVAL_EL02, REG_SCTLR_EL3, REG_ACTLR_EL3,
-			REG_SCR_EL3, REG_SDER32_EL3, REG_CPTR_EL3, REG_MDCR_EL3, REG_TTBR0_EL3,
-			REG_TCR_EL3, REG_SPSR_EL3, REG_ELR_EL3, REG_SP_EL2, REG_AFSR0_EL3,
-			REG_AFSR1_EL3, REG_ESR_EL3, REG_TFSR_EL3, REG_FAR_EL3, REG_MAIR_EL3,
-			REG_AMAIR_EL3, REG_MPAM3_EL3, REG_VBAR_EL3, REG_RMR_EL3, REG_ICC_CTLR_EL3,
-			REG_ICC_SRE_EL3, REG_ICC_IGRPEN1_EL3, REG_TPIDR_EL3, REG_SCXTNUM_EL3,
-			REG_CNTPS_TVAL_EL1, REG_CNTPS_CTL_EL1, REG_CNTPS_CVAL_EL1, REG_PSTATE_SPSEL,
+			/* system registers -- removed because they're not registers anymore */
+
 			/* fake registers */
 			FAKEREG_SYSREG_UNKNOWN, /* acts as an input/output to ARM64_INTRIN_MSR,
 										ARM64_INTRIN_MRS intrinsics when the sysreg
 										has no name (is implementation specific) */
 			FAKEREG_SYSCALL_INFO
 		};
-
 		return r;
 	}
 
@@ -2331,15 +2219,23 @@ class Arm64Architecture : public Architecture
 		}
 
 		if (reg == FAKEREG_SYSREG_UNKNOWN)
+		{
+			// LogWarn("GetRegisterInfo called on FAKEREG_SYSREG_UNKNOWN %#x/%d", reg, reg);
 			return RegisterInfo(reg, 0, 8);
+		}
 
 		if (reg == FAKEREG_SYSCALL_INFO)
 			return RegisterInfo(reg, 0, 4);
 
-		if (reg > SYSREG_NONE && reg < SYSREG_END)
-			return RegisterInfo(reg, 0, 8);
+		if (has_system_register_name((SystemReg)reg))
+			LogDebug("GetRegisterInfo called on sysreg %#x/%d", reg, reg);
 
 		return RegisterInfo(0, 0, 0);
+	}
+
+	uint32_t GetRegisterStackForRegister(uint32_t reg)
+	{
+		return BN_INVALID_REGISTER;
 	}
 
 	virtual uint32_t GetStackPointerRegister() override { return REG_SP; }
@@ -2348,15 +2244,11 @@ class Arm64Architecture : public Architecture
 
 	virtual vector<uint32_t> GetSystemRegisters() override
 	{
-		vector<uint32_t> system_regs = {};
-
-		for (uint32_t ii = SYSREG_NONE + 1; ii < SYSREG_END; ++ii)
-		{
-			system_regs.push_back(ii);
-		}
-
-		system_regs.push_back(FAKEREG_SYSREG_UNKNOWN);
-
+		static vector<uint32_t> system_regs(get_system_registers());
+		static std::once_flag once;
+		std::call_once(once, []() {
+			system_regs.push_back(FAKEREG_SYSREG_UNKNOWN);
+		});
 		return system_regs;
 	}
 };
@@ -3539,20 +3431,20 @@ public:
 };
 
 
-static void InitAarch64Settings()
+static void InitAArch64Settings()
 {
 	Ref<Settings> settings = Settings::Instance();
 
 	settings->RegisterSetting("arch.aarch64.disassembly.alignRequired",
 			R"({
-			"title" : "AARCH64 Alignment Requirement",
+			"title" : "AArch64 Alignment Requirement",
 			"type" : "boolean",
 			"default" : true,
 			"description" : "Require instructions be on 4-byte aligned addresses to be disassembled."
 			})");
 	settings->RegisterSetting("arch.aarch64.disassembly.preferIntrinsics",
 			R"({
-			"title" : "AARCH64 Prefer Intrinsics for Vector Operations",
+			"title" : "AArch64 Prefer Intrinsics for Vector Operations",
 			"type" : "boolean",
 			"default" : true,
 			"description" : "Prefer generating calls to intrinsics (where one is available) to lifting vector operations as unrolled loops (where available). Note that not all vector operations are currently lifted as either intrinsics or unrolled loops."
@@ -3579,7 +3471,7 @@ extern "C"
 	BINARYNINJAPLUGIN bool CorePluginInit()
 #endif
 	{
-		InitAarch64Settings();
+		InitAArch64Settings();
 
 		Architecture* arm64 = new Arm64Architecture();
 
@@ -3616,6 +3508,7 @@ extern "C"
 
 		// Register ARM64 Relocation handlers
 		arm64->RegisterRelocationHandler("Mach-O", new Arm64MachoRelocationHandler());
+		arm64->RegisterRelocationHandler("KCView", new Arm64MachoRelocationHandler());
 		arm64->RegisterRelocationHandler("ELF", new Arm64ElfRelocationHandler());
 		arm64->RegisterRelocationHandler("PE", new Arm64PeRelocationHandler());
 		arm64->RegisterRelocationHandler("COFF", new Arm64COFFRelocationHandler());

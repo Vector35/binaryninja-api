@@ -1,9 +1,7 @@
-# Objective-C (Beta)
+# Objective-C
 
-Recent version of Binary Ninja ship with [an additional plugin](https://github.com/Vector35/workflow_objc)
-for assisting with Objective-C analysis. It provides both a [workflow](https://docs.binary.ninja/dev/workflows.html)
-and a plugin command for enhancing Objective-C binary analysis. A brief summary
-of the features offered is as follows:
+Binary Ninja ships with [an additional plugin](https://github.com/Vector35/workflow_objc) for assisting with Objective-C analysis. 
+A brief summary of the features offered is as follows:
 
 - **Function Call Cleanup.** When using the Objective-C workflow, calls to
   `objc_msgSend` can be replaced with direct calls to the relevant function's
@@ -24,19 +22,12 @@ of the features offered is as follows:
 
 ## Usage
 
-If you have an Objective-C binary you are analyzing for the first time, or one
-you are returning to, you can run the "Objective-C — Analyze Structures" action
-from the command palette or plugins menu to perform Objective-C structure
-analysis. _If you have already marked up Objective-C structures or modified
-function types yourself, be aware that they may be overwritten when this action
-is run._
-
-![](../img/objc-analyze-action.png)
+If you have an Objective-C binary opening in Binary Ninja should automatically process
+the information. This is handled by the view, e.g. MACH-O & Shared Cache.
 
 ### Workflow
 
-To utilize function call cleanup, the workflows feature must be enabled, and the
-Objective-C workflow must be chosen when loading a binary for analysis.
+To utilize function call cleanup, the Objective-C workflow must be chosen when loading a binary for analysis.
 
 ![](../img/objc-workflow-selected.png)
 

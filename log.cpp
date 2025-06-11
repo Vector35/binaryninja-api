@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2024 Vector 35 Inc
+// Copyright (c) 2015-2025 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -255,7 +255,7 @@ void Logger::Log(BNLogLevel level, const char* fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	PerformLog(GetSessionId(), level, GetName(), GetThreadId(), fmt, args);
+	PerformLog(GetSessionId(), level, GetName(), GetThreadId(), fmt::format("{}{}", GetIndent(), fmt).c_str(), args);
 	va_end(args);
 }
 
@@ -265,7 +265,7 @@ void Logger::LogTrace(const char* fmt, ...)
 #ifdef _DEBUG
 	va_list args;
 	va_start(args, fmt);
-	PerformLog(GetSessionId(), DebugLog, GetName(), GetThreadId(), fmt, args);
+	PerformLog(GetSessionId(), DebugLog, GetName(), GetThreadId(), fmt::format("{}{}", GetIndent(), fmt).c_str(), args);
 	va_end(args);
 #endif
 }
@@ -275,7 +275,7 @@ void Logger::LogDebug(const char* fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	PerformLog(GetSessionId(), DebugLog, GetName(), GetThreadId(), fmt, args);
+	PerformLog(GetSessionId(), DebugLog, GetName(), GetThreadId(), fmt::format("{}{}", GetIndent(), fmt).c_str(), args);
 	va_end(args);
 }
 
@@ -284,7 +284,7 @@ void Logger::LogInfo(const char* fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	PerformLog(GetSessionId(), InfoLog, GetName(), GetThreadId(), fmt, args);
+	PerformLog(GetSessionId(), InfoLog, GetName(), GetThreadId(), fmt::format("{}{}", GetIndent(), fmt).c_str(), args);
 	va_end(args);
 }
 
@@ -293,7 +293,7 @@ void Logger::LogWarn(const char* fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	PerformLog(GetSessionId(), WarningLog, GetName(), GetThreadId(), fmt, args);
+	PerformLog(GetSessionId(), WarningLog, GetName(), GetThreadId(), fmt::format("{}{}", GetIndent(), fmt).c_str(), args);
 	va_end(args);
 }
 
@@ -302,7 +302,7 @@ void Logger::LogError(const char* fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	PerformLog(GetSessionId(), ErrorLog, GetName(), GetThreadId(), fmt, args);
+	PerformLog(GetSessionId(), ErrorLog, GetName(), GetThreadId(), fmt::format("{}{}", GetIndent(), fmt).c_str(), args);
 	va_end(args);
 }
 
@@ -311,7 +311,7 @@ void Logger::LogAlert(const char* fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	PerformLog(GetSessionId(), AlertLog, GetName(), GetThreadId(), fmt, args);
+	PerformLog(GetSessionId(), AlertLog, GetName(), GetThreadId(), fmt::format("{}{}", GetIndent(), fmt).c_str(), args);
 	va_end(args);
 }
 
@@ -395,6 +395,19 @@ void Logger::Dedent()
 void Logger::ResetIndent()
 {
 	BNLoggerResetIndent(m_object);
+}
+
+
+string Logger::GetIndent() const
+{
+	char* indent = BNGetLoggerIndent(m_object);
+	if (!indent)
+	{
+		return "";
+	}
+	string result = indent;
+	BNFreeString(indent);
+	return result;
 }
 
 

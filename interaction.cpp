@@ -435,7 +435,7 @@ static bool RunProgressDialogCallback(void* ctxt, const char* title, bool canCan
     void (*task)(void*, bool (*)(void*, size_t, size_t), void*), void* taskCtxt)
 {
 	InteractionHandler* handler = (InteractionHandler*)ctxt;
-	return handler->RunProgressDialog(title, canCancel, [=](std::function<bool(size_t, size_t)> progress) {
+	return handler->RunProgressDialog(title, canCancel, [=](ProgressFunction progress) {
 		ProgressContext context;
 		context.callback = progress;
 		task(taskCtxt, ProgressCallback, &context);
@@ -715,7 +715,7 @@ bool BinaryNinja::OpenUrl(const std::string& url)
 
 struct TaskContext
 {
-	std::function<void(std::function<bool(size_t, size_t)> progress)> callback;
+	std::function<void(ProgressFunction progress)> callback;
 };
 
 
@@ -728,7 +728,7 @@ static void TaskCallback(void* taskCtxt, BNProgressFunction progress, void* prog
 }
 
 
-bool BinaryNinja::RunProgressDialog(const std::string& title, bool canCancel, std::function<void(std::function<bool(size_t, size_t)> progress)> task)
+bool BinaryNinja::RunProgressDialog(const std::string& title, bool canCancel, std::function<void(ProgressFunction progress)> task)
 {
 	TaskContext context;
 	context.callback = task;

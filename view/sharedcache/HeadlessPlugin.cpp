@@ -1,9 +1,9 @@
 #include <binaryninjaapi.h>
-#include "DSCView.h"
-#include "SharedCache.h"
+#include "SharedCacheView.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 	extern void RegisterSharedCacheWorkflow();
 #ifdef __cplusplus
@@ -16,7 +16,7 @@ extern "C"
 
 	BINARYNINJAPLUGIN bool CorePluginInit()
 	{
-		InitDSCViewType();
+		SharedCacheViewType::Register();
 		RegisterSharedCacheWorkflow();
 		return true;
 	}

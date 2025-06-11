@@ -1,7 +1,7 @@
 use crate::binary_view::{BinaryView, BinaryViewExt};
 use crate::function::Function;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{BnString, IntoCStr};
 use crate::types::ComponentReferencedType;
 use std::ffi::c_char;
 use std::fmt::Debug;
@@ -39,20 +39,20 @@ impl ComponentBuilder {
         let result = match (&self.parent, &self.name) {
             (None, None) => unsafe { BNCreateComponent(self.view.handle) },
             (None, Some(name)) => {
-                let name_raw = name.into_bytes_with_nul();
+                let name_raw = name.to_cstr();
                 unsafe {
                     BNCreateComponentWithName(self.view.handle, name_raw.as_ptr() as *mut c_char)
                 }
             }
             (Some(guid), None) => {
-                let guid_raw = guid.into_bytes_with_nul();
+                let guid_raw = guid.to_cstr();
                 unsafe {
                     BNCreateComponentWithParent(self.view.handle, guid_raw.as_ptr() as *mut c_char)
                 }
             }
             (Some(guid), Some(name)) => {
-                let guid_raw = guid.into_bytes_with_nul();
-                let name_raw = name.into_bytes_with_nul();
+                let guid_raw = guid.to_cstr();
+                let name_raw = name.to_cstr();
                 unsafe {
                     BNCreateComponentWithParentAndName(
                         self.view.handle,
@@ -86,10 +86,10 @@ impl Component {
         Ref::new(Self { handle })
     }
 
-    pub fn guid(&self) -> BnString {
+    pub fn guid(&self) -> String {
         let result = unsafe { BNComponentGetGuid(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Add function to this component.
@@ -145,10 +145,10 @@ impl Component {
     }
 
     /// Original name of the component
-    pub fn display_name(&self) -> BnString {
+    pub fn display_name(&self) -> String {
         let result = unsafe { BNComponentGetDisplayName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Original name set for this component
@@ -158,20 +158,15 @@ impl Component {
     /// remain what was originally set (e.g. "MyComponentName")
     /// If this component has a duplicate name and is moved to a component where none of its siblings share its name,
     /// .name will return the original "MyComponentName"
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNComponentGetOriginalName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
-    pub fn set_name<S: BnStrCompatible>(&self, name: S) {
-        let name = name.into_bytes_with_nul();
-        unsafe {
-            BNComponentSetName(
-                self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn set_name(&self, name: &str) {
+        let name = name.to_cstr();
+        unsafe { BNComponentSetName(self.handle.as_ptr(), name.as_ptr()) }
     }
 
     /// The component that contains this component, if it exists.
@@ -307,22 +302,5 @@ unsafe impl CoreArrayProviderInner for Component {
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         let raw_ptr = NonNull::new(*raw).unwrap();
         Guard::new(Self::from_raw(raw_ptr), context)
-    }
-}
-
-// TODO: Should we keep this?
-pub trait IntoComponentGuid {
-    fn component_guid(self) -> BnString;
-}
-
-impl IntoComponentGuid for &Component {
-    fn component_guid(self) -> BnString {
-        self.guid()
-    }
-}
-
-impl<S: BnStrCompatible> IntoComponentGuid for S {
-    fn component_guid(self) -> BnString {
-        BnString::new(self)
     }
 }

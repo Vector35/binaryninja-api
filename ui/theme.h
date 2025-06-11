@@ -55,6 +55,7 @@ void BINARYNINJAUIAPI refreshUserThemes();
 std::vector<QString> BINARYNINJAUIAPI getAvailableThemes();
 QString BINARYNINJAUIAPI getActiveTheme();
 void BINARYNINJAUIAPI setActiveTheme(const QString& name, bool saveToSettings = true);
+void BINARYNINJAUIAPI setTransientScrollbars(bool enable);
 
 bool BINARYNINJAUIAPI isActiveThemeDark();
 

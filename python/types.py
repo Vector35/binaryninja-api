@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2024 Vector 35 Inc
+# Copyright (c) 2015-2025 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -2768,7 +2768,6 @@ class EnumerationType(IntegerType):
 		assert handle is not None, "Attempted to create EnumerationType without handle"
 		super(EnumerationType, self).__init__(handle, platform, confidence)
 		enum_handle = core.BNGetTypeEnumeration(handle)
-		core.BNNewEnumerationReference(enum_handle)
 		assert enum_handle is not None, "core.BNGetTypeEnumeration returned None"
 		self.enum_handle = enum_handle
 

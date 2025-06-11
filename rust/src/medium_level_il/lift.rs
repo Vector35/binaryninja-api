@@ -1,5 +1,5 @@
 use super::operation::*;
-use super::{MediumLevelILFunction, MediumLevelInstructionIndex};
+use super::{MediumLevelExpressionIndex, MediumLevelILFunction, MediumLevelInstructionIndex};
 use crate::architecture::CoreIntrinsic;
 use crate::rc::Ref;
 use crate::variable::{ConstantData, SSAVariable, Variable};
@@ -27,7 +27,8 @@ pub enum MediumLevelILLiftedOperand {
 pub struct MediumLevelILLiftedInstruction {
     pub function: Ref<MediumLevelILFunction>,
     pub address: u64,
-    pub index: MediumLevelInstructionIndex,
+    pub instr_index: MediumLevelInstructionIndex,
+    pub expr_index: MediumLevelExpressionIndex,
     pub size: usize,
     pub kind: MediumLevelILLiftedInstructionKind,
 }
@@ -36,7 +37,8 @@ impl Debug for MediumLevelILLiftedInstruction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MediumLevelILLiftedInstruction")
             .field("address", &self.address)
-            .field("index", &self.index)
+            .field("instr_index", &self.instr_index)
+            .field("expr_index", &self.expr_index)
             .field("size", &self.size)
             .field("kind", &self.kind)
             .finish()
@@ -129,10 +131,16 @@ pub enum MediumLevelILLiftedInstructionKind {
     Rlc(LiftedBinaryOpCarry),
     Rrc(LiftedBinaryOpCarry),
     Call(LiftedCall),
+    CallOutput(LiftedCallOutput),
+    CallParam(LiftedCallParam),
+    CallOutputSsa(LiftedCallOutputSsa),
+    CallParamSsa(LiftedCallParamSsa),
     Tailcall(LiftedCall),
     Intrinsic(LiftedIntrinsic),
     Syscall(LiftedSyscallCall),
     IntrinsicSsa(LiftedIntrinsicSsa),
+    MemoryIntrinsicSsa(LiftedMemoryIntrinsicSsa),
+    MemoryIntrinsicOutputSsa(LiftedMemoryIntrinsicOutputSsa),
     CallSsa(LiftedCallSsa),
     TailcallSsa(LiftedCallSsa),
     CallUntypedSsa(LiftedCallUntypedSsa),
@@ -175,6 +183,9 @@ pub enum MediumLevelILLiftedInstructionKind {
     VarSsaField(VarSsaField),
     VarAliasedField(VarSsaField),
     Trap(Trap),
+    // A placeholder for instructions that the Rust bindings do not yet support.
+    // Distinct from `Unimpl` as that is a valid instruction.
+    NotYetImplemented,
 }
 
 impl MediumLevelILLiftedInstruction {
@@ -186,6 +197,7 @@ impl MediumLevelILLiftedInstruction {
             Bp => "Bp",
             Undef => "Undef",
             Unimpl => "Unimpl",
+            NotYetImplemented => "NotYetImplemented",
             If(_) => "If",
             FloatConst(_) => "FloatConst",
             Const(_) => "Const",
@@ -265,10 +277,16 @@ impl MediumLevelILLiftedInstruction {
             Rlc(_) => "Rlc",
             Rrc(_) => "Rrc",
             Call(_) => "Call",
+            CallOutput(_) => "CallOutput",
+            CallParam(_) => "CallParam",
+            CallOutputSsa(_) => "CallOutputSsa",
+            CallParamSsa(_) => "CallParamSsa",
             Tailcall(_) => "Tailcall",
             Syscall(_) => "Syscall",
             Intrinsic(_) => "Intrinsic",
             IntrinsicSsa(_) => "IntrinsicSsa",
+            MemoryIntrinsicSsa(_) => "MemoryIntrinsicSsa",
+            MemoryIntrinsicOutputSsa(_) => "MemoryIntrinsicOutputSsa",
             CallSsa(_) => "CallSsa",
             TailcallSsa(_) => "TailcallSsa",
             CallUntypedSsa(_) => "CallUntypedSsa",
@@ -318,7 +336,7 @@ impl MediumLevelILLiftedInstruction {
         use MediumLevelILLiftedInstructionKind::*;
         use MediumLevelILLiftedOperand as Operand;
         match &self.kind {
-            Nop | Noret | Bp | Undef | Unimpl => vec![],
+            Nop | Noret | Bp | Undef | Unimpl | NotYetImplemented => vec![],
             If(op) => vec![
                 ("condition", Operand::Expr(*op.condition.clone())),
                 ("dest_true", Operand::InstructionIndex(op.dest_true)),
@@ -437,6 +455,16 @@ impl MediumLevelILLiftedInstruction {
                 ("dest", Operand::Expr(*op.dest.clone())),
                 ("params", Operand::ExprList(op.params.clone())),
             ],
+            CallOutput(op) => vec![("output", Operand::VarList(op.output.clone()))],
+            CallParam(op) => vec![("params", Operand::ExprList(op.params.clone()))],
+            CallOutputSsa(op) => vec![
+                ("output", Operand::VarSsaList(op.output.clone())),
+                ("dest_memory", Operand::Int(op.dest_memory)),
+            ],
+            CallParamSsa(op) => vec![
+                ("params", Operand::ExprList(op.params.clone())),
+                ("src_memory", Operand::Int(op.src_memory)),
+            ],
             Syscall(op) => vec![
                 ("output", Operand::VarList(op.output.clone())),
                 ("params", Operand::ExprList(op.params.clone())),
@@ -450,6 +478,16 @@ impl MediumLevelILLiftedInstruction {
                 ("output", Operand::VarSsaList(op.output.clone())),
                 ("intrinsic", Operand::Intrinsic(op.intrinsic)),
                 ("params", Operand::ExprList(op.params.clone())),
+            ],
+            MemoryIntrinsicSsa(op) => vec![
+                ("output", Operand::Expr(*op.output.clone())),
+                ("intrinsic", Operand::Intrinsic(op.intrinsic)),
+                ("params", Operand::ExprList(op.params.clone())),
+                ("src_memory", Operand::Int(op.src_memory)),
+            ],
+            MemoryIntrinsicOutputSsa(op) => vec![
+                ("dest_memory", Operand::Int(op.dest_memory)),
+                ("output", Operand::VarSsaList(op.output.clone())),
             ],
             CallSsa(op) | TailcallSsa(op) => vec![
                 ("output", Operand::VarSsaList(op.output.clone())),

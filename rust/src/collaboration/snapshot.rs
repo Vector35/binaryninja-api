@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 use std::ptr::NonNull;
 use std::time::SystemTime;
 
@@ -8,7 +8,7 @@ use crate::collaboration::undo::{RemoteUndoEntry, RemoteUndoEntryId};
 use crate::database::snapshot::Snapshot;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{BnString, IntoCStr};
 use binaryninjacore_sys::*;
 
 // TODO: RemoteSnapshotId ?
@@ -54,52 +54,52 @@ impl RemoteSnapshot {
     }
 
     /// Web api endpoint url
-    pub fn url(&self) -> BnString {
+    pub fn url(&self) -> String {
         let value = unsafe { BNCollaborationSnapshotGetUrl(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// Unique id
-    pub fn id(&self) -> BnString {
+    pub fn id(&self) -> String {
         let value = unsafe { BNCollaborationSnapshotGetId(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// Name of snapshot
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let value = unsafe { BNCollaborationSnapshotGetName(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// Get the title of a snapshot: the first line of its name
-    pub fn title(&self) -> BnString {
+    pub fn title(&self) -> String {
         let value = unsafe { BNCollaborationSnapshotGetTitle(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// Get the description of a snapshot: the lines of its name after the first line
-    pub fn description(&self) -> BnString {
+    pub fn description(&self) -> String {
         let value = unsafe { BNCollaborationSnapshotGetDescription(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// Get the user id of the author of a snapshot
-    pub fn author(&self) -> BnString {
+    pub fn author(&self) -> String {
         let value = unsafe { BNCollaborationSnapshotGetAuthor(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// Get the username of the author of a snapshot, if possible (vs author which is user id)
-    pub fn author_username(&self) -> BnString {
+    pub fn author_username(&self) -> String {
         let value = unsafe { BNCollaborationSnapshotGetAuthorUsername(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// Created date of Snapshot
@@ -116,18 +116,18 @@ impl RemoteSnapshot {
 
     /// Hash of snapshot data (analysis and markup, etc)
     /// No specific hash algorithm is guaranteed
-    pub fn hash(&self) -> BnString {
+    pub fn hash(&self) -> String {
         let value = unsafe { BNCollaborationSnapshotGetHash(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// Hash of file contents in snapshot
     /// No specific hash algorithm is guaranteed
-    pub fn snapshot_file_hash(&self) -> BnString {
+    pub fn snapshot_file_hash(&self) -> String {
         let value = unsafe { BNCollaborationSnapshotGetSnapshotFileHash(self.handle.as_ptr()) };
         assert!(!value.is_null());
-        unsafe { BnString::from_raw(value) }
+        unsafe { BnString::into_string(value) }
     }
 
     /// If the snapshot has pulled undo entries yet
@@ -226,18 +226,18 @@ impl RemoteSnapshot {
     }
 
     /// Create a new Undo Entry in this snapshot.
-    pub fn create_undo_entry<S: BnStrCompatible>(
+    pub fn create_undo_entry(
         &self,
         parent: Option<u64>,
-        data: S,
+        data: &str,
     ) -> Result<Ref<RemoteUndoEntry>, ()> {
-        let data = data.into_bytes_with_nul();
+        let data = data.to_cstr();
         let value = unsafe {
             BNCollaborationSnapshotCreateUndoEntry(
                 self.handle.as_ptr(),
                 parent.is_some(),
                 parent.unwrap_or(0),
-                data.as_ref().as_ptr() as *const c_char,
+                data.as_ptr(),
             )
         };
         let handle = NonNull::new(value).ok_or(())?;

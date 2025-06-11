@@ -1,4 +1,4 @@
-// Copyright 2021-2024 Vector 35 Inc.
+// Copyright 2021-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ use std::os::raw::c_void;
 
 use crate::binary_view::BinaryView;
 use crate::function::Function;
-use crate::string::BnStrCompatible;
+use crate::string::IntoCStr;
 
 /// The trait required for generic commands.  See [register_command] for example usage.
 pub trait Command: 'static + Sync {
@@ -93,11 +93,7 @@ where
 ///     true
 /// }
 /// ```
-pub fn register_command<S, C>(name: S, desc: S, command: C)
-where
-    S: BnStrCompatible,
-    C: Command,
-{
+pub fn register_command<C: Command>(name: &str, desc: &str, command: C) {
     extern "C" fn cb_action<C>(ctxt: *mut c_void, view: *mut BNBinaryView)
     where
         C: Command,
@@ -126,11 +122,11 @@ where
         })
     }
 
-    let name = name.into_bytes_with_nul();
-    let desc = desc.into_bytes_with_nul();
+    let name = name.to_cstr();
+    let desc = desc.to_cstr();
 
-    let name_ptr = name.as_ref().as_ptr() as *mut _;
-    let desc_ptr = desc.as_ref().as_ptr() as *mut _;
+    let name_ptr = name.as_ptr();
+    let desc_ptr = desc.as_ptr();
 
     let ctxt = Box::into_raw(Box::new(command));
 
@@ -194,11 +190,7 @@ where
 ///     true
 /// }
 /// ```
-pub fn register_command_for_address<S, C>(name: S, desc: S, command: C)
-where
-    S: BnStrCompatible,
-    C: AddressCommand,
-{
+pub fn register_command_for_address<C: AddressCommand>(name: &str, desc: &str, command: C) {
     extern "C" fn cb_action<C>(ctxt: *mut c_void, view: *mut BNBinaryView, addr: u64)
     where
         C: AddressCommand,
@@ -227,11 +219,11 @@ where
         })
     }
 
-    let name = name.into_bytes_with_nul();
-    let desc = desc.into_bytes_with_nul();
+    let name = name.to_cstr();
+    let desc = desc.to_cstr();
 
-    let name_ptr = name.as_ref().as_ptr() as *mut _;
-    let desc_ptr = desc.as_ref().as_ptr() as *mut _;
+    let name_ptr = name.as_ptr();
+    let desc_ptr = desc.as_ptr();
 
     let ctxt = Box::into_raw(Box::new(command));
 
@@ -296,9 +288,8 @@ where
 ///     true
 /// }
 /// ```
-pub fn register_command_for_range<S, C>(name: S, desc: S, command: C)
+pub fn register_command_for_range<C>(name: &str, desc: &str, command: C)
 where
-    S: BnStrCompatible,
     C: RangeCommand,
 {
     extern "C" fn cb_action<C>(ctxt: *mut c_void, view: *mut BNBinaryView, addr: u64, len: u64)
@@ -334,11 +325,11 @@ where
         })
     }
 
-    let name = name.into_bytes_with_nul();
-    let desc = desc.into_bytes_with_nul();
+    let name = name.to_cstr();
+    let desc = desc.to_cstr();
 
-    let name_ptr = name.as_ref().as_ptr() as *mut _;
-    let desc_ptr = desc.as_ref().as_ptr() as *mut _;
+    let name_ptr = name.as_ptr();
+    let desc_ptr = desc.as_ptr();
 
     let ctxt = Box::into_raw(Box::new(command));
 
@@ -403,11 +394,7 @@ where
 ///     true
 /// }
 /// ```
-pub fn register_command_for_function<S, C>(name: S, desc: S, command: C)
-where
-    S: BnStrCompatible,
-    C: FunctionCommand,
-{
+pub fn register_command_for_function<C: FunctionCommand>(name: &str, desc: &str, command: C) {
     extern "C" fn cb_action<C>(ctxt: *mut c_void, view: *mut BNBinaryView, func: *mut BNFunction)
     where
         C: FunctionCommand,
@@ -446,11 +433,11 @@ where
         })
     }
 
-    let name = name.into_bytes_with_nul();
-    let desc = desc.into_bytes_with_nul();
+    let name = name.to_cstr();
+    let desc = desc.to_cstr();
 
-    let name_ptr = name.as_ref().as_ptr() as *mut _;
-    let desc_ptr = desc.as_ref().as_ptr() as *mut _;
+    let name_ptr = name.as_ptr();
+    let desc_ptr = desc.as_ptr();
 
     let ctxt = Box::into_raw(Box::new(command));
 

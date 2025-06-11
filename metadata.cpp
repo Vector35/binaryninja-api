@@ -320,6 +320,7 @@ map<std::string, Ref<Metadata>> Metadata::GetKeyValueStore() const
 	{
 		result[data->keys[i]] = new Metadata(data->values[i]);
 	}
+	BNFreeMetadataValueStore(data);
 	return result;
 }
 

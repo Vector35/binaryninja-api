@@ -1,6 +1,6 @@
-use crate::string::BnStrCompatible;
+use crate::string::IntoCStr;
 use binaryninjacore_sys::*;
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 
 pub struct WorkerThreadActionExecutor {
     func: Box<dyn Fn()>,
@@ -17,41 +17,41 @@ impl WorkerThreadActionExecutor {
     }
 }
 
-pub fn execute_on_worker_thread<F: Fn() + 'static, S: BnStrCompatible>(name: S, f: F) {
+pub fn execute_on_worker_thread<F: Fn() + 'static>(name: &str, f: F) {
     let boxed_executor = Box::new(WorkerThreadActionExecutor { func: Box::new(f) });
     let raw_executor = Box::into_raw(boxed_executor);
-    let name = name.into_bytes_with_nul();
+    let name = name.to_cstr();
     unsafe {
         BNWorkerEnqueueNamed(
             raw_executor as *mut c_void,
             Some(WorkerThreadActionExecutor::cb_execute),
-            name.as_ref().as_ptr() as *const c_char,
+            name.as_ptr(),
         )
     }
 }
 
-pub fn execute_on_worker_thread_priority<F: Fn() + 'static, S: BnStrCompatible>(name: S, f: F) {
+pub fn execute_on_worker_thread_priority<F: Fn() + 'static>(name: &str, f: F) {
     let boxed_executor = Box::new(WorkerThreadActionExecutor { func: Box::new(f) });
     let raw_executor = Box::into_raw(boxed_executor);
-    let name = name.into_bytes_with_nul();
+    let name = name.to_cstr();
     unsafe {
         BNWorkerPriorityEnqueueNamed(
             raw_executor as *mut c_void,
             Some(WorkerThreadActionExecutor::cb_execute),
-            name.as_ref().as_ptr() as *const c_char,
+            name.as_ptr(),
         )
     }
 }
 
-pub fn execute_on_worker_thread_interactive<F: Fn() + 'static, S: BnStrCompatible>(name: S, f: F) {
+pub fn execute_on_worker_thread_interactive<F: Fn() + 'static>(name: &str, f: F) {
     let boxed_executor = Box::new(WorkerThreadActionExecutor { func: Box::new(f) });
     let raw_executor = Box::into_raw(boxed_executor);
-    let name = name.into_bytes_with_nul();
+    let name = name.to_cstr();
     unsafe {
         BNWorkerInteractiveEnqueueNamed(
             raw_executor as *mut c_void,
             Some(WorkerThreadActionExecutor::cb_execute),
-            name.as_ref().as_ptr() as *const c_char,
+            name.as_ptr(),
         )
     }
 }

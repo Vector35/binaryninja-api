@@ -14,6 +14,7 @@ extern "C"
 	{
 		UINotifications::init();
 		UIAction::registerAction("Load Image by Name");
+		UIAction::registerAction("Load Image by Address");
 		UIAction::registerAction("Load Section by Address");
 		UIAction::registerAction("Load ADDRHERE");
 		UIAction::registerAction("Load IMGHERE");

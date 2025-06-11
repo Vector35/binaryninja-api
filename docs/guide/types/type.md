@@ -35,6 +35,40 @@ When used on an integer, all matching enumeration members will be shown.
 
 However in instances where the hotkey is used on other variables, the display will only be used to apply the enum type to the selection and does not allow editing.
 
+## Union Field Resolution
+
+When a type contains a union, any number of fields can resolve to the same offset. To account for this, the "Field Resolution" menu allows you to select which field to use at different instructions and propagate that type information through the rest of the function and to callee function parameter types. Consider the following type definition:
+
+```C
+typedef enum
+{
+  TYPE_INT,
+  TYPE_BOOL,
+  TYPE_STRING
+} ValueType;
+
+typedef struct
+{
+  ValueType type;
+  union
+  {
+    struct { int i; } int_data;
+    struct { unsigned char b; } bool_data;
+    struct { char* str; } str_data;
+  } data;
+} Value;
+```
+
+This is a tagged union; there's an enum defining the different variants of the union, and then the actual union variants/members. The union should take up as much space as the largest variant, so in this case it will usually be 8 bytes (depends on the target machine's pointer width), but only one variant can occupy those bytes at a time.
+
+When you apply a union type to a variable, you can use the "Field Resolution" option in the right-click menu to change which variant is used for a given instruction. 
+
+![Field Resolution Menu](../../img/select-union-field-resolution.png "Field Resolution Menu")
+
+In the above screenshot the first if-block uses the `TYPE_INT` variant, and the second if-block uses the `TYPE_BOOL` variant. The final return statement is incorrectly showing the `int_data` type (it should be showing the `char*` one), and the "Field Resolution" option in the right-click menu is showing all possible fields that instance can resolve to, including options we've determined should be invalid. Simply select the correct option from the menu, and the output will be updated.
+
+You can also access these options through the [command palette](../index.md#command-palette) by searching for "Field Resolution."
+
 ## Smart Structures Workflow
 
 ![Auto Create Members](../../img/auto-create-members.png "Automatically Creating Struct Members")
@@ -50,7 +84,7 @@ It works in the following ways:
 | Linear/Graph/Types | A variable, data variable, or a type name                    | struct/struct\*       | Create all members for structure                                                  |
 | Linear/Graph/Types | A StructOffsetToken token, e.g., `__offset(0x18)`            | N/A                  | Create current member for structure                                               |
 
-Below are detailed explanation of it:
+Here's a more detailed explanation about the various workflows:
 
 1. In linear/graph view, if the selection is a variable that is not a structure, a dialog pops up and asks you to create a structure. You can specify the structure's name and size. There is also a checkbox that asks you whether the variable's type should be the structure itself or a pointer to the structure.
 2. In linear/graph view, if the selection is a variable that is not a structure, and it happens to be the result of a memory allocation routine, e.g., `malloc`, a new structure will be created and its size is automatically determined (if possible). The variable's type will be a pointer to the structure.

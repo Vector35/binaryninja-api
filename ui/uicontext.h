@@ -524,6 +524,7 @@ public:
 	virtual bool openProjectFile(ProjectFileRef file, ExternalLocationRef loc = nullptr, bool openWithOptions = false);
 	virtual bool openUrl(const QUrl& url, bool openWithOptions = false);
 	virtual void recreateViewFrames(FileContext* file) = 0;
+	virtual void refreshCurrentViewContents();
 
 	UIActionHandler* globalActions() { return &m_globalActions; }
 	virtual UIActionHandler* contentActionHandler() = 0;

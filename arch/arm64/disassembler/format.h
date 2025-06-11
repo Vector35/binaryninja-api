@@ -8,7 +8,7 @@
 #include "encodings_fmt.h"
 #include "operations.h"
 #include "regs.h"
-#include "sysregs.h"
+#include "sysregs_fmt_gen.h"
 
 //-----------------------------------------------------------------------------
 // disassembly function prototypes, return values

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2024 Vector 35 Inc
+// Copyright (c) 2015-2025 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -2488,6 +2488,12 @@ Confidence<RegisterValue> Function::GetRegisterValueAtExit(uint32_t reg) const
 }
 
 
+void Function::Analyze()
+{
+	BNAnalyzeFunction(m_object);
+}
+
+
 void Function::Reanalyze(BNFunctionUpdateType type)
 {
 	BNReanalyzeFunction(m_object, type);
@@ -2699,6 +2705,73 @@ void Function::ClearForcedVariableVersion(const Variable& var, const ArchAndAddr
 }
 
 
+void Function::SetFieldResolutionForVariableAt(const Variable& var, const ArchAndAddr& location, FieldResolutionInfo* info)
+{
+	auto defSite = BNArchitectureAndAddress();
+	defSite.arch = location.arch->m_object;
+	defSite.address = location.address;
+
+	auto var_data = BNVariable();
+	var_data.type = var.type;
+	var_data.index = var.index;
+	var_data.storage = var.storage;
+
+	BNSetFieldResolutionForVariableAt(m_object, &var_data, &defSite, info->m_object);
+}
+
+
+void Function::ClearFieldResolutionForVariableAt(const Variable& var, const ArchAndAddr& location)
+{
+	auto defSite = BNArchitectureAndAddress();
+	defSite.arch = location.arch->m_object;
+	defSite.address = location.address;
+
+	auto var_data = BNVariable();
+	var_data.type = var.type;
+	var_data.index = var.index;
+	var_data.storage = var.storage;
+
+	BNClearFieldResolutionForVariableAt(m_object, &var_data, &defSite);
+}
+
+
+Ref<FieldResolutionInfo> Function::GetFieldResolutionForVariableAt(const Variable& var, const ArchAndAddr& location)
+{
+	auto defSite = BNArchitectureAndAddress();
+	defSite.arch = location.arch->m_object;
+	defSite.address = location.address;
+
+	auto var_data = BNVariable();
+	var_data.type = var.type;
+	var_data.index = var.index;
+	var_data.storage = var.storage;
+
+	BNFieldResolutionInfo* result = BNGetFieldResolutionForVariableAt(m_object, &var_data, &defSite);
+	return result ? new FieldResolutionInfo(result) : nullptr;
+}
+
+
+std::map<Variable, std::map<ArchAndAddr, Ref<FieldResolutionInfo>>> Function::GetAllFieldResolutions()
+{
+	map<Variable, map<ArchAndAddr, Ref<FieldResolutionInfo>>> result;
+
+	size_t count;
+	BNVariableFieldResolutionInfo* info = BNGetAllVariableFieldResolutions(m_object, &count);
+
+	for (size_t i = 0; i < count; i++)
+	{
+		Variable var(info[i].var.type, info[i].var.index, info[i].var.storage);
+		ArchAndAddr location(new CoreArchitecture(info[i].location.arch), info[i].location.address);
+		Ref<FieldResolutionInfo> fieldInfo(new FieldResolutionInfo(BNNewFieldResolutionInfoReference(info[i].info)));
+
+		result[var][location] = fieldInfo;
+	}
+
+	BNFreeVariableFieldResolutions(info, count);
+	return result;
+}
+
+
 void Function::RequestDebugReport(const string& name)
 {
 	BNRequestFunctionDebugReport(m_object, name.c_str());
@@ -2737,6 +2810,42 @@ void Function::SetVariableDeadStoreElimination(const Variable& var, BNDeadStoreE
 	varData.index = var.index;
 	varData.storage = var.storage;
 	BNSetFunctionVariableDeadStoreElimination(m_object, &varData, mode);
+}
+
+
+BNExprFolding Function::GetExprFolding(uint64_t addr)
+{
+	return BNGetExprFolding(m_object, addr);
+}
+
+
+void Function::SetExprFolding(uint64_t addr, BNExprFolding mode)
+{
+	BNSetExprFolding(m_object, addr, mode);
+}
+
+
+bool Function::IsConditionInverted(uint64_t addr)
+{
+	return BNIsConditionInverted(m_object, addr);
+}
+
+
+void Function::SetConditionInverted(uint64_t addr, bool invert)
+{
+	BNSetConditionInverted(m_object, addr, invert);
+}
+
+
+BNEarlyReturn Function::GetEarlyReturn(uint64_t addr)
+{
+	return BNGetEarlyReturn(m_object, addr);
+}
+
+
+void Function::SetEarlyReturn(uint64_t addr, BNEarlyReturn mode)
+{
+	BNSetEarlyReturn(m_object, addr, mode);
 }
 
 
@@ -3295,6 +3404,42 @@ void Function::ExpandAll()
 {
 	BNFunctionExpandAll(m_object);
 }
+
+
+void Function::StoreMetadata(const std::string& key, Ref<Metadata> value, bool isAuto)
+{
+	if (!value)
+		return;
+	BNFunctionStoreMetadata(m_object, key.c_str(), value->GetObject(), isAuto);
+}
+
+
+Ref<Metadata> Function::QueryMetadata(const std::string& key)
+{
+	BNMetadata* value = BNFunctionQueryMetadata(m_object, key.c_str());
+	if (!value)
+		return nullptr;
+	return new Metadata(value);
+}
+
+
+Ref<Metadata> Function::GetMetadata()
+{
+	return new Metadata(BNFunctionGetMetadata(m_object));
+}
+
+
+Ref<Metadata> Function::GetAutoMetadata()
+{
+	return new Metadata(BNFunctionGetAutoMetadata(m_object));
+}
+
+
+void Function::RemoveMetadata(const std::string& key)
+{
+	BNFunctionRemoveMetadata(m_object, key.c_str());
+}
+
 
 AdvancedFunctionAnalysisDataRequestor::AdvancedFunctionAnalysisDataRequestor(Function* func) : m_func(func)
 {

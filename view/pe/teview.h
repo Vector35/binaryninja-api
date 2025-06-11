@@ -62,7 +62,8 @@ namespace BinaryNinja
 		uint64_t m_headersOffset;
 		Ref<Architecture> m_arch;
 		uint64_t m_entryPoint;
-		
+		uint32_t m_addressSize = 4;
+
 	protected:
 		virtual uint64_t PerformGetEntryPoint() const override;
 		virtual bool PerformIsExecutable() const override { return true; }

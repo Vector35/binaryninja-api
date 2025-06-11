@@ -1,7 +1,8 @@
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString, IntoJson};
+use crate::string::{raw_to_string, BnString, IntoCStr, IntoJson};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
+use std::fmt::{Debug, Display, Formatter};
 use std::os::raw::c_char;
 use std::slice;
 
@@ -30,129 +31,129 @@ impl Metadata {
         unsafe { BNMetadataGetType(self.handle) }
     }
 
-    pub fn get_boolean(&self) -> Result<bool, ()> {
+    pub fn get_boolean(&self) -> Option<bool> {
         match self.get_type() {
-            MetadataType::BooleanDataType => Ok(unsafe { BNMetadataGetBoolean(self.handle) }),
-            _ => Err(()),
+            MetadataType::BooleanDataType => Some(unsafe { BNMetadataGetBoolean(self.handle) }),
+            _ => None,
         }
     }
 
-    pub fn get_unsigned_integer(&self) -> Result<u64, ()> {
+    pub fn get_unsigned_integer(&self) -> Option<u64> {
         match self.get_type() {
             MetadataType::UnsignedIntegerDataType => {
-                Ok(unsafe { BNMetadataGetUnsignedInteger(self.handle) })
+                Some(unsafe { BNMetadataGetUnsignedInteger(self.handle) })
             }
-            _ => Err(()),
+            _ => None,
         }
     }
 
-    pub fn get_signed_integer(&self) -> Result<i64, ()> {
+    pub fn get_signed_integer(&self) -> Option<i64> {
         match self.get_type() {
             MetadataType::SignedIntegerDataType => {
-                Ok(unsafe { BNMetadataGetSignedInteger(self.handle) })
+                Some(unsafe { BNMetadataGetSignedInteger(self.handle) })
             }
-            _ => Err(()),
+            _ => None,
         }
     }
 
-    pub fn get_double(&self) -> Result<f64, ()> {
+    pub fn get_double(&self) -> Option<f64> {
         match self.get_type() {
-            MetadataType::DoubleDataType => Ok(unsafe { BNMetadataGetDouble(self.handle) }),
-            _ => Err(()),
+            MetadataType::DoubleDataType => Some(unsafe { BNMetadataGetDouble(self.handle) }),
+            _ => None,
         }
     }
 
-    pub fn get_string(&self) -> Result<BnString, ()> {
+    pub fn get_string(&self) -> Option<BnString> {
         match self.get_type() {
             MetadataType::StringDataType => {
                 let ptr: *mut c_char = unsafe { BNMetadataGetString(self.handle) };
                 if ptr.is_null() {
-                    return Err(());
+                    return None;
                 }
-                Ok(unsafe { BnString::from_raw(ptr) })
+                Some(unsafe { BnString::from_raw(ptr) })
             }
-            _ => Err(()),
+            _ => None,
         }
     }
 
-    pub fn get_boolean_list(&self) -> Result<Vec<bool>, ()> {
+    pub fn get_boolean_list(&self) -> Option<Vec<bool>> {
         match self.get_type() {
             MetadataType::ArrayDataType => {
                 let mut size: usize = 0;
                 let ptr: *mut bool = unsafe { BNMetadataGetBooleanList(self.handle, &mut size) };
                 if ptr.is_null() {
-                    return Err(());
+                    return None;
                 }
                 let list = unsafe { slice::from_raw_parts(ptr, size) };
                 let vec = Vec::from(list);
                 unsafe { BNFreeMetadataBooleanList(ptr, size) };
-                Ok(vec)
+                Some(vec)
             }
-            _ => Err(()),
+            _ => None,
         }
     }
 
-    pub fn get_unsigned_integer_list(&self) -> Result<Vec<u64>, ()> {
+    pub fn get_unsigned_integer_list(&self) -> Option<Vec<u64>> {
         match self.get_type() {
             MetadataType::ArrayDataType => {
                 let mut size: usize = 0;
                 let ptr: *mut u64 =
                     unsafe { BNMetadataGetUnsignedIntegerList(self.handle, &mut size) };
                 if ptr.is_null() {
-                    return Err(());
+                    return None;
                 }
                 let list = unsafe { slice::from_raw_parts(ptr, size) };
                 let vec = Vec::from(list);
                 unsafe { BNFreeMetadataUnsignedIntegerList(ptr, size) };
-                Ok(vec)
+                Some(vec)
             }
-            _ => Err(()),
+            _ => None,
         }
     }
 
-    pub fn get_signed_integer_list(&self) -> Result<Vec<i64>, ()> {
+    pub fn get_signed_integer_list(&self) -> Option<Vec<i64>> {
         match self.get_type() {
             MetadataType::ArrayDataType => {
                 let mut size: usize = 0;
                 let ptr: *mut i64 =
                     unsafe { BNMetadataGetSignedIntegerList(self.handle, &mut size) };
                 if ptr.is_null() {
-                    return Err(());
+                    return None;
                 }
                 let list = unsafe { slice::from_raw_parts(ptr, size) };
                 let vec = Vec::from(list);
                 unsafe { BNFreeMetadataSignedIntegerList(ptr, size) };
-                Ok(vec)
+                Some(vec)
             }
-            _ => Err(()),
+            _ => None,
         }
     }
 
-    pub fn get_double_list(&self) -> Result<Vec<f64>, ()> {
+    pub fn get_double_list(&self) -> Option<Vec<f64>> {
         match self.get_type() {
             MetadataType::ArrayDataType => {
                 let mut size: usize = 0;
                 let ptr: *mut f64 = unsafe { BNMetadataGetDoubleList(self.handle, &mut size) };
                 if ptr.is_null() {
-                    return Err(());
+                    return None;
                 }
                 let list = unsafe { slice::from_raw_parts(ptr, size) };
                 let vec = Vec::from(list);
                 unsafe { BNFreeMetadataDoubleList(ptr, size) };
-                Ok(vec)
+                Some(vec)
             }
-            _ => Err(()),
+            _ => None,
         }
     }
 
-    pub fn get_string_list(&self) -> Result<Vec<BnString>, ()> {
+    pub fn get_string_list(&self) -> Option<Vec<BnString>> {
         match self.get_type() {
             MetadataType::ArrayDataType => {
                 let mut size: usize = 0;
                 let ptr: *mut *mut c_char =
                     unsafe { BNMetadataGetStringList(self.handle, &mut size) };
                 if ptr.is_null() {
-                    return Err(());
+                    return None;
                 }
                 let list = unsafe { slice::from_raw_parts(ptr, size) };
                 let vec = list
@@ -160,66 +161,66 @@ impl Metadata {
                     .map(|ptr| unsafe { BnString::from_raw(*ptr) })
                     .collect::<Vec<_>>();
                 unsafe { BNFreeMetadataStringList(ptr, size) };
-                Ok(vec)
+                Some(vec)
             }
-            _ => Err(()),
+            _ => None,
         }
     }
 
-    pub fn get_json_string(&self) -> Result<BnString, ()> {
+    pub fn get_json_string(&self) -> Option<BnString> {
         match self.get_type() {
             MetadataType::StringDataType => {
                 let ptr: *mut c_char = unsafe { BNMetadataGetJsonString(self.handle) };
                 if ptr.is_null() {
-                    return Err(());
+                    return None;
                 }
-                Ok(unsafe { BnString::from_raw(ptr) })
+                Some(unsafe { BnString::from_raw(ptr) })
             }
-            _ => Err(()),
+            _ => None,
         }
     }
 
-    pub fn get_raw(&self) -> Result<Vec<u8>, ()> {
+    pub fn get_raw(&self) -> Option<Vec<u8>> {
         match self.get_type() {
             MetadataType::RawDataType => {
                 let mut size: usize = 0;
                 let ptr: *mut u8 = unsafe { BNMetadataGetRaw(self.handle, &mut size) };
                 if ptr.is_null() {
-                    return Err(());
+                    return None;
                 }
 
                 let list = unsafe { slice::from_raw_parts(ptr, size) };
                 let vec = Vec::from(list);
                 unsafe { BNFreeMetadataRaw(ptr) };
-                Ok(vec)
+                Some(vec)
             }
-            _ => Err(()),
+            _ => None,
         }
     }
 
-    pub fn get_array(&self) -> Result<Array<Metadata>, ()> {
+    pub fn get_array(&self) -> Option<Array<Metadata>> {
         match self.get_type() {
             MetadataType::ArrayDataType => {
                 let mut size: usize = 0;
                 let ptr: *mut *mut BNMetadata =
                     unsafe { BNMetadataGetArray(self.handle, &mut size) };
                 if ptr.is_null() {
-                    return Err(());
+                    return None;
                 }
 
-                Ok(unsafe { Array::new(ptr, size, ()) })
+                Some(unsafe { Array::new(ptr, size, ()) })
             }
-            _ => Err(()),
+            _ => None,
         }
     }
 
-    pub fn get_value_store(&self) -> Result<HashMap<BnString, Ref<Metadata>>, ()> {
+    pub fn get_value_store(&self) -> Option<HashMap<String, Ref<Metadata>>> {
         match self.get_type() {
             MetadataType::KeyValueDataType => {
                 let ptr: *mut BNMetadataValueStore =
                     unsafe { BNMetadataGetValueStore(self.handle) };
                 if ptr.is_null() {
-                    return Err(());
+                    return None;
                 }
 
                 let size = unsafe { (*ptr).size };
@@ -230,19 +231,16 @@ impl Metadata {
 
                 let mut map = HashMap::new();
                 for i in 0..size {
-                    let key = unsafe { BnString::from_raw(keys[i]) };
-
-                    let value = unsafe {
-                        Ref::<Metadata>::new(Self {
-                            handle: BNNewMetadataReference(values[i]),
-                        })
-                    };
+                    let key = raw_to_string(keys[i]).unwrap();
+                    let value = unsafe { Ref::<Metadata>::new(Self { handle: values[i] }) };
                     map.insert(key, value);
                 }
 
-                Ok(map)
+                unsafe { BNFreeMetadataValueStore(ptr) };
+
+                Some(map)
             }
-            _ => Err(()),
+            _ => None,
         }
     }
 
@@ -265,16 +263,12 @@ impl Metadata {
         Ok(Some(unsafe { Self::ref_from_raw(ptr) }))
     }
 
-    pub fn get<S: BnStrCompatible>(&self, key: S) -> Result<Option<Ref<Metadata>>, ()> {
+    pub fn get(&self, key: &str) -> Result<Option<Ref<Metadata>>, ()> {
         if self.get_type() != MetadataType::KeyValueDataType {
             return Err(());
         }
-        let ptr: *mut BNMetadata = unsafe {
-            BNMetadataGetForKey(
-                self.handle,
-                key.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let raw_key = key.to_cstr();
+        let ptr: *mut BNMetadata = unsafe { BNMetadataGetForKey(self.handle, raw_key.as_ptr()) };
         if ptr.is_null() {
             return Ok(None);
         }
@@ -289,18 +283,12 @@ impl Metadata {
         Ok(())
     }
 
-    pub fn insert<S: BnStrCompatible>(&self, key: S, value: &Metadata) -> Result<(), ()> {
+    pub fn insert(&self, key: &str, value: &Metadata) -> Result<(), ()> {
         if self.get_type() != MetadataType::KeyValueDataType {
             return Err(());
         }
-
-        unsafe {
-            BNMetadataSetValueForKey(
-                self.handle,
-                key.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
-                value.handle,
-            )
-        };
+        let raw_key = key.to_cstr();
+        unsafe { BNMetadataSetValueForKey(self.handle, raw_key.as_ptr(), value.handle) };
         Ok(())
     }
 
@@ -313,18 +301,91 @@ impl Metadata {
         Ok(())
     }
 
-    pub fn remove_key<S: BnStrCompatible>(&self, key: S) -> Result<(), ()> {
+    pub fn remove_key(&self, key: &str) -> Result<(), ()> {
         if self.get_type() != MetadataType::KeyValueDataType {
             return Err(());
         }
 
-        unsafe {
-            BNMetadataRemoveKey(
-                self.handle,
-                key.into_bytes_with_nul().as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let raw_key = key.to_cstr();
+        unsafe { BNMetadataRemoveKey(self.handle, raw_key.as_ptr()) };
         Ok(())
+    }
+}
+
+impl Debug for Metadata {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Metadata")
+            .field("type", &self.get_type())
+            .field("len", &self.len())
+            // Display will give you the metadata value as a string.
+            .field("value", &self.to_string())
+            .finish()
+    }
+}
+
+impl Display for Metadata {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        // Display will give you the metadata value as a string.
+        match self.get_type() {
+            MetadataType::BooleanDataType => match self.get_boolean() {
+                Some(val) => write!(f, "{}", val),
+                None => write!(f, "null"),
+            },
+            MetadataType::UnsignedIntegerDataType => match self.get_unsigned_integer() {
+                Some(val) => write!(f, "{}", val),
+                None => write!(f, "null"),
+            },
+            MetadataType::SignedIntegerDataType => match self.get_signed_integer() {
+                Some(val) => write!(f, "{}", val),
+                None => write!(f, "null"),
+            },
+            MetadataType::DoubleDataType => match self.get_double() {
+                Some(val) => write!(f, "{}", val),
+                None => write!(f, "null"),
+            },
+            MetadataType::StringDataType => match self.get_string() {
+                Some(val) => write!(f, "{}", val.to_string_lossy()),
+                None => write!(f, "null"),
+            },
+            MetadataType::ArrayDataType => {
+                match self.get_array() {
+                    Some(array) => {
+                        // TODO: This is extremely ugly
+                        write!(f, "[")?;
+                        for (i, val) in array.iter().enumerate() {
+                            if i > 0 {
+                                write!(f, ", ")?;
+                            }
+                            write!(f, "{}", *val)?;
+                        }
+                        write!(f, "]")?;
+                        Ok(())
+                    }
+                    None => write!(f, "null"),
+                }
+            }
+            MetadataType::InvalidDataType => {
+                write!(f, "null")
+            }
+            MetadataType::KeyValueDataType => match self.get_value_store() {
+                Some(map) => {
+                    write!(f, "{{")?;
+                    for (i, (key, val)) in map.iter().enumerate() {
+                        if i > 0 {
+                            write!(f, ", ")?;
+                        }
+                        write!(f, "{}: {}", key, val)?;
+                    }
+                    write!(f, "}}")?;
+                    Ok(())
+                }
+                None => write!(f, "null"),
+            },
+            MetadataType::RawDataType => match self.get_raw() {
+                Some(val) => write!(f, "{:x?}", val),
+                None => write!(f, "null"),
+            },
+        }
     }
 }
 
@@ -394,21 +455,15 @@ impl From<f64> for Ref<Metadata> {
 
 impl From<String> for Ref<Metadata> {
     fn from(value: String) -> Self {
-        unsafe {
-            Metadata::ref_from_raw(BNCreateMetadataStringData(
-                value.into_bytes_with_nul().as_ptr() as *const c_char,
-            ))
-        }
+        let raw_value = value.to_cstr();
+        unsafe { Metadata::ref_from_raw(BNCreateMetadataStringData(raw_value.as_ptr())) }
     }
 }
 
 impl From<&str> for Ref<Metadata> {
     fn from(value: &str) -> Self {
-        unsafe {
-            Metadata::ref_from_raw(BNCreateMetadataStringData(
-                value.into_bytes_with_nul().as_ptr() as *const c_char,
-            ))
-        }
+        let raw_value = value.to_cstr();
+        unsafe { Metadata::ref_from_raw(BNCreateMetadataStringData(raw_value.as_ptr())) }
     }
 }
 
@@ -442,16 +497,13 @@ impl From<&Array<Metadata>> for Ref<Metadata> {
     }
 }
 
-impl<S: BnStrCompatible> From<HashMap<S, Ref<Metadata>>> for Ref<Metadata> {
-    fn from(value: HashMap<S, Ref<Metadata>>) -> Self {
+impl<S: IntoCStr, T: Into<Ref<Metadata>>> From<HashMap<S, T>> for Ref<Metadata> {
+    fn from(value: HashMap<S, T>) -> Self {
         let data: Vec<(S::Result, Ref<Metadata>)> = value
             .into_iter()
-            .map(|(k, v)| (k.into_bytes_with_nul(), v))
+            .map(|(k, v)| (k.to_cstr(), v.into()))
             .collect();
-        let mut keys: Vec<*const c_char> = data
-            .iter()
-            .map(|(k, _)| k.as_ref().as_ptr() as *const c_char)
-            .collect();
+        let mut keys: Vec<*const c_char> = data.iter().map(|(k, _)| k.as_ptr()).collect();
         let mut values: Vec<*mut BNMetadata> = data.iter().map(|(_, v)| v.handle).collect();
 
         unsafe {
@@ -466,18 +518,13 @@ impl<S: BnStrCompatible> From<HashMap<S, Ref<Metadata>>> for Ref<Metadata> {
 
 impl<S, T> From<&[(S, T)]> for Ref<Metadata>
 where
-    S: BnStrCompatible + Copy,
+    S: IntoCStr + Copy,
     for<'a> &'a T: Into<Ref<Metadata>>,
 {
     fn from(value: &[(S, T)]) -> Self {
-        let data: Vec<(S::Result, Ref<Metadata>)> = value
-            .iter()
-            .map(|(k, v)| (k.into_bytes_with_nul(), v.into()))
-            .collect();
-        let mut keys: Vec<*const c_char> = data
-            .iter()
-            .map(|(k, _)| k.as_ref().as_ptr() as *const c_char)
-            .collect();
+        let data: Vec<(S::Result, Ref<Metadata>)> =
+            value.iter().map(|(k, v)| (k.to_cstr(), v.into())).collect();
+        let mut keys: Vec<*const c_char> = data.iter().map(|(k, _)| k.as_ptr()).collect();
         let mut values: Vec<*mut BNMetadata> = data.iter().map(|(_, v)| v.handle).collect();
 
         unsafe {
@@ -492,7 +539,7 @@ where
 
 impl<S, T, const N: usize> From<[(S, T); N]> for Ref<Metadata>
 where
-    S: BnStrCompatible + Copy,
+    S: IntoCStr + Copy,
     for<'a> &'a T: Into<Ref<Metadata>>,
 {
     fn from(value: [(S, T); N]) -> Self {
@@ -546,15 +593,15 @@ impl From<&Vec<f64>> for Ref<Metadata> {
     }
 }
 
-impl<S: BnStrCompatible> From<Vec<S>> for Ref<Metadata> {
+impl<S: IntoCStr> From<Vec<S>> for Ref<Metadata> {
     fn from(value: Vec<S>) -> Self {
         let mut refs = vec![];
         for v in value {
-            refs.push(v.into_bytes_with_nul());
+            refs.push(v.to_cstr());
         }
         let mut pointers = vec![];
         for r in &refs {
-            pointers.push(r.as_ref().as_ptr() as *const c_char);
+            pointers.push(r.as_ptr());
         }
         unsafe {
             Metadata::ref_from_raw(BNCreateMetadataStringListData(
@@ -577,7 +624,7 @@ impl TryFrom<&Metadata> for bool {
     type Error = ();
 
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
-        value.get_boolean()
+        value.get_boolean().ok_or(())
     }
 }
 
@@ -585,7 +632,7 @@ impl TryFrom<&Metadata> for u64 {
     type Error = ();
 
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
-        value.get_unsigned_integer()
+        value.get_unsigned_integer().ok_or(())
     }
 }
 
@@ -593,7 +640,7 @@ impl TryFrom<&Metadata> for i64 {
     type Error = ();
 
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
-        value.get_signed_integer()
+        value.get_signed_integer().ok_or(())
     }
 }
 
@@ -601,7 +648,7 @@ impl TryFrom<&Metadata> for f64 {
     type Error = ();
 
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
-        value.get_double()
+        value.get_double().ok_or(())
     }
 }
 
@@ -609,7 +656,7 @@ impl TryFrom<&Metadata> for BnString {
     type Error = ();
 
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
-        value.get_string()
+        value.get_string().ok_or(())
     }
 }
 
@@ -617,7 +664,10 @@ impl TryFrom<&Metadata> for String {
     type Error = ();
 
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
-        value.get_string().map(|s| s.to_string())
+        value
+            .get_string()
+            .map(|s| s.to_string_lossy().to_string())
+            .ok_or(())
     }
 }
 
@@ -625,7 +675,7 @@ impl TryFrom<&Metadata> for Vec<bool> {
     type Error = ();
 
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
-        value.get_boolean_list()
+        value.get_boolean_list().ok_or(())
     }
 }
 
@@ -633,7 +683,7 @@ impl TryFrom<&Metadata> for Vec<u64> {
     type Error = ();
 
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
-        value.get_unsigned_integer_list()
+        value.get_unsigned_integer_list().ok_or(())
     }
 }
 
@@ -641,7 +691,7 @@ impl TryFrom<&Metadata> for Vec<i64> {
     type Error = ();
 
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
-        value.get_signed_integer_list()
+        value.get_signed_integer_list().ok_or(())
     }
 }
 
@@ -649,7 +699,7 @@ impl TryFrom<&Metadata> for Vec<f64> {
     type Error = ();
 
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
-        value.get_double_list()
+        value.get_double_list().ok_or(())
     }
 }
 
@@ -657,7 +707,7 @@ impl TryFrom<&Metadata> for Vec<BnString> {
     type Error = ();
 
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
-        value.get_string_list()
+        value.get_string_list().ok_or(())
     }
 }
 
@@ -667,7 +717,12 @@ impl TryFrom<&Metadata> for Vec<String> {
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
         value
             .get_string_list()
-            .map(|v| v.into_iter().map(|s| s.to_string()).collect())
+            .map(|v| {
+                v.into_iter()
+                    .map(|s| s.to_string_lossy().to_string())
+                    .collect()
+            })
+            .ok_or(())
     }
 }
 
@@ -675,7 +730,7 @@ impl TryFrom<&Metadata> for Vec<u8> {
     type Error = ();
 
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
-        value.get_raw()
+        value.get_raw().ok_or(())
     }
 }
 
@@ -683,15 +738,7 @@ impl TryFrom<&Metadata> for Array<Metadata> {
     type Error = ();
 
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
-        value.get_array()
-    }
-}
-
-impl TryFrom<&Metadata> for HashMap<BnString, Ref<Metadata>> {
-    type Error = ();
-
-    fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
-        value.get_value_store()
+        value.get_array().ok_or(())
     }
 }
 
@@ -699,22 +746,20 @@ impl TryFrom<&Metadata> for HashMap<String, Ref<Metadata>> {
     type Error = ();
 
     fn try_from(value: &Metadata) -> Result<Self, Self::Error> {
-        value
-            .get_value_store()
-            .map(|m| m.into_iter().map(|(k, v)| (k.to_string(), v)).collect())
+        value.get_value_store().ok_or(())
     }
 }
 
 impl IntoJson for &Metadata {
     type Output = BnString;
     fn get_json_string(self) -> Result<BnString, ()> {
-        Metadata::get_json_string(self)
+        Metadata::get_json_string(self).ok_or(())
     }
 }
 
 impl IntoJson for Ref<Metadata> {
     type Output = BnString;
     fn get_json_string(self) -> Result<BnString, ()> {
-        Metadata::get_json_string(&self)
+        Metadata::get_json_string(&self).ok_or(())
     }
 }

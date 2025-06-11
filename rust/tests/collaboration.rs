@@ -20,13 +20,6 @@ fn temp_project_scope<T: Fn(&RemoteProject)>(remote: &Remote, project_name: &str
         // TODO: have connected by the time this errors out. Maybe?
         let _ = remote.connect();
     }
-
-    if let Ok(home_dir) = env::var("HOME").or_else(|_| env::var("USERPROFILE")) {
-        eprintln!("Current user directory: {}", home_dir);
-    } else {
-        eprintln!("Unable to determine the current user directory.");
-    }
-
     let project = remote
         .create_project(project_name, "Test project for test purposes")
         .expect("Failed to create project");
@@ -109,7 +102,7 @@ fn test_project_creation() {
             .expect("Failed to delete file");
         assert!(
             !project
-                .get_file_by_id(created_file_id)
+                .get_file_by_id(&created_file_id)
                 .is_ok_and(|f| f.is_some()),
             "File was not deleted"
         );
@@ -136,7 +129,7 @@ fn test_project_creation() {
         let created_folder_file_id = created_folder_file.id();
         // Verify the file exists in the folder.
         let check_folder_file = project
-            .get_file_by_id(created_folder_file_id)
+            .get_file_by_id(&created_folder_file_id)
             .expect("Failed to get folder file by id")
             .unwrap();
         assert_eq!(check_folder_file.name().as_str(), "test_folder_file");
@@ -155,7 +148,7 @@ fn test_project_creation() {
             .expect("Failed to delete folder");
         assert!(
             !project
-                .get_folder_by_id(created_folder_id)
+                .get_folder_by_id(&created_folder_id)
                 .is_ok_and(|f| f.is_some()),
             "Folder was not deleted"
         );
@@ -190,7 +183,7 @@ fn test_project_sync() {
             SymbolBuilder::new(SymbolType::Function, "test", entry_function.start()).create();
         view.define_user_symbol(&new_entry_func_symbol);
         // Verify that we modified the binary
-        assert_eq!(entry_function.symbol().raw_name().as_str(), "test");
+        assert_eq!(entry_function.symbol().raw_name(), "test".into());
         // Make new snapshot.
         assert!(view.file().save_auto_snapshot());
         // We should have two snapshots.
@@ -210,20 +203,20 @@ fn test_project_sync() {
         drop(view);
         // Verify that the remote file exists.
         project
-            .get_file_by_id(remote_file.id())
+            .get_file_by_id(&remote_file.id())
             .expect("Failed to get remote file by id");
         // Download the remote database with our changes.
         let downloaded_file = remote_file
-            .download_database(out_dir.join("downloaded_atox.obj.bndb"))
+            .download_database(&out_dir.join("downloaded_atox.obj.bndb"))
             .expect("Failed to download database");
         let downloaded_view = downloaded_file
-            .view_of_type(view_type)
+            .view_of_type(&view_type)
             .expect("Failed to open downloaded view");
         // Verify the changes in the entry function.
         let entry_function = downloaded_view
             .entry_point_function()
             .expect("Failed to get entry point function");
-        assert_eq!(entry_function.symbol().raw_name().as_str(), "test");
+        assert_eq!(entry_function.symbol().raw_name(), "test".into());
         project
             .delete_file(&remote_file)
             .expect("Failed to delete file");

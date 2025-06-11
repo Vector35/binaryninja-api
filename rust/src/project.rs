@@ -1,7 +1,7 @@
 pub mod file;
 pub mod folder;
 
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 use std::fmt::Debug;
 use std::ptr::{null_mut, NonNull};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -13,7 +13,7 @@ use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::file::ProjectFile;
 use crate::project::folder::ProjectFolder;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{BnString, IntoCStr};
 
 pub struct Project {
     pub(crate) handle: NonNull<BNProject>,
@@ -35,28 +35,25 @@ impl Project {
         unsafe { Array::new(result, count, ()) }
     }
 
+    // TODO: Path here is actually local path?
     /// Create a new project
     ///
     /// * `path` - Path to the project directory (.bnpr)
     /// * `name` - Name of the new project
-    pub fn create<P: BnStrCompatible, S: BnStrCompatible>(path: P, name: S) -> Option<Ref<Self>> {
-        let path_raw = path.into_bytes_with_nul();
-        let name_raw = name.into_bytes_with_nul();
-        let handle = unsafe {
-            BNCreateProject(
-                path_raw.as_ref().as_ptr() as *const c_char,
-                name_raw.as_ref().as_ptr() as *const c_char,
-            )
-        };
+    pub fn create(path: &str, name: &str) -> Option<Ref<Self>> {
+        let path_raw = path.to_cstr();
+        let name_raw = name.to_cstr();
+        let handle = unsafe { BNCreateProject(path_raw.as_ptr(), name_raw.as_ptr()) };
         NonNull::new(handle).map(|h| unsafe { Self::ref_from_raw(h) })
     }
 
+    // TODO: Path here is actually local path?
     /// Open an existing project
     ///
     /// * `path` - Path to the project directory (.bnpr) or project metadata file (.bnpm)
-    pub fn open_project<P: BnStrCompatible>(path: P) -> Option<Ref<Self>> {
-        let path_raw = path.into_bytes_with_nul();
-        let handle = unsafe { BNOpenProject(path_raw.as_ref().as_ptr() as *const c_char) };
+    pub fn open_project(path: &str) -> Option<Ref<Self>> {
+        let path_raw = path.to_cstr();
+        let handle = unsafe { BNOpenProject(path_raw.as_ptr()) };
         NonNull::new(handle).map(|h| unsafe { Self::ref_from_raw(h) })
     }
 
@@ -84,53 +81,41 @@ impl Project {
     }
 
     /// Get the unique id of this project
-    pub fn id(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectGetId(self.handle.as_ptr())) }
+    pub fn id(&self) -> String {
+        unsafe { BnString::into_string(BNProjectGetId(self.handle.as_ptr())) }
     }
 
     /// Get the path of the project
-    pub fn path(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectGetPath(self.handle.as_ptr())) }
+    pub fn path(&self) -> String {
+        unsafe { BnString::into_string(BNProjectGetPath(self.handle.as_ptr())) }
     }
 
     /// Get the name of the project
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectGetName(self.handle.as_ptr())) }
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNProjectGetName(self.handle.as_ptr())) }
     }
 
     /// Set the name of the project
-    pub fn set_name<S: BnStrCompatible>(&self, value: S) {
-        let value = value.into_bytes_with_nul();
-        unsafe {
-            BNProjectSetName(
-                self.handle.as_ptr(),
-                value.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn set_name(&self, value: &str) {
+        let value = value.to_cstr();
+        unsafe { BNProjectSetName(self.handle.as_ptr(), value.as_ptr()) }
     }
 
     /// Get the description of the project
-    pub fn description(&self) -> BnString {
-        unsafe { BnString::from_raw(BNProjectGetDescription(self.handle.as_ptr())) }
+    pub fn description(&self) -> String {
+        unsafe { BnString::into_string(BNProjectGetDescription(self.handle.as_ptr())) }
     }
 
     /// Set the description of the project
-    pub fn set_description<S: BnStrCompatible>(&self, value: S) {
-        let value = value.into_bytes_with_nul();
-        unsafe {
-            BNProjectSetDescription(
-                self.handle.as_ptr(),
-                value.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn set_description(&self, value: &str) {
+        let value = value.to_cstr();
+        unsafe { BNProjectSetDescription(self.handle.as_ptr(), value.as_ptr()) }
     }
 
     /// Retrieves metadata stored under a key from the project
-    pub fn query_metadata<S: BnStrCompatible>(&self, key: S) -> Ref<Metadata> {
-        let key = key.into_bytes_with_nul();
-        let result = unsafe {
-            BNProjectQueryMetadata(self.handle.as_ptr(), key.as_ref().as_ptr() as *const c_char)
-        };
+    pub fn query_metadata(&self, key: &str) -> Ref<Metadata> {
+        let key = key.to_cstr();
+        let result = unsafe { BNProjectQueryMetadata(self.handle.as_ptr(), key.as_ptr()) };
         unsafe { Metadata::ref_from_raw(result) }
     }
 
@@ -138,26 +123,15 @@ impl Project {
     ///
     /// * `key` - Key under which to store the Metadata object
     /// * `value` - Object to store
-    pub fn store_metadata<S: BnStrCompatible>(&self, key: S, value: &Metadata) -> bool {
-        let key_raw = key.into_bytes_with_nul();
-        unsafe {
-            BNProjectStoreMetadata(
-                self.handle.as_ptr(),
-                key_raw.as_ref().as_ptr() as *const c_char,
-                value.handle,
-            )
-        }
+    pub fn store_metadata(&self, key: &str, value: &Metadata) -> bool {
+        let key_raw = key.to_cstr();
+        unsafe { BNProjectStoreMetadata(self.handle.as_ptr(), key_raw.as_ptr(), value.handle) }
     }
 
     /// Removes the metadata associated with this `key` from the project
-    pub fn remove_metadata<S: BnStrCompatible>(&self, key: S) {
-        let key_raw = key.into_bytes_with_nul();
-        unsafe {
-            BNProjectRemoveMetadata(
-                self.handle.as_ptr(),
-                key_raw.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn remove_metadata(&self, key: &str) {
+        let key_raw = key.to_cstr();
+        unsafe { BNProjectRemoveMetadata(self.handle.as_ptr(), key_raw.as_ptr()) }
     }
 
     pub fn push_folder(&self, file: &ProjectFolder) {
@@ -169,16 +143,12 @@ impl Project {
     /// * `path` - Path to folder on disk
     /// * `parent` - Parent folder in the project that will contain the new contents
     /// * `description` - Description for created root folder
-    pub fn create_folder_from_path<P, D>(
+    pub fn create_folder_from_path(
         &self,
-        path: P,
+        path: &str,
         parent: Option<&ProjectFolder>,
-        description: D,
-    ) -> Result<Ref<ProjectFolder>, ()>
-    where
-        P: BnStrCompatible,
-        D: BnStrCompatible,
-    {
+        description: &str,
+    ) -> Result<Ref<ProjectFolder>, ()> {
         self.create_folder_from_path_with_progress(path, parent, description, NoProgressCallback)
     }
 
@@ -188,28 +158,26 @@ impl Project {
     /// * `parent` - Parent folder in the project that will contain the new contents
     /// * `description` - Description for created root folder
     /// * `progress` - [`ProgressCallback`] that will be called as the [`ProjectFolder`] is being created
-    pub fn create_folder_from_path_with_progress<P, D, PC>(
+    pub fn create_folder_from_path_with_progress<PC>(
         &self,
-        path: P,
+        path: &str,
         parent: Option<&ProjectFolder>,
-        description: D,
+        description: &str,
         mut progress: PC,
     ) -> Result<Ref<ProjectFolder>, ()>
     where
-        P: BnStrCompatible,
-        D: BnStrCompatible,
         PC: ProgressCallback,
     {
-        let path_raw = path.into_bytes_with_nul();
-        let description_raw = description.into_bytes_with_nul();
+        let path_raw = path.to_cstr();
+        let description_raw = description.to_cstr();
         let parent_ptr = parent.map(|p| p.handle.as_ptr()).unwrap_or(null_mut());
 
         unsafe {
             let result = BNProjectCreateFolderFromPath(
                 self.handle.as_ptr(),
-                path_raw.as_ref().as_ptr() as *const c_char,
+                path_raw.as_ptr(),
                 parent_ptr,
-                description_raw.as_ref().as_ptr() as *const c_char,
+                description_raw.as_ptr(),
                 &mut progress as *mut PC as *mut c_void,
                 Some(PC::cb_progress_callback),
             );
@@ -222,25 +190,21 @@ impl Project {
     /// * `parent` - Parent folder in the project that will contain the new folder
     /// * `name` - Name for the created folder
     /// * `description` - Description for created folder
-    pub fn create_folder<N, D>(
+    pub fn create_folder(
         &self,
         parent: Option<&ProjectFolder>,
-        name: N,
-        description: D,
-    ) -> Result<Ref<ProjectFolder>, ()>
-    where
-        N: BnStrCompatible,
-        D: BnStrCompatible,
-    {
-        let name_raw = name.into_bytes_with_nul();
-        let description_raw = description.into_bytes_with_nul();
+        name: &str,
+        description: &str,
+    ) -> Result<Ref<ProjectFolder>, ()> {
+        let name_raw = name.to_cstr();
+        let description_raw = description.to_cstr();
         let parent_ptr = parent.map(|p| p.handle.as_ptr()).unwrap_or(null_mut());
         unsafe {
             let result = BNProjectCreateFolder(
                 self.handle.as_ptr(),
                 parent_ptr,
-                name_raw.as_ref().as_ptr() as *const c_char,
-                description_raw.as_ref().as_ptr() as *const c_char,
+                name_raw.as_ptr(),
+                description_raw.as_ptr(),
             );
             Ok(ProjectFolder::ref_from_raw(NonNull::new(result).ok_or(())?))
         }
@@ -252,29 +216,24 @@ impl Project {
     /// * `name` - Name for the created folder
     /// * `description` - Description for created folder
     /// * `id` - id unique ID
-    pub unsafe fn create_folder_unsafe<N, D, I>(
+    pub unsafe fn create_folder_unsafe(
         &self,
         parent: Option<&ProjectFolder>,
-        name: N,
-        description: D,
-        id: I,
-    ) -> Result<Ref<ProjectFolder>, ()>
-    where
-        N: BnStrCompatible,
-        D: BnStrCompatible,
-        I: BnStrCompatible,
-    {
-        let name_raw = name.into_bytes_with_nul();
-        let description_raw = description.into_bytes_with_nul();
+        name: &str,
+        description: &str,
+        id: &str,
+    ) -> Result<Ref<ProjectFolder>, ()> {
+        let name_raw = name.to_cstr();
+        let description_raw = description.to_cstr();
         let parent_ptr = parent.map(|p| p.handle.as_ptr()).unwrap_or(null_mut());
-        let id_raw = id.into_bytes_with_nul();
+        let id_raw = id.to_cstr();
         unsafe {
             let result = BNProjectCreateFolderUnsafe(
                 self.handle.as_ptr(),
                 parent_ptr,
-                name_raw.as_ref().as_ptr() as *const c_char,
-                description_raw.as_ref().as_ptr() as *const c_char,
-                id_raw.as_ref().as_ptr() as *const c_char,
+                name_raw.as_ptr(),
+                description_raw.as_ptr(),
+                id_raw.as_ptr(),
             );
             Ok(ProjectFolder::ref_from_raw(NonNull::new(result).ok_or(())?))
         }
@@ -292,10 +251,9 @@ impl Project {
     }
 
     /// Retrieve a folder in the project by unique folder `id`
-    pub fn folder_by_id<S: BnStrCompatible>(&self, id: S) -> Option<Ref<ProjectFolder>> {
-        let id_raw = id.into_bytes_with_nul();
-        let id_ptr = id_raw.as_ref().as_ptr() as *const c_char;
-        let result = unsafe { BNProjectGetFolderById(self.handle.as_ptr(), id_ptr) };
+    pub fn folder_by_id(&self, id: &str) -> Option<Ref<ProjectFolder>> {
+        let raw_id = id.to_cstr();
+        let result = unsafe { BNProjectGetFolderById(self.handle.as_ptr(), raw_id.as_ptr()) };
         let handle = NonNull::new(result)?;
         Some(unsafe { ProjectFolder::ref_from_raw(handle) })
     }
@@ -311,17 +269,17 @@ impl Project {
     ///
     /// * `folder` - [`ProjectFolder`] to delete recursively
     /// * `progress` - [`ProgressCallback`] that will be called as objects get deleted
-    pub fn delete_folder_with_progress<P: ProgressCallback>(
+    pub fn delete_folder_with_progress<PC: ProgressCallback>(
         &self,
         folder: &ProjectFolder,
-        mut progress: P,
+        mut progress: PC,
     ) -> Result<(), ()> {
         let result = unsafe {
             BNProjectDeleteFolder(
                 self.handle.as_ptr(),
                 folder.handle.as_ptr(),
-                &mut progress as *mut P as *mut c_void,
-                Some(P::cb_progress_callback),
+                &mut progress as *mut PC as *mut c_void,
+                Some(PC::cb_progress_callback),
             )
         };
 
@@ -342,18 +300,13 @@ impl Project {
     /// * `folder` - Folder to place the created file in
     /// * `name` - Name to assign to the created file
     /// * `description` - Description to assign to the created file
-    pub fn create_file_from_path<P, N, D>(
+    pub fn create_file_from_path(
         &self,
-        path: P,
+        path: &str,
         folder: Option<&ProjectFolder>,
-        name: N,
-        description: D,
-    ) -> Result<Ref<ProjectFile>, ()>
-    where
-        P: BnStrCompatible,
-        N: BnStrCompatible,
-        D: BnStrCompatible,
-    {
+        name: &str,
+        description: &str,
+    ) -> Result<Ref<ProjectFile>, ()> {
         self.create_file_from_path_with_progress(
             path,
             folder,
@@ -370,32 +323,29 @@ impl Project {
     /// * `name` - Name to assign to the created file
     /// * `description` - Description to assign to the created file
     /// * `progress` - [`ProgressCallback`] that will be called as the [`ProjectFile`] is being added
-    pub fn create_file_from_path_with_progress<P, N, D, PC>(
+    pub fn create_file_from_path_with_progress<PC>(
         &self,
-        path: P,
+        path: &str,
         folder: Option<&ProjectFolder>,
-        name: N,
-        description: D,
+        name: &str,
+        description: &str,
         mut progress: PC,
     ) -> Result<Ref<ProjectFile>, ()>
     where
-        P: BnStrCompatible,
-        N: BnStrCompatible,
-        D: BnStrCompatible,
         PC: ProgressCallback,
     {
-        let path_raw = path.into_bytes_with_nul();
-        let name_raw = name.into_bytes_with_nul();
-        let description_raw = description.into_bytes_with_nul();
+        let path_raw = path.to_cstr();
+        let name_raw = name.to_cstr();
+        let description_raw = description.to_cstr();
         let folder_ptr = folder.map(|p| p.handle.as_ptr()).unwrap_or(null_mut());
 
         unsafe {
             let result = BNProjectCreateFileFromPath(
                 self.handle.as_ptr(),
-                path_raw.as_ref().as_ptr() as *const c_char,
+                path_raw.as_ptr(),
                 folder_ptr,
-                name_raw.as_ref().as_ptr() as *const c_char,
-                description_raw.as_ref().as_ptr() as *const c_char,
+                name_raw.as_ptr(),
+                description_raw.as_ptr(),
                 &mut progress as *mut PC as *mut c_void,
                 Some(PC::cb_progress_callback),
             );
@@ -411,21 +361,15 @@ impl Project {
     /// * `description` - Description to assign to the created file
     /// * `id` - id unique ID
     /// * `creation_time` - Creation time of the file
-    pub unsafe fn create_file_from_path_unsafe<P, N, D, I>(
+    pub unsafe fn create_file_from_path_unsafe(
         &self,
-        path: P,
+        path: &str,
         folder: Option<&ProjectFolder>,
-        name: N,
-        description: D,
-        id: I,
+        name: &str,
+        description: &str,
+        id: &str,
         creation_time: SystemTime,
-    ) -> Result<Ref<ProjectFile>, ()>
-    where
-        P: BnStrCompatible,
-        N: BnStrCompatible,
-        D: BnStrCompatible,
-        I: BnStrCompatible,
-    {
+    ) -> Result<Ref<ProjectFile>, ()> {
         self.create_file_from_path_unsafe_with_progress(
             path,
             folder,
@@ -447,37 +391,33 @@ impl Project {
     /// * `creation_time` - Creation time of the file
     /// * `progress` - [`ProgressCallback`] that will be called as the [`ProjectFile`] is being created
     #[allow(clippy::too_many_arguments)]
-    pub unsafe fn create_file_from_path_unsafe_with_progress<P, N, D, I, PC>(
+    pub unsafe fn create_file_from_path_unsafe_with_progress<PC>(
         &self,
-        path: P,
+        path: &str,
         folder: Option<&ProjectFolder>,
-        name: N,
-        description: D,
-        id: I,
+        name: &str,
+        description: &str,
+        id: &str,
         creation_time: SystemTime,
         mut progress: PC,
     ) -> Result<Ref<ProjectFile>, ()>
     where
-        P: BnStrCompatible,
-        N: BnStrCompatible,
-        D: BnStrCompatible,
-        I: BnStrCompatible,
         PC: ProgressCallback,
     {
-        let path_raw = path.into_bytes_with_nul();
-        let name_raw = name.into_bytes_with_nul();
-        let description_raw = description.into_bytes_with_nul();
-        let id_raw = id.into_bytes_with_nul();
+        let path_raw = path.to_cstr();
+        let name_raw = name.to_cstr();
+        let description_raw = description.to_cstr();
+        let id_raw = id.to_cstr();
         let folder_ptr = folder.map(|p| p.handle.as_ptr()).unwrap_or(null_mut());
 
         unsafe {
             let result = BNProjectCreateFileFromPathUnsafe(
                 self.handle.as_ptr(),
-                path_raw.as_ref().as_ptr() as *const c_char,
+                path_raw.as_ptr(),
                 folder_ptr,
-                name_raw.as_ref().as_ptr() as *const c_char,
-                description_raw.as_ref().as_ptr() as *const c_char,
-                id_raw.as_ref().as_ptr() as *const c_char,
+                name_raw.as_ptr(),
+                description_raw.as_ptr(),
+                id_raw.as_ptr(),
                 systime_to_bntime(creation_time).unwrap(),
                 &mut progress as *mut PC as *mut c_void,
                 Some(PC::cb_progress_callback),
@@ -492,17 +432,13 @@ impl Project {
     /// * `folder` - Folder to place the created file in
     /// * `name` - Name to assign to the created file
     /// * `description` - Description to assign to the created file
-    pub fn create_file<N, D>(
+    pub fn create_file(
         &self,
         contents: &[u8],
         folder: Option<&ProjectFolder>,
-        name: N,
-        description: D,
-    ) -> Result<Ref<ProjectFile>, ()>
-    where
-        N: BnStrCompatible,
-        D: BnStrCompatible,
-    {
+        name: &str,
+        description: &str,
+    ) -> Result<Ref<ProjectFile>, ()> {
         self.create_file_with_progress(contents, folder, name, description, NoProgressCallback)
     }
 
@@ -513,21 +449,19 @@ impl Project {
     /// * `name` - Name to assign to the created file
     /// * `description` - Description to assign to the created file
     /// * `progress` - [`ProgressCallback`] that will be called as the [`ProjectFile`] is being created
-    pub fn create_file_with_progress<N, D, P>(
+    pub fn create_file_with_progress<PC>(
         &self,
         contents: &[u8],
         folder: Option<&ProjectFolder>,
-        name: N,
-        description: D,
-        mut progress: P,
+        name: &str,
+        description: &str,
+        mut progress: PC,
     ) -> Result<Ref<ProjectFile>, ()>
     where
-        N: BnStrCompatible,
-        D: BnStrCompatible,
-        P: ProgressCallback,
+        PC: ProgressCallback,
     {
-        let name_raw = name.into_bytes_with_nul();
-        let description_raw = description.into_bytes_with_nul();
+        let name_raw = name.to_cstr();
+        let description_raw = description.to_cstr();
         let folder_ptr = folder.map(|p| p.handle.as_ptr()).unwrap_or(null_mut());
 
         unsafe {
@@ -536,10 +470,10 @@ impl Project {
                 contents.as_ptr(),
                 contents.len(),
                 folder_ptr,
-                name_raw.as_ref().as_ptr() as *const c_char,
-                description_raw.as_ref().as_ptr() as *const c_char,
-                &mut progress as *mut P as *mut c_void,
-                Some(P::cb_progress_callback),
+                name_raw.as_ptr(),
+                description_raw.as_ptr(),
+                &mut progress as *mut PC as *mut c_void,
+                Some(PC::cb_progress_callback),
             );
             Ok(ProjectFile::ref_from_raw(NonNull::new(result).ok_or(())?))
         }
@@ -553,20 +487,15 @@ impl Project {
     /// * `description` - Description to assign to the created file
     /// * `id` - id unique ID
     /// * `creation_time` - Creation time of the file
-    pub unsafe fn create_file_unsafe<N, D, I>(
+    pub unsafe fn create_file_unsafe(
         &self,
         contents: &[u8],
         folder: Option<&ProjectFolder>,
-        name: N,
-        description: D,
-        id: I,
+        name: &str,
+        description: &str,
+        id: &str,
         creation_time: SystemTime,
-    ) -> Result<Ref<ProjectFile>, ()>
-    where
-        N: BnStrCompatible,
-        D: BnStrCompatible,
-        I: BnStrCompatible,
-    {
+    ) -> Result<Ref<ProjectFile>, ()> {
         self.create_file_unsafe_with_progress(
             contents,
             folder,
@@ -588,25 +517,22 @@ impl Project {
     /// * `creation_time` - Creation time of the file
     /// * `progress` - [`ProgressCallback`] that will be called as the [`ProjectFile`] is being created
     #[allow(clippy::too_many_arguments)]
-    pub unsafe fn create_file_unsafe_with_progress<N, D, I, P>(
+    pub unsafe fn create_file_unsafe_with_progress<PC>(
         &self,
         contents: &[u8],
         folder: Option<&ProjectFolder>,
-        name: N,
-        description: D,
-        id: I,
+        name: &str,
+        description: &str,
+        id: &str,
         creation_time: SystemTime,
-        mut progress: P,
+        mut progress: PC,
     ) -> Result<Ref<ProjectFile>, ()>
     where
-        N: BnStrCompatible,
-        D: BnStrCompatible,
-        I: BnStrCompatible,
-        P: ProgressCallback,
+        PC: ProgressCallback,
     {
-        let name_raw = name.into_bytes_with_nul();
-        let description_raw = description.into_bytes_with_nul();
-        let id_raw = id.into_bytes_with_nul();
+        let name_raw = name.to_cstr();
+        let description_raw = description.to_cstr();
+        let id_raw = id.to_cstr();
         let folder_ptr = folder.map(|p| p.handle.as_ptr()).unwrap_or(null_mut());
 
         unsafe {
@@ -615,12 +541,12 @@ impl Project {
                 contents.as_ptr(),
                 contents.len(),
                 folder_ptr,
-                name_raw.as_ref().as_ptr() as *const c_char,
-                description_raw.as_ref().as_ptr() as *const c_char,
-                id_raw.as_ref().as_ptr() as *const c_char,
+                name_raw.as_ptr(),
+                description_raw.as_ptr(),
+                id_raw.as_ptr(),
                 systime_to_bntime(creation_time).unwrap(),
-                &mut progress as *mut P as *mut c_void,
-                Some(P::cb_progress_callback),
+                &mut progress as *mut PC as *mut c_void,
+                Some(PC::cb_progress_callback),
             );
             Ok(ProjectFile::ref_from_raw(NonNull::new(result).ok_or(())?))
         }
@@ -635,21 +561,18 @@ impl Project {
     }
 
     /// Retrieve a file in the project by unique `id`
-    pub fn file_by_id<S: BnStrCompatible>(&self, id: S) -> Option<Ref<ProjectFile>> {
-        let id_raw = id.into_bytes_with_nul();
-        let id_ptr = id_raw.as_ref().as_ptr() as *const c_char;
-
-        let result = unsafe { BNProjectGetFileById(self.handle.as_ptr(), id_ptr) };
+    pub fn file_by_id(&self, id: &str) -> Option<Ref<ProjectFile>> {
+        let raw_id = id.to_cstr();
+        let result = unsafe { BNProjectGetFileById(self.handle.as_ptr(), raw_id.as_ptr()) };
         let handle = NonNull::new(result)?;
         Some(unsafe { ProjectFile::ref_from_raw(handle) })
     }
 
     /// Retrieve a file in the project by the `path` on disk
-    pub fn file_by_path<S: BnStrCompatible>(&self, path: S) -> Option<Ref<ProjectFile>> {
-        let path_raw = path.into_bytes_with_nul();
-        let path_ptr = path_raw.as_ref().as_ptr() as *const c_char;
-
-        let result = unsafe { BNProjectGetFileByPathOnDisk(self.handle.as_ptr(), path_ptr) };
+    pub fn file_by_path(&self, path: &str) -> Option<Ref<ProjectFile>> {
+        let path_raw = path.to_cstr();
+        let result =
+            unsafe { BNProjectGetFileByPathOnDisk(self.handle.as_ptr(), path_raw.as_ptr()) };
         let handle = NonNull::new(result)?;
         Some(unsafe { ProjectFile::ref_from_raw(handle) })
     }

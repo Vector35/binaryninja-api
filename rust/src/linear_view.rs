@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Vector 35 Inc.
+// Copyright 2022-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -267,7 +267,7 @@ impl LinearViewObjectIdentifier {
     }
 
     pub fn free_raw(value: BNLinearViewObjectIdentifier) {
-        let _ = unsafe { BnString::from_raw(value.name) };
+        unsafe { BnString::free_raw(value.name) };
     }
 }
 

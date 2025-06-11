@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2024 Vector 35 Inc
+// Copyright (c) 2015-2025 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -389,6 +389,7 @@ ExprId LowLevelILFunction::AddLabelMap(const map<uint64_t, BNLowLevelILLabel*>& 
 		i++;
 	}
 	ExprId result = (ExprId)BNLowLevelILAddLabelMap(m_object, valueList, labelList, labels.size());
+	delete[] valueList;
 	delete[] labelList;
 	return result;
 }

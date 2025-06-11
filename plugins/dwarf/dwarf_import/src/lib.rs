@@ -1,4 +1,4 @@
-// Copyright 2021-2024 Vector 35 Inc.
+// Copyright 2021-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,6 +44,7 @@ use gimli::{
 
 use binaryninja::logger::Logger;
 use helpers::{get_build_id, load_debug_info_for_build_id};
+use iset::IntervalMap;
 use log::{debug, error, warn};
 
 trait ReaderType: Reader<Offset = usize> {}
@@ -233,6 +234,7 @@ fn recover_names_internal<R: ReaderType>(
                                 .collect::<Vec<String>>()
                                 .join("::"),
                         )
+                        .to_string_lossy()
                         .to_string(),
                     );
                 }
@@ -250,6 +252,7 @@ fn recover_names_internal<R: ReaderType>(
                                     .collect::<Vec<String>>()
                                     .join("::"),
                             )
+                            .to_string_lossy()
                             .to_string(),
                         );
                     }
@@ -374,37 +377,39 @@ where
 {
     let mut bases = gimli::BaseAddresses::default();
 
+    let view_start = view.start();
+
     if let Some(section) = view
         .section_by_name(".eh_frame_hdr")
         .or(view.section_by_name("__eh_frame_hdr"))
     {
-        bases = bases.set_eh_frame_hdr(section.start());
+        bases = bases.set_eh_frame_hdr(section.start() - view_start);
     }
 
     if let Some(section) = view
         .section_by_name(".eh_frame")
         .or(view.section_by_name("__eh_frame"))
     {
-        bases = bases.set_eh_frame(section.start());
+        bases = bases.set_eh_frame(section.start() - view_start);
     } else if let Some(section) = view
         .section_by_name(".debug_frame")
         .or(view.section_by_name("__debug_frame"))
     {
-        bases = bases.set_eh_frame(section.start());
+        bases = bases.set_eh_frame(section.start() - view_start);
     }
 
     if let Some(section) = view
         .section_by_name(".text")
         .or(view.section_by_name("__text"))
     {
-        bases = bases.set_text(section.start());
+        bases = bases.set_text(section.start() - view_start);
     }
 
     if let Some(section) = view
         .section_by_name(".got")
         .or(view.section_by_name("__got"))
     {
-        bases = bases.set_got(section.start());
+        bases = bases.set_got(section.start() - view_start);
     }
 
     let mut cies = HashMap::new();
@@ -453,6 +458,19 @@ where
                                 register: _,
                                 offset,
                             } => {
+                                //TODO: can we normalize this to be sp-based?
+                                /*
+                                Switching to RBP from RSP in this example breaks things, and we should know that RBP = RSP - 8
+                                    65   │   0x1139: CFA=RSP+8: RIP=[CFA-8]
+                                    66   │   0x113a: CFA=RSP+16: RBP=[CFA-16], RIP=[CFA-8]
+                                    67   │   0x113d: CFA=RBP+16: RBP=[CFA-16], RIP=[CFA-8]
+                                    68   │   0x1162: CFA=RSP+8: RBP=[CFA-16], RIP=[CFA-8]
+
+                                    can we
+                                    know that CFA=RSP+8 at the beginning
+                                    in the next instruction (66) we know RBP=[CFA-16]=[RSP-8]
+                                    and do something with that?
+                                */
                                 // TODO: we should store offsets by register
                                 if row.start_address() < row.end_address() {
                                     cfa_offsets
@@ -497,8 +515,51 @@ fn get_supplementary_build_id(bv: &BinaryView) -> Option<String> {
     }
 }
 
+fn parse_range_data_offsets(
+    bv: &BinaryView,
+    dwo_file: bool,
+) -> Option<Result<IntervalMap<u64, i64>, ()>> {
+    if bv.section_by_name(".eh_frame").is_some() || bv.section_by_name("__eh_frame").is_some() {
+        let eh_frame_endian = get_endian(bv);
+        let eh_frame_section_reader = |section_id: SectionId| -> _ {
+            create_section_reader(section_id, bv, eh_frame_endian, dwo_file)
+        };
+        let mut eh_frame = gimli::EhFrame::load(eh_frame_section_reader).unwrap();
+        if let Some(view_arch) = bv.default_arch() {
+            if view_arch.name().as_str() == "aarch64" {
+                eh_frame.set_vendor(gimli::Vendor::AArch64);
+            }
+        }
+        eh_frame.set_address_size(bv.address_size() as u8);
+        Some(
+            parse_unwind_section(bv, eh_frame)
+                .map_err(|e| error!("Error parsing .eh_frame: {}", e)),
+        )
+    } else if bv.section_by_name(".debug_frame").is_some()
+        || bv.section_by_name("__debug_frame").is_some()
+    {
+        let debug_frame_endian = get_endian(bv);
+        let debug_frame_section_reader = |section_id: SectionId| -> _ {
+            create_section_reader(section_id, bv, debug_frame_endian, dwo_file)
+        };
+        let mut debug_frame = gimli::DebugFrame::load(debug_frame_section_reader).unwrap();
+        if let Some(view_arch) = bv.default_arch() {
+            if view_arch.name().as_str() == "aarch64" {
+                debug_frame.set_vendor(gimli::Vendor::AArch64);
+            }
+        }
+        debug_frame.set_address_size(bv.address_size() as u8);
+        Some(
+            parse_unwind_section(bv, debug_frame)
+                .map_err(|e| error!("Error parsing .debug_frame: {}", e)),
+        )
+    } else {
+        None
+    }
+}
+
 fn parse_dwarf(
-    _bv: &BinaryView,
+    bv: &BinaryView,
     debug_bv: &BinaryView,
     supplementary_bv: Option<&BinaryView>,
     progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
@@ -548,30 +609,20 @@ fn parse_dwarf(
         }
     }
 
-    let range_data_offsets;
-    if view.section_by_name(".eh_frame").is_some() || view.section_by_name("__eh_frame").is_some() {
-        let eh_frame_endian = get_endian(view);
-        let eh_frame_section_reader = |section_id: SectionId| -> _ {
-            create_section_reader(section_id, view, eh_frame_endian, dwo_file)
-        };
-        let mut eh_frame = gimli::EhFrame::load(eh_frame_section_reader).unwrap();
-        eh_frame.set_address_size(view.address_size() as u8);
-        range_data_offsets = parse_unwind_section(view, eh_frame)
-            .map_err(|e| error!("Error parsing .eh_frame: {}", e))?;
-    } else if view.section_by_name(".debug_frame").is_some()
-        || view.section_by_name("__debug_frame").is_some()
-    {
-        let debug_frame_endian = get_endian(view);
-        let debug_frame_section_reader = |section_id: SectionId| -> _ {
-            create_section_reader(section_id, view, debug_frame_endian, dwo_file)
-        };
-        let mut debug_frame = gimli::DebugFrame::load(debug_frame_section_reader).unwrap();
-        debug_frame.set_address_size(view.address_size() as u8);
-        range_data_offsets = parse_unwind_section(view, debug_frame)
-            .map_err(|e| error!("Error parsing .debug_frame: {}", e))?;
-    } else {
-        range_data_offsets = Default::default();
-    }
+    let range_data_offsets = match parse_range_data_offsets(bv, dwo_file) {
+        Some(x) => x?,
+        None => {
+            if let Some(raw_view) = bv.raw_view() {
+                if let Some(offsets) = parse_range_data_offsets(&raw_view, dwo_file) {
+                    offsets?
+                } else {
+                    Default::default()
+                }
+            } else {
+                Default::default()
+            }
+        }
+    };
 
     // Create debug info builder and recover name mapping first
     //  Since DWARF is stored as a tree with arbitrary implicit edges among leaves,

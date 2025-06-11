@@ -452,6 +452,8 @@ class PowerpcArchitecture: public Architecture
 				if (!instruction.flags.lk)
 					result.AddBranch(UnresolvedBranch);
 
+			case PPC_ID_BCCTRx:
+				result.AddBranch(UnresolvedBranch);
 				break;
 
 			case PPC_ID_TWU:

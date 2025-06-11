@@ -43,43 +43,30 @@ The previous tools are used in the generation of our documentation, but are not 
     - [zstd] ([zstd license] - BSD)
 
 * Core (Rust)
-    - [Rust] ([Rust license] - Apache 2.0 / MIT)
-    - [pdb-patched] ([pdb-patched license] - Apache 2.0 / MIT -- This repository contains the changes we've made to the PDB crate)
-    - [addr2line] ([addr2line license] - APACHE 2.0 / MIT)
-    - [adler] ([adler license] - APACHE 2.0 / MIT / BSD Zero Clause)
+    - [adler] ([adler license] - APACHE 2.0 / MIT)
+    - [adler2] ([adler2 license] - APACHE 2.0 / MIT)
     - [aead] ([aead license] - APACHE 2.0 / MIT)
     - [aes] ([aes license] - APACHE 2.0 / MIT)
     - [aes-gcm] ([aes-gcm license] - APACHE 2.0 / MIT)
-    - [ahash] ([ahash license] - APACHE 2.0 / MIT)
     - [aho-corasick] ([aho-corasick license] - MIT / Unlicense)
-    - [anstyle] ([anstyle license] - APACHE 2.0 / MIT)
     - [anyhow] ([anyhow license] - APACHE 2.0 / MIT)
     - [async-compression] ([async-compression license] - APACHE 2.0 / MIT)
     - [autocfg] ([autocfg license] - APACHE 2.0 / MIT)
-    - [backtrace] ([backtrace license] - APACHE 2.0 / MIT)
     - [base64] ([base64 license] - APACHE 2.0 / MIT)
-    - [bincode] ([bincode license] - MIT)
-    - [bindgen] ([bindgen license] - BSD 3-Clause)
+    - [bindgen] ([bindgen license] - MIT)
     - [bitflags] ([bitflags license] - APACHE 2.0 / MIT)
-    - [bitstream-io] ([bitstream-io license] - APACHE 2.0 / MIT)
     - [block-buffer] ([block-buffer license] - APACHE 2.0 / MIT)
     - [byteorder] ([byteorder license] - MIT / Unlicense)
     - [bytes] ([bytes license] - MIT)
-    - [cab] ([cab license] - MIT)
     - [cc] ([cc license] - APACHE 2.0 / MIT)
     - [cexpr] ([cexpr license] - APACHE 2.0 / MIT)
     - [cfg-if] ([cfg-if license] - APACHE 2.0 / MIT)
     - [cipher] ([cipher license] - APACHE 2.0 / MIT)
     - [clang] ([clang license] - APACHE 2.0)
     - [clang-sys] ([clang-sys license] - APACHE 2.0)
-    - [clap] ([clap license] - APACHE 2.0 / MIT)
-    - [clap_builder] ([clap_builder license] - APACHE 2.0 / MIT)
-    - [clap_derive] ([clap_derive license] - APACHE 2.0 / MIT)
-    - [clap_lex] ([clap_lex license] - APACHE 2.0 / MIT)
-    - [code_fuzzy_match] ([code_fuzzy_match license] - MIT)
-    - [core-foundation-sys] ([core-foundation-sys license] - APACHE 2.0 / MIT)
+    - [code-fuzzy-match] ([code-fuzzy-match license] - MIT)
     - [core-foundation] ([core-foundation license] - APACHE 2.0 / MIT)
-    - [cpp_demangle] ([cpp_demangle license] - APACHE 2.0 / MIT)
+    - [core-foundation-sys] ([core-foundation-sys license] - APACHE 2.0 / MIT)
     - [cpufeatures] ([cpufeatures license] - APACHE 2.0 / MIT)
     - [crc] ([crc license] - APACHE 2.0 / MIT)
     - [crc-catalog] ([crc-catalog license] - APACHE 2.0 / MIT)
@@ -87,18 +74,16 @@ The previous tools are used in the generation of our documentation, but are not 
     - [crypto-common] ([crypto-common license] - APACHE 2.0 / MIT)
     - [ctr] ([ctr license] - APACHE 2.0 / MIT)
     - [cty] ([cty license] - APACHE 2.0 / MIT)
-    - [curl-sys] ([curl-sys license] - MIT)
     - [curl] ([curl license] - MIT)
+    - [curl-sys] ([curl-sys license] - MIT)
     - [data-encoding] ([data-encoding license] - MIT)
-    - [deranged] ([deranged license] - MIT)
-    - [derive_more] ([derive_more license] - MIT)
     - [digest] ([digest license] - APACHE 2.0 / MIT)
     - [displaydoc] ([displaydoc license] - APACHE 2.0 / MIT)
     - [either] ([either license] - APACHE 2.0 / MIT)
-    - [encoding_rs] ([encoding_rs license] - APACHE 2.0 / MIT / BSD 3-Clause)
+    - [encoding_rs] ([encoding_rs license] - APACHE 2.0 / MIT)
     - [equivalent] ([equivalent license] - APACHE 2.0 / MIT)
     - [errno] ([errno license] - APACHE 2.0 / MIT)
-    - [fallible-iterator] ([fallible-iterator license] - APACHE 2.0 / MIT)
+    - [fastrand] ([fastrand license] - APACHE 2.0 / MIT)
     - [flate2] ([flate2 license] - APACHE 2.0 / MIT)
     - [fnv] ([fnv license] - APACHE 2.0 / MIT)
     - [form_urlencoded] ([form_urlencoded license] - APACHE 2.0 / MIT)
@@ -110,17 +95,15 @@ The previous tools are used in the generation of our documentation, but are not 
     - [futures-macro] ([futures-macro license] - APACHE 2.0 / MIT)
     - [futures-sink] ([futures-sink license] - APACHE 2.0 / MIT)
     - [futures-task] ([futures-task license] - APACHE 2.0 / MIT)
+    - [futures-timer] ([futures-timer license] - APACHE 2.0 / MIT)
     - [futures-util] ([futures-util license] - APACHE 2.0 / MIT)
     - [generic-array] ([generic-array license] - MIT)
     - [getopts] ([getopts license] - APACHE 2.0 / MIT)
     - [getrandom] ([getrandom license] - APACHE 2.0 / MIT)
     - [ghash] ([ghash license] - APACHE 2.0 / MIT)
-    - [gimli] ([gimli license] - APACHE 2.0 / MIT)
     - [glob] ([glob license] - APACHE 2.0 / MIT)
     - [h2] ([h2 license] - MIT)
     - [hashbrown] ([hashbrown license] - APACHE 2.0 / MIT)
-    - [heck] ([heck license] - APACHE 2.0 / MIT)
-    - [home] ([home license] - APACHE 2.0 / MIT)
     - [http] ([http license] - APACHE 2.0 / MIT)
     - [http-body] ([http-body license] - MIT)
     - [httparse] ([httparse license] - APACHE 2.0 / MIT)
@@ -142,21 +125,18 @@ The previous tools are used in the generation of our documentation, but are not 
     - [indexmap] ([indexmap license] - APACHE 2.0 / MIT)
     - [input_buffer] ([input_buffer license] - APACHE 2.0 / MIT)
     - [ipnet] ([ipnet license] - APACHE 2.0 / MIT)
-    - [iset] ([iset license] - MIT)
     - [itertools] ([itertools license] - APACHE 2.0 / MIT)
     - [itoa] ([itoa license] - APACHE 2.0 / MIT)
-    - [jobserver] ([jobserver license] - APACHE 2.0 / MIT)
     - [keyring] ([keyring license] - APACHE 2.0 / MIT)
     - [lazy_static] ([lazy_static license] - APACHE 2.0 / MIT)
-    - [lazycell] ([lazycell license] - APACHE 2.0 / MIT)
     - [libc] ([libc license] - APACHE 2.0 / MIT)
-    - [libloading] ([libloading license] - ISC)
+    - [libloading] ([libloading license] - MIT)
     - [libz-sys] ([libz-sys license] - APACHE 2.0 / MIT)
     - [litemap] ([litemap license] - MIT)
+    - [lock_api] ([lock_api license] - APACHE 2.0 / MIT)
     - [log] ([log license] - APACHE 2.0 / MIT)
     - [lzma] ([lzma license] - WTFPL)
     - [lzma-rs] ([lzma-rs license] - MIT)
-    - [lzxd] ([lzxd license] - APACHE 2.0 / MIT)
     - [machine-uid] ([machine-uid license] - MIT)
     - [markdown] ([markdown license] - MIT)
     - [memchr] ([memchr license] - MIT / Unlicense)
@@ -167,16 +147,13 @@ The previous tools are used in the generation of our documentation, but are not 
     - [mio] ([mio license] - MIT)
     - [nom] ([nom license] - MIT)
     - [num-bigint] ([num-bigint license] - APACHE 2.0 / MIT)
-    - [num-conv] ([num-conv license] - MIT)
-    - [num-derive] ([num-derive license] - APACHE 2.0 / MIT)
     - [num-integer] ([num-integer license] - APACHE 2.0 / MIT)
     - [num-traits] ([num-traits license] - APACHE 2.0 / MIT)
     - [num_cpus] ([num_cpus license] - APACHE 2.0 / MIT)
-    - [object] ([object license] - APACHE 2.0 / MIT)
     - [once_cell] ([once_cell license] - APACHE 2.0 / MIT)
     - [opaque-debug] ([opaque-debug license] - APACHE 2.0 / MIT)
-    - [pdb] ([pdb license] - APACHE 2.0 / MIT)
-    - [peeking_take_while] ([peeking_take_while license] - APACHE 2.0 / MIT)
+    - [parking_lot] ([parking_lot license] - APACHE 2.0 / MIT)
+    - [parking_lot_core] ([parking_lot_core license] - APACHE 2.0 / MIT)
     - [pem] ([pem license] - MIT)
     - [percent-encoding] ([percent-encoding license] - APACHE 2.0 / MIT)
     - [pin-project] ([pin-project license] - APACHE 2.0 / MIT)
@@ -185,9 +162,9 @@ The previous tools are used in the generation of our documentation, but are not 
     - [pin-utils] ([pin-utils license] - APACHE 2.0 / MIT)
     - [pkg-config] ([pkg-config license] - APACHE 2.0 / MIT)
     - [polyval] ([polyval license] - APACHE 2.0 / MIT)
-    - [powerfmt] ([powerfmt license] - MIT)
     - [ppv-lite86] ([ppv-lite86 license] - APACHE 2.0 / MIT)
     - [prettyplease] ([prettyplease license] - APACHE 2.0 / MIT)
+    - [proc-macro-crate] ([proc-macro-crate license] - APACHE 2.0 / MIT)
     - [proc-macro2] ([proc-macro2 license] - APACHE 2.0 / MIT)
     - [pulldown-cmark] ([pulldown-cmark license] - MIT)
     - [pulldown-cmark-escape] ([pulldown-cmark-escape license] - MIT)
@@ -199,29 +176,33 @@ The previous tools are used in the generation of our documentation, but are not 
     - [regex] ([regex license] - APACHE 2.0 / MIT)
     - [regex-automata] ([regex-automata license] - APACHE 2.0 / MIT)
     - [regex-syntax] ([regex-syntax license] - APACHE 2.0 / MIT)
+    - [relative-path] ([relative-path license] - APACHE 2.0 / MIT)
     - [reqwest] ([reqwest license] - APACHE 2.0 / MIT)
     - [ring] ([ring license] - ISC / MIT)
     - [rot13] ([rot13 license] - APACHE 2.0 / MIT)
-    - [rustc-demangle] ([rustc-demangle license] - APACHE 2.0 / MIT)
+    - [rstest] ([rstest license] - APACHE 2.0 / MIT)
+    - [rstest_macros] ([rstest_macros license] - APACHE 2.0 / MIT)
     - [rustc-hash] ([rustc-hash license] - APACHE 2.0 / MIT)
+    - [rustc_version] ([rustc_version license] - APACHE 2.0 / MIT)
     - [rustix] ([rustix license] - APACHE 2.0 / MIT)
     - [rustls] ([rustls license] - APACHE 2.0 / MIT / ISC)
     - [rustls-native-certs] ([rustls-native-certs license] - APACHE 2.0 / MIT / ISC)
     - [rustls-pemfile] ([rustls-pemfile license] - APACHE 2.0 / MIT / ISC)
     - [rustls-webpki] ([rustls-webpki license] - MIT)
-    - [ruzstd] ([ruzstd license] - MIT)
-    - [ryu] ([ryu license] - Apache 2.0 / BSL 1)
-    - [scroll] ([scroll license] - MIT)
+    - [ryu] ([ryu license] - Apache 2.0)
+    - [scc] ([scc license] - MIT)
+    - [scopeguard] ([scopeguard license] - APACHE 2.0 / MIT)
     - [sct] ([sct license] - APACHE 2.0 / MIT / ISC)
-    - [search] ([search license] - MIT)
-    - [secrets] ([secrets license] - APACHE 2.0 / MIT)
-    - [security-framework-sys] ([security-framework-sys license] - APACHE 2.0 / MIT)
+    - [sdd] ([sdd license] - MIT)
     - [security-framework] ([security-framework license] - APACHE 2.0 / MIT)
+    - [security-framework-sys] ([security-framework-sys license] - APACHE 2.0 / MIT)
+    - [semver] ([semver license] - APACHE 2.0 / MIT)
     - [serde] ([serde license] - APACHE 2.0 / MIT)
     - [serde_derive] ([serde_derive license] - APACHE 2.0 / MIT)
     - [serde_json] ([serde_json license] - APACHE 2.0 / MIT)
-    - [serde_repr] ([serde_repr license] - APACHE 2.0 / MIT)
     - [serde_urlencoded] ([serde_urlencoded license] - APACHE 2.0 / MIT)
+    - [serial_test] ([serial_test license] - MIT)
+    - [serial_test_derive] ([serial_test_derive license] - MIT)
     - [sha1] ([sha1 license] - APACHE 2.0 / MIT)
     - [shlex] ([shlex license] - APACHE 2.0 / MIT)
     - [slab] ([slab license] - MIT)
@@ -229,18 +210,15 @@ The previous tools are used in the generation of our documentation, but are not 
     - [socket2] ([socket2 license] - APACHE 2.0 / MIT)
     - [spin] ([spin license] - MIT)
     - [stable_deref_trait] ([stable_deref_trait license] - APACHE 2.0 / MIT)
-    - [static_assertions] ([static_assertions license] - APACHE 2.0 / MIT)
-    - [strsim] ([strsim license] - MIT)
-    - [subtle] ([subtle license] - BSD 3-Clause)
+    - [subtle] ([subtle license] - MIT)
     - [syn] ([syn license] - APACHE 2.0 / MIT)
-    - [sync_wrapper] ([sync_wrapper license] - APACHE 2.0)
+    - [sync_wrapper] ([sync_wrapper license] - MIT)
     - [synstructure] ([synstructure license] - MIT)
     - [system-configuration] ([system-configuration license] - APACHE 2.0 / MIT)
     - [system-configuration-sys] ([system-configuration-sys license] - APACHE 2.0 / MIT)
+    - [tempfile] ([tempfile license] - APACHE 2.0 / MIT)
     - [thiserror] ([thiserror license] - APACHE 2.0 / MIT)
     - [thiserror-impl] ([thiserror-impl license] - APACHE 2.0 / MIT)
-    - [time] ([time license] - APACHE 2.0 / MIT)
-    - [time-core] ([time-core license] - MIT)
     - [tinystr] ([tinystr license] - MIT)
     - [tinyvec] ([tinyvec license] - APACHE 2.0 / MIT / ZLIB)
     - [tinyvec_macros] ([tinyvec_macros license] - APACHE 2.0 / MIT / ZLIB)
@@ -249,17 +227,18 @@ The previous tools are used in the generation of our documentation, but are not 
     - [tokio-rustls] ([tokio-rustls license] - APACHE 2.0 / MIT)
     - [tokio-tungstenite] ([tokio-tungstenite license] - MIT)
     - [tokio-util] ([tokio-util license] - MIT)
+    - [toml_datetime] ([toml_datetime license] - MIT)
+    - [toml_edit] ([toml_edit license] - MIT)
     - [tower-service] ([tower-service license] - MIT)
     - [tracing] ([tracing license] - MIT)
     - [tracing-attributes] ([tracing-attributes license] - MIT)
     - [tracing-core] ([tracing-core license] - MIT)
     - [try-lock] ([try-lock license] - MIT)
     - [tungstenite] ([tungstenite license] - APACHE 2.0 / MIT)
-    - [twox-hash] ([twox-hash license] - MIT)
-    - [typenum] ([typenum license] - APACHE 2.0 / MIT)
+    - [typenum] ([typenum license] - MIT)
     - [unicase] ([unicase license] - APACHE 2.0 / MIT)
     - [unicode-bidi] ([unicode-bidi license] - APACHE 2.0 / MIT)
-    - [unicode-ident] ([unicode-ident license] - APACHE 2.0 / MIT / Unicode)
+    - [unicode-ident] ([unicode-ident license] - APACHE 2.0 / MIT)
     - [unicode-normalization] ([unicode-normalization license] - APACHE 2.0 / MIT)
     - [unicode-width] ([unicode-width license] - APACHE 2.0 / MIT)
     - [universal-hash] ([universal-hash license] - APACHE 2.0 / MIT)
@@ -268,23 +247,24 @@ The previous tools are used in the generation of our documentation, but are not 
     - [utf-8] ([utf-8 license] - APACHE 2.0 / MIT)
     - [utf16_iter] ([utf16_iter license] - APACHE 2.0 / MIT)
     - [utf8_iter] ([utf8_iter license] - APACHE 2.0 / MIT)
-    - [utf8parse] ([utf8parse license] - APACHE 2.0 / MIT)
-    - [uuid] ([uuid license] - APACHE 2.0 / MIT)
     - [vcpkg] ([vcpkg license] - APACHE 2.0 / MIT)
     - [version_check] ([version_check license] - APACHE 2.0 / MIT)
     - [want] ([want license] - MIT)
     - [webpki] ([webpki license] - ISC)
-    - [webpki-roots] ([webpki-roots license] - MPL 2.0)
+    - [webpki-roots] ([webpki-roots license] - APACHE 2.0 / MIT)
     - [websocket] ([websocket license] - MIT)
-    - [which] ([which license] - MIT)
+    - [winnow] ([winnow license] - MIT)
     - [write16] ([write16 license] - APACHE 2.0 / MIT)
     - [writeable] ([writeable license] - UNICODE V3)
     - [x509-signature] ([x509-signature license] - APACHE 2.0 / MIT)
     - [yoke] ([yoke license] - UNICODE V3)
+    - [yoke-derive] ([yoke-derive license] - UNICODE V3)
     - [zerocopy] ([zerocopy license] - APACHE 2.0 / MIT)
+    - [zerocopy-derive] ([zerocopy-derive license] - APACHE 2.0 / MIT)
     - [zerofrom] ([zerofrom license] - UNICODE V3)
+    - [zerofrom-derive] ([zerofrom-derive license] - UNICODE V3)
     - [zerovec] ([zerovec license] - UNICODE V3)
-    - [zstd-rs] ([zstd-rs license] - MIT)
+    - [zerovec-derive] ([zerovec-derive license] - UNICODE V3)
 
 * Other
     - [yasm] ([yasm license] - 2-clause BSD) used for assembling x86 and x64
@@ -301,9 +281,9 @@ The previous tools are used in the generation of our documentation, but are not 
     - LIB Files ([api license] - MIT) .lib files included with the native windows builds of Binary Ninja are released under the same MIT license as the API itself, distinct from the standard EULA
     - [Views] ([views license] - Apache License 2.0) Binary views included with the product
     - [Architectures] ([architectures license] - Apache License 2.0) Architecture support included with the product
-    - [DWARF Import] - ([dwarf import license] - Apache License 2.0)
-    - [DWARF Export] - ([dwarf export license] - Apache License 2.0)
-    - [IDB Import] - ([idb import license] - Apache License 2.0)
+    - [DWARF Import] - ([dwarf import license] - MIT)
+    - [DWARF Export] - ([dwarf export license] - MIT)
+    - [IDB Import] - ([idb import license] - MIT)
 
 ## Building Qt
 
@@ -349,8 +329,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [mkdocs-material license]: https://github.com/squidfunk/mkdocs-material/blob/master/LICENSE
 [mkdocs-material]: https://github.com/squidfunk/mkdocs-material
 [mkdocs]: http://www.mkdocs.org/
-[opensans license]: http://www.apache.org/licenses/LICENSE-2.0.html
-[opensans]: https://www.google.com/fonts/specimen/Open+Sans
+[opensans license]: https://fonts.google.com/specimen/Open+Sans/license
+[opensans]: https://fonts.google.com/specimen/Open+Sans
 [PPC architecture module]: https://github.com/Vector35/ppc-capstone
 [python]: https://github.com/python/cpython
 [python license]: https://github.com/python/cpython/blob/master/LICENSE
@@ -364,14 +344,14 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [NotoColorEmoji license]:  https://github.com/googlefonts/noto-emoji/blob/main/fonts/LICENSE
 [NotoColorEmoji]: https://github.com/googlefonts/noto-emoji
 [sphinx license]: https://github.com/sphinx-doc/sphinx/blob/master/LICENSE.rst
-[sphinx]: http://www.sphinx-doc.org/en/stable/index.html
+[sphinx]: https://www.sphinx-doc.org/en/master/
 [sqlite license]: https://www.sqlite.org/copyright.html
 [sqlite]: https://www.sqlite.org/index.html
 [tarball]: https://binary.ninja/qt6.8.2.tar.xz
 [patch]: https://binary.ninja/qt6.8.2.patch
 [qt-build]: https://github.com/Vector35/qt-build
 [yasm license]: https://github.com/yasm/yasm/blob/master/BSD.txt
-[yasm]: http://yasm.tortall.net/
+[yasm]: https://github.com/yasm/yasm
 [xed]: http://www.github.com/intelxed/xed/
 [xed license]: http://www.github.com/intelxed/xed/blob/master/LICENSE
 [zlib license]: http://www.zlib.net/zlib_license.html
@@ -406,60 +386,48 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [views license]: https://github.com/Vector35/view-pe/blob/main/LICENSE
 [Architectures]: https://github.com/Vector35/?q=arch-&type=all&language=&sort=
 [architectures license]: https://github.com/Vector35/arch-armv7/blob/master/LICENSE
-[DWARF Import]: https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples/dwarf/dwarf_import
-[dwarf import license]: https://github.com/Vector35/binaryninja-api/blob/dev/rust/LICENSE
-[DWARF Export]: https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples/dwarf/dwarf_export
-[dwarf export license]: https://github.com/Vector35/binaryninja-api/blob/dev/rust/LICENSE
-[IDB Import]: https://github.com/Vector35/binaryninja-api/tree/dev/rust/examples/idb_import
-[idb import license]: https://github.com/Vector35/binaryninja-api/blob/dev/rust/LICENSE
+[DWARF Import]: https://github.com/Vector35/binaryninja-api/tree/dev/plugins/dwarf/dwarf_import
+[dwarf import license]: https://github.com/Vector35/binaryninja-api/blob/dev/LICENSE.txt
+[DWARF Export]: https://github.com/Vector35/binaryninja-api/tree/dev/plugins/dwarf/dwarf_export
+[dwarf export license]: https://github.com/Vector35/binaryninja-api/blob/dev/LICENSE.txt
+[IDB Import]: https://github.com/Vector35/binaryninja-api/tree/dev/plugins/idb_import
+[idb import license]: https://github.com/Vector35/binaryninja-api/blob/dev/LICENSE.txt
 
 [Rust]: https://www.rust-lang.org/
 [Rust license]: https://github.com/rust-lang/rust/blob/master/LICENSE-MIT
 [pdb-patched]: https://github.com/Vector35/pdb-rs
 [pdb-patched license]: https://github.com/Vector35/pdb-rs/blob/master/LICENSE-APACHE
 
-[addr2line]: https://github.com/gimli-rs/addr2line
-[addr2line license]: https://github.com/gimli-rs/addr2line/blob/master/LICENSE-MIT
 [adler]: https://github.com/jonas-schievink/adler
 [adler license]: https://github.com/jonas-schievink/adler/blob/master/LICENSE-MIT
+[adler2]: https://github.com/oyvindln/adler2
+[adler2 license]: https://github.com/oyvindln/adler2/blob/main/LICENSE-MIT
 [aead]: https://github.com/RustCrypto/traits/tree/master/aead
 [aead license]: https://github.com/RustCrypto/traits/blob/master/aead/LICENSE-MIT
 [aes]: https://github.com/RustCrypto/block-ciphers/tree/master/aes
 [aes license]: https://github.com/RustCrypto/block-ciphers/blob/master/aes/LICENSE-MIT
 [aes-gcm]: https://github.com/RustCrypto/AEADs/tree/master/aes-gcm
 [aes-gcm license]: https://github.com/RustCrypto/AEADs/blob/master/aes-gcm/LICENSE-MIT
-[ahash]: https://github.com/tkaitchuck/ahash
-[ahash license]: https://github.com/tkaitchuck/aHash/blob/master/LICENSE-MIT
 [aho-corasick]: https://github.com/BurntSushi/aho-corasick
 [aho-corasick license]: https://github.com/BurntSushi/aho-corasick/blob/master/LICENSE-MIT
-[anstyle]: https://github.com/rust-cli/anstyle
-[anstyle license]: https://opensource.org/license/mit
 [anyhow]: https://github.com/dtolnay/anyhow
 [anyhow license]: https://github.com/dtolnay/anyhow/blob/master/LICENSE-MIT
 [async-compression]: https://github.com/Nullus157/async-compression
 [async-compression license]: https://github.com/Nullus157/async-compression/blob/main/LICENSE-MIT
 [autocfg]: https://github.com/cuviper/autocfg
 [autocfg license]: https://github.com/cuviper/autocfg/blob/master/LICENSE-MIT
-[backtrace]: https://github.com/rust-lang/backtrace-rs
-[backtrace license]: https://github.com/rust-lang/backtrace-rs/blob/master/LICENSE-MIT
 [base64]: https://github.com/marshallpierce/rust-base64
 [base64 license]: https://github.com/marshallpierce/rust-base64/blob/master/LICENSE-MIT
-[bincode]: https://github.com/bincode-org/bincode
-[bincode license]: https://github.com/bincode-org/bincode/blob/trunk/LICENSE.md
 [bindgen]: https://github.com/rust-lang/rust-bindgen
 [bindgen license]: https://github.com/rust-lang/rust-bindgen/blob/main/LICENSE
 [bitflags]: https://github.com/bitflags/bitflags
 [bitflags license]: https://github.com/bitflags/bitflags/blob/main/LICENSE-MIT
-[bitstream-io]: https://github.com/tuffy/bitstream-io
-[bitstream-io license]: https://github.com/tuffy/bitstream-io/blob/master/LICENSE-MIT
 [block-buffer]: https://github.com/RustCrypto/utils/tree/master/block-buffer
 [block-buffer license]: https://github.com/RustCrypto/utils/blob/master/block-buffer/LICENSE-MIT
 [byteorder]: https://github.com/BurntSushi/byteorder
 [byteorder license]: https://github.com/BurntSushi/byteorder/blob/master/LICENSE-MIT
 [bytes]: https://github.com/tokio-rs/bytes
 [bytes license]: https://github.com/tokio-rs/bytes/blob/master/LICENSE
-[cab]: https://github.com/mdsteele/rust-cab
-[cab license]: https://github.com/mdsteele/rust-cab/blob/master/LICENSE
 [cc]: https://github.com/rust-lang/cc-rs
 [cc license]: https://github.com/rust-lang/cc-rs/blob/main/LICENSE-MIT
 [cexpr]: https://github.com/jethrogb/rust-cexpr
@@ -469,30 +437,21 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [cipher]: https://github.com/RustCrypto/traits/tree/master/cipher
 [cipher license]: https://github.com/RustCrypto/traits/blob/master/cipher/LICENSE-MIT
 [clang]: https://github.com/KyleMayes/clang-rs
-[clang license]: https://github.com/KyleMayes/clang-rs/blob/master/LICENSE.txt
+[clang license]: https://github.com/KyleMayes/clang-rs
 [clang-sys]: https://github.com/KyleMayes/clang-sys
-[clang-sys license]: https://github.com/KyleMayes/clang-sys/blob/master/LICENSE.txt
-[clap]: https://github.com/clap-rs/clap
-[clap license]: https://github.com/clap-rs/clap/blob/master/LICENSE-MIT
-[clap_builder]: https://github.com/clap-rs/clap
-[clap_builder license]: https://github.com/clap-rs/clap/blob/master/LICENSE-MIT
-[clap_derive]: https://github.com/clap-rs/clap
-[clap_derive license]: https://github.com/clap-rs/clap/blob/master/LICENSE-MIT
-[clap_lex]: https://github.com/clap-rs/clap
-[clap_lex license]: https://github.com/clap-rs/clap/blob/master/LICENSE-MIT
-[code_fuzzy_match license]: https://github.com/D0ntPanic/code-fuzzy-match/blob/master/LICENSE
-[core-foundation-sys]: https://github.com/servo/core-foundation-rs
-[core-foundation-sys license]: https://github.com/servo/core-foundation-rs/blob/main/LICENSE-MIT
+[clang-sys license]: https://github.com/KyleMayes/clang-sys
+[code-fuzzy-match]: https://github.com/D0ntPanic/code-fuzzy-match
+[code-fuzzy-match license]: https://github.com/D0ntPanic/code-fuzzy-match/blob/master/LICENSE
 [core-foundation]: https://github.com/servo/core-foundation-rs
 [core-foundation license]: https://github.com/servo/core-foundation-rs/blob/main/LICENSE-MIT
-[cpp_demangle]: https://github.com/gimli-rs/cpp_demangle
-[cpp_demangle license]: https://github.com/gimli-rs/cpp_demangle/blob/master/LICENSE-MIT
+[core-foundation-sys]: https://github.com/servo/core-foundation-rs
+[core-foundation-sys license]: https://github.com/servo/core-foundation-rs/blob/main/LICENSE-MIT
 [cpufeatures]: https://github.com/RustCrypto/utils/tree/master/cpufeatures
 [cpufeatures license]: https://github.com/RustCrypto/utils/blob/master/cpufeatures/LICENSE-MIT
 [crc]: https://github.com/mrhooray/crc-rs
 [crc license]: https://github.com/mrhooray/crc-rs/blob/master/LICENSE-MIT
 [crc-catalog]: https://github.com/akhilles/crc-catalog
-[crc-catalog license]: https://github.com/akhilles/crc-catalog/blob/master/LICENSES/MIT.txt
+[crc-catalog license]: https://github.com/akhilles/crc-catalog
 [crc32fast]: https://github.com/srijs/rust-crc32fast
 [crc32fast license]: https://github.com/srijs/rust-crc32fast/blob/master/LICENSE-MIT
 [crypto-common]: https://github.com/RustCrypto/traits/tree/master/crypto-common
@@ -501,16 +460,12 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [ctr license]: https://github.com/RustCrypto/block-modes/blob/master/ctr/LICENSE-MIT
 [cty]: https://github.com/japaric/cty
 [cty license]: https://github.com/japaric/cty/blob/master/LICENSE-MIT
-[curl-sys]: https://github.com/alexcrichton/curl-rust
-[curl-sys license]: https://github.com/alexcrichton/curl-rust/blob/main/LICENSE
 [curl]: https://github.com/alexcrichton/curl-rust
 [curl license]: https://github.com/alexcrichton/curl-rust/blob/main/LICENSE
+[curl-sys]: https://github.com/alexcrichton/curl-rust
+[curl-sys license]: https://github.com/alexcrichton/curl-rust/blob/main/LICENSE
 [data-encoding]: https://github.com/ia0/data-encoding
 [data-encoding license]: https://github.com/ia0/data-encoding/blob/main/LICENSE
-[deranged]: https://github.com/jhpratt/deranged
-[deranged license]: https://github.com/jhpratt/deranged/blob/main/LICENSE-MIT
-[derive_more]: https://github.com/JelteF/derive_more
-[derive_more license]: https://github.com/JelteF/derive_more/blob/master/LICENSE
 [digest]: https://github.com/RustCrypto/traits/tree/master/digest
 [digest license]: https://github.com/RustCrypto/traits/blob/master/digest/LICENSE-MIT
 [displaydoc]: https://github.com/yaahc/displaydoc
@@ -518,13 +473,13 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [either]: https://github.com/rayon-rs/either
 [either license]: https://github.com/rayon-rs/either/blob/main/LICENSE-MIT
 [encoding_rs]: https://github.com/hsivonen/encoding_rs
-[encoding_rs license]: https://github.com/hsivonen/encoding_rs/blob/master/LICENSE-MIT
-[equivalent]: https://github.com/cuviper/equivalent
-[equivalent license]: https://github.com/indexmap-rs/equivalent/blob/master/LICENSE-MIT
+[encoding_rs license]: https://github.com/hsivonen/encoding_rs/blob/main/LICENSE-MIT
+[equivalent]: https://github.com/indexmap-rs/equivalent
+[equivalent license]: https://github.com/indexmap-rs/equivalent/blob/main/LICENSE-MIT
 [errno]: https://github.com/lambda-fairy/rust-errno
 [errno license]: https://github.com/lambda-fairy/rust-errno/blob/main/LICENSE-MIT
-[fallible-iterator]: https://github.com/sfackler/rust-fallible-iterator
-[fallible-iterator license]: https://github.com/sfackler/rust-fallible-iterator/blob/master/LICENSE-MIT
+[fastrand]: https://github.com/smol-rs/fastrand
+[fastrand license]: https://github.com/smol-rs/fastrand/blob/master/LICENSE-MIT
 [flate2]: https://github.com/rust-lang/flate2-rs
 [flate2 license]: https://github.com/rust-lang/flate2-rs/blob/main/LICENSE-MIT
 [fnv]: https://github.com/servo/rust-fnv
@@ -533,23 +488,25 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [form_urlencoded license]: https://github.com/servo/rust-url/blob/main/LICENSE-MIT
 [futures]: https://github.com/rust-lang/futures-rs
 [futures license]: https://github.com/rust-lang/futures-rs/blob/master/LICENSE-MIT
-[futures-channel]: https://github.com/rust-lang/futures-rs/tree/master/futures-channel
+[futures-channel]: https://github.com/rust-lang/futures-rs
 [futures-channel license]: https://github.com/rust-lang/futures-rs/blob/master/LICENSE-MIT
-[futures-core]: https://github.com/rust-lang/futures-rs/tree/master/futures-core
+[futures-core]: https://github.com/rust-lang/futures-rs
 [futures-core license]: https://github.com/rust-lang/futures-rs/blob/master/LICENSE-MIT
-[futures-executor]: https://github.com/rust-lang/futures-rs/tree/master/futures-executor
+[futures-executor]: https://github.com/rust-lang/futures-rs
 [futures-executor license]: https://github.com/rust-lang/futures-rs/blob/master/LICENSE-MIT
-[futures-io]: https://github.com/rust-lang/futures-rs/tree/master/futures-io
+[futures-io]: https://github.com/rust-lang/futures-rs
 [futures-io license]: https://github.com/rust-lang/futures-rs/blob/master/LICENSE-MIT
-[futures-macro]: https://github.com/rust-lang/futures-rs/tree/master/futures-macro
+[futures-macro]: https://github.com/rust-lang/futures-rs
 [futures-macro license]: https://github.com/rust-lang/futures-rs/blob/master/LICENSE-MIT
-[futures-sink]: https://github.com/rust-lang/futures-rs/tree/master/futures-sink
+[futures-sink]: https://github.com/rust-lang/futures-rs
 [futures-sink license]: https://github.com/rust-lang/futures-rs/blob/master/LICENSE-MIT
-[futures-task]: https://github.com/rust-lang/futures-rs/tree/master/futures-task
+[futures-task]: https://github.com/rust-lang/futures-rs
 [futures-task license]: https://github.com/rust-lang/futures-rs/blob/master/LICENSE-MIT
-[futures-util]: https://github.com/rust-lang/futures-rs/tree/master/futures-util
+[futures-timer]: https://github.com/async-rs/futures-timer
+[futures-timer license]: https://github.com/async-rs/futures-timer/blob/master/LICENSE-MIT
+[futures-util]: https://github.com/rust-lang/futures-rs
 [futures-util license]: https://github.com/rust-lang/futures-rs/blob/master/LICENSE-MIT
-[generic-array]: https://github.com/fizyk20/generic-array.git
+[generic-array]: https://github.com/fizyk20/generic-array
 [generic-array license]: https://github.com/fizyk20/generic-array/blob/master/LICENSE
 [getopts]: https://github.com/rust-lang/getopts
 [getopts license]: https://github.com/rust-lang/getopts/blob/master/LICENSE-MIT
@@ -557,18 +514,12 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [getrandom license]: https://github.com/rust-random/getrandom/blob/master/LICENSE-MIT
 [ghash]: https://github.com/RustCrypto/universal-hashes/tree/master/ghash
 [ghash license]: https://github.com/RustCrypto/universal-hashes/blob/master/ghash/LICENSE-MIT
-[gimli]: https://github.com/gimli-rs/gimli
-[gimli license]: https://github.com/gimli-rs/gimli/blob/master/LICENSE-MIT
 [glob]: https://github.com/rust-lang/glob
 [glob license]: https://github.com/rust-lang/glob/blob/master/LICENSE-MIT
 [h2]: https://github.com/hyperium/h2
 [h2 license]: https://github.com/hyperium/h2/blob/master/LICENSE
 [hashbrown]: https://github.com/rust-lang/hashbrown
 [hashbrown license]: https://github.com/rust-lang/hashbrown/blob/master/LICENSE-MIT
-[heck]: https://github.com/withoutboats/heck
-[heck license]: https://github.com/withoutboats/heck/blob/master/LICENSE-MIT
-[home]: https://github.com/rust-lang/cargo/tree/master/crates/home
-[home license]: https://github.com/rust-lang/cargo/blob/master/LICENSE-MIT
 [http]: https://github.com/hyperium/http
 [http license]: https://github.com/hyperium/http/blob/master/LICENSE-MIT
 [http-body]: https://github.com/hyperium/http-body
@@ -580,7 +531,7 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [hyper]: https://github.com/hyperium/hyper
 [hyper license]: https://github.com/hyperium/hyper/blob/master/LICENSE
 [hyper-rustls]: https://github.com/rustls/hyper-rustls
-[hyper-rustls license]: https://github.com/rustls/hyper-rustls/blob/main/LICENSE-MIT
+[hyper-rustls license]: https://github.com/rustls/hyper-rustls/blob/main/LICENSE
 [icu_collections]: https://github.com/unicode-org/icu4x
 [icu_collections license]: https://github.com/unicode-org/icu4x/blob/main/LICENSE
 [icu_locid]: https://github.com/unicode-org/icu4x
@@ -606,25 +557,19 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [idna_adapter]: https://github.com/hsivonen/idna_adapter
 [idna_adapter license]: https://github.com/hsivonen/idna_adapter/blob/main/LICENSE-MIT
 [indexmap]: https://github.com/indexmap-rs/indexmap
-[indexmap license]: https://github.com/indexmap-rs/indexmap/blob/master/LICENSE-MIT
+[indexmap license]: https://github.com/indexmap-rs/indexmap/blob/main/LICENSE-MIT
 [input_buffer]: https://github.com/snapview/input_buffer
 [input_buffer license]: https://github.com/snapview/input_buffer/blob/master/LICENSE-MIT
 [ipnet]: https://github.com/krisprice/ipnet
 [ipnet license]: https://github.com/krisprice/ipnet/blob/master/LICENSE-MIT
-[iset]: https://github.com/tprodanov/iset
-[iset license]: https://github.com/tprodanov/iset/blob/master/LICENSE
 [itertools]: https://github.com/rust-itertools/itertools
 [itertools license]: https://github.com/rust-itertools/itertools/blob/master/LICENSE-MIT
 [itoa]: https://github.com/dtolnay/itoa
 [itoa license]: https://github.com/dtolnay/itoa/blob/master/LICENSE-MIT
-[jobserver]: https://github.com/rust-lang/jobserver-rs
-[jobserver license]: https://github.com/rust-lang/jobserver-rs/blob/main/LICENSE-MIT
 [keyring]: https://github.com/hwchen/keyring-rs
-[keyring license]: https://github.com/hwchen/keyring-rs/blob/master/LICENSE-MIT
+[keyring license]: https://github.com/open-source-cooperative/keyring-rs/blob/master/LICENSE-MIT
 [lazy_static]: https://github.com/rust-lang-nursery/lazy-static.rs
 [lazy_static license]: https://github.com/rust-lang-nursery/lazy-static.rs/blob/master/LICENSE-MIT
-[lazycell]: https://github.com/indiv0/lazycell
-[lazycell license]: https://github.com/indiv0/lazycell/blob/master/LICENSE-MIT
 [libc]: https://github.com/rust-lang/libc
 [libc license]: https://github.com/rust-lang/libc/blob/main/LICENSE-MIT
 [libloading]: https://github.com/nagisa/rust_libloading/
@@ -633,14 +578,14 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [libz-sys license]: https://github.com/rust-lang/libz-sys/blob/main/LICENSE-MIT
 [litemap]: https://github.com/unicode-org/icu4x
 [litemap license]: https://github.com/unicode-org/icu4x/blob/main/LICENSE
+[lock_api]: https://github.com/Amanieu/parking_lot
+[lock_api license]: https://github.com/Amanieu/parking_lot/blob/master/LICENSE-MIT
 [log]: https://github.com/rust-lang/log
 [log license]: https://github.com/rust-lang/log/blob/master/LICENSE-MIT
 [lzma]: https://github.com/meh/rust-lzma
-[lzma license]: http://www.wtfpl.net/
+[lzma license]: https://github.com/meh/rust-lzma
 [lzma-rs]: https://github.com/gendx/lzma-rs
 [lzma-rs license]: https://github.com/gendx/lzma-rs/blob/master/LICENSE
-[lzxd]: https://github.com/Lonami/lzxd
-[lzxd license]: https://github.com/Lonami/lzxd/blob/master/LICENSE-MIT
 [machine-uid]: https://github.com/Hanaasagi/machine-uid
 [machine-uid license]: https://github.com/Hanaasagi/machine-uid/blob/master/LICENSE
 [markdown]: https://github.com/wooorm/markdown-rs
@@ -661,34 +606,28 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [nom license]: https://github.com/rust-bakery/nom/blob/main/LICENSE
 [num-bigint]: https://github.com/rust-num/num-bigint
 [num-bigint license]: https://github.com/rust-num/num-bigint/blob/master/LICENSE-MIT
-[num-conv]: https://github.com/jhpratt/num-conv
-[num-conv license]: https://github.com/jhpratt/num-conv/blob/main/LICENSE-MIT
-[num-derive]: https://github.com/rust-num/num-derive
-[num-derive license]: https://github.com/rust-num/num-derive/blob/master/LICENSE-MIT
 [num-integer]: https://github.com/rust-num/num-integer
 [num-integer license]: https://github.com/rust-num/num-integer/blob/master/LICENSE-MIT
 [num-traits]: https://github.com/rust-num/num-traits
 [num-traits license]: https://github.com/rust-num/num-traits/blob/master/LICENSE-MIT
 [num_cpus]: https://github.com/seanmonstar/num_cpus
 [num_cpus license]: https://github.com/seanmonstar/num_cpus/blob/master/LICENSE-MIT
-[object]: https://github.com/gimli-rs/object
-[object license]: https://github.com/gimli-rs/object/blob/master/LICENSE-MIT
 [once_cell]: https://github.com/matklad/once_cell
 [once_cell license]: https://github.com/matklad/once_cell/blob/master/LICENSE-MIT
 [opaque-debug]: https://github.com/RustCrypto/utils/tree/master/opaque-debug
 [opaque-debug license]: https://github.com/RustCrypto/utils/blob/master/opaque-debug/LICENSE-MIT
-[pdb]: https://github.com/getsentry/pdb
-[pdb license]: https://github.com/getsentry/pdb/blob/master/LICENSE-MIT
-[peeking_take_while]: https://github.com/fitzgen/peeking_take_while
-[peeking_take_while license]: https://github.com/fitzgen/peeking_take_while/blob/master/LICENSE-MIT
+[parking_lot]: https://github.com/Amanieu/parking_lot
+[parking_lot license]: https://github.com/Amanieu/parking_lot/blob/master/LICENSE-MIT
+[parking_lot_core]: https://github.com/Amanieu/parking_lot
+[parking_lot_core license]: https://github.com/Amanieu/parking_lot/blob/master/LICENSE-MIT
 [pem]: https://github.com/jcreekmore/pem-rs
 [pem license]: https://github.com/jcreekmore/pem-rs/blob/master/LICENSE.md
 [percent-encoding]: https://github.com/servo/rust-url/
 [percent-encoding license]: https://github.com/servo/rust-url/blob/main/LICENSE-MIT
 [pin-project]: https://github.com/taiki-e/pin-project
 [pin-project license]: https://github.com/taiki-e/pin-project/blob/main/LICENSE-MIT
-[pin-project-internal]: https://github.com/taiki-e/pin-project/tree/main/pin-project-internal
-[pin-project-internal license]: https://github.com/taiki-e/pin-project/blob/main/pin-project-internal/LICENSE-MIT
+[pin-project-internal]: https://github.com/taiki-e/pin-project
+[pin-project-internal license]: https://github.com/taiki-e/pin-project/blob/main/LICENSE-MIT
 [pin-project-lite]: https://github.com/taiki-e/pin-project-lite
 [pin-project-lite license]: https://github.com/taiki-e/pin-project-lite/blob/main/LICENSE-MIT
 [pin-utils]: https://github.com/rust-lang-nursery/pin-utils
@@ -697,12 +636,12 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [pkg-config license]: https://github.com/rust-lang/pkg-config-rs/blob/master/LICENSE-MIT
 [polyval]: https://github.com/RustCrypto/universal-hashes/tree/master/polyval
 [polyval license]: https://github.com/RustCrypto/universal-hashes/blob/master/polyval/LICENSE-MIT
-[powerfmt]: https://github.com/jhpratt/powerfmt
-[powerfmt license]: https://github.com/jhpratt/powerfmt/blob/main/LICENSE-MIT
 [ppv-lite86]: https://github.com/cryptocorrosion/cryptocorrosion
 [ppv-lite86 license]: https://github.com/cryptocorrosion/cryptocorrosion/blob/master/LICENSE-MIT
 [prettyplease]: https://github.com/dtolnay/prettyplease
 [prettyplease license]: https://github.com/dtolnay/prettyplease/blob/master/LICENSE-MIT
+[proc-macro-crate]: https://github.com/bkchr/proc-macro-crate
+[proc-macro-crate license]: https://github.com/bkchr/proc-macro-crate/blob/master/LICENSE-MIT
 [proc-macro2]: https://github.com/dtolnay/proc-macro2
 [proc-macro2 license]: https://github.com/dtolnay/proc-macro2/blob/master/LICENSE-MIT
 [pulldown-cmark]: https://github.com/raphlinus/pulldown-cmark
@@ -725,16 +664,22 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [regex-automata license]: https://github.com/rust-lang/regex/blob/master/LICENSE-MIT
 [regex-syntax]: https://github.com/rust-lang/regex/tree/master/regex-syntax
 [regex-syntax license]: https://github.com/rust-lang/regex/blob/master/LICENSE-MIT
+[relative-path]: https://github.com/udoprog/relative-path
+[relative-path license]: https://github.com/udoprog/relative-path/blob/main/LICENSE-MIT
 [reqwest]: https://github.com/seanmonstar/reqwest
 [reqwest license]: https://github.com/seanmonstar/reqwest/blob/master/LICENSE-MIT
 [ring]: https://github.com/briansmith/ring
 [ring license]: https://github.com/briansmith/ring/blob/main/LICENSE
 [rot13]: https://github.com/marekventur/rust-rot13
 [rot13 license]: https://github.com/marekventur/rust-rot13/blob/master/LICENSE-MIT
-[rustc-demangle]: https://github.com/rust-lang/rustc-demangle
-[rustc-demangle license]: https://github.com/rust-lang/rustc-demangle/blob/main/LICENSE-MIT
+[rstest]: https://github.com/la10736/rstest
+[rstest license]: https://github.com/la10736/rstest/blob/master/LICENSE-MIT
+[rstest_macros]: https://github.com/la10736/rstest
+[rstest_macros license]: https://github.com/la10736/rstest/blob/master/LICENSE-MIT
 [rustc-hash]: https://github.com/rust-lang/rustc-hash
 [rustc-hash license]: https://github.com/rust-lang/rustc-hash/blob/master/LICENSE-MIT
+[rustc_version]: https://github.com/djc/rustc-version-rs
+[rustc_version license]: https://github.com/djc/rustc-version-rs/blob/main/LICENSE-MIT
 [rustix]: https://github.com/bytecodealliance/rustix
 [rustix license]: https://github.com/bytecodealliance/rustix/blob/main/LICENSE-MIT
 [rustls]: https://github.com/rustls/rustls
@@ -745,32 +690,34 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [rustls-pemfile license]: https://github.com/rustls/pemfile/blob/main/LICENSE
 [rustls-webpki]: https://github.com/rustls/webpki
 [rustls-webpki license]: https://github.com/rustls/webpki/blob/main/LICENSE
-[ruzstd]: https://github.com/KillingSpark/zstd-rs
-[ruzstd license]: https://github.com/KillingSpark/zstd-rs/blob/master/LICENSE
 [ryu]: https://github.com/dtolnay/ryu
 [ryu license]: https://github.com/dtolnay/ryu/blob/master/LICENSE-APACHE
-[scroll]: https://github.com/m4b/scroll
-[scroll license]: https://github.com/m4b/scroll/blob/master/LICENSE
+[scc]: https://github.com/wvwwvwwv/scalable-concurrent-containers/
+[scc license]: https://github.com/wvwwvwwv/scalable-concurrent-containers/blob/main/LICENSE
+[scopeguard]: https://github.com/bluss/scopeguard
+[scopeguard license]: https://github.com/bluss/scopeguard/blob/master/LICENSE-MIT
 [sct]: https://github.com/rustls/sct.rs
 [sct license]: https://github.com/rustls/sct.rs/blob/main/LICENSE-MIT
-[search]: https://github.com/ValuONE/search
-[search license]: https://opensource.org/license/mit
-[secrets]: https://github.com/stouset/secrets
-[secrets license]: https://github.com/stouset/secrets/blob/master/LICENSE-MIT
+[sdd]: https://github.com/wvwwvwwv/scalable-delayed-dealloc/
+[sdd license]: https://github.com/wvwwvwwv/scalable-delayed-dealloc/blob/main/LICENSE
 [security-framework]: https://github.com/kornelski/rust-security-framework
 [security-framework license]: https://github.com/kornelski/rust-security-framework/blob/main/LICENSE-MIT
 [security-framework-sys]: https://github.com/kornelski/rust-security-framework
 [security-framework-sys license]: https://github.com/kornelski/rust-security-framework/blob/main/LICENSE-MIT
+[semver]: https://github.com/dtolnay/semver
+[semver license]: https://github.com/dtolnay/semver/blob/master/LICENSE-MIT
 [serde]: https://github.com/serde-rs/serde
 [serde license]: https://github.com/serde-rs/serde/blob/master/LICENSE-MIT
 [serde_derive]: https://github.com/serde-rs/serde
 [serde_derive license]: https://github.com/serde-rs/serde/blob/master/LICENSE-MIT
 [serde_json]: https://github.com/serde-rs/json
 [serde_json license]: https://github.com/serde-rs/json/blob/master/LICENSE-MIT
-[serde_repr]: https://github.com/dtolnay/serde-repr
-[serde_repr license]: https://github.com/dtolnay/serde-repr/blob/master/LICENSE-MIT
 [serde_urlencoded]: https://github.com/nox/serde_urlencoded
 [serde_urlencoded license]: https://github.com/nox/serde_urlencoded/blob/master/LICENSE-MIT
+[serial_test]: https://github.com/palfrey/serial_test/
+[serial_test license]: https://github.com/palfrey/serial_test/blob/main/LICENSE
+[serial_test_derive]: https://github.com/palfrey/serial_test/
+[serial_test_derive license]: https://github.com/palfrey/serial_test/blob/main/LICENSE
 [sha1]: https://github.com/RustCrypto/hashes/tree/master/sha1
 [sha1 license]: https://github.com/RustCrypto/hashes/blob/master/sha1/LICENSE-MIT
 [shlex]: https://github.com/comex/rust-shlex
@@ -782,65 +729,61 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [socket2]: https://github.com/rust-lang/socket2
 [socket2 license]: https://github.com/rust-lang/socket2/blob/master/LICENSE-MIT
 [spin]: https://github.com/mvdnes/spin-rs
-[spin license]: https://github.com/mvdnes/spin-rs/blob/master/LICENSE
+[spin license]: https://github.com/zesterer/spin-rs/blob/master/LICENSE
 [stable_deref_trait]: https://github.com/storyyeller/stable_deref_trait
 [stable_deref_trait license]: https://github.com/Storyyeller/stable_deref_trait/blob/master/LICENSE-MIT
-[static_assertions]: https://github.com/nvzqz/static-assertions-rs
-[static_assertions license]: https://github.com/nvzqz/static-assertions/blob/master/LICENSE-MIT
-[strsim]: https://github.com/rapidfuzz/strsim-rs
-[strsim license]: https://github.com/rapidfuzz/strsim-rs/blob/main/LICENSE
 [subtle]: https://github.com/dalek-cryptography/subtle
 [subtle license]: https://github.com/dalek-cryptography/subtle/blob/main/LICENSE
 [syn]: https://github.com/dtolnay/syn
 [syn license]: https://github.com/dtolnay/syn/blob/master/LICENSE-MIT
-[synstructure]: https://github.com/mystor/synstructure
-[synstructure license]: https://github.com/mystor/synstructure/blob/main/LICENSE
 [sync_wrapper]: https://github.com/Actyx/sync_wrapper
 [sync_wrapper license]: https://github.com/Actyx/sync_wrapper/blob/master/LICENSE
+[synstructure]: https://github.com/mystor/synstructure
+[synstructure license]: https://github.com/mystor/synstructure/blob/main/LICENSE
 [system-configuration]: https://github.com/mullvad/system-configuration-rs
-[system-configuration license]: https://github.com/mullvad/system-configuration-rs/blob/main/system-configuration/LICENSE-MIT
+[system-configuration license]: https://github.com/mullvad/system-configuration-rs
 [system-configuration-sys]: https://github.com/mullvad/system-configuration-rs
-[system-configuration-sys license]: https://github.com/mullvad/system-configuration-rs/blob/main/system-configuration-sys/LICENSE-MIT
+[system-configuration-sys license]: https://github.com/mullvad/system-configuration-rs
+[tempfile]: https://github.com/Stebalien/tempfile
+[tempfile license]: https://github.com/Stebalien/tempfile/blob/master/LICENSE-MIT
 [thiserror]: https://github.com/dtolnay/thiserror
 [thiserror license]: https://github.com/dtolnay/thiserror/blob/master/LICENSE-MIT
-[thiserror-impl]: https://github.com/dtolnay/thiserror/tree/master/impl
+[thiserror-impl]: https://github.com/dtolnay/thiserror
 [thiserror-impl license]: https://github.com/dtolnay/thiserror/blob/master/LICENSE-MIT
-[time]: https://github.com/time-rs/time
-[time license]: https://github.com/time-rs/time/blob/main/LICENSE-MIT
-[time-core]: https://github.com/time-rs/time
-[time-core license]: https://github.com/time-rs/time/blob/main/LICENSE-MIT
 [tinystr]: https://github.com/unicode-org/icu4x
 [tinystr license]: https://github.com/unicode-org/icu4x/blob/main/LICENSE
 [tinyvec]: https://github.com/Lokathor/tinyvec
-[tinyvec license]: https://github.com/Lokathor/tinyvec/blob/main/LICENSE-MIT.md
+[tinyvec license]: https://github.com/Lokathor/tinyvec
 [tinyvec_macros]: https://github.com/Soveu/tinyvec_macros
-[tinyvec_macros license]: https://github.com/Soveu/tinyvec_macros/blob/master/LICENSE-MIT.md
+[tinyvec_macros license]: https://github.com/Soveu/tinyvec_macros
 [tokio]: https://github.com/tokio-rs/tokio
 [tokio license]: https://github.com/tokio-rs/tokio/blob/master/LICENSE
-[tokio-macros]: https://github.com/tokio-rs/tokio/tree/master/tokio-macros
-[tokio-macros license]: https://github.com/tokio-rs/tokio/tree/master/tokio-macros/LICENSE
+[tokio-macros]: https://github.com/tokio-rs/tokio
+[tokio-macros license]: https://github.com/tokio-rs/tokio/blob/master/LICENSE
 [tokio-rustls]: https://github.com/rustls/tokio-rustls
 [tokio-rustls license]: https://github.com/rustls/tokio-rustls/blob/main/LICENSE-MIT
 [tokio-tungstenite]: https://github.com/snapview/tokio-tungstenite
 [tokio-tungstenite license]: https://github.com/snapview/tokio-tungstenite/blob/master/LICENSE
-[tokio-util]: https://github.com/tokio-rs/tokio/tree/master/tokio-util
-[tokio-util license]: https://github.com/tokio-rs/tokio/tree/master/tokio-util/LICENSE
+[tokio-util]: https://github.com/tokio-rs/tokio
+[tokio-util license]: https://github.com/tokio-rs/tokio/blob/master/LICENSE
+[toml_datetime]: https://github.com/toml-rs/toml
+[toml_datetime license]: https://github.com/toml-rs/toml
+[toml_edit]: https://github.com/toml-rs/toml
+[toml_edit license]: https://github.com/toml-rs/toml
 [tower-service]: https://github.com/tower-rs/tower
 [tower-service license]: https://github.com/tower-rs/tower/blob/master/LICENSE
 [tracing]: https://github.com/tokio-rs/tracing
 [tracing license]: https://github.com/tokio-rs/tracing/blob/master/LICENSE
-[tracing-attributes]: https://github.com/tokio-rs/tracing/tree/master/tracing-attributes
-[tracing-attributes license]: https://github.com/tokio-rs/tracing/blob/master/tracing-attributes/LICENSE
-[tracing-core]: https://github.com/tokio-rs/tracing/tree/master/tracing-core
-[tracing-core license]: https://github.com/tokio-rs/tracing/tree/master/tracing-core/LICENSE
+[tracing-attributes]: https://github.com/tokio-rs/tracing
+[tracing-attributes license]: https://github.com/tokio-rs/tracing/blob/master/LICENSE
+[tracing-core]: https://github.com/tokio-rs/tracing
+[tracing-core license]: https://github.com/tokio-rs/tracing/blob/master/LICENSE
 [try-lock]: https://github.com/seanmonstar/try-lock
 [try-lock license]: https://github.com/seanmonstar/try-lock/blob/master/LICENSE
 [tungstenite]: https://github.com/snapview/tungstenite-rs
 [tungstenite license]: https://github.com/snapview/tungstenite-rs/blob/master/LICENSE-MIT
-[twox-hash]: https://github.com/shepmaster/twox-hash
-[twox-hash license]: https://github.com/shepmaster/twox-hash/blob/main/LICENSE.txt
 [typenum]: https://github.com/paholg/typenum
-[typenum license]: https://github.com/paholg/typenum/blob/main/LICENSE-MIT
+[typenum license]: https://github.com/paholg/typenum/blob/main/LICENSE
 [unicase]: https://github.com/seanmonstar/unicase
 [unicase license]: https://github.com/seanmonstar/unicase/blob/master/LICENSE-MIT
 [unicode-bidi]: https://github.com/servo/unicode-bidi
@@ -854,7 +797,7 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [universal-hash]: https://github.com/RustCrypto/traits/tree/master/universal-hash
 [universal-hash license]: https://github.com/RustCrypto/traits/blob/master/universal-hash/LICENSE-MIT
 [untrusted]: https://github.com/briansmith/untrusted
-[untrusted license]: https://github.com/briansmith/untrusted/blob/main/LICENSE.txt
+[untrusted license]: https://github.com/briansmith/untrusted
 [url]: https://github.com/servo/rust-url
 [url license]: https://github.com/servo/rust-url/blob/main/LICENSE-MIT
 [utf-8]: https://github.com/SimonSapin/rust-utf8
@@ -863,35 +806,39 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [utf16_iter license]: https://github.com/hsivonen/utf16_iter/blob/main/LICENSE-MIT
 [utf8_iter]: https://github.com/hsivonen/utf8_iter
 [utf8_iter license]: https://github.com/hsivonen/utf8_iter/blob/main/LICENSE-MIT
-[utf8parse]: https://github.com/alacritty/vte
-[utf8parse license]: https://github.com/alacritty/vte/blob/master/LICENSE-MIT
-[uuid]: https://github.com/uuid-rs/uuid
-[uuid license]: https://github.com/uuid-rs/uuid/blob/main/LICENSE-MIT
 [vcpkg]: https://github.com/mcgoo/vcpkg-rs
 [vcpkg license]: https://github.com/mcgoo/vcpkg-rs/blob/master/LICENSE-MIT
 [version_check]: https://github.com/SergioBenitez/version_check
 [version_check license]: https://github.com/SergioBenitez/version_check/blob/master/LICENSE-MIT
 [want]: https://github.com/seanmonstar/want
-[want license]: https://github.com/seanmonstar/want/blob/master/LICENSE
+[want license]: https://github.com/seanmonstar/want
 [webpki]: https://github.com/briansmith/webpki
-[webpki license]: https://github.com/briansmith/webpki/blob/main/LICENSE
+[webpki license]: https://github.com/briansmith/webpki
 [webpki-roots]: https://github.com/rustls/webpki-roots
-[webpki-roots license]: https://github.com/rustls/webpki-roots/blob/main/webpki-roots/LICENSE
+[webpki-roots license]: https://github.com/rustls/webpki-roots/blob/main/LICENSE-MIT
 [websocket]: https://github.com/websockets-rs/rust-websocket
-[websocket license]: https://github.com/websockets-rs/rust-websocket/blob/master/LICENSE
+[websocket license]: https://github.com/websockets-rs/rust-websocket
+[winnow]: https://github.com/winnow-rs/winnow
+[winnow license]: https://github.com/winnow-rs/winnow/blob/main/LICENSE-MIT
 [write16]: https://github.com/hsivonen/write16
 [write16 license]: https://github.com/hsivonen/write16/blob/main/LICENSE-MIT
 [writeable]: https://github.com/unicode-org/icu4x
-[writeable license]: https://github.com/unicode-org/icu4x/blob/main/utils/writeable/LICENSE
-[which]: https://github.com/harryfei/which-rs
-[which license]: https://github.com/harryfei/which-rs/blob/master/LICENSE.txt
+[writeable license]: https://github.com/unicode-org/icu4x
 [x509-signature]: https://github.com/paritytech/x509-signature
 [x509-signature license]: https://github.com/paritytech/x509-signature/blob/master/LICENSE-MIT
 [yoke]: https://github.com/unicode-org/icu4x
-[yoke license]: https://github.com/unicode-org/icu4x/blob/main/utils/yoke/LICENSE
+[yoke license]: https://github.com/unicode-org/icu4x
+[yoke-derive]: https://github.com/unicode-org/icu4x
+[yoke-derive license]: https://github.com/unicode-org/icu4x
 [zerocopy]: https://github.com/google/zerocopy
 [zerocopy license]: https://github.com/google/zerocopy/blob/main/LICENSE-MIT
+[zerocopy-derive]: https://github.com/google/zerocopy
+[zerocopy-derive license]: https://github.com/google/zerocopy/blob/main/LICENSE-MIT
 [zerofrom]: https://github.com/unicode-org/icu4x
-[zerofrom license]: https://github.com/unicode-org/icu4x/blob/main/utils/zerofrom/LICENSE
+[zerofrom license]: https://github.com/unicode-org/icu4x
+[zerofrom-derive]: https://github.com/unicode-org/icu4x
+[zerofrom-derive license]: https://github.com/unicode-org/icu4x
 [zerovec]: https://github.com/unicode-org/icu4x
-[zerovec license]: https://github.com/unicode-org/icu4x/blob/main/utils/zerovec/LICENSE
+[zerovec license]: https://github.com/unicode-org/icu4x
+[zerovec-derive]: https://github.com/unicode-org/icu4x
+[zerovec-derive license]: https://github.com/unicode-org/icu4x

@@ -35,10 +35,10 @@ use binaryninjacore_sys::{
 };
 
 use crate::rc::{Ref, RefCountable};
-use crate::string::BnString;
+use crate::string::{raw_to_string, BnString, IntoCStr};
 use log;
 use log::LevelFilter;
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 use std::os::raw::{c_char, c_void};
 use std::ptr::NonNull;
 
@@ -66,8 +66,8 @@ impl Logger {
         }
     }
 
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNLoggerGetName(self.handle.as_ptr())) }
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNLoggerGetName(self.handle.as_ptr())) }
     }
 
     pub fn session_id(&self) -> usize {
@@ -138,15 +138,14 @@ impl log::Log for Ref<Logger> {
         };
 
         if let Ok(msg) = CString::new(format!("{}", record.args())) {
-            let percent_s = CString::new("%s").expect("'%s' has no null bytes");
-            let logger_name = self.name();
+            let logger_name = self.name().to_cstr();
             unsafe {
                 BNLog(
                     self.session_id(),
                     level,
                     logger_name.as_ptr(),
                     0,
-                    percent_s.as_ptr(),
+                    c"%s".as_ptr(),
                     msg.as_ptr(),
                 );
             }
@@ -160,7 +159,7 @@ unsafe impl Send for Logger {}
 unsafe impl Sync for Logger {}
 
 pub trait LogListener: 'static + Sync {
-    fn log(&self, session: usize, level: Level, msg: &CStr, logger_name: &CStr, tid: usize);
+    fn log(&self, session: usize, level: Level, msg: &str, logger_name: &str, tid: usize);
     fn level(&self) -> Level;
     fn close(&self) {}
 }
@@ -220,13 +219,9 @@ extern "C" fn cb_log<L>(
 {
     ffi_wrap!("LogListener::log", unsafe {
         let listener = &*(ctxt as *const L);
-        listener.log(
-            session,
-            level,
-            CStr::from_ptr(msg),
-            CStr::from_ptr(logger_name),
-            tid,
-        );
+        let msg_str = raw_to_string(msg).unwrap();
+        let logger_name_str = raw_to_string(logger_name).unwrap();
+        listener.log(session, level, &msg_str, &logger_name_str, tid);
     })
 }
 

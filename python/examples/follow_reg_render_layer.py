@@ -5,6 +5,7 @@ from binaryninja import DisassemblyTextLine, LowLevelILOperation, DisassemblyTex
     MediumLevelILOperation, \
     RenderLayer, BasicBlock, InstructionTextTokenType, RenderLayerDefaultEnableState, \
     PluginCommand, BinaryView, interaction, InstructionTextToken, RegisterValueType
+from binaryninjaui import UIContext, UIActionHandler, UIAction, UIActionContext
 
 
 """
@@ -184,26 +185,32 @@ class FollowRegRenderLayer(RenderLayer):
         return self.apply_to_lines(block, lines)
 
 
-def set_follow_reg(bv: BinaryView):
-    if bv.platform is not None:
-        regs = list(bv.platform.arch.regs.keys())
-        idx = interaction.get_large_choice_input("Choose", "Choose Followed Register", regs)
+def set_follow_reg(ctx: UIActionContext):
+    bv = ctx.binaryView
+    if bv is not None:
+        if bv.platform is not None:
+            regs = list(bv.platform.arch.regs.keys())
+            idx = interaction.get_large_choice_input("Choose", "Choose Followed Register", regs)
 
-        # Save choice both in QSettings and on the RenderLayer object instance
-        layer = RenderLayer[FollowRegRenderLayer.name]
-        if idx is None:
-            layer.followed_reg = None
-            QSettings().remove("layer/followed_reg")
-        else:
-            layer.followed_reg = regs[idx]
-            QSettings().setValue("layer/followed_reg", regs[idx])
+            # Save choice both in QSettings and on the RenderLayer object instance
+            layer = RenderLayer[FollowRegRenderLayer.name]
+            if idx is None:
+                layer.followed_reg = None
+                QSettings().remove("layer/followed_reg")
+            else:
+                layer.followed_reg = regs[idx]
+                QSettings().setValue("layer/followed_reg", regs[idx])
 
-    # Trigger view refresh (gross)
-    for func in bv.get_functions_containing(bv.offset):
-        func.reanalyze()
+    # Trigger view refresh
+    ctx.context.refreshCurrentViewContents()
+
+
+def can_set_follow_reg(ctx: UIActionContext) -> bool:
+    return ctx.binaryView is not None
 
 
 FollowRegRenderLayer.register()
 
 # Using a command for this is kinda janky but currently the only option
-PluginCommand.register("Set Followed Register", "Choose which register to follow for the Follow Register Render Layer", set_follow_reg)
+UIAction.registerAction("Set Followed Register")
+UIActionHandler.globalActions().bindAction("Set Followed Register", UIAction(set_follow_reg, can_set_follow_reg))

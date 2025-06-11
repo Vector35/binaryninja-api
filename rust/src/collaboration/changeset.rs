@@ -1,5 +1,4 @@
 use binaryninjacore_sys::*;
-use std::ffi::c_char;
 use std::ptr::NonNull;
 
 use super::{RemoteFile, RemoteUser};
@@ -7,7 +6,7 @@ use super::{RemoteFile, RemoteUser};
 use crate::database::snapshot::SnapshotId;
 use crate::database::Database;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{BnString, IntoCStr};
 
 /// A collection of snapshots in a local database
 #[repr(transparent)]
@@ -59,21 +58,16 @@ impl Changeset {
     }
 
     /// Changeset name
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNCollaborationChangesetGetName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Set the name of the changeset, e.g. in a name changeset function.
-    pub fn set_name<S: BnStrCompatible>(&self, value: S) -> bool {
-        let value = value.into_bytes_with_nul();
-        unsafe {
-            BNCollaborationChangesetSetName(
-                self.handle.as_ptr(),
-                value.as_ref().as_ptr() as *const c_char,
-            )
-        }
+    pub fn set_name(&self, value: &str) -> bool {
+        let value = value.to_cstr();
+        unsafe { BNCollaborationChangesetSetName(self.handle.as_ptr(), value.as_ptr()) }
     }
 }
 

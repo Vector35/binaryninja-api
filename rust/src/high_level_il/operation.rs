@@ -2,11 +2,11 @@ use binaryninjacore_sys::*;
 use core::ffi;
 use std::fmt::{Debug, Formatter};
 
-use super::HighLevelILLiftedInstruction;
+use super::{HighLevelExpressionIndex, HighLevelILLiftedInstruction};
 use crate::architecture::CoreIntrinsic;
 use crate::function::Function;
 use crate::rc::Ref;
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{BnString, IntoCStr};
 use crate::variable::{ConstantData, SSAVariable, Variable};
 
 #[derive(Clone, PartialEq, Eq)]
@@ -16,12 +16,12 @@ pub struct GotoLabel {
 }
 
 impl GotoLabel {
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetGotoLabelName(self.function.handle, self.target)) }
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNGetGotoLabelName(self.function.handle, self.target)) }
     }
 
-    fn set_name<S: BnStrCompatible>(&self, name: S) {
-        let raw = name.into_bytes_with_nul();
+    fn set_name(&self, name: &str) {
+        let raw = name.to_cstr();
         unsafe {
             BNSetUserGotoLabelName(
                 self.function.handle,
@@ -44,9 +44,9 @@ impl Debug for GotoLabel {
 // ADC, SBB, RLC, RRC
 #[derive(Debug, Copy, Clone)]
 pub struct BinaryOpCarry {
-    pub left: usize,
-    pub right: usize,
-    pub carry: usize,
+    pub left: HighLevelExpressionIndex,
+    pub right: HighLevelExpressionIndex,
+    pub carry: HighLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedBinaryOpCarry {
@@ -58,8 +58,8 @@ pub struct LiftedBinaryOpCarry {
 // ADD, SUB, AND, OR, XOR, LSL, LSR, ASR, ROL, ROR, MUL, MULU_DP, MULS_DP, DIVU, DIVU_DP, DIVS, DIVS_DP, MODU, MODU_DP, MODS, MODS_DP, CMP_E, CMP_NE, CMP_SLT, CMP_ULT, CMP_SLE, CMP_ULE, CMP_SGE, CMP_UGE, CMP_SGT, CMP_UGT, TEST_BIT, ADD_OVERFLOW, FADD, FSUB, FMUL, FDIV, FCMP_E, FCMP_NE, FCMP_LT, FCMP_LE, FCMP_GE, FCMP_GT, FCMP_O, FCMP_UO
 #[derive(Debug, Copy, Clone)]
 pub struct BinaryOp {
-    pub left: usize,
-    pub right: usize,
+    pub left: HighLevelExpressionIndex,
+    pub right: HighLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedBinaryOp {
@@ -70,8 +70,8 @@ pub struct LiftedBinaryOp {
 // ARRAY_INDEX
 #[derive(Debug, Copy, Clone)]
 pub struct ArrayIndex {
-    pub src: usize,
-    pub index: usize,
+    pub src: HighLevelExpressionIndex,
+    pub index: HighLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedArrayIndex {
@@ -82,9 +82,9 @@ pub struct LiftedArrayIndex {
 // ARRAY_INDEX_SSA
 #[derive(Debug, Copy, Clone)]
 pub struct ArrayIndexSsa {
-    pub src: usize,
+    pub src: HighLevelExpressionIndex,
     pub src_memory: u64,
-    pub index: usize,
+    pub index: HighLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedArrayIndexSsa {
@@ -96,8 +96,8 @@ pub struct LiftedArrayIndexSsa {
 // ASSIGN
 #[derive(Debug, Copy, Clone)]
 pub struct Assign {
-    pub dest: usize,
-    pub src: usize,
+    pub dest: HighLevelExpressionIndex,
+    pub src: HighLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedAssign {
@@ -108,9 +108,9 @@ pub struct LiftedAssign {
 // ASSIGN_MEM_SSA
 #[derive(Debug, Copy, Clone)]
 pub struct AssignMemSsa {
-    pub dest: usize,
+    pub dest: HighLevelExpressionIndex,
     pub dest_memory: u64,
-    pub src: usize,
+    pub src: HighLevelExpressionIndex,
     pub src_memory: u64,
 }
 #[derive(Clone, Debug, PartialEq)]
@@ -126,7 +126,7 @@ pub struct LiftedAssignMemSsa {
 pub struct AssignUnpack {
     pub first_dest: usize,
     pub num_dests: usize,
-    pub src: usize,
+    pub src: HighLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedAssignUnpack {
@@ -140,7 +140,7 @@ pub struct AssignUnpackMemSsa {
     pub first_dest: usize,
     pub num_dests: usize,
     pub dest_memory: u64,
-    pub src: usize,
+    pub src: HighLevelExpressionIndex,
     pub src_memory: u64,
 }
 #[derive(Clone, Debug, PartialEq)]
@@ -165,7 +165,7 @@ pub struct LiftedBlock {
 // CALL, TAILCALL
 #[derive(Debug, Copy, Clone)]
 pub struct Call {
-    pub dest: usize,
+    pub dest: HighLevelExpressionIndex,
     pub first_param: usize,
     pub num_params: usize,
 }
@@ -178,7 +178,7 @@ pub struct LiftedCall {
 // CALL_SSA
 #[derive(Debug, Copy, Clone)]
 pub struct CallSsa {
-    pub dest: usize,
+    pub dest: HighLevelExpressionIndex,
     pub first_param: usize,
     pub num_params: usize,
     pub dest_memory: u64,
@@ -197,7 +197,7 @@ pub struct LiftedCallSsa {
 pub struct Case {
     pub first_value: usize,
     pub num_values: usize,
-    pub body: usize,
+    pub body: HighLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedCase {
@@ -227,7 +227,7 @@ pub struct LiftedConstData {
 // DEREF, ADDRESS_OF, NEG, NOT, SX, ZX, LOW_PART, BOOL_TO_INT, UNIMPL_MEM, FSQRT, FNEG, FABS, FLOAT_TO_INT, INT_TO_FLOAT, FLOAT_CONV, ROUND_TO_INT, FLOOR, CEIL, FTRUNC
 #[derive(Debug, Copy, Clone)]
 pub struct UnaryOp {
-    pub src: usize,
+    pub src: HighLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedUnaryOp {
@@ -237,7 +237,7 @@ pub struct LiftedUnaryOp {
 // DEREF_FIELD_SSA
 #[derive(Debug, Copy, Clone)]
 pub struct DerefFieldSsa {
-    pub src: usize,
+    pub src: HighLevelExpressionIndex,
     pub src_memory: u64,
     pub offset: u64,
     pub member_index: Option<usize>,
@@ -254,7 +254,7 @@ pub struct LiftedDerefFieldSsa {
 // DEREF_SSA
 #[derive(Debug, Copy, Clone)]
 pub struct DerefSsa {
-    pub src: usize,
+    pub src: HighLevelExpressionIndex,
     pub src_memory: u64,
 }
 
@@ -280,10 +280,10 @@ pub struct FloatConst {
 // FOR
 #[derive(Debug, Copy, Clone)]
 pub struct ForLoop {
-    pub init: usize,
-    pub condition: usize,
-    pub update: usize,
-    pub body: usize,
+    pub init: HighLevelExpressionIndex,
+    pub condition: HighLevelExpressionIndex,
+    pub update: HighLevelExpressionIndex,
+    pub body: HighLevelExpressionIndex,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -297,11 +297,11 @@ pub struct LiftedForLoop {
 // FOR_SSA
 #[derive(Debug, Copy, Clone)]
 pub struct ForLoopSsa {
-    pub init: usize,
-    pub condition_phi: usize,
-    pub condition: usize,
-    pub update: usize,
-    pub body: usize,
+    pub init: HighLevelExpressionIndex,
+    pub condition_phi: HighLevelExpressionIndex,
+    pub condition: HighLevelExpressionIndex,
+    pub update: HighLevelExpressionIndex,
+    pub body: HighLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedForLoopSsa {
@@ -323,11 +323,11 @@ pub struct LiftedLabel {
 }
 
 impl LiftedLabel {
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         self.target.name()
     }
 
-    pub fn set_name<S: BnStrCompatible>(&self, name: S) {
+    pub fn set_name(&self, name: &str) {
         self.target.set_name(name)
     }
 }
@@ -335,9 +335,9 @@ impl LiftedLabel {
 // IF
 #[derive(Debug, Copy, Clone)]
 pub struct If {
-    pub condition: usize,
-    pub cond_true: usize,
-    pub cond_false: usize,
+    pub condition: HighLevelExpressionIndex,
+    pub cond_true: HighLevelExpressionIndex,
+    pub cond_false: HighLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedIf {
@@ -379,7 +379,7 @@ pub struct LiftedIntrinsicSsa {
 // JUMP
 #[derive(Debug, Copy, Clone)]
 pub struct Jump {
-    pub dest: usize,
+    pub dest: HighLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedJump {
@@ -413,8 +413,8 @@ pub struct LiftedRet {
 // SPLIT
 #[derive(Debug, Copy, Clone)]
 pub struct Split {
-    pub high: usize,
-    pub low: usize,
+    pub high: HighLevelExpressionIndex,
+    pub low: HighLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedSplit {
@@ -425,7 +425,7 @@ pub struct LiftedSplit {
 // STRUCT_FIELD, DEREF_FIELD
 #[derive(Debug, Copy, Clone)]
 pub struct StructField {
-    pub src: usize,
+    pub src: HighLevelExpressionIndex,
     pub offset: u64,
     pub member_index: Option<usize>,
 }
@@ -439,8 +439,8 @@ pub struct LiftedStructField {
 // SWITCH
 #[derive(Debug, Copy, Clone)]
 pub struct Switch {
-    pub condition: usize,
-    pub default: usize,
+    pub condition: HighLevelExpressionIndex,
+    pub default: HighLevelExpressionIndex,
     pub first_case: usize,
     pub num_cases: usize,
 }
@@ -493,7 +493,7 @@ pub struct Var {
 #[derive(Debug, Copy, Clone)]
 pub struct VarInit {
     pub dest: Variable,
-    pub src: usize,
+    pub src: HighLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedVarInit {
@@ -505,7 +505,7 @@ pub struct LiftedVarInit {
 #[derive(Debug, Copy, Clone)]
 pub struct VarInitSsa {
     pub dest: SSAVariable,
-    pub src: usize,
+    pub src: HighLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedVarInitSsa {
@@ -535,8 +535,8 @@ pub struct VarSsa {
 // WHILE, DO_WHILE
 #[derive(Debug, Copy, Clone)]
 pub struct While {
-    pub condition: usize,
-    pub body: usize,
+    pub condition: HighLevelExpressionIndex,
+    pub body: HighLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedWhile {
@@ -547,9 +547,9 @@ pub struct LiftedWhile {
 // WHILE_SSA, DO_WHILE_SSA
 #[derive(Debug, Copy, Clone)]
 pub struct WhileSsa {
-    pub condition_phi: usize,
-    pub condition: usize,
-    pub body: usize,
+    pub condition_phi: HighLevelExpressionIndex,
+    pub condition: HighLevelExpressionIndex,
+    pub body: HighLevelExpressionIndex,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiftedWhileSsa {

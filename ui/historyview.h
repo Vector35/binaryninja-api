@@ -88,9 +88,11 @@ class BINARYNINJAUIAPI HistorySidebarWidget : public SidebarWidget
 	void scrollBarValueChanged(int value);
 	void scrollBarRangeChanged(int min, int max);
 
-	void resetToSelectedEntry(std::function<bool(size_t, size_t)> progress);
+	void resetToSelectedEntry(BinaryNinja::ProgressFunction progress);
 
   public:
+	virtual void copy();
+	virtual bool canCopy();
 	HistorySidebarWidget(BinaryViewRef data);
 	~HistorySidebarWidget();
 	void notifyFontChanged() override;

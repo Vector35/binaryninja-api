@@ -1,4 +1,4 @@
-// Copyright 2021-2024 Vector 35 Inc.
+// Copyright 2021-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -81,7 +81,7 @@ pub(crate) fn parse_function_entry<R: ReaderType>(
     debug_info_builder: &mut DebugInfoBuilder,
 ) -> Option<usize> {
     // Collect function properties (if they exist in this DIE)
-    let raw_name = get_raw_name(dwarf, unit, entry);
+    let raw_name = get_raw_name(dwarf, unit, entry, debug_info_builder_context);
     let return_type = get_type(
         dwarf,
         unit,
@@ -117,7 +117,7 @@ pub(crate) fn parse_function_entry<R: ReaderType>(
                 if let Ok(demangled) = sym.demangle(demangle_options) {
                     let cleaned = abi_regex.replace_all(&demangled, "");
                     let simplified = simplify_str_to_str(&cleaned);
-                    full_name = Some(simplified.to_string());
+                    full_name = Some(simplified.to_string_lossy().to_string());
                 }
             }
         }
@@ -208,6 +208,11 @@ pub(crate) fn parse_lexical_block<R: ReaderType>(
             );
             return None;
         };
+
+        // DWARFv5 spec section 2.17 allows for undefined behavior in cases where the object currently being referred to doesn't exist
+        if low_pc == 0 && high_pc == 0 {
+            return None;
+        }
 
         if low_pc < high_pc {
             result.insert(low_pc..high_pc);

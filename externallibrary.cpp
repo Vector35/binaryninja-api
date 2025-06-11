@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2023 Vector 35 Inc
+// Copyright (c) 2015-2025 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -92,7 +92,7 @@ Ref<ExternalLibrary> ExternalLocation::GetExternalLibrary()
 	BNExternalLibrary* lib = BNExternalLocationGetExternalLibrary(m_object);
 	if (!lib)
 		return nullptr;
-	return new ExternalLibrary(BNNewExternalLibraryReference(lib));
+	return new ExternalLibrary(lib);
 }
 
 

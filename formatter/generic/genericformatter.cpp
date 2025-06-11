@@ -490,9 +490,18 @@ static vector<Item> RelocateStartAndEndOfContainerItems(const vector<Item>& item
 			for (auto& j : startOfContainer.tokens)
 				result.back().AddTokenToLastAtom(j);
 
-			vector<Item> containerItems(i.items.begin() + 1, i.items.end());
+			auto containerContents = i.items.begin() + 1;
+			if (containerContents != i.items.end() && containerContents->type == EndOfContainer)
+			{
+				for (auto& j : containerContents->tokens)
+					result.back().AddTokenToLastAtom(j);
+				++containerContents;
+			}
+
+			vector<Item> containerItems(containerContents, i.items.end());
 			containerItems = RelocateStartAndEndOfContainerItems(containerItems);
-			result.push_back({Container, containerItems, {}, 0});
+			if (!containerItems.empty())
+				result.push_back({Container, containerItems, {}, 0});
 		}
 		else if (i.type == EndOfContainer && !result.empty())
 		{
@@ -794,6 +803,7 @@ vector<DisassemblyTextLine> GenericLineFormatter::FormatLines(
 
 						// Item is an atom. We just have to emit the tokens even though it is too wide.
 						item->AppendAllTokens(outputLine.tokens, firstTokenOfLine);
+						currentWidth += item->width;
 						++item;
 						continue;
 					}

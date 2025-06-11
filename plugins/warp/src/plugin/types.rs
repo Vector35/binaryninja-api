@@ -35,7 +35,7 @@ impl Command for LoadTypes {
         let view = view.to_owned();
         std::thread::spawn(move || {
             let background_task = binaryninja::background_task::BackgroundTask::new(
-                format!("Applying {} types...", data.types.len()),
+                &format!("Applying {} types...", data.types.len()),
                 true,
             );
 
@@ -43,7 +43,7 @@ impl Command for LoadTypes {
             for comp_ty in data.types {
                 let ty_id = comp_ty.guid.to_string();
                 let ty_name = comp_ty.ty.name.to_owned().unwrap_or_else(|| ty_id.clone());
-                view.define_auto_type_with_id(ty_name, ty_id, &to_bn_type(&arch, &comp_ty.ty));
+                view.define_auto_type_with_id(ty_name, &ty_id, &to_bn_type(&arch, &comp_ty.ty));
             }
 
             log::info!("Type application took {:?}", start.elapsed());

@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2024 Vector 35 Inc
+# Copyright (c) 2015-2025 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -34,11 +34,14 @@ class Metadata:
 	    handle: Optional[core.BNMetadata] = None
 	):
 		"""
-		The 'raw' parameter is no longer needed it was a work around for a python 2 limitation.
-		To pass raw data into this api simply use a `bytes` object
+		The 'raw' parameter is no longer needed it was a workaround for a Python 2 limitation.
+		To pass raw data into this API, simply use a `bytes` object.
 		"""
 		if handle is not None:
 			self.handle = handle
+		elif isinstance(value, Metadata):
+			# If the value is already a Metadata object, reuse its handle
+			self.handle = value.handle
 		elif isinstance(value, bool):
 			self.handle = core.BNCreateMetadataBooleanData(value)
 		elif isinstance(value, int):
@@ -64,7 +67,7 @@ class Metadata:
 				md = Metadata(value[elm], signed, raw)
 				core.BNMetadataSetValueForKey(self.handle, str(elm), md.handle)
 		else:
-			raise ValueError(f"{type(value)} doesn't contain type of: int, bool, str, float, list, dict")
+			raise ValueError(f"{type(value)} is not a supported type: int, bool, str, bytes, float, list, tuple, dict, or Metadata")
 
 	def __len__(self):
 		if self.is_array or self.is_dict or self.is_string or self.is_bytes:
@@ -145,6 +148,14 @@ class Metadata:
 			return Metadata(handle=handle).value
 
 		raise NotImplementedError("Metadata object doesn't support indexing")
+
+	def __setitem__(self, key, value):
+		if not self.is_dict:
+			raise TypeError("Metadata object is not a dictionary and does not support item assignment")
+		if not isinstance(key, str):
+			raise ValueError("Metadata keys must be strings")
+		md_value = Metadata(value)
+		core.BNMetadataSetValueForKey(self.handle, key, md_value.handle)
 
 	def __str__(self):
 		if self.is_string:
@@ -263,6 +274,13 @@ class Metadata:
 	@property
 	def is_dict(self):
 		return core.BNMetadataIsKeyValueStore(self.handle)
+
+	def append(self, value):
+		"""Appends a value to the Metadata array."""
+		if not self.is_array:
+			raise TypeError("Metadata object is not an array and does not support append")
+		md_value = Metadata(value)  # Convert value to Metadata object
+		core.BNMetadataArrayAppend(self.handle, md_value.handle)
 
 	def remove(self, key_or_index):
 		if isinstance(key_or_index, str) and self.is_dict:

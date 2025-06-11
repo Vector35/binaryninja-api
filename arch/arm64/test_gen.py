@@ -151,14 +151,14 @@ def gather_samples(mnems, encodings):
 if sys.argv[1] == "mnemonic":
     mnems = sys.argv[2:]
     for mnem in mnems:
-        print("searching for mnemonic -%s-" % mnem)
+        print("searching for mnemonic -%s-" % mnem, file=sys.stderr)
         gather_samples([mnem], [])
 
 # exact match (ignoring case) for encodings
 elif sys.argv[1] == "encoding":
     encnames = sys.argv[2:]
     for encname in encnames:
-        print("searching for encoding -%s-" % encname)
+        print("searching for encoding -%s-" % encname, file=sys.stderr)
         gather_samples([], [encname])
 
 elif sys.argv[1] == "mte":

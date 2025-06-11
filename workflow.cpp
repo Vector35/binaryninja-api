@@ -1,5 +1,4 @@
 #include "binaryninjaapi.h"
-#include "json/json.h"
 #include "rapidjsonwrapper.h"
 #include <string>
 #include <variant>
@@ -8,12 +7,10 @@ using namespace BinaryNinja;
 using namespace std;
 
 
-AnalysisContext::AnalysisContext(BNAnalysisContext* analysisContext) :
-    m_reader(Json::CharReaderBuilder().newCharReader())
+AnalysisContext::AnalysisContext(BNAnalysisContext* analysisContext)
 {
 	// LogError("API-Side AnalysisContext Constructed!");
 	m_object = analysisContext;
-	m_builder["indentation"] = "";
 }
 
 
@@ -104,9 +101,40 @@ void AnalysisContext::SetHighLevelILFunction(Ref<HighLevelILFunction> highLevelI
 }
 
 
+bool AnalysisContext::Inform(const char* request)
+{
+	return BNAnalysisContextInform(m_object, request);
+}
+
+
 bool AnalysisContext::Inform(const string& request)
 {
 	return BNAnalysisContextInform(m_object, request.c_str());
+}
+
+
+bool WorkflowMachine::PostRequest(const std::string& command)
+{
+	rapidjson::Document request(rapidjson::kObjectType);
+	rapidjson::Document::AllocatorType& allocator = request.GetAllocator();
+	rapidjson::Value commandValue(command.c_str(), command.size(), allocator);
+	request.AddMember("command", commandValue, allocator);
+	rapidjson::StringBuffer buffer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+	request.Accept(writer);
+
+	string jsonResult;
+	if (m_function)
+		jsonResult = BNPostWorkflowRequestForFunction(m_function->GetObject(), buffer.GetString());
+	else
+		jsonResult = BNPostWorkflowRequestForBinaryView(m_view->GetObject(), buffer.GetString());
+
+	rapidjson::Document response(rapidjson::kObjectType);
+	response.Parse(jsonResult.c_str());
+	if (response.HasMember("commandStatus") && response["commandStatus"].HasMember("accepted"))
+		return response["commandStatus"]["accepted"].GetBool();
+
+	return false;
 }
 
 
@@ -119,6 +147,151 @@ WorkflowMachine::WorkflowMachine(Ref<BinaryView> view): m_view(view)
 WorkflowMachine::WorkflowMachine(Ref<Function> function): m_function(function)
 {
 
+}
+
+
+bool WorkflowMachine::PostJsonRequest(const std::string& request)
+{
+	string jsonResult;
+	if (m_function)
+		jsonResult = BNPostWorkflowRequestForFunction(m_function->GetObject(), request.c_str());
+	else
+		jsonResult = BNPostWorkflowRequestForBinaryView(m_view->GetObject(), request.c_str());
+
+	rapidjson::Document response(rapidjson::kObjectType);
+	response.Parse(jsonResult.c_str());
+	if (response.HasMember("commandStatus") && response["commandStatus"].HasMember("accepted"))
+		return response["commandStatus"]["accepted"].GetBool();
+
+	return false;
+}
+
+
+Ref<FlowGraph> WorkflowMachine::GetGraph(const std::string& activity, bool sequential)
+{
+	BNFlowGraph* graph;
+	if (m_function)
+		graph = BNGetWorkflowGraphForFunction(m_function->GetObject(), activity.c_str(), sequential);
+	else
+		graph = BNGetWorkflowGraphForBinaryView(m_view->GetObject(), activity.c_str(), sequential);
+
+	return new CoreFlowGraph(graph);
+}
+
+
+void WorkflowMachine::ShowTopology()
+{
+	if (m_function)
+		BNShowWorkflowReportForFunction(m_function->GetObject(), "topology");
+	else
+		BNShowWorkflowReportForBinaryView(m_view->GetObject(), "topology");
+}
+
+
+WorkflowMachine::Status WorkflowMachine::GetStatus()
+{
+	WorkflowMachine::Status status;
+	rapidjson::Document request(rapidjson::kObjectType);
+	rapidjson::Document::AllocatorType& allocator = request.GetAllocator();
+	request.AddMember("command", "status", allocator);
+	rapidjson::StringBuffer buffer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+	request.Accept(writer);
+
+	string jsonResult;
+	if (m_function)
+		jsonResult = BNPostWorkflowRequestForFunction(m_function->GetObject(), buffer.GetString());
+	else
+		jsonResult = BNPostWorkflowRequestForBinaryView(m_view->GetObject(), buffer.GetString());
+
+	rapidjson::Document response(rapidjson::kObjectType);
+	response.Parse(jsonResult.c_str());
+	if (response.HasMember("machineState") && response["machineState"].HasMember("state") && response["machineState"].HasMember("activity"))
+	{
+		status.state = response["machineState"]["state"].GetString();
+		status.activity = response["machineState"]["activity"].GetString();
+	}
+	if (response.HasMember("logStatus") && response["logStatus"].HasMember("local") && response["logStatus"].HasMember("global"))
+	{
+		status.localLogEnabled = response["logStatus"]["local"].GetBool();
+		status.globalLogEnabled = response["logStatus"]["global"].GetBool();
+	}
+
+	return status;
+}
+
+
+bool WorkflowMachine::Resume()
+{
+	return PostRequest("resume");
+}
+
+
+bool WorkflowMachine::Run()
+{
+	return PostRequest("run");
+}
+
+
+bool WorkflowMachine::Configure()
+{
+	return PostRequest("configure");
+}
+
+
+bool WorkflowMachine::Halt()
+{
+	return PostRequest("halt");
+}
+
+
+bool WorkflowMachine::Reset()
+{
+	return PostRequest("reset");
+}
+
+
+bool WorkflowMachine::Enable()
+{
+	return PostRequest("enable");
+}
+
+
+bool WorkflowMachine::Disable()
+{
+	return PostRequest("disable");
+}
+
+
+bool WorkflowMachine::Step()
+{
+	return PostRequest("step");
+}
+
+
+bool WorkflowMachine::SetLogEnabled(bool enable, bool global)
+{
+	rapidjson::Document request(rapidjson::kObjectType);
+	rapidjson::Document::AllocatorType& allocator = request.GetAllocator();
+	request.AddMember("command", "log", allocator);
+	request.AddMember("enable", enable, allocator);
+	request.AddMember("global", global, allocator);
+	rapidjson::StringBuffer buffer;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+	request.Accept(writer);
+
+	string jsonResult;
+	if (m_function)
+		jsonResult = BNPostWorkflowRequestForFunction(m_function->GetObject(), buffer.GetString());
+	else
+		jsonResult = BNPostWorkflowRequestForBinaryView(m_view->GetObject(), buffer.GetString());
+
+	rapidjson::Document response(rapidjson::kObjectType);
+	response.Parse(jsonResult.c_str());
+	if (response.HasMember("commandStatus") && response["commandStatus"].HasMember("accepted"))
+		return response["commandStatus"]["accepted"].GetBool();
+
+	return false;
 }
 
 

@@ -7,7 +7,7 @@ use binaryninja::low_level_il::expression::{
 use binaryninja::low_level_il::instruction::{
     InstructionHandler, LowLevelILInstructionKind, LowLevelInstructionIndex,
 };
-use binaryninja::low_level_il::{LowLevelILRegister, VisitorAction};
+use binaryninja::low_level_il::{LowLevelILRegisterKind, LowLevelILSSARegisterKind, VisitorAction};
 use std::path::PathBuf;
 
 #[test]
@@ -34,7 +34,7 @@ fn test_llil_info() {
         LowLevelILInstructionKind::SetReg(op) => {
             assert_eq!(op.size(), 4);
             match op.dest_reg() {
-                LowLevelILRegister::ArchReg(reg) => assert_eq!(reg.name(), "edi"),
+                LowLevelILRegisterKind::Arch(reg) => assert_eq!(reg.name(), "edi"),
                 _ => panic!("Expected Register::ArchReg"),
             }
             assert_eq!(op.source_expr().index, LowLevelExpressionIndex(0));
@@ -55,7 +55,7 @@ fn test_llil_info() {
                 LowLevelILExpressionKind::Reg(op) => {
                     assert_eq!(op.size(), 4);
                     match op.source_reg() {
-                        LowLevelILRegister::ArchReg(reg) => assert_eq!(reg.name(), "ebp"),
+                        LowLevelILRegisterKind::Arch(reg) => assert_eq!(reg.name(), "ebp"),
                         _ => panic!("Expected Register::ArchReg"),
                     }
                 }
@@ -73,7 +73,7 @@ fn test_llil_info() {
         LowLevelILInstructionKind::SetReg(op) => {
             assert_eq!(op.size(), 4);
             match op.dest_reg() {
-                LowLevelILRegister::ArchReg(reg) => assert_eq!(reg.name(), "ebp"),
+                LowLevelILRegisterKind::Arch(reg) => assert_eq!(reg.name(), "ebp"),
                 _ => panic!("Expected Register::ArchReg"),
             }
             assert_eq!(op.source_expr().index, LowLevelExpressionIndex(4));
@@ -89,7 +89,7 @@ fn test_llil_info() {
         LowLevelILInstructionKind::SetReg(op) => {
             assert_eq!(op.size(), 4);
             match op.dest_reg() {
-                LowLevelILRegister::ArchReg(reg) => assert_eq!(reg.name(), "eax"),
+                LowLevelILRegisterKind::Arch(reg) => assert_eq!(reg.name(), "eax"),
                 _ => panic!("Expected Register::ArchReg"),
             }
             assert_eq!(op.source_expr().index, LowLevelExpressionIndex(9));
@@ -128,7 +128,7 @@ fn test_llil_info() {
         LowLevelILInstructionKind::SetReg(op) => {
             assert_eq!(op.size(), 4);
             match op.dest_reg() {
-                LowLevelILRegister::ArchReg(reg) => assert_eq!(reg.name(), "esp"),
+                LowLevelILRegisterKind::Arch(reg) => assert_eq!(reg.name(), "esp"),
                 _ => panic!("Expected Register::ArchReg"),
             }
             assert_eq!(op.source_expr().index, LowLevelExpressionIndex(17));
@@ -144,7 +144,7 @@ fn test_llil_info() {
         LowLevelILInstructionKind::SetReg(op) => {
             assert_eq!(op.size(), 4);
             match op.dest_reg() {
-                LowLevelILRegister::ArchReg(reg) => assert_eq!(reg.name(), "ebp"),
+                LowLevelILRegisterKind::Arch(reg) => assert_eq!(reg.name(), "ebp"),
                 _ => panic!("Expected Register::ArchReg"),
             }
             assert_eq!(op.source_expr().index, LowLevelExpressionIndex(19));
@@ -223,5 +223,88 @@ fn test_llil_visitor() {
         {
             panic!("Expression with index {:?} not visited", expr_idx);
         };
+    }
+}
+
+#[test]
+fn test_llil_ssa() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
+    let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
+    let image_base = view.original_image_base();
+    let platform = view.default_platform().unwrap();
+
+    // Sample function: __crt_strtox::c_string_character_source<char>::validate
+    let sample_function = view.function_at(&platform, image_base + 0x2bd80).unwrap();
+    let llil_function = sample_function.low_level_il().unwrap();
+    let llil_ssa_function = llil_function.ssa_form().expect("Valid SSA form");
+
+    let llil_ssa_basic_blocks = llil_ssa_function.basic_blocks();
+    let mut llil_ssa_basic_block_iter = llil_ssa_basic_blocks.iter();
+    let first_basic_block = llil_ssa_basic_block_iter.next().unwrap();
+    let mut llil_instr_iter = first_basic_block.iter();
+
+    // 0 @ 0002bd80  (LLIL_SET_REG_SSA.d edi#1 = (LLIL_REG_SSA.d edi#0))
+    let ssa_instr_0 = llil_instr_iter.next().unwrap();
+    assert_eq!(ssa_instr_0.index, LowLevelInstructionIndex(0));
+    assert_eq!(ssa_instr_0.address(), image_base + 0x0002bd80);
+    println!("{:?}", ssa_instr_0);
+    println!("{:?}", ssa_instr_0.kind());
+    match ssa_instr_0.kind() {
+        LowLevelILInstructionKind::SetRegSsa(op) => {
+            assert_eq!(op.size(), 4);
+            match op.dest_reg() {
+                LowLevelILSSARegisterKind::Full { kind, version } => {
+                    assert_eq!(kind.name(), "edi");
+                    assert_eq!(version, 1);
+                }
+                _ => panic!("Expected LowLevelILSSARegisterKind::Full"),
+            }
+            assert_eq!(op.source_expr().index, LowLevelExpressionIndex(0));
+        }
+        _ => panic!("Expected SetRegSsa"),
+    }
+
+    // 1 @ 0002bd82  (LLIL_STORE_SSA.d [(LLIL_SUB.d (LLIL_REG_SSA.d esp#0) - (LLIL_CONST.d 4)) {__saved_ebp}].d = (LLIL_REG_SSA.d ebp#0) @ mem#0 -> mem#1)
+    let ssa_instr_1 = llil_instr_iter.next().unwrap();
+    assert_eq!(ssa_instr_1.index, LowLevelInstructionIndex(1));
+    assert_eq!(ssa_instr_1.address(), image_base + 0x0002bd82);
+    println!("{:?}", ssa_instr_1);
+    println!("{:?}", ssa_instr_1.kind());
+    match ssa_instr_1.kind() {
+        LowLevelILInstructionKind::StoreSsa(op) => {
+            assert_eq!(op.size(), 4);
+            let source_expr = op.source_expr();
+            let source_memory_version = op.source_memory_version();
+            assert_eq!(source_memory_version, 0);
+            assert_eq!(source_expr.index, LowLevelExpressionIndex(5));
+            let dest_expr = op.dest_expr();
+            let dest_memory_version = op.dest_memory_version();
+            assert_eq!(dest_memory_version, 1);
+            assert_eq!(dest_expr.index, LowLevelExpressionIndex(4));
+        }
+        _ => panic!("Expected StoreSsa"),
+    }
+
+    // 34 @ 0002bdc7  (LLIL_CALL_SSA eax#8, edx#5, ecx#6, mem#23 = call((LLIL_EXTERN_PTR.d __CrtDbgReportW), stack = esp#18 @ mem#22))
+    let ssa_instr_34 = llil_ssa_function
+        .instruction_from_index(LowLevelInstructionIndex(34))
+        .expect("Valid instruction");
+    assert_eq!(ssa_instr_34.index, LowLevelInstructionIndex(34));
+    assert_eq!(ssa_instr_34.address(), image_base + 0x0002bdc7);
+    println!("{:?}", ssa_instr_34);
+    println!("{:?}", ssa_instr_34.kind());
+    match ssa_instr_34.kind() {
+        LowLevelILInstructionKind::CallSsa(op) => match op.target().kind() {
+            LowLevelILExpressionKind::ExternPtr(extern_ptr) => {
+                assert_eq!(extern_ptr.size(), 4);
+                let extern_sym = view
+                    .symbol_by_address(extern_ptr.value())
+                    .expect("Valid symbol");
+                assert_eq!(extern_sym.short_name(), "__CrtDbgReportW".into())
+            }
+            _ => panic!("Expected ExternPtr"),
+        },
+        _ => panic!("Expected CallSsa"),
     }
 }

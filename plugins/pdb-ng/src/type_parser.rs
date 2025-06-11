@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Vector 35 Inc.
+// Copyright 2022-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -898,7 +898,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     bitfield_builder
                         .as_mut()
                         .expect("Invariant")
-                        .insert(&m.ty, m.name, 0, false, m.access, m.scope);
+                        .insert(&m.ty, &m.name, 0, false, m.access, m.scope);
                 }
                 (None, None) => {
                     if let Some(mut builder) = bitfield_builder.take() {
@@ -1633,7 +1633,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 for field in fields {
                     match field {
                         ParsedType::Enumerate(member) => {
-                            enumeration.insert(member.name.clone(), member.value);
+                            enumeration.insert(&member.name, member.value);
                         }
                         e => return Err(anyhow!("Unexpected enumerate member: {:?}", e)),
                     }
@@ -1759,9 +1759,8 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         structure.width(data.size);
 
         self.namespace_stack.push(union_name.to_string());
-        let success = self.parse_union_fields(&mut structure, data.fields, finder);
+        let _success = self.parse_union_fields(&mut structure, data.fields, finder);
         self.namespace_stack.pop();
-        let _ = success?;
 
         let new_type = Type::structure(structure.finalize().as_ref());
         Ok(Some(Box::new(ParsedType::Named(union_name, new_type))))
@@ -1804,7 +1803,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             if group.len() == 1 {
                 structure.insert(
                     &group[0].ty,
-                    group[0].name.clone(),
+                    &group[0].name,
                     group[0].offset,
                     false,
                     group[0].access,
@@ -1815,7 +1814,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 for member in group {
                     inner_struct.insert(
                         &member.ty,
-                        member.name.clone(),
+                        &member.name,
                         member.offset,
                         false,
                         member.access,
@@ -1827,7 +1826,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         Type::structure(inner_struct.finalize().as_ref()),
                         MAX_CONFIDENCE,
                     ),
-                    format!("__inner{:x}", i),
+                    &format!("__inner{:x}", i),
                     0,
                     false,
                     MemberAccess::PublicAccess,
@@ -2015,7 +2014,11 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         // for some reason
                         if let Some(raw_name) = Self::type_data_to_raw_name(&parsed) {
                             if let Some(&full_index) = self.full_type_indices.get(&raw_name) {
-                                if let None = self.type_stack.iter().find(|&&idx| idx == full_index)
+                                if self
+                                    .type_stack
+                                    .iter()
+                                    .find(|&&idx| idx == full_index)
+                                    .is_none()
                                 {
                                     if full_index != index {
                                         return self.try_type_index_to_bare(
@@ -2050,8 +2053,11 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                             // for some reason
                             if let Some(raw_name) = Self::type_data_to_raw_name(&parsed) {
                                 if let Some(&full_index) = self.full_type_indices.get(&raw_name) {
-                                    if let None =
-                                        self.type_stack.iter().find(|&&idx| idx == full_index)
+                                    if self
+                                        .type_stack
+                                        .iter()
+                                        .find(|&&idx| idx == full_index)
+                                        .is_none()
                                     {
                                         if full_index != index {
                                             return self.try_type_index_to_bare(

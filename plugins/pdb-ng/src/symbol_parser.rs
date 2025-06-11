@@ -1,4 +1,4 @@
-// Copyright 2022-2024 Vector 35 Inc.
+// Copyright 2022-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -2027,13 +2027,13 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             Some(X86(xreg)) => {
                 self.log(|| format!("Register {:?} ==> {:?}", reg, xreg));
                 self.arch
-                    .register_by_name(xreg.to_string().to_lowercase())
+                    .register_by_name(&xreg.to_string().to_lowercase())
                     .map(|reg| reg.id())
             }
             Some(AMD64(areg)) => {
                 self.log(|| format!("Register {:?} ==> {:?}", reg, areg));
                 self.arch
-                    .register_by_name(areg.to_string().to_lowercase())
+                    .register_by_name(&areg.to_string().to_lowercase())
                     .map(|reg| reg.id())
             }
             // TODO: Other arches

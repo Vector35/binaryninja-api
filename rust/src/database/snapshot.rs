@@ -4,7 +4,7 @@ use crate::database::undo::UndoEntry;
 use crate::database::Database;
 use crate::progress::ProgressCallback;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::string::{BnString, IntoCStr};
 use binaryninjacore_sys::{
     BNCollaborationFreeSnapshotIdList, BNFreeSnapshot, BNFreeSnapshotList, BNGetSnapshotChildren,
     BNGetSnapshotDatabase, BNGetSnapshotFileContents, BNGetSnapshotFileContentsHash,
@@ -14,7 +14,7 @@ use binaryninjacore_sys::{
     BNReadSnapshotDataWithProgress, BNSetSnapshotName, BNSnapshot, BNSnapshotHasAncestor,
     BNSnapshotHasContents, BNSnapshotHasUndo, BNSnapshotStoreData,
 };
-use std::ffi::{c_char, c_void};
+use std::ffi::c_void;
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
 use std::ptr::NonNull;
@@ -45,14 +45,14 @@ impl Snapshot {
     }
 
     /// Get the displayed snapshot name
-    pub fn name(&self) -> BnString {
-        unsafe { BnString::from_raw(BNGetSnapshotName(self.handle.as_ptr())) }
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNGetSnapshotName(self.handle.as_ptr())) }
     }
 
     /// Set the displayed snapshot name
-    pub fn set_name<S: BnStrCompatible>(&self, value: S) {
-        let value_raw = value.into_bytes_with_nul();
-        let value_ptr = value_raw.as_ref().as_ptr() as *const c_char;
+    pub fn set_name(&self, value: &str) {
+        let value_raw = value.to_cstr();
+        let value_ptr = value_raw.as_ptr();
         unsafe { BNSetSnapshotName(self.handle.as_ptr(), value_ptr) }
     }
 

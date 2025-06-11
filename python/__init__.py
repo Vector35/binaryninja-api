@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2024 Vector 35 Inc
+# Copyright (c) 2015-2025 Vector 35 Inc
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -407,7 +407,7 @@ def load(*args, **kwargs) -> BinaryView:
 
 	.. note:: The progress_func callback **must** return True to continue the load operation, False will abort the load operation.
 
-	.. warning:: The progress_func will **only** be called for BNDB files, not for any other file format due to a `design limitation <https://docs.binary.ninja/guide/debugger/index.html#navigating-the-binary>`_.
+	.. warning:: The progress_func will **only** be called for BNDB files, not for any other file format due to a `design limitation <https://github.com/Vector35/binaryninja-api/issues/4116#issuecomment-1479496712>`_.
 
 	:Example:
 		>>> from binaryninja import *

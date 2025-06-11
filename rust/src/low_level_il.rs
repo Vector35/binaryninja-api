@@ -1,4 +1,4 @@
-// Copyright 2021-2024 Vector 35 Inc.
+// Copyright 2021-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::borrow::Cow;
 use std::fmt;
 
 // TODO : provide some way to forbid emitting register reads for certain registers
@@ -20,8 +21,8 @@ use std::fmt;
 // requirements on load/store memory address sizes?
 // can reg/set_reg be used with sizes that differ from what is in BNRegisterInfo?
 
-use crate::architecture::Register as ArchReg;
-use crate::architecture::{Architecture, RegisterId};
+use crate::architecture::{Architecture, Flag, RegisterId};
+use crate::architecture::{CoreRegister, Register as ArchReg};
 use crate::function::Location;
 
 pub mod block;
@@ -35,59 +36,170 @@ use self::expression::*;
 use self::function::*;
 use self::instruction::*;
 
-pub type MutableLiftedILFunction<Arch> = LowLevelILFunction<Arch, Mutable, NonSSA<LiftedNonSSA>>;
-pub type LiftedILFunction<Arch> = LowLevelILFunction<Arch, Finalized, NonSSA<LiftedNonSSA>>;
-pub type MutableLiftedILExpr<'a, Arch, ReturnType> =
-    LowLevelILExpression<'a, Arch, Mutable, NonSSA<LiftedNonSSA>, ReturnType>;
-pub type RegularLowLevelILFunction<Arch> =
-    LowLevelILFunction<Arch, Finalized, NonSSA<RegularNonSSA>>;
-pub type RegularLowLevelILInstruction<'a, Arch> =
-    LowLevelILInstruction<'a, Arch, Finalized, NonSSA<RegularNonSSA>>;
-pub type RegularLowLevelILInstructionKind<'a, Arch> =
-    LowLevelILInstructionKind<'a, Arch, Finalized, NonSSA<RegularNonSSA>>;
-pub type RegularLowLevelILExpression<'a, Arch, ReturnType> =
-    LowLevelILExpression<'a, Arch, Finalized, NonSSA<RegularNonSSA>, ReturnType>;
-pub type RegularLowLevelILExpressionKind<'a, Arch> =
-    LowLevelILExpressionKind<'a, Arch, Finalized, NonSSA<RegularNonSSA>>;
-pub type LowLevelILSSAFunction<Arch> = LowLevelILFunction<Arch, Finalized, SSA>;
+/// Regular low-level IL, if you are not modifying the functions IL or needing SSA, use this.
+pub type LowLevelILRegularFunction = LowLevelILFunction<Finalized, NonSSA>;
+pub type LowLevelILRegularInstruction<'a> = LowLevelILInstruction<'a, Finalized, NonSSA>;
+pub type LowLevelILRegularInstructionKind<'a> = LowLevelILInstructionKind<'a, Finalized, NonSSA>;
+pub type LowLevelILRegularExpression<'a, ReturnType> =
+    LowLevelILExpression<'a, Finalized, NonSSA, ReturnType>;
+pub type LowLevelILRegularExpressionKind<'a> = LowLevelILExpressionKind<'a, Finalized, NonSSA>;
 
-#[derive(Copy, Clone, PartialEq, Eq)]
-pub enum LowLevelILRegister<R: ArchReg> {
-    ArchReg(R),
-    // TODO: Might want to be changed to TempRegisterId.
-    // TODO: If we do that then we would need to get rid of `Register::id()`
-    Temp(u32),
+/// Mutable low-level IL, used when lifting in architectures and modifying IL in workflow activities.
+pub type LowLevelILMutableFunction = LowLevelILFunction<Mutable, NonSSA>;
+pub type LowLevelILMutableExpression<'a, ReturnType> =
+    LowLevelILExpression<'a, Mutable, NonSSA, ReturnType>;
+
+/// SSA Variant of low-level IL, this can never be mutated directly.
+pub type LowLevelILSSAFunction = LowLevelILFunction<Finalized, SSA>;
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct LowLevelILTempRegister {
+    /// The temporary id for the register, this will **NOT** be the referenced id in the core.
+    ///
+    /// Do not attempt to pass this to the core. Use [`LowLevelILTempRegister::id`] instead.
+    temp_id: RegisterId,
 }
 
-impl<R: ArchReg> LowLevelILRegister<R> {
-    fn id(&self) -> RegisterId {
+impl LowLevelILTempRegister {
+    pub fn new(temp_id: u32) -> Self {
+        Self {
+            temp_id: RegisterId(temp_id),
+        }
+    }
+
+    pub fn from_id(id: RegisterId) -> Option<Self> {
+        match id.is_temporary() {
+            true => {
+                let temp_id = RegisterId(id.0 & 0x7fff_ffff);
+                Some(Self { temp_id })
+            }
+            false => None,
+        }
+    }
+
+    /// The temporary registers core id, with the temporary bit set.
+    pub fn id(&self) -> RegisterId {
+        RegisterId(self.temp_id.0 | 0x8000_0000)
+    }
+}
+
+impl fmt::Debug for LowLevelILTempRegister {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "temp{}", self.temp_id)
+    }
+}
+
+impl TryFrom<RegisterId> for LowLevelILTempRegister {
+    type Error = ();
+
+    fn try_from(value: RegisterId) -> Result<Self, Self::Error> {
+        Self::from_id(value).ok_or(())
+    }
+}
+
+impl From<u32> for LowLevelILTempRegister {
+    fn from(value: u32) -> Self {
+        Self::new(value)
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum LowLevelILRegisterKind<R: ArchReg> {
+    Arch(R),
+    Temp(LowLevelILTempRegister),
+}
+
+impl<R: ArchReg> LowLevelILRegisterKind<R> {
+    pub fn from_raw(arch: &impl Architecture<Register = R>, val: RegisterId) -> Option<Self> {
+        match val.is_temporary() {
+            true => {
+                let temp_reg = LowLevelILTempRegister::from_id(val)?;
+                Some(LowLevelILRegisterKind::Temp(temp_reg))
+            }
+            false => {
+                let arch_reg = arch.register_from_id(val)?;
+                Some(LowLevelILRegisterKind::Arch(arch_reg))
+            }
+        }
+    }
+
+    pub fn from_temp(temp: impl Into<LowLevelILTempRegister>) -> Self {
+        LowLevelILRegisterKind::Temp(temp.into())
+    }
+
+    pub fn id(&self) -> RegisterId {
         match *self {
-            LowLevelILRegister::ArchReg(ref r) => r.id(),
-            LowLevelILRegister::Temp(id) => RegisterId(0x8000_0000 | id),
+            LowLevelILRegisterKind::Arch(ref r) => r.id(),
+            LowLevelILRegisterKind::Temp(temp) => temp.id(),
+        }
+    }
+
+    pub fn name(&self) -> Cow<str> {
+        match *self {
+            LowLevelILRegisterKind::Arch(ref r) => r.name(),
+            LowLevelILRegisterKind::Temp(temp) => Cow::Owned(format!("temp{}", temp.temp_id)),
         }
     }
 }
 
-impl<R: ArchReg> fmt::Debug for LowLevelILRegister<R> {
+impl<R: ArchReg> fmt::Debug for LowLevelILRegisterKind<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            LowLevelILRegister::ArchReg(ref r) => write!(f, "{}", r.name().as_ref()),
-            LowLevelILRegister::Temp(id) => write!(f, "temp{}", id),
+            LowLevelILRegisterKind::Arch(ref r) => r.fmt(f),
+            LowLevelILRegisterKind::Temp(id) => id.fmt(f),
+        }
+    }
+}
+
+impl From<LowLevelILTempRegister> for LowLevelILRegisterKind<CoreRegister> {
+    fn from(reg: LowLevelILTempRegister) -> Self {
+        LowLevelILRegisterKind::Temp(reg)
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum LowLevelILSSARegisterKind<R: ArchReg> {
+    Full {
+        kind: LowLevelILRegisterKind<R>,
+        version: u32,
+    },
+    Partial {
+        full_reg: CoreRegister,
+        partial_reg: CoreRegister,
+        version: u32,
+    },
+}
+
+impl<R: ArchReg> LowLevelILSSARegisterKind<R> {
+    pub fn new_full(kind: LowLevelILRegisterKind<R>, version: u32) -> Self {
+        Self::Full { kind, version }
+    }
+
+    pub fn new_partial(full_reg: CoreRegister, partial_reg: CoreRegister, version: u32) -> Self {
+        Self::Partial {
+            full_reg,
+            partial_reg,
+            version,
+        }
+    }
+
+    pub fn version(&self) -> u32 {
+        match *self {
+            LowLevelILSSARegisterKind::Full { version, .. }
+            | LowLevelILSSARegisterKind::Partial { version, .. } => version,
         }
     }
 }
 
 #[derive(Copy, Clone, Debug)]
-pub enum LowLevelILSSARegister<R: ArchReg> {
-    Full(LowLevelILRegister<R>, u32), // no such thing as partial access to a temp register, I think
-    Partial(R, u32, R),               // partial accesses only possible for arch registers, I think
+pub struct LowLevelILSSAFlag<F: Flag> {
+    pub flag: F,
+    pub version: u32,
 }
 
-impl<R: ArchReg> LowLevelILSSARegister<R> {
-    pub fn version(&self) -> u32 {
-        match *self {
-            LowLevelILSSARegister::Full(_, ver) | LowLevelILSSARegister::Partial(_, ver, _) => ver,
-        }
+impl<F: Flag> LowLevelILSSAFlag<F> {
+    pub fn new(flag: F, version: u32) -> Self {
+        Self { flag, version }
     }
 }
 

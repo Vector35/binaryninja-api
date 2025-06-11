@@ -1,104 +1,101 @@
-//
-// Created by kat on 8/15/24.
-//
-
-#include <sharedcacheapi.h>
+#include <QHeaderView>
+#include <QItemDelegate>
+#include <QPainter>
+#include <QSortFilterProxyModel>
+#include <QStandardItemModel>
+#include <QStyledItemDelegate>
+#include <QTableView>
 #include <binaryninjaapi.h>
+#include <progresstask.h>
+#include <sharedcacheapi.h>
+#include "filter.h"
+#include "symboltable.h"
+#include "ui/fontsettings.h"
+#include "uicontext.h"
 #include "uitypes.h"
 #include "viewframe.h"
-#include "animation.h"
-#include "uicontext.h"
-
-#include <QTableView>
-#include <QStandardItemModel>
-#include <QSortFilterProxyModel>
-#include <QHeaderView>
-#include "filter.h"
 
 #ifndef BINARYNINJA_DSCTRIAGE_H
 #define BINARYNINJA_DSCTRIAGE_H
 
+using namespace BinaryNinja;
+using namespace SharedCacheAPI;
 
-class DSCCacheBlocksView : public QWidget
+
+class AddressColorDelegate : public QStyledItemDelegate
 {
-	Q_OBJECT
-
-	BinaryViewRef m_data;
-	Ref<SharedCacheAPI::SharedCache> m_cache;
-
-	uint64_t m_backingCacheCount = 0;
-	std::vector<SharedCacheAPI::BackingCache> m_backingCaches;
-
-	std::atomic<BNDSCViewLoadProgress> m_currentProgress;
-	std::vector<uint64_t> m_blockSizeRatios;
-	std::vector<uint64_t> m_targetBlockSizeForAnimation;
-	uint64_t m_averageBlockSizeForAnimationInterp = 0;
-	std::vector<uint64_t> m_blockLuminance;
-	Animation* m_blockWaveAnimation;
-	Animation* m_blockExpandAnimation;
-	Animation* m_blockAutoselectAnimation;
-
-	int m_selectedBlock = -1;
-
-	int getBlockIndexAtPosition(const QPoint& clickPosition);
-
-	void blockSelected(int index);
-
 public:
-	DSCCacheBlocksView(QWidget* parent, BinaryViewRef data, Ref<SharedCacheAPI::SharedCache> cache);
-	virtual ~DSCCacheBlocksView() override;
+	explicit AddressColorDelegate(QObject* parent = nullptr) : QStyledItemDelegate(parent) {}
 
-protected:
-	void mousePressEvent(QMouseEvent* event) override;
-	void mouseReleaseEvent(QMouseEvent* event) override;
-	void mouseDoubleClickEvent(QMouseEvent* event) override;
-	void mouseMoveEvent(QMouseEvent* event) override;
-	void keyPressEvent(QKeyEvent* event) override;
-	void keyReleaseEvent(QKeyEvent* event) override;
-	void focusInEvent(QFocusEvent* event) override;
-	void focusOutEvent(QFocusEvent* event) override;
-	void enterEvent(QEnterEvent* event) override;
-	void leaveEvent(QEvent* event) override;
-	void paintEvent(QPaintEvent* event) override;
-	void resizeEvent(QResizeEvent* event) override;
+	void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
+	{
+		QStyleOptionViewItem opt = option;
+		initStyleOption(&opt, index);
 
-public:
-	QSize sizeHint() const override;
-	QSize minimumSizeHint() const override;
+		opt.font = getMonospaceFont(qobject_cast<QWidget*>(parent()));
+		opt.palette.setColor(QPalette::Text, getThemeColor(BNThemeColor::AddressColor));
+		opt.displayAlignment = Qt::AlignCenter | Qt::AlignVCenter;
 
-signals:
-	void loadDone();
-	void selectionChanged(const SharedCacheAPI::BackingCache& index, bool automatic);
+		QStyledItemDelegate::paint(painter, opt, index);
+	}
 };
 
 
-class CollapsibleSection : public QWidget
+class LoadedDelegate : public QItemDelegate
 {
-	Q_OBJECT
-
-	QLabel* m_titleLabel;
-	QLabel* m_subtitleRightLabel;
-	QPushButton* m_collapseButton;
-
-	bool m_collapsed = true;
-
-	Animation* m_onContentAddedAnimation;
-
-	QWidget* m_contentWidgetContainer;
-	QWidget* m_contentWidget;
-
-protected:
-	QSize sizeHint() const override;
+Q_OBJECT
 
 public:
-	CollapsibleSection(QWidget* parent);
-	void setTitle(const QString& title);
-	void setSubtitleRight(const QString& subtitle);
+	explicit LoadedDelegate(QObject* parent = nullptr) : QItemDelegate(parent) {}
 
-	void setContentWidget(QWidget* contentWidget);
+	void paint(QPainter *painter, const QStyleOptionViewItem &option,
+			   const QModelIndex &index) const override
+	{
+		if (!index.isValid())
+			return;
 
-	void setCollapsed(bool collapsed, bool animated = true);
-	bool isCollapsed() const { return m_collapsed; }
+		painter->save();
+
+		// Highlight if the item is selected
+		if (option.state & QStyle::State_Selected)
+			painter->fillRect(option.rect, option.palette.highlight());
+
+		// "1" is the indicator that its loaded.
+		if (index.data(Qt::DisplayRole).toString() == "1")
+		{
+			QPixmap loadedIcon;
+			pixmapForBWMaskIcon(":/icons/images/check.png", &loadedIcon, SidebarHeaderTextColor);
+			if (!loadedIcon.isNull())
+			{
+				QSize pixmapSize(20, 20);
+				QPixmap scaledPixmap = loadedIcon.scaled(pixmapSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+
+				// Calculate the rectangle for centering the pixmap
+				int x = option.rect.x() + (option.rect.width() - scaledPixmap.width()) / 2; // Center horizontally
+				int y = option.rect.y() + (option.rect.height() - scaledPixmap.height()) / 2; // Center vertically
+				QRect iconRect(x, y, scaledPixmap.width(), scaledPixmap.height());
+
+				// Draw the pixmap
+				painter->drawPixmap(iconRect, scaledPixmap);
+			}
+		}
+
+		painter->restore();
+	}
+
+	QSize sizeHint(const QStyleOptionViewItem &option,
+				   const QModelIndex &index) const override
+	{
+		Q_UNUSED(option);
+		Q_UNUSED(index);
+		return {50, 24};
+	}
+
+	void setEditorData(QWidget *editor, const QModelIndex &index) const override
+	{
+		Q_UNUSED(editor);
+		Q_UNUSED(index);
+	}
 };
 
 
@@ -108,12 +105,13 @@ class FilterableTableView : public QTableView, public FilterTarget {
 	bool m_filterByHiding;
 
 public:
-	FilterableTableView(QWidget* parent = nullptr, bool filterByHiding = true)
+	explicit FilterableTableView(QWidget* parent = nullptr, bool filterByHiding = true)
 		: QTableView(parent), m_filterByHiding(filterByHiding) {
 		viewport()->installEventFilter(this);
+		setFont(getMonospaceFont(parent));
 	}
 
-	~FilterableTableView() override {}
+	~FilterableTableView() override = default;
 
 	void setFilter(const std::string& filter) override {
 		if (!m_filterByHiding)
@@ -138,7 +136,10 @@ public:
 
 	void scrollToFirstItem() override {
 		if (model()->rowCount() > 0) {
-			scrollTo(model()->index(0, 0));
+			QModelIndex top = indexAt(rect().topLeft());
+			if (top.isValid()) {
+				scrollTo(top);
+			}
 		}
 	}
 
@@ -151,134 +152,66 @@ public:
 
 	void selectFirstItem() override {
 		if (model()->rowCount() > 0) {
-			QModelIndex firstIndex = model()->index(0, 0);
-			selectionModel()->select(firstIndex, QItemSelectionModel::ClearAndSelect);
+			QModelIndex top = indexAt(rect().topLeft());
+			if (top.isValid()) {
+				selectionModel()->select(top, QItemSelectionModel::ClearAndSelect);
+				setCurrentIndex(top);
+			}
 		}
 	}
 
 	void activateFirstItem() override {
 		if (model()->rowCount() > 0) {
-			QModelIndex firstIndex = model()->index(0, 0);
-			setCurrentIndex(firstIndex);
-			emit activated(firstIndex);
-		}
-	}
-
-	bool eventFilter(QObject* obj, QEvent* event) override {
-		if (event->type() == QEvent::KeyPress) {
-			QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
-			if (keyEvent->key() == Qt::Key_Escape) {
-				clearSelection();
-				return true;
-			}
-			if (keyEvent->key() == Qt::Key_Enter || keyEvent->key() == Qt::Key_Return) {
-				emit activated(currentIndex());
-				return true;
+			QModelIndex topLeft = indexAt(rect().topLeft());
+			if (topLeft.isValid()) {
+				setCurrentIndex(topLeft);
+				emit activated(topLeft);
 			}
 		}
-		return QTableView::eventFilter(obj, event);
 	}
 
 signals:
 	void filterTextChanged(const QString& text);
 };
 
-class SymbolTableView;
 
-class SymbolTableModel : public QAbstractTableModel {
-	Q_OBJECT
-
-	SymbolTableView* m_parent;
-	std::string m_filter;
-	std::vector<SharedCacheAPI::DSCSymbol> m_symbols;
-
-public:
-	explicit SymbolTableModel(SymbolTableView* parent);
-
-	int rowCount(const QModelIndex& parent = QModelIndex()) const override;
-	int columnCount(const QModelIndex& parent = QModelIndex()) const override;
-	QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
-	QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
-
-	void updateSymbols();
-
-	void setFilter(std::string text);
-
-	const SharedCacheAPI::DSCSymbol& symbolAt(int row) const;
-};
-
-
-class SymbolTableView : public QTableView, public FilterTarget
-{
-	Q_OBJECT
-	friend class SymbolTableModel;
-
-	std::vector<SharedCacheAPI::DSCSymbol> m_symbols;
-
-	SymbolTableModel* m_model;
-
-public:
-	SymbolTableView(QWidget* parent, Ref<SharedCacheAPI::SharedCache> cache);
-	virtual ~SymbolTableView() override;
-
-	void scrollToFirstItem() override {
-		if (model()->rowCount() > 0) {
-			scrollTo(model()->index(0, 0));
-		}
-	}
-
-	void scrollToCurrentItem() override {
-		QModelIndex currentIndex = selectionModel()->currentIndex();
-		if (currentIndex.isValid()) {
-			scrollTo(currentIndex);
-		}
-	}
-
-	void selectFirstItem() override {
-		if (model()->rowCount() > 0) {
-			QModelIndex firstIndex = model()->index(0, 0);
-			selectionModel()->select(firstIndex, QItemSelectionModel::ClearAndSelect);
-		}
-	}
-
-	void activateFirstItem() override {
-		if (model()->rowCount() > 0) {
-			QModelIndex firstIndex = model()->index(0, 0);
-			setCurrentIndex(firstIndex);
-			emit activated(firstIndex);
-		}
-	}
-
-	SharedCacheAPI::DSCSymbol getSymbolAtRow(int row) const
-	{
-		return m_model->symbolAt(row);
-	}
-
-	void setFilter(const std::string& filter) override;
-};
-
-
-class DSCTriageView : public QWidget, public View
+class DSCTriageView : public QWidget, public View, public UIContextNotification
 {
 	BinaryViewRef m_data;
 	QVBoxLayout* m_layout;
-	Ref<SharedCacheAPI::SharedCache> m_cache;
 
 	SplitTabWidget* m_triageTabs;
 	DockableTabCollection* m_triageCollection;
 
-	SplitTabWidget* m_bottomRegionTabs;
-	DockableTabCollection* m_bottomRegionCollection;
+	FilterableTableView* m_imageTable;
+	QStandardItemModel* m_imageModel;
 
-	std::vector<SharedCacheAPI::SharedCacheMachOHeader> m_headers;
+	SymbolTableView* m_symbolTable;
+
+	FilterableTableView* m_mappingTable;
+	QStandardItemModel* m_mappingModel;
+
+	QStandardItemModel* m_regionModel;
 
 public:
 	DSCTriageView(QWidget* parent, BinaryViewRef data);
+	~DSCTriageView() override;
 	BinaryViewRef getData() override;
 	void setSelectionOffsets(BNAddressRange range) override {};
 	QFont getFont() override;
 	bool navigate(uint64_t offset) override;
 	uint64_t getCurrentOffset() override;
+	SelectionInfoForXref getSelectionForXref() override;
+
+	void OnAfterOpenFile(UIContext* context, FileContext* file, ViewFrame* frame) override;
+	void RefreshData();
+
+private:
+	void loadImagesWithAddr(const std::vector<uint64_t>& addresses, bool includeDependencies = false);
+	void setImageLoaded(uint64_t imageHeaderAddr);
+	QWidget* initImageTable();
+	void initSymbolTable();
+	void initCacheInfoTables();
 };
 
 
@@ -290,6 +223,5 @@ public:
 	QWidget* create(BinaryViewRef data, ViewFrame* viewFrame) override;
 	static void Register();
 };
-
 
 #endif	// BINARYNINJA_DSCTRIAGE_H

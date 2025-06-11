@@ -1,4 +1,4 @@
-// Copyright (c) 2019 Vector 35 Inc
+// Copyright (c) 2019-2025 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -818,6 +818,15 @@ vector<InstructionTextToken> HighLevelILTokenEmitter::GetCurrentTokens() const
 	size_t count = 0;
     BNInstructionTextToken* tokens = BNHighLevelILTokenEmitterGetCurrentTokens(m_object, &count);
 	return InstructionTextToken::ConvertAndFreeInstructionTextTokenList(tokens, count);
+}
+
+
+void HighLevelILTokenEmitter::SetCurrentTokens(const std::vector<InstructionTextToken>& newTokens)
+{
+	size_t count;
+	auto* tokens = AllocAPIObjectList<InstructionTextToken>(newTokens, &count);
+	BNHighLevelILTokenEmitterSetCurrentTokens(m_object, tokens, count);
+	FreeAPIObjectList<InstructionTextToken>(tokens, count);
 }
 
 

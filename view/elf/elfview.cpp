@@ -54,7 +54,7 @@ ElfView::ElfView(BinaryView* data, bool parseOnly): BinaryView("ELF", data->GetF
 	CreateLogger("BinaryView");
 	m_logger = CreateLogger("BinaryView.ElfView");
 	m_elf32 = m_ident.fileClass == 1;
-	m_addressSize = (m_ident.fileClass == 1) ? 4 : 8;
+	m_addressSize = (m_ident.fileClass == 1 || (m_plat && m_plat->GetName() == "linux-32")) ? 4 : 8;
 	m_endian = endian;
 	m_relocatable = m_commonHeader.type == ET_DYN || m_commonHeader.type == ET_REL;
 	m_objectFile = m_commonHeader.type == ET_REL;
@@ -469,6 +469,7 @@ bool ElfView::Init()
 	m_extractMangledTypes = viewSettings->Get<bool>("analysis.extractTypesFromMangledNames", this);
 	m_simplifyTemplates = viewSettings->Get<bool>("analysis.types.templateSimplifier", this);
 
+	bool platformSetByUser = false;
 	Ref<Settings> settings = GetLoadSettings(GetTypeName());
 	if (settings)
 	{
@@ -477,11 +478,13 @@ bool ElfView::Init()
 
 		if (settings->Contains("loader.platform"))
 		{
-			Ref<Platform> platformOverride = Platform::GetByName(settings->Get<string>("loader.platform", this));
+			BNSettingsScope scope = SettingsAutoScope;
+			Ref<Platform> platformOverride = Platform::GetByName(settings->Get<string>("loader.platform", this, &scope));
 			if (platformOverride)
 			{
 				m_plat = platformOverride;
 				m_arch = m_plat->GetArchitecture();
+				platformSetByUser = (scope == SettingsResourceScope);
 			}
 		}
 	}
@@ -752,8 +755,9 @@ bool ElfView::Init()
 	GetParentView()->SetDefaultArchitecture(entryPointArch);
 
 	Ref<Platform> platform = m_plat ? m_plat : g_elfViewType->GetPlatform(m_ident.os, m_arch);
-	if (platform && (entryPointArch != m_arch))
+	if (platform && (entryPointArch != m_arch) && !platformSetByUser)
 		platform = platform->GetRelatedPlatform(entryPointArch);
+
 	if (!platform)
 		platform = entryPointArch->GetStandalonePlatform();
 
@@ -2527,8 +2531,7 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 		{
 			QualifiedName demangledName;
 			Ref<Type> demangledType;
-			bool simplify = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", this);
-			if (DemangleGeneric(m_arch, rawName, demangledType, demangledName, this, simplify))
+			if (DemangleGeneric(m_arch, rawName, demangledType, demangledName, this, m_simplifyTemplates))
 			{
 				shortName = demangledName.GetString();
 				fullName = shortName;
@@ -2700,7 +2703,9 @@ void ElfView::ParseMiniDebugInfo()
 		return;
 	}
 
-	Ref<BinaryView> debugBv = Load(debugElf, false);
+	// Load debug bv at same address as this bv
+	string debugBvOptions = fmt::format("{{\"loader.imageBase\": {}}}", GetStart());
+	Ref<BinaryView> debugBv = Load(debugElf, false, debugBvOptions);
 	if (!debugBv)
 	{
 		m_logger->LogError("Invalid .gnu_debugdata contents: Failed to create BinaryView");
@@ -2712,7 +2717,7 @@ void ElfView::ParseMiniDebugInfo()
 		DefineElfSymbol(
 			symbol->GetType(),
 			symbol->GetRawName(),
-			GetStart() + symbol->GetAddress(),
+			symbol->GetAddress(),
 			false,
 			symbol->GetBinding()
 		);
@@ -2867,16 +2872,6 @@ uint64_t ElfViewType::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonH
 	commonHeader.type = reader.Read16();
 	commonHeader.arch = reader.Read16();
 	commonHeader.version = reader.Read32();
-
-	// Promote the file class to 64-bit
-	// TODO potentially add a setting to allow the user to override header interpretation
-	if ((commonHeader.type == ET_EXEC) && (commonHeader.arch == EM_X86_64) && (ident.fileClass == 1))
-	{
-		ident.fileClass = 2;
-		m_logger->LogWarn(
-			"Executable file claims to be 32-bit but specifies a 64-bit architecture. It is likely malformed or "
-			"malicious. Treating it as 64-bit.");
-	}
 
 	bool is32bit = ident.fileClass == 1;
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2024 Vector 35 Inc
+// Copyright (c) 2015-2025 Vector 35 Inc
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -27,7 +27,7 @@ using namespace std;
 namespace BinaryNinja {
 	struct UpdateProgress
 	{
-		function<bool(size_t progress, size_t total)> func;
+		ProgressFunction func;
 
 		static bool UpdateCallback(void* ctxt, size_t progress, size_t total)
 		{
@@ -90,7 +90,7 @@ BNUpdateResult UpdateChannel::UpdateToVersion(const string& version)
 
 
 BNUpdateResult UpdateChannel::UpdateToVersion(
-    const string& version, const function<bool(size_t progress, size_t total)>& progress)
+    const string& version, const ProgressFunction& progress)
 {
 	UpdateProgress up;
 	up.func = progress;
@@ -116,7 +116,7 @@ BNUpdateResult UpdateChannel::UpdateToLatestVersion()
 }
 
 
-BNUpdateResult UpdateChannel::UpdateToLatestVersion(const function<bool(size_t progress, size_t total)>& progress)
+BNUpdateResult UpdateChannel::UpdateToLatestVersion(const ProgressFunction& progress)
 {
 	UpdateProgress up;
 	up.func = progress;

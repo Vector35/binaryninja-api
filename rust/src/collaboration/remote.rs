@@ -1,8 +1,8 @@
-use binaryninjacore_sys::*;
-use std::ffi::{c_char, c_void};
-use std::ptr::NonNull;
-
 use super::{sync, GroupId, RemoteGroup, RemoteProject, RemoteUser};
+use binaryninjacore_sys::*;
+use std::env::VarError;
+use std::ffi::c_void;
+use std::ptr::NonNull;
 
 use crate::binary_view::BinaryView;
 use crate::database::Database;
@@ -10,7 +10,9 @@ use crate::enterprise;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::Project;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnStrCompatible, BnString};
+use crate::secrets_provider::CoreSecretsProvider;
+use crate::settings::Settings;
+use crate::string::{BnString, IntoCStr};
 
 #[repr(transparent)]
 pub struct Remote {
@@ -27,15 +29,10 @@ impl Remote {
     }
 
     /// Create a Remote and add it to the list of known remotes (saved to Settings)
-    pub fn new<N: BnStrCompatible, A: BnStrCompatible>(name: N, address: A) -> Ref<Self> {
-        let name = name.into_bytes_with_nul();
-        let address = address.into_bytes_with_nul();
-        let result = unsafe {
-            BNCollaborationCreateRemote(
-                name.as_ref().as_ptr() as *const c_char,
-                address.as_ref().as_ptr() as *const c_char,
-            )
-        };
+    pub fn new(name: &str, address: &str) -> Ref<Self> {
+        let name = name.to_cstr();
+        let address = address.to_cstr();
+        let result = unsafe { BNCollaborationCreateRemote(name.as_ptr(), address.as_ptr()) };
         unsafe { Self::ref_from_raw(NonNull::new(result).unwrap()) }
     }
 
@@ -65,17 +62,17 @@ impl Remote {
     }
 
     /// Gets the name of the remote.
-    pub fn name(&self) -> BnString {
+    pub fn name(&self) -> String {
         let result = unsafe { BNRemoteGetName(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Gets the address of the remote.
-    pub fn address(&self) -> BnString {
+    pub fn address(&self) -> String {
         let result = unsafe { BNRemoteGetAddress(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Checks if the remote is connected.
@@ -84,17 +81,17 @@ impl Remote {
     }
 
     /// Gets the username used to connect to the remote.
-    pub fn username(&self) -> BnString {
+    pub fn username(&self) -> String {
         let result = unsafe { BNRemoteGetUsername(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Gets the token used to connect to the remote.
-    pub fn token(&self) -> BnString {
+    pub fn token(&self) -> String {
         let result = unsafe { BNRemoteGetToken(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        unsafe { BnString::into_string(result) }
     }
 
     /// Gets the server version. If metadata has not been pulled, it will be pulled upon calling this.
@@ -168,24 +165,20 @@ impl Remote {
     }
 
     /// Requests an authentication token using a username and password.
-    pub fn request_authentication_token<U: BnStrCompatible, P: BnStrCompatible>(
-        &self,
-        username: U,
-        password: P,
-    ) -> Option<BnString> {
-        let username = username.into_bytes_with_nul();
-        let password = password.into_bytes_with_nul();
+    pub fn request_authentication_token(&self, username: &str, password: &str) -> Option<String> {
+        let username = username.to_cstr();
+        let password = password.to_cstr();
         let token = unsafe {
             BNRemoteRequestAuthenticationToken(
                 self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const c_char,
-                password.as_ref().as_ptr() as *const c_char,
+                username.as_ptr(),
+                password.as_ptr(),
             )
         };
         if token.is_null() {
             None
         } else {
-            Some(unsafe { BnString::from_raw(token) })
+            Some(unsafe { BnString::into_string(token) })
         }
     }
 
@@ -194,20 +187,22 @@ impl Remote {
     /// Use [Remote::connect_with_opts] if you cannot otherwise automatically connect using enterprise.
     ///
     /// WARNING: This is currently **not** thread safe, if you try and connect/disconnect to a remote on
-    /// multiple threads you will be subject to race conditions. To avoid this wrap the [`Remote`] in
-    /// a synchronization primitive, and pass that to your threads. Or don't try and connect on multiple threads.
+    /// multiple threads, you will be subject to race conditions. To avoid this, wrap the [`Remote`] in
+    /// a synchronization primitive and pass that to your threads. Or don't try and connect on multiple threads.
     pub fn connect(&self) -> Result<(), ()> {
-        // TODO: implement SecretsProvider
         if self.is_enterprise()? && enterprise::is_server_authenticated() {
             self.connect_with_opts(ConnectionOptions::from_enterprise()?)
         } else {
-            // TODO: Make this error instead.
-            let username =
-                std::env::var("BN_ENTERPRISE_USERNAME").expect("No username for connection!");
-            let password =
-                std::env::var("BN_ENTERPRISE_PASSWORD").expect("No password for connection!");
-            let connection_opts = ConnectionOptions::new_with_password(username, password);
-            self.connect_with_opts(connection_opts)
+            // Try to load from env vars.
+            match ConnectionOptions::from_env_variables() {
+                Ok(connection_opts) => self.connect_with_opts(connection_opts),
+                Err(_) => {
+                    // Try to load from the enterprise secrets provider.
+                    let secrets_connection_opts =
+                        ConnectionOptions::from_secrets_provider(&self.address())?;
+                    self.connect_with_opts(secrets_connection_opts)
+                }
+            }
         }
     }
 
@@ -224,16 +219,15 @@ impl Remote {
                 let password = options
                     .password
                     .expect("No password or token for connection!");
-                let token = self.request_authentication_token(&options.username, password);
+                let token = self.request_authentication_token(&options.username, &password);
                 // TODO: Error if None.
                 token.unwrap().to_string()
             }
         };
-        let username = options.username.into_bytes_with_nul();
-        let username_ptr = username.as_ptr() as *const c_char;
-        let token = token.into_bytes_with_nul();
-        let token_ptr = token.as_ptr() as *const c_char;
-        let success = unsafe { BNRemoteConnect(self.handle.as_ptr(), username_ptr, token_ptr) };
+        let username = options.username.to_cstr();
+        let token = token.to_cstr();
+        let success =
+            unsafe { BNRemoteConnect(self.handle.as_ptr(), username.as_ptr(), token.as_ptr()) };
         success.then_some(()).ok_or(())
     }
 
@@ -281,39 +275,26 @@ impl Remote {
     /// Gets a specific project in the Remote by its id.
     ///
     /// NOTE: If projects have not been pulled, they will be pulled upon calling this.
-    pub fn get_project_by_id<S: BnStrCompatible>(
-        &self,
-        id: S,
-    ) -> Result<Option<Ref<RemoteProject>>, ()> {
+    pub fn get_project_by_id(&self, id: &str) -> Result<Option<Ref<RemoteProject>>, ()> {
         if !self.has_pulled_projects() {
             self.pull_projects()?;
         }
 
-        let id = id.into_bytes_with_nul();
-        let value = unsafe {
-            BNRemoteGetProjectById(self.handle.as_ptr(), id.as_ref().as_ptr() as *const c_char)
-        };
+        let id = id.to_cstr();
+        let value = unsafe { BNRemoteGetProjectById(self.handle.as_ptr(), id.as_ptr()) };
         Ok(NonNull::new(value).map(|handle| unsafe { RemoteProject::ref_from_raw(handle) }))
     }
 
     /// Gets a specific project in the Remote by its name.
     ///
     /// NOTE: If projects have not been pulled, they will be pulled upon calling this.
-    pub fn get_project_by_name<S: BnStrCompatible>(
-        &self,
-        name: S,
-    ) -> Result<Option<Ref<RemoteProject>>, ()> {
+    pub fn get_project_by_name(&self, name: &str) -> Result<Option<Ref<RemoteProject>>, ()> {
         if !self.has_pulled_projects() {
             self.pull_projects()?;
         }
 
-        let name = name.into_bytes_with_nul();
-        let value = unsafe {
-            BNRemoteGetProjectByName(
-                self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let name = name.to_cstr();
+        let value = unsafe { BNRemoteGetProjectByName(self.handle.as_ptr(), name.as_ptr()) };
         Ok(NonNull::new(value).map(|handle| unsafe { RemoteProject::ref_from_raw(handle) }))
     }
 
@@ -347,25 +328,17 @@ impl Remote {
     ///
     /// * `name` - Project name
     /// * `description` - Project description
-    pub fn create_project<N: BnStrCompatible, D: BnStrCompatible>(
-        &self,
-        name: N,
-        description: D,
-    ) -> Result<Ref<RemoteProject>, ()> {
+    pub fn create_project(&self, name: &str, description: &str) -> Result<Ref<RemoteProject>, ()> {
         // TODO: Do we want this?
         // TODO: If you have not yet pulled projects you will have never filled the map you will be placing your
         // TODO: New project in.
         if !self.has_pulled_projects() {
             self.pull_projects()?;
         }
-        let name = name.into_bytes_with_nul();
-        let description = description.into_bytes_with_nul();
+        let name = name.to_cstr();
+        let description = description.to_cstr();
         let value = unsafe {
-            BNRemoteCreateProject(
-                self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const c_char,
-                description.as_ref().as_ptr() as *const c_char,
-            )
+            BNRemoteCreateProject(self.handle.as_ptr(), name.as_ptr(), description.as_ptr())
         };
         NonNull::new(value)
             .map(|handle| unsafe { RemoteProject::ref_from_raw(handle) })
@@ -400,24 +373,16 @@ impl Remote {
     ///
     /// * `project` - Project object which has been updated
     /// * `extra_fields` - Extra HTTP fields to send with the update
-    pub fn push_project<I, K, V>(&self, project: &RemoteProject, extra_fields: I) -> Result<(), ()>
+    pub fn push_project<I>(&self, project: &RemoteProject, extra_fields: I) -> Result<(), ()>
     where
-        I: Iterator<Item = (K, V)>,
-        K: BnStrCompatible,
-        V: BnStrCompatible,
+        I: IntoIterator<Item = (String, String)>,
     {
         let (keys, values): (Vec<_>, Vec<_>) = extra_fields
             .into_iter()
-            .map(|(k, v)| (k.into_bytes_with_nul(), v.into_bytes_with_nul()))
+            .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
             .unzip();
-        let mut keys_raw = keys
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect::<Vec<_>>();
-        let mut values_raw = values
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect::<Vec<_>>();
+        let mut keys_raw = keys.iter().map(|s| s.as_ptr()).collect::<Vec<_>>();
+        let mut values_raw = values.iter().map(|s| s.as_ptr()).collect::<Vec<_>>();
 
         let success = unsafe {
             BNRemotePushProject(
@@ -472,21 +437,13 @@ impl Remote {
     ///
     /// If groups have not been pulled, they will be pulled upon calling this.
     /// This function is only available to accounts with admin status on the Remote.
-    pub fn get_group_by_name<S: BnStrCompatible>(
-        &self,
-        name: S,
-    ) -> Result<Option<Ref<RemoteGroup>>, ()> {
+    pub fn get_group_by_name(&self, name: &str) -> Result<Option<Ref<RemoteGroup>>, ()> {
         if !self.has_pulled_groups() {
             self.pull_groups()?;
         }
 
-        let name = name.into_bytes_with_nul();
-        let value = unsafe {
-            BNRemoteGetGroupByName(
-                self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let name = name.to_cstr();
+        let value = unsafe { BNRemoteGetGroupByName(self.handle.as_ptr(), name.as_ptr()) };
 
         Ok(NonNull::new(value).map(|handle| unsafe { RemoteGroup::ref_from_raw(handle) }))
     }
@@ -496,11 +453,8 @@ impl Remote {
     /// # Arguments
     ///
     /// * `prefix` - Prefix of name for groups
-    pub fn search_groups<S: BnStrCompatible>(
-        &self,
-        prefix: S,
-    ) -> Result<(Array<GroupId>, Array<BnString>), ()> {
-        let prefix = prefix.into_bytes_with_nul();
+    pub fn search_groups(&self, prefix: &str) -> Result<(Array<GroupId>, Array<BnString>), ()> {
+        let prefix = prefix.to_cstr();
         let mut count = 0;
         let mut group_ids = std::ptr::null_mut();
         let mut group_names = std::ptr::null_mut();
@@ -508,7 +462,7 @@ impl Remote {
         let success = unsafe {
             BNRemoteSearchGroups(
                 self.handle.as_ptr(),
-                prefix.as_ref().as_ptr() as *const c_char,
+                prefix.as_ptr(),
                 &mut group_ids,
                 &mut group_names,
                 &mut count,
@@ -558,26 +512,18 @@ impl Remote {
     ///
     /// * `name` - Group name
     /// * `usernames` - List of usernames of users in the group
-    pub fn create_group<N, I>(&self, name: N, usernames: I) -> Result<Ref<RemoteGroup>, ()>
+    pub fn create_group<I>(&self, name: &str, usernames: I) -> Result<Ref<RemoteGroup>, ()>
     where
-        N: BnStrCompatible,
-        I: IntoIterator,
-        I::Item: BnStrCompatible,
+        I: IntoIterator<Item = String>,
     {
-        let name = name.into_bytes_with_nul();
-        let usernames: Vec<_> = usernames
-            .into_iter()
-            .map(|s| s.into_bytes_with_nul())
-            .collect();
-        let mut username_ptrs: Vec<_> = usernames
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect();
+        let name = name.to_cstr();
+        let usernames: Vec<_> = usernames.into_iter().map(|s| s.to_cstr()).collect();
+        let mut username_ptrs: Vec<_> = usernames.iter().map(|s| s.as_ptr()).collect();
 
         let value = unsafe {
             BNRemoteCreateGroup(
                 self.handle.as_ptr(),
-                name.as_ref().as_ptr() as *const c_char,
+                name.as_ptr(),
                 username_ptrs.as_mut_ptr(),
                 username_ptrs.len(),
             )
@@ -594,24 +540,16 @@ impl Remote {
     ///
     /// * `group` - Group object which has been updated
     /// * `extra_fields` - Extra HTTP fields to send with the update
-    pub fn push_group<I, K, V>(&self, group: &RemoteGroup, extra_fields: I) -> Result<(), ()>
+    pub fn push_group<I>(&self, group: &RemoteGroup, extra_fields: I) -> Result<(), ()>
     where
-        I: IntoIterator<Item = (K, V)>,
-        K: BnStrCompatible,
-        V: BnStrCompatible,
+        I: IntoIterator<Item = (String, String)>,
     {
         let (keys, values): (Vec<_>, Vec<_>) = extra_fields
             .into_iter()
-            .map(|(k, v)| (k.into_bytes_with_nul(), v.into_bytes_with_nul()))
+            .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
             .unzip();
-        let mut keys_raw: Vec<_> = keys
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect();
-        let mut values_raw: Vec<_> = values
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect();
+        let mut keys_raw: Vec<_> = keys.iter().map(|s| s.as_ptr()).collect();
+        let mut values_raw: Vec<_> = values.iter().map(|s| s.as_ptr()).collect();
 
         let success = unsafe {
             BNRemotePushGroup(
@@ -663,14 +601,12 @@ impl Remote {
     /// # Arguments
     ///
     /// * `id` - The identifier of the user to retrieve.
-    pub fn get_user_by_id<S: BnStrCompatible>(&self, id: S) -> Result<Option<Ref<RemoteUser>>, ()> {
+    pub fn get_user_by_id(&self, id: &str) -> Result<Option<Ref<RemoteUser>>, ()> {
         if !self.has_pulled_users() {
             self.pull_users()?;
         }
-        let id = id.into_bytes_with_nul();
-        let value = unsafe {
-            BNRemoteGetUserById(self.handle.as_ptr(), id.as_ref().as_ptr() as *const c_char)
-        };
+        let id = id.to_cstr();
+        let value = unsafe { BNRemoteGetUserById(self.handle.as_ptr(), id.as_ptr()) };
         Ok(NonNull::new(value).map(|handle| unsafe { RemoteUser::ref_from_raw(handle) }))
     }
 
@@ -683,20 +619,12 @@ impl Remote {
     /// # Arguments
     ///
     /// * `username` - The username of the user to retrieve.
-    pub fn get_user_by_username<S: BnStrCompatible>(
-        &self,
-        username: S,
-    ) -> Result<Option<Ref<RemoteUser>>, ()> {
+    pub fn get_user_by_username(&self, username: &str) -> Result<Option<Ref<RemoteUser>>, ()> {
         if !self.has_pulled_users() {
             self.pull_users()?;
         }
-        let username = username.into_bytes_with_nul();
-        let value = unsafe {
-            BNRemoteGetUserByUsername(
-                self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const c_char,
-            )
-        };
+        let username = username.to_cstr();
+        let value = unsafe { BNRemoteGetUserByUsername(self.handle.as_ptr(), username.as_ptr()) };
         Ok(NonNull::new(value).map(|handle| unsafe { RemoteUser::ref_from_raw(handle) }))
     }
 
@@ -718,18 +646,15 @@ impl Remote {
     /// # Arguments
     ///
     /// * `prefix` - The prefix to search for in usernames.
-    pub fn search_users<S: BnStrCompatible>(
-        &self,
-        prefix: S,
-    ) -> Result<(Array<BnString>, Array<BnString>), ()> {
-        let prefix = prefix.into_bytes_with_nul();
+    pub fn search_users(&self, prefix: &str) -> Result<(Array<BnString>, Array<BnString>), ()> {
+        let prefix = prefix.to_cstr();
         let mut count = 0;
         let mut user_ids = std::ptr::null_mut();
         let mut usernames = std::ptr::null_mut();
         let success = unsafe {
             BNRemoteSearchUsers(
                 self.handle.as_ptr(),
-                prefix.as_ref().as_ptr() as *const c_char,
+                prefix.as_ptr(),
                 &mut user_ids,
                 &mut usernames,
                 &mut count,
@@ -783,26 +708,26 @@ impl Remote {
     /// # Arguments
     ///
     /// * Various details about the new user to be created.
-    pub fn create_user<U: BnStrCompatible, E: BnStrCompatible, P: BnStrCompatible>(
+    pub fn create_user(
         &self,
-        username: U,
-        email: E,
+        username: &str,
+        email: &str,
         is_active: bool,
-        password: P,
+        password: &str,
         group_ids: &[u64],
         user_permission_ids: &[u64],
     ) -> Result<Ref<RemoteUser>, ()> {
-        let username = username.into_bytes_with_nul();
-        let email = email.into_bytes_with_nul();
-        let password = password.into_bytes_with_nul();
+        let username = username.to_cstr();
+        let email = email.to_cstr();
+        let password = password.to_cstr();
 
         let value = unsafe {
             BNRemoteCreateUser(
                 self.handle.as_ptr(),
-                username.as_ref().as_ptr() as *const c_char,
-                email.as_ref().as_ptr() as *const c_char,
+                username.as_ptr(),
+                email.as_ptr(),
                 is_active,
-                password.as_ref().as_ptr() as *const c_char,
+                password.as_ptr(),
                 group_ids.as_ptr(),
                 group_ids.len(),
                 user_permission_ids.as_ptr(),
@@ -822,24 +747,16 @@ impl Remote {
     ///
     /// * `user` - Reference to the `RemoteUser` object to push.
     /// * `extra_fields` - Optional extra fields to send with the update.
-    pub fn push_user<I, K, V>(&self, user: &RemoteUser, extra_fields: I) -> Result<(), ()>
+    pub fn push_user<I>(&self, user: &RemoteUser, extra_fields: I) -> Result<(), ()>
     where
-        I: Iterator<Item = (K, V)>,
-        K: BnStrCompatible,
-        V: BnStrCompatible,
+        I: IntoIterator<Item = (String, String)>,
     {
         let (keys, values): (Vec<_>, Vec<_>) = extra_fields
             .into_iter()
-            .map(|(k, v)| (k.into_bytes_with_nul(), v.into_bytes_with_nul()))
+            .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
             .unzip();
-        let mut keys_raw: Vec<_> = keys
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect();
-        let mut values_raw: Vec<_> = values
-            .iter()
-            .map(|s| s.as_ref().as_ptr() as *const c_char)
-            .collect();
+        let mut keys_raw: Vec<_> = keys.iter().map(|s| s.as_ptr()).collect();
+        let mut values_raw: Vec<_> = values.iter().map(|s| s.as_ptr()).collect();
         let success = unsafe {
             BNRemotePushUser(
                 self.handle.as_ptr(),
@@ -957,11 +874,31 @@ impl ConnectionOptions {
         // TODO: Check if enterprise is initialized and error if not.
         let username = enterprise::server_username();
         let token = enterprise::server_token();
+        Ok(Self::new_with_token(username, token))
+    }
+
+    /// Retrieves the [`ConnectionOptions`] for the given address.
+    ///
+    /// NOTE: Uses the secret's provider specified by the setting "enterprise.secretsProvider".
+    pub fn from_secrets_provider(address: &str) -> Result<Self, ()> {
+        let secrets_provider_name = Settings::new().get_string("enterprise.secretsProvider");
+        let provider = CoreSecretsProvider::by_name(&secrets_provider_name).ok_or(())?;
+        let cred_data_str = provider.get_data(address);
+        if cred_data_str.is_empty() {
+            return Err(());
+        }
+        let cred_data: serde_json::Value = serde_json::from_str(&cred_data_str).map_err(|_| ())?;
+        let username = cred_data["username"].as_str().ok_or(())?;
+        let token = cred_data["token"].as_str().ok_or(())?;
         Ok(Self::new_with_token(
             username.to_string(),
             token.to_string(),
         ))
     }
 
-    // TODO: from_secrets_provider
+    pub fn from_env_variables() -> Result<Self, VarError> {
+        let username = std::env::var("BN_ENTERPRISE_USERNAME")?;
+        let password = std::env::var("BN_ENTERPRISE_PASSWORD")?;
+        Ok(ConnectionOptions::new_with_password(username, password))
+    }
 }

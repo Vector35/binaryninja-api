@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.9...3.15 FATAL_ERROR)
 
 project(view_macho)
 
@@ -6,9 +6,7 @@ if(NOT BN_INTERNAL_BUILD)
 	add_subdirectory(${PROJECT_SOURCE_DIR}/../.. ${PROJECT_BINARY_DIR}/api)
 endif()
 
-file(GLOB SOURCES
-	*.cpp
-	*.h)
+file(GLOB SOURCES *.cpp *.h ../../objectivec/*)
 
 if(DEMO)
 	add_library(view_macho STATIC ${SOURCES})

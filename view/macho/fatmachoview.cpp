@@ -210,8 +210,8 @@ bool FatMachoViewType::IsTypeValidForData(BinaryView* data)
 	if (!ExtractFatArchForCPU(data, arch, m_cputype, m_cpusubtype))
 		return false;
 
-	// MachoView::IsMacho only considers the magic header, so we can load only that
-	DataBuffer buffer = data->ReadBuffer(arch.offset, 4);
+	// MachoView::IsMacho needs to inspect the full header
+	DataBuffer buffer = data->ReadBuffer(arch.offset, sizeof(mach_header));
 	Ref<BinaryData> newData = new BinaryData(data->GetFile(), std::move(buffer));
 	Ref<BinaryViewType> attemptedViewType = FatViewTypeForData(newData);
 

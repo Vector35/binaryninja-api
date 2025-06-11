@@ -1,4 +1,4 @@
-// Copyright 2016-2024 Vector 35 Inc.
+// Copyright 2016-2025 Vector 35 Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1616,7 +1616,12 @@ TypeBuilder Demangle::DemangleFunction(BNNameType classFunctionType, bool pointe
 		params.pop_back();
 
 	// TODO: fix calling convention
-	TypeBuilder newType = TypeBuilder::FunctionType(shouldHaveReturnType ? returnType.Finalize() : Type::VoidType(), nullptr, params);
+	Ref<Type> returnTypeObj;
+	if (shouldHaveReturnType)
+		returnTypeObj = returnType.Finalize();
+	else
+		returnTypeObj = Type::VoidType();
+	TypeBuilder newType = TypeBuilder::FunctionType(returnTypeObj, nullptr, params);
 	newType.SetConst(_const);
 	newType.SetVolatile(_volatile);
 	newType.SetPointerSuffix(suffix);

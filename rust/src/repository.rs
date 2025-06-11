@@ -1,3 +1,5 @@
+//! Interaction with plugin repositories to install and manage plugins.
+
 mod manager;
 mod plugin;
 

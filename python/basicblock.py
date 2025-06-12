@@ -118,10 +118,17 @@ class BasicBlock:
 
 	def __repr__(self):
 		arch = self.arch
-		if arch:
-			return f"<{self.__class__.__name__}: {arch.name}@{self.start:#x}-{self.end:#x}>"
+		if self.is_il:
+			# IL indices are shown as decimal
+			if arch:
+				return f"<{self.__class__.__name__}: {arch.name}@{self.start}-{self.end}>"
+			else:
+				return f"<{self.__class__.__name__}: {self.start}-{self.end}>"
 		else:
-			return f"<{self.__class__.__name__}: {self.start:#x}-{self.end:#x}>"
+			if arch:
+				return f"<{self.__class__.__name__}: {arch.name}@{self.start:#x}-{self.end:#x}>"
+			else:
+				return f"<{self.__class__.__name__}: {self.start:#x}-{self.end:#x}>"
 
 	def __len__(self):
 		return int(core.BNGetBasicBlockLength(self.handle))
@@ -430,28 +437,66 @@ class BasicBlock:
 
 	@property
 	def dominators(self) -> List['BasicBlock']:
-		"""List of dominators for this basic block (read-only)"""
+		"""
+		List of dominators for this basic block (read-only).
+
+		A dominator of a basic block B is a block that must be executed before B can be executed.
+		In other words, every path from the entry block to B must go through the dominator.
+		This includes B itself - every block dominates itself. See
+		:py:func:`BasicBlock.strict_dominators` for dominators that don't include B.
+		"""
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockDominators(self.handle, count, False)
 		return self._make_blocks(blocks, count.value)
 
 	@property
 	def post_dominators(self) -> List['BasicBlock']:
-		"""List of dominators for this basic block (read-only)"""
+		"""
+		List of post-dominators for this basic block (read-only)
+
+		A post-dominator of a basic block B is a block that must be executed after B is executed.
+		In other words, every path from B to an exit block must go through the post-dominator.
+		This includes B itself - every block post-dominates itself. See
+		:py:func:`BasicBlock.strict_post_dominators` for post-dominators that don't include B.
+		If B has outgoing edges that can lead to different exit blocks, then this will only include B.
+		"""
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockDominators(self.handle, count, True)
 		return self._make_blocks(blocks, count.value)
 
 	@property
 	def strict_dominators(self) -> List['BasicBlock']:
-		"""List of strict dominators for this basic block (read-only)"""
+		"""
+		List of strict dominators for this basic block (read-only)
+
+		A strict dominator of a basic block B is a dominator of B that is not B itself.
+		See :py:func:`BasicBlock.dominators` for the definition of a dominator.
+		"""
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockStrictDominators(self.handle, count, False)
 		return self._make_blocks(blocks, count.value)
 
 	@property
+	def strict_post_dominators(self) -> List['BasicBlock']:
+		"""
+		List of strict post-dominators for this basic block (read-only)
+
+		A strict post-dominator of a basic block B is a post-dominator of B that is not B itself.
+		See :py:func:`BasicBlock.post_dominators` for the definition of a post-dominator.
+		"""
+		count = ctypes.c_ulonglong()
+		blocks = core.BNGetBasicBlockStrictDominators(self.handle, count, True)
+		return self._make_blocks(blocks, count.value)
+
+	@property
 	def immediate_dominator(self) -> Optional['BasicBlock']:
-		"""Immediate dominator of this basic block (read-only)"""
+		"""
+		Immediate dominator of this basic block (read-only)
+
+		The immediate dominator of a basic block B is the dominator closest to B in the control flow graph.
+		In other words, among all dominators of B, it is the dominator that doesn't dominate any other
+		dominator of B except itself. Each basic block except the entry block has a unique immediate dominator.
+		"""
 		result = core.BNGetBasicBlockImmediateDominator(self.handle, False)
 		if not result:
 			return None
@@ -459,7 +504,14 @@ class BasicBlock:
 
 	@property
 	def immediate_post_dominator(self) -> Optional['BasicBlock']:
-		"""Immediate dominator of this basic block (read-only)"""
+		"""
+		Immediate post-dominator of this basic block (read-only)
+
+		The immediate post-dominator of a basic block B is the post-dominator closest to B in the control flow graph.
+		In other words, among all post-dominators of B, it is the post-dominator that doesn't post-dominate any other
+		post-dominator of B except itself.
+		If B has outgoing edges that can lead to different exit blocks, then this will not exist.
+		"""
 		result = core.BNGetBasicBlockImmediateDominator(self.handle, True)
 		if not result:
 			return None
@@ -467,28 +519,52 @@ class BasicBlock:
 
 	@property
 	def dominator_tree_children(self) -> List['BasicBlock']:
-		"""List of child blocks in the dominator tree for this basic block (read-only)"""
+		"""
+		List of child blocks in the dominator tree for this basic block (read-only)
+
+		The dominator tree children of a basic block B are the blocks dominated by B.
+		See :py:func:`BasicBlock.dominators` for the definition of a dominator.
+		"""
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockDominatorTreeChildren(self.handle, count, False)
 		return self._make_blocks(blocks, count.value)
 
 	@property
 	def post_dominator_tree_children(self) -> List['BasicBlock']:
-		"""List of child blocks in the post dominator tree for this basic block (read-only)"""
+		"""
+		List of child blocks in the post-dominator tree for this basic block (read-only)
+
+		The post-dominator tree children of a basic block B are the blocks post-dominated by B.
+		See :py:func:`BasicBlock.post_dominators` for the definition of a post-dominator.
+		"""
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockDominatorTreeChildren(self.handle, count, True)
 		return self._make_blocks(blocks, count.value)
 
 	@property
 	def dominance_frontier(self) -> List['BasicBlock']:
-		"""Dominance frontier for this basic block (read-only)"""
+		"""
+		Dominance frontier for this basic block (read-only)
+
+		The dominance frontier of a basic block B is the set of blocks that are not strictly dominated by B,
+		but are immediately control-dependent on B. In other words, it contains the blocks where B's dominance 
+		"stops" - the blocks that have at least one predecessor not dominated by B, while having another 
+		predecessor that is dominated by B.
+		"""
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockDominanceFrontier(self.handle, count, False)
 		return self._make_blocks(blocks, count.value)
 
 	@property
 	def post_dominance_frontier(self) -> List['BasicBlock']:
-		"""Post dominance frontier for this basic block (read-only)"""
+		"""
+		Post-dominance frontier for this basic block (read-only)
+
+		The post-dominance frontier of a basic block B is the set of blocks that are not strictly post-dominated
+		by B, but have at least one successor that is post-dominated by B. In other words, it contains the blocks
+		where B's post-dominance "stops" - the blocks that have at least one successor not post-dominated by B,
+		while having another successor that is post-dominated by B.
+		"""
 		count = ctypes.c_ulonglong()
 		blocks = core.BNGetBasicBlockDominanceFrontier(self.handle, count, True)
 		return self._make_blocks(blocks, count.value)

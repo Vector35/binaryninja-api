@@ -4608,6 +4608,13 @@ class HighLevelILFunction:
 			settings_obj = None
 		return flowgraph.CoreFlowGraph(core.BNCreateHighLevelILFunctionGraph(self.handle, settings_obj))
 
+	def create_graph_immediate(self, settings: Optional['function.DisassemblySettings'] = None) -> 'flowgraph.CoreFlowGraph':
+		if settings is not None:
+			settings_obj = settings.handle
+		else:
+			settings_obj = None
+		return flowgraph.CoreFlowGraph(core.BNCreateHighLevelILImmediateFunctionGraph(self.handle, settings_obj))
+
 	@property
 	def il_form(self) -> FunctionGraphType:
 		if len(list(self.basic_blocks)) < 1:

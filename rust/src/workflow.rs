@@ -46,8 +46,7 @@ impl AnalysisContext {
 
     /// [`LowLevelILMutableFunction`] used to represent Lifted Level IL
     pub unsafe fn lifted_il_function(&self) -> Option<Ref<LowLevelILMutableFunction>> {
-        let func = self.function();
-        let result = unsafe { BNGetFunctionLiftedIL(func.handle) };
+        let result = unsafe { BNAnalysisContextGetLiftedILFunction(self.handle.as_ptr()) };
         unsafe {
             Some(LowLevelILMutableFunction::ref_from_raw(
                 NonNull::new(result)?.as_ptr(),

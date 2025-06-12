@@ -5505,6 +5505,7 @@ extern "C"
 			const BNArchitectureAndAddress* defSite);
 
 	BINARYNINJACOREAPI void BNRequestFunctionDebugReport(BNFunction* func, const char* name);
+	BINARYNINJACOREAPI bool BNFunctionCheckForDebugReport(BNFunction* func, const char* name);
 
 	BINARYNINJACOREAPI BNILReferenceSource* BNGetMediumLevelILVariableReferences(
 	    BNFunction* func, BNVariable* var, size_t* count);
@@ -5541,6 +5542,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeAnalysisContext(BNAnalysisContext* analysisContext);
 	BINARYNINJACOREAPI BNBinaryView* BNAnalysisContextGetBinaryView(BNAnalysisContext* analysisContext);
 	BINARYNINJACOREAPI BNFunction* BNAnalysisContextGetFunction(BNAnalysisContext* analysisContext);
+	BINARYNINJACOREAPI BNLowLevelILFunction* BNAnalysisContextGetLiftedILFunction(BNAnalysisContext* analysisContext);
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNAnalysisContextGetLowLevelILFunction(BNAnalysisContext* analysisContext);
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNAnalysisContextGetMediumLevelILFunction(
 	    BNAnalysisContext* analysisContext);
@@ -5651,6 +5653,14 @@ extern "C"
 	BINARYNINJACOREAPI BNFlowGraph* BNCreateMediumLevelILFunctionGraph(
 	    BNMediumLevelILFunction* func, BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI BNFlowGraph* BNCreateHighLevelILFunctionGraph(
+	    BNHighLevelILFunction* func, BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNFlowGraph* BNCreateImmediateFunctionGraph(
+	    BNFunction* func, BNFunctionViewType type, BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNFlowGraph* BNCreateLowLevelILImmediateFunctionGraph(
+	    BNLowLevelILFunction* func, BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNFlowGraph* BNCreateMediumLevelILImmediateFunctionGraph(
+	    BNMediumLevelILFunction* func, BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI BNFlowGraph* BNCreateHighLevelILImmediateFunctionGraph(
 	    BNHighLevelILFunction* func, BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI BNFlowGraph* BNCreateCustomFlowGraph(BNCustomFlowGraph* callbacks);
 	BINARYNINJACOREAPI BNFlowGraph* BNNewFlowGraphReference(BNFlowGraph* graph);

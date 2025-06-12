@@ -3035,7 +3035,7 @@ ExprId LowLevelILFunction::RegisterStackFreeReg(uint32_t reg, const ILSourceLoca
 
 ExprId LowLevelILFunction::RegisterStackFreeTopRelative(uint32_t regStack, ExprId entry, const ILSourceLocation& loc)
 {
-	return AddExprWithLocation(LLIL_REG_STACK_FREE_REG, loc, 0, 0, regStack, entry);
+	return AddExprWithLocation(LLIL_REG_STACK_FREE_REL, loc, 0, 0, regStack, entry);
 }
 
 

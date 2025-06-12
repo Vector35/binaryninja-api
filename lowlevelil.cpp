@@ -1038,3 +1038,10 @@ Ref<FlowGraph> LowLevelILFunction::CreateFunctionGraph(DisassemblySettings* sett
 	BNFlowGraph* graph = BNCreateLowLevelILFunctionGraph(m_object, settings ? settings->GetObject() : nullptr);
 	return new CoreFlowGraph(graph);
 }
+
+
+Ref<FlowGraph> LowLevelILFunction::CreateFunctionGraphImmediate(DisassemblySettings* settings)
+{
+	BNFlowGraph* graph = BNCreateLowLevelILImmediateFunctionGraph(m_object, settings ? settings->GetObject() : nullptr);
+	return new CoreFlowGraph(graph);
+}

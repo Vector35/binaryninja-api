@@ -53,7 +53,7 @@ class AnalysisContext:
 		self.handle = handle
 
 	@property
-	def view(self) -> 'binaryview.BinaryView':
+	def view(self) -> Optional['binaryview.BinaryView']:
 		"""
 		BinaryView for the current AnalysisContext (writable)
 		"""
@@ -63,7 +63,7 @@ class AnalysisContext:
 		return binaryview.BinaryView(handle=result)
 
 	@property
-	def function(self) -> '_function.Function':
+	def function(self) -> Optional['_function.Function']:
 		"""
 		Function for the current AnalysisContext (read-only)
 		"""
@@ -73,18 +73,21 @@ class AnalysisContext:
 		return _function.Function(handle=result)
 
 	@property
-	def lifted_il(self) -> lowlevelil.LowLevelILFunction:
+	def lifted_il(self) -> Optional[lowlevelil.LowLevelILFunction]:
 		"""
 		LowLevelILFunction used to represent lifted IL (writable)
 		"""
-		return self.function.lifted_il
+		result = core.BNAnalysisContextGetLiftedILFunction(self.handle)
+		if not result:
+			return None
+		return lowlevelil.LowLevelILFunction(handle=result)
 
 	@lifted_il.setter
 	def lifted_il(self, lifted_il: lowlevelil.LowLevelILFunction) -> None:
 		core.BNSetLiftedILFunction(self.handle, lifted_il.handle)
 
 	@property
-	def llil(self) -> lowlevelil.LowLevelILFunction:
+	def llil(self) -> Optional[lowlevelil.LowLevelILFunction]:
 		"""
 		LowLevelILFunction used to represent Low Level IL (writable)
 		"""
@@ -98,7 +101,7 @@ class AnalysisContext:
 		core.BNSetLowLevelILFunction(self.handle, value.handle)
 
 	@property
-	def mlil(self) -> mediumlevelil.MediumLevelILFunction:
+	def mlil(self) -> Optional[mediumlevelil.MediumLevelILFunction]:
 		"""
 		MediumLevelILFunction used to represent Medium Level IL (writable)
 		"""
@@ -112,7 +115,7 @@ class AnalysisContext:
 		core.BNSetMediumLevelILFunction(self.handle, value.handle)
 
 	@property
-	def hlil(self) -> highlevelil.HighLevelILFunction:
+	def hlil(self) -> Optional[highlevelil.HighLevelILFunction]:
 		"""
 		HighLevelILFunction used to represent High Level IL (writable)
 		"""

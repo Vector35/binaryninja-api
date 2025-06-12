@@ -3613,12 +3613,12 @@ class MediumLevelILFunction:
 			result |= flag.value
 		core.BNSetMediumLevelILExprAttributes(self.handle, expr, result)
 
-	def append(self, expr: ExpressionIndex) -> int:
+	def append(self, expr: ExpressionIndex) -> InstructionIndex:
 		"""
 		``append`` adds the ExpressionIndex ``expr`` to the current MediumLevelILFunction.
 
 		:param ExpressionIndex expr: the ExpressionIndex to add to the current MediumLevelILFunction
-		:return: number of ExpressionIndex in the current function
+		:return: Index of added instruction in the current function
 		:rtype: int
 		"""
 		return core.BNMediumLevelILAddInstruction(self.handle, expr)
@@ -5517,6 +5517,13 @@ class MediumLevelILFunction:
 		else:
 			settings_obj = None
 		return flowgraph.CoreFlowGraph(core.BNCreateMediumLevelILFunctionGraph(self.handle, settings_obj))
+
+	def create_graph_immediate(self, settings: Optional['function.DisassemblySettings'] = None) -> flowgraph.CoreFlowGraph:
+		if settings is not None:
+			settings_obj = settings.handle
+		else:
+			settings_obj = None
+		return flowgraph.CoreFlowGraph(core.BNCreateMediumLevelILImmediateFunctionGraph(self.handle, settings_obj))
 
 	@property
 	def arch(self) -> 'architecture.Architecture':

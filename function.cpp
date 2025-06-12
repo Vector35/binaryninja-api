@@ -1292,6 +1292,13 @@ Ref<FlowGraph> Function::CreateFunctionGraph(const FunctionViewType& type, Disas
 }
 
 
+Ref<FlowGraph> Function::CreateFunctionGraphImmediate(const FunctionViewType& type, DisassemblySettings* settings)
+{
+	BNFlowGraph* graph = BNCreateImmediateFunctionGraph(m_object, type.ToAPIObject(), settings ? settings->GetObject() : nullptr);
+	return new CoreFlowGraph(graph);
+}
+
+
 map<int64_t, vector<VariableNameAndType>> Function::GetStackLayout()
 {
 	size_t count;
@@ -2775,6 +2782,12 @@ std::map<Variable, std::map<ArchAndAddr, Ref<FieldResolutionInfo>>> Function::Ge
 void Function::RequestDebugReport(const string& name)
 {
 	BNRequestFunctionDebugReport(m_object, name.c_str());
+}
+
+
+bool Function::CheckForDebugReport(const string& name)
+{
+	return BNFunctionCheckForDebugReport(m_object, name.c_str());
 }
 
 

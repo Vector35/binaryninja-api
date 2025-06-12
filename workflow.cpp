@@ -38,6 +38,15 @@ Ref<Function> AnalysisContext::GetFunction()
 }
 
 
+Ref<LowLevelILFunction> AnalysisContext::GetLiftedILFunction()
+{
+	BNLowLevelILFunction* func = BNAnalysisContextGetLiftedILFunction(m_object);
+	if (!func)
+		return nullptr;
+	return new LowLevelILFunction(func);
+}
+
+
 Ref<LowLevelILFunction> AnalysisContext::GetLowLevelILFunction()
 {
 	BNLowLevelILFunction* func = BNAnalysisContextGetLowLevelILFunction(m_object);

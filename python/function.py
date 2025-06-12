@@ -2213,12 +2213,42 @@ class Function:
 	    self, graph_type: FunctionViewTypeOrName = FunctionGraphType.NormalFunctionGraph,
 	    settings: Optional['DisassemblySettings'] = None
 	) -> flowgraph.CoreFlowGraph:
+		"""
+		Create a flow graph with the disassembly of this function.
+
+		.. note:: This graph waits for function analysis, so Workflow Activities should instead use
+		          :py:func:`create_graph_immediate` to create graphs with the function contents as-is.
+
+		:param graph_type: IL form of the disassembly in the graph
+		:param settings: Optional settings for the disassembly text renderer
+		:return: Flow graph object
+		"""
 		if settings is not None:
 			settings_obj = settings.handle
 		else:
 			settings_obj = None
 		graph_type = FunctionViewType(graph_type)._to_core_struct()
 		return flowgraph.CoreFlowGraph(core.BNCreateFunctionGraph(self.handle, graph_type, settings_obj))
+
+	def create_graph_immediate(
+	    self, graph_type: FunctionViewTypeOrName = FunctionGraphType.NormalFunctionGraph,
+	    settings: Optional['DisassemblySettings'] = None
+	) -> flowgraph.CoreFlowGraph:
+		"""
+		Create a flow graph with the disassembly of this function, specifically using the
+		instructions as they are in the function when this is called. You probably want to use
+		this if you are creating a Debug Report in a Workflow Activity.
+
+		:param graph_type: IL form of the disassembly in the graph
+		:param settings: Optional settings for the disassembly text renderer
+		:return: Flow graph object
+		"""
+		if settings is not None:
+			settings_obj = settings.handle
+		else:
+			settings_obj = None
+		graph_type = FunctionViewType(graph_type)._to_core_struct()
+		return flowgraph.CoreFlowGraph(core.BNCreateImmediateFunctionGraph(self.handle, graph_type, settings_obj))
 
 	def apply_imported_types(self, sym: 'types.CoreSymbol', type: Optional[StringOrType] = None) -> None:
 		if isinstance(type, str):
@@ -3039,6 +3069,22 @@ class Function:
 
 		core.BNRequestFunctionDebugReport(self.handle, name)
 		self.view.update_analysis()
+
+	def check_for_debug_report(self, name: str) -> bool:
+		"""
+		``check_for_debug_report`` checks if a function has had a debug report requested
+		with the given name, and then, if one has been requested, clears the request internally
+		so that future calls to this function for that report will return False.
+
+		If a function has had a debug report requested, it is the caller of this function's
+		responsibility to actually generate and show the debug report.
+		You can use :py:func:`binaryninja.interaction.show_report_collection`
+		for showing a debug report from a workflow activity.
+
+		:param name: Name of the debug report
+		:return: True if the report has been requested (and not checked for yet)
+		"""
+		return core.BNFunctionCheckForDebugReport(self.handle, name)
 
 	@property
 	def call_sites(self) -> List['binaryview.ReferenceSource']:

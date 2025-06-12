@@ -941,6 +941,13 @@ Ref<FlowGraph> MediumLevelILFunction::CreateFunctionGraph(DisassemblySettings* s
 }
 
 
+Ref<FlowGraph> MediumLevelILFunction::CreateFunctionGraphImmediate(DisassemblySettings* settings)
+{
+	BNFlowGraph* graph = BNCreateMediumLevelILImmediateFunctionGraph(m_object, settings ? settings->GetObject() : nullptr);
+	return new CoreFlowGraph(graph);
+}
+
+
 set<size_t> MediumLevelILFunction::GetLiveInstructionsForVariable(const Variable& var, bool includeLastUse)
 {
 	size_t count;

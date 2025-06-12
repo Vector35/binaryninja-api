@@ -413,7 +413,6 @@ class PowerpcArchitecture: public Architecture
 					result.AddBranch(CallDestination, target);
 				else
 					result.AddBranch(UnconditionalBranch, target);
-
 				break;
 			}
 
@@ -436,7 +435,6 @@ class PowerpcArchitecture: public Architecture
 						result.AddBranch(TrueBranch, target);
 					}
 				}
-
 				break;
 			}
 
@@ -444,16 +442,12 @@ class PowerpcArchitecture: public Architecture
 			case PPC_ID_VLE_SE_BLRx:
 				if (!instruction.flags.lk)
 					result.AddBranch(FunctionReturn);
-
 				break;
 
 			case PPC_ID_BCCTRx:
 			case PPC_ID_VLE_SE_BCTRx:
 				if (!instruction.flags.lk)
 					result.AddBranch(UnresolvedBranch);
-
-			case PPC_ID_BCCTRx:
-				result.AddBranch(UnresolvedBranch);
 				break;
 
 			case PPC_ID_TWU:
@@ -463,6 +457,8 @@ class PowerpcArchitecture: public Architecture
 			case PPC_ID_RFI:
 			case PPC_ID_VLE_SE_RFI:
 				result.AddBranch(FunctionReturn);
+				break;
+			default:
 				break;
 		}
 
@@ -514,7 +510,7 @@ class PowerpcArchitecture: public Architecture
 				break;
 
 			case PPC_OP_UIMM:
-				snprintf(buf, sizeof(buf), "0x%x", op->uimm);
+				snprintf(buf, sizeof(buf), "0x%" PRIx64, op->uimm);
 				result.emplace_back(IntegerToken, buf,  op->uimm, 4);
 				break;
 
@@ -566,7 +562,6 @@ class PowerpcArchitecture: public Architecture
 	*/
 	virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len, vector<InstructionTextToken>& result) override
 	{
-		bool rc = false;
 		char buf[32];
 		size_t strlenMnem;
 		Instruction instruction;
@@ -2592,7 +2587,7 @@ static Ref<Platform> ElfSpecialRecognize(BinaryView* view, Metadata* metadata)
 		Ref<Metadata> sectionFlagsMetadata = metadata->Get(metaname);
 		if (!sectionFlagsMetadata || !sectionFlagsMetadata->IsUnsignedInteger())
 		{
-			LogError("Internal error: there are %d sections in ELF metadata, but we're missing sectionFlags[%d]", numSections, i);
+			LogError("Internal error: there are %" PRId64 " sections in ELF metadata, but we're missing sectionFlags[%d]", numSections, i);
 
 			return nullptr;
 		}
@@ -2628,7 +2623,7 @@ static Ref<Platform> ElfSpecialRecognize(BinaryView* view, Metadata* metadata)
 
 	if (allVle)
 	{
-		printf("OVERRIDING WITH VLE: %p\n", Platform::GetByName("linux-ppcvle"));
+		printf("OVERRIDING WITH VLE: %p\n", (void *)Platform::GetByName("linux-ppcvle"));
 		if (is32bit)
 			return Platform::GetByName("linux-ppcvle32");
 		else

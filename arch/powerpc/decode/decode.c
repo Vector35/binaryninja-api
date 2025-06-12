@@ -2467,7 +2467,7 @@ static InstructionId Decode0x1E(uint32_t word32, uint32_t decodeFlags)
 	}
 }
 
-static InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
+InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 {
 	uint32_t a = GetA(word32);
 	uint32_t b = GetB(word32);
@@ -5686,6 +5686,18 @@ static InstructionId Decode0x3F(uint32_t word32, uint32_t flags)
 	return true;
 }
 
+InstructionId Decode0x04(uint32_t word32, uint32_t decodeFlags)
+{
+	if ((decodeFlags & DECODE_FLAGS_ALTIVEC))
+		return DecodeAltivec0x04(word32, decodeFlags);
+	else if ((decodeFlags & DECODE_FLAGS_SPE))
+		return DecodeSpe0x04(word32, decodeFlags);
+	else if ((decodeFlags & DECODE_FLAGS_PS))
+		return DecodePairedSingle0x04(word32, decodeFlags);
+	else
+		return PPC_ID_INVALID;
+}
+
 static InstructionId Decode32(uint32_t word32, uint32_t decodeFlags)
 {
 	uint32_t a = GetA(word32);
@@ -5741,14 +5753,7 @@ static InstructionId Decode32(uint32_t word32, uint32_t decodeFlags)
 
 		case 0x04:
 		{
-			if ((decodeFlags & DECODE_FLAGS_ALTIVEC))
-				return DecodeAltivec0x04(word32, decodeFlags);
-			else if ((decodeFlags & DECODE_FLAGS_SPE))
-				return DecodeSpe0x04(word32, decodeFlags);
-			else if ((decodeFlags & DECODE_FLAGS_PS))
-				return DecodePairedSingle0x04(word32, decodeFlags);
-			else
-				return PPC_ID_INVALID;
+			return Decode0x04(word32, decodeFlags);
 		}
 
 		case 0x07:

@@ -592,7 +592,7 @@ static void FillOperands16Vle(Instruction* instruction, uint16_t word16, uint64_
 					case 1: mapped_bo = 0x0c; break;
 					default:
 						// should be unreachable
-						;
+						mapped_bo = 0;  // only to silence compiler warning
 				}
 
 				PushUIMMValue(instruction, mapped_bo);

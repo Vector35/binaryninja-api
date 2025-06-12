@@ -4,7 +4,7 @@
 #include "priv.h"
 
 // see stanford bit twiddling hacks
-static int32_t sign_extend(uint32_t x, unsigned numBits)
+int32_t sign_extend(uint32_t x, unsigned numBits)
 {
 	int32_t const m = 1U << (numBits - 1);
 
@@ -12,70 +12,65 @@ static int32_t sign_extend(uint32_t x, unsigned numBits)
 	return (x ^ m) - m;
 }
 
-static void CopyOperand(Operand* dst, const Operand* src)
-{
-	memcpy(dst, src, sizeof *dst);
-}
-
-static Register Gpr(uint32_t value)
+Register Gpr(uint32_t value)
 {
 	return PPC_REG_GPR0 + value;
 }
 
-static Register Fr(uint32_t value)
+Register Fr(uint32_t value)
 {
 	return PPC_REG_FR0 + value;
 }
 
-static Register Crf(uint32_t value)
+Register Crf(uint32_t value)
 {
 	return PPC_REG_CRF0 + value;
 }
 
-static Register AltivecVr(uint32_t value)
+Register AltivecVr(uint32_t value)
 {
 	return PPC_REG_AV_VR0 + value;
 }
 
-static Register VsxVr(uint32_t value)
+Register VsxVr(uint32_t value)
 {
 	return PPC_REG_VSX_VR0 + value;
 }
 
-static Register VsxVrHi(uint32_t value)
+Register VsxVrHi(uint32_t value)
 {
 	return PPC_REG_VSX_VR0 + value + 32;
 }
 
-static void PushUIMMValue(Instruction* instruction, uint32_t uimm)
+void PushUIMMValue(Instruction* instruction, uint64_t uimm)
 {
 	instruction->operands[instruction->numOperands].cls = PPC_OP_UIMM;
 	instruction->operands[instruction->numOperands].uimm = uimm;
 	++instruction->numOperands;
 }
 
-static void PushSIMMValue(Instruction* instruction, int32_t simm)
+void PushSIMMValue(Instruction* instruction, int32_t simm)
 {
 	instruction->operands[instruction->numOperands].cls = PPC_OP_SIMM;
 	instruction->operands[instruction->numOperands].simm = simm;
 	++instruction->numOperands;
 }
 
-static void PushRegister(Instruction* instruction, OperandClass cls, Register reg)
+void PushRegister(Instruction* instruction, OperandClass cls, Register reg)
 {
 	instruction->operands[instruction->numOperands].cls = cls;
 	instruction->operands[instruction->numOperands].reg = reg;
 	++instruction->numOperands;
 }
 
-static uint64_t ComputeBranchTarget(Instruction* instruction, uint64_t address, uint32_t word32)
+uint64_t ComputeBranchTarget(Instruction* instruction, uint64_t address, uint32_t word32)
 {
 	int32_t bd = (int32_t)((int16_t)(word32 & 0xfffc));
 
 	return instruction->flags.aa ? bd : address + bd;
 }
 
-static void PushLabel(Instruction* instruction, uint64_t address)
+void PushLabel(Instruction* instruction, uint64_t address)
 {
 	instruction->operands[instruction->numOperands].cls = PPC_OP_LABEL;
 	instruction->operands[instruction->numOperands].label = address;
@@ -83,17 +78,17 @@ static void PushLabel(Instruction* instruction, uint64_t address)
 }
 
 // this assumes that instruction->flags.aa has been properly set!
-static void PushBranchTarget(Instruction* instruction, uint64_t address, uint32_t word32)
+void PushBranchTarget(Instruction* instruction, uint64_t address, uint32_t word32)
 {
 	PushLabel(instruction, ComputeBranchTarget(instruction, address, word32));
 }
 
-static void PushRA(Instruction* instruction, uint32_t word32)
+void PushRA(Instruction* instruction, uint32_t word32)
 {
 	PushRegister(instruction, PPC_OP_REG_RA, Gpr(GetA(word32)));
 }
 
-static void PushRAor0(Instruction* instruction, uint32_t word32)
+void PushRAor0(Instruction* instruction, uint32_t word32)
 {
 	uint32_t ra = GetA(word32);
 
@@ -103,92 +98,92 @@ static void PushRAor0(Instruction* instruction, uint32_t word32)
 		PushRegister(instruction, PPC_OP_REG_RA, Gpr(ra));
 }
 
-static void PushRB(Instruction* instruction, uint32_t word32)
+void PushRB(Instruction* instruction, uint32_t word32)
 {
 	PushRegister(instruction, PPC_OP_REG_RB, Gpr(GetB(word32)));
 }
 
-static void PushRC(Instruction* instruction, uint32_t word32)
+void PushRC(Instruction* instruction, uint32_t word32)
 {
 	PushRegister(instruction, PPC_OP_REG_RC, Gpr(GetC(word32)));
 }
 
-static void PushRD(Instruction* instruction, uint32_t word32)
+void PushRD(Instruction* instruction, uint32_t word32)
 {
 	PushRegister(instruction, PPC_OP_REG_RD, Gpr(GetD(word32)));
 }
 
-static void PushRS(Instruction* instruction, uint32_t word32)
+void PushRS(Instruction* instruction, uint32_t word32)
 {
 	PushRegister(instruction, PPC_OP_REG_RS, Gpr(GetS(word32)));
 }
 
-static void PushFRA(Instruction* instruction, uint32_t word32)
+void PushFRA(Instruction* instruction, uint32_t word32)
 {
 	PushRegister(instruction, PPC_OP_REG_FRA, Fr(GetA(word32)));
 }
 
-static void PushFRB(Instruction* instruction, uint32_t word32)
+void PushFRB(Instruction* instruction, uint32_t word32)
 {
 	PushRegister(instruction, PPC_OP_REG_FRB, Fr(GetB(word32)));
 }
 
-static void PushFRC(Instruction* instruction, uint32_t word32)
+void PushFRC(Instruction* instruction, uint32_t word32)
 {
 	PushRegister(instruction, PPC_OP_REG_FRC, Fr(GetC(word32)));
 }
 
-static void PushFRD(Instruction* instruction, uint32_t word32)
+void PushFRD(Instruction* instruction, uint32_t word32)
 {
 	PushRegister(instruction, PPC_OP_REG_FRD, Fr(GetD(word32)));
 }
 
-static void PushFRS(Instruction* instruction, uint32_t word32)
+void PushFRS(Instruction* instruction, uint32_t word32)
 {
 	PushRegister(instruction, PPC_OP_REG_FRS, Fr(GetS(word32)));
 }
 
-static void PushCRFD(Instruction* instruction, uint32_t word32)
+void PushCRFD(Instruction* instruction, uint32_t word32)
 {
 	uint32_t crfd = (word32 >> 23) & 0x7;
 	PushRegister(instruction, PPC_OP_REG_CRFD, Crf(crfd));
 }
 
-static void PushCRFDImplyCR0(Instruction* instruction, uint32_t word32)
+void PushCRFDImplyCR0(Instruction* instruction, uint32_t word32)
 {
 	uint32_t crfd = (word32 >> 23) & 0x7;
 
 	PushRegister(instruction, PPC_OP_REG_CRFD_IMPLY0, Crf(crfd));
 }
 
-static void PushCRFS(Instruction* instruction, uint32_t word32)
+void PushCRFS(Instruction* instruction, uint32_t word32)
 {
 	uint32_t crfs = (word32 >> 18) & 0x7;
 	PushRegister(instruction, PPC_OP_REG_CRFS, Crf(crfs));
 }
 
-static void PushCRBitA(Instruction* instruction, uint32_t word32)
+void PushCRBitA(Instruction* instruction, uint32_t word32)
 {
 	instruction->operands[instruction->numOperands].cls = PPC_OP_CRBIT_A;
 	instruction->operands[instruction->numOperands].crbit = GetA(word32);
 	++instruction->numOperands;
 }
 
-static void PushCRBitB(Instruction* instruction, uint32_t word32)
+void PushCRBitB(Instruction* instruction, uint32_t word32)
 {
 	instruction->operands[instruction->numOperands].cls = PPC_OP_CRBIT_B;
 	instruction->operands[instruction->numOperands].crbit = GetB(word32);
 	++instruction->numOperands;
 }
 
-static void PushCRBitD(Instruction* instruction, uint32_t word32)
+void PushCRBitD(Instruction* instruction, uint32_t word32)
 {
 	instruction->operands[instruction->numOperands].cls = PPC_OP_CRBIT_D;
 	instruction->operands[instruction->numOperands].crbit = GetD(word32);
 	++instruction->numOperands;
 }
 
-static void PushMem(Instruction* instruction, OperandClass cls, Register reg, int32_t offset)
+void PushMem(Instruction* instruction, OperandClass cls, Register reg, int32_t offset)
 {
 	instruction->operands[instruction->numOperands].cls = cls;
 	instruction->operands[instruction->numOperands].mem.reg = reg;
@@ -196,7 +191,7 @@ static void PushMem(Instruction* instruction, OperandClass cls, Register reg, in
 	++instruction->numOperands;
 }
 
-static void FillBranchLikelyHint(Instruction* instruction, uint32_t word32)
+void FillBranchLikelyHint(Instruction* instruction, uint32_t word32)
 {
 	uint32_t bo = GetBO(word32);
 
@@ -222,61 +217,61 @@ static void FillBranchLikelyHint(Instruction* instruction, uint32_t word32)
 	}
 }
 
-static void PushMemRAOffset(Instruction* instruction, uint32_t word32, int32_t offset)
+void PushMemRAOffset(Instruction* instruction, uint32_t word32, int32_t offset)
 {
 	PushMem(instruction, PPC_OP_MEM_RA, Gpr(GetA(word32)), offset);
 }
 
 // Default of d=lower 16 bits
-static void PushMemRA(Instruction* instruction, uint32_t word32)
+void PushMemRA(Instruction* instruction, uint32_t word32)
 {
 	PushMemRAOffset(instruction, word32, (int32_t)((int16_t)(word32 & 0xffff)));
 }
 
-static void PushVsxA(Instruction* instruction, uint32_t word32, VsxWidth width)
+void PushVsxA(Instruction* instruction, uint32_t word32, VsxWidth width)
 {
 	PushRegister(instruction,
 		width == VSX_WIDTH_FULL ? PPC_OP_REG_VSX_RA : PPC_OP_REG_VSX_RA_DWORD0,
 		VsxVr(GetVsxA(word32)));
 }
 
-static void PushVsxHiA(Instruction* instruction, uint32_t word32)
+void PushVsxHiA(Instruction* instruction, uint32_t word32)
 {
 	PushRegister(instruction, PPC_OP_REG_VSX_RA, VsxVrHi(GetA(word32)));
 }
 
-static void PushVsxB(Instruction* instruction, uint32_t word32, VsxWidth width)
+void PushVsxB(Instruction* instruction, uint32_t word32, VsxWidth width)
 {
 	PushRegister(instruction,
 		width == VSX_WIDTH_FULL ? PPC_OP_REG_VSX_RB : PPC_OP_REG_VSX_RB_DWORD0,
 		VsxVr(GetVsxB(word32)));
 }
 
-static void PushVsxHiB(Instruction* instruction, uint32_t word32)
+void PushVsxHiB(Instruction* instruction, uint32_t word32)
 {
 	PushRegister(instruction, PPC_OP_REG_VSX_RB, VsxVrHi(GetB(word32)));
 }
 
-static void PushVsxC(Instruction* instruction, uint32_t word32, VsxWidth width)
+void PushVsxC(Instruction* instruction, uint32_t word32, VsxWidth width)
 {
 	PushRegister(instruction,
 		width == VSX_WIDTH_FULL ? PPC_OP_REG_VSX_RC : PPC_OP_REG_VSX_RC_DWORD0,
 		VsxVr(GetVsxC(word32)));
 }
 
-static void PushVsxD(Instruction* instruction, uint32_t word32, VsxWidth width)
+void PushVsxD(Instruction* instruction, uint32_t word32, VsxWidth width)
 {
 	PushRegister(instruction,
 		width == VSX_WIDTH_FULL ? PPC_OP_REG_VSX_RD : PPC_OP_REG_VSX_RD_DWORD0,
 		VsxVr(GetVsxD(word32)));
 }
 
-static void PushVsxHiD(Instruction* instruction, uint32_t word32)
+void PushVsxHiD(Instruction* instruction, uint32_t word32)
 {
 	PushRegister(instruction, PPC_OP_REG_VSX_RD, VsxVrHi(GetD(word32)));
 }
 
-static void PushVsxS(Instruction* instruction, uint32_t word32, VsxWidth width)
+void PushVsxS(Instruction* instruction, uint32_t word32, VsxWidth width)
 {
 	uint32_t sx = word32 & 0x1;
 	uint32_t s = (word32 >> 21) & 0x1f;
@@ -285,36 +280,36 @@ static void PushVsxS(Instruction* instruction, uint32_t word32, VsxWidth width)
 		VsxVr((sx << 5) | s));
 }
 
-static void PushVsxHiS(Instruction* instruction, uint32_t word32)
+void PushVsxHiS(Instruction* instruction, uint32_t word32)
 {
 	PushRegister(instruction, PPC_OP_REG_VSX_RS, VsxVrHi(GetS(word32)));
 }
 
-static void PushAltivecVA(Instruction* instruction, uint32_t word32)
+void PushAltivecVA(Instruction* instruction, uint32_t word32)
 {
 	uint32_t va = (word32 >> 16) & 0x1f;
 	PushRegister(instruction, PPC_OP_REG_AV_VA, AltivecVr(va));
 }
 
-static void PushAltivecVB(Instruction* instruction, uint32_t word32)
+void PushAltivecVB(Instruction* instruction, uint32_t word32)
 {
 	uint32_t vb = (word32 >> 11) & 0x1f;
 	PushRegister(instruction, PPC_OP_REG_AV_VB, AltivecVr(vb));
 }
 
-static void PushAltivecVC(Instruction* instruction, uint32_t word32)
+void PushAltivecVC(Instruction* instruction, uint32_t word32)
 {
 	uint32_t vc = (word32 >> 6) & 0x1f;
 	PushRegister(instruction, PPC_OP_REG_AV_VC, AltivecVr(vc));
 }
 
-static void PushAltivecVD(Instruction* instruction, uint32_t word32)
+void PushAltivecVD(Instruction* instruction, uint32_t word32)
 {
 	uint32_t vd = (word32 >> 21) & 0x1f;
 	PushRegister(instruction, PPC_OP_REG_AV_VD, AltivecVr(vd));
 }
 
-static void PushAltivecVS(Instruction* instruction, uint32_t word32)
+void PushAltivecVS(Instruction* instruction, uint32_t word32)
 {
 	uint32_t vs = (word32 >> 21) & 0x1f;
 	PushRegister(instruction, PPC_OP_REG_AV_VS, AltivecVr(vs));

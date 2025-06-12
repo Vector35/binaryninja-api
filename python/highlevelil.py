@@ -215,8 +215,8 @@ class HighLevelILInstruction(BaseILInstruction):
 	        ("constant", "int"), ("offset", "int")
 	    ], HighLevelILOperation.HLIL_FLOAT_CONST: [("constant", "float")], HighLevelILOperation.HLIL_IMPORT: [
 	        ("constant", "int")
-	    ], HighLevelILOperation.HLIL_CONST_DATA: [("constant_data", "constant_data")], HighLevelILOperation.HLIL_CONST_DATA: [
-	        ("constant_data", "constant_data")
+	    ], HighLevelILOperation.HLIL_CONST_DATA: [("constant", "ConstantData")], HighLevelILOperation.HLIL_CONST_DATA: [
+	        ("constant", "ConstantData")
 	    ], HighLevelILOperation.HLIL_ADD: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_ADC: [
 	        ("left", "expr"), ("right", "expr"), ("carry", "expr")
 	    ], HighLevelILOperation.HLIL_SUB: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_SBB: [
@@ -1812,13 +1812,17 @@ class HighLevelILImport(HighLevelILInstruction, Constant):
 @dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILConstData(HighLevelILInstruction, Constant):
 	@property
+	def constant(self) -> variable.ConstantData:
+		return self.get_constant_data(0, 1)
+
+	@property
 	def constant_data(self) -> variable.ConstantData:
 		return self.get_constant_data(0, 1)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
 		return [
-			("constant_data", self.constant_data, "ConstantData"),
+			("constant", self.constant, "ConstantData"),
 		]
 
 
@@ -2422,7 +2426,7 @@ ILInstruction = {
     HighLevelILOperation.HLIL_EXTERN_PTR: HighLevelILExternPtr,  #  ("constant", "int"), ("offset", "int"),
     HighLevelILOperation.HLIL_FLOAT_CONST: HighLevelILFloatConst,  #  ("constant", "float"),
     HighLevelILOperation.HLIL_IMPORT: HighLevelILImport,  #  ("constant", "int"),
-    HighLevelILOperation.HLIL_CONST_DATA: HighLevelILConstData,  # [("constant_data", "constant_data")],
+    HighLevelILOperation.HLIL_CONST_DATA: HighLevelILConstData,  # [("constant", "ConstantData")],
     HighLevelILOperation.HLIL_ADD: HighLevelILAdd,  #  ("left", "expr"), ("right", "expr"),
     HighLevelILOperation.HLIL_ADC: HighLevelILAdc,  #  ("left", "expr"), ("right", "expr"), ("carry", "expr"),
     HighLevelILOperation.HLIL_SUB: HighLevelILSub,  #  ("left", "expr"), ("right", "expr"),

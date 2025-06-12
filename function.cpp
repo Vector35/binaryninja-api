@@ -2849,6 +2849,18 @@ void Function::SetEarlyReturn(uint64_t addr, BNEarlyReturn mode)
 }
 
 
+BNSwitchRecovery Function::GetSwitchRecovery(uint64_t addr)
+{
+	return BNGetSwitchRecovery(m_object, addr);
+}
+
+
+void Function::SetSwitchRecovery(uint64_t addr, BNSwitchRecovery mode)
+{
+	BNSetSwitchRecovery(m_object, addr, mode);
+}
+
+
 std::map<Variable, std::set<Variable>> Function::GetMergedVariables()
 {
 	size_t count;

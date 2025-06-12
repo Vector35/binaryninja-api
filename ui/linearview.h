@@ -322,6 +322,8 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	bool getCurrentConditionInverted();
 	std::optional<uint64_t> getCurrentEarlyReturnAddress();
 	BNEarlyReturn getCurrentEarlyReturn();
+	std::optional<uint64_t> getCurrentSwitchRecoveryAddress();
+	BNSwitchRecovery getCurrentSwitchRecovery();
 
 	void setDataButtonVisible(bool visible);
 	std::optional<std::pair<BinaryNinja::Variable, BinaryNinja::Variable>> getMergeVariablesAtCurrentLocation();
@@ -415,6 +417,7 @@ private Q_SLOTS:
 	void setCurrentExprFolding(BNExprFolding folding);
 	void toggleConditionInverted();
 	void setCurrentEarlyReturn(BNEarlyReturn earlyReturn);
+	void setCurrentSwitchRecovery(BNSwitchRecovery recovery);
 
 Q_SIGNALS:
 	void notifyResizeEvent(int width, int height);

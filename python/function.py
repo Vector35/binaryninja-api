@@ -29,7 +29,7 @@ from . import _binaryninjacore as core
 from .enums import (
 	AnalysisSkipReason, FunctionGraphType, SymbolType, InstructionTextTokenType, HighlightStandardColor,
 	HighlightColorStyle, DisassemblyOption, IntegerDisplayType, FunctionAnalysisSkipOverride, FunctionUpdateType,
-	BuiltinType, ExprFolding, EarlyReturn
+	BuiltinType, ExprFolding, EarlyReturn, SwitchRecovery
 )
 
 from . import associateddatastore  # Required in the main scope due to being an argument for _FunctionAssociatedDataStore
@@ -3537,6 +3537,16 @@ class Function:
 		if isinstance(addr, highlevelil.HighLevelILInstruction):
 			addr = addr.address
 		core.BNSetEarlyReturn(self.handle, addr, value)
+
+	def get_switch_recovery(self, addr: Union[int, highlevelil.HighLevelILInstruction]) -> SwitchRecovery:
+		if isinstance(addr, highlevelil.HighLevelILInstruction):
+			addr = addr.address
+		return SwitchRecovery(core.BNGetSwitchRecovery(self.handle, addr))
+
+	def set_switch_recovery(self, addr: Union[int, highlevelil.HighLevelILInstruction], value: SwitchRecovery):
+		if isinstance(addr, highlevelil.HighLevelILInstruction):
+			addr = addr.address
+		core.BNSetSwitchRecovery(self.handle, addr, value)
 
 
 class AdvancedFunctionAnalysisDataRequestor:

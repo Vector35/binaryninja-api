@@ -202,8 +202,8 @@ class MediumLevelILInstruction(BaseILInstruction):
 	        ("constant", "int"), ("offset", "int")
 	    ], MediumLevelILOperation.MLIL_FLOAT_CONST: [("constant", "float")], MediumLevelILOperation.MLIL_IMPORT: [
 	        ("constant", "int")
-	    ], MediumLevelILOperation.MLIL_CONST_DATA: [("constant_data", "constant_data")], MediumLevelILOperation.MLIL_CONST_DATA: [
-	        ("constant_data", "constant_data")
+	    ], MediumLevelILOperation.MLIL_CONST_DATA: [("constant", "ConstantData")], MediumLevelILOperation.MLIL_CONST_DATA: [
+	        ("constant", "ConstantData")
 	    ], MediumLevelILOperation.MLIL_ADD: [("left", "expr"), ("right", "expr")], MediumLevelILOperation.MLIL_ADC: [
 	        ("left", "expr"), ("right", "expr"), ("carry", "expr")
 	    ], MediumLevelILOperation.MLIL_SUB: [("left", "expr"), ("right", "expr")], MediumLevelILOperation.MLIL_SBB: [
@@ -1319,12 +1319,16 @@ class MediumLevelILImport(MediumLevelILConstBase):
 @dataclass(frozen=True, repr=False, eq=False)
 class MediumLevelILConstData(MediumLevelILConstBase):
 	@property
+	def constant(self) -> variable.ConstantData:
+		return self._get_constant_data(0, 1)
+
+	@property
 	def constant_data(self) -> variable.ConstantData:
 		return self._get_constant_data(0, 1)
 
 	@property
 	def detailed_operands(self) -> List[Tuple[str, MediumLevelILOperandType, str]]:
-		return [("constant_data", self.constant_data, "ConstantData")]
+		return [("constant", self.constant, "ConstantData")]
 
 
 @dataclass(frozen=True, repr=False, eq=False)
@@ -3067,7 +3071,7 @@ ILInstruction = {
     MediumLevelILOperation.MLIL_CONST_PTR: MediumLevelILConstPtr,  # [("constant", "int")],
     MediumLevelILOperation.MLIL_FLOAT_CONST: MediumLevelILFloatConst,  # [("constant", "float")],
     MediumLevelILOperation.MLIL_IMPORT: MediumLevelILImport,  # [("constant", "int")],
-    MediumLevelILOperation.MLIL_CONST_DATA: MediumLevelILConstData,  # [("constant_data", "constant_data")],
+    MediumLevelILOperation.MLIL_CONST_DATA: MediumLevelILConstData,  # [("constant", "ConstData")],
     MediumLevelILOperation.MLIL_SET_VAR: MediumLevelILSetVar,  # [("dest", "var"), ("src", "expr")],
     MediumLevelILOperation.MLIL_LOAD_STRUCT: MediumLevelILLoadStruct,  # [("src", "expr"), ("offset", "int")],
     MediumLevelILOperation.MLIL_STORE: MediumLevelILStore,  # [("dest", "expr"), ("src", "expr")],

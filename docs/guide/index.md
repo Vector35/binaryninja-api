@@ -807,7 +807,7 @@ Performing this action on both variables in the example results in the following
 
 ![Dead Store Elimination Results](../img/dead-store-after.png "Dead Store Elimination Results"){ width="500" }
 
-## Expression Folding
+## High Level Optimization Overrides
 
 Binary Ninja automatically performs optimization passes on high level code. One of these optimizations is to fold
 assignments with a single use into the statement that uses it. An example of a function call being folded into another
@@ -815,19 +815,32 @@ is shown below:
 
 ![Expression Folding](../img/folding-before.png "Expression Folding"){ width="500" }
 
-Binary Ninja uses heuristics to determine if this will improve readability, but sometimes it doesn't make the preferred
-choice. You can override the heuristic by right-clicking an expression and choosing "Allow" or "Prevent" from the
-"Expression Folding" submenu.
+Binary Ninja uses heuristics to determine if optimizatoins will improve readability, but sometimes it doesn't make the
+preferred choice. In the case above, you can override the heuristic by right-clicking the inner call expression and
+choosing "Allow" or "Prevent" from the "Expression Folding" submenu.
 
 ![Expression Folding Menu](../img/folding-menu.png "Expression Folding Menu"){ width="500" }
 
-This option will only appear if the expression can be folded. If Binary Ninja's analysis determines that it is not sound
-to fold an expression, the submenu will not be present.
+These options will only appear if the given optimizations are applied or can be applied. If Binary Ninja's analysis
+determines that it is not sound to perform an optimization, the submenus will not be present.
 
 Choosing "Prevent" from the "Expression Folding" menu on the call to `_strlen` in the example above results in the
 following output:
 
 ![Expression Folding Results](../img/folding-after.png "Expression Folding Results"){ width="500" }
+
+The heuristics can sometimes choose to not apply an optimization. You can override the heuristic to apply the
+optimization using the same right-click submenus.
+
+Several optimizations offer the option to override heuristics. The optimizations that support
+this feature are shown in the table below:
+
+| Optimization               | Description                                                                                                                                                    | Valid Locations                                                                                    |
+|----------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
+| Early Return               | Rewrites trailing `if`/`else` constructs to return early from one side. Avoids large indented `if` blocks.                                                     | `if` statements                                                                                    |
+| Expression Folding         | Folds a store of an expression into another expression. Heuristics try to reduce lines of code and number of active variables.                                 | Inner expressions (when optimization is applied) or assignments (when optimization is not applied) |
+| Show Condition as Inverted | Heuristics try to pick the best condition for `if`/`else` constructs, but an override can invert the chosen condition and rearrange the `if`/`else` construct. | `if` statements                                                                                    |
+| Switch Recovery            | Heuristics try to avoid tiny switch constructs. Overrides can choose to display the code as a `switch` or a chain of `if`/`else` constructs.                   | `if` or `switch` statements                                                                        |
 
 ## Merging and Splitting Variables
 

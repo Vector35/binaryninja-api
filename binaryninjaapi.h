@@ -11436,6 +11436,9 @@ namespace BinaryNinja {
 		BNEarlyReturn GetEarlyReturn(uint64_t addr);
 		void SetEarlyReturn(uint64_t addr, BNEarlyReturn mode);
 
+		BNSwitchRecovery GetSwitchRecovery(uint64_t addr);
+		void SetSwitchRecovery(uint64_t addr, BNSwitchRecovery mode);
+
 		std::map<Variable, std::set<Variable>> GetMergedVariables();
 		void MergeVariables(const Variable& target, const std::set<Variable>& sources);
 		void UnmergeVariables(const Variable& target, const std::set<Variable>& sources);

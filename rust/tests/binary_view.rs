@@ -70,3 +70,25 @@ fn test_binary_saving_database() {
         "test"
     );
 }
+
+#[test]
+fn test_binary_view_strings() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
+    let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
+    let image_base = view.original_image_base();
+    assert!(view.strings().len() > 0);
+    let str_15dc = view
+        .strings()
+        .iter()
+        .find(|s| {
+            let buffer = view
+                .read_buffer(s.start, s.length)
+                .expect("Failed to read string reference");
+            let str = buffer.to_escaped_string(false, false);
+            str.contains("Microsoft")
+        })
+        .expect("Failed to find string 'Microsoft (R) Optimizing Compiler'");
+    assert_eq!(str_15dc.start, image_base + 0x15dc);
+    assert_eq!(str_15dc.length, 33);
+}

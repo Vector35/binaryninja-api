@@ -6,7 +6,7 @@ use crate::variable::{ConstantData, SSAVariable, Variable};
 use std::collections::BTreeMap;
 use std::fmt::{Debug, Formatter};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum MediumLevelILLiftedOperand {
     ConstantData(ConstantData),
     Intrinsic(CoreIntrinsic),

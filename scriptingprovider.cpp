@@ -246,7 +246,10 @@ void ScriptingInstance::UnregisterOutputListener(ScriptingOutputListener* listen
 
 std::string ScriptingInstance::GetDelimiters()
 {
-	return BNGetScriptingInstanceDelimiters(m_object);
+	char* str = BNGetScriptingInstanceDelimiters(m_object);
+	std::string result = str;
+	BNFreeString(str);
+	return result;
 }
 
 

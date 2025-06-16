@@ -7138,7 +7138,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNUnregisterScriptingInstanceOutputListener(
 	    BNScriptingInstance* instance, BNScriptingOutputListener* callbacks);
 
-	BINARYNINJACOREAPI const char* BNGetScriptingInstanceDelimiters(BNScriptingInstance* instance);
+	BINARYNINJACOREAPI char* BNGetScriptingInstanceDelimiters(BNScriptingInstance* instance);
 	BINARYNINJACOREAPI void BNSetScriptingInstanceDelimiters(BNScriptingInstance* instance, const char* delimiters);
 
 	BINARYNINJACOREAPI BNScriptingProviderInputReadyState BNGetScriptingInstanceInputReadyState(
@@ -8310,12 +8310,12 @@ extern "C"
 	BINARYNINJACOREAPI bool BNFirmwareNinjaRelationshipGetSecondaryAddress(BNFirmwareNinjaRelationship* rel, uint64_t* result);
 	BINARYNINJACOREAPI bool BNFirmwareNinjaRelationshipGetSecondaryDataVariable(BNFirmwareNinjaRelationship* rel, BNDataVariable* dataVariable);
 	BINARYNINJACOREAPI BNFunction* BNFirmwareNinjaRelationshipGetSecondaryFunction(BNFirmwareNinjaRelationship* rel);
-	BINARYNINJACOREAPI const char* BNFirmwareNinjaRelationshipGetSecondaryExternalSymbol(BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI char* BNFirmwareNinjaRelationshipGetSecondaryExternalSymbol(BNFirmwareNinjaRelationship* rel);
 	BINARYNINJACOREAPI void BNFirmwareNinjaRelationshipSetDescription(BNFirmwareNinjaRelationship* rel, const char* description);
-	BINARYNINJACOREAPI const char* BNFirmwareNinjaRelationshipGetDescription(BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI char* BNFirmwareNinjaRelationshipGetDescription(BNFirmwareNinjaRelationship* rel);
 	BINARYNINJACOREAPI void BNFirmwareNinjaRelationshipSetProvenance(BNFirmwareNinjaRelationship* rel, const char* provenance);
-	BINARYNINJACOREAPI const char* BNFirmwareNinjaRelationshipGetProvenance(BNFirmwareNinjaRelationship* rel);
-	BINARYNINJACOREAPI const char* BNFirmwareNinjaRelationshipGetGuid(BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI char* BNFirmwareNinjaRelationshipGetProvenance(BNFirmwareNinjaRelationship* rel);
+	BINARYNINJACOREAPI char* BNFirmwareNinjaRelationshipGetGuid(BNFirmwareNinjaRelationship* rel);
 
 	// Line formatters
 	BINARYNINJACOREAPI BNLineFormatter* BNRegisterLineFormatter(const char* name, BNCustomLineFormatter* callbacks);

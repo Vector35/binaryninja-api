@@ -251,11 +251,11 @@ Ref<Function> FirmwareNinjaRelationship::GetSecondaryFunction() const
 
 std::string FirmwareNinjaRelationship::GetSecondaryExternalSymbol() const
 {
-	std::string result = "";
 	auto bnSymbol = BNFirmwareNinjaRelationshipGetSecondaryExternalSymbol(m_object);
-	if (bnSymbol)
-		result = std::string(bnSymbol);
-
+	if (!bnSymbol)
+		return "";
+	std::string result = bnSymbol;
+	BNFreeString(bnSymbol);
 	return result;
 }
 
@@ -268,11 +268,11 @@ void FirmwareNinjaRelationship::SetDescription(const std::string& description)
 
 std::string FirmwareNinjaRelationship::GetDescription() const
 {
-	std::string result = "";
 	auto bnDescription = BNFirmwareNinjaRelationshipGetDescription(m_object);
-	if (bnDescription)
-		result = std::string(bnDescription);
-
+	if (!bnDescription)
+		return "";
+	std::string result = bnDescription;
+	BNFreeString(bnDescription);
 	return result;
 }
 
@@ -285,18 +285,23 @@ void FirmwareNinjaRelationship::SetProvenance(const std::string& provenance)
 
 std::string FirmwareNinjaRelationship::GetProvenance() const
 {
-	std::string result = "";
 	auto bnProvenance = BNFirmwareNinjaRelationshipGetProvenance(m_object);
-	if (bnProvenance)
-		result = std::string(bnProvenance);
-
+	if (!bnProvenance)
+		return "";
+	std::string result = bnProvenance;
+	BNFreeString(bnProvenance);
 	return result;
 }
 
 
 std::string FirmwareNinjaRelationship::GetGuid() const
 {
-	return BNFirmwareNinjaRelationshipGetGuid(m_object);
+	auto bnGuid = BNFirmwareNinjaRelationshipGetGuid(m_object);
+	if (!bnGuid)
+		return "";
+	std::string result = bnGuid;
+	BNFreeString(bnGuid);
+	return result;
 }
 
 

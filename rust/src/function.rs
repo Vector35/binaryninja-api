@@ -2442,7 +2442,8 @@ impl Function {
     ) -> Ref<FlowGraph> {
         let settings_raw = settings.map(|s| s.handle).unwrap_or(std::ptr::null_mut());
         let raw_view_type = FunctionViewType::into_raw(view_type);
-        let result = unsafe { BNCreateImmediateFunctionGraph(self.handle, raw_view_type, settings_raw) };
+        let result =
+            unsafe { BNCreateImmediateFunctionGraph(self.handle, raw_view_type, settings_raw) };
         FunctionViewType::free_raw(raw_view_type);
         unsafe { FlowGraph::ref_from_raw(result) }
     }

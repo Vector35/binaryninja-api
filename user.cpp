@@ -33,17 +33,26 @@ User::User(BNUser* user)
 
 string User::GetName()
 {
-	return BNGetUserName(m_object);
+	char* str = BNGetUserName(m_object);
+	string result = str;
+	BNFreeString(str);
+	return result;
 }
 
 
 string User::GetEmail()
 {
-	return BNGetUserEmail(m_object);
+	char* str = BNGetUserEmail(m_object);
+	string result = str;
+	BNFreeString(str);
+	return result;
 }
 
 
 string User::GetId()
 {
-	return BNGetUserId(m_object);
+	char* str = BNGetUserId(m_object);
+	string result = str;
+	BNFreeString(str);
+	return result;
 }

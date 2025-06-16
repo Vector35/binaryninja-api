@@ -76,6 +76,7 @@ pub type Result<R> = result::Result<R, ()>;
 pub type BinaryViewEventType = BNBinaryViewEventType;
 pub type AnalysisState = BNAnalysisState;
 pub type ModificationStatus = BNModificationStatus;
+pub type StringType = BNStringType;
 
 #[allow(clippy::len_without_is_empty)]
 pub trait BinaryViewBase: AsRef<BinaryView> {
@@ -192,11 +193,6 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn type_name(&self) -> String {
-        let ptr: *mut c_char = unsafe { BNGetViewType(self.as_ref().handle) };
-        unsafe { BnString::into_string(ptr) }
-    }
-
     fn parent_view(&self) -> Option<Ref<BinaryView>> {
         let raw_view_ptr = unsafe { BNGetParentView(self.as_ref().handle) };
         match raw_view_ptr.is_null() {
@@ -284,15 +280,43 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNSetAnalysisHold(self.as_ref().handle, enable) }
     }
 
+    /// Runs the analysis pipeline, analyzing any data that has been marked for updates.
+    ///
+    /// You can explicitly mark a function to be updated with:
+    /// - [`Function::mark_updates_required`]
+    /// - [`Function::mark_caller_updates_required`]
+    ///
+    /// NOTE: This is a **non-blocking** call, use [`BinaryViewExt::update_analysis_and_wait`] if you
+    /// require analysis to have completed before moving on.
     fn update_analysis(&self) {
         unsafe {
             BNUpdateAnalysis(self.as_ref().handle);
         }
     }
 
+    /// Runs the analysis pipeline, analyzing any data that has been marked for updates.
+    ///
+    /// You can explicitly mark a function to be updated with:
+    /// - [`Function::mark_updates_required`]
+    /// - [`Function::mark_caller_updates_required`]
+    ///
+    /// NOTE: This is a **blocking** call, use [`BinaryViewExt::update_analysis`] if you do not
+    /// need to wait for the analysis update to finish.
     fn update_analysis_and_wait(&self) {
         unsafe {
             BNUpdateAnalysisAndWait(self.as_ref().handle);
+        }
+    }
+
+    /// Causes **all** functions to be reanalyzed.
+    ///
+    /// Use [`BinaryViewExt::update_analysis`] or [`BinaryViewExt::update_analysis_and_wait`] instead
+    /// if you want to incrementally update analysis.
+    ///
+    /// NOTE: This function does not wait for the analysis to finish.
+    fn reanalyze(&self) {
+        unsafe {
+            BNReanalyzeAllFunctions(self.as_ref().handle);
         }
     }
 
@@ -570,7 +594,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    /// You likely would also like to call [`Self::define_user_symbol`] to bind this data variable with a name
+    /// You likely would also like to call [`BinaryViewExt::define_user_symbol`] to bind this data variable with a name
     fn define_user_data_var<'a, T: Into<Conf<&'a Type>>>(&self, addr: u64, ty: T) {
         let mut owned_raw_ty = Conf::<&Type>::into_raw(ty.into());
         unsafe {
@@ -924,29 +948,36 @@ pub trait BinaryViewExt: BinaryViewBase {
         MemoryMap::new(self.as_ref().to_owned())
     }
 
-    fn add_auto_function(&self, plat: &Platform, addr: u64) -> Option<Ref<Function>> {
-        unsafe {
-            let handle = BNAddFunctionForAnalysis(
-                self.as_ref().handle,
-                plat.handle,
-                addr,
-                false,
-                std::ptr::null_mut(),
-            );
-
-            if handle.is_null() {
-                return None;
-            }
-
-            Some(Function::ref_from_raw(handle))
-        }
+    /// Add an auto function at the given `address` with the views default platform.
+    ///
+    /// Use [`BinaryViewExt::add_auto_function_with_platform`] if you wish to specify a platform.
+    ///
+    /// NOTE: The default platform **must** be set for this view!
+    fn add_auto_function(&self, address: u64) -> Option<Ref<Function>> {
+        let platform = self.default_platform()?;
+        self.add_auto_function_with_platform(address, &platform)
     }
 
-    fn add_function_with_type(
+    /// Add an auto function at the given `address` with the `platform`.
+    ///
+    /// Use [`BinaryViewExt::add_auto_function_ext`] if you wish to specify a function type.
+    ///
+    /// NOTE: If the view's default platform is not set, this will set it to `platform`.
+    fn add_auto_function_with_platform(
         &self,
-        plat: &Platform,
-        addr: u64,
-        auto_discovered: bool,
+        address: u64,
+        platform: &Platform,
+    ) -> Option<Ref<Function>> {
+        self.add_auto_function_ext(address, platform, None)
+    }
+
+    /// Add an auto function at the given `address` with the `platform` and function type.
+    ///
+    /// NOTE: If the view's default platform is not set, this will set it to `platform`.
+    fn add_auto_function_ext(
+        &self,
+        address: u64,
+        platform: &Platform,
         func_type: Option<&Type>,
     ) -> Option<Ref<Function>> {
         unsafe {
@@ -957,9 +988,9 @@ pub trait BinaryViewExt: BinaryViewBase {
 
             let handle = BNAddFunctionForAnalysis(
                 self.as_ref().handle,
-                plat.handle,
-                addr,
-                auto_discovered,
+                platform.handle,
+                address,
+                true,
                 func_type,
             );
 
@@ -971,26 +1002,73 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn add_entry_point(&self, plat: &Platform, addr: u64) {
+    /// Remove an auto function from the view.
+    ///
+    /// Pass `true` for `update_refs` to update all references of the function.
+    ///
+    /// NOTE: Unlike [`BinaryViewExt::remove_user_function`], this will NOT prohibit the function from
+    /// being re-added in the future, use [`BinaryViewExt::remove_user_function`] to blacklist the
+    /// function from being automatically created.
+    fn remove_auto_function(&self, func: &Function, update_refs: bool) {
         unsafe {
-            BNAddEntryPointForAnalysis(self.as_ref().handle, plat.handle, addr);
+            BNRemoveAnalysisFunction(self.as_ref().handle, func.handle, update_refs);
         }
     }
 
-    fn create_user_function(&self, plat: &Platform, addr: u64) -> Result<Ref<Function>> {
+    /// Add a user function at the given `address` with the views default platform.
+    ///
+    /// Use [`BinaryViewExt::add_user_function_with_platform`] if you wish to specify a platform.
+    ///
+    /// NOTE: The default platform **must** be set for this view!
+    fn add_user_function(&self, addr: u64) -> Option<Ref<Function>> {
+        let platform = self.default_platform()?;
+        self.add_user_function_with_platform(addr, &platform)
+    }
+
+    /// Add an auto function at the given `address` with the `platform`.
+    ///
+    /// NOTE: If the view's default platform is not set, this will set it to `platform`.
+    fn add_user_function_with_platform(
+        &self,
+        addr: u64,
+        platform: &Platform,
+    ) -> Option<Ref<Function>> {
         unsafe {
-            let func = BNCreateUserFunction(self.as_ref().handle, plat.handle, addr);
-
+            let func = BNCreateUserFunction(self.as_ref().handle, platform.handle, addr);
             if func.is_null() {
-                return Err(());
+                return None;
             }
-
-            Ok(Function::ref_from_raw(func))
+            Some(Function::ref_from_raw(func))
         }
+    }
+
+    /// Removes the function from the view and blacklists it from being created automatically.
+    ///
+    /// NOTE: If you call [`BinaryViewExt::add_user_function`], it will override the blacklist.
+    fn remove_user_function(&self, func: &Function) {
+        unsafe { BNRemoveUserFunction(self.as_ref().handle, func.handle) }
     }
 
     fn has_functions(&self) -> bool {
         unsafe { BNHasFunctions(self.as_ref().handle) }
+    }
+
+    /// Add an entry point at the given `address` with the view's default platform.
+    ///
+    /// NOTE: The default platform **must** be set for this view!
+    fn add_entry_point(&self, addr: u64) {
+        if let Some(platform) = self.default_platform() {
+            self.add_entry_point_with_platform(addr, &platform);
+        }
+    }
+
+    /// Add an entry point at the given `address` with the `platform`.
+    ///
+    /// NOTE: If the view's default platform is not set, this will set it to `platform`.
+    fn add_entry_point_with_platform(&self, addr: u64, platform: &Platform) {
+        unsafe {
+            BNAddEntryPointForAnalysis(self.as_ref().handle, platform.handle, addr);
+        }
     }
 
     fn entry_point_function(&self) -> Option<Ref<Function>> {
@@ -1828,6 +1906,38 @@ pub trait BinaryViewExt: BinaryViewBase {
         let name = QualifiedName::from_owned_raw(result_name);
         Some((lib, name))
     }
+
+    /// Retrieve all known strings in the binary.
+    ///
+    /// NOTE: This returns a list of [`StringReference`] as strings may not be representable
+    /// as a [`String`] or even a [`BnString`]. It is the caller's responsibility to read the underlying
+    /// data and convert it to a representable form.
+    fn strings(&self) -> Array<StringReference> {
+        unsafe {
+            let mut count = 0;
+            let strings = BNGetStrings(self.as_ref().handle, &mut count);
+            Array::new(strings, count, ())
+        }
+    }
+
+    /// Retrieve all known strings within the provided `range`.
+    ///
+    /// NOTE: This returns a list of [`StringReference`] as strings may not be representable
+    /// as a [`String`] or even a [`BnString`]. It is the caller's responsibility to read the underlying
+    /// data and convert it to a representable form.
+    fn strings_in_range(&self, range: Range<u64>) -> Array<StringReference> {
+        unsafe {
+            let mut count = 0;
+            let strings = BNGetStringsInRange(
+                self.as_ref().handle,
+                range.start,
+                range.end - range.start,
+                &mut count,
+            );
+            Array::new(strings, count, ())
+        }
+    }
+
     //
     // fn type_archives(&self) -> Array<TypeArchive> {
     //     let mut ids: *mut *mut c_char = std::ptr::null_mut();
@@ -2034,7 +2144,7 @@ unsafe impl Sync for BinaryView {}
 impl std::fmt::Debug for BinaryView {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BinaryView")
-            .field("type_name", &self.type_name())
+            .field("view_type", &self.view_type())
             .field("file", &self.file())
             .field("original_image_base", &self.original_image_base())
             .field("start", &self.start())
@@ -2111,5 +2221,48 @@ where
             Some(on_event::<Handler>),
             raw as *mut ::std::os::raw::c_void,
         );
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct StringReference {
+    pub ty: StringType,
+    pub start: u64,
+    pub length: usize,
+}
+
+impl From<BNStringReference> for StringReference {
+    fn from(raw: BNStringReference) -> Self {
+        Self {
+            ty: raw.type_,
+            start: raw.start,
+            length: raw.length,
+        }
+    }
+}
+
+impl From<StringReference> for BNStringReference {
+    fn from(raw: StringReference) -> Self {
+        Self {
+            type_: raw.ty,
+            start: raw.start,
+            length: raw.length,
+        }
+    }
+}
+
+impl CoreArrayProvider for StringReference {
+    type Raw = BNStringReference;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for StringReference {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeStringReferenceList(raw)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::from(*raw)
     }
 }

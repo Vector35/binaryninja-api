@@ -1549,13 +1549,21 @@ class Function:
 	@property
 	def llil_basic_blocks(self) -> Generator['lowlevelil.LowLevelILBasicBlock', None, None]:
 		"""A generator of all LowLevelILBasicBlock objects in the current function"""
-		for block in self.llil:
+		llil = self.llil
+		if llil is None:
+			return
+
+		for block in llil:
 			yield block
 
 	@property
 	def mlil_basic_blocks(self) -> Generator['mediumlevelil.MediumLevelILBasicBlock', None, None]:
 		"""A generator of all MediumLevelILBasicBlock objects in the current function"""
-		for block in self.mlil:
+		mlil = self.mlil
+		if mlil is None:
+			return
+
+		for block in mlil:
 			yield block
 
 	@property
@@ -1883,6 +1891,10 @@ class Function:
 			>>> func.get_llils_at(func.start)
 			[<il: push(rbp)>]
 		"""
+		llil = self.llil
+		if llil is None:
+			return []
+
 		if arch is None:
 			arch = self.arch
 		count = ctypes.c_ulonglong()
@@ -1891,7 +1903,7 @@ class Function:
 		try:
 			result = []
 			for i in range(0, count.value):
-				result.append(self.llil[instrs[i]])
+				result.append(llil[instrs[i]])
 			return result
 		finally:
 			core.BNFreeILInstructionList(instrs)

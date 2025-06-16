@@ -939,7 +939,10 @@ void TagType::SetName(const std::string& name)
 
 std::string TagType::GetIcon() const
 {
-	return BNTagTypeGetIcon(m_object);
+	char* str = BNTagTypeGetIcon(m_object);
+	string result = str;
+	BNFreeString(str);
+	return result;
 }
 
 
@@ -1002,7 +1005,10 @@ Ref<TagType> Tag::GetType() const
 
 std::string Tag::GetData() const
 {
-	return BNTagGetData(m_object);
+	char* str = BNTagGetData(m_object);
+	string result = str;
+	BNFreeString(str);
+	return result;
 }
 
 
@@ -1278,13 +1284,19 @@ uint64_t Section::GetEntrySize() const
 
 std::string Section::GetLinkedSection() const
 {
-	return BNSectionGetLinkedSection(m_object);
+	char* str = BNSectionGetLinkedSection(m_object);
+	string result = str;
+	BNFreeString(str);
+	return result;
 }
 
 
 std::string Section::GetInfoSection() const
 {
-	return BNSectionGetInfoSection(m_object);
+	char* str = BNSectionGetInfoSection(m_object);
+	string result = str;
+	BNFreeString(str);
+	return result;
 }
 
 

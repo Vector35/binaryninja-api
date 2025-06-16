@@ -33,6 +33,7 @@ use crate::tags::Tag;
 use crate::types::Type;
 use crate::variable::StackVariableReference;
 
+use crate::binary_view::StringType;
 use crate::high_level_il::HighLevelILFunction;
 use crate::low_level_il::function::{FunctionForm, FunctionMutability, LowLevelILFunction};
 use crate::medium_level_il::MediumLevelILFunction;
@@ -45,7 +46,6 @@ use std::ptr::NonNull;
 
 pub type DisassemblyOption = BNDisassemblyOption;
 pub type InstructionTextTokenType = BNInstructionTextTokenType;
-pub type StringType = BNStringType;
 
 #[derive(Clone, PartialEq, Debug, Default, Eq)]
 pub struct DisassemblyTextLine {

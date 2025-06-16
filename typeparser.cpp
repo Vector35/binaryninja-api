@@ -101,7 +101,10 @@ std::string TypeParser::FormatParseErrors(const std::vector<TypeParserError>& er
 
 std::string TypeParser::GetName() const
 {
-	return BNGetTypeParserName(m_object);
+	char* str = BNGetTypeParserName(m_object);
+	std::string result = str;
+	BNFreeString(str);
+	return result;
 }
 
 

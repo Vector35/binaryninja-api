@@ -30,7 +30,7 @@ pub struct Edge<'a, C: 'a + BlockContext> {
     pub branch: BranchType,
     pub back_edge: bool,
     pub source: Guard<'a, BasicBlock<C>>,
-    target: Guard<'a, BasicBlock<C>>,
+    pub target: Guard<'a, BasicBlock<C>>,
 }
 
 impl<'a, C: 'a + fmt::Debug + BlockContext> fmt::Debug for Edge<'a, C> {

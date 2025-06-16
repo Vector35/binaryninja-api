@@ -444,12 +444,12 @@ pub struct Type {
 /// bv.define_user_type("int_2", &my_custom_type_2);
 /// ```
 impl Type {
-    pub(crate) unsafe fn from_raw(handle: *mut BNType) -> Self {
+    pub unsafe fn from_raw(handle: *mut BNType) -> Self {
         debug_assert!(!handle.is_null());
         Self { handle }
     }
 
-    pub(crate) unsafe fn ref_from_raw(handle: *mut BNType) -> Ref<Self> {
+    pub unsafe fn ref_from_raw(handle: *mut BNType) -> Ref<Self> {
         debug_assert!(!handle.is_null());
         Ref::new(Self { handle })
     }
@@ -1089,34 +1089,6 @@ impl FunctionParameter {
             name,
             location,
         }
-    }
-}
-
-// TODO: We need to delete this...
-// Name, Variable and Type
-impl CoreArrayProvider for (&str, Variable, &Type) {
-    type Raw = BNVariableNameAndType;
-    type Context = ();
-    type Wrapped<'a>
-        = (&'a str, Variable, &'a Type)
-    where
-        Self: 'a;
-}
-
-// TODO: This needs to go!
-unsafe impl CoreArrayProviderInner for (&str, Variable, &Type) {
-    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeVariableNameAndTypeList(raw, count)
-    }
-
-    unsafe fn wrap_raw<'a>(
-        raw: &'a Self::Raw,
-        _context: &'a Self::Context,
-    ) -> (&'a str, Variable, &'a Type) {
-        let name = CStr::from_ptr(raw.name).to_str().unwrap();
-        let var = Variable::from(raw.var);
-        let var_type = &*(raw.type_ as *mut Type);
-        (name, var, var_type)
     }
 }
 

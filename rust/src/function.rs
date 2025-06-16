@@ -936,7 +936,7 @@ impl Function {
 
     // TODO: Turn this into an actual type?
     /// List of function variables: including name, variable and type
-    pub fn variables(&self) -> Array<(&str, Variable, &Type)> {
+    pub fn variables(&self) -> Array<NamedVariableWithType> {
         let mut count = 0;
         let vars = unsafe { BNGetFunctionVariables(self.handle, &mut count) };
         assert!(!vars.is_null());

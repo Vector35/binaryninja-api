@@ -638,6 +638,9 @@ static void FillOperands32Vle(Instruction* instruction, uint32_t word32, uint64_
 			PushRB(instruction, word32);
 			instruction->flags.rc = word32 & 0x1;
 			break;
+
+		default:
+			;
 	}
 }
 
@@ -689,10 +692,9 @@ void FillVle32BcxOperands(OperandsList *e_bcx, const Instruction *instruction)
 		// Condition is true/false: use crn, copy target
 		case 0:
 		case 1:
-			uint32_t crn = bi >> 2;
 
 			e_bcx->operands[0].cls = PPC_OP_REG_CRFS_IMPLY0;
-			e_bcx->operands[0].reg = Crf(crn);
+			e_bcx->operands[0].reg = Crf(bi >> 2);
 			CopyOperand(&e_bcx->operands[1], &instruction->operands[2]);
 			e_bcx->numOperands = 2;
 			break;

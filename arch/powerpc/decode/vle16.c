@@ -755,6 +755,9 @@ static void FillOperands16Vle(Instruction* instruction, uint16_t word16, uint64_
 			PushMem(instruction, PPC_OP_MEM_RA, Gpr(rx), (int32_t)sd4);
 			break;
 		}
+
+		default:
+			;
 	}
 }
 

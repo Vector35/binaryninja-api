@@ -1403,7 +1403,7 @@ pub struct CoreArchitecture {
 
 impl CoreArchitecture {
     // TODO: Leave a note on architecture lifetimes. Specifically that they are never freed.
-    pub(crate) unsafe fn from_raw(handle: *mut BNArchitecture) -> Self {
+    pub unsafe fn from_raw(handle: *mut BNArchitecture) -> Self {
         debug_assert!(!handle.is_null());
         CoreArchitecture { handle }
     }

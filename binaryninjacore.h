@@ -3618,6 +3618,7 @@ extern "C"
 		size_t desiredLineLength;
 		size_t minimumContentLength;
 		size_t tabWidth;
+		size_t maximumAnnotationLength;
 		char* languageName;
 		char* commentStartString;
 		char* commentEndString;

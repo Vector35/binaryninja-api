@@ -14100,6 +14100,7 @@ namespace BinaryNinja {
 		size_t desiredLineLength;
 		size_t minimumContentLength;
 		size_t tabWidth;
+		size_t maximumAnnotationLength;
 		std::string languageName;
 		std::string commentStartString;
 		std::string commentEndString;

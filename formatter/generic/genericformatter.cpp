@@ -16,6 +16,11 @@ enum ItemType
 	ArgumentSeparator,
 	Statement,
 	StatementSeparator,
+	StringComponent,
+	StringSeparator,
+	StringWhitespace,
+	FormatSpecifier,
+	EscapeSequence,
 	Group,
 	Container,
 	StartOfContainer,
@@ -250,6 +255,161 @@ static vector<Item> CreateStatementItems(const vector<Item>& items)
 	return result;
 }
 
+static vector<InstructionTextToken> ParseStringToken(
+    const InstructionTextToken& unprocessedStringToken,
+    const size_t maxParsingLength)
+{
+    const auto& src = unprocessedStringToken.text;
+    const size_t tail = src.size();
+
+	// Max parsing length set to max annotation length
+    if (tail > maxParsingLength)
+        return { unprocessedStringToken };
+    vector<InstructionTextToken> result;
+    size_t curStart = 0, curEnd = 0;
+
+    auto ConstructToken = [&](size_t start, size_t end) {
+    	InstructionTextToken token = unprocessedStringToken;
+    	const string newTxt = string(src.substr(start, end - start));
+    	token.text = newTxt;
+    	token.width = newTxt.size();
+        result.emplace_back(token);
+    };
+
+	auto flushToken = [&](size_t start, size_t end)
+	{
+		if (start < end)
+			ConstructToken(start, end);
+	};
+
+	// We generally split along spaces while keeping words intact, but some cases have
+	// specific splitting behavior:
+	//
+	// - Any format specifier (starting with %) will be treated as an atom even if embedded
+	//   within a word
+	// - Any escape sequence will also be treated as an atom
+	// - We split along punctuation like commas, colons, periods, and semicolons, grouping
+	//   trailing punctuation together.
+    while (curEnd < tail)
+    {
+        char c = src[curEnd];
+
+        if (c == '%')
+        {
+        	// Flush before format specifier
+        	flushToken(curStart, curEnd);
+
+            size_t start = curEnd;
+            curEnd++;
+            while (curEnd < tail && (isalnum(src[curEnd]) || src[curEnd]=='.' || src[curEnd]=='-'))
+                curEnd++;
+            ConstructToken(start, curEnd);
+            curStart = curEnd;
+        }
+        else if (c == '\\')
+        {
+        	// Flush before escape sequence
+			flushToken(curStart, curEnd);
+
+            size_t start = curEnd;
+            curEnd++;  // consume '\'
+            if (curEnd < tail)
+                curEnd++;  // consume escaped char
+            ConstructToken(start, curEnd);
+            curStart = curEnd;
+        }
+        else if (c == ',' || c == '.' || c == ':' || c == ';' || isspace(c))
+        {
+        	// Flush before punctuation
+        	flushToken(curStart, curEnd);
+
+			// Group together repeated punctuation
+            size_t start = curEnd;
+            while (curEnd < tail && src[curEnd] == c)
+                curEnd++;
+            ConstructToken(start, curEnd);
+            curStart = curEnd;
+        }
+        else
+        {
+            curEnd++;
+        }
+    }
+
+	flushToken(curStart, curEnd);
+    return result;
+}
+
+static vector<Item> CreateStringGroups(const vector<Item>& items)
+{
+    vector<Item> result, pending;
+    bool hasStrings = false;
+    for (auto& i : items)
+    {
+		if (i.type == StringSeparator && !i.tokens.empty())
+		{
+			// We try to push separators onto a preceding word, otherwise treat as
+			// a singular atom
+			if (pending.empty())
+			{
+				result.push_back(Item {Atom, {}, {i.tokens}, 0});
+			}
+			else
+			{
+				for (auto& j : i.tokens)
+					pending.back().AddTokenToLastAtom(j);
+				result.push_back(Item {StringComponent, pending, {}, 0});
+			}
+			pending.clear();
+			hasStrings = true;
+		}
+    	else if (i.type == StringWhitespace)
+    	{
+    		// Special case because we let whitespace trail even if over width
+    		if (!pending.empty())
+    		{
+    			result.push_back(Item {StringComponent, pending, {}, 0});
+    			pending.clear();
+    		}
+    		result.push_back(Item {StringWhitespace, i.items, i.tokens, i.width});
+    	}
+    	else if (i.type == FormatSpecifier || i.type == EscapeSequence)
+    	{
+    		// Flush previous tokens before special sequences like format specifiers or
+    		// escape sequences
+    		if (!pending.empty())
+    		{
+    			result.push_back(Item {StringComponent, pending, {}, 0 });
+    			pending.clear();
+    		}
+    		result.push_back(Item { Atom, i.items, i.tokens, i.width});
+    	}
+
+    	else if (i.type == StartOfContainer && pending.empty())
+    	{
+    		result.push_back(i);
+    	}
+    	else if (i.type == EndOfContainer && hasStrings && !pending.empty())
+    	{
+    		result.push_back(Item {StringComponent, pending, {}, 0});
+    		result.push_back(i);
+    	}
+    	else
+    	{
+    		pending.push_back(Item {i.type, CreateStringGroups(i.items), i.tokens, 0});
+    	}
+    }
+
+	if (!pending.empty())
+	{
+		if (hasStrings)
+			result.push_back(Item {StringComponent, pending, {}, 0});
+		else
+			result.insert(result.end(), pending.begin(), pending.end());
+	}
+
+	return result;
+}
 
 static vector<Item> CreateAssignmentOperatorGroups(const vector<Item>& items)
 {
@@ -576,8 +736,7 @@ vector<DisassemblyTextLine> GenericLineFormatter::FormatLines(
 		size_t tokenIndex = indentationTokens.size();
 
 		// First break the line down into nested container items. A container is anything between a pair of
-		// BraceTokens (except for strings, where the entire string, including the quotes, are treated as
-		// a single atom).
+		// BraceTokens
 		vector<Item> items;
 		stack<vector<Item>> itemStack;
 		for (; tokenIndex < currentLine.tokens.size(); tokenIndex++)
@@ -588,29 +747,30 @@ vector<DisassemblyTextLine> GenericLineFormatter::FormatLines(
 			switch (token.type)
 			{
 			case BraceToken:
+				// Beginning of string
 				if (tokenIndex + 1 < currentLine.tokens.size()
 					&& currentLine.tokens[tokenIndex + 1].type == StringToken)
 				{
-					// Treat string tokens surrounded by brace tokens as a unit (this is usually the quotes
-					// surrounding the string)
-					Item atom;
-					atom.type = Atom;
-					atom.tokens.push_back(token);
-					atom.tokens.push_back(currentLine.tokens[tokenIndex + 1]);
-					atom.width = 0;
-					tokenIndex++;
-					if (tokenIndex + 1 < currentLine.tokens.size()
-						&& currentLine.tokens[tokenIndex + 1].type == BraceToken)
-					{
-						atom.tokens.push_back(currentLine.tokens[tokenIndex + 1]);
-						tokenIndex++;
-					}
+					// Create a ContainerContents item and place it onto the item stack. This will hold anything
+					// inside the container once the end of the container is found.
+					items.push_back(Item {Container, {}, {}, 0});
+					itemStack.push(items);
 
-					items.push_back(atom);
-					break;
+					// Starting a new context
+					items.clear();
+					items.push_back(Item {StartOfContainer, {}, {token}, 0});
 				}
-
-				if (trimmedText == "(" || trimmedText == "[" || trimmedText == "{")
+				// End of string
+				else if (currentLine.tokens[tokenIndex].type == StringToken
+					&& tokenIndex + 1 < currentLine.tokens.size()
+					&& currentLine.tokens[tokenIndex + 1].type == BraceToken)
+				{
+					// Create a ContainerContents item and place it onto the item stack. This will hold anything
+					// inside the container once the end of the container is found.
+					items.push_back(Item {Container, {}, {}, 0});
+					itemStack.push(items);
+				}
+				else if (trimmedText == "(" || trimmedText == "[" || trimmedText == "{")
 				{
 					// Create a ContainerContents item and place it onto the item stack. This will hold anything
 					// inside the container once the end of the container is found.
@@ -663,6 +823,25 @@ vector<DisassemblyTextLine> GenericLineFormatter::FormatLines(
 				else
 					items.push_back(Item {Operator, {}, {token}, 0});
 				break;
+			case StringToken:
+			{
+				vector<InstructionTextToken> stringTokens = ParseStringToken(token, settings.maximumAnnotationLength);
+				for (auto subToken : stringTokens)
+				{
+					string trimmedSubText = TrimString(subToken.text);
+					if (trimmedSubText.empty())
+						items.push_back(Item {StringWhitespace, {}, {subToken}, 0});
+					if (trimmedSubText[0] == '%')
+						items.push_back(Item {FormatSpecifier, {}, {subToken}, 0});
+					else if (!trimmedSubText.empty() && trimmedSubText[0] == '\\')
+						items.push_back(Item {EscapeSequence, {}, {subToken}, 0});
+					else if (trimmedSubText[0] == ',' || trimmedSubText[0] == '.' || trimmedSubText[0] == ':' || trimmedSubText[0] == ';')
+						items.push_back(Item {StringSeparator, {}, {subToken}, 0});
+					else
+						items.push_back(Item {Atom, {}, {subToken}, 0});
+				}
+				break;
+			}
 			default:
 				items.push_back(Item {Atom, {}, {token}, 0});
 				break;
@@ -698,6 +877,10 @@ vector<DisassemblyTextLine> GenericLineFormatter::FormatLines(
 		// Move start of container items to the last token of the previous item, and end of container items to
 		// the previous atom.
 		items = RelocateStartAndEndOfContainerItems(items);
+
+		// Create internal groupings for displaying strings -- grouping items by punctuation, format specifiers, and
+		// escape sequences
+		items = CreateStringGroups(items);
 
 		// Now that items are done, compute widths for layout
 		for (auto& j : items)
@@ -754,9 +937,16 @@ vector<DisassemblyTextLine> GenericLineFormatter::FormatLines(
 
 			for (auto item = items.begin(); item != items.end();)
 			{
-				if (currentWidth + item->width > desiredWidth)
+				if (item->type == StringComponent && currentWidth + item->width > desiredWidth)
+				{
+					// If a string is too wide to fit on the current line, create a newline
+					// without additional indentation
+					newLine();
+				}
+				else if (currentWidth + item->width > desiredWidth && item->type != StringWhitespace)
 				{
 					// Current item is too wide to fit on the current line, will need to start a new line.
+					// Whitespace is allowed to be too wide; we push it on as the preceding word is wrapped.
 					auto next = item;
 					++next;
 

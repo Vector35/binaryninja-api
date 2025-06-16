@@ -53,6 +53,7 @@ LineFormatterSettings LineFormatterSettings::FromAPIObject(const BNLineFormatter
 	result.desiredLineLength = settings->desiredLineLength;
 	result.minimumContentLength = settings->minimumContentLength;
 	result.tabWidth = settings->tabWidth;
+	result.maximumAnnotationLength = settings->maximumAnnotationLength;
 	result.languageName = settings->languageName;
 	result.commentStartString = settings->commentStartString;
 	result.commentEndString = settings->commentEndString;
@@ -69,6 +70,7 @@ BNLineFormatterSettings LineFormatterSettings::ToAPIObject() const
 	result.desiredLineLength = desiredLineLength;
 	result.minimumContentLength = minimumContentLength;
 	result.tabWidth = tabWidth;
+	result.maximumAnnotationLength = maximumAnnotationLength;
 	result.languageName = (char*)languageName.c_str();
 	result.commentStartString = (char*)commentStartString.c_str();
 	result.commentEndString = (char*)commentEndString.c_str();

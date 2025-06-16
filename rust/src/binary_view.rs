@@ -1979,7 +1979,7 @@ impl<T: BinaryViewBase> BinaryViewExt for T {}
 /// has only a weak reference to the [`BinaryView`].
 #[derive(PartialEq, Eq, Hash)]
 pub struct BinaryView {
-    pub(crate) handle: *mut BNBinaryView,
+    pub handle: *mut BNBinaryView,
 }
 
 impl BinaryView {

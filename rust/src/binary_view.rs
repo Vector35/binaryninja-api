@@ -68,6 +68,7 @@ pub mod memory_map;
 pub mod reader;
 pub mod writer;
 
+use crate::workflow::Workflow;
 pub use memory_map::MemoryMap;
 pub use reader::BinaryReader;
 pub use writer::BinaryWriter;
@@ -322,6 +323,14 @@ pub trait BinaryViewExt: BinaryViewBase {
 
     fn abort_analysis(&self) {
         unsafe { BNAbortAnalysis(self.as_ref().handle) }
+    }
+
+    fn workflow(&self) -> Ref<Workflow> {
+        unsafe {
+            let raw_ptr = BNGetWorkflowForBinaryView(self.as_ref().handle);
+            let nonnull = NonNull::new(raw_ptr).expect("All views must have a workflow");
+            Workflow::ref_from_raw(nonnull)
+        }
     }
 
     fn analysis_info(&self) -> Result<AnalysisInfo> {

@@ -1962,6 +1962,12 @@ pub trait BinaryViewExt: BinaryViewBase {
 
 impl<T: BinaryViewBase> BinaryViewExt for T {}
 
+/// # Cleaning up
+///
+/// [`BinaryView`] has a cyclic relationship with the associated [`FileMetadata`], each holds a strong
+/// reference to one another, so to properly clean up/free the [`BinaryView`], you must manually close the
+/// file using [`FileMetadata::close`], this is not fixable in the general case, until [`FileMetadata`]
+/// has only a weak reference to the [`BinaryView`].
 #[derive(PartialEq, Eq, Hash)]
 pub struct BinaryView {
     pub(crate) handle: *mut BNBinaryView,

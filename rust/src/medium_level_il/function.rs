@@ -117,15 +117,6 @@ impl MediumLevelILFunction {
         unsafe { Array::new(blocks, count, context) }
     }
 
-    pub fn var_definitions(&self, var: &Variable) -> Array<MediumLevelILInstruction> {
-        let mut count = 0;
-        let raw_var = BNVariable::from(var);
-        let raw_instr_idxs =
-            unsafe { BNGetMediumLevelILVariableDefinitions(self.handle, &raw_var, &mut count) };
-        assert!(!raw_instr_idxs.is_null());
-        unsafe { Array::new(raw_instr_idxs, count, self.to_owned()) }
-    }
-
     pub fn create_user_stack_var<'a, C: Into<Conf<&'a Type>>>(
         self,
         offset: i64,
@@ -229,7 +220,7 @@ impl MediumLevelILFunction {
     /// * `def_addr` - Address of the definition site of the variable
     pub fn clear_user_var_value(&self, var: &Variable, addr: u64, after: bool) -> Result<(), ()> {
         let Some(_var_def) = self
-            .var_definitions(var)
+            .variable_definitions(var)
             .iter()
             .find(|site| site.address == addr)
         else {
@@ -507,6 +498,7 @@ impl MediumLevelILFunction {
         let raw_var = BNVariable::from(variable);
         let defs =
             unsafe { BNGetMediumLevelILVariableDefinitions(self.handle, &raw_var, &mut count) };
+        assert!(!defs.is_null());
         unsafe { Array::new(defs, count, self.to_owned()) }
     }
 

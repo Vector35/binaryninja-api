@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 111
+#define BN_CURRENT_CORE_ABI_VERSION 112
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -5807,7 +5807,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNDefineImportedFunction(
 	    BNBinaryView* view, BNSymbol* importAddressSym, BNFunction* func, BNType* type);
 	BINARYNINJACOREAPI BNSymbol* BNDefineAutoSymbolAndVariableOrFunction(
-	    BNBinaryView* view, BNPlatform* platform, BNSymbol* sym, BNType* type);
+	    BNBinaryView* view, BNPlatform* platform, BNSymbol* sym, BNTypeWithConfidence* type);
 	BINARYNINJACOREAPI void BNBeginBulkModifySymbols(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNEndBulkModifySymbols(BNBinaryView* view);
 
@@ -7721,8 +7721,8 @@ extern "C"
 	BINARYNINJACOREAPI BNSymbolQueue* BNCreateSymbolQueue(void);
 	BINARYNINJACOREAPI void BNDestroySymbolQueue(BNSymbolQueue* queue);
 	BINARYNINJACOREAPI void BNAppendSymbolQueue(BNSymbolQueue* queue,
-		void (*resolve)(void* ctxt, BNSymbol** symbol, BNType** type), void* resolveContext,
-		void (*add)(void* ctxt, BNSymbol* symbol, BNType* type), void* addContext);
+		void (*resolve)(void* ctxt, BNSymbol** symbol, BNTypeWithConfidence* type), void* resolveContext,
+		void (*add)(void* ctxt, BNSymbol* symbol, BNTypeWithConfidence* type), void* addContext);
 	BINARYNINJACOREAPI void BNProcessSymbolQueue(BNSymbolQueue* queue);
 
 	BINARYNINJACOREAPI bool BNCoreEnumToString(const char* enumName, size_t value, char** result);

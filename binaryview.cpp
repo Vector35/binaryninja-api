@@ -29,12 +29,12 @@ using namespace std;
 
 struct SymbolQueueResolveContext
 {
-	std::function<std::pair<Ref<Symbol>, Ref<Type>>()> resolve;
+	std::function<std::pair<Ref<Symbol>, Confidence<Ref<Type>>>()> resolve;
 };
 
 struct SymbolQueueAddContext
 {
-	std::function<void(Symbol*, Type*)> add;
+	std::function<void(Symbol*, const Confidence<Ref<Type>>&)> add;
 };
 
 
@@ -3130,10 +3130,11 @@ void BinaryView::DefineAutoSymbol(Ref<Symbol> sym)
 }
 
 
-Ref<Symbol> BinaryView::DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type)
+Ref<Symbol> BinaryView::DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, const Confidence<Ref<Type>>& type)
 {
+	BNTypeWithConfidence apiType = {type.GetValue() ? type.GetValue()->GetObject() : nullptr, type.GetConfidence()};
 	BNSymbol* result = BNDefineAutoSymbolAndVariableOrFunction(
-	    m_object, platform ? platform->GetObject() : nullptr, sym->GetObject(), type ? type->GetObject() : nullptr);
+	    m_object, platform ? platform->GetObject() : nullptr, sym->GetObject(), &apiType);
 	if (!result)
 		return nullptr;
 	return new Symbol(result);
@@ -5694,28 +5695,29 @@ SymbolQueue::~SymbolQueue()
 }
 
 
-void SymbolQueue::ResolveCallback(void* ctxt, BNSymbol** symbol, BNType** type)
+void SymbolQueue::ResolveCallback(void* ctxt, BNSymbol** symbol, BNTypeWithConfidence* type)
 {
 	SymbolQueueResolveContext* resolve = (SymbolQueueResolveContext*)ctxt;
 	auto result = resolve->resolve();
 	delete resolve;
 	*symbol = result.first ? BNNewSymbolReference(result.first->GetObject()) : nullptr;
-	*type = result.second ? BNNewTypeReference(result.second->GetObject()) : nullptr;
+	type->type = result.second.GetValue() ? BNNewTypeReference(result.second.GetValue()->GetObject()) : nullptr;
+	type->confidence = result.second.GetConfidence();
 }
 
 
-void SymbolQueue::AddCallback(void* ctxt, BNSymbol* symbol, BNType* type)
+void SymbolQueue::AddCallback(void* ctxt, BNSymbol* symbol, BNTypeWithConfidence* type)
 {
 	SymbolQueueAddContext* add = (SymbolQueueAddContext*)ctxt;
 	Ref<Symbol> apiSymbol = new Symbol(symbol);
-	Ref<Type> apiType = new Type(type);
+	Confidence<Ref<Type>> apiType(type->type ? new Type(type->type) : nullptr, type->confidence);
 	add->add(apiSymbol, apiType);
 	delete add;
 }
 
 
 void SymbolQueue::Append(
-	const std::function<std::pair<Ref<Symbol>, Ref<Type>>()>& resolve, const std::function<void(Symbol*, Type*)>& add)
+	const std::function<std::pair<Ref<Symbol>, Confidence<Ref<Type>>>()>& resolve, const std::function<void(Symbol*, const Confidence<Ref<Type>>&)>& add)
 {
 	SymbolQueueResolveContext* resolveCtxt = new SymbolQueueResolveContext {resolve};
 	SymbolQueueAddContext* addCtxt = new SymbolQueueAddContext {add};

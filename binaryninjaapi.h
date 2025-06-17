@@ -5758,7 +5758,7 @@ namespace BinaryNinja {
 			\param type Type being defined
 			\return The defined symbol
 		*/
-		Ref<Symbol> DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, Ref<Type> type);
+		Ref<Symbol> DefineAutoSymbolAndVariableOrFunction(Ref<Platform> platform, Ref<Symbol> sym, const Confidence<Ref<Type>>& type);
 
 		/*! Undefine an automatically defined symbol
 
@@ -18819,14 +18819,14 @@ namespace BinaryNinja {
 	{
 		BNSymbolQueue* m_object;
 
-		static void ResolveCallback(void* ctxt, BNSymbol** symbol, BNType** type);
-		static void AddCallback(void* ctxt, BNSymbol* symbol, BNType* type);
+		static void ResolveCallback(void* ctxt, BNSymbol** symbol, BNTypeWithConfidence* type);
+		static void AddCallback(void* ctxt, BNSymbol* symbol, BNTypeWithConfidence* type);
 
 	public:
 		SymbolQueue();
 		~SymbolQueue();
-		void Append(const std::function<std::pair<Ref<Symbol>, Ref<Type>>()>& resolve,
-			const std::function<void(Symbol*, Type*)>& add);
+		void Append(const std::function<std::pair<Ref<Symbol>, Confidence<Ref<Type>>>()>& resolve,
+			const std::function<void(Symbol*, const Confidence<Ref<Type>>&)>& add);
 		void Process();
 	};
 

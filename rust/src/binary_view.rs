@@ -528,10 +528,13 @@ pub trait BinaryViewExt: BinaryViewBase {
         plat: &Platform,
         ty: T,
     ) -> Result<Ref<Symbol>> {
-        let raw_type = if let Some(t) = ty.into() {
-            t.handle
-        } else {
-            std::ptr::null_mut()
+        let mut type_with_conf = BNTypeWithConfidence {
+            type_: if let Some(t) = ty.into() {
+                t.handle
+            } else {
+                std::ptr::null_mut()
+            },
+            confidence: 255, // BN_FULL_CONFIDENCE
         };
 
         unsafe {
@@ -539,7 +542,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 self.as_ref().handle,
                 plat.handle,
                 sym.handle,
-                raw_type,
+                &mut type_with_conf,
             );
 
             if raw_sym.is_null() {

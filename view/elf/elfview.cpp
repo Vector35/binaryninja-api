@@ -2526,7 +2526,7 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 		// Try to demangle any C++ symbols
 		string shortName = rawName;
 		string fullName = rawName;
-		Ref<Type> typeRef = symbolTypeRef;
+		Confidence<Ref<Type>> typeRef = symbolTypeRef;
 		if (m_arch)
 		{
 			QualifiedName demangledName;
@@ -2542,18 +2542,19 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 			}
 		}
 
+		// If unable to extract type information, create a default type with the given size and heuristic confidence
 		if (!typeRef && (size > 0 && size <= 8))
 		{
-			typeRef = Type::IntegerType(size, false);
+			typeRef = Type::IntegerType(size, false)->WithConfidence(BN_HEURISTIC_CONFIDENCE);
 		}
 
-		return std::pair<Ref<Symbol>, Ref<Type>>(
+		return std::pair<Ref<Symbol>, Confidence<Ref<Type>>>(
 			new Symbol(type, shortName, fullName, rawName, addr, binding, nameSpace), typeRef);
 	};
 
 	if (m_symbolQueue)
 	{
-		m_symbolQueue->Append(process, [this](Symbol* symbol, Type* type) {
+		m_symbolQueue->Append(process, [this](Symbol* symbol, const Confidence<Ref<Type>>& type) {
 			DefineAutoSymbolAndVariableOrFunction(GetDefaultPlatform(), symbol, type);
 		});
 	}

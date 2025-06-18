@@ -99,7 +99,7 @@ public:
 	virtual bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole) override;
 
 	virtual void toggleGlobalShowFileSize();
-	virtual bool isGlobalShowFileSize() const;
+	virtual bool isGlobalShowFileSize();
 
 	enum {
 		TypeRole = Qt::UserRole,

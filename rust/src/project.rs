@@ -637,6 +637,9 @@ unsafe impl RefCountable for Project {
     }
 }
 
+unsafe impl Send for Project {}
+unsafe impl Sync for Project {}
+
 impl CoreArrayProvider for Project {
     type Raw = *mut BNProject;
     type Context = ();

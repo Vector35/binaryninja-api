@@ -353,10 +353,8 @@ class BINARYNINJAUIAPI Menu
 	void removeTransformActions();
 
 	void addPluginCommandActions(const QString& group);
-	void addPluginCommandActions(const QString& prefix, const QString& group, uint8_t order = MENU_ORDER_NORMAL);
-	void addPluginCommandSubmenuActions(const QString& submenu, const QString& group);
-	void addPluginCommandSubmenuActions(
-	    const QString& submenu, const QString& prefix, const QString& group, uint8_t order = MENU_ORDER_NORMAL);
+	void addPluginCommandActions(const QString& prefix, const QString& group, uint8_t order = MENU_ORDER_NORMAL, const std::vector<BNPluginCommandType>& types = {});
+	void addPluginCommandSubmenuActions(const QString& submenu, const QString& group, const std::vector<BNPluginCommandType>& types);
 	void removePluginCommandActions();
 	void removePluginCommandSubmenuActions(const QString& submenu);
 

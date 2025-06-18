@@ -318,6 +318,7 @@ class BINARYNINJAUIAPI ProjectBrowser: public QWidget, public UIContextNotificat
 	void restoreTreeState();
 
 	void initActions();
+	UIActionContext actionContext();
 
 	std::vector<ProjectFileRef> GetSelectedFilesRecursive();
 

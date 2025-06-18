@@ -164,6 +164,14 @@ void PluginCommand::HighLevelILInstructionPluginCommandActionCallback(
 }
 
 
+void PluginCommand::ProjectPluginCommandActionCallback(void *ctxt, BNProject* project)
+{
+	RegisteredProjectCommand* cmd = (RegisteredProjectCommand*)ctxt;
+	Ref<Project> projectObject = new Project(BNNewProjectReference(project));
+	return cmd->action(projectObject);
+}
+
+
 bool PluginCommand::DefaultPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view)
 {
 	RegisteredDefaultCommand* cmd = (RegisteredDefaultCommand*)ctxt;
@@ -257,6 +265,14 @@ bool PluginCommand::HighLevelILInstructionPluginCommandIsValidCallback(
 	Ref<HighLevelILFunction> funcObject = new HighLevelILFunction(BNNewHighLevelILFunctionReference(func));
 	HighLevelILInstruction instrObject = funcObject->GetInstruction(instr);
 	return cmd->isValid(viewObject, instrObject);
+}
+
+
+bool PluginCommand::ProjectPluginCommandIsValidCallback(void* ctxt, BNProject* project)
+{
+	RegisteredProjectCommand* cmd = (RegisteredProjectCommand*)ctxt;
+	Ref<Project> projectObject = new Project(BNNewProjectReference(project));
+	return cmd->isValid(projectObject);
 }
 
 
@@ -452,6 +468,22 @@ void PluginCommand::RegisterForHighLevelILInstruction(const string& name, const 
 	    HighLevelILInstructionPluginCommandActionCallback, HighLevelILInstructionPluginCommandIsValidCallback, cmd);
 }
 
+void PluginCommand::RegisterForProject(const std::string &name, const std::string &description,
+	const std::function<void(Project *project)> &action)
+{
+	RegisterForProject(name, description, action, [](Project*) { return true; });
+}
+
+void PluginCommand::RegisterForProject(const std::string &name, const std::string &description,
+	const std::function<void(Project* project)> &action, const std::function<bool(Project* project)> &isValid)
+{
+	RegisteredProjectCommand* cmd = new RegisteredProjectCommand;
+	cmd->action = action;
+	cmd->isValid = isValid;
+	BNRegisterPluginCommandForProject(name.c_str(), description.c_str(), ProjectPluginCommandActionCallback,
+		ProjectPluginCommandIsValidCallback, cmd);
+}
+
 
 vector<PluginCommand> PluginCommand::GetList()
 {
@@ -481,40 +513,41 @@ vector<PluginCommand> PluginCommand::GetValidList(const PluginCommandContext& ct
 
 bool PluginCommand::IsValid(const PluginCommandContext& ctxt) const
 {
-	if (!ctxt.binaryView)
-		return false;
-
 	switch (m_command.type)
 	{
 	case DefaultPluginCommand:
+		if (!ctxt.binaryView)
+			return false;
 		if (!m_command.defaultIsValid)
 			return true;
 		return m_command.defaultIsValid(m_command.context, ctxt.binaryView->GetObject());
 	case AddressPluginCommand:
+		if (!ctxt.binaryView)
+			return false;
 		if (!m_command.addressIsValid)
 			return true;
 		return m_command.addressIsValid(m_command.context, ctxt.binaryView->GetObject(), ctxt.address);
 	case RangePluginCommand:
-		if (ctxt.length == 0)
+		if (ctxt.length == 0 || !ctxt.binaryView)
 			return false;
 		if (!m_command.rangeIsValid)
 			return true;
 		return m_command.rangeIsValid(m_command.context, ctxt.binaryView->GetObject(), ctxt.address, ctxt.length);
 	case FunctionPluginCommand:
-		if (!ctxt.function)
+		if (!ctxt.function || !ctxt.binaryView)
 			return false;
 		if (!m_command.functionIsValid)
 			return true;
 		return m_command.functionIsValid(m_command.context, ctxt.binaryView->GetObject(), ctxt.function->GetObject());
 	case LowLevelILFunctionPluginCommand:
-		if (!ctxt.lowLevelILFunction)
+		if (!ctxt.lowLevelILFunction || !ctxt.binaryView)
 			return false;
 		if (!m_command.lowLevelILFunctionIsValid)
 			return true;
 		return m_command.lowLevelILFunctionIsValid(
 		    m_command.context, ctxt.binaryView->GetObject(), ctxt.lowLevelILFunction->GetObject());
 	case LowLevelILInstructionPluginCommand:
-		if (!ctxt.lowLevelILFunction)
+		if (!ctxt.lowLevelILFunction || !ctxt.binaryView)
 			return false;
 		if (ctxt.instrIndex == BN_INVALID_EXPR)
 			return false;
@@ -523,14 +556,14 @@ bool PluginCommand::IsValid(const PluginCommandContext& ctxt) const
 		return m_command.lowLevelILInstructionIsValid(
 		    m_command.context, ctxt.binaryView->GetObject(), ctxt.lowLevelILFunction->GetObject(), ctxt.instrIndex);
 	case MediumLevelILFunctionPluginCommand:
-		if (!ctxt.mediumLevelILFunction)
+		if (!ctxt.mediumLevelILFunction || !ctxt.binaryView)
 			return false;
 		if (!m_command.mediumLevelILFunctionIsValid)
 			return true;
 		return m_command.mediumLevelILFunctionIsValid(
 		    m_command.context, ctxt.binaryView->GetObject(), ctxt.mediumLevelILFunction->GetObject());
 	case MediumLevelILInstructionPluginCommand:
-		if (!ctxt.mediumLevelILFunction)
+		if (!ctxt.mediumLevelILFunction || !ctxt.binaryView)
 			return false;
 		if (ctxt.instrIndex == BN_INVALID_EXPR)
 			return false;
@@ -539,14 +572,14 @@ bool PluginCommand::IsValid(const PluginCommandContext& ctxt) const
 		return m_command.mediumLevelILInstructionIsValid(
 		    m_command.context, ctxt.binaryView->GetObject(), ctxt.mediumLevelILFunction->GetObject(), ctxt.instrIndex);
 	case HighLevelILFunctionPluginCommand:
-		if (!ctxt.highLevelILFunction)
+		if (!ctxt.highLevelILFunction || !ctxt.binaryView)
 			return false;
 		if (!m_command.highLevelILFunctionIsValid)
 			return true;
 		return m_command.highLevelILFunctionIsValid(
 		    m_command.context, ctxt.binaryView->GetObject(), ctxt.highLevelILFunction->GetObject());
 	case HighLevelILInstructionPluginCommand:
-		if (!ctxt.highLevelILFunction)
+		if (!ctxt.highLevelILFunction || !ctxt.binaryView)
 			return false;
 		if (ctxt.instrIndex == BN_INVALID_EXPR)
 			return false;
@@ -554,6 +587,12 @@ bool PluginCommand::IsValid(const PluginCommandContext& ctxt) const
 			return true;
 		return m_command.highLevelILInstructionIsValid(
 		    m_command.context, ctxt.binaryView->GetObject(), ctxt.highLevelILFunction->GetObject(), ctxt.instrIndex);
+	case ProjectPluginCommand:
+		if (!m_command.projectIsValid)
+			return true;
+		if (!ctxt.project)
+			return false;
+		return m_command.projectIsValid(m_command.context, ctxt.project->GetObject());
 	default:
 		return false;
 	}
@@ -602,6 +641,9 @@ void PluginCommand::Execute(const PluginCommandContext& ctxt) const
 	case HighLevelILInstructionPluginCommand:
 		m_command.highLevelILInstructionCommand(
 		    m_command.context, ctxt.binaryView->GetObject(), ctxt.highLevelILFunction->GetObject(), ctxt.instrIndex);
+		break;
+	case ProjectPluginCommand:
+		m_command.projectCommand(m_command.context, ctxt.project->GetObject());
 		break;
 	default:
 		break;

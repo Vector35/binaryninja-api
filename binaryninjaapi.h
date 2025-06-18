@@ -14741,6 +14741,7 @@ namespace BinaryNinja {
 		Ref<LowLevelILFunction> lowLevelILFunction;
 		Ref<MediumLevelILFunction> mediumLevelILFunction;
 		Ref<HighLevelILFunction> highLevelILFunction;
+		Ref<Project> project;
 
 		PluginCommandContext();
 	};
@@ -14817,6 +14818,12 @@ namespace BinaryNinja {
 			std::function<bool(BinaryView*, const HighLevelILInstruction&)> isValid;
 		};
 
+		struct RegisteredProjectCommand
+		{
+			std::function<void(Project*)> action;
+			std::function<bool(Project*)> isValid;
+		};
+
 		static void DefaultPluginCommandActionCallback(void* ctxt, BNBinaryView* view);
 		static void AddressPluginCommandActionCallback(void* ctxt, BNBinaryView* view, uint64_t addr);
 		static void RangePluginCommandActionCallback(void* ctxt, BNBinaryView* view, uint64_t addr, uint64_t len);
@@ -14833,6 +14840,7 @@ namespace BinaryNinja {
 		    void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func);
 		static void HighLevelILInstructionPluginCommandActionCallback(
 		    void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func, size_t instr);
+		static void ProjectPluginCommandActionCallback(void* ctxt, BNProject* project);
 
 		static bool DefaultPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view);
 		static bool AddressPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view, uint64_t addr);
@@ -14850,6 +14858,7 @@ namespace BinaryNinja {
 		    void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func);
 		static bool HighLevelILInstructionPluginCommandIsValidCallback(
 		    void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func, size_t instr);
+		static bool ProjectPluginCommandIsValidCallback(void* ctxt, BNProject* project);
 
 	  public:
 		PluginCommand(const BNPluginCommand& cmd);
@@ -15675,6 +15684,13 @@ namespace BinaryNinja {
 		static void RegisterForHighLevelILInstruction(const std::string& name, const std::string& description,
 		    const std::function<void(BinaryView* view, const HighLevelILInstruction& instr)>& action,
 		    const std::function<bool(BinaryView* view, const HighLevelILInstruction& instr)>& isValid);
+
+		static void RegisterForProject(const std::string& name, const std::string& description,
+		    const std::function<void(Project* project)>& action);
+
+		static void RegisterForProject(const std::string& name, const std::string& description,
+			const std::function<void(Project* project)>& action,
+			const std::function<bool(Project* project)>& isValid);
 
 		/*! Get the list of registered PluginCommands
 

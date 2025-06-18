@@ -33,16 +33,18 @@
 //! The return value of these functions should indicate whether they successfully initialized themselves.
 
 use binaryninjacore_sys::{
-    BNBinaryView, BNFunction, BNRegisterPluginCommand, BNRegisterPluginCommandForAddress,
-    BNRegisterPluginCommandForFunction, BNRegisterPluginCommandForRange,
+    BNBinaryView, BNFunction, BNProject, BNRegisterPluginCommand,
+    BNRegisterPluginCommandForAddress, BNRegisterPluginCommandForFunction,
+    BNRegisterPluginCommandForProject, BNRegisterPluginCommandForRange,
 };
-
-use std::ops::Range;
-use std::os::raw::c_void;
 
 use crate::binary_view::BinaryView;
 use crate::function::Function;
+use crate::project::Project;
 use crate::string::IntoCStr;
+use std::ops::Range;
+use std::os::raw::c_void;
+use std::ptr::NonNull;
 
 /// The trait required for generic commands.  See [register_command] for example usage.
 pub trait Command: 'static + Sync {
@@ -443,6 +445,59 @@ pub fn register_command_for_function<C: FunctionCommand>(name: &str, desc: &str,
 
     unsafe {
         BNRegisterPluginCommandForFunction(
+            name_ptr,
+            desc_ptr,
+            Some(cb_action::<C>),
+            Some(cb_valid::<C>),
+            ctxt as *mut _,
+        );
+    }
+}
+
+pub trait ProjectCommand: 'static + Sync {
+    fn action(&self, project: &Project);
+    fn valid(&self, project: &Project) -> bool;
+}
+
+pub fn register_command_for_project<C: ProjectCommand>(name: &str, desc: &str, command: C) {
+    extern "C" fn cb_action<C>(ctxt: *mut c_void, project: *mut BNProject)
+    where
+        C: ProjectCommand,
+    {
+        ffi_wrap!("Command::action", unsafe {
+            let cmd = &*(ctxt as *const C);
+
+            let handle = NonNull::new(project).expect("project handle is null");
+            let project = Project { handle };
+
+            cmd.action(&project);
+        })
+    }
+
+    extern "C" fn cb_valid<C>(ctxt: *mut c_void, project: *mut BNProject) -> bool
+    where
+        C: ProjectCommand,
+    {
+        ffi_wrap!("Command::valid", unsafe {
+            let cmd = &*(ctxt as *const C);
+
+            let handle = NonNull::new(project).expect("project handle is null");
+            let project = Project { handle };
+
+            cmd.valid(&project)
+        })
+    }
+
+    let name = name.to_cstr();
+    let desc = desc.to_cstr();
+
+    let name_ptr = name.as_ptr();
+    let desc_ptr = desc.as_ptr();
+
+    let ctxt = Box::into_raw(Box::new(command));
+
+    unsafe {
+        BNRegisterPluginCommandForProject(
             name_ptr,
             desc_ptr,
             Some(cb_action::<C>),

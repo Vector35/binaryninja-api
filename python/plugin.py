@@ -18,23 +18,24 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import traceback
 import ctypes
 import threading
-
+import traceback
 from typing import Optional, Callable
 
 # Binary Ninja components
 import binaryninja
+
 from . import _binaryninjacore as core
-from .enums import PluginCommandType
-from . import filemetadata
 from . import binaryview
+from . import filemetadata
 from . import function
-from .log import log_error
+from . import highlevelil
 from . import lowlevelil
 from . import mediumlevelil
-from . import highlevelil
+from . import project
+from .enums import PluginCommandType
+from .log import log_error
 
 
 class PluginCommandContext:
@@ -55,6 +56,7 @@ class PluginCommandContext:
 		self._length = 0
 		self._function = None
 		self._instruction = None
+		self._project = view.project
 
 	def __len__(self):
 		return self._length
@@ -98,6 +100,14 @@ class PluginCommandContext:
 	@instruction.setter
 	def instruction(self, value):
 		self._instruction = value
+
+	@property
+	def project(self):
+		return self._project
+
+	@function.setter
+	def project(self, value):
+		self._project = value
 
 
 class _PluginCommandMetaClass(type):
@@ -234,6 +244,14 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			owner = function.Function(view_obj, core.BNGetHighLevelILOwnerFunction(func))
 			func_obj = highlevelil.HighLevelILFunction(owner.arch, core.BNNewHighLevelILFunctionReference(func), owner)
 			action(view_obj, func_obj[instr])
+		except:
+			log_error(traceback.format_exc())
+
+	@staticmethod
+	def _project_action(project, action):
+		try:
+			project_obj = project.Project(handle=core.BNNewProjectReference(project))
+			action(project_obj)
 		except:
 			log_error(traceback.format_exc())
 
@@ -376,6 +394,17 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			owner = function.Function(view_obj, core.BNGetHighLevelILOwnerFunction(func))
 			func_obj = highlevelil.HighLevelILFunction(owner.arch, core.BNNewHighLevelILFunctionReference(func), owner)
 			return is_valid(view_obj, func_obj[instr])
+		except:
+			log_error(traceback.format_exc())
+			return False
+
+	@staticmethod
+	def _project_is_valid(project, is_valid):
+		try:
+			if is_valid is None:
+				return True
+			project_obj = project.Project(handle=core.BNNewProjectReference(project))
+			return is_valid(project_obj)
 		except:
 			log_error(traceback.format_exc())
 			return False
@@ -756,7 +785,44 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		core.BNRegisterPluginCommandForHighLevelILInstruction(name, description, action_obj, is_valid_obj, None)
 
 	@classmethod
-	def get_valid_list(cls, context):
+	def register_for_project(
+			cls, name: str, description: str, action: Callable[['project.Project'], None],
+			is_valid: Optional[Callable[['project.Project'], bool]] = None
+	):
+		r"""
+		``register_for_project`` Register a plugin to be called with a project argument
+
+		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
+		:param str description: description of the plugin
+		:param callback action: function to call with the :class:`~project.Project` as an argument
+		:param callback is_valid: optional argument of a function passed a :class:`~project.Project` to determine whether the plugin should be enabled for that project
+		:rtype: None
+		:Example:
+
+			>>> def my_plugin(project: Project):
+			>>> 	log_info(f"My plugin was called on project: `{project}`")
+			>>> PluginCommand.register_for_project("My Plugin", "My plugin description (not used)", my_plugin)
+			True
+			>>> def is_valid(project: Project) -> bool:
+			>>> 	return False
+			>>> PluginCommand.register_for_project("My Plugin (With Valid Function)", "My plugin description (not used)", my_plugin, is_valid)
+			True
+
+		.. warning:: Calling ``register_for_project`` with the same function name will replace the existing function but will leak the memory of the original plugin.
+		"""
+		binaryninja._init_plugins()
+		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p,
+									  ctypes.POINTER(core.BNProject
+													 ))(lambda ctxt, project: cls._project_action(project, action))
+		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p,
+										ctypes.POINTER(core.BNProject
+													   ))(
+			lambda ctxt, project: cls._project_is_valid(project, is_valid))
+		cls._registered_commands.append((action_obj, is_valid_obj))
+		core.BNRegisterPluginCommandForProject(name, description, action_obj, is_valid_obj, None)
+
+	@classmethod
+	def get_valid_list(cls, context: PluginCommandContext):
 		"""Dict of registered plugins"""
 		commands = list(cls)
 		result = {}
@@ -765,7 +831,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 				result[cmd.name] = cmd
 		return result
 
-	def is_valid(self, context):
+	def is_valid(self, context: PluginCommandContext):
 		if context.view is None:
 			return False
 		if self._command.type == PluginCommandType.DefaultPluginCommand:
@@ -847,9 +913,13 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			    self._command.context, context.view.handle, context.instruction.function.handle,
 			    context.instruction.instr_index
 			)
+		elif self._command.type == PluginCommandType.ProjectPluginCommand:
+			if not self._command.projectIsValid:
+				return True
+			return self._command.projectIsValid(self._command.context, context.project.handle)
 		return False
 
-	def execute(self, context):
+	def execute(self, context: PluginCommandContext):
 		r"""
 		``execute`` Execute a plugin. See the example in :class:`~PluginCommandContext`
 
@@ -895,6 +965,8 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			    self._command.context, context.view.handle, context.instruction.function.handle,
 			    context.instruction.instr_index
 			)
+		elif self._command.type == PluginCommandType.ProjectPluginCommand:
+			self._command.projectCommand(self._command.context, context.project.handle)
 
 	def __repr__(self):
 		return "<PluginCommand: %s>" % self._name

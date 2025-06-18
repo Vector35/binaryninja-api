@@ -2593,7 +2593,8 @@ extern "C"
 		MediumLevelILFunctionPluginCommand,
 		MediumLevelILInstructionPluginCommand,
 		HighLevelILFunctionPluginCommand,
-		HighLevelILInstructionPluginCommand
+		HighLevelILInstructionPluginCommand,
+		ProjectPluginCommand
 	} BNPluginCommandType;
 
 	typedef struct BNPluginCommand
@@ -2615,6 +2616,7 @@ extern "C"
 		void (*highLevelILFunctionCommand)(void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func);
 		void (*highLevelILInstructionCommand)(
 		    void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func, size_t instr);
+		void (*projectCommand)(void* ctxt, BNProject* view);
 
 		bool (*defaultIsValid)(void* ctxt, BNBinaryView* view);
 		bool (*addressIsValid)(void* ctxt, BNBinaryView* view, uint64_t addr);
@@ -2628,6 +2630,7 @@ extern "C"
 		bool (*highLevelILFunctionIsValid)(void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func);
 		bool (*highLevelILInstructionIsValid)(
 		    void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func, size_t instr);
+		bool (*projectIsValid)(void* ctxt, BNProject* view);
 	} BNPluginCommand;
 
 	typedef struct BNCustomCallingConvention
@@ -6973,6 +6976,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNRegisterPluginCommandForHighLevelILInstruction(const char* name, const char* description,
 	    void (*action)(void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func, size_t instr),
 	    bool (*isValid)(void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func, size_t instr), void* context);
+	BINARYNINJACOREAPI void BNRegisterPluginCommandForProject(const char* name, const char* description,
+		void (*action)(void* ctxt, BNProject* project), bool (*isValid)(void* ctxt, BNProject* project), void* context);
 
 	BINARYNINJACOREAPI BNPluginCommand* BNGetAllPluginCommands(size_t* count);
 	BINARYNINJACOREAPI BNPluginCommand* BNGetValidPluginCommands(BNBinaryView* view, size_t* count);
@@ -6994,6 +6999,7 @@ extern "C"
 	    BNBinaryView* view, BNHighLevelILFunction* func, size_t* count);
 	BINARYNINJACOREAPI BNPluginCommand* BNGetValidPluginCommandsForHighLevelILInstruction(
 	    BNBinaryView* view, BNHighLevelILFunction* func, size_t instr, size_t* count);
+	BINARYNINJACOREAPI BNPluginCommand* BNGetValidPluginCommandsForProject(BNProject* project, size_t* count);
 	BINARYNINJACOREAPI void BNFreePluginCommandList(BNPluginCommand* commands);
 
 	// Calling conventions

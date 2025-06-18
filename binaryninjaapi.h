@@ -19785,6 +19785,10 @@ namespace BinaryNinja {
 		BNBraceRequirement GetBraceRequirement() const;
 		bool HasBracesAroundSwitchCases() const;
 		bool GetDefaultBracesOnSameLine() const;
+
+		/*! Gets the maximum number of tokens to emit as a ternary operation. */
+		size_t GetMaxTernarySimplificationTokens() const;
+
 		bool IsSimpleScopeAllowed() const;
 
 		/*! Gets the list of lines in the output. */

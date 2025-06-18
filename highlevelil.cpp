@@ -878,6 +878,11 @@ bool HighLevelILTokenEmitter::GetDefaultBracesOnSameLine() const
 	return BNHighLevelILTokenEmitterGetDefaultBracesOnSameLine(m_object);
 }
 
+size_t HighLevelILTokenEmitter::GetMaxTernarySimplificationTokens() const
+{
+	return BNHighLevelILTokenEmitterGetMaxTernarySimplficationTokens(m_object);
+}
+
 
 bool HighLevelILTokenEmitter::IsSimpleScopeAllowed() const
 {

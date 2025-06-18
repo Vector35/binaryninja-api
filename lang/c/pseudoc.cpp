@@ -442,6 +442,103 @@ PseudoCFunction::FieldDisplayType PseudoCFunction::GetFieldDisplayType(
 		return FieldDisplayNone;
 }
 
+std::optional<PseudoCFunction::TernaryInfo> PseudoCFunction::CanSimplifyToTernary(const BinaryNinja::HighLevelILInstruction &instr) const
+{
+    // Only handle if-statements
+    if (instr.operation != HLIL_IF)
+        return std::nullopt;
+
+    auto conditionExpr = instr.GetConditionExpr<HLIL_IF>();
+    auto trueExpr = instr.GetTrueExpr<HLIL_IF>();
+    auto falseExpr = instr.GetFalseExpr<HLIL_IF>();
+
+	if (GetHighLevelILFunction()->HasSideEffects(conditionExpr))
+		return std::nullopt;
+    // Both branches must be assignment operations
+    if (trueExpr.operation != HLIL_ASSIGN || falseExpr.operation != HLIL_ASSIGN)
+        return std::nullopt;
+
+    // Get the destination expressions of the assignments
+    auto trueDestExpr = trueExpr.GetDestExpr<HLIL_ASSIGN>();
+    auto falseDestExpr = falseExpr.GetDestExpr<HLIL_ASSIGN>();
+
+    // Verify that the destination expressions are variable references
+    if (trueDestExpr.operation != HLIL_VAR || falseDestExpr.operation != HLIL_VAR)
+        return std::nullopt;
+
+	auto trueExprDestExpr = trueExpr.GetDestExpr<HLIL_ASSIGN>();
+	auto falseExprDestExpr = falseExpr.GetDestExpr<HLIL_ASSIGN>();
+	if (trueExprDestExpr.operation != HLIL_VAR || falseExprDestExpr.operation != HLIL_VAR)
+		return std::nullopt;
+
+	auto trueExprDestVar = trueExprDestExpr.GetVariable<HLIL_VAR>();
+	auto falseExprDestVar = falseExprDestExpr.GetVariable<HLIL_VAR>();
+	if (trueExprDestVar != falseExprDestVar)
+		return std::nullopt;
+
+	auto trueExprSourceExpr = trueExpr.GetSourceExpr<HLIL_ASSIGN>();
+	auto falseExprSourceExpr = falseExpr.GetSourceExpr<HLIL_ASSIGN>();
+	if (GetHighLevelILFunction()->HasSideEffects(trueExprSourceExpr) || GetHighLevelILFunction()->HasSideEffects(falseExprSourceExpr))
+		return std::nullopt;
+
+    // Avoid folding for "else if" cases
+    for (auto parent = instr; parent.HasParent(); parent = parent.GetParent())
+    {
+        if (parent.operation != HLIL_IF)
+            break;
+        auto parentFalse = parent.GetFalseExpr<HLIL_IF>();
+        if (parentFalse.operation == HLIL_IF)
+            return std::nullopt;
+    }
+
+    TernaryInfo info;
+    info.conditional = conditionExpr;
+    info.assignDest  = trueDestExpr;
+    info.trueAssign  = trueExprSourceExpr;
+    info.falseAssign = falseExprSourceExpr;
+    return info;
+}
+
+bool PseudoCFunction::TryEmitSimplifiedTernary(
+	const BinaryNinja::HighLevelILInstruction &instr,
+	DisassemblySettings* settings,
+	BinaryNinja::HighLevelILTokenEmitter &emitter
+)
+{
+	auto ternaryOpt = CanSimplifyToTernary(instr);
+	if (!ternaryOpt.has_value())
+		return false;
+
+	auto &[conditional, assignDest, trueAssign, falseAssign] = ternaryOpt.value();
+
+	std::vector<InstructionTextToken> tokens = emitter.GetCurrentTokens();
+	size_t originalTokenCount = tokens.size();
+
+	// Emit the destination expression
+	GetExprText(assignDest, emitter, settings, AssignmentOperatorPrecedence);
+	emitter.Append(OperationToken, " = ");
+
+	// Emit the condition expression
+	GetExprText(conditional, emitter, settings, TernaryOperatorPrecedence);
+	emitter.Append(OperationToken, " ? ");
+
+	// Emit the true-source expression
+	GetExprText(trueAssign, emitter, settings, TernaryOperatorPrecedence);
+	emitter.Append(OperationToken, " : ");
+
+	// Emit the false-source expression
+	GetExprText(falseAssign, emitter, settings, TernaryOperatorPrecedence);
+	emitter.Append(KeywordToken, ";");
+
+	// If the ternary expression is too complex (i.e. too many tokens), revert back.
+	if (tokens.size() - originalTokenCount > emitter.GetMaxTernarySimplificationTokens())
+	{
+		tokens.resize(originalTokenCount);
+		return false;
+	}
+	return true;
+}
+
 
 void PseudoCFunction::AppendDefaultSplitExpr(const BinaryNinja::HighLevelILInstruction& instr,
 	BinaryNinja::HighLevelILTokenEmitter& tokens, DisassemblySettings* settings, BNOperatorPrecedence precedence)
@@ -672,6 +769,9 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 	case HLIL_IF:
 		[&]()
 		{
+			if (instr.ast && TryEmitSimplifiedTernary(instr, settings, tokens))
+				return;
+
 			const auto condExpr = instr.GetConditionExpr<HLIL_IF>();
 			const auto trueExpr = instr.GetTrueExpr<HLIL_IF>();
 			const auto falseExpr = instr.GetFalseExpr<HLIL_IF>();

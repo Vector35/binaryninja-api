@@ -1,6 +1,7 @@
 #pragma once
 
 #include "binaryninjaapi.h"
+#include "highlevelilinstruction.h"
 
 class PseudoCFunction: public BinaryNinja::LanguageRepresentationFunction
 {
@@ -14,6 +15,23 @@ class PseudoCFunction: public BinaryNinja::LanguageRepresentationFunction
 		FieldDisplayMemberOffset,
 		FieldDisplayNone
 	};
+
+	struct TernaryInfo
+	{
+		BinaryNinja::HighLevelILInstruction conditional;
+		BinaryNinja::HighLevelILInstruction assignDest;
+		BinaryNinja::HighLevelILInstruction trueAssign;
+		BinaryNinja::HighLevelILInstruction falseAssign;
+	};
+
+	std::optional<PseudoCFunction::TernaryInfo> CanSimplifyToTernary(
+		const BinaryNinja::HighLevelILInstruction& instr
+	) const;
+	bool TryEmitSimplifiedTernary(
+		const BinaryNinja::HighLevelILInstruction& instr,
+		BinaryNinja::DisassemblySettings* settings,
+		BinaryNinja::HighLevelILTokenEmitter& emitter
+	);
 
 	BinaryNinja::Ref<BinaryNinja::Type> GetFieldType(const BinaryNinja::HighLevelILInstruction& var, bool deref);
 	FieldDisplayType GetFieldDisplayType(BinaryNinja::Ref<BinaryNinja::Type> type, uint64_t offset, size_t memberIndex, bool deref);

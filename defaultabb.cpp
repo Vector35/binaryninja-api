@@ -56,21 +56,25 @@ static bool GetNextFunctionAfterAddress(Ref<BinaryView> data, Ref<Platform> plat
 }
 
 
-void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnalysisContext& context)
+void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnalysisContext& context)
 {
-	auto data = function.GetView();
+	auto data = function->GetView();
 	queue<ArchAndAddr> blocksToProcess;
 	map<ArchAndAddr, Ref<BasicBlock>> instrBlocks;
 	set<ArchAndAddr> seenBlocks;
-	map<ArchAndAddr, set<ArchAndAddr>> indirectBranches;
-	for (size_t i = 0; i < context.indirectBranchesCount; i++)
-	{
-		auto sourceLocation = ArchAndAddr(new CoreArchitecture(context.indirectBranches[i].sourceArch),
-			context.indirectBranches[i].sourceAddr);
-		auto destLocation = ArchAndAddr(new CoreArchitecture(context.indirectBranches[i].destArch),
-			context.indirectBranches[i].destAddr);
-		indirectBranches[sourceLocation].insert(destLocation);
-	}
+
+	bool translateTailCalls = context.GetTranslateTailCalls();
+	bool disallowBranchToString = context.GetDisallowBranchToString();
+	bool haltOnInvalidInstructions = context.GetHaltOnInvalidInstructions();
+
+	auto& indirectBranches = context.GetIndirectBranches();
+	auto& indirectNoReturnCalls = context.GetIndirectNoReturnCalls();
+
+	auto& contextualFunctionReturns = context.GetContextualReturns();
+
+	auto& directRefs = context.GetDirectCodeReferences();
+	auto& directNoReturnCalls = context.GetDirectNoReturnCalls();
+	auto& haltedDisassemblyAddresses = context.GetHaltedDisassemblyAddresses();
 
 	BNStringReference strRef;
 	auto targetExceedsByteLimit = [](const BNStringReference& strRef) {
@@ -106,8 +110,8 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 	}
 
 	// Start by processing the entry point of the function
-	auto funcPlatform = function.GetPlatform();
-	auto start = function.GetStart();
+	auto funcPlatform = function->GetPlatform();
+	auto start = function->GetStart();
 	blocksToProcess.emplace(funcPlatform->GetArchitecture(), start);
 	seenBlocks.emplace(funcPlatform->GetArchitecture(), start);
 
@@ -148,7 +152,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 	}
 
 	uint64_t totalSize = 0;
-	uint64_t maxSize = context.maxFunctionSize;
+	uint64_t maxSize = context.GetMaxFunctionSize();
 	bool maxSizeReached = false;
 	while (blocksToProcess.size() != 0)
 	{
@@ -161,7 +165,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 		blocksToProcess.pop();
 
 		// Create a new basic block
-		Ref<BasicBlock> block = function.CreateBasicBlock(location.arch, location.address);
+		Ref<BasicBlock> block = context.CreateBasicBlock(location.arch, location.address);
 
 		// Get the next function to prevent disassembling into the next function if the block falls through
 		Ref<Function> nextFunc;
@@ -197,7 +201,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 					else
 					{
 						// Instruction is in the middle of a block, need to split the basic block into two
-						Ref<BasicBlock> splitBlock = function.CreateBasicBlock(location.arch, location.address);
+						Ref<BasicBlock> splitBlock = context.CreateBasicBlock(location.arch, location.address);
 						size_t instrDataLen;
 						const uint8_t* instrData = targetBlock->GetInstructionData(location.address, &instrDataLen);
 						splitBlock->AddInstructionData(instrData, instrDataLen);
@@ -226,7 +230,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 
 						// Mark the new block so that it will not be processed again
 						seenBlocks.insert(location);
-						function.AddBasicBlock(splitBlock);
+						context.AddFunctionBasicBlock(splitBlock);
 
 						// Add an outgoing edge from the current block to the new block
 						block->AddPendingOutgoingEdge(UnconditionalBranch, location.address);
@@ -240,7 +244,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 			if (maxLen == 0)
 			{
 				string text = fmt::format("Could not read instruction at {:#x}", location.address);
-				function.CreateAutoAddressTag(location.arch, location.address, "Invalid Instruction", text, true);
+				function->CreateAutoAddressTag(location.arch, location.address, "Invalid Instruction", text, true);
 				if (location.arch->GetInstructionAlignment() == 0)
 					location.address++;
 				else
@@ -254,7 +258,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 			if (!location.arch->GetInstructionInfo(opcode, location.address, maxLen, info))
 			{
 				string text = fmt::format("Could not get instruction info at {:#x}", location.address);
-				function.CreateAutoAddressTag(location.arch, location.address, "Invalid Instruction", text, true);
+				function->CreateAutoAddressTag(location.arch, location.address, "Invalid Instruction", text, true);
 				if (location.arch->GetInstructionAlignment() == 0)
 					location.address++;
 				else
@@ -267,7 +271,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 			if ((info.length == 0) || (info.length > maxLen))
 			{
 				string text = fmt::format("Instruction of invalid length at {:#x}", location.address);
-				function.CreateAutoAddressTag(location.arch, location.address, "Invalid Instruction", text, true);
+				function->CreateAutoAddressTag(location.arch, location.address, "Invalid Instruction", text, true);
 				if (location.arch->GetInstructionAlignment() == 0)
 					location.address++;
 				else
@@ -284,7 +288,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 				(!data->IsOffsetBackedByFile(instrEnd) && data->IsOffsetBackedByFile(location.address))))
 			{
 				string text = fmt::format("Instruction at {:#x} straddles a non-code section", location.address);
-				function.CreateAutoAddressTag(location.arch, location.address, "Invalid Instruction", text, true);
+				function->CreateAutoAddressTag(location.arch, location.address, "Invalid Instruction", text, true);
 				if (location.arch->GetInstructionAlignment() == 0)
 					location.address++;
 				else
@@ -328,10 +332,10 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 								(dataVar.address == info.branchTarget[i]) && dataVar.type &&
 								(dataVar.type->GetClass() == FunctionTypeClass))
 							{
-								function.AddDirectCodeReference(location, info.branchTarget[i]);
+								directRefs[info.branchTarget[i]].emplace(location);
 								if (!dataVar.type->CanReturn())
 								{
-									function.AddDirectNoReturnCall(location);
+									directNoReturnCalls.insert(location);
 									endsBlock = true;
 									block->SetCanExit(false);
 								}
@@ -347,24 +351,24 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 							target = ArchAndAddr(info.branchArch[i] ? new CoreArchitecture(info.branchArch[i]) : location.arch, info.branchTarget[i]);
 
 							// Check if valid target
-							if (data->ShouldSkipTargetAnalysis(location, &function, instrEnd, target))
+							if (data->ShouldSkipTargetAnalysis(location, function, instrEnd, target))
 								break;
 
 							Platform* targetPlatform = funcPlatform;
 							if (target.arch != funcPlatform->GetArchitecture())
 								targetPlatform = funcPlatform->GetRelatedPlatform(target.arch);
 
-							function.AddDirectCodeReference(location, info.branchTarget[i]);
+							directRefs[info.branchTarget[i]].insert(location);
 
-							auto otherFunc = function.GetCalleeForAnalysis(targetPlatform, target.address, true);
-							if (context.translateTailCalls && targetPlatform && otherFunc && (otherFunc->GetStart() != function.GetStart()))
+							auto otherFunc = function->GetCalleeForAnalysis(targetPlatform, target.address, true);
+							if (translateTailCalls && targetPlatform && otherFunc && (otherFunc->GetStart() != function->GetStart()))
 							{
 								calledFunctions.insert(otherFunc);
 								if (info.branchType[i] == UnconditionalBranch)
 								{
 									if (!otherFunc->CanReturn())
 									{
-										function.AddDirectNoReturnCall(location);
+										directNoReturnCalls.insert(location);
 										endsBlock = true;
 										block->SetCanExit(false);
 									}
@@ -372,7 +376,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 									break;
 								}
 							}
-							else if (context.disallowBranchToString && data->GetStringAtAddress(location.address, strRef) && targetExceedsByteLimit(strRef))
+							else if (disallowBranchToString && data->GetStringAtAddress(location.address, strRef) && targetExceedsByteLimit(strRef))
 							{
 								BNLogInfo("Not adding branch target from 0x%" PRIx64 " to string at 0x%" PRIx64
 									" length:%zu",
@@ -403,10 +407,10 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 								(dataVar.address == info.branchTarget[i]) && dataVar.type &&
 								(dataVar.type->GetClass() == FunctionTypeClass))
 							{
-								function.AddDirectCodeReference(location, info.branchTarget[i]);
+								directRefs[info.branchTarget[i]].emplace(location);
 								if (!dataVar.type->CanReturn())
 								{
-									function.AddDirectNoReturnCall(location);
+									directNoReturnCalls.insert(location);
 									endsBlock = true;
 									block->SetCanExit(false);
 								}
@@ -426,7 +430,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 								IsOffsetCodeSemanticsFast(data, readOnlySections, dataExternSections, location.address))
 							{
 								string message = fmt::format("Non-code call target {:#x}", target.address);
-								function.CreateAutoAddressTag(target.arch, location.address, "Non-code Branch", message, true);
+								function->CreateAutoAddressTag(target.arch, location.address, "Non-code Branch", message, true);
 								break;
 							}
 
@@ -439,34 +443,30 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 							}
 
 							// Check if valid target
-							if (data->ShouldSkipTargetAnalysis(location, &function, instrEnd, target))
+							if (data->ShouldSkipTargetAnalysis(location, function, instrEnd, target))
 								break;
 
 							Ref<Function> func = data->AddFunctionForAnalysis(platform, target.address, true);
 							if (!func)
 							{
 								if (!data->IsOffsetBackedByFile(target.address))
-									BNLogError("Function at 0x%" PRIx64 " failed to add target not backed by file.", function.GetStart());
+									BNLogError("Function at 0x%" PRIx64 " failed to add target not backed by file.", function->GetStart());
 								break;
 							}
 
-							function.AddDirectCodeReference(location, target.address);
+							directRefs[target.address].emplace(location);
 							if (!func->CanReturn())
 							{
-								function.AddDirectNoReturnCall(location);
+								directNoReturnCalls.insert(location);
 								endsBlock = true;
 								block->SetCanExit(false);
 							}
 
 							// Add function as an early reference in case it gets updated before this
 							// function finishes analysis.
-							if (!function.HasTempOutgoingReference(func))
-							{
-								function.AddTempOutgoingReference(func);
-								func->AddTempIncomingReference(&function);
-							}
+							context.AddTempOutgoingReference(func);
 
-							calledFunctions.insert(func);
+							calledFunctions.emplace(func);
 						}
 						break;
 
@@ -498,13 +498,13 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 						{
 							for (auto& branch : indirectBranchIter->second)
 							{
-								function.AddDirectCodeReference(location, branch.address);
+								directRefs[branch.address].emplace(location);
 								Ref<Platform> targetPlatform = funcPlatform;
-								if (branch.arch != function.GetArchitecture())
+								if (branch.arch != function->GetArchitecture())
 									targetPlatform = funcPlatform->GetRelatedPlatform(branch.arch);
 
 								// Normal analysis should not inline indirect targets that are function starts
-								if (context.translateTailCalls && data->GetAnalysisFunction(targetPlatform, branch.address))
+								if (translateTailCalls && data->GetAnalysisFunction(targetPlatform, branch.address))
 									continue;
 
 								block->AddPendingOutgoingEdge(IndirectBranch, branch.address, branch.arch);
@@ -527,21 +527,20 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 							// 2) By default, contextualFunctionReturns is used to translate this to a LLIL_RET (conservative)
 							// 3) Downstream analysis uses dataflow to validate the return target
 							// 4) If the target is not the ReturnAddressValue, then we avoid the translation to a return and leave the instruction as a call
-							bool value;
-							if (function.GetContextualFunctionReturn(location, value))
-								endsBlock = value;
+							if (auto it = contextualFunctionReturns.find(location); it != contextualFunctionReturns.end())
+								endsBlock = it->second;
 							else
 							{
 								Ref<LowLevelILFunction> ilFunc = new LowLevelILFunction(location.arch, nullptr);
 								location.arch->GetInstructionLowLevelIL(opcode, location.address, maxLen, *ilFunc);
 								if (ilFunc->GetInstructionCount() && ((*ilFunc)[0].operation == LLIL_CALL))
-									function.SetContextualFunctionReturn(location, true);
+									contextualFunctionReturns[location] = true;
 							}
 						}
 						else
 						{
 							// If analysis did not find any valid branch targets, don't assume anything about global
-							// function state, such as __noreturn analysis, since we can't see the entire function.
+							// function state, such as __noreturn analysis, since we can't see the entire function->
 							block->SetUndeterminedOutgoingEdges(true);
 						}
 						break;
@@ -549,7 +548,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 				}
 			}
 
-			if (function.LocationHasNoReturnCalls(location))
+			if (indirectNoReturnCalls.count(location))
 			{
 				size_t instrLength = info.length;
 				if (info.delaySlots)
@@ -591,10 +590,11 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 			// We prefer to allow disassembly when function analysis is disabled, but only up to the maximum size.
 			// The log message and tag are generated in ProcessAnalysisSkip
 			totalSize += info.length;
-			if (context.analysisSkipOverride == NeverSkipFunctionAnalysis)
+			auto analysisSkipOverride = context.GetAnalysisSkipOverride();
+			if (analysisSkipOverride == NeverSkipFunctionAnalysis)
 				maxSize = 0;
-			else if (!maxSize && (context.analysisSkipOverride == AlwaysSkipFunctionAnalysis))
-				maxSize = context.maxFunctionSize;
+			else if (!maxSize && (analysisSkipOverride == AlwaysSkipFunctionAnalysis))
+				maxSize = context.GetMaxFunctionSize();
 
 			if (maxSize && (totalSize > maxSize))
 			{
@@ -614,16 +614,16 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 				delayInstructionEndsBlock = endsBlock;
 			}
 
-			if (block->CanExit() && context.translateTailCalls && !delaySlotCount && hasNextFunc && (location.address == nextFuncAddr))
+			if (block->CanExit() && translateTailCalls && !delaySlotCount && hasNextFunc && (location.address == nextFuncAddr))
 			{
-				// Falling through into another function.  Don't consider this a tail call if the current block
+				// Falling through into another function->  Don't consider this a tail call if the current block
 				// called the function, as this indicates a get PC construct.
 				if (calledFunctions.count(nextFunc) == 0)
 				{
 					block->SetFallThroughToFunction(true);
 					if (!nextFunc->CanReturn())
 					{
-						function.AddDirectNoReturnCall(instructionGroupStart);
+						directNoReturnCalls.insert(instructionGroupStart);
 						block->SetCanExit(false);
 					}
 					break;
@@ -637,28 +637,34 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnaly
 		{
 			// Block has one or more instructions, add it to the fucntion
 			block->SetEnd(location.address);
-			function.AddBasicBlock(block);
+			context.AddFunctionBasicBlock(block);
 		}
 
 		if (maxSizeReached)
 			break;
 
-		if (context.haltOnInvalidInstructions && block->HasInvalidInstructions())
+		if (haltOnInvalidInstructions && block->HasInvalidInstructions())
 		{
-			// TODO add haltedDisassemblyAddresses
+			while (!blocksToProcess.empty())
+			{
+				auto i = blocksToProcess.front();
+				blocksToProcess.pop();
+				haltedDisassemblyAddresses.emplace(i);
+			}
 		}
 	}
 
-	// Finalize the function basic block list
-	function.FinalizeBasicBlocks();
-
 	if (maxSizeReached)
-		context.maxSizeReached = true;
+		context.SetMaxSizeReached(true);
+
+	// Finalize the function basic block list
+	context.Finalize();
 }
 
 
 void Architecture::DefaultAnalyzeBasicBlocksCallback(BNFunction* function, BNBasicBlockAnalysisContext* context)
 {
 	Ref<Function> func(new Function(BNNewFunctionReference(function)));
-	Architecture::DefaultAnalyzeBasicBlocks(*func, *context);
+	BasicBlockAnalysisContext abbc(context);
+	Architecture::DefaultAnalyzeBasicBlocks(func, abbc);
 }

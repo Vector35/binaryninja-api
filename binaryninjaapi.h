@@ -8073,7 +8073,52 @@ namespace BinaryNinja {
 	class RelocationHandler;
 
 	typedef size_t ExprId;
-	typedef BNBasicBlockAnalysisContext BasicBlockAnalysisContext;
+
+	class BasicBlockAnalysisContext
+	{
+	private:
+		// in
+		std::optional<std::map<ArchAndAddr, std::set<ArchAndAddr>>> m_indirectBranches;
+		std::optional<std::set<ArchAndAddr>> m_indirectNoReturnCalls;
+
+		// in/out
+		std::optional<std::map<ArchAndAddr, bool>> m_contextualReturns;
+
+		// out
+		std::optional<std::map<uint64_t, std::set<ArchAndAddr>>> m_directCodeReferences;
+		std::optional<std::set<ArchAndAddr>> m_directNoReturnCalls;
+		std::optional<std::set<ArchAndAddr>> m_haltedDisassemblyAddresses;
+
+	public:
+		BNBasicBlockAnalysisContext* m_context;
+
+		BasicBlockAnalysisContext(BNBasicBlockAnalysisContext* context);
+
+		BNFunctionAnalysisSkipOverride GetAnalysisSkipOverride() const { return m_context->analysisSkipOverride; }
+		bool GetTranslateTailCalls() const { return m_context->translateTailCalls; }
+		bool GetDisallowBranchToString() const { return m_context->disallowBranchToString; }
+		bool GetHaltOnInvalidInstructions() const { return m_context->haltOnInvalidInstructions; }
+		uint64_t GetMaxFunctionSize() const { return m_context->maxFunctionSize; }
+
+		bool GetMaxSizeReached() const { return m_context->maxSizeReached; }
+		void SetMaxSizeReached(bool reached) { m_context->maxSizeReached = reached; }
+
+		const std::map<ArchAndAddr, std::set<ArchAndAddr>> GetIndirectBranches();
+		const std::set<ArchAndAddr>& GetIndirectNoReturnCalls();
+
+		std::map<ArchAndAddr, bool>& GetContextualReturns();
+
+		std::map<uint64_t, std::set<ArchAndAddr>>& GetDirectCodeReferences();
+		std::set<ArchAndAddr>& GetDirectNoReturnCalls();
+		std::set<ArchAndAddr>& GetHaltedDisassemblyAddresses();
+
+		void AddTempOutgoingReference(Function* targetFunc);
+
+		Ref<BasicBlock> CreateBasicBlock(Architecture* arch, uint64_t start);
+		void AddFunctionBasicBlock(BasicBlock* block);
+
+		void Finalize();
+	};
 
 	/*! The Architecture class is the base class for all CPU architectures. This provides disassembly, assembly,
 	    patching, and IL translation lifting for a given architecture.
@@ -8182,7 +8227,7 @@ namespace BinaryNinja {
 			\param function Function to analyze
 			\param context Context for the analysis
 		*/
-		static void DefaultAnalyzeBasicBlocks(Function& function, BasicBlockAnalysisContext& context);
+		static void DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnalysisContext& context);
 
 		/*! Get an Architecture by name
 
@@ -8287,7 +8332,7 @@ namespace BinaryNinja {
 			\param function Function to analyze
 			\param context Context for the analysis
 		*/
-		virtual void AnalyzeBasicBlocks(Function& function, BasicBlockAnalysisContext& context);
+		virtual void AnalyzeBasicBlocks(Function* function, BasicBlockAnalysisContext& context);
 
 		/*! Gets a register name from a register index.
 
@@ -8682,7 +8727,7 @@ namespace BinaryNinja {
 		    const uint8_t* data, uint64_t addr, size_t& len, std::vector<InstructionTextToken>& result) override;
 		virtual bool GetInstructionLowLevelIL(
 		    const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override;
-		virtual void AnalyzeBasicBlocks(Function& function, BasicBlockAnalysisContext& context) override;
+		virtual void AnalyzeBasicBlocks(Function* function, BasicBlockAnalysisContext& context) override;
 		virtual std::string GetRegisterName(uint32_t reg) override;
 		virtual std::string GetFlagName(uint32_t flag) override;
 		virtual std::string GetFlagWriteTypeName(uint32_t flags) override;
@@ -11063,24 +11108,6 @@ namespace BinaryNinja {
 		*/
 		std::vector<Ref<BasicBlock>> GetBasicBlocks() const;
 
-		/*! Create a new basic block for this function
-
-			\param arch Architecture for the basic block
-			\param addr Address of the basic block
-			\return The new BasicBlock
-		*/
-		Ref<BasicBlock> CreateBasicBlock(Architecture* arch, uint64_t addr);
-
-		/*! Add a basic block to the function analysis basic block list
-
-			\param block The BasicBlock to add
-		*/
-		void AddBasicBlock(Ref<BasicBlock> block);
-
-		/*! Finalize basic block list for this function
-		*/
-		void FinalizeBasicBlocks();
-
 		/*! Get the basic block an address is located in
 
 			\param arch Architecture for the basic block
@@ -11411,16 +11438,7 @@ namespace BinaryNinja {
 		std::vector<IndirectBranchInfo> GetIndirectBranches();
 		std::vector<IndirectBranchInfo> GetIndirectBranchesAt(Architecture* arch, uint64_t addr);
 
-		void AddDirectCodeReference(const ArchAndAddr& source, uint64_t target);
-		void AddDirectNoReturnCall(const ArchAndAddr& location);
-		bool LocationHasNoReturnCalls(const ArchAndAddr& location) const;
 		Ref<Function> GetCalleeForAnalysis(Ref<Platform> platform, uint64_t addr, bool exact);
-		void AddTempOutgoingReference(Ref<Function> target);
-		bool HasTempOutgoingReference(Ref<Function> target) const;
-		void AddTempIncomingReference(Ref<Function> source);
-
-		bool GetContextualFunctionReturn(const ArchAndAddr& location, bool& value) const;
-		void SetContextualFunctionReturn(const ArchAndAddr& location, bool value);
 
 		std::vector<uint64_t> GetUnresolvedIndirectBranches();
 		bool HasUnresolvedIndirectBranches();

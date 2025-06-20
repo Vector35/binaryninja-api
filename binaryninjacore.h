@@ -1867,19 +1867,42 @@ extern "C"
 
 	typedef struct BNBasicBlockAnalysisContext
 	{
-		size_t indirectBranchesCount;
-		BNIndirectBranchInfo* indirectBranches;
+		BNFunction* function;
+
+		// IN
 		BNFunctionAnalysisSkipOverride analysisSkipOverride;
 		bool translateTailCalls;
 		bool disallowBranchToString;
 		bool haltOnInvalidInstructions;
 		uint64_t maxFunctionSize;
 
-		// OUT
+		size_t indirectBranchesCount;
+		BNIndirectBranchInfo* indirectBranches;
+
+		size_t indirectNoReturnCallsCount;
+		BNArchitectureAndAddress* indirectNoReturnCalls;
+
+		// OUT; can be set directly
 		bool maxSizeReached;
 
-		BNArchitectureAndAddress* haltedDisassemblyAddresses;
+		// NOTHING BELOW THIS POINT CAN BE SET DIRECTLY
+		// use the BN* functions that take BNBasicBlockAnalysisContext* as a param
+
+		// IN *and* OUT
+		size_t contextualFunctionReturnCount;
+		BNArchitectureAndAddress* contextualFunctionReturnLocations;
+		bool* contextualFunctionReturnValues;
+
+		// OUT
+		size_t directRefCount;
+		BNArchitectureAndAddress* directRefSources;
+		uint64_t* directRefTargets;
+
+		size_t directNoReturnCallsCount;
+		BNArchitectureAndAddress* directNoReturnCalls;
+
 		size_t haltedDisassemblyAddressesCount;
+		BNArchitectureAndAddress* haltedDisassemblyAddresses;
 	} BNBasicBlockAnalysisContext;
 
 	typedef struct BNCustomArchitecture
@@ -4712,9 +4735,6 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeBasicBlock(BNBasicBlock* block);
 	BINARYNINJACOREAPI BNBasicBlock** BNGetFunctionBasicBlockList(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI void BNFreeBasicBlockList(BNBasicBlock** blocks, size_t count);
-	BINARYNINJACOREAPI BNBasicBlock* BNCreateFunctionBasicBlock(BNFunction* func, BNArchitecture* arch, uint64_t addr);
-	BINARYNINJACOREAPI void BNAddFunctionBasicBlock(BNFunction* func, BNBasicBlock* block);
-	BINARYNINJACOREAPI void BNFinalizeFunctionBasicBlocks(BNFunction* func);
 	BINARYNINJACOREAPI BNBasicBlock* BNGetFunctionBasicBlockAtAddress(
 	    BNFunction* func, BNArchitecture* arch, uint64_t addr);
 	BINARYNINJACOREAPI BNBasicBlock* BNGetRecentBasicBlockForAddress(BNBinaryView* view, uint64_t addr);
@@ -5096,18 +5116,8 @@ extern "C"
 	BINARYNINJACOREAPI BNIndirectBranchInfo* BNGetIndirectBranchesAt(
 	    BNFunction* func, BNArchitecture* arch, uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI void BNFreeIndirectBranchList(BNIndirectBranchInfo* branches);
-	BINARYNINJACOREAPI void BNFunctionAddDirectCodeReference(BNFunction* func, BNArchitectureAndAddress* source,
-		uint64_t target);
-	BINARYNINJACOREAPI void BNFunctionAddDirectNoReturnCall(BNFunction* func, BNArchitectureAndAddress* location);
-	BINARYNINJACOREAPI bool BNFunctionLocationHasNoReturnCalls(BNFunction* func, BNArchitectureAndAddress* location);
 	BINARYNINJACOREAPI BNFunction* BNGetCalleeForAnalysis(BNFunction* func, BNPlatform* platform,
 		uint64_t addr, bool exact);
-	BINARYNINJACOREAPI void BNFunctionAddTempOutgoingReference(BNFunction* func, BNFunction* target);
-	BINARYNINJACOREAPI bool BNFunctionHasTempOutgoingReference(BNFunction* func, BNFunction* target);
-	BINARYNINJACOREAPI void BNFunctionAddTempIncomingReference(BNFunction* func, BNFunction* source);
-
-	BINARYNINJACOREAPI bool BNFunctionGetContextualFunctionReturn(BNFunction* func, BNArchitectureAndAddress* location, bool* value);
-	BINARYNINJACOREAPI void BNFunctionSetContextualFunctionReturn(BNFunction* func, BNArchitectureAndAddress* location, bool value);
 
 	BINARYNINJACOREAPI uint64_t* BNGetUnresolvedIndirectBranches(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI bool BNHasUnresolvedIndirectBranches(BNFunction* func);
@@ -5170,6 +5180,18 @@ extern "C"
 
 	BINARYNINJACOREAPI char* BNGetGotoLabelName(BNFunction* func, uint64_t labelId);
 	BINARYNINJACOREAPI void BNSetUserGotoLabelName(BNFunction* func, uint64_t labelId, const char* name);
+
+	// BNAnalyzeBasicBlockContext operations
+	BINARYNINJACOREAPI BNBasicBlock* BNAnalyzeBasicBlocksContextCreateBasicBlock(BNBasicBlockAnalysisContext* abb, BNArchitecture* arch, uint64_t addr);
+	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextAddBasicBlockToFunction(BNBasicBlockAnalysisContext* abb, BNBasicBlock* block);
+	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextFinalize(BNBasicBlockAnalysisContext* abb);
+
+	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextAddTempReference(BNBasicBlockAnalysisContext* abb, BNFunction* target);
+
+	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextSetDirectCodeReferences(BNBasicBlockAnalysisContext* abb, BNArchitectureAndAddress* sources, uint64_t* targets, size_t count);
+	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextSetDirectNoReturnCalls(BNBasicBlockAnalysisContext* abb, BNArchitectureAndAddress* sources, size_t count);
+	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextSetContextualFunctionReturns(BNBasicBlockAnalysisContext* abb, BNArchitectureAndAddress* sources, bool* values, size_t count);
+	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextSetHaltedDisassemblyAddresses(BNBasicBlockAnalysisContext* abb, BNArchitectureAndAddress* sources, size_t count);
 
 	BINARYNINJACOREAPI BNAnalysisParameters BNGetParametersForAnalysis(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNSetParametersForAnalysis(BNBinaryView* view, BNAnalysisParameters params);

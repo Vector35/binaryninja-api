@@ -319,27 +319,6 @@ vector<Ref<BasicBlock>> Function::GetBasicBlocks() const
 }
 
 
-Ref<BasicBlock> Function::CreateBasicBlock(Architecture* arch, uint64_t addr)
-{
-	BNBasicBlock* block = BNCreateFunctionBasicBlock(m_object, arch->GetObject(), addr);
-	if (!block)
-		return nullptr;
-	return new BasicBlock(block);
-}
-
-
-void Function::AddBasicBlock(Ref<BasicBlock> block)
-{
-	BNAddFunctionBasicBlock(m_object, block->GetObject());
-}
-
-
-void Function::FinalizeBasicBlocks()
-{
-	BNFinalizeFunctionBasicBlocks(m_object);
-}
-
-
 Ref<BasicBlock> Function::GetBasicBlockAtAddress(Architecture* arch, uint64_t addr) const
 {
 	BNBasicBlock* block = BNGetFunctionBasicBlockAtAddress(m_object, arch->GetObject(), addr);
@@ -1808,75 +1787,12 @@ vector<IndirectBranchInfo> Function::GetIndirectBranchesAt(Architecture* arch, u
 }
 
 
-void Function::AddDirectCodeReference(const ArchAndAddr& source, uint64_t target)
-{
-	BNArchitectureAndAddress bnSource;
-	bnSource.arch = source.arch->GetObject();
-	bnSource.address = source.address;
-	BNFunctionAddDirectCodeReference(m_object, &bnSource, target);
-}
-
-
-void Function::AddDirectNoReturnCall(const ArchAndAddr& location)
-{
-	BNArchitectureAndAddress bnLocation;
-	bnLocation.arch = location.arch->GetObject();
-	bnLocation.address = location.address;
-	BNFunctionAddDirectNoReturnCall(m_object, &bnLocation);
-}
-
-
-bool Function::LocationHasNoReturnCalls(const ArchAndAddr& location) const
-{
-	BNArchitectureAndAddress bnLocation;
-	bnLocation.arch = location.arch->GetObject();
-	bnLocation.address = location.address;
-	return BNFunctionLocationHasNoReturnCalls(m_object, &bnLocation);
-}
-
-
 Ref<Function> Function::GetCalleeForAnalysis(Ref<Platform> platform, uint64_t addr, bool exact)
 {
 	BNFunction* func = BNGetCalleeForAnalysis(m_object, platform->GetObject(), addr, exact);
 	if (!func)
 		return nullptr;
 	return new Function(func);
-}
-
-
-void Function::AddTempOutgoingReference(Ref<Function> target)
-{
-	BNFunctionAddTempOutgoingReference(m_object, target->GetObject());
-}
-
-
-bool Function::HasTempOutgoingReference(Ref<Function> target) const
-{
-	return BNFunctionHasTempOutgoingReference(m_object, target->GetObject());
-}
-
-
-void Function::AddTempIncomingReference(Ref<Function> source)
-{
-	BNFunctionAddTempIncomingReference(m_object, source->GetObject());
-}
-
-
-bool Function::GetContextualFunctionReturn(const ArchAndAddr& location, bool& value) const
-{
-	BNArchitectureAndAddress bnLocation;
-	bnLocation.arch = location.arch->GetObject();
-	bnLocation.address = location.address;
-	return BNFunctionGetContextualFunctionReturn(m_object, &bnLocation, &value);
-}
-
-
-void Function::SetContextualFunctionReturn(const ArchAndAddr& location, bool value)
-{
-	BNArchitectureAndAddress bnLocation;
-	bnLocation.arch = location.arch->GetObject();
-	bnLocation.address = location.address;
-	BNFunctionSetContextualFunctionReturn(m_object, &bnLocation, value);
 }
 
 

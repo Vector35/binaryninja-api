@@ -151,10 +151,10 @@ fn modify_project() {
         .create_folder(None, "deleted_folder", folder_4_desc)
         .unwrap();
 
-    assert_eq!(project.folders().unwrap().len(), 5);
+    assert_eq!(project.folders().len(), 5);
     let last_folder = project.folder_by_id(&folder_5.id()).unwrap();
     project.delete_folder(&last_folder).unwrap();
-    assert_eq!(project.folders().unwrap().len(), 4);
+    assert_eq!(project.folders().len(), 4);
     drop(folder_5);
 
     // create, import and delete file
@@ -246,7 +246,9 @@ fn modify_project() {
 
     assert_eq!(project.files().len(), 10);
     let file_a = project.file_by_id(&file_8.id()).unwrap();
-    let file_b = project.file_by_path(&file_7.path_on_disk()).unwrap();
+    let file_b = project
+        .file_by_path(&file_7.path_on_disk().unwrap())
+        .unwrap();
     project.delete_file(&file_a);
     project.delete_file(&file_b);
     assert_eq!(project.files().len(), 8);
@@ -282,7 +284,7 @@ fn modify_project() {
         (&tmp_folder_1_name, None),
         (&tmp_folder_2_name, None),
     ];
-    for folder in project.folders().unwrap().iter() {
+    for folder in project.folders().iter() {
         let found = folders
             .iter()
             .find(|f| folder.name().as_str() == f.0)
@@ -329,7 +331,7 @@ fn modify_project() {
                     .as_secs()
             );
         }
-        let content = std::fs::read(file.path_on_disk().as_str()).unwrap();
+        let content = std::fs::read(file.path_on_disk().unwrap()).unwrap();
         assert_eq!(content, found.1);
     }
 

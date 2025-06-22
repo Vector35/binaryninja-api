@@ -3,6 +3,7 @@ pub mod folder;
 
 use std::ffi::c_void;
 use std::fmt::Debug;
+use std::path::Path;
 use std::ptr::{null_mut, NonNull};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -240,14 +241,11 @@ impl Project {
     }
 
     /// Get a list of folders in the project
-    pub fn folders(&self) -> Result<Array<ProjectFolder>, ()> {
+    pub fn folders(&self) -> Array<ProjectFolder> {
         let mut count = 0;
         let result = unsafe { BNProjectGetFolders(self.handle.as_ptr(), &mut count) };
-        if result.is_null() {
-            return Err(());
-        }
-
-        Ok(unsafe { Array::new(result, count, ()) })
+        assert!(!result.is_null());
+        unsafe { Array::new(result, count, ()) }
     }
 
     /// Retrieve a folder in the project by unique folder `id`
@@ -569,7 +567,7 @@ impl Project {
     }
 
     /// Retrieve a file in the project by the `path` on disk
-    pub fn file_by_path(&self, path: &str) -> Option<Ref<ProjectFile>> {
+    pub fn file_by_path(&self, path: &Path) -> Option<Ref<ProjectFile>> {
         let path_raw = path.to_cstr();
         let result =
             unsafe { BNProjectGetFileByPathOnDisk(self.handle.as_ptr(), path_raw.as_ptr()) };

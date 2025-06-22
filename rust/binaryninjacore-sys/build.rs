@@ -42,6 +42,7 @@ fn link_path() -> PathBuf {
 }
 
 fn main() {
+    println!("cargo:rerun-if-env-changed=BINARYNINJADIR");
     println!("cargo:rerun-if-changed=../../binaryninjacore.h");
 
     //Cargo's output directory

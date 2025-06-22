@@ -86,7 +86,7 @@ impl BnString {
     }
 
     /// Free a raw string allocated by [`BNAllocString`].
-    pub(crate) unsafe fn free_raw(raw: *mut c_char) {
+    pub unsafe fn free_raw(raw: *mut c_char) {
         if !raw.is_null() {
             BNFreeString(raw);
         }

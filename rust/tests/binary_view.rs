@@ -2,7 +2,10 @@ use binaryninja::binary_view::{AnalysisState, BinaryViewBase, BinaryViewExt};
 use binaryninja::function::Function;
 use binaryninja::headless::Session;
 use binaryninja::main_thread::execute_on_main_thread_and_wait;
-use binaryninja::symbol::{SymbolBuilder, SymbolType};
+use binaryninja::platform::Platform;
+use binaryninja::rc::Ref;
+use binaryninja::symbol::{Symbol, SymbolBuilder, SymbolType};
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 #[test]
@@ -100,7 +103,6 @@ fn test_binary_view_strings() {
 // See `test_deterministic_functions` for details.
 #[derive(Debug, PartialEq)]
 pub struct FunctionSnapshot {
-    name: String,
     platform: Ref<Platform>,
     symbol: Ref<Symbol>,
 }
@@ -108,16 +110,15 @@ pub struct FunctionSnapshot {
 impl From<&Function> for FunctionSnapshot {
     fn from(func: &Function) -> Self {
         Self {
-            name: func.symbol().raw_name().to_string(),
             platform: func.platform().to_owned(),
             symbol: func.symbol().to_owned(),
         }
     }
 }
 
-#[rstest]
-fn test_deterministic_functions(session: &Session) {
-    // Test to make sure that analysis always collects the same information on functions.
+#[test]
+fn test_deterministic_functions() {
+    let session = Session::new().expect("Failed to initialize session");
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     for entry in std::fs::read_dir(out_dir).expect("Failed to read OUT_DIR") {
         let entry = entry.expect("Failed to read directory entry");

@@ -9,7 +9,7 @@ use binaryninjacore_sys::{
     BNProjectFileSetFolder, BNProjectFileSetName,
 };
 use std::fmt::Debug;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::ptr::{null_mut, NonNull};
 use std::time::SystemTime;
 
@@ -37,8 +37,13 @@ impl ProjectFile {
     }
 
     /// Get the path on disk to this file's contents
-    pub fn path_on_disk(&self) -> String {
-        unsafe { BnString::into_string(BNProjectFileGetPathOnDisk(self.handle.as_ptr())) }
+    pub fn path_on_disk(&self) -> Option<PathBuf> {
+        if !self.exists_on_disk() {
+            return None;
+        }
+        let path_str =
+            unsafe { BnString::into_string(BNProjectFileGetPathOnDisk(self.handle.as_ptr())) };
+        Some(PathBuf::from(path_str))
     }
 
     /// Check if this file's contents exist on disk

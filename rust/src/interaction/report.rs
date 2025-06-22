@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::ptr::NonNull;
 
 use binaryninjacore_sys::*;
@@ -68,9 +69,12 @@ impl ReportCollection {
         unsafe { BnString::into_string(raw) }
     }
 
-    fn flow_graph(&self, i: usize) -> Ref<FlowGraph> {
+    fn flow_graph(&self, i: usize) -> Option<Ref<FlowGraph>> {
         let raw = unsafe { BNGetReportFlowGraph(self.handle.as_ptr(), i) };
-        unsafe { FlowGraph::ref_from_raw(raw) }
+        match raw.is_null() {
+            false => Some(unsafe { FlowGraph::ref_from_raw(raw) }),
+            true => None,
+        }
     }
 
     pub fn add_text(&self, view: &BinaryView, title: &str, contents: &str) {
@@ -134,6 +138,14 @@ impl ReportCollection {
 
     pub fn iter(&self) -> ReportCollectionIter<'_> {
         ReportCollectionIter::new(self)
+    }
+}
+
+impl Debug for ReportCollection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ReportCollection")
+            .field("count", &self.count())
+            .finish()
     }
 }
 
@@ -237,7 +249,9 @@ pub struct ReportFlowGraph<'a>(ReportInner<'a>);
 
 impl ReportFlowGraph<'_> {
     pub fn flow_graph(&self) -> Ref<FlowGraph> {
-        self.0.flow_graph()
+        self.0
+            .flow_graph()
+            .expect("Flow graph not available for flow graph report!")
     }
 
     pub fn update_report_flow_graph(&self, graph: &FlowGraph) {
@@ -271,7 +285,7 @@ impl ReportInner<'_> {
         self.collection.plain_text(self.index)
     }
 
-    fn flow_graph(&self) -> Ref<FlowGraph> {
+    fn flow_graph(&self) -> Option<Ref<FlowGraph>> {
         self.collection.flow_graph(self.index)
     }
 

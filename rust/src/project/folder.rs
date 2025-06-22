@@ -102,6 +102,12 @@ impl ProjectFolder {
     }
 }
 
+impl PartialEq for ProjectFolder {
+    fn eq(&self, other: &Self) -> bool {
+        self.id() == other.id()
+    }
+}
+
 impl Debug for ProjectFolder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ProjectFolder")
@@ -111,6 +117,9 @@ impl Debug for ProjectFolder {
             .finish()
     }
 }
+
+unsafe impl Send for ProjectFolder {}
+unsafe impl Sync for ProjectFolder {}
 
 impl ToOwned for ProjectFolder {
     type Owned = Ref<Self>;

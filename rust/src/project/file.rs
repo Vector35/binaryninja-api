@@ -119,6 +119,9 @@ impl Debug for ProjectFile {
     }
 }
 
+unsafe impl Send for ProjectFile {}
+unsafe impl Sync for ProjectFile {}
+
 impl ToOwned for ProjectFile {
     type Owned = Ref<Self>;
 

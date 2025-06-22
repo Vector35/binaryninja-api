@@ -15,6 +15,7 @@
 //! Background tasks provide plugins the ability to inform the core of long-running background tasks.
 
 use binaryninjacore_sys::*;
+use std::fmt::Debug;
 
 use std::result;
 
@@ -86,6 +87,17 @@ impl BackgroundTask {
             let handles = BNGetRunningBackgroundTasks(&mut count);
             Array::new(handles, count, ())
         }
+    }
+}
+
+impl Debug for BackgroundTask {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BackgroundTask")
+            .field("progress_text", &self.progress_text())
+            .field("can_cancel", &self.can_cancel())
+            .field("is_cancelled", &self.is_cancelled())
+            .field("is_finished", &self.is_finished())
+            .finish()
     }
 }
 

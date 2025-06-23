@@ -88,7 +88,7 @@ nav:
         - User Guide:
           - 'guide/index.md'
           - Using Plugins: 'guide/plugins.md'
-          - All Settings: 'guide/settings.md'
+          - Settings: 'guide/settings.md'
           - Projects: 'guide/projects.md'
           - Enterprise: 'guide/enterprise/index.md'
           - Troubleshooting: 'guide/troubleshooting.md'

@@ -156,6 +156,9 @@ class BINARYNINJAUIAPI SettingsEditor : public QWidget
 	std::string m_settingKey;
 	BinaryViewRef m_view = nullptr;
 	BNSettingsScope m_scope = SettingsAutoScope;
+	int m_ignoreScope = 0;
+	QString m_quickSettingsGroup;
+	bool m_workflowDependent = false;
 
 	QLabel* m_title = nullptr;
 	ClickableLabel* m_description = nullptr;

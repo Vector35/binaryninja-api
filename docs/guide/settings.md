@@ -1,33 +1,94 @@
 # Settings
 
-## UI
+## Settings UI
 
 ![settings](../img/settings.png "Settings"){ width="800" }
 
-Binary Ninja provides various settings which are available via the `[CMD/CTRL] ,` hotkey for *User* settings and the `[CMD/CTRL] .` hotkey for *Resource* settings which apply to the current BinaryView. These settings allow a wide variety of customization of the user interface and functional aspects of the analysis environment.
+Binary Ninja's settings are accessible via `[CMD/CTRL] ,` or `[CMD/CTRL] .` (which auto-selects the current BinaryView's scope). These settings provide extensive customization options for both the user interface and analysis functionality.
 
-Several search keywords are available in the settings UI. Those include:
-
-- `@default` - Shows settings that are in the default scope
-- `@user` - Shows only settings that the user has changed
-- `@project` - Shows settings scoped to the current project
-- `@resource` - Shows settings scoped to the current resource (for example if you used open-with-options and changed settings)
-- `@modified` - Shows settings that are changed from their default values
+## Settings Scopes
 
 There are several scopes available for settings:
 
 * **User Settings** - Settings that apply globally and override the defaults. These settings are stored in `settings.json` within the [User Folder](./index.md#user-folder).
 * **Project Settings** - Settings which only apply if a project is opened. These settings are stored in `.binaryninja/settings.json` within a Project Folder. Project Folders can exist anywhere except within the User Folder. These settings apply to all files contained in the Project Folder and override the default and user settings. In order to activate this feature, select the Project Settings tab and a clickable "Open Project" link will appear at the top right of the view. Clicking this will create `.binaryninja/settings.json` in the folder of the currently selected binary view. If it already exists, this link will be replaced with the path of the project folder.
-* **Resource Settings** - Settings which only apply to a specific BinaryView object within a file. These settings persist in a Binary Ninja Database (.bndb) database or ephemerally in a BinaryView object if a database does not yet exist for a file.
+* **Resource Settings** - Settings which only apply to a specific resource (BinaryView or Function) within a file. These settings persist in a Binary Ninja Database (.bndb) database or ephemerally in a BinaryView/Function object if a database does not yet exist for a file.
 
 ???+ Info "Tip"
-    Both the _Project_ and _Resource_ tabs have a drop down indicator (▾) that can be clicked to select the project or resource whose settings you want to adjust.
+    Both the _Project_ and _Resource_ tabs have a drop down indicator (▾) for selecting which project or resource settings to modify.
+
+### Filter Keywords
+
+The settings UI supports several filter tags to help find specific settings:
+
+- `@default` - Shows settings that are in the default scope
+- `@user` - Shows settings changed by the user
+- `@project` - Shows project-scoped settings
+- `@resource` - Shows resource-scoped settings (BinaryView or Function-specific)
+- `@modified` - Shows settings changed from their default values
 
 All settings are uniquely identified with an identifier string. Identifiers are available in the settings UI via the context menu and are useful for finding settings using the search box and for [programmatically](https://api.binary.ninja/binaryninja.settings-module.html) interacting with settings.
 
-**Note**: In order to facilitate reproducible analysis results, when opening a file for the first time, all of the analysis settings are automatically serialized into the _Resource Setting_ scope. This prevents subsequent _User_ and _Project_ setting modifications from unintentionally changing existing analysis results.
+## Resource Settings (BinaryView)
 
-## All Settings
+To facilitate reproducible analysis results, when opening a file for the first time, all analysis settings are automatically serialized into the BinaryView's Resource Setting scope. This prevents subsequent User and Project setting modifications from unintentionally changing existing settings which may influence analysis results.
+
+### Accessing BinaryView Resource Settings
+
+BinaryView Resource settings can be accessed through:
+
+* **Settings UI**: Use `[CMD/CTRL] .` to open Resource Settings (automatically selects the current BinaryView)
+* **Programmatically**: Use the [Settings API](https://api.binary.ninja/binaryninja.settings-module.html) with a BinaryView object as the resource parameter
+
+## Resource Settings (Function)
+
+Binary Ninja supports function-level settings for fine-grained control over analysis parameters. Unlike BinaryView Resource settings which store a complete copy of all analysis settings, Function Resource settings use an inheritance-based storage model. Each function inherits settings from its BinaryView by default, and only stores settings in its own cache when customization is needed for that specific function.
+
+### Accessing Function Resource Settings
+
+Function Resource settings can be accessed through:
+
+* **Context Menu**: Right-click in any analysis view and select "Function Settings" to access a customizable submenu of boolean settings controlled by the Quick Settings system
+* **Programmatically**: Use the [Settings API](https://api.binary.ninja/binaryninja.settings-module.html) with a Function object as the resource parameter
+
+!!! note
+	Function-specific Resource settings are not currently accessible in the Settings UI Resource dropdown tab.
+
+## Quick Settings
+
+Quick Settings provide streamlined access to frequently used boolean analysis settings directly from the context menu within analysis views. This mechanism is designed for efficient per-function customization without requiring the full Settings UI.
+
+By default, no settings are included in the context menus. Individual settings must be explicitly marked for inclusion.
+
+### Using Quick Settings in Context Menus
+
+1. Right-click within any analysis view (Graph, Linear, etc.).
+2. Two submenus may appear:
+   - **Function Analysis** – Contains settings auto-generated by the Workflow system, used to control activity eligibility.
+   - **Function Settings** – Contains manually added analysis settings for quick toggling in the Function Resource scope.
+3. Toggle settings as needed. These changes apply only to the current function’s settings scope.
+4. Select "Reset Settings" to clear the function settings and revert to inherited settings from the BinaryView.
+
+### Adding Quick Settings
+
+1. Open the Settings UI
+2. Right-click any boolean setting
+3. Select “Add to Quick Settings” to add it to the quick access menu
+
+The setting will appear under the `Function Analysis` or the `Function Settings` submenu in applicable context menus.
+
+### Removing Quick Settings
+
+1. Open the Settings UI
+2. Right-click on any boolean setting
+3. Uncheck “Add to Quick Settings” to remove it from the quick access menu
+
+### Reset Quick Settings
+
+* Right-click within the Settings dialog.
+* Select “Reset All Quick Settings”
+
+## Settings Reference
 
 |Category|Setting|Description|Type|Default|Scope|Key|
 |---|---|---|---|---|---|---|

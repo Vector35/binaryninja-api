@@ -17022,8 +17022,9 @@ namespace BinaryNinja {
 			"readOnly"           bool                                     None                 Yes        Only enforced by UI elements
 			"optional"           bool                                     None                 Yes        Indicates setting can be null
 			"hidden"             bool                                     "type" is "string"   Yes        Indicates the UI should conceal the content. The "ignore" property is required to specify the applicable storage scopes
-			"requiresRestart     bool                                     None                 Yes        Enable restart notification in the UI upon change
+			"requiresRestart"    bool                                     None                 Yes        Enable restart notification in the UI upon change
 			"uiSelectionAction"  string                                   "type" is "string"   Yes        {"file", "directory", <Registered UIAction Name>} Informs the UI to add a button to open a selection dialog or run a registered UIAction
+			"quickSettingsGroup" string                                   None                 Yes        Informs the submenu name in the UI when added to quick settings context menu
 			==================   ======================================   ==================   ========   =======================================================================
 
 		\note In order to facilitate deterministic analysis results, settings from the <em><tt>default</tt></em> schema that impact analysis are serialized
@@ -17124,9 +17125,10 @@ namespace BinaryNinja {
 
 		/*! Determine if the active settings schema is empty
 
+			\param scope the settings scope to check, defaults to SettingsAutoScope
 			\return True if the active settings schema is empty, False otherwise
 		*/
-		bool IsEmpty();
+		bool IsEmpty(BNSettingsScope scope = SettingsAutoScope);
 
 		/*! Retrieve the list of setting identifiers in the active settings schema
 
@@ -17153,6 +17155,7 @@ namespace BinaryNinja {
 		    const std::string& contents, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 		std::string SerializeSettings(Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 
+		bool IsEmpty(Ref<BinaryView> view, BNSettingsScope scope = SettingsAutoScope);
 		bool Reset(const std::string& key, Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope);
 		bool ResetAll(
 		    Ref<BinaryView> view = nullptr, BNSettingsScope scope = SettingsAutoScope, bool schemaOnly = true);
@@ -17209,6 +17212,7 @@ namespace BinaryNinja {
 		bool DeserializeSettings(const std::string& contents, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
 		std::string SerializeSettings(Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
 
+		bool IsEmpty(Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
 		bool Reset(const std::string& key, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
 		bool ResetAll(Ref<Function> func, BNSettingsScope scope = SettingsAutoScope, bool schemaOnly = true);
 

@@ -2,8 +2,10 @@
 
 #include "binaryninjaapi.h"
 #include "highlevelilinstruction.h"
+#include "objctypes.h"
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 using namespace BinaryNinja;
@@ -97,6 +99,17 @@ std::optional<std::pair<uint64_t, Ref<Symbol>>> GetCallTargetInfo(const HighLeve
 	return std::make_pair(constant, symbol);
 }
 
+Ref<Type> TypeResolvingNamedTypeReference(Ref<Type> type, const Function& function)
+{
+	if (!type || !type->IsNamedTypeRefer())
+		return type;
+
+	if (auto resolvedType = function.GetView()->GetTypeByRef(type->GetNamedTypeReference()))
+		return resolvedType;
+
+	return type;
+}
+
 struct RuntimeCall
 {
 	enum Type
@@ -111,6 +124,9 @@ struct RuntimeCall
 		Autorelease,
 		RetainAutorelease,
 		Class,
+		Self,
+		RespondsToSelector,
+		IsKindOfClass
 	};
 
 	Type type;
@@ -128,6 +144,9 @@ constexpr std::array RUNTIME_CALLS = {
 	std::make_pair("_objc_msgSendSuper2", RuntimeCall::MessageSendSuper),
 	std::make_pair("_objc_opt_class", RuntimeCall::Class),
 	std::make_pair("_objc_opt_new", RuntimeCall::New),
+	std::make_pair("_objc_opt_self", RuntimeCall::Self),
+	std::make_pair("_objc_opt_respondsToSelector", RuntimeCall::RespondsToSelector),
+	std::make_pair("_objc_opt_isKindOfClass", RuntimeCall::IsKindOfClass),
 	std::make_pair("_objc_release", RuntimeCall::Release),
 	std::make_pair("_objc_retain", RuntimeCall::Retain),
 	std::make_pair("_objc_retainAutoreleasedReturnValue", RuntimeCall::Retain),
@@ -142,6 +161,9 @@ constexpr std::array RUNTIME_CALLS = {
 	std::make_pair("j__objc_msgSendSuper2", RuntimeCall::MessageSendSuper),
 	std::make_pair("j__objc_opt_class", RuntimeCall::Class),
 	std::make_pair("j__objc_opt_new", RuntimeCall::New),
+	std::make_pair("j__objc_opt_self", RuntimeCall::Self),
+	std::make_pair("j__objc_opt_respondsToSelector", RuntimeCall::RespondsToSelector),
+	std::make_pair("j__objc_opt_isKindOfClass", RuntimeCall::IsKindOfClass),
 	std::make_pair("j__objc_release", RuntimeCall::Release),
 	std::make_pair("j__objc_retain", RuntimeCall::Retain),
 	std::make_pair("j__objc_retainAutoreleasedReturnValue", RuntimeCall::Retain),
@@ -187,6 +209,42 @@ std::optional<RuntimeCall> DetectRewrittenDirectObjCMethodCall(const HighLevelIL
 	return RuntimeCall {RuntimeCall::MessageSend, constant, true};
 }
 
+bool VariableIsObjCSuperStruct(const Variable& variable, Function& function)
+{
+	auto variableName = function.GetVariableName(variable);
+	if (variableName != "super")
+		return false;
+
+	const auto variableType = TypeResolvingNamedTypeReference(function.GetVariableType(variable), function);
+	if (!variableType || variableType->GetClass() != StructureTypeClass)
+		return false;
+
+	if (variableType->GetStructureName().GetString() != "objc_super")
+		return false;
+
+	return true;
+}
+
+bool IsAssignmentToObjCSuperStructField(const HighLevelILInstruction& assignInstr, Function& function)
+{
+	// Check if this is an assignment to a field of the objc_super struct
+	// Pattern: HLIL_ASSIGN { dest = HLIL_STRUCT_FIELD { source = HLIL_VAR { super }, }, field = ... }
+
+	if (assignInstr.operation != HLIL_ASSIGN)
+		return false;
+
+	const auto destExpr = assignInstr.GetDestExpr();
+	if (destExpr.operation != HLIL_STRUCT_FIELD)
+		return false;
+
+	const auto sourceExpr = destExpr.GetSourceExpr();
+	if (sourceExpr.operation != HLIL_VAR)
+		return false;
+
+	auto variable = sourceExpr.GetVariable<HLIL_VAR>();
+	return VariableIsObjCSuperStruct(variable, function);
+}
+
 }  // unnamed namespace
 
 PseudoObjCFunction::PseudoObjCFunction(LanguageRepresentationFunctionType* type, Architecture* arch, Function* owner,
@@ -212,7 +270,8 @@ void PseudoObjCFunction::GetExpr_CALL_OR_TAILCALL(const BinaryNinja::HighLevelIL
 	{
 	case RuntimeCall::MessageSend:
 	case RuntimeCall::MessageSendSuper:
-		if (GetExpr_ObjCMsgSend(objCRuntimeCall->address, objCRuntimeCall->isRewritten, destExpr, tokens, settings, parameterExprs))
+		if (GetExpr_ObjCMsgSend(objCRuntimeCall->address, objCRuntimeCall->type == RuntimeCall::MessageSendSuper,
+				objCRuntimeCall->isRewritten, destExpr, tokens, settings, parameterExprs))
 		{
 			if (statement)
 				tokens.AppendSemicolon();
@@ -243,7 +302,20 @@ void PseudoObjCFunction::GetExpr_CALL_OR_TAILCALL(const BinaryNinja::HighLevelIL
 	case RuntimeCall::Class:
 		runtimeCallTokens = {"class"};
 		break;
-	default:
+	case RuntimeCall::Self:
+		runtimeCallTokens = {"self"};
+		break;
+	case RuntimeCall::RespondsToSelector:
+	case RuntimeCall::IsKindOfClass:
+		std::string_view selectorToken =
+			objCRuntimeCall->type == RuntimeCall::RespondsToSelector ? "respondsToSelector:" : "isKindOfClass:";
+		if (GetExpr_TwoParamObjCRuntimeCall(
+				objCRuntimeCall->address, instr, tokens, settings, parameterExprs, selectorToken))
+		{
+			if (statement)
+				tokens.AppendSemicolon();
+			return;
+		}
 		break;
 	}
 
@@ -259,7 +331,7 @@ void PseudoObjCFunction::GetExpr_CALL_OR_TAILCALL(const BinaryNinja::HighLevelIL
 	return PseudoCFunction::GetExpr_CALL_OR_TAILCALL(instr, tokens, settings, precedence, statement);
 }
 
-bool PseudoObjCFunction::GetExpr_ObjCMsgSend(uint64_t msgSendAddress, bool isRewritten,
+bool PseudoObjCFunction::GetExpr_ObjCMsgSend(uint64_t msgSendAddress, bool isSuper, bool isRewritten,
 	const HighLevelILInstruction& instr, HighLevelILTokenEmitter& tokens, DisassemblySettings* settings,
 	const std::vector<HighLevelILInstruction>& parameterExprs)
 {
@@ -278,7 +350,10 @@ bool PseudoObjCFunction::GetExpr_ObjCMsgSend(uint64_t msgSendAddress, bool isRew
 
 	tokens.AppendOpenBracket();
 
-	GetExprText(parameterExprs[0], tokens, settings);
+	if (isSuper)
+		tokens.Append(LocalVariableToken, "super", instr.address);
+	else
+		GetExprText(parameterExprs[0], tokens, settings);
 
 	for (size_t index = 2; index < parameterExprs.size(); index++)
 	{
@@ -331,6 +406,24 @@ bool PseudoObjCFunction::GetExpr_GenericObjCRuntimeCall(uint64_t address, const 
 	return true;
 }
 
+bool PseudoObjCFunction::GetExpr_TwoParamObjCRuntimeCall(uint64_t address, const HighLevelILInstruction& instr,
+	HighLevelILTokenEmitter& tokens, DisassemblySettings* settings,
+	const std::vector<HighLevelILInstruction>& parameterExprs, std::string_view selectorToken)
+{
+	if (parameterExprs.size() < 2)
+		return false;
+
+	tokens.AppendOpenBracket();
+
+	GetExprText(parameterExprs[0], tokens, settings);
+	tokens.Append(TextToken, " ");
+	tokens.Append(CodeSymbolToken, StringReferenceTokenContext, std::string(selectorToken), instr.address, address);
+	GetExprText(parameterExprs[1], tokens, settings, MemberAndFunctionOperatorPrecedence);
+	tokens.AppendCloseBracket();
+
+	return true;
+}
+
 void PseudoObjCFunction::GetExpr_CONST_PTR(const BinaryNinja::HighLevelILInstruction& instr,
 	BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
 	BNOperatorPrecedence precedence, bool statement)
@@ -350,15 +443,17 @@ void PseudoObjCFunction::GetExpr_CONST_PTR(const BinaryNinja::HighLevelILInstruc
 			return;
 	}
 
+	if (shortName.rfind("sel_", 0) == 0
+		&& GetExpr_Selector(
+			std::string_view(shortName).substr(4), constant, instr, tokens, settings, precedence, statement))
+		return;
+
 	DataVariable variable {};
 	auto hasVariable = GetFunction()->GetView()->GetDataVariableAtAddress(constant, variable);
 	if (!hasVariable)
 		return PseudoCFunction::GetExpr_CONST_PTR(instr, tokens, settings, precedence, statement);
 
-	auto type = variable.type->IsNamedTypeRefer() ?
-		GetFunction()->GetView()->GetTypeByRef(variable.type->GetNamedTypeReference()) :
-		variable.type.GetValue();
-
+	auto type = TypeResolvingNamedTypeReference(variable.type, *GetFunction());
 	if (!type || type->GetClass() != StructureTypeClass)
 		return PseudoCFunction::GetExpr_CONST_PTR(instr, tokens, settings, precedence, statement);
 
@@ -389,6 +484,21 @@ bool PseudoObjCFunction::GetExpr_OBJC_CLASS(const Symbol& symbol, uint64_t const
 	tokens.Append(DataSymbolToken, ConstDataTokenContext, className, instr.address, constant);
 	if (statement)
 		tokens.AppendSemicolon();
+
+	return true;
+}
+
+bool PseudoObjCFunction::GetExpr_Selector(std::string_view selector, uint64_t constant,
+	const BinaryNinja::HighLevelILInstruction& instr, BinaryNinja::HighLevelILTokenEmitter& tokens,
+	BinaryNinja::DisassemblySettings* settings, BNOperatorPrecedence precedence, bool statement)
+{
+	if (selector.empty())
+		return false;
+
+	tokens.Append(KeywordToken, "@selector");
+	tokens.AppendOpenParen();
+	tokens.Append(DataSymbolToken, ConstDataTokenContext, std::string(selector), instr.address, constant);
+	tokens.AppendCloseParen();
 
 	return true;
 }
@@ -427,7 +537,7 @@ void PseudoObjCFunction::GetExpr_IMPORT(const BinaryNinja::HighLevelILInstructio
 	BNOperatorPrecedence precedence, bool statement)
 {
 	const auto constant = instr.GetConstant<HLIL_IMPORT>();
-	auto symbol = GetHighLevelILFunction()->GetFunction()->GetView()->GetSymbolByAddress(constant);
+	auto symbol = GetFunction()->GetView()->GetSymbolByAddress(constant);
 	const auto symbolType = symbol->GetType();
 
 	if (symbol && (symbolType == ImportedDataSymbol || symbolType == ImportAddressSymbol))
@@ -449,6 +559,28 @@ void PseudoObjCFunction::GetExpr_IMPORT(const BinaryNinja::HighLevelILInstructio
 	PseudoCFunction::GetExpr_IMPORT(instr, tokens, settings, precedence, statement);
 }
 
+bool PseudoObjCFunction::ShouldSkipStatement(const BinaryNinja::HighLevelILInstruction& instr)
+{
+	// Skip statements that are compiler-generated artifacts of Objective-C runtime calls
+	// For now this is limited to the declaration / initialization of the `objc_super` variable
+	// used for `objc_msgSendSuper` calls.
+	switch (instr.operation)
+	{
+	case HLIL_VAR_DECLARE:
+		if (VariableIsObjCSuperStruct(instr.GetVariable<HLIL_VAR_DECLARE>(), *GetFunction()))
+			return true;
+		break;
+	case HLIL_ASSIGN:
+		if (IsAssignmentToObjCSuperStructField(instr, *GetFunction()))
+			return true;
+		break;
+	default:
+		break;
+	}
+
+	return PseudoCFunction::ShouldSkipStatement(instr);
+}
+
 
 PseudoObjCFunctionType::PseudoObjCFunctionType() : PseudoCFunctionType("Pseudo Objective-C") {}
 
@@ -456,4 +588,9 @@ Ref<LanguageRepresentationFunction> PseudoObjCFunctionType::Create(
 	Architecture* arch, Function* owner, HighLevelILFunction* highLevelILFunction)
 {
 	return new PseudoObjCFunction(this, arch, owner, highLevelILFunction);
+}
+
+Ref<TypePrinter> PseudoObjCFunctionType::GetTypePrinter()
+{
+	return new PseudoObjCTypePrinter();
 }

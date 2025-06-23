@@ -1383,7 +1383,7 @@ impl StructureBuilder {
     }
 
     // TODO: Document the width adjustment with alignment.
-    pub fn finalize(&mut self) -> Ref<Structure> {
+    pub fn finalize(&self) -> Ref<Structure> {
         let raw_struct_ptr = unsafe { BNFinalizeStructureBuilder(self.handle) };
         unsafe { Structure::ref_from_raw(raw_struct_ptr) }
     }

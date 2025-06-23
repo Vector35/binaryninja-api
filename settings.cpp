@@ -57,9 +57,9 @@ bool Settings::Contains(const string& key)
 }
 
 
-bool Settings::IsEmpty()
+bool Settings::IsEmpty(BNSettingsScope scope)
 {
-	return BNSettingsIsEmpty(m_object);
+	return BNSettingsIsEmpty(m_object, nullptr, nullptr, scope);
 }
 
 
@@ -199,6 +199,12 @@ string Settings::SerializeSettings(Ref<BinaryView> view, BNSettingsScope scope)
 	string settings(settingsStr);
 	BNFreeString(settingsStr);
 	return settings;
+}
+
+
+bool Settings::IsEmpty(Ref<BinaryView> view, BNSettingsScope scope)
+{
+	return BNSettingsIsEmpty(m_object, view ? view->GetObject() : nullptr, nullptr, scope);
 }
 
 
@@ -357,6 +363,12 @@ string Settings::SerializeSettings(Ref<Function> func, BNSettingsScope scope)
 	string settings(settingsStr);
 	BNFreeString(settingsStr);
 	return settings;
+}
+
+
+bool Settings::IsEmpty(Ref<Function> func, BNSettingsScope scope)
+{
+	return BNSettingsIsEmpty(m_object, nullptr, func ? func->GetObject() : nullptr, scope);
 }
 
 

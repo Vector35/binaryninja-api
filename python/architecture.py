@@ -40,6 +40,7 @@ from . import typelibrary
 from . import function
 from . import binaryview
 from . import deprecation
+from .variable import IndirectBranchInfo
 
 RegisterIndex = NewType('RegisterIndex', int)
 RegisterStackIndex = NewType('RegisterStackIndex', int)
@@ -63,6 +64,16 @@ RegisterStackType = Union[RegisterStackName, 'lowlevelil.ILRegisterStack', Regis
 SemanticClassType = Union[SemanticClassName, 'lowlevelil.ILSemanticFlagClass', SemanticClassIndex]
 SemanticGroupType = Union[SemanticGroupName, 'lowlevelil.ILSemanticFlagGroup', SemanticGroupIndex]
 IntrinsicType = Union[IntrinsicName, 'lowlevelil.ILIntrinsic', IntrinsicIndex]
+
+
+@dataclass(frozen=True)
+class BasicBlockAnalysisContext:
+	"""Used by ``analyze_basic_blocks`` and contains analysis settings and other contextual information."""
+	indirect_branches: List[IndirectBranchInfo]
+	analysis_skip_override: core.FunctionAnalysisSkipOverrideEnum
+	translate_tail_calls: bool
+	disallow_branch_to_string: bool
+	max_function_size: int
 
 
 @dataclass(frozen=True)
@@ -246,6 +257,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		self._cb.getInstructionLowLevelIL = self._cb.getInstructionLowLevelIL.__class__(
 		    self._get_instruction_low_level_il
 		)
+		self._cb.analyzeBasicBlocks = self._cb.analyzeBasicBlocks.__class__(self._analyze_basic_blocks)
 		self._cb.getRegisterName = self._cb.getRegisterName.__class__(self._get_register_name)
 		self._cb.getFlagName = self._cb.getFlagName.__class__(self._get_flag_name)
 		self._cb.getFlagWriteTypeName = self._cb.getFlagWriteTypeName.__class__(self._get_flag_write_type_name)
@@ -710,6 +722,25 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		except OSError:
 			log_error(traceback.format_exc())
 			return False
+
+	def _analyze_basic_blocks(self, ctx, func, ptr_bn_bb_context):
+		try:
+			bn_bb_context = ptr_bn_bb_context.contents
+			indirect_branches = []
+			for i in range(0, bn_bb_context.indirectBranchesCount):
+				ibi = IndirectBranchInfo()
+				ibi.source_arch = CoreArchitecture._from_cache(bn_bb_context.indirectBranches[i].sourceArch)
+				ibi.source_addr = bn_bb_context.indirectBranches[i].sourceAddr
+				ibi.dest_arch = CoreArchitecture._from_cache(bn_bb_context.indirectBranches[i].destArch)
+				ibi.dest_addr = bn_bb_context.indirectBranches[i].destAddr
+				ibi.auto_defined = bn_bb_context.indirectBranches[i].autoDefined
+				indirect_branches.append(ibi)
+
+			context = BasicBlockAnalysisContext(indirect_branches, bn_bb_context.analysisSkipOverride,
+				bn_bb_context.translateTailCalls, bn_bb_context.disallowBranchToString, bn_bb_context.maxFunctionSize)
+			self.analyze_basic_blocks(function.Function(handle=core.BNNewFunctionReference(func)), context)
+		except:
+			log_error(traceback.format_exc())
 
 	def _get_register_name(self, ctxt, reg):
 		try:
@@ -1425,6 +1456,34 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		:rtype: int
 		"""
 		raise NotImplementedError
+
+	def analyze_basic_blocks(self, func: 'function.Function', context: BasicBlockAnalysisContext) -> None:
+		"""
+		``analyze_basic_blocks`` performs basic block recovery and commits the results to the function analysis
+
+		.. note:: Architecture subclasses should only implement this method if function-level analysis is required
+
+		:param Function func: the function to analyze
+		:param BNBasicBlockAnalysisContext context: the analysis context
+		"""
+
+		try:
+			bn_bb_context = core.BNBasicBlockAnalysisContext()
+			bn_bb_context.indirectBranchesCount = len(context.indirect_branches)
+			bn_bb_context.analysisSkipOverride = context.analysis_skip_override
+			bn_bb_context.translateTailCalls = context.translate_tail_calls
+			bn_bb_context.disallowBranchToString = context.disallow_branch_to_string
+			bn_bb_context.maxFunctionSize = context.max_function_size
+			bn_bb_context.indirectBranches = (core.BNIndirectBranchInfo * len(context.indirect_branches))()
+			for i in range(0, len(context.indirect_branches)):
+				bn_bb_context.indirectBranches[i].sourceArch = context.indirect_branches[i].source_arch.handle
+				bn_bb_context.indirectBranches[i].sourceAddr = context.indirect_branches[i].source_addr
+				bn_bb_context.indirectBranches[i].destArch = context.indirect_branches[i].dest_arch.handle
+				bn_bb_context.indirectBranches[i].destAddr = context.indirect_branches[i].dest_addr
+				bn_bb_context.indirectBranches[i].autoDefined = context.indirect_branches[i].auto_defined
+			core.BNArchitectureDefaultAnalyzeBasicBlocks(func.handle, ctypes.byref(bn_bb_context))
+		except:
+			log_error(traceback.format_exc())
 
 	def get_low_level_il_from_bytes(self, data: bytes, addr: int) -> 'lowlevelil.LowLevelILInstruction':
 		"""

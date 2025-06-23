@@ -317,6 +317,12 @@ uint64_t BasicBlock::GetStart() const
 }
 
 
+void BasicBlock::SetEnd(uint64_t end)
+{
+	BNSetBasicBlockEnd(m_object, end);
+}
+
+
 uint64_t BasicBlock::GetEnd() const
 {
 	return BNGetBasicBlockEnd(m_object);
@@ -382,6 +388,81 @@ vector<BasicBlockEdge> BasicBlock::GetIncomingEdges() const
 bool BasicBlock::HasUndeterminedOutgoingEdges() const
 {
 	return BNBasicBlockHasUndeterminedOutgoingEdges(m_object);
+}
+
+
+bool BasicBlock::HasInvalidInstructions() const
+{
+	return BNBasicBlockHasInvalidInstructions(m_object);
+}
+
+
+void BasicBlock::SetHasInvalidInstructions(bool value)
+{
+	BNBasicBlockSetHasInvalidInstructions(m_object, value);
+}
+
+
+void BasicBlock::AddPendingOutgoingEdge(BNBranchType type, uint64_t addr, Ref<Architecture> arch, bool fallThrough)
+{
+	BNBasicBlockAddPendingOutgoingEdge(m_object, type, addr, arch ? arch->GetObject() : nullptr, fallThrough);
+}
+
+
+vector<PendingBasicBlockEdge> BasicBlock::GetPendingOutgoingEdges() const
+{
+	size_t count;
+	BNPendingBasicBlockEdge* edges = BNGetBasicBlockPendingOutgoingEdges(m_object, &count);
+	vector<PendingBasicBlockEdge> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		PendingBasicBlockEdge edge;
+		edge.type = edges[i].type;
+		edge.arch = edges[i].arch ? new CoreArchitecture(edges[i].arch) : nullptr;
+		edge.target = edges[i].target;
+		edge.fallThrough = edges[i].fallThrough;
+		result.push_back(edge);
+	}
+
+	BNFreePendingBasicBlockEdgeList(edges);
+	return result;
+}
+
+
+void BasicBlock::ClearPendingOutgoingEdges()
+{
+	BNClearBasicBlockPendingOutgoingEdges(m_object);
+}
+
+
+void BasicBlock::SetUndeterminedOutgoingEdges(bool value)
+{
+	BNBasicBlockSetUndeterminedOutgoingEdges(m_object, value);
+}
+
+
+const uint8_t* BasicBlock::GetInstructionData(uint64_t addr, size_t* len) const
+{
+	return BNBasicBlockGetInstructionData(m_object, addr, len);
+}
+
+
+void BasicBlock::AddInstructionData(const void* data, size_t len)
+{
+	BNBasicBlockAddInstructionData(m_object, data, len);
+}
+
+
+void BasicBlock::SetFallThroughToFunction(bool value)
+{
+	BNBasicBlockSetFallThroughToFunction(m_object, value);
+}
+
+
+bool BasicBlock::IsFallThroughToFunction() const
+{
+	return BNBasicBlockIsFallThroughToFunction(m_object);
 }
 
 

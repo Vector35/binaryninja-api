@@ -61,6 +61,22 @@ class BasicBlockEdge:
 			return f"<{self.type.name}: {self.target.start:#x}>"
 
 
+@dataclass(frozen=True)
+class PendingBasicBlockEdge:
+	"""
+	``class PendingBasicBlockEdge`` represents a pending edge that has not yet been resolved.
+
+	:cvar type: The edge branch type.
+	:cvar arch: The architecture of the target basic block.
+	:cvar target: The address of the target basic block.
+	:cvar fall_through: Whether this edge is a fallthrough edge.
+	"""
+	type: BranchType
+	arch: 'architecture.Architecture'
+	target: int
+	fallthrough: bool
+
+
 class BasicBlock:
 	"""
 	The ``class BasicBlock`` object is returned during analysis and should not be directly instantiated.
@@ -361,6 +377,14 @@ class BasicBlock:
 		"""Basic block end (read-only)"""
 		return core.BNGetBasicBlockEnd(self.handle)
 
+	@end.setter
+	def end(self, value: int) -> None:
+		"""Sets the end of the basic block
+
+		.. note:: This setter is intended for use by architecture plugins only.
+		"""
+		core.BNSetBasicBlockEnd(self.handle, value)
+
 	@property
 	def length(self) -> int:
 		"""Basic block length (read-only)"""
@@ -408,6 +432,11 @@ class BasicBlock:
 		"""Whether basic block has undetermined outgoing edges (read-only)"""
 		return core.BNBasicBlockHasUndeterminedOutgoingEdges(self.handle)
 
+	@has_undetermined_outgoing_edges.setter
+	def has_undetermined_outgoing_edges(self, value: bool) -> None:
+		"""Sets whether basic block has undetermined outgoing edges"""
+		core.BNBasicBlockSetUndeterminedOutgoingEdges(self.handle, value)
+
 	@property
 	def can_exit(self) -> bool:
 		"""Whether basic block can return or is tagged as 'No Return' (read-only)"""
@@ -422,6 +451,106 @@ class BasicBlock:
 	def has_invalid_instructions(self) -> bool:
 		"""Whether basic block has any invalid instructions (read-only)"""
 		return core.BNBasicBlockHasInvalidInstructions(self.handle)
+
+	@has_invalid_instructions.setter
+	def has_invalid_instructions(self, value: bool) -> None:
+		"""Sets whether basic block has any invalid instructions"""
+		core.BNBasicBlockSetHasInvalidInstructions(self.handle, value)
+
+	def add_pending_outgoing_edge(self, typ: BranchType, addr: int, arch: 'architecture.Architecture', fallthrough: bool = False) -> None:
+		"""
+		Adds a pending outgoing edge to the basic block. This is used to add edges that are not yet resolved.
+
+		.. note:: This method is intended for use by architecture plugins only.
+
+		:param BranchType typ: The type of the branch.
+		:param int addr: The address of the target basic block.
+		:param Architecture arch: The architecture of the target basic block.
+		:param bool fallthrough: Whether this edge is a fallthrough edge.
+		"""
+
+		core.BNBasicBlockAddPendingOutgoingEdge(self.handle, typ.value, addr, arch.handle, fallthrough)
+
+	def get_pending_outgoing_edges(self) -> list[PendingBasicBlockEdge]:
+		"""
+		Returns a list of pending outgoing edges for the basic block. These are edges that have not yet been resolved.
+
+		.. note:: This method is intended for use by architecture plugins only.
+
+		:return: List of PendingBasicBlockEdge objects.
+		:rtype: list[PendingBasicBlockEdge]
+		"""
+		count = ctypes.c_ulonglong(0)
+		pending_edges = core.BNGetBasicBlockPendingOutgoingEdges(self.handle, ctypes.byref(count))
+		if pending_edges is None:
+			return []
+
+		result: List[PendingBasicBlockEdge] = []
+		try:
+			for i in range(count.value):
+				result.append(PendingBasicBlockEdge(
+					type=BranchType(pending_edges[i].type),
+					arch=architecture.CoreArchitecture._from_cache(pending_edges[i].arch),
+					target=pending_edges[i].target,
+					fallthrough=pending_edges[i].fallThrough
+				))
+			return result
+		finally:
+			core.BNFreePendingBasicBlockEdgeList(pending_edges)
+
+	def clear_pending_outgoing_edges(self) -> None:
+		"""
+		Clears all pending outgoing edges for the basic block. This is used to remove edges that have not yet been resolved.
+
+		.. note:: This method is intended for use by architecture plugins only.
+		"""
+		core.BNClearBasicBlockPendingOutgoingEdges(self.handle)
+
+	def get_instruction_data(self, addr: int) -> bytes:
+		"""
+		Returns the raw instruction data for the basic block at the specified address.
+
+		.. note:: This method is intended for use by architecture plugins only.
+
+		:return: Raw instruction data as bytes.
+		:rtype: bytes
+		"""
+
+		size = ctypes.c_ulonglong(0)
+		data = core.BNBasicBlockGetInstructionData(self.handle, addr, ctypes.byref(size))
+		if data is None:
+			return b''
+
+		return ctypes.string_at(data, size.value)
+
+	def add_instruction_data(self, data: bytes) -> None:
+		"""
+		Adds raw instruction data to the basic block.
+
+		.. note:: This method is intended for use by architecture plugins only.
+
+		:param bytes data: Raw instruction data to add to the basic block.
+		"""
+		if not isinstance(data, bytes):
+			raise TypeError("data must be of type bytes")
+
+		core.BNBasicBlockAddInstructionData(self.handle, data, len(data))
+
+	@property
+	def fallthrough_to_function(self) -> bool:
+		"""Whether the basic block has a fallthrough edge to a function."""
+
+		return core.BNBasicBlockIsFallThroughToFunction(self.handle)
+
+	@fallthrough_to_function.setter
+	def fallthrough_to_function(self, value: bool) -> None:
+		"""Sets whether the basic block has a fallthrough edge to a function.
+
+		.. note:: This setter is intended for use by architecture plugins only.
+		"""
+		if not isinstance(value, bool):
+			raise TypeError("value must be of type bool")
+		core.BNBasicBlockSetFallThroughToFunction(self.handle, value)
 
 	def _make_blocks(self, blocks, count: int) -> List['BasicBlock']:
 		assert blocks is not None, "core returned empty block list"

@@ -1787,6 +1787,15 @@ vector<IndirectBranchInfo> Function::GetIndirectBranchesAt(Architecture* arch, u
 }
 
 
+Ref<Function> Function::GetCalleeForAnalysis(Ref<Platform> platform, uint64_t addr, bool exact)
+{
+	BNFunction* func = BNGetCalleeForAnalysis(m_object, platform->GetObject(), addr, exact);
+	if (!func)
+		return nullptr;
+	return new Function(func);
+}
+
+
 vector<uint64_t> Function::GetUnresolvedIndirectBranches()
 {
 	size_t count;

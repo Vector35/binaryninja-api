@@ -1159,43 +1159,47 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 				break;
 			}
 		case MIPS_ADDU:
+			extendType = ZeroExtend;
 		case MIPS_ADD:
 		case MIPS_ADDI:
 			if (op2.reg == REG_ZERO)
-				il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, ReadILOperand(il, instr, 3, registerSize(op3), 4)));
+				il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, ReadILOperand(il, instr, 3, registerSize(op3), 4), extendType));
 			else
 				il.AddInstruction(
 					SetRegisterOrNop(il, 4, registerSize(op1), op1.reg,
 						il.Add(4,
 							ReadILOperand(il, instr, 2, registerSize(op2), 4),
-							ReadILOperand(il, instr, 3, registerSize(op3), 4))));
+							ReadILOperand(il, instr, 3, registerSize(op3), 4)), extendType));
 			break;
 		case MIPS_DADDU:
 		case MIPS_DADDIU:
+			extendType = ZeroExtend;
 		case MIPS_DADD:
 		case MIPS_DADDI:
 			if (op2.reg == REG_ZERO)
-				il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, ReadILOperand(il, instr, 3, registerSize(op3))));
+				il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, ReadILOperand(il, instr, 3, registerSize(op3)), extendType));
 			else
 				il.AddInstruction(
 					SetRegisterOrNop(il, 8, registerSize(op1), op1.reg,
 						il.Add(8,
 							ReadILOperand(il, instr, 2, registerSize(op2)),
-							ReadILOperand(il, instr, 3, registerSize(op3)))));
+							ReadILOperand(il, instr, 3, registerSize(op3))), extendType));
 			break;
 		case MIPS_SUBU:
+			extendType = ZeroExtend;
 		case MIPS_SUB:
 			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg,
 								il.Sub(4,
 									ReadILOperand(il, instr, 2, registerSize(op2), 4),
-									ReadILOperand(il, instr, 3, registerSize(op3), 4))));
+									ReadILOperand(il, instr, 3, registerSize(op3), 4)), extendType));
 			break;
 		case MIPS_DSUBU:
+			extendType = ZeroExtend;
 		case MIPS_DSUB:
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg,
 								il.Sub(8,
 									ReadILOperand(il, instr, 2, registerSize(op2), 8),
-									ReadILOperand(il, instr, 3, registerSize(op3), 8))));
+									ReadILOperand(il, instr, 3, registerSize(op3), 8)), extendType));
 			break;
 		case MIPS_AND:
 			il.AddInstruction(SetRegisterOrNop(il, registerSize(op2), registerSize(op1), op1.reg,
@@ -2031,20 +2035,22 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, il.ArithShiftRight(4, ReadILOperand(il, instr, 2, registerSize(op2)), il.And(4, ReadILOperand(il, instr, 3, registerSize(op3)), il.Const(4, 0x1f)))));
 			break;
 		case MIPS_SLT:
-			il.AddInstruction(SetRegisterOrNop(il, 1, registerSize(op1), op1.reg, il.BoolToInt(1,
+			il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.BoolToInt(registerSize(op1),
 				il.CompareSignedLessThan(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)), ReadILOperand(il, instr, 3, registerSize(op3))))));
 			break;
 		case MIPS_SLTI:
-			il.AddInstruction(SetRegisterOrNop(il, 1, registerSize(op1), op1.reg, il.BoolToInt(1,
-				il.CompareSignedLessThan(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)), il.Const(2, op3.immediate)))));
+			il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.BoolToInt(registerSize(op1),
+				il.CompareSignedLessThan(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)), il.Const(registerSize(op2), op3.immediate)))));
 			break;
 		case MIPS_SLTIU:
-			il.AddInstruction(SetRegisterOrNop(il, 1, registerSize(op1), op1.reg, il.BoolToInt(1,
-				il.CompareUnsignedLessThan(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)), il.Const(2, op3.immediate)))));
+			il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.BoolToInt(registerSize(op1),
+				il.CompareUnsignedLessThan(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)),
+					il.Const(registerSize(op2), op3.immediate))), ZeroExtend));
 			break;
 		case MIPS_SLTU:
-			il.AddInstruction(SetRegisterOrNop(il, 1, registerSize(op1), op1.reg, il.BoolToInt(1,
-				il.CompareUnsignedLessThan(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)), ReadILOperand(il, instr, 3, registerSize(op3))))));
+			il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.BoolToInt(registerSize(op1),
+				il.CompareUnsignedLessThan(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)),
+					ReadILOperand(il, instr, 3, registerSize(op3)))), ZeroExtend));
 			break;
 		case MIPS_SLL:
 			// SLL is unique in that the input doesn't have to be sign extended, and the
@@ -2066,7 +2072,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 						il.ShiftLeft(registerSize(op1),
 							il.SignExtend(registerSize(op1),
 								il.LowPart(4, ReadILOperand(il, instr, 2, registerSize(op2)))),
-							ReadILOperand(il, instr, 3, 1))));
+							ReadILOperand(il, instr, 3, registerSize(op2)))));
 				}
 			}
 			else
@@ -2074,7 +2080,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 				il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg,
 					il.ShiftLeft(4,
 						ReadILOperand(il, instr, 2, registerSize(op2)),
-						ReadILOperand(il, instr, 3, 1))));
+						ReadILOperand(il, instr, 3, registerSize(op2)))));
 			}
 			break;
 		case MIPS_SLLV:
@@ -2225,7 +2231,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 					SignExtendHiLo(il, 4);
 				auto rd = op1.reg;
 				if (rd != REG_ZERO)
-					il.AddInstruction(SetRegisterOrNop(il, 4, 8, rd, il.Register(get_register_width(lo, version), lo)));
+					il.AddInstruction(SetRegisterOrNop(il, 4, 8, rd, il.Register(get_register_width(lo, version), lo), ZeroExtend));
 			}
 			else {
 				DEFINE_HILO1(MIPS_MADDU1);

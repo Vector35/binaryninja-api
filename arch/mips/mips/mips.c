@@ -3699,7 +3699,7 @@ uint32_t mips_disassemble(
 	int first_operand = 0;
 	const char* reg = NULL;
 
-	strlcpy(operation, OperationStrings[instruction->operation], sizeof(operation));
+	strncpy(operation, OperationStrings[instruction->operation], sizeof(operation));
 	if (instruction->operands[0].operandClass == V_DEST)
 	{
 		char* p = dest;

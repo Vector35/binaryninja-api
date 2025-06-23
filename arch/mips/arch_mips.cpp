@@ -806,7 +806,7 @@ public:
 		const char* operation_name = get_operation(instr.operation);
 		if (operation_name == NULL)
 			return false;
-		strlcpy(operation, operation_name, sizeof(operation));
+		strncpy(operation, operation_name, sizeof(operation));
 
 		if (instr.operands[0].operandClass == V_DEST)
 		{

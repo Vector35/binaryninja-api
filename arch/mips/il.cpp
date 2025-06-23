@@ -7,6 +7,13 @@ using namespace mips;
 
 #define INVALID_EXPRID ((uint32_t)-1)
 
+#define INVALID_OPERATION \
+				default: \
+					LogWarn("Invalid operation"); \
+					il.AddInstruction(il.Unimplemented()); \
+					return false
+
+
 typedef enum {
 	ZeroExtend,
 	SignExtend,
@@ -508,6 +515,7 @@ ExprId GetConditionForInstruction(LowLevelILFunction& il, Instruction& instr, st
 	case MIPS_BGEZ:
 	case MIPS_BGEZL:
 	case MIPS_BGEZAL:
+	case MIPS_BGEZALL:
 		return il.CompareSignedGreaterEqual(registerSize(op1), ReadILOperand(il, instr, 1, registerSize(op1)), il.Const(registerSize(op1), 0));
 	case MIPS_BGTZ:
 	case MIPS_BGTZL:
@@ -518,6 +526,7 @@ ExprId GetConditionForInstruction(LowLevelILFunction& il, Instruction& instr, st
 	case MIPS_BLTZ:
 	case MIPS_BLTZL:
 	case MIPS_BLTZAL:
+	case MIPS_BLTZALL:
 		return il.CompareSignedLessThan(registerSize(op1), ReadILOperand(il, instr, 1, registerSize(op1)), il.Const(registerSize(op1), 0));
 	case MIPS_BC1F:
 	case MIPS_BC1FL:
@@ -1129,9 +1138,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 	InstructionOperand& op4 = instr.operands[3];
 	LowLevelILLabel trueCode, falseCode, again;
 	size_t bytes = 4;
-	bool max = false;
-	// size_t registerSize = addrSize;
-	// std::function<size_t (*)(const InstructionOperand& op)>
 	bool signedFlag = false;
 	ExtendType extendType = SignExtend;
 	bool saturate = false;
@@ -4697,6 +4703,12 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 				case MIPS_VFTOI15: shift = 15; break;
                 case MIPS_VFTOI12: shift = 12; break;
                 case MIPS_VFTOI4: shift = 4; break;
+				default: shift = 0;
+			}
+			if (shift == 0)
+			{
+				il.AddInstruction((il.Unimplemented()));
+				break;
 			}
 			unsigned char dest = op1.reg;
 			if (dest & (1 << 3))
@@ -4719,6 +4731,12 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 				case MIPS_VITOF15: shift = 15; break;
                 case MIPS_VITOF12: shift = 12; break;
                 case MIPS_VITOF4: shift = 4; break;
+			default: shift = 0;
+			}
+			if (shift == 0)
+			{
+				il.AddInstruction((il.Unimplemented()));
+				break;
 			}
 			unsigned char dest = op1.reg;
 			if (dest & (1 << 3))

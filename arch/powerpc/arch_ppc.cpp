@@ -1458,15 +1458,15 @@ class PowerpcArchitecture: public Architecture
 			case IL_FLAG_EQ_6:
 			case IL_FLAG_EQ_7:
 				return ZeroFlagRole;
-			// case IL_FLAG_SO:
-			// case IL_FLAG_SO_1:
-			// case IL_FLAG_SO_2:
-			// case IL_FLAG_SO_3:
-			// case IL_FLAG_SO_4:
-			// case IL_FLAG_SO_5:
-			// case IL_FLAG_SO_6:
-			// case IL_FLAG_SO_7:
-			// case IL_FLAG_XER_SO:
+			case IL_FLAG_SO:
+			case IL_FLAG_SO_1:
+			case IL_FLAG_SO_2:
+			case IL_FLAG_SO_3:
+			case IL_FLAG_SO_4:
+			case IL_FLAG_SO_5:
+			case IL_FLAG_SO_6:
+			case IL_FLAG_SO_7:
+			case IL_FLAG_XER_SO:
 			case IL_FLAG_XER_OV:
 				return OverflowFlagRole;
 			case IL_FLAG_XER_CA:

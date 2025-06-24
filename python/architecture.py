@@ -725,6 +725,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 
 	def _analyze_basic_blocks(self, ctx, func, ptr_bn_bb_context):
 		try:
+			return core.BNArchitectureDefaultAnalyzeBasicBlocks(func, ptr_bn_bb_context)
 			bn_bb_context = ptr_bn_bb_context.contents
 			indirect_branches = []
 			for i in range(0, bn_bb_context.indirectBranchesCount):

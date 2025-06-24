@@ -949,7 +949,7 @@ class PointerBuilder(TypeBuilder):
 
 	@property
 	def offset(self) -> int:
-		""" Currently not used and has no effect (Leaving this in for compatibility)""""
+		""" Currently not used and has no effect (Leaving this in for compatibility)"""
 		return core.BNGetTypeBuilderOffset(self._handle)
 
 	@offset.setter

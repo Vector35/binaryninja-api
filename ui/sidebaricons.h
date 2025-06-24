@@ -78,9 +78,11 @@ class BINARYNINJAUIAPI SidebarIconsWidget : public QWidget
 	std::pair<SidebarWidgetLocation, size_t> findDropLocation(int y) const;
 	QRect placeholderRect() const;
 	bool shouldBeVisible() const;
+	bool shouldContainMoreIcon() const;
 
 private Q_SLOTS:
 	void containerUpdated();
+	void contentClassificationChanged();
 
 protected:
 	virtual void paintEvent(QPaintEvent* event) override;

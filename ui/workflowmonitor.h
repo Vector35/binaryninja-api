@@ -102,6 +102,7 @@ public:
 
 	SidebarWidgetLocation defaultLocation() const override { return SidebarWidgetLocation::LeftReference; }
 	SidebarContextSensitivity contextSensitivity() const override { return PerViewTypeSidebarContext; }
+	SidebarIconVisibility defaultIconVisibility() const override { return AlwaysHideSidebarIcon; }
 
 	SidebarWidget* createWidget(ViewFrame* frame, BinaryViewRef data) override;
 

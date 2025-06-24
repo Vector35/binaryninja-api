@@ -215,5 +215,6 @@ public:
 	SidebarWidgetLocation defaultLocation() const override { return SidebarWidgetLocation::LeftBottom; }
 	SidebarContextSensitivity contextSensitivity() const override { return GlobalSidebarContext; }
 	bool alwaysShowTabs() const override { return true; }
-	bool hideIfNoContent() const override { return true; }
+	SidebarIconVisibility defaultIconVisibility() const override { return InvisibleIfNoContent; }
+	SidebarContentClassifier* contentClassifier(ViewFrame*, BinaryViewRef) override;
 };

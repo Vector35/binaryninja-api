@@ -188,6 +188,51 @@ enum SidebarContextSensitivity
 /*!
     \ingroup sidebar
 */
+enum SidebarIconVisibility
+{
+	AlwaysShowSidebarIcon,
+	HideSidebarIconIfNoContent,
+	AlwaysHideSidebarIcon,
+	InvisibleIfNoContent
+};
+
+/*!
+    \ingroup sidebar
+*/
+enum SidebarContentClassification
+{
+	SidebarHasRelevantContent,
+	SidebarHasGeneralMessage,
+	SidebarHasNoContent,
+	SidebarIsWidgetContainer
+};
+
+class BINARYNINJAUIAPI SidebarContentClassifier : public QObject
+{
+	Q_OBJECT
+
+public:
+	virtual SidebarContentClassification contentClassification() = 0;
+	virtual void notifyViewChanged(ViewFrame*) {}
+
+Q_SIGNALS:
+	void contentClassificationChanged();
+};
+
+class BINARYNINJAUIAPI StaticSidebarContentClassifier : public SidebarContentClassifier
+{
+	Q_OBJECT
+
+	SidebarContentClassification m_classification;
+
+public:
+	StaticSidebarContentClassifier(SidebarContentClassification classification) : m_classification(classification) {}
+	SidebarContentClassification contentClassification() override { return m_classification; }
+};
+
+/*!
+    \ingroup sidebar
+*/
 class BINARYNINJAUIAPI SidebarWidgetType
 {
 	SidebarIcon m_icon;
@@ -213,7 +258,13 @@ public:
 	virtual SidebarWidgetLocation defaultLocation() const;
 	virtual SidebarContextSensitivity contextSensitivity() const;
 	virtual bool alwaysShowTabs() const { return false; }
+
+	/*!
+	    \deprecated Use `defaultIconVisibility()`
+	*/
 	virtual bool hideIfNoContent() const { return false; }
+
+	virtual SidebarIconVisibility defaultIconVisibility() const;
 
 	virtual SidebarWidget* createWidget(ViewFrame* /*frame*/, BinaryViewRef /*data*/) { return nullptr; }
 	virtual SidebarWidget* createInvalidContextWidget();
@@ -228,5 +279,18 @@ public:
 	virtual bool canUseAsPane(SplitPaneWidget* /*panes*/, BinaryViewRef /*data*/) const { return false; }
 	virtual Pane* createPane(SplitPaneWidget* /*panes*/, BinaryViewRef /*data*/) { return nullptr; }
 
+	virtual SidebarContentClassifier* contentClassifier(ViewFrame* /*frame*/, BinaryViewRef /*data*/)
+	{
+		return nullptr;
+	}
+
 	void updateTheme();
+};
+
+class BINARYNINJAUIAPI MoreSidebarWidgetType : public SidebarWidgetType
+{
+public:
+	MoreSidebarWidgetType();
+
+	static MoreSidebarWidgetType* instance();
 };

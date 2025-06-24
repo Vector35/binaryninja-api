@@ -4,10 +4,9 @@
 #include <QtWidgets/QStackedWidget>
 #include <QtWidgets/QWidget>
 #include "splitter.h"
+#include "sidebarwidget.h"
 
 class Sidebar;
-class SidebarWidgetType;
-class SidebarWidgetAndHeader;
 class SplitPaneWidget;
 
 /*!
@@ -88,17 +87,22 @@ class BINARYNINJAUIAPI SidebarWidgetContainer : public QWidget
 	std::map<SplitPaneWidget*,
 		std::map<ViewFrame*, std::map<QString, std::map<SidebarWidgetType*, SidebarWidgetAndHeader*>>>>
 		m_widgets;
+	std::map<SplitPaneWidget*,
+		std::map<ViewFrame*, std::map<QString, std::map<SidebarWidgetType*, SidebarContentClassifier*>>>>
+		m_contentClassifiers;
 	std::map<SplitPaneWidget*, std::map<QString, std::set<SidebarWidgetType*>>> m_priorWidgets;
 
 	std::map<SidebarWidgetType*, SidebarFloatingWidgetState> m_savedFloatingWidgetState;
 
 	SidebarStackedWidget& stackedWidgetForType(SidebarWidgetType* type);
 	std::vector<SidebarWidgetAndHeader*> widgetsForContext() const;
+	std::vector<SidebarContentClassifier*> contentClassifiersForContext() const;
 	void insertWidgetIntoContainer(SidebarWidgetType* type, QStackedWidget* widget);
 	void updateContentsVisibility();
 
 private Q_SLOTS:
 	void floatingWidgetClosed(SidebarWidgetType* type);
+	void childContentClassificationChanged();
 
 public:
 	SidebarWidgetContainer(Sidebar* sidebar, SidebarContainerLocation location);
@@ -134,8 +138,11 @@ public:
 	SidebarWidget* widgetWithTitle(SidebarWidgetType* type, const QString& title) const;
 	bool hasWidgetWithTitle(SidebarWidgetType* type, const QString& title) const;
 	bool activateWidgetWithTitle(SidebarWidgetType* type, const QString& title) const;
-	bool hasContent(SidebarWidgetType* type) const;
-	bool shouldHide(SidebarWidgetType* type) const;
+	SidebarContentClassification contentClassification(SidebarWidgetType* type);
+	bool hasContent(SidebarWidgetType* type);
+	bool shouldHide(SidebarWidgetType* type);
+
+	SidebarContentClassifier* contentClassifier(SidebarWidgetType* type);
 
 	virtual QSize sizeHint() const override;
 
@@ -162,4 +169,5 @@ public:
 Q_SIGNALS:
 	void showContents();
 	void hideContents();
+	void contentClassificationChanged();
 };

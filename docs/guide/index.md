@@ -240,7 +240,7 @@ Once you have a file open, the sidebar lets you quickly access the most common f
  - 5-6: Primarily for horizontal content, the bottom-most panel icon regions behave much like sections 1-2 except they are applied to two regions in the bottom of the window. Clicking a different icon in this region will switch to that panel, or hide that panel entirely if it is already selected.
 
 ???+ Info "Tip"
-    Note that you can also right-click on sidebar icons and choose from `Docked`, `Floating`, and `Window` options to expose even more possible layout options.
+    Note that you can also right-click on sidebar icons and choose from `Docked`, `Floating`, and `Window` options to expose even more possible layout options. From the right-click menu, you can also control if and when a sidebar icon is hidden.
 
 Here's a more detailed look into each of those panels:
 
@@ -455,6 +455,17 @@ The search types are available from a drop-down next to the text input field and
 ![Logs](../img/logs.png "Logs"){ width="700" }
 
 The log window lets you search and filter through logs. You can search by text or filter by loggers to identify messages of interest. By default, only the logs for a specific BinaryView that's open as well as any Global logs will show up but this setting can either be changed through the right-click menu or the drop down menu in the upper-right of the log window.
+
+### Hidden Sidebar Icons
+
+Some sidebar icons are hidden when they are not relevant, and some containing information for plugin debugging are
+hidden by default. You can also choose to hide any sidebar icon by right-clicking on it.
+
+If a sidebar icon is hidden and you want to open it or change the visibility of the icon, you can click the `More...`
+icon in the sidebar (the icon with three dots) and choose the sidebar you want to open from the popup menu. Once it is
+open, right-clicking on the icon and choosing `Show` from the menu will make the icon stay visible at all times.
+
+![More](../img/more.png "More"){ width="300" }
 
 ## Tiling Panes
 

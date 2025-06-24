@@ -35,7 +35,19 @@ extern "C" {
 #endif
 	enum Register
 	{
-		PPC_REG_GPR0,
+
+		PPC_REG_INVALID = 0,
+
+		PPC_REG_CARRY = 2,
+		PPC_REG_CTR = 3,
+		PPC_REG_LR = 5,
+		PPC_REG_RM = 6,
+		PPC_REG_VRSAVE = 8,
+		PPC_REG_XER = 9,
+		PPC_REG_ZERO = 10,
+		PPC_REG_CTR8 = 20,
+
+		PPC_REG_GPR0 = 87,
 		PPC_REG_GPR1,
 		PPC_REG_GPR2,
 		PPC_REG_GPR3,
@@ -68,11 +80,7 @@ extern "C" {
 		PPC_REG_GPR30,
 		PPC_REG_GPR31,
 
-		PPC_REG_XER,
-		PPC_REG_LR,
-		PPC_REG_CTR,
-
-		PPC_REG_FR0,
+		PPC_REG_FR0 = 21,
 		PPC_REG_FR1,
 		PPC_REG_FR2,
 		PPC_REG_FR3,
@@ -106,7 +114,7 @@ extern "C" {
 		PPC_REG_FR31,
 
 		// each 4-bit CR register
-		PPC_REG_CRF0,
+		PPC_REG_CRF0 = 12,
 		PPC_REG_CRF1,
 		PPC_REG_CRF2,
 		PPC_REG_CRF3,
@@ -115,7 +123,7 @@ extern "C" {
 		PPC_REG_CRF6,
 		PPC_REG_CRF7,
 
-		PPC_REG_AV_VR0,
+		PPC_REG_AV_VR0 = 121,
 		PPC_REG_AV_VR1,
 		PPC_REG_AV_VR2,
 		PPC_REG_AV_VR3,
@@ -148,7 +156,7 @@ extern "C" {
 		PPC_REG_AV_VR30,
 		PPC_REG_AV_VR31,
 
-		PPC_REG_VSX_VR0,
+		PPC_REG_VSX_VR0 = 215,
 		PPC_REG_VSX_VR1,
 		PPC_REG_VSX_VR2,
 		PPC_REG_VSX_VR3,
@@ -213,7 +221,7 @@ extern "C" {
 		PPC_REG_VSX_VR62,
 		PPC_REG_VSX_VR63,
 
-		PPC_REG_GQR0,
+		PPC_REG_GQR0 = 345,
 		PPC_REG_GQR1,
 		PPC_REG_GQR2,
 		PPC_REG_GQR3,

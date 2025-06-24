@@ -41,8 +41,14 @@ static ExprId operToIL(LowLevelILFunction &il, Operand* op,
 	{
 		case PPC_OP_REG_RA:
 		case PPC_OP_REG_RB:
+		case PPC_OP_REG_RC:  // XXX: valid?
 		case PPC_OP_REG_RD:
 		case PPC_OP_REG_RS:
+		case PPC_OP_REG_FRA:
+		case PPC_OP_REG_FRB:
+		case PPC_OP_REG_FRC:
+		case PPC_OP_REG_FRD:
+		case PPC_OP_REG_FRS:
 			if (options & OTI_GPR0_ZERO && op->reg == PPC_REG_GPR0)
 				res = il.Const(regsz, 0);
 			else
@@ -2092,10 +2098,10 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 		case PPC_ID_PAIREDSINGLE_PSQ_ST:
 			REQUIRE4OPS
-		    MYLOG("0x%08x psq_st args f%d r%d[%d] w:%lldd gcqr:%lld\n",
-		      (uint32_t)addr, oper0->reg - PPC_REG_F0, oper1->mem.base - PPC_REG_R0, oper1->mem.disp, oper2->imm,
-		      oper3->imm);
-		    MYLOG("opcount %d insn pnem %s\n", ppc->op_count, insn->op_str);
+		    // MYLOG("0x%08x psq_st args f%d r%d[%d] w:%lldd gcqr:%lld\n",
+		    //   (uint32_t)addr, oper0->reg - PPC_REG_F0, oper1->mem.base - PPC_REG_R0, oper1->mem.disp, oper2->imm,
+		    //   oper3->imm);
+		    // MYLOG("opcount %d insn pnem %s\n", ppc->op_count, instruction->op_str);
 
 			// w_l = oper2->imm;
 
@@ -2166,9 +2172,9 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			MYLOG("%s:%s() returning Unimplemented(...) on:\n",
 			  __FILE__, __func__);
 
-			MYLOG("    %08llx: %02X %02X %02X %02X %s %s\n",
-			  addr, data[0], data[1], data[2], data[3],
-			  res->insn.mnemonic, res->insn.op_str);
+			// MYLOG("    %08llx: %02X %02X %02X %02X %s %s\n",
+			//   addr, data[0], data[1], data[2], data[3],
+			//   res->insn.mnemonic, res->insn.op_str);
 
 			il.AddInstruction(il.Unimplemented());
 	}

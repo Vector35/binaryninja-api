@@ -632,7 +632,7 @@ bool ElfView::Init()
 		}
 
 		// Add sections that aren't in the virtual address space only to the raw parent view
-		if (!(m_elfSections[i].flags & ELF_SHF_ALLOC))
+		if (!(m_elfSections[i].flags & ELF_SHF_ALLOC) || m_elfSections[i].type == ELF_SHT_NOTE)
 		{
 			if (m_elfSections[i].size != 0 && m_elfSections[i].type != ELF_SHT_NOBITS)
 				GetParentView()->AddAutoSection(sectionNames[i], m_elfSections[i].offset, m_elfSections[i].size, DefaultSectionSemantics,

@@ -14,7 +14,7 @@ fn test_license_validation() {
     // Release the floating license if we already have one, otherwise the failure will succeed.
     release_license(true);
     // Make sure we properly report invalid license.
-    let options = InitializationOptions::default()
+    let options = InitializationOptions::new()
         .with_license_checkout(false)
         .with_license("blah blag");
     match init_with_opts(options) {

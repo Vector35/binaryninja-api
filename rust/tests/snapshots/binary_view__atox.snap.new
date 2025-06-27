@@ -1,5 +1,6 @@
 ---
 source: rust/tests/binary_view.rs
+assertion_line: 137
 expression: functions
 ---
 {
@@ -233,14 +234,14 @@ expression: functions
             arch: "x86",
         },
         symbol: Symbol {
-            type: Function,
-            binding: Global,
-            full_name: "__crt_strtox::c_string_character_source<wchar_t>::c_string_character_source<wchar_t>(__crt_strtox::c_string_character_source<wchar_t>* this, wchar_t const* const, wchar_t const** const)",
+            type: LibraryFunction,
+            binding: None,
+            full_name: "__crt_strtox::c_string_character_source<wchar_t>::c_string_character_source<wchar_t>",
             short_name: "__crt_strtox::c_string_character_source<wchar_t>::c_string_character_source<wchar_t>",
             raw_name: "??0?$c_string_character_source@_W@__crt_strtox@@QAE@QB_WQAPB_W@Z",
             address: 235952,
-            auto_defined: true,
-            external: true,
+            auto_defined: false,
+            external: false,
         },
     },
     236384: FunctionSnapshot {
@@ -265,14 +266,14 @@ expression: functions
             arch: "x86",
         },
         symbol: Symbol {
-            type: LibraryFunction,
-            binding: None,
-            full_name: "__crt_strtox::c_string_character_source<char>::~c_string_character_source<char>",
+            type: Function,
+            binding: Global,
+            full_name: "__crt_strtox::c_string_character_source<char>::~c_string_character_source<char>(__crt_strtox::c_string_character_source<char>* this)",
             short_name: "__crt_strtox::c_string_character_source<char>::~c_string_character_source<char>",
             raw_name: "??1?$c_string_character_source@D@__crt_strtox@@QAE@XZ",
             address: 237072,
-            auto_defined: false,
-            external: false,
+            auto_defined: true,
+            external: true,
         },
     },
     237456: FunctionSnapshot {

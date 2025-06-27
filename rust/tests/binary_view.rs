@@ -99,6 +99,10 @@ fn test_binary_view_strings() {
     assert_eq!(str_15dc.length, 33);
 }
 
+// These are the target files present in OUT_DIR
+// Add the files to fixtures/bin
+static TARGET_FILES: [&str; 2] = ["atox.obj", "atof.obj"];
+
 // This is what we store to check if a function matches the expected function.
 // See `test_deterministic_functions` for details.
 #[derive(Debug, PartialEq)]
@@ -120,19 +124,16 @@ impl From<&Function> for FunctionSnapshot {
 fn test_deterministic_functions() {
     let session = Session::new().expect("Failed to initialize session");
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
-    for entry in std::fs::read_dir(out_dir).expect("Failed to read OUT_DIR") {
-        let entry = entry.expect("Failed to read directory entry");
-        let path = entry.path();
-        if path.is_file() {
-            let view = session.load(&path).expect("Failed to load view");
-            assert_eq!(view.analysis_progress().state, AnalysisState::IdleState);
-            let functions: BTreeMap<u64, FunctionSnapshot> = view
-                .functions()
-                .iter()
-                .map(|f| (f.start(), FunctionSnapshot::from(f.as_ref())))
-                .collect();
-            let snapshot_name = path.file_stem().unwrap().to_str().unwrap();
-            insta::assert_debug_snapshot!(snapshot_name, functions);
-        }
+    for file_name in TARGET_FILES {
+        let path = out_dir.join(file_name);
+        let view = session.load(&path).expect("Failed to load view");
+        assert_eq!(view.analysis_progress().state, AnalysisState::IdleState);
+        let functions: BTreeMap<u64, FunctionSnapshot> = view
+            .functions()
+            .iter()
+            .map(|f| (f.start(), FunctionSnapshot::from(f.as_ref())))
+            .collect();
+        let snapshot_name = path.file_stem().unwrap().to_str().unwrap();
+        insta::assert_debug_snapshot!(snapshot_name, functions);
     }
 }

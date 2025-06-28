@@ -70,7 +70,7 @@ where
         }
     }
 
-    pub(crate) unsafe fn from_raw(handle: *mut BNLowLevelILFunction) -> Self {
+    pub unsafe fn from_raw(handle: *mut BNLowLevelILFunction) -> Self {
         Self::from_raw_with_arch(handle, None)
     }
 

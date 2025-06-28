@@ -124,6 +124,10 @@ impl FlowGraph {
         unsafe { BNSetViewForFlowGraph(self.handle, view_ptr) }
     }
 
+    pub fn lifted_il(&self) -> Option<Ref<LowLevelILRegularFunction>> {
+        self.function()?.lifted_il().ok()
+    }
+
     pub fn low_level_il(&self) -> Option<Ref<LowLevelILRegularFunction>> {
         unsafe {
             let llil_ptr = BNGetFlowGraphLowLevelILFunction(self.handle);

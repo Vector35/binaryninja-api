@@ -194,7 +194,11 @@ where
 {
     let file_path = file_path.as_ref().to_cstr();
     let options_or_default = if let Some(opt) = options {
-        opt.get_json_string().ok()?.to_cstr().to_bytes().to_vec()
+        opt.get_json_string()
+            .ok()?
+            .to_cstr()
+            .to_bytes_with_nul()
+            .to_vec()
     } else {
         Metadata::new_of_type(MetadataType::KeyValueDataType)
             .get_json_string()
@@ -242,7 +246,11 @@ where
     P: ProgressCallback,
 {
     let options_or_default = if let Some(opt) = options {
-        opt.get_json_string().ok()?.to_cstr().to_bytes().to_vec()
+        opt.get_json_string()
+            .ok()?
+            .to_cstr()
+            .to_bytes_with_nul()
+            .to_vec()
     } else {
         Metadata::new_of_type(MetadataType::KeyValueDataType)
             .get_json_string()

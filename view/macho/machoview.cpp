@@ -696,14 +696,18 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 				header.dyldInfo.export_size = reader.Read32();
 				header.exportTrie.dataoff = header.dyldInfo.export_off;
 				header.exportTrie.datasize = header.dyldInfo.export_size;
-				header.exportTriePresent = true;
+				// Only mark export trie as present if there's actually data
+				if (header.dyldInfo.export_off != 0 && header.dyldInfo.export_size != 0)
+					header.exportTriePresent = true;
 				header.dyldInfoPresent = true;
 				break;
 			case LC_DYLD_EXPORTS_TRIE:
 				m_logger->LogDebug("LC_DYLD_EXPORTS_TRIE\n");
 				header.exportTrie.dataoff = reader.Read32();
 				header.exportTrie.datasize = reader.Read32();
-				header.exportTriePresent = true;
+				// Only mark export trie as present if there's actually data
+				if (header.exportTrie.dataoff != 0 && header.exportTrie.datasize != 0)
+					header.exportTriePresent = true;
 				break;
 			case LC_THREAD:
 			case LC_UNIXTHREAD:

@@ -95,6 +95,17 @@ string BinaryNinja::GetUserDirectory(void)
 }
 
 
+string BinaryNinja::GetSystemCacheDirectory()
+{
+	char* dir = BNGetSystemCacheDirectory();
+	if (!dir)
+		return string();
+	std::string result(dir);
+	BNFreeString(dir);
+	return result;
+}
+
+
 string BinaryNinja::GetSettingsFileName()
 {
 	char* dir = BNGetSettingsFileName();

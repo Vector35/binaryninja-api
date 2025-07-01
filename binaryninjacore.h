@@ -7530,6 +7530,7 @@ extern "C"
 	BINARYNINJACOREAPI char** BNGetFilePathsInDirectory(const char* path, size_t* count);
 	BINARYNINJACOREAPI char* BNAppendPath(const char* path, const char* part);
 	BINARYNINJACOREAPI void BNFreePath(char* path);
+	BINARYNINJACOREAPI char* BNGetSystemCacheDirectory();
 
 	// Settings APIs
 	BINARYNINJACOREAPI BNSettings* BNCreateSettings(const char* schemaId);

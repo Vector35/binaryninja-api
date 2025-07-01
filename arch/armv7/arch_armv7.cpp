@@ -2359,6 +2359,7 @@ public:
 				dest32[0] = (info.implicitAddend ? dest32[0] : (uint32_t)info.addend) + (target & ~1) - (uint32_t)reloc->GetAddress();
 				break;
 			}
+			case R_ARM_PC24:
 			case R_ARM_JUMP24:
 			{
 				if (target & 1)
@@ -2550,8 +2551,14 @@ public:
 				break;
 			case R_ARM_TLS_DTPOFF32:
 				break;
-			case R_ARM_SBREL31:
 			case R_ARM_PC24:
+				reloc.pcRelative = true;
+				reloc.baseRelative = false;
+				reloc.hasSign = false;
+				reloc.size = 3;
+				reloc.truncateSize = 3;
+				break;
+			case R_ARM_SBREL31:
 			case R_ARM_LDR_PC_G0:
 			case R_ARM_ABS16:
 			case R_ARM_ABS12:

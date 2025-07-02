@@ -462,6 +462,19 @@ def connect_vscode_debugger(port=5678):
 	debugpy.wait_for_client()
 	execute_on_main_thread(lambda: debugpy.debug_this_thread())
 
+def get_system_cache_directory() -> Optional[str]:
+	"""
+	Returns Binary Ninja's system cache directory on the system.
+
+	Supported default locations:
+		- macOS: ~/Library/Caches/Binary Ninja
+		- Linux: $XDG_CACHE_HOME/Binary Ninja or ~/.cache/Binary Ninja
+		- Windows: %LOCALAPPDATA%/Binary Ninja/cache
+
+	:return: Returns a string containing the system cache directory, or None on failure.
+	"""
+	return core.BNGetSystemCacheDirectory()
+
 
 class UIPluginInHeadlessError(Exception):
 	"""

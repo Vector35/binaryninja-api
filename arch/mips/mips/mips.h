@@ -1208,7 +1208,7 @@ namespace mips
 		REG_LO1,
 		REG_HI1,
 
-		// Emotion Engine VPU registers
+		// R5900 VPU registers
 
 		REG_VP,
 

@@ -111,12 +111,17 @@ static inline const size_t get_register_width(size_t reg, MipsVersion version, s
 	switch (version)
 	{
 	case MIPS_1:
+		width = 32;
+		break;
 	case MIPS_2:
 	case MIPS_3:
 	case MIPS_4:
 	case MIPS_32:
-		width = 32;
-		break;
+		if (reg < FPREG_F0 || reg > FPREG_F31)
+		{
+			width = 32;
+			break;
+		}
 	case MIPS_64:
 		width = 64;
 		break;

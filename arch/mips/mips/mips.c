@@ -130,12 +130,12 @@ static Operation mips_base_table[7][8][8] = {
 	},{ // MIPS r5900
 		{MIPS_INVALID, MIPS_INVALID, MIPS_J,       MIPS_JAL,      MIPS_BEQ,      MIPS_BNE,     MIPS_BLEZ,   MIPS_BGTZ},
 		{MIPS_ADDI,    MIPS_ADDIU,   MIPS_SLTI,    MIPS_SLTIU,    MIPS_ANDI,     MIPS_ORI,     MIPS_XORI,   MIPS_LUI},
-		{MIPS_COP0,    MIPS_COP1,    MIPS_COP2,    MIPS_INVALID,  MIPS_BEQL,     MIPS_BNEL,    MIPS_BLEZL,  MIPS_BGTZL},
+		{MIPS_COP0,    MIPS_COP1,    MIPS_COP2,    MIPS_COP1X,  MIPS_BEQL,     MIPS_BNEL,    MIPS_BLEZL,  MIPS_BGTZL},
 		{MIPS_DADDI,   MIPS_DADDIU,  MIPS_LDL,	  MIPS_LDR,  	 MIPS_INVALID,  MIPS_INVALID, MIPS_LQ,     MIPS_SQ},
 		{MIPS_LB,      MIPS_LH,      MIPS_LWL,     MIPS_LW,       MIPS_LBU,      MIPS_LHU,     MIPS_LWR,    MIPS_LWU},
 		{MIPS_SB,      MIPS_SH,      MIPS_SWL,     MIPS_SW,       MIPS_SDL,      MIPS_SDR,     MIPS_SWR,    MIPS_CACHE},
-		{MIPS_INVALID, MIPS_LWC1,    MIPS_INVALID, MIPS_PREF,     MIPS_INVALID,  MIPS_INVALID, MIPS_LDC2,   MIPS_LD},
-		{MIPS_INVALID, MIPS_SWC1,    MIPS_INVALID, MIPS_INVALID,  MIPS_INVALID,  MIPS_INVALID, MIPS_SDC2,   MIPS_SD}
+		{MIPS_INVALID, MIPS_LWC1,    MIPS_INVALID, MIPS_PREF,     MIPS_INVALID,  MIPS_LDC1, MIPS_LDC2,   MIPS_LD},
+		{MIPS_INVALID, MIPS_SWC1,    MIPS_INVALID, MIPS_INVALID,  MIPS_INVALID,  MIPS_SDC1, MIPS_SDC2,   MIPS_SD}
 	}
 };
 
@@ -1795,8 +1795,6 @@ uint32_t mips_decompose_instruction(
 			else if (version == MIPS_R5900)
 				instruction->operation = mips_base_table[version-1][ins.decode.op_hi][ins.decode.op_lo];
 			break;
-		// case 0x12:
-		// 	printf("Inst: %08" PRIx64 ":%08X\n", address, ins.value);
 		default:
 			if ((flags & DECOMPOSE_FLAGS_CAVIUM) == 0)
 				instruction->operation = mips_base_table[version-1][ins.decode.op_hi][ins.decode.op_lo];
@@ -2252,7 +2250,6 @@ uint32_t mips_decompose_instruction(
 		case MIPS_BC0FL:
 		case MIPS_BC0T:
 		case MIPS_BC0TL:
-			// INS_1(IMM, (ins.i.immediate << 2))
 			INS_1(LABEL, (4 + address + (ins.i.immediate<<2)) & registerMask)
 			break;
 		case MIPS_COP2:
@@ -2390,6 +2387,13 @@ uint32_t mips_decompose_instruction(
 		case MIPS_TRUNC_L_S:
 		case MIPS_TRUNC_L_D:
 		case MIPS_SQRT_S:
+			if (version == MIPS_R5900)
+			{
+				INS_2(REG, ins.f.fd + FPREG_F0, REG, ins.f.ft + FPREG_F0);
+				if (ins.f.fs != 0)
+					return 1;
+				break;
+			}
 		case MIPS_SQRT_D:
 		case MIPS_RSQRT_D:
 		case MIPS_ROUND_W_S:
@@ -2398,9 +2402,9 @@ uint32_t mips_decompose_instruction(
 		case MIPS_ROUND_L_D:
 		case MIPS_RECIP_S:
 		case MIPS_RECIP_D:
-			INS_2(REG, ins.f.fd + FPREG_F0, REG, ins.f.fs + FPREG_F0);
-			if (0 && ins.f.ft != 0)
+			if (ins.f.ft != 0)
 				return 1;
+			INS_2(REG, ins.f.fd + FPREG_F0, REG, ins.f.fs + FPREG_F0);
 			break;
 		case MIPS_BC1EQZ:
 		case MIPS_BC1NEZ:
@@ -2694,7 +2698,6 @@ uint32_t mips_decompose_instruction(
 		case MIPS_LB:
 		case MIPS_LBU:
 		case MIPS_LD:
-		case MIPS_LDXC1:
 		case MIPS_LDL:
 		case MIPS_LDR:
 		case MIPS_LH:
@@ -2738,6 +2741,8 @@ uint32_t mips_decompose_instruction(
 		case MIPS_SUXC1:
 		case MIPS_SWXC1:
 		case MIPS_SDXC1:
+			if (ins.f.fd != 0)
+				return 1;
 			instruction->operands[0].operandClass = REG;
 			instruction->operands[1].operandClass = MEM_REG;
 			instruction->operands[0].reg = ins.f.fs + FPREG_F0;
@@ -2746,7 +2751,8 @@ uint32_t mips_decompose_instruction(
 			break;
 		case MIPS_LUXC1:
 		case MIPS_LWXC1:
-			if (ins.f.ft != 0)
+		case MIPS_LDXC1:
+			if (ins.f.fs != 0)
 				return 1;
 			instruction->operands[0].operandClass = REG;
 			instruction->operands[1].operandClass = MEM_REG;
@@ -2811,7 +2817,6 @@ uint32_t mips_decompose_instruction(
 			instruction->operands[0].reg = ins.i.rt;
 			instruction->operands[0].immediate = ins.i.rt;
 			instruction->operands[0].operandClass = IMM;
-			// instruction->operands[0].operandClass = REG;
 			instruction->operands[1].operandClass = MEM_IMM;
 			instruction->operands[1].reg = ins.i.rs;
 			instruction->operands[1].immediate = ins.i.immediate;
@@ -2825,15 +2830,6 @@ uint32_t mips_decompose_instruction(
 			break;
 		}
 		//3 operand instructions
-		// case MIPS_MULT1:
-		// case MIPS_MULTU1:
-		// case MIPS_MADDU1:
-		// {
-		// 	if (ins.r.sa != 0)
-		// 		return 1;
-		// 	INS_3(REG, ins.r.rd, REG, ins.r.rs, REG, ins.r.rt)
-		// 	break;
-		// }
 		case MIPS_PADDB:
 		case MIPS_PADDH:
 		case MIPS_PADDW:
@@ -2992,6 +2988,10 @@ uint32_t mips_decompose_instruction(
 		case MIPS_ROTR:
 		case MIPS_DROTR:
 		case MIPS_DROTR32:
+			INS_3(REG, ins.r.rd, REG, ins.r.rt, IMM, ins.r.sa)
+			if (ins.r.rs != 1)
+				return 1;
+			break;
 		case MIPS_PSLLH:
 		case MIPS_PSLLW:
 		case MIPS_PSRAH:
@@ -2999,8 +2999,8 @@ uint32_t mips_decompose_instruction(
 		case MIPS_PSRLH:
 		case MIPS_PSRLW:
 			INS_3(REG, ins.r.rd, REG, ins.r.rt, IMM, ins.r.sa)
-			// if (ins.r.rs != 1)
-			// 	return 1;
+			if (ins.r.rs != 0)
+				return 1;
 			break;
 		case MIPS_DSLL:
 		case MIPS_DSRA:
@@ -3172,128 +3172,7 @@ uint32_t mips_decompose_instruction(
 			INS_3(REG, FPREG_F0 + ins.f.fd, REG, FPREG_F0 + ins.f.fs, REG, FPREG_F0 + ins.f.ft);
 			break;
 
-		// case MIPS_VADDx:
-		// case MIPS_VADDy:
-		// case MIPS_VADDz:
-		// case MIPS_VADDw:
-		// case MIPS_VSUBx:
-		// case MIPS_VSUBy:
-		// case MIPS_VSUBz:
-		// case MIPS_VSUBw:
-		// case MIPS_VMADDx:
-		// case MIPS_VMADDy:
-		// case MIPS_VMADDz:
-		// case MIPS_VMADDw:
-		// case MIPS_VMSUBx:
-		// case MIPS_VMSUBy:
-		// case MIPS_VMSUBz:
-		// case MIPS_VMSUBw:
-		// case MIPS_VMAXx:
-		// case MIPS_VMAXy:
-		// case MIPS_VMAXz:
-		// case MIPS_VMAXw:
-		// case MIPS_VMINIx:
-		// case MIPS_VMINIy:
-		// case MIPS_VMINIz:
-		// case MIPS_VMINIw:
-		// case MIPS_VMULx:
-		// case MIPS_VMULy:
-		// case MIPS_VMULz:
-		// case MIPS_VMULw:
-		// case MIPS_VMULq:
-		// case MIPS_VMAXi:
-		// case MIPS_VMULi:
-		// case MIPS_VMINIi:
-		// case MIPS_VADDq:
-		// case MIPS_VMADDq:
-		// case MIPS_VADDi:
-		// case MIPS_VMADDi:
-		// case MIPS_VSUBq:
-		// case MIPS_VMSUBq:
-		// case MIPS_VSUBi:
-		// case MIPS_VMSUBi:
-		// case MIPS_VADD:
-		// case MIPS_VMADD:
-		// case MIPS_VMUL:
-		// case MIPS_VMAX:
-		// case MIPS_VSUB:
-		// case MIPS_VMSUB:
-		// case MIPS_VOPMSUB:
-		// case MIPS_VMINI:
-		// case MIPS_VIADD:
-		// case MIPS_VISUB:
-		// case MIPS_VIADDI:
-		// case MIPS_VIAND:
-		// case MIPS_VIOR:
-		// case MIPS_VCALLMS:
-		// case MIPS_VCALLMSR:
-		// case MIPS_VADDAx:
-		// case MIPS_VADDAy:
-		// case MIPS_VADDAz:
-		// case MIPS_VADDAw:
-		// case MIPS_VSUBAx:
-		// case MIPS_VSUBAy:
-		// case MIPS_VSUBAz:
-		// case MIPS_VSUBAw:
-		// case MIPS_VMADDAx:
-		// case MIPS_VMADDAy:
-		// case MIPS_VMADDAz:
-		// case MIPS_VMADDAw:
-		// case MIPS_VMSUBAx:
-		// case MIPS_VMSUBAy:
-		// case MIPS_VMSUBAz:
-		// case MIPS_VMSUBAw:
-		// case MIPS_VITOF0:
-		// case MIPS_VITOF4:
-		// case MIPS_VITOF12:
-		// case MIPS_VITOF15:
-		// case MIPS_VFTOI0:
-		// case MIPS_VFTOI4:
-		// case MIPS_VFTOI12:
-		// case MIPS_VFTOI15:
-		// case MIPS_VMULAx:
-		// case MIPS_VMULAy:
-		// case MIPS_VMULAz:
-		// case MIPS_VMULAw:
-		// case MIPS_VMULAq:
-		// case MIPS_VABS:
-		// case MIPS_VMULAi:
-		// case MIPS_VCLIPw:
-		// case MIPS_VADDAq:
-		// case MIPS_VMADDAq:
-		// case MIPS_VADDAi:
-		// case MIPS_VMADDAi:
-		// case MIPS_VSUBAq:
-		// case MIPS_VMSUBAq:
-		// case MIPS_VSUBAi:
-		// case MIPS_VMSUBAi:
-		// case MIPS_VADDA:
-		// case MIPS_VMADDA:
-		// case MIPS_VMULA:
-		// case MIPS_VSUBA:
-		// case MIPS_VMSUBA:
-		// case MIPS_VOPMULA:
-		// case MIPS_VNOP:
-		// case MIPS_VMOVE:
-		// case MIPS_VMR32:
-		// case MIPS_VLQI:
-		// case MIPS_VSQI:
-		// case MIPS_VLQD:
-		// case MIPS_VSQD:
-		// case MIPS_VDIV:
-		// case MIPS_VSQRT:
-		// case MIPS_VRSQRT:
-		// case MIPS_VWAITQ:
-		// case MIPS_VMTIR:
-		// case MIPS_VMFIR:
-		// case MIPS_VILWR:
-		// case MIPS_VISWR:
-		// case MIPS_VRNEXT:
-		// case MIPS_VRGET:
-		// case MIPS_VRINIT:
-		// case MIPS_VRXOR:
-			break;
-
+		// R5900 VU operations
 		case MIPS_VILWR:
 		case MIPS_VISWR:
 			instruction->operands[i].reg = ins.v.ft + REG_VI0;
@@ -3692,6 +3571,7 @@ uint32_t mips_disassemble(
 		char* outBuffer,
 		uint32_t outBufferSize)
 {
+	// +1 to allow for V_DEST
 	char operands[MAX_OPERANDS+1][64] = {{0},{0},{0},{0}, {0}};
 	char operation[64] = {0};
 	char* operandPtr = NULL;
@@ -3769,7 +3649,6 @@ uint32_t mips_disassemble(
 					RegisterStrings[instruction->operands[i].reg]);
 				break;
 			case V_REG:
-				// #define V_FMT "$vf%02d"  // Use this if leading zeroes are preferred
 				#define V_FMT "$vf%d"
 				reg = NULL;
 				if (instruction->operands[i].reg >= REG_VP)
@@ -3832,23 +3711,6 @@ uint32_t mips_disassemble(
 				else
 					snprintf(operandPtr, 64, V_FMT, instruction->operands[i].reg);
 				break;
-			case V_DEST:
-			{
-				// char* p = dest;
-				// if (*p == '\0' && (instruction->operands[i].reg & 0xF) != 0)
-				// {
-				// 	if (instruction->operands[i].reg & 8)
-				// 		*p++ = 'x';
-				// 	if (instruction->operands[i].reg & 4)
-				// 		*p++ = 'y';
-				// 	if (instruction->operands[i].reg & 2)
-				// 		*p++ = 'z';
-				// 	if (instruction->operands[i].reg & 1)
-				// 		*p++ = 'w';
-				// 	*p = '\0';
-				// }
-				break;
-			}
 			case V_REG_FIELD:
 			{
 				snprintf(operandPtr, 64, V_FMT ".%c",
@@ -3856,43 +3718,16 @@ uint32_t mips_disassemble(
 					"xyzw"[instruction->operands[i].immediate]);
 				break;
 			}
-			// case V_REG:
-			// 	strcpy(operandPtr, RegisterStrings[instruction->operands[i].reg + FPREG_F0]);
-			// 	if (dest[0])
-			// 	{
-			// 		strcat(operandPtr, "_");
-			// 		strcat(operandPtr, dest);
-			// 	}
-			// 	break;
-			// case V_DEST:
-			// {
-			// 	char* p = dest;
-			// 	if (instruction->operands[i].reg & 8)
-			// 		*p++ = 'x';
-			// 	if (instruction->operands[i].reg & 4)
-			// 		*p++ = 'y';
-			// 	if (instruction->operands[i].reg & 2)
-			// 		*p++ = 'z';
-			// 	if (instruction->operands[i].reg & 1)
-			// 		*p++ = 'w';
-			// 	*p = '\0';
-			// 	strcat(operation, ".");
-			// 	strcat(operation, dest);
-			// 	break;
-			// }
-			// case V_REG_FIELD:
-			// {
-			// 	char *p = operandPtr;
-			// 	*p++ = "xyzw"[instruction->operands[i].reg];
-			// 	*p = '\0';
-			// 	break;
-			// }
+			case V_DEST:
+			{
+				// Already handled above
+				break;
+			}
 		}
 	}
 	if (instruction->operation != MIPS_INVALID && instruction->operation < MIPS_OPERATION_END)
 	{
 		snprintf(outBuffer, outBufferSize, "%-13s\t%s%s%s%s",
-				// OperationStrings[instruction->operation],
 				operation,
 				operands[first_operand],
 				operands[first_operand+1],

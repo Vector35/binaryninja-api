@@ -13,7 +13,6 @@ using namespace mips;
 					il.AddInstruction(il.Unimplemented()); \
 					return false
 
-
 typedef enum {
 	ZeroExtend,
 	SignExtend,
@@ -196,18 +195,6 @@ static void SaturatingAddSub(LowLevelILFunction& il, Instruction& instr, bool sa
 				}
 				else
 				{
-					// bv.write(here, b'\x28\x26\x41\x70')  # paddub
-					// bv.write(here, b'\x08\x22\x41\x70')  # paddb
-					// bv.write(here, b'\x08\x26\x41\x70')  # paddsb
-					//
-					// bv.write(here, b'\x28\x25\x41\x70')  # padduh
-					// bv.write(here, b'\x08\x21\x41\x70')  # paddh
-					// bv.write(here, b'\x08\x25\x41\x70')  # paddsh
-					//
-					// bv.write(here, b'\x28\x24\x41\x70')  # padduw
-					// bv.write(here, b'\x08\x20\x41\x70')  # paddw
-					// bv.write(here, b'\x08\x24\x41\x70')  # paddsw
-
 					uint64_t clamp_overflow = 0x7FFFFFFF >> (32 - (8 * bytes));
 					uint64_t clamp_under_lower_bound = 0x100000000 >> (32 - (8 * bytes));
 					uint64_t clamp_under_upper_bound = 0x180000000 >> (32 - (8 * bytes));
@@ -314,43 +301,14 @@ static void ParallelMinMax(LowLevelILFunction& il, Instruction& instr, size_t by
 			if (!max)
 				ConditionExecute(il,
 					il.CompareSignedLessThan(bytes,
-						// il.Register(bytes, LLIL_TEMP(0)),
-						// il.Register(bytes, LLIL_TEMP(1))),
 						lhs, rhs),
 						il.SetRegister(bytes, LLIL_TEMP(1), lhs));
-						// il.SetRegister(bytes, LLIL_TEMP(1), il.Register(bytes, LLIL_TEMP(0))));
 			else
 				ConditionExecute(il,
 					il.CompareSignedGreaterThan(bytes,
-						// il.Register(bytes, LLIL_TEMP(0)),
-						// il.Register(bytes, LLIL_TEMP(1))),
 						lhs, rhs),
 						il.SetRegister(bytes, LLIL_TEMP(1), lhs));
-						// il.SetRegister(bytes, LLIL_TEMP(1), il.Register(bytes, LLIL_TEMP(0))));
 			ExprId sum = il.Register(bytes, LLIL_TEMP(1));
-			// // ExprId lhs = op2.reg != REG_ZERO ? il.Register(bytes, LLIL_TEMP(0)) : il.Const(bytes, 0);
-			// // ExprId rhs = op3.reg != REG_ZERO ? il.Register(bytes, LLIL_TEMP(1)) : il.Const(bytes, 0);
-			// // if (op2.reg != REG_ZERO)
-			// 	il.AddInstruction(il.SetRegister(bytes, LLIL_TEMP(0), rs_shifted));
-			// // if (op3.reg != REG_ZERO)
-			// 	il.AddInstruction(il.SetRegister(bytes, LLIL_TEMP(1), rt_shifted));
-			// if (!max)
-			// 	ConditionExecute(il,
-			// 		il.CompareSignedLessThan(bytes,
-			// 			il.Register(bytes, LLIL_TEMP(0)),
-			// 			il.Register(bytes, LLIL_TEMP(1))),
-			// 			// lhs, rhs),
-			// 			// il.SetRegister(bytes, LLIL_TEMP(1), lhs));
-			// 			il.SetRegister(bytes, LLIL_TEMP(1), il.Register(bytes, LLIL_TEMP(0))));
-			// else
-			// 	ConditionExecute(il,
-			// 		il.CompareSignedGreaterThan(bytes,
-			// 			il.Register(bytes, LLIL_TEMP(0)),
-			// 			il.Register(bytes, LLIL_TEMP(1))),
-			// 			// lhs, rhs),
-			// 			// il.SetRegister(bytes, LLIL_TEMP(1), lhs));
-			// 			il.SetRegister(bytes, LLIL_TEMP(1), il.Register(bytes, LLIL_TEMP(0))));
-			// ExprId sum = il.Register(bytes, LLIL_TEMP(1));
 
 			auto shifted_sum = i == 0 ? sum : il.ShiftLeft(16, sum, il.Const(1, shift));
 			if (i == 0)
@@ -1145,1273 +1103,1256 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 	{
 		return get_register_width(Reg(op.reg), version);
 	};
-	auto registerSize5900 = [=](const InstructionOperand& op, size_t maxWidth=8) -> size_t const
-	{
-		if (version == MIPS_R5900)
-			return get_register_width(Reg(op.reg), version, maxWidth);
-		else
-			return get_register_width(Reg(op.reg), version);
-	};
 	BNEndianness endian = arch->GetEndianness();
 	switch (instr.operation)
 	{
-		case MIPS_ADDIU:
-			if (version == MIPS_R5900 && op1.reg == REG_SP)
-			{
-				il.AddInstruction(il.SetRegister(4, op1.reg,
-				il.Add(4,
-					ReadILOperand(il, instr, 2, registerSize(op2), 4),
-					ReadILOperand(il, instr, 3, registerSize(op3), 4))));
-				break;
-			}
-		case MIPS_ADDU:
-			extendType = ZeroExtend;
-		case MIPS_ADD:
-		case MIPS_ADDI:
-			if (op2.reg == REG_ZERO)
-				il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, ReadILOperand(il, instr, 3, registerSize(op3), 4), extendType));
-			else
-				il.AddInstruction(
-					SetRegisterOrNop(il, 4, registerSize(op1), op1.reg,
-						il.Add(4,
-							ReadILOperand(il, instr, 2, registerSize(op2), 4),
-							ReadILOperand(il, instr, 3, registerSize(op3), 4)), extendType));
+	case MIPS_ADDIU:
+		if (version == MIPS_R5900 && op1.reg == REG_SP)
+		{
+			il.AddInstruction(il.SetRegister(4, op1.reg,
+			il.Add(4,
+				ReadILOperand(il, instr, 2, registerSize(op2), 4),
+				ReadILOperand(il, instr, 3, registerSize(op3), 4))));
 			break;
-		case MIPS_DADDU:
-		case MIPS_DADDIU:
-			extendType = ZeroExtend;
-		case MIPS_DADD:
-		case MIPS_DADDI:
-			if (op2.reg == REG_ZERO)
-				il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, ReadILOperand(il, instr, 3, registerSize(op3)), extendType));
-			else
-				il.AddInstruction(
-					SetRegisterOrNop(il, 8, registerSize(op1), op1.reg,
-						il.Add(8,
-							ReadILOperand(il, instr, 2, registerSize(op2)),
-							ReadILOperand(il, instr, 3, registerSize(op3))), extendType));
-			break;
-		case MIPS_SUBU:
-			extendType = ZeroExtend;
-		case MIPS_SUB:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg,
-								il.Sub(4,
-									ReadILOperand(il, instr, 2, registerSize(op2), 4),
-									ReadILOperand(il, instr, 3, registerSize(op3), 4)), extendType));
-			break;
-		case MIPS_DSUBU:
-			extendType = ZeroExtend;
-		case MIPS_DSUB:
-			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg,
-								il.Sub(8,
-									ReadILOperand(il, instr, 2, registerSize(op2), 8),
-									ReadILOperand(il, instr, 3, registerSize(op3), 8)), extendType));
-			break;
-		case MIPS_AND:
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op2), registerSize(op1), op1.reg,
-								il.And(registerSize(op2),
-									ReadILOperand(il, instr, 2, registerSize(op2)),
-									ReadILOperand(il, instr, 3, registerSize(op3))), ZeroExtend));
-			break;
-		case MIPS_ANDI:
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op2), registerSize(op1), op1.reg,
-								il.And(registerSize(op2),
-									ReadILOperand(il, instr, 2, registerSize(op2)),
-									il.Operand(1, il.Const(4, 0x0000ffff & op3.immediate))), ZeroExtend));
-			break;
-		case MIPS_DIV:
-			il.AddInstruction(il.SetRegister(get_register_width(REG_LO, version), REG_LO,
-								il.DivSigned(4,
+		}
+	case MIPS_ADDU:
+		extendType = ZeroExtend;
+	case MIPS_ADD:
+	case MIPS_ADDI:
+		if (op2.reg == REG_ZERO)
+			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, ReadILOperand(il, instr, 3, registerSize(op3), 4), extendType));
+		else
+			il.AddInstruction(
+				SetRegisterOrNop(il, 4, registerSize(op1), op1.reg,
+					il.Add(4,
+						ReadILOperand(il, instr, 2, registerSize(op2), 4),
+						ReadILOperand(il, instr, 3, registerSize(op3), 4)), extendType));
+		break;
+	case MIPS_DADDU:
+	case MIPS_DADDIU:
+		extendType = ZeroExtend;
+	case MIPS_DADD:
+	case MIPS_DADDI:
+		if (op2.reg == REG_ZERO)
+			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, ReadILOperand(il, instr, 3, registerSize(op3)), extendType));
+		else
+			il.AddInstruction(
+				SetRegisterOrNop(il, 8, registerSize(op1), op1.reg,
+					il.Add(8,
+						ReadILOperand(il, instr, 2, registerSize(op2)),
+						ReadILOperand(il, instr, 3, registerSize(op3))), extendType));
+		break;
+	case MIPS_SUBU:
+		extendType = ZeroExtend;
+	case MIPS_SUB:
+		il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg,
+							il.Sub(4,
+								ReadILOperand(il, instr, 2, registerSize(op2), 4),
+								ReadILOperand(il, instr, 3, registerSize(op3), 4)), extendType));
+		break;
+	case MIPS_DSUBU:
+		extendType = ZeroExtend;
+	case MIPS_DSUB:
+		il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg,
+							il.Sub(8,
+								ReadILOperand(il, instr, 2, registerSize(op2), 8),
+								ReadILOperand(il, instr, 3, registerSize(op3), 8)), extendType));
+		break;
+	case MIPS_AND:
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op2), registerSize(op1), op1.reg,
+							il.And(registerSize(op2),
+								ReadILOperand(il, instr, 2, registerSize(op2)),
+								ReadILOperand(il, instr, 3, registerSize(op3))), ZeroExtend));
+		break;
+	case MIPS_ANDI:
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op2), registerSize(op1), op1.reg,
+							il.And(registerSize(op2),
+								ReadILOperand(il, instr, 2, registerSize(op2)),
+								il.Operand(1, il.Const(4, 0x0000ffff & op3.immediate))), ZeroExtend));
+		break;
+	case MIPS_DIV:
+		il.AddInstruction(il.SetRegister(get_register_width(REG_LO, version), REG_LO,
+							il.DivSigned(4,
+								ReadILOperand(il, instr, 1, 4, 4),
+								ReadILOperand(il, instr, 2, 4, 4))));
+		il.AddInstruction(il.SetRegister(get_register_width(REG_HI, version), REG_HI,
+								il.ModSigned(4,
 									ReadILOperand(il, instr, 1, 4, 4),
 									ReadILOperand(il, instr, 2, 4, 4))));
-			il.AddInstruction(il.SetRegister(get_register_width(REG_HI, version), REG_HI,
-									il.ModSigned(4,
-										ReadILOperand(il, instr, 1, 4, 4),
-										ReadILOperand(il, instr, 2, 4, 4))));
-			SignExtendHiLo(il, 4);
-			break;
-		case MIPS_DIV1:
-			il.AddInstruction(il.SetRegister(8, REG_LO1,
-				il.SignExtend(8,
-					il.DivSigned(4,
-						ReadILOperand(il, instr, 1, 4, 4),
-						ReadILOperand(il, instr, 2, 4, 4)))));
-			il.AddInstruction(il.SetRegister(8, REG_HI1,
-				il.SignExtend(8,
-					il.ModSigned(4,
-						ReadILOperand(il, instr, 1, 4, 4),
-						ReadILOperand(il, instr, 2, 4, 4)))));
-			break;
-		case MIPS_DIVU1:
-		case MIPS_DIVU:
-		{
-			DEFINE_HILO1(MIPS_DIVU1);
-			il.AddInstruction(il.SetRegister(get_register_width(lo, version), lo,
-									il.DivUnsigned(4,
-										ReadILOperand(il, instr, 1, 4, 4),
-										ReadILOperand(il, instr, 2, 4, 4))));
-			il.AddInstruction(il.SetRegister(get_register_width(hi, version), hi,
-									il.ModUnsigned(4,
-										ReadILOperand(il, instr, 1, 4, 4),
-										ReadILOperand(il, instr, 2, 4, 4))));
-			if (lo == REG_LO)
-				SignExtendHiLo(il, registerSize(op1));
-			break;
-		}
-		case MIPS_DDIV:
-			il.AddInstruction(il.SetRegister(get_register_width(REG_LO, version), REG_LO,
-								il.DivSigned(8,
+		SignExtendHiLo(il, 4);
+		break;
+	case MIPS_DIV1:
+		il.AddInstruction(il.SetRegister(8, REG_LO1,
+			il.SignExtend(8,
+				il.DivSigned(4,
+					ReadILOperand(il, instr, 1, 4, 4),
+					ReadILOperand(il, instr, 2, 4, 4)))));
+		il.AddInstruction(il.SetRegister(8, REG_HI1,
+			il.SignExtend(8,
+				il.ModSigned(4,
+					ReadILOperand(il, instr, 1, 4, 4),
+					ReadILOperand(il, instr, 2, 4, 4)))));
+		break;
+	case MIPS_DIVU1:
+	case MIPS_DIVU:
+	{
+		DEFINE_HILO1(MIPS_DIVU1);
+		il.AddInstruction(il.SetRegister(get_register_width(lo, version), lo,
+								il.DivUnsigned(4,
+									ReadILOperand(il, instr, 1, 4, 4),
+									ReadILOperand(il, instr, 2, 4, 4))));
+		il.AddInstruction(il.SetRegister(get_register_width(hi, version), hi,
+								il.ModUnsigned(4,
+									ReadILOperand(il, instr, 1, 4, 4),
+									ReadILOperand(il, instr, 2, 4, 4))));
+		if (lo == REG_LO)
+			SignExtendHiLo(il, registerSize(op1));
+		break;
+	}
+	case MIPS_DDIV:
+		il.AddInstruction(il.SetRegister(get_register_width(REG_LO, version), REG_LO,
+							il.DivSigned(8,
+								ReadILOperand(il, instr, 1, registerSize(op1), 8),
+								ReadILOperand(il, instr, 2, registerSize(op2), 8))));
+		il.AddInstruction(il.SetRegister(get_register_width(REG_HI, version), REG_HI,
+								il.ModSigned(8,
 									ReadILOperand(il, instr, 1, registerSize(op1), 8),
 									ReadILOperand(il, instr, 2, registerSize(op2), 8))));
-			il.AddInstruction(il.SetRegister(get_register_width(REG_HI, version), REG_HI,
-									il.ModSigned(8,
-										ReadILOperand(il, instr, 1, registerSize(op1), 8),
-										ReadILOperand(il, instr, 2, registerSize(op2), 8))));
-			break;
-		case MIPS_DDIVU:
-			il.AddInstruction(il.SetRegister(get_register_width(REG_LO, version), REG_LO,
-									il.DivUnsigned(8,
-										ReadILOperand(il, instr, 1, registerSize(op1), 8),
-										ReadILOperand(il, instr, 2, registerSize(op2), 8))));
-			il.AddInstruction(il.SetRegister(get_register_width(REG_HI, version), REG_HI,
-									il.ModUnsigned(8,
-										ReadILOperand(il, instr, 1, registerSize(op1), 8),
-										ReadILOperand(il, instr, 2, registerSize(op2), 8))));
-			break;
-		case MIPS_MUL:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg,
-								il.Mult(4,
-									ReadILOperand(il, instr, 2, registerSize(op2), 4),
-									ReadILOperand(il, instr, 3, registerSize(op3), 4))));
-			break;
-		case MIPS_XOR:
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg,
+		break;
+	case MIPS_DDIVU:
+		il.AddInstruction(il.SetRegister(get_register_width(REG_LO, version), REG_LO,
+								il.DivUnsigned(8,
+									ReadILOperand(il, instr, 1, registerSize(op1), 8),
+									ReadILOperand(il, instr, 2, registerSize(op2), 8))));
+		il.AddInstruction(il.SetRegister(get_register_width(REG_HI, version), REG_HI,
+								il.ModUnsigned(8,
+									ReadILOperand(il, instr, 1, registerSize(op1), 8),
+									ReadILOperand(il, instr, 2, registerSize(op2), 8))));
+		break;
+	case MIPS_MUL:
+		il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg,
+							il.Mult(4,
+								ReadILOperand(il, instr, 2, registerSize(op2), 4),
+								ReadILOperand(il, instr, 3, registerSize(op3), 4))));
+		break;
+	case MIPS_XOR:
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg,
+							il.Xor(registerSize(op2),
+								ReadILOperand(il, instr, 2, registerSize(op2)),
+								ReadILOperand(il, instr, 3, registerSize(op3))), ZeroExtend));
+		break;
+	case MIPS_XORI:
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg,
 								il.Xor(registerSize(op2),
 									ReadILOperand(il, instr, 2, registerSize(op2)),
-									ReadILOperand(il, instr, 3, registerSize(op3))), ZeroExtend));
-			break;
-		case MIPS_XORI:
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg,
-									il.Xor(registerSize(op2),
-										ReadILOperand(il, instr, 2, registerSize(op2)),
-										il.Operand(1,il.Const(registerSize(op2), 0x0000ffff & op3.immediate))), ZeroExtend));
-			break;
-		case MIPS_B:
-		case MIPS_J:
-			il.AddInstruction(DirectJump(arch, il, op1.immediate, addrSize));
-			break;
-		case MIPS_JAL:
-		case MIPS_BAL:
-			if (op1.immediate == (addr + 8)) // Get PC construct
-				il.AddInstruction(il.SetRegister(addrSize, REG_RA, il.ConstPointer(addrSize ,addr + 8)));
-			else
-				il.AddInstruction(il.Call(il.ConstPointer(addrSize, op1.immediate)));
-			break;
+									il.Operand(1,il.Const(registerSize(op2), 0x0000ffff & op3.immediate))), ZeroExtend));
+		break;
+	case MIPS_B:
+	case MIPS_J:
+		il.AddInstruction(DirectJump(arch, il, op1.immediate, addrSize));
+		break;
+	case MIPS_JAL:
+	case MIPS_BAL:
+		if (op1.immediate == (addr + 8)) // Get PC construct
+			il.AddInstruction(il.SetRegister(addrSize, REG_RA, il.ConstPointer(addrSize ,addr + 8)));
+		else
+			il.AddInstruction(il.Call(il.ConstPointer(addrSize, op1.immediate)));
+		break;
 
-		case MIPS_BEQ:
-		case MIPS_BNE:
-		case MIPS_BEQL: //Branch likely
-		case MIPS_BNEL:
-			ConditionalJump(arch, il, GetConditionForInstruction(il, instr, registerSize), addrSize, op3.immediate, addr + 8);
-			return false;
+	case MIPS_BEQ:
+	case MIPS_BNE:
+	case MIPS_BEQL: //Branch likely
+	case MIPS_BNEL:
+		ConditionalJump(arch, il, GetConditionForInstruction(il, instr, registerSize), addrSize, op3.immediate, addr + 8);
+		return false;
 
-		case MIPS_BEQZ:
-		case MIPS_BGEZ:
-		case MIPS_BGTZ:
-		case MIPS_BLEZ:
-		case MIPS_BLTZ:
-		case MIPS_BNEZ:
-		case MIPS_BGEZL: //Branch likely
-		case MIPS_BGTZL:
-		case MIPS_BLEZL:
-		case MIPS_BLTZL:
-			ConditionalJump(arch, il, GetConditionForInstruction(il, instr, registerSize), addrSize, op2.immediate, addr + 8);
-			return false;
+	case MIPS_BEQZ:
+	case MIPS_BGEZ:
+	case MIPS_BGTZ:
+	case MIPS_BLEZ:
+	case MIPS_BLTZ:
+	case MIPS_BNEZ:
+	case MIPS_BGEZL: //Branch likely
+	case MIPS_BGTZL:
+	case MIPS_BLEZL:
+	case MIPS_BLTZL:
+		ConditionalJump(arch, il, GetConditionForInstruction(il, instr, registerSize), addrSize, op2.immediate, addr + 8);
+		return false;
 
-		case MIPS_BC1F:
-		case MIPS_BC1FL:
-			if (op1.operandClass == FLAG)
-				ConditionalJump(arch, il, il.Not(0, il.Flag(op1.reg)), addrSize, op2.immediate, addr + 8);
-			else
-				ConditionalJump(arch, il, il.Not(0, il.Flag(FPCCREG_FCC0)), addrSize, op1.immediate, addr + 8);
-			return false;
+	case MIPS_BC1F:
+	case MIPS_BC1FL:
+		if (op1.operandClass == FLAG)
+			ConditionalJump(arch, il, il.Not(0, il.Flag(op1.reg)), addrSize, op2.immediate, addr + 8);
+		else
+			ConditionalJump(arch, il, il.Not(0, il.Flag(FPCCREG_FCC0)), addrSize, op1.immediate, addr + 8);
+		return false;
 
-		case MIPS_BC1T:
-		case MIPS_BC1TL:
-			if (op1.operandClass == FLAG)
-				ConditionalJump(arch, il, il.Flag(op1.reg), addrSize, op2.immediate, addr + 8);
-			else
-				ConditionalJump(arch, il, il.Flag(FPCCREG_FCC0), addrSize, op1.immediate, addr + 8);
-			return false;
+	case MIPS_BC1T:
+	case MIPS_BC1TL:
+		if (op1.operandClass == FLAG)
+			ConditionalJump(arch, il, il.Flag(op1.reg), addrSize, op2.immediate, addr + 8);
+		else
+			ConditionalJump(arch, il, il.Flag(FPCCREG_FCC0), addrSize, op1.immediate, addr + 8);
+		return false;
 
-		case MIPS_BC2F:
-		case MIPS_BC2FL:
-			if (op1.operandClass == FLAG)
-				ConditionalJump(arch, il, il.Not(0, il.Flag(op1.reg)), addrSize, op2.immediate, addr + 8);
-			else
-				ConditionalJump(arch, il, il.Not(0, il.Flag(CCREG_COC2)), addrSize, op1.immediate, addr + 8);
-			return false;
+	case MIPS_BC2F:
+	case MIPS_BC2FL:
+		if (op1.operandClass == FLAG)
+			ConditionalJump(arch, il, il.Not(0, il.Flag(op1.reg)), addrSize, op2.immediate, addr + 8);
+		else
+			ConditionalJump(arch, il, il.Not(0, il.Flag(CCREG_COC2)), addrSize, op1.immediate, addr + 8);
+		return false;
 
-		case MIPS_BC2T:
-		case MIPS_BC2TL:
-			if (op1.operandClass == FLAG)
-				ConditionalJump(arch, il, il.Flag(op1.reg), addrSize, op2.immediate, addr + 8);
-			else
-				ConditionalJump(arch, il, il.Flag(CCREG_COC2), addrSize, op1.immediate, addr + 8);
-			return false;
+	case MIPS_BC2T:
+	case MIPS_BC2TL:
+		if (op1.operandClass == FLAG)
+			ConditionalJump(arch, il, il.Flag(op1.reg), addrSize, op2.immediate, addr + 8);
+		else
+			ConditionalJump(arch, il, il.Flag(CCREG_COC2), addrSize, op1.immediate, addr + 8);
+		return false;
 
-		case MIPS_BC0F:
-		case MIPS_BC0FL:
+	case MIPS_BC0F:
+	case MIPS_BC0FL:
+		il.AddInstruction(il.Intrinsic({RegisterOrFlag(true, CCREG_COC0)}, MIPS_INTRIN_COP0_CONDITION, {}));
+		ConditionalJump(arch, il, GetConditionForInstruction(il, instr, registerSize), addrSize, op1.immediate, addr + 8);
+		return false;
+
+	case MIPS_BC0T:
+	case MIPS_BC0TL:
+		il.AddInstruction(il.Intrinsic({RegisterOrFlag(true, CCREG_COC0)}, MIPS_INTRIN_COP0_CONDITION, {}));
+		ConditionalJump(arch, il, GetConditionForInstruction(il, instr, registerSize), addrSize, op1.immediate, addr + 8);
+		return false;
+
+	case MIPS_BGEZAL:
+	case MIPS_BLTZAL:
+		il.AddInstruction(il.If(GetConditionForInstruction(il, instr, registerSize), trueCode, falseCode));
+		il.MarkLabel(trueCode);
+		il.AddInstruction(il.Call(ReadILOperand(il, instr, 2, registerSize(op2))));
+		il.MarkLabel(falseCode);
+		break;
+
+	case MIPS_BREAK:
+		il.AddInstruction(il.Breakpoint());
+		break;
+	case MIPS_CLO:
+		//count leading ones
+		//algorithm is as follows
+		//
+		//tmp0 = 0;
+		//again:
+		//if (((op2 << tmp) & 0x80000000) != 0)
+		//{
+		//   tmp0 += 1;
+		//   goto again;
+		//}
+		//
+		il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Const(4,0)));
+		il.MarkLabel(again);
+		il.AddInstruction(il.If(il.CompareNotEqual(4,
+				il.And(4, il.ShiftLeft(4, ReadILOperand(il, instr, 2, registerSize(op2), 4), il.Register(1, LLIL_TEMP(0))), il.Const(4, 0x80000000)),
+				il.Const(4,0)), trueCode, falseCode));
+		il.MarkLabel(trueCode);
+		il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Add(1, il.Const(1,1), il.Register(1, LLIL_TEMP(0)))));
+		il.AddInstruction(il.Goto(again));
+		il.MarkLabel(falseCode);
+		break;
+	case MIPS_DCLO:
+		//count leading ones
+		//algorithm is as follows
+		//
+		//tmp0 = 0;
+		//again:
+		//if (((op2 << tmp) & 0x80000000_00000000) != 0)
+		//{
+		//   tmp0 += 1;
+		//   goto again;
+		//}
+		//
+		il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Const(4,0)));
+		il.MarkLabel(again);
+		il.AddInstruction(il.If(il.CompareNotEqual(8,
+				il.And(8, il.ShiftLeft(8, ReadILOperand(il, instr, 2, registerSize(op2), 8), il.Register(1, LLIL_TEMP(0))), il.Const(8, 0x8000000000000000)),
+				il.Const(8,0)), trueCode, falseCode));
+		il.MarkLabel(trueCode);
+		il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Add(1, il.Const(1,1), il.Register(1, LLIL_TEMP(0)))));
+		il.AddInstruction(il.Goto(again));
+		il.MarkLabel(falseCode);
+		break;
+	case MIPS_CLZ:
+		//count leading zeroes
+		//algorithm is as follows
+		//
+		//tmp0 = 0;
+		//again:
+		//if (((op2 << tmp) & 0x80000000) == 0)
+		//{
+		//   tmp0 += 1;
+		//   goto again;
+		//}
+		//
+		il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Const(4,0)));
+		il.MarkLabel(again);
+		il.AddInstruction(il.If(il.CompareEqual(4,
+				il.And(4, il.ShiftLeft(4, ReadILOperand(il, instr, 2, registerSize(op2), 4), il.Register(1, LLIL_TEMP(0))), il.Const(4, 0x80000000)),
+				il.Const(4,0)), trueCode, falseCode));
+		il.MarkLabel(trueCode);
+		il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Add(1, il.Const(1,1), il.Register(1, LLIL_TEMP(0)))));
+		il.AddInstruction(il.Goto(again));
+		il.MarkLabel(falseCode);
+		break;
+	case MIPS_DCLZ:
+		//count leading zeroes
+		//algorithm is as follows
+		//
+		//tmp0 = 0;
+		//again:
+		//if (((op2 << tmp) & 0x80000000_00000000) == 0)
+		//{
+		//   tmp0 += 1;
+		//   goto again;
+		//}
+		//
+		il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Const(4,0)));
+		il.MarkLabel(again);
+		il.AddInstruction(il.If(il.CompareEqual(8,
+				il.And(8, il.ShiftLeft(8, ReadILOperand(il, instr, 2, registerSize(op2), 8), il.Register(1, LLIL_TEMP(0))), il.Const(8, 0x8000000000000000)),
+				il.Const(8,0)), trueCode, falseCode));
+		il.MarkLabel(trueCode);
+		il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Add(1, il.Const(1,1), il.Register(1, LLIL_TEMP(0)))));
+		il.AddInstruction(il.Goto(again));
+		il.MarkLabel(falseCode);
+		break;
+	case MIPS_JALR:
+	case MIPS_JALR_HB:
+	{
+		uint32_t operand = 1;
+		if (instr.operands[1].operandClass != NONE)
 		{
-			// il.AddInstruction(il.Intrinsic({RegisterOrFlag(true, LLIL_TEMP(0))}, MIPS_INTRIN_COP0_CONDITION, {}));
-			il.AddInstruction(il.Intrinsic({RegisterOrFlag(true, CCREG_COC0)}, MIPS_INTRIN_COP0_CONDITION, {}));
-			// il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_COP0_CONDITION, {}, CCREG_COC0));
-			ConditionalJump(arch, il, GetConditionForInstruction(il, instr, registerSize), addrSize, op1.immediate, addr + 8);
-			// ConditionalJump(arch, il, il.Not(0, il.Flag(LLIL_TEMP(0))), addrSize, op1.immediate, addr + 8);
-			// il.AddInstruction(il.If(il.Not(0, il.Flag(LLIL_TEMP(0))), trueCode, falseCode));
-			// il.MarkLabel(trueCode);
-			// il.AddInstruction(il.Jump(il.ConstPointer(addrSize, op1.immediate)));
-			// il.MarkLabel(falseCode);
-			// il.AddInstruction(il.Jump(il.ConstPointer(addrSize, addr + 8)));
-			return false;
+			operand = 2;
 		}
-		case MIPS_BC0T:
-		case MIPS_BC0TL:
-			// il.AddInstruction(il.Intrinsic({RegisterOrFlag(true, LLIL_TEMP(0))}, MIPS_INTRIN_COP0_CONDITION, {}));
-			// // ConditionalJump(arch, il, il.Intrinsic({}, MIPS_INTRIN_COP0_CONDITION, {}, Flag::CCREG_COC0), addrSize, op1.immediate, addr + 8);
-			// // ConditionalJump(arch, il, GetConditionForInstruction(il, instr, registerSize), addrSize, op1.immediate, addr + 8);
-			// ConditionalJump(arch, il, il.Flag(LLIL_TEMP(0)), addrSize, op1.immediate, addr + 8);
-			// return false;
+		il.AddInstruction(il.Call(ReadILOperand(il, instr, operand, registerSize(instr.operands[operand]), addrSize, true)));
+	}
+		break;
+	case MIPS_JR:
+	case MIPS_JR_HB:
+		if (op1.reg == REG_RA)
+			il.AddInstruction(il.Return(ReadILOperand(il, instr, 1, registerSize(op1), addrSize)));
+		else
+			il.AddInstruction(il.Jump(ReadILOperand(il, instr, 1, registerSize(op1), addrSize)));
+		return false;
+	case MIPS_ERET:
+		il.AddInstruction(il.Return(il.Register(addrSize, REG_ERROR_EPC)));
+		break;
+	case MIPS_LBUX:
+	case MIPS_LBU:
+		il.AddInstruction(SetRegisterOrNop(il, 1, registerSize(op1), op1.reg, ReadILOperand(il, instr, 2, registerSize(op2), 1), ZeroExtend));
+		break;
+	case MIPS_LB:
+		il.AddInstruction(SetRegisterOrNop(il, 1, registerSize(op1), op1.reg, ReadILOperand(il, instr, 2, registerSize(op2), 1), SignExtend));
+		break;
+	case MIPS_MFHI:
+		il.AddInstruction(SetRegisterOrNop(il, get_register_width(REG_HI, version), registerSize(op1), op1.reg, il.Register(get_register_width(REG_HI, version), REG_HI)));
+		break;
+	case MIPS_MFHI1:
+		il.AddInstruction(SetRegisterOrNop(il, get_register_width(REG_HI1, version), registerSize(op1), op1.reg, il.Register(get_register_width(REG_HI1, version), REG_HI1)));
+		break;
+	case MIPS_MFLO:
+		il.AddInstruction(SetRegisterOrNop(il, get_register_width(REG_LO, version), registerSize(op1), op1.reg, il.Register(get_register_width(REG_LO, version), REG_LO)));
+		break;
+	case MIPS_MFLO1:
+		il.AddInstruction(SetRegisterOrNop(il, get_register_width(REG_LO1, version), registerSize(op1), op1.reg, il.Register(get_register_width(REG_LO1, version), REG_LO1)));
+		break;
+	case MIPS_MTHI:
+		il.AddInstruction(il.SetRegister(get_register_width(REG_HI, version), REG_HI, ReadILOperand(il, instr, 1, registerSize(op1))));
+		break;
+	case MIPS_MTHI1:
+		il.AddInstruction(il.SetRegister(get_register_width(REG_HI1, version), REG_HI1, ReadILOperand(il, instr, 1, registerSize(op1))));
+		break;
+	case MIPS_MTLO:
+		il.AddInstruction(il.SetRegister(get_register_width(REG_LO, version), REG_LO, ReadILOperand(il, instr, 1, registerSize(op1))));
+		break;
+	case MIPS_MTLO1:
+		il.AddInstruction(il.SetRegister(get_register_width(REG_LO1, version), REG_LO1, ReadILOperand(il, instr, 1, registerSize(op1))));
+		break;
+	case MIPS_DMFC0:
+		il.AddInstruction(MoveFromCoprocessor(0, il, 8, op1.reg, op2.immediate, op3.immediate, decomposeFlags));
+		break;
+	case MIPS_MFC0:
+		il.AddInstruction(MoveFromCoprocessor(0, il, 4, op1.reg, op2.immediate, op3.immediate, decomposeFlags));
+		break;
+	case MIPS_MFC1:
+		if (version == MIPS_R5900)
 		{
-			// il.AddInstruction(il.Intrinsic({RegisterOrFlag(true, LLIL_TEMP(0))}, MIPS_INTRIN_COP0_CONDITION, {}));
-			il.AddInstruction(il.Intrinsic({RegisterOrFlag(true, CCREG_COC0)}, MIPS_INTRIN_COP0_CONDITION, {}));
-			// il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_COP0_CONDITION, {}, CCREG_COC0));
-			ConditionalJump(arch, il, GetConditionForInstruction(il, instr, registerSize), addrSize, op1.immediate, addr + 8);
-			// ConditionalJump(arch, il, il.Flag(LLIL_TEMP(0)), addrSize, op1.immediate, addr + 8);
-			// il.AddInstruction(il.If(il.Flag(LLIL_TEMP(0)), trueCode, falseCode));
-			// il.MarkLabel(trueCode);
-			// il.AddInstruction(il.Jump(il.ConstPointer(addrSize, op1.immediate)));
-			// il.MarkLabel(falseCode);
-			// il.AddInstruction(il.Jump(il.ConstPointer(addrSize, addr + 8)));
-			return false;
+			il.AddInstruction(
+				SetRegisterOrNop(il, 4, 8, op1.reg, il.Register(4, op2.reg)));
+			break;
 		}
+		else
+			il.AddInstruction(MoveFromCoprocessor(1, il, 4, op1.reg, op2.immediate, op3.immediate, decomposeFlags));
+		break;
+	case MIPS_DMFC2:
+		il.AddInstruction(MoveFromCoprocessor(2, il, 8, op1.reg, op2.immediate, 0, decomposeFlags));
+		break;
+	case MIPS_MFC2:
+		il.AddInstruction(MoveFromCoprocessor(2, il, 4, op1.reg, op2.immediate, 0, decomposeFlags));
+		break;
+	case MIPS_DMTC0:
+		il.AddInstruction(MoveToCoprocessor(0, il, 8, op2.immediate, op3.immediate, ReadILOperand(il, instr, 1, registerSize(op1)), decomposeFlags));
+		break;
+	case MIPS_MTC0:
+		il.AddInstruction(MoveToCoprocessor(0, il, 4, op2.immediate, op3.immediate, ReadILOperand(il, instr, 1, registerSize(op1)), decomposeFlags));
+		break;
+	case MIPS_MTC1:
+		if (version == MIPS_R5900)
+		{
+			il.AddInstruction(
+				il.SetRegister(4, op2.reg,
+					op1.reg == REG_ZERO ? il.Const(4, 0) : il.Register(4, op1.reg)));
+			break;
+		}
+		else
+			il.AddInstruction(MoveToCoprocessor(1, il, 4, op2.immediate, op3.immediate, ReadILOperand(il, instr, 1, registerSize(op1)), decomposeFlags));
+		break;
+	case MIPS_DMTC2:
+		il.AddInstruction(MoveToCoprocessor(2, il, 8, op2.immediate, 0, ReadILOperand(il, instr, 1, registerSize(op1)), decomposeFlags));
+		break;
+	case MIPS_MTC2:
+		il.AddInstruction(MoveToCoprocessor(2, il, 4, op2.immediate, 0, ReadILOperand(il, instr, 1, registerSize(op1)), decomposeFlags));
+		break;
+	case MIPS_MOVE:
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, ReadILOperand(il, instr, 2, registerSize(op2))));
+		break;
+	case MIPS_MOVN:
+		il.AddInstruction(il.If(il.CompareNotEqual(registerSize(op3), ReadILOperand(il, instr, 3, registerSize(op3)), il.Const(registerSize(op3), 0)), trueCode, falseCode));
+		il.MarkLabel(trueCode);
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, ReadILOperand(il, instr, 2, registerSize(op2))));
+		il.MarkLabel(falseCode);
+		break;
+	case MIPS_MOVZ:
+		il.AddInstruction(il.If(il.CompareEqual(registerSize(op3), ReadILOperand(il, instr, 3, registerSize(op3)), il.Const(registerSize(op3), 0)), trueCode, falseCode));
+		il.MarkLabel(trueCode);
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, ReadILOperand(il, instr, 2, registerSize(op2))));
+		il.MarkLabel(falseCode);
+		break;
+	case MIPS_MSUB:
+		//(HI,LO) = (HI,LO) - (GPR[rs] x GPR[rt])
+		//
+		//tmp0 = REG_HI << 32 | REG_LO
+		//(HI,LO) = tmp0 - (op1 * op2)
+		il.AddInstruction(il.SetRegister(8, LLIL_TEMP(0),
+				il.Or(8, il.ShiftLeft(8, il.Register(4, REG_HI), il.Const(1, 32)), il.ZeroExtend(8, il.Register(4, REG_LO)))));
+		il.AddInstruction(il.SetRegisterSplit(4, REG_HI, REG_LO,
+				il.Sub(8, il.Register(8, LLIL_TEMP(0)),
+				il.MultDoublePrecSigned(4, ReadILOperand(il, instr, 1, registerSize(op1)), ReadILOperand(il, instr, 2, registerSize(op2))))));
 
-		case MIPS_BGEZAL:
-		case MIPS_BLTZAL:
-			il.AddInstruction(il.If(GetConditionForInstruction(il, instr, registerSize), trueCode, falseCode));
-			il.MarkLabel(trueCode);
-			il.AddInstruction(il.Call(ReadILOperand(il, instr, 2, registerSize(op2))));
-			il.MarkLabel(falseCode);
-			break;
+		SignExtendHiLo(il, registerSize(op1));
+		break;
+	case MIPS_MSUBU:
+		//(HI,LO) = (HI,LO) - (GPR[rs] x GPR[rt])
+		//
+		//tmp0 = REG_HI << 32 | REG_LO
+		//(HI,LO) = tmp0 - (op1 * op2)
+		il.AddInstruction(il.SetRegister(8, LLIL_TEMP(0),
+				il.Or(8, il.ShiftLeft(8, il.Register(4, REG_HI), il.Const(1, 32)), il.ZeroExtend(8, il.Register(4, REG_LO)))));
+		il.AddInstruction(il.SetRegisterSplit(4, REG_HI, REG_LO,
+				il.Sub(8, il.Register(8, LLIL_TEMP(0)),
+				il.MultDoublePrecUnsigned(4, ReadILOperand(il, instr, 1, registerSize(op1)), ReadILOperand(il, instr, 2, registerSize(op2))))));
 
-		case MIPS_BREAK:
-			il.AddInstruction(il.Breakpoint());
-			break;
-		case MIPS_CLO:
-			//count leading ones
-			//algorithm is as follows
-			//
-			//tmp0 = 0;
-			//again:
-			//if (((op2 << tmp) & 0x80000000) != 0)
-			//{
-			//   tmp0 += 1;
-			//   goto again;
-			//}
-			//
-			il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Const(4,0)));
-			il.MarkLabel(again);
-			il.AddInstruction(il.If(il.CompareNotEqual(4,
-					il.And(4, il.ShiftLeft(4, ReadILOperand(il, instr, 2, registerSize(op2), 4), il.Register(1, LLIL_TEMP(0))), il.Const(4, 0x80000000)),
-					il.Const(4,0)), trueCode, falseCode));
-			il.MarkLabel(trueCode);
-			il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Add(1, il.Const(1,1), il.Register(1, LLIL_TEMP(0)))));
-			il.AddInstruction(il.Goto(again));
-			il.MarkLabel(falseCode);
-			break;
-		case MIPS_DCLO:
-			//count leading ones
-			//algorithm is as follows
-			//
-			//tmp0 = 0;
-			//again:
-			//if (((op2 << tmp) & 0x80000000_00000000) != 0)
-			//{
-			//   tmp0 += 1;
-			//   goto again;
-			//}
-			//
-			il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Const(4,0)));
-			il.MarkLabel(again);
-			il.AddInstruction(il.If(il.CompareNotEqual(8,
-					il.And(8, il.ShiftLeft(8, ReadILOperand(il, instr, 2, registerSize(op2), 8), il.Register(1, LLIL_TEMP(0))), il.Const(8, 0x8000000000000000)),
-					il.Const(8,0)), trueCode, falseCode));
-			il.MarkLabel(trueCode);
-			il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Add(1, il.Const(1,1), il.Register(1, LLIL_TEMP(0)))));
-			il.AddInstruction(il.Goto(again));
-			il.MarkLabel(falseCode);
-			break;
-		case MIPS_CLZ:
-			//count leading zeroes
-			//algorithm is as follows
-			//
-			//tmp0 = 0;
-			//again:
-			//if (((op2 << tmp) & 0x80000000) == 0)
-			//{
-			//   tmp0 += 1;
-			//   goto again;
-			//}
-			//
-			il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Const(4,0)));
-			il.MarkLabel(again);
-			il.AddInstruction(il.If(il.CompareEqual(4,
-					il.And(4, il.ShiftLeft(4, ReadILOperand(il, instr, 2, registerSize(op2), 4), il.Register(1, LLIL_TEMP(0))), il.Const(4, 0x80000000)),
-					il.Const(4,0)), trueCode, falseCode));
-			il.MarkLabel(trueCode);
-			il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Add(1, il.Const(1,1), il.Register(1, LLIL_TEMP(0)))));
-			il.AddInstruction(il.Goto(again));
-			il.MarkLabel(falseCode);
-			break;
-		case MIPS_DCLZ:
-			//count leading zeroes
-			//algorithm is as follows
-			//
-			//tmp0 = 0;
-			//again:
-			//if (((op2 << tmp) & 0x80000000_00000000) == 0)
-			//{
-			//   tmp0 += 1;
-			//   goto again;
-			//}
-			//
-			il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Const(4,0)));
-			il.MarkLabel(again);
-			il.AddInstruction(il.If(il.CompareEqual(8,
-					il.And(8, il.ShiftLeft(8, ReadILOperand(il, instr, 2, registerSize(op2), 8), il.Register(1, LLIL_TEMP(0))), il.Const(8, 0x8000000000000000)),
-					il.Const(8,0)), trueCode, falseCode));
-			il.MarkLabel(trueCode);
-			il.AddInstruction(il.SetRegister(1, LLIL_TEMP(0), il.Add(1, il.Const(1,1), il.Register(1, LLIL_TEMP(0)))));
-			il.AddInstruction(il.Goto(again));
-			il.MarkLabel(falseCode);
-			break;
-		case MIPS_JALR:
-		case MIPS_JALR_HB:
-			{
-				uint32_t operand = 1;
-				if (instr.operands[1].operandClass != NONE)
-				{
-					operand = 2;
-				}
-				il.AddInstruction(il.Call(ReadILOperand(il, instr, operand, registerSize(instr.operands[operand]), addrSize, true)));
-			}
-			break;
-		case MIPS_JR:
-		case MIPS_JR_HB:
-			if (op1.reg == REG_RA)
-				il.AddInstruction(il.Return(ReadILOperand(il, instr, 1, registerSize(op1), addrSize)));
-			else
-				// il.AddInstruction(il.Jump(ReadILOperand(il, instr, 1, registerSize(op1))));
-				il.AddInstruction(il.Jump(ReadILOperand(il, instr, 1, registerSize(op1), addrSize)));
-			return false;
-		case MIPS_ERET:
-			il.AddInstruction(il.Return(il.Register(addrSize, REG_ERROR_EPC)));
-			break;
-		case MIPS_LBUX:
-		case MIPS_LBU:
-			// il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.ZeroExtend(registerSize(op1), ReadILOperand(il, instr, 2, registerSize(op2), 1))));
-			il.AddInstruction(SetRegisterOrNop(il, 1, registerSize(op1), op1.reg, ReadILOperand(il, instr, 2, registerSize(op2), 1), ZeroExtend));
-			break;
-		case MIPS_LB:
-			// il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.SignExtend(registerSize(op1), ReadILOperand(il, instr, 2, registerSize(op2), 1))));
-			il.AddInstruction(SetRegisterOrNop(il, 1, registerSize(op1), op1.reg, ReadILOperand(il, instr, 2, registerSize(op2), 1), SignExtend));
-			break;
-		case MIPS_MFHI:
-			il.AddInstruction(SetRegisterOrNop(il, get_register_width(REG_HI, version), registerSize(op1), op1.reg, il.Register(get_register_width(REG_HI, version), REG_HI)));
-			break;
-		case MIPS_MFHI1:
-			il.AddInstruction(SetRegisterOrNop(il, get_register_width(REG_HI1, version), registerSize(op1), op1.reg, il.Register(get_register_width(REG_HI1, version), REG_HI1)));
-			break;
-		case MIPS_MFLO:
-			il.AddInstruction(SetRegisterOrNop(il, get_register_width(REG_LO, version), registerSize(op1), op1.reg, il.Register(get_register_width(REG_LO, version), REG_LO)));
-			break;
-		case MIPS_MFLO1:
-			il.AddInstruction(SetRegisterOrNop(il, get_register_width(REG_LO1, version), registerSize(op1), op1.reg, il.Register(get_register_width(REG_LO1, version), REG_LO1)));
-			break;
-		case MIPS_MTHI:
-			il.AddInstruction(il.SetRegister(get_register_width(REG_HI, version), REG_HI, ReadILOperand(il, instr, 1, registerSize(op1))));
-			break;
-		case MIPS_MTHI1:
-			il.AddInstruction(il.SetRegister(get_register_width(REG_HI1, version), REG_HI1, ReadILOperand(il, instr, 1, registerSize(op1))));
-			break;
-		case MIPS_MTLO:
-			il.AddInstruction(il.SetRegister(get_register_width(REG_LO, version), REG_LO, ReadILOperand(il, instr, 1, registerSize(op1))));
-			break;
-		case MIPS_MTLO1:
-			il.AddInstruction(il.SetRegister(get_register_width(REG_LO1, version), REG_LO1, ReadILOperand(il, instr, 1, registerSize(op1))));
-			break;
-		case MIPS_DMFC0:
-			il.AddInstruction(MoveFromCoprocessor(0, il, 8, op1.reg, op2.immediate, op3.immediate, decomposeFlags));
-			break;
-		case MIPS_MFC0:
-			il.AddInstruction(MoveFromCoprocessor(0, il, 4, op1.reg, op2.immediate, op3.immediate, decomposeFlags));
-			break;
-		case MIPS_MFC1:
-			if (version == MIPS_R5900)
-			{
-				il.AddInstruction(
-					SetRegisterOrNop(il, 4, 8, op1.reg, il.Register(4, op2.reg)));
-				break;
-			}
-			else
-				il.AddInstruction(MoveFromCoprocessor(1, il, 4, op1.reg, op2.immediate, op3.immediate, decomposeFlags));
-			break;
-		case MIPS_DMFC2:
-			il.AddInstruction(MoveFromCoprocessor(2, il, 8, op1.reg, op2.immediate, 0, decomposeFlags));
-			break;
-		case MIPS_MFC2:
-			il.AddInstruction(MoveFromCoprocessor(2, il, 4, op1.reg, op2.immediate, 0, decomposeFlags));
-			break;
-		case MIPS_DMTC0:
-			il.AddInstruction(MoveToCoprocessor(0, il, 8, op2.immediate, op3.immediate, ReadILOperand(il, instr, 1, registerSize(op1)), decomposeFlags));
-			break;
-		case MIPS_MTC0:
-			il.AddInstruction(MoveToCoprocessor(0, il, 4, op2.immediate, op3.immediate, ReadILOperand(il, instr, 1, registerSize(op1)), decomposeFlags));
-			break;
-		case MIPS_MTC1:
-			if (version == MIPS_R5900)
-			{
-				il.AddInstruction(
-					il.SetRegister(4, op2.reg,
-						op1.reg == REG_ZERO ? il.Const(4, 0) : il.Register(4, op1.reg)));
-				break;
-			}
-			else
-				il.AddInstruction(MoveToCoprocessor(1, il, 4, op2.immediate, op3.immediate, ReadILOperand(il, instr, 1, registerSize(op1)), decomposeFlags));
-			break;
-		case MIPS_DMTC2:
-			il.AddInstruction(MoveToCoprocessor(2, il, 8, op2.immediate, 0, ReadILOperand(il, instr, 1, registerSize(op1)), decomposeFlags));
-			break;
-		case MIPS_MTC2:
-			il.AddInstruction(MoveToCoprocessor(2, il, 4, op2.immediate, 0, ReadILOperand(il, instr, 1, registerSize(op1)), decomposeFlags));
-			break;
-		case MIPS_MOVE:
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, ReadILOperand(il, instr, 2, registerSize(op2))));
-			break;
-		case MIPS_MOVN:
-			il.AddInstruction(il.If(il.CompareNotEqual(registerSize(op3), ReadILOperand(il, instr, 3, registerSize(op3)), il.Const(registerSize(op3), 0)), trueCode, falseCode));
-			il.MarkLabel(trueCode);
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, ReadILOperand(il, instr, 2, registerSize(op2))));
-			il.MarkLabel(falseCode);
-			break;
-		case MIPS_MOVZ:
-			il.AddInstruction(il.If(il.CompareEqual(registerSize(op3), ReadILOperand(il, instr, 3, registerSize(op3)), il.Const(registerSize(op3), 0)), trueCode, falseCode));
-			il.MarkLabel(trueCode);
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, ReadILOperand(il, instr, 2, registerSize(op2))));
-			il.MarkLabel(falseCode);
-			break;
-		case MIPS_MSUB:
-			//(HI,LO) = (HI,LO) - (GPR[rs] x GPR[rt])
-			//
-			//tmp0 = REG_HI << 32 | REG_LO
-			//(HI,LO) = tmp0 - (op1 * op2)
+		SignExtendHiLo(il, registerSize(op1));
+		break;
+	case MIPS_MULT1:
+	case MIPS_MULT:
+		if (version == MIPS_R5900 && instr.numOperands == 3) {
+			DEFINE_HILO1(MIPS_MULT1);
 			il.AddInstruction(il.SetRegister(8, LLIL_TEMP(0),
-					il.Or(8, il.ShiftLeft(8, il.Register(4, REG_HI), il.Const(1, 32)), il.ZeroExtend(8, il.Register(4, REG_LO)))));
-			il.AddInstruction(il.SetRegisterSplit(4, REG_HI, REG_LO,
-					il.Sub(8, il.Register(8, LLIL_TEMP(0)),
-					il.MultDoublePrecSigned(4, ReadILOperand(il, instr, 1, registerSize(op1)), ReadILOperand(il, instr, 2, registerSize(op2))))));
+					il.MultDoublePrecSigned(4,
+						ReadILOperand(il, instr, 2, 4, 4),
+						ReadILOperand(il, instr, 3, 4, 4))));
+			il.AddInstruction(il.SetRegisterSplit(4, hi, lo, il.Register(8, LLIL_TEMP(0))));
+			if (lo == REG_LO)
+				SignExtendHiLo(il, 4);
+			auto rd = op1.reg;
+			if (rd != REG_ZERO)
+				il.AddInstruction(SetRegisterOrNop(il, 4, 8, rd, il.Register(4, LLIL_TEMP(0))));
+		}
+		else
+		{
+			DEFINE_HILO1(MIPS_MADD1);
+			il.AddInstruction(il.SetRegisterSplit(4, hi, lo,
+					il.MultDoublePrecSigned(8,
+						ReadILOperand(il, instr, 1, 4, 4),
+						ReadILOperand(il, instr, 2, 4, 4))));
+			if (lo == REG_LO)
+				SignExtendHiLo(il, 4);
+		}
+		break;
+	case MIPS_MULTU1:
+	case MIPS_MULTU:
+		if (version == MIPS_R5900 && instr.numOperands == 3) {
+			DEFINE_HILO1(MIPS_MULTU1);
 
-			SignExtendHiLo(il, registerSize(op1));
-			break;
-		case MIPS_MSUBU:
-			//(HI,LO) = (HI,LO) - (GPR[rs] x GPR[rt])
-			//
-			//tmp0 = REG_HI << 32 | REG_LO
-			//(HI,LO) = tmp0 - (op1 * op2)
-			il.AddInstruction(il.SetRegister(8, LLIL_TEMP(0),
-					il.Or(8, il.ShiftLeft(8, il.Register(4, REG_HI), il.Const(1, 32)), il.ZeroExtend(8, il.Register(4, REG_LO)))));
-			il.AddInstruction(il.SetRegisterSplit(4, REG_HI, REG_LO,
-					il.Sub(8, il.Register(8, LLIL_TEMP(0)),
-					il.MultDoublePrecUnsigned(4, ReadILOperand(il, instr, 1, registerSize(op1)), ReadILOperand(il, instr, 2, registerSize(op2))))));
-
-			SignExtendHiLo(il, registerSize(op1));
-			break;
-		case MIPS_MULT1:
-		case MIPS_MULT:
-			if (version == MIPS_R5900 && instr.numOperands == 3) {
-				// auto temp = LLIL_TEMP(0);
-				// il.AddInstruction(il.SetRegister(8, temp,
-				// il.MultDoublePrecSigned(8,
-				// 		ReadILOperand(il, instr, 2, 4, 4),
-				// 		ReadILOperand(il, instr, 3, 4, 4))));
-				// il.AddInstruction(il.SetRegister(get_register_width(REG_HI, version), REG_HI,
-				// 	il.SignExtend(get_register_width(REG_HI, version),
-				// 		il.ArithShiftRight(8,
-				// 			il.Register(8, temp),
-				// 			il.Const(8, 32)))));
-				// il.AddInstruction(il.SetRegister(get_register_width(REG_LO, version), REG_LO,
-				// 	il.SignExtend(get_register_width(REG_LO, version),
-				// 		il.LowPart(4,
-				// 			il.Register(8, temp)))));
-				// SignExtendHiLo(il, 4);
-				// auto rd = op1.reg;
-				// if (rd != REG_ZERO)
-				// 	il.AddInstruction(SetRegisterOrNop(il, 4, 4, rd, il.Register(get_register_width(REG_LO, version), REG_LO)));
-				DEFINE_HILO1(MIPS_MULT1);
-				il.AddInstruction(il.SetRegister(8, LLIL_TEMP(0),
-						il.MultDoublePrecSigned(4,
-							ReadILOperand(il, instr, 2, 4, 4),
-							ReadILOperand(il, instr, 3, 4, 4))));
-				il.AddInstruction(il.SetRegisterSplit(4, hi, lo, il.Register(8, LLIL_TEMP(0))));
-				// il.AddInstruction(il.SetRegisterSplit(4, hi, lo,
-				// 		il.MultDoublePrecSigned(8,
-				// 			ReadILOperand(il, instr, 2, 4, 4),
-				// 			ReadILOperand(il, instr, 3, 4, 4))));
-				if (lo == REG_LO)
-					SignExtendHiLo(il, 4);
-				auto rd = op1.reg;
-				if (rd != REG_ZERO)
-					il.AddInstruction(SetRegisterOrNop(il, 4, 8, rd, il.Register(4, LLIL_TEMP(0))));
-					// il.AddInstruction(SetRegisterOrNop(il, 4, 8, rd, il.Register(get_register_width(lo, version), lo)));
-			}
-			else
-			{
-				// il.AddInstruction(il.SetRegisterSplit(get_register_width(REG_HI, version), REG_HI, REG_LO,
-				// 	il.MultDoublePrecSigned(4,
-				// 		ReadILOperand(il, instr, 1, 4, 4),
-				// 		ReadILOperand(il, instr, 2, 4, 4))));
-				// SignExtendHiLo(il, 4);  // TODO: registerSize???
-				DEFINE_HILO1(MIPS_MADD1);
-				il.AddInstruction(il.SetRegisterSplit(4, hi, lo,
-						il.MultDoublePrecSigned(8,
-							ReadILOperand(il, instr, 1, 4, 4),
-							ReadILOperand(il, instr, 2, 4, 4))));
-				if (lo == REG_LO)
-					SignExtendHiLo(il, 4);
-			}
-			break;
-		case MIPS_MULTU1:
-		case MIPS_MULTU:
-			if (version == MIPS_R5900 && instr.numOperands == 3) {
-				DEFINE_HILO1(MIPS_MULTU1);
-
-				il.AddInstruction(il.SetRegisterSplit(4, hi, lo,
-					il.MultDoublePrecUnsigned(4,
-						ReadILOperand(il, instr, 2, 4),
-						ReadILOperand(il, instr, 3, 4))));
-				if (lo == REG_LO)
-					SignExtendHiLo(il, 4);
-				auto rd = op1.reg;
-				if (rd != REG_ZERO)
-					il.AddInstruction(SetRegisterOrNop(il, 4, 8, rd, il.Register(get_register_width(lo, version), lo)));
-			}
-			else
-			{
-				DEFINE_HILO1(MIPS_MULTU1);
-				il.AddInstruction(il.SetRegisterSplit(4, hi, lo,
-					il.MultDoublePrecUnsigned(4,
-						ReadILOperand(il, instr, 1, 4),
-						ReadILOperand(il, instr, 2, 4))));
-				if (lo == REG_LO)
-					SignExtendHiLo(il, 4);
-			}
-			break;
-		case MIPS_DMULT:
-			il.AddInstruction(il.SetRegisterSplit(8, REG_HI, REG_LO, il.MultDoublePrecSigned(8, ReadILOperand(il, instr, 1, registerSize(op1)), ReadILOperand(il, instr, 2, registerSize(op2)))));
-			break;
-		case MIPS_DMULTU:
-			il.AddInstruction(il.SetRegisterSplit(8, REG_HI, REG_LO, il.MultDoublePrecUnsigned(8, ReadILOperand(il, instr, 1, registerSize(op1)), ReadILOperand(il, instr, 2, registerSize(op2)))));
-			break;
-		case MIPS_NEGU:
-			// This doesn't seem to matter, but using zero-extend to be consistent
-			// Also, turns out neg and negu are both pseudo instructions for sub/subu
-		case MIPS_NEG:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg,
-									il.Neg(4, ReadILOperand(il, instr, 2, registerSize(op2)))));
-			break;
-		case MIPS_NOT:
+			il.AddInstruction(il.SetRegisterSplit(4, hi, lo,
+				il.MultDoublePrecUnsigned(4,
+					ReadILOperand(il, instr, 2, 4),
+					ReadILOperand(il, instr, 3, 4))));
+			if (lo == REG_LO)
+				SignExtendHiLo(il, 4);
+			auto rd = op1.reg;
+			if (rd != REG_ZERO)
+				il.AddInstruction(SetRegisterOrNop(il, 4, 8, rd, il.Register(get_register_width(lo, version), lo)));
+		}
+		else
+		{
+			DEFINE_HILO1(MIPS_MULTU1);
+			il.AddInstruction(il.SetRegisterSplit(4, hi, lo,
+				il.MultDoublePrecUnsigned(4,
+					ReadILOperand(il, instr, 1, 4),
+					ReadILOperand(il, instr, 2, 4))));
+			if (lo == REG_LO)
+				SignExtendHiLo(il, 4);
+		}
+		break;
+	case MIPS_DMULT:
+		il.AddInstruction(il.SetRegisterSplit(8, REG_HI, REG_LO, il.MultDoublePrecSigned(8, ReadILOperand(il, instr, 1, registerSize(op1)), ReadILOperand(il, instr, 2, registerSize(op2)))));
+		break;
+	case MIPS_DMULTU:
+		il.AddInstruction(il.SetRegisterSplit(8, REG_HI, REG_LO, il.MultDoublePrecUnsigned(8, ReadILOperand(il, instr, 1, registerSize(op1)), ReadILOperand(il, instr, 2, registerSize(op2)))));
+		break;
+	case MIPS_NEGU:
+		// Also, turns out neg and negu are both pseudo instructions for sub/subu
+	case MIPS_NEG:
+		il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg,
+								il.Neg(4, ReadILOperand(il, instr, 2, registerSize(op2)))));
+		break;
+	case MIPS_NOT:
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op2), registerSize(op1), op1.reg,
+								il.Not(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)))));
+		break;
+	case MIPS_NOR:
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op2), registerSize(op1), op1.reg,
+								il.Not(registerSize(op2), il.Or(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)), ReadILOperand(il, instr, 3, registerSize(op3))))));
+		break;
+	case MIPS_OR:
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op2), registerSize(op1), op1.reg,
+								il.Or(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)), ReadILOperand(il, instr, 3, registerSize(op3)))));
+		break;
+	case MIPS_ORI:
+		if (op2.reg == REG_ZERO)
+			il.AddInstruction(il.SetRegister(registerSize(op1), op1.reg, il.Operand(1, il.Const(4, 0x0000ffff & op3.immediate))));
+		else
 			il.AddInstruction(SetRegisterOrNop(il, registerSize(op2), registerSize(op1), op1.reg,
-									il.Not(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)))));
-			break;
-		case MIPS_NOR:
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op2), registerSize(op1), op1.reg,
-									il.Not(registerSize(op2), il.Or(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)), ReadILOperand(il, instr, 3, registerSize(op3))))));
-			break;
-		case MIPS_OR:
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op2), registerSize(op1), op1.reg,
-									il.Or(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)), ReadILOperand(il, instr, 3, registerSize(op3)))));
-			break;
-		case MIPS_ORI:
-			if (op2.reg == REG_ZERO)
-				il.AddInstruction(il.SetRegister(registerSize(op1), op1.reg, il.Operand(1, il.Const(4, 0x0000ffff & op3.immediate))));
-			else
-				il.AddInstruction(SetRegisterOrNop(il, registerSize(op2), registerSize(op1), op1.reg,
-								il.Or(registerSize(op2),
-									ReadILOperand(il, instr, 2, registerSize(op2)),
-									il.Operand(1, il.Const(4, 0x0000ffff & op3.immediate)))));
-			break;
-		case MIPS_RDHWR:
+							il.Or(registerSize(op2),
+								ReadILOperand(il, instr, 2, registerSize(op2)),
+								il.Operand(1, il.Const(4, 0x0000ffff & op3.immediate)))));
+		break;
+	case MIPS_RDHWR:
+	{
+		MipsIntrinsic intrinsic;
+		switch (op2.immediate)
 		{
-			MipsIntrinsic intrinsic;
-			switch (op2.immediate)
-			{
-				case 0: intrinsic = MIPS_INTRIN_HWR0; break;
-				case 1: intrinsic = MIPS_INTRIN_HWR1; break;
-				case 2: intrinsic = MIPS_INTRIN_HWR2; break;
-				case 3: intrinsic = MIPS_INTRIN_HWR3; break;
-				default: intrinsic = MIPS_INTRIN_HWR_UNKNOWN;
-			}
-
-			if (intrinsic != MIPS_INTRIN_HWR_UNKNOWN)
-			{
-				il.AddInstruction(
-					il.Intrinsic({RegisterOrFlag::Register(op1.reg)}, intrinsic, {})
-				);
-			}
-			else
-			{
-				il.AddInstruction(
-					il.Intrinsic({RegisterOrFlag::Register(op1.reg)}, MIPS_INTRIN_HWR_UNKNOWN, {il.Const(1, op2.immediate)})
-				);
-			}
-			break;
-		}
-		case MIPS_SW:
-			il.AddInstruction(il.Store(4, GetILOperandMemoryAddress(il, op2, addrSize), ReadILOperand(il, instr, 1, registerSize(op1), 4)));
-			break;
-		case MIPS_SWL:
-		{
-			int32_t delta = endian == LittleEndian ? -3 : 0;
-			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(LLIL_TEMP(0)) }, MIPS_INTRIN_GET_LEFT_PART32, { ReadILOperand(il, instr, 1, registerSize(op1), 4) }));
-			il.AddInstruction(il.Store(4,
-				GetILOperandMemoryAddress(il, op2, addrSize, delta),
-				il.Register(4, LLIL_TEMP(0))
-			));
-
-			break;
+		case 0: intrinsic = MIPS_INTRIN_HWR0; break;
+		case 1: intrinsic = MIPS_INTRIN_HWR1; break;
+		case 2: intrinsic = MIPS_INTRIN_HWR2; break;
+		case 3: intrinsic = MIPS_INTRIN_HWR3; break;
+		default: intrinsic = MIPS_INTRIN_HWR_UNKNOWN;
 		}
 
-		case MIPS_SDL:
+		if (intrinsic != MIPS_INTRIN_HWR_UNKNOWN)
 		{
-			int32_t delta = endian == LittleEndian ? -7 : 0;
-			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(LLIL_TEMP(0)) }, MIPS_INTRIN_GET_LEFT_PART64, { ReadILOperand(il, instr, 1, registerSize(op1), 8) }));
-			il.AddInstruction(il.Store(8,
-				GetILOperandMemoryAddress(il, op2, addrSize, delta),
-				il.Register(8, LLIL_TEMP(0))
-			));
-
-			break;
+			il.AddInstruction(
+				il.Intrinsic({RegisterOrFlag::Register(op1.reg)}, intrinsic, {})
+			);
 		}
-		case MIPS_SWR:
+		else
 		{
-			int32_t delta = endian == BigEndian ? -3 : 0;
-			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(LLIL_TEMP(0)) }, MIPS_INTRIN_GET_RIGHT_PART32, { ReadILOperand(il, instr, 1, registerSize(op1), 4) }));
-			il.AddInstruction(il.Store(4,
-				GetILOperandMemoryAddress(il, op2, addrSize, delta),
-				il.Register(4, LLIL_TEMP(0))
-			));
-
-			break;
+			il.AddInstruction(
+				il.Intrinsic({RegisterOrFlag::Register(op1.reg)}, MIPS_INTRIN_HWR_UNKNOWN, {il.Const(1, op2.immediate)})
+			);
 		}
+		break;
+	}
+	case MIPS_SW:
+		il.AddInstruction(il.Store(4, GetILOperandMemoryAddress(il, op2, addrSize), ReadILOperand(il, instr, 1, registerSize(op1), 4)));
+		break;
+	case MIPS_SWL:
+	{
+		int32_t delta = endian == LittleEndian ? -3 : 0;
+		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(LLIL_TEMP(0)) }, MIPS_INTRIN_GET_LEFT_PART32, { ReadILOperand(il, instr, 1, registerSize(op1), 4) }));
+		il.AddInstruction(il.Store(4,
+			GetILOperandMemoryAddress(il, op2, addrSize, delta),
+			il.Register(4, LLIL_TEMP(0))
+		));
 
-		case MIPS_SDR:
+		break;
+	}
+
+	case MIPS_SDL:
+	{
+		int32_t delta = endian == LittleEndian ? -7 : 0;
+		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(LLIL_TEMP(0)) }, MIPS_INTRIN_GET_LEFT_PART64, { ReadILOperand(il, instr, 1, registerSize(op1), 8) }));
+		il.AddInstruction(il.Store(8,
+			GetILOperandMemoryAddress(il, op2, addrSize, delta),
+			il.Register(8, LLIL_TEMP(0))
+		));
+
+		break;
+	}
+	case MIPS_SWR:
+	{
+		int32_t delta = endian == BigEndian ? -3 : 0;
+		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(LLIL_TEMP(0)) }, MIPS_INTRIN_GET_RIGHT_PART32, { ReadILOperand(il, instr, 1, registerSize(op1), 4) }));
+		il.AddInstruction(il.Store(4,
+			GetILOperandMemoryAddress(il, op2, addrSize, delta),
+			il.Register(4, LLIL_TEMP(0))
+		));
+
+		break;
+	}
+
+	case MIPS_SDR:
+	{
+		int32_t delta = endian == BigEndian ? -7 : 0;
+		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(LLIL_TEMP(0)) }, MIPS_INTRIN_GET_RIGHT_PART64, { ReadILOperand(il, instr, 1, registerSize(op1), 8) }));
+		il.AddInstruction(il.Store(8,
+			GetILOperandMemoryAddress(il, op2, addrSize, delta),
+			il.Register(8, LLIL_TEMP(0))
+		));
+
+		break;
+	}
+
+	case MIPS_SC:
+	{
+		LowLevelILLabel trueCode, falseCode, doneCode;
+		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(LLIL_TEMP(0)) }, MIPS_INTRIN_LLBIT_CHECK, {}));
+		il.AddInstruction(il.If(il.CompareEqual(0, il.Register(0, LLIL_TEMP(0)), il.Const(0, 1)),
+								trueCode, falseCode));
+		il.MarkLabel(trueCode);
+
+		il.AddInstruction(il.Store(4, GetILOperandMemoryAddress(il, op2, addrSize), ReadILOperand(il, instr, 1, registerSize(op1), 4)));
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.Const(0, 1)));
+		il.AddInstruction(il.Goto(doneCode));
+
+		il.MarkLabel(falseCode);
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.Const(0, 0)));
+
+		il.MarkLabel(doneCode);
+		break;
+	}
+	case MIPS_SD:
+		il.AddInstruction(il.Store(8, GetILOperandMemoryAddress(il, op2, addrSize), ReadILOperand(il, instr, 1, registerSize(op1))));
+		break;
+	case MIPS_SQ:
+		// Technically, the store address should be automagically aligned by masking off the low 4 bits...
+		// il.AddInstruction(il.Store(16,
+		// 	il.And(addrSize, il.Const(addrSize, ~0x0F), GetILOperandMemoryAddress(il, op2, addrSize)),
+		// 	ReadILOperand(il, instr, 1, 16)));
+		// ...but that makes the IL ugly, so don't bother:
+		il.AddInstruction(il.Store(16, GetILOperandMemoryAddress(il, op2, addrSize), ReadILOperand(il, instr, 1, 16)));
+		break;
+	case MIPS_SCD:
+	{
+		LowLevelILLabel trueCode, falseCode, doneCode;
+		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(LLIL_TEMP(0)) }, MIPS_INTRIN_LLBIT_CHECK, {}));
+		il.AddInstruction(il.If(il.CompareEqual(0, il.Register(0, LLIL_TEMP(0)), il.Const(0, 1)),
+								trueCode, falseCode));
+		il.MarkLabel(trueCode);
+
+		il.AddInstruction(il.Store(8, GetILOperandMemoryAddress(il, op2, addrSize), ReadILOperand(il, instr, 1, registerSize(op1), 4)));
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.Const(0, 1)));
+		il.AddInstruction(il.Goto(doneCode));
+
+		il.MarkLabel(falseCode);
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.Const(0, 0)));
+
+		il.MarkLabel(doneCode);
+		break;
+	}
+	case MIPS_SWC1:
+		if (version == MIPS_R5900)
 		{
-			int32_t delta = endian == BigEndian ? -7 : 0;
-			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(LLIL_TEMP(0)) }, MIPS_INTRIN_GET_RIGHT_PART64, { ReadILOperand(il, instr, 1, registerSize(op1), 8) }));
-			il.AddInstruction(il.Store(8,
-				GetILOperandMemoryAddress(il, op2, addrSize, delta),
-				il.Register(8, LLIL_TEMP(0))
-			));
-
-			break;
+			il.AddInstruction(
+				il.Store(4, GetILOperandMemoryAddress(il, op2, addrSize),
+					il.Register(4, op1.reg)));
 		}
-
-		case MIPS_SC:
+		else
 		{
-			LowLevelILLabel trueCode, falseCode, doneCode;
-			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(LLIL_TEMP(0)) }, MIPS_INTRIN_LLBIT_CHECK, {}));
-			il.AddInstruction(il.If(il.CompareEqual(0, il.Register(0, LLIL_TEMP(0)), il.Const(0, 1)),
-									trueCode, falseCode));
-			il.MarkLabel(trueCode);
-
-			il.AddInstruction(il.Store(4, GetILOperandMemoryAddress(il, op2, addrSize), ReadILOperand(il, instr, 1, registerSize(op1), 4)));
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.Const(0, 1)));
-			il.AddInstruction(il.Goto(doneCode));
-
-			il.MarkLabel(falseCode);
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.Const(0, 0)));
-
-			il.MarkLabel(doneCode);
-			break;
-		}
-		case MIPS_SD:
-			il.AddInstruction(il.Store(8, GetILOperandMemoryAddress(il, op2, addrSize), ReadILOperand(il, instr, 1, registerSize(op1))));
-			break;
-		case MIPS_SQ:
-			// Techinically, the store address should be automagically aligned by masking off the low 4 bits...
-			// il.AddInstruction(il.Store(16,
-			// 	il.And(addrSize, il.Const(addrSize, ~0x0F), GetILOperandMemoryAddress(il, op2, addrSize)),
-			// 	ReadILOperand(il, instr, 1, 16)));
-			// ...but that makes the IL ugly, so don't bother:
-			il.AddInstruction(il.Store(16, GetILOperandMemoryAddress(il, op2, addrSize), ReadILOperand(il, instr, 1, 16)));
-			break;
-		case MIPS_SCD:
-		{
-			LowLevelILLabel trueCode, falseCode, doneCode;
-			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(LLIL_TEMP(0)) }, MIPS_INTRIN_LLBIT_CHECK, {}));
-			il.AddInstruction(il.If(il.CompareEqual(0, il.Register(0, LLIL_TEMP(0)), il.Const(0, 1)),
-									trueCode, falseCode));
-			il.MarkLabel(trueCode);
-
-			il.AddInstruction(il.Store(8, GetILOperandMemoryAddress(il, op2, addrSize), ReadILOperand(il, instr, 1, registerSize(op1), 4)));
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.Const(0, 1)));
-			il.AddInstruction(il.Goto(doneCode));
-
-			il.MarkLabel(falseCode);
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.Const(0, 0)));
-
-			il.MarkLabel(doneCode);
-			break;
-		}
-		case MIPS_SWC1:
-			if (version == MIPS_R5900)
-			{
-				il.AddInstruction(
-					il.Store(4, GetILOperandMemoryAddress(il, op2, addrSize),
-						il.Register(4, op1.reg)));
-			}
-			else
-			{
-				il.AddInstruction(MoveFromCoprocessor(1, il, 4, LLIL_TEMP(0), op1.immediate, 0, decomposeFlags));
-				il.AddInstruction(WriteILOperand(il, instr, 1, addrSize, il.Register(4, LLIL_TEMP(0))));
-			}
-			break;
-		case MIPS_SDC1:
-			if (version == MIPS_R5900)
-			{
-				il.AddInstruction(
-					il.Store(8, GetILOperandMemoryAddress(il, op2, addrSize),
-						il.Register(8, op1.reg)));
-			}
-			break;
-		case MIPS_SWC2:
-			il.AddInstruction(MoveFromCoprocessor(2, il, 4, LLIL_TEMP(0), op1.immediate, 0, decomposeFlags));
+			il.AddInstruction(MoveFromCoprocessor(1, il, 4, LLIL_TEMP(0), op1.immediate, 0, decomposeFlags));
 			il.AddInstruction(WriteILOperand(il, instr, 1, addrSize, il.Register(4, LLIL_TEMP(0))));
-			break;
-		case MIPS_SWC3:
-			il.AddInstruction(MoveFromCoprocessor(3, il, 4, LLIL_TEMP(0), op1.immediate, 0, decomposeFlags));
-			il.AddInstruction(WriteILOperand(il, instr, 1, addrSize, il.Register(4, LLIL_TEMP(0))));
-			break;
-		case MIPS_SYSCALL:
-			il.AddInstruction(il.SystemCall());
-			break;
-		case MIPS_EXT:
-			//op1 = op4.imm bits in op2.reg at bit offset op3.imm
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg,
+		}
+		break;
+	case MIPS_SDC1:
+		il.AddInstruction(
+			il.Store(4, GetILOperandMemoryAddress(il, op2, addrSize),
+				il.LowPart(4, il.Register(8, op1.reg))));
+		il.AddInstruction(
+			il.Store(4, GetILOperandMemoryAddress(il, op2, addrSize, 4),
+				il.LogicalShiftRight(4, il.Register(8, op1.reg), il.Const(4, 32))));
+		break;
+	case MIPS_SDXC1:
+		il.AddInstruction(
+			il.Store(4, GetILOperandMemoryAddress(il, op2, addrSize),
+				il.LowPart(4, il.Register(8, op1.reg))));
+		il.AddInstruction(
+			il.Store(4, il.Add(addrSize, GetILOperandMemoryAddress(il, op2, addrSize), il.Const(addrSize, 4)),
+				il.LogicalShiftRight(4, il.Register(8, op1.reg), il.Const(4, 32))));
+		break;
+	case MIPS_SWXC1:
+		il.AddInstruction(
+			il.Store(4, GetILOperandMemoryAddress(il, op2, addrSize),
+				il.Register(4, op1.reg)));
+		break;
+	case MIPS_SWC2:
+		il.AddInstruction(MoveFromCoprocessor(2, il, 4, LLIL_TEMP(0), op1.immediate, 0, decomposeFlags));
+		il.AddInstruction(WriteILOperand(il, instr, 1, addrSize, il.Register(4, LLIL_TEMP(0))));
+		break;
+	case MIPS_SDC2:
+		il.AddInstruction(MoveFromCoprocessor(2, il, 8, LLIL_TEMP(0), op1.immediate, 0, decomposeFlags));
+		il.AddInstruction(WriteILOperand(il, instr, 1, addrSize, il.Register(8, LLIL_TEMP(0))));
+		break;
+	case MIPS_SWC3:
+		il.AddInstruction(MoveFromCoprocessor(3, il, 4, LLIL_TEMP(0), op1.immediate, 0, decomposeFlags));
+		il.AddInstruction(WriteILOperand(il, instr, 1, addrSize, il.Register(4, LLIL_TEMP(0))));
+		break;
+	case MIPS_SDC3:
+		il.AddInstruction(MoveFromCoprocessor(3, il, 8, LLIL_TEMP(0), op1.immediate, 0, decomposeFlags));
+		il.AddInstruction(WriteILOperand(il, instr, 1, addrSize, il.Register(8, LLIL_TEMP(0))));
+		break;
+	case MIPS_SYSCALL:
+		il.AddInstruction(il.SystemCall());
+		break;
+	case MIPS_EXT:
+		//op1 = op4.imm bits in op2.reg at bit offset op3.imm
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg,
+					il.And(registerSize(op1),
+						il.LogicalShiftRight(registerSize(op1),
+							ReadILOperand(il, instr, 2, registerSize(op2)),
+							il.Const(1, op3.immediate)
+						),
+						il.Const(registerSize(op1), (1<<op4.immediate)-1)
+					)));
+		break;
+	case MIPS_DEXT:
+	case MIPS_DEXTM:
+	case MIPS_DEXTU:
+		//op1 = op4.imm bits in op2.reg at bit offset op3.imm
+		il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg,
+					il.And(8,
+						il.LogicalShiftRight(8,
+							ReadILOperand(il, instr, 2, registerSize(op2)),
+							il.Const(1, op3.immediate)
+						),
+						il.Const(8, (((uint64_t)1)<<op4.immediate)-1)
+					)));
+		break;
+	case MIPS_INS:
+		// recall: pos = op3, size = op4
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg,
+					il.Or(registerSize(op1),
 						il.And(registerSize(op1),
-							il.LogicalShiftRight(registerSize(op1),
-								ReadILOperand(il, instr, 2, registerSize(op2)),
-								il.Const(1, op3.immediate)
-							),
-							il.Const(registerSize(op1), (1<<op4.immediate)-1)
-						)));
-			break;
-		case MIPS_DEXT:
-		case MIPS_DEXTM:
-		case MIPS_DEXTU:
-			//op1 = op4.imm bits in op2.reg at bit offset op3.imm
-			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg,
-						il.And(8,
-							il.LogicalShiftRight(8,
-								ReadILOperand(il, instr, 2, registerSize(op2)),
-								il.Const(1, op3.immediate)
-							),
-							il.Const(8, (((uint64_t)1)<<op4.immediate)-1)
-						)));
-			break;
-		case MIPS_INS:
-			// recall: pos = op3, size = op4
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg,
-						il.Or(registerSize(op1),
-							il.And(registerSize(op1),
-								ReadILOperand(il, instr, 1, registerSize(op1)),
-								il.Const(registerSize(op1), ~(((1<<op4.immediate)-1)<<op3.immediate))
-							),
-							il.ShiftLeft(registerSize(op1),
-								il.And(registerSize(op1),
-									ReadILOperand(il, instr, 2, registerSize(op2)),
-									il.Const(registerSize(op1), (1<<op4.immediate)-1)
-								),
-								il.Const(registerSize(op1), op3.immediate)
-							)
-						)));
-			break;
-		case MIPS_DINS:
-		case MIPS_DINSM:
-		case MIPS_DINSU:
-			// recall: pos = op3, size = op4
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg,
-						il.Or(registerSize(op1),
-							il.And(registerSize(op1),
-								ReadILOperand(il, instr, 1, registerSize(op1)),
-								il.Const(registerSize(op1), ~(((((uint64_t)1)<<op4.immediate)-1)<<op3.immediate))
-							),
-							il.ShiftLeft(registerSize(op1),
-								il.And(registerSize(op1),
-									ReadILOperand(il, instr, 2, registerSize(op2)),
-									il.Const(registerSize(op1), (((uint64_t)1)<<op4.immediate)-1)
-								),
-								il.Const(registerSize(op1), op3.immediate)
-							)
-						)));
-			break;
-		case MIPS_LUI:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, il.Const(4, op2.immediate << 16)));
-			break;
-		case MIPS_LI:
-		case MIPS_LW:
-		case MIPS_LWX:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, ReadILOperand(il, instr, 2, registerSize(op2), 4)));
-			break;
-		case MIPS_LWU:
-			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, il.ZeroExtend(8, ReadILOperand(il, instr, 2, registerSize(op2), 4))));
-			break;
-		case MIPS_LD:
-			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, ReadILOperand(il, instr, 2, registerSize(op2))));
-			break;
-		case MIPS_LQ:
-			il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, ReadILOperand(il, instr, 2, addrSize, 16)));
-			break;
-		case MIPS_LWL:
-		{
-			int32_t delta = endian == LittleEndian ? -3 : 0;
-			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(op1.reg) }, MIPS_INTRIN_SET_LEFT_PART32,
-				{
-					il.Load(4, GetILOperandMemoryAddress(il, op2, addrSize, delta))
-				}
-			));
-
-			break;
-		}
-		case MIPS_LDL:
-		{
-			int32_t delta = endian == LittleEndian ? -7 : 0;
-			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(op1.reg) }, MIPS_INTRIN_SET_LEFT_PART64,
-				{
-					il.Load(8, GetILOperandMemoryAddress(il, op2, addrSize, delta))
-				}
-			));
-
-			break;
-		}
-		case MIPS_LWR:
-		{
-			int32_t delta = endian == BigEndian ? -3 : 0;
-			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(op1.reg) }, MIPS_INTRIN_SET_RIGHT_PART32,
-				{
-					il.Load(4, GetILOperandMemoryAddress(il, op2, addrSize, delta))
-				}
-			));
-
-			break;
-		}
-		case MIPS_LDR:
-		{
-			int32_t delta = endian == BigEndian ? -7 : 0;
-			il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(op1.reg) }, MIPS_INTRIN_SET_RIGHT_PART64,
-				{
-					il.Load(8, GetILOperandMemoryAddress(il, op2, addrSize, delta))
-				}
-			));
-
-			break;
-		}
-		case MIPS_LL:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, ReadILOperand(il, instr, 2, registerSize(op2), 4)));
-			il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_LLBIT_SET, {il.Const(0, 1)}));
-			break;
-		case MIPS_LLD:
-			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, ReadILOperand(il, instr, 2, registerSize(op2))));
-			il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_LLBIT_SET, {il.Const(0, 1)}));
-			break;
-		case MIPS_SRA:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, il.ArithShiftRight(4, ReadILOperand(il, instr, 2, registerSize(op2)), ReadILOperand(il, instr, 3, registerSize(op3)))));
-			break;
-		case MIPS_SRAV:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, il.ArithShiftRight(4, ReadILOperand(il, instr, 2, registerSize(op2)), il.And(4, ReadILOperand(il, instr, 3, registerSize(op3)), il.Const(4, 0x1f)))));
-			break;
-		case MIPS_SLT:
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.BoolToInt(registerSize(op1),
-				il.CompareSignedLessThan(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)), ReadILOperand(il, instr, 3, registerSize(op3))))));
-			break;
-		case MIPS_SLTI:
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.BoolToInt(registerSize(op1),
-				il.CompareSignedLessThan(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)), il.Const(registerSize(op2), op3.immediate)))));
-			break;
-		case MIPS_SLTIU:
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.BoolToInt(registerSize(op1),
-				il.CompareUnsignedLessThan(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)),
-					il.Const(registerSize(op2), op3.immediate))), ZeroExtend));
-			break;
-		case MIPS_SLTU:
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.BoolToInt(registerSize(op1),
-				il.CompareUnsignedLessThan(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)),
-					ReadILOperand(il, instr, 3, registerSize(op3)))), ZeroExtend));
-			break;
-		case MIPS_SLL:
-			// SLL is unique in that the input doesn't have to be sign extended, and the
-			// preferred way to sign extend the lower 32 bits of an register is to shift
-			// it left by 0
-			// if (registerSize(op1) == 8 && op2.reg != 0 && op3.immediate == 0)
-			if ((version == MIPS_R5900 || version == MIPS_64) && op2.reg != REG_ZERO)
-			{
-				if (op3.immediate == 0)
-				{
-					il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg,
-						il.SignExtend(8,
-							il.LowPart(4,
-								ReadILOperand(il, instr, 2, 8)))));
-				}
-				else
-				{
-					il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg,
+							ReadILOperand(il, instr, 1, registerSize(op1)),
+							il.Const(registerSize(op1), ~(((1<<op4.immediate)-1)<<op3.immediate))
+						),
 						il.ShiftLeft(registerSize(op1),
-							il.SignExtend(registerSize(op1),
-								il.LowPart(4, ReadILOperand(il, instr, 2, registerSize(op2)))),
-							ReadILOperand(il, instr, 3, registerSize(op2)))));
-				}
+							il.And(registerSize(op1),
+								ReadILOperand(il, instr, 2, registerSize(op2)),
+								il.Const(registerSize(op1), (1<<op4.immediate)-1)
+							),
+							il.Const(registerSize(op1), op3.immediate)
+						)
+					)));
+		break;
+	case MIPS_DINS:
+	case MIPS_DINSM:
+	case MIPS_DINSU:
+		// recall: pos = op3, size = op4
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg,
+					il.Or(registerSize(op1),
+						il.And(registerSize(op1),
+							ReadILOperand(il, instr, 1, registerSize(op1)),
+							il.Const(registerSize(op1), ~(((((uint64_t)1)<<op4.immediate)-1)<<op3.immediate))
+						),
+						il.ShiftLeft(registerSize(op1),
+							il.And(registerSize(op1),
+								ReadILOperand(il, instr, 2, registerSize(op2)),
+								il.Const(registerSize(op1), (((uint64_t)1)<<op4.immediate)-1)
+							),
+							il.Const(registerSize(op1), op3.immediate)
+						)
+					)));
+		break;
+	case MIPS_LUI:
+		il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, il.Const(4, op2.immediate << 16)));
+		break;
+	case MIPS_LI:
+	case MIPS_LW:
+	case MIPS_LWX:
+		il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, ReadILOperand(il, instr, 2, registerSize(op2), 4)));
+		break;
+	case MIPS_LWU:
+		il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, il.ZeroExtend(8, ReadILOperand(il, instr, 2, registerSize(op2), 4))));
+		break;
+	case MIPS_LD:
+		il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, ReadILOperand(il, instr, 2, registerSize(op2))));
+		break;
+	case MIPS_LQ:
+		il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, ReadILOperand(il, instr, 2, addrSize, 16)));
+		break;
+	case MIPS_LWL:
+	{
+		int32_t delta = endian == LittleEndian ? -3 : 0;
+		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(op1.reg) }, MIPS_INTRIN_SET_LEFT_PART32,
+			{
+				il.Load(4, GetILOperandMemoryAddress(il, op2, addrSize, delta))
+			}
+		));
+
+		break;
+	}
+	case MIPS_LDL:
+	{
+		int32_t delta = endian == LittleEndian ? -7 : 0;
+		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(op1.reg) }, MIPS_INTRIN_SET_LEFT_PART64,
+			{
+				il.Load(8, GetILOperandMemoryAddress(il, op2, addrSize, delta))
+			}
+		));
+
+		break;
+	}
+	case MIPS_LWR:
+	{
+		int32_t delta = endian == BigEndian ? -3 : 0;
+		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(op1.reg) }, MIPS_INTRIN_SET_RIGHT_PART32,
+			{
+				il.Load(4, GetILOperandMemoryAddress(il, op2, addrSize, delta))
+			}
+		));
+
+		break;
+	}
+	case MIPS_LDR:
+	{
+		int32_t delta = endian == BigEndian ? -7 : 0;
+		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(op1.reg) }, MIPS_INTRIN_SET_RIGHT_PART64,
+			{
+				il.Load(8, GetILOperandMemoryAddress(il, op2, addrSize, delta))
+			}
+		));
+
+		break;
+	}
+	case MIPS_LL:
+		il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, ReadILOperand(il, instr, 2, registerSize(op2), 4)));
+		il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_LLBIT_SET, {il.Const(0, 1)}));
+		break;
+	case MIPS_LLD:
+		il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, ReadILOperand(il, instr, 2, registerSize(op2))));
+		il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_LLBIT_SET, {il.Const(0, 1)}));
+		break;
+	case MIPS_SRA:
+		il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, il.ArithShiftRight(4, ReadILOperand(il, instr, 2, registerSize(op2)), ReadILOperand(il, instr, 3, registerSize(op3)))));
+		break;
+	case MIPS_SRAV:
+		il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, il.ArithShiftRight(4, ReadILOperand(il, instr, 2, registerSize(op2)), il.And(4, ReadILOperand(il, instr, 3, registerSize(op3)), il.Const(4, 0x1f)))));
+		break;
+	case MIPS_SLT:
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.BoolToInt(registerSize(op1),
+			il.CompareSignedLessThan(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)), ReadILOperand(il, instr, 3, registerSize(op3))))));
+		break;
+	case MIPS_SLTI:
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.BoolToInt(registerSize(op1),
+			il.CompareSignedLessThan(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)), il.Const(registerSize(op2), op3.immediate)))));
+		break;
+	case MIPS_SLTIU:
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.BoolToInt(registerSize(op1),
+			il.CompareUnsignedLessThan(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)),
+				il.Const(registerSize(op2), op3.immediate))), ZeroExtend));
+		break;
+	case MIPS_SLTU:
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, il.BoolToInt(registerSize(op1),
+			il.CompareUnsignedLessThan(registerSize(op2), ReadILOperand(il, instr, 2, registerSize(op2)),
+				ReadILOperand(il, instr, 3, registerSize(op3)))), ZeroExtend));
+		break;
+	case MIPS_SLL:
+		// SLL is unique in that the input doesn't have to be sign extended, and the
+		// preferred way to sign extend the lower 32 bits of an register is to shift
+		// it left by 0
+		if ((version == MIPS_R5900 || version == MIPS_64) && op2.reg != REG_ZERO)
+		{
+			if (op3.immediate == 0)
+			{
+				il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg,
+					il.SignExtend(8,
+						il.LowPart(4,
+							ReadILOperand(il, instr, 2, 8)))));
 			}
 			else
 			{
 				il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg,
-					il.ShiftLeft(4,
-						ReadILOperand(il, instr, 2, registerSize(op2)),
+					il.ShiftLeft(registerSize(op1),
+						il.SignExtend(registerSize(op1),
+							il.LowPart(4, ReadILOperand(il, instr, 2, registerSize(op2)))),
 						ReadILOperand(il, instr, 3, registerSize(op2)))));
 			}
-			break;
-		case MIPS_SLLV:
-			il.AddInstruction(SetRegisterOrNop(il, registerSize(op2), registerSize(op1), op1.reg,
-				il.ShiftLeft(registerSize(op2),
+		}
+		else
+		{
+			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg,
+				il.ShiftLeft(4,
 					ReadILOperand(il, instr, 2, registerSize(op2)),
-					il.And(4,
-						ReadILOperand(il, instr, 3, registerSize(op3)),
-						il.Const(4, 0x1f)))));
-			break;
-		case MIPS_DSLL32:
-			op3.immediate += 32;
-			// fall through
-		case MIPS_DSLL:
-			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg,
-				il.ShiftLeft(8,
-					ReadILOperand(il, instr, 2, registerSize(op2)),
-					ReadILOperand(il, instr, 3, registerSize(op3)))));
-			break;
-		case MIPS_DSLLV:
-			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg,
-				il.ShiftLeft(8,
-					ReadILOperand(il, instr, 2, registerSize(op2)),
-					il.And(8,
-						ReadILOperand(il, instr, 3, registerSize(op3)),
-						il.Const(8, 0x3f)))));
-			break;
-		case MIPS_DSRL32:
-			op3.immediate += 32;
-			// fall through
-		case MIPS_DSRL:
-			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, il.LogicalShiftRight(8, ReadILOperand(il, instr, 2, registerSize(op2)), ReadILOperand(il, instr, 3, registerSize(op3)))));
-			break;
-		case MIPS_DSRLV:
-			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, il.LogicalShiftRight(8, ReadILOperand(il, instr, 2, registerSize(op2)), il.And(8, ReadILOperand(il, instr, 3, registerSize(op3)), il.Const(8, 0x3f)))));
-			break;
-		case MIPS_DSRA32:
-			op3.immediate += 32;
-			// fall through
-		case MIPS_DSRA:
-			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, il.ArithShiftRight(8, ReadILOperand(il, instr, 2, registerSize(op2)), ReadILOperand(il, instr, 3, registerSize(op3)))));
-			break;
-		case MIPS_DSRAV:
-			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, il.ArithShiftRight(8, ReadILOperand(il, instr, 2, registerSize(op2)), il.And(8, ReadILOperand(il, instr, 3, registerSize(op3)), il.Const(8, 0x3f)))));
-			break;
-		case MIPS_SB:
-			il.AddInstruction(il.Store(1,
-				GetILOperandMemoryAddress(il, op2, addrSize),
-				il.LowPart(1,
-					ReadILOperand(il, instr, 1, registerSize(op1)))));
-			break;
-		case MIPS_TRAP:
-			il.AddInstruction(il.Trap(0));
-			break;
-		case MIPS_TEQI:
-		case MIPS_TEQ:
-			ConditionExecute(il, il.CompareEqual(4, ReadILOperand(il, instr, 1, registerSize(op1)), ReadILOperand(il, instr, 2, registerSize(op2))),il.Trap(0));
-			break;
-		case MIPS_TNE:
-		case MIPS_TNEI:
-			ConditionExecute(il, il.CompareNotEqual(4, ReadILOperand(il, instr, 1, registerSize(op1)), ReadILOperand(il, instr, 2, registerSize(op2))),il.Trap(0));
-			break;
-		case MIPS_TGE:
-		case MIPS_TGEI:
-			ConditionExecute(il, il.CompareSignedGreaterEqual(4, ReadILOperand(il, instr, 1, registerSize(op1)), ReadILOperand(il, instr, 2, registerSize(op2))),il.Trap(0));
-			break;
-		case MIPS_TGEIU:
-		case MIPS_TGEU:
-			ConditionExecute(il, il.CompareUnsignedGreaterEqual(4, ReadILOperand(il, instr, 1, registerSize(op1)), ReadILOperand(il, instr, 2, registerSize(op2))),il.Trap(0));
-			break;
-		case MIPS_TLT:
-		case MIPS_TLTI:
-			ConditionExecute(il, il.CompareSignedLessThan(4, ReadILOperand(il, instr, 1, registerSize(op1)), ReadILOperand(il, instr, 2, registerSize(op2))),il.Trap(0));
-			break;
-		case MIPS_TLTIU:
-		case MIPS_TLTU:
-			ConditionExecute(il, il.CompareUnsignedLessThan(4, ReadILOperand(il, instr, 1, registerSize(op1)), ReadILOperand(il, instr, 2, registerSize(op2))),il.Trap(0));
-			break;
-		case MIPS_LH:
-		case MIPS_LHX:
-		case MIPS_LHI:
-			// il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, il.SignExtend(4, ReadILOperand(il, instr, 2, registerSize(op2), 2))));
-			il.AddInstruction(SetRegisterOrNop(il, 2, registerSize(op1), op1.reg,
-				ReadILOperand(il, instr, 2, registerSize(op2), 2), SignExtend));
-			break;
-		case MIPS_LHU:
-			il.AddInstruction(SetRegisterOrNop(il, 2, registerSize(op1), op1.reg,
-					ReadILOperand(il, instr, 2, registerSize(op2), 2),
-					ZeroExtend));
-			break;
-		case MIPS_MADD1:
-		case MIPS_MADD:
-			if (version == MIPS_R5900 && instr.numOperands == 3) {
-				DEFINE_HILO1(MIPS_MADD1);
-				// il.AddInstruction(il.SetRegister(8, LLIL_TEMP(0),
-				// 	il.Add(8,
-				// 		il.RegisterSplit(4, hi, lo),
-				// 		il.MultDoublePrecSigned(8,
-				// 			ReadILOperand(il, instr, 2, 4, 4),
-				// 			ReadILOperand(il, instr, 3, 4, 4)
-				// 		)
-				// 	)
-				// ));
-				// il.AddInstruction(il.SetRegisterSplit(4, hi, lo, il.Register(8, LLIL_TEMP(0))));
-				il.AddInstruction(il.SetRegisterSplit(4, hi, lo,
-					il.Add(8,
-						il.RegisterSplit(4, hi, lo),
-						il.MultDoublePrecSigned(8,
-							ReadILOperand(il, instr, 2, 4, 4),
-							ReadILOperand(il, instr, 3, 4, 4)
-						)
+					ReadILOperand(il, instr, 3, registerSize(op2)))));
+		}
+		break;
+	case MIPS_SLLV:
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op2), registerSize(op1), op1.reg,
+			il.ShiftLeft(registerSize(op2),
+				ReadILOperand(il, instr, 2, registerSize(op2)),
+				il.And(4,
+					ReadILOperand(il, instr, 3, registerSize(op3)),
+					il.Const(4, 0x1f)))));
+		break;
+	case MIPS_DSLL32:
+		op3.immediate += 32;
+		// fall through
+	case MIPS_DSLL:
+		il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg,
+			il.ShiftLeft(8,
+				ReadILOperand(il, instr, 2, registerSize(op2)),
+				ReadILOperand(il, instr, 3, registerSize(op3)))));
+		break;
+	case MIPS_DSLLV:
+		il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg,
+			il.ShiftLeft(8,
+				ReadILOperand(il, instr, 2, registerSize(op2)),
+				il.And(8,
+					ReadILOperand(il, instr, 3, registerSize(op3)),
+					il.Const(8, 0x3f)))));
+		break;
+	case MIPS_DSRL32:
+		op3.immediate += 32;
+		// fall through
+	case MIPS_DSRL:
+		il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, il.LogicalShiftRight(8, ReadILOperand(il, instr, 2, registerSize(op2)), ReadILOperand(il, instr, 3, registerSize(op3)))));
+		break;
+	case MIPS_DSRLV:
+		il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, il.LogicalShiftRight(8, ReadILOperand(il, instr, 2, registerSize(op2)), il.And(8, ReadILOperand(il, instr, 3, registerSize(op3)), il.Const(8, 0x3f)))));
+		break;
+	case MIPS_DSRA32:
+		op3.immediate += 32;
+		// fall through
+	case MIPS_DSRA:
+		il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, il.ArithShiftRight(8, ReadILOperand(il, instr, 2, registerSize(op2)), ReadILOperand(il, instr, 3, registerSize(op3)))));
+		break;
+	case MIPS_DSRAV:
+		il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, il.ArithShiftRight(8, ReadILOperand(il, instr, 2, registerSize(op2)), il.And(8, ReadILOperand(il, instr, 3, registerSize(op3)), il.Const(8, 0x3f)))));
+		break;
+	case MIPS_SB:
+		il.AddInstruction(il.Store(1,
+			GetILOperandMemoryAddress(il, op2, addrSize),
+			il.LowPart(1,
+				ReadILOperand(il, instr, 1, registerSize(op1)))));
+		break;
+	case MIPS_TRAP:
+		il.AddInstruction(il.Trap(0));
+		break;
+	case MIPS_TEQI:
+	case MIPS_TEQ:
+		ConditionExecute(il, il.CompareEqual(4, ReadILOperand(il, instr, 1, registerSize(op1)), ReadILOperand(il, instr, 2, registerSize(op2))),il.Trap(0));
+		break;
+	case MIPS_TNE:
+	case MIPS_TNEI:
+		ConditionExecute(il, il.CompareNotEqual(4, ReadILOperand(il, instr, 1, registerSize(op1)), ReadILOperand(il, instr, 2, registerSize(op2))),il.Trap(0));
+		break;
+	case MIPS_TGE:
+	case MIPS_TGEI:
+		ConditionExecute(il, il.CompareSignedGreaterEqual(4, ReadILOperand(il, instr, 1, registerSize(op1)), ReadILOperand(il, instr, 2, registerSize(op2))),il.Trap(0));
+		break;
+	case MIPS_TGEIU:
+	case MIPS_TGEU:
+		ConditionExecute(il, il.CompareUnsignedGreaterEqual(4, ReadILOperand(il, instr, 1, registerSize(op1)), ReadILOperand(il, instr, 2, registerSize(op2))),il.Trap(0));
+		break;
+	case MIPS_TLT:
+	case MIPS_TLTI:
+		ConditionExecute(il, il.CompareSignedLessThan(4, ReadILOperand(il, instr, 1, registerSize(op1)), ReadILOperand(il, instr, 2, registerSize(op2))),il.Trap(0));
+		break;
+	case MIPS_TLTIU:
+	case MIPS_TLTU:
+		ConditionExecute(il, il.CompareUnsignedLessThan(4, ReadILOperand(il, instr, 1, registerSize(op1)), ReadILOperand(il, instr, 2, registerSize(op2))),il.Trap(0));
+		break;
+	case MIPS_LH:
+	case MIPS_LHX:
+	case MIPS_LHI:
+		il.AddInstruction(SetRegisterOrNop(il, 2, registerSize(op1), op1.reg,
+			ReadILOperand(il, instr, 2, registerSize(op2), 2), SignExtend));
+		break;
+	case MIPS_LHU:
+		il.AddInstruction(SetRegisterOrNop(il, 2, registerSize(op1), op1.reg,
+				ReadILOperand(il, instr, 2, registerSize(op2), 2),
+				ZeroExtend));
+		break;
+	case MIPS_MADD1:
+	case MIPS_MADD:
+		if (version == MIPS_R5900 && instr.numOperands == 3) {
+			DEFINE_HILO1(MIPS_MADD1);
+			il.AddInstruction(il.SetRegisterSplit(4, hi, lo,
+				il.Add(8,
+					il.RegisterSplit(4, hi, lo),
+					il.MultDoublePrecSigned(8,
+						ReadILOperand(il, instr, 2, 4, 4),
+						ReadILOperand(il, instr, 3, 4, 4)
 					)
-				));
-				if (lo == REG_LO)
-					SignExtendHiLo(il, 4);
-				auto rd = op1.reg;
-				if (rd != REG_ZERO)
-					il.AddInstruction(SetRegisterOrNop(il, 4, 8, rd, il.Register(get_register_width(lo, version), lo)));
-			}
-			else
-			{
-				DEFINE_HILO1(MIPS_MADD1);
-				il.AddInstruction(il.SetRegisterSplit(4, hi, lo,
-					il.Add(8,
-						il.RegisterSplit(4, hi, lo),
-						il.MultDoublePrecSigned(4,
-							ReadILOperand(il, instr, 1, 4, 4),
-							ReadILOperand(il, instr, 2, 4, 4)
-						)
+				)
+			));
+			if (lo == REG_LO)
+				SignExtendHiLo(il, 4);
+			auto rd = op1.reg;
+			if (rd != REG_ZERO)
+				il.AddInstruction(SetRegisterOrNop(il, 4, 8, rd, il.Register(get_register_width(lo, version), lo)));
+		}
+		else
+		{
+			DEFINE_HILO1(MIPS_MADD1);
+			il.AddInstruction(il.SetRegisterSplit(4, hi, lo,
+				il.Add(8,
+					il.RegisterSplit(4, hi, lo),
+					il.MultDoublePrecSigned(4,
+						ReadILOperand(il, instr, 1, 4, 4),
+						ReadILOperand(il, instr, 2, 4, 4)
 					)
-				));
-				if (lo == REG_LO)
-					SignExtendHiLo(il, 4);
-			}
-			break;
-		case MIPS_MADDU1:
-		case MIPS_MADDU:
-			if (version == MIPS_R5900 && instr.numOperands == 3) {
-				DEFINE_HILO1(MIPS_MADDU1);
-				il.AddInstruction(il.SetRegisterSplit(4, hi, lo,
-					il.Add(8,
-						il.RegisterSplit(4, hi, lo),
-						il.MultDoublePrecUnsigned(4,
-							ReadILOperand(il, instr, 2, 4, 4),
-							ReadILOperand(il, instr, 3, 4, 4)
-						))));
-				if (lo == REG_LO)
-					SignExtendHiLo(il, 4);
-				auto rd = op1.reg;
-				if (rd != REG_ZERO)
-					il.AddInstruction(SetRegisterOrNop(il, 4, 8, rd, il.Register(get_register_width(lo, version), lo), ZeroExtend));
-			}
-			else {
-				DEFINE_HILO1(MIPS_MADDU1);
-				il.AddInstruction(il.SetRegisterSplit(4, hi, lo,
+				)
+			));
+			if (lo == REG_LO)
+				SignExtendHiLo(il, 4);
+		}
+		break;
+	case MIPS_MADDU1:
+	case MIPS_MADDU:
+		if (version == MIPS_R5900 && instr.numOperands == 3) {
+			DEFINE_HILO1(MIPS_MADDU1);
+			il.AddInstruction(il.SetRegisterSplit(4, hi, lo,
 				il.Add(8,
 					il.RegisterSplit(4, hi, lo),
 					il.MultDoublePrecUnsigned(4,
-						ReadILOperand(il, instr, 1, 4, 4),
-						ReadILOperand(il, instr, 2, 4, 4)
+						ReadILOperand(il, instr, 2, 4, 4),
+						ReadILOperand(il, instr, 3, 4, 4)
 					))));
-				if (lo == REG_LO)
-					SignExtendHiLo(il, 4);
-			}
-			break;
-		case MIPS_DROTR32:
-			op3.immediate += 32;
-			// fall through
-		case MIPS_DROTR:
-		case MIPS_DROTRV:
-			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, il.RotateRight(8, ReadILOperand(il, instr, 2, registerSize(op2)), ReadILOperand(il, instr, 3, registerSize(op3)))));
-			break;
-		case MIPS_ROTR:
-		case MIPS_ROTRV:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, il.RotateRight(4, ReadILOperand(il, instr, 2, registerSize(op2)), ReadILOperand(il, instr, 3, registerSize(op3)))));
-			break;
-		case MIPS_SDBBP:
-			il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_SDBBP, { il.Const(1, op1.immediate )}));
-			break;
-		case MIPS_SEB:
-			// il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize(op1), op1.reg, il.SignExtend(registerSize, il.LowPart(1, ReadILOperand(il, instr, 2, registerSize(op2))))));
-			il.AddInstruction(SetRegisterOrNop(il, 1, registerSize(op1), op1.reg, il.LowPart(1, ReadILOperand(il, instr, 2, registerSize(op2))), SignExtend));
-			break;
-		case MIPS_SEH:
-			// il.AddInstruction(SetRegisterOrNop(il, registerSize, registerSize(op1), op1.reg, il.SignExtend(registerSize, il.LowPart(2, ReadILOperand(il, instr, 2, registerSize(op2))))));
-			il.AddInstruction(SetRegisterOrNop(il, 2, registerSize(op1), op1.reg, il.LowPart(2, ReadILOperand(il, instr, 2, registerSize(op2))), SignExtend));
-			break;
-		case MIPS_SH:
-			il.AddInstruction(il.Store(2, GetILOperandMemoryAddress(il, op2, addrSize), il.LowPart(2, ReadILOperand(il, instr, 1, registerSize(op1)))));
-			break;
-		case MIPS_SRL:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, il.LogicalShiftRight(4, ReadILOperand(il, instr, 2, registerSize(op2)), ReadILOperand(il, instr, 3, registerSize(op3)))));
-			break;
-		case MIPS_SRLV:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, il.LogicalShiftRight(4, ReadILOperand(il, instr, 2, registerSize(op2)), il.And(4, ReadILOperand(il, instr, 3, registerSize(op3)), il.Const(4, 0x1f)))));
-			break;
-		case MIPS_SSNOP:
-		case MIPS_NOP:
-			il.AddInstruction(il.Nop());
-			break;
-		case MIPS_WSBH:
-			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(op1.reg)}, MIPS_INTRIN_WSBH, {ReadILOperand(il, instr, 2, registerSize(op2))}));
-			break;
-		case MIPS_DSBH:
-			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(op1.reg)}, MIPS_INTRIN_DSBH, {ReadILOperand(il, instr, 2, registerSize(op2))}));
-			break;
-		case MIPS_DSHD:
-			il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(op1.reg)}, MIPS_INTRIN_DSHD, {ReadILOperand(il, instr, 2, registerSize(op2))}));
-			break;
-		case MIPS_BGEZALL:
-		case MIPS_BLTZALL:
-			break;
-		case MIPS_NEG_S:
-			il.AddInstruction(il.SetRegister(4, op1.reg, il.FloatNeg(4, il.Register(4, op2.reg))));
-			break;
-		case MIPS_ABS_S:
-		case MIPS_ABS_D:
-			il.AddInstruction(il.SetRegister(registerSize(op1), op1.reg, il.FloatAbs(registerSize(op2), il.Register(registerSize(op2), op2.reg))));
-			break;
-		case MIPS_MOV_S:
-			il.AddInstruction(il.SetRegister(registerSize(op1), op1.reg, il.Register(registerSize(op2), op2.reg)));
-			break;
-		case MIPS_ADD_D:
-			if (version != MIPS_R5900)
-			{
-				il.AddInstruction(il.SetRegisterSplit(4, op1.reg | 1, op1.reg & (~1),
-				   il.FloatAdd(8, il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)),
-					   il.RegisterSplit(4, op3.reg + 1, op3.reg))));
-				break;
-			}
-			// Fall through
-		case MIPS_ADD_S:
+			if (lo == REG_LO)
+				SignExtendHiLo(il, 4);
+			auto rd = op1.reg;
+			if (rd != REG_ZERO)
+				il.AddInstruction(SetRegisterOrNop(il, 4, 8, rd, il.Register(get_register_width(lo, version), lo), ZeroExtend));
+		}
+		else {
+			DEFINE_HILO1(MIPS_MADDU1);
+			il.AddInstruction(il.SetRegisterSplit(4, hi, lo,
+			il.Add(8,
+				il.RegisterSplit(4, hi, lo),
+				il.MultDoublePrecUnsigned(4,
+					ReadILOperand(il, instr, 1, 4, 4),
+					ReadILOperand(il, instr, 2, 4, 4)
+				))));
+			if (lo == REG_LO)
+				SignExtendHiLo(il, 4);
+		}
+		break;
+	case MIPS_DROTR32:
+		op3.immediate += 32;
+		// fall through
+	case MIPS_DROTR:
+	case MIPS_DROTRV:
+		il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, il.RotateRight(8, ReadILOperand(il, instr, 2, registerSize(op2)), ReadILOperand(il, instr, 3, registerSize(op3)))));
+		break;
+	case MIPS_ROTR:
+	case MIPS_ROTRV:
+		il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, il.RotateRight(4, ReadILOperand(il, instr, 2, registerSize(op2)), ReadILOperand(il, instr, 3, registerSize(op3)))));
+		break;
+	case MIPS_SDBBP:
+		il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_SDBBP, { il.Const(1, op1.immediate )}));
+		break;
+	case MIPS_SEB:
+		il.AddInstruction(SetRegisterOrNop(il, 1, registerSize(op1), op1.reg, il.LowPart(1, ReadILOperand(il, instr, 2, registerSize(op2))), SignExtend));
+		break;
+	case MIPS_SEH:
+		il.AddInstruction(SetRegisterOrNop(il, 2, registerSize(op1), op1.reg, il.LowPart(2, ReadILOperand(il, instr, 2, registerSize(op2))), SignExtend));
+		break;
+	case MIPS_SH:
+		il.AddInstruction(il.Store(2, GetILOperandMemoryAddress(il, op2, addrSize), il.LowPart(2, ReadILOperand(il, instr, 1, registerSize(op1)))));
+		break;
+	case MIPS_SRL:
+		il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, il.LogicalShiftRight(4, ReadILOperand(il, instr, 2, registerSize(op2)), ReadILOperand(il, instr, 3, registerSize(op3)))));
+		break;
+	case MIPS_SRLV:
+		il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, il.LogicalShiftRight(4, ReadILOperand(il, instr, 2, registerSize(op2)), il.And(4, ReadILOperand(il, instr, 3, registerSize(op3)), il.Const(4, 0x1f)))));
+		break;
+	case MIPS_SSNOP:
+	case MIPS_NOP:
+		il.AddInstruction(il.Nop());
+		break;
+	case MIPS_WSBH:
+		il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(op1.reg)}, MIPS_INTRIN_WSBH, {ReadILOperand(il, instr, 2, registerSize(op2))}));
+		break;
+	case MIPS_DSBH:
+		il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(op1.reg)}, MIPS_INTRIN_DSBH, {ReadILOperand(il, instr, 2, registerSize(op2))}));
+		break;
+	case MIPS_DSHD:
+		il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(op1.reg)}, MIPS_INTRIN_DSHD, {ReadILOperand(il, instr, 2, registerSize(op2))}));
+		break;
+	case MIPS_BGEZALL:
+	case MIPS_BLTZALL:
+		break;
+	case MIPS_NEG_S:
+		il.AddInstruction(il.SetRegister(4, op1.reg, il.FloatNeg(4, il.Register(4, op2.reg))));
+		break;
+	case MIPS_ABS_S:
+	case MIPS_ABS_D:
+		il.AddInstruction(il.SetRegister(registerSize(op1), op1.reg, il.FloatAbs(registerSize(op2), il.Register(registerSize(op2), op2.reg))));
+		break;
+	case MIPS_MOV_S:
+		il.AddInstruction(il.SetRegister(registerSize(op1), op1.reg, il.Register(registerSize(op2), op2.reg)));
+		break;
+	case MIPS_ADD_S:
+		il.AddInstruction(il.SetRegister(4, op1.reg, il.FloatAdd(4, il.Register(4, op2.reg), il.Register(4, op3.reg))));
+		break;
+	case MIPS_ADD_D:
+		if (registerSize(op1) < 8)
+			il.AddInstruction(il.SetRegisterSplit(4, op1.reg | 1, op1.reg & (~1),
+			   il.FloatAdd(8, il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)),
+				   il.RegisterSplit(4, op3.reg + 1, op3.reg))));
+		else
 			il.AddInstruction(il.SetRegister(registerSize(op1), op1.reg, il.FloatAdd(registerSize(op2), il.Register(registerSize(op2), op2.reg), il.Register(registerSize(op3), op3.reg))));
-			break;
-		case MIPS_SUB_S:
-			il.AddInstruction(il.SetRegister(4, op1.reg, il.FloatSub(4, il.Register(4, op2.reg), il.Register(4, op3.reg))));
-			break;
-		case MIPS_SUB_D:
+		break;
+	case MIPS_SUB_S:
+		il.AddInstruction(il.SetRegister(4, op1.reg, il.FloatSub(4, il.Register(4, op2.reg), il.Register(4, op3.reg))));
+		break;
+	case MIPS_SUB_D:
+		if (registerSize(op1) < 8)
 			il.AddInstruction(il.SetRegisterSplit(4, op1.reg | 1, op1.reg & (~1),
 				il.FloatSub(8, il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)),
 					il.RegisterSplit(4, op3.reg + 1, op3.reg))));
-			break;
-		case MIPS_MUL_S:
-			il.AddInstruction(il.SetRegister(4, op1.reg, il.FloatMult(4, il.Register(4, op2.reg), il.Register(4, op3.reg))));
-			break;
-		case MIPS_MUL_D:
+		else
+			il.AddInstruction(il.SetRegister(registerSize(op1), op1.reg, il.FloatSub(registerSize(op2),
+				il.Register(registerSize(op2), op2.reg), il.Register(registerSize(op3), op3.reg))));
+		break;
+	case MIPS_MUL_S:
+		il.AddInstruction(il.SetRegister(4, op1.reg, il.FloatMult(4, il.Register(4, op2.reg), il.Register(4, op3.reg))));
+		break;
+	case MIPS_MUL_D:
+		if (registerSize(op1) < 8)
 			il.AddInstruction(il.SetRegisterSplit(4, op1.reg | 1, op1.reg & (~1),
 				il.FloatMult(8, il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)),
 					il.RegisterSplit(4, op3.reg + 1, op3.reg))));
-			break;
-		case MIPS_DIV_S:
-			il.AddInstruction(il.SetRegister(4, op1.reg, il.FloatDiv(4, il.Register(4, op2.reg), il.Register(4, op3.reg))));
-			break;
-		case MIPS_DIV_D:
+		else
+			il.AddInstruction(il.SetRegister(registerSize(op1), op1.reg, il.FloatMult(registerSize(op2),
+				il.Register(registerSize(op2), op2.reg), il.Register(registerSize(op3), op3.reg))));
+		break;
+	case MIPS_DIV_S:
+		il.AddInstruction(il.SetRegister(4, op1.reg, il.FloatDiv(4, il.Register(4, op2.reg), il.Register(4, op3.reg))));
+		break;
+	case MIPS_DIV_D:
+		if (registerSize(op1) < 8)
 			il.AddInstruction(il.SetRegisterSplit(4, op1.reg | 1, op1.reg & (~1),
 				il.FloatDiv(8, il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)),
 					il.RegisterSplit(4, op3.reg + 1, op3.reg))));
-			break;
-		case MIPS_SQRT_S:
-			il.AddInstruction(il.SetRegister(4, op1.reg, il.FloatSqrt(4, il.Register(4, op2.reg))));
-			break;
-		case MIPS_SQRT_D:
+		else
+			il.AddInstruction(il.SetRegister(registerSize(op1), op1.reg, il.FloatDiv(registerSize(op2),
+				il.Register(registerSize(op2), op2.reg), il.Register(registerSize(op3), op3.reg))));
+		break;
+	case MIPS_SQRT_S:
+		il.AddInstruction(il.SetRegister(4, op1.reg, il.FloatSqrt(4, il.Register(4, op2.reg))));
+		break;
+	case MIPS_SQRT_D:
+		if (registerSize(op1) < 8)
 			il.AddInstruction(il.SetRegisterSplit(4, op1.reg | 1, op1.reg & (~1),
 				il.FloatSqrt(8, il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)))));
-			break;
-		case MIPS_CVT_S_W:
-			il.AddInstruction(il.SetRegister(4, op1.reg, il.IntToFloat(4, ReadILOperand(il, instr, 2, registerSize(op2)))));
-			break;
-		case MIPS_CVT_D_W:
+		else
+			il.AddInstruction(il.SetRegister(registerSize(op1), op1.reg, il.FloatSqrt(registerSize(op2),
+				il.Register(registerSize(op2), op2.reg), il.Register(registerSize(op3), op3.reg))));
+		break;
+	case MIPS_CVT_S_W:
+		il.AddInstruction(il.SetRegister(4, op1.reg, il.IntToFloat(4, ReadILOperand(il, instr, 2, 4))));
+		break;
+	case MIPS_CVT_D_W:
+		if (registerSize(op2) < 8)
 			il.AddInstruction(il.SetRegisterSplit(4, op1.reg | 1, op1.reg & (~1),
-				il.IntToFloat(8, ReadILOperand(il, instr, 2, registerSize(op2)))));
-			break;
-		case MIPS_CVT_W_S:
-			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, il.FloatToInt(4, il.Register(4, op2.reg))));
-			break;
-		case MIPS_CVT_W_D:
+				il.IntToFloat(8, ReadILOperand(il, instr, 2, 4))));
+		else
+			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, il.IntToFloat(8, il.Register(4, op2.reg))));
+		break;
+	case MIPS_CVT_W_S:
+		il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, il.FloatToInt(4, il.Register(4, op2.reg))));
+		break;
+	case MIPS_CVT_W_D:
+		if (registerSize(op2) < 8)
 			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, il.FloatToInt(4,
 				il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)))));
-			break;
-		case MIPS_CVT_D_S:
+		else
+			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg, il.FloatToInt(4, il.Register(registerSize(op2), op2.reg))));
+		break;
+	case MIPS_CVT_D_S:
+		if (registerSize(op2) < 8)
 			il.AddInstruction(il.SetRegisterSplit(4, op1.reg | 1, op1.reg & (~1),
 				il.FloatConvert(8, il.Register(4, op2.reg))));
-			break;
-		case MIPS_CVT_S_D:
+		else
+			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, il.FloatConvert(8, il.Register(4, op2.reg))));
+		break;
+	case MIPS_CVT_S_D:
+		if (registerSize(op2) < 8)
 			il.AddInstruction(il.SetRegister(4, op1.reg, il.FloatConvert(4,
-				il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)))));
-			break;
-		case MIPS_C_F_S:
-		case MIPS_C_F_D:
-			if (op1.operandClass == FLAG)
-			{
-				il.AddInstruction(il.SetFlag(op1.reg, il.Const(0, 0)));
-			}
-			else
-			{
-				il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.Const(0, 0)));
-			}
-			break;
-		case MIPS_C_EQ_S:
-			if (op1.operandClass == FLAG)
-			{
-				il.AddInstruction(il.SetFlag(op1.reg, il.FloatCompareEqual(4,
-					il.Register(4, op2.reg), il.Register(4, op3.reg))));
-			}
-			else
-			{
-				il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.FloatCompareEqual(4,
-					il.Register(4, op1.reg), il.Register(4, op2.reg))));
-			}
-			break;
-		case MIPS_C_EQ_D:
-			if (op1.operandClass == FLAG)
-			{
+					il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)))));
+		else
+			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, il.FloatConvert(4, il.Register(registerSize(op2), op2.reg))));
+		break;
+	case MIPS_C_F_S:
+	case MIPS_C_F_D:
+	case MIPS_C_SF_S:
+	case MIPS_C_SF_D:
+		if (op1.operandClass == FLAG)
+		{
+			il.AddInstruction(il.SetFlag(op1.reg, il.Const(0, 0)));
+		}
+		else
+		{
+			il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.Const(0, 0)));
+		}
+		break;
+	case MIPS_C_EQ_S:
+	case MIPS_C_SEQ_S:
+		if (op1.operandClass == FLAG)
+		{
+			il.AddInstruction(il.SetFlag(op1.reg, il.FloatCompareEqual(4,
+				il.Register(4, op2.reg), il.Register(4, op3.reg))));
+		}
+		else
+		{
+			il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.FloatCompareEqual(4,
+				il.Register(4, op1.reg), il.Register(4, op2.reg))));
+		}
+		break;
+	case MIPS_C_EQ_D:
+	case MIPS_C_SEQ_D:
+		if (op1.operandClass == FLAG)
+		{
+			if (registerSize(op2) < 8)
 				il.AddInstruction(il.SetFlag(op1.reg, il.FloatCompareEqual(8,
 					il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)),
 					il.RegisterSplit(4, op3.reg | 1, op3.reg & (~1)))));
-			}
 			else
-			{
+				il.AddInstruction(il.SetFlag(op1.reg, il.FloatCompareEqual(8,
+					il.Register(8, op2.reg), il.Register(8, op3.reg))));
+		}
+		else
+		{
+			if (registerSize(op2) < 8)
 				il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.FloatCompareEqual(8,
 					il.RegisterSplit(4, op1.reg | 1, op1.reg & (~1)),
 					il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)))));
-			}
-			break;
-		case MIPS_C_LE_S:
+			else
+				il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.FloatCompareEqual(8,
+					il.Register(8, op1.reg), il.Register(8, op2.reg))));
+		}
+		break;
+	case MIPS_C_LE_S:
 			if (op1.operandClass == FLAG)
 			{
 				il.AddInstruction(il.SetFlag(op1.reg, il.FloatCompareLessEqual(4,
@@ -2426,15 +2367,23 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_C_LE_D:
 			if (op1.operandClass == FLAG)
 			{
-				il.AddInstruction(il.SetFlag(op1.reg, il.FloatCompareLessEqual(8,
-					il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)),
-					il.RegisterSplit(4, op3.reg | 1, op3.reg & (~1)))));
+				if (registerSize(op2) < 8)
+					il.AddInstruction(il.SetFlag(op1.reg, il.FloatCompareLessEqual(8,
+						il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)),
+						il.RegisterSplit(4, op3.reg | 1, op3.reg & (~1)))));
+				else
+					il.AddInstruction(il.SetFlag(op1.reg, il.FloatCompareLessEqual(8,
+						il.Register(8, op2.reg), il.Register(8, op3.reg))));
 			}
 			else
 			{
-				il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.FloatCompareLessEqual(8,
-					il.RegisterSplit(4, op1.reg | 1, op1.reg & (~1)),
-					il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)))));
+				if (registerSize(op2) < 8)
+					il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.FloatCompareLessEqual(8,
+						il.RegisterSplit(4, op1.reg | 1, op1.reg & (~1)),
+						il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)))));
+				else
+					il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.FloatCompareLessEqual(8,
+						il.Register(8, op1.reg), il.Register(8, op2.reg))));
 			}
 			break;
 		case MIPS_C_LT_S:
@@ -2452,15 +2401,23 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_C_LT_D:
 			if (op1.operandClass == FLAG)
 			{
-				il.AddInstruction(il.SetFlag(op1.reg, il.FloatCompareLessThan(8,
-					il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)),
-					il.RegisterSplit(4, op3.reg | 1, op3.reg & (~1)))));
+				if (registerSize(op2) < 8)
+					il.AddInstruction(il.SetFlag(op1.reg, il.FloatCompareLessThan(8,
+						il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)),
+						il.RegisterSplit(4, op3.reg | 1, op3.reg & (~1)))));
+				else
+					il.AddInstruction(il.SetFlag(op1.reg, il.FloatCompareLessThan(8,
+						il.Register(8, op2.reg), il.Register(8, op3.reg))));
 			}
 			else
 			{
-				il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.FloatCompareLessThan(8,
-					il.RegisterSplit(4, op1.reg | 1, op1.reg & (~1)),
-					il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)))));
+				if (registerSize(op2) < 8)
+					il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.FloatCompareLessThan(8,
+						il.RegisterSplit(4, op1.reg | 1, op1.reg & (~1)),
+						il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)))));
+				else
+					il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.FloatCompareLessThan(8,
+						il.Register(8, op1.reg), il.Register(8, op2.reg))));
 			}
 			break;
 		case MIPS_C_UN_S:
@@ -2478,18 +2435,93 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_C_UN_D:
 			if (op1.operandClass == FLAG)
 			{
-				il.AddInstruction(il.SetFlag(op1.reg, il.FloatCompareUnordered(8,
-					il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)),
-					il.RegisterSplit(4, op3.reg | 1, op3.reg & (~1)))));
+				if (registerSize(op2) < 8)
+					il.AddInstruction(il.SetFlag(op1.reg, il.FloatCompareUnordered(8,
+						il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)),
+						il.RegisterSplit(4, op3.reg | 1, op3.reg & (~1)))));
+				else
+					il.AddInstruction(il.SetFlag(op1.reg, il.FloatCompareUnordered(8,
+						il.Register(8, op2.reg), il.Register(8, op3.reg))));
 			}
 			else
 			{
-				il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.FloatCompareUnordered(8,
-					il.RegisterSplit(4, op1.reg | 1, op1.reg & (~1)),
-					il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)))));
+				if (registerSize(op2) < 8)
+					il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.FloatCompareUnordered(8,
+						il.RegisterSplit(4, op1.reg | 1, op1.reg & (~1)),
+						il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)))));
+				else
+					il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.FloatCompareUnordered(8,
+						il.Register(8, op1.reg), il.Register(8, op2.reg))));
 			}
 			break;
-
+		case MIPS_C_NGE_S:
+			if (op1.operandClass == FLAG)
+			{
+				il.AddInstruction(il.SetFlag(op1.reg, il.Not(4, il.FloatCompareGreaterEqual(4,
+					il.Register(4, op2.reg), il.Register(4, op3.reg)))));
+			}
+			else
+			{
+				il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.Not(4, il.FloatCompareGreaterEqual(4,
+					il.Register(4, op1.reg), il.Register(4, op2.reg)))));
+			}
+			break;
+		case MIPS_C_NGE_D:
+			if (op1.operandClass == FLAG)
+			{
+				if (registerSize(op2) < 8)
+					il.AddInstruction(il.SetFlag(op1.reg, il.Not(8, il.FloatCompareGreaterEqual(8,
+						il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)),
+						il.RegisterSplit(4, op3.reg | 1, op3.reg & (~1))))));
+				else
+					il.AddInstruction(il.SetFlag(op1.reg, il.Not(8, il.FloatCompareGreaterEqual(8,
+						il.Register(8, op2.reg), il.Register(8, op3.reg)))));
+			}
+			else
+			{
+				if (registerSize(op2) < 8)
+					il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.Not(8, il.FloatCompareGreaterEqual(8,
+						il.RegisterSplit(4, op1.reg | 1, op1.reg & (~1)),
+						il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1))))));
+				else
+					il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.Not(8, il.FloatCompareGreaterEqual(8,
+						il.Register(8, op1.reg), il.Register(8, op2.reg)))));
+			}
+			break;
+		case MIPS_C_NGT_S:
+			if (op1.operandClass == FLAG)
+			{
+				il.AddInstruction(il.SetFlag(op1.reg, il.Not(4, il.FloatCompareGreaterThan(4,
+					il.Register(4, op2.reg), il.Register(4, op3.reg)))));
+			}
+			else
+			{
+				il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.Not(4, il.FloatCompareGreaterThan(4,
+					il.Register(4, op1.reg), il.Register(4, op2.reg)))));
+			}
+			break;
+		case MIPS_C_NGT_D:
+			if (op1.operandClass == FLAG)
+			{
+				if (registerSize(op2) < 8)
+					il.AddInstruction(il.SetFlag(op1.reg, il.Not(8, il.FloatCompareGreaterThan(8,
+						il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)),
+						il.RegisterSplit(4, op3.reg | 1, op3.reg & (~1))))));
+				else
+					il.AddInstruction(il.SetFlag(op1.reg, il.Not(8, il.FloatCompareGreaterThan(8,
+						il.Register(8, op2.reg), il.Register(8, op3.reg)))));
+			}
+			else
+			{
+				if (registerSize(op2) < 8)
+					il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.Not(8, il.FloatCompareGreaterEqual(8,
+						il.RegisterSplit(4, op1.reg | 1, op1.reg & (~1)),
+						il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1))))));
+				else
+					il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.Not(8, il.FloatCompareGreaterEqual(8,
+						il.Register(8, op1.reg), il.Register(8, op2.reg)))));
+			}
+			break;
 		case MIPS_SYNC:
 		{
 			uint64_t stype = 0;
@@ -2882,11 +2914,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		}
 		case MIPS_QFSRV:
 		{
-			// il.AddInstruction(il.SetRegister(16, op1.reg,
-			// 	il.LowPart(16,
-			// 		il.LogicalShiftRight(32,
-			// 			il.RegisterSplit(16, op2.reg, op3.reg),
-			// 			il.Register(1, R5900_SA)))));
 			if (op2.reg == REG_ZERO)
 			{
 				if (op3.reg == REG_ZERO)
@@ -3002,23 +3029,10 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 						   il.And(16, il.Register(16, op3.reg),
 							   il.ShiftLeft(16, il.Const(8, 0xFFFFFFFFFFFFFFFF), il.Const(1, 64))))));
 			}
-					// il.ShiftLeft(16,
-					// 	il.LogicalShiftRight(16,
-					// 		il.Register(16, op3.reg),
-					// 		il.Const(1, 64)),
-					// 	il.Const(1, 64)))));
 			break;
 		}
 		case MIPS_PCPYLD:
 		{
-			// il.AddInstruction(il.SetRegister(8, LLIL_TEMP(0),
-			// 	il.ShiftLeft(16,
-			// 		il.Register(16, op2.reg),
-			// 		il.Const(1, 8))));
-			// il.AddInstruction(il.SetRegister(8, op1.reg,
-			// 	il.Or(16,
-			// 		il.Register(16, LLIL_TEMP(0)),
-			// 		il.LowPart(8, il.Register(16, op3.reg)))));
 			il.AddInstruction(il.SetRegister(16, op1.reg,
 				il.Or(16,
 					il.ShiftLeft(16,
@@ -3029,20 +3043,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		}
 		case MIPS_PCPYH:
 		{
-			// il.AddInstruction(il.SetRegister(8, LLIL_TEMP(0),
-			// 	il.ShiftLeft(16,
-			// 		il.Register(16, op2.reg),
-			// 		il.Const(1, 8))));
-			// il.AddInstruction(il.SetRegister(8, op1.reg,
-			// 	il.Or(16,
-			// 		il.Register(16, LLIL_TEMP(0)),
-			// 		il.LowPart(8, il.Register(16, op3.reg)))));
-			// il.AddInstruction(il.SetRegister(16, op1.reg,
-			// 	il.Or(16,
-			// 		il.ShiftLeft(16,
-			// 			il.Register(16, op2.reg),
-			// 			il.Const(1, 64)),
-			// 	il.LowPart(8, il.Register(16, op3.reg)))));
 			il.AddInstruction(il.SetRegister(8, LLIL_TEMP(0), il.Register(2, op2.reg)));
 			il.AddInstruction(il.SetRegister(8, LLIL_TEMP(1), il.LogicalShiftRight(2, il.Register(16, op2.reg), il.Const(1, 64))));
 			for (int i = 0; i < 4; i++)
@@ -3145,20 +3145,30 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			break;
 		}
 
-		case MIPS_ADDR:
+		case MIPS_LWXC1:
+			il.AddInstruction(
+				il.SetRegister(4, op1.reg,
+				il.Load(4	, GetILOperandMemoryAddress(il, op2, addrSize))));
+			break;
 		case MIPS_LDXC1:
-		case MIPS_LLO:
 		case MIPS_LUXC1:
+			// TODO: For LUXC1, this needs verification that it really does the right thing with unaligned addresses in both endiannesses
+			il.AddInstruction(
+				il.SetRegister(8, op1.reg,
+				il.Load(8, GetILOperandMemoryAddress(il, op2, addrSize))));
+			break;
+		case MIPS_ADDR:
+		case MIPS_LLO:
 		case MIPS_LWC1:
-		{
-			if (version == MIPS_R5900)
-			{
-				il.AddInstruction(
-					il.SetRegister(4, op1.reg,
-					il.Load(4, GetILOperandMemoryAddress(il, op2, addrSize))));
-				break;
-			}
-		}
+			il.AddInstruction(
+				il.SetRegister(4, op1.reg,
+				il.Load(4, GetILOperandMemoryAddress(il, op2, addrSize))));
+			break;
+		case MIPS_LWC2:
+		case MIPS_LWC3:
+			il.AddInstruction(MoveToCoprocessor(instr.operation == MIPS_LWC2 ? 2 : 3, il, 4, op1.reg, op1.immediate,
+				ReadILOperand(il, instr, 2, registerSize(op2)), decomposeFlags));
+			break;
 		case MIPS_LDC1:
 		case MIPS_LDC2:
 		case MIPS_LDC3:
@@ -3372,22 +3382,14 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			{
 				if (op2.reg != REG_ZERO)
 				{
-					// if (i == 0)
-					// 	il.AddInstruction(il.SetRegister(16, LLIL_TEMP(0),
-					// 		il.ShiftLeft(16,
-					// 			il.And(2 * bytes,
-					// 				il.Register(16, op2.reg),
-					// 				il.Const(8, mask)),
-					// 			il.Const(1, 2 * bytes))));
-					// else
-						il.AddInstruction(il.SetRegister(16, LLIL_TEMP(0),
-							il.Or(16, il.Register(16, LLIL_TEMP(0)),
-								il.ShiftLeft(16,
-									il.And(2 * bytes,
-										il.LogicalShiftRight(16,
-											il.Register(16, op2.reg),
-											il.Const(1, 64 + i * (bytes * 8))), il.Const(bytes, mask)),
-									il.Const(1, i * (16 * bytes + 1))))));
+					il.AddInstruction(il.SetRegister(16, LLIL_TEMP(0),
+						il.Or(16, il.Register(16, LLIL_TEMP(0)),
+							il.ShiftLeft(16,
+								il.And(2 * bytes,
+									il.LogicalShiftRight(16,
+										il.Register(16, op2.reg),
+										il.Const(1, 64 + i * (bytes * 8))), il.Const(bytes, mask)),
+								il.Const(1, i * (16 * bytes + 1))))));
 				}
 				if (op3.reg != REG_ZERO)
 				{
@@ -3473,55 +3475,8 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 									il.Const(bytes, mask)),
 								il.Const(1, i * bytes * 8))))));
 				}
-
-				// if (op2.reg != REG_ZERO)
-				// {
-				// 	if (i == 0)
-				// 		il.AddInstruction(il.SetRegister(16, LLIL_TEMP(0),
-				// 			il.ShiftLeft(16,
-				// 				il.And(2 * bytes,
-				// 					il.Register(16, op2.reg),
-				// 					il.Const(8, mask)),
-				// 				il.Const(1, 2 * bytes))));
-				// 	else
-				// 		il.AddInstruction(il.SetRegister(16, LLIL_TEMP(0),
-				// 			il.Or(16, il.Register(16, LLIL_TEMP(0)),
-				// 				il.ShiftLeft(16,
-				// 					il.And(2 * bytes,
-				// 						il.LogicalShiftRight(16,
-				// 							il.Register(16, op2.reg),
-				// 							il.Const(1, i * (bytes * 8))), il.Const(bytes, mask)),
-				// 					il.Const(1, i * (16 * bytes + 1))))));
-				// }
-				// if (op3.reg != REG_ZERO)
-				// {
-				// 	if (i == 0)
-				// 		il.AddInstruction(il.SetRegister(16, LLIL_TEMP(1),
-				// 				il.And(2 * bytes,
-				// 					il.Register(16, op3.reg),
-				// 					il.Const(bytes, mask))));
-				// 	else
-				// 		il.AddInstruction(il.SetRegister(16, LLIL_TEMP(1),
-				// 			il.Or(16, il.Register(16, LLIL_TEMP(1)),
-				// 				il.ShiftLeft(16,
-				// 					il.And(2 * bytes,
-				// 						il.LogicalShiftRight(16,
-				// 							il.Register(16, op3.reg),
-				// 							il.Const(1, i * (bytes * 8))), il.Const(bytes, mask)),
-				// 					il.Const(1, i * (16 * bytes))))));
-				// }
 			}
-			// if (op2.reg == REG_ZERO)
-			// {
-			// 	if (op3.reg == REG_ZERO)
-			// 		il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Const(16, 0)));
-			// 	else
-			// 		il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, LLIL_TEMP(1))));
-			// }
-			// else if (op3.reg == REG_ZERO)
-			// 		il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, LLIL_TEMP(0))));
-			// else
-				il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, LLIL_TEMP(0))));
+			il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, LLIL_TEMP(0))));
 			break;
 		}
 
@@ -3555,26 +3510,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 										il.Const(1, i * 16 + shift_amount)),
 									il.Const(16, mask)),
 								il.Const(1, i * 16)))));
-				// if (i == 0)
-				// 	il.AddInstruction(il.SetRegister(16, LLIL_TEMP(0),
-				// 		il.ZeroExtend(bytes,
-				// 			il.And(16,
-				// 				il.LogicalShiftRight(16,
-				// 					il.Register(16, op2.reg),
-				// 					il.Const(1, i * 16 + shift_amount)),
-				// 				il.Const(16, mask)))));
-				// else
-				// 	il.AddInstruction(il.SetRegister(16, LLIL_TEMP(0),
-				// 		il.Or(16, il.Register(16, LLIL_TEMP(0)),
-				// 			il.ShiftLeft(16,
-				// 				il.ZeroExtend(bytes,
-				// 					il.And(16,
-				// 						il.LogicalShiftRight(16,
-				// 							il.Register(16, op2.reg),
-				// 							il.Const(1, i * 16 + shift_amount)),
-				// 						il.Const(16, mask))),
-				// 				il.Const(1, i * 16)))));
-
 			}
 			il.AddInstruction(SetRegisterOrNop(il, 16, 16, op1.reg, il.Register(16, LLIL_TEMP(0))));
 			break;
@@ -3766,32 +3701,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 							il.Register(16, op2.reg),
 							il.Const(1, shift)),
 						il.Const(2, 0xFFFF))));
-				// il.AddInstruction(il.SetRegister(4, LLIL_TEMP(i),
-				// 	il.ShiftLeft(16,
-				// 		il.Or(4,
-				// 			il.Or(4,
-				// 				il.ShiftLeft(4,
-				// 					il.And(4,
-				// 						il.LogicalShiftRight(4, il.Register(4, LLIL_TEMP(i)), il.Const(1, 15)),
-				// 						il.Const(1, 1)),
-				// 					il.Const(1, 31)),
-				// 				il.ShiftLeft(4,
-				// 					il.And(4,
-				// 						il.LogicalShiftRight(4, il.Register(4, LLIL_TEMP(i)), il.Const(1, 10)),
-				// 						il.Const(1, 0x1f)),
-				// 					il.Const(1, 19))),
-				// 			il.Or(4,
-				// 				il.ShiftLeft(4,
-				// 					il.And(4,
-				// 						il.LogicalShiftRight(4, il.Register(4, LLIL_TEMP(i)), il.Const(1, 5)),
-				// 						il.Const(1, 0x1f)),
-				// 					il.Const(1, 10)),
-				// 				il.ShiftLeft(4,
-				// 					il.And(4,
-				// 						il.Register(4, LLIL_TEMP(i)),
-				// 						il.Const(1, 0x1f)),
-				// 					il.Const(1, 3)))),
-				// 		il.Const(1, shift))));
 				il.AddInstruction(il.SetRegister(4, LLIL_TEMP(i),
 					il.ShiftLeft(16,
 					il.Or(4,
@@ -3868,20 +3777,10 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 				break;
 			}
 
-		case MIPS_LWC2:
-		case MIPS_LWC3:
-		case MIPS_LWXC1:
 		case MIPS_MFHC1:
 		case MIPS_MFHC2:
 		case MIPS_MOVT:
 		case MIPS_MULR:
-		// case MIPS_SDC1:
-		case MIPS_SDC2:
-		case MIPS_SDC3:
-		case MIPS_SDXC1:
-		// case MIPS_LDC1:
-		// case MIPS_LDC2:
-		// case MIPS_LDC3:
 
 		//unimplemented system functions
 		case MIPS_BC1ANY2:
@@ -3898,7 +3797,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_WRPGPR:
 		case MIPS_RDPGPR:
 		case MIPS_SUXC1:
-		case MIPS_SWXC1:
 		// Floating point instructions
 		case MIPS_RSQRT_D:
 		case MIPS_RSQRT_S:
@@ -3921,97 +3819,19 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_NMSUB_S:
 		case MIPS_MADD_D:
 		case MIPS_MADD_PS:
-		// case MIPS_MADD_S:
 		case MIPS_MADDF_D:
 		case MIPS_MADDF_S:
-		// R5900 instructions
-		// case MIPS_LQ:
-		// case MIPS_SQ:
+		// Unimplemented R5900 instructions
 		case MIPS_DSLRV:
-		// case MIPS_MFSA:
-		// case MIPS_MTSA:
-		// case MIPS_MTSAB:
-		// case MIPS_MTSAH:
-		// case MIPS_MFHI1:
-		// case MIPS_MTHI1:
-		// case MIPS_MFLO1:
-		// case MIPS_MTLO1:
-		// case MIPS_MULT1:
-		// case MIPS_MULTU1:
-		// case MIPS_DIV1:
-		// case MIPS_DIVU1:
-		// case MIPS_MADD1:
-		// case MIPS_MADDU1:
-		// case MIPS_PLZCW:
-		// case MIPS_PMFHL:
-		// case MIPS_PMTHL:
-		// case MIPS_PSLLH:
-		// case MIPS_PSRLH:
-		// case MIPS_PSRAH:
-		// case MIPS_PSLLW:
-		// case MIPS_PSRLW:
-		// case MIPS_PSRAW:
-		// case MIPS_MFHI1:
-		// case MIPS_MTHI1:
-		// case MIPS_MFLO1:
-		// case MIPS_MTLO1:
-		// case MIPS_MULT1:
-		// case MIPS_MULTU1:
-		// case MIPS_DIV1:
-		// case MIPS_DIVU1:
-		// case MIPS_MADD1:
-		// case MIPS_MADDU1:
 		case MIPS_PMFHL:
 		case MIPS_PMTHL:
-		// case MIPS_PSLLH:
-		// case MIPS_PSRLH:
-		// case MIPS_PSRAH:
-		// case MIPS_PSLLW:
-		// case MIPS_PSRLW:
-		// case MIPS_PSRAW:
-		// case MIPS_PADDW:
-		// case MIPS_PSUBW:
-		// case MIPS_PCGTW:
-		// case MIPS_PMAXW:
-		// case MIPS_PADDH:
-		// case MIPS_PSUBH:
-		// case MIPS_PCGTH:
-		// case MIPS_PMAXH:
-		// case MIPS_PADDB:
-		// case MIPS_PSUBB:
-		// case MIPS_PCGTB:
-		// case MIPS_PADDSW:
-		// case MIPS_PSUBSW:
-		// case MIPS_PEXTLW:
-		// case MIPS_PPACW:
-		// case MIPS_PADDSH:
-		// case MIPS_PSUBSH:
-		// case MIPS_PEXTLH:
-		// case MIPS_PPACH:
-		// case MIPS_PADDSB:
-		// case MIPS_PSUBSB:
-		// case MIPS_PEXTLB:
-		// case MIPS_PPACB:
-		// case MIPS_PEXT5:
 		case MIPS_PPAC5:
 		case MIPS_PABSW:
 		case MIPS_PCEQW:
-		// case MIPS_PMINW:
 		case MIPS_PADSBH:
 		case MIPS_PABSH:
 		case MIPS_PCEQH:
-		// case MIPS_PMINH:
 		case MIPS_PCEQB:
-		// case MIPS_PADDUW:
-		// case MIPS_PSUBUW:
-		// case MIPS_PEXTUW:
-		// case MIPS_PADDUH:
-		// case MIPS_PSUBUH:
-		// case MIPS_PEXTUH:
-		// case MIPS_PADDUB:
-		// case MIPS_PSUBUB:
-		// case MIPS_PEXTUB:
-		// case MIPS_QFSRV:
 		case MIPS_PMADDW:
 		case MIPS_PSLLVW:
 		case MIPS_PSRLVW:
@@ -4021,19 +3841,13 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_PINTH:
 		case MIPS_PMULTW:
 		case MIPS_PDIVW:
-		// case MIPS_PCPYLD:
 		case MIPS_PMADDH:
-		// case MIPS_PHMADH:
-		// case MIPS_PAND:
-		// case MIPS_PXOR:
 		case MIPS_PMSUBH:
 		case MIPS_PHMSBH:
 		case MIPS_PEXEH:
 		case MIPS_PREVH:
 		case MIPS_PMULTH:
 		case MIPS_PDIVBW:
-		// case MIPS_PEXEW:
-		// case MIPS_PROT3W:
 		case MIPS_PMADDUW:
 		case MIPS_PSRAVW:
 		case MIPS_PMTHI:
@@ -4041,24 +3855,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_PINTEH:
 		case MIPS_PMULTUW:
 		case MIPS_PDIVUW:
-		// case MIPS_PCPYUD:
-		// case MIPS_POR:
-		// case MIPS_PNOR:
-		// case MIPS_PEXCH:
-		// case MIPS_PCPYH:
-		// case MIPS_PEXCW:
-		// case MIPS_BC0F:
-		// case MIPS_BC0T:
-		// case MIPS_BC0FL:
-		// case MIPS_BC0TL:
-		// case MIPS_MADDA_S:
-		// case MIPS_MSUBA_S:
-		// case MIPS_MAX_S:
-		// case MIPS_MIN_S:
-		case MIPS_MMI0:
-		case MIPS_MMI1:
-		case MIPS_MMI2:
-		case MIPS_MMI3:
 			il.AddInstruction(il.Unimplemented());
 			break;
 
@@ -4066,10 +3862,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		{
 			ConditionExecute(il,
 				il.FloatCompareGreaterEqual(4, il.Register(4, op2.reg), il.Register(4, op3.reg)),
-				// il.CompareSignedGreaterEqual(4,
-				// 	il.FloatToInt(4, il.FloatSub(4,
-				// 	il.Register(4, op2.reg), il.Register(4, op3.reg))), il.Const(4, 0)
-				// 	),
 				il.SetRegister(4, op1.reg, il.Register(4, op2.reg)),
 				il.SetRegister(4, op1.reg, il.Register(4, op3.reg)));
 			break;
@@ -4078,17 +3870,13 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		{
 			ConditionExecute(il,
 				il.FloatCompareLessEqual(4, il.Register(4, op2.reg), il.Register(4, op3.reg)),
-				// il.CompareSignedLessEqual(4,
-				// 	il.FloatToInt(4, il.FloatSub(4,
-				// 		il.Register(4, op2.reg), il.Register(4, op3.reg))), il.Const(4, 0)
-				// 	),
 				il.SetRegister(4, op1.reg, il.Register(4, op2.reg)),
 				il.SetRegister(4, op1.reg, il.Register(4, op3.reg)));
 			break;
 		}
 
 
-		// Emotion Engine VPU0 (macro) instructions
+		// R5900 VPU0 (macro) instructions
 		case MIPS_VNOP:
 			il.AddInstruction(il.Nop());
 			break;
@@ -4619,7 +4407,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_VLQI:
 		case MIPS_VLQD:
 		{
-			// il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(LLIL_TEMP(0))}, MIPS_INTRIN_R5900_VU_MEM_LOAD, {il.Mult(4, il.Register(4, op2.reg), il.Const(4, 16))}));
 			unsigned char dest = op1.reg;
 			if (dest & (1 << 3))
 				il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(op2.reg + REG_VF0_X)}, MIPS_INTRIN_R5900_VU_MEM_LOAD, {il.Mult(4, il.Register(4, op3.reg), il.Const(4, 16)), il.Const(2, 0)}));
@@ -4636,7 +4423,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_VSQI:
 		case MIPS_VSQD:
 		{
-			// il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(LLIL_TEMP(0))}, MIPS_INTRIN_R5900_VU_MEM_LOAD, {il.Mult(4, il.Register(4, op2.reg), il.Const(4, 16))}));
 			unsigned char dest = op1.reg;
 			if (dest & (1 << 3))
 				il.AddInstruction(il.Intrinsic({}, MIPS_INTRIN_R5900_VU_MEM_STORE, {il.Mult(4, il.Register(4, op3.reg), il.Const(4, 16)), il.Const(2, 0), il.Register(4, op2.reg + REG_VF0_X)}));
@@ -4879,70 +4665,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			break;
 		}
 
-
-		// case MIPS_VDIV:
-		// case MIPS_VIADD:
-		// case MIPS_VIADDI:
-		// case MIPS_VMADD:
-		// case MIPS_VMADDAx:
-		// case MIPS_VMADDAy:
-		// case MIPS_VMADDAz:
-		// case MIPS_VMADDAw:
-		// case MIPS_VMADDx:
-		// case MIPS_VMADDy:
-		// case MIPS_VMADDz:
-		// case MIPS_VMADDw:
-		// case MIPS_VMUL:
-		// case MIPS_VMULAx:
-		// case MIPS_VMULAy:
-		// case MIPS_VMULAz:
-		// case MIPS_VMULAw:
-		// case MIPS_VMULq:
-		// case MIPS_VMULw:
-		// case MIPS_VMULx:
-		// case MIPS_VMULy:
-		// case MIPS_VMULz:
-		// case MIPS_VSUB:
-		// case MIPS_VSUBx:
-		// case MIPS_VSUBy:
-		// case MIPS_VSUBz:
-		// case MIPS_VSUBw:
-
-		// case MIPS_VMAX:
-		// case MIPS_VMAXx:
-		// case MIPS_VMAXy:
-		// case MIPS_VMAXz:
-		// case MIPS_VMAXw:
-		// case MIPS_VMINI:
-		// case MIPS_VMINIx:
-		// case MIPS_VMINIy:
-		// case MIPS_VMINIz:
-		// case MIPS_VMINIw:
-		// ACCx = VF[fs]y × VF[ft]z
-		// ACCy = VF[fs]z × VF[ft]x
-		// ACCz = VF[fs]x × VF[ft]y
-		// case MIPS_VOPMULA:
-		// VF[fd]x = ACCx - VF[fs]y × VF[ft]z
-		// VF[fd]y = ACCy - VF[fs]z × VF[ft]x
-		// VF[fd]z = ACCz - VF[fs]x × VF[ft]y
-		// case MIPS_VOPMSUB:
-		// Mnemonic
-		// 	SQRT Q, VF[ft]ftf
-		// Operation
-		// 	Q = & & & &|VF[ft]ftf|
-		// case MIPS_VRSQRT:
-		// case MIPS_VSQRT:
-
-
-		// case MIPS_VFTOI4:
-		// case MIPS_VFTOI12:
-		// case MIPS_VFTOI15:
-		// case MIPS_VITOF4:
-		// case MIPS_VITOF12:
-		// case MIPS_VITOF15:
-			il.AddInstruction(il.Unimplemented());
-			break;
-
 		// instructions that are just internal placeholders for other
 		// decode tables; these will never be implemented because they're
 		// not real instructions
@@ -4950,6 +4672,10 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_COP0:
 		case MIPS_COP1:
 		case MIPS_COP1X:
+		case MIPS_MMI0:
+		case MIPS_MMI1:
+		case MIPS_MMI2:
+		case MIPS_MMI3:
 			il.AddInstruction(il.Undefined());
 			break;
 

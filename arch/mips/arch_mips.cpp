@@ -19,6 +19,8 @@ using namespace std;
 #define snprintf _snprintf
 #endif
 
+#define E_MIPS_MACH_5900 0x00920000
+
 uint32_t bswap32(uint32_t x)
 {
 	return ((x << 24) & 0xff000000 ) |
@@ -102,7 +104,7 @@ enum ElfMipsRelocationType : uint32_t
 
 	// This range is reserved for vendor specific relocations.
 	R_MIPS_LOVENDOR  =  100,
-	R_MIPS_VCALLMS   =  119,  // MIPS R5900 (Emotion Engine) specific relocation for the Vector Unit (VU) micromode call instruction
+	R_MIPS_VCALLMS   =  119,  // MIPS R5900-specific relocation for the Vector Unit (VU) micromode call instruction
 	R_MIPS64_COPY    =  125,
 	R_MIPS_COPY      =  126,
 	R_MIPS_JUMP_SLOT =  127,
@@ -540,7 +542,7 @@ public:
 			{
 				InstructionInfo instrInfo;
 				LowLevelILLabel trueCode, falseCode;
-				auto registerSize = [=](const InstructionOperand& op) -> size_t const
+				auto registerSize = [this](const InstructionOperand& op) -> size_t const
 				{
 					return get_register_width(Reg(op.reg), m_version);
 				};
@@ -1779,7 +1781,7 @@ public:
 		};
 
 		if (m_version == MIPS_R5900) {
-			// TODO: R5900 has 128-bit wide GPRs, $lo and $hi are 128-bit, and $lo1 and $hi1 are the upper 64 bits of $lo and $hi
+			// Note: R5900 has 128-bit wide GPRs, $lo and $hi are 128-bit, and $lo1 and $hi1 are the upper 64 bits of $lo and $hi
 			uint32_t r5900_registers[] = {
 				R5900_SA,
 				REG_LO1, REG_HI1,
@@ -3595,6 +3597,8 @@ public:
 			case R_MIPS_LO16:
 			case R_MIPS_CALL16:
 			case R_MIPS_GOT16:
+			case R_MIPS_HIGHER:
+			case R_MIPS_HIGHEST:
 				result = BN_NOCOERCE_EXTERN_PTR;
 				break;
 			default:
@@ -3644,6 +3648,9 @@ static Ref<Platform> ElfFlagsRecognize(BinaryView* view, Metadata* metadata)
 		case 0x8e:	// EF_MIPS_MACH_OCTEON3
 			LogInfo("ELF flags 0x%08" PRIx64 " machine variant 0x%02x: using cavium architecture", flagsValue, machineVariant);
 			return Platform::GetByName("linux-cnmips64");
+		case 0x92:  // E_MIPS_MACH_5900
+			LogInfo("ELF flags 0x%08" PRIx64 " machine variant 0x%02x: using R5900 architecture", flagsValue, machineVariant);
+			return Platform::GetByName("r5900l");
 		default:
 			return nullptr;
 	}
@@ -3673,12 +3680,13 @@ extern "C"
 		Architecture* mips64eb = new MipsArchitecture("mips64", MIPS_64, BigEndian, 64);
 		Architecture* cnmips64eb = new MipsArchitecture("cavium-mips64", MIPS_64, BigEndian, 64, DECOMPOSE_FLAGS_CAVIUM);
 		Architecture* r5900l = new MipsArchitecture("r5900l", MIPS_R5900, LittleEndian, 32);
-		Architecture* r5900b = new MipsArchitecture("r5900b", MIPS_R5900, BigEndian, 32);
+		// R5900 should only be Little-Endian, so until someone complains, I'm leaving the Big-Endian variant disabled.
+		// Architecture* r5900b = new MipsArchitecture("r5900b", MIPS_R5900, BigEndian, 32);
 
 		Architecture::Register(mipsel);
 		Architecture::Register(mipseb);
 		Architecture::Register(r5900l);
-		Architecture::Register(r5900b);
+		// Architecture::Register(r5900b);
 		Architecture::Register(mips3);
 		Architecture::Register(mips3el);
 		Architecture::Register(mips64el);
@@ -3692,7 +3700,7 @@ extern "C"
 		MipsN64CallingConvention* n64BE = new MipsN64CallingConvention(mips64eb);
 		MipsN64CallingConvention* n64BEc = new MipsN64CallingConvention(cnmips64eb);
 		MipsPS2CallingConvention* ps2LE = new MipsPS2CallingConvention(r5900l);
-		MipsPS2CallingConvention* ps2BE = new MipsPS2CallingConvention(r5900b);
+		// MipsPS2CallingConvention* ps2BE = new MipsPS2CallingConvention(r5900b);
 
 		mipseb->RegisterCallingConvention(o32BE);
 		mipseb->SetDefaultCallingConvention(o32BE);
@@ -3710,8 +3718,8 @@ extern "C"
 		cnmips64eb->SetDefaultCallingConvention(n64BEc);
 		r5900l->RegisterCallingConvention(ps2LE);
 		r5900l->SetDefaultCallingConvention(ps2LE);
-		r5900b->RegisterCallingConvention(ps2BE);
-		r5900b->SetDefaultCallingConvention(ps2BE);
+		// r5900b->RegisterCallingConvention(ps2BE);
+		// r5900b->SetDefaultCallingConvention(ps2BE);
 
 		MipsLinuxSyscallCallingConvention* linuxSyscallBE = new MipsLinuxSyscallCallingConvention(mipseb);
 		MipsLinuxSyscallCallingConvention* linuxSyscallLE = new MipsLinuxSyscallCallingConvention(mipsel);
@@ -3719,17 +3727,17 @@ extern "C"
 		mipsel->RegisterCallingConvention(linuxSyscallLE);
 		MipsLinuxSyscallCallingConvention* linuxSyscallBE3 = new MipsLinuxSyscallCallingConvention(mips3);
 		MipsLinuxSyscallCallingConvention* linuxSyscallLE3 = new MipsLinuxSyscallCallingConvention(mips3el);
-		mips3->RegisterCallingConvention(linuxSyscallBE);
-		mips3el->RegisterCallingConvention(linuxSyscallLE);
+		mips3->RegisterCallingConvention(linuxSyscallBE3);
+		mips3el->RegisterCallingConvention(linuxSyscallLE3);
 		MipsLinuxSyscallCallingConvention* linuxSyscallr5900LE = new MipsLinuxSyscallCallingConvention(r5900l);
-		MipsLinuxSyscallCallingConvention* linuxSyscallr5900BE = new MipsLinuxSyscallCallingConvention(r5900b);
+		// MipsLinuxSyscallCallingConvention* linuxSyscallr5900BE = new MipsLinuxSyscallCallingConvention(r5900b);
 		r5900l->RegisterCallingConvention(linuxSyscallr5900LE);
-		r5900b->RegisterCallingConvention(linuxSyscallr5900BE);
+		// r5900b->RegisterCallingConvention(linuxSyscallr5900BE);
 
 		mipsel->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mipsel));
 		mipseb->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mipseb));
 		r5900l->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(r5900l));
-		r5900b->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(r5900b));
+		// r5900b->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(r5900b));
 		mips3->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mips3));
 		mips3el->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mips3el));
 		mips64el->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mips64el));
@@ -3749,7 +3757,7 @@ extern "C"
 		mips64eb->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		mips64el->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		r5900l->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
-		r5900b->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
+		// r5900b->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		cnmips64eb->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 
 		// Register the architectures with the binary format parsers so that they know when to use
@@ -3772,6 +3780,7 @@ extern "C"
 		{
 			elf->RegisterPlatformRecognizer(ARCH_ID_MIPS64, LittleEndian, ElfFlagsRecognize);
 			elf->RegisterPlatformRecognizer(ARCH_ID_MIPS64, BigEndian, ElfFlagsRecognize);
+			elf->RegisterPlatformRecognizer(ARCH_ID_MIPS32, LittleEndian, ElfFlagsRecognize); // R5900
 		}
 
 		BinaryViewType::RegisterArchitecture("PE", 0x166, LittleEndian, mipsel);

@@ -1035,6 +1035,9 @@ extern "C"
 
 		// HLIL condition chain can be rewritten as a switch statement
 		HLILSwitchRecoveryPossible = 0x800,
+
+		// Register Windown for Xtensa
+		ILTransparentCopy = 0x1000,
 	} BNILInstructionAttribute;
 
 	typedef enum BNIntrinsicClass

@@ -9,7 +9,7 @@ if((NOT BN_API_PATH) AND (NOT BN_INTERNAL_BUILD))
     endif()
 endif()
 
-file(GLOB_RECURSE SOURCES *.cpp *.h ../../../objectivec/*)
+file(GLOB_RECURSE SOURCES *.cpp *.h ../../../objectivec/* ../../../macho/*)
 
 add_library(sharedcachecore OBJECT ${SOURCES})
 

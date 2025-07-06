@@ -43,7 +43,7 @@
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/prettywriter.h"
 #include "../api/kernelcachecore.h"
-#include "view/macho/machoview.h"
+#include "macho/types.h"
 
 using namespace BinaryNinja;
 

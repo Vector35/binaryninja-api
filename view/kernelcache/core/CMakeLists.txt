@@ -14,6 +14,7 @@ file (GLOB_RECURSE COMMON_SOURCES CONFIGURE_DEPENDS
         *.hpp
         *.c
         *.cpp
+        ../../../macho/*
         )
 
 set(SOURCES ${COMMON_SOURCES})

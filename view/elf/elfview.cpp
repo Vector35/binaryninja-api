@@ -474,7 +474,7 @@ bool ElfView::Init()
 	{
 		if (settings->Contains("loader.imageBase"))
 			preferredImageBase = settings->Get<uint64_t>("loader.imageBase", this);
-
+			
 		if (settings->Contains("loader.platform"))
 		{
 			BNSettingsScope scope = SettingsAutoScope;
@@ -658,11 +658,10 @@ bool ElfView::Init()
 			semantics = ReadOnlyDataSectionSemantics;
 		else if ((m_elfSections[i].flags & ELF_SHF_WRITE) || In(sectionNames[i], readWriteDataSectionNames))
 			semantics = ReadWriteDataSectionSemantics;
-
 		if (m_elfSections[i].size != 0)
 		{
 			if (m_programHeaders.size() == 0)
-			{
+			{	
 				// We have an object file so we'll just create segments for the sections
 				uint32_t flags = 0;
 				if (semantics == ReadOnlyCodeSectionSemantics)
@@ -671,11 +670,22 @@ bool ElfView::Init()
 					flags = SegmentReadable | SegmentWritable;
 				else if (semantics == ReadOnlyDataSectionSemantics)
 					flags = SegmentReadable;
-				m_elfSections[i].address = segmentStart;
-				size_t size = m_elfSections[i].type == ELF_SHT_NOBITS ? 0 : m_elfSections[i].size;
-				uint64_t adjustedSectionAddr = m_elfSections[i].address + imageBaseAdjustment;
-				AddAutoSegment(adjustedSectionAddr, m_elfSections[i].size, m_elfSections[i].offset, size, flags);
-				segmentStart += ((m_elfSections[i].size + 15) & ~15);
+				if ((m_commonHeader.type == ET_DYN) && (!m_parseOnly))
+				{	
+					// We have a shared object file without program headers so we'll create segments for the sections
+					// based on the section address.
+					size_t size = m_elfSections[i].type == ELF_SHT_NOBITS ? 0 : m_elfSections[i].size;
+					uint64_t adjustedSectionAddr = m_elfSections[i].address + imageBaseAdjustment;
+					AddAutoSegment(adjustedSectionAddr, m_elfSections[i].size, m_elfSections[i].offset, size, flags);
+				}	
+				else 
+				{			
+					m_elfSections[i].address = segmentStart;
+					size_t size = m_elfSections[i].type == ELF_SHT_NOBITS ? 0 : m_elfSections[i].size;
+					uint64_t adjustedSectionAddr = m_elfSections[i].address + imageBaseAdjustment;
+					AddAutoSegment(adjustedSectionAddr, m_elfSections[i].size, m_elfSections[i].offset, size, flags);
+					segmentStart += ((m_elfSections[i].size + 15) & ~15);
+				}
 			}
 			else if ((m_elfSections[i].address + m_elfSections[i].size + imageBaseAdjustment) > GetEnd() || ((m_elfSections[i].address + imageBaseAdjustment) < GetStart()))
 			{
@@ -690,7 +700,6 @@ bool ElfView::Init()
 				GetParentView()->AddAutoSection(sectionNames[i], m_elfSections[i].offset, m_elfSections[i].size, DefaultSectionSemantics, type, m_elfSections[i].align, m_elfSections[i].entrySize, linkedSection, infoSection, m_elfSections[i].info);
 		}
 	}
-
 	// Apply architecture and platform
 	if (!m_arch)
 	{

@@ -1,6 +1,6 @@
 use crate::{
-    is_blacklisted_instruction, is_computed_variant_instruction, is_variant_instruction,
-    relocatable_regions,
+    filtered_instructions_at, is_blacklisted_instruction, is_computed_variant_instruction,
+    is_variant_instruction, relocatable_regions,
 };
 use binaryninja::basic_block::BasicBlock;
 use binaryninja::disassembly::DisassemblyTextLine;
@@ -51,7 +51,7 @@ impl HighlightRenderLayer {
         let relocatable_regions = relocatable_regions(&lifted_il.function().view());
         for line in lines {
             // We use address here instead of index since it's more reliable for other IL's.
-            for lifted_il_instr in lifted_il.instructions_at(line.address) {
+            for lifted_il_instr in filtered_instructions_at(lifted_il, line.address) {
                 if is_blacklisted_instruction(&lifted_il_instr) {
                     line.highlight = self.blacklist;
                 } else if is_variant_instruction(&relocatable_regions, &lifted_il_instr) {
@@ -59,7 +59,7 @@ impl HighlightRenderLayer {
                 }
             }
 
-            for llil_instr in llil.instructions_at(line.address) {
+            for llil_instr in filtered_instructions_at(llil, line.address) {
                 if is_computed_variant_instruction(&relocatable_regions, &llil_instr) {
                     line.highlight = self.computed_variant;
                 }
@@ -86,7 +86,10 @@ impl RenderLayer for HighlightRenderLayer {
     ) -> Vec<DisassemblyTextLine> {
         // Highlight any instruction that WARP will mask.
         let function = block.function();
-        if let (Ok(lifted_il), Ok(llil)) = (function.lifted_il(), function.low_level_il()) {
+        if let (Some(lifted_il), Some(llil)) = (
+            function.lifted_il_if_available(),
+            function.low_level_il_if_available(),
+        ) {
             self.highlight_lines(&lifted_il, &llil, &mut lines);
         }
         lines

@@ -3,7 +3,7 @@ use crate::convert::{bn_comment_to_comment, bn_var_to_location, from_bn_symbol, 
 use binaryninja::architecture::{
     Architecture, ImplicitRegisterExtend, Register as BNRegister, RegisterInfo,
 };
-use binaryninja::basic_block::BasicBlock as BNBasicBlock;
+use binaryninja::basic_block::{BasicBlock as BNBasicBlock};
 use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::confidence::MAX_CONFIDENCE;
 use binaryninja::function::{Function as BNFunction, NativeBlock};
@@ -186,7 +186,7 @@ pub fn basic_block_guid<M: FunctionMutability>(
             instr_bytes.truncate(instr_info.length);
 
             // Find variant and blacklisted instructions using lifted il.
-            for lifted_il_instr in lifted_il.instructions_at(instr_addr) {
+            for lifted_il_instr in filtered_instructions_at(lifted_il, instr_addr) {
                 // If instruction is blacklisted, don't include the bytes.
                 if is_blacklisted_instruction(&lifted_il_instr) {
                     continue;
@@ -209,7 +209,7 @@ pub fn basic_block_guid<M: FunctionMutability>(
             // TODO: A "mapped llil" or having some simple data flow, the simple data flow is the most attractive
             // TODO: "solution", but it would require
             if let Ok(llil) = &low_level_il {
-                for low_level_instr in llil.instructions_at(instr_addr) {
+                for low_level_instr in filtered_instructions_at(llil, instr_addr) {
                     if is_computed_variant_instruction(relocatable_regions, &low_level_instr) {
                         // Found a computed variant instruction, mask off the entire instruction.
                         instr_bytes.fill(0);
@@ -224,6 +224,25 @@ pub fn basic_block_guid<M: FunctionMutability>(
     }
 
     BasicBlockGUID::from(basic_block_bytes.as_slice())
+}
+
+pub fn filtered_instructions_at<M: FunctionMutability>(
+    il: &LowLevelILFunction<M, NonSSA>,
+    addr: u64,
+) -> Vec<LowLevelILInstruction<M, NonSSA>> {
+    il.instructions_at(addr)
+        .into_iter()
+        .enumerate()
+        .take_while(|(i, instr)| match instr.kind() {
+            // Stop collecting instructions after we see a LLIL_RET, LLIL_NO_RET.
+            LowLevelILInstructionKind::NoRet(_) | LowLevelILInstructionKind::Ret(_) => false,
+            // Stop collecting instruction if we are probably the end function jump in lifted IL. This
+            // is emitted at the end of the function and will mess with our GUID.
+            LowLevelILInstructionKind::Jump(_) => *i != 0,
+            _ => true,
+        })
+        .map(|(_, instr)| instr)
+        .collect()
 }
 
 /// Is the instruction not included in the masked byte sequence?
@@ -301,7 +320,7 @@ pub fn is_computed_variant_instruction<M: FunctionMutability>(
     instr: &LowLevelILInstruction<M, NonSSA>,
 ) -> bool {
     let is_expr_constant = |expr: &LowLevelILExpression<M, NonSSA, ValueExpr>| match expr.kind() {
-        LowLevelILExpressionKind::Const(_) => true,
+        LowLevelILExpressionKind::Const(_) | LowLevelILExpressionKind::ConstPtr(_) => true,
         _ => false,
     };
 

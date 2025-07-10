@@ -375,7 +375,7 @@ void KCTriageView::initSymbolTable()
 		dialog->setText("Load " + QString::fromStdString(image->name) + "?");
 		dialog->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
 
-		connect(dialog, &QMessageBox::buttonClicked, this, [=](QAbstractButton* button)
+		connect(dialog, &QMessageBox::buttonClicked, this, [=, this](QAbstractButton* button)
 			{
 				if (button == dialog->button(QMessageBox::Yes))
 					loadImagesWithAddr({image->headerFileAddress});

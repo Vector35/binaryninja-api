@@ -187,12 +187,6 @@ class KCTriageView : public QWidget, public View, public UIContextNotification
 	QStandardItemModel* m_imageModel;
 
 	SymbolTableView* m_symbolTable;
-
-	FilterableTableView* m_mappingTable;
-	QStandardItemModel* m_mappingModel;
-
-	QStandardItemModel* m_regionModel;
-
 public:
 	KCTriageView(QWidget* parent, BinaryViewRef data);
 	~KCTriageView() override;

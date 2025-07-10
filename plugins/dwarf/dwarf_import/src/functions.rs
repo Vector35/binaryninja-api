@@ -71,7 +71,7 @@ fn get_parameters<R: ReaderType>(
                 } else {
                     result.push(None)
                 }
-            },
+            }
             constants::DW_TAG_unspecified_parameters => variable_arguments = true,
             _ => (),
         }

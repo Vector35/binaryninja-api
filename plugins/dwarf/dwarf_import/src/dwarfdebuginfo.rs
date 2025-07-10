@@ -397,11 +397,11 @@ impl DebugInfoBuilder {
                 } else {
                     x
                 }
-            },
+            }
             None => {
                 // Anonymous variable, generate name
                 format!("debug_var_{}", offset)
-            },
+            }
         };
 
         let Some(function_index) = fn_idx else {
@@ -476,7 +476,7 @@ impl DebugInfoBuilder {
                     });
 
                 offset + guessed_sp_adjustment.unwrap_or(0)
-            },
+            }
         };
 
         if adjusted_offset > 0 {
@@ -589,7 +589,7 @@ impl DebugInfoBuilder {
         let return_type = match function.return_type {
             Some(return_type_id) => {
                 Conf::new(self.get_type(return_type_id).unwrap().ty.clone(), 128)
-            },
+            }
             _ => Conf::new(Type::void(), 0),
         };
 
@@ -669,11 +669,11 @@ impl DebugInfoBuilder {
                     match existing_functions.len().cmp(&1) {
                         Ordering::Greater => {
                             warn!("Multiple existing functions at address {address:08x}. One or more functions at this address may have the wrong platform information. Please report this binary.");
-                        },
+                        }
                         Ordering::Equal => {
                             func.platform = Some(existing_functions.get(0).platform())
-                        },
-                        Ordering::Less => {},
+                        }
+                        Ordering::Less => {}
                     }
                 }
             }

@@ -3,7 +3,7 @@ use crate::convert::{bn_comment_to_comment, bn_var_to_location, from_bn_symbol, 
 use binaryninja::architecture::{
     Architecture, ImplicitRegisterExtend, Register as BNRegister, RegisterInfo,
 };
-use binaryninja::basic_block::{BasicBlock as BNBasicBlock};
+use binaryninja::basic_block::BasicBlock as BNBasicBlock;
 use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::confidence::MAX_CONFIDENCE;
 use binaryninja::function::{Function as BNFunction, NativeBlock};

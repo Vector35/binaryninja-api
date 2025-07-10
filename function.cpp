@@ -460,39 +460,6 @@ Ref<LowLevelILFunction> Function::GetLowLevelILIfAvailable() const
 }
 
 
-size_t Function::GetLowLevelILForInstruction(Architecture* arch, uint64_t addr)
-{
-	return BNGetLowLevelILForInstruction(m_object, arch->GetObject(), addr);
-}
-
-
-set<size_t> Function::GetLowLevelILInstructionsForAddress(Architecture* arch, uint64_t addr)
-{
-	size_t count;
-	size_t* instrs = BNGetLowLevelILInstructionsForAddress(m_object, arch->GetObject(), addr, &count);
-
-	set<size_t> result;
-	for (size_t i = 0; i < count; i++)
-		result.insert(instrs[i]);
-
-	BNFreeILInstructionList(instrs);
-	return result;
-}
-
-
-vector<size_t> Function::GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr)
-{
-	size_t count;
-	size_t* exits = BNGetLowLevelILExitsForInstruction(m_object, arch->GetObject(), addr, &count);
-
-	vector<size_t> result;
-	result.insert(result.end(), exits, &exits[count]);
-
-	BNFreeILInstructionList(exits);
-	return result;
-}
-
-
 RegisterValue RegisterValue::FromAPIObject(const BNRegisterValue& value)
 {
 	RegisterValue result;
@@ -792,26 +759,6 @@ Ref<LowLevelILFunction> Function::GetLiftedILIfAvailable() const
 	if (!function)
 		return nullptr;
 	return new LowLevelILFunction(function);
-}
-
-
-size_t Function::GetLiftedILForInstruction(Architecture* arch, uint64_t addr)
-{
-	return BNGetLiftedILForInstruction(m_object, arch->GetObject(), addr);
-}
-
-
-set<size_t> Function::GetLiftedILInstructionsForAddress(Architecture* arch, uint64_t addr)
-{
-	size_t count;
-	size_t* instrs = BNGetLiftedILInstructionsForAddress(m_object, arch->GetObject(), addr, &count);
-
-	set<size_t> result;
-	for (size_t i = 0; i < count; i++)
-		result.insert(instrs[i]);
-
-	BNFreeILInstructionList(instrs);
-	return result;
 }
 
 

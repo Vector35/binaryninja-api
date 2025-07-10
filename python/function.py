@@ -1852,15 +1852,12 @@ class Function:
 			>>> func.get_low_level_il_at(func.start)
 			<il: push(rbp)>
 		"""
-		if arch is None:
-			arch = self.arch
-
-		idx = core.BNGetLowLevelILForInstruction(self.handle, arch.handle, addr)
-
 		llil = self.llil
-		if llil is None or idx == len(llil):
+		if llil is None:
 			return None
-
+		idx = llil.get_instruction_start(addr, arch)
+		if idx is None:
+			return None
 		return llil[idx]
 
 	def get_low_level_ils_at(self, addr: int,
@@ -1881,19 +1878,7 @@ class Function:
 		llil = self.llil
 		if llil is None:
 			return []
-
-		if arch is None:
-			arch = self.arch
-		count = ctypes.c_ulonglong()
-		instrs = core.BNGetLowLevelILInstructionsForAddress(self.handle, arch.handle, addr, count)
-		assert instrs is not None, "core.BNGetLowLevelILInstructionsForAddress returned None"
-		try:
-			result = []
-			for i in range(0, count.value):
-				result.append(llil[instrs[i]])
-			return result
-		finally:
-			core.BNFreeILInstructionList(instrs)
+		return [llil[i] for i in llil.get_instructions_at(addr, arch)]
 
 	def get_llil_at(self, addr: int,
 	                arch: Optional['architecture.Architecture'] = None) -> Optional['lowlevelil.LowLevelILInstruction']:
@@ -1929,33 +1914,16 @@ class Function:
 		llil = self.llil
 		if llil is None:
 			return []
-
-		if arch is None:
-			arch = self.arch
-		count = ctypes.c_ulonglong()
-		instrs = core.BNGetLowLevelILInstructionsForAddress(self.handle, arch.handle, addr, count)
-		assert instrs is not None, "core.BNGetLowLevelILInstructionsForAddress returned None"
-		try:
-			result = []
-			for i in range(0, count.value):
-				result.append(llil[instrs[i]])
-			return result
-		finally:
-			core.BNFreeILInstructionList(instrs)
+		return [llil[i] for i in llil.get_instructions_at(addr, arch)]
 
 	def get_low_level_il_exits_at(self, addr: int, arch: Optional['architecture.Architecture'] = None) -> List[int]:
-		if arch is None:
-			arch = self.arch
-		count = ctypes.c_ulonglong()
-		exits = core.BNGetLowLevelILExitsForInstruction(self.handle, arch.handle, addr, count)
-		assert exits is not None, "core.BNGetLowLevelILExitsForInstruction returned None"
-		try:
-			result = []
-			for i in range(0, count.value):
-				result.append(exits[i])
-			return result
-		finally:
-			core.BNFreeILInstructionList(exits)
+		llil = self.llil
+		if llil is None:
+			return []
+		idx = llil.get_instruction_start(addr, arch)
+		if idx is None:
+			return []
+		return llil.get_exits_for_instr(idx)
 
 	def get_constant_data(self, state: RegisterValueType, value: int, size: int = 0) -> databuffer.DataBuffer:
 		return databuffer.DataBuffer(handle=core.BNGetConstantData(self.handle, state, value, size, None))
@@ -2144,15 +2112,13 @@ class Function:
 	def get_lifted_il_at(
 	    self, addr: int, arch: Optional['architecture.Architecture'] = None
 	) -> Optional['lowlevelil.LowLevelILInstruction']:
-		if arch is None:
-			arch = self.arch
-
-		idx = core.BNGetLiftedILForInstruction(self.handle, arch.handle, addr)
-
-		if idx == len(self.lifted_il):
+		lifted_il = self.lifted_il
+		if lifted_il is None:
 			return None
-
-		return self.lifted_il[idx]
+		idx = lifted_il.get_instruction_start(addr, arch)
+		if idx is None:
+			return None
+		return lifted_il[idx]
 
 	def get_lifted_ils_at(
 	    self, addr: int, arch: Optional['architecture.Architecture'] = None
@@ -2168,16 +2134,10 @@ class Function:
 			>>> func.get_lifted_ils_at(func.start)
 			[<il: push(rbp)>]
 		"""
-		if arch is None:
-			arch = self.arch
-		count = ctypes.c_ulonglong()
-		instrs = core.BNGetLiftedILInstructionsForAddress(self.handle, arch.handle, addr, count)
-		assert instrs is not None, "core.BNGetLiftedILInstructionsForAddress returned None"
-		result = []
-		for i in range(0, count.value):
-			result.append(self.lifted_il[instrs[i]])
-		core.BNFreeILInstructionList(instrs)
-		return result
+		lifted_il = self.lifted_il
+		if lifted_il is None:
+			return []
+		return [lifted_il[i] for i in lifted_il.get_instructions_at(addr, arch)]
 
 	def get_constants_referenced_by(self, addr: int,
 	                                arch: Optional['architecture.Architecture'] = None) -> List[variable.ConstantReference]:

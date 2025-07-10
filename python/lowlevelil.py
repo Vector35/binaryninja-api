@@ -3799,6 +3799,45 @@ class LowLevelILFunction:
 			return None
 		return InstructionIndex(result)
 
+	def get_instructions_at(self, addr: int, arch: Optional['architecture.Architecture'] = None) -> List[InstructionIndex]:
+		"""
+		``get_instructions_at`` gets the InstructionIndex(s) corresponding to the given virtual address
+		See the `docs for mappings between ils <https://dev-docs.binary.ninja/dev/concepts.html#mapping-between-ils>`_ for more information.
+
+		:param int addr: virtual address of the instruction to be queried
+		:param Architecture arch: (optional) Architecture for the given function
+		:rtype: list(InstructionIndex)
+		:Example:
+
+			>>> func = next(bv.functions)
+			>>> func.llil.get_instructions_at(func.start)
+			[0]
+		"""
+		if arch is None:
+			arch = self.arch
+		count = ctypes.c_ulonglong()
+		instrs = core.BNLowLevelILGetInstructionsAt(self.handle, arch.handle, addr, count)
+		assert instrs is not None, "core.BNLowLevelILGetInstructionsAt returned None"
+		try:
+			result = []
+			for i in range(0, count.value):
+				result.append(instrs[i])
+			return result
+		finally:
+			core.BNFreeILInstructionList(instrs)
+
+	def get_exits_for_instr(self, idx: InstructionIndex) -> List[InstructionIndex]:
+		count = ctypes.c_ulonglong()
+		exits = core.BNLowLevelILGetExitsForInstruction(self.handle, idx, count)
+		assert exits is not None, "core.BNLowLevelILGetExitsForInstruction returned None"
+		try:
+			result = []
+			for i in range(0, count.value):
+				result.append(exits[i])
+			return result
+		finally:
+			core.BNFreeILInstructionList(exits)
+
 	def clear_indirect_branches(self) -> None:
 		core.BNLowLevelILClearIndirectBranches(self.handle)
 

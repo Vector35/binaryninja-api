@@ -13,16 +13,16 @@
 // limitations under the License.
 
 use crate::basic_block::BasicBlock;
-use crate::rc::Ref;
+use crate::rc::{CoreArrayProvider, CoreArrayProviderInner, Ref};
 
 use super::block::LowLevelILBlock;
 use super::operation;
 use super::operation::Operation;
 use super::VisitorAction;
 use super::*;
-use binaryninjacore_sys::BNGetLowLevelILByIndex;
 use binaryninjacore_sys::BNGetLowLevelILIndexForInstruction;
 use binaryninjacore_sys::BNLowLevelILInstruction;
+use binaryninjacore_sys::{BNFreeILInstructionList, BNGetLowLevelILByIndex};
 use std::fmt::{Debug, Display, Formatter};
 
 #[repr(transparent)]
@@ -50,6 +50,22 @@ impl From<u64> for LowLevelInstructionIndex {
 impl Display for LowLevelInstructionIndex {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!("{}", self.0))
+    }
+}
+
+impl CoreArrayProvider for LowLevelInstructionIndex {
+    type Raw = usize;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for LowLevelInstructionIndex {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeILInstructionList(raw)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::from(*raw)
     }
 }
 

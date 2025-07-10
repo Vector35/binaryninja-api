@@ -96,6 +96,29 @@ size_t LowLevelILFunction::GetInstructionStart(Architecture* arch, uint64_t addr
 	return BNLowLevelILGetInstructionStart(m_object, arch ? arch->GetObject() : nullptr, addr);
 }
 
+std::set<size_t> LowLevelILFunction::GetInstructionsAt(Architecture *arch, uint64_t addr)
+{
+	size_t count;
+	size_t* instructions = BNLowLevelILGetInstructionsAt(m_object, arch ? arch->GetObject() : nullptr, addr, &count);
+	std::set<size_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.insert(instructions[i]);
+	BNFreeILInstructionList(instructions);
+	return result;
+}
+
+std::vector<size_t> LowLevelILFunction::GetExitsForInstruction(size_t i)
+{
+	size_t count;
+	size_t* instructions = BNLowLevelILGetExitsForInstruction(m_object, i, &count);
+	std::vector<size_t> result;
+	result.reserve(count);
+	for (size_t j = 0; j < count; j++)
+		result.push_back(instructions[j]);
+	BNFreeILInstructionList(instructions);
+	return result;
+}
+
 
 void LowLevelILFunction::ClearIndirectBranches()
 {

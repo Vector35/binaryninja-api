@@ -4787,11 +4787,6 @@ extern "C"
 
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetFunctionLowLevelIL(BNFunction* func);
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetFunctionLowLevelILIfAvailable(BNFunction* func);
-	BINARYNINJACOREAPI size_t BNGetLowLevelILForInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr);
-	BINARYNINJACOREAPI size_t* BNGetLowLevelILInstructionsForAddress(
-	    BNFunction* func, BNArchitecture* arch, uint64_t addr, size_t* count);
-	BINARYNINJACOREAPI size_t* BNGetLowLevelILExitsForInstruction(
-	    BNFunction* func, BNArchitecture* arch, uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI void BNFreeILInstructionList(size_t* list);
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetFunctionMediumLevelIL(BNFunction* func);
 	BINARYNINJACOREAPI BNMediumLevelILFunction* BNGetFunctionMediumLevelILIfAvailable(BNFunction* func);
@@ -4837,9 +4832,6 @@ extern "C"
 
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetFunctionLiftedIL(BNFunction* func);
 	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetFunctionLiftedILIfAvailable(BNFunction* func);
-	BINARYNINJACOREAPI size_t BNGetLiftedILForInstruction(BNFunction* func, BNArchitecture* arch, uint64_t addr);
-	BINARYNINJACOREAPI size_t* BNGetLiftedILInstructionsForAddress(
-	    BNFunction* func, BNArchitecture* arch, uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI size_t* BNGetLiftedILFlagUsesForDefinition(
 	    BNFunction* func, size_t i, uint32_t flag, size_t* count);
 	BINARYNINJACOREAPI size_t* BNGetLiftedILFlagDefinitionsForUse(
@@ -5967,6 +5959,10 @@ extern "C"
 	BINARYNINJACOREAPI void BNLowLevelILSetCurrentSourceBlock(BNLowLevelILFunction* func, BNBasicBlock* source);
 	BINARYNINJACOREAPI size_t BNLowLevelILGetInstructionStart(
 	    BNLowLevelILFunction* func, BNArchitecture* arch, uint64_t addr);
+	BINARYNINJACOREAPI size_t* BNLowLevelILGetInstructionsAt(
+		BNLowLevelILFunction* func, BNArchitecture* arch, uint64_t addr, size_t* count);
+	BINARYNINJACOREAPI size_t* BNLowLevelILGetExitsForInstruction(
+		BNLowLevelILFunction* func, size_t instr, size_t* count);
 	BINARYNINJACOREAPI void BNLowLevelILClearIndirectBranches(BNLowLevelILFunction* func);
 	BINARYNINJACOREAPI void BNLowLevelILSetIndirectBranches(
 	    BNLowLevelILFunction* func, BNArchitectureAndAddress* branches, size_t count);

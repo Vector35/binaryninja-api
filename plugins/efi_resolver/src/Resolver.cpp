@@ -308,7 +308,7 @@ vector<HighLevelILInstruction> Resolver::HighLevelILExprsAt(Ref<Function> func, 
 	auto mlil = func->GetMediumLevelIL();
 	auto hlil = func->GetHighLevelIL();
 
-	size_t llilIdx = func->GetLowLevelILForInstruction(arch, addr);
+	size_t llilIdx = llil->GetInstructionStart(arch, addr);
 	size_t llilExprIdx = llil->GetIndexForInstruction(llilIdx);
 	auto mlilIdxes = llil->GetMediumLevelILExprIndexes(llilExprIdx);
 

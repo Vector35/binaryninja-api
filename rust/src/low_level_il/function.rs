@@ -93,36 +93,20 @@ where
         }
     }
 
-    /// Get all the contiguous instructions for a given location.
-    ///
-    /// NOTE: This won't get you every instruction for a location, only the instructions
-    /// that are sequential from the starting instruction.
-    pub fn instructions_at<L: Into<Location>>(&self, loc: L) -> Vec<LowLevelILInstruction<M, F>> {
-        let loc = loc.into();
-        // TODO: Instructions sharing the same address are not always sequential.
-        // Gather all of the sequential instructions with the same address and same block.
-        self.instruction_index_at(loc)
-            .map(|mut idx| {
-                let mut instructions = Vec::new();
-                let block = self.basic_block_containing_index(idx);
-                while idx.0 < self.instruction_count() {
-                    let instr = LowLevelILInstruction::new(self, idx);
-                    if instr.address() != loc.addr || instr.basic_block() != block {
-                        break;
-                    }
-                    instructions.push(instr);
-                    idx = idx.next();
-                }
-                instructions
-            })
-            .unwrap_or_default()
-    }
-
     pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<LowLevelILInstruction<M, F>> {
         Some(LowLevelILInstruction::new(
             self,
             self.instruction_index_at(loc)?,
         ))
+    }
+
+    /// Get all the instructions for a given location.
+    pub fn instructions_at<L: Into<Location>>(&self, loc: L) -> Vec<LowLevelILInstruction<M, F>> {
+        let loc = loc.into();
+        self.instruction_indexes_at(loc)
+            .iter()
+            .map(|idx| LowLevelILInstruction::new(self, idx))
+            .collect()
     }
 
     pub fn instruction_index_at<L: Into<Location>>(
@@ -141,6 +125,20 @@ where
         } else {
             Some(LowLevelInstructionIndex(instr_idx))
         }
+    }
+
+    pub fn instruction_indexes_at<L: Into<Location>>(
+        &self,
+        loc: L,
+    ) -> Array<LowLevelInstructionIndex> {
+        let loc: Location = loc.into();
+        // If the location does not specify an architecture, use the function's architecture.
+        let arch = loc.arch.unwrap_or_else(|| self.arch());
+        let mut count = 0;
+        let indexes = unsafe {
+            BNLowLevelILGetInstructionsAt(self.handle, arch.handle, loc.addr, &mut count)
+        };
+        unsafe { Array::new(indexes, count, ()) }
     }
 
     pub fn instruction_from_index(

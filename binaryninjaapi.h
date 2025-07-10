@@ -11345,16 +11345,6 @@ namespace BinaryNinja {
 		*/
 		Ref<LowLevelILFunction> GetLowLevelILIfAvailable() const;
 
-		/*! Get the Low Level IL Instruction start for an instruction at an address
-
-			\param arch Architecture for the instruction
-			\param addr Address of the instruction
-			\return Start address of the instruction
-		*/
-		size_t GetLowLevelILForInstruction(Architecture* arch, uint64_t addr);
-		std::set<size_t> GetLowLevelILInstructionsForAddress(Architecture* arch, uint64_t addr);
-		std::vector<size_t> GetLowLevelILExitsForInstruction(Architecture* arch, uint64_t addr);
-
 		std::pair<DataBuffer, BNBuiltinType> GetConstantData(
 			BNRegisterValueType state, uint64_t value, size_t size = 0);
 
@@ -12289,6 +12279,9 @@ namespace BinaryNinja {
 		uint64_t GetCurrentAddress() const;
 		void SetCurrentAddress(Architecture* arch, uint64_t addr);
 		size_t GetInstructionStart(Architecture* arch, uint64_t addr);
+		std::set<size_t> GetInstructionsAt(Architecture* arch, uint64_t addr);
+
+		std::vector<size_t> GetExitsForInstruction(size_t i);
 
 		void ClearIndirectBranches();
 		void SetIndirectBranches(const std::vector<ArchAndAddr>& branches);

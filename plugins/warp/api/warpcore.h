@@ -87,6 +87,7 @@ extern "C"
     WARP_FFI_API bool BNWARPGetAnalysisFunctionGUID(BNFunction* analysisFunction, BNWARPFunctionGUID* result);
     WARP_FFI_API bool BNWARPIsLiftedInstructionVariant(BNLowLevelILFunction* liftedFunction, size_t idx);
     WARP_FFI_API bool BNWARPIsLiftedInstructionBlacklisted(BNLowLevelILFunction* liftedFunction, size_t idx);
+    WARP_FFI_API bool BNWARPIsLowLevelInstructionComputedVariant(BNLowLevelILFunction* llilFunction, size_t idx);
 
     WARP_FFI_API BNWARPFunction* BNWARPGetFunction(BNFunction* analysisFunction);
     WARP_FFI_API BNWARPFunction* BNWARPGetMatchedFunction(BNFunction* analysisFunction);

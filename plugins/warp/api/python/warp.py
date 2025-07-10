@@ -365,6 +365,12 @@ def is_instruction_variant(function: LowLevelILFunction, variant: LowLevelILInst
 def is_instruction_blacklisted(function: LowLevelILFunction, variant: LowLevelILInstruction) -> bool:
     return warpcore.BNWARPIsLiftedInstructionBlacklisted(function.handle, variant.instr_index)
 
+def is_instruction_computed_variant(function: LowLevelILFunction, variant: LowLevelILInstruction) -> bool:
+    """
+    Checks to see if the instruction is variant due to some computed value. **Must use LLIL.**
+    """
+    return warpcore.BNWARPIsLowLevelInstructionComputedVariant(function.handle, variant.instr_index)
+
 def get_function_guid(function: Function) -> Optional[FunctionGUID]:
     guid = warpcore.BNWARPUUID()
     if not warpcore.BNWARPGetAnalysisFunctionGUID(function.handle, guid):

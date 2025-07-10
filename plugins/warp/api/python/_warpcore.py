@@ -956,6 +956,25 @@ def BNWARPIsLiftedInstructionVariant(
 
 
 # -------------------------------------------------------
+# _BNWARPIsLowLevelInstructionComputedVariant
+
+_BNWARPIsLowLevelInstructionComputedVariant = core.BNWARPIsLowLevelInstructionComputedVariant
+_BNWARPIsLowLevelInstructionComputedVariant.restype = ctypes.c_bool
+_BNWARPIsLowLevelInstructionComputedVariant.argtypes = [
+		ctypes.POINTER(BNLowLevelILFunction),
+		ctypes.c_ulonglong,
+	]
+
+
+# noinspection PyPep8Naming
+def BNWARPIsLowLevelInstructionComputedVariant(
+		llilFunction: ctypes.POINTER(BNLowLevelILFunction), 
+		idx: int
+		) -> bool:
+	return _BNWARPIsLowLevelInstructionComputedVariant(llilFunction, idx)
+
+
+# -------------------------------------------------------
 # _BNWARPNewContainerReference
 
 _BNWARPNewContainerReference = core.BNWARPNewContainerReference

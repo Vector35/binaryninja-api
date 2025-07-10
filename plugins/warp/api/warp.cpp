@@ -319,6 +319,11 @@ bool IsInstructionBlacklisted(const BinaryNinja::LowLevelILFunction &function, B
     return BNWARPIsLiftedInstructionBlacklisted(function.m_object, idx);
 }
 
+bool IsInstructionComputedVariant(const BinaryNinja::LowLevelILFunction &function, BinaryNinja::ExprId idx)
+{
+    return BNWARPIsLowLevelInstructionComputedVariant(function.m_object, idx);
+}
+
 std::optional<FunctionGUID> Warp::GetAnalysisFunctionGUID(const BinaryNinja::Function &function)
 {
     FunctionGUID guid;

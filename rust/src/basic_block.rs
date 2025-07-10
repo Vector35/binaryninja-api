@@ -26,6 +26,13 @@ enum EdgeDirection {
     Outgoing,
 }
 
+pub struct PendingBasicBlockEdge {
+    pub branch_type: BranchType,
+    pub target: u64,
+    pub arch: CoreArchitecture,
+    pub fallthrough: bool,
+}
+
 pub struct Edge<'a, C: 'a + BlockContext> {
     pub branch: BranchType,
     pub back_edge: bool,
@@ -160,6 +167,44 @@ impl<C: BlockContext> BasicBlock<C> {
         C::InstructionIndex::from(unsafe { BNGetBasicBlockEnd(self.handle) })
     }
 
+    pub fn start(&self) -> u64 {
+        unsafe { BNGetBasicBlockStart(self.handle) }
+    }
+
+    pub fn end(&self) -> u64 {
+        unsafe { BNGetBasicBlockEnd(self.handle) }
+    }
+
+    pub fn set_end(&self, end: u64) {
+        unsafe {
+            BNSetBasicBlockEnd(self.handle, end);
+        }
+    }
+
+    pub fn add_instruction_data(&self, data: &[u8]) {
+        unsafe {
+            BNBasicBlockAddInstructionData(self.handle, data.as_ptr() as *const _, data.len());
+        }
+    }
+
+    pub fn instruction_data(&self, addr: u64) -> &[u8] {
+        unsafe {
+            let mut size: usize = 0;
+            let data = BNBasicBlockGetInstructionData(self.handle, addr, &mut size);
+            if data.is_null() {
+                return &[];
+            }
+
+            std::slice::from_raw_parts(data, size)
+        }
+    }
+
+    pub fn set_has_invalid_instructions(&self, value: bool) {
+        unsafe {
+            BNBasicBlockSetHasInvalidInstructions(self.handle, value);
+        }
+    }
+
     pub fn raw_length(&self) -> u64 {
         unsafe { BNGetBasicBlockLength(self.handle) }
     }
@@ -194,13 +239,74 @@ impl<C: BlockContext> BasicBlock<C> {
         }
     }
 
+    pub fn pending_outgoing_edges(&self) -> Vec<PendingBasicBlockEdge> {
+        unsafe {
+            let mut count = 0;
+            let edges_ptr = BNGetBasicBlockPendingOutgoingEdges(self.handle, &mut count);
+            let edges = std::slice::from_raw_parts(edges_ptr, count);
+
+            let mut result = Vec::with_capacity(count);
+            for edge in edges {
+                result.push(PendingBasicBlockEdge {
+                    branch_type: edge.type_,
+                    target: edge.target,
+                    arch: CoreArchitecture::from_raw(edge.arch),
+                    fallthrough: edge.fallThrough,
+                });
+            }
+
+            BNFreePendingBasicBlockEdgeList(edges_ptr);
+            result
+        }
+    }
+
+    pub fn add_pending_outgoing_edge(
+        &self,
+        typ: BranchType,
+        addr: u64,
+        arch: CoreArchitecture,
+        fallthrough: bool,
+    ) {
+        unsafe {
+            BNBasicBlockAddPendingOutgoingEdge(self.handle, typ, addr, arch.handle, fallthrough);
+        }
+    }
+
+    pub fn clear_pending_outgoing_edges(&self) {
+        unsafe {
+            BNClearBasicBlockPendingOutgoingEdges(self.handle);
+        }
+    }
+
+    pub fn set_fallthrough_to_function(&self, value: bool) {
+        unsafe {
+            BNBasicBlockSetFallThroughToFunction(self.handle, value);
+        }
+    }
+
+    pub fn is_fallthrough_to_function(&self) -> bool {
+        unsafe { BNBasicBlockIsFallThroughToFunction(self.handle) }
+    }
+
     // is this valid for il blocks? (it looks like up to MLIL it is)
     pub fn has_undetermined_outgoing_edges(&self) -> bool {
         unsafe { BNBasicBlockHasUndeterminedOutgoingEdges(self.handle) }
     }
 
+    pub fn set_undetermined_outgoing_edges(&self, value: bool) {
+        unsafe {
+            BNBasicBlockSetUndeterminedOutgoingEdges(self.handle, value);
+        }
+    }
+
     pub fn can_exit(&self) -> bool {
         unsafe { BNBasicBlockCanExit(self.handle) }
+    }
+
+    pub fn set_can_exit(&self, value: bool) {
+        unsafe {
+            BNBasicBlockSetCanExit(self.handle, value);
+        }
     }
 
     // TODO: Should we new type this? I just cant tell where the consumers of this are.

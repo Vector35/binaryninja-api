@@ -520,6 +520,10 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNAbortAnalysis(self.as_ref().handle) }
     }
 
+    fn analysis_is_aborted(&self) -> bool {
+        unsafe { BNAnalysisIsAborted(self.as_ref().handle) }
+    }
+
     fn workflow(&self) -> Ref<Workflow> {
         unsafe {
             let raw_ptr = BNGetWorkflowForBinaryView(self.as_ref().handle);
@@ -1372,6 +1376,33 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    fn should_skip_target_analysis(
+        &self,
+        source: &ArchAndAddr,
+        srcfunc: &Function,
+        srcend: u64,
+        target: &ArchAndAddr,
+    ) -> bool {
+        let mut srccopy = BNArchitectureAndAddress {
+            arch: source.arch.handle,
+            address: source.addr,
+        };
+        let mut targetcopy = BNArchitectureAndAddress {
+            arch: target.arch.handle,
+            address: target.addr,
+        };
+
+        unsafe {
+            BNShouldSkipTargetAnalysis(
+                self.as_ref().handle,
+                &mut srccopy,
+                srcfunc.handle,
+                srcend,
+                &mut targetcopy,
+            )
+        }
+    }
+
     fn read_buffer(&self, offset: u64, len: usize) -> Result<DataBuffer> {
         let read_buffer = unsafe { BNReadViewBuffer(self.as_ref().handle, offset, len) };
         if read_buffer.is_null() {
@@ -2140,7 +2171,16 @@ pub trait BinaryViewExt: BinaryViewBase {
             Array::new(strings, count, ())
         }
     }
+    fn string_at(&self, addr: u64) -> Option<BNStringReference> {
+        let mut str_ref = BNStringReference::default();
+        let success = unsafe { BNGetStringAtAddress(self.as_ref().handle, addr, &mut str_ref) };
 
+        if success {
+            Some(str_ref)
+        } else {
+            None
+        }
+    }
     /// Retrieve all known strings within the provided `range`.
     ///
     /// NOTE: This returns a list of [`StringReference`] as strings may not be representable

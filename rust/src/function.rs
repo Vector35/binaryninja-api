@@ -2906,3 +2906,34 @@ unsafe impl CoreArrayProviderInner for Comment {
         }
     }
 }
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub struct ArchAndAddr {
+    pub arch: CoreArchitecture,
+    pub addr: u64,
+}
+
+impl ArchAndAddr {
+    pub fn new(arch: CoreArchitecture, addr: u64) -> Self {
+        Self { arch, addr }
+    }
+}
+
+impl From<BNArchitectureAndAddress> for ArchAndAddr {
+    fn from(raw: BNArchitectureAndAddress) -> Self {
+        unsafe {
+            let arch = CoreArchitecture::from_raw(raw.arch);
+            let addr = raw.address;
+            ArchAndAddr { arch, addr }
+        }
+    }
+}
+
+impl ArchAndAddr {
+    pub fn into_raw(self) -> BNArchitectureAndAddress {
+        BNArchitectureAndAddress {
+            arch: self.arch.handle,
+            address: self.addr,
+        }
+    }
+}

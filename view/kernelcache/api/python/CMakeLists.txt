@@ -36,7 +36,7 @@ endif()
 add_custom_target(kernelcache_generator_copy ALL
         BYPRODUCTS ${PROJECT_SOURCE_DIR}/_kernelcachecore.py ${PROJECT_SOURCE_DIR}/enums.py
         DEPENDS ${PYTHON_SOURCES} ${PROJECT_SOURCE_DIR}/../kernelcachecore.h $<TARGET_FILE:kernelcache_generator>
-        COMMAND ${CMAKE_COMMAND} -E echo "Copying Shared Cache Python Sources"
+        COMMAND ${CMAKE_COMMAND} -E echo "Copying Kernel Cache Python Sources"
         COMMAND ${CMAKE_COMMAND} -E make_directory ${PYTHON_OUTPUT_DIRECTORY}
         COMMAND ${CMAKE_COMMAND} -E env ASAN_OPTIONS=detect_leaks=0 $<TARGET_FILE:kernelcache_generator>
         ${PROJECT_SOURCE_DIR}/../kernelcachecore.h

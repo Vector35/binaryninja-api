@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::fmt::{Debug, Formatter};
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering::Relaxed;
@@ -285,6 +286,10 @@ pub enum ProcessingFileState {
     Processed,
 }
 
+/// A callback for when a file has been processed, use this if you intend to save off individual
+/// files inside a directory, project or archive.
+pub type ProcessedFileCallback = Arc<dyn Fn(&Path, &WarpFile) + Send + Sync>;
+
 #[derive(Debug, Default)]
 pub struct ProcessingState {
     pub cancelled: AtomicBool,
@@ -319,7 +324,7 @@ impl ProcessingState {
 }
 
 /// Create a new [`WarpFile`] from files, projects, and directories.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct WarpFileProcessor {
     /// The Binary Ninja settings to use when analyzing the binaries.
     analysis_settings: Value,
@@ -333,6 +338,7 @@ pub struct WarpFileProcessor {
     file_data: FileDataKindField,
     included_functions: IncludedFunctionsField,
     compression_type: CompressionTypeField,
+    processed_file_callback: Option<ProcessedFileCallback>,
     /// Regex pattern used to filter out files.
     file_filter: Option<Regex>,
     /// Processor state, this is shareable between threads, so the processor and the consumer can
@@ -357,6 +363,7 @@ impl WarpFileProcessor {
             file_data: Default::default(),
             included_functions: Default::default(),
             compression_type: Default::default(),
+            processed_file_callback: None,
             file_filter: None,
             state: Arc::new(ProcessingState::default()),
         }
@@ -397,6 +404,14 @@ impl WarpFileProcessor {
         self
     }
 
+    pub fn with_processed_file_callback(
+        mut self,
+        processed_file_callback: impl Fn(&Path, &WarpFile) + Send + Sync + 'static,
+    ) -> Self {
+        self.processed_file_callback = Some(Arc::new(processed_file_callback));
+        self
+    }
+
     pub fn with_file_filter(mut self, file_filter: Regex) -> Self {
         self.file_filter = Some(file_filter);
         self
@@ -417,14 +432,34 @@ impl WarpFileProcessor {
         }
     }
 
+    pub fn merge_files(
+        &self,
+        files: Vec<WarpFile<'static>>,
+    ) -> Result<WarpFile<'static>, ProcessingError> {
+        let chunks: Vec<_> = files.into_iter().flat_map(|f| f.chunks.clone()).collect();
+        let merged_chunks = Chunk::merge(&chunks, self.compression_type.into());
+        Ok(WarpFile::new(WarpFileHeader::new(), merged_chunks))
+    }
+
     pub fn process(&self, path: PathBuf) -> Result<WarpFile<'static>, ProcessingError> {
-        match path.extension() {
-            Some(ext) if ext == "a" || ext == "lib" || ext == "rlib" => self.process_archive(path),
-            Some(ext) if ext == "warp" => self.process_warp_file(path),
+        let file = match path.extension() {
+            Some(ext) if ext == "a" || ext == "lib" || ext == "rlib" => {
+                self.process_archive(path.clone())
+            }
+            Some(ext) if ext == "warp" => self.process_warp_file(path.clone()),
             _ if path.is_dir() => self.process_directory(&path),
             // TODO: process_database?
-            _ => self.process_file(path),
+            _ => self.process_file(path.clone()),
+        }?;
+
+        // We do this right after we process the file so that all possible paths to this will be caught.
+        // This callback is typically used to write the file out to some other place for caching or
+        // for distributing smaller unmerged files.
+        if let Some(callback) = &self.processed_file_callback {
+            callback(&path, &file);
         }
+
+        Ok(file)
     }
 
     pub fn process_project(&self, project: &Project) -> Result<WarpFile<'static>, ProcessingError> {
@@ -465,12 +500,7 @@ impl WarpFileProcessor {
             })
             .collect();
 
-        let unmerged_chunks: Vec<_> = unmerged_files?
-            .iter()
-            .flat_map(|f| f.chunks.clone())
-            .collect();
-        let merged_chunks = Chunk::merge(&unmerged_chunks, self.compression_type.into());
-        Ok(WarpFile::new(WarpFileHeader::new(), merged_chunks))
+        self.merge_files(unmerged_files?)
     }
 
     pub fn process_project_file(
@@ -482,11 +512,22 @@ impl WarpFileProcessor {
         let path = project_file
             .path_on_disk()
             .ok_or_else(|| ProcessingError::NoPathToProjectFile(project_file.to_owned()))?;
-        match extension {
-            Some(ext) if ext == "a" || ext == "lib" || ext == "rlib" => self.process_archive(path),
-            Some("warp") => self.process_warp_file(path),
-            _ => self.process_file(path),
+        let file = match extension {
+            Some(ext) if ext == "a" || ext == "lib" || ext == "rlib" => {
+                self.process_archive(path.clone())
+            }
+            Some("warp") => self.process_warp_file(path.clone()),
+            _ => self.process_file(path.clone()),
+        }?;
+
+        // We do this right after we process the file so that all possible paths to this will be caught.
+        // This callback is typically used to write the file out to some other place for caching or
+        // for distributing smaller unmerged files.
+        if let Some(callback) = &self.processed_file_callback {
+            callback(&path, &file);
         }
+
+        Ok(file)
     }
 
     pub fn process_warp_file(&self, path: PathBuf) -> Result<WarpFile<'static>, ProcessingError> {
@@ -601,12 +642,7 @@ impl WarpFileProcessor {
             })
             .collect();
 
-        let unmerged_chunks: Vec<_> = unmerged_files?
-            .iter()
-            .flat_map(|f| f.chunks.clone())
-            .collect();
-        let merged_chunks = Chunk::merge(&unmerged_chunks, self.compression_type.into());
-        Ok(WarpFile::new(WarpFileHeader::new(), merged_chunks))
+        self.merge_files(unmerged_files?)
     }
 
     pub fn process_archive(&self, path: PathBuf) -> Result<WarpFile<'static>, ProcessingError> {
@@ -650,7 +686,6 @@ impl WarpFileProcessor {
                 .set_file_state(entry_file.clone(), ProcessingFileState::Unprocessed);
         }
 
-        // TODO: Par iter?
         // Process all the entries.
         let unmerged_files: Result<Vec<_>, _> = entry_files
             .into_par_iter()
@@ -669,12 +704,7 @@ impl WarpFileProcessor {
             })
             .collect();
 
-        let unmerged_chunks: Vec<_> = unmerged_files?
-            .iter()
-            .flat_map(|f| f.chunks.clone())
-            .collect();
-        let merged_chunks = Chunk::merge(&unmerged_chunks, self.compression_type.into());
-        Ok(WarpFile::new(WarpFileHeader::new(), merged_chunks))
+        self.merge_files(unmerged_files?)
     }
 
     pub fn process_view(
@@ -689,20 +719,25 @@ impl WarpFileProcessor {
         if self.file_data != FileDataKindField::Types {
             let mut signature_chunks = self.create_signature_chunks(view)?;
             for (target, signature_chunk) in signature_chunks.drain() {
-                let chunk = Chunk::new_with_target(
-                    ChunkKind::Signature(signature_chunk),
-                    self.compression_type.into(),
-                    target,
-                );
-                chunks.push(chunk)
+                if signature_chunk.raw_functions().count() != 0 {
+                    let chunk = Chunk::new_with_target(
+                        ChunkKind::Signature(signature_chunk),
+                        self.compression_type.into(),
+                        target,
+                    );
+                    chunks.push(chunk)
+                }
             }
         }
 
         if self.file_data != FileDataKindField::Signatures {
-            chunks.push(Chunk::new(
-                ChunkKind::Type(self.create_type_chunk(view)?),
-                self.compression_type.into(),
-            ));
+            let type_chunk = self.create_type_chunk(view)?;
+            if type_chunk.raw_types().count() != 0 {
+                chunks.push(Chunk::new(
+                    ChunkKind::Type(type_chunk),
+                    self.compression_type.into(),
+                ));
+            }
         }
 
         self.state
@@ -811,6 +846,20 @@ impl WarpFileProcessor {
                 .collect::<Vec<_>>();
         }
         TypeChunk::new_with_computed(&referenced_types).ok_or(ProcessingError::ChunkCreationFailed)
+    }
+}
+
+impl Debug for WarpFileProcessor {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WarpFileProcessor")
+            .field("file_data", &self.file_data)
+            .field("compression_type", &self.compression_type)
+            .field("included_functions", &self.included_functions)
+            .field("file_filter", &self.file_filter)
+            .field("state", &self.state)
+            .field("cache_path", &self.cache_path)
+            .field("analysis_settings", &self.analysis_settings)
+            .finish()
     }
 }
 

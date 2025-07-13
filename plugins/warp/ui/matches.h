@@ -16,6 +16,13 @@ class WarpCurrentFunctionWidget : public QWidget
     WarpFunctionTableWidget *m_tableWidget;
     WarpFunctionInfoWidget *m_infoWidget;
 
+    LoggerRef m_logger;
+
+    std::mutex m_requestMutex;
+    std::vector<FunctionRef> m_pendingRequests;
+    std::atomic<bool> m_requestInProgress {false};
+    std::unordered_set<uint64_t> m_processedFunctions;
+
 public:
     explicit WarpCurrentFunctionWidget(FunctionRef current);
 
@@ -26,4 +33,6 @@ public:
     FunctionRef GetCurrentFunction() { return m_current; };
 
     void UpdateMatches();
+
+    void ProcessPendingFetchRequests();
 };

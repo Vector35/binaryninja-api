@@ -205,6 +205,29 @@ def BNWARPContainerCommitSource(
 
 
 # -------------------------------------------------------
+# _BNWARPContainerFetchFunctions
+
+_BNWARPContainerFetchFunctions = core.BNWARPContainerFetchFunctions
+_BNWARPContainerFetchFunctions.restype = None
+_BNWARPContainerFetchFunctions.argtypes = [
+		ctypes.POINTER(BNWARPContainer),
+		ctypes.POINTER(BNWARPTarget),
+		ctypes.POINTER(BNWARPTypeGUID),
+		ctypes.c_ulonglong,
+	]
+
+
+# noinspection PyPep8Naming
+def BNWARPContainerFetchFunctions(
+		container: ctypes.POINTER(BNWARPContainer), 
+		target: ctypes.POINTER(BNWARPTarget), 
+		guids: ctypes.POINTER(BNWARPTypeGUID), 
+		count: int
+		) -> None:
+	return _BNWARPContainerFetchFunctions(container, target, guids, count)
+
+
+# -------------------------------------------------------
 # _BNWARPContainerGetFunctionsWithGUID
 
 _BNWARPContainerGetFunctionsWithGUID = core.BNWARPContainerGetFunctionsWithGUID

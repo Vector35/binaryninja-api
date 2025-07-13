@@ -3,6 +3,7 @@ use std::time::Instant;
 
 use crate::cache::container::add_cached_container;
 use crate::container::disk::DiskContainer;
+use crate::container::network::{NetworkClient, NetworkContainer};
 use crate::matcher::MatcherSettings;
 use crate::plugin::render_layer::HighlightRenderLayer;
 use crate::plugin::settings::PluginSettings;
@@ -11,9 +12,11 @@ use binaryninja::background_task::BackgroundTask;
 use binaryninja::command::{
     register_command, register_command_for_function, register_command_for_project,
 };
+use binaryninja::is_ui_enabled;
 use binaryninja::logger::Logger;
 use binaryninja::settings::Settings;
 use log::LevelFilter;
+use reqwest::StatusCode;
 
 mod create;
 mod debug;
@@ -25,6 +28,63 @@ mod project;
 mod render_layer;
 mod settings;
 mod workflow;
+
+fn load_bundled_signatures() {
+    let global_bn_settings = Settings::new();
+    let plugin_settings = PluginSettings::from_settings(&global_bn_settings);
+    // We want to load all the bundled directories into the container cache.
+    let background_task = BackgroundTask::new("Loading WARP files...", false);
+    let start = Instant::now();
+    if plugin_settings.load_bundled_files {
+        let core_disk_container = DiskContainer::new_from_dir(core_signature_dir());
+        log::debug!("{:#?}", core_disk_container);
+        add_cached_container(core_disk_container);
+    }
+    if plugin_settings.load_user_files {
+        let user_disk_container = DiskContainer::new_from_dir(user_signature_dir());
+        log::debug!("{:#?}", user_disk_container);
+        add_cached_container(user_disk_container);
+    }
+    log::info!("Loading bundled files took {:?}", start.elapsed());
+    background_task.finish();
+}
+
+fn load_network_container() {
+    let global_bn_settings = Settings::new();
+    let plugin_settings = PluginSettings::from_settings(&global_bn_settings);
+    let background_task = BackgroundTask::new("Initializing WARP server...", false);
+    let start = Instant::now();
+    if plugin_settings.enable_server {
+        let server_url = plugin_settings.server_url.clone();
+        let server_api_key = plugin_settings.server_api_key.clone();
+        let https_proxy_str = global_bn_settings.get_string("network.httpsProxy");
+        let https_proxy = if https_proxy_str.is_empty() {
+            None
+        } else {
+            Some(https_proxy_str)
+        };
+        match NetworkClient::new(server_url.clone(), server_api_key, https_proxy) {
+            Ok(network_client) => {
+                // Before constructing the container, let's make sure that the server is OK.
+                if let Ok(StatusCode::OK) = network_client.status() {
+                    let network_container = NetworkContainer::new(network_client);
+                    log::debug!("{:#?}", network_container);
+                    add_cached_container(network_container);
+                } else {
+                    log::error!(
+                        "Server '{}' is not reachable, disabling container...",
+                        server_url
+                    );
+                }
+            }
+            Err(e) => {
+                log::error!("Failed to add networked container: {}", e);
+            }
+        }
+    }
+    log::debug!("Initializing warp server took {:?}", start.elapsed());
+    background_task.finish();
+}
 
 #[no_mangle]
 #[allow(non_snake_case)]
@@ -44,22 +104,21 @@ pub extern "C" fn CorePluginInit() -> bool {
 
     workflow::insert_workflow();
 
-    let plugin_settings = PluginSettings::from_settings(&global_bn_settings);
-    // We want to load all the bundled directories into the container cache.
-    let background_task = BackgroundTask::new("Loading WARP files...", false);
-    let start = Instant::now();
-    if plugin_settings.load_bundled_files {
-        let core_disk_container = DiskContainer::new_from_dir(core_signature_dir());
-        log::debug!("{:#?}", core_disk_container);
-        add_cached_container(core_disk_container);
+    // TODO: Make the retrieval of containers wait on this to be done.
+    // TODO: We could also have a mechanism for lazily loading the files using the chunk header target.
+    // Loading bundled signatures might take a few hundred milliseconds.
+    if is_ui_enabled() {
+        std::thread::spawn(|| {
+            load_bundled_signatures();
+            load_network_container();
+        });
+    } else {
+        load_bundled_signatures();
+        std::thread::spawn(|| {
+            // Dependence on this is likely to not matter in headless, so we throw it on another thread.
+            load_network_container();
+        });
     }
-    if plugin_settings.load_user_files {
-        let user_disk_container = DiskContainer::new_from_dir(user_signature_dir());
-        log::debug!("{:#?}", user_disk_container);
-        add_cached_container(user_disk_container);
-    }
-    log::info!("Loading bundled files took {:?}", start.elapsed());
-    background_task.finish();
 
     register_command(
         "WARP\\Run Matcher",

@@ -19,7 +19,7 @@ pub struct PluginSettings {
     /// The API key to use for the selected WARP server, if not specified, you will be unable to push data and may be rate-limited.
     ///
     /// This is set to [PluginSettings::SERVER_API_KEY_DEFAULT] by default.
-    pub server_api_key: String,
+    pub server_api_key: Option<String>,
     /// Whether to allow networked WARP requests. Turning this off will not disable local WARP functionality.
     ///
     /// This is set to [PluginSettings::ENABLE_SERVER_DEFAULT] by default.
@@ -33,9 +33,9 @@ impl PluginSettings {
     pub const LOAD_USER_FILES_SETTING: &'static str = "analysis.warp.loadUserFiles";
     pub const SERVER_URL_DEFAULT: &'static str = "https://warp.binary.ninja";
     pub const SERVER_URL_SETTING: &'static str = "analysis.warp.serverUrl";
-    pub const SERVER_API_KEY_DEFAULT: &'static str = "";
+    pub const SERVER_API_KEY_DEFAULT: Option<String> = None;
     pub const SERVER_API_KEY_SETTING: &'static str = "analysis.warp.serverApiKey";
-    pub const ENABLE_SERVER_DEFAULT: bool = true;
+    pub const ENABLE_SERVER_DEFAULT: bool = false;
     pub const ENABLE_SERVER_SETTING: &'static str = "network.enableWARP";
 
     pub fn register(bn_settings: &mut BNSettings) {
@@ -44,7 +44,8 @@ impl PluginSettings {
             "type" : "boolean",
             "default" : Self::LOAD_BUNDLED_FILES_DEFAULT,
             "description" : "Whether to load bundled WARP files on startup. Turn this off if you want to manually load them.",
-            "ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
+            "ignore" : ["SettingsProjectScope", "SettingsResourceScope"],
+            "requiresRestart" : true
         });
         bn_settings.register_setting_json(
             Self::LOAD_BUNDLED_FILES_SETTING,
@@ -55,7 +56,8 @@ impl PluginSettings {
             "type" : "boolean",
             "default" : Self::LOAD_USER_FILES_DEFAULT,
             "description" : "Whether to load user WARP files on startup. Turn this off if you want to manually load them.",
-            "ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
+            "ignore" : ["SettingsProjectScope", "SettingsResourceScope"],
+            "requiresRestart" : true
         });
         bn_settings.register_setting_json(
             Self::LOAD_USER_FILES_SETTING,
@@ -66,7 +68,8 @@ impl PluginSettings {
             "type" : "string",
             "default" : Self::SERVER_URL_DEFAULT,
             "description" : "The WARP server to use.",
-            "ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
+            "ignore" : ["SettingsProjectScope", "SettingsResourceScope"],
+            "requiresRestart" : true
         });
         bn_settings.register_setting_json(Self::SERVER_URL_SETTING, &server_url_prop.to_string());
         let server_api_key_prop = json!({
@@ -75,7 +78,8 @@ impl PluginSettings {
             "default" : Self::SERVER_API_KEY_DEFAULT,
             "description" : "The API key to use for the selected WARP server, if not specified you will be unable to push data, and may be rate limited.",
             "ignore" : ["SettingsProjectScope", "SettingsResourceScope"],
-            "hidden": true
+            "hidden": true,
+            "requiresRestart" : true
         });
         bn_settings.register_setting_json(
             Self::SERVER_API_KEY_SETTING,
@@ -86,7 +90,8 @@ impl PluginSettings {
             "type" : "boolean",
             "default" : Self::ENABLE_SERVER_DEFAULT,
             "description" : "Whether or not to allow networked WARP requests. Turning this off will not disable local WARP functionality.",
-            "ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
+            "ignore" : ["SettingsProjectScope", "SettingsResourceScope"],
+            "requiresRestart" : true
         });
         bn_settings.register_setting_json(
             Self::ENABLE_SERVER_SETTING,
@@ -107,7 +112,10 @@ impl PluginSettings {
             settings.server_url = bn_settings.get_string(Self::SERVER_URL_SETTING);
         }
         if bn_settings.contains(Self::SERVER_API_KEY_SETTING) {
-            settings.server_url = bn_settings.get_string(Self::SERVER_API_KEY_SETTING);
+            let server_api_key_str = bn_settings.get_string(Self::SERVER_API_KEY_SETTING);
+            if !server_api_key_str.is_empty() {
+                settings.server_api_key = Some(server_api_key_str);
+            }
         }
         if bn_settings.contains(Self::ENABLE_SERVER_SETTING) {
             settings.enable_server = bn_settings.get_bool(Self::ENABLE_SERVER_SETTING);
@@ -122,7 +130,7 @@ impl Default for PluginSettings {
             load_bundled_files: PluginSettings::LOAD_BUNDLED_FILES_DEFAULT,
             load_user_files: PluginSettings::LOAD_USER_FILES_DEFAULT,
             server_url: PluginSettings::SERVER_URL_DEFAULT.to_string(),
-            server_api_key: PluginSettings::SERVER_API_KEY_DEFAULT.to_string(),
+            server_api_key: PluginSettings::SERVER_API_KEY_DEFAULT,
             enable_server: PluginSettings::ENABLE_SERVER_DEFAULT,
         }
     }

@@ -249,6 +249,16 @@ bool Container::RemoveTypes(const Source &source, const std::vector<TypeGUID> &g
     return result;
 }
 
+void Container::FetchFunctions(const Target &target, const std::vector<FunctionGUID> &guids) const
+{
+    size_t count = guids.size();
+    BNWARPFunctionGUID *apiGuids = new BNWARPFunctionGUID[count];
+    for (size_t i = 0; i < count; i++)
+        apiGuids[i] = *guids[i].Raw();
+    BNWARPContainerFetchFunctions(m_object, target.m_object, apiGuids, count);
+    delete[] apiGuids;
+}
+
 std::vector<Source> Container::GetSourcesWithFunctionGUID(const Target& target, const FunctionGUID &guid) const
 {
     size_t count;

@@ -36,6 +36,27 @@ pub unsafe extern "C" fn BNWARPContainerGetName(container: *mut BNWARPContainer)
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn BNWARPContainerFetchFunctions(
+    container: *mut BNWARPContainer,
+    target: *mut BNWARPTarget,
+    guids: *const BNWARPFunctionGUID,
+    count: usize,
+) {
+    let arc_container = ManuallyDrop::new(Arc::from_raw(container));
+    let Ok(mut container) = arc_container.write() else {
+        return;
+    };
+
+    let target = unsafe { ManuallyDrop::new(Arc::from_raw(target)) };
+
+    let guids = unsafe { std::slice::from_raw_parts(guids, count) };
+
+    if let Err(e) = container.fetch_functions(&target, guids) {
+        log::error!("Failed to fetch functions: {}", e);
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn BNWARPContainerGetSources(
     container: *mut BNWARPContainer,
     count: *mut usize,

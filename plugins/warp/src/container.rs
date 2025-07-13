@@ -208,6 +208,19 @@ pub trait Container: Send + Sync + Display + Debug {
         functions: &[Function],
     ) -> ContainerResult<()>;
 
+    /// Fetches WARP information for the associated functions.
+    ///
+    /// Typically, a container that resides only in memory has nothing to fetch, so the default implementation
+    /// will do nothing. This function is blocking, so assume it will take a few seconds for a container
+    /// that intends to fetch over the network.
+    fn fetch_functions(
+        &mut self,
+        _target: &Target,
+        _functions: &[FunctionGUID],
+    ) -> ContainerResult<()> {
+        Ok(())
+    }
+
     /// Get the sources that contain a type with the given [`TypeGUID`].
     fn sources_with_type_guid(&self, guid: &TypeGUID) -> ContainerResult<Vec<SourceId>>;
 

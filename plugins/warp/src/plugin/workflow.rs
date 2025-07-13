@@ -60,6 +60,15 @@ impl Command for RunMatcher {
     fn action(&self, view: &BinaryView) {
         let view = view.to_owned();
         std::thread::spawn(move || {
+            // For embedded targets the user may not have set the sections up.
+            // Alert the user if we have no actual regions (+1 comes from the synthetic section).
+            let regions = relocatable_regions(&view);
+            if regions.len() <= 1 && view.memory_map().is_activated() {
+                log::warn!(
+                    "No relocatable regions found, for best results please define sections for the binary!"
+                );
+            }
+
             run_matcher(&view);
         });
     }
@@ -74,14 +83,6 @@ pub fn run_matcher(view: &BinaryView) {
     let undo_id = view.file().begin_undo_actions(false);
     let _ = get_warp_tag_type(view);
     view.file().forget_undo_actions(&undo_id);
-
-    // Alert the user if we have no actual regions (one comes from the synthetic section).
-    let regions = relocatable_regions(view);
-    if regions.len() <= 1 && view.memory_map().is_activated() {
-        log::warn!(
-            "No relocatable regions found, for best results please define sections for the binary!"
-        );
-    }
 
     // Then we want to actually find matching functions.
     let background_task = BackgroundTask::new("Matching on WARP functions...", true);

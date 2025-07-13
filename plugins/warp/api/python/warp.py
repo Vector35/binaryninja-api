@@ -305,6 +305,13 @@ class WarpContainer(metaclass=_WarpContainerMetaclass):
             core_guids[i] = guids[i].uuid
         return warpcore.BNWARPContainerRemoveTypes(self.handle, source.uuid, core_guids, count)
 
+    def fetch_functions(self, target: WarpTarget, guids: List[FunctionGUID]):
+        count = len(guids)
+        core_guids = (warpcore.BNWARPFunctionGUID * count)()
+        for i in range(count):
+            core_guids[i] = guids[i].uuid
+        warpcore.BNWARPContainerFetchFunctions(self.handle, target.handle, core_guids, count)
+
     def get_sources_with_function_guid(self, target: WarpTarget, guid: FunctionGUID) -> List[Source]:
         count = ctypes.c_size_t()
         sources = warpcore.BNWARPContainerGetSourcesWithFunctionGUID(self.handle, target.handle, guid.uuid, count)

@@ -5,6 +5,7 @@
 
 #include <QClipboard>
 #include <QFormLayout>
+#include <thread>
 
 #include "theme.h"
 #include "warp.h"
@@ -14,6 +15,8 @@ WarpCurrentFunctionWidget::WarpCurrentFunctionWidget(FunctionRef current)
 {
     // NOTE: Might be nullptr if the no selected function.
     m_current = current;
+
+    m_logger = new BinaryNinja::Logger("WARP");
 
     // Create the QT stuff
     QGridLayout *layout = new QGridLayout(this);
@@ -110,6 +113,26 @@ void WarpCurrentFunctionWidget::SetCurrentFunction(FunctionRef current)
         return;
     m_current = current;
     m_infoWidget->SetAnalysisFunction(m_current);
+
+    if (current)
+    {
+        // Add the function to the processing list only if we have no already done so.
+        // If a user goes to a function, then navigates away, they do not want to
+        // have us try and send a network request!
+        {
+            std::lock_guard<std::mutex> lock(m_requestMutex);
+            uint64_t funcStart = current->GetStart();
+            if (m_processedFunctions.find(funcStart) == m_processedFunctions.end()) {
+                m_pendingRequests.push_back(current);
+            }
+        }
+        if (!m_requestInProgress.exchange(true)) {
+            BinaryNinja::WorkerPriorityEnqueue([this]() {
+                ProcessPendingFetchRequests();
+            });
+        }
+    }
+
     UpdateMatches();
 }
 
@@ -161,4 +184,52 @@ void WarpCurrentFunctionWidget::UpdateMatches()
     }
 
     m_tableWidget->SetFunctions(matches);
+}
+
+void WarpCurrentFunctionWidget::ProcessPendingFetchRequests()
+{
+    std::vector<FunctionRef> requests;
+    {
+        std::lock_guard<std::mutex> lock(m_requestMutex);
+        requests = std::move(m_pendingRequests);
+        m_pendingRequests.clear();
+    }
+
+    if (requests.empty()) {
+        m_requestInProgress = false;
+        return;
+    }
+
+    auto start_time = std::chrono::high_resolution_clock::now();
+
+    std::vector<Warp::FunctionGUID> guids;
+    Warp::Ref<Warp::Target> target;
+    for (const auto& func : requests) {
+        // TODO: Need to send multiple requests if there is multiple targets.
+        if (!target)
+            target = Warp::Target::FromPlatform(*func->GetPlatform());
+        if (const auto guid = Warp::GetAnalysisFunctionGUID(*func); guid.has_value())
+            guids.push_back(guid.value());
+    }
+
+    // Actually fetch the data!
+    if (!guids.empty())
+        for (const auto &container: Warp::Container::All())
+            container->FetchFunctions(*target, guids);
+
+    {
+        std::lock_guard<std::mutex> lock(m_requestMutex);
+        for (const auto& func : requests) {
+            m_processedFunctions.insert(func->GetStart());
+        }
+    }
+
+    // TODO: Update the matches, make sure there was stuff added first lol.
+    // TODO: UpdateMatches();
+
+    const auto end_time = std::chrono::high_resolution_clock::now();
+    const std::chrono::duration<double> elapsed_time = end_time - start_time;
+    m_logger->LogDebug("ProcessPendingRequests took %f seconds", elapsed_time.count());
+
+    m_requestInProgress = false;
 }

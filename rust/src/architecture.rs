@@ -1828,10 +1828,7 @@ impl Architecture for CoreArchitecture {
     fn assemble(&self, code: &str, addr: u64) -> Result<Vec<u8>, String> {
         let code = CString::new(code).map_err(|_| "Invalid encoding in code string".to_string())?;
 
-        let result = match DataBuffer::new(&[]) {
-            Ok(result) => result,
-            Err(_) => return Err("Result buffer allocation failed".to_string()),
-        };
+        let result = DataBuffer::new(&[]);
         // TODO: This is actually a list of errors.
         let mut error_raw: *mut c_char = std::ptr::null_mut();
         let res = unsafe {

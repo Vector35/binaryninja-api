@@ -32,6 +32,12 @@ impl DataBuffer {
         self.0
     }
 
+    pub fn new(data: &[u8]) -> Self {
+        let buffer = unsafe { BNCreateDataBuffer(data.as_ptr() as *const c_void, data.len()) };
+        assert!(!buffer.is_null());
+        DataBuffer::from_raw(buffer)
+    }
+
     pub fn get_data(&self) -> &[u8] {
         let buffer = unsafe { BNGetDataBufferContents(self.0) };
         if buffer.is_null() {
@@ -161,15 +167,6 @@ impl DataBuffer {
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
-
-    pub fn new(data: &[u8]) -> Result<Self, ()> {
-        let buffer = unsafe { BNCreateDataBuffer(data.as_ptr() as *const c_void, data.len()) };
-        if buffer.is_null() {
-            Err(())
-        } else {
-            Ok(DataBuffer::from_raw(buffer))
-        }
-    }
 }
 
 impl Default for DataBuffer {
@@ -192,10 +189,8 @@ impl Clone for DataBuffer {
     }
 }
 
-impl TryFrom<&[u8]> for DataBuffer {
-    type Error = ();
-
-    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+impl From<&[u8]> for DataBuffer {
+    fn from(value: &[u8]) -> Self {
         DataBuffer::new(value)
     }
 }

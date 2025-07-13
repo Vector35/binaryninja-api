@@ -34,7 +34,7 @@ use crate::external_library::{ExternalLibrary, ExternalLocation};
 use crate::file_accessor::{Accessor, FileAccessor};
 use crate::file_metadata::FileMetadata;
 use crate::flowgraph::FlowGraph;
-use crate::function::{Function, NativeBlock};
+use crate::function::{Function, FunctionViewType, NativeBlock};
 use crate::linear_view::{LinearDisassemblyLine, LinearViewCursor};
 use crate::metadata::Metadata;
 use crate::platform::Platform;
@@ -66,8 +66,11 @@ use std::{result, slice};
 
 pub mod memory_map;
 pub mod reader;
+pub mod search;
 pub mod writer;
 
+use crate::binary_view::search::SearchQuery;
+use crate::disassembly::DisassemblySettings;
 use crate::workflow::Workflow;
 pub use memory_map::MemoryMap;
 pub use reader::BinaryReader;
@@ -78,6 +81,7 @@ pub type BinaryViewEventType = BNBinaryViewEventType;
 pub type AnalysisState = BNAnalysisState;
 pub type ModificationStatus = BNModificationStatus;
 pub type StringType = BNStringType;
+pub type FindFlag = BNFindFlag;
 
 #[allow(clippy::len_without_is_empty)]
 pub trait BinaryViewBase: AsRef<BinaryView> {
@@ -228,6 +232,197 @@ pub trait BinaryViewExt: BinaryViewBase {
         let read_size = self.read(&mut dest[starting_len..], offset);
         dest.truncate(starting_len + read_size);
         read_size
+    }
+
+    /// Search the view using the query options.
+    fn search<C: FnMut(u64, &DataBuffer) -> bool>(&self, query: &SearchQuery, on_match: C) -> bool {
+        self.search_with_progress(query, on_match, NoProgressCallback)
+    }
+
+    /// Search the view using the query options.
+    fn search_with_progress<P: ProgressCallback, C: FnMut(u64, &DataBuffer) -> bool>(
+        &self,
+        query: &SearchQuery,
+        mut on_match: C,
+        mut progress: P,
+    ) -> bool {
+        unsafe extern "C" fn cb_on_match<C: FnMut(u64, &DataBuffer) -> bool>(
+            ctx: *mut c_void,
+            offset: u64,
+            data: *mut BNDataBuffer,
+        ) -> bool {
+            let f = ctx as *mut C;
+            let buffer = DataBuffer::from_raw(data);
+            (*f)(offset, &buffer)
+        }
+
+        let query = query.to_json().to_cstr();
+        unsafe {
+            BNSearch(
+                self.as_ref().handle,
+                query.as_ptr(),
+                &mut progress as *mut P as *mut c_void,
+                Some(P::cb_progress_callback),
+                &mut on_match as *const C as *mut c_void,
+                Some(cb_on_match::<C>),
+            )
+        }
+    }
+
+    fn find_next_data(&self, start: u64, end: u64, data: &DataBuffer) -> Option<u64> {
+        self.find_next_data_with_opts(
+            start,
+            end,
+            data,
+            FindFlag::FindCaseInsensitive,
+            NoProgressCallback,
+        )
+    }
+
+    /// # Warning
+    ///
+    /// This function is likely to be changed to take in a "query" structure. Or deprecated entirely.
+    fn find_next_data_with_opts<P: ProgressCallback>(
+        &self,
+        start: u64,
+        end: u64,
+        data: &DataBuffer,
+        flag: FindFlag,
+        mut progress: P,
+    ) -> Option<u64> {
+        let mut result: u64 = 0;
+        let found = unsafe {
+            BNFindNextDataWithProgress(
+                self.as_ref().handle,
+                start,
+                end,
+                data.as_raw(),
+                &mut result,
+                flag,
+                &mut progress as *mut P as *mut c_void,
+                Some(P::cb_progress_callback),
+            )
+        };
+
+        if found {
+            Some(result)
+        } else {
+            None
+        }
+    }
+
+    fn find_next_constant(
+        &self,
+        start: u64,
+        end: u64,
+        constant: u64,
+        view_type: FunctionViewType,
+    ) -> Option<u64> {
+        // TODO: What are the best "default" settings?
+        let settings = DisassemblySettings::new();
+        self.find_next_constant_with_opts(
+            start,
+            end,
+            constant,
+            &settings,
+            view_type,
+            NoProgressCallback,
+        )
+    }
+
+    /// # Warning
+    ///
+    /// This function is likely to be changed to take in a "query" structure.
+    fn find_next_constant_with_opts<P: ProgressCallback>(
+        &self,
+        start: u64,
+        end: u64,
+        constant: u64,
+        disasm_settings: &DisassemblySettings,
+        view_type: FunctionViewType,
+        mut progress: P,
+    ) -> Option<u64> {
+        let mut result: u64 = 0;
+        let raw_view_type = FunctionViewType::into_raw(view_type);
+        let found = unsafe {
+            BNFindNextConstantWithProgress(
+                self.as_ref().handle,
+                start,
+                end,
+                constant,
+                &mut result,
+                disasm_settings.handle,
+                raw_view_type,
+                &mut progress as *mut P as *mut c_void,
+                Some(P::cb_progress_callback),
+            )
+        };
+        FunctionViewType::free_raw(raw_view_type);
+
+        if found {
+            Some(result)
+        } else {
+            None
+        }
+    }
+
+    fn find_next_text(
+        &self,
+        start: u64,
+        end: u64,
+        text: &str,
+        view_type: FunctionViewType,
+    ) -> Option<u64> {
+        // TODO: What are the best "default" settings?
+        let settings = DisassemblySettings::new();
+        self.find_next_text_with_opts(
+            start,
+            end,
+            text,
+            &settings,
+            FindFlag::FindCaseInsensitive,
+            view_type,
+            NoProgressCallback,
+        )
+    }
+
+    /// # Warning
+    ///
+    /// This function is likely to be changed to take in a "query" structure.
+    fn find_next_text_with_opts<P: ProgressCallback>(
+        &self,
+        start: u64,
+        end: u64,
+        text: &str,
+        disasm_settings: &DisassemblySettings,
+        flag: FindFlag,
+        view_type: FunctionViewType,
+        mut progress: P,
+    ) -> Option<u64> {
+        let text = text.to_cstr();
+        let raw_view_type = FunctionViewType::into_raw(view_type);
+        let mut result: u64 = 0;
+        let found = unsafe {
+            BNFindNextTextWithProgress(
+                self.as_ref().handle,
+                start,
+                end,
+                text.as_ptr(),
+                &mut result,
+                disasm_settings.handle,
+                flag,
+                raw_view_type,
+                &mut progress as *mut P as *mut c_void,
+                Some(P::cb_progress_callback),
+            )
+        };
+        FunctionViewType::free_raw(raw_view_type);
+
+        if found {
+            Some(result)
+        } else {
+            None
+        }
     }
 
     fn notify_data_written(&self, offset: u64, len: usize) {

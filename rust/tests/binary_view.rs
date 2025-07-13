@@ -1,11 +1,13 @@
+use binaryninja::binary_view::search::SearchQuery;
 use binaryninja::binary_view::{AnalysisState, BinaryViewBase, BinaryViewExt};
-use binaryninja::function::Function;
+use binaryninja::data_buffer::DataBuffer;
+use binaryninja::function::{Function, FunctionViewType};
 use binaryninja::headless::Session;
 use binaryninja::main_thread::execute_on_main_thread_and_wait;
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
 use binaryninja::symbol::{Symbol, SymbolBuilder, SymbolType};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::path::PathBuf;
 
 #[test]
@@ -97,6 +99,48 @@ fn test_binary_view_strings() {
         .expect("Failed to find string 'Microsoft (R) Optimizing Compiler'");
     assert_eq!(str_15dc.start, image_base + 0x15dc);
     assert_eq!(str_15dc.length, 33);
+}
+
+#[test]
+fn test_binary_view_search() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
+    let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
+    let image_base = view.original_image_base();
+
+    // Test text search.
+    let txt_1580 = view
+        .find_next_text(0, view.end(), "minkernel", FunctionViewType::MediumLevelIL)
+        .expect("Failed to find text 'minkernel'");
+    assert_eq!(txt_1580, image_base + 0x1580);
+
+    // Test data search.
+    // 65 5c 6d 69 6e 6b 65 72 6e 65 6c (prepend bytes + minkernel)
+    let data = DataBuffer::new(&[
+        0x65, 0x5c, 0x6d, 0x69, 0x6e, 0x6b, 0x65, 0x72, 0x6e, 0x65, 0x6c,
+    ]);
+    let data_1580 = view
+        .find_next_data(0, view.end(), &data)
+        .expect("Failed to find data");
+    assert_eq!(data_1580, image_base + 0x1580);
+
+    // Test constant search.
+    let constant = 0x80000000;
+    let const_2607b = view
+        .find_next_constant(0, view.end(), constant, FunctionViewType::MediumLevelIL)
+        .expect("Failed to find constant");
+    assert_eq!(const_2607b, image_base + 0x2607b);
+
+    // Test binary search.
+    let query = SearchQuery::new("42 2e 64 65 ?? 75 67 24");
+    let mut found: HashSet<u64> = HashSet::new();
+    let found_any = view.search(&query, |offset, _data| {
+        found.insert(offset);
+        true
+    });
+    assert!(found_any);
+    assert_eq!(found.len(), 1);
+    assert_eq!(found.contains(&(&image_base + 0x63)), true);
 }
 
 #[test]

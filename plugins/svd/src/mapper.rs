@@ -167,7 +167,7 @@ impl DeviceMapper {
         if self.settings.add_backing_regions {
             // Because adding a memory region will add a possibly large memory buffer in the BNDB, this
             // is optional. if a user disables this, they cannot write to the segment until they add a backing memory region.
-            let data_memory = DataBuffer::new(&vec![0; address_block.size as usize]).unwrap();
+            let data_memory = DataBuffer::new(&vec![0; address_block.size as usize]);
             let added_memory = view.memory_map().add_data_memory_region(
                 &block_name,
                 block_addr,

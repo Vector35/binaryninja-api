@@ -8293,6 +8293,26 @@ class BinaryView:
 		_new_name = _types.QualifiedName(new_name)._to_core_struct()
 		core.BNRenameAnalysisType(self.handle, _old_name, _new_name)
 
+	def get_system_call_type(self, id: int, platform: Optional['_platform.Platform'] = None) -> Optional['_types.Type']:
+		if platform is None:
+			platform = self.platform
+		if platform is None:
+			raise Exception("Unable to retrieve system call type without a platform")
+		handle = core.BNGetAnalysisSystemCallType(self.handle, platform.handle, id)
+		if handle is None:
+			return None
+		return _types.Type.create(handle, platform=platform)
+
+	def get_system_call_name(self, id: int, platform: Optional['_platform.Platform'] = None) -> Optional[str]:
+		if platform is None:
+			platform = self.platform
+		if platform is None:
+			raise Exception("Unable to retrieve system call type without a platform")
+		result = core.BNGetAnalysisSystemCallName(self.handle, platform.handle, id)
+		if result is None:
+			return None
+		return result
+
 	def import_library_type(self, name: str, lib: Optional[typelibrary.TypeLibrary] = None) -> Optional['_types.Type']:
 		"""
 		``import_library_type`` recursively imports a type from the specified type library, or, if

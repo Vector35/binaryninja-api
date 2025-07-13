@@ -2705,13 +2705,14 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 			if (GetFunction() && (operandList.size() > 0) && (operandList[0].operation == HLIL_CONST))
 			{
 				const auto platform = GetFunction()->GetPlatform();
+				const auto view = GetFunction()->GetView();
 				if (platform)
 				{
 					const auto syscall = (uint32_t)operandList[0].GetConstant<HLIL_CONST>();
-					const auto syscallName = platform->GetSystemCallName(syscall);
+					const auto syscallName = view->GetSystemCallName(platform, syscall);
 					if (settings && settings->GetCallParameterHints() != NeverShowParameterHints)
 					{
-						const auto functionType = platform->GetSystemCallType(syscall);
+						const auto functionType = view->GetSystemCallType(platform, syscall);
 						if (functionType && (functionType->GetClass() == FunctionTypeClass))
 							namedParams = functionType->GetParameters();
 					}

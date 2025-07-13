@@ -6425,6 +6425,8 @@ namespace BinaryNinja {
 		void UndefineType(const std::string& id);
 		void UndefineUserType(const QualifiedName& name);
 		void RenameType(const QualifiedName& oldName, const QualifiedName& newName);
+		Ref<Type> GetSystemCallType(Platform* platform, uint32_t id);
+		std::string GetSystemCallName(Platform* platform, uint32_t id);
 
 		void RegisterPlatformTypes(Platform* platform);
 

@@ -4392,6 +4392,24 @@ void BinaryView::RenameType(const QualifiedName& oldName, const QualifiedName& n
 }
 
 
+Ref<Type> BinaryView::GetSystemCallType(Platform *platform, uint32_t id)
+{
+	BNType* type = BNGetAnalysisSystemCallType(m_object, platform->m_object, id);
+	if (!type)
+		return nullptr;
+	return new Type(type);
+}
+
+
+std::string BinaryView::GetSystemCallName(Platform *platform, uint32_t id)
+{
+	char* name = BNGetAnalysisSystemCallName(m_object, platform->m_object, id);
+	string result = name;
+	BNFreeString(name);
+	return result;
+}
+
+
 void BinaryView::RegisterPlatformTypes(Platform* platform)
 {
 	BNRegisterPlatformTypes(m_object, platform->GetObject());

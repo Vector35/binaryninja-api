@@ -914,6 +914,8 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			    context.instruction.instr_index
 			)
 		elif self._command.type == PluginCommandType.ProjectPluginCommand:
+			if context.project is None:
+				return False
 			if not self._command.projectIsValid:
 				return True
 			return self._command.projectIsValid(self._command.context, context.project.handle)

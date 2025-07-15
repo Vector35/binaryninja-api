@@ -264,6 +264,7 @@ QWidget* KCTriageView::initImageTable()
 	} // refreshDataButton
 
 	auto loadImageFilterEdit = new FilterEdit(m_imageTable);
+	loadImageFilterEdit->setPlaceholderText("Filter images");
 	connect(loadImageFilterEdit, &FilterEdit::textChanged, [this](const QString& filter) {
 		m_imageTable->setFilter(filter.toStdString());
 	});
@@ -316,6 +317,7 @@ void KCTriageView::initSymbolTable()
 	m_symbolTable->setItemDelegateForColumn(0, new AddressColorDelegate(m_symbolTable));
 
 	auto symbolFilterEdit = new FilterEdit(m_symbolTable);
+	symbolFilterEdit->setPlaceholderText("Filter symbols");
 	connect(symbolFilterEdit, &FilterEdit::textChanged, [this](const QString& filter) {
 		m_symbolTable->setFilter(filter.toStdString());
 	});

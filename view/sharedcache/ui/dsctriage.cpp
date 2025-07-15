@@ -266,6 +266,7 @@ QWidget* DSCTriageView::initImageTable()
 	} // refreshDataButton
 
 	auto loadImageFilterEdit = new FilterEdit(m_imageTable);
+	loadImageFilterEdit->setPlaceholderText("Filter images");
 	connect(loadImageFilterEdit, &FilterEdit::textChanged, [this](const QString& filter) {
 		m_imageTable->setFilter(filter.toStdString());
 	});
@@ -318,6 +319,7 @@ void DSCTriageView::initSymbolTable()
 	m_symbolTable->setItemDelegateForColumn(0, new AddressColorDelegate(m_symbolTable));
 
 	auto symbolFilterEdit = new FilterEdit(m_symbolTable);
+	symbolFilterEdit->setPlaceholderText("Filter symbols");
 	connect(symbolFilterEdit, &FilterEdit::textChanged, [this](const QString& filter) {
 		m_symbolTable->setFilter(filter.toStdString());
 	});
@@ -448,6 +450,7 @@ void DSCTriageView::initCacheInfoTables()
 
 	auto mappingLabel = new QLabel("Mappings");
 	auto mappingFilterEdit = new FilterEdit(m_mappingTable);
+	mappingFilterEdit->setPlaceholderText("Filter mappings");
 	connect(mappingFilterEdit, &FilterEdit::textChanged, [this](const QString& filter) {
 		m_mappingTable->setFilter(filter.toStdString());
 	});
@@ -460,6 +463,7 @@ void DSCTriageView::initCacheInfoTables()
 
 	auto regionLabel = new QLabel("Regions");
 	auto regionFilterEdit = new FilterEdit(regionTable);
+	regionFilterEdit->setPlaceholderText("Filter regions");
 	connect(regionFilterEdit, &FilterEdit::textChanged, [regionTable](const QString& filter) {
 		regionTable->setFilter(filter.toStdString());
 	});

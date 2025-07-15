@@ -393,11 +393,28 @@ pub fn is_address_relocatable(relocatable_regions: &[Range<u64>], address: u64) 
 /// Currently, this is all the sections, however, this might be refined later.
 pub fn relocatable_regions(view: &BinaryView) -> Vec<Range<u64>> {
     // NOTE: We cannot use segments here as there will be a zero-based segment.
-    view.sections()
+    let mut ranges: Vec<_> = view
+        .sections()
         .iter()
         .map(|s| Range {
             start: s.start(),
             end: s.end(),
         })
-        .collect()
+        .collect();
+
+    // If the only section available is the synthetic one, fallback to using the segments.
+    // NOTE: This should only happen for firmware, and it should be _fine_ considering that we
+    // do not use segments for the case where we are based at some zero offset. The user should have
+    // based the image somewhere reasonably.
+    // TODO: Restrict this to only when image base is above some value?
+    if ranges.len() <= 1 {
+        let segment_ranges = view
+            .segments()
+            .iter()
+            .map(|s| s.address_range())
+            .collect::<Vec<_>>();
+        ranges.extend(segment_ranges);
+    }
+
+    ranges
 }

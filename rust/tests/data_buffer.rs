@@ -5,7 +5,7 @@ const DUMMY_DATA_1: &[u8] = b"qwertyuiopasdfghjkl\xE7zxcvbnm\x00\x01\x00";
 
 #[test]
 fn get_slice() {
-    let data = DataBuffer::new(DUMMY_DATA_0).unwrap();
+    let data = DataBuffer::new(DUMMY_DATA_0);
     let slice = data.get_slice(9, 10).unwrap();
     assert_eq!(slice.get_data(), &DUMMY_DATA_0[9..19]);
 }
@@ -34,8 +34,8 @@ fn set_len_write() {
 
 #[test]
 fn assign_append() {
-    let mut dst = DataBuffer::new(DUMMY_DATA_0).unwrap();
-    let mut src = DataBuffer::new(DUMMY_DATA_1).unwrap();
+    let mut dst = DataBuffer::new(DUMMY_DATA_0);
+    let mut src = DataBuffer::new(DUMMY_DATA_1);
     DataBuffer::assign(&mut dst, &src);
 
     assert_eq!(dst.get_data(), DUMMY_DATA_1);
@@ -58,7 +58,7 @@ fn assign_append() {
 
 #[test]
 fn to_from_formats() {
-    let data = DataBuffer::new(DUMMY_DATA_0).unwrap();
+    let data = DataBuffer::new(DUMMY_DATA_0);
     let escaped = data.to_escaped_string(false, false);
     let unescaped = DataBuffer::from_escaped_string(&escaped);
     drop(escaped);

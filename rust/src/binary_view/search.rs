@@ -98,7 +98,7 @@ mod tests {
     fn test_search_query_json() {
         let query = SearchQuery::new("test").start(0x1000).align(8);
 
-        let json = query.to_json().unwrap();
+        let json = query.to_json();
         let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
 
         assert_eq!(parsed["pattern"], "test");

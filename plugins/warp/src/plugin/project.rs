@@ -10,7 +10,7 @@ use binaryninja::project::folder::ProjectFolder;
 use binaryninja::project::Project;
 use binaryninja::rc::Ref;
 use regex::Regex;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::thread;
 use std::time::Instant;
 use warp::WarpFile;
@@ -186,7 +186,7 @@ impl CreateSignatures {
                 None => Some(warp_filter),
             };
         }
-        if let Some(filter) = form.file_filter() {
+        if let Some(filter) = filter {
             processor = processor.with_file_filter(filter);
         }
 

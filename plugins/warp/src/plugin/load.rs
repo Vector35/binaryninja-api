@@ -1,4 +1,4 @@
-use crate::cache::container::add_cached_container;
+use crate::cache::container::{add_cached_container, for_cached_containers};
 use crate::container::disk::{DiskContainer, DiskContainerSource};
 use crate::container::{ContainerError, SourcePath};
 use crate::convert::platform_to_target;
@@ -12,6 +12,7 @@ use binaryninja::interaction::{
 use binaryninja::rc::Ref;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
 use std::thread;
 use warp::WarpFile;
 
@@ -125,6 +126,7 @@ impl LoadSignatureFile {
         let rerun_matcher = RunMatcherField::from_form(&form).unwrap_or(false);
 
         let source_file_path = SourcePath::new(file_path.clone());
+        let source_file_id = source_file_path.to_source_id();
 
         let file = match LoadSignatureFile::read_file(&view, source_file_path.clone()) {
             Ok(file) => file,
@@ -133,6 +135,26 @@ impl LoadSignatureFile {
                 return;
             }
         };
+
+        // Verify we have not already loaded the file.
+        let already_exists = AtomicBool::new(false);
+        for_cached_containers(|c| {
+            if let Ok(_) = c.source_path(&source_file_id) {
+                // TODO: What happens if path differs? Warn?
+                already_exists.store(true, std::sync::atomic::Ordering::SeqCst);
+            }
+        });
+        if already_exists.load(std::sync::atomic::Ordering::SeqCst) {
+            let res = show_message_box(
+                "Load again?",
+                "File already loaded, would you like to load it again?",
+                MessageBoxButtonSet::YesNoButtonSet,
+                MessageBoxIcon::WarningIcon,
+            );
+            if res != MessageBoxButtonResult::YesButton {
+                return;
+            }
+        }
 
         let container_source = DiskContainerSource::new(source_file_path.clone(), file);
         log::info!("Loading container source: '{}'", container_source.path);

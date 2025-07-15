@@ -19,13 +19,18 @@ pub struct SaveFileField;
 
 impl SaveFileField {
     pub fn field(view: &BinaryView) -> FormInputField {
-        let default_name = view
-            .file()
-            .filename()
-            .split('/')
-            .last()
-            .unwrap_or("file")
-            .to_string();
+        let file = view.file();
+        let default_name = match file.project_file() {
+            None => {
+                // Not in a project, use the file name directly.
+                file.filename()
+                    .split('/')
+                    .last()
+                    .unwrap_or("file")
+                    .to_string()
+            }
+            Some(project_file) => project_file.name(),
+        };
         let signature_dir = user_signature_dir();
         let default_file_path = signature_dir.join(&default_name).with_extension("warp");
         FormInputField::SaveFileName {
@@ -177,6 +182,7 @@ impl CreateFromCurrentView {
         if std::fs::write(&file_path, file.to_bytes()).is_err() {
             log::error!("Failed to write data to signature file!");
         }
+        log::info!("Saved signature file to: '{}'", file_path.display());
 
         // Show a report of the generate signatures, if desired.
         let report_generator = ReportGenerator::new();

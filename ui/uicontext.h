@@ -340,6 +340,24 @@ class BINARYNINJAUIAPI UIContextNotification
 		(void)action;
 	}
 
+
+	/*!
+	 * Callback when an action is executed. Unlike OnActionExecuted, plugins cannot
+	 * modify the behavior of the action.
+	 *
+	 * \param context
+	 * \param handler
+	 * \param name
+	 * \param ctx
+	 */
+	virtual void OnActionExecutedImmutable(UIContext* context, UIActionHandler* handler, const QString& name, const UIActionContext& ctx)
+	{
+		(void)context;
+		(void)handler;
+		(void)name;
+		(void)ctx;
+	}
+
 	/*!
 	    Callback when a context menu is created, allowing plugins to modify the menu,
 	    e.g., registering and adding new actions into it. This allow plugins to add
@@ -570,6 +588,7 @@ public:
 	void NotifyOnILViewTypeChange(ViewFrame* frame, View* view, const BinaryNinja::FunctionViewType& viewType);
 	void updateCrossReferences(ViewFrame* frame, View* view, const SelectionInfoForXref& selection);
 	void NotifyOnActionExecuted(UIActionHandler* handler, const QString& name, const UIActionContext& ctx, std::function<void(const UIActionContext&)>& action);
+	void NotifyOnActionExecutedImmutable(UIActionHandler* handler, const QString& name, const UIActionContext& ctx);
 	void NotifyOnContextMenuCreated(View* view, Menu& menu);
 
 	virtual void findAll(const BinaryNinja::FindParameters& params);

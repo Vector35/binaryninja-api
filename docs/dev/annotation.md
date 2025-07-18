@@ -503,7 +503,7 @@ Type Library documentation has outgrown this section and now lives [in a separat
 
 ## Signature Libraries
 
-There are now two different signature library systems: [SigKit](#sigkit-signature-libraries), and [WARP](#warp-signature-libraries). SigKit will be deprecated in the near future as WARP represents a superset of its features.
+There are now two different signature library systems: [SigKit](#sigkit-signature-libraries), and [WARP](../guide/warp.md). SigKit will be deprecated by the next release.
 
 ### SigKit Signature Libraries
 
@@ -552,70 +552,3 @@ You can edit signature libraries programmatically using the sigkit API. A very b
 To help debug and optimize your signature libraries in a Signature Explorer GUI by using `Tools > Signature Library > Explore Signature Library`. This GUI can be opened through the sigkit API using [`sigkit.signature_explorer()`](https://github.com/Vector35/sigkit/blob/master/__init__.py) and [`sigkit.explore_signature_library()`](https://github.com/Vector35/sigkit/blob/master/sigkit/sigexplorer.py).
 
 For a text-based approach, you can also export your signature libraries to JSON using the Signature Explorer. Then, you can edit them in a text editor and convert them back to a .sig using the Signature Explorer afterwards. Of course, these conversions are also accessible through the API as the [`sigkit.sig_serialize_json`](https://github.com/Vector35/sigkit/blob/master/sigkit/sig_serialize_json.py) module, which provides a pickle-like interface. Likewise, [`sigkit.sig_serialize_fb`](https://github.com/Vector35/sigkit/blob/master/sigkit/sig_serialize_fb.py) provides serialization for the standard .sig format.
-
-
-### WARP Signature Libraries
-
-WARP integration is included with Binary Ninja but turned **off** by default, for more information about WARP itself visit the open source repository [here](https://github.com/Vector35/warp)!
-
-The benefit to using WARP over SigKit is that WARP signatures are more comprehensive and as such will have fewer false positives.
-Alongside fewer false positives WARP will match more functions with less information due to the matching algorithm taking into account function locality (i.e. functions next to each other).
-After matching has completed WARP functions will be tagged and the types for those functions will be transferred, this means less work for those looking to 
-transfer analysis information from one version of a binary to another version.
-
-#### Configuration
-
-Binary Ninja by default will _only_ use [SigKit signatures](#sigkit-signature-libraries) to match functions, to **enable** WARP signatures you must enable the `analysis.warp` option and restart, after which you will have a few options:
-
-- **WARP GUID** (`analysis.warp.guid`): make the function GUID required for **WARP Matcher** to run on the function, enabled by default.
-- **WARP Matcher** (`analysis.warp.matcher`): match and apply known functions, enabled by default.
-- **Trivial Function Length** (`analysis.warp.trivialFunctionLength`): functions below this length will be required to match on constraints, `20` by default.
-- **Minimum Function Length** (`analysis.warp.minimumFunctionLength`): functions below this length will not be matched, `1` by default.
-- **Maximum Function Length** (`analysis.warp.maximumFunctionLength`): functions above this length will not be matched, a value of **0** will disable this check, `0` by default.
-- **Minimum Matched Constraints** (`analysis.warp.minimumMatchedConstraints`): functions which require constraints must match at-least this number, `1` by default. A Higher number will mean fewer matches due to fewer functions meeting the threshold.
-- **Trivial Function Adjacent Constraints Allowed** (`analysis.warp.trivialFunctionAdjacentAllowed`): if this is enabled functions can match based off trivial adjacent functions (i.e. ones which are below `analysis.warp.trivialFunctionLength`). This is disabled by default.
-
-**WARP GUID** and **WARP Matcher** are complimentary, for **WARP Matcher** to actually start matching known functions there first must be a set of functions with WARP GUID's attached.
-The primary way to create this set of GUID's is to have **WARP GUID** enabled.
-
-???+ Danger "Warning"
-    These settings are cached internally to not slow down analysis, it is best to restart after changing any of these settings.
-
-#### Consumer Usage
-
-**WARP** function matching will occur automatically whenever you first open a binary, this process runs at the end of analysis and will trigger reanalysis on matched functions.
-
-After the function matching has finished, all the matched functions are tagged with "WARP" and can be found in the [Tags Sidebar](../guide/index.md#tagsbookmarks).
-
-#### Producer Usage
-
-Before you create signatures you must first identify the binary for which you want to produce said signatures for and whether that format is directly supported by Binary Ninja.
-
-#### Producing Directly in Binary Ninja
-
-If you have a binary that can be opened within Binary Ninja then the process is straightforward:
-
-1. Open the binary in Binary Ninja
-2. Run `WARP\\Generate Signature File`
-
-Once step 2 completes it will ask for a file name, then it will store the signature file in your user signatures folder (see [Signature Files](#signature-files)).
-
-#### Producing Headlessly with Binary Ninja
-
-If what you are trying to do requires anything more than a single binary (i.e. static library archives) than you will need to use a headless script.
-
-Currently, the only script that exists is `sigem`, which is what is used internally for creation of shipped signature files. The source code and more instructions can be found [here](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/warp).
-
-### Signature Files
-
-The signature files are simple flatbuffers, if you intend on consuming them directly (without Binary Ninja), please visit the open source repository [here](https://github.com/Vector35/warp)!
-
-The signatures that are applied can come from two locations: one in the [install directory](https://docs.binary.ninja/guide/#binary-folder) under `signatures` and one in the [user directory](https://docs.binary.ninja/guide/#user-folder) under `signatures`.
-
-- [Install Directory](https://docs.binary.ninja/guide/#binary-folder)/signatures/{PLATFORM}
-- [User Directory](https://docs.binary.ninja/guide/#user-folder)/signatures/{PLATFORM}
-
-???+ Danger "Warning"
-    Always place your signature libraries in your user directory. The install path is wiped whenever Binary Ninja auto-updates. You can locate it with `Open Plugin Folder` in the command palette and navigate "up" a directory.
-
-Inside the signatures folder, each platform has its own folder for its set of signatures (e.g., windows-x86_64 and linux-ppc32). When the signature matcher runs, it uses the signature libraries relevant to the current binary's platform. (You can check the platform of any binary you have open in the UI by typing `bv.platform` in the console.)

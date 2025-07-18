@@ -97,6 +97,7 @@ nav:
           - Shared Cache: 'guide/sharedcache.md'
           - Kernel Cache: 'guide/kernelcache.md'
           - EFI Resolver: 'guide/efiresolver.md'
+          - WARP: 'guide/warp.md'
           - BinExport / BinDiff: 'guide/binexport.md'
         - Debugger:
             - Overview: 'guide/debugger/index.md'

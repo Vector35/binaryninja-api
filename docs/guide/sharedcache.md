@@ -11,9 +11,9 @@ List of supported features for the given shared cache targets:
 
 | Platform | Arch   | Versions | Features                          | Notes                          |
 |----------|--------|----------|-----------------------------------|--------------------------------|
-| macOS    | x86_64 | 11 - 15  | Core, Objective-C, Workflow       |                                |
-| macOS    | arm64  | 11 - 15  | Core, Objective-C, Workflow       |                                |
-| iOS      | arm64  | 11 - 18  | Core, Objective-C, Workflow       |                                |
+| macOS    | x86_64 | 11 - 26  | Core, Objective-C, Workflow       |                                |
+| macOS    | arm64  | 11 - 26  | Core, Objective-C, Workflow       |                                |
+| iOS      | arm64  | 11 - 26  | Core, Objective-C, Workflow       |                                |
 | iOS      | arm64  | 10       | Core, _~Objective-C_, Workflow    | Some objective-c parsing fails |
 | iOS      | arm64  | 7 - 9    | _~Core_, _~Objective-C_, Workflow | Missing slide info adjustments |
 

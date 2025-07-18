@@ -11,9 +11,9 @@ List of supported features for the given `kernelcache` targets:
 
 | Platform | Arch   | Versions | Features                    |
 |----------|--------|----------|-----------------------------|
-| macOS    | x86_64 | 11 - 15  | Core, Objective-C           |
-| macOS    | arm64  | 11 - 15  | Core, Objective-C           |
-| iOS      | arm64  | 14 - 18  | Core, Objective-C           |
+| macOS    | x86_64 | 11 - 26  | Core, Objective-C           |
+| macOS    | arm64  | 11 - 26  | Core, Objective-C           |
+| iOS      | arm64  | 14 - 26  | Core, Objective-C           |
 
 - **Core**: Core functionality, such as loading, navigating, and analyzing `kernelcache` files.
 - **Objective-C**: Support for analyzing Objective-C information and symbols within the `kernelcache`.

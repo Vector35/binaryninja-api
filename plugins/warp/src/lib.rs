@@ -248,7 +248,7 @@ pub fn filtered_instructions_at<M: FunctionMutability>(
             LowLevelILInstructionKind::NoRet(_) | LowLevelILInstructionKind::Ret(_) => false,
             // Stop collecting instruction if we are probably the end function jump in lifted IL. This
             // is emitted at the end of the function and will mess with our GUID.
-            LowLevelILInstructionKind::Jump(_) => *i != 0,
+            LowLevelILInstructionKind::Jump(_) => *i == 0,
             _ => true,
         })
         .map(|(_, instr)| instr)

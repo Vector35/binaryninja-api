@@ -105,6 +105,15 @@ pub fn run_matcher(view: &BinaryView) {
         })
         .into_group_map();
 
+    if functions_by_target_and_guid.is_empty() && !view.functions().is_empty() {
+        // The user is likely trying to run the matcher on a database before guids were automatically
+        // generated, we should alert them and ask if they would like to reanalyze.
+        // TODO: Call reanalyze for them?
+        log::error!("Trying to match with an older database, please reanalyze the database.");
+        background_task.finish();
+        return;
+    }
+
     // TODO: Par iter this? Using dashmap
     let guids_by_target: HashMap<Target, Vec<FunctionGUID>> = functions_by_target_and_guid
         .keys()

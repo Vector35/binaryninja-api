@@ -191,9 +191,12 @@ pub fn insert_workflow() {
             }
             // TODO: How to clear the comments? They are just persisted.
             // TODO: Also they generate an undo action, i hate implicit undo actions so much.
-            for comment in matched_function.comments {
-                let bn_comment = comment_to_bn_comment(&function, comment);
-                function.set_comment_at(bn_comment.addr, &bn_comment.comment);
+            // TODO: For now we will only apply the comments as a one-shot action, because of the above
+            if function.comments().is_empty() {
+                for comment in matched_function.comments {
+                    let bn_comment = comment_to_bn_comment(&function, comment);
+                    function.set_comment_at(bn_comment.addr, &bn_comment.comment);
+                }
             }
             if let Some(mlil) = ctx.mlil_function() {
                 for variable in matched_function.variables {

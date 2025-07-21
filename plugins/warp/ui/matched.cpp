@@ -70,6 +70,10 @@ void WarpMatchedWidget::Update()
 {
     m_tableWidget->GetTableView()->setSortingEnabled(false);
     m_tableWidget->GetTableView()->setEnabled(false);
+    m_tableWidget->GetProxyModel()->setDynamicSortFilter(false);
+    m_tableWidget->GetTableView()->setUpdatesEnabled(false);
+    m_tableWidget->GetTableView()->setModel(nullptr);
+    m_tableWidget->GetProxyModel()->setSourceModel(nullptr);
     for (const auto &analysisFunction: m_current->GetAnalysisFunctionList())
     {
         if (const auto &matchedFunction = Warp::Function::GetMatched(*analysisFunction))
@@ -78,6 +82,10 @@ void WarpMatchedWidget::Update()
             m_tableWidget->InsertFunction(startAddress, new WarpFunctionItem(matchedFunction, analysisFunction));
         }
     }
+    m_tableWidget->GetTableView()->setModel(m_tableWidget->GetProxyModel());
+    m_tableWidget->GetProxyModel()->setSourceModel(m_tableWidget->GetModel());
+    m_tableWidget->GetProxyModel()->setDynamicSortFilter(true);
     m_tableWidget->GetTableView()->setEnabled(true);
     m_tableWidget->GetTableView()->setSortingEnabled(true);
+    m_tableWidget->GetTableView()->setUpdatesEnabled(true);
 }

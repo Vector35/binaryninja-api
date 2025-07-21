@@ -967,7 +967,7 @@ vector<DisassemblyTextLine> GenericLineFormatter::FormatLines(
 			{
 			case BraceToken:
 				// Beginning of string
-				if (trimmedText == "\"" && tokenIndex + 1 <= currentLine.tokens.size()  && currentLine.tokens[tokenIndex + 1].type == StringToken)
+				if (trimmedText == "\"" && tokenIndex + 1 < currentLine.tokens.size()  && currentLine.tokens[tokenIndex + 1].type == StringToken)
 				{
 					// Create a ContainerContents item and place it onto the item stack. This will hold anything
 					// inside the container once the end of the container is found.

@@ -134,8 +134,7 @@ void WarpSidebarWidget::focus()
 void WarpSidebarWidget::Update()
 {
 	m_matchedWidget->Update();
-	if (!GetMatcherTask())
-		setMatcherActionIcon(false);
+	setMatcherActionIcon(false);
 }
 
 void WarpSidebarWidget::setMatcherActionIcon(bool running)

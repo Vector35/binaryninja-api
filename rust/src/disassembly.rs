@@ -430,7 +430,10 @@ pub enum InstructionTextTokenKind {
         ty: StringType,
     },
     CharacterConstant,
-    Keyword,
+    Keyword {
+        // Example usage can be found for `BNAnalysisWarningActionType`.
+        value: u64,
+    },
     TypeName,
     FieldName {
         /// Offset to this field in the respective structure
@@ -619,7 +622,7 @@ impl InstructionTextTokenKind {
                 _ => Self::String { value: value.value },
             },
             BNInstructionTextTokenType::CharacterConstantToken => Self::CharacterConstant,
-            BNInstructionTextTokenType::KeywordToken => Self::Keyword,
+            BNInstructionTextTokenType::KeywordToken => Self::Keyword { value: value.value },
             BNInstructionTextTokenType::TypeNameToken => Self::TypeName,
             BNInstructionTextTokenType::FieldNameToken => Self::FieldName {
                 offset: value.value,
@@ -735,6 +738,7 @@ impl InstructionTextTokenKind {
             InstructionTextTokenKind::HexDumpText { width, .. } => Some(*width),
             InstructionTextTokenKind::String { value, .. } => Some(*value),
             InstructionTextTokenKind::StringContent { ty, .. } => Some(*ty as u64),
+            InstructionTextTokenKind::Keyword { value, .. } => Some(*value),
             InstructionTextTokenKind::FieldName { offset, .. } => Some(*offset),
             InstructionTextTokenKind::StructOffset { offset, .. } => Some(*offset),
             InstructionTextTokenKind::StructureHexDumpText { width, .. } => Some(*width),
@@ -843,7 +847,7 @@ impl From<InstructionTextTokenKind> for BNInstructionTextTokenType {
             InstructionTextTokenKind::CharacterConstant => {
                 BNInstructionTextTokenType::CharacterConstantToken
             }
-            InstructionTextTokenKind::Keyword => BNInstructionTextTokenType::KeywordToken,
+            InstructionTextTokenKind::Keyword { .. } => BNInstructionTextTokenType::KeywordToken,
             InstructionTextTokenKind::TypeName => BNInstructionTextTokenType::TypeNameToken,
             InstructionTextTokenKind::FieldName { .. } => {
                 BNInstructionTextTokenType::FieldNameToken

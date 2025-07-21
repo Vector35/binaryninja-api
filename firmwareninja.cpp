@@ -67,12 +67,6 @@ FirmwareNinjaRelationship::FirmwareNinjaRelationship(Ref<BinaryView> view, BNFir
 }
 
 
-FirmwareNinjaRelationship::~FirmwareNinjaRelationship()
-{
-	BNFreeFirmwareNinjaRelationship(m_object);
-}
-
-
 void FirmwareNinjaRelationship::SetPrimaryAddress(uint64_t address)
 {
 	BNFirmwareNinjaRelationshipSetPrimaryAddress(m_object, address);
@@ -679,6 +673,7 @@ std::vector<Ref<FirmwareNinjaRelationship>> FirmwareNinja::QueryRelationships()
 			BNNewFirmwareNinjaRelationshipReference(bnRelationships[i])));
 	}
 
+	BNFirmwareNinjaFreeRelationships(bnRelationships, count);
 	return result;
 }
 

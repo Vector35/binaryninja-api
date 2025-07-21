@@ -829,11 +829,16 @@ class FirmwareNinja:
         """
 
         count = ctypes.c_ulonglong(0)
-        relationships = core.BNFirmwareNinjaQueryRelationships(self._handle, count)
+        relationships = core.BNFirmwareNinjaQueryRelationships(self._handle, ctypes.byref(count))
         relationship_list = []
         for i in range(count.value):
-            relationship_list.append(FirmwareNinjaRelationship(self._view, handle=relationships[i]))
+            relationship_list.append(
+                FirmwareNinjaRelationship(
+                    self._view, handle=core.BNNewFirmwareNinjaRelationshipReference(relationships[i])
+                )
+            )
 
+        core.BNFirmwareNinjaFreeRelationships(relationships, count.value)
         return relationship_list
 
     def add_relationship(self, relationship: FirmwareNinjaRelationship) -> None:

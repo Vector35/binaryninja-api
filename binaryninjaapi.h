@@ -19354,7 +19354,6 @@ namespace BinaryNinja {
 	{
 	public:
 		FirmwareNinjaRelationship(Ref<BinaryView> view, BNFirmwareNinjaRelationship* relationship = nullptr);
-		~FirmwareNinjaRelationship();
 
 		/*! Set the primary relationship object to an address
 

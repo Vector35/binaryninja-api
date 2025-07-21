@@ -400,30 +400,27 @@ pub fn is_address_relocatable(relocatable_regions: &[Range<u64>], address: u64) 
 // TODO: This might need to be configurable, in that case we better remove this function.
 /// Get the relocatable regions of the view.
 ///
-/// Currently, this is all the sections, however, this might be refined later.
+/// Currently, segments are used by default, however, if the only segment is based at 0, then we fall
+/// back to using sections.
 pub fn relocatable_regions(view: &BinaryView) -> Vec<Range<u64>> {
-    // NOTE: We cannot use segments here as there will be a zero-based segment.
-    let mut ranges: Vec<_> = view
-        .sections()
+    // NOTE: We used to use sections because the image base for some object files would start
+    // at zero, masking non-relocatable instructions, since then we have started adjusting the
+    // image base to 0x10000 or higher so we can use segments directly, which improves the accuracy
+    // of function GUIDs for binaries which have no or bad section definitions, common of firmware.
+    let mut ranges = view.segments()
         .iter()
-        .map(|s| Range {
-            start: s.start(),
-            end: s.end(),
-        })
-        .collect();
+        .filter(|s| s.address_range().start != 0)
+        .map(|s| s.address_range())
+        .collect::<Vec<_>>();
 
-    // If the only section available is the synthetic one, fallback to using the segments.
-    // NOTE: This should only happen for firmware, and it should be _fine_ considering that we
-    // do not use segments for the case where we are based at some zero offset. The user should have
-    // based the image somewhere reasonably.
-    // TODO: Restrict this to only when image base is above some value?
-    if ranges.len() <= 1 {
-        let segment_ranges = view
-            .segments()
+    if ranges.is_empty() {
+        // Realistically only happens if the only defined segment was based at 0, in which case
+        // we hope the user has set up correct sections. If not we are going to be masking off too many
+        // or too little instructions.
+        ranges = view.sections()
             .iter()
             .map(|s| s.address_range())
             .collect::<Vec<_>>();
-        ranges.extend(segment_ranges);
     }
 
     ranges

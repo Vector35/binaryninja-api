@@ -407,7 +407,8 @@ pub fn relocatable_regions(view: &BinaryView) -> Vec<Range<u64>> {
     // at zero, masking non-relocatable instructions, since then we have started adjusting the
     // image base to 0x10000 or higher so we can use segments directly, which improves the accuracy
     // of function GUIDs for binaries which have no or bad section definitions, common of firmware.
-    let mut ranges = view.segments()
+    let mut ranges = view
+        .segments()
         .iter()
         .filter(|s| s.address_range().start != 0)
         .map(|s| s.address_range())
@@ -417,7 +418,8 @@ pub fn relocatable_regions(view: &BinaryView) -> Vec<Range<u64>> {
         // Realistically only happens if the only defined segment was based at 0, in which case
         // we hope the user has set up correct sections. If not we are going to be masking off too many
         // or too little instructions.
-        ranges = view.sections()
+        ranges = view
+            .sections()
             .iter()
             .map(|s| s.address_range())
             .collect::<Vec<_>>();

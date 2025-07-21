@@ -2727,10 +2727,6 @@ public:
 
 		return registers;
 	}
-
-	MipsVersion GetMIPSVersion() {
-		return m_version;
-	}
 };
 
 class MipsO32CallingConvention: public CallingConvention
@@ -3412,8 +3408,11 @@ public:
 				uint32_t inst2 = *(uint32_t*)(cur->relocationDataCache);
 				Instruction instruction;
 				memset(&instruction, 0, sizeof(instruction));
-				MipsArchitecture& march = dynamic_cast<MipsArchitecture&>(*arch);
-				if (mips_decompose(&inst2, sizeof(uint32_t), &instruction, march.GetMIPSVersion(), cur->address, arch->GetEndianness(), DECOMPOSE_FLAGS_PSEUDO_OP))
+				auto version = arch->GetAddressSize() == 8 ? MIPS_64 : MIPS_32;
+				if (Architecture::GetByName("r5900l") == arch)
+					version = MIPS_R5900;
+				if (mips_decompose(&inst2, sizeof(uint32_t), &instruction,
+					version, cur->address, arch->GetEndianness(), DECOMPOSE_FLAGS_PSEUDO_OP))
 					break;
 
 				int32_t immediate = swap(inst2) & 0xffff;

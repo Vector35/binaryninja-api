@@ -899,7 +899,7 @@ bool KernelCacheView::InitController()
 
 	{
 		BinaryReader reader(GetParentView());
-		reader.Seek(0x18);
+		reader.Seek(0x10);
 		uint64_t ncmds = reader.Read32();
 		uint64_t offset = 0x20;
 		for (uint64_t i = 0; i < ncmds; i++)

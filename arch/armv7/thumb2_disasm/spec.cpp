@@ -34446,8 +34446,8 @@ int vcvt_float_int(struct decomp_request *req, struct decomp_result *res)
 			/* pcode: dp_operation = (sz == 1) */
 			res->fields[FIELD_dp_operation] = ((res->fields[FIELD_sz]) == (1));
 			res->fields_mask[FIELD_dp_operation >> 6] |= 1LL << (FIELD_dp_operation & 63);
-			/* pcode: unsigned = (op == '0') */
-			res->fields[FIELD_unsigned] = ((res->fields[FIELD_op]) == (0x0));
+			/* pcode: unsigned = (opc3 == '0') */
+			res->fields[FIELD_unsigned] = ((res->fields[FIELD_opc3]) == (0x0));
 			res->fields_mask[FIELD_unsigned >> 6] |= 1LL << (FIELD_unsigned & 63);
 			/* pcode: m = UInt(Vm:M) */
 			res->fields[FIELD_m] = ((res->fields[FIELD_Vm]<<M_width)|(res->fields[FIELD_M]));

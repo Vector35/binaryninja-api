@@ -5526,7 +5526,7 @@ fmt VCVTR<c>.S32.F64 <Sd>,<Dm>
 extract32 1110,11101,D.1,11,1,opc1.1,opc2.1,opc3.1,Vd.4,101,sz.1,op.1,1,M.1,0,Vm.4
 pcode_start
 to_integer = (opc1 == '1'); dp_operation = (sz == 1);
-unsigned = (op == '0');
+unsigned = (opc3 == '0');
 m = UInt(Vm:M);
 d = if dp_operation then UInt(D:Vd) else UInt(Vd:D);
 if (to_integer) then unsigned = (opc1 == '0');

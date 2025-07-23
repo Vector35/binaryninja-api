@@ -35,10 +35,10 @@ static uint32_t RegisterSizeFromPrefix(const char* prefix = "")
 	return 4;
 }
 
-static ExprId ReadRegister(LowLevelILFunction& il, decomp_result* instr, uint32_t reg, size_t size = 4, const char* prefix = "")
+static ExprId ReadRegister(LowLevelILFunction& il, decomp_result* instr, uint32_t reg, size_t size = 4, const char* prefix = "", uint32_t align=0)
 {
 	if (reg == armv7::REG_PC && strcmp(prefix, "") == 0)
-		return il.ConstPointer(size, instr->pc);
+		return il.ConstPointer(size, instr->pc & (align ? ~(align - 1) : ~0));
 	return il.Register(RegisterSizeFromPrefix(prefix), GetRegisterByIndex(reg, prefix));
 }
 
@@ -351,9 +351,9 @@ static ExprId ShiftedRegister(LowLevelILFunction& il, decomp_result* instr, uint
 	}
 }
 
-
+#define ReadRegisterA(il, instr, reg, align) ReadRegister(il, instr, reg, 4, "", align)
 static ExprId GetMemoryAddress(LowLevelILFunction& il, decomp_result* instr, size_t operand, uint32_t size,
-	bool canWriteback = true)
+	bool canWriteback = true, uint32_t align=0)
 {
 	uint32_t reg, second, t, n;
 	switch (instr->format->operands[operand].type)
@@ -367,19 +367,19 @@ static ExprId GetMemoryAddress(LowLevelILFunction& il, decomp_result* instr, siz
 		second = instr->fields[instr->format->operands[operand].field1];
 		if (canWriteback && HasWriteback(instr, operand))
 		{
-			il.AddInstruction(il.SetRegister(4, reg, il.Add(4, ReadRegister(il, instr, reg), il.Const(4, second))));
+			il.AddInstruction(il.SetRegister(4, reg, il.Add(4, ReadRegisterA(il, instr, reg, align), il.Const(4, second))));
 			return il.Register(4, reg);
 		}
-		return il.Add(4, ReadRegister(il, instr, reg), il.Const(4, second));
+		return il.Add(4, ReadRegisterA(il, instr, reg, align), il.Const(4, second));
 	case OPERAND_FORMAT_MEMORY_ONE_REG_NEG_IMM:
 		reg = GetRegisterByIndex(instr->fields[instr->format->operands[operand].field0]);
 		second = instr->fields[instr->format->operands[operand].field1];
 		if (canWriteback && HasWriteback(instr, operand))
 		{
-			il.AddInstruction(il.SetRegister(4, reg, il.Sub(4, ReadRegister(il, instr, reg), il.Const(4, second))));
+			il.AddInstruction(il.SetRegister(4, reg, il.Sub(4, ReadRegisterA(il, instr, reg, align), il.Const(4, second))));
 			return il.Register(4, reg);
 		}
-		return il.Sub(4, ReadRegister(il, instr, reg), il.Const(4, second));
+		return il.Sub(4, ReadRegisterA(il, instr, reg, align), il.Const(4, second));
 	case OPERAND_FORMAT_MEMORY_ONE_REG_ADD_IMM:
 	case OPERAND_FORMAT_MEMORY_ONE_REG_OPTIONAL_ADD_IMM:
 		reg = GetRegisterByIndex(instr->fields[instr->format->operands[operand].field0]);
@@ -387,23 +387,23 @@ static ExprId GetMemoryAddress(LowLevelILFunction& il, decomp_result* instr, siz
 		if (canWriteback && HasWriteback(instr, operand))
 		{
 			if (instr->fields[FIELD_add])
-				il.AddInstruction(il.SetRegister(4, reg, il.Add(4, ReadRegister(il, instr, reg), il.Const(4, second))));
+				il.AddInstruction(il.SetRegister(4, reg, il.Add(4, ReadRegisterA(il, instr, reg, align), il.Const(4, second))));
 			else
-				il.AddInstruction(il.SetRegister(4, reg, il.Sub(4, ReadRegister(il, instr, reg), il.Const(4, second))));
+				il.AddInstruction(il.SetRegister(4, reg, il.Sub(4, ReadRegisterA(il, instr, reg, align), il.Const(4, second))));
 			return il.Register(4, reg);
 		}
 		if (instr->fields[FIELD_add])
-			return il.Add(4, ReadRegister(il, instr, reg), il.Const(4, second));
-		return il.Sub(4, ReadRegister(il, instr, reg), il.Const(4, second));
+			return il.Add(4, ReadRegisterA(il, instr, reg, align), il.Const(4, second));
+		return il.Sub(4, ReadRegisterA(il, instr, reg, align), il.Const(4, second));
 	case OPERAND_FORMAT_MEMORY_TWO_REG:
 		reg = GetRegisterByIndex(instr->fields[instr->format->operands[operand].field0]);
 		second = GetRegisterByIndex(instr->fields[instr->format->operands[operand].field1]);
 		if (canWriteback && HasWriteback(instr, operand))
 		{
-			il.AddInstruction(il.SetRegister(4, reg, il.Add(4, ReadRegister(il, instr, reg), il.Register(4, second))));
+			il.AddInstruction(il.SetRegister(4, reg, il.Add(4, ReadRegisterA(il, instr, reg, align), il.Register(4, second))));
 			return il.Register(4, reg);
 		}
-		return il.Add(4, ReadRegister(il, instr, reg), il.Register(4, second));
+		return il.Add(4, ReadRegisterA(il, instr, reg, align), il.Register(4, second));
 	case OPERAND_FORMAT_MEMORY_TWO_REG_SHIFT:
 		reg = GetRegisterByIndex(instr->fields[instr->format->operands[operand].field0]);
 		second = GetRegisterByIndex(instr->fields[instr->format->operands[operand].field1]);
@@ -411,21 +411,21 @@ static ExprId GetMemoryAddress(LowLevelILFunction& il, decomp_result* instr, siz
 		n = instr->fields[FIELD_shift_n];
 		if (canWriteback && HasWriteback(instr, operand))
 		{
-			il.AddInstruction(il.SetRegister(4, reg, il.Add(4, ReadRegister(il, instr, reg),
+			il.AddInstruction(il.SetRegister(4, reg, il.Add(4, ReadRegisterA(il, instr, reg, align),
 				ShiftedRegister(il, instr, second, t, n))));
 			return il.Register(4, reg);
 		}
-		return il.Add(4, ReadRegister(il, instr, reg), ShiftedRegister(il, instr, second, t, n));
+		return il.Add(4, ReadRegisterA(il, instr, reg, align), ShiftedRegister(il, instr, second, t, n));
 	case OPERAND_FORMAT_MEMORY_TWO_REG_LSL_ONE:
 		reg = GetRegisterByIndex(instr->fields[instr->format->operands[operand].field0]);
 		second = GetRegisterByIndex(instr->fields[instr->format->operands[operand].field1]);
 		if (canWriteback && HasWriteback(instr, operand))
 		{
-			il.AddInstruction(il.SetRegister(4, reg, il.Add(4, ReadRegister(il, instr, reg),
+			il.AddInstruction(il.SetRegister(4, reg, il.Add(4, ReadRegisterA(il, instr, reg, align),
 				il.ShiftLeft(4, ReadRegister(il, instr, second), il.Const(4, 1)))));
 			return il.Register(4, reg);
 		}
-		return il.Add(4, ReadRegister(il, instr, reg), il.ShiftLeft(4, ReadRegister(il, instr, second), il.Const(4, 1)));
+		return il.Add(4, ReadRegisterA(il, instr, reg, align), il.ShiftLeft(4, ReadRegister(il, instr, second), il.Const(4, 1)));
 	case OPERAND_FORMAT_MEMORY_SP_IMM:
 	case OPERAND_FORMAT_MEMORY_SP_OPTIONAL_IMM:
 		second = instr->fields[instr->format->operands[operand].field0];
@@ -436,7 +436,7 @@ static ExprId GetMemoryAddress(LowLevelILFunction& il, decomp_result* instr, siz
 		}
 		return il.Add(4, il.Register(4, armv7::REG_SP), il.Const(4, second));
 	case OPERAND_FORMAT_MEMORY_PC:
-		return il.ConstPointer(4, instr->pc);
+		return il.ConstPointer(4, instr->pc & (align ? ~(align - 1) : ~0));
 	case OPERAND_FORMAT_LABEL:
 		if (instr->fields[FIELD_add])
 			return il.ConstPointer(4, ALIGN4(instr->pc) + instr->fields[FIELD_imm32]);
@@ -2053,7 +2053,9 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 		}
 		else
 		{
-			il.AddInstruction(WriteILOperand(il, instr, 0, il.Load(regSize, GetMemoryAddress(il, instr, 1, 4))));
+			il.AddInstruction(WriteILOperand(il, instr, 0,
+				il.Load(regSize,
+					GetMemoryAddress(il, instr, 1, 4, true, 4))));
 		}
 		break;
 	}

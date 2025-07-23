@@ -3,14 +3,19 @@
 import re
 import os
 import sys
+from collections.abc import Sequence
+from pprint import pformat
 
-from parse import pcodeParser, pcodeSemantics
+from parse import pcodeParser
 
 DEBUG = 0
 
 ###############################################################################
 # misc utils
 ###############################################################################
+
+def is_seq(x):
+    return type(x) not in [str, bytes] and isinstance(x, Sequence)
 
 # convert "MOV (register)" text to the function that handles it
 #       ->"mov_register"
@@ -43,10 +48,20 @@ def applyIndent(text, level=0):
 class BetterNode(object):
     def __init__(self, name, children=[], semicolon=False):
         self.name = name
-        self.children = children
+        if isinstance(children, filter):
+            self.children = list(children)
+        else:
+            self.children = children
         self.semicolon = semicolon
 
+    def __repr__(self):
+        if is_seq(self.children):
+            return 'BetterNode(%s)[%d]%s{\n    %s\n}' % (self.name, len(self.children), ';' if self.semicolon else '', pformat(list(map(repr, self.children)), indent=4))
+        else:
+            return 'BetterNode(%s)[%r]' % (self.name, self.children)
+
     def gen(self, extra=''):
+        code = 'BOGUS'
         # leaf nodes (no possible descent)
         if self.name == 'ident':
             tmp = (self.children[0] + extra).replace('.', '_')
@@ -64,8 +79,17 @@ class BetterNode(object):
             code = '\nreturn %s(req, res);' % self.children[0]
             self.semicolon = 0
         else:
-            subCode = map(lambda x: x.gen(), self.children)
-            subCode = tuple(subCode)
+
+            def c_gen(c):
+                if type(c) is str:
+                    return c
+                elif is_seq(c):
+                    c = tuple(map(c_gen, c))
+                    return c
+                else:
+                    return ''.join(c.gen())
+
+            subCode = c_gen(self.children)
 
             # binary operations translate directly to C
             if self.name == 'xor':
@@ -181,7 +205,7 @@ class BetterNode(object):
                     if shamt:
                         code = '((%s >> %d) & 1)' % (subCode[0], shamt)
                     else:
-                        code = '(%s & 1)' % subCode[0]    
+                        code = '(%s & 1)' % subCode[0]
                 else:
                     # there is a bit range to extract, [hi,lo]
                     hi = int(subCode[1])
@@ -192,7 +216,6 @@ class BetterNode(object):
                         code = '((%s >> %d) & 0x%X)' % (subCode[0], lo, 2**width-1)
                     else:
                         code = '(%s & 0x%X)' % (subCode[0], 2**width-1)
-
             # if else
             elif self.name == 'if':
                 if len(subCode) == 2:
@@ -467,7 +490,7 @@ class PcodeSemantics(object):
     def expr0(self, ast):
         rv = None
 
-        if type(ast) == type([]):
+        if is_seq(ast):
             lookup = {'EOR':'xor', '+':'add', '-':'sub',
                         '&&':'log_and', '||':'log_or' }
 
@@ -493,7 +516,7 @@ class PcodeSemantics(object):
     def expr1(self, ast):
         rv = ast
 
-        if type(ast) == type([]):
+        if is_seq(ast):
             lookup = {'*':'mul', '/':'div', 'XOR':'xor', 'DIV':'div', '==':'equals', '!=':'not_equals',
                     '<':'less_than', '>':'greater_than', '<<':'shl', '>>':'rshl',
                     '>=':'greater_than_or_equals', '<=':'less_than_or_equals'}
@@ -529,7 +552,7 @@ class PcodeSemantics(object):
     def expr3(self, ast):
         rv = 'BLUNDER'
 
-        if type(ast) == type([]):
+        if is_seq(ast):
             #print('ast is: ', ast)
 
             # empty closure, return original
@@ -540,7 +563,7 @@ class PcodeSemantics(object):
                     rv = BetterNode('group', [ast[1]])
                 elif ast[0] == '!':
                     rv = BetterNode('log_not', [ast[1]])
-                elif type(ast[1]==[]):
+                elif is_seq(ast[1]):
                     closure = ast[1]
                     assert closure[0][0] == ':'
                     bn = BetterNode('concat', [ast[0], closure[0][1]])
@@ -657,7 +680,7 @@ class PcodeSemantics(object):
         if type(ast) == type(u'x'):
             funcName = ast[:-2]
         # function with arguments
-        elif type(ast) == type([]):
+        elif is_seq(ast):
             funcName = str(ast[0][:-1])
             args = filter(lambda x: x!=',', ast[1:-1])
 
@@ -725,7 +748,7 @@ def genBlock(pcode, comments=True):
     (caseVar, indent) = (None, 0)
 
     for l in lines:
-        #print('line is: -%s-' % l)
+        # print('line is: -%s-' % l, file=sys.stderr)
         if l[0:5] == 'case ':
             m = re.match(r'^case (.*) of', l)
             result.append('/* pcode: %s */' % l.lstrip())
@@ -763,6 +786,8 @@ def genBlock(pcode, comments=True):
                 result.append('}')
                 (caseVar, indent) = (None, 0)
             code = gen(l)
+            # print(f'code is: -{code}-', file=sys.stderr)
+
             result.append(code)
         
     return '\n'.join(result)    

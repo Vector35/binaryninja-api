@@ -4,7 +4,12 @@ translate the pseudocode for arm instructions (given in the docs) to target lang
 once the pcode is extracted, automatic generation of ultra-accurate disassemblers should become possible
 
 # how
-use Grako parser generator, describe the language (pcode.ebnf) and write code generator (codegen.py)
+~~use Grako parser generator, describe the language (pcode.ebnf) and write code generator (codegen.py)~~
+use Tatsu parser generator, describe the language (pcode.ebnf) and write code generator (codegen.py):
+
+```
+python3 -m tatsu --name pcode pcode.ebnf -o parse.py
+```
 
 # example
 input statement:

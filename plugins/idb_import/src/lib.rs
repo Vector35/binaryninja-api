@@ -232,12 +232,22 @@ fn parse_id0_section_info<K: IDAKind>(
     debug_file: &BinaryView,
     id0: &ID0Section<K>,
 ) -> Result<()> {
-    let version = match id0.ida_info()? {
-        idb_rs::id0::IDBParam::V1(IDBParam1 { version, .. })
-        | idb_rs::id0::IDBParam::V2(IDBParam2 { version, .. }) => version,
+    let (version, idb_baseaddr) = match id0.ida_info()? {
+        idb_rs::id0::IDBParam::V1(IDBParam1 {
+            version, baseaddr, ..
+        })
+        | idb_rs::id0::IDBParam::V2(IDBParam2 {
+            version, baseaddr, ..
+        }) => (version, baseaddr.into_u64()),
     };
 
-    for (addr, info) in get_info(id0, version)? {
+    let bv_baseaddr = bv.start();
+    // just addr this value to the address to translate from ida to bn
+    // NOTE this delta could wrapp here and while using translating
+    let addr_delta = bv_baseaddr.wrapping_sub(idb_baseaddr);
+
+    for (idb_addr, info) in get_info(id0, version)? {
+        let addr = addr_delta.wrapping_add(idb_addr.into_u64());
         // just in case we change this struct in the future, this line will for us to review this code
         // TODO merge this data with folder locations
         let AddrInfo {
@@ -246,11 +256,8 @@ fn parse_id0_section_info<K: IDAKind>(
             ty,
         } = info;
         // TODO set comments to address here
-        for function in &bv.functions_containing(addr.into_u64()) {
-            function.set_comment_at(
-                addr.into_u64(),
-                &String::from_utf8_lossy(&comments.join(&b"\n"[..])),
-            );
+        for function in &bv.functions_containing(addr) {
+            function.set_comment_at(addr, &String::from_utf8_lossy(&comments.join(&b"\n"[..])));
         }
 
         let bnty = ty
@@ -282,7 +289,7 @@ fn parse_id0_section_info<K: IDAKind>(
                     None,
                     label.map(|x| x.to_string()),
                     bnty,
-                    Some(addr.into_u64()),
+                    Some(addr),
                     None,
                     vec![],
                     vec![],
@@ -292,7 +299,7 @@ fn parse_id0_section_info<K: IDAKind>(
             }
             (label, Some(_ty), Some(bnty)) => {
                 let label: Option<&str> = label.as_ref().map(|x| x.as_ref());
-                if !debug_info.add_data_variable(addr.into_u64(), &bnty, label, &[]) {
+                if !debug_info.add_data_variable(addr, &bnty, label, &[]) {
                     error!("Unable to add the type at {addr:#x}")
                 }
             }
@@ -302,7 +309,7 @@ fn parse_id0_section_info<K: IDAKind>(
                 // TODO how to add a label without a type associacted with it?
                 if let Some(name) = label {
                     if !debug_info.add_data_variable(
-                        addr.into_u64(),
+                        addr,
                         &binaryninja::types::Type::void(),
                         Some(&name),
                         &[],
@@ -314,7 +321,7 @@ fn parse_id0_section_info<K: IDAKind>(
             (Some(name), None, None) => {
                 // TODO how to add a label without a type associacted with it?
                 if !debug_info.add_data_variable(
-                    addr.into_u64(),
+                    addr,
                     &binaryninja::types::Type::void(),
                     Some(&name),
                     &[],

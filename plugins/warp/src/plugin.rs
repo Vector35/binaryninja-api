@@ -12,9 +12,9 @@ use binaryninja::background_task::BackgroundTask;
 use binaryninja::command::{
     register_command, register_command_for_function, register_command_for_project,
 };
-use binaryninja::is_ui_enabled;
 use binaryninja::logger::Logger;
 use binaryninja::settings::Settings;
+use binaryninja::{add_optional_plugin_dependency, is_ui_enabled};
 use log::LevelFilter;
 use reqwest::StatusCode;
 
@@ -196,4 +196,10 @@ pub extern "C" fn CorePluginInit() -> bool {
     );
 
     true
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn CorePluginDependencies() {
+    // TODO: Remove this once the objectivec workflow is registered on the meta workflow.
+    add_optional_plugin_dependency("workflow_objc");
 }

@@ -380,7 +380,7 @@ void KCTriageView::initSymbolTable()
 		connect(dialog, &QMessageBox::buttonClicked, this, [=, this](QAbstractButton* button)
 			{
 				if (button == dialog->button(QMessageBox::Yes))
-					loadImagesWithAddr({image->headerFileAddress});
+					loadImagesWithAddr({image->headerVirtualAddress});
 			});
 
 		dialog->exec();

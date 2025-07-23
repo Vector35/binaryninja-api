@@ -33,7 +33,7 @@ from . import function
 from . import highlevelil
 from . import lowlevelil
 from . import mediumlevelil
-from . import project
+from .project import Project
 from .enums import PluginCommandType
 from .log import log_error
 
@@ -250,7 +250,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 	@staticmethod
 	def _project_action(project, action):
 		try:
-			project_obj = project.Project(handle=core.BNNewProjectReference(project))
+			project_obj = Project(handle=core.BNNewProjectReference(project))
 			action(project_obj)
 		except:
 			log_error(traceback.format_exc())
@@ -403,7 +403,7 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		try:
 			if is_valid is None:
 				return True
-			project_obj = project.Project(handle=core.BNNewProjectReference(project))
+			project_obj = Project(handle=core.BNNewProjectReference(project))
 			return is_valid(project_obj)
 		except:
 			log_error(traceback.format_exc())
@@ -786,16 +786,16 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 
 	@classmethod
 	def register_for_project(
-			cls, name: str, description: str, action: Callable[['project.Project'], None],
-			is_valid: Optional[Callable[['project.Project'], bool]] = None
+			cls, name: str, description: str, action: Callable[['Project'], None],
+			is_valid: Optional[Callable[['Project'], bool]] = None
 	):
 		r"""
 		``register_for_project`` Register a plugin to be called with a project argument
 
 		:param str name: name of the plugin (use 'Folder\\Name' to have the menu item nested in a folder)
 		:param str description: description of the plugin
-		:param callback action: function to call with the :class:`~project.Project` as an argument
-		:param callback is_valid: optional argument of a function passed a :class:`~project.Project` to determine whether the plugin should be enabled for that project
+		:param callback action: function to call with the :class:`~Project` as an argument
+		:param callback is_valid: optional argument of a function passed a :class:`~Project` to determine whether the plugin should be enabled for that project
 		:rtype: None
 		:Example:
 

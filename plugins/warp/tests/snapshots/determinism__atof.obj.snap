@@ -43,10 +43,10 @@ expression: functions
         guid: 09d86bcf-88d8-5a80-8613-6f349a8f87d0,
     },
     241520: FunctionGUID {
-        guid: 34d39681-2a71-5088-88ca-69a3d9391ea1,
+        guid: af36c5f7-6d3f-5e09-9296-0766ec75fff2,
     },
     242464: FunctionGUID {
-        guid: 34d39681-2a71-5088-88ca-69a3d9391ea1,
+        guid: af36c5f7-6d3f-5e09-9296-0766ec75fff2,
     },
     243408: FunctionGUID {
         guid: 94616015-4cfb-5abb-ba6d-3ffe2ed68bc4,
@@ -82,10 +82,10 @@ expression: functions
         guid: 87d56145-2c64-5972-9d88-79cefa7fa3e7,
     },
     251264: FunctionGUID {
-        guid: 3d0db1c2-5d8c-5654-8cf5-eb75cd7e7032,
+        guid: 09823fdc-48f1-5ee7-9ff3-5b4220393826,
     },
     255600: FunctionGUID {
-        guid: 5c7056a7-e5ae-5d37-80e6-d0c73b73e951,
+        guid: ca553399-0cf4-57b5-939c-8b35f6b2dc55,
     },
     259968: FunctionGUID {
         guid: c2d971c9-f700-5eb2-b008-15d74359b838,
@@ -112,10 +112,10 @@ expression: functions
         guid: 01eb5477-09c0-5021-8ac7-9aa7b17d24bb,
     },
     267424: FunctionGUID {
-        guid: 42fd4e74-f769-51dc-81c3-5913198a03a1,
+        guid: 8e309813-cb4b-5c0d-84b7-92fcb85c30c5,
     },
     268912: FunctionGUID {
-        guid: a166aca0-28bd-52d2-8a0c-8cd19dbb9554,
+        guid: 8e309813-cb4b-5c0d-84b7-92fcb85c30c5,
     },
     270400: FunctionGUID {
         guid: 31ce1f1c-0f6e-529a-ba5c-35d92b7481fd,
@@ -223,7 +223,7 @@ expression: functions
         guid: 1ad2948a-e5a3-56ab-9c8e-f877bcbc3b9d,
     },
     286688: FunctionGUID {
-        guid: 0e8fadb8-3d72-5c7e-aebf-7d4465784209,
+        guid: 18002645-5174-5f17-8c45-d641db730690,
     },
     288432: FunctionGUID {
         guid: f86352b8-4278-507c-b816-bc7a0e307cfa,
@@ -238,7 +238,7 @@ expression: functions
         guid: ec191354-fe32-5e17-a723-c1a381f71e82,
     },
     291984: FunctionGUID {
-        guid: 87617e83-c756-52d3-ae00-3946e80feeb3,
+        guid: 969595f2-4f4f-5289-8c94-e926edd8691f,
     },
     292384: FunctionGUID {
         guid: e68c835d-b1ea-59da-b1c7-aa662412b4a4,

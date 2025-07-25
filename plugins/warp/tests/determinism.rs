@@ -8,7 +8,7 @@ use warp_ninja::cache::cached_function_guid;
 
 // These are the target files present in OUT_DIR
 // Add the files to fixtures/bin
-static TARGET_FILES: [&str; 9] = [
+static TARGET_FILES: [&str; 10] = [
     "_ctype.obj",
     "_fptostr.obj",
     "_mbslen.obj",
@@ -18,6 +18,7 @@ static TARGET_FILES: [&str; 9] = [
     "atof.obj",
     "atoldbl.obj",
     "atox.obj",
+    "ls"
 ];
 
 #[test]

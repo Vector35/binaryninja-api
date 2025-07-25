@@ -18,6 +18,7 @@ fn main() {
     let out_dir = std::env::var("OUT_DIR").expect("OUT_DIR specified");
     let out_dir_path = PathBuf::from(out_dir);
 
+    println!("cargo::rerun-if-changed=fixtures");
     // Copy all binaries to OUT_DIR for unit tests.
     let bin_dir: PathBuf = "fixtures/bin".into();
     if let Ok(entries) = std::fs::read_dir(bin_dir) {

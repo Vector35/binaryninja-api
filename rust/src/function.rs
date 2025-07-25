@@ -37,7 +37,7 @@ pub use binaryninjacore_sys::BNFunctionAnalysisSkipOverride as FunctionAnalysisS
 pub use binaryninjacore_sys::BNFunctionUpdateType as FunctionUpdateType;
 pub use binaryninjacore_sys::BNHighlightStandardColor as HighlightStandardColor;
 
-use crate::architecture::RegisterId;
+use crate::architecture::{IndirectBranchInfo, RegisterId};
 use crate::confidence::Conf;
 use crate::high_level_il::HighLevelILFunction;
 use crate::language_representation::CoreLanguageRepresentationFunction;
@@ -45,7 +45,7 @@ use crate::low_level_il::LowLevelILRegularFunction;
 use crate::medium_level_il::MediumLevelILFunction;
 use crate::metadata::Metadata;
 use crate::variable::{
-    IndirectBranchInfo, MergedVariable, NamedVariableWithType, RegisterValue, RegisterValueType,
+    MergedVariable, NamedVariableWithType, RegisterValue, RegisterValueType,
     StackVariableReference, Variable,
 };
 use crate::workflow::Workflow;
@@ -92,12 +92,40 @@ impl From<BNArchitectureAndAddress> for Location {
     }
 }
 
+impl From<&BNArchitectureAndAddress> for Location {
+    fn from(value: &BNArchitectureAndAddress) -> Self {
+        Self::from_raw(value.address, value.arch)
+    }
+}
+
 impl From<Location> for BNArchitectureAndAddress {
     fn from(value: Location) -> Self {
         Self {
             arch: value.arch.map(|a| a.handle).unwrap_or(std::ptr::null_mut()),
             address: value.addr,
         }
+    }
+}
+
+impl From<&Location> for BNArchitectureAndAddress {
+    fn from(value: &Location) -> Self {
+        Self::from(*value)
+    }
+}
+
+impl CoreArrayProvider for Location {
+    type Raw = BNArchitectureAndAddress;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for Location {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreeArchitectureAndAddressList(raw);
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::from(*raw)
     }
 }
 
@@ -2903,37 +2931,6 @@ unsafe impl CoreArrayProviderInner for Comment {
         Comment {
             addr: *raw,
             comment: function.comment_at(*raw),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-pub struct ArchAndAddr {
-    pub arch: CoreArchitecture,
-    pub addr: u64,
-}
-
-impl ArchAndAddr {
-    pub fn new(arch: CoreArchitecture, addr: u64) -> Self {
-        Self { arch, addr }
-    }
-}
-
-impl From<BNArchitectureAndAddress> for ArchAndAddr {
-    fn from(raw: BNArchitectureAndAddress) -> Self {
-        unsafe {
-            let arch = CoreArchitecture::from_raw(raw.arch);
-            let addr = raw.address;
-            ArchAndAddr { arch, addr }
-        }
-    }
-}
-
-impl ArchAndAddr {
-    pub fn into_raw(self) -> BNArchitectureAndAddress {
-        BNArchitectureAndAddress {
-            arch: self.arch.handle,
-            address: self.addr,
         }
     }
 }

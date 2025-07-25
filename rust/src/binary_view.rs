@@ -34,7 +34,7 @@ use crate::external_library::{ExternalLibrary, ExternalLocation};
 use crate::file_accessor::{Accessor, FileAccessor};
 use crate::file_metadata::FileMetadata;
 use crate::flowgraph::FlowGraph;
-use crate::function::{Function, FunctionViewType, NativeBlock};
+use crate::function::{Function, FunctionViewType, Location, NativeBlock};
 use crate::linear_view::{LinearDisassemblyLine, LinearViewCursor};
 use crate::metadata::Metadata;
 use crate::platform::Platform;
@@ -1376,29 +1376,26 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn should_skip_target_analysis(
+    /// Checks if target analysis should be skipped.
+    ///
+    /// NOTE: This function should **only** be used by within an [`Architecture`].
+    fn should_skip_target_analysis<L: Into<Location>>(
         &self,
-        source: &ArchAndAddr,
-        srcfunc: &Function,
-        srcend: u64,
-        target: &ArchAndAddr,
+        source: L,
+        source_func: &Function,
+        source_end: u64,
+        target: L,
     ) -> bool {
-        let mut srccopy = BNArchitectureAndAddress {
-            arch: source.arch.handle,
-            address: source.addr,
-        };
-        let mut targetcopy = BNArchitectureAndAddress {
-            arch: target.arch.handle,
-            address: target.addr,
-        };
+        let mut raw_source = BNArchitectureAndAddress::from(source.into());
+        let mut raw_target = BNArchitectureAndAddress::from(target.into());
 
         unsafe {
             BNShouldSkipTargetAnalysis(
                 self.as_ref().handle,
-                &mut srccopy,
-                srcfunc.handle,
-                srcend,
-                &mut targetcopy,
+                &mut raw_source,
+                source_func.handle,
+                source_end,
+                &mut raw_target,
             )
         }
     }

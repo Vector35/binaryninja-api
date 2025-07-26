@@ -235,11 +235,15 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     /// Search the view using the query options.
+    ///
+    /// In the `on_match` callback return `false` to stop searching.
     fn search<C: FnMut(u64, &DataBuffer) -> bool>(&self, query: &SearchQuery, on_match: C) -> bool {
         self.search_with_progress(query, on_match, NoProgressCallback)
     }
 
     /// Search the view using the query options.
+    /// 
+    /// In the `on_match` callback return `false` to stop searching.
     fn search_with_progress<P: ProgressCallback, C: FnMut(u64, &DataBuffer) -> bool>(
         &self,
         query: &SearchQuery,

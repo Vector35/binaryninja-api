@@ -2,6 +2,10 @@ use std::ffi::c_void;
 
 pub trait ProgressCallback: Sized {
     type SplitProgressType: SplitProgressBuilder;
+    
+    /// Caller function will call this to report progress.
+    /// 
+    /// Return `false` to tell the caller to stop.
     fn progress(&mut self, progress: usize, total: usize) -> bool;
 
     unsafe extern "C" fn cb_progress_callback(

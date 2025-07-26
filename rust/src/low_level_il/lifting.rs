@@ -678,6 +678,12 @@ impl<R> LowLevelILExpression<'_, Mutable, NonSSA, R>
 where
     R: ExpressionResultType,
 {
+    pub fn with_address(self, address: u64) -> Self {
+        use binaryninjacore_sys::BNLowLevelILSetExprAddress;
+        unsafe { BNLowLevelILSetExprAddress(self.function.handle, self.index.0, address) }
+        self
+    }
+
     pub fn with_source_operand(self, op: u32) -> Self {
         use binaryninjacore_sys::BNLowLevelILSetExprSourceOperand;
         unsafe { BNLowLevelILSetExprSourceOperand(self.function.handle, self.index.0, op) }
@@ -695,6 +701,7 @@ where
 {
     function: &'func LowLevelILFunction<Mutable, NonSSA>,
     op: BNLowLevelILOperation,
+    location: Option<LowLevelILSourceLocation>,
     size: usize,
     flag_write: FlagWriteId,
     op1: u64,
@@ -708,6 +715,25 @@ impl<'a, R> ExpressionBuilder<'a, R>
 where
     R: ExpressionResultType,
 {
+    pub fn new(
+        function: &'a LowLevelILFunction<Mutable, NonSSA>,
+        op: BNLowLevelILOperation,
+        size: usize,
+    ) -> Self {
+        ExpressionBuilder {
+            function,
+            op,
+            location: None,
+            size,
+            flag_write: FlagWriteId(0),
+            op1: 0,
+            op2: 0,
+            op3: 0,
+            op4: 0,
+            _ty: Default::default(),
+        }
+    }
+
     pub fn from_expr(expr: LowLevelILExpression<'a, Mutable, NonSSA, R>) -> Self {
         use binaryninjacore_sys::BNGetLowLevelILByIndex;
 
@@ -716,6 +742,7 @@ where
         ExpressionBuilder {
             function: expr.function,
             op: instr.operation,
+            location: Some(LowLevelILSourceLocation::from(&instr)),
             size: instr.size,
             flag_write: FlagWriteId(instr.flags),
             op1: instr.operands[0],
@@ -726,33 +753,85 @@ where
         }
     }
 
+    pub fn with_op1(mut self, op1: impl Into<u64>) -> Self {
+        self.op1 = op1.into();
+        self
+    }
+
+    pub fn with_op2(mut self, op2: impl Into<u64>) -> Self {
+        self.op2 = op2.into();
+        self
+    }
+
+    pub fn with_op3(mut self, op3: impl Into<u64>) -> Self {
+        self.op3 = op3.into();
+        self
+    }
+
+    pub fn with_op4(mut self, op4: impl Into<u64>) -> Self {
+        self.op4 = op4.into();
+        self
+    }
+
     pub fn with_flag_write(mut self, flag_write: impl FlagWrite) -> Self {
         // TODO verify valid id
         self.flag_write = flag_write.id();
         self
     }
 
+    pub fn with_source_operand(mut self, operand: LowLevelILOperandIndex) -> Self {
+        if let Some(mut location) = self.location {
+            location.source_operand = Some(operand);
+        } else {
+            // TODO: Address 0 here seems incorrect.
+            // TODO: Seems like some architectures lift an operand at a time? It is very weird...
+            self.location = Some(LowLevelILSourceLocation {
+                address: 0,
+                source_operand: Some(operand),
+            })
+        }
+        self
+    }
+
+    pub fn with_location(mut self, location: LowLevelILSourceLocation) -> Self {
+        self.location = Some(location);
+        self
+    }
+
     pub fn build(self) -> LowLevelILExpression<'a, Mutable, NonSSA, R> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
+        use binaryninjacore_sys::BNLowLevelILAddExprWithLocation;
 
-        let expr_idx = unsafe {
-            BNLowLevelILAddExpr(
-                self.function.handle,
-                self.op,
-                self.size,
-                self.flag_write.0,
-                self.op1,
-                self.op2,
-                self.op3,
-                self.op4,
-            )
+        let expr_idx = match self.location {
+            Some(location) => unsafe {
+                BNLowLevelILAddExprWithLocation(
+                    self.function.handle,
+                    location.address,
+                    location.raw_source_operand(),
+                    self.op,
+                    self.size,
+                    self.flag_write.0,
+                    self.op1,
+                    self.op2,
+                    self.op3,
+                    self.op4,
+                )
+            },
+            None => unsafe {
+                BNLowLevelILAddExpr(
+                    self.function.handle,
+                    self.op,
+                    self.size,
+                    self.flag_write.0,
+                    self.op1,
+                    self.op2,
+                    self.op3,
+                    self.op4,
+                )
+            },
         };
 
         LowLevelILExpression::new(self.function, LowLevelExpressionIndex(expr_idx))
-    }
-
-    pub fn with_source_operand(self, op: u32) -> LowLevelILExpression<'a, Mutable, NonSSA, R> {
-        self.build().with_source_operand(op)
     }
 
     pub fn append(self) {
@@ -819,17 +898,7 @@ macro_rules! sized_no_arg_lifter {
         pub fn $name(&self, size: usize) -> ExpressionBuilder<$result> {
             use binaryninjacore_sys::BNLowLevelILOperation::$op;
 
-            ExpressionBuilder {
-                function: self,
-                op: $op,
-                size,
-                flag_write: FlagWriteId(0),
-                op1: 0,
-                op2: 0,
-                op3: 0,
-                op4: 0,
-                _ty: PhantomData,
-            }
+            ExpressionBuilder::new(self, $op, size)
         }
     };
 }
@@ -864,17 +933,7 @@ macro_rules! sized_unary_op_lifter {
 
             let expr = E::lift_with_size(self, expr, size);
 
-            ExpressionBuilder {
-                function: self,
-                op: $op,
-                size,
-                flag_write: FlagWriteId(0),
-                op1: expr.index.0 as u64,
-                op2: 0,
-                op3: 0,
-                op4: 0,
-                _ty: PhantomData,
-            }
+            ExpressionBuilder::new(self, $op, size).with_op1(expr.index.0 as u64)
         }
     };
 }
@@ -889,17 +948,7 @@ macro_rules! size_changing_unary_op_lifter {
 
             let expr = E::lift(self, expr);
 
-            ExpressionBuilder {
-                function: self,
-                op: $op,
-                size,
-                flag_write: FlagWriteId(0),
-                op1: expr.index.0 as u64,
-                op2: 0,
-                op3: 0,
-                op4: 0,
-                _ty: PhantomData,
-            }
+            ExpressionBuilder::new(self, $op, size).with_op1(expr.index.0 as u64)
         }
     };
 }
@@ -921,17 +970,9 @@ macro_rules! binary_op_lifter {
             let left = L::lift_with_size(self, left, size);
             let right = R::lift_with_size(self, right, size);
 
-            ExpressionBuilder {
-                function: self,
-                op: $op,
-                size,
-                flag_write: FlagWriteId(0),
-                op1: left.index.0 as u64,
-                op2: right.index.0 as u64,
-                op3: 0,
-                op4: 0,
-                _ty: PhantomData,
-            }
+            ExpressionBuilder::new(self, $op, size)
+                .with_op1(left.index.0 as u64)
+                .with_op2(right.index.0 as u64)
         }
     };
 }
@@ -956,17 +997,10 @@ macro_rules! binary_op_carry_lifter {
             let right = R::lift_with_size(self, right, size);
             let carry = C::lift_with_size(self, carry, 0);
 
-            ExpressionBuilder {
-                function: self,
-                op: $op,
-                size,
-                flag_write: FlagWriteId(0),
-                op1: left.index.0 as u64,
-                op2: right.index.0 as u64,
-                op3: carry.index.0 as u64,
-                op4: 0,
-                _ty: PhantomData,
-            }
+            ExpressionBuilder::new(self, $op, size)
+                .with_op1(left.index.0 as u64)
+                .with_op2(right.index.0 as u64)
+                .with_op3(carry.index.0 as u64)
         }
     };
 }
@@ -1178,18 +1212,9 @@ impl LowLevelILMutableFunction {
 
         let expr = E::lift_with_size(self, expr, size);
 
-        ExpressionBuilder {
-            function: self,
-            op: LLIL_SET_REG,
-            size,
-            // TODO: Make these optional?
-            flag_write: FlagWriteId(0),
-            op1: dest_reg.0 as u64,
-            op2: expr.index.0 as u64,
-            op3: 0,
-            op4: 0,
-            _ty: PhantomData,
-        }
+        ExpressionBuilder::new(self, LLIL_SET_REG, size)
+            .with_op1(dest_reg)
+            .with_op2(expr.index.0 as u64)
     }
 
     pub fn set_reg_split<'a, R, LR, E>(
@@ -1212,17 +1237,10 @@ impl LowLevelILMutableFunction {
 
         let expr = E::lift_with_size(self, expr, size);
 
-        ExpressionBuilder {
-            function: self,
-            op: LLIL_SET_REG_SPLIT,
-            size,
-            flag_write: FlagWriteId(0),
-            op1: hi_reg.0 as u64,
-            op2: lo_reg.0 as u64,
-            op3: expr.index.0 as u64,
-            op4: 0,
-            _ty: PhantomData,
-        }
+        ExpressionBuilder::new(self, LLIL_SET_REG_SPLIT, size)
+            .with_op1(hi_reg)
+            .with_op2(lo_reg)
+            .with_op3(expr.index.0 as u64)
     }
 
     pub fn flag(&self, flag: impl Flag) -> LowLevelILMutableExpression<ValueExpr> {
@@ -1283,17 +1301,9 @@ impl LowLevelILMutableFunction {
 
         let expr = E::lift_with_size(self, expr, 0);
 
-        ExpressionBuilder {
-            function: self,
-            op: LLIL_SET_FLAG,
-            size: 0,
-            flag_write: FlagWriteId(0),
-            op1: dest_flag.id().0 as u64,
-            op2: expr.index.0 as u64,
-            op3: 0,
-            op4: 0,
-            _ty: PhantomData,
-        }
+        ExpressionBuilder::new(self, LLIL_SET_FLAG, 0)
+            .with_op1(dest_flag.id())
+            .with_op2(expr.index.0 as u64)
     }
 
     /*
@@ -1309,17 +1319,7 @@ impl LowLevelILMutableFunction {
 
         let expr = E::lift(self, source_mem);
 
-        ExpressionBuilder {
-            function: self,
-            op: LLIL_LOAD,
-            size,
-            flag_write: FlagWriteId(0),
-            op1: expr.index.0 as u64,
-            op2: 0,
-            op3: 0,
-            op4: 0,
-            _ty: PhantomData,
-        }
+        ExpressionBuilder::new(self, LLIL_LOAD, size).with_op1(expr.index.0 as u64)
     }
 
     pub fn store<'a, D, V>(
@@ -1337,17 +1337,9 @@ impl LowLevelILMutableFunction {
         let dest_mem = D::lift(self, dest_mem);
         let value = V::lift_with_size(self, value, size);
 
-        ExpressionBuilder {
-            function: self,
-            op: LLIL_STORE,
-            size,
-            flag_write: FlagWriteId(0),
-            op1: dest_mem.index.0 as u64,
-            op2: value.index.0 as u64,
-            op3: 0,
-            op4: 0,
-            _ty: PhantomData,
-        }
+        ExpressionBuilder::new(self, LLIL_STORE, size)
+            .with_op1(dest_mem.index.0 as u64)
+            .with_op2(value.index.0 as u64)
     }
 
     // TODO: Reposition arguments.
@@ -1394,17 +1386,11 @@ impl LowLevelILMutableFunction {
             )
         };
 
-        ExpressionBuilder {
-            function: self,
-            op: LLIL_INTRINSIC,
-            size: 0,
-            flag_write: FlagWriteId(0),
-            op1: outputs.len() as u64,
-            op2: output_expr_idx as u64,
-            op3: intrinsic.id().0 as u64,
-            op4: input_expr_idx as u64,
-            _ty: PhantomData,
-        }
+        ExpressionBuilder::new(self, LLIL_INTRINSIC, 0)
+            .with_op1(output_expr_idx as u64)
+            .with_op2(intrinsic.id().0 as u64)
+            .with_op3(input_expr_idx as u64)
+            .with_op4(input_list_expr_idx as u64)
     }
 
     sized_unary_op_lifter!(push, LLIL_PUSH, VoidExpr);
@@ -1566,8 +1552,8 @@ pub struct LowLevelILLabel {
     // TODO: This expr_ref is not actually a valid one sometimes...
     // TODO: We should make these non public and only accessible if resolved is true.
     pub expr_ref: LowLevelExpressionIndex,
-    // TODO: If this is 7 this label is not valid.
-    pub operand: usize,
+    /// The referring operand for the label.
+    pub operand: Option<usize>,
 }
 
 impl LowLevelILLabel {
@@ -1586,7 +1572,10 @@ impl From<BNLowLevelILLabel> for LowLevelILLabel {
             location: None,
             resolved: value.resolved,
             expr_ref: LowLevelExpressionIndex(value.ref_),
-            operand: value.operand,
+            operand: match value.operand {
+                7 => None,
+                operand => Some(operand),
+            },
         }
     }
 }
@@ -1596,7 +1585,7 @@ impl From<LowLevelILLabel> for BNLowLevelILLabel {
         Self {
             resolved: value.resolved,
             ref_: value.expr_ref.0,
-            operand: value.operand,
+            operand: value.operand.unwrap_or(7),
         }
     }
 }

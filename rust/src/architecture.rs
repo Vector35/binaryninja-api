@@ -80,6 +80,18 @@ macro_rules! new_id_type {
             }
         }
 
+        impl From<u64> for $name {
+            fn from(value: u64) -> Self {
+                Self(value as $inner_type)
+            }
+        }
+
+        impl From<$name> for u64 {
+            fn from(value: $name) -> Self {
+                value.0 as u64
+            }
+        }
+
         impl std::fmt::Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 write!(f, "{}", self.0)
@@ -118,14 +130,26 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     fn max_instr_len(&self) -> usize;
     fn opcode_display_len(&self) -> usize;
 
-    fn associated_arch_by_addr(&self, addr: u64) -> CoreArchitecture;
+    fn associated_arch_by_addr(&self, _addr: u64) -> CoreArchitecture {
+        self.as_ref().handle()
+    }
 
+    /// Returns the [`InstructionInfo`] at the given virtual address with `data`.
+    ///
+    /// The [`InstructionInfo`] object should always fill the proper length and branches if not, the
+    /// next instruction will likely be incorrect.
     fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo>;
+
+    /// Returns a of list of [`InstructionTextToken`]'s representing the instruction at the
+    /// given virtual address with `data`.
     fn instruction_text(
         &self,
         data: &[u8],
         addr: u64,
     ) -> Option<(usize, Vec<InstructionTextToken>)>;
+
+    /// Appends arbitrary low level il instructions representing the semantics of the instruction at
+    /// the given virtual address with `data`.
     fn instruction_llil(
         &self,
         data: &[u8],
@@ -133,6 +157,10 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         il: &LowLevelILMutableFunction,
     ) -> Option<(usize, bool)>;
 
+    /// Performs basic block recovery and commits the results to the function analysis.
+    ///
+    /// NOTE: Only implement this method if function-level analysis is required. Otherwise, do not
+    /// implement to let default basic block analysis take place.
     fn analyze_basic_blocks(
         &self,
         function: &mut Function,

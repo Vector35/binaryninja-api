@@ -159,6 +159,17 @@ where
         }
     }
 
+    pub fn instruction_from_expr_index(
+        &self,
+        index: LowLevelExpressionIndex,
+    ) -> Option<LowLevelILInstruction<M, F>> {
+        if index.0 >= self.expression_count() {
+            None
+        } else {
+            Some(LowLevelILInstruction::new_with_expr_index(self, index))
+        }
+    }
+
     pub fn expression_count(&self) -> usize {
         unsafe {
             use binaryninjacore_sys::BNGetLowLevelILExprCount;

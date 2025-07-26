@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use binaryninjacore_sys::BNLowLevelILInstruction;
 use std::borrow::Cow;
 use std::fmt;
-
+use std::fmt::{Display, Formatter};
 // TODO : provide some way to forbid emitting register reads for certain registers
 // also writing for certain registers (e.g. zero register must prohibit il.set_reg and il.reg
 // (replace with nop or const(0) respectively)
@@ -157,6 +158,30 @@ impl From<LowLevelILTempRegister> for LowLevelILRegisterKind<CoreRegister> {
     }
 }
 
+impl From<CoreRegister> for LowLevelILRegisterKind<CoreRegister> {
+    fn from(reg: CoreRegister) -> Self {
+        LowLevelILRegisterKind::Arch(reg)
+    }
+}
+
+impl PartialEq<CoreRegister> for LowLevelILRegisterKind<CoreRegister> {
+    fn eq(&self, other: &CoreRegister) -> bool {
+        match *self {
+            LowLevelILRegisterKind::Arch(ref r) => r == other,
+            LowLevelILRegisterKind::Temp(_) => false,
+        }
+    }
+}
+
+impl PartialEq<LowLevelILTempRegister> for LowLevelILRegisterKind<CoreRegister> {
+    fn eq(&self, other: &LowLevelILTempRegister) -> bool {
+        match *self {
+            LowLevelILRegisterKind::Arch(_) => false,
+            LowLevelILRegisterKind::Temp(ref r) => r == other,
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug)]
 pub enum LowLevelILSSARegisterKind<R: ArchReg> {
     Full {
@@ -208,4 +233,53 @@ pub enum VisitorAction {
     Descend,
     Sibling,
     Halt,
+}
+
+#[repr(transparent)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct LowLevelILOperandIndex(pub u32);
+
+impl LowLevelILOperandIndex {
+    pub fn next(&self) -> Self {
+        Self(self.0 + 1)
+    }
+}
+
+impl TryFrom<u32> for LowLevelILOperandIndex {
+    type Error = ();
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        match value {
+            7 => Err(()),
+            value => Ok(Self(value)),
+        }
+    }
+}
+
+impl Display for LowLevelILOperandIndex {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_fmt(format_args!("{}", self.0))
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct LowLevelILSourceLocation {
+    pub address: u64,
+    /// The referenced source operand.
+    pub source_operand: Option<LowLevelILOperandIndex>,
+}
+
+impl LowLevelILSourceLocation {
+    pub fn raw_source_operand(&self) -> u32 {
+        self.source_operand.unwrap_or(LowLevelILOperandIndex(7)).0
+    }
+}
+
+impl From<&BNLowLevelILInstruction> for LowLevelILSourceLocation {
+    fn from(value: &BNLowLevelILInstruction) -> Self {
+        Self {
+            address: value.address,
+            source_operand: value.sourceOperand.try_into().ok(),
+        }
+    }
 }

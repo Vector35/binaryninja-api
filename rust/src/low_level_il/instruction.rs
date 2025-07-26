@@ -20,9 +20,9 @@ use super::operation;
 use super::operation::Operation;
 use super::VisitorAction;
 use super::*;
-use binaryninjacore_sys::BNGetLowLevelILIndexForInstruction;
 use binaryninjacore_sys::BNLowLevelILInstruction;
 use binaryninjacore_sys::{BNFreeILInstructionList, BNGetLowLevelILByIndex};
+use binaryninjacore_sys::{BNGetLowLevelILIndexForInstruction, BNGetLowLevelILInstructionForExpr};
 use std::fmt::{Debug, Display, Formatter};
 
 #[repr(transparent)]
@@ -93,6 +93,12 @@ where
 {
     pub(crate) function: &'func LowLevelILFunction<M, F>,
     pub index: LowLevelInstructionIndex,
+    /// The specific expression index in the instruction to query for.
+    ///
+    /// In cases where you want to query for a specific expression in a function,
+    /// you will set this using [`LowLevelILInstruction::new_with_expr_index`] and then any query
+    /// for the [`LowLevelILInstructionKind`] will be returned for that expression index.
+    pub expr_index: LowLevelExpressionIndex,
 }
 
 impl<'func, M, F> LowLevelILInstruction<'func, M, F>
@@ -103,21 +109,32 @@ where
     // TODO: Should we check the instruction count here with BNGetLowLevelILInstructionCount?
     // TODO: If we _can_ then this should become an Option<Self> methinks
     pub fn new(function: &'func LowLevelILFunction<M, F>, index: LowLevelInstructionIndex) -> Self {
-        Self { function, index }
+        let expr_index = unsafe { BNGetLowLevelILIndexForInstruction(function.handle, index.0) };
+        Self {
+            function,
+            index,
+            expr_index: LowLevelExpressionIndex(expr_index),
+        }
+    }
+
+    pub fn new_with_expr_index(
+        function: &'func LowLevelILFunction<M, F>,
+        expr_index: LowLevelExpressionIndex,
+    ) -> Self {
+        let index = unsafe { BNGetLowLevelILInstructionForExpr(function.handle, expr_index.0) };
+        Self {
+            function,
+            index: LowLevelInstructionIndex(index),
+            expr_index,
+        }
     }
 
     pub fn address(&self) -> u64 {
-        self.into_raw().address
+        self.as_raw().address
     }
 
-    // TODO: Document the difference between the self.index and the expr_idx.
-    pub fn expr_idx(&self) -> LowLevelExpressionIndex {
-        let idx = unsafe { BNGetLowLevelILIndexForInstruction(self.function.handle, self.index.0) };
-        LowLevelExpressionIndex(idx)
-    }
-
-    pub fn into_raw(&self) -> BNLowLevelILInstruction {
-        unsafe { BNGetLowLevelILByIndex(self.function.handle, self.expr_idx().0) }
+    pub fn as_raw(&self) -> BNLowLevelILInstruction {
+        unsafe { BNGetLowLevelILByIndex(self.function.handle, self.expr_index.0) }
     }
 
     /// Returns the [`BasicBlock`] containing the given [`LowLevelILInstruction`].
@@ -164,7 +181,7 @@ where
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("Instruction")
             .field("index", &self.index)
-            .field("expr_idx", &self.expr_idx())
+            .field("expr_index", &self.expr_index)
             .field("address", &self.address())
             .finish()
     }
@@ -177,13 +194,13 @@ where
     fn kind(&self) -> LowLevelILInstructionKind<'func, M, SSA> {
         #[allow(unused_imports)]
         use binaryninjacore_sys::BNLowLevelILOperation::*;
-        let raw_op = self.into_raw();
+        let raw_op = self.as_raw();
         #[allow(clippy::match_single_binding)]
         match raw_op.operation {
             // Any invalid ops for Non-Lifted IL will be checked here.
             // SAFETY: We have checked for illegal operations.
             _ => unsafe {
-                LowLevelILInstructionKind::from_raw(self.function, self.expr_idx(), raw_op)
+                LowLevelILInstructionKind::from_raw(self.function, self.expr_index, raw_op)
             },
         }
     }
@@ -204,13 +221,13 @@ where
     fn kind(&self) -> LowLevelILInstructionKind<'func, M, NonSSA> {
         #[allow(unused_imports)]
         use binaryninjacore_sys::BNLowLevelILOperation::*;
-        let raw_op = self.into_raw();
+        let raw_op = self.as_raw();
         #[allow(clippy::match_single_binding)]
         match raw_op.operation {
             // Any invalid ops for Non-Lifted IL will be checked here.
             // SAFETY: We have checked for illegal operations.
             _ => unsafe {
-                LowLevelILInstructionKind::from_raw(self.function, self.expr_idx(), raw_op)
+                LowLevelILInstructionKind::from_raw(self.function, self.expr_index, raw_op)
             },
         }
     }

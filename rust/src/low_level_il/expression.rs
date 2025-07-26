@@ -28,16 +28,18 @@ use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
 use std::marker::PhantomData;
 
+pub trait ExpressionResultType: 'static + Debug {}
+
 /// Used as a marker for an [`LowLevelILExpression`] that **can** produce a value.
 #[derive(Copy, Clone, Debug)]
 pub struct ValueExpr;
+
+impl ExpressionResultType for ValueExpr {}
 
 /// Used as a marker for an [`LowLevelILExpression`] that can **not** produce a value.
 #[derive(Copy, Clone, Debug)]
 pub struct VoidExpr;
 
-pub trait ExpressionResultType: 'static + Debug {}
-impl ExpressionResultType for ValueExpr {}
 impl ExpressionResultType for VoidExpr {}
 
 #[repr(transparent)]
@@ -572,6 +574,10 @@ where
 
     pub fn address(&self) -> u64 {
         self.raw_struct().address
+    }
+
+    pub fn source_operand(&self) -> u32 {
+        self.raw_struct().sourceOperand
     }
 
     /// Determines if the expressions represent the same operation

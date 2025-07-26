@@ -1,6 +1,6 @@
 use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::low_level_il::expression::{ExpressionHandler, LowLevelILExpressionKind};
-use binaryninja::low_level_il::instruction::InstructionHandler;
+use binaryninja::low_level_il::instruction::{InstructionHandler, LowLevelInstructionIndex};
 use binaryninja::low_level_il::VisitorAction;
 use binaryninja::workflow::{Activity, AnalysisContext, Workflow};
 
@@ -32,8 +32,15 @@ fn example_activity(analysis_context: &AnalysisContext) {
                         if let LowLevelILExpressionKind::Const(_op) = expr.kind() {
                             // Replace all consts with 0x1337.
                             println!("Replacing llil expression @ 0x{:x} : {}", instr, expr.index);
+                            // When rewriting, expressions make sure to set the new expressions address.
+                            let src_operand = expr.kind().source_operand();
+                            println!("Source operand: {:?}", src_operand);
                             unsafe {
-                                llil.replace_expression(expr.index, llil.const_int(4, 0x1337))
+                                llil.replace_expression(
+                                    expr.index,
+                                    llil.const_int(4, 0x1337)
+                                        .with_address(expr.kind().address()),
+                                )
                             };
                         }
                         VisitorAction::Descend
@@ -68,16 +75,21 @@ pub fn main() {
     // traverse all llil expressions and look for the constant 0x1337
     for func in &bv.functions() {
         if let Ok(llil) = func.low_level_il() {
+            let last_llil_instr =
+                llil.instruction_from_index(LowLevelInstructionIndex(llil.instruction_count() - 1));
+            let last_llil_instr_addr = last_llil_instr.unwrap().address();
             for block in &llil.basic_blocks() {
                 for instr in block.iter() {
                     instr.visit_tree(&mut |expr| {
                         if let LowLevelILExpressionKind::Const(value) = expr.kind() {
                             if value.value() == 0x1337 {
                                 println!(
-                                    "Found constant 0x1337 at instruction 0x{:x} in function {}",
+                                    "Found constant 0x1337 at instruction 0x{:x} in function 0x{:x}",
                                     instr.address(),
                                     func.start()
                                 );
+                                // When rewriting, expressions make sure to set the address.
+                                assert_ne!(expr.kind().address(), last_llil_instr_addr, "Replaced expression address is not set");
                             }
                         }
                         VisitorAction::Descend

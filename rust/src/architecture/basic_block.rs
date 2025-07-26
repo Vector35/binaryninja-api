@@ -119,6 +119,7 @@ impl BasicBlockAnalysisContext {
         }
     }
 
+    /// Adds a contextual function return location and its value to the current function.
     pub fn add_contextual_return(&mut self, loc: impl Into<Location>, value: bool) {
         let loc = loc.into();
         if !self.contextual_returns.contains_key(&loc) {
@@ -128,20 +129,24 @@ impl BasicBlockAnalysisContext {
         self.contextual_returns.insert(loc, value);
     }
 
+    /// Adds a direct code reference to the current function.
     pub fn add_direct_code_reference(&mut self, target: u64, source: impl Into<Location>) {
         self.direct_code_references
             .entry(target)
             .or_insert(source.into());
     }
 
+    /// Adds a direct no-return call location to the current function.
     pub fn add_direct_no_return_call(&mut self, loc: impl Into<Location>) {
         self.direct_no_return_calls.insert(loc.into());
     }
 
+    /// Adds an address to the set of halted disassembly addresses.
     pub fn add_halted_disassembly_address(&mut self, loc: impl Into<Location>) {
         self.halted_disassembly_addresses.insert(loc.into());
     }
 
+    /// Creates a new [`BasicBlock`] at the specified address for the given [`CoreArchitecture`].
     pub fn create_basic_block(
         &self,
         arch: CoreArchitecture,
@@ -157,12 +162,14 @@ impl BasicBlockAnalysisContext {
         unsafe { Some(BasicBlock::ref_from_raw(raw_block, NativeBlock::new())) }
     }
 
+    /// Adds a [`BasicBlock`] to the current function.
     pub fn add_basic_block(&self, block: Ref<BasicBlock<NativeBlock>>) {
         unsafe {
             BNAnalyzeBasicBlocksContextAddBasicBlockToFunction(self.handle, block.handle);
         }
     }
 
+    /// Adds a temporary outgoing reference to the specified function.
     pub fn add_temp_outgoing_reference(&self, target: &Function) {
         unsafe {
             BNAnalyzeBasicBlocksContextAddTempReference(self.handle, target.handle);
@@ -241,6 +248,7 @@ impl BasicBlockAnalysisContext {
         }
     }
 
+    /// Finalizes the function's basic block analysis.
     pub fn finalize(&mut self) {
         if !self.direct_code_references.is_empty() {
             self.update_direct_code_references();

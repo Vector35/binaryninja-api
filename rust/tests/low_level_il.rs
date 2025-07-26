@@ -1,9 +1,10 @@
-use binaryninja::architecture::Register;
+use binaryninja::architecture::{ArchitectureExt, Register};
 use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::headless::Session;
 use binaryninja::low_level_il::expression::{
     ExpressionHandler, LowLevelExpressionIndex, LowLevelILExpressionKind,
 };
+use binaryninja::low_level_il::function::LowLevelILFunction;
 use binaryninja::low_level_il::instruction::{
     InstructionHandler, LowLevelILInstructionKind, LowLevelInstructionIndex,
 };
@@ -185,7 +186,7 @@ fn test_llil_visitor() {
         basic_blocks_visited += 1;
         for instr in basic_block.iter() {
             instructions_visited.push(instr.index);
-            expressions_visited.push(instr.expr_idx());
+            expressions_visited.push(instr.expr_index);
             instr.visit_tree(&mut |expr| {
                 expressions_visited.push(expr.index);
                 VisitorAction::Descend
@@ -307,4 +308,51 @@ fn test_llil_ssa() {
         },
         _ => panic!("Expected CallSsa"),
     }
+}
+
+#[test]
+fn test_llil_lifting() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
+    let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
+    let platform = view.default_platform().unwrap();
+    let arch = platform.arch();
+    let eax_reg = arch.register_by_name("eax").unwrap();
+    let llil_func = LowLevelILFunction::new(arch, None);
+    println!("{:?}", llil_func);
+    llil_func.set_reg(4, eax_reg, 55).append();
+    assert_eq!(llil_func.instruction_count(), 1);
+    let instr_0 = llil_func
+        .instruction_from_index(LowLevelInstructionIndex(0))
+        .expect("Valid instruction");
+    assert_eq!(instr_0.index, LowLevelInstructionIndex(0));
+    let expr_0 = match instr_0.kind() {
+        LowLevelILInstructionKind::SetReg(op) => {
+            assert_eq!(op.size(), 4);
+            assert_eq!(op.dest_reg(), eax_reg);
+            assert_eq!(op.source_expr().index, LowLevelExpressionIndex(0));
+            match op.source_expr().kind() {
+                LowLevelILExpressionKind::Const(const_expr) => assert_eq!(const_expr.value(), 55),
+                _ => panic!("Expected Const"),
+            }
+            op.source_expr()
+        }
+        _ => panic!("Expected SetReg"),
+    };
+    // Replace the constant with 100.
+    unsafe { llil_func.replace_expression(expr_0.index, 100) };
+    assert_eq!(llil_func.instruction_count(), 1);
+    let replaced_expr_0 = llil_func
+        .instruction_from_expr_index(expr_0.index)
+        .expect("Valid expression");
+    assert_eq!(replaced_expr_0.address(), expr_0.kind().address());
+    assert_eq!(replaced_expr_0.expr_index, expr_0.index);
+    match replaced_expr_0.kind() {
+        LowLevelILInstructionKind::Value(expr) => match expr.kind() {
+            LowLevelILExpressionKind::Const(const_expr) => assert_eq!(const_expr.value(), 100),
+            _ => panic!("Expected Const"),
+        },
+        _ => panic!("Expected Value"),
+    }
+    println!("{:?}", instr_0.kind());
 }

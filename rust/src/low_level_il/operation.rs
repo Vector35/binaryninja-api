@@ -63,6 +63,10 @@ where
         self.op.address
     }
 
+    pub fn source_operand(&self) -> u32 {
+        self.op.sourceOperand
+    }
+
     fn get_operand_list(&self, operand_idx: usize) -> Vec<u64> {
         let mut count = 0;
         let raw_list_ptr = unsafe {

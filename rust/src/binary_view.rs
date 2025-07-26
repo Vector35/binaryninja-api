@@ -242,7 +242,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     /// Search the view using the query options.
-    /// 
+    ///
     /// In the `on_match` callback return `false` to stop searching.
     fn search_with_progress<P: ProgressCallback, C: FnMut(u64, &DataBuffer) -> bool>(
         &self,

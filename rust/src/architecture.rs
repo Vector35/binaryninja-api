@@ -92,6 +92,13 @@ macro_rules! new_id_type {
             }
         }
 
+        // To satisfy type deduction.
+        impl From<i32> for $name {
+            fn from(value: i32) -> Self {
+                Self(value as $inner_type)
+            }
+        }
+
         impl std::fmt::Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 write!(f, "{}", self.0)

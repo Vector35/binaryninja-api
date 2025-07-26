@@ -21,7 +21,7 @@ fn example_activity(analysis_context: &AnalysisContext) {
         "Activity `{}` called in function {} with workflow {:?}!",
         RUST_ACTIVITY_NAME,
         func.start(),
-        func.workflow().map(|wf| wf.name())
+        func.workflow().name()
     );
     // If we have llil available, replace that as well.
     if let Some(llil) = unsafe { analysis_context.llil_function() } {

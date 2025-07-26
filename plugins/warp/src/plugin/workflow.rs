@@ -110,9 +110,7 @@ pub fn run_matcher(view: &BinaryView) {
         // generated, we should alert them and ask if they would like to reanalyze.
         // NOTE: We only alert if we actually have the GUID activity enabled.
         if let Some(sample_function) = view.functions().iter().next() {
-            let function_workflow = sample_function
-                .workflow()
-                .expect("Function has no workflow");
+            let function_workflow = sample_function.workflow();
             if function_workflow.contains(GUID_ACTIVITY_NAME) {
                 log::error!("No function guids in database, please reanalyze the database.");
             } else {

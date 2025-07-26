@@ -44,7 +44,8 @@ use binaryninja::low_level_il::lifting::{
 };
 use binaryninja::low_level_il::{
     expression::ExpressionHandler, instruction::InstructionHandler, LowLevelILMutableExpression,
-    LowLevelILMutableFunction, LowLevelILRegisterKind, LowLevelILRegularFunction,
+    LowLevelILMutableFunction, LowLevelILOperandIndex, LowLevelILRegisterKind,
+    LowLevelILRegularFunction,
 };
 use riscv_dis::{
     FloatReg, FloatRegType, Instr, IntRegType, Op, RegFile, Register as RiscVRegister,
@@ -1117,12 +1118,12 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
 
                 let src_expr = il.add(max_width, rs1, l.imm());
                 let load_expr = il.load(size, src_expr)
-                                  .with_source_operand(1);
+                                  .with_source_operand(LowLevelILOperandIndex(1));
 
                 match (size < max_width, l.zx()) {
                     (false,    _) => load_expr,
-                    (true,  true) => il.zx(max_width, load_expr).build(),
-                    (true, false) => il.sx(max_width, load_expr).build(),
+                    (true,  true) => il.zx(max_width, load_expr),
+                    (true, false) => il.sx(max_width, load_expr),
                 }
             }),
             Op::Store(s) => {
@@ -1136,7 +1137,9 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                     src = il.low_part(size, src).build();
                 }
 
-                il.store(size, dest, src).with_source_operand(1).append();
+                il.store(size, dest, src)
+                    .with_source_operand(LowLevelILOperandIndex(1))
+                    .append();
             }
 
             Op::AddI(i) => simple_i!(i, |rs1, imm| il.add(max_width, rs1, imm)),
@@ -1459,11 +1462,11 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
             Op::Lr(a) => simple_op!(a, no_discard {
                 let size = a.width();
                 let load_expr = il.load(size, Register::from(a.rs1()))
-                                  .with_source_operand(1);
+                                  .with_source_operand(LowLevelILOperandIndex(1));
 
                 match size == max_width {
                     true  => load_expr,
-                    false => il.sx(max_width, load_expr).build(),
+                    false => il.sx(max_width, load_expr),
                 }
             }),
             Op::Sc(a) => {
@@ -1497,7 +1500,7 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
 
                 il.mark_label(&mut t);
                 il.store(size, Register::from(a.rs1()), Register::from(a.rs2()))
-                    .with_source_operand(2)
+                    .with_source_operand(LowLevelILOperandIndex(2))
                     .append();
 
                 if new_false {
@@ -1539,10 +1542,12 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                 let reg_with_address = alloc_reg(rs1);
                 let reg_with_val = alloc_reg(rs2);
 
-                let mut load_expr = il.load(size, Register::from(rs1)).with_source_operand(2);
+                let mut load_expr = il
+                    .load(size, Register::from(rs1))
+                    .with_source_operand(LowLevelILOperandIndex(2));
 
                 if size < max_width {
-                    load_expr = il.sx(max_width, load_expr).build();
+                    load_expr = il.sx(max_width, load_expr);
                 }
 
                 il.set_reg(max_width, dest_reg, load_expr).append();
@@ -1571,7 +1576,7 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
 
                 let load_expr = il
                     .load(m.width(), il.add(max_width, rs1, m.imm()))
-                    .with_source_operand(1);
+                    .with_source_operand(LowLevelILOperandIndex(1));
 
                 il.set_reg(m.width(), rd, load_expr).append();
             }
@@ -1582,7 +1587,7 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                 let dest_expr = il.add(max_width, rs1, m.imm());
 
                 il.store(m.width(), dest_expr, il.reg(m.width(), rs2))
-                    .with_source_operand(1)
+                    .with_source_operand(LowLevelILOperandIndex(1))
                     .append();
             }
             Op::Fmadd(f) | Op::Fmsub(f) | Op::Fnmadd(f) | Op::Fnmsub(f) => {

@@ -371,10 +371,11 @@ impl Function {
         }
     }
 
-    pub fn workflow(&self) -> Option<Ref<Workflow>> {
+    pub fn workflow(&self) -> Ref<Workflow> {
         unsafe {
-            let workflow = NonNull::new(BNGetWorkflowForFunction(self.handle))?;
-            Some(Workflow::ref_from_raw(workflow))
+            let workflow = NonNull::new(BNGetWorkflowForFunction(self.handle))
+                .expect("Function has no workflow");
+            Workflow::ref_from_raw(workflow)
         }
     }
 

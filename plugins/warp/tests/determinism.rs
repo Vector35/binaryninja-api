@@ -18,7 +18,7 @@ static TARGET_FILES: [&str; 10] = [
     "atof.obj",
     "atoldbl.obj",
     "atox.obj",
-    "ls"
+    "ls",
 ];
 
 #[test]

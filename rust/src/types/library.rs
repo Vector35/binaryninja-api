@@ -43,6 +43,7 @@ impl TypeLibrary {
         unsafe { TypeLibrary::ref_from_raw(NonNull::new(new_lib).unwrap()) }
     }
 
+    // TODO: Move this to the [`CoreArchitecture`]
     pub fn all(arch: CoreArchitecture) -> Array<TypeLibrary> {
         let mut count = 0;
         let result = unsafe { BNGetArchitectureTypeLibraries(arch.handle, &mut count) };

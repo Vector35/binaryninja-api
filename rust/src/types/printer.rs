@@ -1,15 +1,15 @@
 #![allow(unused)]
+use std::ffi::{c_char, c_int, c_void};
+use std::ptr::NonNull;
+
+use binaryninjacore_sys::*;
 
 use crate::binary_view::BinaryView;
 use crate::disassembly::InstructionTextToken;
 use crate::platform::Platform;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::string::{raw_to_string, BnString, IntoCStr};
-use crate::type_container::TypeContainer;
-use crate::types::{NamedTypeReference, QualifiedName, QualifiedNameAndType, Type};
-use binaryninjacore_sys::*;
-use std::ffi::{c_char, c_int, c_void};
-use std::ptr::NonNull;
+use crate::types::{NamedTypeReference, QualifiedName, QualifiedNameAndType, Type, TypeContainer};
 
 pub type TokenEscapingType = BNTokenEscapingType;
 pub type TypeDefinitionLineType = BNTypeDefinitionLineType;

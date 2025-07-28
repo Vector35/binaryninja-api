@@ -1,7 +1,6 @@
 use binaryninja::headless::Session;
 use binaryninja::platform::Platform;
-use binaryninja::type_archive::TypeArchive;
-use binaryninja::types::{Type, TypeClass};
+use binaryninja::types::{Type, TypeArchive, TypeClass};
 
 #[test]
 fn test_create_archive() {

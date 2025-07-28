@@ -8,17 +8,18 @@
 // * [TypeLibrary::type_container]
 // * [DebugInfo::get_type_container]
 
-use crate::platform::Platform;
-use crate::progress::{NoProgressCallback, ProgressCallback};
-use crate::rc::{Array, Ref};
-use crate::string::{raw_to_string, BnString, IntoCStr};
-use crate::type_parser::{TypeParserError, TypeParserResult};
-use crate::types::{QualifiedName, QualifiedNameAndType, Type};
-use binaryninjacore_sys::*;
 use std::collections::HashMap;
 use std::ffi::{c_char, c_void};
 use std::fmt::{Debug, Formatter};
 use std::ptr::NonNull;
+
+use binaryninjacore_sys::*;
+
+use crate::platform::Platform;
+use crate::progress::{NoProgressCallback, ProgressCallback};
+use crate::rc::{Array, Ref};
+use crate::string::{raw_to_string, BnString, IntoCStr};
+use crate::types::{QualifiedName, QualifiedNameAndType, Type, TypeParserError, TypeParserResult};
 
 pub type TypeContainerType = BNTypeContainerType;
 

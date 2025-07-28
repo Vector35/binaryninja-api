@@ -24,8 +24,6 @@ use std::ops::Deref;
 use std::path::{Path, PathBuf};
 
 use crate::rc::*;
-use crate::type_archive::TypeArchiveSnapshotId;
-use crate::types::QualifiedName;
 
 // TODO: Remove or refactor this.
 pub(crate) fn raw_to_string(ptr: *const c_char) -> Option<String> {
@@ -263,14 +261,6 @@ impl IntoCStr for Cow<'_, str> {
     }
 }
 
-impl IntoCStr for &QualifiedName {
-    type Result = CString;
-
-    fn to_cstr(self) -> Self::Result {
-        self.to_string().to_cstr()
-    }
-}
-
 impl IntoCStr for PathBuf {
     type Result = CString;
 
@@ -285,14 +275,6 @@ impl IntoCStr for &Path {
     fn to_cstr(self) -> Self::Result {
         CString::new(self.as_os_str().as_encoded_bytes())
             .expect("can't pass paths with internal nul bytes to core!")
-    }
-}
-
-impl IntoCStr for TypeArchiveSnapshotId {
-    type Result = CString;
-
-    fn to_cstr(self) -> Self::Result {
-        self.to_string().to_cstr()
     }
 }
 

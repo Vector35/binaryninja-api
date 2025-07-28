@@ -14,8 +14,7 @@ use crate::high_level_il::{HighLevelExpressionIndex, HighLevelILFunction};
 use crate::line_formatter::CoreLineFormatter;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref, RefCountable};
 use crate::string::{BnString, IntoCStr};
-use crate::type_parser::CoreTypeParser;
-use crate::type_printer::CoreTypePrinter;
+use crate::types::{CoreTypeParser, CoreTypePrinter};
 
 pub type InstructionTextTokenContext = BNInstructionTextTokenContext;
 pub type ScopeType = BNScopeType;

@@ -49,10 +49,9 @@ use crate::settings::Settings;
 use crate::string::*;
 use crate::symbol::{Symbol, SymbolType};
 use crate::tags::{Tag, TagType};
-use crate::type_container::TypeContainer;
-use crate::type_library::TypeLibrary;
 use crate::types::{
     NamedTypeReference, QualifiedName, QualifiedNameAndType, QualifiedNameTypeAndId, Type,
+    TypeArchive, TypeContainer, TypeLibrary,
 };
 use crate::variable::DataVariable;
 use crate::Endianness;

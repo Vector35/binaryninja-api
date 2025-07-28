@@ -14,14 +14,14 @@
 
 //! Contains all information related to the execution environment of the binary, mainly the calling conventions used
 
-use crate::type_container::TypeContainer;
-use crate::type_parser::{TypeParserError, TypeParserErrorSeverity, TypeParserResult};
+use crate::types::{
+    TypeContainer, TypeLibrary, TypeParserError, TypeParserErrorSeverity, TypeParserResult,
+};
 use crate::{
     architecture::{Architecture, CoreArchitecture},
     calling_convention::CoreCallingConvention,
     rc::*,
     string::*,
-    type_library::TypeLibrary,
     types::QualifiedNameAndType,
 };
 use binaryninjacore_sys::*;

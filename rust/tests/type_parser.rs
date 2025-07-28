@@ -1,7 +1,6 @@
 use binaryninja::headless::Session;
 use binaryninja::platform::Platform;
-use binaryninja::type_parser::{CoreTypeParser, TypeParser, TypeParserError};
-use binaryninja::types::Type;
+use binaryninja::types::{CoreTypeParser, Type, TypeParser, TypeParserError};
 use binaryninjacore_sys::BNTypeParserErrorSeverity::ErrorSeverity;
 
 const TEST_TYPES: &str = r#"

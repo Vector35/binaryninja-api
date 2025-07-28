@@ -3,9 +3,9 @@ use binaryninja::disassembly::InstructionTextToken;
 use binaryninja::headless::Session;
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
-use binaryninja::type_container::TypeContainer;
-use binaryninja::type_printer::{
-    register_type_printer, CoreTypePrinter, TokenEscapingType, TypeDefinitionLine, TypePrinter,
+use binaryninja::types::{
+    register_type_printer, CoreTypePrinter, TokenEscapingType, TypeContainer, TypeDefinitionLine,
+    TypePrinter,
 };
 use binaryninja::types::{
     MemberAccess, MemberScope, QualifiedName, Structure, StructureMember, Type,

@@ -1,5 +1,6 @@
-use binaryninja::type_printer::{CoreTypePrinter, TokenEscapingType};
-use binaryninja::types::{MemberAccess, MemberScope, Structure, StructureMember, Type};
+use binaryninja::types::{
+    CoreTypePrinter, MemberAccess, MemberScope, Structure, StructureMember, TokenEscapingType, Type,
+};
 
 fn main() {
     println!("Starting session...");

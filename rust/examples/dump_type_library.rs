@@ -2,8 +2,7 @@
 
 use binaryninja::binary_view::BinaryView;
 use binaryninja::file_metadata::FileMetadata;
-use binaryninja::type_library::TypeLibrary;
-use binaryninja::type_printer::{CoreTypePrinter, TokenEscapingType};
+use binaryninja::types::{CoreTypePrinter, TokenEscapingType, TypeLibrary};
 
 fn main() {
     let type_lib_str = std::env::args().nth(1).expect("No type library provided");

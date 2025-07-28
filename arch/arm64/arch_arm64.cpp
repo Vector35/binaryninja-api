@@ -1886,6 +1886,7 @@ class Arm64Architecture : public Architecture
 			case REG_W28:
 			case REG_W29:
 			case REG_W30:
+			case REG_WZR:
 			case REG_WSP:
 					return RegisterInfo(REG_X0 + (reg-REG_W0), 0, 4, true);
 			case REG_X0:
@@ -1919,6 +1920,7 @@ class Arm64Architecture : public Architecture
 			case REG_X28:
 			case REG_X29:
 			case REG_X30:
+			case REG_XZR:
 			case REG_SP:
 				return RegisterInfo(reg, 0, 8);
 			case REG_V0:

@@ -199,8 +199,12 @@ pub fn insert_workflow() {
                 &matched_function.symbol,
                 function.symbol().address(),
             ));
-            if let Some(func_ty) = &matched_function.ty {
-                function.set_auto_type(&to_bn_type(&function.arch(), func_ty));
+            // core.function.propagateAnalysis will assign user type info to auto, so we must not apply
+            // otherwise we will wipe over user type info.
+            if !function.has_user_type() {
+                if let Some(func_ty) = &matched_function.ty {
+                    function.set_auto_type(&to_bn_type(&function.arch(), func_ty));
+                }
             }
             // TODO: How to clear the comments? They are just persisted.
             // TODO: Also they generate an undo action, i hate implicit undo actions so much.
@@ -220,6 +224,11 @@ pub fn insert_workflow() {
                                 decl_instr.variable_for_stack_location_after(offset)
                             }
                         };
+                        if mlil.is_var_user_defined(&decl_var) {
+                            // Internally, analysis will just assign user vars to auto vars and consult only that.
+                            // So we must skip if there is a user-defined var at the decl.
+                            continue;
+                        }
                         let decl_ty = match variable.ty {
                             Some(decl_ty) => to_bn_type(&function.arch(), &decl_ty),
                             None => {

@@ -8,7 +8,9 @@ use binaryninja::background_task::BackgroundTask;
 use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::Command;
 use binaryninja::interaction::form::{Form, FormInputField};
-use binaryninja::interaction::{show_plaintext_report, MessageBoxButtonResult, MessageBoxButtonSet, MessageBoxIcon};
+use binaryninja::interaction::{
+    show_plaintext_report, MessageBoxButtonResult, MessageBoxButtonSet, MessageBoxIcon,
+};
 use binaryninja::rc::Ref;
 use std::path::PathBuf;
 use std::thread;

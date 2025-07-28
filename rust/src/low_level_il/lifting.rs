@@ -684,9 +684,9 @@ where
         self
     }
 
-    pub fn with_source_operand(self, op: u32) -> Self {
+    pub fn with_source_operand(self, op: LowLevelILOperandIndex) -> Self {
         use binaryninjacore_sys::BNLowLevelILSetExprSourceOperand;
-        unsafe { BNLowLevelILSetExprSourceOperand(self.function.handle, self.index.0, op) }
+        unsafe { BNLowLevelILSetExprSourceOperand(self.function.handle, self.index.0, op.0) }
         self
     }
 
@@ -776,20 +776,6 @@ where
     pub fn with_flag_write(mut self, flag_write: impl FlagWrite) -> Self {
         // TODO verify valid id
         self.flag_write = flag_write.id();
-        self
-    }
-
-    pub fn with_source_operand(mut self, operand: LowLevelILOperandIndex) -> Self {
-        if let Some(mut location) = self.location {
-            location.source_operand = Some(operand);
-        } else {
-            // TODO: Address 0 here seems incorrect.
-            // TODO: Seems like some architectures lift an operand at a time? It is very weird...
-            self.location = Some(LowLevelILSourceLocation {
-                address: 0,
-                source_operand: Some(operand),
-            })
-        }
         self
     }
 
@@ -1402,10 +1388,10 @@ impl LowLevelILMutableFunction {
         };
 
         LowLevelILExpressionBuilder::new(self, LLIL_INTRINSIC, 0)
-            .with_op1(output_expr_idx as u64)
-            .with_op2(intrinsic.id().0 as u64)
-            .with_op3(input_expr_idx as u64)
-            .with_op4(input_list_expr_idx as u64)
+            .with_op1(outputs.len() as u64)
+            .with_op2(output_expr_idx as u64)
+            .with_op3(intrinsic.id().0 as u64)
+            .with_op4(input_expr_idx as u64)
     }
 
     sized_unary_op_lifter!(push, LLIL_PUSH, VoidExpr);

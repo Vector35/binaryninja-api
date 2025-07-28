@@ -12,7 +12,7 @@ fn test_hlil_info() {
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
     let image_base = view.original_image_base();
 
-    let entry_function = view.entry_point_function().unwrap();
+    let entry_function = view.analysis_entry_point_function().unwrap();
     let hlil_function = entry_function.high_level_il(false).unwrap();
     let hlil_basic_blocks = hlil_function.basic_blocks();
     let mut hlil_basic_block_iter = hlil_basic_blocks.iter();

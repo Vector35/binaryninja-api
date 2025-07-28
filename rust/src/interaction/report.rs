@@ -10,6 +10,84 @@ use crate::string::{BnString, IntoCStr};
 
 pub type ReportType = BNReportType;
 
+/// Displays contents to the user in the UI or on the command-line.
+///
+/// NOTE: This function will have no effect when running outside the UI unless you
+/// register an [`super::InteractionHandler`].
+pub fn show_plaintext_report(title: &str, plaintext: &str) {
+    let title = title.to_cstr();
+    let plaintext = plaintext.to_cstr();
+    unsafe {
+        BNShowPlainTextReport(
+            std::ptr::null_mut(),
+            title.as_ref().as_ptr() as *mut _,
+            plaintext.as_ref().as_ptr() as *mut _,
+        )
+    }
+}
+
+/// Displays the Markdown contents in UI applications and plaintext in command-line applications.
+///
+/// Passing in a `view` will allow hyperlinking into the view.
+///
+/// NOTE: This function will have no effect when running outside the UI unless you
+/// register an [`super::InteractionHandler`].
+pub fn show_markdown_report(
+    view: Option<&BinaryView>,
+    title: &str,
+    contents: &str,
+    plaintext: &str,
+) {
+    let title = title.to_cstr();
+    let contents = contents.to_cstr();
+    let plaintext = plaintext.to_cstr();
+    unsafe {
+        BNShowMarkdownReport(
+            view.map(|v| v.handle).unwrap_or(std::ptr::null_mut()),
+            title.as_ref().as_ptr() as *mut _,
+            contents.as_ref().as_ptr() as *mut _,
+            plaintext.as_ref().as_ptr() as *mut _,
+        )
+    }
+}
+
+/// Displays the HTML contents in UI applications and plaintext in command-line applications.
+///
+/// Passing in a `view` will allow hyperlinking into the view.
+///
+/// NOTE: This function will have no effect when running outside the UI unless you
+/// register an [`super::InteractionHandler`].
+pub fn show_html_report(view: Option<&BinaryView>, title: &str, contents: &str, plaintext: &str) {
+    let title = title.to_cstr();
+    let contents = contents.to_cstr();
+    let plaintext = plaintext.to_cstr();
+    unsafe {
+        BNShowHTMLReport(
+            view.map(|v| v.handle).unwrap_or(std::ptr::null_mut()),
+            title.as_ref().as_ptr() as *mut _,
+            contents.as_ref().as_ptr() as *mut _,
+            plaintext.as_ref().as_ptr() as *mut _,
+        )
+    }
+}
+
+/// Displays the HTML contents in UI applications and plaintext in command-line applications.
+///
+/// Passing in a `view` will allow hyperlinking into the view.
+///
+/// NOTE: This function will have no effect when running outside the UI unless you
+/// register an [`super::InteractionHandler`].
+pub fn show_graph_report(view: Option<&BinaryView>, title: &str, graph: &FlowGraph) {
+    let raw_name = title.to_cstr();
+    unsafe {
+        BNShowGraphReport(
+            view.map(|v| v.handle).unwrap_or(std::ptr::null_mut()),
+            raw_name.as_ptr(),
+            graph.handle,
+        );
+    }
+}
+
 #[repr(transparent)]
 pub struct ReportCollection {
     handle: NonNull<BNReportCollection>,

@@ -1,6 +1,6 @@
+use binaryninja::binary_view::types::register_view_type;
 use binaryninja::binary_view::BinaryView;
 use binaryninja::command::{register_command, Command};
-use binaryninja::custom_binary_view::register_view_type;
 use binaryninja::logger::Logger;
 use log::{debug, LevelFilter};
 

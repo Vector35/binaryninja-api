@@ -144,7 +144,7 @@ pub fn create_section_reader<'a, Endian: 'a + Endianity>(
                         let ch_type_vec = view.read_vec(section.start(), 4);
                         let ch_type = endian.read_u32(&ch_type_vec);
 
-                        if let Ok(buffer) = view.read_buffer(offset, len) {
+                        if let Some(buffer) = view.read_buffer(offset, len) {
                             match ch_type {
                                 1 => {
                                     return Ok(EndianRcSlice::new(

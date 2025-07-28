@@ -89,6 +89,8 @@ rust/examples/*/target/
 rust/examples/dwarf/*/target/
 # Allow the test binaries
 !/rust/fixtures/bin/**
+# Allow the types directory in rust, its actually code
+!/rust/src/types
 
 # Debugger docs
 docs/img/debugger

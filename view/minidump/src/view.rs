@@ -10,11 +10,9 @@ use minidump::{
     MinidumpStream, MinidumpSystemInfo, Module,
 };
 
+use binaryninja::binary_view::custom::{CustomBinaryView, CustomView, CustomViewBuilder};
+use binaryninja::binary_view::types::{BinaryViewType, BinaryViewTypeBase, CoreBinaryViewType};
 use binaryninja::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
-use binaryninja::custom_binary_view::{
-    BinaryViewType, BinaryViewTypeBase, CustomBinaryView, CustomBinaryViewType, CustomView,
-    CustomViewBuilder,
-};
 use binaryninja::platform::Platform;
 use binaryninja::Endianness;
 
@@ -28,30 +26,22 @@ type BinaryViewResult<R> = binaryninja::binary_view::Result<R>;
 /// the Binary Ninja core then uses this view type to create an actual instance of the _Minidump_
 /// binary view (via `create_custom_view`).
 pub struct MinidumpBinaryViewType {
-    view_type: BinaryViewType,
+    view_type: CoreBinaryViewType,
 }
 
 impl MinidumpBinaryViewType {
-    pub fn new(view_type: BinaryViewType) -> Self {
+    pub fn new(view_type: CoreBinaryViewType) -> Self {
         MinidumpBinaryViewType { view_type }
     }
 }
 
-impl AsRef<BinaryViewType> for MinidumpBinaryViewType {
-    fn as_ref(&self) -> &BinaryViewType {
+impl AsRef<CoreBinaryViewType> for MinidumpBinaryViewType {
+    fn as_ref(&self) -> &CoreBinaryViewType {
         &self.view_type
     }
 }
 
 impl BinaryViewTypeBase for MinidumpBinaryViewType {
-    fn is_deprecated(&self) -> bool {
-        false
-    }
-
-    fn is_force_loadable(&self) -> bool {
-        false
-    }
-
     fn is_valid_for(&self, data: &BinaryView) -> bool {
         let mut magic_number = Vec::<u8>::new();
         data.read_into_vec(&mut magic_number, 0, 4);
@@ -60,7 +50,7 @@ impl BinaryViewTypeBase for MinidumpBinaryViewType {
     }
 }
 
-impl CustomBinaryViewType for MinidumpBinaryViewType {
+impl BinaryViewType for MinidumpBinaryViewType {
     fn create_custom_view<'builder>(
         &self,
         data: &BinaryView,
@@ -117,7 +107,7 @@ impl MinidumpBinaryView {
 
     fn init(&self) -> BinaryViewResult<()> {
         let parent_view = self.parent_view().ok_or(())?;
-        let read_buffer = parent_view.read_buffer(0, parent_view.len() as usize)?;
+        let read_buffer = parent_view.read_buffer(0, parent_view.len() as usize).ok_or(())?;
 
         if let Ok(minidump_obj) = Minidump::read(read_buffer.get_data()) {
             // Architecture, platform information
@@ -371,9 +361,11 @@ impl AsRef<BinaryView> for MinidumpBinaryView {
 }
 
 impl BinaryViewBase for MinidumpBinaryView {
-    // TODO: This should be filled out with the actual address size
-    // from the platform information in the minidump.
-    fn address_size(&self) -> usize {
+    fn entry_point(&self) -> u64 {
+        // TODO: We should fill this out with a real entry point.
+        // This can be done by getting the main module of the minidump
+        // with MinidumpModuleList::main_module,
+        // then parsing the PE metadata of the main module to find its entry point(s).
         0
     }
 
@@ -383,11 +375,9 @@ impl BinaryViewBase for MinidumpBinaryView {
         Endianness::LittleEndian
     }
 
-    fn entry_point(&self) -> u64 {
-        // TODO: We should fill this out with a real entry point.
-        // This can be done by getting the main module of the minidump
-        // with MinidumpModuleList::main_module,
-        // then parsing the PE metadata of the main module to find its entry point(s).
+    // TODO: This should be filled out with the actual address size
+    // from the platform information in the minidump.
+    fn address_size(&self) -> usize {
         0
     }
 }

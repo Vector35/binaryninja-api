@@ -5,9 +5,8 @@ extern crate msp430_asm;
 use binaryninja::{
     add_optional_plugin_dependency,
     architecture::ArchitectureExt,
-    calling_convention,
-    custom_binary_view::{BinaryViewType, BinaryViewTypeExt},
-    Endianness,
+    binary_view::types::{BinaryViewTypeExt, CoreBinaryViewType},
+    calling_convention, Endianness,
 };
 use log::LevelFilter;
 
@@ -50,7 +49,7 @@ pub extern "C" fn CorePluginInit() -> bool {
 
     arch.set_default_calling_convention(&default);
 
-    if let Ok(bvt) = BinaryViewType::by_name("ELF") {
+    if let Some(bvt) = CoreBinaryViewType::by_name("ELF") {
         bvt.register_arch(105, Endianness::LittleEndian, arch);
     }
 

@@ -1,3 +1,22 @@
+//! A [`MemoryMap`] represents the system-level memory layout for a [`BinaryView`].
+//!
+//! WARNING: This API is described as "experimental".
+//!
+//! Key features:
+//! - Add multiple, arbitrary (even overlapping) memory regions.
+//! - Automatic segmentation and ordering of overlaps (newest takes priority).
+//! - Supports both raw (file-backed) and logical (merged/abstracted) views.
+//!
+//! Region types:
+//! - [`BinaryView`]-backed ([`MemoryMap::add_binary_memory_region`])
+//! - Data buffer ([`MemoryMap::add_data_memory_region`])
+//! - Remote file accessor ([`MemoryMap::add_remote_memory_region`])
+//!
+//! You can query and modify each region’s properties:
+//! - Enable/disable regions
+//! - Change fill patterns for unbacked areas
+//! - Adjust flags (readable, writable, executable, etc.)
+
 use crate::binary_view::BinaryView;
 use crate::data_buffer::DataBuffer;
 use crate::file_accessor::{Accessor, FileAccessor};
@@ -6,6 +25,7 @@ use crate::segment::SegmentFlags;
 use crate::string::{BnString, IntoCStr};
 use binaryninjacore_sys::*;
 
+/// Represents the system-level memory layout for a [`BinaryView`].
 #[derive(PartialEq, Eq, Hash)]
 pub struct MemoryMap {
     view: Ref<BinaryView>,
@@ -41,6 +61,8 @@ impl MemoryMap {
     }
 
     /// Whether the memory map is activated for the associated view.
+    ///
+    /// A "Raw" view will not have an activated memory map.
     pub fn is_activated(&self) -> bool {
         unsafe { BNIsMemoryMapActivated(self.view.handle) }
     }

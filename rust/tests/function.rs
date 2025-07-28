@@ -10,7 +10,7 @@ fn store_and_query_function_metadata() {
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
     let func = view
-        .entry_point_function()
+        .analysis_entry_point_function()
         .expect("Failed to get entry point function");
 
     // Store key/value pairs to user and auto metadata
@@ -75,7 +75,7 @@ fn add_function() {
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
     let mut func = view
-        .entry_point_function()
+        .analysis_entry_point_function()
         .expect("Failed to get entry point function");
 
     // Remove the function then as an auto function then add as auto function.

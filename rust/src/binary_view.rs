@@ -58,14 +58,16 @@ use crate::Endianness;
 use std::collections::HashMap;
 use std::ffi::{c_char, c_void};
 use std::ops::Range;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
 use std::{result, slice};
 // TODO : general reorg of modules related to bv
 
+pub mod custom;
 pub mod memory_map;
 pub mod reader;
 pub mod search;
+pub mod types;
 pub mod writer;
 
 use crate::binary_view::search::SearchQuery;
@@ -535,11 +537,9 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn analysis_info(&self) -> Result<AnalysisInfo> {
+    fn analysis_info(&self) -> AnalysisInfo {
         let info_ref = unsafe { BNGetAnalysisInfo(self.as_ref().handle) };
-        if info_ref.is_null() {
-            return Err(());
-        }
+        assert!(!info_ref.is_null());
         let info = unsafe { *info_ref };
         let active_infos = unsafe { slice::from_raw_parts(info.activeInfo, info.count) };
 
@@ -561,7 +561,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         };
 
         unsafe { BNFreeAnalysisInfo(info_ref) };
-        Ok(result)
+        result
     }
 
     fn analysis_progress(&self) -> AnalysisProgress {
@@ -1182,10 +1182,14 @@ pub trait BinaryViewExt: BinaryViewBase {
         address: u64,
         platform: &Platform,
     ) -> Option<Ref<Function>> {
-        self.add_auto_function_ext(address, platform, None)
+        self.add_auto_function_ext(address, platform, None, true)
     }
 
     /// Add an auto function at the given `address` with the `platform` and function type.
+    ///
+    /// If you set `auto_discovered` to `false`, the function will not be considered for unused function
+    /// deletion, nor will it allow the function to be "blacklisted", that is, the function will always
+    /// be created.
     ///
     /// NOTE: If the view's default platform is not set, this will set it to `platform`.
     fn add_auto_function_ext(
@@ -1193,6 +1197,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         address: u64,
         platform: &Platform,
         func_type: Option<&Type>,
+        auto_discovered: bool,
     ) -> Option<Ref<Function>> {
         unsafe {
             let func_type = match func_type {
@@ -1204,7 +1209,7 @@ pub trait BinaryViewExt: BinaryViewBase {
                 self.as_ref().handle,
                 platform.handle,
                 address,
-                true,
+                auto_discovered,
                 func_type,
             );
 
@@ -1285,7 +1290,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn entry_point_function(&self) -> Option<Ref<Function>> {
+    fn analysis_entry_point_function(&self) -> Option<Ref<Function>> {
         unsafe {
             let raw_func_ptr = BNGetAnalysisEntryPoint(self.as_ref().handle);
             match raw_func_ptr.is_null() {
@@ -1295,6 +1300,11 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    /// This list contains the analysis entry function, and functions like init_array, fini_array,
+    /// and TLS callbacks etc.
+    ///
+    /// We see `entry_functions` as good starting points for analysis, these functions normally don't
+    /// have internal references. Exported functions in a dll/so file are not included.
     fn entry_point_functions(&self) -> Array<Function> {
         unsafe {
             let mut count = 0;
@@ -1381,7 +1391,7 @@ pub trait BinaryViewExt: BinaryViewBase {
 
     /// Checks if target analysis should be skipped.
     ///
-    /// NOTE: This function should **only** be used by within an [`Architecture`].
+    /// NOTE: This function should **only** be used by within [`Architecture::analyze_basic_blocks`].
     fn should_skip_target_analysis<L: Into<Location>>(
         &self,
         source: L,
@@ -1403,12 +1413,12 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn read_buffer(&self, offset: u64, len: usize) -> Result<DataBuffer> {
+    fn read_buffer(&self, offset: u64, len: usize) -> Option<DataBuffer> {
         let read_buffer = unsafe { BNReadViewBuffer(self.as_ref().handle, offset, len) };
         if read_buffer.is_null() {
-            Err(())
+            None
         } else {
-            Ok(DataBuffer::from_raw(read_buffer))
+            Some(DataBuffer::from_raw(read_buffer))
         }
     }
 
@@ -1424,51 +1434,19 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNApplyDebugInfo(self.as_ref().handle, debug_info.handle) }
     }
 
-    fn show_plaintext_report(&self, title: &str, plaintext: &str) {
-        let title = title.to_cstr();
-        let plaintext = plaintext.to_cstr();
-        unsafe {
-            BNShowPlainTextReport(
-                self.as_ref().handle,
-                title.as_ref().as_ptr() as *mut _,
-                plaintext.as_ref().as_ptr() as *mut _,
-            )
-        }
-    }
-
+    /// Wrapper for [`crate::interaction::show_markdown_report`].
     fn show_markdown_report(&self, title: &str, contents: &str, plaintext: &str) {
-        let title = title.to_cstr();
-        let contents = contents.to_cstr();
-        let plaintext = plaintext.to_cstr();
-        unsafe {
-            BNShowMarkdownReport(
-                self.as_ref().handle,
-                title.as_ref().as_ptr() as *mut _,
-                contents.as_ref().as_ptr() as *mut _,
-                plaintext.as_ref().as_ptr() as *mut _,
-            )
-        }
+        crate::interaction::show_markdown_report(Some(self.as_ref()), title, contents, plaintext);
     }
 
+    /// Wrapper for [`crate::interaction::show_html_report`].
     fn show_html_report(&self, title: &str, contents: &str, plaintext: &str) {
-        let title = title.to_cstr();
-        let contents = contents.to_cstr();
-        let plaintext = plaintext.to_cstr();
-        unsafe {
-            BNShowHTMLReport(
-                self.as_ref().handle,
-                title.as_ref().as_ptr() as *mut _,
-                contents.as_ref().as_ptr() as *mut _,
-                plaintext.as_ref().as_ptr() as *mut _,
-            )
-        }
+        crate::interaction::show_html_report(Some(self.as_ref()), title, contents, plaintext);
     }
 
+    /// Wrapper for [`crate::interaction::show_graph_report`].
     fn show_graph_report(&self, raw_name: &str, graph: &FlowGraph) {
-        let raw_name = raw_name.to_cstr();
-        unsafe {
-            BNShowGraphReport(self.as_ref().handle, raw_name.as_ptr(), graph.handle);
-        }
+        crate::interaction::show_graph_report(Some(self.as_ref()), raw_name, graph);
     }
 
     fn load_settings(&self, view_type_name: &str) -> Result<Ref<Settings>> {
@@ -1608,6 +1586,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         result
     }
 
+    // TODO: Why is this impl'd here?
     /// Retrieves a list of the previous disassembly lines.
     ///
     /// `get_previous_linear_disassembly_lines` retrieves an [Array] over [LinearDisassemblyLine] objects for the
@@ -1643,6 +1622,9 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    /// Retrieve the metadata as the type `T`.
+    ///
+    /// Fails if the metadata does not exist, or if the metadata failed to coerce to type `T`.
     fn get_metadata<T>(&self, key: &str) -> Option<Result<T>>
     where
         T: for<'a> TryFrom<&'a Metadata>,
@@ -1672,7 +1654,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNBinaryViewRemoveMetadata(self.as_ref().handle, key.as_ptr()) };
     }
 
-    /// Retrieves a list of [CodeReference]s pointing to a given address.
+    /// Retrieves a list of [`CodeReference`]s pointing to a given address.
     fn code_refs_to_addr(&self, addr: u64) -> Array<CodeReference> {
         unsafe {
             let mut count = 0;
@@ -1681,7 +1663,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    /// Retrieves a list of [CodeReference]s pointing into a given [Range].
+    /// Retrieves a list of [`CodeReference`]s pointing into a given [`Range`].
     fn code_refs_into_range(&self, range: Range<u64>) -> Array<CodeReference> {
         unsafe {
             let mut count = 0;
@@ -2171,16 +2153,20 @@ pub trait BinaryViewExt: BinaryViewBase {
             Array::new(strings, count, ())
         }
     }
-    fn string_at(&self, addr: u64) -> Option<BNStringReference> {
+
+    /// Retrieve the string that falls on a given virtual address.
+    ///
+    /// NOTE: This returns discovered strings and is therefore governed by `analysis.limits.minStringLength` and other settings.
+    fn string_at(&self, addr: u64) -> Option<StringReference> {
         let mut str_ref = BNStringReference::default();
         let success = unsafe { BNGetStringAtAddress(self.as_ref().handle, addr, &mut str_ref) };
-
         if success {
-            Some(str_ref)
+            Some(str_ref.into())
         } else {
             None
         }
     }
+
     /// Retrieve all known strings within the provided `range`.
     ///
     /// NOTE: This returns a list of [`StringReference`] as strings may not be representable
@@ -2199,23 +2185,43 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    //
-    // fn type_archives(&self) -> Array<TypeArchive> {
-    //     let mut ids: *mut *mut c_char = std::ptr::null_mut();
-    //     let mut paths: *mut *mut c_char = std::ptr::null_mut();
-    //     let count = unsafe { BNBinaryViewGetTypeArchives(self.as_ref().handle, &mut ids, &mut paths) };
-    //     let path_list = unsafe { Array::<BnString>::new(paths, count, ()) };
-    //     let ids_list = unsafe { std::slice::from_raw_parts(ids, count).to_vec() };
-    //     let archives = ids_list.iter().filter_map(|id| {
-    //         let archive_raw = unsafe { BNBinaryViewGetTypeArchive(self.as_ref().handle, *id) };
-    //         match archive_raw.is_null() {
-    //             true => None,
-    //             false => Some(archive_raw)
-    //         }
-    //     }).collect();
-    //     unsafe { BNFreeStringList(ids, count) };
-    //     Array::new(archives)
-    // }
+    /// Retrieve the attached type archives as a tuple of id and path.
+    ///
+    /// Using the returned id you can retrieve the [`TypeArchive`] with [`BinaryViewExt::type_archive_by_id`].
+    fn attached_type_archives(&self) -> Vec<(String, String)> {
+        let mut ids: *mut *mut c_char = std::ptr::null_mut();
+        let mut paths: *mut *mut c_char = std::ptr::null_mut();
+        let count =
+            unsafe { BNBinaryViewGetTypeArchives(self.as_ref().handle, &mut ids, &mut paths) };
+        let path_list = unsafe { Array::<BnString>::new(paths, count, ()) };
+        let id_list = unsafe { Array::<BnString>::new(ids, count, ()) };
+        path_list
+            .iter()
+            .zip(id_list.iter())
+            .map(|(path, id)| (id.to_string(), path.to_string()))
+            .collect()
+    }
+
+    /// Look up a connected [`TypeArchive`] by its `id`.
+    ///
+    /// NOTE: A [`TypeArchive`] can be attached but not connected, returning `None`.
+    fn type_archive_by_id(&self, id: &str) -> Option<Ref<TypeArchive>> {
+        let id = id.to_cstr();
+        let result = unsafe { BNBinaryViewGetTypeArchive(self.as_ref().handle, id.as_ptr()) };
+        let result_ptr = NonNull::new(result)?;
+        Some(unsafe { TypeArchive::ref_from_raw(result_ptr) })
+    }
+
+    /// Look up the path for an attached (but not necessarily connected) [`TypeArchive`] by its `id`.
+    fn type_archive_path_by_id(&self, id: &str) -> Option<PathBuf> {
+        let id = id.to_cstr();
+        let result = unsafe { BNBinaryViewGetTypeArchivePath(self.as_ref().handle, id.as_ptr()) };
+        if result.is_null() {
+            return None;
+        }
+        let path_str = unsafe { BnString::into_string(result) };
+        Some(PathBuf::from(path_str))
+    }
 }
 
 impl<T: BinaryViewBase> BinaryViewExt for T {}
@@ -2428,6 +2434,7 @@ impl std::fmt::Debug for BinaryView {
             .field("address_size", &self.address_size())
             .field("sections", &self.sections().to_vec())
             .field("segments", &self.segments().to_vec())
+            .field("attached_type_archives", &self.attached_type_archives())
             .finish()
     }
 }

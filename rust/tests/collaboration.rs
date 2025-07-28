@@ -189,7 +189,7 @@ fn test_project_sync() {
         assert_eq!(view.file().database().unwrap().snapshots().len(), 1);
         // Update the entry function name.
         let entry_function = view
-            .entry_point_function()
+            .analysis_entry_point_function()
             .expect("Failed to get entry point function");
         let new_entry_func_symbol =
             SymbolBuilder::new(SymbolType::Function, "test", entry_function.start()).create();
@@ -226,7 +226,7 @@ fn test_project_sync() {
             .expect("Failed to open downloaded view");
         // Verify the changes in the entry function.
         let entry_function = downloaded_view
-            .entry_point_function()
+            .analysis_entry_point_function()
             .expect("Failed to get entry point function");
         assert_eq!(entry_function.symbol().raw_name(), "test".into());
         project

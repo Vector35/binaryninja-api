@@ -8,7 +8,7 @@ use binaryninja::background_task::BackgroundTask;
 use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::Command;
 use binaryninja::interaction::form::{Form, FormInputField};
-use binaryninja::interaction::{MessageBoxButtonResult, MessageBoxButtonSet, MessageBoxIcon};
+use binaryninja::interaction::{show_plaintext_report, MessageBoxButtonResult, MessageBoxButtonSet, MessageBoxIcon};
 use binaryninja::rc::Ref;
 use std::path::PathBuf;
 use std::thread;
@@ -204,7 +204,7 @@ impl CreateFromCurrentView {
                     view.show_markdown_report("Generated WARP File", report_string.as_str(), "");
                 }
                 ReportKindField::Json => {
-                    view.show_plaintext_report("Generated WARP File", report_string.as_str());
+                    show_plaintext_report("Generated WARP File", report_string.as_str());
                 }
             }
         }

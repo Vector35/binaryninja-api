@@ -14,7 +14,7 @@ fn test_mlil_info() {
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
     let image_base = view.original_image_base();
 
-    let entry_function = view.entry_point_function().unwrap();
+    let entry_function = view.analysis_entry_point_function().unwrap();
     let mlil_function = entry_function.medium_level_il().unwrap();
     let mlil_basic_blocks = mlil_function.basic_blocks();
     let mut mlil_basic_block_iter = mlil_basic_blocks.iter();

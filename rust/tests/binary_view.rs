@@ -57,7 +57,7 @@ fn test_binary_saving_database() {
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
     // Update a symbol to verify modification
     let entry_function = view
-        .entry_point_function()
+        .analysis_entry_point_function()
         .expect("Failed to get entry point function");
     let new_entry_func_symbol =
         SymbolBuilder::new(SymbolType::Function, "test", entry_function.start()).create();
@@ -71,7 +71,7 @@ fn test_binary_saving_database() {
     // Verify that the file exists and is modified.
     let new_view = binaryninja::load(temp_path).expect("Failed to load new view");
     let new_entry_function = new_view
-        .entry_point_function()
+        .analysis_entry_point_function()
         .expect("Failed to get entry point function");
     assert_eq!(
         new_entry_function.symbol().raw_name().to_string_lossy(),

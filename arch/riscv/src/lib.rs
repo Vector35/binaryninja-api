@@ -15,7 +15,6 @@ use binaryninja::{
     },
     binary_view::{BinaryView, BinaryViewExt},
     calling_convention::{register_calling_convention, CallingConvention, ConventionBuilder},
-    custom_binary_view::{BinaryViewType, BinaryViewTypeExt},
     disassembly::{InstructionTextToken, InstructionTextTokenKind},
     function::Function,
     function_recognizer::FunctionRecognizer,
@@ -35,6 +34,7 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 
 use binaryninja::architecture::{BranchKind, IntrinsicId, RegisterId};
+use binaryninja::binary_view::types::{BinaryViewTypeExt, CoreBinaryViewType};
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
 use binaryninja::logger::Logger;
 use binaryninja::low_level_il::expression::{LowLevelILExpressionKind, ValueExpr};
@@ -3070,7 +3070,7 @@ pub extern "C" fn CorePluginInit() -> bool {
     );
     arch64.set_default_calling_convention(&cc64);
 
-    if let Ok(bvt) = BinaryViewType::by_name("ELF") {
+    if let Some(bvt) = CoreBinaryViewType::by_name("ELF") {
         bvt.register_arch(
             (1 << 16) | 243,
             binaryninja::Endianness::LittleEndian,

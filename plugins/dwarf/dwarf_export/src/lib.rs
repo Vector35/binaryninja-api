@@ -409,7 +409,7 @@ fn export_functions(
     dwarf: &mut DwarfUnit,
     defined_types: &mut Vec<(Ref<Type>, UnitEntryId)>,
 ) {
-    let entry_point = bv.entry_point_function();
+    let entry_point = bv.analysis_entry_point_function();
 
     for function in &bv.functions() {
         // Create function DIE as child of the compilation unit DIE

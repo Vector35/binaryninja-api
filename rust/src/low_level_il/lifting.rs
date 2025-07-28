@@ -695,7 +695,7 @@ where
     }
 }
 
-pub struct ExpressionBuilder<'func, R>
+pub struct LowLevelILExpressionBuilder<'func, R>
 where
     R: ExpressionResultType,
 {
@@ -711,7 +711,7 @@ where
     _ty: PhantomData<R>,
 }
 
-impl<'a, R> ExpressionBuilder<'a, R>
+impl<'a, R> LowLevelILExpressionBuilder<'a, R>
 where
     R: ExpressionResultType,
 {
@@ -720,7 +720,7 @@ where
         op: BNLowLevelILOperation,
         size: usize,
     ) -> Self {
-        ExpressionBuilder {
+        LowLevelILExpressionBuilder {
             function,
             op,
             location: None,
@@ -739,7 +739,7 @@ where
 
         let instr = unsafe { BNGetLowLevelILByIndex(expr.function.handle, expr.index.0) };
 
-        ExpressionBuilder {
+        LowLevelILExpressionBuilder {
             function: expr.function,
             op: instr.operation,
             location: Some(LowLevelILSourceLocation::from(&instr)),
@@ -798,6 +798,9 @@ where
         self
     }
 
+    // TODO: I would have preferred to pass in the LLIL function as a ref here instead of keeping it
+    // TODO: in the builder. But all architectures append with that implied llil function with `append()`
+    // TODO: so we would be ergonomically worse, until the functions like il.set_reg or whatever go away.
     pub fn build(self) -> LowLevelILExpression<'a, Mutable, NonSSA, R> {
         use binaryninjacore_sys::BNLowLevelILAddExpr;
         use binaryninjacore_sys::BNLowLevelILAddExprWithLocation;
@@ -840,7 +843,7 @@ where
     }
 }
 
-impl<'a, R> LiftableLowLevelIL<'a> for ExpressionBuilder<'a, R>
+impl<'a, R> LiftableLowLevelIL<'a> for LowLevelILExpressionBuilder<'a, R>
 where
     R: ExpressionResultType,
 {
@@ -856,7 +859,7 @@ where
     }
 }
 
-impl<'a> LiftableLowLevelILWithSize<'a> for ExpressionBuilder<'a, ValueExpr> {
+impl<'a> LiftableLowLevelILWithSize<'a> for LowLevelILExpressionBuilder<'a, ValueExpr> {
     fn lift_with_size(
         il: &'a LowLevelILMutableFunction,
         expr: Self,
@@ -895,10 +898,10 @@ macro_rules! no_arg_lifter {
 
 macro_rules! sized_no_arg_lifter {
     ($name:ident, $op:ident, $result:ty) => {
-        pub fn $name(&self, size: usize) -> ExpressionBuilder<$result> {
+        pub fn $name(&self, size: usize) -> LowLevelILExpressionBuilder<$result> {
             use binaryninjacore_sys::BNLowLevelILOperation::$op;
 
-            ExpressionBuilder::new(self, $op, size)
+            LowLevelILExpressionBuilder::new(self, $op, size)
         }
     };
 }
@@ -925,7 +928,11 @@ macro_rules! unsized_unary_op_lifter {
 
 macro_rules! sized_unary_op_lifter {
     ($name:ident, $op:ident, $result:ty) => {
-        pub fn $name<'a, E>(&'a self, size: usize, expr: E) -> ExpressionBuilder<'a, $result>
+        pub fn $name<'a, E>(
+            &'a self,
+            size: usize,
+            expr: E,
+        ) -> LowLevelILExpressionBuilder<'a, $result>
         where
             E: LiftableLowLevelILWithSize<'a>,
         {
@@ -933,14 +940,18 @@ macro_rules! sized_unary_op_lifter {
 
             let expr = E::lift_with_size(self, expr, size);
 
-            ExpressionBuilder::new(self, $op, size).with_op1(expr.index.0 as u64)
+            LowLevelILExpressionBuilder::new(self, $op, size).with_op1(expr.index.0 as u64)
         }
     };
 }
 
 macro_rules! size_changing_unary_op_lifter {
     ($name:ident, $op:ident, $result:ty) => {
-        pub fn $name<'a, E>(&'a self, size: usize, expr: E) -> ExpressionBuilder<'a, $result>
+        pub fn $name<'a, E>(
+            &'a self,
+            size: usize,
+            expr: E,
+        ) -> LowLevelILExpressionBuilder<'a, $result>
         where
             E: LiftableLowLevelILWithSize<'a>,
         {
@@ -948,7 +959,7 @@ macro_rules! size_changing_unary_op_lifter {
 
             let expr = E::lift(self, expr);
 
-            ExpressionBuilder::new(self, $op, size).with_op1(expr.index.0 as u64)
+            LowLevelILExpressionBuilder::new(self, $op, size).with_op1(expr.index.0 as u64)
         }
     };
 }
@@ -960,7 +971,7 @@ macro_rules! binary_op_lifter {
             size: usize,
             left: L,
             right: R,
-        ) -> ExpressionBuilder<'a, ValueExpr>
+        ) -> LowLevelILExpressionBuilder<'a, ValueExpr>
         where
             L: LiftableLowLevelILWithSize<'a>,
             R: LiftableLowLevelILWithSize<'a>,
@@ -970,7 +981,7 @@ macro_rules! binary_op_lifter {
             let left = L::lift_with_size(self, left, size);
             let right = R::lift_with_size(self, right, size);
 
-            ExpressionBuilder::new(self, $op, size)
+            LowLevelILExpressionBuilder::new(self, $op, size)
                 .with_op1(left.index.0 as u64)
                 .with_op2(right.index.0 as u64)
         }
@@ -985,7 +996,7 @@ macro_rules! binary_op_carry_lifter {
             left: L,
             right: R,
             carry: C,
-        ) -> ExpressionBuilder<'a, ValueExpr>
+        ) -> LowLevelILExpressionBuilder<'a, ValueExpr>
         where
             L: LiftableLowLevelILWithSize<'a>,
             R: LiftableLowLevelILWithSize<'a>,
@@ -997,7 +1008,7 @@ macro_rules! binary_op_carry_lifter {
             let right = R::lift_with_size(self, right, size);
             let carry = C::lift_with_size(self, carry, 0);
 
-            ExpressionBuilder::new(self, $op, size)
+            LowLevelILExpressionBuilder::new(self, $op, size)
                 .with_op1(left.index.0 as u64)
                 .with_op2(right.index.0 as u64)
                 .with_op3(carry.index.0 as u64)
@@ -1006,7 +1017,7 @@ macro_rules! binary_op_carry_lifter {
 }
 
 impl LowLevelILMutableFunction {
-    pub const NO_INPUTS: [ExpressionBuilder<'static, ValueExpr>; 0] = [];
+    pub const NO_INPUTS: [LowLevelILExpressionBuilder<'static, ValueExpr>; 0] = [];
     pub const NO_OUTPUTS: [LowLevelILRegisterKind<CoreRegister>; 0] = [];
 
     pub fn expression<'a, E: LiftableLowLevelIL<'a>>(
@@ -1199,7 +1210,7 @@ impl LowLevelILMutableFunction {
         size: usize,
         dest_reg: LR,
         expr: E,
-    ) -> ExpressionBuilder<'a, VoidExpr>
+    ) -> LowLevelILExpressionBuilder<'a, VoidExpr>
     where
         R: ArchReg,
         LR: Into<LowLevelILRegisterKind<R>>,
@@ -1212,7 +1223,7 @@ impl LowLevelILMutableFunction {
 
         let expr = E::lift_with_size(self, expr, size);
 
-        ExpressionBuilder::new(self, LLIL_SET_REG, size)
+        LowLevelILExpressionBuilder::new(self, LLIL_SET_REG, size)
             .with_op1(dest_reg)
             .with_op2(expr.index.0 as u64)
     }
@@ -1223,7 +1234,7 @@ impl LowLevelILMutableFunction {
         hi_reg: LR,
         lo_reg: LR,
         expr: E,
-    ) -> ExpressionBuilder<'a, VoidExpr>
+    ) -> LowLevelILExpressionBuilder<'a, VoidExpr>
     where
         R: ArchReg,
         LR: Into<LowLevelILRegisterKind<R>>,
@@ -1237,7 +1248,7 @@ impl LowLevelILMutableFunction {
 
         let expr = E::lift_with_size(self, expr, size);
 
-        ExpressionBuilder::new(self, LLIL_SET_REG_SPLIT, size)
+        LowLevelILExpressionBuilder::new(self, LLIL_SET_REG_SPLIT, size)
             .with_op1(hi_reg)
             .with_op2(lo_reg)
             .with_op3(expr.index.0 as u64)
@@ -1291,7 +1302,7 @@ impl LowLevelILMutableFunction {
         &'a self,
         dest_flag: impl Flag,
         expr: E,
-    ) -> ExpressionBuilder<'a, VoidExpr>
+    ) -> LowLevelILExpressionBuilder<'a, VoidExpr>
     where
         E: LiftableLowLevelILWithSize<'a>,
     {
@@ -1301,7 +1312,7 @@ impl LowLevelILMutableFunction {
 
         let expr = E::lift_with_size(self, expr, 0);
 
-        ExpressionBuilder::new(self, LLIL_SET_FLAG, 0)
+        LowLevelILExpressionBuilder::new(self, LLIL_SET_FLAG, 0)
             .with_op1(dest_flag.id())
             .with_op2(expr.index.0 as u64)
     }
@@ -1311,7 +1322,11 @@ impl LowLevelILMutableFunction {
     FlagBit(usize, Flag<A>, u64),
     */
 
-    pub fn load<'a, E>(&'a self, size: usize, source_mem: E) -> ExpressionBuilder<'a, ValueExpr>
+    pub fn load<'a, E>(
+        &'a self,
+        size: usize,
+        source_mem: E,
+    ) -> LowLevelILExpressionBuilder<'a, ValueExpr>
     where
         E: LiftableLowLevelIL<'a, Result = ValueExpr>,
     {
@@ -1319,7 +1334,7 @@ impl LowLevelILMutableFunction {
 
         let expr = E::lift(self, source_mem);
 
-        ExpressionBuilder::new(self, LLIL_LOAD, size).with_op1(expr.index.0 as u64)
+        LowLevelILExpressionBuilder::new(self, LLIL_LOAD, size).with_op1(expr.index.0 as u64)
     }
 
     pub fn store<'a, D, V>(
@@ -1327,7 +1342,7 @@ impl LowLevelILMutableFunction {
         size: usize,
         dest_mem: D,
         value: V,
-    ) -> ExpressionBuilder<'a, VoidExpr>
+    ) -> LowLevelILExpressionBuilder<'a, VoidExpr>
     where
         D: LiftableLowLevelIL<'a, Result = ValueExpr>,
         V: LiftableLowLevelILWithSize<'a>,
@@ -1337,7 +1352,7 @@ impl LowLevelILMutableFunction {
         let dest_mem = D::lift(self, dest_mem);
         let value = V::lift_with_size(self, value, size);
 
-        ExpressionBuilder::new(self, LLIL_STORE, size)
+        LowLevelILExpressionBuilder::new(self, LLIL_STORE, size)
             .with_op1(dest_mem.index.0 as u64)
             .with_op2(value.index.0 as u64)
     }
@@ -1348,7 +1363,7 @@ impl LowLevelILMutableFunction {
         outputs: impl IntoIterator<Item = O>,
         intrinsic: impl Intrinsic,
         inputs: impl IntoIterator<Item = P>,
-    ) -> ExpressionBuilder<'a, VoidExpr>
+    ) -> LowLevelILExpressionBuilder<'a, VoidExpr>
     where
         R: ArchReg,
         O: Into<LowLevelILRegisterKind<R>>,
@@ -1386,7 +1401,7 @@ impl LowLevelILMutableFunction {
             )
         };
 
-        ExpressionBuilder::new(self, LLIL_INTRINSIC, 0)
+        LowLevelILExpressionBuilder::new(self, LLIL_INTRINSIC, 0)
             .with_op1(output_expr_idx as u64)
             .with_op2(intrinsic.id().0 as u64)
             .with_op3(input_expr_idx as u64)

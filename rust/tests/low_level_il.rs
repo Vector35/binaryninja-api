@@ -8,6 +8,7 @@ use binaryninja::low_level_il::function::LowLevelILFunction;
 use binaryninja::low_level_il::instruction::{
     InstructionHandler, LowLevelILInstructionKind, LowLevelInstructionIndex,
 };
+use binaryninja::low_level_il::lifting::LowLevelILExpressionBuilder;
 use binaryninja::low_level_il::{LowLevelILRegisterKind, LowLevelILSSARegisterKind, VisitorAction};
 use std::path::PathBuf;
 
@@ -355,4 +356,9 @@ fn test_llil_lifting() {
         _ => panic!("Expected Value"),
     }
     println!("{:?}", instr_0.kind());
+
+    LowLevelILExpressionBuilder::new()
+        .const_int(100)
+        .set_reg(expr_0.index, eax_reg)
+        .build();
 }

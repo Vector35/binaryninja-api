@@ -253,6 +253,7 @@ impl DownloadInstance {
             )
         };
 
+        unsafe { drop(Box::from_raw(callbacks)) };
         if result < 0 {
             unsafe { BNFreeDownloadInstanceResponse(response) };
             return Err(self.get_error());

@@ -2723,6 +2723,8 @@ void ElfView::ParseMiniDebugInfo()
 			symbol->GetBinding()
 		);
 	}
+
+	debugBv->GetFile()->Close();
 }
 
 

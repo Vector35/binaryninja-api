@@ -448,8 +448,12 @@ class BitPattern:
 				maskNeg += 'x'*int(m.group(1))
 			elif re.match(r'^[\(\)01]+$', field):
 				# unpredictable fields (eg: "(0)(0)(0)(0)") are do-not-cares
-				maskPos += 'x'*(len(field)/3)
-				maskNeg += 'x'*(len(field)/3)
+				try:
+					maskPos += 'x'*(len(field)//3)
+					maskNeg += 'x'*(len(field)//3)
+				except:
+					print(f'stupid math in {field!r} in {self.text!r}')
+					raise
 			else:
 				parseError('genCheckMatch(): unknown bit extract field %s' % field)
 
@@ -459,7 +463,7 @@ class BitPattern:
 
 		# finally convert to a check
 		tmp = bitMaskGenCheckMatch(maskPos, varName)
-		if filter(lambda a: a!='x', maskNeg):
+		if list(filter(lambda a: a!='x', maskNeg)):
 			tmp += ' && !'+bitMaskGenCheckMatch(maskNeg, varName)
 		return tmp
 
@@ -532,7 +536,7 @@ class BitPattern:
 				else:
 					m = re.match(r'^[\(\)01]+$', field)
 					if m:
-						nBits = len(field)/3
+						nBits = len(field)//3
 					else:
 						parseError('genExtractGeneral(): unknown bit extract field %s' % field)
 
@@ -600,7 +604,7 @@ class BitPattern:
 
 	# get the width of a variable from within the pattern
 	def getVarWidth(self, varName):
-		regex = varName + '\.(\\d)'
+		regex = varName + r'\.(\\d)'
 
 		#print("trying to get var: %s" % varName)
 		#print("using regex: %s" % regex)
@@ -673,7 +677,7 @@ def genEncodingBlock(mgr, encName, arches, fmts, pattern, pcode):
 	# generate architecture check
 	checks = []
 	for arch in arches.split(', '):
-		checks.append('!(req->arch & ARCH_%s)' % string.replace(arch, '*', ''))
+		checks.append('!(req->arch & ARCH_%s)' % arch.replace('*', ''))
 	mgr.add("if(%s) {" % ' && '.join(checks))
 	mgr.tab()
 	mgr.add('res->status |= STATUS_ARCH_UNSUPPORTED;')
@@ -1323,9 +1327,9 @@ def gen_node(mgr, nodeName, lines):
 								checks.append(bitMaskGenCheckMatch(mask, varName))
 
 						# collapse all '1's into a single 1
-						trues = filter(lambda x: x=='1', checks)
+						trues = list(filter(lambda x: x=='1', checks))
 						if trues:
-							others = filter(lambda x: x!='1', checks)
+							others = list(filter(lambda x: x!='1', checks))
 							checks = others + ['1']
 
 						# and generate the code
@@ -1389,30 +1393,32 @@ if __name__ == '__main__':
 	for node in node2lines.keys():
 		node2crc[node] = binascii.crc32((''.join(node2lines[node])).encode('utf-8')) & 0xFFFFFFFF
 
-	# open spec.cpp, read the crc's of generated functions (detecting if they need regen)
-	print('collecting functions from spec.cpp')
-	fp = open('spec.cpp', 'r')
-	lines = fp.readlines()
-	fp.close()
-
-	lines = list(map(lambda x: x.rstrip(), lines))
+	forceGen = 'force' in sys.argv
 	funcInfo = {}
-	i = 0
-	while i < len(lines):
-		m = re.match(r'^// gen_crc: (........).*', lines[i])
-		if not m:
-			i += 1
-			continue
-		crc = int(m.group(1), 16)
-		m = re.match(r'^int ([\w\d]+)\(.*$', lines[i+1])
-		if not m:
-			raise Exception('did not find function after crc line %d: %s' % (i+1,lines[i]))
-		name = m.group(1)
-		start = i
-		while lines[i] != '}':
-			i += 1
-		funcInfo[name] = {'crc':crc, 'lines':'\n'.join(lines[start:i+1])}
-		#print('found that %s has crc %08X' % (name, crc))
+	if not forceGen and os.path.exists('spec.cpp'):
+		# open spec.cpp, read the crc's of generated functions (detecting if they need regen)
+		print('collecting functions from spec.cpp')
+		fp = open('spec.cpp', 'r')
+		lines = fp.readlines()
+		fp.close()
+
+		lines = list(map(lambda x: x.rstrip(), lines))
+		i = 0
+		while i < len(lines):
+			m = re.match(r'^// gen_crc: (........).*', lines[i])
+			if not m:
+				i += 1
+				continue
+			crc = int(m.group(1), 16)
+			m = re.match(r'^int ([\w\d]+)\(.*$', lines[i+1])
+			if not m:
+				raise Exception('did not find function after crc line %d: %s' % (i+1,lines[i]))
+			name = m.group(1)
+			start = i
+			while lines[i] != '}':
+				i += 1
+			funcInfo[name] = {'crc':crc, 'lines':'\n'.join(lines[start:i+1])}
+			#print('found that %s has crc %08X' % (name, crc))
 
 	# construct the new file
 	mgr = CodeManager()
@@ -1423,7 +1429,6 @@ if __name__ == '__main__':
 	mgr.add(support)
 
 	count = 0
-	forceGen = 'force' in sys.argv
 	# for every node that doesn't have a matching function, generate!
 	for node in sorted(node2lines.keys()):
 		nodeCrc = node2crc[node]

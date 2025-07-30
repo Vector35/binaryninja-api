@@ -34286,7 +34286,7 @@ int vcvt_float_fixed(struct decomp_request *req, struct decomp_result *res)
 	return undefined(req, res);
 }
 
-// gen_crc: 3CB799A8
+// gen_crc: EBC7DA24
 int vcvt_float_int(struct decomp_request *req, struct decomp_result *res)
 {
 	int rc = -1;
@@ -34486,7 +34486,7 @@ int vcvt_float_int(struct decomp_request *req, struct decomp_result *res)
 			res->fields[FIELD_fmt_idx] = (((((((res->fields[FIELD_op]) == (0x0))) * (4))) + (((res->fields[FIELD_opc3]) * (2)))) + (res->fields[FIELD_sz])) + (2);
 			res->fields_mask[FIELD_fmt_idx >> 6] |= 1LL << (FIELD_fmt_idx & 63);
 			/* pcode: if (opc1 == '0') then fmt_idx = sz */
-			if((res->fields[FIELD_opc1]) == 0x0) {
+			if(((res->fields[FIELD_opc1]) == (0x0))) {
 				res->fields[FIELD_fmt_idx] = res->fields[FIELD_sz];
 				res->fields_mask[FIELD_fmt_idx >> 6] |= 1LL << (FIELD_fmt_idx & 63);
 			}

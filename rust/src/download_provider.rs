@@ -134,14 +134,13 @@ impl DownloadInstance {
     pub fn perform_request(
         &mut self,
         url: &str,
-        callbacks: DownloadInstanceOutputCallbacks,
+        callbacks: &DownloadInstanceOutputCallbacks,
     ) -> Result<(), String> {
-        let callbacks = Box::into_raw(Box::new(callbacks));
         let mut cbs = BNDownloadInstanceOutputCallbacks {
             writeCallback: Some(Self::o_write_callback),
-            writeContext: callbacks as *mut c_void,
+            writeContext: callbacks as *const _ as *mut c_void,
             progressCallback: Some(Self::o_progress_callback),
-            progressContext: callbacks as *mut c_void,
+            progressContext: callbacks as *const _ as *mut c_void,
         };
 
         let url_raw = url.to_cstr();
@@ -153,8 +152,6 @@ impl DownloadInstance {
             )
         };
 
-        // Drop it
-        unsafe { drop(Box::from_raw(callbacks)) };
         if result < 0 {
             Err(self.get_error())
         } else {
@@ -206,7 +203,7 @@ impl DownloadInstance {
         method: &str,
         url: &str,
         headers: I,
-        callbacks: DownloadInstanceInputOutputCallbacks,
+        callbacks: &DownloadInstanceInputOutputCallbacks,
     ) -> Result<DownloadResponse, String>
     where
         I: IntoIterator<Item = (String, String)>,
@@ -226,14 +223,13 @@ impl DownloadInstance {
             header_value_ptrs.push(value.as_ptr());
         }
 
-        let callbacks = Box::into_raw(Box::new(callbacks));
         let mut cbs = BNDownloadInstanceInputOutputCallbacks {
             readCallback: Some(Self::i_read_callback),
-            readContext: callbacks as *mut c_void,
+            readContext: callbacks as *const _ as *mut c_void,
             writeCallback: Some(Self::i_write_callback),
-            writeContext: callbacks as *mut c_void,
+            writeContext: callbacks as *const _ as *mut c_void,
             progressCallback: Some(Self::i_progress_callback),
-            progressContext: callbacks as *mut c_void,
+            progressContext: callbacks as *const _ as *mut c_void,
         };
 
         let mut response: *mut BNDownloadInstanceResponse = null_mut();

@@ -22,7 +22,7 @@ use binaryninja::file_metadata::FileMetadata;
 use binaryninja::Endianness;
 use binaryninja::{
     binary_view::{BinaryView, BinaryViewExt},
-    download_provider::{DownloadInstanceInputOutputCallbacks, DownloadProvider},
+    download_provider::{DownloadProvider, DownloadInstanceInputOutputCallbacks},
     rc::Ref,
     settings::Settings,
 };
@@ -452,7 +452,7 @@ pub(crate) fn download_debug_info(
                 "GET",
                 &artifact_url,
                 vec![],
-                DownloadInstanceInputOutputCallbacks {
+                &DownloadInstanceInputOutputCallbacks {
                     read: None,
                     write: Some(Box::new(write)),
                     progress: None,

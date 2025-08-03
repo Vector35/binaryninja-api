@@ -26,7 +26,7 @@ use pdb::PDB;
 
 use binaryninja::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
 use binaryninja::debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser};
-use binaryninja::download_provider::{DownloadInstanceInputOutputCallbacks, DownloadProvider};
+use binaryninja::download_provider::{DownloadProvider, DownloadInstanceInputOutputCallbacks};
 use binaryninja::interaction::{MessageBoxButtonResult, MessageBoxButtonSet};
 use binaryninja::logger::Logger;
 use binaryninja::settings::{QueryOptions, Settings};
@@ -195,7 +195,7 @@ fn read_from_sym_store(bv: &BinaryView, path: &str) -> Result<(bool, Vec<u8>)> {
             "GET",
             path,
             vec![],
-            DownloadInstanceInputOutputCallbacks {
+            &DownloadInstanceInputOutputCallbacks {
                 read: None,
                 write: Some(Box::new(write)),
                 progress: None,

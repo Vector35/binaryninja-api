@@ -1,18 +1,19 @@
 [package]
-name = "dwarf_import"
+name = "dwarf_import-static"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["staticlib"]
+path = "../src/lib.rs"
 
 [features]
 demo = []
 
 [dependencies]
-dwarfreader = { path = "../shared/" }
-binaryninja.workspace = true
+dwarfreader = { path = "../../shared/" }
+binaryninja = { workspace = true, features = ["demo"]}
 binaryninjacore-sys.workspace = true
 gimli = "0.31"
 log = "0.4"

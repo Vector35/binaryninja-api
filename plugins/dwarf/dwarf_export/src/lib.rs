@@ -792,8 +792,7 @@ impl Command for MyCommand {
     }
 }
 
-#[no_mangle]
-pub extern "C" fn CorePluginInit() -> bool {
+fn plugin_init() {
     Logger::new("DWARF Export")
         .with_level(LevelFilter::Debug)
         .init();
@@ -803,6 +802,20 @@ pub extern "C" fn CorePluginInit() -> bool {
         "Export current analysis state and annotations as DWARF for import into other tools",
         MyCommand {},
     );
+}
 
+#[no_mangle]
+#[allow(non_snake_case)]
+#[cfg(not(feature = "demo"))]
+pub extern "C" fn CorePluginInit() -> bool {
+    plugin_init();
+    true
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+#[cfg(feature = "demo")]
+pub extern "C" fn DwarfExportPluginInit() -> bool {
+    plugin_init();
     true
 }

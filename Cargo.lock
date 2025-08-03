@@ -650,7 +650,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "dwarf_export-static"
+version = "0.1.0"
+dependencies = [
+ "binaryninja",
+ "binaryninjacore-sys",
+ "gimli",
+ "log",
+ "object 0.32.2",
+]
+
+[[package]]
 name = "dwarf_import"
+version = "0.1.0"
+dependencies = [
+ "binaryninja",
+ "binaryninjacore-sys",
+ "cpp_demangle",
+ "dwarfreader",
+ "gimli",
+ "indexmap",
+ "iset",
+ "log",
+ "regex",
+]
+
+[[package]]
+name = "dwarf_import-static"
 version = "0.1.0"
 dependencies = [
  "binaryninja",

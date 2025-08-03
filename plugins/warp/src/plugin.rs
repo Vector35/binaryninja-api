@@ -86,9 +86,7 @@ fn load_network_container() {
     background_task.finish();
 }
 
-#[no_mangle]
-#[allow(non_snake_case)]
-pub extern "C" fn CorePluginInit() -> bool {
+fn plugin_init() {
     Logger::new("WARP").with_level(LevelFilter::Debug).init();
 
     // Register our matcher and plugin settings globally.
@@ -194,11 +192,27 @@ pub extern "C" fn CorePluginInit() -> bool {
         "Create signature files from select project files",
         project::CreateSignatures {},
     );
+}
 
+#[no_mangle]
+#[allow(non_snake_case)]
+#[cfg(feature = "demo")]
+pub extern "C" fn WarpPluginInit() -> bool {
+    plugin_init();
+    true
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+#[cfg(not(feature = "demo"))]
+pub extern "C" fn CorePluginInit() -> bool {
+    plugin_init();
     true
 }
 
 #[unsafe(no_mangle)]
+#[allow(non_snake_case)]
+#[cfg(not(feature = "demo"))]
 pub extern "C" fn CorePluginDependencies() {
     // TODO: Remove this once the objectivec workflow is registered on the meta workflow.
     add_optional_plugin_dependency("workflow_objc");

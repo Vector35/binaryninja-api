@@ -3101,6 +3101,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "warp_ninja-static"
+version = "0.1.0"
+dependencies = [
+ "ar",
+ "arboard",
+ "binaryninja",
+ "binaryninjacore-sys",
+ "dashmap",
+ "itertools 0.14.0",
+ "log",
+ "minijinja",
+ "minijinja-embed",
+ "rayon",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tempdir",
+ "thiserror 2.0.12",
+ "uuid",
+ "walkdir",
+ "warp",
+]
+
+[[package]]
 name = "wasi"
 version = "0.11.1+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

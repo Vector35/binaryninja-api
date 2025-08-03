@@ -19,7 +19,11 @@ BINARYNINJAPLUGIN void CorePluginDependencies()
     BinaryNinja::AddOptionalPluginDependency("arch_arm64");
 }
 
-BINARYNINJAPLUGIN bool CorePluginInit()
+#ifdef DEMO_EDITION
+    bool WorkflowObjcPluginInit()
+#else
+    BINARYNINJAPLUGIN bool CorePluginInit()
+#endif
 {
     Workflow::registerActivities();
 

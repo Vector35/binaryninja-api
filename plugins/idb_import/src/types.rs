@@ -13,6 +13,7 @@ use binaryninja::types::{
 };
 use idb_rs::til::function::CallingConvention as TILCallingConvention;
 use idb_rs::til::pointer::Pointer as TILPointer;
+use idb_rs::til::r#enum::EnumMembers;
 use idb_rs::til::{
     array::Array as TILArray, function::Function as TILFunction, r#enum::Enum as TILEnum,
     r#struct::Struct as TILStruct, r#struct::StructMember as TILStructMember,
@@ -486,14 +487,32 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
 
     fn translate_enum(&self, ty_enum: &TILEnum) -> Ref<Type> {
         let mut eb = EnumerationBuilder::new();
-        for (i, member) in ty_enum.members.iter().enumerate() {
-            let name = member
-                .name
-                .as_ref()
-                .map(|name| name.as_utf8_lossy().to_string())
-                .unwrap_or_else(|| format!("member_{i}"));
-            eb.insert(&name, member.value);
+        match &ty_enum.members {
+            EnumMembers::Regular(enum_members) => {
+                for (i, member) in enum_members.iter().enumerate() {
+                    let name = member
+                        .name
+                        .as_ref()
+                        .map(|name| name.as_utf8_lossy().to_string())
+                        .unwrap_or_else(|| format!("member_{i}"));
+                    eb.insert(&name, member.value);
+                }
+            }
+            EnumMembers::Groups(enum_groups) => {
+                for group in enum_groups {
+                    // TODO implement groups to the importer
+                    for (i, member) in group.sub_fields.iter().enumerate() {
+                        let name = member
+                            .name
+                            .as_ref()
+                            .map(|name| name.as_utf8_lossy().to_string())
+                            .unwrap_or_else(|| format!("member_{i}"));
+                        eb.insert(&name, member.value);
+                    }
+                }
+            }
         }
+
         Type::enumeration(
             &eb.finalize(),
             // TODO: This looks bad, look at the comment in [`Type::width`].

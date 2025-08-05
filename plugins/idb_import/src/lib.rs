@@ -1,5 +1,10 @@
 mod types;
-use idb_rs::{IDAKind, IDAUsize};
+use std::borrow::Cow;
+use std::io::{BufRead, Cursor, Seek};
+
+use idb_rs::id1::ID1Section;
+use idb_rs::id2::{ID2Section, ID2SectionVariants};
+use idb_rs::{IDAKind, IDAUsize, IDBFormat};
 use types::*;
 mod addr_info;
 use addr_info::*;
@@ -9,13 +14,13 @@ use binaryninja::debuginfo::{
     CustomDebugInfoParser, DebugFunctionInfo, DebugInfo, DebugInfoParser,
 };
 
-use idb_rs::id0::{ID0Section, IDBParam1, IDBParam2};
+use idb_rs::id0::{ID0Section, ID0SectionVariants};
 use idb_rs::til::section::TILSection;
 use idb_rs::til::TypeVariant as TILTypeVariant;
 
 use log::{error, trace, warn, LevelFilter};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use binaryninja::logger::Logger;
 
 struct IDBDebugInfoParser;
@@ -81,9 +86,12 @@ struct BinaryViewReader<'a> {
 impl std::io::Read for BinaryViewReader<'_> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         if !self.bv.offset_valid(self.offset) {
-            return Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, ""));
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::UnexpectedEof,
+                "Unable to read at the current offset in BinaryViewReader",
+            ));
         }
-        let len = BinaryView::read(&self.bv, buf, self.offset);
+        let len = BinaryView::read(self.bv, buf, self.offset);
         self.offset += u64::try_from(len).unwrap();
         Ok(len)
     }
@@ -96,10 +104,17 @@ impl std::io::Seek for BinaryViewReader<'_> {
             std::io::SeekFrom::End(end) => self.bv.len().checked_add_signed(end),
             std::io::SeekFrom::Current(next) => self.offset.checked_add_signed(next),
         };
-        let new_offset =
-            new_offset.ok_or_else(|| std::io::Error::new(std::io::ErrorKind::UnexpectedEof, ""))?;
+        let new_offset = new_offset.ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::UnexpectedEof,
+                "Unable to calculate new offset in BinaryViewReader",
+            )
+        })?;
         if !self.bv.offset_valid(new_offset) {
-            return Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, ""));
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::UnexpectedEof,
+                "Try to set invalid offset in BinaryViewReader",
+            ));
         }
         self.offset = new_offset;
         Ok(new_offset)
@@ -118,27 +133,73 @@ fn parse_idb_info(
         offset: 0,
     };
     trace!("Parsing a IDB file");
-    let file = std::io::BufReader::new(file);
-    let mut parser = idb_rs::IDBParserVariants::new(file)?;
-    if let Some(til_section) = parser.til_section_offset() {
+    let mut file = std::io::BufReader::new(file);
+    let idb_kind = idb_rs::identify_idb_file(&mut file)?;
+    match idb_kind {
+        idb_rs::IDBFormats::Separated(sep) => {
+            parse_idb_info_format(debug_info, bv, debug_file, sep, file, progress)
+        }
+        idb_rs::IDBFormats::InlineUncompressed(inline) => {
+            parse_idb_info_format(debug_info, bv, debug_file, inline, file, progress)
+        }
+        idb_rs::IDBFormats::InlineCompressed(compressed) => {
+            let mut buf = vec![];
+            let inline = compressed.decompress_into_memory(&mut file, &mut buf)?;
+            parse_idb_info_format(
+                debug_info,
+                bv,
+                debug_file,
+                inline,
+                Cursor::new(&buf[..]),
+                progress,
+            )
+        }
+    }
+}
+
+fn parse_idb_info_format(
+    debug_info: &mut DebugInfo,
+    bv: &BinaryView,
+    debug_file: &BinaryView,
+    format: impl IDBFormat,
+    mut idb_data: impl BufRead + Seek,
+    progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
+) -> Result<()> {
+    let Some(id0_idx) = format.id0_location() else {
+        return Err(anyhow!("Unable to find the ID0 section"));
+    };
+    let Some(id1_idx) = format.id1_location() else {
+        return Err(anyhow!("Unable to find the ID1 section"));
+    };
+    let id2_idx = format.id2_location();
+
+    if let Some(til_idx) = format.til_location() {
         trace!("Parsing the TIL section");
-        let til = parser.read_til_section(til_section)?;
+        let til = format.read_til(&mut idb_data, til_idx)?;
         // progress 0%-50%
         import_til_section(debug_info, debug_file, &til, progress)?;
-    }
+    };
 
-    if let Some(id0_section) = parser.id0_section_offset() {
-        trace!("Parsing the ID0 section");
-        let id0 = parser.read_id0_section(id0_section)?;
-        // progress 50%-100%
-        match id0 {
-            idb_rs::IDAVariants::IDA32(id0) => {
-                parse_id0_section_info::<idb_rs::IDA32>(debug_info, bv, debug_file, &id0)?
-            }
-            idb_rs::IDAVariants::IDA64(id0) => {
-                parse_id0_section_info::<idb_rs::IDA64>(debug_info, bv, debug_file, &id0)?
-            }
+    let id0 = format.read_id0(&mut idb_data, id0_idx)?;
+    let id1 = format.read_id1(&mut idb_data, id1_idx)?;
+    let id2 = id2_idx
+        .map(|id2_idx| format.read_id2(&mut idb_data, id2_idx))
+        .transpose()?;
+
+    match (id0, id2) {
+        (ID0SectionVariants::IDA32(id0), Some(ID2SectionVariants::IDA32(id2))) => {
+            parse_id0_section_info(debug_info, bv, debug_file, &id0, &id1, Some(&id2))?
         }
+        (ID0SectionVariants::IDA32(id0), None) => {
+            parse_id0_section_info(debug_info, bv, debug_file, &id0, &id1, None)?
+        }
+        (ID0SectionVariants::IDA64(id0), Some(ID2SectionVariants::IDA64(id2))) => {
+            parse_id0_section_info(debug_info, bv, debug_file, &id0, &id1, Some(&id2))?
+        }
+        (ID0SectionVariants::IDA64(id0), None) => {
+            parse_id0_section_info(debug_info, bv, debug_file, &id0, &id1, None)?
+        }
+        _ => unreachable!(),
     }
 
     Ok(())
@@ -231,23 +292,20 @@ fn parse_id0_section_info<K: IDAKind>(
     bv: &BinaryView,
     debug_file: &BinaryView,
     id0: &ID0Section<K>,
+    id1: &ID1Section,
+    id2: Option<&ID2Section<K>>,
 ) -> Result<()> {
-    let (version, idb_baseaddr) = match id0.ida_info()? {
-        idb_rs::id0::IDBParam::V1(IDBParam1 {
-            version, baseaddr, ..
-        })
-        | idb_rs::id0::IDBParam::V2(IDBParam2 {
-            version, baseaddr, ..
-        }) => (version, baseaddr.into_u64()),
-    };
-
+    let ida_info_idx = id0.root_node()?;
+    let ida_info = id0.ida_info(ida_info_idx)?;
+    let idb_baseaddr = ida_info.addresses.loading_base.into_u64();
     let bv_baseaddr = bv.start();
+    let netdelta = ida_info.netdelta();
     // just addr this value to the address to translate from ida to bn
-    // NOTE this delta could wrapp here and while using translating
+    // NOTE this delta could wrap here and while using translating
     let addr_delta = bv_baseaddr.wrapping_sub(idb_baseaddr);
 
-    for (idb_addr, info) in get_info(id0, version)? {
-        let addr = addr_delta.wrapping_add(idb_addr.into_u64());
+    for (idb_addr, info) in get_info(id0, id1, id2, netdelta)? {
+        let addr = addr_delta.wrapping_add(idb_addr.into_raw().into_u64());
         // just in case we change this struct in the future, this line will for us to review this code
         // TODO merge this data with folder locations
         let AddrInfo {
@@ -279,6 +337,8 @@ fn parse_id0_section_info<K: IDAKind>(
                 }
             });
 
+        let label: Option<Cow<'_, str>> =
+            label.as_ref().map(Cow::as_ref).map(String::from_utf8_lossy);
         match (label, &ty, bnty) {
             (label, Some(ty), bnty) if matches!(&ty.type_variant, TILTypeVariant::Function(_)) => {
                 if bnty.is_none() {
@@ -287,7 +347,7 @@ fn parse_id0_section_info<K: IDAKind>(
                 if !debug_info.add_function(&DebugFunctionInfo::new(
                     None,
                     None,
-                    label.map(|x| x.to_string()),
+                    label.map(Cow::into_owned),
                     bnty,
                     Some(addr),
                     None,
@@ -298,15 +358,15 @@ fn parse_id0_section_info<K: IDAKind>(
                 }
             }
             (label, Some(_ty), Some(bnty)) => {
-                let label: Option<&str> = label.as_ref().map(|x| x.as_ref());
-                if !debug_info.add_data_variable(addr, &bnty, label, &[]) {
+                if !debug_info.add_data_variable(addr, &bnty, label.as_ref().map(Cow::as_ref), &[])
+                {
                     error!("Unable to add the type at {addr:#x}")
                 }
             }
             (label, Some(_ty), None) => {
                 // TODO types come from the TIL sections, can we make all types be just NamedTypes?
                 error!("Unable to convert type {addr:#x}");
-                // TODO how to add a label without a type associacted with it?
+                // TODO how to add a label without a type associated with it?
                 if let Some(name) = label {
                     if !debug_info.add_data_variable(
                         addr,
@@ -319,7 +379,7 @@ fn parse_id0_section_info<K: IDAKind>(
                 }
             }
             (Some(name), None, None) => {
-                // TODO how to add a label without a type associacted with it?
+                // TODO how to add a label without a type associated with it?
                 if !debug_info.add_data_variable(
                     addr,
                     &binaryninja::types::Type::void(),

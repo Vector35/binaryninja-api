@@ -3,9 +3,7 @@ use crate::cache::{
     cached_function_guid, insert_cached_function_match, try_cached_function_guid,
     try_cached_function_match,
 };
-use crate::convert::{
-    comment_to_bn_comment, platform_to_target, to_bn_symbol_at_address, to_bn_type,
-};
+use crate::convert::{platform_to_target, to_bn_type};
 use crate::matcher::{Matcher, MatcherSettings};
 use crate::{get_warp_tag_type, relocatable_regions};
 use binaryninja::architecture::RegisterId;
@@ -192,28 +190,19 @@ pub fn run_matcher(view: &BinaryView) {
 }
 
 pub fn insert_workflow() {
+    // TODO: Note: because of symbol persistence function symbol is applied in `insert_cached_function_match`.
+    // TODO: Comments are also applied there, they are "user" like, persisted and make undo actions.
     // "Hey look, it's a plier" ~ Josh 2025
     let apply_activity = |ctx: &AnalysisContext| {
         let view = ctx.view();
         let function = ctx.function();
         if let Some(matched_function) = try_cached_function_match(&function) {
-            view.define_auto_symbol(&to_bn_symbol_at_address(
-                &view,
-                &matched_function.symbol,
-                function.symbol().address(),
-            ));
             // core.function.propagateAnalysis will assign user type info to auto, so we must not apply
             // otherwise we will wipe over user type info.
             if !function.has_user_type() {
                 if let Some(func_ty) = &matched_function.ty {
                     function.set_auto_type(&to_bn_type(&function.arch(), func_ty));
                 }
-            }
-            // TODO: How to clear the comments? They are just persisted.
-            // TODO: Also they generate an undo action, i hate implicit undo actions so much.
-            for comment in matched_function.comments {
-                let bn_comment = comment_to_bn_comment(&function, comment);
-                function.set_comment_at(bn_comment.addr, &bn_comment.comment);
             }
             if let Some(mlil) = ctx.mlil_function() {
                 for variable in matched_function.variables {

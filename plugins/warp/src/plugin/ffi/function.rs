@@ -67,7 +67,7 @@ pub unsafe extern "C" fn BNWARPFunctionApply(
     let analysis_function = Function::from_raw(analysis_function);
     match function.is_null() {
         false => {
-            // Set the matched function to `function` and return previous.
+            // Set the matched function to `function`.
             let matched_function = ManuallyDrop::new(Arc::from_raw(function));
             insert_cached_function_match(
                 &analysis_function,
@@ -75,7 +75,7 @@ pub unsafe extern "C" fn BNWARPFunctionApply(
             )
         }
         true => {
-            // We are removing the previous match and returning it.
+            // We are removing the previous match.
             insert_cached_function_match(&analysis_function, None)
         }
     };

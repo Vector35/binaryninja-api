@@ -5529,12 +5529,14 @@ to_integer = (opc1 == '1'); dp_operation = (sz == 1);
 unsigned = (opc3 == '0');
 m = UInt(Vm:M);
 d = if dp_operation then UInt(D:Vd) else UInt(Vd:D);
-if (to_integer) then unsigned = (opc1 == '0');
-if (to_integer) then d = UInt(Vd:D);
-if (to_integer) then m = if dp_operation then UInt(M:Vm) else UInt(Vm:M);
+if to_integer then unsigned = (opc1 == '0');
+if to_integer then round_zero = (op == '1');
+if to_integer then d = UInt(Vd:D);
+if to_integer then m = if dp_operation then UInt(M:Vm) else UInt(Vm:M);
+if !to_integer then round_nearest = FALSE;
 fmt_idx = ((op == '0') * 4) + (opc3 * 2) + sz + 2;
 if (opc1 == '0') then fmt_idx = sz;
-dt = ((op == '0') * 4) + 2;
+if to_integer then dt = 2 + (sz * 2) + (1 - opc3) else dt = ((op == '0') * 4) + 2;
 pcode_end
 Encoding T1 ADVSIMD
 fmt VCVT<c>.<dt> <Dd>,<Dm>

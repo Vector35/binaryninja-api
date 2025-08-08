@@ -1821,7 +1821,6 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 		il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 1), GetRegisterSize(instr, 1)));
 		break;
 	case armv7::ARMV7_VCVT:
-		// if (instr->format->operandCount == 3)
 		if (IS_FIELD_PRESENT(instr, FIELD_to_fixed))
 		{
 			if (IS_FIELD_PRESENT(instr, FIELD_imm))
@@ -1864,55 +1863,38 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 			if (IS_FIELD_PRESENT(instr, FIELD_td))
 			{
 				// VCVT (between floating-point and integer, Advanced SIMD)
-				/* VCVT<c>.<dt> <Dd>,<Dm> */ // instr->fields[FIELD_regs] = 1
-				/* VCVT<c>.<dt> <Qd>,<Qm> */ // instr->fields[FIELD_regs] = 2
+				/* VCVT<c>.<dt> <Dd>,<Dm> */  // instr->fields[FIELD_regs] = 1
+				/* VCVT<c>.<dt> <Qd>,<Qm> */  // instr->fields[FIELD_regs] = 2
 				switch (instr->fields[FIELD_dt])
 				{
 				case VFP_DATA_SIZE_S32F32:
 				case VFP_DATA_SIZE_U32F32:
 					// TODO: iterate over vector components
-					// il.AddInstruction(WriteILOperand(
-					// 	il, instr, 0, il.IntToFloat(GetRegisterSize(instr, 1), ReadILOperand(il, instr, 1))));
 					// break;
 				case VFP_DATA_SIZE_F32S32:
 				case VFP_DATA_SIZE_F32U32:
 					// TODO: iterate over vector components
-					// il.AddInstruction(WriteILOperand(
-					// 	il, instr, 0, il.FloatToInt(GetRegisterSize(instr, 1),
-					// 		il.RoundToInt(GetRegisterSize(instr, 1),
-					// 			ReadILOperand(il, instr, 1)))));
 					// break;
 				default:
-					// TODO: vector unsupported.
+					// Invalid
 					il.AddInstruction(il.Unimplemented());
 				}
 			}
-			else if (instr->format->operationFlags & (INSTR_FORMAT_FLAG_F32 | INSTR_FORMAT_FLAG_F64))
-			{
-				switch (instr->fields[FIELD_dt])
-				{
-				case VFP_DATA_SIZE_S32:
-					il.AddInstruction(WriteILOperand(
-						il, instr, 0, il.IntToFloat(GetRegisterSize(instr, 0),
-							il.SignExtend(GetRegisterSize(instr, 0),
-								ReadILOperand(il, instr, 1)))));
-					break;
-				case VFP_DATA_SIZE_U32:
-					il.AddInstruction(WriteILOperand(
-						il, instr, 0, il.IntToFloat(GetRegisterSize(instr, 0),
-							il.ZeroExtend(GetRegisterSize(instr, 0),
-								ReadILOperand(il, instr, 1)))));
-					break;
-				}
-				// il.AddInstruction(WriteILOperand(
-				// 	il, instr, 0, il.IntToFloat(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1))));
-			}
-			else
+			else if (instr->fields[FIELD_to_integer])
 			{
 				// VCVT, VCVTR (between floating-point and integer, Floating-point)
+				// TODO: handle distinction of VCVTR:
+				// If R is specified, the operation uses the rounding mode specified by the FPSCR.
+				// If R is omitted. the operation uses the Round towards Zero rounding mode.
+				// (Note: Binary Ninja does not currently support specifying any particular rounding mode, so it doesn't matter.)
 				switch (instr->fields[FIELD_dt])
 				{
 				case VFP_DATA_SIZE_S32F32:
+				case VFP_DATA_SIZE_S32F64:
+					/* VCVT<c>.S32.F32 <Sd>,<Sm> */
+					/* VCVT<c>.S32.F64 <Sd>,<Dm> */
+					/* VCVTR<c>.S32.F32 <Sd>,<Sm> */
+					/* VCVTR<c>.S32.F64 <Sd>,<Dm> */
 					il.AddInstruction(WriteILOperand(
 						il, instr, 0, il.SignExtend(GetRegisterSize(instr, 0),
 							il.FloatToInt(GetRegisterSize(instr, 0),
@@ -1920,22 +1902,40 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 									ReadILOperand(il, instr, 1))))));
 					break;
 				case VFP_DATA_SIZE_U32F32:
-				// case VFP_DATA_SIZE_S32F64:
-				// case VFP_DATA_SIZE_U32F64:
-				il.AddInstruction(WriteILOperand(
-					il, instr, 0, il.ZeroExtend(GetRegisterSize(instr, 0),
-						il.FloatToInt(GetRegisterSize(instr, 0),
-							il.RoundToInt(GetRegisterSize(instr, 0),
-								ReadILOperand(il, instr, 1))))));
-					// il.AddInstruction(WriteILOperand(
-					// 	il, instr, 0, il.FloatToInt(GetRegisterSize(instr, 1),
-					// 		il.RoundToInt(GetRegisterSize(instr, 1),
-					// 			ReadILOperand(il, instr, 1)))));
-					break;
-				case VFP_DATA_SIZE_F32S32:
-				case VFP_DATA_SIZE_F32U32:
+				case VFP_DATA_SIZE_U32F64:
+					/* VCVT<c>.U32.F32 <Sd>,<Sm> */
+					/* VCVT<c>.U32.F64 <Sd>,<Dm> */
+					/* VCVTR<c>.U32.F32 <Sd>,<Sm> */
+					/* VCVTR<c>.U32.F64 <Sd>,<Dm> */
 					il.AddInstruction(WriteILOperand(
-						il, instr, 0, il.IntToFloat(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1))));
+						il, instr, 0, il.ZeroExtend(GetRegisterSize(instr, 0),
+							il.FloatToInt(GetRegisterSize(instr, 0),
+								il.RoundToInt(GetRegisterSize(instr, 0),
+									ReadILOperand(il, instr, 1))))));
+					break;
+				default:
+					// Invalid
+					il.AddInstruction(il.Unimplemented());
+				}
+			}
+			else
+			{
+				// VCVT, VCVTR (between floating-point and integer, Floating-point)
+				switch (instr->fields[FIELD_dt])
+				{
+				case VFP_DATA_SIZE_S32:
+					/* VCVT<c>.F32.<dt> <Sd>,<Sm> */
+					il.AddInstruction(WriteILOperand(
+						il, instr, 0, il.IntToFloat(GetRegisterSize(instr, 0),
+							il.SignExtend(GetRegisterSize(instr, 0),
+								ReadILOperand(il, instr, 1)))));
+					break;
+				case VFP_DATA_SIZE_U32:
+					/* VCVT<c>.F64.<dt> <Dd>,<Sm> */
+					il.AddInstruction(WriteILOperand(
+						il, instr, 0, il.IntToFloat(GetRegisterSize(instr, 0),
+							il.ZeroExtend(GetRegisterSize(instr, 0),
+								ReadILOperand(il, instr, 1)))));
 					break;
 				default:
 					// Invalid
@@ -1943,19 +1943,6 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 				}
 			}
 		}
-		// else if (IS_FIELD_PRESENT(instr, FIELD_dt))
-		// {
-		// 	switch (instr->fields[FIELD_dt])
-		// 	{
-		// 	case VFP_DATA_SIZE_F32:
-		// 	case VFP_DATA_SIZE_S32:
-		// 		il.AddInstruction(WriteILOperand(
-		// 			il, instr, 0, il.FloatConvert(GetRegisterSize(instr, 1), ReadILOperand(il, instr, 1))));
-		// 		break;
-		// 	default:
-		// 		il.AddInstruction(il.Unimplemented());
-		// 	}
-		// }
 		else
 			il.AddInstruction(il.Unimplemented());
 		break;

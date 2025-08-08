@@ -34286,7 +34286,7 @@ int vcvt_float_fixed(struct decomp_request *req, struct decomp_result *res)
 	return undefined(req, res);
 }
 
-// gen_crc: EBC7DA24
+// gen_crc: 54397ABD
 int vcvt_float_int(struct decomp_request *req, struct decomp_result *res)
 {
 	int rc = -1;
@@ -34461,18 +34461,23 @@ int vcvt_float_int(struct decomp_request *req, struct decomp_result *res)
 				res->fields[FIELD_d] = ((res->fields[FIELD_Vd]<<D_width)|(res->fields[FIELD_D]));
 				res->fields_mask[FIELD_d >> 6] |= 1LL << (FIELD_d & 63);
 			}
-			/* pcode: if (to_integer) then unsigned = (opc1 == '0') */
-			if((res->fields[FIELD_to_integer])) {
+			/* pcode: if to_integer then unsigned = (opc1 == '0') */
+			if(res->fields[FIELD_to_integer]) {
 				res->fields[FIELD_unsigned] = ((res->fields[FIELD_opc1]) == (0x0));
 				res->fields_mask[FIELD_unsigned >> 6] |= 1LL << (FIELD_unsigned & 63);
 			}
-			/* pcode: if (to_integer) then d = UInt(Vd:D) */
-			if((res->fields[FIELD_to_integer])) {
+			/* pcode: if to_integer then round_zero = (op == '1') */
+			if(res->fields[FIELD_to_integer]) {
+				res->fields[FIELD_round_zero] = ((res->fields[FIELD_op]) == (0x1));
+				res->fields_mask[FIELD_round_zero >> 6] |= 1LL << (FIELD_round_zero & 63);
+			}
+			/* pcode: if to_integer then d = UInt(Vd:D) */
+			if(res->fields[FIELD_to_integer]) {
 				res->fields[FIELD_d] = ((res->fields[FIELD_Vd]<<D_width)|(res->fields[FIELD_D]));
 				res->fields_mask[FIELD_d >> 6] |= 1LL << (FIELD_d & 63);
 			}
-			/* pcode: if (to_integer) then m = if dp_operation then UInt(M:Vm) else UInt(Vm:M) */
-			if((res->fields[FIELD_to_integer])) {
+			/* pcode: if to_integer then m = if dp_operation then UInt(M:Vm) else UInt(Vm:M) */
+			if(res->fields[FIELD_to_integer]) {
 				if(res->fields[FIELD_dp_operation]) {
 					res->fields[FIELD_m] = ((res->fields[FIELD_M]<<Vm_width)|(res->fields[FIELD_Vm]));
 					res->fields_mask[FIELD_m >> 6] |= 1LL << (FIELD_m & 63);
@@ -34482,6 +34487,11 @@ int vcvt_float_int(struct decomp_request *req, struct decomp_result *res)
 					res->fields_mask[FIELD_m >> 6] |= 1LL << (FIELD_m & 63);
 				};
 			}
+			/* pcode: if !to_integer then round_nearest = FALSE */
+			if(!(res->fields[FIELD_to_integer])) {
+				res->fields[FIELD_round_nearest] = 0;
+				res->fields_mask[FIELD_round_nearest >> 6] |= 1LL << (FIELD_round_nearest & 63);
+			}
 			/* pcode: fmt_idx = ((op == '0') * 4) + (opc3 * 2) + sz + 2 */
 			res->fields[FIELD_fmt_idx] = (((((((res->fields[FIELD_op]) == (0x0))) * (4))) + (((res->fields[FIELD_opc3]) * (2)))) + (res->fields[FIELD_sz])) + (2);
 			res->fields_mask[FIELD_fmt_idx >> 6] |= 1LL << (FIELD_fmt_idx & 63);
@@ -34490,9 +34500,15 @@ int vcvt_float_int(struct decomp_request *req, struct decomp_result *res)
 				res->fields[FIELD_fmt_idx] = res->fields[FIELD_sz];
 				res->fields_mask[FIELD_fmt_idx >> 6] |= 1LL << (FIELD_fmt_idx & 63);
 			}
-			/* pcode: dt = ((op == '0') * 4) + 2 */
-			res->fields[FIELD_dt] = (((((res->fields[FIELD_op]) == (0x0))) * (4))) + (2);
-			res->fields_mask[FIELD_dt >> 6] |= 1LL << (FIELD_dt & 63);
+			/* pcode: if to_integer then dt = 2 + (sz * 2) + (1 - opc3) else dt = ((op == '0') * 4) + 2 */
+			if(res->fields[FIELD_to_integer]) {
+				res->fields[FIELD_dt] = ((2) + (((res->fields[FIELD_sz]) * (2)))) + (((1) - (res->fields[FIELD_opc3])));
+				res->fields_mask[FIELD_dt >> 6] |= 1LL << (FIELD_dt & 63);
+			}
+			else {
+				res->fields[FIELD_dt] = (((((res->fields[FIELD_op]) == (0x0))) * (4))) + (2);
+				res->fields_mask[FIELD_dt >> 6] |= 1LL << (FIELD_dt & 63);
+			}
 
 			return success();
 		} /* ENDS if(<encoding_match_test>) ... */

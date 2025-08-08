@@ -1821,47 +1821,143 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 		il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 1), GetRegisterSize(instr, 1)));
 		break;
 	case armv7::ARMV7_VCVT:
-		if (instr->format->operandCount == 3)
+		// if (instr->format->operandCount == 3)
+		if (IS_FIELD_PRESENT(instr, FIELD_to_fixed))
 		{
-			// TODO: Fixed point unsupported.
+			if (IS_FIELD_PRESENT(instr, FIELD_imm))
+			{
+				// VCVT (between floating-point and fixed-point, Floating-point)
+				/* VCVT<c>.F32.<dt> <Sd>,<Sd>,#<imm> */
+				/* VCVT<c>.F64.<dt> <Dd>,<Dd>,#<imm> */
+				/* VCVT<c>.<dt> <Sd>,<Sd>,#<imm> */
+				/* VCVT<c>.<dt> <Dd>,<Dd>,#<imm> */
+				// TODO: fixed-point unsupported.
+				il.AddInstruction(il.Unimplemented());
+			}
+			else if (IS_FIELD_PRESENT(instr, FIELD_fbits))
+			{
+				// VCVT (between floating-point and fixed-point, Advanced SIMD)
+				/* VCVT<c>.<dt> <Dd>,<Dm>,#<fbits> */
+				/* VCVT<c>.<dt> <Qd>,<Qm>,#<fbits> */
+				// TODO: vector and fixed-point unsupported.
+			}
+		}
+		else if (IS_FIELD_PRESENT(instr, FIELD_half_to_single))
+		{
+			// VCVT (between half-precision and single-precision, Advanced SIMD)
+			/* VCVT<c>.F16.F32 <Dd>,<Qm> */
+			/* VCVT<c>.F32.F16 <Qd>,<Dm> */
+			// TODO: vector and half-precision unsupported.
 			il.AddInstruction(il.Unimplemented());
 		}
-		else if (instr->format->operationFlags & (INSTR_FORMAT_FLAG_F32 | INSTR_FORMAT_FLAG_F64))
+		else if (IS_FIELD_PRESENT(instr, FIELD_double_to_single))
 		{
-			il.AddInstruction(
-				WriteILOperand(il, instr, 0, il.FloatConvert(GetRegisterSize(instr, 1), ReadILOperand(il, instr, 1))));
+			// VCVT (between double-precision and single-precision)
+			/* VCVT<c>.F64.F32 <Dd>,<Sm> */
+			/* VCVT<c>.F32.F64 <Sd>,<Dm> */
+			il.AddInstruction(WriteILOperand(
+				il, instr, 0, il.FloatConvert(GetRegisterSize(instr, 1), ReadILOperand(il, instr, 1))));
+			break;
 		}
-		else if (IS_FIELD_PRESENT(instr, FIELD_td))
+		else if (IS_FIELD_PRESENT(instr, FIELD_to_integer))
 		{
-			switch (instr->fields[FIELD_dt])
+			if (IS_FIELD_PRESENT(instr, FIELD_td))
 			{
-			case VFP_DATA_SIZE_S32F32:
-			case VFP_DATA_SIZE_U32F32:
+				// VCVT (between floating-point and integer, Advanced SIMD)
+				/* VCVT<c>.<dt> <Dd>,<Dm> */ // instr->fields[FIELD_regs] = 1
+				/* VCVT<c>.<dt> <Qd>,<Qm> */ // instr->fields[FIELD_regs] = 2
+				switch (instr->fields[FIELD_dt])
+				{
+				case VFP_DATA_SIZE_S32F32:
+				case VFP_DATA_SIZE_U32F32:
+					// TODO: iterate over vector components
+					// il.AddInstruction(WriteILOperand(
+					// 	il, instr, 0, il.IntToFloat(GetRegisterSize(instr, 1), ReadILOperand(il, instr, 1))));
+					// break;
+				case VFP_DATA_SIZE_F32S32:
+				case VFP_DATA_SIZE_F32U32:
+					// TODO: iterate over vector components
+					// il.AddInstruction(WriteILOperand(
+					// 	il, instr, 0, il.FloatToInt(GetRegisterSize(instr, 1),
+					// 		il.RoundToInt(GetRegisterSize(instr, 1),
+					// 			ReadILOperand(il, instr, 1)))));
+					// break;
+				default:
+					// TODO: vector unsupported.
+					il.AddInstruction(il.Unimplemented());
+				}
+			}
+			else if (instr->format->operationFlags & (INSTR_FORMAT_FLAG_F32 | INSTR_FORMAT_FLAG_F64))
+			{
+				switch (instr->fields[FIELD_dt])
+				{
+				case VFP_DATA_SIZE_S32:
+					il.AddInstruction(WriteILOperand(
+						il, instr, 0, il.IntToFloat(GetRegisterSize(instr, 0),
+							il.SignExtend(GetRegisterSize(instr, 0),
+								ReadILOperand(il, instr, 1)))));
+					break;
+				case VFP_DATA_SIZE_U32:
+					il.AddInstruction(WriteILOperand(
+						il, instr, 0, il.IntToFloat(GetRegisterSize(instr, 0),
+							il.ZeroExtend(GetRegisterSize(instr, 0),
+								ReadILOperand(il, instr, 1)))));
+					break;
+				}
+				// il.AddInstruction(WriteILOperand(
+				// 	il, instr, 0, il.IntToFloat(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1))));
+			}
+			else
+			{
+				// VCVT, VCVTR (between floating-point and integer, Floating-point)
+				switch (instr->fields[FIELD_dt])
+				{
+				case VFP_DATA_SIZE_S32F32:
+					il.AddInstruction(WriteILOperand(
+						il, instr, 0, il.SignExtend(GetRegisterSize(instr, 0),
+							il.FloatToInt(GetRegisterSize(instr, 0),
+								il.RoundToInt(GetRegisterSize(instr, 0),
+									ReadILOperand(il, instr, 1))))));
+					break;
+				case VFP_DATA_SIZE_U32F32:
+				// case VFP_DATA_SIZE_S32F64:
+				// case VFP_DATA_SIZE_U32F64:
 				il.AddInstruction(WriteILOperand(
-					il, instr, 0, il.IntToFloat(GetRegisterSize(instr, 1), ReadILOperand(il, instr, 1))));
-				break;
-			case VFP_DATA_SIZE_F32S32:
-			case VFP_DATA_SIZE_F32U32:
-				il.AddInstruction(WriteILOperand(
-					il, instr, 0, il.FloatToInt(GetRegisterSize(instr, 1), ReadILOperand(il, instr, 1))));
-				break;
-			default:
-				il.AddInstruction(il.Unimplemented());
+					il, instr, 0, il.ZeroExtend(GetRegisterSize(instr, 0),
+						il.FloatToInt(GetRegisterSize(instr, 0),
+							il.RoundToInt(GetRegisterSize(instr, 0),
+								ReadILOperand(il, instr, 1))))));
+					// il.AddInstruction(WriteILOperand(
+					// 	il, instr, 0, il.FloatToInt(GetRegisterSize(instr, 1),
+					// 		il.RoundToInt(GetRegisterSize(instr, 1),
+					// 			ReadILOperand(il, instr, 1)))));
+					break;
+				case VFP_DATA_SIZE_F32S32:
+				case VFP_DATA_SIZE_F32U32:
+					il.AddInstruction(WriteILOperand(
+						il, instr, 0, il.IntToFloat(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1))));
+					break;
+				default:
+					// Invalid
+					il.AddInstruction(il.Unimplemented());
+				}
 			}
 		}
+		// else if (IS_FIELD_PRESENT(instr, FIELD_dt))
+		// {
+		// 	switch (instr->fields[FIELD_dt])
+		// 	{
+		// 	case VFP_DATA_SIZE_F32:
+		// 	case VFP_DATA_SIZE_S32:
+		// 		il.AddInstruction(WriteILOperand(
+		// 			il, instr, 0, il.FloatConvert(GetRegisterSize(instr, 1), ReadILOperand(il, instr, 1))));
+		// 		break;
+		// 	default:
+		// 		il.AddInstruction(il.Unimplemented());
+		// 	}
+		// }
 		else
-		{
-			switch (instr->fields[FIELD_dt])
-			{
-			case VFP_DATA_SIZE_F32:
-			case VFP_DATA_SIZE_S32:
-				il.AddInstruction(WriteILOperand(
-					il, instr, 0, il.FloatConvert(GetRegisterSize(instr, 1), ReadILOperand(il, instr, 1))));
-				break;
-			default:
-				il.AddInstruction(il.Unimplemented());
-			}
-		}
+			il.AddInstruction(il.Unimplemented());
 		break;
 	case armv7::ARMV7_VMOV:
 		if (instr->format->operandCount == 4)

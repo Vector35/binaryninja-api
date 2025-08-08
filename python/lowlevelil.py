@@ -5797,10 +5797,10 @@ class LowLevelILFunction:
 	    loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``int_to_float`` converts floating point value of expression ``value`` to size ``size`` potentially setting flags
+		``float_convert`` converts floating point value of expression ``value`` to size ``size`` potentially setting flags
 
 		:param int size: the size of the result in bytes
-		:param ExpressionIndex value: the expression to negate
+		:param ExpressionIndex value: the expression to convert to a float of ``size`` bytes
 		:param str flags: optional, flags to set
 		:param ILSourceLocation loc: location of returned expression
 		:return: The expression ``fconvert.<size>{<flags>}(value)``

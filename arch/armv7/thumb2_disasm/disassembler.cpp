@@ -317,15 +317,16 @@ std::string get_thumb_operation_name(struct decomp_result* result)
 		contents += tlookup[tindex];
 		contents += slookup[sindex];
 	}
-	if (format->operationFlags & INSTR_FORMAT_FLAG_F16) {
-		contents += ".F16";
-	}
-	if (format->operationFlags & INSTR_FORMAT_FLAG_F32) {
-		contents += ".F32";
-	}
-	if (format->operationFlags & INSTR_FORMAT_FLAG_F64) {
-		contents += ".F64";
-	}
+	// These are obviated by the type specifier being included in the instruction_format.operation field in spec.cpp
+	// if (format->operationFlags & INSTR_FORMAT_FLAG_F16) {
+	// 	contents += ".F16";
+	// }
+	// if (format->operationFlags & INSTR_FORMAT_FLAG_F32) {
+	// 	contents += ".F32";
+	// }
+	// if (format->operationFlags & INSTR_FORMAT_FLAG_F64) {
+	// 	contents += ".F64";
+	// }
 
 	if (format->operationFlags & INSTR_FORMAT_FLAG_WIDE) {
 		contents += ".w";

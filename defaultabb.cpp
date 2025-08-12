@@ -462,7 +462,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 									break;
 								}
 							}
-							else if (disallowBranchToString && data->GetStringAtAddress(location.address, strRef) && targetExceedsByteLimit(strRef))
+							else if (disallowBranchToString && data->GetStringAtAddress(target.address, strRef) && targetExceedsByteLimit(strRef))
 							{
 								BNLogInfo("Not adding branch target from 0x%" PRIx64 " to string at 0x%" PRIx64
 									" length:%zu",

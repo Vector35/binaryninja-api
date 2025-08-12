@@ -86,10 +86,9 @@ struct BinaryViewReader<'a> {
 impl std::io::Read for BinaryViewReader<'_> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         if !self.bv.offset_valid(self.offset) {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::UnexpectedEof,
-                "Unable to read at the current offset in BinaryViewReader",
-            ));
+            // TODO check if this is truly a EoF hit, `self.bv.len()` is not
+            // reliable, it's returning a size bigger then the original file.
+            return Ok(0);
         }
         let len = BinaryView::read(self.bv, buf, self.offset);
         self.offset += u64::try_from(len).unwrap();

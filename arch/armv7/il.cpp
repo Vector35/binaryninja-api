@@ -4938,14 +4938,28 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 			{
 			// To integer cases
 			case DT_S32:
+				switch (instr.dataType2)
+				{
+				case DT_F32:
+				case DT_F64:
+					ConditionExecute(il, instr.cond, il.SetRegister(get_register_size(op1.reg), op1.reg,
+						il.SignExtend(get_register_size(op1.reg),
+							il.FloatToInt(get_register_size(op1.reg), il.RoundToInt(get_register_size(op2.reg),
+								il.Register(get_register_size(op2.reg), op2.reg))))));
+					break;
+				default:
+					break;
+				}
+				break;
 			case DT_U32:
 				switch (instr.dataType2)
 				{
 				case DT_F32:
 				case DT_F64:
 					ConditionExecute(il, instr.cond, il.SetRegister(get_register_size(op1.reg), op1.reg,
-						il.FloatToInt(get_register_size(op1.reg), il.RoundToInt(get_register_size(op2.reg),
-							il.Register(get_register_size(op2.reg), op2.reg)))));
+						il.ZeroExtend(get_register_size(op1.reg),
+							il.FloatToInt(get_register_size(op1.reg), il.RoundToInt(get_register_size(op2.reg),
+								il.Register(get_register_size(op2.reg), op2.reg))))));
 					break;
 				default:
 					break;
@@ -4957,10 +4971,16 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 				switch (instr.dataType2)
 				{
 				case DT_S32:
+					ConditionExecute(il, instr.cond, il.SetRegister(get_register_size(op1.reg), op1.reg,
+						il.IntToFloat(get_register_size(op1.reg),
+							il.SignExtend(get_register_size(op1.reg),
+								il.Register(get_register_size(op2.reg), op2.reg)))));
+					break;
 				case DT_U32:
 					ConditionExecute(il, instr.cond, il.SetRegister(get_register_size(op1.reg), op1.reg,
 						il.IntToFloat(get_register_size(op1.reg),
-							il.Register(get_register_size(op2.reg), op2.reg))));
+							il.ZeroExtend(get_register_size(op1.reg),
+								il.Register(get_register_size(op2.reg), op2.reg)))));
 					break;
 				default:
 					break;

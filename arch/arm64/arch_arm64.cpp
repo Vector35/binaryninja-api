@@ -1168,7 +1168,7 @@ class Arm64Architecture : public Architecture
 		Instruction instr;
 		if (!Disassemble(data, addr, len, instr))
 			return false;
-		return IsConditionalBranch(instr);
+		return IsConditionalJump(instr);
 	}
 
 
@@ -1177,7 +1177,7 @@ class Arm64Architecture : public Architecture
 		Instruction instr;
 		if (!Disassemble(data, addr, len, instr))
 			return false;
-		return IsConditionalBranch(instr);
+		return IsConditionalJump(instr);
 	}
 
 
@@ -1230,9 +1230,17 @@ class Arm64Architecture : public Architecture
 			return false;
 
 		uint32_t* value = (uint32_t*)data;
-		// Combine the immediate in the first operand with the unconditional branch opcode to form
-		// an unconditional branch instruction
-		*value = (5 << 26) | (((uint32_t)((instr.operands[0].immediate - addr) >> 2)) & 0x03ffffff);
+		if (IsConditionalBranch(instr))
+		{
+			// Combine the immediate in the first operand with the unconditional branch opcode to form
+			// an unconditional branch instruction
+			*value = (5 << 26) | (((uint32_t)((instr.operands[0].immediate - addr) >> 2)) & 0x03ffffff);
+		}
+		else
+		{
+			// Force to a *BZ, then change the register to zero register (WZR or XZR, determined by bit 31)
+			*value = (*value & ~(1 << 24)) | 0x0f;
+		}
 		return true;
 	}
 

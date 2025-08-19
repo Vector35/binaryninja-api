@@ -186,6 +186,11 @@ class BINARYNINJAUIAPI StringsView : public TableViewBase, public View, public F
 
 	QPointer<QHeaderView> m_horizontalHeader;
 	QPointer<QHeaderView> m_verticalHeader;
+	QTimer m_headerSaveDebounce;
+
+	void restoreHeaderState() const;
+	void saveHeaderState() const;
+	void scheduleSaveHeaderState();
 
   public:
 	StringsView(BinaryViewRef data, StringsContainer* container);
@@ -218,6 +223,7 @@ class BINARYNINJAUIAPI StringsView : public TableViewBase, public View, public F
 	void toggleIncludeOnlyReferenced() const { m_list->toggleIncludeOnlyReferenced(); };
 	void toggleIncludeOnlyFromCurrentFunction() const { m_list->toggleIncludeOnlyFromCurrentFunction(); };
 
+	void resetColumnLayout() const;
 	void resetFilterOptions();
 
 	void copyText();

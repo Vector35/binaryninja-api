@@ -21,7 +21,7 @@
 import atexit
 import sys
 import ctypes
-from time import gmtime, struct_time
+from time import gmtime, struct_time, time
 import os
 from typing import Mapping, Optional
 import functools
@@ -496,6 +496,59 @@ def fuzzy_match_single(target, query) -> Optional[int]:
 	if result == 0:
 		return None
 	return result
+
+
+def progress(iterator, alert=False):
+	"""
+	Show a progress indicator for consuming an iterator
+	It's like tqdm, but in the Binja UI.
+
+	:param iterator: Iterable value to report progress for
+	:param alert: If an error should be reported with an alert
+	:return: Iterator over the input which shows progress details
+	"""
+	bt = BackgroundTask(can_cancel=True)
+
+	try:
+		try:
+			l = len(iterator)
+		except:
+			l = 0
+
+		start = time()
+
+		def format_time(x):
+			sec = int(x % 60)
+			min = int((x // 60) % 60)
+			hour = int(x // 3600)
+			if hour > 0:
+				return f"{hour}:{min:02}:{sec:02}"
+			else:
+				return f"{min}:{sec:02}"
+
+		for (i, item) in enumerate(iterator):
+			if bt.cancelled:
+				raise StopIteration("Cancelled")
+
+			delta = time() - start
+			if l > 0:
+				if i > 0:
+					predict = (delta / (i / l)) - delta
+					bt.progress = f'{i} / {l}  ({round(i / l * 100, 1)}%)  {format_time(delta)}<{format_time(predict)}'
+				else:
+					bt.progress = f'{i} / {l}  ({round(i / l * 100, 1)}%)'
+			else:
+				bt.progress = f'{i} / ??  {format_time(delta)}'
+			yield item
+
+	except Exception as e:
+		msg = f'Exception during iteration: {e}'
+		if alert:
+			log_alert(msg)
+		else:
+			log_warn(msg)
+	finally:
+		bt.finish()
 
 
 # Load Collaboration scripts from Ultimate (they are bundled in shipping builds)

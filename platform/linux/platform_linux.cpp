@@ -4,7 +4,9 @@ using namespace BinaryNinja;
 using namespace std;
 
 Ref<Platform> g_linuxX32;
+Ref<Platform> g_linuxIlp32;
 #define EM_X86_64 62 // AMD x86-64 architecture
+#define EM_AARCH64 183 // ARM64 architecture
 
 class LinuxX86Platform: public Platform
 {
@@ -196,6 +198,50 @@ public:
 	virtual bool GetFallbackEnabled() override
 	{
 		return false;
+	}
+};
+
+class LinuxIlp32Platform: public Platform
+{
+	public:
+		LinuxIlp32Platform(Architecture* arch): Platform(arch, "linux-ilp32")
+	{
+		Ref<CallingConvention> cc;
+
+		cc = arch->GetCallingConventionByName("cdecl");
+		if (cc)
+		{
+			RegisterDefaultCallingConvention(cc);
+			RegisterCdeclCallingConvention(cc);
+			RegisterFastcallCallingConvention(cc);
+			RegisterStdcallCallingConvention(cc);
+		}
+
+		cc = arch->GetCallingConventionByName("linux-syscall");
+		if (cc)
+			SetSystemCallConvention(cc);
+	}
+
+	virtual size_t GetAddressSize() const override
+	{
+		return 4;
+	}
+
+	static Ref<Platform> Recognize(BinaryView* view, Metadata* metadata)
+	{
+		Ref<Metadata> fileClass = metadata->Get("EI_CLASS");
+
+		if (!fileClass || !fileClass->IsUnsignedInteger())
+			return nullptr;
+
+		Ref<Metadata> machine = metadata->Get("e_machine");
+		if (!machine || !machine->IsUnsignedInteger())
+			return nullptr;
+
+		if (fileClass->GetUnsignedInteger() == 1 && machine->GetUnsignedInteger() == EM_AARCH64)
+			return g_linuxIlp32;
+
+		return nullptr;
 	}
 };
 
@@ -406,13 +452,21 @@ extern "C"
 		Ref<Architecture> arm64 = Architecture::GetByName("aarch64");
 		if (arm64)
 		{
-			Ref<Platform> platform;
+			Ref<Platform> arm64_platform = new LinuxArm64Platform(arm64);
+			g_linuxIlp32 = new LinuxIlp32Platform(arm64);
 
-			platform = new LinuxArm64Platform(arm64);
-			Platform::Register("linux", platform);
+			Platform::Register("linux", arm64_platform);
+			Platform::Register("linux", g_linuxIlp32);
+
 			// Linux binaries sometimes have an OS identifier of zero, even though 3 is the correct one
-			BinaryViewType::RegisterPlatform("ELF", 0, platform);
-			BinaryViewType::RegisterPlatform("ELF", 3, platform);
+			BinaryViewType::RegisterPlatform("ELF", 0, arm64_platform);
+			BinaryViewType::RegisterPlatform("ELF", 3, arm64_platform);
+
+			Ref<BinaryViewType> elf = BinaryViewType::GetByName("ELF");
+			if (elf) {
+				elf->RegisterPlatformRecognizer(EM_AARCH64, LittleEndian, LinuxIlp32Platform::Recognize);
+				elf->RegisterPlatformRecognizer(EM_AARCH64, BigEndian, LinuxIlp32Platform::Recognize);
+			}
 		}
 
 		Ref<Architecture> ppc = Architecture::GetByName("ppc");

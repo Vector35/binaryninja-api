@@ -1082,8 +1082,14 @@ static void LoadStoreOperandSize(LowLevelILFunction& il, bool load, bool sign_ex
 			il.AddInstruction(ILSETREG_O(operand1, tmp));
 			break;
 		case LABEL:
-			il.AddInstruction(ILSETREG_O(
-			    operand1, il.Operand(1, il.Load(size, il.ConstPointer(8, IMM_O(operand2))))));
+			tmp = il.Operand(1, il.Load(size, il.ConstPointer(8, IMM_O(operand2))));
+
+			if (sign_extend)
+				tmp = il.SignExtend(extendSize, tmp);
+			else
+				tmp = il.ZeroExtend(extendSize, tmp);
+
+			il.AddInstruction(ILSETREG_O(operand1, tmp));
 			break;
 		default:
 			il.AddInstruction(il.Unimplemented());

@@ -12125,6 +12125,10 @@ tests_vmul = [
      'LLIL_INTRINSIC([v23],vmull_high_laneq_u32,[LLIL_REG.o(v12),LLIL_REG.o(v26),LLIL_CONST.b(0x1)])'),
 ]
 
+tests_ldrsw = [
+    (b'\x06\x01\x00\x98', 'LLIL_SET_REG.q(x6,LLIL_SX.q(LLIL_LOAD.d(LLIL_CONST.q(0x20))))'),
+]
+
 tests_grab_bag = [
     # some vectors loads/stores that do not fill the entire register
     # shl v19.2d, v21.2d, #0x2
@@ -12774,6 +12778,7 @@ test_cases = \
 	tests_raddhn_rshrn + \
 	tests_ngc_sbc + \
 	tests_vmul + \
+    tests_ldrsw + \
 	tests_grab_bag
 
 def il2str(il):

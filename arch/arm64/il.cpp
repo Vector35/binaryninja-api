@@ -1010,16 +1010,20 @@ static void LoadStoreOperandSize(LowLevelILFunction& il, bool load, bool sign_ex
 	{
 		// LLIL_TEMP registers will be reported to have size 0, so override with size
 		size_t extendSize = REGSZ_O(operand1) ? REGSZ_O(operand1) : size;
+
+		bool smallLoad = extendSize > size;
+
 		switch (operand2.operandClass)
 		{
 		case MEM_REG:
 			// operand1.reg = [operand2.reg]
 			tmp = il.Operand(1, il.Load(size, ILREG_O(operand2)));
 
-			if (sign_extend)
-				tmp = il.SignExtend(extendSize, tmp);
-			else
-				tmp = il.ZeroExtend(extendSize, tmp);
+			if (smallLoad)
+				if (sign_extend)
+					tmp = il.SignExtend(extendSize, tmp);
+				else
+					tmp = il.ZeroExtend(extendSize, tmp);
 
 			il.AddInstruction(ILSETREG_O(operand1, tmp));
 			break;
@@ -1032,10 +1036,11 @@ static void LoadStoreOperandSize(LowLevelILFunction& il, bool load, bool sign_ex
 
 			tmp = il.Operand(1, il.Load(size, tmp));
 
-			if (sign_extend)
-				tmp = il.SignExtend(extendSize, tmp);
-			else
-				tmp = il.ZeroExtend(extendSize, tmp);
+			if (smallLoad)
+				if (sign_extend)
+					tmp = il.SignExtend(extendSize, tmp);
+				else
+					tmp = il.ZeroExtend(extendSize, tmp);
 
 			il.AddInstruction(ILSETREG_O(operand1, tmp));
 			break;
@@ -1047,10 +1052,11 @@ static void LoadStoreOperandSize(LowLevelILFunction& il, bool load, bool sign_ex
 			// operand1.reg = [operand2.reg]
 			tmp = il.Operand(1, il.Load(size, ILREG_O(operand2)));
 
-			if (sign_extend)
-				tmp = il.SignExtend(extendSize, tmp);
-			else
-				tmp = il.ZeroExtend(extendSize, tmp);
+			if (smallLoad)
+				if (sign_extend)
+					tmp = il.SignExtend(extendSize, tmp);
+				else
+					tmp = il.ZeroExtend(extendSize, tmp);
 
 			il.AddInstruction(ILSETREG_O(operand1, tmp));
 			break;
@@ -1058,10 +1064,11 @@ static void LoadStoreOperandSize(LowLevelILFunction& il, bool load, bool sign_ex
 			// operand1.reg = [operand2.reg]
 			tmp = il.Operand(1, il.Load(size, ILREG_O(operand2)));
 
-			if (sign_extend)
-				tmp = il.SignExtend(extendSize, tmp);
-			else
-				tmp = il.ZeroExtend(extendSize, tmp);
+			if (smallLoad)
+				if (sign_extend)
+					tmp = il.SignExtend(extendSize, tmp);
+				else
+					tmp = il.ZeroExtend(extendSize, tmp);
 
 			il.AddInstruction(ILSETREG_O(operand1, tmp));
 			// operand2.reg += operand2.imm
@@ -1074,20 +1081,22 @@ static void LoadStoreOperandSize(LowLevelILFunction& il, bool load, bool sign_ex
 			    il.Operand(1, il.Load(size, il.Add(REGSZ_O(operand2), ILREG_O(operand2),
 			                                    GetShiftedRegister(il, operand2, 1, REGSZ_O(operand2)))));
 
-			if (sign_extend)
-				tmp = il.SignExtend(extendSize, tmp);
-			else
-				tmp = il.ZeroExtend(extendSize, tmp);
+			if (smallLoad)
+				if (sign_extend)
+					tmp = il.SignExtend(extendSize, tmp);
+				else
+					tmp = il.ZeroExtend(extendSize, tmp);
 
 			il.AddInstruction(ILSETREG_O(operand1, tmp));
 			break;
 		case LABEL:
 			tmp = il.Operand(1, il.Load(size, il.ConstPointer(8, IMM_O(operand2))));
 
-			if (sign_extend)
-				tmp = il.SignExtend(extendSize, tmp);
-			else
-				tmp = il.ZeroExtend(extendSize, tmp);
+			if (smallLoad)
+				if (sign_extend)
+					tmp = il.SignExtend(extendSize, tmp);
+				else
+					tmp = il.ZeroExtend(extendSize, tmp);
 
 			il.AddInstruction(ILSETREG_O(operand1, tmp));
 			break;

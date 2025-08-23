@@ -400,57 +400,57 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 					segment64.flags);
 				for (size_t j = 0; j < segment64.nsects; j++)
 				{
-						reader.Read(&sect.sectname, 16);
-						reader.Read(&sect.segname, 16);
-						sect.addr = reader.Read32();
-						sect.size = reader.Read32();
-						sect.offset = reader.Read32();
-						sect.align = reader.Read32();
-						sect.reloff = reader.Read32();
-						sect.nreloc = reader.Read32();
-						sect.flags = reader.Read32();
-						sect.reserved1 = reader.Read32();
-						sect.reserved2 = reader.Read32();
-						// if the segment isn't mapped into virtual memory don't add the corresponding sections.
-						if (segment64.vmsize > 0)
-						{
-							header.sections.push_back(sect);
-							m_allSections.push_back(sect);
-						}
-						else
-							m_logger->LogInfo("Omitting section %16s at %#" PRIx64 " corresponding to segment %16s which is not mapped into memory", (char*)&sect.sectname, sect.addr, (char*)&sect.segname);
+					reader.Read(&sect.sectname, 16);
+					reader.Read(&sect.segname, 16);
+					sect.addr = reader.Read32();
+					sect.size = reader.Read32();
+					sect.offset = reader.Read32();
+					sect.align = reader.Read32();
+					sect.reloff = reader.Read32();
+					sect.nreloc = reader.Read32();
+					sect.flags = reader.Read32();
+					sect.reserved1 = reader.Read32();
+					sect.reserved2 = reader.Read32();
+					// if the segment isn't mapped into virtual memory don't add the corresponding sections.
+					if (segment64.vmsize > 0)
+					{
+						header.sections.push_back(sect);
+						m_allSections.push_back(sect);
+					}
+					else
+						m_logger->LogInfo("Omitting section %16s at %#" PRIx64 " corresponding to segment %16s which is not mapped into memory", (char*)&sect.sectname, sect.addr, (char*)&sect.segname);
 
-						m_logger->LogDebug("\t\tSegName:  %16s\n" \
-							"\t\tSectName: %16s\n" \
-							"\t\tAddr:     %#" PRIx64 "\n" \
-							"\t\tSize:     %#" PRIx64 "\n" \
-							"\t\tOffset:   %#" PRIx32 "\n" \
-							"\t\tAlign:    %#" PRIx32 "\n" \
-							"\t\tReloff:   %#" PRIx32 "\n" \
-							"\t\tNReloc:   %#" PRIx32 "\n" \
-							"\t\tFlags:    %#" PRIx32 "\n" \
-							"\t\tReserved1:%#" PRIx32 "\n" \
-							"\t\tReserved2:%#" PRIx32 "\n" \
-							"\t\t------------------------\n",
-							(char*)&sect.segname,
-							(char*)&sect.sectname,
-							sect.addr,
-							sect.size,
-							sect.offset,
-							sect.align,
-							sect.reloff,
-							sect.nreloc,
-							sect.flags,
-							sect.reserved1,
-							sect.reserved2);
-						if (!strncmp(sect.sectname, "__mod_init_func", 15) || !strncmp(sect.sectname, "__init_offsets", 14))
-							header.moduleInitSections.push_back(sect);
-						if ((sect.flags & (S_ATTR_SELF_MODIFYING_CODE | S_SYMBOL_STUBS)) == (S_ATTR_SELF_MODIFYING_CODE | S_SYMBOL_STUBS))
-							header.symbolStubSections.push_back(sect);
-						if ((sect.flags & S_NON_LAZY_SYMBOL_POINTERS) == S_NON_LAZY_SYMBOL_POINTERS)
-							header.symbolPointerSections.push_back(sect);
-						if ((sect.flags & S_LAZY_SYMBOL_POINTERS) == S_LAZY_SYMBOL_POINTERS)
-							header.symbolPointerSections.push_back(sect);
+					m_logger->LogDebug("\t\tSegName:  %16s\n" \
+						"\t\tSectName: %16s\n" \
+						"\t\tAddr:     %#" PRIx64 "\n" \
+						"\t\tSize:     %#" PRIx64 "\n" \
+						"\t\tOffset:   %#" PRIx32 "\n" \
+						"\t\tAlign:    %#" PRIx32 "\n" \
+						"\t\tReloff:   %#" PRIx32 "\n" \
+						"\t\tNReloc:   %#" PRIx32 "\n" \
+						"\t\tFlags:    %#" PRIx32 "\n" \
+						"\t\tReserved1:%#" PRIx32 "\n" \
+						"\t\tReserved2:%#" PRIx32 "\n" \
+						"\t\t------------------------\n",
+						(char*)&sect.segname,
+						(char*)&sect.sectname,
+						sect.addr,
+						sect.size,
+						sect.offset,
+						sect.align,
+						sect.reloff,
+						sect.nreloc,
+						sect.flags,
+						sect.reserved1,
+						sect.reserved2);
+					if (!strncmp(sect.sectname, "__mod_init_func", 15) || !strncmp(sect.sectname, "__init_offsets", 14))
+						header.moduleInitSections.push_back(sect);
+					if ((sect.flags & (S_ATTR_SELF_MODIFYING_CODE | S_SYMBOL_STUBS)) == (S_ATTR_SELF_MODIFYING_CODE | S_SYMBOL_STUBS))
+						header.symbolStubSections.push_back(sect);
+					if ((sect.flags & S_NON_LAZY_SYMBOL_POINTERS) == S_NON_LAZY_SYMBOL_POINTERS || !strncmp("__got", (char*)&sect.sectname, 5))
+						header.symbolPointerSections.push_back(sect);
+					if ((sect.flags & S_LAZY_SYMBOL_POINTERS) == S_LAZY_SYMBOL_POINTERS || !strncmp("__la_symbol_ptr", (char*)&sect.sectname, 15) )
+						header.symbolPointerSections.push_back(sect);
 				}
 				header.segments.push_back(segment64);
 				m_allSegments.push_back(segment64);
@@ -550,9 +550,9 @@ MachOHeader MachoView::HeaderForAddress(BinaryView* data, uint64_t address, bool
 							header.moduleInitSections.push_back(sect);
 						if ((sect.flags & (S_ATTR_SELF_MODIFYING_CODE | S_SYMBOL_STUBS)) == (S_ATTR_SELF_MODIFYING_CODE | S_SYMBOL_STUBS))
 							header.symbolStubSections.push_back(sect);
-						if ((sect.flags & S_NON_LAZY_SYMBOL_POINTERS) == S_NON_LAZY_SYMBOL_POINTERS)
+						if ((sect.flags & S_NON_LAZY_SYMBOL_POINTERS) == S_NON_LAZY_SYMBOL_POINTERS || !strncmp("__got", (char*)&sect.sectname, 5))
 							header.symbolPointerSections.push_back(sect);
-						if ((sect.flags & S_LAZY_SYMBOL_POINTERS) == S_LAZY_SYMBOL_POINTERS)
+						if ((sect.flags & S_LAZY_SYMBOL_POINTERS) == S_LAZY_SYMBOL_POINTERS || !strncmp("__la_symbol_ptr", (char*)&sect.sectname, 15) )
 							header.symbolPointerSections.push_back(sect);
 				}
 				header.segments.push_back(segment64);
@@ -2079,20 +2079,13 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 	EndBulkModifySymbols();
 
-	for (auto& relocation : header.rebaseRelocations)
-	{
-		uint64_t relocationLocation = relocation.address;
-		virtualReader.Seek(relocationLocation);
-		uint64_t target = virtualReader.ReadPointer();
-		uint64_t slidTarget = target + m_imageBaseAdjustment;
-		relocation.address = slidTarget;
-		DefineRelocation(m_arch, relocation, slidTarget, relocationLocation);
-		if (objcProcessor)
-			objcProcessor->AddRelocatedPointer(relocationLocation, slidTarget);
-	}
+	std::unordered_set<uint64_t> boundAddresses;
+	boundAddresses.reserve(header.bindingRelocations.size());
+
+	BeginBulkModifySymbols();
 	for (auto& [relocation, name, ordinal] : header.bindingRelocations)
 	{
-		bool handled = false;
+		m_logger->LogTraceF("Binding Relocation: name = {:?}, reloc.addr = {:#x}, ord = {}", name, relocation.address, ordinal);
 
 		switch (ordinal)
 		{
@@ -2102,7 +2095,11 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 				DefineRelocation(m_arch, relocation, symbol, relocation.address);
 				if (objcProcessor)
 					objcProcessor->AddRelocatedPointer(relocation.address, symbol->GetAddress());
-				handled = true;
+				boundAddresses.insert(relocation.address);
+			}
+			else
+			{
+				m_logger->LogErrorF("Failed to find local symbol for binding relocation: {:?}, reloc.addr = {:#x}, ord = {}", name, relocation.address, ordinal);
 			}
 			break;
 
@@ -2119,28 +2116,70 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 					DefineRelocation(m_arch, relocation, symbol, relocation.address);
 					if (objcProcessor)
 						objcProcessor->AddRelocatedPointer(relocation.address, symbol->GetAddress());
-					handled = true;
 				}
 				else if (auto symbol = GetSymbolByRawName(name, GetExternalNameSpace()); symbol)
 				{
 					DefineRelocation(m_arch, relocation, symbol, relocation.address);
-					handled = true;
 				}
+				else
+				{
+					auto definedSymbol = DefineMachoSymbol(ExternalSymbol, name, relocation.address, GlobalBinding, false);
+					DefineRelocation(m_arch, relocation, definedSymbol, relocation.address);
+
+					for (const auto& section : header.symbolStubSections)
+					{
+						if (section.addr <= relocation.address && relocation.address < section.addr + section.size)
+						{
+							DefineMachoSymbol(ImportedFunctionSymbol, name, relocation.address,
+								GlobalBinding, false);
+						}
+					}
+					for (const auto& section : header.symbolPointerSections)
+					{
+						if (section.addr <= relocation.address && relocation.address < section.addr + section.size)
+						{
+							DefineMachoSymbol(ImportAddressSymbol, name, relocation.address,
+								GlobalBinding, false);
+						}
+					}
+				}
+				boundAddresses.insert(relocation.address);
 			}
 			else
 			{
 				if (auto symbol = GetSymbolByRawName(name, GetExternalNameSpace()); symbol)
 				{
 					DefineRelocation(m_arch, relocation, symbol, relocation.address);
-					handled = true;
 				}
 				else if (auto symbol = GetSymbolByRawName(name, GetInternalNameSpace()); symbol)
 				{
 					DefineRelocation(m_arch, relocation, symbol, relocation.address);
 					if (objcProcessor)
 						objcProcessor->AddRelocatedPointer(relocation.address, symbol->GetAddress());
-					handled = true;
 				}
+				else
+				{
+					auto definedSymbol = DefineMachoSymbol(ExternalSymbol, name, relocation.address, GlobalBinding, false);
+					DefineRelocation(m_arch, relocation, definedSymbol, relocation.address);
+
+					for (const auto& section : header.symbolStubSections)
+					{
+						if (section.addr <= relocation.address && relocation.address < section.addr + section.size)
+						{
+							DefineMachoSymbol(ImportedFunctionSymbol, name, relocation.address,
+								GlobalBinding, false);
+						}
+					}
+					for (const auto& section : header.symbolPointerSections)
+					{
+						if (section.addr <= relocation.address && relocation.address < section.addr + section.size)
+						{
+							DefineMachoSymbol(ImportAddressSymbol, name, relocation.address,
+								GlobalBinding, false);
+						}
+					}
+				}
+				boundAddresses.insert(relocation.address);
 			}
 			break;
 
@@ -2150,14 +2189,53 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 				if (auto symbol = GetSymbolByRawName(name, GetExternalNameSpace()); symbol)
 				{
 					DefineRelocation(m_arch, relocation, symbol, relocation.address);
-					handled = true;
 				}
+				else
+				{
+					auto definedSymbol = DefineMachoSymbol(ExternalSymbol, name, relocation.address, GlobalBinding, false);
+					m_logger->LogTraceF("Manually defined {} at {:#x} to {}", name, relocation.address, definedSymbol->GetRawName());
+					DefineRelocation(m_arch, relocation, definedSymbol, relocation.address);
+
+					for (const auto& section : header.symbolStubSections)
+					{
+						if (section.addr <= relocation.address && relocation.address < section.addr + section.size)
+						{
+							DefineMachoSymbol(ImportedFunctionSymbol, name, relocation.address,
+								GlobalBinding, false);
+						}
+					}
+					for (const auto& section : header.symbolPointerSections)
+					{
+						if (section.addr <= relocation.address && relocation.address < section.addr + section.size)
+						{
+							DefineMachoSymbol(ImportAddressSymbol, name, relocation.address,
+								GlobalBinding, false);
+						}
+					}
+				}
+				boundAddresses.insert(relocation.address);
+			}
+			else
+			{
+				m_logger->LogErrorF("Unknown binding relocation ordinal: {:?}, reloc.addr = {:#x}, ord = {}", name, relocation.address, ordinal);
 			}
 			break;
 		}
+	}
+	EndBulkModifySymbols();
 
-		if (!handled)
-			m_logger->LogErrorF("Failed to find external symbol {:?}, couldn't bind symbol at {:#x}", name, relocation.address);
+	for (auto& relocation : header.rebaseRelocations)
+	{
+		if (boundAddresses.find(relocation.address) != boundAddresses.end())
+			continue;
+		uint64_t relocationLocation = relocation.address;
+		virtualReader.Seek(relocationLocation);
+		uint64_t target = virtualReader.ReadPointer();
+		uint64_t slidTarget = target + m_imageBaseAdjustment;
+		relocation.address = slidTarget;
+		DefineRelocation(m_arch, relocation, slidTarget, relocationLocation);
+		if (objcProcessor)
+			objcProcessor->AddRelocatedPointer(relocationLocation, slidTarget);
 	}
 
 	auto relocationHandler = m_arch->GetRelocationHandler("Mach-O");

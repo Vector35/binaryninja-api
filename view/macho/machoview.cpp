@@ -2146,8 +2146,15 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 		default:
 			if (ordinal > 0)
-			{
-				if (auto symbol = GetSymbolByRawName(name, GetExternalNameSpace()); symbol)
+			{ 
+				auto symbol = GetSymbolByRawName(name, GetExternalNameSpace());
+				if (!symbol)
+				{
+					// As macho can bind symbols, which is not listed in the symtab
+					symbol = DefineMachoSymbol(ExternalSymbol, name, 0, GlobalBinding, false);
+				}
+
+				if (symbol)
 				{
 					DefineRelocation(m_arch, relocation, symbol, relocation.address);
 					handled = true;

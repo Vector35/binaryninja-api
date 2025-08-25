@@ -3729,11 +3729,11 @@ bool GetLowLevelILForInstruction(
 		break;
 	case ARM64_UBFIZ:
 		il.AddInstruction(
-		    ILSETREG_O(operand1, il.ZeroExtend(REGSZ_O(operand1),
-		                             il.ShiftLeft(REGSZ_O(operand2),
-		                                 il.And(REGSZ_O(operand2), ILREG_O(operand2),
-		                                     il.Const(REGSZ_O(operand2), (1LL << IMM_O(operand4)) - 1)),
-		                                 il.Const(1, IMM_O(operand3))))));
+		    ILSETREG_O(operand1, il.ShiftLeft(REGSZ_O(operand2),
+                                                il.And(REGSZ_O(operand2),
+                                                    ILREG_O(operand2),
+                                                    il.Const(REGSZ_O(operand2), (1LL << IMM_O(operand4)) - 1)),
+                                                il.Const(1, IMM_O(operand3)))));
 		break;
 	case ARM64_UBFX:
 	{
@@ -3746,12 +3746,11 @@ bool GetLowLevelILForInstruction(
 		}
 		else
 		{
-			il.AddInstruction(ILSETREG_O(
-			    operand1, il.ZeroExtend(REGSZ_O(operand1),
-			                  il.And(REGSZ_O(operand2),
-			                      il.LogicalShiftRight(
-			                          REGSZ_O(operand2), ILREG_O(operand2), il.Const(1, IMM_O(operand3))),
-			                      il.Const(REGSZ_O(operand2), (1LL << IMM_O(operand4)) - 1)))));
+			il.AddInstruction(ILSETREG_O(operand1, il.And(REGSZ_O(operand2),
+                                                    il.LogicalShiftRight(REGSZ_O(operand2),
+                                                        ILREG_O(operand2),
+                                                        il.Const(1, IMM_O(operand3))),
+                                                    il.Const(REGSZ_O(operand2), (1LL << IMM_O(operand4)) - 1))));
 		}
 		break;
 	}

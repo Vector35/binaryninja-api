@@ -288,7 +288,7 @@ class _WorkflowMetaclass(type):
 
 	def __getitem__(self, value):
 		binaryninja._init_plugins()
-		workflow = core.BNWorkflowInstance(str(value))
+		workflow = core.BNWorkflowGetOrCreate(str(value))
 		return Workflow(handle=workflow)
 
 
@@ -344,7 +344,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 	def __init__(self, name: str = "", handle: core.BNWorkflowHandle = None, query_registry: bool = True, object_handle: Union[core.BNFunctionHandle, core.BNBinaryViewHandle] = None):
 		if handle is None:
 			if query_registry:
-				_handle = core.BNWorkflowInstance(str(name))
+				_handle = core.BNWorkflowGetOrCreate(str(name))
 			else:
 				_handle = core.BNCreateWorkflow(name)
 		else:

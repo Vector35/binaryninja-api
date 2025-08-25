@@ -5,8 +5,8 @@ use binaryninjacore_sys::{
     BNFreeProjectFile, BNFreeProjectFileList, BNNewProjectFileReference, BNProjectFile,
     BNProjectFileExistsOnDisk, BNProjectFileExport, BNProjectFileGetCreationTimestamp,
     BNProjectFileGetDescription, BNProjectFileGetFolder, BNProjectFileGetId, BNProjectFileGetName,
-    BNProjectFileGetPathOnDisk, BNProjectFileGetProject, BNProjectFileSetDescription,
-    BNProjectFileSetFolder, BNProjectFileSetName,
+    BNProjectFileGetPathInProject, BNProjectFileGetPathOnDisk, BNProjectFileGetProject,
+    BNProjectFileSetDescription, BNProjectFileSetFolder, BNProjectFileSetName,
 };
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
@@ -44,6 +44,13 @@ impl ProjectFile {
         let path_str =
             unsafe { BnString::into_string(BNProjectFileGetPathOnDisk(self.handle.as_ptr())) };
         Some(PathBuf::from(path_str))
+    }
+
+    /// Get the path in the project to this file's contents
+    pub fn path_in_project(&self) -> PathBuf {
+        let path_str =
+            unsafe { BnString::into_string(BNProjectFileGetPathInProject(self.handle.as_ptr())) };
+        PathBuf::from(path_str)
     }
 
     /// Check if this file's contents exist on disk

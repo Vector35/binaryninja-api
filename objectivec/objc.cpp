@@ -1,6 +1,8 @@
 #include "objc.h"
 #include "inttypes.h"
 #include <optional>
+#include <string>
+#include <type_traits>
 
 #define RELEASE_ASSERT(condition) ((condition) ? (void)0 : (std::abort(), (void)0))
 
@@ -1098,37 +1100,51 @@ void ObjCProcessor::ReadIvarList(ObjCReader* reader, ClassBase& cls, std::string
 	}
 }
 
+// Returns the type named `name`, creating it via `factory()` and
+// defining it on the view if it does not already exist.
+template <typename F>
+	requires (std::is_same_v<std::invoke_result_t<F>, Ref<Type>>)
+std::pair<QualifiedName, Ref<Type>> DefineNamedType(
+	Ref<BinaryView> view, const QualifiedName& name, F&& factory)
+{
+	auto typeID = Type::GenerateAutoTypeId("objc", name);
+	if (auto type = view->GetTypeById(typeID))
+		return {name, type};
+
+	auto type = factory();
+	auto definedName = view->DefineType(typeID, name, type);
+	return {definedName, type};
+}
 
 std::pair<QualifiedName, Ref<Type>> finalizeStructureBuilder(
-	Ref<BinaryView> m_data, StructureBuilder sb, std::string name)
+	Ref<BinaryView> m_data, StructureBuilder sb, const QualifiedName& name)
 {
-	auto classTypeStruct = sb.Finalize();
+	return DefineNamedType(m_data, name, [&]() {
+		auto classTypeStruct = sb.Finalize();
+		return Type::StructureType(classTypeStruct);
+	});
+}
 
-	QualifiedName classTypeName(name);
-	auto classTypeId = Type::GenerateAutoTypeId("objc", classTypeName);
-	auto classType = Type::StructureType(classTypeStruct);
-	auto classQualName = m_data->DefineType(classTypeId, classTypeName, classType);
-
-	return {classQualName, classType};
+std::pair<QualifiedName, Ref<Type>> finalizeStructureBuilder(
+	Ref<BinaryView> m_data, StructureBuilder sb, const std::string& name)
+{
+	return finalizeStructureBuilder(m_data, std::move(sb), QualifiedName(name));
 }
 
 std::pair<QualifiedName, Ref<Type>> finalizeEnumerationBuilder(
-	Ref<BinaryView> m_data, EnumerationBuilder eb, uint64_t size, QualifiedName name)
+	Ref<BinaryView> m_data, EnumerationBuilder eb, uint64_t size, const QualifiedName& name)
 {
-	auto enumTypeStruct = eb.Finalize();
-
-	auto enumTypeId = Type::GenerateAutoTypeId("objc", name);
-	auto enumType = Type::EnumerationType(enumTypeStruct, size);
-	auto enumQualName = m_data->DefineType(enumTypeId, name, enumType);
-
-	return {enumQualName, enumType};
+	return DefineNamedType(m_data, name, [&]() {
+		auto enumTypeStruct = eb.Finalize();
+		return Type::EnumerationType(enumTypeStruct, size);
+	});
 }
 
-inline QualifiedName defineTypedef(Ref<BinaryView> m_data, const QualifiedName name, Ref<Type> type)
+inline QualifiedName defineTypedef(Ref<BinaryView> m_data, const QualifiedName& name, Ref<Type> type)
 {
-	auto typeID = Type::GenerateAutoTypeId("objc", name);
-	m_data->DefineType(typeID, name, type);
-	return m_data->GetTypeNameById(typeID);
+	return DefineNamedType(m_data, name, [&]() {
+		return type;
+	}).first;
 }
 
 void ObjCProcessor::GenerateClassTypes()
@@ -1528,11 +1544,8 @@ void ObjCProcessor::ProcessObjCData()
 	classBuilder.AddMember(Type::PointerType(addrSize, Type::VoidType()), "vtable");
 	classBuilder.AddMember(Type::PointerType(addrSize, Type::NamedType(m_data, m_typeNames.classRO)), "data");
 
-	auto classTypeStruct = classBuilder.Finalize();
-	auto classType = Type::StructureType(classTypeStruct);
-	auto classQualName = m_data->DefineType(classTypeId, classTypeName, classType);
-
-	m_typeNames.cls = classQualName;
+	type = finalizeStructureBuilder(m_data, classBuilder, classTypeName);
+	m_typeNames.cls = type.first;
 
 	StructureBuilder categoryBuilder;
 	categoryBuilder.AddMember(Type::PointerType(addrSize, Type::IntegerType(1, true)), "category_name");

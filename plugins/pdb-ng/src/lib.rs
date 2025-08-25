@@ -614,11 +614,7 @@ impl CustomDebugInfoParser for PDBParser {
             potential_path.pop();
             potential_path.push(&info.file_name);
             if potential_path.exists() {
-                match fs::read(
-                    potential_path
-                        .to_str()
-                        .expect("Potential path is a real string"),
-                ) {
+                match fs::read(potential_path) {
                     Ok(conts) => match self
                         .load_from_file(&conts, debug_info, view, &progress, true, false)
                     {
@@ -628,6 +624,35 @@ impl CustomDebugInfoParser for PDBParser {
                     },
                     Err(e) if e.to_string() == "Cancelled" => return false,
                     Err(e) => debug!("Could not read pdb: {}", e.to_string()),
+                }
+            }
+
+            // Try in the same folder in the project
+            if let Some(project_file) = view.file().project_file() {
+                let project_file_folder_id = project_file.folder().map(|x| x.id());
+                for file in project_file.project().files().iter() {
+                    let file_folder_id = file.folder().map(|x| x.id());
+                    if file.name() == info.file_name && file_folder_id == project_file_folder_id {
+                        if !file.exists_on_disk() {
+                            // If the file doesn't exist, don't consider it
+                            // TODO: if we're connected to a remote project, offer to download the file
+                            continue;
+                        }
+
+                        if let Some(path_on_disk) = file.path_on_disk() {
+                            match fs::read(path_on_disk) {
+                                Ok(conts) => match self.load_from_file(
+                                    &conts, debug_info, view, &progress, true, false,
+                                ) {
+                                    Ok(_) => return true,
+                                    Err(e) if e.to_string() == "Cancelled" => return false,
+                                    Err(e) => debug!("Skipping, {}", e.to_string()),
+                                },
+                                Err(e) if e.to_string() == "Cancelled" => return false,
+                                Err(e) => debug!("Could not read pdb: {}", e.to_string()),
+                            }
+                        }
+                    }
                 }
             }
 

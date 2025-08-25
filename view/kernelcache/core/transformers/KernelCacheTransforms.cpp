@@ -39,23 +39,35 @@ class LZFSETransform : public Transform
 {
 
 public:
-    LZFSETransform():
-            Transform(DecodeTransform, "LZFSE", "LZFSE", "Compression")
+    LZFSETransform(): Transform(BinaryCodecTransform, "LZFSE", "LZFSE", "Compress")
     {
     }
 
     virtual bool Decode(const DataBuffer& input, DataBuffer& output, const std::map<std::string, DataBuffer>& params)
     {
         size_t outputBufferSize = input.GetLength() * 6;
-        uint8_t* lzfseOutputBuffer = (uint8_t *)malloc(outputBufferSize);
-        uint8_t* scratchBuffer = (uint8_t *)malloc(lzfse_decode_scratch_size());
-        size_t outSize = lzfse_decode_buffer(lzfseOutputBuffer, outputBufferSize,
-                                             (uint8_t *)input.GetData(), input.GetLength(), scratchBuffer);
+        std::unique_ptr<uint8_t[]> lzfseOutputBuffer(new uint8_t[outputBufferSize]);
+        std::unique_ptr<uint8_t[]> scratchBuffer(new uint8_t[lzfse_decode_scratch_size()]);
+        size_t outSize = lzfse_decode_buffer(lzfseOutputBuffer.get(), outputBufferSize,
+                                            (uint8_t *)input.GetData(), input.GetLength(),
+                                            scratchBuffer.get());
+        if (!outSize)
+            return false;
+        output = DataBuffer(lzfseOutputBuffer.get(), outSize);
+        return true;
+    }
 
-        free(scratchBuffer);
-
-        output = DataBuffer(lzfseOutputBuffer, outSize);
-
+    virtual bool Encode(const DataBuffer& input, DataBuffer& output, const std::map<std::string, DataBuffer>&)
+    {
+        size_t outputBufferSize = input.GetLength() + (input.GetLength() / 16) + 64;
+        std::unique_ptr<uint8_t[]> lzfseOutputBuffer(new uint8_t[outputBufferSize]);
+        std::unique_ptr<uint8_t[]> scratchBuffer(new uint8_t[lzfse_encode_scratch_size()]);
+        size_t outSize = lzfse_encode_buffer(lzfseOutputBuffer.get(), outputBufferSize,
+                                            (uint8_t *)input.GetData(), input.GetLength(),
+                                            scratchBuffer.get());
+        if (!outSize)
+            return false;
+        output = DataBuffer(lzfseOutputBuffer.get(), outSize);
         return true;
     }
 };

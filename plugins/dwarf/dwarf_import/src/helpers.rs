@@ -577,10 +577,35 @@ pub(crate) fn find_sibling_debug_file(view: &BinaryView) -> Option<String> {
 
     let debug_file = PathBuf::from(format!("{}.debug", full_file_path));
     let dsym_folder = PathBuf::from(format!("{}.dSYM", full_file_path));
+
+    // Find sibling debug file
     if debug_file.exists() && debug_file.is_file() {
         return Some(debug_file.to_string_lossy().to_string());
     }
 
+    // Find sibling debug file in project
+    if let Some(debug_file_name) = debug_file.file_name() {
+        if let Some(project_file) = view.file().project_file() {
+            let project_file_folder_id = project_file.folder().map(|x| x.id());
+            for file in project_file.project().files().iter() {
+                if !file.exists_on_disk() {
+                    // If the file doesn't exist, don't consider it
+                    // TODO: if we're connected to a remote project, offer to download the file
+                    continue;
+                }
+
+                let file_folder_id = file.folder().map(|x| x.id());
+                if *file.name() == *debug_file_name && file_folder_id == project_file_folder_id {
+                    if let Some(path_on_disk) = file.path_on_disk() {
+                        return path_on_disk.to_str().map(|x| x.to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    // Look for dSYM
+    // TODO: look for dSYM in project
     if dsym_folder.exists() && dsym_folder.is_dir() {
         let filename = Path::new(&full_file_path)
             .file_name()

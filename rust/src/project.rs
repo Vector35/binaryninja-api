@@ -575,6 +575,18 @@ impl Project {
         Some(unsafe { ProjectFile::ref_from_raw(handle) })
     }
 
+    /// Retrieve a list of files in the project by the `path` inside the project.
+    ///
+    /// Because a [`ProjectFile`] name is not unique, this returns a list instead of a single [`ProjectFile`].
+    pub fn files_by_project_path(&self, path: &Path) -> Array<ProjectFile> {
+        let path_raw = path.to_cstr();
+        let mut count = 0;
+        let result = unsafe {
+            BNProjectGetFilesByPathInProject(self.handle.as_ptr(), path_raw.as_ptr(), &mut count)
+        };
+        unsafe { Array::new(result, count, ()) }
+    }
+
     /// Delete a file from the project
     pub fn delete_file(&self, file: &ProjectFile) -> bool {
         unsafe { BNProjectDeleteFile(self.handle.as_ptr(), file.handle.as_ptr()) }

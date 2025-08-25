@@ -11307,13 +11307,43 @@ namespace BinaryNinja {
 		*/
 		static std::vector<Ref<Workflow>> GetList();
 
-		/*! Get an instance of a workflow by name. If it is already registered, this will return the registered Workflow.
-			If not, it will create and return a new Workflow.
+		/*! Get an instance of an existing registered workflow by name.
+			If no registered workflow exists, nullptr will be returned.
+
+			\note Be sure to handle the nullptr case if you're retrieving
+				anything other than a built-in workflow.
 
 			\param name Workflow name
-			\return The registered workflow.
+			\return The registered workflow, or nullptr if none exists.
 		*/
-		static Ref<Workflow> Instance(const std::string& name = "");
+		static Ref<Workflow> Get(const std::string& name);
+
+		/*! Get an instance of a workflow by name. If it is already registered,
+			this will return the registered Workflow. If not, a new Workflow will
+			be created and returned.
+
+			\note If a new workflow is returned it will have no activities. Attempting
+			to register new activities on it via `Insert` and `InsertAfter` will fail.
+
+			\param name Workflow name
+			\return The workflow.
+		*/
+		static Ref<Workflow> GetOrCreate(const std::string& name);
+
+		/*! Get an instance of a workflow by name. If it is already registered,
+			this will return the registered Workflow. If not, a new Workflow will
+			be created and returned.
+
+			\deprecated Use `Get` or `GetOrCreate` instead.
+
+			\note If a new workflow is returned it will have no activities. Attempting
+			to register new activities on it via `Insert` and `InsertAfter` will fail.
+
+			\param name Workflow name
+			\return The workflow.
+		*/
+		static Ref<Workflow> Instance(const std::string& name = "") { return GetOrCreate(name); }
+
 		/*! Register a workflow, making it immutable and available for use
 
 			\param workflow The workflow to register

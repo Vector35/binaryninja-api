@@ -61,7 +61,7 @@ extern "C"
 	BINARYNINJAPLUGIN bool CorePluginInit()
 	{
 		EfiGuidRenderer::Register();
-		auto workflow = Workflow::Instance("core.module.metaAnalysis")->Clone();
+		auto workflow = Workflow::Get("core.module.metaAnalysis")->Clone();
 		workflow->RegisterActivity(R"~({
 			"title": "EFI Resolver",
 			"name": "analysis.efi.efiResolver",

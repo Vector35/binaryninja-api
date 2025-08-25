@@ -19,7 +19,10 @@ fn main() {
     {
         let crate_name = std::env::var("CARGO_PKG_NAME").expect("CARGO_PKG_NAME not set");
         let lib_name = crate_name.replace('-', "_");
-        println!("cargo::rustc-link-arg=-Wl,-install_name,@rpath/lib{}.dylib", lib_name);
+        println!(
+            "cargo::rustc-link-arg=-Wl,-install_name,@rpath/lib{}.dylib",
+            lib_name
+        );
     }
 
     let out_dir = std::env::var("OUT_DIR").expect("OUT_DIR specified");

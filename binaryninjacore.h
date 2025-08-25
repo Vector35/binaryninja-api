@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 129
+#define BN_CURRENT_CORE_ABI_VERSION 130
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 128
+#define BN_MINIMUM_CORE_ABI_VERSION 130
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -5757,7 +5757,8 @@ extern "C"
 
 	BINARYNINJACOREAPI BNWorkflow** BNGetWorkflowList(size_t* count);
 	BINARYNINJACOREAPI void BNFreeWorkflowList(BNWorkflow** workflows, size_t count);
-	BINARYNINJACOREAPI BNWorkflow* BNWorkflowInstance(const char* name);
+	BINARYNINJACOREAPI BNWorkflow* BNWorkflowGet(const char* name);
+	BINARYNINJACOREAPI BNWorkflow* BNWorkflowGetOrCreate(const char* name);
 	BINARYNINJACOREAPI bool BNRegisterWorkflow(BNWorkflow* workflow, const char* configuration);
 
 	BINARYNINJACOREAPI BNWorkflow* BNWorkflowClone(BNWorkflow* workflow, const char* name, const char* activity);

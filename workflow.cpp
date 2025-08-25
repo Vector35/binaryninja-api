@@ -454,9 +454,19 @@ vector<Ref<Workflow>> Workflow::GetList()
 }
 
 
-Ref<Workflow> Workflow::Instance(const string& name)
+Ref<Workflow> Workflow::Get(const string& name)
 {
-	return new Workflow(BNWorkflowInstance(name.c_str()));
+	auto result = BNWorkflowGet(name.c_str());
+	if (!result)
+		return nullptr;
+
+	return new Workflow(result);
+}
+
+
+Ref<Workflow> Workflow::GetOrCreate(const string& name)
+{
+	return new Workflow(BNWorkflowGetOrCreate(name.c_str()));
 }
 
 

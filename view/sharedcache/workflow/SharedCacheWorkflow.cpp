@@ -370,7 +370,7 @@ void AnalyzeFunction(Ref<AnalysisContext> ctx)
 
 void SharedCacheWorkflow::Register()
 {
-	Ref<Workflow> workflow = Workflow::Instance("core.function.metaAnalysis")->Clone("core.function.metaAnalysis");
+	Ref<Workflow> workflow = Workflow::Get("core.function.metaAnalysis")->Clone("core.function.metaAnalysis");
 
 	// Register and insert activities here.
 	ObjCActivity::Register(*workflow);

@@ -204,9 +204,8 @@ impl Workflow {
 
     /// Get an existing [Workflow] by name.
     pub fn get(name: &str) -> Option<Ref<Workflow>> {
-        // TODO: BNWorkflowInstance has get-or-create semantics. There is currently no way to just get.
         let name = name.to_cstr();
-        let result = unsafe { BNWorkflowInstance(name.as_ptr()) };
+        let result = unsafe { BNWorkflowGet(name.as_ptr()) };
         let handle = NonNull::new(result)?;
         Some(unsafe { Workflow::ref_from_raw(handle) })
     }

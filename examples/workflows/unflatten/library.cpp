@@ -411,7 +411,7 @@ extern "C"
 
 	BINARYNINJAPLUGIN bool CorePluginInit()
 	{
-		auto wf = Workflow::Instance("core.function.metaAnalysis")->Clone("core.function.metaAnalysis");
+		auto wf = Workflow::Get("core.function.metaAnalysis")->Clone("core.function.metaAnalysis");
 		wf->RegisterActivity(new Activity(R"~(
 				{
 					"name": "extension.unflatten_limoncello_cpp.unflatten.dry_run",

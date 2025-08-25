@@ -158,7 +158,7 @@ extern "C"
 		    },
 		    inlinerIsValid);
 
-		Ref<Workflow> inlinerWorkflow = Workflow::Instance("core.function.baseAnalysis")->Clone("InlinerWorkflow");
+		Ref<Workflow> inlinerWorkflow = Workflow::Get("core.function.baseAnalysis")->Clone("InlinerWorkflow");
 		inlinerWorkflow->RegisterActivity(new Activity("extension.functionInliner", &FunctionInliner));
 		inlinerWorkflow->Insert("core.function.translateTailCalls", "extension.functionInliner");
 		Workflow::RegisterWorkflow(inlinerWorkflow,

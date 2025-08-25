@@ -91,7 +91,7 @@ extern "C" {
 		// TODO:	2. Identify if the function is unique to a class, renaming and retyping if true
 		// TODO:	3. Identify functions which address a VFT and are probably a constructor (alloc use), retyping if true
 		// TODO:	4. Identify functions which address a VFT and are probably a deconstructor (free use), retyping if true
-		Ref<Workflow> rttiMetaWorkflow = Workflow::Instance("core.module.metaAnalysis")->Clone();
+		Ref<Workflow> rttiMetaWorkflow = Workflow::Get("core.module.metaAnalysis")->Clone();
 
 		// Add RTTI analysis.
 		rttiMetaWorkflow->RegisterActivity(R"~({

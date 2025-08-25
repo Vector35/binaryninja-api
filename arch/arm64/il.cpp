@@ -2041,8 +2041,8 @@ bool GetLowLevelILForInstruction(
 		switch (instr.encoding)
 		{
 		case ENC_FMOV_64VX_FLOAT2INT:
-			il.AddInstruction(ILSETREG_O(operand1,
-			    il.ZeroExtend(REGSZ_O(operand1), ILREG(vector_reg_minimize(instr.operands[1])))));
+			il.AddInstruction(ILSETREG_O(operand1, ILREG(vector_reg_minimize(instr.operands[1]))));
+				
 			break;
 		case ENC_FMOV_V64I_FLOAT2INT:
 		{
@@ -2055,10 +2055,19 @@ bool GetLowLevelILForInstruction(
 		case ENC_FMOV_32S_FLOAT2INT:
 		case ENC_FMOV_64H_FLOAT2INT:
 		case ENC_FMOV_64D_FLOAT2INT:
+		{
+			bool extend = REGSZ_O(operand1) > REGSZ_O(instr.operands[1]);
+			ExprId tmp;
+
 			// <Rd> <- <Vn> (copy from FP register to general register, with no conversion)
-			il.AddInstruction(
-			    ILSETREG_O(operand1, il.ZeroExtend(REGSZ_O(operand1), ILREG_O(instr.operands[1]))));
+			if (extend)
+				tmp = ILSETREG_O(operand1, il.ZeroExtend(REGSZ_O(operand1), ILREG_O(instr.operands[1])));
+			else
+				tmp = ILSETREG_O(operand1, ILREG_O(instr.operands[1]));
+
+			il.AddInstruction(tmp);
 			break;
+		}
 		case ENC_FMOV_D64_FLOAT2INT:
 		case ENC_FMOV_H32_FLOAT2INT:
 		case ENC_FMOV_H64_FLOAT2INT:

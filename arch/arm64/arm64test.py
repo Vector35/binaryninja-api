@@ -5995,21 +5995,21 @@ tests_fmov = [
     # fmov w24, h20
     (b'\x98\x02\xE6\x1E', 'LLIL_SET_REG.d(w24,LLIL_ZX.d(LLIL_REG.w(h20)))'),
     # fmov w10, s23
-    (b'\xEA\x02\x26\x1E', 'LLIL_SET_REG.d(w10,LLIL_ZX.d(LLIL_REG.d(s23)))'),
+    (b'\xEA\x02\x26\x1E', 'LLIL_SET_REG.d(w10,LLIL_REG.d(s23))'),
     # fmov w12, s23
-    (b'\xEC\x02\x26\x1E', 'LLIL_SET_REG.d(w12,LLIL_ZX.d(LLIL_REG.d(s23)))'),
+    (b'\xEC\x02\x26\x1E', 'LLIL_SET_REG.d(w12,LLIL_REG.d(s23))'),
     # fmov x25, d31
-    (b'\xF9\x03\x66\x9E', 'LLIL_SET_REG.q(x25,LLIL_ZX.q(LLIL_REG.q(d31)))'),
+    (b'\xF9\x03\x66\x9E', 'LLIL_SET_REG.q(x25,LLIL_REG.q(d31))'),
     # fmov x21, d24
-    (b'\x15\x03\x66\x9E', 'LLIL_SET_REG.q(x21,LLIL_ZX.q(LLIL_REG.q(d24)))'),
+    (b'\x15\x03\x66\x9E', 'LLIL_SET_REG.q(x21,LLIL_REG.q(d24))'),
     # fmov x26, h11
     (b'\x7A\x01\xE6\x9E', 'LLIL_SET_REG.q(x26,LLIL_ZX.q(LLIL_REG.w(h11)))'),
     # fmov x21, h3
     (b'\x75\x00\xE6\x9E', 'LLIL_SET_REG.q(x21,LLIL_ZX.q(LLIL_REG.w(h3)))'),
     # fmov x4, v28.d[1]
-    (b'\x84\x03\xAE\x9E', 'LLIL_SET_REG.q(x4,LLIL_ZX.q(LLIL_REG.q(v28.d[1])))'),
+    (b'\x84\x03\xAE\x9E', 'LLIL_SET_REG.q(x4,LLIL_REG.q(v28.d[1]))'),
     # fmov x7, v8.d[1]
-    (b'\x07\x01\xAE\x9E', 'LLIL_SET_REG.q(x7,LLIL_ZX.q(LLIL_REG.q(v8.d[1])))'),
+    (b'\x07\x01\xAE\x9E', 'LLIL_SET_REG.q(x7,LLIL_REG.q(v8.d[1]))'),
     # fmov d19, x0
     (b'\x13\x00\x67\x9E', 'LLIL_SET_REG.q(d19,LLIL_INT_TO_FLOAT.q(LLIL_REG.q(x0)))'),
     # fmov d8, x21

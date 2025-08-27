@@ -75,34 +75,36 @@ pub fn user_signature_dir() -> PathBuf {
 
 pub fn build_variables(func: &BNFunction) -> Vec<FunctionVariable> {
     let func_start = func.start();
-    let mut variables = vec![];
-    if let Ok(mlil) = func.medium_level_il() {
-        let bn_vars = func.variables();
-        for bn_var in &bn_vars {
-            if mlil.is_var_user_defined(&bn_var.variable) {
-                // TODO: live_instruction_for_variable only works for register types.
-                if let Some(first_instr) = mlil
-                    .live_instruction_for_variable(&bn_var.variable, true)
-                    .iter()
-                    .sorted_by_key(|i| i.instr_index)
-                    .next()
-                {
-                    if let Some(var_loc) = bn_var_to_location(bn_var.variable) {
-                        let var_name = bn_var.name;
-                        let var_type =
-                            from_bn_type(&func.view(), &bn_var.ty.contents, bn_var.ty.confidence);
-                        variables.push(FunctionVariable {
-                            offset: (first_instr.address as i64) - (func_start as i64),
-                            location: var_loc,
-                            name: Some(var_name),
-                            ty: Some(var_type),
-                        })
-                    }
-                }
-            }
-        }
-    }
-    variables
+    // It is important that we only retrieve the medium-level IL if the function has
+    // any user-defined variables, otherwise, we will possibly be generating MLIL for no reason.
+    // For the above reason, we do a filter on user-defined variables first.
+    func.variables()
+        .iter()
+        .filter(|var| func.is_variable_user_defined(&var.variable))
+        .filter_map(|var| {
+            // Get the first instruction that uses the variable, this is the "placement" location we store.
+            // TODO: live_instruction_for_variable only works for register types.
+            let first_instr = func
+                .medium_level_il()
+                .ok()?
+                .live_instruction_for_variable(&var.variable, true)
+                .iter()
+                .sorted_by_key(|i| i.instr_index)
+                .next()?;
+            Some((var, first_instr))
+        })
+        .filter_map(|(var, instr)| {
+            // Build the WARP function variable using the placement location, and the variable itself.
+            let var_loc = bn_var_to_location(var.variable)?;
+            let var_type = from_bn_type(&func.view(), &var.ty.contents, var.ty.confidence);
+            Some(FunctionVariable {
+                offset: (instr.address as i64) - (func_start as i64),
+                location: var_loc,
+                name: Some(var.name),
+                ty: Some(var_type),
+            })
+        })
+        .collect()
 }
 
 // TODO: Get rid of the minimal bool.

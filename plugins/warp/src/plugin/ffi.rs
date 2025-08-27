@@ -124,12 +124,12 @@ pub unsafe extern "C" fn BNWARPGetAnalysisFunctionGUID(
     result: *mut BNWARPFunctionGUID,
 ) -> bool {
     let function = unsafe { Function::from_raw(analysis_function) };
-    match function.lifted_il() {
-        Ok(lifted_il) => {
-            *result = cached_function_guid(&function, &lifted_il);
+    match cached_function_guid(&function, || function.lifted_il().ok()) {
+        Some(guid) => {
+            *result = guid;
             true
         }
-        Err(_) => false,
+        None => false,
     }
 }
 

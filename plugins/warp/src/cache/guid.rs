@@ -4,28 +4,35 @@ use crate::function_guid;
 use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::function::Function as BNFunction;
 use binaryninja::low_level_il::function::{FunctionMutability, LowLevelILFunction, NonSSA};
+use binaryninja::rc::Ref as BNRef;
 use binaryninja::symbol::Symbol as BNSymbol;
 use std::collections::HashSet;
 use uuid::Uuid;
 use warp::signature::constraint::Constraint;
 use warp::signature::function::FunctionGUID;
 
+/// Try to get the cached function GUID from the metadata.
+///
+/// If not cached, we will use `lifted_il_accessor` to retrieve the lifted IL and create the GUID.
+///
+/// `lifted_il_accessor` exists as it is to allow the retrieval of a cached GUID without incurring
+/// the cost of building the IL (if it no longer exists).
 pub fn cached_function_guid<M: FunctionMutability>(
     function: &BNFunction,
-    lifted_il: &LowLevelILFunction<M, NonSSA>,
-) -> FunctionGUID {
+    lifted_il_accessor: impl Fn() -> Option<BNRef<LowLevelILFunction<M, NonSSA>>>,
+) -> Option<FunctionGUID> {
     let cached_guid = try_cached_function_guid(function);
     if let Some(cached_guid) = cached_guid {
-        return cached_guid;
+        return Some(cached_guid);
     }
 
-    let function_guid = function_guid(function, lifted_il);
+    let function_guid = function_guid(function, lifted_il_accessor()?.as_ref());
     function.store_metadata(
         "warp_function_guid",
         &function_guid.as_bytes().to_vec(),
         false,
     );
-    function_guid
+    Some(function_guid)
 }
 
 pub fn try_cached_function_guid(function: &BNFunction) -> Option<FunctionGUID> {

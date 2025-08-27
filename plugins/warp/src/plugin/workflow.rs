@@ -220,9 +220,7 @@ pub fn insert_workflow() -> Result<(), ()> {
 
     let guid_activity = |ctx: &AnalysisContext| {
         let function = ctx.function();
-        if let Some(lifted_il) = unsafe { ctx.lifted_il_function() } {
-            cached_function_guid(&function, &lifted_il);
-        }
+        cached_function_guid(&function, || unsafe { ctx.lifted_il_function() });
     };
 
     let guid_config = activity::Config::action(

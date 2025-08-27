@@ -47,11 +47,10 @@ pub struct CopyFunctionGUID;
 
 impl FunctionCommand for CopyFunctionGUID {
     fn action(&self, _view: &BinaryView, func: &Function) {
-        let Ok(lifted_il) = func.lifted_il() else {
-            log::error!("Could not get lifted il for copied function");
+        let Some(guid) = cached_function_guid(func, || func.lifted_il().ok()) else {
+            log::error!("Could not get guid for copied function");
             return;
         };
-        let guid = cached_function_guid(func, &lifted_il);
         log::info!(
             "Function GUID for {:?}... {}",
             func.symbol().short_name(),

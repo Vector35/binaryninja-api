@@ -37,11 +37,10 @@ pub unsafe extern "C" fn BNWARPGetFunction(
     analysis_function: *mut BNFunction,
 ) -> *mut BNWARPFunction {
     let function = Function::from_raw(analysis_function);
-    let Ok(lifted_il) = function.lifted_il() else {
-        return std::ptr::null_mut();
-    };
-    let function = build_function(&function, &lifted_il, false);
-    Arc::into_raw(Arc::new(function)) as *mut BNWARPFunction
+    match build_function(&function, || function.lifted_il().ok(), false) {
+        Some(function) => Arc::into_raw(Arc::new(function)) as *mut BNWARPFunction,
+        None => std::ptr::null_mut(),
+    }
 }
 
 #[no_mangle]

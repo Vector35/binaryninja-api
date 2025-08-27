@@ -9,9 +9,10 @@ pub struct DebugFunction;
 
 impl FunctionCommand for DebugFunction {
     fn action(&self, _view: &BinaryView, func: &Function) {
-        if let Ok(lifted_il) = func.lifted_il() {
-            log::info!("{:#?}", build_function(func, &lifted_il, false));
-        }
+        log::info!(
+            "{:#?}",
+            build_function(func, || func.lifted_il().ok(), false)
+        );
     }
 
     fn valid(&self, _view: &BinaryView, _func: &Function) -> bool {

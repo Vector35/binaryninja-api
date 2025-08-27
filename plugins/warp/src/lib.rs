@@ -106,13 +106,18 @@ pub fn build_variables(func: &BNFunction) -> Vec<FunctionVariable> {
 }
 
 // TODO: Get rid of the minimal bool.
+/// Build the WARP [`Function`] from the Binary Ninja [`BNFunction`].
+///
+/// The `lifted_il_accessor` is passed in such that a function with a guid already cached will not
+/// require us to regenerate the IL. This is important in the event of someone generating signatures
+/// off of an existing BNDB or when the IL is no longer present.
 pub fn build_function<M: FunctionMutability>(
     func: &BNFunction,
-    lifted_il: &LowLevelILFunction<M, NonSSA>,
+    lifted_il_accessor: impl Fn() -> Option<BNRef<LowLevelILFunction<M, NonSSA>>>,
     minimal: bool,
-) -> Function {
+) -> Option<Function> {
     let mut function = Function {
-        guid: cached_function_guid(func, lifted_il),
+        guid: cached_function_guid(func, lifted_il_accessor)?,
         symbol: from_bn_symbol(&func.symbol()),
         // NOTE: Adding adjacent only works if analysis is complete.
         // NOTE: We do not filter out adjacent functions here.
@@ -123,7 +128,7 @@ pub fn build_function<M: FunctionMutability>(
     };
 
     if minimal {
-        return function;
+        return Some(function);
     }
 
     // Currently we only store the type if its a user type.
@@ -142,7 +147,7 @@ pub fn build_function<M: FunctionMutability>(
         .map(|c| bn_comment_to_comment(func, c))
         .collect();
     function.variables = build_variables(func);
-    function
+    Some(function)
 }
 
 /// Basic blocks sorted from high to low.

@@ -814,13 +814,12 @@ impl WarpFileProcessor {
             .filter(is_function_named)
             .filter(|f| !f.analysis_skipped())
             .filter_map(|func| {
-                let lifted_il = func.lifted_il().ok()?;
                 let target = platform_to_target(&func.platform());
                 let built_function = build_function(
                     &func,
-                    &lifted_il,
+                    || func.lifted_il().ok(),
                     self.file_data == FileDataKindField::Symbols,
-                );
+                )?;
                 Some((target, built_function))
             })
             .fold(

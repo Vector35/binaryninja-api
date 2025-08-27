@@ -11,6 +11,7 @@ use ar::Archive;
 use dashmap::DashMap;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::prelude::ParallelSlice;
 use regex::Regex;
 use serde_json::{json, Value};
 use tempdir::TempDir;
@@ -35,6 +36,11 @@ use warp::{WarpFile, WarpFileHeader};
 use crate::cache::cached_type_references;
 use crate::convert::platform_to_target;
 use crate::{build_function, INCLUDE_TAG_ICON, INCLUDE_TAG_NAME};
+
+/// Ensure we never exceed these many functions per signature chunk.
+///
+/// This was added to fix running into the max table limit on certain files.
+const MAX_FUNCTIONS_PER_CHUNK: usize = 1_000_000;
 
 #[derive(Error, Debug)]
 pub enum ProcessingError {
@@ -618,6 +624,15 @@ impl WarpFileProcessor {
             }
         }
 
+        // In the future we may want to do something with a view that has no functions, but for now
+        // we do not care to create any chunks. By skipping this we can avoid merging of empty chunks,
+        // which is quick, but it still requires some allocations that we can avoid.
+        if view.functions().is_empty() {
+            self.state
+                .set_file_state(path.clone(), ProcessingFileState::Processed);
+            return Err(ProcessingError::SkippedFile(path));
+        }
+
         // Process the view
         let warp_file = self.process_view(path, &view);
         // Close the view manually, see comment in [`BinaryView`].
@@ -655,6 +670,10 @@ impl WarpFileProcessor {
             })
             .filter_map(|res| match res {
                 Ok(result) => Some(Ok(result)),
+                Err(ProcessingError::SkippedFile(path)) => {
+                    log::debug!("Skipping directory file: {:?}", path);
+                    None
+                }
                 Err(ProcessingError::Cancelled) => Some(Err(ProcessingError::Cancelled)),
                 Err(e) => {
                     log::error!("Directory file processing error: {:?}", e);
@@ -739,21 +758,23 @@ impl WarpFileProcessor {
         let mut chunks = Vec::new();
         if self.file_data != FileDataKindField::Types {
             let mut signature_chunks = self.create_signature_chunks(view)?;
-            for (target, signature_chunk) in signature_chunks.drain() {
-                if signature_chunk.raw_functions().count() != 0 {
-                    let chunk = Chunk::new_with_target(
-                        ChunkKind::Signature(signature_chunk),
-                        self.compression_type.into(),
-                        target,
-                    );
-                    chunks.push(chunk)
+            for (target, mut target_chunks) in signature_chunks.drain() {
+                for signature_chunk in target_chunks.drain(..) {
+                    if signature_chunk.raw_functions().next().is_some() {
+                        let chunk = Chunk::new_with_target(
+                            ChunkKind::Signature(signature_chunk),
+                            self.compression_type.into(),
+                            target.clone(),
+                        );
+                        chunks.push(chunk)
+                    }
                 }
             }
         }
 
         if self.file_data != FileDataKindField::Signatures {
             let type_chunk = self.create_type_chunk(view)?;
-            if type_chunk.raw_types().count() != 0 {
+            if type_chunk.raw_types().next().is_some() {
                 chunks.push(Chunk::new(
                     ChunkKind::Type(type_chunk),
                     self.compression_type.into(),
@@ -773,7 +794,7 @@ impl WarpFileProcessor {
     pub fn create_signature_chunks(
         &self,
         view: &BinaryView,
-    ) -> Result<HashMap<Target, SignatureChunk<'static>>, ProcessingError> {
+    ) -> Result<HashMap<Target, Vec<SignatureChunk<'static>>>, ProcessingError> {
         let is_function_named = |f: &Guard<BNFunction>| {
             self.included_functions == IncludedFunctionsField::All
                 || view.symbol_by_address(f.start()).is_some()
@@ -836,15 +857,19 @@ impl WarpFileProcessor {
                 acc
             });
 
-        let chunks: Result<HashMap<Target, SignatureChunk<'static>>, ProcessingError> =
+        // Split into multiple chunks if a target has more than MAX_FUNCTIONS_PER_CHUNK functions.
+        // We do this because otherwise some chunks may have too many flatbuffer tables for the verifier to handle.
+        let chunks: Result<HashMap<Target, Vec<SignatureChunk<'static>>>, ProcessingError> =
             built_functions
-                .into_iter()
+                .into_par_iter()
                 .map(|(target, functions)| {
-                    Ok((
-                        target,
-                        SignatureChunk::new(&functions)
-                            .ok_or(ProcessingError::ChunkCreationFailed)?,
-                    ))
+                    let chunks: Result<Vec<_>, _> = functions
+                        .par_chunks(MAX_FUNCTIONS_PER_CHUNK)
+                        .map(|f| {
+                            SignatureChunk::new(&f).ok_or(ProcessingError::ChunkCreationFailed)
+                        })
+                        .collect();
+                    Ok((target, chunks?))
                 })
                 .collect();
 

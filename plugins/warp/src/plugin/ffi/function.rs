@@ -124,7 +124,7 @@ pub unsafe extern "C" fn BNWARPFunctionGetType(
     match &function.ty {
         Some(func_ty) => {
             let arch = analysis_function.arch();
-            let function_type = to_bn_type(&arch, func_ty);
+            let function_type = to_bn_type(Some(arch), func_ty);
             // NOTE: The type ref has been pre-incremented for the caller.
             unsafe { Ref::into_raw(function_type) }.handle
         }

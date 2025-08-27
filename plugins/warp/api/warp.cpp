@@ -5,6 +5,14 @@
 
 using namespace Warp;
 
+std::optional<WarpUUID> WarpUUID::FromString(const std::string &str)
+{
+    BNWARPUUID uuid = {};
+    if (!BNWARPUUIDFromString(str.c_str(), &uuid))
+        return std::nullopt;
+    return WarpUUID(uuid);
+}
+
 std::string WarpUUID::ToString() const
 {
     char *str = BNWARPUUIDGetString(&uuid);
@@ -133,6 +141,94 @@ void Function::RemoveMatch(const BinaryNinja::Function &function)
     BNWARPFunctionApply(nullptr, function.m_object);
 }
 
+ContainerSearchQuery::ContainerSearchQuery(BNWARPContainerSearchQuery *query)
+{
+    m_object = query;
+}
+
+ContainerSearchQuery::ContainerSearchQuery(const std::string &query)
+{
+    m_object = BNWARPNewContainerSearchQuery(query.c_str(), nullptr, nullptr, nullptr, nullptr, 0);
+}
+
+ContainerSearchQuery::ContainerSearchQuery(const std::string &query, const Source &source)
+{
+    m_object = BNWARPNewContainerSearchQuery(query.c_str(), nullptr, nullptr, source.Raw(), nullptr, 0);
+}
+
+ContainerSearchQuery::ContainerSearchQuery(const std::string &query, size_t offset, size_t limit, const std::optional<Source> &source, const std::vector<SourceTag> &tags)
+{
+    size_t tagCount = tags.size();
+    const char** rawTags = new const char*[tagCount];
+    for (size_t i = 0; i < tagCount; i++)
+        rawTags[i] = tags[i].c_str();
+    if (source)
+        m_object = BNWARPNewContainerSearchQuery(query.c_str(), &offset, &limit, source.value().Raw(), rawTags, tagCount);
+    else
+        m_object = BNWARPNewContainerSearchQuery(query.c_str(), &offset, &limit, nullptr, rawTags, tagCount);
+    delete[] rawTags;
+}
+
+ContainerSearchItem::ContainerSearchItem(BNWARPContainerSearchItem *item)
+{
+    m_object = item;
+}
+
+BNWARPContainerSearchItemKind ContainerSearchItem::GetKind() const
+{
+    return BNWARPContainerSearchItemGetKind(m_object);
+}
+
+Source ContainerSearchItem::GetSource() const
+{
+    return BNWARPContainerSearchItemGetSource(m_object);
+}
+
+BinaryNinja::Ref<BinaryNinja::Type> ContainerSearchItem::GetType(const BinaryNinja::Ref<BinaryNinja::Architecture> &arch) const
+{
+    BNType *type = BNWARPContainerSearchItemGetType(arch ? arch->m_object : nullptr, m_object);
+    if (!type)
+        return nullptr;
+    return new BinaryNinja::Type(type);
+}
+
+std::string ContainerSearchItem::GetName() const
+{
+    // NOTE: In the future we may want the name to be optional, see rust core side for more info.
+    char *rawName = BNWARPContainerSearchItemGetName(m_object);
+    std::string name = rawName;
+    BNFreeString(rawName);
+    return name;
+}
+
+Ref<Function> ContainerSearchItem::GetFunction() const
+{
+    BNWARPFunction *function = BNWARPContainerSearchItemGetFunction(m_object);
+    if (!function)
+        return nullptr;
+    return new Function(function);
+}
+
+
+ContainerSearchResponse::ContainerSearchResponse(std::vector<Ref<ContainerSearchItem>>&& items, size_t offset,
+    size_t total)
+{
+    this->items = std::move(items);
+    this->offset = offset;
+    this->total = total;
+}
+
+ContainerSearchResponse ContainerSearchResponse::FromAPIObject(BNWARPContainerSearchResponse *response)
+{
+    std::vector<Ref<ContainerSearchItem>> items;
+    items.reserve(response->count);
+    for (int i = 0; i < response->count; i++)
+        items.push_back(new ContainerSearchItem(BNWARPNewContainerSearchItemReference(response->items[i])));
+    ContainerSearchResponse resp = {std::move(items), response->offset, response->total};
+    BNWARPFreeContainerSearchResponse(response);
+    return resp;
+}
+
 Container::Container(BNWARPContainer *container)
 {
     m_object = container;
@@ -249,14 +345,19 @@ bool Container::RemoveTypes(const Source &source, const std::vector<TypeGUID> &g
     return result;
 }
 
-void Container::FetchFunctions(const Target &target, const std::vector<FunctionGUID> &guids) const
+void Container::FetchFunctions(const Target &target, const std::vector<FunctionGUID> &guids, const std::vector<SourceTag> &tags) const
 {
     size_t count = guids.size();
     BNWARPFunctionGUID *apiGuids = new BNWARPFunctionGUID[count];
     for (size_t i = 0; i < count; i++)
         apiGuids[i] = *guids[i].Raw();
-    BNWARPContainerFetchFunctions(m_object, target.m_object, apiGuids, count);
+    size_t tagCount = tags.size();
+    const char** rawTags = new const char*[tagCount];
+    for (size_t i = 0; i < tagCount; i++)
+        rawTags[i] = tags[i].c_str();
+    BNWARPContainerFetchFunctions(m_object, target.m_object, rawTags, tagCount, apiGuids, count);
     delete[] apiGuids;
+    delete[] rawTags;
 }
 
 std::vector<Source> Container::GetSourcesWithFunctionGUID(const Target& target, const FunctionGUID &guid) const
@@ -312,6 +413,14 @@ std::vector<TypeGUID> Container::GetTypeGUIDsWithName(const Source &source, cons
         result.emplace_back(guids[i]);
     BNWARPFreeUUIDList(guids, count);
     return result;
+}
+
+std::optional<ContainerSearchResponse> Container::Search(const ContainerSearchQuery &query) const
+{
+    BNWARPContainerSearchResponse *response = BNWARPContainerSearch(m_object, query.m_object);
+    if (!response)
+        return std::nullopt;
+    return ContainerSearchResponse::FromAPIObject(response);
 }
 
 void Warp::RunMatcher(const BinaryNinja::BinaryView &view)

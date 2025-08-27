@@ -279,9 +279,10 @@ pub fn to_bn_calling_convention<A: BNArchitecture>(
     arch.get_default_calling_convention().unwrap()
 }
 
-pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
+// Always pass the architecture unless you know what you're doing!
+pub fn to_bn_type<A: BNArchitecture + Copy>(arch: Option<A>, ty: &Type) -> BNRef<BNType> {
     let bits_to_bytes = |val: u64| (val / 8);
-    let addr_size = arch.address_size() as u64;
+    let addr_size = arch.map(|a| a.address_size()).unwrap_or(8) as u64;
     match &ty.class {
         TypeClass::Void => BNType::void(),
         TypeClass::Boolean(_) => BNType::bool(),
@@ -438,8 +439,8 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
             // TODO: Variable arguments
             let variable_args = false;
             // If we have a calling convention we run the extended function type creation.
-            match c.calling_convention.as_ref() {
-                Some(cc) => {
+            match (c.calling_convention.as_ref(), arch.as_ref()) {
+                (Some(cc), Some(arch)) => {
                     let calling_convention = to_bn_calling_convention(arch, cc);
                     BNType::function_with_opts(
                         &return_type,
@@ -449,7 +450,7 @@ pub fn to_bn_type<A: BNArchitecture>(arch: &A, ty: &Type) -> BNRef<BNType> {
                         BNConf::new(0, 0),
                     )
                 }
-                None => BNType::function(&return_type, params, variable_args),
+                (_, _) => BNType::function(&return_type, params, variable_args),
             }
         }
         TypeClass::Referrer(c) => {

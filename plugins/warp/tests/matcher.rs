@@ -169,7 +169,7 @@ fn test_add_type_to_view() {
         .guid(struct_type_guid)
         .build();
     let ref_type = Type::builder().name("my_ref").class(ref_class).build();
-    matcher.add_type_to_view(&container, &source, &view, &arch, &ref_type);
+    matcher.add_type_to_view(&container, &source, &view, arch, &ref_type);
 
     println!("{:#?}", view.types().to_vec());
 

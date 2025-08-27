@@ -162,11 +162,7 @@ pub fn run_matcher(view: &BinaryView) {
         log::info!("Matcher was cancelled by user, you may run it again by running the 'Run Matcher' command.");
     }
 
-    // It is noisy to show this every time, so we only show it in cases where a user can reasonably perceive.
-    let elapsed = start.elapsed();
-    if elapsed > std::time::Duration::from_secs(1) {
-        log::info!("Function matching took {:?}", elapsed);
-    }
+    log::info!("Function matching took {:?}", start.elapsed());
     background_task.finish();
 
     // Now we want to trigger re-analysis.
@@ -185,7 +181,7 @@ pub fn insert_workflow() -> Result<(), ()> {
             // otherwise we will wipe over user type info.
             if !function.has_user_type() {
                 if let Some(func_ty) = &matched_function.ty {
-                    function.set_auto_type(&to_bn_type(&function.arch(), func_ty));
+                    function.set_auto_type(&to_bn_type(Some(function.arch()), func_ty));
                 }
             }
             if let Some(mlil) = ctx.mlil_function() {
@@ -206,7 +202,7 @@ pub fn insert_workflow() -> Result<(), ()> {
                             continue;
                         }
                         let decl_ty = match variable.ty {
-                            Some(decl_ty) => to_bn_type(&function.arch(), &decl_ty),
+                            Some(decl_ty) => to_bn_type(Some(function.arch()), &decl_ty),
                             None => {
                                 let Some(existing_var) = function.variable_type(&decl_var) else {
                                     continue;

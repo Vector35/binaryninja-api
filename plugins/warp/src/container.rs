@@ -1,5 +1,5 @@
 use crate::container::disk::NAMESPACE_DISK_SOURCE;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::io;
@@ -10,6 +10,7 @@ use uuid::Uuid;
 use warp::r#type::guid::TypeGUID;
 use warp::r#type::{ComputedType, Type};
 use warp::signature::function::{Function, FunctionGUID};
+use warp::symbol::Symbol;
 use warp::target::Target;
 
 pub mod disk;
@@ -123,6 +124,77 @@ impl Display for SourcePath {
     }
 }
 
+/// A tag associated with a source in a container.
+///
+/// Tags can be used to categorize and filter sources when querying the container.
+pub type SourceTag = compact_str::CompactString;
+
+/// A search query for finding items in a container.
+///
+/// This struct represents a search request that can be used to find functions, types and any other
+/// items associated with the container.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ContainerSearchQuery {
+    /// The search query string to match against items.
+    pub query: String,
+    /// Optional offset into the results for pagination.
+    pub offset: Option<usize>,
+    /// Optional maximum number of results to return.
+    pub limit: Option<usize>,
+    /// Optional source ID to restrict the search to.
+    pub source: Option<SourceId>,
+    /// Optional list of tags to restrict the search to.
+    pub tags: Vec<SourceTag>,
+    // TODO: Add field for function guid? conceivable someone wants to filter through those.
+}
+
+impl ContainerSearchQuery {
+    pub fn new(query: String) -> Self {
+        Self {
+            query,
+            offset: None,
+            limit: None,
+            source: None,
+            tags: Vec::new(),
+        }
+    }
+}
+
+/// An item returned from a container search.
+///
+/// Contains the source ID where the item was found and the specific kind of item.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ContainerSearchItem {
+    /// The source ID where this item was found
+    pub source: SourceId,
+    /// The specific kind of item that was found
+    pub kind: ContainerSearchItemKind,
+}
+
+/// The kind of item found in a container search.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ContainerSearchItemKind {
+    /// A source identified by its ID
+    Source { path: SourcePath, id: SourceId },
+    /// A function definition
+    Function(Function),
+    /// A type definition
+    Type(Type),
+    /// A symbol definition
+    Symbol(Symbol),
+}
+
+/// Response containing the results of a container search.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct ContainerSearchResponse {
+    /// The matching items found in the search
+    pub items: Vec<ContainerSearchItem>,
+    /// Total number of matching items available
+    pub total: usize,
+    /// Starting offset of these results in the total set
+    pub offset: usize,
+}
+
 /// Storage for WARP information.
 ///
 /// Containers are made up of sources, see [`SourceId`] for more details.
@@ -170,6 +242,9 @@ pub trait Container: Send + Sync + Display + Debug {
     /// that a source has uncommitted changes.
     fn is_source_uncommitted(&self, source: &SourceId) -> ContainerResult<bool>;
 
+    /// Retrieves the set of [`SourceTag`] for the given source.
+    fn source_tags(&self, source: &SourceId) -> ContainerResult<HashSet<SourceTag>>;
+
     /// Retrieve the [`SourcePath`] for the given source.
     ///
     /// NOTE: This does not have to be a filesystem path, its representation is dictated
@@ -216,6 +291,7 @@ pub trait Container: Send + Sync + Display + Debug {
     fn fetch_functions(
         &mut self,
         _target: &Target,
+        _tags: &[SourceTag],
         _functions: &[FunctionGUID],
     ) -> ContainerResult<()> {
         Ok(())
@@ -250,7 +326,6 @@ pub trait Container: Send + Sync + Display + Debug {
         guid: &FunctionGUID,
     ) -> ContainerResult<Vec<SourceId>>;
 
-    // TODO: Allocating with Vec is not good.
     /// Plural version of [`Container::sources_with_function_guid`].
     ///
     /// Each source will have a list of the containing GUID's so that when looking up a source you give
@@ -275,5 +350,16 @@ pub trait Container: Send + Sync + Display + Debug {
         guid: &FunctionGUID,
     ) -> ContainerResult<bool> {
         Ok(!self.functions_with_guid(target, source, guid)?.is_empty())
+    }
+
+    /// Perform a paginated search over the container contents.
+    ///
+    /// The container implementation is responsible for interpreting [`ContainerSearchQuery::query`]
+    /// for example, locally you may not have the capabilities to perform a sane fuzzy search, so the query
+    /// is exact, whereas a database-backed container may opt to instead perform a fuzzy search.
+    ///
+    /// NOTE: This is intended for user-performed actions, as the query may look up over the network.
+    fn search(&self, _query: &ContainerSearchQuery) -> ContainerResult<ContainerSearchResponse> {
+        Ok(ContainerSearchResponse::default())
     }
 }

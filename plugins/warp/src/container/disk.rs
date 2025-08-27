@@ -1,5 +1,7 @@
-use crate::container::{Container, ContainerError, ContainerResult, SourceId, SourcePath};
-use std::collections::HashMap;
+use crate::container::{
+    Container, ContainerError, ContainerResult, SourceId, SourcePath, SourceTag,
+};
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
@@ -20,11 +22,12 @@ pub const NAMESPACE_DISK_SOURCE: Uuid = uuid!("ea89e8ab-a27a-432b-8fbd-77b026cd5
 pub struct DiskContainer {
     pub name: String,
     pub sources: HashMap<SourceId, DiskContainerSource>,
+    pub writable: bool,
 }
 
 impl DiskContainer {
     pub fn new(name: String, sources: HashMap<SourceId, DiskContainerSource>) -> Self {
-        Self { name, sources }
+        Self { name, sources, writable: true }
     }
 
     pub fn new_from_dir(dir_path: PathBuf) -> Self {
@@ -56,6 +59,22 @@ impl DiskContainer {
 
         Self::new(name, sources)
     }
+
+    pub fn insert_source(&mut self, id: SourceId, path: SourcePath) -> ContainerResult<()> {
+        if !self.writable || self.sources.contains_key(&id) {
+            return Err(ContainerError::SourceAlreadyExists(path));
+        }
+        // NOTE: We let anyone add a file from anywhere on the file system because of this.
+        let disk_source = match path.0.exists() {
+            true => DiskContainerSource::new_from_path(path.clone())?,
+            false => {
+                let file = WarpFile::new(WarpFileHeader::new(), vec![]);
+                DiskContainerSource::new(path, file)
+            }
+        };
+        self.sources.insert(id, disk_source);
+        Ok(())
+    }
 }
 
 impl Container for DiskContainer {
@@ -66,23 +85,8 @@ impl Container for DiskContainer {
     fn add_source(&mut self, path: SourcePath) -> ContainerResult<SourceId> {
         // Disk sources have there source id computed from the path.
         let source_id = path.to_source_id();
-        if self.sources.contains_key(&source_id) {
-            return Err(ContainerError::SourceAlreadyExists(path));
-        }
-        // NOTE: We let anyone add a file from anywhere on the file system because of this.
-        match path.0.exists() {
-            true => {
-                let disk_source = DiskContainerSource::new_from_path(path.clone())?;
-                self.sources.insert(source_id, disk_source);
-                Ok(source_id)
-            }
-            false => {
-                let file = WarpFile::new(WarpFileHeader::new(), vec![]);
-                let disk_source = DiskContainerSource::new(path, file);
-                self.sources.insert(source_id, disk_source);
-                Ok(source_id)
-            }
-        }
+        self.insert_source(source_id, path)?;
+        Ok(source_id)
     }
 
     fn commit_source(&mut self, source: &SourceId) -> ContainerResult<bool> {
@@ -99,8 +103,7 @@ impl Container for DiskContainer {
             .sources
             .get(source)
             .ok_or(ContainerError::SourceNotFound(*source))?;
-        // TODO: I think this should be up to the container. (cant write to bundled files)
-        Ok(true)
+        Ok(self.writable)
     }
 
     fn is_source_uncommitted(&self, source: &SourceId) -> ContainerResult<bool> {
@@ -109,6 +112,14 @@ impl Container for DiskContainer {
             .get(source)
             .ok_or(ContainerError::SourceNotFound(*source))?;
         Ok(disk_source.uncommitted)
+    }
+
+    fn source_tags(&self, source: &SourceId) -> ContainerResult<HashSet<SourceTag>> {
+        let disk_source = self
+            .sources
+            .get(source)
+            .ok_or(ContainerError::SourceNotFound(*source))?;
+        Ok(disk_source.tags.clone())
     }
 
     fn source_path(&self, source: &SourceId) -> ContainerResult<SourcePath> {
@@ -277,6 +288,7 @@ impl Debug for DiskContainer {
 
 pub struct DiskContainerSource {
     pub path: SourcePath,
+    pub tags: HashSet<SourceTag>,
     file: WarpFile<'static>,
     uncommitted: bool,
 }
@@ -285,6 +297,7 @@ impl DiskContainerSource {
     pub fn new(path: SourcePath, file: WarpFile<'static>) -> Self {
         Self {
             path,
+            tags: HashSet::new(),
             file,
             uncommitted: false,
         }

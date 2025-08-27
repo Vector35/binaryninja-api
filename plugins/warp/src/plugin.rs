@@ -14,10 +14,11 @@ use binaryninja::command::{
 };
 use binaryninja::is_ui_enabled;
 use binaryninja::logger::Logger;
-use binaryninja::settings::Settings;
+use binaryninja::settings::{QueryOptions, Settings};
 use log::LevelFilter;
 use reqwest::StatusCode;
 
+mod commit;
 mod create;
 mod debug;
 mod ffi;
@@ -31,17 +32,21 @@ mod workflow;
 
 fn load_bundled_signatures() {
     let global_bn_settings = Settings::new();
-    let plugin_settings = PluginSettings::from_settings(&global_bn_settings);
+    let plugin_settings =
+        PluginSettings::from_settings(&global_bn_settings, &mut QueryOptions::new());
     // We want to load all the bundled directories into the container cache.
     let background_task = BackgroundTask::new("Loading WARP files...", false);
     let start = Instant::now();
     if plugin_settings.load_bundled_files {
-        let core_disk_container = DiskContainer::new_from_dir(core_signature_dir());
+        let mut core_disk_container = DiskContainer::new_from_dir(core_signature_dir());
+        core_disk_container.name = "Bundled".to_string();
+        core_disk_container.writable = false;
         log::debug!("{:#?}", core_disk_container);
         add_cached_container(core_disk_container);
     }
     if plugin_settings.load_user_files {
-        let user_disk_container = DiskContainer::new_from_dir(user_signature_dir());
+        let mut user_disk_container = DiskContainer::new_from_dir(user_signature_dir());
+        user_disk_container.name = "User".to_string();
         log::debug!("{:#?}", user_disk_container);
         add_cached_container(user_disk_container);
     }
@@ -51,35 +56,76 @@ fn load_bundled_signatures() {
 
 fn load_network_container() {
     let global_bn_settings = Settings::new();
-    let plugin_settings = PluginSettings::from_settings(&global_bn_settings);
-    let background_task = BackgroundTask::new("Initializing WARP server...", false);
-    let start = Instant::now();
-    if plugin_settings.enable_server {
-        let server_url = plugin_settings.server_url.clone();
-        let server_api_key = plugin_settings.server_api_key.clone();
+
+    let add_network_container = |url: String, api_key: Option<String>| {
         let https_proxy_str = global_bn_settings.get_string("network.httpsProxy");
         let https_proxy = if https_proxy_str.is_empty() {
             None
         } else {
             Some(https_proxy_str)
         };
-        match NetworkClient::new(server_url.clone(), server_api_key, https_proxy) {
+        match NetworkClient::new(url.clone(), api_key.clone(), https_proxy) {
             Ok(network_client) => {
                 // Before constructing the container, let's make sure that the server is OK.
                 if let Ok(StatusCode::OK) = network_client.status() {
-                    let network_container = NetworkContainer::new(network_client);
+                    // Check if the user is logged in. If so, we should collect the writable sources.
+                    let mut writable_sources = Vec::new();
+                    match network_client.current_user() {
+                        Ok((id, username)) => {
+                            log::info!(
+                                "Server '{}' connected, logged in as user '{}'",
+                                url,
+                                username
+                            );
+                            match network_client.query_sources(Some(id)) {
+                                Ok(sources) => {
+                                    writable_sources = sources;
+                                }
+                                Err(e) => {
+                                    log::error!(
+                                        "Server '{}' failed to get sources for user: {}",
+                                        url,
+                                        e
+                                    );
+                                }
+                            }
+                        }
+                        Err(e) if api_key.is_some() => {
+                            log::error!(
+                                "Server '{}' failed to authenticate with provided API key: {}",
+                                url,
+                                e
+                            );
+                        }
+                        Err(_) => {
+                            log::info!("Server '{}' connected, logged in as guest", url);
+                        }
+                    }
+
+                    // TODO: Make the cache path include the domain or url, so that we can have multiple servers.
+                    let main_cache_path = NetworkContainer::root_cache_location().join("main");
+                    let network_container =
+                        NetworkContainer::new(network_client, main_cache_path, &writable_sources);
                     log::debug!("{:#?}", network_container);
                     add_cached_container(network_container);
                 } else {
-                    log::error!(
-                        "Server '{}' is not reachable, disabling container...",
-                        server_url
-                    );
+                    log::error!("Server '{}' is not reachable, disabling container...", url);
                 }
             }
             Err(e) => {
                 log::error!("Failed to add networked container: {}", e);
             }
+        }
+    };
+
+    let plugin_settings =
+        PluginSettings::from_settings(&global_bn_settings, &mut QueryOptions::new());
+    let background_task = BackgroundTask::new("Initializing WARP server...", false);
+    let start = Instant::now();
+    if plugin_settings.enable_server {
+        add_network_container(plugin_settings.server_url, plugin_settings.server_api_key);
+        if let Some(second_server_url) = plugin_settings.second_server_url {
+            add_network_container(second_server_url, plugin_settings.second_server_api_key);
         }
     }
     log::debug!("Initializing warp server took {:?}", start.elapsed());
@@ -154,6 +200,12 @@ pub extern "C" fn CorePluginInit() -> bool {
         "WARP\\Load File",
         "Load file into the matcher, this does NOT kick off matcher analysis",
         load::LoadSignatureFile {},
+    );
+
+    register_command(
+        "WARP\\Commit File",
+        "Commit file to a source",
+        commit::CommitFile {},
     );
 
     register_command_for_function(

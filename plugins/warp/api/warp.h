@@ -68,7 +68,7 @@ namespace Warp {
 	{
 		T *m_obj;
 #ifdef BN_REF_COUNT_DEBUG
-		void* m_assignmentTrace = nullptr;
+		void *m_assignmentTrace = nullptr;
 #endif
 
 	public:
@@ -230,8 +230,12 @@ namespace Warp {
 
 	public:
 		WarpUUID() = default;
-		
-		WarpUUID(BNWARPUUID uuid) : uuid(uuid) {}
+
+		WarpUUID(BNWARPUUID uuid) : uuid(uuid)
+		{
+		}
+
+		static std::optional<WarpUUID> FromString(const std::string &str);
 
 		std::string ToString() const;
 
@@ -245,12 +249,12 @@ namespace Warp {
 			return !(*this == other);
 		}
 
-		BNWARPUUID* RawMut()
+		BNWARPUUID *RawMut()
 		{
 			return &uuid;
 		}
 
-		const BNWARPUUID* Raw() const
+		const BNWARPUUID *Raw() const
 		{
 			return &uuid;
 		}
@@ -261,6 +265,7 @@ namespace Warp {
 	typedef WarpUUID FunctionGUID;
 	typedef WarpUUID ConstraintGUID;
 	typedef WarpUUID TypeGUID;
+	typedef std::string SourceTag;
 
 	class Target : public WarpRefCountObject<BNWARPTarget, BNWARPNewTargetReference,
 				BNWARPFreeTargetReference>
@@ -268,9 +273,9 @@ namespace Warp {
 	public:
 		explicit Target(BNWARPTarget *target);
 
-		static Ref<Target> FromPlatform(const BinaryNinja::Platform& platform); 
+		static Ref<Target> FromPlatform(const BinaryNinja::Platform &platform);
 	};
-	
+
 	struct Constraint
 	{
 		ConstraintGUID guid;
@@ -278,7 +283,7 @@ namespace Warp {
 
 		Constraint(ConstraintGUID guid, std::optional<int64_t> offset);
 
-		static Constraint FromAPIObject(BNWARPConstraint* constraint);
+		static Constraint FromAPIObject(BNWARPConstraint *constraint);
 	};
 
 	struct FunctionComment
@@ -288,7 +293,7 @@ namespace Warp {
 
 		FunctionComment(std::string text, int64_t offset);
 
-		static FunctionComment FromAPIObject(BNWARPFunctionComment* comment);
+		static FunctionComment FromAPIObject(BNWARPFunctionComment *comment);
 	};
 
 	class Function : public WarpRefCountObject<BNWARPFunction, BNWARPNewFunctionReference, BNWARPFreeFunctionReference>
@@ -322,6 +327,51 @@ namespace Warp {
 		static void RemoveMatch(const BinaryNinja::Function &function);
 	};
 
+	class ContainerSearchQuery : public WarpRefCountObject<BNWARPContainerSearchQuery,
+				BNWARPNewContainerSearchQueryReference,
+				BNWARPFreeContainerSearchQueryReference>
+	{
+	public:
+		explicit ContainerSearchQuery(BNWARPContainerSearchQuery *query);
+
+		explicit ContainerSearchQuery(const std::string &query);
+
+		ContainerSearchQuery(const std::string &query, const Source &source);
+
+		ContainerSearchQuery(const std::string &query, size_t offset, size_t limit,
+		                     const std::optional<Source> &source = std::nullopt,
+		                     const std::vector<SourceTag> &tags = {});
+	};
+
+	class ContainerSearchItem : public WarpRefCountObject<BNWARPContainerSearchItem,
+				BNWARPNewContainerSearchItemReference,
+				BNWARPFreeContainerSearchItemReference>
+	{
+	public:
+		explicit ContainerSearchItem(BNWARPContainerSearchItem *item);
+
+		BNWARPContainerSearchItemKind GetKind() const;
+
+		Source GetSource() const;
+
+		BinaryNinja::Ref<BinaryNinja::Type> GetType(const BinaryNinja::Ref<BinaryNinja::Architecture> &arch) const;
+
+		std::string GetName() const;
+
+		Ref<Function> GetFunction() const;
+	};
+
+	struct ContainerSearchResponse
+	{
+		std::vector<Ref<ContainerSearchItem> > items;
+		size_t offset;
+		size_t total;
+
+		ContainerSearchResponse(std::vector<Ref<ContainerSearchItem> > &&items, size_t offset, size_t total);
+
+		static ContainerSearchResponse FromAPIObject(BNWARPContainerSearchResponse *response);
+	};
+
 	class Container : public WarpRefCountObject<BNWARPContainer, BNWARPNewContainerReference,
 				BNWARPFreeContainerReference>
 	{
@@ -345,36 +395,50 @@ namespace Warp {
 
 		std::optional<std::string> SourcePath(const Source &source) const;
 
-		bool AddFunctions(const Target &target, const Source &source, const std::vector<Ref<Function> > &functions) const;
+		bool AddFunctions(const Target &target, const Source &source,
+		                  const std::vector<Ref<Function> > &functions) const;
 
 		bool AddTypes(const BinaryNinja::BinaryView &view, const Source &source,
 		              const std::vector<BinaryNinja::Ref<BinaryNinja::Type> > &types) const;
 
-		bool RemoveFunctions(const Target &target, const Source &source, const std::vector<Ref<Function> > &functions) const;
+		bool RemoveFunctions(const Target &target, const Source &source,
+		                     const std::vector<Ref<Function> > &functions) const;
 
 		bool RemoveTypes(const Source &source, const std::vector<TypeGUID> &guids) const;
 
-		void FetchFunctions(const Target& target, const std::vector<FunctionGUID> &guids) const;
+		void FetchFunctions(const Target &target, const std::vector<FunctionGUID> &guids, const std::vector<SourceTag> &tags = {}) const;
 
-		std::vector<Source> GetSourcesWithFunctionGUID(const Target& target, const FunctionGUID &guid) const;
+		std::vector<Source> GetSourcesWithFunctionGUID(const Target &target, const FunctionGUID &guid) const;
 
 		std::vector<Source> GetSourcesWithTypeGUID(const TypeGUID &guid) const;
 
-		std::vector<Ref<Function> > GetFunctionsWithGUID(const Target& target, const Source &source, const FunctionGUID &guid) const;
+		std::vector<Ref<Function> > GetFunctionsWithGUID(const Target &target, const Source &source,
+		                                                 const FunctionGUID &guid) const;
 
 		BinaryNinja::Ref<BinaryNinja::Type> GetTypeWithGUID(const BinaryNinja::Architecture &arch, const Source &source,
 		                                                    const TypeGUID &guid) const;
 
 		std::vector<TypeGUID> GetTypeGUIDsWithName(const Source &source, const std::string &name) const;
+
+		std::optional<ContainerSearchResponse> Search(const ContainerSearchQuery &query) const;
 	};
 
-	void RunMatcher(const BinaryNinja::BinaryView& view);
+	void RunMatcher(const BinaryNinja::BinaryView &view);
 
 	bool IsInstructionVariant(const BinaryNinja::LowLevelILFunction &function, BinaryNinja::ExprId idx);
 
 	bool IsInstructionBlacklisted(const BinaryNinja::LowLevelILFunction &function, BinaryNinja::ExprId idx);
-	
+
 	std::optional<FunctionGUID> GetAnalysisFunctionGUID(const BinaryNinja::Function &function);
 
 	std::optional<BasicBlockGUID> GetBasicBlockGUID(const BinaryNinja::BasicBlock &basicBlock);
 }
+
+template<> struct std::hash<Warp::WarpUUID>
+{
+	size_t operator()(Warp::WarpUUID const& item) const noexcept
+	{
+		// TODO: Use the raw bytes instead.
+		return std::hash<std::string>()(item.ToString());
+	}
+};

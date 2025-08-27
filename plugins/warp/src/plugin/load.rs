@@ -40,16 +40,15 @@ pub struct RunMatcherField;
 
 impl RunMatcherField {
     pub fn field() -> FormInputField {
-        FormInputField::Choice {
-            prompt: "Rerun Initial Matcher".to_string(),
-            choices: vec!["No".to_string(), "Yes".to_string()],
-            default: Some(1),
-            value: 0,
+        FormInputField::Checkbox {
+            prompt: "Rerun Matcher".to_string(),
+            default: Some(true),
+            value: false,
         }
     }
 
     pub fn from_form(form: &Form) -> Option<bool> {
-        let field = form.get_field_with_name("Rerun Initial Matcher")?;
+        let field = form.get_field_with_name("Rerun Matcher")?;
         let field_value = field.try_value_index()?;
         match field_value {
             1 => Some(true),

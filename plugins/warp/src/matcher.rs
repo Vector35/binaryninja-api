@@ -47,6 +47,18 @@ impl Matcher {
             return None;
         }
 
+        // The number of possible functions is too high, skip.
+        // This can happen if the function is extremely common, in cases like that we are already unlikely to match.
+        // It is unfortunate that we have to do this, but it is the best we can do. In the future we
+        // may find a way to chunk up the possible functions and only match on a subset of them.
+        if self
+            .settings
+            .maximum_possible_functions
+            .is_some_and(|max| max < matched_functions.len() as u64)
+        {
+            return None;
+        }
+
         // If we have a single possible match than that must be our function.
         // We must also not be a trivial function, as those will likely be artifacts of an incomplete dataset
         if matched_functions.len() == 1 && !is_function_trivial {
@@ -296,6 +308,10 @@ pub struct MatcherSettings {
     ///
     /// This is set to [MatcherSettings::TRIVIAL_FUNCTION_ADJACENT_ALLOWED_DEFAULT] by default.
     pub trivial_function_adjacent_allowed: bool,
+    /// The maximum number of WARP functions that can be used to match a Binary Ninja function.
+    ///
+    /// This is set to [MatcherSettings::MAXIMUM_POSSIBLE_FUNCTIONS_DEFAULT] by default.
+    pub maximum_possible_functions: Option<u64>,
 }
 
 impl MatcherSettings {
@@ -311,6 +327,9 @@ impl MatcherSettings {
     pub const TRIVIAL_FUNCTION_ADJACENT_ALLOWED_DEFAULT: bool = false;
     pub const TRIVIAL_FUNCTION_ADJACENT_ALLOWED_SETTING: &'static str =
         "analysis.warp.trivialFunctionAdjacentAllowed";
+    pub const MAXIMUM_POSSIBLE_FUNCTIONS_SETTING: &'static str =
+        "analysis.warp.maximumPossibleFunctions";
+    pub const MAXIMUM_POSSIBLE_FUNCTIONS_DEFAULT: u64 = 1000;
 
     /// Populates the [MatcherSettings] to the current Binary Ninja settings instance.
     ///
@@ -378,6 +397,18 @@ impl MatcherSettings {
             Self::TRIVIAL_FUNCTION_ADJACENT_ALLOWED_SETTING,
             &trivial_function_adjacent_allowed_props.to_string(),
         );
+
+        let maximum_possible_functions_props = json!({
+            "title" : "Maximum Possible Functions",
+            "type" : "number",
+            "default" : Self::MAXIMUM_POSSIBLE_FUNCTIONS_DEFAULT,
+            "description" : "When matching any function that has a list of possible functions greater than this number will be skipped. A value of 0 will disable this check.",
+            "ignore" : []
+        });
+        bn_settings.register_setting_json(
+            Self::MAXIMUM_POSSIBLE_FUNCTIONS_SETTING,
+            &maximum_possible_functions_props.to_string(),
+        );
     }
 
     /// Retrieve matcher settings from [`BNSettings`].
@@ -407,6 +438,14 @@ impl MatcherSettings {
             settings.trivial_function_adjacent_allowed = bn_settings
                 .get_bool_with_opts(Self::TRIVIAL_FUNCTION_ADJACENT_ALLOWED_SETTING, query_opts);
         }
+        if bn_settings.contains(Self::MAXIMUM_POSSIBLE_FUNCTIONS_SETTING) {
+            match bn_settings
+                .get_integer_with_opts(Self::MAXIMUM_POSSIBLE_FUNCTIONS_SETTING, query_opts)
+            {
+                0 => settings.maximum_possible_functions = None,
+                len => settings.maximum_possible_functions = Some(len),
+            }
+        }
         settings
     }
 }
@@ -420,6 +459,7 @@ impl Default for MatcherSettings {
             minimum_matched_constraints: MatcherSettings::MINIMUM_MATCHED_CONSTRAINTS_DEFAULT,
             trivial_function_adjacent_allowed:
                 MatcherSettings::TRIVIAL_FUNCTION_ADJACENT_ALLOWED_DEFAULT,
+            maximum_possible_functions: Some(MatcherSettings::MAXIMUM_POSSIBLE_FUNCTIONS_DEFAULT),
         }
     }
 }

@@ -13,6 +13,8 @@ use binaryninja::command::Command;
 use binaryninja::settings::{QueryOptions, Settings};
 use binaryninja::workflow::{activity, Activity, AnalysisContext, Workflow, WorkflowBuilder};
 use itertools::Itertools;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 use std::collections::HashMap;
 use std::time::Instant;
 use warp::r#type::class::function::{Location, RegisterLocation, StackLocation};
@@ -112,31 +114,47 @@ pub fn run_matcher(view: &BinaryView) {
                 .sources_with_function_guids(target, guids)
                 .unwrap_or_default();
 
-            for (guid, sources) in &function_guid_with_sources {
-                let matched_functions: Vec<Function> = sources
-                    .iter()
-                    .flat_map(|source| {
-                        container
-                            .functions_with_guid(target, source, guid)
-                            .unwrap_or_default()
-                    })
-                    .collect();
+            function_guid_with_sources
+                .into_par_iter()
+                .for_each(|(guid, sources)| {
+                    let matched_functions: Vec<Function> = sources
+                        .iter()
+                        .flat_map(|source| {
+                            container
+                                .functions_with_guid(target, source, &guid)
+                                .unwrap_or_default()
+                        })
+                        .collect();
 
-                let functions = functions_by_target_and_guid
-                    .get(&(*guid, target.clone()))
-                    .expect("Function guid not found");
-
-                for function in functions {
-                    // Match on all the possible functions
-                    if let Some(matched_function) =
-                        matcher.match_function_from_constraints(function, &matched_functions)
+                    // NOTE: See the comment in `match_function_from_constraints` about this fast fail.
+                    if matcher
+                        .settings
+                        .maximum_possible_functions
+                        .is_some_and(|max| max < matched_functions.len() as u64)
                     {
-                        // We were able to find a match, add it to the match cache and then mark the function
-                        // as requiring updates; this is so that we know about it in the applier activity.
-                        insert_cached_function_match(function, Some(matched_function.clone()));
+                        log::warn!(
+                            "Skipping {}, too many possible functions: {}",
+                            guid,
+                            matched_functions.len()
+                        );
+                        return;
                     }
-                }
-            }
+
+                    let functions = functions_by_target_and_guid
+                        .get(&(guid, target.clone()))
+                        .expect("Function guid not found");
+
+                    for function in functions {
+                        // Match on all the possible functions
+                        if let Some(matched_function) =
+                            matcher.match_function_from_constraints(function, &matched_functions)
+                        {
+                            // We were able to find a match, add it to the match cache and then mark the function
+                            // as requiring updates; this is so that we know about it in the applier activity.
+                            insert_cached_function_match(function, Some(matched_function.clone()));
+                        }
+                    }
+                });
         }
     });
 

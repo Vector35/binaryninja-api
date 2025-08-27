@@ -3,8 +3,8 @@ use std::borrow::Cow;
 use std::io::{BufRead, Cursor, Seek};
 
 use idb_rs::id1::ID1Section;
-use idb_rs::id2::{ID2Section, ID2SectionVariants};
-use idb_rs::{IDAKind, IDAUsize, IDBFormat};
+use idb_rs::id2::ID2Section;
+use idb_rs::{IDAKind, IDAUsize, IDAVariants, IDBFormat, IDBString};
 use types::*;
 mod addr_info;
 use addr_info::*;
@@ -14,7 +14,7 @@ use binaryninja::debuginfo::{
     CustomDebugInfoParser, DebugFunctionInfo, DebugInfo, DebugInfoParser,
 };
 
-use idb_rs::id0::{ID0Section, ID0SectionVariants};
+use idb_rs::id0::ID0Section;
 use idb_rs::til::section::TILSection;
 use idb_rs::til::TypeVariant as TILTypeVariant;
 
@@ -135,8 +135,11 @@ fn parse_idb_info(
     let mut file = std::io::BufReader::new(file);
     let idb_kind = idb_rs::identify_idb_file(&mut file)?;
     match idb_kind {
-        idb_rs::IDBFormats::Separated(sep) => {
-            parse_idb_info_format(debug_info, bv, debug_file, sep, file, progress)
+        idb_rs::IDBFormats::Separated(IDAVariants::IDA32(sep32)) => {
+            parse_idb_info_format(debug_info, bv, debug_file, sep32, file, progress)
+        }
+        idb_rs::IDBFormats::Separated(IDAVariants::IDA64(sep64)) => {
+            parse_idb_info_format(debug_info, bv, debug_file, sep64, file, progress)
         }
         idb_rs::IDBFormats::InlineUncompressed(inline) => {
             parse_idb_info_format(debug_info, bv, debug_file, inline, file, progress)
@@ -156,11 +159,11 @@ fn parse_idb_info(
     }
 }
 
-fn parse_idb_info_format(
+fn parse_idb_info_format<K: IDAKind>(
     debug_info: &mut DebugInfo,
     bv: &BinaryView,
     debug_file: &BinaryView,
-    format: impl IDBFormat,
+    format: impl IDBFormat<K>,
     mut idb_data: impl BufRead + Seek,
     progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
 ) -> Result<()> {
@@ -185,21 +188,7 @@ fn parse_idb_info_format(
         .map(|id2_idx| format.read_id2(&mut idb_data, id2_idx))
         .transpose()?;
 
-    match (id0, id2) {
-        (ID0SectionVariants::IDA32(id0), Some(ID2SectionVariants::IDA32(id2))) => {
-            parse_id0_section_info(debug_info, bv, debug_file, &id0, &id1, Some(&id2))?
-        }
-        (ID0SectionVariants::IDA32(id0), None) => {
-            parse_id0_section_info(debug_info, bv, debug_file, &id0, &id1, None)?
-        }
-        (ID0SectionVariants::IDA64(id0), Some(ID2SectionVariants::IDA64(id2))) => {
-            parse_id0_section_info(debug_info, bv, debug_file, &id0, &id1, Some(&id2))?
-        }
-        (ID0SectionVariants::IDA64(id0), None) => {
-            parse_id0_section_info(debug_info, bv, debug_file, &id0, &id1, None)?
-        }
-        _ => unreachable!(),
-    }
+    parse_id0_section_info(debug_info, bv, debug_file, &id0, &id1, id2.as_ref())?;
 
     Ok(())
 }
@@ -291,19 +280,18 @@ fn parse_id0_section_info<K: IDAKind>(
     bv: &BinaryView,
     debug_file: &BinaryView,
     id0: &ID0Section<K>,
-    id1: &ID1Section,
+    id1: &ID1Section<K>,
     id2: Option<&ID2Section<K>>,
 ) -> Result<()> {
     let ida_info_idx = id0.root_node()?;
     let ida_info = id0.ida_info(ida_info_idx)?;
     let idb_baseaddr = ida_info.addresses.loading_base.into_u64();
     let bv_baseaddr = bv.start();
-    let netdelta = ida_info.netdelta();
     // just addr this value to the address to translate from ida to bn
     // NOTE this delta could wrap here and while using translating
     let addr_delta = bv_baseaddr.wrapping_sub(idb_baseaddr);
 
-    for (idb_addr, info) in get_info(id0, id1, id2, netdelta)? {
+    for (idb_addr, info) in get_info(id0, id1, id2, &ida_info)? {
         let addr = addr_delta.wrapping_add(idb_addr.into_raw().into_u64());
         // just in case we change this struct in the future, this line will for us to review this code
         // TODO merge this data with folder locations
@@ -314,30 +302,35 @@ fn parse_id0_section_info<K: IDAKind>(
         } = info;
         // TODO set comments to address here
         for function in &bv.functions_containing(addr) {
-            function.set_comment_at(addr, &String::from_utf8_lossy(&comments.join(&b"\n"[..])));
+            let comments: Vec<String> = comments
+                .iter()
+                .map(idb_rs::IDBString::as_utf8_lossy)
+                .map(Cow::into_owned)
+                .collect();
+            function.set_comment_at(addr, &comments.join("\n"));
         }
 
-        let bnty = ty
-            .as_ref()
-            .and_then(|ty| match translate_ephemeral_type(debug_file, ty) {
-                TranslateTypeResult::Translated(result) => Some(result),
-                TranslateTypeResult::PartiallyTranslated(result, None) => {
-                    warn!("Unable to fully translate the type at {addr:#x}");
-                    Some(result)
-                }
-                TranslateTypeResult::NotYet => {
-                    error!("Unable to translate the type at {addr:#x}");
-                    None
-                }
-                TranslateTypeResult::PartiallyTranslated(_, Some(bn_type_error))
-                | TranslateTypeResult::Error(bn_type_error) => {
-                    error!("Unable to translate the type at {addr:#x}: {bn_type_error}",);
-                    None
-                }
-            });
+        let bnty =
+            ty.as_ref().and_then(
+                |ty| match translate_ephemeral_type(debug_file, &ida_info, ty) {
+                    TranslateTypeResult::Translated(result) => Some(result),
+                    TranslateTypeResult::PartiallyTranslated(result, None) => {
+                        warn!("Unable to fully translate the type at {addr:#x}");
+                        Some(result)
+                    }
+                    TranslateTypeResult::NotYet => {
+                        error!("Unable to translate the type at {addr:#x}");
+                        None
+                    }
+                    TranslateTypeResult::PartiallyTranslated(_, Some(bn_type_error))
+                    | TranslateTypeResult::Error(bn_type_error) => {
+                        error!("Unable to translate the type at {addr:#x}: {bn_type_error}",);
+                        None
+                    }
+                },
+            );
 
-        let label: Option<Cow<'_, str>> =
-            label.as_ref().map(Cow::as_ref).map(String::from_utf8_lossy);
+        let label: Option<Cow<'_, str>> = label.as_ref().map(IDBString::as_utf8_lossy);
         match (label, &ty, bnty) {
             (label, Some(ty), bnty) if matches!(&ty.type_variant, TILTypeVariant::Function(_)) => {
                 if bnty.is_none() {

@@ -11,16 +11,16 @@ use binaryninja::types::{
     EnumerationBuilder, FunctionParameter, MemberAccess, MemberScope, StructureBuilder,
     StructureType, Type,
 };
+use idb_rs::id0::RootInfo;
 use idb_rs::til::function::CallingConvention as TILCallingConvention;
 use idb_rs::til::pointer::Pointer as TILPointer;
 use idb_rs::til::r#enum::EnumMembers;
 use idb_rs::til::{
     array::Array as TILArray, function::Function as TILFunction, r#enum::Enum as TILEnum,
-    r#struct::Struct as TILStruct, r#struct::StructMember as TILStructMember,
-    r#union::Union as TILUnion, section::TILSection, TILTypeInfo, Type as TILType,
-    TypeVariant as TILTypeVariant,
+    section::TILSection, udt::UDTMember as TILUDTMember, udt::UDT as TILUDT, TILTypeInfo,
+    Type as TILType, TypeVariant as TILTypeVariant,
 };
-use idb_rs::IDBString;
+use idb_rs::{IDAKind, IDBString};
 
 #[derive(Debug, Clone)]
 pub enum BnTypeError {
@@ -306,7 +306,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
     fn condensate_bitfields_from_struct(
         &self,
         offset: usize,
-        members_slice: &[TILStructMember],
+        members_slice: &[TILUDTMember],
         struct_builder: &mut StructureBuilder,
     ) {
         if members_slice.is_empty() {
@@ -326,7 +326,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
 
         let mut create_field = |start_idx, i, bytes| {
             let name = if start_idx == i - 1 {
-                let member: &TILStructMember = &members_slice[i - 1];
+                let member: &TILUDTMember = &members_slice[i - 1];
                 member
                     .name
                     .as_ref()
@@ -366,7 +366,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
         }
     }
 
-    fn translate_struct(&self, ty_struct: &TILStruct) -> TranslateTypeResult {
+    fn translate_struct(&self, ty_struct: &TILUDT) -> TranslateTypeResult {
         if ty_struct.members.is_empty() {
             // binary ninja crashes if you create an empty struct, because it divide by 0
             return TranslateTypeResult::Translated(Type::void());
@@ -376,7 +376,7 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
         if let Some(align) = ty_struct.alignment {
             structure.alignment(align.get().into());
         }
-        structure.packed(ty_struct.is_unaligned && ty_struct.is_uknown_8);
+        structure.packed(ty_struct.is_unaligned && ty_struct.is_unknown_8);
 
         let mut errors = vec![];
         let mut first_bitfield_seq = None;
@@ -440,16 +440,16 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
         }
     }
 
-    fn translate_union(&self, ty_union: &TILUnion) -> TranslateTypeResult {
+    fn translate_union(&self, ty_union: &TILUDT) -> TranslateTypeResult {
         let mut is_partial = false;
         let mut structure = StructureBuilder::new();
         structure.structure_type(StructureType::UnionStructureType);
         let mut errors = vec![];
         for (i, member) in ty_union.members.iter().enumerate() {
             // bitfields can be translated into complete fields
-            let mem = match &member.ty.type_variant {
+            let mem = match &member.member_type.type_variant {
                 TILTypeVariant::Bitfield(field) => field_from_bytes(field.nbytes.get().into()),
-                _ => match self.translate_type(&member.ty) {
+                _ => match self.translate_type(&member.member_type) {
                     TranslateTypeResult::Translated(ty) => ty,
                     TranslateTypeResult::Error(error) => {
                         errors.push((i, error));
@@ -580,21 +580,28 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
             TILTypeVariant::Enum(ty_enum) => {
                 TranslateTypeResult::Translated(self.translate_enum(ty_enum))
             }
-            TILTypeVariant::Typeref(typeref) => match &typeref.typeref_value {
-                idb_rs::til::TyperefValue::Ref(idx) => self.find_typedef(&self.types[*idx]),
-                idb_rs::til::TyperefValue::UnsolvedName(name) => self
-                    .find_typedef_by_name(name.as_ref().map(|x| x.as_bytes()).unwrap_or(&[]))
-                    .unwrap_or_else(|| {
-                        TranslateTypeResult::Error(BnTypeError::NameNotFound(
+            TILTypeVariant::Typeref(typeref) => {
+                match self.til.get_ref_value_idx(&typeref.typeref_value) {
+                    Some(idx) => self.find_typedef(&self.types[idx]),
+                    None => match &typeref.typeref_value {
+                        idb_rs::til::TyperefValue::Name(name) => {
+                            // search the default non-defined names
                             name.as_ref()
-                                .map(|x| x.as_utf8_lossy().to_string())
-                                .unwrap_or(String::new()),
-                        ))
-                    }),
-                idb_rs::til::TyperefValue::UnsolvedOrd(ord) => {
-                    TranslateTypeResult::Error(BnTypeError::OrdinalNotFound(*ord))
+                                .and_then(|name| self.find_typedef_by_name(name.as_bytes()))
+                                .unwrap_or_else(|| {
+                                    TranslateTypeResult::Error(BnTypeError::NameNotFound(
+                                        name.as_ref()
+                                            .map(|x| x.as_utf8_lossy().to_string())
+                                            .unwrap_or(String::new()),
+                                    ))
+                                })
+                        }
+                        idb_rs::til::TyperefValue::Ordinal(ord) => {
+                            TranslateTypeResult::Error(BnTypeError::OrdinalNotFound(*ord))
+                        }
+                    },
                 }
-            },
+            }
 
             TILTypeVariant::Pointer(ty) => self.translate_pointer(ty),
             TILTypeVariant::Function(fun) => self.translate_function(fun),
@@ -607,10 +614,15 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
     }
 }
 
-pub fn translate_ephemeral_type(debug_file: &BinaryView, ty: &TILType) -> TranslateTypeResult {
+pub fn translate_ephemeral_type<K: IDAKind>(
+    debug_file: &BinaryView,
+    root_info: &RootInfo<K>,
+    ty: &TILType,
+) -> TranslateTypeResult {
     // in case we need to translate types
-    let header = idb_rs::til::ephemeral_til_header();
+    let header = root_info.til_header();
     let translator = TranslateIDBTypes {
+        // TODO find the correct processor using the segment registers
         arch: debug_file.default_arch().unwrap(/* TODO */),
         progress: |_, _| Ok(()),
         // TODO it's unclear what to do here
@@ -630,7 +642,7 @@ pub fn translate_til_types(
     arch: CoreArchitecture,
     til: &TILSection,
     progress: impl Fn(usize, usize) -> Result<(), ()>,
-) -> Result<Vec<TranslatesIDBType>> {
+) -> Result<Vec<TranslatesIDBType<'_>>> {
     let total = til.symbols.len() + til.types.len();
     let mut types = Vec::with_capacity(total);
     let mut types_by_ord = HashMap::with_capacity(total);

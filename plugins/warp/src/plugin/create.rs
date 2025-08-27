@@ -209,16 +209,25 @@ impl CreateFromCurrentView {
                 let _ = std::fs::write(report_path, &report_string);
             }
 
-            match report_kind {
-                ReportKindField::None => {}
-                ReportKindField::Html => {
-                    view.show_html_report("Generated WARP File", report_string.as_str(), "");
-                }
-                ReportKindField::Markdown => {
-                    view.show_markdown_report("Generated WARP File", report_string.as_str(), "");
-                }
-                ReportKindField::Json => {
-                    view.show_plaintext_report("Generated WARP File", report_string.as_str());
+            // The ReportWidget uses a QTextBrowser, which cannot render large files very well.
+            if file_size > 10000000 {
+                log::warn!("WARP report file is too large to show in the UI. Please see the report file on disk.");
+            } else {
+                match report_kind {
+                    ReportKindField::None => {}
+                    ReportKindField::Html => {
+                        view.show_html_report("Generated WARP File", report_string.as_str(), "");
+                    }
+                    ReportKindField::Markdown => {
+                        view.show_markdown_report(
+                            "Generated WARP File",
+                            report_string.as_str(),
+                            "",
+                        );
+                    }
+                    ReportKindField::Json => {
+                        view.show_plaintext_report("Generated WARP File", report_string.as_str());
+                    }
                 }
             }
         }

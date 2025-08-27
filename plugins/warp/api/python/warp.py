@@ -8,6 +8,7 @@ from binaryninja import BinaryView, Function, BasicBlock, Architecture, Platform
 from binaryninja._binaryninjacore import BNFreeString, BNAllocString, BNType
 
 from . import _warpcore as warpcore
+from .warp_enums import WARPContainerSearchItemKind
 
 
 class WarpUUID:
@@ -195,6 +196,108 @@ class WarpFunction:
         warpcore.BNWARPFunctionApply(self.handle, function.handle)
 
 
+class WarpContainerSearchQuery:
+    def __init__(self, query: str, offset: Optional[int] = None, limit: Optional[int] = None, source: Optional[Source] = None, source_tags: Optional[List[str]] = None):
+        self.query = query
+        self.source = source
+        self.offset = offset
+        self.limit = limit
+        offset_ptr = None
+        if offset is not None:
+            self._c_offset = ctypes.c_size_t(offset)
+            offset_ptr = ctypes.byref(self._c_offset)
+        limit_ptr = None
+        if limit is not None:
+            self._c_limit = ctypes.c_size_t(limit)
+            limit_ptr = ctypes.byref(self._c_limit)
+        source_ptr = None
+        if source is not None:
+            self._c_source = source.uuid
+            source_ptr = ctypes.byref(self._c_source)
+        source_tags_len = 0
+        source_tags_array_ptr = None
+        if source_tags is not None:
+            source_tags_ptr = (ctypes.c_char_p * len(source_tags))()
+            source_tags_len = len(source_tags)
+            for i in range(len(source_tags)):
+                source_tags_ptr[i] = source_tags[i].encode('utf-8')
+            source_tags_array_ptr = ctypes.cast(source_tags_ptr, ctypes.POINTER(ctypes.c_char_p))
+        self.handle = warpcore.BNWARPNewContainerSearchQuery(query, offset_ptr, limit_ptr, source_ptr, source_tags_array_ptr, source_tags_len)
+
+    def __del__(self):
+        if self.handle is not None:
+            warpcore.BNWARPFreeContainerSearchQueryReference(self.handle)
+
+    def __repr__(self):
+        # TODO: Display offset and limit in a pythonic way.
+        if self.source is None:
+            return f"<WarpContainerSearchQuery '{self.query}'>"
+        return f"<WarpContainerSearchQuery '{self.query}': '{self.source}'>"
+
+
+class WarpContainerSearchItem:
+    def __init__(self, handle: warpcore.BNWARPContainerSearchItem):
+        self.handle = handle
+
+    def __del__(self):
+        if self.handle is not None:
+            warpcore.BNWARPFreeContainerSearchItemReference(self.handle)
+
+    @property
+    def kind(self) -> WARPContainerSearchItemKind:
+        return WARPContainerSearchItemKind(warpcore.BNWARPContainerSearchItemGetKind(self.handle))
+
+    @property
+    def source(self) -> Source:
+        return Source(warpcore.BNWARPContainerSearchItemGetSource(self.handle))
+
+    @property
+    def name(self) -> str:
+        return warpcore.BNWARPContainerSearchItemGetName(self.handle)
+
+    def get_type(self, arch: Architecture) -> Optional[Type]:
+        ty = warpcore.BNWARPContainerSearchItemGetType(arch.handle, self.handle)
+        if not ty:
+            return None
+        return Type(ty)
+
+    @property
+    def function(self) -> Optional[WarpFunction]:
+        func = warpcore.BNWARPContainerSearchItemGetFunction(self.handle)
+        if not func:
+            return None
+        return WarpFunction(func)
+
+    def __repr__(self):
+        return f"<WarpContainerSearchItem '{self.name}': '{self.source}'>"
+
+
+class WarpContainerResponse:
+    def __init__(self, items: List[WarpContainerSearchItem], offset: int, total: int):
+        self.items = items
+        self.offset = offset
+        self.total = total
+
+    def __iter__(self):
+        return iter(self.items)
+
+    def __len__(self):
+        return len(self.items)
+
+    def __repr__(self):
+        return f"<WarpContainerResponse items={len(self.items)} offset={self.offset} total={self.total}>"
+
+    @staticmethod
+    def from_api(response: warpcore.BNWARPContainerSearchResponse) -> 'WarpContainerResponse':
+        try:
+            items = []
+            for i in range(response.count):
+                items.append(WarpContainerSearchItem(warpcore.BNWARPNewContainerSearchItemReference(response.items[i])))
+            return WarpContainerResponse(items=items, offset=response.offset, total=response.total)
+        finally:
+            warpcore.BNWARPFreeContainerSearchResponse(response)
+
+
 class _WarpContainerMetaclass(type):
     def __iter__(self):
         binaryninja._init_plugins()
@@ -305,12 +408,19 @@ class WarpContainer(metaclass=_WarpContainerMetaclass):
             core_guids[i] = guids[i].uuid
         return warpcore.BNWARPContainerRemoveTypes(self.handle, source.uuid, core_guids, count)
 
-    def fetch_functions(self, target: WarpTarget, guids: List[FunctionGUID]):
+    def fetch_functions(self, target: WarpTarget, guids: List[FunctionGUID], source_tags: Optional[List[str]] = None):
         count = len(guids)
         core_guids = (warpcore.BNWARPFunctionGUID * count)()
         for i in range(count):
             core_guids[i] = guids[i].uuid
-        warpcore.BNWARPContainerFetchFunctions(self.handle, target.handle, core_guids, count)
+        if source_tags is None:
+            source_tags = []
+        source_tags_ptr = (ctypes.c_char_p * len(source_tags))()
+        source_tags_len = len(source_tags)
+        for i in range(len(source_tags)):
+            source_tags_ptr[i] = source_tags[i].encode('utf-8')
+        source_tags_array_ptr = ctypes.cast(source_tags_ptr, ctypes.POINTER(ctypes.c_char_p))
+        warpcore.BNWARPContainerFetchFunctions(self.handle, target.handle, source_tags_array_ptr, source_tags_len, core_guids, count)
 
     def get_sources_with_function_guid(self, target: WarpTarget, guid: FunctionGUID) -> List[Source]:
         count = ctypes.c_size_t()
@@ -346,7 +456,7 @@ class WarpContainer(metaclass=_WarpContainerMetaclass):
         return result
 
     def get_type_with_guid(self, arch: Architecture, source: Source, guid: TypeGUID) -> Optional[Type]:
-        ty = warpcore.BNWARPContainerGetTypeWithGUID(self.handle, arch.handle, source.uuid, guid.uuid)
+        ty = warpcore.BNWARPContainerGetTypeWithGUID(arch.handle, self.handle, source.uuid, guid.uuid)
         if not ty:
             return None
         return Type(ty)
@@ -361,6 +471,12 @@ class WarpContainer(metaclass=_WarpContainerMetaclass):
             result.append(TypeGUID(guids[i]))
         warpcore.BNWARPFreeUUIDList(guids, count.value)
         return result
+
+    def search(self, query: WarpContainerSearchQuery) -> Optional[WarpContainerResponse]:
+        response = warpcore.BNWARPContainerSearch(self.handle, query.handle)
+        if not response:
+            return None
+        return WarpContainerResponse.from_api(response.contents)
 
 
 def run_matcher(view: BinaryView):

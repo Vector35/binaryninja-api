@@ -1,4 +1,5 @@
 mod container;
+mod file;
 mod function;
 
 use binaryninjacore_sys::{
@@ -85,6 +86,17 @@ pub unsafe extern "C" fn BNWARPUUIDGetString(uuid: *const Uuid) -> *mut c_char {
     let uuid_str = (*uuid).to_string();
     // NOTE: Leak the uuid string to be freed by BNFreeString
     BnString::into_raw(uuid_str.into())
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn BNWARPUUIDFromString(uuid_str: *mut c_char, uuid: *mut Uuid) -> bool {
+    if let Ok(uuid_str) = std::ffi::CStr::from_ptr(uuid_str).to_str() {
+        if let Some(parsed_uuid) = Uuid::parse_str(uuid_str).ok() {
+            *uuid = parsed_uuid;
+            return true;
+        }
+    }
+    false
 }
 
 #[no_mangle]

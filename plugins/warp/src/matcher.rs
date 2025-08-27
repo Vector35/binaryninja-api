@@ -100,21 +100,21 @@ impl Matcher {
 
     // TODO: I would really like for WARP types to be added in a seperate type container, so that we don't
     // TODO: just add them as system or user types.
-    pub fn add_type_to_view<A: BNArchitecture>(
+    pub fn add_type_to_view<A: BNArchitecture + Copy>(
         &self,
         container: &dyn Container,
         source: &SourceId,
         view: &BinaryView,
-        arch: &A,
+        arch: A,
         ty: &Type,
     ) where
         Self: Sized,
     {
-        fn inner_add_type_to_view<A: BNArchitecture>(
+        fn inner_add_type_to_view<A: BNArchitecture + Copy>(
             container: &dyn Container,
             source: &SourceId,
             view: &BinaryView,
-            arch: &A,
+            arch: A,
             visited_refs: &mut HashSet<String>,
             ty: &Type,
         ) {
@@ -251,7 +251,7 @@ impl Matcher {
                             view.define_auto_type_with_id(
                                 name,
                                 &guid.to_string(),
-                                &to_bn_type(arch, &ref_ty),
+                                &to_bn_type(Some(arch), &ref_ty),
                             );
                         }
                         (Some(_guid), Some(_name), None) => {

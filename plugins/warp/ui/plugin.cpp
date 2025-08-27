@@ -6,6 +6,7 @@
 #include "matches.h"
 #include "symbollist.h"
 #include "viewframe.h"
+#include "shared/fetchdialog.h"
 
 using namespace BinaryNinja;
 
@@ -34,7 +35,7 @@ Ref<BackgroundTask> GetMatcherTask()
 
 WarpSidebarWidget::WarpSidebarWidget(BinaryViewRef data) : SidebarWidget("WARP"), m_data(data)
 {
-	m_logger = LogRegistry::CreateLogger("WARPUI");
+	m_logger = LogRegistry::CreateLogger("WARP UI");
 	m_currentFrame = nullptr;
 
 	m_headerWidget = new QWidget();
@@ -89,7 +90,7 @@ WarpSidebarWidget::WarpSidebarWidget(BinaryViewRef data) : SidebarWidget("WARP")
 	m_headerWidget->setLayout(headerLayout);
 
 	QFrame *currentFunctionFrame = new QFrame(this);
-	m_currentFunctionWidget = new WarpCurrentFunctionWidget(nullptr);
+	m_currentFunctionWidget = new WarpCurrentFunctionWidget();
 	QVBoxLayout *currentFunctionLayout = new QVBoxLayout();
 	currentFunctionLayout->setContentsMargins(0, 0, 0, 0);
 	currentFunctionLayout->setSpacing(0);
@@ -104,6 +105,14 @@ WarpSidebarWidget::WarpSidebarWidget(BinaryViewRef data) : SidebarWidget("WARP")
 	matchedLayout->addWidget(m_matchedWidget);
 	matchedFrame->setLayout(matchedLayout);
 
+	QFrame *containerFrame = new QFrame(this);
+	m_containerWidget = new WarpContainersPane();
+	QVBoxLayout *containerLayout = new QVBoxLayout();
+	containerLayout->setContentsMargins(0, 0, 0, 0);
+	containerLayout->setSpacing(0);
+	containerLayout->addWidget(m_containerWidget);
+	containerFrame->setLayout(containerLayout);
+
 	QVBoxLayout *layout = new QVBoxLayout(this);
 	layout->setContentsMargins(0, 0, 0, 0);
 	layout->setSpacing(0);
@@ -111,6 +120,7 @@ WarpSidebarWidget::WarpSidebarWidget(BinaryViewRef data) : SidebarWidget("WARP")
 	auto tabWidget = new QTabWidget(this);
 	tabWidget->addTab(currentFunctionFrame, "Current Function");
 	tabWidget->addTab(matchedFrame, "Matched Functions");
+	tabWidget->addTab(containerFrame, "Containers");
 
 	m_analysisEvent = new AnalysisCompletionEvent(m_data, [this]() {
 		ExecuteOnMainThread([this]() {
@@ -120,6 +130,12 @@ WarpSidebarWidget::WarpSidebarWidget(BinaryViewRef data) : SidebarWidget("WARP")
 
 	layout->addWidget(tabWidget);
 	this->setLayout(layout);
+
+	// Here we construct the fetcher and then apply it to relevant widgets.
+	std::shared_ptr<WarpFetcher> fetcher = std::make_shared<WarpFetcher>();
+	m_currentFunctionWidget->SetFetcher(fetcher);
+	// TODO: This should not live here, this widget is constructed for every view, this is global!
+	RegisterWarpFetchFunctionsCommand(fetcher);
 }
 
 WarpSidebarWidget::~WarpSidebarWidget()
@@ -133,7 +149,9 @@ void WarpSidebarWidget::focus()
 
 void WarpSidebarWidget::Update()
 {
+	m_currentFunctionWidget->UpdateMatches();
 	m_matchedWidget->Update();
+	// TODO: Obviously this probably should not be called here.
 	setMatcherActionIcon(false);
 }
 

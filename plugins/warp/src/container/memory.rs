@@ -1,5 +1,7 @@
-use crate::container::{Container, ContainerError, ContainerResult, SourceId, SourcePath};
-use std::collections::HashMap;
+use crate::container::{
+    Container, ContainerError, ContainerResult, SourceId, SourcePath, SourceTag,
+};
+use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
 use warp::r#type::guid::TypeGUID;
 use warp::r#type::{ComputedType, Type};
@@ -71,6 +73,15 @@ impl Container for MemoryContainer {
             .ok_or(ContainerError::SourceNotFound(*source))?;
         // NOTE: Memory containers do not have a notion of uncommitted data.
         Ok(false)
+    }
+
+    fn source_tags(&self, source: &SourceId) -> ContainerResult<HashSet<SourceTag>> {
+        let _memory_source = self
+            .sources
+            .get(source)
+            .ok_or(ContainerError::SourceNotFound(*source))?;
+        // NOTE: Memory containers do not have a notion of tags.
+        Ok(HashSet::default())
     }
 
     fn source_path(&self, source: &SourceId) -> ContainerResult<SourcePath> {

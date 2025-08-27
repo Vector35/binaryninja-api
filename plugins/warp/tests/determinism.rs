@@ -32,8 +32,8 @@ fn insta_signatures() {
             .functions()
             .iter()
             .map(|f| {
-                let guid = cached_function_guid(&f, &f.lifted_il().unwrap());
-                (f.start(), guid)
+                let guid = cached_function_guid(&f, || f.lifted_il().ok());
+                (f.start(), guid.unwrap())
             })
             .collect();
         insta::assert_debug_snapshot!(file_name, functions);

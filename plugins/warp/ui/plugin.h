@@ -4,6 +4,7 @@
 #include "matches.h"
 #include "sidebar.h"
 #include "sidebarwidget.h"
+#include "containers.h"
 
 class WarpSidebarWidget : public SidebarWidget
 {
@@ -19,6 +20,7 @@ class WarpSidebarWidget : public SidebarWidget
 
     WarpCurrentFunctionWidget *m_currentFunctionWidget;
     WarpMatchedWidget *m_matchedWidget;
+    WarpContainersPane *m_containerWidget;
 
 public:
     explicit WarpSidebarWidget(BinaryViewRef data);

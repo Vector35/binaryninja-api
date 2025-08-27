@@ -5,9 +5,11 @@
 #include <QStyledItemDelegate>
 #include <QTableView>
 #include <QVector>
+#include <utility>
 
 #include "binaryninjaapi.h"
 #include "filter.h"
+#include "warp.h"
 
 // Used to serialize into the item data for rendering with TokenDataDelegate.
 struct TokenData
@@ -15,6 +17,10 @@ struct TokenData
     QVector<BinaryNinja::InstructionTextToken> tokens{};
 
     TokenData() = default;
+
+    TokenData(const std::string& name);
+
+    TokenData(const BinaryNinja::Type &type, const std::string& name);
 
     TokenData(const std::vector<BinaryNinja::InstructionTextToken> &tokens)
     {
@@ -72,7 +78,7 @@ class GenericTextFilterModel : public QSortFilterProxyModel
     Q_OBJECT
 
 public:
-    GenericTextFilterModel(QObject *parent): QSortFilterProxyModel(parent)
+    GenericTextFilterModel(QObject *parent) : QSortFilterProxyModel(parent)
     {
     }
 
@@ -81,4 +87,28 @@ public:
     bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override;
 
     bool lessThan(const QModelIndex &sourceLeft, const QModelIndex &sourceRight) const override;
+};
+
+// Used to parse qualifiers out of a user-supplied string (or "query")
+struct ParsedQuery
+{
+    // The actual query, without the qualifiers like source:<uuid>
+    QString query;
+    // The qualifiers used to build other optional parts of the query.
+    QHash<QString, QString> qualifiers;
+
+    ParsedQuery(QString query, const QHash<QString, QString> &qualifiers)
+        : query(std::move(query)), qualifiers(qualifiers)
+    {
+    }
+
+    explicit ParsedQuery(const QString &rawQuery);
+
+    [[nodiscard]] std::optional<QString> GetValue(const QString &key) const
+    {
+        const auto it = qualifiers.constFind(key);
+        if (it == qualifiers.constEnd() || it->isEmpty())
+            return std::nullopt;
+        return it.value();
+    }
 };

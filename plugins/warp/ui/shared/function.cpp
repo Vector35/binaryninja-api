@@ -14,35 +14,15 @@ WarpFunctionItem::WarpFunctionItem(Warp::Ref<Warp::Function> function,
 {
     m_function = function;
 
-    // TODO: This needs to be better. Symbol can be nullptr.
     BinaryNinja::Ref<BinaryNinja::Symbol> symbol = m_function->GetSymbol(*analysisFunction);
     std::string symbolName = symbol->GetShortName();
     setText(QString::fromStdString(symbolName));
-    BinaryNinja::InstructionTextToken nameToken = {255, TextToken, symbolName};
 
     // Serialize the tokens to make it accessible via QModelIndex.
     // We will take these tokens and then user them in our custom item delegate.
-    TokenData tokenData = {};
-
-    // TODO: Make this not look like garbage
-    BinaryNinja::Ref<BinaryNinja::Type> type = m_function->GetType(*analysisFunction);
-    if (type)
-    {
-        BinaryNinja::Ref<BinaryNinja::Platform> platform = analysisFunction->GetPlatform();
-        std::vector<BinaryNinja::InstructionTextToken> beforeTokens = type->GetTokensBeforeName(platform);
-        std::vector<BinaryNinja::InstructionTextToken> afterTokens = type->GetTokensAfterName(platform);
-
-        for (const auto &token: beforeTokens)
-            tokenData.tokens.emplace_back(token);
-        tokenData.tokens.emplace_back(255, TextToken, " ");
-        tokenData.tokens.emplace_back(nameToken);
-        for (const auto &token: afterTokens)
-            tokenData.tokens.emplace_back(token);
-    } else
-    {
-        tokenData.tokens.emplace_back(nameToken);
-    }
-
+    TokenData tokenData = TokenData(symbolName);
+    if (BinaryNinja::Ref<BinaryNinja::Type> type = m_function->GetType(*analysisFunction))
+        tokenData = TokenData(*type, symbolName);
     setData(QVariant::fromValue(tokenData), Qt::UserRole);
 }
 

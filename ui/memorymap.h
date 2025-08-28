@@ -17,6 +17,7 @@
 #include "uitypes.h"
 #include "fontsettings.h"
 #include "viewframe.h"
+#include "tableviewbase.h"
 
 /*!
 
@@ -172,14 +173,13 @@ class BINARYNINJAUIAPI SegmentWidget : public QWidget
 	Q_OBJECT
 
 	BinaryViewRef m_data;
-	QTableView* m_table;
+	TableViewBase* m_table;
 	SegmentModel* m_model;
 	QSortFilterProxyModel* m_proxyModel;
 	std::mutex m_updateMutex;
 
 	//void updateInfo();
 	void showContextMenu(const QPoint& point);
-	QMenu* createHeaderContextMenu(const QPoint& p);
 	void restoreDefaults();
 
 	void addMemoryRegion(SegmentRef segment);
@@ -251,7 +251,7 @@ class BINARYNINJAUIAPI SectionWidget : public QWidget
 	Q_OBJECT
 
 	BinaryViewRef m_data;
-	QTableView* m_table;
+	TableViewBase* m_table;
 	SectionModel* m_model;
 	QSortFilterProxyModel* m_proxyModel;
 	std::mutex m_updateMutex;

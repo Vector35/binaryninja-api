@@ -144,6 +144,18 @@ void DisassemblySettings::SetCallParameterHints(BNDisassemblyCallParameterHints 
 }
 
 
+BNDisassemblyBlockLabels DisassemblySettings::GetBlockLabels() const
+{
+	return BNGetDisassemblyBlockLabels(m_object);
+}
+
+
+void DisassemblySettings::SetBlockLabels(BNDisassemblyBlockLabels labels)
+{
+	BNSetDisassemblyBlockLabels(m_object, labels);
+}
+
+
 BNDisassemblyTextLineTypeInfo DisassemblyTextLineTypeInfo::GetAPIObject() const
 {
 	BNDisassemblyTextLineTypeInfo result;

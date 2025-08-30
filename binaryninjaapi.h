@@ -11548,6 +11548,8 @@ namespace BinaryNinja {
 		void SetAddressBaseOffset(uint64_t addressBaseOffset);
 		BNDisassemblyCallParameterHints GetCallParameterHints() const;
 		void SetCallParameterHints(BNDisassemblyCallParameterHints hints);
+		BNDisassemblyBlockLabels GetBlockLabels() const;
+		void SetBlockLabels(BNDisassemblyBlockLabels labels);
 	};
 
 	/*!

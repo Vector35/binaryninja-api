@@ -774,6 +774,13 @@ extern "C"
 		NeverShowParameterHints,
 	} BNDisassemblyCallParameterHints;
 
+	typedef enum BNDisassemblyBlockLabels
+	{
+		NeverShowDefaultBlockLabels,
+		AlwaysShowBlockLabels,
+		NeverShowBlockLabels,
+	} BNDisassemblyBlockLabels;
+
 	typedef enum BNTypeClass
 	{
 		VoidTypeClass = 0,
@@ -5833,6 +5840,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetDisassemblyAddressBaseOffset(BNDisassemblySettings* settings, uint64_t addressBaseOffset);
 	BINARYNINJACOREAPI BNDisassemblyCallParameterHints BNGetDisassemblyCallParameterHints(BNDisassemblySettings* settings);
 	BINARYNINJACOREAPI void BNSetDisassemblyCallParameterHints(BNDisassemblySettings* settings, BNDisassemblyCallParameterHints hints);
+	BINARYNINJACOREAPI BNDisassemblyBlockLabels BNGetDisassemblyBlockLabels(BNDisassemblySettings* settings);
+	BINARYNINJACOREAPI void BNSetDisassemblyBlockLabels(BNDisassemblySettings* settings, BNDisassemblyBlockLabels labels);
 
 	// Flow graphs
 	BINARYNINJACOREAPI BNFlowGraph* BNCreateFlowGraph(void);

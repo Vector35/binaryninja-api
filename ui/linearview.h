@@ -511,6 +511,7 @@ public:
 	void toggleOption(BNDisassemblyOption option);
 	void setAddressMode(std::optional<BNDisassemblyAddressMode> mode, std::optional<bool> hex, std::optional<bool> withName);
 	void setCallParamHints(BNDisassemblyCallParameterHints hints);
+	void setBlockLabels(BNDisassemblyBlockLabels labels);
 	void setDisplayedFileName();
 	void setAddressBaseOffset(bool toHere);
 

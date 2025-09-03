@@ -3242,6 +3242,7 @@ class Function:
 		"""
 		``callees`` returns a list of functions that this function calls
 		This does not include the address of those calls, rather just the function objects themselves. Use :py:meth:`call_sites` to identify the location of these calls.
+		This does not include calls to imported functions, as they do not have a function object, use :py:meth:`callee_addresses` for that.
 
 		:return: List of Functions that this function calls
 		:rtype: list(Function)
@@ -3259,7 +3260,7 @@ class Function:
 	@property
 	def callee_addresses(self) -> List[int]:
 		"""
-		``callee_addressses`` returns a list of start addresses for functions that this function calls.
+		``callee_addresses`` returns a list of start addresses for functions that this function calls.
 		Does not point to the actual address where the call occurs, just the start of the function that contains the reference.
 
 		:return: List of start address for functions that this function calls
@@ -3280,7 +3281,7 @@ class Function:
 		:rtype: list(Function)
 		"""
 		functions = []
-		for ref in self.view.get_code_refs(self.start):
+		for ref in self.caller_sites:
 			if ref.function is not None:
 				functions.append(ref.function)
 		return functions
@@ -3289,15 +3290,12 @@ class Function:
 	def caller_sites(self) -> Generator['binaryview.ReferenceSource', None, None]:
 		"""
 		``caller_sites`` returns a list of ReferenceSource objects corresponding to the addresses
-		in functions which reference this function
+		in functions which call this function
 
 		:return: List of ReferenceSource objects of the call sites to this function
 		:rtype: list(ReferenceSource)
 		"""
-		for site in self.view.get_code_refs(self.start):
-			for llil in site.llils:
-				if isinstance(llil, Localcall) and llil.dest.value == self.start:
-					yield site
+		return self.view.get_callers(self.start)
 
 	@property
 	def workflow(self):

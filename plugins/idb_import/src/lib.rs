@@ -2,9 +2,11 @@ mod types;
 use std::borrow::Cow;
 use std::io::{BufRead, Cursor, Seek};
 
+use binaryninja::architecture::CoreArchitecture;
+use idb_rs::id0::segment_register::SrareasIdx;
 use idb_rs::id1::ID1Section;
 use idb_rs::id2::ID2Section;
-use idb_rs::{IDAKind, IDAUsize, IDAVariants, IDBFormat, IDBString};
+use idb_rs::{Address, IDAKind, IDAUsize, IDAVariants, IDBFormat, IDBString};
 use types::*;
 mod addr_info;
 use addr_info::*;
@@ -14,13 +16,13 @@ use binaryninja::debuginfo::{
     CustomDebugInfoParser, DebugFunctionInfo, DebugInfo, DebugInfoParser,
 };
 
-use idb_rs::id0::ID0Section;
+use idb_rs::id0::{ID0Section, RootInfo, SegmentIdx};
 use idb_rs::til::section::TILSection;
 use idb_rs::til::TypeVariant as TILTypeVariant;
 
 use log::{error, trace, warn, LevelFilter};
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, ensure, Result};
 use binaryninja::logger::Logger;
 
 struct IDBDebugInfoParser;
@@ -278,7 +280,7 @@ pub fn import_til_section(
 fn parse_id0_section_info<K: IDAKind>(
     debug_info: &mut DebugInfo,
     bv: &BinaryView,
-    debug_file: &BinaryView,
+    _debug_file: &BinaryView,
     id0: &ID0Section<K>,
     id1: &ID1Section<K>,
     id2: Option<&ID2Section<K>>,
@@ -310,25 +312,34 @@ fn parse_id0_section_info<K: IDAKind>(
             function.set_comment_at(addr, &comments.join("\n"));
         }
 
-        let bnty =
-            ty.as_ref().and_then(
-                |ty| match translate_ephemeral_type(debug_file, &ida_info, ty) {
-                    TranslateTypeResult::Translated(result) => Some(result),
-                    TranslateTypeResult::PartiallyTranslated(result, None) => {
-                        warn!("Unable to fully translate the type at {addr:#x}");
-                        Some(result)
-                    }
-                    TranslateTypeResult::NotYet => {
-                        error!("Unable to translate the type at {addr:#x}");
-                        None
-                    }
-                    TranslateTypeResult::PartiallyTranslated(_, Some(bn_type_error))
-                    | TranslateTypeResult::Error(bn_type_error) => {
-                        error!("Unable to translate the type at {addr:#x}: {bn_type_error}",);
-                        None
-                    }
-                },
-            );
+        let srarea_idx = id0.srareas_idx()?;
+        let segment_idx = id0.segments_idx()?;
+        let bnty = ty.as_ref().and_then(|ty| {
+            match translate_ephemeral_type(
+                bv,
+                id0,
+                srarea_idx,
+                segment_idx,
+                &ida_info,
+                idb_addr,
+                ty,
+            ) {
+                TranslateTypeResult::Translated(result) => Some(result),
+                TranslateTypeResult::PartiallyTranslated(result, None) => {
+                    warn!("Unable to fully translate the type at {addr:#x}");
+                    Some(result)
+                }
+                TranslateTypeResult::NotYet => {
+                    error!("Unable to translate the type at {addr:#x}");
+                    None
+                }
+                TranslateTypeResult::PartiallyTranslated(_, Some(bn_type_error))
+                | TranslateTypeResult::Error(bn_type_error) => {
+                    error!("Unable to translate the type at {addr:#x}: {bn_type_error}",);
+                    None
+                }
+            }
+        });
 
         let label: Option<Cow<'_, str>> = label.as_ref().map(IDBString::as_utf8_lossy);
         match (label, &ty, bnty) {
@@ -390,6 +401,319 @@ fn parse_id0_section_info<K: IDAKind>(
     }
 
     Ok(())
+}
+
+fn read_true_false_segreg<K: IDAKind>(
+    id0: &ID0Section<K>,
+    addr: Address<K>,
+    srarea_idx: Option<SrareasIdx<K>>,
+    segment_idx: Option<SegmentIdx<K>>,
+    segreg_idx: usize,
+) -> Result<bool> {
+    // default into false for the thumb value?
+    let segreg_raw = srarea_idx
+        .zip(segment_idx)
+        .map(|(srarea_idx, segment_idx)| {
+            id0.segment_register_value(addr, srarea_idx, segment_idx, segreg_idx)
+        })
+        .transpose()?
+        .flatten();
+    match segreg_raw.map(<K::Usize as IDAUsize>::into_u64) {
+        None | Some(0) => Ok(false),
+        Some(1) => Ok(true),
+        Some(2..) => Err(anyhow!("Invalid segment register value")),
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CpuSize {
+    B16,
+    B32,
+    B64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CpuEndian {
+    Be,
+    Le,
+}
+
+fn architecture_from_ida<K: IDAKind>(
+    id0: &ID0Section<K>,
+    srarea_idx: Option<SrareasIdx<K>>,
+    segment_idx: Option<SegmentIdx<K>>,
+    root_info: &RootInfo<K>,
+    addr: Address<K>,
+) -> Result<Option<CoreArchitecture>> {
+    let Some(proc) = id0.processor(root_info) else {
+        return Ok(None);
+    };
+    use idb_rs::processors::*;
+    let lflags_32 = root_info.lflags.is_program_32b_or_bigger();
+    let lflags_64 = root_info.lflags.is_program_64b();
+    use CpuSize::*;
+    let bits = match (lflags_32, lflags_64) {
+        (true, true) => B64,
+        (true, false) => B32,
+        (false, false) => B16,
+        (false, true) => {
+            return Err(anyhow!(
+                "Unknown architecture size without lflags 32b and with 64b flag"
+            ))
+        }
+    };
+    use CpuEndian::*;
+    let endian = if root_info.lflags.is_big_endian() {
+        Be
+    } else {
+        Le
+    };
+    match proc {
+        Processor::Msp430(Msp430::Msp430) => {
+            ensure!(bits == B16, "MSP430 with non-16bits size is unknown");
+            ensure!(endian == Le, "MSP430 BigEndian is unknown");
+            Ok(CoreArchitecture::by_name("msp430"))
+        }
+        Processor::Arm(arm) => {
+            use idb_rs::processors::Arm::*;
+            if bits == B64 {
+                // TODO aarch64
+                return Ok(None);
+            }
+            let is_thumb = read_true_false_segreg(
+                id0,
+                addr,
+                srarea_idx,
+                segment_idx,
+                usize::from(ArmReg::T) - ArmReg::SEGMENT_REGISTERS_START,
+            )?;
+            match (arm, endian, bits, is_thumb) {
+                // see above
+                (_, _, B64, _) => unreachable!(),
+                (_, _, B16, _) => Err(anyhow!("ARM 16bits is unknown")),
+                (Arm | ProcAltXScaleL, Be, _, _) | (Armb | ProcAltXScaleB, Le, _, _) => {
+                    Err(anyhow!("ARM with conflicting endian: {arm:?} {endian:?}"))
+                }
+
+                (Arm, Le, B32, false) => Ok(CoreArchitecture::by_name("armv7")),
+                (Armb, Be, B32, false) => Ok(CoreArchitecture::by_name("armv7eb")),
+                (Arm, Le, B32, true) => Ok(CoreArchitecture::by_name("thumb2")),
+                (Armb, Be, B32, true) => Ok(CoreArchitecture::by_name("thumb2eb")),
+
+                // TODO default into armv7/thumb2?
+                (ProcAltArm710A | ProcAltXScaleL, Le, B32, true) => {
+                    Ok(CoreArchitecture::by_name("thumb2"))
+                }
+                (ProcAltArm710A | ProcAltXScaleB, Be, B32, true) => {
+                    Ok(CoreArchitecture::by_name("thumb2eb"))
+                }
+                (ProcAltArm710A | ProcAltXScaleL, Le, B32, false) => {
+                    Ok(CoreArchitecture::by_name("armv7"))
+                }
+                (ProcAltArm710A | ProcAltXScaleB, Be, B32, false) => {
+                    Ok(CoreArchitecture::by_name("armv7eb"))
+                }
+            }
+        }
+        Processor::Mips(mips) => {
+            use idb_rs::processors::Mips::*;
+            // TODO
+            // the mips16 pseudoregister is used to switch between standard MIPS and MIPS16 or microMIPS
+            let is_mips16 = read_true_false_segreg(
+                id0,
+                addr,
+                srarea_idx,
+                segment_idx,
+                usize::from(MipsReg::Mips16) - MipsReg::SEGMENT_REGISTERS_START,
+            )?;
+
+            match (mips, endian, bits, is_mips16) {
+                (_, _, B16, _) => Err(anyhow!("Mips 16bits is unknown")),
+                (Mipsl | Mipsrl | R5900L | Octeonl | Tx19Al, Be, _, _)
+                | (Mipsb | Mipsr | R5900B | Octeonb | Tx19Ab, Le, _, _) => {
+                    Err(anyhow!("Mips with conflicting endian: {mips:?} {endian:?}"))
+                }
+
+                // TODO there is any MIPS cpu here that don't support mips16?
+                // TODO binaja don't implement mips16?
+                (
+                    Mipsl | Mipsb | Mipsrl | Mipsr | R5900L | R5900B | Octeonl | Octeonb | Psp
+                    | Tx19Al | Tx19Ab,
+                    _,
+                    _,
+                    true,
+                ) => Ok(None),
+
+                // TODO I don't know what Mipsr means, just leave it unimplemented for now
+                (Mipsr | Mipsrl, _, _, _) => Ok(None),
+
+                (Mipsl, Le, B32, false) => Ok(CoreArchitecture::by_name("mipsel32")),
+                (Mipsl, Le, B64, false) => Ok(CoreArchitecture::by_name("mipsel64")),
+                (Mipsb, Be, B32, false) => Ok(CoreArchitecture::by_name("mips32")),
+                (Mipsb, Be, B64, false) => Ok(CoreArchitecture::by_name("mips64")),
+
+                (R5900L | R5900B, _, B64, _) => Err(anyhow!("Mips R5900 64bits is unknown")),
+
+                (Tx19Al | Tx19Ab, _, B64, _) => Err(anyhow!("Mips Tx19A 64bits is unknown")),
+                (Tx19Al | Tx19Ab, _, B32, _) => Ok(None),
+
+                (R5900L, Le, B32, false) => Ok(CoreArchitecture::by_name("r5900l")),
+                (R5900B, Be, B32, false) => Ok(CoreArchitecture::by_name("r5900b")),
+
+                (Octeonl | Octeonb, _, B32, _) => Err(anyhow!("Mips Octeon 32bits is unknown")),
+                (Octeonb, Be, B64, false) => Ok(CoreArchitecture::by_name("cavium-mips64")),
+                (Octeonl, Le, B64, false) => Ok(CoreArchitecture::by_name("cavium-mipsel64")),
+
+                (Psp, Be, _, _) => Err(anyhow!("Mips PSP BigEndian is unknown")),
+                (Psp, _, B64, _) => Err(anyhow!("Mips PSP 64bits is unknown")),
+                (Psp, Le, B32, _) => Ok(None),
+            }
+
+            // TODO identify the translation for
+            //mips3
+            //mipsel3
+        }
+        Processor::Ppc(ppc) => {
+            use idb_rs::processors::Ppc::*;
+            let is_vle = read_true_false_segreg(
+                id0,
+                addr,
+                srarea_idx,
+                segment_idx,
+                usize::from(PpcReg::Vle) - PpcReg::SEGMENT_REGISTERS_START,
+            )?;
+
+            match (ppc, endian, bits, is_vle) {
+                (_, _, B16, _) => Err(anyhow!("PPC 16bits is unknown")),
+                (Ppcl, Be, _, _) | (Ppc, Le, _, _) => {
+                    Err(anyhow!("PPC with conflicting endian: {ppc:?} {endian:?}"))
+                }
+                (Ppcl, Le, _, true) => Err(anyhow!("PPC with VLE Little Endian is unknown")),
+                // but ghidra declares it, so I'll put this as possible:
+                // https://github.com/NationalSecurityAgency/ghidra/blob/1ca9e32a5712bc48a603f9e60d8f692220071eb7/Ghidra/Processors/PowerPC/data/languages/ppc_64_isa_vle_be.slaspec
+                (Ppc, Be, B64, true) => Ok(None),
+                (Ppc, Be, B32, true) => Ok(CoreArchitecture::by_name("ppcvle")),
+                (Ppcl, Le, B32, false) => Ok(CoreArchitecture::by_name("ppc_le")),
+                (Ppc, Be, B32, false) => Ok(CoreArchitecture::by_name("ppc")),
+                (Ppc, Be, B64, false) => Ok(CoreArchitecture::by_name("ppc64")),
+                (Ppcl, Le, B64, false) => Ok(CoreArchitecture::by_name("ppc64_le")),
+            }
+            // TODO what about those?
+            //ppc_qpx
+            //ppc_spe
+            //ppc_ps
+        }
+        Processor::Riscv(Riscv::Riscv) => match (endian, bits) {
+            (Le, B64) => Ok(CoreArchitecture::by_name("rv64gc")),
+            (Le, B32) => Ok(CoreArchitecture::by_name("rv32gc")),
+            (_, B16) => Err(anyhow!("RiscV 16bits is unknown")),
+            (Be, _) => Err(anyhow!("RiscV BigEndian is unknown")),
+        },
+        Processor::Pc(pc) => {
+            use Pc::*;
+            if endian == Be {
+                return Err(anyhow!(
+                    "Unknown PC BigEndian, all X86 family is LittleEndian"
+                ));
+            }
+            match (pc, bits) {
+                (ProcAlt8086 | ProcAlt80286R | ProcAlt80286P, B32 | B64) => {
+                    return Err(anyhow!(
+                        "Unknown PC {pc:?} {bits:?}, this cpu is 16bits only"
+                    ))
+                }
+                (
+                    ProcAlt80386R | ProcAlt80386P | ProcAlt80486R | ProcAlt80486P | ProcAlt80586R
+                    | ProcAlt80586P | ProcAlt80686P | P2 | K62 | P3 | Athlon,
+                    B64,
+                ) => {
+                    return Err(anyhow!(
+                        "Unknown PC {pc:?} {bits:?}, this cpu is 32/16bits only"
+                    ))
+                }
+
+                // all x86 can execute x86-16
+                (_, B16) => Ok(CoreArchitecture::by_name("x86_16")),
+                // all cpus after 80386 (AKA i386) can execute x86_32
+                (
+                    ProcAlt80386R | ProcAlt80386P | ProcAlt80486R | ProcAlt80486P | ProcAlt80586R
+                    | ProcAlt80586P | ProcAlt80686P | P2 | K62 | P3 | Athlon | P4 | Metapc,
+                    B32,
+                ) => Ok(CoreArchitecture::by_name("x86_32")),
+                // only P4 and after can execute x86_64
+                (P4 | Metapc, B64) => Ok(CoreArchitecture::by_name("x86_32")),
+            }
+        }
+        Processor::Tricore(Tricore::Tricore) => {
+            ensure!(bits == B32, "Tricore {bits:?} CPU is unknown");
+            ensure!(endian == Le, "Tricore BigEndian is unknown");
+            Ok(CoreArchitecture::by_name("tricore"))
+        }
+        Processor::Script(_) => Ok(None),
+        Processor::M740(_)
+        | Processor::Ia(_)
+        | Processor::M7900(_)
+        | Processor::Avr(_)
+        | Processor::Alpha(_)
+        | Processor::Nec850(_)
+        | Processor::Sparc(_)
+        | Processor::Arc(_)
+        | Processor::Fr(_)
+        | Processor::Tms320C3(_)
+        | Processor::M65816(_)
+        | Processor::F2Mc(_)
+        | Processor::Rl78(_)
+        | Processor::Proc78K0(_)
+        | Processor::Dsp56K(_)
+        | Processor::M65(_)
+        | Processor::Kr1878(_)
+        | Processor::S390(_)
+        | Processor::Sam8(_)
+        | Processor::C166(_)
+        | Processor::Dalvik(_)
+        | Processor::Mc68K(_)
+        | Processor::Tms320C1(_)
+        | Processor::Spc700(_)
+        | Processor::I196(_)
+        | Processor::Mc6812(_)
+        | Processor::I960(_)
+        | Processor::M16C(_)
+        | Processor::Pdp11(_)
+        | Processor::Tms320C6(_)
+        | Processor::M32R(_)
+        | Processor::Java(_)
+        | Processor::Mc6816(_)
+        | Processor::Z80(_)
+        | Processor::Cli(_)
+        | Processor::Hppa(_)
+        | Processor::H8(_)
+        | Processor::Oakdsp(_)
+        | Processor::Xtensa(_)
+        | Processor::Pic16(_)
+        | Processor::H8500(_)
+        | Processor::Tms32028(_)
+        | Processor::Proc78K0S(_)
+        | Processor::Tms320C5(_)
+        | Processor::Z8(_)
+        | Processor::Mc8(_)
+        | Processor::M7700(_)
+        | Processor::Tms32054(_)
+        | Processor::Unsp(_)
+        | Processor::Rx(_)
+        | Processor::Wasm(_)
+        | Processor::Sh3(_)
+        | Processor::St7(_)
+        | Processor::Ad218X(_)
+        | Processor::St9(_)
+        | Processor::Tms32055(_)
+        | Processor::Pic(_)
+        | Processor::I860(_)
+        | Processor::St20(_)
+        | Processor::I51(_)
+        | Processor::Xa(_)
+        | Processor::Ebc(_)
+        | Processor::Spu(_) => Ok(None),
+    }
 }
 
 #[allow(non_snake_case)]

@@ -11,7 +11,8 @@ use binaryninja::types::{
     EnumerationBuilder, FunctionParameter, MemberAccess, MemberScope, StructureBuilder,
     StructureType, Type,
 };
-use idb_rs::id0::RootInfo;
+use idb_rs::id0::segment_register::SrareasIdx;
+use idb_rs::id0::{ID0Section, RootInfo, SegmentIdx};
 use idb_rs::til::function::CallingConvention as TILCallingConvention;
 use idb_rs::til::pointer::Pointer as TILPointer;
 use idb_rs::til::r#enum::EnumMembers;
@@ -20,7 +21,9 @@ use idb_rs::til::{
     section::TILSection, udt::UDTMember as TILUDTMember, udt::UDT as TILUDT, TILTypeInfo,
     Type as TILType, TypeVariant as TILTypeVariant,
 };
-use idb_rs::{IDAKind, IDBString};
+use idb_rs::{Address, IDAKind, IDBString};
+
+use crate::architecture_from_ida;
 
 #[derive(Debug, Clone)]
 pub enum BnTypeError {
@@ -615,15 +618,22 @@ impl<F: Fn(usize, usize) -> Result<(), ()>> TranslateIDBTypes<'_, F> {
 }
 
 pub fn translate_ephemeral_type<K: IDAKind>(
-    debug_file: &BinaryView,
+    bv: &BinaryView,
+    id0: &ID0Section<K>,
+    srarea_idx: Option<SrareasIdx<K>>,
+    segment_idx: Option<SegmentIdx<K>>,
     root_info: &RootInfo<K>,
+    addr: Address<K>,
     ty: &TILType,
 ) -> TranslateTypeResult {
     // in case we need to translate types
     let header = root_info.til_header();
+    let arch = architecture_from_ida(id0, srarea_idx, segment_idx, root_info, addr)
+        .ok()
+        .flatten();
     let translator = TranslateIDBTypes {
         // TODO find the correct processor using the segment registers
-        arch: debug_file.default_arch().unwrap(/* TODO */),
+        arch: arch.unwrap_or_else(|| bv.default_arch().unwrap(/* TODO */)),
         progress: |_, _| Ok(()),
         // TODO it's unclear what to do here
         til: &TILSection {

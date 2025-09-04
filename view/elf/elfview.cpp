@@ -40,19 +40,30 @@ void BinaryNinja::InitElfViewType()
 		"description" : "Enable ARM BE8 binary detection for mixed little/big endianness for code/data",
 		"ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
 		})");
+
+	settings->RegisterSetting("files.elf.overrideX86Endianness",
+		R"~({
+		"title" : "Override x86 ELF endianness",
+		"type" : "boolean",
+		"default" : true,
+		"description" : "Automatically override endianness to little-endian for x86/x86_64 ELF files (useful for obfuscated binaries)",
+		"ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
+		})~");
+
 }
 
 
 ElfView::ElfView(BinaryView* data, bool parseOnly): BinaryView("ELF", data->GetFile(), data), m_parseOnly(parseOnly)
 {
+	CreateLogger("BinaryView");
+	m_logger = CreateLogger("BinaryView.ElfView");
+
 	Elf64Header header;
 	string errorMsg;
 	BNEndianness endian;
-	if (!g_elfViewType->ParseHeaders(data, m_ident, m_commonHeader, header, &m_arch, &m_plat, errorMsg, endian))
+	if (!ParseHeaders(data, m_ident, m_commonHeader, header, &m_arch, &m_plat, errorMsg, endian))
 		throw ElfFormatException(errorMsg);
 
-	CreateLogger("BinaryView");
-	m_logger = CreateLogger("BinaryView.ElfView");
 	m_elf32 = m_ident.fileClass == 1;
 	m_addressSize = (m_ident.fileClass == 1 || (m_plat && m_plat->GetName() == "linux-32")) ? 4 : 8;
 	m_endian = endian;
@@ -70,9 +81,6 @@ ElfView::ElfView(BinaryView* data, bool parseOnly): BinaryView("ELF", data->GetF
 	memset(&m_auxSymbolTable, 0, sizeof(m_auxSymbolTable));
 	memset(&m_sectionStringTable, 0, sizeof(m_sectionStringTable));
 	memset(&m_sectionOpd, 0, sizeof(m_sectionOpd));
-
-	m_logger->LogInfo("Detected %s endian ELF", m_endian == LittleEndian ? "Little Endian" : "Big Endian");
-
 
 	if (m_elf32 && (header.sectionHeaderSize != sizeof(Elf32SectionHeader)))
 	{
@@ -2873,9 +2881,9 @@ bool ElfViewType::IsTypeValidForData(BinaryView* data)
 }
 
 
-uint64_t ElfViewType::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonHeader& commonHeader, Elf64Header& header, Ref<Architecture>* arch, Ref<Platform>* plat, string& errorMsg, BNEndianness& endianness)
+uint64_t ElfView::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonHeader& commonHeader, Elf64Header& header, Ref<Architecture>* arch, Ref<Platform>* plat, string& errorMsg, BNEndianness& endianness)
 {
-	if (!IsTypeValidForData(data))
+	if (!g_elfViewType->IsTypeValidForData(data))
 	{
 		errorMsg = "invalid signature";
 		return 0;
@@ -2889,14 +2897,47 @@ uint64_t ElfViewType::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonH
 	}
 
 	BinaryReader reader(data);
+
+	// Determine endianness from header encoding
+	BNEndianness headerEndianness;
 	if (ident.encoding <= 1)
-		endianness = LittleEndian;
+		headerEndianness = LittleEndian;
 	else if (ident.encoding == 2)
-		endianness = BigEndian;
+		headerEndianness = BigEndian;
 	else
 	{
 		errorMsg = "invalid encoding";
 		return 0;
+	}
+
+	// Use header endianness by default
+	endianness = headerEndianness;
+
+	// Check for automatic x86 endianness override
+	bool overrideX86Endianness = Settings::Instance()->Get<bool>("files.elf.overrideX86Endianness");
+	if (overrideX86Endianness)
+	{
+		// Peek at e_machine field (2 bytes at offset 0x12) with little-endian interpretation
+		uint8_t machineBytes[2];
+		if (data->Read(machineBytes, 0x12, 2) == 2)
+		{
+			uint16_t machineLE = machineBytes[0] | (machineBytes[1] << 8);
+			if (machineLE == EM_386 || machineLE == EM_X86_64)
+			{
+				endianness = LittleEndian;
+				if (endianness != headerEndianness)
+				{
+					m_logger->LogWarn("ELF endianness automatically overridden to little-endian for x86/x86_64 (header specified %s)",
+						headerEndianness == LittleEndian ? "little-endian" : "big-endian");
+				}
+			}
+		}
+	}
+
+	// Log detected endianness if no override occurred
+	if (endianness == headerEndianness)
+	{
+		m_logger->LogInfo("Detected %s ELF", endianness == LittleEndian ? "little-endian" : "big-endian");
 	}
 
 	// parse ElfCommonHeader

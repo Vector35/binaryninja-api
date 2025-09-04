@@ -540,6 +540,7 @@ namespace BinaryNinja
 		bool DerefPpc64Descriptor(BinaryReader& reader, uint64_t addr, uint64_t& result);
 
 		void ParseMiniDebugInfo();
+		uint64_t ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonHeader& commonHeader, Elf64Header& header, Ref<Architecture>* arch, Ref<Platform>* plat, std::string& errorMsg, BNEndianness& endianness);
 	public:
 		ElfView(BinaryView* data, bool parseOnly = false);
 		~ElfView();
@@ -555,7 +556,6 @@ namespace BinaryNinja
 		virtual Ref<BinaryView> Create(BinaryView* data) override;
 		virtual Ref<BinaryView> Parse(BinaryView* data) override;
 		virtual bool IsTypeValidForData(BinaryView* data) override;
-		virtual uint64_t ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonHeader& commonHeader, Elf64Header& header, Ref<Architecture>* arch, Ref<Platform>* plat, std::string& errorMsg, BNEndianness& endianness);
 		virtual Ref<Settings> GetLoadSettingsForData(BinaryView* data) override;
 	};
 

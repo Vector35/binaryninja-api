@@ -476,9 +476,10 @@ fn architecture_from_ida<K: IDAKind>(
         }
         Processor::Arm(arm) => {
             use idb_rs::processors::Arm::*;
-            if bits == B64 {
-                // TODO aarch64
-                return Ok(None);
+            match bits {
+                B64 => return Ok(CoreArchitecture::by_name("aarch64")),
+                B16 => return Err(anyhow!("ARM 16bits is unknown")),
+                B32 => {}
             }
             let is_thumb = read_true_false_segreg(
                 id0,
@@ -487,30 +488,27 @@ fn architecture_from_ida<K: IDAKind>(
                 segment_idx,
                 usize::from(ArmReg::T) - ArmReg::SEGMENT_REGISTERS_START,
             )?;
-            match (arm, endian, bits, is_thumb) {
-                // see above
-                (_, _, B64, _) => unreachable!(),
-                (_, _, B16, _) => Err(anyhow!("ARM 16bits is unknown")),
-                (Arm | ProcAltXScaleL, Be, _, _) | (Armb | ProcAltXScaleB, Le, _, _) => {
+            match (arm, endian, is_thumb) {
+                (Arm | ProcAltXScaleL, Be, _) | (Armb | ProcAltXScaleB, Le, _) => {
                     Err(anyhow!("ARM with conflicting endian: {arm:?} {endian:?}"))
                 }
 
-                (Arm, Le, B32, false) => Ok(CoreArchitecture::by_name("armv7")),
-                (Armb, Be, B32, false) => Ok(CoreArchitecture::by_name("armv7eb")),
-                (Arm, Le, B32, true) => Ok(CoreArchitecture::by_name("thumb2")),
-                (Armb, Be, B32, true) => Ok(CoreArchitecture::by_name("thumb2eb")),
+                (Arm, Le, false) => Ok(CoreArchitecture::by_name("armv7")),
+                (Armb, Be, false) => Ok(CoreArchitecture::by_name("armv7eb")),
+                (Arm, Le, true) => Ok(CoreArchitecture::by_name("thumb2")),
+                (Armb, Be, true) => Ok(CoreArchitecture::by_name("thumb2eb")),
 
                 // TODO default into armv7/thumb2?
-                (ProcAltArm710A | ProcAltXScaleL, Le, B32, true) => {
+                (ProcAltArm710A | ProcAltXScaleL, Le, true) => {
                     Ok(CoreArchitecture::by_name("thumb2"))
                 }
-                (ProcAltArm710A | ProcAltXScaleB, Be, B32, true) => {
+                (ProcAltArm710A | ProcAltXScaleB, Be, true) => {
                     Ok(CoreArchitecture::by_name("thumb2eb"))
                 }
-                (ProcAltArm710A | ProcAltXScaleL, Le, B32, false) => {
+                (ProcAltArm710A | ProcAltXScaleL, Le, false) => {
                     Ok(CoreArchitecture::by_name("armv7"))
                 }
-                (ProcAltArm710A | ProcAltXScaleB, Be, B32, false) => {
+                (ProcAltArm710A | ProcAltXScaleB, Be, false) => {
                     Ok(CoreArchitecture::by_name("armv7eb"))
                 }
             }

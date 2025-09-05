@@ -142,6 +142,14 @@ impl DisassemblyTextLine {
             ..Default::default()
         }
     }
+
+    pub fn new_with_addr(tokens: Vec<InstructionTextToken>, addr: u64) -> Self {
+        Self {
+            address: addr,
+            tokens,
+            ..Default::default()
+        }
+    }
 }
 
 impl From<&str> for DisassemblyTextLine {

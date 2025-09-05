@@ -501,13 +501,13 @@ pub enum InstructionTextTokenKind {
         hash: Option<u64>,
     },
     CodeSymbol {
-        // TODO: Value of what?
+        // Target address of the symbol
         value: u64,
         // TODO: Size of what?
         size: usize, // TODO: Operand?
     },
     DataSymbol {
-        // TODO: Value of what?
+        // Target address of the symbol
         value: u64,
         // TODO: Size of what?
         size: usize, // TODO: Operand?

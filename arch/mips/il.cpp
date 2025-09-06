@@ -1430,7 +1430,10 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		{
 			operand = 2;
 		}
-		il.AddInstruction(il.Call(ReadILOperand(il, instr, operand, registerSize(instr.operands[operand]), addrSize, true)));
+		if (operand == 2 && op1.reg == REG_ZERO && op2.reg == REG_RA)
+			il.AddInstruction(il.Return(il.Register(addrSize, REG_RA)));
+		else
+			il.AddInstruction(il.Call(ReadILOperand(il, instr, operand, registerSize(instr.operands[operand]), addrSize, true)));
 	}
 		break;
 	case MIPS_JR:

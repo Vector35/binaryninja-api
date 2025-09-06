@@ -332,10 +332,12 @@ protected:
 			result.AddBranch(CallDestination, instr.operands[0].immediate, nullptr, hasBranchDelay);
 			break;
 
-		//Jmp to register register value is unknown
 		case MIPS_JALR:
 		case MIPS_JALR_HB:
-			result.delaySlots = 1;
+			if (instr.operands[0].reg == REG_ZERO && instr.operands[1].reg == REG_RA)
+				result.AddBranch(FunctionReturn, 0, nullptr, hasBranchDelay);
+			else
+				result.AddBranch(UnresolvedBranch, 0, nullptr, hasBranchDelay);
 			break;
 
 		case MIPS_BGEZAL:

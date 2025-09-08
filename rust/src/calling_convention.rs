@@ -62,22 +62,23 @@ pub trait CallingConvention: Sync {
     fn are_argument_registers_used_for_var_args(&self) -> bool;
 
     // Register-list/class based API with default implementations
+    // Register-list/class based API with default implementations
     fn register_argument_classes(&self) -> Vec<u32> {
-        Vec::new()
+        vec![]
     }
-    
+
     fn register_argument_class_lists(&self, _class_id: u32) -> Vec<u32> {
-        Vec::new()
+        vec![]
     }
-    
+
     fn register_argument_lists(&self) -> Vec<u32> {
-        Vec::new()
+        vec![]
     }
-    
+
     fn register_argument_list_regs(&self, _reg_list_id: u32) -> Vec<RegisterId> {
-        Vec::new()
+        vec![]
     }
-    
+
     fn register_argument_list_kind(&self, _reg_list_id: u32) -> RegisterListKind {
         RegisterListKind::IntegerSemantics
     }
@@ -354,10 +355,7 @@ where
         })
     }
 
-    extern "C" fn cb_register_argument_lists<C>(
-        ctxt: *mut c_void,
-        count: *mut usize,
-    ) -> *mut u32
+    extern "C" fn cb_register_argument_lists<C>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
     where
         C: CallingConvention,
     {
@@ -408,8 +406,12 @@ where
         ffi_wrap!("CallingConvention::register_argument_list_kind", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
             match ctxt.cc.register_argument_list_kind(reg_list_id) {
-                RegisterListKind::IntegerSemantics => BNRegisterListKind::REGISTER_LIST_KIND_INTEGER_SEMANTICS,
-                RegisterListKind::FloatSemantics => BNRegisterListKind::REGISTER_LIST_KIND_FLOAT_SEMANTICS,
+                RegisterListKind::IntegerSemantics => {
+                    BNRegisterListKind::REGISTER_LIST_KIND_INTEGER_SEMANTICS
+                }
+                RegisterListKind::FloatSemantics => {
+                    BNRegisterListKind::REGISTER_LIST_KIND_FLOAT_SEMANTICS
+                }
             }
         })
     }
@@ -789,8 +791,12 @@ impl CallingConvention for CoreCallingConvention {
         unsafe {
             let kind = BNGetRegisterArgumentListKind(self.handle, reg_list_id);
             match kind {
-                BNRegisterListKind::REGISTER_LIST_KIND_INTEGER_SEMANTICS => RegisterListKind::IntegerSemantics,
-                BNRegisterListKind::REGISTER_LIST_KIND_FLOAT_SEMANTICS => RegisterListKind::FloatSemantics,
+                BNRegisterListKind::REGISTER_LIST_KIND_INTEGER_SEMANTICS => {
+                    RegisterListKind::IntegerSemantics
+                }
+                BNRegisterListKind::REGISTER_LIST_KIND_FLOAT_SEMANTICS => {
+                    RegisterListKind::FloatSemantics
+                }
             }
         }
     }
@@ -940,6 +946,12 @@ pub struct ConventionBuilder<A: Architecture> {
 
     arch_handle: A::Handle,
     _arch: PhantomData<*const A>,
+
+    register_argument_classes: Vec<u32>,
+    register_argument_class_lists: Vec<u32>,
+    register_argument_lists: Vec<u32>,
+    register_argument_list_regs: Vec<RegisterId>,
+    register_argument_list_kind: RegisterListKind,
 }
 
 macro_rules! bool_arg {
@@ -984,6 +996,44 @@ macro_rules! reg {
     };
 }
 
+macro_rules! u32_list {
+    ($name:ident) => {
+        pub fn $name(mut self, ids: &[u32]) -> Self {
+            self.$name = ids.to_vec();
+            self
+        }
+    };
+}
+
+macro_rules! reg_list_simple {
+    ($name:ident) => {
+        pub fn $name(mut self, regs: &[&str]) -> Self {
+            {
+                // FIXME NLL
+                let arch = self.arch_handle.borrow();
+                let arch_regs: Vec<RegisterId> = regs
+                    .iter()
+                    .filter_map(|&r| arch.register_by_name(r))
+                    .map(|r| r.id())
+                    .collect();
+
+                self.$name = arch_regs;
+            }
+
+            self
+        }
+    };
+}
+
+macro_rules! list_kind {
+    ($name:ident) => {
+        pub fn $name(mut self, kind: RegisterListKind) -> Self {
+            self.$name = kind;
+            self
+        }
+    };
+}
+
 impl<A: Architecture> ConventionBuilder<A> {
     pub fn new(arch: &A) -> Self {
         Self {
@@ -1009,6 +1059,12 @@ impl<A: Architecture> ConventionBuilder<A> {
 
             arch_handle: arch.handle(),
             _arch: PhantomData,
+
+            register_argument_classes: Vec::new(),
+            register_argument_class_lists: Vec::new(),
+            register_argument_lists: Vec::new(),
+            register_argument_list_regs: Vec::new(),
+            register_argument_list_kind: RegisterListKind::IntegerSemantics,
         }
     }
 
@@ -1031,6 +1087,12 @@ impl<A: Architecture> ConventionBuilder<A> {
     reg_list!(implicitly_defined_registers);
 
     bool_arg!(are_argument_registers_used_for_var_args);
+
+    u32_list!(register_argument_classes);
+    u32_list!(register_argument_class_lists);
+    u32_list!(register_argument_lists);
+    reg_list_simple!(register_argument_list_regs);
+    list_kind!(register_argument_list_kind);
 
     pub fn register(self, name: &str) -> Ref<CoreCallingConvention> {
         let arch = self.arch_handle.clone();
@@ -1093,6 +1155,26 @@ impl<A: Architecture> CallingConvention for ConventionBuilder<A> {
 
     fn are_argument_registers_used_for_var_args(&self) -> bool {
         self.are_argument_registers_used_for_var_args
+    }
+
+    fn register_argument_classes(&self) -> Vec<u32> {
+        self.register_argument_classes.clone()
+    }
+
+    fn register_argument_class_lists(&self, _class_id: u32) -> Vec<u32> {
+        self.register_argument_class_lists.clone()
+    }
+
+    fn register_argument_lists(&self) -> Vec<u32> {
+        self.register_argument_lists.clone()
+    }
+
+    fn register_argument_list_regs(&self, _reg_list_id: u32) -> Vec<RegisterId> {
+        self.register_argument_list_regs.clone()
+    }
+
+    fn register_argument_list_kind(&self, _reg_list_id: u32) -> RegisterListKind {
+        self.register_argument_list_kind
     }
 }
 

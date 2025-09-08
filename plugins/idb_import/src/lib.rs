@@ -291,7 +291,13 @@ fn parse_id0_section_info<K: IDAKind>(
     let bv_baseaddr = bv.start();
     // just addr this value to the address to translate from ida to bn
     // NOTE this delta could wrap here and while using translating
-    let addr_delta = bv_baseaddr.wrapping_sub(idb_baseaddr);
+    // TODO the base is somethimes zero, whats causes problems, for now I'll
+    // just use the min address to try calculanting the delta
+    let addr_delta = if idb_baseaddr == 0 {
+        bv_baseaddr.wrapping_sub(ida_info.addresses.min_ea.into_raw().into_u64())
+    } else {
+        bv_baseaddr.wrapping_sub(idb_baseaddr)
+    };
 
     for (idb_addr, info) in get_info(id0, id1, id2, &ida_info)? {
         let addr = addr_delta.wrapping_add(idb_addr.into_raw().into_u64());

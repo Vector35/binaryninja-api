@@ -745,10 +745,7 @@ impl CallingConvention for CoreCallingConvention {
         unsafe {
             let mut count = 0;
             let classes_ptr = BNGetRegisterArgumentClasses(self.handle, &mut count);
-            let classes: Vec<u32> = std::slice::from_raw_parts(classes_ptr, count)
-                .iter()
-                .copied()
-                .collect();
+            let classes: Vec<u32> = std::slice::from_raw_parts(classes_ptr, count).to_vec();
             BNFreeRegisterList(classes_ptr);
             classes
         }
@@ -758,10 +755,7 @@ impl CallingConvention for CoreCallingConvention {
         unsafe {
             let mut count = 0;
             let lists_ptr = BNGetRegisterArgumentClassLists(self.handle, class_id, &mut count);
-            let lists: Vec<u32> = std::slice::from_raw_parts(lists_ptr, count)
-                .iter()
-                .copied()
-                .collect();
+            let lists: Vec<u32> = std::slice::from_raw_parts(lists_ptr, count).to_vec();
             BNFreeRegisterList(lists_ptr);
             lists
         }
@@ -785,10 +779,7 @@ impl CallingConvention for CoreCallingConvention {
         unsafe {
             let mut count = 0;
             let lists_ptr = BNGetRegisterArgumentLists(self.handle, &mut count);
-            let lists: Vec<u32> = std::slice::from_raw_parts(lists_ptr, count)
-                .iter()
-                .copied()
-                .collect();
+            let lists: Vec<u32> = std::slice::from_raw_parts(lists_ptr, count).to_vec();
             BNFreeRegisterList(lists_ptr);
             lists
         }

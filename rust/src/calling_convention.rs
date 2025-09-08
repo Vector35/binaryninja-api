@@ -34,6 +34,13 @@ use crate::variable::Variable;
 // CallingConvention impl
 // dataflow callbacks
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[repr(u32)]
+pub enum RegisterListKind {
+    IntegerSemantics = 0,
+    FloatSemantics = 1,
+}
+
 pub trait CallingConvention: Sync {
     fn caller_saved_registers(&self) -> Vec<RegisterId>;
     fn callee_saved_registers(&self) -> Vec<RegisterId>;
@@ -53,6 +60,27 @@ pub trait CallingConvention: Sync {
 
     fn implicitly_defined_registers(&self) -> Vec<RegisterId>;
     fn are_argument_registers_used_for_var_args(&self) -> bool;
+
+    // Register-list/class based API with default implementations
+    fn register_argument_classes(&self) -> Vec<u32> {
+        Vec::new()
+    }
+    
+    fn register_argument_class_lists(&self, _class_id: u32) -> Vec<u32> {
+        Vec::new()
+    }
+    
+    fn register_argument_lists(&self) -> Vec<u32> {
+        Vec::new()
+    }
+    
+    fn register_argument_list_regs(&self, _reg_list_id: u32) -> Vec<RegisterId> {
+        Vec::new()
+    }
+    
+    fn register_argument_list_kind(&self, _reg_list_id: u32) -> RegisterListKind {
+        RegisterListKind::IntegerSemantics
+    }
 }
 
 pub fn register_calling_convention<A, C>(arch: &A, name: &str, cc: C) -> Ref<CoreCallingConvention>
@@ -290,6 +318,102 @@ where
         })
     }
 
+    extern "C" fn cb_register_argument_classes<C>(ctxt: *mut c_void, count: *mut usize) -> *mut u32
+    where
+        C: CallingConvention,
+    {
+        ffi_wrap!("CallingConvention::register_argument_classes", unsafe {
+            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
+            let mut class_ids = ctxt.cc.register_argument_classes();
+
+            // SAFETY: `count` is an out parameter
+            *count = class_ids.len();
+            let ptr = class_ids.as_mut_ptr();
+            std::mem::forget(class_ids);
+            ptr
+        })
+    }
+
+    extern "C" fn cb_register_argument_class_lists<C>(
+        ctxt: *mut c_void,
+        class_id: u32,
+        count: *mut usize,
+    ) -> *mut u32
+    where
+        C: CallingConvention,
+    {
+        ffi_wrap!("CallingConvention::register_argument_class_lists", unsafe {
+            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
+            let mut list_ids = ctxt.cc.register_argument_class_lists(class_id);
+
+            // SAFETY: `count` is an out parameter
+            *count = list_ids.len();
+            let ptr = list_ids.as_mut_ptr();
+            std::mem::forget(list_ids);
+            ptr
+        })
+    }
+
+    extern "C" fn cb_register_argument_lists<C>(
+        ctxt: *mut c_void,
+        count: *mut usize,
+    ) -> *mut u32
+    where
+        C: CallingConvention,
+    {
+        ffi_wrap!("CallingConvention::register_argument_lists", unsafe {
+            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
+            let mut list_ids = ctxt.cc.register_argument_lists();
+
+            // SAFETY: `count` is an out parameter
+            *count = list_ids.len();
+            let ptr = list_ids.as_mut_ptr();
+            std::mem::forget(list_ids);
+            ptr
+        })
+    }
+
+    extern "C" fn cb_register_argument_list_regs<C>(
+        ctxt: *mut c_void,
+        reg_list_id: u32,
+        count: *mut usize,
+    ) -> *mut u32
+    where
+        C: CallingConvention,
+    {
+        ffi_wrap!("CallingConvention::register_argument_list_regs", unsafe {
+            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
+            let mut regs: Vec<_> = ctxt
+                .cc
+                .register_argument_list_regs(reg_list_id)
+                .iter()
+                .map(|r| r.0)
+                .collect();
+
+            // SAFETY: `count` is an out parameter
+            *count = regs.len();
+            let ptr = regs.as_mut_ptr();
+            std::mem::forget(regs);
+            ptr
+        })
+    }
+
+    extern "C" fn cb_register_argument_list_kind<C>(
+        ctxt: *mut c_void,
+        reg_list_id: u32,
+    ) -> BNRegisterListKind
+    where
+        C: CallingConvention,
+    {
+        ffi_wrap!("CallingConvention::register_argument_list_kind", unsafe {
+            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
+            match ctxt.cc.register_argument_list_kind(reg_list_id) {
+                RegisterListKind::IntegerSemantics => BNRegisterListKind::REGISTER_LIST_KIND_INTEGER_SEMANTICS,
+                RegisterListKind::FloatSemantics => BNRegisterListKind::REGISTER_LIST_KIND_FLOAT_SEMANTICS,
+            }
+        })
+    }
+
     #[allow(clippy::extra_unused_type_parameters)]
     extern "C" fn cb_incoming_reg_value<C>(
         _ctxt: *mut c_void,
@@ -391,6 +515,12 @@ where
         getIntegerArgumentRegisters: Some(cb_int_args::<C>),
         getFloatArgumentRegisters: Some(cb_float_args::<C>),
         freeRegisterList: Some(cb_free_register_list),
+
+        getRegisterArgumentClasses: Some(cb_register_argument_classes::<C>),
+        getRegisterArgumentClassLists: Some(cb_register_argument_class_lists::<C>),
+        getRegisterArgumentListRegs: Some(cb_register_argument_list_regs::<C>),
+        getRegisterArgumentLists: Some(cb_register_argument_lists::<C>),
+        getRegisterArgumentListKind: Some(cb_register_argument_list_kind::<C>),
 
         areArgumentRegistersSharedIndex: Some(cb_arg_shared_index::<C>),
         isStackReservedForArgumentRegisters: Some(cb_stack_reserved_arg_regs::<C>),
@@ -608,6 +738,69 @@ impl CallingConvention for CoreCallingConvention {
                 .collect();
             BNFreeRegisterList(regs_ptr);
             regs
+        }
+    }
+
+    fn register_argument_classes(&self) -> Vec<u32> {
+        unsafe {
+            let mut count = 0;
+            let classes_ptr = BNGetRegisterArgumentClasses(self.handle, &mut count);
+            let classes: Vec<u32> = std::slice::from_raw_parts(classes_ptr, count)
+                .iter()
+                .copied()
+                .collect();
+            BNFreeRegisterList(classes_ptr);
+            classes
+        }
+    }
+
+    fn register_argument_class_lists(&self, class_id: u32) -> Vec<u32> {
+        unsafe {
+            let mut count = 0;
+            let lists_ptr = BNGetRegisterArgumentClassLists(self.handle, class_id, &mut count);
+            let lists: Vec<u32> = std::slice::from_raw_parts(lists_ptr, count)
+                .iter()
+                .copied()
+                .collect();
+            BNFreeRegisterList(lists_ptr);
+            lists
+        }
+    }
+
+    fn register_argument_list_regs(&self, reg_list_id: u32) -> Vec<RegisterId> {
+        unsafe {
+            let mut count = 0;
+            let regs_ptr = BNGetRegisterArgumentListRegs(self.handle, reg_list_id, &mut count);
+            let regs: Vec<RegisterId> = std::slice::from_raw_parts(regs_ptr, count)
+                .iter()
+                .copied()
+                .map(RegisterId::from)
+                .collect();
+            BNFreeRegisterList(regs_ptr);
+            regs
+        }
+    }
+
+    fn register_argument_lists(&self) -> Vec<u32> {
+        unsafe {
+            let mut count = 0;
+            let lists_ptr = BNGetRegisterArgumentLists(self.handle, &mut count);
+            let lists: Vec<u32> = std::slice::from_raw_parts(lists_ptr, count)
+                .iter()
+                .copied()
+                .collect();
+            BNFreeRegisterList(lists_ptr);
+            lists
+        }
+    }
+
+    fn register_argument_list_kind(&self, reg_list_id: u32) -> RegisterListKind {
+        unsafe {
+            let kind = BNGetRegisterArgumentListKind(self.handle, reg_list_id);
+            match kind {
+                BNRegisterListKind::REGISTER_LIST_KIND_INTEGER_SEMANTICS => RegisterListKind::IntegerSemantics,
+                BNRegisterListKind::REGISTER_LIST_KIND_FLOAT_SEMANTICS => RegisterListKind::FloatSemantics,
+            }
         }
     }
 

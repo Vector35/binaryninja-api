@@ -2648,6 +2648,12 @@ extern "C"
 		bool (*projectIsValid)(void* ctxt, BNProject* view);
 	} BNPluginCommand;
 
+	enum BNRegisterListKind
+	{
+		REGISTER_LIST_KIND_INTEGER_SEMANTICS = 0,
+		REGISTER_LIST_KIND_FLOAT_SEMANTICS = 1,
+	};
+
 	typedef struct BNCustomCallingConvention
 	{
 		void* context;
@@ -2659,6 +2665,12 @@ extern "C"
 		uint32_t* (*getIntegerArgumentRegisters)(void* ctxt, size_t* count);
 		uint32_t* (*getFloatArgumentRegisters)(void* ctxt, size_t* count);
 		void (*freeRegisterList)(void* ctxt, uint32_t* regs, size_t len);
+
+		uint32_t* (*getRegisterArgumentClasses)(void* ctxt, size_t* count);
+		uint32_t* (*getRegisterArgumentClassLists)(void* ctxt, uint32_t classId, size_t* count);
+		uint32_t* (*getRegisterArgumentLists)(void* ctxt, size_t* count);
+		uint32_t* (*getRegisterArgumentListRegs)(void* ctxt, uint32_t regListId, size_t* count);
+		BNRegisterListKind (*getRegisterArgumentListKind)(void* ctxt, uint32_t regListId);
 
 		bool (*areArgumentRegistersSharedIndex)(void* ctxt);
 		bool (*isStackReservedForArgumentRegisters)(void* ctxt);
@@ -7123,6 +7135,14 @@ extern "C"
 	BINARYNINJACOREAPI uint32_t* BNGetIntegerArgumentRegisters(BNCallingConvention* cc, size_t* count);
 	BINARYNINJACOREAPI uint32_t* BNGetFloatArgumentRegisters(BNCallingConvention* cc, size_t* count);
 	BINARYNINJACOREAPI bool BNAreArgumentRegistersSharedIndex(BNCallingConvention* cc);
+
+	// New register-list/class API
+	BINARYNINJACOREAPI uint32_t* BNGetRegisterArgumentClasses(BNCallingConvention* cc, size_t* count);
+	BINARYNINJACOREAPI uint32_t* BNGetRegisterArgumentClassLists(BNCallingConvention* cc, uint32_t classId, size_t* count);
+	BINARYNINJACOREAPI uint32_t* BNGetRegisterArgumentLists(BNCallingConvention* cc, size_t* count);
+	BINARYNINJACOREAPI uint32_t* BNGetRegisterArgumentListRegs(BNCallingConvention* cc, uint32_t regListId, size_t* count);
+	BINARYNINJACOREAPI BNRegisterListKind BNGetRegisterArgumentListKind(BNCallingConvention* cc, uint32_t regListId);
+
 	BINARYNINJACOREAPI bool BNAreArgumentRegistersUsedForVarArgs(BNCallingConvention* cc);
 	BINARYNINJACOREAPI bool BNIsStackReservedForArgumentRegisters(BNCallingConvention* cc);
 	BINARYNINJACOREAPI bool BNIsStackAdjustedOnReturn(BNCallingConvention* cc);

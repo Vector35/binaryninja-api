@@ -16733,6 +16733,14 @@ namespace BinaryNinja {
 		static void GetParameterVariableForIncomingVariableCallback(
 		    void* ctxt, const BNVariable* var, BNFunction* func, BNVariable* result);
 
+		static uint32_t* GetRegisterArgumentClassesCallback(void* ctxt, size_t* count);
+		static uint32_t* GetRegisterArgumentClassListsCallback(void* ctxt, uint32_t classId, size_t* count);
+		static uint32_t* GetRegisterArgumentListsCallback(void* ctxt, size_t* count);
+		static uint32_t* GetRegisterArgumentListRegsCallback(void* ctxt, uint32_t regListId, size_t* count);
+		static BNRegisterListKind GetRegisterArgumentListKindCallback(void* ctxt, uint32_t regListId);
+		static BNVariable* GetVariablesForParametersCallback(void* ctxt, const BNFunctionParameter* paramTypes, size_t paramCount, const uint32_t* permittedRegs, size_t permittedRegCount, size_t* resultCount);
+		static void FreeVariableListCallback(void* ctxt, BNVariable* vars, size_t count);
+
 	  public:
 		Ref<Architecture> GetArchitecture() const;
 		std::string GetName() const;
@@ -16747,6 +16755,14 @@ namespace BinaryNinja {
 		virtual bool IsStackReservedForArgumentRegisters();
 		virtual bool IsStackAdjustedOnReturn();
 		virtual bool IsEligibleForHeuristics();
+
+		virtual std::vector<uint32_t> GetRegisterArgumentClasses();
+		virtual std::vector<uint32_t> GetRegisterArgumentClassLists(uint32_t classId);
+		virtual std::vector<uint32_t> GetRegisterArgumentLists();
+		virtual std::vector<uint32_t> GetRegisterArgumentListRegs(uint32_t regListId);
+		virtual BNRegisterListKind GetRegisterArgumentListKind(uint32_t regListId);
+		virtual std::vector<Variable> GetVariablesForParameters(const std::vector<FunctionParameter>& paramTypes,
+			const std::set<uint32_t>* permittedRegs = nullptr);
 
 		virtual uint32_t GetIntegerReturnValueRegister() = 0;
 		virtual uint32_t GetHighIntegerReturnValueRegister();
@@ -16791,6 +16807,14 @@ namespace BinaryNinja {
 
 		virtual Variable GetIncomingVariableForParameterVariable(const Variable& var, Function* func) override;
 		virtual Variable GetParameterVariableForIncomingVariable(const Variable& var, Function* func) override;
+
+		virtual std::vector<uint32_t> GetRegisterArgumentClasses() override;
+		virtual std::vector<uint32_t> GetRegisterArgumentClassLists(uint32_t classId) override;
+		virtual std::vector<uint32_t> GetRegisterArgumentLists() override;
+		virtual std::vector<uint32_t> GetRegisterArgumentListRegs(uint32_t regListId) override;
+		virtual BNRegisterListKind GetRegisterArgumentListKind(uint32_t regListId) override;
+		virtual std::vector<Variable> GetVariablesForParameters(const std::vector<FunctionParameter>& paramTypes,
+			const std::set<uint32_t>* permittedRegs = nullptr) override;
 	};
 
 	/*!

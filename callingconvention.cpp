@@ -54,6 +54,13 @@ CallingConvention::CallingConvention(Architecture* arch, const string& name)
 	cc.getIncomingFlagValue = GetIncomingFlagValueCallback;
 	cc.getIncomingVariableForParameterVariable = GetIncomingVariableForParameterVariableCallback;
 	cc.getParameterVariableForIncomingVariable = GetParameterVariableForIncomingVariableCallback;
+	cc.getRegisterArgumentClasses = GetRegisterArgumentClassesCallback;
+	cc.getRegisterArgumentClassLists = GetRegisterArgumentClassListsCallback;
+	cc.getRegisterArgumentLists = GetRegisterArgumentListsCallback;
+	cc.getRegisterArgumentListRegs = GetRegisterArgumentListRegsCallback;
+	cc.getRegisterArgumentListKind = GetRegisterArgumentListKindCallback;
+	cc.getVariablesForParameters = GetVariablesForParametersCallback;
+	cc.freeVariableList = FreeVariableListCallback;
 
 	AddRefForRegistration();
 	m_object = BNCreateCallingConvention(arch->GetObject(), name.c_str(), &cc);
@@ -122,6 +129,12 @@ uint32_t* CallingConvention::GetFloatArgumentRegistersCallback(void* ctxt, size_
 void CallingConvention::FreeRegisterListCallback(void*, uint32_t* regs, size_t)
 {
 	delete[] regs;
+}
+
+
+void CallingConvention::FreeVariableListCallback(void*, BNVariable* vars, size_t)
+{
+	delete[] vars;
 }
 
 
@@ -283,6 +296,65 @@ vector<uint32_t> CallingConvention::GetFloatArgumentRegisters()
 	return vector<uint32_t>();
 }
 
+vector<uint32_t> CallingConvention::GetRegisterArgumentClasses()
+{
+	size_t count;
+	uint32_t* classes = BNGetRegisterArgumentClasses(GetObject(), &count);
+	vector<uint32_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(classes[i]);
+	BNFreeRegisterList(classes);
+	return result;
+}
+
+
+vector<uint32_t> CallingConvention::GetRegisterArgumentClassLists(uint32_t classId)
+{
+	size_t count;
+	uint32_t* lists = BNGetRegisterArgumentClassLists(GetObject(), classId, &count);
+	vector<uint32_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(lists[i]);
+	BNFreeRegisterList(lists);
+	return result;
+}
+
+
+vector<uint32_t> CallingConvention::GetRegisterArgumentLists()
+{
+	size_t count;
+	uint32_t* lists = BNGetRegisterArgumentLists(GetObject(), &count);
+	vector<uint32_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(lists[i]);
+	BNFreeRegisterList(lists);
+	return result;
+}
+
+
+vector<uint32_t> CallingConvention::GetRegisterArgumentListRegs(uint32_t regListId)
+{
+	size_t count;
+	uint32_t* regs = BNGetRegisterArgumentListRegs(GetObject(), regListId, &count);
+	vector<uint32_t> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(regs[i]);
+	BNFreeRegisterList(regs);
+	return result;
+}
+
+
+BNRegisterListKind CallingConvention::GetRegisterArgumentListKind(uint32_t regListId)
+{
+	return BNGetRegisterArgumentListKind(GetObject(), regListId);
+}
+
+
+vector<Variable> CallingConvention::GetVariablesForParameters(const vector<FunctionParameter>& paramTypes,
+	const std::set<uint32_t>* permittedRegs)
+{
+	return vector<Variable>();
+}
 
 bool CallingConvention::AreArgumentRegistersSharedIndex()
 {
@@ -503,4 +575,203 @@ Variable CoreCallingConvention::GetIncomingVariableForParameterVariable(const Va
 Variable CoreCallingConvention::GetParameterVariableForIncomingVariable(const Variable& var, Function* func)
 {
 	return BNGetParameterVariableForIncomingVariable(m_object, &var, func ? func->GetObject() : nullptr);
+}
+
+
+vector<uint32_t> CoreCallingConvention::GetRegisterArgumentClasses()
+{
+	size_t count;
+	uint32_t* classes = BNGetRegisterArgumentClasses(m_object, &count);
+	vector<uint32_t> result;
+	result.insert(result.end(), classes, &classes[count]);
+	BNFreeRegisterList(classes);
+	return result;
+}
+
+
+vector<uint32_t> CoreCallingConvention::GetRegisterArgumentClassLists(uint32_t classId)
+{
+	size_t count;
+	uint32_t* lists = BNGetRegisterArgumentClassLists(m_object, classId, &count);
+	vector<uint32_t> result;
+	result.insert(result.end(), lists, &lists[count]);
+	BNFreeRegisterList(lists);
+	return result;
+}
+
+
+vector<uint32_t> CoreCallingConvention::GetRegisterArgumentLists()
+{
+	size_t count;
+	uint32_t* lists = BNGetRegisterArgumentLists(m_object, &count);
+	vector<uint32_t> result;
+	result.insert(result.end(), lists, &lists[count]);
+	BNFreeRegisterList(lists);
+	return result;
+}
+
+
+vector<uint32_t> CoreCallingConvention::GetRegisterArgumentListRegs(uint32_t regListId)
+{
+	size_t count;
+	uint32_t* regs = BNGetRegisterArgumentListRegs(m_object, regListId, &count);
+	vector<uint32_t> result;
+	result.insert(result.end(), regs, &regs[count]);
+	BNFreeRegisterList(regs);
+	return result;
+}
+
+
+BNRegisterListKind CoreCallingConvention::GetRegisterArgumentListKind(uint32_t regListId)
+{
+	return BNGetRegisterArgumentListKind(m_object, regListId);
+}
+
+
+vector<Variable> CoreCallingConvention::GetVariablesForParameters(const vector<FunctionParameter>& paramTypes,
+	const std::set<uint32_t>* permittedRegs)
+{
+	BNFunctionParameter* params = new BNFunctionParameter[paramTypes.size()];
+	for (size_t i = 0; i < paramTypes.size(); i++)
+	{
+		params[i].name = (char*)paramTypes[i].name.c_str();
+		params[i].type = paramTypes[i].type->GetObject();
+		params[i].typeConfidence = paramTypes[i].type.GetConfidence();
+		params[i].defaultLocation = paramTypes[i].defaultLocation;
+		params[i].location.type = paramTypes[i].location.type;
+		params[i].location.index = paramTypes[i].location.index;
+		params[i].location.storage = paramTypes[i].location.storage;
+	}
+
+	uint32_t* permittedRegsArray = nullptr;
+	size_t permittedRegsCount = 0;
+	if (permittedRegs != nullptr)
+	{
+		permittedRegsCount = permittedRegs->size();
+		permittedRegsArray = new uint32_t[permittedRegsCount];
+		size_t j = 0;
+		for (auto reg : *permittedRegs)
+			permittedRegsArray[j++] = reg;
+	}
+
+	size_t count;
+	BNVariable* vars = BNGetVariablesForParameters(m_object, params, paramTypes.size(), 
+		permittedRegsArray, permittedRegsCount, &count);
+	
+	vector<Variable> result;
+	for (size_t i = 0; i < count; i++)
+		result.push_back(vars[i]);
+
+	delete[] params;
+	if (permittedRegsArray)
+		delete[] permittedRegsArray;
+	BNFreeVariableList(vars);
+	return result;
+}
+
+
+uint32_t* CallingConvention::GetRegisterArgumentClassesCallback(void* ctxt, size_t* count)
+{
+	CallbackRef<CallingConvention> cc(ctxt);
+	vector<uint32_t> classes = cc->GetRegisterArgumentClasses();
+	*count = classes.size();
+
+	uint32_t* result = new uint32_t[classes.size()];
+	for (size_t i = 0; i < classes.size(); i++)
+		result[i] = classes[i];
+	return result;
+}
+
+
+uint32_t* CallingConvention::GetRegisterArgumentClassListsCallback(void* ctxt, uint32_t classId, size_t* count)
+{
+	CallbackRef<CallingConvention> cc(ctxt);
+	vector<uint32_t> lists = cc->GetRegisterArgumentClassLists(classId);
+	*count = lists.size();
+
+	uint32_t* result = new uint32_t[lists.size()];
+	for (size_t i = 0; i < lists.size(); i++)
+		result[i] = lists[i];
+	return result;
+}
+
+
+uint32_t* CallingConvention::GetRegisterArgumentListsCallback(void* ctxt, size_t* count)
+{
+	CallbackRef<CallingConvention> cc(ctxt);
+	vector<uint32_t> lists = cc->GetRegisterArgumentLists();
+	*count = lists.size();
+
+	uint32_t* result = new uint32_t[lists.size()];
+	for (size_t i = 0; i < lists.size(); i++)
+		result[i] = lists[i];
+	return result;
+}
+
+
+uint32_t* CallingConvention::GetRegisterArgumentListRegsCallback(void* ctxt, uint32_t regListId, size_t* count)
+{
+	CallbackRef<CallingConvention> cc(ctxt);
+	vector<uint32_t> regs = cc->GetRegisterArgumentListRegs(regListId);
+	*count = regs.size();
+
+	uint32_t* result = new uint32_t[regs.size()];
+	for (size_t i = 0; i < regs.size(); i++)
+		result[i] = regs[i];
+	return result;
+}
+
+
+BNRegisterListKind CallingConvention::GetRegisterArgumentListKindCallback(void* ctxt, uint32_t regListId)
+{
+	CallbackRef<CallingConvention> cc(ctxt);
+	return cc->GetRegisterArgumentListKind(regListId);
+}
+
+
+BNVariable* CallingConvention::GetVariablesForParametersCallback(void* ctxt, const BNFunctionParameter* paramTypes, size_t paramCount, const uint32_t* permittedRegs, size_t permittedRegCount, size_t* resultCount)
+{
+	CallbackRef<CallingConvention> cc(ctxt);
+	
+	vector<FunctionParameter> params;
+	for (size_t i = 0; i < paramCount; i++)
+	{
+		FunctionParameter param;
+		param.name = paramTypes[i].name;
+		param.type = Confidence<Ref<Type>>(new Type(BNNewTypeReference(paramTypes[i].type)), paramTypes[i].typeConfidence);
+		param.defaultLocation = paramTypes[i].defaultLocation;
+		param.location = paramTypes[i].location;
+		params.push_back(param);
+	}
+	
+	std::set<uint32_t>* permittedRegsSet = nullptr;
+	if (permittedRegs && permittedRegCount > 0)
+	{
+		permittedRegsSet = new std::set<uint32_t>();
+		for (size_t i = 0; i < permittedRegCount; i++)
+			permittedRegsSet->insert(permittedRegs[i]);
+	}
+	
+	vector<Variable> variables = cc->GetVariablesForParameters(params, permittedRegsSet);
+	
+	// If the calling convention doesn't implement this method, it returns an empty vector
+	// Signal fallback to core implementation by returning NULL with count 0
+	if (variables.empty())
+	{
+		*resultCount = 0;
+		if (permittedRegsSet)
+			delete permittedRegsSet;
+		return nullptr;
+	}
+	
+	*resultCount = variables.size();
+	
+	BNVariable* result = new BNVariable[variables.size()];
+	for (size_t i = 0; i < variables.size(); i++)
+		result[i] = variables[i];
+	
+	if (permittedRegsSet)
+		delete permittedRegsSet;
+	
+	return result;
 }

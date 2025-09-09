@@ -33,6 +33,10 @@ FunctionOrILFunction = Union["binaryninja.function.Function", "binaryninja.lowle
                              "binaryninja.mediumlevelil.MediumLevelILFunction",
                              "binaryninja.highlevelil.HighLevelILFunction"]
 
+# Register list kinds
+REGISTER_LIST_KIND_INTEGER_SEMANTICS = 0
+REGISTER_LIST_KIND_FLOAT_SEMANTICS = 1
+
 
 class CallingConvention:
 	name = None
@@ -50,6 +54,13 @@ class CallingConvention:
 	float_return_reg = None
 	global_pointer_reg = None
 	implicitly_defined_regs = []
+	
+	# New register list/class API attributes
+	register_argument_classes = []
+	register_argument_class_lists = {}
+	register_argument_lists = []
+	register_argument_list_regs = {}
+	register_argument_list_kinds = {}
 
 	_registered_calling_conventions = []
 
@@ -109,6 +120,25 @@ class CallingConvention:
 			self._cb.getParameterVariableForIncomingVariable = self._cb.getParameterVariableForIncomingVariable.__class__(
 			    self._get_parameter_var_for_incoming_var
 			)
+			self._cb.getRegisterArgumentClasses = self._cb.getRegisterArgumentClasses.__class__(
+			    self._get_register_argument_classes
+			)
+			self._cb.getRegisterArgumentClassLists = self._cb.getRegisterArgumentClassLists.__class__(
+			    self._get_register_argument_class_lists
+			)
+			self._cb.getRegisterArgumentLists = self._cb.getRegisterArgumentLists.__class__(
+			    self._get_register_argument_lists
+			)
+			self._cb.getRegisterArgumentListRegs = self._cb.getRegisterArgumentListRegs.__class__(
+			    self._get_register_argument_list_regs
+			)
+			self._cb.getRegisterArgumentListKind = self._cb.getRegisterArgumentListKind.__class__(
+			    self._get_register_argument_list_kind
+			)
+			self._cb.getVariablesForParameters = self._cb.getVariablesForParameters.__class__(
+			    self._get_variables_for_parameters
+			)
+			self._cb.freeVariableList = self._cb.freeVariableList.__class__(self._free_variable_list)
 			_handle = core.BNCreateCallingConvention(arch.handle, name, self._cb)
 			self.__class__._registered_calling_conventions.append(self)
 		else:
@@ -434,6 +464,124 @@ class CallingConvention:
 			result[0].index = in_var[0].index
 			result[0].storage = in_var[0].storage
 
+	def _get_register_argument_classes(self, ctxt, count):
+		try:
+			classes = self.__class__.register_argument_classes
+			count[0] = len(classes)
+			class_buf = (ctypes.c_uint * len(classes))()
+			for i in range(0, len(classes)):
+				class_buf[i] = classes[i]
+			result = ctypes.cast(class_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, class_buf)
+			return result.value
+		except:
+			log_error_for_exception("Unhandled Python exception in CallingConvention._get_register_argument_classes")
+			count[0] = 0
+			return None
+
+	def _get_register_argument_class_lists(self, ctxt, class_id, count):
+		try:
+			lists = self.__class__.register_argument_class_lists.get(class_id, [])
+			count[0] = len(lists)
+			list_buf = (ctypes.c_uint * len(lists))()
+			for i in range(0, len(lists)):
+				list_buf[i] = lists[i]
+			result = ctypes.cast(list_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, list_buf)
+			return result.value
+		except:
+			log_error_for_exception("Unhandled Python exception in CallingConvention._get_register_argument_class_lists")
+			count[0] = 0
+			return None
+
+	def _get_register_argument_lists(self, ctxt, count):
+		try:
+			lists = self.__class__.register_argument_lists
+			count[0] = len(lists)
+			list_buf = (ctypes.c_uint * len(lists))()
+			for i in range(0, len(lists)):
+				list_buf[i] = lists[i]
+			result = ctypes.cast(list_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, list_buf)
+			return result.value
+		except:
+			log_error_for_exception("Unhandled Python exception in CallingConvention._get_register_argument_lists")
+			count[0] = 0
+			return None
+
+	def _get_register_argument_list_regs(self, ctxt, reg_list_id, count):
+		try:
+			regs = self.__class__.register_argument_list_regs.get(reg_list_id, [])
+			count[0] = len(regs)
+			reg_buf = (ctypes.c_uint * len(regs))()
+			for i in range(0, len(regs)):
+				if isinstance(regs[i], str):
+					reg_buf[i] = self.arch.regs[regs[i]].index
+				else:
+					reg_buf[i] = regs[i]
+			result = ctypes.cast(reg_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, reg_buf)
+			return result.value
+		except:
+			log_error_for_exception("Unhandled Python exception in CallingConvention._get_register_argument_list_regs")
+			count[0] = 0
+			return None
+
+	def _get_register_argument_list_kind(self, ctxt, reg_list_id):
+		try:
+			return self.__class__.register_argument_list_kinds.get(reg_list_id, 0)  # Default to INTEGER_SEMANTICS
+		except:
+			log_error_for_exception("Unhandled Python exception in CallingConvention._get_register_argument_list_kind")
+			return 0
+
+	def _get_variables_for_parameters(self, ctxt, params, param_count, permitted_regs, permitted_reg_count, count):
+		try:
+			# Convert C parameters to Python
+			param_list = []
+			for i in range(param_count):
+				param = params[i]
+				param_name = param.name.decode('utf-8') if param.name else ""
+				param_type = core.BNNewTypeReference(param.type)
+				param_list.append((param_name, param_type))
+			
+			# Convert permitted registers
+			permitted_reg_set = set()
+			if permitted_regs and permitted_reg_count > 0:
+				for i in range(permitted_reg_count):
+					permitted_reg_set.add(permitted_regs[i])
+			
+			# Call the perform method
+			variables = self.perform_get_variables_for_parameters(param_list, permitted_reg_set if permitted_reg_set else None)
+			
+			# If None returned, signal that core should handle it
+			if variables is None:
+				count[0] = 0
+				return None
+			
+			# Convert result to C
+			count[0] = len(variables)
+			var_buf = (core.BNVariable * len(variables))()
+			for i in range(len(variables)):
+				var_buf[i].type = variables[i].source_type
+				var_buf[i].index = variables[i].index
+				var_buf[i].storage = variables[i].storage
+			
+			result = ctypes.cast(var_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, var_buf)
+			return result.value
+		except:
+			log_error_for_exception("Unhandled Python exception in CallingConvention._get_variables_for_parameters")
+			count[0] = 0
+			return None
+
+	def _free_variable_list(self, ctxt, variables, count):
+		try:
+			buf = ctypes.cast(variables, ctypes.c_void_p)
+			if buf.value in self._pending_reg_lists:
+				del self._pending_reg_lists[buf.value]
+		except:
+			log_error_for_exception("Unhandled Python exception in CallingConvention._free_variable_list")
+
 	def perform_get_incoming_reg_value(
 	    self, reg: 'architecture.RegisterName', func: 'function.Function'
 	) -> 'variable.RegisterValue':
@@ -459,6 +607,18 @@ class CallingConvention:
 	) -> 'variable.CoreVariable':
 		out_var = core.BNGetDefaultParameterVariableForIncomingVariable(self.handle, in_var.to_BNVariable())
 		return variable.CoreVariable.from_BNVariable(out_var)
+
+	def perform_get_variables_for_parameters(self, param_types, permitted_regs=None):
+		"""
+		Override this method to provide custom parameter allocation logic.
+		
+		:param param_types: List of (name, type) tuples for parameters
+		:param permitted_regs: Set of permitted register indices, or None for no restriction
+		:return: List of Variable objects for parameter allocation
+		"""
+		# Default implementation: don't override, let core handle it
+		# This signals to the callback that we should use the core default
+		return None
 
 	def with_confidence(self, confidence: int) -> 'CallingConvention':
 		return CallingConvention(
@@ -508,6 +668,89 @@ class CallingConvention:
 			func_obj = func.handle
 		out_var = core.BNGetParameterVariableForIncomingVariable(self.handle, in_buf, func_obj)
 		return variable.Variable.from_BNVariable(func, out_var)
+
+	def get_register_argument_classes(self):
+		"""Get the register argument classes for this calling convention."""
+		count = ctypes.c_ulonglong()
+		classes = core.BNGetRegisterArgumentClasses(self.handle, count)
+		result = []
+		for i in range(count.value):
+			result.append(classes[i])
+		core.BNFreeRegisterList(classes)
+		return result
+
+	def get_register_argument_class_lists(self, class_id):
+		"""Get the register lists for a specific class."""
+		count = ctypes.c_ulonglong()
+		lists = core.BNGetRegisterArgumentClassLists(self.handle, class_id, count)
+		result = []
+		for i in range(count.value):
+			result.append(lists[i])
+		core.BNFreeRegisterList(lists)
+		return result
+
+	def get_register_argument_lists(self):
+		"""Get all register argument lists."""
+		count = ctypes.c_ulonglong()
+		lists = core.BNGetRegisterArgumentLists(self.handle, count)
+		result = []
+		for i in range(count.value):
+			result.append(lists[i])
+		core.BNFreeRegisterList(lists)
+		return result
+
+	def get_register_argument_list_regs(self, reg_list_id):
+		"""Get the registers for a specific register list."""
+		count = ctypes.c_ulonglong()
+		regs = core.BNGetRegisterArgumentListRegs(self.handle, reg_list_id, count)
+		result = []
+		arch = self.arch
+		for i in range(count.value):
+			result.append(arch.get_reg_name(regs[i]))
+		core.BNFreeRegisterList(regs)
+		return result
+
+	def get_register_argument_list_kind(self, reg_list_id):
+		"""Get the kind (INTEGER_SEMANTICS or FLOAT_SEMANTICS) of a register list."""
+		return core.BNGetRegisterArgumentListKind(self.handle, reg_list_id)
+
+	def get_variables_for_parameters(self, param_types, permitted_regs=None):
+		"""Get variable allocations for the given parameter types."""
+		# Convert Python parameters to BN parameters
+		param_array = (core.BNFunctionParameter * len(param_types))()
+		for i, (name, param_type) in enumerate(param_types):
+			param_array[i].name = name.encode('utf-8')
+			param_array[i].type = param_type.handle if hasattr(param_type, 'handle') else param_type
+			param_array[i].typeConfidence = core.max_confidence
+			param_array[i].defaultLocation = True
+			param_array[i].location.type = 0  # RegisterVariableSourceType
+			param_array[i].location.index = 0
+			param_array[i].location.storage = 0
+
+		# Convert permitted registers
+		permitted_reg_array = None
+		permitted_reg_count = 0
+		if permitted_regs:
+			permitted_reg_count = len(permitted_regs)
+			permitted_reg_array = (ctypes.c_uint * len(permitted_regs))()
+			for i, reg in enumerate(permitted_regs):
+				if isinstance(reg, str):
+					permitted_reg_array[i] = self.arch.regs[reg].index
+				else:
+					permitted_reg_array[i] = reg
+
+		count = ctypes.c_ulonglong()
+		variables = core.BNGetVariablesForParameters(
+			self.handle, param_array, len(param_types), 
+			permitted_reg_array, permitted_reg_count, count
+		)
+		
+		result = []
+		for i in range(count.value):
+			result.append(variable.Variable.from_BNVariable(None, variables[i]))
+		
+		core.BNFreeVariableList(variables)
+		return result
 
 	@property
 	def arch(self) -> 'architecture.Architecture':

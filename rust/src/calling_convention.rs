@@ -525,7 +525,7 @@ where
     {
         ffi_wrap!("CallingConvention::variables_for_parameters", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
-            
+
             // Convert C parameters to Rust
             let params_slice = std::slice::from_raw_parts(params, param_count);
             let rust_params: Vec<FunctionParameter> = params_slice
@@ -547,10 +547,8 @@ where
                 permitted_reg_ids.as_ref().map(|v| v.as_slice()),
             ) {
                 // Convert Vec<Variable> to *mut BNVariable using From trait
-                let mut raw_variables: Vec<BNVariable> = variables
-                    .into_iter()
-                    .map(|v| BNVariable::from(v))
-                    .collect();
+                let mut raw_variables: Vec<BNVariable> =
+                    variables.into_iter().map(|v| BNVariable::from(v)).collect();
 
                 *result_count = raw_variables.len();
                 let ptr = raw_variables.as_mut_ptr();

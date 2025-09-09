@@ -82,6 +82,16 @@ pub trait CallingConvention: Sync {
     fn register_argument_list_kind(&self, _reg_list_id: u32) -> RegisterListKind {
         RegisterListKind::IntegerSemantics
     }
+
+    // Optional method for custom parameter allocation
+    // Returns None to use default implementation, or Some(Vec<Variable>) for custom allocation
+    fn variables_for_parameters(
+        &self,
+        _params: &[FunctionParameter],
+        _permitted_regs: Option<&[RegisterId]>,
+    ) -> Option<Vec<Variable>> {
+        None
+    }
 }
 
 pub fn register_calling_convention<A, C>(arch: &A, name: &str, cc: C) -> Ref<CoreCallingConvention>
@@ -502,6 +512,69 @@ where
         )
     }
 
+    extern "C" fn cb_variable_for_parameters<C>(
+        ctxt: *mut c_void,
+        params: *const BNFunctionParameter,
+        param_count: usize,
+        permitted_regs: *const u32,
+        permitted_reg_count: usize,
+        result_count: *mut usize,
+    ) -> *mut BNVariable
+    where
+        C: CallingConvention,
+    {
+        ffi_wrap!("CallingConvention::variables_for_parameters", unsafe {
+            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
+            
+            // Convert C parameters to Rust
+            let params_slice = std::slice::from_raw_parts(params, param_count);
+            let rust_params: Vec<FunctionParameter> = params_slice
+                .iter()
+                .map(|p| FunctionParameter::from_raw(p))
+                .collect();
+
+            // Convert permitted registers if provided
+            let permitted_reg_ids: Option<Vec<RegisterId>> = if permitted_regs.is_null() {
+                None
+            } else {
+                let regs_slice = std::slice::from_raw_parts(permitted_regs, permitted_reg_count);
+                Some(regs_slice.iter().map(|&id| RegisterId(id)).collect())
+            };
+
+            // Call the trait method
+            if let Some(variables) = ctxt.cc.variables_for_parameters(
+                &rust_params,
+                permitted_reg_ids.as_ref().map(|v| v.as_slice()),
+            ) {
+                // Convert Vec<Variable> to *mut BNVariable using From trait
+                let mut raw_variables: Vec<BNVariable> = variables
+                    .into_iter()
+                    .map(|v| BNVariable::from(v))
+                    .collect();
+
+                *result_count = raw_variables.len();
+                let ptr = raw_variables.as_mut_ptr();
+                std::mem::forget(raw_variables);
+                ptr
+            } else {
+                // Return null to use default implementation
+                *result_count = 0;
+                std::ptr::null_mut()
+            }
+        })
+    }
+
+    extern "C" fn cb_free_variable_list(_ctxt: *mut c_void, vars: *mut BNVariable, count: usize) {
+        ffi_wrap!("CallingConvention::free_variable_list", unsafe {
+            if vars.is_null() {
+                return;
+            }
+
+            let vars_ptr = std::ptr::slice_from_raw_parts_mut(vars, count);
+            let _vars = Box::from_raw(vars_ptr);
+        })
+    }
+
     let name = name.to_cstr();
     let raw = Box::into_raw(Box::new(CustomCallingConventionContext {
         raw_handle: std::ptr::null_mut(),
@@ -523,6 +596,9 @@ where
         getRegisterArgumentListRegs: Some(cb_register_argument_list_regs::<C>),
         getRegisterArgumentLists: Some(cb_register_argument_lists::<C>),
         getRegisterArgumentListKind: Some(cb_register_argument_list_kind::<C>),
+
+        getVariablesForParameters: Some(cb_variable_for_parameters::<C>),
+        freeVariableList: Some(cb_free_variable_list),
 
         areArgumentRegistersSharedIndex: Some(cb_arg_shared_index::<C>),
         isStackReservedForArgumentRegisters: Some(cb_stack_reserved_arg_regs::<C>),

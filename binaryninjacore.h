@@ -2691,6 +2691,10 @@ extern "C"
 		void (*getParameterVariableForIncomingVariable)(
 		    void* ctxt, const BNVariable* var, BNFunction* func, BNVariable* result);
 
+		BNVariable* (*getVariablesForParameters)(void* ctxt, const BNFunctionParameter* params, size_t paramCount, 
+		    const uint32_t* permittedRegs, size_t permittedRegCount, size_t* resultCount);
+		void (*freeVariableList)(void* ctxt, BNVariable* vars, size_t count);
+
 		bool (*areArgumentRegistersUsedForVarArgs)(void* ctxt);
 	} BNCustomCallingConvention;
 

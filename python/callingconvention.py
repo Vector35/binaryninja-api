@@ -36,6 +36,7 @@ FunctionOrILFunction = Union["binaryninja.function.Function", "binaryninja.lowle
 # Register list kinds
 REGISTER_LIST_KIND_INTEGER_SEMANTICS = 0
 REGISTER_LIST_KIND_FLOAT_SEMANTICS = 1
+REGISTER_LIST_KIND_POINTER_SEMANTICS = 2
 
 
 class CallingConvention:

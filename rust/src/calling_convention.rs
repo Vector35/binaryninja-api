@@ -39,6 +39,7 @@ use crate::variable::Variable;
 pub enum RegisterListKind {
     IntegerSemantics = 0,
     FloatSemantics = 1,
+    PointerSemantics = 2,
 }
 
 pub trait CallingConvention: Sync {
@@ -421,6 +422,9 @@ where
                 }
                 RegisterListKind::FloatSemantics => {
                     BNRegisterListKind::REGISTER_LIST_KIND_FLOAT_SEMANTICS
+                }
+                RegisterListKind::PointerSemantics => {
+                    BNRegisterListKind::REGISTER_LIST_KIND_POINTER_SEMANTICS
                 }
             }
         })
@@ -870,6 +874,9 @@ impl CallingConvention for CoreCallingConvention {
                 }
                 BNRegisterListKind::REGISTER_LIST_KIND_FLOAT_SEMANTICS => {
                     RegisterListKind::FloatSemantics
+                }
+                BNRegisterListKind::REGISTER_LIST_KIND_POINTER_SEMANTICS => {
+                    RegisterListKind::PointerSemantics
                 }
             }
         }

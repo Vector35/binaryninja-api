@@ -530,7 +530,7 @@ where
             let params_slice = std::slice::from_raw_parts(params, param_count);
             let rust_params: Vec<FunctionParameter> = params_slice
                 .iter()
-                .map(|p| FunctionParameter::from_raw(p))
+                .map(FunctionParameter::from_raw)
                 .collect();
 
             // Convert permitted registers if provided
@@ -542,13 +542,13 @@ where
             };
 
             // Call the trait method
-            if let Some(variables) = ctxt.cc.variables_for_parameters(
-                &rust_params,
-                permitted_reg_ids.as_ref().map(|v| v.as_slice()),
-            ) {
+            if let Some(variables) = ctxt
+                .cc
+                .variables_for_parameters(&rust_params, permitted_reg_ids.as_deref())
+            {
                 // Convert Vec<Variable> to *mut BNVariable using From trait
                 let mut raw_variables: Vec<BNVariable> =
-                    variables.into_iter().map(|v| BNVariable::from(v)).collect();
+                    variables.into_iter().map(BNVariable::from).collect();
 
                 *result_count = raw_variables.len();
                 let ptr = raw_variables.as_mut_ptr();

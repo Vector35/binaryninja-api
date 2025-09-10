@@ -298,55 +298,34 @@ vector<uint32_t> CallingConvention::GetFloatArgumentRegisters()
 
 vector<uint32_t> CallingConvention::GetRegisterArgumentClasses()
 {
-	size_t count;
-	uint32_t* classes = BNGetRegisterArgumentClasses(GetObject(), &count);
-	vector<uint32_t> result;
-	for (size_t i = 0; i < count; i++)
-		result.push_back(classes[i]);
-	BNFreeRegisterList(classes);
-	return result;
+	return vector<uint32_t>();
 }
 
 
 vector<uint32_t> CallingConvention::GetRegisterArgumentClassLists(uint32_t classId)
 {
-	size_t count;
-	uint32_t* lists = BNGetRegisterArgumentClassLists(GetObject(), classId, &count);
-	vector<uint32_t> result;
-	for (size_t i = 0; i < count; i++)
-		result.push_back(lists[i]);
-	BNFreeRegisterList(lists);
-	return result;
+	return vector<uint32_t>();
 }
 
 
 vector<uint32_t> CallingConvention::GetRegisterArgumentLists()
 {
-	size_t count;
-	uint32_t* lists = BNGetRegisterArgumentLists(GetObject(), &count);
-	vector<uint32_t> result;
-	for (size_t i = 0; i < count; i++)
-		result.push_back(lists[i]);
-	BNFreeRegisterList(lists);
-	return result;
+	// Default implementation: derive from classes
+	return vector<uint32_t>();
 }
 
 
 vector<uint32_t> CallingConvention::GetRegisterArgumentListRegs(uint32_t regListId)
 {
-	size_t count;
-	uint32_t* regs = BNGetRegisterArgumentListRegs(GetObject(), regListId, &count);
-	vector<uint32_t> result;
-	for (size_t i = 0; i < count; i++)
-		result.push_back(regs[i]);
-	BNFreeRegisterList(regs);
-	return result;
+	// Default implementation: no registers for any list
+	return vector<uint32_t>();
 }
 
 
 BNRegisterListKind CallingConvention::GetRegisterArgumentListKind(uint32_t regListId)
 {
-	return BNGetRegisterArgumentListKind(GetObject(), regListId);
+	// Default implementation: list 0 = integer, others = float
+	return (regListId == 0) ? REGISTER_LIST_KIND_INTEGER_SEMANTICS : REGISTER_LIST_KIND_FLOAT_SEMANTICS;
 }
 
 

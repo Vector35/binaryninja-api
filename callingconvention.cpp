@@ -358,23 +358,78 @@ vector<uint32_t> CallingConvention::GetRegisterArgumentListRegs(uint32_t regList
 	return vector<uint32_t>();
 }
 
+
 vector<Variable> CallingConvention::GetVariablesForParameters(
 	const vector<FunctionParameter>& params, const std::optional<set<uint32_t>>& permittedRegs)
 {
-	vector<uint32_t> intArgs = GetIntegerArgumentRegisters();
-	vector<uint32_t> floatArgs = GetFloatArgumentRegisters();
+	vector<uint32_t> classes = GetRegisterArgumentClasses();
+	
+	// Build register lists for all classes
+	// The order of iterators matter here, for register class and register list
+	// we have assumed the INTEGER_SEMANTICS should be the first ones to be processed
+	vector<vector<uint32_t>> allRegLists;
+	vector<BNRegisterListKind> allListKinds;
+	vector<vector<uint32_t>::iterator> allIterators;
+	vector<vector<uint32_t>::iterator> allEndIterators;
+	bool hasSharedIndex = false;
+	
+	for (uint32_t classId : classes)
+	{
+		vector<uint32_t> registerLists = GetRegisterArgumentClassLists(classId);
+		if (registerLists.size() > 1)
+			hasSharedIndex = true;
+			
+		for (uint32_t regListId : registerLists)
+		{
+			vector<uint32_t> regs = GetRegisterArgumentListRegs(regListId);
+			BNRegisterListKind kind = GetRegisterArgumentListKind(regListId);
+			
+			allRegLists.push_back(regs);
+			allListKinds.push_back(kind);
+			allIterators.push_back(allRegLists.back().begin());
+			allEndIterators.push_back(allRegLists.back().end());
+		}
+	}
+
+	// Fallback to legacy API if no register classes defined
+	if (allRegLists.empty())
+	{
+		vector<uint32_t> intArgs = GetIntegerArgumentRegisters();
+		vector<uint32_t> floatArgs = GetFloatArgumentRegisters();
+		
+		if (!intArgs.empty())
+		{
+			allRegLists.push_back(intArgs);
+			allListKinds.push_back(REGISTER_LIST_KIND_INTEGER_SEMANTICS);
+			allIterators.push_back(allRegLists.back().begin());
+			allEndIterators.push_back(allRegLists.back().end());
+		}
+		
+		if (!floatArgs.empty())
+		{
+			allRegLists.push_back(floatArgs);
+			allListKinds.push_back(REGISTER_LIST_KIND_FLOAT_SEMANTICS);
+			allIterators.push_back(allRegLists.back().begin());
+			allEndIterators.push_back(allRegLists.back().end());
+		}
+		
+		hasSharedIndex = AreArgumentRegistersSharedIndex();
+	}
 
 	vector<Variable> result;
-	auto intArgIter = intArgs.begin();
-	auto floatArgIter = floatArgs.begin();
 	size_t addrSize = GetArchitecture()->GetAddressSize();
 	int64_t stackOffset = 0;
-	bool sharedIndex = AreArgumentRegistersSharedIndex();
+	
 	if (GetArchitecture()->GetLinkRegister() == BN_INVALID_REGISTER)
 		stackOffset = addrSize;
 	if (IsStackReservedForArgumentRegisters())
-		stackOffset += intArgs.size() * addrSize;
-
+	{
+		// Count total registers for stack reservation
+		size_t totalRegs = 0;
+		for (const auto& list : allRegLists)
+			totalRegs = std::max(totalRegs, list.size());
+		stackOffset += totalRegs * addrSize;
+	}
 
 	// TODO: Structure in register and multi-reg parameters
 	for (auto& param : params)
@@ -385,22 +440,26 @@ vector<Variable> CallingConvention::GetVariablesForParameters(
 		{
 			// Parameter not storage in a normal location, use custom variable
 			result.push_back(param.location);
+			
 			if (param.location.type == RegisterVariableSourceType)
 			{
-				// If non-default location matches the next register in the register parameter
-				// lists, advance the iterators. It may just be a type mismatch, and we still
-				// want to maintain the state for future parameters.
-				if (intArgIter != intArgs.end() && *intArgIter == param.location.storage)
+				for (size_t i = 0; i < allIterators.size(); ++i)
 				{
-					intArgIter++;
-					if (sharedIndex && floatArgIter != floatArgs.end())
-						floatArgIter++;
-				}
-				else if (floatArgIter != floatArgs.end() && *floatArgIter == param.location.storage)
-				{
-					floatArgIter++;
-					if (sharedIndex && intArgIter != intArgs.end())
-						intArgIter++;
+					if (allIterators[i] != allEndIterators[i] && *allIterators[i] == param.location.storage)
+					{
+						allIterators[i]++;
+						
+						// Advance all other iterators if shared index
+						if (hasSharedIndex)
+						{
+							for (size_t j = i + 1; j < allIterators.size(); ++j)
+							{
+								if (allIterators[j] != allEndIterators[j])
+									allIterators[j]++;
+							}
+						}
+						break;
+					}
 				}
 			}
 			else if (param.location.type == StackVariableSourceType)
@@ -416,62 +475,74 @@ vector<Variable> CallingConvention::GetVariablesForParameters(
 			continue;
 		}
 
-		if (param.type->IsFloat())
+		// Try to find a suitable register for this parameter
+		bool paramPlaced = false;
+		
+		for (size_t i = 0; i < allIterators.size(); ++i)
 		{
-			if (permittedRegs.has_value() && floatArgIter != floatArgs.end()
-				&& permittedRegs.value().count(*floatArgIter) == 0)
+			if (allIterators[i] == allEndIterators[i])
+				continue;
+				
+			// Check if this register is permitted
+			if (permittedRegs.has_value() && permittedRegs.value().count(*allIterators[i]) == 0)
 			{
-				// Disallowed register parameter, start spilling to stack. This is used in calling
-				// conventions that place all variable argument parameters on the stack.
-				floatArgIter = floatArgs.end();
-				if (sharedIndex)
-					intArgIter = intArgs.end();
+				// Disallowed register parameter, mark this list as exhausted
+				allIterators[i] = allEndIterators[i];
+				if (hasSharedIndex)
+				{
+					// Mark all lists as exhausted when shared index
+					for (size_t j = 0; j < allIterators.size(); ++j)
+						allIterators[j] = allEndIterators[j];
+				}
+				continue;
 			}
-			else if (floatArgIter != floatArgs.end())
+			
+			// Check if the type matches the register semantics
+			bool typeMatches = false;
+			BNRegisterListKind kind = allListKinds[i];
+			
+			if (kind == REGISTER_LIST_KIND_INTEGER_SEMANTICS && !param.type->IsFloat())
+				typeMatches = true;
+			else if (kind == REGISTER_LIST_KIND_FLOAT_SEMANTICS && param.type->IsFloat())
+				typeMatches = true;
+			else if (kind == REGISTER_LIST_KIND_POINTER_SEMANTICS && param.type->IsPointer())
+				typeMatches = true;
+			
+			if (typeMatches)
 			{
-				BNRegisterInfo regInfo = GetArchitecture()->GetRegisterInfo(*floatArgIter);
+				BNRegisterInfo regInfo = GetArchitecture()->GetRegisterInfo(*allIterators[i]);
 				if (width <= regInfo.size)
 				{
-					result.emplace_back(RegisterVariableSourceType, 0, *floatArgIter);
-					floatArgIter++;
-					if (sharedIndex && intArgIter != intArgs.end())
-						intArgIter++;
-					continue;
+					result.emplace_back(RegisterVariableSourceType, 0, *allIterators[i]);
+					allIterators[i]++;
+					
+					// Advance all other iterators if shared index
+					if (hasSharedIndex)
+					{
+						for (size_t j = i + 1; j < allIterators.size(); ++j)
+						{
+							if (allIterators[j] != allEndIterators[j])
+								allIterators[j]++;
+						}
+					}
+					
+					paramPlaced = true;
+					break;
 				}
 			}
 		}
-		else
+		
+		// If not placed in register, place on stack
+		if (!paramPlaced)
 		{
-			if (permittedRegs.has_value() && intArgIter != intArgs.end()
-				&& permittedRegs.value().count(*intArgIter) == 0)
-			{
-				// Disallowed register parameter, start spilling to stack. This is used in calling
-				// conventions that place all variable argument parameters on the stack.
-				intArgIter = intArgs.end();
-				if (sharedIndex)
-					floatArgIter = floatArgs.end();
-			}
-			else if (intArgIter != intArgs.end())
-			{
-				BNRegisterInfo regInfo = GetArchitecture()->GetRegisterInfo(*intArgIter);
-				if (width <= regInfo.size)
-				{
-					result.emplace_back(RegisterVariableSourceType, 0, *intArgIter);
-					intArgIter++;
-					if (sharedIndex && floatArgIter != floatArgs.end())
-						floatArgIter++;
-					continue;
-				}
-			}
+			result.emplace_back(StackVariableSourceType, 0, stackOffset);
+
+			if (width < addrSize)
+				width = addrSize;
+			else if ((width % addrSize) != 0)
+				width += addrSize - (width % addrSize);
+			stackOffset += width;
 		}
-
-		result.emplace_back(StackVariableSourceType, 0, stackOffset);
-
-		if (width < addrSize)
-			width = addrSize;
-		else if ((width % addrSize) != 0)
-			width += addrSize - (width % addrSize);
-		stackOffset += width;
 	}
 
 	return result;

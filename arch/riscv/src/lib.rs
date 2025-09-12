@@ -15,9 +15,7 @@ use binaryninja::{
         UnusedRegisterStackInfo,
     },
     binary_view::{BinaryView, BinaryViewExt},
-    calling_convention::{
-        register_calling_convention, CallingConvention, ConventionBuilder,
-    },
+    calling_convention::{register_calling_convention, CallingConvention, ConventionBuilder},
     custom_binary_view::{BinaryViewType, BinaryViewTypeExt},
     disassembly::{InstructionTextToken, InstructionTextTokenKind},
     function::Function,

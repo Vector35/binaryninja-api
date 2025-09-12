@@ -63,6 +63,9 @@ class CallingConvention:
 	register_argument_list_regs = {}
 	register_argument_list_kinds = {}
 
+	variables_for_parameters = []
+
+
 	_registered_calling_conventions = []
 
 	def __init__(
@@ -686,8 +689,8 @@ class CallingConvention:
 		stack_offset = 0
 		addr_size = self.arch.address_size
 		
-		# If there's a link register, start stack after it
-		if self.arch.link_reg is not None:
+		# If no link register, start stack after return address
+		if self.arch.link_reg is None:
 			stack_offset = addr_size
 		
 		# Reserve stack space for argument registers if needed
@@ -713,28 +716,28 @@ class CallingConvention:
 			
 			allocated = False
 			
-			# Try to allocate in appropriate register type
+			# Try float registers first for float types (if available)
+			# TODO: Add proper float type detection when type system supports it
+			# For now, treat all parameters as potentially using integer registers
+			
+			# Try integer registers (for all parameter types when no float regs, or non-float types)
 			try:
-				# For now, assume integer allocation (TODO: add float type detection)
-				try:
-					reg_name = next(int_arg_iter)
-					if is_reg_permitted(reg_name):
-						reg_index = self.arch.regs[reg_name].index
-						result.append(variable.Variable(variable.RegisterVariableSourceType, 0, reg_index))
-						allocated = True
-						if shared_index:
-							try:
-								next(float_arg_iter)  # Advance float iterator too
-							except StopIteration:
-								pass
-					else:
-						# Register not permitted, spill to stack
-						int_arg_iter = iter([])  # Empty the iterator
-						if shared_index:
-							float_arg_iter = iter([])
-				except StopIteration:
-					pass
-			except:
+				reg_name = next(int_arg_iter)
+				if is_reg_permitted(reg_name):
+					reg_index = self.arch.regs[reg_name].index
+					result.append(variable.Variable(variable.RegisterVariableSourceType, 0, reg_index))
+					allocated = True
+					if shared_index:
+						try:
+							next(float_arg_iter)  # Advance float iterator too
+						except StopIteration:
+							pass
+				else:
+					# Register not permitted, spill to stack
+					int_arg_iter = iter([])  # Empty the iterator
+					if shared_index:
+						float_arg_iter = iter([])
+			except StopIteration:
 				pass
 			
 			if not allocated:

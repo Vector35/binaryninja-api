@@ -127,23 +127,23 @@ pub trait CallingConvention: Sync {
         permitted_regs: Option<&std::collections::HashSet<RegisterId>>,
     ) -> Option<Vec<Variable>> {
         use crate::variable::{Variable, VariableSourceType};
-        
+
         // Provide default parameter allocation logic
         let int_args = self.int_arg_registers();
         let float_args = self.float_arg_registers();
         let shared_index = self.arg_registers_shared_index();
-        
+
         let mut result = Vec::new();
         let mut int_arg_iter = int_args.iter();
         let mut float_arg_iter = float_args.iter();
         let mut stack_offset = 0i64;
-        
+
         // TODO: Get address size from architecture when available
         let addr_size = 8; // Default to 8 bytes, should get from arch
-        
+
         for _param in params {
             let param_width = 8; // TODO: Get actual type width when FunctionParameter has type info
-            
+
             // Check if this register is permitted
             let check_permitted = |reg_id: RegisterId| -> bool {
                 if let Some(permitted) = permitted_regs {
@@ -152,9 +152,10 @@ pub trait CallingConvention: Sync {
                     true
                 }
             };
-            
+
             // Try to allocate in appropriate register
-            let allocated = if param_width <= 8 { // Assume float check based on type when available
+            let allocated = if param_width <= 8 {
+                // Assume float check based on type when available
                 // Try integer register first
                 if let Some(&reg_id) = int_arg_iter.as_slice().first() {
                     if check_permitted(reg_id) {
@@ -162,7 +163,11 @@ pub trait CallingConvention: Sync {
                         if shared_index {
                             float_arg_iter.next();
                         }
-                        Some(Variable::new(VariableSourceType::RegisterVariableSourceType, 0, reg_id.0 as i64))
+                        Some(Variable::new(
+                            VariableSourceType::RegisterVariableSourceType,
+                            0,
+                            reg_id.0 as i64,
+                        ))
                     } else {
                         None
                     }
@@ -172,12 +177,16 @@ pub trait CallingConvention: Sync {
             } else {
                 None
             };
-            
+
             if let Some(var) = allocated {
                 result.push(var);
             } else {
                 // Allocate on stack
-                result.push(Variable::new(VariableSourceType::StackVariableSourceType, 0, stack_offset));
+                result.push(Variable::new(
+                    VariableSourceType::StackVariableSourceType,
+                    0,
+                    stack_offset,
+                ));
                 let aligned_width = if param_width < addr_size {
                     addr_size
                 } else if param_width % addr_size != 0 {
@@ -188,7 +197,7 @@ pub trait CallingConvention: Sync {
                 stack_offset += aligned_width as i64;
             }
         }
-        
+
         Some(result)
     }
 }
@@ -636,7 +645,9 @@ where
                 .collect();
 
             // Convert permitted registers if provided
-            let permitted_reg_ids: Option<std::collections::HashSet<RegisterId>> = if permitted_regs.is_null() {
+            let permitted_reg_ids: Option<std::collections::HashSet<RegisterId>> = if permitted_regs
+                .is_null()
+            {
                 None
             } else {
                 let regs_slice = std::slice::from_raw_parts(permitted_regs, permitted_reg_count);

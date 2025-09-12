@@ -452,9 +452,9 @@ vector<Variable> CallingConvention::GetVariablesForParameters(
 						// Advance all other iterators if shared index
 						if (hasSharedIndex)
 						{
-							for (size_t j = i + 1; j < allIterators.size(); ++j)
+							for (size_t j = 0; j < allIterators.size(); ++j)
 							{
-								if (allIterators[j] != allEndIterators[j])
+								if (j != i && allIterators[j] != allEndIterators[j])
 									allIterators[j]++;
 							}
 						}
@@ -519,9 +519,9 @@ vector<Variable> CallingConvention::GetVariablesForParameters(
 					// Advance all other iterators if shared index
 					if (hasSharedIndex)
 					{
-						for (size_t j = i + 1; j < allIterators.size(); ++j)
+						for (size_t j = 0; j < allIterators.size(); ++j)
 						{
-							if (allIterators[j] != allEndIterators[j])
+							if (j != i && allIterators[j] != allEndIterators[j])
 								allIterators[j]++;
 						}
 					}

@@ -63,35 +63,133 @@ pub trait CallingConvention: Sync {
     fn are_argument_registers_used_for_var_args(&self) -> bool;
 
     // Register-list/class based API with default implementations
-    // Register-list/class based API with default implementations
     fn register_argument_classes(&self) -> Vec<u32> {
-        vec![]
+        // Default implementation: similar to C++ CallingConvention::GetRegisterArgumentClasses
+        if self.arg_registers_shared_index() {
+            vec![0]
+        } else {
+            vec![0, 1]
+        }
     }
 
-    fn register_argument_class_lists(&self, _class_id: u32) -> Vec<u32> {
-        vec![]
+    fn register_argument_class_lists(&self, class_id: u32) -> Vec<u32> {
+        // Default implementation: similar to C++ CallingConvention::GetRegisterArgumentClassLists
+        if self.arg_registers_shared_index() {
+            vec![0, 1]
+        } else {
+            if class_id == 0 {
+                vec![0]
+            } else if class_id == 1 {
+                vec![1]
+            } else {
+                vec![]
+            }
+        }
     }
 
     fn register_argument_lists(&self) -> Vec<u32> {
-        vec![]
+        // Default implementation: similar to C++ CallingConvention::GetRegisterArgumentLists
+        let mut result = Vec::new();
+        let classes = self.register_argument_classes();
+        for class_id in classes {
+            let lists = self.register_argument_class_lists(class_id);
+            result.extend(lists);
+        }
+        result
     }
 
-    fn register_argument_list_regs(&self, _reg_list_id: u32) -> Vec<RegisterId> {
-        vec![]
+    fn register_argument_list_regs(&self, reg_list_id: u32) -> Vec<RegisterId> {
+        // Default implementation: similar to C++ CallingConvention::GetRegisterArgumentListRegs
+        // Bridge implementation: use old APIs as fallback
+        if reg_list_id == 0 {
+            self.int_arg_registers()
+        } else if reg_list_id == 1 {
+            self.float_arg_registers()
+        } else {
+            vec![]
+        }
     }
 
-    fn register_argument_list_kind(&self, _reg_list_id: u32) -> RegisterListKind {
-        RegisterListKind::IntegerSemantics
+    fn register_argument_list_kind(&self, reg_list_id: u32) -> RegisterListKind {
+        // Default implementation: similar to C++ CallingConvention::GetRegisterArgumentListKind
+        // List 0 = integer, others = float
+        if reg_list_id == 0 {
+            RegisterListKind::IntegerSemantics
+        } else {
+            RegisterListKind::FloatSemantics
+        }
     }
 
-    // Optional method for custom parameter allocation
-    // Returns None to use default implementation, or Some(Vec<Variable>) for custom allocation
+    // Default implementation for parameter allocation, similar to C++ CallingConvention::GetVariablesForParameters
     fn variables_for_parameters(
         &self,
-        _params: &[FunctionParameter],
-        _permitted_regs: Option<&[RegisterId]>,
+        params: &[FunctionParameter],
+        permitted_regs: Option<&std::collections::HashSet<RegisterId>>,
     ) -> Option<Vec<Variable>> {
-        None
+        use crate::variable::{Variable, VariableSourceType};
+        
+        // Provide default parameter allocation logic
+        let int_args = self.int_arg_registers();
+        let float_args = self.float_arg_registers();
+        let shared_index = self.arg_registers_shared_index();
+        
+        let mut result = Vec::new();
+        let mut int_arg_iter = int_args.iter();
+        let mut float_arg_iter = float_args.iter();
+        let mut stack_offset = 0i64;
+        
+        // TODO: Get address size from architecture when available
+        let addr_size = 8; // Default to 8 bytes, should get from arch
+        
+        for _param in params {
+            let param_width = 8; // TODO: Get actual type width when FunctionParameter has type info
+            
+            // Check if this register is permitted
+            let check_permitted = |reg_id: RegisterId| -> bool {
+                if let Some(permitted) = permitted_regs {
+                    permitted.contains(&reg_id)
+                } else {
+                    true
+                }
+            };
+            
+            // Try to allocate in appropriate register
+            let allocated = if param_width <= 8 { // Assume float check based on type when available
+                // Try integer register first
+                if let Some(&reg_id) = int_arg_iter.as_slice().first() {
+                    if check_permitted(reg_id) {
+                        int_arg_iter.next();
+                        if shared_index {
+                            float_arg_iter.next();
+                        }
+                        Some(Variable::new(VariableSourceType::RegisterVariableSourceType, 0, reg_id.0 as i64))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+            
+            if let Some(var) = allocated {
+                result.push(var);
+            } else {
+                // Allocate on stack
+                result.push(Variable::new(VariableSourceType::StackVariableSourceType, 0, stack_offset));
+                let aligned_width = if param_width < addr_size {
+                    addr_size
+                } else if param_width % addr_size != 0 {
+                    param_width + (addr_size - (param_width % addr_size))
+                } else {
+                    param_width
+                };
+                stack_offset += aligned_width as i64;
+            }
+        }
+        
+        Some(result)
     }
 }
 
@@ -538,7 +636,7 @@ where
                 .collect();
 
             // Convert permitted registers if provided
-            let permitted_reg_ids: Option<Vec<RegisterId>> = if permitted_regs.is_null() {
+            let permitted_reg_ids: Option<std::collections::HashSet<RegisterId>> = if permitted_regs.is_null() {
                 None
             } else {
                 let regs_slice = std::slice::from_raw_parts(permitted_regs, permitted_reg_count);
@@ -548,7 +646,7 @@ where
             // Call the trait method
             if let Some(variables) = ctxt
                 .cc
-                .variables_for_parameters(&rust_params, permitted_reg_ids.as_deref())
+                .variables_for_parameters(&rust_params, permitted_reg_ids.as_ref())
             {
                 // Convert Vec<Variable> to *mut BNVariable using From trait
                 let mut raw_variables: Vec<BNVariable> =
@@ -671,7 +769,7 @@ impl CoreCallingConvention {
     pub fn variables_for_parameters(
         &self,
         params: &[FunctionParameter],
-        permitted_registers: Option<&[CoreRegister]>,
+        permitted_registers: Option<&std::collections::HashSet<CoreRegister>>,
     ) -> Vec<Variable> {
         let mut count: usize = 0;
         let raw_params: Vec<BNFunctionParameter> = params
@@ -708,6 +806,67 @@ impl CoreCallingConvention {
         }
 
         unsafe { Array::<Variable>::new(raw_vars_ptr, count, ()) }.to_vec()
+    }
+
+    pub fn register_argument_classes(&self) -> Vec<u32> {
+        unsafe {
+            let mut count = 0;
+            let classes_ptr = BNGetRegisterArgumentClasses(self.handle, &mut count);
+            let classes: Vec<u32> = std::slice::from_raw_parts(classes_ptr, count).to_vec();
+            BNFreeRegisterList(classes_ptr);
+            classes
+        }
+    }
+
+    pub fn register_argument_class_lists(&self, class_id: u32) -> Vec<u32> {
+        unsafe {
+            let mut count = 0;
+            let lists_ptr = BNGetRegisterArgumentClassLists(self.handle, class_id, &mut count);
+            let lists: Vec<u32> = std::slice::from_raw_parts(lists_ptr, count).to_vec();
+            BNFreeRegisterList(lists_ptr);
+            lists
+        }
+    }
+
+    pub fn register_argument_lists(&self) -> Vec<u32> {
+        unsafe {
+            let mut count = 0;
+            let lists_ptr = BNGetRegisterArgumentLists(self.handle, &mut count);
+            let lists: Vec<u32> = std::slice::from_raw_parts(lists_ptr, count).to_vec();
+            BNFreeRegisterList(lists_ptr);
+            lists
+        }
+    }
+
+    pub fn register_argument_list_regs(&self, reg_list_id: u32) -> Vec<RegisterId> {
+        unsafe {
+            let mut count = 0;
+            let regs_ptr = BNGetRegisterArgumentListRegs(self.handle, reg_list_id, &mut count);
+            let regs: Vec<RegisterId> = std::slice::from_raw_parts(regs_ptr, count)
+                .iter()
+                .copied()
+                .map(RegisterId::from)
+                .collect();
+            BNFreeRegisterList(regs_ptr);
+            regs
+        }
+    }
+
+    pub fn register_argument_list_kind(&self, reg_list_id: u32) -> RegisterListKind {
+        unsafe {
+            let kind = BNGetRegisterArgumentListKind(self.handle, reg_list_id);
+            match kind {
+                BNRegisterListKind::REGISTER_LIST_KIND_INTEGER_SEMANTICS => {
+                    RegisterListKind::IntegerSemantics
+                }
+                BNRegisterListKind::REGISTER_LIST_KIND_FLOAT_SEMANTICS => {
+                    RegisterListKind::FloatSemantics
+                }
+                BNRegisterListKind::REGISTER_LIST_KIND_POINTER_SEMANTICS => {
+                    RegisterListKind::PointerSemantics
+                }
+            }
+        }
     }
 }
 

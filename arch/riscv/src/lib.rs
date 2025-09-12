@@ -16,7 +16,7 @@ use binaryninja::{
     },
     binary_view::{BinaryView, BinaryViewExt},
     calling_convention::{
-        register_calling_convention, CallingConvention, ConventionBuilder, RegisterListKind,
+        register_calling_convention, CallingConvention, ConventionBuilder,
     },
     custom_binary_view::{BinaryViewType, BinaryViewTypeExt},
     disassembly::{InstructionTextToken, InstructionTextTokenKind},
@@ -2843,27 +2843,6 @@ impl<D: RiscVDisassembler> CallingConvention for RiscVCC<D> {
     }
     fn are_argument_registers_used_for_var_args(&self) -> bool {
         true
-    }
-
-    // Register-list/class based API - default implementations for simple calling convention
-    fn register_argument_classes(&self) -> Vec<u32> {
-        Vec::new()
-    }
-
-    fn register_argument_class_lists(&self, _class_id: u32) -> Vec<u32> {
-        Vec::new()
-    }
-
-    fn register_argument_lists(&self) -> Vec<u32> {
-        Vec::new()
-    }
-
-    fn register_argument_list_regs(&self, _reg_list_id: u32) -> Vec<RegisterId> {
-        Vec::new()
-    }
-
-    fn register_argument_list_kind(&self, _reg_list_id: u32) -> RegisterListKind {
-        RegisterListKind::IntegerSemantics
     }
 }
 

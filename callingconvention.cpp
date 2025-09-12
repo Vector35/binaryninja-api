@@ -298,27 +298,183 @@ vector<uint32_t> CallingConvention::GetFloatArgumentRegisters()
 
 vector<uint32_t> CallingConvention::GetRegisterArgumentClasses()
 {
-	return vector<uint32_t>();
+	/*
+	This should return vector<uint32_t> {} when all architecture
+	supports register class and register list.
+	*/
+	if (AreArgumentRegistersSharedIndex()) 
+		return vector<uint32_t> {0};
+	
+	return vector<uint32_t> {0, 1};
 }
 
 
 vector<uint32_t> CallingConvention::GetRegisterArgumentClassLists(uint32_t classId)
 {
-	return vector<uint32_t>();
+	/*
+	This should return vector<uint32_t> {} when all architecture
+	supports register class and register list.
+	*/
+	if (AreArgumentRegistersSharedIndex()) {
+		return vector<uint32_t> {0, 1};
+	} else {
+		if (0 == classId) {
+			return vector<uint32_t> {0};
+		} else if (1 == classId) {
+			return vector<uint32_t> {1};
+		}
+	}
+	return vector<uint32_t> {};
 }
 
 
 vector<uint32_t> CallingConvention::GetRegisterArgumentLists()
 {
-	// Default implementation: derive from classes
-	return vector<uint32_t>();
+	vector<uint32_t> result;
+	vector<uint32_t> classes = GetRegisterArgumentClasses();
+	for(uint32_t classId : classes) 
+	{
+		vector<uint32_t> lists = GetRegisterArgumentClassLists(classId);
+		result.insert(result.end(), lists.begin(), lists.end());
+	}
+	return result;
 }
 
 
 vector<uint32_t> CallingConvention::GetRegisterArgumentListRegs(uint32_t regListId)
 {
-	// Default implementation: no registers for any list
+	/*
+	This should return vector<uint32_t> {} when all architecture
+	supports register class and register list.
+	
+	Bridge implementation: use old APIs as fallback for architectures that haven't
+	implemented the new register list/class APIs yet
+	*/
+	if (regListId == 0) {
+		return GetIntegerArgumentRegisters();
+	} else if (regListId == 1) {
+		return GetFloatArgumentRegisters();
+	}
 	return vector<uint32_t>();
+}
+
+vector<Variable> CallingConvention::GetVariablesForParameters(
+	const vector<FunctionParameter>& params, const std::optional<set<uint32_t>>& permittedRegs)
+{
+	vector<uint32_t> intArgs = GetIntegerArgumentRegisters();
+	vector<uint32_t> floatArgs = GetFloatArgumentRegisters();
+
+	vector<Variable> result;
+	auto intArgIter = intArgs.begin();
+	auto floatArgIter = floatArgs.begin();
+	size_t addrSize = GetArchitecture()->GetAddressSize();
+	int64_t stackOffset = 0;
+	bool sharedIndex = AreArgumentRegistersSharedIndex();
+	if (GetArchitecture()->GetLinkRegister() == BN_INVALID_REGISTER)
+		stackOffset = addrSize;
+	if (IsStackReservedForArgumentRegisters())
+		stackOffset += intArgs.size() * addrSize;
+
+
+	// TODO: Structure in register and multi-reg parameters
+	for (auto& param : params)
+	{
+		size_t width = param.type->GetWidth();
+
+		if (!param.defaultLocation)
+		{
+			// Parameter not storage in a normal location, use custom variable
+			result.push_back(param.location);
+			if (param.location.type == RegisterVariableSourceType)
+			{
+				// If non-default location matches the next register in the register parameter
+				// lists, advance the iterators. It may just be a type mismatch, and we still
+				// want to maintain the state for future parameters.
+				if (intArgIter != intArgs.end() && *intArgIter == param.location.storage)
+				{
+					intArgIter++;
+					if (sharedIndex && floatArgIter != floatArgs.end())
+						floatArgIter++;
+				}
+				else if (floatArgIter != floatArgs.end() && *floatArgIter == param.location.storage)
+				{
+					floatArgIter++;
+					if (sharedIndex && intArgIter != intArgs.end())
+						intArgIter++;
+				}
+			}
+			else if (param.location.type == StackVariableSourceType)
+			{
+				// Adjust next automatic stack location to after this one
+				stackOffset = param.location.storage;
+				if (width < addrSize)
+					width = addrSize;
+				else if ((width % addrSize) != 0)
+					width += addrSize - (width % addrSize);
+				stackOffset += width;
+			}
+			continue;
+		}
+
+		if (param.type->IsFloat())
+		{
+			if (permittedRegs.has_value() && floatArgIter != floatArgs.end()
+				&& permittedRegs.value().count(*floatArgIter) == 0)
+			{
+				// Disallowed register parameter, start spilling to stack. This is used in calling
+				// conventions that place all variable argument parameters on the stack.
+				floatArgIter = floatArgs.end();
+				if (sharedIndex)
+					intArgIter = intArgs.end();
+			}
+			else if (floatArgIter != floatArgs.end())
+			{
+				BNRegisterInfo regInfo = GetArchitecture()->GetRegisterInfo(*floatArgIter);
+				if (width <= regInfo.size)
+				{
+					result.emplace_back(RegisterVariableSourceType, 0, *floatArgIter);
+					floatArgIter++;
+					if (sharedIndex && intArgIter != intArgs.end())
+						intArgIter++;
+					continue;
+				}
+			}
+		}
+		else
+		{
+			if (permittedRegs.has_value() && intArgIter != intArgs.end()
+				&& permittedRegs.value().count(*intArgIter) == 0)
+			{
+				// Disallowed register parameter, start spilling to stack. This is used in calling
+				// conventions that place all variable argument parameters on the stack.
+				intArgIter = intArgs.end();
+				if (sharedIndex)
+					floatArgIter = floatArgs.end();
+			}
+			else if (intArgIter != intArgs.end())
+			{
+				BNRegisterInfo regInfo = GetArchitecture()->GetRegisterInfo(*intArgIter);
+				if (width <= regInfo.size)
+				{
+					result.emplace_back(RegisterVariableSourceType, 0, *intArgIter);
+					intArgIter++;
+					if (sharedIndex && floatArgIter != floatArgs.end())
+						floatArgIter++;
+					continue;
+				}
+			}
+		}
+
+		result.emplace_back(StackVariableSourceType, 0, stackOffset);
+
+		if (width < addrSize)
+			width = addrSize;
+		else if ((width % addrSize) != 0)
+			width += addrSize - (width % addrSize);
+		stackOffset += width;
+	}
+
+	return result;
 }
 
 
@@ -328,12 +484,6 @@ BNRegisterListKind CallingConvention::GetRegisterArgumentListKind(uint32_t regLi
 	return (regListId == 0) ? REGISTER_LIST_KIND_INTEGER_SEMANTICS : REGISTER_LIST_KIND_FLOAT_SEMANTICS;
 }
 
-
-vector<Variable> CallingConvention::GetVariablesForParameters(const vector<FunctionParameter>& paramTypes,
-	const std::set<uint32_t>* permittedRegs)
-{
-	return vector<Variable>();
-}
 
 bool CallingConvention::AreArgumentRegistersSharedIndex()
 {
@@ -608,7 +758,7 @@ BNRegisterListKind CoreCallingConvention::GetRegisterArgumentListKind(uint32_t r
 
 
 vector<Variable> CoreCallingConvention::GetVariablesForParameters(const vector<FunctionParameter>& paramTypes,
-	const std::set<uint32_t>* permittedRegs)
+	const std::optional<std::set<uint32_t>>& permittedRegs)
 {
 	BNFunctionParameter* params = new BNFunctionParameter[paramTypes.size()];
 	for (size_t i = 0; i < paramTypes.size(); i++)
@@ -624,12 +774,12 @@ vector<Variable> CoreCallingConvention::GetVariablesForParameters(const vector<F
 
 	uint32_t* permittedRegsArray = nullptr;
 	size_t permittedRegsCount = 0;
-	if (permittedRegs != nullptr)
+	if (permittedRegs.has_value())
 	{
-		permittedRegsCount = permittedRegs->size();
+		permittedRegsCount = permittedRegs.value().size();
 		permittedRegsArray = new uint32_t[permittedRegsCount];
 		size_t j = 0;
-		for (auto reg : *permittedRegs)
+		for (auto reg : permittedRegs.value())
 			permittedRegsArray[j++] = reg;
 	}
 
@@ -640,11 +790,11 @@ vector<Variable> CoreCallingConvention::GetVariablesForParameters(const vector<F
 	vector<Variable> result;
 	for (size_t i = 0; i < count; i++)
 		result.push_back(vars[i]);
-
+	BNFreeVariableList(vars);
+	
 	delete[] params;
 	if (permittedRegsArray)
 		delete[] permittedRegsArray;
-	BNFreeVariableList(vars);
 	return result;
 }
 
@@ -723,34 +873,21 @@ BNVariable* CallingConvention::GetVariablesForParametersCallback(void* ctxt, con
 		params.push_back(param);
 	}
 	
-	std::set<uint32_t>* permittedRegsSet = nullptr;
+	std::set<uint32_t> regsSet;
+	std::optional<std::set<uint32_t>> permittedRegsSet;
 	if (permittedRegs && permittedRegCount > 0)
 	{
-		permittedRegsSet = new std::set<uint32_t>();
 		for (size_t i = 0; i < permittedRegCount; i++)
-			permittedRegsSet->insert(permittedRegs[i]);
+			regsSet.insert(permittedRegs[i]);
+		permittedRegsSet = regsSet;
 	}
 	
-	vector<Variable> variables = cc->GetVariablesForParameters(params, permittedRegsSet);
-	
-	// If the calling convention doesn't implement this method, it returns an empty vector
-	// Signal fallback to core implementation by returning NULL with count 0
-	if (variables.empty())
-	{
-		*resultCount = 0;
-		if (permittedRegsSet)
-			delete permittedRegsSet;
-		return nullptr;
-	}
-	
+	vector<Variable> variables = cc->GetVariablesForParameters(params, permittedRegsSet);	
 	*resultCount = variables.size();
 	
 	BNVariable* result = new BNVariable[variables.size()];
 	for (size_t i = 0; i < variables.size(); i++)
 		result[i] = variables[i];
-	
-	if (permittedRegsSet)
-		delete permittedRegsSet;
 	
 	return result;
 }

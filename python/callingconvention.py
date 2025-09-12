@@ -18,9 +18,9 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+from typing import Optional, Union, Set
 import traceback
 import ctypes
-from typing import Optional, Union
 
 # Binary Ninja components
 from . import _binaryninjacore as core
@@ -467,7 +467,7 @@ class CallingConvention:
 
 	def _get_register_argument_classes(self, ctxt, count):
 		try:
-			classes = self.__class__.register_argument_classes
+			classes = self.perform_get_register_argument_classes()
 			count[0] = len(classes)
 			class_buf = (ctypes.c_uint * len(classes))()
 			for i in range(0, len(classes)):
@@ -482,7 +482,7 @@ class CallingConvention:
 
 	def _get_register_argument_class_lists(self, ctxt, class_id, count):
 		try:
-			lists = self.__class__.register_argument_class_lists.get(class_id, [])
+			lists = self.perform_get_register_argument_class_lists(class_id)
 			count[0] = len(lists)
 			list_buf = (ctypes.c_uint * len(lists))()
 			for i in range(0, len(lists)):
@@ -497,7 +497,7 @@ class CallingConvention:
 
 	def _get_register_argument_lists(self, ctxt, count):
 		try:
-			lists = self.__class__.register_argument_lists
+			lists = self.perform_get_register_argument_lists()
 			count[0] = len(lists)
 			list_buf = (ctypes.c_uint * len(lists))()
 			for i in range(0, len(lists)):
@@ -512,7 +512,7 @@ class CallingConvention:
 
 	def _get_register_argument_list_regs(self, ctxt, reg_list_id, count):
 		try:
-			regs = self.__class__.register_argument_list_regs.get(reg_list_id, [])
+			regs = self.perform_get_register_argument_list_regs(reg_list_id)
 			count[0] = len(regs)
 			reg_buf = (ctypes.c_uint * len(regs))()
 			for i in range(0, len(regs)):
@@ -530,7 +530,7 @@ class CallingConvention:
 
 	def _get_register_argument_list_kind(self, ctxt, reg_list_id):
 		try:
-			return self.__class__.register_argument_list_kinds.get(reg_list_id, 0)  # Default to INTEGER_SEMANTICS
+			return self.perform_get_register_argument_list_kind(reg_list_id)
 		except:
 			log_error_for_exception("Unhandled Python exception in CallingConvention._get_register_argument_list_kind")
 			return 0
@@ -609,7 +609,63 @@ class CallingConvention:
 		out_var = core.BNGetDefaultParameterVariableForIncomingVariable(self.handle, in_var.to_BNVariable())
 		return variable.CoreVariable.from_BNVariable(out_var)
 
-	def perform_get_variables_for_parameters(self, param_types, permitted_regs=None):
+	def perform_get_register_argument_classes(self):
+		"""
+		Override this method to provide custom register argument classes.
+		Default implementation matches C++ CallingConvention::GetRegisterArgumentClasses
+		"""
+		if self.__class__.arg_regs_share_index:
+			return [0]
+		else:
+			return [0, 1]
+
+	def perform_get_register_argument_class_lists(self, class_id):
+		"""
+		Override this method to provide custom register argument class lists.
+		Default implementation matches C++ CallingConvention::GetRegisterArgumentClassLists
+		"""
+		if self.__class__.arg_regs_share_index:
+			return [0, 1]
+		else:
+			if class_id == 0:
+				return [0]
+			elif class_id == 1:
+				return [1]
+			else:
+				return []
+
+	def perform_get_register_argument_lists(self):
+		"""
+		Override this method to provide custom register argument lists.
+		Default implementation matches C++ CallingConvention::GetRegisterArgumentLists
+		"""
+		result = []
+		classes = self.perform_get_register_argument_classes()
+		for class_id in classes:
+			lists = self.perform_get_register_argument_class_lists(class_id)
+			result.extend(lists)
+		return result
+
+	def perform_get_register_argument_list_regs(self, reg_list_id):
+		"""
+		Override this method to provide custom register argument list registers.
+		Default implementation matches C++ CallingConvention::GetRegisterArgumentListRegs
+		"""
+		if reg_list_id == 0:
+			return self.__class__.int_arg_regs[:]
+		elif reg_list_id == 1:
+			return self.__class__.float_arg_regs[:]
+		else:
+			return []
+
+	def perform_get_register_argument_list_kind(self, reg_list_id):
+		"""
+		Override this method to provide custom register argument list kind.
+		Default implementation matches C++ CallingConvention::GetRegisterArgumentListKind
+		"""
+		return 0 if reg_list_id == 0 else 1  # INTEGER_SEMANTICS : FLOAT_SEMANTICS
+
+	def perform_get_variables_for_parameters(self, param_types, permitted_regs: Optional[Set[int]] = None):
 		"""
 		Override this method to provide custom parameter allocation logic.
 		
@@ -617,9 +673,84 @@ class CallingConvention:
 		:param permitted_regs: Set of permitted register indices, or None for no restriction
 		:return: List of Variable objects for parameter allocation
 		"""
-		# Default implementation: don't override, let core handle it
-		# This signals to the callback that we should use the core default
-		return None
+		# Default implementation: provide fallback parameter allocation logic
+		# similar to C++ CallingConvention::GetVariablesForParameters
+		
+		int_args = self.__class__.int_arg_regs
+		float_args = self.__class__.float_arg_regs
+		shared_index = self.__class__.arg_regs_share_index
+		
+		result = []
+		int_arg_iter = iter(int_args)
+		float_arg_iter = iter(float_args)
+		stack_offset = 0
+		addr_size = self.arch.address_size
+		
+		# If there's a link register, start stack after it
+		if self.arch.link_reg is not None:
+			stack_offset = addr_size
+		
+		# Reserve stack space for argument registers if needed
+		if self.__class__.stack_reserved_for_arg_regs:
+			stack_offset += len(int_args) * addr_size
+		
+		for param_name, param_type in param_types:
+			# Get parameter width - use a default if type info not available
+			try:
+				param_width = param_type.width if hasattr(param_type, 'width') else addr_size
+			except:
+				param_width = addr_size
+			
+			# Check if register is permitted
+			def is_reg_permitted(reg_name):
+				if permitted_regs is None:
+					return True
+				try:
+					reg_index = self.arch.regs[reg_name].index
+					return reg_index in permitted_regs
+				except:
+					return True
+			
+			allocated = False
+			
+			# Try to allocate in appropriate register type
+			try:
+				# For now, assume integer allocation (TODO: add float type detection)
+				try:
+					reg_name = next(int_arg_iter)
+					if is_reg_permitted(reg_name):
+						reg_index = self.arch.regs[reg_name].index
+						result.append(variable.Variable(variable.RegisterVariableSourceType, 0, reg_index))
+						allocated = True
+						if shared_index:
+							try:
+								next(float_arg_iter)  # Advance float iterator too
+							except StopIteration:
+								pass
+					else:
+						# Register not permitted, spill to stack
+						int_arg_iter = iter([])  # Empty the iterator
+						if shared_index:
+							float_arg_iter = iter([])
+				except StopIteration:
+					pass
+			except:
+				pass
+			
+			if not allocated:
+				# Allocate on stack
+				result.append(variable.Variable(variable.StackVariableSourceType, 0, stack_offset))
+				
+				# Align parameter width
+				aligned_width = param_width
+				if aligned_width < addr_size:
+					aligned_width = addr_size
+				elif aligned_width % addr_size != 0:
+					aligned_width += addr_size - (aligned_width % addr_size)
+				
+				stack_offset += aligned_width
+		
+		return result
 
 	def with_confidence(self, confidence: int) -> 'CallingConvention':
 		return CallingConvention(
@@ -715,7 +846,7 @@ class CallingConvention:
 		"""Get the kind (INTEGER_SEMANTICS or FLOAT_SEMANTICS) of a register list."""
 		return core.BNGetRegisterArgumentListKind(self.handle, reg_list_id)
 
-	def get_variables_for_parameters(self, param_types, permitted_regs=None):
+	def get_variables_for_parameters(self, param_types, permitted_regs: Optional[Set[int]] = None):
 		"""Get variable allocations for the given parameter types."""
 		# Convert Python parameters to BN parameters
 		param_array = (core.BNFunctionParameter * len(param_types))()

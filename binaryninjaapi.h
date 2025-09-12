@@ -16762,7 +16762,7 @@ namespace BinaryNinja {
 		virtual std::vector<uint32_t> GetRegisterArgumentListRegs(uint32_t regListId);
 		virtual BNRegisterListKind GetRegisterArgumentListKind(uint32_t regListId);
 		virtual std::vector<Variable> GetVariablesForParameters(const std::vector<FunctionParameter>& paramTypes,
-			const std::set<uint32_t>* permittedRegs = nullptr);
+			const std::optional<std::set<uint32_t>>& permittedRegs = std::nullopt);
 
 		virtual uint32_t GetIntegerReturnValueRegister() = 0;
 		virtual uint32_t GetHighIntegerReturnValueRegister();
@@ -16814,7 +16814,7 @@ namespace BinaryNinja {
 		virtual std::vector<uint32_t> GetRegisterArgumentListRegs(uint32_t regListId) override;
 		virtual BNRegisterListKind GetRegisterArgumentListKind(uint32_t regListId) override;
 		virtual std::vector<Variable> GetVariablesForParameters(const std::vector<FunctionParameter>& paramTypes,
-			const std::set<uint32_t>* permittedRegs = nullptr) override;
+			const std::optional<std::set<uint32_t>>& permittedRegs = std::nullopt) override;
 	};
 
 	/*!

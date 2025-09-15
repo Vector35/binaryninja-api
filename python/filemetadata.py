@@ -706,3 +706,7 @@ class FileMetadata:
 			views.append(result[i].decode("utf-8"))
 		core.BNFreeStringList(result, length.value)
 		return views
+
+	@property
+	def database_object(self):
+		return database.DatabaseObject(handle=core.BNGetFileDatabaseObject(self.handle, None))

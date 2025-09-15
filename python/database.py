@@ -369,3 +369,55 @@ class Database:
 		handle = core.BNReadDatabaseAnalysisCache(self.handle)
 		assert handle is not None
 		return KeyValueStore(handle=handle)
+
+
+class DatabaseObject:
+	def __init__(self, handle):
+		self.handle = core.handle_of_type(handle, core.BNDatabaseObject)
+
+	def __del__(self):
+		core.BNFreeDatabaseObject(self.handle)
+
+	def __str__(self):
+		return f"<dbo {self.name}>"
+
+	def __repr__(self):
+		return f"<dbo {self.name}>"
+
+	@property
+	def type(self) -> int:
+		"""Get the database object type (read-only)"""
+		return core.BNGetDatabaseObjectType(self.handle)
+
+	@property
+	def name(self) -> str:
+		"""Get the database object name (read-only)"""
+		return core.BNGetDatabaseObjectName(self.handle)
+
+	@property
+	def parent(self) -> Optional['DatabaseObject']:
+		"""Get the parent database object (read-only)"""
+		handle = core.BNGetDatabaseObjectParent(self.handle)
+		if handle is None:
+			return None
+		return DatabaseObject(handle=handle)
+
+	@property
+	def children(self) -> Dict[str, 'DatabaseObject']:
+		"""Get dictionary of child objects (read-only)"""
+		names = ctypes.POINTER(ctypes.c_char_p)()
+		objects = ctypes.POINTER(core.BNDatabaseObjectHandle)()
+		count = core.BNGetDatabaseObjectChildren(
+			self.handle, ctypes.byref(names), ctypes.byref(objects)
+		)
+
+		result = {}
+		try:
+			for i in range(count):
+				name = core.pyNativeStr(names[i])
+				obj_handle = core.BNNewDatabaseObjectReference(objects[i])
+				result[name] = DatabaseObject(handle=obj_handle)
+			return result
+		finally:
+			core.BNFreeDatabaseObjectList(objects, count)
+			core.BNFreeStringList(names, count)

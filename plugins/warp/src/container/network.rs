@@ -1,7 +1,7 @@
 use crate::container::disk::DiskContainer;
 use crate::container::{
-    Container, ContainerError, ContainerResult, ContainerSearchItem, ContainerSearchQuery,
-    ContainerSearchResponse, SourceId, SourcePath, SourceTag,
+    Container, ContainerError, ContainerResult, ContainerSearchQuery, ContainerSearchResponse,
+    SourceId, SourcePath, SourceTag,
 };
 use directories::ProjectDirs;
 use std::collections::{HashMap, HashSet};

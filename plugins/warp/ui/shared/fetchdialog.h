@@ -5,11 +5,6 @@
 #include <QListWidget>
 #include <QSpinBox>
 #include <QCheckBox>
-#include <QPushButton>
-#include <QDialogButtonBox>
-#include <QFormLayout>
-#include <QHBoxLayout>
-#include <QVBoxLayout>
 
 #include "uicontext.h"
 #include "viewframe.h"

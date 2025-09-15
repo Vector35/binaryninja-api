@@ -3,7 +3,6 @@ use crate::container::{
     ContainerSearchItem, ContainerSearchItemKind, ContainerSearchQuery, ContainerSearchResponse,
     SourceId, SourcePath, SourceTag,
 };
-use itertools::Itertools;
 use reqwest::blocking::Client;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use reqwest::StatusCode;
@@ -481,17 +480,10 @@ impl NetworkClient {
         struct SearchItem {
             id: String,
             kind: String,
-            created_at: String,
-            #[serde(default)]
-            commit_id: Option<i32>,
-            #[serde(default)]
-            function_guid: Option<Uuid>,
             #[serde(default)]
             name: Option<String>,
             #[serde(default)]
             source_id: Option<Uuid>,
-            #[serde(default)]
-            symbol_id: Option<i32>,
             #[serde(default)]
             data: Option<Vec<u8>>,
         }

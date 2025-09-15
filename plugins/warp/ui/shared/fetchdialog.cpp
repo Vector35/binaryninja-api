@@ -1,9 +1,10 @@
 #include "fetchdialog.h"
 
+#include <QDialogButtonBox>
+#include <QFormLayout>
 #include <QInputDialog>
 #include <QLabel>
 
-#include "menu.h"
 #include "action.h"
 #include "fetcher.h"
 

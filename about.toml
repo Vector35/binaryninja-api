@@ -6,5 +6,6 @@ accepted = [
     "ISC",
     "BSD-3-Clause",
     "BSL-1.0",
-    "LicenseRef-scancode-google-patent-license-fuchsia"
+    "LicenseRef-scancode-google-patent-license-fuchsia",
+    "MPL-2.0"
 ]

@@ -21,6 +21,8 @@ public:
     {
         GuidCol = 0,
         PathCol,
+        WritableCol,
+        UncommittedCol,
         ColumnCount
     };
 
@@ -31,10 +33,7 @@ public:
 
     void setContainer(Warp::Ref<Warp::Container> container)
     {
-        beginResetModel();
         m_container = std::move(container);
-        m_rows.clear();
-        endResetModel();
         reload();
     }
 
@@ -47,7 +46,9 @@ public:
         {
             QString guid = QString::fromStdString(src.ToString());
             QString path = QString::fromStdString(m_container->SourcePath(src).value_or(std::string{}));
-            m_rows.push_back({guid, path});
+            bool writable = m_container->IsSourceWritable(src);
+            bool uncommitted = m_container->IsSourceUncommitted(src);
+            m_rows.push_back({guid, path, writable, uncommitted});
         }
         endResetModel();
     }
@@ -64,20 +65,7 @@ public:
         return ColumnCount;
     }
 
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override
-    {
-        if (!index.isValid() || role != Qt::DisplayRole)
-            return {};
-        if (index.row() < 0 || index.row() >= rowCount())
-            return {};
-        const auto &r = m_rows[static_cast<size_t>(index.row())];
-        switch (index.column())
-        {
-            case GuidCol: return r.guid;
-            case PathCol: return r.path;
-            default: return {};
-        }
-    }
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
     QVariant headerData(int section, Qt::Orientation orientation, int role) const override
     {
@@ -87,6 +75,8 @@ public:
             {
                 case GuidCol: return "Source GUID";
                 case PathCol: return "Path";
+                case WritableCol: return "Writable";
+                case UncommittedCol: return "Uncommitted";
                 default: return {};
             }
         }
@@ -98,6 +88,8 @@ private:
     {
         QString guid;
         QString path;
+        bool writable;
+        bool uncommitted;
     };
 
     std::vector<Row> m_rows;
@@ -109,102 +101,7 @@ class WarpContainerWidget : public QWidget
     Q_OBJECT
 
 public:
-    explicit WarpContainerWidget(Warp::Ref<Warp::Container> container, QWidget *parent = nullptr)
-        : QWidget(parent), m_container(std::move(container))
-    {
-        auto *layout = new QVBoxLayout(this);
-        layout->setContentsMargins(0, 0, 0, 0);
-        m_tabs = new QTabWidget(this);
-        layout->addWidget(m_tabs);
-
-        // Sources tab
-        auto *sourcesPage = new QWidget(this);
-        auto *sourcesLayout = new QVBoxLayout(sourcesPage);
-        m_sourcesView = new QTableView(sourcesPage);
-        m_sourcesModel = new WarpSourcesModel(sourcesPage);
-        m_sourcesModel->setContainer(m_container);
-        m_sourcesView->setModel(m_sourcesModel);
-        m_sourcesView->horizontalHeader()->setStretchLastSection(true);
-        m_sourcesView->setSelectionBehavior(QAbstractItemView::SelectRows);
-        m_sourcesView->setSelectionMode(QAbstractItemView::SingleSelection);
-
-        // Make the table look like a simple list that shows only the source path
-        m_sourcesView->setShowGrid(false);
-        m_sourcesView->verticalHeader()->setVisible(false);
-        m_sourcesView->horizontalHeader()->setVisible(false);
-        m_sourcesView->setAlternatingRowColors(false);
-        m_sourcesView->setEditTriggers(QAbstractItemView::NoEditTriggers);
-        m_sourcesView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        m_sourcesView->setWordWrap(false);
-        // Ensure long paths truncate from the left: "...tail/of/the/path"
-        m_sourcesView->setTextElideMode(Qt::ElideLeft);
-        // Hide GUID column, keep only the Path column visible
-        m_sourcesView->setColumnHidden(WarpSourcesModel::GuidCol, true);
-        // Ensure the remaining (Path) column fills the width
-        m_sourcesView->horizontalHeader()->setSectionResizeMode(WarpSourcesModel::PathCol, QHeaderView::Stretch);
-
-        // Per-item context menu
-        m_sourcesView->setContextMenuPolicy(Qt::CustomContextMenu);
-        connect(m_sourcesView, &QWidget::customContextMenuRequested, this, [this](const QPoint &pos) {
-            QMenu menu(m_sourcesView);
-            const QModelIndex index = m_sourcesView->indexAt(pos);
-
-            if (!index.isValid())
-            {
-                QAction *actAdd = menu.addAction(tr("Add Source"));
-                QAction *chosen = menu.exec(m_sourcesView->viewport()->mapToGlobal(pos));
-                if (!chosen)
-                    return;
-                if (chosen == actAdd)
-                {
-                    std::string sourceName;
-                    if (!BinaryNinja::GetTextLineInput(sourceName, "Source name:", "Add Source"))
-                        return;
-                    if (const auto sourceId = m_container->AddSource(sourceName); !sourceId.has_value())
-                    {
-                        BinaryNinja::LogAlertF("Failed to add source: {}", sourceName);
-                        return;
-                    }
-                    m_sourcesModel->reload();
-                }
-            }
-            else
-            {
-                m_sourcesView->setCurrentIndex(index.sibling(index.row(), WarpSourcesModel::PathCol));
-
-                const int row = index.row();
-                const QModelIndex pathIdx = m_sourcesModel->index(row, WarpSourcesModel::PathCol);
-                const QModelIndex guidIdx = m_sourcesModel->index(row, WarpSourcesModel::GuidCol);
-                const QString path = m_sourcesModel->data(pathIdx, Qt::DisplayRole).toString();
-                const QFileInfo fi(path);
-                const QString guid = m_sourcesModel->data(guidIdx, Qt::DisplayRole).toString();
-
-                QAction *actReveal = menu.addAction(tr("Reveal in File Browser"));
-                actReveal->setEnabled(fi.exists());
-                QAction *actCopyPath = menu.addAction(tr("Copy Path"));
-                QAction *actCopyGuid = menu.addAction(tr("Copy GUID"));
-
-
-                QAction *chosen = menu.exec(m_sourcesView->viewport()->mapToGlobal(pos));
-                if (!chosen)
-                    return;
-                if (chosen == actCopyPath)
-                    QGuiApplication::clipboard()->setText(path);
-                else if (chosen == actCopyGuid)
-                    QGuiApplication::clipboard()->setText(guid);
-                else if (chosen == actReveal)
-                    QDesktopServices::openUrl(QUrl::fromLocalFile(fi.absoluteFilePath()));
-            }
-        });
-
-
-        sourcesLayout->addWidget(m_sourcesView);
-        m_tabs->addTab(sourcesPage, tr("Sources"));
-
-        // Search tab
-        m_searchTab = new WarpSearchWidget(m_container, this);
-        m_tabs->addTab(m_searchTab, tr("Search"));
-    }
+    explicit WarpContainerWidget(Warp::Ref<Warp::Container> container, QWidget *parent = nullptr);
 
 private:
     Warp::Ref<Warp::Container> m_container;
@@ -214,6 +111,8 @@ private:
     // Sources
     QTableView *m_sourcesView = nullptr;
     WarpSourcesModel *m_sourcesModel = nullptr;
+    QWidget* m_sourcesPage = nullptr;
+    QTimer* m_refreshTimer = nullptr;
 
     // Search
     WarpSearchWidget *m_searchTab = nullptr;
@@ -224,57 +123,7 @@ class WarpContainersPane : public QWidget
     Q_OBJECT
 
 public:
-    explicit WarpContainersPane(QWidget *parent = nullptr)
-        : QWidget(parent)
-    {
-        auto *splitter = new QSplitter(Qt::Vertical, this);
-        splitter->setContentsMargins(0, 0, 0, 0);
-        auto *mainLayout = new QVBoxLayout(this);
-        mainLayout->setContentsMargins(0, 0, 0, 0);
-        mainLayout->setSpacing(0);
-        mainLayout->addWidget(splitter);
-        auto newPalette = palette();
-        newPalette.setColor(QPalette::Window, getThemeColor(SidebarWidgetBackgroundColor));
-        setAutoFillBackground(true);
-        setPalette(newPalette);
-
-        // List on top
-        m_list = new QListWidget(splitter);
-        m_list->setSelectionMode(QAbstractItemView::SingleSelection);
-        m_list->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        m_list->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
-        m_list->setUniformItemSizes(true);
-
-        // Make names larger and show end of long strings (elide at the start)
-        {
-            QFont f = m_list->font();
-            f.setPointSizeF(f.pointSizeF() + 2.0); // bump size
-            m_list->setFont(f);
-            m_list->setTextElideMode(Qt::ElideLeft);
-        }
-
-        // Container view (tabs) below
-        m_stack = new QStackedWidget(splitter);
-        m_stack->setContentsMargins(0, 0, 0, 0);
-
-        splitter->setStretchFactor(0, 0); // list: minimal growth
-        splitter->setStretchFactor(1, 1); // stack: takes remaining space
-        splitter->setCollapsible(0, false);
-        splitter->setCollapsible(1, false);
-
-        populate();
-
-        connect(m_list, &QListWidget::currentRowChanged, this, [this](int row) {
-            if (row >= 0 && row < m_stack->count())
-                m_stack->setCurrentIndex(row);
-        });
-
-        // Select the first container if available
-        if (m_list->count() > 0)
-        {
-            m_list->setCurrentRow(0);
-        }
-    }
+    explicit WarpContainersPane(QWidget *parent = nullptr);
 
     void refresh()
     {

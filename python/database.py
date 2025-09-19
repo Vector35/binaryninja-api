@@ -379,10 +379,10 @@ class DatabaseObject:
 		core.BNFreeDatabaseObject(self.handle)
 
 	def __str__(self):
-		return f"<dbo {self.name}>"
+		return f"<dbo {self.id}: {self.description}>"
 
 	def __repr__(self):
-		return f"<dbo {self.name}>"
+		return f"<dbo {self.id}>"
 
 	@property
 	def type(self) -> int:
@@ -390,9 +390,14 @@ class DatabaseObject:
 		return core.BNGetDatabaseObjectType(self.handle)
 
 	@property
-	def name(self) -> str:
-		"""Get the database object name (read-only)"""
-		return core.BNGetDatabaseObjectName(self.handle)
+	def id(self) -> str:
+		"""Get the database object id (read-only)"""
+		return core.BNGetDatabaseObjectId(self.handle)
+
+	@property
+	def description(self) -> str:
+		"""Get the database object description (read-only)"""
+		return core.BNGetDatabaseObjectDescription(self.handle)
 
 	@property
 	def parent(self) -> Optional['DatabaseObject']:

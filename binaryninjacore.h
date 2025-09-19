@@ -4407,6 +4407,17 @@ extern "C"
 		char* stringPostfix;
 	} BNCustomStringTypeInfo;
 
+	typedef enum BNMergeStrategy
+	{
+		IgnoreMergeStrategy,
+		MergeChildrenMergeStrategy,
+		AutoResolveLeftMergeStrategy,
+		AutoResolveRightMergeStrategy,
+		UserResolveLeftMergeStrategy,
+		UserResolveRightMergeStrategy,
+		PresentConflictMergeStrategy
+	} BNMergeStrategy;
+
 	typedef struct BNSimilarityEntityId
 	{
 		uint32_t value;

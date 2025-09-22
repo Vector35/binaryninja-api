@@ -1013,6 +1013,19 @@ where
 // LLIL_FLAG, LLIL_FLAG_SSA
 pub struct Flag;
 
+impl<M, F> Operation<'_, M, F, Flag>
+where
+    M: FunctionMutability,
+    F: FunctionForm,
+{
+    pub fn source_flag(&self) -> CoreFlag {
+        self.function
+            .arch()
+            .flag_from_id(FlagId(self.op.operands[0] as u32))
+            .expect("Bad flag ID")
+    }
+}
+
 impl<M, F> Debug for Operation<'_, M, F, Flag>
 where
     M: FunctionMutability,

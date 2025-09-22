@@ -1032,7 +1032,9 @@ where
     F: FunctionForm,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Flag").finish()
+        f.debug_struct("Flag")
+            .field("source_flag", &self.source_flag())
+            .finish()
     }
 }
 

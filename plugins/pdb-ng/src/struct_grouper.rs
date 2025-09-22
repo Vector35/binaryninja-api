@@ -359,14 +359,29 @@ pub fn group_structure(
         Err(e) => {
             warn!("{} Could not resolve structure groups: {}", name, e);
             for member in members {
-                structure.insert(
-                    &member.ty,
-                    &member.name,
-                    member.offset,
-                    false,
-                    member.access,
-                    member.scope,
-                );
+                match (member.bitfield_position, member.bitfield_size) {
+                    (Some(bit_pos), bit_width) => {
+                        structure.insert_bitwise(
+                            &member.ty,
+                            &member.name,
+                            bit_pos,
+                            bit_width.map(|w| w as u8),
+                            false,
+                            member.access,
+                            member.scope,
+                        );
+                    }
+                    (None, _) => {
+                        structure.insert(
+                            &member.ty,
+                            &member.name,
+                            member.offset,
+                            false,
+                            member.access,
+                            member.scope,
+                        );
+                    }
+                }
             }
         }
     }

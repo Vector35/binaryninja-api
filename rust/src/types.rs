@@ -1486,10 +1486,11 @@ impl StructureBuilder {
         member: StructureMember,
         overwrite_existing: bool,
     ) -> &mut Self {
-        self.insert(
+        self.insert_bitwise(
             &member.ty,
             &member.name,
-            member.offset,
+            member.bit_offset(),
+            member.bit_width,
             overwrite_existing,
             member.access,
             member.scope,
@@ -1506,17 +1507,42 @@ impl StructureBuilder {
         access: MemberAccess,
         scope: MemberScope,
     ) -> &mut Self {
+        self.insert_bitwise(
+            ty,
+            name,
+            offset * 8,
+            None,
+            overwrite_existing,
+            access,
+            scope,
+        )
+    }
+
+    pub fn insert_bitwise<'a, T: Into<Conf<&'a Type>>>(
+        &mut self,
+        ty: T,
+        name: &str,
+        bit_offset: u64,
+        bit_width: Option<u8>,
+        overwrite_existing: bool,
+        access: MemberAccess,
+        scope: MemberScope,
+    ) -> &mut Self {
         let name = name.to_cstr();
         let owned_raw_ty = Conf::<&Type>::into_raw(ty.into());
+        let byte_offset = bit_offset / 8;
+        let bit_position = bit_offset % 8;
         unsafe {
             BNAddStructureBuilderMemberAtOffset(
                 self.handle,
                 &owned_raw_ty,
                 name.as_ref().as_ptr() as _,
-                offset,
+                byte_offset,
                 overwrite_existing,
                 access,
                 scope,
+                bit_position as u8,
+                bit_width.unwrap_or(0),
             );
         }
         self
@@ -1668,9 +1694,13 @@ pub struct StructureMember {
     pub ty: Conf<Ref<Type>>,
     // TODO: Shouldnt this be a QualifiedName? The ffi says no...
     pub name: String,
+    /// The byte offset of the member.
     pub offset: u64,
     pub access: MemberAccess,
     pub scope: MemberScope,
+    /// The bit position relative to the byte offset.
+    pub bit_position: Option<u8>,
+    pub bit_width: Option<u8>,
 }
 
 impl StructureMember {
@@ -1685,6 +1715,14 @@ impl StructureMember {
             offset: value.offset,
             access: value.access,
             scope: value.scope,
+            bit_position: match value.bitPosition {
+                0 => None,
+                _ => Some(value.bitPosition),
+            },
+            bit_width: match value.bitWidth {
+                0 => None,
+                _ => Some(value.bitWidth),
+            },
         }
     }
 
@@ -1703,6 +1741,8 @@ impl StructureMember {
             typeConfidence: value.ty.confidence,
             access: value.access,
             scope: value.scope,
+            bitPosition: value.bit_position.unwrap_or(0),
+            bitWidth: value.bit_width.unwrap_or(0),
         }
     }
 
@@ -1724,7 +1764,33 @@ impl StructureMember {
             offset,
             access,
             scope,
+            bit_position: None,
+            bit_width: None,
         }
+    }
+
+    pub fn new_bitfield(
+        ty: Conf<Ref<Type>>,
+        name: String,
+        bit_offset: u64,
+        bit_width: u8,
+        access: MemberAccess,
+        scope: MemberScope,
+    ) -> Self {
+        Self {
+            ty,
+            name,
+            offset: bit_offset / 8,
+            access,
+            scope,
+            bit_position: Some((bit_offset % 8) as u8),
+            bit_width: Some(bit_width),
+        }
+    }
+
+    /// Member offset in bits.
+    pub fn bit_offset(&self) -> u64 {
+        (self.offset * 8) + self.bit_position.unwrap_or(0) as u64
     }
 }
 

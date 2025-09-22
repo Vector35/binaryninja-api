@@ -205,7 +205,6 @@ fn do_structure_parse<R: ReaderType>(
                     continue;
                 };
 
-                // TODO : support DW_AT_data_bit_offset for offset as well
                 if let Ok(Some(raw_struct_offset)) =
                     child.entry().attr(constants::DW_AT_data_member_location)
                 {
@@ -223,12 +222,54 @@ fn do_structure_parse<R: ReaderType>(
                         MemberScope::NoScope,
                     );
                 } else {
-                    structure_builder.append(
-                        &child_type,
-                        &child_name,
-                        MemberAccess::NoAccess,
-                        MemberScope::NoScope,
-                    );
+                    // If no byte offset, try bitfield using DW_AT_bit_offset + DW_AT_bit_size
+                    let bit_size = child
+                        .entry()
+                        .attr(constants::DW_AT_bit_size)
+                        .ok()
+                        .and_then(|a| a)
+                        .and_then(|a| get_attr_as_u64(&a));
+
+                    let bit_offset = child
+                        .entry()
+                        .attr(constants::DW_AT_bit_offset)
+                        .ok()
+                        .and_then(|a| a)
+                        .and_then(|a| get_attr_as_u64(&a));
+
+                    if let (Some(bit_sz), Some(boffs)) = (bit_size, bit_offset) {
+                        // Heuristic storage unit bits from the member type width (bytes -> bits). Fallback to 8.
+                        let storage_bits = {
+                            let w = child_type.width() as u64;
+                            if w > 0 {
+                                w * 8
+                            } else {
+                                8
+                            }
+                        };
+
+                        // DW_AT_bit_offset is from the MSB of the storage unit:
+                        // absolute = base_byte_off*8 + storage_bits - (boffs + bit_sz)
+                        // With no base_byte_off available here, treat base as 0.
+                        let total_bit_off = storage_bits.saturating_sub(boffs + bit_sz);
+
+                        structure_builder.insert_bitwise(
+                            &child_type,
+                            &child_name,
+                            total_bit_off,
+                            Some(bit_sz as u8),
+                            false,
+                            MemberAccess::NoAccess,
+                            MemberScope::NoScope,
+                        );
+                    } else {
+                        structure_builder.append(
+                            &child_type,
+                            &child_name,
+                            MemberAccess::NoAccess,
+                            MemberScope::NoScope,
+                        );
+                    }
                 }
             }
             constants::DW_TAG_inheritance => {

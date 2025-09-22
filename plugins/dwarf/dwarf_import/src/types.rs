@@ -24,7 +24,7 @@ use binaryninja::{
     },
 };
 
-use gimli::{constants, AttributeValue, DebuggingInformationEntry, Dwarf, Operation, Unit};
+use gimli::{constants, AttributeValue, DebuggingInformationEntry, DwAt, Dwarf, Operation, Unit};
 
 use log::{debug, error, warn};
 
@@ -220,10 +220,6 @@ fn do_structure_parse<R: ReaderType>(
                     continue;
                 };
 
-                /*
-                    TODO: apply correct member size when that's supported
-                    let child_type_width = get_size_as_u64(child_entry).unwrap_or_else(|| child_type.width());
-                */
                 if let Ok(Some(raw_struct_offset)) =
                     child_entry.attr(constants::DW_AT_data_member_location)
                 {
@@ -246,36 +242,65 @@ fn do_structure_parse<R: ReaderType>(
                         MemberAccess::NoAccess, // TODO : Resolve actual scopes, if possible
                         MemberScope::NoScope,
                     );
-                } else if let Ok(Some(raw_struct_offset_bits)) =
-                    child_entry.attr(constants::DW_AT_data_bit_offset)
-                {
-                    //TODO: support misaligned offsets when bitwise data structures get in
-                    let Some(struct_offset_bits) = get_attr_as_u64(&raw_struct_offset_bits)
-                        .or_else(|| get_expr_value(unit, raw_struct_offset_bits))
-                    else {
-                        log::warn!(
-                            "Failed to get DW_AT_data_bit_offset for offset {:#x} in unit {:?}",
-                            child_entry.offset().0,
-                            unit.header.offset()
-                        );
-                        continue;
-                    };
-
-                    structure_builder.insert(
-                        &child_type,
-                        &child_name,
-                        struct_offset_bits / 8,
-                        false,
-                        MemberAccess::NoAccess, // TODO : Resolve actual scopes, if possible
-                        MemberScope::NoScope,
-                    );
                 } else {
-                    structure_builder.append(
-                        &child_type,
-                        &child_name,
-                        MemberAccess::NoAccess,
-                        MemberScope::NoScope,
-                    );
+                    let select_value =
+                        |e: &DebuggingInformationEntry<R>, attr: DwAt| -> Option<u64> {
+                            get_attr_as_u64(&e.attr(attr).ok()??)
+                        };
+
+                    // If no byte offset, try the bitfield using DW_AT_bit_offset/DW_AT_data_bit_offset + DW_AT_bit_size
+                    let bit_size = select_value(child_entry, constants::DW_AT_bit_size);
+                    let bit_offset = select_value(child_entry, constants::DW_AT_bit_offset);
+                    let data_bit_offset =
+                        select_value(child_entry, constants::DW_AT_data_bit_offset);
+
+                    match (bit_size, bit_offset, data_bit_offset) {
+                        (Some(bit_size), Some(bit_offset), _) => {
+                            // Heuristic storage unit bits from the member type width (bytes -> bits). Fallback to 8.
+                            let storage_bits = {
+                                let w = child_type.width();
+                                if w > 0 {
+                                    w * 8
+                                } else {
+                                    8
+                                }
+                            };
+
+                            // DW_AT_bit_offset is from the MSB of the storage unit:
+                            // absolute = base_byte_off*8 + storage_bits - (boffs + bit_sz)
+                            // With no base_byte_off available here, treat base as 0.
+                            let total_bit_off = storage_bits.saturating_sub(bit_offset + bit_size);
+
+                            structure_builder.insert_bitwise(
+                                &child_type,
+                                &child_name,
+                                total_bit_off,
+                                Some(bit_size as u8),
+                                false,
+                                MemberAccess::NoAccess,
+                                MemberScope::NoScope,
+                            );
+                        }
+                        (Some(bit_size), None, Some(data_bit_offset)) => {
+                            structure_builder.insert_bitwise(
+                                &child_type,
+                                &child_name,
+                                data_bit_offset,
+                                Some(bit_size as u8),
+                                false,
+                                MemberAccess::NoAccess,
+                                MemberScope::NoScope,
+                            );
+                        }
+                        _ => {
+                            structure_builder.append(
+                                &child_type,
+                                &child_name,
+                                MemberAccess::NoAccess,
+                                MemberScope::NoScope,
+                            );
+                        }
+                    }
                 }
             }
             constants::DW_TAG_inheritance => {
@@ -316,7 +341,6 @@ fn do_structure_parse<R: ReaderType>(
 
     structure_builder.base_structures(&base_structures);
     let finalized_structure = Type::structure(&structure_builder.finalize());
-
     if let Some(full_name) = full_name {
         debug_info_builder.add_type(
             get_uid(dwarf, unit, entry) + 1, // TODO : This is super broke (uid + 1 is not guaranteed to be unique)

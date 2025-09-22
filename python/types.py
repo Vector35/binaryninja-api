@@ -1332,11 +1332,18 @@ class StructureMember:
 	offset: int
 	access: MemberAccess = MemberAccess.NoAccess
 	scope: MemberScope = MemberScope.NoScope
+	bit_position: int = 0
+	bit_width: int = 0
 
 	def __repr__(self):
 		if len(self.name) == 0:
-			return f"<member: {self.type}, offset {self.offset:#x}>"
-		return f"<{self.type.get_string_before_name()} {self.name}{self.type.get_string_after_name()}, offset {self.offset:#x}>"
+			base = f"<member: {self.type}, offset {self.offset:#x}>"
+		else:
+			base = f"<{self.type.get_string_before_name()} {self.name}{self.type.get_string_after_name()}, offset {self.offset:#x}>"
+		# Append bit position/width only if bit_width is not zero (indicates a bitfield)
+		if self.bit_width != 0:
+			return base[:-1] + f", bit {self.bit_position}:{self.bit_width}>"
+		return base
 
 	def __len__(self):
 		return len(self.type)
@@ -1416,7 +1423,7 @@ class StructureBuilder(TypeBuilder):
 			elif isinstance(member, StructureMember):
 				core.BNAddStructureBuilderMemberAtOffset(
 				    structure_builder_handle, member.type._to_core_struct(), member.name, member.offset, False,
-				    member.access, member.scope
+				    member.access, member.scope, member.bit_position, member.bit_width
 				)
 			elif isinstance(member, (TypeBuilder, Type)):
 				core.BNAddStructureBuilderMember(
@@ -1464,7 +1471,7 @@ class StructureBuilder(TypeBuilder):
 				result.append(
 				    StructureMember(
 				        t, members[i].name, members[i].offset, MemberAccess(members[i].access),
-				        MemberScope(members[i].scope)
+				        MemberScope(members[i].scope), members[i].bitPosition, members[i].bitWidth
 				    )
 				)
 			return result
@@ -1560,7 +1567,7 @@ class StructureBuilder(TypeBuilder):
 			return StructureMember(
 			    Type.create(core.BNNewTypeReference(member.contents.type), confidence=member.contents.typeConfidence),
 			    member.contents.name, member.contents.offset, MemberAccess(member.contents.access),
-			    MemberScope(member.contents.scope)
+			    MemberScope(member.contents.scope), member.contents.bitPosition, member.contents.bitWidth
 			)
 		finally:
 			core.BNFreeStructureMember(member)
@@ -1600,10 +1607,11 @@ class StructureBuilder(TypeBuilder):
 
 	def insert(
 	    self, offset: int, type: SomeType, name: str = "", overwrite_existing: bool = True,
-	    access: MemberAccess = MemberAccess.NoAccess, scope: MemberScope = MemberScope.NoScope
+	    access: MemberAccess = MemberAccess.NoAccess, scope: MemberScope = MemberScope.NoScope, bit_position: int = 0, bit_width: int = 0
 	):
 		core.BNAddStructureBuilderMemberAtOffset(
-		    self.builder_handle, type._to_core_struct(), name, offset, overwrite_existing, access, scope
+		    self.builder_handle, type._to_core_struct(), name, offset, overwrite_existing, access, scope, bit_position,
+		    bit_width
 		)
 
 	def append(
@@ -1616,11 +1624,12 @@ class StructureBuilder(TypeBuilder):
 
 	def add_member_at_offset(
 	    self, name: MemberName, type: SomeType, offset: MemberOffset, overwrite_existing: bool = True,
-	    access: MemberAccess = MemberAccess.NoAccess, scope: MemberScope = MemberScope.NoScope
+	    access: MemberAccess = MemberAccess.NoAccess, scope: MemberScope = MemberScope.NoScope, bit_position: int = 0, bit_width: int = 0
 	) -> 'StructureBuilder':
 		# Adds structure member to the given offset optionally clearing any members within the range offset-offset+len(type)
 		core.BNAddStructureBuilderMemberAtOffset(
-		    self.builder_handle, type._to_core_struct(), name, offset, overwrite_existing, access, scope
+		    self.builder_handle, type._to_core_struct(), name, offset, overwrite_existing, access, scope, bit_position,
+		    bit_width
 		)
 		return self
 
@@ -2603,7 +2612,7 @@ class StructureType(Type):
 			return StructureMember(
 			    Type.create(core.BNNewTypeReference(member.contents.type), confidence=member.contents.typeConfidence),
 			    member.contents.name, member.contents.offset, MemberAccess(member.contents.access),
-			    MemberScope(member.contents.scope)
+			    MemberScope(member.contents.scope), member.contents.bitPosition, member.contents.bitWidth
 			)
 		finally:
 			if member is not None:
@@ -2618,14 +2627,17 @@ class StructureType(Type):
 			return StructureMember(
 			    Type.create(core.BNNewTypeReference(member.contents.type), confidence=member.contents.typeConfidence),
 			    member.contents.name, member.contents.offset, MemberAccess(member.contents.access),
-			    MemberScope(member.contents.scope)
+			    MemberScope(member.contents.scope), member.contents.bitPosition, member.contents.bitWidth
 			)
 		finally:
 			core.BNFreeStructureMember(member)
 
 	@property
 	def members(self):
-		"""Structure member list (read-only)"""
+		"""
+		Structure member list (read-only). This list will **not** contain members inherited from base structures.
+		To get members including inherited ones, call `members_including_inherited`.
+		"""
 		count = ctypes.c_ulonglong()
 		members = core.BNGetStructureMembers(self.struct_handle, count)
 		assert members is not None, "core.BNGetStructureMembers returned None"
@@ -2636,7 +2648,7 @@ class StructureType(Type):
 				    StructureMember(
 				        Type.create(core.BNNewTypeReference(members[i].type), confidence=members[i].typeConfidence),
 				        members[i].name, members[i].offset, MemberAccess(members[i].access),
-				        MemberScope(members[i].scope)
+				        MemberScope(members[i].scope), members[i].bitPosition, members[i].bitWidth
 				    )
 				)
 		finally:
@@ -2719,7 +2731,7 @@ class StructureType(Type):
 				        StructureMember(
 							Type.create(core.BNNewTypeReference(members[i].member.type), confidence=members[i].member.typeConfidence),
 							members[i].member.name, members[i].member.offset, MemberAccess(members[i].member.access),
-							MemberScope(members[i].member.scope)
+							MemberScope(members[i].member.scope), members[i].member.bitPosition, members[i].member.bitWidth
 						),
 						members[i].memberIndex
 				    )
@@ -2733,7 +2745,6 @@ class StructureType(Type):
 		member = None
 		try:
 			member = core.BNGetMemberIncludingInheritedAtOffset(self.struct_handle, view.handle, offset)
-			result = None
 			if member is None:
 				raise ValueError(f"No member exists at offset {offset}")
 
@@ -2751,7 +2762,7 @@ class StructureType(Type):
 				StructureMember(
 					Type.create(core.BNNewTypeReference(member[0].member.type), confidence=member[0].member.typeConfidence),
 					member[0].member.name, member[0].member.offset, MemberAccess(member[0].member.access),
-					MemberScope(member[0].member.scope)
+					MemberScope(member[0].member.scope), member[0].member.bitPosition, member[0].member.bitWidth
 				),
 				member[0].memberIndex
 			)

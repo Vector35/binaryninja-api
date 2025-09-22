@@ -8,7 +8,7 @@ use binaryninja::segment::{SegmentBuilder, SegmentFlags};
 use binaryninja::symbol::{SymbolBuilder, SymbolType};
 use binaryninja::types::{
     BaseStructure, EnumerationBuilder, MemberAccess, MemberScope, NamedTypeReference,
-    NamedTypeReferenceClass, StructureBuilder, StructureMember, StructureType, Type, TypeBuilder,
+    NamedTypeReferenceClass, StructureBuilder, StructureMember, Type, TypeBuilder,
 };
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
@@ -442,51 +442,10 @@ impl DeviceMapper {
 
                 let type_builder = match &register.fields {
                     Some(fields) => {
-                        // Separate bitfields from regular fields.
-                        let (fields, bitfield_items): (Vec<_>, Vec<_>) =
-                            fields.iter().partition(|f| {
-                                byte_aligned(f.bit_range.width) && byte_aligned(f.bit_range.offset)
-                            });
-
                         for field in fields {
                             let field_member = self.field_member(field);
                             let overwrites = true; // TODO: Handle overwrites?
                             register_struct.insert_member(field_member, overwrites);
-                        }
-
-                        if self.settings.add_bitfields {
-                            // The bitfield items need to be coalesced to a map of byte offset to vec of fields.
-                            let mut bitfield_map: HashMap<u64, Vec<&Field>> = HashMap::new();
-
-                            // Sort bitfields by their offset
-                            let mut sorted_bitfields = bitfield_items.iter().collect::<Vec<_>>();
-                            sorted_bitfields.sort_by_key(|f| f.bit_range.offset);
-
-                            // Group bitfields by overlapping bit offsets
-                            let mut current_bit_start = 0;
-                            let mut current_bit_end = 0;
-                            for field in sorted_bitfields {
-                                let bit_start = field.bit_range.offset;
-                                let byte_start = bit_start / 8;
-                                let current_byte_start = current_bit_start / 8;
-                                if current_byte_start != byte_start && current_bit_end < bit_start {
-                                    // Make a new bitfield, only if the current field is in a new byte.
-                                    current_bit_start = bit_start;
-                                }
-                                current_bit_end = bit_start + field.bit_range.width;
-                                bitfield_map
-                                    .entry(current_bit_start as u64)
-                                    .or_insert_with(Vec::new)
-                                    .push(field);
-                            }
-
-                            for (bit_start, fields) in bitfield_map {
-                                // Add each bitfield to the structure!
-                                let byte_start = bit_start / 8;
-                                let bitfield_member = self.bitfield_member(byte_start, fields);
-                                let overwrites = true; // TODO: Handle overwrites?
-                                register_struct.insert_member(bitfield_member, overwrites);
-                            }
                         }
 
                         TypeBuilder::structure(&register_struct.finalize())
@@ -559,43 +518,14 @@ impl DeviceMapper {
         }
     }
 
-    pub fn bitfield_member(&self, byte_offset: u64, fields: Vec<&Field>) -> StructureMember {
-        let field_ty = self.bitfield_type(byte_offset, fields);
-        // TODO: Create bitfield name from the fields?
-        let field_name = format!("bitfield_0x{:x}", byte_offset);
-        // TODO: This should be like 120 confidence?
-        let conf_field_ty = Conf::new(field_ty, MAX_CONFIDENCE);
-        StructureMember::new(
-            conf_field_ty,
-            field_name,
-            byte_offset,
-            MemberAccess::PublicAccess,
-            MemberScope::NoScope,
-        )
-    }
-
-    pub fn bitfield_type(&self, byte_offset: u64, fields: Vec<&Field>) -> Ref<Type> {
-        let mut union_builder = StructureBuilder::new();
-        union_builder.structure_type(StructureType::UnionStructureType);
-        for field in fields {
-            let mut field_member = self.field_member(field);
-            // Field members are relative to the union member, so we must remove the union member offset
-            // from the field member offset to make it relative to the union member.
-            field_member.offset -= byte_offset;
-            let overwrites = false; // TODO: Handle overwrites?
-            union_builder.insert_member(field_member, overwrites);
-        }
-        Type::structure(&union_builder.finalize())
-    }
-
     pub fn field_member(&self, field: &Field) -> StructureMember {
         let field_ty = self.field_type(field);
         let conf_field_ty = Conf::new(field_ty, MAX_CONFIDENCE);
-        let byte_offset = field.bit_offset() / 8;
-        StructureMember::new(
+        StructureMember::new_bitfield(
             conf_field_ty,
             field.name.to_owned(),
-            byte_offset as u64,
+            field.bit_offset() as u64,
+            field.bit_width() as u8,
             MemberAccess::PublicAccess,
             MemberScope::NoScope,
         )
@@ -633,7 +563,6 @@ impl DeviceMapper {
     }
 
     pub fn single_field_int_type(&self, field: &FieldInfo) -> Ref<Type> {
-        // TODO: Binary Ninja is unable to handle bit fields, so we abuse unions.
         // Get the closest 8-bit aligned integer and use that.
         let width = field.bit_width();
         let byte_aligned_width = byte_width(width);

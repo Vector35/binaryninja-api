@@ -52,6 +52,8 @@ fn test_structure_builder() {
             offset: 0,
             access: MemberAccess::PrivateAccess,
             scope: MemberScope::FriendScope,
+            bit_position: None,
+            bit_width: None,
         }
     );
 }

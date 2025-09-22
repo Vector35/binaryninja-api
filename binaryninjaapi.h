@@ -10890,6 +10890,9 @@ namespace BinaryNinja {
 		uint64_t offset;
 		BNMemberAccess access;
 		BNMemberScope scope;
+		uint8_t bitPosition;
+		// TODO: See the comment in the core about this.
+		uint8_t bitWidth;
 	};
 
 	/*!
@@ -11091,6 +11094,7 @@ namespace BinaryNinja {
 		    \return Whether a StructureMember was successfully retrieved
 		*/
 		bool GetMemberByName(const std::string& name, StructureMember& result) const;
+		// TODO: GetMember at offset also needs to pass a bit position.
 		bool GetMemberAtOffset(int64_t offset, StructureMember& result) const;
 		bool GetMemberAtOffset(int64_t offset, StructureMember& result, size_t& idx) const;
 		uint64_t GetWidth() const;
@@ -11143,7 +11147,7 @@ namespace BinaryNinja {
 		    \return Reference to the StructureBuilder
 		*/
 		StructureBuilder& AddMemberAtOffset(const Confidence<Ref<Type>>& type, const std::string& name, uint64_t offset,
-		    bool overwriteExisting = true, BNMemberAccess access = NoAccess, BNMemberScope scope = NoScope);
+		    bool overwriteExisting = true, BNMemberAccess access = NoAccess, BNMemberScope scope = NoScope, uint8_t bitPosition = 0, uint8_t bitWidth = 0);
 
 		/*! RemoveMember removes a member at a specified index
 

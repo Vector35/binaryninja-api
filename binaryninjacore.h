@@ -2519,6 +2519,8 @@ extern "C"
 		uint8_t typeConfidence;
 		BNMemberAccess access;
 		BNMemberScope scope;
+		uint8_t bitPosition;
+		uint8_t bitWidth;
 	} BNStructureMember;
 
 	typedef struct BNInheritedStructureMember
@@ -7072,7 +7074,7 @@ extern "C"
 	    const char* name, BNMemberAccess access, BNMemberScope scope);
 	BINARYNINJACOREAPI void BNAddStructureBuilderMemberAtOffset(BNStructureBuilder* s,
 	    const BNTypeWithConfidence* const type, const char* name, uint64_t offset, bool overwriteExisting,
-	    BNMemberAccess access, BNMemberScope scope);
+	    BNMemberAccess access, BNMemberScope scope, uint8_t bitPosition, uint8_t bitWidth);
 	BINARYNINJACOREAPI void BNRemoveStructureBuilderMember(BNStructureBuilder* s, size_t idx);
 	BINARYNINJACOREAPI void BNReplaceStructureBuilderMember(BNStructureBuilder* s, size_t idx,
 	    const BNTypeWithConfidence* const type, const char* name, bool overwriteExisting);

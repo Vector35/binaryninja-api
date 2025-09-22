@@ -29,6 +29,7 @@ use crate::{
 
 use crate::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
 use crate::string::{raw_to_string, strings_to_string_list};
+use crate::type_container::TypeContainer;
 use crate::variable::{Variable, VariableSourceType};
 use std::borrow::Cow;
 use std::num::NonZeroUsize;
@@ -1460,6 +1461,13 @@ impl StructureBuilder {
         self
     }
 
+    /// Append a member at the next available byte offset.
+    ///
+    /// Otherwise, consider using:
+    ///
+    /// - [`StructureBuilder::insert_member`]
+    /// - [`StructureBuilder::insert`]
+    /// - [`StructureBuilder::insert_bitwise`]
     pub fn append<'a, T: Into<Conf<&'a Type>>>(
         &mut self,
         ty: T,
@@ -1481,15 +1489,23 @@ impl StructureBuilder {
         self
     }
 
+    /// Insert an already constructed [`StructureMember`].
+    ///
+    /// Otherwise, consider using:
+    ///
+    /// - [`StructureBuilder::append`]
+    /// - [`StructureBuilder::insert`]
+    /// - [`StructureBuilder::insert_bitwise`]
     pub fn insert_member(
         &mut self,
         member: StructureMember,
         overwrite_existing: bool,
     ) -> &mut Self {
-        self.insert(
+        self.insert_bitwise(
             &member.ty,
             &member.name,
-            member.offset,
+            member.bit_offset(),
+            member.bit_width,
             overwrite_existing,
             member.access,
             member.scope,
@@ -1497,6 +1513,10 @@ impl StructureBuilder {
         self
     }
 
+    /// Inserts a member at the `offset` (in bytes).
+    ///
+    /// If you need to insert a member at a specific bit within a given byte (like a bitfield), you
+    /// can use [`StructureBuilder::insert_bitwise`].
     pub fn insert<'a, T: Into<Conf<&'a Type>>>(
         &mut self,
         ty: T,
@@ -1506,17 +1526,46 @@ impl StructureBuilder {
         access: MemberAccess,
         scope: MemberScope,
     ) -> &mut Self {
+        self.insert_bitwise(
+            ty,
+            name,
+            offset * 8,
+            None,
+            overwrite_existing,
+            access,
+            scope,
+        )
+    }
+
+    /// Inserts a member at `bit_offset` with an optional `bit_width`.
+    ///
+    /// NOTE: The `bit_offset` is not relative to any other offset, for example, passing `8` will place
+    /// the field at the start of the byte `0x1`.
+    pub fn insert_bitwise<'a, T: Into<Conf<&'a Type>>>(
+        &mut self,
+        ty: T,
+        name: &str,
+        bit_offset: u64,
+        bit_width: Option<u8>,
+        overwrite_existing: bool,
+        access: MemberAccess,
+        scope: MemberScope,
+    ) -> &mut Self {
         let name = name.to_cstr();
         let owned_raw_ty = Conf::<&Type>::into_raw(ty.into());
+        let byte_offset = bit_offset / 8;
+        let bit_position = bit_offset % 8;
         unsafe {
             BNAddStructureBuilderMemberAtOffset(
                 self.handle,
                 &owned_raw_ty,
                 name.as_ref().as_ptr() as _,
-                offset,
+                byte_offset,
                 overwrite_existing,
                 access,
                 scope,
+                bit_position as u8,
+                bit_width.unwrap_or(0),
             );
         }
         self
@@ -1543,6 +1592,7 @@ impl StructureBuilder {
         self
     }
 
+    /// Removes the member at a given index.
     pub fn remove(&mut self, index: usize) -> &mut Self {
         unsafe { BNRemoveStructureBuilderMember(self.handle, index) };
         self
@@ -1608,6 +1658,33 @@ impl Structure {
         unsafe { BNGetStructureType(self.handle) }
     }
 
+    /// Retrieve the members that are accessible at a given offset.
+    ///
+    /// The reason for this being plural is that members may overlap and the offset is in bytes
+    /// where a bitfield may contain multiple members at the given byte.
+    ///
+    /// Unions are also represented as structures and will cause this function to return
+    /// **all** members that can reach that offset.
+    ///
+    /// We must pass a [`TypeContainer`] here so that we can resolve base structure members, as they
+    /// are treated as members through this function. Typically, you get the [`TypeContainer`]
+    /// through the binary view with [`BinaryView::get_type_container`].
+    pub fn members_at_offset(
+        &self,
+        container: &TypeContainer,
+        offset: u64,
+    ) -> Vec<StructureMember> {
+        self.members_including_inherited(container)
+            .into_iter()
+            .filter(|m| m.member.is_offset_valid(offset))
+            .map(|m| m.member)
+            .collect()
+    }
+
+    /// Return the list of non-inherited structure members.
+    ///
+    /// If you want to get all members, including ones inherited from base structures,
+    /// use [`Structure::members_including_inherited`] instead.
     pub fn members(&self) -> Vec<StructureMember> {
         unsafe {
             let mut count = 0;
@@ -1621,6 +1698,35 @@ impl Structure {
         }
     }
 
+    /// Returns the list of all structure members, including inherited ones.
+    ///
+    /// Because we must traverse through base structures, we have to provide the [`TypeContainer`];
+    /// in most cases it is ok to provide the binary views container via [`BinaryView::type_container`].
+    pub fn members_including_inherited(
+        &self,
+        container: &TypeContainer,
+    ) -> Vec<InheritedStructureMember> {
+        unsafe {
+            let mut count = 0;
+            let members_raw_ptr: *mut BNInheritedStructureMember =
+                BNGetStructureMembersIncludingInherited(
+                    self.handle,
+                    container.handle.as_ptr(),
+                    &mut count,
+                );
+            debug_assert!(!members_raw_ptr.is_null());
+            let members_raw = std::slice::from_raw_parts(members_raw_ptr, count);
+            let members = members_raw
+                .iter()
+                .map(InheritedStructureMember::from_raw)
+                .collect();
+            BNFreeInheritedStructureMemberList(members_raw_ptr, count);
+            members
+        }
+    }
+
+    /// Retrieve the list of base structures for the structure. These base structures are what give
+    /// a structure inherited members.
     pub fn base_structures(&self) -> Vec<BaseStructure> {
         let mut count = 0;
         let bases_raw_ptr = unsafe { BNGetBaseStructuresForStructure(self.handle, &mut count) };
@@ -1631,13 +1737,22 @@ impl Structure {
         bases
     }
 
-    // TODO : The other methods in the python version (alignment, packed, type, members, remove, replace, etc)
+    /// Whether the structure is packed or not.
+    pub fn is_packed(&self) -> bool {
+        unsafe { BNIsStructurePacked(self.handle) }
+    }
+
+    pub fn alignment(&self) -> usize {
+        unsafe { BNGetStructureAlignment(self.handle) }
+    }
 }
 
 impl Debug for Structure {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Structure")
             .field("width", &self.width())
+            .field("alignment", &self.alignment())
+            .field("packed", &self.is_packed())
             .field("structure_type", &self.structure_type())
             .field("base_structures", &self.base_structures())
             .field("members", &self.members())
@@ -1668,9 +1783,13 @@ pub struct StructureMember {
     pub ty: Conf<Ref<Type>>,
     // TODO: Shouldnt this be a QualifiedName? The ffi says no...
     pub name: String,
+    /// The byte offset of the member.
     pub offset: u64,
     pub access: MemberAccess,
     pub scope: MemberScope,
+    /// The bit position relative to the byte offset.
+    pub bit_position: Option<u8>,
+    pub bit_width: Option<u8>,
 }
 
 impl StructureMember {
@@ -1685,6 +1804,14 @@ impl StructureMember {
             offset: value.offset,
             access: value.access,
             scope: value.scope,
+            bit_position: match value.bitPosition {
+                0 => None,
+                _ => Some(value.bitPosition),
+            },
+            bit_width: match value.bitWidth {
+                0 => None,
+                _ => Some(value.bitWidth),
+            },
         }
     }
 
@@ -1703,6 +1830,8 @@ impl StructureMember {
             typeConfidence: value.ty.confidence,
             access: value.access,
             scope: value.scope,
+            bitPosition: value.bit_position.unwrap_or(0),
+            bitWidth: value.bit_width.unwrap_or(0),
         }
     }
 
@@ -1724,7 +1853,39 @@ impl StructureMember {
             offset,
             access,
             scope,
+            bit_position: None,
+            bit_width: None,
         }
+    }
+
+    pub fn new_bitfield(
+        ty: Conf<Ref<Type>>,
+        name: String,
+        bit_offset: u64,
+        bit_width: u8,
+        access: MemberAccess,
+        scope: MemberScope,
+    ) -> Self {
+        Self {
+            ty,
+            name,
+            offset: bit_offset / 8,
+            access,
+            scope,
+            bit_position: Some((bit_offset % 8) as u8),
+            bit_width: Some(bit_width),
+        }
+    }
+
+    // TODO: Do we count bitwidth here?
+    /// Whether the offset within the accessible range of the member.
+    pub fn is_offset_valid(&self, offset: u64) -> bool {
+        self.offset <= offset && offset < self.offset + self.ty.contents.width()
+    }
+
+    /// Member offset in bits.
+    pub fn bit_offset(&self) -> u64 {
+        (self.offset * 8) + self.bit_position.unwrap_or(0) as u64
     }
 }
 
@@ -1753,6 +1914,35 @@ pub struct InheritedStructureMember {
 }
 
 impl InheritedStructureMember {
+    pub(crate) fn from_raw(value: &BNInheritedStructureMember) -> Self {
+        Self {
+            base: unsafe { NamedTypeReference::from_raw(value.base) }.to_owned(),
+            base_offset: value.baseOffset,
+            member: StructureMember::from_raw(&value.member),
+            member_index: value.memberIndex,
+        }
+    }
+
+    pub(crate) fn from_owned_raw(value: BNInheritedStructureMember) -> Self {
+        let owned = Self::from_raw(&value);
+        Self::free_raw(value);
+        owned
+    }
+
+    pub(crate) fn into_raw(value: Self) -> BNInheritedStructureMember {
+        BNInheritedStructureMember {
+            base: unsafe { Ref::into_raw(value.base) }.handle,
+            baseOffset: value.base_offset,
+            member: StructureMember::into_raw(value.member),
+            memberIndex: value.member_index,
+        }
+    }
+
+    pub(crate) fn free_raw(value: BNInheritedStructureMember) {
+        let _ = unsafe { NamedTypeReference::ref_from_raw(value.base) };
+        StructureMember::free_raw(value.member);
+    }
+
     pub fn new(
         base: Ref<NamedTypeReference>,
         base_offset: u64,

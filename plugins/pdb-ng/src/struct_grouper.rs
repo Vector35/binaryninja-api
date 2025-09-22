@@ -340,8 +340,10 @@ pub fn group_structure(
         .enumerate()
         .map(|(i, member)| MemberSize {
             index: i,
-            offset: member.offset,
-            width: member.ty.contents.width(),
+            offset: member.bitfield_position.unwrap_or(member.offset * 8),
+            width: member
+                .bitfield_size
+                .unwrap_or(member.ty.contents.width() * 8),
         })
         .collect::<Vec<_>>();
 
@@ -359,14 +361,29 @@ pub fn group_structure(
         Err(e) => {
             warn!("{} Could not resolve structure groups: {}", name, e);
             for member in members {
-                structure.insert(
-                    &member.ty,
-                    &member.name,
-                    member.offset,
-                    false,
-                    member.access,
-                    member.scope,
-                );
+                match (member.bitfield_position, member.bitfield_size) {
+                    (Some(bit_pos), bit_width) => {
+                        structure.insert_bitwise(
+                            &member.ty,
+                            &member.name,
+                            bit_pos,
+                            bit_width.map(|w| w as u8),
+                            false,
+                            member.access,
+                            member.scope,
+                        );
+                    }
+                    (None, _) => {
+                        structure.insert(
+                            &member.ty,
+                            &member.name,
+                            member.offset,
+                            false,
+                            member.access,
+                            member.scope,
+                        );
+                    }
+                }
             }
         }
     }
@@ -387,24 +404,38 @@ fn apply_groups(
 
                 // TODO : Fix inner-offset being larger than `member.offset`
 
-                if offset > member.offset {
-                    structure.insert(
-                        &member.ty,
-                        &member.name,
-                        0,
-                        false,
-                        member.access,
-                        member.scope,
-                    );
-                } else {
-                    structure.insert(
-                        &member.ty,
-                        &member.name,
-                        member.offset - offset,
-                        false,
-                        member.access,
-                        member.scope,
-                    );
+                match (member.bitfield_position, member.bitfield_size) {
+                    (Some(bit_pos), bit_width) => {
+                        structure.insert_bitwise(
+                            &member.ty,
+                            &member.name,
+                            bit_pos,
+                            bit_width.map(|w| w as u8),
+                            false,
+                            member.access,
+                            member.scope,
+                        );
+                    }
+                    (None, _) if offset > member.offset => {
+                        structure.insert(
+                            &member.ty,
+                            &member.name,
+                            0,
+                            false,
+                            member.access,
+                            member.scope,
+                        );
+                    }
+                    (None, _) => {
+                        structure.insert(
+                            &member.ty,
+                            &member.name,
+                            member.offset - offset,
+                            false,
+                            member.access,
+                            member.scope,
+                        );
+                    }
                 }
             }
             ResolvedGroup::Struct(inner_offset, children) => {

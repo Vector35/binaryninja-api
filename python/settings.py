@@ -276,7 +276,10 @@ class Settings:
 		assert result is not None, "core.BNSettingsKeysList returned None"
 		out_list = []
 		for i in range(length.value):
-			out_list.append(result[i].decode('utf8'))
+			try:
+				out_list.append(result[i].decode('utf8'))
+			except UnicodeDecodeError:
+				out_list.append(result[i].decode('charmap'))
 		core.BNFreeStringList(result, length)
 		return out_list
 

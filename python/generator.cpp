@@ -287,7 +287,10 @@ int main(int argc, char* argv[])
 	fprintf(out, "	if isinstance(arg, str):\n");
 	fprintf(out, "		return arg\n");
 	fprintf(out, "	else:\n");
-	fprintf(out, "		return arg.decode('utf8')\n\n\n");
+	fprintf(out, "		try:\n");
+	fprintf(out, "			return arg.decode('utf8')\n");
+	fprintf(out, "		except UnicodeDecodeError:\n");
+	fprintf(out, "			return arg.decode('charmap')\n\n\n");
 
 	fprintf(out, "def free_string(value:ctypes.c_char_p) -> None:\n");
 	fprintf(out, "	BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))\n\n");

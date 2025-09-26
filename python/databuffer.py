@@ -128,7 +128,10 @@ class DataBuffer:
 		data = core.BNGetDataBufferContents(self.handle)
 		assert data is not None, "core.BNGetDataBufferContents returned None"
 		ctypes.memmove(buf, data, len(self))
-		return buf.raw.decode('utf8')
+		try:
+			return buf.raw.decode('utf8')
+		except UnicodeDecodeError:
+			return buf.raw.decode('charmap')
 
 	def __bytes__(self):
 		buf = ctypes.create_string_buffer(len(self))

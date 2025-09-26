@@ -25,7 +25,10 @@ def pyNativeStr(arg):
 	if isinstance(arg, str):
 		return arg
 	else:
-		return arg.decode('utf8')
+		try:
+			return arg.decode('utf8')
+		except UnicodeDecodeError:
+			return arg.decode('charmap')
 
 
 def valid_import(mod_name):

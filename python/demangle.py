@@ -131,7 +131,10 @@ def demangle_llvm(mangled_name: str, options: Optional[Union[bool, binaryview.Bi
 	)
 	):
 		for i in range(outSize.value):
-			names.append(outName[i].decode('utf8'))  # type: ignore
+			try:
+				names.append(outName[i].decode('utf8'))  # type: ignore
+			except UnicodeDecodeError:
+				names.append(outName[i].decode('charmap'))  # type: ignore
 		core.BNFreeDemangledName(ctypes.byref(outName), outSize.value)
 		return names
 	return None

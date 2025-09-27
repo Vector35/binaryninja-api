@@ -311,6 +311,17 @@ where
         unsafe { BNLowLevelILFreeOperandList(out_list.as_mut_ptr()) };
         outputs
     }
+
+    /// Get the input list for the intrinsic.
+    ///
+    /// This will just be a CallParamSsa expression.
+    #[inline]
+    pub fn inputs(&self) -> LowLevelILExpression<'_, M, F, ValueExpr> {
+        LowLevelILExpression::new(
+            self.function,
+            LowLevelExpressionIndex(self.op.operands[3] as usize),
+        )
+    }
 }
 
 impl<M, F> Debug for Operation<'_, M, F, Intrinsic>

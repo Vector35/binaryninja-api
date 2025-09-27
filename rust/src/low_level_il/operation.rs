@@ -230,15 +230,86 @@ where
 // LLIL_INTRINSIC, LLIL_INTRINSIC_SSA
 pub struct Intrinsic;
 
+#[derive(Debug, Clone, Copy)]
+pub enum RegOrFlag {
+    Reg(CoreRegister),
+    Flag(CoreFlag),
+}
+
+impl From<CoreRegister> for RegOrFlag {
+    fn from(value: CoreRegister) -> Self {
+        Self::Reg(value)
+    }
+}
+
+impl From<CoreFlag> for RegOrFlag {
+    fn from(value: CoreFlag) -> Self {
+        Self::Flag(value)
+    }
+}
+
 impl<M, F> Operation<'_, M, F, Intrinsic>
 where
     M: FunctionMutability,
     F: FunctionForm,
 {
+    // Order of operands for this operation:
+    // 1. Number of outputs in the reg or flag list
+    // 2. Reg or flag list
+    // 3. Intrinsic id
+    // 4. Operand list
+
     // TODO: Support register and expression lists
     pub fn intrinsic(&self) -> Option<CoreIntrinsic> {
         let raw_id = self.op.operands[2] as u32;
         self.function.arch().intrinsic_from_id(IntrinsicId(raw_id))
+    }
+
+    /// Number of outputs the intrinsic has.
+    #[inline]
+    pub fn output_count(&self) -> usize {
+        self.op.operands[0] as usize
+    }
+
+    /// Get the output list.
+    pub fn outputs(&self) -> Vec<RegOrFlag> {
+        let mut outputs = Vec::new();
+        let mut output_size = self.op.operands[0] as usize;
+        if output_size == 0 {
+            return outputs;
+        }
+        let out_list = unsafe {
+            BNLowLevelILGetOperandList(
+                self.function.handle,
+                self.expr_idx.0,
+                0,
+                &mut output_size as *mut _,
+            )
+        };
+        let out_list = unsafe { std::slice::from_raw_parts_mut(out_list, output_size) };
+        for val in out_list.iter() {
+            if *val & (1 << 32) != 0 {
+                outputs.push(
+                    self.function
+                        .arch()
+                        .flag_from_id(FlagId((*val & 0xffffffff) as u32))
+                        .expect("Invalid core flag ID")
+                        .into(),
+                );
+            } else {
+                outputs.push(
+                    self.function
+                        .arch()
+                        .register_from_id(RegisterId((*val & 0xffffffff) as u32))
+                        .expect("Invalid register ID")
+                        .into(),
+                );
+            }
+        }
+        // Need to drop the list at the end. This will get leaked if there's a panic anywhere.
+        // TODO: Make a new type for this that implements drop so it can't be leaked.
+        unsafe { BNLowLevelILFreeOperandList(out_list.as_mut_ptr()) };
+        outputs
     }
 }
 

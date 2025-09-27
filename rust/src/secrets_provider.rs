@@ -8,7 +8,7 @@ use crate::string::{BnString, IntoCStr};
 
 pub trait SecretsProvider {
     fn has_data(&mut self, key: &str) -> bool;
-    fn get_data(&mut self, key: &str) -> String;
+    fn get_data(&mut self, key: &str) -> Option<String>;
     fn store_data(&mut self, key: &str, data: &str) -> bool;
     fn delete_data(&mut self, key: &str) -> bool;
 }
@@ -126,8 +126,10 @@ unsafe extern "C" fn cb_get_data<C: SecretsProvider>(
     key: *const c_char,
 ) -> *mut c_char {
     let ctxt: &mut C = &mut *(ctxt as *mut C);
-    let result = ctxt.get_data(&CStr::from_ptr(key).to_string_lossy());
-    BnString::into_raw(BnString::new(result))
+    match ctxt.get_data(&CStr::from_ptr(key).to_string_lossy()) {
+        Some(result) => BnString::into_raw(BnString::new(result)),
+        None => std::ptr::null_mut(),
+    }
 }
 
 unsafe extern "C" fn cb_store_data<C: SecretsProvider>(

@@ -17,8 +17,12 @@ impl SecretsProvider for MySecretsProvider {
         key == "my_key"
     }
 
-    fn get_data(&mut self, key: &str) -> String {
-        if key == "my_key" { "my_value" } else { "" }.to_string()
+    fn get_data(&mut self, key: &str) -> Option<String> {
+        if key == "my_key" {
+            Some("my_value".to_string())
+        } else {
+            None
+        }
     }
 
     fn store_data(&mut self, _key: &str, _data: &str) -> bool {

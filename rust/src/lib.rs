@@ -44,7 +44,7 @@ pub mod database;
 pub mod debuginfo;
 pub mod demangle;
 pub mod disassembly;
-pub mod download_provider;
+pub mod download;
 pub mod enterprise;
 pub mod external_library;
 pub mod file_accessor;

@@ -22,7 +22,7 @@ use binaryninja::file_metadata::FileMetadata;
 use binaryninja::Endianness;
 use binaryninja::{
     binary_view::{BinaryView, BinaryViewExt},
-    download_provider::{DownloadInstanceInputOutputCallbacks, DownloadProvider},
+    download::{DownloadInstanceInputOutputCallbacks, DownloadProvider},
     rc::Ref,
     settings::Settings,
 };

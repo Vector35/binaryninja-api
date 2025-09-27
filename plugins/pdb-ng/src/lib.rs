@@ -26,7 +26,7 @@ use pdb::PDB;
 
 use binaryninja::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
 use binaryninja::debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser};
-use binaryninja::download_provider::{DownloadInstanceInputOutputCallbacks, DownloadProvider};
+use binaryninja::download::{DownloadInstanceInputOutputCallbacks, DownloadProvider};
 use binaryninja::interaction::{MessageBoxButtonResult, MessageBoxButtonSet};
 use binaryninja::logger::Logger;
 use binaryninja::settings::{QueryOptions, Settings};

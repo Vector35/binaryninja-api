@@ -91,6 +91,25 @@ impl Ref<Logger> {
         log::set_max_level(self.level);
         let _ = log::set_boxed_logger(Box::new(self));
     }
+
+    /// Send a log to the logger instance, if you instead want to use the `log` crate and its facilities,
+    /// you should use [`Ref<Logger>::init`] to initialize the `log` compatible logger.
+    pub fn send_log(&self, level: Level, msg: &str) {
+        use binaryninjacore_sys::BNLog;
+        if let Ok(msg) = CString::new(format!("{}", msg)) {
+            let logger_name = self.name().to_cstr();
+            unsafe {
+                BNLog(
+                    self.session_id(),
+                    level,
+                    logger_name.as_ptr(),
+                    0,
+                    c"%s".as_ptr(),
+                    msg.as_ptr(),
+                )
+            }
+        }
+    }
 }
 
 impl Default for Ref<Logger> {
@@ -127,29 +146,13 @@ impl log::Log for Ref<Logger> {
 
     fn log(&self, record: &log::Record) {
         use self::Level::*;
-        use binaryninjacore_sys::BNLog;
-        use log::Level;
-
         let level = match record.level() {
-            Level::Error => ErrorLog,
-            Level::Warn => WarningLog,
-            Level::Info => InfoLog,
-            Level::Debug | Level::Trace => DebugLog,
+            log::Level::Error => ErrorLog,
+            log::Level::Warn => WarningLog,
+            log::Level::Info => InfoLog,
+            log::Level::Debug | log::Level::Trace => DebugLog,
         };
-
-        if let Ok(msg) = CString::new(format!("{}", record.args())) {
-            let logger_name = self.name().to_cstr();
-            unsafe {
-                BNLog(
-                    self.session_id(),
-                    level,
-                    logger_name.as_ptr(),
-                    0,
-                    c"%s".as_ptr(),
-                    msg.as_ptr(),
-                );
-            }
-        };
+        self.send_log(level, &format!("{}", record.args()));
     }
 
     fn flush(&self) {}

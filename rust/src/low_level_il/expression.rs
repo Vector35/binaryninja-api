@@ -98,10 +98,7 @@ where
     F: FunctionForm,
     R: ExpressionResultType,
 {
-    pub(crate) fn new(
-        function: &'func LowLevelILFunction<M, F>,
-        index: LowLevelExpressionIndex,
-    ) -> Self {
+    pub fn new(function: &'func LowLevelILFunction<M, F>, index: LowLevelExpressionIndex) -> Self {
         // TODO: Validate expression here?
         Self {
             function,

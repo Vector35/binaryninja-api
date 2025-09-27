@@ -1291,7 +1291,7 @@ impl FlagGroup for CoreFlagGroup {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub struct CoreIntrinsic {
     pub arch: CoreArchitecture,
     pub id: IntrinsicId,
@@ -1374,6 +1374,18 @@ impl Intrinsic for CoreIntrinsic {
 
             ret
         }
+    }
+}
+
+impl Debug for CoreIntrinsic {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CoreIntrinsic")
+            .field("id", &self.id)
+            .field("name", &self.name())
+            .field("class", &self.class())
+            .field("inputs", &self.inputs())
+            .field("outputs", &self.outputs())
+            .finish()
     }
 }
 

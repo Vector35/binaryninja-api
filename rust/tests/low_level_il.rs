@@ -1,4 +1,4 @@
-use binaryninja::architecture::Register;
+use binaryninja::architecture::{ArchitectureExt, Intrinsic, Register};
 use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::headless::Session;
 use binaryninja::low_level_il::expression::{
@@ -7,6 +7,7 @@ use binaryninja::low_level_il::expression::{
 use binaryninja::low_level_il::instruction::{
     InstructionHandler, LowLevelILInstructionKind, LowLevelInstructionIndex,
 };
+use binaryninja::low_level_il::operation::IntrinsicOutput;
 use binaryninja::low_level_il::{LowLevelILRegisterKind, LowLevelILSSARegisterKind, VisitorAction};
 use std::path::PathBuf;
 
@@ -306,5 +307,45 @@ fn test_llil_ssa() {
             _ => panic!("Expected ExternPtr"),
         },
         _ => panic!("Expected CallSsa"),
+    }
+}
+
+#[test]
+fn test_llil_intrinsic() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
+    let view = binaryninja::load(out_dir.join("atof.obj")).expect("Failed to create view");
+    let image_base = view.original_image_base();
+    let platform = view.default_platform().unwrap();
+    let arch = platform.arch();
+
+    // Sample function: __crt_strtox::bit_scan_reverse
+    let sample_function = view
+        .function_at(&platform, image_base + 0x00037310)
+        .unwrap();
+    let llil_function = sample_function.low_level_il().unwrap();
+
+    // 5 @ 0004731d  (LLIL_INTRINSIC eax, eflags = __bsr_gprv_memv((LLIL_LOAD.d [(LLIL_ADD.d (LLIL_REG.d ebp) + (LLIL_CONST.d 8)) {arg1}].d)))
+    let instr_5 = llil_function
+        .instruction_from_index(LowLevelInstructionIndex(5))
+        .expect("Valid instruction");
+    assert_eq!(instr_5.address(), image_base + 0x0003731d);
+    println!("{:?}", instr_5);
+    println!("{:#?}", instr_5.kind());
+    match instr_5.kind() {
+        LowLevelILInstructionKind::Intrinsic(op) => {
+            assert_eq!(op.intrinsic().unwrap().name(), "__bsr_gprv_memv");
+            assert_eq!(op.outputs().len(), 2);
+            let reg_out_0 = arch.register_by_name("eax").unwrap();
+            let reg_out_1 = arch.register_by_name("eflags").unwrap();
+            assert_eq!(
+                op.outputs(),
+                vec![
+                    IntrinsicOutput::Reg(reg_out_0),
+                    IntrinsicOutput::Reg(reg_out_1),
+                ]
+            );
+        }
+        _ => panic!("Expected Intrinsic"),
     }
 }

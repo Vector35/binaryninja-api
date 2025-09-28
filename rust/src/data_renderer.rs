@@ -1,8 +1,7 @@
+use binaryninjacore_sys::*;
 use core::ffi;
 use ffi::c_void;
 use std::ptr::NonNull;
-use log::debug;
-use binaryninjacore_sys::*;
 
 use crate::binary_view::BinaryView;
 use crate::disassembly::{DisassemblyTextLine, InstructionTextToken};
@@ -42,8 +41,7 @@ pub trait CustomDataRenderer: Sized + Sync + Send + 'static {
         view: &BinaryView,
         addr: u64,
         type_: &Type,
-        prefix: &InstructionTextToken,
-        prefix_count: usize,
+        prefix: Vec<InstructionTextToken>,
         width: usize,
         types_ctx: &[TypeContext],
         language: &str,
@@ -93,12 +91,14 @@ trait CustomDataRendererFFI: CustomDataRenderer {
         let ctxt = ctxt as *mut Self;
         // SAFETY BNTypeContext and TypeContext are transparent
         let types = core::slice::from_raw_parts(type_ctx as *mut TypeContext, ctx_count);
+        let prefix = core::slice::from_raw_parts(prefix, prefix_count)
+            .iter().map(InstructionTextToken::from_raw)
+            .collect::<Vec<_>>();
         let result = (*ctxt).lines_for_data(
             &BinaryView::from_raw(view),
             addr,
             &Type::from_raw(type_),
-            &InstructionTextToken::from_raw(&*prefix),
-            prefix_count,
+            prefix,
             width,
             types,
             ffi::CStr::from_ptr(language).to_str().unwrap(),

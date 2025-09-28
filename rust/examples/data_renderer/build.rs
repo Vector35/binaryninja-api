@@ -1,6 +1,6 @@
 fn main() {
-    let link_path =
-        std::env::var_os("DEP_BINARYNINJACORE_PATH").expect("DEP_BINARYNINJACORE_PATH not specified");
+    let link_path = std::env::var_os("DEP_BINARYNINJACORE_PATH")
+        .expect("DEP_BINARYNINJACORE_PATH not specified");
 
     println!("cargo::rustc-link-lib=dylib=binaryninjacore");
     println!("cargo::rustc-link-search={}", link_path.to_str().unwrap());
@@ -17,6 +17,9 @@ fn main() {
     {
         let crate_name = std::env::var("CARGO_PKG_NAME").expect("CARGO_PKG_NAME not set");
         let lib_name = crate_name.replace('-', "_");
-        println!("cargo::rustc-link-arg=-Wl,-install_name,@rpath/lib{}.dylib", lib_name);
+        println!(
+            "cargo::rustc-link-arg=-Wl,-install_name,@rpath/lib{}.dylib",
+            lib_name
+        );
     }
 }

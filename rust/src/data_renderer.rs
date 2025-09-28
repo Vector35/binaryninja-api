@@ -12,7 +12,7 @@ use crate::types::Type;
 // don't have a *from_raw function, it don't need to worry about drop it.
 #[repr(transparent)]
 pub struct TypeContext {
-    handle: BNTypeContext
+    handle: BNTypeContext,
 }
 
 impl TypeContext {
@@ -92,7 +92,8 @@ trait CustomDataRendererFFI: CustomDataRenderer {
         // SAFETY BNTypeContext and TypeContext are transparent
         let types = core::slice::from_raw_parts(type_ctx as *mut TypeContext, ctx_count);
         let prefix = core::slice::from_raw_parts(prefix, prefix_count)
-            .iter().map(InstructionTextToken::from_raw)
+            .iter()
+            .map(InstructionTextToken::from_raw)
             .collect::<Vec<_>>();
         let result = (*ctxt).lines_for_data(
             &BinaryView::from_raw(view),
@@ -139,7 +140,9 @@ impl CoreDataRenderer {
     }
 }
 
-fn create_custom_data_renderer<T: CustomDataRenderer>(renderer: T) -> (&'static mut T, CoreDataRenderer) {
+fn create_custom_data_renderer<T: CustomDataRenderer>(
+    renderer: T,
+) -> (&'static mut T, CoreDataRenderer) {
     let renderer = Box::leak(Box::new(renderer));
     let mut callbacks = BNCustomDataRenderer {
         context: renderer as *mut _ as *mut c_void,
@@ -153,7 +156,9 @@ fn create_custom_data_renderer<T: CustomDataRenderer>(renderer: T) -> (&'static 
     (renderer, core)
 }
 
-pub fn register_generic_data_renderer<T: CustomDataRenderer>(custom: T) -> (&'static mut T, CoreDataRenderer) {
+pub fn register_generic_data_renderer<T: CustomDataRenderer>(
+    custom: T,
+) -> (&'static mut T, CoreDataRenderer) {
     let (renderer, core) = create_custom_data_renderer(custom);
     // debug!("register_generic_data_renderer: core={:?}", core.handle);
     let container = DataRendererContainer::get();
@@ -161,7 +166,9 @@ pub fn register_generic_data_renderer<T: CustomDataRenderer>(custom: T) -> (&'st
     (renderer, core)
 }
 
-pub fn register_specific_data_renderer<C: CustomDataRenderer>(custom: C) -> (&'static mut C, CoreDataRenderer) {
+pub fn register_specific_data_renderer<C: CustomDataRenderer>(
+    custom: C,
+) -> (&'static mut C, CoreDataRenderer) {
     let (renderer, core) = create_custom_data_renderer(custom);
     // debug!("register_specific_data_renderer: core={:?}", core.handle);
     let container = DataRendererContainer::get();
@@ -171,13 +178,13 @@ pub fn register_specific_data_renderer<C: CustomDataRenderer>(custom: C) -> (&'s
 
 #[derive(Clone, Copy)]
 struct DataRendererContainer {
-    pub(crate) handle: *mut BNDataRendererContainer
+    pub(crate) handle: *mut BNDataRendererContainer,
 }
 
 impl DataRendererContainer {
     pub fn get() -> Self {
         Self {
-            handle: unsafe { BNGetDataRendererContainer() }
+            handle: unsafe { BNGetDataRendererContainer() },
         }
     }
 }

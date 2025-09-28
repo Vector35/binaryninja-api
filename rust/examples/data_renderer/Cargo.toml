@@ -9,5 +9,5 @@ crate-type = ["cdylib"]
 [dependencies]
 uuid = "1.18.1"
 binaryninjacore-sys = { path = "../../binaryninjacore-sys", default-features = false }
-binaryninja = { path = "../../" }
+binaryninja = { path = "../.." }
 log = "0.4.27"

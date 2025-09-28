@@ -1,0 +1,13 @@
+[package]
+name = "example_data_renderer"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+uuid = "1.18.1"
+binaryninjacore-sys = { path = "../../binaryninjacore-sys", default-features = false }
+binaryninja = { path = "../../" }
+log = "0.4.27"

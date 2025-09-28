@@ -6,7 +6,6 @@ use binaryninja::disassembly::{
     DisassemblyTextLine, InstructionTextToken, InstructionTextTokenKind,
 };
 use binaryninja::types::{Type, TypeClass};
-use log::debug;
 use uuid::Uuid;
 
 struct UuidDataRenderer {}
@@ -14,8 +13,8 @@ struct UuidDataRenderer {}
 impl CustomDataRenderer for UuidDataRenderer {
     fn is_valid_for_data(
         &self,
-        view: &BinaryView,
-        addr: u64,
+        _view: &BinaryView,
+        _addr: u64,
         type_: &Type,
         types: &[TypeContext],
     ) -> bool {
@@ -61,11 +60,11 @@ impl CustomDataRenderer for UuidDataRenderer {
         &self,
         view: &BinaryView,
         addr: u64,
-        type_: &Type,
+        _type_: &Type,
         prefix: Vec<InstructionTextToken>,
-        width: usize,
-        types_ctx: &[TypeContext],
-        language: &str,
+        _width: usize,
+        _types_ctx: &[TypeContext],
+        _language: &str,
     ) -> Vec<DisassemblyTextLine> {
         let mut tokens = prefix.clone();
 
@@ -93,6 +92,8 @@ impl CustomDataRenderer for UuidDataRenderer {
     }
 }
 
+/// # Safety
+/// This function is called from Binary Ninja once to initialize the plugin.
 #[allow(non_snake_case)]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn CorePluginInit() -> bool {

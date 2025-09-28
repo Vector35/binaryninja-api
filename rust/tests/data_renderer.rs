@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use binaryninja::binary_view::BinaryView;
 use binaryninja::data_renderer::{
     register_specific_data_renderer, CustomDataRenderer, TypeContext,

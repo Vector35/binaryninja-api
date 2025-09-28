@@ -1,6 +1,6 @@
 use binaryninja::binary_view::{BinaryView, BinaryViewBase};
 use binaryninja::data_renderer::{
-    CustomDataRenderer, TypeContext, register_specific_data_renderer,
+    register_specific_data_renderer, CustomDataRenderer, TypeContext,
 };
 use binaryninja::disassembly::{
     DisassemblyTextLine, InstructionTextToken, InstructionTextTokenKind,

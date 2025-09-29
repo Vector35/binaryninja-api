@@ -10,7 +10,7 @@ https://binary.ninja/2024/04/08/customizing-data-display.html.
 
 ```sh
 # Build from the root directory (binaryninja-api)
-cargo build --manifest-path rust/examples/data_renderer/Cargo.toml
+cargo build --manifest-path rust/plugin_examples/data_renderer/Cargo.toml
 # Link binary on macOS
 ln -sf $PWD/target/debug/libexample_data_renderer.dylib ~/Library/Application\ Support/Binary\ Ninja/plugins
 ```

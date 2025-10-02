@@ -7,7 +7,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-uuid = "1.18.1"
-binaryninjacore-sys = { path = "../../binaryninjacore-sys", default-features = false }
+binaryninjacore-sys = { path = "../../binaryninjacore-sys" }
 binaryninja = { path = "../.." }
+uuid = "1.18.1"
 log = "0.4.27"

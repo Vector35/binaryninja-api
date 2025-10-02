@@ -316,6 +316,10 @@ impl InstructionTextToken {
         }
     }
 
+    /// Construct a new token **without** an associated address.
+    ///
+    /// You most likely want to call [`InstructionTextToken::new_with_address`], while also adjusting
+    /// the [`InstructionTextToken::expr_index`] field where applicable.
     pub fn new(text: impl Into<String>, kind: InstructionTextTokenKind) -> Self {
         Self {
             address: 0,

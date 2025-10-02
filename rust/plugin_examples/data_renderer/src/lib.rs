@@ -1,6 +1,6 @@
 use binaryninja::binary_view::{BinaryView, BinaryViewBase};
 use binaryninja::data_renderer::{
-    register_specific_data_renderer, CustomDataRenderer, TypeContext,
+    register_data_renderer, CustomDataRenderer, RegistrationType, TypeContext,
 };
 use binaryninja::disassembly::{
     DisassemblyTextLine, InstructionTextToken, InstructionTextTokenKind,
@@ -11,6 +11,8 @@ use uuid::Uuid;
 struct UuidDataRenderer {}
 
 impl CustomDataRenderer for UuidDataRenderer {
+    const REGISTRATION_TYPE: RegistrationType = RegistrationType::Specific;
+
     fn is_valid_for_data(
         &self,
         _view: &BinaryView,
@@ -40,11 +42,11 @@ impl CustomDataRenderer for UuidDataRenderer {
 
         // The array should be embedded in a named type reference with the id macho:["uuid"]
         for type_ctx in types {
-            if type_ctx.type_().type_class() != TypeClass::NamedTypeReferenceClass {
+            if type_ctx.ty().type_class() != TypeClass::NamedTypeReferenceClass {
                 continue;
             }
 
-            let Some(name_ref) = type_ctx.type_().get_named_type_reference() else {
+            let Some(name_ref) = type_ctx.ty().get_named_type_reference() else {
                 continue;
             };
 
@@ -103,7 +105,7 @@ pub unsafe extern "C" fn CorePluginInit() -> bool {
         .init();
 
     // Register data renderer
-    register_specific_data_renderer(UuidDataRenderer {});
+    register_data_renderer(UuidDataRenderer {});
 
     true
 }

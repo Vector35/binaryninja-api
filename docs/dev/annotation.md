@@ -238,6 +238,24 @@ StructureType.create(members=[(Type.int(4), 'field_0'), (Type.int(4), 'field_4')
 StructureType.create(members=[(Type.int(4), 'field_0')], type=StructureVariant.ClassStructureType)
 ```
 
+#### Create Bitfields in a Structure
+
+To create a bitfield in a structure, you can use the `bit_position` and `bit_width` parameters when inserting a member at an offset.
+
+```pycon
+>>> t = TypeBuilder.structure()
+>>> t.insert(0, Type.int(4), "field_0")
+>>> t.insert(4, Type.int(4), "bitfield_1", bit_width=4)
+>>> t.insert(4, Type.int(4), "bitfield_2", bit_position=4, bit_width=4)
+>>> t.members
+[<int32_t field_0, offset 0x0>, <int32_t bitfield_1, offset 0x4, bit 0:4>, <int32_t bitfield_2, offset 0x4, bit 4:4>]
+```
+
+It is important to note the distinction between the `bit_position` and `offset` parameters. The `offset` is a byte offset
+from the start of the structure, and the `bit_position` is a bit offset from the start of byte offset. The reason member
+offsets are byte offsets instead of bit offsets is historical, previous versions of Binary Ninja had no concept of bitwise
+structures.
+
 #### Create Enumerations
 
 ```python

@@ -114,7 +114,7 @@ Binary Ninja provides a flexible API for creating and defining types explicitly.
 There are a number of different type objects available for creation:
 
 - Integer Types
-- Characters Types (technically an integer)
+- ~~Characters Types (technically an integer)~~ ([just a 1-byte signed integer](https://github.com/Vector35/binaryninja-api/issues/5355))
 - Wide Characters Types (also technically an integer)
 - Boolean (guess what? also technically an integer)
 - Float Types (definitely not an integer)

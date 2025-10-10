@@ -855,9 +855,10 @@ bool SharedCacheView::InitController()
 	{
 		// After this we should have all the mappings available as well.
 		auto startTime = std::chrono::high_resolution_clock::now();
-		sharedCacheBuilder.AddDirectory(primaryFileDir);
 		if (primaryProjectFile)
 			sharedCacheBuilder.AddProjectFolder(primaryProjectFile->GetFolder());
+		else
+			sharedCacheBuilder.AddDirectory(primaryFileDir);
 		auto totalEntries = sharedCacheBuilder.GetCache().GetEntries().size();
 		auto endTime = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> elapsed = endTime - startTime;

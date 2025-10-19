@@ -96,7 +96,7 @@ impl Ref<Logger> {
     /// you should use [`Ref<Logger>::init`] to initialize the `log` compatible logger.
     pub fn send_log(&self, level: Level, msg: &str) {
         use binaryninjacore_sys::BNLog;
-        if let Ok(msg) = CString::new(format!("{}", msg)) {
+        if let Ok(msg) = CString::new(msg) {
             let logger_name = self.name().to_cstr();
             unsafe {
                 BNLog(

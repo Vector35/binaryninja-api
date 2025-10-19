@@ -22,7 +22,7 @@ pub trait CustomDownloadInstance: Sized {
             destroyInstance: Some(cb_destroy_instance::<Self>),
             performRequest: Some(cb_perform_request::<Self>),
             performCustomRequest: Some(cb_perform_custom_request::<Self>),
-            freeResponse: Some(cb_free_response::<Self>),
+            freeResponse: Some(cb_free_response),
         };
         let instance_ptr = unsafe { BNInitDownloadInstance(provider.handle, &mut callbacks) };
         // TODO: If possible pass a sensible error back...
@@ -168,7 +168,7 @@ impl std::io::Write for DownloadInstanceWriter {
             self.progress += buf.len() as u64;
             if self
                 .instance
-                .progress_callback(self.progress, self.total_length.unwrap_or(u64::max_value()))
+                .progress_callback(self.progress, self.total_length.unwrap_or(u64::MAX))
             {
                 Ok(length as usize)
             } else {
@@ -602,7 +602,7 @@ pub unsafe extern "C" fn cb_perform_custom_request<C: CustomDownloadInstance>(
     }
 }
 
-unsafe extern "C" fn cb_free_response<C: CustomDownloadInstance>(
+unsafe extern "C" fn cb_free_response(
     _ctxt: *mut c_void,
     response: *mut BNDownloadInstanceResponse,
 ) {

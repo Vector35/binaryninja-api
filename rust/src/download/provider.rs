@@ -1,9 +1,10 @@
 use crate::download::{CustomDownloadInstance, DownloadInstance};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref};
 use crate::settings::Settings;
-use crate::string::IntoCStr;
+use crate::string::{BnString, IntoCStr};
 use binaryninjacore_sys::*;
 use std::ffi::c_void;
+use std::fmt::Debug;
 use std::mem::MaybeUninit;
 
 /// Register a new download provider type, which is used by the core (and other plugins) to make HTTP requests.
@@ -81,6 +82,10 @@ impl DownloadProvider {
         Self::get(&dp_name).ok_or(())
     }
 
+    pub fn name(&self) -> String {
+        unsafe { BnString::into_string(BNGetDownloadProviderName(self.handle)) }
+    }
+
     pub fn create_instance(&self) -> Result<Ref<DownloadInstance>, ()> {
         let result: *mut BNDownloadInstance =
             unsafe { BNCreateDownloadProviderInstance(self.handle) };
@@ -89,6 +94,14 @@ impl DownloadProvider {
         }
 
         Ok(unsafe { DownloadInstance::ref_from_raw(result) })
+    }
+}
+
+impl Debug for DownloadProvider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DownloadProvider")
+            .field("name", &self.name())
+            .finish()
     }
 }
 

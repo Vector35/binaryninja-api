@@ -115,26 +115,33 @@ impl NetworkContainer {
         let mut result: HashMap<SourceId, Vec<FunctionGUID>> = HashMap::new();
         // Only query server for unknown guids if we have any.
         if !unknown.is_empty() {
-            if let Some(queried_results) =
-                self.client
+            let queried_results =
+                match self
+                    .client
                     .query_functions_source(Some(target_id), tags, &unknown)
-            {
-                // Cache the new results, this means we will not try and contact the server for that guids source.
-                // NOTE: Here we do not just simply list the queried results because we also
-                // want to cache function guids which have no source, this is important so that we never
-                // attempt to contact the server for that guid.
-                for guid in &unknown {
-                    let sources = queried_results
-                        .keys()
-                        .filter(|source_id| queried_results[source_id].contains(guid))
-                        .copied()
-                        .collect();
-                    self.known_function_sources.insert(*guid, sources);
-                }
+                {
+                    Ok(queried_results) => queried_results,
+                    Err(e) => {
+                        log::error!("Failed to query functions source: {}", e);
+                        return result;
+                    }
+                };
 
-                for (source_id, guids) in queried_results {
-                    result.entry(source_id).or_default().extend(guids);
-                }
+            // Cache the new results, this means we will not try and contact the server for that guids source.
+            // NOTE: Here we do not just simply list the queried results because we also
+            // want to cache function guids which have no source, this is important so that we never
+            // attempt to contact the server for that guid.
+            for guid in &unknown {
+                let sources = queried_results
+                    .keys()
+                    .filter(|source_id| queried_results[source_id].contains(guid))
+                    .copied()
+                    .collect();
+                self.known_function_sources.insert(*guid, sources);
+            }
+
+            for (source_id, guids) in queried_results {
+                result.entry(source_id).or_default().extend(guids);
             }
         }
 
@@ -157,34 +164,40 @@ impl NetworkContainer {
         functions: &[FunctionGUID],
     ) {
         let target_id = self.get_target_id(target);
-        if let Some(file) = self
+        let file = match self
             .client
             .query_functions(target_id, Some(*source), functions)
         {
-            log::debug!("Got {} chunks from server", file.chunks.len());
-            for chunk in &file.chunks {
-                match &chunk.kind {
-                    ChunkKind::Signature(sc) => {
-                        let functions: Vec<_> = sc.functions().collect();
-                        // Probe the source before attempting to access it, as it might not exist locally.
-                        self.probe_source(*source);
-                        match self.cache.add_functions(target, source, &functions) {
-                            Ok(_) => log::debug!(
-                                "Added {} functions into cached source '{}'",
-                                functions.len(),
-                                source
-                            ),
-                            Err(err) => log::error!(
-                                "Failed to add {} function into cached source '{}': {}",
-                                functions.len(),
-                                source,
-                                err
-                            ),
-                        }
+            Ok(file) => file,
+            Err(e) => {
+                log::error!("Failed to query functions: {}", e);
+                return;
+            }
+        };
+
+        log::debug!("Got {} chunks from server", file.chunks.len());
+        for chunk in &file.chunks {
+            match &chunk.kind {
+                ChunkKind::Signature(sc) => {
+                    let functions: Vec<_> = sc.functions().collect();
+                    // Probe the source before attempting to access it, as it might not exist locally.
+                    self.probe_source(*source);
+                    match self.cache.add_functions(target, source, &functions) {
+                        Ok(_) => log::debug!(
+                            "Added {} functions into cached source '{}'",
+                            functions.len(),
+                            source
+                        ),
+                        Err(err) => log::error!(
+                            "Failed to add {} function into cached source '{}': {}",
+                            functions.len(),
+                            source,
+                            err
+                        ),
                     }
-                    // TODO; Probably want to pull type in with this.
-                    ChunkKind::Type(_) => {}
                 }
+                // TODO; Probably want to pull type in with this.
+                ChunkKind::Type(_) => {}
             }
         }
     }
@@ -192,10 +205,10 @@ impl NetworkContainer {
     /// Push a file to the network source.
     ///
     /// **This is blocking**
-    pub fn push_file(&mut self, source_id: SourceId, file: &WarpFile) {
+    pub fn push_file(&mut self, source_id: SourceId, file: &WarpFile) -> Result<i32, String> {
         // TODO: We need a better name for the commit. I would like to derive it automatically from
         // TODO: something instead of having the user give it TBH.
-        self.client.push_file(source_id, file, "commit");
+        self.client.push_file(source_id, file, "commit")
     }
 
     /// Probe the source to make sure it exists in the cache. Retrieving the name from the server.
@@ -261,10 +274,14 @@ impl Container for NetworkContainer {
             .added_chunks
             .remove(source)
             .ok_or(ContainerError::SourceNotFound(source.clone()))?;
+        if chunks.is_empty() {
+            return Ok(false);
+        }
         // Because each add operation is its own chunk, we should merge them into larger chunks before sending.
         let merged_chunks = Chunk::merge(&chunks, CompressionType::Zstd);
         let file = WarpFile::new(WarpFileHeader::new(), merged_chunks);
-        self.push_file(*source, &file);
+        self.push_file(*source, &file)
+            .map_err(|e| ContainerError::CommitFailed(*source, e))?;
         Ok(true)
     }
 
@@ -407,12 +424,9 @@ impl Container for NetworkContainer {
     }
 
     fn search(&self, query: &ContainerSearchQuery) -> ContainerResult<ContainerSearchResponse> {
-        // TODO: Give this an actual network error.
         self.client
             .search(query)
-            .ok_or(ContainerError::CorruptedData(
-                "search query failed to validate",
-            ))
+            .map_err(|e| ContainerError::SearchFailed(e.to_string()))
     }
 }
 

@@ -16,7 +16,6 @@ use binaryninja::is_ui_enabled;
 use binaryninja::logger::Logger;
 use binaryninja::settings::{QueryOptions, Settings};
 use log::LevelFilter;
-use reqwest::StatusCode;
 
 mod commit;
 mod create;
@@ -58,64 +57,49 @@ fn load_network_container() {
     let global_bn_settings = Settings::new();
 
     let add_network_container = |url: String, api_key: Option<String>| {
-        let https_proxy_str = global_bn_settings.get_string("network.httpsProxy");
-        let https_proxy = if https_proxy_str.is_empty() {
-            None
-        } else {
-            Some(https_proxy_str)
-        };
-        match NetworkClient::new(url.clone(), api_key.clone(), https_proxy) {
-            Ok(network_client) => {
-                // Before constructing the container, let's make sure that the server is OK.
-                if let Ok(StatusCode::OK) = network_client.status() {
-                    // Check if the user is logged in. If so, we should collect the writable sources.
-                    let mut writable_sources = Vec::new();
-                    match network_client.current_user() {
-                        Ok((id, username)) => {
-                            log::info!(
-                                "Server '{}' connected, logged in as user '{}'",
-                                url,
-                                username
-                            );
-                            match network_client.query_sources(Some(id)) {
-                                Ok(sources) => {
-                                    writable_sources = sources;
-                                }
-                                Err(e) => {
-                                    log::error!(
-                                        "Server '{}' failed to get sources for user: {}",
-                                        url,
-                                        e
-                                    );
-                                }
-                            }
-                        }
-                        Err(e) if api_key.is_some() => {
-                            log::error!(
-                                "Server '{}' failed to authenticate with provided API key: {}",
-                                url,
-                                e
-                            );
-                        }
-                        Err(_) => {
-                            log::info!("Server '{}' connected, logged in as guest", url);
-                        }
-                    }
+        let network_client = NetworkClient::new(url.clone(), api_key.clone());
+        // Before constructing the container, let's make sure that the server is OK.
+        if let Err(e) = network_client.status() {
+            log::error!("Server '{}' failed to connect: {}", url, e);
+            return;
+        }
 
-                    // TODO: Make the cache path include the domain or url, so that we can have multiple servers.
-                    let main_cache_path = NetworkContainer::root_cache_location().join("main");
-                    let network_container =
-                        NetworkContainer::new(network_client, main_cache_path, &writable_sources);
-                    log::debug!("{:#?}", network_container);
-                    add_cached_container(network_container);
-                } else {
-                    log::error!("Server '{}' is not reachable, disabling container...", url);
+        // Check if the user is logged in. If so, we should collect the writable sources.
+        let mut writable_sources = Vec::new();
+        match network_client.current_user() {
+            Ok((id, username)) => {
+                log::info!(
+                    "Server '{}' connected, logged in as user '{}'",
+                    url,
+                    username
+                );
+                match network_client.query_sources(Some(id)) {
+                    Ok(sources) => {
+                        writable_sources = sources;
+                    }
+                    Err(e) => {
+                        log::error!("Server '{}' failed to get sources for user: {}", url, e);
+                    }
                 }
             }
-            Err(e) => {
-                log::error!("Failed to add networked container: {}", e);
+            Err(e) if api_key.is_some() => {
+                log::error!(
+                    "Server '{}' failed to authenticate with provided API key: {}",
+                    url,
+                    e
+                );
+            }
+            Err(_) => {
+                log::info!("Server '{}' connected, logged in as guest", url);
             }
         }
+
+        // TODO: Make the cache path include the domain or url, so that we can have multiple servers.
+        let main_cache_path = NetworkContainer::root_cache_location().join("main");
+        let network_container =
+            NetworkContainer::new(network_client, main_cache_path, &writable_sources);
+        log::debug!("{:#?}", network_container);
+        add_cached_container(network_container);
     };
 
     let plugin_settings =

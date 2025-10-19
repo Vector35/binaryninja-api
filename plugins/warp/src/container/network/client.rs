@@ -3,9 +3,8 @@ use crate::container::{
     ContainerSearchItem, ContainerSearchItemKind, ContainerSearchQuery, ContainerSearchResponse,
     SourceId, SourcePath, SourceTag,
 };
-use reqwest::blocking::Client;
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
-use reqwest::StatusCode;
+use base64::Engine;
+use binaryninja::download::DownloadProvider;
 use serde::Deserialize;
 use serde_json::json;
 use std::collections::HashMap;
@@ -23,42 +22,23 @@ use warp::WarpFile;
 /// NOTE: **All requests are blocking**.
 #[derive(Clone, Debug)]
 pub struct NetworkClient {
-    client: Client,
+    provider: DownloadProvider,
+    headers: Vec<(String, String)>,
     pub server_url: String,
 }
 
 impl NetworkClient {
-    pub fn new(
-        server_url: String,
-        server_token: Option<String>,
-        https_proxy: Option<String>,
-    ) -> reqwest::Result<Self> {
-        let version_info = binaryninja::version_info();
-        // TODO: IIRC we had a user agent format already for some other thing.
-        let client_agent = format!(
-            "Binary Ninja/{}.{}.{}",
-            version_info.major, version_info.minor, version_info.build
-        );
+    pub fn new(server_url: String, server_token: Option<String>) -> Self {
         // TODO: This might want to be kept for the request header?
-        let mut headers = HeaderMap::new();
+        let mut headers: Vec<(String, String)> = vec![];
         if let Some(token) = &server_token {
-            headers.insert(
-                AUTHORIZATION,
-                HeaderValue::from_str(&format!("Bearer {}", token)).unwrap(),
-            );
+            headers.push(("authorization".to_string(), format!("Bearer {}", token)));
         }
-        // TODO: Configurable timeout?
-        let mut client_builder = Client::builder()
-            .connect_timeout(std::time::Duration::from_secs(10))
-            .default_headers(headers)
-            .user_agent(client_agent);
-        if let Some(https_proxy) = https_proxy {
-            client_builder = client_builder.proxy(reqwest::Proxy::all(&https_proxy)?);
-        }
-        Ok(Self {
-            client: client_builder.build()?,
+        Self {
+            provider: DownloadProvider::try_default().unwrap(),
+            headers,
             server_url,
-        })
+        }
     }
 
     /// Check to see the status of the server.
@@ -67,10 +47,14 @@ impl NetworkClient {
     /// server that is unresponsive.
     ///
     /// Route: `api/v1/status`
-    pub fn status(&self) -> reqwest::Result<StatusCode> {
+    pub fn status(&self) -> Result<(), String> {
         let status_url = format!("{}/api/v1/status", self.server_url);
-        let resp = self.client.get(&status_url).send()?;
-        Ok(resp.status())
+        let mut inst = self.provider.create_instance().unwrap();
+        let resp = inst.get(&status_url, self.headers.clone())?;
+        match resp.is_success() {
+            true => Ok(()),
+            false => Err(format!("Server returned an error: {}", resp.status_code)),
+        }
     }
 
     /// Query the logged in user.
@@ -78,8 +62,9 @@ impl NetworkClient {
     /// NOTE: **THIS IS BLOCKING**
     ///
     /// Route: `api/v1/users/me` (TODO: Comment about the query)
-    pub fn current_user(&self) -> reqwest::Result<(i32, String)> {
+    pub fn current_user(&self) -> Result<(i32, String), String> {
         let current_user_url = format!("{}/api/v1/users/me", self.server_url);
+        let mut inst = self.provider.create_instance().unwrap();
 
         #[derive(Deserialize)]
         struct CurrentUser {
@@ -87,12 +72,14 @@ impl NetworkClient {
             id: i32,
         }
 
-        let resp = self
-            .client
-            .get(&current_user_url)
-            .send()?
-            .error_for_status()?;
-        let user: CurrentUser = resp.json()?;
+        let resp = inst.get(&current_user_url, self.headers.clone())?;
+        if !resp.is_success() {
+            return Err(format!(
+                "'{}' returned {}",
+                current_user_url, resp.status_code
+            ));
+        }
+        let user: CurrentUser = resp.json().map_err(|e| e.to_string())?;
         Ok((user.id, user.username))
     }
 
@@ -101,16 +88,20 @@ impl NetworkClient {
     /// NOTE: **THIS IS BLOCKING**
     ///
     /// Route: `api/v1/users/me` (TODO: Comment about the query)
-    pub fn source_name(&self, id: SourceId) -> reqwest::Result<String> {
+    pub fn source_name(&self, id: SourceId) -> Result<String, String> {
         let source_url = format!("{}/api/v1/sources/{}", self.server_url, id);
+        let mut inst = self.provider.create_instance().unwrap();
 
         #[derive(Deserialize)]
         struct Source {
             name: String,
         }
 
-        let resp = self.client.get(&source_url).send()?.error_for_status()?;
-        let src: Source = resp.json()?;
+        let resp = inst.get(&source_url, self.headers.clone())?;
+        if !resp.is_success() {
+            return Err(format!("'{}' returned {}", source_url, resp.status_code));
+        }
+        let src: Source = resp.json().map_err(|e| e.to_string())?;
         Ok(src.name)
     }
 
@@ -123,8 +114,9 @@ impl NetworkClient {
     /// NOTE: **THIS IS BLOCKING**
     ///
     /// Route: `api/v1/sources/`
-    pub fn create_source(&self, name: &str) -> reqwest::Result<SourceId> {
+    pub fn create_source(&self, name: &str) -> Result<SourceId, String> {
         let source_url = format!("{}/api/v1/sources", self.server_url);
+        let mut inst = self.provider.create_instance().unwrap();
 
         let body = json!({
             "name": name,
@@ -137,14 +129,11 @@ impl NetworkClient {
             id: Uuid,
         }
 
-        let resp = self
-            .client
-            .post(&source_url)
-            .json(&body)
-            .send()?
-            .error_for_status()?;
-
-        let parsed: CreateSourceResponse = resp.json()?;
+        let resp = inst.post_json(&source_url, self.headers.clone(), &body)?;
+        if !resp.is_success() {
+            return Err(format!("'{}' returned {}", source_url, resp.status_code));
+        }
+        let parsed: CreateSourceResponse = resp.json().map_err(|e| e.to_string())?;
         Ok(SourceId(parsed.id))
     }
 
@@ -153,8 +142,9 @@ impl NetworkClient {
     /// NOTE: **THIS IS BLOCKING**
     ///
     /// Route: `api/v1/sources/query` (TODO: Comment about the query)
-    pub fn query_sources(&self, user_id: Option<i32>) -> reqwest::Result<Vec<SourceId>> {
+    pub fn query_sources(&self, user_id: Option<i32>) -> Result<Vec<SourceId>, String> {
         let sources_url = format!("{}/api/v1/sources/query", self.server_url);
+        let mut inst = self.provider.create_instance().unwrap();
 
         #[derive(Deserialize)]
         struct SourceItem {
@@ -170,16 +160,12 @@ impl NetworkClient {
         if let Some(user_id) = user_id {
             query.insert("user_id", user_id);
         }
-        let query_str = json!(query).to_string();
-        let resp = self
-            .client
-            .post(&sources_url)
-            .body(query_str)
-            .header("Content-Type", "application/json")
-            .send()?
-            .error_for_status()?;
 
-        let parsed: SourcesQueryResponse = resp.json()?;
+        let resp = inst.post_json(&sources_url, self.headers.clone(), &json!(query))?;
+        if !resp.is_success() {
+            return Err(format!("'{}' returned {}", sources_url, resp.status_code));
+        }
+        let parsed: SourcesQueryResponse = resp.json().map_err(|e| e.to_string())?;
         Ok(parsed.items.into_iter().map(|it| SourceId(it.id)).collect())
     }
 
@@ -190,6 +176,12 @@ impl NetworkClient {
     /// Route: `api/v1/targets/query` (TODO: Comment about the query)
     pub fn query_target_id(&self, target: &Target) -> Option<NetworkTargetId> {
         let query_target_url = format!("{}/api/v1/targets/query", self.server_url);
+        let mut inst = self.provider.create_instance().unwrap();
+
+        #[derive(Deserialize)]
+        struct TargetQueryResponse {
+            id: NetworkTargetId,
+        }
 
         let mut query = HashMap::new();
         if let Some(platform) = &target.platform {
@@ -198,25 +190,13 @@ impl NetworkClient {
         if let Some(architecture) = &target.architecture {
             query.insert("arch", architecture);
         }
-        let query_str = json!(query).to_string();
 
-        #[derive(Deserialize)]
-        struct TargetQueryResponse {
-            id: NetworkTargetId,
-        }
-
-        // NOTE: This is blocking.
-        let response = self
-            .client
-            .post(query_target_url)
-            .body(query_str)
-            .header("Content-Type", "application/json")
-            .send()
+        let resp = inst
+            .post_json(&query_target_url, self.headers.clone(), &json!(query))
             .ok()?;
-
         // Assuming the first response is the one we want.
         // TODO: Handle multiple responses, or error out.
-        let json_response: Vec<TargetQueryResponse> = response.json().ok()?;
+        let json_response: Vec<TargetQueryResponse> = resp.json().ok()?;
         let first_response = json_response.first()?;
 
         Some(first_response.id)
@@ -257,27 +237,22 @@ impl NetworkClient {
         target: Option<NetworkTargetId>,
         source: Option<SourceId>,
         guids: &[FunctionGUID],
-    ) -> Option<WarpFile<'static>> {
+    ) -> Result<WarpFile<'static>, String> {
         let query_functions_url = format!("{}/api/v1/functions/query", self.server_url);
         // TODO: Allow for source tags? We really only need this in query_functions_source as that
         // TODO: is what prevents a undesired source from being "known" to the container.
         let payload = Self::query_functions_body(target, source, &[], guids);
+        let mut inst = self.provider.create_instance().unwrap();
 
-        // Make the POST request
-        let response = self
-            .client
-            .post(&query_functions_url)
-            .json(&payload)
-            .send()
-            .ok()?;
-        if !response.status().is_success() {
-            log::error!("Failed to query functions: {}", response.status());
-            return None;
+        let resp = inst.post_json(&query_functions_url, self.headers.clone(), &payload)?;
+        if !resp.is_success() {
+            return Err(format!(
+                "'{}' returned {}",
+                query_functions_url, resp.status_code
+            ));
         }
-
         // Get response bytes and convert to WarpFile
-        let bytes = response.bytes().ok()?;
-        WarpFile::from_owned_bytes(bytes.to_vec())
+        WarpFile::from_owned_bytes(resp.data).ok_or("Failed to parse WARP data".to_string())
     }
 
     /// Query the functions, returning the sources and the corresponding function guids.
@@ -290,25 +265,21 @@ impl NetworkClient {
         target: Option<NetworkTargetId>,
         tags: &[SourceTag],
         guids: &[FunctionGUID],
-    ) -> Option<HashMap<SourceId, Vec<FunctionGUID>>> {
+    ) -> Result<HashMap<SourceId, Vec<FunctionGUID>>, String> {
         let query_functions_source_url =
             format!("{}/api/v1/functions/query/source", self.server_url);
         let payload = Self::query_functions_body(target, None, tags, guids);
+        let mut inst = self.provider.create_instance().unwrap();
 
-        // Make the POST request
-        let response = self
-            .client
-            .post(&query_functions_source_url)
-            .json(&payload)
-            .send()
-            .ok()?;
-        if !response.status().is_success() {
-            log::error!("Failed to query functions source: {}", response.status());
-            return None;
+        let resp = inst.post_json(&query_functions_source_url, self.headers.clone(), &payload)?;
+        if !resp.is_success() {
+            return Err(format!(
+                "'{}' returned {}",
+                query_functions_source_url, resp.status_code
+            ));
         }
-
         // Mapping of source id to function guids
-        let json_response: HashMap<String, Vec<String>> = response.json().ok()?;
+        let json_response: HashMap<String, Vec<String>> = resp.json().map_err(|e| e.to_string())?;
         let mapped_function_guids = json_response
             .into_iter()
             .filter_map(|(source_str, guid_strs)| {
@@ -321,85 +292,79 @@ impl NetworkClient {
             })
             .collect();
 
-        Some(mapped_function_guids)
+        Ok(mapped_function_guids)
     }
 
-    /// Pushes the file to the remote source.
+    /// Pushes the file to the remote source, returning the commit id.
     ///
     /// NOTE: **THIS IS BLOCKING**
     ///
-    /// Route: `api/v1/files/{source}`
-    pub fn push_file(&self, source_id: SourceId, file: &WarpFile, name: &str) -> bool {
-        let push_file_url = format!("{}/api/v1/files", self.server_url);
+    /// Route: `api/v1/files/json`
+    pub fn push_file(
+        &self,
+        source_id: SourceId,
+        file: &WarpFile,
+        name: &str,
+    ) -> Result<i32, String> {
+        let push_file_url = format!("{}/api/v1/files/json", self.server_url);
+        // Convert WarpFile to base64 encoded bytes
+        let file_bytes_base64 = base64::engine::general_purpose::STANDARD.encode(&file.to_bytes());
+        let mut inst = self.provider.create_instance().unwrap();
 
-        // Convert WarpFile to bytes
-        let file_bytes = file.to_bytes();
-
-        let Ok(file_part) = reqwest::blocking::multipart::Part::bytes(file_bytes)
-            .file_name("data.warp")
-            .mime_str("application/octet-stream")
-        else {
-            log::error!("Failed to create file part");
-            return false;
-        };
-
-        let form = reqwest::blocking::multipart::Form::new()
-            .part("file", file_part)
-            .text("name", name.to_string())
-            .text("source", source_id.to_string());
-
-        // Send the request
-        match self.client.post(&push_file_url).multipart(form).send() {
-            Ok(response) => {
-                if response.status().is_success() {
-                    true
-                } else {
-                    log::error!("Failed to push file: {}", response.status());
-                    false
-                }
-            }
-            Err(e) => {
-                log::error!("Failed to send push request: {}", e);
-                false
-            }
+        #[derive(Deserialize)]
+        struct UploadResponse {
+            commit_id: i32,
         }
+
+        let body = json!({
+            "file": file_bytes_base64,
+            "name": name,
+            "source": source_id.to_string(),
+            "description": serde_json::Value::Null,
+        });
+
+        let resp = inst.post_json(&push_file_url, self.headers.clone(), &body)?;
+        if !resp.is_success() {
+            return Err(format!("'{}' returned {}", push_file_url, resp.status_code));
+        }
+        let out: UploadResponse = resp.json().map_err(|e| e.to_string())?;
+        Ok(out.commit_id)
     }
 
-    pub fn function_data(&self, id: i32) -> Option<Function> {
+    pub fn function_data(&self, id: i32) -> Result<Function, String> {
         let function_data_url = format!("{}/api/v1/functions/{}/data", self.server_url, id);
-        let response = self.client.get(&function_data_url).send().ok()?;
-        if !response.status().is_success() {
-            log::error!(
-                "Failed to fetch function data for {}: {}",
-                id,
-                response.status()
-            );
-            return None;
+        let mut inst = self.provider.create_instance().unwrap();
+
+        let resp = inst.get(&function_data_url, self.headers.clone())?;
+        if !resp.is_success() {
+            return Err(format!(
+                "'{}' returned {}",
+                function_data_url, resp.status_code
+            ));
         }
-        let bytes = response.bytes().ok()?;
-        Function::from_bytes(bytes.as_ref())
+        Function::from_bytes(&resp.data)
+            .ok_or_else(|| format!("Failed to parse function data for function {}", id,))
     }
 
-    pub fn function_datas(&self, ids: &[i32]) -> Option<Vec<Function>> {
+    pub fn function_datas(&self, ids: &[i32]) -> Result<Vec<Function>, String> {
         if ids.is_empty() {
-            return Some(Vec::new());
+            return Ok(Vec::new());
         }
         let function_data_url = format!("{}/api/v1/functions/data", self.server_url);
+        let mut inst = self.provider.create_instance().unwrap();
+
         let body = json!({
             "ids": ids,
         });
-        let response = self
-            .client
-            .post(&function_data_url)
-            .json(&body)
-            .send()
-            .ok()?;
-        if !response.status().is_success() {
-            log::error!("Failed to fetch function data: {}", response.status());
-            return None;
+        let resp = inst.post_json(&function_data_url, self.headers.clone(), &body)?;
+        if !resp.is_success() {
+            return Err(format!(
+                "'{}' returned {}",
+                function_data_url, resp.status_code
+            ));
         }
-        let bytes = response.bytes().ok()?;
-        let file = WarpFile::from_bytes(bytes.as_ref())?;
+        let file = WarpFile::from_bytes(&resp.data)
+            .ok_or_else(|| format!("Failed to parse function data for functions {:?}", ids))?;
         let mut functions = Vec::with_capacity(ids.len());
         for chunk in file.chunks {
             let ChunkKind::Signature(sc) = chunk.kind else {
@@ -407,39 +372,37 @@ impl NetworkClient {
             };
             functions.extend(sc.functions());
         }
-        Some(functions)
+        Ok(functions)
     }
 
-    pub fn type_data(&self, guid: TypeGUID) -> Option<Type> {
+    pub fn type_data(&self, guid: TypeGUID) -> Result<Type, String> {
         let type_data_url = format!("{}/api/v1/types/{}/data", self.server_url, guid.to_string());
-        let response = self.client.get(&type_data_url).send().ok()?;
-        if !response.status().is_success() {
-            log::error!(
-                "Failed to fetch type data for {}: {}",
-                guid.to_string(),
-                response.status()
-            );
-            return None;
+        let mut inst = self.provider.create_instance().unwrap();
+
+        let resp = inst.get(&type_data_url, self.headers.clone())?;
+        if !resp.is_success() {
+            return Err(format!("'{}' returned {}", type_data_url, resp.status_code));
         }
-        let bytes = response.bytes().ok()?;
-        Type::from_bytes(bytes.as_ref())
+        Type::from_bytes(&resp.data)
+            .ok_or_else(|| format!("Failed to parse type data for type {}", guid))
     }
 
-    pub fn type_datas(&self, guids: &[TypeGUID]) -> Option<Vec<ComputedType>> {
+    pub fn type_datas(&self, guids: &[TypeGUID]) -> Result<Vec<ComputedType>, String> {
         if guids.is_empty() {
-            return Some(Vec::new());
+            return Ok(Vec::new());
         }
         let type_data_url = format!("{}/api/v1/types/data", self.server_url);
+        let mut inst = self.provider.create_instance().unwrap();
+
         let body = json!({
             "ids": guids.iter().map(|g| g.to_string()).collect::<Vec<_>>(),
         });
-        let response = self.client.post(&type_data_url).json(&body).send().ok()?;
-        if !response.status().is_success() {
-            log::error!("Failed to fetch type data: {}", response.status());
-            return None;
+        let resp = inst.post_json(&type_data_url, self.headers.clone(), &body)?;
+        if !resp.is_success() {
+            return Err(format!("'{}' returned {}", type_data_url, resp.status_code));
         }
-        let bytes = response.bytes().ok()?;
-        let file = WarpFile::from_bytes(bytes.as_ref())?;
+        let file = WarpFile::from_bytes(&resp.data)
+            .ok_or_else(|| format!("Failed to parse type data for types {:?}", guids))?;
         let mut types = Vec::with_capacity(guids.len());
         for chunk in file.chunks {
             let ChunkKind::Type(tc) = chunk.kind else {
@@ -447,12 +410,10 @@ impl NetworkClient {
             };
             types.extend(tc.types());
         }
-        Some(types)
+        Ok(types)
     }
 
-    pub fn search(&self, query: &ContainerSearchQuery) -> Option<ContainerSearchResponse> {
-        let search_url = format!("{}/api/v1/search", self.server_url);
-
+    pub fn search(&self, query: &ContainerSearchQuery) -> Result<ContainerSearchResponse, String> {
         #[derive(serde::Serialize)]
         struct SearchRequest<'a> {
             #[serde(rename = "q")]
@@ -468,6 +429,26 @@ impl NetworkClient {
             #[serde(skip_serializing_if = "Option::is_none")]
             retrieve_data: Option<bool>,
         }
+        let source_id_str = query.source.map(|s| s.to_string());
+        let request = SearchRequest {
+            q: &query.query,
+            limit: query.limit,
+            offset: query.offset,
+            source_id: source_id_str,
+            source_tags: match query.tags.is_empty() {
+                true => None,
+                false => Some(query.tags.clone()),
+            },
+            // This must be passed to retrieve the function and type data.
+            retrieve_data: Some(true),
+        };
+        let request_qs = serde_qs::to_string(&request).map_err(|e| e.to_string())?;
+        let search_url = match request_qs.is_empty() {
+            true => format!("{}/api/v1/search", self.server_url),
+            false => format!("{}/api/v1/search?{}", self.server_url, request_qs),
+        };
+
+        let mut inst = self.provider.create_instance().unwrap();
 
         #[derive(serde::Deserialize)]
         struct SearchResponse {
@@ -488,32 +469,11 @@ impl NetworkClient {
             data: Option<Vec<u8>>,
         }
 
-        let source_id_str = query.source.map(|s| s.to_string());
-        let request = SearchRequest {
-            q: &query.query,
-            limit: query.limit,
-            offset: query.offset,
-            source_id: source_id_str,
-            source_tags: match query.tags.is_empty() {
-                true => None,
-                false => Some(query.tags.clone()),
-            },
-            // This must be passed to retrieve the function and type data.
-            retrieve_data: Some(true),
-        };
-
-        let resp = match self.client.get(search_url).query(&request).send() {
-            Ok(r) => r,
-            Err(err) => {
-                log::error!("Failed to send search request: {}", err);
-                return None;
-            }
-        };
-
-        let Ok(parsed) = resp.json::<SearchResponse>() else {
-            log::error!("Failed to parse search response");
-            return None;
-        };
+        let resp = inst.get(&search_url, self.headers.clone())?;
+        if !resp.is_success() {
+            return Err(format!("'{}' returned {}", search_url, resp.status_code));
+        }
+        let parsed: SearchResponse = resp.json().map_err(|e| e.to_string())?;
 
         // TODO: This is quite scuffed, but it works for now. (Mostly just that it looks bad and queries a lot)
         // TODO: Here I think would be a good place to sort it so sources always come first.
@@ -580,7 +540,7 @@ impl NetworkClient {
             });
         }
 
-        Some(ContainerSearchResponse {
+        Ok(ContainerSearchResponse {
             items,
             total: parsed.total,
             offset: parsed.offset,

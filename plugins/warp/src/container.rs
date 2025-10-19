@@ -35,6 +35,10 @@ pub enum ContainerError {
     FailedIO(io::ErrorKind),
     #[error("source {0} does not have an available path")]
     SourcePathUnavailable(SourceId),
+    #[error("search failed: {0}")]
+    SearchFailed(String),
+    #[error("failed to commit source '{0}': {1}")]
+    CommitFailed(SourceId, String),
 }
 
 /// Represents the ID for a single container source.

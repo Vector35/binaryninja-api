@@ -3,11 +3,13 @@ use crate::headless::is_shutdown_requested;
 use crate::rc::{Ref, RefCountable};
 use crate::string::{strings_to_string_list, BnString, IntoCStr};
 use binaryninjacore_sys::*;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ffi::{c_void, CStr};
 use std::mem::{ManuallyDrop, MaybeUninit};
 use std::os::raw::c_char;
 use std::ptr::null_mut;
+use std::rc::Rc;
 use std::slice;
 
 pub trait CustomDownloadInstance: Sized {
@@ -81,6 +83,36 @@ pub struct DownloadInstanceInputOutputCallbacks {
 pub struct DownloadResponse {
     pub status_code: u16,
     pub headers: HashMap<String, String>,
+}
+
+pub struct OwnedDownloadResponse {
+    pub data: Vec<u8>,
+    pub status_code: u16,
+    pub headers: HashMap<String, String>,
+}
+
+impl OwnedDownloadResponse {
+    /// Attempt to parse the response body as UTF-8.
+    pub fn text(&self) -> Result<String, std::string::FromUtf8Error> {
+        String::from_utf8(self.data.clone())
+    }
+
+    /// Attempt to deserialize the response body as JSON into T.
+    pub fn json<T: serde::de::DeserializeOwned>(&self) -> Result<T, serde_json::Error> {
+        serde_json::from_slice(&self.data)
+    }
+
+    /// Convenience to get a header value by case-insensitive name.
+    pub fn header(&self, name: &str) -> Option<&str> {
+        self.headers
+            .get(&name.to_ascii_lowercase())
+            .map(|s| s.as_str())
+    }
+
+    /// True if the status code is in the 2xx range.
+    pub fn is_success(&self) -> bool {
+        (200..300).contains(&self.status_code)
+    }
 }
 
 /// A reader for a [`DownloadInstance`].
@@ -197,6 +229,100 @@ impl DownloadInstance {
     /// Use inside [`CustomDownloadInstance::perform_custom_request`] to inform the caller of the request progress.
     pub fn progress_callback(&self, progress: u64, total: u64) -> bool {
         unsafe { BNNotifyProgressForDownloadInstance(self.handle, progress, total) }
+    }
+
+    pub fn get<I>(&mut self, url: &str, headers: I) -> Result<OwnedDownloadResponse, String>
+    where
+        I: IntoIterator<Item = (String, String)>,
+    {
+        let buf: Rc<RefCell<Vec<u8>>> = Rc::new(RefCell::new(Vec::new()));
+        let buf_closure = Rc::clone(&buf);
+        let callbacks = DownloadInstanceInputOutputCallbacks {
+            read: None,
+            write: Some(Box::new(move |data: &[u8]| {
+                buf_closure.borrow_mut().extend_from_slice(data);
+                data.len()
+            })),
+            progress: Some(Box::new(|_, _| true)),
+        };
+
+        let resp = self.perform_custom_request("GET", url, headers, &callbacks)?;
+        drop(callbacks);
+        let out = Rc::try_unwrap(buf).map_err(|_| "Buffer held with strong reference")?;
+        Ok(OwnedDownloadResponse {
+            data: out.into_inner(),
+            status_code: resp.status_code,
+            headers: resp.headers,
+        })
+    }
+
+    pub fn post<I>(
+        &mut self,
+        url: &str,
+        headers: I,
+        body: Vec<u8>,
+    ) -> Result<OwnedDownloadResponse, String>
+    where
+        I: IntoIterator<Item = (String, String)>,
+    {
+        let resp_buf: Rc<RefCell<Vec<u8>>> = Rc::new(RefCell::new(Vec::new()));
+        let resp_buf_closure = Rc::clone(&resp_buf);
+        // Request body position tracker captured by the read closure
+        let mut pos = 0usize;
+        let total = body.len();
+        let callbacks = DownloadInstanceInputOutputCallbacks {
+            // Supply request body to the core
+            read: Some(Box::new(move |dst: &mut [u8]| -> Option<usize> {
+                if pos >= total {
+                    return Some(0);
+                }
+                let remaining = total - pos;
+                let to_copy = remaining.min(dst.len());
+                dst[..to_copy].copy_from_slice(&body[pos..pos + to_copy]);
+                pos += to_copy;
+                Some(to_copy)
+            })),
+            // Collect response body
+            write: Some(Box::new(move |data: &[u8]| {
+                resp_buf_closure.borrow_mut().extend_from_slice(data);
+                data.len()
+            })),
+            progress: Some(Box::new(|_, _| true)),
+        };
+
+        let resp = self.perform_custom_request("POST", url, headers, &callbacks)?;
+        drop(callbacks);
+        if !(200..300).contains(&(resp.status_code as i32)) {
+            return Err(format!("HTTP error: {}", resp.status_code));
+        }
+
+        let out = Rc::try_unwrap(resp_buf).map_err(|_| "Buffer held with strong reference")?;
+        Ok(OwnedDownloadResponse {
+            data: out.into_inner(),
+            status_code: resp.status_code,
+            headers: resp.headers,
+        })
+    }
+
+    pub fn post_json<I, T>(
+        &mut self,
+        url: &str,
+        headers: I,
+        body: &T,
+    ) -> Result<OwnedDownloadResponse, String>
+    where
+        I: IntoIterator<Item = (String, String)>,
+        T: serde::Serialize,
+    {
+        let mut headers: Vec<(String, String)> = headers.into_iter().collect();
+        if !headers
+            .iter()
+            .any(|(k, _)| k.eq_ignore_ascii_case("content-type"))
+        {
+            headers.push(("content-type".into(), "application/json".into()));
+        }
+        let bytes = serde_json::to_vec(body).map_err(|e| e.to_string())?;
+        self.post(url, headers, bytes)
     }
 
     pub fn perform_request(

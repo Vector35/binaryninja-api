@@ -11,6 +11,93 @@ One of the best ways to learn a complicated API is to simply find the right exam
 
 # Recipes
 
+## Loading Files & Databases
+
+### Loading a file headlessly
+
+The `load` function is the recommended way to open a file for analysis in a headless script:
+
+```python
+from binaryninja import load
+
+# Basic usage - automatically runs analysis
+bv = load('/bin/ls')
+if bv is not None:
+    # Do something with the binary view
+    print(f"Loaded {bv.file.filename}")
+    print(f"Architecture: {bv.arch.name}")
+    print(f"Entry point: {hex(bv.entry_point)}")
+    
+    # Important: Close the file when done to prevent memory leaks
+    bv.file.close()
+```
+
+### Loading a file with options
+
+You can customize the loading behavior by passing options:
+
+```python
+from binaryninja import load
+
+# Load with custom options
+bv = load('/bin/ls', options={
+    'loader.imageBase': 0xfffffff0000,
+    'loader.macho.processFunctionStarts': False,
+    'analysis.mode': 'basic',
+    'analysis.linearSweep.autorun': False
+})
+
+if bv is not None:
+    # Process the binary view
+    print(f"Loaded at base address: {hex(bv.start)}")
+    bv.file.close()
+```
+
+### Loading a database file
+
+Binary Ninja database files (.bndb) can be loaded the same way as regular binaries:
+
+```python
+from binaryninja import load
+
+# Load a saved database
+bv = load('/path/to/analysis.bndb')
+if bv is not None:
+    # All previous analysis is preserved
+    print(f"Loaded database with {len(bv.functions)} functions")
+    bv.file.close()
+```
+
+### Using the context manager pattern
+
+The recommended way to work with Binary Ninja files is using a context manager, which automatically handles cleanup:
+
+```python
+from binaryninja import load
+
+# Context manager automatically closes the file
+with load('/bin/ls') as bv:
+    if bv is not None:
+        for func in bv.functions:
+            print(f"{hex(func.start)}: {func.name}")
+# File is automatically closed here
+```
+
+### Controlling analysis behavior
+
+By default, `load()` runs analysis automatically. You can disable this for faster loading:
+
+```python
+from binaryninja import load
+
+# Load without running analysis
+bv = load('/bin/ls', update_analysis=False)
+if bv is not None:
+    # Manually control when analysis runs
+    bv.update_analysis_and_wait()
+    bv.file.close()
+```
+
 ## Navigation / Search
 
 ### Getting all functions in a binary

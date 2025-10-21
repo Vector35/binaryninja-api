@@ -13,8 +13,12 @@ One of the best ways to learn a complicated API is to simply find the right exam
 
 ## Loading Files & Databases
 
-!!! note "Headless Usage"
-    Headless file loading is only available in Binary Ninja Commercial and above (Commercial, Ultimate, and Enterprise). This feature is not available in the Personal edition.
+When scripting from the Binary Ninja UI, the `bv` magic variable is already defined and available in the Python console or scripts loaded via `File -> Run Script...`. You can directly use `bv` to access the currently open binary.
+
+If you have Binary Ninja Commercial and above (Commercial, Ultimate, and Enterprise), you can also use Binary Ninja headlessly as a library. This allows you to write standalone scripts that load and analyze files without the UI.
+
+!!! note "Headless Usage Requirement"
+    Using Binary Ninja as a library (headlessly) is only available in Binary Ninja Commercial and above. This feature is not available in the Personal edition.
 
 ### Basic file loading
 

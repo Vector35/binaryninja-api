@@ -1754,12 +1754,14 @@ where
             }
         }
 
-        let mut mask = -1i64 as u64;
-
-        if self.op.size < mem::size_of::<u64>() {
-            mask <<= self.op.size * 8;
-            mask = !mask;
-        }
+        let mask: u64 = if self.op.size == 0 {
+            1
+        } else if self.op.size < mem::size_of::<u64>() {
+            let m = -1i64 << (self.op.size * 8);
+            !m as u64
+        } else {
+            (-1i64) as u64
+        };
 
         self.op.operands[0] & mask
     }

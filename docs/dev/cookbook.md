@@ -14,7 +14,7 @@ One of the best ways to learn a complicated API is to simply find the right exam
 ## Loading Files & Databases
 
 !!! note "Headless Usage"
-    Headless file loading requires Binary Ninja Commercial or Enterprise. This feature is not available in the Personal edition.
+    Headless file loading is only available in Binary Ninja Commercial and above (Commercial, Ultimate, and Enterprise). This feature is not available in the Personal edition.
 
 ### Basic file loading
 

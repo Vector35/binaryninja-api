@@ -335,17 +335,20 @@ static InstructionId Decode16Vle(uint16_t word16, uint32_t decodeFlags)
 }
 static uint16_t Get16Rx(uint16_t word16)
 {
-	return word16 & 0xf;
+	uint16_t rx = word16 & 0xf;
+	return rx + ((rx & 0x8) >> 3) * 16;
 }
 
 static uint16_t Get16Ry(uint16_t word16)
 {
-	return (word16 >> 4) & 0xf;
+	uint16_t ry = (word16 >> 4) & 0xf;
+	return ry + ((ry & 0x8) >> 3) * 16;
 }
 
 static uint16_t Get16Rz(uint16_t word16)
 {
-	return (word16 >> 4) & 0xf;
+	uint16_t rz = (word16 >> 4) & 0xf;
+	return rz + ((rz & 0x8) >> 3) * 16;
 }
 
 static void FillOperands16Vle(Instruction* instruction, uint16_t word16, uint64_t address, bool translate)

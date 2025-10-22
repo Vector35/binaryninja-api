@@ -1668,7 +1668,7 @@ impl Structure {
     ///
     /// We must pass a [`TypeContainer`] here so that we can resolve base structure members, as they
     /// are treated as members through this function. Typically, you get the [`TypeContainer`]
-    /// through the binary view with [`BinaryView::get_type_container`].
+    /// through the binary view with [`BinaryViewExt::get_type_container`].
     pub fn members_at_offset(
         &self,
         container: &TypeContainer,
@@ -1701,7 +1701,7 @@ impl Structure {
     /// Returns the list of all structure members, including inherited ones.
     ///
     /// Because we must traverse through base structures, we have to provide the [`TypeContainer`];
-    /// in most cases it is ok to provide the binary views container via [`BinaryView::type_container`].
+    /// in most cases it is ok to provide the binary views container via [`BinaryViewExt::type_container`].
     pub fn members_including_inherited(
         &self,
         container: &TypeContainer,

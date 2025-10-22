@@ -1028,7 +1028,9 @@ impl From<InstructionTextTokenContext> for BNInstructionTextTokenContext {
             InstructionTextTokenContext::Collapsed => Self::ContentCollapsedContext,
             InstructionTextTokenContext::Expanded => Self::ContentExpandedContext,
             InstructionTextTokenContext::CollapsiblePadding => Self::ContentCollapsiblePadding,
-            InstructionTextTokenContext::DerivedStringReference => Self::DerivedStringReferenceTokenContext,
+            InstructionTextTokenContext::DerivedStringReference => {
+                Self::DerivedStringReferenceTokenContext
+            }
         }
     }
 }

@@ -1,17 +1,18 @@
 [package]
-name = "warp_ninja"
+name = "warp_ninja-static"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 
 [lib]
-crate-type = ["lib", "cdylib"]
+crate-type = ["lib", "staticlib"]
+path = "../src/lib.rs"
 
 [features]
 demo = []
 
 [dependencies]
-binaryninja = { workspace = true, features = ["rayon"] }
+binaryninja = { workspace = true, features = ["rayon", "demo"] }
 binaryninjacore-sys.workspace = true
 warp = { git = "https://github.com/Vector35/warp/", tag = "1.0.0" }
 log = "0.4"
@@ -42,15 +43,3 @@ minijinja-embed = "2.10.2"
 [dev-dependencies]
 criterion = "0.6"
 insta = { version = "1.42", features = ["yaml"] }
-
-[[bench]]
-name = "guid"
-harness = false
-
-[[bench]]
-name = "convert"
-harness = false
-
-[[bench]]
-name = "function"
-harness = false

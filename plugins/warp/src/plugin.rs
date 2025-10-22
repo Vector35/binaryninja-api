@@ -116,9 +116,7 @@ fn load_network_container() {
     background_task.finish();
 }
 
-#[no_mangle]
-#[allow(non_snake_case)]
-pub extern "C" fn CorePluginInit() -> bool {
+fn plugin_init() -> bool {
     Logger::new("WARP").with_level(LevelFilter::Debug).init();
 
     // Register our matcher and plugin settings globally.
@@ -247,5 +245,21 @@ pub extern "C" fn CorePluginInit() -> bool {
         project::CreateSignatures {},
     );
 
+    true
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+#[cfg(feature = "demo")]
+pub extern "C" fn WarpPluginInit() -> bool {
+    plugin_init();
+    true
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+#[cfg(not(feature = "demo"))]
+pub extern "C" fn CorePluginInit() -> bool {
+    plugin_init();
     true
 }

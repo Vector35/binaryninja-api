@@ -19,7 +19,11 @@ set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
 
-add_library(${PROJECT_NAME} SHARED ${SOURCES} ${MOCS})
+if (DEMO)
+    add_library(${PROJECT_NAME} STATIC ${SOURCES} ${MOCS})
+else ()
+    add_library(${PROJECT_NAME} SHARED ${SOURCES} ${MOCS})
+endif ()
 
 target_include_directories(${PROJECT_NAME} PRIVATE ../api)
 

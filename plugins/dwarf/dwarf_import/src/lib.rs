@@ -756,8 +756,7 @@ impl CustomDebugInfoParser for DWARFParser {
     }
 }
 
-#[no_mangle]
-pub extern "C" fn CorePluginInit() -> bool {
+fn plugin_init() {
     Logger::new("DWARF").init();
 
     let settings = Settings::new();
@@ -820,5 +819,20 @@ pub extern "C" fn CorePluginInit() -> bool {
     );
 
     DebugInfoParser::register("DWARF", DWARFParser {});
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+#[cfg(not(feature = "demo"))]
+pub extern "C" fn CorePluginInit() -> bool {
+    plugin_init();
+    true
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+#[cfg(feature = "demo")]
+pub extern "C" fn DwarfImportPluginInit() -> bool {
+    plugin_init();
     true
 }

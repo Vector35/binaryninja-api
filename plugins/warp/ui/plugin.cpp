@@ -247,13 +247,19 @@ extern "C"
 {
 	BN_DECLARE_UI_ABI_VERSION
 
+#ifndef DEMO_EDITION
 	BINARYNINJAPLUGIN void CorePluginDependencies()
 	{
 		// We must have WARP to enable this plugin!
 		AddRequiredPluginDependency("warp_ninja");
 	}
+#endif
 
+#ifdef DEMO_EDITION
+	bool WarpUIPluginInit()
+#else
 	BINARYNINJAPLUGIN bool UIPluginInit()
+#endif
 	{
 		RegisterWarpFetchFunctionsCommand();
 		Sidebar::addSidebarWidgetType(new WarpSidebarWidgetType());

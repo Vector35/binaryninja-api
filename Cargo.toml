@@ -11,6 +11,7 @@ members = [
     "rust/plugin_examples/data_renderer",
     "view/minidump",
     "plugins/dwarf/dwarf_import",
+    "plugins/dwarf/dwarf_import/demo",
     "plugins/dwarf/dwarf_export",
     "plugins/dwarf/dwarfdump",
     "plugins/dwarf/shared",
@@ -20,7 +21,9 @@ members = [
     "plugins/svd",
     "plugins/svd/demo",
     "plugins/warp",
+    "plugins/warp/demo",
     "plugins/workflow_objc",
+    "plugins/workflow_objc/demo",
 ]
 
 [workspace.dependencies]

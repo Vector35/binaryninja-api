@@ -1,17 +1,18 @@
 [package]
-name = "workflow_objc"
+name = "workflow_objc-static"
 version = "0.1.0"
 edition = "2021"
 license = "BSD-3-Clause"
 
 [lib]
-crate-type = ["staticlib", "cdylib"]
+crate-type = ["staticlib"]
+path = "../src/lib.rs"
 
 [features]
 demo = []
 
 [dependencies]
-binaryninja = { workspace = true }
+binaryninja = { workspace = true, features = ["demo"] }
 binaryninjacore-sys.workspace = true
 log = "0.4"
 dashmap = { version = "6.1", features = ["rayon"]}

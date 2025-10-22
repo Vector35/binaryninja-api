@@ -693,6 +693,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "dwarf_import-static"
+version = "0.1.0"
+dependencies = [
+ "binaryninja",
+ "binaryninjacore-sys",
+ "cpp_demangle",
+ "dwarfreader",
+ "gimli",
+ "indexmap",
+ "iset",
+ "log",
+ "object 0.36.7",
+ "regex",
+]
+
+[[package]]
 name = "dwarfdump"
 version = "0.1.0"
 dependencies = [
@@ -2423,6 +2439,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "warp_ninja-static"
+version = "0.1.0"
+dependencies = [
+ "ar",
+ "arboard",
+ "base64",
+ "binaryninja",
+ "binaryninjacore-sys",
+ "compact_str",
+ "criterion",
+ "dashmap",
+ "directories",
+ "insta",
+ "itertools 0.14.0",
+ "log",
+ "minijinja",
+ "minijinja-embed",
+ "rayon",
+ "regex",
+ "serde",
+ "serde_json",
+ "serde_qs",
+ "tempdir",
+ "thiserror 2.0.12",
+ "uuid",
+ "walkdir",
+ "warp",
+]
+
+[[package]]
 name = "wasi"
 version = "0.11.1+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2765,6 +2811,19 @@ dependencies = [
 
 [[package]]
 name = "workflow_objc"
+version = "0.1.0"
+dependencies = [
+ "binaryninja",
+ "binaryninjacore-sys",
+ "bstr",
+ "dashmap",
+ "log",
+ "once_cell",
+ "thiserror 2.0.12",
+]
+
+[[package]]
+name = "workflow_objc-static"
 version = "0.1.0"
 dependencies = [
  "binaryninja",

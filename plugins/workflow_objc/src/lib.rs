@@ -10,17 +10,7 @@ use metadata::GlobalState;
 
 use log::LevelFilter;
 
-#[no_mangle]
-#[allow(non_snake_case)]
-pub extern "C" fn CorePluginDependencies() {
-    add_optional_plugin_dependency("arch_x86");
-    add_optional_plugin_dependency("arch_armv7");
-    add_optional_plugin_dependency("arch_arm64");
-}
-
-#[no_mangle]
-#[allow(non_snake_case)]
-pub extern "C" fn CorePluginInit() -> bool {
+fn plugin_init() -> bool {
     Logger::new("Plugin.Objective-C")
         .with_level(LevelFilter::Debug)
         .init();
@@ -45,4 +35,27 @@ pub extern "C" fn CorePluginInit() -> bool {
     GlobalState::register_cleanup();
 
     true
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+#[cfg(not(feature = "demo"))]
+pub extern "C" fn CorePluginDependencies() {
+    add_optional_plugin_dependency("arch_x86");
+    add_optional_plugin_dependency("arch_armv7");
+    add_optional_plugin_dependency("arch_arm64");
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+#[cfg(not(feature = "demo"))]
+pub extern "C" fn CorePluginInit() -> bool {
+    plugin_init()
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+#[cfg(feature = "demo")]
+pub extern "C" fn WorkflowObjcPluginInit() -> bool {
+    plugin_init()
 }

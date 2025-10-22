@@ -611,7 +611,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 				ei0 = il.Const(addressSize_l, oper2->simm);
 			ei0 = il.Add(
 				addressSize_l,
-				operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l),
+				operToIL(il, oper1),
 				ei0
 			);
 			ei0 = il.SetRegister(addressSize_l, oper0->reg, ei0);

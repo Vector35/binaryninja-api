@@ -12,12 +12,11 @@
 # make docset
 # =-=--
 
-__DOXYGEN_REQUIRED_VERSION__ = "1.12.0"
-
 import argparse
 import os
 import sys
 import json
+import re
 from collections import namedtuple
 import subprocess
 import shutil
@@ -81,6 +80,45 @@ def load_items_in_file(filename):
 	return items
 
 
+def replace_getScript_function(js_content, replacement_func):
+	"""
+	Robustly find and replace the getScript function definition.
+	Uses brace counting to handle nested functions across different Doxygen versions.
+	"""
+	# Find the start of the function
+	pattern = r'const getScript\s*=\s*function\s*\([^)]*\)\s*\{'
+	match = re.search(pattern, js_content)
+
+	if not match:
+		print("ERROR: getScript function not found in navtree.js")
+		sys.exit(1)
+
+	start_pos = match.start()
+	func_start = match.end() - 1  # Position of opening brace
+
+	# Count braces to find the matching closing brace
+	brace_count = 1
+	pos = func_start + 1
+
+	while pos < len(js_content) and brace_count > 0:
+		if js_content[pos] == '{':
+			brace_count += 1
+		elif js_content[pos] == '}':
+			brace_count -= 1
+		pos += 1
+
+	if brace_count != 0:
+		print("ERROR: Could not find matching closing brace for getScript function")
+		sys.exit(1)
+
+	end_pos = pos  # Position after closing brace
+
+	# Replace the function
+	new_content = js_content[:start_pos] + replacement_func + js_content[end_pos:]
+
+	return new_content
+
+
 def minifier():
 
 	# Typically, doxygen's navbar will lazy load the data in all of these variables.
@@ -115,12 +153,10 @@ def minifier():
 
 	# getScript(scriptName,func,show) here originally loads the js file and calls func once that is complete
 	# Here, we just want to skip the whole process and immediately call the callback.
+	# This replacement works across different Doxygen versions (tested with 1.12.0, 1.14.0, and 1.15.0)
 	nav_tree_fixed_get_script = "function getScript(scriptName,func,show) { func(); }"
 
-	navtree_before_get_script = navtree_orig.split("const getScript = function(scriptName,func) {")[0]
-	navtree_after_get_script = navtree_orig.split("const getScript = function(scriptName,func) {")[1].split('}', 1)[1]
-
-	nav_tree_fixed = navtree_before_get_script + nav_tree_fixed_get_script + navtree_after_get_script
+	nav_tree_fixed = replace_getScript_function(navtree_orig, nav_tree_fixed_get_script)
 	navtree = navtree_built_data + "\n" + nav_tree_fixed
 
 	fp = open("html/navtree.js", "w")
@@ -133,9 +169,6 @@ def build_doxygen(args):
 		print('No Doxyfile found. Are you in the right directory?')
 		sys.exit(1)
 	_, vers, _ = system_with_output(f"{doxygen} -V")
-	if __DOXYGEN_REQUIRED_VERSION__ not in vers.strip():
-		print(f'Please use Doxygen {__DOXYGEN_REQUIRED_VERSION__} to build documentation')
-		sys.exit(1)
 
 	if args.docset:
 		stat, _, _ = system_with_output("doxygen2docset --help")

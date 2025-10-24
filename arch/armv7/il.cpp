@@ -123,6 +123,7 @@ static void ConditionExecute(LowLevelILFunction& il, Condition cond, ExprId true
 	il.AddInstruction(trueCase);
 	il.MarkLabel(falseCode);
 }
+// Returns an instructions datatype size in bits
 static size_t GetDataTypeSize(DataType dt)
 {
 	switch (dt)
@@ -183,6 +184,18 @@ static ExprId GetShifted(LowLevelILFunction& il, Register reg, uint32_t ShiftAmo
 			return 0;
 	}
 }
+static DoubleWordRegisterList ReadRegisterList(InstructionOperand instr) {
+	uint32_t val = instr.reg;
+	DoubleWordRegisterList dwrl;
+	#ifdef _MSC_VER
+	dwrl.size = __popcnt(val);
+	DWORD pos = 0;
+	_BitScanForward(&pos, val);
+	dwrl.start = pos;
+	
+	#else
+	dwrl.size = __builtin_popcount(val);
+	dwrl.start = __builtin_ctz(val);
 
 
 static ExprId GetShiftedOffset(LowLevelILFunction& il, InstructionOperand& op)

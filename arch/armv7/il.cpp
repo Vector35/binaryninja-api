@@ -123,7 +123,31 @@ static void ConditionExecute(LowLevelILFunction& il, Condition cond, ExprId true
 	il.AddInstruction(trueCase);
 	il.MarkLabel(falseCode);
 }
-
+static size_t GetDataTypeSize(DataType dt)
+{
+	switch (dt)
+	{
+	case DT_I8:
+	case DT_8:
+		return 8;
+		break;
+	case DT_F16:
+	case DT_I16:
+	case DT_16:
+		return 16;
+		break;
+	case DT_F32:
+	case DT_I32:
+	case DT_32:
+		return 32;
+		break;
+	case DT_F64:
+	case DT_I64:
+	case DT_64:
+		return 64;
+		break;
+	}
+};
 
 static ExprId GetShifted(LowLevelILFunction& il, Register reg, uint32_t ShiftAmount, Shift shift)
 {

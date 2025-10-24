@@ -910,15 +910,23 @@ typedef union _ieee754 {
 	float fvalue;
 }ieee754;
 
-typedef union _ieee754_double {
+typedef union _ieee754_double
+{
 	uint64_t value;
-	struct {
-		uint64_t fraction:52;
-		uint64_t exponent:11;
-		uint64_t sign:1;
+	struct
+	{
+		uint64_t fraction : 52;
+		uint64_t exponent : 11;
+		uint64_t sign : 1;
 	};
 	double fvalue;
-}ieee754_double;
+} ieee754_double;
+
+struct DoubleWordRegisterList
+{
+	uint8_t size;
+	uint8_t start;
+};
 
 #ifndef __cplusplus
 	typedef enum OperandClass OperandClass;

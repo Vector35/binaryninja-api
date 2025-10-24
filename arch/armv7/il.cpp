@@ -5110,6 +5110,31 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 				)
 			);
 			break;
+		case ARMV7_VLD1:
+			ConditionExecute(addrSize, instr.cond, instr, il, [&](size_t addrSize, Instruction& instr, LowLevelILFunction& il) {
+				switch (op1.cls)
+					{
+					case OperandClass::REG_LIST_DOUBLE:
+						DoubleWordRegisterList reglist = ReadRegisterList(op1);
+						uint32_t dregsize = get_register_size(REG_D0);
+						uint32_t regsize = get_register_size(op2.reg);
+						uint32_t dataSizeInBytes = GetDataTypeSize(instr.dataType) / 8;
+						for (unsigned int i = 0; i < reglist.size; i++)
+						{
+							uint32_t curOffset = i * dataSizeInBytes;
+							uint32_t curregind = REG_D0 + reglist.start + i;
+
+							il.AddInstruction(il.SetRegister(dregsize, curregind,
+								il.Load(dataSizeInBytes, il.Add(regsize, ILREG(op2), il.Const(regsize, curOffset)))));
+						}
+						if (op2.flags.wb)
+						{
+							il.AddInstruction(il.SetRegister(
+								regsize, op2.reg, il.Add(regsize, ILREG(op2), il.Const(regsize, dataSizeInBytes * reglist.size))));
+						}
+					}
+				});
+			break;
 		default:
 			//printf("Instruction: %s\n", get_operation(instr.operation));
 			ConditionExecute(il, instr.cond, il.Unimplemented());

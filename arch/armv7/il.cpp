@@ -197,6 +197,9 @@ static DoubleWordRegisterList ReadRegisterList(InstructionOperand instr) {
 	dwrl.size = __builtin_popcount(val);
 	dwrl.start = __builtin_ctz(val);
 
+	#endif
+	return dwrl;
+}
 
 static ExprId GetShiftedOffset(LowLevelILFunction& il, InstructionOperand& op)
 {

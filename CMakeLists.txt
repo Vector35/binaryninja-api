@@ -17,6 +17,30 @@ if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     endif()
 endif()
 
+# PROJECT_IS_TOP_LEVEL is set by project() in CMake 3.21+
+if(CMAKE_VERSION VERSION_LESS "3.21")
+    string(COMPARE EQUAL "${CMAKE_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}" PROJECT_IS_TOP_LEVEL)
+endif()
+
+# ---- Warning guard ----
+# target_include_directories with the SYSTEM modifier will request the compiler
+# to omit warnings (by using `-isystem`) from the provided paths, if the
+# compiler supports this behavior
+# This provides a user experience similar to find_package when add_subdirectory
+# or FetchContent is used to consume the project
+set(warning_guard "")
+if(NOT PROJECT_IS_TOP_LEVEL)
+  option(
+      binaryninjaapi_INCLUDES_WITH_SYSTEM
+      "Use SYSTEM modifier for binaryninjaapi's includes, disabling compiler warnings"
+      ON
+  )
+  mark_as_advanced(binaryninjaapi_INCLUDES_WITH_SYSTEM)
+  if(binaryninjaapi_INCLUDES_WITH_SYSTEM)
+    set(warning_guard SYSTEM)
+  endif()
+endif()
+
 file(GLOB BN_API_SOURCES CONFIGURE_DEPENDS *.cpp *.h json/json.h json/json-forwards.h)
 if(NOT DEMO)
     list(APPEND BN_API_SOURCES json/jsoncpp.cpp)
@@ -31,7 +55,7 @@ endif()
 
 add_library(binaryninjaapi STATIC ${BN_API_SOURCES})
 
-target_include_directories(binaryninjaapi
+target_include_directories(binaryninjaapi ${warning_guard}
     PUBLIC ${PROJECT_SOURCE_DIR})
 
 # Store path to user plugin dir
@@ -98,7 +122,7 @@ if(NOT HEADLESS)
             target_compile_definitions(binaryninjaui INTERFACE ${BinaryNinjaUI_DEFINITIONS})
 
             # UI headers are in here
-            target_include_directories(binaryninjaui INTERFACE ${PROJECT_SOURCE_DIR}/ui)
+            target_include_directories(binaryninjaui ${warning_guard} INTERFACE ${PROJECT_SOURCE_DIR}/ui)
         else()
             # Add a fake target for binaryninjaui to intentionally break anything that tries to link against it,
             # since the find script failed and your build would otherwise break in less obvious places.

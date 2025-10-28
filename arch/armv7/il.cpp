@@ -180,7 +180,7 @@ static ExprId GetShifted(LowLevelILFunction& il, Register reg, uint32_t ShiftAmo
 			return 0;
 	}
 }
-static DoubleWordRegisterList ReadRegisterList(InstructionOperand instr) {
+static DoubleWordRegisterList ReadRegisterList(const InstructionOperand& instr) {
 	uint32_t val = instr.reg;
 	DoubleWordRegisterList dwrl;
 	#ifdef _MSC_VER

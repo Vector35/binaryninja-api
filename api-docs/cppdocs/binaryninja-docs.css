@@ -65,7 +65,7 @@
     --line-height-content: 27px;
 
     /* Layout */
-    --sidebar-width: 335px;
+    --sidebar-width: 450px;
     --top-height: 120px;
     --content-maxwidth: 1050px;
     --spacing-small: 5px;
@@ -763,13 +763,13 @@ table.memberdecls .memItemLeft {
     white-space: normal;
     word-wrap: break-word;
     overflow-wrap: break-word;
-    padding: var(--spacing-small) var(--spacing-medium);
+    padding: 2px var(--spacing-small);
     border-bottom: 1px solid var(--border-color);
     width: 40%;
 }
 
 table.memberdecls .memItemRight {
-    padding: var(--spacing-small) var(--spacing-medium);
+    padding: 2px var(--spacing-small);
     border-bottom: 1px solid var(--border-color);
     word-wrap: break-word;
     overflow-wrap: break-word;
@@ -848,7 +848,7 @@ table.memname {
 table.memname td {
     vertical-align: top;
     font-family: var(--font-family-monospace);
-    padding: 0 10px 0 0;
+    padding: 0 5px 0 0;
 }
 
 /* Keep function name on first column from wrapping */
@@ -997,7 +997,7 @@ dl.bug {
  * MEMBER DOCUMENTATION
  * ============================================================================ */
 .memitem {
-    margin-bottom: var(--spacing-large);
+    margin-bottom: var(--spacing-medium);
     position: relative;
 }
 
@@ -1019,14 +1019,14 @@ dl.bug {
     border: 1px solid var(--border-color);
     border-top: none;
     border-radius: 0 0 var(--border-radius-small) var(--border-radius-small);
-    padding: var(--spacing-medium);
+    padding: var(--spacing-small) var(--spacing-medium);
     background-color: var(--page-bg);
 }
 
 .memproto {
     background-color: var(--fragment-bg);
     border: 1px solid var(--border-color);
-    padding: var(--spacing-small) var(--spacing-medium);
+    padding: 3px var(--spacing-small);
     border-radius: var(--border-radius-small);
 }
 
@@ -1229,4 +1229,70 @@ html.dark-mode div.contents > table img {
 html.dark-mode .darkmode_inverted_image img,
 html.dark-mode .darkmode_inverted_image object[type="image/svg+xml"] {
     filter: brightness(89%) hue-rotate(180deg) invert();
+}
+
+/* ============================================================================
+ * SIDEBAR COLLAPSE
+ * ============================================================================ */
+
+.sidebar-toggle {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--border-color);
+    background-color: var(--page-bg);
+    color: var(--page-text);
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.sidebar-toggle:hover {
+    background-color: var(--table-header-bg);
+    border-color: var(--link-color);
+}
+
+/* Collapsed sidebar state */
+#side-nav.collapsed {
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    overflow: visible;
+}
+
+#side-nav.collapsed .sidebar-toggle {
+    left: 10px;
+    right: auto;
+}
+
+/* Hide header/top when collapsed */
+#top.collapsed,
+#titlearea.collapsed {
+    display: none !important;
+}
+
+#doc-content.sidebar-collapsed,
+#container.sidebar-collapsed {
+    margin-left: 0 !important;
+}
+
+#doc-content.sidebar-collapsed {
+    width: 100% !important;
+}
+
+.ui-resizable-handle {
+    transition: left 0.3s ease;
+}
+
+#side-nav.collapsed ~ #splitbar {
+    left: 0 !important;
+    display: none;
 }

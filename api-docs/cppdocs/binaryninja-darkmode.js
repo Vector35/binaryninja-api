@@ -98,3 +98,87 @@
     // Initialize on page load
     init();
 })();
+
+/**
+ * Sidebar Collapse Functionality
+ */
+(function() {
+    'use strict';
+
+    const COOKIE_NAME = 'bn-docs-sidebar-collapsed';
+    const COOKIE_DAYS = 365;
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return null;
+    }
+
+    function setCookie(name, value, days) {
+        const date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        const expires = `expires=${date.toUTCString()}`;
+        document.cookie = `${name}=${value};${expires};path=/`;
+    }
+
+    function toggleSidebar() {
+        const sideNav = document.getElementById('side-nav');
+        const docContent = document.getElementById('doc-content');
+        const container = document.getElementById('container');
+        const button = document.getElementById('sidebar-toggle');
+        const top = document.getElementById('top');
+        const titlearea = document.getElementById('titlearea');
+
+        if (!sideNav) return;
+
+        const isCollapsed = sideNav.classList.toggle('collapsed');
+        if (docContent) docContent.classList.toggle('sidebar-collapsed', isCollapsed);
+        if (container) container.classList.toggle('sidebar-collapsed', isCollapsed);
+        if (top) top.classList.toggle('collapsed', isCollapsed);
+        if (titlearea) titlearea.classList.toggle('collapsed', isCollapsed);
+        if (button) button.textContent = isCollapsed ? '→' : '←';
+
+        setCookie(COOKIE_NAME, isCollapsed ? '1' : '0', COOKIE_DAYS);
+    }
+
+    function init() {
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+            return;
+        }
+
+        const sideNav = document.getElementById('side-nav');
+        if (!sideNav) return;
+
+        // Create collapse button
+        const button = document.createElement('button');
+        button.id = 'sidebar-toggle';
+        button.className = 'sidebar-toggle';
+        button.textContent = '←';
+        button.title = 'Toggle sidebar';
+        button.addEventListener('click', toggleSidebar);
+
+        // Insert button at the beginning of side-nav
+        sideNav.insertBefore(button, sideNav.firstChild);
+
+        // Restore collapsed state from cookie
+        const isCollapsed = getCookie(COOKIE_NAME) === '1';
+        if (isCollapsed) {
+            sideNav.classList.add('collapsed');
+            const docContent = document.getElementById('doc-content');
+            const container = document.getElementById('container');
+            const top = document.getElementById('top');
+            const titlearea = document.getElementById('titlearea');
+            if (docContent) docContent.classList.add('sidebar-collapsed');
+            if (container) container.classList.add('sidebar-collapsed');
+            if (top) top.classList.add('collapsed');
+            if (titlearea) titlearea.classList.add('collapsed');
+            button.textContent = '→';
+        }
+    }
+
+    window.bnToggleSidebar = toggleSidebar;
+    init();
+})();

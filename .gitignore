@@ -93,3 +93,6 @@ rust/examples/dwarf/*/target/
 # Debugger docs
 docs/img/debugger
 docs/guide/debugger
+
+# AI
+.claude

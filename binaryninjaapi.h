@@ -3225,46 +3225,45 @@ namespace BinaryNinja {
 		Uses of tokens include plugins that parse the output of an architecture (though parsing IL is recommended),
 	 	or additionally, applying color schemes appropriately.
 
-			========================== ============================================
-			InstructionTextTokenType   Description
-			========================== ============================================
-			AddressDisplayToken        **Not emitted by architectures**
-			AnnotationToken            **Not emitted by architectures**
-			ArgumentNameToken          **Not emitted by architectures**
-			BeginMemoryOperandToken    The start of memory operand
-			CharacterConstantToken     A printable character
-			CodeRelativeAddressToken   **Not emitted by architectures**
-			CodeSymbolToken            **Not emitted by architectures**
-			DataSymbolToken            **Not emitted by architectures**
-			EndMemoryOperandToken      The end of a memory operand
-			ExternalSymbolToken        **Not emitted by architectures**
-			FieldNameToken             **Not emitted by architectures**
-			FloatingPointToken         Floating point number
-			HexDumpByteValueToken      **Not emitted by architectures**
-			HexDumpInvalidByteToken    **Not emitted by architectures**
-			HexDumpSkippedByteToken    **Not emitted by architectures**
-			HexDumpTextToken           **Not emitted by architectures**
-			ImportToken                **Not emitted by architectures**
-			IndirectImportToken        **Not emitted by architectures**
-			InstructionToken           The instruction mnemonic
-			IntegerToken               Integers
-			KeywordToken               **Not emitted by architectures**
-			LocalVariableToken         **Not emitted by architectures**
-			StackVariableToken         **Not emitted by architectures**
-			NameSpaceSeparatorToken    **Not emitted by architectures**
-			NameSpaceToken             **Not emitted by architectures**
-			OpcodeToken                **Not emitted by architectures**
-			OperandSeparatorToken      The comma or delimiter that separates tokens
-			PossibleAddressToken       Integers that are likely addresses
-			RegisterToken              Registers
-			StringToken                **Not emitted by architectures**
-			StructOffsetToken          **Not emitted by architectures**
-			TagToken                   **Not emitted by architectures**
-			TextToken                  Used for anything not of another type.
-			CommentToken               Comments
-			TypeNameToken              **Not emitted by architectures**
-			AddressSeparatorToken      **Not emitted by architectures**
-			========================== ============================================
+			<table>
+			<tr><th>InstructionTextTokenType</th><th>Description</th></tr>
+			<tr><td>AddressDisplayToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>AnnotationToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>ArgumentNameToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>BeginMemoryOperandToken</td><td>The start of memory operand</td></tr>
+			<tr><td>CharacterConstantToken</td><td>A printable character</td></tr>
+			<tr><td>CodeRelativeAddressToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>CodeSymbolToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>DataSymbolToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>EndMemoryOperandToken</td><td>The end of a memory operand</td></tr>
+			<tr><td>ExternalSymbolToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>FieldNameToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>FloatingPointToken</td><td>Floating point number</td></tr>
+			<tr><td>HexDumpByteValueToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>HexDumpInvalidByteToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>HexDumpSkippedByteToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>HexDumpTextToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>ImportToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>IndirectImportToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>InstructionToken</td><td>The instruction mnemonic</td></tr>
+			<tr><td>IntegerToken</td><td>Integers</td></tr>
+			<tr><td>KeywordToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>LocalVariableToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>StackVariableToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>NameSpaceSeparatorToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>NameSpaceToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>OpcodeToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>OperandSeparatorToken</td><td>The comma or delimiter that separates tokens</td></tr>
+			<tr><td>PossibleAddressToken</td><td>Integers that are likely addresses</td></tr>
+			<tr><td>RegisterToken</td><td>Registers</td></tr>
+			<tr><td>StringToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>StructOffsetToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>TagToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>TextToken</td><td>Used for anything not of another type.</td></tr>
+			<tr><td>CommentToken</td><td>Comments</td></tr>
+			<tr><td>TypeNameToken</td><td><b>Not emitted by architectures</b></td></tr>
+			<tr><td>AddressSeparatorToken</td><td><b>Not emitted by architectures</b></td></tr>
+			</table>
 	*/
 	struct InstructionTextToken
 	{
@@ -4869,19 +4868,18 @@ namespace BinaryNinja {
 		/*!
 			Symbols are defined as one of the following types:
 
-				=========================== =================================================================
-				BNSymbolType                Description
-				=========================== =================================================================
-				FunctionSymbol              Symbol for function that exists in the current binary
-				ImportAddressSymbol         Symbol defined in the Import Address Table
-				ImportedFunctionSymbol      Symbol for a function that is not defined in the current binary
-				DataSymbol                  Symbol for data in the current binary
-				ImportedDataSymbol          Symbol for data that is not defined in the current binary
-				ExternalSymbol              Symbols for data and code that reside outside the BinaryView
-				LibraryFunctionSymbol       Symbols for functions identified as belonging to a shared library
-				SymbolicFunctionSymbol      Symbols for functions without a concrete implementation or which have been abstractly represented
-				LocalLabelSymbol            Symbol for a local label in the current binary
-				=========================== =================================================================
+				<table>
+				<tr><th>BNSymbolType</th><th>Description</th></tr>
+				<tr><td>FunctionSymbol</td><td>Symbol for function that exists in the current binary</td></tr>
+				<tr><td>ImportAddressSymbol</td><td>Symbol defined in the Import Address Table</td></tr>
+				<tr><td>ImportedFunctionSymbol</td><td>Symbol for a function that is not defined in the current binary</td></tr>
+				<tr><td>DataSymbol</td><td>Symbol for data in the current binary</td></tr>
+				<tr><td>ImportedDataSymbol</td><td>Symbol for data that is not defined in the current binary</td></tr>
+				<tr><td>ExternalSymbol</td><td>Symbols for data and code that reside outside the BinaryView</td></tr>
+				<tr><td>LibraryFunctionSymbol</td><td>Symbols for functions identified as belonging to a shared library</td></tr>
+				<tr><td>SymbolicFunctionSymbol</td><td>Symbols for functions without a concrete implementation or which have been abstractly represented</td></tr>
+				<tr><td>LocalLabelSymbol</td><td>Symbol for a local label in the current binary</td></tr>
+				</table>
 
 		    \return Symbol type
 		*/
@@ -9433,18 +9431,17 @@ namespace BinaryNinja {
 
 			If the instruction is a branch instruction architecture plugins should add a branch of the proper type:
 
-				===================== ===================================================
-				BNBranchType          Description
-				===================== ===================================================
-				UnconditionalBranch   Branch will always be taken
-				FalseBranch           False branch condition
-				TrueBranch            True branch condition
-				CallDestination       Branch is a call instruction (Branch with Link)
-				FunctionReturn        Branch returns from a function
-				SystemCall            System call instruction
-				IndirectBranch        Branch destination is a memory address or register
-				UnresolvedBranch      Branch destination is an unknown address
-				===================== ===================================================
+				<table>
+				<tr><th>BNBranchType</th><th>Description</th></tr>
+				<tr><td>UnconditionalBranch</td><td>Branch will always be taken</td></tr>
+				<tr><td>FalseBranch</td><td>False branch condition</td></tr>
+				<tr><td>TrueBranch</td><td>True branch condition</td></tr>
+				<tr><td>CallDestination</td><td>Branch is a call instruction (Branch with Link)</td></tr>
+				<tr><td>FunctionReturn</td><td>Branch returns from a function</td></tr>
+				<tr><td>SystemCall</td><td>System call instruction</td></tr>
+				<tr><td>IndirectBranch</td><td>Branch destination is a memory address or register</td></tr>
+				<tr><td>UnresolvedBranch</td><td>Branch destination is an unknown address</td></tr>
+				</table>
 
 			\param[in] data pointer to the instruction data to retrieve info for
 		    \param[in] addr address of the instruction data to retrieve info for
@@ -18490,44 +18487,42 @@ namespace BinaryNinja {
 		levels. The levels and their associated storage are shown in the following table. Default setting values are optional, and if specified,
 		saved in the schema itself.
 
-			================= ========================== ============== ==============================================
-			Setting Level     Settings Scope             Preference     Storage
-			================= ========================== ============== ==============================================
-			Default           SettingsDefaultScope       Lowest         Settings Schema
-			User              SettingsUserScope          -              <User Directory>/settings.json
-			Project           SettingsProjectScope       -              <Project Directory>/settings.json
-			Resource          SettingsResourceScope      Highest        Raw BinaryView (Storage in BNDB)
-			================= ========================== ============== ==============================================
+			<table>
+			<tr><th>Setting Level</th><th>Settings Scope</th><th>Preference</th><th>Storage</th></tr>
+			<tr><td>Default</td><td>SettingsDefaultScope</td><td>Lowest</td><td>Settings Schema</td></tr>
+			<tr><td>User</td><td>SettingsUserScope</td><td>-</td><td><User Directory>/settings.json</td></tr>
+			<tr><td>Project</td><td>SettingsProjectScope</td><td>-</td><td><Project Directory>/settings.json</td></tr>
+			<tr><td>Resource</td><td>SettingsResourceScope</td><td>Highest</td><td>Raw BinaryView (Storage in BNDB)</td></tr>
+			</table>
 
 		Settings are identified by a key, which is a string in the form of <b><tt><group>.<name></tt></b> or <b><tt><group>.<subGroup>.<name></tt></b> . Groups provide
 		a simple way to categorize settings. Sub-groups are optional and multiple sub-groups are allowed. When defining a settings group, the
 		\c RegisterGroup method allows for specifying a UI friendly title for use in the Binary Ninja UI. Defining a new setting requires a
 		unique setting key and a JSON string of property, value pairs. The following table describes the available properties and values.
 
-			==================   ======================================   ==================   ========   =======================================================================
-			Property             JSON Data Type                           Prerequisite         Optional   {Allowed Values} and Notes
-			==================   ======================================   ==================   ========   =======================================================================
-			"title"              string                                   None                 No         Concise Setting Title
-			"type"               string                                   None                 No         {"array", "boolean", "number", "string", "object"}
-			"sorted"             boolean                                  "type" is "array"    Yes        Automatically sort list items (default is false)
-			"isSerialized"       boolean                                  "type" is "string"   Yes        Treat the string as a serialized JSON object
-			"enum"               array : {string}                         "type" is "array"    Yes        Enumeration definitions
-			"enumDescriptions"   array : {string}                         "type" is "array"    Yes        Enumeration descriptions that match "enum" array
-			"minValue"           number                                   "type" is "number"   Yes        Specify 0 to infer unsigned (default is signed)
-			"maxValue"           number                                   "type" is "number"   Yes        Values less than or equal to INT_MAX result in a QSpinBox UI element
-			"precision"          number                                   "type" is "number"   Yes        Specify precision for a QDoubleSpinBox
-			"default"            {array, boolean, number, string, null}   None                 Yes        Specify optimal default value
-			"aliases"            array : {string}                         None                 Yes        Array of deprecated setting key(s)
-			"description"        string                                   None                 No         Detailed setting description
-			"ignore"             array : {string}                         None                 Yes        {"SettingsUserScope", "SettingsProjectScope", "SettingsResourceScope"}
-			"message"            string                                   None                 Yes        An optional message with additional emphasis
-			"readOnly"           bool                                     None                 Yes        Only enforced by UI elements
-			"optional"           bool                                     None                 Yes        Indicates setting can be null
-			"hidden"             bool                                     "type" is "string"   Yes        Indicates the UI should conceal the content. The "ignore" property is required to specify the applicable storage scopes
-			"requiresRestart"    bool                                     None                 Yes        Enable restart notification in the UI upon change
-			"uiSelectionAction"  string                                   "type" is "string"   Yes        {"file", "directory", <Registered UIAction Name>} Informs the UI to add a button to open a selection dialog or run a registered UIAction
-			"quickSettingsGroup" string                                   None                 Yes        Groups related items in the quick settings context menu using dividers to separate groups
-			==================   ======================================   ==================   ========   =======================================================================
+			<table>
+			<tr><th>Property</th><th>JSON Data Type</th><th>Prerequisite</th><th>Optional</th><th>{Allowed Values} and Notes</th></tr>
+			<tr><td>"title"</td><td>string</td><td>None</td><td>No</td><td>Concise Setting Title</td></tr>
+			<tr><td>"type"</td><td>string</td><td>None</td><td>No</td><td>{"array", "boolean", "number", "string", "object"}</td></tr>
+			<tr><td>"sorted"</td><td>boolean</td><td>"type" is "array"</td><td>Yes</td><td>Automatically sort list items (default is false)</td></tr>
+			<tr><td>"isSerialized"</td><td>boolean</td><td>"type" is "string"</td><td>Yes</td><td>Treat the string as a serialized JSON object</td></tr>
+			<tr><td>"enum"</td><td>array : {string}</td><td>"type" is "array"</td><td>Yes</td><td>Enumeration definitions</td></tr>
+			<tr><td>"enumDescriptions"</td><td>array : {string}</td><td>"type" is "array"</td><td>Yes</td><td>Enumeration descriptions that match "enum" array</td></tr>
+			<tr><td>"minValue"</td><td>number</td><td>"type" is "number"</td><td>Yes</td><td>Specify 0 to infer unsigned (default is signed)</td></tr>
+			<tr><td>"maxValue"</td><td>number</td><td>"type" is "number"</td><td>Yes</td><td>Values less than or equal to INT_MAX result in a QSpinBox UI element</td></tr>
+			<tr><td>"precision"</td><td>number</td><td>"type" is "number"</td><td>Yes</td><td>Specify precision for a QDoubleSpinBox</td></tr>
+			<tr><td>"default"</td><td>{array, boolean, number, string, null}</td><td>None</td><td>Yes</td><td>Specify optimal default value</td></tr>
+			<tr><td>"aliases"</td><td>array : {string}</td><td>None</td><td>Yes</td><td>Array of deprecated setting key(s)</td></tr>
+			<tr><td>"description"</td><td>string</td><td>None</td><td>No</td><td>Detailed setting description</td></tr>
+			<tr><td>"ignore"</td><td>array : {string}</td><td>None</td><td>Yes</td><td>{"SettingsUserScope", "SettingsProjectScope", "SettingsResourceScope"}</td></tr>
+			<tr><td>"message"</td><td>string</td><td>None</td><td>Yes</td><td>An optional message with additional emphasis</td></tr>
+			<tr><td>"readOnly"</td><td>bool</td><td>None</td><td>Yes</td><td>Only enforced by UI elements</td></tr>
+			<tr><td>"optional"</td><td>bool</td><td>None</td><td>Yes</td><td>Indicates setting can be null</td></tr>
+			<tr><td>"hidden"</td><td>bool</td><td>"type" is "string"</td><td>Yes</td><td>Indicates the UI should conceal the content. The "ignore" property is required to specify the applicable storage scopes</td></tr>
+			<tr><td>"requiresRestart"</td><td>bool</td><td>None</td><td>Yes</td><td>Enable restart notification in the UI upon change</td></tr>
+			<tr><td>"uiSelectionAction"</td><td>string</td><td>"type" is "string"</td><td>Yes</td><td>{"file", "directory", &lt;Registered UIAction Name&gt;} Informs the UI to add a button to open a selection dialog or run a registered UIAction</td></tr>
+			<tr><td>"quickSettingsGroup"</td><td>string</td><td>None</td><td>Yes</td><td>Groups related items in the quick settings context menu using dividers to separate groups</td></tr>
+			</table>
 
 		\note In order to facilitate deterministic analysis results, settings from the <em><tt>default</tt></em> schema that impact analysis are serialized
 		from Default, User, and Project scope into Resource scope during initial BinaryView analysis. This allows an analysis database to be opened

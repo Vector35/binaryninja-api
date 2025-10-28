@@ -144,7 +144,7 @@ static size_t GetDataTypeSize(DataType dt)
 	case DT_64:
 		return 64;
 	}
-};
+}
 
 static ExprId GetShifted(LowLevelILFunction& il, Register reg, uint32_t ShiftAmount, Shift shift)
 {

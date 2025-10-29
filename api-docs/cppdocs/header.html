@@ -26,6 +26,28 @@ $mathjax
 <link href="$relpath^$stylesheet" rel="stylesheet" type="text/css" />
 $extrastylesheet
 <script type="text/javascript" src="$relpath^binaryninja-darkmode.js"></script>
+<script type="text/javascript">
+$(document).ready(function() {
+    setTimeout(function() {
+        var selected = document.querySelector('#nav-tree .selected');
+        if (selected) {
+            var parentLi = selected.closest('li');
+            if (parentLi) {
+                var arrow = parentLi.querySelector('.arrow');
+                var arrowhead = arrow ? arrow.querySelector('.arrowhead.closed') : null;
+                if (arrowhead) {
+                    arrow.click();
+                    setTimeout(function() {
+                        if (document.activeElement) {
+                            document.activeElement.blur();
+                        }
+                    }, 0);
+                }
+            }
+        }
+    }, 150);
+});
+</script>
 </head>
 <body>
 <!--BEGIN FULL_SIDEBAR-->

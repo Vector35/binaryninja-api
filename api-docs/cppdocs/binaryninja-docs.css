@@ -601,7 +601,7 @@ tr#projectrow {
     background-color: var(--bn-red);
     color: #ffffff;
     display: inline-block;
-    line-height: var(--tree-item-height);
+    line-height: 1.4;
     padding: 0 4px;
     margin: 0 -4px;
 }
@@ -620,8 +620,13 @@ html.dark-mode #nav-tree .selected a {
 }
 
 #nav-tree .item {
-    height: var(--tree-item-height);
-    line-height: var(--tree-item-height);
+    min-height: var(--tree-item-height);
+    line-height: 1.4;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
 }
 
 /* Undecorated root node */
@@ -658,10 +663,6 @@ a.index\.html {
     margin-top: 0;
 }
 
-#nav-tree-contents > ul > li:first-child > ul > li > .item {
-    padding-top: 4px;
-}
-
 /* ============================================================================
  * COLLAPSIBLE SECTIONS (dynsections.js)
  * ============================================================================ */
@@ -676,7 +677,8 @@ a.index\.html {
 }
 
 .arrow:hover .arrowhead,
-tr:hover .arrowhead {
+tr:hover .arrowhead,
+.arrowhead.opened {
     opacity: 1;
 }
 

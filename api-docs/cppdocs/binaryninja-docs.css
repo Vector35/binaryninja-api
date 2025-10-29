@@ -600,6 +600,10 @@ tr#projectrow {
 #nav-tree .selected {
     background-color: var(--bn-red);
     color: #ffffff;
+    display: inline-block;
+    line-height: var(--tree-item-height);
+    padding: 0 4px;
+    margin: 0 -4px;
 }
 
 #nav-tree .selected a {
@@ -618,14 +622,6 @@ html.dark-mode #nav-tree .selected a {
 #nav-tree .item {
     height: var(--tree-item-height);
     line-height: var(--tree-item-height);
-}
-
-#nav-tree .item:hover {
-    background-color: rgba(0,0,0,.05);
-}
-
-html.dark-mode #nav-tree .item:hover {
-    background-color: rgba(0,0,0,.4);
 }
 
 /* Undecorated root node */
@@ -655,13 +651,15 @@ a.index\.html {
 
 /* Add spacing between top-level items */
 #nav-tree-contents > ul > li:first-child > ul > li {
-    margin-top: 6px;
-    padding-top: 2px;
-    padding-bottom: 2px;
+    margin-top: 2px;
 }
 
 #nav-tree-contents > ul > li:first-child > ul > li:first-child {
     margin-top: 0;
+}
+
+#nav-tree-contents > ul > li:first-child > ul > li > .item {
+    padding-top: 4px;
 }
 
 /* ============================================================================
@@ -859,6 +857,63 @@ table.markdownTable tr.markdownTableRowOdd {
 
 table.markdownTable tr.markdownTableRowEven {
     background-color: var(--page-bg);
+}
+
+/* Directory table (class list) */
+.directory {
+    margin: var(--spacing-medium) 0;
+}
+
+.directory .levels {
+    font-size: 0.75em;
+    text-align: right;
+    margin-bottom: var(--spacing-small);
+    color: var(--page-text-secondary);
+}
+
+.directory .levels span {
+    cursor: pointer;
+    margin-left: var(--spacing-small);
+}
+
+.directory .levels span:hover {
+    color: var(--page-text);
+}
+
+/* Make the numbers much dimmer */
+.directory .levels span[onclick] {
+    opacity: 0.4;
+}
+
+.directory .levels span[onclick]:hover {
+    opacity: 0.7;
+}
+
+table.directory {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table.directory tr.even {
+    background-color: var(--table-row-even);
+}
+
+table.directory tr.odd {
+    background-color: var(--table-row-odd);
+}
+
+table.directory td {
+    padding: var(--spacing-small) var(--spacing-medium);
+    border-bottom: 1px solid var(--border-color);
+}
+
+table.directory td.entry {
+    vertical-align: middle;
+}
+
+table.directory td.desc {
+    vertical-align: middle;
+    color: var(--page-text-secondary);
 }
 
 /* Detail level labels (default, inline, virtual, etc.) */

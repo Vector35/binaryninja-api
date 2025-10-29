@@ -12,6 +12,13 @@
     --bn-red-dark: #d0584d;
     --bn-red-light: #a2382a;
 
+    /* Complementary Colors (Teal - complementary to red) */
+    --bn-teal: #33b6c7;
+    --bn-teal-bright: #16b9ce;
+    --bn-teal-light: #eaf8f9;
+    --bn-teal-dark: #163f44;
+    --bn-teal-accent: #36cee2;
+
     /* Page Structure */
     --page-bg: #ffffff;
     --page-text: #2f4153;
@@ -46,8 +53,8 @@
     /* Content Boxes */
     --warning-bg: #faf3d8;
     --warning-border: #f3a600;
-    --note-bg: #e4f3ff;
-    --note-border: #1879C4;
+    --note-bg: var(--bn-teal-light);
+    --note-border: var(--bn-teal-bright);
     --deprecated-bg: #ecf0f3;
     --deprecated-border: #5b6269;
     --bug-bg: #f8d1cc;
@@ -91,6 +98,13 @@ html.dark-mode {
     --bn-red-dark: #d0584d;
     --bn-red-light: #a2382a;
 
+    /* Complementary Colors (Teal - same base) */
+    --bn-teal: #33b6c7;
+    --bn-teal-bright: #16b9ce;
+    --bn-teal-light: #eaf8f9;
+    --bn-teal-dark: #163f44;
+    --bn-teal-accent: #36cee2;
+
     /* Page Structure */
     --page-bg: #1C1D1F;
     --page-text: #d2dbde;
@@ -125,8 +139,8 @@ html.dark-mode {
     /* Content Boxes */
     --warning-bg: #3b2e04;
     --warning-border: #f1b602;
-    --note-bg: #163750;
-    --note-border: #1982D2;
+    --note-bg: var(--bn-teal-dark);
+    --note-border: var(--bn-teal-accent);
     --deprecated-bg: #2e323b;
     --deprecated-border: #738396;
     --bug-bg: #2e1917;
@@ -143,6 +157,12 @@ html.dark-mode {
         --bn-red: #c74433;
         --bn-red-dark: #d0584d;
         --bn-red-light: #a2382a;
+
+        --bn-teal: #33b6c7;
+        --bn-teal-bright: #16b9ce;
+        --bn-teal-light: #eaf8f9;
+        --bn-teal-dark: #163f44;
+        --bn-teal-accent: #36cee2;
 
         --page-bg: #1C1D1F;
         --page-text: #d2dbde;
@@ -172,8 +192,8 @@ html.dark-mode {
 
         --warning-bg: #3b2e04;
         --warning-border: #f1b602;
-        --note-bg: #163750;
-        --note-border: #1982D2;
+        --note-bg: var(--bn-teal-dark);
+        --note-border: var(--bn-teal-accent);
         --deprecated-bg: #2e323b;
         --deprecated-border: #738396;
         --bug-bg: #2e1917;
@@ -1020,77 +1040,88 @@ dl.threadsafe {
     position: absolute;
     top: 0px;
     right: 8px;
-    margin-top: 10px;
-    background-color: #d0d6e2;
+    margin-top: 5px;
+    background-color: var(--code-bg);
     font-weight: normal;
-    padding: 2px 10px;
+    padding: 2px 4px 2px 10px;
     border-radius: 4px;
+    border: 1px solid var(--border-color);
 }
 
 html.dark-mode dl.threadsafe {
-    background-color: #434956;
+    background-color: var(--code-bg);
 }
 
 .threadsafe dt {
-    padding-right: 35px;
+    padding-right: 40px;
+    color: var(--page-text);
 }
 
 .threadsafe.Main.Thread.Only dt {
-    padding-right: 145px;
+    padding-right: 155px;
 }
 
 .threadsafe.Yes dd {
     display: inline;
     margin-inline-start: 0;
     position: absolute;
-    top: 1px;
-    right: 1px;
-    padding: 1px 6px 1px 5px;
-    background-color: #9af78c;
+    top: 0px;
+    right: 0px;
+    padding: 3px 8px;
+    background-color: #6b9d63;
+    color: #ffffff;
     border-bottom-right-radius: 3px;
     border-top-right-radius: 3px;
-    width: 25px;
+    min-width: 28px;
     text-align: center;
+    font-weight: 600;
 }
 
 html.dark-mode .threadsafe.Yes dd {
-    background-color: #4e8646;
+    background-color: #5a7a54;
+    color: #e8f5e6;
 }
 
 .threadsafe.No dd {
     display: inline;
     margin-inline-start: 0;
     position: absolute;
-    top: 1px;
-    right: 1px;
-    padding: 1px 6px 1px 5px;
-    background-color: #fb877d;
+    top: 0px;
+    right: 0px;
+    padding: 3px 8px;
+    background-color: #c76058;
+    color: #ffffff;
     border-bottom-right-radius: 3px;
     border-top-right-radius: 3px;
-    width: 25px;
+    min-width: 28px;
     text-align: center;
+    font-weight: 600;
 }
 
 html.dark-mode .threadsafe.No dd {
-    background-color: #d0584d;
+    background-color: #9d5048;
+    color: #fce8e6;
 }
 
 .threadsafe.Main.Thread.Only dd {
     display: inline;
     margin-inline-start: 0;
     position: absolute;
-    top: 1px;
-    right: 1px;
-    padding: 1px 6px 1px 5px;
-    background-color: #fb877d;
+    top: 0px;
+    right: 0px;
+    padding: 3px 8px;
+    background-color: #c76058;
+    color: #ffffff;
     border-bottom-right-radius: 3px;
     border-top-right-radius: 3px;
-    width: 135px;
+    min-width: 145px;
     text-align: center;
+    font-weight: 600;
 }
 
 html.dark-mode .threadsafe.Main.Thread.Only dd {
-    background-color: #d0584d;
+    background-color: #9d5048;
+    color: #fce8e6;
 }
 
 img.thread {

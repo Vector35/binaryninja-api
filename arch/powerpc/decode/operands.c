@@ -2868,7 +2868,7 @@ void FillOperands32(Instruction* instruction, uint32_t word32, uint64_t address)
 		case PPC_ID_SPE_EVFSCTUI:
 		case PPC_ID_SPE_EVFSCTUIZ:
 			PushRD(instruction, word32);
-			PushRA(instruction, word32);
+			PushRB(instruction, word32);
 			break;
 
 		// crfD//, rA, rB

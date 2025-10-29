@@ -587,6 +587,10 @@ tr#projectrow {
 #nav-tree .arrow {
     opacity: 0.6;
     transition: opacity 0.2s;
+    display: inline-block;
+    min-width: 32px;
+    text-align: center;
+    box-sizing: border-box;
 }
 
 #nav-tree .item:hover .arrow {
@@ -633,8 +637,31 @@ a.index\.html {
     display: none;
 }
 
-#nav-tree-contents > ul > li > .item {
-    height: 0px;
+/* Doxygen 1.15 creates a wrapper node - hide it but show its children */
+#nav-tree-contents > ul > li:first-child > .item {
+    display: none !important;
+}
+
+/* Make the wrapper's children appear at the top level by removing their indentation */
+#nav-tree-contents > ul > li:first-child > ul {
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+}
+
+/* No compensation needed - arrows are now consistent */
+#nav-tree-contents > ul > li:first-child > ul > li > .item {
+    margin-left: 0;
+}
+
+/* Add spacing between top-level items */
+#nav-tree-contents > ul > li:first-child > ul > li {
+    margin-top: 6px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+#nav-tree-contents > ul > li:first-child > ul > li:first-child {
+    margin-top: 0;
 }
 
 /* ============================================================================

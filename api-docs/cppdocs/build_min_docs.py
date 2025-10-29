@@ -80,6 +80,176 @@ def load_items_in_file(filename):
 	return items
 
 
+def convert_navtree_format(js_content):
+	"""
+	Fix Doxygen 1.15+ NAVTREE format.
+	Doxygen 1.15 incorrectly wraps all top-level items as children of the first item.
+	Instead of unwrapping (which breaks breadcrumbs), we'll just reorder items and
+	use CSS to hide the wrapper node.
+
+	Incorrect (Doxygen 1.15):
+	  var NAVTREE = [ ["Root", "index.html", [["Item1",...], ["Deprecated",...], ["Item2",...]] ] ];
+
+	We'll reorder to:
+	  var NAVTREE = [ ["Root", "index.html", [["Item1",...], ["Item2",...], ["Deprecated",...]] ] ];
+	"""
+	# Find NAVTREE definition
+	navtree_pattern = r'var NAVTREE\s*=\s*\[(.*?)\];'
+	match = re.search(navtree_pattern, js_content, re.DOTALL)
+
+	if not match:
+		print("WARNING: NAVTREE not found, skipping format conversion")
+		return js_content
+
+	navtree_content = match.group(1).strip()
+
+	print("Checking NAVTREE format...")
+
+	# Parse the NAVTREE array
+	try:
+		# Wrap in array brackets to make it valid JSON
+		navtree_array = json.loads('[' + navtree_content + ']')
+	except json.JSONDecodeError as e:
+		print(f"WARNING: Could not parse NAVTREE as JSON: {e}")
+		return js_content
+
+	# Check if this is the Doxygen 1.15 format:
+	# - Single top-level item
+	# - That item has an array of children as its 3rd element
+	if len(navtree_array) == 1 and isinstance(navtree_array[0], list) and len(navtree_array[0]) == 3:
+		root_item = navtree_array[0]
+		children = root_item[2]
+
+		if isinstance(children, list) and len(children) > 0:
+			print(f"Detected Doxygen 1.15 format with wrapper containing {len(children)} items")
+
+			# Doxygen 1.15 reorders items incorrectly
+			# Correct order should be: Binary Ninja C++ API, Topics, Namespaces, Classes, Deprecated List
+			# Doxygen 1.15 puts: Binary Ninja C++ API, Deprecated List, Topics, Namespaces, Classes
+			# Let's reorder to put Deprecated List at the end
+			deprecated_idx = None
+			for i, item in enumerate(children):
+				if item[0] == "Deprecated List":
+					deprecated_idx = i
+					break
+
+			if deprecated_idx is not None and deprecated_idx > 0:
+				# Move Deprecated List to the end
+				deprecated_item = children.pop(deprecated_idx)
+				children.append(deprecated_item)
+				print(f"Reordered: moved 'Deprecated List' from position {deprecated_idx} to end")
+
+			# Keep the wrapper structure, just with reordered children
+			root_item[2] = children
+			fixed_array = [root_item]
+
+			# Convert back to JavaScript
+			fixed_json = json.dumps(fixed_array, indent=None, separators=(',', ':'))
+
+			# Replace in original content
+			new_navtree_def = f'var NAVTREE = {fixed_json};'
+			result = js_content[:match.start()] + new_navtree_def + js_content[match.end():]
+
+			# Adjust NAVTREEINDEX breadcrumbs to account for the reordering
+			result = adjust_breadcrumbs_for_reorder(result, deprecated_idx)
+
+			print(f"Fixed NAVTREE: kept wrapper structure, reordered children")
+			return result
+
+	print("NAVTREE format appears correct, no conversion needed")
+	return js_content
+
+
+def adjust_breadcrumbs_for_reorder(js_content, deprecated_moved_from_idx):
+	"""
+	Adjust breadcrumbs in NAVTREEINDEX to account for moving Deprecated List.
+
+	Original order (Doxygen 1.15): [0: Binary Ninja, 1: Deprecated, 2: Topics, 3: Namespaces, 4: Classes]
+	New order after reorder:       [0: Binary Ninja, 1: Topics, 2: Namespaces, 3: Classes, 4: Deprecated]
+
+	So breadcrumbs need adjustment:
+	- Items at old index 1 (Deprecated) -> new index 4
+	- Items at old index 2+ -> subtract 1
+	"""
+	if deprecated_moved_from_idx is None:
+		return js_content
+
+	print(f"Adjusting NAVTREEINDEX breadcrumbs for reordering (Deprecated moved from {deprecated_moved_from_idx} to end)...")
+
+	result = []
+	pos = 0
+	adjusted_count = 0
+
+	while True:
+		# Find next NAVTREEINDEX variable
+		match = re.search(r'var (NAVTREEINDEX\d*)\s*=\s*\{', js_content[pos:])
+		if not match:
+			result.append(js_content[pos:])
+			break
+
+		# Add everything before this match
+		result.append(js_content[pos:pos + match.start()])
+
+		var_name = match.group(1)
+		obj_start = pos + match.end() - 1  # Position of the opening {
+
+		# Find the matching closing } by counting braces
+		brace_count = 1
+		i = obj_start + 1
+		while i < len(js_content) and brace_count > 0:
+			if js_content[i] == '{':
+				brace_count += 1
+			elif js_content[i] == '}':
+				brace_count -= 1
+			i += 1
+
+		if brace_count != 0:
+			print(f"WARNING: Could not find closing brace for {var_name}")
+			result.append(js_content[pos:])
+			break
+
+		obj_end = i  # Position after the closing }
+		obj_content = js_content[obj_start:obj_end]
+
+		try:
+			# Parse the index object
+			index_obj = json.loads(obj_content)
+			adjusted_obj = {}
+
+			for key, breadcrumbs in index_obj.items():
+				if isinstance(breadcrumbs, list) and len(breadcrumbs) > 0:
+					# Adjust the first breadcrumb index for the reordering
+					first_idx = breadcrumbs[0]
+					new_breadcrumbs = breadcrumbs.copy()
+
+					if first_idx == deprecated_moved_from_idx:
+						# This points to Deprecated List, now at the end
+						new_breadcrumbs[0] = 4
+					elif first_idx > deprecated_moved_from_idx:
+						# This was after Deprecated, shift down by 1
+						new_breadcrumbs[0] = first_idx - 1
+
+					adjusted_obj[key] = new_breadcrumbs
+				else:
+					adjusted_obj[key] = breadcrumbs
+
+			# Convert back to JavaScript
+			adjusted_json = json.dumps(adjusted_obj, indent=None, separators=(',', ':'))
+			result.append(f'var {var_name} = {adjusted_json};')
+			adjusted_count += 1
+
+		except json.JSONDecodeError as e:
+			print(f"WARNING: Could not parse {var_name}: {e}")
+			result.append(js_content[pos:obj_end])
+
+		pos = obj_end
+
+	print(f"Adjusted {adjusted_count} NAVTREEINDEX variables for reordering")
+	return ''.join(result)
+
+
+
+
 def replace_getScript_function(js_content, replacement_func):
 	"""
 	Robustly find and replace the getScript function definition.
@@ -134,6 +304,12 @@ def minifier():
 	for mod in load_items_in_file("html/annotated.js"):
 		navtree_built_data += mod + "\n"
 
+	# Load navtreedata.js which contains NAVTREE and NAVTREEINDEX definitions (Doxygen 1.15+)
+	if os.path.exists("html/navtreedata.js"):
+		with open("html/navtreedata.js", "r") as fp:
+			navtree_built_data += fp.read() + "\n"
+			deletion_queue.append("html/navtreedata.js")
+
 	# The navtree indices also need to be loaded in since we're modifying how navbar.js::getScript works.
 	# This also saves another ~60 files.
 	for nav_tree_index_file in os.listdir("html"):
@@ -145,6 +321,9 @@ def minifier():
 	while "\n\n" in navtree_built_data:
 		navtree_built_data = navtree_built_data.replace("\n\n", "\n")
 
+	# Fix Doxygen 1.15 NAVTREE format BEFORE removing newlines
+	navtree_built_data = convert_navtree_format(navtree_built_data)
+
 	navtree_built_data = navtree_built_data.replace("\n", "")
 
 	fp = open("html/navtree.js", "r")
@@ -152,11 +331,13 @@ def minifier():
 	fp.close()
 
 	# getScript(scriptName,func,show) here originally loads the js file and calls func once that is complete
-	# Here, we just want to skip the whole process and immediately call the callback.
+	# Here, we just want to skip the whole process and call the callback.
+	# We use setTimeout(0) to make it async, which may be important for the tree sync logic
 	# This replacement works across different Doxygen versions (tested with 1.12.0, 1.14.0, and 1.15.0)
-	nav_tree_fixed_get_script = "function getScript(scriptName,func,show) { func(); }"
+	nav_tree_fixed_get_script = "function getScript(scriptName,func,show) { setTimeout(func, 0); }"
 
 	nav_tree_fixed = replace_getScript_function(navtree_orig, nav_tree_fixed_get_script)
+
 	navtree = navtree_built_data + "\n" + nav_tree_fixed
 
 	fp = open("html/navtree.js", "w")
@@ -200,6 +381,31 @@ def build_doxygen(args):
 		print(f"Created docset with status code {stat}")
 
 
+def remove_navtreedata_references():
+	"""
+	Remove references to navtreedata.js from HTML files since we've inlined it into navtree.js
+	"""
+	import glob
+	html_files = glob.glob("html/**/*.html", recursive=True)
+	count = 0
+	for html_file in html_files:
+		with open(html_file, 'r') as f:
+			content = f.read()
+
+		# Remove the navtreedata.js script tag
+		if 'navtreedata.js' in content:
+			new_content = re.sub(
+				r'<script type="text/javascript" src="navtreedata\.js"></script>\s*\n',
+				'',
+				content
+			)
+			with open(html_file, 'w') as f:
+				f.write(new_content)
+			count += 1
+
+	print(f'Removed navtreedata.js references from {count} HTML files')
+
+
 def main():
 	parser = argparse.ArgumentParser(prog=sys.argv[0])
 	parser.add_argument("--docset", action="store_true", default=False, help="Generate Dash docset")
@@ -209,6 +415,7 @@ def main():
 	print("Minifying Output")
 	if os.path.exists("html/navtree.js"):
 		minifier()
+		remove_navtreedata_references()
 	for file in deletion_queue:
 		file = "./" + file
 		os.remove(file)

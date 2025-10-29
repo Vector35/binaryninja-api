@@ -912,9 +912,7 @@ EXCLUDE_SYMBOLS        = BinaryNinja::LowLevelILInstructionAccessor \
                          BinaryNinja::MediumLevelILInstructionAccessor \
                          BinaryNinja::MediumLevelILInstructionAccessor* \
                          BinaryNinja::HighLevelILInstructionAccessor \
-                         BinaryNinja::HighLevelILInstructionAccessor* \
-                         metadata \
-                         platform
+                         BinaryNinja::HighLevelILInstructionAccessor*
 
 
 #EXCLUDE_SYMBOLS        = QProgressIndicator #Broke Exhale

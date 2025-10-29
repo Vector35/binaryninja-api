@@ -709,7 +709,10 @@ div.contents div.dyncontent {
 /* ============================================================================
  * TABLES
  * ============================================================================ */
-table {
+/* Only apply to content tables, not Doxygen structural tables */
+div.contents > table:not(.memberdecls):not(.mlabels):not(.memname):not(.params),
+div.contents p + table,
+div.textblock table:not(.memname):not(.params) {
     border-collapse: collapse;
     border-spacing: 0;
     width: 100%;
@@ -763,13 +766,13 @@ table.memberdecls .memItemLeft {
     white-space: normal;
     word-wrap: break-word;
     overflow-wrap: break-word;
-    padding: 2px var(--spacing-small);
+    padding: var(--spacing-small) var(--spacing-medium);
     border-bottom: 1px solid var(--border-color);
     width: 40%;
 }
 
 table.memberdecls .memItemRight {
-    padding: 2px var(--spacing-small);
+    padding: var(--spacing-small) var(--spacing-medium);
     border-bottom: 1px solid var(--border-color);
     word-wrap: break-word;
     overflow-wrap: break-word;
@@ -814,6 +817,7 @@ table.markdownTable tr.markdownTableRowEven {
 /* Detail level labels (default, inline, virtual, etc.) */
 table.mlabels {
     border-spacing: 0;
+    width: 100%;
 }
 
 table.mlabels td.mlabels-left {
@@ -837,41 +841,18 @@ span.mlabel {
 
 /* Function signature tables */
 table.memname {
+    border-collapse: collapse;
+}
+
+div.memproto table.memname {
     font-family: var(--font-family-monospace);
     color: var(--code-text);
-    border-collapse: collapse;
-    border-spacing: 0;
-    width: auto;
-    table-layout: auto;
 }
 
-table.memname td {
-    vertical-align: top;
-    font-family: var(--font-family-monospace);
-    padding: 0 5px 0 0;
+.memname td {
+    vertical-align: bottom;
 }
 
-/* Keep function name on first column from wrapping */
-table.memname td.memname {
-    white-space: nowrap;
-    width: 1%;
-}
-
-/* Constrain parameter type column width */
-table.memname td.paramtype {
-    white-space: nowrap;
-    width: 1%;
-}
-
-/* Parameter names should not wrap and stay compact */
-table.memname td.paramname {
-    white-space: nowrap;
-}
-
-/* Empty cells (paramkey) should not take space */
-table.memname td.paramkey {
-    width: 1%;
-}
 
 /* Type/Namespace icons (C, N, S, etc.) */
 .icon {
@@ -896,14 +877,6 @@ table thead th {
     font-weight: 600;
     padding: var(--spacing-small) var(--spacing-medium);
     border-bottom: 1px solid var(--border-color);
-}
-
-table tbody tr:nth-child(odd) {
-    background-color: var(--table-row-odd);
-}
-
-table tbody tr:nth-child(even) {
-    background-color: var(--table-row-even);
 }
 
 /* ============================================================================
@@ -997,7 +970,7 @@ dl.bug {
  * MEMBER DOCUMENTATION
  * ============================================================================ */
 .memitem {
-    margin-bottom: var(--spacing-medium);
+    margin-bottom: var(--spacing-large);
     position: relative;
 }
 
@@ -1019,18 +992,19 @@ dl.bug {
     border: 1px solid var(--border-color);
     border-top: none;
     border-radius: 0 0 var(--border-radius-small) var(--border-radius-small);
-    padding: var(--spacing-small) var(--spacing-medium);
+    padding: var(--spacing-medium);
     background-color: var(--page-bg);
 }
 
 .memproto {
     background-color: var(--fragment-bg);
     border: 1px solid var(--border-color);
-    padding: 3px var(--spacing-small);
+    padding: var(--spacing-small) var(--spacing-medium);
     border-radius: var(--border-radius-small);
 }
 
-.paramname {
+.paramname em,
+.paramname span.paramname {
     color: var(--bn-red-light);
     font-style: italic;
 }

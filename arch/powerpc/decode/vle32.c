@@ -326,7 +326,7 @@ static uint32_t ComputeSCI8(uint32_t word32) {
 
 static void FillOperands32Vle(Instruction* instruction, uint32_t word32, uint64_t address, bool translate)
 {
-	uint16_t ui0_4 = (word32 >> 16) & 0x1f;
+	uint16_t ui0_4 = (word32 >> 21) & 0x1f;
 	uint16_t ui5_15 = word32 & 0x7ff;
 	uint32_t ui_split16 = (ui0_4 << 11) | ui5_15;
 	int32_t si_split16 = (int32_t)(int16_t)(uint16_t)(ui_split16);

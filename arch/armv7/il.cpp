@@ -128,21 +128,34 @@ static size_t GetDataTypeSize(DataType dt)
 {
 	switch (dt)
 	{
+	case DT_P8:
+	case DT_U8:
 	case DT_I8:
 	case DT_8:
 		return 8;
+	case DT_P16:
+	case DT_U16:
+	case DT_S16:
 	case DT_F16:
 	case DT_I16:
 	case DT_16:
 		return 16;
+	case DT_P32:
+	case DT_U32:
+	case DT_S32
 	case DT_F32:
 	case DT_I32:
 	case DT_32:
 		return 32;
+	case DT_P64:
+	case DT_U64:
+	case DT_S64:
 	case DT_F64:
 	case DT_I64:
 	case DT_64:
 		return 64;
+	default:
+		return 0;
 	}
 }
 
@@ -5144,6 +5157,9 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 							il.AddInstruction(il.SetRegister(
 								regsize, op2.reg, il.Add(regsize, ILREG(op2), il.Const(regsize, dataSizeInBytes * reglist.size))));
 						}
+					default:
+						il.AddInstruction(il.Unimplemented());
+						break;
 					}
 				});
 			break;

@@ -1340,6 +1340,45 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    /// List of functions with the given name.
+    ///
+    /// There is one special case where if you pass a string of the form `sub_[0-9a-f]+` then it will lookup all
+    /// functions defined at the address matched by the regular expression if that symbol is not defined in the
+    /// database.
+    ///
+    /// # Params
+    /// - `name`: Name that the function should have
+    /// - `plat`: Optional platform that the function should be defined for. Defaults to all platforms if `None` passed.
+    fn functions_by_name(
+        &self,
+        name: impl IntoCStr,
+        plat: Option<&Platform>,
+    ) -> Vec<Ref<Function>> {
+        let name = name.to_cstr();
+        let symbols = self.symbols_by_name(&*name);
+        let mut addresses: Vec<u64> = symbols.into_iter().map(|s| s.address()).collect();
+        if addresses.is_empty() && name.to_bytes().starts_with(b"sub_") {
+            if let Ok(str) = name.to_str() {
+                if let Ok(address) = u64::from_str_radix(&str[4..], 16) {
+                    addresses.push(address);
+                }
+            }
+        }
+
+        let mut functions = Vec::new();
+
+        for address in addresses {
+            let funcs = self.functions_at(address);
+            for func in funcs.into_iter() {
+                if func.start() == address && plat.map_or(true, |p| p == func.platform().as_ref()) {
+                    functions.push(func.clone());
+                }
+            }
+        }
+
+        functions
+    }
+
     fn function_at(&self, platform: &Platform, addr: u64) -> Option<Ref<Function>> {
         unsafe {
             let raw_func_ptr = BNGetAnalysisFunction(self.as_ref().handle, platform.handle, addr);

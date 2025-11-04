@@ -89,7 +89,11 @@ impl Container for DiskContainer {
     fn add_source(&mut self, path: SourcePath) -> ContainerResult<SourceId> {
         // Disk sources have there source id computed from the path.
         let source_id = path.to_source_id();
-        self.insert_source(source_id, path)?;
+        match self.insert_source(source_id, path) {
+            Ok(()) => {}
+            Err(ContainerError::SourceAlreadyExists(_)) => {}
+            Err(err) => return Err(err),
+        }
         Ok(source_id)
     }
 

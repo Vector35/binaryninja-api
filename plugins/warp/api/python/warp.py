@@ -350,6 +350,13 @@ class WarpContainer(metaclass=_WarpContainerMetaclass):
         warpcore.BNWARPFreeContainerList(containers, count.value)
         return result
 
+    @staticmethod
+    def by_name(name: str) -> Optional['WarpContainer']:
+        for container in WarpContainer:
+            if container.name == name:
+                return container
+        return None
+
     @property
     def name(self) -> str:
         return warpcore.BNWARPContainerGetName(self.handle)

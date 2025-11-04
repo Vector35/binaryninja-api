@@ -14,12 +14,15 @@ def process_binary(input_file: str, output_dir: str) -> None:
     if not bv:
         return
 
-    # Sources exist only in containers, so we will just pull off the first available container.
-    # In the future we might make container construction available to the API.
-    container = WarpContainer.all()[0]
+    # For the sake of this example we are going to assume the container "User"
+    # is available, in the future we might want to make containers constructable
+    container = WarpContainer.by_name("User")
     output_file = output_dir / f"{input_path.stem}_analysis.warp"
     # Add the source so we can add functions to it and then commit it (write to disk)
     source = container.add_source(str(output_file))
+    if source is None:
+        print(f"Failed to create source {str(output_file)}")
+        return
 
     # NOTE: You probably want to pull the platform from the function, but for this example it's fine.
     target = WarpTarget(bv.platform)
@@ -30,6 +33,7 @@ def process_binary(input_file: str, output_dir: str) -> None:
     # Actually write the warp file to disk.
     container.commit_source(source)
     bv.file.close()
+    print(f"committed {len(functions_to_warp)} functions to {output_file}")
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:

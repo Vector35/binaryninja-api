@@ -1327,11 +1327,34 @@ class FunctionBuilder(TypeBuilder):
 class StructureMember:
 	type: 'Type'
 	name: str
-	offset: int
+	offset: int # Offset (in bytes) from the start of the structure. Use `bit_offset` for bitwise fields.
 	access: MemberAccess = MemberAccess.NoAccess
 	scope: MemberScope = MemberScope.NoScope
-	bit_position: int = 0
+	bit_position: int = 0 # Relative to the starting byte at `offset`, must be in range 0 to 7.
 	bit_width: int = 0
+
+	@property
+	def bit_offset(self) -> int:
+		"""
+		Total bit offset from the start of the structure.
+
+		Computed as: offset * 8 + bit_position.
+		"""
+		return (self.offset * 8) + self.bit_position
+
+	@bit_offset.setter
+	def bit_offset(self, value: int) -> None:
+		"""
+		Set the total bit offset from the start of the structure.
+
+		This will automatically set:
+		  - offset to value // 8 (byte offset)
+		  - bit_position to value % 8 (bit within the byte offset)
+		"""
+		if value < 0:
+			raise ValueError("bit_offset must be non-negative")
+		self.offset = value // 8
+		self.bit_position = value % 8
 
 	def __repr__(self):
 		if len(self.name) == 0:

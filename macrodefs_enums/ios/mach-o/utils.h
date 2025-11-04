@@ -1,0 +1,7 @@
+// Correctnes: bad
+// /Users/mstanchin/share/git-reps/binaryninja/contributing/origin/iPhoneOS18.6.sdk/usr/include/mach-o/utils.h
+
+/* ======== UNRESOLVED MACROS SECTION ======== */
+// Line: 105
+// #define __MACHO_NOESCAPE __attribute__((__noescape__))
+

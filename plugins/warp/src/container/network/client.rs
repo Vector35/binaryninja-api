@@ -34,8 +34,15 @@ impl NetworkClient {
         if let Some(token) = &server_token {
             headers.push(("authorization".to_string(), format!("Bearer {}", token)));
         }
+        // NOTE: Because we pull in the system certificates as well in the enterprise download provider
+        // it is safe to assume that provider when available, so that we can connect to enterprise servers
+        // when a client is running under an enterprise client build.
+        let provider = DownloadProvider::get("_EnterpriseDownloadProvider").unwrap_or_else(|| {
+            // Not running under an enterprise client, fallback to the default download provider.
+            DownloadProvider::try_default().expect("No default download provider")
+        });
         Self {
-            provider: DownloadProvider::try_default().unwrap(),
+            provider,
             headers,
             server_url,
         }

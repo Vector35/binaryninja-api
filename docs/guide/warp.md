@@ -41,9 +41,9 @@ When a function matches, we will apply the following information:
 Files are automatically loaded from two locations when Binary Ninja starts:
 
 - [Install Directory] + `/signatures/`
-    - Can be disabled using the setting `analysis.warp.loadBundledFiles`.
+    - Can be disabled using the setting `warp.container.loadBundledFiles`.
 - [User Directory] + `/signatures/`
-    - Can be disabled using the setting `analysis.warp.loadUserFiles`.
+    - Can be disabled using the setting `warp.container.loadUserFiles`.
 
 ???+ Danger "Warning"
     Always place your signature libraries in your user directory. The installation path is wiped whenever Binary Ninja auto-updates. You can locate it with `Open Plugin Folder` in the command palette and navigate "up" a directory.
@@ -112,6 +112,62 @@ Information in the WARP file will be deduplicated across all processed files aut
 If your files are too large, try and adjust the file data to something like "Symbols" only, and if you are looking to
 make the files load quicker, turn off compression.
 
+## Networked Functionality
+
+WARP for Binary Ninja provides the ability to lazily pull data (functions, types) from a WARP server, by default, networked
+functionality is disabled, as it requires sending the functions platform (`windows-x86`) and GUID (`2f893a32-8592-54e2-8052-207603976686`)
+which can be considered sensitive information, see [Connecting](#connecting) to learn how to enable this functionality.
+
+### Connecting
+
+To enable turn on `network.enableWARP` and restart, server connection settings exist in the regular WARP setting group, 
+and the default primary server is https://warp.binary.ninja. You can also give it an API token so that you can be logged 
+in as your user, and have access to push data to your sources using `warp.container.serverApiKey`.
+
+Once restarted, you should see a log message indicating you have connected. You can also verify connections in the WARP 
+sidebar under the "Containers" tab which should list the provided WARP server(s) alongside any of your sources you have created.
+
+### Pulling Networked Data
+
+To pull networked data, you must have successfully connected and have an open binary view, after which,
+you can use the command `WARP\\Fetch` or using the ⬇ button within the WARP sidebar. This will open a
+dialog which will, in batches, pull down all the necessary data for matching all functions in a binary.
+
+By default, we will only ever pull down data from "official" and "trusted" tagged sources. You can change the default 
+globally by modifying the setting `warp.fetcher.allowedSourceTags` as a comma separated list. These tags are assigned
+from within the server UI, either by source users or the server admin, the tags "official" and "trusted" may only be added
+or removed by the server admin.
+
+![Fetch Dialog](../img/warp/fetch_dialog.png "Fetch Dialog")
+
+???+ Info "Tip"
+    Fetching of function information from the server will also be done on demand when navigating to a function for the first time
+    with the WARP sidebar open. The fetched functions will be shown in the "Matched Functions" sidebar automatically, however,
+    you will need to run the matcher to apply the information to the analysis.
+
+In the case where you want fetching to be done automatically, set `analysis.warp.fetcher` to true, this will cause the fetcher
+to run at the end of the analysis, useful if you are working with binaries headlessly and do not mind waiting for the fetcher
+to complete.
+
+### Pushing Networked Data
+
+To push data to the server, you must provide an API key. This can be done either self-service or by the server admin.
+
+To get an API key using the website:
+
+1. Navigate to the account settings page (https://warp.binary.ninja/account)
+2. Give a name to the key and hit "Add Key"
+3. Copy the API key and open Binary Ninja
+4. Paste the API key into the setting `warp.container.serverApiKey`
+
+Once restarted, you should see a log message indicating you have connected as the associated user.
+
+After logging in, you can create a new source on the server by right-clicking in the container sources tab and selecting
+"Add Source" you can also do this via the website. 
+
+Once you have created a source, you can start pushing your WARP files to them using the command `WARP\\Commit File` or 
+using the ⬆ button within the WARP sidebar.
+
 ## Overwriting Matched Functions
 
 WARP will not always be able to identify the unique function in the matcher. In this case we give the user a few
@@ -123,55 +179,31 @@ options for resolving the matched function:
 
 All matched functions are stored in the BNDB, so you do not need to provide signature files when distributing databases.
 
+## Removing Matched Functions
+
+Using the command "WARP\\Remove Matched Function" or via the context menu in the WARP sidebar, you can remove matched function
+information. You may also want to run the complementary command `WARP\\Ignore Function` which will prevent the selected function 
+from being matched automatically in the future.
+
 ## API
 
 To create, query and load WARP data programmatically, we provide a [Python API]. For those looking to interact with WARP
 from Rust because the plugin is open source, you can depend _directly_ on the [Rust plugin], skipping the FFI entirely.
 
+### Rust example (recommended)
+
+This example will use the Rust API directly to generate WARP files from given inputs, it will automatically parallelize
+the work, so it will be much faster than the Python example.
+
+Find the example [here](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/warp/examples/headless).
+
 ### Python example
 
 This example will open a binary in Binary Ninja then output a WARP signature file.
 
-```python
-import sys
-from pathlib import Path
-from binaryninja import load
-from binaryninja.warp import WarpContainer, WarpFunction, WarpTarget
-
-def process_binary(input_file: str, output_dir: str) -> None:
-    input_path = Path(input_file)
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    bv = load(input_path)
-    bv.update_analysis_and_wait()
-    if not bv:
-        return
-
-    # Sources exist only in containers, so we will just pull off the first available container.
-    # In the future we might make container construction available to the API.
-    container = WarpContainer.all()[0]
-    output_file = output_dir / f"{input_path.stem}_analysis.warp"
-    # Add the source so we can add functions to it and then commit it (write to disk)
-    source = container.add_source(str(output_file))
-
-    # NOTE: You probably want to pull the platform from the function, but for this example it's fine.
-    target = WarpTarget(bv.platform)
-    # NOTE: You probably want to filter for functions with actual annotations, no point to signature a function with no symbol.
-    functions_to_warp = [WarpFunction(func) for func in bv.functions]
-    container.add_functions(target, source, functions_to_warp)
-
-    # Actually write the warp file to disk.
-    container.commit_source(source)
-    bv.file.close()
-
-if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print(f"Usage: {sys.argv[0]} <input_binary> <output_directory>")
-        sys.exit(1)
-    process_binary(sys.argv[1], sys.argv[2])
-```
-
 The flexibility of the API allows you to include or exclude any functions you want from the creation of the signature file.
+
+Find the example [here](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/warp/examples/create_signatures.py).
 
 ## Troubleshooting
 
@@ -198,6 +230,11 @@ When running the matcher manually, you may get a warning about no relocatable re
 sections or segments in your view. For WARP to work we must have some range of address space to work with, without it the
 function GUID's will likely be inconsistent if the functions can be based at different addresses.
 
+### Failed to connect to the server
+
+If you fail to connect to a WARP server, you will receive an error in the log. Outside typical network connectivity issues 
+it is possible the provided server URL is malformed, verify that the URL looks similar to the default server URL: `https://warp.binary.ninja`
+
 ## Glossary
 
 Here is a list of terms used and a simplified description, please see the [WARP] spec repository for a more detailed description.
@@ -210,6 +247,10 @@ A **Container** stores and manages WARP data, whether in memory, on disk or over
 
 ### Source
 A **Source** is a collection of WARP data within a container, like a file containing function and type information.
+
+### Source Tag
+A **Source Tag** is an arbitrary string that is used for filtering fetched function data from containers, useful when dealing with larger potentially
+untrusted datasets.
 
 ### Function
 A **Function** in WARP represents the collection of metadata that we wish to transfer, such as the symbol, comments and types.

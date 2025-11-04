@@ -22,6 +22,7 @@ members = [
     "plugins/svd/demo",
     "plugins/warp",
     "plugins/warp/demo",
+    "plugins/warp/examples/headless",
     "plugins/workflow_objc",
     "plugins/workflow_objc/demo",
 ]
@@ -29,6 +30,7 @@ members = [
 [workspace.dependencies]
 binaryninja = { path = "rust" }
 binaryninjacore-sys = { path = "rust/binaryninjacore-sys" }
+warp_ninja = { path = "plugins/warp" }
 
 [profile.release]
 lto = "thin"

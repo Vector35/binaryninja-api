@@ -77,6 +77,12 @@ class KeyValueStore:
 		"""Set the value for a single key"""
 		core.BNSetKeyValueStoreBuffer(self.handle, key, value.handle)
 
+	def get_value_hash(self, key: str) -> databuffer.DataBuffer:
+		"""Get the hash of the value for a single key (hash function not specified)"""
+		handle = core.BNGetKeyValueStoreValueHash(self.handle, key)
+		assert handle is not None
+		return databuffer.DataBuffer(handle=handle)
+
 	@property
 	def serialized_data(self) -> databuffer.DataBuffer:
 		"""Get the stored representation of the kvs (read-only)"""

@@ -119,6 +119,13 @@ fn load_network_container() {
 fn plugin_init() -> bool {
     Logger::new("WARP").with_level(LevelFilter::Debug).init();
 
+    // Create the user signature directory if it does not exist, otherwise we will not be able to write to it.
+    if !user_signature_dir().exists() {
+        if let Err(e) = std::fs::create_dir_all(&user_signature_dir()) {
+            log::error!("Failed to create user signature directory: {}", e);
+        }
+    }
+
     // Register our matcher and plugin settings globally.
     let mut global_bn_settings = Settings::new();
     global_bn_settings.register_group("warp", "WARP");

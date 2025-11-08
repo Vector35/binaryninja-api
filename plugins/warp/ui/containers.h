@@ -149,7 +149,7 @@ private:
 	{
 		// Retrieve all available containers
 		const auto all = Warp::Container::All();
-		m_containers = all;  // copy vector<Ref<Container>>
+		m_containers = all;
 
 		for (const auto& c : m_containers)
 		{
@@ -159,10 +159,6 @@ private:
 			auto* widget = new WarpContainerWidget(c, m_stack);
 			m_stack->addWidget(widget);
 		}
-
-		// Visual style: behave like a vertical tab bar
-		// m_list->setFrameShape(QFrame::NoFrame);
-		// m_list->setSpacing(0);
 	}
 
 	static int itemHeightPx()

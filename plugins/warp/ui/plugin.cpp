@@ -194,6 +194,7 @@ void WarpSidebarWidget::Update()
 {
 	m_currentFunctionWidget->UpdateMatches();
 	m_matchedWidget->Update();
+	m_containerWidget->refresh();
 	// TODO: Obviously this probably should not be called here.
 	setMatcherActionIcon(false);
 }

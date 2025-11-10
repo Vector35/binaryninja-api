@@ -551,21 +551,32 @@ void PseudoRustFunction::AppendFieldTextTokens(const HighLevelILInstruction& ins
 		if ((!settings || settings->IsOptionSet(ShowTypeCasts)) && srcExpr.operation == HLIL_ARRAY_INDEX)
 		{
 			auto arrayIndexExpr = srcExpr.GetSourceExpr<HLIL_ARRAY_INDEX>();
-			if (arrayIndexExpr.operation == HLIL_VAR
-				&& arrayIndexExpr.GetType()->GetChildType()->GetWidth() < instr.size)
+			if (arrayIndexExpr.operation == HLIL_VAR)
 			{
-				if (!addrOf)
+				const Variable var = arrayIndexExpr.GetVariable<HLIL_VAR>();
+				// NOTE: Querying through the variable type instead of expr type because it seems to be missing.
+				auto varTy = GetFunction()->GetVariableType(var).GetValue();
+				if (varTy && varTy->IsNamedTypeRefer())
+					varTy = varTy->DerefNamedTypeReference(GetFunction()->GetView());
+				if (varTy && varTy->GetChildType().GetValue() && varTy->GetChildType()->GetWidth() < instr.size)
+				{
+					if (!addrOf)
+						tokens.Append(TextToken, "*");
+					tokens.AppendOpenParen();
+					tokens.Append(OperationToken, "&");
+					GetExprText(srcExpr, tokens, settings, UnaryOperatorPrecedence);
+					tokens.Append(KeywordToken, " as ");
 					tokens.Append(TextToken, "*");
-				tokens.AppendOpenParen();
-				tokens.Append(OperationToken, "&");
-				GetExprText(srcExpr, tokens, settings, UnaryOperatorPrecedence);
-				tokens.Append(KeywordToken, " as ");
-				tokens.Append(TextToken, "*");
-				tokens.Append(KeywordToken, "mut ");
-				AppendSizeToken(instr.size, signedHint.value_or(false), tokens);
-				tokens.AppendCloseParen();
-				castedSrcExpr = true;
-				precedence = MemberAndFunctionOperatorPrecedence;
+					tokens.Append(KeywordToken, "mut ");
+					AppendSizeToken(instr.size, signedHint.value_or(false), tokens);
+					tokens.AppendCloseParen();
+					castedSrcExpr = true;
+					precedence = MemberAndFunctionOperatorPrecedence;
+				}
+				else if (addrOf)
+				{
+					tokens.Append(OperationToken, "&");
+				}
 			}
 			else if (addrOf)
 			{
@@ -574,8 +585,12 @@ void PseudoRustFunction::AppendFieldTextTokens(const HighLevelILInstruction& ins
 		}
 		else if ((!settings || settings->IsOptionSet(ShowTypeCasts)) && srcExpr.operation == HLIL_VAR)
 		{
-			if (srcExpr.GetType().GetValue() && srcExpr.GetType()->GetClass() != StructureTypeClass
-				&& srcExpr.size > instr.size)
+			const Variable var = srcExpr.GetVariable<HLIL_VAR>();
+			// NOTE: Querying through the variable type instead of expr type because it seems to be missing.
+			auto varTy = GetFunction()->GetVariableType(var).GetValue();
+			if (varTy && varTy->IsNamedTypeRefer())
+				varTy = varTy->DerefNamedTypeReference(GetFunction()->GetView());
+			if (varTy && varTy->GetClass() != StructureTypeClass && srcExpr.size > instr.size)
 			{
 				if (addrOf)
 					tokens.Append(OperationToken, "&");

@@ -208,7 +208,6 @@ QWidget* KCTriageView::initImageTable()
 
 		QAction noSelectionAction("No Images Selected", m_imageTable);
 		QAction loadImagesAction("", m_imageTable);
-		QAction loadImagesWithDepsAction("", m_imageTable);
 		if (selectedCount == 0)
 		{
 			noSelectionAction.setEnabled(false);
@@ -223,14 +222,6 @@ QWidget* KCTriageView::initImageTable()
 				loadImagesWithAddr(addresses, false);
 			});
 			contextMenu.addAction(&loadImagesAction);
-
-			// Format action text for loading selected images with dependencies
-			QString loadWithDepsActionText = (selectedCount == 1) ? "Load Selected Image and Dependencies" : QString("Load %1 Selected Images and Dependencies").arg(selectedCount);
-			loadImagesWithDepsAction.setText(loadWithDepsActionText);
-			connect(&loadImagesWithDepsAction, &QAction::triggered, [this, addresses]() {
-				this->loadImagesWithAddr(addresses, true);
-			});
-			contextMenu.addAction(&loadImagesWithDepsAction);
 		}
 
 		contextMenu.exec(m_imageTable->viewport()->mapToGlobal(pos));

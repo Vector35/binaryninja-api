@@ -453,7 +453,11 @@ pub(crate) fn download_debug_info(
         settings.get_string_list_with_opts("network.debuginfodServers", &mut settings_query_opts);
 
     for debug_server_url in debug_server_urls.iter() {
-        let artifact_url = format!("{}/buildid/{}/debuginfo", debug_server_url, build_id);
+        let artifact_url = format!(
+            "{}/buildid/{}/debuginfo",
+            debug_server_url.trim_end_matches("/"),
+            build_id
+        );
 
         // Download from remote
         let (tx, rx) = mpsc::channel();

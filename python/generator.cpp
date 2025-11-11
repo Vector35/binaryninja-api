@@ -284,7 +284,7 @@ int main(int argc, char* argv[])
 	fprintf(out, "	return var.encode(\"utf-8\")\n\n\n");
 
 	fprintf(out, "def pyNativeStr(arg: AnyStr) -> str:\n");
-	fprintf(out, "	if isinstance(arg, str):\n");
+	fprintf(out, "	if arg is None or isinstance(arg, str):\n");
 	fprintf(out, "		return arg\n");
 	fprintf(out, "	else:\n");
 	fprintf(out, "		try:\n");

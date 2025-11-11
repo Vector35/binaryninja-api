@@ -164,7 +164,7 @@ class CoreVersionInfo:
 			self.major = core_version_info.major
 			self.minor = core_version_info.minor
 			self.build = core_version_info.build
-			if core_version_info._channel is not None:
+			if core_version_info.channel is not None:
 				self.channel = core_version_info.channel
 		else:
 			self.major = major

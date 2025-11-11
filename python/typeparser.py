@@ -324,7 +324,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 			for i in range(includeDirCount):
 				include_dirs_py.append(core.pyNativeStr(includeDirs[i]))
 
-			auto_type_source = core.pyNativeStr(autoTypeSource)
+			auto_type_source = core.pyNativeStr(autoTypeSource) or ""
 
 			(result_py, errors_py) = self.parse_types_from_source(
 				source_py, file_name_py, platform_py, existing_types_py, options_py,

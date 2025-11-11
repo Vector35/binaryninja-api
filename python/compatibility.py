@@ -22,7 +22,7 @@ import sys
 
 
 def pyNativeStr(arg):
-	if isinstance(arg, str):
+	if arg is None or isinstance(arg, str):
 		return arg
 	else:
 		try:

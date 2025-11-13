@@ -147,6 +147,27 @@ If you're having trouble getting Binary Ninja installed in a headless server ins
 apt-get install libgl1-mesa-glx libfontconfig1 libxrender1 libegl1-mesa libxi6 libnspr4 libsm6
 ```
 
+#### Firefox Snap on Ubuntu 22.04 and Newer
+
+If you have installed Binary Ninja into a path outside your home folder such as `/opt`, you will likely run into this limitation. 
+
+Ubuntu 22.04 and newer ship Firefox as a snap that is confined by AppArmor. The confinement blocks `snap.firefox.firefox` from reading arbitrary system paths outside the user's home directory, so paths such as `/opt/binaryninja/docs` are inaccessible. Binary Ninja's local help viewer fails under these conditions because Firefox cannot open the documentation files it launches from `/opt/binaryninja/`, and `dmesg` will show `apparmor="DENIED"` entries similar to:
+
+```
+apparmor="DENIED" operation="open" profile="snap.firefox.firefox" name="/opt/binaryninja/docs/index.html" requested_mask="r" denied_mask="r"
+```
+
+**Work-around 1:** Keep using the Firefox snap but relocate Binary Ninja so Firefox reads the docs inside `$HOME`. Moving the entire installation from `/opt/binaryninja` to a directory such as `~/Applications/binaryninja/` avoids the sandbox restriction because the snap may read anywhere under the user's home.
+
+**Work-around 2:** Replace the snap build with the deb-packaged Firefox, which is not sandboxed and can read from `/opt`. Canonical publishes the deb via the `ppa:mozillateam/ppa`. A typical sequence looks like:
+
+``` bash
+sudo add-apt-repository ppa:mozillateam/ppa
+sudo apt update
+sudo apt install firefox
+sudo snap remove firefox
+```
+
 #### Wayland
 
 Binary Ninja uses X11 by default, but ships Wayland client support as an option. To enable Wayland support, run Binary Ninja with the following option:

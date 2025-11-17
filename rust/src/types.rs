@@ -2080,13 +2080,13 @@ impl NamedTypeReference {
         match ty.type_class() {
             TypeClass::NamedTypeReferenceClass => {
                 // Recurse into the NTR type until we get the target type.
-                let ntr = ty.get_named_type_reference().unwrap();
+                let ntr = ty
+                    .get_named_type_reference()
+                    .expect("NTR type class should always have a valid NTR");
                 match visited.insert(ntr.id()) {
                     true => ntr.target_helper(bv, visited),
-                    false => {
-                        log::error!("Can't get target for recursively defined type!");
-                        None
-                    }
+                    // Cyclic reference, return None.
+                    false => None,
                 }
             }
             // Found target type
@@ -2095,6 +2095,8 @@ impl NamedTypeReference {
     }
 
     /// Type referenced by this [`NamedTypeReference`].
+    ///
+    /// Will return `None` if the reference is cyclic, or the target type does not exist.
     pub fn target(&self, bv: &BinaryView) -> Option<Ref<Type>> {
         self.target_helper(bv, &mut HashSet::new())
     }

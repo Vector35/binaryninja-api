@@ -17,7 +17,7 @@ use gimli::{
         UnitEntryId,
     },
 };
-use log::{error, info, LevelFilter};
+use log::{error, info, warn, LevelFilter};
 use object::{write, Architecture, BinaryFormat, SectionKind};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -123,26 +123,35 @@ fn export_type(
 
             for base_struct in ty_struct.base_structures() {
                 let inheritance_uid = dwarf.unit.add(structure_die_uid, gimli::DW_TAG_inheritance);
-                let base_struct_uid = export_type(
-                    base_struct.ty.name().to_string(),
-                    base_struct.ty.target(bv).unwrap().as_ref(),
-                    bv,
-                    defined_types,
-                    dwarf,
-                )
-                .unwrap();
-                dwarf
-                    .unit
-                    .get_mut(inheritance_uid)
-                    .set(gimli::DW_AT_type, AttributeValue::UnitRef(base_struct_uid));
-                dwarf.unit.get_mut(inheritance_uid).set(
-                    gimli::DW_AT_data_member_location,
-                    AttributeValue::Data8(base_struct.offset),
-                );
-                dwarf.unit.get_mut(inheritance_uid).set(
-                    gimli::DW_AT_accessibility,
-                    AttributeValue::Accessibility(gimli::DW_ACCESS_public),
-                );
+                if let Some(target_ty) = base_struct.ty.target(bv) {
+                    let base_struct_uid = export_type(
+                        base_struct.ty.name().to_string(),
+                        &target_ty,
+                        bv,
+                        defined_types,
+                        dwarf,
+                    );
+
+                    match base_struct_uid {
+                        Some(uid) => {
+                            dwarf
+                                .unit
+                                .get_mut(inheritance_uid)
+                                .set(gimli::DW_AT_type, AttributeValue::UnitRef(uid));
+                            dwarf.unit.get_mut(inheritance_uid).set(
+                                gimli::DW_AT_data_member_location,
+                                AttributeValue::Data8(base_struct.offset),
+                            );
+                            dwarf.unit.get_mut(inheritance_uid).set(
+                                gimli::DW_AT_accessibility,
+                                AttributeValue::Accessibility(gimli::DW_ACCESS_public),
+                            );
+                        }
+                        None => {
+                            log::warn!("Could not export base struct `{}`", base_struct.ty.name());
+                        }
+                    }
+                }
             }
 
             dwarf.unit.get_mut(structure_die_uid).set(
@@ -365,7 +374,7 @@ fn export_type(
                     Some(typedef_die_uid)
                 }
             } else {
-                error!("Could not get target of typedef `{}`", ntr.name());
+                warn!("Could not get target of typedef `{}`", ntr.name());
                 None
             }
         }

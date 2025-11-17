@@ -49,7 +49,7 @@ impl RunMatcherField {
 
     pub fn from_form(form: &Form) -> Option<bool> {
         let field = form.get_field_with_name("Rerun Matcher")?;
-        let field_value = field.try_value_index()?;
+        let field_value = field.try_value_int()?;
         match field_value {
             1 => Some(true),
             _ => Some(false),

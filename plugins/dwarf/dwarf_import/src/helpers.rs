@@ -517,10 +517,16 @@ pub(crate) fn download_debug_info(
     Err("Could not find a server with debug info for this file".to_string())
 }
 
-pub(crate) fn find_local_debug_file_for_build_id(
-    build_id: &str,
-    view: &BinaryView,
-) -> Option<String> {
+pub(crate) fn find_local_debug_file_from_path(path: &PathBuf, view: &BinaryView) -> Option<String> {
+    // Search debug directories for path (or None if setting disabled/empty), return the first one that exists
+    // TODO: put absolute paths behind setting?
+    if path.is_absolute() {
+        if !path.exists() {
+            return None;
+        }
+        return path.to_str().map(|s| s.to_string());
+    }
+
     let mut settings_query_opts = QueryOptions::new_with_view(view);
     let settings = Settings::new();
     let debug_dirs_enabled = settings.get_bool_with_opts(
@@ -537,29 +543,27 @@ pub(crate) fn find_local_debug_file_for_build_id(
         &mut settings_query_opts,
     );
 
-    if debug_info_paths.is_empty() {
-        return None;
-    }
-
     for debug_info_path in debug_info_paths.into_iter() {
-        let path = PathBuf::from(debug_info_path);
-        let elf_path = path.join(&build_id[..2]).join(&build_id[2..]).join("elf");
-
-        let debug_ext_path = path
-            .join(&build_id[..2])
-            .join(format!("{}.debug", &build_id[2..]));
-
-        let final_path = if debug_ext_path.exists() {
-            debug_ext_path
-        } else if elf_path.exists() {
-            elf_path
-        } else {
-            // No paths exist in this dir, try the next one
-            continue;
-        };
-        return final_path.to_str().and_then(|x| Some(x.to_string()));
+        let final_path = PathBuf::from(debug_info_path).join(path);
+        if final_path.exists() {
+            return final_path.to_str().map(|s| s.to_string());
+        }
     }
     None
+}
+
+pub(crate) fn find_local_debug_file_for_build_id(
+    build_id: &str,
+    view: &BinaryView,
+) -> Option<String> {
+    let debug_ext_path = PathBuf::from(&build_id[..2]).join(format!("{}.debug", &build_id[2..]));
+
+    let elf_path = PathBuf::from(&build_id[..2])
+        .join(&build_id[2..])
+        .join("elf");
+
+    find_local_debug_file_from_path(&debug_ext_path, view)
+        .or_else(|| find_local_debug_file_from_path(&elf_path, view))
 }
 
 pub(crate) fn load_debug_info_for_build_id(
@@ -575,7 +579,7 @@ pub(crate) fn load_debug_info_for_build_id(
                 false,
                 Some("{\"analysis.debugInfo.internal\": false}"),
             ),
-            false,
+            true,
         );
     } else if settings.get_bool_with_opts("network.enableDebuginfod", &mut settings_query_opts) {
         return (download_debug_info(build_id, view).ok(), true);

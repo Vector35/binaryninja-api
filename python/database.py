@@ -432,3 +432,16 @@ class DatabaseObject:
 		finally:
 			core.BNFreeDatabaseObjectList(objects, count)
 			core.BNFreeStringList(names, count)
+
+	@property
+	def dependencies(self) -> List[str]:
+		"""Get list of dependencies for this database object (read-only)"""
+		count = ctypes.c_size_t()
+		deps = core.BNGetDatabaseObjectDependencies(self.handle, ctypes.byref(count))
+		try:
+			result = []
+			for i in range(0, count.value):
+				result.append(core.pyNativeStr(deps[i]))
+			return result
+		finally:
+			core.BNFreeStringList(deps, count.value)

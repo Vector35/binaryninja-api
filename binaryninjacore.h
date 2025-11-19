@@ -10057,6 +10057,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetDatabaseObjectDescription(BNDatabaseObject* object);
 	BINARYNINJACOREAPI BNDatabaseObject* BNGetDatabaseObjectParent(BNDatabaseObject* object);
 	BINARYNINJACOREAPI size_t BNGetDatabaseObjectChildren(BNDatabaseObject* object, char*** names, BNDatabaseObject*** objects);
+	BINARYNINJACOREAPI char** BNGetDatabaseObjectDependencies(BNDatabaseObject* object, size_t* count);
 
 	// todo remove before release
 	BINARYNINJACOREAPI void BNTestMerge(BNDatabaseObject* base, BNDatabaseObject* left, BNDatabaseObject* right, BNDatabaseObject* result);

@@ -380,6 +380,8 @@ class Database:
 class DatabaseObject:
 	def __init__(self, handle):
 		self.handle = core.handle_of_type(handle, core.BNDatabaseObject)
+		self._children = None
+		self._dependencies = None
 
 	def __del__(self):
 		core.BNFreeDatabaseObject(self.handle)
@@ -416,6 +418,11 @@ class DatabaseObject:
 	@property
 	def children(self) -> Dict[str, 'DatabaseObject']:
 		"""Get dictionary of child objects (read-only)"""
+		if self._children is None:
+			self._children = self._generate_children()
+		return self._children
+
+	def _generate_children(self) -> Dict[str, 'DatabaseObject']:
 		names = ctypes.POINTER(ctypes.c_char_p)()
 		objects = ctypes.POINTER(core.BNDatabaseObjectHandle)()
 		count = core.BNGetDatabaseObjectChildren(
@@ -436,6 +443,11 @@ class DatabaseObject:
 	@property
 	def dependencies(self) -> List[str]:
 		"""Get list of dependencies for this database object (read-only)"""
+		if self._dependencies is None:
+			self._dependencies = self._generate_dependencies()
+		return self._dependencies
+
+	def _generate_dependencies(self) -> List[str]:
 		count = ctypes.c_size_t()
 		deps = core.BNGetDatabaseObjectDependencies(self.handle, ctypes.byref(count))
 		try:
@@ -508,9 +520,16 @@ class DiffState:
 class DiffObject:
 	def __init__(self, handle):
 		self.handle = core.handle_of_type(handle, core.BNDiffObject)
+		self._children = None
 
 	def __del__(self):
 		core.BNFreeDiffObject(self.handle)
+
+	def __str__(self):
+		return f"<diff {self.base}/{self.left}/{self.right}>"
+
+	def __repr__(self):
+		return f"<diff {self.base}/{self.left}/{self.right}>"
 
 	@property
 	def base(self) -> Optional[str]:
@@ -539,6 +558,11 @@ class DiffObject:
 	@property
 	def children(self) -> Dict[str, 'DiffObject']:
 		"""Get dictionary of child diff objects (read-only)"""
+		if self._children is None:
+			self._children = self._generate_children()
+		return self._children
+
+	def _generate_children(self) -> Dict[str, 'DiffObject']:
 		names = ctypes.POINTER(ctypes.c_char_p)()
 		objects = ctypes.POINTER(ctypes.POINTER(core.BNDiffObject))()
 		count = core.BNGetDiffObjectChildren(

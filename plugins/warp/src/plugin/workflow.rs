@@ -3,7 +3,7 @@ use crate::cache::{
     cached_function_guid, insert_cached_function_match, try_cached_function_guid,
     try_cached_function_match,
 };
-use crate::convert::{platform_to_target, to_bn_type};
+use crate::convert::{platform_to_target, to_bn_symbol_at_address, to_bn_type};
 use crate::matcher::{Matcher, MatcherSettings};
 use crate::plugin::settings::PluginSettings;
 use crate::{get_warp_ignore_tag_type, get_warp_tag_type, relocatable_regions, IGNORE_TAG_NAME};
@@ -260,6 +260,13 @@ pub fn insert_workflow() -> Result<(), ()> {
             if !function.has_user_type() {
                 if let Some(func_ty) = &matched_function.ty {
                     function.set_auto_type(&to_bn_type(Some(function.arch()), func_ty));
+                } else if !function.has_explicitly_defined_type() {
+                    // Attempt to retrieve the type information from the named platform functions.
+                    // NOTE: We check `has_explicitly_defined_type` because after applying imported type
+                    // information, that flag will be set, allowing us to avoid applying it again.
+                    let bn_symbol =
+                        to_bn_symbol_at_address(&view, &matched_function.symbol, function.start());
+                    function.apply_imported_types(&bn_symbol, None);
                 }
             }
             if let Some(mlil) = ctx.mlil_function() {

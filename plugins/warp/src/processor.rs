@@ -772,6 +772,10 @@ impl WarpFileProcessor {
             })
             .filter_map(|res| match res {
                 Ok(result) => Some(Ok(result)),
+                Err(ProcessingError::SkippedFile(path)) => {
+                    log::debug!("Skipping archive file: {:?}", path);
+                    None
+                }
                 Err(ProcessingError::Cancelled) => Some(Err(ProcessingError::Cancelled)),
                 Err(e) => {
                     log::error!("Archive file processing error: {:?}", e);

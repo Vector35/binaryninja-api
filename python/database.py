@@ -445,3 +445,123 @@ class DatabaseObject:
 			return result
 		finally:
 			core.BNFreeStringList(deps, count.value)
+
+
+class DiffState:
+	def __init__(self, logger=None, handle=None):
+		if handle is not None:
+			self.handle = core.handle_of_type(handle, core.BNDiffState)
+		else:
+			assert logger is not None, "Need logger to construct diff state"
+			self.handle = core.BNCreateDiffState(logger.handle)
+
+	def __del__(self):
+		core.BNFreeDiffState(self.handle)
+
+	@property
+	def errors(self) -> List[str]:
+		"""Get list of error messages (read-only)"""
+		count = ctypes.c_size_t()
+		errors = core.BNGetDiffStateErrors(self.handle, ctypes.byref(count))
+		try:
+			result = []
+			for i in range(0, count.value):
+				result.append(core.pyNativeStr(errors[i]))
+			return result
+		finally:
+			core.BNFreeStringList(errors, count.value)
+
+	def clear_errors(self):
+		"""Clear all error messages"""
+		core.BNClearDiffStateErrors(self.handle)
+
+	def generate_diff(
+		self, base: DatabaseObject, left: DatabaseObject, right: DatabaseObject
+	) -> Optional['DiffObject']:
+		"""Generate a three-way diff database objects"""
+		handle = core.BNDiffStateGenerateDiff(
+			self.handle, base.handle, left.handle, right.handle
+		)
+		if handle is None:
+			return None
+		return DiffObject(handle=handle)
+
+	def apply_diff(
+		self, diff: 'DiffObject', base: DatabaseObject, left: DatabaseObject,
+		right: DatabaseObject, result: DatabaseObject
+	) -> bool:
+		"""Apply a diff to database objects"""
+		return core.BNDiffStateApplyDiff(
+			self.handle, diff.handle, base.handle, left.handle, right.handle,
+			result.handle
+		)
+
+	def is_diffed(self, object: DatabaseObject) -> bool:
+		"""Check if an object was used during generate_diff"""
+		return core.BNDiffStateIsDiffed(self.handle, object.handle)
+
+	def is_applied(self, object: 'DiffObject') -> bool:
+		"""Check if an object was used during apply_diff"""
+		return core.BNDiffStateIsApplied(self.handle, object.handle)
+
+
+class DiffObject:
+	def __init__(self, handle):
+		self.handle = core.handle_of_type(handle, core.BNDiffObject)
+
+	def __del__(self):
+		core.BNFreeDiffObject(self.handle)
+
+	@property
+	def base(self) -> Optional[str]:
+		"""Get the base path for the diff object (read-only)"""
+		value = core.BNGetDiffObjectBase(self.handle)
+		if value is None:
+			return None
+		return value
+
+	@property
+	def left(self) -> Optional[str]:
+		"""Get the left path for the diff object (read-only)"""
+		value = core.BNGetDiffObjectLeft(self.handle)
+		if value is None:
+			return None
+		return value
+
+	@property
+	def right(self) -> Optional[str]:
+		"""Get the right path for the diff object (read-only)"""
+		value = core.BNGetDiffObjectRight(self.handle)
+		if value is None:
+			return None
+		return value
+
+	@property
+	def children(self) -> Dict[str, 'DiffObject']:
+		"""Get dictionary of child diff objects (read-only)"""
+		names = ctypes.POINTER(ctypes.c_char_p)()
+		objects = ctypes.POINTER(ctypes.POINTER(core.BNDiffObject))()
+		count = core.BNGetDiffObjectChildren(
+			self.handle, ctypes.byref(names), ctypes.byref(objects)
+		)
+
+		result = {}
+		try:
+			for i in range(count):
+				name = core.pyNativeStr(names[i])
+				obj_handle = core.BNNewDiffObjectReference(objects[i])
+				result[name] = DiffObject(handle=obj_handle)
+			return result
+		finally:
+			core.BNFreeDiffObjectList(objects, count)
+			core.BNFreeStringList(names, count)
+
+	@property
+	def strategy(self) -> 'MergeStrategy':
+		"""Get the merge strategy for this diff object"""
+		return core.BNGetDiffObjectMergeStrategy(self.handle)
+
+	@strategy.setter
+	def strategy(self, value: 'MergeStrategy'):
+		"""Set the merge strategy for this diff object"""
+		core.BNSetDiffObjectMergeStrategy(self.handle, value)

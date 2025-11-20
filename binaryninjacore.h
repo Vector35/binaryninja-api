@@ -374,6 +374,8 @@ extern "C"
 	typedef struct BNSimilaritySessionReceiver BNSimilaritySessionReceiver;
 	typedef struct BNSimilaritySession BNSimilaritySession;
 	typedef struct BNDatabaseObject BNDatabaseObject;
+	typedef struct BNDiffState BNDiffState;
+	typedef struct BNDiffObject BNDiffObject;
 
 	typedef struct BNVersionInfo {
 		uint32_t major;
@@ -10059,8 +10061,25 @@ extern "C"
 	BINARYNINJACOREAPI size_t BNGetDatabaseObjectChildren(BNDatabaseObject* object, char*** names, BNDatabaseObject*** objects);
 	BINARYNINJACOREAPI char** BNGetDatabaseObjectDependencies(BNDatabaseObject* object, size_t* count);
 
-	// todo remove before release
-	BINARYNINJACOREAPI void BNTestMerge(BNDatabaseObject* base, BNDatabaseObject* left, BNDatabaseObject* right, BNDatabaseObject* result);
+	BINARYNINJACOREAPI BNDiffState* BNNewDiffStateReference(BNDiffState* state);
+	BINARYNINJACOREAPI void BNFreeDiffState(BNDiffState* state);
+	BINARYNINJACOREAPI BNDiffState* BNCreateDiffState(BNLogger* logger);
+	BINARYNINJACOREAPI char** BNGetDiffStateErrors(BNDiffState* state, size_t* count);
+	BINARYNINJACOREAPI void BNClearDiffStateErrors(BNDiffState* state);
+	BINARYNINJACOREAPI BNDiffObject* BNDiffStateGenerateDiff(BNDiffState* state, BNDatabaseObject* base, BNDatabaseObject* left, BNDatabaseObject* right);
+	BINARYNINJACOREAPI bool BNDiffStateApplyDiff(BNDiffState* state, BNDiffObject* diff, BNDatabaseObject* base, BNDatabaseObject* left, BNDatabaseObject* right, BNDatabaseObject* result);
+	BINARYNINJACOREAPI bool BNDiffStateIsDiffed(BNDiffState* state, BNDatabaseObject* object);
+	BINARYNINJACOREAPI bool BNDiffStateIsApplied(BNDiffState* state, BNDiffObject* object);
+
+	BINARYNINJACOREAPI BNDiffObject* BNNewDiffObjectReference(BNDiffObject* object);
+	BINARYNINJACOREAPI void BNFreeDiffObject(BNDiffObject* object);
+	BINARYNINJACOREAPI void BNFreeDiffObjectList(BNDiffObject** objects, size_t count);
+	BINARYNINJACOREAPI char* BNGetDiffObjectBase(BNDiffObject* object);
+	BINARYNINJACOREAPI char* BNGetDiffObjectLeft(BNDiffObject* object);
+	BINARYNINJACOREAPI char* BNGetDiffObjectRight(BNDiffObject* object);
+	BINARYNINJACOREAPI size_t BNGetDiffObjectChildren(BNDiffObject* object, char*** names, BNDiffObject*** objects);
+	BINARYNINJACOREAPI BNMergeStrategy BNGetDiffObjectMergeStrategy(BNDiffObject* object);
+	BINARYNINJACOREAPI void BNSetDiffObjectMergeStrategy(BNDiffObject* object, BNMergeStrategy strategy);
 
 #ifdef __cplusplus
 }

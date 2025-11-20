@@ -664,6 +664,8 @@ impl WarpFileProcessor {
         if view.functions().is_empty() {
             self.state
                 .set_file_state(path.clone(), ProcessingFileState::Processed);
+            // Close the view manually, see comment in [`BinaryView`].
+            view.file().close();
             return Err(ProcessingError::SkippedFile(path));
         }
 

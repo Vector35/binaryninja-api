@@ -31,7 +31,8 @@ from .enums import (
 	ReferenceType, VariableSourceType,
 	TypeReferenceType, MemberAccess, MemberScope, TypeDefinitionLineType,
 	TokenEscapingType,
-	NameType, PointerSuffix, PointerBaseType
+	NameType, PointerSuffix, PointerBaseType,
+	Endianness
 )
 from . import callingconvention
 from . import function as _function
@@ -655,6 +656,7 @@ class TypeBuilder:
 		    TypeClass.StructureTypeClass: StructureType,
 		    TypeClass.EnumerationTypeClass: EnumerationType,
 		    TypeClass.NamedTypeReferenceClass: NamedTypeReferenceType,
+		    TypeClass.FragmentTypeClass: FragmentType,
 		}
 		return Types[self.type_class](self._finalized, self.platform, self.confidence)
 
@@ -1124,6 +1126,74 @@ class PointerBuilder(TypeBuilder):
 	@pointer_base_offset.setter
 	def pointer_base_offset(self, value: int):
 		self.set_pointer_base(self.pointer_base_type, value)
+
+class FragmentBuilder(TypeBuilder):
+	@classmethod
+	def create(
+	    cls, type: SomeType, width: int,
+	    offset: int, endianness: Endianness = Endianness.LittleEndian,
+	    confidence: int = core.max_confidence
+	) -> 'FragmentBuilder':
+		ic = type.immutable_copy()
+		handle = core.BNCreateFragmentTypeBuilder(width, ic._to_core_struct(), offset, endianness)
+		assert handle is not None, "BNCreateFragmentTypeBuilder returned None"
+		return cls(handle, None, confidence)
+
+	@property
+	def offset(self) -> int:
+		return core.BNGetTypeBuilderFragmentOriginalOffsetBytes(self._handle)
+
+	@offset.setter
+	def offset(self, value: int):
+		core.BNSetTypeBuilderFragmentOriginalOffsetBytes(self._handle, value)
+
+	@property
+	def fragment_original_width(self) -> int:
+		return core.BNGetTypeBuilderFragmentOriginalWidthBytes(self._handle)
+
+	@fragment_original_width.setter
+	def fragment_original_width(self, value: int):
+		core.BNSetTypeBuilderFragmentOriginalWidthBytes(self._handle, value)
+
+	@property
+	def fragment_start_bit(self) -> int:
+		return core.BNGetTypeBuilderFragmentStartBit(self._handle)
+
+	@fragment_start_bit.setter
+	def fragment_start_bit(self, value: int):
+		core.BNSetTypeBuilderFragmentStartBit(self._handle, value)
+
+	@property
+	def fragment_width_bits(self) -> int:
+		return core.BNGetTypeBuilderFragmentWidthBits(self._handle)
+
+	@fragment_width_bits.setter
+	def fragment_width_bits(self, value: int):
+		core.BNSetTypeBuilderFragmentWidthBits(self._handle, value)
+
+	@property
+	def fragment_truncated_start_bits(self) -> int:
+		return core.BNGetTypeBuilderFragmentTruncatedStartBits(self._handle)
+
+	@fragment_truncated_start_bits.setter
+	def fragment_truncated_start_bits(self, value: int):
+		core.BNSetTypeBuilderFragmentTruncatedStartBits(self._handle, value)
+
+	@property
+	def fragment_wrap_bit(self) -> int:
+		return core.BNGetTypeBuilderFragmentWrapBit(self._handle)
+
+	@fragment_wrap_bit.setter
+	def fragment_wrap_bit(self, value: int):
+		core.BNSetTypeBuilderFragmentWrapBit(self._handle, value)
+
+	@property
+	def endianness(self) -> Endianness:
+		return Endianness(core.BNGetTypeBuilderFragmentEndianness(self._handle))
+
+	@endianness.setter
+	def endianness(self, value: Endianness):
+		core.BNSetTypeBuilderFragmentEndianness(self._handle, value)
 
 
 class ArrayBuilder(TypeBuilder):
@@ -2289,6 +2359,7 @@ class Type:
 		    TypeClass.IntegerTypeClass: IntegerBuilder, TypeClass.FloatTypeClass: FloatBuilder,
 		    TypeClass.PointerTypeClass: PointerBuilder, TypeClass.ArrayTypeClass: ArrayBuilder,
 		    TypeClass.FunctionTypeClass: FunctionBuilder, TypeClass.WideCharTypeClass: WideCharBuilder,
+		    TypeClass.FragmentTypeClass: FragmentBuilder,
 		    # TypeClass.StructureTypeClass:Structure,
 		    # TypeClass.EnumerationTypeClass:Enumeration,
 		    # TypeClass.NamedTypeReferenceClass:NamedTypeReference,
@@ -3484,6 +3555,42 @@ class WideCharType(Type):
 		assert core_type is not None, "core.BNCreateWideCharType returned None"
 		return cls(core_type, platform, confidence)
 
+class FragmentType(Type):
+	@property
+	def target(self) -> Type:
+		"""Target (read-only)"""
+		result = core.BNGetChildType(self._handle)
+		assert result is not None, "core.BNGetChildType returned None"
+		return Type.create(result.type, self._platform, result.confidence)
+
+	@property
+	def offset(self) -> int:
+		return core.BNGetTypeFragmentOriginalOffsetBytes(self._handle)
+
+	@property
+	def fragment_original_width_bytes(self) -> int:
+		return core.BNGetTypeFragmentOriginalWidthBytes(self._handle)
+
+	@property
+	def fragment_start_bit(self) -> int:
+		return core.BNGetTypeFragmentStartBit(self._handle)
+
+	@property
+	def fragment_width_bits(self) -> int:
+		return core.BNGetTypeFragmentWidthBits(self._handle)
+
+	@property
+	def fragment_truncated_start_bits(self) -> int:
+		return core.BNGetTypeFragmentTruncatedStartBits(self._handle)
+
+	@property
+	def fragment_wrap_bit(self) -> int:
+		return core.BNGetTypeFragmentWrapBit(self._handle)
+
+	@property
+	def fragment_endianness(self) -> Endianness:
+		return Endianness(core.BNGetTypeFragmentEndianness(self._handle))
+
 
 Types = {
     TypeClass.VoidTypeClass: VoidType, TypeClass.BoolTypeClass: BoolType, TypeClass.IntegerTypeClass: IntegerType,
@@ -3491,6 +3598,7 @@ Types = {
     TypeClass.EnumerationTypeClass: EnumerationType, TypeClass.PointerTypeClass: PointerType,
     TypeClass.ArrayTypeClass: ArrayType, TypeClass.FunctionTypeClass: FunctionType,
     TypeClass.NamedTypeReferenceClass: NamedTypeReferenceType, TypeClass.WideCharTypeClass: WideCharType,
+    TypeClass.FragmentTypeClass: FragmentType,
 }
 
 

@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 163
+#define BN_CURRENT_CORE_ABI_VERSION 164
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 163
+#define BN_MINIMUM_CORE_ABI_VERSION 164
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -871,7 +871,8 @@ extern "C"
 		VarArgsTypeClass = 9,
 		ValueTypeClass = 10,
 		NamedTypeReferenceClass = 11,
-		WideCharTypeClass = 12
+		WideCharTypeClass = 12,
+		FragmentTypeClass = 13,
 	};
 
 	BN_ENUM(uint8_t, BNNamedTypeReferenceClass)
@@ -7006,6 +7007,11 @@ extern "C"
 	    BNBoolWithConfidence* cnst, BNBoolWithConfidence* vltl, BNReferenceType refType);
 	BINARYNINJACOREAPI BNType* BNCreatePointerTypeOfWidth(size_t width, const BNTypeWithConfidence* const type,
 	    BNBoolWithConfidence* cnst, BNBoolWithConfidence* vltl, BNReferenceType refType);
+	BINARYNINJACOREAPI BNType* BNCreateFragmentType(size_t width, const BNTypeWithConfidence* const type,
+	    uint64_t offset, BNEndianness endianness);
+	BINARYNINJACOREAPI BNType* BNCreateFragmentTypeBits(size_t width, const BNTypeWithConfidence* const type,
+	    uint64_t originalFragmentOffsetBytes, size_t originalFragmentWidthBytes, BNEndianness endianness,
+	    size_t fragmentStartBit, size_t fragmentWidthBits, size_t fragmentTruncatedStartBits, size_t wrapBit);
 	BINARYNINJACOREAPI BNType* BNCreateArrayType(const BNTypeWithConfidence* const type, uint64_t elem);
 	BINARYNINJACOREAPI BNType* BNCreateFunctionType(BNTypeWithConfidence* returnValue, BNCallingConventionWithConfidence* callingConvention,
 	    BNFunctionParameter* params, size_t paramCount, BNBoolWithConfidence* varArg,
@@ -7041,6 +7047,11 @@ extern "C"
 	BINARYNINJACOREAPI BNTypeBuilder* BNCreatePointerTypeBuilderOfWidth(size_t width,
 	    const BNTypeWithConfidence* const type, BNBoolWithConfidence* cnst, BNBoolWithConfidence* vltl,
 	    BNReferenceType refType);
+	BINARYNINJACOREAPI BNTypeBuilder* BNCreateFragmentTypeBuilder(size_t width, const BNTypeWithConfidence* const type,
+	    uint64_t offset, BNEndianness endianness);
+	BINARYNINJACOREAPI BNTypeBuilder* BNCreateFragmentTypeBuilderBits(size_t width, const BNTypeWithConfidence* const type,
+	    uint64_t originalFragmentOffsetBytes, size_t originalFragmentWidthBytes, BNEndianness endianness,
+	    size_t fragmentStartBit, size_t fragmentWidthBits, size_t fragmentTruncatedStartBits, size_t wrapBit);
 	BINARYNINJACOREAPI BNTypeBuilder* BNCreateArrayTypeBuilder(const BNTypeWithConfidence* const type, uint64_t elem);
 	BINARYNINJACOREAPI BNTypeBuilder* BNCreateFunctionTypeBuilder(BNTypeWithConfidence* returnValue, BNCallingConventionWithConfidence* callingConvention,
 		BNFunctionParameter* params, size_t paramCount, BNBoolWithConfidence* varArg,
@@ -7078,6 +7089,13 @@ extern "C"
 	BINARYNINJACOREAPI BNNamedTypeReference* BNGetTypeNamedTypeReference(BNType* type);
 	BINARYNINJACOREAPI uint64_t BNGetTypeElementCount(BNType* type);
 	BINARYNINJACOREAPI uint64_t BNGetTypeOffset(BNType* type);
+	BINARYNINJACOREAPI uint64_t BNGetTypeFragmentOriginalOffsetBytes(BNType* type);
+	BINARYNINJACOREAPI size_t BNGetTypeFragmentOriginalWidthBytes(BNType* type);
+	BINARYNINJACOREAPI size_t BNGetTypeFragmentStartBit(BNType* type);
+	BINARYNINJACOREAPI size_t BNGetTypeFragmentWidthBits(BNType* type);
+	BINARYNINJACOREAPI size_t BNGetTypeFragmentTruncatedStartBits(BNType* type);
+	BINARYNINJACOREAPI size_t BNGetTypeFragmentWrapBit(BNType* type);
+	BINARYNINJACOREAPI BNEndianness BNGetTypeFragmentEndianness(BNType* type);
 	BINARYNINJACOREAPI BNOffsetWithConfidence BNGetTypeStackAdjustment(BNType* type);
 	BINARYNINJACOREAPI BNQualifiedName BNTypeGetStructureName(BNType* type);
 	BINARYNINJACOREAPI BNNamedTypeReference* BNGetRegisteredTypeName(BNType* type);
@@ -7145,8 +7163,22 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetTypeBuilderNamedTypeReference(BNTypeBuilder* type, BNNamedTypeReference* ntr);
 	BINARYNINJACOREAPI uint64_t BNGetTypeBuilderElementCount(BNTypeBuilder* type);
 	BINARYNINJACOREAPI uint64_t BNGetTypeBuilderOffset(BNTypeBuilder* type);
+	BINARYNINJACOREAPI uint64_t BNGetTypeBuilderFragmentOriginalOffsetBytes(BNTypeBuilder* type);
+	BINARYNINJACOREAPI size_t BNGetTypeBuilderFragmentOriginalWidthBytes(BNTypeBuilder* type);
+	BINARYNINJACOREAPI size_t BNGetTypeBuilderFragmentStartBit(BNTypeBuilder* type);
+	BINARYNINJACOREAPI size_t BNGetTypeBuilderFragmentWidthBits(BNTypeBuilder* type);
+	BINARYNINJACOREAPI size_t BNGetTypeBuilderFragmentTruncatedStartBits(BNTypeBuilder* type);
+	BINARYNINJACOREAPI size_t BNGetTypeBuilderFragmentWrapBit(BNTypeBuilder* type);
+	BINARYNINJACOREAPI BNEndianness BNGetTypeBuilderFragmentEndianness(BNTypeBuilder* type);
 	BINARYNINJACOREAPI void BNSetTypeBuilderOffset(BNTypeBuilder* type, uint64_t offset);
 	BINARYNINJACOREAPI void BNSetTypeBuilderPointerBase(BNTypeBuilder* type, BNPointerBaseType baseType, int64_t baseOffset);
+	BINARYNINJACOREAPI void BNSetTypeBuilderFragmentOriginalOffsetBytes(BNTypeBuilder* type, uint64_t offset);
+	BINARYNINJACOREAPI void BNSetTypeBuilderFragmentOriginalWidthBytes(BNTypeBuilder* type, size_t size);
+	BINARYNINJACOREAPI void BNSetTypeBuilderFragmentStartBit(BNTypeBuilder* type, size_t startBit);
+	BINARYNINJACOREAPI void BNSetTypeBuilderFragmentWidthBits(BNTypeBuilder* type, size_t widthBits);
+	BINARYNINJACOREAPI void BNSetTypeBuilderFragmentTruncatedStartBits(BNTypeBuilder* type, size_t truncatedBits);
+	BINARYNINJACOREAPI void BNSetTypeBuilderFragmentWrapBit(BNTypeBuilder* type, size_t wrapBit);
+	BINARYNINJACOREAPI void BNSetTypeBuilderFragmentEndianness(BNTypeBuilder* type, BNEndianness endianness);
 	BINARYNINJACOREAPI void BNSetFunctionTypeBuilderCanReturn(BNTypeBuilder* type, BNBoolWithConfidence* canReturn);
 	BINARYNINJACOREAPI void BNSetTypeBuilderPure(BNTypeBuilder* type, BNBoolWithConfidence* pure);
 	BINARYNINJACOREAPI void BNSetFunctionTypeBuilderParameters(

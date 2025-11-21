@@ -244,6 +244,10 @@ pub fn from_bn_type_internal(
             };
             TypeClass::Character(char_class)
         }
+        BNTypeClass::FragmentTypeClass => {
+            // XXX: possibly unrepresentable?
+            TypeClass::Void
+        }
     };
 
     let name = raw_ty.registered_name().map(|n| n.name().to_string());

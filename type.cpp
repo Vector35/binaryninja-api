@@ -716,6 +716,48 @@ int64_t Type::GetPointerBaseOffset() const
 }
 
 
+uint64_t Type::GetFragmentOriginalOffsetBytes() const
+{
+	return BNGetTypeFragmentOriginalOffsetBytes(m_object);
+}
+
+
+size_t Type::GetFragmentOriginalWidthBytes() const
+{
+	return BNGetTypeFragmentOriginalWidthBytes(m_object);
+}
+
+
+size_t Type::GetFragmentStartBit() const
+{
+	return BNGetTypeFragmentStartBit(m_object);
+}
+
+
+size_t Type::GetFragmentWidthBits() const
+{
+	return BNGetTypeFragmentWidthBits(m_object);
+}
+
+
+size_t Type::GetFragmentTruncatedStartBits() const
+{
+	return BNGetTypeFragmentTruncatedStartBits(m_object);
+}
+
+
+size_t Type::GetFragmentWrapBit() const
+{
+	return BNGetTypeFragmentWrapBit(m_object);
+}
+
+
+BNEndianness Type::GetFragmentEndianness() const
+{
+	return BNGetTypeFragmentEndianness(m_object);
+}
+
+
 Confidence<int64_t> Type::GetStackAdjustment() const
 {
 	BNOffsetWithConfidence result = BNGetTypeStackAdjustment(m_object);
@@ -988,6 +1030,31 @@ Ref<Type> Type::PointerType(size_t width, const Confidence<Ref<Type>>& type, con
 	vltlConf.confidence = vltl.GetConfidence();
 
 	return new Type(BNCreatePointerTypeOfWidth(width, &typeConf, &cnstConf, &vltlConf, refType));
+}
+
+
+Ref<Type> Type::FragmentType(size_t width, const Confidence<Ref<Type>>& type,
+		uint64_t offset, BNEndianness endianness)
+{
+	BNTypeWithConfidence typeConf;
+	typeConf.type = type->GetObject();
+	typeConf.confidence = type.GetConfidence();
+
+	return new Type(BNCreateFragmentType(width, &typeConf, offset, endianness));
+}
+
+
+Ref<Type> Type::FragmentType(size_t width, const Confidence<Ref<Type>>& type,
+	uint64_t originalFragmentOffsetBytes, size_t originalFragmentWidthBytes, BNEndianness endianness,
+	size_t fragmentStartBit, size_t fragmentWidthBits, size_t fragmentTruncatedStartBits, size_t wrapBit)
+{
+	BNTypeWithConfidence typeConf;
+	typeConf.type = type->GetObject();
+	typeConf.confidence = type.GetConfidence();
+
+	return new Type(BNCreateFragmentTypeBits(width, &typeConf,
+		originalFragmentOffsetBytes, originalFragmentWidthBytes, endianness,
+		fragmentStartBit, fragmentWidthBits, fragmentTruncatedStartBits, wrapBit));
 }
 
 
@@ -1985,6 +2052,31 @@ TypeBuilder TypeBuilder::PointerType(size_t width, const Confidence<Ref<Type>>& 
 }
 
 
+TypeBuilder TypeBuilder::FragmentType(size_t width, const Confidence<Ref<Type>>& type,
+		uint64_t offset, BNEndianness endianness)
+{
+	BNTypeWithConfidence typeConf;
+	typeConf.type = type->GetObject();
+	typeConf.confidence = type.GetConfidence();
+
+	return TypeBuilder(BNCreateFragmentTypeBuilder(width, &typeConf, offset, endianness));
+}
+
+
+TypeBuilder TypeBuilder::FragmentType(size_t width, const Confidence<Ref<Type>>& type,
+	uint64_t originalFragmentOffsetBytes, size_t originalFragmentWidthBytes, BNEndianness endianness,
+	size_t fragmentStartBit, size_t fragmentWidthBits, size_t fragmentTruncatedStartBits, size_t wrapBit)
+{
+	BNTypeWithConfidence typeConf;
+	typeConf.type = type->GetObject();
+	typeConf.confidence = type.GetConfidence();
+
+	return TypeBuilder(BNCreateFragmentTypeBuilderBits(width, &typeConf,
+		originalFragmentOffsetBytes, originalFragmentWidthBytes, endianness,
+		fragmentStartBit, fragmentWidthBits, fragmentTruncatedStartBits, wrapBit));
+}
+
+
 TypeBuilder TypeBuilder::ArrayType(const Confidence<Ref<Type>>& type, uint64_t elem)
 {
 	BNTypeWithConfidence typeConf;
@@ -2180,6 +2272,55 @@ TypeBuilder& TypeBuilder::SetPointerBase(BNPointerBaseType baseType, int64_t bas
 }
 
 
+TypeBuilder& TypeBuilder::SetFragmentOriginalOffsetBytes(uint64_t offset)
+{
+	BNSetTypeBuilderFragmentOriginalOffsetBytes(m_object, offset);
+	return *this;
+}
+
+
+TypeBuilder& TypeBuilder::SetFragmentOriginalWidthBytes(size_t width)
+{
+	BNSetTypeBuilderFragmentOriginalWidthBytes(m_object, width);
+	return *this;
+}
+
+
+TypeBuilder& TypeBuilder::SetFragmentStartBit(size_t startBit)
+{
+	BNSetTypeBuilderFragmentStartBit(m_object, startBit);
+	return *this;
+}
+
+
+TypeBuilder& TypeBuilder::SetFragmentWidthBits(size_t widthBits)
+{
+	BNSetTypeBuilderFragmentWidthBits(m_object, widthBits);
+	return *this;
+}
+
+
+TypeBuilder& TypeBuilder::SetFragmentTruncatedStartBits(size_t truncatedBits)
+{
+	BNSetTypeBuilderFragmentTruncatedStartBits(m_object, truncatedBits);
+	return *this;
+}
+
+
+TypeBuilder& TypeBuilder::SetFragmentWrapBit(size_t wrapBit)
+{
+	BNSetTypeBuilderFragmentWrapBit(m_object, wrapBit);
+	return *this;
+}
+
+
+TypeBuilder& TypeBuilder::SetFragmentEndianness(BNEndianness endianness)
+{
+	BNSetTypeBuilderFragmentEndianness(m_object, endianness);
+	return *this;
+}
+
+
 std::set<BNPointerSuffix> TypeBuilder::GetPointerSuffix() const
 {
 	size_t count = 0;
@@ -2332,6 +2473,48 @@ BNPointerBaseType TypeBuilder::GetPointerBaseType() const
 int64_t TypeBuilder::GetPointerBaseOffset() const
 {
 	return BNTypeBuilderGetPointerBaseOffset(m_object);
+}
+
+
+uint64_t TypeBuilder::GetFragmentOriginalOffsetBytes() const
+{
+	return BNGetTypeBuilderFragmentOriginalOffsetBytes(m_object);
+}
+
+
+size_t TypeBuilder::GetFragmentOriginalWidthBytes() const
+{
+	return BNGetTypeBuilderFragmentOriginalWidthBytes(m_object);
+}
+
+
+size_t TypeBuilder::GetFragmentStartBit() const
+{
+	return BNGetTypeBuilderFragmentStartBit(m_object);
+}
+
+
+size_t TypeBuilder::GetFragmentWidthBits() const
+{
+	return BNGetTypeBuilderFragmentWidthBits(m_object);
+}
+
+
+size_t TypeBuilder::GetFragmentTruncatedStartBits() const
+{
+	return BNGetTypeBuilderFragmentTruncatedStartBits(m_object);
+}
+
+
+size_t TypeBuilder::GetFragmentWrapBit() const
+{
+	return BNGetTypeBuilderFragmentWrapBit(m_object);
+}
+
+
+BNEndianness TypeBuilder::GetFragmentEndianness() const
+{
+	return BNGetTypeBuilderFragmentEndianness(m_object);
 }
 
 

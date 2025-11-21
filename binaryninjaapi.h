@@ -10676,22 +10676,6 @@ namespace BinaryNinja {
 
 		/*! Retrieve the Type Class for this Structure
 
-		 	One of:
-
-		        VoidTypeClass
-				BoolTypeClass
-				IntegerTypeClass
-				FloatTypeClass
-				StructureTypeClass
-				EnumerationTypeClass
-				PointerTypeClass
-				ArrayTypeClass
-				FunctionTypeClass
-				VarArgsTypeClass
-				ValueTypeClass
-				NamedTypeReferenceClass
-				WideCharTypeClass
-
 		    \return The type class
 		*/
 		BNTypeClass GetClass() const;
@@ -10800,6 +10784,14 @@ namespace BinaryNinja {
 		uint64_t GetOffset() const;
 		BNPointerBaseType GetPointerBaseType() const;
 		int64_t GetPointerBaseOffset() const;
+
+		uint64_t GetFragmentOriginalOffsetBytes() const;
+		size_t GetFragmentOriginalWidthBytes() const;
+		size_t GetFragmentStartBit() const;
+		size_t GetFragmentWidthBits() const;
+		size_t GetFragmentTruncatedStartBits() const;
+		size_t GetFragmentWrapBit() const;
+		BNEndianness GetFragmentEndianness() const;
 
 		std::set<BNPointerSuffix> GetPointerSuffix() const;
 		std::string GetPointerSuffixString() const;
@@ -10916,6 +10908,33 @@ namespace BinaryNinja {
 		static Ref<Type> PointerType(size_t width, const Confidence<Ref<Type>>& type,
 		    const Confidence<bool>& cnst = Confidence<bool>(false, 0),
 		    const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
+
+		/*! Create a Fragment type, which represents a bounded load from an existing type
+
+			\param width Width of the fragment in bytes
+			\param type Type that this fragment was loaded from
+			\param offset Offset into type that this fragment represents
+			\param endianness Endianness of the load operation creating the fragment
+			\return The created type
+		*/
+		static Ref<Type> FragmentType(size_t width, const Confidence<Ref<Type>>& type, uint64_t offset, BNEndianness endianness);
+
+		/*! Create a Fragment type, which represents a bounded load from an existing type
+
+			\param width Width of the fragment in its current storage location; can be larger/smaller than the original fragment load
+			\param type Type that this fragment was loaded from
+			\param originalFragmentOffsetBytes Offset into type that this fragment represents
+			\param originalFragmentWidthBytes Width of the initial load that created the fragment
+			\param endianness Endianness of the load operation creating the fragment
+			\param fragmentStartBit Logical bit position inside the fragment container where fragment data starts (0 = lsb of fragment type)
+			\param fragmentWidthBits Number of remaining contiguous bits still represented in the fragment type
+			\param fragmentTruncatedStartBits Number of low-order bits of fragment data lost
+			\param wrapBit Logical bit position inside the fragment container where fragment data wraps around (0 = irrelevant)
+			\return The created type
+		*/
+		static Ref<Type> FragmentType(size_t width, const Confidence<Ref<Type>>& type,
+			uint64_t originalFragmentOffsetBytes, size_t originalFragmentWidthBytes, BNEndianness endianness,
+			size_t fragmentStartBit, size_t fragmentWidthBits, size_t fragmentTruncatedStartBits, size_t wrapBit = 0);
 
 		/*! Create an Array Type
 
@@ -11217,11 +11236,27 @@ namespace BinaryNinja {
 		BNPointerBaseType GetPointerBaseType() const;
 		int64_t GetPointerBaseOffset() const;
 
+		uint64_t GetFragmentOriginalOffsetBytes() const;
+		size_t GetFragmentOriginalWidthBytes() const;
+		size_t GetFragmentStartBit() const;
+		size_t GetFragmentWidthBits() const;
+		size_t GetFragmentTruncatedStartBits() const;
+		size_t GetFragmentWrapBit() const;
+		BNEndianness GetFragmentEndianness() const;
+
 		TypeBuilder& SetOffset(uint64_t offset);
 		TypeBuilder& SetFunctionCanReturn(const Confidence<bool>& canReturn);
 		TypeBuilder& SetPure(const Confidence<bool>& pure);
 		TypeBuilder& SetParameters(const std::vector<FunctionParameter>& params);
 		TypeBuilder& SetPointerBase(BNPointerBaseType baseType, int64_t baseOffset);
+
+		TypeBuilder& SetFragmentOriginalOffsetBytes(uint64_t offset);
+		TypeBuilder& SetFragmentOriginalWidthBytes(size_t size);
+		TypeBuilder& SetFragmentStartBit(size_t startBit);
+		TypeBuilder& SetFragmentWidthBits(size_t widthBits);
+		TypeBuilder& SetFragmentTruncatedStartBits(size_t truncatedBits);
+		TypeBuilder& SetFragmentWrapBit(size_t wrapBit);
+		TypeBuilder& SetFragmentEndianness(BNEndianness endianness);
 
 		std::set<BNPointerSuffix> GetPointerSuffix() const;
 		std::string GetPointerSuffixString() const;
@@ -11274,6 +11309,10 @@ namespace BinaryNinja {
 		static TypeBuilder PointerType(size_t width, const Confidence<Ref<Type>>& type,
 		    const Confidence<bool>& cnst = Confidence<bool>(false, 0),
 		    const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
+		static TypeBuilder FragmentType(size_t width, const Confidence<Ref<Type>>& type, uint64_t offset, BNEndianness endianness);
+		static TypeBuilder FragmentType(size_t width, const Confidence<Ref<Type>>& type,
+			uint64_t originalFragmentOffsetBytes, size_t originalFragmentWidthBytes, BNEndianness endianness,
+			size_t fragmentStartBit, size_t fragmentWidthBits, size_t fragmentTruncatedStartBits, size_t wrapBit = 0);
 		static TypeBuilder ArrayType(const Confidence<Ref<Type>>& type, uint64_t elem);
 		static TypeBuilder FunctionType(const Confidence<Ref<Type>>& returnValue,
 		    const Confidence<Ref<CallingConvention>>& callingConvention, const std::vector<FunctionParameter>& params,

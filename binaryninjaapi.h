@@ -24217,6 +24217,67 @@ namespace BinaryNinja {
 		std::optional<DerivedString> RecognizeStructInit(
 			const HighLevelILInstruction& instr, Type* type, const std::map<uint64_t, int64_t>& values) override;
 	};
+
+	class DatabaseObject: public CoreRefCountObject<BNDatabaseObject, BNNewDatabaseObjectReference, BNFreeDatabaseObject>
+	{
+	public:
+		explicit DatabaseObject(BNDatabaseObject* database);
+		virtual ~DatabaseObject();
+
+		// TODO: User subclassing
+		int GetType() const;
+		std::string GetId() const;
+		std::string GetDescription() const;
+		Ref<DatabaseObject> GetParent() const;
+		std::unordered_map<std::string, Ref<DatabaseObject>> GetChildren();
+		std::vector<std::string> GetDependencies() const;
+	};
+
+	class DiffState:
+		public CoreRefCountObject<BNDiffState, BNNewDiffStateReference, BNFreeDiffState>
+	{
+	public:
+		explicit DiffState(BNDiffState* state);
+		explicit DiffState(Ref<Logger> logger);
+		virtual ~DiffState();
+
+		std::vector<std::string> GetErrors() const;
+		void ClearErrors();
+
+		Ref<class DiffObject> GenerateDiff(
+			Ref<DatabaseObject> base,
+			Ref<DatabaseObject> left,
+			Ref<DatabaseObject> right
+		);
+
+		bool ApplyDiff(
+			Ref<class DiffObject> diff,
+			Ref<DatabaseObject> base,
+			Ref<DatabaseObject> left,
+			Ref<DatabaseObject> right,
+			Ref<DatabaseObject> result
+		);
+
+		bool IsDiffed(Ref<DatabaseObject> object) const;
+		bool IsApplied(Ref<class DiffObject> object) const;
+	};
+
+	class DiffObject:
+		public CoreRefCountObject<BNDiffObject, BNNewDiffObjectReference, BNFreeDiffObject>
+	{
+	public:
+		DiffObject(BNDiffObject* object);
+		virtual ~DiffObject();
+
+		std::string GetBase() const;
+		std::string GetLeft() const;
+		std::string GetRight() const;
+
+		std::unordered_map<std::string, Ref<DiffObject>> GetChildren() const;
+
+		BNMergeStrategy GetMergeStrategy() const;
+		void SetMergeStrategy(BNMergeStrategy strategy);
+	};
 }  // namespace BinaryNinja
 
 

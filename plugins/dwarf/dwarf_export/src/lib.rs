@@ -391,6 +391,10 @@ fn export_type(
             );
             Some(wide_char_die_uid)
         }
+        TypeClass::FragmentTypeClass => {
+            error!("Fragment types are not representable in DWARF");
+            None
+        }
     }
 }
 

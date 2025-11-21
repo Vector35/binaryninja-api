@@ -832,7 +832,8 @@ extern "C"
 		VarArgsTypeClass = 9,
 		ValueTypeClass = 10,
 		NamedTypeReferenceClass = 11,
-		WideCharTypeClass = 12
+		WideCharTypeClass = 12,
+		FragmentTypeClass = 13,
 	} BNTypeClass;
 
 	typedef enum BNNamedTypeReferenceClass

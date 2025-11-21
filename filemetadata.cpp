@@ -285,6 +285,15 @@ Ref<Database> FileMetadata::GetDatabase()
 }
 
 
+Ref<DatabaseObject> FileMetadata::GetDatabaseObject()
+{
+	BNDatabaseObject* object = BNGetFileDatabaseObject(m_object, nullptr);
+	if (!object)
+		return nullptr;
+	return new DatabaseObject(object);
+}
+
+
 bool FileMetadata::Rebase(BinaryView* data, uint64_t address)
 {
 	return BNRebase(data->GetObject(), address);

@@ -871,7 +871,8 @@ extern "C"
 		VarArgsTypeClass = 9,
 		ValueTypeClass = 10,
 		NamedTypeReferenceClass = 11,
-		WideCharTypeClass = 12
+		WideCharTypeClass = 12,
+		FragmentTypeClass = 13,
 	};
 
 	BN_ENUM(uint8_t, BNNamedTypeReferenceClass)

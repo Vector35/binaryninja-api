@@ -3458,6 +3458,8 @@ class WideCharType(Type):
 		assert core_type is not None, "core.BNCreateWideCharType returned None"
 		return cls(core_type, platform, confidence)
 
+class FragmentType(Type):
+	pass
 
 Types = {
     TypeClass.VoidTypeClass: VoidType, TypeClass.BoolTypeClass: BoolType, TypeClass.IntegerTypeClass: IntegerType,
@@ -3465,6 +3467,7 @@ Types = {
     TypeClass.EnumerationTypeClass: EnumerationType, TypeClass.PointerTypeClass: PointerType,
     TypeClass.ArrayTypeClass: ArrayType, TypeClass.FunctionTypeClass: FunctionType,
     TypeClass.NamedTypeReferenceClass: NamedTypeReferenceType, TypeClass.WideCharTypeClass: WideCharType,
+    TypeClass.FragmentTypeClass: FragmentType,
 }
 
 

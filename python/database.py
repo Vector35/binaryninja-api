@@ -581,11 +581,11 @@ class DiffObject:
 			core.BNFreeStringList(names, count)
 
 	@property
-	def strategy(self) -> 'MergeStrategy':
+	def merge_strategy(self) -> 'MergeStrategy':
 		"""Get the merge strategy for this diff object"""
 		return core.BNGetDiffObjectMergeStrategy(self.handle)
 
-	@strategy.setter
-	def strategy(self, value: 'MergeStrategy'):
+	@merge_strategy.setter
+	def merge_strategy(self, value: 'MergeStrategy'):
 		"""Set the merge strategy for this diff object"""
 		core.BNSetDiffObjectMergeStrategy(self.handle, value)

@@ -18,9 +18,11 @@ use binaryninja::workflow::{activity, Activity, AnalysisContext, Workflow, Workf
 use itertools::Itertools;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
+use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::Instant;
+use std::sync::atomic::AtomicUsize;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use warp::r#type::class::function::{Location, RegisterLocation, StackLocation};
 use warp::signature::function::{Function, FunctionGUID};
 use warp::target::Target;
@@ -149,7 +151,7 @@ pub fn run_matcher(view: &BinaryView) {
             function_guid_with_sources
                 .into_par_iter()
                 .for_each(|(guid, sources)| {
-                    let matched_functions: Vec<Function> = sources
+                    let mut matched_functions: Vec<Function> = sources
                         .iter()
                         .flat_map(|source| {
                             container
@@ -157,6 +159,21 @@ pub fn run_matcher(view: &BinaryView) {
                                 .unwrap_or_default()
                         })
                         .collect();
+
+                    // We sort primarily by symbol, then by type, so we can deduplicate in-place.
+                    matched_functions.sort_unstable_by(|a, b| match a.symbol.cmp(&b.symbol) {
+                        Ordering::Equal => match (&a.ty, &b.ty) {
+                            (None, None) => Ordering::Equal,
+                            (None, Some(_)) => Ordering::Less,
+                            (Some(_), None) => Ordering::Greater,
+                            // TODO: We still need to order the types, probably cant do this in place.
+                            // TODO: Once Type can be ordered, we can remove this entire explicit match stmt.
+                            (Some(_), Some(_)) => Ordering::Equal,
+                        },
+                        other => other,
+                    });
+                    // This removes consecutive duplicates efficiently
+                    matched_functions.dedup_by(|a, b| a.symbol == b.symbol && a.ty == b.ty);
 
                     // NOTE: See the comment in `match_function_from_constraints` about this fast fail.
                     if matcher
@@ -182,7 +199,7 @@ pub fn run_matcher(view: &BinaryView) {
                         if let Some(matched_function) =
                             matcher.match_function_from_constraints(function, &matched_functions)
                         {
-                            matched_count.fetch_add(1, Ordering::Relaxed);
+                            matched_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                             // We were able to find a match, add it to the match cache and then mark the function
                             // as requiring updates; this is so that we know about it in the applier activity.
                             insert_cached_function_match(function, Some(matched_function.clone()));
@@ -199,7 +216,7 @@ pub fn run_matcher(view: &BinaryView) {
     log::info!(
         "Function matching took {:.3} seconds and matched {} functions",
         start.elapsed().as_secs_f64(),
-        matched_count.load(Ordering::Relaxed)
+        matched_count.load(std::sync::atomic::Ordering::Relaxed)
     );
     background_task.finish();
 

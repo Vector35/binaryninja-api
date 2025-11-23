@@ -155,8 +155,10 @@ impl ConstraintBuilder {
             let guid_constraint = Constraint::from_function(&guid, Some(offset));
             constraints.push(guid_constraint);
         }
-        let symbol_constraint = self.related_symbol_constraint(&function.symbol(), offset);
-        constraints.push(symbol_constraint);
+        if let Some(symbol) = function.defined_symbol() {
+            let symbol_constraint = self.related_symbol_constraint(&symbol, offset);
+            constraints.push(symbol_constraint);
+        }
         constraints
     }
 

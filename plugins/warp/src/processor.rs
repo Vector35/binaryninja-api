@@ -837,7 +837,7 @@ impl WarpFileProcessor {
     ) -> Result<HashMap<Target, Vec<SignatureChunk<'static>>>, ProcessingError> {
         let is_function_named = |f: &Guard<BNFunction>| {
             self.included_functions == IncludedFunctionsField::All
-                || view.symbol_by_address(f.start()).is_some()
+                || f.defined_symbol().is_some()
                 || f.has_user_annotations()
         };
         let is_function_tagged = |f: &Guard<BNFunction>| {

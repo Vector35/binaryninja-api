@@ -338,11 +338,21 @@ impl Function {
         }
     }
 
+    /// Returns the symbol at the function start address or a default symbol.
+    ///
+    /// NOTE: If you want to only get the symbol if there is actually a symbol, use [`Function::defined_symbol`].
     pub fn symbol(&self) -> Ref<Symbol> {
         unsafe {
             let sym = BNGetFunctionSymbol(self.handle);
             Symbol::ref_from_raw(sym)
         }
+    }
+
+    /// Returns the symbol at the function start address or `None` if there is no symbol.
+    ///
+    /// NOTE: If you want to get a default "sub_X" symbol use [`Function::symbol`].
+    pub fn defined_symbol(&self) -> Option<Ref<Symbol>> {
+        self.view().symbol_by_address(self.start())
     }
 
     /// Returns true when the function's symbol binding marks it as exported.

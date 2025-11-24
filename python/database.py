@@ -408,6 +408,14 @@ class DatabaseObject:
 		return core.BNGetDatabaseObjectDescription(self.handle)
 
 	@property
+	def metadata(self) -> Optional['binaryninja.Metadata']:
+		"""Get specific metadata about this object (read-only)"""
+		handle = core.BNGetDatabaseObjectMetadata(self.handle)
+		if handle is None:
+			return None
+		return binaryninja.Metadata(handle=handle)
+
+	@property
 	def parent(self) -> Optional['DatabaseObject']:
 		"""Get the parent database object (read-only)"""
 		handle = core.BNGetDatabaseObjectParent(self.handle)

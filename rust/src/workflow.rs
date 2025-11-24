@@ -290,7 +290,7 @@ impl AnalysisContext {
 
     /// Get the end address (the highest address) from the cached [`MemoryMap`].
     ///
-    /// NOTE: This is a lock-free alternative to [`BinaryViewBase::end`].
+    /// NOTE: This is a lock-free alternative to [`BinaryViewExt::end`].
     pub fn end(&self) -> u64 {
         unsafe { BNAnalysisContextGetEnd(self.handle.as_ptr()) }
     }
@@ -325,7 +325,7 @@ impl AnalysisContext {
 
     /// Get the segment containing the given address from the cached [`MemoryMap`].
     ///
-    /// NOTE: This is a lock-free alternative to [`BinaryView::segment_at`].
+    /// NOTE: This is a lock-free alternative to [`BinaryViewExt::segment_at`].
     pub fn segment_at(&self, addr: u64) -> Option<Ref<Segment>> {
         unsafe {
             let result = BNAnalysisContextGetSegmentAt(self.handle.as_ptr(), addr);

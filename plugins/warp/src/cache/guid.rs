@@ -49,7 +49,7 @@ where
     // TODO: Implied constraints, symbol name, image offset
     let cs_constraints = cached_call_site_constraints(function);
     let adj_constraints = cached_adjacency_constraints(function, filter);
-    cs_constraints.union(&adj_constraints).cloned().collect()
+    cs_constraints.union(&adj_constraints).copied().collect()
 }
 
 pub fn cached_call_site_constraints(function: &BNFunction) -> HashSet<Constraint> {

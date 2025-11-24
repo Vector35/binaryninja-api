@@ -11,7 +11,7 @@ use warp::signature::function::Function;
 /// IMPORTANT: This will mark the function as needing updates, if you intend to fill in functions with
 /// no match (i.e. `None`), then you must change this function to prevent marking that as needing updates.
 /// However, it's perfectly valid to remove a match and need to update the function still, so be careful.
-pub fn insert_cached_function_match(function: &BNFunction, matched_function: Option<Function>) {
+pub fn insert_cached_function_match(function: &BNFunction, matched_function: Option<&Function>) {
     let view = function.view();
     let function_start = function.start();
     // NOTE: If we expect to run match_function multiple times on a function, we should move this elsewhere.

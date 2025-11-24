@@ -68,10 +68,7 @@ pub unsafe extern "C" fn BNWARPFunctionApply(
         false => {
             // Set the matched function to `function`.
             let matched_function = ManuallyDrop::new(Arc::from_raw(function));
-            insert_cached_function_match(
-                &analysis_function,
-                Some(matched_function.as_ref().clone()),
-            )
+            insert_cached_function_match(&analysis_function, Some(&matched_function))
         }
         true => {
             // We are removing the previous match.

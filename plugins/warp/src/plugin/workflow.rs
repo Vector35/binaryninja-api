@@ -202,7 +202,7 @@ pub fn run_matcher(view: &BinaryView) {
                             matched_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                             // We were able to find a match, add it to the match cache and then mark the function
                             // as requiring updates; this is so that we know about it in the applier activity.
-                            insert_cached_function_match(function, Some(matched_function.clone()));
+                            insert_cached_function_match(function, Some(matched_function));
                         }
                     }
                 });

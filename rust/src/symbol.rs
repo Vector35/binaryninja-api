@@ -15,7 +15,7 @@
 //! Interfaces for the various kinds of symbols in a binary.
 
 use std::fmt;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::hash::{Hash, Hasher};
 use std::ptr;
 
@@ -299,6 +299,12 @@ impl Debug for Symbol {
             .field("auto_defined", &self.auto_defined())
             .field("external", &self.external())
             .finish()
+    }
+}
+
+impl Display for Symbol {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.short_name().to_string_lossy())
     }
 }
 

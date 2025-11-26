@@ -47,7 +47,7 @@ use crate::project::file::ProjectFile;
 use crate::rc::*;
 use crate::references::{CodeReference, DataReference};
 use crate::relocation::Relocation;
-use crate::section::{Section, SectionBuilder};
+use crate::section::{Section, SectionBuilder, SectionMap};
 use crate::segment::{Segment, SegmentBuilder};
 use crate::settings::Settings;
 use crate::string::*;
@@ -1166,6 +1166,14 @@ pub trait BinaryViewExt: BinaryViewBase {
                 false => Some(Section::ref_from_raw(raw_section_ptr)),
                 true => None,
             }
+        }
+    }
+
+    fn section_map(&self) -> Ref<SectionMap> {
+        unsafe {
+            let raw_section_map_ptr = BNGetSectionMap(self.as_ref().handle);
+            assert!(!raw_section_map_ptr.is_null());
+            SectionMap::ref_from_raw(raw_section_map_ptr)
         }
     }
 

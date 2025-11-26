@@ -5307,6 +5307,19 @@ namespace BinaryNinja {
 		bool AutoDefined() const;
 	};
 
+	class SectionMap : public CoreRefCountObject<BNSectionMap, BNNewSectionMapReference, BNFreeSectionMap>
+	{
+	  public:
+		SectionMap(BNSectionMap* map);
+		std::vector<Ref<Section>> GetSections() const;
+		std::vector<Ref<Section>> GetSectionsAt(uint64_t offset) const;
+		Ref<Section> GetSectionByName(const std::string& name) const;
+		bool IsOffsetCodeSemantics(uint64_t offset) const;
+		bool IsOffsetExternSemantics(uint64_t offset) const;
+		bool IsOffsetWritableSemantics(uint64_t offset) const;
+		bool IsOffsetReadOnlySemantics(uint64_t offset) const;
+	};
+
 	struct RegisterValue
 	{
 		BNRegisterValueType state;
@@ -7912,6 +7925,8 @@ namespace BinaryNinja {
 			\return The Section with that name
 		*/
 		Ref<Section> GetSectionByName(const std::string& name);
+
+		Ref<SectionMap> GetSectionMap();
 
 		/*! Create unique names for all items in the input list, modifying them if they are not unique
 

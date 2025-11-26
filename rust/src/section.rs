@@ -24,6 +24,94 @@ use crate::binary_view::BinaryView;
 use crate::rc::*;
 use crate::string::*;
 
+/// An immutable view of the sections in a [`BinaryView`].
+pub struct SectionMap {
+    handle: *mut BNSectionMap,
+}
+
+impl SectionMap {
+    pub(crate) unsafe fn ref_from_raw(handle: *mut BNSectionMap) -> Ref<Self> {
+        debug_assert!(!handle.is_null());
+        Ref::new(Self { handle })
+    }
+
+    pub fn section_by_name(&self, name: impl IntoCStr) -> Option<Ref<Section>> {
+        unsafe {
+            let raw_name = name.to_cstr();
+            let name_ptr = raw_name.as_ptr();
+            let raw_section_ptr = BNSectionMapGetSectionByName(self.handle, name_ptr);
+            match raw_section_ptr.is_null() {
+                false => Some(Section::ref_from_raw(raw_section_ptr)),
+                true => None,
+            }
+        }
+    }
+
+    pub fn sections(&self) -> Array<Section> {
+        unsafe {
+            let mut count = 0;
+            let sections = BNSectionMapGetSections(self.handle, &mut count);
+            Array::new(sections, count, ())
+        }
+    }
+
+    pub fn sections_at(&self, addr: u64) -> Array<Section> {
+        unsafe {
+            let mut count = 0;
+            let sections = BNSectionMapGetSectionsAt(self.handle, addr, &mut count);
+            Array::new(sections, count, ())
+        }
+    }
+
+    /// Consults the [`Section`]'s current [`Semantics`] to determine if the offset has code semantics.
+    pub fn offset_has_code_semantics(&self, offset: u64) -> bool {
+        unsafe { BNSectionMapIsOffsetCodeSemantics(self.handle, offset) }
+    }
+
+    /// Check if the offset is within a [`Section`] with [`Semantics::External`].
+    pub fn offset_has_extern_semantics(&self, offset: u64) -> bool {
+        unsafe { BNSectionMapIsOffsetExternSemantics(self.handle, offset) }
+    }
+
+    /// Consults the [`Section`]'s current [`Semantics`] to determine if the offset has writable semantics.
+    pub fn offset_has_writable_semantics(&self, offset: u64) -> bool {
+        unsafe { BNSectionMapIsOffsetWritableSemantics(self.handle, offset) }
+    }
+
+    /// Consults the [`Section`]'s current [`Semantics`] to determine if the offset has read only semantics.
+    pub fn offset_has_read_only_semantics(&self, offset: u64) -> bool {
+        unsafe { BNSectionMapIsOffsetReadOnlySemantics(self.handle, offset) }
+    }
+}
+
+impl fmt::Debug for SectionMap {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("SectionMap")
+            .field("sections", &self.sections().to_vec())
+            .finish()
+    }
+}
+
+impl ToOwned for SectionMap {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+unsafe impl RefCountable for SectionMap {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Ref::new(Self {
+            handle: BNNewSectionMapReference(handle.handle),
+        })
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeSectionMap(handle.handle);
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Default)]
 pub enum Semantics {
     #[default]

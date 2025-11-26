@@ -314,6 +314,7 @@ extern "C"
 	typedef struct BNConstantRenderer BNConstantRenderer;
 	typedef struct BNStringRecognizer BNStringRecognizer;
 	typedef struct BNCustomStringType BNCustomStringType;
+	typedef struct BNSectionMap BNSectionMap;
 
 	typedef struct BNRemoteFileSearchMatch
 	{
@@ -4591,6 +4592,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeSectionList(BNSection** sections, size_t count);
 	BINARYNINJACOREAPI BNSection* BNGetSectionByName(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI char** BNGetUniqueSectionNames(BNBinaryView* view, const char** names, size_t count);
+	BINARYNINJACOREAPI BNSectionMap* BNGetSectionMap(BNBinaryView* view);
 
 	BINARYNINJACOREAPI BNAddressRange* BNGetAllocatedRanges(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI BNAddressRange* BNGetMappedAddressRanges(BNBinaryView* view, size_t* count);
@@ -8860,6 +8862,16 @@ extern "C"
 		BNHighLevelILFunction* il, size_t exprIndex, BNType* type, int64_t val, uint64_t offset, BNDerivedString* out);
 	BINARYNINJACOREAPI bool BNStringRecognizerRecognizeImport(BNStringRecognizer* recognizer, BNHighLevelILFunction* il,
 		size_t exprIndex, BNType* type, int64_t val, BNDerivedString* out);
+
+	BINARYNINJACOREAPI bool BNSectionMapIsOffsetCodeSemantics(BNSectionMap* map, uint64_t offset);
+	BINARYNINJACOREAPI bool BNSectionMapIsOffsetExternSemantics(BNSectionMap* map, uint64_t offset);
+	BINARYNINJACOREAPI bool BNSectionMapIsOffsetWritableSemantics(BNSectionMap* map, uint64_t offset);
+	BINARYNINJACOREAPI bool BNSectionMapIsOffsetReadOnlySemantics(BNSectionMap* map, uint64_t offset);
+	BINARYNINJACOREAPI BNSection** BNSectionMapGetSections(BNSectionMap* map, size_t* count);
+	BINARYNINJACOREAPI BNSection** BNSectionMapGetSectionsAt(BNSectionMap* map, uint64_t addr, size_t* count);
+	BINARYNINJACOREAPI BNSection* BNSectionMapGetSectionByName(BNSectionMap* map, const char* name);
+	BINARYNINJACOREAPI BNSectionMap* BNNewSectionMapReference(BNSectionMap* map);
+	BINARYNINJACOREAPI void BNFreeSectionMap(BNSectionMap* map);
 
 #ifdef __cplusplus
 }

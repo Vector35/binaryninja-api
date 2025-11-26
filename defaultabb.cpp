@@ -9,44 +9,6 @@
 using namespace std;
 using namespace BinaryNinja;
 
-// TODO: Decomposed from BinaryView::IsOffsetCodeSemantics BinaryView::IsOffsetExternSemantics
-// TODO: When the better sections model is merged, remove this
-static bool IsOffsetCodeSemanticsFast(BinaryView* data, const vector<Section*>& readOnlySections, const vector<Section*>& dataExternSections, uint64_t offset)
-{
-	if (!data->IsOffsetBackedByFile(offset))
-		return false;
-
-	for (const auto& i : readOnlySections)
-	{
-		if ((offset >= i->GetStart()) && (offset < i->GetEnd()))
-			return true;
-	}
-	for (const auto& i : dataExternSections)
-	{
-		if ((offset >= i->GetStart()) && (offset < i->GetEnd()))
-			return false;
-	}
-
-	return data->IsOffsetExecutable(offset);
-}
-
-
-static bool IsOffsetExternSemanticsFast(BinaryView* data, const vector<Section*>& externSections, uint64_t offset)
-{
-	if (data->IsOffsetBackedByFile(offset))
-		return false;
-	if (data->IsOffsetExecutable(offset))
-		return false;
-
-	for (const auto& i : externSections)
-	{
-		if ((offset >= i->GetStart()) && (offset < i->GetEnd()))
-			return true;
-	}
-
-	return false;
-}
-
 
 static bool GetNextFunctionAfterAddress(Ref<BinaryView> data, Ref<Platform> platform, uint64_t address, Ref<Function>& nextFunc)
 {
@@ -59,6 +21,7 @@ static bool GetNextFunctionAfterAddress(Ref<BinaryView> data, Ref<Platform> plat
 void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnalysisContext& context)
 {
 	auto data = function->GetView();
+	auto sectionMap = data->GetSectionMap();
 	queue<ArchAndAddr> blocksToProcess;
 	map<ArchAndAddr, Ref<BasicBlock>> instrBlocks;
 	set<ArchAndAddr> seenBlocks;
@@ -93,31 +56,6 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 			return (strRef.length >= byteLimit);
 	};
 
-	// TODO: Decomposed from BinaryView::IsOffsetCodeSemantics BinaryView::IsOffsetExternSemantics
-	// TODO: When the better sections model is merged, remove this
-	auto sections = data->GetSections();
-	vector<Section*> externSections, readOnlySections, dataExternSections;
-	externSections.reserve(sections.size());
-	readOnlySections.reserve(sections.size());
-	dataExternSections.reserve(sections.size());
-	for (auto& section: sections)
-	{
-		if (section->GetSemantics() == ExternalSectionSemantics)
-		{
-			externSections.push_back(section);
-		}
-		if (section->GetSemantics() == ReadOnlyCodeSectionSemantics)
-		{
-			readOnlySections.push_back(section);
-		}
-		if ((section->GetSemantics() == ReadOnlyDataSectionSemantics) ||
-			(section->GetSemantics() == ReadWriteDataSectionSemantics) ||
-			(section->GetSemantics() == ExternalSectionSemantics))
-		{
-			dataExternSections.push_back(section);
-		}
-	}
-
 	// Start by processing the entry point of the function
 	Ref<Platform> funcPlatform = function->GetPlatform();
 	auto start = function->GetStart();
@@ -136,7 +74,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 		// Extract the bounds of the section containing this
 		// function, to avoid calling into the BinaryView on
 		// every instruction.
-		for (auto& sec : data->GetSectionsAt(start))
+		for (auto& sec : sectionMap->GetSectionsAt(start))
 		{
 			if (sec->GetSemantics() == ReadOnlyDataSectionSemantics)
 				continue;
@@ -295,7 +233,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 			uint64_t instrEnd = location.address + info.length - 1;
 			bool slowPath = !fastValidate || (instrEnd < fastStartAddr) || (instrEnd > fastEndAddr);
 			if (slowPath &&
-				((!IsOffsetCodeSemanticsFast(data, readOnlySections, dataExternSections, instrEnd) && IsOffsetCodeSemanticsFast(data, readOnlySections, dataExternSections,location.address)) ||
+				((!sectionMap->IsOffsetCodeSemantics(instrEnd) && sectionMap->IsOffsetCodeSemantics(location.address)) ||
 				(!data->IsOffsetBackedByFile(instrEnd) && data->IsOffsetBackedByFile(location.address))))
 			{
 				string text = fmt::format("Instruction at {:#x} straddles a non-code section", location.address);
@@ -410,7 +348,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 						// Normal branch, resume disassembly at targets
 						endsBlock = true;
 						// Target of a call instruction, add the function to the analysis
-						if (IsOffsetExternSemanticsFast(data, externSections, info.branchTarget[i]))
+						if (sectionMap->IsOffsetExternSemantics(info.branchTarget[i]))
 						{
 							// Deal with direct pointers into the extern section
 							DataVariable dataVar;
@@ -487,7 +425,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 
 					case CallDestination:
 						// Target of a call instruction, add the function to the analysis
-						if (IsOffsetExternSemanticsFast(data, externSections, info.branchTarget[i]))
+						if (sectionMap->IsOffsetExternSemantics(info.branchTarget[i]))
 						{
 							// Deal with direct pointers into the extern section
 							DataVariable dataVar;
@@ -514,8 +452,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 						{
 							target = ArchAndAddr(info.branchArch[i] ? new CoreArchitecture(info.branchArch[i]) : location.arch, info.branchTarget[i]);
 
-							if (!fastPath && !IsOffsetCodeSemanticsFast(data, readOnlySections, dataExternSections, target.address) &&
-								IsOffsetCodeSemanticsFast(data, readOnlySections, dataExternSections, location.address))
+							if (!fastPath && !sectionMap->IsOffsetCodeSemantics(target.address) && sectionMap->IsOffsetCodeSemantics(location.address))
 							{
 								string message = fmt::format("Non-code call target {:#x}", target.address);
 								function->CreateAutoAddressTag(target.arch, location.address, "Non-code Branch", message, true);

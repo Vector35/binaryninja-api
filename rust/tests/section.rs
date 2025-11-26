@@ -54,3 +54,16 @@ fn test_add_remove_section() {
         .expect("Failed to find new section");
     assert_eq!(old_section, new_section);
 }
+
+#[test]
+fn test_section_map() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
+    let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
+    let section_map = view.section_map();
+    assert_eq!(section_map.sections().len(), 139);
+
+    let section = section_map.section_by_name(".rdata").unwrap();
+    assert_eq!(section.name(), ".rdata".into());
+    assert_eq!(section.semantics(), Semantics::ReadOnlyData);
+}

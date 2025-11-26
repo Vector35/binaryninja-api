@@ -1338,6 +1338,71 @@ bool Section::AutoDefined() const
 }
 
 
+SectionMap::SectionMap(BNSectionMap *map)
+{
+	m_object = map;
+}
+
+
+std::vector<Ref<Section>> SectionMap::GetSections() const
+{
+	size_t count;
+	BNSection** sections = BNSectionMapGetSections(m_object, &count);
+	vector<Ref<Section>> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new Section(BNNewSectionReference(sections[i])));
+	BNFreeSectionList(sections, count);
+	return result;
+}
+
+
+std::vector<Ref<Section>> SectionMap::GetSectionsAt(uint64_t offset) const
+{
+	size_t count;
+	BNSection** sections = BNSectionMapGetSectionsAt(m_object, offset, &count);
+	vector<Ref<Section>> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.push_back(new Section(BNNewSectionReference(sections[i])));
+	BNFreeSectionList(sections, count);
+	return result;
+}
+
+
+Ref<Section> SectionMap::GetSectionByName(const std::string& name) const
+{
+	BNSection* section = BNSectionMapGetSectionByName(m_object, name.c_str());
+	if (section)
+		return new Section(section);
+	return nullptr;
+}
+
+
+bool SectionMap::IsOffsetCodeSemantics(uint64_t offset) const
+{
+	return BNSectionMapIsOffsetCodeSemantics(m_object, offset);
+}
+
+
+bool SectionMap::IsOffsetExternSemantics(uint64_t offset) const
+{
+	return BNSectionMapIsOffsetExternSemantics(m_object, offset);
+}
+
+
+bool SectionMap::IsOffsetWritableSemantics(uint64_t offset) const
+{
+	return BNSectionMapIsOffsetWritableSemantics(m_object, offset);
+}
+
+
+bool SectionMap::IsOffsetReadOnlySemantics(uint64_t offset) const
+{
+	return BNSectionMapIsOffsetReadOnlySemantics(m_object, offset);
+}
+
+
 BinaryView::BinaryView(const std::string& typeName, FileMetadata* file, BinaryView* parentView)
 {
 	BNCustomBinaryView view;
@@ -5340,6 +5405,12 @@ Ref<Section> BinaryView::GetSectionByName(const string& name)
 	if (section)
 		return new Section(section);
 	return nullptr;
+}
+
+
+Ref<SectionMap> BinaryView::GetSectionMap()
+{
+	return new SectionMap(BNGetSectionMap(m_object));
 }
 
 

@@ -1931,6 +1931,112 @@ class SectionDescriptorList(list):
 		super().append(section_info)
 
 
+class SectionMap:
+	"""
+    An immutable view of a BinaryView's sections.
+    """
+
+	def __init__(self, handle):
+		self.handle = core.handle_of_type(handle, core.BNSectionMap)
+
+	def __del__(self):
+		if self.handle is not None:
+			core.BNFreeSectionMap(self.handle)
+
+	def __repr__(self) -> str:
+		return f"<SectionMap {self.sections} sections>"
+
+	def __iter__(self):
+		return iter(self.sections)
+
+	def __len__(self):
+		return len(self.sections)
+
+	def __getitem__(self, key):
+		return self.get_section_by_name(key)
+
+	@property
+	def sections(self) -> List['Section']:
+		"""List of resolved sections (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		section_list = core.BNSectionMapGetSections(self.handle, count)
+		assert section_list is not None, "core.BNSectionMapGetSections returned None"
+		result = []
+		try:
+			for i in range(0, count.value):
+				section_handle = core.BNNewSectionReference(section_list[i])
+				assert section_handle is not None, "core.BNNewSectionReference returned None"
+				result.append(Section(section_handle))
+			return result
+		finally:
+			core.BNFreeSectionList(section_list, count.value)
+
+	def get_sections_at(self, addr: int) -> List['Section']:
+		"""List of resolved sections (read-only)"""
+		count = ctypes.c_ulonglong(0)
+		section_list = core.BNSectionMapGetSectionsAt(self.handle, addr, count)
+		assert section_list is not None, "core.BNSectionMapGetSections returned None"
+		result = []
+		try:
+			for i in range(0, count.value):
+				section_handle = core.BNNewSectionReference(section_list[i])
+				assert section_handle is not None, "core.BNNewSectionReference returned None"
+				result.append(Section(section_handle))
+			return result
+		finally:
+			core.BNFreeSectionList(section_list, count.value)
+
+	def get_section_by_name(self, name: str) -> Optional[Section]:
+		section = core.BNSectionMapGetSectionByName(self.handle, name)
+		if section is None:
+			return None
+		return Section(section)
+
+	def is_offset_code_semantics(self, addr: int) -> bool:
+		"""
+        ``is_offset_code_semantics`` checks if a virtual address ``addr`` is semantically valid for code.
+
+        :param int addr: a virtual address to be checked
+        :return: True if the virtual address is valid for code semantics, False if the virtual address is invalid or error
+        :rtype: bool
+        """
+		return core.BNSectionMapIsOffsetCodeSemantics(self.handle, addr)
+
+	def is_offset_extern_semantics(self, addr: int) -> bool:
+		"""
+        ``is_offset_extern_semantics`` checks if a virtual address ``addr`` is semantically valid for external references.
+
+        :param int addr: a virtual address to be checked
+        :return: true if the virtual address is valid for external references, false if the virtual address is invalid or error
+        :rtype: bool
+        """
+		return core.BNSectionMapIsOffsetExternSemantics(self.handle, addr)
+
+	def is_offset_writable_semantics(self, addr: int) -> bool:
+		"""
+        ``is_offset_writable_semantics`` checks if a virtual address ``addr`` is semantically writable. Some sections
+        may have writable permissions for linking purposes but can be treated as read-only for the purposes of
+        analysis.
+
+        :param int addr: a virtual address to be checked
+        :return: True if the virtual address is valid for writing, False if the virtual address is invalid or error
+        :rtype: bool
+        """
+		return core.BNSectionMapIsOffsetWritableSemantics(self.handle, addr)
+
+	def is_offset_readonly_semantics(self, addr: int) -> bool:
+		"""
+        ``is_offset_readonly_semantics`` checks if a virtual address ``addr`` is semantically read-only. This considers
+        both section semantics and segment permissions to determine if an address should be treated as read-only for
+        analysis purposes.
+
+        :param int addr: a virtual address to be checked
+        :return: True if the virtual address is semantically read-only, False otherwise
+        :rtype: bool
+        """
+		return core.BNSectionMapIsOffsetReadOnlySemantics(self.handle, addr)
+
+
 class TagType:
 	"""
 	The ``TagType`` object is created by the create_tag_type API and should not be directly instantiated.
@@ -10140,6 +10246,10 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			return result
 		finally:
 			core.BNFreeStringList(outgoing_names, len(name_list))
+
+	@property
+	def section_map(self) -> 'SectionMap':
+		return SectionMap(core.BNGetSectionMap(self.handle))
 
 	@property
 	def address_comments(self) -> Mapping[int, str]:

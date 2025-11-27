@@ -24272,9 +24272,9 @@ namespace BinaryNinja {
 		DiffObject(BNDiffObject* object);
 		virtual ~DiffObject();
 
-		std::string GetBase() const;
-		std::string GetLeft() const;
-		std::string GetRight() const;
+		std::optional<std::string> GetBase() const;
+		std::optional<std::string> GetLeft() const;
+		std::optional<std::string> GetRight() const;
 
 		std::unordered_map<std::string, Ref<DiffObject>> GetChildren() const;
 

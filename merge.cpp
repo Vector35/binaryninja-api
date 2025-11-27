@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include "ffi.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -65,7 +66,9 @@ Ref<Metadata> DatabaseObject::GetMetadata() const
 {
 	BNMetadata* metadata = BNGetDatabaseObjectMetadata(m_object);
 	if (!metadata)
+	{
 		return nullptr;
+	}
 	return new Metadata(metadata);
 }
 
@@ -96,15 +99,9 @@ std::unordered_map<std::string, Ref<DatabaseObject>> DatabaseObject::GetChildren
 
 std::vector<std::string> DatabaseObject::GetDependencies() const
 {
-	size_t count;
+	size_t count = 0;
 	char** deps = BNGetDatabaseObjectDependencies(m_object, &count);
-
-	std::vector<std::string> result;
-	for (size_t i = 0; i < count; i++)
-	{
-		result.push_back(deps[i]);
-	}
-
+	std::vector<std::string> result = ParseStringList(deps, count);
 	BNFreeStringList(deps, count);
 	return result;
 }
@@ -127,15 +124,9 @@ DiffState::~DiffState() = default;
 
 std::vector<std::string> DiffState::GetErrors() const
 {
-	size_t count;
+	size_t count = 0;
 	char** errors = BNGetDiffStateErrors(m_object, &count);
-
-	std::vector<std::string> result;
-	for (size_t i = 0; i < count; i++)
-	{
-		result.push_back(errors[i]);
-	}
-
+	std::vector<std::string> result = ParseStringList(errors, count);
 	BNFreeStringList(errors, count);
 	return result;
 }
@@ -177,8 +168,13 @@ bool DiffState::ApplyDiff(
 )
 {
 	return BNDiffStateApplyDiff(
-		m_object, diff->GetObject(), base->GetObject(),
-		left->GetObject(), right->GetObject(), result->GetObject());
+		m_object,
+		diff->GetObject(),
+		base->GetObject(),
+		left->GetObject(),
+		right->GetObject(),
+		result->GetObject()
+	);
 }
 
 
@@ -203,27 +199,39 @@ DiffObject::DiffObject(BNDiffObject* object)
 DiffObject::~DiffObject() = default;
 
 
-std::string DiffObject::GetBase() const
+std::optional<std::string> DiffObject::GetBase() const
 {
 	char* base = BNGetDiffObjectBase(m_object);
+	if (!base)
+	{
+		return std::nullopt;
+	}
 	std::string result = base;
 	BNFreeString(base);
 	return result;
 }
 
 
-std::string DiffObject::GetLeft() const
+std::optional<std::string> DiffObject::GetLeft() const
 {
 	char* left = BNGetDiffObjectLeft(m_object);
+	if (!left)
+	{
+		return std::nullopt;
+	}
 	std::string result = left;
 	BNFreeString(left);
 	return result;
 }
 
 
-std::string DiffObject::GetRight() const
+std::optional<std::string> DiffObject::GetRight() const
 {
 	char* right = BNGetDiffObjectRight(m_object);
+	if (!right)
+	{
+		return std::nullopt;
+	}
 	std::string result = right;
 	BNFreeString(right);
 	return result;

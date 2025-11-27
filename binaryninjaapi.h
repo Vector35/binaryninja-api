@@ -11394,6 +11394,8 @@ namespace BinaryNinja {
 		*/
 		Ref<BinaryView> GetBinaryView();
 
+		Ref<SectionMap> GetSectionMap();
+
 		/*! Get the Function for the current AnalysisContext
 
 			\return The function for the current context

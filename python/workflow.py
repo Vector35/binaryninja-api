@@ -63,6 +63,16 @@ class AnalysisContext:
 		return binaryview.BinaryView(handle=result)
 
 	@property
+	def section_map(self) -> Optional['binaryview.SectionMap']:
+		"""
+		SectionMap for the current AnalysisContext (read-only)
+		"""
+		result = core.BNAnalysisContextGetSectionMap(self.handle)
+		if not result:
+			return None
+		return binaryview.SectionMap(handle=result)
+
+	@property
 	def function(self) -> Optional['_function.Function']:
 		"""
 		Function for the current AnalysisContext (read-only)
@@ -292,83 +302,6 @@ class AnalysisContext:
 		:return: True if offset is backed by file
 		"""
 		return core.BNAnalysisContextIsOffsetBackedByFile(self.handle, offset)
-
-	def is_offset_code_semantics(self, offset: int) -> bool:
-		"""
-		Check if an offset has code semantics in the cached section map.
-
-		:param offset: Offset to check
-		:return: True if offset has code semantics
-		"""
-		return core.BNAnalysisContextIsOffsetCodeSemantics(self.handle, offset)
-
-	def is_offset_extern_semantics(self, offset: int) -> bool:
-		"""
-		Check if an offset has external semantics in the cached section map.
-
-		:param offset: Offset to check
-		:return: True if offset has external semantics
-		"""
-		return core.BNAnalysisContextIsOffsetExternSemantics(self.handle, offset)
-
-	def is_offset_writable_semantics(self, offset: int) -> bool:
-		"""
-		Check if an offset has writable semantics in the cached section map.
-
-		:param offset: Offset to check
-		:return: True if offset has writable semantics
-		"""
-		return core.BNAnalysisContextIsOffsetWritableSemantics(self.handle, offset)
-
-	def is_offset_readonly_semantics(self, offset: int) -> bool:
-		"""
-		Check if an offset has read-only semantics in the cached section map.
-
-		:param offset: Offset to check
-		:return: True if offset has read-only semantics
-		"""
-		return core.BNAnalysisContextIsOffsetReadOnlySemantics(self.handle, offset)
-
-	def get_sections(self) -> List['binaryninja.binaryview.Section']:
-		"""
-		Get all sections from the cached section map.
-
-		:return: List of all sections
-		"""
-		count = ctypes.c_ulonglong()
-		sections = core.BNAnalysisContextGetSections(self.handle, count)
-		result = []
-		for i in range(count.value):
-			result.append(binaryninja.binaryview.Section(core.BNNewSectionReference(sections[i])))
-		core.BNFreeSectionList(sections, count.value)
-		return result
-
-	def get_section_by_name(self, name: str) -> Optional['binaryninja.binaryview.Section']:
-		"""
-		Get a section by name from the cached section map.
-
-		:param name: Section name
-		:return: Section with the given name, or None if not found
-		"""
-		section = core.BNAnalysisContextGetSectionByName(self.handle, name)
-		if not section:
-			return None
-		return binaryninja.binaryview.Section(section)
-
-	def get_sections_at(self, addr: int) -> List['binaryninja.binaryview.Section']:
-		"""
-		Get all sections containing the given address from the cached section map.
-
-		:param addr: Address to query
-		:return: List of sections containing the address
-		"""
-		count = ctypes.c_ulonglong()
-		sections = core.BNAnalysisContextGetSectionsAt(self.handle, addr, count)
-		result = []
-		for i in range(count.value):
-			result.append(binaryninja.binaryview.Section(core.BNNewSectionReference(sections[i])))
-		core.BNFreeSectionList(sections, count.value)
-		return result
 
 	def get_start(self) -> int:
 		"""

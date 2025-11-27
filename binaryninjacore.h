@@ -5958,19 +5958,14 @@ extern "C"
 	BINARYNINJACOREAPI char* BNAnalysisContextGetSettingString(BNAnalysisContext* analysisContext, const char* key);
 	BINARYNINJACOREAPI char** BNAnalysisContextGetSettingStringList(BNAnalysisContext* analysisContext, const char* key, size_t* count);
 
+	BINARYNINJACOREAPI BNSectionMap* BNAnalysisContextGetSectionMap(BNAnalysisContext* analysisContext);
+	
 	// Memory map access
 	BINARYNINJACOREAPI bool BNAnalysisContextIsValidOffset(BNAnalysisContext* analysisContext, uint64_t offset);
 	BINARYNINJACOREAPI bool BNAnalysisContextIsOffsetReadable(BNAnalysisContext* analysisContext, uint64_t offset);
 	BINARYNINJACOREAPI bool BNAnalysisContextIsOffsetWritable(BNAnalysisContext* analysisContext, uint64_t offset);
 	BINARYNINJACOREAPI bool BNAnalysisContextIsOffsetExecutable(BNAnalysisContext* analysisContext, uint64_t offset);
 	BINARYNINJACOREAPI bool BNAnalysisContextIsOffsetBackedByFile(BNAnalysisContext* analysisContext, uint64_t offset);
-	BINARYNINJACOREAPI bool BNAnalysisContextIsOffsetCodeSemantics(BNAnalysisContext* analysisContext, uint64_t offset);
-	BINARYNINJACOREAPI bool BNAnalysisContextIsOffsetExternSemantics(BNAnalysisContext* analysisContext, uint64_t offset);
-	BINARYNINJACOREAPI bool BNAnalysisContextIsOffsetWritableSemantics(BNAnalysisContext* analysisContext, uint64_t offset);
-	BINARYNINJACOREAPI bool BNAnalysisContextIsOffsetReadOnlySemantics(BNAnalysisContext* analysisContext, uint64_t offset);
-	BINARYNINJACOREAPI BNSection** BNAnalysisContextGetSections(BNAnalysisContext* analysisContext, size_t* count);
-	BINARYNINJACOREAPI BNSection* BNAnalysisContextGetSectionByName(BNAnalysisContext* analysisContext, const char* name);
-	BINARYNINJACOREAPI BNSection** BNAnalysisContextGetSectionsAt(BNAnalysisContext* analysisContext, uint64_t addr, size_t* count);
 	BINARYNINJACOREAPI uint64_t BNAnalysisContextGetStart(BNAnalysisContext* analysisContext);
 	BINARYNINJACOREAPI uint64_t BNAnalysisContextGetEnd(BNAnalysisContext* analysisContext);
 	BINARYNINJACOREAPI uint64_t BNAnalysisContextGetLength(BNAnalysisContext* analysisContext);

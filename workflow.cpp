@@ -29,6 +29,15 @@ Ref<BinaryView> AnalysisContext::GetBinaryView()
 }
 
 
+Ref<SectionMap> AnalysisContext::GetSectionMap()
+{
+	BNSectionMap* sectionMap = BNAnalysisContextGetSectionMap(m_object);
+	if (!sectionMap)
+		return nullptr;
+	return new SectionMap(sectionMap);
+}
+
+
 Ref<Function> AnalysisContext::GetFunction()
 {
 	BNFunction* func = BNAnalysisContextGetFunction(m_object);
@@ -232,65 +241,6 @@ bool AnalysisContext::IsOffsetExecutable(uint64_t offset)
 bool AnalysisContext::IsOffsetBackedByFile(uint64_t offset)
 {
 	return BNAnalysisContextIsOffsetBackedByFile(m_object, offset);
-}
-
-
-bool AnalysisContext::IsOffsetCodeSemantics(uint64_t offset)
-{
-	return BNAnalysisContextIsOffsetCodeSemantics(m_object, offset);
-}
-
-
-bool AnalysisContext::IsOffsetExternSemantics(uint64_t offset)
-{
-	return BNAnalysisContextIsOffsetExternSemantics(m_object, offset);
-}
-
-
-bool AnalysisContext::IsOffsetWritableSemantics(uint64_t offset)
-{
-	return BNAnalysisContextIsOffsetWritableSemantics(m_object, offset);
-}
-
-
-bool AnalysisContext::IsOffsetReadOnlySemantics(uint64_t offset)
-{
-	return BNAnalysisContextIsOffsetReadOnlySemantics(m_object, offset);
-}
-
-
-vector<Ref<Section>> AnalysisContext::GetSections()
-{
-	size_t count;
-	BNSection** sections = BNAnalysisContextGetSections(m_object, &count);
-	vector<Ref<Section>> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-		result.push_back(new Section(BNNewSectionReference(sections[i])));
-	BNFreeSectionList(sections, count);
-	return result;
-}
-
-
-Ref<Section> AnalysisContext::GetSectionByName(const string& name)
-{
-	BNSection* section = BNAnalysisContextGetSectionByName(m_object, name.c_str());
-	if (!section)
-		return nullptr;
-	return new Section(section);
-}
-
-
-vector<Ref<Section>> AnalysisContext::GetSectionsAt(uint64_t addr)
-{
-	size_t count;
-	BNSection** sections = BNAnalysisContextGetSectionsAt(m_object, addr, &count);
-	vector<Ref<Section>> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-		result.push_back(new Section(BNNewSectionReference(sections[i])));
-	BNFreeSectionList(sections, count);
-	return result;
 }
 
 

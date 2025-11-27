@@ -4592,7 +4592,6 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeSectionList(BNSection** sections, size_t count);
 	BINARYNINJACOREAPI BNSection* BNGetSectionByName(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI char** BNGetUniqueSectionNames(BNBinaryView* view, const char** names, size_t count);
-	BINARYNINJACOREAPI BNSectionMap* BNGetSectionMap(BNBinaryView* view);
 
 	BINARYNINJACOREAPI BNAddressRange* BNGetAllocatedRanges(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI BNAddressRange* BNGetMappedAddressRanges(BNBinaryView* view, size_t* count);

@@ -3,6 +3,7 @@ use crate::cache::{
     cached_function_guid, insert_cached_function_match, try_cached_function_guid,
     try_cached_function_match,
 };
+use crate::container::{Container, SourceId};
 use crate::convert::{platform_to_target, to_bn_symbol_at_address, to_bn_type};
 use crate::matcher::{Matcher, MatcherSettings};
 use crate::plugin::settings::PluginSettings;
@@ -15,14 +16,13 @@ use binaryninja::function::Function as BNFunction;
 use binaryninja::rc::Ref as BNRef;
 use binaryninja::settings::{QueryOptions, Settings};
 use binaryninja::workflow::{activity, Activity, AnalysisContext, Workflow, WorkflowBuilder};
+use dashmap::DashSet;
 use itertools::Itertools;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::sync::atomic::AtomicUsize;
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use warp::r#type::class::function::{Location, RegisterLocation, StackLocation};
 use warp::signature::function::{Function, FunctionGUID};
 use warp::target::Target;
@@ -120,6 +120,23 @@ pub fn run_matcher(view: &BinaryView) {
     let _ = get_warp_ignore_tag_type(view);
     view.file().forget_undo_actions(&undo_id);
 
+    let filter_functions = |functions: &mut Vec<Function>| {
+        // We sort primarily by symbol, then by type, so we can deduplicate in-place.
+        functions.sort_unstable_by(|a, b| match a.symbol.cmp(&b.symbol) {
+            Ordering::Equal => match (&a.ty, &b.ty) {
+                (None, None) => Ordering::Equal,
+                (None, Some(_)) => Ordering::Less,
+                (Some(_), None) => Ordering::Greater,
+                // TODO: We still need to order the types, probably cant do this in place.
+                // TODO: Once Type can be ordered, we can remove this entire explicit match stmt.
+                (Some(_), Some(_)) => Ordering::Equal,
+            },
+            other => other,
+        });
+        // This removes consecutive duplicates efficiently
+        functions.dedup_by(|a, b| a.symbol == b.symbol && a.ty == b.ty);
+    };
+
     // Then we want to actually find matching functions.
     let background_task = BackgroundTask::new("Matching on WARP functions...", true);
     let start = Instant::now();
@@ -135,88 +152,106 @@ pub fn run_matcher(view: &BinaryView) {
         return;
     };
 
-    // TODO: Target gets cloned a lot.
-    // TODO: Containers might both match on the same function. What should we do?
-    let matched_count = AtomicUsize::new(0);
-    for_cached_containers(|container| {
-        if background_task.is_cancelled() {
+    let matcher_results: DashSet<u64> = DashSet::new();
+    let match_for_guid = |target, container: &dyn Container, sources: Vec<SourceId>, guid| {
+        let mut matched_functions: Vec<Function> = sources
+            .iter()
+            .flat_map(|source| {
+                container
+                    .functions_with_guid(target, source, &guid)
+                    .unwrap_or_default()
+            })
+            .collect();
+
+        // NOTE: See the comment in `match_function_from_constraints` about this fast fail.
+        if matcher
+            .settings
+            .maximum_possible_functions
+            .is_some_and(|max| max < matched_functions.len() as u64)
+        {
+            log::warn!(
+                "Skipping {}, too many possible functions: {}",
+                guid,
+                matched_functions.len()
+            );
             return;
         }
 
-        for (target, guids) in &function_set.guids_by_target {
-            let function_guid_with_sources = container
-                .sources_with_function_guids(target, guids)
-                .unwrap_or_default();
+        // Filter out duplicate functions for matching.
+        filter_functions(&mut matched_functions);
 
-            function_guid_with_sources
-                .into_par_iter()
-                .for_each(|(guid, sources)| {
-                    let mut matched_functions: Vec<Function> = sources
-                        .iter()
-                        .flat_map(|source| {
-                            container
-                                .functions_with_guid(target, source, &guid)
-                                .unwrap_or_default()
-                        })
-                        .collect();
+        let functions = function_set
+            .functions_by_target_and_guid
+            .get(&(guid, target.clone()))
+            .expect("Function guid not found");
 
-                    // We sort primarily by symbol, then by type, so we can deduplicate in-place.
-                    matched_functions.sort_unstable_by(|a, b| match a.symbol.cmp(&b.symbol) {
-                        Ordering::Equal => match (&a.ty, &b.ty) {
-                            (None, None) => Ordering::Equal,
-                            (None, Some(_)) => Ordering::Less,
-                            (Some(_), None) => Ordering::Greater,
-                            // TODO: We still need to order the types, probably cant do this in place.
-                            // TODO: Once Type can be ordered, we can remove this entire explicit match stmt.
-                            (Some(_), Some(_)) => Ordering::Equal,
-                        },
-                        other => other,
-                    });
-                    // This removes consecutive duplicates efficiently
-                    matched_functions.dedup_by(|a, b| a.symbol == b.symbol && a.ty == b.ty);
-
-                    // NOTE: See the comment in `match_function_from_constraints` about this fast fail.
-                    if matcher
-                        .settings
-                        .maximum_possible_functions
-                        .is_some_and(|max| max < matched_functions.len() as u64)
-                    {
-                        log::warn!(
-                            "Skipping {}, too many possible functions: {}",
-                            guid,
-                            matched_functions.len()
-                        );
-                        return;
-                    }
-
-                    let functions = function_set
-                        .functions_by_target_and_guid
-                        .get(&(guid, target.clone()))
-                        .expect("Function guid not found");
-
-                    for function in functions {
-                        // Match on all the possible functions
-                        if let Some(matched_function) =
-                            matcher.match_function_from_constraints(function, &matched_functions)
-                        {
-                            matched_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                            // We were able to find a match, add it to the match cache and then mark the function
-                            // as requiring updates; this is so that we know about it in the applier activity.
-                            insert_cached_function_match(function, Some(matched_function));
-                        }
-                    }
-                });
+        for function in functions {
+            // Match on all the possible functions
+            if let Some(matched_function) =
+                matcher.match_function_from_constraints(function, &matched_functions)
+            {
+                // Because we can do multiple rounds of matching at once, we only want to insert a function
+                // match if we have not already done so in a previous round.
+                // TODO: What if the new round changes the matched function metadata? Unlikely but possible.
+                if matcher_results.insert(function.start()) {
+                    // We were able to find a match, add it to the match cache and then mark the function
+                    // as requiring updates; this is so that we know about it in the applier activity.
+                    insert_cached_function_match(function, Some(matched_function));
+                }
+            }
         }
-    });
+    };
+
+    // NOTE: Because matching can depend on other functions to have matched, we will run multiple
+    // rounds of matching until it stabilizes (e.g. no more newly matched functions), there are other
+    // ways to have the same behavior that may take less time, such as a work list, and pushing callers
+    // back into the work list on matches of a function, on top of that you could order the functions
+    // matched bottom up, with a reverse post order sort.
+
+    // TODO: Target gets cloned a lot.
+    // TODO: Containers might both match on the same function. What should we do?
+    let maximum_rounds = matcher.settings.maximum_matching_rounds.unwrap_or(100);
+    let mut final_matched_round = 1;
+    for matched_round in 1..=maximum_rounds {
+        let bg_task_text = format!("Matching on WARP functions... ({} rounds)", matched_round);
+        background_task.set_progress_text(&bg_task_text);
+        let matched_count_before = matcher_results.len();
+
+        for_cached_containers(|container| {
+            if background_task.is_cancelled() {
+                return;
+            }
+
+            for (target, guids) in &function_set.guids_by_target {
+                let function_guid_with_sources = container
+                    .sources_with_function_guids(target, guids)
+                    .unwrap_or_default();
+
+                function_guid_with_sources
+                    .into_par_iter()
+                    .for_each(|(guid, sources)| {
+                        match_for_guid(target, container, sources, guid);
+                    });
+            }
+        });
+
+        final_matched_round = matched_round;
+        // If the number of matches did not increase we can stop matching.
+        let matched_count_after = matcher_results.len();
+        if matched_count_after == 0 || matched_count_after == matched_count_before {
+            break;
+        }
+    }
 
     if background_task.is_cancelled() {
         log::info!("Matcher was cancelled by user, you may run it again by running the 'Run Matcher' command.");
     }
 
     log::info!(
-        "Function matching took {:.3} seconds and matched {} functions",
+        "Function matching took {:.3} seconds and matched {} functions after {} rounds",
         start.elapsed().as_secs_f64(),
-        matched_count.load(std::sync::atomic::Ordering::Relaxed)
+        matcher_results.len(),
+        final_matched_round
     );
     background_task.finish();
 

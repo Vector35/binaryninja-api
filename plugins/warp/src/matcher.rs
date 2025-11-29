@@ -312,6 +312,10 @@ pub struct MatcherSettings {
     ///
     /// This is set to [MatcherSettings::MAXIMUM_POSSIBLE_FUNCTIONS_DEFAULT] by default.
     pub maximum_possible_functions: Option<u64>,
+    /// The maximum number of matching rounds to run, consecutive rounds are ran until no new matched functions are found.
+    ///
+    /// This is set to [MatcherSettings::MAXIMUM_MATCHING_ROUNDS_DEFAULT] by default.
+    pub maximum_matching_rounds: Option<u64>,
 }
 
 impl MatcherSettings {
@@ -342,6 +346,9 @@ impl MatcherSettings {
     pub const MAXIMUM_POSSIBLE_FUNCTIONS_SETTING: &'static str =
         "warp.matcher.maximumPossibleFunctions";
     pub const MAXIMUM_POSSIBLE_FUNCTIONS_DEFAULT: u64 = 1000;
+    pub const MAXIMUM_MATCHING_ROUNDS_SETTING: &'static str = "warp.matcher.maximumMatchingRounds";
+    pub const MAXIMUM_MATCHING_ROUNDS_DEFAULT: u64 = 0;
+
     /// Populates the [MatcherSettings] to the current Binary Ninja settings instance.
     ///
     /// Call this once when you initialize so that the settings exist.
@@ -426,6 +433,18 @@ impl MatcherSettings {
             Self::MAXIMUM_POSSIBLE_FUNCTIONS_SETTING,
             &maximum_possible_functions_props.to_string(),
         );
+
+        let maximum_matching_rounds_props = json!({
+            "title" : "Maximum Matching Rounds",
+            "type" : "number",
+            "default" : Self::MAXIMUM_MATCHING_ROUNDS_DEFAULT,
+            "description" : "The maximum number of matching rounds to run, consecutive rounds are ran until no new matched functions are found. A value of 0 will disable this check.",
+            "ignore" : [],
+        });
+        bn_settings.register_setting_json(
+            Self::MAXIMUM_MATCHING_ROUNDS_SETTING,
+            &maximum_matching_rounds_props.to_string(),
+        );
     }
 
     /// Retrieve matcher settings from [`BNSettings`].
@@ -463,6 +482,14 @@ impl MatcherSettings {
                 len => settings.maximum_possible_functions = Some(len),
             }
         }
+        if bn_settings.contains(Self::MAXIMUM_MATCHING_ROUNDS_SETTING) {
+            match bn_settings
+                .get_integer_with_opts(Self::MAXIMUM_MATCHING_ROUNDS_SETTING, query_opts)
+            {
+                0 => settings.maximum_matching_rounds = None,
+                len => settings.maximum_matching_rounds = Some(len),
+            }
+        }
         settings
     }
 }
@@ -477,6 +504,7 @@ impl Default for MatcherSettings {
             trivial_function_adjacent_allowed:
                 MatcherSettings::TRIVIAL_FUNCTION_ADJACENT_ALLOWED_DEFAULT,
             maximum_possible_functions: Some(MatcherSettings::MAXIMUM_POSSIBLE_FUNCTIONS_DEFAULT),
+            maximum_matching_rounds: Some(MatcherSettings::MAXIMUM_MATCHING_ROUNDS_DEFAULT),
         }
     }
 }

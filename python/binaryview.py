@@ -4926,13 +4926,23 @@ class BinaryView:
 
 	def is_valid_offset(self, addr: int) -> bool:
 		"""
-		``is_valid_offset`` checks if a virtual address ``addr`` is valid .
+		``is_valid_offset`` checks if a virtual address ``addr`` is valid.
 
 		:param int addr: a virtual address to be checked
 		:return: True if the virtual address is valid, False if the virtual address is invalid or error
 		:rtype: bool
 		"""
 		return core.BNIsValidOffset(self.handle, addr)
+
+	def is_offset_backed_by_file(self, addr: int) -> bool:
+		"""
+		``is_offset_backed_by_file`` checks if a virtual address ``addr`` is backed by the original file.
+
+		:param int addr: a virtual address to be checked
+		:return: True if the virtual address is backed by original file, False if the not backed by original file or error
+		:rtype: bool
+		"""
+		return core.BNIsOffsetBackedByFile(self.handle, addr)
 
 	def is_offset_readable(self, addr: int) -> bool:
 		"""

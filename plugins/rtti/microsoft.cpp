@@ -727,7 +727,7 @@ void MicrosoftRTTIProcessor::ProcessVFT()
         }
     }
 
-    if (virtualFunctionTableSweep)
+    if (virtualFunctionTableSweep && !m_classInfo.empty())
     {
         BinaryReader optReader = BinaryReader(m_view);
         auto addrSize = m_view->GetAddressSize();

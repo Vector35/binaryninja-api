@@ -9,6 +9,7 @@ using namespace BinaryNinja::RTTI::Itanium;
 // TODO: Itanium doesnt really say anything about the sizing of these fields, i assume they are all u32 for thje most part.
 
 constexpr const char *TYPE_SOURCE_ITANIUM = "rtti_itanium";
+constexpr int MAX_FAILED_SCAN_ATTEMPTS = 10;
 
 
 Ref<Symbol> GetRealSymbol(BinaryView *view, uint64_t relocAddr, uint64_t symAddr)
@@ -737,6 +738,7 @@ void ItaniumRTTIProcessor::ProcessRTTI()
     uint64_t maxTypeInfoSize = TypeInfoSize(m_view);
 
     auto scan = [&](const Ref<Section> &section) {
+        int failedAttempts = 0;
         for (uint64_t currAddr = section->GetStart(); currAddr <= section->GetEnd() - maxTypeInfoSize; currAddr += addrSize)
         {
             if (bgTask->IsCancelled())
@@ -748,9 +750,14 @@ void ItaniumRTTIProcessor::ProcessRTTI()
             }
             catch (std::exception& e)
             {
+                if (failedAttempts++; failedAttempts > MAX_FAILED_SCAN_ATTEMPTS)
+                    break;
                 m_logger->LogWarnForException(e, "Failed to process object at %llx... skipping", currAddr);
             }
         }
+
+        if (failedAttempts > MAX_FAILED_SCAN_ATTEMPTS)
+            m_logger->LogWarn("Too many failed scans for section %llx... skipping", section->GetStart());
     };
 
     m_view->BeginBulkModifySymbols();
@@ -763,8 +770,16 @@ void ItaniumRTTIProcessor::ProcessRTTI()
         // Some RTTI unfortunately will get put into a DefaultSectionSemantics section, so we have to check those.
         if (sectionSemantics == ReadOnlyDataSectionSemantics || sectionSemantics == DefaultSectionSemantics)
         {
-            m_logger->LogDebug("Attempting to find RTTI in section %llx", section->GetStart());
-            scan(section);
+            // If a malformed binary makes the binary view set up unbacked sections we should not attempt to read in them.
+            if (m_view->ReadBuffer(section->GetStart(), 4).GetLength() == 4)
+            {
+                m_logger->LogDebug("Attempting to find RTTI in section %llx", section->GetStart());
+                scan(section);
+            }
+            else
+            {
+                m_logger->LogDebug("Unbacked start for section %llx... skipping", section->GetStart());
+            }
         }
     }
     m_view->EndBulkModifySymbols();

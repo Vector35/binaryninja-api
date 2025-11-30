@@ -694,14 +694,34 @@ void MicrosoftRTTIProcessor::ProcessRTTI()
     {
         if (segment->GetFlags() == (SegmentReadable | SegmentContainsData))
         {
+            // If a malformed binary makes the binary view set up unbacked segments we should not attempt to read in them.
+            if (m_view->ReadBuffer(segment->GetStart(), 4).GetLength() != 4)
+            {
+                m_logger->LogInfo("Unbacked start for segment %llx... skipping", segment->GetStart());
+                continue;
+            }
             m_logger->LogDebug("Attempting to find RTTI in segment %llx", segment->GetStart());
-            scan(segment);
+            try
+            {
+                scan(segment);
+            }
+            catch (std::exception &e)
+            {
+                m_logger->LogWarn("Unhandled exception in segment scan %llx %s", segment->GetStart(), e.what());
+            }
         }
         else if (checkWritableRData && rdataSection && rdataSection->GetStart() == segment->GetStart())
         {
             m_logger->LogDebug("Attempting to find RTTI in writable rdata segment %llx",
                                segment->GetStart());
-            scan(segment);
+            try
+            {
+                scan(segment);
+            }
+            catch (std::exception &e)
+            {
+                m_logger->LogWarn("Unhandled exception in writable segment scan %llx %s", segment->GetStart(), e.what());
+            }
         }
     }
 
@@ -757,13 +777,27 @@ void MicrosoftRTTIProcessor::ProcessVFT()
             if (segment->GetFlags() == (SegmentReadable | SegmentContainsData))
             {
                 m_logger->LogDebug("Attempting to find VirtualFunctionTables in segment %llx", segment->GetStart());
-                scan(segment);
+                try
+                {
+                    scan(segment);
+                }
+                catch (std::exception &e)
+                {
+                    m_logger->LogWarn("Unhandled exception in vtable segment scan %llx %s", segment->GetStart(), e.what());
+                }
             }
             else if (checkWritableRData && rdataSection && rdataSection->GetStart() == segment->GetStart())
             {
                 m_logger->LogDebug("Attempting to find VirtualFunctionTables in writable rdata segment %llx",
                                    segment->GetStart());
-                scan(segment);
+                try
+                {
+                    scan(segment);
+                }
+                catch (std::exception &e)
+                {
+                    m_logger->LogWarn("Unhandled exception in vtable writable segment scan %llx %s", segment->GetStart(), e.what());
+                }
             }
         }
     }

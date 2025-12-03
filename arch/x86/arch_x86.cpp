@@ -3463,22 +3463,22 @@ public:
 		case XED_REG_R14W:      return RegisterInfo(XED_REG_R14, 0, 2);
 		case XED_REG_R15W:      return RegisterInfo(XED_REG_R15, 0, 2);
 
-		case XED_REG_R16W:      return RegisterInfo(XED_REG_R16, 0, 1);
-		case XED_REG_R17W:      return RegisterInfo(XED_REG_R17, 0, 1);
-		case XED_REG_R18W:      return RegisterInfo(XED_REG_R18, 0, 1);
-		case XED_REG_R19W:      return RegisterInfo(XED_REG_R19, 0, 1);
-		case XED_REG_R20W:      return RegisterInfo(XED_REG_R20, 0, 1);
-		case XED_REG_R21W:      return RegisterInfo(XED_REG_R21, 0, 1);
-		case XED_REG_R22W:      return RegisterInfo(XED_REG_R22, 0, 1);
-		case XED_REG_R23W:      return RegisterInfo(XED_REG_R23, 0, 1);
-		case XED_REG_R24W:      return RegisterInfo(XED_REG_R24, 0, 1);
-		case XED_REG_R25W:      return RegisterInfo(XED_REG_R25, 0, 1);
-		case XED_REG_R26W:      return RegisterInfo(XED_REG_R26, 0, 1);
-		case XED_REG_R27W:      return RegisterInfo(XED_REG_R27, 0, 1);
-		case XED_REG_R28W:      return RegisterInfo(XED_REG_R28, 0, 1);
-		case XED_REG_R29W:      return RegisterInfo(XED_REG_R29, 0, 1);
-		case XED_REG_R30W:      return RegisterInfo(XED_REG_R30, 0, 1);
-		case XED_REG_R31W:      return RegisterInfo(XED_REG_R31, 0, 1);
+		case XED_REG_R16W:      return RegisterInfo(XED_REG_R16, 0, 2);
+		case XED_REG_R17W:      return RegisterInfo(XED_REG_R17, 0, 2);
+		case XED_REG_R18W:      return RegisterInfo(XED_REG_R18, 0, 2);
+		case XED_REG_R19W:      return RegisterInfo(XED_REG_R19, 0, 2);
+		case XED_REG_R20W:      return RegisterInfo(XED_REG_R20, 0, 2);
+		case XED_REG_R21W:      return RegisterInfo(XED_REG_R21, 0, 2);
+		case XED_REG_R22W:      return RegisterInfo(XED_REG_R22, 0, 2);
+		case XED_REG_R23W:      return RegisterInfo(XED_REG_R23, 0, 2);
+		case XED_REG_R24W:      return RegisterInfo(XED_REG_R24, 0, 2);
+		case XED_REG_R25W:      return RegisterInfo(XED_REG_R25, 0, 2);
+		case XED_REG_R26W:      return RegisterInfo(XED_REG_R26, 0, 2);
+		case XED_REG_R27W:      return RegisterInfo(XED_REG_R27, 0, 2);
+		case XED_REG_R28W:      return RegisterInfo(XED_REG_R28, 0, 2);
+		case XED_REG_R29W:      return RegisterInfo(XED_REG_R29, 0, 2);
+		case XED_REG_R30W:      return RegisterInfo(XED_REG_R30, 0, 2);
+		case XED_REG_R31W:      return RegisterInfo(XED_REG_R31, 0, 2);
 
 		// 32-Bit
 		case XED_REG_EIP:       return RegisterInfo(XED_REG_RIP, 0, 4);
@@ -3517,22 +3517,22 @@ public:
 		case XED_REG_R14D:      return RegisterInfo(XED_REG_R14, 0, 4, true);
 		case XED_REG_R15D:      return RegisterInfo(XED_REG_R15, 0, 4, true);
 
-		case XED_REG_R16D:      return RegisterInfo(XED_REG_R16, 0, 1);
-		case XED_REG_R17D:      return RegisterInfo(XED_REG_R17, 0, 1);
-		case XED_REG_R18D:      return RegisterInfo(XED_REG_R18, 0, 1);
-		case XED_REG_R19D:      return RegisterInfo(XED_REG_R19, 0, 1);
-		case XED_REG_R20D:      return RegisterInfo(XED_REG_R20, 0, 1);
-		case XED_REG_R21D:      return RegisterInfo(XED_REG_R21, 0, 1);
-		case XED_REG_R22D:      return RegisterInfo(XED_REG_R22, 0, 1);
-		case XED_REG_R23D:      return RegisterInfo(XED_REG_R23, 0, 1);
-		case XED_REG_R24D:      return RegisterInfo(XED_REG_R24, 0, 1);
-		case XED_REG_R25D:      return RegisterInfo(XED_REG_R25, 0, 1);
-		case XED_REG_R26D:      return RegisterInfo(XED_REG_R26, 0, 1);
-		case XED_REG_R27D:      return RegisterInfo(XED_REG_R27, 0, 1);
-		case XED_REG_R28D:      return RegisterInfo(XED_REG_R28, 0, 1);
-		case XED_REG_R29D:      return RegisterInfo(XED_REG_R29, 0, 1);
-		case XED_REG_R30D:      return RegisterInfo(XED_REG_R30, 0, 1);
-		case XED_REG_R31D:      return RegisterInfo(XED_REG_R31, 0, 1);
+		case XED_REG_R16D:      return RegisterInfo(XED_REG_R16, 0, 4, true);
+		case XED_REG_R17D:      return RegisterInfo(XED_REG_R17, 0, 4, true);
+		case XED_REG_R18D:      return RegisterInfo(XED_REG_R18, 0, 4, true);
+		case XED_REG_R19D:      return RegisterInfo(XED_REG_R19, 0, 4, true);
+		case XED_REG_R20D:      return RegisterInfo(XED_REG_R20, 0, 4, true);
+		case XED_REG_R21D:      return RegisterInfo(XED_REG_R21, 0, 4, true);
+		case XED_REG_R22D:      return RegisterInfo(XED_REG_R22, 0, 4, true);
+		case XED_REG_R23D:      return RegisterInfo(XED_REG_R23, 0, 4, true);
+		case XED_REG_R24D:      return RegisterInfo(XED_REG_R24, 0, 4, true);
+		case XED_REG_R25D:      return RegisterInfo(XED_REG_R25, 0, 4, true);
+		case XED_REG_R26D:      return RegisterInfo(XED_REG_R26, 0, 4, true);
+		case XED_REG_R27D:      return RegisterInfo(XED_REG_R27, 0, 4, true);
+		case XED_REG_R28D:      return RegisterInfo(XED_REG_R28, 0, 4, true);
+		case XED_REG_R29D:      return RegisterInfo(XED_REG_R29, 0, 4, true);
+		case XED_REG_R30D:      return RegisterInfo(XED_REG_R30, 0, 4, true);
+		case XED_REG_R31D:      return RegisterInfo(XED_REG_R31, 0, 4, true);
 
 		// 48-Bit
 		case XED_REG_GDTR:      return RegisterInfo(XED_REG_GDTR, 0, 6);
@@ -3580,22 +3580,23 @@ public:
 		case XED_REG_R13:       return RegisterInfo(XED_REG_R13, 0, 8);
 		case XED_REG_R14:       return RegisterInfo(XED_REG_R14, 0, 8);
 		case XED_REG_R15:       return RegisterInfo(XED_REG_R15, 0, 8);
-		case XED_REG_R16:       return RegisterInfo(XED_REG_R16, 0, 1);
-		case XED_REG_R17:       return RegisterInfo(XED_REG_R17, 0, 1);
-		case XED_REG_R18:       return RegisterInfo(XED_REG_R18, 0, 1);
-		case XED_REG_R19:       return RegisterInfo(XED_REG_R19, 0, 1);
-		case XED_REG_R20:       return RegisterInfo(XED_REG_R20, 0, 1);
-		case XED_REG_R21:       return RegisterInfo(XED_REG_R21, 0, 1);
-		case XED_REG_R22:       return RegisterInfo(XED_REG_R22, 0, 1);
-		case XED_REG_R23:       return RegisterInfo(XED_REG_R23, 0, 1);
-		case XED_REG_R24:       return RegisterInfo(XED_REG_R24, 0, 1);
-		case XED_REG_R25:       return RegisterInfo(XED_REG_R25, 0, 1);
-		case XED_REG_R26:       return RegisterInfo(XED_REG_R26, 0, 1);
-		case XED_REG_R27:       return RegisterInfo(XED_REG_R27, 0, 1);
-		case XED_REG_R28:       return RegisterInfo(XED_REG_R28, 0, 1);
-		case XED_REG_R29:       return RegisterInfo(XED_REG_R29, 0, 1);
-		case XED_REG_R30:       return RegisterInfo(XED_REG_R30, 0, 1);
-		case XED_REG_R31:       return RegisterInfo(XED_REG_R31, 0, 1);
+
+		case XED_REG_R16:       return RegisterInfo(XED_REG_R16, 0, 8);
+		case XED_REG_R17:       return RegisterInfo(XED_REG_R17, 0, 8);
+		case XED_REG_R18:       return RegisterInfo(XED_REG_R18, 0, 8);
+		case XED_REG_R19:       return RegisterInfo(XED_REG_R19, 0, 8);
+		case XED_REG_R20:       return RegisterInfo(XED_REG_R20, 0, 8);
+		case XED_REG_R21:       return RegisterInfo(XED_REG_R21, 0, 8);
+		case XED_REG_R22:       return RegisterInfo(XED_REG_R22, 0, 8);
+		case XED_REG_R23:       return RegisterInfo(XED_REG_R23, 0, 8);
+		case XED_REG_R24:       return RegisterInfo(XED_REG_R24, 0, 8);
+		case XED_REG_R25:       return RegisterInfo(XED_REG_R25, 0, 8);
+		case XED_REG_R26:       return RegisterInfo(XED_REG_R26, 0, 8);
+		case XED_REG_R27:       return RegisterInfo(XED_REG_R27, 0, 8);
+		case XED_REG_R28:       return RegisterInfo(XED_REG_R28, 0, 8);
+		case XED_REG_R29:       return RegisterInfo(XED_REG_R29, 0, 8);
+		case XED_REG_R30:       return RegisterInfo(XED_REG_R30, 0, 8);
+		case XED_REG_R31:       return RegisterInfo(XED_REG_R31, 0, 8);
 
 
 		case XED_REG_BNDCFGU:   return RegisterInfo(XED_REG_BNDCFGU, 0, 8);

@@ -254,7 +254,7 @@ impl Ref<LowLevelILFunction<Mutable, NonSSA>> {
         unsafe {
             BNFinalizeLowLevelILFunction(self.handle);
             // Now that we have finalized return the function as is so the caller can reference the "finalized function".
-            LowLevelILFunction::from_raw(self.handle).to_owned()
+            LowLevelILFunction::from_raw_with_arch(self.handle, self.arch).to_owned()
         }
     }
 }

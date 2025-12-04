@@ -58,10 +58,10 @@ if(APPLE)
                 OUTPUT ${OUTPUT_FILE_PATH}
                 COMMAND ${CMAKE_COMMAND} -E env
                 MACOSX_DEPLOYMENT_TARGET=10.14 BINARYNINJADIR=${BINJA_LIB_DIR}
-                ${RUSTUP_COMMAND} clean --target=aarch64-apple-darwin ${CARGO_OPTS}
+                ${RUSTUP_COMMAND} clean --target=aarch64-apple-darwin ${CARGO_OPTS} --package binaryninjacore-sys
                 COMMAND ${CMAKE_COMMAND} -E env
                 MACOSX_DEPLOYMENT_TARGET=10.14 BINARYNINJADIR=${BINJA_LIB_DIR}
-                ${RUSTUP_COMMAND} clean --target=x86_64-apple-darwin ${CARGO_OPTS}
+                ${RUSTUP_COMMAND} clean --target=x86_64-apple-darwin ${CARGO_OPTS} --package binaryninjacore-sys
                 COMMAND ${CMAKE_COMMAND} -E env
                 MACOSX_DEPLOYMENT_TARGET=10.14 BINARYNINJADIR=${BINJA_LIB_DIR}
                 ${RUSTUP_COMMAND} build --target=aarch64-apple-darwin ${CARGO_OPTS} ${CARGO_FEATURES}
@@ -83,7 +83,7 @@ if(APPLE)
                 OUTPUT ${OUTPUT_FILE_PATH}
                 COMMAND ${CMAKE_COMMAND} -E env
                 MACOSX_DEPLOYMENT_TARGET=10.14 BINARYNINJADIR=${BINJA_LIB_DIR}
-                ${RUSTUP_COMMAND} clean ${CARGO_OPTS}
+                ${RUSTUP_COMMAND} clean ${CARGO_OPTS} --package binaryninjacore-sys
                 COMMAND ${CMAKE_COMMAND} -E env
                 MACOSX_DEPLOYMENT_TARGET=10.14 BINARYNINJADIR=${BINJA_LIB_DIR}
                 ${RUSTUP_COMMAND} build ${CARGO_OPTS} ${CARGO_FEATURES}
@@ -95,7 +95,7 @@ if(APPLE)
 elseif(WIN32)
     add_custom_command(
             OUTPUT ${OUTPUT_FILE_PATH}
-            COMMAND ${CMAKE_COMMAND} -E env BINARYNINJADIR=${BINJA_LIB_DIR} ${RUSTUP_COMMAND} clean ${CARGO_OPTS}
+            COMMAND ${CMAKE_COMMAND} -E env BINARYNINJADIR=${BINJA_LIB_DIR} ${RUSTUP_COMMAND} clean ${CARGO_OPTS} --package binaryninjacore-sys
             COMMAND ${CMAKE_COMMAND} -E env BINARYNINJADIR=${BINJA_LIB_DIR} ${RUSTUP_COMMAND} build ${CARGO_OPTS} ${CARGO_FEATURES}
             COMMAND ${CMAKE_COMMAND} -E copy ${TARGET_DIR}/${OUTPUT_FILE_NAME} ${OUTPUT_FILE_PATH}
             COMMAND ${CMAKE_COMMAND} -E copy ${TARGET_DIR}/${OUTPUT_PDB_NAME} ${OUTPUT_PDB_PATH}
@@ -105,7 +105,7 @@ elseif(WIN32)
 else()
     add_custom_command(
             OUTPUT ${OUTPUT_FILE_PATH}
-            COMMAND ${CMAKE_COMMAND} -E env BINARYNINJADIR=${BINJA_LIB_DIR} ${RUSTUP_COMMAND} clean ${CARGO_OPTS}
+            COMMAND ${CMAKE_COMMAND} -E env BINARYNINJADIR=${BINJA_LIB_DIR} ${RUSTUP_COMMAND} clean ${CARGO_OPTS} --package binaryninjacore-sys
             COMMAND ${CMAKE_COMMAND} -E env BINARYNINJADIR=${BINJA_LIB_DIR} ${RUSTUP_COMMAND} build ${CARGO_OPTS} ${CARGO_FEATURES}
             COMMAND ${CMAKE_COMMAND} -E copy ${TARGET_DIR}/${OUTPUT_FILE_NAME} ${OUTPUT_FILE_PATH}
             WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}

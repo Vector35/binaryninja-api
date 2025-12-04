@@ -139,7 +139,7 @@ elseif(WIN32)
     if(DEMO)
         add_custom_command(
                 OUTPUT ${OUTPUT_FILE_PATH}
-                COMMAND ${CMAKE_COMMAND} -E env BINARYNINJADIR=${BINJA_LIB_DIR} ${RUSTUP_COMMAND} clean ${CARGO_OPTS}
+                COMMAND ${CMAKE_COMMAND} -E env BINARYNINJADIR=${BINJA_LIB_DIR} ${RUSTUP_COMMAND} clean ${CARGO_OPTS} --package binaryninjacore-sys
                 COMMAND ${CMAKE_COMMAND} -E env BINARYNINJADIR=${BINJA_LIB_DIR} ${RUSTUP_COMMAND} build ${CARGO_OPTS} ${CARGO_FEATURES}
                 COMMAND ${CMAKE_COMMAND} -E copy ${TARGET_DIR}/${OUTPUT_FILE_NAME} ${OUTPUT_FILE_PATH}
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}

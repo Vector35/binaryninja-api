@@ -702,7 +702,7 @@ std::vector<CacheSymbol> SharedCacheMachOHeader::ReadExportSymbolTrie(VirtualMem
 			}
 		}
 	}
-	catch (ReadException&)
+	catch (std::exception&)
 	{
 		LogError("Export trie is malformed. Could not load Exported symbol names.");
 	}

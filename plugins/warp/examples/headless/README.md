@@ -7,7 +7,7 @@ Provides headless support for generating WARP signatures using Binary Ninja.
 > Assuming you have the following:
 > - A compatible Binary Ninja with headless usage (see [this documentation](https://docs.binary.ninja/dev/batch.html#batch-processing-and-other-automation-tips) for more information)
 > - Clang
-> - Rust (currently tested for 1.83.0)
+> - Rust (currently tested for 1.91.1)
 > - Set `BINARYNINJADIR` env variable to your installation directory (see [here](https://docs.binary.ninja/guide/#binary-path) for more details)
 >   - If this is not set, the -sys crate will try and locate using the default installation path and last run location.
 

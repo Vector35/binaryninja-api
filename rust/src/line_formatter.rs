@@ -160,7 +160,7 @@ unsafe extern "C" fn cb_free_lines(
     count: usize,
 ) {
     let lines: Box<[BNDisassemblyTextLine]> =
-        Box::from_raw(core::slice::from_raw_parts_mut(raw_lines, count));
+        Box::from_raw(std::ptr::slice_from_raw_parts_mut(raw_lines, count));
     for line in lines {
         DisassemblyTextLine::free_raw(line);
     }

@@ -630,7 +630,7 @@ pub fn translate_til_types(
     arch: CoreArchitecture,
     til: &TILSection,
     progress: impl Fn(usize, usize) -> Result<(), ()>,
-) -> Result<Vec<TranslatesIDBType>> {
+) -> Result<Vec<TranslatesIDBType<'_>>> {
     let total = til.symbols.len() + til.types.len();
     let mut types = Vec::with_capacity(total);
     let mut types_by_ord = HashMap::with_capacity(total);

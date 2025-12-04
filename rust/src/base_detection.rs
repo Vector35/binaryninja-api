@@ -1,8 +1,9 @@
 use binaryninjacore_sys::*;
-use std::ffi::{c_char, CStr};
+use std::ffi::CStr;
 
 use crate::architecture::CoreArchitecture;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner};
+use crate::string::IntoCStr;
 use std::num::NonZeroU32;
 use std::ptr::NonNull;
 
@@ -11,7 +12,7 @@ pub type BaseAddressDetectionConfidence = BNBaseAddressDetectionConfidence;
 pub type BaseAddressDetectionPOIType = BNBaseAddressDetectionPOIType;
 
 /// This is the architecture name used to use the architecture auto-detection feature.
-const BASE_ADDRESS_AUTO_DETECTION_ARCH: &CStr = c"auto detect";
+const BASE_ADDRESS_AUTO_DETECTION_ARCH: &str = "auto detect";
 
 pub enum BaseAddressDetectionAnalysis {
     Basic,
@@ -149,23 +150,22 @@ impl Drop for BaseAddressDetection {
     }
 }
 
-/// Build the initial analysis.
-///
-/// * `analysis` - analysis mode
-/// * `min_strlen` - minimum length of a string to be considered a point-of-interest
-/// * `alignment` - byte boundary to align the base address to while brute-forcing
-/// * `low_boundary` - lower boundary of the base address range to test
-/// * `high_boundary` - upper boundary of the base address range to test
-/// * `poi_analysis` - specifies types of points-of-interest to use for analysis
-/// * `max_pointers` - maximum number of candidate pointers to collect per pointer cluster
+/// Builds the initial analysis settings for base address detection.
 pub struct BaseAddressDetectionSettings {
     arch: Option<CoreArchitecture>,
+    /// Analysis mode to use
     analysis: BaseAddressDetectionAnalysis,
+    /// Minimum length of a string to be considered a point-of-interest
     min_string_len: u32,
+    /// Byte boundary to align the base address to while brute-forcing
     alignment: NonZeroU32,
+    /// Lower boundary of the base address range to test
     lower_boundary: u64,
+    /// Upper boundary of the base address range to test
     upper_boundary: u64,
+    /// Specifies types of points-of-interest to use for analysis
     poi_analysis: BaseAddressDetectionPOISetting,
+    /// Maximum number of candidate pointers to collect per pointer cluster
     max_pointers: u32,
 }
 
@@ -173,10 +173,11 @@ impl BaseAddressDetectionSettings {
     pub(crate) fn into_raw(value: &Self) -> BNBaseAddressDetectionSettings {
         let arch_name = value
             .arch
-            .map(|a| a.name().as_ptr())
-            .unwrap_or(BASE_ADDRESS_AUTO_DETECTION_ARCH.as_ptr() as *const u8);
+            .map(|a| a.name())
+            .unwrap_or(BASE_ADDRESS_AUTO_DETECTION_ARCH.to_string());
+        let c_arch_name = arch_name.to_cstr();
         BNBaseAddressDetectionSettings {
-            Architecture: arch_name as *const c_char,
+            Architecture: c_arch_name.into_raw(),
             Analysis: value.analysis.as_raw().as_ptr(),
             MinStrlen: value.min_string_len,
             Alignment: value.alignment.get(),
@@ -207,6 +208,9 @@ impl BaseAddressDetectionSettings {
         self
     }
 
+    /// Specify the lower boundary of the base address range to test.
+    ///
+    /// NOTE: The passed `value` **must** be less than the upper boundary.
     pub fn low_boundary(mut self, value: u64) -> Self {
         assert!(
             self.upper_boundary >= value,
@@ -216,6 +220,9 @@ impl BaseAddressDetectionSettings {
         self
     }
 
+    /// Specify the upper boundary of the base address range to test.
+    ///
+    /// NOTE: The passed `value` **must** be greater than the lower boundary.
     pub fn high_boundary(mut self, value: u64) -> Self {
         assert!(
             self.lower_boundary <= value,
@@ -230,6 +237,9 @@ impl BaseAddressDetectionSettings {
         self
     }
 
+    /// Specify the maximum number of candidate pointers to collect per pointer cluster.
+    ///
+    /// NOTE: The passed `value` **must** be at least 2.
     pub fn max_pointers(mut self, value: u32) -> Self {
         assert!(value > 2, "max pointers must be at least 2");
         self.max_pointers = value;

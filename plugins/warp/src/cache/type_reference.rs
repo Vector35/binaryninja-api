@@ -39,7 +39,7 @@ pub fn cached_type_reference(
     }
 }
 
-pub fn cached_type_references(view: &BinaryView) -> Option<Ref<ViewID, TypeRefCache>> {
+pub fn cached_type_references(view: &BinaryView) -> Option<Ref<'_, ViewID, TypeRefCache>> {
     let view_id = ViewID::from(view);
     let type_ref_cache = TYPE_REF_CACHE.get_or_init(Default::default);
     type_ref_cache.get(&view_id)

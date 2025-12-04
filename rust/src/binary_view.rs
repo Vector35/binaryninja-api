@@ -1392,7 +1392,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         for address in addresses {
             let funcs = self.functions_at(address);
             for func in funcs.into_iter() {
-                if func.start() == address && plat.map_or(true, |p| p == func.platform().as_ref()) {
+                if func.start() == address && plat.is_none_or(|p| p == func.platform().as_ref()) {
                     functions.push(func.clone());
                 }
             }

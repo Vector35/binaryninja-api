@@ -13,10 +13,12 @@ use std::ptr::NonNull;
 
 /// The state in which the [`RenderLayer`] will be registered with.
 #[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub enum RenderLayerDefaultState {
     /// Register the [`RenderLayer`] as disabled, the user must then enable it via the UI.
     ///
     /// This is the default registration value.
+    #[default]
     Disabled = 0,
     /// Register the [`RenderLayer`] as enabled, the user must then disable it via the UI.
     Enabled = 1,
@@ -51,12 +53,6 @@ impl From<RenderLayerDefaultState> for BNRenderLayerDefaultEnableState {
                 Self::AlwaysEnabledRenderLayerDefaultEnableState
             }
         }
-    }
-}
-
-impl Default for RenderLayerDefaultState {
-    fn default() -> Self {
-        Self::Disabled
     }
 }
 

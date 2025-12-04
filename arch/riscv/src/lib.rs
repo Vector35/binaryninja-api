@@ -169,7 +169,7 @@ impl<D: RiscVDisassembler> RegisterInfo for Register<D> {
 impl<D: RiscVDisassembler> architecture::Register for Register<D> {
     type InfoType = Self;
 
-    fn name(&self) -> Cow<str> {
+    fn name(&self) -> Cow<'_, str> {
         match self.reg_type() {
             RegType::Integer(id) => match id {
                 0 => "zero".into(),
@@ -393,7 +393,7 @@ impl<D: RiscVDisassembler> From<Intrinsic> for RiscVIntrinsic<D> {
 }
 
 impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
-    fn name(&self) -> Cow<str> {
+    fn name(&self) -> Cow<'_, str> {
         match self.id {
             Intrinsic::Uret => "_uret".into(),
             Intrinsic::Sret => "_sret".into(),

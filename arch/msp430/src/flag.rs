@@ -16,7 +16,7 @@ pub enum Flag {
 impl architecture::Flag for Flag {
     type FlagClass = FlagClass;
 
-    fn name(&self) -> Cow<str> {
+    fn name(&self) -> Cow<'_, str> {
         match self {
             Self::C => "c".into(),
             Self::Z => "z".into(),
@@ -62,7 +62,7 @@ impl TryFrom<FlagId> for Flag {
 pub struct FlagClass {}
 
 impl architecture::FlagClass for FlagClass {
-    fn name(&self) -> Cow<str> {
+    fn name(&self) -> Cow<'_, str> {
         unimplemented!()
     }
 
@@ -78,7 +78,7 @@ impl architecture::FlagGroup for FlagGroup {
     type FlagType = Flag;
     type FlagClass = FlagClass;
 
-    fn name(&self) -> Cow<str> {
+    fn name(&self) -> Cow<'_, str> {
         unimplemented!()
     }
 
@@ -107,7 +107,7 @@ impl architecture::FlagWrite for FlagWrite {
     type FlagType = Flag;
     type FlagClass = FlagClass;
 
-    fn name(&self) -> Cow<str> {
+    fn name(&self) -> Cow<'_, str> {
         match self {
             Self::All => "*".into(),
             Self::Nz => "nz".into(),

@@ -21,7 +21,7 @@ use crate::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
 use crate::Endianness;
 
 use crate::rc::Ref;
-use std::io::{ErrorKind, Seek, SeekFrom, Write};
+use std::io::{Seek, SeekFrom, Write};
 
 pub struct BinaryWriter {
     view: Ref<BinaryView>,
@@ -88,10 +88,7 @@ impl Seek for BinaryWriter {
                 let view_end = self.view.original_image_base() + self.view.len();
                 let offset = view_end
                     .checked_add_signed(end_offset)
-                    .ok_or(std::io::Error::new(
-                        ErrorKind::Other,
-                        "Seeking from end overflowed",
-                    ))?;
+                    .ok_or(std::io::Error::other("Seeking from end overflowed"))?;
                 self.seek_to_offset(offset);
             }
         };
@@ -105,10 +102,7 @@ impl Write for BinaryWriter {
         let len = buf.len();
         let result = unsafe { BNWriteData(self.handle, buf.as_ptr() as *mut _, len) };
         if !result {
-            Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "write out of bounds",
-            ))
+            Err(std::io::Error::other("write out of bounds"))
         } else {
             Ok(len)
         }

@@ -19,7 +19,6 @@ use log::LevelFilter;
 
 mod commit;
 mod create;
-mod debug;
 mod ffi;
 mod file;
 mod function;
@@ -28,6 +27,9 @@ mod project;
 mod render_layer;
 mod settings;
 mod workflow;
+
+#[cfg(debug_assertions)]
+mod debug;
 
 fn load_bundled_signatures() {
     let global_bn_settings = Settings::new();

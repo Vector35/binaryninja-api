@@ -1775,7 +1775,7 @@ pub enum Instr<D: RiscVDisassembler> {
 }
 
 impl<D: RiscVDisassembler> Instr<D> {
-    pub fn mnem(&self) -> Mnem<D> {
+    pub fn mnem(&self) -> Mnem<'_, D> {
         Mnem(self)
     }
 
@@ -2116,7 +2116,7 @@ impl<'a, D: RiscVDisassembler + 'a> Mnem<'a, D> {
         }
     }
 
-    fn suffix(&self) -> Option<Cow<str>> {
+    fn suffix(&self) -> Option<Cow<'_, str>> {
         match self.0 {
             // &Instr::Rv16(_) => None,
             &Instr::Rv32(ref op) | &Instr::Rv16(ref op) => match *op {

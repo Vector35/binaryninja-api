@@ -281,7 +281,7 @@ pub fn to_bn_calling_convention<A: BNArchitecture>(
 
 // Always pass the architecture unless you know what you're doing!
 pub fn to_bn_type<A: BNArchitecture + Copy>(arch: Option<A>, ty: &Type) -> BNRef<BNType> {
-    let bits_to_bytes = |val: u64| (val / 8);
+    let bits_to_bytes = |val: u64| val / 8;
     let addr_size = arch.map(|a| a.address_size()).unwrap_or(8) as u64;
     match &ty.class {
         TypeClass::Void => BNType::void(),

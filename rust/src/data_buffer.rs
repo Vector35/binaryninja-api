@@ -234,7 +234,7 @@ impl Eq for DataBuffer {}
 
 impl PartialOrd for DataBuffer {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.as_ref().cmp(other.as_ref()))
+        Some(self.cmp(other))
     }
 }
 

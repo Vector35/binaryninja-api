@@ -21,7 +21,7 @@ use crate::binary_view::{BinaryView, BinaryViewBase};
 use crate::Endianness;
 
 use crate::rc::Ref;
-use std::io::{ErrorKind, Read, Seek, SeekFrom};
+use std::io::{Read, Seek, SeekFrom};
 
 pub struct BinaryReader {
     view: Ref<BinaryView>,
@@ -107,14 +107,11 @@ impl Seek for BinaryReader {
             SeekFrom::End(end_offset) => {
                 // We do NOT need to add the image base here as
                 // the reader (unlike the writer) can set the virtual base.
-                let offset =
-                    self.view
-                        .len()
-                        .checked_add_signed(end_offset)
-                        .ok_or(std::io::Error::new(
-                            ErrorKind::Other,
-                            "Seeking from end overflowed",
-                        ))?;
+                let offset = self
+                    .view
+                    .len()
+                    .checked_add_signed(end_offset)
+                    .ok_or(std::io::Error::other("Seeking from end overflowed"))?;
                 self.seek_to_offset(offset);
             }
         };
@@ -130,7 +127,7 @@ impl Read for BinaryReader {
         let result = unsafe { BNReadData(self.handle, buf.as_mut_ptr() as *mut _, len) };
 
         if !result {
-            Err(std::io::Error::new(ErrorKind::Other, "Read out of bounds"))
+            Err(std::io::Error::other("Read out of bounds"))
         } else {
             Ok(len)
         }

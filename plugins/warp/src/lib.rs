@@ -254,7 +254,7 @@ pub fn basic_block_guid<M: FunctionMutability>(
 pub fn filtered_instructions_at<M: FunctionMutability>(
     il: &LowLevelILFunction<M, NonSSA>,
     addr: u64,
-) -> Vec<LowLevelILInstruction<M, NonSSA>> {
+) -> Vec<LowLevelILInstruction<'_, M, NonSSA>> {
     il.instructions_at(addr)
         .into_iter()
         .enumerate()

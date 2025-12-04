@@ -1,4 +1,6 @@
-use binaryninja::architecture::{ArchitectureExt, Intrinsic, Register};
+use binaryninja::architecture::{
+    Architecture, ArchitectureExt, CoreArchitecture, Intrinsic, Register,
+};
 use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::headless::Session;
 use binaryninja::low_level_il::expression::{
@@ -8,7 +10,9 @@ use binaryninja::low_level_il::instruction::{
     InstructionHandler, LowLevelILInstructionKind, LowLevelInstructionIndex,
 };
 use binaryninja::low_level_il::operation::IntrinsicOutput;
-use binaryninja::low_level_il::{LowLevelILRegisterKind, LowLevelILSSARegisterKind, VisitorAction};
+use binaryninja::low_level_il::{
+    LowLevelILMutableFunction, LowLevelILRegisterKind, LowLevelILSSARegisterKind, VisitorAction,
+};
 use std::path::PathBuf;
 
 #[test]
@@ -348,4 +352,30 @@ fn test_llil_intrinsic() {
         }
         _ => panic!("Expected Intrinsic"),
     }
+}
+
+#[test]
+fn test_llil_unbacked_function_creation() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let arch = CoreArchitecture::by_name("x86_64").unwrap();
+    // Create an LLIL function backed by no Function.
+    let llil = LowLevelILMutableFunction::new(arch, None);
+    let (instr_len, _) = arch.instruction_llil(&[0x8b, 0xd9], 0x0, &llil).unwrap();
+    assert_eq!(instr_len, 2);
+    let llil = llil.finalized();
+
+    // Validate to make sure we can read the llil instruction for a non-backed LLIL function.
+    let inst = llil
+        .instruction_from_index(LowLevelInstructionIndex(0))
+        .unwrap();
+    let LowLevelILInstructionKind::SetReg(inst_operation) = inst.kind() else {
+        panic!("Expected SetReg");
+    };
+    let LowLevelILExpressionKind::Reg(src_operation) = inst_operation.source_expr().kind() else {
+        panic!("Expected Reg");
+    };
+    let src_reg = src_operation.source_reg();
+    assert_eq!(src_reg.name(), "ecx");
+    let dest_reg = inst_operation.dest_reg();
+    assert_eq!(dest_reg.name(), "ebx");
 }

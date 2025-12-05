@@ -1522,14 +1522,14 @@ def show_message_box(title, text, buttons=MessageBoxButtonSet.OKButtonSet, icon=
 
 	:note: This uses a standard QDialog which means simple HTML will render as HTML, but links are not clickable and special characters need to be escaped.
 
-	:param str title: Text title for the message box.
-	:param str text: Text for the main body of the message box.
+	:param str | None title: Text title for the message box.
+	:param str | None text: Text for the main body of the message box.
 	:param MessageBoxButtonSet buttons: One of :py:class:`MessageBoxButtonSet`
 	:param MessageBoxIcon icon: One of :py:class:`MessageBoxIcon`
 	:return: Which button was selected
 	:rtype: MessageBoxButtonResult
 	"""
-	return core.BNShowMessageBox(title, text, buttons, icon)
+	return core.BNShowMessageBox(title or "", text or "", buttons, icon)
 
 
 def open_url(url):

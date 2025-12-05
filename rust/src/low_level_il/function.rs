@@ -267,15 +267,11 @@ impl<M: FunctionMutability> LowLevelILFunction<M, SSA> {
         reg: LowLevelILSSARegisterKind<R>,
     ) -> Vec<LowLevelILInstruction<'_, M, SSA>> {
         use binaryninjacore_sys::BNGetLowLevelILSSARegisterUses;
-        let register_id = match reg {
-            LowLevelILSSARegisterKind::Full { kind, .. } => kind.id(),
-            LowLevelILSSARegisterKind::Partial { partial_reg, .. } => partial_reg.id(),
-        };
         let mut count = 0;
         let instrs = unsafe {
             BNGetLowLevelILSSARegisterUses(
                 self.handle,
-                register_id.into(),
+                reg.id().into(),
                 reg.version() as usize,
                 &mut count,
             )
@@ -295,14 +291,10 @@ impl<M: FunctionMutability> LowLevelILFunction<M, SSA> {
         reg: &LowLevelILSSARegisterKind<R>,
     ) -> Option<LowLevelILInstruction<'_, M, SSA>> {
         use binaryninjacore_sys::BNGetLowLevelILSSARegisterDefinition;
-        let register_id = match reg {
-            LowLevelILSSARegisterKind::Full { kind, .. } => kind.id(),
-            LowLevelILSSARegisterKind::Partial { partial_reg, .. } => partial_reg.id(),
-        };
         let instr_idx = unsafe {
             BNGetLowLevelILSSARegisterDefinition(
                 self.handle,
-                register_id.into(),
+                reg.id().into(),
                 reg.version() as usize,
             )
         };
@@ -315,12 +307,8 @@ impl<M: FunctionMutability> LowLevelILFunction<M, SSA> {
         &self,
         reg: &LowLevelILSSARegisterKind<R>,
     ) -> Option<RegisterValue> {
-        let register_id = match reg {
-            LowLevelILSSARegisterKind::Full { kind, .. } => kind.id(),
-            LowLevelILSSARegisterKind::Partial { partial_reg, .. } => partial_reg.id(),
-        };
         let value = unsafe {
-            BNGetLowLevelILSSARegisterValue(self.handle, register_id.into(), reg.version() as usize)
+            BNGetLowLevelILSSARegisterValue(self.handle, reg.id().into(), reg.version() as usize)
         };
         if value.state == BNRegisterValueType::UndeterminedValue {
             return None;

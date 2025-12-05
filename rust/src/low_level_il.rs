@@ -189,6 +189,13 @@ impl<R: ArchReg> LowLevelILSSARegisterKind<R> {
             | LowLevelILSSARegisterKind::Partial { version, .. } => version,
         }
     }
+
+    pub fn id(&self) -> RegisterId {
+        match *self {
+            LowLevelILSSARegisterKind::Full { kind, .. } => kind.id(),
+            LowLevelILSSARegisterKind::Partial { partial_reg, .. } => partial_reg.id(),
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug)]

@@ -30,6 +30,7 @@ DatabaseObject::DatabaseObject(BNDatabaseObject* object)
 }
 
 
+// todo: this can be deleted
 DatabaseObject::~DatabaseObject() = default;
 
 
@@ -85,6 +86,8 @@ std::unordered_map<std::string, Ref<DatabaseObject>> DatabaseObject::GetChildren
 	BNDatabaseObject** objects;
 	size_t count = BNGetDatabaseObjectChildren(m_object, &names, &objects);
 
+	// todo: do we want a cache?
+
 	std::unordered_map<std::string, Ref<DatabaseObject>> result;
 	for (size_t i = 0; i < count; i++)
 	{
@@ -95,6 +98,9 @@ std::unordered_map<std::string, Ref<DatabaseObject>> DatabaseObject::GetChildren
 	BNFreeDatabaseObjectList(objects, count);
 	return result;
 }
+
+
+// todo: expose GetChild() and friends
 
 
 std::vector<std::string> DatabaseObject::GetDependencies() const
@@ -119,6 +125,7 @@ DiffState::DiffState(Ref<Logger> logger)
 }
 
 
+// todo: this can be deleted
 DiffState::~DiffState() = default;
 
 
@@ -196,6 +203,7 @@ DiffObject::DiffObject(BNDiffObject* object)
 }
 
 
+// todo: this can be deleted
 DiffObject::~DiffObject() = default;
 
 
@@ -243,6 +251,8 @@ std::unordered_map<std::string, Ref<DiffObject>> DiffObject::GetChildren() const
 	char** names;
 	BNDiffObject** objects;
 	size_t count = BNGetDiffObjectChildren(m_object, &names, &objects);
+
+	// todo: do we want a cache?
 
 	std::unordered_map<std::string, Ref<DiffObject>> result;
 	for (size_t i = 0; i < count; i++)

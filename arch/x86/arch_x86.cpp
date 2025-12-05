@@ -4058,7 +4058,8 @@ public:
 
 	virtual bool GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, vector<BNRelocationInfo>& result) override
 	{
-		(void)view; (void)arch;
+		(void)arch;
+		Ref<Logger> logger = view->CreateLogger("X86MachoReloc");
 		set<uint64_t> relocTypes;
 		for (size_t i = 0; i < result.size(); i++)
 		{
@@ -4080,7 +4081,7 @@ public:
 		}
 
 		for (auto& reloc : relocTypes)
-			LogWarn("Unsupported Mach-O relocation type: %s", GetRelocationString((Machox86RelocationType)reloc));
+			logger->LogWarn("Unsupported Mach-O relocation type: %s", GetRelocationString((Machox86RelocationType)reloc));
 		return true;
 	}
 };
@@ -4090,7 +4091,8 @@ class x86ElfRelocationHandler: public RelocationHandler
 public:
 	virtual bool GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, vector<BNRelocationInfo>& result) override
 	{
-		(void)view; (void)arch;
+		(void)arch;
+		Ref<Logger> logger = view->CreateLogger("X86ElfReloc");
 		set<uint64_t> relocTypes;
 		for (auto& reloc : result)
 		{
@@ -4154,7 +4156,7 @@ public:
 			}
 		}
 		for (auto& reloc : relocTypes)
-			LogWarn("Unsupported ELF relocation type: %s", GetRelocationString((Elfx86RelocationType)reloc));
+			logger->LogWarn("Unsupported ELF relocation type: %s", GetRelocationString((Elfx86RelocationType)reloc));
 		return true;
 	}
 };
@@ -4221,7 +4223,8 @@ public:
 
 	virtual bool GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, vector<BNRelocationInfo>& result) override
 	{
-		(void)view; (void)arch;
+		(void)arch;
+		Ref<Logger> logger = view->CreateLogger("X86MachoReloc");
 		set<uint64_t> relocTypes;
 		for (size_t i = 0; i < result.size(); i++)
 		{
@@ -4286,7 +4289,7 @@ public:
 		}
 
 		for (auto& reloc : relocTypes)
-			LogWarn("Unsupported Mach-O relocation: %s", GetRelocationString((Machox64RelocationType)reloc));
+			logger->LogWarn("Unsupported Mach-O relocation: %s", GetRelocationString((Machox64RelocationType)reloc));
 		return true;
 	}
 };
@@ -4345,7 +4348,8 @@ public:
 		The AMD64 ILP32 ABI architecture uses only Elf32_Rela relocation entries in relocatable files. Relocations
 			contained within executable files or shared objects may use either Elf32_Rela relocation or Elf32_Rel relocation.
 		*/
-		(void)view; (void)arch;
+		(void)arch;
+		Ref<Logger> logger = view->CreateLogger("X86ElfReloc");
 		set<uint64_t> relocTypes;
 		for (auto& reloc : result)
 		{
@@ -4477,7 +4481,7 @@ public:
 			}
 		}
 		for (auto& reloc : relocTypes)
-			LogWarn("Unsupported ELF relocation: %s", GetRelocationString((Elfx64RelocationType)reloc));
+			logger->LogWarn("Unsupported ELF relocation: %s", GetRelocationString((Elfx64RelocationType)reloc));
 		return true;
 	}
 };
@@ -4547,7 +4551,8 @@ public:
 
 	virtual bool GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, vector<BNRelocationInfo>& result) override
 	{
-		(void)view; (void)arch;
+		(void)arch;
+		Ref<Logger> logger = view->CreateLogger("X86CoffReloc");
 		set<uint64_t> relocTypes;
 		for (auto& reloc : result)
 		{
@@ -4608,7 +4613,7 @@ public:
 					relocTypes.insert(reloc.nativeType);
 				}
 				for (auto& reloc : relocTypes)
-					LogWarn("Unsupported COFF relocation: %s", GetRelocationString((COFFx64RelocationType)reloc));
+					logger->LogWarn("Unsupported COFF relocation: %s", GetRelocationString((COFFx64RelocationType)reloc));
 			}
 			else if (arch->GetName() == "x86")
 			{
@@ -4652,7 +4657,7 @@ public:
 					relocTypes.insert(reloc.nativeType);
 				}
 				for (auto& reloc : relocTypes)
-					LogWarn("Unsupported COFF relocation: %s", GetRelocationString((COFFx86RelocationType)reloc));
+					logger->LogWarn("Unsupported COFF relocation: %s", GetRelocationString((COFFx86RelocationType)reloc));
 			}
 		}
 
@@ -4708,7 +4713,8 @@ public:
 
 	virtual bool GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, vector<BNRelocationInfo>& result) override
 	{
-		(void)view; (void)arch;
+		(void)arch;
+		Ref<Logger> logger = view->CreateLogger("X86PeReloc");
 		set<uint64_t> relocTypes;
 		for (auto& reloc : result)
 		{
@@ -4741,7 +4747,7 @@ public:
 		}
 
 		for (auto& reloc : relocTypes)
-			LogWarn("Unsupported PE relocation: %s", GetRelocationString((PeRelocationType)reloc));
+			logger->LogWarn("Unsupported PE relocation: %s", GetRelocationString((PeRelocationType)reloc));
 		return false;
 	}
 

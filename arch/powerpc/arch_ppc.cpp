@@ -2469,7 +2469,8 @@ public:
 
 	virtual bool GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, vector<BNRelocationInfo>& result) override
 	{
-		(void)view; (void)arch; (void)result;
+		(void)arch; (void)result;
+		Ref<Logger> logger = view->CreateLogger("PpcElfReloc");
 		set<uint64_t> relocTypes;
 		for (auto& reloc : result)
 		{
@@ -2526,7 +2527,7 @@ public:
 			}
 		}
 		for (auto& reloc : relocTypes)
-			LogWarn("Unsupported ELF relocation type: %s", GetRelocationString((ElfPpcRelocationType)reloc));
+			logger->LogWarn("Unsupported ELF relocation type: %s", GetRelocationString((ElfPpcRelocationType)reloc));
 		return true;
 	}
 
@@ -2555,7 +2556,8 @@ class PpcMachoRelocationHandler: public RelocationHandler
 public:
 	virtual bool GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, vector<BNRelocationInfo>& result) override
 	{
-		(void)view; (void)arch;
+		(void)arch;
+		Ref<Logger> logger = view->CreateLogger("PpcMachoReloc");
 		set<uint64_t> relocTypes;
 		for (auto& reloc : result)
 		{
@@ -2563,7 +2565,7 @@ public:
 			relocTypes.insert(reloc.nativeType);
 		}
 		for (auto& reloc : relocTypes)
-			LogWarn("Unsupported Mach-O relocation type: %s", GetRelocationString((MachoPpcRelocationType)reloc));
+			logger->LogWarn("Unsupported Mach-O relocation type: %s", GetRelocationString((MachoPpcRelocationType)reloc));
 		return false;
 	}
 };

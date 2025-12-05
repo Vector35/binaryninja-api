@@ -2497,8 +2497,8 @@ public:
 
 	virtual bool GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, vector<BNRelocationInfo>& result) override
 	{
-		(void)view;
 		(void)arch;
+		Ref<Logger> logger = view->CreateLogger("ArmElfReloc");
 		set<uint64_t> relocTypes;
 		for (auto& reloc: result)
 		{
@@ -2670,7 +2670,7 @@ public:
 			}
 		}
 		for (auto& reloc : relocTypes)
-			LogWarn("Unsupported ELF relocation: %s", GetRelocationString((ElfArmRelocationType)reloc));
+			logger->LogWarn("Unsupported ELF relocation: %s", GetRelocationString((ElfArmRelocationType)reloc));
 		return true;
 	}
 };
@@ -2693,8 +2693,8 @@ public:
 
 	virtual bool GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, vector<BNRelocationInfo>& result) override
 	{
-		(void)view;
 		(void)arch;
+		Ref<Logger> logger = view->CreateLogger("ArmMachoReloc");
 		set<uint64_t> relocTypes;
 		for (auto& reloc: result)
 		{
@@ -2702,7 +2702,7 @@ public:
 			relocTypes.insert(reloc.nativeType);
 		}
 		for (auto& reloc : relocTypes)
-			LogWarn("Unsupported Mach-O relocation %s", GetRelocationString((MachoArmRelocationType)reloc));
+			logger->LogWarn("Unsupported Mach-O relocation %s", GetRelocationString((MachoArmRelocationType)reloc));
 		return false;
 	};
 };
@@ -2745,8 +2745,8 @@ public:
 
 	virtual bool GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, vector<BNRelocationInfo>& result) override
 	{
-		(void)view;
 		(void)arch;
+		Ref<Logger> logger = view->CreateLogger("ArmPeReloc");
 		set<uint64_t> relocTypes;
 		for (auto& reloc: result)
 		{
@@ -2775,7 +2775,7 @@ public:
 			}
 		}
 		for (auto& reloc : relocTypes)
-			LogWarn("Unsupported PE relocation %s", GetRelocationString((PeRelocationType)reloc));
+			logger->LogWarn("Unsupported PE relocation %s", GetRelocationString((PeRelocationType)reloc));
 		return false;
 	}
 
@@ -3162,8 +3162,8 @@ public:
 
 	virtual bool GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, vector<BNRelocationInfo>& result) override
 	{
-		(void)view;
 		(void)arch;
+		Ref<Logger> logger = view->CreateLogger("ArmCoffReloc");
 		set<uint64_t> relocTypes;
 		for (auto& reloc: result)
 		{
@@ -3236,7 +3236,7 @@ public:
 			}
 		}
 		for (auto& reloc : relocTypes)
-			LogWarn("Unsupported COFF relocation %s", GetRelocationString((PeArmRelocationType)reloc));
+			logger->LogWarn("Unsupported COFF relocation %s", GetRelocationString((PeArmRelocationType)reloc));
 		return true;
 	}
 };

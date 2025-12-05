@@ -2843,9 +2843,8 @@ class Arm64MachoRelocationHandler : public RelocationHandler
 	virtual bool GetRelocationInfo(
 	    Ref<BinaryView> view, Ref<Architecture> arch, vector<BNRelocationInfo>& result) override
 	{
-		(void)view;
 		(void)arch;
-
+		Ref<Logger> logger = view->CreateLogger("Arm64MachoReloc");
 		set<MachoArm64RelocationType> unsupportedRelocations;
 		for (size_t i = 0; i < result.size(); i++)
 		{
@@ -2897,7 +2896,7 @@ class Arm64MachoRelocationHandler : public RelocationHandler
 		}
 
 		for (auto& relocType : unsupportedRelocations)
-			LogWarn("Unsupported relocation: %s (%x)", GetRelocationString(relocType), relocType);
+			logger->LogWarn("Unsupported relocation: %s (%x)", GetRelocationString(relocType), relocType);
 		return true;
 	}
 };
@@ -3159,9 +3158,9 @@ class Arm64ElfRelocationHandler : public RelocationHandler
 
 	virtual bool GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, vector<BNRelocationInfo>& result) override
 	{
-		(void)view;
 		(void)arch;
 		(void)result;
+		Ref<Logger> logger = view->CreateLogger("Arm64ElfReloc");
 		set<uint64_t> relocTypes;
 		for (auto& reloc : result)
 		{
@@ -3253,7 +3252,7 @@ class Arm64ElfRelocationHandler : public RelocationHandler
 			}
 		}
 		for (auto& reloc : relocTypes)
-			LogWarn("Unsupported ELF relocation type: %s", GetRelocationString((ElfArm64RelocationType)reloc));
+			logger->LogWarn("Unsupported ELF relocation type: %s", GetRelocationString((ElfArm64RelocationType)reloc));
 		return true;
 	}
 
@@ -3282,8 +3281,8 @@ class Arm64PeRelocationHandler : public RelocationHandler
 	virtual bool GetRelocationInfo(
 	    Ref<BinaryView> view, Ref<Architecture> arch, vector<BNRelocationInfo>& result) override
 	{
-		(void)view;
 		(void)arch;
+		Ref<Logger> logger = view->CreateLogger("Arm64PeReloc");
 		set<uint64_t> relocTypes;
 		for (auto& reloc : result)
 		{
@@ -3291,7 +3290,7 @@ class Arm64PeRelocationHandler : public RelocationHandler
 			relocTypes.insert(reloc.nativeType);
 		}
 		for (auto& reloc : relocTypes)
-			LogWarn(
+			logger->LogWarn(
 			    "Unsupported PE relocation type: %s", GetRelocationString((PeArm64RelocationType)reloc));
 		return false;
 	}
@@ -3407,8 +3406,8 @@ public:
 
 	virtual bool GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, vector<BNRelocationInfo>& result) override
 	{
-		(void)view;
 		(void)arch;
+		Ref<Logger> logger = view->CreateLogger("Arm64CoffReloc");
 		set<uint64_t> relocTypes;
 		for (auto& reloc : result)
 		{
@@ -3477,7 +3476,7 @@ public:
 			}
 		}
 		for (auto& reloc : relocTypes)
-			LogWarn("Unsupported PE relocation type: %s", GetRelocationString((PeArm64RelocationType)reloc));
+			logger->LogWarn("Unsupported PE relocation type: %s", GetRelocationString((PeArm64RelocationType)reloc));
 		return false;
 	}
 };

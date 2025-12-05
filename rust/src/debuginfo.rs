@@ -78,6 +78,7 @@ use binaryninjacore_sys::*;
 use std::ffi::c_void;
 
 use crate::progress::{NoProgressCallback, ProgressCallback};
+use crate::string::strings_to_string_list;
 use crate::variable::{NamedDataVariableWithType, NamedVariableWithType};
 use crate::{
     binary_view::BinaryView,
@@ -417,36 +418,19 @@ impl DebugInfo {
     }
 
     /// Returns all types within the parser
-    pub fn types_by_name(&self, parser_name: &str) -> Vec<NameAndType> {
+    pub fn types_by_name(&self, parser_name: &str) -> Array<NameAndType> {
         let parser_name = parser_name.to_cstr();
-
         let mut count: usize = 0;
         let debug_types_ptr =
             unsafe { BNGetDebugTypes(self.handle, parser_name.as_ptr(), &mut count) };
-        let result: Vec<_> = unsafe {
-            std::slice::from_raw_parts_mut(debug_types_ptr, count)
-                .iter()
-                .map(NameAndType::from_raw)
-                .collect()
-        };
-
-        unsafe { BNFreeDebugTypes(debug_types_ptr, count) };
-        result
+        unsafe { Array::new(debug_types_ptr, count, ()) }
     }
 
-    pub fn types(&self) -> Vec<NameAndType> {
+    pub fn types(&self) -> Array<NameAndType> {
         let mut count: usize = 0;
         let debug_types_ptr =
             unsafe { BNGetDebugTypes(self.handle, std::ptr::null_mut(), &mut count) };
-        let result: Vec<_> = unsafe {
-            std::slice::from_raw_parts_mut(debug_types_ptr, count)
-                .iter()
-                .map(NameAndType::from_raw)
-                .collect()
-        };
-
-        unsafe { BNFreeDebugTypes(debug_types_ptr, count) };
-        result
+        unsafe { Array::new(debug_types_ptr, count, ()) }
     }
 
     /// Returns all functions within the parser
@@ -485,38 +469,19 @@ impl DebugInfo {
     }
 
     /// Returns all data variables within the parser
-    pub fn data_variables_by_name(&self, parser_name: &str) -> Vec<NamedDataVariableWithType> {
+    pub fn data_variables_by_name(&self, parser_name: &str) -> Array<NamedDataVariableWithType> {
         let parser_name = parser_name.to_cstr();
-
         let mut count: usize = 0;
         let data_variables_ptr =
             unsafe { BNGetDebugDataVariables(self.handle, parser_name.as_ptr(), &mut count) };
-
-        let result: Vec<NamedDataVariableWithType> = unsafe {
-            std::slice::from_raw_parts_mut(data_variables_ptr, count)
-                .iter()
-                .map(NamedDataVariableWithType::from_raw)
-                .collect()
-        };
-
-        unsafe { BNFreeDataVariablesAndName(data_variables_ptr, count) };
-        result
+        unsafe { Array::new(data_variables_ptr, count, ()) }
     }
 
-    pub fn data_variables(&self) -> Vec<NamedDataVariableWithType> {
+    pub fn data_variables(&self) -> Array<NamedDataVariableWithType> {
         let mut count: usize = 0;
         let data_variables_ptr =
             unsafe { BNGetDebugDataVariables(self.handle, std::ptr::null_mut(), &mut count) };
-
-        let result: Vec<NamedDataVariableWithType> = unsafe {
-            std::slice::from_raw_parts_mut(data_variables_ptr, count)
-                .iter()
-                .map(NamedDataVariableWithType::from_raw)
-                .collect()
-        };
-
-        unsafe { BNFreeDataVariablesAndName(data_variables_ptr, count) };
-        result
+        unsafe { Array::new(data_variables_ptr, count, ()) }
     }
 
     pub fn type_by_name(&self, parser_name: &str, name: &str) -> Option<Ref<Type>> {
@@ -572,49 +537,21 @@ impl DebugInfo {
     }
 
     /// Returns a list of [`NameAndType`] where the `name` is the parser the type originates from.
-    pub fn get_types_by_name(&self, name: &str) -> Vec<NameAndType> {
-        let mut count: usize = 0;
+    pub fn get_types_by_name(&self, name: &str) -> Array<NameAndType> {
         let name = name.to_cstr();
+        let mut count: usize = 0;
         let raw_names_and_types_ptr =
             unsafe { BNGetDebugTypesByName(self.handle, name.as_ptr(), &mut count) };
-
-        let raw_names_and_types: &[BNNameAndType] =
-            unsafe { std::slice::from_raw_parts(raw_names_and_types_ptr, count) };
-
-        let names_and_types = raw_names_and_types
-            .iter()
-            .map(NameAndType::from_raw)
-            .collect();
-
-        unsafe { BNFreeNameAndTypeList(raw_names_and_types_ptr, count) };
-        names_and_types
+        unsafe { Array::new(raw_names_and_types_ptr, count, ()) }
     }
 
     // The tuple is (DebugInfoParserName, address, type)
-    pub fn get_data_variables_by_name(&self, name: &str) -> Vec<(String, u64, Ref<Type>)> {
+    pub fn get_data_variables_by_name(&self, name: &str) -> Array<NamedDataVariableWithType> {
         let name = name.to_cstr();
-
         let mut count: usize = 0;
         let raw_variables_and_names =
             unsafe { BNGetDebugDataVariablesByName(self.handle, name.as_ptr(), &mut count) };
-
-        let variables_and_names: &[*mut BNDataVariableAndName] =
-            unsafe { std::slice::from_raw_parts(raw_variables_and_names as *mut _, count) };
-
-        let result = variables_and_names
-            .iter()
-            .take(count)
-            .map(|&variable_and_name| unsafe {
-                (
-                    raw_to_string((*variable_and_name).name).unwrap(),
-                    (*variable_and_name).address,
-                    Type::from_raw((*variable_and_name).type_).to_owned(),
-                )
-            })
-            .collect();
-
-        unsafe { BNFreeDataVariablesAndName(raw_variables_and_names, count) };
-        result
+        unsafe { Array::new(raw_variables_and_names, count, ()) }
     }
 
     /// The tuple is (DebugInfoParserName, TypeName, type)
@@ -687,19 +624,20 @@ impl DebugInfo {
 
     /// Adds a type scoped under the current parser's name to the debug info
     pub fn add_type(&self, name: &str, new_type: &Type, components: &[&str]) -> bool {
-        // SAFETY: Lifetime of `components` will live long enough, so passing as_ptr is safe.
-        let raw_components: Vec<_> = components.iter().map(|&c| c.as_ptr()).collect();
-
+        // NOTE: Must be freed after call to BNAddDebugType is over.
+        let raw_components_ptr = strings_to_string_list(components);
         let name = name.to_cstr();
-        unsafe {
+        let result = unsafe {
             BNAddDebugType(
                 self.handle,
                 name.as_ptr(),
                 new_type.handle,
-                raw_components.as_ptr() as *mut _,
+                raw_components_ptr as *mut _,
                 components.len(),
             )
-        }
+        };
+        unsafe { BNFreeStringList(raw_components_ptr, components.len()) };
+        result
     }
 
     /// Adds a function scoped under the current parser's name to the debug info

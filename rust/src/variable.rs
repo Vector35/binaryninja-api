@@ -8,13 +8,13 @@ use crate::string::{raw_to_string, BnString};
 use crate::types::Type;
 use binaryninjacore_sys::{
     BNDataVariable, BNDataVariableAndName, BNFreeDataVariableAndName, BNFreeDataVariables,
-    BNFreeILInstructionList, BNFreeIndirectBranchList, BNFreeMergedVariableList,
-    BNFreePossibleValueSet, BNFreeStackVariableReferenceList, BNFreeUserVariableValues,
-    BNFreeVariableList, BNFreeVariableNameAndTypeList, BNFromVariableIdentifier,
-    BNIndirectBranchInfo, BNLookupTableEntry, BNMergedVariable, BNPossibleValueSet,
-    BNRegisterValue, BNRegisterValueType, BNStackVariableReference, BNToVariableIdentifier,
-    BNTypeWithConfidence, BNUserVariableValue, BNValueRange, BNVariable, BNVariableNameAndType,
-    BNVariableSourceType,
+    BNFreeDataVariablesAndName, BNFreeILInstructionList, BNFreeIndirectBranchList,
+    BNFreeMergedVariableList, BNFreePossibleValueSet, BNFreeStackVariableReferenceList,
+    BNFreeUserVariableValues, BNFreeVariableList, BNFreeVariableNameAndTypeList,
+    BNFromVariableIdentifier, BNIndirectBranchInfo, BNLookupTableEntry, BNMergedVariable,
+    BNPossibleValueSet, BNRegisterValue, BNRegisterValueType, BNStackVariableReference,
+    BNToVariableIdentifier, BNTypeWithConfidence, BNUserVariableValue, BNValueRange, BNVariable,
+    BNVariableNameAndType, BNVariableSourceType,
 };
 use std::collections::HashSet;
 
@@ -144,6 +144,22 @@ impl NamedDataVariableWithType {
             name,
             auto_discovered,
         }
+    }
+}
+
+impl CoreArrayProvider for NamedDataVariableWithType {
+    type Raw = BNDataVariableAndName;
+    type Context = ();
+    type Wrapped<'a> = NamedDataVariableWithType;
+}
+
+unsafe impl CoreArrayProviderInner for NamedDataVariableWithType {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreeDataVariablesAndName(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Self::from_raw(raw)
     }
 }
 

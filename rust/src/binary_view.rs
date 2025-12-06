@@ -38,7 +38,7 @@ use crate::external_library::{ExternalLibrary, ExternalLocation};
 use crate::file_accessor::{Accessor, FileAccessor};
 use crate::file_metadata::FileMetadata;
 use crate::flowgraph::FlowGraph;
-use crate::function::{ArchAndAddr, Function, FunctionViewType, NativeBlock};
+use crate::function::{Function, FunctionViewType, Location, NativeBlock};
 use crate::linear_view::{LinearDisassemblyLine, LinearViewCursor};
 use crate::metadata::Metadata;
 use crate::platform::Platform;
@@ -1445,29 +1445,23 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    // TODO: Should this instead be implemented on [`Function`] considering `src_func`? `Location` is local to the source function.
     fn should_skip_target_analysis(
         &self,
-        source: &ArchAndAddr,
-        srcfunc: &Function,
-        srcend: u64,
-        target: &ArchAndAddr,
+        src_loc: impl Into<Location>,
+        src_func: &Function,
+        src_end: u64,
+        target: impl Into<Location>,
     ) -> bool {
-        let mut srccopy = BNArchitectureAndAddress {
-            arch: source.arch.handle,
-            address: source.addr,
-        };
-        let mut targetcopy = BNArchitectureAndAddress {
-            arch: target.arch.handle,
-            address: target.addr,
-        };
-
+        let src_loc = src_loc.into();
+        let target = target.into();
         unsafe {
             BNShouldSkipTargetAnalysis(
                 self.as_ref().handle,
-                &mut srccopy,
-                srcfunc.handle,
-                srcend,
-                &mut targetcopy,
+                &mut src_loc.into(),
+                src_func.handle,
+                src_end,
+                &mut target.into(),
             )
         }
     }

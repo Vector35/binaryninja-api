@@ -71,20 +71,21 @@ impl Location {
             arch: Some(unsafe { CoreArchitecture::from_raw(arch) }),
         }
     }
+
+    pub fn new(arch: Option<CoreArchitecture>, addr: u64) -> Self {
+        Self { arch, addr }
+    }
 }
 
 impl From<u64> for Location {
     fn from(addr: u64) -> Self {
-        Location { arch: None, addr }
+        Location::new(None, addr)
     }
 }
 
 impl From<(CoreArchitecture, u64)> for Location {
     fn from(loc: (CoreArchitecture, u64)) -> Self {
-        Location {
-            arch: Some(loc.0),
-            addr: loc.1,
-        }
+        Location::new(Some(loc.0), loc.1)
     }
 }
 
@@ -2995,37 +2996,6 @@ unsafe impl CoreArrayProviderInner for Comment {
         Comment {
             addr: *raw,
             comment: function.comment_at(*raw),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-pub struct ArchAndAddr {
-    pub arch: CoreArchitecture,
-    pub addr: u64,
-}
-
-impl ArchAndAddr {
-    pub fn new(arch: CoreArchitecture, addr: u64) -> Self {
-        Self { arch, addr }
-    }
-}
-
-impl From<BNArchitectureAndAddress> for ArchAndAddr {
-    fn from(raw: BNArchitectureAndAddress) -> Self {
-        unsafe {
-            let arch = CoreArchitecture::from_raw(raw.arch);
-            let addr = raw.address;
-            ArchAndAddr { arch, addr }
-        }
-    }
-}
-
-impl ArchAndAddr {
-    pub fn into_raw(self) -> BNArchitectureAndAddress {
-        BNArchitectureAndAddress {
-            arch: self.arch.handle,
-            address: self.addr,
         }
     }
 }

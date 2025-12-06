@@ -23,7 +23,7 @@ use crate::{
     calling_convention::CoreCallingConvention,
     data_buffer::DataBuffer,
     disassembly::InstructionTextToken,
-    function::{ArchAndAddr, Function, NativeBlock},
+    function::{Function, NativeBlock},
     platform::Platform,
     rc::*,
     relocation::CoreRelocationHandler,
@@ -47,6 +47,7 @@ use crate::relocation::{CustomRelocationHandlerHandle, RelocationHandler};
 use crate::variable::IndirectBranchInfo;
 
 use crate::confidence::Conf;
+use crate::function::Location;
 use crate::low_level_il::expression::ValueExpr;
 use crate::low_level_il::lifting::{
     get_default_flag_cond_llil, get_default_flag_write_llil, LowLevelILFlagWriteOp,
@@ -1959,7 +1960,7 @@ pub struct BasicBlockAnalysisContext {
 
     // In
     pub indirect_branches: Vec<IndirectBranchInfo>,
-    pub indirect_no_return_calls: HashSet<ArchAndAddr>,
+    pub indirect_no_return_calls: HashSet<Location>,
     pub analysis_skip_override: BNFunctionAnalysisSkipOverride,
     pub guided_analysis_mode: bool,
     pub trigger_guided_on_invalid_instruction: bool,
@@ -1969,13 +1970,13 @@ pub struct BasicBlockAnalysisContext {
 
     // In/Out
     pub max_size_reached: bool,
-    contextual_returns: HashMap<ArchAndAddr, bool>,
+    contextual_returns: HashMap<Location, bool>,
 
     // Out
-    direct_code_references: HashMap<u64, ArchAndAddr>,
-    direct_no_return_calls: HashSet<ArchAndAddr>,
-    halted_disassembly_addresses: HashSet<ArchAndAddr>,
-    inlined_unresolved_indirect_branches: HashSet<ArchAndAddr>,
+    direct_code_references: HashMap<u64, Location>,
+    direct_no_return_calls: HashSet<Location>,
+    halted_disassembly_addresses: HashSet<Location>,
+    inlined_unresolved_indirect_branches: HashSet<Location>,
 }
 
 impl BasicBlockAnalysisContext {
@@ -1995,7 +1996,7 @@ impl BasicBlockAnalysisContext {
         let indirect_no_return_calls = (0..ctx_ref.indirectNoReturnCallsCount)
             .map(|i| {
                 let raw = unsafe { std::ptr::read(ctx_ref.indirectNoReturnCalls.add(i)) };
-                ArchAndAddr::from(raw)
+                Location::from(raw)
             })
             .collect::<HashSet<_>>();
 
@@ -2003,7 +2004,7 @@ impl BasicBlockAnalysisContext {
             .map(|i| {
                 let loc = unsafe {
                     let raw = std::ptr::read(ctx_ref.contextualFunctionReturnLocations.add(i));
-                    ArchAndAddr::from(raw)
+                    Location::from(raw)
                 };
                 let val = unsafe { *ctx_ref.contextualFunctionReturnValues.add(i) };
                 (loc, val)
@@ -2014,7 +2015,7 @@ impl BasicBlockAnalysisContext {
             .map(|i| {
                 let src = unsafe {
                     let raw = std::ptr::read(ctx_ref.directRefSources.add(i));
-                    ArchAndAddr::from(raw)
+                    Location::from(raw)
                 };
                 let tgt = unsafe { *ctx_ref.directRefTargets.add(i) };
                 (tgt, src)
@@ -2024,14 +2025,14 @@ impl BasicBlockAnalysisContext {
         let direct_no_return_calls = (0..ctx_ref.directNoReturnCallsCount)
             .map(|i| {
                 let raw = unsafe { std::ptr::read(ctx_ref.directNoReturnCalls.add(i)) };
-                ArchAndAddr::from(raw)
+                Location::from(raw)
             })
             .collect::<HashSet<_>>();
 
         let halted_disassembly_addresses = (0..ctx_ref.haltedDisassemblyAddressesCount)
             .map(|i| {
                 let raw = unsafe { std::ptr::read(ctx_ref.haltedDisassemblyAddresses.add(i)) };
-                ArchAndAddr::from(raw)
+                Location::from(raw)
             })
             .collect::<HashSet<_>>();
 
@@ -2040,7 +2041,7 @@ impl BasicBlockAnalysisContext {
             .map(|i| {
                 let raw =
                     unsafe { std::ptr::read(ctx_ref.inlinedUnresolvedIndirectBranches.add(i)) };
-                ArchAndAddr::from(raw)
+                Location::from(raw)
             })
             .collect::<HashSet<_>>();
 
@@ -2064,7 +2065,8 @@ impl BasicBlockAnalysisContext {
         }
     }
 
-    pub fn add_contextual_return(&mut self, loc: ArchAndAddr, value: bool) {
+    pub fn add_contextual_return(&mut self, loc: impl Into<Location>, value: bool) {
+        let loc = loc.into();
         if !self.contextual_returns.contains_key(&loc) {
             self.contextual_returns_dirty = true;
         }
@@ -2072,20 +2074,22 @@ impl BasicBlockAnalysisContext {
         self.contextual_returns.insert(loc, value);
     }
 
-    pub fn add_direct_code_reference(&mut self, target: u64, src: ArchAndAddr) {
-        self.direct_code_references.entry(target).or_insert(src);
+    pub fn add_direct_code_reference(&mut self, target: u64, src: impl Into<Location>) {
+        self.direct_code_references
+            .entry(target)
+            .or_insert(src.into());
     }
 
-    pub fn add_direct_no_return_call(&mut self, loc: ArchAndAddr) {
-        self.direct_no_return_calls.insert(loc);
+    pub fn add_direct_no_return_call(&mut self, loc: impl Into<Location>) {
+        self.direct_no_return_calls.insert(loc.into());
     }
 
-    pub fn add_halted_disassembly_address(&mut self, loc: ArchAndAddr) {
-        self.halted_disassembly_addresses.insert(loc);
+    pub fn add_halted_disassembly_address(&mut self, loc: impl Into<Location>) {
+        self.halted_disassembly_addresses.insert(loc.into());
     }
 
-    pub fn add_inlined_unresolved_indirect_branch(&mut self, loc: ArchAndAddr) {
-        self.inlined_unresolved_indirect_branches.insert(loc);
+    pub fn add_inlined_unresolved_indirect_branch(&mut self, loc: impl Into<Location>) {
+        self.inlined_unresolved_indirect_branches.insert(loc.into());
     }
 
     pub fn create_basic_block(
@@ -2121,7 +2125,7 @@ impl BasicBlockAnalysisContext {
             let mut sources: Vec<BNArchitectureAndAddress> = Vec::with_capacity(total);
             let mut targets: Vec<u64> = Vec::with_capacity(total);
             for (target, src) in &self.direct_code_references {
-                sources.push(src.into_raw());
+                sources.push(BNArchitectureAndAddress::from(src));
                 targets.push(*target);
             }
             unsafe {
@@ -2138,7 +2142,7 @@ impl BasicBlockAnalysisContext {
             let total = self.direct_no_return_calls.len();
             let mut locations: Vec<BNArchitectureAndAddress> = Vec::with_capacity(total);
             for loc in &self.direct_no_return_calls {
-                locations.push(loc.into_raw());
+                locations.push(BNArchitectureAndAddress::from(loc));
             }
             unsafe {
                 BNAnalyzeBasicBlocksContextSetDirectNoReturnCalls(
@@ -2153,7 +2157,7 @@ impl BasicBlockAnalysisContext {
             let total = self.halted_disassembly_addresses.len();
             let mut locations: Vec<BNArchitectureAndAddress> = Vec::with_capacity(total);
             for loc in &self.halted_disassembly_addresses {
-                locations.push(loc.into_raw());
+                locations.push(BNArchitectureAndAddress::from(loc));
             }
             unsafe {
                 BNAnalyzeBasicBlocksContextSetHaltedDisassemblyAddresses(
@@ -2168,7 +2172,7 @@ impl BasicBlockAnalysisContext {
             let total = self.inlined_unresolved_indirect_branches.len();
             let mut locations: Vec<BNArchitectureAndAddress> = Vec::with_capacity(total);
             for loc in &self.inlined_unresolved_indirect_branches {
-                locations.push(loc.into_raw());
+                locations.push(BNArchitectureAndAddress::from(loc));
             }
             unsafe {
                 BNAnalyzeBasicBlocksContextSetInlinedUnresolvedIndirectBranches(
@@ -2188,7 +2192,7 @@ impl BasicBlockAnalysisContext {
             let mut locations: Vec<BNArchitectureAndAddress> = Vec::with_capacity(total);
             let mut values: Vec<bool> = Vec::with_capacity(total);
             for (loc, value) in &self.contextual_returns {
-                locations.push(loc.into_raw());
+                locations.push(BNArchitectureAndAddress::from(loc));
                 values.push(*value);
             }
             unsafe {

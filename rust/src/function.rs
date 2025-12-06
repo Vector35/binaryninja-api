@@ -94,12 +94,41 @@ impl From<BNArchitectureAndAddress> for Location {
     }
 }
 
+impl From<&BNArchitectureAndAddress> for Location {
+    fn from(value: &BNArchitectureAndAddress) -> Self {
+        Self::from_raw(value.address, value.arch)
+    }
+}
+
 impl From<Location> for BNArchitectureAndAddress {
     fn from(value: Location) -> Self {
         Self {
             arch: value.arch.map(|a| a.handle).unwrap_or(std::ptr::null_mut()),
             address: value.addr,
         }
+    }
+}
+
+impl From<&Location> for BNArchitectureAndAddress {
+    fn from(value: &Location) -> Self {
+        Self::from(*value)
+    }
+}
+
+impl CoreArrayProvider for Location {
+    type Raw = BNArchitectureAndAddress;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for Location {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        // NOTE: Does not use _count because freeing does not require iterating the list.
+        BNFreeArchitectureAndAddressList(raw)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        Location::from(*raw)
     }
 }
 
@@ -2594,19 +2623,14 @@ impl Function {
         unsafe { BNFunctionRemoveMetadata(self.handle, key.as_ptr()) };
     }
 
-    pub fn guided_source_blocks(&self) -> HashSet<ArchAndAddr> {
+    /// The current list of guided source block start [`Location`]s for this function.
+    ///
+    /// These blocks have their direct outgoing branch targets analyzed.
+    pub fn guided_source_blocks(&self) -> HashSet<Location> {
         let mut count = 0;
         let raw = unsafe { BNGetGuidedSourceBlocks(self.handle, &mut count) };
-        if raw.is_null() || count == 0 {
-            return HashSet::new();
-        }
-
-        (0..count)
-            .map(|i| {
-                let raw = unsafe { std::ptr::read(raw.add(i)) };
-                ArchAndAddr::from(raw)
-            })
-            .collect::<HashSet<_>>()
+        let array: Array<Location> = unsafe { Array::new(raw, count, ()) };
+        array.into_iter().collect()
     }
 }
 

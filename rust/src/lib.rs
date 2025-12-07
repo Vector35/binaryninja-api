@@ -104,6 +104,7 @@ use rc::Ref;
 use std::cmp;
 use std::collections::HashMap;
 use std::ffi::{c_char, c_void, CStr};
+use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 use string::BnString;
 use string::IntoCStr;
@@ -509,6 +510,20 @@ impl Ord for VersionInfo {
             cmp::Ordering::Less
         } else {
             cmp::Ordering::Greater
+        }
+    }
+}
+
+impl Display for VersionInfo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if self.channel.is_empty() {
+            write!(f, "{}.{}.{}", self.major, self.minor, self.build)
+        } else {
+            write!(
+                f,
+                "{}.{}.{}-{}",
+                self.major, self.minor, self.build, self.channel
+            )
         }
     }
 }

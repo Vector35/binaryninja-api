@@ -7,9 +7,10 @@ use binaryninja::interaction::handler::{
 };
 use binaryninja::interaction::{MessageBoxButtonResult, MessageBoxButtonSet, MessageBoxIcon};
 use binaryninja::{
+    architecture::BranchType,
     binary_view::{BinaryView, BinaryViewExt},
     disassembly::{DisassemblyTextLine, InstructionTextToken, InstructionTextTokenKind},
-    flowgraph::{BranchType, EdgePenStyle, FlowGraph, ThemeColor},
+    flowgraph::{EdgePenStyle, FlowGraph, ThemeColor},
 };
 
 pub struct GraphPrinter;

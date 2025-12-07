@@ -94,6 +94,8 @@ pub mod workflow;
 
 use crate::file_metadata::FileMetadata;
 use crate::function::Function;
+use crate::progress::{NoProgressCallback, ProgressCallback};
+use crate::string::raw_to_string;
 use binary_view::BinaryView;
 use binaryninjacore_sys::*;
 use metadata::Metadata;
@@ -107,9 +109,6 @@ use string::BnString;
 use string::IntoCStr;
 use string::IntoJson;
 
-use crate::progress::{NoProgressCallback, ProgressCallback};
-use crate::string::raw_to_string;
-pub use binaryninjacore_sys::BNBranchType as BranchType;
 pub use binaryninjacore_sys::BNDataFlowQueryOption as DataFlowQueryOption;
 pub use binaryninjacore_sys::BNEndianness as Endianness;
 pub use binaryninjacore_sys::BNILBranchDependence as ILBranchDependence;

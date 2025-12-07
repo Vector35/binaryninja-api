@@ -37,7 +37,7 @@ pub use binaryninjacore_sys::BNFunctionAnalysisSkipOverride as FunctionAnalysisS
 pub use binaryninjacore_sys::BNFunctionUpdateType as FunctionUpdateType;
 pub use binaryninjacore_sys::BNHighlightStandardColor as HighlightStandardColor;
 
-use crate::architecture::RegisterId;
+use crate::architecture::{IndirectBranchInfo, RegisterId};
 use crate::binary_view::AddressRange;
 use crate::confidence::Conf;
 use crate::high_level_il::HighLevelILFunction;
@@ -46,7 +46,7 @@ use crate::low_level_il::LowLevelILRegularFunction;
 use crate::medium_level_il::MediumLevelILFunction;
 use crate::metadata::Metadata;
 use crate::variable::{
-    IndirectBranchInfo, MergedVariable, NamedVariableWithType, RegisterValue, RegisterValueType,
+    MergedVariable, NamedVariableWithType, RegisterValue, RegisterValueType,
     StackVariableReference, Variable,
 };
 use crate::workflow::Workflow;

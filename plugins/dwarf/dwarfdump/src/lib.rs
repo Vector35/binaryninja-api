@@ -13,10 +13,11 @@
 // limitations under the License.
 
 use binaryninja::{
+    architecture::BranchType,
     binary_view::{BinaryView, BinaryViewExt},
     command::{register_command, Command},
     disassembly::{DisassemblyTextLine, InstructionTextToken, InstructionTextTokenKind},
-    flowgraph::{BranchType, EdgeStyle, FlowGraph, FlowGraphNode, FlowGraphOption},
+    flowgraph::{EdgeStyle, FlowGraph, FlowGraphNode, FlowGraphOption},
 };
 use dwarfreader::is_valid;
 

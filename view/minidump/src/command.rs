@@ -8,7 +8,7 @@ use binaryninja::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
 pub fn print_memory_information(bv: &BinaryView) {
     debug!("Printing memory information");
     if let Some(minidump_bv) = bv.parent_view() {
-        if let Ok(read_buffer) = minidump_bv.read_buffer(0, minidump_bv.len() as usize) {
+        if let Some(read_buffer) = minidump_bv.read_buffer(0, minidump_bv.len() as usize) {
             if let Ok(minidump_obj) = Minidump::read(read_buffer.get_data()) {
                 if let Ok(memory_info_list) = minidump_obj.get_stream::<MinidumpMemoryInfoList>() {
                     let mut memory_info_list_writer = Vec::new();

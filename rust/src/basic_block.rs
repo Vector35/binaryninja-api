@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::architecture::CoreArchitecture;
+use crate::architecture::{BranchType, CoreArchitecture};
 use crate::function::Function;
 use crate::rc::*;
-use crate::BranchType;
 use binaryninjacore_sys::*;
 use std::fmt;
 use std::fmt::Debug;
@@ -26,13 +25,6 @@ enum EdgeDirection {
     Outgoing,
 }
 
-pub struct PendingBasicBlockEdge {
-    pub branch_type: BranchType,
-    pub target: u64,
-    pub arch: CoreArchitecture,
-    pub fallthrough: bool,
-}
-
 pub struct Edge<'a, C: 'a + BlockContext> {
     pub branch: BranchType,
     pub back_edge: bool,
@@ -40,7 +32,7 @@ pub struct Edge<'a, C: 'a + BlockContext> {
     pub target: Guard<'a, BasicBlock<C>>,
 }
 
-impl<'a, C: 'a + fmt::Debug + BlockContext> fmt::Debug for Edge<'a, C> {
+impl<'a, C: 'a + Debug + BlockContext> Debug for Edge<'a, C> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -93,6 +85,60 @@ unsafe impl<'a, C: 'a + BlockContext> CoreArrayProviderInner for Edge<'a, C> {
             source,
             target,
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PendingBasicBlockEdge {
+    pub branch_type: BranchType,
+    pub target: u64,
+    pub arch: CoreArchitecture,
+    pub fallthrough: bool,
+}
+
+impl PendingBasicBlockEdge {
+    pub fn new(
+        branch_type: BranchType,
+        target: u64,
+        arch: CoreArchitecture,
+        fallthrough: bool,
+    ) -> Self {
+        Self {
+            branch_type,
+            target,
+            arch,
+            fallthrough,
+        }
+    }
+}
+
+impl From<BNPendingBasicBlockEdge> for PendingBasicBlockEdge {
+    fn from(edge: BNPendingBasicBlockEdge) -> Self {
+        Self {
+            branch_type: edge.type_,
+            target: edge.target,
+            arch: unsafe { CoreArchitecture::from_raw(edge.arch) },
+            fallthrough: edge.fallThrough,
+        }
+    }
+}
+
+impl CoreArrayProvider for PendingBasicBlockEdge {
+    type Raw = BNPendingBasicBlockEdge;
+    type Context = ();
+    type Wrapped<'a>
+        = PendingBasicBlockEdge
+    where
+        Self: 'a;
+}
+
+unsafe impl CoreArrayProviderInner for PendingBasicBlockEdge {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        BNFreePendingBasicBlockEdgeList(raw);
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        PendingBasicBlockEdge::from(*raw)
     }
 }
 
@@ -243,36 +289,24 @@ impl<C: BlockContext> BasicBlock<C> {
         }
     }
 
-    pub fn pending_outgoing_edges(&self) -> Vec<PendingBasicBlockEdge> {
+    /// Pending outgoing edges for the basic block. These are edges that have not yet been resolved.
+    pub fn pending_outgoing_edges(&self) -> Array<PendingBasicBlockEdge> {
         unsafe {
             let mut count = 0;
             let edges_ptr = BNGetBasicBlockPendingOutgoingEdges(self.handle, &mut count);
-            let edges = std::slice::from_raw_parts(edges_ptr, count);
-
-            let mut result = Vec::with_capacity(count);
-            for edge in edges {
-                result.push(PendingBasicBlockEdge {
-                    branch_type: edge.type_,
-                    target: edge.target,
-                    arch: CoreArchitecture::from_raw(edge.arch),
-                    fallthrough: edge.fallThrough,
-                });
-            }
-
-            BNFreePendingBasicBlockEdgeList(edges_ptr);
-            result
+            Array::new(edges_ptr, count, ())
         }
     }
 
-    pub fn add_pending_outgoing_edge(
-        &self,
-        typ: BranchType,
-        addr: u64,
-        arch: CoreArchitecture,
-        fallthrough: bool,
-    ) {
+    pub fn add_pending_outgoing_edge(&self, edge: &PendingBasicBlockEdge) {
         unsafe {
-            BNBasicBlockAddPendingOutgoingEdge(self.handle, typ, addr, arch.handle, fallthrough);
+            BNBasicBlockAddPendingOutgoingEdge(
+                self.handle,
+                edge.branch_type,
+                edge.target,
+                edge.arch.handle,
+                edge.fallthrough,
+            );
         }
     }
 

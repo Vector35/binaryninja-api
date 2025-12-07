@@ -9,10 +9,9 @@ use binaryninja::relocation::{Relocation, RelocationHandlerExt};
 use binaryninja::{
     add_optional_plugin_dependency, architecture,
     architecture::{
-        llvm_assemble, Architecture, ArchitectureExt, CoreArchitecture, CustomArchitectureHandle,
-        ImplicitRegisterExtend, InstructionInfo, LlvmServicesCodeModel, LlvmServicesDialect,
-        LlvmServicesRelocMode, Register as Reg, RegisterInfo, UnusedFlag, UnusedRegisterStack,
-        UnusedRegisterStackInfo,
+        Architecture, ArchitectureExt, CoreArchitecture, CustomArchitectureHandle,
+        ImplicitRegisterExtend, InstructionInfo, Register as Reg, RegisterInfo, UnusedFlag,
+        UnusedRegisterStack, UnusedRegisterStackInfo,
     },
     binary_view::{BinaryView, BinaryViewExt},
     calling_convention::{register_calling_convention, CallingConvention, ConventionBuilder},
@@ -20,6 +19,7 @@ use binaryninja::{
     disassembly::{InstructionTextToken, InstructionTextTokenKind},
     function::Function,
     function_recognizer::FunctionRecognizer,
+    llvm::{llvm_assemble, LlvmServicesCodeModel, LlvmServicesDialect, LlvmServicesRelocMode},
     rc::Ref,
     relocation::{
         CoreRelocationHandler, CustomRelocationHandlerHandle, RelocationHandler, RelocationInfo,

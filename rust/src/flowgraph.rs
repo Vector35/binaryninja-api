@@ -32,7 +32,6 @@ pub use edge::EdgeStyle;
 pub use edge::FlowGraphEdge;
 pub use node::FlowGraphNode;
 
-pub type BranchType = BNBranchType;
 pub type EdgePenStyle = BNEdgePenStyle;
 pub type ThemeColor = BNThemeColor;
 pub type FlowGraphOption = BNFlowGraphOption;

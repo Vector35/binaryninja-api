@@ -1,7 +1,8 @@
+use crate::architecture::BranchType;
 use crate::basic_block::{BasicBlock, BlockContext};
 use crate::disassembly::DisassemblyTextLine;
 use crate::flowgraph::edge::{EdgeStyle, FlowGraphEdge};
-use crate::flowgraph::{BranchType, FlowGraph};
+use crate::flowgraph::FlowGraph;
 use crate::function::HighlightColor;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use binaryninjacore_sys::*;

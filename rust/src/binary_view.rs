@@ -1466,12 +1466,12 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn read_buffer(&self, offset: u64, len: usize) -> Result<DataBuffer> {
+    fn read_buffer(&self, offset: u64, len: usize) -> Option<DataBuffer> {
         let read_buffer = unsafe { BNReadViewBuffer(self.as_ref().handle, offset, len) };
         if read_buffer.is_null() {
-            Err(())
+            None
         } else {
-            Ok(DataBuffer::from_raw(read_buffer))
+            Some(DataBuffer::from_raw(read_buffer))
         }
     }
 

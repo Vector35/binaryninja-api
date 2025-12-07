@@ -1322,6 +1322,11 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    /// This list contains the analysis entry function, and functions like init_array, fini_array,
+    /// and TLS callbacks etc.
+    ///
+    /// We see `entry_functions` as good starting points for analysis, these functions normally don't
+    /// have internal references. Exported functions in a dll/so file are not included.
     fn entry_point_functions(&self) -> Array<Function> {
         unsafe {
             let mut count = 0;
@@ -1706,6 +1711,9 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    /// Retrieve the metadata as the type `T`.
+    ///
+    /// Fails if the metadata does not exist, or if the metadata failed to coerce to type `T`.
     fn get_metadata<T>(&self, key: &str) -> Option<Result<T>>
     where
         T: for<'a> TryFrom<&'a Metadata>,
@@ -2235,6 +2243,9 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
+    /// Retrieve the string that falls on a given virtual address.
+    ///
+    /// NOTE: This returns discovered strings and is therefore governed by `analysis.limits.minStringLength` and other settings.
     fn string_at(&self, addr: u64) -> Option<BNStringReference> {
         let mut str_ref = BNStringReference::default();
         let success = unsafe { BNGetStringAtAddress(self.as_ref().handle, addr, &mut str_ref) };

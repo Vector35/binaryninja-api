@@ -555,7 +555,7 @@ pub fn license_count() -> i32 {
 
 /// Set the license that will be used once the core initializes. You can reset the license by passing `None`.
 ///
-/// If not set the normal license retrieval will occur:
+/// If not set, the normal license retrieval will occur:
 /// 1. Check the BN_LICENSE environment variable
 /// 2. Check the Binary Ninja user directory for license.dat
 #[cfg(not(feature = "demo"))]
@@ -623,7 +623,7 @@ pub fn add_optional_plugin_dependency(name: &str) {
     unsafe { BNAddOptionalPluginDependency(raw_name.as_ptr()) };
 }
 
-// Provide ABI version automatically so that the core can verify binary compatibility
+/// Exported function to tell the core what core ABI version this plugin was compiled against.
 #[cfg(not(feature = "no_exports"))]
 #[no_mangle]
 #[allow(non_snake_case)]
@@ -631,6 +631,7 @@ pub extern "C" fn CorePluginABIVersion() -> u32 {
     plugin_abi_version()
 }
 
+/// Exported function to tell the core what UI ABI version this plugin was compiled against.
 #[cfg(not(feature = "no_exports"))]
 #[no_mangle]
 pub extern "C" fn UIPluginABIVersion() -> u32 {

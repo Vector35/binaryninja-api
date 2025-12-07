@@ -1,3 +1,7 @@
+//! LLVM functionality exposed by the core.
+//!
+//! Also see [`crate::demangle::demangle_llvm`].
+
 use binaryninjacore_sys::{
     BNLlvmServicesAssemble, BNLlvmServicesAssembleFree, BNLlvmServicesDisasmInstruction,
     BNLlvmServicesInit,

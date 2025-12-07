@@ -123,12 +123,23 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
 
     fn associated_arch_by_addr(&self, addr: u64) -> CoreArchitecture;
 
+    /// Returns the [`InstructionInfo`] at the given virtual address with `data`.
+    ///
+    /// The [`InstructionInfo`] object should always fill the proper length and branches if not, the
+    /// next instruction will likely be incorrect.
     fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo>;
+
     fn instruction_text(
         &self,
         data: &[u8],
         addr: u64,
     ) -> Option<(usize, Vec<InstructionTextToken>)>;
+
+    // TODO: Why do we need to return a boolean here? Does `None` not represent the same thing?
+    /// Appends arbitrary low-level il instructions to `il`.
+    ///
+    /// If `None` is returned, no instructions were appended and the data is invalid. If `Some` is returned,
+    /// the instructions consumed length is returned (necessary for variable length instruction decoding).
     fn instruction_llil(
         &self,
         data: &[u8],
@@ -136,6 +147,10 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         il: &LowLevelILMutableFunction,
     ) -> Option<(usize, bool)>;
 
+    /// Performs basic block recovery and commits the results to the function analysis.
+    ///
+    /// NOTE: Only implement this method if function-level analysis is required. Otherwise, do not
+    /// implement to let default basic block analysis take place.
     fn analyze_basic_blocks(
         &self,
         function: &mut Function,
@@ -147,7 +162,7 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     }
 
     /// Fallback flag value calculation path. This method is invoked when the core is unable to
-    /// recover flag use semantics, and resorts to emitting instructions that explicitly set each
+    /// recover the flag using semantics and resorts to emitting instructions that explicitly set each
     /// observed flag to the value of an expression returned by this function.
     ///
     /// This function *MUST NOT* append instructions that have side effects.
@@ -166,11 +181,10 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         Some(get_default_flag_write_llil(self, role, op, il))
     }
 
-    /// Determines what flags need to be examined in order to attempt automatic recovery of the
-    /// semantics of this flag use.
+    /// Determines what flags need to be examined to attempt automatic recovery of the flag uses semantics.
     ///
-    /// If automatic recovery is not possible, the `flag_cond_llil` method will be invoked to give
-    /// this `Architecture` implementation arbitrary control over the expression to be evaluated.
+    /// If automatic recovery is not possible, the [`Architecture::flag_cond_llil`] method will be invoked
+    /// to give this [`Architecture`] implementation arbitrary control over the expression to be evaluated.
     fn flags_required_for_flag_condition(
         &self,
         _condition: FlagCondition,
@@ -485,6 +499,12 @@ impl Architecture for CoreArchitecture {
         }
     }
 
+    /// Performs basic block recovery and commits the results to the function analysis.
+    ///
+    /// NOTE: Only implement this method if function-level analysis is required. Otherwise, do not
+    /// implement to let default basic block analysis take place.
+    ///
+    /// NOTE: The default implementation exists in C++ here: <https://github.com/Vector35/binaryninja-api/blob/dev/defaultabb.cpp>
     fn analyze_basic_blocks(
         &self,
         function: &mut Function,

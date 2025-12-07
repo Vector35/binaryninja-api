@@ -648,11 +648,11 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 
 			>>> def my_plugin(bv: BinaryView, func: MediumLevelILFunction):
 			>>> 	log_info(f"My plugin was called on func {func} in bv `{bv}`")
-			>>> PluginCommand.register_for_low_level_il_function("My Plugin", "My plugin description (not used)", my_plugin)
+			>>> PluginCommand.register_for_medium_level_il_function("My Plugin", "My plugin description (not used)", my_plugin)
 			True
 			>>> def is_valid(bv: BinaryView, func: MediumLevelILFunction) -> bool:
 			>>> 	return False
-			>>> PluginCommand.register_for_low_level_il_function("My Plugin (With Valid Function)", "My plugin description (not used)", my_plugin, is_valid)
+			>>> PluginCommand.register_for_medium_level_il_function("My Plugin (With Valid Function)", "My plugin description (not used)", my_plugin, is_valid)
 			True
 
 		.. warning:: Calling ``register_for_medium_level_il_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
@@ -686,11 +686,11 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 
 			>>> def my_plugin(bv: BinaryView, inst: MediumLevelILInstruction):
 			>>> 	log_info(f"My plugin was called on inst {inst} in bv `{bv}`")
-			>>> PluginCommand.register_for_low_level_il_instruction("My Plugin", "My plugin description (not used)", my_plugin)
+			>>> PluginCommand.register_for_medium_level_il_instruction("My Plugin", "My plugin description (not used)", my_plugin)
 			True
 			>>> def is_valid(bv: BinaryView, inst: MediumLevelILInstruction) -> bool:
 			>>> 	return False
-			>>> PluginCommand.register_for_low_level_il_instruction("My Plugin (With Valid Function)", "My plugin description (not used)", my_plugin, is_valid)
+			>>> PluginCommand.register_for_medium_level_il_instruction("My Plugin (With Valid Function)", "My plugin description (not used)", my_plugin, is_valid)
 			True
 
 		.. warning:: Calling ``register_for_medium_level_il_instruction`` with the same function name will replace the existing function but will leak the memory of the original plugin.
@@ -725,11 +725,11 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 
 			>>> def my_plugin(bv: BinaryView, func: HighLevelILFunction):
 			>>> 	log_info(f"My plugin was called on func {func} in bv `{bv}`")
-			>>> PluginCommand.register_for_low_level_il_function("My Plugin", "My plugin description (not used)", my_plugin)
+			>>> PluginCommand.register_for_high_level_il_function("My Plugin", "My plugin description (not used)", my_plugin)
 			True
 			>>> def is_valid(bv: BinaryView, func: HighLevelILFunction) -> bool:
 			>>> 	return False
-			>>> PluginCommand.register_for_low_level_il_function("My Plugin (With Valid Function)", "My plugin description (not used)", my_plugin, is_valid)
+			>>> PluginCommand.register_for_high_level_il_function("My Plugin (With Valid Function)", "My plugin description (not used)", my_plugin, is_valid)
 			True
 
 		.. warning:: Calling ``register_for_high_level_il_function`` with the same function name will replace the existing function but will leak the memory of the original plugin.
@@ -763,11 +763,11 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 
 			>>> def my_plugin(bv: BinaryView, inst: HighLevelILInstruction):
 			>>> 	log_info(f"My plugin was called on inst {inst} in bv `{bv}`")
-			>>> PluginCommand.register_for_low_level_il_instruction("My Plugin", "My plugin description (not used)", my_plugin)
+			>>> PluginCommand.register_for_high_level_il_instruction("My Plugin", "My plugin description (not used)", my_plugin)
 			True
 			>>> def is_valid(bv: BinaryView, inst: HighLevelILInstruction) -> bool:
 			>>> 	return False
-			>>> PluginCommand.register_for_low_level_il_instruction("My Plugin (With Valid Function)", "My plugin description (not used)", my_plugin, is_valid)
+			>>> PluginCommand.register_for_high_level_il_instruction("My Plugin (With Valid Function)", "My plugin description (not used)", my_plugin, is_valid)
 			True
 
 		.. warning:: Calling ``register_for_high_level_il_instruction`` with the same function name will replace the existing function but will leak the memory of the original plugin.

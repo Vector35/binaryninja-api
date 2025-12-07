@@ -136,6 +136,12 @@ impl From<IndirectBranchInfo> for BNIndirectBranchInfo {
     }
 }
 
+impl From<&BNIndirectBranchInfo> for IndirectBranchInfo {
+    fn from(value: &BNIndirectBranchInfo) -> Self {
+        Self::from(*value)
+    }
+}
+
 impl CoreArrayProvider for IndirectBranchInfo {
     type Raw = BNIndirectBranchInfo;
     type Context = ();

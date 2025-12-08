@@ -30,10 +30,6 @@ DatabaseObject::DatabaseObject(BNDatabaseObject* object)
 }
 
 
-// todo: this can be deleted
-DatabaseObject::~DatabaseObject() = default;
-
-
 Ref<DatabaseObject> DatabaseObject::GetParent() const
 {
 	BNDatabaseObject* parent = BNGetDatabaseObjectParent(m_object);
@@ -125,10 +121,6 @@ DiffState::DiffState(Ref<Logger> logger)
 }
 
 
-// todo: this can be deleted
-DiffState::~DiffState() = default;
-
-
 std::vector<std::string> DiffState::GetErrors() const
 {
 	size_t count = 0;
@@ -201,10 +193,6 @@ DiffObject::DiffObject(BNDiffObject* object)
 {
 	m_object = object;
 }
-
-
-// todo: this can be deleted
-DiffObject::~DiffObject() = default;
 
 
 std::optional<std::string> DiffObject::GetBase() const

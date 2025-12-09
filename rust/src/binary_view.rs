@@ -59,9 +59,9 @@ use crate::types::{
     NamedTypeReference, QualifiedName, QualifiedNameAndType, QualifiedNameTypeAndId, Type,
 };
 use crate::variable::DataVariable;
-use crate::Endianness;
+use crate::{Endianness, BN_FULL_CONFIDENCE};
 use std::collections::HashMap;
-use std::ffi::{c_char, c_void};
+use std::ffi::{c_char, c_void, CString};
 use std::ops::Range;
 use std::path::Path;
 use std::ptr::NonNull;
@@ -222,10 +222,8 @@ pub trait BinaryViewExt: BinaryViewBase {
     /// Reads up to `len` bytes from address `offset`
     fn read_vec(&self, offset: u64, len: usize) -> Vec<u8> {
         let mut ret = vec![0; len];
-
         let size = self.read(&mut ret, offset);
         ret.truncate(size);
-
         ret
     }
 
@@ -236,6 +234,22 @@ pub trait BinaryViewExt: BinaryViewBase {
         let read_size = self.read(&mut dest[starting_len..], offset);
         dest.truncate(starting_len + read_size);
         read_size
+    }
+
+    /// Reads up to `len` bytes from the address `offset` returning a `CString` if available.
+    fn read_c_string_at(&self, offset: u64, len: usize) -> Option<CString> {
+        let mut buf = vec![0; len];
+        let size = self.read(&mut buf, offset);
+        let string = CString::new(buf[..size].to_vec()).ok()?;
+        Some(string)
+    }
+
+    /// Reads up to `len` bytes from the address `offset` returning a `String` if available.
+    fn read_utf8_string_at(&self, offset: u64, len: usize) -> Option<String> {
+        let mut buf = vec![0; len];
+        let size = self.read(&mut buf, offset);
+        let string = String::from_utf8(buf[..size].to_vec()).ok()?;
+        Some(string)
     }
 
     /// Search the view using the query options.
@@ -562,17 +576,15 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn analysis_info(&self) -> Result<AnalysisInfo> {
-        let info_ref = unsafe { BNGetAnalysisInfo(self.as_ref().handle) };
-        if info_ref.is_null() {
-            return Err(());
-        }
-        let info = unsafe { *info_ref };
+    fn analysis_info(&self) -> AnalysisInfo {
+        let info_ptr = unsafe { BNGetAnalysisInfo(self.as_ref().handle) };
+        assert!(!info_ptr.is_null());
+        let info = unsafe { *info_ptr };
         let active_infos = unsafe { slice::from_raw_parts(info.activeInfo, info.count) };
 
         let mut active_info_list = vec![];
         for active_info in active_infos {
-            let func = unsafe { Function::ref_from_raw(active_info.func) };
+            let func = unsafe { Function::from_raw(active_info.func).to_owned() };
             active_info_list.push(ActiveAnalysisInfo {
                 func,
                 analysis_time: active_info.analysisTime,
@@ -584,11 +596,11 @@ pub trait BinaryViewExt: BinaryViewBase {
         let result = AnalysisInfo {
             state: info.state,
             analysis_time: info.analysisTime,
-            active_info: vec![],
+            active_info: active_info_list,
         };
 
-        unsafe { BNFreeAnalysisInfo(info_ref) };
-        Ok(result)
+        unsafe { BNFreeAnalysisInfo(info_ptr) };
+        result
     }
 
     fn analysis_progress(&self) -> AnalysisProgress {
@@ -772,7 +784,7 @@ pub trait BinaryViewExt: BinaryViewBase {
             } else {
                 std::ptr::null_mut()
             },
-            confidence: 255, // BN_FULL_CONFIDENCE
+            confidence: BN_FULL_CONFIDENCE,
         };
 
         unsafe {
@@ -2235,6 +2247,14 @@ pub trait BinaryViewExt: BinaryViewBase {
     /// NOTE: This returns a list of [`StringReference`] as strings may not be representable
     /// as a [`String`] or even a [`BnString`]. It is the caller's responsibility to read the underlying
     /// data and convert it to a representable form.
+    ///
+    /// Some helpers for reading strings are available:
+    ///
+    /// - [`BinaryViewExt::read_c_string_at`]
+    /// - [`BinaryViewExt::read_utf8_string_at`]
+    ///
+    /// NOTE: This returns discovered strings and is therefore governed by `analysis.limits.minStringLength`
+    /// and other settings.
     fn strings(&self) -> Array<StringReference> {
         unsafe {
             let mut count = 0;
@@ -2245,13 +2265,22 @@ pub trait BinaryViewExt: BinaryViewBase {
 
     /// Retrieve the string that falls on a given virtual address.
     ///
-    /// NOTE: This returns discovered strings and is therefore governed by `analysis.limits.minStringLength` and other settings.
-    fn string_at(&self, addr: u64) -> Option<BNStringReference> {
+    /// NOTE: This returns a [`StringReference`] and since strings may not be representable as a Rust
+    /// [`String`] or even a [`BnString`]. It is the caller's responsibility to read the underlying
+    /// data and convert it to a representable form.
+    ///
+    /// Some helpers for reading strings are available:
+    ///
+    /// - [`BinaryViewExt::read_c_string_at`]
+    /// - [`BinaryViewExt::read_utf8_string_at`]
+    ///
+    /// NOTE: This returns discovered strings and is therefore governed by `analysis.limits.minStringLength`
+    /// and other settings.
+    fn string_at(&self, addr: u64) -> Option<StringReference> {
         let mut str_ref = BNStringReference::default();
         let success = unsafe { BNGetStringAtAddress(self.as_ref().handle, addr, &mut str_ref) };
-
         if success {
-            Some(str_ref)
+            Some(str_ref.into())
         } else {
             None
         }
@@ -2262,6 +2291,14 @@ pub trait BinaryViewExt: BinaryViewBase {
     /// NOTE: This returns a list of [`StringReference`] as strings may not be representable
     /// as a [`String`] or even a [`BnString`]. It is the caller's responsibility to read the underlying
     /// data and convert it to a representable form.
+    ///
+    /// Some helpers for reading strings are available:
+    ///
+    /// - [`BinaryViewExt::read_c_string_at`]
+    /// - [`BinaryViewExt::read_utf8_string_at`]
+    ///
+    /// NOTE: This returns discovered strings and is therefore governed by `analysis.limits.minStringLength`
+    /// and other settings.
     fn strings_in_range(&self, range: Range<u64>) -> Array<StringReference> {
         unsafe {
             let mut count = 0;

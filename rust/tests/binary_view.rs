@@ -1,5 +1,5 @@
 use binaryninja::binary_view::search::SearchQuery;
-use binaryninja::binary_view::{AnalysisState, BinaryViewBase, BinaryViewExt};
+use binaryninja::binary_view::{AnalysisState, BinaryViewBase, BinaryViewExt, StringType};
 use binaryninja::data_buffer::DataBuffer;
 use binaryninja::function::{Function, FunctionViewType};
 use binaryninja::headless::Session;
@@ -99,6 +99,12 @@ fn test_binary_view_strings() {
         .expect("Failed to find string 'Microsoft (R) Optimizing Compiler'");
     assert_eq!(str_15dc.start, image_base + 0x15dc);
     assert_eq!(str_15dc.length, 33);
+    assert_eq!(str_15dc.ty, StringType::AsciiString);
+
+    let string = view
+        .read_c_string_at(str_15dc.start, str_15dc.length)
+        .expect("Failed to read string");
+    assert_eq!(string, c"Microsoft (R) Optimizing Compiler");
 }
 
 #[test]

@@ -306,19 +306,19 @@ DataBuffer Snapshot::GetUndoData()
 }
 
 
-vector<Ref<UndoEntry>> Snapshot::GetUndoEntries()
+vector<Ref<UndoEntry>> Snapshot::GetUndoEntries(Ref<FileMetadata> file)
 {
-	return GetUndoEntries([](size_t, size_t) { return true; });
+	return GetUndoEntries(file, [](size_t, size_t) { return true; });
 }
 
 
-vector<Ref<UndoEntry>> Snapshot::GetUndoEntries(const ProgressFunction& progress)
+vector<Ref<UndoEntry>> Snapshot::GetUndoEntries(Ref<FileMetadata> file, const ProgressFunction& progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
 
 	size_t count;
-	BNUndoEntry** entries = BNGetSnapshotUndoEntriesWithProgress(m_object, &pctxt, ProgressCallback, &count);
+	BNUndoEntry** entries = BNGetSnapshotUndoEntriesWithProgress(m_object, file->GetObject(), &pctxt, ProgressCallback, &count);
 	if (entries == nullptr)
 	{
 		throw DatabaseException("BNGetSnapshotUndoEntriesWithProgress");
@@ -533,12 +533,6 @@ void Database::WriteGlobalData(const std::string& key, const DataBuffer& val)
 	{
 		throw DatabaseException("BNWriteDatabaseGlobalData");
 	}
-}
-
-
-Ref<FileMetadata> Database::GetFile()
-{
-	return new FileMetadata(BNGetDatabaseFile(m_object));
 }
 
 

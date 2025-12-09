@@ -3365,8 +3365,8 @@ namespace BinaryNinja {
 		DataBuffer GetFileContents();
 		DataBuffer GetFileContentsHash();
 		DataBuffer GetUndoData();
-		std::vector<Ref<UndoEntry>> GetUndoEntries();
-		std::vector<Ref<UndoEntry>> GetUndoEntries(const ProgressFunction& progress);
+		std::vector<Ref<UndoEntry>> GetUndoEntries(Ref<FileMetadata> file);
+		std::vector<Ref<UndoEntry>> GetUndoEntries(Ref<FileMetadata> file, const ProgressFunction& progress);
 		Ref<KeyValueStore> ReadData();
 		Ref<KeyValueStore> ReadData(const ProgressFunction& progress);
 		bool StoreData(const Ref<KeyValueStore>& data, const ProgressFunction& progress);
@@ -3401,7 +3401,6 @@ namespace BinaryNinja {
 		DataBuffer ReadGlobalData(const std::string& key) const;
 		void WriteGlobalData(const std::string& key, const DataBuffer& val);
 
-		Ref<FileMetadata> GetFile();
 		void ReloadConnection();
 
 		Ref<KeyValueStore> ReadAnalysisCache() const;
@@ -24142,14 +24141,14 @@ namespace BinaryNinja::Collaboration
 
 	/*!
 	    Completely sync a database, pushing/pulling/merging/applying changes
-	    \param database Database to sync
+	    \param metadata File from database to sync
 	    \param file Remote File to sync with
 	    \param conflictHandler Function to call to resolve snapshot conflicts
 	    \param progress Function to call for progress updates
 	    \param nameChangeset Function to call for naming a pushed changeset, if necessary
 	    \throws SyncException If there is an error syncing
 	 */
-	void SyncDatabase(Ref<Database> database, Ref<RemoteFile> file, AnalysisConflictHandler conflictHandler, ProgressFunction progress = {}, NameChangesetFunction nameChangeset = [](Ref<CollabChangeset>){ return true; });
+	void SyncDatabase(Ref<FileMetadata> metadata, Ref<RemoteFile> file, AnalysisConflictHandler conflictHandler, ProgressFunction progress = {}, NameChangesetFunction nameChangeset = [](Ref<CollabChangeset>){ return true; });
 
 	/*!
 	    Completely sync a type archive, pushing/pulling/merging/applying changes

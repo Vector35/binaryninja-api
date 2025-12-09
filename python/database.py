@@ -352,13 +352,6 @@ class Database:
 		core.BNWriteDatabaseGlobalData(self.handle, key, value.handle)
 
 	@property
-	def file(self) -> 'filemetadata.FileMetadata':
-		"""Get the owning FileMetadata (read-only)"""
-		handle = core.BNGetDatabaseFile(self.handle)
-		assert handle is not None
-		return filemetadata.FileMetadata(handle=handle)
-
-	@property
 	def analysis_cache(self) -> KeyValueStore:
 		"""Get the backing analysis cache kvs (read-only)"""
 		handle = core.BNReadDatabaseAnalysisCache(self.handle)

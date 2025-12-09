@@ -12,7 +12,6 @@ use crate::binary_view::BinaryView;
 use crate::data_buffer::DataBuffer;
 use crate::database::kvs::KeyValueStore;
 use crate::database::snapshot::{Snapshot, SnapshotId};
-use crate::file_metadata::FileMetadata;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::rc::{Array, Ref, RefCountable};
 use crate::string::{BnString, IntoCStr};
@@ -179,13 +178,6 @@ impl Database {
     pub fn write_global_data(&self, key: &str, value: &DataBuffer) -> bool {
         let key_raw = key.to_cstr();
         unsafe { BNWriteDatabaseGlobalData(self.handle.as_ptr(), key_raw.as_ptr(), value.as_raw()) }
-    }
-
-    /// Get the owning FileMetadata
-    pub fn file(&self) -> Ref<FileMetadata> {
-        let result = unsafe { BNGetDatabaseFile(self.handle.as_ptr()) };
-        assert!(!result.is_null());
-        FileMetadata::ref_from_raw(result)
     }
 
     /// Get the backing analysis cache kvs

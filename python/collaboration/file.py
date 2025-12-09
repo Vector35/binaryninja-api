@@ -419,23 +419,19 @@ class RemoteFile:
 			file.database, lambda conflicts: False, util.split_progress(progress, 1, [0.5, 0.5]))
 		return file
 
-	def sync(self, bv_or_db: Union['BinaryView', 'Database'], conflict_handler: 'util.ConflictHandlerType', progress: 'util.ProgressFuncType' = util.nop, name_changeset: 'util.NameChangesetFuncType' = util.nop):
+	def sync(self, bv: 'BinaryView', conflict_handler: 'util.ConflictHandlerType', progress: 'util.ProgressFuncType' = util.nop, name_changeset: 'util.NameChangesetFuncType' = util.nop):
 		"""
 		Completely sync a file, pushing/pulling/merging/applying changes
 
-		:param bv_or_db: Binary view or database to sync with
+		:param bv: Binary view to sync with
 		:param conflict_handler: Function to call to resolve snapshot conflicts
 		:param name_changeset: Function to call for naming a pushed changeset, if necessary
 		:param progress: Function to call for progress updates
 		:raises RuntimeError: If there was an error (or the operation was cancelled)
 		"""
-		if isinstance(bv_or_db, BinaryView):
-			if not bv_or_db.file.has_database:
-				raise RuntimeError("Cannot sync non-database view")
-			db = bv_or_db.file.database
-		else:
-			db = bv_or_db
-		databasesync.sync_database(db, self, conflict_handler, progress, name_changeset)
+		if not bv.file.has_database:
+			raise RuntimeError("Cannot sync non-database view")
+		databasesync.sync_database(bv.file, self, conflict_handler, progress, name_changeset)
 
 	def pull(self, bv_or_db: Union['BinaryView', 'Database'], conflict_handler: 'util.ConflictHandlerType', progress: 'util.ProgressFuncType' = util.nop, name_changeset: 'util.NameChangesetFuncType' = util.nop):
 		"""

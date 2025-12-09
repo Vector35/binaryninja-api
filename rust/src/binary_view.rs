@@ -62,6 +62,7 @@ use crate::variable::DataVariable;
 use crate::{Endianness, BN_FULL_CONFIDENCE};
 use std::collections::HashMap;
 use std::ffi::{c_char, c_void, CString};
+use std::fmt::{Display, Formatter};
 use std::ops::Range;
 use std::path::Path;
 use std::ptr::NonNull;
@@ -187,11 +188,57 @@ pub struct AnalysisInfo {
     pub active_info: Vec<ActiveAnalysisInfo>,
 }
 
-#[derive(Debug, Clone)]
-pub struct AnalysisProgress {
-    pub state: AnalysisState,
-    pub count: usize,
-    pub total: usize,
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
+pub enum AnalysisProgress {
+    Initial,
+    Hold,
+    Idle,
+    Discovery,
+    Disassembling(usize, usize),
+    Analyzing(usize, usize),
+    ExtendedAnalysis,
+}
+
+impl Display for AnalysisProgress {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AnalysisProgress::Initial => {
+                write!(f, "Initial")
+            }
+            AnalysisProgress::Hold => {
+                write!(f, "Hold")
+            }
+            AnalysisProgress::Idle => {
+                write!(f, "Idle")
+            }
+            AnalysisProgress::Discovery => {
+                write!(f, "Discovery")
+            }
+            AnalysisProgress::Disassembling(count, total) => {
+                write!(f, "Disassembling ({count}/{total})")
+            }
+            AnalysisProgress::Analyzing(count, total) => {
+                write!(f, "Analyzing ({count}/{total})")
+            }
+            AnalysisProgress::ExtendedAnalysis => {
+                write!(f, "Extended Analysis")
+            }
+        }
+    }
+}
+
+impl From<BNAnalysisProgress> for AnalysisProgress {
+    fn from(value: BNAnalysisProgress) -> Self {
+        match value.state {
+            BNAnalysisState::InitialState => Self::Initial,
+            BNAnalysisState::HoldState => Self::Hold,
+            BNAnalysisState::IdleState => Self::Idle,
+            BNAnalysisState::DiscoveryState => Self::Discovery,
+            BNAnalysisState::DisassembleState => Self::Disassembling(value.count, value.total),
+            BNAnalysisState::AnalyzeState => Self::Analyzing(value.count, value.total),
+            BNAnalysisState::ExtendedAnalyzeState => Self::ExtendedAnalysis,
+        }
+    }
 }
 
 pub trait BinaryViewExt: BinaryViewBase {
@@ -604,12 +651,8 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     fn analysis_progress(&self) -> AnalysisProgress {
-        let progress = unsafe { BNGetAnalysisProgress(self.as_ref().handle) };
-        AnalysisProgress {
-            state: progress.state,
-            count: progress.count,
-            total: progress.total,
-        }
+        let progress_raw = unsafe { BNGetAnalysisProgress(self.as_ref().handle) };
+        AnalysisProgress::from(progress_raw)
     }
 
     fn default_arch(&self) -> Option<CoreArchitecture> {

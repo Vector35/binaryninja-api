@@ -1,5 +1,7 @@
 use binaryninja::binary_view::search::SearchQuery;
-use binaryninja::binary_view::{AnalysisState, BinaryViewBase, BinaryViewExt, StringType};
+use binaryninja::binary_view::{
+    AnalysisProgress, AnalysisState, BinaryViewBase, BinaryViewExt, StringType,
+};
 use binaryninja::data_buffer::DataBuffer;
 use binaryninja::function::{Function, FunctionViewType};
 use binaryninja::headless::Session;
@@ -16,7 +18,7 @@ fn test_binary_loading() {
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
     assert!(view.has_initial_analysis(), "No initial analysis");
-    assert_eq!(view.analysis_progress().state, AnalysisState::IdleState);
+    assert_eq!(view.analysis_progress(), AnalysisProgress::Idle);
     assert_eq!(view.file().is_analysis_changed(), false);
     assert_eq!(view.file().is_database_backed(), false);
 }
@@ -188,7 +190,7 @@ fn test_deterministic_functions() {
     for file_name in TARGET_FILES {
         let path = out_dir.join(file_name);
         let view = session.load(&path).expect("Failed to load view");
-        assert_eq!(view.analysis_progress().state, AnalysisState::IdleState);
+        assert_eq!(view.analysis_progress(), AnalysisProgress::Idle);
         let functions: BTreeMap<u64, FunctionSnapshot> = view
             .functions()
             .iter()

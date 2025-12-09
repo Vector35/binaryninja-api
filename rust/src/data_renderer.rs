@@ -1,3 +1,5 @@
+//! Render data variables using builtin renderers as well as add custom rendering.
+
 use binaryninjacore_sys::*;
 use core::ffi;
 use ffi::c_void;

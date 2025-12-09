@@ -11,7 +11,7 @@ use binaryninja::{
     architecture::{
         Architecture, ArchitectureExt, CoreArchitecture, CustomArchitectureHandle,
         ImplicitRegisterExtend, InstructionInfo, Register as Reg, RegisterInfo, UnusedFlag,
-        UnusedRegisterStack, UnusedRegisterStackInfo,
+        UnusedRegisterStack,
     },
     binary_view::{BinaryView, BinaryViewExt},
     calling_convention::{register_calling_convention, CallingConvention, ConventionBuilder},
@@ -644,7 +644,7 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
 
     type RegisterInfo = Register<D>;
     type Register = Register<D>;
-    type RegisterStackInfo = UnusedRegisterStackInfo<Self::Register>;
+    type RegisterStackInfo = UnusedRegisterStack<Self::Register>;
     type RegisterStack = UnusedRegisterStack<Self::Register>;
 
     type Flag = UnusedFlag;

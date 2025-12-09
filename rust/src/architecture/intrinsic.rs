@@ -32,7 +32,7 @@ pub trait Intrinsic: Debug + Sized + Clone + Copy {
     fn outputs(&self) -> Vec<Conf<Ref<Type>>>;
 }
 
-/// Type for architrectures that do not use intrinsics. Will panic if accessed as an intrinsic.
+/// Type for architectures that do not use intrinsics. Will panic if accessed as an intrinsic.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct UnusedIntrinsic;
 

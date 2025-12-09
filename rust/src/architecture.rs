@@ -94,22 +94,62 @@ macro_rules! new_id_type {
 pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     type Handle: Borrow<Self> + Clone;
 
+    /// The [`RegisterInfo`] associated with this architecture.
     type RegisterInfo: RegisterInfo<RegType = Self::Register>;
+
+    /// The [`Register`] associated with this architecture.
     type Register: Register<InfoType = Self::RegisterInfo>;
+
+    /// The [`RegisterStackInfo`] associated with this architecture.
+    ///
+    /// You may only set this to [`UnusedRegisterStack`] if [`Self::RegisterStack`] is as well.
     type RegisterStackInfo: RegisterStackInfo<
         RegType = Self::Register,
         RegInfoType = Self::RegisterInfo,
         RegStackType = Self::RegisterStack,
     >;
+
+    /// The [`RegisterStack`] associated with this architecture.
+    ///
+    /// If you do not override [`Architecture::register_stack_from_id`] and [`Architecture::register_stacks`],
+    /// you may set this to [`UnusedRegisterStack`].
     type RegisterStack: RegisterStack<
         InfoType = Self::RegisterStackInfo,
         RegType = Self::Register,
         RegInfoType = Self::RegisterInfo,
     >;
 
+    /// The [`Flag`] associated with this architecture.
+    ///
+    /// If you do not override [`Architecture::flag_from_id`] and [`Architecture::flags`], you may
+    /// set this to [`UnusedFlag`].
     type Flag: Flag<FlagClass = Self::FlagClass>;
+
+    /// The [`FlagWrite`] associated with this architecture.
+    ///
+    /// Can only be set to [`UnusedFlag`] if [`Self::Flag`] is as well. Otherwise, it is expected that
+    /// this points to a custom [`FlagWrite`] with the following functions defined:
+    ///
+    /// - [`Architecture::flag_write_types`]
+    /// - [`Architecture::flag_write_from_id`]
     type FlagWrite: FlagWrite<FlagType = Self::Flag, FlagClass = Self::FlagClass>;
+
+    /// The [`FlagClass`] associated with this architecture.
+    ///
+    /// Can only be set to [`UnusedFlag`] if [`Self::Flag`] is as well. Otherwise, it is expected that
+    /// this points to a custom [`FlagClass`] with the following functions defined:
+    ///
+    /// - [`Architecture::flag_classes`]
+    /// - [`Architecture::flag_class_from_id`]
     type FlagClass: FlagClass;
+
+    /// The [`FlagGroup`] associated with this architecture.
+    ///
+    /// Can only be set to [`UnusedFlag`] if [`Self::Flag`] is as well. Otherwise, it is expected that
+    /// this points to a custom [`FlagGroup`] with the following functions defined:
+    ///
+    /// - [`Architecture::flag_groups`]
+    /// - [`Architecture::flag_group_from_id`]
     type FlagGroup: FlagGroup<FlagType = Self::Flag, FlagClass = Self::FlagClass>;
 
     type Intrinsic: Intrinsic;
@@ -118,10 +158,26 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     fn address_size(&self) -> usize;
     fn default_integer_size(&self) -> usize;
     fn instruction_alignment(&self) -> usize;
-    fn max_instr_len(&self) -> usize;
-    fn opcode_display_len(&self) -> usize;
 
-    fn associated_arch_by_addr(&self, addr: u64) -> CoreArchitecture;
+    /// The maximum length of an instruction in bytes. This is used to determine the size of the buffer
+    /// given to callbacks such as [`Architecture::instruction_info`], [`Architecture::instruction_text`]
+    /// and [`Architecture::instruction_llil`].
+    ///
+    /// NOTE: The maximum **CANNOT** be greater than 256.
+    fn max_instr_len(&self) -> usize;
+
+    /// How many bytes to display in the opcode space before displaying a `...`, typically set to
+    /// the [`Architecture::max_instr_len`], however, can be overridden to display a truncated opcode.
+    fn opcode_display_len(&self) -> usize {
+        self.max_instr_len()
+    }
+
+    /// In binaries with multiple architectures, you may wish to associate a specific architecture
+    /// with a given virtual address. This can be seen in armv7 where odd addresses are associated
+    /// with the thumb architecture.
+    fn associated_arch_by_addr(&self, _addr: u64) -> CoreArchitecture {
+        *self.as_ref()
+    }
 
     /// Returns the [`InstructionInfo`] at the given virtual address with `data`.
     ///
@@ -129,6 +185,20 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     /// next instruction will likely be incorrect.
     fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo>;
 
+    /// Disassembles a raw byte sequence into a human-readable list of text tokens.
+    ///
+    /// This function is responsible for the visual representation of assembly instructions.
+    /// It does *not* define semantics (use [`Architecture::instruction_llil`] for that);
+    /// it simply tells the UI how to print the instruction.
+    ///
+    /// # Returns
+    ///
+    /// An `Option` containing a tuple:
+    ///
+    /// * `usize`: The size of the decoded instruction in bytes. Is used to advance to the next instruction.
+    /// * `Vec<InstructionTextToken>`: A list of text tokens representing the instruction.
+    ///
+    /// Returns `None` if the bytes do not form a valid instruction.
     fn instruction_text(
         &self,
         data: &[u8],
@@ -231,61 +301,179 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     }
 
     fn registers_all(&self) -> Vec<Self::Register>;
+
+    fn register_from_id(&self, id: RegisterId) -> Option<Self::Register>;
+
     fn registers_full_width(&self) -> Vec<Self::Register>;
+
+    // TODO: Document the difference between global and system registers.
     fn registers_global(&self) -> Vec<Self::Register> {
         Vec::new()
     }
+
+    // TODO: Document the difference between global and system registers.
     fn registers_system(&self) -> Vec<Self::Register> {
         Vec::new()
     }
 
+    /// List of concrete register stacks for this architecture.
+    ///
+    /// You **must** override the following functions as well:
+    ///
+    /// - [`Architecture::register_stack_from_id`]
     fn register_stacks(&self) -> Vec<Self::RegisterStack> {
         Vec::new()
     }
 
-    fn flags(&self) -> Vec<Self::Flag> {
-        Vec::new()
-    }
-    fn flag_write_types(&self) -> Vec<Self::FlagWrite> {
-        Vec::new()
-    }
-    fn flag_classes(&self) -> Vec<Self::FlagClass> {
-        Vec::new()
-    }
-    fn flag_groups(&self) -> Vec<Self::FlagGroup> {
-        Vec::new()
-    }
-
-    fn stack_pointer_reg(&self) -> Option<Self::Register>;
-    fn link_reg(&self) -> Option<Self::Register> {
-        None
-    }
-
-    fn register_from_id(&self, id: RegisterId) -> Option<Self::Register>;
-
+    /// Get the [`Self::RegisterStack`] associated with the given [`RegisterStackId`].
+    ///
+    /// You **must** override the following functions as well:
+    ///
+    /// - [`Architecture::register_stacks`]
     fn register_stack_from_id(&self, _id: RegisterStackId) -> Option<Self::RegisterStack> {
         None
     }
 
+    /// List of concrete flags for this architecture.
+    ///
+    /// You **must** override the following functions as well:
+    ///
+    /// - [`Architecture::flag_from_id`]
+    /// - [`Architecture::flag_write_types`]
+    /// - [`Architecture::flag_write_from_id`]
+    /// - [`Architecture::flag_classes`]
+    /// - [`Architecture::flag_class_from_id`]
+    /// - [`Architecture::flag_groups`]
+    /// - [`Architecture::flag_group_from_id`]
+    fn flags(&self) -> Vec<Self::Flag> {
+        Vec::new()
+    }
+
+    /// Get the [`Self::Flag`] associated with the given [`FlagId`].
+    ///
+    /// You **must** override the following functions as well:
+    ///
+    /// - [`Architecture::flags`]
+    /// - [`Architecture::flag_write_types`]
+    /// - [`Architecture::flag_write_from_id`]
+    /// - [`Architecture::flag_classes`]
+    /// - [`Architecture::flag_class_from_id`]
+    /// - [`Architecture::flag_groups`]
+    /// - [`Architecture::flag_group_from_id`]
     fn flag_from_id(&self, _id: FlagId) -> Option<Self::Flag> {
         None
     }
+
+    /// List of concrete flag write types for this architecture.
+    ///
+    /// You **must** override the following functions as well:
+    ///
+    /// - [`Architecture::flags`]
+    /// - [`Architecture::flag_from_id`]
+    /// - [`Architecture::flag_write_from_id`]
+    /// - [`Architecture::flag_classes`]
+    /// - [`Architecture::flag_class_from_id`]
+    /// - [`Architecture::flag_groups`]
+    /// - [`Architecture::flag_group_from_id`]
+    fn flag_write_types(&self) -> Vec<Self::FlagWrite> {
+        Vec::new()
+    }
+
+    /// Get the [`Self::FlagWrite`] associated with the given [`FlagWriteId`].
+    ///
+    /// You **must** override the following functions as well:
+    ///
+    /// - [`Architecture::flags`]
+    /// - [`Architecture::flag_from_id`]
+    /// - [`Architecture::flag_write_types`]
+    /// - [`Architecture::flag_classes`]
+    /// - [`Architecture::flag_class_from_id`]
+    /// - [`Architecture::flag_groups`]
+    /// - [`Architecture::flag_group_from_id`]
     fn flag_write_from_id(&self, _id: FlagWriteId) -> Option<Self::FlagWrite> {
         None
     }
+
+    /// List of concrete flag classes for this architecture.
+    ///
+    /// You **must** override the following functions as well:
+    ///
+    /// - [`Architecture::flags`]
+    /// - [`Architecture::flag_from_id`]
+    /// - [`Architecture::flag_write_from_id`]
+    /// - [`Architecture::flag_class_from_id`]
+    /// - [`Architecture::flag_groups`]
+    /// - [`Architecture::flag_group_from_id`]
+    fn flag_classes(&self) -> Vec<Self::FlagClass> {
+        Vec::new()
+    }
+
+    /// Get the [`Self::FlagClass`] associated with the given [`FlagClassId`].
+    ///
+    /// You **must** override the following functions as well:
+    ///
+    /// - [`Architecture::flags`]
+    /// - [`Architecture::flag_from_id`]
+    /// - [`Architecture::flag_write_from_id`]
+    /// - [`Architecture::flag_classes`]
+    /// - [`Architecture::flag_groups`]
+    /// - [`Architecture::flag_group_from_id`]
     fn flag_class_from_id(&self, _id: FlagClassId) -> Option<Self::FlagClass> {
         None
     }
+
+    /// List of concrete flag groups for this architecture.
+    ///
+    /// You **must** override the following functions as well:
+    ///
+    /// - [`Architecture::flags`]
+    /// - [`Architecture::flag_from_id`]
+    /// - [`Architecture::flag_write_from_id`]
+    /// - [`Architecture::flag_classes`]
+    /// - [`Architecture::flag_class_from_id`]
+    /// - [`Architecture::flag_group_from_id`]
+    fn flag_groups(&self) -> Vec<Self::FlagGroup> {
+        Vec::new()
+    }
+
+    /// Get the [`Self::FlagGroup`] associated with the given [`FlagGroupId`].
+    ///
+    /// You **must** override the following functions as well:
+    ///
+    /// - [`Architecture::flags`]
+    /// - [`Architecture::flag_from_id`]
+    /// - [`Architecture::flag_write_from_id`]
+    /// - [`Architecture::flag_classes`]
+    /// - [`Architecture::flag_class_from_id`]
+    /// - [`Architecture::flag_groups`]
     fn flag_group_from_id(&self, _id: FlagGroupId) -> Option<Self::FlagGroup> {
         None
     }
 
+    fn stack_pointer_reg(&self) -> Option<Self::Register>;
+
+    fn link_reg(&self) -> Option<Self::Register> {
+        None
+    }
+
+    /// List of concrete intrinsics for this architecture.
+    ///
+    /// You **must** override the following functions as well:
+    ///
+    /// - [`Architecture::intrinsic_from_id`]
     fn intrinsics(&self) -> Vec<Self::Intrinsic> {
         Vec::new()
     }
+
     fn intrinsic_class(&self, _id: IntrinsicId) -> BNIntrinsicClass {
         BNIntrinsicClass::GeneralIntrinsicClass
     }
+
+    /// Get the [`Self::Intrinsic`] associated with the given [`IntrinsicId`].
+    ///
+    /// You **must** override the following functions as well:
+    ///
+    /// - [`Architecture::intrinsics`]
     fn intrinsic_from_id(&self, _id: IntrinsicId) -> Option<Self::Intrinsic> {
         None
     }
@@ -293,6 +481,7 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     fn can_assemble(&self) -> bool {
         false
     }
+
     fn assemble(&self, _code: &str, _addr: u64) -> Result<Vec<u8>, String> {
         Err("Assemble unsupported".into())
     }
@@ -300,15 +489,19 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     fn is_never_branch_patch_available(&self, _data: &[u8], _addr: u64) -> bool {
         false
     }
+
     fn is_always_branch_patch_available(&self, _data: &[u8], _addr: u64) -> bool {
         false
     }
+
     fn is_invert_branch_patch_available(&self, _data: &[u8], _addr: u64) -> bool {
         false
     }
+
     fn is_skip_and_return_zero_patch_available(&self, _data: &[u8], _addr: u64) -> bool {
         false
     }
+
     fn is_skip_and_return_value_patch_available(&self, _data: &[u8], _addr: u64) -> bool {
         false
     }
@@ -587,6 +780,10 @@ impl Architecture for CoreArchitecture {
         }
     }
 
+    fn register_from_id(&self, id: RegisterId) -> Option<CoreRegister> {
+        CoreRegister::new(*self, id)
+    }
+
     fn registers_full_width(&self) -> Vec<CoreRegister> {
         unsafe {
             let mut count: usize = 0;
@@ -655,6 +852,10 @@ impl Architecture for CoreArchitecture {
         }
     }
 
+    fn register_stack_from_id(&self, id: RegisterStackId) -> Option<CoreRegisterStack> {
+        CoreRegisterStack::new(*self, id)
+    }
+
     fn flags(&self) -> Vec<CoreFlag> {
         unsafe {
             let mut count: usize = 0;
@@ -670,6 +871,10 @@ impl Architecture for CoreArchitecture {
 
             ret
         }
+    }
+
+    fn flag_from_id(&self, id: FlagId) -> Option<CoreFlag> {
+        CoreFlag::new(*self, id)
     }
 
     fn flag_write_types(&self) -> Vec<CoreFlagWrite> {
@@ -689,6 +894,10 @@ impl Architecture for CoreArchitecture {
         }
     }
 
+    fn flag_write_from_id(&self, id: FlagWriteId) -> Option<CoreFlagWrite> {
+        CoreFlagWrite::new(*self, id)
+    }
+
     fn flag_classes(&self) -> Vec<CoreFlagClass> {
         unsafe {
             let mut count: usize = 0;
@@ -704,6 +913,10 @@ impl Architecture for CoreArchitecture {
 
             ret
         }
+    }
+
+    fn flag_class_from_id(&self, id: FlagClassId) -> Option<CoreFlagClass> {
+        CoreFlagClass::new(*self, id)
     }
 
     fn flag_groups(&self) -> Vec<CoreFlagGroup> {
@@ -723,6 +936,10 @@ impl Architecture for CoreArchitecture {
         }
     }
 
+    fn flag_group_from_id(&self, id: FlagGroupId) -> Option<CoreFlagGroup> {
+        CoreFlagGroup::new(*self, id)
+    }
+
     fn stack_pointer_reg(&self) -> Option<CoreRegister> {
         match unsafe { BNGetArchitectureStackPointerRegister(self.handle) } {
             0xffff_ffff => None,
@@ -735,30 +952,6 @@ impl Architecture for CoreArchitecture {
             0xffff_ffff => None,
             reg => Some(CoreRegister::new(*self, reg.into())?),
         }
-    }
-
-    fn register_from_id(&self, id: RegisterId) -> Option<CoreRegister> {
-        CoreRegister::new(*self, id)
-    }
-
-    fn register_stack_from_id(&self, id: RegisterStackId) -> Option<CoreRegisterStack> {
-        CoreRegisterStack::new(*self, id)
-    }
-
-    fn flag_from_id(&self, id: FlagId) -> Option<CoreFlag> {
-        CoreFlag::new(*self, id)
-    }
-
-    fn flag_write_from_id(&self, id: FlagWriteId) -> Option<CoreFlagWrite> {
-        CoreFlagWrite::new(*self, id)
-    }
-
-    fn flag_class_from_id(&self, id: FlagClassId) -> Option<CoreFlagClass> {
-        CoreFlagClass::new(*self, id)
-    }
-
-    fn flag_group_from_id(&self, id: FlagGroupId) -> Option<CoreFlagGroup> {
-        CoreFlagGroup::new(*self, id)
     }
 
     fn intrinsics(&self) -> Vec<CoreIntrinsic> {
@@ -889,10 +1082,7 @@ impl Debug for CoreArchitecture {
             .field("name", &self.name())
             .field("endianness", &self.endianness())
             .field("address_size", &self.address_size())
-            .field("default_integer_size", &self.default_integer_size())
             .field("instruction_alignment", &self.instruction_alignment())
-            .field("max_instr_len", &self.max_instr_len())
-            .field("opcode_display_len", &self.opcode_display_len())
             .finish()
     }
 }
@@ -1717,7 +1907,7 @@ where
 
             result.offset = info.offset();
             result.size = info.size();
-            result.extend = info.implicit_extend();
+            result.extend = info.implicit_extend().into();
         }
     }
 

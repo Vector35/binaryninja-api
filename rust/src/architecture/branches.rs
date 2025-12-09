@@ -22,7 +22,7 @@ pub enum BranchKind {
 
 #[derive(Default, Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct BranchInfo {
-    /// If `None` the target architecture is the same as the branch instruction.
+    /// If `None`, the target architecture is the same as the branching instruction.
     pub arch: Option<CoreArchitecture>,
     pub kind: BranchKind,
 }

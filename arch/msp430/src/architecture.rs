@@ -5,7 +5,7 @@ use crate::register::Register;
 use binaryninja::{
     architecture::{
         Architecture, CoreArchitecture, CustomArchitectureHandle, FlagCondition, InstructionInfo,
-        UnusedIntrinsic, UnusedRegisterStack, UnusedRegisterStackInfo,
+        UnusedIntrinsic, UnusedRegisterStack,
     },
     disassembly::{InstructionTextToken, InstructionTextTokenKind},
     Endianness,
@@ -42,7 +42,7 @@ impl Msp430 {
 
 impl Architecture for Msp430 {
     type Handle = CustomArchitectureHandle<Self>;
-    type RegisterStackInfo = UnusedRegisterStackInfo<Self::Register>;
+    type RegisterStackInfo = UnusedRegisterStack<Self::Register>;
     type RegisterStack = UnusedRegisterStack<Self::Register>;
     type Register = Register;
     type RegisterInfo = Register;

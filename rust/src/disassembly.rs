@@ -19,11 +19,11 @@ use crate::architecture::Architecture;
 use crate::architecture::CoreArchitecture;
 use crate::basic_block::BasicBlock;
 use crate::function::{Location, NativeBlock};
-use crate::high_level_il as hlil;
 use crate::low_level_il as llil;
 use crate::medium_level_il as mlil;
 use crate::string::IntoCStr;
 use crate::string::{raw_to_string, strings_to_string_list, BnString};
+use crate::{high_level_il as hlil, BN_INVALID_EXPR};
 
 use crate::rc::*;
 
@@ -266,8 +266,7 @@ pub struct InstructionTextToken {
     pub text: String,
     pub confidence: u8,
     pub context: InstructionTextTokenContext,
-    // TODO: Document that this is not necessary to set and that this is valid in a limited context.
-    pub expr_index: usize,
+    pub expr_index: Option<usize>,
     pub kind: InstructionTextTokenKind,
 }
 
@@ -278,7 +277,10 @@ impl InstructionTextToken {
             text: raw_to_string(value.text).unwrap(),
             confidence: value.confidence,
             context: value.context.into(),
-            expr_index: value.exprIndex,
+            expr_index: match value.exprIndex {
+                BN_INVALID_EXPR => None,
+                index => Some(index),
+            },
             kind: InstructionTextTokenKind::from_raw(value),
         }
     }
@@ -305,7 +307,7 @@ impl InstructionTextToken {
             // NOTE: Expected to be freed with `InstructionTextToken::free_raw`.
             typeNames: strings_to_string_list(&type_names),
             namesCount: type_names.len(),
-            exprIndex: value.expr_index,
+            exprIndex: value.expr_index.unwrap_or(BN_INVALID_EXPR),
         }
     }
 
@@ -326,7 +328,7 @@ impl InstructionTextToken {
             text: text.into(),
             confidence: MAX_CONFIDENCE,
             context: InstructionTextTokenContext::Normal,
-            expr_index: 0,
+            expr_index: None,
             kind,
         }
     }
@@ -341,7 +343,7 @@ impl InstructionTextToken {
             text: text.into(),
             confidence: MAX_CONFIDENCE,
             context: InstructionTextTokenContext::Normal,
-            expr_index: 0,
+            expr_index: None,
             kind,
         }
     }

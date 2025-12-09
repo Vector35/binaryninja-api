@@ -64,7 +64,7 @@ use std::collections::HashMap;
 use std::ffi::{c_char, c_void, CString};
 use std::fmt::{Display, Formatter};
 use std::ops::Range;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
 use std::{result, slice};
 // TODO : general reorg of modules related to bv
@@ -76,6 +76,7 @@ pub mod writer;
 
 use crate::binary_view::search::SearchQuery;
 use crate::disassembly::DisassemblySettings;
+use crate::type_archive::{TypeArchive, TypeArchiveId};
 use crate::workflow::Workflow;
 pub use memory_map::MemoryMap;
 pub use reader::BinaryReader;
@@ -2355,23 +2356,45 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    //
-    // fn type_archives(&self) -> Array<TypeArchive> {
-    //     let mut ids: *mut *mut c_char = std::ptr::null_mut();
-    //     let mut paths: *mut *mut c_char = std::ptr::null_mut();
-    //     let count = unsafe { BNBinaryViewGetTypeArchives(self.as_ref().handle, &mut ids, &mut paths) };
-    //     let path_list = unsafe { Array::<BnString>::new(paths, count, ()) };
-    //     let ids_list = unsafe { std::slice::from_raw_parts(ids, count).to_vec() };
-    //     let archives = ids_list.iter().filter_map(|id| {
-    //         let archive_raw = unsafe { BNBinaryViewGetTypeArchive(self.as_ref().handle, *id) };
-    //         match archive_raw.is_null() {
-    //             true => None,
-    //             false => Some(archive_raw)
-    //         }
-    //     }).collect();
-    //     unsafe { BNFreeStringList(ids, count) };
-    //     Array::new(archives)
-    // }
+    /// Retrieve the attached type archives as their [`TypeArchiveId`].
+    ///
+    /// Using the returned id you can retrieve the [`TypeArchive`] with [`BinaryViewExt::type_archive_by_id`].
+    fn attached_type_archives(&self) -> Vec<TypeArchiveId> {
+        let mut ids: *mut *mut c_char = std::ptr::null_mut();
+        let mut paths: *mut *mut c_char = std::ptr::null_mut();
+        let count =
+            unsafe { BNBinaryViewGetTypeArchives(self.as_ref().handle, &mut ids, &mut paths) };
+        // We discard the path here, you can retrieve it later with [`BinaryViewExt::type_archive_path_by_id`],
+        // this is so we can simplify the return type which will commonly just want to query through to the type
+        // archive itself.
+        let _path_list = unsafe { Array::<BnString>::new(paths, count, ()) };
+        let id_list = unsafe { Array::<BnString>::new(ids, count, ()) };
+        id_list
+            .into_iter()
+            .map(|id| TypeArchiveId(id.to_string()))
+            .collect()
+    }
+
+    /// Look up a connected [`TypeArchive`] by its `id`.
+    ///
+    /// NOTE: A [`TypeArchive`] can be attached but not connected, returning `None`.
+    fn type_archive_by_id(&self, id: &TypeArchiveId) -> Option<Ref<TypeArchive>> {
+        let id = id.0.as_str().to_cstr();
+        let result = unsafe { BNBinaryViewGetTypeArchive(self.as_ref().handle, id.as_ptr()) };
+        let result_ptr = NonNull::new(result)?;
+        Some(unsafe { TypeArchive::ref_from_raw(result_ptr) })
+    }
+
+    /// Look up the path for an attached (but not necessarily connected) [`TypeArchive`] by its `id`.
+    fn type_archive_path_by_id(&self, id: &TypeArchiveId) -> Option<PathBuf> {
+        let id = id.0.as_str().to_cstr();
+        let result = unsafe { BNBinaryViewGetTypeArchivePath(self.as_ref().handle, id.as_ptr()) };
+        if result.is_null() {
+            return None;
+        }
+        let path_str = unsafe { BnString::into_string(result) };
+        Some(PathBuf::from(path_str))
+    }
 }
 
 impl<T: BinaryViewBase> BinaryViewExt for T {}

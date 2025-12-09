@@ -220,7 +220,7 @@ impl MediumLevelILFunction {
     /// # use binaryninja::variable::Variable;
     /// # let mlil_fun: MediumLevelILFunction = todo!();
     /// # let mlil_var: Variable = todo!();
-    /// let instr_idx = mlil_fun.var_refs(&mlil_var).get(0).expr_idx;
+    /// let instr_addr = mlil_fun.var_refs(&mlil_var).get(0).addr;
     /// ```
     pub fn var_refs(&self, var: &Variable) -> Array<ILReferenceSource> {
         let mut count = 0;
@@ -525,7 +525,7 @@ pub struct ILReferenceSource {
     pub arch: CoreArchitecture,
     pub addr: u64,
     pub graph_type: FunctionGraphType,
-    pub expr_idx: usize,
+    pub expr_idx: MediumLevelExpressionIndex,
 }
 
 impl From<BNILReferenceSource> for ILReferenceSource {
@@ -535,7 +535,7 @@ impl From<BNILReferenceSource> for ILReferenceSource {
             arch: unsafe { CoreArchitecture::from_raw(value.arch) },
             addr: value.addr,
             graph_type: value.type_,
-            expr_idx: value.exprId,
+            expr_idx: MediumLevelExpressionIndex(value.exprId),
         }
     }
 }
@@ -547,7 +547,7 @@ impl From<&BNILReferenceSource> for ILReferenceSource {
             arch: unsafe { CoreArchitecture::from_raw(value.arch) },
             addr: value.addr,
             graph_type: value.type_,
-            expr_idx: value.exprId,
+            expr_idx: MediumLevelExpressionIndex(value.exprId),
         }
     }
 }

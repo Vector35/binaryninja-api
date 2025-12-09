@@ -29,7 +29,7 @@ fn main() {
         .load("/bin/cat")
         .expect("Couldn't open `/bin/cat`");
     
-    println!("Filename:  `{}`", bv.file().filename());
+    println!("File:  `{}`", bv.file());
     println!("File size: `{:#x}`", bv.len());
     println!("Function count: {}", bv.functions().len());
     

@@ -27,7 +27,7 @@ use binaryninjacore_sys::{
 };
 use binaryninjacore_sys::{BNCreateDatabaseWithProgress, BNOpenExistingDatabaseWithProgress};
 use std::ffi::c_void;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter};
 use std::path::Path;
 
 use crate::progress::ProgressCallback;
@@ -375,7 +375,7 @@ impl FileMetadata {
 }
 
 impl Debug for FileMetadata {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("FileMetadata")
             .field("filename", &self.filename())
             .field("session_id", &self.session_id())
@@ -385,6 +385,12 @@ impl Debug for FileMetadata {
             .field("current_offset", &self.current_offset())
             .field("view_types", &self.view_types().to_vec())
             .finish()
+    }
+}
+
+impl Display for FileMetadata {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.filename())
     }
 }
 

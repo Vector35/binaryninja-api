@@ -16,6 +16,16 @@ use crate::types::{QualifiedName, QualifiedNameAndType, QualifiedNameTypeAndId, 
 
 #[repr(transparent)]
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TypeArchiveId(pub String);
+
+impl Display for TypeArchiveId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", self.0))
+    }
+}
+
+#[repr(transparent)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TypeArchiveSnapshotId(pub String);
 
 impl TypeArchiveSnapshotId {
@@ -79,24 +89,24 @@ impl TypeArchive {
         NonNull::new(handle).map(|handle| unsafe { TypeArchive::ref_from_raw(handle) })
     }
 
-    /// Create a Type Archive at the given path and id, returning None if it could not be created.
+    /// Create a Type Archive at the given path and id, returning `None` if it could not be created.
     ///
     /// If the file has already been created and is not a valid type archive this will return `None`.
     pub fn create_with_id(
         path: impl AsRef<Path>,
-        id: &str,
+        id: &TypeArchiveId,
         platform: &Platform,
     ) -> Option<Ref<TypeArchive>> {
         let raw_path = path.as_ref().to_cstr();
-        let id = id.to_cstr();
+        let id = id.0.as_str().to_cstr();
         let handle =
             unsafe { BNCreateTypeArchiveWithId(raw_path.as_ptr(), platform.handle, id.as_ptr()) };
         NonNull::new(handle).map(|handle| unsafe { TypeArchive::ref_from_raw(handle) })
     }
 
     /// Get a reference to the Type Archive with the known id, if one exists.
-    pub fn lookup_by_id(id: &str) -> Option<Ref<TypeArchive>> {
-        let id = id.to_cstr();
+    pub fn lookup_by_id(id: &TypeArchiveId) -> Option<Ref<TypeArchive>> {
+        let id = id.0.as_str().to_cstr();
         let handle = unsafe { BNLookupTypeArchiveById(id.as_ptr()) };
         NonNull::new(handle).map(|handle| unsafe { TypeArchive::ref_from_raw(handle) })
     }
@@ -110,10 +120,11 @@ impl TypeArchive {
     }
 
     /// Get the guid for a Type Archive
-    pub fn id(&self) -> BnString {
+    pub fn id(&self) -> TypeArchiveId {
         let result = unsafe { BNGetTypeArchiveId(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::from_raw(result) }
+        let result_str = unsafe { BnString::from_raw(result) };
+        TypeArchiveId(result_str.to_string_lossy().to_string())
     }
 
     /// Get the associated Platform for a Type Archive
@@ -711,9 +722,9 @@ impl TypeArchive {
     /// conflicting type ids
     pub fn merge_snapshots<M>(
         &self,
-        base_snapshot: &str,
-        first_snapshot: &str,
-        second_snapshot: &str,
+        base_snapshot: &TypeArchiveSnapshotId,
+        first_snapshot: &TypeArchiveSnapshotId,
+        second_snapshot: &TypeArchiveSnapshotId,
         merge_conflicts: M,
     ) -> Result<BnString, Array<BnString>>
     where
@@ -740,9 +751,9 @@ impl TypeArchive {
     /// conflicting type ids
     pub fn merge_snapshots_with_progress<M, PC>(
         &self,
-        base_snapshot: &str,
-        first_snapshot: &str,
-        second_snapshot: &str,
+        base_snapshot: &TypeArchiveSnapshotId,
+        first_snapshot: &TypeArchiveSnapshotId,
+        second_snapshot: &TypeArchiveSnapshotId,
         merge_conflicts: M,
         mut progress: PC,
     ) -> Result<BnString, Array<BnString>>
@@ -750,9 +761,9 @@ impl TypeArchive {
         M: IntoIterator<Item = (String, String)>,
         PC: ProgressCallback,
     {
-        let base_snapshot = base_snapshot.to_cstr();
-        let first_snapshot = first_snapshot.to_cstr();
-        let second_snapshot = second_snapshot.to_cstr();
+        let base_snapshot = base_snapshot.0.as_str().to_cstr();
+        let first_snapshot = first_snapshot.0.as_str().to_cstr();
+        let second_snapshot = second_snapshot.0.as_str().to_cstr();
         let (merge_keys, merge_values): (Vec<BnString>, Vec<BnString>) = merge_conflicts
             .into_iter()
             .map(|(k, v)| (BnString::new(k), BnString::new(v)))

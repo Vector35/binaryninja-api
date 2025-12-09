@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Architectures provide disassembly, lifting, and associated metadata about a CPU to inform analysis and decompilation.
+//! Architectures provide disassembly, lifting, and associated metadata about a CPU to inform
+//! analysis and decompilation.
+//!
+//! For more information see the [`Architecture`] trait and the [`CoreArchitecture`] structure for
+//! querying already registered architectures.
 
-// container abstraction to avoid Vec<> (want CoreArchFlagList, CoreArchRegList)
 // RegisterInfo purge
 use binaryninjacore_sys::*;
 use std::fmt::{Debug, Formatter};
@@ -91,6 +94,16 @@ macro_rules! new_id_type {
     };
 }
 
+/// The [`Architecture`] trait is the backbone of Binary Ninja's analysis capabilities. It tells the
+/// core how to interpret the machine code into LLIL, a generic intermediate representation for
+/// program analysis.
+///
+/// To add support for a new Instruction Set Architecture (ISA), you must implement this trait and
+/// register it. The core analysis loop relies on your implementation for three critical stages:
+///
+/// 1.  **Disassembly ([`Architecture::instruction_text`])**: Machine code into human-readable text (e.g., `55` -> `push rbp`).
+/// 2.  **Control Flow Analysis ([`Architecture::instruction_info`])**: Identifying where execution goes next (e.g., "This is a `call` instruction, it targets address `0x401000`").
+/// 3.  **Lifting ([`Architecture::instruction_llil`])**: Translating machine code into **Low Level Intermediate Language (LLIL)**, which enables decompilation and automated analysis.
 pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     type Handle: Borrow<Self> + Clone;
 
@@ -316,6 +329,12 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         Vec::new()
     }
 
+    fn stack_pointer_reg(&self) -> Option<Self::Register>;
+
+    fn link_reg(&self) -> Option<Self::Register> {
+        None
+    }
+
     /// List of concrete register stacks for this architecture.
     ///
     /// You **must** override the following functions as well:
@@ -450,12 +469,6 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         None
     }
 
-    fn stack_pointer_reg(&self) -> Option<Self::Register>;
-
-    fn link_reg(&self) -> Option<Self::Register> {
-        None
-    }
-
     /// List of concrete intrinsics for this architecture.
     ///
     /// You **must** override the following functions as well:
@@ -478,30 +491,51 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         None
     }
 
+    /// Let the UI display this patch option.
+    ///
+    /// If set to true, you must override [`Architecture::assemble`].
     fn can_assemble(&self) -> bool {
         false
     }
 
+    /// Assemble the code at the specified address and return the machine code in bytes.
+    ///
+    /// If overridden, you must set [`Architecture::can_assemble`] to `true`.
     fn assemble(&self, _code: &str, _addr: u64) -> Result<Vec<u8>, String> {
         Err("Assemble unsupported".into())
     }
 
-    fn is_never_branch_patch_available(&self, _data: &[u8], _addr: u64) -> bool {
-        false
+    /// Let the UI display this patch option.
+    ///
+    /// If set to true, you must override [`Architecture::invert_branch`].
+    fn is_never_branch_patch_available(&self, data: &[u8], addr: u64) -> bool {
+        self.is_invert_branch_patch_available(data, addr)
     }
 
+    /// Let the UI display this patch option.
+    ///
+    /// If set to true, you must override [`Architecture::always_branch`].
     fn is_always_branch_patch_available(&self, _data: &[u8], _addr: u64) -> bool {
         false
     }
 
+    /// Let the UI display this patch option.
+    ///
+    /// If set to true, you must override [`Architecture::invert_branch`].
     fn is_invert_branch_patch_available(&self, _data: &[u8], _addr: u64) -> bool {
         false
     }
 
-    fn is_skip_and_return_zero_patch_available(&self, _data: &[u8], _addr: u64) -> bool {
-        false
+    /// Let the UI display this patch option.
+    ///
+    /// If set to true, you must override [`Architecture::skip_and_return_value`].
+    fn is_skip_and_return_zero_patch_available(&self, data: &[u8], addr: u64) -> bool {
+        self.is_skip_and_return_value_patch_available(data, addr)
     }
 
+    /// Let the UI display this patch option.
+    ///
+    /// If set to true, you must override [`Architecture::skip_and_return_value`].
     fn is_skip_and_return_value_patch_available(&self, _data: &[u8], _addr: u64) -> bool {
         false
     }
@@ -510,14 +544,23 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         false
     }
 
+    /// Patch the instruction to always branch.
+    ///
+    /// If overridden, you must also override [`Architecture::is_always_branch_patch_available`].
     fn always_branch(&self, _data: &mut [u8], _addr: u64) -> bool {
         false
     }
 
+    /// Patch the instruction to invert the branch condition.
+    ///
+    /// If overridden, you must also override [`Architecture::is_invert_branch_patch_available`].
     fn invert_branch(&self, _data: &mut [u8], _addr: u64) -> bool {
         false
     }
 
+    /// Patch the instruction to skip and return value.
+    ///
+    /// If overridden, you must also override [`Architecture::is_skip_and_return_value_patch_available`].
     fn skip_and_return_value(&self, _data: &mut [u8], _addr: u64, _value: u64) -> bool {
         false
     }
@@ -835,6 +878,20 @@ impl Architecture for CoreArchitecture {
         }
     }
 
+    fn stack_pointer_reg(&self) -> Option<CoreRegister> {
+        match unsafe { BNGetArchitectureStackPointerRegister(self.handle) } {
+            0xffff_ffff => None,
+            reg => Some(CoreRegister::new(*self, reg.into())?),
+        }
+    }
+
+    fn link_reg(&self) -> Option<CoreRegister> {
+        match unsafe { BNGetArchitectureLinkRegister(self.handle) } {
+            0xffff_ffff => None,
+            reg => Some(CoreRegister::new(*self, reg.into())?),
+        }
+    }
+
     fn register_stacks(&self) -> Vec<CoreRegisterStack> {
         unsafe {
             let mut count: usize = 0;
@@ -938,20 +995,6 @@ impl Architecture for CoreArchitecture {
 
     fn flag_group_from_id(&self, id: FlagGroupId) -> Option<CoreFlagGroup> {
         CoreFlagGroup::new(*self, id)
-    }
-
-    fn stack_pointer_reg(&self) -> Option<CoreRegister> {
-        match unsafe { BNGetArchitectureStackPointerRegister(self.handle) } {
-            0xffff_ffff => None,
-            reg => Some(CoreRegister::new(*self, reg.into())?),
-        }
-    }
-
-    fn link_reg(&self) -> Option<CoreRegister> {
-        match unsafe { BNGetArchitectureLinkRegister(self.handle) } {
-            0xffff_ffff => None,
-            reg => Some(CoreRegister::new(*self, reg.into())?),
-        }
     }
 
     fn intrinsics(&self) -> Vec<CoreIntrinsic> {
@@ -1221,6 +1264,9 @@ pub trait ArchitectureExt: Architecture {
 
 impl<T: Architecture> ArchitectureExt for T {}
 
+/// Registers a new architecture with the given name.
+///
+/// NOTE: This function should only be called within `CorePluginInit`.
 pub fn register_architecture<A, F>(name: &str, func: F) -> &'static A
 where
     A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync + Sized,

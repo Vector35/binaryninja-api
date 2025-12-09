@@ -15,7 +15,7 @@
 //! Interfaces for the various kinds of symbols in a binary.
 
 use std::fmt;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::ptr;
 
@@ -347,5 +347,11 @@ impl Hash for Symbol {
 impl PartialEq for Symbol {
     fn eq(&self, other: &Self) -> bool {
         self.handle == other.handle
+    }
+}
+
+impl Display for Symbol {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.short_name().to_string_lossy())
     }
 }

@@ -34,7 +34,7 @@ fn main() {
     println!("Function count: {}", bv.functions().len());
     
     for func in &bv.functions() {
-        println!("{}:", func.symbol().full_name());
+        println!("{}: {}", func.start(), func.symbol());
     }
 }
 ```

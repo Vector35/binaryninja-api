@@ -396,3 +396,20 @@ class ConflictSplitter:
 		         this splitter cannot handle the conflict
 		"""
 		raise NotImplementedError("Not implemented")
+
+
+def merge_snapshots(first: Snapshot, second: Snapshot, conflict_handler: 'util.ConflictHandlerType', progress: Optional['util.ProgressFuncType'] = None):
+	"""
+	Merge two snapshots in a database down to a single leaf snapshot.
+
+	:param first: First snapshot
+	:param second: Second snapshot
+	:param conflict_handler: Function to call for progress updates
+	:param progress: Function to call to resolve snapshot conflicts
+	:raises RuntimeError: If there was an error (or the operation was cancelled)
+	"""
+	if progress is None:
+		progress = util.nop
+
+	if not core.BNCollaborationMergeSnapshots(first.handle, second.handle, util.wrap_conflict_handler(conflict_handler), None, util.wrap_progress(progress), None):
+		raise RuntimeError(util._last_error())

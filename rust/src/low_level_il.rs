@@ -14,7 +14,7 @@
 
 use std::borrow::Cow;
 use std::fmt;
-
+use std::fmt::{Display, Formatter};
 // TODO : provide some way to forbid emitting register reads for certain registers
 // also writing for certain registers (e.g. zero register must prohibit il.set_reg and il.reg
 // (replace with nop or const(0) respectively)
@@ -89,6 +89,12 @@ impl fmt::Debug for LowLevelILTempRegister {
     }
 }
 
+impl fmt::Display for LowLevelILTempRegister {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self, f)
+    }
+}
+
 impl TryFrom<RegisterId> for LowLevelILTempRegister {
     type Error = ();
 
@@ -146,8 +152,14 @@ impl<R: ArchReg> fmt::Debug for LowLevelILRegisterKind<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             LowLevelILRegisterKind::Arch(ref r) => r.fmt(f),
-            LowLevelILRegisterKind::Temp(id) => id.fmt(f),
+            LowLevelILRegisterKind::Temp(ref id) => fmt::Debug::fmt(id, f),
         }
+    }
+}
+
+impl<R: ArchReg> fmt::Display for LowLevelILRegisterKind<R> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self, f)
     }
 }
 
@@ -158,42 +170,127 @@ impl From<LowLevelILTempRegister> for LowLevelILRegisterKind<CoreRegister> {
 }
 
 #[derive(Copy, Clone, Debug)]
+pub struct LowLevelILSSARegister<R: ArchReg> {
+    pub reg: LowLevelILRegisterKind<R>,
+    /// The SSA version of the register.
+    pub version: u32,
+}
+
+impl<R: ArchReg> LowLevelILSSARegister<R> {
+    pub fn new(reg: LowLevelILRegisterKind<R>, version: u32) -> Self {
+        Self { reg, version }
+    }
+
+    pub fn name(&self) -> Cow<'_, str> {
+        self.reg.name()
+    }
+
+    pub fn id(&self) -> RegisterId {
+        self.reg.id()
+    }
+}
+
+impl<R: ArchReg> Display for LowLevelILSSARegister<R> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}#{}", self.reg, self.version)
+    }
+}
+
+/// The kind of SSA register.
+///
+/// An SSA register can exist in two states:
+///
+/// - Full, e.g. `eax` on x86
+/// - Partial, e.g. `al` on x86
+///
+/// If you intend to query for the ssa uses or definitions you must retrieve the physical register
+/// using the function [`LowLevelILSSARegisterKind::physical_reg`] which will give you the actual
+/// [`LowLevelILSSARegister`].
+#[derive(Copy, Clone, Debug)]
 pub enum LowLevelILSSARegisterKind<R: ArchReg> {
-    Full {
-        kind: LowLevelILRegisterKind<R>,
-        version: u32,
-    },
+    /// A full register is one that is not aliasing another, such as `eax` on x86 or `rax` on x86_64.
+    Full(LowLevelILSSARegister<R>),
     Partial {
-        full_reg: CoreRegister,
+        /// This is the non-aliased register.
+        ///
+        /// This register is what is used for dataflow, otherwise the backing storage of aliased registers
+        /// like `al` on x86 would contain separate value information from the physical register `eax`.
+        ///
+        /// NOTE: While this is a [`LowLevelILSSARegister`] temporary registers are not allowed in partial
+        /// assignments, so this will always be an actual architecture register.
+        full_reg: LowLevelILSSARegister<R>,
+        /// This is the aliased register.
+        ///
+        /// On x86 if the register `al` is used that would be considered a partial register, with the
+        /// full register `eax` being used as the backing storage.
         partial_reg: CoreRegister,
-        version: u32,
     },
 }
 
 impl<R: ArchReg> LowLevelILSSARegisterKind<R> {
     pub fn new_full(kind: LowLevelILRegisterKind<R>, version: u32) -> Self {
-        Self::Full { kind, version }
+        Self::Full(LowLevelILSSARegister::new(kind, version))
     }
 
-    pub fn new_partial(full_reg: CoreRegister, partial_reg: CoreRegister, version: u32) -> Self {
+    pub fn new_partial(
+        full_reg: LowLevelILRegisterKind<R>,
+        version: u32,
+        partial_reg: CoreRegister,
+    ) -> Self {
         Self::Partial {
-            full_reg,
+            full_reg: LowLevelILSSARegister::new(full_reg, version),
             partial_reg,
-            version,
         }
     }
 
-    pub fn version(&self) -> u32 {
+    /// This is the non-aliased register used. This should be called when you intend to actually
+    /// query for SSA dataflow information, as a partial register is prohibited from being used.
+    ///
+    /// # Example
+    ///
+    /// On x86 `al` in the LLIL SSA will have a physical register of `eax`.
+    pub fn physical_reg(&self) -> LowLevelILSSARegister<R> {
         match *self {
-            LowLevelILSSARegisterKind::Full { version, .. }
-            | LowLevelILSSARegisterKind::Partial { version, .. } => version,
+            LowLevelILSSARegisterKind::Full(reg) => reg,
+            LowLevelILSSARegisterKind::Partial { full_reg, .. } => full_reg,
         }
     }
 
-    pub fn id(&self) -> RegisterId {
+    /// Gets the displayable register, for partial this will be the partial register name.
+    ///
+    /// # Example
+    ///
+    /// On x86 this will display "al" not "eax".
+    pub fn name(&self) -> Cow<'_, str> {
         match *self {
-            LowLevelILSSARegisterKind::Full { kind, .. } => kind.id(),
-            LowLevelILSSARegisterKind::Partial { partial_reg, .. } => partial_reg.id(),
+            LowLevelILSSARegisterKind::Full(ref reg) => reg.reg.name(),
+            LowLevelILSSARegisterKind::Partial {
+                ref partial_reg, ..
+            } => partial_reg.name(),
+        }
+    }
+}
+
+impl<R: ArchReg> AsRef<LowLevelILSSARegister<R>> for LowLevelILSSARegisterKind<R> {
+    fn as_ref(&self) -> &LowLevelILSSARegister<R> {
+        match self {
+            LowLevelILSSARegisterKind::Full(reg) => reg,
+            LowLevelILSSARegisterKind::Partial { full_reg, .. } => full_reg,
+        }
+    }
+}
+
+impl<R: ArchReg> From<LowLevelILSSARegister<R>> for LowLevelILSSARegisterKind<R> {
+    fn from(value: LowLevelILSSARegister<R>) -> Self {
+        LowLevelILSSARegisterKind::Full(value)
+    }
+}
+
+impl<R: ArchReg> From<LowLevelILSSARegisterKind<R>> for LowLevelILSSARegister<R> {
+    fn from(value: LowLevelILSSARegisterKind<R>) -> Self {
+        match value {
+            LowLevelILSSARegisterKind::Full(reg) => reg,
+            LowLevelILSSARegisterKind::Partial { full_reg, .. } => full_reg,
         }
     }
 }

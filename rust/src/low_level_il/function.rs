@@ -264,15 +264,16 @@ impl<M: FunctionMutability> LowLevelILFunction<M, SSA> {
     #[must_use]
     pub fn get_ssa_register_uses<R: ArchReg>(
         &self,
-        reg: LowLevelILSSARegisterKind<R>,
+        reg: impl AsRef<LowLevelILSSARegister<R>>,
     ) -> Vec<LowLevelILInstruction<'_, M, SSA>> {
         use binaryninjacore_sys::BNGetLowLevelILSSARegisterUses;
+        let reg = reg.as_ref();
         let mut count = 0;
         let instrs = unsafe {
             BNGetLowLevelILSSARegisterUses(
                 self.handle,
                 reg.id().into(),
-                reg.version() as usize,
+                reg.version as usize,
                 &mut count,
             )
         };
@@ -288,15 +289,12 @@ impl<M: FunctionMutability> LowLevelILFunction<M, SSA> {
     #[must_use]
     pub fn get_ssa_register_definition<R: ArchReg>(
         &self,
-        reg: &LowLevelILSSARegisterKind<R>,
+        reg: impl AsRef<LowLevelILSSARegister<R>>,
     ) -> Option<LowLevelILInstruction<'_, M, SSA>> {
         use binaryninjacore_sys::BNGetLowLevelILSSARegisterDefinition;
+        let reg = reg.as_ref();
         let instr_idx = unsafe {
-            BNGetLowLevelILSSARegisterDefinition(
-                self.handle,
-                reg.id().into(),
-                reg.version() as usize,
-            )
+            BNGetLowLevelILSSARegisterDefinition(self.handle, reg.id().into(), reg.version as usize)
         };
         self.instruction_from_index(LowLevelInstructionIndex(instr_idx))
     }
@@ -305,10 +303,11 @@ impl<M: FunctionMutability> LowLevelILFunction<M, SSA> {
     #[must_use]
     pub fn get_ssa_register_value<R: ArchReg>(
         &self,
-        reg: &LowLevelILSSARegisterKind<R>,
+        reg: impl AsRef<LowLevelILSSARegister<R>>,
     ) -> Option<RegisterValue> {
+        let reg = reg.as_ref();
         let value = unsafe {
-            BNGetLowLevelILSSARegisterValue(self.handle, reg.id().into(), reg.version() as usize)
+            BNGetLowLevelILSSARegisterValue(self.handle, reg.id().into(), reg.version as usize)
         };
         if value.state == BNRegisterValueType::UndeterminedValue {
             return None;

@@ -259,13 +259,19 @@ fn test_llil_ssa() {
         LowLevelILInstructionKind::SetRegSsa(op) => {
             assert_eq!(op.size(), 4);
             match op.dest_reg() {
-                LowLevelILSSARegisterKind::Full { kind, version } => {
-                    assert_eq!(kind.name(), "edi");
-                    assert_eq!(version, 1);
+                LowLevelILSSARegisterKind::Full(reg) => {
+                    assert_eq!(reg.name(), "edi");
+                    assert_eq!(reg.version, 1);
                 }
                 _ => panic!("Expected LowLevelILSSARegisterKind::Full"),
             }
             assert_eq!(op.source_expr().index, LowLevelExpressionIndex(0));
+
+            // Verify dest_reg does not have a use, so let's verify the ssa register definition.
+            let dest_reg_def = llil_ssa_function
+                .get_ssa_register_definition(op.dest_reg())
+                .expect("Valid ssa reg def");
+            assert_eq!(dest_reg_def.address(), ssa_instr_0.address());
         }
         _ => panic!("Expected SetRegSsa"),
     }
@@ -287,6 +293,23 @@ fn test_llil_ssa() {
             let dest_memory_version = op.dest_memory_version();
             assert_eq!(dest_memory_version, 1);
             assert_eq!(dest_expr.index, LowLevelExpressionIndex(4));
+
+            // Grab the SP register so we can verify its use.
+            let dest_expr_kind = dest_expr.kind();
+            let sub_expr = dest_expr_kind.as_binary_op().unwrap();
+            match sub_expr.left().kind() {
+                LowLevelILExpressionKind::RegSsa(reg) => {
+                    // Verify esp#0 has a single use in the next instruction (same address however).
+                    let sp_0_uses = llil_ssa_function.get_ssa_register_uses(reg.source_reg());
+                    println!("{:?}", sp_0_uses);
+                    assert_eq!(sp_0_uses.len(), 2);
+                    let _next_instr_use = sp_0_uses
+                        .iter()
+                        .find(|inst| inst.index != ssa_instr_1.index)
+                        .expect("Failed to get next instructions use of sp");
+                }
+                _ => panic!("Expected RegSsa"),
+            }
         }
         _ => panic!("Expected StoreSsa"),
     }

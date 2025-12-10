@@ -413,11 +413,11 @@ where
         let full_raw_id = RegisterId(self.op.operands[0] as u32);
         let version = self.op.operands[1] as u32;
         let partial_raw_id = RegisterId(self.op.operands[2] as u32);
-        let full_reg =
-            CoreRegister::new(self.function.arch(), full_raw_id).expect("Bad register ID");
+        let full_reg_kind = LowLevelILRegisterKind::from_raw(&self.function.arch(), full_raw_id)
+            .expect("Bad register ID");
         let partial_reg =
             CoreRegister::new(self.function.arch(), partial_raw_id).expect("Bad register ID");
-        LowLevelILSSARegisterKind::new_partial(full_reg, partial_reg, version)
+        LowLevelILSSARegisterKind::new_partial(full_reg_kind, version, partial_reg)
     }
 
     pub fn source_expr(&self) -> LowLevelILExpression<'func, M, F, ValueExpr> {
@@ -868,11 +868,11 @@ where
         let full_raw_id = RegisterId(self.op.operands[0] as u32);
         let version = self.op.operands[1] as u32;
         let partial_raw_id = RegisterId(self.op.operands[2] as u32);
-        let full_reg =
-            CoreRegister::new(self.function.arch(), full_raw_id).expect("Bad register ID");
+        let full_reg_kind = LowLevelILRegisterKind::from_raw(&self.function.arch(), full_raw_id)
+            .expect("Bad register ID");
         let partial_reg =
             CoreRegister::new(self.function.arch(), partial_raw_id).expect("Bad register ID");
-        LowLevelILSSARegisterKind::new_partial(full_reg, partial_reg, version)
+        LowLevelILSSARegisterKind::new_partial(full_reg_kind, version, partial_reg)
     }
 }
 

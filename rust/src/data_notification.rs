@@ -1,17 +1,13 @@
+//! Receive notifications for many types of core events.
+
 use std::ffi::{c_char, c_void, CStr};
 use std::ptr::NonNull;
 
-use binaryninjacore_sys::{
-    BNBinaryDataNotification, BNBinaryView, BNComponent, BNDataVariable, BNExternalLibrary,
-    BNExternalLocation, BNFunction, BNQualifiedName, BNRegisterDataNotification, BNSection,
-    BNSegment, BNStringType, BNSymbol, BNTagReference, BNTagType, BNType, BNTypeArchive,
-    BNUndoEntry, BNUnregisterDataNotification,
-};
+use binaryninjacore_sys::*;
 
-use crate::binary_view::BinaryView;
+use crate::binary_view::{BinaryView, StringType};
 use crate::component::Component;
 use crate::database::undo::UndoEntry;
-use crate::disassembly::StringType;
 use crate::external_library::{ExternalLibrary, ExternalLocation};
 use crate::function::Function;
 use crate::rc::Ref;
@@ -36,10 +32,9 @@ macro_rules! trait_handler {
         ) $(-> $ret_type:ty)?
     ),* $(,)?
 ) => {
-    /// Used to describe which call should be triggered by BinaryNinja.
-    /// By default all calls are disabled.
+    /// Used to describe which call should be triggered. By default, all calls are disabled.
     ///
-    /// Used by [CustomDataNotification::register]
+    /// Used by [`CustomDataNotification::register`]
     #[derive(Default)]
     pub struct DataNotificationTriggers {
         $($fun_name: bool,)*
@@ -91,7 +86,11 @@ macro_rules! trait_handler {
         let leak_notify = Box::leak(Box::new(notify));
         let handle = BNBinaryDataNotification {
             context: leak_notify as *mut _ as *mut c_void,
-            $($ffi_param_name: triggers.$fun_name.then_some($fun_name::<H>)),*
+            $($ffi_param_name: triggers.$fun_name.then_some($fun_name::<H>)),*,
+            // TODO: Require all BNBinaryDataNotification's to be implemented?
+            // Since core developers are not required to write Rust bindings (yet) we do not
+            // force new binary data notifications callbacks to be written here.of core developers who do not wish to write
+            ..Default::default()
         };
         // Box it to prevent a copy being returned in `DataNotificationHandle`.
         let mut boxed_handle = Box::new(handle);
@@ -103,10 +102,15 @@ macro_rules! trait_handler {
         }
     }
 
-    /// Implement closures that will be called by BinaryNinja on the event of
-    /// data modification.
+    /// Implement closures that will be called by on the event of data modification.
     ///
-    /// example:
+    /// Once dropped the closures will stop being called.
+    ///
+    /// NOTE: Closures are not executed on the same thread as the event that occurred, you must not depend
+    /// on any serial behavior
+    ///
+    /// # Example
+    ///
     /// ```no_run
     /// # use binaryninja::data_notification::DataNotificationClosure;
     /// # use binaryninja::function::Function;
@@ -144,6 +148,7 @@ macro_rules! trait_handler {
         }
     )*
 
+        /// Register the closures to be notified up until the [`DataNotificationHandle`] is dropped.
         pub fn register(
             self,
             view: &BinaryView,

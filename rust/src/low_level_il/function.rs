@@ -213,12 +213,37 @@ where
 
 impl<M: FunctionMutability> LowLevelILFunction<M, NonSSA> {
     /// Retrieve the SSA form of the function.
+    ///
+    /// If the function has not had the SSA form generated you may call `generate_ssa_form`.
     pub fn ssa_form(&self) -> Option<Ref<LowLevelILFunction<M, SSA>>> {
         let handle = unsafe { BNGetLowLevelILSSAForm(self.handle) };
         if handle.is_null() {
             return None;
         }
         Some(unsafe { LowLevelILFunction::ref_from_raw(handle) })
+    }
+
+    /// Generates the SSA form of the function. Typically called **after** `finalize`.
+    ///
+    /// If you created a freestanding [`LowLevelILFunction`] with no [`LowLevelILFunction::function`]
+    /// than this function will **not** generate the SSA form, as it is currently impossible.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use binaryninja::low_level_il::LowLevelILMutableFunction;
+    /// use binaryninja::rc::Ref;
+    /// # let mutable_llil: Ref<LowLevelILMutableFunction> = unimplemented!();
+    /// // ... modify the IL
+    /// let finalized_llil = mutable_llil.finalized();
+    /// finalized_llil.generate_ssa_form();
+    /// ```
+    pub fn generate_ssa_form(&self) {
+        use binaryninjacore_sys::BNGenerateLowLevelILSSAForm;
+        // SSA form may only be generated if there is an owning function, otherwise it will crash.
+        if self.function().is_some() {
+            unsafe { BNGenerateLowLevelILSSAForm(self.handle) };
+        }
     }
 }
 
@@ -242,14 +267,24 @@ impl LowLevelILFunction<Mutable, NonSSA> {
 
         unsafe { Self::ref_from_raw_with_arch(handle, Some(arch)) }
     }
-
-    pub fn generate_ssa_form(&self) {
-        use binaryninjacore_sys::BNGenerateLowLevelILSSAForm;
-        unsafe { BNGenerateLowLevelILSSAForm(self.handle) };
-    }
 }
 
 impl Ref<LowLevelILFunction<Mutable, NonSSA>> {
+    /// Finalize the mutated [`LowLevelILFunction`], returning a [`LowLevelILRegularFunction`].
+    ///
+    /// This function **will not** correct the SSA related dataflow, to do that you must call
+    /// the function [`LowLevelILMutableFunction::generate_ssa_form`].
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use binaryninja::low_level_il::LowLevelILMutableFunction;
+    /// use binaryninja::rc::Ref;
+    /// # let mutable_llil: Ref<LowLevelILMutableFunction> = unimplemented!();
+    /// // ... modify the IL
+    /// let finalized_llil = mutable_llil.finalized();
+    /// finalized_llil.generate_ssa_form();
+    /// ```
     pub fn finalized(self) -> Ref<LowLevelILFunction<Finalized, NonSSA>> {
         unsafe {
             BNFinalizeLowLevelILFunction(self.handle);

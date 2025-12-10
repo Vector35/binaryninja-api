@@ -14,7 +14,7 @@
 
 use std::borrow::Cow;
 use std::fmt;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display};
 // TODO : provide some way to forbid emitting register reads for certain registers
 // also writing for certain registers (e.g. zero register must prohibit il.set_reg and il.reg
 // (replace with nop or const(0) respectively)
@@ -83,15 +83,15 @@ impl LowLevelILTempRegister {
     }
 }
 
-impl fmt::Debug for LowLevelILTempRegister {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Debug for LowLevelILTempRegister {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "temp{}", self.temp_id)
     }
 }
 
-impl fmt::Display for LowLevelILTempRegister {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        fmt::Debug::fmt(self, f)
+impl Display for LowLevelILTempRegister {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(self, f)
     }
 }
 
@@ -148,18 +148,21 @@ impl<R: ArchReg> LowLevelILRegisterKind<R> {
     }
 }
 
-impl<R: ArchReg> fmt::Debug for LowLevelILRegisterKind<R> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl<R: ArchReg> Debug for LowLevelILRegisterKind<R> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
             LowLevelILRegisterKind::Arch(ref r) => r.fmt(f),
-            LowLevelILRegisterKind::Temp(ref id) => fmt::Debug::fmt(id, f),
+            LowLevelILRegisterKind::Temp(ref id) => Debug::fmt(id, f),
         }
     }
 }
 
-impl<R: ArchReg> fmt::Display for LowLevelILRegisterKind<R> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        fmt::Debug::fmt(self, f)
+impl<R: ArchReg> Display for LowLevelILRegisterKind<R> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            LowLevelILRegisterKind::Arch(ref r) => write!(f, "{}", r.name()),
+            LowLevelILRegisterKind::Temp(ref id) => Display::fmt(id, f),
+        }
     }
 }
 
@@ -191,7 +194,7 @@ impl<R: ArchReg> LowLevelILSSARegister<R> {
 }
 
 impl<R: ArchReg> Display for LowLevelILSSARegister<R> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}#{}", self.reg, self.version)
     }
 }

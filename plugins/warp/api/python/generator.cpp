@@ -479,6 +479,9 @@ int main(int argc, char* argv[])
 			(i.second->GetChildType()->GetChildType()->IsSigned());
 		// Pointer returns will be automatically wrapped to return None on null pointer
 		bool pointerResult = (i.second->GetChildType()->GetClass() == PointerTypeClass);
+		// Enum returns will automatically cast to the enum type
+		bool enumResult = (i.second->GetChildType()->GetClass() == NamedTypeReferenceClass
+						   && i.second->GetChildType()->GetNamedTypeReference()->GetTypeReferenceClass() == EnumNamedTypeClass);
 
 		// From python -> C python3 requires str -> str.encode('charmap')
 		bool swizzleArgs = true;
@@ -631,6 +634,13 @@ int main(int argc, char* argv[])
 			fprintf(out, "\tif not result:\n");
 			fprintf(out, "\t\treturn None\n");
 			fprintf(out, "\treturn result\n");
+		}
+		else if (enumResult)
+		{
+			// Emit wrapper to cast result to enum type
+			fprintf(out, "\treturn ");
+			OutputSwizzledType(out, i.second->GetChildType().GetValue());
+			fprintf(out, "(%s)", stringArgFuncCall.c_str());
 		}
 		else
 		{

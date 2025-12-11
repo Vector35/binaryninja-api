@@ -542,7 +542,7 @@ TypeBuilder DemangleGNU3::DemangleType()
 		case 'c': type = CreateUnknownType("decltype(auto)"); break; //decltype(auto)
 		case 'n':
 		{
-			static const QualifiedName stdNullptrTName(vector<string>{"std", "nullptr_t"});
+			static const QualifiedName stdNullptrTName(SmallVector<string>{"std", "nullptr_t"});
 			type = CreateUnknownType(stdNullptrTName);
 			break;
 		}
@@ -635,13 +635,13 @@ TypeBuilder DemangleGNU3::DemangleType()
 
 TypeBuilder DemangleGNU3::DemangleSubstitution()
 {
-	static const QualifiedName stdAllocatorName(vector<string>{"std", "allocator"});
-	static const QualifiedName stdBasicStringName(vector<string>{"std", "basic_string"});
-	static const QualifiedName stdIostreamName(vector<string>{"std", "iostream"});
-	static const QualifiedName stdIstreamName(vector<string>{"std", "istream"});
-	static const QualifiedName stdOstreamName(vector<string>{"std", "ostream"});
-	static const QualifiedName stdStringName(vector<string>{"std", "string"});
-	static const QualifiedName stdName(vector<string>{"std"});
+	static const QualifiedName stdAllocatorName(SmallVector<string>{"std", "allocator"});
+	static const QualifiedName stdBasicStringName(SmallVector<string>{"std", "basic_string"});
+	static const QualifiedName stdIostreamName(SmallVector<string>{"std", "iostream"});
+	static const QualifiedName stdIstreamName(SmallVector<string>{"std", "istream"});
+	static const QualifiedName stdOstreamName(SmallVector<string>{"std", "ostream"});
+	static const QualifiedName stdStringName(SmallVector<string>{"std", "string"});
+	static const QualifiedName stdName(SmallVector<string>{"std"});
 
 	indent()
 	MyLogDebug("%s: '%s'\n", __FUNCTION__, m_reader.GetRaw().c_str());
@@ -2076,7 +2076,7 @@ TypeBuilder DemangleGNU3::DemangleSymbol(QualifiedName& varName)
 		case 'S':
 		{
 			TypeBuilder t = DemangleType();
-			varName = vector<string>{"typeinfo_name_for_" + t.GetString()};
+			varName = SmallVector<string>{"typeinfo_name_for_" + t.GetString()};
 			return TypeBuilder::ArrayType(Type::IntegerType(1, true), 0);
 		}
 		case 'T': //VTT
@@ -2143,7 +2143,7 @@ TypeBuilder DemangleGNU3::DemangleSymbol(QualifiedName& varName)
 
 		if (t.GetString() == "cxx11")
 		{
-			static const QualifiedName stdCxx11StringName(vector<string>{"std", "cxx11", "string"});
+			static const QualifiedName stdCxx11StringName(SmallVector<string>{"std", "cxx11", "string"});
 			returnType = CreateUnknownType(stdCxx11StringName);
 		}
 	}

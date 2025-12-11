@@ -11,6 +11,18 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! The model for representing types in Binary Ninja.
+//!
+//! [`Type`]'s are fundamental to analysis. With types, you can influence how decompilation resolves accesses,
+//! renders data, and tell the analysis of properties such as volatility and constness.
+//!
+//! Types are typically stored within a [`BinaryView`], [`TypeArchive`] or a [`TypeLibrary`].
+//!
+//! Types can be created using the [`TypeBuilder`] or one of the convenience functions. Another way
+//! to create a type is with a [`TypeParser`] if you have C type definitions.
+//!
+//! Some interfaces may expect to be passed a [`TypeContainer`] which itself does not store any type
+//! information, rather a generic interface to query for types by name or by id.
 
 pub mod archive;
 pub mod container;
@@ -80,12 +92,10 @@ impl TypeBuilder {
         Self { handle }
     }
 
-    // Chainable terminal
+    /// Turn the [`TypeBuilder`] into a [`Type`].
     pub fn finalize(&self) -> Ref<Type> {
         unsafe { Type::ref_from_raw(BNFinalizeTypeBuilder(self.handle)) }
     }
-
-    // Settable properties
 
     pub fn set_can_return<T: Into<Conf<bool>>>(&self, value: T) -> &Self {
         let mut bool_with_confidence = value.into().into();
@@ -284,18 +294,22 @@ impl TypeBuilder {
     // TODO : This and properties
     // pub fn tokens(&self) -> ? {}
 
+    /// Create a void [`TypeBuilder`]. Analogous to [`Type::void`].
     pub fn void() -> Self {
         unsafe { Self::from_raw(BNCreateVoidTypeBuilder()) }
     }
 
+    /// Create a bool [`TypeBuilder`]. Analogous to [`Type::bool`].
     pub fn bool() -> Self {
         unsafe { Self::from_raw(BNCreateBoolTypeBuilder()) }
     }
 
+    /// Create a signed one byte integer [`TypeBuilder`]. Analogous to [`Type::char`].
     pub fn char() -> Self {
         Self::int(1, true)
     }
 
+    /// Create an integer [`TypeBuilder`] with the given width and signedness. Analogous to [`Type::int`].
     pub fn int(width: usize, is_signed: bool) -> Self {
         let mut is_signed = Conf::new(is_signed, MAX_CONFIDENCE).into();
 
@@ -303,15 +317,16 @@ impl TypeBuilder {
             Self::from_raw(BNCreateIntegerTypeBuilder(
                 width,
                 &mut is_signed,
-                BnString::new("").as_ptr() as *mut _,
+                c"".as_ptr() as _,
             ))
         }
     }
 
+    /// Create an integer [`TypeBuilder`] with the given width and signedness and an alternative name.
+    /// Analogous to [`Type::named_int`].
     pub fn named_int(width: usize, is_signed: bool, alt_name: &str) -> Self {
         let mut is_signed = Conf::new(is_signed, MAX_CONFIDENCE).into();
-        // let alt_name = BnString::new(alt_name);
-        let alt_name = alt_name.to_cstr(); // This segfaulted once, so the above version is there if we need to change to it, but in theory this is copied into a `const string&` on the C++ side; I'm just not 100% confident that a constant reference copies data
+        let alt_name = alt_name.to_cstr();
 
         unsafe {
             Self::from_raw(BNCreateIntegerTypeBuilder(
@@ -322,20 +337,25 @@ impl TypeBuilder {
         }
     }
 
+    /// Create a float [`TypeBuilder`] with the given width. Analogous to [`Type::float`].
     pub fn float(width: usize) -> Self {
         unsafe { Self::from_raw(BNCreateFloatTypeBuilder(width, c"".as_ptr())) }
     }
 
+    /// Create a float [`TypeBuilder`] with the given width and alternative name. Analogous to [`Type::named_float`].
     pub fn named_float(width: usize, alt_name: &str) -> Self {
         let alt_name = alt_name.to_cstr();
         unsafe { Self::from_raw(BNCreateFloatTypeBuilder(width, alt_name.as_ptr())) }
     }
 
+    /// Create an array [`TypeBuilder`] with the given element type and count. Analogous to [`Type::array`].
     pub fn array<'a, T: Into<Conf<&'a Type>>>(ty: T, count: u64) -> Self {
         let owned_raw_ty = Conf::<&Type>::into_raw(ty.into());
         unsafe { Self::from_raw(BNCreateArrayTypeBuilder(&owned_raw_ty, count)) }
     }
 
+    /// Create an enumeration [`TypeBuilder`] with the given width and signedness. Analogous to [`Type::enumeration`].
+    ///
     /// ## NOTE
     ///
     /// The C/C++ APIs require an associated architecture, but in the core we only query the default_int_size if the given width is 0.
@@ -357,10 +377,12 @@ impl TypeBuilder {
         }
     }
 
+    /// Create a structure [`TypeBuilder`]. Analogous to [`Type::structure`].
     pub fn structure(structure_type: &Structure) -> Self {
         unsafe { Self::from_raw(BNCreateStructureTypeBuilder(structure_type.handle)) }
     }
 
+    /// Create a named type reference [`TypeBuilder`]. Analogous to [`Type::named_type`].
     pub fn named_type(type_reference: NamedTypeReference) -> Self {
         let mut is_const = Conf::new(false, MIN_CONFIDENCE).into();
         let mut is_volatile = Conf::new(false, MIN_CONFIDENCE).into();
@@ -375,6 +397,7 @@ impl TypeBuilder {
         }
     }
 
+    /// Create a named type reference [`TypeBuilder`] from a type and name. Analogous to [`Type::named_type_from_type`].
     pub fn named_type_from_type<T: Into<QualifiedName>>(name: T, t: &Type) -> Self {
         let mut raw_name = QualifiedName::into_raw(name.into());
         let id = c"";
@@ -392,34 +415,25 @@ impl TypeBuilder {
 
     // TODO : BNCreateFunctionTypeBuilder
 
+    /// Create a pointer [`TypeBuilder`] with the given target type. Analogous to [`Type::pointer`].
     pub fn pointer<'a, A: Architecture, T: Into<Conf<&'a Type>>>(arch: &A, ty: T) -> Self {
-        let mut is_const = Conf::new(false, MIN_CONFIDENCE).into();
-        let mut is_volatile = Conf::new(false, MIN_CONFIDENCE).into();
-        let owned_raw_ty = Conf::<&Type>::into_raw(ty.into());
-        unsafe {
-            Self::from_raw(BNCreatePointerTypeBuilder(
-                arch.as_ref().handle,
-                &owned_raw_ty,
-                &mut is_const,
-                &mut is_volatile,
-                ReferenceType::PointerReferenceType,
-            ))
-        }
+        Self::pointer_with_options(arch, ty, false, false, None)
     }
 
+    /// Create a const pointer [`TypeBuilder`] with the given target type. Analogous to [`Type::const_pointer`].
     pub fn const_pointer<'a, A: Architecture, T: Into<Conf<&'a Type>>>(arch: &A, ty: T) -> Self {
-        let mut is_const = Conf::new(true, MAX_CONFIDENCE).into();
-        let mut is_volatile = Conf::new(false, MIN_CONFIDENCE).into();
-        let owned_raw_ty = Conf::<&Type>::into_raw(ty.into());
-        unsafe {
-            Self::from_raw(BNCreatePointerTypeBuilder(
-                arch.as_ref().handle,
-                &owned_raw_ty,
-                &mut is_const,
-                &mut is_volatile,
-                ReferenceType::PointerReferenceType,
-            ))
-        }
+        Self::pointer_with_options(arch, ty, true, false, None)
+    }
+
+    pub fn pointer_with_options<'a, A: Architecture, T: Into<Conf<&'a Type>>>(
+        arch: &A,
+        ty: T,
+        is_const: bool,
+        is_volatile: bool,
+        ref_type: Option<ReferenceType>,
+    ) -> Self {
+        let arch_ptr_size = arch.address_size();
+        Self::pointer_of_width(ty, arch_ptr_size, is_const, is_volatile, ref_type)
     }
 
     pub fn pointer_of_width<'a, T: Into<Conf<&'a Type>>>(
@@ -435,27 +449,6 @@ impl TypeBuilder {
         unsafe {
             Self::from_raw(BNCreatePointerTypeBuilderOfWidth(
                 size,
-                &owned_raw_ty,
-                &mut is_const,
-                &mut is_volatile,
-                ref_type.unwrap_or(ReferenceType::PointerReferenceType),
-            ))
-        }
-    }
-
-    pub fn pointer_with_options<'a, A: Architecture, T: Into<Conf<&'a Type>>>(
-        arch: &A,
-        ty: T,
-        is_const: bool,
-        is_volatile: bool,
-        ref_type: Option<ReferenceType>,
-    ) -> Self {
-        let mut is_const = Conf::new(is_const, MAX_CONFIDENCE).into();
-        let mut is_volatile = Conf::new(is_volatile, MAX_CONFIDENCE).into();
-        let owned_raw_ty = Conf::<&Type>::into_raw(ty.into());
-        unsafe {
-            Self::from_raw(BNCreatePointerTypeBuilder(
-                arch.as_ref().handle,
                 &owned_raw_ty,
                 &mut is_const,
                 &mut is_volatile,
@@ -479,11 +472,32 @@ impl Drop for TypeBuilder {
     }
 }
 
-#[repr(transparent)]
-pub struct Type {
-    pub handle: *mut BNType,
-}
-
+/// The core model for types in Binary Ninja.
+///
+/// A [`Type`] is how we model the storage of a [`Variable`] or [`crate::variable::DataVariable`] as
+/// well as propagate information such as the constness of a variable. Types are also used to declare
+/// function signatures, such as the [`FunctionParameter`]'s and return type.
+///
+/// Types are immutable. To change a type, you must create a new one either using [`TypeBuilder`] or
+/// one of the helper functions:
+///
+/// - [`Type::void`]
+/// - [`Type::bool`]
+/// - [`Type::char`]
+/// - [`Type::wide_char`]
+/// - [`Type::int`], [`Type::named_int`]
+/// - [`Type::float`], [`Type::named_float`]
+/// - [`Type::array`]
+/// - [`Type::enumeration`]
+/// - [`Type::structure`]
+/// - [`Type::named_type`], [`Type::named_type_from_type`]
+/// - [`Type::function`], [`Type::function_with_opts`]
+/// - [`Type::pointer`], [`Type::const_pointer`], [`Type::pointer_of_width`], [`Type::pointer_with_options`]
+///
+/// # Example
+///
+/// As an example, defining a _named_ type within a [`BinaryView`]:
+///
 /// ```no_run
 /// # use crate::binaryninja::binary_view::BinaryViewExt;
 /// # use binaryninja::types::Type;
@@ -493,6 +507,11 @@ pub struct Type {
 /// bv.define_user_type("int_1", &my_custom_type_1);
 /// bv.define_user_type("int_2", &my_custom_type_2);
 /// ```
+#[repr(transparent)]
+pub struct Type {
+    pub handle: *mut BNType,
+}
+
 impl Type {
     pub unsafe fn from_raw(handle: *mut BNType) -> Self {
         debug_assert!(!handle.is_null());
@@ -885,36 +904,25 @@ impl Type {
     }
 
     pub fn pointer<'a, A: Architecture, T: Into<Conf<&'a Type>>>(arch: &A, ty: T) -> Ref<Self> {
-        let mut is_const = Conf::new(false, MIN_CONFIDENCE).into();
-        let mut is_volatile = Conf::new(false, MIN_CONFIDENCE).into();
-        let owned_raw_ty = Conf::<&Type>::into_raw(ty.into());
-        unsafe {
-            Self::ref_from_raw(BNCreatePointerType(
-                arch.as_ref().handle,
-                &owned_raw_ty,
-                &mut is_const,
-                &mut is_volatile,
-                ReferenceType::PointerReferenceType,
-            ))
-        }
+        Self::pointer_with_options(arch, ty, false, false, None)
     }
 
     pub fn const_pointer<'a, A: Architecture, T: Into<Conf<&'a Type>>>(
         arch: &A,
         ty: T,
     ) -> Ref<Self> {
-        let mut is_const = Conf::new(true, MAX_CONFIDENCE).into();
-        let mut is_volatile = Conf::new(false, MIN_CONFIDENCE).into();
-        let owned_raw_ty = Conf::<&Type>::into_raw(ty.into());
-        unsafe {
-            Self::ref_from_raw(BNCreatePointerType(
-                arch.as_ref().handle,
-                &owned_raw_ty,
-                &mut is_const,
-                &mut is_volatile,
-                ReferenceType::PointerReferenceType,
-            ))
-        }
+        Self::pointer_with_options(arch, ty, true, false, None)
+    }
+
+    pub fn pointer_with_options<'a, A: Architecture, T: Into<Conf<&'a Type>>>(
+        arch: &A,
+        ty: T,
+        is_const: bool,
+        is_volatile: bool,
+        ref_type: Option<ReferenceType>,
+    ) -> Ref<Self> {
+        let arch_pointer_size = arch.address_size();
+        Self::pointer_of_width(ty, arch_pointer_size, is_const, is_volatile, ref_type)
     }
 
     pub fn pointer_of_width<'a, T: Into<Conf<&'a Type>>>(
@@ -930,27 +938,6 @@ impl Type {
         unsafe {
             Self::ref_from_raw(BNCreatePointerTypeOfWidth(
                 size,
-                &owned_raw_ty,
-                &mut is_const,
-                &mut is_volatile,
-                ref_type.unwrap_or(ReferenceType::PointerReferenceType),
-            ))
-        }
-    }
-
-    pub fn pointer_with_options<'a, A: Architecture, T: Into<Conf<&'a Type>>>(
-        arch: &A,
-        ty: T,
-        is_const: bool,
-        is_volatile: bool,
-        ref_type: Option<ReferenceType>,
-    ) -> Ref<Self> {
-        let mut is_const = Conf::new(is_const, MAX_CONFIDENCE).into();
-        let mut is_volatile = Conf::new(is_volatile, MAX_CONFIDENCE).into();
-        let owned_raw_ty = Conf::<&Type>::into_raw(ty.into());
-        unsafe {
-            Self::ref_from_raw(BNCreatePointerType(
-                arch.as_ref().handle,
                 &owned_raw_ty,
                 &mut is_const,
                 &mut is_volatile,

@@ -373,9 +373,9 @@ class FileMetadata:
 		"""
 		``begin_undo_actions`` starts recording actions taken so they can be undone at some point.
 
-		:param bool anonymous_allowed: Legacy interop: prevent empty calls to :py:func:`commit_undo_actions`` from
-		                               affecting this undo state. Specifically for :py:func:`undoable_transaction``
-		:return: Id of undo state, for passing to :py:func:`commit_undo_actions`` or :py:func:`revert_undo_actions`.
+		:param bool anonymous_allowed: Legacy interop: prevent empty calls to :py:func:`commit_undo_actions` from
+		                               affecting this undo state. Specifically for :py:func:`undoable_transaction`
+		:return: Id of undo state, for passing to :py:func:`commit_undo_actions` or :py:func:`revert_undo_actions`.
 		:rtype: str
 		:Example:
 

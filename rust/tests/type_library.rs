@@ -1,8 +1,7 @@
 use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::headless::Session;
 use binaryninja::platform::Platform;
-use binaryninja::type_library::TypeLibrary;
-use binaryninja::types::{Type, TypeClass};
+use binaryninja::types::{Type, TypeClass, TypeLibrary};
 use std::path::PathBuf;
 
 #[test]

@@ -1,8 +1,7 @@
 // Usage: cargo run --example create_type_library <header_file_path> <platform> <type_library_path>
 
 use binaryninja::platform::Platform;
-use binaryninja::type_library::TypeLibrary;
-use binaryninja::type_parser::{CoreTypeParser, TypeParser};
+use binaryninja::types::{CoreTypeParser, TypeLibrary, TypeParser};
 
 fn main() {
     let header_path_str = std::env::args().nth(1).expect("No header provided");

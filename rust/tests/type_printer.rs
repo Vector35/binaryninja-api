@@ -3,12 +3,10 @@ use binaryninja::disassembly::InstructionTextToken;
 use binaryninja::headless::Session;
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
-use binaryninja::type_container::TypeContainer;
-use binaryninja::type_printer::{
-    register_type_printer, CoreTypePrinter, TokenEscapingType, TypeDefinitionLine, TypePrinter,
-};
+use binaryninja::types::printer::{register_type_printer, TokenEscapingType, TypeDefinitionLine};
 use binaryninja::types::{
-    MemberAccess, MemberScope, QualifiedName, Structure, StructureMember, Type,
+    CoreTypePrinter, MemberAccess, MemberScope, QualifiedName, Structure, StructureMember, Type,
+    TypeContainer, TypePrinter,
 };
 use std::path::PathBuf;
 

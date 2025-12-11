@@ -13,7 +13,7 @@ use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::file::ProjectFile;
 use crate::rc::Ref;
 use crate::string::{raw_to_string, BnString, IntoCStr};
-use crate::type_archive::{TypeArchive, TypeArchiveMergeConflict};
+use crate::types::archive::{TypeArchive, TypeArchiveMergeConflict};
 
 /// Get the default directory path for a remote Project. This is based off the Setting for
 /// collaboration.directory, the project's id, and the project's remote's id.

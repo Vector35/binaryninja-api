@@ -1,6 +1,6 @@
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use binaryninjacore_sys::*;
-use std::ffi::{c_char, c_void, CStr};
+use std::ffi::{c_char, c_void, CStr, CString};
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 use std::path::{Path, PathBuf};
@@ -11,8 +11,9 @@ use crate::metadata::Metadata;
 use crate::platform::Platform;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{raw_to_string, BnString, IntoCStr};
-use crate::type_container::TypeContainer;
-use crate::types::{QualifiedName, QualifiedNameAndType, QualifiedNameTypeAndId, Type};
+use crate::types::{
+    QualifiedName, QualifiedNameAndType, QualifiedNameTypeAndId, Type, TypeContainer,
+};
 
 #[repr(transparent)]
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -54,6 +55,14 @@ unsafe impl CoreArrayProviderInner for TypeArchiveSnapshotId {
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
         let str = CStr::from_ptr(*raw).to_str().unwrap().to_string();
         TypeArchiveSnapshotId(str)
+    }
+}
+
+impl IntoCStr for TypeArchiveSnapshotId {
+    type Result = CString;
+
+    fn to_cstr(self) -> Self::Result {
+        self.to_string().to_cstr()
     }
 }
 

@@ -30,10 +30,12 @@ pub use crate::workflow::AnalysisContext;
 use crate::architecture::{Architecture, CoreArchitecture};
 use crate::base_detection::BaseAddressDetection;
 use crate::basic_block::BasicBlock;
+use crate::binary_view::search::SearchQuery;
 use crate::component::Component;
 use crate::confidence::Conf;
 use crate::data_buffer::DataBuffer;
 use crate::debuginfo::DebugInfo;
+use crate::disassembly::DisassemblySettings;
 use crate::external_library::{ExternalLibrary, ExternalLocation};
 use crate::file_accessor::{Accessor, FileAccessor};
 use crate::file_metadata::FileMetadata;
@@ -53,12 +55,12 @@ use crate::settings::Settings;
 use crate::string::*;
 use crate::symbol::{Symbol, SymbolType};
 use crate::tags::{Tag, TagType};
-use crate::type_container::TypeContainer;
-use crate::type_library::TypeLibrary;
 use crate::types::{
     NamedTypeReference, QualifiedName, QualifiedNameAndType, QualifiedNameTypeAndId, Type,
+    TypeArchive, TypeArchiveId, TypeContainer, TypeLibrary,
 };
 use crate::variable::DataVariable;
+use crate::workflow::Workflow;
 use crate::{Endianness, BN_FULL_CONFIDENCE};
 use std::collections::HashMap;
 use std::ffi::{c_char, c_void, CString};
@@ -67,17 +69,12 @@ use std::ops::Range;
 use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
 use std::{result, slice};
-// TODO : general reorg of modules related to bv
 
 pub mod memory_map;
 pub mod reader;
 pub mod search;
 pub mod writer;
 
-use crate::binary_view::search::SearchQuery;
-use crate::disassembly::DisassemblySettings;
-use crate::type_archive::{TypeArchive, TypeArchiveId};
-use crate::workflow::Workflow;
 pub use memory_map::MemoryMap;
 pub use reader::BinaryReader;
 pub use writer::BinaryWriter;

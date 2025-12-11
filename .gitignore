@@ -90,6 +90,7 @@ rust/examples/*/target/
 rust/examples/dwarf/*/target/
 # Allow the test binaries
 !/rust/fixtures/bin/**
+!/rust/src/types
 
 # Debugger docs
 docs/img/debugger

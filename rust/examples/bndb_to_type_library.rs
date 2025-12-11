@@ -1,8 +1,7 @@
 // Usage: cargo run --example bndb_to_type_library <bndb_path> <type_library_path>
 
 use binaryninja::binary_view::BinaryViewExt;
-use binaryninja::type_library::TypeLibrary;
-use binaryninja::types::QualifiedName;
+use binaryninja::types::{QualifiedName, TypeLibrary};
 
 fn main() {
     let bndb_path_str = std::env::args().nth(1).expect("No header provided");

@@ -7,8 +7,7 @@ use std::ptr::NonNull;
 use crate::platform::Platform;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
 use crate::string::{raw_to_string, BnString, IntoCStr};
-use crate::type_container::TypeContainer;
-use crate::types::{QualifiedName, QualifiedNameAndType, Type};
+use crate::types::{QualifiedName, QualifiedNameAndType, Type, TypeContainer};
 
 pub type TypeParserErrorSeverity = BNTypeParserErrorSeverity;
 pub type TypeParserOption = BNTypeParserOption;

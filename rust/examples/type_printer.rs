@@ -1,4 +1,4 @@
-use binaryninja::type_printer::{CoreTypePrinter, TokenEscapingType};
+use binaryninja::types::printer::{CoreTypePrinter, TokenEscapingType};
 use binaryninja::types::{MemberAccess, MemberScope, Structure, StructureMember, Type};
 
 fn main() {

@@ -15,8 +15,7 @@ use crate::section::Section;
 use crate::segment::Segment;
 use crate::symbol::Symbol;
 use crate::tags::{TagReference, TagType};
-use crate::type_archive::TypeArchive;
-use crate::types::{QualifiedName, Type};
+use crate::types::{QualifiedName, Type, TypeArchive};
 use crate::variable::DataVariable;
 
 macro_rules! trait_handler {

@@ -2,7 +2,7 @@ use crate::binary_view::{BinaryView, BinaryViewExt};
 use crate::function::Function;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnString, IntoCStr};
-use crate::types::ComponentReferencedType;
+use crate::types::Type;
 use std::ffi::c_char;
 use std::fmt::Debug;
 use std::ptr::NonNull;
@@ -302,5 +302,26 @@ unsafe impl CoreArrayProviderInner for Component {
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
         let raw_ptr = NonNull::new(*raw).unwrap();
         Guard::new(Self::from_raw(raw_ptr), context)
+    }
+}
+
+// TODO: Remove this struct, or make it not a ZST with a terrible array provider.
+/// ZST used only for `Array<ComponentReferencedType>`.
+pub struct ComponentReferencedType;
+
+impl CoreArrayProvider for ComponentReferencedType {
+    type Raw = *mut BNType;
+    type Context = ();
+    type Wrapped<'a> = &'a Type;
+}
+
+unsafe impl CoreArrayProviderInner for ComponentReferencedType {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNComponentFreeReferencedTypes(raw, count)
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        // SAFETY: &*mut BNType == &Type (*mut BNType == Type)
+        std::mem::transmute(raw)
     }
 }

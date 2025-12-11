@@ -49,6 +49,7 @@ There are two distinct types of Workflows:
 ### **Activity**
 
 An **Activity** represents a fundamental unit of work within a Workflow. Activities are configurable components that form the building blocks of complex analysis pipelines. Activities can:
+
   - Execute specific tasks through callbacks
   - Make dynamic decisions
   - Manage dependencies and eligibility
@@ -70,6 +71,7 @@ Activities can have different **roles** that define their behavior and how they 
 #### Eligibility Control
 
 Activities provide fine-grained execution control through:
+
 * Static configuration via JSON settings
 * Dynamic eligibility functions
 * Continuation and run-once behaviors
@@ -77,6 +79,7 @@ Activities provide fine-grained execution control through:
 #### Continuation Support
 
 Activities can be configured with `continuation` eligibility, allowing them to:
+
   - Remain on the execution stack after processing
   - Execute repeatedly until becoming ineligible
   - Build iterative processing patterns

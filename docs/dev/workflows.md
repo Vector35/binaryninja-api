@@ -195,7 +195,7 @@ Once you've queried the available workflows, you can create your own by cloning 
 
 #### Example: NOP'ing Module-Level Analysis
 
-The following example demonstrates how to modify a module workflow by clearing all module-level analysis. This effectively disables module-level analysis while preserving the ability to analyze single functions at a time in the UI.
+The following example demonstrates how to modify a module workflow by clearing all module-level analysis. This effectively disables module-level analysis while preserving the ability to analyze single functions at a time in the UI. Don't worry about registering the cloned workflow over top of `core.module.metaAnalysis`. Workflows are all generated fresh when Binary Ninja opens. They are then modified by plugins. Any changes you make here will not be there next time you start Binary Ninja.
 
 ```python
 # Clone the workflow

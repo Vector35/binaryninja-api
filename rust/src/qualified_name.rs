@@ -1,3 +1,5 @@
+//! The [`QualifiedName`] is the canonical way to represent structured names in Binary Ninja.
+
 use crate::rc::{CoreArrayProvider, CoreArrayProviderInner};
 use crate::string::{raw_to_string, strings_to_string_list, BnString};
 use binaryninjacore_sys::*;
@@ -5,7 +7,34 @@ use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 use std::ops::{Index, IndexMut};
 
-// TODO: Document usage, specifically how to make a qualified name and why it exists.
+/// A [`QualifiedName`] represents a name composed of multiple components, typically used for symbols
+/// and type names within namespaces, classes, or modules.
+///
+/// # Creating a Qualified Name
+///
+/// ```
+/// use binaryninja::qualified_name::QualifiedName;
+///
+/// // Uses the default separator "::"
+/// let qn_vec = QualifiedName::new(vec!["my", "namespace", "func"]);
+/// assert_eq!(qn_vec.to_string(), "my::namespace::func");
+///
+/// // Using `QualifiedName::from` will not split on the default separator "::".
+/// let qn_from = QualifiedName::from("std::string");
+/// assert_eq!(qn_from.len(), 1);
+/// assert_eq!(qn_from.to_string(), "std::string");
+/// ```
+///
+/// # Using a Custom Separator
+///
+/// While `::` is the default, you can specify a custom separator:
+///
+/// ```
+/// use binaryninja::qualified_name::QualifiedName;
+///
+/// let qn = QualifiedName::new_with_separator(["a", "b", "c"], ".");
+/// assert_eq!(qn.to_string(), "a.b.c");
+/// ```
 #[derive(Default, Debug, Clone, Hash, PartialEq, Eq, Ord, PartialOrd)]
 pub struct QualifiedName {
     // TODO: Make this Option<String> where default is "::".
@@ -14,7 +43,7 @@ pub struct QualifiedName {
 }
 
 impl QualifiedName {
-    pub(crate) fn from_raw(value: &BNQualifiedName) -> Self {
+    pub fn from_raw(value: &BNQualifiedName) -> Self {
         // TODO: This could be improved...
         let raw_names = unsafe { std::slice::from_raw_parts(value.name, value.nameCount) };
         let items = raw_names
@@ -25,7 +54,7 @@ impl QualifiedName {
         Self { items, separator }
     }
 
-    pub(crate) fn from_owned_raw(value: BNQualifiedName) -> Self {
+    pub fn from_owned_raw(value: BNQualifiedName) -> Self {
         let result = Self::from_raw(&value);
         Self::free_raw(value);
         result
@@ -42,17 +71,31 @@ impl QualifiedName {
         }
     }
 
-    pub(crate) fn free_raw(value: BNQualifiedName) {
+    pub fn free_raw(value: BNQualifiedName) {
         unsafe { BnString::free_raw(value.join) };
         unsafe { BNFreeStringList(value.name, value.nameCount) };
     }
 
-    pub fn new(items: Vec<String>) -> Self {
-        Self::new_with_separator(items, "::".to_string())
+    /// Creates a new [`QualifiedName`] with the default separator `::`.
+    pub fn new<I, S>(items: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        Self::new_with_separator(items, "::")
     }
 
-    pub fn new_with_separator(items: Vec<String>, separator: String) -> Self {
-        Self { items, separator }
+    /// Creates a new `QualifiedName` with a custom separator.
+    pub fn new_with_separator<I, S>(items: I, separator: impl Into<String>) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        let items = items.into_iter().map(Into::into).collect::<Vec<String>>();
+        Self {
+            items,
+            separator: separator.into(),
+        }
     }
 
     pub fn with_item(&self, item: impl Into<String>) -> Self {
@@ -90,7 +133,7 @@ impl QualifiedName {
     /// # Example
     ///
     /// ```
-    /// use binaryninja::types::QualifiedName;
+    /// use binaryninja::qualified_name::QualifiedName;
     ///
     /// let qualified_name =
     ///     QualifiedName::new(vec!["my::namespace".to_string(), "mytype".to_string()]);

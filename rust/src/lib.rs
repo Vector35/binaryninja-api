@@ -68,6 +68,7 @@ pub mod metadata;
 pub mod platform;
 pub mod progress;
 pub mod project;
+pub mod qualified_name;
 pub mod rc;
 pub mod references;
 pub mod relocation;

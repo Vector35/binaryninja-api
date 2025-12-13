@@ -406,6 +406,11 @@ def get_memory_usage_info() -> Mapping[str, int]:
 	core.BNFreeMemoryUsageInfo(info, count.value)
 	return result
 
+def add_required_plugin_dependency(plugin_name: str) -> None:
+	core.BNAddRequiredPluginDependency(plugin_name)
+
+def add_optional_plugin_dependency(plugin_name: str) -> None:
+	core.BNAddOptionalPluginDependency(plugin_name)
 
 def load(*args, **kwargs) -> BinaryView:
 	"""

@@ -3555,6 +3555,10 @@ ExprId LowLevelILFunction::BoolToInt(size_t size, ExprId a, const ILSourceLocati
 	return AddExprWithLocation(LLIL_BOOL_TO_INT, loc, size, 0, a);
 }
 
+ExprId LowLevelILFunction::AddOverflow(size_t size, ExprId left, ExprId right, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(LLIL_ADD_OVERFLOW, loc, size, left, right);
+}
 
 ExprId LowLevelILFunction::SystemCall(const ILSourceLocation& loc)
 {

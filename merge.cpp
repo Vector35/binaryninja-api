@@ -145,9 +145,9 @@ Ref<DiffObject> DiffState::GenerateDiff(
 {
 	BNDiffObject* diff = BNDiffStateGenerateDiff(
 		m_object,
-		base->GetObject(),
-		left->GetObject(),
-		right->GetObject()
+		base ? base->GetObject() : nullptr,
+		left ? left->GetObject() : nullptr,
+		right ? right->GetObject() : nullptr
 	);
 
 	if (!diff)
@@ -169,9 +169,9 @@ bool DiffState::ApplyDiff(
 	return BNDiffStateApplyDiff(
 		m_object,
 		diff->GetObject(),
-		base->GetObject(),
-		left->GetObject(),
-		right->GetObject(),
+		base ? base->GetObject() : nullptr,
+		left ? left->GetObject() : nullptr,
+		right ? right->GetObject() : nullptr,
 		result->GetObject()
 	);
 }

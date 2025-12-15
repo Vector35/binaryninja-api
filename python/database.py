@@ -496,23 +496,34 @@ class DiffState:
 		core.BNClearDiffStateErrors(self.handle)
 
 	def generate_diff(
-		self, base: DatabaseObject, left: DatabaseObject, right: DatabaseObject
+		self, base: Optional[DatabaseObject], left: Optional[DatabaseObject], right: Optional[DatabaseObject]
 	) -> Optional['DiffObject']:
 		"""Generate a three-way diff database objects"""
 		handle = core.BNDiffStateGenerateDiff(
-			self.handle, base.handle, left.handle, right.handle
+			self.handle,
+			base.handle if base is not None else None,
+			left.handle if left is not None else None,
+			right.handle if right is not None else None
 		)
 		if handle is None:
 			return None
 		return DiffObject(handle=handle)
 
 	def apply_diff(
-		self, diff: 'DiffObject', base: DatabaseObject, left: DatabaseObject,
-		right: DatabaseObject, result: DatabaseObject
+		self,
+		diff: 'DiffObject',
+		base: Optional[DatabaseObject],
+		left: Optional[DatabaseObject],
+		right: Optional[DatabaseObject],
+		result: DatabaseObject
 	) -> bool:
 		"""Apply a diff to database objects"""
 		return core.BNDiffStateApplyDiff(
-			self.handle, diff.handle, base.handle, left.handle, right.handle,
+			self.handle,
+			diff.handle,
+			base.handle if base is not None else None,
+			left.handle if left is not None else None,
+			right.handle if right is not None else None,
 			result.handle
 		)
 

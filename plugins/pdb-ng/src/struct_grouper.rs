@@ -340,7 +340,7 @@ pub fn group_structure(
         .enumerate()
         .map(|(i, member)| MemberSize {
             index: i,
-            offset: member.bitfield_position.unwrap_or(member.offset * 8),
+            offset: member.offset * 8 + member.bitfield_position.unwrap_or(0),
             width: member
                 .bitfield_size
                 .unwrap_or(member.ty.contents.width() * 8),
@@ -366,7 +366,7 @@ pub fn group_structure(
                         structure.insert_bitwise(
                             &member.ty,
                             &member.name,
-                            bit_pos,
+                            member.offset * 8 + bit_pos,
                             bit_width.map(|w| w as u8),
                             false,
                             member.access,
@@ -409,7 +409,7 @@ fn apply_groups(
                         structure.insert_bitwise(
                             &member.ty,
                             &member.name,
-                            bit_pos,
+                            (member.offset - offset) * 8 + bit_pos,
                             bit_width.map(|w| w as u8),
                             false,
                             member.access,

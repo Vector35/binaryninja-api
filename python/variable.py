@@ -340,6 +340,35 @@ class PossibleValueSet:
 		if self._type == RegisterValueType.ReturnAddressValue:
 			return "<return address>"
 		return "<undetermined>"
+	
+	def __add__(self, other: "PossibleValueSet") -> "PossibleValueSet":
+		if not isinstance(other, self.__class__):
+			return NotImplemented
+
+		if self.type == RegisterValueType.UndeterminedValue or other.type == RegisterValueType.UndeterminedValue:
+			return PossibleValueSet.undetermined()
+
+		const_numeric_types = [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue]
+		if self.type in const_numeric_types and other.type in const_numeric_types:
+			if self.value == other.value:
+				return PossibleValueSet.constant(self.value)
+			else:
+				return PossibleValueSet.in_set_of_values({self.value, other.value})
+
+		if self.type == RegisterValueType.InSetOfValues:
+			if other.type == RegisterValueType.InSetOfValues:
+				return PossibleValueSet.in_set_of_values(self.values | other.values)
+			elif hasattr(other, "value"):
+				return PossibleValueSet.in_set_of_values(self.values | {other.value})
+
+		if self.type == RegisterValueType.NotInSetOfValues and other.type == RegisterValueType.NotInSetOfValues:
+			return PossibleValueSet.not_in_set_of_values(self.values | other.values)
+
+		return NotImplemented
+
+	def __iadd__(self, other: "PossibleValueSet") -> "PossibleValueSet":
+		self = self + other
+		return self
 
 	def __contains__(self, other):
 		if self.type in [RegisterValueType.ConstantValue, RegisterValueType.ConstantPointerValue

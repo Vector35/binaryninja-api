@@ -6,6 +6,7 @@ use binaryninjacore_sys::*;
 use std::collections::HashMap;
 use std::ffi::c_void;
 use std::fmt::Debug;
+use std::path::Path;
 use std::ptr::NonNull;
 
 use crate::binary_view::BinaryView;
@@ -27,6 +28,17 @@ impl Database {
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNDatabase>) -> Ref<Self> {
         Ref::new(Self { handle })
+    }
+
+    /// Open a database with the given file path
+    pub fn open_existing(path: impl AsRef<Path>) -> Result<Ref<Self>, ()> {
+        let db = unsafe { Self::ref_from_raw(NonNull::new(BNCreateDatabaseInstance()).ok_or(())?) };
+        let path_raw = path.as_ref().to_cstr();
+        if unsafe { BNDatabaseOpenExisting(db.handle.as_ptr(), path_raw.as_ptr()) } {
+            Ok(db)
+        } else {
+            Err(())
+        }
     }
 
     /// Get a [`Snapshot`] by its `id`, or `None` if no snapshot with that `id` exists.

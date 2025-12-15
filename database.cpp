@@ -380,6 +380,15 @@ Database::Database(BNDatabase* database)
 }
 
 
+Ref<Database> Database::OpenExisting(const std::string& path)
+{
+	Ref<Database> db = new Database(BNCreateDatabaseInstance());
+	if (!BNDatabaseOpenExisting(db->GetObject(), path.c_str()))
+		throw DatabaseException("BNDatabaseOpenExisting");
+	return db;
+}
+
+
 Ref<Snapshot> Database::GetSnapshot(int64_t id)
 {
 	BNSnapshot* snap = BNGetDatabaseSnapshot(m_object, id);

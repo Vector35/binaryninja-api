@@ -3384,6 +3384,8 @@ namespace BinaryNinja {
 	  public:
 		Database(BNDatabase* database);
 
+		static Ref<Database> OpenExisting(const std::string& path);
+
 		bool SnapshotHasData(int64_t id);
 		Ref<Snapshot> GetSnapshot(int64_t id);
 		std::vector<Ref<Snapshot>> GetSnapshots();

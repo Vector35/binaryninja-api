@@ -246,6 +246,18 @@ class Database:
 	def __del__(self):
 		core.BNFreeDatabase(self.handle)
 
+	@classmethod
+	def open_existing(cls, path: str) -> 'Database':
+		"""
+		Open a Database from a file
+		:param path: Path to file containing database
+		:return: Database instance
+		"""
+		db = Database(handle=core.BNCreateDatabaseInstance())
+		if not core.BNDatabaseOpenExisting(db.handle, path):
+			raise RuntimeError("BNDatabaseOpenExisting returned False")
+		return db
+
 	def __getitem__(self, item: int) -> Optional[Snapshot]:
 		return self.get_snapshot(item)
 

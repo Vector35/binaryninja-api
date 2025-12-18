@@ -30,7 +30,6 @@ use binaryninja::debuginfo::{DebugFunctionInfo, DebugInfo};
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
 use binaryninja::settings::{QueryOptions, Settings};
-use binaryninja::tracing::{debug, info};
 use binaryninja::types::{
     EnumerationBuilder, NamedTypeReference, NamedTypeReferenceClass, StructureBuilder,
     StructureType, Type, TypeClass,
@@ -172,7 +171,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 .add_type(&name.to_string(), ty.as_ref(), &[]); // TODO : Components
         }
 
-        info!(
+        tracing::info!(
             "PDB found {} types (before resolving NTRs)",
             self.named_types.len()
         );
@@ -198,9 +197,9 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 )?;
             }
 
-            info!("PDB found {} types", self.named_types.len());
-            info!("PDB found {} data variables", symbols.len());
-            info!("PDB found {} functions", functions.len());
+            tracing::info!("PDB found {} types", self.named_types.len());
+            tracing::info!("PDB found {} data variables", symbols.len());
+            tracing::info!("PDB found {} functions", functions.len());
 
             let allow_void = self.settings.get_bool_with_opts(
                 "pdb.features.allowVoidGlobals",
@@ -462,7 +461,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         if *debug_pdb {
             let space = "\t".repeat(self.type_stack.len()) + &"\t".repeat(self.symbol_stack.len());
             let msg = format!("{}", msg());
-            debug!(
+            tracing::debug!(
                 "{}{}",
                 space,
                 msg.replace("\n", &("\n".to_string() + &space))

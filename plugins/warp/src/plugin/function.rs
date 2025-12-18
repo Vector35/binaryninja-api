@@ -10,7 +10,6 @@ use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::{Command, FunctionCommand};
 use binaryninja::function::{Function, FunctionUpdateType};
 use binaryninja::rc::Guard;
-use binaryninja::tracing;
 use rayon::iter::ParallelIterator;
 use std::thread;
 use warp::signature::function::FunctionGUID;

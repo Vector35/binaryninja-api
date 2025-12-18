@@ -1,4 +1,3 @@
-use binaryninja::tracing;
 use binaryninja::workflow::{activity, Activity, AnalysisContext, Workflow};
 
 use crate::{activities, error::WorkflowRegistrationError};

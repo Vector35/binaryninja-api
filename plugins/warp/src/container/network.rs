@@ -3,7 +3,6 @@ use crate::container::{
     Container, ContainerError, ContainerResult, ContainerSearchQuery, ContainerSearchResponse,
     SourceId, SourcePath, SourceTag,
 };
-use binaryninja::tracing;
 use directories::ProjectDirs;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display, Formatter};

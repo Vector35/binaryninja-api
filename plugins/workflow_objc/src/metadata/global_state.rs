@@ -5,7 +5,7 @@ use binaryninja::{
     metadata::Metadata,
     rc::Ref,
     settings::{QueryOptions, Settings},
-    tracing, ObjectDestructor,
+    ObjectDestructor,
 };
 use dashmap::DashMap;
 use once_cell::sync::Lazy;

@@ -29,7 +29,6 @@ use binaryninja::rc::{Guard, Ref};
 use crate::cache::cached_type_references;
 use crate::convert::platform_to_target;
 use crate::{build_function, INCLUDE_TAG_ICON, INCLUDE_TAG_NAME};
-use binaryninja::tracing;
 use warp::chunk::{Chunk, ChunkKind, CompressionType};
 use warp::r#type::chunk::TypeChunk;
 use warp::signature::chunk::SignatureChunk;

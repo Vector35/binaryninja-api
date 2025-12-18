@@ -10,4 +10,4 @@ crate-type = ["cdylib"]
 binaryninjacore-sys = { path = "../../binaryninjacore-sys" }
 binaryninja = { path = "../.." }
 uuid = "1.18.1"
-log = "0.4.27"
+tracing = "0.1"

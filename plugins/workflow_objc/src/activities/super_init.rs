@@ -10,7 +10,6 @@ use binaryninja::{
         MediumLevelILFunction, MediumLevelILLiftedInstruction, MediumLevelILLiftedInstructionKind,
     },
     rc::Ref,
-    tracing,
     types::Type,
     variable::{RegisterValueType, SSAVariable},
     workflow::AnalysisContext,

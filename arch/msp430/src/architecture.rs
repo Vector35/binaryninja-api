@@ -8,7 +8,7 @@ use binaryninja::{
         UnusedIntrinsic, UnusedRegisterStack,
     },
     disassembly::{InstructionTextToken, InstructionTextTokenKind},
-    tracing, Endianness,
+    Endianness,
 };
 
 use msp430_asm::{

@@ -19,7 +19,6 @@ use crate::types::get_type;
 use crate::{helpers::*, ReaderType};
 
 use binaryninja::template_simplifier::simplify_str_to_str;
-use binaryninja::tracing;
 use cpp_demangle::DemangleOptions;
 use gimli::{constants, AttributeValue, DebuggingInformationEntry, Dwarf, Operation, Unit};
 use regex::Regex;

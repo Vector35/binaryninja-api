@@ -6,7 +6,6 @@ use crate::settings::LoadSettings;
 use binaryninja::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
 use binaryninja::command::Command;
 use binaryninja::interaction::{Form, FormInputField};
-use binaryninja::tracing;
 use binaryninja::workflow::{activity, Activity, AnalysisContext, Workflow};
 use std::path::PathBuf;
 use svd_parser::ValidateLevel;

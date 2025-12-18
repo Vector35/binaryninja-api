@@ -18,7 +18,6 @@ use crate::{helpers::*, ReaderType};
 
 use binaryninja::{
     rc::*,
-    tracing,
     types::{EnumerationBuilder, FunctionParameter, ReferenceType, Type, TypeBuilder},
 };
 

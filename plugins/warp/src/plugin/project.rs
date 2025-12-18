@@ -9,7 +9,6 @@ use binaryninja::interaction::{Form, FormInputField};
 use binaryninja::project::folder::ProjectFolder;
 use binaryninja::project::Project;
 use binaryninja::rc::Ref;
-use binaryninja::tracing;
 use binaryninja::worker_thread::{set_worker_thread_count, worker_thread_count};
 use rayon::ThreadPoolBuilder;
 use regex::Regex;

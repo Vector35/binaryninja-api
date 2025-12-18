@@ -26,7 +26,6 @@ use binaryninja::{
         RelocationType,
     },
     symbol::{Symbol, SymbolType},
-    tracing,
     types::{NameAndType, Type},
 };
 use std::borrow::Cow;

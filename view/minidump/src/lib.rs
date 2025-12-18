@@ -1,7 +1,6 @@
 use binaryninja::binary_view::BinaryView;
 use binaryninja::command::{register_command, Command};
 use binaryninja::custom_binary_view::register_view_type;
-use binaryninja::tracing;
 
 mod command;
 mod view;

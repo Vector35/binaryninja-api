@@ -1,7 +1,6 @@
 use crate::container::{
     Container, ContainerError, ContainerResult, SourceId, SourcePath, SourceTag,
 };
-use binaryninja::tracing;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};

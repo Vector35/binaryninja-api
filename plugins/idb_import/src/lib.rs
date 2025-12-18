@@ -19,7 +19,6 @@ use idb_rs::til::section::TILSection;
 use idb_rs::til::TypeVariant as TILTypeVariant;
 
 use anyhow::{anyhow, Result};
-use binaryninja::tracing;
 
 struct IDBDebugInfoParser;
 impl CustomDebugInfoParser for IDBDebugInfoParser {

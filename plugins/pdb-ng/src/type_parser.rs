@@ -24,7 +24,6 @@ use binaryninja::calling_convention::CoreCallingConvention;
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE};
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
-use binaryninja::tracing::warn;
 use binaryninja::types::{
     BaseStructure, EnumerationBuilder, EnumerationMember, FunctionParameter, MemberAccess,
     MemberScope, NamedTypeReference, NamedTypeReferenceClass, StructureBuilder, StructureMember,
@@ -556,7 +555,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                                         if let Some(_old) =
                                             self.named_types.insert(name.clone(), parsed.clone())
                                         {
-                                            warn!("Found two types both named `{}`, only one will be used.", name);
+                                            tracing::warn!("Found two types both named `{}`, only one will be used.", name);
                                         }
                                     }
                                 }
@@ -570,7 +569,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     }
                 }
                 Err(UnimplementedTypeKind(k)) if k != 0 => {
-                    warn!("Not parsing unimplemented type {}: kind {:x?}", ty, k);
+                    tracing::warn!("Not parsing unimplemented type {}: kind {:x?}", ty, k);
                 }
                 Err(e) => {
                     self.log(|| format!("Could not parse type: {}: {}", ty, e));
@@ -921,7 +920,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         *base_offset,
                         base_type.width(),
                     ));
-                    warn!(
+                    tracing::warn!(
                         "Class `{}` uses virtual inheritance. Type information may be inaccurate.",
                         self.namespace_stack
                             .last()
@@ -933,7 +932,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         }
 
         if bases.len() > 1 {
-            warn!(
+            tracing::warn!(
                 "Class `{}` has multiple base classes. Type information may be inaccurate.",
                 self.namespace_stack
                     .last()

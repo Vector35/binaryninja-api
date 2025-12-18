@@ -20,7 +20,7 @@ macro_rules! ffi_wrap {
         use std::process;
 
         panic::catch_unwind(|| $b).unwrap_or_else(|_| {
-            tracing::error!("ffi callback caught panic: {}", $n);
+            ::tracing::error!("ffi callback caught panic: {}", $n);
             process::abort()
         })
     }};
@@ -37,10 +37,10 @@ macro_rules! ffi_span {
         use $crate::binary_view::BinaryViewExt;
         #[allow(unused_imports)]
         use $crate::file_metadata::FileMetadata;
-        tracing::info_span!($name, session_id = $bv.file().session_id().0).entered()
+        ::tracing::info_span!($name, session_id = $bv.file().session_id().0).entered()
     }};
     ($name:expr) => {
-        tracing::info_span!($name).entered()
+        ::tracing::info_span!($name).entered()
     };
 }
 

@@ -25,7 +25,6 @@ use binaryninja::{
     rc::*,
     symbol::SymbolType,
     template_simplifier::simplify_str_to_fqn,
-    tracing,
     types::{FunctionParameter, Type},
     variable::NamedVariableWithType,
 };

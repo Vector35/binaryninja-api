@@ -6,7 +6,6 @@ use crate::plugin::create::OpenFileField;
 use binaryninja::binary_view::BinaryView;
 use binaryninja::command::Command;
 use binaryninja::interaction::{Form, FormInputField};
-use binaryninja::tracing;
 use warp::chunk::ChunkKind;
 use warp::WarpFile;
 

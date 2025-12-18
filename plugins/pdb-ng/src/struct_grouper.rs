@@ -15,7 +15,6 @@
 use crate::type_parser::ParsedMember;
 use anyhow::{anyhow, Result};
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE};
-use binaryninja::tracing::{debug, warn};
 use binaryninja::types::{MemberAccess, MemberScope, StructureBuilder, StructureType, Type};
 use std::cmp::Ordering;
 use std::env;
@@ -358,7 +357,7 @@ pub fn group_structure(
             apply_groups(members, structure, groups, 0);
         }
         Err(e) => {
-            warn!("{} Could not resolve structure groups: {}", name, e);
+            tracing::warn!("{} Could not resolve structure groups: {}", name, e);
             for member in members {
                 match (member.bitfield_position, member.bitfield_size) {
                     (Some(bit_pos), bit_width) => {
@@ -1189,6 +1188,6 @@ fn test_bool_modifier() {
 fn log<F: FnOnce() -> D, D: Display>(msg: F) {
     // println!("{}", msg());
     if env::var("BN_DEBUG_PDB").is_ok() {
-        debug!("{}", msg());
+        tracing::debug!("{}", msg());
     }
 }

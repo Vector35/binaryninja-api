@@ -4,7 +4,6 @@ use binaryninja::{
         function::{LowLevelILFunction, Mutable, NonSSA, SSA},
         instruction::{InstructionHandler as _, LowLevelILInstruction, LowLevelILInstructionKind},
     },
-    tracing,
 };
 
 use super::MessageSendType;

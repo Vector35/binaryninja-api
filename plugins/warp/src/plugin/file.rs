@@ -1,7 +1,6 @@
 use crate::report::ReportGenerator;
 use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::Command;
-use binaryninja::tracing;
 
 pub struct ShowFileReport;
 

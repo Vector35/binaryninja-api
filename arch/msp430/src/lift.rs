@@ -2,7 +2,7 @@ use crate::architecture::offset_to_absolute;
 use crate::flag::{Flag, FlagWrite};
 use crate::register::Register;
 
-use binaryninja::{architecture::FlagCondition, low_level_il::lifting::LowLevelILLabel, tracing};
+use binaryninja::{architecture::FlagCondition, low_level_il::lifting::LowLevelILLabel};
 
 use msp430_asm::emulate::Emulated;
 use msp430_asm::instruction::Instruction;

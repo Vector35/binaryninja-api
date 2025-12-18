@@ -28,7 +28,6 @@ use binaryninja::debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser};
 use binaryninja::download::{DownloadInstanceInputOutputCallbacks, DownloadProvider};
 use binaryninja::interaction::{MessageBoxButtonResult, MessageBoxButtonSet};
 use binaryninja::settings::{QueryOptions, Settings};
-use binaryninja::tracing::{debug, error, info};
 use binaryninja::{interaction, user_directory};
 use parser::PDBParserInstance;
 
@@ -162,7 +161,7 @@ fn parse_sym_srv(symbol_path: &str, default_store: String) -> Result<impl Iterat
 fn read_from_sym_store(bv: &BinaryView, path: &str) -> Result<(bool, Vec<u8>)> {
     if !path.contains("://") {
         // Local file
-        info!("Read local file: {}", path);
+        tracing::info!("Read local file: {}", path);
         let conts = fs::read(path)?;
         return Ok((false, conts));
     }
@@ -182,7 +181,7 @@ fn read_from_sym_store(bv: &BinaryView, path: &str) -> Result<(bool, Vec<u8>)> {
         }
     };
 
-    info!("GET: {}", path);
+    tracing::info!("GET: {}", path);
 
     let dp =
         DownloadProvider::try_default().map_err(|_| anyhow!("No default download provider"))?;
@@ -397,9 +396,9 @@ impl PDBParser {
             if info.age != pdb_info.age {
                 if info.age > pdb_info.age {
                     // Have not seen this case, so I'm not sure if this is fatal
-                    info!("PDB age is older than our binary! Loading it anyway, but there may be missing information.");
+                    tracing::info!("PDB age is older than our binary! Loading it anyway, but there may be missing information.");
                 } else {
-                    info!("PDB age is newer than our binary! Loading it anyway, there probably shouldn't be any issues.");
+                    tracing::info!("PDB age is newer than our binary! Loading it anyway, there probably shouldn't be any issues.");
                 }
             }
 
@@ -424,7 +423,7 @@ impl PDBParser {
                             match fs::create_dir_all(&cab_path) {
                                 Ok(_) => true,
                                 Err(e) => {
-                                    error!("Could not create PDB cache dir: {}", e);
+                                    tracing::error!("Could not create PDB cache dir: {}", e);
                                     false
                                 }
                             }
@@ -433,10 +432,10 @@ impl PDBParser {
                             cab_path.push(&info.file_name);
                             match fs::write(&cab_path, conts) {
                                 Ok(_) => {
-                                    info!("Downloaded to: {}", cab_path.to_string_lossy());
+                                    tracing::info!("Downloaded to: {}", cab_path.to_string_lossy());
                                 }
                                 Err(e) => {
-                                    error!("Could not write PDB to cache: {}", e)
+                                    tracing::error!("Could not write PDB to cache: {}", e)
                                 }
                             }
                         }
@@ -461,7 +460,7 @@ impl PDBParser {
                                 match fs::create_dir_all(&cab_path) {
                                     Ok(_) => true,
                                     Err(e) => {
-                                        error!("Could not create PDB cache dir: {}", e);
+                                        tracing::error!("Could not create PDB cache dir: {}", e);
                                         false
                                     }
                                 }
@@ -470,16 +469,19 @@ impl PDBParser {
                                 cab_path.push(&info.file_name);
                                 match fs::write(&cab_path, conts) {
                                     Ok(_) => {
-                                        info!("Downloaded to: {}", cab_path.to_string_lossy());
+                                        tracing::info!(
+                                            "Downloaded to: {}",
+                                            cab_path.to_string_lossy()
+                                        );
                                     }
                                     Err(e) => {
-                                        error!("Could not write PDB to cache: {}", e)
+                                        tracing::error!("Could not write PDB to cache: {}", e)
                                     }
                                 }
                             }
                         }
                     }
-                    Err(e) => error!("Could not get local cache for writing: {}", e),
+                    Err(e) => tracing::error!("Could not get local cache for writing: {}", e),
                 }
             }
         } else {
@@ -512,11 +514,11 @@ impl PDBParser {
 
         let mut inst = match PDBParserInstance::new(debug_info, view, pdb) {
             Ok(inst) => {
-                info!("Loaded PDB, parsing...");
+                tracing::info!("Loaded PDB, parsing...");
                 inst
             }
             Err(e) => {
-                error!("Could not open PDB: {}", e);
+                tracing::error!("Could not open PDB: {}", e);
                 return Err(e);
             }
         };
@@ -524,11 +526,11 @@ impl PDBParser {
             (*progress)(cur, max).map_err(|_| anyhow!("Cancelled"))
         })) {
             Ok(()) => {
-                info!("Parsed pdb");
+                tracing::info!("Parsed pdb");
                 Ok(())
             }
             Err(e) => {
-                error!("Could not parse PDB: {}", e);
+                tracing::error!("Could not parse PDB: {}", e);
                 if e.to_string() == "Todo" {
                     Ok(())
                 } else {
@@ -563,7 +565,7 @@ impl CustomDebugInfoParser for PDBParser {
                 Ok(_) => return true,
                 Err(e) if e.to_string() == "Cancelled" => return false,
                 Err(_) => {
-                    error!("Chosen PDB file failed to load");
+                    tracing::error!("Chosen PDB file failed to load");
                     return false;
                 }
             }
@@ -587,12 +589,12 @@ impl CustomDebugInfoParser for PDBParser {
                                 {
                                     Ok(_) => return true,
                                     Err(e) if e.to_string() == "Cancelled" => return false,
-                                    Err(e) => debug!("Skipping, {}", e.to_string()),
+                                    Err(e) => tracing::debug!("Skipping, {}", e.to_string()),
                                 }
                             }
                             Ok(None) => {}
                             e => {
-                                error!("Error searching symbol store {}: {:?}", store, e)
+                                tracing::error!("Error searching symbol store {}: {:?}", store, e)
                             }
                         }
                     }
@@ -607,10 +609,10 @@ impl CustomDebugInfoParser for PDBParser {
                     {
                         Ok(_) => return true,
                         Err(e) if e.to_string() == "Cancelled" => return false,
-                        Err(e) => debug!("Skipping, {}", e.to_string()),
+                        Err(e) => tracing::debug!("Skipping, {}", e.to_string()),
                     },
                     Err(e) if e.to_string() == "Cancelled" => return false,
-                    Err(e) => debug!("Could not read pdb: {}", e.to_string()),
+                    Err(e) => tracing::debug!("Could not read pdb: {}", e.to_string()),
                 }
             }
 
@@ -625,10 +627,10 @@ impl CustomDebugInfoParser for PDBParser {
                     {
                         Ok(_) => return true,
                         Err(e) if e.to_string() == "Cancelled" => return false,
-                        Err(e) => debug!("Skipping, {}", e.to_string()),
+                        Err(e) => tracing::debug!("Skipping, {}", e.to_string()),
                     },
                     Err(e) if e.to_string() == "Cancelled" => return false,
-                    Err(e) => debug!("Could not read pdb: {}", e.to_string()),
+                    Err(e) => tracing::debug!("Could not read pdb: {}", e.to_string()),
                 }
             }
 
@@ -651,11 +653,11 @@ impl CustomDebugInfoParser for PDBParser {
                                 ) {
                                     Ok(_) => return true,
                                     Err(e) if e.to_string() == "Cancelled" => return false,
-                                    Err(e) => debug!("Skipping, {}", e.to_string()),
+                                    Err(e) => tracing::debug!("Skipping, {}", e.to_string()),
                                 },
                                 Err(e) if e.to_string() == "Cancelled" => return false,
                                 Err(e) => {
-                                    debug!("Could not read pdb: {}", e.to_string())
+                                    tracing::debug!("Could not read pdb: {}", e.to_string())
                                 }
                             }
                         }
@@ -671,13 +673,14 @@ impl CustomDebugInfoParser for PDBParser {
                         {
                             Ok(_) => return true,
                             Err(e) if e.to_string() == "Cancelled" => return false,
-                            Err(e) => debug!("Skipping, {}", e.to_string()),
+                            Err(e) => tracing::debug!("Skipping, {}", e.to_string()),
                         }
                     }
                     Ok(None) => {}
-                    e => error!(
+                    e => tracing::error!(
                         "Error searching local symbol store {}: {:?}",
-                        local_store_path, e
+                        local_store_path,
+                        e
                     ),
                 }
             }
@@ -693,12 +696,12 @@ impl CustomDebugInfoParser for PDBParser {
                         match self.load_from_file(&conts, debug_info, view, &progress, true, true) {
                             Ok(_) => return true,
                             Err(e) if e.to_string() == "Cancelled" => return false,
-                            Err(e) => debug!("Skipping, {}", e.to_string()),
+                            Err(e) => tracing::debug!("Skipping, {}", e.to_string()),
                         }
                     }
                     Ok(None) => {}
                     e => {
-                        error!("Error searching remote symbol server {}: {:?}", server, e)
+                        tracing::error!("Error searching remote symbol server {}: {:?}", server, e)
                     }
                 }
             }

@@ -18,7 +18,6 @@ use crate::{die_handlers::*, ReaderType};
 
 use binaryninja::{
     rc::*,
-    tracing,
     types::{
         BaseStructure, MemberAccess, MemberScope, ReferenceType, StructureBuilder, StructureType,
         Type, TypeClass,

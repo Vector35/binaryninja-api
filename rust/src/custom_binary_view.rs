@@ -48,12 +48,10 @@ where
     where
         T: CustomBinaryViewType,
     {
-        ffi_wrap!("BinaryViewTypeBase::is_valid_for", unsafe {
-            let view_type = &*(ctxt as *mut T);
-            let data = BinaryView::ref_from_raw(BNNewViewReference(data));
-
-            view_type.is_valid_for(&data)
-        })
+        let view_type = unsafe { &*(ctxt as *mut T) };
+        let data = unsafe { BinaryView::ref_from_raw(BNNewViewReference(data)) };
+        let _span = ffi_span!("BinaryViewTypeBase::is_valid_for", data);
+        view_type.is_valid_for(&data)
     }
 
     extern "C" fn cb_deprecated<T>(ctxt: *mut c_void) -> bool
@@ -89,6 +87,7 @@ where
                 actual_parent: &data,
             };
 
+            let _span = ffi_span!("BinaryViewTypeBase::create", data);
             match view_type.create_custom_view(&data, builder) {
                 Ok(bv) => {
                     // force a leak of the Ref; failure to do this would result
@@ -114,6 +113,7 @@ where
                 actual_parent: &data,
             };
 
+            let _span = ffi_span!("BinaryViewTypeBase::parse", data);
             match view_type.parse_custom_view(&data, builder) {
                 Ok(bv) => {
                     // force a leak of the Ref; failure to do this would result
@@ -134,6 +134,7 @@ where
             let view_type = &*(ctxt as *mut T);
             let data = BinaryView::ref_from_raw(BNNewViewReference(data));
 
+            let _span = ffi_span!("BinaryViewTypeBase::load_settings", data);
             match view_type.load_settings_for_data(&data) {
                 Some(settings) => Ref::into_raw(settings).handle,
                 None => ptr::null_mut() as *mut _,

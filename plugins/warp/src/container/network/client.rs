@@ -5,7 +5,6 @@ use crate::container::{
 };
 use base64::Engine;
 use binaryninja::download::DownloadProvider;
-use binaryninja::tracing;
 use serde::Deserialize;
 use serde_json::json;
 use std::collections::HashMap;

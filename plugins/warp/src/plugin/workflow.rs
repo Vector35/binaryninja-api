@@ -15,7 +15,6 @@ use binaryninja::command::Command;
 use binaryninja::function::Function as BNFunction;
 use binaryninja::rc::Ref as BNRef;
 use binaryninja::settings::{QueryOptions, Settings};
-use binaryninja::tracing;
 use binaryninja::workflow::{activity, Activity, AnalysisContext, Workflow, WorkflowBuilder};
 use dashmap::DashSet;
 use itertools::Itertools;

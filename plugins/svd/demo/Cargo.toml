@@ -13,6 +13,7 @@ binaryninja = { workspace = true, features = ["demo"]}
 binaryninjacore-sys.workspace = true
 svd-parser = { version = "0.14.8", features = ["expand"] }
 serde_json = "1.0"
+tracing = "0.1"
 
 [dev-dependencies]
 insta = { version = "1.42", features = ["yaml"] }

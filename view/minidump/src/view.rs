@@ -15,7 +15,7 @@ use binaryninja::custom_binary_view::{
     CustomViewBuilder,
 };
 use binaryninja::platform::Platform;
-use binaryninja::{tracing, Endianness};
+use binaryninja::Endianness;
 
 type BinaryViewResult<R> = binaryninja::binary_view::Result<R>;
 

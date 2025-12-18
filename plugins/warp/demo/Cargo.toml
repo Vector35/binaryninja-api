@@ -12,6 +12,7 @@ path = "../src/lib.rs"
 demo = []
 
 [dependencies]
+tracing = "0.1"
 binaryninja = { workspace = true, features = ["rayon", "demo"] }
 binaryninjacore-sys.workspace = true
 warp = { git = "https://github.com/Vector35/warp/", tag = "1.0.0" }

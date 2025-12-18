@@ -2,14 +2,11 @@
 
 use crate::file_metadata::SessionId;
 use crate::logger::{
-    bn_log_with_session, BnLogLevel, LogContext, LogListener, LOGGER_DEFAULT_SESSION_ID,
+    bn_log_with_session, BnLogLevel, LogContext, LogGuard, LogListener, LOGGER_DEFAULT_SESSION_ID,
 };
 use tracing::{Event, Id, Level, Subscriber};
-use tracing_subscriber::prelude::*;
-
-// Re-export specific things to make it easy for the user
-pub use tracing::{debug, error, info, trace, warn};
 use tracing_subscriber::layer::Context;
+use tracing_subscriber::prelude::*;
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Layer;
 
@@ -26,7 +23,7 @@ use tracing_subscriber::Layer;
 /// #[unsafe(no_mangle)]
 /// pub unsafe extern "C" fn CorePluginInit() -> bool {
 ///     binaryninja::tracing_init!("MyPlugin");
-///     binaryninja::tracing::info!("Core plugin initialized");
+///     tracing::info!("Core plugin initialized");
 ///     true
 /// }
 /// ```
@@ -264,7 +261,7 @@ impl tracing::field::Visit for BnFieldVisitor {
 ///     // Register our tracing subscriber, this will send tracing events to stdout.
 ///     tracing_subscriber::fmt::init();
 ///     // Register our log listener, this will send logs from the core to our tracing subscriber.
-///     let _listener = register_log_listener(TracingLogListener::new(BnLogLevel::DebugLog));
+///     let _listener = TracingLogListener::new(BnLogLevel::DebugLog).register();
 ///     // Should see logs from the core in regard to initialization show up.
 ///     let _session = Session::new().expect("Failed to create session");
 ///     bn_log("Test", BnLogLevel::DebugLog, "Hello, world!");
@@ -275,8 +272,28 @@ pub struct TracingLogListener {
 }
 
 impl TracingLogListener {
-    pub fn new(minimum_level: BnLogLevel) -> Self {
+    /// Create a [`TracingLogListener`] with the minimum log level set to [`BnLogLevel::InfoLog`].
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn new_with_lvl(minimum_level: BnLogLevel) -> Self {
         Self { minimum_level }
+    }
+
+    /// Register the [`TracingLogListener`] and send logs to the registered tracing subscriber until
+    /// the [`LogGuard`] is dropped, make sure to register your tracing subscriber before registering.
+    #[must_use]
+    pub fn register(self) -> LogGuard<Self> {
+        crate::logger::register_log_listener(self)
+    }
+}
+
+impl Default for TracingLogListener {
+    fn default() -> Self {
+        Self {
+            minimum_level: BnLogLevel::InfoLog,
+        }
     }
 }
 
@@ -285,16 +302,40 @@ impl LogListener for TracingLogListener {
         let session = ctx.session_id.map(|s| s.0);
         match level {
             BnLogLevel::ErrorLog | BnLogLevel::AlertLog => {
-                error!(session_id = session, target = %ctx.logger_name, "{}", message)
+                tracing::error!(
+                    target: "binaryninja",
+                    session_id = session,
+                    logger = %ctx.logger_name,
+                    "{}",
+                    message
+                )
             }
             BnLogLevel::WarningLog => {
-                warn!(session_id = session, target = %ctx.logger_name, "{}", message)
+                tracing::warn!(
+                    target: "binaryninja",
+                    session_id = session,
+                    logger = %ctx.logger_name,
+                    "{}",
+                    message
+                )
             }
             BnLogLevel::InfoLog => {
-                info!(session_id = session, target = %ctx.logger_name, "{}", message)
+                tracing::info!(
+                    target: "binaryninja",
+                    session_id = session,
+                    logger = %ctx.logger_name,
+                    "{}",
+                    message
+                )
             }
             BnLogLevel::DebugLog => {
-                debug!(session_id = session, target = %ctx.logger_name, "{}", message)
+                tracing::debug!(
+                    target: "binaryninja",
+                    session_id = session,
+                    logger = %ctx.logger_name,
+                    "{}",
+                    message
+                )
             }
         };
     }

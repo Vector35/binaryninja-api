@@ -216,12 +216,10 @@ impl DebugInfoParser {
         where
             C: CustomDebugInfoParser,
         {
-            ffi_wrap!("CustomDebugInfoParser::is_valid", unsafe {
-                let cmd = &*(ctxt as *const C);
-                let view = BinaryView::ref_from_raw(view);
-
-                cmd.is_valid(&view)
-            })
+            let cmd = unsafe { &*(ctxt as *const C) };
+            let view = unsafe { BinaryView::ref_from_raw(view) };
+            let _span = ffi_span!("CustomDebugInfoParser::is_valid", view);
+            cmd.is_valid(&view)
         }
 
         extern "C" fn cb_parse_info<C>(
@@ -235,28 +233,27 @@ impl DebugInfoParser {
         where
             C: CustomDebugInfoParser,
         {
-            ffi_wrap!("CustomDebugInfoParser::parse_info", unsafe {
-                let cmd = &*(ctxt as *const C);
-                let view = BinaryView::ref_from_raw(view);
-                let debug_file = BinaryView::ref_from_raw(debug_file);
-                let mut debug_info = DebugInfo::ref_from_raw(debug_info);
+            let cmd = unsafe { &*(ctxt as *const C) };
+            let view = unsafe { BinaryView::ref_from_raw(view) };
+            let debug_file = unsafe { BinaryView::ref_from_raw(debug_file) };
+            let mut debug_info = unsafe { DebugInfo::ref_from_raw(debug_info) };
 
-                cmd.parse_info(
-                    &mut debug_info,
-                    &view,
-                    &debug_file,
-                    Box::new(move |cur: usize, max: usize| match progress {
-                        Some(func) => {
-                            if func(progress_ctxt, cur, max) {
-                                Ok(())
-                            } else {
-                                Err(())
-                            }
+            let _span = ffi_span!("CustomDebugInfoParser::parse_info", view);
+            cmd.parse_info(
+                &mut debug_info,
+                &view,
+                &debug_file,
+                Box::new(move |cur: usize, max: usize| match progress {
+                    Some(func) => unsafe {
+                        if func(progress_ctxt, cur, max) {
+                            Ok(())
+                        } else {
+                            Err(())
                         }
-                        _ => Ok(()),
-                    }),
-                )
-            })
+                    },
+                    _ => Ok(()),
+                }),
+            )
         }
 
         let name = name.to_cstr();

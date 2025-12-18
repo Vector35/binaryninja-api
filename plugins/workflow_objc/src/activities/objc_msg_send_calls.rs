@@ -7,7 +7,6 @@ use binaryninja::{
         instruction::{InstructionHandler as _, LowLevelILInstruction, LowLevelILInstructionKind},
         operation::{CallSsa, Operation},
     },
-    tracing,
     variable::PossibleValueSet,
     workflow::AnalysisContext,
 };

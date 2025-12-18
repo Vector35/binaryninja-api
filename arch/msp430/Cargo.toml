@@ -9,6 +9,7 @@ license = "Apache-2.0"
 binaryninja.workspace = true
 binaryninjacore-sys.workspace = true
 msp430-asm = "^0.2"
+tracing = "0.1"
 
 [lib]
 crate-type = ["cdylib"]

@@ -6,7 +6,6 @@ use binaryninja::rc::Ref;
 use binaryninja::section::{SectionBuilder, Semantics};
 use binaryninja::segment::{SegmentBuilder, SegmentFlags};
 use binaryninja::symbol::{SymbolBuilder, SymbolType};
-use binaryninja::tracing;
 use binaryninja::types::{
     BaseStructure, EnumerationBuilder, MemberAccess, MemberScope, NamedTypeReference,
     NamedTypeReferenceClass, StructureBuilder, StructureMember, Type, TypeBuilder,

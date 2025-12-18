@@ -11,7 +11,6 @@ use binaryninja::{
         lifting::LowLevelILLabel,
         LowLevelILRegisterKind,
     },
-    tracing,
     variable::PossibleValueSet,
     workflow::AnalysisContext,
 };

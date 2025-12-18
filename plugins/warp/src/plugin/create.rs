@@ -10,7 +10,6 @@ use binaryninja::command::Command;
 use binaryninja::interaction::form::{Form, FormInputField};
 use binaryninja::interaction::{MessageBoxButtonResult, MessageBoxButtonSet, MessageBoxIcon};
 use binaryninja::rc::Ref;
-use binaryninja::tracing;
 use std::path::PathBuf;
 use std::thread;
 use warp::chunk::Chunk;

@@ -137,6 +137,7 @@ unsafe impl Sync for Logger {}
 /// This is typically used in headless usage. It can also be used to temporarily log core
 /// messages to something like a file while some analysis is occurring, once the [`LogGuard`] is
 /// dropped, the listener will be unregistered.
+#[must_use]
 pub fn register_log_listener<L: LogListener>(listener: L) -> LogGuard<L> {
     use binaryninjacore_sys::BNRegisterLogListener;
 

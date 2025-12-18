@@ -7,7 +7,6 @@ use binaryninja::{
     confidence::Conf,
     rc::Ref,
     symbol::SymbolType,
-    tracing,
     types::{MemberAccess, StructureType, Type, TypeClass},
 };
 use gimli::{

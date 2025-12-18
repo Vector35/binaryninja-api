@@ -18,12 +18,12 @@ use std::{str::FromStr, sync::mpsc};
 
 use crate::{DebugInfoBuilderContext, ReaderType};
 use binaryninja::binary_view::BinaryViewBase;
+use binaryninja::Endianness;
 use binaryninja::{
     binary_view::{BinaryView, BinaryViewExt},
     download::{DownloadInstanceInputOutputCallbacks, DownloadProvider},
     settings::Settings,
 };
-use binaryninja::{tracing, Endianness};
 use gimli::Dwarf;
 use gimli::{
     constants, Attribute, AttributeValue,

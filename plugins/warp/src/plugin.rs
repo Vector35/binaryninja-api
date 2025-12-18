@@ -12,8 +12,8 @@ use binaryninja::background_task::BackgroundTask;
 use binaryninja::command::{
     register_command, register_command_for_function, register_command_for_project,
 };
+use binaryninja::is_ui_enabled;
 use binaryninja::settings::{QueryOptions, Settings};
-use binaryninja::{is_ui_enabled, tracing};
 
 mod commit;
 mod create;

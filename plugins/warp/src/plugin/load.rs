@@ -10,7 +10,6 @@ use binaryninja::interaction::{
     MessageBoxIcon,
 };
 use binaryninja::rc::Ref;
-use binaryninja::tracing;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;

@@ -10,7 +10,6 @@ use binaryninja::architecture::CoreArchitecture;
 use binaryninja::binary_view::BinaryView;
 use binaryninja::rc::Ref;
 use binaryninja::string::BnString;
-use binaryninja::tracing;
 use binaryninja::types::Type;
 use binaryninjacore_sys::{BNArchitecture, BNBinaryView, BNType};
 use std::ffi::{c_char, CStr};

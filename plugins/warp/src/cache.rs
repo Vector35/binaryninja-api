@@ -11,7 +11,7 @@ use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::function::Function as BNFunction;
 use binaryninja::rc::Guard;
 use binaryninja::rc::Ref as BNRef;
-use binaryninja::{tracing, ObjectDestructor};
+use binaryninja::ObjectDestructor;
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 pub fn register_cache_destructor() {

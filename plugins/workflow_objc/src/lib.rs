@@ -1,4 +1,4 @@
-use binaryninja::{add_optional_plugin_dependency, settings::Settings, tracing};
+use binaryninja::{add_optional_plugin_dependency, settings::Settings};
 
 mod activities;
 mod error;

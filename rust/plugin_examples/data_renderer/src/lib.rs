@@ -101,7 +101,7 @@ impl CustomDataRenderer for UuidDataRenderer {
 pub unsafe extern "C" fn CorePluginInit() -> bool {
     // Initialize logging
     binaryninja::tracing_init!();
-    binaryninja::tracing::info!("Core plugin initialized");
+    tracing::info!("Core plugin initialized");
 
     // Register data renderer
     register_data_renderer(UuidDataRenderer {});

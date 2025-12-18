@@ -34,7 +34,6 @@ use binaryninja::{
     debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser},
     settings::Settings,
     template_simplifier::simplify_str_to_str,
-    tracing,
 };
 use dwarfreader::create_section_reader_object;
 

@@ -6,7 +6,6 @@ use binaryninja::calling_convention::CoreCallingConvention as BNCallingConventio
 use binaryninja::confidence::Conf as BNConf;
 use binaryninja::confidence::MAX_CONFIDENCE;
 use binaryninja::rc::Ref as BNRef;
-use binaryninja::tracing;
 use binaryninja::types::BaseStructure as BNBaseStructure;
 use binaryninja::types::EnumerationBuilder as BNEnumerationBuilder;
 use binaryninja::types::FunctionParameter as BNFunctionParameter;

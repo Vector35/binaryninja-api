@@ -18,7 +18,6 @@ use std::fmt::Display;
 use std::sync::OnceLock;
 
 use anyhow::{anyhow, Result};
-use log::{debug, info};
 use pdb::*;
 
 use crate::symbol_parser::{ParsedDataSymbol, ParsedProcedure, ParsedSymbol};
@@ -31,6 +30,7 @@ use binaryninja::debuginfo::{DebugFunctionInfo, DebugInfo};
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
 use binaryninja::settings::{QueryOptions, Settings};
+use binaryninja::tracing::{debug, info};
 use binaryninja::types::{
     EnumerationBuilder, NamedTypeReference, NamedTypeReferenceClass, StructureBuilder,
     StructureType, Type, TypeClass,

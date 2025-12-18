@@ -6,9 +6,8 @@ use crate::settings::LoadSettings;
 use binaryninja::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
 use binaryninja::command::Command;
 use binaryninja::interaction::{Form, FormInputField};
-use binaryninja::logger::Logger;
+use binaryninja::tracing;
 use binaryninja::workflow::{activity, Activity, AnalysisContext, Workflow};
-use log::LevelFilter;
 use std::path::PathBuf;
 use svd_parser::ValidateLevel;
 
@@ -120,7 +119,7 @@ impl Command for LoadSVDFile {
         let file_content = match std::fs::read_to_string(&file_path) {
             Ok(content) => content,
             Err(e) => {
-                log::error!("Failed to read file: {:?}", e);
+                tracing::error!("Failed to read file: {:?}", e);
                 return;
             }
         };
@@ -137,7 +136,7 @@ impl Command for LoadSVDFile {
                 view.update_analysis();
             }
             Err(e) => {
-                log::error!("Failed to parse SVD file: {:?}", e);
+                tracing::error!("Failed to parse SVD file: {:?}", e);
             }
         }
     }
@@ -152,7 +151,7 @@ impl Command for LoadSVDFile {
 #[cfg(not(feature = "demo"))]
 pub extern "C" fn CorePluginInit() -> bool {
     if plugin_init().is_err() {
-        log::error!("Failed to initialize SVD plug-in");
+        tracing::error!("Failed to initialize SVD plug-in");
         return false;
     }
     true
@@ -163,14 +162,14 @@ pub extern "C" fn CorePluginInit() -> bool {
 #[cfg(feature = "demo")]
 pub extern "C" fn SVDPluginInit() -> bool {
     if plugin_init().is_err() {
-        log::error!("Failed to initialize SVD plug-in");
+        tracing::error!("Failed to initialize SVD plug-in");
         return false;
     }
     true
 }
 
 fn plugin_init() -> Result<(), ()> {
-    Logger::new("SVD").with_level(LevelFilter::Debug).init();
+    binaryninja::tracing_init!("SVD");
 
     binaryninja::command::register_command(
         "Load SVD File",
@@ -185,13 +184,13 @@ fn plugin_init() -> Result<(), ()> {
         let view = ctx.view();
         let load_settings = LoadSettings::from_view_settings(&view);
         let Some(file) = &load_settings.auto_load_file else {
-            log::debug!("No SVD file specified, skipping...");
+            tracing::debug!("No SVD file specified, skipping...");
             return;
         };
         let file_content = match std::fs::read_to_string(file) {
             Ok(content) => content,
             Err(e) => {
-                log::error!("Failed to read file: {}", e);
+                tracing::error!("Failed to read file: {}", e);
                 return;
             }
         };
@@ -204,7 +203,7 @@ fn plugin_init() -> Result<(), ()> {
                 mapper.map_to_view(&view);
             }
             Err(e) => {
-                log::error!("Failed to parse SVD file: {:?}", e);
+                tracing::error!("Failed to parse SVD file: {:?}", e);
             }
         }
     };

@@ -1,7 +1,3 @@
-extern crate binaryninja;
-extern crate log;
-extern crate msp430_asm;
-
 use binaryninja::{
     add_optional_plugin_dependency,
     architecture::ArchitectureExt,
@@ -9,7 +5,6 @@ use binaryninja::{
     custom_binary_view::{BinaryViewType, BinaryViewTypeExt},
     Endianness,
 };
-use log::LevelFilter;
 
 mod architecture;
 mod flag;
@@ -17,12 +12,12 @@ mod lift;
 mod register;
 
 use architecture::Msp430;
-use binaryninja::logger::Logger;
 
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "C" fn CorePluginInit() -> bool {
-    Logger::new("MSP430").with_level(LevelFilter::Info).init();
+    binaryninja::tracing_init!("MSP430");
+
     let arch =
         binaryninja::architecture::register_architecture("msp430", |custom_handle, handle| {
             Msp430::new(handle, custom_handle)

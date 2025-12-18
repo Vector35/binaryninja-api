@@ -1,10 +1,11 @@
+use binaryninja::file_metadata::SessionId;
 use binaryninja::{
     binary_view::{BinaryView, BinaryViewBase, BinaryViewExt},
     file_metadata::FileMetadata,
     metadata::Metadata,
     rc::Ref,
     settings::{QueryOptions, Settings},
-    ObjectDestructor,
+    tracing, ObjectDestructor,
 };
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
@@ -31,8 +32,8 @@ struct SelectorImplementations {
     sel_to_impl: HashMap<u64, Vec<u64>>,
 }
 
-static VIEW_INFOS: Lazy<DashMap<usize, Arc<AnalysisInfo>>> = Lazy::new(DashMap::new);
-static IGNORED_VIEWS: Lazy<DashMap<usize, bool>> = Lazy::new(DashMap::new);
+static VIEW_INFOS: Lazy<DashMap<SessionId, Arc<AnalysisInfo>>> = Lazy::new(DashMap::new);
+static IGNORED_VIEWS: Lazy<DashMap<SessionId, bool>> = Lazy::new(DashMap::new);
 
 struct ObjectLifetimeObserver;
 
@@ -69,7 +70,7 @@ impl GlobalState {
         observer.register();
     }
 
-    fn id(bv: &BinaryView) -> usize {
+    fn id(bv: &BinaryView) -> SessionId {
         bv.file().session_id()
     }
 
@@ -159,7 +160,7 @@ impl AnalysisInfo {
         };
         let version_meta = meta.get("version")?;
         if version_meta.get_unsigned_integer()? != 1 {
-            log::error!(
+            tracing::error!(
                 "workflow_objc: Unexpected Objective-C metadata version. Expected 1, got {}.",
                 version_meta.get_unsigned_integer()?
             );
@@ -192,7 +193,7 @@ impl AnalysisInfo {
         for item in &array {
             let item = item.get_array()?;
             if item.len() != 2 {
-                log::warn!(
+                tracing::warn!(
                     "Expected selector implementation metadata to have 2 items, found {}",
                     item.len()
                 );

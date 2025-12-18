@@ -1745,7 +1745,7 @@ where
             };
 
             if !is_safe {
-                log::error!(
+                tracing::error!(
                     "il expr @ {:x} contains constant 0x{:x} as {} byte value (doesn't fit!)",
                     self.op.address,
                     self.op.operands[0],
@@ -1810,7 +1810,7 @@ where
             }
             _ => {
                 // Log error for unexpected sizes
-                log::error!(
+                tracing::error!(
                     "il expr @ {:x} has invalid float size {} (expected 4 or 8 bytes)",
                     self.op.address,
                     self.op.size
@@ -1858,7 +1858,7 @@ where
             };
 
             if !is_safe {
-                log::error!(
+                tracing::error!(
                     "il expr @ {:x} contains extern 0x{:x} as {} byte value (doesn't fit!)",
                     self.op.address,
                     self.op.operands[0],

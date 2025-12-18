@@ -5,6 +5,7 @@ use crate::container::{
 };
 use base64::Engine;
 use binaryninja::download::DownloadProvider;
+use binaryninja::tracing;
 use serde::Deserialize;
 use serde_json::json;
 use std::collections::HashMap;
@@ -496,14 +497,14 @@ impl NetworkClient {
             let kind = match item.kind.as_str() {
                 "function" => {
                     let Some(data) = &item.data else {
-                        log::warn!(
+                        tracing::warn!(
                             "Function item {} has no data from network, skipping...",
                             item.id
                         );
                         continue;
                     };
                     let Some(func) = Function::from_bytes(&data) else {
-                        log::warn!(
+                        tracing::warn!(
                             "Function item {} has invalid data from network, skipping...",
                             item.id
                         );
@@ -514,7 +515,7 @@ impl NetworkClient {
                 "source" => ContainerSearchItemKind::Source {
                     path: match item.name {
                         None => {
-                            log::warn!("Source item {} has no name", item.id);
+                            tracing::warn!("Source item {} has no name", item.id);
                             continue;
                         }
                         Some(name) => SourcePath(format!("{}/{}", self.server_url, name).into()),
@@ -523,14 +524,14 @@ impl NetworkClient {
                 },
                 "type" => {
                     let Some(data) = &item.data else {
-                        log::warn!(
+                        tracing::warn!(
                             "Type item {} has no data from network, skipping...",
                             item.id
                         );
                         continue;
                     };
                     let Some(ty) = Type::from_bytes(&data) else {
-                        log::warn!(
+                        tracing::warn!(
                             "Type item {} has invalid data from network, skipping...",
                             item.id
                         );

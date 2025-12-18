@@ -6,6 +6,7 @@ use binaryninja::rc::Ref;
 use binaryninja::section::{SectionBuilder, Semantics};
 use binaryninja::segment::{SegmentBuilder, SegmentFlags};
 use binaryninja::symbol::{SymbolBuilder, SymbolType};
+use binaryninja::tracing;
 use binaryninja::types::{
     BaseStructure, EnumerationBuilder, MemberAccess, MemberScope, NamedTypeReference,
     NamedTypeReferenceClass, StructureBuilder, StructureMember, Type, TypeBuilder,
@@ -78,7 +79,7 @@ impl DeviceMapper {
     }
 
     pub fn map_to_view(&self, view: &BinaryView) {
-        log::info!("Mapping device... {}", self.device.name);
+        tracing::info!("Mapping device... {}", self.device.name);
         for peripheral in &self.device.peripherals {
             match peripheral {
                 Peripheral::Single(info) => {
@@ -143,7 +144,7 @@ impl DeviceMapper {
         address_block: &AddressBlock,
     ) {
         let block_addr = peripheral.base_address + address_block.offset as u64;
-        log::info!(
+        tracing::info!(
             "Mapping peripheral block @ 0x{:x} for {}",
             block_addr,
             peripheral.name
@@ -176,7 +177,7 @@ impl DeviceMapper {
             );
 
             if !added_memory {
-                log::error!(
+                tracing::error!(
                     "Failed to add memory for peripheral block! {} @ 0x{:x}",
                     block_name,
                     block_addr

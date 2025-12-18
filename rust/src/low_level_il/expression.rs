@@ -536,8 +536,7 @@ where
             }
 
             _ => {
-                // #[cfg(debug_assertions)]
-                log::error!(
+                tracing::error!(
                     "Got unexpected operation {:?} in value expr at 0x{:x}",
                     op.operation,
                     op.address

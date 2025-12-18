@@ -25,6 +25,7 @@ use binaryninja::{
     rc::*,
     symbol::SymbolType,
     template_simplifier::simplify_str_to_fqn,
+    tracing,
     types::{FunctionParameter, Type},
     variable::NamedVariableWithType,
 };
@@ -34,7 +35,6 @@ use gimli::{DebuggingInformationEntry, Dwarf, Unit};
 use binaryninja::confidence::Conf;
 use binaryninja::variable::{Variable, VariableSourceType};
 use indexmap::{map::Values, IndexMap};
-use log::{debug, error, warn};
 use std::{cmp::Ordering, collections::HashMap, hash::Hash};
 
 pub(crate) type TypeUID = usize;
@@ -133,7 +133,7 @@ impl<R: ReaderType> DebugInfoBuilderContext<R> {
             if let Ok(unit) = dwarf.unit(header) {
                 units.push(unit);
             } else {
-                error!("Unable to read DWARF information. File may be malformed or corrupted. Not applying debug info.");
+                tracing::error!("Unable to read DWARF information. File may be malformed or corrupted. Not applying debug info.");
                 return None;
             }
         }
@@ -145,7 +145,7 @@ impl<R: ReaderType> DebugInfoBuilderContext<R> {
                 if let Ok(unit) = sup_dwarf.unit(header) {
                     sup_units.push(unit);
                 } else {
-                    error!("Unable to read supplementary DWARF information. File may be malformed or corrupted. Not applying debug info.");
+                    tracing::error!("Unable to read supplementary DWARF information. File may be malformed or corrupted. Not applying debug info.");
                     return None;
                 }
             }
@@ -193,7 +193,7 @@ impl<R: ReaderType> DebugInfoBuilderContext<R> {
                     match &entry_unit.entry(entry_offset) {
                         Ok(x) => x,
                         Err(e) => {
-                            log::error!(
+                            tracing::error!(
                                 "Failed to get entry {:?} in unit {:?}: {}",
                                 entry_offset,
                                 entry_unit.header.offset(),
@@ -265,7 +265,7 @@ impl DebugInfoBuilder {
             // if the full name exists, update the stored index for the full name
             if let Some(idx) = self.raw_function_name_indices.get(ident) {
                 let function = self.functions.get_mut(*idx).or_else(|| {
-                    log::error!("Failed to get function with index {}", idx);
+                    tracing::error!("Failed to get function with index {}", idx);
                     None
                 })?;
 
@@ -298,7 +298,7 @@ impl DebugInfoBuilder {
             // if the raw name exists, update the stored index for the raw name
             if let Some(idx) = self.full_function_name_indices.get(ident) {
                 let function = self.functions.get_mut(*idx).or_else(|| {
-                    log::error!("Failed to get function with index {}", idx);
+                    tracing::error!("Failed to get function with index {}", idx);
                     None
                 })?;
 
@@ -325,7 +325,7 @@ impl DebugInfoBuilder {
                 return Some(*idx);
             }
         } else {
-            debug!("Function entry in DWARF without full or raw name.");
+            tracing::debug!("Function entry in DWARF without full or raw name.");
             return None;
         }
 
@@ -387,7 +387,7 @@ impl DebugInfoBuilder {
             },
         ) {
             if existing_type != t && commit {
-                warn!("DWARF info contains duplicate type definition. Overwriting type `{}` (named `{:?}`) with `{}` (named `{:?}`)",
+                tracing::warn!("DWARF info contains duplicate type definition. Overwriting type `{}` (named `{:?}`) with `{}` (named `{:?}`)",
                     existing_type,
                     existing_name,
                     t,
@@ -434,7 +434,7 @@ impl DebugInfoBuilder {
 
         let Some(function_index) = fn_idx else {
             // If we somehow lost track of what subprogram we're in or we're not actually in a subprogram
-            error!(
+            tracing::error!(
                 "Trying to add a local variable outside of a subprogram. Please report this issue."
             );
             return;
@@ -452,12 +452,12 @@ impl DebugInfoBuilder {
 
         let Some(func_addr) = function.address else {
             // If we somehow are processing a function's variables before the function is created
-            error!("Trying to add a local variable without a known function start. Please report this issue.");
+            tracing::error!("Trying to add a local variable without a known function start. Please report this issue.");
             return;
         };
 
         let Some(frame_base) = &function.frame_base else {
-            error!("Trying to add a local variable ({}) to a function ({:#x}) without a frame base. Please report this issue.", name, func_addr);
+            tracing::error!("Trying to add a local variable ({}) to a function ({:#x}) without a frame base. Please report this issue.", name, func_addr);
             return;
         };
 
@@ -480,7 +480,7 @@ impl DebugInfoBuilder {
             .cloned()
         else {
             // Unknown why, but this is happening with MachO + external dSYM
-            debug!("Refusing to add a local variable ({}@{}) to function at {} without a known CFA adjustment.", name, offset, func_addr);
+            tracing::debug!("Refusing to add a local variable ({}@{}) to function at {} without a known CFA adjustment.", name, offset, func_addr);
             return;
         };
 
@@ -510,7 +510,7 @@ impl DebugInfoBuilder {
 
         if adjusted_offset > 0 {
             // If we somehow end up with a positive sp offset
-            error!("Trying to add a local variable \"{}\" in function at {:#x} at positive storage offset {}. Please report this issue.", name, func_addr, adjusted_offset);
+            tracing::error!("Trying to add a local variable \"{}\" in function at {:#x} at positive storage offset {}. Please report this issue.", name, func_addr, adjusted_offset);
             return;
         }
 
@@ -536,7 +536,7 @@ impl DebugInfoBuilder {
             let existing_type = match self.get_type(existing_type_uid) {
                 Some(x) => x.ty.as_ref(),
                 None => {
-                    log::error!(
+                    tracing::error!(
                         "Failed to find existing type with uid {} for data variable at {:#x}",
                         existing_type_uid,
                         address
@@ -548,7 +548,7 @@ impl DebugInfoBuilder {
             let new_type = match self.get_type(type_uid) {
                 Some(x) => x.ty.as_ref(),
                 None => {
-                    log::error!(
+                    tracing::error!(
                         "Failed to find new type with uid {} for data variable at {:#x}",
                         type_uid,
                         address
@@ -558,7 +558,7 @@ impl DebugInfoBuilder {
             };
 
             if existing_type_uid != type_uid || existing_type != new_type {
-                warn!("DWARF info contains duplicate data variable definition. Overwriting data variable at {:#08x} (`{}`) with `{}`",
+                tracing::warn!("DWARF info contains duplicate data variable definition. Overwriting data variable at {:#08x} (`{}`) with `{}`",
                     address,
                     existing_type,
                     new_type
@@ -580,7 +580,7 @@ impl DebugInfoBuilder {
             // Prevent storing two types with the same name and differing definitions
             if let Some(stored_uid) = type_uids_by_name.get(&debug_type_name) {
                 let Some(stored_debug_type) = self.types.get(stored_uid) else {
-                    error!("Stored type name without storing a type! Please report this error. UID: {}, name: {}", stored_uid, debug_type_name);
+                    tracing::error!("Stored type name without storing a type! Please report this error. UID: {}, name: {}", stored_uid, debug_type_name);
                     continue;
                 };
 
@@ -624,14 +624,14 @@ impl DebugInfoBuilder {
                     if let Some(target_type) = self.get_type(target_uid) {
                         debug_info.add_type(&debug_type_name, &target_type.get_type(), &[]);
                     } else {
-                        error!(
+                        tracing::error!(
                             "Failed to find typedef {} target for uid {}",
                             debug_type_name,
                             ntr.name()
                         );
                     }
                 } else {
-                    error!(
+                    tracing::error!(
                         "Failed to find typedef {} target uid for {}",
                         debug_type_name,
                         ntr.name()
@@ -650,7 +650,7 @@ impl DebugInfoBuilder {
             let data_var_type = match self.get_type(*type_uid) {
                 Some(x) => &x.ty,
                 None => {
-                    log::error!("Failed to find type for data variable at {:#x}", address);
+                    tracing::error!("Failed to find type for data variable at {:#x}", address);
                     continue;
                 }
             };
@@ -752,7 +752,7 @@ impl DebugInfoBuilder {
                     let existing_functions = bv.functions_at(*address);
                     match existing_functions.len().cmp(&1) {
                         Ordering::Greater => {
-                            warn!("Multiple existing functions at address {address:08x}. One or more functions at this address may have the wrong platform information. Please report this binary.");
+                            tracing::warn!("Multiple existing functions at address {address:08x}. One or more functions at this address may have the wrong platform information. Please report this binary.");
                         }
                         Ordering::Equal => {
                             func.platform = Some(existing_functions.get(0).platform())

@@ -1,6 +1,7 @@
 use crate::report::ReportGenerator;
 use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::Command;
+use binaryninja::tracing;
 
 pub struct ShowFileReport;
 
@@ -15,12 +16,12 @@ impl Command for ShowFileReport {
             };
 
             let Ok(bytes) = std::fs::read(&path) else {
-                log::error!("Failed to read file: {:?}", path);
+                tracing::error!("Failed to read file: {:?}", path);
                 return;
             };
 
             let Some(file) = warp::WarpFile::from_bytes(&bytes) else {
-                log::error!("Failed to parse file: {:?}", path);
+                tracing::error!("Failed to parse file: {:?}", path);
                 return;
             };
 

@@ -15,7 +15,6 @@ demo = []
 binaryninja = { workspace = true, features = ["rayon", "demo"] }
 binaryninjacore-sys.workspace = true
 warp = { git = "https://github.com/Vector35/warp/", tag = "1.0.0" }
-log = "0.4"
 itertools = "0.14.0"
 dashmap = { version = "6.1", features = ["rayon"]}
 rayon = "1.10"

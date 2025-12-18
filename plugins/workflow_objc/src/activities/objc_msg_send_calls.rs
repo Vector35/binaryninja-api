@@ -7,6 +7,7 @@ use binaryninja::{
         instruction::{InstructionHandler as _, LowLevelILInstruction, LowLevelILInstructionKind},
         operation::{CallSsa, Operation},
     },
+    tracing,
     variable::PossibleValueSet,
     workflow::AnalysisContext,
 };
@@ -53,7 +54,7 @@ pub fn process(ac: &AnalysisContext) -> Result<(), Error> {
                 Ok(true) => function_changed = true,
                 Ok(_) => {}
                 Err(err) => {
-                    log::error!(
+                    tracing::error!(
                         "Error processing instruction at {:#x}: {}",
                         insn.address(),
                         err

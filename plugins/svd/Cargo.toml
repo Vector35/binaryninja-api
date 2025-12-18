@@ -11,7 +11,6 @@ crate-type = ["cdylib", "lib"]
 binaryninja.workspace = true
 binaryninjacore-sys.workspace = true
 svd-parser = { version = "0.14.8", features = ["expand"] }
-log = "0.4"
 serde_json = "1.0"
 
 [dev-dependencies]

@@ -3,13 +3,13 @@ use crate::{build_function, cache};
 use binaryninja::binary_view::BinaryView;
 use binaryninja::command::{Command, FunctionCommand};
 use binaryninja::function::Function;
-use binaryninja::ObjectDestructor;
+use binaryninja::{tracing, ObjectDestructor};
 
 pub struct DebugFunction;
 
 impl FunctionCommand for DebugFunction {
     fn action(&self, _view: &BinaryView, func: &Function) {
-        log::info!(
+        tracing::info!(
             "{:#?}",
             build_function(func, || func.lifted_il().ok(), false)
         );
@@ -25,7 +25,7 @@ pub struct DebugCache;
 impl Command for DebugCache {
     fn action(&self, _view: &BinaryView) {
         for_cached_containers(|c| {
-            log::info!("Container: {:#?}", c);
+            tracing::info!("Container: {:#?}", c);
         });
     }
 
@@ -40,7 +40,7 @@ impl Command for DebugInvalidateCache {
     fn action(&self, view: &BinaryView) {
         let destructor = cache::CacheDestructor {};
         destructor.destruct_view(view);
-        log::info!("Invalidated all WARP caches...");
+        tracing::info!("Invalidated all WARP caches...");
     }
 
     fn valid(&self, _view: &BinaryView) -> bool {

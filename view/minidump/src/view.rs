@@ -3,7 +3,6 @@ use std::ops::Range;
 
 use binaryninja::section::Section;
 use binaryninja::segment::{Segment, SegmentFlags};
-use log::{debug, error, info, warn};
 use minidump::format::MemoryProtection;
 use minidump::{
     Minidump, MinidumpMemory64List, MinidumpMemoryInfoList, MinidumpMemoryList, MinidumpModuleList,
@@ -16,7 +15,7 @@ use binaryninja::custom_binary_view::{
     CustomViewBuilder,
 };
 use binaryninja::platform::Platform;
-use binaryninja::Endianness;
+use binaryninja::{tracing, Endianness};
 
 type BinaryViewResult<R> = binaryninja::binary_view::Result<R>;
 
@@ -66,7 +65,7 @@ impl CustomBinaryViewType for MinidumpBinaryViewType {
         data: &BinaryView,
         builder: CustomViewBuilder<'builder, Self>,
     ) -> BinaryViewResult<CustomView<'builder>> {
-        debug!("Creating MinidumpBinaryView from registered MinidumpBinaryViewType");
+        tracing::debug!("Creating MinidumpBinaryView from registered MinidumpBinaryViewType");
 
         let binary_view = builder.create::<MinidumpBinaryView>(data, ());
         binary_view
@@ -131,7 +130,7 @@ impl MinidumpBinaryView {
                 ) {
                     self.set_default_platform(&platform);
                 } else {
-                    error!(
+                    tracing::error!(
                         "Could not parse valid system information from minidump: could not map system information in MinidumpSystemInfo stream (arch {:?}, endian {:?}, os {:?}) to a known architecture",
                         minidump_system_info.cpu,
                         minidump_obj.endian,
@@ -140,7 +139,9 @@ impl MinidumpBinaryView {
                     return Err(());
                 }
             } else {
-                error!("Could not parse system information from minidump: could not find a valid MinidumpSystemInfo stream");
+                tracing::error!(
+                    "Could not parse system information from minidump: could not find a valid MinidumpSystemInfo stream"
+                );
                 return Err(());
             }
 
@@ -153,19 +154,19 @@ impl MinidumpBinaryView {
             if let Ok(raw_stream) = minidump_obj.get_raw_stream(MinidumpMemory64List::STREAM_TYPE) {
                 if let Ok(base_rva_array) = raw_stream[8..16].try_into() {
                     let base_rva = u64::from_le_bytes(base_rva_array);
-                    debug!("Found BaseRVA value {:#x}", base_rva);
+                    tracing::debug!("Found BaseRVA value {:#x}", base_rva);
 
                     if let Ok(minidump_memory_list) =
                         minidump_obj.get_stream::<MinidumpMemory64List>()
                     {
                         let mut current_rva = base_rva;
                         for memory_segment in minidump_memory_list.iter() {
-                            debug!(
-                            "Found memory segment at RVA {:#x} with virtual address {:#x} and size {:#x}",
-                            current_rva,
-                            memory_segment.base_address,
-                            memory_segment.size,
-                        );
+                            tracing::debug!(
+                                "Found memory segment at RVA {:#x} with virtual address {:#x} and size {:#x}",
+                                current_rva,
+                                memory_segment.base_address,
+                                memory_segment.size,
+                            );
                             segment_data.push(SegmentData::from_addresses_and_size(
                                 current_rva,
                                 memory_segment.base_address,
@@ -175,15 +176,19 @@ impl MinidumpBinaryView {
                         }
                     }
                 } else {
-                    error!("Could not parse BaseRVA value shared by all entries in the MinidumpMemory64List stream")
+                    tracing::error!(
+                        "Could not parse BaseRVA value shared by all entries in the MinidumpMemory64List stream"
+                    )
                 }
             } else {
-                warn!("Could not read memory from minidump: could not find a valid MinidumpMemory64List stream. This minidump may not be a full memory dump. Trying to find partial dump memory from a MinidumpMemoryList now...");
+                tracing::warn!(
+                    "Could not read memory from minidump: could not find a valid MinidumpMemory64List stream. This minidump may not be a full memory dump. Trying to find partial dump memory from a MinidumpMemoryList now..."
+                );
                 // Memory segments in a regular memory dump (MinidumpMemoryList),
                 // i.e. one that does not include the full process memory data.
                 if let Ok(minidump_memory_list) = minidump_obj.get_stream::<MinidumpMemoryList>() {
                     for memory_segment in minidump_memory_list.by_addr() {
-                        debug!(
+                        tracing::debug!(
                             "Found memory segment at RVA {:#x} with virtual address {:#x} and size {:#x}",
                             memory_segment.desc.memory.rva,
                             memory_segment.base_address,
@@ -196,7 +201,9 @@ impl MinidumpBinaryView {
                         ));
                     }
                 } else {
-                    error!("Could not read any memory from minidump: could not find a valid MinidumpMemory64List stream or a valid MinidumpMemoryList stream.");
+                    tracing::error!(
+                        "Could not read any memory from minidump: could not find a valid MinidumpMemory64List stream or a valid MinidumpMemoryList stream."
+                    );
                 }
             }
 
@@ -208,7 +215,7 @@ impl MinidumpBinaryView {
             {
                 for memory_info in minidump_memory_info_list.iter() {
                     if let Some(memory_range) = memory_info.memory_range() {
-                        debug!(
+                        tracing::debug!(
                             "Found memory protection info for memory segment ranging from virtual address {:#x} to {:#x}: {:#?}",
                             memory_range.start,
                             memory_range.end,
@@ -235,15 +242,15 @@ impl MinidumpBinaryView {
                     let segment_memory_protection =
                         MinidumpBinaryView::translate_memory_protection(*segment_protection);
 
-                    info!(
+                    tracing::info!(
                         "Adding memory segment at virtual address {:#x} to {:#x}, from data range {:#x} to {:#x}, with protections readable {}, writable {}, executable {}",
-                         segment.mapped_addr_range.start,
-                         segment.mapped_addr_range.end,
-                         segment.rva_range.start,
-                         segment.rva_range.end,
-                         segment_memory_protection.readable,
-                         segment_memory_protection.writable,
-                         segment_memory_protection.executable,
+                        segment.mapped_addr_range.start,
+                        segment.mapped_addr_range.end,
+                        segment.rva_range.start,
+                        segment.rva_range.end,
+                        segment_memory_protection.readable,
+                        segment_memory_protection.writable,
+                        segment_memory_protection.executable,
                     );
 
                     let segment_flags = SegmentFlags::new()
@@ -258,7 +265,7 @@ impl MinidumpBinaryView {
                             .flags(segment_flags),
                     );
                 } else {
-                    error!(
+                    tracing::error!(
                         "Could not find memory protection information for memory segment from {:#x} to {:#x}", segment.mapped_addr_range.start,
                         segment.mapped_addr_range.end,
                     );
@@ -271,7 +278,7 @@ impl MinidumpBinaryView {
             // Sections can be named, and can span multiple segments.
             if let Ok(minidump_module_list) = minidump_obj.get_stream::<MinidumpModuleList>() {
                 for module_info in minidump_module_list.by_addr() {
-                    info!(
+                    tracing::info!(
                         "Found module with name {} at virtual address {:#x} with size {:#x}",
                         module_info.name,
                         module_info.base_address(),
@@ -287,10 +294,12 @@ impl MinidumpBinaryView {
                     );
                 }
             } else {
-                warn!("Could not find valid module information in minidump: could not find a valid MinidumpModuleList stream");
+                tracing::warn!(
+                    "Could not find valid module information in minidump: could not find a valid MinidumpModuleList stream"
+                );
             }
         } else {
-            error!("Could not parse data as minidump");
+            tracing::error!("Could not parse data as minidump");
             return Err(());
         }
         Ok(())

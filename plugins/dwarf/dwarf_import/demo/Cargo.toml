@@ -16,7 +16,6 @@ dwarfreader = { path = "../../shared/" }
 binaryninja = { workspace = true, features = ["demo"]}
 binaryninjacore-sys.workspace = true
 gimli = "0.31"
-log = "0.4"
 iset = "0.2.2"
 cpp_demangle = "0.4.3"
 regex = "1"

@@ -18,10 +18,8 @@ use idb_rs::id0::{ID0Section, ID0SectionVariants};
 use idb_rs::til::section::TILSection;
 use idb_rs::til::TypeVariant as TILTypeVariant;
 
-use log::{error, trace, warn, LevelFilter};
-
 use anyhow::{anyhow, Result};
-use binaryninja::logger::Logger;
+use binaryninja::tracing;
 
 struct IDBDebugInfoParser;
 impl CustomDebugInfoParser for IDBDebugInfoParser {
@@ -45,7 +43,7 @@ impl CustomDebugInfoParser for IDBDebugInfoParser {
         match parse_idb_info(debug_info, bv, debug_file, progress) {
             Ok(()) => true,
             Err(error) => {
-                error!("Unable to parse IDB file: {error}");
+                tracing::error!("Unable to parse IDB file: {error}");
                 false
             }
         }
@@ -72,7 +70,7 @@ impl CustomDebugInfoParser for TILDebugInfoParser {
         match parse_til_info(debug_info, debug_file, progress) {
             Ok(()) => true,
             Err(error) => {
-                error!("Unable to parse TIL file: {error}");
+                tracing::error!("Unable to parse TIL file: {error}");
                 false
             }
         }
@@ -126,12 +124,12 @@ fn parse_idb_info(
     debug_file: &BinaryView,
     progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
 ) -> Result<()> {
-    trace!("Opening a IDB file");
+    tracing::trace!("Opening a IDB file");
     let file = BinaryViewReader {
         bv: debug_file,
         offset: 0,
     };
-    trace!("Parsing a IDB file");
+    tracing::trace!("Parsing a IDB file");
     let mut file = std::io::BufReader::new(file);
     let idb_kind = idb_rs::identify_idb_file(&mut file)?;
     match idb_kind {
@@ -173,7 +171,7 @@ fn parse_idb_info_format(
     let id2_idx = format.id2_location();
 
     if let Some(til_idx) = format.til_location() {
-        trace!("Parsing the TIL section");
+        tracing::trace!("Parsing the TIL section");
         let til = format.read_til(&mut idb_data, til_idx)?;
         // progress 0%-50%
         import_til_section(debug_info, debug_file, &til, progress)?;
@@ -209,13 +207,13 @@ fn parse_til_info(
     debug_file: &BinaryView,
     progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
 ) -> Result<()> {
-    trace!("Opening a TIL file");
+    tracing::trace!("Opening a TIL file");
     let file = BinaryViewReader {
         bv: debug_file,
         offset: 0,
     };
     let mut file = std::io::BufReader::new(file);
-    trace!("Parsing the TIL section");
+    tracing::trace!("Parsing the TIL section");
     let til = TILSection::read(&mut file)?;
     import_til_section(debug_info, debug_file, &til, progress)
 }
@@ -239,19 +237,19 @@ pub fn import_til_section(
                 );
             }
             TranslateTypeResult::Error(error) => {
-                error!(
+                tracing::error!(
                     "Unable to parse type `{}`: {error}",
                     ty.name.as_utf8_lossy(),
                 );
             }
             TranslateTypeResult::PartiallyTranslated(_, error) => {
                 if let Some(error) = error {
-                    error!(
+                    tracing::error!(
                         "Unable to parse type `{}` correctly: {error}",
                         ty.name.as_utf8_lossy(),
                     );
                 } else {
-                    warn!(
+                    tracing::warn!(
                         "Type `{}` maybe not be fully translated",
                         ty.name.as_utf8_lossy(),
                     );
@@ -267,7 +265,7 @@ pub fn import_til_section(
         | TranslateTypeResult::PartiallyTranslated(bn_ty, _) = &ty.ty
         {
             if !debug_info.add_type(&ty.name.as_utf8_lossy(), bn_ty, &[/* TODO */]) {
-                error!("Unable to add type `{}`", ty.name.as_utf8_lossy())
+                tracing::error!("Unable to add type `{}`", ty.name.as_utf8_lossy())
             }
         }
     }
@@ -278,7 +276,7 @@ pub fn import_til_section(
         | TranslateTypeResult::PartiallyTranslated(bn_ty, _) = &ty.ty
         {
             if !debug_info.add_type(&ty.name.as_utf8_lossy(), bn_ty, &[/* TODO */]) {
-                error!("Unable to fix type `{}`", ty.name.as_utf8_lossy())
+                tracing::error!("Unable to fix type `{}`", ty.name.as_utf8_lossy())
             }
         }
     }
@@ -322,16 +320,16 @@ fn parse_id0_section_info<K: IDAKind>(
             .and_then(|ty| match translate_ephemeral_type(debug_file, ty) {
                 TranslateTypeResult::Translated(result) => Some(result),
                 TranslateTypeResult::PartiallyTranslated(result, None) => {
-                    warn!("Unable to fully translate the type at {addr:#x}");
+                    tracing::warn!("Unable to fully translate the type at {addr:#x}");
                     Some(result)
                 }
                 TranslateTypeResult::NotYet => {
-                    error!("Unable to translate the type at {addr:#x}");
+                    tracing::error!("Unable to translate the type at {addr:#x}");
                     None
                 }
                 TranslateTypeResult::PartiallyTranslated(_, Some(bn_type_error))
                 | TranslateTypeResult::Error(bn_type_error) => {
-                    error!("Unable to translate the type at {addr:#x}: {bn_type_error}",);
+                    tracing::error!("Unable to translate the type at {addr:#x}: {bn_type_error}",);
                     None
                 }
             });
@@ -341,7 +339,7 @@ fn parse_id0_section_info<K: IDAKind>(
         match (label, &ty, bnty) {
             (label, Some(ty), bnty) if matches!(&ty.type_variant, TILTypeVariant::Function(_)) => {
                 if bnty.is_none() {
-                    error!("Unable to convert the function type at {addr:#x}",)
+                    tracing::error!("Unable to convert the function type at {addr:#x}",)
                 }
                 if !debug_info.add_function(&DebugFunctionInfo::new(
                     None,
@@ -353,18 +351,18 @@ fn parse_id0_section_info<K: IDAKind>(
                     vec![],
                     vec![],
                 )) {
-                    error!("Unable to add the function at {addr:#x}")
+                    tracing::error!("Unable to add the function at {addr:#x}")
                 }
             }
             (label, Some(_ty), Some(bnty)) => {
                 if !debug_info.add_data_variable(addr, &bnty, label.as_ref().map(Cow::as_ref), &[])
                 {
-                    error!("Unable to add the type at {addr:#x}")
+                    tracing::error!("Unable to add the type at {addr:#x}")
                 }
             }
             (label, Some(_ty), None) => {
                 // TODO types come from the TIL sections, can we make all types be just NamedTypes?
-                error!("Unable to convert type {addr:#x}");
+                tracing::error!("Unable to convert type {addr:#x}");
                 // TODO how to add a label without a type associated with it?
                 if let Some(name) = label {
                     if !debug_info.add_data_variable(
@@ -373,7 +371,7 @@ fn parse_id0_section_info<K: IDAKind>(
                         Some(&name),
                         &[],
                     ) {
-                        error!("Unable to add the label at {addr:#x}")
+                        tracing::error!("Unable to add the label at {addr:#x}")
                     }
                 }
             }
@@ -385,7 +383,7 @@ fn parse_id0_section_info<K: IDAKind>(
                     Some(&name),
                     &[],
                 ) {
-                    error!("Unable to add the label at {addr:#x}")
+                    tracing::error!("Unable to add the label at {addr:#x}")
                 }
             }
 
@@ -402,9 +400,7 @@ fn parse_id0_section_info<K: IDAKind>(
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "C" fn CorePluginInit() -> bool {
-    Logger::new("IDB Import")
-        .with_level(LevelFilter::Error)
-        .init();
+    binaryninja::tracing_init!("IDB Import");
     DebugInfoParser::register("IDB Parser", IDBDebugInfoParser);
     DebugInfoParser::register("TIL Parser", TILDebugInfoParser);
     true

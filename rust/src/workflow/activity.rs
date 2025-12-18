@@ -69,7 +69,9 @@ impl Activity {
         ) {
             let ctxt = &mut *(ctxt as *mut F);
             if let Some(analysis) = NonNull::new(analysis) {
-                ctxt(&AnalysisContext::from_raw(analysis))
+                let analysis = AnalysisContext::from_raw(analysis);
+                let _span = ffi_span!("Activity::action", analysis.view());
+                ctxt(&analysis)
             }
         }
         let config = config.as_config();

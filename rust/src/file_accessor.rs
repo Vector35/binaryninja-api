@@ -46,7 +46,6 @@ impl<A: Accessor> FileAccessor<A> {
             let dest = unsafe { slice::from_raw_parts_mut(dest as *mut u8, len) };
 
             if f.seek(SeekFrom::Start(offset)).is_err() {
-                log::debug!("Failed to seek to offset {:x}", offset);
                 0
             } else {
                 f.read(dest).unwrap_or(0)

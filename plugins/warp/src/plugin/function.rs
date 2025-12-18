@@ -10,6 +10,7 @@ use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::command::{Command, FunctionCommand};
 use binaryninja::function::{Function, FunctionUpdateType};
 use binaryninja::rc::Guard;
+use binaryninja::tracing;
 use rayon::iter::ParallelIterator;
 use std::thread;
 use warp::signature::function::FunctionGUID;
@@ -24,7 +25,7 @@ impl FunctionCommand for IncludeFunction {
         let insert_tag_type = get_warp_include_tag_type(view);
         match should_add_tag {
             true => {
-                log::info!(
+                tracing::info!(
                     "Including selected function '{}' at 0x{:x}",
                     sym_name_str,
                     func.start()
@@ -32,7 +33,7 @@ impl FunctionCommand for IncludeFunction {
                 func.add_tag(&insert_tag_type, "", None, false, None);
             }
             false => {
-                log::info!(
+                tracing::info!(
                     "Removing included function '{}' at 0x{:x}",
                     sym_name_str,
                     func.start()
@@ -58,7 +59,7 @@ impl FunctionCommand for IgnoreFunction {
         let ignore_tag_type = get_warp_ignore_tag_type(view);
         match should_add_tag {
             true => {
-                log::info!(
+                tracing::info!(
                     "Ignoring function for matching '{}' at 0x{:x}",
                     sym_name_str,
                     func.start()
@@ -66,7 +67,7 @@ impl FunctionCommand for IgnoreFunction {
                 func.add_tag(&ignore_tag_type, "", None, false, None);
             }
             false => {
-                log::info!(
+                tracing::info!(
                     "Including function for matching '{}' at 0x{:x}",
                     sym_name_str,
                     func.start()
@@ -87,7 +88,7 @@ impl FunctionCommand for RemoveFunction {
     fn action(&self, _view: &BinaryView, func: &Function) {
         let sym_name = func.symbol().short_name();
         let sym_name_str = sym_name.to_string_lossy();
-        log::info!(
+        tracing::info!(
             "Removing matched function '{}' at 0x{:x}",
             sym_name_str,
             func.start()
@@ -107,10 +108,10 @@ pub struct CopyFunctionGUID;
 impl FunctionCommand for CopyFunctionGUID {
     fn action(&self, _view: &BinaryView, func: &Function) {
         let Some(guid) = cached_function_guid(func, || func.lifted_il().ok()) else {
-            log::error!("Could not get guid for copied function");
+            tracing::error!("Could not get guid for copied function");
             return;
         };
-        log::info!(
+        tracing::info!(
             "Function GUID for {:?}... {}",
             func.symbol().short_name(),
             guid
@@ -137,11 +138,11 @@ impl Command for FindFunctionFromGUID {
         };
 
         let Ok(searched_guid) = guid_str.parse::<FunctionGUID>() else {
-            log::error!("Failed to parse function guid... {}", guid_str);
+            tracing::error!("Failed to parse function guid... {}", guid_str);
             return;
         };
 
-        log::info!("Searching functions for GUID... {}", searched_guid);
+        tracing::info!("Searching functions for GUID... {}", searched_guid);
         let funcs = view.functions();
         let view = view.to_owned();
         thread::spawn(move || {
@@ -159,7 +160,7 @@ impl Command for FindFunctionFromGUID {
                 .collect();
 
             if matched.is_empty() {
-                log::info!("No matches found for GUID... {}", searched_guid);
+                tracing::info!("No matches found for GUID... {}", searched_guid);
             } else {
                 for func in &matched {
                     // Also navigate the user, as that is probably what they want.
@@ -170,14 +171,14 @@ impl Command for FindFunctionFromGUID {
                             .navigate_to(&current_view, func.start())
                             .is_err()
                         {
-                            log::error!(
+                            tracing::error!(
                                 "Failed to navigate to found function 0x{:0x} in view {}",
                                 func.start(),
                                 current_view
                             );
                         }
                     }
-                    log::info!("Match found at function... 0x{:0x}", func.start());
+                    tracing::info!("Match found at function... 0x{:0x}", func.start());
                 }
             }
 

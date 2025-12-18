@@ -533,7 +533,7 @@ macro_rules! prim_int_lifter {
                     };
 
                     if !is_safe {
-                        log::error!("il @ {:x} attempted to lift constant 0x{:x} as {} byte expr (won't fit!)",
+                        tracing::error!("il @ {:x} attempted to lift constant 0x{:x} as {} byte expr (won't fit!)",
                                il.current_address(), val, size);
                     }
                 }
@@ -660,7 +660,7 @@ impl<'a> LiftableLowLevelILWithSize<'a> for LowLevelILExpression<'a, Mutable, No
             use crate::low_level_il::ExpressionHandler;
             if let Some(expr_size) = expr.kind().size() {
                 if expr_size != _size {
-                    log::warn!(
+                    tracing::warn!(
                         "il @ {:x} attempted to lift {} byte expression as {} bytes",
                         il.current_address(),
                         expr_size,
@@ -788,7 +788,7 @@ impl<'a> LiftableLowLevelILWithSize<'a> for ExpressionBuilder<'a, ValueExpr> {
             use binaryninjacore_sys::BNLowLevelILOperation::{LLIL_UNIMPL, LLIL_UNIMPL_MEM};
 
             if expr.size != _size && ![LLIL_UNIMPL, LLIL_UNIMPL_MEM].contains(&expr.op) {
-                log::warn!(
+                tracing::warn!(
                     "il @ {:x} attempted to lift {} byte expression builder as {} bytes",
                     il.current_address(),
                     expr.size,

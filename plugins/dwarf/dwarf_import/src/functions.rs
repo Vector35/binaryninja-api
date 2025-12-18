@@ -19,9 +19,9 @@ use crate::types::get_type;
 use crate::{helpers::*, ReaderType};
 
 use binaryninja::template_simplifier::simplify_str_to_str;
+use binaryninja::tracing;
 use cpp_demangle::DemangleOptions;
 use gimli::{constants, AttributeValue, DebuggingInformationEntry, Dwarf, Operation, Unit};
-use log::{debug, error};
 use regex::Regex;
 
 #[derive(PartialEq, Eq, Hash)]
@@ -45,14 +45,14 @@ fn get_parameters<R: ReaderType>(
     let mut sub_die_tree = match unit.entries_tree(Some(entry.offset())) {
         Ok(x) => x,
         Err(e) => {
-            log::error!("Failed to get function parameter entry tree: {}", e);
+            tracing::error!("Failed to get function parameter entry tree: {}", e);
             return (vec![], false);
         }
     };
     let root = match sub_die_tree.root() {
         Ok(x) => x,
         Err(e) => {
-            log::error!("Failed to get function parameter entry tree root: {}", e);
+            tracing::error!("Failed to get function parameter entry tree root: {}", e);
             return (vec![], false);
         }
     };
@@ -148,7 +148,7 @@ pub(crate) fn parse_function_entry<R: ReaderType>(
     }
 
     if raw_name.is_none() && full_name.is_none() {
-        debug!(
+        tracing::debug!(
             "Function entry in DWARF without full or raw name: .debug_info offset {:?}",
             entry.offset().to_debug_info_offset(&unit.header)
         );
@@ -203,13 +203,13 @@ pub(crate) fn parse_lexical_block<R: ReaderType>(
         let unit_base = match unit.header.offset().as_debug_info_offset() {
             Some(x) => x.0,
             None => {
-                log::warn!("Unable to get unit offset in debug info: {:?}. This may be an indicator of parsing issues.", unit.header.offset());
+                tracing::warn!("Unable to get unit offset in debug info: {:?}. This may be an indicator of parsing issues.", unit.header.offset());
                 0
             }
         };
 
         let Ok(Some(low_pc)) = dwarf.attr_address(unit, low_pc_value.clone()) else {
-            error!(
+            tracing::error!(
                 "Failed to read lexical block low_pc for entry {:#x}, please report this bug.",
                 unit_base + entry.offset().0
             );
@@ -217,7 +217,7 @@ pub(crate) fn parse_lexical_block<R: ReaderType>(
         };
 
         let Ok(Some(high_pc_value)) = entry.attr_value(constants::DW_AT_high_pc) else {
-            error!("Failed to read lexical block high_pc attribute for entry {:#x}, please report this bug.", unit_base + entry.offset().0);
+            tracing::error!("Failed to read lexical block high_pc attribute for entry {:#x}, please report this bug.", unit_base + entry.offset().0);
             return None;
         };
 
@@ -226,7 +226,7 @@ pub(crate) fn parse_lexical_block<R: ReaderType>(
             .and_then(|x| Some(low_pc + x))
             .or_else(|| dwarf.attr_address(unit, high_pc_value).unwrap_or(None))
         else {
-            error!(
+            tracing::error!(
                 "Failed to read lexical block high_pc for entry {:#x}, please report this bug.",
                 unit_base + entry.offset().0
             );
@@ -244,9 +244,10 @@ pub(crate) fn parse_lexical_block<R: ReaderType>(
             // Ranges where start == end may be ignored (DWARFv5 spec, 2.17.3 line 17)
             return None;
         } else {
-            error!(
+            tracing::error!(
                 "Invalid lexical block range: {:#x} -> {:#x}",
-                low_pc, high_pc
+                low_pc,
+                high_pc
             );
         }
     } else {

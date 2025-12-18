@@ -9,11 +9,11 @@ use std::hash::Hash;
 pub use binaryninjacore_sys::BNFlagRole as FlagRole;
 pub use binaryninjacore_sys::BNLowLevelILFlagCondition as FlagCondition;
 
-crate::new_id_type!(FlagId, u32);
+new_id_type!(FlagId, u32);
 // TODO: Make this NonZero<u32>?
-crate::new_id_type!(FlagWriteId, u32);
-crate::new_id_type!(FlagClassId, u32);
-crate::new_id_type!(FlagGroupId, u32);
+new_id_type!(FlagWriteId, u32);
+new_id_type!(FlagClassId, u32);
+new_id_type!(FlagGroupId, u32);
 
 pub trait Flag: Debug + Sized + Clone + Copy + Hash + Eq {
     type FlagClass: FlagClass;

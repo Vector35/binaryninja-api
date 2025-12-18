@@ -16,15 +16,7 @@ use crate::binary_view::BinaryView;
 use crate::database::Database;
 use crate::rc::*;
 use crate::string::*;
-use binaryninjacore_sys::{
-    BNBeginUndoActions, BNCloseFile, BNCommitUndoActions, BNCreateDatabase, BNCreateFileMetadata,
-    BNFileMetadata, BNFileMetadataGetSessionId, BNForgetUndoActions, BNFreeFileMetadata,
-    BNGetCurrentOffset, BNGetCurrentView, BNGetExistingViews, BNGetFileMetadataDatabase,
-    BNGetFileViewOfType, BNGetFilename, BNGetProjectFile, BNIsAnalysisChanged,
-    BNIsBackedByDatabase, BNIsFileModified, BNMarkFileModified, BNMarkFileSaved, BNNavigate,
-    BNNewFileReference, BNOpenDatabaseForConfiguration, BNOpenExistingDatabase, BNRedo,
-    BNRevertUndoActions, BNSaveAutoSnapshot, BNSetFilename, BNUndo,
-};
+use binaryninjacore_sys::*;
 use binaryninjacore_sys::{BNCreateDatabaseWithProgress, BNOpenExistingDatabaseWithProgress};
 use std::ffi::c_void;
 use std::fmt::{Debug, Display, Formatter};
@@ -33,6 +25,8 @@ use std::path::Path;
 use crate::progress::ProgressCallback;
 use crate::project::file::ProjectFile;
 use std::ptr::{self, NonNull};
+
+new_id_type!(SessionId, usize);
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct FileMetadata {
@@ -64,8 +58,9 @@ impl FileMetadata {
         }
     }
 
-    pub fn session_id(&self) -> usize {
-        unsafe { BNFileMetadataGetSessionId(self.handle) }
+    pub fn session_id(&self) -> SessionId {
+        let raw = unsafe { BNFileMetadataGetSessionId(self.handle) };
+        SessionId(raw)
     }
 
     pub fn filename(&self) -> String {

@@ -12,15 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::type_parser::ParsedMember;
 use anyhow::{anyhow, Result};
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE};
+use binaryninja::tracing::{debug, warn};
 use binaryninja::types::{MemberAccess, MemberScope, StructureBuilder, StructureType, Type};
-use log::{debug, warn};
 use std::cmp::Ordering;
 use std::env;
 use std::fmt::{Debug, Display, Formatter};
-
-use crate::type_parser::ParsedMember;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct MemberSize {

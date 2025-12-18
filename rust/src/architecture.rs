@@ -68,32 +68,6 @@ pub use instruction::*;
 pub use intrinsic::*;
 pub use register::*;
 
-#[macro_export]
-macro_rules! new_id_type {
-    ($name:ident, $inner_type:ty) => {
-        #[derive(std::fmt::Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-        pub struct $name(pub $inner_type);
-
-        impl From<$inner_type> for $name {
-            fn from(value: $inner_type) -> Self {
-                Self(value)
-            }
-        }
-
-        impl From<$name> for $inner_type {
-            fn from(value: $name) -> Self {
-                value.0
-            }
-        }
-
-        impl std::fmt::Display for $name {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(f, "{}", self.0)
-            }
-        }
-    };
-}
-
 /// The [`Architecture`] trait is the backbone of Binary Ninja's analysis capabilities. It tells the
 /// core how to interpret the machine code into LLIL, a generic intermediate representation for
 /// program analysis.
@@ -1852,7 +1826,7 @@ where
                     return expr.index.0;
                 }
             } else {
-                log::warn!(
+                tracing::warn!(
                     "unable to unpack flag write op: {:?} with {} operands",
                     op,
                     operands.len()

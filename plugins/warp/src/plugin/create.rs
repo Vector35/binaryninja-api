@@ -10,6 +10,7 @@ use binaryninja::command::Command;
 use binaryninja::interaction::form::{Form, FormInputField};
 use binaryninja::interaction::{MessageBoxButtonResult, MessageBoxButtonSet, MessageBoxIcon};
 use binaryninja::rc::Ref;
+use binaryninja::tracing;
 use std::path::PathBuf;
 use std::thread;
 use warp::chunk::Chunk;
@@ -131,7 +132,7 @@ impl CreateFromCurrentView {
                     existing_chunks.extend(existing_file.chunks);
                 }
                 MessageBoxButtonResult::CancelButton => {
-                    log::info!(
+                    tracing::info!(
                         "User cancelled signature file creation, no operations were performed."
                     );
                     return None;
@@ -168,7 +169,7 @@ impl CreateFromCurrentView {
                 MessageBoxButtonSet::OKButtonSet,
                 MessageBoxIcon::ErrorIcon,
             );
-            log::error!("Failed to create signature file: {}", err);
+            tracing::error!("Failed to create signature file: {}", err);
             return None;
         }
 
@@ -184,7 +185,9 @@ impl CreateFromCurrentView {
 
             // After merging, we should have at least one chunk. If not, merging actually removed data.
             if file.chunks.len() < 1 {
-                log::error!("Failed to merge chunks! Please report this, it should not happen.");
+                tracing::error!(
+                    "Failed to merge chunks! Please report this, it should not happen."
+                );
                 return None;
             }
         }
@@ -192,9 +195,9 @@ impl CreateFromCurrentView {
         let file_bytes = file.to_bytes();
         let file_size = file_bytes.len();
         if std::fs::write(&file_path, file_bytes).is_err() {
-            log::error!("Failed to write data to signature file!");
+            tracing::error!("Failed to write data to signature file!");
         }
-        log::info!("Saved signature file to: '{}'", file_path.display());
+        tracing::info!("Saved signature file to: '{}'", file_path.display());
         background_task.finish();
 
         // Show a report of the generate signatures, if desired.
@@ -210,7 +213,7 @@ impl CreateFromCurrentView {
 
             // The ReportWidget uses a QTextBrowser, which cannot render large files very well.
             if file_size > 10000000 {
-                log::warn!("WARP report file is too large to show in the UI. Please see the report file on disk.");
+                tracing::warn!("WARP report file is too large to show in the UI. Please see the report file on disk.");
             } else {
                 match report_kind {
                     ReportKindField::None => {}

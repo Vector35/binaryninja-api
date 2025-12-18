@@ -21,15 +21,14 @@ use std::sync::mpsc;
 use std::{env, fs};
 
 use anyhow::{anyhow, Result};
-use log::{debug, error, info};
 use pdb::PDB;
 
 use binaryninja::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
 use binaryninja::debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser};
 use binaryninja::download::{DownloadInstanceInputOutputCallbacks, DownloadProvider};
 use binaryninja::interaction::{MessageBoxButtonResult, MessageBoxButtonSet};
-use binaryninja::logger::Logger;
 use binaryninja::settings::{QueryOptions, Settings};
+use binaryninja::tracing::{debug, error, info};
 use binaryninja::{interaction, user_directory};
 use parser::PDBParserInstance;
 
@@ -436,7 +435,9 @@ impl PDBParser {
                                 Ok(_) => {
                                     info!("Downloaded to: {}", cab_path.to_string_lossy());
                                 }
-                                Err(e) => error!("Could not write PDB to cache: {}", e),
+                                Err(e) => {
+                                    error!("Could not write PDB to cache: {}", e)
+                                }
                             }
                         }
 
@@ -471,7 +472,9 @@ impl PDBParser {
                                     Ok(_) => {
                                         info!("Downloaded to: {}", cab_path.to_string_lossy());
                                     }
-                                    Err(e) => error!("Could not write PDB to cache: {}", e),
+                                    Err(e) => {
+                                        error!("Could not write PDB to cache: {}", e)
+                                    }
                                 }
                             }
                         }
@@ -588,7 +591,9 @@ impl CustomDebugInfoParser for PDBParser {
                                 }
                             }
                             Ok(None) => {}
-                            e => error!("Error searching symbol store {}: {:?}", store, e),
+                            e => {
+                                error!("Error searching symbol store {}: {:?}", store, e)
+                            }
                         }
                     }
                 }
@@ -649,7 +654,9 @@ impl CustomDebugInfoParser for PDBParser {
                                     Err(e) => debug!("Skipping, {}", e.to_string()),
                                 },
                                 Err(e) if e.to_string() == "Cancelled" => return false,
-                                Err(e) => debug!("Could not read pdb: {}", e.to_string()),
+                                Err(e) => {
+                                    debug!("Could not read pdb: {}", e.to_string())
+                                }
                             }
                         }
                     }
@@ -690,7 +697,9 @@ impl CustomDebugInfoParser for PDBParser {
                         }
                     }
                     Ok(None) => {}
-                    e => error!("Error searching remote symbol server {}: {:?}", server, e),
+                    e => {
+                        error!("Error searching remote symbol server {}: {:?}", server, e)
+                    }
                 }
             }
         }
@@ -718,7 +727,7 @@ pub extern "C" fn PDBPluginInit() -> bool {
 }
 
 fn init_plugin() -> bool {
-    Logger::new("PDB").init();
+    binaryninja::tracing_init!("PDB Import");
     DebugInfoParser::register("PDB", PDBParser {});
 
     let settings = Settings::new();

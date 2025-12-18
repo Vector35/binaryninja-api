@@ -6,6 +6,7 @@ use binaryninja::calling_convention::CoreCallingConvention as BNCallingConventio
 use binaryninja::confidence::Conf as BNConf;
 use binaryninja::confidence::MAX_CONFIDENCE;
 use binaryninja::rc::Ref as BNRef;
+use binaryninja::tracing;
 use binaryninja::types::BaseStructure as BNBaseStructure;
 use binaryninja::types::EnumerationBuilder as BNEnumerationBuilder;
 use binaryninja::types::FunctionParameter as BNFunctionParameter;
@@ -361,7 +362,7 @@ pub fn to_bn_type<A: BNArchitecture + Copy>(arch: Option<A>, ty: &Type) -> BNRef
                             ))
                         }
                         _ => {
-                            log::error!(
+                            tracing::error!(
                                 "Adding base {:?} with invalid ty: {:?}",
                                 ty.name,
                                 member.ty
@@ -470,7 +471,7 @@ pub fn to_bn_type<A: BNArchitecture + Copy>(arch: Option<A>, ty: &Type) -> BNRef
                         ntr_name,
                     ),
                     None => {
-                        log::error!("Referrer with no reference! {:?}", c);
+                        tracing::error!("Referrer with no reference! {:?}", c);
                         NamedTypeReference::new(
                             NamedTypeReferenceClass::UnknownNamedTypeClass,
                             "AHHHHHH",

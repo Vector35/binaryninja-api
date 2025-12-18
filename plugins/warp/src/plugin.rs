@@ -12,10 +12,8 @@ use binaryninja::background_task::BackgroundTask;
 use binaryninja::command::{
     register_command, register_command_for_function, register_command_for_project,
 };
-use binaryninja::is_ui_enabled;
-use binaryninja::logger::Logger;
 use binaryninja::settings::{QueryOptions, Settings};
-use log::LevelFilter;
+use binaryninja::{is_ui_enabled, tracing};
 
 mod commit;
 mod create;
@@ -42,16 +40,16 @@ fn load_bundled_signatures() {
         let mut core_disk_container = DiskContainer::new_from_dir(core_signature_dir());
         core_disk_container.name = "Bundled".to_string();
         core_disk_container.writable = false;
-        log::debug!("{:#?}", core_disk_container);
+        tracing::debug!("{:#?}", core_disk_container);
         add_cached_container(core_disk_container);
     }
     if plugin_settings.load_user_files {
         let mut user_disk_container = DiskContainer::new_from_dir(user_signature_dir());
         user_disk_container.name = "User".to_string();
-        log::debug!("{:#?}", user_disk_container);
+        tracing::debug!("{:#?}", user_disk_container);
         add_cached_container(user_disk_container);
     }
-    log::info!("Loading files took {:?}", start.elapsed());
+    tracing::info!("Loading files took {:?}", start.elapsed());
     background_task.finish();
 }
 
@@ -62,7 +60,7 @@ fn load_network_container() {
         let network_client = NetworkClient::new(url.clone(), api_key.clone());
         // Before constructing the container, let's make sure that the server is OK.
         if let Err(e) = network_client.status() {
-            log::warn!("Server '{}' failed to connect: {}", url, e);
+            tracing::warn!("Server '{}' failed to connect: {}", url, e);
             return;
         }
 
@@ -70,7 +68,7 @@ fn load_network_container() {
         let mut writable_sources = Vec::new();
         match network_client.current_user() {
             Ok((id, username)) => {
-                log::info!(
+                tracing::info!(
                     "Server '{}' connected, logged in as user '{}'",
                     url,
                     username
@@ -80,19 +78,19 @@ fn load_network_container() {
                         writable_sources = sources;
                     }
                     Err(e) => {
-                        log::error!("Server '{}' failed to get sources for user: {}", url, e);
+                        tracing::error!("Server '{}' failed to get sources for user: {}", url, e);
                     }
                 }
             }
             Err(e) if api_key.is_some() => {
-                log::error!(
+                tracing::error!(
                     "Server '{}' failed to authenticate with provided API key: {}",
                     url,
                     e
                 );
             }
             Err(_) => {
-                log::info!("Server '{}' connected, logged in as guest", url);
+                tracing::info!("Server '{}' connected, logged in as guest", url);
             }
         }
 
@@ -100,7 +98,7 @@ fn load_network_container() {
         let main_cache_path = NetworkContainer::root_cache_location().join("main");
         let network_container =
             NetworkContainer::new(network_client, main_cache_path, &writable_sources);
-        log::debug!("{:#?}", network_container);
+        tracing::debug!("{:#?}", network_container);
         add_cached_container(network_container);
     };
 
@@ -114,17 +112,17 @@ fn load_network_container() {
             add_network_container(second_server_url, plugin_settings.second_server_api_key);
         }
     }
-    log::debug!("Initializing warp server took {:?}", start.elapsed());
+    tracing::debug!("Initializing warp server took {:?}", start.elapsed());
     background_task.finish();
 }
 
 fn plugin_init() -> bool {
-    Logger::new("WARP").with_level(LevelFilter::Debug).init();
+    binaryninja::tracing_init!("WARP");
 
     // Create the user signature directory if it does not exist, otherwise we will not be able to write to it.
     if !user_signature_dir().exists() {
         if let Err(e) = std::fs::create_dir_all(&user_signature_dir()) {
-            log::error!("Failed to create user signature directory: {}", e);
+            tracing::error!("Failed to create user signature directory: {}", e);
         }
     }
 
@@ -141,7 +139,7 @@ fn plugin_init() -> bool {
     HighlightRenderLayer::register();
 
     if workflow::insert_workflow().is_err() {
-        log::error!("Failed to register WARP workflow");
+        tracing::error!("Failed to register WARP workflow");
         return false;
     }
 

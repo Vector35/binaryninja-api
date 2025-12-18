@@ -11,7 +11,7 @@ use std::borrow::Cow;
 use std::ffi::CStr;
 use std::fmt::{Debug, Formatter};
 
-crate::new_id_type!(IntrinsicId, u32);
+new_id_type!(IntrinsicId, u32);
 
 pub trait Intrinsic: Debug + Sized + Clone + Copy {
     fn name(&self) -> Cow<'_, str>;

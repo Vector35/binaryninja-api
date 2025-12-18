@@ -18,6 +18,7 @@ use crate::{helpers::*, ReaderType};
 
 use binaryninja::{
     rc::*,
+    tracing,
     types::{EnumerationBuilder, FunctionParameter, ReferenceType, Type, TypeBuilder},
 };
 
@@ -109,7 +110,7 @@ pub(crate) fn handle_enum<R: ReaderType>(
     let mut tree = match unit.entries_tree(Some(entry.offset())) {
         Ok(x) => x,
         Err(e) => {
-            log::error!("Failed to get enum entry tree: {}", e);
+            tracing::error!("Failed to get enum entry tree: {}", e);
             return None;
         }
     };
@@ -117,7 +118,7 @@ pub(crate) fn handle_enum<R: ReaderType>(
     let tree_root = match tree.root() {
         Ok(x) => x,
         Err(e) => {
-            log::error!("Failed to get enum entry tree root: {}", e);
+            tracing::error!("Failed to get enum entry tree root: {}", e);
             return None;
         }
     };
@@ -132,15 +133,15 @@ pub(crate) fn handle_enum<R: ReaderType>(
                         enumeration_builder.insert(&name, value);
                     } else {
                         // Somehow the child entry is not a const value.
-                        log::error!("Unhandled enum member value type for `{}`", name);
+                        tracing::error!("Unhandled enum member value type for `{}`", name);
                     }
                 }
                 Ok(None) => {
                     // Somehow the child entry does not have a const value.
-                    log::error!("Enum member `{}` has no constant value attribute", name);
+                    tracing::error!("Enum member `{}` has no constant value attribute", name);
                 }
                 Err(e) => {
-                    log::error!("Error parsing next attribute entry for `{}`: {}", name, e);
+                    tracing::error!("Error parsing next attribute entry for `{}`: {}", name, e);
                     return None;
                 }
             }
@@ -208,7 +209,7 @@ pub(crate) fn handle_pointer<R: ReaderType>(
         Some(entry_type_offset) => {
             let debug_target_type =
                 debug_info_builder.get_type(entry_type_offset).or_else(|| {
-                    log::error!(
+                    tracing::error!(
                         "Failed to get pointer target type at entry offset {}",
                         entry_type_offset
                     );
@@ -255,7 +256,7 @@ pub(crate) fn handle_array<R: ReaderType>(
     let parent_type = debug_info_builder
         .get_type(entry_type_offset)
         .or_else(|| {
-            log::error!(
+            tracing::error!(
                 "Failed to get array member type at entry offset {}",
                 entry_type_offset
             );
@@ -266,14 +267,14 @@ pub(crate) fn handle_array<R: ReaderType>(
     let mut tree = match unit.entries_tree(Some(entry.offset())) {
         Ok(x) => x,
         Err(e) => {
-            log::error!("Failed to get array entry tree: {}", e);
+            tracing::error!("Failed to get array entry tree: {}", e);
             return None;
         }
     };
     let tree_root = match tree.root() {
         Ok(x) => x,
         Err(e) => {
-            log::error!("Failed to get array entry tree root: {}", e);
+            tracing::error!("Failed to get array entry tree root: {}", e);
             return None;
         }
     };
@@ -351,7 +352,7 @@ pub(crate) fn handle_function<R: ReaderType>(
     let mut tree = match unit.entries_tree(Some(entry.offset())) {
         Ok(x) => x,
         Err(e) => {
-            log::error!("Failed to get function entry tree: {}", e);
+            tracing::error!("Failed to get function entry tree: {}", e);
             return None;
         }
     };
@@ -359,7 +360,7 @@ pub(crate) fn handle_function<R: ReaderType>(
     let tree_root = match tree.root() {
         Ok(x) => x,
         Err(e) => {
-            log::error!("Failed to get function entry tree root: {}", e);
+            tracing::error!("Failed to get function entry tree root: {}", e);
             return None;
         }
     };
@@ -374,7 +375,7 @@ pub(crate) fn handle_function<R: ReaderType>(
                 debug_info_builder_context,
                 debug_info_builder,
             ) else {
-                log::error!(
+                tracing::error!(
                     "Failed to get function parameter child type in unit {:?} at offset {:x}",
                     unit.header.offset(),
                     child.entry().offset().0,
@@ -384,7 +385,7 @@ pub(crate) fn handle_function<R: ReaderType>(
             let name = debug_info_builder_context.get_name(dwarf, unit, child.entry());
 
             let child_debug_type = debug_info_builder.get_type(child_uid).or_else(|| {
-                log::error!(
+                tracing::error!(
                     "Failed to get function parameter type with uid {}",
                     child_uid
                 );
@@ -439,7 +440,7 @@ pub(crate) fn handle_const(
         Some(entry_type_offset) => debug_info_builder
             .get_type(entry_type_offset)
             .or_else(|| {
-                log::error!(
+                tracing::error!(
                     "Failed to get const type with entry offset {}",
                     entry_type_offset
                 );
@@ -469,7 +470,7 @@ pub(crate) fn handle_volatile(
         Some(entry_type_offset) => debug_info_builder
             .get_type(entry_type_offset)
             .or_else(|| {
-                log::error!(
+                tracing::error!(
                     "Failed to get volatile type with entry offset {}",
                     entry_type_offset
                 );

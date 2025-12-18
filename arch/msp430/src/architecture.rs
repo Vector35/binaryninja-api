@@ -8,7 +8,7 @@ use binaryninja::{
         UnusedIntrinsic, UnusedRegisterStack,
     },
     disassembly::{InstructionTextToken, InstructionTextTokenKind},
-    Endianness,
+    tracing, Endianness,
 };
 
 use msp430_asm::{
@@ -21,7 +21,6 @@ use binaryninja::architecture::{
 };
 use binaryninja::low_level_il::expression::ValueExpr;
 use binaryninja::low_level_il::{LowLevelILMutableExpression, LowLevelILMutableFunction};
-use log::error;
 
 const MIN_MNEMONIC: usize = 9;
 
@@ -321,7 +320,7 @@ impl Architecture for Msp430 {
         match id.try_into() {
             Ok(flag) => Some(flag),
             Err(_) => {
-                error!("invalid flag id {}", id);
+                tracing::error!("invalid flag id {}", id);
                 None
             }
         }
@@ -331,7 +330,7 @@ impl Architecture for Msp430 {
         match id.try_into() {
             Ok(flag_write) => Some(flag_write),
             Err(_) => {
-                error!("invalid flag write id {}", id);
+                tracing::error!("invalid flag write id {}", id);
                 None
             }
         }

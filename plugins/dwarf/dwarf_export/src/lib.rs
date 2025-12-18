@@ -1,13 +1,13 @@
 mod edit_distance;
 
 use binaryninja::interaction::form::{Form, FormInputField};
-use binaryninja::logger::Logger;
 use binaryninja::{
     binary_view::{BinaryView, BinaryViewBase, BinaryViewExt},
     command::{register_command, Command},
     confidence::Conf,
     rc::Ref,
     symbol::SymbolType,
+    tracing,
     types::{MemberAccess, StructureType, Type, TypeClass},
 };
 use gimli::{
@@ -17,7 +17,6 @@ use gimli::{
         UnitEntryId,
     },
 };
-use log::{error, info, warn, LevelFilter};
 use object::{write, Architecture, BinaryFormat, SectionKind};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -148,7 +147,10 @@ fn export_type(
                             );
                         }
                         None => {
-                            log::warn!("Could not export base struct `{}`", base_struct.ty.name());
+                            tracing::warn!(
+                                "Could not export base struct `{}`",
+                                base_struct.ty.name()
+                            );
                         }
                     }
                 }
@@ -374,7 +376,7 @@ fn export_type(
                     Some(typedef_die_uid)
                 }
             } else {
-                warn!("Could not get target of typedef `{}`", ntr.name());
+                tracing::warn!("Could not get target of typedef `{}`", ntr.name());
                 None
             }
         }
@@ -703,12 +705,12 @@ fn write_dwarf<T: gimli::Endianity>(
 
     if let Ok(out_data) = out_object.write() {
         if let Err(err) = fs::write(file_path, out_data) {
-            error!("Failed to write DWARF file: {}", err);
+            tracing::error!("Failed to write DWARF file: {}", err);
         } else {
-            info!("Successfully saved as DWARF to `{:?}`", file_path);
+            tracing::info!("Successfully saved as DWARF to `{:?}`", file_path);
         }
     } else {
-        error!("Failed to write DWARF with requested settings");
+        tracing::error!("Failed to write DWARF with requested settings");
     }
 
     Ok(())
@@ -785,7 +787,7 @@ fn export_dwarf(bv: &BinaryView) {
     };
 
     if let Err(e) = write_dwarf(&save_loc_path, arch, endianness, &mut dwarf) {
-        error!("Error writing DWARF: {}", e);
+        tracing::error!("Error writing DWARF: {}", e);
     }
 }
 
@@ -802,9 +804,7 @@ impl Command for MyCommand {
 
 #[no_mangle]
 pub extern "C" fn CorePluginInit() -> bool {
-    Logger::new("DWARF Export")
-        .with_level(LevelFilter::Debug)
-        .init();
+    binaryninja::tracing_init!("DWARF Export");
 
     register_command(
         "Export as DWARF",

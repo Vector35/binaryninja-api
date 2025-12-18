@@ -26,16 +26,16 @@ use binaryninja::project::file::ProjectFile;
 use binaryninja::project::Project;
 use binaryninja::rc::{Guard, Ref};
 
+use crate::cache::cached_type_references;
+use crate::convert::platform_to_target;
+use crate::{build_function, INCLUDE_TAG_ICON, INCLUDE_TAG_NAME};
+use binaryninja::tracing;
 use warp::chunk::{Chunk, ChunkKind, CompressionType};
 use warp::r#type::chunk::TypeChunk;
 use warp::signature::chunk::SignatureChunk;
 use warp::signature::function::Function;
 use warp::target::Target;
 use warp::{WarpFile, WarpFileHeader};
-
-use crate::cache::cached_type_references;
-use crate::convert::platform_to_target;
-use crate::{build_function, INCLUDE_TAG_ICON, INCLUDE_TAG_NAME};
 
 /// Ensure we never exceed these many functions per signature chunk.
 ///
@@ -538,15 +538,15 @@ impl WarpFileProcessor {
                 Ok(result) => Some(Ok(result)),
                 Err(ProcessingError::Cancelled) => Some(Err(ProcessingError::Cancelled)),
                 Err(ProcessingError::NoPathToProjectFile(path)) => {
-                    log::debug!("Skipping non-pulled project file: {:?}", path);
+                    tracing::debug!("Skipping non-pulled project file: {:?}", path);
                     None
                 }
                 Err(ProcessingError::SkippedFile(path)) => {
-                    log::debug!("Skipping project file: {:?}", path);
+                    tracing::debug!("Skipping project file: {:?}", path);
                     None
                 }
                 Err(e) => {
-                    log::error!("Project file processing error: {:?}", e);
+                    tracing::error!("Project file processing error: {:?}", e);
                     None
                 }
             })
@@ -615,14 +615,14 @@ impl WarpFileProcessor {
                     .with_extension("bndb");
                 if file_cache_path.exists() {
                     // TODO: Update analysis and wait option
-                    log::debug!("Analysis database found in cache: {:?}", file_cache_path);
+                    tracing::debug!("Analysis database found in cache: {:?}", file_cache_path);
                     binaryninja::load_with_options(
                         &file_cache_path,
                         self.request_analysis,
                         Some(settings_str),
                     )
                 } else {
-                    log::debug!("No database found in cache: {:?}", file_cache_path);
+                    tracing::debug!("No database found in cache: {:?}", file_cache_path);
                     binaryninja::load_with_options(&path, self.request_analysis, Some(settings_str))
                 }
             }
@@ -645,13 +645,13 @@ impl WarpFileProcessor {
             // TODO: We should also update the cache if analysis has changed!
             if !view.file().is_database_backed() {
                 // Update the cache.
-                log::debug!("Saving analysis database to {:?}", file_cache_path);
+                tracing::debug!("Saving analysis database to {:?}", file_cache_path);
                 if !view.file().create_database(&file_cache_path) {
                     // TODO: We might want to error here...
-                    log::warn!("Failed to save analysis database to {:?}", file_cache_path);
+                    tracing::warn!("Failed to save analysis database to {:?}", file_cache_path);
                 }
             } else {
-                log::debug!(
+                tracing::debug!(
                     "Analysis database unchanged, skipping save to {:?}",
                     file_cache_path
                 );
@@ -699,7 +699,7 @@ impl WarpFileProcessor {
         // Process all the files.
         let unmerged_files: Result<Vec<_>, _> = files
             .into_par_iter()
-            .inspect(|path| log::debug!("Processing file: {:?}", path))
+            .inspect(|path| tracing::debug!("Processing file: {:?}", path))
             .map(|path| {
                 self.check_cancelled()?;
                 self.process(path)
@@ -707,12 +707,12 @@ impl WarpFileProcessor {
             .filter_map(|res| match res {
                 Ok(result) => Some(Ok(result)),
                 Err(ProcessingError::SkippedFile(path)) => {
-                    log::debug!("Skipping directory file: {:?}", path);
+                    tracing::debug!("Skipping directory file: {:?}", path);
                     None
                 }
                 Err(ProcessingError::Cancelled) => Some(Err(ProcessingError::Cancelled)),
                 Err(e) => {
-                    log::error!("Directory file processing error: {:?}", e);
+                    tracing::error!("Directory file processing error: {:?}", e);
                     None
                 }
             })
@@ -752,7 +752,7 @@ impl WarpFileProcessor {
                 std::io::copy(&mut entry, &mut output_file).map_err(ProcessingError::FileRead)?;
                 entry_files.insert(output_path);
             } else {
-                log::debug!("Skipping already inserted entry: {}", normalized_name);
+                tracing::debug!("Skipping already inserted entry: {}", normalized_name);
             }
         }
 
@@ -765,7 +765,7 @@ impl WarpFileProcessor {
         // Process all the entries.
         let unmerged_files: Result<Vec<_>, _> = entry_files
             .into_par_iter()
-            .inspect(|path| log::debug!("Processing entry: {:?}", path))
+            .inspect(|path| tracing::debug!("Processing entry: {:?}", path))
             .map(|path| {
                 self.check_cancelled()?;
                 self.process_file(path)
@@ -773,12 +773,12 @@ impl WarpFileProcessor {
             .filter_map(|res| match res {
                 Ok(result) => Some(Ok(result)),
                 Err(ProcessingError::SkippedFile(path)) => {
-                    log::debug!("Skipping archive file: {:?}", path);
+                    tracing::debug!("Skipping archive file: {:?}", path);
                     None
                 }
                 Err(ProcessingError::Cancelled) => Some(Err(ProcessingError::Cancelled)),
                 Err(e) => {
-                    log::error!("Archive file processing error: {:?}", e);
+                    tracing::error!("Archive file processing error: {:?}", e);
                     None
                 }
             })

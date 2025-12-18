@@ -3,6 +3,7 @@ use crate::container::{
     Container, ContainerError, ContainerResult, ContainerSearchQuery, ContainerSearchResponse,
     SourceId, SourcePath, SourceTag,
 };
+use binaryninja::tracing;
 use directories::ProjectDirs;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display, Formatter};
@@ -102,7 +103,7 @@ impl NetworkContainer {
         guids: &[FunctionGUID],
     ) -> HashMap<SourceId, Vec<FunctionGUID>> {
         let Some(target_id) = target.and_then(|t| self.get_target_id(t)) else {
-            log::debug!("Cannot query functions source without a target, skipping...");
+            tracing::debug!("Cannot query functions source without a target, skipping...");
             return HashMap::new();
         };
 
@@ -122,7 +123,7 @@ impl NetworkContainer {
                 {
                     Ok(queried_results) => queried_results,
                     Err(e) => {
-                        log::error!("Failed to query functions source: {}", e);
+                        tracing::error!("Failed to query functions source: {}", e);
                         return result;
                     }
                 };
@@ -170,12 +171,12 @@ impl NetworkContainer {
         {
             Ok(file) => file,
             Err(e) => {
-                log::error!("Failed to query functions: {}", e);
+                tracing::error!("Failed to query functions: {}", e);
                 return;
             }
         };
 
-        log::debug!("Got {} chunks from server", file.chunks.len());
+        tracing::debug!("Got {} chunks from server", file.chunks.len());
         for chunk in &file.chunks {
             match &chunk.kind {
                 ChunkKind::Signature(sc) => {
@@ -183,12 +184,12 @@ impl NetworkContainer {
                     // Probe the source before attempting to access it, as it might not exist locally.
                     self.probe_source(*source);
                     match self.cache.add_functions(target, source, &functions) {
-                        Ok(_) => log::debug!(
+                        Ok(_) => tracing::debug!(
                             "Added {} functions into cached source '{}'",
                             functions.len(),
                             source
                         ),
-                        Err(err) => log::error!(
+                        Err(err) => tracing::error!(
                             "Failed to add {} function into cached source '{}': {}",
                             functions.len(),
                             source,
@@ -227,7 +228,7 @@ impl NetworkContainer {
                     let _ = self.cache.insert_source(source_id, SourcePath(source_path));
                 }
                 Err(e) => {
-                    log::error!("Failed to probe source '{}': {}", source_id, e);
+                    tracing::error!("Failed to probe source '{}': {}", source_id, e);
                 }
             }
         }

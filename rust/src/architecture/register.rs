@@ -6,7 +6,7 @@ use std::ffi::CStr;
 use std::fmt::{Debug, Formatter};
 use std::hash::Hash;
 
-crate::new_id_type!(RegisterId, u32);
+new_id_type!(RegisterId, u32);
 
 impl RegisterId {
     pub fn is_temporary(&self) -> bool {
@@ -14,7 +14,7 @@ impl RegisterId {
     }
 }
 
-crate::new_id_type!(RegisterStackId, u32);
+new_id_type!(RegisterStackId, u32);
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum ImplicitRegisterExtend {

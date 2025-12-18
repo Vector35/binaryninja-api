@@ -1,3 +1,4 @@
+use binaryninja::tracing;
 use binaryninja::workflow::{activity, Activity, AnalysisContext, Workflow};
 
 use crate::{activities, error::WorkflowRegistrationError};
@@ -15,7 +16,7 @@ fn run<E: std::fmt::Debug>(
 ) -> impl Fn(&AnalysisContext) {
     move |ac| {
         if let Err(err) = func(ac) {
-            log::debug!("Error occurred while running activity: {err:#x?}");
+            tracing::debug!("Error occurred while running activity: {err:#x?}");
         }
     }
 }

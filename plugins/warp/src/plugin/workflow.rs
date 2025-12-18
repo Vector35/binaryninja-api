@@ -15,6 +15,7 @@ use binaryninja::command::Command;
 use binaryninja::function::Function as BNFunction;
 use binaryninja::rc::Ref as BNRef;
 use binaryninja::settings::{QueryOptions, Settings};
+use binaryninja::tracing;
 use binaryninja::workflow::{activity, Activity, AnalysisContext, Workflow, WorkflowBuilder};
 use dashmap::DashSet;
 use itertools::Itertools;
@@ -39,7 +40,7 @@ impl Command for RunMatcher {
             // Alert the user if we have no actual regions (+1 comes from the synthetic section).
             let regions = relocatable_regions(&view);
             if regions.len() <= 1 && view.memory_map().is_activated() {
-                log::warn!(
+                tracing::warn!(
                     "No relocatable regions found, for best results please define sections for the binary!"
                 );
             }
@@ -90,13 +91,15 @@ impl FunctionSet {
                     .workflow()
                     .expect("Function has no workflow");
                 if function_workflow.contains(GUID_ACTIVITY_NAME) {
-                    log::error!("No function guids in database, please reanalyze the database.");
+                    tracing::error!(
+                        "No function guids in database, please reanalyze the database."
+                    );
                 } else {
-                    log::error!(
-                    "Activity '{}' is not in workflow '{}', create function guids manually to run matcher...",
-                    GUID_ACTIVITY_NAME,
-                    function_workflow.name()
-                )
+                    tracing::error!(
+                        "Activity '{}' is not in workflow '{}', create function guids manually to run matcher...",
+                        GUID_ACTIVITY_NAME,
+                        function_workflow.name()
+                    )
                 }
             }
             return None;
@@ -169,7 +172,7 @@ pub fn run_matcher(view: &BinaryView) {
             .maximum_possible_functions
             .is_some_and(|max| max < matched_functions.len() as u64)
         {
-            log::warn!(
+            tracing::warn!(
                 "Skipping {}, too many possible functions: {}",
                 guid,
                 matched_functions.len()
@@ -244,10 +247,10 @@ pub fn run_matcher(view: &BinaryView) {
     }
 
     if background_task.is_cancelled() {
-        log::info!("Matcher was cancelled by user, you may run it again by running the 'Run Matcher' command.");
+        tracing::info!("Matcher was cancelled by user, you may run it again by running the 'Run Matcher' command.");
     }
 
-    log::info!(
+    tracing::info!(
         "Function matching took {:.3} seconds and matched {} functions after {} rounds",
         start.elapsed().as_secs_f64(),
         matcher_results.len(),
@@ -290,12 +293,12 @@ pub fn run_fetcher(view: &BinaryView) {
     });
 
     if background_task.is_cancelled() {
-        log::info!(
+        tracing::info!(
             "Fetcher was cancelled by user, you may run it again by running the 'Fetch' command."
         );
     }
 
-    log::info!("Fetching took {:?}", start.elapsed());
+    tracing::info!("Fetching took {:?}", start.elapsed());
     background_task.finish();
 }
 

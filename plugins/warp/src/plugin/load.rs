@@ -10,6 +10,7 @@ use binaryninja::interaction::{
     MessageBoxIcon,
 };
 use binaryninja::rc::Ref;
+use binaryninja::tracing;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
@@ -130,7 +131,7 @@ impl LoadSignatureFile {
         let file = match LoadSignatureFile::read_file(&view, source_file_path.clone()) {
             Ok(file) => file,
             Err(e) => {
-                log::error!("Failed to read signature file: {}", e);
+                tracing::error!("Failed to read signature file: {}", e);
                 return;
             }
         };
@@ -156,7 +157,7 @@ impl LoadSignatureFile {
         }
 
         let container_source = DiskContainerSource::new(source_file_path.clone(), file);
-        log::info!("Loading container source: '{}'", container_source.path);
+        tracing::info!("Loading container source: '{}'", container_source.path);
         let mut map = HashMap::new();
         map.insert(source_file_path.to_source_id(), container_source);
         let container = DiskContainer::new("Loaded signatures".to_string(), map);

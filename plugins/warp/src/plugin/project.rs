@@ -9,6 +9,7 @@ use binaryninja::interaction::{Form, FormInputField};
 use binaryninja::project::folder::ProjectFolder;
 use binaryninja::project::Project;
 use binaryninja::rc::Ref;
+use binaryninja::tracing;
 use binaryninja::worker_thread::{set_worker_thread_count, worker_thread_count};
 use rayon::ThreadPoolBuilder;
 use regex::Regex;
@@ -157,7 +158,7 @@ impl CreateSignatures {
                 .create_file(&warp_file.to_bytes(), folder, name, "")
                 .is_err()
             {
-                log::error!("Failed to create project file!");
+                tracing::error!("Failed to create project file!");
             }
 
             let report = ReportGenerator::new();
@@ -168,7 +169,7 @@ impl CreateSignatures {
                     .create_file(&generated.into_bytes(), folder, &file_name, "Warp file")
                     .is_err()
                 {
-                    log::error!("Failed to create project file!");
+                    tracing::error!("Failed to create project file!");
                 }
             }
         };
@@ -177,12 +178,12 @@ impl CreateSignatures {
         let callback_project = project.clone();
         let save_individual_files_cb = move |path: &Path, file: &WarpFile| {
             if file.chunks.is_empty() {
-                log::debug!("Skipping empty file: {}", path.display());
+                tracing::debug!("Skipping empty file: {}", path.display());
                 return;
             }
             // The path returned will be the one on disk, so we will go and grab the project for it.
             let Some(project_file) = callback_project.file_by_path(path) else {
-                log::error!("Failed to find project file for path: {}", path.display());
+                tracing::error!("Failed to find project file for path: {}", path.display());
                 return;
             };
             let project_file = project_file.to_owned();
@@ -214,8 +215,8 @@ impl CreateSignatures {
                     processor = processor.with_file_filter(f);
                 }
                 Err(err) => {
-                    log::error!("Failed to parse file filter: {}", err);
-                    log::error!(
+                    tracing::error!("Failed to parse file filter: {}", err);
+                    tracing::error!(
                         "Consider using a substring instead of a glob pattern, e.g. *.exe => exe"
                     );
                     return;
@@ -231,7 +232,7 @@ impl CreateSignatures {
             .num_threads(processing_thread_count)
             .build()
         else {
-            log::error!("Failed to create processing thread pool!");
+            tracing::error!("Failed to create processing thread pool!");
             return;
         };
 
@@ -240,7 +241,7 @@ impl CreateSignatures {
         let previous_worker_thread_count = worker_thread_count();
         let upgraded_thread_count = previous_worker_thread_count * 3;
         if upgraded_thread_count > previous_worker_thread_count {
-            log::info!(
+            tracing::info!(
                 "Setting worker thread count to {} for the duration of processing...",
                 upgraded_thread_count
             );
@@ -253,14 +254,14 @@ impl CreateSignatures {
                 save_warp_file(&project, None, "generated.warp", &warp_file);
             }
             Err(e) => {
-                log::error!("Failed to process project: {}", e);
+                tracing::error!("Failed to process project: {}", e);
             }
         });
 
         let processed_file_count = processor
             .state()
             .files_with_state(ProcessingFileState::Processed);
-        log::info!(
+        tracing::info!(
             "Processing {} project files took: {:?}",
             processed_file_count,
             start.elapsed()

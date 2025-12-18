@@ -96,10 +96,7 @@ where
                     // to the core -- we're transferring ownership of the Ref here
                     Ref::into_raw(bv.handle).handle
                 }
-                Err(_) => {
-                    log::error!("CustomBinaryViewType::create_custom_view returned Err");
-                    ptr::null_mut()
-                }
+                Err(_) => ptr::null_mut(),
             }
         })
     }
@@ -124,10 +121,7 @@ where
                     // to the core -- we're transferring ownership of the Ref here
                     Ref::into_raw(bv.handle).handle
                 }
-                Err(_) => {
-                    log::error!("CustomBinaryViewType::parse returned Err");
-                    ptr::null_mut()
-                }
+                Err(_) => ptr::null_mut(),
             }
         })
     }
@@ -173,7 +167,6 @@ where
             // be one since view types live for the life of the process) as
             // MaybeUninit suppress the Drop implementation of it's inner type
             drop(Box::from_raw(ctxt));
-
             panic!("bvt registration failed");
         }
 
@@ -303,10 +296,7 @@ pub trait BinaryViewTypeExt: BinaryViewTypeBase {
         let handle = unsafe { BNCreateBinaryViewOfType(self.as_ref().handle, data.handle) };
 
         if handle.is_null() {
-            log::error!(
-                "failed to create BinaryView of BinaryViewType '{}'",
-                self.name()
-            );
+            // TODO: Proper Result, possibly introduce BNSetError to populate.
             return Err(());
         }
 
@@ -317,10 +307,7 @@ pub trait BinaryViewTypeExt: BinaryViewTypeBase {
         let handle = unsafe { BNParseBinaryViewOfType(self.as_ref().handle, data.handle) };
 
         if handle.is_null() {
-            log::error!(
-                "failed to parse BinaryView of BinaryViewType '{}'",
-                self.name()
-            );
+            // TODO: Proper Result, possibly introduce BNSetError to populate.
             return Err(());
         }
 
@@ -503,7 +490,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
 
         if let Some(bv) = file.view_of_type(&view_name) {
             // while it seems to work most of the time, you can get really unlucky
-            // if the a free of the existing view of the same type kicks off while
+            // if a free of the existing view of the same type kicks off while
             // BNCreateBinaryViewOfType is still running. the freeObject callback
             // will run for the new view before we've even finished initializing,
             // and that's all she wrote.
@@ -511,7 +498,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
             // even if we deal with it gracefully in cb_free_object,
             // BNCreateBinaryViewOfType is still going to crash, so we're just
             // going to try and stop this from happening in the first place.
-            log::error!(
+            tracing::error!(
                 "attempt to create duplicate view of type '{}' (existing: {:?})",
                 view_name,
                 bv.handle
@@ -572,12 +559,14 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
                             true
                         }
                         Err(_) => {
-                            log::error!("CustomBinaryView::init failed; custom view returned Err");
+                            tracing::error!(
+                                "CustomBinaryView::init failed; custom view returned Err"
+                            );
                             false
                         }
                     },
                     Err(_) => {
-                        log::error!("CustomBinaryView::new failed; custom view returned Err");
+                        tracing::error!("CustomBinaryView::new failed; custom view returned Err");
                         false
                     }
                 }
@@ -607,7 +596,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
                     //
                     // if we're here, it's too late to do anything about it, though we can at least not
                     // run the destructor on the custom view since that memory is uninitialized.
-                    log::error!(
+                    tracing::error!(
                       "BinaryViewBase::freeObject called on partially initialized object! crash imminent!"
                     );
                 } else if matches!(
@@ -626,7 +615,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
                     //
                     // we can't do anything to prevent this, but we can at least have the crash
                     // not be our fault.
-                    log::error!("BinaryViewBase::freeObject called on leaked/never initialized custom view!");
+                    tracing::error!("BinaryViewBase::freeObject called on leaked/never initialized custom view!");
                 }
             })
         }
@@ -884,20 +873,11 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
                 parent.handle,
                 &mut bn_obj,
             );
-
-            if res.is_null() {
-                // TODO not sure when this can even happen, let alone what we're supposed to do about
-                // it. cb_init isn't normally called until later, and cb_free_object definitely won't
-                // have been called, so we'd at least be on the hook for freeing that stuff...
-                // probably.
-                //
-                // no idea how to force this to fail so I can test this, so just going to do the
-                // reasonable thing and panic.
-                panic!("failed to create custom binary view!");
-            }
-
+            assert!(
+                !res.is_null(),
+                "BNCreateCustomBinaryView cannot return null"
+            );
             (*ctxt).raw_handle = res;
-
             Ok(CustomView {
                 handle: BinaryView::ref_from_raw(res),
                 _builder: PhantomData,

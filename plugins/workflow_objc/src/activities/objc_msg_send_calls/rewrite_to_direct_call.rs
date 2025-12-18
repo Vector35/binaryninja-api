@@ -4,6 +4,7 @@ use binaryninja::{
         function::{LowLevelILFunction, Mutable, NonSSA, SSA},
         instruction::{InstructionHandler as _, LowLevelILInstruction, LowLevelILInstructionKind},
     },
+    tracing,
 };
 
 use super::MessageSendType;
@@ -48,7 +49,7 @@ pub fn process_call(
             Ok(())
         }
         _ => {
-            log::error!(
+            tracing::error!(
                 "Unexpected LLIL operation for objc_msgSend call at {:#x}",
                 insn.address()
             );

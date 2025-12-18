@@ -18,12 +18,12 @@ use std::{str::FromStr, sync::mpsc};
 
 use crate::{DebugInfoBuilderContext, ReaderType};
 use binaryninja::binary_view::BinaryViewBase;
-use binaryninja::Endianness;
 use binaryninja::{
     binary_view::{BinaryView, BinaryViewExt},
     download::{DownloadInstanceInputOutputCallbacks, DownloadProvider},
     settings::Settings,
 };
+use binaryninja::{tracing, Endianness};
 use gimli::Dwarf;
 use gimli::{
     constants, Attribute, AttributeValue,
@@ -32,7 +32,6 @@ use gimli::{
 };
 
 use binaryninja::settings::QueryOptions;
-use log::warn;
 
 pub(crate) fn get_uid<R: ReaderType>(
     dwarf: &Dwarf<R>,
@@ -111,14 +110,16 @@ pub(crate) fn get_attr_die<'a, R: ReaderType>(
                     let sup: &Dwarf<R> = match dwarf.sup() {
                         Some(x) => x,
                         None => {
-                            log::error!("Trying to get offset in supplmentary dwarf info, but none is present");
+                            tracing::error!("Trying to get offset in supplmentary dwarf info, but none is present");
                             return None;
                         }
                     };
                     return Some(DieReference::UnitAndOffset((sup, source_unit, new_offset)));
                 }
             }
-            warn!("Failed to fetch DIE. Supplementary debug information may be incomplete.");
+            tracing::warn!(
+                "Failed to fetch DIE. Supplementary debug information may be incomplete."
+            );
             None
         }
         _ => None,
@@ -143,7 +144,7 @@ pub(crate) fn resolve_specification<'a, R: ReaderType>(
                 if let Ok(entry) = entry_unit.entry(entry_offset) {
                     resolve_specification(dwarf, entry_unit, &entry, debug_info_builder_context)
                 } else {
-                    warn!("Failed to fetch DIE for attr DW_AT_specification. Debug information may be incomplete.");
+                    tracing::warn!("Failed to fetch DIE for attr DW_AT_specification. Debug information may be incomplete.");
                     DieReference::Err
                 }
             }
@@ -161,12 +162,12 @@ pub(crate) fn resolve_specification<'a, R: ReaderType>(
                 if entry_offset == entry.offset()
                     && unit.header.offset() == entry_unit.header.offset()
                 {
-                    warn!("DWARF information is invalid (infinite abstract origin reference cycle). Debug information may be incomplete.");
+                    tracing::warn!("DWARF information is invalid (infinite abstract origin reference cycle). Debug information may be incomplete.");
                     DieReference::Err
                 } else if let Ok(new_entry) = entry_unit.entry(entry_offset) {
                     resolve_specification(dwarf, entry_unit, &new_entry, debug_info_builder_context)
                 } else {
-                    warn!("Failed to fetch DIE for attr DW_AT_abstract_origin. Debug information may be incomplete.");
+                    tracing::warn!("Failed to fetch DIE for attr DW_AT_abstract_origin. Debug information may be incomplete.");
                     DieReference::Err
                 }
             }
@@ -189,7 +190,7 @@ pub(crate) fn get_name<R: ReaderType>(
             let resolved_entry = match entry_unit.entry(entry_offset) {
                 Ok(x) => x,
                 Err(_) => {
-                    log::error!(
+                    tracing::error!(
                         "Failed to get entry in unit at {:?} at offset {:#x} (get_name)",
                         entry_unit.header.offset(),
                         entry_offset.0
@@ -236,7 +237,7 @@ pub(crate) fn get_raw_name<R: ReaderType>(
             let resolved_entry = match entry_unit.entry(entry_offset) {
                 Ok(x) => x,
                 Err(_) => {
-                    log::error!(
+                    tracing::error!(
                         "Failed to get entry in unit at {:?} at offset {:#x} (get_raw_name)",
                         entry_unit.header.offset(),
                         entry_offset.0

@@ -11,7 +11,7 @@ use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::function::Function as BNFunction;
 use binaryninja::rc::Guard;
 use binaryninja::rc::Ref as BNRef;
-use binaryninja::ObjectDestructor;
+use binaryninja::{tracing, ObjectDestructor};
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 pub fn register_cache_destructor() {
@@ -31,7 +31,7 @@ impl From<&BinaryView> for ViewID {
     fn from(value: &BinaryView) -> Self {
         let mut hasher = DefaultHasher::new();
         hasher.write_u64(value.original_image_base());
-        hasher.write_usize(value.file().session_id());
+        hasher.write_usize(value.file().session_id().0);
         Self(hasher.finish())
     }
 }
@@ -79,6 +79,6 @@ pub struct CacheDestructor;
 impl ObjectDestructor for CacheDestructor {
     fn destruct_view(&self, view: &BinaryView) {
         clear_type_ref_cache(view);
-        log::debug!("Removed WARP caches for {:?}", view.file().filename());
+        tracing::debug!("Removed WARP caches for {:?}", view.file().filename());
     }
 }

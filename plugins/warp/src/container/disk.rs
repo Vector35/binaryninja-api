@@ -1,6 +1,7 @@
 use crate::container::{
     Container, ContainerError, ContainerResult, SourceId, SourcePath, SourceTag,
 };
+use binaryninja::tracing;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
@@ -42,7 +43,7 @@ impl DiskContainer {
             match (DiskContainerSource::new_from_path(path.clone()), path_ext) {
                 (Ok(source), _) => Some((source_id, source)),
                 (Err(err), Some("warp")) => {
-                    log::error!("Failed to load source '{}' from disk: {}", path, err);
+                    tracing::error!("Failed to load source '{}' from disk: {}", path, err);
                     None
                 }
                 // We don't care to show errors loading for non-warp files.

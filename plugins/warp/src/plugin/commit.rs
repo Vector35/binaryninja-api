@@ -6,6 +6,7 @@ use crate::plugin::create::OpenFileField;
 use binaryninja::binary_view::BinaryView;
 use binaryninja::command::Command;
 use binaryninja::interaction::{Form, FormInputField};
+use binaryninja::tracing;
 use warp::chunk::ChunkKind;
 use warp::WarpFile;
 
@@ -84,11 +85,11 @@ impl CommitFile {
 
         let open_file_path = OpenFileField::from_form(&form)?;
         let source_id = source_field.from_form(&form)?;
-        log::info!("Committing file to source: {}", source_id);
+        tracing::info!("Committing file to source: {}", source_id);
 
         let bytes = std::fs::read(open_file_path).ok()?;
         let Some(warp_file) = WarpFile::from_bytes(&bytes) else {
-            log::error!("Failed to parse warp file!");
+            tracing::error!("Failed to parse warp file!");
             return None;
         };
 
@@ -103,7 +104,7 @@ impl CommitFile {
                     match &chunk.kind {
                         ChunkKind::Signature(sc) => {
                             let functions: Vec<_> = sc.functions().collect();
-                            log::info!(
+                            tracing::info!(
                                 "Adding {} functions to source: {}",
                                 functions.len(),
                                 source_id
@@ -113,22 +114,22 @@ impl CommitFile {
                                 &source_id,
                                 &functions,
                             ) {
-                                log::error!("Failed to add functions to source: {}", e);
+                                tracing::error!("Failed to add functions to source: {}", e);
                             }
                         }
                         ChunkKind::Type(sc) => {
                             let types: Vec<_> = sc.types().collect();
-                            log::info!("Adding {} types to source: {}", types.len(), source_id);
+                            tracing::info!("Adding {} types to source: {}", types.len(), source_id);
                             if let Err(e) = container.add_computed_types(&source_id, &types) {
-                                log::error!("Failed to add types to source: {}", e);
+                                tracing::error!("Failed to add types to source: {}", e);
                             }
                         }
                     }
                 }
                 if let Err(e) = container.commit_source(&source_id) {
-                    log::error!("Failed to commit source: {}", e);
+                    tracing::error!("Failed to commit source: {}", e);
                 }
-                log::info!("Committed file to source: {}", source_id);
+                tracing::info!("Committed file to source: {}", source_id);
                 return Some(());
             }
         }

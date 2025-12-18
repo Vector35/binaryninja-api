@@ -34,6 +34,7 @@ use binaryninja::{
     debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser},
     settings::Settings,
     template_simplifier::simplify_str_to_str,
+    tracing,
 };
 use dwarfreader::create_section_reader_object;
 
@@ -43,10 +44,8 @@ use gimli::{
     SectionId, Unit, UnwindContext, UnwindSection,
 };
 
-use binaryninja::logger::Logger;
 use helpers::{get_build_id, load_debug_info_for_build_id};
 use iset::IntervalMap;
-use log::{debug, error, warn};
 use object::read::macho::FatArch;
 use object::{Object, ObjectSection};
 
@@ -126,7 +125,7 @@ fn recover_names_internal<R: ReaderType>(
     while let Ok(Some(header)) = iter.next() {
         let unit_offset = header.offset().as_debug_info_offset().map_or_else(
             || {
-                log::warn!("Failed to get debug info offset for {:?}", header.offset());
+                tracing::warn!("Failed to get debug info offset for {:?}", header.offset());
                 0
             },
             |x| x.0,
@@ -134,7 +133,7 @@ fn recover_names_internal<R: ReaderType>(
         let unit = match dwarf.unit(header) {
             Ok(x) => x,
             Err(e) => {
-                log::error!("Failed to get unit at {:#x}: {}", unit_offset, e);
+                tracing::error!("Failed to get unit at {:#x}: {}", unit_offset, e);
                 continue;
             }
         };
@@ -163,7 +162,7 @@ fn recover_names_internal<R: ReaderType>(
 
             depth += delta_depth;
             if depth < 0 {
-                error!("DWARF information is seriously malformed. Aborting parsing.");
+                tracing::error!("DWARF information is seriously malformed. Aborting parsing.");
                 return false;
             }
 
@@ -196,7 +195,7 @@ fn recover_names_internal<R: ReaderType>(
                                     let resolved_entry = match entry_unit.entry(entry_offset) {
                                         Ok(x) => x,
                                         Err(e) => {
-                                            log::error!("Failed to resolve entry in unit {:?} at offset {:#x} (resolve_namespace_name): {}", entry_unit.header.offset(), entry_offset.0, e);
+                                            tracing::error!("Failed to resolve entry in unit {:?} at offset {:#x} (resolve_namespace_name): {}", entry_unit.header.offset(), entry_offset.0, e);
                                             return;
                                         }
                                     };
@@ -210,7 +209,7 @@ fn recover_names_internal<R: ReaderType>(
                                     )
                                 }
                                 DieReference::Err => {
-                                    warn!(
+                                    tracing::warn!(
                                         "Failed to fetch DIE when resolving namespace. Debug information may be incomplete."
                                     );
                                 }
@@ -436,7 +435,7 @@ where
                 }) {
                     Ok(fde) => fde,
                     Err(e) => {
-                        error!("Failed to parse FDE: {}", e);
+                        tracing::error!("Failed to parse FDE: {}", e);
                         continue;
                     }
                 };
@@ -447,7 +446,7 @@ where
                 }
 
                 if fde.initial_address().overflowing_add(fde.len()).1 {
-                    warn!(
+                    tracing::warn!(
                         "FDE at offset {:?} exceeds bounds of memory space! {:#x} + length {:#x}",
                         fde.offset(),
                         fde.initial_address(),
@@ -481,7 +480,7 @@ where
                                     cfa_offsets
                                         .insert(row.start_address()..row.end_address(), *offset);
                                 } else {
-                                    debug!(
+                                    tracing::debug!(
                                         "Invalid FDE table row addresses: {:#x}..{:#x}",
                                         row.start_address(),
                                         row.end_address()
@@ -489,7 +488,7 @@ where
                                 }
                             }
                             CfaRule::Expression(_) => {
-                                debug!("Unhandled CFA expression when determining offset");
+                                tracing::debug!("Unhandled CFA expression when determining offset");
                             }
                         };
                     }
@@ -548,7 +547,7 @@ fn parse_dwarf(
     progress: Box<dyn Fn(usize, usize) -> Result<(), ()>>,
 ) -> Result<DebugInfoBuilder, String> {
     if debug_file.section_by_name(".gnu_debugaltlink").is_some() && supplementary_data.is_none() {
-        log::warn!(".gnu_debugaltlink section present but no supplementary data provided. DWARF parsing may fail.")
+        tracing::warn!(".gnu_debugaltlink section present but no supplementary data provided. DWARF parsing may fail.")
     }
 
     let address_size = match debug_file.architecture().address_size() {
@@ -588,7 +587,7 @@ fn parse_dwarf(
             create_section_reader_object(section_id, &sup_file, sup_endian, sup_dwo_file)
         };
         if let Err(e) = dwarf.load_sup(sup_section_reader) {
-            error!("Failed to load supplementary file: {}", e);
+            tracing::error!("Failed to load supplementary file: {}", e);
         }
     }
 
@@ -620,7 +619,7 @@ fn parse_dwarf(
             let sup = match dwarf.sup() {
                 Some(x) => x,
                 None => {
-                    log::error!(
+                    tracing::error!(
                         "Supplemental units found but no supplementary DWARF info available"
                     );
                     break;
@@ -743,7 +742,7 @@ impl CustomDebugInfoParser for DWARFParser {
                 match helpers::load_sibling_debug_file(bv) {
                     Ok(x) => x,
                     Err(e) => {
-                        log::error!("Failed loading sibling debug file: {}", e);
+                        tracing::error!("Failed loading sibling debug file: {}", e);
                         None
                     }
                 }
@@ -754,7 +753,7 @@ impl CustomDebugInfoParser for DWARFParser {
                     match load_debug_info_for_build_id(&build_id, bv) {
                         Ok(x) => x,
                         Err(e) => {
-                            log::error!("Failed loading debug info from build id: {}", e);
+                            tracing::error!("Failed loading debug info from build id: {}", e);
                             None
                         }
                     }
@@ -771,7 +770,7 @@ impl CustomDebugInfoParser for DWARFParser {
         let debug_file = match parse_data_to_object(debug_data_vec.as_slice(), bv) {
             Ok(x) => x,
             Err(e) => {
-                log::error!("Failed to parse debug data: {}", e);
+                tracing::error!("Failed to parse debug data: {}", e);
                 return false;
             }
         };
@@ -784,7 +783,7 @@ impl CustomDebugInfoParser for DWARFParser {
                 let sup_data = match load_debug_info_for_build_id(sup_build_id, bv) {
                     Ok(x) => x,
                     Err(e) => {
-                        log::error!("Failed to load supplementary debug file: {}", e);
+                        tracing::error!("Failed to load supplementary debug file: {}", e);
                         None
                     }
                 };
@@ -795,13 +794,13 @@ impl CustomDebugInfoParser for DWARFParser {
                         |sup_file_path| match std::fs::read(sup_file_path) {
                             Ok(sup_data) => Some(sup_data),
                             Err(e) => {
-                                log::error!("Failed reading supplementary file {}: {}", x, e);
+                                tracing::error!("Failed reading supplementary file {}: {}", x, e);
                                 None
                             }
                         },
                     ),
                     Err(e) => {
-                        log::error!("Supplementary file path is invalid utf8: {}", e);
+                        tracing::error!("Supplementary file path is invalid utf8: {}", e);
                         None
                     }
                 })
@@ -812,7 +811,7 @@ impl CustomDebugInfoParser for DWARFParser {
             match parse_data_to_object(data.as_slice(), bv) {
                 Ok(x) => Some(x),
                 Err(e) => {
-                    log::error!("Failed to parse supplementary debug data: {}", e);
+                    tracing::error!("Failed to parse supplementary debug data: {}", e);
                     None
                 }
             }
@@ -823,7 +822,7 @@ impl CustomDebugInfoParser for DWARFParser {
             if let Ok(Some((_, expected_build_id))) = debug_file.gnu_debugaltlink() {
                 if let Ok(Some(loaded_sup_build_id)) = sup_file.build_id() {
                     if loaded_sup_build_id != expected_build_id {
-                        log::warn!(
+                        tracing::warn!(
                             "Supplementary debug info build id ({}) does not match expected ({})",
                             loaded_sup_build_id
                                 .iter()
@@ -845,7 +844,7 @@ impl CustomDebugInfoParser for DWARFParser {
                 true
             }
             Err(e) => {
-                log::error!("Failed to parse DWARF: {}", e);
+                tracing::error!("Failed to parse DWARF: {}", e);
                 false
             }
         };
@@ -855,7 +854,7 @@ impl CustomDebugInfoParser for DWARFParser {
 }
 
 fn plugin_init() {
-    Logger::new("DWARF").init();
+    binaryninja::tracing_init!("DWARF Import");
 
     let settings = Settings::new();
 

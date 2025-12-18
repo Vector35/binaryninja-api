@@ -24,12 +24,12 @@ use binaryninja::calling_convention::CoreCallingConvention;
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE};
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
+use binaryninja::tracing::warn;
 use binaryninja::types::{
     BaseStructure, EnumerationBuilder, EnumerationMember, FunctionParameter, MemberAccess,
     MemberScope, NamedTypeReference, NamedTypeReferenceClass, StructureBuilder, StructureMember,
     StructureType, Type, TypeBuilder, TypeClass,
 };
-use log::warn;
 use pdb::Error::UnimplementedTypeKind;
 use pdb::{
     ArgumentList, ArrayType, BaseClassType, BitfieldType, ClassKind, ClassType, EnumerateType,

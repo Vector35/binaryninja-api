@@ -10,6 +10,7 @@ use binaryninja::{
         MediumLevelILFunction, MediumLevelILLiftedInstruction, MediumLevelILLiftedInstructionKind,
     },
     rc::Ref,
+    tracing,
     types::Type,
     variable::{RegisterValueType, SSAVariable},
     workflow::AnalysisContext,
@@ -148,7 +149,7 @@ fn return_type_for_super_init(call: &Call, view: &BinaryView) -> Option<Ref<Type
         src: super_param_var,
     }) = super_param.kind
     else {
-        log::debug!(
+        tracing::debug!(
             "Unhandled super paramater format at {:#0x} {:?}",
             super_param.address,
             super_param
@@ -163,7 +164,7 @@ fn return_type_for_super_init(call: &Call, view: &BinaryView) -> Option<Ref<Type
         .function
         .ssa_variable_definition(&super_param_var)
     else {
-        log::debug!("  could not find definition of variable?");
+        tracing::debug!("  could not find definition of variable?");
         return None;
     };
 
@@ -171,7 +172,7 @@ fn return_type_for_super_init(call: &Call, view: &BinaryView) -> Option<Ref<Type
         MediumLevelILLiftedInstructionKind::SetVarSsa(LiftedSetVarSsa { src, .. }) => src,
         _ => {
             // The Swift compiler generates code that conditionally assigns to the receiver field of `objc_super`.
-            log::debug!(
+            tracing::debug!(
                 "Unexpected variable definition kind at {:#0x} {:#x?}",
                 super_param_def.address,
                 super_param_def
@@ -184,7 +185,7 @@ fn return_type_for_super_init(call: &Call, view: &BinaryView) -> Option<Ref<Type
         MediumLevelILLiftedInstructionKind::AddressOf(Var { src: src_var }) => src_var,
         _ => {
             // The Swift compiler generates code that initializes the `objc_super` variable in more varied ways.
-            log::debug!(
+            tracing::debug!(
                 "  found non-address-of variable definition of `objc_super` variable at {:#0x} {:?}",
                 super_param_def.address,
                 super_param_def
@@ -223,7 +224,7 @@ fn return_type_for_super_init(call: &Call, view: &BinaryView) -> Option<Ref<Type
     // If there are zero, that likely means the assigned value was not a constant. Handling
     // that is above my pay grade.
     let &[super_class_ptr] = &super_class_constants[..] else {
-        log::debug!(
+        tracing::debug!(
             "Unexpected number of assignments to super class found for {:#0x}: {:#0x?}",
             src.address,
             super_class_constants
@@ -232,7 +233,7 @@ fn return_type_for_super_init(call: &Call, view: &BinaryView) -> Option<Ref<Type
     };
 
     let Some(super_class_symbol) = view.symbol_by_address(super_class_ptr) else {
-        log::debug!("No symbol found for super class at {super_class_ptr:#0x}");
+        tracing::debug!("No symbol found for super class at {super_class_ptr:#0x}");
         return None;
     };
 
@@ -240,12 +241,14 @@ fn return_type_for_super_init(call: &Call, view: &BinaryView) -> Option<Ref<Type
     let Some(class_name) =
         class_name_from_symbol_name(super_class_symbol_name.to_bytes().as_bstr())
     else {
-        log::debug!("Unable to extract class name from symbol name: {super_class_symbol_name:?}");
+        tracing::debug!(
+            "Unable to extract class name from symbol name: {super_class_symbol_name:?}"
+        );
         return None;
     };
 
     let Some(class_type) = view.type_by_name(class_name.to_str_lossy()) else {
-        log::debug!("No type found for class named {class_name:?}");
+        tracing::debug!("No type found for class named {class_name:?}");
         return None;
     };
 

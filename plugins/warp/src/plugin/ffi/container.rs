@@ -10,6 +10,7 @@ use binaryninja::architecture::CoreArchitecture;
 use binaryninja::binary_view::BinaryView;
 use binaryninja::rc::Ref;
 use binaryninja::string::BnString;
+use binaryninja::tracing;
 use binaryninja::types::Type;
 use binaryninjacore_sys::{BNArchitecture, BNBinaryView, BNType};
 use std::ffi::{c_char, CStr};
@@ -219,7 +220,7 @@ pub unsafe extern "C" fn BNWARPContainerFetchFunctions(
     let guids = unsafe { std::slice::from_raw_parts(guids, count) };
 
     if let Err(e) = container.fetch_functions(&target, &source_tags, guids) {
-        log::error!("Failed to fetch functions: {}", e);
+        tracing::error!("Failed to fetch functions: {}", e);
     }
 }
 
@@ -586,7 +587,7 @@ pub unsafe extern "C" fn BNWARPContainerSearch(
     let result = match container.search(&query) {
         Ok(result) => result,
         Err(err) => {
-            log::error!("Failed to search container {:?}: {}", query.deref(), err);
+            tracing::error!("Failed to search container {:?}: {}", query.deref(), err);
             return std::ptr::null_mut();
         }
     };

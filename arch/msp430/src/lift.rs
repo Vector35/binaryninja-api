@@ -2,7 +2,7 @@ use crate::architecture::offset_to_absolute;
 use crate::flag::{Flag, FlagWrite};
 use crate::register::Register;
 
-use binaryninja::{architecture::FlagCondition, low_level_il::lifting::LowLevelILLabel};
+use binaryninja::{architecture::FlagCondition, low_level_il::lifting::LowLevelILLabel, tracing};
 
 use msp430_asm::emulate::Emulated;
 use msp430_asm::instruction::Instruction;
@@ -13,7 +13,6 @@ use msp430_asm::two_operand::TwoOperand;
 
 use binaryninja::low_level_il::expression::ValueExpr;
 use binaryninja::low_level_il::{LowLevelILMutableExpression, LowLevelILMutableFunction};
-use log::info;
 
 macro_rules! auto_increment {
     ($src:expr, $il:ident) => {
@@ -550,7 +549,7 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMut
                 il.set_reg(size, Register::try_from(*r as u32).unwrap(), il.pop(2))
                     .append();
             } else {
-                info!("pop: invalid destination operand");
+                tracing::info!("pop: invalid destination operand");
             }
         }
         Instruction::Ret(_) => {

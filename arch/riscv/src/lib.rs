@@ -26,9 +26,9 @@ use binaryninja::{
         RelocationType,
     },
     symbol::{Symbol, SymbolType},
+    tracing,
     types::{NameAndType, Type},
 };
-use log::LevelFilter;
 use std::borrow::Cow;
 use std::fmt;
 use std::hash::Hash;
@@ -36,7 +36,6 @@ use std::marker::PhantomData;
 
 use binaryninja::architecture::{BranchKind, IntrinsicId, RegisterId};
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
-use binaryninja::logger::Logger;
 use binaryninja::low_level_il::expression::{LowLevelILExpressionKind, ValueExpr};
 use binaryninja::low_level_il::instruction::LowLevelILInstructionKind;
 use binaryninja::low_level_il::lifting::{
@@ -228,7 +227,7 @@ impl<'a, D: RiscVDisassembler> LiftableLowLevelILWithSize<'a> for Register<D> {
         #[cfg(debug_assertions)]
         {
             if reg.size() < size {
-                log::warn!(
+                tracing::warn!(
                     "il @ {:x} attempted to lift {} byte register as {} byte expr",
                     il.current_address(),
                     reg.size(),
@@ -2431,7 +2430,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> RelocationHandler
                 }
                 Self::R_RISCV_TLS_TPREL32 => {
                     reloc.type_ = RelocationType::UnhandledRelocation;
-                    log::warn!(
+                    tracing::warn!(
                         "Unhandled relocation type {:?} (R_RISCV_TLS_TPREL32) at {:x?}",
                         reloc.native_type,
                         reloc.address
@@ -2439,7 +2438,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> RelocationHandler
                 }
                 Self::R_RISCV_TLS_TPREL64 => {
                     reloc.type_ = RelocationType::UnhandledRelocation;
-                    log::warn!(
+                    tracing::warn!(
                         "Unhandled relocation type {:?} (R_RISCV_TLS_TPREL64) at {:x?}",
                         reloc.native_type,
                         reloc.address
@@ -2447,7 +2446,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> RelocationHandler
                 }
                 _ => {
                     reloc.type_ = RelocationType::UnhandledRelocation;
-                    log::warn!(
+                    tracing::warn!(
                         "Unknown relocation type {:?} at {:x?}",
                         reloc.native_type,
                         reloc.address
@@ -3014,7 +3013,7 @@ impl FunctionRecognizer for RiscVELFPLTRecognizer {
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "C" fn CorePluginInit() -> bool {
-    Logger::new("RISCV").with_level(LevelFilter::Trace).init();
+    binaryninja::tracing_init!("RISCV");
 
     use riscv_dis::{RiscVIMACDisassembler, Rv32GRegs, Rv64GRegs};
     let arch32 =

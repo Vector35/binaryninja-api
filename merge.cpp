@@ -41,15 +41,6 @@ Ref<DatabaseObject> DatabaseObject::GetParent() const
 }
 
 
-std::string DatabaseObject::GetId() const
-{
-	char* id = BNGetDatabaseObjectId(m_object);
-	std::string result = id;
-	BNFreeString(id);
-	return result;
-}
-
-
 std::string DatabaseObject::GetDescription() const
 {
 	char* desc = BNGetDatabaseObjectDescription(m_object);

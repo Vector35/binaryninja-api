@@ -24227,7 +24227,6 @@ namespace BinaryNinja {
 
 		// TODO: User subclassing
 		int GetType() const;
-		std::string GetId() const;
 		std::string GetDescription() const;
 		Ref<Metadata> GetMetadata() const;
 		Ref<DatabaseObject> GetParent() const;

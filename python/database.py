@@ -398,11 +398,6 @@ class DatabaseObject:
 		return core.BNGetDatabaseObjectType(self.handle)
 
 	@property
-	def id(self) -> str:
-		"""Get the database object id (read-only)"""
-		return core.BNGetDatabaseObjectId(self.handle)
-
-	@property
 	def description(self) -> str:
 		"""Get the database object description (read-only)"""
 		return core.BNGetDatabaseObjectDescription(self.handle)

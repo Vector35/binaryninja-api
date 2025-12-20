@@ -2,6 +2,7 @@ use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::low_level_il::expression::{ExpressionHandler, LowLevelILExpressionKind};
 use binaryninja::low_level_il::instruction::InstructionHandler;
 use binaryninja::low_level_il::VisitorAction;
+use binaryninja::tracing::TracingLogListener;
 use binaryninja::workflow::{Activity, AnalysisContext, Workflow};
 
 const RUST_ACTIVITY_NAME: &str = "analysis.plugins.rustexample";
@@ -31,7 +32,11 @@ fn example_activity(analysis_context: &AnalysisContext) {
                     llil_instr.visit_tree(&mut |expr| {
                         if let LowLevelILExpressionKind::Const(_op) = expr.kind() {
                             // Replace all consts with 0x1337.
-                            println!("Replacing llil expression @ 0x{:x} : {}", instr, expr.index);
+                            tracing::debug!(
+                                "Replacing llil expression @ 0x{:x} : {}",
+                                instr,
+                                expr.index
+                            );
                             unsafe {
                                 llil.replace_expression(expr.index, llil.const_int(4, 0x1337))
                             };
@@ -46,12 +51,14 @@ fn example_activity(analysis_context: &AnalysisContext) {
 }
 
 pub fn main() {
-    println!("Starting session...");
+    tracing_subscriber::fmt::init();
+    let _listener = TracingLogListener::new().register();
+
     // This loads all the core architecture, platform, etc plugins
     let headless_session =
         binaryninja::headless::Session::new().expect("Failed to initialize session");
 
-    println!("Registering workflow...");
+    tracing::info!("Registering workflow...");
     let activity = Activity::new_with_action(RUST_ACTIVITY_CONFIG, example_activity);
     // Update the meta-workflow with our new activity.
     Workflow::cloned("core.function.metaAnalysis")
@@ -61,7 +68,7 @@ pub fn main() {
         .register()
         .expect("Couldn't register activity");
 
-    println!("Loading binary...");
+    tracing::info!("Loading binary...");
     let bv = headless_session
         .load("/bin/cat")
         .expect("Couldn't open `/bin/cat`");
@@ -74,7 +81,7 @@ pub fn main() {
                     instr.visit_tree(&mut |expr| {
                         if let LowLevelILExpressionKind::Const(value) = expr.kind() {
                             if value.value() == 0x1337 {
-                                println!(
+                                tracing::info!(
                                     "Found constant 0x1337 at instruction 0x{:x} in function {}",
                                     instr.address(),
                                     func.start()

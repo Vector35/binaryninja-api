@@ -6,6 +6,7 @@ use binaryninja::interaction::handler::{
     register_interaction_handler, InteractionHandler, InteractionHandlerTask,
 };
 use binaryninja::interaction::{MessageBoxButtonResult, MessageBoxButtonSet, MessageBoxIcon};
+use binaryninja::tracing::TracingLogListener;
 use binaryninja::{
     architecture::BranchType,
     binary_view::{BinaryView, BinaryViewExt},
@@ -17,22 +18,22 @@ pub struct GraphPrinter;
 
 impl GraphPrinter {
     pub fn print_graph(&self, graph: &FlowGraph) {
-        println!("Printing flow graph:");
+        tracing::info!("Printing flow graph:");
         for node in &graph.nodes() {
             // Print all disassembly lines in the node
-            println!("Node @ {:?}:", node.position());
-            println!("------------------");
-            println!("Disassembly lines:");
+            tracing::info!("Node @ {:?}:", node.position());
+            tracing::info!("------------------");
+            tracing::info!("Disassembly lines:");
             for line in &node.lines() {
-                println!("  {}", line);
+                tracing::info!("  {}", line);
             }
 
             // Print outgoing edges
-            println!("Outgoing edges:");
+            tracing::info!("Outgoing edges:");
             for edge in &node.outgoing_edges() {
-                println!("  {:?} => {:?}", edge.branch_type, edge.target.position());
+                tracing::info!("  {:?} => {:?}", edge.branch_type, edge.target.position());
             }
-            println!("------------------");
+            tracing::info!("------------------");
         }
     }
 }
@@ -62,14 +63,14 @@ impl InteractionHandler for GraphPrinter {
     }
 
     fn show_plain_text_report(&mut self, _view: Option<&BinaryView>, title: &str, contents: &str) {
-        println!("Plain text report");
-        println!("Title: {}", title);
-        println!("Contents: {}", contents);
+        tracing::info!("Plain text report");
+        tracing::info!("Title: {}", title);
+        tracing::info!("Contents: {}", contents);
     }
 
     fn show_graph_report(&mut self, _view: Option<&BinaryView>, title: &str, graph: &FlowGraph) {
-        println!("Graph report");
-        println!("Title: {}", title);
+        tracing::info!("Graph report");
+        tracing::info!("Title: {}", title);
         self.print_graph(graph);
     }
 
@@ -115,12 +116,14 @@ fn test_graph() {
 }
 
 fn main() {
-    println!("Starting session...");
+    tracing_subscriber::fmt::init();
+    let _listener = TracingLogListener::new().register();
+
     // This loads all the core architecture, platform, etc plugins
     let headless_session =
         binaryninja::headless::Session::new().expect("Failed to initialize session");
 
-    println!("Loading binary...");
+    tracing::info!("Loading binary...");
     let bv = headless_session
         .load("/bin/cat")
         .expect("Couldn't open `/bin/cat`");

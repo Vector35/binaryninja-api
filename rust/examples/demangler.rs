@@ -2,6 +2,7 @@ use binaryninja::architecture::CoreArchitecture;
 use binaryninja::binary_view::BinaryView;
 use binaryninja::demangle::{CustomDemangler, Demangler};
 use binaryninja::rc::Ref;
+use binaryninja::tracing::TracingLogListener;
 use binaryninja::types::{QualifiedName, Type};
 
 struct TestDemangler;
@@ -26,32 +27,34 @@ impl CustomDemangler for TestDemangler {
 }
 
 fn main() {
-    println!("Starting session...");
+    tracing_subscriber::fmt::init();
+    let _listener = TracingLogListener::new().register();
+
     // This loads all the core architecture, platform, etc plugins
     let _headless_session =
         binaryninja::headless::Session::new().expect("Failed to initialize session");
 
-    println!("Registering demangler...");
+    tracing::info!("Registering demangler...");
     Demangler::register("Test", TestDemangler);
 
     let placeholder_arch = CoreArchitecture::by_name("x86_64").expect("x86 exists");
 
     for d in Demangler::list().iter() {
-        println!("{}", d.name());
+        tracing::info!("{}", d.name());
 
-        println!(
+        tracing::info!(
             "  \"__ZN1AC2Ei\" is mangled? {}",
             d.is_mangled_string("__ZN1AC2Ei")
         );
-        println!(
+        tracing::info!(
             "  \"__ZN1AC2Ei\" : {:?}",
             d.demangle(&placeholder_arch, "__ZN1AC2Ei", None)
         );
-        println!(
+        tracing::info!(
             "  \"test_name\" : {:?}",
             d.demangle(&placeholder_arch, "test_name", None)
         );
-        println!(
+        tracing::info!(
             "  \"test_name2\" : {:?}",
             d.demangle(&placeholder_arch, "test_name2", None)
         );

@@ -1,19 +1,22 @@
 use binaryninja::binary_view::{BinaryViewBase, BinaryViewExt};
+use binaryninja::tracing::TracingLogListener;
 
 fn main() {
-    println!("Starting session...");
+    tracing_subscriber::fmt::init();
+    let _listener = TracingLogListener::new().register();
+
     // This loads all the core architecture, platform, etc plugins
     let headless_session =
         binaryninja::headless::Session::new().expect("Failed to initialize session");
 
-    println!("Loading binary...");
+    tracing::info!("Loading binary...");
     let bv = headless_session
         .load("/bin/cat")
         .expect("Couldn't open `/bin/cat`");
 
-    println!("Filename:  `{}`", bv.file().filename());
-    println!("File size: `{:#x}`", bv.len());
-    println!("Function count: {}", bv.functions().len());
+    tracing::info!("Filename:  `{}`", bv.file().filename());
+    tracing::info!("File size: `{:#x}`", bv.len());
+    tracing::info!("Function count: {}", bv.functions().len());
 
     for func in &bv.functions() {
         println!("{:?}:", func.symbol().full_name());

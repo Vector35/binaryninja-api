@@ -1,9 +1,13 @@
 // Usage: cargo run --example create_type_library <header_file_path> <platform> <type_library_path>
 
 use binaryninja::platform::Platform;
+use binaryninja::tracing::TracingLogListener;
 use binaryninja::types::{CoreTypeParser, TypeLibrary, TypeParser};
 
 fn main() {
+    tracing_subscriber::fmt::init();
+    let _listener = TracingLogListener::new().register();
+
     let header_path_str = std::env::args().nth(1).expect("No header provided");
     let header_path = std::path::Path::new(&header_path_str);
     let header_name = header_path.file_stem().unwrap().to_str().unwrap();
@@ -14,7 +18,6 @@ fn main() {
 
     let header_contents = std::fs::read_to_string(header_path).expect("Failed to read header file");
 
-    println!("Starting session...");
     // This loads all the core architecture, platform, etc plugins
     let _headless_session =
         binaryninja::headless::Session::new().expect("Failed to initialize session");
@@ -38,14 +41,19 @@ fn main() {
         .expect("Parsed types");
 
     for ty in parsed_types.types {
-        println!("Adding type: {}", ty.name);
+        tracing::debug!("Adding type: {}", ty.name);
         type_lib.add_named_type(ty.name, &ty.ty);
     }
 
     for func in parsed_types.functions {
-        println!("Adding function: {}", func.name);
+        tracing::debug!("Adding function: {}", func.name);
         type_lib.add_named_object(func.name, &func.ty);
     }
 
+    tracing::info!(
+        "Created type library with {} types and {} functions",
+        type_lib.named_types().len(),
+        type_lib.named_objects().len()
+    );
     type_lib.write_to_file(&type_lib_path);
 }

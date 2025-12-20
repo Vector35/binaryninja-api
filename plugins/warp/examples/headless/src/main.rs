@@ -1,10 +1,16 @@
 use binaryninja::headless::Session;
+use binaryninja::tracing::TracingLogListener;
 use clap::Parser;
-use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
+use tracing_indicatif::span_ext::IndicatifSpanExt;
+use tracing_indicatif::style::ProgressStyle;
+use tracing_indicatif::IndicatifLayer;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 use warp_ninja::processor::{
     CompressionTypeField, ProcessingFileState, ProcessingState, WarpFileProcessor,
 };
@@ -50,9 +56,15 @@ struct Args {
 }
 
 fn main() {
+    let indicatif_layer = IndicatifLayer::new();
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer().with_writer(indicatif_layer.get_stderr_writer()))
+        .with(indicatif_layer)
+        .init();
+    let _listener = TracingLogListener::new().register();
+
     let _session = Session::new().expect("Failed to create session");
     let args = Args::parse();
-    env_logger::init();
 
     let compression_ty = match args.compressed {
         true => CompressionTypeField::Zstd,
@@ -72,7 +84,12 @@ fn main() {
     })
     .expect("Error setting Ctrl-C handler");
 
-    let progress_guard = run_progress_bar(processor.state());
+    let finished_signal = Arc::new(AtomicBool::new(false));
+    // Report progress to the terminal.
+    let progress_state = processor.state();
+    let progress_finished_signal = finished_signal.clone();
+    let progress_thread =
+        std::thread::spawn(|| run_progress_bar(progress_state, progress_finished_signal));
 
     let outputs: HashMap<PathBuf, WarpFile<'static>> = args
         .input
@@ -80,14 +97,14 @@ fn main() {
         .filter_map(|i| match processor.process(i.clone()) {
             Ok(o) => Some((i, o)),
             Err(err) => {
-                log::error!("{}", err);
+                tracing::error!("{}", err);
                 None
             }
         })
         .collect();
 
-    // Stop progress UI
-    progress_guard.finish();
+    finished_signal.store(true, Ordering::Relaxed);
+    progress_thread.join().expect("Progress thread exited");
 
     match args.output.is_dir() {
         true => {
@@ -98,7 +115,7 @@ fn main() {
                     None => input.components().last().unwrap().as_os_str(),
                 };
                 let output_path = args.output.join(output_name).with_extension("warp");
-                log::info!("Writing to {:?}", output_path);
+                tracing::info!("Writing to {:?}", output_path);
                 std::fs::write(output_path, output.to_bytes()).unwrap();
             }
         }
@@ -106,11 +123,11 @@ fn main() {
             // Given a non-existing directory, merge all outputs and place at the output path.
             match processor.merge_files(outputs.values().cloned().collect()) {
                 Ok(output) => {
-                    log::info!("Writing to {:?}", args.output);
+                    tracing::info!("Writing to {:?}", args.output);
                     std::fs::write(args.output, output.to_bytes()).unwrap();
                 }
                 Err(err) => {
-                    log::error!("{}", err);
+                    tracing::error!("{}", err);
                 }
             }
         }
@@ -118,65 +135,36 @@ fn main() {
 }
 
 // TODO: Also poll for background tasks and display them as independent progress bars.
-fn run_progress_bar(state: Arc<ProcessingState>) -> ProgressGuard {
-    let pb = ProgressBar::new(0);
-    pb.set_style(
-        ProgressStyle::with_template(
-            "{spinner} {bar:40.cyan/blue} {pos}/{len} ({percent}%) [{elapsed_precise}] {msg}",
-        )
-        .unwrap()
-        .progress_chars("=>-"),
-    );
+fn run_progress_bar(state: Arc<ProcessingState>, finished: Arc<AtomicBool>) {
+    let progress_span = tracing::info_span!("loading");
+    let progress_style = ProgressStyle::with_template("{msg} {elapsed} {wide_bar}").unwrap();
+    progress_span.pb_set_style(&progress_style);
+    progress_span.pb_set_message("Processing files");
+    progress_span.pb_set_finish_message("Files processed");
 
-    let pb_clone = pb.clone();
-    let state_clone = state.clone();
-    let handle = std::thread::spawn(move || loop {
-        let total = state_clone.total_files() as u64;
-        let done = state_clone.files_with_state(ProcessingFileState::Processed) as u64;
-        let unprocessed = state_clone.files_with_state(ProcessingFileState::Unprocessed);
-        let analyzing = state_clone.files_with_state(ProcessingFileState::Analyzing);
-        let processing = state_clone.files_with_state(ProcessingFileState::Processing);
+    let elapsed = std::time::Instant::now();
+    progress_span.in_scope(|| loop {
+        let total = state.total_files() as u64;
+        let done = state.files_with_state(ProcessingFileState::Processed) as u64;
+        let unprocessed = state.files_with_state(ProcessingFileState::Unprocessed);
+        let analyzing = state.files_with_state(ProcessingFileState::Analyzing);
+        let processing = state.files_with_state(ProcessingFileState::Processing);
 
-        if pb_clone.length().unwrap_or(0) != total {
-            pb_clone.set_length(total);
-        }
-        pb_clone.set_position(done.min(total));
-        pb_clone.set_message(format!(
+        progress_span.pb_set_length(total);
+        progress_span.pb_set_position(done.min(total));
+        progress_span.pb_set_message(&format!(
             "{{u:{}|a:{}|p:{}|d:{}}}",
             unprocessed, analyzing, processing, done
         ));
 
-        if pb_clone.is_finished() {
+        if state.is_cancelled() || finished.load(Ordering::Relaxed) {
             break;
         }
         std::thread::sleep(Duration::from_millis(100));
     });
 
-    ProgressGuard {
-        pb,
-        handle: Some(handle),
-    }
-}
-
-struct ProgressGuard {
-    pb: ProgressBar,
-    handle: Option<std::thread::JoinHandle<()>>,
-}
-
-impl ProgressGuard {
-    fn finish(mut self) {
-        self.pb.finish_and_clear();
-        if let Some(h) = self.handle.take() {
-            let _ = h.join();
-        }
-    }
-}
-
-impl Drop for ProgressGuard {
-    fn drop(&mut self) {
-        self.pb.finish_and_clear();
-        if let Some(h) = self.handle.take() {
-            let _ = h.join();
-        }
-    }
+    tracing::info!(
+        "Finished processing in {:.2} seconds",
+        elapsed.elapsed().as_secs_f32()
+    );
 }

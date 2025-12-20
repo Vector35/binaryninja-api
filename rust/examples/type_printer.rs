@@ -1,13 +1,16 @@
+use binaryninja::tracing::TracingLogListener;
 use binaryninja::types::printer::{CoreTypePrinter, TokenEscapingType};
 use binaryninja::types::{MemberAccess, MemberScope, Structure, StructureMember, Type};
 
 fn main() {
-    println!("Starting session...");
+    tracing_subscriber::fmt::init();
+    let _listener = TracingLogListener::new().register();
+
     // This loads all the core architecture, platform, etc plugins
     let headless_session =
         binaryninja::headless::Session::new().expect("Failed to initialize session");
 
-    println!("Loading binary...");
+    tracing::info!("Loading binary...");
     let bv = headless_session
         .load("/bin/cat")
         .expect("Couldn't open `/bin/cat`");

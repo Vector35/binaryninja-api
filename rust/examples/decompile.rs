@@ -2,6 +2,7 @@ use binaryninja::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
 use binaryninja::disassembly::{DisassemblyOption, DisassemblySettings};
 use binaryninja::function::Function;
 use binaryninja::linear_view::LinearViewObject;
+use binaryninja::tracing::TracingLogListener;
 
 fn decompile_to_c(view: &BinaryView, func: &Function) {
     let settings = DisassemblySettings::new();
@@ -22,26 +23,28 @@ fn decompile_to_c(view: &BinaryView, func: &Function) {
     let lines = first.into_iter().chain(&last);
 
     for line in lines {
-        println!("{}", line);
+        tracing::info!("{}", line);
     }
 }
 
 pub fn main() {
+    tracing_subscriber::fmt::init();
+    let _listener = TracingLogListener::new().register();
+
     let filename = std::env::args().nth(1).expect("No filename provided");
 
-    println!("Starting session...");
     // This loads all the core architecture, platform, etc plugins
     let headless_session =
         binaryninja::headless::Session::new().expect("Failed to initialize session");
 
-    println!("Loading binary...");
+    tracing::info!("Loading binary...");
     let bv = headless_session
         .load(&filename)
         .expect("Couldn't open file!");
 
-    println!("Filename:  `{}`", bv.file().filename());
-    println!("File size: `{:#x}`", bv.len());
-    println!("Function count: {}", bv.functions().len());
+    tracing::info!("Filename:  `{}`", bv.file().filename());
+    tracing::info!("File size: `{:#x}`", bv.len());
+    tracing::info!("Function count: {}", bv.functions().len());
 
     for func in &bv.functions() {
         decompile_to_c(bv.as_ref(), func.as_ref());

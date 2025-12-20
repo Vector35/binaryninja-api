@@ -1,6 +1,7 @@
 use binaryninja::binary_view::{BinaryViewBase, BinaryViewExt};
 use binaryninja::disassembly::{DisassemblyOption, DisassemblySettings, DisassemblyTextRenderer};
 use binaryninja::function::Function;
+use binaryninja::tracing::TracingLogListener;
 
 fn disassemble(func: &Function) {
     let settings = DisassemblySettings::new();
@@ -17,28 +18,30 @@ fn disassemble(func: &Function) {
             if let Some((text, _len)) = text_renderer.instruction_text(instr_addr) {
                 // TODO: This only ever appears to return a single string?
                 let text_string: Vec<_> = text.iter().map(|t| t.to_string()).collect();
-                println!("{}", text_string.join(""));
+                tracing::info!("{}", text_string.join(""));
             }
         }
     }
 }
 
 pub fn main() {
+    tracing_subscriber::fmt::init();
+    let _listener = TracingLogListener::new().register();
+
     let filename = std::env::args().nth(1).expect("No filename provided");
 
-    println!("Starting session...");
     // This loads all the core architecture, platform, etc plugins
     let headless_session =
         binaryninja::headless::Session::new().expect("Failed to initialize session");
 
-    println!("Loading binary...");
+    tracing::info!("Loading binary...");
     let bv = headless_session
         .load(&filename)
         .expect("Couldn't open file!");
 
-    println!("Filename:  `{}`", bv.file().filename());
-    println!("File size: `{:#x}`", bv.len());
-    println!("Function count: {}", bv.functions().len());
+    tracing::info!("Filename:  `{}`", bv.file().filename());
+    tracing::info!("File size: `{:#x}`", bv.len());
+    tracing::info!("Function count: {}", bv.functions().len());
 
     for func in &bv.functions() {
         disassemble(func.as_ref());

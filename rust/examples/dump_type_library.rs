@@ -2,21 +2,24 @@
 
 use binaryninja::binary_view::BinaryView;
 use binaryninja::file_metadata::FileMetadata;
+use binaryninja::tracing::TracingLogListener;
 use binaryninja::types::library::TypeLibrary;
 use binaryninja::types::printer::{CoreTypePrinter, TokenEscapingType};
 
 fn main() {
+    tracing_subscriber::fmt::init();
+    let _listener = TracingLogListener::new().register();
+
     let type_lib_str = std::env::args().nth(1).expect("No type library provided");
     let type_lib_path = std::path::Path::new(&type_lib_str);
 
-    println!("Starting session...");
     // This loads all the core architecture, platform, etc plugins
     let _headless_session =
         binaryninja::headless::Session::new().expect("Failed to initialize session");
 
     let type_lib = TypeLibrary::load_from_file(type_lib_path).expect("Failed to load type library");
-    println!("Name: `{}`", type_lib.name());
-    println!("GUID: `{}`", type_lib.guid());
+    tracing::info!("Name: `{}`", type_lib.name());
+    tracing::info!("GUID: `{}`", type_lib.guid());
 
     // Print out all the types as a c header.
     let type_lib_header_path = type_lib_path.with_extension("h");
@@ -27,7 +30,7 @@ fn main() {
         .chain(type_lib.named_objects().iter())
         .collect();
 
-    println!(
+    tracing::info!(
         "Dumping {} types to: `{:?}`",
         all_types.len(),
         type_lib_header_path

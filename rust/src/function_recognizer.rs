@@ -50,6 +50,7 @@ where
         let bv = unsafe { BinaryView::from_raw(bv).to_owned() };
         let func = unsafe { Function::from_raw(func).to_owned() };
         let llil = unsafe { LowLevelILFunction::from_raw(llil).to_owned() };
+        let _span = ffi_span!("FunctionRecognizer::recognize_low_level_il", bv);
         context.recognizer.recognize_low_level_il(&bv, &func, &llil)
     }
 
@@ -66,6 +67,7 @@ where
         let bv = unsafe { BinaryView::from_raw(bv).to_owned() };
         let func = unsafe { Function::from_raw(func).to_owned() };
         let mlil = unsafe { MediumLevelILFunction::from_raw(mlil).to_owned() };
+        let _span = ffi_span!("FunctionRecognizer::recognize_medium_level_il", bv);
         context
             .recognizer
             .recognize_medium_level_il(&bv, &func, &mlil)

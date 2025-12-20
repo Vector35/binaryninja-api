@@ -442,6 +442,7 @@ where
             .iter()
             .map(RelocationInfo::from_raw)
             .collect::<Vec<_>>();
+        let _span = ffi_span!("RelocationHandler::get_relocation_info", bv);
         let ok =
             custom_handler.get_relocation_info(bv.as_ref(), arch.as_ref(), info.as_mut_slice());
         for (result, info) in result.iter_mut().zip(info.iter()) {
@@ -466,6 +467,7 @@ where
         let arch = unsafe { CoreArchitecture::from_raw(arch) };
         let reloc = unsafe { Relocation::from_raw(reloc) };
         let dest = unsafe { core::slice::from_raw_parts_mut(dest, len) };
+        let _span = ffi_span!("RelocationHandler::apply_relocation", bv);
         custom_handler.apply_relocation(bv.as_ref(), arch.as_ref(), &reloc, dest)
     }
 

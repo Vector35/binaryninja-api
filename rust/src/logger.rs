@@ -1,5 +1,8 @@
-// TODO: Describe this in terms of the core Logger, but refer to tracing for how to capture rust logs.
-
+//! Core [`Logger`] implementation, see [`crate::tracing`] for typical plugin and headless usage.
+//!
+//! This module defines the core logger model, which is typically not used directly and instead is used
+//! via the [`crate::tracing`] implementations. If you require a custom [`LogListener`] or need to log
+//! directly to the core instead of through `tracing` macros, that is what this module is useful for.
 use crate::file_metadata::SessionId;
 use crate::rc::{Ref, RefCountable};
 use crate::string::{raw_to_string, BnString, IntoCStr};

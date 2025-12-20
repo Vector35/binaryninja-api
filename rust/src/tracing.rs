@@ -1,4 +1,22 @@
-// TODO: Add top level docs here.
+//! Integration with the [`tracing`](https://docs.rs/tracing) ecosystem. Send logs to and from Binary Ninja.
+//!
+//! This module allows you to use standard Rust `tracing` macros (like `info!`, `warn!`, `error!`)
+//! and have them get sent to Binary Ninja, as well as the other way around with [`TracingLogListener`].
+//!
+//! ## For Plugins
+//!
+//! When writing a plugin, and you want your Rust logs to appear in the Binary Ninja UI, use the
+//! [`crate::tracing_init`] macro at the start of your plugin's init function.
+//!
+//! ## For Headless
+//!
+//! When running headless (standalone executables), and you want internal Binary Ninja logs to appear
+//! in your terminal's standard output, register the [`TracingLogListener`] after initializing your
+//! tracing subscriber.
+//!
+//! ## Never use both [`BinaryNinjaLayer`] and [`TracingLogListener`] simultaneously
+//!
+//! Enabling both creates an infinite feedback loop where a log triggers a log, deadlocking the application.
 
 use crate::file_metadata::SessionId;
 use crate::logger::{
@@ -261,7 +279,7 @@ impl tracing::field::Visit for BnFieldVisitor {
 ///     // Register our tracing subscriber, this will send tracing events to stdout.
 ///     tracing_subscriber::fmt::init();
 ///     // Register our log listener, this will send logs from the core to our tracing subscriber.
-///     let _listener = TracingLogListener::new(BnLogLevel::DebugLog).register();
+///     let _listener = TracingLogListener::new().register();
 ///     // Should see logs from the core in regard to initialization show up.
 ///     let _session = Session::new().expect("Failed to create session");
 ///     bn_log("Test", BnLogLevel::DebugLog, "Hello, world!");

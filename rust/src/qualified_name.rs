@@ -35,7 +35,7 @@ use std::ops::{Index, IndexMut};
 /// let qn = QualifiedName::new_with_separator(["a", "b", "c"], ".");
 /// assert_eq!(qn.to_string(), "a.b.c");
 /// ```
-#[derive(Default, Debug, Clone, Hash, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Ord, PartialOrd)]
 pub struct QualifiedName {
     // TODO: Make this Option<String> where default is "::".
     pub separator: String,
@@ -174,6 +174,12 @@ impl QualifiedName {
     /// you must first convert the qualified name to unqualified via the `to_string` method.
     pub fn is_empty(&self) -> bool {
         self.items.is_empty()
+    }
+}
+
+impl Default for QualifiedName {
+    fn default() -> Self {
+        Self::new(Vec::<String>::new())
     }
 }
 

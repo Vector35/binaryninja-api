@@ -1885,54 +1885,17 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             }
         }
 
-        // VTables have types on their data symbols,
-        if let Some((last, class_name)) = name.split_last() {
-            if last.contains("`vftable'") {
-                let mut vt_name = class_name.with_item("VTable");
-                if last.contains("{for") {
-                    // DerivedClass::`vftable'{for `BaseClass'}
-                    let mut base_name = last.to_owned();
-                    base_name.drain(0..("`vftable'{for `".len()));
-                    base_name.drain((base_name.len() - "'}".len())..(base_name.len()));
-                    // Multiply inherited classes have multiple vtable types
-                    // TODO: Do that
-                    vt_name = QualifiedName::new(vec![base_name, "VTable".to_string()]);
-                }
-
-                vt_name = vt_name
-                    .replace("class ", "")
-                    .replace("struct ", "")
-                    .replace("enum ", "");
-
-                if let Some(ty) = self.named_types.get(&vt_name) {
-                    t = Some(Conf::new(
-                        Type::named_type_from_type(vt_name, ty.as_ref()),
-                        DEMANGLE_CONFIDENCE,
-                    ));
-                } else {
-                    // Sometimes the demangler has trouble with `class Foo` in templates
-                    vt_name = vt_name
-                        .replace("class ", "")
-                        .replace("struct ", "")
-                        .replace("enum ", "");
-
-                    if let Some(ty) = self.named_types.get(&vt_name) {
-                        t = Some(Conf::new(
-                            Type::named_type_from_type(vt_name, ty.as_ref()),
-                            DEMANGLE_CONFIDENCE,
-                        ));
-                    } else {
-                        t = Some(Conf::new(
-                            Type::named_type_from_type(
-                                vt_name,
-                                Type::structure(StructureBuilder::new().finalize().as_ref())
-                                    .as_ref(),
-                            ),
-                            DEMANGLE_CONFIDENCE,
-                        ));
-                    }
-                }
-            }
+        // VTables have types on their data symbols
+        // Format: "ClassName::`vftable'" or "ClassName::`vftable'{for `BaseClass'}"
+        if let Some(vt_name) = parse_vtable_type_name(&name) {
+            let ty =
+                self.named_types.get(&vt_name).cloned().unwrap_or_else(|| {
+                    Type::structure(StructureBuilder::new().finalize().as_ref())
+                });
+            t = Some(Conf::new(
+                Type::named_type_from_type(vt_name, ty.as_ref()),
+                DEMANGLE_CONFIDENCE,
+            ));
         }
 
         if let Some(last_name) = name.last_mut() {
@@ -2038,6 +2001,75 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             }
             // TODO: Other arches
             _ => None,
+        }
+    }
+}
+
+/// Parse a vtable symbol name and return the parts for the vtable type.
+/// Takes the last element of (e.g., `"ClassName::`vftable'{for `BaseClass'}"`)
+/// and converts it to a vtable type name (e.g., `["ClassName", "BaseClass", "VTable"]`).
+fn parse_vtable_type_name(name: &QualifiedName) -> Option<QualifiedName> {
+    let (last, qualified_name_base) = name.items.split_last()?;
+    let (class_name, rest) = last.split_once("::`vftable'")?;
+
+    let clean = |s: &str| {
+        s.replace("class ", "")
+            .replace("struct ", "")
+            .replace("enum ", "")
+    };
+
+    let mut parts = qualified_name_base.to_vec();
+    parts.extend(class_name.split("::").map(|s| clean(s)));
+
+    if let Some(base_class) = rest
+        .split_once("{for `")
+        .and_then(|(_, base_start)| base_start.split_once("'}"))
+        .map(|(base, _)| base)
+    {
+        parts.push(clean(base_class));
+    }
+
+    parts.push("VTable".to_string());
+    Some(QualifiedName::new(parts))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// (input_demangled_name, expected_output)
+    #[rustfmt::skip]
+    const VTABLE_TEST_CASES: &[(&str, &[&str])] = &[
+        // Simple vtables
+        ("Base::`vftable'", &["Base", "VTable"]),
+        // Multiple inheritance with {for}
+        ("MultiDerived::`vftable'{for `InterfaceA'}", &["MultiDerived", "InterfaceA", "VTable"]),
+        // Simple templates
+        ("Container<int32_t>::`vftable'", &["Container<int32_t>", "VTable"]),
+        ("Pair<int32_t,char>::`vftable'", &["Pair<int32_t,char>", "VTable"]),
+        ("FixedArray<int32_t,10>::`vftable'", &["FixedArray<int32_t,10>", "VTable"]),
+        // Namespaced classes
+        ("outer::inner::NamespacedTemplate<int32_t>::`vftable'", &["outer", "inner", "NamespacedTemplate<int32_t>", "VTable"]),
+        // Nested class inside template
+        ("complex::HasNested<int32_t>::Nested::`vftable'", &["complex", "HasNested<int32_t>", "Nested", "VTable"]),
+        // Template with {for} clause
+        ("TemplateMultiDerived<int32_t>::`vftable'{for `TemplateInterfaceA<int32_t>'}", &["TemplateMultiDerived<int32_t>", "TemplateInterfaceA<int32_t>", "VTable"]),
+        ("TemplateDiamond<int32_t>::`vftable'{for `TemplateLeftVirtual<int32_t>'}", &["TemplateDiamond<int32_t>", "TemplateLeftVirtual<int32_t>", "VTable"]),
+        // Nested templates - note: "class " prefix gets stripped
+        ("Wrapper<class Container<int32_t> >::`vftable'", &["Wrapper<Container<int32_t> >", "VTable"]),
+        // Class/struct/enum keyword removal
+        ("Wrapper<class Foo>::`vftable'", &["Wrapper<Foo>", "VTable"]),
+        ("Container<struct Bar>::`vftable'", &["Container<Bar>", "VTable"]),
+        ("Holder<enum Baz>::`vftable'", &["Holder<Baz>", "VTable"]),
+    ];
+
+    #[test]
+    fn test_vtable_type_name_parsing() {
+        for (input, expected) in VTABLE_TEST_CASES {
+            let name = QualifiedName::new(vec![input.to_string()]);
+            let result = parse_vtable_type_name(&name);
+            let expected_qn = QualifiedName::new(expected.into_iter().cloned());
+            assert_eq!(result, Some(expected_qn), "Failed for input: {}", input);
         }
     }
 }

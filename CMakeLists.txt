@@ -9,6 +9,8 @@ option(BN_ALLOW_STUBS "Allow generating and linking against stubs if a Binary Ni
 option(BN_REF_COUNT_DEBUG "Add extra debugging checks for RefCountObject leaks" OFF)
 mark_as_advanced(BN_REF_COUNT_DEBUG)
 
+find_package(Python3 3.10 COMPONENTS Interpreter REQUIRED)
+
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     if (MSVC)
         message(FATAL_ERROR "Binary Ninja is 64-bit only (try -G \"${CMAKE_GENERATOR} Win64\")")

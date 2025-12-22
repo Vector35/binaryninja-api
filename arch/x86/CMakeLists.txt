@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
 project(arch_x86)
 
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
 OPTION(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 OPTION(YASM_BUILD_TESTS "Enable building of tests" OFF)
 add_subdirectory(yasm)
@@ -9,10 +11,10 @@ add_subdirectory(yasm)
 set(XED_CONFIGURE_ARGS --no-encoder just-gen)
 if(WIN32)
 	execute_process(COMMAND ${CMAKE_COMMAND} -E env OS=Windows_NT PYTHONPATH=${PROJECT_SOURCE_DIR}/mbuild
-		py -3 ${PROJECT_SOURCE_DIR}/xed/mfile.py ${XED_CONFIGURE_ARGS}
+		${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/xed/mfile.py ${XED_CONFIGURE_ARGS}
 		WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 else()
-	execute_process(COMMAND python3 ${PROJECT_SOURCE_DIR}/xed/mfile.py ${XED_CONFIGURE_ARGS}
+	execute_process(COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/xed/mfile.py ${XED_CONFIGURE_ARGS}
 		WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 endif()
 

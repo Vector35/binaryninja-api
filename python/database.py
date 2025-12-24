@@ -377,6 +377,10 @@ class Database:
 		return KeyValueStore(handle=handle)
 
 
+def _from_4cc(four_cc) -> str:
+	return chr((four_cc >> 24) & 0xff) + chr((four_cc >> 16) & 0xff) + chr((four_cc >> 8) & 0xff) + chr(four_cc & 0xff)
+
+
 class DatabaseObject:
 	def __init__(self, handle):
 		self.handle = core.handle_of_type(handle, core.BNDatabaseObject)
@@ -390,10 +394,10 @@ class DatabaseObject:
 		core.BNFreeDatabaseObject(self.handle)
 
 	def __str__(self):
-		return f"<dbo {self.id}: {self.description}>"
+		return f"<dbo {_from_4cc(self.type)}: {self.description}>"
 
 	def __repr__(self):
-		return f"<dbo {self.id}>"
+		return f"<dbo {_from_4cc(self.type)}>"
 
 	@property
 	def type(self) -> int:

@@ -27,6 +27,7 @@ using namespace std;
 DatabaseObject::DatabaseObject(BNDatabaseObject* object)
 {
 	m_object = object;
+	m_parent = GetParent();
 }
 
 

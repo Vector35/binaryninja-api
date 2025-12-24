@@ -382,6 +382,9 @@ class DatabaseObject:
 		self.handle = core.handle_of_type(handle, core.BNDatabaseObject)
 		self._children = None
 		self._dependencies = None
+		# Hold a strong reference to parent because normally children have a weak ref
+		# and their parent could be cleaned up without them
+		self._parent = self.parent
 
 	def __del__(self):
 		core.BNFreeDatabaseObject(self.handle)

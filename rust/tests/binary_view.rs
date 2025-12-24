@@ -117,7 +117,7 @@ fn test_binary_view_strings() {
     let string = view
         .read_c_string_at(str_15dc.start, str_15dc.length)
         .expect("Failed to read string");
-    assert_eq!(string, c"Microsoft (R) Optimizing Compiler");
+    assert_eq!(string, c"Microsoft (R) Optimizing Compiler".into());
 }
 
 #[test]

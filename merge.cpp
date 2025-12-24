@@ -87,7 +87,43 @@ std::unordered_map<std::string, Ref<DatabaseObject>> DatabaseObject::GetChildren
 }
 
 
-// todo: expose GetChild() and friends
+std::vector<std::string> DatabaseObject::GetChildNames()
+{
+	size_t count = 0;
+	char** names = BNGetDatabaseObjectChildNames(m_object, &count);
+	std::vector<std::string> result = ParseStringList(names, count);
+	BNFreeStringList(names, count);
+	return result;
+}
+
+
+std::optional<Ref<DatabaseObject>> DatabaseObject::GetChild(const std::string& key)
+{
+	BNDatabaseObject* child = BNGetDatabaseObjectChild(m_object, key.c_str());
+	if (child)
+	{
+		return new DatabaseObject(child);
+	}
+	return std::nullopt;
+}
+
+
+std::optional<Ref<DatabaseObject>> DatabaseObject::FindChild(const std::vector<std::string>& path)
+{
+	std::vector<const char*> pathCStrs;
+	pathCStrs.reserve(path.size());
+	for (const auto& item : path)
+	{
+		pathCStrs.push_back(item.c_str());
+	}
+
+	BNDatabaseObject* child = BNFindDatabaseObjectChild(m_object, pathCStrs.data(), pathCStrs.size());
+	if (child)
+	{
+		return new DatabaseObject(child);
+	}
+	return std::nullopt;
+}
 
 
 std::vector<std::string> DatabaseObject::GetDependencies() const

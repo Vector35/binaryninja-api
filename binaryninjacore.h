@@ -10059,6 +10059,9 @@ extern "C"
 	BINARYNINJACOREAPI BNMetadata* BNGetDatabaseObjectMetadata(BNDatabaseObject* object);
 	BINARYNINJACOREAPI BNDatabaseObject* BNGetDatabaseObjectParent(BNDatabaseObject* object);
 	BINARYNINJACOREAPI size_t BNGetDatabaseObjectChildren(BNDatabaseObject* object, char*** names, BNDatabaseObject*** objects);
+	BINARYNINJACOREAPI char** BNGetDatabaseObjectChildNames(BNDatabaseObject* object, size_t* count);
+	BINARYNINJACOREAPI BNDatabaseObject* BNGetDatabaseObjectChild(BNDatabaseObject* object, const char* key);
+	BINARYNINJACOREAPI BNDatabaseObject* BNFindDatabaseObjectChild(BNDatabaseObject* object, const char** path, size_t pathLength);
 	BINARYNINJACOREAPI char** BNGetDatabaseObjectDependencies(BNDatabaseObject* object, size_t* count);
 
 	BINARYNINJACOREAPI BNDiffState* BNNewDiffStateReference(BNDiffState* state);

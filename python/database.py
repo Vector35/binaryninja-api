@@ -444,6 +444,37 @@ class DatabaseObject:
 			core.BNFreeStringList(names, count)
 
 	@property
+	def child_names(self) -> List[str]:
+		"""Get list of child object names (read-only)"""
+		count = ctypes.c_size_t()
+		names = core.BNGetDatabaseObjectChildNames(self.handle, ctypes.byref(count))
+		try:
+			result = []
+			for i in range(0, count.value):
+				result.append(core.pyNativeStr(names[i]))
+			return result
+		finally:
+			core.BNFreeStringList(names, count.value)
+
+	def get_child(self, key: str) -> Optional['DatabaseObject']:
+		"""Get a single child object by key"""
+		handle = core.BNGetDatabaseObjectChild(self.handle, key)
+		if handle is None:
+			return None
+		return DatabaseObject(handle=handle)
+
+	def find_child(self, path: List[str]) -> Optional['DatabaseObject']:
+		"""Find a child object by following a path"""
+		path_array = (ctypes.c_char_p * len(path))()
+		for i, item in enumerate(path):
+			path_array[i] = item.encode('utf-8')
+
+		handle = core.BNFindDatabaseObjectChild(self.handle, path_array, len(path))
+		if handle is None:
+			return None
+		return DatabaseObject(handle=handle)
+
+	@property
 	def dependencies(self) -> List[str]:
 		"""Get list of dependencies for this database object (read-only)"""
 		if self._dependencies is None:

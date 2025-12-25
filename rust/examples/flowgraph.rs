@@ -13,6 +13,7 @@ use binaryninja::{
     disassembly::{DisassemblyTextLine, InstructionTextToken, InstructionTextTokenKind},
     flowgraph::{EdgePenStyle, FlowGraph, ThemeColor},
 };
+use std::time::Duration;
 
 pub struct GraphPrinter;
 
@@ -134,8 +135,9 @@ fn main() {
     test_graph();
 
     for func in bv.functions().iter().take(5) {
-        // TODO: Why are the nodes empty? Python its empty until its shown...
         let graph = func.create_graph(FunctionViewType::MediumLevelIL, None);
+        // It is important to call this, otherwise no nodes will be placed.
+        graph.request_layout_and_wait(Duration::from_secs(5));
         let func_name = func.symbol().short_name();
         let title = func_name.to_string_lossy();
         bv.show_graph_report(&title, &graph);

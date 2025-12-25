@@ -1,0 +1,13 @@
+[package]
+name = "example_flowgraph_layout"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+binaryninjacore-sys = { path = "../../binaryninjacore-sys" }
+binaryninja = { path = "../.." }
+rust-sugiyama = "0.4.0"
+petgraph = "0.8"

@@ -14,18 +14,22 @@
 
 //! Interfaces for creating and displaying pretty CFGs in Binary Ninja.
 
-use binaryninjacore_sys::*;
-
 use crate::high_level_il::HighLevelILFunction;
 use crate::low_level_il::LowLevelILRegularFunction;
 use crate::medium_level_il::MediumLevelILFunction;
 use crate::rc::*;
 use crate::render_layer::CoreRenderLayer;
+use binaryninjacore_sys::*;
+use std::ffi::c_void;
+use std::ptr::NonNull;
+use std::time::Duration;
 
 pub mod edge;
+pub mod layout;
 pub mod node;
 
 use crate::binary_view::BinaryView;
+use crate::flowgraph::layout::FlowGraphLayoutRequest;
 use crate::function::Function;
 use crate::string::IntoCStr;
 pub use edge::EdgeStyle;
@@ -36,6 +40,7 @@ pub type EdgePenStyle = BNEdgePenStyle;
 pub type ThemeColor = BNThemeColor;
 pub type FlowGraphOption = BNFlowGraphOption;
 
+#[repr(transparent)]
 #[derive(PartialEq, Eq, Hash)]
 pub struct FlowGraph {
     pub(crate) handle: *mut BNFlowGraph,
@@ -50,8 +55,42 @@ impl FlowGraph {
         Ref::new(Self { handle: raw })
     }
 
+    /// Create an empty flowgraph.
+    ///
+    /// If you instead want to create a flowgraph of a given [`Function`], use [`Function::create_graph`].
     pub fn new() -> Ref<Self> {
         unsafe { FlowGraph::ref_from_raw(BNCreateFlowGraph()) }
+    }
+
+    /// Requests the flowgraph to be laid out, positioning nodes and routing edges.
+    ///
+    /// This function returns immediately, with `on_complete` being called when the layout has been
+    /// completed, to wait for the request to be completed use [`FlowGraph::request_layout_and_wait`].
+    pub fn request_layout<C: FnOnce() + Send + 'static>(
+        &self,
+        on_complete: C,
+    ) -> Ref<FlowGraphLayoutRequest> {
+        let context = Box::into_raw(Box::new(on_complete));
+        let request_raw_ptr = unsafe {
+            BNStartFlowGraphLayout(self.handle, context as *mut _, Some(cb_on_complete::<C>))
+        };
+        let request_ptr =
+            NonNull::new(request_raw_ptr).expect("BNStartFlowGraphLayout returned null");
+        unsafe { FlowGraphLayoutRequest::ref_from_raw(request_ptr) }
+    }
+
+    /// Blocks until the flow graph layout is complete or until the `timeout` has elapsed, returning
+    /// `true` if the layout completed within the timeout, `false` otherwise.
+    ///
+    /// Use [`FlowGraph::request_layout`] instead if you want to provide a callback when the layout
+    /// has been completed and return immediately.
+    pub fn request_layout_and_wait(&self, timeout: Duration) -> bool {
+        let (tx, rx) = std::sync::mpsc::channel();
+        // IMPORTANT: named `_request` to keep from dropping before function return.
+        let _request = self.request_layout(move || {
+            let _ = tx.send(());
+        });
+        rx.recv_timeout(timeout).is_ok()
     }
 
     pub fn has_updates(&self) -> bool {
@@ -70,6 +109,10 @@ impl FlowGraph {
         Some(unsafe { FlowGraph::ref_from_raw(new_graph) })
     }
 
+    /// Sends the [`FlowGraph`] to the interaction handlers to display.
+    ///
+    /// - On headless this is a no-op unless you register a [`crate::interaction::handler::InteractionHandler`].
+    /// - On UI this will create a new tab to display the graph.
     pub fn show(&self, title: &str) {
         let raw_title = title.to_cstr();
         match self.view() {
@@ -82,14 +125,37 @@ impl FlowGraph {
         }
     }
 
-    /// Whether flow graph layout is complete.
+    /// Whether the flow graph layout is complete.
     pub fn is_layout_complete(&self) -> bool {
         unsafe { BNIsFlowGraphLayoutComplete(self.handle) }
     }
 
+    // TODO: A [`FlowGraphLayoutRequest::abort`] does not actually abort the layout, it sets a flag
+    // TODO: in the associated [`FlowGraph`], but we have no way to observe that flag. See the
+    // TODO: issue filed here: https://github.com/Vector35/binaryninja-api/issues/7826.
+    // pub fn is_aborted(&self) -> bool {}
+
     pub fn nodes(&self) -> Array<FlowGraphNode> {
         let mut count: usize = 0;
-        let nodes_ptr = unsafe { BNGetFlowGraphNodes(self.handle, &mut count as *mut usize) };
+        let nodes_ptr = unsafe { BNGetFlowGraphNodes(self.handle, &mut count) };
+        unsafe { Array::new(nodes_ptr, count, ()) }
+    }
+
+    /// Returns the nodes that are partially or fully visible within the given region.
+    ///
+    /// The node visibility region is set with [`FlowGraphNode::set_visibility_region`] when laying
+    /// out the graph.
+    pub fn visible_nodes(
+        &self,
+        left: i32,
+        top: i32,
+        right: i32,
+        bottom: i32,
+    ) -> Array<FlowGraphNode> {
+        let mut count: usize = 0;
+        let nodes_ptr = unsafe {
+            BNGetFlowGraphNodesInRegion(self.handle, left, top, right, bottom, &mut count)
+        };
         unsafe { Array::new(nodes_ptr, count, ()) }
     }
 
@@ -181,6 +247,12 @@ impl FlowGraph {
         (width, height)
     }
 
+    /// Set the size of the graph.
+    pub fn set_size(&self, width: i32, height: i32) {
+        unsafe { BNFlowGraphSetWidth(self.handle, width) };
+        unsafe { BNFlowGraphSetHeight(self.handle, height) };
+    }
+
     /// Returns the graph margins between nodes.
     pub fn node_margins(&self) -> (i32, i32) {
         let horizontal = unsafe { BNGetHorizontalFlowGraphNodeMargin(self.handle) };
@@ -193,14 +265,27 @@ impl FlowGraph {
         unsafe { BNSetFlowGraphNodeMargins(self.handle, horizontal, vertical) };
     }
 
+    pub fn is_node_valid(&self, node: &FlowGraphNode) -> bool {
+        unsafe { BNIsNodeValidForFlowGraph(self.handle, node.handle) }
+    }
+
+    /// Add a [`FlowGraphNode`] to the graph, returning its index.
+    ///
+    /// This only works before the flow graph layout is complete, inside [`layout::FlowGraphLayout::layout`].
     pub fn append(&self, node: &FlowGraphNode) -> usize {
         unsafe { BNAddFlowGraphNode(self.handle, node.handle) }
     }
 
+    /// Replaces the node at the given index with the provided [`FlowGraphNode`].
+    ///
+    /// This only works before the flow graph layout is complete, inside [`layout::FlowGraphLayout::layout`].
     pub fn replace(&self, index: usize, node: &FlowGraphNode) {
         unsafe { BNReplaceFlowGraphNode(self.handle, index, node.handle) }
     }
 
+    /// Removes all nodes from the graph.
+    ///
+    /// This only works before the flow graph layout is complete, inside [`layout::FlowGraphLayout::layout`].
     pub fn clear(&self) {
         unsafe { BNClearFlowGraphNodes(self.handle) }
     }
@@ -253,4 +338,11 @@ impl ToOwned for FlowGraph {
     fn to_owned(&self) -> Self::Owned {
         unsafe { RefCountable::inc_ref(self) }
     }
+}
+
+unsafe extern "C" fn cb_on_complete<C: FnOnce()>(ctxt: *mut c_void) {
+    // Take ownership of the ctxt so that we do not leak, we assume this callback to always
+    // be called so that the ctxt may be freed.
+    let ctxt: Box<C> = unsafe { Box::from_raw(ctxt as *mut C) };
+    ctxt();
 }

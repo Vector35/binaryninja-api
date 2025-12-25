@@ -1,3 +1,5 @@
+//! Represents the connection between two [`FlowGraphNode`]s.
+
 use crate::architecture::BranchType;
 use crate::flowgraph::node::FlowGraphNode;
 use crate::flowgraph::{EdgePenStyle, ThemeColor};

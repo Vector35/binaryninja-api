@@ -2638,6 +2638,24 @@ impl Function {
         (!graph.is_null()).then(|| unsafe { FlowGraph::ref_from_raw(graph) })
     }
 
+    /// Create a [`FlowGraph`] of the function at the specified `view_type`.
+    ///
+    /// This will **NOT** populate the [`FlowGraph::nodes`], to populate the nodes and position
+    /// them, you must call [`FlowGraph::request_layout`] or [`FlowGraph::request_layout_and_wait`].
+    ///
+    /// ```no_run
+    /// # use std::time::Duration;
+    /// # use binaryninja::function::{Function, FunctionViewType};
+    /// # let func: Function = todo!()
+    /// let graph = func.create_graph(FunctionViewType::MediumLevelIL, None);
+    /// assert!(graph.request_layout_and_wait(Duration::from_secs(5)), "Took too long to create graph");
+    /// assert!(graph.is_layout_complete(), "Should always be true if request_layout_and_wait returned true");
+    /// for node in &graph.nodes() {
+    ///    for line in &node.lines() {
+    ///        println!("{}", line);
+    ///    }
+    ///}
+    /// ```
     pub fn create_graph(
         &self,
         view_type: FunctionViewType,

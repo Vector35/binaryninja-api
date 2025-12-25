@@ -9,6 +9,7 @@ members = [
     "arch/riscv",
     "arch/msp430",
     "rust/plugin_examples/data_renderer",
+    "rust/plugin_examples/flowgraph_layout",
     "view/minidump",
     "plugins/dwarf/dwarf_import",
     "plugins/dwarf/dwarf_import/demo",

@@ -1019,15 +1019,15 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			result[0].branchCount = len(info.branches)
 			for i in range(0, len(info.branches)):
 				if isinstance(info.branches[i].type, str):
-					result[0].branchType[i] = BranchType[info.branches[i].type.name]
+					result[0].branchInfo[i].branchType = BranchType[info.branches[i].type.name]
 				else:
-					result[0].branchType[i] = info.branches[i].type
-				result[0].branchTarget[i] = info.branches[i].target
+					result[0].branchInfo[i].branchType = info.branches[i].type
+				result[0].branchInfo[i].branchTarget = info.branches[i].target
 				arch = info.branches[i].arch
 				if arch is None:
-					result[0].branchArch[i] = None
+					result[0].branchInfo[i].branchArch = None
 				else:
-					result[0].branchArch[i] = arch.handle
+					result[0].branchInfo[i].branchArch = arch.handle
 			return True
 		except:
 			log_error_for_exception("Unhandled Python exception in Architecture._get_instruction_info")
@@ -2763,13 +2763,12 @@ class CoreArchitecture(Architecture):
 		result.length = info.length
 		result.arch_transition_by_target_addr = info.archTransitionByTargetAddr
 		result.branch_delay = info.delaySlots
-		for i in range(0, info.branchCount):
-			target = info.branchTarget[i]
-			if info.branchArch[i]:
-				arch = CoreArchitecture._from_cache(info.branchArch[i])
+		for branch_info in info.branchInfo:
+			if branch_info.branchArch:
+				arch = CoreArchitecture._from_cache(branch_info.branchArch)
 			else:
 				arch = None
-			result.add_branch(BranchType(info.branchType[i]), target, arch)
+			result.add_branch(BranchType(branch_info.branchType), branch_info.branchTarget, arch)
 		return result
 
 	def get_instruction_text(self, data: bytes, addr: int) -> Optional[Tuple[List['function.InstructionTextToken'], int]]:

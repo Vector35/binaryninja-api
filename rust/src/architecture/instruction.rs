@@ -39,13 +39,16 @@ impl InstructionInfo {
 
 impl From<BNInstructionInfo> for InstructionInfo {
     fn from(value: BNInstructionInfo) -> Self {
-        // TODO: This is quite ugly, but we destructure the branch info so this will have to do.
         let mut branch_info = [None; NUM_BRANCH_INFO];
-        #[allow(clippy::needless_range_loop)]
-        for i in 0..value.branchCount.min(NUM_BRANCH_INFO) {
-            let branch_target = value.branchTarget[i];
+        for (i, info) in value
+            .branchInfo
+            .iter()
+            .take(value.branchCount.min(NUM_BRANCH_INFO))
+            .enumerate()
+        {
+            let branch_target = info.branchTarget;
             branch_info[i] = Some(BranchInfo {
-                kind: match value.branchType[i] {
+                kind: match info.branchType {
                     BNBranchType::UnconditionalBranch => BranchKind::Unconditional(branch_target),
                     BNBranchType::FalseBranch => BranchKind::False(branch_target),
                     BNBranchType::TrueBranch => BranchKind::True(branch_target),
@@ -57,10 +60,10 @@ impl From<BNInstructionInfo> for InstructionInfo {
                     BNBranchType::UnresolvedBranch => BranchKind::Unresolved,
                     BNBranchType::UserDefinedBranch => BranchKind::UserDefined,
                 },
-                arch: if value.branchArch[i].is_null() {
+                arch: if info.branchArch.is_null() {
                     None
                 } else {
-                    Some(unsafe { CoreArchitecture::from_raw(value.branchArch[i]) })
+                    Some(unsafe { CoreArchitecture::from_raw(info.branchArch) })
                 },
             });
         }
@@ -76,38 +79,15 @@ impl From<BNInstructionInfo> for InstructionInfo {
 impl From<InstructionInfo> for BNInstructionInfo {
     fn from(value: InstructionInfo) -> Self {
         let branch_count = value.branches.into_iter().filter(Option::is_some).count();
-        // TODO: This is quite ugly, but we destructure the branch info so this will have to do.
-        let branch_info_0 = value.branches[0].unwrap_or_default();
-        let branch_info_1 = value.branches[1].unwrap_or_default();
-        let branch_info_2 = value.branches[2].unwrap_or_default();
         Self {
             length: value.length,
             branchCount: branch_count,
             archTransitionByTargetAddr: value.arch_transition_by_target_addr,
             delaySlots: value.delay_slots,
-            branchType: [
-                branch_info_0.into(),
-                branch_info_1.into(),
-                branch_info_2.into(),
-            ],
-            branchTarget: [
-                branch_info_0.target().unwrap_or_default(),
-                branch_info_1.target().unwrap_or_default(),
-                branch_info_2.target().unwrap_or_default(),
-            ],
-            branchArch: [
-                branch_info_0
-                    .arch
-                    .map(|a| a.handle)
-                    .unwrap_or(std::ptr::null_mut()),
-                branch_info_1
-                    .arch
-                    .map(|a| a.handle)
-                    .unwrap_or(std::ptr::null_mut()),
-                branch_info_2
-                    .arch
-                    .map(|a| a.handle)
-                    .unwrap_or(std::ptr::null_mut()),
+            branchInfo: [
+                value.branches[0].unwrap_or_default().into(),
+                value.branches[1].unwrap_or_default().into(),
+                value.branches[2].unwrap_or_default().into(),
             ],
         }
     }

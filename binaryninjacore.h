@@ -1857,15 +1857,20 @@ extern "C"
 		bool (*canDecode)(void* ctxt, BNBinaryView* input);
 	} BNCustomTransform;
 
+	typedef struct BNBranchInfo
+	{
+		BNBranchType branchType;
+		uint64_t branchTarget;
+		BNArchitecture* branchArch; // If null, same architecture as instruction
+	} BNBranchInfo;
+
 	typedef struct BNInstructionInfo
 	{
 		size_t length;
 		size_t branchCount;
 		bool archTransitionByTargetAddr;
 		uint8_t delaySlots;
-		BNBranchType branchType[BN_MAX_INSTRUCTION_BRANCHES];
-		uint64_t branchTarget[BN_MAX_INSTRUCTION_BRANCHES];
-		BNArchitecture* branchArch[BN_MAX_INSTRUCTION_BRANCHES];  // If null, same architecture as instruction
+		BNBranchInfo branchInfo[BN_MAX_INSTRUCTION_BRANCHES];
 	} BNInstructionInfo;
 
 	BN_ENUM(uint8_t, BNRelocationType)

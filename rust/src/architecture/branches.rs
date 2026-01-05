@@ -54,19 +54,23 @@ impl BranchInfo {
     }
 }
 
-impl From<BranchInfo> for BNBranchType {
+impl From<BranchInfo> for BNBranchInfo {
     fn from(value: BranchInfo) -> Self {
-        match value.kind {
-            BranchKind::Unresolved => BNBranchType::UnresolvedBranch,
-            BranchKind::Unconditional(_) => BNBranchType::UnconditionalBranch,
-            BranchKind::False(_) => BNBranchType::FalseBranch,
-            BranchKind::True(_) => BNBranchType::TrueBranch,
-            BranchKind::Call(_) => BNBranchType::CallDestination,
-            BranchKind::FunctionReturn => BNBranchType::FunctionReturn,
-            BranchKind::SystemCall => BNBranchType::SystemCall,
-            BranchKind::Indirect => BNBranchType::IndirectBranch,
-            BranchKind::Exception => BNBranchType::ExceptionBranch,
-            BranchKind::UserDefined => BNBranchType::UserDefinedBranch,
+        Self {
+            branchType: match value.kind {
+                BranchKind::Unresolved => BNBranchType::UnresolvedBranch,
+                BranchKind::Unconditional(_) => BNBranchType::UnconditionalBranch,
+                BranchKind::False(_) => BNBranchType::FalseBranch,
+                BranchKind::True(_) => BNBranchType::TrueBranch,
+                BranchKind::Call(_) => BNBranchType::CallDestination,
+                BranchKind::FunctionReturn => BNBranchType::FunctionReturn,
+                BranchKind::SystemCall => BNBranchType::SystemCall,
+                BranchKind::Indirect => BNBranchType::IndirectBranch,
+                BranchKind::Exception => BNBranchType::ExceptionBranch,
+                BranchKind::UserDefined => BNBranchType::UserDefinedBranch,
+            },
+            branchTarget: value.target().unwrap_or_default(),
+            branchArch: value.arch.map(|a| a.handle).unwrap_or(std::ptr::null_mut()),
         }
     }
 }

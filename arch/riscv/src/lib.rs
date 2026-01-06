@@ -85,6 +85,11 @@ enum Intrinsic {
     FcvtUToF(u8, u8, RoundMode),
     FcvtFToU(u8, u8, RoundMode),
     Fence,
+    Clz,
+    Ctz,
+    Popcount,
+    OrCombine,
+    Rev8,
 }
 
 #[derive(Copy, Clone)]
@@ -342,6 +347,11 @@ impl<D: RiscVDisassembler> RiscVIntrinsic<D> {
             Some((23, usize, fsize, rm)) => Some(Intrinsic::FcvtUToF(usize, fsize, rm).into()),
             Some((24, fsize, usize, rm)) => Some(Intrinsic::FcvtFToU(fsize, usize, rm).into()),
             Some((25, _, _, _)) => Some(Intrinsic::Fence.into()),
+            Some((26, _, _, _)) => Some(Intrinsic::Clz.into()),
+            Some((27, _, _, _)) => Some(Intrinsic::Ctz.into()),
+            Some((28, _, _, _)) => Some(Intrinsic::Popcount.into()),
+            Some((29, _, _, _)) => Some(Intrinsic::OrCombine.into()),
+            Some((30, _, _, _)) => Some(Intrinsic::Rev8.into()),
             _ => None,
         }
     }
@@ -476,6 +486,11 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             )
             .into(),
             Intrinsic::Fence => "_fence".into(),
+            Intrinsic::Clz => "_clz".into(),
+            Intrinsic::Ctz => "_ctz".into(),
+            Intrinsic::Popcount => "_popcount".into(),
+            Intrinsic::OrCombine => "_orc_b".into(),
+            Intrinsic::Rev8 => "_rev8".into(),
         }
     }
 
@@ -517,6 +532,11 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
                 Self::id_from_parts(24, Some(usize), Some(fsize), Some(rm))
             }
             Intrinsic::Fence => Self::id_from_parts(25, None, None, None),
+            Intrinsic::Clz => Self::id_from_parts(26, None, None, None),
+            Intrinsic::Ctz => Self::id_from_parts(27, None, None, None),
+            Intrinsic::Popcount => Self::id_from_parts(28, None, None, None),
+            Intrinsic::OrCombine => Self::id_from_parts(29, None, None, None),
+            Intrinsic::Rev8 => Self::id_from_parts(30, None, None, None),
         }
     }
 
@@ -585,6 +605,19 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
                     Conf::new(Type::int(4, false), MIN_CONFIDENCE),
                 )]
             }
+            Intrinsic::Clz
+            | Intrinsic::Ctz
+            | Intrinsic::Popcount
+            | Intrinsic::OrCombine
+            | Intrinsic::Rev8 => {
+                vec![NameAndType::new(
+                    "input",
+                    Conf::new(
+                        Type::int(<D::RegFile as RegFile>::Int::width(), false),
+                        MIN_CONFIDENCE,
+                    ),
+                )]
+            }
         }
     }
 
@@ -627,6 +660,16 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             }
             Intrinsic::FcvtFToU(_, size, _) => {
                 vec![Conf::new(Type::int(size as usize, false), MAX_CONFIDENCE)]
+            }
+            Intrinsic::Clz
+            | Intrinsic::Ctz
+            | Intrinsic::Popcount
+            | Intrinsic::OrCombine
+            | Intrinsic::Rev8 => {
+                vec![Conf::new(
+                    Type::int(<D::RegFile as RegFile>::Int::width(), false),
+                    MIN_CONFIDENCE,
+                )]
             }
         }
     }
@@ -1177,6 +1220,61 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
             }),
 
             Op::RorI(i) => simple_i!(i, |rs1, imm| il.ror(max_width, rs1, imm)),
+            Op::Clz(i) => {
+                let rd = Register::from(i.rd());
+                let rs1 = LiftableLowLevelIL::lift(il, Register::from(i.rs1()));
+
+                if i.rd().id() == 0 {
+                    il.nop().append();
+                } else {
+                    il.intrinsic([rd], RiscVIntrinsic::<D>::from(Intrinsic::Clz), [rs1])
+                        .append();
+                }
+            }
+            Op::Ctz(i) => {
+                let rd = Register::from(i.rd());
+                let rs1 = LiftableLowLevelIL::lift(il, Register::from(i.rs1()));
+
+                if i.rd().id() == 0 {
+                    il.nop().append();
+                } else {
+                    il.intrinsic([rd], RiscVIntrinsic::<D>::from(Intrinsic::Ctz), [rs1])
+                        .append();
+                }
+            }
+            Op::Cpop(i) => {
+                let rd = Register::from(i.rd());
+                let rs1 = LiftableLowLevelIL::lift(il, Register::from(i.rs1()));
+
+                if i.rd().id() == 0 {
+                    il.nop().append();
+                } else {
+                    il.intrinsic([rd], RiscVIntrinsic::<D>::from(Intrinsic::Popcount), [rs1])
+                        .append();
+                }
+            }
+            Op::Orcb(i) => {
+                let rd = Register::from(i.rd());
+                let rs1 = LiftableLowLevelIL::lift(il, Register::from(i.rs1()));
+
+                if i.rd().id() == 0 {
+                    il.nop().append();
+                } else {
+                    il.intrinsic([rd], RiscVIntrinsic::<D>::from(Intrinsic::OrCombine), [rs1])
+                        .append();
+                }
+            }
+            Op::Rev8(i) => {
+                let rd = Register::from(i.rd());
+                let rs1 = LiftableLowLevelIL::lift(il, Register::from(i.rs1()));
+
+                if i.rd().id() == 0 {
+                    il.nop().append();
+                } else {
+                    il.intrinsic([rd], RiscVIntrinsic::<D>::from(Intrinsic::Rev8), [rs1])
+                        .append();
+                }
+            }
 
             // r-type
             Op::Add(r) => simple_r!(r, |rs1, rs2| il.add(max_width, rs1, rs2)),
@@ -1274,6 +1372,42 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
             }),
 
             Op::RorIW(i) => simple_i!(i, |rs1, imm| il.sx(max_width, il.ror(4, rs1, imm))),
+            Op::ClzW(i) => {
+                let rd = Register::from(i.rd());
+                let rs1 =
+                    LiftableLowLevelILWithSize::lift_with_size(il, Register::from(i.rs1()), 4);
+
+                if i.rd().id() == 0 {
+                    il.nop().append();
+                } else {
+                    il.intrinsic([rd], RiscVIntrinsic::<D>::from(Intrinsic::Clz), [rs1])
+                        .append();
+                }
+            }
+            Op::CtzW(i) => {
+                let rd = Register::from(i.rd());
+                let rs1 =
+                    LiftableLowLevelILWithSize::lift_with_size(il, Register::from(i.rs1()), 4);
+
+                if i.rd().id() == 0 {
+                    il.nop().append();
+                } else {
+                    il.intrinsic([rd], RiscVIntrinsic::<D>::from(Intrinsic::Ctz), [rs1])
+                        .append();
+                }
+            }
+            Op::CpopW(i) => {
+                let rd = Register::from(i.rd());
+                let rs1 =
+                    LiftableLowLevelILWithSize::lift_with_size(il, Register::from(i.rs1()), 4);
+
+                if i.rd().id() == 0 {
+                    il.nop().append();
+                } else {
+                    il.intrinsic([rd], RiscVIntrinsic::<D>::from(Intrinsic::Popcount), [rs1])
+                        .append();
+                }
+            }
 
             // r-type 32-bit
             Op::AddW(r) => simple_r!(r, |rs1, rs2| il.sx(max_width, il.add(4, rs1, rs2))),

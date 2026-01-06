@@ -224,6 +224,15 @@ pub enum Op<D: RiscVDisassembler> {
     RolW(RTypeIntInst<D>),
     RorW(RTypeIntInst<D>),
     RorIW(ITypeIntInst<D>),
+
+    Clz(ITypeIntInst<D>),
+    ClzW(ITypeIntInst<D>),
+    Ctz(ITypeIntInst<D>),
+    CtzW(ITypeIntInst<D>),
+    Cpop(ITypeIntInst<D>),
+    CpopW(ITypeIntInst<D>),
+    Orcb(ITypeIntInst<D>),
+    Rev8(ITypeIntInst<D>),
 }
 
 pub trait Register {
@@ -1910,7 +1919,16 @@ impl<D: RiscVDisassembler> Instr<D> {
                     ops.push(Operand::R(r.rs1()));
                     ops.push(Operand::R(r.rs2()));
                 }
-                Op::SextB(ref i) | Op::SextH(ref i) => {
+                Op::SextB(ref i)
+                | Op::SextH(ref i)
+                | Op::Clz(ref i)
+                | Op::ClzW(ref i)
+                | Op::Ctz(ref i)
+                | Op::CtzW(ref i)
+                | Op::Cpop(ref i)
+                | Op::CpopW(ref i)
+                | Op::Orcb(ref i)
+                | Op::Rev8(ref i) => {
                     ops.push(Operand::R(i.rd()));
                     ops.push(Operand::R(i.rs1()));
                 }
@@ -2216,6 +2234,15 @@ impl<'a, D: RiscVDisassembler + 'a> Mnem<'a, D> {
                 Op::RolW(..) => "rolw",
                 Op::RorW(..) => "rorw",
                 Op::RorIW(..) => "roriw",
+
+                Op::Clz(..) => "clz",
+                Op::ClzW(..) => "clzw",
+                Op::Ctz(..) => "ctz",
+                Op::CtzW(..) => "ctzw",
+                Op::Cpop(..) => "cpop",
+                Op::CpopW(..) => "cpopw",
+                Op::Orcb(..) => "orc.b",
+                Op::Rev8(..) => "rev8",
             },
         }
     }
@@ -2927,6 +2954,9 @@ pub trait RiscVDisassembler: 'static + Debug + Sized + Copy + Clone + Send + Syn
                                     }
                                     0b011000 if Self::BitmanipZbbExtension::supported() => {
                                         match orig_imm & 0b11111 {
+                                            0b00000 => Op::Clz(itype),
+                                            0b00001 => Op::Ctz(itype),
+                                            0b00010 => Op::Cpop(itype),
                                             0b00100 => Op::SextB(itype),
                                             0b00101 => Op::SextH(itype),
                                             _ => return Err(InvalidSubop),
@@ -2937,6 +2967,7 @@ pub trait RiscVDisassembler: 'static + Debug + Sized + Copy + Clone + Send + Syn
                             }
                             0b101 => {
                                 let shift_opc = inst.0 >> 26;
+                                let orig_imm = inst.i_imm();
 
                                 // pretty terrible hack to clear bits for shamt
                                 if int_width > 4 {
@@ -2947,12 +2978,25 @@ pub trait RiscVDisassembler: 'static + Debug + Sized + Copy + Clone + Send + Syn
 
                                 match shift_opc {
                                     0b000000 => Op::SrlI(itype),
+                                    0b001010 if Self::BitmanipZbbExtension::supported() => {
+                                        match orig_imm & 0b111111 {
+                                            0b000111 => Op::Orcb(itype),
+                                            _ => return Err(InvalidSubop),
+                                        }
+                                    }
                                     0b010000 => Op::SraI(itype),
                                     0b010010 if Self::BitmanipZbsExtension::supported() => {
                                         Op::BextI(itype)
                                     }
                                     0b011000 if Self::BitmanipZbbExtension::supported() => {
                                         Op::RorI(itype)
+                                    }
+                                    0b011010 if Self::BitmanipZbbExtension::supported() => {
+                                        match orig_imm & 0b111111 {
+                                            0b011000 if int_width == 4 => Op::Rev8(itype),
+                                            0b111000 if int_width == 8 => Op::Rev8(itype),
+                                            _ => return Err(InvalidSubop),
+                                        }
                                     }
                                     _ => return Err(InvalidSubop),
                                 }
@@ -2970,12 +3014,21 @@ pub trait RiscVDisassembler: 'static + Debug + Sized + Copy + Clone + Send + Syn
                             0b000 => Op::AddIW(itype),
                             0b001 => {
                                 let shift_opc = inst.0 >> 26;
+                                let orig_imm = inst.i_imm();
                                 // pretty terrible hack to clear bits for shamt
                                 itype.inst.0 &= !0xfc000000;
 
                                 match shift_opc {
                                     0b000000 => Op::SllIW(itype),
                                     0b000010 => Op::SllIUW(itype),
+                                    0b011000 if Self::BitmanipZbbExtension::supported() => {
+                                        match orig_imm & 0b11111 {
+                                            0b00000 => Op::ClzW(itype),
+                                            0b00001 => Op::CtzW(itype),
+                                            0b00010 => Op::CpopW(itype),
+                                            _ => return Err(InvalidSubop),
+                                        }
+                                    }
                                     _ => return Err(InvalidSubop),
                                 }
                             }

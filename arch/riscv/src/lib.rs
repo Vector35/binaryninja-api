@@ -1151,6 +1151,23 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
             Op::SrlI(i) => simple_i!(i, |rs1, imm| il.lsr(max_width, rs1, imm)),
             Op::SraI(i) => simple_i!(i, |rs1, imm| il.asr(max_width, rs1, imm)),
 
+            Op::BclrI(i) => simple_i!(i, |rs1, shamt| {
+                let mask = il.not(max_width, il.lsl(max_width, 1, shamt));
+                il.and(max_width, rs1, mask)
+            }),
+            Op::BextI(i) => simple_i!(i, |rs1, shamt| {
+                let val = il.lsr(max_width, rs1, shamt);
+                il.and(max_width, val, 1)
+            }),
+            Op::BinvI(i) => simple_i!(i, |rs1, shamt| {
+                let mask = il.lsl(max_width, 1, shamt);
+                il.xor(max_width, rs1, mask)
+            }),
+            Op::BsetI(i) => simple_i!(i, |rs1, shamt| {
+                let mask = il.lsl(max_width, 1, shamt);
+                il.or(max_width, rs1, mask)
+            }),
+
             // r-type
             Op::Add(r) => simple_r!(r, |rs1, rs2| il.add(max_width, rs1, rs2)),
             Op::Sll(r) => simple_r!(r, |rs1, rs2| il.lsl(max_width, rs1, rs2)),
@@ -1164,6 +1181,27 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
             Op::And(r) => simple_r!(r, |rs1, rs2| il.and(max_width, rs1, rs2)),
             Op::Sub(r) => simple_r!(r, |rs1, rs2| il.sub(max_width, rs1, rs2)),
             Op::Sra(r) => simple_r!(r, |rs1, rs2| il.asr(max_width, rs1, rs2)),
+
+            Op::Bclr(r) => simple_r!(r, |rs1, rs2| {
+                let shamt = il.and(max_width, rs2, (max_width * 8 - 1) as u64);
+                let mask = il.not(max_width, il.lsl(max_width, 1, shamt));
+                il.and(max_width, rs1, mask)
+            }),
+            Op::Bext(r) => simple_r!(r, |rs1, rs2| {
+                let shamt = il.and(max_width, rs2, (max_width * 8 - 1) as u64);
+                let val = il.lsr(max_width, rs1, shamt);
+                il.and(max_width, val, 1)
+            }),
+            Op::Binv(r) => simple_r!(r, |rs1, rs2| {
+                let shamt = il.and(max_width, rs2, (max_width * 8 - 1) as u64);
+                let mask = il.lsl(max_width, 1, shamt);
+                il.xor(max_width, rs1, mask)
+            }),
+            Op::Bset(r) => simple_r!(r, |rs1, rs2| {
+                let shamt = il.and(max_width, rs2, (max_width * 8 - 1) as u64);
+                let mask = il.lsl(max_width, 1, shamt);
+                il.or(max_width, rs1, mask)
+            }),
 
             // i-type 32-bit
             Op::AddIW(i) => simple_i!(i, |rs1, imm| il.sx(max_width, il.add(4, rs1, imm))),

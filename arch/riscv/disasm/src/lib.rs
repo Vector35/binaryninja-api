@@ -187,6 +187,16 @@ pub enum Op<D: RiscVDisassembler> {
     FmvToInt(FpMvToIntInst<D>),
     FmvFromInt(FpMvFromIntInst<D>),
     Fclass(FpClassInst<D>),
+
+    // Zbs (bit-manipulation, single-bit)
+    Bclr(RTypeIntInst<D>),
+    BclrI(ITypeIntInst<D>),
+    Bext(RTypeIntInst<D>),
+    BextI(ITypeIntInst<D>),
+    Binv(RTypeIntInst<D>),
+    BinvI(ITypeIntInst<D>),
+    Bset(RTypeIntInst<D>),
+    BsetI(ITypeIntInst<D>),
 }
 
 pub trait Register {
@@ -1807,7 +1817,11 @@ impl<D: RiscVDisassembler> Instr<D> {
                 | Op::AddIW(ref i)
                 | Op::SllIW(ref i)
                 | Op::SrlIW(ref i)
-                | Op::SraIW(ref i) => {
+                | Op::SraIW(ref i)
+                | Op::BclrI(ref i)
+                | Op::BextI(ref i)
+                | Op::BinvI(ref i)
+                | Op::BsetI(ref i) => {
                     ops.push(Operand::R(i.rd()));
                     ops.push(Operand::R(i.rs1()));
                     ops.push(Operand::I(i.imm()));
@@ -1843,7 +1857,11 @@ impl<D: RiscVDisassembler> Instr<D> {
                 | Op::DivW(ref r)
                 | Op::DivUW(ref r)
                 | Op::RemW(ref r)
-                | Op::RemUW(ref r) => {
+                | Op::RemUW(ref r)
+                | Op::Bclr(ref r)
+                | Op::Bext(ref r)
+                | Op::Binv(ref r)
+                | Op::Bset(ref r) => {
                     ops.push(Operand::R(r.rd()));
                     ops.push(Operand::R(r.rs1()));
                     ops.push(Operand::R(r.rs2()));
@@ -2112,6 +2130,15 @@ impl<'a, D: RiscVDisassembler + 'a> Mnem<'a, D> {
                 Op::Fcvt(..) | Op::FcvtToInt(..) | Op::FcvtFromInt(..) => "fcvt",
                 Op::FmvToInt(..) | Op::FmvFromInt(..) => "fmv",
                 Op::Fclass(..) => "fclass",
+
+                Op::Bclr(..) => "bclr",
+                Op::Bext(..) => "bext",
+                Op::Binv(..) => "binv",
+                Op::Bset(..) => "bset",
+                Op::BclrI(..) => "bclri",
+                Op::BextI(..) => "bexti",
+                Op::BinvI(..) => "binvi",
+                Op::BsetI(..) => "bseti",
             },
         }
     }
@@ -2336,6 +2363,7 @@ pub trait RiscVDisassembler: 'static + Debug + Sized + Copy + Clone + Send + Syn
     type MulDivExtension: StandardExtension;
     type AtomicExtension: StandardExtension;
     type CompressedExtension: StandardExtension;
+    type BitmanipZbsExtension: StandardExtension;
 
     fn decode(addr: u64, bytes: &[u8]) -> DisResult<Instr<Self>> {
         use Error::*;
@@ -2796,14 +2824,47 @@ pub trait RiscVDisassembler: 'static + Debug + Sized + Copy + Clone + Send + Syn
                             0b100 => Op::XorI(itype),
                             0b110 => Op::OrI(itype),
                             0b111 => Op::AndI(itype),
-                            0b001 => Op::SllI(itype), // TODO shamt
-                            0b101 => {
-                                if inst.0 & 0x40000000 == 0 {
-                                    Op::SrlI(itype)
+                            0b001 => {
+                                let shift_opc = inst.0 >> 26;
+
+                                // pretty terrible hack to clear bits for shamt
+                                if int_width > 4 {
+                                    itype.inst.0 &= !0xfc000000;
                                 } else {
-                                    // pretty terrible hack, whatever
-                                    itype.inst.0 &= !0x40000000;
-                                    Op::SraI(itype)
+                                    itype.inst.0 &= !0xfe000000;
+                                }
+
+                                match shift_opc {
+                                    0b000000 => Op::SllI(itype),
+                                    0b010010 if Self::BitmanipZbsExtension::supported() => {
+                                        Op::BclrI(itype)
+                                    }
+                                    0b011010 if Self::BitmanipZbsExtension::supported() => {
+                                        Op::BinvI(itype)
+                                    }
+                                    0b001010 if Self::BitmanipZbsExtension::supported() => {
+                                        Op::BsetI(itype)
+                                    }
+                                    _ => return Err(InvalidSubop),
+                                }
+                            }
+                            0b101 => {
+                                let shift_opc = inst.0 >> 26;
+
+                                // pretty terrible hack to clear bits for shamt
+                                if int_width > 4 {
+                                    itype.inst.0 &= !0xfc000000;
+                                } else {
+                                    itype.inst.0 &= !0xfe000000;
+                                }
+
+                                match shift_opc {
+                                    0b000000 => Op::SrlI(itype),
+                                    0b010000 => Op::SraI(itype),
+                                    0b010010 if Self::BitmanipZbsExtension::supported() => {
+                                        Op::BextI(itype)
+                                    }
+                                    _ => return Err(InvalidSubop),
                                 }
                             }
                             _ => unreachable!(),
@@ -2897,6 +2958,27 @@ pub trait RiscVDisassembler: 'static + Debug + Sized + Copy + Clone + Send + Syn
                                     0b110 => Op::Rem(rtype),
                                     0b111 => Op::RemU(rtype),
                                     _ => unreachable!(),
+                                }
+                            }
+                            0b0100100 if Self::BitmanipZbsExtension::supported() => {
+                                match inst.funct3() {
+                                    0b001 => Op::Bclr(rtype),
+                                    0b101 => Op::Bext(rtype),
+                                    _ => return Err(InvalidSubop),
+                                }
+                            }
+                            0b0010100 if Self::BitmanipZbsExtension::supported() => {
+                                if inst.funct3() == 0b001 {
+                                    Op::Bset(rtype)
+                                } else {
+                                    return Err(InvalidSubop);
+                                }
+                            }
+                            0b0110100 if Self::BitmanipZbsExtension::supported() => {
+                                if inst.funct3() == 0b001 {
+                                    Op::Binv(rtype)
+                                } else {
+                                    return Err(InvalidSubop);
                                 }
                             }
                             _ => return Err(InvalidSubop),
@@ -3181,4 +3263,5 @@ impl<RF: RegFile> RiscVDisassembler for RiscVIMACDisassembler<RF> {
     type MulDivExtension = ExtensionSupported;
     type AtomicExtension = ExtensionSupported;
     type CompressedExtension = ExtensionSupported;
+    type BitmanipZbsExtension = ExtensionSupported;
 }

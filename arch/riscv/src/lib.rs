@@ -1213,6 +1213,8 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                 il.or(max_width, rs1, mask)
             }),
 
+            Op::RorI(i) => simple_i!(i, |rs1, imm| il.ror(max_width, rs1, imm)),
+
             // r-type
             Op::Add(r) => simple_r!(r, |rs1, rs2| il.add(max_width, rs1, rs2)),
             Op::Sll(r) => simple_r!(r, |rs1, rs2| il.lsl(max_width, rs1, rs2)),
@@ -1252,6 +1254,52 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                 il.add(max_width, il.lsl(max_width, rs1, x), rs2)
             }),
 
+            Op::Andn(r) => simple_r!(r, |rs1, rs2| il.and(max_width, rs1, il.not(max_width, rs2))),
+            Op::Orn(r) => simple_r!(r, |rs1, rs2| il.or(max_width, rs1, il.not(max_width, rs2))),
+            Op::Xnor(r) => simple_r!(r, |rs1, rs2| il.not(max_width, il.xor(max_width, rs1, rs2))),
+            Op::SextB(i) => simple_i!(i, |rs1, _| { il.sx(max_width, il.low_part(1, rs1)) }),
+            Op::SextH(i) => simple_i!(i, |rs1, _| { il.sx(max_width, il.low_part(2, rs1)) }),
+            Op::ZextH(r) => simple_r!(r, |rs1, _| { il.zx(max_width, il.low_part(2, rs1)) }),
+            Op::Rol(r) => simple_r!(r, |rs1, rs2| {
+                let shamt = il.and(max_width, rs2, (max_width * 8 - 1) as u64);
+                il.rol(max_width, rs1, shamt)
+            }),
+            Op::Ror(r) => simple_r!(r, |rs1, rs2| {
+                let shamt = il.and(max_width, rs2, (max_width * 8 - 1) as u64);
+                il.ror(max_width, rs1, shamt)
+            }),
+            Op::Max(r) | Op::MaxU(r) | Op::Min(r) | Op::MinU(r) => {
+                let rd = Register::from(r.rd());
+                if rd.id.0 == 0 {
+                    il.nop().append()
+                } else {
+                    let rs1 = Register::from(r.rs1());
+                    let rs2 = Register::from(r.rs2());
+
+                    let cond = match op {
+                        Op::Max(..) => il.cmp_sgt(max_width, rs1, rs2),
+                        Op::MaxU(..) => il.cmp_ugt(max_width, rs1, rs2),
+                        Op::Min(..) => il.cmp_slt(max_width, rs1, rs2),
+                        Op::MinU(..) => il.cmp_ult(max_width, rs1, rs2),
+                        _ => unreachable!(),
+                    };
+
+                    let mut t = LowLevelILLabel::new();
+                    let mut f = LowLevelILLabel::new();
+                    let mut end = LowLevelILLabel::new();
+
+                    il.if_expr(cond, &mut t, &mut f).append();
+
+                    il.mark_label(&mut t);
+                    il.set_reg(max_width, rd, rs1).append();
+                    il.goto(&mut end).append();
+
+                    il.mark_label(&mut f);
+                    il.set_reg(max_width, rd, rs2).append();
+                    il.mark_label(&mut end);
+                }
+            }
+
             // i-type 32-bit
             Op::AddIW(i) => simple_i!(i, |rs1, imm| il.sx(max_width, il.add(4, rs1, imm))),
             Op::SllIW(i) => simple_i!(i, |rs1, imm| il.sx(max_width, il.lsl(4, rs1, imm))),
@@ -1261,6 +1309,8 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
             Op::SllIUW(i) => simple_i!(i, |rs1, imm| {
                 il.lsl(max_width, il.low_part(4, rs1), imm)
             }),
+
+            Op::RorIW(i) => simple_i!(i, |rs1, imm| il.sx(max_width, il.ror(4, rs1, imm))),
 
             // r-type 32-bit
             Op::AddW(r) => simple_r!(r, |rs1, rs2| il.sx(max_width, il.add(4, rs1, rs2))),
@@ -1275,6 +1325,15 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
             Op::ShXAddUW(x, r) => {
                 simple_r!(r, |rs1, rs2| { il.add(max_width, il.lsl(4, rs1, x), rs2) })
             }
+
+            Op::RolW(r) => simple_r!(r, |rs1, rs2| {
+                let shamt = il.and(max_width, rs2, 31);
+                il.sx(max_width, il.rol(4, rs1, shamt))
+            }),
+            Op::RorW(r) => simple_r!(r, |rs1, rs2| {
+                let shamt = il.and(max_width, rs2, 31);
+                il.sx(max_width, il.ror(4, rs1, shamt))
+            }),
 
             Op::Mul(r) => simple_r!(r, |rs1, rs2| il.mul(max_width, rs1, rs2)),
             Op::MulH(r) => simple_r!(r, |rs1, rs2| {

@@ -233,6 +233,9 @@ pub enum Op<D: RiscVDisassembler> {
     CpopW(ITypeIntInst<D>),
     Orcb(ITypeIntInst<D>),
     Rev8(ITypeIntInst<D>),
+
+    // WCH
+    WchMcpy(RTypeIntInst<D>), // does not use R-format, but uses three registers
 }
 
 pub trait Register {
@@ -364,6 +367,13 @@ impl RegFile for Rv32ERegs {
     fn int_reg_count() -> u32 {
         16
     }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct Rv32FRegs;
+impl RegFile for Rv32FRegs {
+    type Int = u32;
+    type Float = f32;
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -1813,6 +1823,36 @@ impl Instr16 {
 
         imm as i16 as i32
     }
+
+    #[inline(always)]
+    fn qk_byte_imm(self) -> i32 {
+        let b0 = self.extract_bits(12, 1);
+        let b21 = self.extract_bits(5, 2);
+        let b43 = self.extract_bits(10, 2);
+
+        (b0 | (b21 << 1) | (b43 << 3)) as i32
+    }
+
+    #[inline(always)]
+    fn qk_half_imm(self) -> i32 {
+        let b21 = self.extract_bits(5, 2);
+        let b53 = self.extract_bits(10, 3);
+
+        ((b21 << 1) | (b53 << 3)) as i32
+    }
+
+    #[inline(always)]
+    fn qk_byte_sp_imm(self) -> i32 {
+        self.extract_bits(7, 4) as i32
+    }
+
+    #[inline(always)]
+    fn qk_half_sp_imm(self) -> i32 {
+        let b31 = self.extract_bits(8, 3);
+        let b4 = self.extract_bits(7, 1);
+
+        ((b31 << 1) | (b4 << 4)) as i32
+    }
 }
 
 pub enum Instr<D: RiscVDisassembler> {
@@ -1914,7 +1954,8 @@ impl<D: RiscVDisassembler> Instr<D> {
                 | Op::Rol(ref r)
                 | Op::Ror(ref r)
                 | Op::RolW(ref r)
-                | Op::RorW(ref r) => {
+                | Op::RorW(ref r)
+                | Op::WchMcpy(ref r) => {
                     ops.push(Operand::R(r.rd()));
                     ops.push(Operand::R(r.rs1()));
                     ops.push(Operand::R(r.rs2()));
@@ -2243,6 +2284,8 @@ impl<'a, D: RiscVDisassembler + 'a> Mnem<'a, D> {
                 Op::CpopW(..) => "cpopw",
                 Op::Orcb(..) => "orc.b",
                 Op::Rev8(..) => "rev8",
+
+                Op::WchMcpy(..) => "qk.mcpy",
             },
         }
     }
@@ -2445,6 +2488,9 @@ impl<D: RiscVDisassembler> fmt::Display for Mnem<'_, D> {
 pub trait StandardExtension {
     fn supported() -> bool;
 }
+pub trait VendorExtension {
+    fn supported() -> bool;
+}
 
 pub struct ExtensionNotImplemented;
 impl StandardExtension for ExtensionNotImplemented {
@@ -2453,9 +2499,21 @@ impl StandardExtension for ExtensionNotImplemented {
         false
     }
 }
+impl VendorExtension for ExtensionNotImplemented {
+    #[inline(always)]
+    fn supported() -> bool {
+        false
+    }
+}
 
 pub struct ExtensionSupported;
 impl StandardExtension for ExtensionSupported {
+    #[inline(always)]
+    fn supported() -> bool {
+        true
+    }
+}
+impl VendorExtension for ExtensionSupported {
     #[inline(always)]
     fn supported() -> bool {
         true
@@ -2470,6 +2528,7 @@ pub trait RiscVDisassembler: 'static + Debug + Sized + Copy + Clone + Send + Syn
     type BitmanipZbaExtension: StandardExtension;
     type BitmanipZbbExtension: StandardExtension;
     type BitmanipZbsExtension: StandardExtension;
+    type WCHExtension: VendorExtension;
 
     fn decode(addr: u64, bytes: &[u8]) -> DisResult<Instr<Self>> {
         use Error::*;
@@ -2557,6 +2616,74 @@ pub trait RiscVDisassembler: 'static + Debug + Sized + Copy + Clone + Send + Syn
                             IntReg::new(rd),
                             shamt as i32,
                         ))
+                    }
+
+                    // WCH extensions
+                    0b001_00 if Self::WCHExtension::supported() => {
+                        // qk.c.lbu
+                        let rd = IntReg::new(8 + inst.extract_bits(2, 3) as u32);
+                        let rs1 = IntReg::new(8 + inst.extract_bits(7, 3) as u32);
+
+                        let imm = inst.qk_byte_imm();
+                        Op::Load(LoadTypeInst::new(1, true, rd, rs1, imm)?)
+                    }
+                    0b101_00 if Self::WCHExtension::supported() => {
+                        // qk.c.sb
+                        let rs2 = IntReg::new(8 + inst.extract_bits(2, 3) as u32);
+                        let rs1 = IntReg::new(8 + inst.extract_bits(7, 3) as u32);
+
+                        let imm = inst.qk_byte_imm();
+                        Op::Store(StoreTypeInst::new(1, rs2, rs1, imm)?)
+                    }
+                    0b001_10 if Self::WCHExtension::supported() => {
+                        // qk.c.lhu
+                        let rd = IntReg::new(8 + inst.extract_bits(2, 3) as u32);
+                        let rs1 = IntReg::new(8 + inst.extract_bits(7, 3) as u32);
+
+                        let imm = inst.qk_half_imm();
+                        Op::Load(LoadTypeInst::new(2, true, rd, rs1, imm)?)
+                    }
+                    0b101_10 if Self::WCHExtension::supported() => {
+                        // qk.c.sh
+                        let rs2 = IntReg::new(8 + inst.extract_bits(2, 3) as u32);
+                        let rs1 = IntReg::new(8 + inst.extract_bits(7, 3) as u32);
+
+                        let imm = inst.qk_half_imm();
+                        Op::Store(StoreTypeInst::new(2, rs2, rs1, imm)?)
+                    }
+                    0b100_00 if Self::WCHExtension::supported() && ((parcel >> 11) & 3 == 0) => {
+                        let subop = (parcel >> 5) & 0b11;
+                        match subop {
+                            0b00 => {
+                                // qk.c.lbusp
+                                let rd = IntReg::new(8 + inst.extract_bits(2, 3) as u32);
+                                let imm = inst.qk_byte_sp_imm();
+
+                                Op::Load(LoadTypeInst::new(1, true, rd, IntReg::new(2), imm)?)
+                            }
+                            0b01 => {
+                                // qk.c.lhusp
+                                let rd = IntReg::new(8 + inst.extract_bits(2, 3) as u32);
+                                let imm = inst.qk_half_sp_imm();
+
+                                Op::Load(LoadTypeInst::new(2, true, rd, IntReg::new(2), imm)?)
+                            }
+                            0b10 => {
+                                // qk.c.sbsp
+                                let rs2 = IntReg::new(8 + inst.extract_bits(2, 3) as u32);
+                                let imm = inst.qk_byte_sp_imm();
+
+                                Op::Store(StoreTypeInst::new(1, rs2, IntReg::new(2), imm)?)
+                            }
+                            0b11 => {
+                                // qk.c.shsp
+                                let rs2 = IntReg::new(8 + inst.extract_bits(2, 3) as u32);
+                                let imm = inst.qk_half_sp_imm();
+
+                                Op::Store(StoreTypeInst::new(2, rs2, IntReg::new(2), imm)?)
+                            }
+                            _ => unreachable!(),
+                        }
                     }
 
                     //0b001_00 if int_width == 16 => unimplemented!("LQ"),
@@ -2912,12 +3039,27 @@ pub trait RiscVDisassembler: 'static + Debug + Sized + Copy + Clone + Send + Syn
                     // TODO CUSTOM_0
                     0b00011 => {
                         // MISC-MEM
-                        let itype = ITypeInst::new(inst)?;
+                        if Self::WCHExtension::supported()
+                            && inst.0 & 0b00000_11_00000_00000_11111111_1111111
+                                == 0b00000_00_00000_00000_11100000_0001111
+                        {
+                            // qk.mcpy
+                            let r_end = inst.extract_bits(15, 5);
+                            let r_start = inst.extract_bits(20, 5);
+                            let r_dst = inst.extract_bits(27, 5);
+                            Op::WchMcpy(RTypeIntInst::from_ops(
+                                IntReg::new(r_dst),
+                                IntReg::new(r_start),
+                                IntReg::new(r_end),
+                            ))
+                        } else {
+                            let itype = ITypeInst::new(inst)?;
 
-                        match inst.funct3() {
-                            0b000 => Op::Fence(itype),
-                            0b001 => Op::FenceI(itype),
-                            _ => return Err(InvalidSubop),
+                            match inst.funct3() {
+                                0b000 => Op::Fence(itype),
+                                0b001 => Op::FenceI(itype),
+                                _ => return Err(InvalidSubop),
+                            }
                         }
                     }
                     0b00100 => {
@@ -3488,4 +3630,19 @@ impl<RF: RegFile> RiscVDisassembler for RiscVIMACDisassembler<RF> {
     type BitmanipZbaExtension = ExtensionSupported;
     type BitmanipZbbExtension = ExtensionSupported;
     type BitmanipZbsExtension = ExtensionSupported;
+    type WCHExtension = ExtensionNotImplemented;
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct RiscVWCHDisassembler();
+
+impl RiscVDisassembler for RiscVWCHDisassembler {
+    type RegFile = Rv32FRegs;
+    type MulDivExtension = ExtensionSupported;
+    type AtomicExtension = ExtensionSupported;
+    type CompressedExtension = ExtensionSupported;
+    type BitmanipZbaExtension = ExtensionSupported;
+    type BitmanipZbbExtension = ExtensionSupported;
+    type BitmanipZbsExtension = ExtensionSupported;
+    type WCHExtension = ExtensionSupported;
 }

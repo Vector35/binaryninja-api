@@ -1549,7 +1549,7 @@ bool ElfView::Init()
 						else if (entry.section < m_elfSections.size())
 						{
 							// symbol is relative to a section, look up by address instead of name to avoid ambiguity
-							uint64_t target = m_elfSections[entry.section].address + entry.value;
+							uint64_t target = imageBaseAdjustment + m_elfSections[entry.section].address + entry.value;
 							auto symbol = GetSymbolByAddress(target);
 							if (symbol)
 							{

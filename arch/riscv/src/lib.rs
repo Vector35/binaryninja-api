@@ -2325,6 +2325,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> RiscVELFRelocationHandler<D> 
     const R_RISCV_SUB64: u64 = 40;
     const R_RISCV_RVC_BRANCH: u64 = 44;
     const R_RISCV_RVC_JUMP: u64 = 45;
+    const R_RISCV_RELAX: u64 = 51;
 
     fn replace_b_imm(opcode: u32, imm: u32) -> u32 {
         (opcode & 0x01fff07f)
@@ -2492,6 +2493,7 @@ impl<D: 'static + RiscVDisassembler + Send + Sync> RelocationHandler
                         reloc.address
                     )
                 }
+                Self::R_RISCV_RELAX => reloc.type_ = RelocationType::IgnoredRelocation,
                 _ => {
                     reloc.type_ = RelocationType::UnhandledRelocation;
                     tracing::warn!(

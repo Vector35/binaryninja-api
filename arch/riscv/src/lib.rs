@@ -829,6 +829,14 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                     operands.remove(2);
                 }
             }
+            Op::AddUW(r) => {
+                // add.uw rd, rs, x0 => zext.w rd, rs
+                if r.rs2().id() == 0 {
+                    mnem = "zext.w".into();
+                    pad_len = 8usize.saturating_sub(mnem.len());
+                    operands.remove(2);
+                }
+            }
             Op::Beq(i) => {
                 // beq rs, zero, offset => beqz rs, offset
                 if i.rs2().id() == 0 {
@@ -1240,11 +1248,19 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                 il.or(max_width, rs1, mask)
             }),
 
+            Op::ShXAdd(x, r) => simple_r!(r, |rs1, rs2| {
+                il.add(max_width, il.lsl(max_width, rs1, x), rs2)
+            }),
+
             // i-type 32-bit
             Op::AddIW(i) => simple_i!(i, |rs1, imm| il.sx(max_width, il.add(4, rs1, imm))),
             Op::SllIW(i) => simple_i!(i, |rs1, imm| il.sx(max_width, il.lsl(4, rs1, imm))),
             Op::SrlIW(i) => simple_i!(i, |rs1, imm| il.sx(max_width, il.lsr(4, rs1, imm))),
             Op::SraIW(i) => simple_i!(i, |rs1, imm| il.sx(max_width, il.asr(4, rs1, imm))),
+
+            Op::SllIUW(i) => simple_i!(i, |rs1, imm| {
+                il.lsl(max_width, il.low_part(4, rs1), imm)
+            }),
 
             // r-type 32-bit
             Op::AddW(r) => simple_r!(r, |rs1, rs2| il.sx(max_width, il.add(4, rs1, rs2))),
@@ -1252,6 +1268,13 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
             Op::SrlW(r) => simple_r!(r, |rs1, rs2| il.sx(max_width, il.lsr(4, rs1, rs2))),
             Op::SubW(r) => simple_r!(r, |rs1, rs2| il.sx(max_width, il.sub(4, rs1, rs2))),
             Op::SraW(r) => simple_r!(r, |rs1, rs2| il.sx(max_width, il.asr(4, rs1, rs2))),
+
+            Op::AddUW(r) => simple_r!(r, |rs1, rs2| {
+                il.add(max_width, il.low_part(4, rs1), rs2)
+            }),
+            Op::ShXAddUW(x, r) => {
+                simple_r!(r, |rs1, rs2| { il.add(max_width, il.lsl(4, rs1, x), rs2) })
+            }
 
             Op::Mul(r) => simple_r!(r, |rs1, rs2| il.mul(max_width, rs1, rs2)),
             Op::MulH(r) => simple_r!(r, |rs1, rs2| {

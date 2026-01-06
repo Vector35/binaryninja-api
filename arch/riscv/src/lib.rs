@@ -48,7 +48,7 @@ use binaryninja::low_level_il::{
 };
 use riscv_dis::{
     FloatReg, FloatRegType, Instr, IntRegType, Op, RegFile, Register as RiscVRegister,
-    RiscVDisassembler, RoundMode,
+    RiscVDisassembler, RiscVWCHDisassembler, RoundMode,
 };
 
 enum RegType {
@@ -90,6 +90,7 @@ enum Intrinsic {
     Popcount,
     OrCombine,
     Rev8,
+    WchMcpy,
 }
 
 #[derive(Copy, Clone)]
@@ -352,6 +353,7 @@ impl<D: RiscVDisassembler> RiscVIntrinsic<D> {
             Some((28, _, _, _)) => Some(Intrinsic::Popcount.into()),
             Some((29, _, _, _)) => Some(Intrinsic::OrCombine.into()),
             Some((30, _, _, _)) => Some(Intrinsic::Rev8.into()),
+            Some((31, _, _, _)) => Some(Intrinsic::WchMcpy.into()),
             _ => None,
         }
     }
@@ -491,6 +493,7 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             Intrinsic::Popcount => "_popcount".into(),
             Intrinsic::OrCombine => "_orc_b".into(),
             Intrinsic::Rev8 => "_rev8".into(),
+            Intrinsic::WchMcpy => "_wch_mcpy".into(),
         }
     }
 
@@ -537,6 +540,7 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             Intrinsic::Popcount => Self::id_from_parts(28, None, None, None),
             Intrinsic::OrCombine => Self::id_from_parts(29, None, None, None),
             Intrinsic::Rev8 => Self::id_from_parts(30, None, None, None),
+            Intrinsic::WchMcpy => Self::id_from_parts(31, None, None, None),
         }
     }
 
@@ -618,6 +622,31 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
                     ),
                 )]
             }
+            Intrinsic::WchMcpy => {
+                vec![
+                    NameAndType::new(
+                        "dst",
+                        Conf::new(
+                            Type::int(<D::RegFile as RegFile>::Int::width(), false),
+                            MIN_CONFIDENCE,
+                        ),
+                    ),
+                    NameAndType::new(
+                        "start",
+                        Conf::new(
+                            Type::int(<D::RegFile as RegFile>::Int::width(), false),
+                            MIN_CONFIDENCE,
+                        ),
+                    ),
+                    NameAndType::new(
+                        "end",
+                        Conf::new(
+                            Type::int(<D::RegFile as RegFile>::Int::width(), false),
+                            MIN_CONFIDENCE,
+                        ),
+                    ),
+                ]
+            }
         }
     }
 
@@ -628,7 +657,8 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             | Intrinsic::Mret
             | Intrinsic::Wfi
             | Intrinsic::Csrwr
-            | Intrinsic::Fence => {
+            | Intrinsic::Fence
+            | Intrinsic::WchMcpy => {
                 vec![]
             }
             Intrinsic::Csrrw | Intrinsic::Csrrd | Intrinsic::Csrrs | Intrinsic::Csrrc => {
@@ -1359,6 +1389,18 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                     il.set_reg(max_width, rd, rs2).append();
                     il.mark_label(&mut end);
                 }
+            }
+
+            Op::WchMcpy(r) => {
+                let dst = LiftableLowLevelIL::lift(il, Register::from(r.rd()));
+                let start = LiftableLowLevelIL::lift(il, Register::from(r.rs1()));
+                let end = LiftableLowLevelIL::lift(il, Register::from(r.rs2()));
+                il.intrinsic::<_, LowLevelILRegisterKind<Register<D>>, _>(
+                    [],
+                    RiscVIntrinsic::<D>::from(Intrinsic::WchMcpy),
+                    [dst, start, end],
+                )
+                .append();
             }
 
             // i-type 32-bit
@@ -3281,6 +3323,14 @@ pub extern "C" fn CorePluginInit() -> bool {
             custom_handle,
             _dis: PhantomData,
         });
+    let arch_wch =
+        architecture::register_architecture("rv32-wch", |custom_handle, core_arch| RiscVArch::<
+            RiscVWCHDisassembler,
+        > {
+            handle: core_arch,
+            custom_handle,
+            _dis: PhantomData,
+        });
     let arch64 =
         architecture::register_architecture("rv64gc", |custom_handle, core_arch| RiscVArch::<
             RiscVIMACDisassembler<Rv64GRegs>,
@@ -3297,6 +3347,13 @@ pub extern "C" fn CorePluginInit() -> bool {
             _dis: PhantomData,
         }
     });
+    arch_wch.register_relocation_handler("ELF", |custom_handle, core_handler| {
+        RiscVELFRelocationHandler::<RiscVWCHDisassembler> {
+            handle: core_handler,
+            custom_handle,
+            _dis: PhantomData,
+        }
+    });
     arch64.register_relocation_handler("ELF", |custom_handle, core_handler| {
         RiscVELFRelocationHandler::<RiscVIMACDisassembler<Rv64GRegs>> {
             handle: core_handler,
@@ -3306,6 +3363,7 @@ pub extern "C" fn CorePluginInit() -> bool {
     });
 
     arch32.register_function_recognizer(RiscVELFPLTRecognizer);
+    arch_wch.register_function_recognizer(RiscVELFPLTRecognizer);
     arch64.register_function_recognizer(RiscVELFPLTRecognizer);
 
     let cc32 = register_calling_convention(
@@ -3314,6 +3372,9 @@ pub extern "C" fn CorePluginInit() -> bool {
         RiscVCC::<RiscVIMACDisassembler<Rv32GRegs>>::new(),
     );
     arch32.set_default_calling_convention(&cc32);
+    let cc32_wch =
+        register_calling_convention(arch_wch, "default", RiscVCC::<RiscVWCHDisassembler>::new());
+    arch_wch.set_default_calling_convention(&cc32_wch);
     let cc64 = register_calling_convention(
         arch64,
         "default",

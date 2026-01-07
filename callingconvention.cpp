@@ -39,6 +39,8 @@ CallingConvention::CallingConvention(Architecture* arch, const string& name)
 	cc.getCalleeSavedRegisters = GetCalleeSavedRegistersCallback;
 	cc.getIntegerArgumentRegisters = GetIntegerArgumentRegistersCallback;
 	cc.getFloatArgumentRegisters = GetFloatArgumentRegistersCallback;
+	cc.getRequiredArgumentRegisters = GetRequiredArgumentRegistersCallback;
+	cc.getRequiredClobberedRegisters = GetRequiredClobberedRegistersCallback;
 	cc.freeRegisterList = FreeRegisterListCallback;
 	cc.areArgumentRegistersSharedIndex = AreArgumentRegistersSharedIndexCallback;
 	cc.areArgumentRegistersUsedForVarArgs = AreArgumentRegistersUsedForVarArgsCallback;
@@ -110,6 +112,32 @@ uint32_t* CallingConvention::GetFloatArgumentRegistersCallback(void* ctxt, size_
 {
 	CallbackRef<CallingConvention> cc(ctxt);
 	vector<uint32_t> regs = cc->GetFloatArgumentRegisters();
+	*count = regs.size();
+
+	uint32_t* result = new uint32_t[regs.size()];
+	for (size_t i = 0; i < regs.size(); i++)
+		result[i] = regs[i];
+	return result;
+}
+
+
+uint32_t* CallingConvention::GetRequiredArgumentRegistersCallback(void* ctxt, size_t* count)
+{
+	CallbackRef<CallingConvention> cc(ctxt);
+	vector<uint32_t> regs = cc->GetRequiredArgumentRegisters();
+	*count = regs.size();
+
+	uint32_t* result = new uint32_t[regs.size()];
+	for (size_t i = 0; i < regs.size(); i++)
+		result[i] = regs[i];
+	return result;
+}
+
+
+uint32_t* CallingConvention::GetRequiredClobberedRegistersCallback(void* ctxt, size_t* count)
+{
+	CallbackRef<CallingConvention> cc(ctxt);
+	vector<uint32_t> regs = cc->GetRequiredClobberedRegisters();
 	*count = regs.size();
 
 	uint32_t* result = new uint32_t[regs.size()];
@@ -284,6 +312,18 @@ vector<uint32_t> CallingConvention::GetFloatArgumentRegisters()
 }
 
 
+vector<uint32_t> CallingConvention::GetRequiredArgumentRegisters()
+{
+	return vector<uint32_t>();
+}
+
+
+vector<uint32_t> CallingConvention::GetRequiredClobberedRegisters()
+{
+	return vector<uint32_t>();
+}
+
+
 bool CallingConvention::AreArgumentRegistersSharedIndex()
 {
 	return false;
@@ -410,6 +450,28 @@ vector<uint32_t> CoreCallingConvention::GetFloatArgumentRegisters()
 {
 	size_t count;
 	uint32_t* regs = BNGetFloatArgumentRegisters(m_object, &count);
+	vector<uint32_t> result;
+	result.insert(result.end(), regs, &regs[count]);
+	BNFreeRegisterList(regs);
+	return result;
+}
+
+
+vector<uint32_t> CoreCallingConvention::GetRequiredArgumentRegisters()
+{
+	size_t count;
+	uint32_t* regs = BNGetRequiredArgumentRegisters(m_object, &count);
+	vector<uint32_t> result;
+	result.insert(result.end(), regs, &regs[count]);
+	BNFreeRegisterList(regs);
+	return result;
+}
+
+
+vector<uint32_t> CoreCallingConvention::GetRequiredClobberedRegisters()
+{
+	size_t count;
+	uint32_t* regs = BNGetRequiredClobberedRegisters(m_object, &count);
 	vector<uint32_t> result;
 	result.insert(result.end(), regs, &regs[count]);
 	BNFreeRegisterList(regs);

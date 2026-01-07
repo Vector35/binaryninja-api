@@ -3814,6 +3814,11 @@ public:
 		return vector<uint32_t>{ XED_REG_ECX };
 	}
 
+	virtual vector<uint32_t> GetRequiredArgumentRegisters() override
+	{
+		return vector<uint32_t>{ XED_REG_ECX };
+	}
+
 	virtual bool IsStackAdjustedOnReturn() override
 	{
 		return true;

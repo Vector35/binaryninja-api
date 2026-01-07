@@ -39,6 +39,12 @@ pub trait CallingConvention: Sync {
     fn callee_saved_registers(&self) -> Vec<RegisterId>;
     fn int_arg_registers(&self) -> Vec<RegisterId>;
     fn float_arg_registers(&self) -> Vec<RegisterId>;
+    fn required_argument_registers(&self) -> Vec<RegisterId> {
+        Vec::new()
+    }
+    fn required_clobbered_registers(&self) -> Vec<RegisterId> {
+        Vec::new()
+    }
 
     fn arg_registers_shared_index(&self) -> bool;
     fn reserved_stack_space_for_arg_registers(&self) -> bool;
@@ -154,6 +160,54 @@ where
         ffi_wrap!("CallingConvention::float_arg_registers", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
             let mut regs: Vec<_> = ctxt.cc.float_arg_registers().iter().map(|r| r.0).collect();
+
+            // SAFETY: `count` is an out parameter
+            *count = regs.len();
+            let regs_ptr = regs.as_mut_ptr();
+            std::mem::forget(regs);
+            regs_ptr
+        })
+    }
+
+    extern "C" fn cb_required_argument_registers<C>(
+        ctxt: *mut c_void,
+        count: *mut usize,
+    ) -> *mut u32
+    where
+        C: CallingConvention,
+    {
+        ffi_wrap!("CallingConvention::required_argument_registers", unsafe {
+            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
+            let mut regs: Vec<_> = ctxt
+                .cc
+                .required_argument_registers()
+                .iter()
+                .map(|r| r.0)
+                .collect();
+
+            // SAFETY: `count` is an out parameter
+            *count = regs.len();
+            let regs_ptr = regs.as_mut_ptr();
+            std::mem::forget(regs);
+            regs_ptr
+        })
+    }
+
+    extern "C" fn cb_required_clobbered_registers<C>(
+        ctxt: *mut c_void,
+        count: *mut usize,
+    ) -> *mut u32
+    where
+        C: CallingConvention,
+    {
+        ffi_wrap!("CallingConvention::required_clobbered_registers", unsafe {
+            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
+            let mut regs: Vec<_> = ctxt
+                .cc
+                .required_clobbered_registers()
+                .iter()
+                .map(|r| r.0)
+                .collect();
 
             // SAFETY: `count` is an out parameter
             *count = regs.len();
@@ -390,6 +444,8 @@ where
         getCalleeSavedRegisters: Some(cb_callee_saved::<C>),
         getIntegerArgumentRegisters: Some(cb_int_args::<C>),
         getFloatArgumentRegisters: Some(cb_float_args::<C>),
+        getRequiredArgumentRegisters: Some(cb_required_argument_registers::<C>),
+        getRequiredClobberedRegisters: Some(cb_required_clobbered_registers::<C>),
         freeRegisterList: Some(cb_free_register_list),
 
         areArgumentRegistersSharedIndex: Some(cb_arg_shared_index::<C>),
@@ -520,6 +576,14 @@ impl Debug for CoreCallingConvention {
             .field("int_arg_registers", &self.int_arg_registers())
             .field("float_arg_registers", &self.float_arg_registers())
             .field(
+                "required_argument_registers",
+                &self.required_argument_registers(),
+            )
+            .field(
+                "required_clobbered_registers",
+                &self.required_clobbered_registers(),
+            )
+            .field(
                 "arg_registers_shared_index",
                 &self.arg_registers_shared_index(),
             )
@@ -601,6 +665,34 @@ impl CallingConvention for CoreCallingConvention {
         unsafe {
             let mut count = 0;
             let regs_ptr = BNGetFloatArgumentRegisters(self.handle, &mut count);
+            let regs: Vec<RegisterId> = std::slice::from_raw_parts(regs_ptr, count)
+                .iter()
+                .copied()
+                .map(RegisterId::from)
+                .collect();
+            BNFreeRegisterList(regs_ptr);
+            regs
+        }
+    }
+
+    fn required_argument_registers(&self) -> Vec<RegisterId> {
+        unsafe {
+            let mut count = 0;
+            let regs_ptr = BNGetRequiredArgumentRegisters(self.handle, &mut count);
+            let regs: Vec<RegisterId> = std::slice::from_raw_parts(regs_ptr, count)
+                .iter()
+                .copied()
+                .map(RegisterId::from)
+                .collect();
+            BNFreeRegisterList(regs_ptr);
+            regs
+        }
+    }
+
+    fn required_clobbered_registers(&self) -> Vec<RegisterId> {
+        unsafe {
+            let mut count = 0;
+            let regs_ptr = BNGetRequiredClobberedRegisters(self.handle, &mut count);
             let regs: Vec<RegisterId> = std::slice::from_raw_parts(regs_ptr, count)
                 .iter()
                 .copied()
@@ -738,6 +830,8 @@ pub struct ConventionBuilder<A: Architecture> {
     callee_saved_registers: Vec<RegisterId>,
     int_arg_registers: Vec<RegisterId>,
     float_arg_registers: Vec<RegisterId>,
+    required_argument_registers: Vec<RegisterId>,
+    required_clobbered_registers: Vec<RegisterId>,
 
     arg_registers_shared_index: bool,
     reserved_stack_space_for_arg_registers: bool,
@@ -807,6 +901,8 @@ impl<A: Architecture> ConventionBuilder<A> {
             callee_saved_registers: Vec::new(),
             int_arg_registers: Vec::new(),
             float_arg_registers: Vec::new(),
+            required_argument_registers: Vec::new(),
+            required_clobbered_registers: Vec::new(),
 
             arg_registers_shared_index: false,
             reserved_stack_space_for_arg_registers: false,
@@ -832,6 +928,8 @@ impl<A: Architecture> ConventionBuilder<A> {
     reg_list!(callee_saved_registers);
     reg_list!(int_arg_registers);
     reg_list!(float_arg_registers);
+    reg_list!(required_argument_registers);
+    reg_list!(required_clobbered_registers);
 
     bool_arg!(arg_registers_shared_index);
     bool_arg!(reserved_stack_space_for_arg_registers);
@@ -869,6 +967,14 @@ impl<A: Architecture> CallingConvention for ConventionBuilder<A> {
 
     fn float_arg_registers(&self) -> Vec<RegisterId> {
         self.float_arg_registers.clone()
+    }
+
+    fn required_argument_registers(&self) -> Vec<RegisterId> {
+        self.required_argument_registers.clone()
+    }
+
+    fn required_clobbered_registers(&self) -> Vec<RegisterId> {
+        self.required_clobbered_registers.clone()
     }
 
     fn arg_registers_shared_index(&self) -> bool {

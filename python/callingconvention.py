@@ -40,6 +40,8 @@ class CallingConvention:
 	callee_saved_regs = []
 	int_arg_regs = []
 	float_arg_regs = []
+	required_arg_regs = []
+	required_clobbered_regs = []
 	arg_regs_share_index = False
 	arg_regs_for_varargs = True
 	stack_reserved_for_arg_regs = False
@@ -70,6 +72,8 @@ class CallingConvention:
 			    self._get_int_arg_regs
 			)
 			self._cb.getFloatArgumentRegisters = self._cb.getFloatArgumentRegisters.__class__(self._get_float_arg_regs)
+			self._cb.getRequiredArgumentRegisters = self._cb.getRequiredArgumentRegisters.__class__(self._get_required_arg_regs)
+			self._cb.getRequiredClobberedRegisters = self._cb.getRequiredClobberedRegisters.__class__(self._get_required_clobbered_regs)
 			self._cb.freeRegisterList = self._cb.freeRegisterList.__class__(self._free_register_list)
 			self._cb.areArgumentRegistersSharedIndex = self._cb.areArgumentRegistersSharedIndex.__class__(
 			    self._arg_regs_share_index
@@ -160,6 +164,26 @@ class CallingConvention:
 				result.append(arch.get_reg_name(regs[i]))
 			core.BNFreeRegisterList(regs)
 			self.__dict__["float_arg_regs"] = result
+
+			count = ctypes.c_ulonglong()
+			regs = core.BNGetRequiredArgumentRegisters(_handle, count)
+			assert regs is not None, "core.BNGetRequiredArgumentRegisters returned None"
+			result = []
+			arch = self.arch
+			for i in range(0, count.value):
+				result.append(arch.get_reg_name(regs[i]))
+			core.BNFreeRegisterList(regs)
+			self.__dict__["required_arg_regs"] = result
+
+			count = ctypes.c_ulonglong()
+			regs = core.BNGetRequiredClobberedRegisters(_handle, count)
+			assert regs is not None, "core.BNGetRequiredClobberedRegisters returned None"
+			result = []
+			arch = self.arch
+			for i in range(0, count.value):
+				result.append(arch.get_reg_name(regs[i]))
+			core.BNFreeRegisterList(regs)
+			self.__dict__["required_clobbered_regs"] = result
 
 			reg = core.BNGetIntegerReturnValueRegister(_handle)
 			if reg == 0xffffffff:
@@ -278,6 +302,36 @@ class CallingConvention:
 			return result.value
 		except:
 			log_error_for_exception("Unhandled Python exception in CallingConvention._get_float_arg_regs")
+			count[0] = 0
+			return None
+
+	def _get_required_arg_regs(self, ctxt, count):
+		try:
+			regs = self.__class__.required_arg_regs
+			count[0] = len(regs)
+			reg_buf = (ctypes.c_uint * len(regs))()
+			for i in range(0, len(regs)):
+				reg_buf[i] = self.arch.regs[regs[i]].index
+			result = ctypes.cast(reg_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, reg_buf)
+			return result.value
+		except:
+			log_error_for_exception("Unhandled Python exception in CallingConvention._get_required_arg_regs")
+			count[0] = 0
+			return None
+
+	def _get_required_clobbered_regs(self, ctxt, count):
+		try:
+			regs = self.__class__.required_clobbered_regs
+			count[0] = len(regs)
+			reg_buf = (ctypes.c_uint * len(regs))()
+			for i in range(0, len(regs)):
+				reg_buf[i] = self.arch.regs[regs[i]].index
+			result = ctypes.cast(reg_buf, ctypes.c_void_p)
+			self._pending_reg_lists[result.value] = (result, reg_buf)
+			return result.value
+		except:
+			log_error_for_exception("Unhandled Python exception in CallingConvention._get_required_clobbered_regs")
 			count[0] = 0
 			return None
 

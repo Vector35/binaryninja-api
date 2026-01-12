@@ -482,37 +482,19 @@ std::optional<ClassInfo> MicrosoftRTTIProcessor::ProcessRTTI(uint64_t coLocatorA
 std::optional<VirtualFunctionTableInfo> MicrosoftRTTIProcessor::ProcessVFT(uint64_t vftAddr, ClassInfo &classInfo, std::optional<BaseClassInfo> baseClassInfo)
 {
     VirtualFunctionTableInfo vftInfo = {vftAddr};
-    // Gather all virtual functions
-    BinaryReader reader = BinaryReader(m_view);
-    reader.Seek(vftAddr);
     // Virtual functions and the analysis object of it, if it exists.
     std::vector<std::pair<uint64_t, std::optional<Ref<Function>>>> virtualFunctions = {};
+    uint64_t currentVftEntry = vftAddr;
     while (true)
     {
-        uint64_t readOffset = reader.GetOffset();
-        if (!m_view->IsValidOffset(readOffset))
+        uint64_t vFuncAddr = 0;
+        const FunctionDiscoverState state = DiscoverVirtualFunction(currentVftEntry, vFuncAddr);
+        if (state == FunctionDiscoverState::Failed)
             break;
-        uint64_t vFuncAddr = reader.ReadPointer();
-        auto funcs = m_view->GetAnalysisFunctionsForAddress(vFuncAddr);
-        if (funcs.empty())
-        {
-            Ref<Segment> segment = m_view->GetSegmentAt(vFuncAddr);
-            if (segment == nullptr || !(segment->GetFlags() & (SegmentExecutable | SegmentDenyWrite)))
-            {
-                // Last CompleteObjectLocator or hit the next CompleteObjectLocator
-                break;
-            }
-            // TODO: Is likely a function check here?
-            m_logger->LogDebugF("Discovered function from virtual function table... {:#x}", vFuncAddr);
-            auto vftPlatform = m_view->GetDefaultPlatform()->GetAssociatedPlatformByAddress(vFuncAddr);
-            auto vFunc = m_view->AddFunctionForAnalysis(vftPlatform, vFuncAddr, true);
-            virtualFunctions.emplace_back(vFuncAddr, vFunc ? std::optional(vFunc) : std::nullopt);
-        }
-        else
-        {
-            // Only ever add one function.
-            virtualFunctions.emplace_back(vFuncAddr, funcs.front());
-        }
+        currentVftEntry += m_view->GetAddressSize();
+        Ref<Platform> vftPlatform = m_view->GetDefaultPlatform()->GetAssociatedPlatformByAddress(vFuncAddr);
+        Ref<Function> vFunc = m_view->GetAnalysisFunction(vftPlatform, vFuncAddr);
+        virtualFunctions.emplace_back(vFuncAddr, vFunc ? std::optional(vFunc) : std::nullopt);
     }
 
     if (virtualFunctions.empty())

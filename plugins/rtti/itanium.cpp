@@ -14,28 +14,11 @@ constexpr const char *TYPE_SOURCE_ITANIUM = "rtti_itanium";
 constexpr int MAX_FAILED_SCAN_ATTEMPTS = 10;
 
 
-Ref<Symbol> GetRealSymbol(BinaryView *view, uint64_t relocAddr, uint64_t symAddr)
-{
-    if (view->IsOffsetExternSemantics(symAddr))
-    {
-        // Because bases in the extern section are not 8 byte width only they will
-        // overlap with other externs, until https://github.com/Vector35/binaryninja-api/issues/6387 is fixed.
-        // Check relocation at objectAddr for symbol
-        for (const auto& r : view->GetRelocationsAt(relocAddr))
-            if (auto relocSym = r->GetSymbol())
-                return relocSym;
-    }
-
-    return view->GetSymbolByAddress(symAddr);
-}
-
-
 // Some fields are not always u32, use this if it goes from u32 -> u16 on 32bit
 uint64_t ArchFieldSize(BinaryView *view)
 {
     return view->GetAddressSize() / 2;
 }
-
 
 
 uint64_t TypeInfoSize(BinaryView *view)
@@ -558,47 +541,16 @@ std::optional<ClassInfo> ItaniumRTTIProcessor::ProcessRTTI(uint64_t objectAddr)
 std::optional<VirtualFunctionTableInfo> ItaniumRTTIProcessor::ProcessVFT(uint64_t vftAddr, ClassInfo &classInfo, std::optional<BaseClassInfo> baseClassInfo)
 {
     VirtualFunctionTableInfo vftInfo = {vftAddr};
-    BinaryReader reader = BinaryReader(m_view);
-    reader.Seek(vftAddr);
     // Gather all virtual functions
     std::vector<VirtualFunctionInfo> virtualFunctions = {};
+    uint64_t currentVftEntry = vftAddr;
     while (true)
     {
-        uint64_t readOffset = reader.GetOffset();
-        if (!m_view->IsValidOffset(readOffset))
+        uint64_t vFuncAddr = 0;
+        const FunctionDiscoverState state = DiscoverVirtualFunction(currentVftEntry, vFuncAddr);
+        if (state == FunctionDiscoverState::Failed)
             break;
-        uint64_t vFuncAddr = reader.ReadPointer();
-        auto funcs = m_view->GetAnalysisFunctionsForAddress(vFuncAddr);
-        if (funcs.empty())
-        {
-            Ref<Segment> segment = m_view->GetSegmentAt(vFuncAddr);
-            if (segment == nullptr || !(segment->GetFlags() & (SegmentExecutable | SegmentDenyWrite)))
-            {
-                // TODO: Sometimes vFunc idx will be zeroed iirc.
-                // We allow vfuncs to point to extern functions.
-                // TODO: Until https://github.com/Vector35/binaryninja-api/issues/5982 is fixed we need to check extern sym relocs instead of the symbol directly
-                auto vFuncSym = GetRealSymbol(m_view, reader.GetOffset(), vFuncAddr);
-                if (!vFuncSym)
-                    break;
-                DataVariable dv;
-                bool foundDv = m_view->GetDataVariableAtAddress(vFuncAddr, dv);
-                // Last virtual function, or hit the next vtable.
-                if (!foundDv || !dv.type->m_object)
-                    break;
-                // Void externs are very likely to be a func.
-                // TODO: Add some sanity checks for this!
-                if (!dv.type->IsFunction() && !(dv.type->IsVoid() && vFuncSym->GetType() == ExternalSymbol))
-                    break;
-            }
-            else
-            {
-                // TODO: Is likely a function check here?
-                m_logger->LogDebugF("Discovered function from virtual function table... {:#x}", vFuncAddr);
-                auto vftPlatform = m_view->GetDefaultPlatform()->GetAssociatedPlatformByAddress(vFuncAddr);
-                m_view->AddFunctionForAnalysis(vftPlatform, vFuncAddr, true);
-            }
-        }
-        // Only ever add one function.
+        currentVftEntry += m_view->GetAddressSize();
         virtualFunctions.emplace_back(VirtualFunctionInfo{vFuncAddr});
     }
 

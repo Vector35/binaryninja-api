@@ -1618,6 +1618,27 @@ class BinaryViewType(metaclass=_BinaryViewTypeMetaclass):
 		"""
 		BinaryViewEvent.register(BinaryViewEventType.BinaryViewInitialAnalysisCompletionEvent, callback)
 
+@dataclass
+class SegmentInfo:
+	"""
+	This class helper class holds Segment information used to describe segments when creating a BinaryView.
+	See BinaryView.add_auto_segments and BinaryView.add_user_segments for usage.
+	See class Segment for segment information retrieval from an existing BinaryView.
+	"""
+	start: int
+	length: int
+	data_offset: int
+	data_length: int
+	flags: 'SegmentFlag'
+
+	def _to_core_struct(self) -> core.BNSegmentInfo:
+		info = core.BNSegmentInfo()
+		info.start	  = self.start
+		info.length	  = self.length
+		info.dataOffset = self.data_offset
+		info.dataLength = self.data_length
+		info.flags	  = self.flags
+		return info
 
 class Segment:
 	"""
@@ -1732,6 +1753,16 @@ class Segment:
 	def auto_defined(self) -> bool:
 		return core.BNSegmentIsAutoDefined(self.handle)
 
+	@property
+	def segment_info(self) -> SegmentInfo:
+		return SegmentInfo(
+			start=self.start,
+			length=self.length,
+			data_offset=self.data_offset,
+			data_length=self.data_length,
+			flags=core.BNSegmentGetFlags(self.handle)
+		)
+
 
 class SegmentDescriptorList(list):
 	def __init__(self, image_base: int):
@@ -1765,6 +1796,38 @@ class SegmentDescriptorList(list):
 		}
 		super().append(segment_info)
 
+
+@dataclass
+class SectionInfo:
+	"""
+	SectionInfo is a helper class for describing sections to be added to a BinaryView.
+	See `BinaryView.add_auto_sections` and `BinaryView.add_auto_section` for more details or see
+	`class Section` for accessing section information from an existing BinaryView.
+	"""
+	name: str
+	start: int
+	length: int
+	semantics: SectionSemantics
+	type: str
+	align: int
+	entry_size: int
+	linked_section: str
+	info_section: str
+	info_data: int
+
+	def _to_core_struct(self):
+		core_section = core.BNSectionInfo()
+		core_section.name = core.pyNativeStr(self.name)
+		core_section.start = self.start
+		core_section.length = self.length
+		core_section.semantics = self.semantics
+		core_section.type = core.pyNativeStr(self.type)
+		core_section.align = self.align
+		core_section.entrySize = self.entry_size
+		core_section.linkedSection = core.pyNativeStr(self.linked_section)
+		core_section.infoSection = core.pyNativeStr(self.info_section)
+		core_section.infoData = self.info_data
+		return core_section
 
 class Section:
 	"""
@@ -1886,6 +1949,21 @@ class Section:
 	def end(self) -> int:
 		return self.start + self.length
 
+	@property
+	def section_info(self) -> SectionInfo:
+		"""Returns a section info object representing this section."""
+		return SectionInfo(
+			name=self.name,
+			start=self.start,
+			length=self.length,
+			semantics=self.semantics,
+			type=self.type,
+			align=self.align,
+			entry_size=self.entry_size,
+			linked_section=self.linked_section,
+			info_section=self.info_section,
+			info_data=self.info_data
+		)
 
 class SectionDescriptorList(list):
 	def __init__(self, image_base: int):
@@ -10064,13 +10142,16 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		    info_data
 		)
 
-	def add_auto_sections(self, sections: List[core.BNSectionInfo]) -> None:
+	def add_auto_sections(self, sections: Union[List[SectionInfo], List[core.BNSectionInfo]]) -> None:
 		"""
 		``add_auto_sections`` Adds analysis sections that specify semantic information about regions of the binary
 
-		:param List[core.BNSectionInfo] sections: list of sections to add
+		:param Union[List[SectionInfo], List[core.BNSectionInfo]] sections: list of sections to add
 		:rtype: None
 		"""
+		if len(sections) > 0 and isinstance(sections[0], SectionInfo):
+			sections = [s._to_core_struct() for s in sections]  # type: ignore
+
 		section_list = (core.BNSectionInfo * len(sections))(*sections)
 		core.BNAddAutoSections(self.handle, section_list, len(sections))
 
@@ -10103,13 +10184,16 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		    info_data
 		)
 
-	def add_user_sections(self, sections: List[core.BNSectionInfo]) -> None:
+	def add_user_sections(self, sections: Union[List[SectionInfo], List[core.BNSectionInfo]]) -> None:
 		"""
 		``add_user_sections`` Adds user-defined sections that specify semantic information about regions of the binary
 
-		:param List[core.BNSectionInfo] sections: list of sections to add
+		:param Union[List[SectionInfo], List[core.BNSectionInfo]] sections: list of sections to add
 		:rtype: None
 		"""
+		if len(sections) > 0 and isinstance(sections[0], SectionInfo):
+			sections = [s._to_core_struct() for s in sections]  # type: ignore
+
 		section_list = (core.BNSectionInfo * len(sections))(*sections)
 		core.BNAddUserSections(self.handle, section_list, len(sections))
 

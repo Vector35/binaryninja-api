@@ -10034,7 +10034,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		"""
 		core.BNAddAutoSegment(self.handle, start, length, data_offset, data_length, flags)
 
-	def add_auto_segments(self, segments: List[core.BNSegmentInfo]) -> None:
+	def add_auto_segments(self, segments: Union[List[SegmentInfo], List[core.BNSegmentInfo]]) -> None:
 		"""
 		``add_auto_segments`` Adds analysis segments that specify how data from the raw file is mapped into a virtual address space
 
@@ -10070,7 +10070,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		"""
 		core.BNAddUserSegment(self.handle, start, length, data_offset, data_length, flags)
 
-	def add_user_segments(self, segments: List[core.BNSegmentInfo]) -> None:
+	def add_user_segments(self, segments: Union[List[SegmentInfo], List[core.BNSegmentInfo]]) -> None:
 		"""
 		``add_user_segments`` Adds user-defined segments that specify how data from the raw file is mapped into a virtual address space
 

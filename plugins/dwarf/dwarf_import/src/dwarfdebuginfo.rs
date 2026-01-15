@@ -31,7 +31,7 @@ use binaryninja::{
 
 use gimli::{DebuggingInformationEntry, Dwarf, Unit};
 
-use binaryninja::confidence::Conf;
+use binaryninja::confidence::{Conf, MAX_CONFIDENCE};
 use binaryninja::variable::{Variable, VariableSourceType};
 use indexmap::{map::Values, IndexMap};
 use std::{cmp::Ordering, collections::HashMap, hash::Hash};
@@ -666,8 +666,20 @@ impl DebugInfoBuilder {
         let return_type = function
             .return_type
             .and_then(|return_type_id| self.get_type(return_type_id))
-            .map(|t| Conf::new(t.ty.clone(), 128))
-            .unwrap_or_else(|| Conf::new(Type::void(), 0));
+            .map(|t| Conf::new(t.ty.clone(), MAX_CONFIDENCE))
+            .unwrap_or_else(|| {
+                // Per DWARF spec section 3.3.2: "If the subroutine or entry point is a function
+                // that returns a value, then its debugging information entry has a DW_AT_type
+                // attribute." A missing DW_AT_type means void, not unknown.
+                //
+                // To distinguish "void" from "unknown" (minimal -g1 debug info), we check if
+                // the compilation unit has any type definitions. At -g2+, types are always
+                // present (int, structs, etc.), so missing DW_AT_type definitively means void.
+                // At -g1, no types exist, so we use low confidence to let analysis infer.
+                let has_full_debug_info = !self.types.is_empty();
+                let confidence = if has_full_debug_info { MAX_CONFIDENCE } else { 0 };
+                Conf::new(Type::void(), confidence)
+            });
 
         let parameters: Vec<FunctionParameter> = function
             .parameters

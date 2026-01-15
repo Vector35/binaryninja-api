@@ -1,6 +1,6 @@
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::repository::{PluginStatus, PluginType};
-use crate::string::BnString;
+use crate::string::{BnString, IntoCStr};
 use crate::VersionInfo;
 use binaryninjacore_sys::*;
 use std::ffi::c_char;
@@ -10,16 +10,16 @@ use std::ptr::NonNull;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[repr(transparent)]
-pub struct RepositoryPlugin {
-    handle: NonNull<BNRepoPlugin>,
+pub struct Extension {
+    handle: NonNull<BNPlugin>,
 }
 
-impl RepositoryPlugin {
-    pub(crate) unsafe fn from_raw(handle: NonNull<BNRepoPlugin>) -> Self {
+impl Extension {
+    pub(crate) unsafe fn from_raw(handle: NonNull<BNPlugin>) -> Self {
         Self { handle }
     }
 
-    pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNRepoPlugin>) -> Ref<Self> {
+    pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNPlugin>) -> Ref<Self> {
         Ref::new(Self { handle })
     }
 
@@ -33,7 +33,7 @@ impl RepositoryPlugin {
 
     /// String of the plugin author
     pub fn author(&self) -> String {
-        let result = unsafe { BNPluginGetAuthor(self.handle.as_ptr()) };
+        let result = unsafe { BNPluginGetAuthorUrl(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::into_string(result as *mut c_char) }
     }
@@ -41,20 +41,6 @@ impl RepositoryPlugin {
     /// String short description of the plugin
     pub fn description(&self) -> String {
         let result = unsafe { BNPluginGetDescription(self.handle.as_ptr()) };
-        assert!(!result.is_null());
-        unsafe { BnString::into_string(result as *mut c_char) }
-    }
-
-    /// String complete license text for the given plugin
-    pub fn license_text(&self) -> String {
-        let result = unsafe { BNPluginGetLicenseText(self.handle.as_ptr()) };
-        assert!(!result.is_null());
-        unsafe { BnString::into_string(result as *mut c_char) }
-    }
-
-    /// String long description of the plugin
-    pub fn long_description(&self) -> String {
-        let result = unsafe { BNPluginGetLongdescription(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::into_string(result as *mut c_char) }
     }
@@ -95,12 +81,6 @@ impl RepositoryPlugin {
     /// String URL of the plugin author's url
     pub fn author_url(&self) -> String {
         let result = unsafe { BNPluginGetAuthorUrl(self.handle.as_ptr()) };
-        assert!(!result.is_null());
-        unsafe { BnString::into_string(result as *mut c_char) }
-    }
-    /// String version of the plugin
-    pub fn version(&self) -> String {
-        let result = unsafe { BNPluginGetVersion(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::into_string(result as *mut c_char) }
     }
@@ -168,8 +148,9 @@ impl RepositoryPlugin {
     }
 
     /// Attempt to install the given plugin
-    pub fn install(&self) -> bool {
-        unsafe { BNPluginInstall(self.handle.as_ptr()) }
+    pub fn install(&self, version_id: &str) -> bool {
+        let version_id_raw = version_id.to_cstr();
+        unsafe { BNPluginInstall(self.handle.as_ptr(), version_id_raw.as_ptr()) }
     }
 
     pub fn install_dependencies(&self) -> bool {
@@ -181,8 +162,9 @@ impl RepositoryPlugin {
         unsafe { BNPluginUninstall(self.handle.as_ptr()) }
     }
 
-    pub fn updated(&self) -> bool {
-        unsafe { BNPluginUpdate(self.handle.as_ptr()) }
+    pub fn updated(&self, version_id: &str) -> bool {
+        let version_id_raw = version_id.to_cstr();
+        unsafe { BNPluginUpdate(self.handle.as_ptr(), version_id_raw.as_ptr()) }
     }
 
     /// List of platforms this plugin can execute on
@@ -245,30 +227,22 @@ impl RepositoryPlugin {
         assert!(!result.is_null());
         unsafe { BnString::into_string(result) }
     }
-
-    /// Returns a datetime object representing the plugins last update
-    pub fn last_update(&self) -> SystemTime {
-        let result = unsafe { BNPluginGetLastUpdate(self.handle.as_ptr()) };
-        UNIX_EPOCH + Duration::from_secs(result)
-    }
 }
 
-impl Debug for RepositoryPlugin {
+impl Debug for Extension {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("RepositoryPlugin")
+        f.debug_struct("Extension")
             .field("name", &self.name())
-            .field("version", &self.version())
             .field("author", &self.author())
             .field("description", &self.description())
             .field("minimum_version_info", &self.minimum_version_info())
             .field("maximum_version_info", &self.maximum_version_info())
-            .field("last_update", &self.last_update())
             .field("status", &self.status())
             .finish()
     }
 }
 
-impl ToOwned for RepositoryPlugin {
+impl ToOwned for Extension {
     type Owned = Ref<Self>;
 
     fn to_owned(&self) -> Self::Owned {
@@ -276,7 +250,7 @@ impl ToOwned for RepositoryPlugin {
     }
 }
 
-unsafe impl RefCountable for RepositoryPlugin {
+unsafe impl RefCountable for Extension {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
         Self::ref_from_raw(NonNull::new(BNNewPluginReference(handle.handle.as_ptr())).unwrap())
     }
@@ -286,13 +260,13 @@ unsafe impl RefCountable for RepositoryPlugin {
     }
 }
 
-impl CoreArrayProvider for RepositoryPlugin {
-    type Raw = *mut BNRepoPlugin;
+impl CoreArrayProvider for Extension {
+    type Raw = *mut BNPlugin;
     type Context = ();
     type Wrapped<'a> = Guard<'a, Self>;
 }
 
-unsafe impl CoreArrayProviderInner for RepositoryPlugin {
+unsafe impl CoreArrayProviderInner for Extension {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
         BNFreeRepositoryPluginList(raw)
     }

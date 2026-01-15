@@ -263,7 +263,6 @@ def _init_plugins():
 		if _enable_default_log and is_headless_init_once and min_level in LogLevel.__members__ and not core_ui_enabled(
 		) and sys.stderr.isatty():
 			log_to_stderr(LogLevel[min_level])
-		core.BNInitRepoPlugins()
 	if core.BNIsLicenseValidated():
 		_plugin_init = True
 	else:

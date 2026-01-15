@@ -12,42 +12,42 @@ using namespace std;
 		return result; \
 	} while (0)
 
-RepoPlugin::RepoPlugin(BNRepoPlugin* plugin)
+Extension::Extension(BNPlugin* plugin)
 {
 	m_object = plugin;
 }
 
-string RepoPlugin::GetPath() const
+string Extension::GetPath() const
 {
 	RETURN_STRING(BNPluginGetPath(m_object));
 }
 
-string RepoPlugin::GetSubdir() const
+string Extension::GetSubdir() const
 {
 	RETURN_STRING(BNPluginGetSubdir(m_object));
 }
 
-string RepoPlugin::GetDependencies() const
+string Extension::GetDependencies() const
 {
 	RETURN_STRING(BNPluginGetDependencies(m_object));
 }
 
-bool RepoPlugin::IsInstalled() const
+bool Extension::IsInstalled() const
 {
 	return BNPluginIsInstalled(m_object);
 }
 
-bool RepoPlugin::IsEnabled() const
+bool Extension::IsEnabled() const
 {
 	return BNPluginIsEnabled(m_object);
 }
 
-PluginStatus RepoPlugin::GetPluginStatus() const
+PluginStatus Extension::GetPluginStatus() const
 {
 	return BNPluginGetPluginStatus(m_object);
 }
 
-vector<string> RepoPlugin::GetApis() const
+vector<string> Extension::GetApis() const
 {
 	vector<string> result;
 	size_t count = 0;
@@ -60,27 +60,17 @@ vector<string> RepoPlugin::GetApis() const
 	return result;
 }
 
-string RepoPlugin::GetAuthor() const
+string Extension::GetAuthor() const
 {
 	RETURN_STRING(BNPluginGetAuthor(m_object));
 }
 
-string RepoPlugin::GetDescription() const
+string Extension::GetDescription() const
 {
 	RETURN_STRING(BNPluginGetDescription(m_object));
 }
 
-string RepoPlugin::GetLicenseText() const
-{
-	RETURN_STRING(BNPluginGetLicenseText(m_object));
-}
-
-string RepoPlugin::GetLongdescription() const
-{
-	RETURN_STRING(BNPluginGetLongdescription(m_object));
-}
-
-VersionInfo RepoPlugin::GetMinimumVersionInfo() const
+VersionInfo Extension::GetMinimumVersionInfo() const
 {
 	auto coreInfo = BNPluginGetMinimumVersionInfo(m_object);
 	VersionInfo result;
@@ -92,7 +82,7 @@ VersionInfo RepoPlugin::GetMinimumVersionInfo() const
 	return result;
 }
 
-VersionInfo RepoPlugin::GetMaximumVersionInfo() const
+VersionInfo Extension::GetMaximumVersionInfo() const
 {
 	auto coreInfo = BNPluginGetMaximumVersionInfo(m_object);
 	VersionInfo result;
@@ -104,12 +94,12 @@ VersionInfo RepoPlugin::GetMaximumVersionInfo() const
 	return result;
 }
 
-string RepoPlugin::GetName() const
+string Extension::GetName() const
 {
 	RETURN_STRING(BNPluginGetName(m_object));
 }
 
-vector<PluginType> RepoPlugin::GetPluginTypes() const
+vector<PluginType> Extension::GetPluginTypes() const
 {
 	size_t count;
 	BNPluginType* pluginTypesPtr = BNPluginGetPluginTypes(m_object, &count);
@@ -124,49 +114,101 @@ vector<PluginType> RepoPlugin::GetPluginTypes() const
 }
 
 
-string RepoPlugin::GetProjectUrl() const
+string Extension::GetProjectUrl() const
 {
 	RETURN_STRING(BNPluginGetProjectUrl(m_object));
 }
 
 
-string RepoPlugin::GetPackageUrl() const
+string Extension::GetPackageUrl() const
 {
 	RETURN_STRING(BNPluginGetPackageUrl(m_object));
 }
 
 
-string RepoPlugin::GetAuthorUrl() const
+string Extension::GetAuthorUrl() const
 {
 	RETURN_STRING(BNPluginGetAuthorUrl(m_object));
 }
 
 
-string RepoPlugin::GetVersion() const
+std::vector<ExtensionVersion> Extension::GetVersions() const
 {
-	RETURN_STRING(BNPluginGetVersion(m_object));
+	size_t count;
+	BNPluginVersion* versionsPtr = BNPluginGetVersions(m_object, &count);
+	std::vector<ExtensionVersion> versions;
+	for (size_t i = 0; i < count; i++)
+	{
+		ExtensionVersion version;
+		version.id = versionsPtr[i].id ? versionsPtr[i].id : "";
+		version.version = versionsPtr[i].versionString ? versionsPtr[i].versionString :
+		    "";
+		version.longDescription = versionsPtr[i].longDescription ? versionsPtr[i].longDescription : "";
+		version.changelog = versionsPtr[i].changelog ? versionsPtr[i].changelog : "";
+		version.minimumClientVersion = versionsPtr[i].minimumClientVersion;
+		version.created = versionsPtr[i].created ? versionsPtr[i].created : "";
+		versions.push_back(version);
+	}
+	BNFreePluginVersions(versionsPtr, count);
+	return versions;
 }
 
 
-string RepoPlugin::GetCommit() const
+ExtensionVersion Extension::GetCurrentVersion() const
+{
+	ExtensionVersion version;
+	BNPluginVersion currentVersion = BNPluginGetCurrentVersion(m_object);
+	version.id = currentVersion.id ? currentVersion.id : "";
+	version.version = currentVersion.versionString ? currentVersion.versionString : "";
+	version.longDescription = currentVersion.longDescription ? currentVersion.longDescription : "";
+	version.changelog = currentVersion.changelog ? currentVersion.changelog : "";
+	version.minimumClientVersion = currentVersion.minimumClientVersion;
+	version.created = currentVersion.created ? currentVersion.created : "";
+	BNPluginFreeVersion(currentVersion);
+	return version;
+}
+
+
+std::string Extension::GetCurrentVersionID() const
+{
+	RETURN_STRING(BNPluginGetCurrentVersionID(m_object));
+}
+
+
+std::string Extension::GetLatestVersionID() const
+{
+	auto versions = GetVersions();
+	if (versions.empty())
+		return "";
+	return versions.front().id;
+}
+
+
+bool Extension::IsVersionIDLessThan(const std::string& smaller, const std::string& larger) const
+{
+	return BNPluginVersionIDLessThan(m_object, smaller.c_str(), larger.c_str());
+}
+
+
+string Extension::GetCommit() const
 {
 	RETURN_STRING(BNPluginGetCommit(m_object));
 }
 
 
-bool RepoPlugin::IsViewOnly() const
+bool Extension::IsViewOnly() const
 {
 	return BNPluginGetViewOnly(m_object);
 }
 
 
-string RepoPlugin::GetRepository() const
+string Extension::GetRepository() const
 {
 	RETURN_STRING(BNPluginGetRepository(m_object));
 }
 
 
-vector<string> RepoPlugin::GetInstallPlatforms() const
+vector<string> Extension::GetInstallPlatforms() const
 {
 	vector<string> result;
 	size_t count = 0;
@@ -179,94 +221,100 @@ vector<string> RepoPlugin::GetInstallPlatforms() const
 }
 
 
-bool RepoPlugin::IsBeingDeleted() const
+bool Extension::IsBeingDeleted() const
 {
 	return BNPluginIsBeingDeleted(m_object);
 }
 
-bool RepoPlugin::IsBeingUpdated() const
+bool Extension::IsBeingUpdated() const
 {
 	return BNPluginIsBeingUpdated(m_object);
 }
 
-bool RepoPlugin::IsRunning() const
+bool Extension::IsRunning() const
 {
 	return BNPluginIsRunning(m_object);
 }
 
 
-bool RepoPlugin::IsUpdatePending() const
+bool Extension::IsUpdatePending() const
 {
 	return BNPluginIsUpdatePending(m_object);
 }
 
 
-bool RepoPlugin::IsDisablePending() const
+bool Extension::IsDisablePending() const
 {
 	return BNPluginIsDisablePending(m_object);
 }
 
 
-bool RepoPlugin::IsDeletePending() const
+bool Extension::IsDeletePending() const
 {
 	return BNPluginIsDeletePending(m_object);
 }
 
 
-bool RepoPlugin::IsUpdateAvailable() const
+bool Extension::IsUpdateAvailable() const
 {
 	return BNPluginIsUpdateAvailable(m_object);
 }
 
 
-bool RepoPlugin::AreDependenciesBeingInstalled() const
+bool Extension::AreDependenciesBeingInstalled() const
 {
 	return BNPluginAreDependenciesBeingInstalled(m_object);
 }
 
 
-uint64_t RepoPlugin::GetLastUpdate()
+string Extension::GetCreationDate()
 {
-	return BNPluginGetLastUpdate(m_object);
+	return BNPluginGetCurrentVersionCreationDate(m_object);
 }
 
-string RepoPlugin::GetProjectData()
+string Extension::GetProjectData()
 {
 	RETURN_STRING(BNPluginGetProjectData(m_object));
 }
 
 
-bool RepoPlugin::Uninstall()
+bool Extension::Uninstall()
 {
 	return BNPluginUninstall(m_object);
 }
 
 
-bool RepoPlugin::Install()
+bool Extension::Install(std::string versionID)
 {
-	return BNPluginInstall(m_object);
+	char* versionIDStr = BNAllocString(versionID.c_str());
+	auto success = BNPluginInstall(m_object, versionIDStr);
+	BNFreeString(versionIDStr);
+	return success;
 }
 
 
-bool RepoPlugin::InstallDependencies()
+bool Extension::InstallDependencies()
 {
 	return BNPluginInstallDependencies(m_object);
 }
 
 
-bool RepoPlugin::Enable(bool force)
+bool Extension::Enable(bool force)
 {
 	return BNPluginEnable(m_object, force);
 }
 
 
-bool RepoPlugin::Update()
+bool Extension::Update(std::string versionID)
 {
-	return BNPluginUpdate(m_object);
+	char* versionIDStr = BNAllocString(versionID.c_str());
+	auto success = BNPluginUpdate(m_object, versionIDStr);
+	BNFreeString(versionIDStr);
+	return success;
 }
 
 
-bool RepoPlugin::Disable()
+bool Extension::Disable()
 {
 	return BNPluginDisable(m_object);
 }
@@ -289,22 +337,22 @@ string Repository::GetRepoPath() const
 }
 
 
-vector<Ref<RepoPlugin>> Repository::GetPlugins() const
+vector<Ref<Extension>> Repository::GetPlugins() const
 {
-	vector<Ref<RepoPlugin>> plugins;
+	vector<Ref<Extension>> plugins;
 	size_t count = 0;
-	BNRepoPlugin** pluginsPtr = BNRepositoryGetPlugins(m_object, &count);
+	BNPlugin** pluginsPtr = BNRepositoryGetPlugins(m_object, &count);
 	plugins.reserve(count);
 	for (size_t i = 0; i < count; i++)
-		plugins.push_back(new RepoPlugin(BNNewPluginReference(pluginsPtr[i])));
+		plugins.push_back(new Extension(BNNewPluginReference(pluginsPtr[i])));
 	BNFreeRepositoryPluginList(pluginsPtr);
 	return plugins;
 }
 
 
-Ref<RepoPlugin> Repository::GetPluginByPath(const string& pluginPath)
+Ref<Extension> Repository::GetPluginByPath(const string& pluginPath)
 {
-	return new RepoPlugin(BNRepositoryGetPluginByPath(m_object, pluginPath.c_str()));
+	return new Extension(BNRepositoryGetPluginByPath(m_object, pluginPath.c_str()));
 }
 
 string Repository::GetFullPath() const
@@ -312,32 +360,16 @@ string Repository::GetFullPath() const
 	RETURN_STRING(BNRepositoryGetPluginsPath(m_object));
 }
 
-RepositoryManager::RepositoryManager(const string& enabledPluginsPath)
-{
-	m_object = BNCreateRepositoryManager(enabledPluginsPath.c_str());
-}
-
-RepositoryManager::RepositoryManager(BNRepositoryManager* mgr)
-{
-	m_object = mgr;
-}
-
-RepositoryManager::RepositoryManager()
-{
-	m_object = BNGetRepositoryManager();
-}
-
 bool RepositoryManager::CheckForUpdates()
 {
-	return BNRepositoryManagerCheckForUpdates(m_object);
+	return BNRepositoryManagerCheckForUpdates();
 }
 
 vector<Ref<Repository>> RepositoryManager::GetRepositories()
 {
 	vector<Ref<Repository>> repos;
 	size_t count = 0;
-	BNRepository** reposPtr = BNRepositoryManagerGetRepositories(m_object, &count);
-	repos.reserve(count);
+	BNRepository** reposPtr = BNRepositoryManagerGetRepositories(&count);
 	for (size_t i = 0; i < count; i++)
 		repos.push_back(new Repository(BNNewRepositoryReference(reposPtr[i])));
 	BNFreeRepositoryManagerRepositoriesList(reposPtr);
@@ -347,15 +379,15 @@ vector<Ref<Repository>> RepositoryManager::GetRepositories()
 bool RepositoryManager::AddRepository(const std::string& url,
     const std::string& repoPath)  // Relative path within the repositories directory
 {
-	return BNRepositoryManagerAddRepository(m_object, url.c_str(), repoPath.c_str());
+	return BNRepositoryManagerAddRepository(url.c_str(), repoPath.c_str());
 }
 
 Ref<Repository> RepositoryManager::GetRepositoryByPath(const std::string& repoPath)
 {
-	return new Repository(BNRepositoryGetRepositoryByPath(m_object, repoPath.c_str()));
+	return new Repository(BNRepositoryGetRepositoryByPath(repoPath.c_str()));
 }
 
 Ref<Repository> RepositoryManager::GetDefaultRepository()
 {
-	return new Repository(BNRepositoryManagerGetDefaultRepository(m_object));
+	return new Repository(BNRepositoryManagerGetDefaultRepository());
 }

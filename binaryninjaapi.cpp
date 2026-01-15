@@ -49,24 +49,6 @@ bool BinaryNinja::InitPlugins(bool allowUserPlugins)
 }
 
 
-void BinaryNinja::InitCorePlugins()
-{
-	BNInitCorePlugins();
-}
-
-
-void BinaryNinja::InitUserPlugins()
-{
-	BNInitUserPlugins();
-}
-
-
-void BinaryNinja::InitRepoPlugins()
-{
-	BNInitRepoPlugins();
-}
-
-
 string BinaryNinja::GetBundledPluginDirectory()
 {
 	char* path = BNGetBundledPluginDirectory();
@@ -298,7 +280,7 @@ uint32_t BinaryNinja::GetBuildId()
 }
 
 
-void BinaryNinja::SetCurrentPluginLoadOrder(BNPluginLoadOrder order)
+void BinaryNinja::SetCurrentPluginLoadOrder(BNPluginLoadPhase order)
 {
 	BNSetCurrentPluginLoadOrder(order);
 }

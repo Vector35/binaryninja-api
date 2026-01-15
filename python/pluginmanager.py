@@ -29,9 +29,9 @@ from . import deprecation
 from .enums import PluginType
 
 
-class RepoPlugin:
+class Extension:
 	"""
-	``RepoPlugin`` is mostly read-only, however you can install/uninstall enable/disable plugins. RepoPlugins are
+	``Extension`` is mostly read-only, however you can install/uninstall enable/disable plugins. Extensions are
 	created by parsing the plugins.json in a plugin repository.
 	"""
 	def __init__(self, handle: 'core.BNRepoPluginHandle'):
@@ -313,8 +313,8 @@ class Repository:
 		return result
 
 	@property
-	def plugins(self) -> List[RepoPlugin]:
-		"""List of RepoPlugin objects contained within this repository"""
+	def plugins(self) -> List[Extension]:
+		"""List of Extension objects contained within this repository"""
 		pluginlist = []
 		count = ctypes.c_ulonglong(0)
 		result = core.BNRepositoryGetPlugins(self.handle, count)
@@ -323,7 +323,7 @@ class Repository:
 			for i in range(count.value):
 				plugin_ref = core.BNNewPluginReference(result[i])
 				assert plugin_ref is not None, "core.BNNewPluginReference returned None"
-				pluginlist.append(RepoPlugin(plugin_ref))
+				pluginlist.append(Extension(plugin_ref))
 			return pluginlist
 		finally:
 			core.BNFreeRepositoryPluginList(result)
@@ -337,7 +337,6 @@ class RepositoryManager:
 	"""
 	def __init__(self):
 		binaryninja._init_plugins()
-		self.handle = core.BNGetRepositoryManager()
 
 	def __getitem__(self, repo_path: str) -> Repository:
 		for repo in self.repositories:
@@ -347,14 +346,14 @@ class RepositoryManager:
 
 	def check_for_updates(self) -> bool:
 		"""Check for updates for all managed Repository objects"""
-		return core.BNRepositoryManagerCheckForUpdates(self.handle)
+		return core.BNRepositoryManagerCheckForUpdates()
 
 	@property
 	def repositories(self) -> List[Repository]:
 		"""List of Repository objects being managed"""
 		result = []
 		count = ctypes.c_ulonglong(0)
-		repos = core.BNRepositoryManagerGetRepositories(self.handle, count)
+		repos = core.BNRepositoryManagerGetRepositories(count)
 		assert repos is not None, "core.BNRepositoryManagerGetRepositories returned None"
 		try:
 			for i in range(count.value):
@@ -366,8 +365,8 @@ class RepositoryManager:
 			core.BNFreeRepositoryManagerRepositoriesList(repos)
 
 	@property
-	def plugins(self) -> Dict[str, List[RepoPlugin]]:
-		"""List of all RepoPlugins in each repository"""
+	def plugins(self) -> Dict[str, List[Extension]]:
+		"""List of all Extensions in each repository"""
 		plugin_list = {}
 		for repo in self.repositories:
 			plugin_list[repo.path] = repo.plugins
@@ -376,7 +375,7 @@ class RepositoryManager:
 	@property
 	def default_repository(self) -> Repository:
 		"""Gets the default Repository"""
-		repo_handle = core.BNRepositoryManagerGetDefaultRepository(self.handle)
+		repo_handle = core.BNRepositoryManagerGetDefaultRepository()
 		assert repo_handle is not None, "core.BNRepositoryManagerGetDefaultRepository returned None"
 		repo_handle_ref = core.BNNewRepositoryReference(repo_handle)
 		assert repo_handle_ref is not None, "core.BNNewRepositoryReference returned None"
@@ -406,4 +405,4 @@ class RepositoryManager:
 		if not isinstance(url, str) or not isinstance(repopath, str):
 			raise ValueError("Expected url or repopath to be of type str.")
 
-		return core.BNRepositoryManagerAddRepository(self.handle, url, repopath)
+		return core.BNRepositoryManagerAddRepository(url, repopath)

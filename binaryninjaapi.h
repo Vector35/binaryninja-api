@@ -1980,17 +1980,6 @@ namespace BinaryNinja {
 	void DisablePlugins();
 	bool IsPluginsEnabled();
 	bool InitPlugins(bool allowUserPlugins = true);
-	/*!
-		\deprecated Use `InitPlugins()`
-	*/
-	BN_DEPRECATED("Use InitPlugins", "InitPlugins")
-	void InitCorePlugins();
-	/*!
-		\deprecated Use `InitPlugins()`
-	*/
-	BN_DEPRECATED("Use InitPlugins", "InitPlugins")
-	void InitUserPlugins();
-	void InitRepoPlugins();
 
 	std::string GetBundledPluginDirectory();
 	void SetBundledPluginDirectory(const std::string& path);
@@ -2033,7 +2022,7 @@ namespace BinaryNinja {
 	std::string GetActiveUpdateChannel();
 	void SetActiveUpdateChannel(const std::string& channel);
 
-	void SetCurrentPluginLoadOrder(BNPluginLoadOrder order);
+	void SetCurrentPluginLoadOrder(BNPluginLoadPhase order);
 	void AddRequiredPluginDependency(const std::string& name);
 	void AddOptionalPluginDependency(const std::string& name);
 
@@ -19145,13 +19134,25 @@ namespace BinaryNinja {
 	typedef BNPluginStatus PluginStatus;
 	typedef BNPluginType PluginType;
 
+	struct ExtensionVersion
+	{
+		std::string id;
+		std::string version;
+
+		std::string longDescription;
+		std::string changelog;
+
+		uint64_t minimumClientVersion;
+		std::string created;
+	};
+
 	/*!
 		\ingroup pluginmanager
 	*/
-	class RepoPlugin : public CoreRefCountObject<BNRepoPlugin, BNNewPluginReference, BNFreePlugin>
+	class Extension : public CoreRefCountObject<BNPlugin, BNNewPluginReference, BNFreePlugin>
 	{
 	  public:
-		RepoPlugin(BNRepoPlugin* plugin);
+		Extension(BNPlugin* plugin);
 		PluginStatus GetPluginStatus() const;
 		std::vector<std::string> GetApis() const;
 		std::vector<std::string> GetInstallPlatforms() const;
@@ -19161,20 +19162,22 @@ namespace BinaryNinja {
 		std::string GetPluginDirectory() const;
 		std::string GetAuthor() const;
 		std::string GetDescription() const;
-		std::string GetLicenseText() const;
-		std::string GetLongdescription() const;
 		std::string GetName() const;
 		std::vector<PluginType> GetPluginTypes() const;
 		std::string GetPackageUrl() const;
 		std::string GetProjectUrl() const;
 		std::string GetAuthorUrl() const;
-		std::string GetVersion() const;
+		std::vector<ExtensionVersion> GetVersions() const;
+		ExtensionVersion GetCurrentVersion() const;
+		std::string GetCurrentVersionID() const;
+		std::string GetLatestVersionID() const;
+		bool IsVersionIDLessThan(const std::string& smaller, const std::string& larger) const;
 		std::string GetCommit() const;
 		std::string GetRepository() const;
 		std::string GetProjectData();
 		VersionInfo GetMinimumVersionInfo() const;
 		VersionInfo GetMaximumVersionInfo() const;
-		uint64_t GetLastUpdate();
+		std::string GetCreationDate();
 		bool IsViewOnly() const;
 		bool IsBeingDeleted() const;
 		bool IsBeingUpdated() const;
@@ -19188,12 +19191,12 @@ namespace BinaryNinja {
 		bool AreDependenciesBeingInstalled() const;
 
 		bool Uninstall();
-		bool Install();
+		bool Install(std::string versionID);
 		bool InstallDependencies();
 		// `force` ignores optional checks for platform/api compliance
 		bool Enable(bool force);
 		bool Disable();
-		bool Update();
+		bool Update(std::string versionID);
 	};
 
 	/*!
@@ -19207,26 +19210,22 @@ namespace BinaryNinja {
 		std::string GetRepoPath() const;
 		std::string GetLocalReference() const;
 		std::string GetRemoteReference() const;
-		std::vector<Ref<RepoPlugin>> GetPlugins() const;
+		std::vector<Ref<Extension>> GetPlugins() const;
 		std::string GetPluginDirectory() const;
-		Ref<RepoPlugin> GetPluginByPath(const std::string& pluginPath);
+		Ref<Extension> GetPluginByPath(const std::string& pluginPath);
 		std::string GetFullPath() const;
 	};
 
 	/*!
 		\ingroup pluginmanager
 	*/
-	class RepositoryManager :
-	    public CoreRefCountObject<BNRepositoryManager, BNNewRepositoryManagerReference, BNFreeRepositoryManager>
+	class RepositoryManager
 	{
 	  public:
-		RepositoryManager(const std::string& enabledPluginsPath);
-		RepositoryManager(BNRepositoryManager* repoManager);
-		RepositoryManager();
-		bool CheckForUpdates();
-		std::vector<Ref<Repository>> GetRepositories();
-		Ref<Repository> GetRepositoryByPath(const std::string& repoName);
-		bool AddRepository(const std::string& url,  // URL to raw plugins.json file
+		static bool CheckForUpdates();
+		static std::vector<Ref<Repository>> GetRepositories();
+		static Ref<Repository> GetRepositoryByPath(const std::string& repoName);
+		static bool AddRepository(const std::string& url,  // URL to raw plugins.json file
 		    const std::string& repoPath);           // Relative path within the repositories directory
 		Ref<Repository> GetDefaultRepository();
 	};

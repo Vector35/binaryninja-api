@@ -1086,12 +1086,8 @@ class PythonScriptingProvider(ScriptingProvider):
 			plugin = repo[module]
 
 			if not force and self.apiName not in plugin.api:
-				raise ValueError(f"Plugin API name is not {self.name}")
+				raise ValueError(f"Plugin '{plugin.name}' API name '{plugin.api}' is not {self.name}")
 
-			if not force and core.core_platform not in plugin.install_platforms:
-				raise ValueError(
-				    f"Current platform {core.core_platform} isn't in list of valid platforms for this plugin {plugin.install_platforms}"
-				)
 			if not plugin.installed:
 				plugin.installed = True
 

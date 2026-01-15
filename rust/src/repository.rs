@@ -11,7 +11,7 @@ use std::ptr::NonNull;
 use binaryninjacore_sys::*;
 
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::repository::plugin::RepositoryPlugin;
+use crate::repository::plugin::Extension;
 use crate::string::{BnString, IntoCStr};
 
 pub use manager::RepositoryManager;
@@ -49,17 +49,17 @@ impl Repository {
     }
 
     /// List of RepoPlugin objects contained within this repository
-    pub fn plugins(&self) -> Array<RepositoryPlugin> {
+    pub fn plugins(&self) -> Array<Extension> {
         let mut count = 0;
         let result = unsafe { BNRepositoryGetPlugins(self.handle.as_ptr(), &mut count) };
         assert!(!result.is_null());
         unsafe { Array::new(result, count, ()) }
     }
 
-    pub fn plugin_by_path(&self, path: &Path) -> Option<Ref<RepositoryPlugin>> {
+    pub fn plugin_by_path(&self, path: &Path) -> Option<Ref<Extension>> {
         let path = path.to_cstr();
         let result = unsafe { BNRepositoryGetPluginByPath(self.handle.as_ptr(), path.as_ptr()) };
-        NonNull::new(result).map(|h| unsafe { RepositoryPlugin::ref_from_raw(h) })
+        NonNull::new(result).map(|h| unsafe { Extension::ref_from_raw(h) })
     }
 
     /// String full path the repository

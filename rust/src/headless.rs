@@ -26,7 +26,7 @@ use crate::enterprise::EnterpriseCheckoutStatus;
 use crate::main_thread::{MainThreadAction, MainThreadHandler};
 use crate::progress::ProgressCallback;
 use crate::rc::Ref;
-use binaryninjacore_sys::{BNInitPlugins, BNInitRepoPlugins};
+use binaryninjacore_sys::{BNInitPlugins};
 use std::sync::mpsc::Sender;
 use std::sync::Mutex;
 use std::thread::JoinHandle;
@@ -221,10 +221,6 @@ pub fn init_with_opts(options: InitializationOptions) -> Result<(), Initializati
 
     unsafe {
         BNInitPlugins(options.user_plugins);
-        if options.repo_plugins {
-            // We are allowed to initialize repo plugins, so do it!
-            BNInitRepoPlugins();
-        }
     }
 
     if !is_license_validated() {

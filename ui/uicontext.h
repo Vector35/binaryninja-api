@@ -673,7 +673,7 @@ void BINARYNINJAUIAPI InitUIViews();
 void BINARYNINJAUIAPI InitUIActions();
 
 void BINARYNINJAUIAPI InitUIPlugins();
-void BINARYNINJAUIAPI SetCurrentUIPluginLoadOrder(BNPluginLoadOrder order);
+void BINARYNINJAUIAPI SetCurrentUIPluginLoadOrder(BNPluginLoadPhase order);
 void BINARYNINJAUIAPI AddRequiredUIPluginDependency(const std::string& name);
 void BINARYNINJAUIAPI AddOptionalUIPluginDependency(const std::string& name);
 

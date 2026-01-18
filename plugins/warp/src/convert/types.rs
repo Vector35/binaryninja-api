@@ -6,7 +6,6 @@ use binaryninja::calling_convention::CoreCallingConvention as BNCallingConventio
 use binaryninja::confidence::Conf as BNConf;
 use binaryninja::confidence::MAX_CONFIDENCE;
 use binaryninja::rc::Ref as BNRef;
-use binaryninja::types::BaseStructure as BNBaseStructure;
 use binaryninja::types::EnumerationBuilder as BNEnumerationBuilder;
 use binaryninja::types::FunctionParameter as BNFunctionParameter;
 use binaryninja::types::MemberAccess as BNMemberAccess;
@@ -17,6 +16,7 @@ use binaryninja::types::StructureMember as BNStructureMember;
 use binaryninja::types::StructureType as BNStructureType;
 use binaryninja::types::Type as BNType;
 use binaryninja::types::TypeClass as BNTypeClass;
+use binaryninja::types::{BaseStructure as BNBaseStructure, StructureType};
 use binaryninja::types::{NamedTypeReference, NamedTypeReferenceClass};
 use std::collections::HashSet;
 use warp::r#type::class::array::ArrayModifiers;
@@ -25,7 +25,7 @@ use warp::r#type::class::structure::StructureMemberModifiers;
 use warp::r#type::class::{
     ArrayClass, BooleanClass, CallingConvention, CharacterClass, EnumerationClass,
     EnumerationMember, FloatClass, FunctionClass, FunctionMember, IntegerClass, PointerClass,
-    ReferrerClass, StructureClass, StructureMember, TypeClass,
+    ReferrerClass, StructureClass, StructureMember, TypeClass, UnionClass, UnionMember,
 };
 use warp::r#type::{Type, TypeModifiers};
 
@@ -65,58 +65,117 @@ pub fn from_bn_type_internal(
             };
             TypeClass::Float(float_class)
         }
-        // TODO: Union?????
         BNTypeClass::StructureTypeClass => {
             let raw_struct = raw_ty.get_structure().unwrap();
+            match raw_struct.structure_type() {
+                StructureType::ClassStructureType | StructureType::StructStructureType => {
+                    let mut members = raw_struct
+                        .members()
+                        .into_iter()
+                        .map(|raw_member| {
+                            let bit_offset = bytes_to_bits(raw_member.offset)
+                                + raw_member.bit_position.unwrap_or(0) as u64;
+                            let mut modifiers = StructureMemberModifiers::empty();
+                            // If this member is not public, mark it as internal.
+                            modifiers.set(
+                                StructureMemberModifiers::Internal,
+                                !matches!(raw_member.access, BNMemberAccess::PublicAccess),
+                            );
+                            let mut member_ty = from_bn_type_internal(
+                                view,
+                                visited_refs,
+                                &raw_member.ty.contents,
+                                raw_member.ty.confidence,
+                            );
 
-            let mut members = raw_struct
-                .members()
-                .into_iter()
-                .map(|raw_member| {
-                    let bit_offset = bytes_to_bits(raw_member.offset);
-                    let mut modifiers = StructureMemberModifiers::empty();
-                    // If this member is not public mark it as internal.
-                    modifiers.set(
-                        StructureMemberModifiers::Internal,
-                        !matches!(raw_member.access, BNMemberAccess::PublicAccess),
-                    );
-                    StructureMember {
-                        name: Some(raw_member.name),
-                        offset: bit_offset,
-                        ty: Box::new(from_bn_type_internal(
-                            view,
-                            visited_refs,
-                            &raw_member.ty.contents,
-                            raw_member.ty.confidence,
-                        )),
-                        modifiers,
+                            // TODO: Handle this directly in from_bn_type_internal? bit_width: Option<u16> param
+                            // Adjust type class widths when dealing with bitfields.
+                            if let Some(member_bit_width) = raw_member.bit_width {
+                                match &mut member_ty.class {
+                                    TypeClass::Boolean(c) => {
+                                        c.width = Some(member_bit_width as u16);
+                                    }
+                                    TypeClass::Integer(c) => {
+                                        c.width = Some(member_bit_width as u16);
+                                    }
+                                    TypeClass::Character(c) => {
+                                        c.width = Some(member_bit_width as u16);
+                                    }
+                                    TypeClass::Float(c) => {
+                                        c.width = Some(member_bit_width as u16);
+                                    }
+                                    TypeClass::Pointer(c) => {
+                                        c.width = Some(member_bit_width as u16);
+                                    }
+                                    _ => {}
+                                }
+                            }
+
+                            StructureMember {
+                                name: Some(raw_member.name),
+                                offset: bit_offset,
+                                ty: Box::new(member_ty),
+                                modifiers,
+                            }
+                        })
+                        .collect::<Vec<_>>();
+
+                    // Add base structures as flattened members
+                    let base_to_member_iter =
+                        raw_struct.base_structures().into_iter().map(|base_struct| {
+                            let bit_offset = bytes_to_bits(base_struct.offset);
+                            let mut modifiers = StructureMemberModifiers::empty();
+                            modifiers.set(StructureMemberModifiers::Flattened, true);
+                            let base_struct_ty = from_bn_type_internal(
+                                view,
+                                visited_refs,
+                                &BNType::named_type(&base_struct.ty),
+                                MAX_CONFIDENCE,
+                            );
+                            StructureMember {
+                                name: base_struct_ty.name.to_owned(),
+                                offset: bit_offset,
+                                ty: Box::new(base_struct_ty),
+                                modifiers,
+                            }
+                        });
+                    members.extend(base_to_member_iter);
+
+                    // Add padding to the end of the struct if needed.
+                    let mut struct_class = StructureClass::new(members);
+                    let tail_padding_size =
+                        raw_ty_bit_width.saturating_sub(struct_class.size().unwrap_or(0));
+                    if tail_padding_size > 0 {
+                        let padding_member = StructureMember {
+                            name: None,
+                            offset: raw_ty_bit_width,
+                            ty: Box::new(padding_ty(tail_padding_size)),
+                            modifiers: StructureMemberModifiers::Internal,
+                        };
+                        struct_class.members.push(padding_member);
                     }
-                })
-                .collect::<Vec<_>>();
 
-            // Add base structures as flattened members
-            let base_to_member_iter = raw_struct.base_structures().into_iter().map(|base_struct| {
-                let bit_offset = bytes_to_bits(base_struct.offset);
-                let mut modifiers = StructureMemberModifiers::empty();
-                modifiers.set(StructureMemberModifiers::Flattened, true);
-                let base_struct_ty = from_bn_type_internal(
-                    view,
-                    visited_refs,
-                    &BNType::named_type(&base_struct.ty),
-                    MAX_CONFIDENCE,
-                );
-                StructureMember {
-                    name: base_struct_ty.name.to_owned(),
-                    offset: bit_offset,
-                    ty: Box::new(base_struct_ty),
-                    modifiers,
+                    TypeClass::Structure(struct_class)
                 }
-            });
-            members.extend(base_to_member_iter);
-
-            // TODO: Check if union
-            let struct_class = StructureClass::new(members);
-            TypeClass::Structure(struct_class)
+                StructureType::UnionStructureType => {
+                    let members = raw_struct
+                        .members()
+                        .into_iter()
+                        .map(|raw_member| {
+                            let member_name = raw_member.name.to_owned();
+                            let member_ty = from_bn_type_internal(
+                                view,
+                                visited_refs,
+                                &raw_member.ty.contents,
+                                raw_member.ty.confidence,
+                            );
+                            UnionMember::new(member_name, member_ty)
+                        })
+                        .collect();
+                    let union_class = UnionClass::new(members);
+                    TypeClass::Union(union_class)
+                }
+            }
         }
         BNTypeClass::EnumerationTypeClass => {
             let raw_enum = raw_ty.get_enumeration().unwrap();
@@ -321,16 +380,26 @@ pub fn to_bn_type<A: BNArchitecture + Copy>(arch: Option<A>, ty: &Type) -> BNRef
             let mut base_structs: Vec<BNBaseStructure> = Vec::new();
             for member in &c.members {
                 let member_type = BNConf::new(to_bn_type(arch, &member.ty), u8::MAX);
-                let member_name = member.name.to_owned().unwrap_or("field_OFFSET".into());
-                let member_offset = bits_to_bytes(member.offset);
-                let member_access = if member
+                let member_offset_in_bytes = bits_to_bytes(member.offset);
+                let member_name = member
+                    .name
+                    .to_owned()
+                    .unwrap_or_else(|| format!("field_{}", member_offset_in_bytes));
+                let is_member_internal = member
                     .modifiers
-                    .contains(StructureMemberModifiers::Internal)
-                {
+                    .contains(StructureMemberModifiers::Internal);
+                let member_access = if is_member_internal {
                     BNMemberAccess::PrivateAccess
                 } else {
                     BNMemberAccess::PublicAccess
                 };
+
+                // Member has no name, is private; we consider this padding, don't create a member for it.
+                if is_member_internal && member.name.is_none() {
+                    builder.width(member_offset_in_bytes + member_type.contents.width());
+                    continue;
+                }
+
                 // TODO: Member scope
                 let member_scope = BNMemberScope::NoScope;
                 if member
@@ -356,7 +425,7 @@ pub fn to_bn_type<A: BNArchitecture + Copy>(arch: Option<A>, ty: &Type) -> BNRef
                             };
                             base_structs.push(BNBaseStructure::new(
                                 base_struct_ntr,
-                                member_offset,
+                                member_offset_in_bytes,
                                 member.ty.size().unwrap_or(0),
                             ))
                         }
@@ -369,11 +438,16 @@ pub fn to_bn_type<A: BNArchitecture + Copy>(arch: Option<A>, ty: &Type) -> BNRef
                         }
                     }
                 } else {
+                    let mut member_bit_width = member.ty.size().unwrap_or(8);
+                    if member_bit_width % 8 == 0 {
+                        member_bit_width = 0;
+                    }
                     builder.insert_member(
-                        BNStructureMember::new(
+                        BNStructureMember::new_bitfield(
                             member_type,
                             member_name,
-                            member_offset,
+                            member.offset,
+                            member_bit_width as u8,
                             member_access,
                             member_scope,
                         ),
@@ -481,6 +555,22 @@ pub fn to_bn_type<A: BNArchitecture + Copy>(arch: Option<A>, ty: &Type) -> BNRef
             BNType::named_type(&ntr)
         }
     }
+}
+
+/// Return a new type to represent padding.
+fn padding_ty(size: u64) -> Type {
+    let size_in_bytes = (size + 7) / 8;
+    let byte_class = IntegerClass::builder().width(8).signed(false).build();
+    let byte_ty = Type::builder::<String, _>()
+        .class(TypeClass::Integer(byte_class))
+        .build();
+    let array_class = ArrayClass::builder()
+        .length(size_in_bytes / 8)
+        .member_type(byte_ty)
+        .build();
+    Type::builder::<String, _>()
+        .class(TypeClass::Array(array_class))
+        .build()
 }
 
 #[cfg(test)]

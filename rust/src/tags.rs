@@ -16,6 +16,7 @@
 
 use binaryninjacore_sys::*;
 use std::fmt::{Debug, Formatter};
+use std::ptr::NonNull;
 
 use crate::architecture::CoreArchitecture;
 use crate::binary_view::BinaryView;
@@ -257,8 +258,8 @@ unsafe impl Sync for TagType {}
 
 #[derive(Clone, PartialEq)]
 pub struct TagReference {
-    pub arch: CoreArchitecture,
-    pub func: Ref<Function>,
+    pub arch: Option<CoreArchitecture>,
+    pub func: Option<Ref<Function>>,
     pub addr: u64,
     pub auto_defined: bool,
     pub reference_type: TagReferenceType,
@@ -271,8 +272,10 @@ impl From<&BNTagReference> for TagReference {
             reference_type: value.refType,
             auto_defined: value.autoDefined,
             tag: unsafe { Tag::from_raw(value.tag).to_owned() },
-            arch: unsafe { CoreArchitecture::from_raw(value.arch) },
-            func: unsafe { Function::from_raw(value.func).to_owned() },
+            arch: NonNull::new(value.arch)
+                .map(|arch| unsafe { CoreArchitecture::from_raw(arch.as_ptr()) }),
+            func: NonNull::new(value.func)
+                .map(|func| unsafe { Function::from_raw(func.as_ptr()).to_owned() }),
             addr: value.addr,
         }
     }

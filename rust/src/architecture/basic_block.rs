@@ -71,40 +71,58 @@ impl BasicBlockAnalysisContext {
             .zip(raw_contextual_return_vals.iter().copied())
             .collect();
 
-        let raw_direct_ref_sources: &[BNArchitectureAndAddress] =
-            unsafe { std::slice::from_raw_parts(ctx_ref.directRefSources, ctx_ref.directRefCount) };
-        let raw_direct_ref_targets: &[u64] =
-            unsafe { std::slice::from_raw_parts(ctx_ref.directRefTargets, ctx_ref.directRefCount) };
+        // The lists below this are out params and are possibly not initialized.
+        let raw_direct_ref_sources: &[BNArchitectureAndAddress] = match ctx_ref
+            .directRefSources
+            .is_null()
+        {
+            true => &[],
+            false => std::slice::from_raw_parts(ctx_ref.directRefSources, ctx_ref.directRefCount),
+        };
+        let raw_direct_ref_targets: &[u64] = match ctx_ref.directRefTargets.is_null() {
+            true => &[],
+            false => std::slice::from_raw_parts(ctx_ref.directRefTargets, ctx_ref.directRefCount),
+        };
         let direct_code_references: HashMap<u64, Location> = raw_direct_ref_targets
             .iter()
             .copied()
             .zip(raw_direct_ref_sources.iter().map(Location::from))
             .collect();
 
-        let raw_direct_no_return_calls: &[BNArchitectureAndAddress] = std::slice::from_raw_parts(
-            ctx_ref.directNoReturnCalls,
-            ctx_ref.directNoReturnCallsCount,
-        );
+        let raw_direct_no_return_calls: &[BNArchitectureAndAddress] =
+            match ctx_ref.directNoReturnCalls.is_null() {
+                true => &[],
+                false => std::slice::from_raw_parts(
+                    ctx_ref.directNoReturnCalls,
+                    ctx_ref.directNoReturnCallsCount,
+                ),
+            };
         let direct_no_return_calls: HashSet<Location> = raw_direct_no_return_calls
             .iter()
             .map(Location::from)
             .collect();
 
         let raw_halted_disassembly_address: &[BNArchitectureAndAddress] =
-            std::slice::from_raw_parts(
-                ctx_ref.haltedDisassemblyAddresses,
-                ctx_ref.haltedDisassemblyAddressesCount,
-            );
+            match ctx_ref.haltedDisassemblyAddresses.is_null() {
+                true => &[],
+                false => std::slice::from_raw_parts(
+                    ctx_ref.haltedDisassemblyAddresses,
+                    ctx_ref.haltedDisassemblyAddressesCount,
+                ),
+            };
         let halted_disassembly_addresses: HashSet<Location> = raw_halted_disassembly_address
             .iter()
             .map(Location::from)
             .collect();
 
         let raw_inlined_unresolved_indirect_branches: &[BNArchitectureAndAddress] =
-            std::slice::from_raw_parts(
-                ctx_ref.inlinedUnresolvedIndirectBranches,
-                ctx_ref.inlinedUnresolvedIndirectBranchCount,
-            );
+            match ctx_ref.inlinedUnresolvedIndirectBranches.is_null() {
+                true => &[],
+                false => std::slice::from_raw_parts(
+                    ctx_ref.inlinedUnresolvedIndirectBranches,
+                    ctx_ref.inlinedUnresolvedIndirectBranchCount,
+                ),
+            };
         let inlined_unresolved_indirect_branches: HashSet<Location> =
             raw_inlined_unresolved_indirect_branches
                 .iter()

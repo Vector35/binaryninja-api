@@ -437,7 +437,127 @@ impl TypeBuilder {
         result
     }
 
-    // TODO : BNCreateFunctionTypeBuilder
+    // TODO: Deprecate this for a FunctionBuilder (along with the Type variant?)
+    /// NOTE: This is likely to be deprecated and removed in favor of a function type builder, please
+    /// use [`Type::function`] where possible.
+    pub fn function<'a, T: Into<Conf<&'a Type>>>(
+        return_type: T,
+        parameters: Vec<FunctionParameter>,
+        variable_arguments: bool,
+    ) -> Self {
+        let mut owned_raw_return_type = Conf::<&Type>::into_raw(return_type.into());
+        let mut variable_arguments = Conf::new(variable_arguments, MAX_CONFIDENCE).into();
+        let mut can_return = Conf::new(true, MIN_CONFIDENCE).into();
+        let mut pure = Conf::new(false, MIN_CONFIDENCE).into();
+
+        let mut raw_calling_convention: BNCallingConventionWithConfidence =
+            BNCallingConventionWithConfidence {
+                convention: std::ptr::null_mut(),
+                confidence: MIN_CONFIDENCE,
+            };
+
+        let mut stack_adjust = Conf::new(0, MIN_CONFIDENCE).into();
+        let mut raw_parameters = parameters
+            .into_iter()
+            .map(FunctionParameter::into_raw)
+            .collect::<Vec<_>>();
+        let reg_stack_adjust_regs = std::ptr::null_mut();
+        let reg_stack_adjust_values = std::ptr::null_mut();
+
+        let mut return_regs: BNRegisterSetWithConfidence = BNRegisterSetWithConfidence {
+            regs: std::ptr::null_mut(),
+            count: 0,
+            confidence: 0,
+        };
+
+        let result = unsafe {
+            Self::from_raw(BNCreateFunctionTypeBuilder(
+                &mut owned_raw_return_type,
+                &mut raw_calling_convention,
+                raw_parameters.as_mut_ptr(),
+                raw_parameters.len(),
+                &mut variable_arguments,
+                &mut can_return,
+                &mut stack_adjust,
+                reg_stack_adjust_regs,
+                reg_stack_adjust_values,
+                0,
+                &mut return_regs,
+                BNNameType::NoNameType,
+                &mut pure,
+            ))
+        };
+
+        for raw_param in raw_parameters {
+            FunctionParameter::free_raw(raw_param);
+        }
+
+        result
+    }
+
+    // TODO: Deprecate this for a FunctionBuilder (along with the Type variant?)
+    /// NOTE: This is likely to be deprecated and removed in favor of a function type builder, please
+    /// use [`Type::function_with_opts`] where possible.
+    pub fn function_with_opts<
+        'a,
+        T: Into<Conf<&'a Type>>,
+        C: Into<Conf<Ref<CoreCallingConvention>>>,
+    >(
+        return_type: T,
+        parameters: &[FunctionParameter],
+        variable_arguments: bool,
+        calling_convention: C,
+        stack_adjust: Conf<i64>,
+    ) -> Self {
+        let mut owned_raw_return_type = Conf::<&Type>::into_raw(return_type.into());
+        let mut variable_arguments = Conf::new(variable_arguments, MAX_CONFIDENCE).into();
+        let mut can_return = Conf::new(true, MIN_CONFIDENCE).into();
+        let mut pure = Conf::new(false, MIN_CONFIDENCE).into();
+
+        let mut owned_raw_calling_convention =
+            Conf::<Ref<CoreCallingConvention>>::into_owned_raw(&calling_convention.into());
+
+        let mut stack_adjust = stack_adjust.into();
+        let mut raw_parameters = parameters
+            .iter()
+            .cloned()
+            .map(FunctionParameter::into_raw)
+            .collect::<Vec<_>>();
+
+        // TODO: Update type signature and include these (will be a breaking change)
+        let reg_stack_adjust_regs = std::ptr::null_mut();
+        let reg_stack_adjust_values = std::ptr::null_mut();
+
+        let mut return_regs: BNRegisterSetWithConfidence = BNRegisterSetWithConfidence {
+            regs: std::ptr::null_mut(),
+            count: 0,
+            confidence: 0,
+        };
+
+        let result = unsafe {
+            Self::from_raw(BNCreateFunctionTypeBuilder(
+                &mut owned_raw_return_type,
+                &mut owned_raw_calling_convention,
+                raw_parameters.as_mut_ptr(),
+                raw_parameters.len(),
+                &mut variable_arguments,
+                &mut can_return,
+                &mut stack_adjust,
+                reg_stack_adjust_regs,
+                reg_stack_adjust_values,
+                0,
+                &mut return_regs,
+                BNNameType::NoNameType,
+                &mut pure,
+            ))
+        };
+
+        for raw_param in raw_parameters {
+            FunctionParameter::free_raw(raw_param);
+        }
+
+        result
+    }
 
     /// Create a pointer [`TypeBuilder`] with the given target type. Analogous to [`Type::pointer`].
     pub fn pointer<'a, A: Architecture, T: Into<Conf<&'a Type>>>(arch: &A, ty: T) -> Self {

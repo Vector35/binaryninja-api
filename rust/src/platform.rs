@@ -165,6 +165,12 @@ impl Platform {
         unsafe { CoreArchitecture::from_raw(BNGetPlatformArchitecture(self.handle)) }
     }
 
+    /// Get the address size of the platform, this is typically the same as the architecture's address size,
+    /// but some platforms like Linux x86_64 x32 ABI have differing address sizes from architecture.
+    pub fn address_size(&self) -> usize {
+        unsafe { BNGetPlatformAddressSize(self.handle) }
+    }
+
     pub fn type_container(&self) -> TypeContainer {
         let type_container_ptr = NonNull::new(unsafe { BNGetPlatformTypeContainer(self.handle) });
         // NOTE: I have no idea how this isn't a UAF, see the note in `TypeContainer::from_raw`

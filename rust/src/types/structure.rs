@@ -571,6 +571,16 @@ impl StructureMember {
     pub fn bit_offset(&self) -> u64 {
         (self.offset * 8) + self.bit_position.unwrap_or(0) as u64
     }
+
+    /// Member width in bits.
+    ///
+    /// NOTE: This is a helper to calculate the bit width of the member, even for non-bitfield members.
+    /// This is not to be confused with the field `bit_width`, which is set for only bitfield members.
+    pub fn width_in_bits(&self) -> u64 {
+        self.bit_width
+            .map(|w| w as u64)
+            .unwrap_or(self.ty.contents.width() * 8)
+    }
 }
 
 impl CoreArrayProvider for StructureMember {

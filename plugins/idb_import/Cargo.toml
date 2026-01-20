@@ -13,5 +13,7 @@ crate-type = ["cdylib"]
 anyhow = { version = "1.0.86", features = ["backtrace"] }
 binaryninja.workspace = true
 binaryninjacore-sys.workspace = true
-idb-rs = { git = "https://github.com/Vector35/idb-rs", tag = "0.1.12" }
+idb-rs = { git = "https://github.com/Vector35/idb-rs", tag = "0.1.13" }
 tracing = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

@@ -206,7 +206,7 @@ dependencies = [
  "binaryninjacore-sys",
  "insta",
  "rayon",
- "rstest",
+ "rstest 0.24.0",
  "serde",
  "serde_derive",
  "serde_json",
@@ -267,6 +267,9 @@ name = "bitflags"
 version = "2.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1b8e56985ec62d17e9c1001dc89c88ecd7dc08e47eba5ec7c29c7b5eeecde967"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "block2"
@@ -1256,8 +1259,8 @@ dependencies = [
 
 [[package]]
 name = "idb-rs"
-version = "0.1.12"
-source = "git+https://github.com/Vector35/idb-rs?tag=0.1.12#54c50ebb35724e1470ac28d259df8c98ad5fa3b0"
+version = "0.1.13"
+source = "git+https://github.com/Vector35/idb-rs?tag=0.1.13#9cec8cc88d35b23635c3c883f4bdbaa26c4a2f39"
 dependencies = [
  "anyhow",
  "bincode",
@@ -1265,6 +1268,9 @@ dependencies = [
  "flate2",
  "num-traits",
  "num_enum",
+ "ron",
+ "rstest 0.25.0",
+ "rustc-hash",
  "serde",
  "zstd",
 ]
@@ -1277,6 +1283,8 @@ dependencies = [
  "binaryninja",
  "binaryninjacore-sys",
  "idb-rs",
+ "serde",
+ "serde_json",
  "tracing",
 ]
 
@@ -2190,6 +2198,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "ron"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "beceb6f7bf81c73e73aeef6dd1356d9a1b2b4909e1f0fc3e59b034f9572d7b7f"
+dependencies = [
+ "base64",
+ "bitflags 2.9.1",
+ "serde",
+ "serde_derive",
+ "unicode-ident",
+]
+
+[[package]]
 name = "roxmltree"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2203,7 +2224,19 @@ checksum = "03e905296805ab93e13c1ec3a03f4b6c4f35e9498a3d5fa96dc626d22c03cd89"
 dependencies = [
  "futures-timer",
  "futures-util",
- "rstest_macros",
+ "rstest_macros 0.24.0",
+ "rustc_version",
+]
+
+[[package]]
+name = "rstest"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6fc39292f8613e913f7df8fa892b8944ceb47c247b78e1b1ae2f09e019be789d"
+dependencies = [
+ "futures-timer",
+ "futures-util",
+ "rstest_macros 0.25.0",
  "rustc_version",
 ]
 
@@ -2212,6 +2245,24 @@ name = "rstest_macros"
 version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ef0053bbffce09062bee4bcc499b0fbe7a57b879f1efe088d6d8d4c7adcdef9b"
+dependencies = [
+ "cfg-if",
+ "glob",
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "relative-path",
+ "rustc_version",
+ "syn",
+ "unicode-ident",
+]
+
+[[package]]
+name = "rstest_macros"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f168d99749d307be9de54d23fd226628d99768225ef08f6ffb52e0182a27746"
 dependencies = [
  "cfg-if",
  "glob",

@@ -678,14 +678,6 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
         4
     }
 
-    fn opcode_display_len(&self) -> usize {
-        self.max_instr_len()
-    }
-
-    fn associated_arch_by_addr(&self, _addr: u64) -> CoreArchitecture {
-        self.handle
-    }
-
     fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo> {
         let (inst_len, op) = match D::decode(addr, data) {
             Ok(Instr::Rv16(op)) => (2, op),

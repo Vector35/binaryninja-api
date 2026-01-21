@@ -1,8 +1,7 @@
 use binaryninja::architecture;
-use binaryninja::architecture::{FlagClassId, FlagGroupId, FlagId, FlagRole, FlagWriteId};
+use binaryninja::architecture::{CoreArchitecture, FlagId, FlagRole, FlagWriteId, UnusedFlagClass};
 
 use std::borrow::Cow;
-use std::collections::HashMap;
 
 // NOTE: GIE, CPUOFF, OSCOFF, SG0, and SG1 not implemented as it's not clear how they would be used
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -14,7 +13,11 @@ pub enum Flag {
 }
 
 impl architecture::Flag for Flag {
-    type FlagClass = FlagClass;
+    type FlagClass = UnusedFlagClass;
+
+    fn flags(_arch: &CoreArchitecture) -> Vec<Self> {
+        vec![Flag::C, Flag::Z, Flag::N, Flag::V]
+    }
 
     fn name(&self) -> Cow<'_, str> {
         match self {
@@ -43,55 +46,15 @@ impl architecture::Flag for Flag {
         }
         .into()
     }
-}
 
-impl TryFrom<FlagId> for Flag {
-    type Error = ();
-    fn try_from(flag: FlagId) -> Result<Self, Self::Error> {
-        match flag.0 {
-            0 => Ok(Self::C),
-            1 => Ok(Self::Z),
-            2 => Ok(Self::N),
-            8 => Ok(Self::V),
-            _ => Err(()),
+    fn from_id(_arch: &CoreArchitecture, id: FlagId) -> Option<Self> {
+        match id.0 {
+            0 => Some(Self::C),
+            1 => Some(Self::Z),
+            2 => Some(Self::N),
+            8 => Some(Self::V),
+            _ => None,
         }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct FlagClass {}
-
-impl architecture::FlagClass for FlagClass {
-    fn name(&self) -> Cow<'_, str> {
-        unimplemented!()
-    }
-
-    fn id(&self) -> FlagClassId {
-        unimplemented!()
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum FlagGroup {}
-
-impl architecture::FlagGroup for FlagGroup {
-    type FlagType = Flag;
-    type FlagClass = FlagClass;
-
-    fn name(&self) -> Cow<'_, str> {
-        unimplemented!()
-    }
-
-    fn id(&self) -> FlagGroupId {
-        unimplemented!()
-    }
-
-    fn flags_required(&self) -> Vec<Self::FlagType> {
-        unimplemented!()
-    }
-
-    fn flag_conditions(&self) -> HashMap<Self::FlagClass, architecture::FlagCondition> {
-        unimplemented!()
     }
 }
 
@@ -105,7 +68,16 @@ pub enum FlagWrite {
 
 impl architecture::FlagWrite for FlagWrite {
     type FlagType = Flag;
-    type FlagClass = FlagClass;
+    type FlagClass = UnusedFlagClass;
+
+    fn flag_write_types(_arch: &CoreArchitecture) -> Vec<Self> {
+        vec![
+            FlagWrite::All,
+            FlagWrite::Nz,
+            FlagWrite::Nvz,
+            FlagWrite::Cnz,
+        ]
+    }
 
     fn name(&self) -> Cow<'_, str> {
         match self {
@@ -130,26 +102,22 @@ impl architecture::FlagWrite for FlagWrite {
         .into()
     }
 
+    fn from_id(_arch: &CoreArchitecture, id: FlagWriteId) -> Option<Self> {
+        match id.0 {
+            1 => Some(Self::All),
+            2 => Some(Self::Nz),
+            3 => Some(Self::Nvz),
+            4 => Some(Self::Cnz),
+            _ => None,
+        }
+    }
+
     fn flags_written(&self) -> Vec<Self::FlagType> {
         match self {
             Self::All => vec![Flag::C, Flag::N, Flag::V, Flag::Z],
             Self::Nz => vec![Flag::N, Flag::Z],
             Self::Nvz => vec![Flag::N, Flag::V, Flag::Z],
             Self::Cnz => vec![Flag::C, Flag::N, Flag::Z],
-        }
-    }
-}
-
-impl TryFrom<FlagWriteId> for FlagWrite {
-    type Error = ();
-
-    fn try_from(value: FlagWriteId) -> Result<Self, Self::Error> {
-        match value.0 {
-            1 => Ok(Self::All),
-            2 => Ok(Self::Nz),
-            3 => Ok(Self::Nvz),
-            4 => Ok(Self::Cnz),
-            _ => Err(()),
         }
     }
 }

@@ -398,10 +398,8 @@ class TagList:
 			return arch, self._tags[i].addr, binaryview.Tag(core_tag)
 		elif isinstance(i, slice):
 			result = []
-			if i.start < 0 or i.start >= len(self) or i.stop < 0 or i.stop >= len(self):
-				raise IndexError(f"Slice {i} out of bounds for TagList of size {len(self)}")
-
-			for j in range(i.start, i.stop, i.step if i.step is not None else 1):
+			start, stop, step = i.indices(len(self))
+			for j in range(start, stop, step):
 				core_tag = core.BNNewTagReference(self._tags[j].tag)
 				assert core_tag is not None, "core.BNNewTagReference returned None"
 				arch = architecture.CoreArchitecture._from_cache(self._tags[j].arch)

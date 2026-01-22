@@ -2466,10 +2466,8 @@ class FunctionList:
 			return _function.Function(self._view, core.BNNewFunctionReference(self._funcs[i]))
 		elif isinstance(i, slice):
 			result = []
-			if i.start < 0 or i.start >= len(self) or i.stop < 0 or i.stop >= len(self):
-				raise IndexError(f"Slice {i} out of bounds for FunctionList of size {len(self)}")
-
-			for j in range(i.start, i.stop, i.step if i.step is not None else 1):
+			start, stop, step = i.indices(len(self))
+			for j in range(start, stop, step):
 				result.append(_function.Function(self._view, core.BNNewFunctionReference(self._funcs[j])))
 			return result
 		raise ValueError("FunctionList.__getitem__ supports argument of type integer or slice")

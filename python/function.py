@@ -279,10 +279,8 @@ class BasicBlockList:
 			return self._function._instantiate_block(block)
 		elif isinstance(i, slice):
 			result = []
-			if i.start < 0 or i.start >= len(self) or i.stop < 0 or i.stop >= len(self):
-				raise IndexError(f"Slice {i} out of bounds for BasicBlockList of size {len(self)}")
-
-			for j in range(i.start, i.stop, i.step if i.step is not None else 1):
+			start, stop, step = i.indices(len(self))
+			for j in range(start, stop, step):
 				block = core.BNNewBasicBlockReference(self._blocks[j])
 				assert block is not None, "core.BNNewBasicBlockReference returned None"
 				result.append(self._function._instantiate_block(block))

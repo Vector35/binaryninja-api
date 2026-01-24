@@ -1458,6 +1458,13 @@ bool ElfView::Init()
 					else if(reloc.relocType == R_ARM_TLS_DTPMOD32)
 						tlsModuleStarts.push_back(reloc.offset);
 				}
+				else if (m_arch && (m_arch->GetName() == "x86_64"))
+				{
+					if (reloc.relocType == R_X86_64_DTPOFF64)
+						tlsOffsets.push_back(reloc.offset);
+					else if (reloc.relocType == R_X86_64_DTPMOD64)
+						tlsModuleStarts.push_back(reloc.offset);
+				}
 			}
 
 			if (relocHandler->GetRelocationInfo(this, m_arch, m_relocationInfo))
@@ -2474,10 +2481,13 @@ bool ElfView::Init()
 	}
 
 	// Add type, data variables for TLS entries
+	size_t tlsModuleEntrySize = 4;
+	if (m_arch && (m_arch->GetAddressSize() == 8))
+		tlsModuleEntrySize = 8;
 	for (auto offset : tlsModuleStarts)
 	{
 		/* All module ID's are set to 0. */
-		DefineDataVariable(offset, Type::IntegerType(4, false)->WithConfidence(BN_FULL_CONFIDENCE));
+		DefineDataVariable(offset, Type::IntegerType(tlsModuleEntrySize, false)->WithConfidence(BN_FULL_CONFIDENCE));
 	}
 	for (auto offset : tlsOffsets)
 	{

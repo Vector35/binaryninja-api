@@ -4331,6 +4331,16 @@ public:
 			memcpy(dest, (uint8_t*)&write, sizeof(uint64_t));
 			return true;
 		}
+		case R_X86_64_DTPMOD64: {
+			uint64_t write = 0;
+			memcpy(dest, (uint8_t*)&write, sizeof(uint64_t));
+			return true;
+		}
+		case R_X86_64_DTPOFF64: {
+			uint64_t write = reloc->GetTarget() + info.addend;
+			memcpy(dest, (uint8_t*)&write, sizeof(uint64_t));
+			return true;
+		}
 		default:
 			return RelocationHandler::ApplyRelocation(view, arch, reloc, dest, len);
 		}
@@ -4418,6 +4428,21 @@ public:
 				reloc.truncateSize = 4;
 				break;
 			case R_X86_64_64:
+				reloc.pcRelative = false;
+				reloc.baseRelative = false;
+				reloc.hasSign = false;
+				reloc.size = 8;
+				reloc.truncateSize = 8;
+				break;
+			case R_X86_64_DTPMOD64:
+				reloc.pcRelative = false;
+				reloc.baseRelative = false;
+				reloc.hasSign = false;
+				reloc.size = 8;
+				reloc.truncateSize = 8;
+				reloc.symbolIndex = 0;
+				break;
+			case R_X86_64_DTPOFF64:
 				reloc.pcRelative = false;
 				reloc.baseRelative = false;
 				reloc.hasSign = false;

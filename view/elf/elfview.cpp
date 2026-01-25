@@ -429,14 +429,35 @@ void ElfView::GetRelocEntries(BinaryReader& reader, const vector<Elf64SectionHea
 		for (uint64_t j = 0; j < section.size / relocSize; j++)
 		{
 			reader.Seek(section.offset + (j * relocSize));
+			if (!m_elf32 && (m_commonHeader.arch == EM_MIPS))
+			{
+				// MIPS64 relocations apparently use dedicated r_sym/r_type fields.
+				// See page 40, table 29 of the 64-bit ELF Object File Specification
+				// published by MIPS/SGCS (document no. 007-4658-001).
+				uint64_t ofs = reader.Read64();
+				uint64_t sym = reader.Read32();
+				uint32_t ssym = reader.Read8();
+				uint32_t type3 = reader.Read8();
+				uint32_t type2 = reader.Read8();
+				uint32_t type = reader.Read8();
+				uint64_t addend = 0;
+				if (!implicit)
+					addend = reader.Read64();
+				uint64_t relocType = type | (type2 << 8) | (type3 << 16);
+				(void)ssym;
+				result.push_back(ELFRelocEntry(ofs, sym, relocType, addend, section.info, implicit));
+				continue;
+			}
+
 			uint64_t ofs = m_elf32 ? reader.Read32() : reader.Read64();
 			uint64_t info = m_elf32 ? reader.Read32() : reader.Read64();
 			uint64_t addend = 0;
 			if (!implicit)
 				addend = m_elf32 ? reader.Read32() : reader.Read64();
 
-			result.push_back(ELFRelocEntry(ofs, info >> (m_elf32 ? 8 : 32), info & (m_elf32 ? 0xff : 0xffffffff),
-				addend, section.info, implicit));
+			uint64_t sym = info >> (m_elf32 ? 8 : 32);
+			uint64_t relocType = info & (m_elf32 ? 0xff : 0xffffffff);
+			result.push_back(ELFRelocEntry(ofs, sym, relocType, addend, section.info, implicit));
 		}
 	}
 }

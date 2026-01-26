@@ -1982,7 +1982,16 @@ namespace BinaryNinja {
 	bool InitPlugins(bool allowUserPlugins = true);
 
 	std::string GetBundledPluginDirectory();
+
+	/*! Get the directory that script plugins bundled with BinaryNinja are located.
+	 *
+	 * On non-Apple platforms by default this will be identical to the core plugin directory.
+	 *
+	 * @return std::string - Absolute path directory that script plugins bundled with BinaryNinja are located in.
+	 */
+	std::string GetBundledScriptPluginDirectory();
 	void SetBundledPluginDirectory(const std::string& path);
+	void SetBundledScriptPluginDirectory(const std::string& path);
 	std::string GetUserDirectory();
 
 	/*! Get the Binary Ninja system cache directory

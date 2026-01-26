@@ -4105,7 +4105,10 @@ extern "C"
 
 	BINARYNINJACOREAPI char* BNGetInstallDirectory(void);
 	BINARYNINJACOREAPI char* BNGetBundledPluginDirectory(void);
+	BINARYNINJACOREAPI char* BNGetBundledScriptPluginDirectory(void);
 	BINARYNINJACOREAPI void BNSetBundledPluginDirectory(const char* path);
+	BINARYNINJACOREAPI void BNSetBundledScriptPluginDirectory(const char* path);
+
 	BINARYNINJACOREAPI char* BNGetUserDirectory(void);
 	BINARYNINJACOREAPI char* BNGetUserPluginDirectory(void);
 	BINARYNINJACOREAPI char* BNGetRepositoriesDirectory(void);

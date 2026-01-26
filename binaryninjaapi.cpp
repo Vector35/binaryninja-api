@@ -60,6 +60,17 @@ string BinaryNinja::GetBundledPluginDirectory()
 }
 
 
+std::string BinaryNinja::GetBundledScriptPluginDirectory()
+{
+	char* path = BNGetBundledScriptPluginDirectory();
+	if (!path)
+		return string();
+	std::string result = path;
+	BNFreeString(path);
+	return result;
+}
+
+
 void BinaryNinja::SetBundledPluginDirectory(const string& path)
 {
 	BNSetBundledPluginDirectory(path.c_str());

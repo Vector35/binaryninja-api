@@ -123,6 +123,22 @@ impl TypeBuilder {
         self
     }
 
+    /// Set the width of the type.
+    ///
+    /// Typically only done for named type references, which will not have their width set otherwise.
+    pub fn set_width(&self, width: usize) -> &Self {
+        unsafe { BNTypeBuilderSetWidth(self.handle, width) }
+        self
+    }
+
+    /// Set the alignment of the type.
+    ///
+    /// Typically only done for named type references, which will not have their alignment set otherwise.
+    pub fn set_alignment(&self, alignment: usize) -> &Self {
+        unsafe { BNTypeBuilderSetAlignment(self.handle, alignment) }
+        self
+    }
+
     pub fn set_pointer_base(&self, base_type: PointerBaseType, base_offset: i64) -> &Self {
         unsafe { BNSetTypeBuilderPointerBase(self.handle, base_type, base_offset) }
         self
@@ -541,6 +557,7 @@ impl Type {
 
     // TODO: We need to decide on a public type to represent type width.
     // TODO: The api uses both `u64` and `usize`, pick one or a new type!
+    /// The size of the type in bytes.
     pub fn width(&self) -> u64 {
         unsafe { BNGetTypeWidth(self.handle) }
     }

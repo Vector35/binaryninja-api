@@ -407,7 +407,7 @@ impl TypeBuilder {
     }
 
     /// Create a named type reference [`TypeBuilder`]. Analogous to [`Type::named_type`].
-    pub fn named_type(type_reference: NamedTypeReference) -> Self {
+    pub fn named_type(type_reference: &NamedTypeReference) -> Self {
         let mut is_const = Conf::new(false, MIN_CONFIDENCE).into();
         let mut is_volatile = Conf::new(false, MIN_CONFIDENCE).into();
         unsafe {

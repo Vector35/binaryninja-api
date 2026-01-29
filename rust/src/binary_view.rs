@@ -2145,9 +2145,9 @@ pub trait BinaryViewExt: BinaryViewBase {
         NonNull::new(result).map(|h| unsafe { TypeLibrary::ref_from_raw(h) })
     }
 
-    /// Should be called by custom py:py:class:`BinaryView` implementations
-    /// when they have successfully imported an object from a type library (eg a symbol's type).
-    /// Values recorded with this function will then be queryable via [BinaryViewExt::lookup_imported_object_library].
+    /// Should be called by custom [`BinaryView`] implementations when they have successfully
+    /// imported an object from a type library (eg a symbol's type). Values recorded with this
+    /// function will then be queryable via [`BinaryViewExt::lookup_imported_object_library`].
     ///
     /// * `lib` - Type Library containing the imported type
     /// * `name` - Name of the object in the type library
@@ -2173,23 +2173,23 @@ pub trait BinaryViewExt: BinaryViewBase {
         QualifiedName::free_raw(raw_name);
     }
 
-    /// Recursively imports a type from the specified type library, or, if
-    /// no library was explicitly provided, the first type library associated with the current [BinaryView]
-    /// that provides the name requested.
+    /// Recursively imports a type from the specified type library, or, if no library was
+    /// explicitly provided, the first type library associated with the current [`BinaryView`] that
+    /// provides the name requested.
     ///
-    /// This may have the impact of loading other type libraries as dependencies on other type libraries are lazily resolved
-    /// when references to types provided by them are first encountered.
+    /// This may have the impact of loading other type libraries as dependencies on other type
+    /// libraries are lazily resolved when references to types provided by them are first encountered.
     ///
-    /// Note that the name actually inserted into the view may not match the name as it exists in the type library in
-    /// the event of a name conflict. To aid in this, the [Type] object returned is a `NamedTypeReference` to
-    /// the deconflicted name used.
+    /// Note that the name actually inserted into the view may not match the name as it exists in
+    /// the type library in the event of a name conflict. To aid in this, the [`Type`] object
+    /// returned is a `NamedTypeReference` to the deconflicted name used.
     fn import_type_library<T: Into<QualifiedName>>(
         &self,
         name: T,
-        mut lib: Option<TypeLibrary>,
+        lib: Option<&TypeLibrary>,
     ) -> Option<Ref<Type>> {
         let mut lib_ref = lib
-            .as_mut()
+            .as_ref()
             .map(|l| unsafe { l.as_raw() } as *mut _)
             .unwrap_or(std::ptr::null_mut());
         let mut raw_name = QualifiedName::into_raw(name.into());
@@ -2200,22 +2200,23 @@ pub trait BinaryViewExt: BinaryViewBase {
         (!result.is_null()).then(|| unsafe { Type::ref_from_raw(result) })
     }
 
-    /// Recursively imports an object from the specified type library, or, if
-    /// no library was explicitly provided, the first type library associated with the current [BinaryView]
-    /// that provides the name requested.
+    /// Recursively imports an object (function) from the specified type library, or, if no library was
+    /// explicitly provided, the first type library associated with the current [`BinaryView`] that
+    /// provides the name requested.
     ///
-    /// This may have the impact of loading other type libraries as dependencies on other type libraries are lazily resolved
-    /// when references to types provided by them are first encountered.
+    /// This may have the impact of loading other type libraries as dependencies on other type
+    /// libraries are lazily resolved when references to types provided by them are first encountered.
     ///
-    /// .. note:: If you are implementing a custom BinaryView and use this method to import object types,
-    /// you should then call [BinaryViewExt::record_imported_object_library] with the details of where the object is located.
+    /// NOTE: If you are implementing a custom [`BinaryView`] and use this method to import object types,
+    /// you should then call [BinaryViewExt::record_imported_object_library] with the details of
+    /// where the object is located.
     fn import_type_object<T: Into<QualifiedName>>(
         &self,
         name: T,
-        mut lib: Option<TypeLibrary>,
+        lib: Option<&TypeLibrary>,
     ) -> Option<Ref<Type>> {
         let mut lib_ref = lib
-            .as_mut()
+            .as_ref()
             .map(|l| unsafe { l.as_raw() } as *mut _)
             .unwrap_or(std::ptr::null_mut());
         let mut raw_name = QualifiedName::into_raw(name.into());
@@ -2226,7 +2227,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         (!result.is_null()).then(|| unsafe { Type::ref_from_raw(result) })
     }
 
-    /// Recursively imports a type interface given its GUID.
+    /// Recursively imports a [`Type`] given its GUID from available type libraries.
     fn import_type_by_guid(&self, guid: &str) -> Option<Ref<Type>> {
         let guid = guid.to_cstr();
         let result =
@@ -2234,7 +2235,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         (!result.is_null()).then(|| unsafe { Type::ref_from_raw(result) })
     }
 
-    /// Recursively exports `type_obj` into `lib` as a type with name `name`
+    /// Recursively exports `type_obj` into `lib` as a type with name `name`.
     ///
     /// As other referenced types are encountered, they are either copied into the destination type library or
     /// else the type library that provided the referenced type is added as a dependency for the destination library.
@@ -2256,10 +2257,10 @@ pub trait BinaryViewExt: BinaryViewBase {
         QualifiedName::free_raw(raw_name);
     }
 
-    /// Recursively exports `type_obj` into `lib` as a type with name `name`
+    /// Recursively exports `type_obj` into `lib` as a type with name `name`.
     ///
     /// As other referenced types are encountered, they are either copied into the destination type library or
-    ///     else the type library that provided the referenced type is added as a dependency for the destination library.
+    /// else the type library that provided the referenced type is added as a dependency for the destination library.
     fn export_object_to_library<T: Into<QualifiedName>>(
         &self,
         lib: &TypeLibrary,

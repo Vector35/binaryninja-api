@@ -6,6 +6,7 @@
 #include <cxxabi.h>
 #endif
 #include "universalview.h"
+#include "universaltransform.h"
 #include "machoview.h"
 #include "rapidjsonwrapper.h"
 
@@ -14,92 +15,6 @@ using namespace std;
 
 
 static UniversalViewType* g_universalViewType = nullptr;
-
-
-const map<pair<cpu_type_t, cpu_subtype_t>, string>& UniversalViewType::GetArchitectures()
-{
-	static map<pair<cpu_type_t, cpu_subtype_t>, string> g_cpuArchNames =
-	{
-		{{MACHO_CPU_TYPE_VAX, 0}, "vax"},
-		{{MACHO_CPU_TYPE_MC680x0, 0}, "mc680x0"},
-		{{MACHO_CPU_TYPE_X86, 0}, "x86"},
-		{{MACHO_CPU_TYPE_X86, MACHO_CPU_SUBTYPE_X86_ALL}, "x86"},
-		{{MACHO_CPU_TYPE_X86, MACHO_CPU_SUBTYPE_X86_ARCH1}, "x86 (Arch1)"},
-		{{MACHO_CPU_TYPE_X86_64, 0}, "x86_64"},
-		{{MACHO_CPU_TYPE_X86_64, MACHO_CPU_SUBTYPE_X86_64_ALL}, "x86_64"},
-		{{MACHO_CPU_TYPE_X86_64, MACHO_CPU_SUBTYPE_X86_64_H}, "x86_64 (Haswell)"},
-		{{MACHO_CPU_TYPE_MIPS, 0}, "mips"},
-		{{MACHO_CPU_TYPE_MC98000, 0}, "mc98000"},
-		{{MACHO_CPU_TYPE_HPPA, 0}, "hppa"},
-		{{MACHO_CPU_TYPE_ARM, MACHO_CPU_SUBTYPE_ARM_ALL}, "arm"},
-		{{MACHO_CPU_TYPE_ARM, MACHO_CPU_SUBTYPE_ARM_V4T}, "armv4t"},
-		{{MACHO_CPU_TYPE_ARM, MACHO_CPU_SUBTYPE_ARM_V6}, "armv6"},
-		{{MACHO_CPU_TYPE_ARM, MACHO_CPU_SUBTYPE_ARM_V5TEJ}, "armv5tej"},
-		{{MACHO_CPU_TYPE_ARM, MACHO_CPU_SUBTYPE_ARM_XSCALE}, "arm (XScale)"},
-		{{MACHO_CPU_TYPE_ARM, MACHO_CPU_SUBTYPE_ARM_V7}, "armv7"},
-		{{MACHO_CPU_TYPE_ARM, MACHO_CPU_SUBTYPE_ARM_V7F}, "armv7f"},
-		{{MACHO_CPU_TYPE_ARM, MACHO_CPU_SUBTYPE_ARM_V7S}, "armv7s"},
-		{{MACHO_CPU_TYPE_ARM, MACHO_CPU_SUBTYPE_ARM_V7K}, "armv7k"},
-		{{MACHO_CPU_TYPE_ARM, MACHO_CPU_SUBTYPE_ARM_V8}, "armv8"},
-		{{MACHO_CPU_TYPE_ARM, MACHO_CPU_SUBTYPE_ARM_V6M}, "armv6m"},
-		{{MACHO_CPU_TYPE_ARM, MACHO_CPU_SUBTYPE_ARM_V7M}, "armv7m"},
-		{{MACHO_CPU_TYPE_ARM, MACHO_CPU_SUBTYPE_ARM_V7EM}, "armv7em"},
-		{{MACHO_CPU_TYPE_ARM64, MACHO_CPU_SUBTYPE_ARM64_ALL}, "arm64"},
-		{{MACHO_CPU_TYPE_ARM64, MACHO_CPU_SUBTYPE_ARM64_V8}, "arm64v8"},
-		{{MACHO_CPU_TYPE_ARM64, MACHO_CPU_SUBTYPE_ARM64E}, "arm64e"},
-		{{MACHO_CPU_TYPE_ARM64_32, MACHO_CPU_SUBTYPE_ARM64_32_ALL}, "arm64_32"},
-		{{MACHO_CPU_TYPE_ARM64_32, MACHO_CPU_SUBTYPE_ARM64_32_V8}, "arm64_32v8"},
-		{{MACHO_CPU_TYPE_MC88000, 0}, "mc88000"},
-		{{MACHO_CPU_TYPE_SPARC, 0}, "sparc"},
-		{{MACHO_CPU_TYPE_I860, 0}, "i860"},
-		{{MACHO_CPU_TYPE_ALPHA, 0}, "alpha"},
-		{{MACHO_CPU_TYPE_POWERPC, MACHO_CPU_SUBTYPE_POWERPC_ALL}, "ppc"},
-		{{MACHO_CPU_TYPE_POWERPC, MACHO_CPU_SUBTYPE_POWERPC_601}, "ppc601"},
-		{{MACHO_CPU_TYPE_POWERPC, MACHO_CPU_SUBTYPE_POWERPC_602}, "ppc602"},
-		{{MACHO_CPU_TYPE_POWERPC, MACHO_CPU_SUBTYPE_POWERPC_603}, "ppc603"},
-		{{MACHO_CPU_TYPE_POWERPC, MACHO_CPU_SUBTYPE_POWERPC_603e}, "ppc603e"},
-		{{MACHO_CPU_TYPE_POWERPC, MACHO_CPU_SUBTYPE_POWERPC_603ev}, "ppc603ev"},
-		{{MACHO_CPU_TYPE_POWERPC, MACHO_CPU_SUBTYPE_POWERPC_604}, "ppc604"},
-		{{MACHO_CPU_TYPE_POWERPC, MACHO_CPU_SUBTYPE_POWERPC_604e}, "ppc604e"},
-		{{MACHO_CPU_TYPE_POWERPC, MACHO_CPU_SUBTYPE_POWERPC_620}, "ppc620"},
-		{{MACHO_CPU_TYPE_POWERPC, MACHO_CPU_SUBTYPE_POWERPC_750}, "ppc750"},
-		{{MACHO_CPU_TYPE_POWERPC, MACHO_CPU_SUBTYPE_POWERPC_7400}, "ppc7400"},
-		{{MACHO_CPU_TYPE_POWERPC, MACHO_CPU_SUBTYPE_POWERPC_7450}, "ppc7450"},
-		{{MACHO_CPU_TYPE_POWERPC, MACHO_CPU_SUBTYPE_POWERPC_970}, "ppc970"},
-		{{MACHO_CPU_TYPE_POWERPC64, 0}, "ppc64"}
-	};
-
-	return g_cpuArchNames;
-}
-
-
-string UniversalViewType::ArchitectureToString(cpu_type_t cpuType, cpu_subtype_t cpuSubType, bool& is64Bit)
-{
-	const map<pair<cpu_type_t, cpu_subtype_t>, string>& cpuArchNames = GetArchitectures();
-
-	switch(cpuType)
-	{
-		case MACHO_CPU_TYPE_X86_64:
-		case MACHO_CPU_TYPE_ARM64:
-		case MACHO_CPU_TYPE_ARM64_32:
-		case MACHO_CPU_TYPE_POWERPC64:
-			is64Bit = true;
-			break;
-		default:
-			is64Bit = false;
-			break;
-	}
-
-	auto itr = cpuArchNames.find({cpuType, cpuSubType});
-	if (itr != cpuArchNames.end())
-		return itr->second;
-
-	itr = cpuArchNames.find({cpuType, 0});
-	if (itr != cpuArchNames.end())
-		return itr->second;
-
-	return "Unknown";
-}
 
 
 void BinaryNinja::InitUniversalViewType()
@@ -119,7 +34,7 @@ void BinaryNinja::InitUniversalViewType()
 			"ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
 			})");
 
-	const map<pair<cpu_type_t, cpu_subtype_t>, string>& cpuArchNames = UniversalViewType::GetArchitectures();
+	const map<pair<cpu_type_t, cpu_subtype_t>, string>& cpuArchNames = UniversalTransform::GetArchitectures();
 	set<string> names;
 	for (const auto& [key, name] : cpuArchNames)
 		names.insert(name);
@@ -157,52 +72,7 @@ bool UniversalViewType::IsTypeValidForData(BinaryView* data)
 
 bool UniversalViewType::ParseHeaders(BinaryView* data, FatHeader& fatHeader, vector<FatArch64>& fatArchEntries, bool& isFat64, string& errorMsg)
 {
-	if (!IsTypeValidForData(data))
-	{
-		errorMsg = "Universal (Fat Mach-O): invalid signature";
-		return false;
-	}
-
-	BinaryReader reader(data);
-	reader.SetEndianness(BigEndian);
-	fatHeader.magic = reader.Read32();
-	fatHeader.nfat_arch = reader.Read32();
-
-	isFat64 = (fatHeader.magic == FAT_MAGIC_64);
-	size_t requiredFatHeaderSize = fatHeader.nfat_arch * (isFat64 ? 32 : 20) + 8;
-	if (requiredFatHeaderSize > data->GetLength())
-	{
-		errorMsg = "Universal (Fat Mach-O): header truncated";
-		return false;
-	}
-
-	for (size_t i = 0; i < fatHeader.nfat_arch; i++)
-	{
-		FatArch64 fatArch;
-		if (isFat64)
-		{
-			fatArch.cputype = reader.Read32();
-			fatArch.cpusubtype = reader.Read32();
-			fatArch.offset = reader.Read64();
-			fatArch.size = reader.Read64();
-			fatArch.align = reader.Read32();
-			fatArch.reserved = reader.Read32();
-		}
-		else
-		{
-			fatArch.cputype = reader.Read32();
-			fatArch.cpusubtype = reader.Read32();
-			fatArch.offset = reader.Read32();
-			fatArch.size = reader.Read32();
-			fatArch.align = reader.Read32();
-		}
-
-		// Mask away cpu subtype capability bits
-		fatArch.cpusubtype &= ~MACHO_CPU_SUBTYPE_MASK;
-		fatArchEntries.push_back(fatArch);
-	}
-
-	return true;
+	return UniversalTransform::ParseHeaders(data, fatHeader, fatArchEntries, isFat64, errorMsg);
 }
 
 
@@ -248,7 +118,7 @@ Ref<Settings> UniversalViewType::GetLoadSettingsForData(BinaryView* data)
 	{
 		rapidjson::Value result(rapidjson::kObjectType);
 		bool is64Bit;
-		string archDesc = ArchitectureToString(entry.cputype, entry.cpusubtype, is64Bit);
+		string archDesc = UniversalTransform::ArchitectureToString(entry.cputype, entry.cpusubtype, is64Bit);
 		string bitDesc = is64Bit ? "64-bit" : "32-bit";
 		result.AddMember("id", count++, entries.GetAllocator());
 		result.AddMember("architecture", archDesc, entries.GetAllocator());

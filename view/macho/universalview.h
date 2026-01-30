@@ -16,9 +16,6 @@ namespace BinaryNinja
 	class UniversalViewType: public BinaryViewType
 	{
 	public:
-		static const std::map<std::pair<cpu_type_t, cpu_subtype_t>, std::string>& GetArchitectures();
-		static std::string ArchitectureToString(cpu_type_t cpuType, cpu_subtype_t cpuSubType, bool& is64Bit);
-
 		UniversalViewType(): BinaryViewType("Universal", "Universal") { }
 		virtual Ref<BinaryView> Create(BinaryView* data) override;
 		virtual bool IsTypeValidForData(BinaryView* data) override;

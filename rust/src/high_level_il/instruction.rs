@@ -4,7 +4,7 @@ use std::fmt::{Debug, Display, Formatter};
 
 use super::operation::*;
 use super::{HighLevelILFunction, HighLevelILLiftedInstruction, HighLevelILLiftedInstructionKind};
-use crate::architecture::{CoreIntrinsic, IntrinsicId};
+use crate::architecture::{CoreIntrinsic, Intrinsic as _, IntrinsicId};
 use crate::confidence::Conf;
 use crate::disassembly::DisassemblyTextLine;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
@@ -835,8 +835,8 @@ impl HighLevelILInstruction {
                 cond_false: self.lift_operand(op.cond_false),
             }),
             Intrinsic(op) => Lifted::Intrinsic(LiftedIntrinsic {
-                intrinsic: CoreIntrinsic::new(
-                    self.function.function().arch(),
+                intrinsic: CoreIntrinsic::from_id(
+                    &self.function.function().arch(),
                     IntrinsicId(op.intrinsic),
                 )
                 .expect("Invalid intrinsic"),
@@ -847,8 +847,8 @@ impl HighLevelILInstruction {
                     .collect(),
             }),
             IntrinsicSsa(op) => Lifted::IntrinsicSsa(LiftedIntrinsicSsa {
-                intrinsic: CoreIntrinsic::new(
-                    self.function.function().arch(),
+                intrinsic: CoreIntrinsic::from_id(
+                    &self.function.function().arch(),
                     IntrinsicId(op.intrinsic),
                 )
                 .expect("Invalid intrinsic"),

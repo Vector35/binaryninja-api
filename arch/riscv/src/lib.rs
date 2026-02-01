@@ -312,38 +312,6 @@ impl<D: RiscVDisassembler> RiscVIntrinsic<D> {
         Some(((id >> 20) & 0xfff, sz1, sz2, rm))
     }
 
-    fn from_id(id: IntrinsicId) -> Option<RiscVIntrinsic<D>> {
-        match Self::parts_from_id(id) {
-            Some((0, _, _, _)) => Some(Intrinsic::Uret.into()),
-            Some((1, _, _, _)) => Some(Intrinsic::Sret.into()),
-            Some((2, _, _, _)) => Some(Intrinsic::Mret.into()),
-            Some((3, _, _, _)) => Some(Intrinsic::Wfi.into()),
-            Some((4, _, _, _)) => Some(Intrinsic::Csrrw.into()),
-            Some((5, _, _, _)) => Some(Intrinsic::Csrwr.into()),
-            Some((6, _, _, _)) => Some(Intrinsic::Csrrd.into()),
-            Some((7, _, _, _)) => Some(Intrinsic::Csrrs.into()),
-            Some((8, _, _, _)) => Some(Intrinsic::Csrrc.into()),
-            Some((9, size, _, rm)) => Some(Intrinsic::Fadd(size, rm).into()),
-            Some((10, size, _, rm)) => Some(Intrinsic::Fsub(size, rm).into()),
-            Some((11, size, _, rm)) => Some(Intrinsic::Fmul(size, rm).into()),
-            Some((12, size, _, rm)) => Some(Intrinsic::Fdiv(size, rm).into()),
-            Some((13, size, _, rm)) => Some(Intrinsic::Fsqrt(size, rm).into()),
-            Some((14, size, _, _)) => Some(Intrinsic::Fsgnj(size).into()),
-            Some((15, size, _, _)) => Some(Intrinsic::Fsgnjn(size).into()),
-            Some((16, size, _, _)) => Some(Intrinsic::Fsgnjx(size).into()),
-            Some((17, size, _, _)) => Some(Intrinsic::Fmin(size).into()),
-            Some((18, size, _, _)) => Some(Intrinsic::Fmax(size).into()),
-            Some((19, size, _, _)) => Some(Intrinsic::Fclass(size).into()),
-            Some((20, ssize, dsize, rm)) => Some(Intrinsic::FcvtFToF(ssize, dsize, rm).into()),
-            Some((21, isize, fsize, rm)) => Some(Intrinsic::FcvtIToF(isize, fsize, rm).into()),
-            Some((22, fsize, isize, rm)) => Some(Intrinsic::FcvtFToI(fsize, isize, rm).into()),
-            Some((23, usize, fsize, rm)) => Some(Intrinsic::FcvtUToF(usize, fsize, rm).into()),
-            Some((24, fsize, usize, rm)) => Some(Intrinsic::FcvtFToU(fsize, usize, rm).into()),
-            Some((25, _, _, _)) => Some(Intrinsic::Fence.into()),
-            _ => None,
-        }
-    }
-
     fn int_size_suffix(size: u8) -> &'static str {
         match size {
             4 => "_i32",
@@ -391,6 +359,79 @@ impl<D: RiscVDisassembler> From<Intrinsic> for RiscVIntrinsic<D> {
 }
 
 impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
+    fn intrinsics(_: &CoreArchitecture) -> Vec<Self> {
+        let mut res = Vec::new();
+
+        res.extend_from_slice(&[
+            Intrinsic::Uret,
+            Intrinsic::Sret,
+            Intrinsic::Mret,
+            Intrinsic::Wfi,
+            Intrinsic::Csrrw,
+            Intrinsic::Csrwr,
+            Intrinsic::Csrrd,
+            Intrinsic::Csrrs,
+            Intrinsic::Csrrc,
+        ]);
+
+        if <D::RegFile as RegFile>::Float::present() {
+            let mut float_sizes = vec![4];
+            if <D::RegFile as RegFile>::Float::width() >= 8 {
+                float_sizes.push(8);
+            }
+            if <D::RegFile as RegFile>::Float::width() >= 16 {
+                float_sizes.push(16);
+            }
+            let mut int_sizes = vec![4];
+            if <D::RegFile as RegFile>::Int::width() >= 8 {
+                int_sizes.push(8);
+            }
+
+            for fsize in &float_sizes {
+                res.extend_from_slice(&[
+                    Intrinsic::Fsgnj(*fsize),
+                    Intrinsic::Fsgnjn(*fsize),
+                    Intrinsic::Fsgnjx(*fsize),
+                    Intrinsic::Fmin(*fsize),
+                    Intrinsic::Fmax(*fsize),
+                    Intrinsic::Fclass(*fsize),
+                ]);
+                for rm in RoundMode::all() {
+                    if *rm != RoundMode::Dynamic {
+                        res.extend_from_slice(&[
+                            Intrinsic::Fadd(*fsize, *rm),
+                            Intrinsic::Fsub(*fsize, *rm),
+                            Intrinsic::Fmul(*fsize, *rm),
+                            Intrinsic::Fdiv(*fsize, *rm),
+                            Intrinsic::Fsqrt(*fsize, *rm),
+                        ]);
+                    }
+                }
+                for dsize in &float_sizes {
+                    if fsize != dsize {
+                        for rm in RoundMode::all() {
+                            if *rm != RoundMode::Dynamic {
+                                res.push(Intrinsic::FcvtFToF(*fsize, *dsize, *rm));
+                            }
+                        }
+                    }
+                }
+                for isize in &int_sizes {
+                    for rm in RoundMode::all() {
+                        res.push(Intrinsic::FcvtFToU(*fsize, *isize, *rm));
+                        res.push(Intrinsic::FcvtUToF(*isize, *fsize, *rm));
+                        if *rm != RoundMode::Dynamic {
+                            res.push(Intrinsic::FcvtFToI(*fsize, *isize, *rm));
+                            res.push(Intrinsic::FcvtIToF(*isize, *fsize, *rm));
+                        }
+                    }
+                }
+            }
+        }
+
+        res.iter().map(|i| (*i).into()).collect()
+    }
+
     fn name(&self) -> Cow<'_, str> {
         match self.id {
             Intrinsic::Uret => "_uret".into(),
@@ -515,6 +556,38 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
                 Self::id_from_parts(24, Some(usize), Some(fsize), Some(rm))
             }
             Intrinsic::Fence => Self::id_from_parts(25, None, None, None),
+        }
+    }
+
+    fn from_id(_arch: &CoreArchitecture, id: IntrinsicId) -> Option<RiscVIntrinsic<D>> {
+        match Self::parts_from_id(id) {
+            Some((0, _, _, _)) => Some(Intrinsic::Uret.into()),
+            Some((1, _, _, _)) => Some(Intrinsic::Sret.into()),
+            Some((2, _, _, _)) => Some(Intrinsic::Mret.into()),
+            Some((3, _, _, _)) => Some(Intrinsic::Wfi.into()),
+            Some((4, _, _, _)) => Some(Intrinsic::Csrrw.into()),
+            Some((5, _, _, _)) => Some(Intrinsic::Csrwr.into()),
+            Some((6, _, _, _)) => Some(Intrinsic::Csrrd.into()),
+            Some((7, _, _, _)) => Some(Intrinsic::Csrrs.into()),
+            Some((8, _, _, _)) => Some(Intrinsic::Csrrc.into()),
+            Some((9, size, _, rm)) => Some(Intrinsic::Fadd(size, rm).into()),
+            Some((10, size, _, rm)) => Some(Intrinsic::Fsub(size, rm).into()),
+            Some((11, size, _, rm)) => Some(Intrinsic::Fmul(size, rm).into()),
+            Some((12, size, _, rm)) => Some(Intrinsic::Fdiv(size, rm).into()),
+            Some((13, size, _, rm)) => Some(Intrinsic::Fsqrt(size, rm).into()),
+            Some((14, size, _, _)) => Some(Intrinsic::Fsgnj(size).into()),
+            Some((15, size, _, _)) => Some(Intrinsic::Fsgnjn(size).into()),
+            Some((16, size, _, _)) => Some(Intrinsic::Fsgnjx(size).into()),
+            Some((17, size, _, _)) => Some(Intrinsic::Fmin(size).into()),
+            Some((18, size, _, _)) => Some(Intrinsic::Fmax(size).into()),
+            Some((19, size, _, _)) => Some(Intrinsic::Fclass(size).into()),
+            Some((20, ssize, dsize, rm)) => Some(Intrinsic::FcvtFToF(ssize, dsize, rm).into()),
+            Some((21, isize, fsize, rm)) => Some(Intrinsic::FcvtIToF(isize, fsize, rm).into()),
+            Some((22, fsize, isize, rm)) => Some(Intrinsic::FcvtFToI(fsize, isize, rm).into()),
+            Some((23, usize, fsize, rm)) => Some(Intrinsic::FcvtUToF(usize, fsize, rm).into()),
+            Some((24, fsize, usize, rm)) => Some(Intrinsic::FcvtFToU(fsize, usize, rm).into()),
+            Some((25, _, _, _)) => Some(Intrinsic::Fence.into()),
+            _ => None,
         }
     }
 
@@ -1958,83 +2031,6 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
         } else {
             Some(Register::new(id))
         }
-    }
-
-    fn intrinsics(&self) -> Vec<Self::Intrinsic> {
-        let mut res = Vec::new();
-
-        res.extend_from_slice(&[
-            Intrinsic::Uret,
-            Intrinsic::Sret,
-            Intrinsic::Mret,
-            Intrinsic::Wfi,
-            Intrinsic::Csrrw,
-            Intrinsic::Csrwr,
-            Intrinsic::Csrrd,
-            Intrinsic::Csrrs,
-            Intrinsic::Csrrc,
-        ]);
-
-        if <D::RegFile as RegFile>::Float::present() {
-            let mut float_sizes = vec![4];
-            if <D::RegFile as RegFile>::Float::width() >= 8 {
-                float_sizes.push(8);
-            }
-            if <D::RegFile as RegFile>::Float::width() >= 16 {
-                float_sizes.push(16);
-            }
-            let mut int_sizes = vec![4];
-            if <D::RegFile as RegFile>::Int::width() >= 8 {
-                int_sizes.push(8);
-            }
-
-            for fsize in &float_sizes {
-                res.extend_from_slice(&[
-                    Intrinsic::Fsgnj(*fsize),
-                    Intrinsic::Fsgnjn(*fsize),
-                    Intrinsic::Fsgnjx(*fsize),
-                    Intrinsic::Fmin(*fsize),
-                    Intrinsic::Fmax(*fsize),
-                    Intrinsic::Fclass(*fsize),
-                ]);
-                for rm in RoundMode::all() {
-                    if *rm != RoundMode::Dynamic {
-                        res.extend_from_slice(&[
-                            Intrinsic::Fadd(*fsize, *rm),
-                            Intrinsic::Fsub(*fsize, *rm),
-                            Intrinsic::Fmul(*fsize, *rm),
-                            Intrinsic::Fdiv(*fsize, *rm),
-                            Intrinsic::Fsqrt(*fsize, *rm),
-                        ]);
-                    }
-                }
-                for dsize in &float_sizes {
-                    if fsize != dsize {
-                        for rm in RoundMode::all() {
-                            if *rm != RoundMode::Dynamic {
-                                res.push(Intrinsic::FcvtFToF(*fsize, *dsize, *rm));
-                            }
-                        }
-                    }
-                }
-                for isize in &int_sizes {
-                    for rm in RoundMode::all() {
-                        res.push(Intrinsic::FcvtFToU(*fsize, *isize, *rm));
-                        res.push(Intrinsic::FcvtUToF(*isize, *fsize, *rm));
-                        if *rm != RoundMode::Dynamic {
-                            res.push(Intrinsic::FcvtFToI(*fsize, *isize, *rm));
-                            res.push(Intrinsic::FcvtIToF(*isize, *fsize, *rm));
-                        }
-                    }
-                }
-            }
-        }
-
-        res.iter().map(|i| (*i).into()).collect()
-    }
-
-    fn intrinsic_from_id(&self, id: IntrinsicId) -> Option<Self::Intrinsic> {
-        RiscVIntrinsic::from_id(id)
     }
 
     fn can_assemble(&self) -> bool {

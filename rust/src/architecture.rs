@@ -365,12 +365,8 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     }
 
     /// List of concrete intrinsics for this architecture.
-    ///
-    /// You **must** override the following functions as well:
-    ///
-    /// - [`Architecture::intrinsic_from_id`]
     fn intrinsics(&self) -> Vec<Self::Intrinsic> {
-        Vec::new()
+        Self::Intrinsic::intrinsics(self.as_ref())
     }
 
     fn intrinsic_class(&self, _id: IntrinsicId) -> BNIntrinsicClass {
@@ -378,12 +374,8 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     }
 
     /// Get the [`Self::Intrinsic`] associated with the given [`IntrinsicId`].
-    ///
-    /// You **must** override the following functions as well:
-    ///
-    /// - [`Architecture::intrinsics`]
-    fn intrinsic_from_id(&self, _id: IntrinsicId) -> Option<Self::Intrinsic> {
-        None
+    fn intrinsic_from_id(&self, id: IntrinsicId) -> Option<Self::Intrinsic> {
+        Self::Intrinsic::from_id(self.as_ref(), id)
     }
 
     /// Let the UI display this patch option.
@@ -796,14 +788,14 @@ impl Architecture for CoreArchitecture {
     fn stack_pointer_reg(&self) -> Option<CoreRegister> {
         match unsafe { BNGetArchitectureStackPointerRegister(self.handle) } {
             0xffff_ffff => None,
-            reg => Some(CoreRegister::new(*self, reg.into())?),
+            reg => Some(CoreRegister::from_id(self, reg.into())?),
         }
     }
 
     fn link_reg(&self) -> Option<CoreRegister> {
         match unsafe { BNGetArchitectureLinkRegister(self.handle) } {
             0xffff_ffff => None,
-            reg => Some(CoreRegister::new(*self, reg.into())?),
+            reg => Some(CoreRegister::from_id(self, reg.into())?),
         }
     }
 
@@ -826,27 +818,6 @@ impl Architecture for CoreArchitecture {
 
     fn register_stack_from_id(&self, id: RegisterStackId) -> Option<CoreRegisterStack> {
         CoreRegisterStack::new(*self, id)
-    }
-
-    fn intrinsics(&self) -> Vec<CoreIntrinsic> {
-        unsafe {
-            let mut count: usize = 0;
-            let intrinsics_raw = BNGetAllArchitectureIntrinsics(self.handle, &mut count);
-
-            let intrinsics = std::slice::from_raw_parts_mut(intrinsics_raw, count)
-                .iter()
-                .map(|&id| IntrinsicId::from(id))
-                .filter_map(|intrinsic| CoreIntrinsic::new(*self, intrinsic))
-                .collect();
-
-            BNFreeRegisterList(intrinsics_raw);
-
-            intrinsics
-        }
-    }
-
-    fn intrinsic_from_id(&self, id: IntrinsicId) -> Option<CoreIntrinsic> {
-        CoreIntrinsic::new(*self, id)
     }
 
     fn can_assemble(&self) -> bool {

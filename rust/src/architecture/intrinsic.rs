@@ -3,7 +3,8 @@ use crate::confidence::Conf;
 use crate::rc::Ref;
 use crate::types::{NameAndType, Type};
 use binaryninjacore_sys::{
-    BNFreeNameAndTypeList, BNFreeOutputTypeList, BNFreeString, BNGetArchitectureIntrinsicClass,
+    BNFreeNameAndTypeList, BNFreeOutputTypeList, BNFreeRegisterList, BNFreeString,
+    BNGetAllArchitectureIntrinsics, BNGetArchitectureIntrinsicClass,
     BNGetArchitectureIntrinsicInputs, BNGetArchitectureIntrinsicName,
     BNGetArchitectureIntrinsicOutputs, BNIntrinsicClass,
 };
@@ -13,11 +14,14 @@ use std::fmt::{Debug, Formatter};
 
 new_id_type!(IntrinsicId, u32);
 
-pub trait Intrinsic: Debug + Sized + Clone + Copy {
+pub trait Intrinsic: Copy {
+    fn intrinsics(arch: &CoreArchitecture) -> Vec<Self>;
+
     fn name(&self) -> Cow<'_, str>;
 
     /// Unique identifier for this `Intrinsic`.
     fn id(&self) -> IntrinsicId;
+    fn from_id(arch: &CoreArchitecture, id: IntrinsicId) -> Option<Self>;
 
     /// The intrinsic class for this `Intrinsic`.
     fn class(&self) -> BNIntrinsicClass {
@@ -37,11 +41,17 @@ pub trait Intrinsic: Debug + Sized + Clone + Copy {
 pub struct UnusedIntrinsic;
 
 impl Intrinsic for UnusedIntrinsic {
+    fn intrinsics(_arch: &CoreArchitecture) -> Vec<Self> {
+        Vec::new()
+    }
     fn name(&self) -> Cow<'_, str> {
         unreachable!()
     }
     fn id(&self) -> IntrinsicId {
         unreachable!()
+    }
+    fn from_id(_arch: &CoreArchitecture, _id: IntrinsicId) -> Option<Self> {
+        None
     }
     fn inputs(&self) -> Vec<NameAndType> {
         unreachable!()
@@ -58,11 +68,6 @@ pub struct CoreIntrinsic {
 }
 
 impl CoreIntrinsic {
-    pub fn new(arch: CoreArchitecture, id: IntrinsicId) -> Option<Self> {
-        let intrinsic = Self { arch, id };
-        intrinsic.is_valid().then_some(intrinsic)
-    }
-
     fn is_valid(&self) -> bool {
         // We check the name to see if the intrinsic is actually valid.
         let name = unsafe { BNGetArchitectureIntrinsicName(self.arch.handle, self.id.into()) };
@@ -77,6 +82,23 @@ impl CoreIntrinsic {
 }
 
 impl Intrinsic for CoreIntrinsic {
+    fn intrinsics(arch: &CoreArchitecture) -> Vec<CoreIntrinsic> {
+        unsafe {
+            let mut count: usize = 0;
+            let intrinsics_raw = BNGetAllArchitectureIntrinsics(arch.handle, &mut count);
+
+            let intrinsics = std::slice::from_raw_parts_mut(intrinsics_raw, count)
+                .iter()
+                .map(|&id| IntrinsicId::from(id))
+                .filter_map(|intrinsic| CoreIntrinsic::from_id(arch, intrinsic))
+                .collect();
+
+            BNFreeRegisterList(intrinsics_raw);
+
+            intrinsics
+        }
+    }
+
     fn name(&self) -> Cow<'_, str> {
         unsafe {
             let name = BNGetArchitectureIntrinsicName(self.arch.handle, self.id.into());
@@ -96,6 +118,11 @@ impl Intrinsic for CoreIntrinsic {
 
     fn id(&self) -> IntrinsicId {
         self.id
+    }
+
+    fn from_id(arch: &CoreArchitecture, id: IntrinsicId) -> Option<Self> {
+        let intrinsic = Self { arch: *arch, id };
+        intrinsic.is_valid().then_some(intrinsic)
     }
 
     fn class(&self) -> BNIntrinsicClass {

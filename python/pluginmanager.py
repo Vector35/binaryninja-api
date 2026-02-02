@@ -126,14 +126,16 @@ class Extension:
 			core.BNFreePluginPlatforms(platforms, count.value)
 
 	@property
+	@deprecation.deprecated(deprecated_in="5.3", details='Use :py:attr:`current_version` in combination with :py:attr:`versions` instead.')
 	def description(self) -> Optional[str]:
 		"""String short description of the plugin"""
 		return core.BNPluginGetDescription(self.handle)
 
 	@property
+	@deprecation.deprecated(deprecated_in="5.3", details='This field will be removed.')
 	def license_text(self) -> Optional[str]:
 		"""String complete license text for the given plugin"""
-		return core.BNPluginGetLicenseText(self.handle)
+		return ''
 
 	@property
 	def long_description(self) -> Optional[str]:
@@ -185,6 +187,7 @@ class Extension:
 		return core.BNPluginGetProjectUrl(self.handle)
 
 	@property
+	@deprecation.deprecated(deprecated_in="5.3", details='Use :py:attr:`current_version` in combination with :py:attr:`versions` instead.')
 	def package_url(self) -> Optional[str]:
 		"""String URL of the plugin's zip file"""
 		return core.BNPluginGetPackageUrl(self.handle)
@@ -200,9 +203,17 @@ class Extension:
 		return core.BNPluginGetAuthor(self.handle)
 
 	@property
+	@deprecation.deprecated(deprecated_in="5.3", details='Use :py:attr:`current_version` in combination with :py:attr:`versions` instead.')
 	def version(self) -> Optional[str]:
 		"""String version of the plugin"""
-		return core.BNPluginGetVersion(self.handle)
+		version: core.BNPluginVersion = core.BNPluginGetCurrentVersion(self.handle)
+		try:
+			version_string = version.versionString
+		except AttributeError:
+			version_string = ""
+		finally:
+			core.BNPluginFreeVersion(version)
+		return version_string
 
 	@property
 	def install_platforms(self) -> List[str]:
@@ -259,6 +270,7 @@ class Extension:
 		return core.BNPluginAreDependenciesBeingInstalled(self.handle)
 
 	@property
+	@deprecation.deprecated(deprecated_in="5.3", details='This field will be removed.')
 	def project_data(self) -> Dict:
 		"""Gets a json object of the project data field"""
 		data = core.BNPluginGetProjectData(self.handle)
@@ -266,6 +278,7 @@ class Extension:
 		return json.loads(data)
 
 	@property
+	@deprecation.deprecated(deprecated_in="5.3", details='Use :py:attr:`versions` in combination with :py:attr:`current_version` to check for updates instead.')
 	def last_update(self) -> date:
 		"""Returns a datetime object representing the plugins last update"""
 		return datetime.fromtimestamp(core.BNPluginGetLastUpdate(self.handle))

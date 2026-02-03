@@ -40,17 +40,6 @@ target_include_directories(binaryninjaapi
 
 target_link_libraries(binaryninjaapi PUBLIC binaryninjabase)
 
-# Store path to user plugin dir
-if(WIN32)
-    set(plugin_dir "$ENV{APPDATA}\\Binary Ninja\\plugins")
-elseif(APPLE)
-    set(plugin_dir "$ENV{HOME}/Library/Application Support/Binary Ninja/plugins")
-else()
-    set(plugin_dir "$ENV{HOME}/.binaryninja/plugins")
-endif()
-set(BN_USER_PLUGINS_DIR "${plugin_dir}" CACHE PATH "Path to Binary Ninja user plugins")
-message(STATUS "Binary Ninja User Plugins Dir: ${BN_USER_PLUGINS_DIR}")
-
 find_package(BinaryNinjaCore)
 if(BinaryNinjaCore_FOUND)
     target_link_libraries(binaryninjaapi PUBLIC ${BinaryNinjaCore_LIBRARIES})
@@ -119,15 +108,7 @@ if(NOT HEADLESS)
 endif()
 
 function(bn_install_plugin target)
-    if(WIN32)
-        set(plugin_dir "$ENV{APPDATA}\\Binary Ninja\\plugins")
-    elseif(APPLE)
-        set(plugin_dir "$ENV{HOME}/Library/Application Support/Binary Ninja/plugins")
-    else()
-        set(plugin_dir "$ENV{HOME}/.binaryninja/plugins")
-    endif()
-    set(BN_USER_PLUGINS_DIR "${plugin_dir}" CACHE PATH "Path to Binary Ninja user plugins")
-
+    # BN_USER_PLUGINS_DIR is set by FindBinaryNinjaCore.cmake
     if(NOT BN_INTERNAL_BUILD)
         if(WIN32)
             install(TARGETS ${target} RUNTIME

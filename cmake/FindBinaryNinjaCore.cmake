@@ -6,13 +6,30 @@
 #  BinaryNinjaCore_LIBRARIES - The libraries for linking core plugins
 #  BinaryNinjaCore_LIBRARY_DIRS - The link paths required for core plugins
 #  BinaryNinjaCore_DEFINITIONS - Compiler switches required for core plugins
+#  BN_USER_PLUGINS_DIR - User plugin directory (e.g. ~/.binaryninja/plugins)
+#  BN_PLUGIN_OUTPUT_DIR - Plugin output directory (internal: build tree, standalone: user plugins)
 #
 # According to Good CMake Hygiene, we should use BinaryNinjaCore_<VAR> named variables.
 # Existing plugins likely use BN_<VAR> names already, so both are provided.
 
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
+# User plugin directory (always available, independent of build mode)
+if(WIN32)
+    set(_BN_USER_PLUGINS_DEFAULT "$ENV{APPDATA}\\Binary Ninja\\plugins")
+elseif(APPLE)
+    set(_BN_USER_PLUGINS_DEFAULT "$ENV{HOME}/Library/Application Support/Binary Ninja/plugins")
+else()
+    set(_BN_USER_PLUGINS_DEFAULT "$ENV{HOME}/.binaryninja/plugins")
+endif()
+set(BN_USER_PLUGINS_DIR "${_BN_USER_PLUGINS_DEFAULT}" CACHE PATH "Path to Binary Ninja user plugins")
+
 if(NOT BN_INTERNAL_BUILD)
+    # For standalone builds, plugins go to the user plugins dir
+    if(NOT DEFINED BN_PLUGIN_OUTPUT_DIR)
+        set(BN_PLUGIN_OUTPUT_DIR "${BN_USER_PLUGINS_DIR}")
+    endif()
+
     set(PATH_HINTS "$ENV{BN_INSTALL_DIR}" "${BN_INSTALL_DIR}")
     if(WIN32)
         # System-wide install

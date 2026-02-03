@@ -1,4 +1,14 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+// For static builds, CARGO_MANIFEST_DIR points to the generated crate directory,
+// so we read the original source path from source_dir.txt written by generate_static_crate.py.
+#[cfg(feature = "demo")]
+const SOURCE_DIR: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/source_dir.txt"));
+#[cfg(not(feature = "demo"))]
+const SOURCE_DIR: &str = env!("CARGO_MANIFEST_DIR");
+
+const TEMPLATES_DIR: &str = const_str::concat!(SOURCE_DIR, "/src/templates");
+const FIXTURES_DIR: &str = const_str::concat!(SOURCE_DIR, "/fixtures");
 
 fn main() {
     let link_path = std::env::var_os("DEP_BINARYNINJACORE_PATH")
@@ -28,9 +38,9 @@ fn main() {
     let out_dir = std::env::var("OUT_DIR").expect("OUT_DIR specified");
     let out_dir_path = PathBuf::from(out_dir);
 
-    println!("cargo::rerun-if-changed=fixtures");
+    println!("cargo::rerun-if-changed={}", FIXTURES_DIR);
     // Copy all binaries to OUT_DIR for unit tests.
-    let bin_dir: PathBuf = "fixtures/bin".into();
+    let bin_dir = Path::new(FIXTURES_DIR).join("bin");
     if let Ok(entries) = std::fs::read_dir(bin_dir) {
         for entry in entries {
             let entry = entry.unwrap();
@@ -43,7 +53,7 @@ fn main() {
         }
     }
 
-    println!("cargo::rerun-if-changed=src/templates");
+    println!("cargo::rerun-if-changed={}", TEMPLATES_DIR);
     // Templates used for rendering reports.
-    minijinja_embed::embed_templates!("src/templates");
+    minijinja_embed::embed_templates!(TEMPLATES_DIR);
 }

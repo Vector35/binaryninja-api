@@ -2,7 +2,7 @@
 
 DECODE_OBJS = pcode.o decode.o decode0.o decode1.o decode2.o decode_fields32.o decode_scratchpad.o encodings_dec.o
 
-FORMAT_OBJS = format.o encodings_fmt.o operations.o sysregs.o regs.o
+FORMAT_OBJS = format.o encodings_fmt.o operations.o sysregs_gen.o sysregs_fmt_gen.o regs.o
 
 HEADERS = decode.h decode1.h decode2.h format.h pcode.h operations.h sysregs.h decode_fields32.h encodings_dec.h encodings_fmt.h regs.h
 

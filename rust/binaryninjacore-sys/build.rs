@@ -62,6 +62,7 @@ fn generate_stubs() -> PathBuf {
 fn main() {
     println!("cargo:rerun-if-env-changed=BINARYNINJADIR");
     println!("cargo:rerun-if-changed=../../binaryninjacore.h");
+    println!("cargo:rerun-if-changed=../../ui/uitypes.h");
 
     //Cargo's output directory
     let out_dir = env::var("OUT_DIR").unwrap();

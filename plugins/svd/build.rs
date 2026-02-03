@@ -1,4 +1,11 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+// For static builds, CARGO_MANIFEST_DIR points to the generated crate directory,
+// so we read the original source path from source_dir.txt written by generate_static_crate.py.
+#[cfg(feature = "demo")]
+const SOURCE_DIR: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/source_dir.txt"));
+#[cfg(not(feature = "demo"))]
+const SOURCE_DIR: &str = env!("CARGO_MANIFEST_DIR");
 
 fn main() {
     let link_path = std::env::var_os("DEP_BINARYNINJACORE_PATH")
@@ -29,8 +36,9 @@ fn main() {
     let out_dir_path = PathBuf::from(out_dir);
 
     // Copy all binaries to OUT_DIR for unit tests.
-    let bin_dir: PathBuf = "fixtures/".into();
-    if let Ok(entries) = std::fs::read_dir(bin_dir) {
+    let fixtures_dir = Path::new(SOURCE_DIR).join("fixtures");
+    println!("cargo::rerun-if-changed={}", fixtures_dir.display());
+    if let Ok(entries) = std::fs::read_dir(&fixtures_dir) {
         for entry in entries {
             let entry = entry.unwrap();
             let path = entry.path();

@@ -9414,6 +9414,9 @@ namespace BinaryNinja {
 		std::set<ArchAndAddr>& GetHaltedDisassemblyAddresses();
 		std::map<ArchAndAddr, ArchAndAddr>& GetInlinedUnresolvedIndirectBranches();
 
+		void* GetFunctionArchContext() { return m_context->functionArchContext; }
+		void SetFunctionArchContext(void* context) { m_context->functionArchContext = context; }
+
 		void AddTempOutgoingReference(Function* targetFunc);
 
 		Ref<BasicBlock> CreateBasicBlock(Architecture* arch, uint64_t start);
@@ -9436,6 +9439,7 @@ namespace BinaryNinja {
 		std::map<ArchAndAddr, std::set<ArchAndAddr>> m_autoIndirectBranches;
 		std::set<uint64_t> m_inlinedCalls;
 		bool* m_containsInlinedFunctions;
+		void* m_functionArchContext;
 
 	public:
 		BNFunctionLifterContext* m_context;
@@ -9451,6 +9455,7 @@ namespace BinaryNinja {
 		std::map<ArchAndAddr, std::set<ArchAndAddr>>& GetAutoIndirectBranches();
 		std::set<uint64_t>& GetInlinedCalls();
 		void SetContainsInlinedFunctions(bool value);
+		void* GetFunctionArchContext();
 
 		void CheckForInlinedCall(BasicBlock* block, size_t instrCountBefore, size_t instrCountAfter, uint64_t prevAddr,
 			uint64_t addr, const uint8_t* opcode, size_t len,
@@ -9484,11 +9489,14 @@ namespace BinaryNinja {
 		    void* ctxt, const uint8_t* data, uint64_t addr, size_t maxLen, BNInstructionInfo* result);
 		static bool GetInstructionTextCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t* len,
 		    BNInstructionTextToken** result, size_t* count);
+		static bool GetInstructionTextWithContextCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t* len,
+			void* context, BNInstructionTextToken** result, size_t* count);
 		static void FreeInstructionTextCallback(BNInstructionTextToken* tokens, size_t count);
 		static bool GetInstructionLowLevelILCallback(
 		    void* ctxt, const uint8_t* data, uint64_t addr, size_t* len, BNLowLevelILFunction* il);
 		static void AnalyzeBasicBlocksCallback(void *ctxt, BNFunction* function, BNBasicBlockAnalysisContext* context);
 		static bool LiftFunctionCallback(void* ctxt, BNLowLevelILFunction* function, BNFunctionLifterContext* context);
+		static void FreeFunctionArchContextCallback(void* ctxt, void* context);
 		static char* GetRegisterNameCallback(void* ctxt, uint32_t reg);
 		static char* GetFlagNameCallback(void* ctxt, uint32_t flag);
 		static char* GetFlagWriteTypeNameCallback(void* ctxt, uint32_t flags);
@@ -9666,6 +9674,20 @@ namespace BinaryNinja {
 		virtual bool GetInstructionText(
 		    const uint8_t* data, uint64_t addr, size_t& len, std::vector<InstructionTextToken>& result) = 0;
 
+		/*! Retrieves a list of InstructionTextTokens while supplying contextual information
+
+		    \note Architecture subclasses can implement this method to provide contextual information from AnalyzeBasicBlocks
+
+			\param[in] data pointer to the instruction data to retrieve text for
+			\param[in] addr address of the instruction data to retrieve text for
+			\param[out] len will be written to with the length of the instruction data which was translated
+			\param[in] context context to use when retrieving instruction text
+			\param[out] result
+			\return Whether instruction info was successfully retrieved.
+		*/
+		virtual bool GetInstructionTextWithContext(const uint8_t* data, uint64_t addr, size_t& len, void* context,
+			std::vector<InstructionTextToken>& result);
+
 		/*! Translates an instruction at addr and appends it onto the LowLevelILFunction& il.
 
 		    \note Architecture subclasses should implement this method.
@@ -9691,6 +9713,12 @@ namespace BinaryNinja {
 		    \return Whether lifting was successful
 		*/
 		virtual bool LiftFunction(LowLevelILFunction* function, FunctionLifterContext& context);
+
+		/*! Free the function architecture context
+
+			\param context Function architecture context
+		*/
+		virtual void FreeFunctionArchContext(void* context);
 
 		/*! Gets a register name from a register index.
 
@@ -10086,10 +10114,13 @@ namespace BinaryNinja {
 		    const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
 		virtual bool GetInstructionText(
 		    const uint8_t* data, uint64_t addr, size_t& len, std::vector<InstructionTextToken>& result) override;
+		virtual bool GetInstructionTextWithContext(const uint8_t* data, uint64_t addr, size_t& len, void* context,
+			std::vector<InstructionTextToken>& result) override;
 		virtual bool GetInstructionLowLevelIL(
 		    const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override;
 		virtual void AnalyzeBasicBlocks(Function* function, BasicBlockAnalysisContext& context) override;
 		virtual bool LiftFunction(LowLevelILFunction* function, FunctionLifterContext& context) override;
+		virtual void FreeFunctionArchContext(void* context) override;
 		virtual std::string GetRegisterName(uint32_t reg) override;
 		virtual std::string GetFlagName(uint32_t flag) override;
 		virtual std::string GetFlagWriteTypeName(uint32_t flags) override;
@@ -10173,6 +10204,8 @@ namespace BinaryNinja {
 		    const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
 		virtual bool GetInstructionText(
 		    const uint8_t* data, uint64_t addr, size_t& len, std::vector<InstructionTextToken>& result) override;
+		virtual bool GetInstructionTextWithContext(const uint8_t* data, uint64_t addr, size_t& len, void* context,
+			std::vector<InstructionTextToken>& result) override;
 		virtual bool GetInstructionLowLevelIL(
 		    const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override;
 		virtual std::string GetRegisterName(uint32_t reg) override;

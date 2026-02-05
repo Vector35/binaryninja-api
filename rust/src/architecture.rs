@@ -42,6 +42,8 @@ use std::{
     mem::MaybeUninit,
 };
 
+use std::ptr::NonNull;
+
 use crate::function_recognizer::FunctionRecognizer;
 use crate::relocation::{CustomRelocationHandlerHandle, RelocationHandler};
 
@@ -192,6 +194,30 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         addr: u64,
     ) -> Option<(usize, Vec<InstructionTextToken>)>;
 
+    /// Disassembles a raw byte sequence into a human-readable list of text tokens.
+    ///
+    /// This function is responsible for the visual representation of assembly instructions.
+    /// It does *not* define semantics (use [`Architecture::instruction_llil`] for that);
+    /// it simply tells the UI how to print the instruction. This variant includes contextual data, which
+    /// can be produced by analyze_basic_blocks
+    ///
+    /// # Returns
+    ///
+    /// An `Option` containing a tuple:
+    ///
+    /// * `usize`: The size of the decoded instruction in bytes. Is used to advance to the next instruction.
+    /// * `Vec<InstructionTextToken>`: A list of text tokens representing the instruction.
+    ///
+    /// Returns `None` if the bytes do not form a valid instruction.
+    fn instruction_text_with_context(
+        &self,
+        data: &[u8],
+        addr: u64,
+        _context: Option<NonNull<c_void>>,
+    ) -> Option<(usize, Vec<InstructionTextToken>)> {
+        self.instruction_text(data, addr)
+    }
+
     // TODO: Why do we need to return a boolean here? Does `None` not represent the same thing?
     /// Appends arbitrary low-level il instructions to `il`.
     ///
@@ -225,6 +251,12 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     ) -> bool {
         unsafe { BNArchitectureDefaultLiftFunction(function.handle, context.handle) }
     }
+
+    /// Free the function architecture context
+    ///
+    /// NOTE: Only implement this method in architecture plugins that allocate a context in
+    /// analyze_basic_blocks
+    fn free_function_arch_context(&self, _context: Option<NonNull<c_void>>) {}
 
     /// Fallback flag value calculation path. This method is invoked when the core is unable to
     /// recover the flag using semantics and resorts to emitting instructions that explicitly set each
@@ -705,6 +737,38 @@ impl Architecture for CoreArchitecture {
         }
     }
 
+    fn instruction_text_with_context(
+        &self,
+        data: &[u8],
+        addr: u64,
+        context: Option<NonNull<c_void>>,
+    ) -> Option<(usize, Vec<InstructionTextToken>)> {
+        let mut consumed = data.len();
+        let mut count: usize = 0;
+        let mut result: *mut BNInstructionTextToken = std::ptr::null_mut();
+        let ctx_ptr: *mut c_void = context.map_or(std::ptr::null_mut(), |p| p.as_ptr());
+        unsafe {
+            if BNGetInstructionTextWithContext(
+                self.handle,
+                data.as_ptr(),
+                addr,
+                &mut consumed,
+                ctx_ptr,
+                &mut result,
+                &mut count,
+            ) {
+                let instr_text_tokens = std::slice::from_raw_parts(result, count)
+                    .iter()
+                    .map(InstructionTextToken::from_raw)
+                    .collect();
+                BNFreeInstructionText(result, count);
+                Some((consumed, instr_text_tokens))
+            } else {
+                None
+            }
+        }
+    }
+
     fn instruction_llil(
         &self,
         data: &[u8],
@@ -752,6 +816,8 @@ impl Architecture for CoreArchitecture {
     ) -> bool {
         unsafe { BNArchitectureLiftFunction(self.handle, function.handle, context.handle) }
     }
+
+    fn free_function_arch_context(&self, _context: Option<NonNull<c_void>>) {}
 
     fn flag_write_llil<'a>(
         &self,
@@ -1419,6 +1485,43 @@ where
         true
     }
 
+    pub unsafe extern "C" fn cb_get_instruction_text_with_context<A>(
+        ctxt: *mut c_void,
+        data: *const u8,
+        addr: u64,
+        len: *mut usize,
+        context: *mut c_void,
+        result: *mut *mut BNInstructionTextToken,
+        count: *mut usize,
+    ) -> bool
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let data = unsafe { std::slice::from_raw_parts(data, *len) };
+        let result = unsafe { &mut *result };
+        let context = NonNull::new(context);
+
+        let Some((res_size, res_tokens)) =
+            custom_arch.instruction_text_with_context(data, addr, context)
+        else {
+            return false;
+        };
+
+        let res_tokens: Box<[BNInstructionTextToken]> = res_tokens
+            .into_iter()
+            .map(InstructionTextToken::into_raw)
+            .collect();
+        unsafe {
+            // NOTE: Freed with `cb_free_instruction_text`
+            let res_tokens = Box::leak(res_tokens);
+            *result = res_tokens.as_mut_ptr();
+            *count = res_tokens.len();
+            *len = res_size;
+        }
+        true
+    }
+
     extern "C" fn cb_free_instruction_text(tokens: *mut BNInstructionTextToken, count: usize) {
         unsafe {
             let raw_tokens = std::slice::from_raw_parts_mut(tokens, count);
@@ -1483,6 +1586,15 @@ where
         let mut context: FunctionLifterContext =
             unsafe { FunctionLifterContext::from_raw(context) };
         custom_arch.lift_function(function, &mut context)
+    }
+
+    extern "C" fn cb_free_function_arch_context<A>(ctxt: *mut c_void, context: *mut c_void)
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let context = NonNull::new(context);
+        custom_arch.free_function_arch_context(context);
     }
 
     extern "C" fn cb_reg_name<A>(ctxt: *mut c_void, reg: u32) -> *mut c_char
@@ -2401,10 +2513,12 @@ where
         getAssociatedArchitectureByAddress: Some(cb_associated_arch_by_addr::<A>),
         getInstructionInfo: Some(cb_instruction_info::<A>),
         getInstructionText: Some(cb_get_instruction_text::<A>),
+        getInstructionTextWithContext: Some(cb_get_instruction_text_with_context::<A>),
         freeInstructionText: Some(cb_free_instruction_text),
         getInstructionLowLevelIL: Some(cb_instruction_llil::<A>),
         analyzeBasicBlocks: Some(cb_analyze_basic_blocks::<A>),
         liftFunction: Some(cb_lift_function::<A>),
+        freeFunctionArchContext: Some(cb_free_function_arch_context::<A>),
 
         getRegisterName: Some(cb_reg_name::<A>),
         getFlagName: Some(cb_flag_name::<A>),

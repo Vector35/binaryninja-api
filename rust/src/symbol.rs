@@ -267,6 +267,16 @@ impl Symbol {
         unsafe { BNGetSymbolAddress(self.handle) }
     }
 
+    /// Get the symbols ordinal, this will return `None` if the symbol ordinal is `0`.
+    pub fn ordinal(&self) -> Option<u64> {
+        let ordinal = unsafe { BNGetSymbolOrdinal(self.handle) };
+        if ordinal == u64::MIN {
+            None
+        } else {
+            Some(ordinal)
+        }
+    }
+
     pub fn auto_defined(&self) -> bool {
         unsafe { BNIsSymbolAutoDefined(self.handle) }
     }

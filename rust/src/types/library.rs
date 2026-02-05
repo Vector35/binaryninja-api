@@ -363,3 +363,6 @@ unsafe impl CoreArrayProviderInner for TypeLibrary {
         Guard::new(Self::from_raw(NonNull::new(*raw).unwrap()), context)
     }
 }
+
+unsafe impl Send for TypeLibrary {}
+unsafe impl Sync for TypeLibrary {}

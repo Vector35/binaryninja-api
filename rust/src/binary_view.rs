@@ -2134,6 +2134,12 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { TypeContainer::from_raw(type_container_ptr.unwrap()) }
     }
 
+    fn type_libraries(&self) -> Array<TypeLibrary> {
+        let mut count = 0;
+        let result = unsafe { BNGetBinaryViewTypeLibraries(self.as_ref().handle, &mut count) };
+        unsafe { Array::new(result, count, ()) }
+    }
+
     /// Make the contents of a type library available for type/import resolution
     fn add_type_library(&self, library: &TypeLibrary) {
         unsafe { BNAddBinaryViewTypeLibrary(self.as_ref().handle, library.as_raw()) }

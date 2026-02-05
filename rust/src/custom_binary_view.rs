@@ -18,6 +18,7 @@ use binaryninjacore_sys::*;
 
 pub use binaryninjacore_sys::BNModificationStatus as ModificationStatus;
 
+use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 use std::os::raw::c_void;
@@ -378,6 +379,15 @@ impl BinaryViewTypeBase for BinaryViewType {
         } else {
             unsafe { Some(Settings::ref_from_raw(settings_handle)) }
         }
+    }
+}
+
+impl Debug for BinaryViewType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BinaryViewType")
+            .field("name", &self.name())
+            .field("long_name", &self.long_name())
+            .finish()
     }
 }
 

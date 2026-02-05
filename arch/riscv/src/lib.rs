@@ -200,6 +200,54 @@ impl<D: RiscVDisassembler> architecture::Register for Register<D> {
     fn id(&self) -> RegisterId {
         self.id
     }
+
+    fn from_id(_arch: &CoreArchitecture, id: RegisterId) -> Option<Self> {
+        let mut reg_count = <D::RegFile as RegFile>::int_reg_count();
+
+        if <D::RegFile as RegFile>::Float::present() {
+            reg_count += 32;
+        }
+
+        if id.0 > reg_count {
+            None
+        } else {
+            Some(Register::new(id))
+        }
+    }
+
+    fn registers_all(_: &CoreArchitecture) -> Vec<Self> {
+        let mut reg_count = <D::RegFile as RegFile>::int_reg_count();
+
+        if <D::RegFile as RegFile>::Float::present() {
+            reg_count += 32;
+        }
+
+        let mut res = Vec::with_capacity(reg_count as usize);
+
+        for i in 0..reg_count {
+            res.push(Register::new(RegisterId(i)));
+        }
+
+        res
+    }
+
+    fn registers_global(_: &CoreArchitecture) -> Vec<Self> {
+        let mut regs = Vec::with_capacity(2);
+
+        for i in &[3, 4] {
+            regs.push(Register::new(RegisterId(*i)));
+        }
+
+        regs
+    }
+
+    fn stack_pointer_reg(_: &CoreArchitecture) -> Option<Self> {
+        Some(Register::new(RegisterId(2)))
+    }
+
+    fn link_reg(_: &CoreArchitecture) -> Option<Self> {
+        Some(Register::new(RegisterId(1)))
+    }
 }
 
 impl<'a, D: RiscVDisassembler> LiftableLowLevelIL<'a> for Register<D> {
@@ -1979,58 +2027,6 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
         };
 
         Some((inst_len as usize, true))
-    }
-
-    fn registers_all(&self) -> Vec<Self::Register> {
-        let mut reg_count = <D::RegFile as RegFile>::int_reg_count();
-
-        if <D::RegFile as RegFile>::Float::present() {
-            reg_count += 32;
-        }
-
-        let mut res = Vec::with_capacity(reg_count as usize);
-
-        for i in 0..reg_count {
-            res.push(Register::new(RegisterId(i)));
-        }
-
-        res
-    }
-
-    fn registers_full_width(&self) -> Vec<Self::Register> {
-        self.registers_all()
-    }
-
-    fn registers_global(&self) -> Vec<Self::Register> {
-        let mut regs = Vec::with_capacity(2);
-
-        for i in &[3, 4] {
-            regs.push(Register::new(RegisterId(*i)));
-        }
-
-        regs
-    }
-
-    fn stack_pointer_reg(&self) -> Option<Self::Register> {
-        Some(Register::new(RegisterId(2)))
-    }
-
-    fn link_reg(&self) -> Option<Self::Register> {
-        Some(Register::new(RegisterId(1)))
-    }
-
-    fn register_from_id(&self, id: RegisterId) -> Option<Self::Register> {
-        let mut reg_count = <D::RegFile as RegFile>::int_reg_count();
-
-        if <D::RegFile as RegFile>::Float::present() {
-            reg_count += 32;
-        }
-
-        if id.0 > reg_count {
-            None
-        } else {
-            Some(Register::new(id))
-        }
     }
 
     fn can_assemble(&self) -> bool {

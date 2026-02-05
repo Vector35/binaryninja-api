@@ -16,7 +16,7 @@ use msp430_asm::{
     single_operand::SingleOperand, two_operand::TwoOperand,
 };
 
-use binaryninja::architecture::{BranchKind, RegisterId};
+use binaryninja::architecture::BranchKind;
 use binaryninja::low_level_il::expression::ValueExpr;
 use binaryninja::low_level_il::{LowLevelILMutableExpression, LowLevelILMutableFunction};
 
@@ -218,59 +218,6 @@ impl Architecture for Msp430 {
         _il: &'a LowLevelILMutableFunction,
     ) -> Option<LowLevelILMutableExpression<'a, ValueExpr>> {
         None
-    }
-
-    fn registers_all(&self) -> Vec<Self::Register> {
-        vec![
-            Register::Pc,
-            Register::Sp,
-            Register::Sr,
-            Register::Cg,
-            Register::R4,
-            Register::R5,
-            Register::R6,
-            Register::R7,
-            Register::R8,
-            Register::R9,
-            Register::R10,
-            Register::R11,
-            Register::R12,
-            Register::R13,
-            Register::R14,
-            Register::R15,
-        ]
-    }
-
-    fn registers_full_width(&self) -> Vec<Self::Register> {
-        vec![
-            Register::Pc,
-            Register::Sp,
-            Register::Sr,
-            Register::Cg,
-            Register::R4,
-            Register::R5,
-            Register::R6,
-            Register::R7,
-            Register::R8,
-            Register::R9,
-            Register::R10,
-            Register::R11,
-            Register::R12,
-            Register::R13,
-            Register::R14,
-            Register::R15,
-        ]
-    }
-
-    fn stack_pointer_reg(&self) -> Option<Self::Register> {
-        Some(Register::Sp)
-    }
-
-    fn register_from_id(&self, id: RegisterId) -> Option<Self::Register> {
-        match id.try_into() {
-            Ok(register) => Some(register),
-            Err(_) => None,
-        }
     }
 
     fn handle(&self) -> Self::Handle {

@@ -97,9 +97,6 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     >;
 
     /// The [`RegisterStack`] associated with this architecture.
-    ///
-    /// If you do not override [`Architecture::register_stack_from_id`] and [`Architecture::register_stacks`],
-    /// you may set this to [`UnusedRegisterStack`].
     type RegisterStack: RegisterStack<
         InfoType = Self::RegisterStackInfo,
         RegType = Self::Register,
@@ -284,44 +281,42 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         None
     }
 
-    fn registers_all(&self) -> Vec<Self::Register>;
+    fn registers_all(&self) -> Vec<Self::Register> {
+        Self::Register::registers_all(self.as_ref())
+    }
 
-    fn register_from_id(&self, id: RegisterId) -> Option<Self::Register>;
+    fn register_from_id(&self, id: RegisterId) -> Option<Self::Register> {
+        Self::Register::from_id(self.as_ref(), id)
+    }
 
-    fn registers_full_width(&self) -> Vec<Self::Register>;
+    fn registers_full_width(&self) -> Vec<Self::Register> {
+        Self::Register::registers_full_width(self.as_ref())
+    }
 
-    // TODO: Document the difference between global and system registers.
     fn registers_global(&self) -> Vec<Self::Register> {
-        Vec::new()
+        Self::Register::registers_global(self.as_ref())
     }
 
-    // TODO: Document the difference between global and system registers.
     fn registers_system(&self) -> Vec<Self::Register> {
-        Vec::new()
+        Self::Register::registers_system(self.as_ref())
     }
 
-    fn stack_pointer_reg(&self) -> Option<Self::Register>;
+    fn stack_pointer_reg(&self) -> Option<Self::Register> {
+        Self::Register::stack_pointer_reg(self.as_ref())
+    }
 
     fn link_reg(&self) -> Option<Self::Register> {
-        None
+        Self::Register::link_reg(self.as_ref())
     }
 
     /// List of concrete register stacks for this architecture.
-    ///
-    /// You **must** override the following functions as well:
-    ///
-    /// - [`Architecture::register_stack_from_id`]
     fn register_stacks(&self) -> Vec<Self::RegisterStack> {
-        Vec::new()
+        Self::RegisterStack::register_stacks(self.as_ref())
     }
 
     /// Get the [`Self::RegisterStack`] associated with the given [`RegisterStackId`].
-    ///
-    /// You **must** override the following functions as well:
-    ///
-    /// - [`Architecture::register_stacks`]
-    fn register_stack_from_id(&self, _id: RegisterStackId) -> Option<Self::RegisterStack> {
-        None
+    fn register_stack_from_id(&self, id: RegisterStackId) -> Option<Self::RegisterStack> {
+        Self::RegisterStack::from_id(self.as_ref(), id)
     }
 
     /// List of concrete flags for this architecture.
@@ -711,113 +706,6 @@ impl Architecture for CoreArchitecture {
         _il: &'a LowLevelILMutableFunction,
     ) -> Option<LowLevelILMutableExpression<'a, ValueExpr>> {
         None
-    }
-
-    fn registers_all(&self) -> Vec<CoreRegister> {
-        unsafe {
-            let mut count: usize = 0;
-            let registers_raw = BNGetAllArchitectureRegisters(self.handle, &mut count);
-
-            let ret = std::slice::from_raw_parts(registers_raw, count)
-                .iter()
-                .map(|&id| RegisterId::from(id))
-                .filter_map(|reg| CoreRegister::new(*self, reg))
-                .collect();
-
-            BNFreeRegisterList(registers_raw);
-
-            ret
-        }
-    }
-
-    fn register_from_id(&self, id: RegisterId) -> Option<CoreRegister> {
-        CoreRegister::new(*self, id)
-    }
-
-    fn registers_full_width(&self) -> Vec<CoreRegister> {
-        unsafe {
-            let mut count: usize = 0;
-            let registers_raw = BNGetFullWidthArchitectureRegisters(self.handle, &mut count);
-
-            let ret = std::slice::from_raw_parts(registers_raw, count)
-                .iter()
-                .map(|&id| RegisterId::from(id))
-                .filter_map(|reg| CoreRegister::new(*self, reg))
-                .collect();
-
-            BNFreeRegisterList(registers_raw);
-
-            ret
-        }
-    }
-
-    fn registers_global(&self) -> Vec<CoreRegister> {
-        unsafe {
-            let mut count: usize = 0;
-            let registers_raw = BNGetArchitectureGlobalRegisters(self.handle, &mut count);
-
-            let ret = std::slice::from_raw_parts(registers_raw, count)
-                .iter()
-                .map(|&id| RegisterId::from(id))
-                .filter_map(|reg| CoreRegister::new(*self, reg))
-                .collect();
-
-            BNFreeRegisterList(registers_raw);
-
-            ret
-        }
-    }
-
-    fn registers_system(&self) -> Vec<CoreRegister> {
-        unsafe {
-            let mut count: usize = 0;
-            let registers_raw = BNGetArchitectureSystemRegisters(self.handle, &mut count);
-
-            let ret = std::slice::from_raw_parts(registers_raw, count)
-                .iter()
-                .map(|&id| RegisterId::from(id))
-                .filter_map(|reg| CoreRegister::new(*self, reg))
-                .collect();
-
-            BNFreeRegisterList(registers_raw);
-
-            ret
-        }
-    }
-
-    fn stack_pointer_reg(&self) -> Option<CoreRegister> {
-        match unsafe { BNGetArchitectureStackPointerRegister(self.handle) } {
-            0xffff_ffff => None,
-            reg => Some(CoreRegister::from_id(self, reg.into())?),
-        }
-    }
-
-    fn link_reg(&self) -> Option<CoreRegister> {
-        match unsafe { BNGetArchitectureLinkRegister(self.handle) } {
-            0xffff_ffff => None,
-            reg => Some(CoreRegister::from_id(self, reg.into())?),
-        }
-    }
-
-    fn register_stacks(&self) -> Vec<CoreRegisterStack> {
-        unsafe {
-            let mut count: usize = 0;
-            let reg_stacks_raw = BNGetAllArchitectureRegisterStacks(self.handle, &mut count);
-
-            let ret = std::slice::from_raw_parts(reg_stacks_raw, count)
-                .iter()
-                .map(|&id| RegisterStackId::from(id))
-                .filter_map(|reg_stack| CoreRegisterStack::new(*self, reg_stack))
-                .collect();
-
-            BNFreeRegisterList(reg_stacks_raw);
-
-            ret
-        }
-    }
-
-    fn register_stack_from_id(&self, id: RegisterStackId) -> Option<CoreRegisterStack> {
-        CoreRegisterStack::new(*self, id)
     }
 
     fn can_assemble(&self) -> bool {

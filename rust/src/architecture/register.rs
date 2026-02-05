@@ -89,6 +89,31 @@ pub trait Register: Debug + Sized + Clone + Copy + Hash + Eq {
     ///
     /// NOTE: *MUST* be in the range [0, 0x7fff_ffff]
     fn id(&self) -> RegisterId;
+    fn from_id(arch: &CoreArchitecture, id: RegisterId) -> Option<Self>;
+
+    fn registers_all(arch: &CoreArchitecture) -> Vec<Self>;
+
+    /// By default returns the same as [`Self::registers_all`]. Provide an implementation if not
+    /// all registers are full-width.
+    fn registers_full_width(arch: &CoreArchitecture) -> Vec<Self> {
+        Self::registers_all(arch)
+    }
+
+    // TODO: Document the difference between global and system registers.
+    fn registers_global(_arch: &CoreArchitecture) -> Vec<Self> {
+        Vec::new()
+    }
+
+    // TODO: Document the difference between global and system registers.
+    fn registers_system(_arch: &CoreArchitecture) -> Vec<Self> {
+        Vec::new()
+    }
+
+    fn stack_pointer_reg(arch: &CoreArchitecture) -> Option<Self>;
+
+    fn link_reg(_arch: &CoreArchitecture) -> Option<Self> {
+        None
+    }
 }
 
 /// Information about a register stack.
@@ -152,6 +177,9 @@ pub trait RegisterStack: Debug + Sized + Clone + Copy {
     type RegType: Register<InfoType = Self::RegInfoType>;
     type RegInfoType: RegisterInfo<RegType = Self::RegType>;
 
+    // Must return a list of all possible register stacks.
+    fn register_stacks(arch: &CoreArchitecture) -> Vec<Self>;
+
     fn name(&self) -> Cow<'_, str>;
     fn info(&self) -> Self::InfoType;
 
@@ -159,6 +187,7 @@ pub trait RegisterStack: Debug + Sized + Clone + Copy {
     ///
     /// *MUST* be in the range [0, 0x7fff_ffff]
     fn id(&self) -> RegisterStackId;
+    fn from_id(arch: &CoreArchitecture, id: RegisterStackId) -> Option<Self>;
 }
 
 /// Type for architectures that do not use register stacks. Will panic if accessed as a register stack.
@@ -172,6 +201,9 @@ impl<R: Register> RegisterStack for UnusedRegisterStack<R> {
     type RegType = R;
     type RegInfoType = R::InfoType;
 
+    fn register_stacks(_arch: &CoreArchitecture) -> Vec<Self> {
+        Vec::new()
+    }
     fn name(&self) -> Cow<'_, str> {
         unreachable!()
     }
@@ -180,6 +212,9 @@ impl<R: Register> RegisterStack for UnusedRegisterStack<R> {
     }
     fn id(&self) -> RegisterStackId {
         unreachable!()
+    }
+    fn from_id(_arch: &CoreArchitecture, _id: RegisterStackId) -> Option<Self> {
+        None
     }
 }
 
@@ -217,8 +252,8 @@ impl RegisterInfo for CoreRegisterInfo {
 
     fn parent(&self) -> Option<CoreRegister> {
         if self.id != RegisterId::from(self.info.fullWidthRegister) {
-            Some(CoreRegister::new(
-                self.arch,
+            Some(CoreRegister::from_id(
+                &self.arch,
                 RegisterId::from(self.info.fullWidthRegister),
             )?)
         } else {
@@ -246,11 +281,6 @@ pub struct CoreRegister {
 }
 
 impl CoreRegister {
-    pub fn new(arch: CoreArchitecture, id: RegisterId) -> Option<Self> {
-        let register = Self { arch, id };
-        register.is_valid().then_some(register)
-    }
-
     fn is_valid(&self) -> bool {
         // We check the name to see if the register is actually valid.
         let name = unsafe { BNGetArchitectureRegisterName(self.arch.handle, self.id.into()) };
@@ -292,6 +322,93 @@ impl Register for CoreRegister {
     fn id(&self) -> RegisterId {
         self.id
     }
+
+    fn from_id(arch: &CoreArchitecture, id: RegisterId) -> Option<Self> {
+        let register = Self { arch: *arch, id };
+        register.is_valid().then_some(register)
+    }
+
+    fn registers_all(arch: &CoreArchitecture) -> Vec<CoreRegister> {
+        unsafe {
+            let mut count: usize = 0;
+            let registers_raw = BNGetAllArchitectureRegisters(arch.handle, &mut count);
+
+            let ret = std::slice::from_raw_parts(registers_raw, count)
+                .iter()
+                .map(|&id| RegisterId::from(id))
+                .filter_map(|reg| Self::from_id(arch, reg))
+                .collect();
+
+            BNFreeRegisterList(registers_raw);
+
+            ret
+        }
+    }
+
+    fn registers_full_width(arch: &CoreArchitecture) -> Vec<CoreRegister> {
+        unsafe {
+            let mut count: usize = 0;
+            let registers_raw = BNGetFullWidthArchitectureRegisters(arch.handle, &mut count);
+
+            let ret = std::slice::from_raw_parts(registers_raw, count)
+                .iter()
+                .map(|&id| RegisterId::from(id))
+                .filter_map(|reg| Self::from_id(arch, reg))
+                .collect();
+
+            BNFreeRegisterList(registers_raw);
+
+            ret
+        }
+    }
+
+    fn registers_global(arch: &CoreArchitecture) -> Vec<CoreRegister> {
+        unsafe {
+            let mut count: usize = 0;
+            let registers_raw = BNGetArchitectureGlobalRegisters(arch.handle, &mut count);
+
+            let ret = std::slice::from_raw_parts(registers_raw, count)
+                .iter()
+                .map(|&id| RegisterId::from(id))
+                .filter_map(|reg| Self::from_id(arch, reg))
+                .collect();
+
+            BNFreeRegisterList(registers_raw);
+
+            ret
+        }
+    }
+
+    fn registers_system(arch: &CoreArchitecture) -> Vec<CoreRegister> {
+        unsafe {
+            let mut count: usize = 0;
+            let registers_raw = BNGetArchitectureSystemRegisters(arch.handle, &mut count);
+
+            let ret = std::slice::from_raw_parts(registers_raw, count)
+                .iter()
+                .map(|&id| RegisterId::from(id))
+                .filter_map(|reg| Self::from_id(arch, reg))
+                .collect();
+
+            BNFreeRegisterList(registers_raw);
+
+            ret
+        }
+    }
+
+    fn stack_pointer_reg(arch: &CoreArchitecture) -> Option<CoreRegister> {
+        match unsafe { BNGetArchitectureStackPointerRegister(arch.handle) } {
+            0xffff_ffff => None,
+            reg => Some(Self::from_id(arch, reg.into())?),
+        }
+    }
+
+    fn link_reg(arch: &CoreArchitecture) -> Option<CoreRegister> {
+        match unsafe { BNGetArchitectureLinkRegister(arch.handle) } {
+            0xffff_ffff => None,
+            reg => Some(Self::from_id(arch, reg.into())?),
+        }
+    }
 }
 
 impl Debug for CoreRegister {
@@ -315,7 +432,8 @@ unsafe impl CoreArrayProviderInner for CoreRegister {
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::new(*context, RegisterId::from(*raw)).expect("Register list contains valid registers")
+        Self::from_id(context, RegisterId::from(*raw))
+            .expect("Register list contains valid registers")
     }
 }
 
@@ -339,7 +457,7 @@ impl RegisterStackInfo for CoreRegisterStackInfo {
 
     fn storage_regs(&self) -> (Self::RegType, usize) {
         (
-            CoreRegister::new(self.arch, RegisterId::from(self.info.firstStorageReg))
+            CoreRegister::from_id(&self.arch, RegisterId::from(self.info.firstStorageReg))
                 .expect("Storage register is valid"),
             self.info.storageCount as usize,
         )
@@ -350,7 +468,7 @@ impl RegisterStackInfo for CoreRegisterStackInfo {
             None
         } else {
             Some((
-                CoreRegister::new(self.arch, RegisterId::from(self.info.firstTopRelativeReg))
+                CoreRegister::from_id(&self.arch, RegisterId::from(self.info.firstTopRelativeReg))
                     .expect("Top relative register is valid"),
                 self.info.topRelativeCount as usize,
             ))
@@ -358,7 +476,7 @@ impl RegisterStackInfo for CoreRegisterStackInfo {
     }
 
     fn stack_top_reg(&self) -> Self::RegType {
-        CoreRegister::new(self.arch, RegisterId::from(self.info.stackTopReg))
+        CoreRegister::from_id(&self.arch, RegisterId::from(self.info.stackTopReg))
             .expect("Stack top register is valid")
     }
 }
@@ -370,11 +488,6 @@ pub struct CoreRegisterStack {
 }
 
 impl CoreRegisterStack {
-    pub fn new(arch: CoreArchitecture, id: RegisterStackId) -> Option<Self> {
-        let register_stack = Self { arch, id };
-        register_stack.is_valid().then_some(register_stack)
-    }
-
     fn is_valid(&self) -> bool {
         // We check the name to see if the stack register is actually valid.
         let name = unsafe { BNGetArchitectureRegisterStackName(self.arch.handle, self.id.into()) };
@@ -392,6 +505,23 @@ impl RegisterStack for CoreRegisterStack {
     type InfoType = CoreRegisterStackInfo;
     type RegType = CoreRegister;
     type RegInfoType = CoreRegisterInfo;
+
+    fn register_stacks(arch: &CoreArchitecture) -> Vec<Self> {
+        unsafe {
+            let mut count: usize = 0;
+            let reg_stacks_raw = BNGetAllArchitectureRegisterStacks(arch.handle, &mut count);
+
+            let ret = std::slice::from_raw_parts(reg_stacks_raw, count)
+                .iter()
+                .map(|&id| RegisterStackId::from(id))
+                .filter_map(|reg_stack| CoreRegisterStack::from_id(arch, reg_stack))
+                .collect();
+
+            BNFreeRegisterList(reg_stacks_raw);
+
+            ret
+        }
+    }
 
     fn name(&self) -> Cow<'_, str> {
         unsafe {
@@ -417,5 +547,10 @@ impl RegisterStack for CoreRegisterStack {
 
     fn id(&self) -> RegisterStackId {
         self.id
+    }
+
+    fn from_id(arch: &CoreArchitecture, id: RegisterStackId) -> Option<Self> {
+        let register_stack = Self { arch: *arch, id };
+        register_stack.is_valid().then_some(register_stack)
     }
 }

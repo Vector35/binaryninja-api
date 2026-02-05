@@ -416,7 +416,7 @@ where
         let full_reg_kind = LowLevelILRegisterKind::from_raw(&self.function.arch(), full_raw_id)
             .expect("Bad register ID");
         let partial_reg =
-            CoreRegister::new(self.function.arch(), partial_raw_id).expect("Bad register ID");
+            CoreRegister::from_id(&self.function.arch(), partial_raw_id).expect("Bad register ID");
         LowLevelILSSARegisterKind::new_partial(full_reg_kind, version, partial_reg)
     }
 
@@ -871,7 +871,7 @@ where
         let full_reg_kind = LowLevelILRegisterKind::from_raw(&self.function.arch(), full_raw_id)
             .expect("Bad register ID");
         let partial_reg =
-            CoreRegister::new(self.function.arch(), partial_raw_id).expect("Bad register ID");
+            CoreRegister::from_id(&self.function.arch(), partial_raw_id).expect("Bad register ID");
         LowLevelILSSARegisterKind::new_partial(full_reg_kind, version, partial_reg)
     }
 }

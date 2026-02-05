@@ -83,10 +83,18 @@ impl TypeParser for CoreTypeParser {
         platform: &Platform,
         existing_types: &TypeContainer,
         options: &[String],
-        include_dirs: &[String],
+        include_directories: &[String],
     ) -> Result<String, Vec<TypeParserError>> {
         let source_cstr = BnString::new(source);
         let file_name_cstr = BnString::new(file_name);
+        let options: Vec<_> = options.into_iter().map(|o| o.to_cstr()).collect();
+        let options_raw: Vec<*const c_char> = options.iter().map(|o| o.as_ptr()).collect();
+        let include_directories: Vec<_> = include_directories
+            .into_iter()
+            .map(|d| d.to_cstr())
+            .collect();
+        let include_directories_raw: Vec<*const c_char> =
+            include_directories.iter().map(|d| d.as_ptr()).collect();
         let mut result = std::ptr::null_mut();
         let mut errors = std::ptr::null_mut();
         let mut error_count = 0;
@@ -97,10 +105,10 @@ impl TypeParser for CoreTypeParser {
                 file_name_cstr.as_ptr(),
                 platform.handle,
                 existing_types.handle.as_ptr(),
-                options.as_ptr() as *const *const c_char,
-                options.len(),
-                include_dirs.as_ptr() as *const *const c_char,
-                include_dirs.len(),
+                options_raw.as_ptr() as *const *const c_char,
+                options_raw.len(),
+                include_directories_raw.as_ptr() as *const *const c_char,
+                include_directories_raw.len(),
                 &mut result,
                 &mut errors,
                 &mut error_count,
@@ -123,11 +131,19 @@ impl TypeParser for CoreTypeParser {
         platform: &Platform,
         existing_types: &TypeContainer,
         options: &[String],
-        include_dirs: &[String],
+        include_directories: &[String],
         auto_type_source: &str,
     ) -> Result<TypeParserResult, Vec<TypeParserError>> {
         let source_cstr = BnString::new(source);
         let file_name_cstr = BnString::new(file_name);
+        let options: Vec<_> = options.into_iter().map(|o| o.to_cstr()).collect();
+        let options_raw: Vec<*const c_char> = options.iter().map(|o| o.as_ptr()).collect();
+        let include_directories: Vec<_> = include_directories
+            .into_iter()
+            .map(|d| d.to_cstr())
+            .collect();
+        let include_directories_raw: Vec<*const c_char> =
+            include_directories.iter().map(|d| d.as_ptr()).collect();
         let auto_type_source = BnString::new(auto_type_source);
         let mut raw_result = BNTypeParserResult::default();
         let mut errors = std::ptr::null_mut();
@@ -139,10 +155,10 @@ impl TypeParser for CoreTypeParser {
                 file_name_cstr.as_ptr(),
                 platform.handle,
                 existing_types.handle.as_ptr(),
-                options.as_ptr() as *const *const c_char,
-                options.len(),
-                include_dirs.as_ptr() as *const *const c_char,
-                include_dirs.len(),
+                options_raw.as_ptr() as *const *const c_char,
+                options_raw.len(),
+                include_directories_raw.as_ptr() as *const *const c_char,
+                include_directories_raw.len(),
                 auto_type_source.as_ptr(),
                 &mut raw_result,
                 &mut errors,

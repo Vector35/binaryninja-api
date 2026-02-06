@@ -45,7 +45,7 @@ More examples can be found in [here](https://github.com/Vector35/binaryninja-api
 
 ### Requirements
 
-- Having BinaryNinja installed (and your license registered)
+- Having [Binary Ninja] installed (and your license registered)
   - For headless operation you must have a headless supporting license.
 - Clang
 - Rust
@@ -65,7 +65,7 @@ binaryninjacore-sys = { git = "https://github.com/Vector35/binaryninja-api.git",
 ```
 
 `build.rs`:
-```doctestinjectablerust
+```rust
 fn main() {
     let link_path =
         std::env::var_os("DEP_BINARYNINJACORE_PATH").expect("DEP_BINARYNINJACORE_PATH not specified");
@@ -112,14 +112,27 @@ pub extern "C" fn CorePluginInit() -> bool {
 }
 ```
 
-Examples for writing a plugin can be found [here](https://github.com/Vector35/binaryninja-api/tree/dev/plugins).
+Examples for writing a plugin can be found [here](https://github.com/Vector35/binaryninja-api/tree/dev/rust/plugin_examples) and [here](https://github.com/Vector35/binaryninja-api/tree/dev/plugins).
+
+#### Sending Logs
+
+To send logs from your plugin to Binary Ninja, you can use the [tracing](https://docs.rs/tracing/latest/tracing/) crate.
+At the beginning of your plugin's initialization routine, register the tracing subscriber with [`crate::tracing_init!`],
+for more details see the documentation of that macro.
+
+#### Plugin Compatibility
+
+A built plugin can only be loaded into a compatible Binary Ninja version, this is determined by the ABI version of the 
+plugin. The ABI version is located at the top of the `binaryninjacore.h` header file, and as such plugins should pin
+their binary ninja dependency to a specific tag or commit hash. See the cargo documentation [here](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#choice-of-commit)
+for more details.
 
 ### Write a Standalone Executable
 
 If you have a headless supporting license, you are able to use Binary Ninja as a regular dynamically loaded library.
 
-Standalone executables must initialize the core themselves. `binaryninja::headless::init()` to initialize the core, and
-`binaryninja::headless::shutdown()` to shutdown the core. Prefer using `binaryninja::headless::Session` as it will 
+Standalone executables must initialize the core themselves. [`crate::headless::init()`] to initialize the core, and
+[`crate::headless::shutdown()`] to shutdown the core. Prefer using [`crate::headless::Session`] as it will 
 shut down for you once it is dropped.
 
 `main.rs`:
@@ -130,6 +143,12 @@ fn main() {
   // Once `session` is dropped, the core will be shutdown!
 }
 ```
+
+#### Capturing Logs
+
+To capture logs from Binary Ninja, you can use the [tracing](https://docs.rs/tracing/latest/tracing/) crate. Before initializing
+the core but after registering your tracing subscriber, register a [`crate::tracing::TracingLogListener`], for more details see
+the documentation for that type.
 
 ## Offline Documentation
 
@@ -161,18 +180,6 @@ it will likely confuse someone else, and you should make an issue or ask for gui
 
 #### Attribution
 
-This project makes use of:
-  - [log] ([log license] - MIT)
-  - [rayon] ([rayon license] - MIT)
-  - [thiserror] ([thiserror license] - MIT)
-  - [serde_json] ([serde_json license] - MIT)
+For attribution, please refer to the [Rust Licenses section](https://docs.binary.ninja/about/open-source.html#rust-licenses) of the user documentation.
 
-[log]: https://github.com/rust-lang/log
-[log license]: https://github.com/rust-lang/log/blob/master/LICENSE-MIT
-[rayon]: https://github.com/rayon-rs/rayon
-[rayon license]: https://github.com/rayon-rs/rayon/blob/master/LICENSE-MIT
-[thiserror]: https://github.com/dtolnay/thiserror
-[thiserror license]: https://github.com/dtolnay/thiserror/blob/master/LICENSE-MIT
-[serde_json]: https://github.com/serde-rs/json
-[serde_json license]: https://github.com/serde-rs/json/blob/master/LICENSE-MIT
-[Binary Ninja]: https://binary.ninja
+[Binary Ninja]: https://binary.ninja/

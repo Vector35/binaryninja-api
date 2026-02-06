@@ -307,6 +307,16 @@ std::map<ArchAndAddr, ArchAndAddr>& BasicBlockAnalysisContext::GetInlinedUnresol
 }
 
 
+bool BasicBlockAnalysisContext::SetFunctionArchContext(void* context)
+{
+	if (m_context->functionArchContext)
+		return false;
+
+	m_context->functionArchContext = context;
+	return true;
+}
+
+
 void BasicBlockAnalysisContext::AddTempOutgoingReference(Function* targetFunc)
 {
 	BNAnalyzeBasicBlocksContextAddTempReference(m_context, targetFunc->m_object);
@@ -461,8 +471,6 @@ void BasicBlockAnalysisContext::Finalize()
 			delete[] values;
 		}
 	}
-
-	BNAnalyzeBasicBlocksContextFinalize(m_context);
 }
 
 

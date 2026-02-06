@@ -96,7 +96,6 @@ class BasicBlockAnalysisContext:
 	_direct_code_references: Dict[int, "function.ArchAndAddr"]
 	_direct_no_return_calls: Set["function.ArchAndAddr"]
 	_halted_disassembly_addresses: Set["function.ArchAndAddr"]
-	_function_arch_context_token: int
 
 	@staticmethod
 	def from_core_struct(bn_bb_context: core.BNBasicBlockAnalysisContext) -> "BasicBlockAnalysisContext":
@@ -167,7 +166,6 @@ class BasicBlockAnalysisContext:
 		    _contextual_returns=contextual_returns, _contextual_returns_dirty=False,
 		    _direct_code_references=direct_code_references, _direct_no_return_calls=direct_no_return_calls,
 		    _halted_disassembly_addresses=halted_disassembly_addresses,
-		    _function_arch_context_token=bn_bb_context.functionArchContext,
 		)
 
 	@property
@@ -328,15 +326,20 @@ class BasicBlockAnalysisContext:
 	def function_arch_context(self) -> Any:
 		"""Get the function architecture context"""
 
-		return self._function.arch.function_arch_contexts.get(self._function_arch_context_token, None)
+		tok = int(self._handle.functionArchContext or 0)
+		if tok == 0:
+			return None
+		return self._function.arch.function_arch_contexts.get(tok, None)
 
 	@function_arch_context.setter
 	def function_arch_context(self, value: Any) -> None:
 		"""Set the function architecture context"""
 
-		token = id(self._function)
+		if self._handle.functionArchContext:
+			raise ValueError("Function architecture context has already been set")
+		token = self._function.start
 		self._function.arch.function_arch_contexts[token] = value
-		self._function_arch_context_token = token
+		self._handle.functionArchContext = ctypes.c_void_p(token)
 
 	def create_basic_block(self, arch: "Architecture", start: int) -> Optional["basicblock.BasicBlock"]:
 		"""
@@ -420,9 +423,6 @@ class BasicBlockAnalysisContext:
 				returns[i].address = loc.addr
 				values[i] = value
 			core.BNAnalyzeBasicBlocksContextSetContextualFunctionReturns(self._handle, returns, values, total)
-
-		self._handle.functionArchContext = self._function_arch_context_token
-		core.BNAnalyzeBasicBlocksContextFinalize(self._handle)
 
 
 @dataclass

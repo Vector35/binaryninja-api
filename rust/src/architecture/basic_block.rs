@@ -328,8 +328,6 @@ impl BasicBlockAnalysisContext {
         if self.contextual_returns_dirty {
             self.update_contextual_returns();
         }
-
-        unsafe { BNAnalyzeBasicBlocksContextFinalize(self.handle) };
     }
 }
 

@@ -9415,7 +9415,7 @@ namespace BinaryNinja {
 		std::map<ArchAndAddr, ArchAndAddr>& GetInlinedUnresolvedIndirectBranches();
 
 		void* GetFunctionArchContext() { return m_context->functionArchContext; }
-		void SetFunctionArchContext(void* context) { m_context->functionArchContext = context; }
+		bool SetFunctionArchContext(void* context);
 
 		void AddTempOutgoingReference(Function* targetFunc);
 

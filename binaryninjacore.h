@@ -5604,7 +5604,6 @@ extern "C"
 	// BNAnalyzeBasicBlockContext operations
 	BINARYNINJACOREAPI BNBasicBlock* BNAnalyzeBasicBlocksContextCreateBasicBlock(BNBasicBlockAnalysisContext* abb, BNArchitecture* arch, uint64_t addr);
 	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextAddBasicBlockToFunction(BNBasicBlockAnalysisContext* abb, BNBasicBlock* block);
-	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextFinalize(BNBasicBlockAnalysisContext* abb);
 
 	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextAddTempReference(BNBasicBlockAnalysisContext* abb, BNFunction* target);
 

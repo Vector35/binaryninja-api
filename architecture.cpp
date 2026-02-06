@@ -307,12 +307,11 @@ std::map<ArchAndAddr, ArchAndAddr>& BasicBlockAnalysisContext::GetInlinedUnresol
 }
 
 
-bool BasicBlockAnalysisContext::SetFunctionArchContext(void* context)
+bool BasicBlockAnalysisContext::SetFunctionArchContextRaw(void* p)
 {
 	if (m_context->functionArchContext)
 		return false;
-
-	m_context->functionArchContext = context;
+	m_context->functionArchContext = p;
 	return true;
 }
 
@@ -588,12 +587,6 @@ std::map<ArchAndAddr, bool>& FunctionLifterContext::GetContextualReturns()
 std::set<uint64_t>& FunctionLifterContext::GetInlinedCalls()
 {
 	return m_inlinedCalls;
-}
-
-
-void *FunctionLifterContext::GetFunctionArchContext()
-{
-	return m_functionArchContext;
 }
 
 

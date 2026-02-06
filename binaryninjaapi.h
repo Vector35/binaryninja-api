@@ -9414,8 +9414,20 @@ namespace BinaryNinja {
 		std::set<ArchAndAddr>& GetHaltedDisassemblyAddresses();
 		std::map<ArchAndAddr, ArchAndAddr>& GetInlinedUnresolvedIndirectBranches();
 
-		void* GetFunctionArchContext() { return m_context->functionArchContext; }
-		bool SetFunctionArchContext(void* context);
+		bool SetFunctionArchContextRaw(void* p);
+		void* GetFunctionArchContextRaw() const { return m_context->functionArchContext; }
+
+		template <class ArchT>
+		bool SetFunctionArchContext(const ArchT* arch, typename ArchT::FunctionArchContext* context)
+		{
+			return arch->SetFunctionArchContext(*this, context);
+		}
+
+		template <class ArchT>
+		typename ArchT::FunctionArchContext* GetFunctionArchContext(const ArchT* arch)
+		{
+			return arch->GetFunctionArchContext(*this);
+		}
 
 		void AddTempOutgoingReference(Function* targetFunc);
 
@@ -9455,7 +9467,12 @@ namespace BinaryNinja {
 		std::map<ArchAndAddr, std::set<ArchAndAddr>>& GetAutoIndirectBranches();
 		std::set<uint64_t>& GetInlinedCalls();
 		void SetContainsInlinedFunctions(bool value);
-		void* GetFunctionArchContext();
+		void* GetFunctionArchContextRaw() const { return m_functionArchContext; }
+		template <class ArchT>
+		typename ArchT::FunctionArchContext* GetFunctionArchContext(const ArchT* arch)
+		{
+			return arch->GetFunctionArchContext(*this);
+		}
 
 		void CheckForInlinedCall(BasicBlock* block, size_t instrCountBefore, size_t instrCountAfter, uint64_t prevAddr,
 			uint64_t addr, const uint8_t* opcode, size_t len,
@@ -9674,17 +9691,7 @@ namespace BinaryNinja {
 		virtual bool GetInstructionText(
 		    const uint8_t* data, uint64_t addr, size_t& len, std::vector<InstructionTextToken>& result) = 0;
 
-		/*! Retrieves a list of InstructionTextTokens while supplying contextual information
-
-		    \note Architecture subclasses can implement this method to provide contextual information from AnalyzeBasicBlocks
-
-			\param[in] data pointer to the instruction data to retrieve text for
-			\param[in] addr address of the instruction data to retrieve text for
-			\param[out] len will be written to with the length of the instruction data which was translated
-			\param[in] context context to use when retrieving instruction text
-			\param[out] result
-			\return Whether instruction info was successfully retrieved.
-		*/
+		/* For use in architecture plugins that inherit from ArchitectureWithFunctionContext */
 		virtual bool GetInstructionTextWithContext(const uint8_t* data, uint64_t addr, size_t& len, void* context,
 			std::vector<InstructionTextToken>& result);
 
@@ -9714,10 +9721,7 @@ namespace BinaryNinja {
 		*/
 		virtual bool LiftFunction(LowLevelILFunction* function, FunctionLifterContext& context);
 
-		/*! Free the function architecture context
-
-			\param context Function architecture context
-		*/
+		/* For use in architecture plugins that inherit from ArchitectureWithFunctionContext */
 		virtual void FreeFunctionArchContext(void* context);
 
 		/*! Gets a register name from a register index.
@@ -10093,6 +10097,71 @@ namespace BinaryNinja {
 		std::vector<Ref<TypeLibrary>> GetTypeLibraries();
 
 		void AddArchitectureRedirection(Architecture* from, Architecture* to);
+	};
+
+	/*! The ArchitectureWithFunctionContext class is to be inherited by architecture plugins that need to maintain a
+	 * function context that is set during AnalyzeBasicBlocks and accessed in LiftFunction and/or
+	 * GetInstructionTextWithContext.
+
+	    \ingroup architectures
+	*/
+	template <class FnCtxT>
+	class ArchitectureWithFunctionContext : public Architecture
+	{
+	public:
+		using Architecture::Architecture;
+		using FunctionArchContext = FnCtxT;
+
+		/*! Set the function architecture context
+
+			\param bbac Basic block analysis context
+			\param ctx Function architecture context
+			\return True if the context was set successfully
+		 */
+		bool SetFunctionArchContext(BasicBlockAnalysisContext& bbac, FnCtxT* ctx) const
+		{
+			return bbac.SetFunctionArchContextRaw(static_cast<void*>(ctx));
+		}
+
+		/*! Get the function architecture context from the basic block analysis context
+
+			\param bbac Basic block analysis context
+			\return Function architecture context
+		 */
+		FnCtxT* GetFunctionArchContext(const BasicBlockAnalysisContext& bbac) const
+		{
+			return static_cast<FnCtxT*>(bbac.GetFunctionArchContextRaw());
+		}
+
+		/*! Free the function architecture context
+			\param context Function architecture context
+		 */
+		virtual void FreeFunctionArchContext(FnCtxT* context) {}
+		void FreeFunctionArchContext(void* context) override final
+		{
+			FreeFunctionArchContext(static_cast<FnCtxT*>(context));
+		}
+
+		/*! Get instruction text with function context
+
+			\param data Pointer to the instruction data to retrieve text for
+			\param addr Address of the instruction data to retrieve text for
+			\param len Will be written to with the length of the instruction data which was translated
+			\param context Context to use when retrieving instruction text
+			\param result Output vector of instruction text tokens
+			\return Whether instruction info was successfully retrieved.
+		*/
+		virtual bool GetInstructionTextWithContext(
+			const uint8_t* data, uint64_t addr, size_t& len, FnCtxT* context, std::vector<InstructionTextToken>& result)
+		{
+			return Architecture::GetInstructionTextWithContext(data, addr, len, static_cast<void*>(context), result);
+		}
+
+		bool GetInstructionTextWithContext(const uint8_t* data, uint64_t addr, size_t& len, void* context,
+			std::vector<InstructionTextToken>& result) override final
+		{
+			return GetInstructionTextWithContext(data, addr, len, static_cast<FnCtxT*>(context), result);
+		}
 	};
 
 	/*!

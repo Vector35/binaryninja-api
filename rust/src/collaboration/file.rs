@@ -57,10 +57,10 @@ impl RemoteFile {
         RemoteFile::get_for_local_database(&database)
     }
 
-    pub fn core_file(&self) -> Result<ProjectFile, ()> {
+    pub fn core_file(&self) -> Result<Ref<ProjectFile>, ()> {
         let result = unsafe { BNRemoteFileGetCoreFile(self.handle.as_ptr()) };
         NonNull::new(result)
-            .map(|handle| unsafe { ProjectFile::from_raw(handle) })
+            .map(|handle| unsafe { ProjectFile::ref_from_raw(handle) })
             .ok_or(())
     }
 

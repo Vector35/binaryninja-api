@@ -2,6 +2,7 @@
 use binaryninjacore_sys::*;
 use std::ffi::{c_char, c_void};
 use std::fmt::Debug;
+use std::path::PathBuf;
 use std::ptr::NonNull;
 
 use crate::platform::Platform;
@@ -83,7 +84,7 @@ impl TypeParser for CoreTypeParser {
         platform: &Platform,
         existing_types: &TypeContainer,
         options: &[String],
-        include_directories: &[String],
+        include_directories: &[PathBuf],
     ) -> Result<String, Vec<TypeParserError>> {
         let source_cstr = BnString::new(source);
         let file_name_cstr = BnString::new(file_name);
@@ -91,7 +92,7 @@ impl TypeParser for CoreTypeParser {
         let options_raw: Vec<*const c_char> = options.iter().map(|o| o.as_ptr()).collect();
         let include_directories: Vec<_> = include_directories
             .into_iter()
-            .map(|d| d.to_cstr())
+            .map(|d| d.clone().to_cstr())
             .collect();
         let include_directories_raw: Vec<*const c_char> =
             include_directories.iter().map(|d| d.as_ptr()).collect();
@@ -131,7 +132,7 @@ impl TypeParser for CoreTypeParser {
         platform: &Platform,
         existing_types: &TypeContainer,
         options: &[String],
-        include_directories: &[String],
+        include_directories: &[PathBuf],
         auto_type_source: &str,
     ) -> Result<TypeParserResult, Vec<TypeParserError>> {
         let source_cstr = BnString::new(source);
@@ -140,7 +141,7 @@ impl TypeParser for CoreTypeParser {
         let options_raw: Vec<*const c_char> = options.iter().map(|o| o.as_ptr()).collect();
         let include_directories: Vec<_> = include_directories
             .into_iter()
-            .map(|d| d.to_cstr())
+            .map(|d| d.clone().to_cstr())
             .collect();
         let include_directories_raw: Vec<*const c_char> =
             include_directories.iter().map(|d| d.as_ptr()).collect();
@@ -238,7 +239,7 @@ pub trait TypeParser {
         platform: &Platform,
         existing_types: &TypeContainer,
         options: &[String],
-        include_dirs: &[String],
+        include_dirs: &[PathBuf],
     ) -> Result<String, Vec<TypeParserError>>;
 
     /// Parse an entire block of source into types, variables, and functions
@@ -257,7 +258,7 @@ pub trait TypeParser {
         platform: &Platform,
         existing_types: &TypeContainer,
         options: &[String],
-        include_dirs: &[String],
+        include_dirs: &[PathBuf],
         auto_type_source: &str,
     ) -> Result<TypeParserResult, Vec<TypeParserError>>;
 
@@ -556,7 +557,7 @@ unsafe extern "C" fn cb_preprocess_source<T: TypeParser>(
     let includes_raw = unsafe { std::slice::from_raw_parts(include_dirs, include_dir_count) };
     let includes: Vec<_> = includes_raw
         .iter()
-        .filter_map(|&r| raw_to_string(r))
+        .filter_map(|&r| Some(PathBuf::from(raw_to_string(r)?)))
         .collect();
     match ctxt.preprocess_source(
         &raw_to_string(source).unwrap(),
@@ -616,7 +617,7 @@ unsafe extern "C" fn cb_parse_types_from_source<T: TypeParser>(
     let includes_raw = unsafe { std::slice::from_raw_parts(include_dirs, include_dir_count) };
     let includes: Vec<_> = includes_raw
         .iter()
-        .filter_map(|&r| raw_to_string(r))
+        .filter_map(|&r| Some(PathBuf::from(raw_to_string(r)?)))
         .collect();
     match ctxt.parse_types_from_source(
         &raw_to_string(source).unwrap(),

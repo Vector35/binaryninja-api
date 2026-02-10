@@ -193,6 +193,15 @@ impl From<String> for QualifiedName {
     }
 }
 
+impl From<BnString> for QualifiedName {
+    fn from(value: BnString) -> Self {
+        Self {
+            items: vec![value.to_string_lossy().to_string()],
+            separator: String::from("::"),
+        }
+    }
+}
+
 impl From<&str> for QualifiedName {
     fn from(value: &str) -> Self {
         Self::from(value.to_string())

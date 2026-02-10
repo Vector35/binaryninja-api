@@ -1,4 +1,5 @@
-use crate::cache::container::cached_containers;
+use crate::cache::container::{add_cached_container, cached_container_by_name, cached_containers};
+use crate::container::disk::DiskContainer;
 use crate::container::{
     ContainerSearchItem, ContainerSearchItemKind, ContainerSearchQuery, SourcePath, SourceTag,
 };
@@ -12,6 +13,7 @@ use binaryninja::rc::Ref;
 use binaryninja::string::BnString;
 use binaryninja::types::Type;
 use binaryninjacore_sys::{BNArchitecture, BNBinaryView, BNType};
+use std::collections::HashMap;
 use std::ffi::{c_char, CStr};
 use std::mem::ManuallyDrop;
 use std::ops::Deref;
@@ -169,6 +171,21 @@ pub unsafe extern "C" fn BNWARPContainerSearchItemGetFunction(
         }
         ContainerSearchItemKind::Type(_) => std::ptr::null_mut(),
         ContainerSearchItemKind::Symbol(_) => std::ptr::null_mut(),
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn BNWARPAddContainer(name: *const c_char) -> *mut BNWARPContainer {
+    let name_cstr = unsafe { CStr::from_ptr(name) };
+    let name_str = name_cstr.to_str().unwrap();
+    // TODO: Using this generic API name for disk container, I think anything like the network container
+    // TODO: should probably be a second class name so something like BNWARPAddNetworkContainer.
+    let disk_container = DiskContainer::new(name_str.to_string(), HashMap::new());
+    let container_name = disk_container.to_string();
+    add_cached_container(disk_container);
+    match cached_container_by_name(&container_name) {
+        Some(container) => Arc::into_raw(container) as *mut BNWARPContainer,
+        None => std::ptr::null_mut(),
     }
 }
 

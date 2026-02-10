@@ -246,6 +246,14 @@ std::vector<Ref<Container> > Container::All()
     return result;
 }
 
+Ref<Container> Container::Add(const std::string &name)
+{
+    BNWARPContainer *result = BNWARPAddContainer(name.c_str());
+    if (!result)
+        return nullptr;
+    return new Container(result);
+}
+
 std::string Container::GetName() const
 {
     char *rawName = BNWARPContainerGetName(m_object);

@@ -35,3 +35,8 @@ pub fn cached_containers() -> Vec<Arc<RwLock<Box<dyn Container>>>> {
     let containers_cache = CONTAINER_CACHE.get_or_init(Default::default);
     containers_cache.iter().map(|c| c.clone()).collect()
 }
+
+pub fn cached_container_by_name(name: &str) -> Option<Arc<RwLock<Box<dyn Container>>>> {
+    let containers_cache = CONTAINER_CACHE.get_or_init(Default::default);
+    containers_cache.get(name).map(|c| c.clone())
+}

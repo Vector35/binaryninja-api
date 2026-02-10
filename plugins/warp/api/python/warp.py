@@ -351,6 +351,13 @@ class WarpContainer(metaclass=_WarpContainerMetaclass):
         return result
 
     @staticmethod
+    def add(name: str) -> 'WarpContainer':
+        container = warpcore.BNWARPAddContainer(name)
+        if container is None:
+            raise ValueError(f"Failed to add container: {name}")
+        return WarpContainer(container)
+
+    @staticmethod
     def by_name(name: str) -> Optional['WarpContainer']:
         for container in WarpContainer:
             if container.name == name:

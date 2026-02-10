@@ -111,6 +111,7 @@ extern "C"
     WARP_FFI_API BNWARPFunction* BNWARPGetFunction(BNFunction* analysisFunction);
     WARP_FFI_API BNWARPFunction* BNWARPGetMatchedFunction(BNFunction* analysisFunction);
     WARP_FFI_API BNWARPContainer** BNWARPGetContainers(size_t* count);
+    WARP_FFI_API BNWARPContainer* BNWARPAddContainer(const char* name);
 
     WARP_FFI_API char* BNWARPContainerGetName(BNWARPContainer* container);
 

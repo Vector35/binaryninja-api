@@ -381,6 +381,9 @@ namespace Warp {
 		/// Retrieve all available containers.
 		static std::vector<Ref<Container> > All();
 
+		/// Add a new container with the given name.
+		static Ref<Container> Add(const std::string &name);
+
 		std::string GetName() const;
 
 		std::vector<Source> GetSources() const;

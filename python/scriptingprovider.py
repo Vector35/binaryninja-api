@@ -53,6 +53,7 @@ from .pluginmanager import RepositoryManager
 from .enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
 from .settings import Settings
 from .enums import SettingsScope
+import json
 
 _WARNING_REGEX = re.compile(r'^\S+:\d+: \w+Warning: ')
 
@@ -1214,7 +1215,10 @@ class PythonScriptingProvider(ScriptingProvider):
 
 	def _install_modules(self, ctx, _modules: bytes) -> bool:
 		# This callback should not be called directly
-		modules = _modules.decode("utf-8")
+		dependencies_json = json.loads(_modules.decode("utf-8"))
+		modules = ""
+		if "pip" in dependencies_json:
+			modules = dependencies_json["pip"]
 		if len(modules.strip()) == 0:
 			return True
 		python_lib = settings.Settings().get_string("python.interpreter")

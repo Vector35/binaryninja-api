@@ -1,0 +1,42 @@
+[package]
+name = "bntl_utils"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+binaryninja.workspace = true
+binaryninjacore-sys.workspace = true
+tracing = "0.1"
+thiserror = "2.0"
+similar = "2.7.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+nt-apiset = "0.1.0"
+url = "2.5"
+uuid = "1.20"
+walkdir = "2.5"
+dashmap = "6.1"
+
+# For TBD parsing
+serde-saphyr = { version = "0.0.18", default-features = false, features = [] }
+
+# For reports
+minijinja = "2.10.2"
+minijinja-embed = "2.10.2"
+
+[build-dependencies]
+minijinja-embed = "2.10.2"
+
+# TODO: We need to depend on latest because the windows-metadata crate has not yet been bumped, but depending on the crate
+# TODO: with git will mean we pull in all of the data of the crate instead of just the necessary bits, we likely need to
+# TODO: wait until the windows-metadata crate is bumped before merging this PR.
+# TODO: Relevant PR: https://github.com/microsoft/windows-rs/pull/3799
+# TODO: Relevant issue: https://github.com/microsoft/windows-rs/issues/3887
+[dependencies.windows-metadata]
+git = "https://github.com/microsoft/windows-rs"
+tag = "72"

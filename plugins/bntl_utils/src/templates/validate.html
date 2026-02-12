@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {# palette() is reading from the QT style sheet FYI #}
+    <style>
+        body {
+            color: palette(text);
+            font-family: "Segoe UI", "Ubuntu", "Helvetica Neue", sans-serif;
+            font-size: 13px;
+            margin: 20px;
+            line-height: 1.5;
+        }
+        .header {
+            border-bottom: 2px solid palette(mid);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            color: palette(highlight);
+            font-size: 18px;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .issue-card {
+            background-color: rgba(128, 128, 128, 0.1);
+            border-left: 4px solid #ff4444;
+            margin-bottom: 12px;
+            padding: 12px 16px;
+            border-radius: 2px;
+        }
+
+        .issue-error { border-left-color: #ef5350; }
+        .issue-title {
+            font-weight: bold;
+            color: palette(window-text);
+            display: block;
+            margin-bottom: 4px;
+        }
+        .issue-detail {
+            color: palette(highlight);
+            font-family: "Consolas", "Monaco", monospace;
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .label {
+            color: palette(disabled-text);
+            font-size: 11px;
+            text-transform: uppercase;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>Type Library Validation Report</h1>
+</div>
+
+{% for issue in issues %}
+<div class="issue-card issue-error">
+
+    {% if issue.DuplicateGUID %}
+    <span class="issue-title">Duplicate GUID</span>
+    <span>The GUID <span class="issue-detail">{{ issue.DuplicateGUID.guid }}</span> is already used by <span class="issue-detail">{{ issue.DuplicateGUID.existing_library }}</span>.</span>
+
+    {% elif issue.DuplicateDependencyName %}
+    <span class="issue-title">Dependency Name Collision</span>
+    <span>The name <span class="issue-detail">{{ issue.DuplicateDependencyName.name }}</span> is already provided by <span class="issue-detail">{{ issue.DuplicateDependencyName.existing_library }}</span>.</span>
+
+    {% elif issue.InvalidMetadata %}
+    <span class="issue-title">Invalid Metadata</span>
+    <span><span class="label">Key:</span> {{ issue.InvalidMetadata.key }} | <span class="label">Issue:</span> {{ issue.InvalidMetadata.issue }}</span>
+
+    {% elif issue.DuplicateOrdinal %}
+    <span class="issue-title">Duplicate Ordinal</span>
+    <span>Ordinal <span class="issue-detail">#{{ issue.DuplicateOrdinal.ordinal }}</span> is assigned to <span class="issue-detail">{{ issue.DuplicateOrdinal.existing_name }}</span> and <span class="issue-detail">{{ issue.DuplicateOrdinal.duplicate_name }}</span>.</span>
+
+    {% elif issue.NoPlatform %}
+    <span class="issue-title">Missing Platform</span>
+    <span>The type library has no target platform associated with it.</span>
+
+    {% elif issue.UnresolvedExternalReference %}
+    <span class="issue-title">Unresolved External Reference</span>
+    <span>Type <span class="issue-detail">{{ issue.UnresolvedExternalReference.name }}</span> (in <span class="issue-detail">{{ issue.UnresolvedExternalReference.container }}</span>) has no source.</span>
+
+    {% elif issue.UnresolvedSourceReference %}
+    <span class="issue-title">Unresolved Source Reference</span>
+    <span>Type <span class="issue-detail">{{ issue.UnresolvedSourceReference.name }}</span> was not found in expected source <span class="issue-detail">{{ issue.UnresolvedSourceReference.source }}</span>.</span>
+
+    {% elif issue.UnresolvedTypeLibrary %}
+    <span class="issue-title">Unresolved Type Library</span>
+    <span>Could not find dependency library file for <span class="issue-detail">{{ issue.UnresolvedTypeLibrary.name }}</span>.</span>
+    {% endif %}
+
+</div>
+{% endfor %}
+
+</body>
+</html>

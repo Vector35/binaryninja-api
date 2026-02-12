@@ -25,6 +25,8 @@ members = [
     "plugins/warp/examples/headless",
     "plugins/workflow_objc",
     "plugins/workflow_objc/demo",
+    "plugins/bntl_utils",
+    "plugins/bntl_utils/cli",
 ]
 
 [workspace.dependencies]

@@ -14,7 +14,7 @@ fn main() {
         .load("/bin/cat")
         .expect("Couldn't open `/bin/cat`");
 
-    tracing::info!("Filename:  `{}`", bv.file().filename());
+    tracing::info!("File:  `{}`", bv.file());
     tracing::info!("File size: `{:#x}`", bv.len());
     tracing::info!("Function count: {}", bv.functions().len());
 

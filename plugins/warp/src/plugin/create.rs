@@ -23,11 +23,7 @@ impl SaveFileField {
         let default_name = match file.project_file() {
             None => {
                 // Not in a project, use the file name directly.
-                file.filename()
-                    .split('/')
-                    .last()
-                    .unwrap_or("file")
-                    .to_string()
+                file.display_name()
             }
             Some(project_file) => project_file.name(),
         };

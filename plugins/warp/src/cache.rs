@@ -79,6 +79,6 @@ pub struct CacheDestructor;
 impl ObjectDestructor for CacheDestructor {
     fn destruct_view(&self, view: &BinaryView) {
         clear_type_ref_cache(view);
-        tracing::debug!("Removed WARP caches for {:?}", view.file().filename());
+        tracing::debug!("Removed WARP caches for {}", view.file());
     }
 }

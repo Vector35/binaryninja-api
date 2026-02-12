@@ -39,7 +39,7 @@ pub fn main() {
         .load(&filename)
         .expect("Couldn't open file!");
 
-    tracing::info!("Filename:  `{}`", bv.file().filename());
+    tracing::info!("File:  `{}`", bv.file());
     tracing::info!("File size: `{:#x}`", bv.len());
     tracing::info!("Function count: {}", bv.functions().len());
 

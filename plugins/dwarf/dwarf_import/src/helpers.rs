@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::ffi::OsStr;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::{str::FromStr, sync::mpsc};
 
 use crate::{DebugInfoBuilderContext, ReaderType};
@@ -590,10 +589,8 @@ pub(crate) fn find_sibling_debug_file(view: &BinaryView) -> Option<String> {
         return None;
     }
 
-    let full_file_path = view.file().filename().to_string();
-
-    let debug_file = PathBuf::from(format!("{}.debug", full_file_path));
-    let dsym_folder = PathBuf::from(format!("{}.dSYM", full_file_path));
+    let debug_file = view.file().file_path().with_extension("debug");
+    let dsym_folder = view.file().file_path().with_extension("dSYM");
 
     // Find sibling debug file
     if debug_file.exists() && debug_file.is_file() {
@@ -624,13 +621,12 @@ pub(crate) fn find_sibling_debug_file(view: &BinaryView) -> Option<String> {
     // Look for dSYM
     // TODO: look for dSYM in project
     if dsym_folder.exists() && dsym_folder.is_dir() {
-        let filename = Path::new(&full_file_path)
-            .file_name()
-            .unwrap_or(OsStr::new(""));
-
-        let dsym_file = dsym_folder.join("Contents/Resources/DWARF/").join(filename); // TODO: should this just pull any file out? Can there be multiple files?
-        if dsym_file.exists() {
-            return Some(dsym_file.to_string_lossy().to_string());
+        if let Some(filename) = view.file().file_path().file_name() {
+            // TODO: should this just pull any file out? Can there be multiple files?
+            let dsym_file = dsym_folder.join("Contents/Resources/DWARF/").join(filename);
+            if dsym_file.exists() {
+                return Some(dsym_file.to_string_lossy().to_string());
+            }
         }
     }
 

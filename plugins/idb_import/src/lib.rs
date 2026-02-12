@@ -27,8 +27,10 @@ impl CustomDebugInfoParser for IDBDebugInfoParser {
             project_file.name().as_str().ends_with(".i64")
                 || project_file.name().as_str().ends_with(".idb")
         } else {
-            view.file().filename().as_str().ends_with(".i64")
-                || view.file().filename().as_str().ends_with(".idb")
+            view.file()
+                .file_path()
+                .extension()
+                .map_or(false, |ext| ext == "i64" || ext == "idb")
         }
     }
 
@@ -55,7 +57,10 @@ impl CustomDebugInfoParser for TILDebugInfoParser {
         if let Some(project_file) = view.file().project_file() {
             project_file.name().as_str().ends_with(".til")
         } else {
-            view.file().filename().as_str().ends_with(".til")
+            view.file()
+                .file_path()
+                .extension()
+                .map_or(false, |ext| ext == "til")
         }
     }
 

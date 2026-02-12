@@ -2476,8 +2476,14 @@ impl BinaryView {
         Ref::new(Self { handle })
     }
 
-    pub fn from_path(meta: &mut FileMetadata, file_path: impl AsRef<Path>) -> Result<Ref<Self>> {
-        let file = file_path.as_ref().to_cstr();
+    /// Construct the raw binary view from the given metadata. Before calling this make sure you have
+    /// a valid file path set for the [`FileMetadata`]. It is required that the [`FileMetadata::file_path`]
+    /// exist on the local filesystem.
+    pub fn from_metadata(meta: &FileMetadata) -> Result<Ref<Self>> {
+        if !meta.file_path().exists() {
+            return Err(());
+        }
+        let file = meta.file_path().to_cstr();
         let handle =
             unsafe { BNCreateBinaryDataViewFromFilename(meta.handle, file.as_ptr() as *mut _) };
 
@@ -2486,6 +2492,15 @@ impl BinaryView {
         }
 
         unsafe { Ok(Ref::new(Self { handle })) }
+    }
+
+    /// Construct the raw binary view from the given `file_path` and metadata.
+    ///
+    /// This will implicitly set the metadata file path and then construct the view. If the metadata
+    /// already has the desired file path, use [`BinaryView::from_metadata`] instead.
+    pub fn from_path(meta: &FileMetadata, file_path: impl AsRef<Path>) -> Result<Ref<Self>> {
+        meta.set_file_path(file_path.as_ref());
+        Self::from_metadata(meta)
     }
 
     pub fn from_accessor<A: Accessor>(

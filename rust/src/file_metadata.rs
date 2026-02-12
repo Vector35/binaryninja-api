@@ -20,7 +20,7 @@ use binaryninjacore_sys::*;
 use binaryninjacore_sys::{BNCreateDatabaseWithProgress, BNOpenExistingDatabaseWithProgress};
 use std::ffi::c_void;
 use std::fmt::{Debug, Display, Formatter};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::progress::ProgressCallback;
 use crate::project::file::ProjectFile;
@@ -46,12 +46,15 @@ impl FileMetadata {
         Self::ref_from_raw(unsafe { BNCreateFileMetadata() })
     }
 
-    pub fn with_filename(name: &str) -> Ref<Self> {
+    /// Build a [`FileMetadata`] with the given `path`, this is uncommon as you are likely to want to
+    /// open a [`BinaryView`]
+    pub fn with_file_path(path: &Path) -> Ref<Self> {
         let ret = FileMetadata::new();
-        ret.set_filename(name);
+        ret.set_file_path(path);
         ret
     }
 
+    /// Closes the [`FileMetadata`] allowing any [`BinaryView`] parented to it to be freed.
     pub fn close(&self) {
         unsafe {
             BNCloseFile(self.handle);
@@ -63,22 +66,124 @@ impl FileMetadata {
         SessionId(raw)
     }
 
-    pub fn filename(&self) -> String {
+    /// The path to the [`FileMetadata`] on disk.
+    ///
+    /// This will not point to the original file on disk, in the event that the file was saved
+    /// as a BNDB. When a BNDB is opened, the FileMetadata will contain the file path to the database.
+    ///
+    /// If you need the original binary file path, use [`FileMetadata::original_file_path`] instead.
+    ///
+    /// If you just want a name to present to the user, use [`FileMetadata::display_name`].
+    pub fn file_path(&self) -> PathBuf {
         unsafe {
             let raw = BNGetFilename(self.handle);
-            BnString::into_string(raw)
+            PathBuf::from(BnString::into_string(raw))
         }
     }
 
-    pub fn set_filename(&self, name: &str) {
+    // TODO: To prevent issues we will not allow users to set the file path as it really should be
+    // TODO: derived at construction and not modified later.
+    /// Set the files path on disk.
+    ///
+    /// This should always be a valid path.
+    pub(crate) fn set_file_path(&self, name: &Path) {
         let name = name.to_cstr();
-
         unsafe {
             BNSetFilename(self.handle, name.as_ptr());
         }
     }
 
-    pub fn modified(&self) -> bool {
+    /// The display name of the file. Useful for presenting to the user. Can differ from the original
+    /// name of the file and can be overridden with [`FileMetadata::set_display_name`].
+    pub fn display_name(&self) -> String {
+        let raw_name = unsafe {
+            let raw = BNGetDisplayName(self.handle);
+            BnString::into_string(raw)
+        };
+        // Sometimes this display name may return a full path, which is not the intended purpose.
+        raw_name
+            .split('/')
+            .next_back()
+            .unwrap_or(&raw_name)
+            .to_string()
+    }
+
+    /// Set the display name of the file.
+    ///
+    /// This can be anything and will not be used for any purpose other than presentation.
+    pub fn set_display_name(&self, name: &str) {
+        let name = name.to_cstr();
+        unsafe {
+            BNSetDisplayName(self.handle, name.as_ptr());
+        }
+    }
+
+    /// The path to the original file on disk, if any.
+    ///
+    /// It may not be present if the BNDB was saved without it or cleared via [`FileMetadata::clear_original_file_path`].
+    ///
+    /// Only prefer this over [`FileMetadata::file_path`] if you require the original binary location.
+    pub fn original_file_path(&self) -> Option<PathBuf> {
+        let raw_name = unsafe {
+            let raw = BNGetOriginalFilename(self.handle);
+            PathBuf::from(BnString::into_string(raw))
+        };
+        // If the original file path is empty, or the original file path is pointing to the same file
+        // as the database itself, we know the original file path does not exist.
+        if raw_name.as_os_str().is_empty()
+            || self.is_database_backed() && raw_name == self.file_path()
+        {
+            None
+        } else {
+            Some(raw_name)
+        }
+    }
+
+    /// Set the original file path inside the database. Useful if it has since been cleared from the
+    /// database, or you have moved the original file.
+    pub fn set_original_file_path(&self, path: &Path) {
+        let name = path.to_cstr();
+        unsafe {
+            BNSetOriginalFilename(self.handle, name.as_ptr());
+        }
+    }
+
+    /// Clear the original file path inside the database. This is useful since the original file path
+    /// may be sensitive information you wish to not share with others.
+    pub fn clear_original_file_path(&self) {
+        unsafe {
+            BNSetOriginalFilename(self.handle, std::ptr::null());
+        }
+    }
+
+    /// The non-filesystem path that describes how this file was derived from the container
+    /// transform system, detailing the sequence of transform steps and selection names.
+    ///
+    /// NOTE: Returns `None` if this [`FileMetadata`] was not processed by the transform system and
+    /// does not differ from that of the "physical" file path reported by [`FileMetadata::file_path`].
+    pub fn virtual_path(&self) -> Option<String> {
+        unsafe {
+            let raw = BNGetVirtualPath(self.handle);
+            let path = BnString::into_string(raw);
+            // For whatever reason the core may report there being a virtual path as the file path.
+            // In the case where that occurs, we wish not to report there being one to the user.
+            match path.is_empty() || path == self.file_path() {
+                true => None,
+                false => Some(path),
+            }
+        }
+    }
+
+    /// Sets the non-filesystem path that describes how this file was derived from the container
+    /// transform system.
+    pub fn set_virtual_path(&self, path: &str) {
+        let path = path.to_cstr();
+        unsafe {
+            BNSetVirtualPath(self.handle, path.as_ptr());
+        }
+    }
+
+    pub fn is_modified(&self) -> bool {
         unsafe { BNIsFileModified(self.handle) }
     }
 
@@ -372,9 +477,10 @@ impl FileMetadata {
 impl Debug for FileMetadata {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("FileMetadata")
-            .field("filename", &self.filename())
+            .field("file_path", &self.file_path())
+            .field("display_name", &self.display_name())
             .field("session_id", &self.session_id())
-            .field("modified", &self.modified())
+            .field("is_modified", &self.is_modified())
             .field("is_analysis_changed", &self.is_analysis_changed())
             .field("current_view_type", &self.current_view())
             .field("current_offset", &self.current_offset())
@@ -385,7 +491,7 @@ impl Debug for FileMetadata {
 
 impl Display for FileMetadata {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.filename())
+        f.write_str(&self.display_name())
     }
 }
 

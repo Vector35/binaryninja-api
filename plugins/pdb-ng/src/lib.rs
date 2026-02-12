@@ -617,7 +617,7 @@ impl CustomDebugInfoParser for PDBParser {
             }
 
             // Try in the same directory as the file
-            let mut potential_path = PathBuf::from(view.file().filename().to_string());
+            let mut potential_path = view.file().file_path();
             potential_path.pop();
             potential_path.push(&info.file_name);
             if potential_path.exists() {

@@ -1,6 +1,6 @@
-use std::fmt::Debug;
 use super::{Remote, RemoteProject};
 use binaryninjacore_sys::*;
+use std::fmt::Debug;
 use std::ptr::NonNull;
 
 use crate::project::folder::ProjectFolder;
@@ -151,6 +151,9 @@ impl ToOwned for RemoteFolder {
         unsafe { RefCountable::inc_ref(self) }
     }
 }
+
+unsafe impl Send for RemoteFolder {}
+unsafe impl Sync for RemoteFolder {}
 
 unsafe impl RefCountable for RemoteFolder {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {

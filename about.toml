@@ -9,4 +9,5 @@ accepted = [
     "LicenseRef-scancode-google-patent-license-fuchsia",
     "MPL-2.0",
     "LicenseRef-scancode-unknown-license-reference",
+    "BSD-2-Clause"
 ]

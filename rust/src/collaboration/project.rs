@@ -897,6 +897,9 @@ impl ToOwned for RemoteProject {
     }
 }
 
+unsafe impl Send for RemoteProject {}
+unsafe impl Sync for RemoteProject {}
+
 unsafe impl RefCountable for RemoteProject {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
         Ref::new(Self {

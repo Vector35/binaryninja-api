@@ -88,10 +88,10 @@ impl TypeParser for CoreTypeParser {
     ) -> Result<String, Vec<TypeParserError>> {
         let source_cstr = BnString::new(source);
         let file_name_cstr = BnString::new(file_name);
-        let options: Vec<_> = options.into_iter().map(|o| o.to_cstr()).collect();
+        let options: Vec<_> = options.iter().map(|o| o.to_cstr()).collect();
         let options_raw: Vec<*const c_char> = options.iter().map(|o| o.as_ptr()).collect();
         let include_directories: Vec<_> = include_directories
-            .into_iter()
+            .iter()
             .map(|d| d.clone().to_cstr())
             .collect();
         let include_directories_raw: Vec<*const c_char> =
@@ -106,9 +106,9 @@ impl TypeParser for CoreTypeParser {
                 file_name_cstr.as_ptr(),
                 platform.handle,
                 existing_types.handle.as_ptr(),
-                options_raw.as_ptr() as *const *const c_char,
+                options_raw.as_ptr(),
                 options_raw.len(),
-                include_directories_raw.as_ptr() as *const *const c_char,
+                include_directories_raw.as_ptr(),
                 include_directories_raw.len(),
                 &mut result,
                 &mut errors,
@@ -137,10 +137,10 @@ impl TypeParser for CoreTypeParser {
     ) -> Result<TypeParserResult, Vec<TypeParserError>> {
         let source_cstr = BnString::new(source);
         let file_name_cstr = BnString::new(file_name);
-        let options: Vec<_> = options.into_iter().map(|o| o.to_cstr()).collect();
+        let options: Vec<_> = options.iter().map(|o| o.to_cstr()).collect();
         let options_raw: Vec<*const c_char> = options.iter().map(|o| o.as_ptr()).collect();
         let include_directories: Vec<_> = include_directories
-            .into_iter()
+            .iter()
             .map(|d| d.clone().to_cstr())
             .collect();
         let include_directories_raw: Vec<*const c_char> =
@@ -156,9 +156,9 @@ impl TypeParser for CoreTypeParser {
                 file_name_cstr.as_ptr(),
                 platform.handle,
                 existing_types.handle.as_ptr(),
-                options_raw.as_ptr() as *const *const c_char,
+                options_raw.as_ptr(),
                 options_raw.len(),
-                include_directories_raw.as_ptr() as *const *const c_char,
+                include_directories_raw.as_ptr(),
                 include_directories_raw.len(),
                 auto_type_source.as_ptr(),
                 &mut raw_result,

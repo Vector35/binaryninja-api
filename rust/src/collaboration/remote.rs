@@ -312,6 +312,10 @@ impl Remote {
         &self,
         mut progress: F,
     ) -> Result<(), ()> {
+        if !self.has_loaded_metadata() {
+            self.load_metadata()?;
+        }
+
         let success = unsafe {
             BNRemotePullProjects(
                 self.handle.as_ptr(),

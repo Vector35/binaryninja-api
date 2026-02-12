@@ -584,6 +584,7 @@ impl PartialEq for RemoteFile {
         self.id() == other.id()
     }
 }
+
 impl Eq for RemoteFile {}
 
 impl ToOwned for RemoteFile {
@@ -593,6 +594,9 @@ impl ToOwned for RemoteFile {
         unsafe { RefCountable::inc_ref(self) }
     }
 }
+
+unsafe impl Send for RemoteFile {}
+unsafe impl Sync for RemoteFile {}
 
 unsafe impl RefCountable for RemoteFile {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {

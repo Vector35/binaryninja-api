@@ -1,6 +1,3 @@
-use binaryninjacore_sys::*;
-use std::fmt::{Debug, Formatter};
-
 use crate::rc::{Guard, RefCountable};
 use crate::types::TypeContainer;
 use crate::{
@@ -11,6 +8,9 @@ use crate::{
     string::{BnString, IntoCStr},
     types::{QualifiedName, QualifiedNameAndType, Type},
 };
+use binaryninjacore_sys::*;
+use std::fmt::{Debug, Formatter};
+use std::hash::{Hash, Hasher};
 use std::path::Path;
 use std::ptr::NonNull;
 
@@ -264,32 +264,53 @@ impl TypeLibrary {
         QualifiedName::free_raw(raw_name);
     }
 
-    /// Directly inserts a named object into the type library's object store.
-    /// This is not done recursively, so care should be taken that types referring to other types
-    /// through NamedTypeReferences are already appropriately prepared.
+    pub fn remove_named_object(&self, name: QualifiedName) {
+        let mut raw_name = QualifiedName::into_raw(name);
+        unsafe { BNRemoveTypeLibraryNamedObject(self.as_raw(), &mut raw_name) }
+        QualifiedName::free_raw(raw_name);
+    }
+
+    /// Directly inserts a named type into the type library's type store.
     ///
-    /// To add types and objects from an existing BinaryView, it is recommended to use
-    /// `export_type_to_library <binaryview.BinaryView.export_type_to_library>`, which will automatically pull in
-    /// all referenced types and record additional dependencies as needed.
+    /// Referenced types will not automatically be added, so make sure to add referenced types to the
+    /// library or use [`TypeLibrary::add_type_source`] to mark the references originating source.
+    ///
+    /// To add types from a binary view, prefer using [`BinaryView::export_type_to_library`] which
+    /// will automatically pull in all referenced types and record additional dependencies as needed.
     pub fn add_named_type(&self, name: QualifiedName, type_: &Type) {
         let mut raw_name = QualifiedName::into_raw(name);
         unsafe { BNAddTypeLibraryNamedType(self.as_raw(), &mut raw_name, type_.handle) }
         QualifiedName::free_raw(raw_name);
     }
 
-    /// Manually flag NamedTypeReferences to the given QualifiedName as originating from another source
-    /// TypeLibrary with the given dependency name.
+    pub fn remove_named_type(&self, name: QualifiedName) {
+        let mut raw_name = QualifiedName::into_raw(name);
+        unsafe { BNRemoveTypeLibraryNamedType(self.as_raw(), &mut raw_name) }
+        QualifiedName::free_raw(raw_name);
+    }
+
+    /// Flag any outgoing named type reference with the given `name` as belonging to the `source` type library.
     ///
-    /// <div class="warning">
-    ///
-    /// Use this api with extreme caution.
-    ///
-    /// </div>
+    /// This allows type libraries to share types between them, automatically pulling in dependencies
+    /// into the binary view as needed.
     pub fn add_type_source(&self, name: QualifiedName, source: &str) {
         let source = source.to_cstr();
         let mut raw_name = QualifiedName::into_raw(name);
         unsafe { BNAddTypeLibraryNamedTypeSource(self.as_raw(), &mut raw_name, source.as_ptr()) }
         QualifiedName::free_raw(raw_name);
+    }
+
+    /// Retrieve the source type library associated with the given named type, if any.
+    pub fn get_named_type_source(&self, name: QualifiedName) -> Option<String> {
+        let mut raw_name = QualifiedName::into_raw(name);
+        let result = unsafe { BNGetTypeLibraryNamedTypeSource(self.as_raw(), &mut raw_name) };
+        QualifiedName::free_raw(raw_name);
+        let str = unsafe { BnString::into_string(result) };
+        if str.is_empty() {
+            None
+        } else {
+            Some(str)
+        }
     }
 
     /// Get the object (function) associated with the given name, if any.
@@ -343,6 +364,20 @@ impl Debug for TypeLibrary {
             // .field("named_objects", &self.named_objects().to_vec())
             // .field("named_types", &self.named_types().to_vec())
             .finish()
+    }
+}
+
+impl PartialEq for TypeLibrary {
+    fn eq(&self, other: &Self) -> bool {
+        self.guid() == other.guid()
+    }
+}
+
+impl Eq for TypeLibrary {}
+
+impl Hash for TypeLibrary {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.guid().hash(state);
     }
 }
 

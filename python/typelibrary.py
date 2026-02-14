@@ -139,6 +139,14 @@ class TypeLibrary:
 		"""Sets the name of a type library instance that has not been finalized"""
 		core.BNSetTypeLibraryName(self.handle, value)
 
+	def duplicate(self) -> 'TypeLibrary':
+		"""
+		Creates a new type library instance with a random GUID and the same data as the current instance.
+
+		:rtype: TypeLibrary
+		"""
+		return TypeLibrary(core.BNDuplicateTypeLibrary(self.handle))
+
 	@property
 	def dependency_name(self) -> Optional[str]:
 		"""

@@ -2189,7 +2189,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     /// Note that the name actually inserted into the view may not match the name as it exists in
     /// the type library in the event of a name conflict. To aid in this, the [`Type`] object
     /// returned is a `NamedTypeReference` to the deconflicted name used.
-    fn import_type_library<T: Into<QualifiedName>>(
+    fn import_type_library_type<T: Into<QualifiedName>>(
         &self,
         name: T,
         lib: Option<&TypeLibrary>,
@@ -2216,7 +2216,7 @@ pub trait BinaryViewExt: BinaryViewBase {
     /// NOTE: If you are implementing a custom [`BinaryView`] and use this method to import object types,
     /// you should then call [BinaryViewExt::record_imported_object_library] with the details of
     /// where the object is located.
-    fn import_type_object<T: Into<QualifiedName>>(
+    fn import_type_library_object<T: Into<QualifiedName>>(
         &self,
         name: T,
         lib: Option<&TypeLibrary>,

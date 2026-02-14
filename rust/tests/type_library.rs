@@ -47,7 +47,7 @@ fn test_applying_type_library() {
     // Type library types don't exist in the view until they are imported.
     // Adding the type library to the view will let you import types from it without necessarily knowing "where" they came from.
     let found_lib_type = view
-        .import_type_library("SIP_ADD_NEWPROVIDER", None)
+        .import_type_library_type("SIP_ADD_NEWPROVIDER", None)
         .expect("SIP_ADD_NEWPROVIDER exists");
     assert_eq!(found_lib_type.width(), 48);
     // Per docs type is returned as a NamedTypeReferenceClass.

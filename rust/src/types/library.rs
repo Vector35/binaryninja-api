@@ -2,6 +2,7 @@ use binaryninjacore_sys::*;
 use std::fmt::{Debug, Formatter};
 
 use crate::rc::{Guard, RefCountable};
+use crate::types::TypeContainer;
 use crate::{
     architecture::CoreArchitecture,
     metadata::Metadata,
@@ -13,6 +14,20 @@ use crate::{
 use std::path::Path;
 use std::ptr::NonNull;
 
+// Used for doc comments
+#[allow(unused_imports)]
+use crate::binary_view::BinaryView;
+
+// TODO: Introduce a FinalizedTypeLibrary that cannot be mutated, so we do not have APIs that are unusable.
+
+/// A [`TypeLibrary`] is a collection of function symbols and their associated types and metadata that
+/// correspond to a shared library or are used in conjunction with a shared library. Type libraries
+/// are the main way external functions in a binary view are annotated and are crucial to allowing
+/// proper analysis of the binary.
+///
+/// Type libraries can share common types between them by forwarding named type references to a specified
+/// source type library. If a type library is made available to a view, it may also pull in other type
+/// libraries, it is important to not treat a type library as a complete source of information.
 #[repr(transparent)]
 pub struct TypeLibrary {
     handle: NonNull<BNTypeLibrary>,
@@ -32,7 +47,12 @@ impl TypeLibrary {
         &mut *self.handle.as_ptr()
     }
 
-    pub fn new_duplicated(&self) -> Ref<Self> {
+    /// Duplicate the type library. This creates a new, non-finalized type library object that shares
+    /// the same underlying name and architecture.
+    ///
+    /// IMPORTANT: This does not *actually* duplicate the type library currently, you still need to
+    /// copy over the named types, named objects, platforms, and metadata.
+    pub fn duplicate(&self) -> Ref<Self> {
         unsafe { Self::ref_from_raw(NonNull::new(BNDuplicateTypeLibrary(self.as_raw())).unwrap()) }
     }
 
@@ -50,21 +70,25 @@ impl TypeLibrary {
         unsafe { Array::new(result, count, ()) }
     }
 
-    /// Decompresses a type library file to a file on disk.
+    /// Decompresses a type library file to a JSON file at the given `output_path`.
     pub fn decompress_to_file(path: &Path, output_path: &Path) -> bool {
         let path = path.to_cstr();
         let output = output_path.to_cstr();
         unsafe { BNTypeLibraryDecompressToFile(path.as_ptr(), output.as_ptr()) }
     }
 
-    /// Loads a finalized type library instance from file
+    /// Loads a finalized type library instance from the given `path`.
+    ///
+    /// The returned type library cannot be modified.
     pub fn load_from_file(path: &Path) -> Option<Ref<TypeLibrary>> {
         let path = path.to_cstr();
         let handle = unsafe { BNLoadTypeLibraryFromFile(path.as_ptr()) };
         NonNull::new(handle).map(|h| unsafe { TypeLibrary::ref_from_raw(h) })
     }
 
-    /// Saves a finalized type library instance to file
+    /// Saves a type library at the given `path` on disk, overwriting any existing file.
+    ///
+    /// The path must be writable, and the parent directory must exist.
     pub fn write_to_file(&self, path: &Path) -> bool {
         let path = path.to_cstr();
         unsafe { BNWriteTypeLibraryToFile(self.as_raw(), path.as_ptr()) }
@@ -92,21 +116,25 @@ impl TypeLibrary {
         NonNull::new(handle).map(|h| unsafe { TypeLibrary::ref_from_raw(h) })
     }
 
-    /// The Architecture this type library is associated with
+    /// The [`CoreArchitecture`] this type library is associated with.
+    ///
+    /// Type libraries will always have a single architecture associated with it. It can have multiple
+    /// platforms associated with it, see [`TypeLibrary::platform_names`] for more detail.
     pub fn arch(&self) -> CoreArchitecture {
         let arch = unsafe { BNGetTypeLibraryArchitecture(self.as_raw()) };
         assert!(!arch.is_null());
         unsafe { CoreArchitecture::from_raw(arch) }
     }
 
-    /// The primary name associated with this type library
+    /// The primary name associated with this type library, this will not be used for importing type
+    /// libraries automatically into a binary view, that is the job of [`TypeLibrary::dependency_name`].
     pub fn name(&self) -> String {
         let result = unsafe { BNGetTypeLibraryName(self.as_raw()) };
         assert!(!result.is_null());
         unsafe { BnString::into_string(result) }
     }
 
-    /// Sets the name of a type library instance that has not been finalized
+    /// Sets the name of a type library that has not been finalized.
     pub fn set_name(&self, value: &str) {
         let value = value.to_cstr();
         unsafe { BNSetTypeLibraryName(self.as_raw(), value.as_ptr()) }
@@ -136,13 +164,13 @@ impl TypeLibrary {
         unsafe { BnString::into_string(result) }
     }
 
-    /// Sets the GUID of a type library instance that has not been finalized
+    /// Sets the GUID of a type library instance that has not been finalized.
     pub fn set_guid(&self, value: &str) {
         let value = value.to_cstr();
         unsafe { BNSetTypeLibraryGuid(self.as_raw(), value.as_ptr()) }
     }
 
-    /// A list of extra names that will be considered a match by [Platform::get_type_libraries_by_name]
+    /// A list of extra names that will be considered a match by [`Platform::get_type_libraries_by_name`]
     pub fn alternate_names(&self) -> Array<BnString> {
         let mut count = 0;
         let result = unsafe { BNGetTypeLibraryAlternateNames(self.as_raw(), &mut count) };
@@ -170,76 +198,66 @@ impl TypeLibrary {
 
     /// Associate a platform with a type library instance that has not been finalized.
     ///
-    /// This will cause the library to be searchable by [Platform::get_type_libraries_by_name]
+    /// This will cause the library to be searchable by [`Platform::get_type_libraries_by_name`]
     /// when loaded.
     ///
-    /// This does not have side affects until finalization of the type library.
+    /// This does not have side effects until finalization of the type library.
     pub fn add_platform(&self, plat: &Platform) {
         unsafe { BNAddTypeLibraryPlatform(self.as_raw(), plat.handle) }
     }
 
-    /// Clears the list of platforms associated with a type library instance that has not been finalized
+    /// Clears the list of platforms associated with a type library instance that has not been finalized.
     pub fn clear_platforms(&self) {
         unsafe { BNClearTypeLibraryPlatforms(self.as_raw()) }
     }
 
-    /// Flags a newly created type library instance as finalized and makes it available for Platform and Architecture
-    /// type library searches
+    /// Flags a newly created type library instance as finalized and makes it available for Platform
+    /// and Architecture type library searches.
     pub fn finalize(&self) -> bool {
         unsafe { BNFinalizeTypeLibrary(self.as_raw()) }
     }
 
-    /// Retrieves a metadata associated with the given key stored in the type library
+    /// Retrieves the metadata associated with the given key stored in the type library.
     pub fn query_metadata(&self, key: &str) -> Option<Ref<Metadata>> {
         let key = key.to_cstr();
         let result = unsafe { BNTypeLibraryQueryMetadata(self.as_raw(), key.as_ptr()) };
         (!result.is_null()).then(|| unsafe { Metadata::ref_from_raw(result) })
     }
 
-    /// Stores an object for the given key in the current type library. Objects stored using
-    /// `store_metadata` can be retrieved from any reference to the library. Objects stored are not arbitrary python
-    /// objects! The values stored must be able to be held in a Metadata object. See [Metadata]
-    /// for more information. Python objects could obviously be serialized using pickle but this intentionally
-    /// a task left to the user since there is the potential security issues.
+    /// Stores a [`Metadata`] object in the given key for the type library.
     ///
     /// This is primarily intended as a way to store Platform specific information relevant to BinaryView implementations;
-    /// for example the PE BinaryViewType uses type library metadata to retrieve ordinal information, when available.
-    ///
-    /// * `key` - key value to associate the Metadata object with
-    /// * `md` - object to store.
+    /// for example, the PE BinaryViewType uses type library metadata to retrieve ordinal information, when available.
     pub fn store_metadata(&self, key: &str, md: &Metadata) {
         let key = key.to_cstr();
         unsafe { BNTypeLibraryStoreMetadata(self.as_raw(), key.as_ptr(), md.handle) }
     }
 
-    /// Removes the metadata associated with key from the current type library.
+    /// Removes the metadata associated with key from the type library.
     pub fn remove_metadata(&self, key: &str) {
         let key = key.to_cstr();
         unsafe { BNTypeLibraryRemoveMetadata(self.as_raw(), key.as_ptr()) }
     }
 
-    /// Retrieves the metadata associated with the current type library.
+    /// Retrieves the metadata associated with the type library.
     pub fn metadata(&self) -> Ref<Metadata> {
         let md_handle = unsafe { BNTypeLibraryGetMetadata(self.as_raw()) };
         assert!(!md_handle.is_null());
         unsafe { Metadata::ref_from_raw(md_handle) }
     }
 
-    // TODO: implement TypeContainer
-    // /// Type Container for all TYPES within the Type Library. Objects are not included.
-    // /// The Type Container's Platform will be the first platform associated with the Type Library.
-    // pub fn type_container(&self) -> TypeContainer {
-    //     let result = unsafe{ BNGetTypeLibraryTypeContainer(self.as_raw())};
-    //     unsafe{TypeContainer::from_raw(NonNull::new(result).unwrap())}
-    // }
+    pub fn type_container(&self) -> TypeContainer {
+        let result = unsafe { BNGetTypeLibraryTypeContainer(self.as_raw()) };
+        unsafe { TypeContainer::from_raw(NonNull::new(result).unwrap()) }
+    }
 
     /// Directly inserts a named object into the type library's object store.
-    /// This is not done recursively, so care should be taken that types referring to other types
-    /// through NamedTypeReferences are already appropriately prepared.
     ///
-    /// To add types and objects from an existing BinaryView, it is recommended to use
-    /// `export_object_to_library <binaryview.BinaryView.export_object_to_library>`, which will automatically pull in
-    /// all referenced types and record additional dependencies as needed.
+    /// Referenced types will not automatically be added, so make sure to add referenced types to the
+    /// library or use [`TypeLibrary::add_type_source`] to mark the references originating source.
+    ///
+    /// To add objects from a binary view, prefer using [`BinaryView::export_object_to_library`] which
+    /// will automatically pull in all referenced types and record additional dependencies as needed.
     pub fn add_named_object(&self, name: QualifiedName, type_: &Type) {
         let mut raw_name = QualifiedName::into_raw(name);
         unsafe { BNAddTypeLibraryNamedObject(self.as_raw(), &mut raw_name, type_.handle) }
@@ -274,9 +292,9 @@ impl TypeLibrary {
         QualifiedName::free_raw(raw_name);
     }
 
-    /// Direct extracts a reference to a contained object -- when
-    /// attempting to extract types from a library into a BinaryView, consider using
-    /// `import_library_object <binaryview.BinaryView.import_library_object>` instead.
+    /// Get the object (function) associated with the given name, if any.
+    ///
+    /// Prefer [`BinaryView::import_type_library_object`] as it will recursively import types required.
     pub fn get_named_object(&self, name: QualifiedName) -> Option<Ref<Type>> {
         let mut raw_name = QualifiedName::into_raw(name);
         let t = unsafe { BNGetTypeLibraryNamedObject(self.as_raw(), &mut raw_name) };
@@ -284,9 +302,9 @@ impl TypeLibrary {
         (!t.is_null()).then(|| unsafe { Type::ref_from_raw(t) })
     }
 
-    /// Direct extracts a reference to a contained type -- when
-    /// attempting to extract types from a library into a BinaryView, consider using
-    /// `import_library_type <binaryview.BinaryView.import_library_type>` instead.
+    /// Get the type associated with the given name, if any.
+    ///
+    /// Prefer [`BinaryView::import_type_library_type`] as it will recursively import types required.
     pub fn get_named_type(&self, name: QualifiedName) -> Option<Ref<Type>> {
         let mut raw_name = QualifiedName::into_raw(name);
         let t = unsafe { BNGetTypeLibraryNamedType(self.as_raw(), &mut raw_name) };
@@ -294,7 +312,7 @@ impl TypeLibrary {
         (!t.is_null()).then(|| unsafe { Type::ref_from_raw(t) })
     }
 
-    /// A dict containing all named objects (functions, exported variables) provided by a type library
+    /// The list of all named objects provided by a type library
     pub fn named_objects(&self) -> Array<QualifiedNameAndType> {
         let mut count = 0;
         let result = unsafe { BNGetTypeLibraryNamedObjects(self.as_raw(), &mut count) };
@@ -302,7 +320,7 @@ impl TypeLibrary {
         unsafe { Array::new(result, count, ()) }
     }
 
-    /// A dict containing all named types provided by a type library
+    /// The list of all named types provided by a type library
     pub fn named_types(&self) -> Array<QualifiedNameAndType> {
         let mut count = 0;
         let result = unsafe { BNGetTypeLibraryNamedTypes(self.as_raw(), &mut count) };

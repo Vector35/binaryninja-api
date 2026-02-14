@@ -374,6 +374,16 @@ class TypeLibrary:
 			raise ValueError("type must be a Type")
 		core.BNAddTypeLibraryNamedObject(self.handle, name._to_core_struct(), type.handle)
 
+	def remove_named_object(self, name: 'types.QualifiedName') -> None:
+		"""
+		`remove_named_object` removes a named object from the type library's object store.
+		This does not remove any types that are referenced by the object, only the object itself.
+		
+		:param QualifiedName name:
+		:rtype: None
+		"""
+		core.BNRemoveTypeLibraryNamedObject(self.handle, name._to_core_struct())
+
 	def add_named_type(self, name: 'types.QualifiedNameType', type: 'types.Type') -> None:
 		"""
 		`add_named_type` directly inserts a named object into the type library's object store.
@@ -394,6 +404,13 @@ class TypeLibrary:
 		if not isinstance(type, types.Type):
 			raise ValueError("parameter type must be a Type")
 		core.BNAddTypeLibraryNamedType(self.handle, name._to_core_struct(), type.handle)
+
+	def remove_named_type(self, name: 'types.QualifiedName') -> None:
+		"""
+		`remove_named_type` removes a named type from the type library's type store.
+		This does not remove any objects that reference the type, only the type itself.
+		"""
+		core.BNRemoveTypeLibraryNamedType(self.handle, name._to_core_struct())
 
 	def add_type_source(self, name: types.QualifiedName, source: str) -> None:
 		"""

@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 157
+#define BN_CURRENT_CORE_ABI_VERSION 158
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 157
+#define BN_MINIMUM_CORE_ABI_VERSION 158
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -6853,11 +6853,14 @@ extern "C"
 	BINARYNINJACOREAPI BNTypeContainer* BNGetTypeLibraryTypeContainer(BNTypeLibrary* lib);
 
 	BINARYNINJACOREAPI void BNAddTypeLibraryNamedObject(BNTypeLibrary* lib, BNQualifiedName* name, BNType* type);
+	BINARYNINJACOREAPI void BNRemoveTypeLibraryNamedObject(BNTypeLibrary* lib, BNQualifiedName* name);
 	BINARYNINJACOREAPI void BNAddTypeLibraryNamedType(BNTypeLibrary* lib, BNQualifiedName* name, BNType* type);
+	BINARYNINJACOREAPI void BNRemoveTypeLibraryNamedType(BNTypeLibrary* lib, BNQualifiedName* name);
 	BINARYNINJACOREAPI void BNAddTypeLibraryNamedTypeSource(BNTypeLibrary* lib, BNQualifiedName* name, const char* source);
 
 	BINARYNINJACOREAPI BNType* BNGetTypeLibraryNamedObject(BNTypeLibrary* lib, BNQualifiedName* name);
 	BINARYNINJACOREAPI BNType* BNGetTypeLibraryNamedType(BNTypeLibrary* lib, BNQualifiedName* name);
+	BINARYNINJACOREAPI char* BNGetTypeLibraryNamedTypeSource(BNTypeLibrary* lib, BNQualifiedName* name);
 
 	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetTypeLibraryNamedObjects(BNTypeLibrary* lib, size_t* count);
 	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetTypeLibraryNamedTypes(BNTypeLibrary* lib, size_t* count);

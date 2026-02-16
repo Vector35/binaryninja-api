@@ -405,13 +405,13 @@ class BasicBlockAnalysisContext:
 				direct_no_return_calls[i].address = loc.addr
 			core.BNAnalyzeBasicBlocksContextSetDirectNoReturnCalls(self._handle, direct_no_return_calls, total)
 
-        if self._halted_disassembly_addresses:
-            total = len(self._halted_disassembly_addresses)
-            halted_addresses = (core.BNArchitectureAndAddress * total)()
-            for i, loc in enumerate(self._halted_disassembly_addresses):
-                halted_addresses[i].arch = loc.arch.handle
-                halted_addresses[i].address = loc.addr
-            core.BNAnalyzeBasicBlocksContextSetHaltedDisassemblyAddresses(self._handle, halted_addresses, total)
+		if self._halted_disassembly_addresses:
+			total = len(self._halted_disassembly_addresses)
+			halted_addresses = (core.BNArchitectureAndAddress * total)()
+			for i, loc in enumerate(self._halted_disassembly_addresses):
+				halted_addresses[i].arch = loc.arch.handle
+				halted_addresses[i].address = loc.addr
+			core.BNAnalyzeBasicBlocksContextSetHaltedDisassemblyAddresses(self._handle, halted_addresses, total)
 
 		self._handle.maxSizeReached = ctypes.c_bool(self._max_size_reached)
 		if self._contextual_returns_dirty:

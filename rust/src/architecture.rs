@@ -582,6 +582,22 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     fn handle(&self) -> Self::Handle;
 }
 
+pub trait ArchitectureWithFunctionContext: Architecture {
+    type FunctionArchContext: 'static;
+
+    #[allow(clippy::boxed_local)]
+    fn free_typed_function_arch_context(&self, _context: Box<Self::FunctionArchContext>) {}
+
+    fn instruction_text_with_typed_context(
+        &self,
+        data: &[u8],
+        addr: u64,
+        _context: Option<&Self::FunctionArchContext>,
+    ) -> Option<(usize, Vec<InstructionTextToken>)> {
+        self.instruction_text(data, addr)
+    }
+}
+
 pub struct FunctionLifterContext {
     pub(crate) handle: *mut BNFunctionLifterContext,
 }
@@ -591,6 +607,20 @@ impl FunctionLifterContext {
         debug_assert!(!handle.is_null());
 
         FunctionLifterContext { handle }
+    }
+
+    pub fn get_function_arch_context<A: ArchitectureWithFunctionContext>(
+        &self,
+        _arch: &A,
+    ) -> Option<&A::FunctionArchContext> {
+        unsafe {
+            let ptr = (*self.handle).functionArchContext;
+            if ptr.is_null() {
+                None
+            } else {
+                Some(&*(ptr as *const A::FunctionArchContext))
+            }
+        }
     }
 }
 
@@ -1339,6 +1369,15 @@ pub fn register_architecture<A, F>(name: &str, func: F) -> &'static A
 where
     A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync + Sized,
     F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
+{
+    register_architecture_impl(name, func, |_| {})
+}
+
+fn register_architecture_impl<A, F, C>(name: &str, func: F, customize: C) -> &'static A
+where
+    A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync + Sized,
+    F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
+    C: FnOnce(&mut BNCustomArchitecture),
 {
     #[repr(C)]
     struct ArchitectureBuilder<A, F>
@@ -2585,6 +2624,8 @@ where
         skipAndReturnValue: Some(cb_skip_and_return_value::<A>),
     };
 
+    customize(&mut custom_arch);
+
     unsafe {
         let res = BNRegisterArchitecture(name.as_ptr(), &mut custom_arch as *mut _);
 
@@ -2592,6 +2633,82 @@ where
 
         (*raw).arch.assume_init_mut()
     }
+}
+
+pub fn register_architecture_with_function_context<A, F>(name: &str, func: F) -> &'static A
+where
+    A: 'static
+        + ArchitectureWithFunctionContext<Handle = CustomArchitectureHandle<A>>
+        + Send
+        + Sync
+        + Sized,
+    F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
+{
+    unsafe extern "C" fn cb_free_function_arch_context_typed<A>(
+        ctxt: *mut c_void,
+        context: *mut c_void,
+    ) where
+        A: 'static
+            + ArchitectureWithFunctionContext<Handle = CustomArchitectureHandle<A>>
+            + Send
+            + Sync,
+    {
+        if context.is_null() {
+            return;
+        }
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let boxed = unsafe { Box::from_raw(context as *mut A::FunctionArchContext) };
+        custom_arch.free_typed_function_arch_context(boxed);
+    }
+
+    unsafe extern "C" fn cb_get_instruction_text_with_context_typed<A>(
+        ctxt: *mut c_void,
+        data: *const u8,
+        addr: u64,
+        len: *mut usize,
+        context: *mut c_void,
+        result: *mut *mut BNInstructionTextToken,
+        count: *mut usize,
+    ) -> bool
+    where
+        A: 'static
+            + ArchitectureWithFunctionContext<Handle = CustomArchitectureHandle<A>>
+            + Send
+            + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let data = unsafe { std::slice::from_raw_parts(data, *len) };
+        let result = unsafe { &mut *result };
+        let typed_context: Option<&A::FunctionArchContext> = if context.is_null() {
+            None
+        } else {
+            Some(unsafe { &*(context as *const A::FunctionArchContext) })
+        };
+
+        let Some((res_size, res_tokens)) =
+            custom_arch.instruction_text_with_typed_context(data, addr, typed_context)
+        else {
+            return false;
+        };
+
+        let res_tokens: Box<[BNInstructionTextToken]> = res_tokens
+            .into_iter()
+            .map(InstructionTextToken::into_raw)
+            .collect();
+        unsafe {
+            let res_tokens = Box::leak(res_tokens);
+            *result = res_tokens.as_mut_ptr();
+            *count = res_tokens.len();
+            *len = res_size;
+        }
+        true
+    }
+
+    register_architecture_impl(name, func, |custom_arch| {
+        custom_arch.freeFunctionArchContext = Some(cb_free_function_arch_context_typed::<A>);
+        custom_arch.getInstructionTextWithContext =
+            Some(cb_get_instruction_text_with_context_typed::<A>);
+    })
 }
 
 #[derive(Debug)]

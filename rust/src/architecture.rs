@@ -252,12 +252,6 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         unsafe { BNArchitectureDefaultLiftFunction(function.handle, context.handle) }
     }
 
-    /// Free the function architecture context
-    ///
-    /// NOTE: Only implement this method in architecture plugins that allocate a context in
-    /// analyze_basic_blocks
-    fn free_function_arch_context(&self, _context: Option<NonNull<c_void>>) {}
-
     /// Fallback flag value calculation path. This method is invoked when the core is unable to
     /// recover the flag using semantics and resorts to emitting instructions that explicitly set each
     /// observed flag to the value of an expression returned by this function.
@@ -583,10 +577,7 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
 }
 
 pub trait ArchitectureWithFunctionContext: Architecture {
-    type FunctionArchContext: 'static;
-
-    #[allow(clippy::boxed_local)]
-    fn free_typed_function_arch_context(&self, _context: Box<Self::FunctionArchContext>) {}
+    type FunctionArchContext: Send + Sync + 'static;
 
     fn instruction_text_with_typed_context(
         &self,
@@ -846,8 +837,6 @@ impl Architecture for CoreArchitecture {
     ) -> bool {
         unsafe { BNArchitectureLiftFunction(self.handle, function.handle, context.handle) }
     }
-
-    fn free_function_arch_context(&self, _context: Option<NonNull<c_void>>) {}
 
     fn flag_write_llil<'a>(
         &self,
@@ -1625,15 +1614,6 @@ where
         let mut context: FunctionLifterContext =
             unsafe { FunctionLifterContext::from_raw(context) };
         custom_arch.lift_function(function, &mut context)
-    }
-
-    extern "C" fn cb_free_function_arch_context<A>(ctxt: *mut c_void, context: *mut c_void)
-    where
-        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
-    {
-        let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let context = NonNull::new(context);
-        custom_arch.free_function_arch_context(context);
     }
 
     extern "C" fn cb_reg_name<A>(ctxt: *mut c_void, reg: u32) -> *mut c_char
@@ -2557,7 +2537,7 @@ where
         getInstructionLowLevelIL: Some(cb_instruction_llil::<A>),
         analyzeBasicBlocks: Some(cb_analyze_basic_blocks::<A>),
         liftFunction: Some(cb_lift_function::<A>),
-        freeFunctionArchContext: Some(cb_free_function_arch_context::<A>),
+        freeFunctionArchContext: None,
 
         getRegisterName: Some(cb_reg_name::<A>),
         getFlagName: Some(cb_flag_name::<A>),
@@ -2645,7 +2625,7 @@ where
     F: FnOnce(CustomArchitectureHandle<A>, CoreArchitecture) -> A,
 {
     unsafe extern "C" fn cb_free_function_arch_context_typed<A>(
-        ctxt: *mut c_void,
+        _ctxt: *mut c_void,
         context: *mut c_void,
     ) where
         A: 'static
@@ -2656,9 +2636,9 @@ where
         if context.is_null() {
             return;
         }
-        let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let boxed = unsafe { Box::from_raw(context as *mut A::FunctionArchContext) };
-        custom_arch.free_typed_function_arch_context(boxed);
+        // The context was allocated via Box::into_raw in set_function_arch_context,
+        // so we reconstruct the Box here and let it drop.
+        let _ = unsafe { Box::from_raw(context as *mut A::FunctionArchContext) };
     }
 
     unsafe extern "C" fn cb_get_instruction_text_with_context_typed<A>(

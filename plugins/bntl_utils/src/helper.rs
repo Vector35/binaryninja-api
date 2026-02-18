@@ -8,7 +8,7 @@ pub fn path_to_type_libraries(path: &Path) -> Vec<Ref<TypeLibrary>> {
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())
-        .filter(|e| e.path().extension().map_or(false, |ext| ext == "bntl"))
+        .filter(|e| e.path().extension().is_some_and(|ext| ext == "bntl"))
         .filter_map(|e| TypeLibrary::load_from_file(e.path()))
         .collect::<Vec<_>>()
 }

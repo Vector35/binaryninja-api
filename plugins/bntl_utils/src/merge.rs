@@ -101,12 +101,11 @@ fn merge_structures(s1: &Structure, s2: &Structure) -> Option<Ref<Structure>> {
         for m in &s.members() {
             members
                 .entry(m.offset)
-                .and_modify(|(existing_name, existing_ty)| {
+                .and_modify(|(_existing_name, existing_ty)| {
                     // Update type if merge succeeds
                     if let Some(merged) = merge_recursive(existing_ty, &m.ty.contents) {
                         *existing_ty = merged;
                     }
-                    // Name collision: Keep existing (s1/first wins), ignoring m.name
                 })
                 .or_insert_with(|| (m.name.clone(), m.ty.contents.to_owned()));
         }

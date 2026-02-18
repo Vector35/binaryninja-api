@@ -202,7 +202,7 @@ impl BnParsedUrl {
                             .get_file_by_id(&item_guid_str)
                             .ok()
                             .flatten()
-                            .ok_or_else(|| BnResourceError::ItemNotFound(item_guid_str))?;
+                            .ok_or(BnResourceError::ItemNotFound(item_guid_str))?;
 
                         Ok(BnResource::RemoteProjectFile(file))
                     }

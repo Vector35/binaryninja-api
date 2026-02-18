@@ -283,7 +283,7 @@ impl WindowsMetadataTranslator {
 
         let nested: Result<HashMap<String, _>, _> = structure
             .index()
-            .nested(structure.clone())
+            .nested(*structure)
             .map(|n| {
                 // TODO: Are all nested fields a struct?
                 let nested_ty = self.translate_struct(&n)?;
@@ -372,11 +372,7 @@ impl WindowsMetadataTranslator {
 
         let mut constants = Vec::new();
         for field in class.fields() {
-            if let Some(constant) = field
-                .constant()
-                .map(|c| self.value_to_u64(&c.value()))
-                .flatten()
-            {
+            if let Some(constant) = field.constant().and_then(|c| self.value_to_u64(&c.value())) {
                 constants.push(MetadataConstantInfo {
                     name: field.name().to_string(),
                     namespace: namespace.clone(),
@@ -525,8 +521,7 @@ impl WindowsMetadataTranslator {
             }
             let variant_constant = variant
                 .constant()
-                .map(|c| self.value_to_u64(&c.value()))
-                .flatten()
+                .and_then(|c| self.value_to_u64(&c.value()))
                 .unwrap_or(last_constant);
             let variant_name = variant.name().to_string();
             variants.push((variant_name, variant_constant));

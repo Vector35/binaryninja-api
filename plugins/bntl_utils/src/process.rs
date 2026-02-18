@@ -144,7 +144,7 @@ impl ProcessedData {
     }
 
     pub fn finalized(mut self, default_name: &str) -> Self {
-        self.deduplicate_types(&default_name);
+        self.deduplicate_types(default_name);
         // TODO: Run remap.
         self.prune()
     }
@@ -209,7 +209,7 @@ impl ProcessedData {
                     merged_type_library.add_alternate_name(alt_name);
                 }
                 for platform_name in &tl.platform_names() {
-                    if let Some(platform) = Platform::by_name(&platform_name) {
+                    if let Some(platform) = Platform::by_name(platform_name) {
                         merged_type_library.add_platform(&platform);
                     } else {
                         // TODO: Upgrade this to an error?
@@ -375,14 +375,13 @@ impl ProcessedData {
                 for type_library in type_libraries {
                     // If the default type library does not have the platform, it will not be pulled in.
                     for platform_name in &type_library.platform_names() {
-                        if let Some(platform) = Platform::by_name(&platform_name) {
+                        if let Some(platform) = Platform::by_name(platform_name) {
                             default_type_library.add_platform(&platform);
                         }
                     }
 
                     type_library.remove_named_type(qualified_name.clone());
-                    type_library
-                        .add_type_source(qualified_name.clone(), &default_type_library_name);
+                    type_library.add_type_source(qualified_name.clone(), default_type_library_name);
                 }
             } else {
                 // TODO: Probably demote this to debug, since they might just be disparate types.
@@ -480,7 +479,7 @@ impl TypeLibProcessor {
 
     pub fn process(&self, path: &Path) -> Result<ProcessedData, ProcessingError> {
         match path.extension() {
-            Some(ext) if ext == "bntl" => self.process_type_library(&path),
+            Some(ext) if ext == "bntl" => self.process_type_library(path),
             Some(ext) if ext == "h" || ext == "hpp" => self.process_source(path),
             // NOTE: A typical processor will not go down this path where we only provide a single
             // winmd file to be processed. You almost always want to process multiple winmd files,
@@ -603,18 +602,18 @@ impl TypeLibProcessor {
         project_file: &ProjectFile,
     ) -> Result<ProcessedData, ProcessingError> {
         let file_name = project_file.name();
-        let extension = file_name.split('.').last();
+        let extension = file_name.split('.').next_back();
         let path = project_file
             .path_on_disk()
             .ok_or_else(|| ProcessingError::NoPathToProjectFile(project_file.to_owned()))?;
         match extension {
-            Some(ext) if ext == "bntl" => self.process_type_library(&path),
+            Some("bntl") => self.process_type_library(&path),
             Some(ext) if ext == "h" || ext == "hpp" => self.process_source(&path),
             // NOTE: A typical processor will not go down this path where we only provide a single
             // winmd file to be processed. You almost always want to process multiple winmd files,
             // which can be done by passing a directory with the relevant winmd files.
-            Some(ext) if ext == "winmd" => self.process_winmd(&[path]),
-            Some(ext) if ext == "tbd" => self.process_tbd(&path),
+            Some("winmd") => self.process_winmd(&[path]),
+            Some("tbd") => self.process_tbd(&path),
             _ => {
                 // If the file cannot be parsed, it should be skipped to avoid a load error.
                 if !is_parsable(&path) {
@@ -623,7 +622,7 @@ impl TypeLibProcessor {
 
                 let settings_str = self.analysis_settings.to_string();
                 let file = binaryninja::load_project_file_with_progress(
-                    &project_file,
+                    project_file,
                     false,
                     Some(settings_str),
                     |_pos, _total| {
@@ -654,7 +653,7 @@ impl TypeLibProcessor {
 
         let settings_str = self.analysis_settings.to_string();
         let file = binaryninja::load_with_options_and_progress(
-            &path,
+            path,
             false,
             Some(settings_str),
             |_pos, _total| {
@@ -800,10 +799,10 @@ impl TypeLibProcessor {
             type_library.store_metadata("ordinals_10_0", &map_md);
         }
 
-        let mut processed_data = self.process_external_libraries(&view)?;
+        let mut processed_data = self.process_external_libraries(view)?;
         processed_data.type_libraries.insert(type_library);
         if let Some(api_set_section) = view.section_by_name(".apiset") {
-            let processed_api_set = self.process_api_set(&view, &api_set_section)?;
+            let processed_api_set = self.process_api_set(view, &api_set_section)?;
             tracing::info!(
                 "Found {} api set libraries in '{}', adding alternative names...",
                 processed_api_set.type_libraries.len(),
@@ -905,7 +904,7 @@ impl TypeLibProcessor {
         let section_bytes = view
             .read_buffer(section.start(), section.len())
             .ok_or_else(|| ProcessingError::BinaryViewRead(section.start(), section.len()))?;
-        let api_set_map = ApiSetMap::try_from_apiset_section_bytes(&section_bytes.get_data())?;
+        let api_set_map = ApiSetMap::try_from_apiset_section_bytes(section_bytes.get_data())?;
 
         let mut target_map: HashMap<String, HashSet<String>> = HashMap::new();
         for entry in api_set_map.namespace_entries()? {
@@ -944,7 +943,7 @@ impl TypeLibProcessor {
     /// during the [`ProcessedData::merge`] step. This lets us add overrides like extra platforms.
     pub fn process_type_library(&self, path: &Path) -> Result<ProcessedData, ProcessingError> {
         self.state.set_file_state(path.to_owned(), false);
-        let finalized_type_library = TypeLibrary::load_from_file(&path)
+        let finalized_type_library = TypeLibrary::load_from_file(path)
             .ok_or_else(|| ProcessingError::InvalidTypeLibrary(path.to_owned()))?;
         self.state.set_file_state(path.to_owned(), true);
         Ok(ProcessedData::new(vec![finalized_type_library]))
@@ -957,8 +956,7 @@ impl TypeLibProcessor {
             CoreTypeParser::parser_by_name("ClangTypeParser").expect("Failed to get clang parser");
         let platform_type_container = platform.type_container();
 
-        let header_contents =
-            std::fs::read_to_string(path).map_err(|e| ProcessingError::FileRead(e))?;
+        let header_contents = std::fs::read_to_string(path).map_err(ProcessingError::FileRead)?;
 
         let file_name = path
             .file_name()
@@ -982,7 +980,7 @@ impl TypeLibProcessor {
                 &include_dirs,
                 "",
             )
-            .map_err(|e| ProcessingError::TypeParsingFailed(e))?;
+            .map_err(ProcessingError::TypeParsingFailed)?;
 
         let type_library = TypeLibrary::new(platform.arch(), &self.default_dependency_name);
         type_library.add_platform(&platform);
@@ -1000,7 +998,7 @@ impl TypeLibProcessor {
     /// most important for us is the list of exported symbols, which we can use to relocate objects
     /// in the default type library (specified by `default_dependency_name`) to the correct type library.
     pub fn process_tbd(&self, path: &Path) -> Result<ProcessedData, ProcessingError> {
-        let mut file = File::open(path).map_err(|e| ProcessingError::FileRead(e))?;
+        let mut file = File::open(path).map_err(ProcessingError::FileRead)?;
         let mut type_libraries = Vec::new();
         for tbd_info in parse_tbd_info(&mut file).unwrap() {
             let install_path = PathBuf::from(tbd_info.install_name);
@@ -1066,7 +1064,7 @@ impl TypeLibProcessor {
         }
         let platform = self.default_platform()?;
         let type_libraries = WindowsMetadataImporter::new()
-            .with_files(&paths)
+            .with_files(paths)
             .map_err(ProcessingError::WinMdFailedImport)?
             .import(&platform)
             .map_err(ProcessingError::WinMdFailedImport)?;
@@ -1090,8 +1088,8 @@ pub fn is_parsable(path: &Path) -> bool {
     if path.extension() == Some(OsStr::new("pdb")) {
         return false;
     }
-    let mut metadata = FileMetadata::with_file_path(&path);
-    let Ok(view) = BinaryView::from_path(&mut metadata, path) else {
+    let mut metadata = FileMetadata::with_file_path(path);
+    let Ok(view) = BinaryView::from_path(&metadata, path) else {
         return false;
     };
     // If any view type parses this file, consider it for this source.

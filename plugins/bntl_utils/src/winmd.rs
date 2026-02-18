@@ -70,6 +70,7 @@ impl WindowsMetadataImporter {
         Ok(self)
     }
 
+    #[allow(dead_code)]
     pub fn with_platform(mut self, platform: &Platform) -> Self {
         // TODO: platform.address_size()
         self.address_size = platform.arch().address_size();
@@ -115,10 +116,10 @@ impl WindowsMetadataImporter {
             til.add_platform(platform);
             til.set_dependency_name(&type_lib_name);
             for ty in &info.metadata.types {
-                self.import_type(&til, &ty)?;
+                self.import_type(&til, ty)?;
             }
             for func in &info.metadata.functions {
-                self.import_function(&til, &func)?;
+                self.import_function(&til, func)?;
             }
             for (name, library_name) in &info.external_references {
                 let qualified_name = QualifiedName::from(name.clone());
@@ -314,9 +315,7 @@ impl WindowsMetadataImporter {
                 union.structure_type(StructureType::UnionStructureType);
 
                 let mut max_alignment = 0usize;
-                // We need to look ahead to figure out when bitfields end and adjust current_byte_offset accordingly.
-                let mut field_iter = fields.iter().peekable();
-                while let Some(field) = field_iter.next() {
+                for field in fields {
                     let field_ty = self.convert_type_kind(&field.ty)?;
                     let field_alignment = self.type_kind_alignment(&field.ty)?;
                     max_alignment = max_alignment.max(field_alignment);

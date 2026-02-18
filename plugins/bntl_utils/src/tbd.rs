@@ -8,7 +8,8 @@ use std::str::FromStr;
 pub fn parse_tbd_info(data: &mut impl Read) -> Result<Vec<TbdInfo>, serde_saphyr::Error> {
     let mut documents = Vec::new();
     for file in serde_saphyr::read::<_, TbdFile>(data) {
-        if let Some(info) = TbdInfo::try_from(file?).ok() {
+        // TODO: Float errors to caller
+        if let Ok(info) = TbdInfo::try_from(file?) {
             documents.push(info);
         }
     }
@@ -301,8 +302,8 @@ impl TbdTarget {
             .iter()
             .map(|a| {
                 Ok(TbdTarget {
-                    arch: a.clone(),
-                    platform: platform.clone(),
+                    arch: *a,
+                    platform: *platform,
                 })
             })
             .collect()

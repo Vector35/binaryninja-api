@@ -7,7 +7,6 @@ use binaryninja::command::{Command, ProjectCommand};
 use binaryninja::interaction::{Form, FormInputField, MessageBoxButtonSet, MessageBoxIcon};
 use binaryninja::platform::Platform;
 use binaryninja::project::Project;
-use binaryninja::types::TypeLibrary;
 use std::thread;
 
 pub struct CreateFromCurrentView;
@@ -226,10 +225,10 @@ impl CreateFromProject {
 
         let background_task = BackgroundTask::new("Processing started...", true);
         new_processing_state_background_thread(background_task.clone(), processor.state());
-        let data = processor.process_project(&project);
+        let data = processor.process_project(project);
         background_task.finish();
 
-        let mut finalized_data = match data {
+        let finalized_data = match data {
             // Prune off empty type libraries, no need to save them.
             Ok(data) => data.finalized(&default_name),
             Err(err) => {

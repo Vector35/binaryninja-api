@@ -58,7 +58,7 @@ impl TILDump {
 
         let platform_name_str = platform_name.to_string();
         let platform = Platform::by_name(&platform_name_str)
-            .ok_or_else(|| TILDumpError::PlatformNotFound(platform_name_str))?;
+            .ok_or(TILDumpError::PlatformNotFound(platform_name_str))?;
 
         empty_bv.set_default_platform(&platform);
 

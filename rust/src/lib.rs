@@ -108,6 +108,7 @@ use string::BnString;
 use string::IntoCStr;
 use string::IntoJson;
 
+use crate::project::file::ProjectFile;
 pub use binaryninjacore_sys::BNDataFlowQueryOption as DataFlowQueryOption;
 pub use binaryninjacore_sys::BNEndianness as Endianness;
 pub use binaryninjacore_sys::BNILBranchDependence as ILBranchDependence;
@@ -257,6 +258,54 @@ where
     let handle = unsafe {
         BNLoadBinaryView(
             bv.handle as *mut _,
+            update_analysis_and_wait,
+            options_or_default.as_ptr() as *mut c_char,
+            Some(P::cb_progress_callback),
+            &mut progress as *mut P as *mut c_void,
+        )
+    };
+
+    if handle.is_null() {
+        None
+    } else {
+        Some(unsafe { BinaryView::ref_from_raw(handle) })
+    }
+}
+
+pub fn load_project_file<O>(
+    file: &ProjectFile,
+    update_analysis_and_wait: bool,
+    options: Option<O>,
+) -> Option<Ref<BinaryView>>
+where
+    O: IntoJson,
+{
+    load_project_file_with_progress(file, update_analysis_and_wait, options, NoProgressCallback)
+}
+
+/// Equivalent to [`load_project_file`] but with a progress callback.
+pub fn load_project_file_with_progress<O, P>(
+    file: &ProjectFile,
+    update_analysis_and_wait: bool,
+    options: Option<O>,
+    mut progress: P,
+) -> Option<Ref<BinaryView>>
+where
+    O: IntoJson,
+    P: ProgressCallback,
+{
+    let options_or_default = if let Some(opt) = options {
+        opt.get_json_string()
+            .ok()?
+            .to_cstr()
+            .to_bytes_with_nul()
+            .to_vec()
+    } else {
+        "{}".to_cstr().to_bytes_with_nul().to_vec()
+    };
+    let handle = unsafe {
+        BNLoadProjectFile(
+            file.handle.as_ptr(),
             update_analysis_and_wait,
             options_or_default.as_ptr() as *mut c_char,
             Some(P::cb_progress_callback),

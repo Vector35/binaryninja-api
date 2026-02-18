@@ -14,9 +14,9 @@ TypeLibrary::TypeLibrary(Ref<Architecture> arch, const std::string& name)
 }
 
 
-bool TypeLibrary::DecompressToFile(const std::string& path, const std::string& output)
+bool TypeLibrary::DecompressToFile(const std::string& path)
 {
-	return BNTypeLibraryDecompressToFile(path.c_str(), output.c_str());
+	return BNTypeLibraryDecompressToFile(m_object, path.c_str());
 }
 
 

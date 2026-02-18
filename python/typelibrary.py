@@ -57,17 +57,6 @@ class TypeLibrary:
 		return TypeLibrary(core.BNNewTypeLibrary(arch.handle, name))
 
 	@staticmethod
-	def decompress_to_file(path: str, output: str) -> bool:
-		"""
-		Decompresses a type library file to a file on disk.
-
-		:param str path:
-		:param str output:
-		:rtype: bool
-		"""
-		return core.BNTypeLibraryDecompressToFile(path, output)
-
-	@staticmethod
 	def load_from_file(path: str) -> Optional['TypeLibrary']:
 		"""
 		Loads a finalized type library instance from file
@@ -91,6 +80,17 @@ class TypeLibrary:
 		"""
 		if not core.BNWriteTypeLibraryToFile(self.handle, path):
 			raise OSError(f"Failed to write type library to '{path}'")
+
+	def decompress_to_file(self, path: str) -> None:
+		"""
+		Decompresses the type library file to a file on disk.
+
+		:param str path:
+		:rtype: bool
+		:raises: OSError if saving the file fails
+		"""
+		if not core.BNTypeLibraryDecompressToFile(self.handle, path):
+			raise OSError(f"Failed to decompress type library to '{path}'")
 
 	@staticmethod
 	def from_name(arch: architecture.Architecture, name: str):

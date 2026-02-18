@@ -19934,21 +19934,6 @@ namespace BinaryNinja {
 		*/
 		TypeLibrary(Ref<Architecture> arch, const std::string& name);
 
-		/*! Decompresses a type library from a file
-
-			\param path
-			\return The string contents of the decompressed type library
-		*/
-		std::string Decompress(const std::string& path);
-
-		/*! Decompresses a type library from a file
-
-			\param path
-			\param output
-			\return True if the type library was successfully decompressed
-		*/
-		static bool DecompressToFile(const std::string& path, const std::string& output);
-
 		/*! Loads a finalized type library instance from file
 
 			\param path
@@ -19976,9 +19961,17 @@ namespace BinaryNinja {
 		/*! Saves a finalized type library instance to file
 
 			\param path
+			\return True if the type library was successfully written to the file
 		*/
 		bool WriteToFile(const std::string& path);
 
+		/*! Decompresses the type library to a JSON file
+
+			\param path
+			\return True if the type library was successfully decompressed
+		*/
+		bool DecompressToFile(const std::string& path);
+		
 		/*! The Architecture this type library is associated with
 
 			\return

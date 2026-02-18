@@ -70,13 +70,6 @@ impl TypeLibrary {
         unsafe { Array::new(result, count, ()) }
     }
 
-    /// Decompresses a type library file to a JSON file at the given `output_path`.
-    pub fn decompress_to_file(path: &Path, output_path: &Path) -> bool {
-        let path = path.to_cstr();
-        let output = output_path.to_cstr();
-        unsafe { BNTypeLibraryDecompressToFile(path.as_ptr(), output.as_ptr()) }
-    }
-
     /// Loads a finalized type library instance from the given `path`.
     ///
     /// The returned type library cannot be modified.
@@ -92,6 +85,12 @@ impl TypeLibrary {
     pub fn write_to_file(&self, path: &Path) -> bool {
         let path = path.to_cstr();
         unsafe { BNWriteTypeLibraryToFile(self.as_raw(), path.as_ptr()) }
+    }
+
+    /// Decompresses the type library file to a JSON file at the given `output_path`.
+    pub fn decompress_to_file(&self, output_path: &Path) -> bool {
+        let path = output_path.to_cstr();
+        unsafe { BNTypeLibraryDecompressToFile(self.handle.as_ptr(), path.as_ptr()) }
     }
 
     /// Looks up the first type library found with a matching name. Keep in mind that names are not

@@ -122,6 +122,10 @@ impl FileMetadata {
     ///
     /// It may not be present if the BNDB was saved without it or cleared via [`FileMetadata::clear_original_file_path`].
     ///
+    /// If this [`FileMetadata`] is a database within a project, it may not have a "consumable" original
+    /// file path. Instead, this might return the path to the on disk file path of the project file that
+    /// this database was created from, for projects you should query through [`FileMetadata::project_file`].
+    ///
     /// Only prefer this over [`FileMetadata::file_path`] if you require the original binary location.
     pub fn original_file_path(&self) -> Option<PathBuf> {
         let raw_name = unsafe {

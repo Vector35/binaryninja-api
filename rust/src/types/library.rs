@@ -188,8 +188,7 @@ impl TypeLibrary {
     /// Returns a list of all platform names that this type library will register with during platform
     /// type registration.
     ///
-    /// This returns strings, not Platform objects, as type libraries can be distributed with support for
-    /// Platforms that may not be present.
+    /// Because type libraries can be distributed with platforms that do not exist, we return the names.
     pub fn platform_names(&self) -> Array<BnString> {
         let mut count = 0;
         let result = unsafe { BNGetTypeLibraryPlatforms(self.as_raw(), &mut count) };

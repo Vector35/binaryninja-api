@@ -30,7 +30,7 @@ pub struct OwnedBackgroundTaskGuard {
 }
 
 impl OwnedBackgroundTaskGuard {
-    pub fn cancel(&mut self) {
+    pub fn cancel(&self) {
         self.task.cancel();
     }
 
@@ -38,7 +38,7 @@ impl OwnedBackgroundTaskGuard {
         self.task.is_cancelled()
     }
 
-    pub fn set_progress_text(&mut self, text: &str) {
+    pub fn set_progress_text(&self, text: &str) {
         self.task.set_progress_text(text);
     }
 }

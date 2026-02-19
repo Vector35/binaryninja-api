@@ -1,5 +1,6 @@
 use crate::dump::TILDump;
 use crate::helper::path_to_type_libraries;
+use binaryninja::rc::Ref;
 use binaryninja::types::TypeLibrary;
 use similar::{Algorithm, TextDiff};
 use std::path::{Path, PathBuf};
@@ -48,9 +49,17 @@ impl TILDiff {
             .parent()
             .ok_or_else(|| TILDiffError::InvalidPath(b_path.to_path_buf()))?;
 
-        let a_dependencies = path_to_type_libraries(a_parent);
-        let b_dependencies = path_to_type_libraries(b_parent);
+        self.diff_with_dependencies(
+            (&a_type_lib, path_to_type_libraries(a_parent)),
+            (&b_type_lib, path_to_type_libraries(b_parent)),
+        )
+    }
 
+    pub fn diff_with_dependencies(
+        &self,
+        (a_type_lib, a_dependencies): (&TypeLibrary, Vec<Ref<TypeLibrary>>),
+        (b_type_lib, b_dependencies): (&TypeLibrary, Vec<Ref<TypeLibrary>>),
+    ) -> Result<DiffResult, TILDiffError> {
         let dumped_a = TILDump::new()
             .with_type_libs(a_dependencies)
             .dump(a_type_lib)
@@ -70,8 +79,8 @@ impl TILDiff {
             .unified_diff()
             .context_radius(3)
             .header(
-                a_path.to_string_lossy().as_ref(),
-                b_path.to_string_lossy().as_ref(),
+                &format!("A/{}", a_type_lib.name()),
+                &format!("B/{}", b_type_lib.name()),
             )
             .to_string();
 

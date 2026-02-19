@@ -198,7 +198,7 @@ impl TypeLibValidater {
             .extend(self.validate_external_references(type_lib));
 
         // TODO: This is currently disabled because it's too slow.
-        // result.issues.extend(self.validate_source_files(type_lib));
+        result.issues.extend(self.validate_source_files(type_lib));
 
         result
     }

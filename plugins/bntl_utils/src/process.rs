@@ -143,6 +143,11 @@ impl ProcessedData {
         }
     }
 
+    /// Finalizes the processed data, deduplicating types and pruning empty type libraries.
+    ///
+    /// The `default_name` should be the library name for which you want deduplicated types to be
+    /// relocated to. This does not need to be a logical-shared library name like `mylib.dll` as it will
+    /// be only referenced by other loaded type libraries (it cannot contain named objects).
     pub fn finalized(mut self, default_name: &str) -> Self {
         self.deduplicate_types(default_name);
         // TODO: Run remap.

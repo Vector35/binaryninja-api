@@ -1,10 +1,10 @@
 use crate::command::OutputDirectoryField;
 use crate::diff::TILDiff;
+use crate::helper::path_to_type_libraries;
 use binaryninja::background_task::BackgroundTask;
 use binaryninja::binary_view::BinaryView;
 use binaryninja::command::Command;
 use binaryninja::interaction::{Form, FormInputField};
-use binaryninja::types::TypeLibrary;
 use std::path::PathBuf;
 use std::thread;
 
@@ -12,17 +12,15 @@ pub struct InputFileAField;
 
 impl InputFileAField {
     pub fn field() -> FormInputField {
-        FormInputField::OpenFileName {
-            prompt: "Library A".to_string(),
-            // TODO: This is called extension but is really a filter.
-            extension: Some("*.bntl".to_string()),
+        FormInputField::DirectoryName {
+            prompt: "Directory A".to_string(),
             default: None,
             value: None,
         }
     }
 
     pub fn from_form(form: &Form) -> Option<PathBuf> {
-        let field = form.get_field_with_name("Library A")?;
+        let field = form.get_field_with_name("Directory A")?;
         let field_value = field.try_value_string()?;
         Some(PathBuf::from(field_value))
     }
@@ -32,17 +30,15 @@ pub struct InputFileBField;
 
 impl InputFileBField {
     pub fn field() -> FormInputField {
-        FormInputField::OpenFileName {
-            prompt: "Library B".to_string(),
-            // TODO: This is called extension but is really a filter.
-            extension: Some("*.bntl".to_string()),
+        FormInputField::DirectoryName {
+            prompt: "Directory B".to_string(),
             default: None,
             value: None,
         }
     }
 
     pub fn from_form(form: &Form) -> Option<PathBuf> {
-        let field = form.get_field_with_name("Library B")?;
+        let field = form.get_field_with_name("Directory B")?;
         let field_value = field.try_value_string()?;
         Some(PathBuf::from(field_value))
     }
@@ -63,30 +59,39 @@ impl Diff {
         let b_path = InputFileBField::from_form(&form).unwrap();
         let output_dir = OutputDirectoryField::from_form(&form).unwrap();
 
-        let _bg_task = BackgroundTask::new("Diffing type libraries...", false).enter();
-        let Some(type_lib_a) = TypeLibrary::load_from_file(&a_path) else {
-            tracing::error!("Failed to load type library: {}", a_path.display());
-            return;
-        };
-        let Some(type_lib_b) = TypeLibrary::load_from_file(&b_path) else {
-            tracing::error!("Failed to load type library: {}", b_path.display());
-            return;
-        };
+        let bg_task = BackgroundTask::new("Diffing type libraries...", true).enter();
 
-        let diff_result = match TILDiff::new().diff((&a_path, &type_lib_a), (&b_path, &type_lib_b))
-        {
-            Ok(diff_result) => diff_result,
-            Err(err) => {
-                tracing::error!("Failed to diff type libraries: {}", err);
-                return;
+        let b_libraries = path_to_type_libraries(&a_path);
+        let a_libraries = path_to_type_libraries(&b_path);
+        // TODO: Make this parallel
+        for a_lib in &a_libraries {
+            for b_lib in &b_libraries {
+                if bg_task.is_cancelled() {
+                    return;
+                }
+
+                if a_lib.name() != b_lib.name() {
+                    continue;
+                }
+
+                bg_task.set_progress_text(&format!("Diffing '{}'...", a_lib.name()));
+                let diff_result = match TILDiff::new().diff_with_dependencies(
+                    (&a_lib, a_libraries.clone()),
+                    (&b_lib, b_libraries.clone()),
+                ) {
+                    Ok(diff_result) => diff_result,
+                    Err(err) => {
+                        tracing::error!("Failed to diff type libraries: {}", err);
+                        continue;
+                    }
+                };
+                tracing::info!("Similarity Ratio: {}", diff_result.ratio);
+
+                let output_path = output_dir.join(a_lib.name()).with_extension("diff");
+                std::fs::write(&output_path, diff_result.diff).unwrap();
+                tracing::info!("Diff written to: {}", output_path.display());
             }
-        };
-        tracing::info!("Similarity Ratio: {}", diff_result.ratio);
-        let output_path = output_dir
-            .join(type_lib_a.dependency_name())
-            .with_extension("diff");
-        std::fs::write(&output_path, diff_result.diff).unwrap();
-        tracing::info!("Diff written to: {}", output_path.display());
+        }
     }
 }
 

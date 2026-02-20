@@ -2,16 +2,31 @@ use crate::rc::{Ref, RefCountable};
 use crate::string::{BnString, IntoCStr};
 use binaryninjacore_sys::*;
 use std::ffi::{c_char, c_void, CStr};
+use std::marker::PhantomData;
+use std::ops::Deref;
 use std::ptr::NonNull;
 
 pub trait WebsocketClientCallback: Sync + Send {
-    fn connected(&mut self) -> bool;
+    /// Receive a notification that the websocket connection has been connected successfully.
+    ///
+    /// Return `false` if you would like to terminate the connection early.
+    fn connected(&self) -> bool;
 
-    fn disconnected(&mut self);
+    /// Receive a notification that the websocket connection has been terminated.
+    ///
+    /// For implementations, you must call this at the end of the websocket connection lifecycle
+    /// even if you notify the client of an error.
+    fn disconnected(&self);
 
-    fn error(&mut self, msg: &str);
+    /// Receive an error from the websocket connection.
+    ///
+    /// For implementations, you typically write the data to an interior mutable buffer on the instance.
+    fn error(&self, msg: &str);
 
-    fn read(&mut self, data: &[u8]) -> bool;
+    /// Receive data from the websocket connection.
+    ///
+    /// For implementations, you typically write the data to an interior mutable buffer on the instance.
+    fn read(&self, data: &[u8]) -> bool;
 }
 
 pub trait WebsocketClient: Sync + Send {
@@ -27,7 +42,32 @@ pub trait WebsocketClient: Sync + Send {
     fn disconnect(&self) -> bool;
 }
 
+/// Represents a live websocket connection.
+///
+/// This manages the lifetime of the callback, ensuring it outlives the connection.
+pub struct ActiveConnection<'a, C: WebsocketClientCallback> {
+    pub client: Ref<CoreWebsocketClient>,
+    _callback: PhantomData<&'a mut C>,
+}
+
+impl<'a, C: WebsocketClientCallback> Deref for ActiveConnection<'a, C> {
+    type Target = CoreWebsocketClient;
+
+    fn deref(&self) -> &Self::Target {
+        &self.client
+    }
+}
+
+impl<'a, C: WebsocketClientCallback> Drop for ActiveConnection<'a, C> {
+    fn drop(&mut self) {
+        self.client.disconnect();
+    }
+}
+
 /// Implements a websocket client.
+///
+/// To connect, use [`Ref<CoreWebsocketClient>::connect`] which will return an [`ActiveConnection`]
+/// which manages the lifecycle of the websocket connection.
 #[repr(transparent)]
 pub struct CoreWebsocketClient {
     pub(crate) handle: NonNull<BNWebsocketClient>,
@@ -43,82 +83,27 @@ impl CoreWebsocketClient {
         &mut *self.handle.as_ptr()
     }
 
-    /// Initializes the web socket connection.
-    ///
-    /// Connect to a given url, asynchronously. The connection will be run in a
-    /// separate thread managed by the websocket provider.
-    ///
-    /// Callbacks will be called **on the thread of the connection**, so be sure
-    /// to ExecuteOnMainThread any long-running or gui operations in the callbacks.
-    ///
-    /// If the connection succeeds, [WebsocketClientCallback::connected] will be called. On normal
-    /// termination, [WebsocketClientCallback::disconnected] will be called.
-    ///
-    /// If the connection succeeds, but later fails, [WebsocketClientCallback::disconnected] will not
-    /// be called, and [WebsocketClientCallback::error] will be called instead.
-    ///
-    /// If the connection fails, neither [WebsocketClientCallback::connected] nor
-    /// [WebsocketClientCallback::disconnected] will be called, and [WebsocketClientCallback::error]
-    /// will be called instead.
-    ///
-    /// If [WebsocketClientCallback::connected] or [WebsocketClientCallback::read] return false, the
-    /// connection will be aborted.
-    ///
-    /// * `host` - Full url with scheme, domain, optionally port, and path
-    /// * `headers` - HTTP header keys and values
-    /// * `callback` - Callbacks for various websocket events
-    pub fn initialize_connection<I, C>(&self, host: &str, headers: I, callbacks: &mut C) -> bool
-    where
-        I: IntoIterator<Item = (String, String)>,
-        C: WebsocketClientCallback,
-    {
-        let url = host.to_cstr();
-        let (header_keys, header_values): (Vec<_>, Vec<_>) = headers
-            .into_iter()
-            .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
-            .unzip();
-        let header_keys: Vec<*const c_char> = header_keys.iter().map(|k| k.as_ptr()).collect();
-        let header_values: Vec<*const c_char> = header_values.iter().map(|v| v.as_ptr()).collect();
-        // SAFETY: This context will only be live for the duration of BNConnectWebsocketClient
-        // SAFETY: Any subsequent call to BNConnectWebsocketClient will write over the context.
-        let mut output_callbacks = BNWebsocketClientOutputCallbacks {
-            context: callbacks as *mut C as *mut c_void,
-            connectedCallback: Some(cb_connected::<C>),
-            disconnectedCallback: Some(cb_disconnected::<C>),
-            errorCallback: Some(cb_error::<C>),
-            readCallback: Some(cb_read::<C>),
-        };
-        unsafe {
-            BNConnectWebsocketClient(
-                self.handle.as_ptr(),
-                url.as_ptr(),
-                header_keys.len().try_into().unwrap(),
-                header_keys.as_ptr(),
-                header_values.as_ptr(),
-                &mut output_callbacks,
-            )
-        }
-    }
-
     /// Call the connect callback function, forward the callback returned value
     pub fn notify_connected(&self) -> bool {
         unsafe { BNNotifyWebsocketClientConnect(self.handle.as_ptr()) }
     }
 
-    /// Notify the callback function of a disconnect,
+    /// Notify the callback function of a disconnect. This must be called at the end of an active
+    /// websocket connection lifecycle, to free resources.
     ///
     /// NOTE: This does not actually disconnect, use the [Self::disconnect] function for that.
     pub fn notify_disconnected(&self) {
         unsafe { BNNotifyWebsocketClientDisconnect(self.handle.as_ptr()) }
     }
 
-    /// Call the error callback function
+    /// Call the error callback function, this is not a terminating request you must use
+    /// [`CoreWebsocketClient::notify_disconnected`] to terminate the connection.
     pub fn notify_error(&self, msg: &str) {
         let error = msg.to_cstr();
         unsafe { BNNotifyWebsocketClientError(self.handle.as_ptr(), error.as_ptr()) }
     }
 
-    /// Call the read callback function, forward the callback returned value
+    /// Call the read callback function, forward the callback returned value.
     pub fn notify_read(&self, data: &[u8]) -> bool {
         unsafe {
             BNNotifyWebsocketClientReadData(
@@ -136,6 +121,77 @@ impl CoreWebsocketClient {
 
     pub fn disconnect(&self) -> bool {
         unsafe { BNDisconnectWebsocketClient(self.as_raw()) }
+    }
+}
+
+impl Ref<CoreWebsocketClient> {
+    /// Initializes the web socket connection, returning the [`ActiveConnection`], once dropped the
+    /// connection will be disconnected.
+    ///
+    /// Connect to a given url, asynchronously. The connection will be run in a
+    /// separate thread managed by the websocket provider.
+    ///
+    /// Callbacks will be called **on the thread of the connection**, so be sure
+    /// to ExecuteOnMainThread any long-running or gui operations in the callbacks.
+    ///
+    /// If the connection succeeds, [WebsocketClientCallback::connected] will be called. On normal
+    /// termination, [WebsocketClientCallback::disconnected] will be called.
+    ///
+    /// If the connection succeeds but later fails, [`WebsocketClientCallback::error`] will be called
+    /// and shortly thereafter [`WebsocketClientCallback::disconnected`] will be called.
+    ///
+    /// If [`WebsocketClientCallback::connected`] or [`WebsocketClientCallback::read`] return false, the
+    /// connection will be aborted.
+    ///
+    /// * `host` - Full url with scheme, domain, optionally port, and path
+    /// * `headers` - HTTP header keys and values
+    /// * `callback` - Callbacks for various websocket events
+    #[must_use]
+    pub fn connect<'a, I, C>(
+        self,
+        host: &str,
+        headers: I,
+        callbacks: &'a C,
+    ) -> Option<ActiveConnection<'a, C>>
+    where
+        I: IntoIterator<Item = (String, String)>,
+        C: WebsocketClientCallback,
+    {
+        let url = host.to_cstr();
+        let (header_keys, header_values): (Vec<_>, Vec<_>) = headers
+            .into_iter()
+            .map(|(k, v)| (k.to_cstr(), v.to_cstr()))
+            .unzip();
+        let header_keys: Vec<*const c_char> = header_keys.iter().map(|k| k.as_ptr()).collect();
+        let header_values: Vec<*const c_char> = header_values.iter().map(|v| v.as_ptr()).collect();
+        // SAFETY: This context will live for as long as the `ActiveConnection` is alive.
+        // SAFETY: Any subsequent call to BNConnectWebsocketClient will write over the context.
+        let mut output_callbacks = BNWebsocketClientOutputCallbacks {
+            context: callbacks as *const C as *mut C as *mut c_void,
+            connectedCallback: Some(cb_connected::<C>),
+            disconnectedCallback: Some(cb_disconnected::<C>),
+            errorCallback: Some(cb_error::<C>),
+            readCallback: Some(cb_read::<C>),
+        };
+        let success = unsafe {
+            BNConnectWebsocketClient(
+                self.handle.as_ptr(),
+                url.as_ptr(),
+                header_keys.len().try_into().unwrap(),
+                header_keys.as_ptr(),
+                header_values.as_ptr(),
+                &mut output_callbacks,
+            )
+        };
+
+        if success {
+            Some(ActiveConnection {
+                client: self,
+                _callback: PhantomData,
+            })
+        } else {
+            None
+        }
     }
 }
 

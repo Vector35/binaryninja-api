@@ -42,6 +42,7 @@ from . import binaryview
 from . import variable
 from . import basicblock
 from . import log
+from . import relocation
 from . import unicode
 
 RegisterIndex = NewType('RegisterIndex', int)
@@ -2639,6 +2640,28 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			>>>
 		"""
 		raise NotImplementedError
+
+	def register_relocation_handler(self, view_name: str, handler: 'relocation.RelocationHandler') -> None:
+		"""
+		``register_relocation_handler`` registers a new relocation handler for the Architecture.
+
+		:param RelocationHandler handler: RelocationHandler object to be registered
+		:rtype: None
+		"""
+		core.BNArchitectureRegisterRelocationHandler(self.handle, core.cstr(view_name), handler.handle)
+
+	def get_relocation_handler(self, view_name: str) -> Optional['relocation.RelocationHandler']:
+		"""
+		``get_relocation_handler`` gets a relocation handler by its view name for the Architecture.
+
+		:param str view_name: the name of the corresponding view
+		:rtype: Optional['relocation.RelocationHandler']
+		"""
+		handler_handle = core.BNArchitectureGetRelocationHandler(self.handle, core.cstr(view_name))
+		if handler_handle is None:
+			return None
+
+		return relocation.RelocationHandler(handler_handle)
 
 	def register_calling_convention(self, cc: 'callingconvention.CallingConvention') -> None:
 		"""

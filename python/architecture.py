@@ -2400,7 +2400,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			b'\\x0f\\x84\\x04\\x00\\x00\\x00'
 			>>>
 		"""
-		return NotImplemented
+		raise NotImplementedError
 
 	def is_never_branch_patch_available(self, data: bytes, addr: int = 0) -> bool:
 		"""
@@ -2420,7 +2420,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			False
 			>>>
 		"""
-		return NotImplemented
+		return False
 
 	def is_always_branch_patch_available(self, data: bytes, addr: int = 0) -> bool:
 		"""
@@ -2441,7 +2441,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			False
 			>>>
 		"""
-		return NotImplemented
+		return False
 
 	def is_invert_branch_patch_available(self, data: bytes, addr: int = 0) -> bool:
 		"""
@@ -2461,7 +2461,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			False
 			>>>
 		"""
-		return NotImplemented
+		return False
 
 	def is_skip_and_return_zero_patch_available(self, data: bytes, addr: int = 0) -> bool:
 		"""
@@ -2484,7 +2484,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			False
 			>>>
 		"""
-		return NotImplemented
+		return False
 
 	def is_skip_and_return_value_patch_available(self, data: bytes, addr: int = 0) -> bool:
 		"""
@@ -2505,7 +2505,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			False
 			>>>
 		"""
-		return NotImplemented
+		return False
 
 	def convert_to_nop(self, data: bytes, addr: int = 0) -> Optional[bytes]:
 		"""
@@ -2524,7 +2524,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			b'\\x90\\x90'
 			>>>
 		"""
-		return NotImplemented
+		raise NotImplementedError
 
 	def always_branch(self, data: bytes, addr: int = 0) -> Optional[bytes]:
 		"""
@@ -2546,7 +2546,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			(['jmp', '     ', '0x9'], 5)
 			>>>
 		"""
-		return NotImplemented
+		raise NotImplementedError
 
 	def invert_branch(self, data: bytes, addr: int = 0) -> Optional[bytes]:
 		"""
@@ -2569,7 +2569,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			(['jl', '      ', '0xa'], 6)
 			>>>
 		"""
-		return NotImplemented
+		raise NotImplementedError
 
 	def skip_and_return_value(self, data: bytes, addr: int, value: int) -> Optional[bytes]:
 		"""
@@ -2588,7 +2588,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			(['mov', '     ', 'eax', ', ', '0x0'], 5)
 			>>>
 		"""
-		return NotImplemented
+		raise NotImplementedError
 
 	def register_calling_convention(self, cc: 'callingconvention.CallingConvention') -> None:
 		"""

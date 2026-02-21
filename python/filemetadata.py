@@ -70,13 +70,13 @@ class NavigationHandler:
 			return False
 
 	def get_current_view(self) -> str:
-		return NotImplemented
+		raise NotImplementedError
 
 	def get_current_offset(self) -> int:
-		return NotImplemented
+		raise NotImplementedError
 
 	def navigate(self, view: ViewName, offset: int) -> bool:
-		return NotImplemented
+		raise NotImplementedError
 
 
 class SaveSettings:

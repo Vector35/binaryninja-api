@@ -35,13 +35,13 @@ class FileAccessor:
 		self._cb.write = self._cb.write.__class__(self._write)
 
 	def get_length(self):
-		return NotImplemented
+		raise NotImplementedError
 
 	def read(self, offset, length):
-		return NotImplemented
+		raise NotImplementedError
 
 	def write(self, offset: int, data: bytes):
-		return NotImplemented
+		raise NotImplementedError
 
 	def __len__(self):
 		return self.get_length()

@@ -47,8 +47,7 @@ impl TILDump {
 
     pub fn dump(&self, type_lib: &TypeLibrary) -> Result<String, TILDumpError> {
         let empty_file = FileMetadata::new();
-        let empty_bv = BinaryView::from_data(&empty_file, &[])
-            .map_err(|_| TILDumpError::ViewCreationFailed)?;
+        let empty_bv = BinaryView::from_data(&empty_file, &[]);
 
         let type_lib_plats = type_lib.platform_names();
         let platform_name = type_lib_plats

@@ -36,8 +36,7 @@ fn main() {
         type_lib_header_path
     );
     let type_printer = CoreTypePrinter::default();
-    let empty_bv =
-        BinaryView::from_data(&FileMetadata::new(), &[]).expect("Failed to create empty view");
+    let empty_bv = BinaryView::from_data(&FileMetadata::new(), &[]);
     let printed_types = type_printer
         .print_all_types(
             all_types,

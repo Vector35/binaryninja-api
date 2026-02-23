@@ -61,8 +61,7 @@ fn test_structure_builder() {
 #[test]
 fn add_type_to_view() {
     let _session = Session::new().expect("Failed to initialize session");
-    let empty_view =
-        BinaryView::from_data(&FileMetadata::new(), &[]).expect("Failed to create view");
+    let empty_view = BinaryView::from_data(&FileMetadata::new(), &[]);
     let test_type = Type::int(4, true);
     empty_view.define_auto_type("test", "me", &test_type);
     assert!(empty_view.type_by_name("test").is_some());

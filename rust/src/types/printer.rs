@@ -338,6 +338,7 @@ impl CoreTypePrinter {
                 raw_names.as_mut_ptr(),
                 raw_types.as_mut_ptr(),
                 raw_types.len(),
+                // TODO: Add a print_all_types that accepts a set of type containers.
                 data.handle,
                 padding_cols as c_int,
                 escaping,

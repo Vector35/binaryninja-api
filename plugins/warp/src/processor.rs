@@ -29,6 +29,7 @@ use binaryninja::rc::{Guard, Ref};
 use crate::cache::cached_type_references;
 use crate::convert::platform_to_target;
 use crate::{build_function, INCLUDE_TAG_ICON, INCLUDE_TAG_NAME};
+use binaryninja::file_metadata::{SaveOption, SaveSettings};
 use warp::chunk::{Chunk, ChunkKind, CompressionType};
 use warp::r#type::chunk::TypeChunk;
 use warp::signature::chunk::SignatureChunk;
@@ -645,7 +646,11 @@ impl WarpFileProcessor {
             if !view.file().is_database_backed() {
                 // Update the cache.
                 tracing::debug!("Saving analysis database to {:?}", file_cache_path);
-                if !view.file().create_database(&file_cache_path) {
+                let save_settings = SaveSettings::new().with_option(SaveOption::RemoveUndoData);
+                if !view
+                    .file()
+                    .create_database(&file_cache_path, &save_settings)
+                {
                     // TODO: We might want to error here...
                     tracing::warn!("Failed to save analysis database to {:?}", file_cache_path);
                 }

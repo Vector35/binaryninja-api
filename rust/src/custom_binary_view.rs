@@ -178,12 +178,23 @@ where
 }
 
 pub trait BinaryViewTypeBase: AsRef<BinaryViewType> {
+    /// Is this [`BinaryViewType`] valid for the given the raw [`BinaryView`]?
+    ///
+    /// Typical implementations will read the magic bytes (e.g. 'MZ'), this is a performance-sensitive
+    /// path so prefer inexpensive checks rather than comprehensive ones.
     fn is_valid_for(&self, data: &BinaryView) -> bool;
 
+    /// Is this [`BinaryViewType`] deprecated and should not be used?
+    ///
+    /// We specify this such that the view type may still be used by existing databases, but not
+    /// newly created views.
     fn is_deprecated(&self) -> bool {
         false
     }
 
+    /// Is this [`BinaryViewType`] able to be loaded forcefully?
+    ///
+    /// If so, it will be shown in the drop-down when a user opens a file with options.
     fn is_force_loadable(&self) -> bool {
         false
     }
@@ -319,6 +330,9 @@ pub trait BinaryViewTypeExt: BinaryViewTypeBase {
 
 impl<T: BinaryViewTypeBase> BinaryViewTypeExt for T {}
 
+/// A [`BinaryViewType`] acts as a factory for [`BinaryView`] objects.
+///
+/// Each file format will have its own type, such as PE, ELF, or Mach-O.
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct BinaryViewType {
     pub handle: *mut BNBinaryViewType,
@@ -338,7 +352,9 @@ impl BinaryViewType {
         }
     }
 
-    pub fn list_valid_types_for(data: &BinaryView) -> Array<BinaryViewType> {
+    /// Enumerates all view types and checks to see if the given raw [`BinaryView`] is valid,
+    /// returning only those that are.
+    pub fn valid_types_for_data(data: &BinaryView) -> Array<BinaryViewType> {
         unsafe {
             let mut count: usize = 0;
             let types = BNGetBinaryViewTypesForData(data.handle, &mut count as *mut _);

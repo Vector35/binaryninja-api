@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! The [`FileMetadata`] struct provides information about a file and owns its available [`BinaryView`]s.
+
 use crate::binary_view::BinaryView;
 use crate::database::Database;
 use crate::rc::*;
@@ -22,12 +24,90 @@ use std::ffi::c_void;
 use std::fmt::{Debug, Display, Formatter};
 use std::path::{Path, PathBuf};
 
-use crate::progress::ProgressCallback;
+use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::file::ProjectFile;
-use std::ptr::{self, NonNull};
+use std::ptr::NonNull;
+
+#[allow(unused_imports)]
+use crate::custom_binary_view::BinaryViewType;
 
 new_id_type!(SessionId, usize);
 
+pub type SaveOption = BNSaveOption;
+
+/// Settings to alter the behavior of creating snapshots saved within a [`Database`].
+pub struct SaveSettings {
+    pub(crate) handle: *mut BNSaveSettings,
+}
+
+impl SaveSettings {
+    pub fn new() -> Ref<Self> {
+        Self::ref_from_raw(unsafe { BNCreateSaveSettings() })
+    }
+
+    fn ref_from_raw(handle: *mut BNSaveSettings) -> Ref<Self> {
+        unsafe { Ref::new(Self { handle }) }
+    }
+
+    /// Sets the specified `option` to `true` and returns a ref counted `SaveSettings` that can
+    /// continued to be chained.
+    pub fn with_option(&self, option: SaveOption) -> Ref<Self> {
+        self.set_option(option, true);
+        self.to_owned()
+    }
+
+    pub fn set_option(&self, option: SaveOption, value: bool) {
+        unsafe { BNSetSaveSettingsOption(self.handle, option, value) }
+    }
+
+    pub fn option(&self, option: SaveOption) -> bool {
+        unsafe { BNIsSaveSettingsOptionSet(self.handle, option) }
+    }
+
+    /// When saving an automatic snapshot via [`FileMetadata::save_auto_snapshot`] this name will be
+    /// used for the newly written snapshot.
+    pub fn snapshot_name(&self) -> String {
+        unsafe { BnString::into_string(BNGetSaveSettingsName(self.handle)) }
+    }
+
+    pub fn set_snapshot_name(&self, name: &str) {
+        let name = name.to_cstr();
+        unsafe { BNSetSaveSettingsName(self.handle, name.as_ptr()) }
+    }
+}
+
+unsafe impl Send for SaveSettings {}
+unsafe impl Sync for SaveSettings {}
+
+impl ToOwned for SaveSettings {
+    type Owned = Ref<Self>;
+
+    fn to_owned(&self) -> Self::Owned {
+        unsafe { RefCountable::inc_ref(self) }
+    }
+}
+
+unsafe impl RefCountable for SaveSettings {
+    unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
+        Ref::new(Self {
+            handle: BNNewSaveSettingsReference(handle.handle),
+        })
+    }
+
+    unsafe fn dec_ref(handle: &Self) {
+        BNFreeSaveSettings(handle.handle);
+    }
+}
+
+/// File metadata provides information about a file in the context of Binary Ninja. It contains no
+/// analysis information, only information useful for identifying a file, such as the [`FileMetadata::file_path`].
+///
+/// Another responsibility of the [`FileMetadata`] is to own the available [`BinaryView`]s for the
+/// file, such as the "Raw" view and any other views that may be created for the file.
+///
+/// **Important**: Because [`FileMetadata`] holds a strong reference to the [`BinaryView`]s and those
+/// views hold a strong reference to the file metadata, to end the cyclic reference a call to the
+/// [`FileMetadata::close`] is required.
 #[derive(PartialEq, Eq, Hash)]
 pub struct FileMetadata {
     pub(crate) handle: *mut BNFileMetadata,
@@ -42,12 +122,14 @@ impl FileMetadata {
         unsafe { Ref::new(Self { handle }) }
     }
 
+    /// Create an empty [`FileMetadata`] with no associated file path.
+    ///
+    /// Unless you are creating an ephemeral file with no backing, prefer [`FileMetadata::with_file_path`].
     pub fn new() -> Ref<Self> {
         Self::ref_from_raw(unsafe { BNCreateFileMetadata() })
     }
 
-    /// Build a [`FileMetadata`] with the given `path`, this is uncommon as you are likely to want to
-    /// open a [`BinaryView`]
+    /// Build a [`FileMetadata`] with the given `path`.
     pub fn with_file_path(path: &Path) -> Ref<Self> {
         let ret = FileMetadata::new();
         ret.set_file_path(path);
@@ -61,6 +143,7 @@ impl FileMetadata {
         }
     }
 
+    /// An id unique to this [`FileMetadata`], mostly used for associating logs with a specific file.
     pub fn session_id(&self) -> SessionId {
         let raw = unsafe { BNFileMetadataGetSessionId(self.handle) };
         SessionId(raw)
@@ -187,16 +270,23 @@ impl FileMetadata {
         }
     }
 
+    /// Whether the file is currently flagged as modified.
+    ///
+    /// When this returns `true`, the UI will prompt to save the database on close, as well as display
+    /// a dot in the files tab.
     pub fn is_modified(&self) -> bool {
         unsafe { BNIsFileModified(self.handle) }
     }
 
+    /// Marks the file as modified such that we can prompt to save the database on close.
     pub fn mark_modified(&self) {
         unsafe {
             BNMarkFileModified(self.handle);
         }
     }
 
+    /// Marks the file as saved such that [`FileMetadata::is_modified`] and [`FileMetadata::is_analysis_changed`]
+    /// will return `false` and the undo buffer associated with this [`FileMetadata`] will be updated.
     pub fn mark_saved(&self) {
         unsafe {
             BNMarkFileSaved(self.handle);
@@ -207,13 +297,19 @@ impl FileMetadata {
         unsafe { BNIsAnalysisChanged(self.handle) }
     }
 
+    /// Checks to see if the database exists for the file.
     pub fn is_database_backed(&self) -> bool {
+        // TODO: This seems to be a useless function. Replace with a call to file.database().is_some()?
         self.is_database_backed_for_view_type("")
     }
 
+    /// Checks to see if the file metadata has a [`Database`], and then checks to see if the `view_type`
+    /// is available.
+    ///
+    /// NOTE: Passing an empty string will simply check if the database exists.
     pub fn is_database_backed_for_view_type(&self, view_type: &str) -> bool {
         let view_type = view_type.to_cstr();
-
+        // TODO: This seems to be a useless function. Replace with a call to file.database().is_some()?
         unsafe { BNIsBackedByDatabase(self.handle, view_type.as_ref().as_ptr() as *const _) }
     }
 
@@ -310,10 +406,23 @@ impl FileMetadata {
         }
     }
 
+    /// Retrieve the raw view for the file, this should always be present.
+    ///
+    /// The "Raw" view is a special [`BinaryView`] that holds data required for updating and creating
+    /// [`Database`]s such as the view and load settings.
+    pub fn raw_view(&self) -> Ref<BinaryView> {
+        self.view_of_type("Raw")
+            .expect("Raw view should always be present")
+    }
+
+    /// The current view for the file.
+    ///
+    /// For example, opening a PE file and navigating to the linear view will return "Linear:PE".
     pub fn current_view(&self) -> String {
         unsafe { BnString::into_string(BNGetCurrentView(self.handle)) }
     }
 
+    /// The current offset navigated to within the [`FileMetadata::current_view`].
     pub fn current_offset(&self) -> u64 {
         unsafe { BNGetCurrentOffset(self.handle) }
     }
@@ -360,6 +469,9 @@ impl FileMetadata {
         }
     }
 
+    /// The [`BinaryViewType`]s associated with this file.
+    ///
+    /// For example, opening a PE binary will have the following: "Raw", "PE".
     pub fn view_types(&self) -> Array<BnString> {
         let mut count = 0;
         unsafe {
@@ -376,32 +488,26 @@ impl FileMetadata {
         }
     }
 
-    pub fn create_database(&self, file_path: impl AsRef<Path>) -> bool {
-        // Databases are created with the root view (Raw).
-        let Some(raw_view) = self.view_of_type("Raw") else {
-            return false;
-        };
-
-        let file_path = file_path.as_ref().to_cstr();
-        unsafe {
-            BNCreateDatabase(
-                raw_view.handle,
-                file_path.as_ptr() as *mut _,
-                ptr::null_mut(),
-            )
-        }
+    /// Create a database for the file and its views at `file_path`.
+    ///
+    /// NOTE: Calling this while analysis is running will flag the next load of the database to
+    /// regenerate the current analysis.
+    pub fn create_database(&self, file_path: impl AsRef<Path>, settings: &SaveSettings) -> bool {
+        self.create_database_with_progress(file_path, settings, NoProgressCallback)
     }
 
-    // TODO: Pass settings?
+    /// Create a database for the file and its views at `file_path`, with a progress callback.
+    ///
+    /// NOTE: Calling this while analysis is running will flag the next load of the database to
+    /// regenerate the current analysis.
     pub fn create_database_with_progress<P: ProgressCallback>(
         &self,
         file_path: impl AsRef<Path>,
+        settings: &SaveSettings,
         mut progress: P,
     ) -> bool {
         // Databases are created with the root view (Raw).
-        let Some(raw_view) = self.view_of_type("Raw") else {
-            return false;
-        };
+        let raw_view = self.raw_view();
         let file_path = file_path.as_ref().to_cstr();
         unsafe {
             BNCreateDatabaseWithProgress(
@@ -409,20 +515,22 @@ impl FileMetadata {
                 file_path.as_ptr() as *mut _,
                 &mut progress as *mut P as *mut c_void,
                 Some(P::cb_progress_callback),
-                ptr::null_mut(),
+                settings.handle,
             )
         }
     }
 
+    /// Save a new snapshot of the current file.
+    ///
+    /// NOTE: Calling this while analysis is running will flag the next load of the database to
+    /// regenerate the current analysis.
     pub fn save_auto_snapshot(&self) -> bool {
         // Snapshots are saved with the root view (Raw).
-        let Some(raw_view) = self.view_of_type("Raw") else {
-            return false;
-        };
-
-        unsafe { BNSaveAutoSnapshot(raw_view.handle, ptr::null_mut() as *mut _) }
+        let raw_view = self.raw_view();
+        unsafe { BNSaveAutoSnapshot(raw_view.handle, std::ptr::null_mut() as *mut _) }
     }
 
+    // TODO: Deprecate this function? Does not seem to do anything different than `open_database`.
     pub fn open_database_for_configuration(&self, file: &Path) -> Result<Ref<BinaryView>, ()> {
         let file = file.to_cstr();
         unsafe {
@@ -437,6 +545,7 @@ impl FileMetadata {
         }
     }
 
+    // TODO: How this relates to `BNLoadFilename`?
     pub fn open_database(&self, file: &Path) -> Result<Ref<BinaryView>, ()> {
         let file = file.to_cstr();
         let view = unsafe { BNOpenExistingDatabase(self.handle, file.as_ptr()) };
@@ -448,6 +557,7 @@ impl FileMetadata {
         }
     }
 
+    // TODO: How this relates to `BNLoadFilename`?
     pub fn open_database_with_progress<P: ProgressCallback>(
         &self,
         file: &Path,
@@ -471,7 +581,9 @@ impl FileMetadata {
         }
     }
 
-    /// Get the current database
+    /// Get the database attached to this file.
+    ///
+    /// Only available if this file is a database, or has called [`FileMetadata::create_database`].
     pub fn database(&self) -> Option<Ref<Database>> {
         let result = unsafe { BNGetFileMetadataDatabase(self.handle) };
         NonNull::new(result).map(|handle| unsafe { Database::ref_from_raw(handle) })

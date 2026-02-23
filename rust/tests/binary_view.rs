@@ -3,6 +3,7 @@ use binaryninja::binary_view::{
     AnalysisProgress, AnalysisState, BinaryViewBase, BinaryViewExt, StringType,
 };
 use binaryninja::data_buffer::DataBuffer;
+use binaryninja::file_metadata::SaveSettings;
 use binaryninja::function::{Function, FunctionViewType};
 use binaryninja::headless::Session;
 use binaryninja::main_thread::execute_on_main_thread_and_wait;
@@ -69,7 +70,9 @@ fn test_binary_saving_database() {
     // Save the modified database.
     let temp_dir = tempfile::tempdir().expect("Failed to create temporary directory");
     let temp_path = temp_dir.path().join("atox.obj.bndb");
-    assert!(view.file().create_database(&temp_path));
+    assert!(view
+        .file()
+        .create_database(&temp_path, &SaveSettings::new()));
     // Verify that the file exists and is modified.
     let new_view = binaryninja::load(temp_path).expect("Failed to load new view");
     let new_entry_function = new_view

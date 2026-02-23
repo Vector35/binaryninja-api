@@ -1,5 +1,6 @@
 use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::collaboration::{NoNameChangeset, Remote, RemoteFileType, RemoteProject};
+use binaryninja::file_metadata::SaveSettings;
 use binaryninja::headless::Session;
 use binaryninja::rc::Ref;
 use binaryninja::symbol::{SymbolBuilder, SymbolType};
@@ -7,7 +8,6 @@ use rstest::*;
 use serial_test::serial;
 use std::env;
 use std::path::PathBuf;
-
 // TODO: Why cant we create_project for the same project name? why does that fail.
 // TODO: Remote connection / disconnection is NOT thread safe, the core needs to lock on each.
 // TODO: Because of this we run these tests serially, this isnt _really_ an issue for real code, as
@@ -182,7 +182,8 @@ fn test_project_sync() {
         let view_type = view.view_type();
         // Save the view to local database so that we can upload it
         assert!(
-            view.file().create_database(out_dir.join("atox.obj.bndb")),
+            view.file()
+                .create_database(out_dir.join("atox.obj.bndb"), &SaveSettings::new()),
             "Failed to create local database"
         );
         // We should have a single snapshot.

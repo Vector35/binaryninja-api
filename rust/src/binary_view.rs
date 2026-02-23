@@ -12,14 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! A view on binary data and queryable interface of a binary file.
-//!
-//! One key job of BinaryView is file format parsing which allows Binary Ninja to read, write,
-//! insert, remove portions of the file given a virtual address.
-//!
-//! For the purposes of this documentation we define a virtual address as the memory address that
-//! the various pieces of the physical file will be loaded at.
-//! TODO : Mirror the Python docs for this
+//! A view on binary data and queryable interface of a binary files analysis.
 
 use binaryninjacore_sys::*;
 
@@ -104,6 +97,7 @@ pub trait BinaryViewBase: AsRef<BinaryView> {
         0
     }
 
+    /// Check if the offset is valid for the current view.
     fn offset_valid(&self, offset: u64) -> bool {
         let mut buf = [0u8; 1];
 
@@ -112,22 +106,28 @@ pub trait BinaryViewBase: AsRef<BinaryView> {
         self.as_ref().read(&mut buf[..], offset) == buf.len()
     }
 
+    /// Check if the offset is readable for the current view.
     fn offset_readable(&self, offset: u64) -> bool {
         self.offset_valid(offset)
     }
 
+    /// Check if the offset is writable for the current view.
     fn offset_writable(&self, offset: u64) -> bool {
         self.offset_valid(offset)
     }
 
+    /// Check if the offset is executable for the current view.
     fn offset_executable(&self, offset: u64) -> bool {
         self.offset_valid(offset)
     }
 
+    /// Check if the offset is backed by the original file and not added after the fact.
     fn offset_backed_by_file(&self, offset: u64) -> bool {
         self.offset_valid(offset)
     }
 
+    /// Get the next valid offset after the provided `offset`, useful if you need to iterate over all
+    /// readable offsets in the view.
     fn next_valid_offset_after(&self, offset: u64) -> u64 {
         let start = self.as_ref().start();
 
@@ -138,15 +138,17 @@ pub trait BinaryViewBase: AsRef<BinaryView> {
         }
     }
 
-    #[allow(unused)]
-    fn modification_status(&self, offset: u64) -> ModificationStatus {
+    /// Whether the data at the given `offset` been modified (patched).
+    fn modification_status(&self, _offset: u64) -> ModificationStatus {
         ModificationStatus::Original
     }
 
+    /// The lowest address in the view.
     fn start(&self) -> u64 {
         0
     }
 
+    /// The length of the view.
     fn len(&self) -> u64 {
         0
     }
@@ -546,8 +548,6 @@ pub trait BinaryViewExt: BinaryViewBase {
     }
 
     /// The highest address in the view.
-    ///
-    /// NOTE: If operating within a [`Workflow`], consider using [`AnalysisContext::end`].
     fn end(&self) -> u64 {
         unsafe { BNGetEndOffset(self.as_ref().handle) }
     }
@@ -2454,6 +2454,26 @@ pub trait BinaryViewExt: BinaryViewBase {
 
 impl<T: BinaryViewBase> BinaryViewExt for T {}
 
+/// Represents the "whole view" of the binary and its analysis.
+///
+/// Analysis information:
+///
+/// - [`BinaryViewExt::functions`]
+/// - [`BinaryViewExt::data_variables`]
+/// - [`BinaryViewExt::strings`]
+///
+/// Annotation information:
+///
+/// - [`BinaryViewExt::symbols`]
+/// - [`BinaryViewExt::tags_all_scopes`]
+/// - [`BinaryViewExt::comments`]
+///
+/// Data representation and binary information:
+///
+/// - [`BinaryViewExt::types`]
+/// - [`BinaryViewExt::segments`]
+/// - [`BinaryViewExt::sections`]
+///
 /// # Cleaning up
 ///
 /// [`BinaryView`] has a cyclic relationship with the associated [`FileMetadata`], each holds a strong
@@ -2476,9 +2496,10 @@ impl BinaryView {
         Ref::new(Self { handle })
     }
 
-    /// Construct the raw binary view from the given metadata. Before calling this make sure you have
-    /// a valid file path set for the [`FileMetadata`]. It is required that the [`FileMetadata::file_path`]
-    /// exist on the local filesystem.
+    /// Construct the raw binary view from the given metadata.
+    ///
+    /// Before calling this, make sure you have a valid file path set for the [`FileMetadata`]. It is
+    /// required that the [`FileMetadata::file_path`] exist in the local filesystem.
     pub fn from_metadata(meta: &FileMetadata) -> Result<Ref<Self>> {
         if !meta.file_path().exists() {
             return Err(());
@@ -2486,11 +2507,9 @@ impl BinaryView {
         let file = meta.file_path().to_cstr();
         let handle =
             unsafe { BNCreateBinaryDataViewFromFilename(meta.handle, file.as_ptr() as *mut _) };
-
         if handle.is_null() {
             return Err(());
         }
-
         unsafe { Ok(Ref::new(Self { handle })) }
     }
 
@@ -2503,29 +2522,34 @@ impl BinaryView {
         Self::from_metadata(meta)
     }
 
-    pub fn from_accessor<A: Accessor>(
+    // TODO: Provide an API that manages the lifetime of the accessor and the view.
+    /// Construct the raw binary view from the given `accessor` and metadata.
+    ///
+    /// It is the responsibility of the caller to keep the accessor alive for the lifetime of the view;
+    /// because of this, we mark the function as unsafe.
+    pub unsafe fn from_accessor<A: Accessor>(
         meta: &FileMetadata,
-        file: &mut FileAccessor<A>,
+        accessor: &mut FileAccessor<A>,
     ) -> Result<Ref<Self>> {
-        let handle = unsafe { BNCreateBinaryDataViewFromFile(meta.handle, &mut file.raw) };
-
+        let handle = unsafe { BNCreateBinaryDataViewFromFile(meta.handle, &mut accessor.raw) };
         if handle.is_null() {
             return Err(());
         }
-
         unsafe { Ok(Ref::new(Self { handle })) }
     }
 
-    pub fn from_data(meta: &FileMetadata, data: &[u8]) -> Result<Ref<Self>> {
+    /// Construct the raw binary view from the given `data` and metadata.
+    ///
+    /// The data will be copied into the view, so the caller does not need to keep the data alive.
+    pub fn from_data(meta: &FileMetadata, data: &[u8]) -> Ref<Self> {
         let handle = unsafe {
             BNCreateBinaryDataViewFromData(meta.handle, data.as_ptr() as *mut _, data.len())
         };
-
-        if handle.is_null() {
-            return Err(());
-        }
-
-        unsafe { Ok(Ref::new(Self { handle })) }
+        assert!(
+            !handle.is_null(),
+            "BNCreateBinaryDataViewFromData should always succeed"
+        );
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// Save the original binary file to the provided `file_path` along with any modifications.
@@ -2571,45 +2595,26 @@ impl BinaryViewBase for BinaryView {
         unsafe { BNRemoveViewData(self.handle, offset, len as u64) }
     }
 
-    /// Check if the offset is valid for the current view.
-    ///
-    /// NOTE: If operating within a [`Workflow`], consider using [`AnalysisContext::is_offset_valid`].
     fn offset_valid(&self, offset: u64) -> bool {
         unsafe { BNIsValidOffset(self.handle, offset) }
     }
 
-    /// Check if the offset is readable for the current view.
-    ///
-    /// NOTE: If operating within a [`Workflow`], consider using [`AnalysisContext::is_offset_valid`].
     fn offset_readable(&self, offset: u64) -> bool {
         unsafe { BNIsOffsetReadable(self.handle, offset) }
     }
 
-    /// Check if the offset is writable for the current view.
-    ///
-    /// NOTE: If operating within a [`Workflow`], consider using [`AnalysisContext::is_offset_writable`].
     fn offset_writable(&self, offset: u64) -> bool {
         unsafe { BNIsOffsetWritable(self.handle, offset) }
     }
 
-    /// Check if the offset is executable for the current view.
-    ///
-    /// NOTE: If operating within a [`Workflow`], consider using [`AnalysisContext::is_offset_executable`].
     fn offset_executable(&self, offset: u64) -> bool {
         unsafe { BNIsOffsetExecutable(self.handle, offset) }
     }
 
-    /// Check if the offset is backed by the original file and not added after the fact.
-    ///
-    /// NOTE: If operating within a [`Workflow`], consider using [`AnalysisContext::is_offset_backed_by_file`].
     fn offset_backed_by_file(&self, offset: u64) -> bool {
         unsafe { BNIsOffsetBackedByFile(self.handle, offset) }
     }
 
-    /// Get the next valid offset after the provided `offset`, useful if you need to iterate over all
-    /// readable offsets in the view.
-    ///
-    /// NOTE: If operating within a [`Workflow`], consider using [`AnalysisContext::next_valid_offset`].
     fn next_valid_offset_after(&self, offset: u64) -> u64 {
         unsafe { BNGetNextValidOffset(self.handle, offset) }
     }
@@ -2618,16 +2623,10 @@ impl BinaryViewBase for BinaryView {
         unsafe { BNGetModification(self.handle, offset) }
     }
 
-    /// The lowest address in the view.
-    ///
-    /// NOTE: If operating within a [`Workflow`], consider using [`AnalysisContext::start`].
     fn start(&self) -> u64 {
         unsafe { BNGetStartOffset(self.handle) }
     }
 
-    /// The length of the view, lowest to highest address.
-    ///
-    /// NOTE: If operating within a [`Workflow`], consider using [`AnalysisContext::length`].
     fn len(&self) -> u64 {
         unsafe { BNGetViewLength(self.handle) }
     }

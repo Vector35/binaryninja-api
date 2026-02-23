@@ -37,8 +37,7 @@ fn test_type_id() {
 #[test]
 fn test_add_delete_type() {
     let _session = Session::new().expect("Failed to initialize session");
-    let empty_view =
-        BinaryView::from_data(&FileMetadata::new(), &[]).expect("Failed to create view");
+    let empty_view = BinaryView::from_data(&FileMetadata::new(), &[]);
     let view_type_container = empty_view.type_container();
     let test_type = Type::int(4, true);
     assert!(
@@ -106,8 +105,7 @@ fn test_parse_type() {
 fn test_container_lifetime() {
     let _session = Session::new().expect("Failed to initialize session");
     let platform = Platform::by_name("windows-x86_64").expect("windows-x86_64 exists");
-    let empty_view =
-        BinaryView::from_data(&FileMetadata::new(), &[]).expect("Failed to create view");
+    let empty_view = BinaryView::from_data(&FileMetadata::new(), &[]);
     let plat_type_container_dropped = platform.type_container();
     let view_type_container_dropped = empty_view.type_container();
     let _plat_types_dropped = plat_type_container_dropped.types();

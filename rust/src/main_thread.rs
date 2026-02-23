@@ -21,9 +21,9 @@ impl MainThreadActionExecutor {
     }
 }
 
-/// Execute passed function on the main thread. Returns `None` if already running on the main thread.
+/// Execute the passed function on the main thread. Returns `None` if already running on the main thread.
 ///
-/// When not running in headless this will block the UI.
+/// When not running in headless, this will block the UI.
 pub fn execute_on_main_thread<F: Fn() + 'static>(f: F) -> Option<Ref<MainThreadAction>> {
     let boxed_executor = Box::new(MainThreadActionExecutor { func: Box::new(f) });
     let raw_executor = Box::into_raw(boxed_executor);
@@ -39,9 +39,9 @@ pub fn execute_on_main_thread<F: Fn() + 'static>(f: F) -> Option<Ref<MainThreadA
     }
 }
 
-/// Execute passed function on the main thread and wait until the function is finished.
+/// Execute the passed function on the main thread and wait until the function is finished.
 ///
-/// When not running in headless this will block the UI.
+/// When not running in headless, this will block the UI.
 pub fn execute_on_main_thread_and_wait<F: Fn() + 'static>(f: F) {
     let boxed_executor = Box::new(MainThreadActionExecutor { func: Box::new(f) });
     let raw_executor = Box::into_raw(boxed_executor);

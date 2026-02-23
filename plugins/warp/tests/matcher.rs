@@ -33,8 +33,7 @@ const MOCK_FUNCTION_BYTES: &[u8] = &[
 
 fn create_mock_bn_function(_session: &Session) -> Ref<BNFunction> {
     let file = FileMetadata::new();
-    let view =
-        BinaryView::from_data(&file, MOCK_FUNCTION_BYTES).expect("Failed to create mock view");
+    let view = BinaryView::from_data(&file, MOCK_FUNCTION_BYTES);
     let platform = Platform::by_name("x86").unwrap();
     // Add the constraint symbol so that the matcher picks it up, so we can test constraint matching.
     let constraint_symbol =
@@ -160,7 +159,7 @@ fn test_add_type_to_view() {
 
     let _session = Session::new().expect("Failed to create session");
     let file = FileMetadata::new();
-    let view = BinaryView::from_data(&file, &[]).expect("Failed to create view");
+    let view = BinaryView::from_data(&file, &[]);
     let arch = CoreArchitecture::by_name("x86").expect("Failed to get architecture");
 
     // Try and add a NTR to the view, this should also add the referenced struct type.

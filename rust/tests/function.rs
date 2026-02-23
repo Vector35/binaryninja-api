@@ -116,7 +116,7 @@ fn add_function() {
 
     // Make sure you cannot add a function without a default platform.
     let code = &[0xa1, 0xfa, 0xf8, 0xf0, 0x99, 0x83, 0xc0, 0x37, 0xc3];
-    let view = BinaryView::from_data(&FileMetadata::new(), code).expect("Failed to create view");
+    let view = BinaryView::from_data(&FileMetadata::new(), code);
     assert!(view.add_user_function(0).is_none());
     assert!(view.add_auto_function(0).is_none());
 

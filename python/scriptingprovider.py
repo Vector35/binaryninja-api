@@ -1218,8 +1218,10 @@ class PythonScriptingProvider(ScriptingProvider):
 		dependencies_json = json.loads(_modules.decode("utf-8"))
 		modules = ""
 		if "pip" in dependencies_json:
-			modules = dependencies_json["pip"]
-		if len(modules.strip()) == 0:
+			if len(dependencies_json["pip"].strip()) == 0:
+				return True
+			modules = [line.split('#', 1)[0].strip() for line in dependencies_json["pip"].split('\n') if line.split('#', 1)[0].strip()]
+		if len(modules) == 0:
 			return True
 		python_lib = settings.Settings().get_string("python.interpreter")
 		python_bin_override = settings.Settings().get_string("python.binaryOverride")
@@ -1267,7 +1269,7 @@ class PythonScriptingProvider(ScriptingProvider):
 			) / f"python{sys.version_info.major}{sys.version_info.minor}" / "site-packages"
 			site_package_dir.mkdir(parents=True, exist_ok=True)
 			args.extend(["--target", str(site_package_dir)])
-		args.extend(list(filter(len, modules.split("\n"))))
+		args.extend(list(filter(len, modules)))
 		logger.log_info(f"Running pip {args}")
 		status, result = self._run_args(args, env=python_env)
 		if status:

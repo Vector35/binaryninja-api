@@ -247,7 +247,7 @@ class RelocationHandler:
 
 		return bytes(dest)
 
-	def perform_get_operand_for_external_relocation(self, data: bytes, addr: int, il: lowlevelil.LowLevelILFunction, reloc: Relocation) -> bool | Optional['lowlevelil.ExpressionIndex']:
+	def perform_get_operand_for_external_relocation(self, data: bytes, addr: int, il: lowlevelil.LowLevelILFunction, reloc: Relocation) -> Optional[bool | int]:
 		return True
 
 	def get_relocation_info(self, view: 'binaryview.BinaryView', arch: 'architecture.Architecture', result: List[RelocationInfo]) -> bool:
@@ -282,7 +282,7 @@ class RelocationHandler:
 
 		return bytes(dest)
 
-	def get_operand_for_external_relocation(self, data: bytes, addr: int, il: lowlevelil.LowLevelILFunction, reloc: Relocation) -> bool | Optional['lowlevelil.ExpressionIndex']:
+	def get_operand_for_external_relocation(self, data: bytes, addr: int, il: lowlevelil.LowLevelILFunction, reloc: Relocation) -> Optional[bool | int]:
 		buf = (ctypes.c_ubyte * len(data))()
 		ctypes.memmove(buf, data, len(data))
 		result = core.BNRelocationHandlerGetOperandForExternalRelocation(

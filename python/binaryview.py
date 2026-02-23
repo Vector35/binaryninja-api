@@ -4374,7 +4374,7 @@ class BinaryView:
 	def max_function_size_for_analysis(self, size: int) -> None:
 		core.BNSetMaxFunctionSizeForAnalysis(self.handle, size)
 
-	def define_relocation(self, info: 'relocation.RelocationInfo', target: 'int | _types.Symbol', reloc: int, arch: Optional['architecture.Architecture'] = None):
+	def define_relocation(self, info: 'relocation.RelocationInfo', target: 'int | _types.CoreSymbol', reloc: int, arch: Optional['architecture.Architecture'] = None):
 		if arch is None:
 			if self.arch is None:
 				raise Exception("Can not define relocation with no Architecture specified")

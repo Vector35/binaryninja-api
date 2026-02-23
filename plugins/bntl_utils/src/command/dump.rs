@@ -2,8 +2,7 @@ use crate::command::{InputDirectoryField, OutputDirectoryField};
 use crate::dump::TILDump;
 use crate::helper::path_to_type_libraries;
 use binaryninja::background_task::BackgroundTask;
-use binaryninja::binary_view::BinaryView;
-use binaryninja::command::Command;
+use binaryninja::command::GlobalCommand;
 use binaryninja::interaction::Form;
 
 pub struct Dump;
@@ -48,15 +47,14 @@ impl Dump {
     }
 }
 
-impl Command for Dump {
-    // TODO: We need a command type that does not require a binary view.
-    fn action(&self, _view: &BinaryView) {
+impl GlobalCommand for Dump {
+    fn action(&self) {
         std::thread::spawn(move || {
             Dump::execute();
         });
     }
 
-    fn valid(&self, _view: &BinaryView) -> bool {
+    fn valid(&self) -> bool {
         true
     }
 }

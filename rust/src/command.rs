@@ -32,11 +32,7 @@
 //!
 //! The return value of these functions should indicate whether they successfully initialized themselves.
 
-use binaryninjacore_sys::{
-    BNBinaryView, BNFunction, BNProject, BNRegisterPluginCommand,
-    BNRegisterPluginCommandForAddress, BNRegisterPluginCommandForFunction,
-    BNRegisterPluginCommandForProject, BNRegisterPluginCommandForRange,
-};
+use binaryninjacore_sys::*;
 
 use crate::binary_view::BinaryView;
 use crate::function::Function;
@@ -45,6 +41,42 @@ use crate::string::IntoCStr;
 use std::ops::Range;
 use std::os::raw::c_void;
 use std::ptr::NonNull;
+
+pub trait GlobalCommand: 'static + Sync {
+    fn action(&self);
+    fn valid(&self) -> bool;
+}
+
+pub fn register_global_command<C: GlobalCommand>(name: &str, desc: &str, command: C) {
+    extern "C" fn cb_action<C>(ctxt: *mut c_void)
+    where
+        C: GlobalCommand,
+    {
+        let cmd = unsafe { &*(ctxt as *const C) };
+        cmd.action();
+    }
+
+    extern "C" fn cb_valid<C>(ctxt: *mut c_void) -> bool
+    where
+        C: GlobalCommand,
+    {
+        let cmd = unsafe { &*(ctxt as *const C) };
+        cmd.valid()
+    }
+
+    let name = name.to_cstr();
+    let desc = desc.to_cstr();
+    let ctxt = Box::into_raw(Box::new(command));
+    unsafe {
+        BNRegisterPluginCommandGlobal(
+            name.as_ptr(),
+            desc.as_ptr(),
+            Some(cb_action::<C>),
+            Some(cb_valid::<C>),
+            ctxt as *mut _,
+        );
+    }
+}
 
 /// The trait required for generic commands.  See [register_command] for example usage.
 pub trait Command: 'static + Sync {

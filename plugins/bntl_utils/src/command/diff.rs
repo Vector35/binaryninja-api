@@ -2,8 +2,7 @@ use crate::command::OutputDirectoryField;
 use crate::diff::TILDiff;
 use crate::helper::path_to_type_libraries;
 use binaryninja::background_task::BackgroundTask;
-use binaryninja::binary_view::BinaryView;
-use binaryninja::command::Command;
+use binaryninja::command::GlobalCommand;
 use binaryninja::interaction::{Form, FormInputField};
 use std::path::PathBuf;
 use std::thread;
@@ -95,14 +94,14 @@ impl Diff {
     }
 }
 
-impl Command for Diff {
-    fn action(&self, _view: &BinaryView) {
+impl GlobalCommand for Diff {
+    fn action(&self) {
         thread::spawn(move || {
             Diff::execute();
         });
     }
 
-    fn valid(&self, _view: &BinaryView) -> bool {
+    fn valid(&self) -> bool {
         true
     }
 }

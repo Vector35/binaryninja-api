@@ -6,7 +6,8 @@ use crate::report::{ReportGenerator, ReportKindField};
 use crate::{user_signature_dir, INCLUDE_TAG_NAME};
 use binaryninja::background_task::BackgroundTask;
 use binaryninja::binary_view::{BinaryView, BinaryViewExt};
-use binaryninja::command::Command;
+use binaryninja::command::{Command, GlobalCommand};
+use binaryninja::file_metadata::FileMetadata;
 use binaryninja::interaction::form::{Form, FormInputField};
 use binaryninja::interaction::{MessageBoxButtonResult, MessageBoxButtonSet, MessageBoxIcon};
 use binaryninja::rc::Ref;
@@ -248,15 +249,17 @@ impl Command for CreateFromCurrentView {
 
 pub struct CreateFromFiles;
 
-impl Command for CreateFromFiles {
-    fn action(&self, view: &BinaryView) {
-        let view = view.to_owned();
+impl GlobalCommand for CreateFromFiles {
+    fn action(&self) {
+        let empty_file_metadata = FileMetadata::new();
+        let empty_bv = BinaryView::from_data(&empty_file_metadata, &[]);
         thread::spawn(move || {
-            CreateFromCurrentView::execute(view, true);
+            CreateFromCurrentView::execute(empty_bv.to_owned(), true);
+            empty_bv.file().close();
         });
     }
 
-    fn valid(&self, _view: &BinaryView) -> bool {
+    fn valid(&self) -> bool {
         true
     }
 }

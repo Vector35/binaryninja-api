@@ -1,8 +1,7 @@
 use crate::command::{InputDirectoryField, OutputDirectoryField};
 use crate::helper::path_to_type_libraries;
 use crate::validate::TypeLibValidater;
-use binaryninja::binary_view::BinaryView;
-use binaryninja::command::Command;
+use binaryninja::command::GlobalCommand;
 use binaryninja::interaction::Form;
 use binaryninja::platform::Platform;
 
@@ -68,14 +67,14 @@ impl Validate {
     }
 }
 
-impl Command for Validate {
-    fn action(&self, _view: &BinaryView) {
+impl GlobalCommand for Validate {
+    fn action(&self) {
         std::thread::spawn(move || {
             Validate::execute();
         });
     }
 
-    fn valid(&self, _view: &BinaryView) -> bool {
+    fn valid(&self) -> bool {
         true
     }
 }

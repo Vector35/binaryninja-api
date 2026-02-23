@@ -3,7 +3,7 @@ use crate::process::{new_processing_state_background_thread, TypeLibProcessor};
 use crate::validate::TypeLibValidater;
 use binaryninja::background_task::BackgroundTask;
 use binaryninja::binary_view::{BinaryView, BinaryViewExt};
-use binaryninja::command::{Command, ProjectCommand};
+use binaryninja::command::{Command, GlobalCommand, ProjectCommand};
 use binaryninja::interaction::{Form, FormInputField, MessageBoxButtonSet, MessageBoxIcon};
 use binaryninja::platform::Platform;
 use binaryninja::project::Project;
@@ -188,14 +188,14 @@ impl CreateFromDirectory {
     }
 }
 
-impl Command for CreateFromDirectory {
-    fn action(&self, _view: &BinaryView) {
+impl GlobalCommand for CreateFromDirectory {
+    fn action(&self) {
         thread::spawn(move || {
             CreateFromDirectory::execute();
         });
     }
 
-    fn valid(&self, _view: &BinaryView) -> bool {
+    fn valid(&self) -> bool {
         true
     }
 }

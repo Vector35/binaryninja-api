@@ -16502,6 +16502,12 @@ namespace BinaryNinja {
 	{
 		BNPluginCommand m_command;
 
+		struct RegisteredGlobalCommand
+		{
+			std::function<void()> action;
+			std::function<bool()> isValid;
+		};
+
 		struct RegisteredDefaultCommand
 		{
 			std::function<void(BinaryView*)> action;
@@ -16568,6 +16574,7 @@ namespace BinaryNinja {
 			std::function<bool(Project*)> isValid;
 		};
 
+		static void GlobalPluginCommandActionCallback(void* ctxt);
 		static void DefaultPluginCommandActionCallback(void* ctxt, BNBinaryView* view);
 		static void AddressPluginCommandActionCallback(void* ctxt, BNBinaryView* view, uint64_t addr);
 		static void RangePluginCommandActionCallback(void* ctxt, BNBinaryView* view, uint64_t addr, uint64_t len);
@@ -16586,6 +16593,7 @@ namespace BinaryNinja {
 		    void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func, size_t instr);
 		static void ProjectPluginCommandActionCallback(void* ctxt, BNProject* project);
 
+		static bool GlobalPluginCommandIsValidCallback(void* ctxt);
 		static bool DefaultPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view);
 		static bool AddressPluginCommandIsValidCallback(void* ctxt, BNBinaryView* view, uint64_t addr);
 		static bool RangePluginCommandIsValidCallback(void* ctxt, BNBinaryView* view, uint64_t addr, uint64_t len);
@@ -16611,9 +16619,74 @@ namespace BinaryNinja {
 
 		PluginCommand& operator=(const PluginCommand& cmd);
 
+		/*! Register a command.
+
+			This will appear in the top menu.
+
+			\code{.cpp}
+
+			// Registering a command using a lambda expression
+			PluginCommand::RegisterGlobal("MyPlugin\\MyAction", "Perform an action", []() { });
+
+			// Registering a command using a standard static function
+			// This also works with functions in the global namespace, e.g. "void myCommand()"
+			void MyPlugin::MyCommand()
+			{
+				// Perform an action
+			}
+
+			PluginCommand::Register("MyPlugin\\MySecondAction", "Perform an action", MyPlugin::MyCommand);
+			\endcode
+
+			\param name
+			\parblock
+			Name of the command to register. This will appear in the top menu.
+
+			You can register submenus to an item by separating names with a \c "\\". The base (farthest right) name will
+			be the item which upon being clicked will perform the action.
+			\endparblock
+			\param description Description of the command
+			\param action Action to perform
+		*/
+		static void RegisterGlobal(const std::string& name, const std::string& description, const std::function<void()>& action);
+
+		/*! Register a command globally, with a validity check.
+
+			This will appear in the top menu.
+
+			\code{.cpp}
+
+			// Registering a command using lambda expressions
+			PluginCommand::Register("MyPlugin\\MyAction", "Perform an action", [](){ }, [](){ });
+
+			// Registering a command using a standard static function, and a lambda for the isValid check
+			// This also works with functions in the global namespace, e.g. "void myCommand()"
+			void MyPlugin::MyCommand(BinaryView* view)
+			{
+				// Perform an action
+			}
+
+			PluginCommand::Register("MyPlugin\\MySecondAction", "Perform an action", MyPlugin::MyCommand,
+				   [](){ return true; });
+			\endcode
+
+			\param name
+			\parblock
+			Name of the command to register. This will appear in the top menu and the context menu.
+
+			You can register submenus to an item by separating names with a \c "\\". The base (farthest right) name will
+			be the item which upon being clicked will perform the action.
+			\endparblock
+			\param description Description of the command
+			\param action Action to perform
+			\param isValid Function that returns whether the command is allowed to be performed.
+		*/
+		static void RegisterGlobal(const std::string& name, const std::string& description,
+		    const std::function<void()>& action, const std::function<bool()>& isValid);
+
 		/*! Register a command for a given BinaryView.
 
-			This will appear in the top menu and the right-click context menu.
+			This will appear in the top menu.
 
 			\code{.cpp}
 
@@ -16649,7 +16722,7 @@ namespace BinaryNinja {
 
 		/*! Register a command for a given BinaryView, with a validity check.
 
-			This will appear in the top menu and the right-click context menu.
+			This will appear in the top menu.
 
 			\code{.cpp}
 

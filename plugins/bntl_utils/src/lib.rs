@@ -35,25 +35,25 @@ fn plugin_init() -> Result<(), ()> {
         command::create::CreateFromProject {},
     );
 
-    binaryninja::command::register_command(
+    binaryninja::command::register_global_command(
         "BNTL\\Create\\From Directory",
         "Create .bntl files from the given directory",
         command::create::CreateFromDirectory {},
     );
 
-    binaryninja::command::register_command(
+    binaryninja::command::register_global_command(
         "BNTL\\Diff",
         "Diff two .bntl files and output the difference to a file",
         command::diff::Diff {},
     );
 
-    binaryninja::command::register_command(
+    binaryninja::command::register_global_command(
         "BNTL\\Dump To Header",
         "Dump a .bntl file to a header file",
         command::dump::Dump {},
     );
 
-    binaryninja::command::register_command(
+    binaryninja::command::register_global_command(
         "BNTL\\Validate",
         "Validate a .bntl file and report the issues",
         command::validate::Validate {},

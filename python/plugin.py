@@ -55,7 +55,8 @@ class PluginCommandContext:
 		self._length = 0
 		self._function = None
 		self._instruction = None
-		self._project = view.project
+		if view is not None:
+			self._project = view.project
 
 	def __len__(self):
 		return self._length
@@ -138,6 +139,14 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		self._name = str(cmd.name)
 		self._description = str(cmd.description)
 		self._type = PluginCommandType(cmd.type)
+
+	@staticmethod
+	def _global_action(action):
+		try:
+			action()
+		except:
+			log_error_for_exception("Unhandled Python exception in PluginCommand._global_action")
+
 
 	@staticmethod
 	def _default_action(view, action):
@@ -253,6 +262,16 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			action(project_obj)
 		except:
 			log_error_for_exception("Unhandled Python exception in PluginCommand._project_action")
+
+	@staticmethod
+	def _global_is_valid(is_valid):
+		try:
+			if is_valid is None:
+				return True
+			return is_valid()
+		except:
+			log_error_for_exception("Unhandled Python exception in PluginCommand._global_is_valid")
+			return False
 
 	@staticmethod
 	def _default_is_valid(view, is_valid):
@@ -407,6 +426,38 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		except:
 			log_error_for_exception("Unhandled Python exception in PluginCommand._project_is_valid")
 			return False
+
+	@classmethod
+	def register_global(
+			cls, name: str, description: str, action: Callable[[], None],
+			is_valid: Optional[Callable[[], bool]] = None
+	):
+		r"""
+		``register_global`` Register a command globally
+
+		:param str name: name of the command (use 'Folder\\Name' to have the menu item nested in a folder)
+		:param str description: description of the command
+		:param callback action: function to call
+		:param callback is_valid: optional argument of a function to determine whether the command should be enabled
+		:rtype: None
+		:Example:
+
+			>>> def my_command():
+			>>> 	log_info(f"My command was called on bv")
+			>>> PluginCommand.register_global("My Command", "My command description (not used)", my_command)
+			True
+			>>> def is_valid() -> bool:
+			>>> 	return False
+			>>> PluginCommand.register_global("My Command (With Valid Function)", "My command description (not used)", my_plugin, is_valid)
+			True
+
+		.. warning:: Calling ``register_global`` with the same function name will replace the existing function but will leak the memory of the original plugin.
+		"""
+		binaryninja._init_plugins()
+		action_obj = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(lambda ctxt: cls._global_action(action))
+		is_valid_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p)(lambda ctxt: cls._global_is_valid(is_valid))
+		cls._registered_commands.append((action_obj, is_valid_obj))
+		core.BNRegisterPluginCommandGlobal(name, description, action_obj, is_valid_obj, None)
 
 	@classmethod
 	def register(
@@ -831,6 +882,17 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		return result
 
 	def is_valid(self, context: PluginCommandContext):
+		if self._command.type == PluginCommandType.ProjectPluginCommand:
+			if context.project is None:
+				return False
+			if not self._command.projectIsValid:
+				return True
+			return self._command.projectIsValid(self._command.context, context.project.handle)
+		elif self._command.type == PluginCommandType.GlobalPluginCommand:
+			if not self._command.globalIsValid:
+				return True
+			return self._command.globalIsValid(self._command.context)
+
 		if context.view is None:
 			return False
 		if self._command.type == PluginCommandType.DefaultPluginCommand:
@@ -912,12 +974,6 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 			    self._command.context, context.view.handle, context.instruction.function.handle,
 			    context.instruction.instr_index
 			)
-		elif self._command.type == PluginCommandType.ProjectPluginCommand:
-			if context.project is None:
-				return False
-			if not self._command.projectIsValid:
-				return True
-			return self._command.projectIsValid(self._command.context, context.project.handle)
 		return False
 
 	def execute(self, context: PluginCommandContext):
@@ -933,7 +989,9 @@ class PluginCommand(metaclass=_PluginCommandMetaClass):
 		"""
 		if not self.is_valid(context):
 			return
-		if self._command.type == PluginCommandType.DefaultPluginCommand:
+		if self._command.type == PluginCommandType.GlobalPluginCommand:
+			self._command.globalCommand(self._command.context)
+		elif self._command.type == PluginCommandType.DefaultPluginCommand:
 			self._command.defaultCommand(self._command.context, context.view.handle)
 		elif self._command.type == PluginCommandType.AddressPluginCommand:
 			self._command.addressCommand(self._command.context, context.view.handle, context.address)

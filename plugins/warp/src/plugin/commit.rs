@@ -3,8 +3,7 @@
 use crate::cache::container::cached_containers;
 use crate::container::{SourceId, SourcePath};
 use crate::plugin::create::OpenFileField;
-use binaryninja::binary_view::BinaryView;
-use binaryninja::command::Command;
+use binaryninja::command::GlobalCommand;
 use binaryninja::interaction::{Form, FormInputField};
 use warp::chunk::ChunkKind;
 use warp::WarpFile;
@@ -137,14 +136,14 @@ impl CommitFile {
     }
 }
 
-impl Command for CommitFile {
-    fn action(&self, _view: &BinaryView) {
+impl GlobalCommand for CommitFile {
+    fn action(&self) {
         std::thread::spawn(move || {
             Self::execute();
         });
     }
 
-    fn valid(&self, _view: &BinaryView) -> bool {
+    fn valid(&self) -> bool {
         true
     }
 }

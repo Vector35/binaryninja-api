@@ -2784,7 +2784,8 @@ extern "C"
 		MediumLevelILInstructionPluginCommand,
 		HighLevelILFunctionPluginCommand,
 		HighLevelILInstructionPluginCommand,
-		ProjectPluginCommand
+		ProjectPluginCommand,
+		GlobalPluginCommand
 	};
 
 	typedef struct BNPluginCommand
@@ -2794,6 +2795,7 @@ extern "C"
 		BNPluginCommandType type;
 		void* context;
 
+		void (*globalCommand)(void* ctxt);
 		void (*defaultCommand)(void* ctxt, BNBinaryView* view);
 		void (*addressCommand)(void* ctxt, BNBinaryView* view, uint64_t addr);
 		void (*rangeCommand)(void* ctxt, BNBinaryView* view, uint64_t addr, uint64_t len);
@@ -2808,6 +2810,7 @@ extern "C"
 		    void* ctxt, BNBinaryView* view, BNHighLevelILFunction* func, size_t instr);
 		void (*projectCommand)(void* ctxt, BNProject* view);
 
+		bool (*globalIsValid)(void* ctxt);
 		bool (*defaultIsValid)(void* ctxt, BNBinaryView* view);
 		bool (*addressIsValid)(void* ctxt, BNBinaryView* view, uint64_t addr);
 		bool (*rangeIsValid)(void* ctxt, BNBinaryView* view, uint64_t addr, uint64_t len);
@@ -7426,6 +7429,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNInstallPendingUpdate(char** errors);
 
 	// Plugin commands
+	BINARYNINJACOREAPI void BNRegisterPluginCommandGlobal(const char* name, const char* description,
+		void (*action)(void* ctxt), bool (*isValid)(void* ctxt), void* context);
 	BINARYNINJACOREAPI void BNRegisterPluginCommand(const char* name, const char* description,
 	    void (*action)(void* ctxt, BNBinaryView* view), bool (*isValid)(void* ctxt, BNBinaryView* view), void* context);
 	BINARYNINJACOREAPI void BNRegisterPluginCommandForAddress(const char* name, const char* description,
@@ -7460,6 +7465,7 @@ extern "C"
 		void (*action)(void* ctxt, BNProject* project), bool (*isValid)(void* ctxt, BNProject* project), void* context);
 
 	BINARYNINJACOREAPI BNPluginCommand* BNGetAllPluginCommands(size_t* count);
+	BINARYNINJACOREAPI BNPluginCommand* BNGetValidPluginCommandsGlobal(size_t* count);
 	BINARYNINJACOREAPI BNPluginCommand* BNGetValidPluginCommands(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI BNPluginCommand* BNGetValidPluginCommandsForAddress(
 	    BNBinaryView* view, uint64_t addr, size_t* count);

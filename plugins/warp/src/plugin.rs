@@ -11,6 +11,7 @@ use crate::{core_signature_dir, user_signature_dir};
 use binaryninja::background_task::BackgroundTask;
 use binaryninja::command::{
     register_command, register_command_for_function, register_command_for_project,
+    register_global_command,
 };
 use binaryninja::is_ui_enabled;
 use binaryninja::settings::{QueryOptions, Settings};
@@ -192,7 +193,7 @@ fn plugin_init() -> bool {
         load::LoadSignatureFile {},
     );
 
-    register_command(
+    register_global_command(
         "WARP\\Commit File",
         "Commit file to a source",
         commit::CommitFile {},
@@ -234,7 +235,7 @@ fn plugin_init() -> bool {
         create::CreateFromCurrentView {},
     );
 
-    register_command(
+    register_global_command(
         "WARP\\Create\\From File(s)",
         "Creates a signature file containing all selected functions",
         create::CreateFromFiles {},

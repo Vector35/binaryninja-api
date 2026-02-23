@@ -2389,9 +2389,9 @@ dependencies = [
 
 [[package]]
 name = "serde-saphyr"
-version = "0.0.18"
+version = "0.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "191a4f997fef5e095212c5790898516e9567d2d8502c4159317603ff0321e394"
+checksum = "29fb2d57f074f415e3ea6905994be8aca2bd7a17f8a0344cc43ed15bf240a547"
 dependencies = [
  "ahash",
  "annotate-snippets",

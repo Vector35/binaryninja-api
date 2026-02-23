@@ -354,12 +354,12 @@ impl ProcessedData {
             (QualifiedName, CoreArchitecture),
             Vec<Ref<TypeLibrary>>,
         > = HashMap::new();
-        for merged_type_library in &self.type_libraries {
-            for named_type in &merged_type_library.named_types() {
+        for tl in &self.type_libraries {
+            for named_type in &tl.named_types() {
                 mapped_named_types
-                    .entry((named_type.name.clone(), merged_type_library.arch()))
+                    .entry((named_type.name.clone(), tl.arch()))
                     .or_default()
-                    .push(merged_type_library.clone());
+                    .push(tl.clone());
             }
         }
 
@@ -553,12 +553,16 @@ impl TypeLibProcessor {
             .filter_map(|res| match res {
                 Ok(result) => Some(Ok(result)),
                 Err(ProcessingError::SkippedFile(path)) => {
-                    tracing::debug!("Skipping project root file: {:?}", path);
+                    tracing::debug!("Skipping project file: {:?}", path);
                     None
                 }
                 Err(ProcessingError::Cancelled) => Some(Err(ProcessingError::Cancelled)),
+                Err(ProcessingError::NoPathToProjectFile(path)) => {
+                    tracing::warn!("Project file not downloaded: {:?}", path);
+                    None
+                }
                 Err(e) => {
-                    tracing::error!("Project root file processing error: {:?}", e);
+                    tracing::error!("Project file processing error: {:?}", e);
                     None
                 }
             })
@@ -588,12 +592,16 @@ impl TypeLibProcessor {
             .filter_map(|res| match res {
                 Ok(result) => Some(Ok(result)),
                 Err(ProcessingError::SkippedFile(path)) => {
-                    tracing::debug!("Skipping project directory file: {:?}", path);
+                    tracing::debug!("Skipping project file: {:?}", path);
                     None
                 }
                 Err(ProcessingError::Cancelled) => Some(Err(ProcessingError::Cancelled)),
+                Err(ProcessingError::NoPathToProjectFile(path)) => {
+                    tracing::warn!("Project file not downloaded: {:?}", path);
+                    None
+                }
                 Err(e) => {
-                    tracing::error!("Project folder file processing error: {:?}", e);
+                    tracing::error!("Project file processing error: {:?}", e);
                     None
                 }
             })
@@ -1093,13 +1101,13 @@ pub fn is_parsable(path: &Path) -> bool {
     if path.extension() == Some(OsStr::new("pdb")) {
         return false;
     }
-    let mut metadata = FileMetadata::with_file_path(path);
-    let Ok(view) = BinaryView::from_path(&metadata, path) else {
+    let metadata = FileMetadata::with_file_path(path);
+    let Ok(view) = BinaryView::from_metadata(&metadata) else {
         return false;
     };
     // If any view type parses this file, consider it for this source.
     // All files will have a "Raw" file type, so we account for that.
-    BinaryViewType::list_valid_types_for(&view).len() > 1
+    BinaryViewType::valid_types_for_data(&view).len() > 1
 }
 
 #[cfg(test)]

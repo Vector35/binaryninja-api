@@ -34,6 +34,8 @@ Examples:
     - Downloads and processes all files in the project, placing potentially multiple `.bntl` files in the `output` directory.
 - `./bntl_cli create sqlite3.dll "windows-x86_64" ./winmd/ ./output/`
   - `winmd` files are also supported as input, they will be processed together. You also probably want to provide some apiset schema files as well.
+- `./bntl_cli create sqlite3.dll "windows-x86_64" ./headers/ ./output/ --include-directories ./system_headers/`
+  - You can also specify additional include directories to search for referenced headers.
 
 #### Dump
 
@@ -45,7 +47,7 @@ Examples:
 
 #### Diff
 
-Compare two type libraries and generate a .diff file containing a similarity ratio.
+Compare two type libraries and generate a .diff file.
 
 Examples:
 

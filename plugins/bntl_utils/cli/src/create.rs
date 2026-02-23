@@ -14,6 +14,9 @@ pub struct CreateArgs {
     pub platform: String,
     pub input: Input,
     pub output_directory: Option<PathBuf>,
+    /// A list of directories to use for include paths when parsing C header files.
+    #[clap(long)]
+    pub include_directories: Vec<PathBuf>,
     #[clap(long)]
     pub dry_run: bool,
 }
@@ -37,7 +40,8 @@ impl CreateArgs {
         }
         std::fs::create_dir_all(&output_path).expect("Failed to create output directory");
 
-        let processor = TypeLibProcessor::new(&self.name, &self.platform);
+        let processor = TypeLibProcessor::new(&self.name, &self.platform)
+            .with_include_directories(self.include_directories.clone());
         // TODO: Need progress indicator here, when downloading files.
         let resolved_input = self.input.resolve().expect("Failed to resolve input");
 

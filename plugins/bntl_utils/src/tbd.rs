@@ -1,3 +1,5 @@
+//! Parse Apples TBD file format, which gives information about where source symbols are located.
+
 use binaryninja::architecture::CoreArchitecture;
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;

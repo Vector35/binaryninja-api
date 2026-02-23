@@ -1,7 +1,7 @@
 use crate::command::{InputDirectoryField, OutputDirectoryField};
 use crate::helper::path_to_type_libraries;
 use crate::validate::TypeLibValidater;
-use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::BinaryView;
 use binaryninja::command::Command;
 use binaryninja::interaction::Form;
 use binaryninja::platform::Platform;

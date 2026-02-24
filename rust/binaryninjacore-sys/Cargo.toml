@@ -6,6 +6,12 @@ build = "build.rs"
 edition = "2021"
 links = "binaryninjacore"
 license = "Apache-2.0"
+description = "FFI Bindings to Binary Ninja"
+keywords = ["binary", "binja", "analysis", "program", "reverse-engineering"]
+categories = ["security"]
+repository = "https://github.com/Vector35/binaryninja-api"
+homepage = "https://binary.ninja"
+include = ["**/**"]
 
 [features]
 default = ["core"]

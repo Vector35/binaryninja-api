@@ -1,8 +1,7 @@
-use std::env;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[cfg(target_os = "macos")]
 static LASTRUN_PATH: (&str, &str) = ("HOME", "Library/Application Support/Binary Ninja/lastrun");
@@ -13,11 +12,11 @@ static LASTRUN_PATH: (&str, &str) = ("HOME", ".binaryninja/lastrun");
 #[cfg(windows)]
 static LASTRUN_PATH: (&str, &str) = ("APPDATA", "Binary Ninja\\lastrun");
 
-// Check last run location for path to BinaryNinja; Otherwise check the default install locations
+/// Check the last run location for the path to binary ninja core, falling back to default install locations.
 fn link_path() -> PathBuf {
     use std::io::prelude::*;
 
-    let home = PathBuf::from(env::var(LASTRUN_PATH.0).unwrap());
+    let home = PathBuf::from(std::env::var(LASTRUN_PATH.0).unwrap());
     let lastrun = PathBuf::from(&home).join(LASTRUN_PATH.1);
 
     File::open(lastrun)
@@ -41,17 +40,15 @@ fn link_path() -> PathBuf {
         })
 }
 
-// Generate and compile stub shared library and return the path to the folder containing the built stub library
+/// Generate and compile a stubbed out shared library and return the path to the folder containing
+/// the built stub library, this allows us to link without actually having the real core library.
 fn generate_stubs() -> PathBuf {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
-
-    let api_base_path = std::path::PathBuf::from(manifest_dir)
+    let api_base_path = PathBuf::from(manifest_dir)
         .join("../../")
         .canonicalize()
         .unwrap();
-
     let stubs_path = api_base_path.join("stubs");
-
     // TODO: does visual studio add the config name as a subdirectory?
     cmake::Config::new(stubs_path)
         .generator("Ninja")
@@ -59,15 +56,29 @@ fn generate_stubs() -> PathBuf {
         .join("build")
 }
 
+/// Find a header file for parsing, checking the vendored directory, falling back to the default location.
+///
+/// The `vendor` directory is used when publishing the crate, as the headers must be contained within
+/// the packaged crate, for more information see https://doc.rust-lang.org/cargo/reference/publishing.html#packaging-a-crate
+fn find_header(name: &str, fallback_path: &str) -> PathBuf {
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+    let vendored = Path::new(&manifest_dir).join("vendor").join(name);
+    if vendored.exists() {
+        vendored
+    } else {
+        PathBuf::from(fallback_path)
+    }
+}
+
 fn main() {
     println!("cargo:rerun-if-env-changed=BINARYNINJADIR");
     println!("cargo:rerun-if-changed=../../binaryninjacore.h");
 
     //Cargo's output directory
-    let out_dir = env::var("OUT_DIR").unwrap();
+    let out_dir = std::env::var("OUT_DIR").unwrap();
 
-    let link_path = match env::var("CARGO_FEATURE_CORE") {
-        Ok(_) => env::var("BINARYNINJADIR")
+    let link_path = match std::env::var("CARGO_FEATURE_CORE") {
+        Ok(_) => std::env::var("BINARYNINJADIR")
             .map(PathBuf::from)
             .unwrap_or_else(|_| link_path()),
         Err(_) => generate_stubs(),
@@ -93,11 +104,19 @@ fn main() {
     // Emit the path to binaryninjacore consumers of this crate should pass to the linker.
     println!("cargo:path={}", link_path.to_str().unwrap());
 
+    // We need to vendor the headers when publishing the crate, otherwise the headers will be missing
+    // from the packaged crate, and building will fail.
+    let header_path = find_header("binaryninjacore.h", "../../binaryninjacore.h");
+    let ui_header_path = find_header("uitypes.h", "../../ui/uitypes.h");
+
     let current_line = "#define BN_CURRENT_UI_ABI_VERSION ";
     let minimum_line = "#define BN_MINIMUM_UI_ABI_VERSION ";
     let mut current_version = "0".to_string();
     let mut minimum_version = "0".to_string();
-    let file = File::open("../../ui/uitypes.h").expect("Couldn't open uitypes.h");
+    let file = File::open(&ui_header_path).expect(&format!(
+        "Couldn't open '{}'",
+        ui_header_path.to_string_lossy()
+    ));
     for line in BufReader::new(file).lines() {
         let line = line.unwrap();
         if let Some(version) = line.strip_prefix(current_line) {
@@ -108,7 +127,7 @@ fn main() {
     }
 
     bindgen::builder()
-        .header("../../binaryninjacore.h")
+        .header(header_path.to_string_lossy())
         .clang_arg("-std=c++20")
         .clang_arg("-x")
         .clang_arg("c++")

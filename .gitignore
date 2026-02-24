@@ -86,6 +86,7 @@ rust/**/*.swp
 rust/**/*.rs.bk
 rust/target/
 rust/binaryninjacore-sys/target/
+rust/binaryninjacore-sys/vendor/
 rust/examples/*/target/
 rust/examples/dwarf/*/target/
 # Allow the test binaries

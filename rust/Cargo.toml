@@ -5,6 +5,12 @@ authors = ["Ryan Snyder <ryan@vector35.com>", "Kyle Martin <kyle@vector35.com>"]
 edition = "2021"
 rust-version = "1.91.1"
 license = "Apache-2.0"
+description = "Binary Ninja bindings"
+keywords = ["binary", "binja", "analysis", "program", "reverse-engineering"]
+categories = ["security"]
+repository = "https://github.com/Vector35/binaryninja-api"
+homepage = "https://binary.ninja"
+exclude = ["fixtures"]
 
 [features]
 default = ["core"]

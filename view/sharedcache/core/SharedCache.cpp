@@ -227,7 +227,10 @@ void SharedCache::AddSymbols(std::vector<CacheSymbol>&& symbols)
 void SharedCache::AddEntry(CacheEntry entry)
 {
 	// Get the file accessor to associate with the virtual memory region.
-	auto fileAccessor = FileAccessorCache::Global().Open(entry.GetFilePath());
+	WeakFileAccessor fileAccessor = entry.GetAccessor();
+	// We want to share the **same** WeakFileAccessor object across the memory regions of the entry so that when a revive
+	// occurs
+	std::shared_ptr<WeakFileAccessor> sharedFileAccessor = std::make_shared<WeakFileAccessor>(std::move(fileAccessor));
 
 	if (entry.GetType() == CacheEntryType::Symbols)
 	{
@@ -236,7 +239,7 @@ void SharedCache::AddEntry(CacheEntry entry)
 		// This is necessary due to code that processes symbols being written in terms of a `VirtualMemory`
 		// rather than something more generic.
 		m_localSymbolsVM = std::make_shared<VirtualMemory>(m_vm->GetAddressSize());
-		m_localSymbolsVM->MapRegion(fileAccessor, {0, fileAccessor.lock()->Length()}, 0);
+		m_localSymbolsVM->MapRegion(sharedFileAccessor, {0, sharedFileAccessor->lock()->Length()}, 0);
 		return;
 	}
 
@@ -245,7 +248,7 @@ void SharedCache::AddEntry(CacheEntry entry)
 	const auto& mappings = entry.GetMappings();
 	for (const auto& mapping : mappings)
 	{
-		m_vm->MapRegion(fileAccessor, {mapping.address, mapping.address + mapping.size}, mapping.fileOffset);
+		m_vm->MapRegion(sharedFileAccessor, {mapping.address, mapping.address + mapping.size}, mapping.fileOffset);
 
 		// Recalculate the base address.
 		if (mapping.address < m_baseAddress || m_baseAddress == 0)
@@ -448,7 +451,7 @@ void SharedCache::ProcessEntrySlideInfo(const CacheEntry& entry) const
 			if (auto vmRegion = vm->GetRegionAtAddress(*mappedMappingAddr))
 			{
 				// Ok we have the virtual memory region, lets register the callback on its accessor.
-				vmRegion->fileAccessor.RegisterReviveCallback(reviveCallback);
+				vmRegion->fileAccessor->RegisterReviveCallback(reviveCallback);
 				continue;
 			}
 		}

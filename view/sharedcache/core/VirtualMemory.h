@@ -24,9 +24,9 @@ struct VirtualMemoryRegion
 	uint64_t fileOffset;
 	// Access the memory regions contents through this.
 	// NOTE: Any read through this should be seeked to `fileOffset`
-	WeakFileAccessor fileAccessor;
+	std::shared_ptr<WeakFileAccessor> fileAccessor;
 
-	VirtualMemoryRegion(uint64_t offset, WeakFileAccessor accessor)
+	VirtualMemoryRegion(uint64_t offset, std::shared_ptr<WeakFileAccessor> accessor)
 		: fileOffset(offset), fileAccessor(std::move(accessor)) {}
 
 
@@ -54,7 +54,7 @@ public:
 	uint64_t GetAddressSize() const { return m_addressSize; }
 
 	// At no point do we ever store a strong pointer to a file accessor, that is the job of the `FileAccessorCache`.
-	void MapRegion(WeakFileAccessor fileAccessor, AddressRange mappedRange, uint64_t fileOffset);
+	void MapRegion(std::shared_ptr<WeakFileAccessor> fileAccessor, AddressRange mappedRange, uint64_t fileOffset);
 
 	// Returns the region in virtual memory, along with the offset into that region where the address is located.
 	// Using the regions file accessor and the address offset you can read a regions content.

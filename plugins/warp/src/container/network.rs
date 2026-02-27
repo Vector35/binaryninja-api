@@ -3,10 +3,12 @@ use crate::container::{
     Container, ContainerError, ContainerResult, ContainerSearchQuery, ContainerSearchResponse,
     SourceId, SourcePath, SourceTag,
 };
+use dashmap::DashMap;
 use directories::ProjectDirs;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display, Formatter};
 use std::path::PathBuf;
+use std::sync::RwLock;
 use warp::chunk::{Chunk, ChunkKind, CompressionType};
 use warp::r#type::chunk::TypeChunk;
 use warp::r#type::guid::TypeGUID;
@@ -28,15 +30,21 @@ pub struct NetworkContainer {
     client: NetworkClient,
     /// This is the store that the interface will write to; then we have special functions for pulling
     /// and pushing to the network source.
-    cache: DiskContainer,
+    cache: RwLock<DiskContainer>,
     /// Where to place newly created sources.
     ///
     /// This is typically a directory inside [`NetworkContainer::root_cache_location`].
     cache_path: PathBuf,
     /// Populated when targets are queried.
-    known_targets: HashMap<Target, Option<NetworkTargetId>>,
+    ///
+    /// NOTE: This is a [`DashMap`] purely for the sake of interior mutability as we do not wish to hold
+    /// a write lock on the entire container while performing network operations.
+    known_targets: DashMap<Target, Option<NetworkTargetId>>,
     /// Populated when function sources are queried.
-    known_function_sources: HashMap<FunctionGUID, Vec<SourceId>>,
+    ///
+    /// NOTE: This is a [`DashMap`] purely for the sake of interior mutability as we do not wish to hold
+    /// a write lock on the entire container while performing network operations.
+    known_function_sources: DashMap<FunctionGUID, Vec<SourceId>>,
     /// Populated when user adds function, this is used for writing back to the server.
     added_chunks: HashMap<SourceId, Vec<Chunk<'static>>>,
     /// Populated when connecting to the server, this is used to determine which sources are writable.
@@ -47,12 +55,12 @@ pub struct NetworkContainer {
 
 impl NetworkContainer {
     pub fn new(client: NetworkClient, cache_path: PathBuf, writable_sources: &[SourceId]) -> Self {
-        let mut container = Self {
-            cache: DiskContainer::new_from_dir(cache_path.clone()),
+        let container = Self {
+            cache: RwLock::new(DiskContainer::new_from_dir(cache_path.clone())),
             cache_path,
             client,
-            known_targets: HashMap::new(),
-            known_function_sources: HashMap::new(),
+            known_targets: DashMap::new(),
+            known_function_sources: DashMap::new(),
             added_chunks: HashMap::new(),
             writable_sources: writable_sources.into_iter().copied().collect(),
         };
@@ -74,7 +82,7 @@ impl NetworkContainer {
     /// # Caching policy
     ///
     /// The [`NetworkTargetId`] is unique and immutable, so they will be persisted indefinitely.
-    pub fn get_target_id(&mut self, target: &Target) -> Option<NetworkTargetId> {
+    pub fn get_target_id(&self, target: &Target) -> Option<NetworkTargetId> {
         // It's highly probable we have previously queried the target, check that first.
         if let Some(target_id) = self.known_targets.get(target) {
             return target_id.clone();
@@ -96,7 +104,7 @@ impl NetworkContainer {
     /// for now as the requests for functions come at the request of some user interaction. Any guid
     /// with no sources will still be cached.
     pub fn get_unseen_functions_source(
-        &mut self,
+        &self,
         target: Option<&Target>,
         tags: &[SourceTag],
         guids: &[FunctionGUID],
@@ -157,12 +165,7 @@ impl NetworkContainer {
     /// Every request we store the returned objects on disk, this means that users will first
     /// query against the disk objects, then the server. This also means we need to cache functions f
     /// or which we have not received any functions for, as otherwise we would keep trying to query it.
-    pub fn pull_functions(
-        &mut self,
-        target: &Target,
-        source: &SourceId,
-        functions: &[FunctionGUID],
-    ) {
+    pub fn pull_functions(&self, target: &Target, source: &SourceId, functions: &[FunctionGUID]) {
         let target_id = self.get_target_id(target);
         let file = match self
             .client
@@ -182,18 +185,25 @@ impl NetworkContainer {
                     let functions: Vec<_> = sc.functions().collect();
                     // Probe the source before attempting to access it, as it might not exist locally.
                     self.probe_source(*source);
-                    match self.cache.add_functions(target, source, &functions) {
-                        Ok(_) => tracing::debug!(
-                            "Added {} functions into cached source '{}'",
-                            functions.len(),
-                            source
-                        ),
-                        Err(err) => tracing::error!(
-                            "Failed to add {} function into cached source '{}': {}",
-                            functions.len(),
-                            source,
-                            err
-                        ),
+
+                    match self.cache.write() {
+                        Ok(mut cache) => match cache.add_functions(target, source, &functions) {
+                            Ok(_) => tracing::debug!(
+                                "Added {} functions into cached source '{}'",
+                                functions.len(),
+                                source
+                            ),
+                            Err(err) => tracing::error!(
+                                "Failed to add {} function into cached source '{}': {}",
+                                functions.len(),
+                                source,
+                                err
+                            ),
+                        },
+                        Err(err) => {
+                            tracing::error!("Failed to write to cache: {}", err);
+                            return;
+                        }
                     }
                 }
                 // TODO; Probably want to pull type in with this.
@@ -214,8 +224,13 @@ impl NetworkContainer {
     /// Probe the source to make sure it exists in the cache. Retrieving the name from the server.
     ///
     /// **This is blocking**
-    pub fn probe_source(&mut self, source_id: SourceId) {
-        if !self.cache.source_path(&source_id).is_ok() {
+    pub fn probe_source(&self, source_id: SourceId) {
+        let Ok(mut cache) = self.cache.write() else {
+            tracing::error!("Cannot probe source '{}', cache is poisoned", source_id);
+            return;
+        };
+
+        if !cache.source_path(&source_id).is_ok() {
             // Add the source to the cache. Using the source id and source name as the source path.
             match self.client.source_name(source_id) {
                 Ok(source_name) => {
@@ -224,7 +239,7 @@ impl NetworkContainer {
                         .cache_path
                         .join(source_id.to_string())
                         .join(source_name);
-                    let _ = self.cache.insert_source(source_id, SourcePath(source_path));
+                    let _ = cache.insert_source(source_id, SourcePath(source_path));
                 }
                 Err(e) => {
                     tracing::error!("Failed to probe source '{}': {}", source_id, e);
@@ -251,7 +266,10 @@ impl NetworkContainer {
 
 impl Container for NetworkContainer {
     fn sources(&self) -> ContainerResult<Vec<SourceId>> {
-        self.cache.sources()
+        self.cache
+            .read()
+            .map_err(|e| ContainerError::Custom(format!("Cache read error: {}", e)))?
+            .sources()
     }
 
     fn add_source(&mut self, path: SourcePath) -> ContainerResult<SourceId> {
@@ -295,11 +313,17 @@ impl Container for NetworkContainer {
     }
 
     fn source_tags(&self, source: &SourceId) -> ContainerResult<HashSet<SourceTag>> {
-        self.cache.source_tags(source)
+        self.cache
+            .read()
+            .map_err(|e| ContainerError::Custom(format!("Cache read error: {}", e)))?
+            .source_tags(source)
     }
 
     fn source_path(&self, source: &SourceId) -> ContainerResult<SourcePath> {
-        self.cache.source_path(source)
+        self.cache
+            .read()
+            .map_err(|e| ContainerError::Custom(format!("Cache read error: {}", e)))?
+            .source_path(source)
     }
 
     fn add_computed_types(
@@ -310,7 +334,10 @@ impl Container for NetworkContainer {
         // NOTE: We must `add_computed_types` to the cache before we add the chunk, as `added_chunks` is
         // not consulted when retrieving types from the cache, if we fail to add the types to
         // the cache, we will not see them show up in the UI or when matching.
-        self.cache.add_computed_types(source, types)?;
+        self.cache
+            .write()
+            .map_err(|e| ContainerError::Custom(format!("Cache write error: {}", e)))?
+            .add_computed_types(source, types)?;
         let type_chunk = TypeChunk::new_with_computed(types).ok_or(
             ContainerError::CorruptedData("signature chunk failed to validate"),
         )?;
@@ -320,7 +347,10 @@ impl Container for NetworkContainer {
     }
 
     fn remove_types(&mut self, source: &SourceId, guids: &[TypeGUID]) -> ContainerResult<()> {
-        self.cache.remove_types(source, guids)
+        self.cache
+            .write()
+            .map_err(|e| ContainerError::Custom(format!("Cache write error: {}", e)))?
+            .remove_types(source, guids)
     }
 
     fn add_functions(
@@ -332,7 +362,10 @@ impl Container for NetworkContainer {
         // NOTE: We must `add_functions` to the cache before we add the chunk, as `added_chunks` is
         // not consulted when retrieving functions from the cache, if we fail to add the functions to
         // the cache, we will not see them show up in the UI or when matching.
-        self.cache.add_functions(target, source, functions)?;
+        self.cache
+            .write()
+            .map_err(|e| ContainerError::Custom(format!("Cache write error: {}", e)))?
+            .add_functions(target, source, functions)?;
         let signature_chunk = SignatureChunk::new(functions).ok_or(
             ContainerError::CorruptedData("signature chunk failed to validate"),
         )?;
@@ -352,11 +385,14 @@ impl Container for NetworkContainer {
         functions: &[Function],
     ) -> ContainerResult<()> {
         // TODO: Wont persist, need to add remote removal.
-        self.cache.remove_functions(target, source, functions)
+        self.cache
+            .write()
+            .map_err(|e| ContainerError::Custom(format!("Cache write error: {}", e)))?
+            .remove_functions(target, source, functions)
     }
 
     fn fetch_functions(
-        &mut self,
+        &self,
         target: &Target,
         tags: &[SourceTag],
         functions: &[FunctionGUID],
@@ -376,14 +412,20 @@ impl Container for NetworkContainer {
     }
 
     fn sources_with_type_guid(&self, guid: &TypeGUID) -> ContainerResult<Vec<SourceId>> {
-        self.cache.sources_with_type_guid(guid)
+        self.cache
+            .read()
+            .map_err(|e| ContainerError::Custom(format!("Cache read error: {}", e)))?
+            .sources_with_type_guid(guid)
     }
 
     fn sources_with_type_guids(
         &self,
         guids: &[TypeGUID],
     ) -> ContainerResult<HashMap<TypeGUID, Vec<SourceId>>> {
-        self.cache.sources_with_type_guids(guids)
+        self.cache
+            .read()
+            .map_err(|e| ContainerError::Custom(format!("Cache read error: {}", e)))?
+            .sources_with_type_guids(guids)
     }
 
     fn type_guids_with_name(
@@ -391,11 +433,17 @@ impl Container for NetworkContainer {
         source: &SourceId,
         name: &str,
     ) -> ContainerResult<Vec<TypeGUID>> {
-        self.cache.type_guids_with_name(source, name)
+        self.cache
+            .read()
+            .map_err(|e| ContainerError::Custom(format!("Cache read error: {}", e)))?
+            .type_guids_with_name(source, name)
     }
 
     fn type_with_guid(&self, source: &SourceId, guid: &TypeGUID) -> ContainerResult<Option<Type>> {
-        self.cache.type_with_guid(source, guid)
+        self.cache
+            .read()
+            .map_err(|e| ContainerError::Custom(format!("Cache read error: {}", e)))?
+            .type_with_guid(source, guid)
     }
 
     fn sources_with_function_guid(
@@ -403,7 +451,10 @@ impl Container for NetworkContainer {
         target: &Target,
         guid: &FunctionGUID,
     ) -> ContainerResult<Vec<SourceId>> {
-        self.cache.sources_with_function_guid(target, guid)
+        self.cache
+            .read()
+            .map_err(|e| ContainerError::Custom(format!("Cache read error: {}", e)))?
+            .sources_with_function_guid(target, guid)
     }
 
     fn sources_with_function_guids(
@@ -411,7 +462,10 @@ impl Container for NetworkContainer {
         target: &Target,
         guids: &[FunctionGUID],
     ) -> ContainerResult<HashMap<FunctionGUID, Vec<SourceId>>> {
-        self.cache.sources_with_function_guids(target, guids)
+        self.cache
+            .read()
+            .map_err(|e| ContainerError::Custom(format!("Cache read error: {}", e)))?
+            .sources_with_function_guids(target, guids)
     }
 
     fn functions_with_guid(
@@ -420,7 +474,10 @@ impl Container for NetworkContainer {
         source: &SourceId,
         guid: &FunctionGUID,
     ) -> ContainerResult<Vec<Function>> {
-        self.cache.functions_with_guid(target, source, guid)
+        self.cache
+            .read()
+            .map_err(|e| ContainerError::Custom(format!("Cache read error: {}", e)))?
+            .functions_with_guid(target, source, guid)
     }
 
     fn search(&self, query: &ContainerSearchQuery) -> ContainerResult<ContainerSearchResponse> {

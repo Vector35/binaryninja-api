@@ -220,7 +220,7 @@ pub unsafe extern "C" fn BNWARPContainerFetchFunctions(
     count: usize,
 ) {
     let arc_container = ManuallyDrop::new(Arc::from_raw(container));
-    let Ok(mut container) = arc_container.write() else {
+    let Ok(container) = arc_container.read() else {
         return;
     };
 
@@ -246,7 +246,7 @@ pub unsafe extern "C" fn BNWARPContainerGetSources(
     count: *mut usize,
 ) -> *mut BNWARPSource {
     let arc_container = ManuallyDrop::new(Arc::from_raw(container));
-    let Ok(container) = arc_container.write() else {
+    let Ok(container) = arc_container.read() else {
         return std::ptr::null_mut();
     };
 

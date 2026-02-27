@@ -39,6 +39,8 @@ pub enum ContainerError {
     SearchFailed(String),
     #[error("failed to commit source '{0}': {1}")]
     CommitFailed(SourceId, String),
+    #[error("container error encountered: {0}")]
+    Custom(String),
 }
 
 /// Represents the ID for a single container source.
@@ -224,6 +226,7 @@ pub trait Container: Send + Sync + Display + Debug {
     /// to verify the permissions of the source.
     fn add_source(&mut self, path: SourcePath) -> ContainerResult<SourceId>;
 
+    // TODO: Make interior mutable.
     /// Flush changes made to a source.
     ///
     /// Because writing to a source can require file or network operations, we let the container
@@ -293,7 +296,7 @@ pub trait Container: Send + Sync + Display + Debug {
     /// will do nothing. This function is blocking, so assume it will take a few seconds for a container
     /// that intends to fetch over the network.
     fn fetch_functions(
-        &mut self,
+        &self,
         _target: &Target,
         _tags: &[SourceTag],
         _functions: &[FunctionGUID],

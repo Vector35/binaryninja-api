@@ -136,7 +136,7 @@ WarpSidebarWidget::WarpSidebarWidget(BinaryViewRef data) : SidebarWidget("WARP")
 	m_headerWidget->setLayout(headerLayout);
 
 	QFrame* currentFunctionFrame = new QFrame(this);
-	m_currentFunctionWidget = new WarpCurrentFunctionWidget();
+	m_currentFunctionWidget = new WarpCurrentFunctionWidget(this);
 	QVBoxLayout* currentFunctionLayout = new QVBoxLayout();
 	currentFunctionLayout->setContentsMargins(0, 0, 0, 0);
 	currentFunctionLayout->setSpacing(0);

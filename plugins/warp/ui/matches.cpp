@@ -11,7 +11,7 @@
 #include "warp.h"
 #include "shared/misc.h"
 
-WarpCurrentFunctionWidget::WarpCurrentFunctionWidget()
+WarpCurrentFunctionWidget::WarpCurrentFunctionWidget(QWidget* parent) : QWidget(parent)
 {
 	// We must explicitly support no current function.
 	m_current = nullptr;
@@ -31,10 +31,27 @@ WarpCurrentFunctionWidget::WarpCurrentFunctionWidget()
 	m_splitter = new QSplitter(Qt::Vertical);
 	m_splitter->setContentsMargins(0, 0, 0, 0);
 
+	// Wrap the table and the spinner so that we can overlay the spinner on the table.
+	QWidget* tableWrapper = new QWidget(m_splitter);
+	QGridLayout* wrapperLayout = new QGridLayout(tableWrapper);
+	wrapperLayout->setContentsMargins(0, 0, 0, 0);
+
 	// Add a widget to display the matches.
-	m_tableWidget = new WarpFunctionTableWidget(this);
+	m_tableWidget = new WarpFunctionTableWidget(tableWrapper);
 	m_tableWidget->setContentsMargins(0, 0, 0, 0);
-	m_splitter->addWidget(m_tableWidget);
+
+	// Spinner for when we are fetching functions over the network.
+	m_spinner = new QProgressBar(tableWrapper);
+	m_spinner->setRange(0, 0);
+	m_spinner->setTextVisible(false);
+	m_spinner->setFixedHeight(6);
+	m_spinner->hide();
+
+	// The table has no alignment, so it expands to fill the entire cell.
+	wrapperLayout->addWidget(m_tableWidget, 0, 0);
+	wrapperLayout->addWidget(m_spinner, 0, 0, Qt::AlignBottom);
+
+	m_splitter->addWidget(tableWrapper);
 
 	// Add a widget to display the info about the selected function match.
 	m_infoWidget = new WarpFunctionInfoWidget(this);
@@ -145,10 +162,12 @@ void WarpCurrentFunctionWidget::SetCurrentFunction(FunctionRef current)
 		if (!m_fetcher->m_requestInProgress.exchange(true))
 		{
 			BinaryNinja::WorkerPriorityEnqueue([this]() {
+				QMetaObject::invokeMethod(this, [this] { m_spinner->show(); }, Qt::QueuedConnection);
 				BinaryNinja::Ref bgTask = new BinaryNinja::BackgroundTask("Fetching WARP Functions...", true);
 				const auto allowedTags = GetAllowedTagsFromView(m_current->GetView());
 				m_fetcher->FetchPendingFunctions(allowedTags);
 				bgTask->Finish();
+				QMetaObject::invokeMethod(this, [this] { m_spinner->hide(); }, Qt::QueuedConnection);
 			});
 		}
 	}

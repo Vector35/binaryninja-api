@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QSplitter>
+#include <QProgressBar>
 
 #include "filter.h"
 #include "render.h"
@@ -13,6 +14,7 @@ class WarpCurrentFunctionWidget : public QWidget
 	FunctionRef m_current;
 
 	QSplitter* m_splitter;
+	QProgressBar* m_spinner;
 
 	WarpFunctionTableWidget* m_tableWidget;
 	WarpFunctionInfoWidget* m_infoWidget;
@@ -22,7 +24,7 @@ class WarpCurrentFunctionWidget : public QWidget
 	std::shared_ptr<WarpFetcher> m_fetcher;
 
 public:
-	explicit WarpCurrentFunctionWidget();
+	explicit WarpCurrentFunctionWidget(QWidget* parent = nullptr);
 
 	~WarpCurrentFunctionWidget() override = default;
 

@@ -39,6 +39,8 @@ public:
 	void notifyViewChanged(ViewFrame*) override;
 
 	void notifyViewLocationChanged(View*, const ViewLocation&) override;
+
+	void focus() override;
 };
 
 class WarpSidebarWidgetType : public SidebarWidgetType

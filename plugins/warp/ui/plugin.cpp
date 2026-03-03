@@ -227,7 +227,6 @@ void WarpSidebarWidget::notifyViewChanged(ViewFrame* view)
 	if (view == m_currentFrame)
 		return;
 	m_currentFrame = view;
-	// TODO: We need to set some stuff here prolly.
 }
 
 void WarpSidebarWidget::notifyViewLocationChanged(View* view, const ViewLocation& location)
@@ -239,6 +238,12 @@ void WarpSidebarWidget::notifyViewLocationChanged(View* view, const ViewLocation
 	// TODO: Only update if the function exists?
 	// NOTE: The function called will exit early if it is the same function.
 	m_currentFunctionWidget->SetCurrentFunction(function);
+}
+
+void WarpSidebarWidget::focus()
+{
+	m_currentFunctionWidget->SetCurrentFunction(m_currentFrame->getViewLocation().getFunction());
+	SidebarWidget::focus();
 }
 
 WarpSidebarWidgetType::WarpSidebarWidgetType() : SidebarWidgetType(QImage(":/icons/images/warp.png"), "WARP") {}

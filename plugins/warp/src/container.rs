@@ -9,6 +9,7 @@ use thiserror::Error;
 use uuid::Uuid;
 use warp::r#type::guid::TypeGUID;
 use warp::r#type::{ComputedType, Type};
+use warp::signature::constraint::ConstraintGUID;
 use warp::signature::function::{Function, FunctionGUID};
 use warp::symbol::Symbol;
 use warp::target::Target;
@@ -295,11 +296,15 @@ pub trait Container: Send + Sync + Display + Debug {
     /// Typically, a container that resides only in memory has nothing to fetch, so the default implementation
     /// will do nothing. This function is blocking, so assume it will take a few seconds for a container
     /// that intends to fetch over the network.
+    ///
+    /// To constrain on the fetched functions, pass a list of [`ConstraintGUID`]s that will be
+    /// used to filter the fetched functions which do not contain at least one of the constraints.
     fn fetch_functions(
         &self,
         _target: &Target,
         _tags: &[SourceTag],
         _functions: &[FunctionGUID],
+        _constraints: &[ConstraintGUID],
     ) -> ContainerResult<()> {
         Ok(())
     }

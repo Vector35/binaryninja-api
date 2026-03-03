@@ -426,11 +426,17 @@ class WarpContainer(metaclass=_WarpContainerMetaclass):
             core_guids[i] = guids[i].uuid
         return warpcore.BNWARPContainerRemoveTypes(self.handle, source.uuid, core_guids, count)
 
-    def fetch_functions(self, target: WarpTarget, guids: List[FunctionGUID], source_tags: Optional[List[str]] = None):
+    def fetch_functions(self, target: WarpTarget, guids: List[FunctionGUID], source_tags: Optional[List[str]] = None, constraints: Optional[List[ConstraintGUID]] = None):
         count = len(guids)
         core_guids = (warpcore.BNWARPFunctionGUID * count)()
         for i in range(count):
             core_guids[i] = guids[i].uuid
+        if constraints is None:
+            constraints = []
+        constraints_count = len(constraints)
+        core_constraints = (warpcore.BNWARPConstraintGUID * constraints_count)()
+        for i in range(constraints_count):
+            core_constraints[i] = constraints[i].uuid
         if source_tags is None:
             source_tags = []
         source_tags_ptr = (ctypes.c_char_p * len(source_tags))()
@@ -438,7 +444,7 @@ class WarpContainer(metaclass=_WarpContainerMetaclass):
         for i in range(len(source_tags)):
             source_tags_ptr[i] = source_tags[i].encode('utf-8')
         source_tags_array_ptr = ctypes.cast(source_tags_ptr, ctypes.POINTER(ctypes.c_char_p))
-        warpcore.BNWARPContainerFetchFunctions(self.handle, target.handle, source_tags_array_ptr, source_tags_len, core_guids, count)
+        warpcore.BNWARPContainerFetchFunctions(self.handle, target.handle, source_tags_array_ptr, source_tags_len, core_guids, count, core_constraints, constraints_count)
 
     def get_sources_with_function_guid(self, target: WarpTarget, guid: FunctionGUID) -> List[Source]:
         count = ctypes.c_size_t()

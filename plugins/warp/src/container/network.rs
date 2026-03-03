@@ -14,6 +14,7 @@ use warp::r#type::chunk::TypeChunk;
 use warp::r#type::guid::TypeGUID;
 use warp::r#type::{ComputedType, Type};
 use warp::signature::chunk::SignatureChunk;
+use warp::signature::constraint::ConstraintGUID;
 use warp::signature::function::{Function, FunctionGUID};
 use warp::target::Target;
 use warp::{WarpFile, WarpFileHeader};
@@ -45,7 +46,7 @@ pub struct NetworkContainer {
     /// NOTE: This is a [`DashMap`] purely for the sake of interior mutability as we do not wish to hold
     /// a write lock on the entire container while performing network operations.
     known_function_sources: DashMap<FunctionGUID, Vec<SourceId>>,
-    /// Populated when user adds function, this is used for writing back to the server.
+    /// Populated when the user adds a function, this is used for writing back to the server.
     added_chunks: HashMap<SourceId, Vec<Chunk<'static>>>,
     /// Populated when connecting to the server, this is used to determine which sources are writable.
     ///
@@ -165,18 +166,25 @@ impl NetworkContainer {
     /// Every request we store the returned objects on disk, this means that users will first
     /// query against the disk objects, then the server. This also means we need to cache functions f
     /// or which we have not received any functions for, as otherwise we would keep trying to query it.
-    pub fn pull_functions(&self, target: &Target, source: &SourceId, functions: &[FunctionGUID]) {
+    pub fn pull_functions(
+        &self,
+        target: &Target,
+        source: &SourceId,
+        functions: &[FunctionGUID],
+        constraints: &[ConstraintGUID],
+    ) {
         let target_id = self.get_target_id(target);
-        let file = match self
-            .client
-            .query_functions(target_id, Some(*source), functions)
-        {
-            Ok(file) => file,
-            Err(e) => {
-                tracing::error!("Failed to query functions: {}", e);
-                return;
-            }
-        };
+        let file =
+            match self
+                .client
+                .query_functions(target_id, Some(*source), functions, constraints)
+            {
+                Ok(file) => file,
+                Err(e) => {
+                    tracing::error!("Failed to query functions: {}", e);
+                    return;
+                }
+            };
 
         tracing::debug!("Got {} chunks from server", file.chunks.len());
         for chunk in &file.chunks {
@@ -396,16 +404,18 @@ impl Container for NetworkContainer {
         target: &Target,
         tags: &[SourceTag],
         functions: &[FunctionGUID],
+        constraints: &[ConstraintGUID],
     ) -> ContainerResult<()> {
         // NOTE: Blocking request to get the mapped function sources.
         let mapped_unseen_functions =
             self.get_unseen_functions_source(Some(&target), tags, functions);
 
+        // TODO: It would be nice to have a way to not have to pull through each source individually.
         // Actually get the function data for the unseen guids, we really only want to do this once per
         // session, anymore, and this is annoying!
         for (source, unseen_guids) in mapped_unseen_functions {
             // NOTE: Blocking request to get the function data in the container cache.
-            self.pull_functions(&target, &source, &unseen_guids);
+            self.pull_functions(&target, &source, &unseen_guids, constraints);
         }
 
         Ok(())

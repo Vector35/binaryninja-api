@@ -22,7 +22,6 @@ class WarpFetchDialog : public QDialog
 	QPushButton* m_removeTagBtn;
 	QPushButton* m_resetTagBtn;
 
-	QSpinBox* m_batchSize;
 	QCheckBox* m_rerunMatcher;
 	QCheckBox* m_clearProcessed;
 
@@ -51,7 +50,7 @@ private:
 	std::vector<Warp::SourceTag> collectTags() const;
 
 	void runBatchedFetch(const std::optional<size_t>& containerIndex, const std::vector<Warp::SourceTag>& allowedTags,
-		size_t batchSize, bool rerunMatcher);
+		bool rerunMatcher);
 };
 
 void RegisterWarpFetchFunctionsCommand();

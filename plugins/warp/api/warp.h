@@ -409,7 +409,7 @@ namespace Warp {
 
 		bool RemoveTypes(const Source &source, const std::vector<TypeGUID> &guids) const;
 
-		void FetchFunctions(const Target &target, const std::vector<FunctionGUID> &guids, const std::vector<SourceTag> &tags = {}) const;
+		void FetchFunctions(const Target &target, const std::vector<FunctionGUID> &guids, const std::vector<SourceTag> &tags = {}, const std::vector<ConstraintGUID> &constraints = {}) const;
 
 		std::vector<Source> GetSourcesWithFunctionGUID(const Target &target, const FunctionGUID &guid) const;
 

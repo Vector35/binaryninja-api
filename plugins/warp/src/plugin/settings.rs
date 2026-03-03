@@ -40,7 +40,7 @@ pub struct PluginSettings {
 impl PluginSettings {
     pub const ALLOWED_SOURCE_TAGS_DEFAULT: [&'static str; 2] = ["official", "trusted"];
     pub const ALLOWED_SOURCE_TAGS_SETTING: &'static str = "warp.fetcher.allowedSourceTags";
-    pub const FETCH_BATCH_SIZE_DEFAULT: usize = 100;
+    pub const FETCH_BATCH_SIZE_DEFAULT: usize = 10000;
     pub const FETCH_BATCH_SIZE_SETTING: &'static str = "warp.fetcher.fetchBatchSize";
     pub const LOAD_BUNDLED_FILES_DEFAULT: bool = true;
     pub const LOAD_BUNDLED_FILES_SETTING: &'static str = "warp.container.loadBundledFiles";
@@ -81,8 +81,8 @@ impl PluginSettings {
         let fetch_size_props = json!({
             "title" : "Fetch Batch Limit",
             "type" : "number",
-            "minValue" : 1,
-            "maxValue" : 1000,
+            "minValue" : 100,
+            "maxValue" : 20000,
             "default" : Self::FETCH_BATCH_SIZE_DEFAULT,
             "description" : "The maximum number of functions to fetch in a single batch. This is used to limit the amount of functions to fetch at once, lowering this value will make the fetch process more comprehensive at the cost of more network requests.",
             "ignore" : [],

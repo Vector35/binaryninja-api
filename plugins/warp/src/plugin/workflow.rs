@@ -24,6 +24,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::time::Instant;
 use warp::r#type::class::function::{Location, RegisterLocation, StackLocation};
+use warp::signature::constraint::ConstraintGUID;
 use warp::signature::function::{Function, FunctionGUID};
 use warp::target::Target;
 
@@ -171,7 +172,7 @@ pub fn run_matcher(view: &BinaryView) {
             .maximum_possible_functions
             .is_some_and(|max| max < matched_functions.len() as u64)
         {
-            tracing::warn!(
+            tracing::debug!(
                 "Skipping {}, too many possible functions: {}",
                 guid,
                 matched_functions.len()
@@ -270,6 +271,20 @@ pub fn run_fetcher(view: &BinaryView) {
     let mut query_opts = QueryOptions::new_with_view(view);
     let plugin_settings = PluginSettings::from_settings(&view_settings, &mut query_opts);
 
+    let is_ignored_func = |f: &BNFunction| !f.function_tags(None, Some(IGNORE_TAG_NAME)).is_empty();
+
+    let constraints: Vec<ConstraintGUID> = view
+        .functions()
+        .iter()
+        // Skip functions that have the ignored tag! Otherwise, we will store their constraints.
+        .filter(|f| !is_ignored_func(f))
+        .filter_map(|f| {
+            let function = try_cached_function_match(&f)?;
+            Some(function.constraints.into_iter().map(|c| c.guid))
+        })
+        .flatten()
+        .collect();
+
     let Some(function_set) = FunctionSet::from_view(view) else {
         background_task.finish();
         return;
@@ -285,8 +300,12 @@ pub fn run_fetcher(view: &BinaryView) {
                 if background_task.is_cancelled() {
                     break;
                 }
-                let _ =
-                    container.fetch_functions(target, &plugin_settings.allowed_source_tags, batch);
+                let _ = container.fetch_functions(
+                    target,
+                    &plugin_settings.allowed_source_tags,
+                    batch,
+                    &constraints,
+                );
             }
         }
     });

@@ -5,7 +5,8 @@ use crate::container::{
 };
 use crate::convert::{from_bn_type, to_bn_type};
 use crate::plugin::ffi::{
-    BNWARPContainer, BNWARPFunction, BNWARPFunctionGUID, BNWARPSource, BNWARPTarget, BNWARPTypeGUID,
+    BNWARPConstraintGUID, BNWARPContainer, BNWARPFunction, BNWARPFunctionGUID, BNWARPSource,
+    BNWARPTarget, BNWARPTypeGUID,
 };
 use binaryninja::architecture::CoreArchitecture;
 use binaryninja::binary_view::BinaryView;
@@ -218,6 +219,8 @@ pub unsafe extern "C" fn BNWARPContainerFetchFunctions(
     source_tags_count: usize,
     guids: *const BNWARPFunctionGUID,
     count: usize,
+    constraints: *const BNWARPConstraintGUID,
+    constraints_count: usize,
 ) {
     let arc_container = ManuallyDrop::new(Arc::from_raw(container));
     let Ok(container) = arc_container.read() else {
@@ -234,8 +237,9 @@ pub unsafe extern "C" fn BNWARPContainerFetchFunctions(
         .collect();
 
     let guids = unsafe { std::slice::from_raw_parts(guids, count) };
+    let constraints = unsafe { std::slice::from_raw_parts(constraints, constraints_count) };
 
-    if let Err(e) = container.fetch_functions(&target, &source_tags, guids) {
+    if let Err(e) = container.fetch_functions(&target, &source_tags, guids, constraints) {
         tracing::error!("Failed to fetch functions: {}", e);
     }
 }

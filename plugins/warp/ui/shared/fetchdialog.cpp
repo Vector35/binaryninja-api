@@ -67,12 +67,6 @@ WarpFetchDialog::WarpFetchDialog(BinaryViewRef bv, std::shared_ptr<WarpFetcher> 
 	for (const auto& t : GetAllowedTagsFromView(m_bv))
 		AddListItem(m_tagsList, QString::fromStdString(t));
 
-	// Batch size and matcher checkbox
-	m_batchSize = new QSpinBox(this);
-	m_batchSize->setRange(10, 1000);
-	m_batchSize->setValue(GetBatchSizeFromView(m_bv));
-	m_batchSize->setToolTip("Number of functions to fetch in each batch");
-
 	m_rerunMatcher = new QCheckBox("Re-run matcher after fetch", this);
 	m_rerunMatcher->setChecked(true);
 
@@ -83,7 +77,6 @@ WarpFetchDialog::WarpFetchDialog(BinaryViewRef bv, std::shared_ptr<WarpFetcher> 
 
 	form->addRow(new QLabel("Container: "), m_containerCombo);
 	form->addRow(new QLabel("Allowed Tags: "), tagWrapper);
-	form->addRow(new QLabel("Batch Size: "), m_batchSize);
 	form->addRow(m_rerunMatcher);
 	form->addRow(m_clearProcessed);
 
@@ -144,7 +137,6 @@ void WarpFetchDialog::onAccept()
 	if (idx > 0)  // 0 == All Containers
 		containerIndex = static_cast<size_t>(idx - 1);
 
-	const auto batch = static_cast<size_t>(m_batchSize->value());
 	const bool rerun = m_rerunMatcher->isChecked();
 
 	const auto tags = collectTags();
@@ -155,7 +147,7 @@ void WarpFetchDialog::onAccept()
 		m_fetchProcessor->ClearProcessed();
 
 	// Execute the network fetch in batches
-	runBatchedFetch(containerIndex, tags, batch, rerun);
+	runBatchedFetch(containerIndex, tags, rerun);
 
 	accept();
 }
@@ -169,7 +161,7 @@ void WarpFetchDialog::onReject()
 }
 
 void WarpFetchDialog::runBatchedFetch(const std::optional<size_t>& containerIndex,
-	const std::vector<Warp::SourceTag>& allowedTags, size_t batchSize, bool rerunMatcher)
+	const std::vector<Warp::SourceTag>& allowedTags, bool rerunMatcher)
 {
 	if (!m_bv)
 		return;
@@ -177,42 +169,34 @@ void WarpFetchDialog::runBatchedFetch(const std::optional<size_t>& containerInde
 	std::vector<Ref<Function>> funcs = m_bv->GetAnalysisFunctionList();
 	if (funcs.empty())
 		return;
-	const size_t totalFuncs = funcs.size();
-	const size_t totalBatches = (totalFuncs + batchSize - 1) / batchSize;
 
 	// Create a background task to show progress in the UI
 	Ref<BackgroundTask> task =
-		new BackgroundTask("Fetching WARP functions (0 / " + std::to_string(totalBatches) + ")", false);
+		new BackgroundTask("Fetching WARP functions (0 / " + std::to_string(funcs.size()) + ")", true);
 
 	auto fetcher = m_fetchProcessor;
 	auto bv = m_bv;
 
 	// TODO: Too many captures in this thing lol.
 	WorkerInteractiveEnqueue(
-		[fetcher, bv, funcs = std::move(funcs), batchSize, rerunMatcher, task, allowedTags]() mutable {
+		[fetcher, bv, funcs = std::move(funcs), rerunMatcher, task, allowedTags]() mutable {
+			const auto batchSize = GetBatchSizeFromView(bv);
 			size_t processed = 0;
-			size_t batchIndex = 0;
-
 			while (processed < funcs.size())
 			{
+				if (task->IsCancelled())
+					break;
 				const size_t remaining = funcs.size() - processed;
 				const size_t thisBatchCount = std::min(batchSize, remaining);
-
 				for (size_t i = 0; i < thisBatchCount; ++i)
 					fetcher->AddPendingFunction(funcs[processed + i]);
-
 				fetcher->FetchPendingFunctions(allowedTags);
-
-				++batchIndex;
 				processed += thisBatchCount;
-
-				task->SetProgressText("Fetching WARP functions (" + std::to_string(batchIndex) + " / "
-					+ std::to_string((funcs.size() + batchSize - 1) / batchSize) + ")");
+				task->SetProgressText("Fetching WARP functions (" + std::to_string(processed) + " / " + std::to_string(funcs.size()) + ")");
 			}
 
 			task->Finish();
-			// TODO: Print how long it took?
-			Logger("WARP Fetcher").LogInfo("Finished fetching WARP functions...");
+			Logger("WARP Fetcher").LogInfo("Finished fetching WARP functions in %d seconds...", task->GetRuntimeSeconds());
 
 			if (rerunMatcher && bv)
 				Warp::RunMatcher(*bv);

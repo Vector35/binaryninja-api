@@ -138,10 +138,10 @@ inline void SetTagsToView(const BinaryViewRef& view, const std::vector<Warp::Sou
 	settings->Set(ALLOWED_TAGS_SETTING, tags, view);
 }
 
-inline int GetBatchSizeFromView(const BinaryViewRef& view)
+inline size_t GetBatchSizeFromView(const BinaryViewRef& view)
 {
 	auto settings = BinaryNinja::Settings::Instance();
 	if (!settings->Contains(BATCH_SIZE_SETTING))
-		return 100;
+		return 10000;
 	return settings->Get<uint64_t>(BATCH_SIZE_SETTING, view);
 }

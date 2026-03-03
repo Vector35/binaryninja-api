@@ -63,22 +63,40 @@ void WarpFetcher::FetchPendingFunctions(const std::vector<Warp::SourceTag>& allo
 
 	// Because we must fetch for a single target we map the function guids to the associated platform to perform fetches
 	// for each.
-	std::map<PlatformRef, std::vector<Warp::FunctionGUID>> platformMappedGuids;
+	std::map<PlatformRef, std::unordered_set<Warp::FunctionGUID>> platformMappedGuidSet;
+	std::map<PlatformRef, std::unordered_set<Warp::ConstraintGUID>> platformMappedConstraintSet;
 	for (const auto& func : requests)
 	{
-		const auto guid = Warp::GetAnalysisFunctionGUID(*func);
-		if (!guid.has_value())
+		const auto warpFunc = Warp::Function::Get(*func);
+		if (!warpFunc)
 			continue;
 		auto platform = func->GetPlatform();
-		platformMappedGuids[platform].push_back(guid.value());
+		platformMappedGuidSet[platform].insert(warpFunc->GetGUID());
+
+		// We want to keep track of the guids so we can constrain the server response to only return functions with any of them.
+		const auto constraints = warpFunc->GetConstraints();
+		std::vector<Warp::ConstraintGUID> constraintGuids;
+		constraintGuids.reserve(constraints.size());
+		for (const auto& constraint : constraints)
+			constraintGuids.push_back(constraint.guid);
+		platformMappedConstraintSet[platform].insert(constraintGuids.begin(), constraintGuids.end());
 	}
+
+	std::map<PlatformRef, std::vector<Warp::FunctionGUID>> platformMappedGuids;
+	for (const auto& [platform, guids] : platformMappedGuidSet)
+		platformMappedGuids[platform] = std::vector(guids.begin(), guids.end());
+
+	// We keep them in the set above so we don't duplicate a bunch for functions with the same set of constraint guids.
+	std::map<PlatformRef, std::vector<Warp::ConstraintGUID>> platformMappedConstraints;
+	for (const auto& [platform, guids] : platformMappedConstraintSet)
+		platformMappedConstraints[platform] = std::vector(guids.begin(), guids.end());
 
 	for (const auto& [platform, guids] : platformMappedGuids)
 	{
 		m_logger->LogDebugF("Fetching {} functions for platform {}", guids.size(), platform->GetName());
 		auto target = Warp::Target::FromPlatform(*platform);
 		for (const auto& container : Warp::Container::All())
-			container->FetchFunctions(*target, guids, allowedTags);
+			container->FetchFunctions(*target, guids, allowedTags, platformMappedConstraints[platform]);
 
 		std::lock_guard<std::mutex> lock(m_requestMutex);
 		for (const auto& guid : guids)

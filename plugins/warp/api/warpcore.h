@@ -128,7 +128,7 @@ extern "C"
     WARP_FFI_API bool BNWARPContainerRemoveFunctions(BNWARPContainer* container, const BNWARPTarget* target, const BNWARPSource* source, BNWARPFunction** functions, size_t count);
     WARP_FFI_API bool BNWARPContainerRemoveTypes(BNWARPContainer* container, const BNWARPSource* source, BNWARPTypeGUID* types, size_t count);
 
-    WARP_FFI_API void BNWARPContainerFetchFunctions(BNWARPContainer* container, BNWARPTarget* target, const char** sourceTags, size_t sourceTagCount, const BNWARPTypeGUID* guids, size_t count);
+    WARP_FFI_API void BNWARPContainerFetchFunctions(BNWARPContainer* container, BNWARPTarget* target, const char** sourceTags, size_t sourceTagCount, const BNWARPFunctionGUID* guids, size_t count, const BNWARPConstraintGUID* constraints, size_t constraintCount);
 
     WARP_FFI_API BNWARPSource* BNWARPContainerGetSourcesWithFunctionGUID(BNWARPContainer* container, const BNWARPTarget* target, const BNWARPFunctionGUID* guid, size_t* count);
     WARP_FFI_API BNWARPSource* BNWARPContainerGetSourcesWithTypeGUID(BNWARPContainer* container, const BNWARPTypeGUID* guid, size_t* count);

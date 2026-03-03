@@ -353,7 +353,7 @@ bool Container::RemoveTypes(const Source &source, const std::vector<TypeGUID> &g
     return result;
 }
 
-void Container::FetchFunctions(const Target &target, const std::vector<FunctionGUID> &guids, const std::vector<SourceTag> &tags) const
+void Container::FetchFunctions(const Target &target, const std::vector<FunctionGUID> &guids, const std::vector<SourceTag> &tags, const std::vector<ConstraintGUID> &constraints) const
 {
     size_t count = guids.size();
     BNWARPFunctionGUID *apiGuids = new BNWARPFunctionGUID[count];
@@ -363,9 +363,14 @@ void Container::FetchFunctions(const Target &target, const std::vector<FunctionG
     const char** rawTags = new const char*[tagCount];
     for (size_t i = 0; i < tagCount; i++)
         rawTags[i] = tags[i].c_str();
-    BNWARPContainerFetchFunctions(m_object, target.m_object, rawTags, tagCount, apiGuids, count);
+    size_t constraintCount = constraints.size();
+    BNWARPConstraintGUID *apiConstraints = new BNWARPConstraintGUID[constraintCount];
+    for (size_t i = 0; i < constraintCount; i++)
+        apiConstraints[i] = *constraints[i].Raw();
+    BNWARPContainerFetchFunctions(m_object, target.m_object, rawTags, tagCount, apiGuids, count, apiConstraints, constraintCount);
     delete[] apiGuids;
     delete[] rawTags;
+    delete[] apiConstraints;
 }
 
 std::vector<Source> Container::GetSourcesWithFunctionGUID(const Target& target, const FunctionGUID &guid) const

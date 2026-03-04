@@ -25,6 +25,8 @@ use warp::signature::basic_block::BasicBlockGUID;
 use warp::signature::function::{Function, FunctionGUID};
 use warp::signature::variable::FunctionVariable;
 
+use binaryninja::section::Semantics;
+use binaryninja::segment::Segment;
 /// Re-export the warp crate that is used, this is useful for consumers of this crate.
 pub use warp;
 
@@ -418,6 +420,15 @@ pub fn is_address_relocatable(relocatable_regions: &[Range<u64>], address: u64) 
 /// Currently, segments are used by default, however, if the only segment is based at 0, then we fall
 /// back to using sections.
 pub fn relocatable_regions(view: &BinaryView) -> Vec<Range<u64>> {
+    // We need to filter out the segment for the synthetic builtins, otherwise we can't get to
+    // the path where we look at sections for relocatable regions, this segment is always created
+    // for now we just filter, but in the future I would like to have something less jank.
+    let is_synthetic_segment = |segment: &Segment| {
+        view.sections_at(segment.address_range().start)
+            .iter()
+            .any(|sec| sec.auto_defined() && sec.semantics() == Semantics::External)
+    };
+
     // NOTE: We used to use sections because the image base for some object files would start
     // at zero, masking non-relocatable instructions, since then we have started adjusting the
     // image base to 0x10000 or higher so we can use segments directly, which improves the accuracy
@@ -426,13 +437,14 @@ pub fn relocatable_regions(view: &BinaryView) -> Vec<Range<u64>> {
         .segments()
         .iter()
         .filter(|s| s.address_range().start != 0)
+        .filter(|s| !is_synthetic_segment(s))
         .map(|s| s.address_range())
         .collect::<Vec<_>>();
 
     if ranges.is_empty() {
         // Realistically only happens if the only defined segment was based at 0, in which case
-        // we hope the user has set up correct sections. If not we are going to be masking off too many
-        // or too little instructions.
+        // we hope the user has set up correct sections. If not, we are going to be masking off too
+        // many or too little instructions.
         ranges = view
             .sections()
             .iter()

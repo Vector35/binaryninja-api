@@ -8211,6 +8211,35 @@ namespace BinaryNinja {
 	    segmentation is automatically managed. If multiple regions overlap, the most recently added region takes
 	    precedence by default.
 	*/
+
+	struct MemoryRegionInfo
+	{
+		std::string name;
+		std::string displayName;
+		uint64_t start;
+		uint64_t length;
+		uint32_t flags;
+		bool enabled;
+		bool rebaseable;
+		uint8_t fill;
+		bool hasTarget;
+		bool absoluteAddressMode;
+		bool local;
+	};
+
+	struct ResolvedMemoryRange
+	{
+		uint64_t start;
+		uint64_t length;
+		std::vector<MemoryRegionInfo> regions;
+
+		uint64_t End() const { return start + length; }
+		const MemoryRegionInfo* ActiveRegion() const { return regions.empty() ? nullptr : &regions.front(); }
+		const MemoryRegionInfo* Region() const { return ActiveRegion(); }
+		std::string Name() const { auto* r = ActiveRegion(); return r ? r->name : std::string(); }
+		uint32_t Flags() const { auto* r = ActiveRegion(); return r ? r->flags : 0; }
+	};
+
 	class MemoryMap
 	{
 		BNBinaryView* m_object;
@@ -8334,6 +8363,59 @@ namespace BinaryNinja {
 		bool IsMemoryRegionLocal(const std::string& name)
 		{
 			return BNIsMemoryRegionLocal(m_object, name.c_str());
+		}
+
+		std::vector<MemoryRegionInfo> GetMemoryRegions()
+		{
+			size_t count = 0;
+			BNMemoryRegionInfo* regions = BNGetMemoryRegions(m_object, &count);
+			std::vector<MemoryRegionInfo> result;
+			result.reserve(count);
+			for (size_t i = 0; i < count; i++)
+			{
+				result.push_back({
+					regions[i].name,
+					regions[i].displayName,
+					regions[i].start,
+					regions[i].length,
+					regions[i].flags,
+					regions[i].enabled,
+					regions[i].rebaseable,
+					regions[i].fill,
+					regions[i].hasTarget,
+					regions[i].absoluteAddressMode,
+					regions[i].local,
+				});
+			}
+			BNFreeMemoryRegions(regions, count);
+			return result;
+		}
+
+		std::vector<ResolvedMemoryRange> GetResolvedRanges()
+		{
+			size_t count = 0;
+			BNResolvedMemoryRange* ranges = BNGetResolvedMemoryRanges(m_object, &count);
+			std::vector<ResolvedMemoryRange> result;
+			result.reserve(count);
+			for (size_t i = 0; i < count; i++)
+			{
+				ResolvedMemoryRange range;
+				range.start = ranges[i].start;
+				range.length = ranges[i].length;
+				range.regions.reserve(ranges[i].regionCount);
+				for (size_t j = 0; j < ranges[i].regionCount; j++)
+				{
+					auto& r = ranges[i].regions[j];
+					range.regions.push_back({
+						r.name, r.displayName, r.start, r.length,
+						r.flags, r.enabled, r.rebaseable, r.fill,
+						r.hasTarget, r.absoluteAddressMode, r.local,
+					});
+				}
+				result.push_back(std::move(range));
+			}
+			BNFreeResolvedMemoryRanges(ranges, count);
+			return result;
 		}
 
 		void Reset()
@@ -20044,7 +20126,7 @@ namespace BinaryNinja {
 			\return True if the type library was successfully decompressed
 		*/
 		bool DecompressToFile(const std::string& path);
-		
+
 		/*! The Architecture this type library is associated with
 
 			\return

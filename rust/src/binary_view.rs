@@ -68,7 +68,7 @@ pub mod reader;
 pub mod search;
 pub mod writer;
 
-pub use memory_map::MemoryMap;
+pub use memory_map::{MemoryMap, MemoryRegionInfo, ResolvedRange};
 pub use reader::BinaryReader;
 pub use writer::BinaryWriter;
 

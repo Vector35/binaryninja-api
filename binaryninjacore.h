@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 158
+#define BN_CURRENT_CORE_ABI_VERSION 159
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 158
+#define BN_MINIMUM_CORE_ABI_VERSION 159
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -3803,6 +3803,27 @@ extern "C"
 		uint64_t infoData;
 	} BNSectionInfo;
 
+	typedef struct BNMemoryRegionInfo {
+		char* name;
+		char* displayName;
+		uint64_t start;
+		uint64_t length;
+		uint32_t flags;
+		bool enabled;
+		bool rebaseable;
+		uint8_t fill;
+		bool hasTarget;
+		bool absoluteAddressMode;
+		bool local;
+	} BNMemoryRegionInfo;
+
+	typedef struct BNResolvedMemoryRange {
+		uint64_t start;
+		uint64_t length;
+		BNMemoryRegionInfo* regions;
+		size_t regionCount;
+	} BNResolvedMemoryRange;
+
 	typedef bool(*BNCollaborationAnalysisConflictHandler)(void*, const char** keys, BNAnalysisMergeConflict** conflicts, size_t conflictCount);
 	typedef bool(*BNCollaborationNameChangesetFunction)(void*, BNCollaborationChangeset*);
 
@@ -4531,6 +4552,10 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetMemoryRegionDisplayName(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI bool BNSetMemoryRegionDisplayName(BNBinaryView* view, const char* name, const char* displayName);
 	BINARYNINJACOREAPI bool BNIsMemoryRegionLocal(BNBinaryView* view, const char* name);
+	BINARYNINJACOREAPI BNMemoryRegionInfo* BNGetMemoryRegions(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI void BNFreeMemoryRegions(BNMemoryRegionInfo* regions, size_t count);
+	BINARYNINJACOREAPI BNResolvedMemoryRange* BNGetResolvedMemoryRanges(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI void BNFreeResolvedMemoryRanges(BNResolvedMemoryRange* ranges, size_t count);
 	BINARYNINJACOREAPI void BNResetMemoryMap(BNBinaryView* view);
 
 	// Binary view access

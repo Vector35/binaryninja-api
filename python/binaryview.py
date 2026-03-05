@@ -2532,6 +2532,94 @@ class AdvancedILFunctionList:
 			yield self._func_queue.popleft().function
 
 
+@dataclass(frozen=True)
+class MemoryRegionInfo:
+	"""Snapshot of a memory region's properties at the time of query.
+
+	This is a frozen value type. Modifying the memory map will not update existing
+	MemoryRegionInfo instances. To mutate a region, use the corresponding MemoryMap methods
+	(e.g., ``memory_map.set_memory_region_flags(region.name, new_flags)``).
+	"""
+	name: str
+	display_name: str
+	start: int
+	length: int
+	flags: SegmentFlag
+	enabled: bool
+	rebaseable: bool
+	fill: int
+	has_target: bool
+	absolute_address_mode: bool
+	local: bool
+
+	@property
+	def end(self) -> int:
+		return self.start + self.length
+
+	def __repr__(self):
+		r = "r" if self.flags & SegmentFlag.SegmentReadable else "-"
+		w = "w" if self.flags & SegmentFlag.SegmentWritable else "-"
+		x = "x" if self.flags & SegmentFlag.SegmentExecutable else "-"
+		status = ""
+		if not self.enabled:
+			status = " | DISABLED"
+		return f"<MemoryRegion: '{self.name}' {self.start:#x}-{self.end:#x} {r}{w}{x}{status}>"
+
+
+@dataclass(frozen=True)
+class ResolvedRange:
+	"""A resolved address range in the memory map.
+
+	Each range represents a disjoint interval in the address space. Ranges are
+	non-overlapping and sorted by start address. Each range contains an ordered
+	list of memory regions that overlap at this interval, with the first region
+	being the active (highest priority) one.
+
+	:Example:
+
+		>>> for r in bv.memory_map:
+		...     print(f"{r.start:#x}-{r.end:#x} {r.flags} {r.name}")
+	"""
+	start: int
+	length: int
+	regions: List[MemoryRegionInfo]
+
+	@property
+	def end(self) -> int:
+		return self.start + self.length
+
+	@property
+	def active_region(self) -> Optional[MemoryRegionInfo]:
+		"""The highest-priority region at this range, or None if empty."""
+		return self.regions[0] if self.regions else None
+
+	@property
+	def region(self) -> Optional[MemoryRegionInfo]:
+		"""Alias for :py:attr:`active_region`."""
+		return self.active_region
+
+	@property
+	def name(self) -> Optional[str]:
+		"""Name of the active region, or None if empty."""
+		r = self.active_region
+		return r.name if r else None
+
+	@property
+	def flags(self) -> SegmentFlag:
+		"""Flags of the active (highest-priority) region."""
+		r = self.active_region
+		return r.flags if r else SegmentFlag(0)
+
+	def __repr__(self):
+		r = "r" if self.flags & SegmentFlag.SegmentReadable else "-"
+		w = "w" if self.flags & SegmentFlag.SegmentWritable else "-"
+		x = "x" if self.flags & SegmentFlag.SegmentExecutable else "-"
+		return f"<ResolvedRange: {self.start:#x}-{self.end:#x} {r}{w}{x}, {len(self.regions)} region(s)>"
+
+	def __contains__(self, addr: int) -> bool:
+		return self.start <= addr < self.end
+
+
 class MemoryMap:
 	r"""
 		The MemoryMap object provides access to the system-level memory map describing how a BinaryView is loaded
@@ -2571,37 +2659,37 @@ class MemoryMap:
 		>>> segments.append(start=rom_base, length=0x1000, flags=SegmentFlag.SegmentReadable)
 		>>> view = load(bytes.fromhex('5054ebfe'), options={'loader.imageBase': base, 'loader.platform': 'x86', 'loader.segments': json.dumps(segments)})
 		>>> view.memory_map
-			<region: 0x10000 - 0x10004>
+			<range: 0x10000 - 0x10004>
 				size: 0x4
-				objects:
+				regions:
 					'origin<Mapped>@0x0' | Mapped<Absolute> | <r-x>
 
-			<region: 0xc0000000 - 0xc0001000>
+			<range: 0xc0000000 - 0xc0001000>
 				size: 0x1000
-				objects:
+				regions:
 					'origin<Mapped>@0xbfff0000' | Unmapped | <r--> | FILL<0x0>
 
-			<region: 0xc0001000 - 0xc0001014>
+			<range: 0xc0001000 - 0xc0001014>
 				size: 0x14
-				objects:
+				regions:
 					'origin<Mapped>@0xbfff1000' | Unmapped | <---> | FILL<0x0>
 		>>> view.memory_map.add_memory_region("rom", rom_base, b'\x90' * 4096, SegmentFlag.SegmentReadable | SegmentFlag.SegmentExecutable)
 		True
 		>>> view.memory_map
-			<region: 0x10000 - 0x10004>
+			<range: 0x10000 - 0x10004>
 				size: 0x4
-				objects:
+				regions:
 					'origin<Mapped>@0x0' | Mapped<Absolute> | <r-x>
 
-			<region: 0xc0000000 - 0xc0001000>
+			<range: 0xc0000000 - 0xc0001000>
 				size: 0x1000
-				objects:
+				regions:
 					'rom' | Mapped<Relative> | <r-x>
 					'origin<Mapped>@0xbfff0000' | Unmapped | <r--> | FILL<0x0>
 
-			<region: 0xc0001000 - 0xc0001014>
+			<range: 0xc0001000 - 0xc0001014>
 				size: 0x14
-				objects:
+				regions:
 					'origin<Mapped>@0xbfff1000' | Unmapped | <---> | FILL<0x0>
 		>>> view.read(rom_base, 16)
 		b'\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90'
@@ -2610,27 +2698,27 @@ class MemoryMap:
 		>>> view.read(rom_base, 16)
 		b'\xa5\xa5\xa5\xa5\xa5\xa5\xa5\xa5\x90\x90\x90\x90\x90\x90\x90\x90'
 		>>> view.memory_map
-			<region: 0x10000 - 0x10004>
+			<range: 0x10000 - 0x10004>
 				size: 0x4
-				objects:
+				regions:
 					'origin<Mapped>@0x0' | Mapped<Absolute> | <r-x>
 
-			<region: 0xc0000000 - 0xc0000008>
+			<range: 0xc0000000 - 0xc0000008>
 				size: 0x8
-				objects:
+				regions:
 					'pad' | Mapped<Relative> | <--->
 					'rom' | Mapped<Relative> | <r-x>
 					'origin<Mapped>@0xbfff0000' | Unmapped | <r--> | FILL<0x0>
 
-			<region: 0xc0000008 - 0xc0001000>
+			<range: 0xc0000008 - 0xc0001000>
 				size: 0xff8
-				objects:
+				regions:
 					'rom' | Mapped<Relative> | <r-x>
 					'origin<Mapped>@0xbfff0000' | Unmapped | <r--> | FILL<0x0>
 
-			<region: 0xc0001000 - 0xc0001014>
+			<range: 0xc0001000 - 0xc0001014>
 				size: 0x14
-				objects:
+				regions:
 					'origin<Mapped>@0xbfff1000' | Unmapped | <---> | FILL<0x0>
 	"""
 
@@ -2642,22 +2730,100 @@ class MemoryMap:
 		return self.format_description(description)
 
 	def __len__(self):
-		mm_json = self.description()
-		if 'MemoryMap' in mm_json:
-			return len(mm_json['MemoryMap'])
-		else:
-			return 0
+		return len(self.ranges)
+
+	def __iter__(self):
+		return iter(self.ranges)
+
+	def __getitem__(self, name: str) -> MemoryRegionInfo:
+		"""Look up a memory region by name.
+
+		:param name: The unique name of the memory region
+		:return: MemoryRegionInfo for the matching region
+		:raises KeyError: If no region with the given name exists
+		"""
+		for region in self.regions:
+			if region.name == name:
+				return region
+		raise KeyError(f"No memory region named '{name}'")
 
 	def __init__(self, handle: 'BinaryView'):
 		self.handle = handle
 
+	@property
+	def regions(self) -> List[MemoryRegionInfo]:
+		"""List of all memory regions (including disabled ones) as snapshot value types."""
+		count = ctypes.c_ulonglong(0)
+		regions = core.BNGetMemoryRegions(self.handle, count)
+		if not regions:
+			return []
+		result = []
+		try:
+			for i in range(count.value):
+				result.append(MemoryRegionInfo(
+					name=core.pyNativeStr(regions[i].name),
+					display_name=core.pyNativeStr(regions[i].displayName),
+					start=regions[i].start,
+					length=regions[i].length,
+					flags=SegmentFlag(regions[i].flags),
+					enabled=regions[i].enabled,
+					rebaseable=regions[i].rebaseable,
+					fill=regions[i].fill,
+					has_target=regions[i].hasTarget,
+					absolute_address_mode=regions[i].absoluteAddressMode,
+					local=regions[i].local,
+				))
+			return result
+		finally:
+			core.BNFreeMemoryRegions(regions, count.value)
+
+	@property
+	def ranges(self) -> List[ResolvedRange]:
+		"""List of resolved, non-overlapping address ranges sorted by start address.
+
+		Each range contains an ordered list of memory regions at that interval,
+		with the first being the active (highest-priority) region. This is the
+		computed address-space view, analogous to segments.
+		"""
+		count = ctypes.c_ulonglong(0)
+		raw_ranges = core.BNGetResolvedMemoryRanges(self.handle, count)
+		if not raw_ranges:
+			return []
+		result = []
+		try:
+			for i in range(count.value):
+				regions = []
+				for j in range(raw_ranges[i].regionCount):
+					r = raw_ranges[i].regions[j]
+					regions.append(MemoryRegionInfo(
+						name=core.pyNativeStr(r.name),
+						display_name=core.pyNativeStr(r.displayName),
+						start=r.start,
+						length=r.length,
+						flags=SegmentFlag(r.flags),
+						enabled=r.enabled,
+						rebaseable=r.rebaseable,
+						fill=r.fill,
+						has_target=r.hasTarget,
+						absolute_address_mode=r.absoluteAddressMode,
+						local=r.local,
+					))
+				result.append(ResolvedRange(
+					start=raw_ranges[i].start,
+					length=raw_ranges[i].length,
+					regions=regions,
+				))
+			return result
+		finally:
+			core.BNFreeResolvedMemoryRanges(raw_ranges, count.value)
+
 	def format_description(self, description: dict) -> str:
 		formatted_description = ""
 		for entry in description['MemoryMap']:
-			formatted_description += f"<region: {hex(entry['address'])} - {hex(entry['address'] + entry['length'])}>\n"
+			formatted_description += f"<range: {hex(entry['address'])} - {hex(entry['address'] + entry['length'])}>\n"
 			formatted_description += f"\tsize: {hex(entry['length'])}\n"
-			formatted_description += "\tobjects:\n"
-			for obj in entry['objects']:
+			formatted_description += "\tregions:\n"
+			for obj in entry['regions']:
 				if obj['target']:
 					mapped_state = f"Mapped<{'Absolute' if obj['absolute_address_mode'] else 'Relative'}>"
 				else:
@@ -2789,11 +2955,15 @@ class MemoryMap:
 	def get_active_memory_region_at(self, addr: int) -> str:
 		return core.BNGetActiveMemoryRegionAt(self.handle, addr)
 
-	def get_memory_region_flags(self, name: str) -> set:
-		flags = core.BNGetMemoryRegionFlags(self.handle, name)
-		return {flag for flag in SegmentFlag if flags & flag}
+	def get_memory_region_flags(self, name: str) -> SegmentFlag:
+		return SegmentFlag(core.BNGetMemoryRegionFlags(self.handle, name))
 
-	def set_memory_region_flags(self, name: str, flags: SegmentFlag) -> bool:
+	def set_memory_region_flags(self, name: str, flags) -> bool:
+		if isinstance(flags, set):
+			combined = 0
+			for flag in flags:
+				combined |= flag
+			flags = combined
 		return core.BNSetMemoryRegionFlags(self.handle, name, flags)
 
 	def is_memory_region_enabled(self, name: str) -> bool:

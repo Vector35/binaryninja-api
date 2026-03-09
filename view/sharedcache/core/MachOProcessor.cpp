@@ -50,9 +50,16 @@ void SharedCacheMachOProcessor::ApplyHeader(const SharedCache& cache, SharedCach
 		if (m_applyFunctions && header.functionStartsPresent)
 		{
 			auto targetPlatform = m_view->GetDefaultPlatform();
+			auto arch = targetPlatform->GetArchitecture();
 			auto functions = header.ReadFunctionTable(*m_vm);
 			for (const auto& func : functions)
-				m_view->AddFunctionForAnalysis(targetPlatform, func, false);
+			{
+				uint8_t opcode[BN_MAX_INSTRUCTION_LENGTH];
+				size_t opLen = arch->GetMaxInstructionLength();
+				m_vm->Read(opcode, func, opLen);
+				if (IsValidFunctionStart(arch, func, opcode, opLen))
+					m_view->AddFunctionForAnalysis(targetPlatform, func, false);
+			}
 		}
 
 		BulkSymbolModification bulkSymbolModification(m_view);

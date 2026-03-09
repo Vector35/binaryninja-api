@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "binaryninjaapi.h"
+#include "lowlevelilinstruction.h"
 #include "objc.h"
 
 //These are laready defined in one of the osx headers we want to override
@@ -1545,4 +1546,27 @@ namespace BinaryNinja
 	};
 
 	void InitMachoViewType();
+}
+
+// Check whether the instruction at `addr` looks like a valid function entry point.
+// Returns false for undefined or trap instructions that typically indicate jump table entries.
+// `opcode` must contain at least `opLen` bytes read from `addr`.
+inline bool IsValidFunctionStart(BinaryNinja::Architecture* arch, uint64_t addr, const uint8_t* opcode, size_t opLen)
+{
+	if (!opLen)
+		return false;
+
+	BinaryNinja::Ref<BinaryNinja::LowLevelILFunction> ilFunc = new BinaryNinja::LowLevelILFunction(arch, nullptr);
+	ilFunc->SetCurrentAddress(arch, addr);
+	arch->GetInstructionLowLevelIL(opcode, addr, opLen, *ilFunc);
+	for (size_t i = 0; i < ilFunc->GetInstructionCount(); i++)
+	{
+		const auto& instr = ilFunc->GetInstruction(i);
+		if (instr.operation == LLIL_UNDEF)
+			return false;
+		if (i == 0 && instr.operation == LLIL_TRAP)
+			return false;
+	}
+
+	return true;
 }

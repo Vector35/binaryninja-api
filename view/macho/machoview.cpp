@@ -1103,22 +1103,7 @@ bool MachoView::IsValidFunctionStart(uint64_t addr)
 {
 	uint8_t opcode[BN_MAX_INSTRUCTION_LENGTH];
 	size_t opLen = Read(opcode, addr, m_arch->GetMaxInstructionLength());
-	if (!opLen)
-		return false;
-
-	Ref<LowLevelILFunction> ilFunc = new LowLevelILFunction(m_arch, nullptr);
-	ilFunc->SetCurrentAddress(m_arch, addr);
-	m_arch->GetInstructionLowLevelIL(opcode, addr, opLen, *ilFunc);
-	for (size_t i = 0; i < ilFunc->GetInstructionCount(); i++)
-	{
-		const auto& instr = ilFunc->GetInstruction(i);
-		if (instr.operation == LLIL_UNDEF)
-			return false;
-		if (i == 0 && instr.operation == LLIL_TRAP)
-			return false;
-	}
-
-	return true;
+	return ::IsValidFunctionStart(m_arch, addr, opcode, opLen);
 }
 
 

@@ -123,6 +123,9 @@ pub struct CoreLanguageRepresentationFunctionType {
     handle: NonNull<BNLanguageRepresentationFunctionType>,
 }
 
+unsafe impl Send for CoreLanguageRepresentationFunctionType {}
+unsafe impl Sync for CoreLanguageRepresentationFunctionType {}
+
 impl CoreLanguageRepresentationFunctionType {
     pub(crate) unsafe fn from_raw(handle: NonNull<BNLanguageRepresentationFunctionType>) -> Self {
         Self { handle }

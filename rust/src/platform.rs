@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Contains all information related to the execution environment of the binary, mainly the calling conventions used
+//! A [`Platform`] models the information related to the execution environment of the binary.
 
 use crate::{
     architecture::{Architecture, CoreArchitecture},
@@ -29,6 +29,8 @@ use std::fmt::Debug;
 use std::ptr::NonNull;
 use std::{borrow::Borrow, ffi, ptr};
 
+/// A platform describes the target [`CoreArchitecture`] and platform-specific information such as
+/// the calling conventions and generic types (think `HRESULT` on Windows).
 #[derive(PartialEq, Eq, Hash)]
 pub struct Platform {
     pub(crate) handle: *mut BNPlatform,

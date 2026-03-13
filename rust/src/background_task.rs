@@ -70,6 +70,9 @@ impl BackgroundTask {
         Self { handle }
     }
 
+    /// Begin the [`BackgroundTask`], you must manually finish the task by calling [`BackgroundTask::finish`].
+    ///
+    /// If you wish to automatically finish the task when leaving the scope, use [`BackgroundTask::enter`].
     pub fn new(initial_text: &str, can_cancel: bool) -> Ref<Self> {
         let text = initial_text.to_cstr();
         let handle = unsafe { BNBeginBackgroundTask(text.as_ptr(), can_cancel) };

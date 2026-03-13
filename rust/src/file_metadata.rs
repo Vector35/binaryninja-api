@@ -583,7 +583,8 @@ impl FileMetadata {
 
     /// Get the database attached to this file.
     ///
-    /// Only available if this file is a database, or has called [`FileMetadata::create_database`].
+    /// Only available if this file is a database, or [`FileMetadata::create_database`] has previously
+    /// been called on this file.
     pub fn database(&self) -> Option<Ref<Database>> {
         let result = unsafe { BNGetFileMetadataDatabase(self.handle) };
         NonNull::new(result).map(|handle| unsafe { Database::ref_from_raw(handle) })

@@ -30,7 +30,7 @@ impl Database {
         Ref::new(Self { handle })
     }
 
-    /// Get a snapshot by its id, or None if no snapshot with that id exists
+    /// Get a [`Snapshot`] by its `id`, or `None` if no snapshot with that `id` exists.
     pub fn snapshot_by_id(&self, id: SnapshotId) -> Option<Ref<Snapshot>> {
         let result = unsafe { BNGetDatabaseSnapshot(self.handle.as_ptr(), id.0) };
         NonNull::new(result).map(|handle| unsafe { Snapshot::ref_from_raw(handle) })
@@ -113,8 +113,9 @@ impl Database {
         SnapshotId(new_id)
     }
 
-    /// Trim a snapshot's contents in the database by id, but leave the parent/child
-    /// hierarchy intact. Future references to this snapshot will return False for has_contents
+    /// Trim a snapshot's contents in the database but leave the parent/child hierarchy intact.
+    ///
+    /// NOTE: Future references to this snapshot will return `false` for [`Database::snapshot_has_data`]
     pub fn trim_snapshot(&self, id: SnapshotId) -> Result<(), ()> {
         if unsafe { BNTrimDatabaseSnapshot(self.handle.as_ptr(), id.0) } {
             Ok(())
@@ -193,6 +194,7 @@ impl Database {
         unsafe { KeyValueStore::ref_from_raw(NonNull::new(result).unwrap()) }
     }
 
+    /// Closes then reopens the database.
     pub fn reload_connection(&self) {
         unsafe { BNDatabaseReloadConnection(self.handle.as_ptr()) }
     }

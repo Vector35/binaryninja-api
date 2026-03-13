@@ -11,9 +11,8 @@ use tracing_indicatif::style::ProgressStyle;
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use warp_ninja::processor::{
-    CompressionTypeField, ProcessingFileState, ProcessingState, WarpFileProcessor,
-};
+use warp_ninja::processor::{ProcessingFileState, ProcessingState, WarpFileProcessor};
+use warp_ninja::warp::chunk::CompressionType;
 use warp_ninja::warp::WarpFile;
 
 /// Generate WARP files using Binary Ninja
@@ -67,8 +66,8 @@ fn main() {
     let args = Args::parse();
 
     let compression_ty = match args.compressed {
-        true => CompressionTypeField::Zstd,
-        false => CompressionTypeField::None,
+        true => CompressionType::Zstd,
+        false => CompressionType::None,
     };
     let mut processor = WarpFileProcessor::new()
         .with_skip_warp_files(args.skip_warp_files)
@@ -94,7 +93,7 @@ fn main() {
     let outputs: HashMap<PathBuf, WarpFile<'static>> = args
         .input
         .into_iter()
-        .filter_map(|i| match processor.process(i.clone()) {
+        .filter_map(|i| match processor.process_path(i.clone()) {
             Ok(o) => Some((i, o)),
             Err(err) => {
                 tracing::error!("{}", err);

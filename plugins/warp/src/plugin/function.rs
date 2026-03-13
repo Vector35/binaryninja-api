@@ -1,18 +1,10 @@
-use crate::cache::{
-    cached_function_guid, insert_cached_function_match, try_cached_function_guid,
-    try_cached_function_match,
-};
+use crate::cache::{insert_cached_function_match, try_cached_function_match};
 use crate::{
     get_warp_ignore_tag_type, get_warp_include_tag_type, IGNORE_TAG_NAME, INCLUDE_TAG_NAME,
 };
-use binaryninja::background_task::BackgroundTask;
-use binaryninja::binary_view::{BinaryView, BinaryViewExt};
-use binaryninja::command::{Command, FunctionCommand};
+use binaryninja::binary_view::BinaryView;
+use binaryninja::command::FunctionCommand;
 use binaryninja::function::{Function, FunctionUpdateType};
-use binaryninja::rc::Guard;
-use rayon::iter::ParallelIterator;
-use std::thread;
-use warp::signature::function::FunctionGUID;
 
 pub struct IncludeFunction;
 
@@ -99,93 +91,5 @@ impl FunctionCommand for RemoveFunction {
     fn valid(&self, _view: &BinaryView, func: &Function) -> bool {
         // Only allow if the function actually has a match.
         try_cached_function_match(func).is_some()
-    }
-}
-
-pub struct CopyFunctionGUID;
-
-impl FunctionCommand for CopyFunctionGUID {
-    fn action(&self, _view: &BinaryView, func: &Function) {
-        let Some(guid) = cached_function_guid(func, || func.lifted_il().ok()) else {
-            tracing::error!("Could not get guid for copied function");
-            return;
-        };
-        tracing::info!(
-            "Function GUID for {:?}... {}",
-            func.symbol().short_name(),
-            guid
-        );
-        if let Ok(mut clipboard) = arboard::Clipboard::new() {
-            let _ = clipboard.set_text(guid.to_string());
-        }
-    }
-
-    fn valid(&self, _view: &BinaryView, _func: &Function) -> bool {
-        true
-    }
-}
-
-pub struct FindFunctionFromGUID;
-
-impl Command for FindFunctionFromGUID {
-    fn action(&self, view: &BinaryView) {
-        let Some(guid_str) = binaryninja::interaction::get_text_line_input(
-            "Function GUID",
-            "Find Function from GUID",
-        ) else {
-            return;
-        };
-
-        let Ok(searched_guid) = guid_str.parse::<FunctionGUID>() else {
-            tracing::error!("Failed to parse function guid... {}", guid_str);
-            return;
-        };
-
-        tracing::info!("Searching functions for GUID... {}", searched_guid);
-        let funcs = view.functions();
-        let view = view.to_owned();
-        thread::spawn(move || {
-            let background_task = BackgroundTask::new(
-                &format!("Searching functions for GUID... {}", searched_guid),
-                false,
-            );
-
-            // Only run this for functions which have already generated a GUID.
-            let matched: Vec<Guard<Function>> = funcs
-                .par_iter()
-                .filter(|func| {
-                    try_cached_function_guid(func).is_some_and(|guid| guid == searched_guid)
-                })
-                .collect();
-
-            if matched.is_empty() {
-                tracing::info!("No matches found for GUID... {}", searched_guid);
-            } else {
-                for func in &matched {
-                    // Also navigate the user, as that is probably what they want.
-                    if matched.len() == 1 {
-                        let current_view = view.file().current_view();
-                        if view
-                            .file()
-                            .navigate_to(&current_view, func.start())
-                            .is_err()
-                        {
-                            tracing::error!(
-                                "Failed to navigate to found function 0x{:0x} in view {}",
-                                func.start(),
-                                current_view
-                            );
-                        }
-                    }
-                    tracing::info!("Match found at function... 0x{:0x}", func.start());
-                }
-            }
-
-            background_task.finish();
-        });
-    }
-
-    fn valid(&self, _view: &BinaryView) -> bool {
-        true
     }
 }

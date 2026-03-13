@@ -52,5 +52,3 @@ private:
 	void runBatchedFetch(const std::optional<size_t>& containerIndex, const std::vector<Warp::SourceTag>& allowedTags,
 		bool rerunMatcher);
 };
-
-void RegisterWarpFetchFunctionsCommand();

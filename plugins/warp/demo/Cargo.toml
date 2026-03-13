@@ -27,18 +27,10 @@ uuid = { version = "1.12.0", features = ["v4", "serde"] }
 thiserror = "2.0"
 ar = { git = "https://github.com/mdsteele/rust-ar" }
 tempdir = "0.3.7"
-regex = "1.11"
 directories = "6.0"
 compact_str = { version = "0.9.0", features = ["serde"] }
 base64 = "0.22"
 serde_qs = "0.15"
-
-# For reports
-minijinja = "2.10.2"
-minijinja-embed = "2.10.2"
-
-[build-dependencies]
-minijinja-embed = "2.10.2"
 
 [dev-dependencies]
 criterion = "0.6"

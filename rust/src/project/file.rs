@@ -22,7 +22,7 @@ pub struct ProjectFile {
 }
 
 impl ProjectFile {
-    pub(crate) unsafe fn from_raw(handle: NonNull<BNProjectFile>) -> Self {
+    pub unsafe fn from_raw(handle: NonNull<BNProjectFile>) -> Self {
         Self { handle }
     }
 

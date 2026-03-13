@@ -67,6 +67,14 @@ public:
 	void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 };
 
+class SourcePathDelegate : public QStyledItemDelegate
+{
+	Q_OBJECT
+
+public:
+	explicit SourcePathDelegate(QObject* parent = nullptr) : QStyledItemDelegate(parent) {}
+	void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+};
 
 class GenericTextFilterModel : public QSortFilterProxyModel
 {
@@ -109,6 +117,7 @@ struct ParsedQuery
 class WarpRemoveMatchDialog : public QDialog
 {
 	Q_OBJECT
+
 public:
 	explicit WarpRemoveMatchDialog(QWidget* parent, FunctionRef func);
 
@@ -116,7 +125,7 @@ public:
 
 private:
 	FunctionRef m_func;
-	QCheckBox* m_ignoreCheck{nullptr};
+	QCheckBox* m_ignoreCheck {nullptr};
 };
 
 constexpr const char* ALLOWED_TAGS_SETTING = "warp.fetcher.allowedSourceTags";
@@ -144,4 +153,15 @@ inline size_t GetBatchSizeFromView(const BinaryViewRef& view)
 	if (!settings->Contains(BATCH_SIZE_SETTING))
 		return 10000;
 	return settings->Get<uint64_t>(BATCH_SIZE_SETTING, view);
+}
+
+inline void RegisterPluginAction(
+	std::string name, std::function<void(const UIActionContext&)> action,
+	std::function<bool(const UIActionContext&)> isValid = [](const UIActionContext&) { return true; })
+{
+	const QString actionName = QString("WARP\\%1").arg(QString::fromStdString(name));
+	if (!UIAction::isActionRegistered(actionName))
+		UIAction::registerAction(actionName);
+	UIActionHandler::globalActions()->bindAction(actionName, UIAction(action, isValid));
+	Menu::mainMenu("Plugins")->addAction(actionName, "Plugins");
 }

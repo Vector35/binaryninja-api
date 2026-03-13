@@ -7,12 +7,14 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use thiserror::Error;
 use uuid::Uuid;
+use warp::chunk::{Chunk, ChunkKind};
 use warp::r#type::guid::TypeGUID;
 use warp::r#type::{ComputedType, Type};
 use warp::signature::constraint::ConstraintGUID;
 use warp::signature::function::{Function, FunctionGUID};
 use warp::symbol::Symbol;
 use warp::target::Target;
+use warp::WarpFile;
 
 pub mod disk;
 pub mod memory;
@@ -290,6 +292,28 @@ pub trait Container: Send + Sync + Display + Debug {
         source: &SourceId,
         functions: &[Function],
     ) -> ContainerResult<()>;
+
+    /// Add the `chunk`s data to the provided `source` if it exists and is writable.
+    fn add_chunk(&mut self, source: &SourceId, chunk: &Chunk) -> ContainerResult<()> {
+        match &chunk.kind {
+            ChunkKind::Signature(sc) => {
+                let functions: Vec<_> = sc.functions().collect();
+                self.add_functions(&chunk.header.target, source, &functions)
+            }
+            ChunkKind::Type(tc) => {
+                let types: Vec<_> = tc.types().collect();
+                self.add_computed_types(source, &types)
+            }
+        }
+    }
+
+    /// Add the `file` data to the provided `source` if it exists and is writable.
+    fn add_file(&mut self, source: &SourceId, file: &WarpFile) -> ContainerResult<()> {
+        for chunk in &file.chunks {
+            self.add_chunk(source, chunk)?;
+        }
+        Ok(())
+    }
 
     /// Fetches WARP information for the associated functions.
     ///

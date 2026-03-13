@@ -1,11 +1,11 @@
 use crate::build_function;
 use crate::cache::{insert_cached_function_match, try_cached_function_match};
-use crate::convert::{to_bn_symbol_at_address, to_bn_type};
-use crate::plugin::ffi::{BNWARPConstraint, BNWARPFunction, BNWARPFunctionGUID};
+use crate::convert::to_bn_symbol_at_address;
+use crate::plugin::ffi::{BNWARPConstraint, BNWARPFunction, BNWARPFunctionGUID, BNWARPType};
 use binaryninja::function::Function;
 use binaryninja::rc::Ref;
 use binaryninja::string::BnString;
-use binaryninjacore_sys::{BNFunction, BNSymbol, BNType};
+use binaryninjacore_sys::{BNFunction, BNSymbol};
 use std::ffi::c_char;
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
@@ -111,19 +111,14 @@ pub unsafe extern "C" fn BNWARPFunctionGetSymbolName(function: *mut BNWARPFuncti
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn BNWARPFunctionGetType(
-    function: *mut BNWARPFunction,
-    analysis_function: *mut BNFunction,
-) -> *mut BNType {
-    let analysis_function = Function::from_raw(analysis_function);
+pub unsafe extern "C" fn BNWARPFunctionGetType(function: *mut BNWARPFunction) -> *mut BNWARPType {
     // We do not own function so we should not drop.
     let function = ManuallyDrop::new(Arc::from_raw(function));
     match &function.ty {
         Some(func_ty) => {
-            let arch = analysis_function.arch();
-            let function_type = to_bn_type(Some(arch), func_ty);
-            // NOTE: The type ref has been pre-incremented for the caller.
-            unsafe { Ref::into_raw(function_type) }.handle
+            let arc_func_ty = Arc::new(func_ty.clone());
+            // NOTE: Freed by BNWARPFreeTypeReference
+            Arc::into_raw(arc_func_ty) as *mut BNWARPType
         }
         None => std::ptr::null_mut(),
     }

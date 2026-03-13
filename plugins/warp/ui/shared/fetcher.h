@@ -24,6 +24,7 @@ class WarpFetcher
 	std::mutex m_requestMutex;
 	std::vector<FunctionRef> m_pendingRequests;
 	std::unordered_set<Warp::FunctionGUID> m_processedGuids;
+
 public:
 	using CallbackId = uint64_t;
 	using CompletionCallback = std::function<WarpFetchCompletionStatus()>;

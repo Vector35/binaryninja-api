@@ -1,6 +1,6 @@
 #include "search.h"
 #include "misc.h"
-#include "../../../../../ui/mainwindow.h"
+#include "viewframe.h"
 
 QVariant WarpSearchModel::data(const QModelIndex& index, int role) const
 {
@@ -12,8 +12,8 @@ QVariant WarpSearchModel::data(const QModelIndex& index, int role) const
 	if (role == Qt::UserRole && index.column() == DisplayCol)
 	{
 		if (it && it->GetKind() == WARPContainerSearchItemKindFunction)
-			if (auto itemType = it->GetType(nullptr))
-				return QVariant::fromValue(TokenData(*itemType, it->GetName()));
+			if (auto itemType = it->GetType())
+				return QVariant::fromValue(TokenData(*itemType->GetAnalysisType(), it->GetName()));
 		return {};
 	}
 
@@ -246,21 +246,16 @@ WarpSearchWidget::WarpSearchWidget(Warp::Ref<Warp::Container> container, QWidget
 			return;
 
 		// TODO: Getting the current view here is really awful, but i dont care right now.
-		auto ctx = MainWindow::activeContext();
+		auto ctx = UIContext::activeContext();
 		auto view = ctx->getCurrentView();
 		auto binaryView = view->getData();
 		auto viewFrame = ctx->getCurrentViewFrame();
 		auto viewLocation = viewFrame->getViewLocation();
 		auto func = viewLocation.getFunction();
 
-		// Retrieve the current architecture from the current function or try the current view.
-		auto arch = binaryView->GetDefaultArchitecture();
-		if (func)
-			arch = func->GetArchitecture();
-
 		const int row = idx.row();
 		const auto item = m_model->itemAt(row);
-		const auto itemType = item->GetType(arch);
+		const auto itemType = item->GetType();
 		const auto itemFunc = item->GetFunction();
 
 		QMenu menu(this);
@@ -272,7 +267,7 @@ WarpSearchWidget::WarpSearchWidget(Warp::Ref<Warp::Container> container, QWidget
 		// We let users apply the type for types and functions (assuming the function has one)
 		// if the user applies a function, we actually will set the user type for the current view location function.
 		// For types, we will just throw it in the user types.
-		applyType->setEnabled(itemType != nullptr);
+		applyType->setEnabled(itemType->m_object != nullptr);
 		applyType->setVisible(applyType->isEnabled());
 
 		applyFunction->setEnabled(func != nullptr && itemFunc);
@@ -294,11 +289,12 @@ WarpSearchWidget::WarpSearchWidget(Warp::Ref<Warp::Container> container, QWidget
 		{
 			if (func && item->GetKind() == WARPContainerSearchItemKindFunction)
 			{
-				func->SetUserType(itemType);
+				func->SetUserType(itemType->GetAnalysisType(func->GetArchitecture()));
 				binaryView->UpdateAnalysis();
 			}
 			else
-				binaryView->DefineUserType(item->GetName(), itemType);
+				binaryView->DefineUserType(
+					item->GetName(), itemType->GetAnalysisType(binaryView->GetDefaultArchitecture()));
 		}
 		else if (chosen == applyFunction)
 		{

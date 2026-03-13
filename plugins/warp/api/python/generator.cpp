@@ -321,6 +321,11 @@ int main(int argc, char* argv[])
 			fprintf(out, "from binaryninja._binaryninjacore import BNType, BNTypeHandle\n");
 			continue;
 		}
+		if (name == "BNDataBuffer")
+		{
+			fprintf(out, "from binaryninja._binaryninjacore import BNDataBuffer, BNDataBufferHandle\n");
+			continue;
+		}
 		if (i.second->GetClass() == StructureTypeClass)
 		{
 			fprintf(out, "class %s(ctypes.Structure):\n", name.c_str());

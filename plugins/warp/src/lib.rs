@@ -35,7 +35,6 @@ pub mod container;
 pub mod convert;
 pub mod matcher;
 pub mod processor;
-pub mod report;
 
 /// Only used when compiled for cdylib target.
 mod plugin;

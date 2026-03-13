@@ -4,11 +4,11 @@ import uuid
 from typing import List, Optional, Union
 
 import binaryninja
-from binaryninja import BinaryView, Function, BasicBlock, Architecture, Platform, Type, Symbol, LowLevelILInstruction, LowLevelILFunction
+from binaryninja import BinaryView, Function, BasicBlock, Architecture, Platform, Type, Symbol, LowLevelILInstruction, LowLevelILFunction, DataBuffer, Project, ProjectFile
 from binaryninja._binaryninjacore import BNFreeString, BNAllocString, BNType
 
 from . import _warpcore as warpcore
-from .warp_enums import WARPContainerSearchItemKind
+from .warp_enums import WARPContainerSearchItemKind, WARPProcessorIncludedData, WARPProcessorIncludedFunctions
 
 
 class WarpUUID:
@@ -73,6 +73,30 @@ class TypeGUID(WarpUUID):
     def __repr__(self):
         return f"<TypeGUID '{str(self)}'>"
 
+
+class WarpType:
+    def __init__(self, handle: warpcore.BNWARPType):
+        self.handle = handle
+
+    def __del__(self):
+        if self.handle is not None:
+            warpcore.BNWARPFreeTypeReference(self.handle)
+
+    def __repr__(self):
+        return f"<WarpType name: '{self.name}' confidence: '{self.confidence}'>"
+
+    @property
+    def name(self) -> str:
+        return warpcore.BNWARPTypeGetName(self.handle)
+
+    @property
+    def confidence(self) -> int:
+        return warpcore.BNWARPTypeGetConfidence(self.handle)
+
+    def analysis_type(self, arch: Optional[Architecture] = None) -> Type:
+        if arch is None:
+            return Type.create(handle=warpcore.BNWARPTypeGetAnalysisType(None, self.handle))
+        return Type.create(handle=warpcore.BNWARPTypeGetAnalysisType(arch.handle, self.handle))
 
 @dataclasses.dataclass
 class WarpFunctionComment:
@@ -155,11 +179,12 @@ class WarpFunction:
         symbol_handle = warpcore.BNWARPFunctionGetSymbol(self.handle, function.handle)
         return Symbol(symbol_handle)
 
-    def get_type(self, function: Function) -> Optional[Type]:
-        type_handle = warpcore.BNWARPFunctionGetType(self.handle, function.handle)
+    @property
+    def type(self) -> Optional[WarpType]:
+        type_handle = warpcore.BNWARPFunctionGetType(self.handle)
         if not type_handle:
             return None
-        return Type(type_handle)
+        return WarpType(type_handle)
 
     @property
     def constraints(self) -> List[WarpConstraint]:
@@ -259,11 +284,12 @@ class WarpContainerSearchItem:
     def name(self) -> str:
         return warpcore.BNWARPContainerSearchItemGetName(self.handle)
 
-    def get_type(self, arch: Architecture) -> Optional[Type]:
-        ty = warpcore.BNWARPContainerSearchItemGetType(arch.handle, self.handle)
+    @property
+    def type(self) -> Optional[WarpType]:
+        ty = warpcore.BNWARPContainerSearchItemGetType(self.handle)
         if not ty:
             return None
-        return Type(ty)
+        return WarpType(ty)
 
     @property
     def function(self) -> Optional[WarpFunction]:
@@ -405,12 +431,12 @@ class WarpContainer(metaclass=_WarpContainerMetaclass):
             core_funcs[i] = functions[i].handle
         return warpcore.BNWARPContainerAddFunctions(self.handle, target.handle, source.uuid, core_funcs, count)
 
-    def add_types(self, view: BinaryView, source: Source, types: List[Type]) -> bool:
+    def add_types(self, source: Source, types: List[WarpType]) -> bool:
         count = len(types)
-        core_types = (ctypes.POINTER(BNType) * count)()
+        core_types = (ctypes.POINTER(warpcore.BNWARPType) * count)()
         for i in range(count):
             core_types[i] = types[i].handle
-        return warpcore.BNWARPContainerAddTypes(view.handle, self.handle, source.uuid, core_types, count)
+        return warpcore.BNWARPContainerAddTypes(self.handle, source.uuid, core_types, count)
 
     def remove_functions(self, target: WarpTarget, source: Source, functions: List[Function]) -> bool:
         count = len(functions)
@@ -479,11 +505,11 @@ class WarpContainer(metaclass=_WarpContainerMetaclass):
         warpcore.BNWARPFreeFunctionList(funcs, count.value)
         return result
 
-    def get_type_with_guid(self, arch: Architecture, source: Source, guid: TypeGUID) -> Optional[Type]:
-        ty = warpcore.BNWARPContainerGetTypeWithGUID(arch.handle, self.handle, source.uuid, guid.uuid)
+    def get_type_with_guid(self, source: Source, guid: TypeGUID) -> Optional[WarpType]:
+        ty = warpcore.BNWARPContainerGetTypeWithGUID(self.handle, source.uuid, guid.uuid)
         if not ty:
             return None
-        return Type(ty)
+        return WarpType(ty)
 
     def get_type_guids_with_name(self, source: Source, name: str) -> List[TypeGUID]:
         count = ctypes.c_size_t()
@@ -502,6 +528,128 @@ class WarpContainer(metaclass=_WarpContainerMetaclass):
             return None
         return WarpContainerResponse.from_api(response.contents)
 
+
+class WarpChunk:
+    def __init__(self, handle: warpcore.BNWARPChunk):
+        self.handle = handle
+
+    def __del__(self):
+        if self.handle is not None:
+            warpcore.BNWARPFreeChunkReference(self.handle)
+
+    def __repr__(self):
+        return f"<WarpChunk functions: '{len(self.functions)}' types: '{len(self.types)}'>"
+
+    @property
+    def functions(self) -> List[WarpFunction]:
+        count = ctypes.c_size_t()
+        funcs = warpcore.BNWARPChunkGetFunctions(self.handle, count)
+        if not funcs:
+            return []
+        result = []
+        for i in range(count.value):
+            result.append(WarpFunction(warpcore.BNWARPNewFunctionReference(funcs[i])))
+        warpcore.BNWARPFreeFunctionList(funcs, count.value)
+        return result
+
+    @property
+    def types(self) -> List[WarpType]:
+        count = ctypes.c_size_t()
+        types = warpcore.BNWARPChunkGetTypes(self.handle, count)
+        if not types:
+            return []
+        result = []
+        for i in range(count.value):
+            result.append(WarpType(warpcore.BNWARPNewTypeReference(types[i])))
+        warpcore.BNWARPFreeTypeList(types, count.value)
+        return result
+
+class WarpFile:
+    def __init__(self, handle: Union[warpcore.BNWARPFileHandle, str]):
+        if isinstance(handle, str):
+            self.handle = warpcore.BNWARPNewFileFromPath(handle)
+        else:
+            self.handle = handle
+
+    def __del__(self):
+        if self.handle is not None:
+            warpcore.BNWARPFreeFileReference(self.handle)
+
+    def __repr__(self):
+        return f"<WarpFile chunks: '{len(self.chunks)}'>"
+
+    @property
+    def chunks(self) -> List[WarpChunk]:
+        count = ctypes.c_size_t()
+        chunks = warpcore.BNWARPFileGetChunks(self.handle, count)
+        if not chunks:
+            return []
+        result = []
+        for i in range(count.value):
+            result.append(WarpChunk(warpcore.BNWARPNewChunkReference(chunks[i])))
+        warpcore.BNWARPFreeChunkList(chunks, count.value)
+        return result
+
+    def to_data_buffer(self) -> DataBuffer:
+        return DataBuffer(handle=warpcore.BNWARPFileToDataBuffer(self.handle))
+
+
+@dataclasses.dataclass
+class WarpProcessorState:
+    cancelled: bool = False
+    unprocessed_file_count: int = 0
+    processed_file_count: int = 0
+    analyzing_files: List[str] = dataclasses.field(default_factory=list)
+    processing_files: List[str] = dataclasses.field(default_factory=list)
+
+    @staticmethod
+    def from_api(state: warpcore.BNWARPProcessorState) -> 'WarpProcessorState':
+        analyzing_files = []
+        processing_files = []
+        for i in range(state.analyzing_files_count):
+            analyzing_files.append(state.analyzing_files[i])
+        for i in range(state.processing_files_count):
+            processing_files.append(state.processing_files[i])
+        return WarpProcessorState(
+            cancelled=state.cancelled,
+            unprocessed_file_count=state.unprocessed_file_count,
+            processed_file_count=state.processed_file_count,
+            analyzing_files=analyzing_files,
+            processing_files=processing_files
+        )
+
+class WarpProcessor:
+    def __init__(self, included_data: WARPProcessorIncludedData = WARPProcessorIncludedData.WARPProcessorIncludedDataAll,
+                 included_functions: WARPProcessorIncludedFunctions = WARPProcessorIncludedFunctions.WARPProcessorIncludedFunctionsAnnotated,
+                 worker_count: int = 1):
+        self.handle = warpcore.BNWARPNewProcessor(ctypes.c_int(included_data), ctypes.c_int(included_functions), worker_count)
+
+    def __del__(self):
+        if self.handle is not None:
+            warpcore.BNWARPFreeProcessor(self.handle)
+
+    def add_path(self, path: str):
+        warpcore.BNWARPProcessorAddPath(self.handle, path)
+
+    def add_project(self, project: Project):
+        warpcore.BNWARPProcessorAddProject(self.handle, project.handle)
+
+    def add_project_file(self, project_file: ProjectFile):
+        warpcore.BNWARPProcessorAddProjectFile(self.handle, project_file.handle)
+
+    def add_binary_view(self, view: BinaryView):
+        warpcore.BNWARPProcessorAddBinaryView(self.handle, view.handle)
+
+    def start(self) -> Optional[WarpFile]:
+        file = warpcore.BNWARPProcessorStart(self.handle)
+        if not file:
+            return None
+        return WarpFile(file)
+
+    def state(self) -> WarpProcessorState:
+        state_raw = warpcore.BNWARPProcessorGetState(self.handle)
+        warpcore.BNWARPFreeProcessorState(state_raw)
+        return WarpProcessorState.from_api(state_raw)
 
 def run_matcher(view: BinaryView):
     warpcore.BNWARPRunMatcher(view.handle)

@@ -112,10 +112,9 @@ public:
 	void RegisterContextMenuAction(
 		const QString& name, const std::function<void(WarpFunctionItem*, std::optional<uint64_t>)>& callback);
 
-	void RegisterContextMenuAction(
-		const QString &name,
-		const std::function<void(WarpFunctionItem *, std::optional<uint64_t>)> &callback,
-		const std::function<bool(WarpFunctionItem *, std::optional<uint64_t>)> &isValid);
+	void RegisterContextMenuAction(const QString& name,
+		const std::function<void(WarpFunctionItem*, std::optional<uint64_t>)>& callback,
+		const std::function<bool(WarpFunctionItem*, std::optional<uint64_t>)>& isValid);
 
 	void SetFunctions(QVector<WarpFunctionItem*> functions);
 

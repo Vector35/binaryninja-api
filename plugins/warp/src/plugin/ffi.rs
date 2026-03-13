@@ -1,6 +1,8 @@
 mod container;
 mod file;
 mod function;
+mod processor;
+mod ty;
 
 use binaryninjacore_sys::{
     BNBasicBlock, BNBinaryView, BNFunction, BNLowLevelILFunction, BNPlatform,
@@ -48,6 +50,7 @@ pub type BNWARPTypeGUID = TypeGUID;
 pub type BNWARPTarget = warp::target::Target;
 pub type BNWARPFunction = warp::signature::function::Function;
 pub type BNWARPContainer = RwLock<Box<dyn Container>>;
+pub type BNWARPType = warp::r#type::Type;
 
 // TODO: Some sort of callback for loading functions
 // TODO: Be able to run matcher for a specific file

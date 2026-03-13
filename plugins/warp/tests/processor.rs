@@ -27,12 +27,12 @@ fn test_processor() {
     // All files should process and not error.
     for file_name in BIN_TARGET_FILES {
         let path = out_dir.join(file_name);
-        processor.process(path).unwrap();
+        processor.process_path(path).unwrap();
     }
 
     // We should be able to process a warp file.
     let warp_path = out_dir.join("random.warp");
-    processor.process(warp_path).unwrap();
+    processor.process_path(warp_path).unwrap();
 }
 
 #[test]
@@ -47,7 +47,7 @@ fn test_caching() {
     // Go through files, this should cache the databases.
     for file_name in BIN_TARGET_FILES {
         let path = out_dir.join(file_name);
-        processor.process(path).unwrap();
+        processor.process_path(path).unwrap();
     }
 
     // Verify the databases were saved to the cache.

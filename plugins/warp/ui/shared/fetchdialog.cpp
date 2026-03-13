@@ -25,7 +25,7 @@ static void AddListItem(QListWidget* list, const QString& value)
 WarpFetchDialog::WarpFetchDialog(BinaryViewRef bv, std::shared_ptr<WarpFetcher> fetcher, QWidget* parent) :
 	QDialog(parent), m_fetchProcessor(std::move(fetcher)), m_bv(std::move(bv))
 {
-	setWindowTitle("Fetch WARP Functions");
+	setWindowTitle("WARP Fetcher");
 
 	auto form = new QFormLayout();
 	m_containerCombo = new QComboBox(this);
@@ -160,8 +160,8 @@ void WarpFetchDialog::onReject()
 	reject();
 }
 
-void WarpFetchDialog::runBatchedFetch(const std::optional<size_t>& containerIndex,
-	const std::vector<Warp::SourceTag>& allowedTags, bool rerunMatcher)
+void WarpFetchDialog::runBatchedFetch(
+	const std::optional<size_t>& containerIndex, const std::vector<Warp::SourceTag>& allowedTags, bool rerunMatcher)
 {
 	if (!m_bv)
 		return;
@@ -178,48 +178,27 @@ void WarpFetchDialog::runBatchedFetch(const std::optional<size_t>& containerInde
 	auto bv = m_bv;
 
 	// TODO: Too many captures in this thing lol.
-	WorkerInteractiveEnqueue(
-		[fetcher, bv, funcs = std::move(funcs), rerunMatcher, task, allowedTags]() mutable {
-			const auto batchSize = GetBatchSizeFromView(bv);
-			size_t processed = 0;
-			while (processed < funcs.size())
-			{
-				if (task->IsCancelled())
-					break;
-				const size_t remaining = funcs.size() - processed;
-				const size_t thisBatchCount = std::min(batchSize, remaining);
-				for (size_t i = 0; i < thisBatchCount; ++i)
-					fetcher->AddPendingFunction(funcs[processed + i]);
-				fetcher->FetchPendingFunctions(allowedTags);
-				processed += thisBatchCount;
-				task->SetProgressText("Fetching WARP functions (" + std::to_string(processed) + " / " + std::to_string(funcs.size()) + ")");
-			}
+	WorkerInteractiveEnqueue([fetcher, bv, funcs = std::move(funcs), rerunMatcher, task, allowedTags]() mutable {
+		const auto batchSize = GetBatchSizeFromView(bv);
+		size_t processed = 0;
+		while (processed < funcs.size())
+		{
+			if (task->IsCancelled())
+				break;
+			const size_t remaining = funcs.size() - processed;
+			const size_t thisBatchCount = std::min(batchSize, remaining);
+			for (size_t i = 0; i < thisBatchCount; ++i)
+				fetcher->AddPendingFunction(funcs[processed + i]);
+			fetcher->FetchPendingFunctions(allowedTags);
+			processed += thisBatchCount;
+			task->SetProgressText(
+				"Fetching WARP functions (" + std::to_string(processed) + " / " + std::to_string(funcs.size()) + ")");
+		}
 
-			task->Finish();
-			Logger("WARP Fetcher").LogInfo("Finished fetching WARP functions in %d seconds...", task->GetRuntimeSeconds());
+		task->Finish();
+		Logger("WARP Fetcher").LogInfo("Finished fetching WARP functions in %d seconds...", task->GetRuntimeSeconds());
 
-			if (rerunMatcher && bv)
-				Warp::RunMatcher(*bv);
-		});
-}
-
-void RegisterWarpFetchFunctionsCommand()
-{
-	// Register a UI action and bind it globally. Add it to the Tools menu.
-	const QString actionName = "WARP\\Fetch";
-	if (!UIAction::isActionRegistered(actionName))
-		UIAction::registerAction(actionName);
-
-	UIActionHandler::globalActions()->bindAction(actionName,
-		UIAction(
-			[](const UIActionContext& context) {
-				if (const BinaryViewRef bv = context.binaryView; bv)
-				{
-					WarpFetchDialog dlg(bv, WarpFetcher::Global(), nullptr);
-					dlg.exec();
-				}
-			},
-			[](const UIActionContext& context) { return context.binaryView != nullptr; }));
-
-	Menu::mainMenu("Plugins")->addAction(actionName, "Plugins");
+		if (rerunMatcher && bv)
+			Warp::RunMatcher(*bv);
+	});
 }

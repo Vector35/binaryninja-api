@@ -9,26 +9,16 @@ use crate::plugin::render_layer::HighlightRenderLayer;
 use crate::plugin::settings::PluginSettings;
 use crate::{core_signature_dir, user_signature_dir};
 use binaryninja::background_task::BackgroundTask;
-use binaryninja::command::{
-    register_command, register_command_for_function, register_command_for_project,
-    register_global_command,
-};
+use binaryninja::command::{register_command, register_command_for_function};
 use binaryninja::is_ui_enabled;
 use binaryninja::settings::{QueryOptions, Settings};
 
-mod commit;
-mod create;
 mod ffi;
-mod file;
 mod function;
 mod load;
-mod project;
 mod render_layer;
 mod settings;
 mod workflow;
-
-#[cfg(debug_assertions)]
-mod debug;
 
 fn load_bundled_signatures() {
     let global_bn_settings = Settings::new();
@@ -166,37 +156,10 @@ fn plugin_init() -> bool {
         workflow::RunMatcher {},
     );
 
-    #[cfg(debug_assertions)]
-    register_command(
-        "WARP\\Debug\\Cache",
-        "Debug cache sizes... because...",
-        debug::DebugCache {},
-    );
-
-    #[cfg(debug_assertions)]
-    register_command(
-        "WARP\\Debug\\Invalidate Caches",
-        "Invalidate all WARP caches",
-        debug::DebugInvalidateCache {},
-    );
-
-    #[cfg(debug_assertions)]
-    register_command_for_function(
-        "WARP\\Debug\\Function Signature",
-        "Print the entire signature for the function",
-        debug::DebugFunction {},
-    );
-
     register_command(
         "WARP\\Load File",
-        "Load file into the matcher, this does NOT kick off matcher analysis",
+        "Load WARP file",
         load::LoadSignatureFile {},
-    );
-
-    register_global_command(
-        "WARP\\Commit File",
-        "Commit file to a source",
-        commit::CommitFile {},
     );
 
     register_command_for_function(
@@ -215,42 +178,6 @@ fn plugin_init() -> bool {
         "WARP\\Remove Matched Function",
         "Remove the current match from the selected function, to prevent matches in future use 'Ignore Function'",
         function::RemoveFunction {},
-    );
-
-    register_command_for_function(
-        "WARP\\Copy GUID",
-        "Copy the computed GUID for the function",
-        function::CopyFunctionGUID {},
-    );
-
-    register_command(
-        "WARP\\Find GUID",
-        "Locate the function in the view using a GUID",
-        function::FindFunctionFromGUID {},
-    );
-
-    register_command(
-        "WARP\\Create\\From Current View",
-        "Creates a signature file containing all selected functions",
-        create::CreateFromCurrentView {},
-    );
-
-    register_global_command(
-        "WARP\\Create\\From File(s)",
-        "Creates a signature file containing all selected functions",
-        create::CreateFromFiles {},
-    );
-
-    register_command(
-        "WARP\\Show Report",
-        "Creates a report for the selected file, displaying info on functions and types",
-        file::ShowFileReport {},
-    );
-
-    register_command_for_project(
-        "WARP\\Create\\From Project",
-        "Create signature files from select project files",
-        project::CreateSignatures {},
     );
 
     true

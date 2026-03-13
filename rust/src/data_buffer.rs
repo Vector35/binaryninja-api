@@ -32,6 +32,13 @@ impl DataBuffer {
         self.0
     }
 
+    /// Return the raw pointer to the underlying data buffer, to be freed later with `BNFreeDataBuffer`.
+    pub fn into_raw(self) -> *mut BNDataBuffer {
+        let ptr = self.0;
+        std::mem::forget(self);
+        ptr
+    }
+
     pub fn new(data: &[u8]) -> Self {
         let buffer = unsafe { BNCreateDataBuffer(data.as_ptr() as *const c_void, data.len()) };
         assert!(!buffer.is_null());

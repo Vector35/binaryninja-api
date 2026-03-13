@@ -42,8 +42,4 @@ fn main() {
             }
         }
     }
-
-    println!("cargo::rerun-if-changed=src/templates");
-    // Templates used for rendering reports.
-    minijinja_embed::embed_templates!("src/templates");
 }

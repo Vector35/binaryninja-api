@@ -1,10 +1,7 @@
 #include "matched.h"
-
-#include <QGridLayout>
-
 #include "theme.h"
 
-const char* WARP_APPLY_ACTIVITY = "analysis.warp.apply";
+#include <QGridLayout>
 
 WarpMatchedWidget::WarpMatchedWidget(BinaryViewRef current)
 {
@@ -28,7 +25,8 @@ WarpMatchedWidget::WarpMatchedWidget(BinaryViewRef current)
 	m_splitter->addWidget(m_tableWidget);
 
 	// Removes the match for the function, this is irreversible currently, and the user must run the matcher again.
-	// TODO: We previously were trying to instead toggle the application of the match, but because the symbols are applied
+	// TODO: We previously were trying to instead toggle the application of the match, but because the symbols are
+	// applied
 	// TODO: when applying the match metadata we would persist that regardless.
 	m_tableWidget->RegisterContextMenuAction(
 		"Remove Match", [this](WarpFunctionItem*, std::optional<uint64_t> address) {
@@ -76,7 +74,8 @@ void WarpMatchedWidget::Update()
 	for (const auto& analysisFunction : m_current->GetAnalysisFunctionList())
 	{
 		if (const auto& matchedFunction = Warp::Function::GetMatched(*analysisFunction))
-			m_tableWidget->InsertFunction(analysisFunction->GetStart(), new WarpFunctionItem(matchedFunction, analysisFunction));
+			m_tableWidget->InsertFunction(
+				analysisFunction->GetStart(), new WarpFunctionItem(matchedFunction, analysisFunction));
 		else
 			m_tableWidget->RemoveFunction(analysisFunction->GetStart());
 	}

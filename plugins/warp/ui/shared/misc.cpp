@@ -72,6 +72,75 @@ void AddressColorDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
 	QStyledItemDelegate::paint(painter, opt, index);
 }
 
+void SourcePathDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
+{
+	QStyleOptionViewItem opt = option;
+	initStyleOption(&opt, index);
+
+	// Draw background and selection highlights
+	opt.widget->style()->drawControl(QStyle::CE_ItemViewItem, &opt, painter, opt.widget);
+
+	QString text = index.data(Qt::DisplayRole).toString();
+	int sepIdx = qMax(text.lastIndexOf('/'), text.lastIndexOf('\\'));
+	QString dirPart = sepIdx != -1 ? text.left(sepIdx + 1) : "";
+	QString filePart = sepIdx != -1 ? text.mid(sepIdx + 1) : text;
+
+	QFont regularFont = opt.font;
+	QFont boldFont = regularFont;
+	boldFont.setBold(true);
+
+	QFontMetrics fmReg(regularFont);
+	QFontMetrics fmBold(boldFont);
+
+	// Basic padding inside the list item
+	QRect textRect = opt.rect.adjusted(3, 0, -3, 0);
+
+	int fileWidth = fmBold.horizontalAdvance(filePart);
+	int dirWidth = fmReg.horizontalAdvance(dirPart);
+
+	QString textToDrawDir;
+	QString textToDrawFile = filePart;
+
+	if (dirWidth + fileWidth > textRect.width())
+	{
+		if (fileWidth > textRect.width())
+		{
+			// The file name itself is too long, elide it
+			textToDrawDir = "";
+			textToDrawFile = fmBold.elidedText(filePart, Qt::ElideLeft, textRect.width());
+		}
+		else
+		{
+			// Elide the directory part so the bold file name fits
+			textToDrawDir = fmReg.elidedText(dirPart, Qt::ElideLeft, textRect.width() - fileWidth);
+		}
+	}
+	else
+	{
+		textToDrawDir = dirPart;
+	}
+
+	painter->save();
+
+	// Set the proper text color based on selection state
+	if (opt.state & QStyle::State_Selected)
+		painter->setPen(opt.palette.highlightedText().color());
+	else
+		painter->setPen(opt.palette.text().color());
+
+	// Draw the directory part
+	painter->setFont(regularFont);
+	painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, textToDrawDir);
+
+	// Draw the file part
+	painter->setFont(boldFont);
+	int dirAdvance = fmReg.horizontalAdvance(textToDrawDir);
+	QRect fileRect = textRect.adjusted(dirAdvance, 0, 0, 0);
+	painter->drawText(fileRect, Qt::AlignLeft | Qt::AlignVCenter, textToDrawFile);
+
+	painter->restore();
+}
+
 bool GenericTextFilterModel::filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const
 {
 	auto filterString = filterRegularExpression().pattern();
@@ -142,13 +211,14 @@ ParsedQuery::ParsedQuery(const QString& rawQuery)
 	query = query.simplified();
 }
 
-WarpRemoveMatchDialog::WarpRemoveMatchDialog(QWidget *parent, FunctionRef func) : QDialog(parent), m_func(func)
+WarpRemoveMatchDialog::WarpRemoveMatchDialog(QWidget* parent, FunctionRef func) : QDialog(parent), m_func(func)
 {
 	setWindowTitle("Remove Matching Function");
 	setModal(true);
 
 	auto* vbox = new QVBoxLayout(this);
-	auto* text = new QLabel("Remove the match for this function? You can also mark it as ignored to prevent future automatic matches.");
+	auto* text = new QLabel(
+		"Remove the match for this function? You can also mark it as ignored to prevent future automatic matches.");
 	text->setWordWrap(true);
 	vbox->addWidget(text);
 

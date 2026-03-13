@@ -1,15 +1,13 @@
-#include <QGridLayout>
-#include <QHeaderView>
-
 #include "matches.h"
+#include "theme.h"
+#include "warp.h"
+#include "shared/misc.h"
 
 #include <QClipboard>
 #include <QFormLayout>
 #include <thread>
-
-#include "theme.h"
-#include "warp.h"
-#include "shared/misc.h"
+#include <QGridLayout>
+#include <QHeaderView>
 
 WarpCurrentFunctionWidget::WarpCurrentFunctionWidget(QWidget* parent) : QWidget(parent)
 {
@@ -74,23 +72,24 @@ WarpCurrentFunctionWidget::WarpCurrentFunctionWidget(QWidget* parent) : QWidget(
 		m_tableWidget->GetModel()->SetMatchedFunction(selectedFunction);
 	});
 	// If the selected function is the current match, let the user remove the match.
-	m_tableWidget->RegisterContextMenuAction("Remove Match",
+	m_tableWidget->RegisterContextMenuAction(
+		"Remove Match",
 		[this](WarpFunctionItem*, std::optional<uint64_t>) {
 			WarpRemoveMatchDialog dlg(this, m_current);
 			if (dlg.execute())
 				m_tableWidget->GetModel()->SetMatchedFunction(nullptr);
 		},
 		[this](WarpFunctionItem* item, std::optional<uint64_t>) {
-		if (item == nullptr)
-			return false;
-		Warp::Ref<Warp::Function> selectedFunction = item->GetFunction();
-		if (!selectedFunction)
-			return false;
-		Warp::Ref<Warp::Function> matchedFunction = m_tableWidget->GetModel()->GetMatchedFunction();
-		if (!matchedFunction)
-			return false;
-		return BNWARPFunctionsEqual(selectedFunction->m_object, matchedFunction->m_object);
-	});
+			if (item == nullptr)
+				return false;
+			Warp::Ref<Warp::Function> selectedFunction = item->GetFunction();
+			if (!selectedFunction)
+				return false;
+			Warp::Ref<Warp::Function> matchedFunction = m_tableWidget->GetModel()->GetMatchedFunction();
+			if (!matchedFunction)
+				return false;
+			return BNWARPFunctionsEqual(selectedFunction->m_object, matchedFunction->m_object);
+		});
 	m_tableWidget->RegisterContextMenuAction(
 		"Search for Source", [this](WarpFunctionItem* item, std::optional<uint64_t>) {
 			// Apply the source as the filter.

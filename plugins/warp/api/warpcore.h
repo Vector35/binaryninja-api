@@ -48,6 +48,9 @@ extern "C"
     typedef struct BNFunction BNFunction;
     typedef struct BNSymbol BNSymbol;
     typedef struct BNType BNType;
+    typedef struct BNDataBuffer BNDataBuffer;
+    typedef struct BNProject BNProject;
+    typedef struct BNProjectFile BNProjectFile;
 
     struct BNWARPUUID
     {
@@ -71,20 +74,39 @@ extern "C"
     typedef BNWARPUUID BNWARPFunctionGUID;
     typedef BNWARPUUID BNWARPTypeGUID;
 
+    typedef struct BNWARPProcessor BNWARPProcessor;
+    typedef struct BNWARPFile BNWARPFile;
+    typedef struct BNWARPChunk BNWARPChunk;
     typedef struct BNWARPTarget BNWARPTarget;
     typedef struct BNWARPContainer BNWARPContainer;
     typedef struct BNWARPFunction BNWARPFunction;
+    typedef struct BNWARPType BNWARPType;
     typedef struct BNWARPConstraint BNWARPConstraint;
     typedef struct BNWARPContainerSearchQuery BNWARPContainerSearchQuery;
     typedef struct BNWARPContainerSearchItem BNWARPContainerSearchItem;
 
-    enum BNWARPContainerSearchItemKind
+    typedef enum BNWARPProcessorIncludedData : uint8_t
+    {
+        WARPProcessorIncludedDataSymbols = 0,
+        WARPProcessorIncludedDataSignatures = 1,
+        WARPProcessorIncludedDataTypes = 2,
+        WARPProcessorIncludedDataAll = 3,
+    } BNWARPProcessorIncludedData;
+
+    typedef enum BNWARPProcessorIncludedFunctions : uint8_t
+    {
+        WARPProcessorIncludedFunctionsSelected = 0,
+        WARPProcessorIncludedFunctionsAnnotated = 1,
+        WARPProcessorIncludedFunctionsAll = 2,
+    } BNWARPProcessorIncludedFunctions;
+
+    typedef enum BNWARPContainerSearchItemKind
     {
         WARPContainerSearchItemKindSource = 0,
         WARPContainerSearchItemKindFunction = 1,
         WARPContainerSearchItemKindType = 2,
         WARPContainerSearchItemKindSymbol = 3,
-    };
+    } BNWARPContainerSearchItemKind;
 
     struct BNWARPContainerSearchResponse
     {
@@ -99,6 +121,28 @@ extern "C"
         BNWARPConstraintGUID guid;
         int64_t offset;
     };
+    
+    struct BNWARPProcessorState
+    {
+        bool cancelled;
+        size_t unprocessedFilesCount;
+        size_t processedFilesCount;
+        char** analyzingFiles;
+        size_t analyzingFilesCount;
+        char** processingFiles;
+        size_t processingFilesCount;
+    };
+
+    WARP_FFI_API BNWARPProcessor* BNWARPNewProcessor(BNWARPProcessorIncludedData includedData, BNWARPProcessorIncludedFunctions includedFunctions, size_t workerCount);
+    WARP_FFI_API void BNWARPProcessorAddPath(BNWARPProcessor* processor, const char* path);
+    WARP_FFI_API void BNWARPProcessorAddProject(BNWARPProcessor* processor, BNProject* project);
+    WARP_FFI_API void BNWARPProcessorAddProjectFile(BNWARPProcessor* processor, BNProjectFile* projectFile);
+    WARP_FFI_API void BNWARPProcessorAddBinaryView(BNWARPProcessor* processor, BNBinaryView* view);
+    WARP_FFI_API BNWARPFile* BNWARPProcessorStart(BNWARPProcessor* processor);
+    WARP_FFI_API void BNWARPProcessorCancel(BNWARPProcessor* processor);
+    WARP_FFI_API BNWARPProcessorState BNWARPProcessorGetState(BNWARPProcessor* processor);
+    WARP_FFI_API void BNWARPFreeProcessor(BNWARPProcessor* processor);
+    WARP_FFI_API void BNWARPFreeProcessorState(BNWARPProcessorState processorState);
 
     WARP_FFI_API void BNWARPRunMatcher(BNBinaryView* view);
 
@@ -123,7 +167,7 @@ extern "C"
     WARP_FFI_API char* BNWARPContainerGetSourcePath(BNWARPContainer* container, const BNWARPSource* source);
 
     WARP_FFI_API bool BNWARPContainerAddFunctions(BNWARPContainer* container, const BNWARPTarget* target, const BNWARPSource* source, BNWARPFunction** functions, size_t count);
-    WARP_FFI_API bool BNWARPContainerAddTypes(BNBinaryView* view, BNWARPContainer* container, const BNWARPSource* source, BNType** types, size_t count);
+    WARP_FFI_API bool BNWARPContainerAddTypes(BNWARPContainer* container, const BNWARPSource* source, BNWARPType** types, size_t count);
 
     WARP_FFI_API bool BNWARPContainerRemoveFunctions(BNWARPContainer* container, const BNWARPTarget* target, const BNWARPSource* source, BNWARPFunction** functions, size_t count);
     WARP_FFI_API bool BNWARPContainerRemoveTypes(BNWARPContainer* container, const BNWARPSource* source, BNWARPTypeGUID* types, size_t count);
@@ -133,7 +177,7 @@ extern "C"
     WARP_FFI_API BNWARPSource* BNWARPContainerGetSourcesWithFunctionGUID(BNWARPContainer* container, const BNWARPTarget* target, const BNWARPFunctionGUID* guid, size_t* count);
     WARP_FFI_API BNWARPSource* BNWARPContainerGetSourcesWithTypeGUID(BNWARPContainer* container, const BNWARPTypeGUID* guid, size_t* count);
     WARP_FFI_API BNWARPFunction** BNWARPContainerGetFunctionsWithGUID(BNWARPContainer* container, const BNWARPTarget* target, const BNWARPSource* source, const BNWARPFunctionGUID* guid, size_t* count);
-    WARP_FFI_API BNType* BNWARPContainerGetTypeWithGUID(BNArchitecture* arch, BNWARPContainer* container, const BNWARPSource* source, const BNWARPTypeGUID* guid);
+    WARP_FFI_API BNWARPType* BNWARPContainerGetTypeWithGUID(BNWARPContainer* container, const BNWARPSource* source, const BNWARPTypeGUID* guid);
     WARP_FFI_API BNWARPTypeGUID* BNWARPContainerGetTypeGUIDsWithName(BNWARPContainer* container, const BNWARPSource* source, const char* name, size_t* count);
 
     WARP_FFI_API BNWARPContainer* BNWARPNewContainerReference(BNWARPContainer* container);
@@ -146,7 +190,7 @@ extern "C"
 
     WARP_FFI_API BNWARPContainerSearchItemKind BNWARPContainerSearchItemGetKind(BNWARPContainerSearchItem* item);
     WARP_FFI_API BNWARPSource BNWARPContainerSearchItemGetSource(BNWARPContainerSearchItem* item);
-    WARP_FFI_API BNType* BNWARPContainerSearchItemGetType(BNArchitecture* arch, BNWARPContainerSearchItem* item);
+    WARP_FFI_API BNWARPType* BNWARPContainerSearchItemGetType(BNWARPContainerSearchItem* item);
     WARP_FFI_API char* BNWARPContainerSearchItemGetName(BNWARPContainerSearchItem* item);
     WARP_FFI_API BNWARPFunction* BNWARPContainerSearchItemGetFunction(BNWARPContainerSearchItem* item);
 
@@ -163,7 +207,7 @@ extern "C"
     WARP_FFI_API BNWARPFunctionGUID BNWARPFunctionGetGUID(BNWARPFunction* function);
     WARP_FFI_API BNSymbol* BNWARPFunctionGetSymbol(BNWARPFunction* function, BNFunction* analysisFunction);
     WARP_FFI_API char* BNWARPFunctionGetSymbolName(BNWARPFunction* function);
-    WARP_FFI_API BNType* BNWARPFunctionGetType(BNWARPFunction* function, BNFunction* analysisFunction);
+    WARP_FFI_API BNWARPType* BNWARPFunctionGetType(BNWARPFunction* function);
     WARP_FFI_API BNWARPConstraint* BNWARPFunctionGetConstraints(BNWARPFunction* function, size_t* count);
     WARP_FFI_API BNWARPFunctionComment* BNWARPFunctionGetComments(BNWARPFunction* function, size_t* count);
     WARP_FFI_API bool BNWARPFunctionsEqual(BNWARPFunction* functionA, BNWARPFunction* functionB);
@@ -175,10 +219,36 @@ extern "C"
     WARP_FFI_API void BNWARPFreeFunctionReference(BNWARPFunction* function);
     WARP_FFI_API void BNWARPFreeFunctionList(BNWARPFunction** functions, size_t count);
 
+    WARP_FFI_API BNWARPType* BNWARPGetType(BNType* analysisType, uint8_t confidence);
+    WARP_FFI_API char* BNWARPTypeGetName(BNWARPType* ty);
+    WARP_FFI_API uint8_t BNWARPTypeGetConfidence(BNWARPType* ty);
+    WARP_FFI_API BNType* BNWARPTypeGetAnalysisType(BNArchitecture* arch, BNWARPType* ty);
+
+    WARP_FFI_API BNWARPType* BNWARPNewTypeReference(BNWARPType* ty);
+    WARP_FFI_API void BNWARPFreeTypeReference(BNWARPType* ty);
+
     WARP_FFI_API BNWARPTarget* BNWARPGetTarget(BNPlatform* platform);
 
     WARP_FFI_API BNWARPTarget* BNWARPNewTargetReference(BNWARPTarget* target);
     WARP_FFI_API void BNWARPFreeTargetReference(BNWARPTarget* target);
+
+    WARP_FFI_API BNWARPFile* BNWARPNewFileFromPath(const char* path);
+
+    WARP_FFI_API BNWARPChunk** BNWARPFileGetChunks(BNWARPFile* file, size_t* count);
+    WARP_FFI_API BNDataBuffer* BNWARPFileToDataBuffer(BNWARPFile* file);
+    
+    WARP_FFI_API BNWARPTarget* BNWARPChunkGetTarget(BNWARPChunk* chunk);
+    WARP_FFI_API BNWARPFunction** BNWARPChunkGetFunctions(BNWARPChunk* chunk, size_t* count);
+    WARP_FFI_API BNWARPType** BNWARPChunkGetTypes(BNWARPChunk* chunk, size_t* count);
+
+    WARP_FFI_API BNWARPFile* BNWARPNewFileReference(BNWARPFile* file);
+    WARP_FFI_API void BNWARPFreeFileReference(BNWARPFile* file);
+
+    WARP_FFI_API BNWARPChunk* BNWARPNewChunkReference(BNWARPChunk* chunk);
+    WARP_FFI_API void BNWARPFreeChunkReference(BNWARPChunk* chunk);
+
+    WARP_FFI_API void BNWARPFreeChunkList(BNWARPChunk** chunks, size_t count);
+    WARP_FFI_API void BNWARPFreeTypeList(BNWARPType** types, size_t count);
 
 #ifdef __cplusplus
 }

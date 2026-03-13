@@ -34,6 +34,41 @@ Ref<Target> Target::FromPlatform(const BinaryNinja::Platform &platform)
     return new Target(result);
 }
 
+Type::Type(BNWARPType *type)
+{
+    m_object = type;
+}
+
+std::optional<std::string> Type::GetName() const
+{
+    char *name = BNWARPTypeGetName(m_object);
+    if (!name)
+        return std::nullopt;
+    std::string result = name;
+    BNFreeString(name);
+    return result;
+}
+
+uint8_t Type::GetConfidence() const
+{
+    return BNWARPTypeGetConfidence(m_object);
+}
+
+Ref<Type> Type::FromAnalysisType(const BinaryNinja::Type &type, uint8_t confidence)
+{
+    BNWARPType* ty = BNWARPGetType(type.m_object, confidence);
+    // TODO: Assert always should convert.
+    return new Type(ty);
+}
+
+BinaryNinja::Ref<BinaryNinja::Type> Type::GetAnalysisType(BinaryNinja::Architecture* arch) const
+{
+    BNType* ty = BNWARPTypeGetAnalysisType(arch ? arch->m_object : nullptr, m_object);
+    if (!ty)
+        return nullptr;
+    return new BinaryNinja::Type(ty);
+}
+
 Constraint::Constraint(ConstraintGUID guid, std::optional<int64_t> offset)
 {
     this->guid = guid;
@@ -83,17 +118,17 @@ BinaryNinja::Ref<BinaryNinja::Symbol> Function::GetSymbol(const BinaryNinja::Fun
     return new BinaryNinja::Symbol(symbol);
 }
 
-BinaryNinja::Ref<BinaryNinja::Type> Function::GetType(const BinaryNinja::Function &function) const
+Ref<Type> Function::GetType() const
 {
-    BNType *type = BNWARPFunctionGetType(m_object, function.m_object);
+    BNWARPType *type = BNWARPFunctionGetType(m_object);
     if (!type)
         return nullptr;
-    return new BinaryNinja::Type(type);
+    return new Type(type);
 }
 
 std::vector<Constraint> Function::GetConstraints() const
 {
-    size_t count;
+    size_t count = 0;
     BNWARPConstraint *constraints = BNWARPFunctionGetConstraints(m_object, &count);
     std::vector<Constraint> result;
     result.reserve(count);
@@ -105,7 +140,7 @@ std::vector<Constraint> Function::GetConstraints() const
 
 std::vector<FunctionComment> Function::GetComments() const
 {
-    size_t count;
+    size_t count = 0;
     BNWARPFunctionComment *comments = BNWARPFunctionGetComments(m_object, &count);
     std::vector<FunctionComment> result;
     result.reserve(count);
@@ -184,12 +219,12 @@ Source ContainerSearchItem::GetSource() const
     return BNWARPContainerSearchItemGetSource(m_object);
 }
 
-BinaryNinja::Ref<BinaryNinja::Type> ContainerSearchItem::GetType(const BinaryNinja::Ref<BinaryNinja::Architecture> &arch) const
+Ref<Type> ContainerSearchItem::GetType() const
 {
-    BNType *type = BNWARPContainerSearchItemGetType(arch ? arch->m_object : nullptr, m_object);
+    BNWARPType *type = BNWARPContainerSearchItemGetType(m_object);
     if (!type)
         return nullptr;
-    return new BinaryNinja::Type(type);
+    return new Type(type);
 }
 
 std::string ContainerSearchItem::GetName() const
@@ -236,7 +271,7 @@ Container::Container(BNWARPContainer *container)
 
 std::vector<Ref<Container> > Container::All()
 {
-    size_t count;
+    size_t count = 0;
     BNWARPContainer **containers = BNWARPGetContainers(&count);
     std::vector<Ref<Container> > result;
     result.reserve(count);
@@ -264,7 +299,7 @@ std::string Container::GetName() const
 
 std::vector<Source> Container::GetSources() const
 {
-    size_t count;
+    size_t count = 0;
     BNWARPSource *sources = BNWARPContainerGetSources(m_object, &count);
     std::vector<Source> result;
     result.reserve(count);
@@ -318,14 +353,13 @@ bool Container::AddFunctions(const Target &target, const Source &source, const s
     return result;
 }
 
-bool Container::AddTypes(const BinaryNinja::BinaryView &view, const Source &source,
-                         const std::vector<BinaryNinja::Ref<BinaryNinja::Type> > &types) const
+bool Container::AddTypes(const Source &source, const std::vector<Ref<Type>> &types) const
 {
     size_t count = types.size();
-    BNType **apiTypes = new BNType *[count];
+    BNWARPType **apiTypes = new BNWARPType *[count];
     for (size_t i = 0; i < count; i++)
         apiTypes[i] = types[i]->m_object;
-    const bool result = BNWARPContainerAddTypes(view.m_object, m_object, source.Raw(), apiTypes, count);
+    const bool result = BNWARPContainerAddTypes(m_object, source.Raw(), apiTypes, count);
     delete[] apiTypes;
     return result;
 }
@@ -375,7 +409,7 @@ void Container::FetchFunctions(const Target &target, const std::vector<FunctionG
 
 std::vector<Source> Container::GetSourcesWithFunctionGUID(const Target& target, const FunctionGUID &guid) const
 {
-    size_t count;
+    size_t count = 0;
     BNWARPSource *sources = BNWARPContainerGetSourcesWithFunctionGUID(m_object, target.m_object, guid.Raw(), &count);
     std::vector<Source> result;
     result.reserve(count);
@@ -387,7 +421,7 @@ std::vector<Source> Container::GetSourcesWithFunctionGUID(const Target& target, 
 
 std::vector<Source> Container::GetSourcesWithTypeGUID(const TypeGUID &guid) const
 {
-    size_t count;
+    size_t count = 0;
     BNWARPSource *sources = BNWARPContainerGetSourcesWithTypeGUID(m_object, guid.Raw(), &count);
     std::vector<Source> result;
     result.reserve(count);
@@ -399,7 +433,7 @@ std::vector<Source> Container::GetSourcesWithTypeGUID(const TypeGUID &guid) cons
 
 std::vector<Ref<Function> > Container::GetFunctionsWithGUID(const Target& target, const Source &source, const FunctionGUID &guid) const
 {
-    size_t count;
+    size_t count = 0;
     BNWARPFunction **functions = BNWARPContainerGetFunctionsWithGUID(m_object, target.m_object, source.Raw(), guid.Raw(), &count);
     std::vector<Ref<Function> > result;
     result.reserve(count);
@@ -409,16 +443,15 @@ std::vector<Ref<Function> > Container::GetFunctionsWithGUID(const Target& target
     return result;
 }
 
-BinaryNinja::Ref<BinaryNinja::Type> Container::GetTypeWithGUID(const BinaryNinja::Architecture &arch,
-                                                               const Source &source, const TypeGUID &guid) const
+Ref<Type> Container::GetTypeWithGUID(const Source &source, const TypeGUID &guid) const
 {
-    BNType *type = BNWARPContainerGetTypeWithGUID(arch.m_object, m_object, source.Raw(), guid.Raw());
-    return new BinaryNinja::Type(type);
+    BNWARPType *type = BNWARPContainerGetTypeWithGUID(m_object, source.Raw(), guid.Raw());
+    return new Type(type);
 }
 
 std::vector<TypeGUID> Container::GetTypeGUIDsWithName(const Source &source, const std::string &name) const
 {
-    size_t count;
+    size_t count = 0;
     BNWARPTypeGUID *guids = BNWARPContainerGetTypeGUIDsWithName(m_object, source.Raw(), name.c_str(), &count);
     std::vector<TypeGUID> result;
     result.reserve(count);
@@ -434,6 +467,139 @@ std::optional<ContainerSearchResponse> Container::Search(const ContainerSearchQu
     if (!response)
         return std::nullopt;
     return ContainerSearchResponse::FromAPIObject(response);
+}
+
+Chunk::Chunk(BNWARPChunk *chunk)
+{
+    m_object = chunk;
+}
+
+Ref<Target> Chunk::GetTarget() const
+{
+    BNWARPTarget *target = BNWARPChunkGetTarget(m_object);
+    if (!target)
+        return nullptr;
+    return new Target(target);
+}
+
+std::vector<Ref<Function>> Chunk::GetFunctions() const
+{
+    size_t count = 0;
+    BNWARPFunction** functions = BNWARPChunkGetFunctions(m_object, &count);
+    std::vector<Ref<Function>> result;
+    result.reserve(count);
+    for (size_t i = 0; i < count; i++)
+        result.push_back(new Function(BNWARPNewFunctionReference(functions[i])));
+    BNWARPFreeFunctionList(functions, count);
+    return result;
+}
+
+std::vector<Ref<Type>> Chunk::GetTypes() const
+{
+    size_t count = 0;
+    BNWARPType** types = BNWARPChunkGetTypes(m_object, &count);
+    std::vector<Ref<Type>> result;
+    result.reserve(count);
+    for (size_t i = 0; i < count; i++)
+        result.push_back(new Type(BNWARPNewTypeReference(types[i])));
+    BNWARPFreeTypeList(types, count);
+    return result;
+}
+
+File::File(BNWARPFile *file)
+{
+    m_object = file;
+}
+
+Ref<File> File::FromPath(const std::string &path)
+{
+    BNWARPFile *result = BNWARPNewFileFromPath(path.c_str());
+    if (!result)
+        return nullptr;
+    return new File(result);
+}
+
+std::vector<Ref<Chunk>> File::GetChunks() const
+{
+    size_t count = 0;
+    BNWARPChunk **chunks = BNWARPFileGetChunks(m_object, &count);
+    std::vector<Ref<Chunk>> result;
+    result.reserve(count);
+    for (int i = 0; i < count; i++)
+        result.push_back(new Chunk(BNWARPNewChunkReference(chunks[i])));
+    BNWARPFreeChunkList(chunks, count);
+    return result;
+}
+
+BinaryNinja::DataBuffer File::ToDataBuffer() const
+{
+    return BinaryNinja::DataBuffer(BNWARPFileToDataBuffer(m_object));
+}
+
+ProcessorState ProcessorState::FromAPIObject(BNWARPProcessorState *state)
+{
+    ProcessorState result;
+    result.cancelled = state->cancelled;
+    result.unprocessedFilesCount = state->unprocessedFilesCount;
+    result.processedFilesCount = state->processedFilesCount;
+    result.analyzingFiles.reserve(state->analyzingFilesCount);
+    for (size_t i = 0; i < state->analyzingFilesCount; ++i)
+        result.analyzingFiles.emplace_back(state->analyzingFiles[i]);
+    result.processingFiles.reserve(state->processingFilesCount);
+    for (size_t i = 0; i < state->processingFilesCount; ++i)
+        result.processingFiles.emplace_back(state->processingFiles[i]);
+    return result;
+}
+
+Processor::Processor(BNWARPProcessorIncludedData includedData, BNWARPProcessorIncludedFunctions includedFunctions, size_t workerCount)
+{
+    m_object = BNWARPNewProcessor(includedData, includedFunctions, workerCount);
+}
+
+Processor::~Processor()
+{
+    BNWARPFreeProcessor(m_object);
+}
+
+void Processor::AddPath(const std::string &path) const
+{
+    BNWARPProcessorAddPath(m_object, path.c_str());
+}
+
+void Processor::AddProject(const BinaryNinja::Project &project) const
+{
+    BNWARPProcessorAddProject(m_object, project.m_object);
+}
+
+void Processor::AddProjectFile(const BinaryNinja::ProjectFile &projectFile) const
+{
+    BNWARPProcessorAddProjectFile(m_object, projectFile.m_object);
+}
+
+void Processor::AddBinaryView(const BinaryNinja::BinaryView &view) const
+{
+    BNWARPProcessorAddBinaryView(m_object, view.m_object);
+}
+
+Ref<File> Processor::Start() const
+{
+    BNWARPFile* file = BNWARPProcessorStart(m_object);
+    if (!file)
+        return nullptr;
+    return new File(file);
+}
+
+void Processor::Cancel() const
+{
+    BNWARPProcessorCancel(m_object);
+}
+
+ProcessorState Processor::GetState() const
+{
+    BNWARPProcessorState stateRaw = BNWARPProcessorGetState(m_object);
+    ProcessorState state = ProcessorState::FromAPIObject(&stateRaw);
+    BNWARPFreeProcessorState(stateRaw);
+    return state;
 }
 
 void Warp::RunMatcher(const BinaryNinja::BinaryView &view)

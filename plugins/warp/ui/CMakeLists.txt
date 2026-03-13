@@ -12,7 +12,13 @@ file(GLOB SOURCES CONFIGURE_DEPENDS
         containers.cpp containers.h
         shared/search.cpp shared/search.h
         shared/fetcher.cpp shared/fetcher.h
-        shared/fetchdialog.cpp shared/fetchdialog.h)
+        shared/fetchdialog.cpp shared/fetchdialog.h
+        shared/processordialog.cpp shared/processordialog.h
+        shared/commitdialog.cpp shared/commitdialog.h
+        shared/file.cpp shared/file.h
+        shared/chunk.cpp shared/chunk.h
+        shared/source.cpp shared/source.h
+        shared/selectprojectfilesdialog.cpp shared/selectprojectfilesdialog.h)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)

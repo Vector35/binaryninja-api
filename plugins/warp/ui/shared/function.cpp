@@ -21,8 +21,8 @@ WarpFunctionItem::WarpFunctionItem(
 	// Serialize the tokens to make it accessible via QModelIndex.
 	// We will take these tokens and then user them in our custom item delegate.
 	TokenData tokenData = TokenData(symbolName);
-	if (BinaryNinja::Ref<BinaryNinja::Type> type = m_function->GetType(*analysisFunction))
-		tokenData = TokenData(*type, symbolName);
+	if (Warp::Ref<Warp::Type> warpType = m_function->GetType())
+		tokenData = TokenData(*warpType->GetAnalysisType(analysisFunction->GetArchitecture()), symbolName);
 	setData(QVariant::fromValue(tokenData), Qt::UserRole);
 }
 
@@ -256,8 +256,7 @@ void WarpFunctionTableWidget::RegisterContextMenuAction(
 	m_contextMenuActions[name] = callback;
 }
 
-void WarpFunctionTableWidget::RegisterContextMenuAction(
-	const QString& name,
+void WarpFunctionTableWidget::RegisterContextMenuAction(const QString& name,
 	const std::function<void(WarpFunctionItem*, std::optional<uint64_t>)>& callback,
 	const std::function<bool(WarpFunctionItem*, std::optional<uint64_t>)>& isValid)
 {

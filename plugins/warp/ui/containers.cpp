@@ -1,94 +1,5 @@
 #include "containers.h"
 
-QVariant WarpSourcesModel::data(const QModelIndex& index, int role) const
-{
-	if (!index.isValid())
-		return {};
-	if (index.row() < 0 || index.row() >= rowCount())
-		return {};
-
-	const auto& r = m_rows[static_cast<size_t>(index.row())];
-
-	// Build a small two-dot status icon (left: writable, right: uncommitted)
-	auto statusIcon = [](bool writable, bool uncommitted) -> QIcon {
-		static QIcon cache[2][2];  // [writable][uncommitted]
-		QIcon& cached = cache[writable ? 1 : 0][uncommitted ? 1 : 0];
-		if (!cached.isNull())
-			return cached;
-
-		const int w = 16, h = 12, radius = 4;
-		QPixmap pm(w, h);
-		pm.fill(Qt::transparent);
-		QPainter p(&pm);
-		p.setRenderHint(QPainter::Antialiasing, true);
-
-		// Colors
-		QColor writableOn(76, 175, 80);        // green
-		QColor writableOff(158, 158, 158);     // grey
-		QColor uncommittedOn(255, 193, 7);     // amber
-		QColor uncommittedOff(158, 158, 158);  // grey
-
-		// Left dot: writable
-		p.setBrush(writable ? writableOn : writableOff);
-		p.setPen(Qt::NoPen);
-		p.drawEllipse(QPoint(4, h / 2), radius, radius);
-
-		// Right dot: uncommitted
-		p.setBrush(uncommitted ? uncommittedOn : uncommittedOff);
-		p.drawEllipse(QPoint(w - 6, h / 2), radius, radius);
-
-		p.end();
-		cached = QIcon(pm);
-		return cached;
-	};
-
-	if (role == Qt::DecorationRole && index.column() == PathCol)
-	{
-		return statusIcon(r.writable, r.uncommitted);
-	}
-
-	if (role == Qt::ToolTipRole && index.column() == PathCol)
-	{
-		QStringList parts;
-		parts << (r.writable ? "Writable" : "Read-only");
-		parts << (r.uncommitted ? "Uncommitted changes" : "No uncommitted changes");
-		return parts.join(" • ");
-	}
-
-	if (role == Qt::DisplayRole)
-	{
-		switch (index.column())
-		{
-		case GuidCol:
-			return r.guid;
-		case PathCol:
-			return r.path;
-		case WritableCol:
-			return r.writable ? "Yes" : "No";
-		case UncommittedCol:
-			return r.uncommitted ? "Yes" : "No";
-		default:
-			return {};
-		}
-	}
-
-	if (role == Qt::CheckStateRole)
-	{
-		// Optional: expose as checkboxes if someone ever shows these columns
-		switch (index.column())
-		{
-		case WritableCol:
-			return r.writable ? Qt::Checked : Qt::Unchecked;
-		case UncommittedCol:
-			return r.uncommitted ? Qt::Checked : Qt::Unchecked;
-		default:
-			break;
-		}
-	}
-
-	return {};
-}
-
 WarpContainerWidget::WarpContainerWidget(Warp::Ref<Warp::Container> container, QWidget* parent) : QWidget(parent)
 {
 	m_container = std::move(container);
@@ -100,95 +11,14 @@ WarpContainerWidget::WarpContainerWidget(Warp::Ref<Warp::Container> container, Q
 	// Sources tab
 	m_sourcesPage = new QWidget(this);
 	auto* sourcesLayout = new QVBoxLayout(m_sourcesPage);
-	m_sourcesView = new QTableView(m_sourcesPage);
-	m_sourcesModel = new WarpSourcesModel(m_sourcesPage);
-	m_sourcesModel->setContainer(m_container);
-	m_sourcesView->setModel(m_sourcesModel);
-	m_sourcesView->horizontalHeader()->setStretchLastSection(true);
-	m_sourcesView->setSelectionBehavior(QAbstractItemView::SelectRows);
-	m_sourcesView->setSelectionMode(QAbstractItemView::SingleSelection);
 
-	// Make the table look like a simple list that shows only the source path
-	m_sourcesView->setShowGrid(false);
-	m_sourcesView->verticalHeader()->setVisible(false);
-	m_sourcesView->horizontalHeader()->setVisible(false);
-	m_sourcesView->setAlternatingRowColors(false);
-	m_sourcesView->setEditTriggers(QAbstractItemView::NoEditTriggers);
-	m_sourcesView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-	m_sourcesView->setWordWrap(false);
-	m_sourcesView->setIconSize(QSize(16, 12));
-	// Ensure long paths truncate from the left: "...tail/of/the/path"
-	m_sourcesView->setTextElideMode(Qt::ElideLeft);
-	// Hide GUID column, keep only the Path column visible
-	m_sourcesView->setColumnHidden(WarpSourcesModel::GuidCol, true);
-	// Also hide boolean columns; their state is shown as an icon next to the path
-	m_sourcesView->setColumnHidden(WarpSourcesModel::WritableCol, true);
-	m_sourcesView->setColumnHidden(WarpSourcesModel::UncommittedCol, true);
-	// Ensure the remaining (Path) column fills the width
-	m_sourcesView->horizontalHeader()->setSectionResizeMode(WarpSourcesModel::PathCol, QHeaderView::Stretch);
-
-	// Per-item context menu
-	m_sourcesView->setContextMenuPolicy(Qt::CustomContextMenu);
-	connect(m_sourcesView, &QWidget::customContextMenuRequested, this, [this](const QPoint& pos) {
-		QMenu menu(m_sourcesView);
-		const QModelIndex index = m_sourcesView->indexAt(pos);
-
-		if (!index.isValid())
-		{
-			QAction* actAdd = menu.addAction(tr("Add Source"));
-			QAction* chosen = menu.exec(m_sourcesView->viewport()->mapToGlobal(pos));
-			if (!chosen)
-				return;
-			if (chosen == actAdd)
-			{
-				std::string sourceName;
-				if (!BinaryNinja::GetTextLineInput(sourceName, "Source name:", "Add Source"))
-					return;
-				if (const auto sourceId = m_container->AddSource(sourceName); !sourceId.has_value())
-				{
-					BinaryNinja::LogAlertF("Failed to add source: {}", sourceName);
-					return;
-				}
-				m_sourcesModel->reload();
-			}
-		}
-		else
-		{
-			m_sourcesView->setCurrentIndex(index.sibling(index.row(), WarpSourcesModel::PathCol));
-
-			const int row = index.row();
-			const QModelIndex pathIdx = m_sourcesModel->index(row, WarpSourcesModel::PathCol);
-			const QModelIndex guidIdx = m_sourcesModel->index(row, WarpSourcesModel::GuidCol);
-			const QString path = m_sourcesModel->data(pathIdx, Qt::DisplayRole).toString();
-			const QFileInfo fi(path);
-
-			const QString guid = m_sourcesModel->data(guidIdx, Qt::DisplayRole).toString();
-
-			QAction* actReveal = menu.addAction(tr("Reveal in File Browser"));
-			actReveal->setEnabled(fi.exists());
-			QAction* actCopyPath = menu.addAction(tr("Copy Path"));
-			QAction* actCopyGuid = menu.addAction(tr("Copy GUID"));
-
-			QAction* chosen = menu.exec(m_sourcesView->viewport()->mapToGlobal(pos));
-			if (!chosen)
-				return;
-			if (chosen == actCopyPath)
-				QGuiApplication::clipboard()->setText(path);
-			else if (chosen == actCopyGuid)
-				QGuiApplication::clipboard()->setText(guid);
-			else if (chosen == actReveal)
-				QDesktopServices::openUrl(QUrl::fromLocalFile(fi.absoluteFilePath()));
-		}
-	});
-
+	m_sourcesView = new WarpSourcesView(m_sourcesPage);
+	m_sourcesView->setContainer(m_container);
 
 	sourcesLayout->addWidget(m_sourcesView);
 	m_tabs->addTab(m_sourcesPage, tr("Sources"));
 
-	// Search tab
-	m_searchTab = new WarpSearchWidget(m_container, this);
-	m_tabs->addTab(m_searchTab, tr("Search"));
-
+	// TODO: Maybe introduce some callbacks or something, but i feel like this is fine for now.
 	// Periodic refresh timer for the Sources view
 	m_refreshTimer = new QTimer(this);
 	m_refreshTimer->setInterval(5000);
@@ -197,25 +27,26 @@ WarpContainerWidget::WarpContainerWidget(Warp::Ref<Warp::Container> container, Q
 		if (!this->isVisible() || !m_sourcesPage || !m_sourcesPage->isVisible())
 			return;
 
+		WarpSourcesModel* sourcesModel = m_sourcesView->sourceModel();
 		// Preserve selection by GUID across reloads
 		QString currentGuid;
 		if (const QModelIndex currentIdx = m_sourcesView->currentIndex(); currentIdx.isValid())
 		{
 			const int row = currentIdx.row();
-			const QModelIndex guidIdx = m_sourcesModel->index(row, WarpSourcesModel::GuidCol);
-			currentGuid = m_sourcesModel->data(guidIdx, Qt::DisplayRole).toString();
+			const QModelIndex guidIdx = sourcesModel->index(row, WarpSourcesModel::GuidCol);
+			currentGuid = sourcesModel->data(guidIdx, Qt::DisplayRole).toString();
 		}
 
-		m_sourcesModel->reload();
+		sourcesModel->reload();
 
 		if (!currentGuid.isEmpty())
 		{
-			for (int r = 0; r < m_sourcesModel->rowCount(); ++r)
+			for (int r = 0; r < sourcesModel->rowCount(); ++r)
 			{
-				const QModelIndex gIdx = m_sourcesModel->index(r, WarpSourcesModel::GuidCol);
-				if (m_sourcesModel->data(gIdx, Qt::DisplayRole).toString() == currentGuid)
+				const QModelIndex gIdx = sourcesModel->index(r, WarpSourcesModel::GuidCol);
+				if (sourcesModel->data(gIdx, Qt::DisplayRole).toString() == currentGuid)
 				{
-					m_sourcesView->setCurrentIndex(m_sourcesModel->index(r, WarpSourcesModel::PathCol));
+					m_sourcesView->setCurrentIndex(sourcesModel->index(r, WarpSourcesModel::PathCol));
 					break;
 				}
 			}
@@ -223,11 +54,11 @@ WarpContainerWidget::WarpContainerWidget(Warp::Ref<Warp::Container> container, Q
 	});
 	m_refreshTimer->start();
 
-	// Optional: force a refresh when switching back to the Sources tab
+	// TODO: Do we want to reload this on tab changed???
 	connect(m_tabs, &QTabWidget::currentChanged, this, [this](const int idx) {
 		QWidget* w = m_tabs->widget(idx);
 		if (w == m_sourcesPage)
-			m_sourcesModel->reload();
+			m_sourcesView->sourceModel()->reload();
 	});
 }
 

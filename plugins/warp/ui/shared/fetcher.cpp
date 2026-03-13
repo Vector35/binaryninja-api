@@ -73,7 +73,8 @@ void WarpFetcher::FetchPendingFunctions(const std::vector<Warp::SourceTag>& allo
 		auto platform = func->GetPlatform();
 		platformMappedGuidSet[platform].insert(warpFunc->GetGUID());
 
-		// We want to keep track of the guids so we can constrain the server response to only return functions with any of them.
+		// We want to keep track of the guids so we can constrain the server response to only return functions with any
+		// of them.
 		const auto constraints = warpFunc->GetConstraints();
 		std::vector<Warp::ConstraintGUID> constraintGuids;
 		constraintGuids.reserve(constraints.size());

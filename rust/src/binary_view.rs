@@ -2709,6 +2709,12 @@ pub trait BinaryViewEventHandler: 'static + Sync {
     fn on_event(&self, binary_view: &BinaryView);
 }
 
+impl<F: Fn(&BinaryView) + 'static + Sync> BinaryViewEventHandler for F {
+    fn on_event(&self, binary_view: &BinaryView) {
+        self(binary_view);
+    }
+}
+
 /// Registers an event listener for binary view events.
 ///
 /// # Example

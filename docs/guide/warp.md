@@ -232,6 +232,13 @@ When running the matcher manually, you may get a warning about no relocatable re
 sections or segments in your view. For WARP to work we must have some range of address space to work with, without it the
 function GUIDs will likely be inconsistent if the functions can be based at different addresses.
 
+### "Relocatable region has a low start-address" warning
+
+WARP uses relocatable regions to determine relocatable addresses encoded in instructions, if you have a relocatable region
+that covers a low address space, WARP may mask regular constants and other irrelevant instructions. This warning mostly
+affects firmware binaries (or other mapped views), if you have not rebased the view to the correct image base, then you
+should as it will fix this issue
+
 ### Failed to connect to the server
 
 If you fail to connect to a WARP server, you will receive an error in the log. Outside typical network connectivity issues 

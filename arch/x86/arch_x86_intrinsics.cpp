@@ -5183,9 +5183,9 @@ vector<NameAndType> X86CommonArchitecture::GetIntrinsicInputs(uint32_t intrinsic
 
 vector<Confidence<Ref<Type>>> X86CommonArchitecture::GetIntrinsicOutputs(uint32_t intrinsic)
 {
-    static const vector<Confidence<Ref<Type>>> singleFloat10 { Type::FloatType(10)->SetIgnored(true) };
+    static const vector<Confidence<Ref<Type>>> singleFloat10Bool { Type::FloatType(10)->SetIgnored(true), Type::BoolType()->SetIgnored(true) };
     static const vector<Confidence<Ref<Type>>> singleInt10 { Type::IntegerType(10, false)->SetIgnored(true) };
-    static const vector<Confidence<Ref<Type>>> float10Bool { Type::FloatType(10)->SetIgnored(true), Type::BoolType()->SetIgnored(true) };
+    static const vector<Confidence<Ref<Type>>> float10BoolBool { Type::FloatType(10)->SetIgnored(true), Type::BoolType()->SetIgnored(true), Type::BoolType()->SetIgnored(true) };
     static const vector<Confidence<Ref<Type>>> doubleFloat10Bool { Type::FloatType(10)->SetIgnored(true), Type::FloatType(10)->SetIgnored(true), Type::BoolType()->SetIgnored(true) };
     static const vector<Confidence<Ref<Type>>> float10BoolInt1 { Type::FloatType(10)->SetIgnored(true), Type::BoolType()->SetIgnored(true), Type::IntegerType(1, false)->SetIgnored(true) };
     static const vector<Confidence<Ref<Type>>> quadBool { Type::BoolType()->SetIgnored(true), Type::BoolType()->SetIgnored(true), Type::BoolType()->SetIgnored(true), Type::BoolType()->SetIgnored(true) };
@@ -5202,13 +5202,13 @@ vector<Confidence<Ref<Type>>> X86CommonArchitecture::GetIntrinsicOutputs(uint32_
     case INTRINSIC_FSCALE:
     case INTRINSIC_FYL2X:
     case INTRINSIC_FYL2XP1:
-        return singleFloat10;
+        return singleFloat10Bool;
     case INTRINSIC_FBST:
         return singleInt10;
     case INTRINSIC_FSIN:
     case INTRINSIC_FCOS:
     case INTRINSIC_FPTAN:
-        return float10Bool;
+        return float10BoolBool;
     case INTRINSIC_FSINCOS:
         return doubleFloat10Bool;
     case INTRINSIC_FPREM:

@@ -4742,13 +4742,13 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		break;
 
 	case XED_ICLASS_F2XM1:
-		il.AddInstruction(il.Intrinsic(vector<RegisterOrFlag> { RegisterOrFlag::Register(XED_REG_ST0) },
+		il.AddInstruction(il.Intrinsic(vector<RegisterOrFlag> { RegisterOrFlag::Register(XED_REG_ST0), RegisterOrFlag::Flag(IL_FLAG_C1)},
 			INTRINSIC_F2XM1, vector<ExprId> { il.Register(10, XED_REG_ST0) }, IL_FLAGWRITE_X87RND));
 		break;
 
 	case XED_ICLASS_FBLD:
 		il.AddInstruction(il.SetRegister(2, REG_X87_TOP, il.Sub(2, il.Register(2, REG_X87_TOP), il.Const(2, 1))));
-		il.AddInstruction(il.Intrinsic(vector<RegisterOrFlag> { RegisterOrFlag::Register(XED_REG_ST0) },
+		il.AddInstruction(il.Intrinsic(vector<RegisterOrFlag> { RegisterOrFlag::Register(XED_REG_ST0), RegisterOrFlag::Flag(IL_FLAG_C1) },
 			INTRINSIC_FBLD, vector<ExprId> { ReadILOperand(il, xedd, addr, 1, 1) }, IL_FLAGWRITE_X87C1Z));
 		break;
 
@@ -4764,25 +4764,25 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 
 	case XED_ICLASS_FSIN:
 		il.AddInstruction(il.Intrinsic(vector<RegisterOrFlag> { RegisterOrFlag::Register(XED_REG_ST0),
-			RegisterOrFlag::Flag(IL_FLAG_C2) }, INTRINSIC_FSIN, vector<ExprId> { il.Register(10, XED_REG_ST0) },
+			RegisterOrFlag::Flag(IL_FLAG_C1), RegisterOrFlag::Flag(IL_FLAG_C2) }, INTRINSIC_FSIN, vector<ExprId> { il.Register(10, XED_REG_ST0) },
 			IL_FLAGWRITE_X87RND));
 		break;
 
 	case XED_ICLASS_FCOS:
 		il.AddInstruction(il.Intrinsic(vector<RegisterOrFlag> { RegisterOrFlag::Register(XED_REG_ST0),
-			RegisterOrFlag::Flag(IL_FLAG_C2) }, INTRINSIC_FCOS, vector<ExprId> { il.Register(10, XED_REG_ST0) },
+			RegisterOrFlag::Flag(IL_FLAG_C1), RegisterOrFlag::Flag(IL_FLAG_C2) }, INTRINSIC_FCOS, vector<ExprId> { il.Register(10, XED_REG_ST0) },
 			IL_FLAGWRITE_X87RND));
 		break;
 
 	case XED_ICLASS_FSINCOS:
 		il.AddInstruction(il.SetRegister(2, REG_X87_TOP, il.Sub(2, il.Register(2, REG_X87_TOP), il.Const(2, 1))));
 		il.AddInstruction(il.Intrinsic(vector<RegisterOrFlag> { RegisterOrFlag::Register(XED_REG_ST1),
-			RegisterOrFlag::Register(XED_REG_ST0), RegisterOrFlag::Flag(IL_FLAG_C2) }, INTRINSIC_FSINCOS,
+			RegisterOrFlag::Register(XED_REG_ST0), RegisterOrFlag::Flag(IL_FLAG_C1), RegisterOrFlag::Flag(IL_FLAG_C2) }, INTRINSIC_FSINCOS,
 			vector<ExprId> { il.Register(10, XED_REG_ST1) }, IL_FLAGWRITE_X87RND));
 		break;
 
 	case XED_ICLASS_FPATAN:
-		il.AddInstruction(il.Intrinsic(vector<RegisterOrFlag> { RegisterOrFlag::Register(XED_REG_ST1) },
+		il.AddInstruction(il.Intrinsic(vector<RegisterOrFlag> { RegisterOrFlag::Register(XED_REG_ST1), RegisterOrFlag::Flag(IL_FLAG_C1) },
 			INTRINSIC_FPATAN, vector<ExprId> { il.Register(10, XED_REG_ST0), il.Register(10, XED_REG_ST1) }, IL_FLAGWRITE_X87RND));
 		il.AddInstruction(il.RegisterStackFreeReg(XED_REG_ST0));
 		il.AddInstruction(il.SetRegister(2, REG_X87_TOP, il.Add(2, il.Register(2, REG_X87_TOP), il.Const(2, 1))));
@@ -4822,7 +4822,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 
 	case XED_ICLASS_FPTAN:
 		il.AddInstruction(il.Intrinsic(vector<RegisterOrFlag> { RegisterOrFlag::Register(XED_REG_ST0),
-			RegisterOrFlag::Flag(IL_FLAG_C2) }, INTRINSIC_FPTAN, vector<ExprId> { il.Register(10, XED_REG_ST0) },
+			RegisterOrFlag::Flag(IL_FLAG_C1), RegisterOrFlag::Flag(IL_FLAG_C2) }, INTRINSIC_FPTAN, vector<ExprId> { il.Register(10, XED_REG_ST0) },
 			IL_FLAGWRITE_X87RND));
 		il.AddInstruction(il.If(il.Flag(IL_FLAG_C2), doneLabel, falseLabel));
 		il.MarkLabel(falseLabel);
@@ -4836,7 +4836,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		break;
 
 	case XED_ICLASS_FSCALE:
-		il.AddInstruction(il.Intrinsic(vector<RegisterOrFlag> { RegisterOrFlag::Register(XED_REG_ST0) },
+		il.AddInstruction(il.Intrinsic(vector<RegisterOrFlag> { RegisterOrFlag::Register(XED_REG_ST0), RegisterOrFlag::Flag(IL_FLAG_C1) },
 			INTRINSIC_FSCALE, vector<ExprId> { il.Register(10, XED_REG_ST0), il.Register(10, XED_REG_ST1) },
 			IL_FLAGWRITE_X87RND));
 		break;
@@ -4855,7 +4855,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		break;
 
 	case XED_ICLASS_FYL2X:
-		il.AddInstruction(il.Intrinsic(vector<RegisterOrFlag> { RegisterOrFlag::Register(XED_REG_ST1) },
+		il.AddInstruction(il.Intrinsic(vector<RegisterOrFlag> { RegisterOrFlag::Register(XED_REG_ST1), RegisterOrFlag::Flag(IL_FLAG_C1)},
 			INTRINSIC_FYL2X, vector<ExprId> { il.Register(10, XED_REG_ST0), il.Register(10, XED_REG_ST1) },
 			IL_FLAGWRITE_X87RND));
 		il.AddInstruction(il.RegisterStackFreeReg(XED_REG_ST0));
@@ -4863,7 +4863,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		break;
 
 	case XED_ICLASS_FYL2XP1:
-		il.AddInstruction(il.Intrinsic(vector<RegisterOrFlag> { RegisterOrFlag::Register(XED_REG_ST1) },
+		il.AddInstruction(il.Intrinsic(vector<RegisterOrFlag> { RegisterOrFlag::Register(XED_REG_ST1), RegisterOrFlag::Flag(IL_FLAG_C1)},
 			INTRINSIC_FYL2XP1, vector<ExprId> { il.Register(10, XED_REG_ST0), il.Register(10, XED_REG_ST1) },
 			IL_FLAGWRITE_X87RND));
 		il.AddInstruction(il.RegisterStackFreeReg(XED_REG_ST0));

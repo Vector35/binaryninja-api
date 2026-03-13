@@ -2124,7 +2124,7 @@ size_t X86CommonArchitecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, s
 		case IL_FLAG_O:
 			return il.Const(0, 0);
 		case IL_FLAG_A:
-			return il.Undefined();
+			return il.Unimplemented();
 		}
 		break;
 	case LLIL_MULU_DP:
@@ -2152,6 +2152,10 @@ size_t X86CommonArchitecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, s
 			break;
 		}
 	}
+
+	if (flagWriteType == IL_FLAGWRITE_X87RND && flag == IL_FLAG_C1)
+		return il.Unimplemented();
+
 	if (((flagWriteType == IL_FLAGWRITE_X87COM) || (flagWriteType == IL_FLAGWRITE_X87C1Z)) && (flag == IL_FLAG_C1))
 		return il.Const(0, 0);
 	return Architecture::GetFlagWriteLowLevelIL(op, size, flagWriteType, flag, operands, operandCount, il);

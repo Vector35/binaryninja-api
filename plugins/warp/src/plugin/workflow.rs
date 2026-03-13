@@ -44,6 +44,14 @@ impl Command for RunMatcher {
                     "No relocatable regions found, for best results please define sections for the binary!"
                 );
             }
+            for region in regions {
+                if region.start < 0x1000 {
+                    tracing::warn!(
+                        "Relocatable region has a low start-address ({:0x}), if possible, please rebase the binary to a higher address!",
+                        view.image_base()
+                    );
+                }
+            }
 
             run_matcher(&view);
         });

@@ -3,7 +3,7 @@ use crate::{build_function, cache};
 use binaryninja::binary_view::BinaryView;
 use binaryninja::command::{Command, FunctionCommand};
 use binaryninja::function::Function;
-use binaryninja::ObjectDestructor;
+use binaryninja::object_destructor::ObjectDestructor;
 
 pub struct DebugFunction;
 

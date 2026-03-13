@@ -65,6 +65,7 @@ pub mod low_level_il;
 pub mod main_thread;
 pub mod medium_level_il;
 pub mod metadata;
+pub mod object_destructor;
 pub mod platform;
 pub mod progress;
 pub mod project;
@@ -90,8 +91,6 @@ pub mod websocket;
 pub mod worker_thread;
 pub mod workflow;
 
-use crate::file_metadata::FileMetadata;
-use crate::function::Function;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::string::raw_to_string;
 use binary_view::BinaryView;
@@ -426,54 +425,6 @@ pub fn memory_info() -> HashMap<String, u64> {
         BNFreeMemoryUsageInfo(info_ptr, count);
     }
     usage
-}
-
-/// The trait required for receiving core object destruction callbacks.
-pub trait ObjectDestructor: 'static + Sync + Sized {
-    fn destruct_view(&self, _view: &BinaryView) {}
-    fn destruct_file_metadata(&self, _metadata: &FileMetadata) {}
-    fn destruct_function(&self, _func: &Function) {}
-
-    unsafe extern "C" fn cb_destruct_binary_view(ctxt: *mut c_void, view: *mut BNBinaryView) {
-        ffi_wrap!("ObjectDestructor::destruct_view", {
-            let view_type = &*(ctxt as *mut Self);
-            let view = BinaryView { handle: view };
-            view_type.destruct_view(&view);
-        })
-    }
-
-    unsafe extern "C" fn cb_destruct_file_metadata(ctxt: *mut c_void, file: *mut BNFileMetadata) {
-        ffi_wrap!("ObjectDestructor::destruct_file_metadata", {
-            let view_type = &*(ctxt as *mut Self);
-            let file = FileMetadata::from_raw(file);
-            view_type.destruct_file_metadata(&file);
-        })
-    }
-
-    unsafe extern "C" fn cb_destruct_function(ctxt: *mut c_void, func: *mut BNFunction) {
-        ffi_wrap!("ObjectDestructor::destruct_function", {
-            let view_type = &*(ctxt as *mut Self);
-            let func = Function { handle: func };
-            view_type.destruct_function(&func);
-        })
-    }
-
-    unsafe fn as_callbacks(&'static mut self) -> BNObjectDestructionCallbacks {
-        BNObjectDestructionCallbacks {
-            context: std::mem::transmute(&self),
-            destructBinaryView: Some(Self::cb_destruct_binary_view),
-            destructFileMetadata: Some(Self::cb_destruct_file_metadata),
-            destructFunction: Some(Self::cb_destruct_function),
-        }
-    }
-
-    fn register(&'static mut self) {
-        unsafe { BNRegisterObjectDestructionCallbacks(&mut self.as_callbacks()) };
-    }
-
-    fn unregister(&'static mut self) {
-        unsafe { BNUnregisterObjectDestructionCallbacks(&mut self.as_callbacks()) };
-    }
 }
 
 pub fn version() -> String {

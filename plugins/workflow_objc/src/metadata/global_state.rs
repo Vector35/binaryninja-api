@@ -1,11 +1,12 @@
 use binaryninja::file_metadata::SessionId;
+use binaryninja::object_destructor::register_object_destructor;
 use binaryninja::{
     binary_view::{BinaryView, BinaryViewBase, BinaryViewExt},
     file_metadata::FileMetadata,
     metadata::Metadata,
+    object_destructor::ObjectDestructor,
     rc::Ref,
     settings::{QueryOptions, Settings},
-    ObjectDestructor,
 };
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
@@ -66,8 +67,8 @@ pub struct GlobalState;
 
 impl GlobalState {
     pub fn register_cleanup() {
-        let observer = Box::leak(Box::new(ObjectLifetimeObserver));
-        observer.register();
+        let destructor = register_object_destructor(ObjectLifetimeObserver);
+        std::mem::forget(destructor);
     }
 
     fn id(bv: &BinaryView) -> SessionId {

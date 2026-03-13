@@ -9,18 +9,14 @@ pub use type_reference::*;
 
 use binaryninja::binary_view::{BinaryView, BinaryViewExt};
 use binaryninja::function::Function as BNFunction;
+use binaryninja::object_destructor::{register_object_destructor, ObjectDestructor};
 use binaryninja::rc::Guard;
 use binaryninja::rc::Ref as BNRef;
-use binaryninja::ObjectDestructor;
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 pub fn register_cache_destructor() {
-    pub static mut CACHE_DESTRUCTOR: CacheDestructor = CacheDestructor;
-    #[allow(static_mut_refs)]
-    // SAFETY: This can be done as the backing data is an opaque ZST.
-    unsafe {
-        CACHE_DESTRUCTOR.register()
-    };
+    let destructor = register_object_destructor(CacheDestructor);
+    std::mem::forget(destructor);
 }
 
 /// A unique view ID, used for caching.

@@ -22,6 +22,7 @@ use binaryninjacore_sys::*;
 use binaryninjacore_sys::{BNCreateDatabaseWithProgress, BNOpenExistingDatabaseWithProgress};
 use std::ffi::c_void;
 use std::fmt::{Debug, Display, Formatter};
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 
 use crate::progress::{NoProgressCallback, ProgressCallback};
@@ -108,7 +109,6 @@ unsafe impl RefCountable for SaveSettings {
 /// **Important**: Because [`FileMetadata`] holds a strong reference to the [`BinaryView`]s and those
 /// views hold a strong reference to the file metadata, to end the cyclic reference a call to the
 /// [`FileMetadata::close`] is required.
-#[derive(PartialEq, Eq, Hash)]
 pub struct FileMetadata {
     pub(crate) handle: *mut BNFileMetadata,
 }
@@ -609,6 +609,20 @@ impl Debug for FileMetadata {
 impl Display for FileMetadata {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.display_name())
+    }
+}
+
+impl PartialEq for FileMetadata {
+    fn eq(&self, other: &Self) -> bool {
+        self.session_id() == other.session_id()
+    }
+}
+
+impl Eq for FileMetadata {}
+
+impl Hash for FileMetadata {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.session_id().hash(state);
     }
 }
 

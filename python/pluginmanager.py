@@ -284,6 +284,12 @@ class Extension:
 		return datetime.fromtimestamp(core.BNPluginGetLastUpdate(self.handle))
 
 
+@deprecation.deprecated(deprecated_in="5.3", details='Use :py:class:`binaryninja.Extension` instead.')
+class RepoPlugin(Extension):
+	def __init__(self, handle: 'core.BNRepoPluginHandle'):
+		super().__init__(handle)
+
+
 class Repository:
 	"""
 	``Repository`` is a read-only class. Use RepositoryManager to Enable/Disable/Install/Uninstall plugins.

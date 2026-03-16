@@ -7,7 +7,6 @@ use std::ffi::c_char;
 use std::fmt::Debug;
 use std::path::PathBuf;
 use std::ptr::NonNull;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[repr(transparent)]
 pub struct Extension {

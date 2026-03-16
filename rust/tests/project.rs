@@ -26,7 +26,7 @@ fn create_delete_empty() {
     let project_path_received = project.path();
     assert_eq!(
         canonicalize(&project_path).unwrap(),
-        canonicalize(project_path_received.to_string()).unwrap()
+        canonicalize(project_path_received).unwrap()
     );
     let project_name_received = project.name();
     assert_eq!(project_name, project_name_received.as_str());

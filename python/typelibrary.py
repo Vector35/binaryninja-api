@@ -359,7 +359,7 @@ class TypeLibrary:
 		"""
 		return typecontainer.TypeContainer(core.BNGetTypeLibraryTypeContainer(self.handle))
 
-	def add_named_object(self, name: 'types.QualifiedName', type: 'types.Type') -> None:
+	def add_named_object(self, name: Union[types.QualifiedName, str], type: 'types.Type') -> None:
 		"""
 		`add_named_object` directly inserts a named object into the type library's object store.
 		This is not done recursively, so care should be taken that types referring to other types
@@ -380,7 +380,7 @@ class TypeLibrary:
 			raise ValueError("type must be a Type")
 		core.BNAddTypeLibraryNamedObject(self.handle, name._to_core_struct(), type.handle)
 
-	def remove_named_object(self, name: 'types.QualifiedName') -> None:
+	def remove_named_object(self, name: Union[types.QualifiedName, str]) -> None:
 		"""
 		`remove_named_object` removes a named object from the type library's object store.
 		This does not remove any types that are referenced by the object, only the object itself.
@@ -388,6 +388,8 @@ class TypeLibrary:
 		:param QualifiedName name:
 		:rtype: None
 		"""
+		if not isinstance(name, types.QualifiedName):
+			name = types.QualifiedName(name)
 		core.BNRemoveTypeLibraryNamedObject(self.handle, name._to_core_struct())
 
 	def add_named_type(self, name: 'types.QualifiedNameType', type: 'types.Type') -> None:
@@ -411,20 +413,24 @@ class TypeLibrary:
 			raise ValueError("parameter type must be a Type")
 		core.BNAddTypeLibraryNamedType(self.handle, name._to_core_struct(), type.handle)
 
-	def remove_named_type(self, name: 'types.QualifiedName') -> None:
+	def remove_named_type(self, name: Union[types.QualifiedName, str]) -> None:
 		"""
 		`remove_named_type` removes a named type from the type library's type store.
 		This does not remove any objects that reference the type, only the type itself.
 		"""
+		if not isinstance(name, types.QualifiedName):
+			name = types.QualifiedName(name)
 		core.BNRemoveTypeLibraryNamedType(self.handle, name._to_core_struct())
 
-	def add_type_source(self, name: types.QualifiedName, source: str) -> None:
+	def add_type_source(self, name: Union[types.QualifiedName, str], source: str) -> None:
 		"""
 		Manually flag NamedTypeReferences to the given QualifiedName as originating from another source
 		TypeLibrary with the given dependency name.
 
 		.. warning:: Use this api with extreme caution.
 		"""
+		if not isinstance(name, types.QualifiedName):
+			name = types.QualifiedName(name)
 		core.BNAddTypeLibraryNamedTypeSource(self.handle, types.QualifiedName(name)._to_core_struct(), source)
 
 	def get_named_object(self, name: Union[types.QualifiedName, str]) -> Optional[types.Type]:

@@ -174,7 +174,12 @@ WarpSidebarWidget::WarpSidebarWidget(BinaryViewRef data) : SidebarWidget("WARP")
 
 	m_fetcher = WarpFetcher::Global();
 	m_callbackId = m_fetcher->AddCompletionCallback([this]() {
-		ExecuteOnMainThread([this]() { Update(); });
+		ExecuteOnMainThread([this]() {
+			// Instead of doing a full update after fetching, we only want to make sure the current function has
+			// up-to-date matches, since the other two tabs (all matches, container list) do not get populated with
+			// additional information or manage their own updates (e.g. container source list).
+			m_currentFunctionWidget->UpdateMatches();
+		});
 		return KeepCallback;
 	});
 

@@ -5,9 +5,9 @@ use std::path::Path;
 
 #[derive(Deserialize, Debug)]
 pub struct BntlSchema {
-    // The list of library names this library depends on
+    /// The list of library names this library depends on
     pub dependencies: Vec<String>,
-    // Maps internal type IDs or names to their external sources
+    /// Maps internal type IDs or names to their external sources
     pub type_sources: Vec<TypeSource>,
 }
 
@@ -35,8 +35,8 @@ impl BntlSchema {
 
 #[derive(Deserialize, Debug)]
 pub struct TypeSource {
-    // The components of the name, e.g., ["std", "string"]
+    /// The components of the name, e.g., ["std", "string"]
     pub name: Vec<String>,
-    // The name of the dependency library it comes from
+    /// The name of the dependency library it comes from
     pub source: String,
 }

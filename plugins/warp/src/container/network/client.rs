@@ -46,7 +46,11 @@ impl NetworkClient {
         Self {
             provider,
             headers,
-            server_url,
+            // We place the '/' already in the materialized URLs we query, so strip it here.
+            server_url: server_url
+                .strip_suffix('/')
+                .unwrap_or(&server_url)
+                .to_string(),
         }
     }
 

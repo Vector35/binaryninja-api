@@ -3,7 +3,8 @@ pub mod folder;
 
 use std::ffi::c_void;
 use std::fmt::Debug;
-use std::path::Path;
+use std::hash::Hash;
+use std::path::{Path, PathBuf};
 use std::ptr::{null_mut, NonNull};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -633,6 +634,20 @@ impl Debug for Project {
             .field("name", &self.name())
             .field("description", &self.description())
             .finish()
+    }
+}
+
+impl PartialEq for Project {
+    fn eq(&self, other: &Self) -> bool {
+        self.id() == other.id()
+    }
+}
+
+impl Eq for Project {}
+
+impl Hash for Project {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id().hash(state);
     }
 }
 

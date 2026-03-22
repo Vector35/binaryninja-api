@@ -11,6 +11,7 @@ use binaryninjacore_sys::{
     BNProjectFileSetFolder, BNProjectFileSetName,
 };
 use std::fmt::Debug;
+use std::hash::Hash;
 use std::path::{Path, PathBuf};
 use std::ptr::{null_mut, NonNull};
 use std::time::SystemTime;
@@ -154,6 +155,20 @@ impl Debug for ProjectFile {
 
 unsafe impl Send for ProjectFile {}
 unsafe impl Sync for ProjectFile {}
+
+impl PartialEq for ProjectFile {
+    fn eq(&self, other: &Self) -> bool {
+        self.id() == other.id()
+    }
+}
+
+impl Eq for ProjectFile {}
+
+impl Hash for ProjectFile {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id().hash(state);
+    }
+}
 
 impl ToOwned for ProjectFile {
     type Owned = Ref<Self>;

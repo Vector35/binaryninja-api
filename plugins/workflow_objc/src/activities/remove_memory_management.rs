@@ -1,5 +1,5 @@
 use binaryninja::{
-    architecture::{Architecture as _, CoreRegister, Register as _, RegisterInfo as _},
+    architecture::{Architecture as _, CoreRegister, Register as _, RegisterId, RegisterInfo as _},
     binary_view::BinaryView,
     low_level_il::{
         expression::{ExpressionHandler, LowLevelILExpressionKind},
@@ -11,45 +11,58 @@ use binaryninja::{
         lifting::LowLevelILLabel,
         LowLevelILRegisterKind,
     },
-    variable::PossibleValueSet,
+    platform::Platform,
+    variable::{PossibleValueSet, VariableSourceType},
     workflow::AnalysisContext,
 };
 
 use crate::{error::ILLevel, metadata::GlobalState, Error};
 
-// TODO: We should also handle `objc_retain_x` / `objc_release_x` variants
-// that use a custom calling convention.
 const IGNORABLE_MEMORY_MANAGEMENT_FUNCTIONS: &[&[u8]] = &[
     b"_objc_autorelease",
     b"_objc_autoreleaseReturnValue",
+    b"_objc_claimAutoreleasedReturnValue",
     b"_objc_release",
     b"_objc_retain",
     b"_objc_retainAutorelease",
-    b"_objc_retainAutoreleaseReturnValue",
     b"_objc_retainAutoreleasedReturnValue",
+    b"_objc_retainAutoreleaseReturnValue",
     b"_objc_retainBlock",
     b"_objc_unsafeClaimAutoreleasedReturnValue",
 ];
 
-fn is_call_to_ignorable_memory_management_function<'func>(
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MemoryManagementFunctionCategory {
+    ReturnVoid,
+    ReturnObject,
+}
+
+struct MemoryManagementCall {
+    category: MemoryManagementFunctionCategory,
+    /// Register the target receives its object argument in.
+    object_register: CoreRegister,
+    /// Register the target returns its result in.
+    return_register: Option<CoreRegister>,
+}
+
+fn classify_memory_management_call(
     view: &binaryninja::binary_view::BinaryView,
-    instr: &'func LowLevelILInstruction<'func, Mutable, NonSSA>,
-) -> bool {
+    platform: &Platform,
+    instr: &LowLevelILInstruction<Mutable, NonSSA>,
+) -> Option<MemoryManagementCall> {
     let target = match instr.kind() {
         LowLevelILInstructionKind::Call(call) | LowLevelILInstructionKind::TailCall(call) => {
             match call.target().possible_values() {
                 PossibleValueSet::ConstantValue { value }
                 | PossibleValueSet::ConstantPointerValue { value }
                 | PossibleValueSet::ImportedAddressValue { value } => value as u64,
-                _ => return false,
+                _ => return None,
             }
         }
         LowLevelILInstructionKind::Goto(target) => target.address(),
-        _ => return false,
+        _ => return None,
     };
-    let Some(symbol) = view.symbol_by_address(target) else {
-        return false;
-    };
+    let symbol = view.symbol_by_address(target)?;
 
     let symbol_name = symbol.full_name();
     let symbol_name = symbol_name.to_bytes();
@@ -57,45 +70,99 @@ fn is_call_to_ignorable_memory_management_function<'func>(
     // Remove any j_ prefix that the shared cache workflow adds to stub functions.
     let symbol_name = symbol_name.strip_prefix(b"j_").unwrap_or(symbol_name);
 
-    IGNORABLE_MEMORY_MANAGEMENT_FUNCTIONS.contains(&symbol_name)
+    if !IGNORABLE_MEMORY_MANAGEMENT_FUNCTIONS.contains(&symbol_name)
+        && !symbol_name.starts_with(b"_objc_retain_x")
+        && !symbol_name.starts_with(b"_objc_release_x")
+    {
+        return None;
+    }
+
+    let category = if symbol_name.starts_with(b"_objc_release") {
+        MemoryManagementFunctionCategory::ReturnVoid
+    } else {
+        MemoryManagementFunctionCategory::ReturnObject
+    };
+
+    // The `objc_retain_xN` / `objc_release_xN` variants take their object in `xN` rather than
+    // `x0`. The target's parameter and return value locations name the registers.
+    let target_function = view.function_at(platform, target)?;
+    let arch = target_function.arch();
+    let object_register = target_function
+        .parameter_variables()
+        .contents
+        .first()
+        .filter(|var| var.ty == VariableSourceType::RegisterVariableSourceType)
+        .and_then(|var| arch.register_from_id(RegisterId::from(var.storage as u32)))?;
+    let return_register = target_function.return_registers().contents.iter().next();
+
+    Some(MemoryManagementCall {
+        category,
+        object_register,
+        return_register,
+    })
 }
 
 fn process_instruction(
     bv: &BinaryView,
+    platform: &Platform,
     llil: &LowLevelILFunction<Mutable, NonSSA>,
     insn: &LowLevelILInstruction<Mutable, NonSSA>,
     link_register: LowLevelILRegisterKind<CoreRegister>,
     link_register_size: usize,
 ) -> Result<bool, &'static str> {
-    if !is_call_to_ignorable_memory_management_function(bv, insn) {
+    let Some(call) = classify_memory_management_call(bv, platform, insn) else {
         return Ok(false);
-    }
+    };
+
+    // A target that returns its object in a register other than the one it received it in
+    // needs a move before any return that replaces it. A single expression replacement cannot
+    // express that, so such tail calls and stub gotos are left in place.
+    let returns_object_in_place = call.category == MemoryManagementFunctionCategory::ReturnVoid
+        || call.return_register == Some(call.object_register);
 
     // TODO: Removing calls to `objc_release` can sometimes leave behind a load of a struct field
     // that appears to be unused. It's not clear whether we should be trying to detect and remove
     // those here, or if some later analysis pass should be cleaning them up but isn't.
 
     match insn.kind() {
-        LowLevelILInstructionKind::TailCall(_) => unsafe {
+        LowLevelILInstructionKind::TailCall(_) if returns_object_in_place => unsafe {
             llil.set_current_address(insn.address());
             llil.replace_expression(
                 insn.expr_idx(),
                 llil.ret(llil.reg(link_register_size, link_register)),
             );
         },
-        LowLevelILInstructionKind::Call(_) => unsafe {
-            // The memory management functions that are currently supported either return void
-            // or return their first argument. For arm64, the first argument is passed in `x0`
-            // and results are returned in `x0`, so we can replace the call with a nop. We'll need
-            // to revisit this to support other architectures, and to support the `objc_retain_x`
-            // `objc_release_x` functions that accept their argument in a different register.
+        LowLevelILInstructionKind::TailCall(_) => return Ok(false),
+        LowLevelILInstructionKind::Call(_) if returns_object_in_place => unsafe {
             llil.set_current_address(insn.address());
             llil.replace_expression(insn.expr_idx(), llil.nop());
         },
+        LowLevelILInstructionKind::Call(_) => unsafe {
+            // The target returns the object it was given, so the call is equivalent to a move
+            // from the object register to the return register.
+            let Some(return_register) = call.return_register else {
+                return Ok(false);
+            };
+            let size = call.object_register.info().size();
+
+            llil.set_current_address(insn.address());
+            llil.replace_expression(
+                insn.expr_idx(),
+                llil.set_reg(
+                    size,
+                    LowLevelILRegisterKind::Arch(return_register),
+                    llil.reg(size, LowLevelILRegisterKind::Arch(call.object_register)),
+                ),
+            );
+        },
+        LowLevelILInstructionKind::Goto(_) if insn.index.0 == 0 && !returns_object_in_place => {
+            return Ok(false)
+        }
         LowLevelILInstructionKind::Goto(_) if insn.index.0 == 0 => unsafe {
-            // If the `objc_retain` is the first instruction in the function, this function
-            // can only contain the call to the memory management function since when the
+            // If a goto to a memory management function is the first instruction in the function,
+            // this function can only contain the call to the memory management function. When the
             // memory management function returns, it will return to this function's caller.
+            // This means we can replace the goto with a return.
             llil.set_current_address(insn.address());
             llil.replace_expression(
                 insn.expr_idx(),
@@ -155,6 +222,7 @@ pub fn process(ac: &AnalysisContext) -> Result<(), Error> {
     }
 
     let func = ac.function();
+    let platform = func.platform();
 
     let Some(link_register) = func.arch().link_reg() else {
         return Ok(());
@@ -172,7 +240,14 @@ pub fn process(ac: &AnalysisContext) -> Result<(), Error> {
     let mut function_changed = false;
     for block in llil.basic_blocks().iter() {
         for insn in block.iter() {
-            match process_instruction(&view, &llil, &insn, link_register, link_register_size) {
+            match process_instruction(
+                &view,
+                &platform,
+                &llil,
+                &insn,
+                link_register,
+                link_register_size,
+            ) {
                 Ok(true) => function_changed = true,
                 Ok(_) => {}
                 Err(err) => {

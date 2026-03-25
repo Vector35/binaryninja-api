@@ -32,7 +32,7 @@ impl Extension {
 
     /// String of the plugin author
     pub fn author(&self) -> String {
-        let result = unsafe { BNPluginGetAuthorUrl(self.handle.as_ptr()) };
+        let result = unsafe { BNPluginGetAuthor(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::into_string(result as *mut c_char) }
     }

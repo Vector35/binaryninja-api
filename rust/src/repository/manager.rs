@@ -1,9 +1,10 @@
 use crate::rc::{Array, Ref};
 use crate::repository::Repository;
 use crate::string::IntoCStr;
-use binaryninjacore_sys::{BNRepositoryGetRepositoryByPath,
-                          BNRepositoryManagerAddRepository, BNRepositoryManagerCheckForUpdates,
-                          BNRepositoryManagerGetDefaultRepository, BNRepositoryManagerGetRepositories,
+use binaryninjacore_sys::{
+    BNRepositoryGetRepositoryByPath, BNRepositoryManagerAddRepository,
+    BNRepositoryManagerCheckForUpdates, BNRepositoryManagerGetDefaultRepository,
+    BNRepositoryManagerGetRepositories,
 };
 use std::fmt::Debug;
 use std::path::Path;
@@ -22,8 +23,7 @@ impl RepositoryManager {
     /// List of [`Repository`] objects being managed
     pub fn repositories() -> Array<Repository> {
         let mut count = 0;
-        let result =
-            unsafe { BNRepositoryManagerGetRepositories(&mut count) };
+        let result = unsafe { BNRepositoryManagerGetRepositories(&mut count) };
         assert!(!result.is_null());
         unsafe { Array::new(result, count, ()) }
     }
@@ -42,15 +42,12 @@ impl RepositoryManager {
     pub fn add_repository(url: &str, repository_path: &Path) -> bool {
         let url = url.to_cstr();
         let repo_path = repository_path.to_cstr();
-        unsafe {
-            BNRepositoryManagerAddRepository(url.as_ptr(), repo_path.as_ptr())
-        }
+        unsafe { BNRepositoryManagerAddRepository(url.as_ptr(), repo_path.as_ptr()) }
     }
 
     pub fn repository_by_path(path: &Path) -> Option<Repository> {
         let path = path.to_cstr();
-        let result =
-            unsafe { BNRepositoryGetRepositoryByPath(path.as_ptr()) };
+        let result = unsafe { BNRepositoryGetRepositoryByPath(path.as_ptr()) };
         NonNull::new(result).map(|raw| unsafe { Repository::from_raw(raw) })
     }
 

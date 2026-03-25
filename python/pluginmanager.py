@@ -70,10 +70,10 @@ class Extension:
 		"""Boolean True if the plugin is installed, False otherwise"""
 		return core.BNPluginIsInstalled(self.handle)
 
-	def install(self) -> bool:
+	def install(self, version_id=None) -> bool:
 		"""Attempt to install the given plugin"""
 		self.install_dependencies()
-		return core.BNPluginInstall(self.handle)
+		return core.BNPluginInstall(self.handle, version_id)
 
 	def uninstall(self) -> bool:
 		"""Attempt to uninstall the given plugin"""
@@ -83,7 +83,7 @@ class Extension:
 	def installed(self, state: bool):
 		if state:
 			self.install_dependencies()
-			core.BNPluginInstall(self.handle)
+			core.BNPluginInstall(self.handle, None)
 		else:
 			core.BNPluginUninstall(self.handle)
 

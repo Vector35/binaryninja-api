@@ -15,8 +15,10 @@ impl Command for LoadIDBFile {
         let mut form = Form::new("Load IDB File");
         let mut default_path = PathBuf::from(&view.file().file_path());
         default_path.set_extension("idb");
-        let file_field =
-            LoadFileField::with_default("*.idb;;*.i64;;*.til", &default_path.to_string_lossy());
+        let file_field = LoadFileField::with_default(
+            "IDA Files (*.idb *.i64 *.til)",
+            &default_path.to_string_lossy(),
+        );
         form.add_field(file_field.field());
         if !form.prompt() {
             return;

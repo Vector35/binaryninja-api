@@ -1,15 +1,19 @@
 //! Map the IDB data we parsed into the [`BinaryView`].
 
-use crate::parse::{CommentInfo, FunctionInfo, IDBInfo, LabelInfo, NameInfo, SegmentInfo};
+use crate::parse::{
+    BaseAddressInfo, CommentInfo, ExportInfo, FunctionInfo, IDBInfo, LabelInfo, NameInfo,
+    SegmentInfo,
+};
 use crate::translate::TILTranslator;
 use binaryninja::architecture::Architecture;
 use binaryninja::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
 use binaryninja::qualified_name::QualifiedName;
 use binaryninja::rc::Ref;
 use binaryninja::section::{SectionBuilder, Semantics};
-use binaryninja::symbol::{Symbol, SymbolType};
+use binaryninja::symbol::{Binding, Symbol, SymbolType};
 use binaryninja::types::Type;
 use idb_rs::id0::SegmentType;
+use idb_rs::til::TypeVariant;
 use std::collections::HashSet;
 
 /// Maps IDB data into a [`BinaryView`].
@@ -36,8 +40,28 @@ impl IDBMapper {
 
         // Rebase the address from ida -> binja without this rebased views will fail to map.
         let bn_base_address = view.start();
-        let ida_base_address = id0.base_address.unwrap_or(bn_base_address);
-        let base_address_delta = bn_base_address.wrapping_sub(ida_base_address);
+        let base_address_delta = match id0.base_address {
+            // There is no base address in the IDA file, so we assume everything is relative and rebase.
+            BaseAddressInfo::None => bn_base_address,
+            BaseAddressInfo::BaseSegment(start_addr) => bn_base_address.wrapping_sub(start_addr),
+            BaseAddressInfo::BaseSection(section_addr) => {
+                let bn_section_addr = view
+                    .sections()
+                    .iter()
+                    .min_by_key(|s| s.start())
+                    .map(|s| s.start());
+                match bn_section_addr {
+                    Some(bn_section) => bn_section.wrapping_sub(section_addr),
+                    None => bn_base_address,
+                }
+            }
+        };
+
+        tracing::debug!(
+            "Rebasing for {:0x} with delta {:0x}",
+            bn_base_address,
+            base_address_delta
+        );
         let rebase = |addr: u64| -> u64 { addr.wrapping_add(base_address_delta) };
 
         for segment in &id0.segments {
@@ -70,10 +94,16 @@ impl IDBMapper {
             self.map_func_to_view(view, &til_translator, &rebased_func);
         }
 
+        for export in &id0.exports {
+            let mut rebased_export = export.clone();
+            rebased_export.address = rebase(export.address);
+            self.map_export_to_view(view, &til_translator, &rebased_export);
+        }
+
         // TODO: The below undo and ignore is not thread safe, this means that the mapper itself
         // TODO: should be the only thing running at the time of the mapping process.
         let undo = view.file().begin_undo_actions(true);
-        for comment in &id0.comments {
+        for comment in &self.info.merged_comments() {
             let mut rebased_comment = comment.clone();
             rebased_comment.address = rebase(comment.address);
             self.map_comment_to_view(view, &rebased_comment);
@@ -103,11 +133,11 @@ impl IDBMapper {
             }
             match til_translator.translate_type_info(&ty.tinfo) {
                 Ok(bn_ty) => {
-                    tracing::debug!("Mapping type: {:?}", ty);
+                    tracing::debug!("Mapping type: {}", ty.name);
                     view.define_auto_type(&ty_name, "IDA", &bn_ty);
                 }
                 Err(err) => {
-                    tracing::warn!("Failed to map type {:?}: {}", ty, err)
+                    tracing::warn!("Failed to map type {}: {}", ty.name, err)
                 }
             }
         }
@@ -183,6 +213,11 @@ impl IDBMapper {
     pub fn map_segment_to_view(&self, view: &BinaryView, segment: &SegmentInfo) {
         let semantics = match segment.ty {
             SegmentType::Norm => Semantics::DefaultSection,
+            // One issue is that an IDA section named 'extern' is _actually_ a synthetic section, so we
+            // should not map it.
+            SegmentType::Xtrn if segment.name == "extern" => {
+                return;
+            }
             SegmentType::Xtrn => {
                 // IDA definition of extern is an actual section like '.idata' whereas extern in BN
                 // is a synthetic section, do NOT use [`Semantics::External`].
@@ -226,12 +261,62 @@ impl IDBMapper {
         view.add_section(section);
     }
 
+    pub fn map_export_to_view(
+        &self,
+        view: &BinaryView,
+        til_translator: &TILTranslator,
+        export: &ExportInfo,
+    ) {
+        let within_code_section = view
+            .sections_at(export.address)
+            .iter()
+            .find(|s| s.semantics() == Semantics::ReadOnlyCode)
+            .is_some();
+        let is_func_ty = export
+            .ty
+            .as_ref()
+            .is_some_and(|ty| matches!(ty.type_variant, TypeVariant::Function(_)));
+
+        if within_code_section && is_func_ty {
+            tracing::debug!("Mapping function export: {:0x}", export.address);
+            let func_info = FunctionInfo {
+                name: Some(export.name.clone()),
+                ty: export.ty.clone(),
+                address: export.address,
+                is_library: false,
+                is_no_return: false,
+            };
+            self.map_func_to_view(view, til_translator, &func_info);
+        } else {
+            tracing::debug!("Mapping data export: {:0x}", export.address);
+            let name_info = NameInfo {
+                label: Some(export.name.clone()),
+                ty: export.ty.clone(),
+                address: export.address,
+                exported: true,
+            };
+            self.map_name_to_view(view, til_translator, &name_info);
+        }
+    }
+
     pub fn map_func_to_view(
         &self,
         view: &BinaryView,
         til_translator: &TILTranslator,
         func: &FunctionInfo,
     ) {
+        // We need to skip things that hit the extern section, since they do not have a bearing in the
+        // actual context of the binary, and can be derived differently between IDA and Binja.
+        let within_extern_section = view
+            .sections_at(func.address)
+            .iter()
+            .find(|s| s.semantics() == Semantics::External)
+            .is_some();
+        if within_extern_section {
+            tracing::debug!("Skipping function in extern section: {:0x}", func.address);
+            return;
+        }
+
         let Some(bn_func) = view.add_auto_function(func.address) else {
             tracing::warn!("Failed to add function for {:0x}", func.address);
             return;
@@ -277,6 +362,18 @@ impl IDBMapper {
         til_translator: &TILTranslator,
         name: &NameInfo,
     ) {
+        // We need to skip things that hit the extern section, since they do not have a bearing in the
+        // actual context of the binary, and can be derived differently between IDA and Binja.
+        let within_extern_section = view
+            .sections_at(name.address)
+            .iter()
+            .find(|s| s.semantics() == Semantics::External)
+            .is_some();
+        if within_extern_section {
+            tracing::debug!("Skipping name in extern section: {:0x}", name.address);
+            return;
+        }
+
         // Currently, we only want to use name info to map data variables, so skip anything in code.
         let within_code_section = view
             .sections_at(name.address)
@@ -289,7 +386,13 @@ impl IDBMapper {
         }
 
         if let Some(label) = &name.label {
-            let symbol = Symbol::builder(SymbolType::Data, &label, name.address).create();
+            let binding = name
+                .exported
+                .then_some(Binding::Global)
+                .unwrap_or(Binding::None);
+            let symbol = Symbol::builder(SymbolType::Data, &label, name.address)
+                .binding(binding)
+                .create();
             tracing::debug!("Mapping name label: {:0x} => {}", name.address, symbol);
             view.define_auto_symbol(&symbol);
         }

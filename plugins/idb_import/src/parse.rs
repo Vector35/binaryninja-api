@@ -1,6 +1,6 @@
 //! Parse the provided IDB / TIL file and extract information into a struct for further processing.
 
-use idb_rs::addr_info::AddressInfo;
+use idb_rs::addr_info::{all_address_info, AddressInfo};
 use idb_rs::id0::function::{FuncIdx, FuncordsIdx, IDBFunctionType};
 use idb_rs::id0::{ID0Section, Netdelta, SegmentType};
 use idb_rs::id1::ID1Section;
@@ -27,7 +27,13 @@ pub struct FunctionInfo {
     pub address: u64,
     pub is_library: bool,
     pub is_no_return: bool,
-    pub is_entry: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ExportInfo {
+    pub name: String,
+    pub address: u64,
+    pub ty: Option<idb_rs::til::Type>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -35,6 +41,7 @@ pub struct NameInfo {
     pub address: u64,
     pub ty: Option<idb_rs::til::Type>,
     pub label: Option<String>,
+    pub exported: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -57,12 +64,27 @@ pub struct FunctionCordInfo {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub enum BaseAddressInfo {
+    /// The base address is not specified in the IDB.
+    None,
+    /// The base address is the absolute address of the first byte of the executable.
+    ///
+    /// To get a delta, calculate the difference between the base address and the address of the lowest segment.
+    BaseSegment(u64),
+    /// The base address is the address of the first byte of the lowest section.
+    ///
+    /// To get a delta, calculate the difference between the base address and the address of the lowest section.
+    BaseSection(u64),
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct ID0Info {
-    pub base_address: Option<u64>,
+    pub base_address: BaseAddressInfo,
     pub segments: Vec<SegmentInfo>,
     pub functions: Vec<FunctionInfo>,
     pub comments: Vec<CommentInfo>,
     pub labels: Vec<LabelInfo>,
+    pub exports: Vec<ExportInfo>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -71,6 +93,7 @@ pub struct DirTreeInfo {
     pub types: Vec<TILTypeInfo>,
     /// Contains both function and data names (along with their types).
     pub names: Vec<NameInfo>,
+    pub comments: Vec<CommentInfo>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -124,6 +147,7 @@ impl IDBInfo {
                     address: label.address,
                     ty: None,
                     label: Some(label.label.clone()),
+                    exported: false,
                 });
             }
 
@@ -132,6 +156,7 @@ impl IDBInfo {
                     address: func.address,
                     ty: func.ty.clone(),
                     label: func.name.clone(),
+                    exported: false,
                 });
             }
         }
@@ -171,6 +196,24 @@ impl IDBInfo {
             true
         });
         types
+    }
+
+    pub fn merged_comments(&self) -> Vec<CommentInfo> {
+        let mut comments = Vec::new();
+        if let Some(id0) = &self.id0 {
+            comments.extend(id0.comments.clone());
+        }
+        if let Some(dir_tree) = &self.dir_tree {
+            comments.extend(dir_tree.comments.clone());
+        }
+        comments.sort_by_key(|c| c.address);
+        comments.dedup_by(|a, b| {
+            if a.address != b.address {
+                return false;
+            }
+            a.is_repeatable == b.is_repeatable
+        });
+        comments
     }
 }
 
@@ -314,32 +357,32 @@ impl IDBFileParser {
                             address: func_start,
                             is_library: func.flags.is_lib(),
                             is_no_return: func.flags.is_no_return(),
-                            is_entry: false,
                         });
                     }
                 }
             }
         }
 
+        let mut exports = Vec::new();
         if let Ok(entry_points) = id0.entry_points(&root_info) {
             for entry in entry_points {
-                // TODO: What to do with entry.forwarded?
-                functions.push(FunctionInfo {
-                    name: Some(entry.name),
-                    ty: entry.entry_type,
+                exports.push(ExportInfo {
+                    name: entry.name,
                     address: entry.address.into_u64(),
-                    is_library: false,
-                    is_no_return: false,
-                    is_entry: true,
+                    ty: entry.entry_type,
                 });
             }
         }
 
-        let base_address = match root_info.addresses.loading_base.into_u64() {
+        let min_ea = root_info.addresses.min_ea.into_raw().into_u64();
+        let loading_base = root_info.addresses.loading_base.into_u64();
+        let base_address = match (loading_base, min_ea) {
+            (0, 0) => BaseAddressInfo::None,
             // An IDB with zero loading base is possibly not loaded there.
             // For example, see the FlawedGrace.idb in the idb-rs resources directory.
-            0 => None,
-            loading_base => Some(loading_base.into_u64()),
+            // Instead, we will want to use the lowest section address.
+            (0, min_ea) => BaseAddressInfo::BaseSection(min_ea),
+            (loading_base, _) => BaseAddressInfo::BaseSegment(loading_base.into_u64()),
         };
 
         Ok(ID0Info {
@@ -348,6 +391,7 @@ impl IDBFileParser {
             functions,
             comments,
             labels,
+            exports,
         })
     }
 
@@ -421,9 +465,50 @@ impl IDBFileParser {
                     address: func_addr,
                     is_library: false,
                     is_no_return: false,
-                    is_entry: false,
                 }))
             };
+
+        let comment_info_from_addr = |addr_info: &AddressInfo<K>| -> Vec<CommentInfo> {
+            let mut comments = Vec::new();
+            if let Some(comment) = addr_info.comment() {
+                comments.push(CommentInfo {
+                    address: addr_info.address().into_raw().into_u64(),
+                    comment: comment.to_string(),
+                    is_repeatable: false,
+                });
+            }
+            if let Some(comment) = addr_info.comment_repeatable() {
+                comments.push(CommentInfo {
+                    address: addr_info.address().into_raw().into_u64(),
+                    comment: comment.to_string(),
+                    is_repeatable: true,
+                })
+            }
+            if let Some(pre_comments) = addr_info.comment_pre() {
+                for comment in pre_comments {
+                    comments.push(CommentInfo {
+                        address: addr_info.address().into_raw().into_u64(),
+                        comment: comment.to_string(),
+                        is_repeatable: false,
+                    })
+                }
+            }
+            if let Some(post_comments) = addr_info.comment_post() {
+                for comment in post_comments {
+                    comments.push(CommentInfo {
+                        address: addr_info.address().into_raw().into_u64(),
+                        comment: comment.to_string(),
+                        is_repeatable: false,
+                    })
+                }
+            }
+            comments
+        };
+
+        let mut comments = Vec::new();
+        for (addr_info, _) in all_address_info(id0, id1, id2, netdelta) {
+            comments.extend(comment_info_from_addr(&addr_info));
+        }
 
         let mut functions = Vec::new();
         if let Some(func_dir_tree) = id0.dirtree_function_address()? {
@@ -446,6 +531,7 @@ impl IDBFileParser {
                         address: info.address().into_raw().into_u64(),
                         ty: info.tinfo(&root_info).ok().flatten().map(|t| t.clone()),
                         label: info.label().ok().flatten().map(|s| s.to_string()),
+                        exported: false,
                     });
                 }
             });
@@ -466,6 +552,7 @@ impl IDBFileParser {
             functions,
             types,
             names,
+            comments,
         })
     }
 }

@@ -8,9 +8,9 @@ use binaryninja::segment::{SegmentBuilder, SegmentFlags};
 use binaryninja::symbol::{SymbolBuilder, SymbolType};
 use binaryninja::types::{
     BaseStructure, EnumerationBuilder, MemberAccess, MemberScope, NamedTypeReference,
-    NamedTypeReferenceClass, StructureBuilder, StructureMember, Type, TypeBuilder,
+    NamedTypeReferenceClass, StructureBuilder, StructureMember, StructureType, Type, TypeBuilder,
 };
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::num::NonZeroUsize;
 use svd_parser::svd::{
     Access, AddressBlock, AddressBlockUsage, DataType, Device, EnumeratedValues, Field, FieldInfo,
@@ -373,19 +373,52 @@ impl DeviceMapper {
         peripheral_struct.width(address_block.size as u64);
 
         if let Some(register_clusters) = &peripheral.registers {
+            // Collect registers by offset so we can handle overlapping registers by creating a union.
+            let mut registers_by_offset: BTreeMap<u64, Vec<&Register>> = BTreeMap::new();
             for register_cluster in register_clusters {
                 match register_cluster {
                     RegisterCluster::Register(register) => {
-                        let mut register_member = self.register_member(register);
-                        // TODO: If we want registers to be relative to the peripheral than we must
-                        // TODO: assert that we create the peripheral type at offset 0 from the base address.
-                        // Make the register member relative to the address block, not the peripheral.
-                        register_member.offset -= address_block.offset as u64;
-                        let overwrite = false; // TODO: Handle overwrites?
-                        peripheral_struct.insert_member(register_member, overwrite);
+                        registers_by_offset
+                            .entry(register.address_offset as u64)
+                            .or_default()
+                            .push(register);
                     }
                     RegisterCluster::Cluster(_cluster) => {
                         // TODO: Support clusters
+                    }
+                }
+            }
+
+            for (offset, registers) in registers_by_offset {
+                match registers.as_slice() {
+                    [register] => {
+                        // We only have one register at this offset, just insert it.
+                        let mut register_member = self.register_member(register);
+                        register_member.offset -= address_block.offset as u64;
+                        peripheral_struct.insert_member(register_member, false);
+                    }
+                    _ => {
+                        // We have multiple registers at the same offset, create a union of them.
+                        // This happens typically when there is some mode field that changes the
+                        // behavior of the register region.
+                        // NOTE: Typically overlapping registers are specified with an alternate register.
+                        let mut union_builder = StructureBuilder::new();
+                        union_builder.structure_type(StructureType::UnionStructureType);
+                        for register in registers {
+                            let mut register_member = self.register_member(register);
+                            register_member.offset = 0;
+                            union_builder.insert_member(register_member, false);
+                        }
+
+                        let union_ty = Type::structure(&union_builder.finalize());
+                        let union_member = StructureMember::new(
+                            Conf::new(union_ty, MAX_CONFIDENCE),
+                            "".to_string(),
+                            offset - address_block.offset as u64,
+                            MemberAccess::PublicAccess,
+                            MemberScope::NoScope,
+                        );
+                        peripheral_struct.insert_member(union_member, false);
                     }
                 }
             }
@@ -440,10 +473,13 @@ impl DeviceMapper {
                     register_struct.base_structures(&[base_struct]);
                 }
 
-                let type_builder = match &register.fields {
-                    Some(fields) => {
+                let type_builder = match register.fields.clone() {
+                    Some(mut fields) => {
+                        // Order the fields by offset so that rendering of the structure will not
+                        // insert "offset" fields, which happens when fields are unordered.
+                        fields.sort_by(|a, b| a.bit_range.offset.cmp(&b.bit_range.offset));
                         for field in fields {
-                            let field_member = self.field_member(field);
+                            let field_member = self.field_member(&field);
                             let overwrites = true; // TODO: Handle overwrites?
                             register_struct.insert_member(field_member, overwrites);
                         }

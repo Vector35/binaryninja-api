@@ -51,27 +51,6 @@ impl AddCommentsField {
     }
 }
 
-pub struct AddBitfieldsField;
-
-impl AddBitfieldsField {
-    pub fn field(default: bool) -> FormInputField {
-        FormInputField::Checkbox {
-            prompt: "Add Bitfields".to_string(),
-            default: Some(default),
-            value: false,
-        }
-    }
-
-    pub fn from_form(form: &Form) -> Option<bool> {
-        let field = form.get_field_with_name("Add Bitfields")?;
-        let field_value = field.try_value_int()?;
-        match field_value {
-            1 => Some(true),
-            _ => Some(false),
-        }
-    }
-}
-
 pub struct AddMemoryRegionsField;
 
 impl AddMemoryRegionsField {
@@ -101,7 +80,6 @@ impl Command for LoadSVDFile {
         let mut load_settings = LoadSettings::from_view_settings(view);
         form.add_field(LoadFileField::field());
         form.add_field(AddCommentsField::field(load_settings.add_comments));
-        form.add_field(AddBitfieldsField::field(load_settings.add_bitfields));
         form.add_field(AddMemoryRegionsField::field(
             load_settings.add_backing_regions,
         ));
@@ -112,7 +90,6 @@ impl Command for LoadSVDFile {
             return;
         };
         load_settings.add_comments = AddCommentsField::from_form(&form).unwrap_or(true);
-        load_settings.add_bitfields = AddBitfieldsField::from_form(&form).unwrap_or(true);
         load_settings.add_backing_regions = AddMemoryRegionsField::from_form(&form).unwrap_or(true);
 
         let file_content = match std::fs::read_to_string(&file_path) {

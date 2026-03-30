@@ -187,6 +187,117 @@ public:
 
 		result.length = decomp.instrSize / 8;
 
+		if ((decomp.mnem == armv7::ARMV7_IT) && (decomp.fields[FIELD_mask] != 0))
+		{
+			// IT block: consume all instructions and handle contained branches
+			uint32_t offset = decomp.instrSize / 8;
+			uint32_t mask = decomp.fields[FIELD_mask];
+			uint32_t cond = decomp.fields[FIELD_firstcond];
+
+			size_t instrCount;
+			if (mask & 1)
+				instrCount = 4;
+			else if (mask & 2)
+				instrCount = 3;
+			else if (mask & 4)
+				instrCount = 2;
+			else
+				instrCount = 1;
+
+			// First branch/return in each condition path
+			bool trueTerminated = false;
+			bool falseTerminated = false;
+			bool trueBranched = false;
+			bool falseBranched = false;
+			bool trueReturned = false;
+			bool falseReturned = false;
+
+			uint64_t trueBranchTargetAddr = 0;
+			uint64_t falseBranchTargetAddr = 0;
+
+			for (size_t i = 0; i < instrCount; i++)
+			{
+				bool isTrue = (i == 0) || (((mask >> (4 - i)) & 1) == (cond & 1));
+
+				InstructionInfo innerResult;
+				if (!GetInstructionInfo(data + offset, addr + offset, maxLen - offset, innerResult))
+					break;
+				if ((offset + innerResult.length) > maxLen)
+					break;
+
+				bool& terminated = isTrue ? trueTerminated : falseTerminated;
+				bool& branched = isTrue ? trueBranched : falseBranched;
+				bool& returned = isTrue ? trueReturned : falseReturned;
+				uint64_t& branchTarget = isTrue ? trueBranchTargetAddr : falseBranchTargetAddr;
+
+				// Only process if the conditional branch we're following isn't terminated
+				// Otherwise, just track if the arch is switching and the offset
+				if (!terminated)
+				{
+					for (size_t j = 0; j < innerResult.branchCount; j++)
+					{
+						switch (innerResult.branchType[j])
+						{
+						case UnconditionalBranch:
+						case TrueBranch:
+						case FalseBranch:
+							branched = true;
+							terminated = true;
+							branchTarget = innerResult.branchTarget[j];
+							break;
+						case FunctionReturn:
+							returned = true;
+							terminated = true;
+							break;
+						case CallDestination:
+							result.AddBranch(CallDestination, innerResult.branchTarget[j],
+								innerResult.branchArch[j] ? m_armArch : this);
+							break;
+						case UnresolvedBranch:
+						case IndirectBranch:
+						case ExceptionBranch:
+							// We don't know the branch target so just set terminated
+							terminated = true;
+							break;
+						default:
+							break;
+						}
+					}
+				}
+
+				if (innerResult.archTransitionByTargetAddr)
+					result.archTransitionByTargetAddr = true;
+
+				offset += innerResult.length;
+			}
+
+			result.length = offset;
+
+			uint64_t fallThroughAddr = (addr + offset) & 0xffffffffLL;
+			// The targets for true/false branches either go somewhere or fall through to the next instr
+			uint64_t trueTargetAddr = trueBranched ? trueBranchTargetAddr : fallThroughAddr;
+			uint64_t falseTargetAddr = falseBranched ? falseBranchTargetAddr : fallThroughAddr;
+
+			if (trueReturned && falseReturned)
+			{
+				// If both paths return
+				result.AddBranch(FunctionReturn);
+			}
+			else if (trueTargetAddr != falseTargetAddr)
+			{
+				// True and false go to different locations (either branch or fallthrough)
+				result.AddBranch(TrueBranch, trueTargetAddr, this);
+				result.AddBranch(FalseBranch, falseTargetAddr, this);
+			}
+			else if (trueTargetAddr != fallThroughAddr)
+			{
+				// True and false branch to the same location that isn't the fallthrough address
+				result.AddBranch(UnconditionalBranch, trueTargetAddr, this);
+			}
+
+			return true;
+		}
+
 		switch (decomp.mnem)
 		{
 		case armv7::ARMV7_LDR:

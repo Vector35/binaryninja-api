@@ -5,6 +5,7 @@ use crate::cache::container::add_cached_container;
 use crate::container::disk::DiskContainer;
 use crate::container::network::{NetworkClient, NetworkContainer};
 use crate::matcher::MatcherSettings;
+use crate::plugin::conflict_handler::ConflictHandler;
 use crate::plugin::render_layer::HighlightRenderLayer;
 use crate::plugin::settings::PluginSettings;
 use crate::{core_signature_dir, user_signature_dir};
@@ -13,6 +14,7 @@ use binaryninja::command::{register_command, register_command_for_function};
 use binaryninja::is_ui_enabled;
 use binaryninja::settings::{QueryOptions, Settings};
 
+mod conflict_handler;
 mod ffi;
 mod function;
 mod load;
@@ -128,6 +130,11 @@ fn plugin_init() -> bool {
 
     // Register our highlight render layer.
     HighlightRenderLayer::register();
+
+    // Register the conflict handler
+    if binaryninja::product() == "Binary Ninja Ultimate" {
+        ConflictHandler::register();
+    }
 
     if workflow::insert_workflow().is_err() {
         tracing::error!("Failed to register WARP workflow");

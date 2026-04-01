@@ -3141,6 +3141,15 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		break;
 
 	case XED_ICLASS_POP:
+	{
+		const unsigned int stackAdjustment = xed_decoded_inst_get_memory_operand_length(xedd, 0);
+		auto expr = il.Pop(stackAdjustment);
+		il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0,
+			opOneLen == stackAdjustment ? expr :
+				il.LowPart(opOneLen, expr)));
+		break;
+	}
+
 	case XED_ICLASS_POPP:
 		il.AddInstruction(
 			WriteILOperand(il, xedd, addr, 0, 0,
@@ -3287,17 +3296,10 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		// https://stackoverflow.com/questions/43435764/64-bit-mode-does-not-support-32-bit-push-and-pop-instructions
 		// for more details
 		const unsigned int stackAdjustment = xed_decoded_inst_get_memory_operand_length(xedd, 0);
-		if (opOneLen != stackAdjustment)
-		{
-			il.AddInstruction(
-				il.Push(stackAdjustment,
-					il.ZeroExtend(stackAdjustment,
-						ReadILOperand(il, xedd, addr, 0, 0))));
-		}
-		else
-			il.AddInstruction(
-				il.Push(stackAdjustment,
-					ReadILOperand(il, xedd, addr, 0, 0)));
+		auto expr = ReadILOperand(il, xedd, addr, 0, 0);
+		il.AddInstruction(il.Push(stackAdjustment,
+			opOneLen == stackAdjustment ? expr :
+				il.ZeroExtend(stackAdjustment, expr)));
 		break;
 	}
 

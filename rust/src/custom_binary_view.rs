@@ -460,6 +460,7 @@ pub unsafe trait CustomBinaryView: 'static + BinaryViewBase + Sync + Sized {
 
     fn new(handle: &BinaryView, args: &Self::Args) -> Result<Self>;
     fn init(&mut self, args: Self::Args) -> Result<()>;
+    fn process(&self) -> Result<()>;
     fn on_after_snapshot_data_applied(&mut self) {}
 }
 
@@ -584,7 +585,7 @@ impl<'a, T: CustomBinaryViewType> CustomViewBuilder<'a, T> {
                         Ok(_) => {
                             // put the initialized state
                             context.state = CustomViewContextState::Initialized { view };
-                            true
+                            context.assume_init_ref().process().is_ok()
                         }
                         Err(_) => {
                             tracing::error!(

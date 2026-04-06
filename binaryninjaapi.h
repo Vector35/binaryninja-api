@@ -9472,8 +9472,10 @@ namespace BinaryNinja {
 	class TransformSession : public CoreRefCountObject<BNTransformSession, BNNewTransformSessionReference, BNFreeTransformSession>
 	{
 	  public:
-		TransformSession(const std::string& filename, const std::string& options = "{}");
-		TransformSession(const std::string& filename, BNTransformSessionMode mode, const std::string& options = "{}");
+		TransformSession(const std::string& filePath, const std::string& options = "{}");
+		TransformSession(const std::string& filePath, BNTransformSessionMode mode, const std::string& options = "{}");
+		TransformSession(Ref<ProjectFile> projectFile, const std::string& options = "{}");
+		TransformSession(Ref<ProjectFile> projectFile, BNTransformSessionMode mode, const std::string& options = "{}");
 		TransformSession(Ref<BinaryView> initialView, const std::string& options = "{}");
 		TransformSession(Ref<BinaryView> initialView, BNTransformSessionMode mode, const std::string& options = "{}");
 		TransformSession(Ref<TransformContext> context, BNTransformSessionMode mode, const std::string& options = "{}");

@@ -4,15 +4,27 @@ using namespace BinaryNinja;
 using namespace std;
 
 
-TransformSession::TransformSession(const string& filename, const string& options)
+TransformSession::TransformSession(const string& filePath, const string& options)
 {
-	m_object = BNCreateTransformSession(filename.c_str(), options.c_str());
+	m_object = BNCreateTransformSession(filePath.c_str(), options.c_str());
 }
 
 
-TransformSession::TransformSession(const string& filename, BNTransformSessionMode mode, const string& options)
+TransformSession::TransformSession(const string& filePath, BNTransformSessionMode mode, const string& options)
 {
-	m_object = BNCreateTransformSessionWithMode(filename.c_str(), mode, options.c_str());
+	m_object = BNCreateTransformSessionWithMode(filePath.c_str(), mode, options.c_str());
+}
+
+
+TransformSession::TransformSession(Ref<ProjectFile> projectFile, const string &options)
+{
+	m_object = BNCreateTransformSessionFromProjectFile(projectFile->GetObject(), options.c_str());
+}
+
+
+TransformSession::TransformSession(Ref<ProjectFile> projectFile, BNTransformSessionMode mode, const string &options)
+{
+	m_object = BNCreateTransformSessionFromProjectFileWithMode(projectFile->GetObject(), mode, options.c_str());
 }
 
 

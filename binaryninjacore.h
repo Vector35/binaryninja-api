@@ -4935,8 +4935,10 @@ extern "C"
 	BINARYNINJACOREAPI BNSettings* BNTransformContextGetSettings(BNTransformContext* context);
 
 	// Transform Session
-	BINARYNINJACOREAPI BNTransformSession* BNCreateTransformSession(const char* filename, const char* options);
-	BINARYNINJACOREAPI BNTransformSession* BNCreateTransformSessionWithMode(const char* filename, BNTransformSessionMode mode, const char* options);
+	BINARYNINJACOREAPI BNTransformSession* BNCreateTransformSession(const char* filePath, const char* options);
+	BINARYNINJACOREAPI BNTransformSession* BNCreateTransformSessionWithMode(const char* filePath, BNTransformSessionMode mode, const char* options);
+	BINARYNINJACOREAPI BNTransformSession* BNCreateTransformSessionFromProjectFile(BNProjectFile* projectFile, const char* options);
+	BINARYNINJACOREAPI BNTransformSession* BNCreateTransformSessionFromProjectFileWithMode(BNProjectFile* projectFile, BNTransformSessionMode mode, const char* options);
 	BINARYNINJACOREAPI BNTransformSession* BNCreateTransformSessionFromBinaryView(BNBinaryView* initialView, const char* options);
 	BINARYNINJACOREAPI BNTransformSession* BNCreateTransformSessionFromBinaryViewWithMode(BNBinaryView* initialView, BNTransformSessionMode mode, const char* options);
 	BINARYNINJACOREAPI BNTransformSession* BNCreateTransformSessionFromTransformContextWithMode(BNTransformContext* context, BNTransformSessionMode mode, const char* options);

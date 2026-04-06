@@ -20,6 +20,7 @@ public:
 	};
 
 	explicit ContainerOpenRequest(const std::string& path, bool forceContainerBrowser = false);
+	explicit ContainerOpenRequest(ProjectFileRef projectFile, bool forceContainerBrowser = false);
 
 	TransformSessionRef session() const { return m_session; }
 

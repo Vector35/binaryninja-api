@@ -6,7 +6,7 @@ You can list all available container transforms (those with detection support) u
 
 ```python
 >>> [x.name for x in Transform if getattr(x, "supports_detection", False)]
-['Gzip', 'Zlib', 'XZ', 'Zip', 'CaRT', 'Tar', 'CPIO', 'IntelHex', 'SRec', 'TiTxt', 'IMG4', 'LZFSE']
+['Gzip', 'Zlib', 'Bzip2', 'LZMA', 'LZ4Frame', 'Zstd', 'XZ', 'Zip', 'CaRT', 'Tar', 'AR', 'CPIO', 'DMG', 'UImage', 'FIT', 'TRX', 'IntelHex', 'SRec', 'TiTxt', 'IMG4', 'LZFSE', 'Universal']
 ```
 
 ## Overview

@@ -446,9 +446,11 @@ std::optional<ClassInfo> ItaniumRTTIProcessor::ProcessRTTI(uint64_t objectAddr)
             return std::nullopt;
         auto symName = sym->GetShortName();
         // Remove type info prefix.
-        if (symName.rfind("_typeinfo_for_", 0) != 0)
-            return std::nullopt;
-        return symName.substr(14);
+        if (symName.rfind("_typeinfo_for_", 0) == 0)
+            return symName.substr(14);
+        if (symName.rfind("typeinfo_for_", 0) == 0)
+            return symName.substr(13);
+        return std::nullopt;
     };
 
     if (typeInfoVariant == TIVSIClass)

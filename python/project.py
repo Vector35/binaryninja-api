@@ -22,7 +22,7 @@ import ctypes
 
 from contextlib import contextmanager
 from os import PathLike
-from typing import Any, Callable, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import binaryninja
 from . import _binaryninjacore as core
@@ -584,6 +584,19 @@ class Project:
 		if not isinstance(_val, Metadata):
 			_val = Metadata(_val)
 		return core.BNProjectStoreMetadata(self._handle, key, _val.handle)
+
+	@property
+	def metadata(self) -> Dict[str, 'MetadataValueType']:
+		"""
+		Retrieves the metadata associated with the project.
+
+		:return: metadata associated with the Project
+		"""
+		md_handle = core.BNProjectGetMetadata(self._handle)
+		assert md_handle is not None, "core.BNProjectGetMetadata returned None"
+		value = Metadata(handle=md_handle).value
+		assert isinstance(value, dict), "core.BNProjectGetMetadata did not return a dict"
+		return value
 
 	def remove_metadata(self, key: str) -> bool:
 		"""

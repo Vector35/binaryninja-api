@@ -340,6 +340,15 @@ bool Project::StoreMetadata(const std::string& key, Ref<Metadata> value)
 }
 
 
+Ref<Metadata> Project::GetMetadata()
+{
+	BNMetadata* value = BNProjectGetMetadata(m_object);
+	if (value == nullptr)
+		return nullptr;
+	return new Metadata(value);
+}
+
+
 bool Project::RemoveMetadata(const std::string& key)
 {
 	return BNProjectRemoveMetadata(m_object, key.c_str());

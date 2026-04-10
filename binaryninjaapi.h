@@ -3687,6 +3687,7 @@ namespace BinaryNinja {
 
 		Ref<Metadata> QueryMetadata(const std::string& key);
 		bool StoreMetadata(const std::string& key, Ref<Metadata> value);
+		Ref<Metadata> GetMetadata();
 		bool RemoveMetadata(const std::string& key);
 
 		Ref<ProjectFolder> CreateFolderFromPath(const std::string& path, Ref<ProjectFolder> parent, const std::string& description,
@@ -5774,7 +5775,7 @@ namespace BinaryNinja {
 		void PerformDefineRelocation(Architecture* arch, BNRelocationInfo& info, Ref<Symbol> sym, uint64_t reloc);
 
 		/*! OnAfterSnapshotDataApplied is called when loading a view from a database, after snapshot data has been applied to it.
-		
+
 		    \note This method **may** be overridden by custom BinaryViews.
 
 			\warning This method **must not** be called directly.

@@ -132,6 +132,13 @@ impl Project {
         unsafe { BNProjectStoreMetadata(self.handle.as_ptr(), key_raw.as_ptr(), value.handle) }
     }
 
+    /// Retrieves the metadata associated with the project.
+    pub fn metadata(&self) -> Ref<Metadata> {
+        let md_handle = unsafe { BNProjectGetMetadata(self.handle.as_ptr()) };
+        assert!(!md_handle.is_null());
+        unsafe { Metadata::ref_from_raw(md_handle) }
+    }
+
     /// Removes the metadata associated with this `key` from the project
     pub fn remove_metadata(&self, key: &str) -> bool {
         let key_raw = key.to_cstr();

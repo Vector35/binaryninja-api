@@ -1026,7 +1026,7 @@ bool SharedCacheView::InitController()
 void SharedCacheView::OnAfterSnapshotDataApplied()
 {
 	if (auto controller = SharedCacheController::FromView(*this))
-		controller->ProcessObjCForLoadedImages(*this);
+		controller->ProcessObjCForLoadedImagesIfNeeded(*this);
 }
 
 

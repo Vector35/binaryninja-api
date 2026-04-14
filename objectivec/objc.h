@@ -349,9 +349,42 @@ namespace BinaryNinja {
 	public:
 		virtual ~ObjCProcessor() = default;
 
+		enum class Tasks : uint8_t
+		{
+			None = 0,
+			Metadata = 1 << 0,
+			Literals = 1 << 1,
+		};
+
 		ObjCProcessor(BinaryView* data, const char* loggerName, bool skipClassBaseProtocols = false);
 		void ProcessObjCData();
 		void ProcessObjCLiterals();
 		void AddRelocatedPointer(uint64_t location, uint64_t rewrite);
+
+		// Run the requested Obj-C processing tasks. Each sub-task's exception is caught and
+		// logged independently. Failure of one does not skip the others.
+		void Process(Tasks tasks);
+
+		static constexpr bool HasTask(Tasks tasks, Tasks task)
+		{
+			return (static_cast<uint8_t>(tasks) & static_cast<uint8_t>(task)) != 0;
+		}
+
+		// Returns the subset of `requested` tasks for which `view` does not already have
+		// up-to-date persisted metadata. Use this to decide what `Process` should run.
+		static Tasks NeededTasks(BinaryView* view, Tasks requested);
+
+	private:
+		static bool HasUpToDateMetadata(BinaryView* view);
+		static bool HasUpToDateLiterals(BinaryView* view);
 	};
+
+	constexpr ObjCProcessor::Tasks operator|(ObjCProcessor::Tasks a, ObjCProcessor::Tasks b)
+	{
+		return static_cast<ObjCProcessor::Tasks>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+	}
+	constexpr ObjCProcessor::Tasks& operator|=(ObjCProcessor::Tasks& a, ObjCProcessor::Tasks b)
+	{
+		return a = a | b;
+	}
 }

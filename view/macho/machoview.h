@@ -1533,6 +1533,7 @@ namespace BinaryNinja
 		MachoView(const std::string& typeName, BinaryView* data, bool parseOnly = false);
 
 		virtual bool Init() override;
+		void OnAfterSnapshotDataApplied() override;
 	};
 
 	class MachoViewType: public BinaryViewType

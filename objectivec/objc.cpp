@@ -68,6 +68,150 @@ namespace {
 		return Type::NamedType(builder.Finalize());
 	}
 
+	constexpr uint64_t kObjCMetadataVersion = 2;
+	constexpr const char* kObjCMetadataKey = "Objective-C";
+	constexpr uint64_t kObjCLiteralsVersion = 1;
+	constexpr const char* kObjCLiteralsKey = "Objective-C Literals";
+
+	bool HasUpToDateVersion(BinaryView* view, const char* key, uint64_t currentVersion)
+	{
+		auto existing = view->QueryMetadata(key);
+		if (!existing)
+			return false;
+		auto kv = existing->GetKeyValueStore();
+		auto it = kv.find("version");
+		if (it == kv.end())
+			return false;
+		return it->second->GetUnsignedInteger() >= currentVersion;
+	}
+
+	// Classes, categories, and methods are arrays of records keyed on `loc`. Entry locations
+	// are unique across images in a shared cache so we can safely merge by concatenating.
+	Ref<Metadata> MergeObjCRecordsByLocation(Ref<Metadata> existing, Ref<Metadata> fresh)
+	{
+		std::vector<Ref<Metadata>> combined = existing->GetArray();
+		if (fresh)
+		{
+			auto freshEntries = fresh->GetArray();
+			combined.insert(combined.end(), freshEntries.begin(), freshEntries.end());
+		}
+		return new Metadata(combined);
+	}
+
+	// selImplementations and selRefImplementations are lists of [addr, impls] pairs. Selector
+	// live in shared regions of the dyld shared cache and legitimately appear under the same
+	// key in multiple images, so entries must be merged key-wise rather than concatenated.
+	// For each key, the union of impls from both inputs is written out.
+	Ref<Metadata> MergeSelectorImplLists(Ref<Metadata> existing, Ref<Metadata> fresh)
+	{
+		std::map<uint64_t, std::vector<uint64_t>> merged;
+
+		auto append = [&merged](const Ref<Metadata>& array) {
+			if (!array)
+				return;
+			for (const auto& entry : array->GetArray())
+			{
+				auto pair = entry->GetArray();
+				if (pair.size() != 2)
+					continue;
+				uint64_t key = pair[0]->GetUnsignedInteger();
+				auto& dest = merged[key];
+				for (uint64_t impl : pair[1]->GetUnsignedIntegerList())
+				{
+					if (std::find(dest.begin(), dest.end(), impl) == dest.end())
+						dest.push_back(impl);
+				}
+			}
+		};
+
+		append(existing);
+		append(fresh);
+
+		std::vector<Ref<Metadata>> result;
+		result.reserve(merged.size());
+		for (const auto& [key, impls] : merged)
+		{
+			std::vector<Ref<Metadata>> pair = {new Metadata(key), new Metadata(impls)};
+			result.push_back(new Metadata(pair));
+		}
+		return new Metadata(result);
+	}
+
+	// selRefToName is a list of [selref_addr, name] pairs. Selref addresses are per-image and
+	// should not collide, but in case an image is reprocessed, keep the first value observed.
+	Ref<Metadata> MergeSelRefNames(Ref<Metadata> existing, Ref<Metadata> fresh)
+	{
+		std::map<uint64_t, std::string> merged;
+
+		auto insert = [&merged](const Ref<Metadata>& array) {
+			if (!array)
+				return;
+			for (const auto& entry : array->GetArray())
+			{
+				auto pair = entry->GetArray();
+				if (pair.size() != 2)
+					continue;
+				uint64_t key = pair[0]->GetUnsignedInteger();
+				merged.emplace(key, pair[1]->GetString());
+			}
+		};
+
+		insert(existing);
+		insert(fresh);
+
+		std::vector<Ref<Metadata>> result;
+		result.reserve(merged.size());
+		for (const auto& [key, name] : merged)
+		{
+			std::vector<Ref<Metadata>> pair = {new Metadata(key), new Metadata(name)};
+			result.push_back(new Metadata(pair));
+		}
+		return new Metadata(result);
+	}
+
+	Ref<Metadata> MergeObjCMetadata(Ref<Metadata> existing, Ref<Metadata> fresh)
+	{
+		if (!existing)
+			return fresh;
+
+		auto existingKv = existing->GetKeyValueStore();
+
+		// Merging records from an older metadata version would duplicate entries, as they
+		// describe the same locations as the fresh records. Replace them instead.
+		auto existingVersion = existingKv.find("version");
+		if (existingVersion == existingKv.end()
+			|| existingVersion->second->GetUnsignedInteger() != kObjCMetadataVersion)
+			return fresh;
+
+		auto freshKv = fresh->GetKeyValueStore();
+		std::map<std::string, Ref<Metadata>> merged = freshKv;
+
+		auto lookup = [](const std::map<std::string, Ref<Metadata>>& kv, const char* key) -> Ref<Metadata> {
+			auto it = kv.find(key);
+			return it != kv.end() ? it->second : nullptr;
+		};
+
+		for (const char* key : {"classes", "categories", "methods"})
+		{
+			if (auto existingArray = lookup(existingKv, key))
+				merged[key] = MergeObjCRecordsByLocation(existingArray, lookup(freshKv, key));
+		}
+
+		for (const char* key : {"selImplementations", "selRefImplementations"})
+		{
+			if (existingKv.count(key) || freshKv.count(key))
+				merged[key] = MergeSelectorImplLists(lookup(existingKv, key), lookup(freshKv, key));
+		}
+
+		if (existingKv.count("selRefToName") || freshKv.count("selRefToName"))
+		{
+			merged["selRefToName"] = MergeSelRefNames(
+				lookup(existingKv, "selRefToName"), lookup(freshKv, "selRefToName"));
+		}
+
+		return new Metadata(merged);
+	}
+
 }  // namespace
 
 Ref<Metadata> ObjCProcessor::SerializeMethod(uint64_t loc, const Method& method)
@@ -104,10 +248,59 @@ Ref<Metadata> ObjCProcessor::SerializeClass(uint64_t loc, const Class& cls)
 	return new Metadata(clsMeta);
 }
 
+bool ObjCProcessor::HasUpToDateMetadata(BinaryView* view)
+{
+	return HasUpToDateVersion(view, kObjCMetadataKey, kObjCMetadataVersion);
+}
+
+bool ObjCProcessor::HasUpToDateLiterals(BinaryView* view)
+{
+	return HasUpToDateVersion(view, kObjCLiteralsKey, kObjCLiteralsVersion);
+}
+
+ObjCProcessor::Tasks ObjCProcessor::NeededTasks(BinaryView* view, Tasks requested)
+{
+	Tasks needed = Tasks::None;
+	if (HasTask(requested, Tasks::Metadata) && !HasUpToDateMetadata(view))
+		needed |= Tasks::Metadata;
+	if (HasTask(requested, Tasks::Literals) && !HasUpToDateLiterals(view))
+		needed |= Tasks::Literals;
+	return needed;
+}
+
+void ObjCProcessor::Process(Tasks tasks)
+{
+	if (HasTask(tasks, Tasks::Literals))
+	{
+		try
+		{
+			ProcessObjCLiterals();
+		}
+		catch (std::exception& ex)
+		{
+			m_logger->LogError("Failed to process Objective-C literals. Binary may be malformed");
+			m_logger->LogErrorF("Error: {:?}", ex.what());
+		}
+	}
+
+	if (HasTask(tasks, Tasks::Metadata))
+	{
+		try
+		{
+			ProcessObjCData();
+		}
+		catch (std::exception& ex)
+		{
+			m_logger->LogError("Failed to process Objective-C metadata. Binary may be malformed");
+			m_logger->LogErrorF("Error: {:?}", ex.what());
+		}
+	}
+}
+
 Ref<Metadata> ObjCProcessor::SerializeMetadata()
 {
 	std::map<std::string, Ref<Metadata>> viewMeta;
-	viewMeta["version"] = new Metadata((uint64_t)1);
+	viewMeta["version"] = new Metadata(kObjCMetadataVersion);
 
 	std::vector<Ref<Metadata>> classes;
 	classes.reserve(m_classes.size());
@@ -355,17 +548,10 @@ void ObjCProcessor::DefineObjCSymbol(
 
 	Ref<Symbol> symbol = new Symbol(type, name, name, name, addr, LocalBinding, nameSpace);
 	uint64_t symbolAddress = symbol->GetAddress();
-	if (Ref<Symbol> existingSymbol = m_data->GetSymbolByAddress(symbolAddress))
-	{
-		if (existingSymbol->IsAutoDefined() && existingSymbol->GetType() == symbol->GetType()
-			&& existingSymbol->GetRawNameRef() == symbol->GetRawNameRef())
-			return;
-
-		m_data->UndefineAutoSymbol(existingSymbol);
-	}
-
 	// Armv7/Thumb: This will rewrite the symbol's address.
 	// e.g. We pass in 0xc001, it will rewrite it to 0xc000 and create the function w/ the "thumb2" arch.
+	if (Ref<Symbol> existingSymbol = m_data->GetSymbolByAddress(symbolAddress))
+		m_data->UndefineAutoSymbol(existingSymbol);
 	Ref<Platform> targetPlatform = m_data->GetDefaultPlatform()->GetAssociatedPlatformByAddress(symbolAddress);
 	if (symbol->GetType() == FunctionSymbol)
 	{
@@ -1119,11 +1305,6 @@ void ObjCProcessor::GenerateClassTypes()
 {
 	for (auto& [_, cls] : m_classes)
 	{
-		QualifiedName classTypeName = cls.name;
-		std::string classTypeId = Type::GenerateAutoTypeId("objc", classTypeName);
-		if (m_data->GetTypeById(classTypeId))
-			continue;
-
 		QualifiedName typeName;
 		StructureBuilder classTypeBuilder;
 		bool failedToDecodeType = false;
@@ -1156,6 +1337,8 @@ void ObjCProcessor::GenerateClassTypes()
 		if (failedToDecodeType)
 			continue;
 		auto classTypeStruct = classTypeBuilder.Finalize();
+		QualifiedName classTypeName = cls.name;
+		std::string classTypeId = Type::GenerateAutoTypeId("objc", classTypeName);
 		Ref<Type> classType = Type::StructureType(classTypeStruct);
 		QualifiedName classQualName = m_data->DefineType(classTypeId, classTypeName, classType);
 		cls.associatedName = classTypeName;
@@ -1585,7 +1768,8 @@ void ObjCProcessor::ProcessObjCData()
 	PostProcessObjCSections(reader.get());
 
 	auto meta = SerializeMetadata();
-	m_data->StoreMetadata("Objective-C", meta, MetadataStoreEphemeral);
+	auto existing = m_data->QueryMetadata(kObjCMetadataKey);
+	m_data->StoreMetadata(kObjCMetadataKey, MergeObjCMetadata(existing, meta), MetadataStorePersistent);
 
 	m_relocationPointerRewrites.clear();
 }
@@ -1598,6 +1782,10 @@ void ObjCProcessor::ProcessObjCLiterals()
 	ProcessNSConstantIntegerNumbers();
 	ProcessNSConstantFloatingPointNumbers();
 	ProcessNSConstantDatas();
+
+	std::map<std::string, Ref<Metadata>> versionMeta;
+	versionMeta["version"] = new Metadata(kObjCLiteralsVersion);
+	m_data->StoreMetadata(kObjCLiteralsKey, new Metadata(versionMeta), MetadataStorePersistent);
 }
 
 void ObjCProcessor::ProcessCFStrings()

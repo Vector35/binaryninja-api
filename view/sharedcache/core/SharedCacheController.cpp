@@ -220,20 +220,13 @@ bool SharedCacheController::ApplyImage(BinaryView& view, const CacheImage& image
 		view.SetFunctionAnalysisUpdateDisabled(prevDisabledState);
 
 		// Load objective-c information.
-		auto objcProcessor = DSCObjC::SharedCacheObjCProcessor(&view, image.headerAddress);
-		try
-		{
-			if (m_processObjC)
-				objcProcessor.ProcessObjCData();
-			if (m_processCFStrings)
-				objcProcessor.ProcessObjCLiterals();
-		}
-		catch (std::exception& e)
-		{
-			// Let the user know there was an error in processing the objc stuff but let the image load
-			// regardless, as its non-critical.
-			m_logger->LogErrorF("Failed to process ObjC information: {}", e.what());
-		}
+		ObjCProcessor::Tasks tasks = ObjCProcessor::Tasks::None;
+		if (m_processObjC)
+			tasks |= ObjCProcessor::Tasks::Metadata;
+		if (m_processCFStrings)
+			tasks |= ObjCProcessor::Tasks::Literals;
+		if (tasks != ObjCProcessor::Tasks::None)
+			DSCObjC::SharedCacheObjCProcessor(&view, image.headerAddress).Process(tasks);
 	}
 
 	m_loadedImages.insert(image.headerAddress);
@@ -294,9 +287,19 @@ void SharedCacheController::LoadMetadata(const Metadata& metadata)
 }
 
 
-void SharedCacheController::ProcessObjCForLoadedImages(BinaryView& view)
+void SharedCacheController::ProcessObjCForLoadedImagesIfNeeded(BinaryView& view)
 {
-	if (!m_processObjC || m_loadedImages.empty())
+	if (m_loadedImages.empty())
+		return;
+
+	ObjCProcessor::Tasks requested = ObjCProcessor::Tasks::None;
+	if (m_processObjC)
+		requested |= ObjCProcessor::Tasks::Metadata;
+	if (m_processCFStrings)
+		requested |= ObjCProcessor::Tasks::Literals;
+
+	ObjCProcessor::Tasks tasks = ObjCProcessor::NeededTasks(&view, requested);
+	if (tasks == ObjCProcessor::Tasks::None)
 		return;
 
 	for (const auto& headerAddress : m_loadedImages)
@@ -305,15 +308,7 @@ void SharedCacheController::ProcessObjCForLoadedImages(BinaryView& view)
 		if (!image)
 			continue;
 
-		auto objcProcessor = DSCObjC::SharedCacheObjCProcessor(&view, image->headerAddress);
-		try
-		{
-			objcProcessor.ProcessObjCData();
-		}
-		catch (std::exception& e)
-		{
-			m_logger->LogErrorForExceptionF(e, "Failed to restore ObjC metadata for image at {:#x}: {}", headerAddress, e.what());
-		}
+		DSCObjC::SharedCacheObjCProcessor(&view, image->headerAddress).Process(tasks);
 	}
 }
 

@@ -3,6 +3,7 @@
 #include "chained_fixups.h"
 #include "fatmachoview.h"
 #include "lowlevelilinstruction.h"
+#include "objectivec/objc.h"
 #include "rapidjsonwrapper.h"
 #include "universaltransform.h"
 #include "universalview.h"
@@ -31,6 +32,23 @@ namespace {
 constexpr std::string_view kPseudoLibraryMainExecutable = "<main executable>";
 constexpr std::string_view kPseudoLibraryFlatLookup = "<flat lookup>";
 constexpr std::string_view kPseudoLibraryWeakLookup = "<weak lookup>";
+
+ObjCProcessor::Tasks ObjCTasksFromLoadSettings(MachoView* view)
+{
+	Ref<Settings> settings = view->GetLoadSettings(view->GetTypeName());
+	auto settingEnabled = [&](const char* key) {
+		return !settings || !settings->Contains(key) || settings->Get<bool>(key, view);
+	};
+
+	ObjCProcessor::Tasks requested = ObjCProcessor::Tasks::None;
+	if (settingEnabled("loader.macho.processObjectiveC") && MachoObjCProcessor::ViewHasObjCMetadata(view))
+		requested |= ObjCProcessor::Tasks::Metadata;
+
+	if (settingEnabled("loader.macho.processCFStrings") && view->GetSectionByName("__cfstring"))
+		requested |= ObjCProcessor::Tasks::Literals;
+
+	return ObjCProcessor::NeededTasks(view, requested);
+}
 
 string CommandToString(uint32_t lcCommand)
 {
@@ -2099,19 +2117,10 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 			analysisSettings->Set("analysis.workflows.functionWorkflow", "core.function.metaAnalysis", this);
 	}
 
-	bool parseObjCStructs = true;
-	bool parseCFStrings = true;
-	if (settings && settings->Contains("loader.macho.processObjectiveC"))
-		parseObjCStructs = settings->Get<bool>("loader.macho.processObjectiveC", this);
-	if (settings && settings->Contains("loader.macho.processCFStrings"))
-		parseCFStrings = settings->Get<bool>("loader.macho.processCFStrings", this);
-	if (!MachoObjCProcessor::ViewHasObjCMetadata(this))
-		parseObjCStructs = false;
-	if (!GetSectionByName("__cfstring"))
-		parseCFStrings = false;
+	ObjCProcessor::Tasks objcTasks = ObjCTasksFromLoadSettings(this);
 
 	std::unique_ptr<MachoObjCProcessor> objcProcessor;
-	if (parseObjCStructs || parseCFStrings)
+	if (objcTasks != ObjCProcessor::Tasks::None)
 	{
 		objcProcessor = std::make_unique<MachoObjCProcessor>(this);
 	}
@@ -2651,32 +2660,20 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		}
 	}
 
-	if (parseCFStrings)
-	{
-		try {
-			objcProcessor->ProcessObjCLiterals();
-		}
-		catch (std::exception& ex)
-		{
-			m_logger->LogError("Failed to process CFStrings. Binary may be malformed");
-			m_logger->LogErrorF("Error: {:?}", ex.what());
-		}
-	}
-
-	if (parseObjCStructs)
-	{
-		try {
-			objcProcessor->ProcessObjCData();
-		}
-		catch (std::exception& ex)
-		{
-			m_logger->LogError("Failed to process Objective-C Metadata. Binary may be malformed");
-			m_logger->LogErrorF("Error: {:?}", ex.what());
-		}
-	}
-
+	// Process Objective-C metadata when loading a new binary. When loading from a database,
+	// types and symbols have already been applied. Objective-C metadata may be re-processed
+	// in OnAfterSnapshotDataApplied if the database version is too old.
+	if (!m_backedByDatabase && objcProcessor)
+		objcProcessor->Process(objcTasks);
 
 	return true;
+}
+
+
+void MachoView::OnAfterSnapshotDataApplied()
+{
+	if (ObjCProcessor::Tasks objcTasks = ObjCTasksFromLoadSettings(this); objcTasks != ObjCProcessor::Tasks::None)
+		MachoObjCProcessor(this).Process(objcTasks);
 }
 
 

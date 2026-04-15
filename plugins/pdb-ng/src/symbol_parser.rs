@@ -106,9 +106,11 @@ pub struct ParsedVariable {
 
 #[derive(Debug, Copy, Clone)]
 pub struct ParsedLocation {
-    /// Location information
-    pub location: Variable,
-    /// Is the storage location relative to the base pointer? See [ParsedProcedureInfo.frame_offset]
+    /// Location information (or None for use default)
+    pub location: Option<Variable>,
+    /// Is the storage location relative to the virtual frame pointer (after function prologue adjusts it)
+    pub vframe_relative: bool,
+    /// Is the storage location relative to the base pointer?
     pub base_relative: bool,
     /// Is the storage location relative to the stack pointer?
     pub stack_relative: bool,
@@ -729,11 +731,12 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
         let storage = if let Some(reg) = self.convert_register(data.register) {
             vec![ParsedLocation {
-                location: Variable {
+                location: Some(Variable {
                     ty: VariableSourceType::RegisterVariableSourceType,
                     index: 0,
                     storage: reg.0 as i64,
-                },
+                }),
+                vframe_relative: false,
                 base_relative: false,
                 stack_relative: false,
             }]
@@ -960,7 +963,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     MIN_CONFIDENCE,
                 )),
                 p.name.clone(),
-                p.storage.first().map(|loc| loc.location),
+                p.storage.iter().flat_map(|x| x.location).next(),
             );
             parsed_params.push(param);
         }
@@ -972,7 +975,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     MIN_CONFIDENCE,
                 )),
                 p.name.clone(),
-                p.storage.first().map(|loc| loc.location),
+                p.storage.iter().flat_map(|loc| loc.location).next(),
             );
             parsed_locals.push(param);
         }
@@ -1408,19 +1411,36 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         data: &RegisterRelativeSymbol,
     ) -> Result<Option<ParsedSymbol>> {
         self.log(|| format!("Got RegisterRelative symbol: {:?}", data));
+
+        // I wanted to do some cool thing here to read the debug info frame data
+        // and see what ebp would be at the entry point. Unfortunately, that data is
+        // just not reliably present nor in a format that is possible to be parsed.
+
+        // I think an actual solution to this would be: look up the debug info start
+        // of the function (in the proc symbol) and then calculate the register's
+        // offset from the entry stack pointer at that offset. Theoretically we have
+        // all of that information available (because we are a decompiler), but actually
+        // trying to make use of it would be outrageously annoying.
+
+        // But to make matters worse, PDB likes to call parameters "stack relative" when they
+        // are actually stored in registers but then moved onto the stack in the prologue.
+        // To resolve those, we would have to see if the function moved a parameter from
+        // a register into the stack slot during the prologue, which again we _could_ do
+        // because we have a whole decompiler, but wow that is not an easy task.
+
+        // For this reason, we can't use this location information and have to rely on
+        // the default calling convention.
+
         match self.lookup_register(data.register) {
             Some(X86(X86Register::EBP)) | Some(AMD64(AMD64Register::RBP)) => {
                 // Local is relative to base pointer
-                // This is just another way of writing BasePointerRelativeSymbol
+
                 Ok(Some(ParsedSymbol::LocalVariable(ParsedVariable {
                     name: data.name.to_string().to_string(),
                     type_: self.lookup_type_conf(&data.type_index, false)?,
                     storage: vec![ParsedLocation {
-                        location: Variable {
-                            ty: VariableSourceType::StackVariableSourceType,
-                            index: 0,
-                            storage: data.offset as i64,
-                        },
+                        location: None,
+                        vframe_relative: false,
                         base_relative: true,   // !!
                         stack_relative: false, // !!
                     }],
@@ -1429,16 +1449,13 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             }
             Some(X86(X86Register::ESP)) | Some(AMD64(AMD64Register::RSP)) => {
                 // Local is relative to stack pointer
-                // This is the same as base pointer case except not base relative (ofc)
+
                 Ok(Some(ParsedSymbol::LocalVariable(ParsedVariable {
                     name: data.name.to_string().to_string(),
                     type_: self.lookup_type_conf(&data.type_index, false)?,
                     storage: vec![ParsedLocation {
-                        location: Variable {
-                            ty: VariableSourceType::StackVariableSourceType,
-                            index: 0,
-                            storage: data.offset as i64,
-                        },
+                        location: None,
+                        vframe_relative: false,
                         base_relative: false, // !!
                         stack_relative: true, // !!
                     }],
@@ -1578,11 +1595,12 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         self.log(|| format!("Got DefRangeRegister symbol: {:?}", data));
         if let Some(reg) = self.convert_register(data.register) {
             Ok(Some(ParsedSymbol::Location(ParsedLocation {
-                location: Variable {
+                location: Some(Variable {
                     ty: VariableSourceType::RegisterVariableSourceType,
                     index: 0,
                     storage: reg.0 as i64,
-                },
+                }),
+                vframe_relative: false,
                 base_relative: false,
                 stack_relative: false,
             })))
@@ -1645,12 +1663,13 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
             name: data.name.to_string().to_string(),
             type_: self.lookup_type_conf(&data.type_index, false)?,
             storage: vec![ParsedLocation {
-                location: Variable {
+                location: Some(Variable {
                     ty: VariableSourceType::StackVariableSourceType,
                     index: 0,
                     storage: data.offset as i64,
-                },
-                base_relative: true,
+                }),
+                vframe_relative: true,
+                base_relative: false,
                 stack_relative: false,
             }],
             is_param: data.offset as i64 > 0 || data.slot.map_or(false, |slot| slot > 0),
@@ -1687,18 +1706,18 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     let mut really_is_param = *is_param;
                     for loc in &new_storage {
                         match loc {
-                            Variable {
+                            Some(Variable {
                                 ty: VariableSourceType::RegisterVariableSourceType,
                                 ..
-                            } => {
+                            }) => {
                                 // Assume register vars are always parameters
                                 really_is_param = true;
                             }
-                            Variable {
+                            Some(Variable {
                                 ty: VariableSourceType::StackVariableSourceType,
                                 storage,
                                 ..
-                            } if *storage >= 0 => {
+                            }) if *storage >= 0 => {
                                 // Sometimes you can get two locals at the same offset, both rbp+(x > 0)
                                 // I'm guessing from looking at dumps from dia2dump that only the first
                                 // one is considered a parameter, although there are times that I see
@@ -1722,6 +1741,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                                 .map(|loc| ParsedLocation {
                                     location: loc,
                                     // This has been handled now
+                                    vframe_relative: false,
                                     base_relative: false,
                                     stack_relative: false,
                                 })
@@ -1737,6 +1757,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                                 .map(|loc| ParsedLocation {
                                     location: loc,
                                     // This has been handled now
+                                    vframe_relative: false,
                                     base_relative: false,
                                     stack_relative: false,
                                 })

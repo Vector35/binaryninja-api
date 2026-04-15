@@ -17,7 +17,15 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::mem;
 use std::sync::OnceLock;
 
+use crate::PDBParserInstance;
 use anyhow::{anyhow, Result};
+use binaryninja::architecture::{Architecture, ArchitectureExt, Register, RegisterId};
+use binaryninja::binary_view::BinaryViewBase;
+use binaryninja::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
+use binaryninja::demangle::demangle_ms;
+use binaryninja::rc::Ref;
+use binaryninja::types::{FunctionParameter, QualifiedName, StructureBuilder, Type, TypeClass};
+use binaryninja::variable::{Variable, VariableSourceType};
 use itertools::Itertools;
 use pdb::register::Register::{AMD64, X86};
 use pdb::register::{AMD64Register, X86Register};
@@ -34,15 +42,6 @@ use pdb::{
     SymbolIter, ThreadStorageSymbol, ThunkSymbol, TrampolineSymbol, TypeIndex,
     UserDefinedTypeSymbol, UsingNamespaceSymbol,
 };
-
-use crate::PDBParserInstance;
-use binaryninja::architecture::{Architecture, ArchitectureExt, Register, RegisterId};
-use binaryninja::binary_view::BinaryViewBase;
-use binaryninja::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
-use binaryninja::demangle::demangle_ms;
-use binaryninja::rc::Ref;
-use binaryninja::types::{FunctionParameter, QualifiedName, StructureBuilder, Type, TypeClass};
-use binaryninja::variable::{Variable, VariableSourceType};
 
 const DEMANGLE_CONFIDENCE: u8 = 32;
 
@@ -963,10 +962,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 p.name.clone(),
                 p.storage.first().map(|loc| loc.location),
             );
-            // Ignore thisptr because it's not technically part of the raw type signature
-            if p.name != "this" {
-                parsed_params.push(param);
-            }
+            parsed_params.push(param);
         }
         let mut parsed_locals = vec![];
         for p in &locals {
@@ -978,24 +974,25 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 p.name.clone(),
                 p.storage.first().map(|loc| loc.location),
             );
-            // Ignore thisptr because it's not technically part of the raw type signature
-            if p.name != "this" {
-                parsed_locals.push(param);
-            }
+            parsed_locals.push(param);
         }
 
         self.log(|| format!("Raw params:    {:#x?}", raw_params));
         self.log(|| format!("Fancy params:  {:#x?}", fancy_params));
         self.log(|| format!("Parsed params: {:#x?}", parsed_params));
+        self.log(|| format!("Parsed locals: {:#x?}", parsed_locals));
 
-        // We expect one parameter for each unnamed parameter in the marked up type
-        let expected_param_count = fancy_params.iter().filter(|p| p.name.is_empty()).count();
-        // Sanity
-        if expected_param_count != raw_params.len() {
-            return Err(anyhow!(
-                "Mismatched number of formal parameters and interpreted parameters"
-            ));
+        // We expect one parameter for each unnamed parameter in the marked up type.
+        // Named parameters are ones we've inserted synthetically, except for the
+        // `this` pointer parameter, which is synthetic but PDB includes it too
+        fn is_included_param(p: &FunctionParameter) -> bool {
+            p.name.is_empty() || p.name == "this"
         }
+
+        let expected_param_count = fancy_params
+            .iter()
+            .filter(|p| is_included_param(*p))
+            .count();
 
         // If we don't have enough parameters to fill the slots, there's a problem here
         // So just fallback to the unnamed params
@@ -1017,7 +1014,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
         let mut i = 0;
         for p in fancy_params.iter_mut() {
-            if p.name.is_empty() {
+            if is_included_param(p) {
                 if p.ty.contents != expected_parsed_params[i].ty.contents {
                     self.log(|| {
                         format!(
@@ -1031,9 +1028,15 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                 } else {
                     p.name = expected_parsed_params[i].name.clone();
                 }
+                // The parsed params also have location information for us
+                if p.location.is_none() && expected_parsed_params[i].location.is_some() {
+                    p.location = expected_parsed_params[i].location;
+                }
                 i += 1;
             }
         }
+
+        self.log(|| format!("Params after renames: {:#x?}", fancy_params));
 
         // Now apply the default location for the params from the cc
         let cc = fancy_type

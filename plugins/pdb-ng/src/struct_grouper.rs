@@ -407,7 +407,11 @@ fn apply_groups(
                         structure.insert_bitwise(
                             &member.ty,
                             &member.name,
-                            (member.offset - offset) * 8 + bit_pos,
+                            member
+                                .offset
+                                .wrapping_sub(offset)
+                                .wrapping_mul(8)
+                                .wrapping_add(bit_pos),
                             bit_width.map(|w| w as u8),
                             false,
                             member.access,
@@ -428,7 +432,7 @@ fn apply_groups(
                         structure.insert(
                             &member.ty,
                             &member.name,
-                            member.offset - offset,
+                            member.offset.wrapping_sub(offset),
                             false,
                             member.access,
                             member.scope,

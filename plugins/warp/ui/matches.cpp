@@ -161,18 +161,29 @@ void WarpCurrentFunctionWidget::SetCurrentFunction(FunctionRef current)
 			// Don't block the UI thread when fetching, also unlike other cases where we reach for QtConcurrent::run we
 			// do not use a watcher to tie the future to the widget's lifetime, this is because network requests can
 			// take a long time, and we want to avoid blocking the UI thread in the widget destructor. Instead of
-			// insuring the widget is alive, we just use a weak pointer that can tell us when it (self) has been
+			// ensuring the widget is alive, we just use a weak pointer that can tell us when it (self) has been
 			// destructed.
 			auto future = QtConcurrent::run([self = QPointer(this), current, fetcher = m_fetcher]() {
 				if (!self)
 					return;
-				QMetaObject::invokeMethod(self, [self] { self->m_spinner->show(); }, Qt::QueuedConnection);
+				QMetaObject::invokeMethod(
+					self,
+					[self] {
+						if (self)
+							self->m_spinner->show();
+					},
+					Qt::QueuedConnection);
 				BinaryNinja::Ref bgTask = new BinaryNinja::BackgroundTask("Fetching WARP Functions...", true);
 				const auto allowedTags = GetAllowedTagsFromView(current->GetView());
 				fetcher->FetchPendingFunctions(allowedTags);
 				bgTask->Finish();
-				if (self)
-					QMetaObject::invokeMethod(self, [self] { self->m_spinner->hide(); }, Qt::QueuedConnection);
+				QMetaObject::invokeMethod(
+					self,
+					[self] {
+						if (self)
+							self->m_spinner->hide();
+					},
+					Qt::QueuedConnection);
 			});
 		}
 	}

@@ -113,6 +113,7 @@ void WarpFetcher::FetchPendingFunctions(const std::vector<Warp::SourceTag>& allo
 
 void WarpFetcher::ClearProcessed()
 {
+	std::lock_guard<std::mutex> lock(m_requestMutex);
 	m_logger->LogInfoF("Clearing {} processed functions from cache...", m_processedGuids.size());
 	m_processedGuids.clear();
 }

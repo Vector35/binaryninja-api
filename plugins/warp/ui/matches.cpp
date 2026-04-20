@@ -8,6 +8,7 @@
 #include <thread>
 #include <QGridLayout>
 #include <QHeaderView>
+#include <QtConcurrent/QtConcurrent>
 
 WarpCurrentFunctionWidget::WarpCurrentFunctionWidget(QWidget* parent) : QWidget(parent)
 {
@@ -151,22 +152,27 @@ void WarpCurrentFunctionWidget::SetCurrentFunction(FunctionRef current)
 	m_current = current;
 	m_infoWidget->SetAnalysisFunction(m_current);
 
-	// If we have a fetcher we should also let it know to try and fetch the possible functions from the containers.
+	// If we have a fetcher, we should also let it know to try and fetch the possible functions from the containers.
 	if (current && m_fetcher)
 	{
 		m_fetcher->AddPendingFunction(current);
-
-		// TODO: Automatically fetch the function, I need to figure out how to make this debounce correctly so that all
-		// requests are processed in line.
 		if (!m_fetcher->m_requestInProgress.exchange(true))
 		{
-			BinaryNinja::WorkerPriorityEnqueue([this]() {
-				QMetaObject::invokeMethod(this, [this] { m_spinner->show(); }, Qt::QueuedConnection);
+			// Don't block the UI thread when fetching, also unlike other cases where we reach for QtConcurrent::run we
+			// do not use a watcher to tie the future to the widget's lifetime, this is because network requests can
+			// take a long time, and we want to avoid blocking the UI thread in the widget destructor. Instead of
+			// insuring the widget is alive, we just use a weak pointer that can tell us when it (self) has been
+			// destructed.
+			auto future = QtConcurrent::run([self = QPointer(this), current, fetcher = m_fetcher]() {
+				if (!self)
+					return;
+				QMetaObject::invokeMethod(self, [self] { self->m_spinner->show(); }, Qt::QueuedConnection);
 				BinaryNinja::Ref bgTask = new BinaryNinja::BackgroundTask("Fetching WARP Functions...", true);
-				const auto allowedTags = GetAllowedTagsFromView(m_current->GetView());
-				m_fetcher->FetchPendingFunctions(allowedTags);
+				const auto allowedTags = GetAllowedTagsFromView(current->GetView());
+				fetcher->FetchPendingFunctions(allowedTags);
 				bgTask->Finish();
-				QMetaObject::invokeMethod(this, [this] { m_spinner->hide(); }, Qt::QueuedConnection);
+				if (self)
+					QMetaObject::invokeMethod(self, [self] { self->m_spinner->hide(); }, Qt::QueuedConnection);
 			});
 		}
 	}

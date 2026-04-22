@@ -490,7 +490,6 @@ pub fn to_bn_type<A: BNArchitecture + Copy>(arch: Option<A>, ty: &Type) -> BNRef
 #[cfg(test)]
 mod tests {
     use super::*;
-    use binaryninja::binary_view::BinaryViewExt;
     use binaryninja::headless::Session;
     use std::path::PathBuf;
     use warp::r#type::guid::TypeGUID;

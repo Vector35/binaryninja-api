@@ -16,7 +16,7 @@ use gimli::{EndianRcSlice, Endianity, RunTimeEndian, SectionId};
 use object::{Object, ObjectSection};
 
 use binaryninja::{
-    binary_view::{BinaryView, BinaryViewBase, BinaryViewExt},
+    binary_view::{BinaryView, BinaryViewBase},
     settings::Settings,
     Endianness,
 };

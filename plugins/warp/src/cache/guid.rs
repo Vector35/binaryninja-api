@@ -1,7 +1,6 @@
 use crate::cache::FunctionID;
 use crate::convert::from_bn_symbol;
 use crate::function_guid;
-use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::function::Function as BNFunction;
 use binaryninja::low_level_il::function::{FunctionMutability, LowLevelILFunction, NonSSA};
 use binaryninja::rc::Ref as BNRef;

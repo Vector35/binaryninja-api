@@ -19,7 +19,7 @@ use crate::{DebugInfoBuilderContext, ReaderType};
 use binaryninja::binary_view::BinaryViewBase;
 use binaryninja::Endianness;
 use binaryninja::{
-    binary_view::{BinaryView, BinaryViewExt},
+    binary_view::BinaryView,
     download::{DownloadInstanceInputOutputCallbacks, DownloadProvider},
     settings::Settings,
 };

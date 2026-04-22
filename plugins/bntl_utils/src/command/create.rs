@@ -2,7 +2,7 @@ use crate::command::{InputDirectoryField, OutputDirectoryField};
 use crate::process::{new_processing_state_background_thread, TypeLibProcessor};
 use crate::validate::TypeLibValidater;
 use binaryninja::background_task::BackgroundTask;
-use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::BinaryView;
 use binaryninja::command::{Command, GlobalCommand, ProjectCommand};
 use binaryninja::interaction::{Form, FormInputField, MessageBoxButtonSet, MessageBoxIcon};
 use binaryninja::platform::Platform;

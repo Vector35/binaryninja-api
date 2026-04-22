@@ -21,7 +21,6 @@ If you are worried about breaking changes, avoid modules with warnings about ins
 
 ```rust
 use binaryninja::headless::Session;
-use binaryninja::binary_view::{BinaryViewBase, BinaryViewExt};
 
 fn main() {
     let headless_session = Session::new().expect("Failed to initialize session");
@@ -30,7 +29,6 @@ fn main() {
         .expect("Couldn't open `/bin/cat`");
     
     println!("File:  `{}`", bv.file());
-    println!("File size: `{:#x}`", bv.len());
     println!("Function count: {}", bv.functions().len());
     
     for func in &bv.functions() {

@@ -1,4 +1,4 @@
-use crate::binary_view::{BinaryView, BinaryViewExt};
+use crate::binary_view::BinaryView;
 use crate::function::Function;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnString, IntoCStr};

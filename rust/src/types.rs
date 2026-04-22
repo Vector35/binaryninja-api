@@ -36,7 +36,7 @@ use binaryninjacore_sys::*;
 
 use crate::{
     architecture::Architecture,
-    binary_view::{BinaryView, BinaryViewExt},
+    binary_view::BinaryView,
     calling_convention::CoreCallingConvention,
     rc::*,
     string::{BnString, IntoCStr},
@@ -643,7 +643,6 @@ impl Drop for TypeBuilder {
 /// As an example, defining a _named_ type within a [`BinaryView`]:
 ///
 /// ```no_run
-/// # use crate::binaryninja::binary_view::BinaryViewExt;
 /// # use binaryninja::types::Type;
 /// let bv = binaryninja::load("example.bin").unwrap();
 /// let my_custom_type_1 = Type::named_int(5, false, "my_w");

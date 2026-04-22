@@ -1,5 +1,5 @@
 use binaryninja::{
-    binary_view::{BinaryView, BinaryViewExt as _},
+    binary_view::BinaryView,
     function::Function,
     low_level_il::{
         expression::{ExpressionHandler as _, LowLevelILExpressionKind},

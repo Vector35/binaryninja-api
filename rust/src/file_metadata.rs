@@ -30,7 +30,7 @@ use crate::project::file::ProjectFile;
 use std::ptr::NonNull;
 
 #[allow(unused_imports)]
-use crate::custom_binary_view::BinaryViewType;
+use crate::binary_view::BinaryViewType;
 
 new_id_type!(SessionId, usize);
 
@@ -472,6 +472,9 @@ impl FileMetadata {
     /// The [`BinaryViewType`]s associated with this file.
     ///
     /// For example, opening a PE binary will have the following: "Raw", "PE".
+    ///
+    /// Because the type may not have been registered, and the actual [`BinaryViewType`] is not available,
+    /// we instead return the name of the view type.
     pub fn view_types(&self) -> Array<BnString> {
         let mut count = 0;
         unsafe {

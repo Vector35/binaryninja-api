@@ -3,7 +3,7 @@ use std::num::{NonZeroU16, NonZeroU8};
 
 use anyhow::{anyhow, Result};
 use binaryninja::architecture::{Architecture, ArchitectureExt, CoreArchitecture};
-use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView};
 use binaryninja::calling_convention::CoreCallingConvention;
 use binaryninja::confidence::Conf;
 use binaryninja::rc::Ref;

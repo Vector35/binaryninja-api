@@ -1,5 +1,5 @@
 use binaryninja::{
-    binary_view::{BinaryView, BinaryViewBase as _, BinaryViewExt as _},
+    binary_view::{BinaryView, BinaryViewBase as _},
     medium_level_il::{
         operation::{Constant, LiftedSetVarSsa, LiftedSetVarSsaField, Var, VarSsa},
         MediumLevelILLiftedInstruction, MediumLevelILLiftedInstructionKind,

@@ -9,7 +9,7 @@ use binaryninja::interaction::{MessageBoxButtonResult, MessageBoxButtonSet, Mess
 use binaryninja::tracing::TracingLogListener;
 use binaryninja::{
     architecture::BranchType,
-    binary_view::{BinaryView, BinaryViewExt},
+    binary_view::BinaryView,
     disassembly::{DisassemblyTextLine, InstructionTextToken, InstructionTextTokenKind},
     flowgraph::{EdgePenStyle, FlowGraph, ThemeColor},
 };

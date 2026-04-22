@@ -13,9 +13,8 @@ use binaryninja::{
         ImplicitRegisterExtend, InstructionInfo, Register as Reg, RegisterInfo, UnusedFlag,
         UnusedRegisterStack,
     },
-    binary_view::{BinaryView, BinaryViewExt},
+    binary_view::{BinaryView, BinaryViewType},
     calling_convention::{register_calling_convention, CallingConvention, ConventionBuilder},
-    custom_binary_view::{BinaryViewType, BinaryViewTypeExt},
     disassembly::{InstructionTextToken, InstructionTextTokenKind},
     function::Function,
     function_recognizer::FunctionRecognizer,
@@ -3101,7 +3100,7 @@ pub extern "C" fn CorePluginInit() -> bool {
     );
     arch64.set_default_calling_convention(&cc64);
 
-    if let Ok(bvt) = BinaryViewType::by_name("ELF") {
+    if let Some(bvt) = BinaryViewType::by_name("ELF") {
         bvt.register_arch(
             (1 << 16) | 243,
             binaryninja::Endianness::LittleEndian,

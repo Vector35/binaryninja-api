@@ -41,6 +41,9 @@ impl SegmentBuilder {
         }
     }
 
+    /// The range of the data in the parent binary view.
+    ///
+    /// If this is not specified, then the segment is "unbacked" and will contain no data.
     pub fn parent_backing(mut self, parent_backing: Range<u64>) -> Self {
         self.parent_backing = Some(parent_backing);
         self
@@ -107,7 +110,6 @@ impl Segment {
     ///
     /// ```no_run
     /// # use binaryninja::segment::{Segment, SegmentFlags};
-    /// # use binaryninja::binary_view::BinaryViewExt;
     /// let bv = binaryninja::load("example").unwrap();
     /// let segment_flags = SegmentFlags::new().writable(true).readable(true);
     /// bv.add_segment(Segment::builder(0..0x1000).flags(segment_flags))

@@ -1,4 +1,4 @@
-use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::BinaryView;
 use binaryninja::debuginfo::*;
 use binaryninja::headless::Session;
 use binaryninja::types::{MemberAccess, MemberScope, StructureBuilder, Type, TypeBuilder};

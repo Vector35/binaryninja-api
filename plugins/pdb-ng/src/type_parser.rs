@@ -19,7 +19,6 @@ use crate::struct_grouper::group_structure;
 use crate::PDBParserInstance;
 use anyhow::{anyhow, Result};
 use binaryninja::architecture::Architecture;
-use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::calling_convention::CoreCallingConvention;
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE};
 use binaryninja::platform::Platform;

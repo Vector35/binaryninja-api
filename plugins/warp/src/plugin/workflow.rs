@@ -10,7 +10,7 @@ use crate::plugin::settings::PluginSettings;
 use crate::{get_warp_ignore_tag_type, get_warp_tag_type, relocatable_regions, IGNORE_TAG_NAME};
 use binaryninja::architecture::RegisterId;
 use binaryninja::background_task::BackgroundTask;
-use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::BinaryView;
 use binaryninja::command::Command;
 use binaryninja::function::Function as BNFunction;
 use binaryninja::rc::Ref as BNRef;

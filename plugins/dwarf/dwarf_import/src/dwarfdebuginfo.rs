@@ -19,7 +19,7 @@ use crate::{
 };
 
 use binaryninja::{
-    binary_view::{BinaryView, BinaryViewBase, BinaryViewExt},
+    binary_view::{BinaryView, BinaryViewBase},
     debuginfo::{DebugFunctionInfo, DebugInfo},
     platform::Platform,
     rc::*,

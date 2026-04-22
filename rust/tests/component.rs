@@ -1,4 +1,3 @@
-use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::component::ComponentBuilder;
 use binaryninja::headless::Session;
 use std::path::PathBuf;

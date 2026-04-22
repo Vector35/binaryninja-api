@@ -2,7 +2,7 @@ mod edit_distance;
 
 use binaryninja::interaction::form::{Form, FormInputField};
 use binaryninja::{
-    binary_view::{BinaryView, BinaryViewBase, BinaryViewExt},
+    binary_view::{BinaryView, BinaryViewBase},
     command::{register_command, Command},
     confidence::Conf,
     rc::Ref,

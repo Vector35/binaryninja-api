@@ -17,8 +17,6 @@ use std::ptr::NonNull;
 // Used for doc comments
 #[allow(unused_imports)]
 use crate::binary_view::BinaryView;
-#[allow(unused_imports)]
-use crate::binary_view::BinaryViewExt;
 
 // TODO: Introduce a FinalizedTypeLibrary that cannot be mutated, so we do not have APIs that are unusable.
 
@@ -261,7 +259,7 @@ impl TypeLibrary {
     /// Referenced types will not automatically be added, so make sure to add referenced types to the
     /// library or use [`TypeLibrary::add_type_source`] to mark the references originating source.
     ///
-    /// To add objects from a binary view, prefer using [`BinaryViewExt::export_object_to_library`] which
+    /// To add objects from a binary view, prefer using [`BinaryView::export_object_to_library`] which
     /// will automatically pull in all referenced types and record additional dependencies as needed.
     pub fn add_named_object(&self, name: QualifiedName, type_: &Type) {
         let mut raw_name = QualifiedName::into_raw(name);
@@ -280,7 +278,7 @@ impl TypeLibrary {
     /// Referenced types will not automatically be added, so make sure to add referenced types to the
     /// library or use [`TypeLibrary::add_type_source`] to mark the references originating source.
     ///
-    /// To add types from a binary view, prefer using [`BinaryViewExt::export_type_to_library`] which
+    /// To add types from a binary view, prefer using [`BinaryView::export_type_to_library`] which
     /// will automatically pull in all referenced types and record additional dependencies as needed.
     pub fn add_named_type(&self, name: QualifiedName, type_: &Type) {
         let mut raw_name = QualifiedName::into_raw(name);
@@ -320,7 +318,7 @@ impl TypeLibrary {
 
     /// Get the object (function) associated with the given name, if any.
     ///
-    /// Prefer [`BinaryViewExt::import_type_library_object`] as it will recursively import types required.
+    /// Prefer [`BinaryView::import_type_library_object`] as it will recursively import types required.
     pub fn get_named_object(&self, name: QualifiedName) -> Option<Ref<Type>> {
         let mut raw_name = QualifiedName::into_raw(name);
         let t = unsafe { BNGetTypeLibraryNamedObject(self.as_raw(), &mut raw_name) };
@@ -330,7 +328,7 @@ impl TypeLibrary {
 
     /// Get the type associated with the given name, if any.
     ///
-    /// Prefer [`BinaryViewExt::import_type_library_type`] as it will recursively import types required.
+    /// Prefer [`BinaryView::import_type_library_type`] as it will recursively import types required.
     pub fn get_named_type(&self, name: QualifiedName) -> Option<Ref<Type>> {
         let mut raw_name = QualifiedName::into_raw(name);
         let t = unsafe { BNGetTypeLibraryNamedType(self.as_raw(), &mut raw_name) };

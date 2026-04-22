@@ -17,7 +17,7 @@ use binaryninjacore_sys::*;
 use crate::{
     architecture::{Architecture, CoreArchitecture, CoreRegister, Register},
     basic_block::{BasicBlock, BlockContext},
-    binary_view::{BinaryView, BinaryViewExt},
+    binary_view::BinaryView,
     calling_convention::CoreCallingConvention,
     component::Component,
     disassembly::{DisassemblySettings, DisassemblyTextLine},
@@ -1157,7 +1157,7 @@ impl Function {
     /// Function.add_tag, you'll create an "address tag". These are good for labeling
     /// specific instructions.
     ///
-    /// For tagging arbitrary data, consider [BinaryViewExt::add_tag].
+    /// For tagging arbitrary data, consider [BinaryView::add_tag].
     ///
     /// * `tag_type_name` - The name of the tag type for this Tag.
     /// * `data` - Additional data for the Tag.
@@ -1167,7 +1167,7 @@ impl Function {
     /// # Example
     ///
     /// ```no_run
-    /// # use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+    /// # use binaryninja::binary_view::BinaryView;
     /// # use binaryninja::function::Function;
     /// # let fun: Function = todo!();
     /// # let bv: BinaryView = todo!();

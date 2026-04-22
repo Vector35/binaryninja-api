@@ -7,7 +7,7 @@ pub use function::*;
 pub use guid::*;
 pub use type_reference::*;
 
-use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::BinaryView;
 use binaryninja::function::Function as BNFunction;
 use binaryninja::object_destructor::{register_object_destructor, ObjectDestructor};
 use binaryninja::rc::Guard;

@@ -1,5 +1,5 @@
 use binaryninja::architecture::Architecture;
-use binaryninja::binary_view::{BinaryViewBase, BinaryViewExt};
+use binaryninja::binary_view::BinaryViewBase;
 use binaryninja::tracing::TracingLogListener;
 
 fn main() {

@@ -8,11 +8,10 @@ use binaryninjacore_sys::*;
 
 use super::{
     sync, CollaborationPermissionLevel, NameChangeset, Permission, Remote, RemoteFile,
-    RemoteFileType, RemoteFolder,
+    RemoteFileType, RemoteFolder, RemoteUser,
 };
 
-use crate::binary_view::{BinaryView, BinaryViewExt};
-use crate::collaboration::RemoteUser;
+use crate::binary_view::BinaryView;
 use crate::database::Database;
 use crate::file_metadata::FileMetadata;
 use crate::progress::{NoProgressCallback, ProgressCallback};

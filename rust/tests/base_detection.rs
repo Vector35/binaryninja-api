@@ -1,5 +1,4 @@
 use binaryninja::base_detection::{BaseAddressDetectionConfidence, BaseAddressDetectionSettings};
-use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::headless::Session;
 use std::path::PathBuf;
 

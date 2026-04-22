@@ -6,7 +6,7 @@ use crate::parse::{
 };
 use crate::translate::TILTranslator;
 use binaryninja::architecture::Architecture;
-use binaryninja::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewBase};
 use binaryninja::qualified_name::QualifiedName;
 use binaryninja::rc::Ref;
 use binaryninja::section::{SectionBuilder, Semantics};

@@ -1,4 +1,3 @@
-use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::collaboration::{NoNameChangeset, Remote, RemoteFileType, RemoteProject};
 use binaryninja::file_metadata::SaveSettings;
 use binaryninja::headless::Session;

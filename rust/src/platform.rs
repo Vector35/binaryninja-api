@@ -176,7 +176,7 @@ impl Platform {
     pub fn type_container(&self) -> TypeContainer {
         let type_container_ptr = NonNull::new(unsafe { BNGetPlatformTypeContainer(self.handle) });
         // NOTE: I have no idea how this isn't a UAF, see the note in `TypeContainer::from_raw`
-        // TODO: We are cloning here for platforms but we dont need to do this for [BinaryViewExt::type_container]
+        // TODO: We are cloning here for platforms but we dont need to do this for [BinaryView::type_container]
         // TODO: Why does this require that we, construct a TypeContainer, duplicate the type container, then drop the original.
         unsafe { TypeContainer::from_raw(type_container_ptr.unwrap()) }
     }

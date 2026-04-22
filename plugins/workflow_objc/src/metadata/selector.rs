@@ -1,5 +1,5 @@
 use crate::Error;
-use binaryninja::binary_view::{BinaryView, BinaryViewBase as _, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewBase as _};
 
 pub struct Selector {
     pub name: String,

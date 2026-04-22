@@ -30,7 +30,7 @@ use crate::types::parse_variable;
 
 use binaryninja::binary_view::BinaryViewBase;
 use binaryninja::{
-    binary_view::{BinaryView, BinaryViewExt},
+    binary_view::BinaryView,
     debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser},
     settings::Settings,
     template_simplifier::simplify_str_to_str,

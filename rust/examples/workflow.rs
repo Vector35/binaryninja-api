@@ -1,4 +1,3 @@
-use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::low_level_il::expression::{ExpressionHandler, LowLevelILExpressionKind};
 use binaryninja::low_level_il::instruction::InstructionHandler;
 use binaryninja::low_level_il::VisitorAction;

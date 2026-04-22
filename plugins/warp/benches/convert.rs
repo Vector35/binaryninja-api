@@ -1,4 +1,3 @@
-use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::headless::Session;
 use criterion::{criterion_group, criterion_main, Criterion};
 use std::path::PathBuf;

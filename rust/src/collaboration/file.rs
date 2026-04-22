@@ -11,7 +11,7 @@ use super::{
     Remote, RemoteFolder, RemoteProject, RemoteSnapshot,
 };
 
-use crate::binary_view::{BinaryView, BinaryViewExt};
+use crate::binary_view::BinaryView;
 use crate::database::Database;
 use crate::file_metadata::FileMetadata;
 use crate::progress::{NoProgressCallback, ProgressCallback, SplitProgressBuilder};

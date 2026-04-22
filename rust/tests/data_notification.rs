@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::BinaryView;
 use binaryninja::data_notification::*;
 use binaryninja::function::Function;
 use binaryninja::headless::Session;

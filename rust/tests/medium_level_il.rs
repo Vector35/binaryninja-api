@@ -1,4 +1,3 @@
-use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::headless::Session;
 use binaryninja::medium_level_il::{
     MediumLevelExpressionIndex, MediumLevelILInstructionKind, MediumLevelILLiftedInstructionKind,

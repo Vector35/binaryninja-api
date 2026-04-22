@@ -1,6 +1,6 @@
 use binaryninja::{
     architecture::{Architecture as _, CoreRegister, Register as _, RegisterInfo as _},
-    binary_view::{BinaryView, BinaryViewExt as _},
+    binary_view::BinaryView,
     low_level_il::{
         expression::{ExpressionHandler, LowLevelILExpressionKind},
         function::{LowLevelILFunction, Mutable, NonSSA},

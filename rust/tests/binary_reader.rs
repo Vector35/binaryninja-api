@@ -1,4 +1,4 @@
-use binaryninja::binary_view::{BinaryReader, BinaryViewBase, BinaryViewExt};
+use binaryninja::binary_view::{BinaryReader, BinaryViewBase};
 use binaryninja::headless::Session;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::PathBuf;

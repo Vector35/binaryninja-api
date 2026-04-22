@@ -17,7 +17,7 @@
 use binaryninjacore_sys::*;
 use std::fmt::Debug;
 
-use crate::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
+use crate::binary_view::{BinaryView, BinaryViewBase};
 use crate::Endianness;
 
 use crate::rc::Ref;

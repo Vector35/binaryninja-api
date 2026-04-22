@@ -1,5 +1,4 @@
 use crate::convert::{comment_to_bn_comment, to_bn_symbol_at_address};
-use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::function::{Function as BNFunction, FunctionUpdateType};
 use binaryninja::symbol::SymbolType;
 use warp::signature::function::Function;

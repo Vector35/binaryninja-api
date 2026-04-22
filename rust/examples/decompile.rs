@@ -1,4 +1,4 @@
-use binaryninja::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewBase};
 use binaryninja::disassembly::{DisassemblyOption, DisassemblySettings};
 use binaryninja::function::Function;
 use binaryninja::linear_view::LinearViewObject;

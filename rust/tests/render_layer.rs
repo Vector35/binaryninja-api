@@ -1,5 +1,4 @@
 use binaryninja::basic_block::BasicBlock;
-use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::disassembly::{DisassemblyOption, DisassemblySettings, DisassemblyTextLine};
 use binaryninja::function::NativeBlock;
 use binaryninja::headless::Session;

@@ -1,6 +1,6 @@
 use binaryninja::{
     architecture::CoreRegister,
-    binary_view::{BinaryView, BinaryViewBase as _, BinaryViewExt},
+    binary_view::{BinaryView, BinaryViewBase as _},
     confidence::Conf,
     function::Function,
     low_level_il::{

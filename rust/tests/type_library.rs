@@ -1,4 +1,3 @@
-use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::headless::Session;
 use binaryninja::platform::Platform;
 use binaryninja::types::{Type, TypeClass, TypeLibrary};

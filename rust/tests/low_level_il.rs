@@ -1,7 +1,6 @@
 use binaryninja::architecture::{
     Architecture, ArchitectureExt, CoreArchitecture, Intrinsic, Register,
 };
-use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::headless::Session;
 use binaryninja::low_level_il::expression::{
     ExpressionHandler, LowLevelExpressionIndex, LowLevelILExpressionKind,

@@ -3,7 +3,7 @@ use std::ptr::NonNull;
 use std::time::SystemTime;
 
 use super::{sync, Remote, RemoteFile, RemoteProject};
-use crate::binary_view::{BinaryView, BinaryViewExt};
+use crate::binary_view::BinaryView;
 use crate::collaboration::undo::{RemoteUndoEntry, RemoteUndoEntryId};
 use crate::database::snapshot::Snapshot;
 use crate::progress::{NoProgressCallback, ProgressCallback};

@@ -81,7 +81,6 @@ impl Section {
     ///
     /// ```no_run
     /// # use binaryninja::section::Section;
-    /// # use binaryninja::binary_view::BinaryViewExt;
     /// let bv = binaryninja::load("example").unwrap();
     /// bv.add_section(Section::builder("example".to_string(), 0..1024).align(4).entry_size(4))
     /// ```

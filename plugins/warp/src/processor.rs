@@ -19,7 +19,7 @@ use thiserror::Error;
 use walkdir::WalkDir;
 
 use binaryninja::background_task::BackgroundTask;
-use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::BinaryView;
 use binaryninja::function::Function as BNFunction;
 use binaryninja::project::file::ProjectFile;
 use binaryninja::project::Project;

@@ -7,9 +7,9 @@ use crate::types::{
 use binaryninjacore_sys::*;
 use std::fmt::{Debug, Formatter};
 
-// Needed for doc comments
+// Used for documentation purposes.
 #[allow(unused)]
-use crate::binary_view::BinaryViewExt;
+use crate::binary_view::BinaryView;
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct StructureBuilder {
@@ -18,7 +18,6 @@ pub struct StructureBuilder {
 
 /// ```no_run
 /// // Includes
-/// # use binaryninja::binary_view::BinaryViewExt;
 /// use binaryninja::types::{MemberAccess, MemberScope, Structure, StructureBuilder, Type};
 ///
 /// // Types to use in the members
@@ -349,7 +348,7 @@ impl Structure {
     ///
     /// We must pass a [`TypeContainer`] here so that we can resolve base structure members, as they
     /// are treated as members through this function. Typically, you get the [`TypeContainer`]
-    /// through the binary view with [`BinaryViewExt::type_container`].
+    /// through the binary view with [`BinaryView::type_container`].
     pub fn members_at_offset(
         &self,
         container: &TypeContainer,
@@ -382,7 +381,7 @@ impl Structure {
     /// Returns the list of all structure members, including inherited ones.
     ///
     /// Because we must traverse through base structures, we have to provide the [`TypeContainer`];
-    /// in most cases it is ok to provide the binary views container via [`BinaryViewExt::type_container`].
+    /// in most cases it is ok to provide the binary views container via [`BinaryView::type_container`].
     pub fn members_including_inherited(
         &self,
         container: &TypeContainer,

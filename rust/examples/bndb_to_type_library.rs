@@ -1,6 +1,5 @@
 // Usage: cargo run --example bndb_to_type_library <bndb_path> <type_library_path>
 
-use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::tracing::TracingLogListener;
 use binaryninja::types::{QualifiedName, TypeLibrary};
 use tracing_indicatif::span_ext::IndicatifSpanExt;

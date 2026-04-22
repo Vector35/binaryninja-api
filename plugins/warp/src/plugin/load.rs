@@ -3,7 +3,7 @@ use crate::container::disk::{DiskContainer, DiskContainerSource};
 use crate::container::{ContainerError, SourcePath};
 use crate::convert::platform_to_target;
 use crate::plugin::workflow::run_matcher;
-use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::BinaryView;
 use binaryninja::command::Command;
 use binaryninja::interaction::{
     show_message_box, Form, FormInputField, MessageBoxButtonResult, MessageBoxButtonSet,

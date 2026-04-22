@@ -1,5 +1,4 @@
 //! This tests to make sure the function GUIDs are stable.
-use binaryninja::binary_view::BinaryViewExt;
 use binaryninja::headless::Session;
 use std::collections::BTreeMap;
 use std::path::PathBuf;

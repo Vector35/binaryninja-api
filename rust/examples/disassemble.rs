@@ -1,4 +1,4 @@
-use binaryninja::binary_view::{BinaryViewBase, BinaryViewExt};
+use binaryninja::binary_view::BinaryViewBase;
 use binaryninja::disassembly::{DisassemblyOption, DisassemblySettings, DisassemblyTextRenderer};
 use binaryninja::function::Function;
 use binaryninja::tracing::TracingLogListener;

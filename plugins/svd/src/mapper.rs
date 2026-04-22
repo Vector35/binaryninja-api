@@ -1,5 +1,5 @@
 use crate::settings::LoadSettings;
-use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::BinaryView;
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE};
 use binaryninja::data_buffer::DataBuffer;
 use binaryninja::rc::Ref;

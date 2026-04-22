@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use binaryninja::architecture::CoreArchitecture;
-use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::BinaryView;
 use binaryninja::disassembly::{
     DisassemblySettings, DisassemblyTextLine, InstructionTextToken, InstructionTextTokenKind,
 };

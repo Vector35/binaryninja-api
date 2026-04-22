@@ -62,7 +62,6 @@
 //! `DebugInfo` will then be automatically applied to binary views that contain debug information (via the setting `analysis.debugInfo.internal`), binary views that provide valid external debug info files (`analysis.debugInfo.external`), or manually fetched/applied as below:
 //! ```no_run
 //! # use binaryninja::debuginfo::DebugInfoParser;
-//! # use binaryninja::binary_view::BinaryViewExt;
 //! let bv = binaryninja::load("example").unwrap();
 //! let valid_parsers = DebugInfoParser::parsers_for_view(&bv);
 //! let parser = valid_parsers.get(0);

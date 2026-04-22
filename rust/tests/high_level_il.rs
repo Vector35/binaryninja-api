@@ -1,4 +1,4 @@
-use binaryninja::binary_view::{BinaryViewBase, BinaryViewExt};
+use binaryninja::binary_view::BinaryViewBase;
 use binaryninja::headless::Session;
 use binaryninja::high_level_il::{
     HighLevelExpressionIndex, HighLevelILInstructionKind, HighLevelInstructionIndex,

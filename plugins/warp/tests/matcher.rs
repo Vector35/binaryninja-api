@@ -1,5 +1,5 @@
 use binaryninja::architecture::CoreArchitecture;
-use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::BinaryView;
 use binaryninja::file_metadata::FileMetadata;
 use binaryninja::function::Function as BNFunction;
 use binaryninja::headless::Session;

@@ -11,5 +11,6 @@ crate-type = ["cdylib"]
 [dependencies]
 binaryninja.workspace = true
 binaryninjacore-sys.workspace = true
-minidump = "0.23.0"
+minidump = "0.26.1"
 tracing = "0.1"
+object = "0.39.1"

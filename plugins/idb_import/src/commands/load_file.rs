@@ -1,7 +1,7 @@
 use crate::commands::LoadFileField;
 use crate::mapper::IDBMapper;
 use crate::parse::IDBFileParser;
-use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::BinaryView;
 use binaryninja::command::Command;
 use binaryninja::interaction::Form;
 use std::fs::File;

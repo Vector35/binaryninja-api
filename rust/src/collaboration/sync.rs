@@ -6,7 +6,7 @@ use std::ffi::{c_char, c_void};
 use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
 
-use crate::binary_view::{BinaryView, BinaryViewExt};
+use crate::binary_view::BinaryView;
 use crate::database::{snapshot::Snapshot, Database};
 use crate::file_metadata::FileMetadata;
 use crate::progress::{NoProgressCallback, ProgressCallback};
@@ -138,7 +138,7 @@ pub fn get_remote_for_local_database(database: &Database) -> Result<Option<Ref<R
         .ok_or(())
 }
 
-/// Get the Remote for a BinaryView
+/// Get the [`Remote`] for the given [`BinaryView`].
 pub fn get_remote_for_binary_view(bv: &BinaryView) -> Result<Option<Ref<Remote>>, ()> {
     let Some(db) = bv.file().database() else {
         return Ok(None);

@@ -1,5 +1,5 @@
 use binaryninja::{
-    binary_view::{BinaryView, BinaryViewExt as _},
+    binary_view::BinaryView,
     confidence::Conf,
     function::Function,
     medium_level_il::{

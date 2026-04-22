@@ -3,7 +3,7 @@ pub mod settings;
 
 use crate::mapper::DeviceMapper;
 use crate::settings::LoadSettings;
-use binaryninja::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewBase};
 use binaryninja::command::Command;
 use binaryninja::interaction::{Form, FormInputField};
 use binaryninja::workflow::{activity, Activity, AnalysisContext, Workflow};

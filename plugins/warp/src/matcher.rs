@@ -2,7 +2,7 @@ use crate::cache::cached_constraints;
 use crate::container::{Container, SourceId};
 use crate::convert::to_bn_type;
 use binaryninja::architecture::Architecture as BNArchitecture;
-use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::BinaryView;
 use binaryninja::function::Function as BNFunction;
 use binaryninja::settings::{QueryOptions, Settings as BNSettings};
 use serde_json::json;

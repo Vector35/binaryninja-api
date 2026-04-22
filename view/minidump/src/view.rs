@@ -1,357 +1,137 @@
-use std::collections::HashMap;
-use std::ops::Range;
-
-use binaryninja::section::Section;
-use binaryninja::segment::{Segment, SegmentFlags};
-use minidump::format::MemoryProtection;
-use minidump::{
-    Minidump, MinidumpMemory64List, MinidumpMemoryInfoList, MinidumpMemoryList, MinidumpModuleList,
-    MinidumpStream, MinidumpSystemInfo, Module,
-};
-
-use binaryninja::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
-use binaryninja::custom_binary_view::{
-    BinaryViewType, BinaryViewTypeBase, CustomBinaryView, CustomBinaryViewType, CustomView,
-    CustomViewBuilder,
-};
+use binaryninja::binary_view::{BinaryView, BinaryViewBase};
+use binaryninja::binary_view::{CustomBinaryView, CustomBinaryViewType};
+use binaryninja::data_buffer::DataBuffer;
 use binaryninja::platform::Platform;
+use binaryninja::rc::Ref;
+use binaryninja::section::{SectionBuilder, Semantics};
+use binaryninja::segment::SegmentFlags;
+use binaryninja::symbol::{SymbolBuilder, SymbolType};
 use binaryninja::Endianness;
+use minidump::format::MemoryProtection;
+use minidump::system_info::{Cpu, Os, PointerWidth};
+use minidump::{Minidump, MinidumpMemoryInfoList, MinidumpModuleList};
+use minidump::{MinidumpSystemInfo, Module};
+use object::{Object, ObjectSection, ObjectSymbol, SectionKind, SymbolKind};
 
-type BinaryViewResult<R> = binaryninja::binary_view::Result<R>;
+pub struct MinidumpBinaryViewType;
 
-/// The _Minidump_ binary view type, which the Rust plugin registers with the Binary Ninja core
-/// (via `binaryninja::custombinaryview::register_view_type`) as a possible binary view
-/// that can be applied to opened binaries.
-///
-/// If this view type is valid for an opened binary (determined by `is_valid_for`),
-/// the Binary Ninja core then uses this view type to create an actual instance of the _Minidump_
-/// binary view (via `create_custom_view`).
-pub struct MinidumpBinaryViewType {
-    view_type: BinaryViewType,
-}
+impl CustomBinaryViewType for MinidumpBinaryViewType {
+    type CustomBinaryView = MinidumpBinaryView;
+    const NAME: &'static str = "Minidump";
 
-impl MinidumpBinaryViewType {
-    pub fn new(view_type: BinaryViewType) -> Self {
-        MinidumpBinaryViewType { view_type }
-    }
-}
-
-impl AsRef<BinaryViewType> for MinidumpBinaryViewType {
-    fn as_ref(&self) -> &BinaryViewType {
-        &self.view_type
-    }
-}
-
-impl BinaryViewTypeBase for MinidumpBinaryViewType {
-    fn is_deprecated(&self) -> bool {
-        false
-    }
-
-    fn is_force_loadable(&self) -> bool {
-        false
+    fn create_binary_view(&self, data: &BinaryView) -> Result<Self::CustomBinaryView, ()> {
+        match MinidumpBinaryView::new(data) {
+            Ok(minidump_binary_view) => Ok(minidump_binary_view),
+            Err(e) => {
+                tracing::error!("Failed to create minidump binary view: {}", e);
+                Err(())
+            }
+        }
     }
 
     fn is_valid_for(&self, data: &BinaryView) -> bool {
-        let mut magic_number = Vec::<u8>::new();
-        data.read_into_vec(&mut magic_number, 0, 4);
-
-        magic_number == b"MDMP"
+        // Check for the MDMP magic bytes
+        let magic = [0x4d, 0x44, 0x4d, 0x50];
+        let mut buffer = [0u8; 4];
+        data.read(&mut buffer, 0);
+        buffer == magic
     }
 }
 
-impl CustomBinaryViewType for MinidumpBinaryViewType {
-    fn create_custom_view<'builder>(
-        &self,
-        data: &BinaryView,
-        builder: CustomViewBuilder<'builder, Self>,
-    ) -> BinaryViewResult<CustomView<'builder>> {
-        tracing::debug!("Creating MinidumpBinaryView from registered MinidumpBinaryViewType");
-
-        let binary_view = builder.create::<MinidumpBinaryView>(data, ());
-        binary_view
-    }
-}
-
-#[derive(Debug)]
-struct SegmentData {
-    rva_range: Range<u64>,
-    mapped_addr_range: Range<u64>,
-}
-
-impl SegmentData {
-    fn from_addresses_and_size(rva: u64, mapped_addr: u64, size: u64) -> Self {
-        SegmentData {
-            rva_range: Range {
-                start: rva,
-                end: rva + size,
-            },
-            mapped_addr_range: Range {
-                start: mapped_addr,
-                end: mapped_addr + size,
-            },
-        }
-    }
-}
-
-#[derive(Debug)]
-struct SegmentMemoryProtection {
-    readable: bool,
-    writable: bool,
-    executable: bool,
-}
-
-/// An instance of the actual _Minidump_ custom binary view.
+/// An instance of the actual custom Minidump binary view.
+///
 /// This contains the main logic to load the memory segments inside a minidump file into the binary view.
 pub struct MinidumpBinaryView {
-    /// The handle to the "real" BinaryView object, in the Binary Ninja core.
-    inner: binaryninja::rc::Ref<BinaryView>,
+    minidump: Minidump<'static, Vec<u8>>,
+    endianness: Endianness,
+    address_size: usize,
+    /// The entry point of the main module.
+    ///
+    /// This will be set inside [`MinidumpBinaryView::initialize`], so won't be immediately available.
+    main_entry_point: Option<u64>,
 }
 
 impl MinidumpBinaryView {
-    fn new(view: &BinaryView) -> Self {
-        MinidumpBinaryView {
-            inner: view.to_owned(),
-        }
+    pub fn new(data: &BinaryView) -> Result<Self, String> {
+        let read_buffer = data
+            .read_buffer(0, data.len() as usize)
+            .ok_or("Failed to read data from binary view".to_string())?;
+        let minidump = Minidump::read(read_buffer.get_data().to_vec())
+            .map_err(|e| format!("Failed to parse minidump: {}", e))?;
+        let system_info = minidump
+            .get_stream::<MinidumpSystemInfo>()
+            .map_err(|e| format!("Failed to get system info stream: {}", e))?;
+        let endianness = match minidump.endian {
+            minidump::Endian::Little => Endianness::LittleEndian,
+            minidump::Endian::Big => Endianness::BigEndian,
+        };
+        let address_size = match system_info.cpu.pointer_width() {
+            PointerWidth::Bits32 => 4,
+            PointerWidth::Bits64 => 8,
+            PointerWidth::Unknown => {
+                tracing::warn!("Unknown pointer width, defaulting to 32-bit");
+                4
+            }
+        };
+
+        Ok(MinidumpBinaryView {
+            minidump,
+            endianness,
+            address_size,
+            main_entry_point: None,
+        })
     }
 
-    fn init(&self) -> BinaryViewResult<()> {
-        let parent_view = self.parent_view().ok_or(())?;
-        let read_buffer = parent_view
-            .read_buffer(0, parent_view.len() as usize)
-            .ok_or(())?;
-
-        if let Ok(minidump_obj) = Minidump::read(read_buffer.get_data()) {
-            // Architecture, platform information
-            if let Ok(minidump_system_info) = minidump_obj.get_stream::<MinidumpSystemInfo>() {
-                if let Some(platform) = MinidumpBinaryView::translate_minidump_platform(
-                    minidump_system_info.cpu,
-                    minidump_obj.endian,
-                    minidump_system_info.os,
-                ) {
-                    self.set_default_platform(&platform);
-                } else {
-                    tracing::error!(
-                        "Could not parse valid system information from minidump: could not map system information in MinidumpSystemInfo stream (arch {:?}, endian {:?}, os {:?}) to a known architecture",
-                        minidump_system_info.cpu,
-                        minidump_obj.endian,
-                        minidump_system_info.os,
-                    );
-                    return Err(());
-                }
-            } else {
-                tracing::error!(
-                    "Could not parse system information from minidump: could not find a valid MinidumpSystemInfo stream"
-                );
-                return Err(());
-            }
-
-            // Memory segments
-            let mut segment_data = Vec::<SegmentData>::new();
-
-            // Memory segments in a full memory dump (MinidumpMemory64List)
-            // Grab the shared base RVA for all entries in the MinidumpMemory64List,
-            // since the minidump crate doesn't expose this to us
-            if let Ok(raw_stream) = minidump_obj.get_raw_stream(MinidumpMemory64List::STREAM_TYPE) {
-                if let Ok(base_rva_array) = raw_stream[8..16].try_into() {
-                    let base_rva = u64::from_le_bytes(base_rva_array);
-                    tracing::debug!("Found BaseRVA value {:#x}", base_rva);
-
-                    if let Ok(minidump_memory_list) =
-                        minidump_obj.get_stream::<MinidumpMemory64List>()
-                    {
-                        let mut current_rva = base_rva;
-                        for memory_segment in minidump_memory_list.iter() {
-                            tracing::debug!(
-                                "Found memory segment at RVA {:#x} with virtual address {:#x} and size {:#x}",
-                                current_rva,
-                                memory_segment.base_address,
-                                memory_segment.size,
-                            );
-                            segment_data.push(SegmentData::from_addresses_and_size(
-                                current_rva,
-                                memory_segment.base_address,
-                                memory_segment.size,
-                            ));
-                            current_rva += memory_segment.size;
-                        }
-                    }
-                } else {
-                    tracing::error!(
-                        "Could not parse BaseRVA value shared by all entries in the MinidumpMemory64List stream"
-                    )
-                }
-            } else {
-                tracing::warn!(
-                    "Could not read memory from minidump: could not find a valid MinidumpMemory64List stream. This minidump may not be a full memory dump. Trying to find partial dump memory from a MinidumpMemoryList now..."
-                );
-                // Memory segments in a regular memory dump (MinidumpMemoryList),
-                // i.e. one that does not include the full process memory data.
-                if let Ok(minidump_memory_list) = minidump_obj.get_stream::<MinidumpMemoryList>() {
-                    for memory_segment in minidump_memory_list.by_addr() {
-                        tracing::debug!(
-                            "Found memory segment at RVA {:#x} with virtual address {:#x} and size {:#x}",
-                            memory_segment.desc.memory.rva,
-                            memory_segment.base_address,
-                            memory_segment.size
-                        );
-                        segment_data.push(SegmentData::from_addresses_and_size(
-                            memory_segment.desc.memory.rva as u64,
-                            memory_segment.base_address,
-                            memory_segment.size,
-                        ));
-                    }
-                } else {
-                    tracing::error!(
-                        "Could not read any memory from minidump: could not find a valid MinidumpMemory64List stream or a valid MinidumpMemoryList stream."
-                    );
-                }
-            }
-
-            // Memory protection information
-            let mut segment_protection_data = HashMap::new();
-
-            if let Ok(minidump_memory_info_list) =
-                minidump_obj.get_stream::<MinidumpMemoryInfoList>()
-            {
-                for memory_info in minidump_memory_info_list.iter() {
-                    if let Some(memory_range) = memory_info.memory_range() {
-                        tracing::debug!(
-                            "Found memory protection info for memory segment ranging from virtual address {:#x} to {:#x}: {:#?}",
-                            memory_range.start,
-                            memory_range.end,
-                            memory_info.protection
-                        );
-                        segment_protection_data.insert(
-                            // The range returned to us by MinidumpMemoryInfoList is an
-                            // end-inclusive range_map::Range; we need to add 1 to
-                            // the end index to make it into an end-exclusive std::ops::Range.
-                            Range {
-                                start: memory_range.start,
-                                end: memory_range.end + 1,
-                            },
-                            memory_info.protection,
-                        );
-                    }
-                }
-            }
-
-            for segment in segment_data.iter() {
-                if let Some(segment_protection) =
-                    segment_protection_data.get(&segment.mapped_addr_range)
-                {
-                    let segment_memory_protection =
-                        MinidumpBinaryView::translate_memory_protection(*segment_protection);
-
-                    tracing::info!(
-                        "Adding memory segment at virtual address {:#x} to {:#x}, from data range {:#x} to {:#x}, with protections readable {}, writable {}, executable {}",
-                        segment.mapped_addr_range.start,
-                        segment.mapped_addr_range.end,
-                        segment.rva_range.start,
-                        segment.rva_range.end,
-                        segment_memory_protection.readable,
-                        segment_memory_protection.writable,
-                        segment_memory_protection.executable,
-                    );
-
-                    let segment_flags = SegmentFlags::new()
-                        .readable(segment_memory_protection.readable)
-                        .writable(segment_memory_protection.writable)
-                        .executable(segment_memory_protection.executable);
-
-                    self.add_segment(
-                        Segment::builder(segment.mapped_addr_range.clone())
-                            .parent_backing(segment.rva_range.clone())
-                            .is_auto(true)
-                            .flags(segment_flags),
-                    );
-                } else {
-                    tracing::error!(
-                        "Could not find memory protection information for memory segment from {:#x} to {:#x}", segment.mapped_addr_range.start,
-                        segment.mapped_addr_range.end,
-                    );
-                }
-            }
-
-            // Module information
-            // This stretches the concept a bit, but we can add each module as a
-            // separate "section" of the binary.
-            // Sections can be named, and can span multiple segments.
-            if let Ok(minidump_module_list) = minidump_obj.get_stream::<MinidumpModuleList>() {
-                for module_info in minidump_module_list.by_addr() {
-                    tracing::info!(
-                        "Found module with name {} at virtual address {:#x} with size {:#x}",
-                        module_info.name,
-                        module_info.base_address(),
-                        module_info.size(),
-                    );
-                    let module_address_range = Range {
-                        start: module_info.base_address(),
-                        end: module_info.base_address() + module_info.size(),
-                    };
-                    self.add_section(
-                        Section::builder(module_info.name.clone(), module_address_range)
-                            .is_auto(true),
-                    );
-                }
-            } else {
-                tracing::warn!(
-                    "Could not find valid module information in minidump: could not find a valid MinidumpModuleList stream"
-                );
-            }
-        } else {
-            tracing::error!("Could not parse data as minidump");
-            return Err(());
-        }
-        Ok(())
+    pub fn translate_platform(
+        &self,
+        system_info: &MinidumpSystemInfo,
+    ) -> Result<Ref<Platform>, String> {
+        let platform_name = self.translate_platform_name(system_info.os, system_info.cpu)?;
+        Platform::by_name(platform_name)
+            .ok_or_else(|| format!("Could not find platform {}", platform_name))
     }
 
-    fn translate_minidump_platform(
-        minidump_cpu_arch: minidump::system_info::Cpu,
-        minidump_endian: minidump::Endian,
-        minidump_os: minidump::system_info::Os,
-    ) -> Option<binaryninja::rc::Ref<Platform>> {
-        match minidump_os {
-            minidump::system_info::Os::Windows => match minidump_cpu_arch {
-                minidump::system_info::Cpu::Arm64 => Platform::by_name("windows-aarch64"),
-                minidump::system_info::Cpu::Arm => Platform::by_name("windows-armv7"),
-                minidump::system_info::Cpu::X86 => Platform::by_name("windows-x86"),
-                minidump::system_info::Cpu::X86_64 => Platform::by_name("windows-x86_64"),
-                _ => None,
+    pub fn translate_platform_name(&self, os: Os, cpu: Cpu) -> Result<&'static str, String> {
+        match os {
+            Os::Windows => match cpu {
+                Cpu::Arm64 => Ok("windows-aarch64"),
+                Cpu::Arm => Ok("windows-armv7"),
+                Cpu::X86 => Ok("windows-x86"),
+                Cpu::X86_64 => Ok("windows-x86_64"),
+                _ => Err("Unsupported CPU architecture".to_string()),
             },
-            minidump::system_info::Os::MacOs => match minidump_cpu_arch {
-                minidump::system_info::Cpu::Arm64 => Platform::by_name("mac-aarch64"),
-                minidump::system_info::Cpu::Arm => Platform::by_name("mac-armv7"),
-                minidump::system_info::Cpu::X86 => Platform::by_name("mac-x86"),
-                minidump::system_info::Cpu::X86_64 => Platform::by_name("mac-x86_64"),
-                _ => None,
+            Os::MacOs => match cpu {
+                Cpu::Arm64 => Ok("mac-aarch64"),
+                Cpu::Arm => Ok("mac-armv7"),
+                Cpu::X86 => Ok("mac-x86"),
+                Cpu::X86_64 => Ok("mac-x86_64"),
+                _ => Err("Unsupported CPU architecture".to_string()),
             },
-            minidump::system_info::Os::Linux => match minidump_cpu_arch {
-                minidump::system_info::Cpu::Arm64 => Platform::by_name("linux-aarch64"),
-                minidump::system_info::Cpu::Arm => Platform::by_name("linux-armv7"),
-                minidump::system_info::Cpu::X86 => Platform::by_name("linux-x86"),
-                minidump::system_info::Cpu::X86_64 => Platform::by_name("linux-x86_64"),
-                minidump::system_info::Cpu::Ppc => match minidump_endian {
-                    minidump::Endian::Little => Platform::by_name("linux-ppc32_le"),
-                    minidump::Endian::Big => Platform::by_name("linux-ppc32"),
+            Os::Linux => match cpu {
+                Cpu::Arm64 => Ok("linux-aarch64"),
+                Cpu::Arm => Ok("linux-armv7"),
+                Cpu::X86 => Ok("linux-x86"),
+                Cpu::X86_64 => Ok("linux-x86_64"),
+                Cpu::Ppc => match self.endianness {
+                    Endianness::LittleEndian => Ok("linux-ppc32_le"),
+                    Endianness::BigEndian => Ok("linux-ppc32"),
                 },
-                minidump::system_info::Cpu::Ppc64 => match minidump_endian {
-                    minidump::Endian::Little => Platform::by_name("linux-ppc64_le"),
-                    minidump::Endian::Big => Platform::by_name("linux-ppc64"),
+                Cpu::Ppc64 => match self.endianness {
+                    Endianness::LittleEndian => Ok("linux-ppc64_le"),
+                    Endianness::BigEndian => Ok("linux-ppc64"),
                 },
-                _ => None,
+                _ => Err("Unsupported CPU architecture".to_string()),
             },
-            minidump::system_info::Os::NaCl => None,
-            minidump::system_info::Os::Android => None,
-            minidump::system_info::Os::Ios => None,
-            minidump::system_info::Os::Ps3 => None,
-            minidump::system_info::Os::Solaris => None,
-            _ => None,
+            // TODO: Support iOS
+            Os::Ios => Err("Unsupported operating system".to_string()),
+            _ => Err("Unsupported operating system".to_string()),
         }
     }
 
-    fn translate_memory_protection(
+    pub fn translate_memory_protection(
+        &self,
         minidump_memory_protection: MemoryProtection,
-    ) -> SegmentMemoryProtection {
+    ) -> SegmentFlags {
         let (readable, writable, executable) = match minidump_memory_protection {
             MemoryProtection::PAGE_NOACCESS => (false, false, false),
             MemoryProtection::PAGE_READONLY => (true, false, false),
@@ -367,50 +147,163 @@ impl MinidumpBinaryView {
             MemoryProtection::PAGE_WRITECOMBINE => (false, false, false),
             _ => (false, false, false),
         };
-        SegmentMemoryProtection {
-            readable,
-            writable,
-            executable,
-        }
-    }
-}
-
-impl AsRef<BinaryView> for MinidumpBinaryView {
-    fn as_ref(&self) -> &BinaryView {
-        &self.inner
+        SegmentFlags::new()
+            .readable(readable)
+            .writable(writable)
+            .executable(executable)
     }
 }
 
 impl BinaryViewBase for MinidumpBinaryView {
-    // TODO: This should be filled out with the actual address size
-    // from the platform information in the minidump.
-    fn address_size(&self) -> usize {
-        0
+    fn entry_point(&self) -> u64 {
+        self.main_entry_point.unwrap_or(0)
     }
 
     fn default_endianness(&self) -> Endianness {
-        // TODO: This should be filled out with the actual endianness
-        // from the platform information in the minidump.
-        Endianness::LittleEndian
+        self.endianness
     }
 
-    fn entry_point(&self) -> u64 {
-        // TODO: We should fill this out with a real entry point.
-        // This can be done by getting the main module of the minidump
-        // with MinidumpModuleList::main_module,
-        // then parsing the PE metadata of the main module to find its entry point(s).
-        0
+    fn address_size(&self) -> usize {
+        self.address_size
     }
 }
 
-unsafe impl CustomBinaryView for MinidumpBinaryView {
-    type Args = ();
+impl CustomBinaryView for MinidumpBinaryView {
+    fn initialize(&mut self, view: &BinaryView) -> bool {
+        let Ok(system_info) = self.minidump.get_stream::<MinidumpSystemInfo>() else {
+            tracing::error!("Could not find a valid MinidumpSystemInfo stream");
+            return false;
+        };
 
-    fn new(handle: &BinaryView, _args: &Self::Args) -> BinaryViewResult<Self> {
-        Ok(MinidumpBinaryView::new(handle))
-    }
+        let platform = match self.translate_platform(&system_info) {
+            Ok(platform) => platform,
+            Err(err) => {
+                tracing::error!("Could not determine platform: {}", err);
+                return false;
+            }
+        };
+        view.set_default_platform(&platform);
 
-    fn init(&mut self, _args: Self::Args) -> BinaryViewResult<()> {
-        MinidumpBinaryView::init(self)
+        let Some(unified_memory_list) = self.minidump.get_memory() else {
+            tracing::error!("Could not find a valid memory list stream");
+            return false;
+        };
+
+        // Some full memory dumps don't have memory info, so we will fall back to default segment flags in that case.
+        let memory_info_list = self
+            .minidump
+            .get_stream::<MinidumpMemoryInfoList>()
+            .inspect_err(|e| tracing::warn!("Could not find a valid memory info list stream: '{}' no segment flags will be set", e))
+            .ok();
+
+        for memory in unified_memory_list.iter() {
+            let Some(memory_range) = memory.memory_range() else {
+                tracing::error!(
+                    "Could not find a valid memory range for memory segment: {:?}",
+                    memory
+                );
+                continue;
+            };
+
+            // If we are opening the view again, this will already be filled from the first load, so skip it.
+            if view
+                .memory_map()
+                .get_active_region_at(memory_range.start)
+                .is_some()
+            {
+                tracing::debug!("Skipping memory segment {:0x} because it overlaps with an existing memory region", memory_range.start);
+                continue;
+            }
+
+            let segment_flags = memory_info_list
+                .as_ref()
+                .and_then(|list| list.memory_info_at_address(memory.base_address()))
+                .map(|info| self.translate_memory_protection(info.protection));
+
+            // TODO: The parent backing _is_ the memory range itself, we currently add that memory range
+            // TODO: after the fact instead of deriving it from the contents of the file itself.
+            let buffer = DataBuffer::new(memory.bytes());
+            view.memory_map().add_data_memory_region(
+                &format!("{:0x}", memory_range.start),
+                memory_range.start,
+                &buffer,
+                segment_flags,
+            );
+        }
+
+        let Ok(module_list) = self.minidump.get_stream::<MinidumpModuleList>() else {
+            tracing::warn!(
+                "Could not find a valid module list stream, no module sections will be added!"
+            );
+            return true;
+        };
+
+        let main_module_addr = module_list
+            .main_module()
+            .map(|module| module.base_address());
+
+        for module in module_list.iter() {
+            tracing::info!(
+                "Loading module '{}' at {:0x}",
+                module.name,
+                module.base_address()
+            );
+            let mut buffer: Vec<u8> = vec![0; module.size() as usize];
+            let read_length = view.read(&mut buffer, module.base_address());
+            if read_length != module.size() as usize {
+                tracing::error!("Could not read module: {:?}", module);
+                continue;
+            }
+            let file = match object::File::parse(&*buffer) {
+                Ok(file) => file,
+                Err(e) => {
+                    tracing::error!("Could not parse module: {:?}: {}", module.name, e);
+                    continue;
+                }
+            };
+            for section in file.sections() {
+                let section_name =
+                    format!("{}:{}", module.name, section.name().unwrap_or("<unknown>"));
+                let section_range = section.address()..section.address() + section.size();
+                let section_semantics = match section.kind() {
+                    SectionKind::Unknown => Semantics::DefaultSection,
+                    SectionKind::Text => Semantics::ReadOnlyCode,
+                    SectionKind::Data => Semantics::ReadWriteData,
+                    SectionKind::ReadOnlyData => Semantics::ReadOnlyData,
+                    SectionKind::ReadOnlyDataWithRel => Semantics::ReadOnlyData,
+                    SectionKind::ReadOnlyString => Semantics::ReadOnlyData,
+                    SectionKind::UninitializedData => Semantics::ReadOnlyData,
+                    _ => Semantics::DefaultSection,
+                };
+                let section_builder = SectionBuilder::new(section_name, section_range)
+                    .align(section.align())
+                    .semantics(section_semantics)
+                    .is_auto(true);
+                view.add_section(section_builder);
+            }
+            for symbol in file.symbols() {
+                let symbol_name = symbol.name().unwrap_or("<unknown>");
+                let symbol_type = match symbol.kind() {
+                    SymbolKind::Unknown => SymbolType::Symbolic,
+                    SymbolKind::Text => SymbolType::Function,
+                    SymbolKind::Data => SymbolType::Data,
+                    SymbolKind::Section => SymbolType::Symbolic,
+                    SymbolKind::File => SymbolType::Symbolic,
+                    SymbolKind::Label => SymbolType::LocalLabel,
+                    SymbolKind::Tls => SymbolType::Symbolic,
+                    _ => SymbolType::Symbolic,
+                };
+                let symbol =
+                    SymbolBuilder::new(symbol_type, symbol_name, symbol.address()).create();
+                view.define_auto_symbol(&symbol);
+            }
+            view.add_entry_point(file.entry());
+            // Set this so [`BinaryView::entry_point`] knows which is the main entry point.
+            if main_module_addr.is_some_and(|addr| addr == module.base_address()) {
+                self.main_entry_point = Some(file.entry());
+            }
+        }
+
+        true
     }
 }

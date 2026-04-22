@@ -34,7 +34,6 @@ pub(crate) fn time_from_bn(timestamp: u64) -> SystemTime {
 #[macro_export]
 macro_rules! ffi_span {
     ($name:expr, $bv:expr) => {{
-        use $crate::binary_view::BinaryViewExt;
         #[allow(unused_imports)]
         use $crate::file_metadata::FileMetadata;
         ::tracing::info_span!($name, session_id = $bv.file().session_id().0).entered()

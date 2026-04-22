@@ -2,7 +2,7 @@ use binaryninjacore_sys::*;
 
 // Needed for documentation.
 #[allow(unused)]
-use crate::binary_view::{memory_map::MemoryMap, BinaryViewBase, BinaryViewExt};
+use crate::binary_view::{memory_map::MemoryMap, BinaryViewBase};
 
 use crate::basic_block::BasicBlock;
 use crate::binary_view::BinaryView;

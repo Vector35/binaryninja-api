@@ -23,7 +23,7 @@ use std::{env, fs};
 use anyhow::{anyhow, Result};
 use pdb::PDB;
 
-use binaryninja::binary_view::{BinaryView, BinaryViewBase, BinaryViewExt};
+use binaryninja::binary_view::{BinaryView, BinaryViewBase};
 use binaryninja::debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser};
 use binaryninja::download::{DownloadInstanceInputOutputCallbacks, DownloadProvider};
 use binaryninja::interaction::{MessageBoxButtonResult, MessageBoxButtonSet};
@@ -275,23 +275,14 @@ fn search_sym_store(
 
 fn parse_pdb_info(view: &BinaryView) -> Option<PDBInfo> {
     match view.get_metadata::<u64>("DEBUG_INFO_TYPE") {
-        Some(Ok(0x53445352 /* 'SDSR' */)) => {}
+        Some(0x53445352 /* 'SDSR' */) => {}
         _ => return None,
     }
 
     // This is stored in the BV by the PE loader
-    let file_path = match view.get_metadata::<String>("PDB_FILENAME") {
-        Some(Ok(md)) => md,
-        _ => return None,
-    };
-    let mut guid = match view.get_metadata::<Vec<u8>>("PDB_GUID") {
-        Some(Ok(md)) => md,
-        _ => return None,
-    };
-    let age = match view.get_metadata::<u64>("PDB_AGE") {
-        Some(Ok(md)) => md as u32,
-        _ => return None,
-    };
+    let file_path = view.get_metadata::<String>("PDB_FILENAME")?;
+    let mut guid = view.get_metadata::<Vec<u8>>("PDB_GUID")?;
+    let age = view.get_metadata::<u64>("PDB_AGE")? as u32;
 
     if guid.len() != 16 {
         return None;

@@ -1,8 +1,5 @@
 use binaryninja::{
-    binary_view::{BinaryView, BinaryViewExt as _},
-    medium_level_il::MediumLevelILLiftedInstruction,
-    rc::Ref,
-    types::Type,
+    binary_view::BinaryView, medium_level_il::MediumLevelILLiftedInstruction, rc::Ref, types::Type,
     workflow::AnalysisContext,
 };
 use bstr::ByteSlice;

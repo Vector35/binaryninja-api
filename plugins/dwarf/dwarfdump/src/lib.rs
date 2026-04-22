@@ -14,7 +14,7 @@
 
 use binaryninja::{
     architecture::BranchType,
-    binary_view::{BinaryView, BinaryViewExt},
+    binary_view::BinaryView,
     command::{register_command, Command},
     disassembly::{DisassemblyTextLine, InstructionTextToken, InstructionTextTokenKind},
     flowgraph::{EdgeStyle, FlowGraph, FlowGraphNode, FlowGraphOption},

@@ -1,4 +1,4 @@
-use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::BinaryView;
 use binaryninja::data_renderer::{
     register_data_renderer, render_lines_for_data, CustomDataRenderer, RegistrationType,
     TypeContext,

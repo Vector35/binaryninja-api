@@ -1,4 +1,4 @@
-use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::BinaryView;
 use binaryninja::confidence::Conf;
 use binaryninja::file_metadata::FileMetadata;
 use binaryninja::headless::Session;

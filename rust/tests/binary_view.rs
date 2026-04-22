@@ -1,15 +1,18 @@
 use binaryninja::binary_view::search::SearchQuery;
 use binaryninja::binary_view::{
-    AnalysisProgress, AnalysisState, BinaryViewBase, BinaryViewExt, StringType,
+    register_binary_view_type, AnalysisProgress, BinaryView, BinaryViewBase, CustomBinaryView,
+    CustomBinaryViewType, StringType,
 };
 use binaryninja::data_buffer::DataBuffer;
-use binaryninja::file_metadata::SaveSettings;
+use binaryninja::file_metadata::{FileMetadata, SaveSettings};
 use binaryninja::function::{Function, FunctionViewType};
 use binaryninja::headless::Session;
 use binaryninja::main_thread::execute_on_main_thread_and_wait;
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
+use binaryninja::segment::SegmentBuilder;
 use binaryninja::symbol::{Symbol, SymbolBuilder, SymbolType};
+use binaryninja::Endianness;
 use std::collections::{BTreeMap, HashSet};
 use std::path::PathBuf;
 
@@ -202,4 +205,74 @@ fn test_deterministic_functions() {
         let snapshot_name = path.file_stem().unwrap().to_str().unwrap();
         insta::assert_debug_snapshot!(snapshot_name, functions);
     }
+}
+
+struct MyBinaryViewType;
+
+impl CustomBinaryViewType for MyBinaryViewType {
+    type CustomBinaryView = MyBinaryView;
+    const NAME: &'static str = "MyBinaryView";
+
+    fn create_binary_view(&self, _data: &BinaryView) -> Result<Self::CustomBinaryView, ()> {
+        Ok(MyBinaryView)
+    }
+
+    fn is_valid_for(&self, data: &BinaryView) -> bool {
+        let mut buffer = [0u8; 4];
+        data.read(&mut buffer, 0);
+        buffer == [0x42, 0x42, 0x42, 0x42]
+    }
+}
+
+struct MyBinaryView;
+
+impl BinaryViewBase for MyBinaryView {
+    fn default_endianness(&self) -> Endianness {
+        Endianness::LittleEndian
+    }
+
+    fn address_size(&self) -> usize {
+        4
+    }
+}
+
+impl CustomBinaryView for MyBinaryView {
+    fn initialize(&mut self, view: &BinaryView) -> bool {
+        let test_sym = SymbolBuilder::new(SymbolType::Symbolic, "hello", 0).create();
+        view.define_auto_symbol(&test_sym);
+        view.add_segment(SegmentBuilder::new(0..4).parent_backing(0..4).is_auto(true));
+        true
+    }
+}
+
+#[test]
+fn test_custom_view() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let invalid_view = BinaryView::from_data(&FileMetadata::new(), &[0x0, 0x0, 0x0, 0x0]);
+    let valid_view = BinaryView::from_data(&FileMetadata::new(), &[0x42, 0x42, 0x42, 0x42]);
+    assert_eq!(MyBinaryViewType.is_valid_for(&invalid_view), false);
+    assert_eq!(MyBinaryViewType.is_valid_for(&valid_view), true);
+
+    let (_, core_type) = register_binary_view_type(MyBinaryViewType);
+    assert_eq!(core_type.is_valid_for(&invalid_view), false);
+    assert_eq!(core_type.is_valid_for(&valid_view), true);
+    assert_eq!(core_type.name(), "MyBinaryView");
+    assert_eq!(core_type.is_deprecated(), false);
+    assert_eq!(core_type.is_force_loadable(), false);
+
+    let created_view = core_type
+        .create(&valid_view)
+        .expect("Failed to create view");
+    assert_eq!(created_view.analysis_progress(), AnalysisProgress::Initial);
+
+    let hello_symbol = created_view
+        .symbol_by_address(0)
+        .expect("Failed to get symbol");
+    assert_eq!(hello_symbol.to_string(), "hello");
+
+    assert_eq!(
+        created_view.read_vec(0, 4),
+        vec![0x42, 0x42, 0x42, 0x42],
+        "View not backed by the parent data"
+    );
 }

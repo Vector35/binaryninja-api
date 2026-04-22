@@ -1,7 +1,7 @@
 use binaryninja::file_metadata::SessionId;
 use binaryninja::object_destructor::register_object_destructor;
 use binaryninja::{
-    binary_view::{BinaryView, BinaryViewBase, BinaryViewExt},
+    binary_view::{BinaryView, BinaryViewBase},
     file_metadata::FileMetadata,
     metadata::Metadata,
     object_destructor::ObjectDestructor,
@@ -155,10 +155,7 @@ impl AnalysisInfo {
     }
 
     fn load_selector_impls(&self, bv: &BinaryView) -> Option<SelectorImplementations> {
-        let Some(Ok(meta)) = bv.get_metadata::<HashMap<String, Ref<Metadata>>>("Objective-C")
-        else {
-            return None;
-        };
+        let meta = bv.get_metadata::<HashMap<String, Ref<Metadata>>>("Objective-C")?;
         let version_meta = meta.get("version")?;
         if version_meta.get_unsigned_integer()? != 1 {
             tracing::error!(

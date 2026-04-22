@@ -23,7 +23,7 @@ use pdb::*;
 use crate::symbol_parser::{ParsedDataSymbol, ParsedProcedure, ParsedSymbol};
 use crate::type_parser::ParsedType;
 use binaryninja::architecture::{Architecture, CoreArchitecture};
-use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::BinaryView;
 use binaryninja::calling_convention::CoreCallingConvention;
 use binaryninja::confidence::{Conf, MIN_CONFIDENCE};
 use binaryninja::debuginfo::{DebugFunctionInfo, DebugInfo};

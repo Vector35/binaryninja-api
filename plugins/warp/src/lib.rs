@@ -4,7 +4,7 @@ use binaryninja::architecture::{
     Architecture, ImplicitRegisterExtend, Register as BNRegister, RegisterInfo,
 };
 use binaryninja::basic_block::BasicBlock as BNBasicBlock;
-use binaryninja::binary_view::{BinaryView, BinaryViewExt};
+use binaryninja::binary_view::BinaryView;
 use binaryninja::confidence::MAX_CONFIDENCE;
 use binaryninja::function::{Function as BNFunction, NativeBlock};
 use binaryninja::low_level_il::expression::{

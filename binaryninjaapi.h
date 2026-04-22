@@ -8165,7 +8165,8 @@ namespace BinaryNinja {
 		*/
 		void SetCommentForAddress(uint64_t addr, const std::string& comment);
 
-		void StoreMetadata(const std::string& key, Ref<Metadata> value, bool isAuto = false);
+		void StoreMetadata(const std::string& key, Ref<Metadata> value,
+			BNMetadataStoreFlag flags = (BNMetadataStoreFlag)(MetadataStorePersistent | MetadataStoreMarksAnalysisChanged));
 		Ref<Metadata> QueryMetadata(const std::string& key);
 		void RemoveMetadata(const std::string& key);
 		Ref<Metadata> GetMetadata();
@@ -13916,7 +13917,10 @@ namespace BinaryNinja {
 		void ExpandRegion(uint64_t hash);
 		void ExpandAll();
 
-		void StoreMetadata(const std::string& key, Ref<Metadata> value, bool isAuto = false);
+		// Unlike BinaryView::StoreMetadata, the default does not mark the file as modified,
+		// preserving the historical behavior of Function metadata writes.
+		void StoreMetadata(const std::string& key, Ref<Metadata> value,
+			BNMetadataStoreFlag flags = MetadataStorePersistent);
 		Ref<Metadata> QueryMetadata(const std::string& key);
 		Ref<Metadata> GetMetadata();
 		Ref<Metadata> GetAutoMetadata();

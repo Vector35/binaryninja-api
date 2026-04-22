@@ -40,7 +40,7 @@ pub use binaryninjacore_sys::BNHighlightStandardColor as HighlightStandardColor;
 pub use binaryninjacore_sys::BNInlineDuringAnalysis as InlineDuringAnalysis;
 
 use crate::architecture::{IndirectBranchInfo, RegisterId};
-use crate::binary_view::AddressRange;
+use crate::binary_view::{AddressRange, MetadataStoreFlags};
 use crate::confidence::Conf;
 use crate::high_level_il::HighLevelILFunction;
 use crate::language_representation::CoreLanguageRepresentationFunction;
@@ -2721,13 +2721,20 @@ impl Function {
         }
     }
 
-    pub fn store_metadata<V>(&self, key: &str, value: V, is_auto: bool)
+    pub fn store_metadata<V>(&self, key: &str, value: V, flags: MetadataStoreFlags)
     where
         V: Into<Ref<Metadata>>,
     {
         let md = value.into();
         let key = key.to_cstr();
-        unsafe { BNFunctionStoreMetadata(self.handle, key.as_ptr(), md.as_ref().handle, is_auto) };
+        unsafe {
+            BNFunctionStoreMetadata(
+                self.handle,
+                key.as_ptr(),
+                md.as_ref().handle,
+                flags.into_raw(),
+            )
+        };
     }
 
     pub fn remove_metadata(&self, key: &str) {

@@ -450,6 +450,56 @@ struct CustomBinaryViewContext<C: CustomBinaryView> {
     view: C,
 }
 
+/// Controls how a metadata write behaves on a [`BinaryView`] or [`crate::function::Function`].
+///
+/// `persistent` serializes the value into the BNDB snapshot so it survives reload. Without it
+/// the value is kept in memory for this session only.
+/// `marks_analysis_changed` marks the file as analysis-changed (drives the "dirty" indicator).
+/// Set this for genuine user-visible edits and leave it clear when caching re-derivable data.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct MetadataStoreFlags {
+    pub persistent: bool,
+    pub marks_analysis_changed: bool,
+}
+
+impl MetadataStoreFlags {
+    /// Neither persisted nor dirties the view. Equivalent to the legacy
+    /// `BinaryView::store_metadata`/`Function::store_metadata` `is_auto = true`.
+    pub const EPHEMERAL: Self = Self {
+        persistent: false,
+        marks_analysis_changed: false,
+    };
+
+    /// Persisted without dirtying the view. Equivalent to the legacy `Function::store_metadata`
+    /// `is_auto = false` (where Function metadata writes never affected the file's modified
+    /// state). For BinaryView writes that should also dirty the view, chain `.marks_analysis_changed(true)`.
+    pub const PERSISTENT: Self = Self {
+        persistent: true,
+        marks_analysis_changed: false,
+    };
+
+    pub fn persistent(mut self, persistent: bool) -> Self {
+        self.persistent = persistent;
+        self
+    }
+
+    pub fn marks_analysis_changed(mut self, marks_analysis_changed: bool) -> Self {
+        self.marks_analysis_changed = marks_analysis_changed;
+        self
+    }
+
+    pub(crate) fn into_raw(self) -> BNMetadataStoreFlag {
+        let mut raw = BNMetadataStoreFlag::MetadataStoreEphemeral;
+        if self.persistent {
+            raw |= BNMetadataStoreFlag::MetadataStorePersistent;
+        }
+        if self.marks_analysis_changed {
+            raw |= BNMetadataStoreFlag::MetadataStoreMarksAnalysisChanged;
+        }
+        raw
+    }
+}
+
 #[allow(clippy::len_without_is_empty)]
 pub trait BinaryViewBase {
     fn read(&self, _buf: &mut [u8], _offset: u64) -> usize {
@@ -2377,14 +2427,19 @@ impl BinaryView {
             .and_then(|md| T::try_from(md.as_ref()).ok())
     }
 
-    pub fn store_metadata<V>(&self, key: &str, value: V, is_auto: bool)
+    pub fn store_metadata<V>(&self, key: &str, value: V, flags: MetadataStoreFlags)
     where
         V: Into<Ref<Metadata>>,
     {
         let md = value.into();
         let key = key.to_cstr();
         unsafe {
-            BNBinaryViewStoreMetadata(self.handle, key.as_ptr(), md.as_ref().handle, is_auto)
+            BNBinaryViewStoreMetadata(
+                self.handle,
+                key.as_ptr(),
+                md.as_ref().handle,
+                flags.into_raw(),
+            )
         };
     }
 

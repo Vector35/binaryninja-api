@@ -3664,6 +3664,18 @@ extern "C"
 		ArrayDataType
 	};
 
+	// Controls how a metadata write behaves on a BinaryView or Function.
+	BN_OPTIONS(uint8_t, BNMetadataStoreFlag)
+	{
+		// The value is kept in memory for this session only.
+		MetadataStoreEphemeral            = 0,
+		// Serialize the value into the BNDB snapshot so it survives reload.
+		MetadataStorePersistent           = 1,
+		// Mark the file as analysis-changed (drives the "dirty" indicator). Set this for
+		// genuine user-visible edits. Leave it clear when caching re-derivable data.
+		MetadataStoreMarksAnalysisChanged = 2,
+	};
+
 	typedef struct BNRegisterStackAdjustment
 	{
 		uint32_t regStack;
@@ -5956,7 +5968,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNFunctionExpandRegion(BNFunction* func, uint64_t hash);
 
 	BINARYNINJACOREAPI void BNFunctionStoreMetadata(
-	    BNFunction* func, const char* key, BNMetadata* value, bool isAuto);
+	    BNFunction* func, const char* key, BNMetadata* value, BNMetadataStoreFlag flags);
 	BINARYNINJACOREAPI BNMetadata* BNFunctionQueryMetadata(BNFunction* func, const char* key);
 	BINARYNINJACOREAPI void BNFunctionRemoveMetadata(BNFunction* func, const char* key);
 	BINARYNINJACOREAPI BNMetadata* BNFunctionGetMetadata(BNFunction* func);
@@ -8650,7 +8662,7 @@ extern "C"
 
 	// Store/Query structured data to/from a BinaryView
 	BINARYNINJACOREAPI void BNBinaryViewStoreMetadata(
-	    BNBinaryView* view, const char* key, BNMetadata* value, bool isAuto);
+	    BNBinaryView* view, const char* key, BNMetadata* value, BNMetadataStoreFlag flags);
 	BINARYNINJACOREAPI BNMetadata* BNBinaryViewQueryMetadata(BNBinaryView* view, const char* key);
 	BINARYNINJACOREAPI void BNBinaryViewRemoveMetadata(BNBinaryView* view, const char* key);
 	BINARYNINJACOREAPI BNMetadata* BNBinaryViewGetMetadata(BNBinaryView* view);

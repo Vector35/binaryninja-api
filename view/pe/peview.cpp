@@ -1010,8 +1010,8 @@ bool PEView::Init()
 				richMetadataLookupIdentifiers.push_back(id);
 				richMetadataLookupNames.push_back(name);
 			}
-			StoreMetadata("RichHeaderLookupIdentifiers", new Metadata(richMetadataLookupIdentifiers), true);
-			StoreMetadata("RichHeaderLookupNames", new Metadata(richMetadataLookupNames), true);
+			StoreMetadata("RichHeaderLookupIdentifiers", new Metadata(richMetadataLookupIdentifiers), MetadataStoreEphemeral);
+			StoreMetadata("RichHeaderLookupNames", new Metadata(richMetadataLookupNames), MetadataStoreEphemeral);
 
 			vector<Ref<Metadata>> richMetadata;
 			for (entryIdx = 0; entryIdx < richValues.size(); entryIdx++)
@@ -1041,7 +1041,7 @@ bool PEView::Init()
 
 			if (validRichHeader)
 			{
-				StoreMetadata("RichHeader", new Metadata(richMetadata), true);
+				StoreMetadata("RichHeader", new Metadata(richMetadata), MetadataStoreEphemeral);
 				StructureBuilder richHeaderBuilder;
 				richHeaderBuilder.AddMember(Type::IntegerType(4, false), "e_magic__DanS");
 				richHeaderBuilder.AddMember(Type::ArrayType(Type::IntegerType(4, false), 3), "e_align");
@@ -1686,8 +1686,8 @@ bool PEView::Init()
 				numImportEntries++;
 			}
 
-			StoreMetadata("Libraries", new Metadata(libraries), true);
-			StoreMetadata("LibraryFound", new Metadata(libraryFound), true);
+			StoreMetadata("Libraries", new Metadata(libraries), MetadataStoreEphemeral);
+			StoreMetadata("LibraryFound", new Metadata(libraryFound), MetadataStoreEphemeral);
 			if (numImportEntries)
 			{
 				// Create Import Directory Table Type
@@ -1893,16 +1893,16 @@ bool PEView::Init()
 
 						reader.Seek(RVAToFileOffset(debugDir.addressOfRawData));
 						uint32_t signature = reader.Read32();
-						StoreMetadata("DEBUG_INFO_TYPE", new Metadata((uint64_t)signature), true);
+						StoreMetadata("DEBUG_INFO_TYPE", new Metadata((uint64_t)signature), MetadataStoreEphemeral);
 						if (signature == 0x53445352) // SDSR
 						{
 							vector<uint8_t> guid(16);
 							reader.Read(&guid[0], 16);
 							uint32_t age = reader.Read32();
-							StoreMetadata("PDB_GUID", new Metadata(guid), true);
-							StoreMetadata("PDB_AGE", new Metadata((uint64_t)age), true);
+							StoreMetadata("PDB_GUID", new Metadata(guid), MetadataStoreEphemeral);
+							StoreMetadata("PDB_AGE", new Metadata((uint64_t)age), MetadataStoreEphemeral);
 							string pdbFileName = reader.ReadCString();
-							StoreMetadata("PDB_FILENAME", new Metadata(pdbFileName), true);
+							StoreMetadata("PDB_FILENAME", new Metadata(pdbFileName), MetadataStoreEphemeral);
 							m_logger->LogInfo("PDBFileName: %s\n", pdbFileName.c_str());
 
 							DefineDataVariable(m_imageBase + debugDir.addressOfRawData + 4, Type::ArrayType(Type::IntegerType(1, false), 16));
@@ -2676,7 +2676,7 @@ bool PEView::Init()
 
 	bulkSymbolModification.End();
 
-	StoreMetadata("SymbolExternalLibraryMapping", m_symExternMappingMetadata, true);
+	StoreMetadata("SymbolExternalLibraryMapping", m_symExternMappingMetadata, MetadataStoreEphemeral);
 
 	try
 	{
@@ -3363,7 +3363,7 @@ bool PEView::Init()
 
 					if (!versionInfo.empty())
 					{
-						StoreMetadata("PEVersionInfo", new Metadata(versionInfo), true);
+						StoreMetadata("PEVersionInfo", new Metadata(versionInfo), MetadataStoreEphemeral);
 
 						// Set preview on this resource entry
 						std::string verPreview;
@@ -3391,7 +3391,7 @@ bool PEView::Init()
 				metadataArray.reserve(resourceEntries.size());
 				for (auto& entry : resourceEntries)
 					metadataArray.push_back(new Metadata(entry));
-				StoreMetadata("PEResources", new Metadata(metadataArray), true);
+				StoreMetadata("PEResources", new Metadata(metadataArray), MetadataStoreEphemeral);
 			}
 		}
 	}

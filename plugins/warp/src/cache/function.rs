@@ -1,4 +1,5 @@
 use crate::convert::{comment_to_bn_comment, to_bn_symbol_at_address};
+use binaryninja::binary_view::MetadataStoreFlags;
 use binaryninja::function::{Function as BNFunction, FunctionUpdateType};
 use binaryninja::symbol::SymbolType;
 use warp::signature::function::Function;
@@ -36,7 +37,11 @@ pub fn insert_cached_function_match(function: &BNFunction, matched_function: Opt
                 let bn_comment = comment_to_bn_comment(&function, comment.clone());
                 function.set_comment_at(bn_comment.addr, &bn_comment.comment);
             }
-            function.store_metadata("warp_matched_function", &matched_function.to_bytes(), false);
+            function.store_metadata(
+                "warp_matched_function",
+                &matched_function.to_bytes(),
+                MetadataStoreFlags::PERSISTENT,
+            );
         }
         None => {
             function.remove_metadata("warp_matched_function");

@@ -1,4 +1,4 @@
-use binaryninja::binary_view::BinaryView;
+use binaryninja::binary_view::{BinaryView, MetadataStoreFlags};
 use binaryninja::file_metadata::FileMetadata;
 use binaryninja::headless::Session;
 use binaryninja::platform::Platform;
@@ -14,9 +14,9 @@ fn store_and_query_function_metadata() {
         .expect("Failed to get entry point function");
 
     // Store key/value pairs to user and auto metadata
-    func.store_metadata("one", "one", false);
-    func.store_metadata("two", 2u64, true);
-    func.store_metadata("three", "three", true);
+    func.store_metadata("one", "one", MetadataStoreFlags::PERSISTENT);
+    func.store_metadata("two", 2u64, MetadataStoreFlags::NONE);
+    func.store_metadata("three", "three", MetadataStoreFlags::NONE);
     func.remove_metadata("three");
 
     // Assert that we can query from both user and auto metadata

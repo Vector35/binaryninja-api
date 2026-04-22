@@ -1585,7 +1585,7 @@ void ObjCProcessor::ProcessObjCData()
 	PostProcessObjCSections(reader.get());
 
 	auto meta = SerializeMetadata();
-	m_data->StoreMetadata("Objective-C", meta, true);
+	m_data->StoreMetadata("Objective-C", meta, MetadataStoreEphemeral);
 
 	m_relocationPointerRewrites.clear();
 }

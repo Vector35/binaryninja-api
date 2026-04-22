@@ -2244,8 +2244,8 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 			else
 				libraryFound.push_back(new Metadata(string("")));
 		}
-		StoreMetadata("Libraries", new Metadata(libraries), true);
-		StoreMetadata("LibraryFound", new Metadata(libraryFound), true);
+		StoreMetadata("Libraries", new Metadata(libraries), MetadataStoreEphemeral);
+		StoreMetadata("LibraryFound", new Metadata(libraryFound), MetadataStoreEphemeral);
 	}
 
 	bool first = true;
@@ -2380,7 +2380,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	Ref<Metadata> symbolToLibraryMapping = new Metadata(KeyValueDataType);
 	for (const auto& [name, libName] : symbolLibraryMapping)
 		symbolToLibraryMapping->SetValueForKey(name, new Metadata(libName));
-	StoreMetadata("SymbolExternalLibraryMapping", std::move(symbolToLibraryMapping), true);
+	StoreMetadata("SymbolExternalLibraryMapping", std::move(symbolToLibraryMapping), MetadataStoreEphemeral);
 
 	auto relocationHandler = m_arch->GetRelocationHandler("Mach-O");
 	if (relocationHandler)

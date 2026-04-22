@@ -987,8 +987,8 @@ bool ElfView::Init()
 				else
 					libraryFound.push_back(new Metadata(string("")));
 			}
-			StoreMetadata("Libraries", new Metadata(libraries), true);
-			StoreMetadata("LibraryFound", new Metadata(libraryFound), true);
+			StoreMetadata("Libraries", new Metadata(libraries), MetadataStoreEphemeral);
+			StoreMetadata("LibraryFound", new Metadata(libraryFound), MetadataStoreEphemeral);
 
 			if (m_relocaSection.size > 0)
 			{

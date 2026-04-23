@@ -128,6 +128,9 @@ test_cases = \
     ('T', b'\x41\xf3\x1d\x50', 'LLIL_SET_REG.d(r0,LLIL_ASR.d(LLIL_REG.d(r1),LLIL_CONST.b(0x14)))'),
     # rev r1, r1
     ('T', b'\x09\xba',         'LLIL_SET_REG.d(r1,LLIL_OR.d(LLIL_LSR.d(LLIL_REG.d(r1),LLIL_CONST.d(0x18)),LLIL_OR.d(LLIL_LSL.d(LLIL_AND.d(LLIL_LSR.d(LLIL_REG.d(r1),LLIL_CONST.d(0x10)),LLIL_CONST.d(0xFF)),LLIL_CONST.b(0x8)),LLIL_OR.d(LLIL_LSL.d(LLIL_AND.d(LLIL_LSR.d(LLIL_REG.d(r1),LLIL_CONST.d(0x8)),LLIL_CONST.d(0xFF)),LLIL_CONST.b(0x10)),LLIL_LSL.d(LLIL_AND.d(LLIL_REG.d(r1),LLIL_CONST.d(0xFF)),LLIL_CONST.b(0x18))))))'),
+    ('T', b'\x09\xba',         'LLIL_SET_REG.d(r1,LLIL_OR.d(LLIL_LSR.d(LLIL_REG.d(r1),LLIL_CONST.d(0x18)),LLIL_OR.d(LLIL_LSL.d(LLIL_AND.d(LLIL_LSR.d(LLIL_REG.d(r1),LLIL_CONST.d(0x10)),LLIL_CONST.d(0xFF)),LLIL_CONST.b(0x8)),LLIL_OR.d(LLIL_LSL.d(LLIL_AND.d(LLIL_LSR.d(LLIL_REG.d(r1),LLIL_CONST.d(0x8)),LLIL_CONST.d(0xFF)),LLIL_CONST.b(0x10)),LLIL_LSL.d(LLIL_AND.d(LLIL_REG.d(r1),LLIL_CONST.d(0xFF)),LLIL_CONST.b(0x18))))))'),
+    # smlabb  r0, r0, r5, r4
+    ('T', b'\x10\xfb\x05\x40', 'LLIL_SET_REG(r0,LLIL_ADD.d(LLIL_MUL.d(LLIL_LOW_PART.w(LLIL_REG.d(r0)),LLIL_LOW_PART.w(LLIL_REG.d(r5))),LLIL_REG.d(r4)))'),
 ]
 
 import re

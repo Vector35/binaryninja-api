@@ -4,15 +4,14 @@ use binaryninja::repository::RepositoryManager;
 #[test]
 fn test_list() {
     let _session = Session::new().expect("Failed to initialize session");
-    let manager = RepositoryManager::default();
-    let repositories = manager.repositories();
+    let repositories = RepositoryManager::repositories();
     for repository in &repositories {
         let repo_path = repository.path();
-        let repository_by_path = manager.repository_by_path(&repo_path).unwrap();
+        let repository_by_path = RepositoryManager::repository_by_path(&repo_path).unwrap();
         assert_eq!(repository.url(), repository_by_path.url());
     }
 
-    let repository = manager.default_repository();
+    let repository = RepositoryManager::default_repository();
     let _full_path = repository.full_path();
     let _path = repository.path();
     let _url = repository.url();

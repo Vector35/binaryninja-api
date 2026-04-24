@@ -1668,7 +1668,7 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 				break;
 		}
 
-		il.AddInstruction(WriteArithOperand(il, instr, il.Add(4, il.Mult(4, op1,
+		il.AddInstruction(WriteArithOperand(il, instr, il.Add(4, il.MultDoublePrecSigned(2, op1,
 			op2), ReadILOperand(il, instr, 3)), IL_FLAGWRITE_NONE));
 
 		break;

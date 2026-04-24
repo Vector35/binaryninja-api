@@ -1,11 +1,14 @@
 #pragma once
 
 #include <QtCore/QAbstractItemModel>
+#include <QtCore/QHash>
 #include <QtCore/QItemSelection>
 #include <QtCore/QModelIndex>
+#include <QtCore/QPointer>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QSize>
 #include <QtCore/QSortFilterProxyModel>
+#include <QtCore/QStringList>
 #include <QtCore/QTimer>
 #include <QtCore/QVariant>
 #include <QtGui/QMouseEvent>
@@ -19,6 +22,7 @@
 #include <QtWidgets/QStyledItemDelegate>
 #include <QtWidgets/QTableWidget>
 #include <QtWidgets/QTreeView>
+#include <QtWidgets/QVBoxLayout>
 
 #include <map>
 #include <optional>
@@ -30,6 +34,7 @@
 #include "render.h"
 #include "menus.h"
 #include "clickablelabel.h"
+#include "theme.h"
 
 /*!
 
@@ -147,6 +152,50 @@ class BINARYNINJAUIAPI SettingsOutlineProxyModel : public QSortFilterProxyModel
 
 /*!
     \ingroup settingsview
+
+    Editor widget for array-of-string settings. Renders one editable row per item
+    plus a top row for adding new entries. Used by SettingsEditor in place of the
+    raw JSON QLineEdit for settings whose value is a list of strings.
+*/
+class BINARYNINJAUIAPI ArrayStringSettingEditor : public QWidget
+{
+	Q_OBJECT
+
+  private:
+	QStringList m_enumValues;
+	bool m_readOnly = false;
+	QVBoxLayout* m_rowLayout = nullptr;
+	QWidget* m_addRowWidget = nullptr;
+	QLineEdit* m_addLineEdit = nullptr;
+	QComboBox* m_addComboBox = nullptr;
+	CustomStyleFlatToolButton* m_addButton = nullptr;
+	std::vector<QWidget*> m_rows;
+
+	QLineEdit* addRowInputField() const;
+	void clearRows();
+	QString currentAddText() const;
+	void appendRow(const QString& text);
+
+  private Q_SLOTS:
+	void onAddClicked();
+	void onRowEditingFinished();
+	void onRowRemoveClicked();
+
+  public:
+	ArrayStringSettingEditor(QWidget* parent, const QStringList& enumValues, bool readOnly);
+
+	void setValues(const QStringList& values);
+	QStringList values() const;
+	void clearAddText();
+
+  Q_SIGNALS:
+	void changed();
+	void geometryChanged();
+};
+
+
+/*!
+    \ingroup settingsview
 */
 class BINARYNINJAUIAPI SettingsEditor : public QWidget
 {
@@ -176,6 +225,7 @@ class BINARYNINJAUIAPI SettingsEditor : public QWidget
 	QSpinBox* m_spinBox = nullptr;
 	QComboBox* m_comboBox = nullptr;
 	QTableWidget* m_objectTable = nullptr;
+	ArrayStringSettingEditor* m_stringListEditor = nullptr;
 	std::set<QString> m_validComboSelections;
 	std::vector<std::pair<std::string, Json::ValueType>> m_objectTableColumns;
 	Json::StreamWriterBuilder m_builder;
@@ -219,6 +269,8 @@ class BINARYNINJAUIAPI SettingsEditor : public QWidget
 	void updateDoubleNumberSetting(double value);
 	void updateIntNumberSetting(int value);
 	void updateObjectSetting();
+	void updateStringListSetting();
+	void onStringListGeometryChanged();
 	void addArraySetting(const QString& text);
 	void resetSetting();
 	void resetAllSettings(BNSettingsScope scope);
@@ -268,6 +320,7 @@ class BINARYNINJAUIAPI SettingsDelegate : public QStyledItemDelegate
 	QPersistentModelIndex m_scrollAnchorIdx;
 	int m_scrollAnchorOffset = 0;
 	bool m_resizing = false;
+	mutable QHash<QPersistentModelIndex, QPointer<SettingsEditor>> m_settingEditors;
 
 	QTreeView* m_treeView;
 	std::function<void(const QModelIndex& index)> m_hoverAction = nullptr;

@@ -6,6 +6,7 @@
 #include <QtCore/QModelIndex>
 #include <QtCore/QPointer>
 #include <QtCore/QRegularExpression>
+#include <QtCore/QSet>
 #include <QtCore/QSize>
 #include <QtCore/QSortFilterProxyModel>
 #include <QtCore/QStringList>
@@ -163,6 +164,7 @@ class BINARYNINJAUIAPI ArrayStringSettingEditor : public QWidget
 
   private:
 	QStringList m_enumValues;
+	QSet<QString> m_defaultValueSet;
 	bool m_readOnly = false;
 	QVBoxLayout* m_rowLayout = nullptr;
 	QWidget* m_addRowWidget = nullptr;
@@ -175,6 +177,7 @@ class BINARYNINJAUIAPI ArrayStringSettingEditor : public QWidget
 	void clearRows();
 	QString currentAddText() const;
 	void appendRow(const QString& text);
+	void updateTabOrder();
 
   private Q_SLOTS:
 	void onAddClicked();
@@ -182,11 +185,14 @@ class BINARYNINJAUIAPI ArrayStringSettingEditor : public QWidget
 	void onRowRemoveClicked();
 
   public:
-	ArrayStringSettingEditor(QWidget* parent, const QStringList& enumValues, bool readOnly);
+	ArrayStringSettingEditor(QWidget* parent, const QStringList& enumValues, const QStringList& defaultValues, bool readOnly);
 
 	void setValues(const QStringList& values);
 	QStringList values() const;
 	void clearAddText();
+
+  protected:
+	void paintEvent(QPaintEvent* event) override;
 
   Q_SIGNALS:
 	void changed();

@@ -204,6 +204,7 @@ name = "binaryninja"
 version = "0.1.0"
 dependencies = [
  "binaryninjacore-sys",
+ "bitflags 2.9.1",
  "insta",
  "rayon",
  "rstest 0.24.0",

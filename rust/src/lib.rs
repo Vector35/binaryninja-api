@@ -86,6 +86,7 @@ pub mod string_detection;
 pub mod symbol;
 pub mod tags;
 pub mod tracing;
+pub mod transform;
 pub mod types;
 pub mod update;
 pub mod variable;

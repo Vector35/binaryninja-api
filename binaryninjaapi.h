@@ -19201,6 +19201,7 @@ namespace BinaryNinja {
 		std::string GetPluginDirectory() const;
 		std::string GetAuthor() const;
 		std::string GetDescription() const;
+		std::string GetLicenseText() const;
 		std::string GetName() const;
 		std::vector<PluginType> GetPluginTypes() const;
 		std::string GetPackageUrl() const;

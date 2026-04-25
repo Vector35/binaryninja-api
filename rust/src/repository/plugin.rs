@@ -103,6 +103,13 @@ impl Extension {
         unsafe { BnString::into_string(result as *mut c_char) }
     }
 
+    /// String complete license text for the given plugin
+    pub fn license_text(&self) -> String {
+        let result = unsafe { BNPluginGetLicenseText(self.handle.as_ptr()) };
+        assert!(!result.is_null());
+        unsafe { BnString::into_string(result as *mut c_char) }
+    }
+
     /// Minimum version info the plugin was tested on
     pub fn minimum_version_info(&self) -> VersionInfo {
         let result = unsafe { BNPluginGetMinimumVersionInfo(self.handle.as_ptr()) };

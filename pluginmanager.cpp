@@ -70,6 +70,11 @@ string Extension::GetDescription() const
 	RETURN_STRING(BNPluginGetDescription(m_object));
 }
 
+string Extension::GetLicenseText() const
+{
+	RETURN_STRING(BNPluginGetLicenseText(m_object));
+}
+
 static VersionInfo ConvertVersionInfo(const BNVersionInfo& coreInfo)
 {
 	VersionInfo result;

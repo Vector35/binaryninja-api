@@ -20,6 +20,7 @@ fn test_list() {
     for plugin in &plugins {
         let plugin_path = plugin.path();
         let plugin_by_path = repository.plugin_by_path(&plugin_path).unwrap();
+        let _license_text = plugin.license_text();
         assert_eq!(plugin.package_url(), plugin_by_path.package_url());
     }
 }

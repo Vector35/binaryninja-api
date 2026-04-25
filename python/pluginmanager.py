@@ -154,7 +154,7 @@ class Extension:
 	@deprecation.deprecated(deprecated_in="5.3", details='This field will be removed.')
 	def license_text(self) -> Optional[str]:
 		"""String complete license text for the given plugin"""
-		return ''
+		return core.BNPluginGetLicenseText(self.handle)
 
 	@property
 	def long_description(self) -> Optional[str]:

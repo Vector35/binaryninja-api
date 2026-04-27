@@ -1697,7 +1697,7 @@ void ObjCProcessor::ProcessCFStrings()
 				auto data = m_data->ReadBuffer(strLoc, size * 2);
 
 				str = "";
-				for (uint64_t bufferOff = 0; bufferOff < size * 2; bufferOff += 2)
+				for (uint64_t bufferOff = 0; bufferOff + 1 < data.GetLength(); bufferOff += 2)
 				{
 					uint8_t* rawData = static_cast<uint8_t*>(data.GetData());
 					uint8_t* offsetAddress = rawData + bufferOff;
@@ -1789,7 +1789,7 @@ void ObjCProcessor::ProcessNSConstantArrays()
 		}
 		ScopedSymbolQueue::Get().Process();
 	}
-	
+
 }
 
 void ObjCProcessor::ProcessNSConstantDictionaries()

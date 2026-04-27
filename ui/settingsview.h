@@ -3,7 +3,9 @@
 #include <QtCore/QAbstractItemModel>
 #include <QtCore/QHash>
 #include <QtCore/QItemSelection>
+#include <QtCore/QMimeData>
 #include <QtCore/QModelIndex>
+#include <QtCore/QPoint>
 #include <QtCore/QPointer>
 #include <QtCore/QRegularExpression>
 #include <QtCore/QSet>
@@ -12,6 +14,11 @@
 #include <QtCore/QStringList>
 #include <QtCore/QTimer>
 #include <QtCore/QVariant>
+#include <QtGui/QDrag>
+#include <QtGui/QDragEnterEvent>
+#include <QtGui/QDragLeaveEvent>
+#include <QtGui/QDragMoveEvent>
+#include <QtGui/QDropEvent>
 #include <QtGui/QMouseEvent>
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QComboBox>
@@ -22,6 +29,7 @@
 #include <QtWidgets/QSpinBox>
 #include <QtWidgets/QStyledItemDelegate>
 #include <QtWidgets/QTableWidget>
+#include <QtWidgets/QToolButton>
 #include <QtWidgets/QTreeView>
 #include <QtWidgets/QVBoxLayout>
 
@@ -166,6 +174,7 @@ class BINARYNINJAUIAPI ArrayStringSettingEditor : public QWidget
 	QStringList m_enumValues;
 	QSet<QString> m_defaultValueSet;
 	bool m_readOnly = false;
+	bool m_reorderable = false;
 	QVBoxLayout* m_rowLayout = nullptr;
 	QWidget* m_addRowWidget = nullptr;
 	QLineEdit* m_addLineEdit = nullptr;
@@ -173,11 +182,17 @@ class BINARYNINJAUIAPI ArrayStringSettingEditor : public QWidget
 	CustomStyleFlatToolButton* m_addButton = nullptr;
 	std::vector<QWidget*> m_rows;
 
+	int m_dropIndicatorY = -1;
+	QPoint m_dragStartPos;
+	int m_dragSourceIndex = -1;
+
 	QLineEdit* addRowInputField() const;
 	void clearRows();
 	QString currentAddText() const;
 	void appendRow(const QString& text);
 	void updateTabOrder();
+	int rowIndexAtY(int y) const;
+	QToolButton* findRowGrip(QWidget* row) const;
 
   private Q_SLOTS:
 	void onAddClicked();
@@ -185,7 +200,7 @@ class BINARYNINJAUIAPI ArrayStringSettingEditor : public QWidget
 	void onRowRemoveClicked();
 
   public:
-	ArrayStringSettingEditor(QWidget* parent, const QStringList& enumValues, const QStringList& defaultValues, bool readOnly);
+	ArrayStringSettingEditor(QWidget* parent, const QStringList& enumValues, const QStringList& defaultValues, bool readOnly, bool reorderable);
 
 	void setValues(const QStringList& values);
 	QStringList values() const;
@@ -193,6 +208,11 @@ class BINARYNINJAUIAPI ArrayStringSettingEditor : public QWidget
 
   protected:
 	void paintEvent(QPaintEvent* event) override;
+	bool eventFilter(QObject* watched, QEvent* event) override;
+	void dragEnterEvent(QDragEnterEvent* event) override;
+	void dragMoveEvent(QDragMoveEvent* event) override;
+	void dragLeaveEvent(QDragLeaveEvent* event) override;
+	void dropEvent(QDropEvent* event) override;
 
   Q_SIGNALS:
 	void changed();

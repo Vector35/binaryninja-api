@@ -194,10 +194,7 @@ std::string Extension::GetCurrentVersionID() const
 
 std::string Extension::GetLatestVersionID() const
 {
-	auto versions = GetVersions();
-	if (versions.empty())
-		return "";
-	return versions.front().id;
+	RETURN_STRING(BNPluginGetLatestVersionID(m_object));
 }
 
 

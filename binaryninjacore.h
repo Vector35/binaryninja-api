@@ -7982,6 +7982,7 @@ extern "C"
 	BINARYNINJACOREAPI BNPluginVersion* BNPluginGetVersions(BNPlugin* p, size_t* count);
 	BINARYNINJACOREAPI void BNFreePluginVersions(BNPluginVersion* r, size_t count);
 	BINARYNINJACOREAPI const char* BNPluginGetCurrentVersionID(BNPlugin* p);
+	BINARYNINJACOREAPI const char* BNPluginGetLatestVersionID(BNPlugin* p);
 	BINARYNINJACOREAPI BNPluginVersion BNPluginGetCurrentVersion(BNPlugin* p);
 	BINARYNINJACOREAPI void BNPluginFreeVersion(BNPluginVersion v);
 	BINARYNINJACOREAPI const char* BNPluginGetCommit(BNPlugin* p);

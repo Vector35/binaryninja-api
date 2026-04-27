@@ -263,6 +263,13 @@ class Extension:
 			core.BNPluginFreeVersion(version)
 
 	@property
+	def latest_version_id(self) -> str:
+		"""Repository-provided latest version id for the plugin"""
+		result = core.BNPluginGetLatestVersionID(self.handle)
+		assert result is not None, "core.BNPluginGetLatestVersionID returned None"
+		return result
+
+	@property
 	def versions(self) -> List[ExtensionVersion]:
 		"""Version metadata for all available plugin versions"""
 		result = []

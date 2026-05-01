@@ -13,6 +13,14 @@ using namespace std;
 
 
 static ElfViewType* g_elfViewType = nullptr;
+static const char* ELF_RECORD_MINI_DEBUG_SYMBOL_ADDRESSES_OPTION = "loader.elf.recordMiniDebugSymbolAddresses";
+static const char* ELF_MINI_DEBUG_SYMBOL_ADDRESS_METADATA = "ELFMiniDebugSymbolAddresses";
+
+
+static bool IsFunctionSymbolType(BNSymbolType type)
+{
+	return (type == FunctionSymbol) || (type == ImportedFunctionSymbol) || (type == LibraryFunctionSymbol);
+}
 
 
 void BinaryNinja::InitElfViewType()
@@ -809,6 +817,9 @@ bool ElfView::Init()
 	SetDefaultPlatform(platform);
 	GetParentView()->SetDefaultPlatform(platform);
 
+	if (settings && settings->Contains(ELF_RECORD_MINI_DEBUG_SYMBOL_ADDRESSES_OPTION))
+		m_recordMiniDebugSymbolAddresses = settings->Get<bool>(ELF_RECORD_MINI_DEBUG_SYMBOL_ADDRESSES_OPTION, this);
+
 	// Finished for parse only mode
 	if (m_parseOnly)
 	{
@@ -1436,6 +1447,8 @@ bool ElfView::Init()
 
 	// Process the queued symbols
 	m_symbolQueue->Process();
+	if (!m_miniDebugSymbolAddresses.empty())
+		StoreMetadata(ELF_MINI_DEBUG_SYMBOL_ADDRESS_METADATA, new Metadata(m_miniDebugSymbolAddresses), true);
 	delete m_symbolQueue;
 	m_symbolQueue = nullptr;
 
@@ -2526,12 +2539,36 @@ bool ElfView::Init()
 }
 
 
+Ref<Symbol> ElfView::DefineElfSymbolAndVariableOrFunction(
+	Ref<Platform> functionPlatform, Ref<Symbol> symbol, const Confidence<Ref<Type>>& type)
+{
+	if (IsFunctionSymbolType(symbol->GetType()) && functionPlatform)
+	{
+		DefineAutoSymbol(symbol);
+		auto func = AddFunctionForAnalysis(functionPlatform, symbol->GetAddress());
+		if (type.GetValue() && func)
+			func->ApplyAutoDiscoveredType(type.GetValue());
+		return symbol;
+	}
+
+	return DefineAutoSymbolAndVariableOrFunction(GetDefaultPlatform(), symbol, type);
+}
+
+
 void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uint64_t addr, bool gotEntry,
-	BNSymbolBinding binding, size_t size, const Confidence<Ref<Type>>& typeObj)
+	BNSymbolBinding binding, size_t size, const Confidence<Ref<Type>>& typeObj, Ref<Platform> functionPlatform)
 {
 	// Ensure symbol is within the executable
 	if (type != ExternalSymbol && !IsValidOffset(addr))
 		return;
+
+	uint64_t originalAddress = addr;
+	if (IsFunctionSymbolType(type) && functionPlatform)
+	{
+		uint64_t adjustedAddress = addr;
+		functionPlatform->GetArchitecture()->GetAssociatedArchitectureByAddress(adjustedAddress);
+		addr = adjustedAddress;
+	}
 
 	string name = incomingName;
 	Confidence<Ref<Type>> symbolTypeRef;
@@ -2633,16 +2670,36 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 			new Symbol(type, shortName, fullName, rawName, addr, binding, nameSpace), typeRef);
 	};
 
+	auto recordMiniDebugSymbolAddress = [this, originalAddress](const Ref<Symbol>& symbol) {
+		// Mini-debug ELF function symbols may be normalized before the parent view sees them. Keep only
+		// changed addresses so the parent can recover the associated platform without re-parsing symbols.
+		if (!symbol)
+			return;
+		if (m_recordMiniDebugSymbolAddresses && IsFunctionSymbolType(symbol->GetType()) &&
+			(symbol->GetAddress() != originalAddress))
+		{
+			map<string, Ref<Metadata>> entry = {
+				{"name", new Metadata(symbol->GetRawName())},
+				{"address", new Metadata(symbol->GetAddress())},
+				{"originalAddress", new Metadata(originalAddress)}
+			};
+			m_miniDebugSymbolAddresses.push_back(new Metadata(entry));
+		}
+	};
+
 	if (m_symbolQueue)
 	{
-		m_symbolQueue->Append(process, [this](Symbol* symbol, const Confidence<Ref<Type>>& type) {
-			DefineAutoSymbolAndVariableOrFunction(GetDefaultPlatform(), symbol, type);
-		});
+		m_symbolQueue->Append(process,
+			[this, functionPlatform, recordMiniDebugSymbolAddress](Symbol* symbol, const Confidence<Ref<Type>>& type) {
+				Ref<Symbol> definedSymbol = DefineElfSymbolAndVariableOrFunction(functionPlatform, symbol, type);
+				recordMiniDebugSymbolAddress(definedSymbol);
+			});
 	}
 	else
 	{
 		auto result = process();
-		DefineAutoSymbolAndVariableOrFunction(GetDefaultPlatform(), result.first, result.second);
+		Ref<Symbol> definedSymbol = DefineElfSymbolAndVariableOrFunction(functionPlatform, result.first, result.second);
+		recordMiniDebugSymbolAddress(definedSymbol);
 	}
 }
 
@@ -2767,6 +2824,57 @@ bool ElfView::DerefPpc64Descriptor(BinaryReader& reader, uint64_t addr, uint64_t
 }
 
 
+static map<pair<string, uint64_t>, Ref<Platform>> GetMiniDebugFunctionPlatforms(Ref<BinaryView> debugBv, bool enabled)
+{
+	map<pair<string, uint64_t>, Ref<Platform>> result;
+	if (!enabled || !debugBv)
+		return result;
+
+	Ref<Platform> defaultPlatform = debugBv->GetDefaultPlatform();
+
+	Ref<Metadata> miniDebugSymbolAddresses = debugBv->QueryMetadata(ELF_MINI_DEBUG_SYMBOL_ADDRESS_METADATA);
+	if (!miniDebugSymbolAddresses || !miniDebugSymbolAddresses->IsArray())
+		return result;
+
+	for (const auto& entry : miniDebugSymbolAddresses->GetArray())
+	{
+		if (!entry || !entry->IsKeyValueStore())
+			continue;
+
+		auto values = entry->GetKeyValueStore();
+		auto name = values.find("name");
+		auto address = values.find("address");
+		auto originalAddress = values.find("originalAddress");
+		if ((name == values.end()) || (address == values.end()) || (originalAddress == values.end()) ||
+			!name->second || !address->second || !originalAddress->second ||
+			!name->second->IsString() || !address->second->IsUnsignedInteger() ||
+			!originalAddress->second->IsUnsignedInteger())
+			continue;
+
+		uint64_t associatedAddress = originalAddress->second->GetUnsignedInteger();
+		Ref<Platform> functionPlatform = defaultPlatform->GetAssociatedPlatformByAddress(associatedAddress);
+		if (functionPlatform)
+			result[{name->second->GetString(), address->second->GetUnsignedInteger()}] = functionPlatform;
+	}
+
+	return result;
+}
+
+
+static Ref<Platform> GetMiniDebugFunctionPlatform(
+	const map<pair<string, uint64_t>, Ref<Platform>>& functionPlatforms, const Ref<Symbol>& symbol)
+{
+	if (functionPlatforms.empty() || !IsFunctionSymbolType(symbol->GetType()))
+		return nullptr;
+
+	auto platform = functionPlatforms.find({symbol->GetRawName(), symbol->GetAddress()});
+	if (platform == functionPlatforms.end())
+		return nullptr;
+
+	return platform->second;
+}
+
+
 void ElfView::ParseMiniDebugInfo()
 {
 	Ref<Section> gnuDebugdata = GetParentView()->GetSectionByName(".gnu_debugdata");
@@ -2786,14 +2894,19 @@ void ElfView::ParseMiniDebugInfo()
 	}
 
 	// Load debug bv at same address as this bv
-	string debugBvOptions = fmt::format("{{\"loader.imageBase\": {}, \"analysis.outlining.builtins\": false}}", GetStart());
+	bool isArmThumb = In(m_arch->GetName(), {"armv7", "armv7eb", "thumb2", "thumb2eb"});
+	string debugBvOptions = fmt::format(
+		"{{\"loader.imageBase\": {}, \"analysis.outlining.builtins\": false, \"{}\": {}}}",
+		GetStart(), ELF_RECORD_MINI_DEBUG_SYMBOL_ADDRESSES_OPTION, isArmThumb ? "true" : "false");
 	Ref<BinaryView> debugBv = Load(debugElf, false, debugBvOptions);
+
 	if (!debugBv)
 	{
 		m_logger->LogError("Invalid .gnu_debugdata contents: Failed to create BinaryView");
 		return;
 	}
 
+	auto debugPlatforms = GetMiniDebugFunctionPlatforms(debugBv, isArmThumb);
 	for (const auto& symbol : debugBv->GetSymbols())
 	{
 		DefineElfSymbol(
@@ -2801,7 +2914,10 @@ void ElfView::ParseMiniDebugInfo()
 			symbol->GetRawName(),
 			symbol->GetAddress(),
 			false,
-			symbol->GetBinding()
+			symbol->GetBinding(),
+			0,
+			nullptr,
+			GetMiniDebugFunctionPlatform(debugPlatforms, symbol)
 		);
 	}
 
@@ -3168,6 +3284,16 @@ Ref<Settings> ElfViewType::GetLoadSettingsForData(BinaryView* data)
 	vector<string> overrides = {"loader.imageBase", "loader.platform"};
 	if (!viewRef->IsRelocatable())
 		settings->UpdateProperty("loader.imageBase", "message", "Note: File indicates image is not relocatable.");
+
+	settings->RegisterSetting(ELF_RECORD_MINI_DEBUG_SYMBOL_ADDRESSES_OPTION,
+		R"({
+		"title" : "Record ELF Mini Debug Symbol Addresses",
+		"type" : "boolean",
+		"default" : false,
+		"description" : "Internal option for preserving normalized mini-debug function symbol source addresses during ELF loading.",
+		"ignore" : ["SettingsDefaultScope", "SettingsUserScope", "SettingsProjectScope"],
+		"hidden" : true
+		})");
 
 	for (const auto& override : overrides)
 	{

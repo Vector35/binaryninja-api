@@ -516,6 +516,8 @@ namespace BinaryNinja
 		std::map<uint64_t, uint64_t> m_localGotEntries;
 		std::set<uint64_t> m_gotEntryLocations;
 		std::vector<BNRelocationInfo> m_relocationInfo;
+		std::vector<Ref<Metadata>> m_miniDebugSymbolAddresses;
+		bool m_recordMiniDebugSymbolAddresses = false;
 
 		size_t m_auxSymbolTableEntrySize = 0;
 		size_t m_numDynamicTableEntries = 0;
@@ -525,7 +527,10 @@ namespace BinaryNinja
 		SymbolQueue* m_symbolQueue = nullptr;
 
 		void DefineElfSymbol(BNSymbolType type, const std::string& name, uint64_t addr, bool gotEntry,
-			BNSymbolBinding binding, size_t size = 0, const Confidence<Ref<Type>>& typeObj = nullptr);
+			BNSymbolBinding binding, size_t size = 0, const Confidence<Ref<Type>>& typeObj = nullptr,
+			Ref<Platform> functionPlatform = nullptr);
+		Ref<Symbol> DefineElfSymbolAndVariableOrFunction(Ref<Platform> functionPlatform, Ref<Symbol> symbol,
+			const Confidence<Ref<Type>>& type);
 
 		void ApplyTypesToParentStringTable(const Elf64SectionHeader& section, const bool offset = true);
 		void ApplyTypesToStringTable(const Elf64SectionHeader& section, const int64_t imageBaseAdjustment, const bool offset = true);

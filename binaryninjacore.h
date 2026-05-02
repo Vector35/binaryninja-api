@@ -10056,7 +10056,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeDatabaseObjectList(BNDatabaseObject** objects, size_t count);
 	BINARYNINJACOREAPI int BNGetDatabaseObjectType(BNDatabaseObject* object);
 	BINARYNINJACOREAPI char* BNGetDatabaseObjectDescription(BNDatabaseObject* object);
-	BINARYNINJACOREAPI BNMetadata* BNGetDatabaseObjectMetadata(BNDatabaseObject* object);
+	BINARYNINJACOREAPI BNMetadata* BNGetDatabaseObjectFields(BNDatabaseObject* object);
 	BINARYNINJACOREAPI BNDatabaseObject* BNGetDatabaseObjectParent(BNDatabaseObject* object);
 	BINARYNINJACOREAPI size_t BNGetDatabaseObjectChildren(BNDatabaseObject* object, char*** names, BNDatabaseObject*** objects);
 	BINARYNINJACOREAPI char** BNGetDatabaseObjectChildNames(BNDatabaseObject* object, size_t* count);

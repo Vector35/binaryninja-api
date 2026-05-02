@@ -24230,7 +24230,7 @@ namespace BinaryNinja {
 		// TODO: User subclassing
 		int GetType() const;
 		std::string GetDescription() const;
-		Ref<Metadata> GetMetadata() const;
+		Ref<Metadata> GetFields() const;
 		Ref<DatabaseObject> GetParent() const;
 		std::unordered_map<std::string, Ref<DatabaseObject>> GetChildren();
 		std::vector<std::string> GetChildNames();

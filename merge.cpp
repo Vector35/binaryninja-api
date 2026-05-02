@@ -51,14 +51,9 @@ std::string DatabaseObject::GetDescription() const
 }
 
 
-Ref<Metadata> DatabaseObject::GetMetadata() const
+Ref<Metadata> DatabaseObject::GetFields() const
 {
-	BNMetadata* metadata = BNGetDatabaseObjectMetadata(m_object);
-	if (!metadata)
-	{
-		return nullptr;
-	}
-	return new Metadata(metadata);
+	return new Metadata(BNGetDatabaseObjectFields(m_object));
 }
 
 

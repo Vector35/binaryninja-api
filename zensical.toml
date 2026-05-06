@@ -1,0 +1,180 @@
+[project]
+site_name = "Binary Ninja User Documentation"
+site_description = "Documentation for the Binary Ninja reverse engineering platform"
+site_author = "Vector 35 Inc"
+copyright = '(<a href="https://creativecommons.org/licenses/by/3.0/">cc</a>) <a href="https://vector35.com/">Vector 35 Inc</a>'
+site_url = "https://docs.binary.ninja/"
+repo_url = "https://binary.ninja/"
+repo_name = "binary.ninja"
+dev_addr = "0.0.0.0:8000"
+use_directory_urls = false
+extra_css = ["docs.css", "github.min.css", "juxtapose.min.css"]
+extra_javascript = ["highlight.min.js", "cpp.min.js", "python.min.js", "juxtapose.min.js", "tabsync.js"]
+
+nav = [
+    { "User Documentation" = [
+        { "Getting Started" = "getting-started.md" },
+        { "User Guide" = [
+            "guide/index.md",
+            { "Using Plugins" = "guide/plugins.md" },
+            { "Settings" = "guide/settings.md" },
+            { "Projects" = "guide/projects.md" },
+            { "Enterprise" = "guide/enterprise/index.md" },
+            { "Troubleshooting" = "guide/troubleshooting.md" },
+            { "Objective-C" = "guide/objectivec.md" },
+            { "Firmware Ninja" = "guide/firmwareninja.md" },
+            { "Shared Cache" = "guide/sharedcache.md" },
+            { "Kernel Cache" = "guide/kernelcache.md" },
+            { "EFI Resolver" = "guide/efiresolver.md" },
+            { "WARP" = "guide/warp.md" },
+            { "BinExport / BinDiff" = "guide/binexport.md" },
+            { "Guided Analysis" = "guide/guided_analysis.md" },
+        ] },
+        { "Debugger" = [
+            { "Overview" = "guide/debugger/index.md" },
+            { "Remote Debugging" = "guide/debugger/remote-debugging.md" },
+            { "Time Travel Debugging (Windows)" = "guide/debugger/dbgeng-ttd.md" },
+            { "Time Travel Debugging (Linux)" = "guide/debugger/gdbrsp-ttd.md" },
+            { "Kernel Debugging (Windows)" = "guide/debugger/windows-kd.md" },
+            { "Corellium Remote Debugging" = "guide/debugger/corellium-remote-debugging.md" },
+        ] },
+        { "Migration Guide" = [
+            "guide/migration/index.md",
+            { "Migrating from IDA" = "guide/migration/migrationguideida.md" },
+            { "Migrating from Ghidra" = [
+                "guide/migration/ghidra/index.md",
+                { "Ghidra Import" = "guide/migration/ghidra/ghidraimport.md" },
+                { "Ghidra Export" = "guide/migration/ghidra/ghidraexport.md" },
+            ] },
+        ] },
+        { "Types" = [
+            "guide/types/index.md",
+            { "Basic Types" = "guide/types/basictypes.md" },
+            { "Working With Types" = "guide/types/type.md" },
+            { "Type Attributes and Annotations" = "guide/types/attributes.md" },
+            { "Importing/Exporting Types" = "guide/types/typeimportexport.md" },
+            { "Type Archives" = "guide/types/typearchives.md" },
+            { "Type Libraries" = "guide/types/typelibraries.md" },
+            { "Debug Info" = "guide/types/debuginfo.md" },
+            { "Platform Types" = "guide/types/platformtypes.md" },
+            { "C++ Types" = "guide/types/cpp.md" },
+        ] },
+    ] },
+    { "Developer Documentation" = [
+        "dev/index.md",
+        { "Cookbook" = "dev/cookbook.md" },
+        { "Writing Plugins" = "dev/plugins.md" },
+        { "Container Transforms" = "dev/containertransforms.md" },
+        { "Automation" = "dev/batch.md" },
+        { "Architecture / Platform" = [
+            { "Part 1: Disassembly" = "dev/archplatform-disassembly.md" },
+            { "Part 2: Lifting" = "dev/archplatform-lifting.md" },
+            { "Part 3: Platform Support" = "dev/archplatform-platform.md" },
+            { "Flag Guide" = "dev/flags.md" },
+        ] },
+        { "BNIL" = [
+            { "BNIL Guide: Overview" = "dev/bnil-overview.md" },
+            { "BNIL Guide: LLIL" = "dev/bnil-llil.md" },
+            { "BNIL Guide: MLIL" = "dev/bnil-mlil.md" },
+            { "BNIL Guide: HLIL" = "dev/bnil-hlil.md" },
+            { "Modifying ILs" = "dev/bnil-modifying.md" },
+        ] },
+        { "Types" = [
+            { "Applying Annotations" = "dev/annotation.md" },
+            { "Type Libraries" = "dev/typelibraries.md" },
+        ] },
+        { "Important Concepts" = [
+            "dev/concepts.md",
+            { "Outlining" = "dev/outlining.md" },
+            { "User Informed Data Flow" = "dev/uidf.md" },
+            { "Workflows" = "dev/workflows.md" },
+        ] },
+        { "Creating Themes" = "dev/themes.md" },
+        { "Contributing Documentation" = "dev/documentation.md" },
+    ] },
+    { "About" = [
+        "about/index.md",
+        { "License" = [
+            "about/license.md",
+            { "Non-commercial (Named)" = "about/license/noncommercial-named.md" },
+            { "Commercial (Named)" = "about/license/commercial-named.md" },
+            { "Non-commercial (Computer)" = "about/license/noncommercial-computer.md" },
+            { "Commercial (Computer)" = "about/license/commercial-computer.md" },
+            { "Free" = "about/license/free.md" },
+            { "Ultimate" = "about/license/ultimate.md" },
+            { "Ultimate Floating" = "about/license/ultimate-floating.md" },
+            { "Enterprise Server" = "about/license/enterprise-server.md" },
+        ] },
+        { "Open Source" = "about/open-source.md" },
+        { "Privacy" = "about/privacy.md" },
+        { "Icons" = "about/icons.md" },
+    ] },
+]
+
+[project.theme]
+custom_dir = "docs/overrides"
+favicon = "img/favicon.ico"
+font = false
+highlightjs = false
+features = [
+    "navigation.tracking",
+    "navigation.tabs",
+    "navigation.tabs.sticky",
+    "navigation.expand",
+    "navigation.indexes",
+    "navigation.top",
+    "content.code.copy",
+    "search.highlight",
+    "toc.follow",
+]
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "binja"
+primary = "red"
+accent = "red"
+toggle.icon = "material/brightness-7"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "red"
+accent = "red"
+toggle.icon = "material/brightness-4"
+toggle.name = "Switch to light mode"
+
+[project.plugins.search]
+lang = "en"
+separator = '[\s\-,:!=\[\]()"/]+|\.(?!\d)|&[lg]t;'
+
+[project.plugins.offline]
+
+[project.plugins.privacy]
+
+[project.plugins.redirects.redirect_maps]
+"index.md" = "getting-started.md"
+"guide/debugger.md" = "guide/debugger/index.md"
+"guide/remote-debugging.md" = "guide/debugger/remote-debugging.md"
+"guide/dbgeng-ttd.md" = "guide/debugger/dbgeng-ttd.md"
+
+[project.markdown_extensions.attr_list]
+[project.markdown_extensions.md_in_html]
+[project.markdown_extensions.codehilite]
+[project.markdown_extensions.admonition]
+[project.markdown_extensions.pymdownx.details]
+
+[project.markdown_extensions.pymdownx.superfences]
+preserve_tabs = true
+
+[project.markdown_extensions.pymdownx.tabbed]
+alternate_style = true
+
+[project.markdown_extensions.toc]
+permalink = true
+
+[project.markdown_extensions.zensical.extensions.glightbox]
+
+[project.extra]
+disablesearch = true
+logo = "images/logo.png"

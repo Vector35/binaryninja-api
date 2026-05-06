@@ -123,7 +123,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         {% else %}
-          {% set class = "md-nav__link--active" if index == page %}
+          {% set class = "md-nav__link--active" if index.url == page.url %}
           <div class="md-nav__link md-nav__container">
             <a href="{{ index.url | url }}" class="md-nav__link {{ class }}">
               {{ render_content(index, nav_item) }}
@@ -146,7 +146,7 @@
                 drawer. Stock Material never folds a section index page's TOC into
                 the nav; this mirrors its leaf-page #__toc structure so the same
                 CSS hides it on desktop and shows it on mobile. -#}
-            {% if index and index == page %}
+            {% if index and index.url == page.url %}
               {% set bn_toc = page.toc %}
               {% set bn_first = bn_toc | first %}
               {% if bn_first and bn_first.level == 1 %}
@@ -180,7 +180,7 @@
         {{ render_pruned(nav_item) }}
       {% endif %}
     </li>
-  {% elif nav_item == page %}
+  {% elif nav_item.url == page.url %}
     <li class="{{ class }}">
       {% set toc = page.toc %}
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">

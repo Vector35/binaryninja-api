@@ -79,7 +79,7 @@ Binary Ninja's layout is also a bit different from what you're used to in Ghidra
 
 ![xref icon >](../../../img/xref-icon.png "Xref Icon")
 
-The default behavior of cross-references to open in a tabbed reference UI element similar to how ghidra does it, however the `X` hotkey is used by default (and can be changed in the [keybindings UI](index.md#custom-hotkeys)).
+The default behavior of cross-references to open in a tabbed reference UI element similar to how ghidra does it, however the `X` hotkey is used by default (and can be changed in the [keybindings UI](../../index.md#custom-hotkeys)).
 
 ### Theme
 
@@ -130,4 +130,4 @@ Now that you've done all this hard work to make the perfect layout, it would be 
 
 ---
 
-Don't forget to check out our [additional resources](index.md#additional-resources)!
+Don't forget to check out our [additional resources](../index.md#additional-resources)!

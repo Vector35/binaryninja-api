@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "binaryninja-api-docs"
+version = "0.1.0"
+description = "Documentation build environment for the Binary Ninja API"
+authors = ["Vector 35 <dev@vector35.com>"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+zensical = "^0.0.50"
+sphinx = "^7.2.6"
+breathe = "^4.35.0"
+sphinxcontrib-jquery = "^4.1"
+doc2dash = "^3.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

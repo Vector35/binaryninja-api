@@ -851,7 +851,7 @@ impl MediumLevelILInstruction {
             MemPhi(op) => Lifted::MemPhi(LiftedMemPhi {
                 dest_memory: op.dest_memory,
                 // TODO: Make a stronger type for this.
-                src_memory: self.get_operand_list(0),
+                src_memory: self.get_operand_list(1),
             }),
             VarSplit(op) => Lifted::VarSplit(op),
             SetVarSplit(op) => Lifted::SetVarSplit(LiftedSetVarSplit {
@@ -977,7 +977,7 @@ impl MediumLevelILInstruction {
                 )
                 .expect("Valid intrinsic"),
                 params: self
-                    .get_expr_list(3)
+                    .get_expr_list(2)
                     .iter()
                     .map(|expr| expr.lift())
                     .collect(),

@@ -766,7 +766,7 @@ impl RemoteProject {
     /// # Arguments
     ///
     /// * `user` - User to check
-    pub fn can_user_view(&self, user: Ref<RemoteUser>) -> bool {
+    pub fn can_user_view(&self, user: &RemoteUser) -> bool {
         unsafe { BNRemoteProjectCanUserView(self.handle.as_ptr(), user.handle.as_ptr()) }
     }
 
@@ -775,7 +775,7 @@ impl RemoteProject {
     /// # Arguments
     ///
     /// * `user` - User to check
-    pub fn can_user_edit(&self, user: Ref<RemoteUser>) -> bool {
+    pub fn can_user_edit(&self, user: &RemoteUser) -> bool {
         unsafe { BNRemoteProjectCanUserEdit(self.handle.as_ptr(), user.handle.as_ptr()) }
     }
 
@@ -784,16 +784,17 @@ impl RemoteProject {
     /// # Arguments
     ///
     /// * `user` - User to check
-    pub fn can_user_admin(&self, user: Ref<RemoteUser>) -> bool {
+    pub fn can_user_admin(&self, user: &RemoteUser) -> bool {
         unsafe { BNRemoteProjectCanUserAdmin(self.handle.as_ptr(), user.handle.as_ptr()) }
     }
 
     /// Get the default directory path for a remote Project. This is based off
     /// the Setting for collaboration.directory, the project's id, and the
     /// project's remote's id.
-    pub fn default_project_path(&self) -> String {
+    pub fn default_project_path(&self) -> PathBuf {
         let result = unsafe { BNCollaborationDefaultProjectPath(self.handle.as_ptr()) };
-        unsafe { BnString::into_string(result) }
+        let result_str = unsafe { BnString::into_string(result) };
+        PathBuf::from(result_str)
     }
 
     /// Upload a file, with database, to the remote under the given project

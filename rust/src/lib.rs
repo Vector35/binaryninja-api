@@ -95,8 +95,6 @@ use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::string::raw_to_string;
 use binary_view::BinaryView;
 use binaryninjacore_sys::*;
-use metadata::Metadata;
-use metadata::MetadataType;
 use rc::Ref;
 use std::cmp;
 use std::collections::HashMap;
@@ -200,11 +198,7 @@ where
             .to_bytes_with_nul()
             .to_vec()
     } else {
-        Metadata::new_of_type(MetadataType::KeyValueDataType)
-            .get_json_string()
-            .ok()?
-            .as_ref()
-            .to_vec()
+        "{}".to_cstr().to_bytes_with_nul().to_vec()
     };
     let handle = unsafe {
         BNLoadFilename(

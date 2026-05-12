@@ -1,6 +1,6 @@
 # User Guide
 
-Welcome to the Binary Ninja User Guide. You'll notice two menus here. On the right is the table of contents for this main page of the user manual. On the left are links to larger topics that have their own pages, including:
+Welcome to the Binary Ninja User Guide! You'll notice two menus here. On the right is the table of contents for this main page of the user manual. On the left are links to larger topics that have their own pages, including:
 
 ## Directories
 

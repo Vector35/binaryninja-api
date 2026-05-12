@@ -51,7 +51,7 @@ The tags API has been reworked in 3.4 to be easier to use and understand.
 
 ### TagTypes
 
-A [TagType](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.TagType) is the object that represents the "type" of tag something is. By default, a binary view starts off with several tag types, include "Bugs," "Crashes," "Important," and so on.
+A [TagType](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.TagType) is the object that represents the "type" of tag something is. By default, a binary view starts off with several tag types, including "Bugs," "Crashes," "Important," and so on.
 
 Before you can create a tag of a type that's not already in the BinaryView, you need to create the tag type.
 
@@ -481,7 +481,7 @@ current_function.parameter_vars[0].type = Type.pointer(bv.arch, Type.char())
 >>> bv.get_data_var_at(here).type = Type.char()
 ```
 
-#### Applying a type where non exists yet
+#### Applying a type where none exists yet
 
 In some instances you may need to first create a `DataVariable` before you can set the type at a given location:
 

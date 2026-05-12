@@ -130,7 +130,7 @@ If using a floating license, you can use the [example code](https://api.binary.n
 
 ### In-Memory License
 
-For many applications it might be helpful to avoid having a license file on disk. Whether because the environment will be used to analyze malware, or because a docker image might be saved somewhere that the license file needs to be kept secret. (Note: this does not obfuscate the serial number as it can be extracted from memory or even via the API -- an informed attacker can still leak it and network isolation is recommended for analzying malicious applications)
+For many applications it might be helpful to avoid having a license file on disk. Whether because the environment will be used to analyze malware, or because a docker image might be saved somewhere that the license file needs to be kept secret. (Note: this does not obfuscate the serial number as it can be extracted from memory or even via the API -- an informed attacker can still leak it and network isolation is recommended for analyzing malicious applications)
 
 To use this API, copy the contents of your license file into a string and pass it as an argument to [`core_set_license`](https://api.binary.ninja/#binaryninja.core_set_license)
 

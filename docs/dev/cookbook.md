@@ -195,7 +195,7 @@ As defined by having the highest sum of incoming and outgoing calls. Adjust acco
 ```python
 max(bv.functions, key=lambda x: len(x.callers + x.callees))
 ```
-j
+
 ### Accessing cross references
 
 This recipe is useful for iterating over all of the HLIL cross-references of a given interesting function:

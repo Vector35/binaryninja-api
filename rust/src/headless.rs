@@ -295,7 +295,7 @@ pub fn license_location() -> Option<LicenseLocation> {
 }
 
 /// Wrapper for [`init`] and [`shutdown`]. Instantiating this at the top of your script will initialize everything correctly and then clean itself up at exit as well.
-#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, PartialEq, Eq, Hash)]
 pub struct Session {
     license_duration: Option<Duration>,
 }
@@ -419,6 +419,15 @@ impl Session {
             options,
             progress,
         )
+    }
+}
+
+impl Clone for Session {
+    fn clone(&self) -> Self {
+        SESSION_COUNT.fetch_add(1, SeqCst);
+        Self {
+            license_duration: self.license_duration,
+        }
     }
 }
 

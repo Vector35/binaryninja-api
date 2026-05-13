@@ -1,6 +1,6 @@
 # Working with Types, Structures, and Symbols
 
-There's so many things to learn about working with Types in Binary Ninja that we've organized it into several sections!
+There are so many things to learn about working with Types in Binary Ninja that we've organized it into several sections!
 
 - [Basic Type Editing](basictypes.md): Brief overview of the basics
 - [Working with Types](type.md): Interacting with types in disassembly and decompilation

@@ -232,7 +232,7 @@ Recent files can be opened on double click. They can also be navigated using the
 
 The Recent files list can be cleared via using the Command Palette (`[CTRL] + P`) action `Clear All Recent Files`.
 
-Hotkeys (macOS: `[CMD] + 0` - `[CMD] + 9`, Windows/Linux: `[CTRL] + 0` - `[CTRL + 9]`) can also be used to quickly open a file. The hotkey for a given entry will be shown on the right.
+Hotkeys (macOS: `[CMD] + 0` - `[CMD] + 9`, Windows/Linux: `[CTRL] + 0` - `[CTRL] + 9`) can also be used to quickly open a file. The hotkey for a given entry will be shown on the right.
 
 ### Plugins
 

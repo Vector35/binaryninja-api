@@ -536,7 +536,7 @@ The search types are available from a drop-down next to the text input field and
 
  - Advanced Binary Search: A new search type using the [bv.search](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.search) syntax (supporting regular expressions and wildcard hex strings)
  - Escaped: Escaped strings such as `OneString\x09\Tabsx09Another`
- - Hex: All values much be valid hex characters such as `ebfffc390` and the bytes will only be searched for in this particular order
+ - Hex: All values must be valid hex characters such as `ebfffc390` and the bytes will only be searched for in this particular order
  - Raw: A simple string search that matches the exact string as specified
  - Text: Searches the decompilation or whatever view is currently selected for disassembly, BNIL, or Pseudo C
  - Constant: Useful for searching for a constant where the byte ordering is handled for you, such as `0x01020304`

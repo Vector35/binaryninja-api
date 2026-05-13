@@ -72,7 +72,7 @@ struct Foo
 };
 ```
 
-## Structures with Base Classes and Inheritence
+## Structures with Base Classes and Inheritance
 
 See [Working with C++ Types and Virtual Function Tables](cpp.md).
 

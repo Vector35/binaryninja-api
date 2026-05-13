@@ -3674,6 +3674,21 @@ static Ref<Platform> ElfFlagsRecognize(BinaryView* view, Metadata* metadata)
 	if (!flagsMetadata || !flagsMetadata->IsUnsignedInteger())
 		return nullptr;
 
+	Ref<Metadata> endiannessMetadata = metadata->Get("EI_DATA");
+	if (!endiannessMetadata || !endiannessMetadata->IsUnsignedInteger())
+		return nullptr;
+
+	uint64_t endiannessValue = endiannessMetadata->GetUnsignedInteger();
+	BNEndianness endianness;
+	if (endiannessValue == 1)
+		endianness = LittleEndian;
+	else if (endiannessValue == 2)
+		endianness = BigEndian;
+	else {
+		LogError("ELF endianness value 0x%" PRIx64 " doesn't map to valid value", endiannessValue);
+		return nullptr;
+	}
+
 	uint64_t flagsValue = flagsMetadata->GetUnsignedInteger();
 	uint8_t machineVariant = (flagsValue >> 16) & 0xff;
 
@@ -3683,7 +3698,7 @@ static Ref<Platform> ElfFlagsRecognize(BinaryView* view, Metadata* metadata)
 		case 0x8d:	// EF_MIPS_MACH_OCTEON2
 		case 0x8e:	// EF_MIPS_MACH_OCTEON3
 			LogInfo("ELF flags 0x%08" PRIx64 " machine variant 0x%02x: using cavium architecture", flagsValue, machineVariant);
-			return Platform::GetByName("linux-cnmips64");
+			return Platform::GetByName(endianness == BigEndian ? "linux-cnmips64" : "linux-cnmipsel64");
 		case 0x92:  // E_MIPS_MACH_5900
 			LogInfo("ELF flags 0x%08" PRIx64 " machine variant 0x%02x: using R5900 architecture", flagsValue, machineVariant);
 			return Platform::GetByName("r5900l");
@@ -3715,6 +3730,7 @@ extern "C"
 		Architecture* mips64el = new MipsArchitecture("mipsel64", MIPS_64, LittleEndian, 64);
 		Architecture* mips64eb = new MipsArchitecture("mips64", MIPS_64, BigEndian, 64);
 		Architecture* cnmips64eb = new MipsArchitecture("cavium-mips64", MIPS_64, BigEndian, 64, DECOMPOSE_FLAGS_CAVIUM);
+		Architecture* cnmips64el = new MipsArchitecture("cavium-mipsel64", MIPS_64, LittleEndian, 64, DECOMPOSE_FLAGS_CAVIUM);
 		Architecture* r5900l = new MipsArchitecture("r5900l", MIPS_R5900, LittleEndian, 32);
 		// R5900 should only be Little-Endian, so until someone complains, I'm leaving the Big-Endian variant disabled.
 		// Architecture* r5900b = new MipsArchitecture("r5900b", MIPS_R5900, BigEndian, 32);
@@ -3728,6 +3744,7 @@ extern "C"
 		Architecture::Register(mips64el);
 		Architecture::Register(mips64eb);
 		Architecture::Register(cnmips64eb);
+		Architecture::Register(cnmips64el);
 
 		/* calling conventions */
 		MipsO32CallingConvention* o32LE = new MipsO32CallingConvention(mipsel);
@@ -3735,6 +3752,7 @@ extern "C"
 		MipsN64CallingConvention* n64LE = new MipsN64CallingConvention(mips64el);
 		MipsN64CallingConvention* n64BE = new MipsN64CallingConvention(mips64eb);
 		MipsN64CallingConvention* n64BEc = new MipsN64CallingConvention(cnmips64eb);
+		MipsN64CallingConvention* n64LEc = new MipsN64CallingConvention(cnmips64el);
 		MipsPS2CallingConvention* ps2LE = new MipsPS2CallingConvention(r5900l);
 		// MipsPS2CallingConvention* ps2BE = new MipsPS2CallingConvention(r5900b);
 
@@ -3752,6 +3770,8 @@ extern "C"
 		mips64eb->SetDefaultCallingConvention(n64BE);
 		cnmips64eb->RegisterCallingConvention(n64BEc);
 		cnmips64eb->SetDefaultCallingConvention(n64BEc);
+		cnmips64el->RegisterCallingConvention(n64LEc);
+		cnmips64el->SetDefaultCallingConvention(n64LEc);
 		r5900l->RegisterCallingConvention(ps2LE);
 		r5900l->SetDefaultCallingConvention(ps2LE);
 		// r5900b->RegisterCallingConvention(ps2BE);
@@ -3779,6 +3799,7 @@ extern "C"
 		mips64el->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mips64el));
 		mips64eb->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(mips64eb));
 		cnmips64eb->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(cnmips64eb));
+		cnmips64el->RegisterCallingConvention(new MipsLinuxRtlResolveCallingConvention(cnmips64el));
 
 		/* function recognizers */
 		mipsel->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
@@ -3788,6 +3809,7 @@ extern "C"
 		mips64el->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
 		mips64eb->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
 		cnmips64eb->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
+		cnmips64el->RegisterFunctionRecognizer(new MipsImportedFunctionRecognizer());
 
 		mipseb->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		mipsel->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
@@ -3798,6 +3820,7 @@ extern "C"
 		r5900l->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		// r5900b->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 		cnmips64eb->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
+		cnmips64el->RegisterRelocationHandler("ELF", new MipsElfRelocationHandler());
 
 		// Register the architectures with the binary format parsers so that they know when to use
 		// these architectures for disassembling an executable file

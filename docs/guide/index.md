@@ -751,7 +751,7 @@ it into your clipboard.
 
 This section appears only in `BinaryView`s and the exact information depends on the view itself. PE headers
 are the most detailed and include such items as checksums, characteristics, and compiler strings. Addresses that
-existing in the virtual memory space of the file can be clicked to navigate to that location.
+exist in the virtual memory space of the file can be clicked to navigate to that location.
 
 ### 4. Base Address Detection (BASE)
 

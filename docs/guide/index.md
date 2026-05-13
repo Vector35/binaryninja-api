@@ -343,7 +343,7 @@ The Symbol List shows the following columns by default:
 
 Additionally, the following columns are hidden by default and can be enabled by right-clicking the header:
 
-- `Total Bytes`: tn the case of functions, the sum of size of basic blocks
+- `Total Bytes`: in the case of functions, the sum of size of basic blocks
 
 These columns can be re-arranged, hidden, and used for sorting.
 

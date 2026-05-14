@@ -989,6 +989,29 @@ void SharedCacheView::OnAfterSnapshotDataApplied()
 }
 
 
+void SharedCacheView::OnAfterSnapshotDataSaved()
+{
+	auto projectFile = GetFile()->GetProjectFile();
+	if (!projectFile)
+		return;
+
+	auto project = projectFile->GetProject();
+	auto projectFolder = projectFile->GetFolder();
+
+	std::set<std::string> dependencyFileNames = m_secondaryFileNames;
+	if (!m_primaryFileName.empty())
+		dependencyFileNames.insert(m_primaryFileName);
+
+	for (const auto& dependencyFile : project->GetFilesInFolder(projectFolder))
+	{
+		if (!dependencyFileNames.contains(dependencyFile->GetName()))
+			continue;
+
+		projectFile->AddDependency(dependencyFile);
+	}
+}
+
+
 void SharedCacheView::SetPrimaryFileName(std::string primaryFileName)
 {
 	m_primaryFileName = std::move(primaryFileName);

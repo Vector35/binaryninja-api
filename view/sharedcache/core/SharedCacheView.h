@@ -26,6 +26,7 @@ public:
 
 	bool Init() override;
 	void OnAfterSnapshotDataApplied() override;
+	void OnAfterSnapshotDataSaved() override;
 
 	// Initialized the shared cache controller for this view. This is what allows us to load images and regions.
 	bool InitController();

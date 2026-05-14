@@ -266,20 +266,19 @@ bool UniversalTransform::DecodeWithContext(Ref<TransformContext> context, const 
 			architectures.push_back(archName);
 		}
 
-		// TODO: It is surprising that this is UniversalTransform's responsibility.
-		if (!BinaryNinja::IsUIEnabled())
+		if (!context->IsInteractive())
 		{
-			// When headless, filter to the preferred architecture if one is configured.
 			vector<string> archPref = context->GetSettings()->Get<vector<string>>("files.universal.architecturePreference");
 			if (auto result = find_first_of(archPref.begin(), archPref.end(), architectures.begin(), architectures.end()); result != archPref.end())
 			{
+				// Filter to preferred architecture to support container auto-open policy
 				size_t archIndex = find(architectures.begin(), architectures.end(), *result) - architectures.begin();
 				context->SetAvailableFiles({architectures[archIndex]});
 				return false;
 			}
 
-			// Load the first architecture if no preference is found.
-			if (archPref.empty() && architectures.size())
+			// Preserve original headless load behavior when no architecturePreference is specified
+			if (!BinaryNinja::IsUIEnabled() && archPref.empty() && architectures.size())
 			{
 				context->SetAvailableFiles({architectures[0]});
 				return false;

@@ -15,7 +15,6 @@
 
 #include <vector>
 
-class ContainerOpenRequest;
 
 class ContainerTreeModel : public QAbstractItemModel
 {
@@ -121,9 +120,5 @@ public:
 	QStringList selectedPaths() const { return m_selectedPaths; }
 	bool openWithOptionsRequested() const { return m_openWithOptionsRequested; }
 
-	static std::vector<TransformContextRef> openContainerFile(const QString& path, bool forceShowDialog = false, bool* outOpenWithOptions = nullptr);
-
-	// Show the container browser dialog for the given open request.
-	// Returns the selected contexts, or empty if the user cancelled.
-	static std::vector<TransformContextRef> showBrowser(ContainerOpenRequest& request, bool* outOpenWithOptions = nullptr);
+	static std::vector<TransformContextRef> openContainerFile(const QString& path, bool forceShowDialog = false, bool* outOpenWithOptions = nullptr, ProjectFileRef projectFile = nullptr);
 };

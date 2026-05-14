@@ -419,6 +419,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	void makeDouble();
 	void cycleFloatSize();
 	void makePtr();
+	void makeEnum();
 	void makeString(size_t charSize = 1);
 	void toggleIntegerSignedness();
 

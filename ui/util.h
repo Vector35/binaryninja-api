@@ -41,6 +41,19 @@ bool BINARYNINJAUIAPI toggleLocalVariableIntegerSignedness(BinaryViewRef view, F
 bool BINARYNINJAUIAPI setLocalVariableFloatWidth(BinaryViewRef view, FunctionRef func, BinaryNinja::Variable var, size_t width);
 bool BINARYNINJAUIAPI cycleLocalVariableFloatWidth(BinaryViewRef view, FunctionRef func, BinaryNinja::Variable var);
 bool BINARYNINJAUIAPI makeLocalVariablePointer(BinaryViewRef view, FunctionRef func, BinaryNinja::Variable var);
+bool BINARYNINJAUIAPI makeLocalVariableEnum(
+	BinaryViewRef view, FunctionRef func, BinaryNinja::Variable var, TypeRef enumType);
+struct BINARYNINJAUIAPI StructureMemberTypeActionContext
+{
+	BinaryNinja::DataVariable var;
+	TypeRef rootType;
+	BinaryNinja::QualifiedName rootName;
+	TypeRef parentType;
+	size_t fieldIndex = (size_t)-1;
+	TypeRef fieldType;
+};
+bool BINARYNINJAUIAPI replaceStructureMemberType(
+	BinaryViewRef view, const StructureMemberTypeActionContext& memberContext, TypeRef newType);
 std::string BINARYNINJAUIAPI getStringForPossibleValueSet(ArchitectureRef arch, const BinaryNinja::PossibleValueSet& values, bool pretty = true);
 std::string BINARYNINJAUIAPI getStringForInstructionDataflowDetails(BinaryViewRef data, ArchitectureRef arch, FunctionRef func, uint64_t address);
 std::optional<BinaryNinja::PossibleValueSet> BINARYNINJAUIAPI getPossibleValueSetForToken(View* view, BinaryViewRef data, ArchitectureRef arch,

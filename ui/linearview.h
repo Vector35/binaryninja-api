@@ -21,6 +21,8 @@
 #define LINEAR_VIEW_UPDATE_CHECK_INTERVAL 200
 #define MAX_STRING_TYPE_LENGTH            1048576
 
+struct StructureMemberTypeActionContext;
+
 /*!
 
 	\defgroup linearview LinearView
@@ -313,6 +315,11 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	StructureRef defineInnerSign(TypeRef type, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
 	TypeRef getPointerTypeAndName(ArchitectureRef arch, uint64_t addr, std::string& name);
 	std::string getVariableName(uint64_t addr);
+	bool getSelectedStructureMemberForTypeAction(
+		const UIActionContext& context, StructureMemberTypeActionContext& memberContext);
+	bool canMakeEnum(const UIActionContext& context);
+	void makeEnum(const UIActionContext& context);
+	bool makeEnumForSelectedStructureMember(const UIActionContext& context, TypeRef enumType);
 
 	BinaryNinja::Ref<BinaryNinja::LinearViewObject> createLinearViewObject();
 	LinearViewCursorPosition getPositionForCursor(BinaryNinja::LinearViewCursor* cursor);

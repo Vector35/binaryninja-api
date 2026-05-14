@@ -275,6 +275,8 @@ class BINARYNINJAUIAPI StackView : public QAbstractScrollArea, public View, publ
 	void quickCreateIntegerAtCursor(size_t size);
 
 	//! Toggle the sign of the integer at the cursor position.
+	void quickToggleIntegerSignednessAtCursor();
+	BN_DEPRECATED("Deprecated as of 6.1; use quickToggleIntegerSignednessAtCursor", "quickToggleIntegerSignednessAtCursor")
 	void quickInvertIntegerSignAtCursor();
 
 	//! Create an float of the given size at the cursor position. Pass \c 0

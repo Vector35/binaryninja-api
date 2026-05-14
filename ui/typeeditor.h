@@ -134,7 +134,11 @@ public:
 	void cycleIntegerSize();
 	bool canCycleFloatSize();
 	void cycleFloatSize();
+	bool canToggleIntegerSignedness();
+	void toggleIntegerSignedness();
+	BN_DEPRECATED("Deprecated as of 6.1; use canToggleIntegerSignedness", "canToggleIntegerSignedness")
 	bool canInvertIntegerSize();
+	BN_DEPRECATED("Deprecated as of 6.1; use toggleIntegerSignedness", "toggleIntegerSignedness")
 	void invertIntegerSize();
 	bool canMakeInt8();
 	void makeInt8();
@@ -144,9 +148,17 @@ public:
 	void makeInt32();
 	bool canMakeInt64();
 	void makeInt64();
+	bool canMakeFloat();
+	void makeFloat();
+	bool canMakeDouble();
+	void makeDouble();
+	BN_DEPRECATED("Deprecated as of 6.1; use canMakeFloat", "canMakeFloat")
 	bool canMakeFloat32();
+	BN_DEPRECATED("Deprecated as of 6.1; use makeFloat", "makeFloat")
 	void makeFloat32();
+	BN_DEPRECATED("Deprecated as of 6.1; use canMakeDouble", "canMakeDouble")
 	bool canMakeFloat64();
+	BN_DEPRECATED("Deprecated as of 6.1; use makeDouble", "makeDouble")
 	void makeFloat64();
 	bool canGoToAddress(bool selecting);
 	void goToAddress(bool selecting);

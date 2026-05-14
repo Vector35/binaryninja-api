@@ -412,10 +412,20 @@ private Q_SLOTS:
 	void makeInt16();
 	void makeInt32();
 	void makeInt64();
+	void cycleIntegerSize();
+	void toggleIntegerSignedness(const UIActionContext& context);
+	void makeFloat();
+	void makeDouble();
+	void cycleFloatSize();
+	BN_DEPRECATED("Deprecated as of 6.1; use cycleIntegerSize", "cycleIntegerSize")
 	void toggleIntSize();
+	BN_DEPRECATED("Deprecated as of 6.1; use toggleIntegerSignedness", "toggleIntegerSignedness")
 	void toggleIntSign(const UIActionContext& context);
+	BN_DEPRECATED("Deprecated as of 6.1; use makeFloat", "makeFloat")
 	void makeFloat32();
+	BN_DEPRECATED("Deprecated as of 6.1; use makeDouble", "makeDouble")
 	void makeFloat64();
+	BN_DEPRECATED("Deprecated as of 6.1; use cycleFloatSize", "cycleFloatSize")
 	void toggleFloatSize();
 	void makePtr();
 	bool canMakeString(size_t charSize);

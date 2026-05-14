@@ -23,6 +23,8 @@ std::string BINARYNINJAUIAPI getPossibleValueSetStateName(BNRegisterValueType st
 std::string BINARYNINJAUIAPI getStringForIntegerValue(int64_t value);
 std::string BINARYNINJAUIAPI getStringForUIntegerValue(uint64_t value);
 bool BINARYNINJAUIAPI canDisplayIntegerTokenAs(const HighlightTokenState& token, BNIntegerDisplayType displayType);
+BNIntegerDisplayType BINARYNINJAUIAPI getToggledIntegerSignednessDisplayType(BNIntegerDisplayType displayType, const std::string& text);
+BN_DEPRECATED("Deprecated as of 6.1; use getToggledIntegerSignednessDisplayType", "getToggledIntegerSignednessDisplayType")
 BNIntegerDisplayType BINARYNINJAUIAPI getInvertedIntegerDisplayType(BNIntegerDisplayType displayType, const std::string& text);
 BNIntegerDisplayType BINARYNINJAUIAPI getToggledIntegerRadixDisplayType(BNIntegerDisplayType displayType, const std::string& text);
 BNIntegerDisplayType BINARYNINJAUIAPI getToggledIntegerComplementDisplayType(BNIntegerDisplayType displayType, const std::string& text);
@@ -31,6 +33,14 @@ uint64_t BINARYNINJAUIAPI getIntegerConstantDisplayAddress(
 TypeRef BINARYNINJAUIAPI getIntegerTypePreservingDisplay(TypeRef type, size_t width, BinaryNinja::Confidence<bool> isSigned);
 TypeRef BINARYNINJAUIAPI getIntegerTypeWithWidthPreservingAttributes(TypeRef type, size_t width);
 TypeRef BINARYNINJAUIAPI getIntegerTypeWithSignPreservingAttributes(TypeRef type, BinaryNinja::Confidence<bool> isSigned);
+bool BINARYNINJAUIAPI canChangeLocalVariableType(FunctionRef func, const HighlightTokenState& token);
+bool BINARYNINJAUIAPI isIntegerLocalVariable(FunctionRef func, const HighlightTokenState& token);
+bool BINARYNINJAUIAPI setLocalVariableIntegerWidth(BinaryViewRef view, FunctionRef func, BinaryNinja::Variable var, size_t width);
+bool BINARYNINJAUIAPI cycleLocalVariableIntegerWidth(BinaryViewRef view, FunctionRef func, BinaryNinja::Variable var);
+bool BINARYNINJAUIAPI toggleLocalVariableIntegerSignedness(BinaryViewRef view, FunctionRef func, BinaryNinja::Variable var);
+bool BINARYNINJAUIAPI setLocalVariableFloatWidth(BinaryViewRef view, FunctionRef func, BinaryNinja::Variable var, size_t width);
+bool BINARYNINJAUIAPI cycleLocalVariableFloatWidth(BinaryViewRef view, FunctionRef func, BinaryNinja::Variable var);
+bool BINARYNINJAUIAPI makeLocalVariablePointer(BinaryViewRef view, FunctionRef func, BinaryNinja::Variable var);
 std::string BINARYNINJAUIAPI getStringForPossibleValueSet(ArchitectureRef arch, const BinaryNinja::PossibleValueSet& values, bool pretty = true);
 std::string BINARYNINJAUIAPI getStringForInstructionDataflowDetails(BinaryViewRef data, ArchitectureRef arch, FunctionRef func, uint64_t address);
 std::optional<BinaryNinja::PossibleValueSet> BINARYNINJAUIAPI getPossibleValueSetForToken(View* view, BinaryViewRef data, ArchitectureRef arch,

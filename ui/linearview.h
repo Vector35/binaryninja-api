@@ -389,11 +389,11 @@ private Q_SLOTS:
 	void makeInt16();
 	void makeInt32();
 	void makeInt64();
-	void toggleIntSize();
-	void toggleIntSign(const UIActionContext& context);
-	void makeFloat32();
-	void makeFloat64();
-	void toggleFloatSize();
+	void cycleIntegerSize();
+	void toggleIntegerSignedness(const UIActionContext& context);
+	void makeFloat();
+	void makeDouble();
+	void cycleFloatSize();
 	void makePtr();
 	bool canMakeString(size_t charSize);
 	void makeString(size_t charSize = 1);
@@ -514,6 +514,7 @@ public:
 
 	virtual bool canCopyWithTransform() override;
 	virtual bool canCut() override;
+	virtual bool canCopy() override;
 	virtual void cut() override;
 	virtual void copy(TransformRef xform = nullptr) override;
 	virtual void paste(TransformRef xform = nullptr) override;

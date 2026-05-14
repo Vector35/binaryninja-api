@@ -272,7 +272,7 @@ class BINARYNINJAUIAPI StackView : public QAbstractScrollArea, public View, publ
 	void quickCreateIntegerAtCursor(size_t size);
 
 	//! Toggle the sign of the integer at the cursor position.
-	void quickInvertIntegerSignAtCursor();
+	void quickToggleIntegerSignednessAtCursor();
 
 	//! Create an float of the given size at the cursor position. Pass `0`
 	//! for `size` to cycle through float sizes automatically.

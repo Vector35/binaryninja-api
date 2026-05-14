@@ -134,8 +134,8 @@ public:
 	void cycleIntegerSize();
 	bool canCycleFloatSize();
 	void cycleFloatSize();
-	bool canInvertIntegerSize();
-	void invertIntegerSize();
+	bool canToggleIntegerSignedness();
+	void toggleIntegerSignedness();
 	bool canMakeInt8();
 	void makeInt8();
 	bool canMakeInt16();
@@ -144,10 +144,10 @@ public:
 	void makeInt32();
 	bool canMakeInt64();
 	void makeInt64();
-	bool canMakeFloat32();
-	void makeFloat32();
-	bool canMakeFloat64();
-	void makeFloat64();
+	bool canMakeFloat();
+	void makeFloat();
+	bool canMakeDouble();
+	void makeDouble();
 	bool canGoToAddress(bool selecting);
 	void goToAddress(bool selecting);
 	void toggleWrapLines();

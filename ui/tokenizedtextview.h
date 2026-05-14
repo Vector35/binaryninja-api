@@ -105,11 +105,11 @@ class BINARYNINJAUIAPI TokenizedTextView :
 	void makeInt16();
 	void makeInt32();
 	void makeInt64();
-	void toggleIntSize();
-	void toggleIntSign();
-	void makeFloat32();
-	void makeFloat64();
-	void toggleFloatSize();
+	void cycleIntegerSize();
+	void toggleIntegerSignedness();
+	void makeFloat();
+	void makeDouble();
+	void cycleFloatSize();
 	void makePtr();
 	void makeString(size_t charSize = 1);
 	void changeType();

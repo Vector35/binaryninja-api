@@ -392,8 +392,17 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	void skipAndReturnZero();
 	void skipAndReturnValue();
 
+	void makeInt8();
+	void makeInt16();
+	void makeInt32();
+	void makeInt64();
+	void cycleIntegerSize();
+	void makeFloat();
+	void makeDouble();
+	void cycleFloatSize();
 	void makePtr();
 	void makeString(size_t charSize = 1);
+	void toggleIntegerSignedness();
 
 	void reanalyze();
 

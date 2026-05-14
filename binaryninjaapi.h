@@ -5820,6 +5820,15 @@ namespace BinaryNinja {
 		*/
 		virtual void OnAfterSnapshotDataApplied() {}
 
+		/*! OnAfterSnapshotDataSaved is called when saving a view to a database, after snapshot data has been saved from it.
+
+		    \note This method **may** be overridden by custom BinaryViews.
+
+			\warning This method **must not** be called directly.
+
+		*/
+		virtual void OnAfterSnapshotDataSaved() {}
+
 	  public:
 		void NotifyDataWritten(uint64_t offset, size_t len);
 		void NotifyDataInserted(uint64_t offset, size_t len);
@@ -5828,6 +5837,7 @@ namespace BinaryNinja {
 	  private:
 		static bool InitCallback(void* ctxt);
 		static void OnAfterSnapshotDataAppliedCallback(void* ctxt);
+		static void OnAfterSnapshotDataSavedCallback(void* ctxt);
 		static void FreeCallback(void* ctxt);
 		static size_t ReadCallback(void* ctxt, void* dest, uint64_t offset, size_t len);
 		static size_t WriteCallback(void* ctxt, uint64_t offset, const void* src, size_t len);

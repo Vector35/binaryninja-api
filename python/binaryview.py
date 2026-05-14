@@ -3188,6 +3188,7 @@ class BinaryView:
 			self._cb.getAddressSize = self._cb.getAddressSize.__class__(self._get_address_size)
 			self._cb.save = self._cb.save.__class__(self._save)
 			self._cb.onAfterSnapshotDataApplied = self._cb.onAfterSnapshotDataApplied.__class__(self._on_after_snapshot_data_applied)
+			self._cb.onAfterSnapshotDataSaved = self._cb.onAfterSnapshotDataSaved.__class__(self._on_after_snapshot_data_saved)
 			if file_metadata is None:
 				raise Exception("Attempting to create a BinaryView with FileMetadata which is None")
 			self._file = file_metadata
@@ -4518,6 +4519,15 @@ class BinaryView:
 			log_error_for_exception("Unhandled Python exception in BinaryView._on_after_snapshot_data_applied")
 
 	def perform_on_after_snapshot_data_applied(self) -> None:
+		pass
+
+	def _on_after_snapshot_data_saved(self, ctxt):
+		try:
+			self.perform_on_after_snapshot_data_saved()
+		except Exception:
+			log_error_for_exception("Unhandled Python exception in BinaryView._on_after_snapshot_data_saved")
+
+	def perform_on_after_snapshot_data_saved(self) -> None:
 		pass
 
 	def init(self) -> bool:

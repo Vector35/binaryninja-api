@@ -432,6 +432,10 @@ pub trait CustomBinaryView: BinaryViewBase {
     ///
     /// Useful if you need to regenerate temporary data based on the view state.
     fn on_after_snapshot_data_applied(&mut self) {}
+
+    /// Called after serialization of the current database snapshot has completed and all the
+    /// view data inside that snapshot has been saved from the view (like sections and segments).
+    fn on_after_snapshot_data_saved(&mut self) {}
 }
 
 /// Wrapper around `C` when being passed to the custom view constructor so that we have the core
@@ -692,6 +696,7 @@ impl BinaryView {
                     getAddressSize: Some(cb_address_size::<C>),
                     save: Some(cb_save::<C>),
                     onAfterSnapshotDataApplied: Some(cb_on_after_snapshot_data_applied::<C>),
+                    onAfterSnapshotDataSaved: Some(cb_on_after_snapshot_data_saved::<C>),
                 },
             )
         };
@@ -3371,6 +3376,18 @@ where
         // SAFETY: The custom view is not being touched by anything else at the point this function is called,
         // so it should be safe to mutably borrow it.
         context.view.on_after_snapshot_data_applied();
+    })
+}
+
+extern "C" fn cb_on_after_snapshot_data_saved<C>(ctxt: *mut c_void)
+where
+    C: CustomBinaryView,
+{
+    ffi_wrap!("BinaryViewBase::onAfterSnapshotDataSaved", unsafe {
+        let context = &mut *(ctxt as *mut CustomBinaryViewContext<C>);
+        // SAFETY: The custom view is not being touched by anything else at the point this function is called,
+        // so it should be safe to mutably borrow it.
+        context.view.on_after_snapshot_data_saved();
     })
 }
 

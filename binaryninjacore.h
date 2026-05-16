@@ -100,8 +100,10 @@
 // BN_ENUM macro for defining enums with explicit size in a C-compatible way
 // In C++, use an explicitly sized enum directly.
 // In C, add a typedef to the underlying type and use an unnamed enum to define the values.
-#if defined(__cplusplus) || __has_extension(c_fixed_enum)
+#if defined(__cplusplus)
 	#define BN_ENUM(type, name) enum __BN_ENUM_ATTRIBUTES name : type
+#elif __has_extension(c_fixed_enum)
+  #define BN_ENUM(type, name) typedef type name; enum __BN_ENUM_ATTRIBUTES name : type
 #else
 	#define BN_ENUM(type, name) typedef type name; enum __BN_ENUM_ATTRIBUTES
 #endif
@@ -109,8 +111,10 @@
 // BN_OPTIONS macro for defining flag enums with explicit size in a C-compatible way
 // In C++, use an explicitly sized enum directly.
 // In C, add a typedef to the underlying type and use an unnamed enum to define the values.
-#if defined(__cplusplus) || __has_extension(c_fixed_enum)
+#if defined(__cplusplus)
 	#define BN_OPTIONS(type, name) enum __BN_OPTIONS_ATTRIBUTES name : type
+#elif __has_extension(c_fixed_enum)
+  #define BN_OPTIONS(type, name) typedef type name; enum __BN_OPTIONS_ATTRIBUTES name : type
 #else
 	#define BN_OPTIONS(type, name) typedef type name; enum __BN_OPTIONS_ATTRIBUTES
 #endif

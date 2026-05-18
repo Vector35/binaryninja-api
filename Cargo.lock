@@ -8,7 +8,7 @@ version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dfbe277e56a376000877090da837660b4427aad530e3028d44e0bffe4f89a1c1"
 dependencies = [
- "gimli",
+ "gimli 0.31.1",
 ]
 
 [[package]]
@@ -809,7 +809,7 @@ version = "0.1.0"
 dependencies = [
  "binaryninja",
  "binaryninjacore-sys",
- "gimli",
+ "gimli 0.31.1",
  "object 0.32.2",
  "tracing",
 ]
@@ -822,7 +822,7 @@ dependencies = [
  "binaryninjacore-sys",
  "cpp_demangle",
  "dwarfreader",
- "gimli",
+ "gimli 0.31.1",
  "indexmap",
  "iset",
  "object 0.36.7",
@@ -838,7 +838,7 @@ dependencies = [
  "binaryninjacore-sys",
  "cpp_demangle",
  "dwarfreader",
- "gimli",
+ "gimli 0.31.1",
  "indexmap",
  "iset",
  "object 0.36.7",
@@ -853,7 +853,7 @@ dependencies = [
  "binaryninja",
  "binaryninjacore-sys",
  "dwarfreader",
- "gimli",
+ "gimli 0.31.1",
 ]
 
 [[package]]
@@ -862,7 +862,7 @@ version = "0.1.0"
 dependencies = [
  "binaryninja",
  "binaryninjacore-sys",
- "gimli",
+ "gimli 0.31.1",
  "object 0.36.7",
  "thiserror 2.0.18",
  "zstd",
@@ -1140,6 +1140,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "gimli"
+version = "0.33.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0bf7f043f89559805f8c7cacc432749b2fa0d0a0a9ee46ce47164ed5ba7f126c"
+dependencies = [
+ "fnv",
+ "hashbrown 0.16.1",
+ "indexmap",
+ "stable_deref_trait",
+]
+
+[[package]]
 name = "glob"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1169,6 +1181,12 @@ name = "hashbrown"
 version = "0.15.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5971ac85611da7067dbfcabef3c70ebb5606018acd9e2a3903a0da507521e0d5"
+
+[[package]]
+name = "hashbrown"
+version = "0.16.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
 
 [[package]]
 name = "heck"
@@ -2633,6 +2651,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "source_line_renderer"
+version = "0.1.0"
+dependencies = [
+ "binaryninja",
+ "binaryninjacore-sys",
+ "gimli 0.33.0",
+ "tracing",
 ]
 
 [[package]]

@@ -680,6 +680,18 @@ int64_t ProjectFile::GetCreationTimestamp() const
 }
 
 
+bool ProjectFile::IsReady() const
+{
+	return BNProjectFileIsReady(m_object);
+}
+
+
+bool ProjectFile::SetReady(bool ready)
+{
+	return BNProjectFileSetReady(m_object, ready);
+}
+
+
 bool ProjectFile::AddDependency(Ref<ProjectFile> file)
 {
 	return BNProjectFileAddDependency(m_object, file->m_object);

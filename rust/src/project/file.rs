@@ -7,8 +7,9 @@ use binaryninjacore_sys::{
     BNProjectFileGetCreationTimestamp, BNProjectFileGetDependencies, BNProjectFileGetDescription,
     BNProjectFileGetFolder, BNProjectFileGetId, BNProjectFileGetName,
     BNProjectFileGetPathInProject, BNProjectFileGetPathOnDisk, BNProjectFileGetProject,
-    BNProjectFileGetRequiredBy, BNProjectFileRemoveDependency, BNProjectFileSetDescription,
-    BNProjectFileSetFolder, BNProjectFileSetName,
+    BNProjectFileGetRequiredBy, BNProjectFileIsReady, BNProjectFileRemoveDependency,
+    BNProjectFileSetDescription, BNProjectFileSetFolder, BNProjectFileSetName,
+    BNProjectFileSetReady,
 };
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -94,6 +95,16 @@ impl ProjectFile {
             .unwrap()
     }
 
+    /// Check if this file is ready (first save has completed)
+    pub fn is_ready(&self) -> bool {
+        unsafe { BNProjectFileIsReady(self.handle.as_ptr()) }
+    }
+
+    /// Set whether this file is ready (first save has completed)
+    pub fn set_ready(&self, value: bool) -> bool {
+        unsafe { BNProjectFileSetReady(self.handle.as_ptr(), value) }
+    }
+
     /// Get the folder that contains this file
     pub fn folder(&self) -> Option<Ref<ProjectFolder>> {
         let result = unsafe { BNProjectFileGetFolder(self.handle.as_ptr()) };
@@ -146,6 +157,7 @@ impl Debug for ProjectFile {
             .field("name", &self.name())
             .field("description", &self.description())
             .field("creation_time", &self.creation_time())
+            .field("ready", &self.is_ready())
             .field("exists_on_disk", &self.exists_on_disk())
             .field("project", &self.project())
             .field("folder", &self.folder())

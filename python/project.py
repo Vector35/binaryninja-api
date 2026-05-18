@@ -160,6 +160,24 @@ class ProjectFile:
 		return core.BNProjectFileSetDescription(self._handle, new_description)
 
 	@property
+	def ready(self) -> bool:
+		"""
+		Check if this file is ready (first save has completed)
+
+		:return: True if this file is ready, False otherwise
+		"""
+		return core.BNProjectFileIsReady(self._handle)
+
+	@ready.setter
+	def ready(self, value: bool) -> bool:
+		"""
+		Set whether this file is ready (first save has completed)
+
+		:param value: Desired ready state
+		"""
+		return core.BNProjectFileSetReady(self._handle, value)
+
+	@property
 	def folder(self) -> Optional['ProjectFolder']:
 		"""
 		Get the folder that contains this file

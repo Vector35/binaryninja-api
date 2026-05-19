@@ -98,9 +98,11 @@ protected:
 		return "thumbv7-none-none";
 	}
 
-	void populateDecomposeRequest(decomp_request *req, const uint8_t *data, size_t len,
+	bool populateDecomposeRequest(decomp_request *req, const uint8_t *data, size_t len,
 		uint64_t addr, int inIfThen, int inIfThenLast)
 	{
+		if (!data || len < 2)
+			return false;
 		req->instr_word16 = 0;
 		req->instr_word32 = 0;
 		if(m_endian == LittleEndian) {
@@ -122,6 +124,7 @@ protected:
 		req->inIfThenLast = inIfThenLast;
 		req->carry_in = 0;
 		req->addr = (uint32_t)addr;
+		return true;
 	}
 
 	virtual bool Disassemble(const uint8_t* data, uint64_t addr, size_t maxLen, decomp_result& result)
@@ -129,7 +132,9 @@ protected:
 		(void)addr;
 		(void)maxLen;
 		decomp_request request;
-		populateDecomposeRequest(&request, data, maxLen, addr, IFTHEN_UNKNOWN, IFTHENLAST_UNKNOWN);
+
+		if (!populateDecomposeRequest(&request, data, maxLen, addr, IFTHEN_UNKNOWN, IFTHENLAST_UNKNOWN))
+			return false;
 
 		memset(&result, 0, sizeof(result));
 		if (thumb_decompose(&request, &result) != STATUS_OK)
@@ -176,7 +181,8 @@ public:
 		decomp_request request;
 		decomp_result decomp;
 
-		populateDecomposeRequest(&request, data, maxLen, addr, IFTHEN_UNKNOWN, IFTHENLAST_UNKNOWN);
+		if (!populateDecomposeRequest(&request, data, maxLen, addr, IFTHEN_UNKNOWN, IFTHENLAST_UNKNOWN))
+			return false;
 
 		if (thumb_decompose(&request, &decomp) != STATUS_OK)
 			return false;
@@ -460,7 +466,8 @@ public:
 		decomp_request request;
 		decomp_result decomp;
 
-		populateDecomposeRequest(&request, data, len, addr, IFTHEN_UNKNOWN, IFTHENLAST_UNKNOWN);
+		if (!populateDecomposeRequest(&request, data, len, addr, IFTHEN_UNKNOWN, IFTHENLAST_UNKNOWN))
+			return false;
 
 		if (thumb_decompose(&request, &decomp) != STATUS_OK)
 			return false;
@@ -1759,7 +1766,8 @@ public:
 		decomp_request request;
 		decomp_result decomp;
 
-		populateDecomposeRequest(&request, data, len, addr, IFTHEN_NO, IFTHENLAST_NO);
+		if (!populateDecomposeRequest(&request, data, len, addr, IFTHEN_NO, IFTHENLAST_NO))
+			return false;
 
 		if (thumb_decompose(&request, &decomp) != STATUS_OK)
 			return false;
@@ -1792,14 +1800,19 @@ public:
 
 			for (size_t i = 0; i < instrCount; i++)
 			{
-				bool isTrue = (i == 0) || (((mask >> (4 - i)) & 1) == (cond & 1));
+				if (offset >= len || (len - offset) < 2)
+					return false;
 
-				populateDecomposeRequest(&request, data+offset, len-offset, addr+offset,
-					IFTHEN_YES, ((i + 1) >= instrCount) ? IFTHENLAST_YES : IFTHENLAST_NO);
+				bool isTrue = (i == 0) || (((mask >> (4 - i)) & 1) == (cond & 1));
+				size_t remainingLen = len - offset;
+
+				if (!populateDecomposeRequest(&request, data+offset, remainingLen, addr+offset,
+					IFTHEN_YES, ((i + 1) >= instrCount) ? IFTHENLAST_YES : IFTHENLAST_NO))
+					return false;
 
 				if (thumb_decompose(&request, &decomp) != STATUS_OK)
 					return false;
-				if ((offset + (decomp.instrSize / 8)) > len)
+				if ((decomp.instrSize / 8) > remainingLen)
 					return false;
 				if ((decomp.status & STATUS_UNDEFINED) || (!decomp.format))
 					return false;

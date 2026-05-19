@@ -796,16 +796,24 @@ bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLif
 				if (buffer.GetLength() == 0)
 					buffer = data->ReadBuffer(i->GetStart(), i->GetEnd() - i->GetStart());
 
-				if (addr < i->GetStart() || addr >= (i->GetStart() + buffer.GetLength()))
+				uint64_t blockStart = i->GetStart();
+				size_t bufferLen = buffer.GetLength();
+				if (addr < blockStart || (addr - blockStart) >= bufferLen)
 				{
-					// Instruction data not found, emit undefined IL instruction
 					function->AddInstruction(function->AddExpr(LLIL_UNDEF, 0, 0));
 					logger->LogDebug("Instruction data not found, inserted LLIL_UNDEF at %#" PRIx64, addr);
 					break;
 				}
 
-				len = (i->GetStart() + buffer.GetLength()) - addr;
-				opcode = (const uint8_t*)buffer.GetDataAt(addr - i->GetStart());
+				size_t bufferOffset = static_cast<size_t>(addr - blockStart);
+				len = bufferLen - bufferOffset;
+				opcode = (const uint8_t*)buffer.GetDataAt(bufferOffset);
+				if (!opcode)
+				{
+					function->AddInstruction(function->AddExpr(LLIL_UNDEF, 0, 0));
+					logger->LogDebug("Instruction data not found, inserted LLIL_UNDEF at %#" PRIx64, addr);
+					break;
+				}
 			}
 
 			size_t instrCountBefore = function->GetInstructionCount();

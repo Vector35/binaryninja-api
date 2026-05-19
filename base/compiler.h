@@ -71,3 +71,15 @@
 
 #define BN_IGNORE_DEPRECATION_WARNINGS_BEGIN BN_IGNORE_WARNINGS_BEGIN("-Wdeprecated-declarations", 4996)
 #define BN_IGNORE_DEPRECATION_WARNINGS_END BN_IGNORE_WARNINGS_END
+
+// BN_NO_UNIQUE_ADDRESS
+//
+// Allows a non-static data member of empty type to share storage with another
+// member, removing the one-byte overhead the language otherwise requires. MSVC
+// ignores the standard [[no_unique_address]] for ABI-compat reasons and
+// provides [[msvc::no_unique_address]] instead.
+#if defined(_MSC_VER)
+#define BN_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+#else
+#define BN_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#endif

@@ -5,8 +5,8 @@ file(GLOB BN_BASE_SOURCES CONFIGURE_DEPENDS *.cpp *.h unicode/*.h unicode/*.cpp)
 add_library(binaryninjabase OBJECT ${BN_BASE_SOURCES})
 set_target_properties(binaryninjabase PROPERTIES LINKER_LANGUAGE CXX)
 
-target_include_directories(binaryninjabase
-    PUBLIC ${PROJECT_SOURCE_DIR})
+get_filename_component(BN_API_DIR "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
+target_include_directories(binaryninjabase PUBLIC ${BN_API_DIR})
 
 set_target_properties(binaryninjabase PROPERTIES
     CXX_STANDARD 20

@@ -51,6 +51,10 @@
 #define BN_ASSERT_TRAP __builtin_trap()
 #endif
 
+// Forward-declare BNLogError so this header is self-contained, without
+// pulling in all of binaryninjacore.h.
+extern "C" void BNLogError(const char* fmt, ...);
+
 #if BN_ASSERTIONS_ENABLED
 
 // When assertions are enabled, reporting an assertion failure logs an error message then traps.

@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 181
+#define BN_CURRENT_CORE_ABI_VERSION 182
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 181
+#define BN_MINIMUM_CORE_ABI_VERSION 182
 
 #define BN_DEMANGLER_MSVC "MS"
 #define BN_DEMANGLER_GNU3 "GNU3"
@@ -366,6 +366,16 @@ extern "C"
 		uint32_t build;
 		char* channel;
 	} BNVersionInfo;
+
+	typedef struct BNLicenseAddon
+	{
+		char* id;
+		char* licenseSerial;
+		char* product;
+		uint64_t createdTimestamp;
+		uint64_t expirationTimestamp;
+		char* signature;
+	} BNLicenseAddon;
 
 	typedef struct BNPluginVersionPlatform
 	{
@@ -4326,6 +4336,8 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetLicensedUserEmail(void);
 	BINARYNINJACOREAPI char* BNGetProduct(void);
 	BINARYNINJACOREAPI char* BNGetProductType(void);
+	BINARYNINJACOREAPI BNLicenseAddon* BNGetLicenseAddons(size_t* count);
+	BINARYNINJACOREAPI void BNFreeLicenseAddons(BNLicenseAddon* addons, size_t count);
 	BINARYNINJACOREAPI int BNGetLicenseCount(void);
 	BINARYNINJACOREAPI bool BNIsUIEnabled(void);
 	BINARYNINJACOREAPI void BNSetLicense(const char* licenseData);

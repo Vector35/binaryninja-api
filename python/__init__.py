@@ -22,9 +22,10 @@ import atexit
 import sys
 import ctypes
 import inspect
+from dataclasses import dataclass
 from time import gmtime, struct_time
 import os
-from typing import Mapping, Optional
+from typing import List, Mapping, Optional
 import functools
 
 # Binary Ninja components
@@ -380,6 +381,37 @@ def core_license_count() -> int:
 	'''License count from the license file'''
 	_init_plugins()
 	return core.BNGetLicenseCount()
+
+
+@dataclass(frozen=True)
+class LicenseAddon:
+	'''A verified add-on attached to the active license.'''
+	id: str
+	license_serial: str
+	product: str
+	created_timestamp: int
+	expiration_timestamp: int
+	signature: str
+
+
+def core_license_addons() -> List[LicenseAddon]:
+	'''License addons from the license file'''
+	_init_plugins()
+	count = ctypes.c_ulonglong()
+	addons = core.BNGetLicenseAddons(ctypes.byref(count))
+	if not addons:
+		return []
+	try:
+		return [LicenseAddon(
+			id=addons[i].id,
+			license_serial=addons[i].licenseSerial,
+			product=addons[i].product,
+			created_timestamp=addons[i].createdTimestamp,
+			expiration_timestamp=addons[i].expirationTimestamp,
+			signature=addons[i].signature,
+		) for i in range(count.value)]
+	finally:
+		core.BNFreeLicenseAddons(addons, count.value)
 
 
 def core_ui_enabled() -> bool:

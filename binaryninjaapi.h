@@ -1980,6 +1980,16 @@ namespace BinaryNinja {
 		}
 	};
 
+	struct LicenseAddon
+	{
+		std::string id;
+		std::string licenseSerial;
+		std::string product;
+		uint64_t createdTimestamp;
+		uint64_t expirationTimestamp;
+		std::string signature;
+	};
+
 	std::string EscapeString(const std::string& s);
 	std::string UnescapeString(const std::string& s);
 
@@ -2028,6 +2038,7 @@ namespace BinaryNinja {
 	std::string GetProduct();
 	std::string GetProductType();
 	std::string GetSerialNumber();
+	std::vector<LicenseAddon> GetLicenseAddons();
 	int GetLicenseCount();
 	bool IsUIEnabled();
 	uint32_t GetBuildId();

@@ -22,6 +22,17 @@ fn test_platform_types() {
 }
 
 #[test]
+fn test_platform_function_by_name() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let platform = Platform::by_name("windows-x86_64").expect("windows-x86_64 exists");
+    let platform_functions = platform.functions();
+    assert_ne!(platform_functions.len(), 0);
+
+    let function = platform_functions.get(0);
+    assert!(platform.function_by_name(function.name, true).is_some());
+}
+
+#[test]
 fn test_platform_calling_conventions() {
     let _session = Session::new().expect("Failed to initialize session");
     let platform = Platform::by_name("windows-x86_64").expect("windows-x86_64 exists");

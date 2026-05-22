@@ -57,6 +57,14 @@ impl Logger {
         Self::new_with_session(name, LOGGER_DEFAULT_SESSION_ID)
     }
 
+    pub fn ref_from_raw(handle: *mut BNLogger) -> Ref<Logger> {
+        unsafe {
+            Ref::new(Logger {
+                handle: NonNull::new(handle).unwrap(),
+            })
+        }
+    }
+
     /// Create a logger scoped with the specific [`SessionId`], hiding the logs when the session
     /// is not active in the UI.
     ///

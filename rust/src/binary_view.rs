@@ -1808,10 +1808,14 @@ impl BinaryView {
         address: u64,
         platform: &Platform,
     ) -> Option<Ref<Function>> {
-        self.add_auto_function_ext(address, platform, None)
+        self.add_auto_function_ext(address, platform, None, false)
     }
 
     /// Add an auto function at the given `address` with the `platform` and function type.
+    ///
+    /// The `auto_discovered` flag is used to prevent or allow this created function to be deleted if
+    /// it is never used (the function has no xrefs), if you are confident that this is a valid function
+    /// set this to `false`.
     ///
     /// NOTE: If the view's default platform is not set, this will set it to `platform`.
     pub fn add_auto_function_ext(
@@ -1819,6 +1823,7 @@ impl BinaryView {
         address: u64,
         platform: &Platform,
         func_type: Option<&Type>,
+        auto_discovered: bool,
     ) -> Option<Ref<Function>> {
         unsafe {
             let func_type = match func_type {
@@ -1826,8 +1831,13 @@ impl BinaryView {
                 None => std::ptr::null_mut(),
             };
 
-            let handle =
-                BNAddFunctionForAnalysis(self.handle, platform.handle, address, true, func_type);
+            let handle = BNAddFunctionForAnalysis(
+                self.handle,
+                platform.handle,
+                address,
+                auto_discovered,
+                func_type,
+            );
 
             if handle.is_null() {
                 return None;

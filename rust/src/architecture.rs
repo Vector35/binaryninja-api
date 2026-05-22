@@ -27,7 +27,7 @@ use crate::{
     data_buffer::DataBuffer,
     disassembly::InstructionTextToken,
     ffi::INVALID_REGISTER,
-    function::Function,
+    function::{Function, Location, NativeBlock},
     platform::Platform,
     rc::*,
     relocation::CoreRelocationHandler,
@@ -35,6 +35,7 @@ use crate::{
     types::{NameAndType, Type},
     Endianness,
 };
+use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
 use std::{
     borrow::Borrow,
@@ -48,7 +49,9 @@ use std::ptr::NonNull;
 use crate::function_recognizer::FunctionRecognizer;
 use crate::relocation::{CustomRelocationHandlerHandle, RelocationHandler};
 
+use crate::basic_block::BasicBlock;
 use crate::confidence::Conf;
+use crate::logger::Logger;
 use crate::low_level_il::expression::ValueExpr;
 use crate::low_level_il::lifting::{
     get_default_flag_cond_llil, get_default_flag_write_llil, LowLevelILFlagWriteOp,
@@ -592,13 +595,133 @@ pub trait ArchitectureWithFunctionContext: Architecture {
 
 pub struct FunctionLifterContext {
     pub(crate) handle: *mut BNFunctionLifterContext,
+    pub function: *mut BNLowLevelILFunction,
+    pub platform: Ref<Platform>,
+    pub logger: Ref<Logger>,
+    pub blocks: Vec<Ref<BasicBlock<NativeBlock>>>,
+    pub no_return_calls: HashSet<Location>,
+    pub contextual_returns: HashMap<Location, bool>,
+    pub inlined_remapping: HashMap<Location, Location>,
+    pub user_indirect_branches: HashMap<Location, HashSet<Location>>,
+    pub auto_indirect_branches: HashMap<Location, HashSet<Location>>,
+    //pub inlined_calls: HashSet<u64>,
+}
+
+unsafe fn lifter_context_slice<'a, T>(ptr: *const T, len: usize) -> &'a [T] {
+    if len == 0 {
+        &[]
+    } else {
+        debug_assert!(!ptr.is_null());
+        unsafe { std::slice::from_raw_parts(ptr, len) }
+    }
 }
 
 impl FunctionLifterContext {
-    pub unsafe fn from_raw(handle: *mut BNFunctionLifterContext) -> Self {
+    pub unsafe fn from_raw(
+        function: *mut BNLowLevelILFunction,
+        handle: *mut BNFunctionLifterContext,
+    ) -> Self {
+        debug_assert!(!function.is_null());
         debug_assert!(!handle.is_null());
+        let flc_ref = &*handle;
+        let platform = unsafe { Platform::ref_from_raw(BNNewPlatformReference(flc_ref.platform)) };
+        let logger = unsafe { Logger::ref_from_raw(BNNewLoggerReference(flc_ref.logger)) };
 
-        FunctionLifterContext { handle }
+        let mut blocks = Vec::new();
+        for i in 0..flc_ref.basicBlockCount {
+            let block = unsafe {
+                Some(BasicBlock::ref_from_raw(
+                    BNNewBasicBlockReference(*flc_ref.basicBlocks.add(i)),
+                    NativeBlock::new(),
+                ))
+            };
+
+            blocks.push(block.unwrap());
+        }
+
+        let raw_no_return_calls: &[BNArchitectureAndAddress] =
+            lifter_context_slice(flc_ref.noReturnCalls, flc_ref.noReturnCallsCount);
+        let no_return_calls: HashSet<Location> =
+            raw_no_return_calls.iter().map(Location::from).collect();
+
+        let raw_contextual_return_locs: &[BNArchitectureAndAddress] = unsafe {
+            lifter_context_slice(
+                flc_ref.contextualFunctionReturnLocations,
+                flc_ref.contextualFunctionReturnCount,
+            )
+        };
+        let raw_contextual_return_vals: &[bool] = unsafe {
+            lifter_context_slice(
+                flc_ref.contextualFunctionReturnValues,
+                flc_ref.contextualFunctionReturnCount,
+            )
+        };
+        let contextual_returns: HashMap<Location, bool> = raw_contextual_return_locs
+            .iter()
+            .map(Location::from)
+            .zip(raw_contextual_return_vals.iter().copied())
+            .collect();
+
+        let inlined_remapping: HashMap<Location, Location> = {
+            let raw_inline_remap_locs: &[BNArchitectureAndAddress] = lifter_context_slice(
+                flc_ref.inlinedRemappingKeys,
+                flc_ref.inlinedRemappingEntryCount,
+            );
+
+            let raw_inline_remap_dests: &[BNArchitectureAndAddress] = lifter_context_slice(
+                flc_ref.inlinedRemappingValues,
+                flc_ref.inlinedRemappingEntryCount,
+            );
+
+            raw_inline_remap_locs
+                .iter()
+                .map(Location::from)
+                .zip(raw_inline_remap_dests.iter().map(Location::from))
+                .collect()
+        };
+
+        let mut user_indirect_branches: HashMap<Location, HashSet<Location>> = HashMap::new();
+        let mut auto_indirect_branches: HashMap<Location, HashSet<Location>> = HashMap::new();
+        for i in 0..flc_ref.indirectBranchesCount {
+            let entry = unsafe { *flc_ref.indirectBranches.add(i) };
+            let src = Location::new(
+                Some(CoreArchitecture::from_raw(entry.sourceArch)),
+                entry.sourceAddr,
+            );
+            let dest = Location::new(
+                Some(CoreArchitecture::from_raw(entry.destArch)),
+                entry.destAddr,
+            );
+            if entry.autoDefined {
+                auto_indirect_branches.entry(src).or_default().insert(dest);
+            } else {
+                user_indirect_branches.entry(src).or_default().insert(dest);
+            }
+        }
+
+        FunctionLifterContext {
+            handle,
+            function: BNNewLowLevelILFunctionReference(function),
+            platform,
+            logger,
+            blocks,
+            no_return_calls,
+            contextual_returns,
+            inlined_remapping,
+            user_indirect_branches,
+            auto_indirect_branches,
+        }
+    }
+
+    pub fn prepare_block_translation(
+        &self,
+        func: &LowLevelILMutableFunction,
+        arch: &CoreArchitecture,
+        address: u64,
+    ) {
+        unsafe {
+            BNPrepareBlockTranslation(func.handle, arch.handle, address);
+        }
     }
 
     pub fn get_function_arch_context<A: ArchitectureWithFunctionContext>(
@@ -612,6 +735,14 @@ impl FunctionLifterContext {
             } else {
                 Some(&*(ptr as *const A::FunctionArchContext))
             }
+        }
+    }
+}
+
+impl Drop for FunctionLifterContext {
+    fn drop(&mut self) {
+        if !self.function.is_null() {
+            unsafe { BNFreeLowLevelILFunction(self.function) };
         }
     }
 }
@@ -1630,12 +1761,12 @@ where
         A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
-        let function = unsafe {
+        let llil = unsafe {
             LowLevelILMutableFunction::from_raw_with_arch(function, Some(*custom_arch.as_ref()))
         };
-        let mut context: FunctionLifterContext =
-            unsafe { FunctionLifterContext::from_raw(context) };
-        custom_arch.lift_function(function, &mut context)
+
+        let mut ctx = unsafe { FunctionLifterContext::from_raw(function, context) };
+        custom_arch.lift_function(llil, &mut ctx)
     }
 
     extern "C" fn cb_reg_name<A>(ctxt: *mut c_void, reg: u32) -> *mut c_char
@@ -2630,7 +2761,6 @@ where
 
     unsafe {
         let res = BNRegisterArchitecture(name.as_ptr(), &mut custom_arch as *mut _);
-
         assert!(!res.is_null());
 
         (*raw).arch.assume_init_mut()

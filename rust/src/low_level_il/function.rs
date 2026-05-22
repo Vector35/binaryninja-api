@@ -209,6 +209,20 @@ where
             Some(unsafe { BasicBlock::ref_from_raw(block, LowLevelILBlock { function: self }) })
         }
     }
+
+    pub fn set_indirect_branches(&self, branches: &[Location]) {
+        let mut bn_branches: Box<[BNArchitectureAndAddress]> = branches
+            .iter()
+            .map(|loc| BNArchitectureAndAddress {
+                address: loc.addr,
+                arch: loc.arch.unwrap_or_else(|| self.arch()).handle,
+            })
+            .collect();
+
+        unsafe {
+            BNLowLevelILSetIndirectBranches(self.handle, bn_branches.as_mut_ptr(), branches.len());
+        }
+    }
 }
 
 impl<M: FunctionMutability> LowLevelILFunction<M, NonSSA> {

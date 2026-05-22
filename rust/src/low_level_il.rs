@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::borrow::Cow;
+use std::collections::HashSet;
 use std::fmt;
 use std::fmt::{Debug, Display};
 // TODO : provide some way to forbid emitting register reads for certain registers
@@ -316,3 +317,42 @@ pub enum VisitorAction {
     Sibling,
     Halt,
 }
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum ILInstructionAttribute {
+    ILAllowDeadStoreElimination,
+    ILPreventDeadStoreElimination,
+    MLILAssumePossibleUse,
+    MLILUnknownSize,
+    SrcInstructionUsesPointerAuth,
+    ILPreventAliasAnalysis,
+    ILIsCFGProtected,
+    MLILPossiblyUnusedIntermediate,
+    HLILFoldableExpr,
+    HLILInvertableCondition,
+    HLILEarlyReturnPossible,
+    HLILSwitchRecoveryPossible,
+    ILTransparentCopy,
+}
+
+impl ILInstructionAttribute {
+    pub fn value(&self) -> u32 {
+        match self {
+            Self::ILAllowDeadStoreElimination => 1,
+            Self::ILPreventDeadStoreElimination => 2,
+            Self::MLILAssumePossibleUse => 4,
+            Self::MLILUnknownSize => 8,
+            Self::SrcInstructionUsesPointerAuth => 16,
+            Self::ILPreventAliasAnalysis => 32,
+            Self::ILIsCFGProtected => 64,
+            Self::MLILPossiblyUnusedIntermediate => 128,
+            Self::HLILFoldableExpr => 256,
+            Self::HLILInvertableCondition => 512,
+            Self::HLILEarlyReturnPossible => 1024,
+            Self::HLILSwitchRecoveryPossible => 2048,
+            Self::ILTransparentCopy => 4096,
+        }
+    }
+}
+
+pub type ILInstructionAttributeSet = HashSet<ILInstructionAttribute>;

@@ -14,8 +14,10 @@
 
 use std::marker::PhantomData;
 
-use binaryninjacore_sys::{BNAddLowLevelILLabelForAddress, BNLowLevelILOperation};
-use binaryninjacore_sys::{BNLowLevelILLabel, BNRegisterOrConstant};
+use binaryninjacore_sys::{
+    BNAddLowLevelILLabelForAddress, BNLowLevelILClearIndirectBranches, BNLowLevelILLabel,
+    BNLowLevelILOperation, BNRegisterOrConstant, BNSetLowLevelILExprAttributes,
+};
 
 use super::*;
 use crate::architecture::{Architecture, FlagWriteId, RegisterId};
@@ -23,7 +25,8 @@ use crate::architecture::{CoreRegister, Register as ArchReg};
 use crate::architecture::{
     Flag, FlagClass, FlagCondition, FlagGroup, FlagRole, FlagWrite, Intrinsic,
 };
-use crate::function::Location;
+use crate::basic_block::BasicBlock;
+use crate::function::{Location, NativeBlock};
 
 pub trait LiftableLowLevelIL<'func> {
     type Result: ExpressionResultType;
@@ -1512,6 +1515,13 @@ impl LowLevelILMutableFunction {
         }
     }
 
+    pub fn set_current_source_block(&self, source: &BasicBlock<NativeBlock>) {
+        use binaryninjacore_sys::BNLowLevelILSetCurrentSourceBlock;
+        unsafe {
+            BNLowLevelILSetCurrentSourceBlock(self.handle, source.handle);
+        }
+    }
+
     pub fn label_for_address<L: Into<Location>>(&self, loc: L) -> Option<LowLevelILLabel> {
         use binaryninjacore_sys::BNGetLowLevelILLabelForAddress;
 
@@ -1560,6 +1570,25 @@ impl LowLevelILMutableFunction {
             self.update_label_map_for_label(&new_label);
         }
         *label = new_label;
+    }
+
+    pub fn set_expr_attributes(
+        &self,
+        expr: LowLevelExpressionIndex,
+        value: &ILInstructionAttributeSet,
+    ) {
+        let mut result = 0u32;
+        for flag in value {
+            result |= flag.value();
+        }
+
+        unsafe {
+            BNSetLowLevelILExprAttributes(self.handle, expr.0, result);
+        }
+    }
+
+    pub fn clear_indirect_branches(&self) {
+        unsafe { BNLowLevelILClearIndirectBranches(self.handle) };
     }
 }
 

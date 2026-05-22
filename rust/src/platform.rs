@@ -20,8 +20,8 @@ use crate::{
     rc::*,
     string::*,
     types::{
-        QualifiedNameAndType, TypeContainer, TypeLibrary, TypeParserError, TypeParserErrorSeverity,
-        TypeParserResult,
+        QualifiedName, QualifiedNameAndType, Type, TypeContainer, TypeLibrary, TypeParserError,
+        TypeParserErrorSeverity, TypeParserResult,
     },
 };
 use binaryninjacore_sys::*;
@@ -276,6 +276,22 @@ impl Platform {
             let mut count = 0;
             let handles = BNGetPlatformFunctions(self.handle, &mut count);
             Array::new(handles, count, ())
+        }
+    }
+
+    pub fn function_by_name<T: Into<QualifiedName>>(
+        &self,
+        name: T,
+        exact_match: bool,
+    ) -> Option<Ref<Type>> {
+        let mut raw_name = QualifiedName::into_raw(name.into());
+        unsafe {
+            let type_handle = BNGetPlatformFunctionByName(self.handle, &mut raw_name, exact_match);
+            QualifiedName::free_raw(raw_name);
+            if type_handle.is_null() {
+                return None;
+            }
+            Some(Type::ref_from_raw(type_handle))
         }
     }
 

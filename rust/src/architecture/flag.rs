@@ -15,8 +15,11 @@ new_id_type!(FlagWriteId, u32);
 new_id_type!(FlagClassId, u32);
 new_id_type!(FlagGroupId, u32);
 
-pub trait Flag: Debug + Sized + Clone + Copy + Hash + Eq {
+pub trait Flag: Copy {
     type FlagClass: FlagClass;
+
+    /// Must return a list of all possible flags.
+    fn flags(arch: &CoreArchitecture) -> Vec<Self>;
 
     fn name(&self) -> Cow<'_, str>;
     fn role(&self, class: Option<Self::FlagClass>) -> FlagRole;
@@ -25,11 +28,15 @@ pub trait Flag: Debug + Sized + Clone + Copy + Hash + Eq {
     ///
     /// *MUST* be in the range [0, 0x7fff_ffff]
     fn id(&self) -> FlagId;
+    fn from_id(arch: &CoreArchitecture, id: FlagId) -> Option<Self>;
 }
 
-pub trait FlagWrite: Sized + Clone + Copy {
+pub trait FlagWrite: Copy {
     type FlagType: Flag;
     type FlagClass: FlagClass;
+
+    /// Must return a list of all possible flag write types.
+    fn flag_write_types(arch: &CoreArchitecture) -> Vec<Self>;
 
     fn name(&self) -> Cow<'_, str>;
     fn class(&self) -> Option<Self::FlagClass>;
@@ -39,11 +46,15 @@ pub trait FlagWrite: Sized + Clone + Copy {
     /// *MUST NOT* be 0.
     /// *MUST* be in the range [1, 0x7fff_ffff]
     fn id(&self) -> FlagWriteId;
+    fn from_id(arch: &CoreArchitecture, id: FlagWriteId) -> Option<Self>;
 
     fn flags_written(&self) -> Vec<Self::FlagType>;
 }
 
-pub trait FlagClass: Sized + Clone + Copy + Hash + Eq {
+pub trait FlagClass: Copy {
+    /// Must return a list of all possible flag classes.
+    fn flag_classes(arch: &CoreArchitecture) -> Vec<Self>;
+
     fn name(&self) -> Cow<'_, str>;
 
     /// Unique identifier for this `FlagClass`.
@@ -51,11 +62,15 @@ pub trait FlagClass: Sized + Clone + Copy + Hash + Eq {
     /// *MUST NOT* be 0.
     /// *MUST* be in the range [1, 0x7fff_ffff]
     fn id(&self) -> FlagClassId;
+    fn from_id(arch: &CoreArchitecture, id: FlagClassId) -> Option<Self>;
 }
 
-pub trait FlagGroup: Debug + Sized + Clone + Copy {
+pub trait FlagGroup: Copy {
     type FlagType: Flag;
-    type FlagClass: FlagClass;
+    type FlagClass: FlagClass + Hash + Eq;
+
+    /// Must return a list of all possible flag groups.
+    fn flag_groups(arch: &CoreArchitecture) -> Vec<Self>;
 
     fn name(&self) -> Cow<'_, str>;
 
@@ -63,6 +78,7 @@ pub trait FlagGroup: Debug + Sized + Clone + Copy {
     ///
     /// *MUST* be in the range [0, 0x7fff_ffff]
     fn id(&self) -> FlagGroupId;
+    fn from_id(arch: &CoreArchitecture, id: FlagGroupId) -> Option<Self>;
 
     /// Returns the list of flags that need to be resolved in order
     /// to take the clean flag resolution path -- at time of writing,
@@ -97,11 +113,17 @@ pub struct UnusedFlag;
 
 impl Flag for UnusedFlag {
     type FlagClass = Self;
+    fn flags(_arch: &CoreArchitecture) -> Vec<Self> {
+        Vec::new()
+    }
     fn name(&self) -> Cow<'_, str> {
         unreachable!()
     }
     fn role(&self, _class: Option<Self::FlagClass>) -> FlagRole {
         unreachable!()
+    }
+    fn from_id(_arch: &CoreArchitecture, _id: FlagId) -> Option<Self> {
+        None
     }
     fn id(&self) -> FlagId {
         unreachable!()
@@ -111,14 +133,20 @@ impl Flag for UnusedFlag {
 impl FlagWrite for UnusedFlag {
     type FlagType = Self;
     type FlagClass = Self;
+    fn flag_write_types(_arch: &CoreArchitecture) -> Vec<Self> {
+        Vec::new()
+    }
     fn name(&self) -> Cow<'_, str> {
         unreachable!()
     }
-    fn class(&self) -> Option<Self> {
+    fn class(&self) -> Option<Self::FlagClass> {
         unreachable!()
     }
     fn id(&self) -> FlagWriteId {
         unreachable!()
+    }
+    fn from_id(_arch: &CoreArchitecture, _id: FlagWriteId) -> Option<Self> {
+        None
     }
     fn flags_written(&self) -> Vec<Self::FlagType> {
         unreachable!()
@@ -126,27 +154,88 @@ impl FlagWrite for UnusedFlag {
 }
 
 impl FlagClass for UnusedFlag {
+    fn flag_classes(_arch: &CoreArchitecture) -> Vec<Self> {
+        Vec::new()
+    }
     fn name(&self) -> Cow<'_, str> {
         unreachable!()
     }
     fn id(&self) -> FlagClassId {
         unreachable!()
     }
+    fn from_id(_arch: &CoreArchitecture, _id: FlagClassId) -> Option<Self> {
+        None
+    }
 }
 
 impl FlagGroup for UnusedFlag {
     type FlagType = Self;
     type FlagClass = Self;
+    fn flag_groups(_arch: &CoreArchitecture) -> Vec<Self> {
+        Vec::new()
+    }
     fn name(&self) -> Cow<'_, str> {
         unreachable!()
     }
     fn id(&self) -> FlagGroupId {
         unreachable!()
     }
+    fn from_id(_arch: &CoreArchitecture, _id: FlagGroupId) -> Option<Self> {
+        None
+    }
     fn flags_required(&self) -> Vec<Self::FlagType> {
         unreachable!()
     }
-    fn flag_conditions(&self) -> HashMap<Self, FlagCondition> {
+    fn flag_conditions(&self) -> HashMap<Self::FlagClass, FlagCondition> {
+        unreachable!()
+    }
+}
+
+/// Type for architectures that do not use flag classes, but may still use flags. Will panic if accessed as a flag class.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct UnusedFlagClass;
+
+impl FlagClass for UnusedFlagClass {
+    fn flag_classes(_arch: &CoreArchitecture) -> Vec<Self> {
+        Vec::new()
+    }
+    fn name(&self) -> Cow<'_, str> {
+        unreachable!()
+    }
+    fn id(&self) -> FlagClassId {
+        unreachable!()
+    }
+    fn from_id(_arch: &CoreArchitecture, _id: FlagClassId) -> Option<Self> {
+        None
+    }
+}
+
+/// Type for architectures that do not use flag groups, but may still use flags or flag classes. Will panic if accessed as a flag group.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct UnusedFlagGroup<F: Flag = UnusedFlag, C: FlagClass = UnusedFlagClass> {
+    _flag: std::marker::PhantomData<F>,
+    _class: std::marker::PhantomData<C>,
+}
+
+impl<F: Flag, C: FlagClass + Hash + Eq> FlagGroup for UnusedFlagGroup<F, C> {
+    type FlagType = F;
+    type FlagClass = C;
+    fn flag_groups(_arch: &CoreArchitecture) -> Vec<Self> {
+        Vec::new()
+    }
+    fn name(&self) -> Cow<'_, str> {
+        unreachable!()
+    }
+    fn id(&self) -> FlagGroupId {
+        unreachable!()
+    }
+    fn from_id(_arch: &CoreArchitecture, _id: FlagGroupId) -> Option<Self> {
+        None
+    }
+    fn flags_required(&self) -> Vec<Self::FlagType> {
+        unreachable!()
+    }
+    fn flag_conditions(&self) -> HashMap<Self::FlagClass, FlagCondition> {
         unreachable!()
     }
 }
@@ -158,11 +247,6 @@ pub struct CoreFlag {
 }
 
 impl CoreFlag {
-    pub fn new(arch: CoreArchitecture, id: FlagId) -> Option<Self> {
-        let flag = Self { arch, id };
-        flag.is_valid().then_some(flag)
-    }
-
     fn is_valid(&self) -> bool {
         // We check the name to see if the flag is actually valid.
         let name = unsafe { BNGetArchitectureFlagName(self.arch.handle, self.id.into()) };
@@ -178,6 +262,23 @@ impl CoreFlag {
 
 impl Flag for CoreFlag {
     type FlagClass = CoreFlagClass;
+
+    fn flags(arch: &CoreArchitecture) -> Vec<Self> {
+        let mut count: usize = 0;
+        unsafe {
+            let flags_raw = BNGetAllArchitectureFlags(arch.handle, &mut count);
+
+            let ret = std::slice::from_raw_parts(flags_raw, count)
+                .iter()
+                .map(|&id| FlagId::from(id))
+                .filter_map(|flag| Self::from_id(arch, flag))
+                .collect();
+
+            BNFreeRegisterList(flags_raw);
+
+            ret
+        }
+    }
 
     fn name(&self) -> Cow<'_, str> {
         unsafe {
@@ -208,6 +309,11 @@ impl Flag for CoreFlag {
     fn id(&self) -> FlagId {
         self.id
     }
+
+    fn from_id(arch: &CoreArchitecture, id: FlagId) -> Option<Self> {
+        let flag_write = Self { arch: *arch, id };
+        flag_write.is_valid().then_some(flag_write)
+    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
@@ -217,11 +323,6 @@ pub struct CoreFlagWrite {
 }
 
 impl CoreFlagWrite {
-    pub fn new(arch: CoreArchitecture, id: FlagWriteId) -> Option<Self> {
-        let flag_write = Self { arch, id };
-        flag_write.is_valid().then_some(flag_write)
-    }
-
     fn is_valid(&self) -> bool {
         // We check the name to see if the flag write is actually valid.
         let name = unsafe { BNGetArchitectureFlagWriteTypeName(self.arch.handle, self.id.into()) };
@@ -238,6 +339,23 @@ impl CoreFlagWrite {
 impl FlagWrite for CoreFlagWrite {
     type FlagType = CoreFlag;
     type FlagClass = CoreFlagClass;
+
+    fn flag_write_types(arch: &CoreArchitecture) -> Vec<CoreFlagWrite> {
+        unsafe {
+            let mut count: usize = 0;
+            let flag_writes_raw = BNGetAllArchitectureFlagWriteTypes(arch.handle, &mut count);
+
+            let ret = std::slice::from_raw_parts(flag_writes_raw, count)
+                .iter()
+                .map(|&id| FlagWriteId::from(id))
+                .filter_map(|flag_write| Self::from_id(arch, flag_write))
+                .collect();
+
+            BNFreeRegisterList(flag_writes_raw);
+
+            ret
+        }
+    }
 
     fn name(&self) -> Cow<'_, str> {
         unsafe {
@@ -262,12 +380,17 @@ impl FlagWrite for CoreFlagWrite {
 
         match class {
             0 => None,
-            class_id => Some(CoreFlagClass::new(self.arch, class_id.into())?),
+            class_id => Some(CoreFlagClass::from_id(&self.arch, class_id.into())?),
         }
     }
 
     fn id(&self) -> FlagWriteId {
         self.id
+    }
+
+    fn from_id(arch: &CoreArchitecture, id: FlagWriteId) -> Option<Self> {
+        let flag_write = Self { arch: *arch, id };
+        flag_write.is_valid().then_some(flag_write)
     }
 
     fn flags_written(&self) -> Vec<CoreFlag> {
@@ -284,7 +407,7 @@ impl FlagWrite for CoreFlagWrite {
             std::slice::from_raw_parts(regs, count)
                 .iter()
                 .map(|id| FlagId::from(*id))
-                .filter_map(|reg| CoreFlag::new(self.arch, reg))
+                .filter_map(|reg| CoreFlag::from_id(&self.arch, reg))
                 .collect()
         };
 
@@ -303,11 +426,6 @@ pub struct CoreFlagClass {
 }
 
 impl CoreFlagClass {
-    pub fn new(arch: CoreArchitecture, id: FlagClassId) -> Option<Self> {
-        let flag = Self { arch, id };
-        flag.is_valid().then_some(flag)
-    }
-
     fn is_valid(&self) -> bool {
         // We check the name to see if the flag is actually valid.
         let name =
@@ -323,6 +441,23 @@ impl CoreFlagClass {
 }
 
 impl FlagClass for CoreFlagClass {
+    fn flag_classes(arch: &CoreArchitecture) -> Vec<CoreFlagClass> {
+        unsafe {
+            let mut count: usize = 0;
+            let flag_classes_raw = BNGetAllArchitectureSemanticFlagClasses(arch.handle, &mut count);
+
+            let ret = std::slice::from_raw_parts(flag_classes_raw, count)
+                .iter()
+                .map(|&id| FlagClassId::from(id))
+                .filter_map(|flag_class| Self::from_id(arch, flag_class))
+                .collect();
+
+            BNFreeRegisterList(flag_classes_raw);
+
+            ret
+        }
+    }
+
     fn name(&self) -> Cow<'_, str> {
         unsafe {
             let name = BNGetArchitectureSemanticFlagClassName(self.arch.handle, self.id.into());
@@ -342,6 +477,11 @@ impl FlagClass for CoreFlagClass {
     fn id(&self) -> FlagClassId {
         self.id
     }
+
+    fn from_id(arch: &CoreArchitecture, id: FlagClassId) -> Option<Self> {
+        let flag_write = Self { arch: *arch, id };
+        flag_write.is_valid().then_some(flag_write)
+    }
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -351,11 +491,6 @@ pub struct CoreFlagGroup {
 }
 
 impl CoreFlagGroup {
-    pub fn new(arch: CoreArchitecture, id: FlagGroupId) -> Option<Self> {
-        let flag_group = Self { arch, id };
-        flag_group.is_valid().then_some(flag_group)
-    }
-
     fn is_valid(&self) -> bool {
         // We check the name to see if the flag group is actually valid.
         let name =
@@ -373,6 +508,23 @@ impl CoreFlagGroup {
 impl FlagGroup for CoreFlagGroup {
     type FlagType = CoreFlag;
     type FlagClass = CoreFlagClass;
+
+    fn flag_groups(arch: &CoreArchitecture) -> Vec<CoreFlagGroup> {
+        unsafe {
+            let mut count: usize = 0;
+            let flag_groups_raw = BNGetAllArchitectureSemanticFlagGroups(arch.handle, &mut count);
+
+            let ret = std::slice::from_raw_parts(flag_groups_raw, count)
+                .iter()
+                .map(|&id| FlagGroupId::from(id))
+                .filter_map(|flag_group| Self::from_id(arch, flag_group))
+                .collect();
+
+            BNFreeRegisterList(flag_groups_raw);
+
+            ret
+        }
+    }
 
     fn name(&self) -> Cow<'_, str> {
         unsafe {
@@ -394,6 +546,11 @@ impl FlagGroup for CoreFlagGroup {
         self.id
     }
 
+    fn from_id(arch: &CoreArchitecture, id: FlagGroupId) -> Option<Self> {
+        let flag_write = Self { arch: *arch, id };
+        flag_write.is_valid().then_some(flag_write)
+    }
+
     fn flags_required(&self) -> Vec<CoreFlag> {
         let mut count: usize = 0;
         let regs: *mut u32 = unsafe {
@@ -408,7 +565,7 @@ impl FlagGroup for CoreFlagGroup {
             std::slice::from_raw_parts(regs, count)
                 .iter()
                 .map(|id| FlagId::from(*id))
-                .filter_map(|reg| CoreFlag::new(self.arch, reg))
+                .filter_map(|reg| CoreFlag::from_id(&self.arch, reg))
                 .collect()
         };
 
@@ -433,7 +590,7 @@ impl FlagGroup for CoreFlagGroup {
                 .iter()
                 .filter_map(|class_cond| {
                     Some((
-                        CoreFlagClass::new(self.arch, class_cond.semanticClass.into())?,
+                        CoreFlagClass::from_id(&self.arch, class_cond.semanticClass.into())?,
                         class_cond.condition,
                     ))
                 })

@@ -1,11 +1,11 @@
-use crate::flag::{Flag, FlagClass, FlagGroup, FlagWrite};
+use crate::flag::{Flag, FlagWrite};
 use crate::lift::lift_instruction;
 use crate::register::Register;
 
 use binaryninja::{
     architecture::{
         Architecture, CoreArchitecture, CustomArchitectureHandle, FlagCondition, InstructionInfo,
-        UnusedIntrinsic, UnusedRegisterStack,
+        UnusedFlagClass, UnusedFlagGroup, UnusedIntrinsic, UnusedRegisterStack,
     },
     disassembly::{InstructionTextToken, InstructionTextTokenKind},
     Endianness,
@@ -16,9 +16,7 @@ use msp430_asm::{
     single_operand::SingleOperand, two_operand::TwoOperand,
 };
 
-use binaryninja::architecture::{
-    BranchKind, FlagClassId, FlagGroupId, FlagId, FlagWriteId, RegisterId,
-};
+use binaryninja::architecture::BranchKind;
 use binaryninja::low_level_il::expression::ValueExpr;
 use binaryninja::low_level_il::{LowLevelILMutableExpression, LowLevelILMutableFunction};
 
@@ -47,8 +45,8 @@ impl Architecture for Msp430 {
     type RegisterInfo = Register;
     type Flag = Flag;
     type FlagWrite = FlagWrite;
-    type FlagClass = FlagClass;
-    type FlagGroup = FlagGroup;
+    type FlagClass = UnusedFlagClass;
+    type FlagGroup = UnusedFlagGroup<Flag>;
     type Intrinsic = UnusedIntrinsic;
 
     fn endianness(&self) -> Endianness {
@@ -69,14 +67,6 @@ impl Architecture for Msp430 {
 
     fn max_instr_len(&self) -> usize {
         6
-    }
-
-    fn opcode_display_len(&self) -> usize {
-        self.max_instr_len()
-    }
-
-    fn associated_arch_by_addr(&self, _addr: u64) -> CoreArchitecture {
-        self.handle
     }
 
     fn instruction_info(&self, data: &[u8], addr: u64) -> Option<InstructionInfo> {
@@ -227,120 +217,6 @@ impl Architecture for Msp430 {
         _group: Self::FlagGroup,
         _il: &'a LowLevelILMutableFunction,
     ) -> Option<LowLevelILMutableExpression<'a, ValueExpr>> {
-        None
-    }
-
-    fn registers_all(&self) -> Vec<Self::Register> {
-        vec![
-            Register::Pc,
-            Register::Sp,
-            Register::Sr,
-            Register::Cg,
-            Register::R4,
-            Register::R5,
-            Register::R6,
-            Register::R7,
-            Register::R8,
-            Register::R9,
-            Register::R10,
-            Register::R11,
-            Register::R12,
-            Register::R13,
-            Register::R14,
-            Register::R15,
-        ]
-    }
-
-    fn registers_full_width(&self) -> Vec<Self::Register> {
-        vec![
-            Register::Pc,
-            Register::Sp,
-            Register::Sr,
-            Register::Cg,
-            Register::R4,
-            Register::R5,
-            Register::R6,
-            Register::R7,
-            Register::R8,
-            Register::R9,
-            Register::R10,
-            Register::R11,
-            Register::R12,
-            Register::R13,
-            Register::R14,
-            Register::R15,
-        ]
-    }
-
-    fn registers_global(&self) -> Vec<Self::Register> {
-        Vec::new()
-    }
-
-    fn registers_system(&self) -> Vec<Self::Register> {
-        Vec::new()
-    }
-
-    fn flags(&self) -> Vec<Self::Flag> {
-        vec![Flag::C, Flag::Z, Flag::N, Flag::V]
-    }
-
-    fn flag_write_types(&self) -> Vec<Self::FlagWrite> {
-        vec![
-            FlagWrite::All,
-            FlagWrite::Nz,
-            FlagWrite::Nvz,
-            FlagWrite::Cnz,
-        ]
-    }
-
-    fn flag_classes(&self) -> Vec<Self::FlagClass> {
-        Vec::new()
-    }
-
-    fn flag_groups(&self) -> Vec<Self::FlagGroup> {
-        Vec::new()
-    }
-
-    fn stack_pointer_reg(&self) -> Option<Self::Register> {
-        Some(Register::Sp)
-    }
-
-    fn link_reg(&self) -> Option<Self::Register> {
-        None
-    }
-
-    fn register_from_id(&self, id: RegisterId) -> Option<Self::Register> {
-        match id.try_into() {
-            Ok(register) => Some(register),
-            Err(_) => None,
-        }
-    }
-
-    fn flag_from_id(&self, id: FlagId) -> Option<Self::Flag> {
-        match id.try_into() {
-            Ok(flag) => Some(flag),
-            Err(_) => {
-                tracing::error!("invalid flag id {}", id);
-                None
-            }
-        }
-    }
-
-    fn flag_write_from_id(&self, id: FlagWriteId) -> Option<Self::FlagWrite> {
-        match id.try_into() {
-            Ok(flag_write) => Some(flag_write),
-            Err(_) => {
-                tracing::error!("invalid flag write id {}", id);
-                None
-            }
-        }
-    }
-
-    fn flag_class_from_id(&self, _: FlagClassId) -> Option<Self::FlagClass> {
-        None
-    }
-
-    fn flag_group_from_id(&self, _: FlagGroupId) -> Option<Self::FlagGroup> {
         None
     }
 

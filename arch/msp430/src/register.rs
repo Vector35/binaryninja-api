@@ -1,5 +1,4 @@
-use binaryninja::architecture;
-use binaryninja::architecture::{ImplicitRegisterExtend, RegisterId};
+use binaryninja::architecture::{self, CoreArchitecture, ImplicitRegisterExtend, RegisterId};
 
 use binaryninja::low_level_il::LowLevelILRegisterKind;
 use std::borrow::Cow;
@@ -111,6 +110,35 @@ impl architecture::Register for Register {
             Self::R15 => 15,
         }
         .into()
+    }
+
+    fn from_id(_arch: &CoreArchitecture, id: RegisterId) -> Option<Self> {
+        id.try_into().ok()
+    }
+
+    fn registers_all(_: &CoreArchitecture) -> Vec<Self> {
+        vec![
+            Register::Pc,
+            Register::Sp,
+            Register::Sr,
+            Register::Cg,
+            Register::R4,
+            Register::R5,
+            Register::R6,
+            Register::R7,
+            Register::R8,
+            Register::R9,
+            Register::R10,
+            Register::R11,
+            Register::R12,
+            Register::R13,
+            Register::R14,
+            Register::R15,
+        ]
+    }
+
+    fn stack_pointer_reg(_: &CoreArchitecture) -> Option<Self> {
+        Some(Register::Sp)
     }
 }
 

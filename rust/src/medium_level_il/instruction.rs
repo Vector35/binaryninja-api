@@ -1,7 +1,7 @@
 use super::lift::*;
 use super::operation::*;
 use super::{MediumLevelILBlock, MediumLevelILFunction};
-use crate::architecture::{CoreIntrinsic, FlagId, IntrinsicId, RegisterId};
+use crate::architecture::{CoreIntrinsic, FlagId, Intrinsic as _, IntrinsicId, RegisterId};
 use crate::basic_block::BasicBlock;
 use crate::confidence::Conf;
 use crate::disassembly::InstructionTextToken;
@@ -937,8 +937,8 @@ impl MediumLevelILInstruction {
 
             Intrinsic(op) => Lifted::Intrinsic(LiftedIntrinsic {
                 output: self.get_var_list(0),
-                intrinsic: CoreIntrinsic::new(
-                    self.function.function().arch(),
+                intrinsic: CoreIntrinsic::from_id(
+                    &self.function.function().arch(),
                     IntrinsicId(op.intrinsic),
                 )
                 .expect("Valid intrinsic"),
@@ -958,8 +958,8 @@ impl MediumLevelILInstruction {
             }),
             IntrinsicSsa(op) => Lifted::IntrinsicSsa(LiftedIntrinsicSsa {
                 output: self.get_ssa_var_list(0),
-                intrinsic: CoreIntrinsic::new(
-                    self.function.function().arch(),
+                intrinsic: CoreIntrinsic::from_id(
+                    &self.function.function().arch(),
                     IntrinsicId(op.intrinsic),
                 )
                 .expect("Valid intrinsic"),
@@ -971,8 +971,8 @@ impl MediumLevelILInstruction {
             }),
             MemoryIntrinsicSsa(op) => Lifted::MemoryIntrinsicSsa(LiftedMemoryIntrinsicSsa {
                 output: self.lift_operand(op.output),
-                intrinsic: CoreIntrinsic::new(
-                    self.function.function().arch(),
+                intrinsic: CoreIntrinsic::from_id(
+                    &self.function.function().arch(),
                     IntrinsicId(op.intrinsic),
                 )
                 .expect("Valid intrinsic"),

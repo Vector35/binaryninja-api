@@ -99,9 +99,6 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     >;
 
     /// The [`RegisterStack`] associated with this architecture.
-    ///
-    /// If you do not override [`Architecture::register_stack_from_id`] and [`Architecture::register_stacks`],
-    /// you may set this to [`UnusedRegisterStack`].
     type RegisterStack: RegisterStack<
         InfoType = Self::RegisterStackInfo,
         RegType = Self::Register,
@@ -110,35 +107,24 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
 
     /// The [`Flag`] associated with this architecture.
     ///
-    /// If you do not override [`Architecture::flag_from_id`] and [`Architecture::flags`], you may
-    /// set this to [`UnusedFlag`].
+    /// If the architecture does not use flags, you may set this to [`UnusedFlag`].
     type Flag: Flag<FlagClass = Self::FlagClass>;
 
     /// The [`FlagWrite`] associated with this architecture.
     ///
-    /// Can only be set to [`UnusedFlag`] if [`Self::Flag`] is as well. Otherwise, it is expected that
-    /// this points to a custom [`FlagWrite`] with the following functions defined:
-    ///
-    /// - [`Architecture::flag_write_types`]
-    /// - [`Architecture::flag_write_from_id`]
+    /// If unused, this can be set to [`UnusedFlag`], but only if [`Self::Flag`] is unused as well.
     type FlagWrite: FlagWrite<FlagType = Self::Flag, FlagClass = Self::FlagClass>;
 
     /// The [`FlagClass`] associated with this architecture.
     ///
-    /// Can only be set to [`UnusedFlag`] if [`Self::Flag`] is as well. Otherwise, it is expected that
-    /// this points to a custom [`FlagClass`] with the following functions defined:
-    ///
-    /// - [`Architecture::flag_classes`]
-    /// - [`Architecture::flag_class_from_id`]
+    /// If unused, this can be set to either [`UnusedFlagClass`], or to [`UnusedFlag`] if
+    /// [`Self::Flag`] is also unused.
     type FlagClass: FlagClass;
 
     /// The [`FlagGroup`] associated with this architecture.
     ///
-    /// Can only be set to [`UnusedFlag`] if [`Self::Flag`] is as well. Otherwise, it is expected that
-    /// this points to a custom [`FlagGroup`] with the following functions defined:
-    ///
-    /// - [`Architecture::flag_groups`]
-    /// - [`Architecture::flag_group_from_id`]
+    /// If unused, this can be set to either [`UnusedFlagGroup`], or to [`UnusedFlag`] if
+    /// [`Self::Flag`] is also unused.
     type FlagGroup: FlagGroup<FlagType = Self::Flag, FlagClass = Self::FlagClass>;
 
     type Intrinsic: Intrinsic;
@@ -321,169 +307,87 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
         None
     }
 
-    fn registers_all(&self) -> Vec<Self::Register>;
+    fn registers_all(&self) -> Vec<Self::Register> {
+        Self::Register::registers_all(self.as_ref())
+    }
 
-    fn register_from_id(&self, id: RegisterId) -> Option<Self::Register>;
+    fn register_from_id(&self, id: RegisterId) -> Option<Self::Register> {
+        Self::Register::from_id(self.as_ref(), id)
+    }
 
-    fn registers_full_width(&self) -> Vec<Self::Register>;
+    fn registers_full_width(&self) -> Vec<Self::Register> {
+        Self::Register::registers_full_width(self.as_ref())
+    }
 
-    // TODO: Document the difference between global and system registers.
     fn registers_global(&self) -> Vec<Self::Register> {
-        Vec::new()
+        Self::Register::registers_global(self.as_ref())
     }
 
-    // TODO: Document the difference between global and system registers.
     fn registers_system(&self) -> Vec<Self::Register> {
-        Vec::new()
+        Self::Register::registers_system(self.as_ref())
     }
 
-    fn stack_pointer_reg(&self) -> Option<Self::Register>;
+    fn stack_pointer_reg(&self) -> Option<Self::Register> {
+        Self::Register::stack_pointer_reg(self.as_ref())
+    }
 
     fn link_reg(&self) -> Option<Self::Register> {
-        None
+        Self::Register::link_reg(self.as_ref())
     }
 
     /// List of concrete register stacks for this architecture.
-    ///
-    /// You **must** override the following functions as well:
-    ///
-    /// - [`Architecture::register_stack_from_id`]
     fn register_stacks(&self) -> Vec<Self::RegisterStack> {
-        Vec::new()
+        Self::RegisterStack::register_stacks(self.as_ref())
     }
 
     /// Get the [`Self::RegisterStack`] associated with the given [`RegisterStackId`].
-    ///
-    /// You **must** override the following functions as well:
-    ///
-    /// - [`Architecture::register_stacks`]
-    fn register_stack_from_id(&self, _id: RegisterStackId) -> Option<Self::RegisterStack> {
-        None
+    fn register_stack_from_id(&self, id: RegisterStackId) -> Option<Self::RegisterStack> {
+        Self::RegisterStack::from_id(self.as_ref(), id)
     }
 
     /// List of concrete flags for this architecture.
-    ///
-    /// You **must** override the following functions as well:
-    ///
-    /// - [`Architecture::flag_from_id`]
-    /// - [`Architecture::flag_write_types`]
-    /// - [`Architecture::flag_write_from_id`]
-    /// - [`Architecture::flag_classes`]
-    /// - [`Architecture::flag_class_from_id`]
-    /// - [`Architecture::flag_groups`]
-    /// - [`Architecture::flag_group_from_id`]
     fn flags(&self) -> Vec<Self::Flag> {
-        Vec::new()
+        Self::Flag::flags(self.as_ref())
     }
 
     /// Get the [`Self::Flag`] associated with the given [`FlagId`].
-    ///
-    /// You **must** override the following functions as well:
-    ///
-    /// - [`Architecture::flags`]
-    /// - [`Architecture::flag_write_types`]
-    /// - [`Architecture::flag_write_from_id`]
-    /// - [`Architecture::flag_classes`]
-    /// - [`Architecture::flag_class_from_id`]
-    /// - [`Architecture::flag_groups`]
-    /// - [`Architecture::flag_group_from_id`]
-    fn flag_from_id(&self, _id: FlagId) -> Option<Self::Flag> {
-        None
+    fn flag_from_id(&self, id: FlagId) -> Option<Self::Flag> {
+        Self::Flag::from_id(self.as_ref(), id)
     }
 
     /// List of concrete flag write types for this architecture.
-    ///
-    /// You **must** override the following functions as well:
-    ///
-    /// - [`Architecture::flags`]
-    /// - [`Architecture::flag_from_id`]
-    /// - [`Architecture::flag_write_from_id`]
-    /// - [`Architecture::flag_classes`]
-    /// - [`Architecture::flag_class_from_id`]
-    /// - [`Architecture::flag_groups`]
-    /// - [`Architecture::flag_group_from_id`]
     fn flag_write_types(&self) -> Vec<Self::FlagWrite> {
-        Vec::new()
+        Self::FlagWrite::flag_write_types(self.as_ref())
     }
 
     /// Get the [`Self::FlagWrite`] associated with the given [`FlagWriteId`].
-    ///
-    /// You **must** override the following functions as well:
-    ///
-    /// - [`Architecture::flags`]
-    /// - [`Architecture::flag_from_id`]
-    /// - [`Architecture::flag_write_types`]
-    /// - [`Architecture::flag_classes`]
-    /// - [`Architecture::flag_class_from_id`]
-    /// - [`Architecture::flag_groups`]
-    /// - [`Architecture::flag_group_from_id`]
-    fn flag_write_from_id(&self, _id: FlagWriteId) -> Option<Self::FlagWrite> {
-        None
+    fn flag_write_from_id(&self, id: FlagWriteId) -> Option<Self::FlagWrite> {
+        Self::FlagWrite::from_id(self.as_ref(), id)
     }
 
     /// List of concrete flag classes for this architecture.
-    ///
-    /// You **must** override the following functions as well:
-    ///
-    /// - [`Architecture::flags`]
-    /// - [`Architecture::flag_from_id`]
-    /// - [`Architecture::flag_write_from_id`]
-    /// - [`Architecture::flag_class_from_id`]
-    /// - [`Architecture::flag_groups`]
-    /// - [`Architecture::flag_group_from_id`]
     fn flag_classes(&self) -> Vec<Self::FlagClass> {
-        Vec::new()
+        Self::FlagClass::flag_classes(self.as_ref())
     }
 
     /// Get the [`Self::FlagClass`] associated with the given [`FlagClassId`].
-    ///
-    /// You **must** override the following functions as well:
-    ///
-    /// - [`Architecture::flags`]
-    /// - [`Architecture::flag_from_id`]
-    /// - [`Architecture::flag_write_from_id`]
-    /// - [`Architecture::flag_classes`]
-    /// - [`Architecture::flag_groups`]
-    /// - [`Architecture::flag_group_from_id`]
-    fn flag_class_from_id(&self, _id: FlagClassId) -> Option<Self::FlagClass> {
-        None
+    fn flag_class_from_id(&self, id: FlagClassId) -> Option<Self::FlagClass> {
+        Self::FlagClass::from_id(self.as_ref(), id)
     }
 
     /// List of concrete flag groups for this architecture.
-    ///
-    /// You **must** override the following functions as well:
-    ///
-    /// - [`Architecture::flags`]
-    /// - [`Architecture::flag_from_id`]
-    /// - [`Architecture::flag_write_from_id`]
-    /// - [`Architecture::flag_classes`]
-    /// - [`Architecture::flag_class_from_id`]
-    /// - [`Architecture::flag_group_from_id`]
     fn flag_groups(&self) -> Vec<Self::FlagGroup> {
-        Vec::new()
+        Self::FlagGroup::flag_groups(self.as_ref())
     }
 
     /// Get the [`Self::FlagGroup`] associated with the given [`FlagGroupId`].
-    ///
-    /// You **must** override the following functions as well:
-    ///
-    /// - [`Architecture::flags`]
-    /// - [`Architecture::flag_from_id`]
-    /// - [`Architecture::flag_write_from_id`]
-    /// - [`Architecture::flag_classes`]
-    /// - [`Architecture::flag_class_from_id`]
-    /// - [`Architecture::flag_groups`]
-    fn flag_group_from_id(&self, _id: FlagGroupId) -> Option<Self::FlagGroup> {
-        None
+    fn flag_group_from_id(&self, id: FlagGroupId) -> Option<Self::FlagGroup> {
+        Self::FlagGroup::from_id(self.as_ref(), id)
     }
 
     /// List of concrete intrinsics for this architecture.
-    ///
-    /// You **must** override the following functions as well:
-    ///
-    /// - [`Architecture::intrinsic_from_id`]
     fn intrinsics(&self) -> Vec<Self::Intrinsic> {
-        Vec::new()
+        Self::Intrinsic::intrinsics(self.as_ref())
     }
 
     fn intrinsic_class(&self, _id: IntrinsicId) -> BNIntrinsicClass {
@@ -491,12 +395,8 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     }
 
     /// Get the [`Self::Intrinsic`] associated with the given [`IntrinsicId`].
-    ///
-    /// You **must** override the following functions as well:
-    ///
-    /// - [`Architecture::intrinsics`]
-    fn intrinsic_from_id(&self, _id: IntrinsicId) -> Option<Self::Intrinsic> {
-        None
+    fn intrinsic_from_id(&self, id: IntrinsicId) -> Option<Self::Intrinsic> {
+        Self::Intrinsic::from_id(self.as_ref(), id)
     }
 
     /// Let the UI display this patch option.
@@ -867,7 +767,7 @@ impl Architecture for CoreArchitecture {
             let ret = std::slice::from_raw_parts(flags, count)
                 .iter()
                 .map(|&id| FlagId::from(id))
-                .filter_map(|flag| CoreFlag::new(*self, flag))
+                .filter_map(|flag| CoreFlag::from_id(self, flag))
                 .collect();
 
             BNFreeRegisterList(flags);
@@ -891,218 +791,6 @@ impl Architecture for CoreArchitecture {
         _il: &'a LowLevelILMutableFunction,
     ) -> Option<LowLevelILMutableExpression<'a, ValueExpr>> {
         None
-    }
-
-    fn registers_all(&self) -> Vec<CoreRegister> {
-        unsafe {
-            let mut count: usize = 0;
-            let registers_raw = BNGetAllArchitectureRegisters(self.handle, &mut count);
-
-            let ret = std::slice::from_raw_parts(registers_raw, count)
-                .iter()
-                .map(|&id| RegisterId::from(id))
-                .filter_map(|reg| CoreRegister::new(*self, reg))
-                .collect();
-
-            BNFreeRegisterList(registers_raw);
-
-            ret
-        }
-    }
-
-    fn register_from_id(&self, id: RegisterId) -> Option<CoreRegister> {
-        CoreRegister::new(*self, id)
-    }
-
-    fn registers_full_width(&self) -> Vec<CoreRegister> {
-        unsafe {
-            let mut count: usize = 0;
-            let registers_raw = BNGetFullWidthArchitectureRegisters(self.handle, &mut count);
-
-            let ret = std::slice::from_raw_parts(registers_raw, count)
-                .iter()
-                .map(|&id| RegisterId::from(id))
-                .filter_map(|reg| CoreRegister::new(*self, reg))
-                .collect();
-
-            BNFreeRegisterList(registers_raw);
-
-            ret
-        }
-    }
-
-    fn registers_global(&self) -> Vec<CoreRegister> {
-        unsafe {
-            let mut count: usize = 0;
-            let registers_raw = BNGetArchitectureGlobalRegisters(self.handle, &mut count);
-
-            let ret = std::slice::from_raw_parts(registers_raw, count)
-                .iter()
-                .map(|&id| RegisterId::from(id))
-                .filter_map(|reg| CoreRegister::new(*self, reg))
-                .collect();
-
-            BNFreeRegisterList(registers_raw);
-
-            ret
-        }
-    }
-
-    fn registers_system(&self) -> Vec<CoreRegister> {
-        unsafe {
-            let mut count: usize = 0;
-            let registers_raw = BNGetArchitectureSystemRegisters(self.handle, &mut count);
-
-            let ret = std::slice::from_raw_parts(registers_raw, count)
-                .iter()
-                .map(|&id| RegisterId::from(id))
-                .filter_map(|reg| CoreRegister::new(*self, reg))
-                .collect();
-
-            BNFreeRegisterList(registers_raw);
-
-            ret
-        }
-    }
-
-    fn stack_pointer_reg(&self) -> Option<CoreRegister> {
-        match unsafe { BNGetArchitectureStackPointerRegister(self.handle) } {
-            0xffff_ffff => None,
-            reg => Some(CoreRegister::new(*self, reg.into())?),
-        }
-    }
-
-    fn link_reg(&self) -> Option<CoreRegister> {
-        match unsafe { BNGetArchitectureLinkRegister(self.handle) } {
-            0xffff_ffff => None,
-            reg => Some(CoreRegister::new(*self, reg.into())?),
-        }
-    }
-
-    fn register_stacks(&self) -> Vec<CoreRegisterStack> {
-        unsafe {
-            let mut count: usize = 0;
-            let reg_stacks_raw = BNGetAllArchitectureRegisterStacks(self.handle, &mut count);
-
-            let ret = std::slice::from_raw_parts(reg_stacks_raw, count)
-                .iter()
-                .map(|&id| RegisterStackId::from(id))
-                .filter_map(|reg_stack| CoreRegisterStack::new(*self, reg_stack))
-                .collect();
-
-            BNFreeRegisterList(reg_stacks_raw);
-
-            ret
-        }
-    }
-
-    fn register_stack_from_id(&self, id: RegisterStackId) -> Option<CoreRegisterStack> {
-        CoreRegisterStack::new(*self, id)
-    }
-
-    fn flags(&self) -> Vec<CoreFlag> {
-        unsafe {
-            let mut count: usize = 0;
-            let flags_raw = BNGetAllArchitectureFlags(self.handle, &mut count);
-
-            let ret = std::slice::from_raw_parts(flags_raw, count)
-                .iter()
-                .map(|&id| FlagId::from(id))
-                .filter_map(|flag| CoreFlag::new(*self, flag))
-                .collect();
-
-            BNFreeRegisterList(flags_raw);
-
-            ret
-        }
-    }
-
-    fn flag_from_id(&self, id: FlagId) -> Option<CoreFlag> {
-        CoreFlag::new(*self, id)
-    }
-
-    fn flag_write_types(&self) -> Vec<CoreFlagWrite> {
-        unsafe {
-            let mut count: usize = 0;
-            let flag_writes_raw = BNGetAllArchitectureFlagWriteTypes(self.handle, &mut count);
-
-            let ret = std::slice::from_raw_parts(flag_writes_raw, count)
-                .iter()
-                .map(|&id| FlagWriteId::from(id))
-                .filter_map(|flag_write| CoreFlagWrite::new(*self, flag_write))
-                .collect();
-
-            BNFreeRegisterList(flag_writes_raw);
-
-            ret
-        }
-    }
-
-    fn flag_write_from_id(&self, id: FlagWriteId) -> Option<CoreFlagWrite> {
-        CoreFlagWrite::new(*self, id)
-    }
-
-    fn flag_classes(&self) -> Vec<CoreFlagClass> {
-        unsafe {
-            let mut count: usize = 0;
-            let flag_classes_raw = BNGetAllArchitectureSemanticFlagClasses(self.handle, &mut count);
-
-            let ret = std::slice::from_raw_parts(flag_classes_raw, count)
-                .iter()
-                .map(|&id| FlagClassId::from(id))
-                .filter_map(|flag_class| CoreFlagClass::new(*self, flag_class))
-                .collect();
-
-            BNFreeRegisterList(flag_classes_raw);
-
-            ret
-        }
-    }
-
-    fn flag_class_from_id(&self, id: FlagClassId) -> Option<CoreFlagClass> {
-        CoreFlagClass::new(*self, id)
-    }
-
-    fn flag_groups(&self) -> Vec<CoreFlagGroup> {
-        unsafe {
-            let mut count: usize = 0;
-            let flag_groups_raw = BNGetAllArchitectureSemanticFlagGroups(self.handle, &mut count);
-
-            let ret = std::slice::from_raw_parts(flag_groups_raw, count)
-                .iter()
-                .map(|&id| FlagGroupId::from(id))
-                .filter_map(|flag_group| CoreFlagGroup::new(*self, flag_group))
-                .collect();
-
-            BNFreeRegisterList(flag_groups_raw);
-
-            ret
-        }
-    }
-
-    fn flag_group_from_id(&self, id: FlagGroupId) -> Option<CoreFlagGroup> {
-        CoreFlagGroup::new(*self, id)
-    }
-
-    fn intrinsics(&self) -> Vec<CoreIntrinsic> {
-        unsafe {
-            let mut count: usize = 0;
-            let intrinsics_raw = BNGetAllArchitectureIntrinsics(self.handle, &mut count);
-
-            let intrinsics = std::slice::from_raw_parts_mut(intrinsics_raw, count)
-                .iter()
-                .map(|&id| IntrinsicId::from(id))
-                .filter_map(|intrinsic| CoreIntrinsic::new(*self, intrinsic))
-                .collect();
-
-            BNFreeRegisterList(intrinsics_raw);
-
-            intrinsics
-        }
-    }
-
-    fn intrinsic_from_id(&self, id: IntrinsicId) -> Option<CoreIntrinsic> {
-        CoreIntrinsic::new(*self, id)
     }
 
     fn can_assemble(&self) -> bool {

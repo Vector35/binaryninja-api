@@ -6,6 +6,10 @@
 
 #define RELEASE_ASSERT(condition) ((condition) ? (void)0 : (std::abort(), (void)0))
 
+#define MAX_PROTOCOL_COUNT 0x1000
+#define MAX_METHOD_LIST_COUNT 0x1000
+#define MAX_IVAR_LIST_COUNT 0x1000
+
 using namespace BinaryNinja;
 
 namespace {
@@ -847,6 +851,11 @@ void ObjCProcessor::LoadProtocols(ObjCReader* reader, Ref<Section> listSection)
 				"protoProtocols_" + protocolName, protocol.protocols, true);
 			reader->Seek(protocol.protocols);
 			uint32_t count = reader->Read64();
+			if (count > MAX_PROTOCOL_COUNT)
+			{
+				m_logger->LogWarn("List of protocols at 0x%llx has too large a count of 0x%x, skipping...", protocol.protocols, count);
+				continue;
+			}
 			view_ptr_t addr = reader->GetOffset();
 			for (uint32_t j = 0; j < count; j++)
 			{
@@ -928,7 +937,7 @@ void ObjCProcessor::ReadListOfMethodLists(ObjCReader* reader, ClassBase& cls, st
 	head.entsizeAndFlags = reader->Read32();
 	head.count = reader->Read32();
 
-	if (head.count > 0x1000)
+	if (head.count > MAX_METHOD_LIST_COUNT)
 	{
 		m_logger->LogError("List of method lists at 0x%llx has an invalid count of 0x%x", start, head.count);
 		return;
@@ -962,7 +971,7 @@ void ObjCProcessor::ReadMethodList(ObjCReader* reader, ClassBase& cls, std::stri
 	head.entsizeAndFlags = reader->Read32();
 	head.count = reader->Read32();
 
-	if (head.count > 0x1000)
+	if (head.count > MAX_METHOD_LIST_COUNT)
 	{
 		m_logger->LogError("Method list at 0x%llx has an invalid count of 0x%x", start, head.count);
 		return;
@@ -1066,6 +1075,11 @@ void ObjCProcessor::ReadIvarList(ObjCReader* reader, ClassBase& cls, std::string
 	ivar_list_t head;
 	head.entsizeAndFlags = reader->Read32();
 	head.count = reader->Read32();
+	if (head.count > MAX_IVAR_LIST_COUNT)
+	{
+		m_logger->LogWarn("Ivar list at 0x%llx has an invalid count of 0x%x, skipping..", start, head.count);
+		return;
+	}
 	auto addressSize = m_data->GetAddressSize();
 	DefineObjCSymbol(DataSymbol, m_typeNames.ivarList, "ivar_list_" + std::string(name), start, true);
 	for (unsigned i = 0; i < head.count; i++)
@@ -1681,6 +1695,11 @@ void ObjCProcessor::ProcessCFStrings()
 			uint64_t flags = reader->ReadPointer();
 			auto strLoc = ReadPointerAccountingForRelocations(reader.get());
 			auto size = reader->ReadPointer();
+			if (size > cfstrings->GetEnd() || reader->GetOffset() > cfstrings->GetEnd() - size)
+			{
+				m_logger->LogWarn("CFString at 0x%llx has invalid size 0x%llx, skipping...", i, size);
+				continue;
+			}
 			std::string str;
 			if (flags & 0b10000)  // UTF16
 			{

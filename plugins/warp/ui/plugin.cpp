@@ -9,6 +9,7 @@
 
 #include <QToolBar>
 #include <QVBoxLayout>
+#include <QtCore/QMetaObject>
 #include <utility>
 
 using namespace BinaryNinja;
@@ -170,11 +171,13 @@ WarpSidebarWidget::WarpSidebarWidget(BinaryViewRef data) : SidebarWidget("WARP")
 	this->setLayout(layout);
 
 	// Do a full update if analysis has been done, otherwise we may persist old data and not have new data.
-	m_analysisEvent = new AnalysisCompletionEvent(m_data, [this]() { ExecuteOnMainThread([this]() { Update(); }); });
+	m_analysisEvent = new AnalysisCompletionEvent(m_data, [this]() {
+		QMetaObject::invokeMethod(this, [this]() { Update(); });
+	});
 
 	m_fetcher = WarpFetcher::Global();
 	m_callbackId = m_fetcher->AddCompletionCallback([this]() {
-		ExecuteOnMainThread([this]() {
+		QMetaObject::invokeMethod(this, [this]() {
 			// Instead of doing a full update after fetching, we only want to make sure the current function has
 			// up-to-date matches, since the other two tabs (all matches, container list) do not get populated with
 			// additional information or manage their own updates (e.g. container source list).

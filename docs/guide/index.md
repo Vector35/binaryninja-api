@@ -882,19 +882,23 @@ Pure functions are assumed to have no side effects and may be inlined if their r
 
 ### 8. Inline During Analysis
 
-When Inline During Analysis is checked, it causes the function to be [inlined](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.inline_during_analysis) during analysis.
+When Inline During Analysis is checked, it causes the function to be [inlined](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.inline_during_analysis) during analysis. The three options control whether instruction addresses are preserved per function or per call site.
 
-### 9. Clobbered Registers
+### 9. Signature Table
+
+This section contains the function's return value and parameters as an editable table with columns for index, type, name, source, and location.
+
+### 10. Clobbered Registers
 
 This section contains the list of registers that this function clobbers; individual registers can be checked or unchecked.
-
-### 10. Return Registers
-
-Return registers shows the list of registers that this function returns data in; individual registers can be checked or unchecked.
 
 ### 11. Register Stack Adjustments
 
 This element is a table containing a row for each register stack (e.g. x87) in the architecture, with the ability to adjust how many registers are removed from each stack when the function returns.
+
+### 12. Function Workflow
+
+This dropdown selects the [function-level workflow](https://docs.binary.ninja/dev/workflows.html#workflow) which is used to analyze this function.
 
 ## High Level IL
 

@@ -121,7 +121,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
 
         let default_cc = platform
             .get_default_calling_convention()
-            .expect("Expected default calling convention");
+            .ok_or_else(|| anyhow!("Cannot parse to view with no default calling convention"))?;
 
         let thiscall_cc = Self::find_calling_convention(platform.as_ref(), "thiscall")
             .unwrap_or(default_cc.clone());

@@ -92,6 +92,7 @@ class WindowsX64Platform: public Platform
 {
 	uint32_t m_gsbase;
 	Ref<Type> m_teb;
+	std::mutex m_tebMutex;
 
 public:
 	WindowsX64Platform(Architecture* arch): Platform(arch, "windows-x86_64")
@@ -113,6 +114,8 @@ public:
 
 	virtual void BinaryViewInit(BinaryView* view) override
 	{
+		// Locking here so that if we have two views in BinaryViewInit at once we don't race to init m_teb.
+		std::lock_guard<std::mutex> lock(m_tebMutex);
 		if (!m_teb)
 			m_teb = Type::PointerType(GetArchitecture()->GetAddressSize(), Type::NamedType(QualifiedName("TEB"), GetTypeByName(QualifiedName("TEB"))));
 	}

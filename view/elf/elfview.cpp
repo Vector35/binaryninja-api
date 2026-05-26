@@ -1338,8 +1338,16 @@ bool ElfView::Init()
 				DefineElfSymbol(FunctionSymbol, entry->name, entry->value, false, entry->binding);
 				break;
 			case ELF_STT_FUNC:
-				DefineElfSymbol(FunctionSymbol, entry->name, entry->value, false, entry->binding);
-				break;
+				{
+					auto symbolType = FunctionSymbol;
+					if (m_plat && m_plat->GetName() == "tms320c6x" &&
+						(entry->name.find('$') != std::string::npos || entry->name == "LOOP")) {
+						// TMS320C6x ELFs use ELF_STT_FUNC *$* and LOOP symbols for labeling blocks
+						symbolType = LocalLabelSymbol;
+					}
+					DefineElfSymbol(symbolType, entry->name, entry->value, false, entry->binding);
+					break;
+				}
 			case ELF_STT_TLS:
 				/* - only create Binja symbols for .symtab (not .dynsym) symbols
 				   - ignore mapping symbols, all is assumed data
@@ -2617,9 +2625,9 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 			}
 		}
 
-		if (!typeRef && m_arch && m_arch->GetName() == "hexagon")
+		if (!typeRef && m_arch && (m_arch->GetName() == "hexagon" || m_arch->GetName() == "tms320c6x"))
 		{
-			// Apply platform types for statically linked Hexagon binaries
+			// Apply platform types for statically linked Hexagon and TMS320C6x binaries
 			typeRef = GetDefaultPlatform()->GetFunctionByName(rawName);
 		}
 

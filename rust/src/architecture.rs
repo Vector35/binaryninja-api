@@ -595,7 +595,7 @@ pub trait ArchitectureWithFunctionContext: Architecture {
 
 pub struct FunctionLifterContext {
     pub(crate) handle: *mut BNFunctionLifterContext,
-    pub function: *mut BNLowLevelILFunction,
+    pub function: Ref<LowLevelILMutableFunction>,
     pub platform: Ref<Platform>,
     pub logger: Ref<Logger>,
     pub blocks: Vec<Ref<BasicBlock<NativeBlock>>>,
@@ -604,7 +604,7 @@ pub struct FunctionLifterContext {
     pub inlined_remapping: HashMap<Location, Location>,
     pub user_indirect_branches: HashMap<Location, HashSet<Location>>,
     pub auto_indirect_branches: HashMap<Location, HashSet<Location>>,
-    //pub inlined_calls: HashSet<u64>,
+    pub inlined_calls: HashSet<u64>,
 }
 
 unsafe fn lifter_context_slice<'a, T>(ptr: *const T, len: usize) -> &'a [T] {
@@ -620,6 +620,14 @@ impl FunctionLifterContext {
     pub unsafe fn from_raw(
         function: *mut BNLowLevelILFunction,
         handle: *mut BNFunctionLifterContext,
+    ) -> Self {
+        Self::from_raw_with_arch(function, handle, None)
+    }
+
+    pub(crate) unsafe fn from_raw_with_arch(
+        function: *mut BNLowLevelILFunction,
+        handle: *mut BNFunctionLifterContext,
+        arch: Option<CoreArchitecture>,
     ) -> Self {
         debug_assert!(!function.is_null());
         debug_assert!(!handle.is_null());
@@ -699,9 +707,18 @@ impl FunctionLifterContext {
             }
         }
 
+        let inlined_calls: HashSet<u64> =
+            lifter_context_slice(flc_ref.inlinedCalls, flc_ref.inlinedCallsCount)
+                .iter()
+                .copied()
+                .collect();
+
         FunctionLifterContext {
             handle,
-            function: BNNewLowLevelILFunctionReference(function),
+            function: LowLevelILMutableFunction::ref_from_raw_with_arch(
+                BNNewLowLevelILFunctionReference(function),
+                arch,
+            ),
             platform,
             logger,
             blocks,
@@ -710,6 +727,7 @@ impl FunctionLifterContext {
             inlined_remapping,
             user_indirect_branches,
             auto_indirect_branches,
+            inlined_calls,
         }
     }
 
@@ -735,14 +753,6 @@ impl FunctionLifterContext {
             } else {
                 Some(&*(ptr as *const A::FunctionArchContext))
             }
-        }
-    }
-}
-
-impl Drop for FunctionLifterContext {
-    fn drop(&mut self) {
-        if !self.function.is_null() {
-            unsafe { BNFreeLowLevelILFunction(self.function) };
         }
     }
 }
@@ -1765,7 +1775,9 @@ where
             LowLevelILMutableFunction::from_raw_with_arch(function, Some(*custom_arch.as_ref()))
         };
 
-        let mut ctx = unsafe { FunctionLifterContext::from_raw(function, context) };
+        let mut ctx = unsafe {
+            FunctionLifterContext::from_raw_with_arch(function, context, Some(*custom_arch.as_ref()))
+        };
         custom_arch.lift_function(llil, &mut ctx)
     }
 

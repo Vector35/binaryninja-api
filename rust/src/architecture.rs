@@ -1776,7 +1776,11 @@ where
         };
 
         let mut ctx = unsafe {
-            FunctionLifterContext::from_raw_with_arch(function, context, Some(*custom_arch.as_ref()))
+            FunctionLifterContext::from_raw_with_arch(
+                function,
+                context,
+                Some(*custom_arch.as_ref()),
+            )
         };
         custom_arch.lift_function(llil, &mut ctx)
     }

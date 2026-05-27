@@ -1154,6 +1154,11 @@ bool ElfView::Init()
 			for (uint64_t i = firstMipsSym; i < (m_auxSymbolTable.size / (m_elf32 ? 16 : 24)); i++)
 			{
 				uint64_t gotEntry = gotStart + ((localMipsSyms + i - firstMipsSym) * (m_elf32 ? 4 : 8));
+				if (!IsValidOffset(gotEntry))
+				{
+					m_logger->LogWarn("ELF GOT entry %" PRIx64 " is invalid", gotEntry);
+					break;
+				}
 
 				ElfSymbolTableEntry entry;
 				if (!ParseSymbolTableEntry(virtualReader, entry, i, m_auxSymbolTable, m_dynamicStringTable, true))

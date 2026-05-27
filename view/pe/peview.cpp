@@ -1753,10 +1753,15 @@ bool PEView::Init()
 				}
 			}
 
-			if (m_dataDirs[IMAGE_DIRECTORY_ENTRY_EXCEPTION].size % entrySize)
+			const auto& exceptionDir = m_dataDirs[IMAGE_DIRECTORY_ENTRY_EXCEPTION];
+			if (exceptionDir.size % entrySize)
 				throw PEFormatException("invalid table size");
-			numExceptionEntries = m_dataDirs[IMAGE_DIRECTORY_ENTRY_EXCEPTION].size / entrySize;
+			const auto imageSize = GetEnd() - GetStart();
+			if ((exceptionDir.virtualAddress > imageSize)
+				|| (exceptionDir.size > (imageSize - exceptionDir.virtualAddress)))
+				throw PEFormatException("too many exception entries, table size exceeds available memory range");
 
+			numExceptionEntries = exceptionDir.size / entrySize;
 			// This DataVariable can end up creating a large array and rendering this in LinearView currently has performance implications
 			// So instead we just create separate structures not in an array
 			Ref<Structure> exceptionEntryStruct = exceptionEntryBuilder.Finalize();

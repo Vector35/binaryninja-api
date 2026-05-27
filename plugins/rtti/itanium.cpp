@@ -697,7 +697,7 @@ void ItaniumRTTIProcessor::ProcessRTTI()
         int failedAttempts = 0;
         for (uint64_t currAddr = section->GetStart(); currAddr <= section->GetEnd() - maxTypeInfoSize; currAddr += addrSize)
         {
-            if (bgTask->IsCancelled())
+            if (bgTask->IsCancelled() || !m_view->IsValidOffset(currAddr))
                 break;
             try
             {

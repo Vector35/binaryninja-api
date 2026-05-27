@@ -3183,7 +3183,7 @@ class BinaryView:
 			_handle = core.BNCreateCustomBinaryView(self.__class__.name, file_metadata.handle, _parent_view, self._cb)
 
 		assert _handle is not None
-		self.handle = _handle
+		self._handle = _handle
 		self._notifications = {}
 		self._parse_only = False
 		self._preload_limit = 5
@@ -3196,9 +3196,9 @@ class BinaryView:
 		for i in self._notifications.values():
 			i._unregister()
 		self._notifications.clear()
-		if self.handle is not None:
-			core.BNFreeBinaryView(self.handle)
-			self.handle = None
+		if self._handle is not None:
+			core.BNFreeBinaryView(self._handle)
+			self._handle = None
 
 	def __enter__(self) -> 'BinaryView':
 		return self
@@ -3211,6 +3211,8 @@ class BinaryView:
 		self._cleanup()
 
 	def __repr__(self):
+		if self._handle is None:
+			return "<BinaryView: disposed>"
 		start = self.start
 		length = self.length
 		if start != 0:
@@ -3225,6 +3227,12 @@ class BinaryView:
 	@property
 	def length(self):
 		return int(core.BNGetViewLength(self.handle))
+
+	@property
+	def handle(self):
+		if self._handle is None:
+			raise ReferenceError("BinaryView has been disposed")
+		return self._handle
 
 	def __bool__(self):
 		return True

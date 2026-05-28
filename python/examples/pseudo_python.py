@@ -1165,6 +1165,38 @@ class PseudoPythonFunction(LanguageRepresentationFunction):
                 tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, ", "))
                 self.perform_get_expr_text(instr.low, tokens, settings)
                 tokens.append_close_paren()
+            elif instr.operation == HighLevelILOperation.HLIL_STRUCT_INIT:
+                # Render the structure type if it is known, otherwise just the `struct` keyword. Use
+                # Python-style constructor syntax for the initializer.
+                struct_type = instr.expr_type
+                if struct_type is not None:
+                    tokens.append(struct_type.get_tokens())
+                else:
+                    tokens.append(InstructionTextToken(InstructionTextTokenType.KeywordToken, "struct"))
+                tokens.append_open_paren()
+                tokens.increase_indent()
+                first = True
+                for field in instr.fields:
+                    if field.operation != HighLevelILOperation.HLIL_STRUCT_INIT_FIELD:
+                        continue
+                    if not first:
+                        tokens.append(InstructionTextToken(InstructionTextTokenType.OperandSeparatorToken, ", "))
+                    first = False
+                    tokens.new_line()
+                    tokens.prepend_blank_collapse_indicator()
+                    self.append_struct_init_field_text_tokens(instr, field.offset, field.member_index, field.size, tokens)
+                    tokens.append(InstructionTextToken(InstructionTextTokenType.OperationToken, " = "))
+                    self.perform_get_expr_text(field.src, tokens, settings,
+                        OperatorPrecedence.AssignmentOperatorPrecedence)
+                tokens.decrease_indent()
+                tokens.new_line()
+                tokens.prepend_blank_collapse_indicator()
+                tokens.append_close_paren()
+            elif instr.operation == HighLevelILOperation.HLIL_STRUCT_INIT_FIELD:
+                tokens.append(InstructionTextToken(InstructionTextTokenType.OperationToken, "."))
+                self.append_struct_init_field_text_tokens(instr, instr.offset, instr.member_index, instr.size, tokens)
+                tokens.append(InstructionTextToken(InstructionTextTokenType.OperationToken, " = "))
+                self.perform_get_expr_text(instr.src, tokens, settings, OperatorPrecedence.AssignmentOperatorPrecedence)
             elif instr.operation in [HighLevelILOperation.HLIL_UNIMPL, HighLevelILOperation.HLIL_UNIMPL_MEM]:
                 tokens.append(InstructionTextToken(InstructionTextTokenType.AnnotationToken, "# "))
                 for token in instr.tokens:
@@ -1252,6 +1284,66 @@ class PseudoPythonFunction(LanguageRepresentationFunction):
             self.function.view, var_type, var) + [offset_str]
         tokens.append(InstructionTextToken(InstructionTextTokenType.StructOffsetToken, offset_str, value=offset,
                                            size=size, typeNames=name_list))
+
+    def append_struct_init_field_text_tokens(self, init: HighLevelILInstruction, offset: int, member_index: int, size: int,
+            tokens: HighLevelILTokenEmitter):
+        struct_type = init.expr_type
+        # Follow named type references to the target
+        if isinstance(struct_type, NamedTypeReferenceType):
+            target_type = struct_type.target(init.function.view)
+            if target_type is not None:
+                struct_type = target_type
+
+        has_field = False
+        if isinstance(struct_type, StructureType):
+            # For structures, resolve field names using the type API
+            class Resolver:
+                def __init__(self, view: BinaryView, offset: int):
+                    self.has_field = False
+                    self.correct_size = False
+                    self.offset = offset
+                    self.view = view
+
+                def resolve_func(self, base_name: Optional[NamedTypeReferenceType],
+                        resolved_struct: Optional[StructureType], resolved_member_index: int,
+                        struct_offset: int, adjusted_offset: int, member: StructureMember):
+                    if self.has_field:
+                        tokens.append(InstructionTextToken(InstructionTextTokenType.OperationToken, "."))
+                    name_list = HighLevelILTokenEmitter.names_for_outer_structure_members(
+                        self.view, struct_type, init) + [member.name]
+                    tokens.append(InstructionTextToken(InstructionTextTokenType.FieldNameToken, member.name,
+                        value=struct_offset + member.offset, typeNames=name_list))
+                    self.offset = adjusted_offset - member.offset
+                    self.has_field = True
+                    self.correct_size = member.type is not None and size == member.type.width
+
+            resolver = Resolver(self.function.view, offset)
+            result = struct_type.resolve_member_or_base_member(resolver.view, offset, 0, resolver.resolve_func)
+            if result and resolver.has_field and resolver.correct_size:
+                # If the field was matched, we're done
+                return
+            has_field = resolver.has_field
+            offset = resolver.offset
+
+        # Generate offset syntax for the missing field
+        suffix = {0: "", 1: ".b", 2: ".w", 4: ".d", 8: ".q", 10: ".t", 16: ".q"}
+        if size in suffix:
+            suffix_str = suffix[size]
+        else:
+            suffix_str = f".{size}"
+        if (has_field or not isinstance(struct_type, StructureType)) and offset == 0:
+            # No offset, just display a size suffix
+            offset_str = suffix_str
+        else:
+            # Has an offset
+            offset_str = f"__offset({offset:#x}){suffix_str}"
+            if has_field:
+                offset_str = f".{offset_str}"
+
+        name_list = HighLevelILTokenEmitter.names_for_outer_structure_members(
+            self.function.view, struct_type, init) + [offset_str]
+        tokens.append(InstructionTextToken(InstructionTextTokenType.StructOffsetToken, offset_str, value=offset,
+            size=size, typeNames=name_list))
 
 
 class PseudoPythonFunctionType(LanguageRepresentationFunctionType):

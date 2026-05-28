@@ -299,7 +299,11 @@ class HighLevelILInstruction(BaseILInstruction):
 	                                             ], HighLevelILOperation.HLIL_UNDEF: [],
 	    HighLevelILOperation.HLIL_UNIMPL: [], HighLevelILOperation.HLIL_UNIMPL_MEM: [
 	        ("src", "expr")
-	    ], HighLevelILOperation.HLIL_FADD: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_FSUB: [
+	    ], HighLevelILOperation.HLIL_STRUCT_INIT: [
+			("fields", "expr_list")
+		], HighLevelILOperation.HLIL_STRUCT_INIT_FIELD: [
+			("offset", "int"), ("member_index", "member_index"), ("src", "expr")
+		], HighLevelILOperation.HLIL_FADD: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_FSUB: [
 	        ("left", "expr"), ("right", "expr")
 	    ], HighLevelILOperation.HLIL_FMUL: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_FDIV: [
 	        ("left", "expr"), ("right", "expr")
@@ -1695,6 +1699,42 @@ class HighLevelILSplit(HighLevelILInstruction):
 
 
 @dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILStructInit(HighLevelILInstruction):
+	@property
+	def fields(self) -> List[HighLevelILInstruction]:
+		return self._get_expr_list(0, 1)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("fields", self.fields, "List[HighLevelILInstruction]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILStructInitField(HighLevelILInstruction):
+	@property
+	def offset(self) -> int:
+		return self._get_int(0)
+
+	@property
+	def member_index(self) -> Optional[int]:
+		return self._get_member_index(1)
+
+	@property
+	def src(self) -> HighLevelILInstruction:
+		return self._get_expr(2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("offset", self.offset, "int"),
+			("member_index", self.member_index, "Optional[int]"),
+			("src", self.src, "HighLevelILInstruction"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
 class HighLevelILDeref(HighLevelILUnaryBase):
 	pass
 
@@ -2608,6 +2648,9 @@ ILInstruction = {
     HighLevelILOperation.HLIL_UNDEF: HighLevelILUndef,  #  ,
     HighLevelILOperation.HLIL_UNIMPL: HighLevelILUnimpl,  #  ,
     HighLevelILOperation.HLIL_UNIMPL_MEM: HighLevelILUnimplMem,  #  ("src", "expr"),
+	HighLevelILOperation.HLIL_STRUCT_INIT: HighLevelILStructInit,  #  ("fields", "expr_list"),
+	HighLevelILOperation.HLIL_STRUCT_INIT_FIELD:
+		HighLevelILStructInitField,  #  ("offset", "int"), ("member_index", "member_index"), ("src", "expr"),
     HighLevelILOperation.HLIL_FADD: HighLevelILFadd,  #  ("left", "expr"), ("right", "expr"),
     HighLevelILOperation.HLIL_FSUB: HighLevelILFsub,  #  ("left", "expr"), ("right", "expr"),
     HighLevelILOperation.HLIL_FMUL: HighLevelILFmul,  #  ("left", "expr"), ("right", "expr"),
@@ -3455,6 +3498,36 @@ class HighLevelILFunction:
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(HighLevelILOperation.HLIL_ARRAY_INDEX, src, idx, size=size, source_location=loc)
+
+	def struct_init(self, size: int, fields: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		``struct_init`` initializes a structure with ``fields``. Each field should be a ``struct_init_field``.
+
+		:param int size: the size of the structure in bytes
+		:param List[ExpressionIndex] fields: list of fields to initialize
+		:param ILSourceLocation loc: location of returned expression
+		:return: The expression ``struct { .field = expr, ... }``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_STRUCT_INIT, len(fields), self.add_operand_list(fields), size=size, source_location=loc)
+
+	def struct_init_field(
+		self, size: int, offset: int, member_index: int, src: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		``struct_init_field`` returns an initialization of the structure field at offset ``offset`` and index
+		``member_index`` from expression ``src`` of size ``size``. This should only be used inside a ``struct_init``
+		expression.
+
+		:param int size: the size of the field in bytes
+		:param int offset: offset of field in the structure
+		:param int member_index: index of field in the structure
+		:param ExpressionIndex src: the expression containing the value
+		:param ILSourceLocation loc: location of returned expression
+		:return: The expression ``.field = src``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_STRUCT_INIT_FIELD, offset, member_index, src, size=size, source_location=loc)
 
 	def deref(self, size: int, src: ExpressionIndex, loc: Optional['ILSourceLocation']) -> ExpressionIndex:
 		"""

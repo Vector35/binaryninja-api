@@ -16439,6 +16439,9 @@ namespace BinaryNinja {
 		ExprId ArrayIndex(size_t size, ExprId src, ExprId idx, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId ArrayIndexSSA(size_t size, ExprId src, size_t srcMemVersion, ExprId idx,
 		    const ILSourceLocation& loc = ILSourceLocation());
+		ExprId StructInit(size_t size, const std::vector<ExprId>& fields, const ILSourceLocation& loc = ILSourceLocation());
+		ExprId StructInitField(size_t size, uint64_t offset, size_t memberIndex, ExprId src,
+			const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Split(size_t size, ExprId high, ExprId low, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId Deref(size_t size, ExprId src, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId DerefField(size_t size, ExprId src, uint64_t offset, size_t memberIndex,

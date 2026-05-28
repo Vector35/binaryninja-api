@@ -422,7 +422,7 @@ pub struct LiftedSplit {
     pub low: Box<HighLevelILLiftedInstruction>,
 }
 
-// STRUCT_FIELD, DEREF_FIELD
+// STRUCT_FIELD, DEREF_FIELD, STRUCT_INIT_FIELD
 #[derive(Debug, Copy, Clone)]
 pub struct StructField {
     pub src: HighLevelExpressionIndex,
@@ -434,6 +434,17 @@ pub struct LiftedStructField {
     pub src: Box<HighLevelILLiftedInstruction>,
     pub offset: u64,
     pub member_index: Option<usize>,
+}
+
+// STRUCT_INIT
+#[derive(Debug, Copy, Clone)]
+pub struct StructInit {
+    pub first_field: usize,
+    pub num_fields: usize,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiftedStructInit {
+    pub fields: Vec<HighLevelILLiftedInstruction>,
 }
 
 // SWITCH

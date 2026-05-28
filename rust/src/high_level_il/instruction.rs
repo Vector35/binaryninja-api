@@ -573,6 +573,15 @@ impl HighLevelILInstruction {
                 offset: op.operands[1],
                 member_index: get_member_index(op.operands[2]),
             }),
+            HLIL_STRUCT_INIT => Op::StructInit(StructInit {
+                num_fields: op.operands[0] as usize,
+                first_field: op.operands[1] as usize,
+            }),
+            HLIL_STRUCT_INIT_FIELD => Op::StructInitField(StructField {
+                offset: op.operands[0],
+                member_index: get_member_index(op.operands[1]),
+                src: HighLevelExpressionIndex::from(op.operands[2]),
+            }),
             HLIL_SWITCH => Op::Switch(Switch {
                 condition: HighLevelExpressionIndex::from(op.operands[0]),
                 default: HighLevelExpressionIndex::from(op.operands[1]),
@@ -940,6 +949,14 @@ impl HighLevelILInstruction {
             }),
             StructField(op) => Lifted::StructField(self.lift_struct_field(op)),
             DerefField(op) => Lifted::DerefField(self.lift_struct_field(op)),
+            StructInit(_op) => Lifted::StructInit(LiftedStructInit {
+                fields: self
+                    .get_expr_list(0)
+                    .iter()
+                    .map(|expr| expr.lift())
+                    .collect(),
+            }),
+            StructInitField(op) => Lifted::StructInitField(self.lift_struct_field(op)),
             Switch(op) => Lifted::Switch(LiftedSwitch {
                 condition: self.lift_operand(op.condition),
                 default: self.lift_operand(op.default),
@@ -1269,6 +1286,8 @@ pub enum HighLevelILInstructionKind {
     Split(Split),
     StructField(StructField),
     DerefField(StructField),
+    StructInit(StructInit),
+    StructInitField(StructField),
     Switch(Switch),
     Syscall(Syscall),
     SyscallSsa(SyscallSsa),

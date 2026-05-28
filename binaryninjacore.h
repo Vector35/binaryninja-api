@@ -1705,6 +1705,8 @@ extern "C"
 		HLIL_UNDEF,
 		HLIL_UNIMPL,
 		HLIL_UNIMPL_MEM,
+		HLIL_STRUCT_INIT,
+		HLIL_STRUCT_INIT_FIELD,  // Only valid in HLIL_STRUCT_INIT
 
 		// Floating point
 		HLIL_FADD,

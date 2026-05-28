@@ -1684,9 +1684,9 @@ void ObjCProcessor::ProcessCFStrings()
 		{
 			reader->Seek(i + ptrSize);
 			uint64_t flags = reader->ReadPointer();
-			auto strLoc = ReadPointerAccountingForRelocations(reader.get());
-			auto size = reader->ReadPointer();
-			if (size > cfstrings->GetEnd() || reader->GetOffset() > cfstrings->GetEnd() - size)
+			const auto strLoc = ReadPointerAccountingForRelocations(reader.get());
+			const auto size = reader->ReadPointer();
+			if (!m_data->IsValidOffset(strLoc + size))
 			{
 				m_logger->LogWarn("CFString at 0x%llx has invalid size 0x%llx, skipping...", i, size);
 				continue;

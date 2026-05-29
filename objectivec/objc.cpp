@@ -1694,16 +1694,17 @@ void ObjCProcessor::ProcessCFStrings()
 			reader->Seek(i + ptrSize);
 			uint64_t flags = reader->ReadPointer();
 			const auto strLoc = ReadPointerAccountingForRelocations(reader.get());
-			const auto size = reader->ReadPointer();
-			if (!m_data->IsValidOffset(strLoc + size))
-			{
-				m_logger->LogWarn("CFString at 0x%llx has invalid size 0x%llx, skipping...", i, size);
-				continue;
-			}
+			const auto strLen = reader->ReadPointer();
 			std::string str;
 			if (flags & 0b10000)  // UTF16
 			{
-				auto data = m_data->ReadBuffer(strLoc, size * 2);
+				const auto strSize = strLen * 2;
+				if (!m_data->IsValidOffset(strLoc + strSize))
+				{
+					m_logger->LogWarn("CFString at 0x%llx has invalid length 0x%llx, skipping...", i, strLen);
+					continue;
+				}
+				auto data = m_data->ReadBuffer(strLoc, strSize);
 
 				str = "";
 				for (uint64_t bufferOff = 0; bufferOff + 1 < data.GetLength(); bufferOff += 2)
@@ -1729,14 +1730,14 @@ void ObjCProcessor::ProcessCFStrings()
 					}
 				}
 				DefineObjCSymbol(
-					DataSymbol, Type::ArrayType(Type::WideCharType(2), size + 1), "ustr_" + str, strLoc, true);
+					DataSymbol, Type::ArrayType(Type::WideCharType(2), strLen + 1), "ustr_" + str, strLoc, true);
 				DefineObjCSymbol(
 					DataSymbol, Type::NamedType(m_data, m_typeNames.cfStringUTF16), "cfstr_" + str, i, true);
 			}
 			else  // UTF8 / ASCII
 			{
 				reader->Seek(strLoc);
-				std::string rawStr = reader->ReadCString(size + 1);
+				std::string rawStr = reader->ReadCString(strLen + 1);
 				str = "";
 				for (signed char c : rawStr)
 				{

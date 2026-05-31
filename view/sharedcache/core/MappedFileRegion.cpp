@@ -9,13 +9,13 @@
 #endif
 
 
-MappedFileRegion::MappedFileRegion(PrivateTag, uint8_t* data, size_t length, std::string path)
+MappedFileRegion::MappedFileRegion(PrivateTag, uint8_t* data, size_t length, std::filesystem::path path)
 	: m_data(data), m_length(length), m_path(std::move(path))
 {}
 
 #ifndef _MSC_VER
 
-std::shared_ptr<MappedFileRegion> MappedFileRegion::Open(const std::string& path)
+std::shared_ptr<MappedFileRegion> MappedFileRegion::Open(const std::filesystem::path& path)
 {
 	std::unique_ptr<FILE, decltype(&fclose)> fd(fopen(path.c_str(), "r"), fclose);
 	if (!fd)
@@ -54,9 +54,9 @@ MappedFileRegion::~MappedFileRegion()
 
 #else  // _MSC_VER
 
-std::shared_ptr<MappedFileRegion> MappedFileRegion::Open(const std::string& path)
+std::shared_ptr<MappedFileRegion> MappedFileRegion::Open(const std::filesystem::path& path)
 {
-	HANDLE hFile = CreateFile(path.c_str(),
+	HANDLE hFile = CreateFileW(path.c_str(),
 		GENERIC_READ,
 		FILE_SHARE_READ,
 		NULL,

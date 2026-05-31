@@ -160,7 +160,7 @@ impl FileMetadata {
     pub fn file_path(&self) -> PathBuf {
         unsafe {
             let raw = BNGetFilename(self.handle);
-            PathBuf::from(BnString::into_string(raw))
+            BnString::into_path_buf(raw)
         }
     }
 
@@ -170,7 +170,7 @@ impl FileMetadata {
     ///
     /// This should always be a valid path.
     pub(crate) fn set_file_path(&self, name: &Path) {
-        let name = name.to_cstr();
+        let name = BnPath::new(name);
         unsafe {
             BNSetFilename(self.handle, name.as_ptr());
         }
@@ -220,7 +220,7 @@ impl FileMetadata {
     pub fn original_file_path(&self) -> Option<PathBuf> {
         let raw_name = unsafe {
             let raw = BNGetOriginalFilename(self.handle);
-            PathBuf::from(BnString::into_string(raw))
+            BnString::into_path_buf(raw)
         };
         // If the original file path is empty, or the original file path is pointing to the same file
         // as the database itself, we know the original file path does not exist.
@@ -236,7 +236,7 @@ impl FileMetadata {
     /// Set the original file path inside the database. Useful if it has since been cleared from the
     /// database, or you have moved the original file.
     pub fn set_original_file_path(&self, path: &Path) {
-        let name = path.to_cstr();
+        let name = BnPath::new(path);
         unsafe {
             BNSetOriginalFilename(self.handle, name.as_ptr());
         }
@@ -246,7 +246,7 @@ impl FileMetadata {
     /// may be sensitive information you wish to not share with others.
     pub fn clear_original_file_path(&self) {
         unsafe {
-            BNSetOriginalFilename(self.handle, std::ptr::null());
+            BNSetOriginalFilename(self.handle, std::ptr::null_mut());
         }
     }
 
@@ -527,11 +527,11 @@ impl FileMetadata {
     ) -> bool {
         // Databases are created with the root view (Raw).
         let raw_view = self.raw_view();
-        let file_path = file_path.as_ref().to_cstr();
+        let file_path = BnPath::new(file_path.as_ref());
         unsafe {
             BNCreateDatabaseWithProgress(
                 raw_view.handle,
-                file_path.as_ptr() as *mut _,
+                file_path.as_ptr(),
                 &mut progress as *mut P as *mut c_void,
                 Some(P::cb_progress_callback),
                 settings.handle,
@@ -551,10 +551,9 @@ impl FileMetadata {
 
     // TODO: Deprecate this function? Does not seem to do anything different than `open_database`.
     pub fn open_database_for_configuration(&self, file: &Path) -> Result<Ref<BinaryView>, ()> {
-        let file = file.to_cstr();
+        let file = BnPath::new(file);
         unsafe {
-            let bv =
-                BNOpenDatabaseForConfiguration(self.handle, file.as_ref().as_ptr() as *const _);
+            let bv = BNOpenDatabaseForConfiguration(self.handle, file.as_ptr());
 
             if bv.is_null() {
                 Err(())
@@ -566,7 +565,7 @@ impl FileMetadata {
 
     // TODO: How this relates to `BNLoadFilename`?
     pub fn open_database(&self, file: &Path) -> Result<Ref<BinaryView>, ()> {
-        let file = file.to_cstr();
+        let file = BnPath::new(file);
         let view = unsafe { BNOpenExistingDatabase(self.handle, file.as_ptr()) };
 
         if view.is_null() {
@@ -582,7 +581,7 @@ impl FileMetadata {
         file: &Path,
         mut progress: P,
     ) -> Result<Ref<BinaryView>, ()> {
-        let file = file.to_cstr();
+        let file = BnPath::new(file);
 
         let view = unsafe {
             BNOpenExistingDatabaseWithProgress(

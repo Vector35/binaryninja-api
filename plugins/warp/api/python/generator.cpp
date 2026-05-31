@@ -62,6 +62,13 @@ map<string, string> g_pythonKeywordReplacements = {
 	{"yield", "yield_"},
 };
 
+bool IsPathType(Type* type)
+{
+	return (type->GetClass() == PointerTypeClass) &&
+		(type->GetChildType()->GetClass() == NamedTypeReferenceClass) &&
+		(type->GetChildType()->GetNamedTypeReference()->GetName().GetString() == "BNPath");
+}
+
 
 void OutputType(FILE* out, Type* type, bool isReturnType = false, bool isCallback = false)
 {
@@ -125,6 +132,11 @@ void OutputType(FILE* out, Type* type, bool isReturnType = false, bool isCallbac
 		}
 		break;
 	case PointerTypeClass:
+		if (IsPathType(type))
+		{
+			fprintf(out, "BNPathHandle");
+			break;
+		}
 		if (isCallback || (type->GetChildType()->GetClass() == VoidTypeClass))
 		{
 			fprintf(out, "ctypes.c_void_p");
@@ -199,6 +211,11 @@ void OutputSwizzledType(FILE* out, Type* type)
 		}
 		break;
 	case PointerTypeClass:
+		if (IsPathType(type))
+		{
+			fprintf(out, "Optional[os.PathLike]");
+			break;
+		}
 		if (type->GetChildType()->GetClass() == VoidTypeClass)
 		{
 			fprintf(out, "Optional[ctypes.c_void_p]");
@@ -251,7 +268,7 @@ int main(int argc, char* argv[])
 	auto arch = new CoreArchitecture(BNGetNativeTypeParserArchitecture());
 
 	// Enable ephemeral settings
-	Settings::Instance()->LoadSettingsFile("");
+	Settings::Instance()->LoadSettingsFile();
 	Settings::Instance()->Set("analysis.types.parserName", "ClangTypeParser");
 	bool ok = arch->GetStandalonePlatform()->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors);
 
@@ -324,6 +341,11 @@ int main(int argc, char* argv[])
 		if (name == "BNDataBuffer")
 		{
 			fprintf(out, "from binaryninja._binaryninjacore import BNDataBuffer, BNDataBufferHandle\n");
+			continue;
+		}
+		if (name == "BNPath")
+		{
+			fprintf(out, "from binaryninja._binaryninjacore import BNPath, BNPathHandle\n");
 			continue;
 		}
 		if (i.second->GetClass() == StructureTypeClass)
@@ -482,6 +504,7 @@ int main(int argc, char* argv[])
 		bool stringResult = (i.second->GetChildType()->GetClass() == PointerTypeClass) &&
 			(i.second->GetChildType()->GetChildType()->GetWidth() == 1) &&
 			(i.second->GetChildType()->GetChildType()->IsSigned());
+		bool pathResult = IsPathType(i.second->GetChildType().GetValue());
 		// Pointer returns will be automatically wrapped to return None on null pointer
 		bool pointerResult = (i.second->GetChildType()->GetClass() == PointerTypeClass);
 
@@ -577,10 +600,10 @@ int main(int argc, char* argv[])
 		fprintf(out, "\n\t\t) -> ");
 		if (swizzleArgs)
 		{
-			if (stringResult || pointerResult)
+			if (stringResult || pathResult || pointerResult)
 				fprintf(out, "Optional[");
 			OutputSwizzledType(out, i.second->GetChildType().GetValue());
-			if (stringResult || pointerResult)
+			if (stringResult || pathResult || pointerResult)
 				fprintf(out, "]");
 		}
 		else
@@ -600,7 +623,11 @@ int main(int argc, char* argv[])
 			if (argName.empty())
 				argName = "arg" + to_string(argN);
 
-			if (swizzleArgs && (arg.type->GetClass() == PointerTypeClass) &&
+			if (swizzleArgs && IsPathType(arg.type.GetValue()))
+			{
+				stringArgFuncCall += string("_path_arg") + to_string(argN) + ", ";
+			}
+			else if (swizzleArgs && (arg.type->GetClass() == PointerTypeClass) &&
 				(arg.type->GetChildType()->GetClass() == IntegerTypeClass) &&
 				(arg.type->GetChildType()->GetWidth() == 1) &&
 				(arg.type->GetChildType()->IsSigned()))
@@ -617,29 +644,56 @@ int main(int argc, char* argv[])
 			stringArgFuncCall = stringArgFuncCall.substr(0, stringArgFuncCall.size()-2);
 		stringArgFuncCall += ")";
 
+		argN = 0;
+		for (auto& arg : i.second->GetParameters())
+		{
+			string argName = arg.name;
+			if (g_pythonKeywordReplacements.find(argName) != g_pythonKeywordReplacements.end())
+				argName = g_pythonKeywordReplacements[argName];
+			if (argName.empty())
+				argName = "arg" + to_string(argN);
+			if (swizzleArgs && IsPathType(arg.type.GetValue()))
+				fprintf(out, "\twith core_path(%s) as _path_arg%zu:\n", argName.c_str(), argN);
+			argN++;
+		}
+		string indent = "\t";
+		for (auto& arg : i.second->GetParameters())
+		{
+			if (swizzleArgs && IsPathType(arg.type.GetValue()))
+				indent += "\t";
+		}
+
 		if (stringResult)
 		{
 			// Emit wrapper to get Python string and free native memory
-			fprintf(out, "\tresult = ");
+			fprintf(out, "%sresult = ", indent.c_str());
 			fprintf(out, "%s\n", stringArgFuncCall.c_str());
-			fprintf(out, "\tif not result:\n");
-			fprintf(out, "\t\treturn None\n");
-			fprintf(out, "\tstring = str(pyNativeStr(ctypes.cast(result, ctypes.c_char_p).value))\n");
-			fprintf(out, "\tBNFreeString(result)\n");
-			fprintf(out, "\treturn string\n");
+			fprintf(out, "%sif not result:\n", indent.c_str());
+			fprintf(out, "%s\treturn None\n", indent.c_str());
+			fprintf(out, "%sstring = str(pyNativeStr(ctypes.cast(result, ctypes.c_char_p).value))\n", indent.c_str());
+			fprintf(out, "%sBNFreeString(result)\n", indent.c_str());
+			fprintf(out, "%sreturn string\n", indent.c_str());
+		}
+		else if (pathResult)
+		{
+			fprintf(out, "%sresult = ", indent.c_str());
+			fprintf(out, "%s\n", stringArgFuncCall.c_str());
+			fprintf(out, "%sif not result:\n", indent.c_str());
+			fprintf(out, "%s\treturn None\n", indent.c_str());
+			fprintf(out, "%sreturn path_to_native_path(result)\n", indent.c_str());
 		}
 		else if (pointerResult)
 		{
 			// Emit wrapper to return None on null pointer
-			fprintf(out, "\tresult = ");
+			fprintf(out, "%sresult = ", indent.c_str());
 			fprintf(out, "%s\n", stringArgFuncCall.c_str());
-			fprintf(out, "\tif not result:\n");
-			fprintf(out, "\t\treturn None\n");
-			fprintf(out, "\treturn result\n");
+			fprintf(out, "%sif not result:\n", indent.c_str());
+			fprintf(out, "%s\treturn None\n", indent.c_str());
+			fprintf(out, "%sreturn result\n", indent.c_str());
 		}
 		else
 		{
-			fprintf(out, "\treturn ");
+			fprintf(out, "%sreturn ", indent.c_str());
 			fprintf(out, "%s\n", stringArgFuncCall.c_str());
 		}
 		fprintf(out, "\n\n");

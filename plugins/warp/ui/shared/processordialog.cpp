@@ -1,6 +1,7 @@
 #include "processordialog.h"
 #include "commitdialog.h"
 #include "misc.h"
+#include "pathhelpers.h"
 #include "selectprojectfilesdialog.h"
 
 #include <QHBoxLayout>
@@ -220,7 +221,7 @@ void ProcessorDialog::onAddBinaryView(Ref<BinaryView> view)
 	ToProcessEntry item;
 	item.type = ToProcessEntry::ViewMode;
 	item.view = view;
-	item.displayName = QString("View: %1").arg(QString::fromStdString(view->GetFile()->GetFilename()));
+	item.displayName = QString("View: %1").arg(QString::fromStdString(Path::PrintablePath(view->GetFile()->GetFilename())));
 
 	m_toProcess.push_back(item);
 	m_entryList->addItem(item.displayName);
@@ -404,10 +405,10 @@ void ProcessorDialog::onUpdateState()
 
 	m_stateList->clear();
 
-	auto addToList = [&](const std::vector<std::string>& files, const QString& prefix) {
+	auto addToList = [&](const std::vector<std::filesystem::path>& files, const QString& prefix) {
 		for (auto it = files.rbegin(); it != files.rend(); ++it)
 		{
-			auto* item = new QListWidgetItem(prefix + QString::fromStdString(*it));
+			auto* item = new QListWidgetItem(prefix + QString::fromStdString(BinaryNinja::Path::PrintablePath(*it)));
 			item->setTextAlignment(Qt::AlignCenter);
 			m_stateList->addItem(item);
 		}

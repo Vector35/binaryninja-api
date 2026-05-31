@@ -96,8 +96,11 @@ impl InteractionHandler for MyInteractionHandler {
                 default,
                 ..
             } => {
-                let new_value = format!("example{}", default.clone().unwrap_or_default(),);
-                *value = Some(new_value);
+                let suffix = default
+                    .as_ref()
+                    .map(|path| path.as_os_str().to_string_lossy())
+                    .unwrap_or_default();
+                *value = Some(PathBuf::from(format!("example{}", suffix)));
                 true
             }
             _ => false,
@@ -129,14 +132,15 @@ fn test_get_directory_default() {
     let mut my_form = Form::new("get_dir_default");
     my_form.add_field(FormInputField::DirectoryName {
         prompt: "get_dir_default".to_string(),
-        default: Some("_default".to_string()),
+        default_name: None,
+        default: Some(PathBuf::from("_default")),
         value: None,
     });
 
     assert_eq!(my_form.prompt(), true);
     assert_eq!(
-        my_form.fields[0].try_value_string(),
-        Some("example_default".to_string())
+        my_form.fields[0].try_value_path(),
+        Some(PathBuf::from("example_default"))
     )
 }
 

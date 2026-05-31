@@ -7,7 +7,8 @@ using namespace BinaryNinja::DSC;
 BNSharedCacheImage ImageToApi(const CacheImage& image)
 {
 	BNSharedCacheImage apiImage;
-	apiImage.name = BNAllocStringWithLength(image.path.c_str(), image.path.size());
+	auto path = ImagePathToUtf8String(image.path);
+	apiImage.name = BNAllocStringWithLength(path.c_str(), path.size());
 	apiImage.headerAddress = image.headerAddress;
 	apiImage.regionStartCount = image.regionStarts.size();
 	uint64_t* regionStarts = new uint64_t[image.regionStarts.size()];
@@ -20,7 +21,7 @@ BNSharedCacheImage ImageToApi(const CacheImage& image)
 CacheImage ImageFromApi(const BNSharedCacheImage& image)
 {
 	CacheImage apiImage;
-	apiImage.path = image.name;
+	apiImage.path = ImagePathFromString(image.name);
 	apiImage.headerAddress = image.headerAddress;
 	apiImage.regionStarts.reserve(image.regionStartCount);
 	for (size_t i = 0; i < image.regionStartCount; i++)
@@ -135,7 +136,7 @@ BNSharedCacheMappingInfo MappingToApi(const dyld_cache_mapping_info& mapping)
 BNSharedCacheEntry EntryToApi(const CacheEntry& entry)
 {
 	BNSharedCacheEntry apiEntry;
-	auto path = entry.GetFilePath();
+	auto path = Path::PathToUtf8String(entry.GetFilePath());
 	auto name = entry.GetFileName();
 	apiEntry.path = BNAllocStringWithLength(path.c_str(), path.size());
 	apiEntry.name = BNAllocStringWithLength(name.c_str(), name.size());

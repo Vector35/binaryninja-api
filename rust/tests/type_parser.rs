@@ -47,7 +47,7 @@ fn test_string_to_types() {
     let parsed_type = parser
         .parse_types_from_source(
             TEST_TYPES,
-            "test_file.h",
+            std::path::Path::new("test_file.h"),
             &platform,
             &plat_type_container,
             &[],

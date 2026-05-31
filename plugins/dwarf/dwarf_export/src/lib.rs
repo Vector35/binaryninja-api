@@ -18,7 +18,7 @@ use gimli::{
 };
 use object::{write, Architecture, BinaryFormat, SectionKind};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 fn export_type(
     name: String,
@@ -646,6 +646,7 @@ fn create_export_form(bv_arch: &str) -> Form {
     form.add_field(FormInputField::SaveFileName {
         prompt: "Save Location".to_string(),
         extension: Some("Debug Files (*.dwo *.debug);;All Files (*)".to_string()),
+        default_name: None,
         default: None,
         value: None,
     });
@@ -760,7 +761,7 @@ fn export_dwarf(bv: &BinaryView) {
     };
 
     let save_loc_field = export_form.get_field_with_name("Save Location").unwrap();
-    let save_loc_path = PathBuf::from(save_loc_field.try_value_string().unwrap_or_default());
+    let save_loc_path = save_loc_field.try_value_path().unwrap_or_default();
 
     let encoding = gimli::Encoding {
         format: gimli::Format::Dwarf32,

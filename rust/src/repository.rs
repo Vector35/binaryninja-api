@@ -11,7 +11,7 @@ use std::ptr::NonNull;
 use binaryninjacore_sys::*;
 
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnString, IntoCStr};
+use crate::string::{BnPath, BnString};
 
 pub use manager::RepositoryManager;
 pub use plugin::{Extension, ExtensionVersion, ExtensionVersionPlatform};
@@ -44,8 +44,7 @@ impl Repository {
     pub fn path(&self) -> PathBuf {
         let result = unsafe { BNRepositoryGetRepoPath(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        let result_str = unsafe { BnString::into_string(result as *mut c_char) };
-        PathBuf::from(result_str)
+        unsafe { BnString::into_path_buf(result) }
     }
 
     /// List of RepoPlugin objects contained within this repository
@@ -57,7 +56,7 @@ impl Repository {
     }
 
     pub fn plugin_by_path(&self, path: &Path) -> Option<Ref<Extension>> {
-        let path = path.to_cstr();
+        let path = BnPath::new(path);
         let result = unsafe { BNRepositoryGetPluginByPath(self.handle.as_ptr(), path.as_ptr()) };
         NonNull::new(result).map(|h| unsafe { Extension::ref_from_raw(h) })
     }
@@ -66,8 +65,7 @@ impl Repository {
     pub fn full_path(&self) -> PathBuf {
         let result = unsafe { BNRepositoryGetPluginsPath(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        let result_str = unsafe { BnString::into_string(result as *mut c_char) };
-        PathBuf::from(result_str)
+        unsafe { BnString::into_path_buf(result) }
     }
 }
 

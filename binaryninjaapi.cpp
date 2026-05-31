@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include "pathhelpers.h"
 #include <numeric>
 
 using namespace BinaryNinja;
@@ -49,134 +50,106 @@ bool BinaryNinja::InitPlugins(bool allowUserPlugins)
 }
 
 
-string BinaryNinja::GetBundledPluginDirectory()
+filesystem::path BinaryNinja::GetBundledPluginDirectory()
 {
-	char* path = BNGetBundledPluginDirectory();
-	if (!path)
-		return string();
-	string result = path;
-	BNFreeString(path);
-	return result;
+	return Path::PathFromCore(BNGetBundledPluginDirectory());
 }
 
 
-std::string BinaryNinja::GetBundledScriptPluginDirectory()
+filesystem::path BinaryNinja::GetBundledScriptPluginDirectory()
 {
-	char* path = BNGetBundledScriptPluginDirectory();
-	if (!path)
-		return string();
-	std::string result = path;
-	BNFreeString(path);
-	return result;
+	return Path::PathFromCore(BNGetBundledScriptPluginDirectory());
 }
 
 
-void BinaryNinja::SetBundledPluginDirectory(const string& path)
+void BinaryNinja::SetBundledPluginDirectory(const filesystem::path& path)
 {
-	BNSetBundledPluginDirectory(path.c_str());
+	Path::APIObject corePath(path);
+	BNSetBundledPluginDirectory(corePath);
 }
 
 
-string BinaryNinja::GetUserDirectory(void)
+void BinaryNinja::SetBundledScriptPluginDirectory(const filesystem::path& path)
 {
-	char* dir = BNGetUserDirectory();
-	if (!dir)
-		return string();
-	string result(dir);
-	BNFreeString(dir);
-	return result;
+	Path::APIObject corePath(path);
+	BNSetBundledScriptPluginDirectory(corePath);
 }
 
 
-string BinaryNinja::GetSystemCacheDirectory()
+filesystem::path BinaryNinja::GetUserDirectory(void)
 {
-	char* dir = BNGetSystemCacheDirectory();
-	if (!dir)
-		return string();
-	std::string result(dir);
-	BNFreeString(dir);
-	return result;
+	return Path::PathFromCore(BNGetUserDirectory());
 }
 
 
-string BinaryNinja::GetSettingsFileName()
+filesystem::path BinaryNinja::GetSystemCacheDirectory()
 {
-	char* dir = BNGetSettingsFileName();
-	if (!dir)
-		return string();
-	string result(dir);
-	BNFreeString(dir);
-	return result;
+	return Path::PathFromCore(BNGetSystemCacheDirectory());
 }
 
 
-string BinaryNinja::GetRepositoriesDirectory()
+filesystem::path BinaryNinja::GetSettingsFileName()
 {
-	char* dir = BNGetRepositoriesDirectory();
-	if (!dir)
-		return string();
-	string result(dir);
-	BNFreeString(dir);
-	return result;
+	return Path::PathFromCore(BNGetSettingsFileName());
 }
 
 
-string BinaryNinja::GetInstallDirectory()
+filesystem::path BinaryNinja::GetRepositoriesDirectory()
 {
-	char* path = BNGetInstallDirectory();
-	if (!path)
-		return string();
-	string result = path;
-	BNFreeString(path);
-	return result;
+	return Path::PathFromCore(BNGetRepositoriesDirectory());
 }
 
 
-string BinaryNinja::GetUserPluginDirectory()
+filesystem::path BinaryNinja::GetInstallDirectory()
 {
-	char* path = BNGetUserPluginDirectory();
-	if (!path)
-		return string();
-	string result = path;
-	BNFreeString(path);
-	return result;
+	return Path::PathFromCore(BNGetInstallDirectory());
 }
 
 
-string BinaryNinja::GetPathRelativeToBundledPluginDirectory(const string& rel)
+filesystem::path BinaryNinja::GetUserPluginDirectory()
 {
-	char* path = BNGetPathRelativeToBundledPluginDirectory(rel.c_str());
+	return Path::PathFromCore(BNGetUserPluginDirectory());
+}
+
+
+filesystem::path BinaryNinja::GetPathRelativeToBundledPluginDirectory(const filesystem::path& rel)
+{
+	Path::APIObject coreRel(rel);
+	BNPath* path = BNGetPathRelativeToBundledPluginDirectory(coreRel);
 	if (!path)
 		return rel;
-	string result = path;
-	BNFreeString(path);
-	return result;
+	return Path::PathFromCore(path);
 }
 
 
-string BinaryNinja::GetPathRelativeToUserPluginDirectory(const string& rel)
+filesystem::path BinaryNinja::GetPathRelativeToUserPluginDirectory(const filesystem::path& rel)
 {
-	char* path = BNGetPathRelativeToUserPluginDirectory(rel.c_str());
+	Path::APIObject coreRel(rel);
+	BNPath* path = BNGetPathRelativeToUserPluginDirectory(coreRel);
 	if (!path)
 		return rel;
-	string result = path;
-	BNFreeString(path);
-	return result;
+	return Path::PathFromCore(path);
 }
 
 
-string BinaryNinja::GetPathRelativeToUserDirectory(const string& rel)
+filesystem::path BinaryNinja::GetPathRelativeToUserDirectory(const filesystem::path& rel)
 {
-	char* path = BNGetPathRelativeToUserDirectory(rel.c_str());
+	Path::APIObject coreRel(rel);
+	BNPath* path = BNGetPathRelativeToUserDirectory(coreRel);
 	if (!path)
 		return rel;
-	string result = path;
-	BNFreeString(path);
-	return result;
+	return Path::PathFromCore(path);
 }
 
 
-bool BinaryNinja::ExecuteWorkerProcess(const string& path, const vector<string>& args, const DataBuffer& input,
+bool BinaryNinja::IsDatabase(const filesystem::path& path)
+{
+	Path::APIObject corePath(path);
+	return BNIsDatabase(corePath);
+}
+
+
+bool BinaryNinja::ExecuteWorkerProcess(const filesystem::path& path, const vector<string>& args, const DataBuffer& input,
     string& output, string& errors, bool stdoutIsText, bool stderrIsText)
 {
 	const char** argArray = new const char*[args.size() + 1];
@@ -186,8 +159,9 @@ bool BinaryNinja::ExecuteWorkerProcess(const string& path, const vector<string>&
 
 	char* outputStr;
 	char* errorStr;
+	Path::APIObject corePath(path);
 	bool result = BNExecuteWorkerProcess(
-	    path.c_str(), argArray, input.GetBufferObject(), &outputStr, &errorStr, stdoutIsText, stderrIsText);
+	    corePath, argArray, input.GetBufferObject(), &outputStr, &errorStr, stdoutIsText, stderrIsText);
 
 	output = outputStr;
 	errors = errorStr;

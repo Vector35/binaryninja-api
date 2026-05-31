@@ -1,6 +1,6 @@
 use std::ffi::c_void;
 use std::fmt::{Debug, Formatter};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
 use std::time::SystemTime;
 
@@ -221,10 +221,10 @@ impl RemoteFile {
     /// Get the default filepath for a remote File. This is based off the Setting for
     /// collaboration.directory, the file's id, the file's project's id, and the file's
     /// remote's id.
-    pub fn default_path(&self) -> String {
+    pub fn default_path(&self) -> PathBuf {
         let result = unsafe { BNCollaborationDefaultFilePath(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        unsafe { BnString::into_string(result) }
+        unsafe { BnString::into_path_buf(result) }
     }
 
     /// If the file has pulled the snapshots yet

@@ -2,6 +2,8 @@
 
 #include "VirtualMemory.h"
 
+#include <filesystem>
+
 // TODO: Including this adds a bunch of binary ninja specific stuff :ugh:
 #include "view/macho/machoview.h"
 
@@ -68,7 +70,7 @@ struct SharedCacheMachOHeader
 	uint64_t GetLinkEditFileBase() const { return linkeditSegment.vmaddr - linkeditSegment.fileoff; };
 
 	static std::optional<SharedCacheMachOHeader> ParseHeaderForAddress(
-		std::shared_ptr<VirtualMemory> vm, uint64_t address, const std::string& imagePath);
+		std::shared_ptr<VirtualMemory> vm, uint64_t address, const std::filesystem::path& imagePath);
 
 	std::vector<CacheSymbol> ReadSymbolTable(VirtualMemory& vm, const TableInfo &symbolInfo, const TableInfo &stringInfo,
 		BNSymbolBinding bindingOverride = NoBinding) const;

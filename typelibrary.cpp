@@ -1,4 +1,5 @@
 #include "binaryninjaapi.h"
+#include "pathhelpers.h"
 
 using namespace BinaryNinja;
 
@@ -14,15 +15,17 @@ TypeLibrary::TypeLibrary(Ref<Architecture> arch, const std::string& name)
 }
 
 
-bool TypeLibrary::DecompressToFile(const std::string& path)
+bool TypeLibrary::DecompressToFile(const std::filesystem::path& path)
 {
-	return BNTypeLibraryDecompressToFile(m_object, path.c_str());
+	Path::APIObject corePath(path);
+	return BNTypeLibraryDecompressToFile(m_object, corePath);
 }
 
 
-Ref<TypeLibrary> TypeLibrary::LoadFromFile(const std::string& path)
+Ref<TypeLibrary> TypeLibrary::LoadFromFile(const std::filesystem::path& path)
 {
-	return new TypeLibrary(BNLoadTypeLibraryFromFile(path.c_str()));
+	Path::APIObject corePath(path);
+	return new TypeLibrary(BNLoadTypeLibraryFromFile(corePath));
 }
 
 
@@ -38,9 +41,10 @@ Ref<TypeLibrary> TypeLibrary::LookupByGuid(Ref<Architecture> arch, const std::st
 }
 
 
-bool TypeLibrary::WriteToFile(const std::string& path)
+bool TypeLibrary::WriteToFile(const std::filesystem::path& path)
 {
-	return BNWriteTypeLibraryToFile(m_object, path.c_str());
+	Path::APIObject corePath(path);
+	return BNWriteTypeLibraryToFile(m_object, corePath);
 }
 
 

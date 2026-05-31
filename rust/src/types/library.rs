@@ -5,7 +5,7 @@ use crate::{
     metadata::Metadata,
     platform::Platform,
     rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref},
-    string::{BnString, IntoCStr},
+    string::{BnPath, BnString, IntoCStr},
     types::{QualifiedName, QualifiedNameAndType, Type},
 };
 use binaryninjacore_sys::*;
@@ -74,7 +74,7 @@ impl TypeLibrary {
     ///
     /// The returned type library cannot be modified.
     pub fn load_from_file(path: &Path) -> Option<Ref<TypeLibrary>> {
-        let path = path.to_cstr();
+        let path = BnPath::new(path);
         let handle = unsafe { BNLoadTypeLibraryFromFile(path.as_ptr()) };
         NonNull::new(handle).map(|h| unsafe { TypeLibrary::ref_from_raw(h) })
     }
@@ -83,13 +83,13 @@ impl TypeLibrary {
     ///
     /// The path must be writable, and the parent directory must exist.
     pub fn write_to_file(&self, path: &Path) -> bool {
-        let path = path.to_cstr();
+        let path = BnPath::new(path);
         unsafe { BNWriteTypeLibraryToFile(self.as_raw(), path.as_ptr()) }
     }
 
     /// Decompresses the type library file to a JSON file at the given `output_path`.
     pub fn decompress_to_file(&self, output_path: &Path) -> bool {
-        let path = output_path.to_cstr();
+        let path = BnPath::new(output_path);
         unsafe { BNTypeLibraryDecompressToFile(self.handle.as_ptr(), path.as_ptr()) }
     }
 

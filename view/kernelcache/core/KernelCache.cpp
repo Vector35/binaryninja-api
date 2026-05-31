@@ -51,7 +51,7 @@ void KernelCache::AddSymbols(std::vector<CacheSymbol>&& symbols)
 		m_symbols.insert({symbol.address, std::move(symbol)});
 }
 
-bool KernelCache::ProcessEntryImage(Ref<BinaryView> bv, const std::string& path, const fileset_entry_command& info)
+bool KernelCache::ProcessEntryImage(Ref<BinaryView> bv, const std::filesystem::path& path, const fileset_entry_command& info)
 {
 	auto imageHeader = KernelCacheMachOHeader::ParseHeaderForAddress(bv, info.vmaddr, info.fileoff, path);
 	if (!imageHeader.has_value())
@@ -402,8 +402,9 @@ std::optional<CacheImage> KernelCache::GetImageContaining(const uint64_t address
 
 std::optional<CacheImage> KernelCache::GetImageWithName(const std::string& name) const
 {
+	auto imagePath = ImagePathFromString(name);
 	for (const auto& [address, image] : m_images)
-		if (image.path == name)
+		if (image.path == imagePath)
 			return image;
 	return std::nullopt;
 }

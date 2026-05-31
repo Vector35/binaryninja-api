@@ -2,12 +2,12 @@
 use binaryninjacore_sys::*;
 use std::ffi::{c_char, c_void};
 use std::fmt::Debug;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
 
 use crate::platform::Platform;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref};
-use crate::string::{raw_to_string, BnString, IntoCStr};
+use crate::string::{raw_to_string, BnPath, BnString, IntoCStr};
 use crate::types::{QualifiedName, QualifiedNameAndType, Type, TypeContainer};
 
 pub type TypeParserErrorSeverity = BNTypeParserErrorSeverity;
@@ -80,21 +80,21 @@ impl TypeParser for CoreTypeParser {
     fn preprocess_source(
         &self,
         source: &str,
-        file_name: &str,
+        file_name: &Path,
         platform: &Platform,
         existing_types: &TypeContainer,
         options: &[String],
         include_directories: &[PathBuf],
     ) -> Result<String, Vec<TypeParserError>> {
         let source_cstr = BnString::new(source);
-        let file_name_cstr = BnString::new(file_name);
+        let file_name = BnPath::new(file_name);
         let options: Vec<_> = options.iter().map(|o| o.to_cstr()).collect();
         let options_raw: Vec<*const c_char> = options.iter().map(|o| o.as_ptr()).collect();
         let include_directories: Vec<_> = include_directories
             .iter()
-            .map(|d| d.clone().to_cstr())
+            .map(|d| BnPath::new(d.as_path()))
             .collect();
-        let include_directories_raw: Vec<*const c_char> =
+        let include_directories_raw: Vec<*mut BNPath> =
             include_directories.iter().map(|d| d.as_ptr()).collect();
         let mut result = std::ptr::null_mut();
         let mut errors = std::ptr::null_mut();
@@ -103,12 +103,12 @@ impl TypeParser for CoreTypeParser {
             BNTypeParserPreprocessSource(
                 self.handle.as_ptr(),
                 source_cstr.as_ptr(),
-                file_name_cstr.as_ptr(),
+                file_name.as_ptr(),
                 platform.handle,
                 existing_types.handle.as_ptr(),
                 options_raw.as_ptr(),
                 options_raw.len(),
-                include_directories_raw.as_ptr(),
+                include_directories_raw.as_ptr() as *mut *mut BNPath,
                 include_directories_raw.len(),
                 &mut result,
                 &mut errors,
@@ -128,7 +128,7 @@ impl TypeParser for CoreTypeParser {
     fn parse_types_from_source(
         &self,
         source: &str,
-        file_name: &str,
+        file_name: &Path,
         platform: &Platform,
         existing_types: &TypeContainer,
         options: &[String],
@@ -136,14 +136,14 @@ impl TypeParser for CoreTypeParser {
         auto_type_source: &str,
     ) -> Result<TypeParserResult, Vec<TypeParserError>> {
         let source_cstr = BnString::new(source);
-        let file_name_cstr = BnString::new(file_name);
+        let file_name = BnPath::new(file_name);
         let options: Vec<_> = options.iter().map(|o| o.to_cstr()).collect();
         let options_raw: Vec<*const c_char> = options.iter().map(|o| o.as_ptr()).collect();
         let include_directories: Vec<_> = include_directories
             .iter()
-            .map(|d| d.clone().to_cstr())
+            .map(|d| BnPath::new(d.as_path()))
             .collect();
-        let include_directories_raw: Vec<*const c_char> =
+        let include_directories_raw: Vec<*mut BNPath> =
             include_directories.iter().map(|d| d.as_ptr()).collect();
         let auto_type_source = BnString::new(auto_type_source);
         let mut raw_result = BNTypeParserResult::default();
@@ -153,12 +153,12 @@ impl TypeParser for CoreTypeParser {
             BNTypeParserParseTypesFromSource(
                 self.handle.as_ptr(),
                 source_cstr.as_ptr(),
-                file_name_cstr.as_ptr(),
+                file_name.as_ptr(),
                 platform.handle,
                 existing_types.handle.as_ptr(),
                 options_raw.as_ptr(),
                 options_raw.len(),
-                include_directories_raw.as_ptr(),
+                include_directories_raw.as_ptr() as *mut *mut BNPath,
                 include_directories_raw.len(),
                 auto_type_source.as_ptr(),
                 &mut raw_result,
@@ -235,7 +235,7 @@ pub trait TypeParser {
     fn preprocess_source(
         &self,
         source: &str,
-        file_name: &str,
+        file_name: &Path,
         platform: &Platform,
         existing_types: &TypeContainer,
         options: &[String],
@@ -254,7 +254,7 @@ pub trait TypeParser {
     fn parse_types_from_source(
         &self,
         source: &str,
-        file_name: &str,
+        file_name: &Path,
         platform: &Platform,
         existing_types: &TypeContainer,
         options: &[String],
@@ -534,12 +534,12 @@ unsafe extern "C" fn cb_get_option_text<T: TypeParser>(
 unsafe extern "C" fn cb_preprocess_source<T: TypeParser>(
     ctxt: *mut c_void,
     source: *const c_char,
-    file_name: *const c_char,
+    file_name: *mut BNPath,
     platform: *mut BNPlatform,
     existing_types: *mut BNTypeContainer,
     options: *const *const c_char,
     option_count: usize,
-    include_dirs: *const *const c_char,
+    include_dirs: *mut *mut BNPath,
     include_dir_count: usize,
     result: *mut *mut c_char,
     errors: *mut *mut BNTypeParserError,
@@ -557,11 +557,13 @@ unsafe extern "C" fn cb_preprocess_source<T: TypeParser>(
     let includes_raw = unsafe { std::slice::from_raw_parts(include_dirs, include_dir_count) };
     let includes: Vec<_> = includes_raw
         .iter()
-        .filter_map(|&r| Some(PathBuf::from(raw_to_string(r)?)))
+        .filter(|&&r| !r.is_null())
+        .map(|&r| unsafe { BnString::path_buf_from_raw(r) })
         .collect();
+    let file_name = unsafe { BnString::path_buf_from_raw(file_name) };
     match ctxt.preprocess_source(
         &raw_to_string(source).unwrap(),
-        &raw_to_string(file_name).unwrap(),
+        file_name.as_path(),
         &platform,
         &existing_types,
         &options,
@@ -593,12 +595,12 @@ unsafe extern "C" fn cb_preprocess_source<T: TypeParser>(
 unsafe extern "C" fn cb_parse_types_from_source<T: TypeParser>(
     ctxt: *mut c_void,
     source: *const c_char,
-    file_name: *const c_char,
+    file_name: *mut BNPath,
     platform: *mut BNPlatform,
     existing_types: *mut BNTypeContainer,
     options: *const *const c_char,
     option_count: usize,
-    include_dirs: *const *const c_char,
+    include_dirs: *mut *mut BNPath,
     include_dir_count: usize,
     auto_type_source: *const c_char,
     result: *mut BNTypeParserResult,
@@ -617,11 +619,13 @@ unsafe extern "C" fn cb_parse_types_from_source<T: TypeParser>(
     let includes_raw = unsafe { std::slice::from_raw_parts(include_dirs, include_dir_count) };
     let includes: Vec<_> = includes_raw
         .iter()
-        .filter_map(|&r| Some(PathBuf::from(raw_to_string(r)?)))
+        .filter(|&&r| !r.is_null())
+        .map(|&r| unsafe { BnString::path_buf_from_raw(r) })
         .collect();
+    let file_name = unsafe { BnString::path_buf_from_raw(file_name) };
     match ctxt.parse_types_from_source(
         &raw_to_string(source).unwrap(),
-        &raw_to_string(file_name).unwrap(),
+        file_name.as_path(),
         &platform,
         &existing_types,
         &options,

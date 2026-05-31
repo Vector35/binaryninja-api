@@ -1,11 +1,13 @@
 #pragma once
 
+#include <filesystem>
 #include <shared_mutex>
 #include <vector>
 #include <Dyld.h>
 
 #include "binaryninjaapi.h"
 #include "MachO.h"
+#include "Utility.h"
 #include "VirtualMemory.h"
 
 struct CacheSymbol
@@ -81,7 +83,7 @@ struct CacheRegion
 struct CacheImage
 {
 	uint64_t headerAddress;
-	std::string path;
+	std::filesystem::path path;
 	// A list to the start of memory regions associated with the image.
 	// This lets us load all regions for a given image easily.
 	std::vector<uint64_t> regionStarts;
@@ -97,7 +99,7 @@ struct CacheImage
 	CacheImage& operator=(CacheImage&& other) noexcept = default;
 
 	// Get the file name from the path.
-	std::string GetName() const { return BaseFileName(path); }
+	std::string GetName() const { return ImageNameFromPath(path); }
 
 	// Get the names of the dependencies.
 	std::vector<std::string> GetDependencies() const;
@@ -119,7 +121,7 @@ enum class CacheEntryType
 class CacheEntry
 {
 	CacheEntryType m_type;
-	std::string m_filePath;
+	std::filesystem::path m_filePath;
 	std::string m_fileName;
 	dyld_cache_header m_header {};
 	// Mappings tell us _where_ to map the regions within the flat address space.
@@ -131,7 +133,7 @@ class CacheEntry
 	std::shared_ptr<MappedFileRegion> m_file;
 
 public:
-	CacheEntry(std::string filePath, std::string fileName, CacheEntryType type, dyld_cache_header header,
+	CacheEntry(std::filesystem::path filePath, std::string fileName, CacheEntryType type, dyld_cache_header header,
 		std::vector<dyld_cache_mapping_info> mappings, std::vector<std::pair<std::string, dyld_cache_image_info>> images,
 		std::shared_ptr<MappedFileRegion> file);
 
@@ -142,7 +144,7 @@ public:
 	CacheEntry& operator=(CacheEntry&&) = default;
 
 	// Construct a cache entry from the file on disk.
-	static CacheEntry FromFile(const std::string& filePath, const std::string& fileName, CacheEntryType type);
+	static CacheEntry FromFile(const std::filesystem::path& filePath, const std::string& fileName, CacheEntryType type);
 
 	const std::shared_ptr<MappedFileRegion>& GetFile() const { return m_file; }
 
@@ -156,7 +158,7 @@ public:
 
 	CacheEntryType GetType() const { return m_type; }
 	// Ex. "/myuser/mypath/dyld_shared_cache_arm64e"
-	const std::string& GetFilePath() const { return m_filePath; }
+	const std::filesystem::path& GetFilePath() const { return m_filePath; }
 	// Ex. "dyld_shared_cache_arm64e"
 	const std::string GetFileName() const { return m_fileName; }
 	const dyld_cache_header& GetHeader() const { return m_header; }
@@ -197,7 +199,7 @@ class SharedCache
 	std::optional<CacheEntry> m_localSymbolsEntry;
 	std::shared_ptr<VirtualMemory> m_localSymbolsVM;
 
-	bool ProcessEntryImage(const std::string& path, const dyld_cache_image_info& info);
+	bool ProcessEntryImage(const std::filesystem::path& path, const dyld_cache_image_info& info);
 
 	// Add a region known not to overlap with another, otherwise use AddRegion.
 	// returns whether the region was inserted.

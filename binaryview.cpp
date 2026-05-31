@@ -22,6 +22,7 @@
 #include <iterator>
 #include <memory>
 #include "binaryninjaapi.h"
+#include "pathhelpers.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -478,19 +479,19 @@ void BinaryDataNotification::ExternalLocationRemovedCallback(void* ctxt, BNBinar
 }
 
 
-void BinaryDataNotification::TypeArchiveAttachedCallback(void* ctxt, BNBinaryView* data, const char* id, const char* path)
+void BinaryDataNotification::TypeArchiveAttachedCallback(void* ctxt, BNBinaryView* data, const char* id, BNPath* path)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
-	notify->OnTypeArchiveAttached(view, id, path);
+	notify->OnTypeArchiveAttached(view, id, Path::PathFromCoreBorrowed(path));
 }
 
 
-void BinaryDataNotification::TypeArchiveDetachedCallback(void* ctxt, BNBinaryView* data, const char* id, const char* path)
+void BinaryDataNotification::TypeArchiveDetachedCallback(void* ctxt, BNBinaryView* data, const char* id, BNPath* path)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
 	Ref<BinaryView> view = new BinaryView(BNNewViewReference(data));
-	notify->OnTypeArchiveDetached(view, id, path);
+	notify->OnTypeArchiveDetached(view, id, Path::PathFromCoreBorrowed(path));
 }
 
 
@@ -1670,7 +1671,7 @@ bool BinaryView::IsAnalysisChanged() const
 }
 
 
-bool BinaryView::CreateDatabase(const string& path, Ref<SaveSettings> settings)
+bool BinaryView::CreateDatabase(const filesystem::path& path, Ref<SaveSettings> settings)
 {
 	auto parent = GetParentView();
 	if (parent)
@@ -1679,7 +1680,7 @@ bool BinaryView::CreateDatabase(const string& path, Ref<SaveSettings> settings)
 }
 
 
-bool BinaryView::CreateDatabase(const string& path,
+bool BinaryView::CreateDatabase(const filesystem::path& path,
     const ProgressFunction& progressCallback, Ref<SaveSettings> settings)
 {
 	auto parent = GetParentView();
@@ -1844,9 +1845,10 @@ uint64_t BinaryView::GetEnd() const
 }
 
 
-bool BinaryView::Save(const string& path)
+bool BinaryView::Save(const filesystem::path& path)
 {
-	return BNSaveToFilename(m_object, path.c_str());
+	Path::APIObject corePath(path);
+	return BNSaveToFilename(m_object, corePath);
 }
 
 bool BinaryView::FinalizeNewSegments()
@@ -4245,7 +4247,7 @@ bool BinaryView::ParseTypeString(const string& source, map<QualifiedName, Ref<Ty
 	}
 
 	vector<const char*> options;
-	vector<const char*> includeDirs;
+	vector<BNPath*> includeDirs;
 
 	bool ok = BNParseTypesString(m_object, source.c_str(), options.data(), options.size(),
 		includeDirs.data(), includeDirs.size(), &result, &errorStr, &typesList, importDependencies);
@@ -4278,7 +4280,7 @@ bool BinaryView::ParseTypeString(const string& source, map<QualifiedName, Ref<Ty
 }
 
 
-bool BinaryView::ParseTypesFromSource(const string& source, const vector<string>& options, const vector<string>& includeDirs,
+bool BinaryView::ParseTypesFromSource(const string& source, const vector<string>& options, const vector<filesystem::path>& includeDirs,
 	TypeParserResult& result, string& errors, const std::set<QualifiedName>& typesAllowRedefinition, bool importDependencies)
 {
 	BNQualifiedNameList typesList;
@@ -4296,10 +4298,7 @@ bool BinaryView::ParseTypesFromSource(const string& source, const vector<string>
 	for (auto& option : options)
 		coreOptions.push_back(option.c_str());
 
-	vector<const char*> coreIncludeDirs;
-	coreIncludeDirs.reserve(includeDirs.size());
-	for (auto& includeDir : includeDirs)
-		coreIncludeDirs.push_back(includeDir.c_str());
+	Path::APIObjectList coreIncludeDirs(includeDirs);
 
 	BNTypeParserResult apiResult;
 	char* errorStr = nullptr;
@@ -4771,9 +4770,10 @@ std::optional<std::pair<Ref<TypeLibrary>, QualifiedName>> BinaryView::LookupImpo
 }
 
 
-Ref<TypeArchive> BinaryView::AttachTypeArchive(const string& id, const string& path)
+Ref<TypeArchive> BinaryView::AttachTypeArchive(const string& id, const filesystem::path& path)
 {
-	BNTypeArchive* archive = BNBinaryViewAttachTypeArchive(m_object, id.c_str(), path.c_str());
+	Path::APIObject corePath(path);
+	BNTypeArchive* archive = BNBinaryViewAttachTypeArchive(m_object, id.c_str(), corePath);
 	if (!archive)
 		return nullptr;
 	return new TypeArchive(archive);
@@ -4795,31 +4795,29 @@ Ref<TypeArchive> BinaryView::GetTypeArchive(const std::string& id) const
 }
 
 
-std::unordered_map<std::string, std::string> BinaryView::GetTypeArchives() const
+std::unordered_map<std::string, std::filesystem::path> BinaryView::GetTypeArchives() const
 {
 	char** ids;
-	char** paths;
+	BNPath** paths;
 	size_t count = BNBinaryViewGetTypeArchives(m_object, &ids, &paths);
 
-	std::unordered_map<std::string, std::string> result;
+	std::unordered_map<std::string, std::filesystem::path> result;
 	for (size_t i = 0; i < count; i ++)
 	{
-		result.emplace(ids[i], paths[i]);
+		result.emplace(ids[i], Path::PathFromCoreBorrowed(paths[i]));
 	}
 	BNFreeStringList(ids, count);
-	BNFreeStringList(paths, count);
+	BNFreePathList(paths, count);
 	return result;
 }
 
 
-std::optional<std::string> BinaryView::GetTypeArchivePath(const std::string& id) const
+std::optional<filesystem::path> BinaryView::GetTypeArchivePath(const std::string& id) const
 {
-	char* result = BNBinaryViewGetTypeArchivePath(m_object, id.c_str());
+	BNPath* result = BNBinaryViewGetTypeArchivePath(m_object, id.c_str());
 	if (!result)
 		return std::nullopt;
-	std::string cppResult = result;
-	BNFreeString(result);
-	return cppResult;
+	return Path::PathFromCore(result);
 }
 
 
@@ -5922,8 +5920,11 @@ BinaryData::BinaryData(FileMetadata* file, const void* data, size_t len) :
 {}
 
 
-BinaryData::BinaryData(FileMetadata* file, const string& path) :
-	BinaryView(BNCreateBinaryDataViewFromFilename(file->GetObject(), path.c_str()))
+BinaryData::BinaryData(FileMetadata* file, const filesystem::path& path) :
+	BinaryView([&]() {
+		Path::APIObject corePath(path);
+		return BNCreateBinaryDataViewFromFilename(file->GetObject(), corePath);
+	}())
 {}
 
 
@@ -5932,10 +5933,11 @@ BinaryData::BinaryData(FileMetadata* file, FileAccessor* accessor) :
 {}
 
 
-Ref<BinaryData> BinaryData::CreateFromFilename(FileMetadata* file, const std::string& path)
+Ref<BinaryData> BinaryData::CreateFromFilename(FileMetadata* file, const filesystem::path& path)
 {
 	// This can fail, and throwing an exception in a c++ ctor is Ugly, so now there's a helper method here
-	BNBinaryView* handle = BNCreateBinaryDataViewFromFilename(file->GetObject(), path.c_str());
+	Path::APIObject corePath(path);
+	BNBinaryView* handle = BNCreateBinaryDataViewFromFilename(file->GetObject(), corePath);
 	if (!handle)
 		return nullptr;
 	return new BinaryData(handle);
@@ -5975,11 +5977,12 @@ Ref<BinaryView> BinaryNinja::Load(Ref<BinaryView> view, bool updateAnalysis,
 }
 
 
-Ref<BinaryView> BinaryNinja::Load(const std::string& filename, bool updateAnalysis, const std::string& options, ProgressFunction progress)
+Ref<BinaryView> BinaryNinja::Load(const filesystem::path& filename, bool updateAnalysis, const std::string& options, ProgressFunction progress)
 {
 	ProgressContext cb;
 	cb.callback = progress;
-	BNBinaryView* handle = BNLoadFilename(filename.c_str(), updateAnalysis, options.c_str(), ProgressCallback, &cb);
+	Path::APIObject coreFilename(filename);
+	BNBinaryView* handle = BNLoadFilename(coreFilename, updateAnalysis, options.c_str(), ProgressCallback, &cb);
 	if (!handle)
 		return nullptr;
 	return new BinaryView(handle);
@@ -6016,9 +6019,10 @@ Ref<BinaryView> BinaryNinja::Load(Ref<ProjectFile> projectFile, bool updateAnaly
 }
 
 
-Ref<BinaryView> BinaryNinja::ParseTextFormat(const std::string& filename)
+Ref<BinaryView> BinaryNinja::ParseTextFormat(const filesystem::path& filename)
 {
-	BNBinaryView* handle = BNParseTextFormat(filename.c_str());
+	Path::APIObject coreFilename(filename);
+	BNBinaryView* handle = BNParseTextFormat(coreFilename);
 	if (!handle)
 		return nullptr;
 	return new BinaryView(handle);

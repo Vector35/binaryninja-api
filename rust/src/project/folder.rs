@@ -2,7 +2,7 @@ use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::file::ProjectFile;
 use crate::project::Project;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnString, IntoCStr};
+use crate::string::{BnPath, BnString, IntoCStr};
 use binaryninjacore_sys::{
     BNFreeProjectFolder, BNFreeProjectFolderList, BNNewProjectFolderReference, BNProjectFolder,
     BNProjectFolderExport, BNProjectFolderGetDescription, BNProjectFolderGetFiles,
@@ -92,7 +92,7 @@ impl ProjectFolder {
     where
         P: ProgressCallback,
     {
-        let dest_raw = dest.to_cstr();
+        let dest_raw = BnPath::new(dest);
         unsafe {
             BNProjectFolderExport(
                 self.handle.as_ptr(),

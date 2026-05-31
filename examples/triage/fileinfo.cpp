@@ -3,6 +3,7 @@
 #include "fontsettings.h"
 #include "theme.h"
 #include "copyablelabel.h"
+#include "pathhelpers.h"
 #include <QClipboard>
 #include <QApplication>
 #include <QGuiApplication>
@@ -140,13 +141,14 @@ FileInfoWidget::FileInfoWidget(QWidget* parent, BinaryViewRef bv, EntropyWidget*
 
 	const auto file = bv->GetFile();
 	const auto filePath = file->GetOriginalFilename();
+	const auto filePathString = BinaryNinja::Path::PathToUtf8String(filePath);
 
 	// Calculate max path width as 50% of screen width
 	// Using screen width since the scroll area viewport isn't sized yet during construction
 	const int screenWidth = QGuiApplication::primaryScreen()->availableGeometry().width();
 	const int maxPathWidth = screenWidth / 2;
 
-	this->addCopyableFieldWithElide("Path on disk: ", filePath.c_str(), maxPathWidth);
+	this->addCopyableFieldWithElide("Path on disk: ", filePathString.c_str(), maxPathWidth);
 
 	// If triage view is opened from a project, show both actual filepath and path relative to project
 	if (const auto fileProjectRef = file->GetProjectFile())

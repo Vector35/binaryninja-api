@@ -187,7 +187,7 @@ class ScriptingInstance:
 
 	def _execute_script_input_from_filename(self, ctxt, filename):
 		try:
-			return self.perform_execute_script_input_from_filename(filename)
+			return self.perform_execute_script_input_from_filename(core.path_to_native_path(filename, free=False))
 		except Exception:
 			logger.log_error_for_exception("Unhandled Python exception in ScriptingInstance._execute_script_input_from_filename")
 			return ScriptingProviderExecuteResult.InvalidScriptInput
@@ -499,7 +499,7 @@ class ScriptingProvider(metaclass=_ScriptingProviderMetaclass):
 			return None
 		return ScriptingInstance(self, handle=result)
 
-	def _load_module(self, ctx, repo_path: bytes, plugin_path: bytes, force: bool) -> bool:
+	def _load_module(self, ctx, repo_path, plugin_path, force: bool) -> bool:
 		return False
 
 	def _install_modules(self, ctx, modules: bytes) -> bool:
@@ -1004,8 +1004,7 @@ from binaryninja import *
 
 	@abc.abstractmethod
 	def perform_execute_script_input_from_filename(self, filename):
-		if isinstance(filename, bytes):
-			filename = filename.decode("utf-8")
+		filename_for_compile = os.fspath(filename)
 		if not os.path.exists(filename) and os.path.isfile(filename):
 			return ScriptingProviderExecuteResult.InvalidScriptInput  # TODO: maybe this isn't the best result to use?
 		try:
@@ -1018,8 +1017,8 @@ from binaryninja import *
 		if len(file_contents) == 0:
 			return ScriptingProviderExecuteResult.SuccessfulScriptExecution
 
-		_code = code.compile_command(file_contents.decode('utf-8'), filename, 'exec')
-		self.interpreter.locals['__file__'] = filename
+		_code = code.compile_command(file_contents.decode('utf-8'), filename_for_compile, 'exec')
+		self.interpreter.locals['__file__'] = filename_for_compile
 		self.interpreter.locals['__name__'] = '__main__'
 		self.interpreter.execute(_code)
 
@@ -1138,9 +1137,9 @@ class PythonScriptingProvider(ScriptingProvider):
 		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override, python_env=python_env)
 		return python_bin
 
-	def _load_module(self, ctx, _repo_path: bytes, _module: bytes, force: bool):
-		repo_path = _repo_path.decode("utf-8")
-		module = _module.decode("utf-8")
+	def _load_module(self, ctx, _repo_path, _module, force: bool):
+		repo_path = core.path_to_native_path(_repo_path, free=False)
+		module = core.path_to_native_path(_module, free=False)
 		try:
 			repo = RepositoryManager()[repo_path]
 			plugin = repo[module]

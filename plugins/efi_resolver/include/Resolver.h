@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <fstream>
 #include <thread>
 
@@ -10,6 +11,7 @@
 #include "highlevelilinstruction.h"
 #include "lowlevelilinstruction.h"
 #include "mediumlevelilinstruction.h"
+#include "pathhelpers.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -30,8 +32,8 @@ protected:
 	vector<pair<uint64_t, EFI_GUID>> m_guid_usages;
 	vector<pair<uint64_t, string>> m_variable_usages;
 
-	bool parseUserGuidIfExists(const string& filePath);
-	bool parseProtocolMapping(const string& filePath);
+	bool parseUserGuidIfExists(const filesystem::path& filePath);
+	bool parseProtocolMapping(const filesystem::path& filePath);
 
 	/*!
 	For backward compatibility, if a user saved a bndb with older version Binary Ninja

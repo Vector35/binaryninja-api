@@ -1,6 +1,6 @@
 use crate::rc::{Array, Ref};
 use crate::repository::Repository;
-use crate::string::IntoCStr;
+use crate::string::{BnPath, IntoCStr};
 use binaryninjacore_sys::{
     BNRepositoryGetRepositoryByPath, BNRepositoryManagerAddRepository,
     BNRepositoryManagerCheckForUpdates, BNRepositoryManagerGetDefaultRepository,
@@ -41,12 +41,12 @@ impl RepositoryManager {
     /// Returns true if the repository was successfully added, false otherwise.
     pub fn add_repository(url: &str, repository_path: &Path) -> bool {
         let url = url.to_cstr();
-        let repo_path = repository_path.to_cstr();
+        let repo_path = BnPath::new(repository_path);
         unsafe { BNRepositoryManagerAddRepository(url.as_ptr(), repo_path.as_ptr()) }
     }
 
     pub fn repository_by_path(path: &Path) -> Option<Repository> {
-        let path = path.to_cstr();
+        let path = BnPath::new(path);
         let result = unsafe { BNRepositoryGetRepositoryByPath(path.as_ptr()) };
         NonNull::new(result).map(|raw| unsafe { Repository::from_raw(raw) })
     }

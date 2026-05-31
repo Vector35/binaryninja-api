@@ -32,7 +32,7 @@ std::vector<uint64_t> SharedCacheMachOHeader::ReadFunctionTable(VirtualMemory& v
 }
 
 std::optional<SharedCacheMachOHeader> SharedCacheMachOHeader::ParseHeaderForAddress(
-	std::shared_ptr<VirtualMemory> vm, uint64_t address, const std::string& imagePath)
+	std::shared_ptr<VirtualMemory> vm, uint64_t address, const std::filesystem::path& imagePath)
 {
 	// Sanity check to make sure that the header is mapped.
 	// This should really only fail if we didn't grab all the required entries.
@@ -42,9 +42,9 @@ std::optional<SharedCacheMachOHeader> SharedCacheMachOHeader::ParseHeaderForAddr
 	SharedCacheMachOHeader header;
 
 	header.textBase = address;
-	header.installName = imagePath;
+	header.installName = ImagePathToUtf8String(imagePath);
 	// The identifierPrefix is used for the display of the image name in the sections and segments.
-	header.identifierPrefix = BaseFileName(imagePath);
+	header.identifierPrefix = ImageNameFromPath(imagePath);
 
 	std::string errorMsg;
 	VirtualMemoryReader reader(vm);

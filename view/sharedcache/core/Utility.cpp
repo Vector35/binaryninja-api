@@ -4,6 +4,25 @@
 
 using namespace BinaryNinja;
 
+std::filesystem::path ImagePathFromString(std::string_view imagePath)
+{
+#if defined(WIN32) || defined(_WIN32)
+	std::u8string utf8Path;
+	utf8Path.reserve(imagePath.size());
+	for (char ch : imagePath)
+		utf8Path.push_back(static_cast<char8_t>(static_cast<unsigned char>(ch)));
+	return std::filesystem::path(utf8Path, std::filesystem::path::generic_format);
+#else
+	return std::filesystem::path(std::string(imagePath), std::filesystem::path::generic_format);
+#endif
+}
+
+std::string ImagePathToUtf8String(const std::filesystem::path& imagePath)
+{
+	auto value = imagePath.generic_u8string();
+	return std::string(reinterpret_cast<const char*>(value.data()), value.size());
+}
+
 BNSegmentFlag SegmentFlagsFromMachOProtections(int initProt, int maxProt)
 {
 	uint32_t flags = 0;
@@ -135,12 +154,9 @@ void ApplySymbol(Ref<BinaryView> view, Ref<TypeLibrary> typeLib, Ref<Symbol> sym
 	}
 }
 
-std::string BaseFileName(const std::string& path)
+std::string ImageNameFromPath(const std::filesystem::path& imagePath)
 {
-	auto lastSlashPos = path.find_last_of("/\\");
-	if (lastSlashPos != std::string::npos)
-		return path.substr(lastSlashPos + 1);
-	return path;
+	return ImagePathToUtf8String(imagePath.filename());
 }
 
 bool IsSameFolderForFile(Ref<ProjectFile> a, Ref<ProjectFile> b)

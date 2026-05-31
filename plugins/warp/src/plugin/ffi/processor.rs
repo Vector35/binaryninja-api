@@ -6,10 +6,9 @@ use crate::processor::{
 use binaryninja::binary_view::BinaryView;
 use binaryninja::project::file::ProjectFile;
 use binaryninja::project::Project;
-use binaryninjacore_sys::{BNBinaryView, BNProject, BNProjectFile};
-use std::ffi::{c_char, CStr, CString};
+use binaryninja::string::{BnPath, BnString};
+use binaryninjacore_sys::{BNBinaryView, BNFreePath, BNPath, BNProject, BNProjectFile};
 use std::mem::ManuallyDrop;
-use std::path::PathBuf;
 use std::ptr::NonNull;
 use std::sync::Arc;
 use warp::chunk::CompressionType;
@@ -21,9 +20,9 @@ pub struct BNWARPProcessorState {
     cancelled: bool,
     unprocessed_files_count: usize,
     processed_files_count: usize,
-    analyzing_files: *mut *mut c_char,
+    analyzing_files: *mut *mut BNPath,
     analyzing_files_count: usize,
-    processing_files: *mut *mut c_char,
+    processing_files: *mut *mut BNPath,
     processing_files_count: usize,
 }
 
@@ -44,11 +43,13 @@ pub unsafe extern "C" fn BNWARPNewProcessor(
 #[no_mangle]
 pub unsafe extern "C" fn BNWARPProcessorAddPath(
     processor: *mut BNWARPProcessor,
-    path: *const c_char,
+    path: *mut BNPath,
 ) {
     let mut processor = ManuallyDrop::new(Box::from_raw(processor));
-    let path_cstr = unsafe { CStr::from_ptr(path) };
-    let path = PathBuf::from(path_cstr.to_str().unwrap());
+    if path.is_null() {
+        return;
+    }
+    let path = unsafe { BnString::path_buf_from_raw(path) };
     // TODO: Not thread safe.
     processor.add_entry(WarpFileProcessorEntry::Path(path));
 }
@@ -140,14 +141,14 @@ pub unsafe extern "C" fn BNWARPProcessorGetState(
 
     let raw_analyzing_files: Box<[_]> = analyzing_files
         .into_iter()
-        .map(|p| CString::new(p.to_str().unwrap()).unwrap().into_raw())
+        .map(|p| BnPath::into_raw(BnPath::new(&p)))
         .collect();
     let raw_analyzing_files_count = raw_analyzing_files.len();
     let raw_analyzing_files_ptr = Box::into_raw(raw_analyzing_files);
 
     let raw_processing_files: Box<[_]> = processing_files
         .into_iter()
-        .map(|p| CString::new(p.to_str().unwrap()).unwrap().into_raw())
+        .map(|p| BnPath::into_raw(BnPath::new(&p)))
         .collect();
     let raw_processing_files_count = raw_processing_files.len();
     let raw_processing_files_ptr = Box::into_raw(raw_processing_files);
@@ -158,9 +159,9 @@ pub unsafe extern "C" fn BNWARPProcessorGetState(
             .load(std::sync::atomic::Ordering::Relaxed),
         unprocessed_files_count,
         processed_files_count,
-        analyzing_files: raw_analyzing_files_ptr as *mut *mut c_char,
+        analyzing_files: raw_analyzing_files_ptr as *mut *mut BNPath,
         analyzing_files_count: raw_analyzing_files_count,
-        processing_files: raw_processing_files_ptr as *mut *mut c_char,
+        processing_files: raw_processing_files_ptr as *mut *mut BNPath,
         processing_files_count: raw_processing_files_count,
     }
 }
@@ -176,12 +177,12 @@ pub unsafe extern "C" fn BNWARPFreeProcessorState(state: BNWARPProcessorState) {
         std::ptr::slice_from_raw_parts_mut(state.analyzing_files, state.analyzing_files_count);
     let a_files_boxed = unsafe { Box::from_raw(a_files_ptr) };
     for path in a_files_boxed.iter() {
-        let _ = CString::from_raw(*path);
+        unsafe { BNFreePath(*path) };
     }
     let p_files_ptr =
         std::ptr::slice_from_raw_parts_mut(state.processing_files, state.processing_files_count);
     let p_files_boxed = unsafe { Box::from_raw(p_files_ptr) };
     for path in p_files_boxed.iter() {
-        let _ = CString::from_raw(*path);
+        unsafe { BNFreePath(*path) };
     }
 }

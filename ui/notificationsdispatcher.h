@@ -112,10 +112,10 @@ public:
 	struct TypeArchiveInfo
 	{
 		std::string id;
-		std::string path;
+		std::filesystem::path path;
 
 		TypeArchiveInfo() {};
-		TypeArchiveInfo(const std::string& id, const std::string& path) : id(id), path(path) {};
+		TypeArchiveInfo(const std::string& id, const std::filesystem::path& path) : id(id), path(path) {};
 	};
 
 private:
@@ -294,8 +294,8 @@ public:
 	void OnExternalLocationRemoved(BinaryNinja::BinaryView* data, BinaryNinja::ExternalLocation* location) override;
 	void OnExternalLocationUpdated(BinaryNinja::BinaryView* data, BinaryNinja::ExternalLocation* location) override;
 
-	void OnTypeArchiveAttached(BinaryNinja::BinaryView* data, const std::string& id, const std::string& path) override;
-	void OnTypeArchiveDetached(BinaryNinja::BinaryView* data, const std::string& id, const std::string& path) override;
+	void OnTypeArchiveAttached(BinaryNinja::BinaryView* data, const std::string& id, const std::filesystem::path& path) override;
+	void OnTypeArchiveDetached(BinaryNinja::BinaryView* data, const std::string& id, const std::filesystem::path& path) override;
 	void OnTypeArchiveConnected(BinaryNinja::BinaryView* data, BinaryNinja::TypeArchive* archive) override;
 	void OnTypeArchiveDisconnected(BinaryNinja::BinaryView* data, BinaryNinja::TypeArchive* archive) override;
 
@@ -321,4 +321,3 @@ public:
 
 	void asyncRefresh() { m_worker->asyncRefresh(); }
 };
-

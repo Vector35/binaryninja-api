@@ -32,7 +32,7 @@ std::vector<std::string> CacheImage::GetDependencies() const
 	return {};
 }
 
-CacheEntry::CacheEntry(std::string filePath, std::string fileName, CacheEntryType type, dyld_cache_header header,
+CacheEntry::CacheEntry(std::filesystem::path filePath, std::string fileName, CacheEntryType type, dyld_cache_header header,
 	std::vector<dyld_cache_mapping_info> mappings, std::vector<std::pair<std::string, dyld_cache_image_info>> images,
 	std::shared_ptr<MappedFileRegion> file)
 {
@@ -45,21 +45,21 @@ CacheEntry::CacheEntry(std::string filePath, std::string fileName, CacheEntryTyp
 	m_file = std::move(file);
 }
 
-CacheEntry CacheEntry::FromFile(const std::string& filePath, const std::string& fileName, CacheEntryType type)
+CacheEntry CacheEntry::FromFile(const std::filesystem::path& filePath, const std::string& fileName, CacheEntryType type)
 {
 	auto file = MappedFileRegion::Open(filePath);
 	if (!file)
-		throw std::runtime_error(fmt::format("Failed to open cache file: '{}'", filePath));
+		throw std::runtime_error(fmt::format("Failed to open cache file: '{}'", PrintablePath(filePath)));
 
 	// TODO: Pull this out into another function so we can do IsValidDSCFile or something.
 	// We first want to make sure that the base file is dyld.
 	// All entries must start with "dyld".
 	if (file->Length() < 4)
-		throw std::runtime_error(fmt::format("File too small to be a shared cache: '{}'", filePath));
+		throw std::runtime_error(fmt::format("File too small to be a shared cache: '{}'", PrintablePath(filePath)));
 	DataBuffer sig = file->ReadBuffer(0, 4);
 	const char* magic = static_cast<char*>(sig.GetData());
 	if (strncmp(magic, "dyld", 4) != 0)
-		throw std::runtime_error(fmt::format("File does not start with 'dyld': '{}'", filePath));
+		throw std::runtime_error(fmt::format("File does not start with 'dyld': '{}'", PrintablePath(filePath)));
 
 	// Read the header, this _should_ be compatible with all known DSC formats.
 	// Mason: the above is not true! https://github.com/Vector35/binaryninja-api/issues/6073
@@ -78,7 +78,7 @@ CacheEntry CacheEntry::FromFile(const std::string& filePath, const std::string& 
 
 		// Cancel adding the entry if we have an invalid mapping.
 		if (currentMapping.fileOffset + currentMapping.size > file->Length())
-			throw std::runtime_error(fmt::format("Invalid mapping in shared cache entry: '{}'", filePath));
+			throw std::runtime_error(fmt::format("Invalid mapping in shared cache entry: '{}'", PrintablePath(filePath)));
 
 		// TODO: Check initProt to make sure its in the range of expected values.
 
@@ -254,7 +254,7 @@ void SharedCache::AddEntry(CacheEntry entry)
 	m_entries.push_back(std::move(entry));
 }
 
-bool SharedCache::ProcessEntryImage(const std::string& path, const dyld_cache_image_info& info)
+bool SharedCache::ProcessEntryImage(const std::filesystem::path& path, const dyld_cache_image_info& info)
 {
 	auto imageHeader = SharedCacheMachOHeader::ParseHeaderForAddress(m_vm, info.address, path);
 	if (!imageHeader.has_value())
@@ -321,7 +321,7 @@ bool SharedCache::ProcessEntryImage(const std::string& path, const dyld_cache_im
 void SharedCache::ProcessEntryImages(const CacheEntry& entry)
 {
 	for (const auto& [imagePath, imageInfo] : entry.GetImages())
-		ProcessEntryImage(imagePath, imageInfo);
+		ProcessEntryImage(ImagePathFromString(imagePath), imageInfo);
 }
 
 // At this point all relevant mapping should be loaded in the virtual memory.
@@ -335,7 +335,7 @@ void SharedCache::ProcessEntryRegions(const CacheEntry& entry)
 		auto branchPoolIdxAddr = *entry.GetMappedAddress(entryHeader.branchPoolsOffset) + (i * m_vm->GetAddressSize());
 		auto branchPoolAddr = m_vm->ReadPointer(branchPoolIdxAddr);
 		auto branchHeader = SharedCacheMachOHeader::ParseHeaderForAddress(
-			m_vm, branchPoolAddr, fmt::format("dyld_shared_cache_branch_islands_{}", i));
+			m_vm, branchPoolAddr, ImagePathFromString(fmt::format("dyld_shared_cache_branch_islands_{}", i)));
 		// Stop processing branch pools if a header fails to parse.
 		if (!branchHeader.has_value())
 			break;
@@ -498,8 +498,9 @@ std::optional<CacheImage> SharedCache::GetImageContaining(const uint64_t address
 
 std::optional<CacheImage> SharedCache::GetImageWithName(const std::string& name) const
 {
+	auto imagePath = ImagePathFromString(name);
 	for (const auto& [address, image] : m_images)
-		if (image.path == name)
+		if (image.path == imagePath)
 			return image;
 	return std::nullopt;
 }

@@ -20,6 +20,7 @@
 #include <cstring>
 #include "binaryninjaapi.h"
 #include "binaryninjacore.h"
+#include "pathhelpers.h"
 
 using namespace BinaryNinja;
 using namespace Json;
@@ -63,17 +64,19 @@ FileMetadata::FileMetadata()
 }
 
 
-FileMetadata::FileMetadata(const string& filename)
+FileMetadata::FileMetadata(const std::filesystem::path& filename)
 {
 	m_object = BNCreateFileMetadata();
-	BNSetFilename(m_object, filename.c_str());
+	Path::APIObject coreFilename(filename);
+	BNSetFilename(m_object, coreFilename);
 }
 
 
 FileMetadata::FileMetadata(Ref<ProjectFile> projectFile)
 {
 	m_object = BNCreateFileMetadata();
-	BNSetFilename(m_object, projectFile->GetPathOnDisk().c_str());
+	Path::APIObject corePath(projectFile->GetPathOnDisk());
+	BNSetFilename(m_object, corePath);
 	BNSetProjectFile(m_object, projectFile->m_object);
 }
 
@@ -99,33 +102,36 @@ void FileMetadata::SetNavigationHandler(NavigationHandler* handler)
 }
 
 
-string FileMetadata::GetOriginalFilename() const
+std::filesystem::path FileMetadata::GetOriginalFilename() const
 {
-	char* str = BNGetOriginalFilename(m_object);
-	string result = str;
-	BNFreeString(str);
-	return result;
+	return Path::PathFromCore(BNGetOriginalFilename(m_object));
 }
 
 
-void FileMetadata::SetOriginalFilename(const string& name)
+void FileMetadata::SetOriginalFilename(const std::filesystem::path& name)
 {
-	BNSetOriginalFilename(m_object, name.c_str());
+	Path::APIObject coreName(name);
+	BNSetOriginalFilename(m_object, coreName);
 }
 
 
-string FileMetadata::GetFilename() const
+std::filesystem::path FileMetadata::GetFilename() const
 {
-	char* str = BNGetFilename(m_object);
-	string result = str;
-	BNFreeString(str);
-	return result;
+	return Path::PathFromCore(BNGetFilename(m_object));
 }
 
 
-void FileMetadata::SetFilename(const string& name)
+void FileMetadata::SetFilename(const std::filesystem::path& name)
 {
-	BNSetFilename(m_object, name.c_str());
+	Path::APIObject coreName(name);
+	BNSetFilename(m_object, coreName);
+}
+
+
+bool FileMetadata::IsContainerEntry() const
+{
+	std::string virtualPath = GetVirtualPath();
+	return !virtualPath.empty() && Path::PathToUtf8String(GetFilename()) != virtualPath;
 }
 
 
@@ -189,25 +195,28 @@ bool FileMetadata::IsBackedByDatabase(const string& binaryViewType) const
 }
 
 
-bool FileMetadata::CreateDatabase(const string& name, BinaryView* data, Ref<SaveSettings> settings)
+bool FileMetadata::CreateDatabase(const filesystem::path& name, BinaryView* data, Ref<SaveSettings> settings)
 {
-	return BNCreateDatabase(data->GetObject(), name.c_str(), settings ? settings->GetObject() : nullptr);
+	Path::APIObject coreName(name);
+	return BNCreateDatabase(data->GetObject(), coreName, settings ? settings->GetObject() : nullptr);
 }
 
 
-bool FileMetadata::CreateDatabase(const string& name, BinaryView* data,
+bool FileMetadata::CreateDatabase(const filesystem::path& name, BinaryView* data,
     const ProgressFunction& progressCallback, Ref<SaveSettings> settings)
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;
+	Path::APIObject coreName(name);
 	return BNCreateDatabaseWithProgress(
-	    data->GetObject(), name.c_str(), &cb, ProgressCallback, settings ? settings->GetObject() : nullptr);
+	    data->GetObject(), coreName, &cb, ProgressCallback, settings ? settings->GetObject() : nullptr);
 }
 
 
-Ref<BinaryView> FileMetadata::OpenExistingDatabase(const string& path)
+Ref<BinaryView> FileMetadata::OpenExistingDatabase(const filesystem::path& path)
 {
-	BNBinaryView* data = BNOpenExistingDatabase(m_object, path.c_str());
+	Path::APIObject corePath(path);
+	BNBinaryView* data = BNOpenExistingDatabase(m_object, corePath);
 	if (!data)
 		return nullptr;
 	return new BinaryView(data);
@@ -215,20 +224,22 @@ Ref<BinaryView> FileMetadata::OpenExistingDatabase(const string& path)
 
 
 Ref<BinaryView> FileMetadata::OpenExistingDatabase(
-    const string& path, const ProgressFunction& progressCallback)
+    const filesystem::path& path, const ProgressFunction& progressCallback)
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;
-	BNBinaryView* data = BNOpenExistingDatabaseWithProgress(m_object, path.c_str(), &cb, ProgressCallback);
+	Path::APIObject corePath(path);
+	BNBinaryView* data = BNOpenExistingDatabaseWithProgress(m_object, corePath, &cb, ProgressCallback);
 	if (!data)
 		return nullptr;
 	return new BinaryView(data);
 }
 
 
-Ref<BinaryView> FileMetadata::OpenDatabaseForConfiguration(const string& path)
+Ref<BinaryView> FileMetadata::OpenDatabaseForConfiguration(const filesystem::path& path)
 {
-	BNBinaryView* data = BNOpenDatabaseForConfiguration(m_object, path.c_str());
+	Path::APIObject corePath(path);
+	BNBinaryView* data = BNOpenDatabaseForConfiguration(m_object, corePath);
 	if (!data)
 		return nullptr;
 	return new BinaryView(data);

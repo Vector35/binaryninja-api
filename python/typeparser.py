@@ -19,8 +19,10 @@
 # IN THE SOFTWARE.
 
 import abc
+import contextlib
 import ctypes
 import dataclasses
+import os
 from json import dumps
 from typing import List, Tuple, Optional, Dict, Any
 
@@ -282,7 +284,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 	) -> bool:
 		try:
 			source_py = core.pyNativeStr(source)
-			file_name_py = core.pyNativeStr(fileName)
+			file_name_py = core.path_to_native_path(fileName, free=False)
 			platform_py = platform.CorePlatform._from_cache(handle=core.BNNewPlatformReference(platform_))
 
 			existing_types_py = None
@@ -295,7 +297,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 
 			include_dirs_py = []
 			for i in range(includeDirCount):
-				include_dirs_py.append(core.pyNativeStr(includeDirs[i]))
+				include_dirs_py.append(core.path_to_native_path(includeDirs[i], free=False))
 
 			(output_py, errors_py) = self.preprocess_source(
 				source_py, file_name_py, platform_py, existing_types_py, options_py,
@@ -326,7 +328,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 	) -> bool:
 		try:
 			source_py = core.pyNativeStr(source)
-			file_name_py = core.pyNativeStr(fileName)
+			file_name_py = core.path_to_native_path(fileName, free=False)
 			platform_py = platform.CorePlatform._from_cache(handle=core.BNNewPlatformReference(platform_))
 
 			existing_types_py = None
@@ -339,7 +341,7 @@ class TypeParser(metaclass=_TypeParserMetaclass):
 
 			include_dirs_py = []
 			for i in range(includeDirCount):
-				include_dirs_py.append(core.pyNativeStr(includeDirs[i]))
+				include_dirs_py.append(core.path_to_native_path(includeDirs[i], free=False))
 
 			auto_type_source = core.pyNativeStr(autoTypeSource) or ""
 
@@ -539,20 +541,19 @@ class CoreTypeParser(TypeParser):
 		for (i, s) in enumerate(options):
 			options_cpp[i] = core.cstr(s)
 
-		include_dirs_cpp = (ctypes.c_char_p * len(include_dirs))()
-		for (i, s) in enumerate(include_dirs):
-			include_dirs_cpp[i] = core.cstr(s)
-
 		output_cpp = ctypes.c_char_p()
 		errors_cpp = ctypes.POINTER(core.BNTypeParserError)()
 		error_count = ctypes.c_size_t()
 
-		success = core.BNTypeParserPreprocessSource(
-			self.handle, source, file_name, platform.handle,
-			existing_types_cpp.handle if existing_types_cpp is not None else None,
-			options_cpp, len(options), include_dirs_cpp, len(include_dirs),
-			output_cpp, errors_cpp, error_count
-		)
+		with contextlib.ExitStack() as stack:
+			include_dir_paths = [stack.enter_context(core.core_path(path)) for path in include_dirs]
+			include_dirs_cpp = (core.BNPathHandle * len(include_dir_paths))(*include_dir_paths)
+			success = core.BNTypeParserPreprocessSource(
+				self.handle, source, file_name, platform.handle,
+				existing_types_cpp.handle if existing_types_cpp is not None else None,
+				options_cpp, len(options), include_dirs_cpp, len(include_dir_paths),
+				output_cpp, errors_cpp, error_count
+			)
 
 		if success:
 			output = core.pyNativeStr(output_cpp.value)
@@ -591,20 +592,19 @@ class CoreTypeParser(TypeParser):
 		for (i, s) in enumerate(options):
 			options_cpp[i] = core.cstr(s)
 
-		include_dirs_cpp = (ctypes.c_char_p * len(include_dirs))()
-		for (i, s) in enumerate(include_dirs):
-			include_dirs_cpp[i] = core.cstr(s)
-
 		result_cpp = core.BNTypeParserResult()
 		errors_cpp = ctypes.POINTER(core.BNTypeParserError)()
 		error_count = ctypes.c_size_t()
 
-		success = core.BNTypeParserParseTypesFromSource(
-			self.handle, source, file_name, platform.handle,
-			existing_types_cpp.handle if existing_types_cpp is not None else None,
-			options_cpp, len(options), include_dirs_cpp, len(include_dirs),
-			auto_type_source, result_cpp, errors_cpp, error_count
-		)
+		with contextlib.ExitStack() as stack:
+			include_dir_paths = [stack.enter_context(core.core_path(path)) for path in include_dirs]
+			include_dirs_cpp = (core.BNPathHandle * len(include_dir_paths))(*include_dir_paths)
+			success = core.BNTypeParserParseTypesFromSource(
+				self.handle, source, file_name, platform.handle,
+				existing_types_cpp.handle if existing_types_cpp is not None else None,
+				options_cpp, len(options), include_dirs_cpp, len(include_dir_paths),
+				auto_type_source, result_cpp, errors_cpp, error_count
+			)
 
 		if success:
 			result = TypeParserResult._from_core_struct(result_cpp)

@@ -801,7 +801,7 @@ bool KernelCacheView::InitController()
 				reader.Read(&fileset_entry, sizeof(fileset_entry_command));
 				reader.Seek(offset + fileset_entry.nameEntryOffsetFromBaseOfCommand);
 				auto name = reader.ReadCString(1000);
-				kernelCache.ProcessEntryImage(this, name, fileset_entry);
+				kernelCache.ProcessEntryImage(this, ImagePathFromString(name), fileset_entry);
 			}
 
 			if (cmd == LC_DYLD_CHAINED_FIXUPS)

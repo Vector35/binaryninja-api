@@ -180,16 +180,14 @@ impl Extension {
     pub fn path(&self) -> PathBuf {
         let result = unsafe { BNPluginGetPath(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        let result_str = unsafe { BnString::into_string(result as *mut c_char) };
-        PathBuf::from(result_str)
+        unsafe { BnString::into_path_buf(result) }
     }
 
     /// Optional sub-directory the plugin code lives in as a relative path from the plugin root
     pub fn subdir(&self) -> PathBuf {
         let result = unsafe { BNPluginGetSubdir(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        let result_str = unsafe { BnString::into_string(result as *mut c_char) };
-        PathBuf::from(result_str)
+        unsafe { PathBuf::from(BnString::into_string(result as *mut c_char)) }
     }
 
     /// Dependencies required for installing this plugin

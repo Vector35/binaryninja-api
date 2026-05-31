@@ -251,7 +251,7 @@ int main(int argc, char* argv[])
 	auto arch = new CoreArchitecture(BNGetNativeTypeParserArchitecture());
 
 	// Enable ephemeral settings
-	Settings::Instance()->LoadSettingsFile("");
+	Settings::Instance()->LoadSettingsFile();
 	Settings::Instance()->Set("analysis.types.parserName", "ClangTypeParser");
 	bool ok = arch->GetStandalonePlatform()->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors);
 

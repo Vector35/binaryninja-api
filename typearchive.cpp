@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include "pathhelpers.h"
 
 using namespace BinaryNinja;
 
@@ -77,27 +78,30 @@ TypeArchive::TypeArchive(BNTypeArchive* archive)
 }
 
 
-Ref<TypeArchive> TypeArchive::Open(const std::string& path)
+Ref<TypeArchive> TypeArchive::Open(const std::filesystem::path& path)
 {
-	BNTypeArchive* handle = BNOpenTypeArchive(path.c_str());
+	Path::APIObject corePath(path);
+	BNTypeArchive* handle = BNOpenTypeArchive(corePath);
 	if (!handle)
 		return nullptr;
 	return new TypeArchive(handle);
 }
 
 
-Ref<TypeArchive> TypeArchive::Create(const std::string& path, Ref<Platform> platform)
+Ref<TypeArchive> TypeArchive::Create(const std::filesystem::path& path, Ref<Platform> platform)
 {
-	BNTypeArchive* handle = BNCreateTypeArchive(path.c_str(), platform->GetObject());
+	Path::APIObject corePath(path);
+	BNTypeArchive* handle = BNCreateTypeArchive(corePath, platform->GetObject());
 	if (!handle)
 		return nullptr;
 	return new TypeArchive(handle);
 }
 
 
-Ref<TypeArchive> TypeArchive::CreateWithId(const std::string& path, Ref<Platform> platform, const std::string& id)
+Ref<TypeArchive> TypeArchive::CreateWithId(const std::filesystem::path& path, Ref<Platform> platform, const std::string& id)
 {
-	BNTypeArchive* handle = BNCreateTypeArchiveWithId(path.c_str(), platform->GetObject(), id.c_str());
+	Path::APIObject corePath(path);
+	BNTypeArchive* handle = BNCreateTypeArchiveWithId(corePath, platform->GetObject(), id.c_str());
 	if (!handle)
 		return nullptr;
 	return new TypeArchive(handle);
@@ -119,9 +123,10 @@ void TypeArchive::Close(Ref<TypeArchive> archive)
 }
 
 
-bool TypeArchive::IsTypeArchive(const std::string& path)
+bool TypeArchive::IsTypeArchive(const std::filesystem::path& path)
 {
-	return BNIsTypeArchive(path.c_str());
+	Path::APIObject corePath(path);
+	return BNIsTypeArchive(corePath);
 }
 
 
@@ -134,12 +139,9 @@ std::string TypeArchive::GetId() const
 }
 
 
-std::string TypeArchive::GetPath() const
+std::filesystem::path TypeArchive::GetPath() const
 {
-	char* str = BNGetTypeArchivePath(m_object);
-	std::string result(str);
-	BNFreeString(str);
-	return result;
+	return Path::PathFromCore(BNGetTypeArchivePath(m_object));
 }
 
 

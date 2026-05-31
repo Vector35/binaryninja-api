@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <vector>
 
 #include "binaryninjaapi.h"
@@ -74,7 +75,7 @@ struct CacheImage
 {
 	uint64_t headerFileAddress;
 	uint64_t headerVirtualAddress;
-	std::string path;
+	std::filesystem::path path;
 	// A list to the start of memory regions associated with the image.
 	// This lets us load all regions for a given image easily.
 	std::vector<CacheRegion> regions;
@@ -90,7 +91,7 @@ struct CacheImage
 	CacheImage& operator=(CacheImage&& other) noexcept = default;
 
 	// Get the file name from the path.
-	std::string GetName() const { return BaseFileName(path); }
+	std::string GetName() const { return ImageNameFromPath(path); }
 
 	// Get the names of the dependencies.
 	std::vector<std::string> GetDependencies() const;
@@ -120,7 +121,7 @@ class KernelCache
 
 public:
 
-	bool ProcessEntryImage(BinaryNinja::Ref<BinaryNinja::BinaryView> bv, const std::string& path, const BinaryNinja::fileset_entry_command& info);
+	bool ProcessEntryImage(BinaryNinja::Ref<BinaryNinja::BinaryView> bv, const std::filesystem::path& path, const BinaryNinja::fileset_entry_command& info);
 	KernelCache() = default;
 	explicit KernelCache(uint64_t addressSize);
 

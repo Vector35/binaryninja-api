@@ -7,6 +7,7 @@
 
 #include "binaryninjacore.h"
 #include "binaryninjaapi.h"
+#include "pathhelpers.h"
 
 using namespace BinaryNinja;
 
@@ -51,12 +52,12 @@ int main(int ac, char** av)
 	BNInstructionTextToken* ttResult = NULL;
 	size_t ttCount;
 
-	char* path_bundled_plugins;
-
 	/* plugin path */
-	path_bundled_plugins = BNGetBundledPluginDirectory();
-	printf("using bundled plugin path: %s\n", path_bundled_plugins);
-	BNSetBundledPluginDirectory(path_bundled_plugins);
+	auto path_bundled_plugins = GetBundledPluginDirectory();
+	auto path_bundled_plugins_string = Path::PathToUtf8String(path_bundled_plugins);
+	printf("using bundled plugin path: %s\n", path_bundled_plugins_string.c_str());
+	Path::APIObject coreBundledPluginPath(path_bundled_plugins);
+	BNSetBundledPluginDirectory(coreBundledPluginPath);
 	BNInitPlugins(true);
 
 	/* parse architecture argument */

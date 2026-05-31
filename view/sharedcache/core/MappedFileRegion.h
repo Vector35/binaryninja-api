@@ -2,6 +2,7 @@
 
 #include "binaryninjaapi.h"
 
+#include <filesystem>
 #include <memory>
 #include <mutex>
 #include <span>
@@ -22,7 +23,7 @@ class MappedFileRegion
 {
 	uint8_t* m_data = nullptr;
 	size_t m_length = 0;
-	std::string m_path;
+	std::filesystem::path m_path;
 	std::once_flag m_slidOnce;
 
 	MappedFileRegion(const MappedFileRegion&) = delete;
@@ -33,14 +34,14 @@ class MappedFileRegion
 	struct PrivateTag {};
 
 public:
-	MappedFileRegion(PrivateTag, uint8_t* data, size_t length, std::string path);
+	MappedFileRegion(PrivateTag, uint8_t* data, size_t length, std::filesystem::path path);
 	~MappedFileRegion();
 
 	// Opens file, mmaps with MAP_PRIVATE, closes fd immediately.
 	// Returns nullptr on failure.
-	static std::shared_ptr<MappedFileRegion> Open(const std::string& path);
+	static std::shared_ptr<MappedFileRegion> Open(const std::filesystem::path& path);
 
-	const std::string& Path() const { return m_path; }
+	const std::filesystem::path& Path() const { return m_path; }
 	size_t Length() const { return m_length; }
 
 	// Run `fn` exactly once. All callers block until the work is complete.

@@ -4,8 +4,8 @@ use std::path::PathBuf;
 pub mod load_file;
 
 pub struct LoadFileField {
-    filter: String,
-    default: Option<String>,
+	filter: String,
+	default: Option<PathBuf>,
 }
 
 impl LoadFileField {
@@ -17,12 +17,12 @@ impl LoadFileField {
         }
     }
 
-    pub fn with_default(filter: &str, default: &str) -> Self {
-        Self {
-            filter: filter.to_string(),
-            default: Some(default.to_string()),
-        }
-    }
+	pub fn with_default(filter: &str, default: &str) -> Self {
+		Self {
+			filter: filter.to_string(),
+			default: Some(PathBuf::from(default)),
+		}
+	}
 
     pub fn field(&self) -> FormInputField {
         FormInputField::OpenFileName {
@@ -34,9 +34,8 @@ impl LoadFileField {
         }
     }
 
-    pub fn from_form(form: &Form) -> Option<PathBuf> {
-        let field = form.get_field_with_name("File Path")?;
-        let field_value = field.try_value_string()?;
-        Some(PathBuf::from(field_value))
-    }
+	pub fn from_form(form: &Form) -> Option<PathBuf> {
+		let field = form.get_field_with_name("File Path")?;
+		field.try_value_path()
+	}
 }

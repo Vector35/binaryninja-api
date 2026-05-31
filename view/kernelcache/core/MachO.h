@@ -1,5 +1,7 @@
 #pragma once
 
+#include <filesystem>
+
 // TODO: Including this adds a bunch of binary ninja specific stuff :ugh:
 #include "view/macho/machoview.h"
 
@@ -62,7 +64,7 @@ struct KernelCacheMachOHeader
 	bool relocatable = false;
 
 	static std::optional<KernelCacheMachOHeader> ParseHeaderForAddress(
-		BinaryNinja::Ref<BinaryNinja::BinaryView> bv, uint64_t vmAddress, uint64_t fileAddress, const std::string& imagePath);
+		BinaryNinja::Ref<BinaryNinja::BinaryView> bv, uint64_t vmAddress, uint64_t fileAddress, const std::filesystem::path& imagePath);
 
 	std::vector<CacheSymbol> ReadSymbolTable(BinaryNinja::Ref<BinaryNinja::BinaryView> bv, const TableInfo &symbolInfo, const TableInfo &stringInfo) const;
 

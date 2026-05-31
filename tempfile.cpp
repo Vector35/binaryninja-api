@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include "pathhelpers.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -49,15 +50,12 @@ TemporaryFile::TemporaryFile(BNTemporaryFile* file)
 }
 
 
-string TemporaryFile::GetPath() const
+filesystem::path TemporaryFile::GetPath() const
 {
 	if (!m_object)
-		return string();
+		return {};
 
-	char* str = BNGetTemporaryFilePath(m_object);
-	string result = str;
-	BNFreeString(str);
-	return result;
+	return Path::PathFromCore(BNGetTemporaryFilePath(m_object));
 }
 
 

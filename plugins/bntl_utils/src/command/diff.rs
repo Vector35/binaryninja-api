@@ -13,6 +13,7 @@ impl InputFileAField {
     pub fn field() -> FormInputField {
         FormInputField::DirectoryName {
             prompt: "Directory A".to_string(),
+            default_name: None,
             default: None,
             value: None,
         }
@@ -20,8 +21,7 @@ impl InputFileAField {
 
     pub fn from_form(form: &Form) -> Option<PathBuf> {
         let field = form.get_field_with_name("Directory A")?;
-        let field_value = field.try_value_string()?;
-        Some(PathBuf::from(field_value))
+        field.try_value_path()
     }
 }
 
@@ -31,6 +31,7 @@ impl InputFileBField {
     pub fn field() -> FormInputField {
         FormInputField::DirectoryName {
             prompt: "Directory B".to_string(),
+            default_name: None,
             default: None,
             value: None,
         }
@@ -38,8 +39,7 @@ impl InputFileBField {
 
     pub fn from_form(form: &Form) -> Option<PathBuf> {
         let field = form.get_field_with_name("Directory B")?;
-        let field_value = field.try_value_string()?;
-        Some(PathBuf::from(field_value))
+        field.try_value_path()
     }
 }
 

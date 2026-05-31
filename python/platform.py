@@ -19,6 +19,7 @@
 # IN THE SOFTWARE.
 
 import os
+import contextlib
 import ctypes
 import traceback
 import warnings
@@ -139,13 +140,12 @@ class Platform(metaclass=_PlatformMetaClass):
 				_handle = core.BNCreateCustomPlatform(arch.handle, self.__class__.name, self._cb)
 				assert _handle is not None
 			else:
-				dir_buf = (ctypes.c_char_p * len(self.__class__.type_include_dirs))()
-				for (i, dir) in enumerate(self.__class__.type_include_dirs):
-					dir_buf[i] = dir.encode('charmap')
-				_handle = core.BNCreateCustomPlatformWithTypes(
-				    arch.handle, self.__class__.name, self._cb, self.__class__.type_file_path, dir_buf,
-				    len(self.__class__.type_include_dirs)
-				)
+				with contextlib.ExitStack() as stack:
+					dir_paths = [stack.enter_context(core.core_path(dir)) for dir in self.__class__.type_include_dirs]
+					dir_buf = (core.BNPathHandle * len(dir_paths))(*dir_paths)
+					_handle = core.BNCreateCustomPlatformWithTypes(
+					    arch.handle, self.__class__.name, self._cb, self.__class__.type_file_path, dir_buf, len(dir_paths)
+					)
 				assert _handle is not None
 				self.__class__._registered_platforms.append(self)
 		else:
@@ -704,14 +704,14 @@ class Platform(metaclass=_PlatformMetaClass):
 			raise AttributeError("Source must be a string")
 		if include_dirs is None:
 			include_dirs = []
-		dir_buf = (ctypes.c_char_p * len(include_dirs))()
-		for i in range(0, len(include_dirs)):
-			dir_buf[i] = include_dirs[i].encode('charmap')
 		parse = core.BNTypeParserResult()
 		errors = ctypes.c_char_p()
-		result = core.BNParseTypesFromSource(
-		    self.handle, source, filename, parse, errors, dir_buf, len(include_dirs), auto_type_source
-		)
+		with contextlib.ExitStack() as stack:
+			dir_paths = [stack.enter_context(core.core_path(dir)) for dir in include_dirs]
+			dir_buf = (core.BNPathHandle * len(dir_paths))(*dir_paths)
+			result = core.BNParseTypesFromSource(
+			    self.handle, source, filename, parse, errors, dir_buf, len(dir_paths), auto_type_source
+			)
 		assert errors.value is not None, "core.BNParseTypesFromSource returned errors set to None"
 		error_str = errors.value.decode("utf-8")
 		core.free_string(errors)
@@ -754,18 +754,19 @@ class Platform(metaclass=_PlatformMetaClass):
 			{'bar': <type: int32_t(int32_t x)>}}, '')
 			>>>
 		"""
+		filename = os.fspath(filename)
 		if not (isinstance(filename, str) and os.path.isfile(filename) and os.access(filename, os.R_OK)):
 			raise AttributeError("File {} doesn't exist or isn't readable".format(filename))
 		if include_dirs is None:
 			include_dirs = []
-		dir_buf = (ctypes.c_char_p * len(include_dirs))()
-		for i in range(0, len(include_dirs)):
-			dir_buf[i] = include_dirs[i].encode('charmap')
 		parse = core.BNTypeParserResult()
 		errors = ctypes.c_char_p()
-		result = core.BNParseTypesFromSourceFile(
-		    self.handle, filename, parse, errors, dir_buf, len(include_dirs), auto_type_source
-		)
+		with contextlib.ExitStack() as stack:
+			dir_paths = [stack.enter_context(core.core_path(dir)) for dir in include_dirs]
+			dir_buf = (core.BNPathHandle * len(dir_paths))(*dir_paths)
+			result = core.BNParseTypesFromSourceFile(
+			    self.handle, filename, parse, errors, dir_buf, len(dir_paths), auto_type_source
+			)
 		assert errors.value is not None, "core.BNParseTypesFromSourceFile returned errors set to None"
 		error_str = errors.value.decode("utf-8")
 		core.free_string(errors)

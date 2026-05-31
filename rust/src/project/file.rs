@@ -1,6 +1,6 @@
 use crate::project::{systime_from_bntime, Project, ProjectFolder};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnString, IntoCStr};
+use crate::string::{BnPath, BnString, IntoCStr};
 use binaryninjacore_sys::{
     BNFreeProjectFile, BNFreeProjectFileList, BNNewProjectFileReference, BNProjectFile,
     BNProjectFileAddDependency, BNProjectFileExistsOnDisk, BNProjectFileExport,
@@ -44,16 +44,16 @@ impl ProjectFile {
         if !self.exists_on_disk() {
             return None;
         }
-        let path_str =
-            unsafe { BnString::into_string(BNProjectFileGetPathOnDisk(self.handle.as_ptr())) };
-        Some(PathBuf::from(path_str))
+        Some(unsafe { BnString::into_path_buf(BNProjectFileGetPathOnDisk(self.handle.as_ptr())) })
     }
 
     /// Get the path in the project to this file's contents
     pub fn path_in_project(&self) -> PathBuf {
-        let path_str =
-            unsafe { BnString::into_string(BNProjectFileGetPathInProject(self.handle.as_ptr())) };
-        PathBuf::from(path_str)
+        unsafe {
+            PathBuf::from(BnString::into_string(BNProjectFileGetPathInProject(
+                self.handle.as_ptr(),
+            )))
+        }
     }
 
     /// Check if this file's contents exist on disk
@@ -110,7 +110,7 @@ impl ProjectFile {
     ///
     /// * `dest` - Destination file path for the exported contents, passing a directory will append the file name.
     pub fn export(&self, dest: &Path) -> bool {
-        let dest_raw = dest.to_cstr();
+        let dest_raw = BnPath::new(dest);
         unsafe { BNProjectFileExport(self.handle.as_ptr(), dest_raw.as_ptr()) }
     }
 

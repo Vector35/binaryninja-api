@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include "pathhelpers.h"
 
 using namespace BinaryNinja;
 
@@ -402,9 +403,9 @@ bool TypeContainer::ParseTypeString(
 
 bool TypeContainer::ParseTypesFromSource(
 	const std::string& text,
-	const std::string& fileName,
+	const std::filesystem::path& fileName,
 	const std::vector<std::string>& options,
-	const std::vector<std::string>& includeDirs,
+	const std::vector<std::filesystem::path>& includeDirs,
 	const std::string& autoTypeSource,
 	bool importDependencies,
 	BinaryNinja::TypeParserResult& result,
@@ -416,22 +417,18 @@ bool TypeContainer::ParseTypesFromSource(
 	{
 		apiOptions[i] = options[i].c_str();
 	}
-	const char** apiIncludeDirs = new const char*[includeDirs.size()];
-	for (size_t i = 0; i < includeDirs.size(); ++i)
-	{
-		apiIncludeDirs[i] = includeDirs[i].c_str();
-	}
+	Path::APIObjectList apiIncludeDirs(includeDirs);
 
 	BNTypeParserResult apiResult;
 	BNTypeParserError* apiErrors;
 	size_t errorCount;
 
-	auto success = BNTypeContainerParseTypesFromSource(m_object, text.c_str(), fileName.c_str(),
-		apiOptions, options.size(), apiIncludeDirs, includeDirs.size(), autoTypeSource.c_str(), importDependencies,
+	Path::APIObject apiFileName(fileName);
+	auto success = BNTypeContainerParseTypesFromSource(m_object, text.c_str(), apiFileName,
+		apiOptions, options.size(), apiIncludeDirs.data(), apiIncludeDirs.size(), autoTypeSource.c_str(), importDependencies,
 		&apiResult, &apiErrors, &errorCount);
 
 	delete [] apiOptions;
-	delete [] apiIncludeDirs;
 
 	for (size_t j = 0; j < errorCount; j ++)
 	{
@@ -487,9 +484,9 @@ bool TypeContainer::ParseTypesFromSource(
 
 bool TypeContainer::ParseTypesFromSource(
 	const std::string& text,
-	const std::string& fileName,
+	const std::filesystem::path& fileName,
 	const std::vector<std::string>& options,
-	const std::vector<std::string>& includeDirs,
+	const std::vector<std::filesystem::path>& includeDirs,
 	const std::string& autoTypeSource,
 	BinaryNinja::TypeParserResult& result,
 	std::vector<TypeParserError>& errors

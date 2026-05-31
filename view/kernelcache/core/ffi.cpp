@@ -7,7 +7,8 @@ using namespace BinaryNinja::KC;
 BNKernelCacheImage ImageToApi(const CacheImage& image)
 {
 	BNKernelCacheImage apiImage;
-	apiImage.name = BNAllocString(image.path.c_str());
+	auto path = ImagePathToUtf8String(image.path);
+	apiImage.name = BNAllocString(path.c_str());
 	apiImage.headerVirtualAddress = image.headerVirtualAddress;
 	apiImage.headerFileAddress = image.headerFileAddress;
 	return apiImage;
@@ -16,7 +17,7 @@ BNKernelCacheImage ImageToApi(const CacheImage& image)
 CacheImage ImageFromApi(const BNKernelCacheImage& image)
 {
 	CacheImage apiImage;
-	apiImage.path = image.name;
+	apiImage.path = ImagePathFromString(image.name);
 	apiImage.headerVirtualAddress = image.headerVirtualAddress;
 	apiImage.headerFileAddress = image.headerFileAddress;
 	apiImage.header = nullptr;

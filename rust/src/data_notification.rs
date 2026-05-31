@@ -1,6 +1,7 @@
 //! Receive notifications for many types of core events.
 
 use std::ffi::{c_char, c_void, CStr};
+use std::path::PathBuf;
 use std::ptr::NonNull;
 
 use binaryninjacore_sys::*;
@@ -13,6 +14,7 @@ use crate::function::Function;
 use crate::rc::Ref;
 use crate::section::Section;
 use crate::segment::Segment;
+use crate::string::BnString;
 use crate::symbol::Symbol;
 use crate::tags::{TagReference, TagType};
 use crate::types::{QualifiedName, Type, TypeArchive};
@@ -378,12 +380,12 @@ trait_handler! {
     typeArchiveAttached => type_archive_attached(
         view: *mut BNBinaryView: &BinaryView = &BinaryView::from_raw(view),
         id: *const c_char: &str = CStr::from_ptr(id).to_str().unwrap(),
-        path: *const c_char: &[u8] = CStr::from_ptr(path).to_bytes(),
+        path: *mut BNPath: PathBuf = unsafe { BnString::path_buf_from_raw(path) },
     ),
     typeArchiveDetached => type_archive_detached(
         view: *mut BNBinaryView: &BinaryView = &BinaryView::from_raw(view),
         id: *const c_char: &str = CStr::from_ptr(id).to_str().unwrap(),
-        path: *const c_char: &[u8] = CStr::from_ptr(path).to_bytes(),
+        path: *mut BNPath: PathBuf = unsafe { BnString::path_buf_from_raw(path) },
     ),
     typeArchiveConnected => type_archive_connected(
         view: *mut BNBinaryView: &BinaryView = &BinaryView::from_raw(view),

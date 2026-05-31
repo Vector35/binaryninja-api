@@ -25,6 +25,7 @@ import queue
 import traceback
 import ctypes
 import abc
+import contextlib
 import json
 import pprint
 import inspect
@@ -455,10 +456,10 @@ class BinaryDataNotification:
 	def component_data_var_removed(self, view: 'BinaryView', _component: component.Component, var: 'DataVariable'):
 		pass
 
-	def type_archive_attached(self, view: 'BinaryView', id: str, path: str):
+	def type_archive_attached(self, view: 'BinaryView', id: str, path: os.PathLike):
 		pass
 
-	def type_archive_detached(self, view: 'BinaryView', id: str, path: str):
+	def type_archive_detached(self, view: 'BinaryView', id: str, path: os.PathLike):
 		pass
 
 	def type_archive_connected(self, view: 'BinaryView', archive: 'typearchive.TypeArchive'):
@@ -1365,15 +1366,15 @@ class BinaryDataNotificationCallbacks:
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in BinaryDataNotificationCallbacks._component_data_variable_removed")
 
-	def _type_archive_attached(self, ctxt, view: core.BNBinaryView, id: ctypes.c_char_p, path: ctypes.c_char_p):
+	def _type_archive_attached(self, ctxt, view: core.BNBinaryView, id: ctypes.c_char_p, path: core.BNPathHandle):
 		try:
-			self._notify.type_archive_attached(self._view, core.pyNativeStr(id), core.pyNativeStr(path))
+			self._notify.type_archive_attached(self._view, core.pyNativeStr(id), core.path_to_native_path(path, free=False))
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in BinaryDataNotificationCallbacks._type_archive_attached")
 
-	def _type_archive_detached(self, ctxt, view: core.BNBinaryView, id: ctypes.c_char_p, path: ctypes.c_char_p):
+	def _type_archive_detached(self, ctxt, view: core.BNBinaryView, id: ctypes.c_char_p, path: core.BNPathHandle):
 		try:
-			self._notify.type_archive_detached(self._view, core.pyNativeStr(id), core.pyNativeStr(path))
+			self._notify.type_archive_detached(self._view, core.pyNativeStr(id), core.path_to_native_path(path, free=False))
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in BinaryDataNotificationCallbacks._type_archive_detached")
 
@@ -3465,9 +3466,10 @@ class BinaryView:
 				file_metadata = filemetadata.FileMetadata()
 			view = core.BNCreateBinaryDataViewFromFile(file_metadata.handle, src._cb)
 		else:
+			src_path = os.fspath(src)
 			if file_metadata is None:
-				file_metadata = filemetadata.FileMetadata(str(src))
-			view = core.BNCreateBinaryDataViewFromFilename(file_metadata.handle, str(src))
+				file_metadata = filemetadata.FileMetadata(src_path)
+			view = core.BNCreateBinaryDataViewFromFilename(file_metadata.handle, src_path)
 		if view is None:
 			return None
 		return BinaryView(file_metadata=file_metadata, handle=view)
@@ -3554,13 +3556,14 @@ class BinaryView:
 		else:
 			progress_cfunc = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)(lambda ctxt, cur, total: progress_func(cur, total))
 
-		if isinstance(source, os.PathLike):
-			source = str(source)
+		source_is_pathlike = isinstance(source, os.PathLike)
+		if source_is_pathlike:
+			source = os.fspath(source)
 		if isinstance(source, BinaryView):
 			handle = core.BNLoadBinaryView(source.handle, update_analysis, json.dumps(options), progress_cfunc, None)
 		elif isinstance(source, project.ProjectFile):
 			handle = core.BNLoadProjectFile(source._handle, update_analysis, json.dumps(options), progress_cfunc, None)
-		elif isinstance(source, str):
+		elif isinstance(source, str) or source_is_pathlike:
 			handle = core.BNLoadFilename(source, update_analysis, json.dumps(options), progress_cfunc, None)
 		elif isinstance(source, bytes) or isinstance(source, bytearray) or isinstance(source, databuffer.DataBuffer):
 			raw_view = BinaryView.new(source)
@@ -4093,19 +4096,19 @@ class BinaryView:
 			core.BNFreeTypeLibraryList(libraries, count.value)
 
 	@property
-	def attached_type_archives(self) -> Mapping['str', 'str']:
+	def attached_type_archives(self) -> Mapping['str', os.PathLike]:
 		"""All attached type archive ids and paths (read-only)"""
 		ids = ctypes.POINTER(ctypes.c_char_p)()
-		paths = ctypes.POINTER(ctypes.c_char_p)()
+		paths = ctypes.POINTER(core.BNPathHandle)()
 		count = core.BNBinaryViewGetTypeArchives(self.handle, ids, paths)
 		result = {}
 		try:
 			for i in range(0, count):
-				result[core.pyNativeStr(ids[i])] = core.pyNativeStr(paths[i])
+				result[core.pyNativeStr(ids[i])] = core.path_to_native_path(paths[i], free=False)
 			return result
 		finally:
 			core.BNFreeStringList(ids, count)
-			core.BNFreeStringList(paths, count)
+			core.BNFreePathList(paths, count)
 
 	@property
 	def connected_type_archives(self) -> List['typearchive.TypeArchive']:
@@ -5365,7 +5368,7 @@ class BinaryView:
 		"""
 		return core.BNIsOffsetReadOnlySemantics(self.handle, addr)
 
-	def save(self, dest: Union['fileaccessor.FileAccessor', str]) -> bool:
+	def save(self, dest: Union['fileaccessor.FileAccessor', str, bytes, os.PathLike]) -> bool:
 		"""
 		``save`` saves the original binary file to the provided destination ``dest`` along with any modifications.
 
@@ -5377,7 +5380,7 @@ class BinaryView:
 		"""
 		if isinstance(dest, fileaccessor.FileAccessor):
 			return core.BNSaveToFile(self.handle, dest._cb)
-		return core.BNSaveToFilename(self.handle, str(dest))
+		return core.BNSaveToFilename(self.handle, os.fspath(dest))
 
 	def register_notification(self, notify: BinaryDataNotification) -> None:
 		"""
@@ -6774,7 +6777,7 @@ class BinaryView:
 
 		names_buf = (ctypes.c_char_p * len(names))()
 		for i in range(0, len(names)):
-			names_buf[i] = names[i].encode('charmap')
+			names_buf[i] = core.cstr(names[i])
 
 		values_buf = (ctypes.c_ulonglong * len(values))()
 		for i in range(0, len(values)):
@@ -6796,7 +6799,7 @@ class BinaryView:
 
 		names_buf = (ctypes.c_char_p * len(names))()
 		for i in range(0, len(names)):
-			names_buf[i] = names[i].encode('charmap')
+			names_buf[i] = core.cstr(names[i])
 
 		core.BNRemoveExpressionParserMagicValues(self.handle, names_buf, len(names))
 
@@ -8521,16 +8524,16 @@ class BinaryView:
 			for (i, s) in enumerate(options):
 				options_cpp[i] = core.cstr(s)
 
-			include_dirs_cpp = (ctypes.c_char_p * len(include_dirs))()
-			for (i, s) in enumerate(include_dirs):
-				include_dirs_cpp[i] = core.cstr(s)
-
 			errors = ctypes.c_char_p()
 			type_list = core.BNQualifiedNameList()
 			type_list.count = 0
-			if not core.BNParseTypesString(
+			with contextlib.ExitStack() as stack:
+				include_dir_paths = [stack.enter_context(core.core_path(path)) for path in include_dirs]
+				include_dirs_cpp = (core.BNPathHandle * len(include_dir_paths))(*include_dir_paths)
+				ok = core.BNParseTypesString(
 					self.handle, text, options_cpp, len(options), include_dirs_cpp,
-					len(include_dirs), parse, errors, type_list, import_dependencies):
+					len(include_dir_paths), parse, errors, type_list, import_dependencies)
+			if not ok:
 				assert errors.value is not None, "core.BNParseTypesString returned errors set to None"
 				error_str = errors.value.decode("utf-8")
 				core.free_string(errors)

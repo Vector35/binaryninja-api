@@ -10,7 +10,6 @@ fn main() {
 
     let header_path_str = std::env::args().nth(1).expect("No header provided");
     let header_path = std::path::Path::new(&header_path_str);
-    let header_name = header_path.file_stem().unwrap().to_str().unwrap();
     let type_lib_plat_str = std::env::args().nth(2).expect("No type library provided");
     let type_lib_path_str = std::env::args().nth(3).expect("No type library provided");
     let type_lib_path = std::path::Path::new(&type_lib_path_str);
@@ -31,7 +30,7 @@ fn main() {
     let parsed_types = parser
         .parse_types_from_source(
             &header_contents,
-            header_name,
+            header_path,
             &type_lib_plat,
             &plat_type_container,
             &[],

@@ -718,7 +718,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 			return None
 		input_list = (ctypes.c_char_p * len(subactivities))()
 		for i in range(0, len(subactivities)):
-			input_list[i] = str(subactivities[i]).encode('charmap')
+			input_list[i] = core.cstr(str(subactivities[i]))
 		handle = core.BNWorkflowRegisterActivity(self.handle, activity.handle, input_list, len(subactivities))
 		if handle is None:
 			return None
@@ -818,7 +818,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 			activities = [activities]
 		input_list = (ctypes.c_char_p * len(activities))()
 		for i in range(0, len(activities)):
-			input_list[i] = str(activities[i]).encode('charmap')
+			input_list[i] = core.cstr(str(activities[i]))
 		return core.BNWorkflowAssignSubactivities(self.handle, str(activity), input_list, len(activities))
 
 	def clear(self) -> bool:
@@ -843,7 +843,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 			activities = [activities]
 		input_list = (ctypes.c_char_p * len(activities))()
 		for i in range(0, len(activities)):
-			input_list[i] = str(activities[i]).encode('charmap')
+			input_list[i] = core.cstr(str(activities[i]))
 		return core.BNWorkflowInsert(self.handle, str(activity), input_list, len(activities))
 
 	def insert_after(self, activity: ActivityType, activities: Union[List[str], str]) -> bool:
@@ -859,7 +859,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 			activities = [activities]
 		input_list = (ctypes.c_char_p * len(activities))()
 		for i in range(0, len(activities)):
-			input_list[i] = str(activities[i]).encode('charmap')
+			input_list[i] = core.cstr(str(activities[i]))
 		return core.BNWorkflowInsertAfter(self.handle, str(activity), input_list, len(activities))
 
 	def remove(self, activity: ActivityType) -> bool:

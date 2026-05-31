@@ -6,6 +6,7 @@
 #define SHAREDCACHE_DSCVIEW_H
 
 #include <binaryninjaapi.h>
+#include <filesystem>
 
 class SharedCacheView : public BinaryNinja::BinaryView
 {
@@ -21,12 +22,15 @@ class SharedCacheView : public BinaryNinja::BinaryView
 	// NOTE: Currently this is just used to alert the user to supposed missing files.
 	std::set<std::string> m_secondaryFileNames;
 
-	std::string StorePrimaryProjectFile(BinaryNinja::ProjectFile* projectFile);
-	void StorePrimaryFilePath(const std::string& path, BinaryNinja::Project* project, const std::string& databaseDir);
-	std::optional<std::string> ResolveProjectFilePath(BinaryNinja::Project* project, const std::string& projectPath);
-	std::optional<std::string> ResolveUniqueProjectFileName(BinaryNinja::Project* project);
-	std::optional<std::string> ResolveMetadataPrimaryFilePath(BinaryNinja::Project* project, const std::string& databaseDir);
-	std::optional<std::string> PromptForPrimaryFile();
+	std::filesystem::path StorePrimaryProjectFile(BinaryNinja::ProjectFile* projectFile);
+	void StorePrimaryFilePath(
+		const std::filesystem::path& path, BinaryNinja::Project* project, const std::filesystem::path& databaseDir);
+	std::optional<std::filesystem::path> ResolveProjectFilePath(
+		BinaryNinja::Project* project, const std::string& projectPath);
+	std::optional<std::filesystem::path> ResolveUniqueProjectFileName(BinaryNinja::Project* project);
+	std::optional<std::filesystem::path> ResolveMetadataPrimaryFilePath(
+		BinaryNinja::Project* project, const std::filesystem::path& databaseDir);
+	std::optional<std::filesystem::path> PromptForPrimaryFile();
 
 public:
 	SharedCacheView(const std::string& typeName, BinaryView* data, bool parseOnly = false);
@@ -46,7 +50,7 @@ public:
 	void LogSecondaryFileName(std::string associatedFileName);
 
 	// Get the path to the primary file.
-	std::optional<std::string> GetPrimaryFilePath();
+	std::optional<std::filesystem::path> GetPrimaryFilePath();
 
 	// Get the metadata for saving the state of the shared cache.
 	BinaryNinja::Ref<BinaryNinja::Metadata> GetMetadata() const;

@@ -176,7 +176,7 @@ bool KernelCacheController::ApplyImage(BinaryView& view, const CacheImage& image
 
 	m_loadedImages.insert(image.headerVirtualAddress);
 
-	m_logger->LogInfoF("Loaded image: '{}'", image.path);
+	m_logger->LogInfoF("Loaded image: '{}'", ImagePathToUtf8String(image.path));
 
 	// TODO: This needs to be done in a "database save" callback.
 	// NOTE: We store on the parent view because hilariously, the view metadata is not available in view init.

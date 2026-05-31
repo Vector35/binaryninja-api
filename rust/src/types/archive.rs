@@ -10,7 +10,7 @@ use crate::data_buffer::DataBuffer;
 use crate::metadata::Metadata;
 use crate::platform::Platform;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{raw_to_string, BnString, IntoCStr};
+use crate::string::{raw_to_string, BnPath, BnString, IntoCStr};
 use crate::types::{
     QualifiedName, QualifiedNameAndType, QualifiedNameTypeAndId, Type, TypeContainer,
 };
@@ -84,7 +84,7 @@ impl TypeArchive {
 
     /// Open the Type Archive at the given path, if it exists.
     pub fn open(path: impl AsRef<Path>) -> Option<Ref<TypeArchive>> {
-        let raw_path = path.as_ref().to_cstr();
+        let raw_path = BnPath::new(path.as_ref());
         let handle = unsafe { BNOpenTypeArchive(raw_path.as_ptr()) };
         NonNull::new(handle).map(|handle| unsafe { TypeArchive::ref_from_raw(handle) })
     }
@@ -93,7 +93,7 @@ impl TypeArchive {
     ///
     /// If the file has already been created and is not a valid type archive this will return `None`.
     pub fn create(path: impl AsRef<Path>, platform: &Platform) -> Option<Ref<TypeArchive>> {
-        let raw_path = path.as_ref().to_cstr();
+        let raw_path = BnPath::new(path.as_ref());
         let handle = unsafe { BNCreateTypeArchive(raw_path.as_ptr(), platform.handle) };
         NonNull::new(handle).map(|handle| unsafe { TypeArchive::ref_from_raw(handle) })
     }
@@ -106,7 +106,7 @@ impl TypeArchive {
         id: &TypeArchiveId,
         platform: &Platform,
     ) -> Option<Ref<TypeArchive>> {
-        let raw_path = path.as_ref().to_cstr();
+        let raw_path = BnPath::new(path.as_ref());
         let id = id.0.as_str().to_cstr();
         let handle =
             unsafe { BNCreateTypeArchiveWithId(raw_path.as_ptr(), platform.handle, id.as_ptr()) };
@@ -124,8 +124,7 @@ impl TypeArchive {
     pub fn path(&self) -> Option<PathBuf> {
         let result = unsafe { BNGetTypeArchivePath(self.handle.as_ptr()) };
         assert!(!result.is_null());
-        let path_str = unsafe { BnString::into_string(result) };
-        Some(PathBuf::from(path_str))
+        Some(unsafe { BnString::into_path_buf(result) })
     }
 
     /// Get the guid for a Type Archive
@@ -668,7 +667,7 @@ impl TypeArchive {
 
     /// Determine if `file` is a Type Archive
     pub fn is_type_archive(file: &Path) -> bool {
-        let file = file.to_cstr();
+        let file = BnPath::new(file);
         unsafe { BNIsTypeArchive(file.as_ptr()) }
     }
 

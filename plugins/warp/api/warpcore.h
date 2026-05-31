@@ -49,6 +49,7 @@ extern "C"
     typedef struct BNSymbol BNSymbol;
     typedef struct BNType BNType;
     typedef struct BNDataBuffer BNDataBuffer;
+    typedef struct BNPath BNPath;
     typedef struct BNProject BNProject;
     typedef struct BNProjectFile BNProjectFile;
 
@@ -127,14 +128,14 @@ extern "C"
         bool cancelled;
         size_t unprocessedFilesCount;
         size_t processedFilesCount;
-        char** analyzingFiles;
+        BNPath** analyzingFiles;
         size_t analyzingFilesCount;
-        char** processingFiles;
+        BNPath** processingFiles;
         size_t processingFilesCount;
     };
 
     WARP_FFI_API BNWARPProcessor* BNWARPNewProcessor(BNWARPProcessorIncludedData includedData, BNWARPProcessorIncludedFunctions includedFunctions, size_t workerCount);
-    WARP_FFI_API void BNWARPProcessorAddPath(BNWARPProcessor* processor, const char* path);
+    WARP_FFI_API void BNWARPProcessorAddPath(BNWARPProcessor* processor, BNPath* path);
     WARP_FFI_API void BNWARPProcessorAddProject(BNWARPProcessor* processor, BNProject* project);
     WARP_FFI_API void BNWARPProcessorAddProjectFile(BNWARPProcessor* processor, BNProjectFile* projectFile);
     WARP_FFI_API void BNWARPProcessorAddBinaryView(BNWARPProcessor* processor, BNBinaryView* view);
@@ -160,11 +161,11 @@ extern "C"
     WARP_FFI_API char* BNWARPContainerGetName(BNWARPContainer* container);
 
     WARP_FFI_API BNWARPSource* BNWARPContainerGetSources(BNWARPContainer* container, size_t* count);
-    WARP_FFI_API bool BNWARPContainerAddSource(BNWARPContainer* container, const char* sourcePath, BNWARPSource* result);
+    WARP_FFI_API bool BNWARPContainerAddSource(BNWARPContainer* container, BNPath* sourcePath, BNWARPSource* result);
     WARP_FFI_API bool BNWARPContainerCommitSource(BNWARPContainer* container, const BNWARPSource* source);
     WARP_FFI_API bool BNWARPContainerIsSourceUncommitted(BNWARPContainer* container, const BNWARPSource* source);
     WARP_FFI_API bool BNWARPContainerIsSourceWritable(BNWARPContainer* container, const BNWARPSource* source);
-    WARP_FFI_API char* BNWARPContainerGetSourcePath(BNWARPContainer* container, const BNWARPSource* source);
+    WARP_FFI_API BNPath* BNWARPContainerGetSourcePath(BNWARPContainer* container, const BNWARPSource* source);
 
     WARP_FFI_API bool BNWARPContainerAddFunctions(BNWARPContainer* container, const BNWARPTarget* target, const BNWARPSource* source, BNWARPFunction** functions, size_t count);
     WARP_FFI_API bool BNWARPContainerAddTypes(BNWARPContainer* container, const BNWARPSource* source, BNWARPType** types, size_t count);
@@ -232,7 +233,7 @@ extern "C"
     WARP_FFI_API BNWARPTarget* BNWARPNewTargetReference(BNWARPTarget* target);
     WARP_FFI_API void BNWARPFreeTargetReference(BNWARPTarget* target);
 
-    WARP_FFI_API BNWARPFile* BNWARPNewFileFromPath(const char* path);
+    WARP_FFI_API BNWARPFile* BNWARPNewFileFromPath(BNPath* path);
 
     WARP_FFI_API BNWARPChunk** BNWARPFileGetChunks(BNWARPFile* file, size_t* count);
     WARP_FFI_API BNDataBuffer* BNWARPFileToDataBuffer(BNWARPFile* file);

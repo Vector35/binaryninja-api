@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include "pathhelpers.h"
 #include <cinttypes>
 
 using namespace BinaryNinja;
@@ -3672,24 +3673,21 @@ EnumerationBuilder& EnumerationBuilder::ReplaceMember(size_t idx, const string& 
 
 
 bool BinaryNinja::PreprocessSource(
-    const string& source, const string& fileName, string& output, string& errors, const vector<string>& includeDirs)
+    const string& source, const filesystem::path& fileName, string& output, string& errors, const vector<filesystem::path>& includeDirs)
 {
 	char* outStr;
 	char* errorStr;
-	const char** includeDirList = new const char*[includeDirs.size()];
+	Path::APIObjectList includeDirList(includeDirs);
 
-	for (size_t i = 0; i < includeDirs.size(); i++)
-		includeDirList[i] = includeDirs[i].c_str();
-
-	bool result =
-	    BNPreprocessSource(source.c_str(), fileName.c_str(), &outStr, &errorStr, includeDirList, includeDirs.size());
+	Path::APIObject coreFileName(fileName);
+	bool result = BNPreprocessSource(
+	    source.c_str(), coreFileName, &outStr, &errorStr, includeDirList.data(), includeDirList.size());
 
 	output = outStr;
 	errors = errorStr;
 
 	BNFreeString(outStr);
 	BNFreeString(errorStr);
-	delete[] includeDirList;
 	return result;
 }
 

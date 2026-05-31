@@ -1,5 +1,7 @@
 #include "binaryninjaapi.h"
+#include "pathhelpers.h"
 #include <filesystem>
+#include <fstream>
 
 using namespace BinaryNinja;
 using namespace std;
@@ -134,10 +136,10 @@ bool TypeParser::GetOptionTextCallback(void* ctxt, BNTypeParserOption option, co
 
 
 bool TypeParser::PreprocessSourceCallback(void* ctxt,
-	const char* source, const char* fileName, BNPlatform* platform,
+	const char* source, BNPath* fileName, BNPlatform* platform,
 	BNTypeContainer* existingTypes,
 	const char* const* options, size_t optionCount,
-	const char* const* includeDirs, size_t includeDirCount,
+	BNPath** includeDirs, size_t includeDirCount,
 	char** output, BNTypeParserError** errors, size_t* errorCount
 )
 {
@@ -150,18 +152,18 @@ bool TypeParser::PreprocessSourceCallback(void* ctxt,
 		optionsCpp.push_back(options[i]);
 	}
 
-	vector<string> includeDirsCpp;
+	vector<filesystem::path> includeDirsCpp;
 	includeDirsCpp.reserve(includeDirCount);
 	for (size_t i = 0; i < includeDirCount; i ++)
 	{
-		includeDirsCpp.push_back(includeDirs[i]);
+		includeDirsCpp.push_back(Path::PathFromCoreBorrowed(includeDirs[i]));
 	}
 
 	std::string outputCpp;
 	vector<TypeParserError> errorsCpp;
 	bool success = parser->PreprocessSource(
 		source,
-		fileName,
+		Path::PathFromCoreBorrowed(fileName),
 		new CorePlatform(platform),
 		TypeContainer{BNDuplicateTypeContainer(existingTypes)},
 		optionsCpp,
@@ -195,10 +197,10 @@ bool TypeParser::PreprocessSourceCallback(void* ctxt,
 
 
 bool TypeParser::ParseTypesFromSourceCallback(void* ctxt,
-	const char* source, const char* fileName, BNPlatform* platform,
+	const char* source, BNPath* fileName, BNPlatform* platform,
 	BNTypeContainer* existingTypes,
 	const char* const* options, size_t optionCount,
-	const char* const* includeDirs, size_t includeDirCount,
+	BNPath** includeDirs, size_t includeDirCount,
 	const char* autoTypeSource, BNTypeParserResult* result,
 	BNTypeParserError** errors, size_t* errorCount
 )
@@ -212,18 +214,18 @@ bool TypeParser::ParseTypesFromSourceCallback(void* ctxt,
 		optionsCpp.push_back(options[i]);
 	}
 
-	vector<string> includeDirsCpp;
+	vector<filesystem::path> includeDirsCpp;
 	includeDirsCpp.reserve(includeDirCount);
 	for (size_t i = 0; i < includeDirCount; i ++)
 	{
-		includeDirsCpp.push_back(includeDirs[i]);
+		includeDirsCpp.push_back(Path::PathFromCoreBorrowed(includeDirs[i]));
 	}
 
 	TypeParserResult resultCpp;
 	vector<TypeParserError> errorsCpp;
 	bool success = parser->ParseTypesFromSource(
 		source,
-		fileName,
+		Path::PathFromCoreBorrowed(fileName),
 		new CorePlatform(platform),
 		TypeContainer{BNDuplicateTypeContainer(existingTypes)},
 		optionsCpp,
@@ -359,49 +361,38 @@ void TypeParser::FreeErrorListCallback(void* ctxt, BNTypeParserError* errors, si
 }
 
 
-bool TypeParser::ParseTypesFromSourceFile(const string& fileName, Ref<Platform> platform,
+bool TypeParser::ParseTypesFromSourceFile(const filesystem::path& fileName, Ref<Platform> platform,
 	std::optional<TypeContainer> existingTypes, const vector<string>& options,
-	const vector<string>& includeDirs, const string& autoTypeSource, TypeParserResult& result,
+	const vector<filesystem::path>& includeDirs, const string& autoTypeSource, TypeParserResult& result,
 	vector<TypeParserError>& errors)
 {
-	if (!fs::is_regular_file(fileName))
+	auto fileNameString = Path::PathToUtf8String(fileName);
+
+	std::error_code ec;
+	if (!fs::is_regular_file(fileName, ec) || ec)
 	{
-		errors.push_back(TypeParserError(FatalSeverity, string("error: argument '") + fileName + "' is not a file"));
+		errors.push_back(TypeParserError(FatalSeverity, string("error: argument '") + fileNameString + "' is not a file"));
 		return false;
 	}
 
 	// Read file contents, then parse them
-	FILE* fp = fopen(fileName.c_str(), "rb");
+	ifstream fp(fileName, ios::binary);
 	if (!fp)
 	{
-		errors.push_back(TypeParserError(FatalSeverity, string("file '") + fileName + "' not found"));
+		errors.push_back(TypeParserError(FatalSeverity, string("file '") + fileNameString + "' not found"));
 		return false;
 	}
 
-	fseek(fp, 0, SEEK_END);
-	long size = ftell(fp);
-	if(size == -1)
+	string data((istreambuf_iterator<char>(fp)), istreambuf_iterator<char>());
+	if (!fp.eof() && fp.fail())
 	{
-		errors.push_back(TypeParserError(FatalSeverity, string("error: unable to open '") + fileName));
+		errors.push_back(TypeParserError(FatalSeverity, string("error: file '") + fileNameString + "' could not be read"));
 		return false;
 	}
-	fseek(fp, 0, SEEK_SET);
+	data.push_back('\n');
 
-	char* data = new char[size + 2];
-	if (fread(data, 1, size, fp) != (size_t)size)
-	{
-		errors.push_back(TypeParserError(FatalSeverity, string("error: file '") + fileName + "' could not be read"));
-		delete[] data;
-		fclose(fp);
-		return false;
-	}
-	data[size++] = '\n';
-	data[size] = 0;
-	fclose(fp);
-
-	bool ok = ParseTypesFromSource(data, fileName, platform, existingTypes, options, includeDirs, autoTypeSource, result, errors);
-	delete[] data;
-	return ok;
+	return ParseTypesFromSource(
+		data, fileName, platform, existingTypes, options, includeDirs, autoTypeSource, result, errors);
 }
 
 
@@ -422,9 +413,9 @@ bool CoreTypeParser::GetOptionText(BNTypeParserOption option, std::string value,
 }
 
 
-bool CoreTypeParser::PreprocessSource(const std::string& source, const std::string& fileName,
+bool CoreTypeParser::PreprocessSource(const std::string& source, const filesystem::path& fileName,
 	Ref<Platform> platform, std::optional<TypeContainer> existingTypes,
-	const std::vector<std::string>& options, const std::vector<std::string>& includeDirs,
+	const std::vector<std::string>& options, const std::vector<filesystem::path>& includeDirs,
 	std::string& output, std::vector<TypeParserError>& errors)
 {
 	BNTypeContainer* apiExistingTypes = (existingTypes.has_value() ? existingTypes->GetObject() : nullptr);
@@ -434,23 +425,19 @@ bool CoreTypeParser::PreprocessSource(const std::string& source, const std::stri
 	{
 		apiOptions[i] = options[i].c_str();
 	}
-	const char** apiIncludeDirs = new const char*[includeDirs.size()];
-	for (size_t i = 0; i < includeDirs.size(); ++i)
-	{
-		apiIncludeDirs[i] = includeDirs[i].c_str();
-	}
+	Path::APIObjectList apiIncludeDirs(includeDirs);
 
 	char* apiOutput;
 	BNTypeParserError* apiErrors;
 	size_t errorCount;
 
-	auto success = BNTypeParserPreprocessSource(m_object, source.c_str(), fileName.c_str(),
+	Path::APIObject apiFileName(fileName);
+	auto success = BNTypeParserPreprocessSource(m_object, source.c_str(), apiFileName,
 		platform->GetObject(), apiExistingTypes,
-		apiOptions, options.size(), apiIncludeDirs, includeDirs.size(), &apiOutput,
+		apiOptions, options.size(), apiIncludeDirs.data(), apiIncludeDirs.size(), &apiOutput,
 		&apiErrors, &errorCount);
 
 	delete [] apiOptions;
-	delete [] apiIncludeDirs;
 
 	for (size_t j = 0; j < errorCount; j ++)
 	{
@@ -475,9 +462,9 @@ bool CoreTypeParser::PreprocessSource(const std::string& source, const std::stri
 }
 
 
-bool CoreTypeParser::ParseTypesFromSource(const std::string& source, const std::string& fileName,
+bool CoreTypeParser::ParseTypesFromSource(const std::string& source, const filesystem::path& fileName,
 	Ref<Platform> platform, std::optional<TypeContainer> existingTypes,
-	const std::vector<std::string>& options, const std::vector<std::string>& includeDirs,
+	const std::vector<std::string>& options, const std::vector<filesystem::path>& includeDirs,
 	const std::string& autoTypeSource, TypeParserResult& result, std::vector<TypeParserError>& errors)
 {
 	BNTypeContainer* apiExistingTypes = (existingTypes.has_value() ? existingTypes->GetObject() : nullptr);
@@ -487,23 +474,19 @@ bool CoreTypeParser::ParseTypesFromSource(const std::string& source, const std::
 	{
 		apiOptions[i] = options[i].c_str();
 	}
-	const char** apiIncludeDirs = new const char*[includeDirs.size()];
-	for (size_t i = 0; i < includeDirs.size(); ++i)
-	{
-		apiIncludeDirs[i] = includeDirs[i].c_str();
-	}
+	Path::APIObjectList apiIncludeDirs(includeDirs);
 
 	BNTypeParserResult apiResult;
 	BNTypeParserError* apiErrors;
 	size_t errorCount;
 
-	auto success = BNTypeParserParseTypesFromSource(m_object, source.c_str(), fileName.c_str(),
+	Path::APIObject apiFileName(fileName);
+	auto success = BNTypeParserParseTypesFromSource(m_object, source.c_str(), apiFileName,
 		platform->GetObject(), apiExistingTypes,
-		apiOptions, options.size(), apiIncludeDirs, includeDirs.size(), autoTypeSource.c_str(), &apiResult,
+		apiOptions, options.size(), apiIncludeDirs.data(), apiIncludeDirs.size(), autoTypeSource.c_str(), &apiResult,
 		&apiErrors, &errorCount);
 
 	delete [] apiOptions;
-	delete [] apiIncludeDirs;
 
 	for (size_t j = 0; j < errorCount; j ++)
 	{

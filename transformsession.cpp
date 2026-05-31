@@ -1,18 +1,21 @@
 #include "binaryninjaapi.h"
+#include "pathhelpers.h"
 
 using namespace BinaryNinja;
 using namespace std;
 
 
-TransformSession::TransformSession(const string& filename, const string& options)
+TransformSession::TransformSession(const filesystem::path& filename, const string& options)
 {
-	m_object = BNCreateTransformSession(filename.c_str(), options.c_str());
+	Path::APIObject coreFilename(filename);
+	m_object = BNCreateTransformSession(coreFilename, options.c_str());
 }
 
 
-TransformSession::TransformSession(const string& filename, BNTransformSessionMode mode, const string& options)
+TransformSession::TransformSession(const filesystem::path& filename, BNTransformSessionMode mode, const string& options)
 {
-	m_object = BNCreateTransformSessionWithMode(filename.c_str(), mode, options.c_str());
+	Path::APIObject coreFilename(filename);
+	m_object = BNCreateTransformSessionWithMode(coreFilename, mode, options.c_str());
 }
 
 

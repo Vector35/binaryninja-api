@@ -584,7 +584,7 @@ class Settings:
 		length.value = len(value)
 		string_list = (ctypes.c_char_p * len(value))()
 		for i in range(len(value)):
-			string_list[i] = value[i].encode('charmap')
+			string_list[i] = core.cstr(value[i])
 		return core.BNSettingsSetStringList(self.handle, view_handle, func_handle, scope, key, string_list, length)
 
 	def set_json(self, key: str, value: str, resource: Optional[Union['binaryview.BinaryView', 'function.Function']] = None, scope: 'SettingsScope' = SettingsScope.SettingsAutoScope) -> bool:

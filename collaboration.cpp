@@ -21,6 +21,7 @@
 #include "binaryninjaapi.h"
 #include "binaryninjacore.h"
 #include "http.h"
+#include "pathhelpers.h"
 
 using namespace BinaryNinja;
 using namespace BinaryNinja::Collaboration;
@@ -216,12 +217,13 @@ bool BinaryNinja::Collaboration::IsTypeArchiveSnapshotIgnored(Ref<TypeArchive> a
 }
 
 
-Ref<TypeArchive> BinaryNinja::Collaboration::DownloadTypeArchive(Ref<RemoteFile> file, const std::string& dbPath, ProgressFunction progress)
+Ref<TypeArchive> BinaryNinja::Collaboration::DownloadTypeArchive(Ref<RemoteFile> file, const std::filesystem::path& dbPath, ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
 	BNTypeArchive* val;
-	if (!BNCollaborationDownloadTypeArchive(file->m_object, dbPath.c_str(), ProgressCallback, &pctxt, &val))
+	Path::APIObject coreDbPath(dbPath);
+	if (!BNCollaborationDownloadTypeArchive(file->m_object, coreDbPath, ProgressCallback, &pctxt, &val))
 		throw RemoteException("Failed to download type archive");
 
 	if (val == nullptr)
@@ -270,12 +272,13 @@ size_t BinaryNinja::Collaboration::PullTypeArchive(Ref<TypeArchive> archive, Ref
 }
 
 
-void BinaryNinja::Collaboration::DownloadDatabaseForFile(Ref<RemoteFile> file, const std::string& dbPath, bool force, ProgressFunction progress)
+void BinaryNinja::Collaboration::DownloadDatabaseForFile(Ref<RemoteFile> file, const std::filesystem::path& dbPath, bool force, ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
 
-	if (!BNCollaborationDownloadDatabaseForFile(file->m_object, dbPath.c_str(), force, ProgressCallback, &pctxt))
+	Path::APIObject coreDbPath(dbPath);
+	if (!BNCollaborationDownloadDatabaseForFile(file->m_object, coreDbPath, force, ProgressCallback, &pctxt))
 		throw RemoteException("Failed to download database for file");
 }
 
@@ -505,29 +508,24 @@ Ref<Snapshot> BinaryNinja::Collaboration::MergeSnapshots(Ref<Snapshot> first, Re
 }
 
 
-std::string BinaryNinja::Collaboration::DefaultProjectPath(Ref<RemoteProject> project)
+std::filesystem::path BinaryNinja::Collaboration::DefaultProjectPath(Ref<RemoteProject> project)
 {
-	char* path = BNCollaborationDefaultProjectPath(project->m_object);
-	std::string result = path;
-	BNFreeString(path);
-	return result;
+	return Path::PathFromCore(BNCollaborationDefaultProjectPath(project->m_object));
 }
 
 
-std::string BinaryNinja::Collaboration::DefaultFilePath(Ref<RemoteFile> file)
+std::filesystem::path BinaryNinja::Collaboration::DefaultFilePath(Ref<RemoteFile> file)
 {
-	char* path = BNCollaborationDefaultFilePath(file->m_object);
-	std::string result = path;
-	BNFreeString(path);
-	return result;
+	return Path::PathFromCore(BNCollaborationDefaultFilePath(file->m_object));
 }
 
 
-Ref<FileMetadata> BinaryNinja::Collaboration::DownloadFile(Ref<RemoteFile> file, const std::string& dbPath, ProgressFunction progress)
+Ref<FileMetadata> BinaryNinja::Collaboration::DownloadFile(Ref<RemoteFile> file, const std::filesystem::path& dbPath, ProgressFunction progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	BNFileMetadata* metadata = BNCollaborationDownloadFile(file->m_object, dbPath.c_str(), ProgressCallback, &pctxt);
+	Path::APIObject coreDbPath(dbPath);
+	BNFileMetadata* metadata = BNCollaborationDownloadFile(file->m_object, coreDbPath, ProgressCallback, &pctxt);
 	if (metadata == nullptr)
 		return nullptr;
 	return new FileMetadata(metadata);

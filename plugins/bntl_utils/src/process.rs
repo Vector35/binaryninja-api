@@ -970,10 +970,6 @@ impl TypeLibProcessor {
 
         let header_contents = std::fs::read_to_string(path).map_err(ProcessingError::FileRead)?;
 
-        let file_name = path
-            .file_name()
-            .unwrap_or(OsStr::new("source.hpp"))
-            .to_string_lossy();
         // TODO: Allow specifying options?
         let mut include_dirs = self.include_directories.clone();
         // TODO: This will not work for projects, we need to remove this parent call
@@ -985,7 +981,7 @@ impl TypeLibProcessor {
         let parsed_types = parser
             .parse_types_from_source(
                 &header_contents,
-                &file_name,
+                path,
                 &platform,
                 &platform_type_container,
                 &[],

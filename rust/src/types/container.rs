@@ -11,12 +11,13 @@
 use crate::platform::Platform;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::rc::{Array, Ref};
-use crate::string::{raw_to_string, BnString, IntoCStr};
+use crate::string::{raw_to_string, BnPath, BnString, IntoCStr};
 use crate::types::{QualifiedName, QualifiedNameAndType, Type, TypeParserError, TypeParserResult};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
 use std::ffi::{c_char, c_void};
 use std::fmt::{Debug, Formatter};
+use std::path::Path;
 use std::ptr::NonNull;
 
 pub type TypeContainerType = BNTypeContainerType;
@@ -327,7 +328,7 @@ impl TypeContainer {
     pub fn parse_types_from_source<O, I>(
         &self,
         source: &str,
-        filename: &str,
+        filename: &impl AsRef<Path>,
         options: O,
         include_directories: I,
         auto_type_source: &str,
@@ -335,17 +336,18 @@ impl TypeContainer {
     ) -> Result<TypeParserResult, Array<TypeParserError>>
     where
         O: IntoIterator<Item = String>,
-        I: IntoIterator<Item = String>,
+        I: IntoIterator,
+        I::Item: AsRef<Path>,
     {
         let source = source.to_cstr();
-        let filename = filename.to_cstr();
+        let filename = BnPath::new(filename.as_ref());
         let options: Vec<_> = options.into_iter().map(|o| o.to_cstr()).collect();
         let options_raw: Vec<*const c_char> = options.iter().map(|o| o.as_ptr()).collect();
         let include_directories: Vec<_> = include_directories
             .into_iter()
-            .map(|d| d.to_cstr())
+            .map(|d| BnPath::new(d.as_ref()))
             .collect();
-        let include_directories_raw: Vec<*const c_char> =
+        let include_directories_raw: Vec<*mut BNPath> =
             include_directories.iter().map(|d| d.as_ptr()).collect();
         let auto_type_source = auto_type_source.to_cstr();
         let mut raw_result = BNTypeParserResult::default();
@@ -358,7 +360,7 @@ impl TypeContainer {
                 filename.as_ptr(),
                 options_raw.as_ptr(),
                 options_raw.len(),
-                include_directories_raw.as_ptr(),
+                include_directories_raw.as_ptr() as *mut *mut BNPath,
                 include_directories_raw.len(),
                 auto_type_source.as_ptr(),
                 import_dependencies,

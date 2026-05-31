@@ -18,9 +18,10 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 import contextlib
+import os
 import traceback
 import ctypes
-from typing import Any, Callable, Optional, List, Generator
+from typing import Any, Callable, Optional, List, Generator, Union
 
 # Binary Ninja Components
 import binaryninja
@@ -36,6 +37,7 @@ from . import undo
 
 ProgressFuncType = Callable[[int, int], bool]
 ViewName = str
+AsPath = Union[os.PathLike, str, bytes]
 
 
 class NavigationHandler:
@@ -128,7 +130,7 @@ class FileMetadata:
 
 	_associated_data = {}
 
-	def __init__(self, filename: Optional[str] = None, handle: Optional[core.BNFileMetadataHandle] = None):
+	def __init__(self, filename: Optional[AsPath] = None, handle: Optional[core.BNFileMetadataHandle] = None):
 		if handle is not None:
 			_type = core.BNFileMetadataHandle
 			_handle = ctypes.cast(handle, _type)
@@ -136,7 +138,7 @@ class FileMetadata:
 			binaryninja._init_plugins()
 			_handle = core.BNCreateFileMetadata()
 			if filename is not None:
-				core.BNSetFilename(_handle, str(filename))
+				core.BNSetFilename(_handle, os.fspath(filename))
 		self._nav: Optional[NavigationHandler] = None
 		assert _handle is not None
 		self.handle = _handle
@@ -196,8 +198,8 @@ class FileMetadata:
 		return core.BNGetOriginalFilename(self.handle)
 
 	@original_filename.setter
-	def original_filename(self, value: str) -> None:
-		core.BNSetOriginalFilename(self.handle, str(value))
+	def original_filename(self, value: AsPath) -> None:
+		core.BNSetOriginalFilename(self.handle, os.fspath(value))
 
 	@property
 	def filename(self) -> str:
@@ -205,8 +207,8 @@ class FileMetadata:
 		return core.BNGetFilename(self.handle)
 
 	@filename.setter
-	def filename(self, value: str) -> None:
-		core.BNSetFilename(self.handle, str(value))
+	def filename(self, value: AsPath) -> None:
+		core.BNSetFilename(self.handle, os.fspath(value))
 
 	@property
 	def virtual_path(self) -> str:
@@ -619,7 +621,7 @@ class FileMetadata:
 		return core.BNNavigate(self.handle, str(view), offset)
 
 	def create_database(
-	    self, filename: str, progress_func: Optional[ProgressFuncType] = None, settings: Optional[SaveSettings] = None
+	    self, filename: AsPath, progress_func: Optional[ProgressFuncType] = None, settings: Optional[SaveSettings] = None
 	) -> bool:
 		"""
 		``create_database`` writes the current database (.bndb) out to the specified file.
@@ -644,12 +646,13 @@ class FileMetadata:
 			_settings = settings.handle
 
 		assert self.raw is not None, "BinaryView.create_database called when raw view is None"
+		filename = os.fspath(filename)
 		if progress_func is None:
-			return core.BNCreateDatabase(self.raw.handle, str(filename), _settings)
+			return core.BNCreateDatabase(self.raw.handle, filename, _settings)
 		else:
 			_progress_func = progress_func
 			return core.BNCreateDatabaseWithProgress(
-			    self.raw.handle, str(filename), None,
+			    self.raw.handle, filename, None,
 			    ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong,
 			                     ctypes.c_ulonglong)(lambda ctxt, cur, total: _progress_func(cur, total)), _settings
 			)

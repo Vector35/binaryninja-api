@@ -23,6 +23,7 @@ from typing import Optional, Union, Any
 # Binary Ninja components
 from . import _binaryninjacore as core
 from .enums import LogLevel
+import os
 import threading
 import traceback
 
@@ -342,7 +343,7 @@ def log_to_stderr(min_level: LogLevel):
 	core.BNLogToStderr(min_level)
 
 
-def log_to_file(min_level: LogLevel, path: str, append: bool=False):
+def log_to_file(min_level: LogLevel, path: Union[str, bytes, os.PathLike], append: bool=False):
 	"""
 	``log_to_file`` redirects minimum log level to a file named ``path``, optionally appending rather than overwriting.
 
@@ -351,7 +352,7 @@ def log_to_file(min_level: LogLevel, path: str, append: bool=False):
 	:param bool append: optional flag for specifying appending. True = append, False = overwrite.
 	:rtype: None
 	"""
-	core.BNLogToFile(min_level, str(path), append)
+	core.BNLogToFile(min_level, os.fspath(path), append)
 
 
 def close_logs():

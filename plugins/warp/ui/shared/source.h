@@ -8,6 +8,7 @@
 
 #include "theme.h"
 #include "warp.h"
+#include "pathhelpers.h"
 
 class WarpSourcesModel final : public QAbstractTableModel
 {
@@ -39,7 +40,8 @@ public:
 		for (const auto& src : m_container->GetSources())
 		{
 			QString guid = QString::fromStdString(src.ToString());
-			QString path = QString::fromStdString(m_container->SourcePath(src).value_or(std::string {}));
+			auto sourcePath = m_container->SourcePath(src);
+			QString path = sourcePath ? QString::fromStdString(BinaryNinja::Path::PrintablePath(*sourcePath)) : QString {};
 			bool writable = m_container->IsSourceWritable(src);
 			bool uncommitted = m_container->IsSourceUncommitted(src);
 			m_rows.push_back({guid, path, writable, uncommitted});

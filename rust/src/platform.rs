@@ -26,8 +26,9 @@ use crate::{
 };
 use binaryninjacore_sys::*;
 use std::fmt::Debug;
+use std::path::Path;
 use std::ptr::NonNull;
-use std::{borrow::Borrow, ffi, ptr};
+use std::{borrow::Borrow, ptr};
 
 /// A platform describes the target [`CoreArchitecture`] and platform-specific information such as
 /// the calling conventions and generic types (think `HRESULT` on Windows).
@@ -302,22 +303,31 @@ impl Platform {
     pub fn preprocess_source(
         &self,
         source: &str,
-        file_name: &str,
-        include_dirs: &[BnString],
+        file_name: &impl AsRef<Path>,
+        include_dirs: &[impl AsRef<Path>],
     ) -> Result<BnString, TypeParserError> {
         let source_cstr = BnString::new(source);
-        let file_name_cstr = BnString::new(file_name);
+        let file_name_display = file_name.as_ref().to_string_lossy().to_string();
+        let file_name = BnPath::new(file_name.as_ref());
+        let include_dir_paths: Vec<BnPath> = include_dirs
+            .iter()
+            .map(|include_dir| BnPath::new(include_dir.as_ref()))
+            .collect();
+        let include_dir_ptrs: Vec<*mut BNPath> = include_dir_paths
+            .iter()
+            .map(|include_dir| include_dir.as_ptr())
+            .collect();
 
         let mut result = ptr::null_mut();
         let mut error_string = ptr::null_mut();
         let success = unsafe {
             BNPreprocessSource(
                 source_cstr.as_ptr(),
-                file_name_cstr.as_ptr(),
+                file_name.as_ptr(),
                 &mut result,
                 &mut error_string,
-                include_dirs.as_ptr() as *mut *const ffi::c_char,
-                include_dirs.len(),
+                include_dir_ptrs.as_ptr() as *mut *mut BNPath,
+                include_dir_ptrs.len(),
             )
         };
 
@@ -329,7 +339,7 @@ impl Platform {
             Err(TypeParserError::new(
                 TypeParserErrorSeverity::FatalSeverity,
                 unsafe { BnString::into_string(error_string) },
-                file_name.to_string(),
+                file_name_display,
                 0,
                 0,
             ))
@@ -340,12 +350,20 @@ impl Platform {
     pub fn parse_types_from_source(
         &self,
         src: &str,
-        filename: &str,
-        include_dirs: &[BnString],
+        filename: &impl AsRef<Path>,
+        include_dirs: &[impl AsRef<Path>],
         auto_type_source: &str,
     ) -> Result<TypeParserResult, TypeParserError> {
         let source_cstr = BnString::new(src);
-        let file_name_cstr = BnString::new(filename);
+        let file_name = BnPath::new(filename.as_ref());
+        let include_dir_paths: Vec<BnPath> = include_dirs
+            .iter()
+            .map(|include_dir| BnPath::new(include_dir.as_ref()))
+            .collect();
+        let include_dir_ptrs: Vec<*mut BNPath> = include_dir_paths
+            .iter()
+            .map(|include_dir| include_dir.as_ptr())
+            .collect();
         let auto_type_source = BnString::new(auto_type_source);
 
         let mut raw_result = BNTypeParserResult::default();
@@ -354,11 +372,11 @@ impl Platform {
             BNParseTypesFromSource(
                 self.handle,
                 source_cstr.as_ptr(),
-                file_name_cstr.as_ptr(),
+                file_name.as_ptr(),
                 &mut raw_result,
                 &mut error_string,
-                include_dirs.as_ptr() as *mut *const ffi::c_char,
-                include_dirs.len(),
+                include_dir_ptrs.as_ptr() as *mut *mut BNPath,
+                include_dir_ptrs.len(),
                 auto_type_source.as_ptr(),
             )
         };
@@ -373,7 +391,7 @@ impl Platform {
             Err(TypeParserError::new(
                 TypeParserErrorSeverity::FatalSeverity,
                 unsafe { BnString::into_string(error_string) },
-                filename.to_string(),
+                filename.as_ref().to_string_lossy().to_string(),
                 0,
                 0,
             ))
@@ -383,11 +401,19 @@ impl Platform {
     // TODO: Documentation, specifically how this differs from the TypeParser impl
     pub fn parse_types_from_source_file(
         &self,
-        filename: &str,
-        include_dirs: &[BnString],
+        filename: impl AsRef<std::path::Path>,
+        include_dirs: &[impl AsRef<std::path::Path>],
         auto_type_source: &str,
     ) -> Result<TypeParserResult, TypeParserError> {
-        let file_name_cstr = BnString::new(filename);
+        let file_name = BnPath::new(filename.as_ref());
+        let include_dir_paths: Vec<BnPath> = include_dirs
+            .iter()
+            .map(|include_dir| BnPath::new(include_dir.as_ref()))
+            .collect();
+        let include_dir_ptrs: Vec<*mut BNPath> = include_dir_paths
+            .iter()
+            .map(|include_dir| include_dir.as_ptr())
+            .collect();
         let auto_type_source = BnString::new(auto_type_source);
 
         let mut raw_result = BNTypeParserResult::default();
@@ -395,11 +421,11 @@ impl Platform {
         let success = unsafe {
             BNParseTypesFromSourceFile(
                 self.handle,
-                file_name_cstr.as_ptr(),
+                file_name.as_ptr(),
                 &mut raw_result,
                 &mut error_string,
-                include_dirs.as_ptr() as *mut *const ffi::c_char,
-                include_dirs.len(),
+                include_dir_ptrs.as_ptr() as *mut *mut BNPath,
+                include_dir_ptrs.len(),
                 auto_type_source.as_ptr(),
             )
         };
@@ -414,7 +440,7 @@ impl Platform {
             Err(TypeParserError::new(
                 TypeParserErrorSeverity::FatalSeverity,
                 unsafe { BnString::into_string(error_string) },
-                filename.to_string(),
+                filename.as_ref().display().to_string(),
                 0,
                 0,
             ))

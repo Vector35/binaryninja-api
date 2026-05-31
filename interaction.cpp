@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <cstring>
 #include "binaryninjaapi.h"
+#include "pathhelpers.h"
 
 using namespace std;
 using namespace BinaryNinja;
@@ -89,7 +90,8 @@ FormInputField FormInputField::OpenFileName(const string& prompt, const string& 
 }
 
 
-FormInputField FormInputField::SaveFileName(const string& prompt, const string& ext, const string& defaultName)
+FormInputField FormInputField::SaveFileName(
+    const string& prompt, const string& ext, const std::filesystem::path& defaultName)
 {
 	FormInputField result;
 	result.type = SaveFileNameFormField;
@@ -101,7 +103,7 @@ FormInputField FormInputField::SaveFileName(const string& prompt, const string& 
 }
 
 
-FormInputField FormInputField::DirectoryName(const string& prompt, const string& defaultName)
+FormInputField FormInputField::DirectoryName(const string& prompt, const std::filesystem::path& defaultName)
 {
 	FormInputField result;
 	result.type = DirectoryNameFormField;
@@ -182,21 +184,35 @@ bool InteractionHandler::GetAddressInput(
 }
 
 
-bool InteractionHandler::GetOpenFileNameInput(string& result, const string& prompt, const string&)
+bool InteractionHandler::GetOpenFileNameInput(std::filesystem::path& result, const string& prompt, const string&)
 {
-	return GetTextLineInput(result, prompt, "Open File");
+	string value;
+	if (!GetTextLineInput(value, prompt, "Open File"))
+		return false;
+	result = Path::Utf8ToPath(value);
+	return true;
 }
 
 
-bool InteractionHandler::GetSaveFileNameInput(string& result, const string& prompt, const string&, const string&)
+bool InteractionHandler::GetSaveFileNameInput(
+    std::filesystem::path& result, const string& prompt, const string&, const std::filesystem::path&)
 {
-	return GetTextLineInput(result, prompt, "Save File");
+	string value;
+	if (!GetTextLineInput(value, prompt, "Save File"))
+		return false;
+	result = Path::Utf8ToPath(value);
+	return true;
 }
 
 
-bool InteractionHandler::GetDirectoryNameInput(string& result, const string& prompt, const string&)
+bool InteractionHandler::GetDirectoryNameInput(
+    std::filesystem::path& result, const string& prompt, const std::filesystem::path&)
 {
-	return GetTextLineInput(result, prompt, "Select Directory");
+	string value;
+	if (!GetTextLineInput(value, prompt, "Select Directory"))
+		return false;
+	result = Path::Utf8ToPath(value);
+	return true;
 }
 
 
@@ -295,36 +311,36 @@ static bool GetLargeChoiceInputCallback(
 }
 
 
-static bool GetOpenFileNameInputCallback(void* ctxt, char** result, const char* prompt, const char* ext)
+static bool GetOpenFileNameInputCallback(void* ctxt, BNPath** result, const char* prompt, const char* ext)
 {
 	InteractionHandler* handler = (InteractionHandler*)ctxt;
-	string value;
+	std::filesystem::path value;
 	if (!handler->GetOpenFileNameInput(value, prompt, ext))
 		return false;
-	*result = BNAllocString(value.c_str());
+	*result = Path::PathToCore(value);
 	return true;
 }
 
 
 static bool GetSaveFileNameInputCallback(
-    void* ctxt, char** result, const char* prompt, const char* ext, const char* defaultName)
+    void* ctxt, BNPath** result, const char* prompt, const char* ext, BNPath* defaultName)
 {
 	InteractionHandler* handler = (InteractionHandler*)ctxt;
-	string value;
-	if (!handler->GetSaveFileNameInput(value, prompt, ext, defaultName))
+	std::filesystem::path value;
+	if (!handler->GetSaveFileNameInput(value, prompt, ext, Path::PathFromCoreBorrowed(defaultName)))
 		return false;
-	*result = BNAllocString(value.c_str());
+	*result = Path::PathToCore(value);
 	return true;
 }
 
 
-static bool GetDirectoryNameInputCallback(void* ctxt, char** result, const char* prompt, const char* defaultName)
+static bool GetDirectoryNameInputCallback(void* ctxt, BNPath** result, const char* prompt, BNPath* defaultName)
 {
 	InteractionHandler* handler = (InteractionHandler*)ctxt;
-	string value;
-	if (!handler->GetDirectoryNameInput(value, prompt, defaultName))
+	std::filesystem::path value;
+	if (!handler->GetDirectoryNameInput(value, prompt, Path::PathFromCoreBorrowed(defaultName)))
 		return false;
-	*result = BNAllocString(value.c_str());
+	*result = Path::PathToCore(value);
 	return true;
 }
 
@@ -374,10 +390,12 @@ static bool GetFormInputCallback(void* ctxt, BNFormInputField* fieldBuf, size_t 
 			break;
 		case SaveFileNameFormField:
 			fields.push_back(
-			    FormInputField::SaveFileName(fieldBuf[i].prompt, fieldBuf[i].ext, fieldBuf[i].defaultName));
+			    FormInputField::SaveFileName(fieldBuf[i].prompt, fieldBuf[i].ext,
+			        Path::PathFromCoreBorrowed(fieldBuf[i].defaultName)));
 			break;
 		case DirectoryNameFormField:
-			fields.push_back(FormInputField::DirectoryName(fieldBuf[i].prompt, fieldBuf[i].defaultName));
+			fields.push_back(
+			    FormInputField::DirectoryName(fieldBuf[i].prompt, Path::PathFromCoreBorrowed(fieldBuf[i].defaultName)));
 			break;
 		case CheckboxFormField:
 			fields.push_back(FormInputField::Checkbox(fieldBuf[i].prompt, fieldBuf[i].intDefault));
@@ -396,7 +414,7 @@ static bool GetFormInputCallback(void* ctxt, BNFormInputField* fieldBuf, size_t 
 			case OpenFileNameFormField:
 			case SaveFileNameFormField:
 			case DirectoryNameFormField:
-				fields.back().stringDefault = fieldBuf[i].stringDefault;
+				fields.back().pathDefault = Path::PathFromCoreBorrowed(fieldBuf[i].pathDefault);
 				break;
 			case CheckboxFormField:
 			case IntegerFormField:
@@ -424,10 +442,12 @@ static bool GetFormInputCallback(void* ctxt, BNFormInputField* fieldBuf, size_t 
 		{
 		case TextLineFormField:
 		case MultilineTextFormField:
+			fieldBuf[i].stringResult = BNAllocString(fields[i].stringResult.c_str());
+			break;
 		case OpenFileNameFormField:
 		case SaveFileNameFormField:
 		case DirectoryNameFormField:
-			fieldBuf[i].stringResult = BNAllocString(fields[i].stringResult.c_str());
+			fieldBuf[i].pathResult = Path::PathToCore(fields[i].pathResult);
 			break;
 		case CheckboxFormField:
 		case IntegerFormField:
@@ -588,36 +608,36 @@ bool BinaryNinja::GetLargeChoiceInput(size_t& idx, const string& prompt, const s
 }
 
 
-bool BinaryNinja::GetOpenFileNameInput(string& result, const string& prompt, const string& ext)
+bool BinaryNinja::GetOpenFileNameInput(std::filesystem::path& result, const string& prompt, const string& ext)
 {
-	char* value = nullptr;
+	BNPath* value = nullptr;
 	if (!BNGetOpenFileNameInput(&value, prompt.c_str(), ext.c_str()))
 		return false;
-	result = value;
-	BNFreeString(value);
+	result = Path::PathFromCore(value);
 	return true;
 }
 
 
 bool BinaryNinja::GetSaveFileNameInput(
-    string& result, const string& prompt, const string& ext, const string& defaultName)
+    std::filesystem::path& result, const string& prompt, const string& ext, const std::filesystem::path& defaultName)
 {
-	char* value = nullptr;
-	if (!BNGetSaveFileNameInput(&value, prompt.c_str(), ext.c_str(), defaultName.c_str()))
+	BNPath* value = nullptr;
+	Path::APIObject coreDefaultName(defaultName);
+	if (!BNGetSaveFileNameInput(&value, prompt.c_str(), ext.c_str(), coreDefaultName))
 		return false;
-	result = value;
-	BNFreeString(value);
+	result = Path::PathFromCore(value);
 	return true;
 }
 
 
-bool BinaryNinja::GetDirectoryNameInput(string& result, const string& prompt, const string& defaultName)
+bool BinaryNinja::GetDirectoryNameInput(
+    std::filesystem::path& result, const string& prompt, const std::filesystem::path& defaultName)
 {
-	char* value = nullptr;
-	if (!BNGetDirectoryNameInput(&value, prompt.c_str(), defaultName.c_str()))
+	BNPath* value = nullptr;
+	Path::APIObject coreDefaultName(defaultName);
+	if (!BNGetDirectoryNameInput(&value, prompt.c_str(), coreDefaultName))
 		return false;
-	result = value;
-	BNFreeString(value);
+	result = Path::PathFromCore(value);
 	return true;
 }
 
@@ -631,7 +651,11 @@ bool BinaryNinja::GetCheckboxInput(int64_t& result, const std::string& prompt, c
 bool BinaryNinja::GetFormInput(vector<FormInputField>& fields, const string& title)
 {
 	// Construct field list in core format
-	BNFormInputField* fieldBuf = new BNFormInputField[fields.size()];
+	BNFormInputField* fieldBuf = new BNFormInputField[fields.size()]();
+	vector<Path::APIObject> defaultNamePaths;
+	vector<Path::APIObject> pathDefaults;
+	defaultNamePaths.reserve(fields.size());
+	pathDefaults.reserve(fields.size());
 	for (size_t i = 0; i < fields.size(); i++)
 	{
 		fieldBuf[i].type = fields[i].type;
@@ -653,10 +677,12 @@ bool BinaryNinja::GetFormInput(vector<FormInputField>& fields, const string& tit
 			break;
 		case SaveFileNameFormField:
 			fieldBuf[i].ext = fields[i].ext.c_str();
-			fieldBuf[i].defaultName = fields[i].defaultName.c_str();
+			defaultNamePaths.emplace_back(fields[i].defaultName);
+			fieldBuf[i].defaultName = defaultNamePaths.back();
 			break;
 		case DirectoryNameFormField:
-			fieldBuf[i].defaultName = fields[i].defaultName.c_str();
+			defaultNamePaths.emplace_back(fields[i].defaultName);
+			fieldBuf[i].defaultName = defaultNamePaths.back();
 			break;
 		default:
 			break;
@@ -668,10 +694,13 @@ bool BinaryNinja::GetFormInput(vector<FormInputField>& fields, const string& tit
 			{
 			case TextLineFormField:
 			case MultilineTextFormField:
+				fieldBuf[i].stringDefault = fields[i].stringDefault.c_str();
+				break;
 			case OpenFileNameFormField:
 			case SaveFileNameFormField:
 			case DirectoryNameFormField:
-				fieldBuf[i].stringDefault = fields[i].stringDefault.c_str();
+				pathDefaults.emplace_back(fields[i].pathDefault);
+				fieldBuf[i].pathDefault = pathDefaults.back();
 				break;
 			case CheckboxFormField:
 				fieldBuf[i].intDefault = fields[i].intDefault;
@@ -713,10 +742,12 @@ bool BinaryNinja::GetFormInput(vector<FormInputField>& fields, const string& tit
 		{
 		case TextLineFormField:
 		case MultilineTextFormField:
+			fields[i].stringResult = fieldBuf[i].stringResult;
+			break;
 		case OpenFileNameFormField:
 		case SaveFileNameFormField:
 		case DirectoryNameFormField:
-			fields[i].stringResult = fieldBuf[i].stringResult;
+			fields[i].pathResult = Path::PathFromCoreBorrowed(fieldBuf[i].pathResult);
 			break;
 		case CheckboxFormField:
 		case IntegerFormField:

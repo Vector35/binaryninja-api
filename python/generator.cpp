@@ -64,6 +64,22 @@ map<string, string> g_pythonKeywordReplacements = {
     {"yield", "yield_"},
 };
 
+static bool IsPathPointerType(Type* type)
+{
+	if (type->GetClass() != PointerTypeClass)
+		return false;
+	auto child = type->GetChildType();
+	return (child->GetClass() == NamedTypeReferenceClass) &&
+	    (child->GetNamedTypeReference()->GetName().GetString() == "BNPath");
+}
+
+
+static bool IsRawPathFunction(const string& name)
+{
+	return (name == "BNCreatePath") || (name == "BNGetPathData") || (name == "BNFreePath")
+	    || (name == "BNFreePathList");
+}
+
 
 void OutputType(FILE* out, Type* type, bool isReturnType = false, bool isCallback = false, bool isTypeHint = false)
 {
@@ -206,6 +222,11 @@ void OutputSwizzledType(FILE* out, Type* type, bool isTypeHint = false)
 		}
 		break;
 	case PointerTypeClass:
+		if (IsPathPointerType(type))
+		{
+			fprintf(out, "Optional[os.PathLike]");
+			break;
+		}
 		if (type->GetChildType()->GetClass() == VoidTypeClass)
 		{
 			fprintf(out, "Optional[ctypes.c_void_p]");
@@ -271,7 +292,7 @@ int main(int argc, char* argv[])
 	auto arch = new CoreArchitecture(BNGetNativeTypeParserArchitecture());
 
 	// Enable ephemeral settings
-	Settings::Instance()->LoadSettingsFile("");
+	Settings::Instance()->LoadSettingsFile();
 	Settings::Instance()->Set("analysis.types.parserName", "ClangTypeParser");
 	bool ok = arch->GetStandalonePlatform()->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors);
 
@@ -283,7 +304,7 @@ int main(int argc, char* argv[])
 	FILE* out = fopen(argv[2], "w");
 	FILE* enums = fopen(argv[3], "w");
 
-	fprintf(out, "import ctypes, os\n\n");
+	fprintf(out, "import ctypes, os, pathlib\n\n");
 	fprintf(out, "from typing import Optional, AnyStr\n");
 	fprintf(out, "from .enums import *");
 
@@ -324,16 +345,80 @@ int main(int argc, char* argv[])
 
 	fprintf(out, "def free_string(value:ctypes.c_char_p) -> None:\n");
 	fprintf(out, "	BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))\n\n");
+	fprintf(out, "def free_path(value) -> None:\n");
+	fprintf(out, "	BNFreePath(value)\n\n");
+	fprintf(out, "class BinaryNinjaPath(type(pathlib.Path())):\n");
+	fprintf(out, "	def __len__(self):\n");
+	fprintf(out, "		return len(os.fspath(self))\n");
+	fprintf(out, "	def __contains__(self, value):\n");
+	fprintf(out, "		return value in os.fspath(self)\n");
+	fprintf(out, "	def __getitem__(self, value):\n");
+	fprintf(out, "		return os.fspath(self)[value]\n");
+	fprintf(out, "	def __add__(self, value):\n");
+	fprintf(out, "		return os.fspath(self) + value\n");
+	fprintf(out, "	def __radd__(self, value):\n");
+	fprintf(out, "		return value + os.fspath(self)\n");
+	fprintf(out, "	def __getattr__(self, name):\n");
+	fprintf(out, "		if name.startswith('_'):\n");
+	fprintf(out, "			raise AttributeError(name)\n");
+	fprintf(out, "		return getattr(os.fspath(self), name)\n\n");
+	fprintf(out, "class BinaryNinjaEmptyPath(str):\n");
+	fprintf(out, "	def __new__(cls):\n");
+	fprintf(out, "		return super().__new__(cls, \"\")\n");
+	fprintf(out, "	def __fspath__(self):\n");
+	fprintf(out, "		return \"\"\n\n");
+	fprintf(out, "def path_to_core(value):\n");
+	fprintf(out, "	if value is None:\n");
+	fprintf(out, "		return None\n");
+	fprintf(out, "	native = os.fspath(value)\n");
+	fprintf(out, "	if core_platform == \"Windows\" or core_platform.find(\"CYGWIN_NT\") == 0:\n");
+	fprintf(out, "		if isinstance(native, bytes):\n");
+	fprintf(out, "			native = os.fsdecode(native)\n");
+	fprintf(out, "		buffer = ctypes.create_unicode_buffer(native)\n");
+	fprintf(out, "		return BNCreatePath(ctypes.cast(buffer, ctypes.c_void_p), len(buffer) - 1)\n");
+	fprintf(out, "	if isinstance(native, str):\n");
+	fprintf(out, "		native = os.fsencode(native)\n");
+	fprintf(out, "	buffer = ctypes.create_string_buffer(native)\n");
+	fprintf(out, "	return BNCreatePath(ctypes.cast(buffer, ctypes.c_void_p), len(native))\n\n");
+	fprintf(out, "class core_path:\n");
+	fprintf(out, "	def __init__(self, value):\n");
+	fprintf(out, "		self.value = path_to_core(value)\n");
+	fprintf(out, "	def __enter__(self):\n");
+	fprintf(out, "		return self.value\n");
+	fprintf(out, "	def __exit__(self, exc_type, exc_value, traceback):\n");
+	fprintf(out, "		if self.value:\n");
+	fprintf(out, "			BNFreePath(self.value)\n\n");
+	fprintf(out, "def path_to_native_path(value, free: bool = True) -> Optional[pathlib.Path]:\n");
+	fprintf(out, "	if not value:\n");
+	fprintf(out, "		return None\n");
+	fprintf(out, "	size = ctypes.c_ulonglong()\n");
+	fprintf(out, "	data = BNGetPathData(value, size)\n");
+	fprintf(out, "	try:\n");
+	fprintf(out, "		if size.value == 0:\n");
+	fprintf(out, "			return BinaryNinjaEmptyPath()\n");
+	fprintf(out, "		if not data:\n");
+	fprintf(out, "			return None\n");
+	fprintf(out, "		if core_platform == \"Windows\" or core_platform.find(\"CYGWIN_NT\") == 0:\n");
+	fprintf(out, "			return BinaryNinjaPath(ctypes.wstring_at(data, size.value))\n");
+	fprintf(out, "		return BinaryNinjaPath(os.fsdecode(ctypes.string_at(data, size.value)))\n");
+	fprintf(out, "	finally:\n");
+	fprintf(out, "		if free:\n");
+			fprintf(out, "			BNFreePath(value)\n\n");
 
 	// Create type objects
 	fprintf(out, "# Type definitions\n");
 	fprintf(out, "BNProgressFunction = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)\n");
+	fprintf(out, "class BNPath(ctypes.Structure):\n");
+	fprintf(out, "	pass\n\n\n");
+	fprintf(out, "BNPathHandle = ctypes.POINTER(BNPath)\n\n\n");
 	for (auto& i : types)
 	{
 		string name;
 		if (i.first.size() != 1)
 			continue;
 		name = i.first[0];
+		if (name == "BNPath")
+			continue;
 		if (i.second->GetClass() == StructureTypeClass)
 		{
 			fprintf(out, "class %s(ctypes.Structure):\n", name.c_str());
@@ -496,15 +581,18 @@ int main(int argc, char* argv[])
 		                    && i.second->GetChildType()->GetChildType()->GetClass() == IntegerTypeClass
 		                    && i.second->GetChildType()->GetChildType()->GetWidth() == 1
 		                    && i.second->GetChildType()->GetChildType()->IsSigned();
+		bool rawPathFunction = IsRawPathFunction(name);
+		bool rawPathResult = rawPathFunction && IsPathPointerType(i.second->GetChildType().GetValue());
+		bool pathResult = !rawPathResult && IsPathPointerType(i.second->GetChildType().GetValue());
 		// Pointer returns will be automatically wrapped to return None on null pointer
-		bool pointerResult = (i.second->GetChildType()->GetClass() == PointerTypeClass);
+		bool pointerResult = (i.second->GetChildType()->GetClass() == PointerTypeClass) && !pathResult;
 		// Enum returns will automatically cast to the enum type
 		bool enumResult = (i.second->GetChildType()->GetClass() == NamedTypeReferenceClass
 		                   && i.second->GetChildType()->GetNamedTypeReference()->GetTypeReferenceClass() == EnumNamedTypeClass);
 
-		// From python -> C python3 requires str -> str.encode('charmap')
+		// From python -> C python3 requires str -> bytes. Use UTF-8 to match the C API string convention.
 		bool swizzleArgs = true;
-		if (name == "BNFreeString")
+		if ((name == "BNFreeString") || rawPathFunction)
 			swizzleArgs = false;
 
 		bool callbackConvention = false;
@@ -531,10 +619,10 @@ int main(int argc, char* argv[])
 			for (auto& j : i.second->GetParameters())
 			{
 				fprintf(out, "\t\t");
-				if (name == "BNFreeString")
+				if ((name == "BNFreeString") || rawPathFunction)
 				{
-					// BNFreeString expects a pointer to a string allocated by the core, so do not use
-					// a c_char_p here, as that would be allocated by the Python runtime.  This can
+					// Free functions expect pointers allocated by the core, so do not use a c_char_p
+					// here, as that would be allocated by the Python runtime. This can
 					// be enforced by outputting like a return value.
 					OutputType(out, j.type.GetValue(), true);
 				}
@@ -593,13 +681,19 @@ int main(int argc, char* argv[])
 			}
 		}
 		fprintf(out, "\n\t\t) -> ");
-		if (stringResult || pointerResult)
+		if (stringResult || pointerResult || pathResult)
 			fprintf(out, "Optional['");
-		OutputSwizzledType(out, i.second->GetChildType().GetValue(), true);
-		if (stringResult || pointerResult)
+		if (pathResult)
+			fprintf(out, "pathlib.Path");
+		else if (rawPathResult)
+			OutputType(out, i.second->GetChildType().GetValue(), false, false, true);
+		else
+			OutputSwizzledType(out, i.second->GetChildType().GetValue(), true);
+		if (stringResult || pointerResult || pathResult)
 			fprintf(out, "']");
 		fprintf(out, ":\n");
 
+		vector<pair<size_t, string>> pathArgs;
 		string stringArgFuncCall = funcName + "(";
 		size_t argN = 0;
 		for (auto& arg : i.second->GetParameters())
@@ -611,7 +705,13 @@ int main(int argc, char* argv[])
 			if (argName.empty())
 				argName = "arg" + to_string(argN);
 
-			if (swizzleArgs && (arg.type->GetClass() == PointerTypeClass)
+			if (swizzleArgs && IsPathPointerType(arg.type.GetValue()))
+			{
+				string pathArgName = "_path_arg" + to_string(argN);
+				pathArgs.emplace_back(argN, argName);
+				stringArgFuncCall += pathArgName + ", ";
+			}
+			else if (swizzleArgs && (arg.type->GetClass() == PointerTypeClass)
 			    && (arg.type->GetChildType()->GetClass() == IntegerTypeClass)
 			    && (arg.type->GetChildType()->GetWidth() == 1) && (arg.type->GetChildType()->IsSigned()))
 			{
@@ -627,37 +727,55 @@ int main(int argc, char* argv[])
 			stringArgFuncCall = stringArgFuncCall.substr(0, stringArgFuncCall.size() - 2);
 		stringArgFuncCall += ")";
 
+		string indent = "\t";
+		if (!pathArgs.empty())
+		{
+			fprintf(out, "\twith ");
+			for (size_t pathArgIndex = 0; pathArgIndex < pathArgs.size(); pathArgIndex++)
+			{
+				if (pathArgIndex > 0)
+					fprintf(out, ", ");
+				fprintf(out, "core_path(%s) as _path_arg%zu", pathArgs[pathArgIndex].second.c_str(), pathArgs[pathArgIndex].first);
+			}
+			fprintf(out, ":\n");
+			indent = "\t\t";
+		}
+
 		if (stringResult)
 		{
 			// Emit wrapper to get Python string and free native memory
-			fprintf(out, "\tresult = ");
+			fprintf(out, "%sresult = ", indent.c_str());
 			fprintf(out, "%s\n", stringArgFuncCall.c_str());
-			fprintf(out, "\tcasted = ctypes.cast(result, ctypes.c_char_p).value\n");
-			fprintf(out, "\tif casted is None:\n");
-			fprintf(out, "\t\treturn None\n");
-			fprintf(out, "\tstring = str(pyNativeStr(casted))\n");
-			fprintf(out, "\tBNFreeString(result)\n");
-			fprintf(out, "\treturn string\n");
+			fprintf(out, "%scasted = ctypes.cast(result, ctypes.c_char_p).value\n", indent.c_str());
+			fprintf(out, "%sif casted is None:\n", indent.c_str());
+			fprintf(out, "%s\treturn None\n", indent.c_str());
+			fprintf(out, "%sstring = str(pyNativeStr(casted))\n", indent.c_str());
+			fprintf(out, "%sBNFreeString(result)\n", indent.c_str());
+			fprintf(out, "%sreturn string\n", indent.c_str());
+		}
+		else if (pathResult)
+		{
+			fprintf(out, "%sreturn path_to_native_path(%s)\n", indent.c_str(), stringArgFuncCall.c_str());
 		}
 		else if (pointerResult)
 		{
 			// Emit wrapper to return None on null pointer
-			fprintf(out, "\tresult = ");
+			fprintf(out, "%sresult = ", indent.c_str());
 			fprintf(out, "%s\n", stringArgFuncCall.c_str());
-			fprintf(out, "\tif not result:\n");
-			fprintf(out, "\t\treturn None\n");
-			fprintf(out, "\treturn result\n");
+			fprintf(out, "%sif not result:\n", indent.c_str());
+			fprintf(out, "%s\treturn None\n", indent.c_str());
+			fprintf(out, "%sreturn result\n", indent.c_str());
 		}
 		else if (enumResult)
 		{
 			// Emit wrapper to cast result to enum type
-			fprintf(out, "\treturn ");
+			fprintf(out, "%sreturn ", indent.c_str());
 			OutputSwizzledType(out, i.second->GetChildType().GetValue());
 			fprintf(out, "(%s)", stringArgFuncCall.c_str());
 		}
 		else
 		{
-			fprintf(out, "\treturn ");
+			fprintf(out, "%sreturn ", indent.c_str());
 			fprintf(out, "%s\n", stringArgFuncCall.c_str());
 		}
 		fprintf(out, "\n\n");

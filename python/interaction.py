@@ -19,6 +19,7 @@
 # IN THE SOFTWARE.
 
 import ctypes
+import pathlib
 import traceback
 import webbrowser
 from typing import Optional, Callable, List
@@ -30,6 +31,21 @@ from . import binaryview
 from .log import log_error_for_exception
 from . import flowgraph
 from . import mainthread
+
+
+def _track_core_path(obj, value):
+	path = core.path_to_core(value)
+	if not hasattr(obj, "_core_paths"):
+		obj._core_paths = []
+	obj._core_paths.append(path)
+	return path
+
+
+def _free_tracked_core_paths(obj):
+	for path in getattr(obj, "_core_paths", []):
+		if path:
+			core.BNFreePath(path)
+	obj._core_paths = []
 
 
 class LabelField:
@@ -282,7 +298,7 @@ class ChoiceField:
 		value.prompt = self._prompt
 		choice_buf = (ctypes.c_char_p * len(self._choices))()
 		for i in range(0, len(self._choices)):
-			choice_buf[i] = self._choices[i].encode('charmap')
+			choice_buf[i] = core.cstr(self._choices[i])
 		value.choices = choice_buf
 		value.count = len(self._choices)
 		value.hasDefault = self._default is not None
@@ -330,9 +346,9 @@ class ChoiceField:
 
 class OpenFileNameField:
 	"""
-	``OpenFileNameField`` prompts the user to specify a file name to open. Result is stored in self.result as a string.
+	``OpenFileNameField`` prompts the user to specify a file name to open. Result is stored in self.result as a path.
 	"""
-	def __init__(self, prompt: str, ext: str = "", default: Optional[str] = None):
+	def __init__(self, prompt: str, ext: str = "", default = None):
 		self._prompt = prompt
 		self._ext = ext
 		self._default = default
@@ -344,13 +360,16 @@ class OpenFileNameField:
 		value.ext = self._ext
 		value.hasDefault = self._default is not None
 		if self._default is not None:
-			value.stringDefault = self._default
+			value.pathDefault = _track_core_path(self, self._default)
 
 	def _fill_core_result(self, value):
-		value.stringResult = core.BNAllocString(str(self.result))
+		value.pathResult = core.path_to_core(self.result)
 
 	def _get_result(self, value):
-		self._result = value.stringResult
+		self._result = core.path_to_native_path(value.pathResult, free=False)
+
+	def _free_core_struct(self):
+		_free_tracked_core_paths(self)
 
 	@property
 	def prompt(self):
@@ -379,29 +398,32 @@ class OpenFileNameField:
 
 class SaveFileNameField:
 	"""
-	``SaveFileNameField`` prompts the user to specify a file name to save. Result is stored in self.result as a string.
+	``SaveFileNameField`` prompts the user to specify a file name to save. Result is stored in self.result as a path.
 	"""
-	def __init__(self, prompt: str, ext: str = "", default_name: str = "", default: Optional[str] = None):
+	def __init__(self, prompt: str, ext: str = "", default_name = "", default = None):
 		self._prompt = prompt
 		self._ext = ext
 		self._default_name = default_name
 		self._default = default
-		self._result: Optional[str] = None
+		self._result = None
 
 	def _fill_core_struct(self, value):
 		value.type = FormInputFieldType.SaveFileNameFormField
 		value.prompt = self._prompt
 		value.ext = self._ext
-		value.defaultName = self._default_name
+		value.defaultName = _track_core_path(self, self._default_name)
 		value.hasDefault = self._default is not None
 		if self._default is not None:
-			value.stringDefault = self._default
+			value.pathDefault = _track_core_path(self, self._default)
 
 	def _fill_core_result(self, value):
-		value.stringResult = core.BNAllocString(str(self._result))
+		value.pathResult = core.path_to_core(self._result)
 
 	def _get_result(self, value):
-		self._result = value.stringResult
+		self._result = core.path_to_native_path(value.pathResult, free=False)
+
+	def _free_core_struct(self):
+		_free_tracked_core_paths(self)
 
 	@property
 	def prompt(self):
@@ -432,16 +454,16 @@ class SaveFileNameField:
 		return self._result
 
 	@result.setter
-	def result(self, value: Optional[str]):
+	def result(self, value):
 		self._result = value
 
 
 class DirectoryNameField:
 	"""
 	``DirectoryNameField`` prompts the user to specify a directory name to open. Result is stored in self.result as
-	a string.
+	a path.
 	"""
-	def __init__(self, prompt: str, default_name: str = "", default: Optional[str] = None):
+	def __init__(self, prompt: str, default_name = "", default = None):
 		self._prompt = prompt
 		self._default_name = default_name
 		self._default = default
@@ -450,16 +472,19 @@ class DirectoryNameField:
 	def _fill_core_struct(self, value):
 		value.type = FormInputFieldType.DirectoryNameFormField
 		value.prompt = self._prompt
-		value.defaultName = self._default_name
+		value.defaultName = _track_core_path(self, self._default_name)
 		value.hasDefault = self._default is not None
 		if self._default is not None:
-			value.stringDefault = self._default
+			value.pathDefault = _track_core_path(self, self._default)
 
 	def _fill_core_result(self, value):
-		value.stringResult = core.BNAllocString(str(self._result))
+		value.pathResult = core.path_to_core(self._result)
 
 	def _get_result(self, value):
-		self._result = value.stringResult
+		self._result = core.path_to_native_path(value.pathResult, free=False)
+
+	def _free_core_struct(self):
+		_free_tracked_core_paths(self)
 
 	@property
 	def prompt(self):
@@ -676,27 +701,27 @@ class InteractionHandler:
 			value = self.get_open_filename_input(prompt, ext)
 			if value is None:
 				return False
-			result[0] = core.BNAllocString(str(value))
+			result[0] = core.path_to_core(value)
 			return True
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in InteractionHandler._get_open_filename_input")
 
 	def _get_save_filename_input(self, ctxt, result, prompt, ext, default_name):
 		try:
-			value = self.get_save_filename_input(prompt, ext, default_name)
+			value = self.get_save_filename_input(prompt, ext, core.path_to_native_path(default_name, free=False))
 			if value is None:
 				return False
-			result[0] = core.BNAllocString(str(value))
+			result[0] = core.path_to_core(value)
 			return True
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in InteractionHandler._get_save_filename_input")
 
 	def _get_directory_name_input(self, ctxt, result, prompt, default_name):
 		try:
-			value = self.get_directory_name_input(prompt, default_name)
+			value = self.get_directory_name_input(prompt, core.path_to_native_path(default_name, free=False))
 			if value is None:
 				return False
-			result[0] = core.BNAllocString(str(value))
+			result[0] = core.path_to_core(value)
 			return True
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in InteractionHandler._get_directory_name_input")
@@ -758,21 +783,21 @@ class InteractionHandler:
 					field_objs.append(
 					    OpenFileNameField(
 					        fields[i].prompt, fields[i].ext,
-					        default=fields[i].stringDefault if fields[i].hasDefault else None
+					        default=core.path_to_native_path(fields[i].pathDefault, free=False) if fields[i].hasDefault else None
 					    )
 					)
 				elif fields[i].type == FormInputFieldType.SaveFileNameFormField:
 					field_objs.append(
 					    SaveFileNameField(
-					        fields[i].prompt, fields[i].ext, fields[i].defaultName,
-					        default=fields[i].stringDefault if fields[i].hasDefault else None
+					        fields[i].prompt, fields[i].ext, core.path_to_native_path(fields[i].defaultName, free=False),
+					        default=core.path_to_native_path(fields[i].pathDefault, free=False) if fields[i].hasDefault else None
 					    )
 					)
 				elif fields[i].type == FormInputFieldType.DirectoryNameFormField:
 					field_objs.append(
 					    DirectoryNameField(
-					        fields[i].prompt, fields[i].defaultName,
-					        default=fields[i].stringDefault if fields[i].hasDefault else None
+					        fields[i].prompt, core.path_to_native_path(fields[i].defaultName, free=False),
+					        default=core.path_to_native_path(fields[i].pathDefault, free=False) if fields[i].hasDefault else None
 					    )
 					)
 				elif fields[i].type == FormInputFieldType.CheckboxFormField:
@@ -1308,7 +1333,7 @@ def get_choice_input(prompt, title, choices):
 	"""
 	choice_buf = (ctypes.c_char_p * len(choices))()
 	for i in range(0, len(choices)):
-		choice_buf[i] = str(choices[i]).encode('charmap')
+		choice_buf[i] = core.cstr(str(choices[i]))
 	value = ctypes.c_ulonglong()
 	if not core.BNGetChoiceInput(value, prompt, title, choice_buf, len(choices)):
 		return None
@@ -1332,14 +1357,14 @@ def get_large_choice_input(prompt, title, choices):
 	"""
 	choice_buf = (ctypes.c_char_p * len(choices))()
 	for i in range(0, len(choices)):
-		choice_buf[i] = str(choices[i]).encode('charmap')
+		choice_buf[i] = core.cstr(str(choices[i]))
 	value = ctypes.c_ulonglong()
 	if not core.BNGetLargeChoiceInput(value, prompt, title, choice_buf, len(choices)):
 		return None
 	return value.value
 
 
-def get_open_filename_input(prompt: str, ext: str = "") -> Optional[str]:
+def get_open_filename_input(prompt: str, ext: str = "") -> Optional[pathlib.Path]:
 	"""
 	``get_open_filename_input`` prompts the user for a file name to open
 
@@ -1352,6 +1377,7 @@ def get_open_filename_input(prompt: str, ext: str = "") -> Optional[str]:
 
 	:param str prompt: Prompt to display.
 	:param str ext: Optional, file extension
+	:rtype: pathlib.Path or None
 	:Example:
 		>>> get_open_filename_input("filename:", "*.py")
 		'test.py'
@@ -1364,26 +1390,24 @@ def get_open_filename_input(prompt: str, ext: str = "") -> Optional[str]:
 		>>> get_open_filename_input("filename:", "Executables (*.exe *.com);;Python Files (*.py);;All Files (*)")
 		'foo.exe'
 	"""
-	value = ctypes.c_char_p()
-	if not core.BNGetOpenFileNameInput(value, prompt, ext):
+	value = core.BNPathHandle()
+	if not core.BNGetOpenFileNameInput(ctypes.byref(value), prompt, ext):
 		return None
-	result = value.value
-	assert result is not None
-	core.free_string(value)
-	return result.decode("utf-8")
+	return core.path_to_native_path(value)
 
 
-def get_save_filename_input(prompt: str, ext: str = "", default_name: str = "") -> Optional[str]:
+def get_save_filename_input(prompt: str, ext: str = "", default_name: str = ""):
 	"""
 	``get_save_filename_input`` prompts the user for a file name to save as, optionally providing a file extension and \
-	default_name
+	default_name.
 
 	.. note:: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line \
 	a simple text prompt is used. The UI uses the native window pop-up for file selection.
 
 	:param str prompt: Prompt to display.
 	:param str ext: Optional, file extension
-	:param str default_name: Optional, default file name.
+	:param default_name: Optional, path-like default file name.
+	:rtype: pathlib.Path or None
 	:Example:
 		>>> get_save_filename_input("filename:", "*.py", "test.py")
 		filename: test.py
@@ -1401,36 +1425,30 @@ def get_save_filename_input(prompt: str, ext: str = "", default_name: str = "") 
 		filename: foo.exe
 		'foo.exe'
 	"""
-	value = ctypes.c_char_p()
-	if not core.BNGetSaveFileNameInput(value, prompt, ext, default_name):
+	value = core.BNPathHandle()
+	if not core.BNGetSaveFileNameInput(ctypes.byref(value), prompt, ext, default_name):
 		return None
-	result = value.value
-	assert result is not None
-	core.free_string(value)
-	return result.decode("utf-8")
+	return core.path_to_native_path(value)
 
 
-def get_directory_name_input(prompt: str, default_name: str = ""):
+def get_directory_name_input(prompt: str, default_name: str = "") -> Optional[pathlib.Path]:
 	"""
 	``get_directory_name_input`` prompts the user for a directory name to save as, optionally providing a default_name
 
 	.. note:: This API function differently on the command-line vs the UI. In the UI a pop-up is used. On the command-line a simple text prompt is used. The UI uses the native window pop-up for file selection.
 
 	:param str prompt: Prompt to display.
-	:param str default_name: Optional, default directory name.
-	:rtype: str
+	:param default_name: Optional, path-like default directory name.
+	:rtype: pathlib.Path or None
 	:Example:
 		>>> get_directory_name_input("prompt")
 		prompt dirname
 		'dirname'
 	"""
-	value = ctypes.c_char_p()
-	if not core.BNGetDirectoryNameInput(value, prompt, default_name):
+	value = core.BNPathHandle()
+	if not core.BNGetDirectoryNameInput(ctypes.byref(value), prompt, default_name):
 		return None
-	result = value.value
-	assert result is not None
-	core.free_string(value)
-	return result.decode("utf-8")
+	return core.path_to_native_path(value)
 
 def get_checkbox_input(prompt: str, title: str, default: bool = False):
 	"""
@@ -1507,13 +1525,20 @@ def get_form_input(fields, title):
 			SeparatorField()._fill_core_struct(value[i])
 		else:
 			fields[i]._fill_core_struct(value[i])
-	if not core.BNGetFormInput(value, len(fields), title):
-		return False
-	for i in range(0, len(fields)):
-		if not (isinstance(fields[i], str) or (fields[i] is None)):
-			fields[i]._get_result(value[i])
-	core.BNFreeFormInputResults(value, len(fields))
-	return True
+	try:
+		if not core.BNGetFormInput(value, len(fields), title):
+			return False
+		try:
+			for i in range(0, len(fields)):
+				if not (isinstance(fields[i], str) or (fields[i] is None)):
+					fields[i]._get_result(value[i])
+		finally:
+			core.BNFreeFormInputResults(value, len(fields))
+		return True
+	finally:
+		for field in fields:
+			if not (isinstance(field, str) or (field is None)) and hasattr(field, "_free_core_struct"):
+				field._free_core_struct()
 
 
 def show_message_box(title, text, buttons=MessageBoxButtonSet.OKButtonSet, icon=MessageBoxIcon.InformationIcon):

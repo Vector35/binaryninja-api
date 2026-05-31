@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <system_error>
 #include "SharedCacheBuilder.h"
 
 using namespace BinaryNinja;
@@ -7,7 +8,7 @@ SharedCacheBuilder::SharedCacheBuilder(Ref<BinaryView> view)
 {
 	m_view = std::move(view);
 	m_logger = new Logger("SharedCache.Builder", m_view->GetFile()->GetSessionId());
-	m_primaryFileName = BaseFileName(m_view->GetFile()->GetOriginalFilename());
+	m_primaryFileName = PrintablePath(m_view->GetFile()->GetOriginalFilename().filename());
 	m_cache = SharedCache(m_view->GetAddressSize());
 	m_processedFiles = {};
 }
@@ -20,7 +21,7 @@ SharedCache SharedCacheBuilder::Finalize()
 }
 
 bool SharedCacheBuilder::AddFile(
-	const std::string& filePath, const std::string& fileName, const CacheEntryType cacheType)
+	const std::filesystem::path& filePath, const std::string& fileName, const CacheEntryType cacheType)
 {
 	// Skip already processed files.
 	if (auto [_, inserted] = m_processedFiles.insert(filePath); !inserted)
@@ -48,22 +49,23 @@ bool SharedCacheBuilder::AddFile(
 	catch (const std::exception& e)
 	{
 		// Just return false so the view init can continue.
-		m_logger->LogErrorForExceptionF(e, "Failed to add file '{}': {}", fileName, e.what());
+		m_logger->LogErrorForExceptionF(e, "Failed to add file '{}': {}", filePath, e.what());
 		return false;
 	}
 
 	return true;
 }
 
-size_t SharedCacheBuilder::AddDirectory(const std::string& directoryPath)
+size_t SharedCacheBuilder::AddDirectory(const std::filesystem::path& directoryPath)
 {
 	// Filters then attempts to process a single directory entry as a shared cache file.
 	auto processDirEntry = [&](const std::filesystem::directory_entry& entry) {
-		const auto currentFilePath = entry.path().string();
-		const auto currentFileName = BaseFileName(currentFilePath);
+		const auto currentFilePath = entry.path();
+		const auto currentFileName = PrintablePath(currentFilePath.filename());
 
 		// Skip non-files.
-		if (!entry.is_regular_file())
+		std::error_code ec;
+		if (!entry.is_regular_file(ec) || ec)
 			return false;
 
 		// Ok, we are now _sure_ that this file _might_ be a part of the cache, lets try and process it!
@@ -73,8 +75,9 @@ size_t SharedCacheBuilder::AddDirectory(const std::string& directoryPath)
 	// TODO: This is ugly.
 	size_t added = 0;
 	// Locate all possible related entry files and add them to the cache.
-	for (const auto& entry : std::filesystem::directory_iterator(directoryPath))
-		if (processDirEntry(entry))
+	std::error_code ec;
+	for (std::filesystem::directory_iterator entry(directoryPath, ec), end; !ec && entry != end; entry.increment(ec))
+		if (processDirEntry(*entry))
 			added++;
 	return added;
 }

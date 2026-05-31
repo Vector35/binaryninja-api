@@ -20,6 +20,7 @@
 #include <cstring>
 #include "binaryninjaapi.h"
 #include "binaryninjacore.h"
+#include "pathhelpers.h"
 
 using namespace BinaryNinja;
 
@@ -216,18 +217,20 @@ Project::Project(BNProject* project)
 }
 
 
-Ref<Project> Project::CreateProject(const std::string& path, const std::string& name)
+Ref<Project> Project::CreateProject(const std::filesystem::path& path, const std::string& name)
 {
-	BNProject* bnproj = BNCreateProject(path.c_str(), name.c_str());
+	Path::APIObject corePath(path);
+	BNProject* bnproj = BNCreateProject(corePath, name.c_str());
 	if (!bnproj)
 		return nullptr;
 	return new Project(bnproj);
 }
 
 
-Ref<Project> Project::OpenProject(const std::string& path)
+Ref<Project> Project::OpenProject(const std::filesystem::path& path)
 {
-	BNProject* bnproj = BNOpenProject(path.c_str());
+	Path::APIObject corePath(path);
+	BNProject* bnproj = BNOpenProject(corePath);
 	if (!bnproj)
 		return nullptr;
 	return new Project(bnproj);
@@ -277,12 +280,9 @@ bool Project::IsOpen() const
 }
 
 
-std::string Project::GetPath() const
+std::filesystem::path Project::GetPath() const
 {
-	char* path = BNProjectGetPath(m_object);
-	std::string result = path;
-	BNFreeString(path);
-	return result;
+	return Path::PathFromCore(BNProjectGetPath(m_object));
 }
 
 std::string Project::GetFilePathInProject(const Ref<ProjectFile>& file) const
@@ -346,12 +346,13 @@ bool Project::RemoveMetadata(const std::string& key)
 }
 
 
-Ref<ProjectFolder> Project::CreateFolderFromPath(const std::string& path, Ref<ProjectFolder> parent, const std::string& description,
+Ref<ProjectFolder> Project::CreateFolderFromPath(const std::filesystem::path& path, Ref<ProjectFolder> parent, const std::string& description,
 	const ProgressFunction& progressCallback)
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;
-	BNProjectFolder* folder = BNProjectCreateFolderFromPath(m_object, path.c_str(), parent ? parent->m_object : nullptr, description.c_str(), &cb, ProgressCallback);
+	Path::APIObject corePath(path);
+	BNProjectFolder* folder = BNProjectCreateFolderFromPath(m_object, corePath, parent ? parent->m_object : nullptr, description.c_str(), &cb, ProgressCallback);
 	if (folder == nullptr)
 		return nullptr;
 	return new ProjectFolder(folder);
@@ -416,22 +417,24 @@ bool Project::DeleteFolder(Ref<ProjectFolder> folder, const ProgressFunction& pr
 }
 
 
-Ref<ProjectFile> Project::CreateFileFromPath(const std::string& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const ProgressFunction& progressCallback)
+Ref<ProjectFile> Project::CreateFileFromPath(const std::filesystem::path& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const ProgressFunction& progressCallback)
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;
-	BNProjectFile* file = BNProjectCreateFileFromPath(m_object, path.c_str(), folder ? folder->m_object : nullptr, name.c_str(), description.c_str(), &cb, ProgressCallback);
+	Path::APIObject corePath(path);
+	BNProjectFile* file = BNProjectCreateFileFromPath(m_object, corePath, folder ? folder->m_object : nullptr, name.c_str(), description.c_str(), &cb, ProgressCallback);
 	if (file == nullptr)
 		return nullptr;
 	return new ProjectFile(file);
 }
 
 
-Ref<ProjectFile> Project::CreateFileFromPathUnsafe(const std::string& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::string& id, int64_t creationTimestamp, const ProgressFunction& progressCallback)
+Ref<ProjectFile> Project::CreateFileFromPathUnsafe(const std::filesystem::path& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::string& id, int64_t creationTimestamp, const ProgressFunction& progressCallback)
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;
-	BNProjectFile* file = BNProjectCreateFileFromPathUnsafe(m_object, path.c_str(), folder ? folder->m_object : nullptr, name.c_str(), description.c_str(), id.c_str(), creationTimestamp, &cb, ProgressCallback);
+	Path::APIObject corePath(path);
+	BNProjectFile* file = BNProjectCreateFileFromPathUnsafe(m_object, corePath, folder ? folder->m_object : nullptr, name.c_str(), description.c_str(), id.c_str(), creationTimestamp, &cb, ProgressCallback);
 	if (file == nullptr)
 		return nullptr;
 	return new ProjectFile(file);
@@ -486,9 +489,10 @@ Ref<ProjectFile> Project::GetFileById(const std::string& id) const
 }
 
 
-Ref<ProjectFile> Project::GetFileByPathOnDisk(const std::string& path) const
+Ref<ProjectFile> Project::GetFileByPathOnDisk(const std::filesystem::path& path) const
 {
-	BNProjectFile* file = BNProjectGetFileByPathOnDisk(m_object, path.c_str());
+	Path::APIObject corePath(path);
+	BNProjectFile* file = BNProjectGetFileByPathOnDisk(m_object, corePath);
 	if (file == nullptr)
 		return nullptr;
 	return new ProjectFile(file);
@@ -591,12 +595,9 @@ Ref<Project> ProjectFile::GetProject() const
 }
 
 
-std::string ProjectFile::GetPathOnDisk() const
+std::filesystem::path ProjectFile::GetPathOnDisk() const
 {
-	char* path = BNProjectFileGetPathOnDisk(m_object);
-	std::string result = path;
-	BNFreeString(path);
-	return result;
+	return Path::PathFromCore(BNProjectFileGetPathOnDisk(m_object));
 }
 
 std::string ProjectFile::GetPathInProject() const
@@ -668,9 +669,10 @@ bool ProjectFile::SetFolder(Ref<ProjectFolder> folder)
 }
 
 
-bool ProjectFile::Export(const std::string& destination) const
+bool ProjectFile::Export(const std::filesystem::path& destination) const
 {
-	return BNProjectFileExport(m_object, destination.c_str());
+	Path::APIObject coreDestination(destination);
+	return BNProjectFileExport(m_object, coreDestination);
 }
 
 
@@ -788,11 +790,12 @@ bool ProjectFolder::SetParent(Ref<ProjectFolder> parent)
 }
 
 
-bool ProjectFolder::Export(const std::string& destination, const ProgressFunction& progressCallback) const
+bool ProjectFolder::Export(const std::filesystem::path& destination, const ProgressFunction& progressCallback) const
 {
 	ProgressContext cb;
 	cb.callback = progressCallback;
-	return BNProjectFolderExport(m_object, destination.c_str(), &cb, ProgressCallback);
+	Path::APIObject coreDestination(destination);
+	return BNProjectFolderExport(m_object, coreDestination, &cb, ProgressCallback);
 }
 
 

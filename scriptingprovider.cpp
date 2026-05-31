@@ -1,4 +1,5 @@
 #include "binaryninjaapi.h"
+#include "pathhelpers.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -99,10 +100,10 @@ BNScriptingProviderExecuteResult ScriptingInstance::ExecuteScriptInputCallback(v
 }
 
 
-BNScriptingProviderExecuteResult ScriptingInstance::ExecuteScriptFromFilenameCallback(void* ctxt, const char* filename)
+BNScriptingProviderExecuteResult ScriptingInstance::ExecuteScriptFromFilenameCallback(void* ctxt, BNPath* filename)
 {
 	CallbackRef<ScriptingInstance> instance(ctxt);
-	return instance->ExecuteScriptInputFromFilename(filename);
+	return instance->ExecuteScriptInputFromFilename(BinaryNinja::Path::PathFromCoreBorrowed(filename));
 }
 
 
@@ -310,9 +311,10 @@ BNScriptingProviderExecuteResult CoreScriptingInstance::ExecuteScriptInput(const
 	return BNExecuteScriptInput(m_object, input.c_str());
 }
 
-BNScriptingProviderExecuteResult CoreScriptingInstance::ExecuteScriptInputFromFilename(const string& filename)
+BNScriptingProviderExecuteResult CoreScriptingInstance::ExecuteScriptInputFromFilename(const filesystem::path& filename)
 {
-	return BNExecuteScriptInputFromFilename(m_object, filename.c_str());
+	BinaryNinja::Path::APIObject coreFilename(filename);
+	return BNExecuteScriptInputFromFilename(m_object, coreFilename);
 }
 
 void CoreScriptingInstance::CancelScriptInput()
@@ -409,10 +411,11 @@ BNScriptingInstance* ScriptingProvider::CreateInstanceCallback(void* ctxt)
 }
 
 
-bool ScriptingProvider::LoadModuleCallback(void* ctxt, const char* repository, const char* module, bool force)
+bool ScriptingProvider::LoadModuleCallback(void* ctxt, BNPath* repository, BNPath* module, bool force)
 {
 	ScriptingProvider* provider = (ScriptingProvider*)ctxt;
-	return BNLoadScriptingProviderModule(provider->GetObject(), repository, module, force);
+	return provider->LoadModule(
+	    BinaryNinja::Path::PathFromCoreBorrowed(repository), BinaryNinja::Path::PathFromCoreBorrowed(module), force);
 }
 
 
@@ -496,9 +499,11 @@ Ref<ScriptingInstance> CoreScriptingProvider::CreateNewInstance()
 }
 
 
-bool CoreScriptingProvider::LoadModule(const std::string& repository, const std::string& module, bool force)
+bool CoreScriptingProvider::LoadModule(const filesystem::path& repository, const filesystem::path& module, bool force)
 {
-	return BNLoadScriptingProviderModule(m_object, repository.c_str(), module.c_str(), force);
+	BinaryNinja::Path::APIObject coreRepository(repository);
+	BinaryNinja::Path::APIObject coreModule(module);
+	return BNLoadScriptingProviderModule(m_object, coreRepository, coreModule, force);
 }
 
 

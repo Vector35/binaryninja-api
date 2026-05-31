@@ -1,5 +1,6 @@
 import ctypes
 import dataclasses
+import os
 import uuid
 from typing import List, Optional, Union
 
@@ -406,7 +407,7 @@ class WarpContainer(metaclass=_WarpContainerMetaclass):
         warpcore.BNWARPFreeUUIDList(sources, count.value)
         return result
 
-    def add_source(self, source_path: str) -> Optional[Source]:
+    def add_source(self, source_path: Union[str, bytes, os.PathLike]) -> Optional[Source]:
         source = warpcore.BNWARPUUID()
         if not warpcore.BNWARPContainerAddSource(self.handle, source_path, source):
             return None
@@ -421,7 +422,7 @@ class WarpContainer(metaclass=_WarpContainerMetaclass):
     def is_source_writable(self, source: Source) -> bool:
         return warpcore.BNWARPContainerIsSourceWritable(self.handle, source.uuid)
 
-    def get_source_path(self, source: Source) -> Optional[str]:
+    def get_source_path(self, source: Source) -> Optional[os.PathLike]:
         return warpcore.BNWARPContainerGetSourcePath(self.handle, source.uuid)
 
     def add_functions(self, target: WarpTarget, source: Source, functions: List[Function]) -> bool:
@@ -565,8 +566,8 @@ class WarpChunk:
         return result
 
 class WarpFile:
-    def __init__(self, handle: Union[warpcore.BNWARPFileHandle, str]):
-        if isinstance(handle, str):
+    def __init__(self, handle: Union[warpcore.BNWARPFileHandle, str, bytes, os.PathLike]):
+        if isinstance(handle, (str, bytes, os.PathLike)):
             self.handle = warpcore.BNWARPNewFileFromPath(handle)
         else:
             self.handle = handle
@@ -599,21 +600,28 @@ class WarpProcessorState:
     cancelled: bool = False
     unprocessed_file_count: int = 0
     processed_file_count: int = 0
-    analyzing_files: List[str] = dataclasses.field(default_factory=list)
-    processing_files: List[str] = dataclasses.field(default_factory=list)
+    analyzing_files: List[os.PathLike] = dataclasses.field(default_factory=list)
+    processing_files: List[os.PathLike] = dataclasses.field(default_factory=list)
 
     @staticmethod
     def from_api(state: warpcore.BNWARPProcessorState) -> 'WarpProcessorState':
+        def field(name: str, fallback: str):
+            if hasattr(state, name):
+                return getattr(state, name)
+            return getattr(state, fallback)
+
         analyzing_files = []
         processing_files = []
-        for i in range(state.analyzing_files_count):
-            analyzing_files.append(state.analyzing_files[i])
-        for i in range(state.processing_files_count):
-            processing_files.append(state.processing_files[i])
+        analyzing_files_raw = field("analyzing_files", "analyzingFiles")
+        processing_files_raw = field("processing_files", "processingFiles")
+        for i in range(field("analyzing_files_count", "analyzingFilesCount")):
+            analyzing_files.append(warpcore.path_to_native_path(analyzing_files_raw[i], free=False))
+        for i in range(field("processing_files_count", "processingFilesCount")):
+            processing_files.append(warpcore.path_to_native_path(processing_files_raw[i], free=False))
         return WarpProcessorState(
-            cancelled=state.cancelled,
-            unprocessed_file_count=state.unprocessed_file_count,
-            processed_file_count=state.processed_file_count,
+            cancelled=field("cancelled", "cancelled"),
+            unprocessed_file_count=field("unprocessed_file_count", "unprocessedFilesCount"),
+            processed_file_count=field("processed_file_count", "processedFilesCount"),
             analyzing_files=analyzing_files,
             processing_files=processing_files
         )
@@ -628,7 +636,7 @@ class WarpProcessor:
         if self.handle is not None:
             warpcore.BNWARPFreeProcessor(self.handle)
 
-    def add_path(self, path: str):
+    def add_path(self, path: Union[str, bytes, os.PathLike]):
         warpcore.BNWARPProcessorAddPath(self.handle, path)
 
     def add_project(self, project: Project):
@@ -648,8 +656,10 @@ class WarpProcessor:
 
     def state(self) -> WarpProcessorState:
         state_raw = warpcore.BNWARPProcessorGetState(self.handle)
-        warpcore.BNWARPFreeProcessorState(state_raw)
-        return WarpProcessorState.from_api(state_raw)
+        try:
+            return WarpProcessorState.from_api(state_raw)
+        finally:
+            warpcore.BNWARPFreeProcessorState(state_raw)
 
 def run_matcher(view: BinaryView):
     warpcore.BNWARPRunMatcher(view.handle)

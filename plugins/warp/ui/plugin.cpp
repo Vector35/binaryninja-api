@@ -6,6 +6,7 @@
 #include "shared/processordialog.h"
 #include "shared/fetchdialog.h"
 #include "shared/file.h"
+#include "pathhelpers.h"
 
 #include <QToolBar>
 #include <QVBoxLayout>
@@ -267,7 +268,7 @@ void RegisterCommands()
 		dlg->show();
 	});
 	RegisterPluginAction("View File", [](const UIActionContext& context) {
-		std::string path;
+		std::filesystem::path path;
 		if (!GetOpenFileNameInput(path, "Open WARP File", "*.warp"))
 			return;
 		auto file = Warp::File::FromPath(path);
@@ -275,7 +276,7 @@ void RegisterCommands()
 			return;
 
 		auto* dlg = new QDialog(context.widget);
-		dlg->setWindowTitle(QString::fromStdString("WARP File: " + path));
+		dlg->setWindowTitle(QString::fromStdString("WARP File: " + Path::PrintablePath(path)));
 		dlg->setAttribute(Qt::WA_DeleteOnClose);
 
 		auto* layout = new QVBoxLayout(dlg);

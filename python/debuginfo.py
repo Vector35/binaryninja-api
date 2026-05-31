@@ -515,7 +515,7 @@ class DebugInfo(object):
 			components = []
 		component_list = (ctypes.c_char_p * len(components))()
 		for i in range(0, len(components)):
-			component_list[i] = str(components[i]).encode('charmap')
+			component_list[i] = core.cstr(str(components[i]))
 
 		if isinstance(new_type, _types.Type):
 			return core.BNAddDebugType(self.handle, name, new_type.handle, component_list, len(components))
@@ -550,7 +550,7 @@ class DebugInfo(object):
 			return NotImplemented
 		component_list = (ctypes.c_char_p * len(components))()
 		for c in range(0, len(components)):
-			component_list[c] = str(components[c]).encode('charmap')
+			component_list[c] = core.cstr(str(components[c]))
 		func_info.components = component_list
 		func_info.componentN = len(components)
 
@@ -587,7 +587,7 @@ class DebugInfo(object):
 			components = []
 		component_list = (ctypes.c_char_p * len(components))()
 		for i in range(0, len(components)):
-			component_list[i] = str(components[i]).encode('charmap')
+			component_list[i] = core.cstr(str(components[i]))
 
 		if isinstance(address, int) and isinstance(new_type, _types.Type):
 			return core.BNAddDebugDataVariable(self.handle, address, new_type.handle, name, component_list, len(components))

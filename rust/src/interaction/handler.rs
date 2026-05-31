@@ -1,4 +1,5 @@
 use std::ffi::{c_char, c_void, CStr};
+use std::path::PathBuf;
 use std::ptr;
 
 use binaryninjacore_sys::*;
@@ -8,7 +9,7 @@ use crate::flowgraph::FlowGraph;
 use crate::interaction::form::{Form, FormInputField};
 use crate::interaction::report::{Report, ReportCollection};
 use crate::interaction::{MessageBoxButtonResult, MessageBoxButtonSet, MessageBoxIcon};
-use crate::string::{raw_to_string, BnString};
+use crate::string::{raw_to_string, BnPath, BnString};
 
 pub fn register_interaction_handler<R: InteractionHandler>(custom: R) {
     let leak_custom = Box::leak(Box::new(custom));
@@ -192,7 +193,7 @@ pub trait InteractionHandler: Sync + Send + 'static {
         &mut self,
         prompt: &str,
         extension: Option<String>,
-    ) -> Option<String> {
+    ) -> Option<PathBuf> {
         let mut form = Form::new(prompt.to_owned());
         form.add_field(FormInputField::OpenFileName {
             prompt: prompt.to_string(),
@@ -204,19 +205,20 @@ pub trait InteractionHandler: Sync + Send + 'static {
             return None;
         }
         form.get_field_with_name(prompt)
-            .and_then(|f| f.try_value_string())
+            .and_then(|f| f.try_value_path())
     }
 
     fn get_save_file_name_input(
         &mut self,
         prompt: &str,
         extension: Option<String>,
-        default: Option<String>,
-    ) -> Option<String> {
+        default: Option<PathBuf>,
+    ) -> Option<PathBuf> {
         let mut form = Form::new(prompt.to_owned());
         form.add_field(FormInputField::SaveFileName {
             prompt: prompt.to_string(),
             extension,
+            default_name: default.clone(),
             default,
             value: None,
         });
@@ -224,17 +226,18 @@ pub trait InteractionHandler: Sync + Send + 'static {
             return None;
         }
         form.get_field_with_name(prompt)
-            .and_then(|f| f.try_value_string())
+            .and_then(|f| f.try_value_path())
     }
 
     fn get_directory_name_input(
         &mut self,
         prompt: &str,
-        default: Option<String>,
-    ) -> Option<String> {
+        default: Option<PathBuf>,
+    ) -> Option<PathBuf> {
         let mut form = Form::new(prompt.to_owned());
         form.add_field(FormInputField::DirectoryName {
             prompt: prompt.to_string(),
+            default_name: default.clone(),
             default,
             value: None,
         });
@@ -242,7 +245,7 @@ pub trait InteractionHandler: Sync + Send + 'static {
             return None;
         }
         form.get_field_with_name(prompt)
-            .and_then(|f| f.try_value_string())
+            .and_then(|f| f.try_value_path())
     }
 
     fn get_checkbox_input(
@@ -502,7 +505,7 @@ unsafe extern "C" fn cb_get_large_choice_input<R: InteractionHandler>(
 
 unsafe extern "C" fn cb_get_open_file_name_input<R: InteractionHandler>(
     ctxt: *mut c_void,
-    result_ffi: *mut *mut c_char,
+    result_ffi: *mut *mut BNPath,
     prompt: *const c_char,
     ext: *const c_char,
 ) -> bool {
@@ -512,7 +515,7 @@ unsafe extern "C" fn cb_get_open_file_name_input<R: InteractionHandler>(
     let result =
         (*ctxt).get_open_file_name_input(&prompt, ext.map(|x| x.to_string_lossy().to_string()));
     if let Some(result) = result {
-        unsafe { *result_ffi = BnString::into_raw(BnString::new(result)) };
+        unsafe { *result_ffi = BnPath::into_raw(BnPath::new(result.as_path())) };
         true
     } else {
         unsafe { *result_ffi = ptr::null_mut() };
@@ -522,18 +525,22 @@ unsafe extern "C" fn cb_get_open_file_name_input<R: InteractionHandler>(
 
 unsafe extern "C" fn cb_get_save_file_name_input<R: InteractionHandler>(
     ctxt: *mut c_void,
-    result_ffi: *mut *mut c_char,
+    result_ffi: *mut *mut BNPath,
     prompt: *const c_char,
     ext: *const c_char,
-    default_name: *const c_char,
+    default_name: *mut BNPath,
 ) -> bool {
     let ctxt = ctxt as *mut R;
     let prompt = raw_to_string(prompt).unwrap();
     let ext = raw_to_string(ext);
-    let default_name = raw_to_string(default_name);
+    let default_name = if default_name.is_null() {
+        None
+    } else {
+        Some(BnString::path_buf_from_raw(default_name))
+    };
     let result = (*ctxt).get_save_file_name_input(&prompt, ext, default_name);
     if let Some(result) = result {
-        unsafe { *result_ffi = BnString::into_raw(BnString::new(result)) };
+        unsafe { *result_ffi = BnPath::into_raw(BnPath::new(result.as_path())) };
         true
     } else {
         unsafe { *result_ffi = ptr::null_mut() };
@@ -543,16 +550,20 @@ unsafe extern "C" fn cb_get_save_file_name_input<R: InteractionHandler>(
 
 unsafe extern "C" fn cb_get_directory_name_input<R: InteractionHandler>(
     ctxt: *mut c_void,
-    result_ffi: *mut *mut c_char,
+    result_ffi: *mut *mut BNPath,
     prompt: *const c_char,
-    default_name: *const c_char,
+    default_name: *mut BNPath,
 ) -> bool {
     let ctxt = ctxt as *mut R;
     let prompt = raw_to_string(prompt).unwrap();
-    let default_name = raw_to_string(default_name);
+    let default_name = if default_name.is_null() {
+        None
+    } else {
+        Some(BnString::path_buf_from_raw(default_name))
+    };
     let result = (*ctxt).get_directory_name_input(&prompt, default_name);
     if let Some(result) = result {
-        unsafe { *result_ffi = BnString::into_raw(BnString::new(result)) };
+        unsafe { *result_ffi = BnPath::into_raw(BnPath::new(result.as_path())) };
         true
     } else {
         unsafe { *result_ffi = ptr::null_mut() };
@@ -596,13 +607,13 @@ unsafe extern "C" fn cb_get_form_input<R: InteractionHandler>(
     let title = raw_to_string(title).unwrap();
     let mut form = Form::new_with_fields(title, fields);
     let results = (*ctxt).get_form_input(&mut form);
-    // Update the fields with the new values. Freeing the old ones.
+    // The incoming fields are borrowed from the caller. Only result fields are
+    // callback-owned outputs, so leave prompts/defaults/choices/view untouched.
     raw_fields
         .iter_mut()
         .enumerate()
         .for_each(|(idx, raw_field)| {
-            FormInputField::free_raw(*raw_field);
-            *raw_field = form.fields[idx].into_raw();
+            form.fields[idx].update_raw_result(raw_field);
         });
     results
 }

@@ -22,19 +22,6 @@ public:
 	// Initialized the shared cache controller for this view. This is what allows us to load images and regions.
 	bool InitController();
 
-	void SetPrimaryFileName(std::string primaryFileName);
-
-	// Logs the secondary file name to `m_secondaryFileNames`, see the note on the field about usage.
-	void LogSecondaryFileName(std::string associatedFileName);
-
-	// Get the path to the primary file.
-	std::optional<std::string> GetPrimaryFilePath();
-
-	// Get the metadata for saving the state of the shared cache.
-	BinaryNinja::Ref<BinaryNinja::Metadata> GetMetadata() const;
-
-	void LoadMetadata(const BinaryNinja::Metadata& metadata);
-
 	virtual bool PerformIsExecutable() const override { return true; }
 };
 

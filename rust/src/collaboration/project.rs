@@ -793,8 +793,7 @@ impl RemoteProject {
     /// project's remote's id.
     pub fn default_project_path(&self) -> PathBuf {
         let result = unsafe { BNCollaborationDefaultProjectPath(self.handle.as_ptr()) };
-        let result_str = unsafe { BnString::into_string(result) };
-        PathBuf::from(result_str)
+        unsafe { BnString::into_path_buf(result) }
     }
 
     /// Upload a file, with database, to the remote under the given project

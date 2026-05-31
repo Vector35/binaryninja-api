@@ -22,6 +22,7 @@ use std::hash::{Hash, Hasher};
 use std::mem;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
+use std::ptr::NonNull;
 
 use crate::rc::*;
 use crate::types::QualifiedName;
@@ -66,6 +67,70 @@ pub struct BnString {
     raw: *mut c_char,
 }
 
+#[repr(transparent)]
+pub struct BnPath {
+    raw: NonNull<BNPath>,
+}
+
+impl BnPath {
+    pub fn new(path: &Path) -> Self {
+        let raw = unsafe {
+            #[cfg(windows)]
+            {
+                use std::os::windows::ffi::OsStrExt;
+                let path_data: Vec<u16> = path.as_os_str().encode_wide().collect();
+                BNCreatePath(path_data.as_ptr() as *const _, path_data.len())
+            }
+            #[cfg(unix)]
+            {
+                use std::os::unix::ffi::OsStrExt;
+                let path_data = path.as_os_str().as_bytes();
+                BNCreatePath(path_data.as_ptr() as *const _, path_data.len())
+            }
+            #[cfg(not(any(windows, unix)))]
+            {
+                let path_data = path.to_string_lossy();
+                BNCreatePath(path_data.as_bytes().as_ptr() as *const _, path_data.len())
+            }
+        };
+        Self {
+            raw: NonNull::new(raw).expect("core failed to allocate path"),
+        }
+    }
+
+    pub fn as_ptr(&self) -> *mut BNPath {
+        self.raw.as_ptr()
+    }
+
+    pub fn into_raw(value: Self) -> *mut BNPath {
+        let res = value.raw.as_ptr();
+        mem::forget(value);
+        res
+    }
+}
+
+impl Drop for BnPath {
+    fn drop(&mut self) {
+        unsafe { BNFreePath(self.raw.as_ptr()) };
+    }
+}
+
+impl CoreArrayProvider for BnPath {
+    type Raw = *mut BNPath;
+    type Context = ();
+    type Wrapped<'a> = PathBuf;
+}
+
+unsafe impl CoreArrayProviderInner for BnPath {
+    unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
+        BNFreePathList(raw, count);
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        unsafe { BnString::path_buf_from_raw(*raw) }
+    }
+}
+
 impl BnString {
     pub fn new(s: impl IntoCStr) -> Self {
         let raw = s.to_cstr();
@@ -77,6 +142,44 @@ impl BnString {
     /// This expects the passed raw string to be owned, as in, freed by us.
     pub unsafe fn into_string(raw: *mut c_char) -> String {
         Self::from_raw(raw).to_string_lossy().to_string()
+    }
+
+    /// Take an owned core path and convert it to [`PathBuf`].
+    ///
+    /// Core paths are UTF-16 on Windows and native bytes on Unix.
+    pub unsafe fn path_buf_from_raw(raw: *mut BNPath) -> PathBuf {
+        let mut size = 0usize;
+        let data = BNGetPathData(raw, &mut size);
+        if data.is_null() {
+            PathBuf::new()
+        } else {
+            #[cfg(windows)]
+            {
+                use std::os::windows::ffi::OsStringExt;
+                let path_data = std::slice::from_raw_parts(data as *const u16, size);
+                PathBuf::from(std::ffi::OsString::from_wide(path_data))
+            }
+            #[cfg(unix)]
+            {
+                use std::os::unix::ffi::OsStringExt;
+                let path_data = std::slice::from_raw_parts(data as *const u8, size);
+                PathBuf::from(std::ffi::OsString::from_vec(path_data.to_vec()))
+            }
+            #[cfg(not(any(windows, unix)))]
+            {
+                let path_data = std::slice::from_raw_parts(data as *const u8, size);
+                PathBuf::from(String::from_utf8_lossy(path_data).into_owned())
+            }
+        }
+    }
+
+    /// Take an owned core path and convert it to [`PathBuf`].
+    ///
+    /// Core paths are UTF-16 on Windows and native bytes on Unix.
+    pub unsafe fn into_path_buf(raw: *mut BNPath) -> PathBuf {
+        let path = unsafe { Self::path_buf_from_raw(raw) };
+        BNFreePath(raw);
+        path
     }
 
     /// Construct a BnString from an owned const char* allocated by [`BNAllocString`].
@@ -282,8 +385,25 @@ impl IntoCStr for &Path {
     type Result = CString;
 
     fn to_cstr(self) -> Self::Result {
-        CString::new(self.as_os_str().as_encoded_bytes())
+        #[cfg(windows)]
+        {
+            CString::new(
+                self.to_str()
+                    .expect("can't pass paths with unpaired surrogates to core!"),
+            )
             .expect("can't pass paths with internal nul bytes to core!")
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::ffi::OsStrExt;
+            CString::new(self.as_os_str().as_bytes())
+                .expect("can't pass paths with internal nul bytes to core!")
+        }
+        #[cfg(not(any(windows, unix)))]
+        {
+            CString::new(self.to_string_lossy().as_bytes())
+                .expect("can't pass paths with internal nul bytes to core!")
+        }
     }
 }
 

@@ -21,7 +21,7 @@
 import ctypes
 
 from contextlib import contextmanager
-from os import PathLike
+from os import PathLike, fspath
 from typing import Any, Callable, List, Optional, Union
 
 import binaryninja
@@ -31,7 +31,7 @@ from .metadata import Metadata, MetadataValueType
 
 
 ProgressFuncType = Callable[[int, int], bool]
-AsPath = Union[PathLike, str]
+AsPath = Union[PathLike, str, bytes]
 
 #TODO: notifications
 
@@ -188,7 +188,7 @@ class ProjectFile:
 		:param dest: Destination path for the exported contents
 		:return: True if the export succeeded, False otherwise
 		"""
-		return core.BNProjectFileExport(self._handle, str(dest))
+		return core.BNProjectFileExport(self._handle, fspath(dest))
 
 	def get_path_on_disk(self) -> Optional[str]:
 		"""
@@ -381,7 +381,7 @@ class ProjectFolder:
 		:param progress_func: Progress function that will be called as contents are exporting
 		:return: True if the export succeeded, False otherwise
 		"""
-		return core.BNProjectFolderExport(self._handle, str(dest), None, _wrap_progress(progress_func))
+		return core.BNProjectFolderExport(self._handle, fspath(dest), None, _wrap_progress(progress_func))
 
 	@property
 	def files(self) -> List['ProjectFile']:
@@ -434,7 +434,7 @@ class Project:
 		:raises ProjectException: If there was an error opening the project
 		"""
 		binaryninja._init_plugins()
-		project_handle = core.BNOpenProject(str(path))
+		project_handle = core.BNOpenProject(fspath(path))
 		if project_handle is None:
 			raise ProjectException("Failed to open project")
 		return Project(handle=project_handle)
@@ -450,7 +450,7 @@ class Project:
 		:raises ProjectException: If there was an error creating the project
 		"""
 		binaryninja._init_plugins()
-		project_handle = core.BNCreateProject(str(path), name)
+		project_handle = core.BNCreateProject(fspath(path), name)
 		if project_handle is None:
 			raise ProjectException("Failed to create project")
 		return Project(handle=project_handle)
@@ -593,7 +593,7 @@ class Project:
 		"""
 		return core.BNProjectRemoveMetadata(self._handle, key)
 
-	def create_folder_from_path(self, path: Union[PathLike, str], parent: Optional[ProjectFolder] = None, description: str = "", progress_func: ProgressFuncType = _nop) -> ProjectFolder:
+	def create_folder_from_path(self, path: AsPath, parent: Optional[ProjectFolder] = None, description: str = "", progress_func: ProgressFuncType = _nop) -> ProjectFolder:
 		"""
 		Recursively create files and folders in the project from a path on disk
 
@@ -606,7 +606,7 @@ class Project:
 		parent_handle = parent._handle if parent is not None else None
 		folder_handle = core.BNProjectCreateFolderFromPath(
 			project=self._handle,
-			path=str(path),
+			path=fspath(path),
 			parent=parent_handle,
 			description=description,
 			ctxt=None,
@@ -698,7 +698,7 @@ class Project:
 		folder_handle = folder._handle if folder is not None else None
 		file_handle = core.BNProjectCreateFileFromPath(
 			project=self._handle,
-			path=str(path),
+			path=fspath(path),
 			folder=folder_handle,
 			name=name,
 			description=description,
@@ -775,14 +775,14 @@ class Project:
 		file = ProjectFile(handle)
 		return file
 
-	def get_file_by_path_on_disk(self, path: str) -> Optional[ProjectFile]:
+	def get_file_by_path_on_disk(self, path: AsPath) -> Optional[ProjectFile]:
 		"""
 		Retrieve a file in the project by its path on disk
 
 		:param path: Path of the file on the disk
 		:return: File with the requested path or None
 		"""
-		handle = core.BNProjectGetFileByPathOnDisk(self._handle, path)
+		handle = core.BNProjectGetFileByPathOnDisk(self._handle, fspath(path))
 		if handle is None:
 			return None
 		file = ProjectFile(handle)

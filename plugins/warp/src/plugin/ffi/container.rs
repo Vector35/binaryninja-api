@@ -7,11 +7,13 @@ use crate::plugin::ffi::{
     BNWARPConstraintGUID, BNWARPContainer, BNWARPFunction, BNWARPFunctionGUID, BNWARPSource,
     BNWARPTarget, BNWARPType, BNWARPTypeGUID,
 };
-use binaryninja::string::BnString;
+use binaryninja::string::{BnPath, BnString};
+use binaryninjacore_sys::BNPath;
 use std::collections::HashMap;
 use std::ffi::{c_char, CStr};
 use std::mem::ManuallyDrop;
 use std::ops::Deref;
+use std::path::Path;
 use std::sync::Arc;
 use warp::r#type::guid::TypeGUID;
 
@@ -250,7 +252,7 @@ pub unsafe extern "C" fn BNWARPContainerGetSources(
 #[no_mangle]
 pub unsafe extern "C" fn BNWARPContainerAddSource(
     container: *mut BNWARPContainer,
-    source_path: *const c_char,
+    source_path: *mut BNPath,
     result: *mut BNWARPSource,
 ) -> bool {
     let arc_container = ManuallyDrop::new(Arc::from_raw(container));
@@ -258,9 +260,10 @@ pub unsafe extern "C" fn BNWARPContainerAddSource(
         return false;
     };
 
-    let source_path_cstr = unsafe { CStr::from_ptr(source_path) };
-    let source_path_str = source_path_cstr.to_str().unwrap();
-    let source_path = SourcePath::new_with_str(source_path_str);
+    if source_path.is_null() {
+        return false;
+    }
+    let source_path = SourcePath::new(unsafe { BnString::path_buf_from_raw(source_path) });
 
     match container.add_source(source_path) {
         Ok(source) => {
@@ -327,21 +330,20 @@ pub unsafe extern "C" fn BNWARPContainerIsSourceWritable(
 pub unsafe extern "C" fn BNWARPContainerGetSourcePath(
     container: *mut BNWARPContainer,
     source: *const BNWARPSource,
-) -> *const c_char {
+) -> *mut BNPath {
     let arc_container = ManuallyDrop::new(Arc::from_raw(container));
     let Ok(container) = arc_container.read() else {
-        return std::ptr::null();
+        return std::ptr::null_mut();
     };
 
     let source = unsafe { *source };
 
     match container.source_path(&source) {
         Ok(path) => {
-            let path = path.to_string();
-            // NOTE: Leak the source path to be freed by BNFreeString
-            BnString::into_raw(path.into())
+            let path: &Path = path.as_ref();
+            BnPath::into_raw(BnPath::new(path))
         }
-        Err(_) => std::ptr::null(),
+        Err(_) => std::ptr::null_mut(),
     }
 }
 

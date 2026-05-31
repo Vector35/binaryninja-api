@@ -15,11 +15,11 @@
 //! Interfaces for asking the user for information: forms, opening files, etc.
 
 use std::ffi::{c_char, c_void};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use binaryninjacore_sys::*;
 
-use crate::string::{BnString, IntoCStr};
+use crate::string::{BnPath, BnString, IntoCStr};
 
 pub mod form;
 pub mod handler;
@@ -126,7 +126,7 @@ pub fn get_large_choice_input(prompt: &str, title: &str, choices: &[&str]) -> Op
 }
 
 pub fn get_open_filename_input(prompt: &str, extension: &str) -> Option<PathBuf> {
-    let mut value: *mut c_char = std::ptr::null_mut();
+    let mut value: *mut BNPath = std::ptr::null_mut();
 
     let prompt = prompt.to_cstr();
     let extension = extension.to_cstr();
@@ -135,20 +135,19 @@ pub fn get_open_filename_input(prompt: &str, extension: &str) -> Option<PathBuf>
         return None;
     }
 
-    let path = unsafe { BnString::into_string(value) };
-    Some(PathBuf::from(path))
+    Some(unsafe { BnString::into_path_buf(value) })
 }
 
 pub fn get_save_filename_input(
     prompt: &str,
     extension: &str,
-    default_name: &str,
+    default_name: impl AsRef<Path>,
 ) -> Option<PathBuf> {
-    let mut value: *mut c_char = std::ptr::null_mut();
+    let mut value: *mut BNPath = std::ptr::null_mut();
 
     let prompt = prompt.to_cstr();
     let extension = extension.to_cstr();
-    let default_name = default_name.to_cstr();
+    let default_name = BnPath::new(default_name.as_ref());
     let result = unsafe {
         BNGetSaveFileNameInput(
             &mut value,
@@ -161,23 +160,21 @@ pub fn get_save_filename_input(
         return None;
     }
 
-    let path = unsafe { BnString::into_string(value) };
-    Some(PathBuf::from(path))
+    Some(unsafe { BnString::into_path_buf(value) })
 }
 
-pub fn get_directory_name_input(prompt: &str, default_name: &str) -> Option<PathBuf> {
-    let mut value: *mut c_char = std::ptr::null_mut();
+pub fn get_directory_name_input(prompt: &str, default_name: impl AsRef<Path>) -> Option<PathBuf> {
+    let mut value: *mut BNPath = std::ptr::null_mut();
 
     let prompt = prompt.to_cstr();
-    let default_name = default_name.to_cstr();
+    let default_name = BnPath::new(default_name.as_ref());
     let result =
         unsafe { BNGetDirectoryNameInput(&mut value, prompt.as_ptr(), default_name.as_ptr()) };
     if !result {
         return None;
     }
 
-    let path = unsafe { BnString::into_string(value) };
-    Some(PathBuf::from(path))
+    Some(unsafe { BnString::into_path_buf(value) })
 }
 
 pub fn show_message_box(

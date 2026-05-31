@@ -1,7 +1,7 @@
 use crate::plugin::ffi::{BNWARPFunction, BNWARPTarget, BNWARPType};
 use binaryninja::data_buffer::DataBuffer;
-use binaryninjacore_sys::BNDataBuffer;
-use std::ffi::c_char;
+use binaryninja::string::BnString;
+use binaryninjacore_sys::{BNDataBuffer, BNPath};
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
 use warp::chunk::ChunkKind;
@@ -41,12 +41,12 @@ pub type BNWARPChunk = warp::chunk::Chunk<'static>;
 
 // TODO: From bytes as well.
 #[no_mangle]
-pub unsafe extern "C" fn BNWARPNewFileFromPath(path: *mut c_char) -> *mut BNWARPFile {
-    let path_cstr = unsafe { std::ffi::CStr::from_ptr(path) };
-    let Ok(path) = path_cstr.to_str() else {
+pub unsafe extern "C" fn BNWARPNewFileFromPath(path: *mut BNPath) -> *mut BNWARPFile {
+    if path.is_null() {
         return std::ptr::null_mut();
-    };
-    let Ok(bytes) = std::fs::read(path) else {
+    }
+    let path = unsafe { BnString::path_buf_from_raw(path) };
+    let Ok(bytes) = std::fs::read(&path) else {
         return std::ptr::null_mut();
     };
     let Some(file) = WarpFile::from_owned_bytes(bytes) else {

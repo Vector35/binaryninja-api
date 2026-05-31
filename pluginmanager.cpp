@@ -1,4 +1,5 @@
 #include "binaryninjaapi.h"
+#include "pathhelpers.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -12,14 +13,21 @@ using namespace std;
 		return result; \
 	} while (0)
 
+#define RETURN_PATH(s) \
+	do \
+	{ \
+		BNPath* contents = (s); \
+		return Path::PathFromCore(contents); \
+	} while (0)
+
 Extension::Extension(BNPlugin* plugin)
 {
 	m_object = plugin;
 }
 
-string Extension::GetPath() const
+filesystem::path Extension::GetPath() const
 {
-	RETURN_STRING(BNPluginGetPath(m_object));
+	RETURN_PATH(BNPluginGetPath(m_object));
 }
 
 string Extension::GetSubdir() const
@@ -359,9 +367,9 @@ string Repository::GetUrl() const
 }
 
 
-string Repository::GetRepoPath() const
+filesystem::path Repository::GetRepoPath() const
 {
-	RETURN_STRING(BNRepositoryGetRepoPath(m_object));
+	RETURN_PATH(BNRepositoryGetRepoPath(m_object));
 }
 
 
@@ -378,17 +386,18 @@ vector<Ref<Extension>> Repository::GetPlugins() const
 }
 
 
-Ref<Extension> Repository::GetPluginByPath(const string& pluginPath)
+Ref<Extension> Repository::GetPluginByPath(const filesystem::path& pluginPath)
 {
-	BNPlugin* plugin = BNRepositoryGetPluginByPath(m_object, pluginPath.c_str());
+	Path::APIObject corePluginPath(pluginPath);
+	BNPlugin* plugin = BNRepositoryGetPluginByPath(m_object, corePluginPath);
 	if (!plugin)
 		return nullptr;
 	return new Extension(plugin);
 }
 
-string Repository::GetFullPath() const
+filesystem::path Repository::GetFullPath() const
 {
-	RETURN_STRING(BNRepositoryGetPluginsPath(m_object));
+	RETURN_PATH(BNRepositoryGetPluginsPath(m_object));
 }
 
 bool RepositoryManager::CheckForUpdates()
@@ -408,14 +417,16 @@ vector<Ref<Repository>> RepositoryManager::GetRepositories()
 }
 
 bool RepositoryManager::AddRepository(const std::string& url,
-    const std::string& repoPath)  // Relative path within the repositories directory
+    const filesystem::path& repoPath)  // Relative path within the repositories directory
 {
-	return BNRepositoryManagerAddRepository(url.c_str(), repoPath.c_str());
+	Path::APIObject coreRepoPath(repoPath);
+	return BNRepositoryManagerAddRepository(url.c_str(), coreRepoPath);
 }
 
-Ref<Repository> RepositoryManager::GetRepositoryByPath(const std::string& repoPath)
+Ref<Repository> RepositoryManager::GetRepositoryByPath(const filesystem::path& repoPath)
 {
-	BNRepository* repo = BNRepositoryGetRepositoryByPath(repoPath.c_str());
+	Path::APIObject coreRepoPath(repoPath);
+	BNRepository* repo = BNRepositoryGetRepositoryByPath(coreRepoPath);
 	if (!repo)
 		return nullptr;
 	return new Repository(repo);

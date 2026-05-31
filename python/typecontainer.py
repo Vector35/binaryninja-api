@@ -19,6 +19,7 @@
 # IN THE SOFTWARE.
 
 import ctypes
+import contextlib
 from typing import Optional, Mapping, Callable, List, Tuple
 
 # Binary Ninja components
@@ -399,20 +400,19 @@ class TypeContainer:
 		for (i, s) in enumerate(options):
 			options_cpp[i] = core.cstr(s)
 
-		include_dirs_cpp = (ctypes.c_char_p * len(include_dirs))()
-		for (i, s) in enumerate(include_dirs):
-			include_dirs_cpp[i] = core.cstr(s)
-
 		result_cpp = core.BNTypeParserResult()
 		errors_cpp = ctypes.POINTER(core.BNTypeParserError)()
 		error_count = ctypes.c_size_t()
 
-		success = core.BNTypeContainerParseTypesFromSource(
-			self.handle, source, file_name,
-			options_cpp, len(options),
-			include_dirs_cpp, len(include_dirs), auto_type_source, import_dependencies,
-			result_cpp, errors_cpp, error_count
-		)
+		with contextlib.ExitStack() as stack:
+			include_dir_paths = [stack.enter_context(core.core_path(path)) for path in include_dirs]
+			include_dirs_cpp = (core.BNPathHandle * len(include_dir_paths))(*include_dir_paths)
+			success = core.BNTypeContainerParseTypesFromSource(
+				self.handle, source, file_name,
+				options_cpp, len(options),
+				include_dirs_cpp, len(include_dir_paths), auto_type_source, import_dependencies,
+				result_cpp, errors_cpp, error_count
+			)
 
 		if success:
 			result = typeparser.TypeParserResult._from_core_struct(result_cpp)
@@ -426,5 +426,3 @@ class TypeContainer:
 		core.BNFreeTypeParserErrors(errors_cpp, error_count.value)
 
 		return result, errors
-
-

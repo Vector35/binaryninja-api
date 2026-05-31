@@ -23,6 +23,7 @@
 #include <cstdio>
 #include <thread>
 #include "binaryninjaapi.h"
+#include "pathhelpers.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -460,9 +461,10 @@ void BinaryNinja::LogToStderr(BNLogLevel minimumLevel)
 }
 
 
-bool BinaryNinja::LogToFile(BNLogLevel minimumLevel, const string& path, bool append)
+bool BinaryNinja::LogToFile(BNLogLevel minimumLevel, const filesystem::path& path, bool append)
 {
-	return BNLogToFile(minimumLevel, path.c_str(), append);
+	Path::APIObject corePath(path);
+	return BNLogToFile(minimumLevel, corePath, append);
 }
 
 

@@ -713,9 +713,8 @@ impl BinaryView {
         if !meta.file_path().exists() {
             return Err(());
         }
-        let file = meta.file_path().to_cstr();
-        let handle =
-            unsafe { BNCreateBinaryDataViewFromFilename(meta.handle, file.as_ptr() as *mut _) };
+        let file = BnPath::new(&meta.file_path());
+        let handle = unsafe { BNCreateBinaryDataViewFromFilename(meta.handle, file.as_ptr()) };
         if handle.is_null() {
             return Err(());
         }
@@ -770,8 +769,8 @@ impl BinaryView {
     /// To avoid the above issue, use [`crate::main_thread::execute_on_main_thread_and_wait`] to verify there
     /// are no queued up main thread actions.
     pub fn save_to_path(&self, file_path: impl AsRef<Path>) -> bool {
-        let file = file_path.as_ref().to_cstr();
-        unsafe { BNSaveToFilename(self.handle, file.as_ptr() as *mut _) }
+        let file = BnPath::new(file_path.as_ref());
+        unsafe { BNSaveToFilename(self.handle, file.as_ptr()) }
     }
 
     /// Save the original binary file to the provided [`FileAccessor`] along with any modifications.
@@ -2942,12 +2941,12 @@ impl BinaryView {
     /// Using the returned id you can retrieve the [`TypeArchive`] with [`BinaryView::type_archive_by_id`].
     pub fn attached_type_archives(&self) -> Vec<TypeArchiveId> {
         let mut ids: *mut *mut c_char = std::ptr::null_mut();
-        let mut paths: *mut *mut c_char = std::ptr::null_mut();
+        let mut paths: *mut *mut BNPath = std::ptr::null_mut();
         let count = unsafe { BNBinaryViewGetTypeArchives(self.handle, &mut ids, &mut paths) };
         // We discard the path here, you can retrieve it later with [`BinaryView::type_archive_path_by_id`].
         // This is so we can simplify the return type which will commonly just want to query through to the type
         // archive itself.
-        let _path_list = unsafe { Array::<BnString>::new(paths, count, ()) };
+        let _path_list = unsafe { Array::<BnPath>::new(paths, count, ()) };
         let id_list = unsafe { Array::<BnString>::new(ids, count, ()) };
         id_list
             .into_iter()
@@ -2972,8 +2971,7 @@ impl BinaryView {
         if result.is_null() {
             return None;
         }
-        let path_str = unsafe { BnString::into_string(result) };
-        Some(PathBuf::from(path_str))
+        Some(unsafe { BnString::into_path_buf(result) })
     }
 
     pub fn deref_return_value_named_type_references(

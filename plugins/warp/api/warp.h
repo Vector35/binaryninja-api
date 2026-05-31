@@ -3,6 +3,8 @@
 #include <binaryninjaapi.h>
 #include "warpcore.h"
 
+#include <filesystem>
+
 template<class T, T *(*AddObjectReference)(T *), void (*FreeObjectReference)(T *)>
 class WarpRefCountObject
 {
@@ -402,7 +404,7 @@ namespace Warp {
 
 		std::vector<Source> GetSources() const;
 
-		std::optional<Source> AddSource(const std::string &sourcePath) const;
+		std::optional<Source> AddSource(const std::filesystem::path& sourcePath) const;
 
 		bool CommitSource(const Source &source) const;
 
@@ -410,7 +412,7 @@ namespace Warp {
 
 		bool IsSourceWritable(const Source &source) const;
 
-		std::optional<std::string> SourcePath(const Source &source) const;
+		std::optional<std::filesystem::path> SourcePath(const Source &source) const;
 
 		bool AddFunctions(const Target &target, const Source &source,
 		                  const std::vector<Ref<Function>> &functions) const;
@@ -456,7 +458,7 @@ namespace Warp {
 	public:
 		explicit File(BNWARPFile *file);
 
-		static Ref<File> FromPath(const std::string &path);
+		static Ref<File> FromPath(const std::filesystem::path& path);
 
 		[[nodiscard]] std::vector<Ref<Chunk>> GetChunks() const;
 		[[nodiscard]] BinaryNinja::DataBuffer ToDataBuffer() const;
@@ -465,8 +467,8 @@ namespace Warp {
 	class ProcessorState
 	{
 	public:
-		std::vector<std::string> analyzingFiles;
-		std::vector<std::string> processingFiles;
+		std::vector<std::filesystem::path> analyzingFiles;
+		std::vector<std::filesystem::path> processingFiles;
 		bool cancelled;
 		size_t unprocessedFilesCount;
 		size_t processedFilesCount;
@@ -485,7 +487,7 @@ namespace Warp {
 
 		~Processor();
 
-		void AddPath(const std::string &path) const;
+		void AddPath(const std::filesystem::path& path) const;
 		void AddProject(const BinaryNinja::Project &project) const;
 		void AddProjectFile(const BinaryNinja::ProjectFile &projectFile) const;
 		void AddBinaryView(const BinaryNinja::BinaryView &view) const;

@@ -8,6 +8,8 @@ import platform
 core = None
 core_platform = platform.system()
 
+from binaryninja._binaryninjacore import BNPath, BNPathHandle, core_path, path_to_native_path
+
 from binaryninja import Settings
 if Settings().get_bool("corePlugins.warp"):
     from binaryninja._binaryninjacore import BNGetBundledPluginDirectory
@@ -55,4 +57,3 @@ def pyNativeStr(arg):
 
 def free_string(value:ctypes.c_char_p) -> None:
     BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))
-

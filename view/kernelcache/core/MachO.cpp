@@ -27,14 +27,14 @@ std::vector<uint64_t> KernelCacheMachOHeader::ReadFunctionTable(Ref<BinaryView> 
 }
 
 std::optional<KernelCacheMachOHeader> KernelCacheMachOHeader::ParseHeaderForAddress(
-	Ref<BinaryView> bv, uint64_t vmAddress, uint64_t fileAddress, const std::string& imagePath)
+	Ref<BinaryView> bv, uint64_t vmAddress, uint64_t fileAddress, const std::filesystem::path& imagePath)
 {
 	KernelCacheMachOHeader header;
 
 	header.textBase = vmAddress;
-	header.installName = imagePath;
+	header.installName = ImagePathToUtf8String(imagePath);
 	// The identifierPrefix is used for the display of the image name in the sections and segments.
-	header.identifierPrefix = BaseFileName(imagePath);
+	header.identifierPrefix = ImageNameFromPath(imagePath);
 
 	std::string errorMsg;
 	BinaryReader reader(bv->GetParentView());

@@ -4,6 +4,7 @@
 #include <string.h>
 #include <sstream>
 #include "binaryninjaapi.h"
+#include "pathhelpers.h"
 #include "il.h"
 extern "C" {
     #include "xed-interface.h"
@@ -2625,15 +2626,16 @@ bool X86CommonArchitecture::Assemble(const string& code, uint64_t addr, DataBuff
 	}
 
 	#ifdef WIN32
-		string yasmPath = GetPathRelativeToBundledPluginDirectory("yasm.exe");
+		auto yasmPath = GetPathRelativeToBundledPluginDirectory("yasm.exe");
 	#else
-		string yasmPath = GetPathRelativeToBundledPluginDirectory("yasm");
+		auto yasmPath = GetPathRelativeToBundledPluginDirectory("yasm");
 	#endif
 
-	string inputPath = inputFile->GetPath();
-	string outputPath = outputFile->GetPath();
+	string yasmPathString = Path::PathToUtf8String(yasmPath);
+	string inputPath = Path::PathToUtf8String(inputFile->GetPath());
+	string outputPath = Path::PathToUtf8String(outputFile->GetPath());
 
-	vector<string> args = vector<string> { yasmPath, "-fbin", "-w", "-Worphan-labels", "-Werror", "-o", outputPath, inputPath };
+	vector<string> args = vector<string> { yasmPathString, "-fbin", "-w", "-Worphan-labels", "-Werror", "-o", outputPath, inputPath };
 
 	string output;
 	bool ok = ExecuteWorkerProcess(yasmPath, args, DataBuffer(),
@@ -2649,7 +2651,7 @@ bool X86CommonArchitecture::Assemble(const string& code, uint64_t addr, DataBuff
 			OR the yasm process return code was nonzero */
 		if(errors.size() == 0)
 		{
-			errors = yasmPath + " returned nonzero\n";
+			errors = yasmPathString + " returned nonzero\n";
 		}
 	}
 	else

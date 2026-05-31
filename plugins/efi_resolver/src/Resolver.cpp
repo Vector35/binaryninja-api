@@ -40,28 +40,20 @@ string Resolver::nonConflictingLocalName(Ref<Function> func, const string& basen
 	return name;
 }
 
-static string GetBundledEfiPath()
+static filesystem::path GetBundledEfiPath()
 {
-	string path = GetBundledPluginDirectory();
 #if defined(_WIN32)
-	return path + "\\..\\types\\efi.c";
+	return GetBundledPluginDirectory() / ".." / "types" / "efi.c";
 #elif defined(__APPLE__)
-	return path + "/../../Resources/types/efi.c";
+	return GetBundledPluginDirectory() / ".." / ".." / "Resources" / "types" / "efi.c";
 #else
-	return path + "/../types/efi.c";
+	return GetBundledPluginDirectory() / ".." / "types" / "efi.c";
 #endif
 }
 
-static string GetUserGuidPath()
+static filesystem::path GetUserGuidPath()
 {
-	string path = GetUserDirectory();
-#if defined(_WIN32)
-	return path + "\\types\\efi-guids.json";
-#elif defined(__APPLE__)
-	return path + "/types/efi-guids.json";
-#else
-	return path + "/types/efi-guids.json";
-#endif
+	return GetUserDirectory() / "types" / "efi-guids.json";
 }
 
 static EFI_GUID parseGuid(const string& guidStr)
@@ -97,7 +89,7 @@ static EFI_GUID parseGuid(const string& guidStr)
 	return guid;
 }
 
-bool Resolver::parseProtocolMapping(const string& filePath)
+bool Resolver::parseProtocolMapping(const filesystem::path& filePath)
 {
 	vector<pair<EFI_GUID, string>> guids;
 	ifstream efiDefs;
@@ -105,7 +97,7 @@ bool Resolver::parseProtocolMapping(const string& filePath)
 
 	m_protocol.clear();
 
-	efiDefs.open(filePath.c_str());
+	efiDefs.open(filePath);
 	if (!efiDefs.is_open())
 		return false;
 
@@ -159,7 +151,7 @@ bool Resolver::parseProtocolMapping(const string& filePath)
 	return true;
 }
 
-bool Resolver::parseUserGuidIfExists(const string& filePath)
+bool Resolver::parseUserGuidIfExists(const filesystem::path& filePath)
 {
 	ifstream userJson(filePath);
 	if (!userJson.is_open())

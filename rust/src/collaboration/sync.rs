@@ -12,7 +12,7 @@ use crate::file_metadata::FileMetadata;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::file::ProjectFile;
 use crate::rc::Ref;
-use crate::string::{raw_to_string, BnString, IntoCStr};
+use crate::string::{raw_to_string, BnPath, BnString, IntoCStr};
 use crate::types::archive::{TypeArchive, TypeArchiveMergeConflict};
 
 /// Get the default directory path for a remote Project. This is based off the Setting for
@@ -21,7 +21,7 @@ pub fn default_project_path(project: &RemoteProject) -> Result<PathBuf, ()> {
     let result = unsafe { BNCollaborationDefaultProjectPath(project.handle.as_ptr()) };
     let success = !result.is_null();
     success
-        .then(|| PathBuf::from(unsafe { BnString::into_string(result) }))
+        .then(|| unsafe { BnString::into_path_buf(result) })
         .ok_or(())
 }
 
@@ -32,7 +32,7 @@ pub fn default_file_path(file: &RemoteFile) -> Result<PathBuf, ()> {
     let result = unsafe { BNCollaborationDefaultFilePath(file.handle.as_ptr()) };
     let success = !result.is_null();
     success
-        .then(|| PathBuf::from(unsafe { BnString::into_string(result) }))
+        .then(|| unsafe { BnString::into_path_buf(result) })
         .ok_or(())
 }
 
@@ -56,7 +56,7 @@ pub fn download_file_with_progress<F: ProgressCallback>(
     db_path: &Path,
     mut progress: F,
 ) -> Result<Ref<FileMetadata>, ()> {
-    let db_path = db_path.to_cstr();
+    let db_path = BnPath::new(db_path);
     let result = unsafe {
         BNCollaborationDownloadFile(
             file.handle.as_ptr(),
@@ -228,7 +228,7 @@ pub fn download_database_with_progress<PC>(
 where
     PC: ProgressCallback,
 {
-    let db_path = location.to_cstr();
+    let db_path = BnPath::new(location);
     let success = unsafe {
         BNCollaborationDownloadDatabaseForFile(
             file.handle.as_ptr(),
@@ -699,7 +699,7 @@ pub fn download_type_archive_with_progress<PC: ProgressCallback>(
     mut progress: PC,
 ) -> Result<Option<Ref<TypeArchive>>, ()> {
     let mut value = std::ptr::null_mut();
-    let db_path = location.to_cstr();
+    let db_path = BnPath::new(location);
     let success = unsafe {
         BNCollaborationDownloadTypeArchive(
             file.handle.as_ptr(),

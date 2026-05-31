@@ -1,6 +1,7 @@
 #include "SharedCacheController.h"
 #include "MachOProcessor.h"
 #include "ObjC.h"
+#include "Utility.h"
 
 using namespace BinaryNinja;
 using namespace BinaryNinja::DSC;
@@ -40,7 +41,7 @@ void DeleteController(const FileMetadata& file)
 				controller->m_refs.load());
 
 		controllers.erase(it);
-		LogDebugF("Deleted SharedCacheController for view {:?}", file.GetFilename().c_str());
+		LogDebugF("Deleted SharedCacheController for view {:?}", file.GetFilename());
 	}
 }
 
@@ -238,7 +239,7 @@ bool SharedCacheController::ApplyImage(BinaryView& view, const CacheImage& image
 
 	m_loadedImages.insert(image.headerAddress);
 
-	m_logger->LogInfoF("Loaded image: '{}'", image.path);
+	m_logger->LogInfoF("Loaded image: '{}'", ImagePathToUtf8String(image.path));
 
 	// TODO: This needs to be done in a "database save" callback.
 	// NOTE: We store on the parent view because hilariously, the view metadata is not available in view init.

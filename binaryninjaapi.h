@@ -30,12 +30,14 @@
 #include "base/compiler.h"
 #include "binaryninjacore.h"
 #include "exceptions.h"
+#include "pathhelpers.h"
 
 #include "json/json.h"
 #include "rapidjsonwrapper.h"
 #include "vendor/nlohmann/json.hpp"
 
 #include <cstddef>
+#include <filesystem>
 #include <string>
 #include <vector>
 #include <map>
@@ -53,6 +55,8 @@
 #include <optional>
 #include <memory>
 #include <any>
+#include <tuple>
+#include <utility>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <fmt/core.h>
@@ -1163,7 +1167,7 @@ namespace BinaryNinja {
 	template <typename... T>
 	void LogWithStackTraceF(BNLogLevel level, fmt::format_string<T...> format, T&&... args)
 	{
-		LogWithWithStackTraceFV(level, format, fmt::make_format_args(args...));
+		LogWithStackTraceFV(level, format, fmt::make_format_args(args...));
 	}
 
 	/*! LogTraceWithStackTraceF only writes text to the error console if the console is set to log level: DebugLog
@@ -1294,7 +1298,7 @@ namespace BinaryNinja {
 		\param path Path to log to
 		\param append Optional flag for specifying appending. True = append, False = overwrite.
 	*/
-	bool LogToFile(BNLogLevel minimumLevel, const std::string& path, bool append = false);
+	bool LogToFile(BNLogLevel minimumLevel, const std::filesystem::path& path, bool append = false);
 
 	/*! Close all log files
 
@@ -1982,42 +1986,43 @@ namespace BinaryNinja {
 	std::string EscapeString(const std::string& s);
 	std::string UnescapeString(const std::string& s);
 
-	bool PreprocessSource(const std::string& source, const std::string& fileName, std::string& output,
-	    std::string& errors, const std::vector<std::string>& includeDirs = std::vector<std::string>());
+	bool PreprocessSource(const std::string& source, const std::filesystem::path& fileName, std::string& output,
+	    std::string& errors, const std::vector<std::filesystem::path>& includeDirs = std::vector<std::filesystem::path>());
 
 	void DisablePlugins();
 	bool IsPluginsEnabled();
 	bool InitPlugins(bool allowUserPlugins = true);
 
-	std::string GetBundledPluginDirectory();
+	std::filesystem::path GetBundledPluginDirectory();
 
 	/*! Get the directory that script plugins bundled with BinaryNinja are located.
 	 *
 	 * On non-Apple platforms by default this will be identical to the core plugin directory.
 	 *
-	 * @return std::string - Absolute path directory that script plugins bundled with BinaryNinja are located in.
+	 * @return std::filesystem::path - Absolute path directory that script plugins bundled with BinaryNinja are located in.
 	 */
-	std::string GetBundledScriptPluginDirectory();
-	void SetBundledPluginDirectory(const std::string& path);
-	void SetBundledScriptPluginDirectory(const std::string& path);
-	std::string GetUserDirectory();
+	std::filesystem::path GetBundledScriptPluginDirectory();
+	void SetBundledPluginDirectory(const std::filesystem::path& path);
+	void SetBundledScriptPluginDirectory(const std::filesystem::path& path);
+	std::filesystem::path GetUserDirectory();
 
 	/*! Get the Binary Ninja system cache directory
 	 *
-	 * @return std::string - Binary Ninja's cache directory on a given system
+	 * @return std::filesystem::path - Binary Ninja's cache directory on a given system
 	 */
-	std::string GetSystemCacheDirectory();
+	std::filesystem::path GetSystemCacheDirectory();
 
-	std::string GetSettingsFileName();
-	std::string GetRepositoriesDirectory();
-	std::string GetInstallDirectory();
-	std::string GetUserPluginDirectory();
+	std::filesystem::path GetSettingsFileName();
+	std::filesystem::path GetRepositoriesDirectory();
+	std::filesystem::path GetInstallDirectory();
+	std::filesystem::path GetUserPluginDirectory();
 
-	std::string GetPathRelativeToBundledPluginDirectory(const std::string& path);
-	std::string GetPathRelativeToUserPluginDirectory(const std::string& path);
-	std::string GetPathRelativeToUserDirectory(const std::string& path);
+	std::filesystem::path GetPathRelativeToBundledPluginDirectory(const std::filesystem::path& path);
+	std::filesystem::path GetPathRelativeToUserPluginDirectory(const std::filesystem::path& path);
+	std::filesystem::path GetPathRelativeToUserDirectory(const std::filesystem::path& path);
+	bool IsDatabase(const std::filesystem::path& path);
 
-	bool ExecuteWorkerProcess(const std::string& path, const std::vector<std::string>& args, const DataBuffer& input,
+	bool ExecuteWorkerProcess(const std::filesystem::path& path, const std::vector<std::string>& args, const DataBuffer& input,
 	    std::string& output, std::string& errors, bool stdoutIsText = false, bool stderrIsText = true);
 
 	std::string GetVersionString();
@@ -2363,7 +2368,7 @@ namespace BinaryNinja {
 	                    being loaded. If the function returns false, it will cancel Load.
 	    \return Constructed view, or a nullptr Ref<BinaryView>
 	*/
-	Ref<BinaryView> Load(const std::string& filename, bool updateAnalysis = true, const std::string& options = "{}", ProgressFunction progress = {});
+	Ref<BinaryView> Load(const std::filesystem::path& filename, bool updateAnalysis = true, const std::string& options = "{}", ProgressFunction progress = {});
 	/*! Open a BinaryView from a raw data buffer, initializing data views and loading settings.
 
 	    @threadmainonly
@@ -2416,7 +2421,7 @@ namespace BinaryNinja {
 	*/
 	Ref<BinaryView> Load(Ref<ProjectFile> rawData, bool updateAnalysis = true, const std::string& options = "{}", ProgressFunction progress = {});
 
-	Ref<BinaryView> ParseTextFormat(const std::string& filename);
+	Ref<BinaryView> ParseTextFormat(const std::filesystem::path& filename);
 
 	/*!
 		Deprecated. Use non-metadata version.
@@ -2715,7 +2720,7 @@ namespace BinaryNinja {
 
 	 	\ingroup interaction
 
-		\param[out] result Reference to the string the result will be copied to
+		\param[out] result Reference to the path the result will be copied to
 		\param[in] prompt Prompt for the input
 		\param[in] title Title for the input popup when used in UI
 		\return Whether a line was successfully received
@@ -2782,12 +2787,12 @@ namespace BinaryNinja {
 
 	 	\ingroup interaction
 
-		\param[out] result Reference to the string the result will be copied to
+		\param[out] result Reference to the path the result will be copied to
 		\param[in] prompt Prompt for the dialog
 		\param[in] ext Optional, file extension
 		\return Whether a filename was successfully received
 	*/
-	bool GetOpenFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "");
+	bool GetOpenFileNameInput(std::filesystem::path& result, const std::string& prompt, const std::string& ext = "");
 
 	/*! Prompts the user for a file name to save as, optionally providing a file extension and defaultName
 
@@ -2795,26 +2800,27 @@ namespace BinaryNinja {
 
 	 	\ingroup interaction
 
-		\param[out] result Reference to the string the result will be copied to
+		\param[out] result Reference to the path the result will be copied to
 		\param[in] prompt Prompt for the dialog
 		\param[in] ext Optional, file extension
 		\param[in] defaultName Optional, default filename
 		\return Whether a filename was successfully received
 	*/
-	bool GetSaveFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "",
-	    const std::string& defaultName = "");
+	bool GetSaveFileNameInput(std::filesystem::path& result, const std::string& prompt, const std::string& ext = "",
+	    const std::filesystem::path& defaultName = {});
 
 	/*! Prompts the user for a directory name to save as, optionally providing a default_name
 
 		@threadsafe
 
 	 	\ingroup interaction
-		\param[out] result Reference to the string the result will be copied to
+		\param[out] result Reference to the path the result will be copied to
 		\param[in] prompt Prompt for the dialog
 		\param[in] defaultName Optional, default directory name
 		\return Whether a directory was successfully received
 	*/
-	bool GetDirectoryNameInput(std::string& result, const std::string& prompt, const std::string& defaultName = "");
+	bool GetDirectoryNameInput(std::filesystem::path& result, const std::string& prompt,
+	    const std::filesystem::path& defaultName = {});
 
 	/*! Prompts the user for a checkbox input
 		\ingroup interaction
@@ -3154,7 +3160,7 @@ namespace BinaryNinja {
 
 		/*! Path to the TemporaryFile on the filesystem.
 		*/
-		std::string GetPath() const;
+		std::filesystem::path GetPath() const;
 
 		/*! DataBuffer with contents of the file.
 		*/
@@ -3630,7 +3636,7 @@ namespace BinaryNinja {
 		bool SetDescription(const std::string& description);
 		Ref<ProjectFolder> GetParent() const;
 		bool SetParent(Ref<ProjectFolder> parent);
-		bool Export(const std::string& destination, const ProgressFunction& progressCallback = {}) const;
+		bool Export(const std::filesystem::path& destination, const ProgressFunction& progressCallback = {}) const;
 		std::vector<Ref<ProjectFile>> GetFiles() const;
 	};
 
@@ -3644,7 +3650,7 @@ namespace BinaryNinja {
 		ProjectFile(BNProjectFile* file);
 
 		Ref<Project> GetProject() const;
-		std::string GetPathOnDisk() const;
+		std::filesystem::path GetPathOnDisk() const;
 		std::string GetPathInProject() const;
 		bool ExistsOnDisk() const;
 		std::string GetName() const;
@@ -3654,7 +3660,7 @@ namespace BinaryNinja {
 		std::string GetId() const;
 		Ref<ProjectFolder> GetFolder() const;
 		bool SetFolder(Ref<ProjectFolder> folder);
-		bool Export(const std::string& destination) const;
+		bool Export(const std::filesystem::path& destination) const;
 		int64_t GetCreationTimestamp() const;
 		bool AddDependency(Ref<ProjectFile> file);
 		bool RemoveDependency(Ref<ProjectFile> file);
@@ -3676,15 +3682,15 @@ namespace BinaryNinja {
 	  public:
 		Project(BNProject* project);
 
-		static Ref<Project> CreateProject(const std::string& path, const std::string& name);
-		static Ref<Project> OpenProject(const std::string& path);
+		static Ref<Project> CreateProject(const std::filesystem::path& path, const std::string& name);
+		static Ref<Project> OpenProject(const std::filesystem::path& path);
 		static std::vector<Ref<Project>> GetOpenProjects();
 
 		bool Open();
 		bool Close();
 		std::string GetId() const;
 		bool IsOpen() const;
-		std::string GetPath() const;
+		std::filesystem::path GetPath() const;
 		std::string GetFilePathInProject(const Ref<ProjectFile>& file) const;
 		std::string GetName() const;
 		bool SetName(const std::string& name);
@@ -3695,7 +3701,7 @@ namespace BinaryNinja {
 		bool StoreMetadata(const std::string& key, Ref<Metadata> value);
 		bool RemoveMetadata(const std::string& key);
 
-		Ref<ProjectFolder> CreateFolderFromPath(const std::string& path, Ref<ProjectFolder> parent, const std::string& description,
+		Ref<ProjectFolder> CreateFolderFromPath(const std::filesystem::path& path, Ref<ProjectFolder> parent, const std::string& description,
 			const ProgressFunction& progressCallback = {});
 		Ref<ProjectFolder> CreateFolder(Ref<ProjectFolder> parent, const std::string& name, const std::string& description);
 		Ref<ProjectFolder> CreateFolderUnsafe(Ref<ProjectFolder> parent, const std::string& name, const std::string& description, const std::string& id);
@@ -3704,13 +3710,13 @@ namespace BinaryNinja {
 		bool PushFolder(Ref<ProjectFolder> folder);
 		bool DeleteFolder(Ref<ProjectFolder> folder, const ProgressFunction& progressCallback = {});
 
-		Ref<ProjectFile> CreateFileFromPath(const std::string& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const ProgressFunction& progressCallback = {});
-		Ref<ProjectFile> CreateFileFromPathUnsafe(const std::string& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::string& id, int64_t creationTimestamp, const ProgressFunction& progressCallback = {});
+		Ref<ProjectFile> CreateFileFromPath(const std::filesystem::path& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const ProgressFunction& progressCallback = {});
+		Ref<ProjectFile> CreateFileFromPathUnsafe(const std::filesystem::path& path, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::string& id, int64_t creationTimestamp, const ProgressFunction& progressCallback = {});
 		Ref<ProjectFile> CreateFile_(const std::vector<uint8_t>& contents, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const ProgressFunction& progressCallback = {});
 		Ref<ProjectFile> CreateFileUnsafe(const std::vector<uint8_t>& contents, Ref<ProjectFolder> folder, const std::string& name, const std::string& description, const std::string& id, int64_t creationTimestamp, const ProgressFunction& progressCallback = {});
 		std::vector<Ref<ProjectFile>> GetFiles() const;
 		Ref<ProjectFile> GetFileById(const std::string& id) const;
-		Ref<ProjectFile> GetFileByPathOnDisk(const std::string& path) const;
+		Ref<ProjectFile> GetFileByPathOnDisk(const std::filesystem::path& path) const;
 		std::vector<Ref<ProjectFile>> GetFilesByPathInProject(const std::string& path) const;
 		std::vector<Ref<ProjectFile>> GetFilesInFolder(Ref<ProjectFolder> folder) const;
 
@@ -3776,7 +3782,7 @@ namespace BinaryNinja {
 	{
 	  public:
 		FileMetadata();
-		FileMetadata(const std::string& filename);
+		FileMetadata(const std::filesystem::path& filename);
 		FileMetadata(Ref<ProjectFile> projectFile);
 		FileMetadata(BNFileMetadata* file);
 
@@ -3790,24 +3796,24 @@ namespace BinaryNinja {
 
 			\return The original name of the binary opened if a bndb, otherwise returns the current filename
 		*/
-		std::string GetOriginalFilename() const;
+		std::filesystem::path GetOriginalFilename() const;
 
 		/*! If the filename is not open in a BNDB, sets the filename for the current file.
 
 			\param name New name
 		*/
-		void SetOriginalFilename(const std::string& name);
+		void SetOriginalFilename(const std::filesystem::path& name);
 
 		/*!
 			\return The name of the open bndb or binary filename
 		*/
-		std::string GetFilename() const;
+		std::filesystem::path GetFilename() const;
 
 		/*! Set the filename for the current BNDB or binary.
 
 		 	\param name Set the filename for the current BNDB or binary.
 		*/
-		void SetFilename(const std::string& name);
+		void SetFilename(const std::filesystem::path& name);
 
 		/*! Get the transform-chain identity for this file in the current session There are three meaningful states:
 
@@ -3839,11 +3845,7 @@ namespace BinaryNinja {
 
 			\return Whether this FileMetadata represents a derived container entry.
 		*/
-		bool IsContainerEntry() const
-		{
-			std::string virtualPath = GetVirtualPath();
-			return !virtualPath.empty() && GetFilename() != virtualPath;
-		}
+		bool IsContainerEntry() const;
 
 		/*! A leaf-shaped human-readable name for UI presentation. Never contains a directory
 			path. Resolution order:
@@ -3904,7 +3906,7 @@ namespace BinaryNinja {
 		 	\param settings Special save options
 		 	\return Whether the save was successful
 		*/
-		bool CreateDatabase(const std::string& name, BinaryView* data, Ref<SaveSettings> settings);
+		bool CreateDatabase(const std::filesystem::path& name, BinaryView* data, Ref<SaveSettings> settings);
 
 		/*! Writes the current database (.bndb) out to the specified file.
 
@@ -3914,7 +3916,7 @@ namespace BinaryNinja {
 		    \param settings Special save options
 		    \return Whether the save was successful
 		*/
-		bool CreateDatabase(const std::string& name, BinaryView* data,
+		bool CreateDatabase(const std::filesystem::path& name, BinaryView* data,
 		    const ProgressFunction& progressCallback, Ref<SaveSettings> settings);
 
 		/*! Open an existing database from a given path
@@ -3922,7 +3924,7 @@ namespace BinaryNinja {
 		 	\param path Path to the existing database
 		 	\return The resulting BinaryView, if the load was successful
 		*/
-		Ref<BinaryView> OpenExistingDatabase(const std::string& path);
+		Ref<BinaryView> OpenExistingDatabase(const std::filesystem::path& path);
 
 		/*! Open an existing database from a given path with a progress callback
 
@@ -3931,8 +3933,8 @@ namespace BinaryNinja {
 		    \return The resulting BinaryView, if the load was successful
 		*/
 		Ref<BinaryView> OpenExistingDatabase(
-		    const std::string& path, const ProgressFunction& progressCallback);
-		Ref<BinaryView> OpenDatabaseForConfiguration(const std::string& path);
+		    const std::filesystem::path& path, const ProgressFunction& progressCallback);
+		Ref<BinaryView> OpenDatabaseForConfiguration(const std::filesystem::path& path);
 
 		/*! Save the current database to the already created file.
 
@@ -4177,8 +4179,8 @@ namespace BinaryNinja {
 		static void ExternalLocationUpdatedCallback(void* ctxt, BNBinaryView* data, BNExternalLocation* location);
 		static void ExternalLocationRemovedCallback(void* ctxt, BNBinaryView* data, BNExternalLocation* location);
 
-		static void TypeArchiveAttachedCallback(void* ctxt, BNBinaryView* data, const char* id, const char* path);
-		static void TypeArchiveDetachedCallback(void* ctxt, BNBinaryView* data, const char* id, const char* path);
+		static void TypeArchiveAttachedCallback(void* ctxt, BNBinaryView* data, const char* id, BNPath* path);
+		static void TypeArchiveDetachedCallback(void* ctxt, BNBinaryView* data, const char* id, BNPath* path);
 		static void TypeArchiveConnectedCallback(void* ctxt, BNBinaryView* data, BNTypeArchive* archive);
 		static void TypeArchiveDisconnectedCallback(void* ctxt, BNBinaryView* data, BNTypeArchive* archive);
 
@@ -4612,7 +4614,7 @@ namespace BinaryNinja {
 		    \param id Id of the attached archive
 		    \param path Path on disk of the attached archive
 		 */
-		virtual void OnTypeArchiveAttached(BinaryView* data, const std::string& id, const std::string& path)
+		virtual void OnTypeArchiveAttached(BinaryView* data, const std::string& id, const std::filesystem::path& path)
 		{
 			(void)data;
 			(void)id;
@@ -4625,7 +4627,7 @@ namespace BinaryNinja {
 		    \param id Id of the attached archive
 		    \param path Path on disk of the attached archive
 		 */
-		virtual void OnTypeArchiveDetached(BinaryView* data, const std::string& id, const std::string& path)
+		virtual void OnTypeArchiveDetached(BinaryView* data, const std::string& id, const std::filesystem::path& path)
 		{
 			(void)data;
 			(void)id;
@@ -5884,7 +5886,7 @@ namespace BinaryNinja {
 		 	\param settings Special save options
 		 	\return Whether the save was successful
 		*/
-		bool CreateDatabase(const std::string& path, Ref<SaveSettings> settings = new SaveSettings());
+		bool CreateDatabase(const std::filesystem::path& path, Ref<SaveSettings> settings = new SaveSettings());
 
 		/*! Writes the current database (.bndb) out to the specified file.
 
@@ -5893,7 +5895,7 @@ namespace BinaryNinja {
 		    \param settings Special save options
 		    \return Whether the save was successful
 		*/
-		bool CreateDatabase(const std::string& path,
+		bool CreateDatabase(const std::filesystem::path& path,
 		    const ProgressFunction& progressCallback,
 		    Ref<SaveSettings> settings = new SaveSettings());
 		bool SaveAutoSnapshot(Ref<SaveSettings> settings = new SaveSettings());
@@ -6225,7 +6227,7 @@ namespace BinaryNinja {
 		    \param path destination path and filename of the file to be written
 		    \return Whether the save was successful
 		*/
-		bool Save(const std::string& path);
+		bool Save(const std::filesystem::path& path);
 
 		/*! Performs "finalization" on segments added after initial Finalization (performed after an Init() has completed).
 
@@ -7443,7 +7445,7 @@ namespace BinaryNinja {
 			\param[in] importDependencies If Type Library / Type Archive types should be imported during parsing
 			\return Whether parsing was successful
 		*/
-		bool ParseTypesFromSource(const std::string& text, const std::vector<std::string>& options, const std::vector<std::string>& includeDirs, TypeParserResult& result,
+		bool ParseTypesFromSource(const std::string& text, const std::vector<std::string>& options, const std::vector<std::filesystem::path>& includeDirs, TypeParserResult& result,
 		    std::string& errors, const std::set<QualifiedName>& typesAllowRedefinition = {}, bool importDependencies = true);
 
 		/*! Type Container for all types (user and auto) in the BinaryView. Any auto types
@@ -7623,7 +7625,7 @@ namespace BinaryNinja {
 			\param id Expected id of archive
 			\param path Path to archive
 		 */
-		Ref<TypeArchive> AttachTypeArchive(const std::string& id, const std::string& path);
+		Ref<TypeArchive> AttachTypeArchive(const std::string& id, const std::filesystem::path& path);
 		/*! Detach from a type archive, breaking all associations to types with the archive
 
 			\param id Id of archive to detach
@@ -7639,13 +7641,13 @@ namespace BinaryNinja {
 
 			\return All attached archive (id, path) pairs
 		 */
-		std::unordered_map<std::string, std::string> GetTypeArchives() const;
+		std::unordered_map<std::string, std::filesystem::path> GetTypeArchives() const;
 		/*! Look up the path for an attached (but not necessarily connected) type archive by its id
 
 			\param id Id of archive
 			\return Archive path, if it is attached. Otherwise nullopt.
 		 */
-		std::optional<std::string> GetTypeArchivePath(const std::string& id) const;
+		std::optional<std::filesystem::path> GetTypeArchivePath(const std::string& id) const;
 		/*! Get a list of all available type names in all connected archives, and their archive/type id pair
 
 			\return All type names in a map
@@ -8612,7 +8614,7 @@ namespace BinaryNinja {
 		BinaryData(FileMetadata* file);
 		BinaryData(FileMetadata* file, const DataBuffer& data);
 		BinaryData(FileMetadata* file, const void* data, size_t len);
-		BinaryData(FileMetadata* file, const std::string& path);
+		BinaryData(FileMetadata* file, const std::filesystem::path& path);
 		BinaryData(FileMetadata* file, FileAccessor* accessor);
 
 		/*!
@@ -8622,7 +8624,7 @@ namespace BinaryNinja {
 			\param path Path to file to open
 			\return Reference to binary data if successful, nullptr reference otherwise
 		 */
-		static Ref<BinaryData> CreateFromFilename(FileMetadata* file, const std::string& path);
+		static Ref<BinaryData> CreateFromFilename(FileMetadata* file, const std::filesystem::path& path);
 
 		/*!
 			Open a raw file from a given path.
@@ -9496,6 +9498,7 @@ namespace BinaryNinja {
 
 		Ref<BinaryView> GetInput() const;
 		std::string GetFileName() const;
+		std::filesystem::path GetFilePath() const;
 		std::vector<std::string> GetAvailableTransforms() const;
 		std::string GetTransformName() const;
 		void SetTransformName(const std::string& transformName);
@@ -9529,8 +9532,8 @@ namespace BinaryNinja {
 	class TransformSession : public CoreRefCountObject<BNTransformSession, BNNewTransformSessionReference, BNFreeTransformSession>
 	{
 	  public:
-		TransformSession(const std::string& filename, const std::string& options = "{}");
-		TransformSession(const std::string& filename, BNTransformSessionMode mode, const std::string& options = "{}");
+		TransformSession(const std::filesystem::path& filename, const std::string& options = "{}");
+		TransformSession(const std::filesystem::path& filename, BNTransformSessionMode mode, const std::string& options = "{}");
 		TransformSession(Ref<BinaryView> initialView, const std::string& options = "{}");
 		TransformSession(Ref<BinaryView> initialView, BNTransformSessionMode mode, const std::string& options = "{}");
 		TransformSession(Ref<TransformContext> context, BNTransformSessionMode mode, const std::string& options = "{}");
@@ -18498,8 +18501,8 @@ namespace BinaryNinja {
 	{
 	  protected:
 		Platform(Architecture* arch, const std::string& name);
-		Platform(Architecture* arch, const std::string& name, const std::string& typeFile,
-		    const std::vector<std::string>& includeDirs = std::vector<std::string>());
+		Platform(Architecture* arch, const std::string& name, const std::filesystem::path& typeFile,
+		    const std::vector<std::filesystem::path>& includeDirs = std::vector<std::filesystem::path>());
 
 		static void InitCallback(void *ctxt, BNPlatform*);
 		static void InitViewCallback(void* ctxt, BNBinaryView* view);
@@ -18783,10 +18786,10 @@ namespace BinaryNinja {
 			\param autoTypeSource optional source of types if used for automatically generated types
 			\return true on success, false otherwise
 		*/
-		bool ParseTypesFromSource(const std::string& source, const std::string& fileName,
+		bool ParseTypesFromSource(const std::string& source, const std::filesystem::path& fileName,
 		    std::map<QualifiedName, Ref<Type>>& types, std::map<QualifiedName, Ref<Type>>& variables,
 		    std::map<QualifiedName, Ref<Type>>& functions, std::string& errors,
-		    const std::vector<std::string>& includeDirs = std::vector<std::string>(),
+		    const std::vector<std::filesystem::path>& includeDirs = std::vector<std::filesystem::path>(),
 		    const std::string& autoTypeSource = "");
 
 		/*! Parses the source string and any needed headers searching for them in
@@ -18804,9 +18807,9 @@ namespace BinaryNinja {
 			\return true on success, false otherwise
 			\return
 		*/
-		bool ParseTypesFromSourceFile(const std::string& fileName, std::map<QualifiedName, Ref<Type>>& types,
+		bool ParseTypesFromSourceFile(const std::filesystem::path& fileName, std::map<QualifiedName, Ref<Type>>& types,
 		    std::map<QualifiedName, Ref<Type>>& variables, std::map<QualifiedName, Ref<Type>>& functions,
-		    std::string& errors, const std::vector<std::string>& includeDirs = std::vector<std::string>(),
+		    std::string& errors, const std::vector<std::filesystem::path>& includeDirs = std::vector<std::filesystem::path>(),
 		    const std::string& autoTypeSource = "");
 	};
 
@@ -18838,17 +18841,17 @@ namespace BinaryNinja {
 
 		static bool GetOptionTextCallback(void* ctxt, BNTypeParserOption option, const char* value, char** result);
 		static bool PreprocessSourceCallback(void* ctxt,
-			const char* source, const char* fileName, BNPlatform* platform,
+			const char* source, BNPath* fileName, BNPlatform* platform,
 			BNTypeContainer* existingTypes,
 			const char* const* options, size_t optionCount,
-			const char* const* includeDirs, size_t includeDirCount,
+			BNPath** includeDirs, size_t includeDirCount,
 			char** output, BNTypeParserError** errors, size_t* errorCount
 		);
 		static bool ParseTypesFromSourceCallback(void* ctxt,
-			const char* source, const char* fileName, BNPlatform* platform,
+			const char* source, BNPath* fileName, BNPlatform* platform,
 			BNTypeContainer* existingTypes,
 			const char* const* options, size_t optionCount,
-			const char* const* includeDirs, size_t includeDirCount,
+			BNPath** includeDirs, size_t includeDirCount,
 			const char* autoTypeSource, BNTypeParserResult* result,
 			BNTypeParserError** errors, size_t* errorCount
 		);
@@ -18911,11 +18914,11 @@ namespace BinaryNinja {
 		*/
 		virtual bool PreprocessSource(
 			const std::string& source,
-			const std::string& fileName,
+			const std::filesystem::path& fileName,
 			Ref<Platform> platform,
 			std::optional<TypeContainer> existingTypes,
 			const std::vector<std::string>& options,
-			const std::vector<std::string>& includeDirs,
+			const std::vector<std::filesystem::path>& includeDirs,
 			std::string& output,
 			std::vector<TypeParserError>& errors
 		) = 0;
@@ -18935,11 +18938,11 @@ namespace BinaryNinja {
 		*/
 		virtual bool ParseTypesFromSource(
 			const std::string& source,
-			const std::string& fileName,
+			const std::filesystem::path& fileName,
 			Ref<Platform> platform,
 			std::optional<TypeContainer> existingTypes,
 			const std::vector<std::string>& options,
-			const std::vector<std::string>& includeDirs,
+			const std::vector<std::filesystem::path>& includeDirs,
 			const std::string& autoTypeSource,
 			TypeParserResult& result,
 			std::vector<TypeParserError>& errors
@@ -18958,11 +18961,11 @@ namespace BinaryNinja {
 		    \return True if parsing was successful
 		*/
 		bool ParseTypesFromSourceFile(
-			const std::string& fileName,
+			const std::filesystem::path& fileName,
 			Ref<Platform> platform,
 			std::optional<TypeContainer> existingTypes,
 			const std::vector<std::string>& options,
-			const std::vector<std::string>& includeDirs,
+			const std::vector<std::filesystem::path>& includeDirs,
 			const std::string& autoTypeSource,
 			TypeParserResult& result,
 			std::vector<TypeParserError>& errors
@@ -18999,22 +19002,22 @@ namespace BinaryNinja {
 
 		virtual bool PreprocessSource(
 			const std::string& source,
-			const std::string& fileName,
+			const std::filesystem::path& fileName,
 			Ref<Platform> platform,
 			std::optional<TypeContainer> existingTypes,
 			const std::vector<std::string>& options,
-			const std::vector<std::string>& includeDirs,
+			const std::vector<std::filesystem::path>& includeDirs,
 			std::string& output,
 			std::vector<TypeParserError>& errors
 		) override;
 
 		virtual bool ParseTypesFromSource(
 			const std::string& source,
-			const std::string& fileName,
+			const std::filesystem::path& fileName,
 			Ref<Platform> platform,
 			std::optional<TypeContainer> existingTypes,
 			const std::vector<std::string>& options,
-			const std::vector<std::string>& includeDirs,
+			const std::vector<std::filesystem::path>& includeDirs,
 			const std::string& autoTypeSource,
 			TypeParserResult& result,
 			std::vector<TypeParserError>& errors
@@ -19514,7 +19517,7 @@ namespace BinaryNinja {
 
 		static void DestroyInstanceCallback(void* ctxt);
 		static BNScriptingProviderExecuteResult ExecuteScriptInputCallback(void* ctxt, const char* input);
-		static BNScriptingProviderExecuteResult ExecuteScriptFromFilenameCallback(void *ctxt, const char* filename);
+		static BNScriptingProviderExecuteResult ExecuteScriptFromFilenameCallback(void *ctxt, BNPath* filename);
 		static void CancelScriptInputCallback(void* ctxt);
 		static void ReleaseBinaryViewCallback(void* ctxt, BNBinaryView* view);
 		static void SetCurrentBinaryViewCallback(void* ctxt, BNBinaryView* view);
@@ -19531,7 +19534,7 @@ namespace BinaryNinja {
 
 	  public:
 		virtual BNScriptingProviderExecuteResult ExecuteScriptInput(const std::string& input) = 0;
-		virtual BNScriptingProviderExecuteResult ExecuteScriptInputFromFilename(const std::string& filename) = 0;
+		virtual BNScriptingProviderExecuteResult ExecuteScriptInputFromFilename(const std::filesystem::path& filename) = 0;
 		virtual void CancelScriptInput();
 		virtual void ReleaseBinaryView(BinaryView* view);
 		virtual void SetCurrentBinaryView(BinaryView* view);
@@ -19567,7 +19570,7 @@ namespace BinaryNinja {
 		virtual ~CoreScriptingInstance() {};
 
 		virtual BNScriptingProviderExecuteResult ExecuteScriptInput(const std::string& input) override;
-		virtual BNScriptingProviderExecuteResult ExecuteScriptInputFromFilename(const std::string& filename) override;
+		virtual BNScriptingProviderExecuteResult ExecuteScriptInputFromFilename(const std::filesystem::path& filename) override;
 		virtual void CancelScriptInput() override;
 		virtual void ReleaseBinaryView(BinaryView* view) override;
 		virtual void SetCurrentBinaryView(BinaryView* view) override;
@@ -19594,12 +19597,12 @@ namespace BinaryNinja {
 		ScriptingProvider(BNScriptingProvider* provider);
 
 		static BNScriptingInstance* CreateInstanceCallback(void* ctxt);
-		static bool LoadModuleCallback(void* ctxt, const char* repository, const char* module, bool force);
+		static bool LoadModuleCallback(void* ctxt, BNPath* repository, BNPath* module, bool force);
 		static bool InstallModulesCallback(void* ctxt, const char* modules);
 
 	  public:
 		virtual Ref<ScriptingInstance> CreateNewInstance() = 0;
-		virtual bool LoadModule(const std::string& repository, const std::string& module, bool force) = 0;
+		virtual bool LoadModule(const std::filesystem::path& repository, const std::filesystem::path& module, bool force) = 0;
 		virtual bool InstallModules(const std::string& modules) = 0;
 
 		std::string GetName();
@@ -19616,7 +19619,7 @@ namespace BinaryNinja {
 	  public:
 		CoreScriptingProvider(BNScriptingProvider* provider);
 		virtual Ref<ScriptingInstance> CreateNewInstance() override;
-		virtual bool LoadModule(const std::string& repository, const std::string& module, bool force) override;
+		virtual bool LoadModule(const std::filesystem::path& repository, const std::filesystem::path& module, bool force) override;
 		virtual bool InstallModules(const std::string& modules) override;
 	};
 
@@ -19688,15 +19691,17 @@ namespace BinaryNinja {
 		uint64_t currentAddress;           // For AddressFormField
 		std::vector<std::string> choices;  // For ChoiceFormField
 		std::string ext;                   // For OpenFileNameFormField, SaveFileNameFormField
-		std::string defaultName;           // For SaveFileNameFormField
+		std::filesystem::path defaultName; // For SaveFileNameFormField, DirectoryNameFormField
 		int64_t intResult;
 		uint64_t addressResult;
 		std::string stringResult;
+		std::filesystem::path pathResult;  // For OpenFileNameFormField, SaveFileNameFormField, DirectoryNameFormField
 		size_t indexResult;
 		bool hasDefault;
 		int64_t intDefault;
 		uint64_t addressDefault;
 		std::string stringDefault;
+		std::filesystem::path pathDefault; // For OpenFileNameFormField, SaveFileNameFormField, DirectoryNameFormField
 		size_t indexDefault;
 
 		static FormInputField Label(const std::string& text);
@@ -19709,8 +19714,8 @@ namespace BinaryNinja {
 		static FormInputField Choice(const std::string& prompt, const std::vector<std::string>& choices);
 		static FormInputField OpenFileName(const std::string& prompt, const std::string& ext);
 		static FormInputField SaveFileName(
-		    const std::string& prompt, const std::string& ext, const std::string& defaultName = "");
-		static FormInputField DirectoryName(const std::string& prompt, const std::string& defaultName = "");
+		    const std::string& prompt, const std::string& ext, const std::filesystem::path& defaultName = {});
+		static FormInputField DirectoryName(const std::string& prompt, const std::filesystem::path& defaultName = {});
 		static FormInputField Checkbox(const std::string& prompt, const bool& defaultChoice = false);
 	};
 
@@ -19766,11 +19771,12 @@ namespace BinaryNinja {
 			const std::vector<std::string>& choices) = 0;
 		virtual bool GetLargeChoiceInput(size_t& idx, const std::string& prompt, const std::string& title,
 			const std::vector<std::string>& choices) = 0;
-		virtual bool GetOpenFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "");
-		virtual bool GetSaveFileNameInput(std::string& result, const std::string& prompt, const std::string& ext = "",
-		    const std::string& defaultName = "");
-		virtual bool GetDirectoryNameInput(
-		    std::string& result, const std::string& prompt, const std::string& defaultName = "");
+		virtual bool GetOpenFileNameInput(
+		    std::filesystem::path& result, const std::string& prompt, const std::string& ext = "");
+		virtual bool GetSaveFileNameInput(std::filesystem::path& result, const std::string& prompt,
+		    const std::string& ext = "", const std::filesystem::path& defaultName = {});
+		virtual bool GetDirectoryNameInput(std::filesystem::path& result, const std::string& prompt,
+		    const std::filesystem::path& defaultName = {});
 		virtual bool GetCheckboxInput(
 			int64_t& result,
 			const std::string& prompt,
@@ -19820,7 +19826,7 @@ namespace BinaryNinja {
 		PluginStatus GetPluginStatus() const;
 		std::vector<std::string> GetApis() const;
 		std::vector<std::string> GetInstallPlatforms() const;
-		std::string GetPath() const;
+		std::filesystem::path GetPath() const;
 		std::string GetSubdir() const;
 		std::string GetDependencies() const;
 		std::string GetPluginDirectory() const;
@@ -19873,13 +19879,13 @@ namespace BinaryNinja {
 	  public:
 		Repository(BNRepository* repository);
 		std::string GetUrl() const;
-		std::string GetRepoPath() const;
+		std::filesystem::path GetRepoPath() const;
 		std::string GetLocalReference() const;
 		std::string GetRemoteReference() const;
 		std::vector<Ref<Extension>> GetPlugins() const;
 		std::string GetPluginDirectory() const;
-		Ref<Extension> GetPluginByPath(const std::string& pluginPath);
-		std::string GetFullPath() const;
+		Ref<Extension> GetPluginByPath(const std::filesystem::path& pluginPath);
+		std::filesystem::path GetFullPath() const;
 	};
 
 	/*!
@@ -19890,9 +19896,9 @@ namespace BinaryNinja {
 	  public:
 		static bool CheckForUpdates();
 		static std::vector<Ref<Repository>> GetRepositories();
-		static Ref<Repository> GetRepositoryByPath(const std::string& repoName);
+		static Ref<Repository> GetRepositoryByPath(const std::filesystem::path& repoName);
 		static bool AddRepository(const std::string& url,  // URL to raw plugins.json file
-		    const std::string& repoPath);           // Relative path within the repositories directory
+		    const std::filesystem::path& repoPath);           // Relative path within the repositories directory
 		Ref<Repository> GetDefaultRepository();
 	};
 
@@ -20010,7 +20016,7 @@ namespace BinaryNinja {
 			\param view a BinaryView object
 			\return True if the load is successful, False otherwise
 		*/
-		bool LoadSettingsFile(const std::string& fileName, BNSettingsScope scope = SettingsAutoScope, Ref<BinaryView> view = nullptr);
+		bool LoadSettingsFile(const std::filesystem::path& fileName = std::filesystem::path(), BNSettingsScope scope = SettingsAutoScope, Ref<BinaryView> view = nullptr);
 
 		/*! Sets the resource identifier for this \c Settings instance. When accessing setting values at the
 			\c SettingsResourceScope level, the resource identifier is passed along through the backing store interface.
@@ -20127,6 +20133,8 @@ namespace BinaryNinja {
 		    BNSettingsScope scope = SettingsAutoScope);
 		bool Set(const std::string& key, const std::string& value, Ref<BinaryView> view = nullptr,
 		    BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, const std::filesystem::path& value, Ref<BinaryView> view = nullptr,
+		    BNSettingsScope scope = SettingsAutoScope);
 		bool Set(const std::string& key, const std::vector<std::string>& value, Ref<BinaryView> view = nullptr,
 		    BNSettingsScope scope = SettingsAutoScope);
 		bool SetJson(const std::string& key, const std::string& value, Ref<BinaryView> view = nullptr,
@@ -20152,6 +20160,7 @@ namespace BinaryNinja {
 		bool Set(const std::string& key, uint64_t value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
 		bool Set(const std::string& key, const char* value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
 		bool Set(const std::string& key, const std::string& value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
+		bool Set(const std::string& key, const std::filesystem::path& value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
 		bool Set(const std::string& key, const std::vector<std::string>& value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
 		bool SetJson(const std::string& key, const std::string& value, Ref<Function> func, BNSettingsScope scope = SettingsAutoScope);
 	};
@@ -20175,6 +20184,8 @@ namespace BinaryNinja {
 	template <>
 	std::string Settings::Get<std::string>(const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
 	template <>
+	std::filesystem::path Settings::Get<std::filesystem::path>(const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
+	template <>
 	std::vector<std::string> Settings::Get<std::vector<std::string>>(
 	    const std::string& key, Ref<BinaryView> view, BNSettingsScope* scope);
 	/*! \endcond*/
@@ -20189,6 +20200,8 @@ namespace BinaryNinja {
 	uint64_t Settings::Get<uint64_t>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
 	template <>
 	std::string Settings::Get<std::string>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
+	template <>
+	std::filesystem::path Settings::Get<std::filesystem::path>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
 	template <>
 	std::vector<std::string> Settings::Get<std::vector<std::string>>(const std::string& key, Ref<Function> func, BNSettingsScope* scope);
 
@@ -20875,7 +20888,7 @@ namespace BinaryNinja {
 			\param path
 			\return True if the type library was successfully loaded
 		*/
-		static Ref<TypeLibrary> LoadFromFile(const std::string& path);
+		static Ref<TypeLibrary> LoadFromFile(const std::filesystem::path& path);
 
 		/*! Looks up the first type library found with a matching name. Keep in mind that names are
 			not necessarily unique.
@@ -20899,14 +20912,14 @@ namespace BinaryNinja {
 			\param path
 			\return True if the type library was successfully written to the file
 		*/
-		bool WriteToFile(const std::string& path);
+		bool WriteToFile(const std::filesystem::path& path);
 
 		/*! Decompresses the type library to a JSON file
 
 			\param path
 			\return True if the type library was successfully decompressed
 		*/
-		bool DecompressToFile(const std::string& path);
+		bool DecompressToFile(const std::filesystem::path& path);
 
 		/*! The Architecture this type library is associated with
 
@@ -21190,7 +21203,7 @@ namespace BinaryNinja {
 		    \param path Path to type archive file
 		    \return Type archive, or nullptr if it could not be loaded.
 		 */
-		static Ref<TypeArchive> Open(const std::string& path);
+		static Ref<TypeArchive> Open(const std::filesystem::path& path);
 
 		/*! Create a type archive at the given path.
 
@@ -21198,7 +21211,7 @@ namespace BinaryNinja {
 		    \param platform Relevant platform for types in the archive
 		    \return Type archive, or nullptr if it could not be loaded.
 		 */
-		static Ref<TypeArchive> Create(const std::string& path, Ref<Platform> platform);
+		static Ref<TypeArchive> Create(const std::filesystem::path& path, Ref<Platform> platform);
 
 		/*! Create a type archive at the given path with a manually-specified id.
 
@@ -21208,7 +21221,7 @@ namespace BinaryNinja {
 		    \param id Assigned id for the type archive
 		    \return Type archive, or nullptr if it could not be created.
 		 */
-		static Ref<TypeArchive> CreateWithId(const std::string& path, Ref<Platform> platform, const std::string& id);
+		static Ref<TypeArchive> CreateWithId(const std::filesystem::path& path, Ref<Platform> platform, const std::string& id);
 
 		/*! Get a reference to the type archive with the known id, if one exists.
 
@@ -21228,7 +21241,7 @@ namespace BinaryNinja {
 		    \param path File path
 		    \return True if it's a type archive
 		 */
-		static bool IsTypeArchive(const std::string& path);
+		static bool IsTypeArchive(const std::filesystem::path& path);
 
 		/*! Get the unique id associated with this type archive
 
@@ -21240,7 +21253,7 @@ namespace BinaryNinja {
 
 		    \return The path
 		 */
-		std::string GetPath() const;
+		std::filesystem::path GetPath() const;
 
 		/*! Get the associated Platform for a Type Archive
 
@@ -21733,9 +21746,9 @@ namespace BinaryNinja {
 		 */
 		bool ParseTypesFromSource(
 			const std::string& text,
-			const std::string& fileName,
+			const std::filesystem::path& fileName,
 			const std::vector<std::string>& options,
-			const std::vector<std::string>& includeDirs,
+			const std::vector<std::filesystem::path>& includeDirs,
 			const std::string& autoTypeSource,
 			bool importDependencies,
 			TypeParserResult& result,
@@ -21748,9 +21761,9 @@ namespace BinaryNinja {
 		BN_DEPRECATED("Use ParseTypesFromSource overload with the extra importDependencies param")
 		bool ParseTypesFromSource(
 			const std::string& text,
-			const std::string& fileName,
+			const std::filesystem::path& fileName,
 			const std::vector<std::string>& options,
-			const std::vector<std::string>& includeDirs,
+			const std::vector<std::filesystem::path>& includeDirs,
 			const std::string& autoTypeSource,
 			TypeParserResult& result,
 			std::vector<TypeParserError>& errors
@@ -23899,7 +23912,7 @@ namespace BinaryNinja::Collaboration
 	    \param project Remote Project
 	    \return Default project path
 	 */
-	std::string DefaultProjectPath(Ref<RemoteProject> project);
+	std::filesystem::path DefaultProjectPath(Ref<RemoteProject> project);
 
 	/*!
 	    Get the default filepath for a remote File. This is based off the Setting for
@@ -23908,7 +23921,7 @@ namespace BinaryNinja::Collaboration
 	    \param file Remote File
 	    \return Default file path
 	 */
-	std::string DefaultFilePath(Ref<RemoteFile> file);
+	std::filesystem::path DefaultFilePath(Ref<RemoteFile> file);
 
 		/*!
 	    Download a file from its remote, saving all snapshots to a database in the
@@ -23919,7 +23932,7 @@ namespace BinaryNinja::Collaboration
 	    \return FileContext for opening
 	    \throws SyncException If there was an error downloading
 	 */
-	Ref<FileMetadata> DownloadFile(Ref<RemoteFile> file, const std::string& dbPath, ProgressFunction progress = {});
+	Ref<FileMetadata> DownloadFile(Ref<RemoteFile> file, const std::filesystem::path& dbPath, ProgressFunction progress = {});
 
 	/*!
 	    Add a snapshot to the id map in a database
@@ -24116,7 +24129,7 @@ namespace BinaryNinja::Collaboration
 	    \return TypeArchive for using
 	    \throws SyncException If there was an error downloading
 	 */
-	Ref<TypeArchive> DownloadTypeArchive(Ref<RemoteFile> file, const std::string& dbPath, ProgressFunction progress = {});
+	Ref<TypeArchive> DownloadTypeArchive(Ref<RemoteFile> file, const std::filesystem::path& dbPath, ProgressFunction progress = {});
 
 	/*!
 	    Upload a type archive
@@ -24152,7 +24165,7 @@ namespace BinaryNinja::Collaboration
 	 */
 	size_t PullTypeArchive(Ref<TypeArchive> archive, Ref<RemoteFile> file, std::function<bool(const std::vector<Ref<TypeArchiveMergeConflict>>)> conflictHandler, ProgressFunction progress = {});
 
-	void DownloadDatabaseForFile(Ref<RemoteFile> file, const std::string& dbPath, bool force, ProgressFunction progress = {});
+	void DownloadDatabaseForFile(Ref<RemoteFile> file, const std::filesystem::path& dbPath, bool force, ProgressFunction progress = {});
 
 	/*!
 	    Set the remote author of a local snapshot (does not upload)

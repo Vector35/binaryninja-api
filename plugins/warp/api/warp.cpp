@@ -1,5 +1,6 @@
 #include "warpcore.h"
 #include "warp.h"
+#include "pathhelpers.h"
 
 #include <utility>
 
@@ -309,10 +310,11 @@ std::vector<Source> Container::GetSources() const
     return result;
 }
 
-std::optional<Source> Container::AddSource(const std::string &sourcePath) const
+std::optional<Source> Container::AddSource(const std::filesystem::path& sourcePath) const
 {
     Source source;
-    if (!BNWARPContainerAddSource(m_object, sourcePath.c_str(), source.RawMut()))
+    BinaryNinja::Path::APIObject corePath(sourcePath);
+    if (!BNWARPContainerAddSource(m_object, corePath, source.RawMut()))
         return std::nullopt;
     return source;
 }
@@ -332,14 +334,12 @@ bool Container::IsSourceWritable(const Source &source) const
     return BNWARPContainerIsSourceWritable(m_object, source.Raw());
 }
 
-std::optional<std::string> Container::SourcePath(const Source &source) const
+std::optional<std::filesystem::path> Container::SourcePath(const Source &source) const
 {
-    char *rawPath = BNWARPContainerGetSourcePath(m_object, source.Raw());
+    BNPath *rawPath = BNWARPContainerGetSourcePath(m_object, source.Raw());
     if (!rawPath)
         return std::nullopt;
-    std::string path = rawPath;
-    BNFreeString(rawPath);
-    return path;
+    return BinaryNinja::Path::PathFromCore(rawPath);
 }
 
 bool Container::AddFunctions(const Target &target, const Source &source, const std::vector<Ref<Function> > &functions) const
@@ -511,9 +511,10 @@ File::File(BNWARPFile *file)
     m_object = file;
 }
 
-Ref<File> File::FromPath(const std::string &path)
+Ref<File> File::FromPath(const std::filesystem::path& path)
 {
-    BNWARPFile *result = BNWARPNewFileFromPath(path.c_str());
+    BinaryNinja::Path::APIObject corePath(path);
+    BNWARPFile *result = BNWARPNewFileFromPath(corePath);
     if (!result)
         return nullptr;
     return new File(result);
@@ -544,10 +545,10 @@ ProcessorState ProcessorState::FromAPIObject(BNWARPProcessorState *state)
     result.processedFilesCount = state->processedFilesCount;
     result.analyzingFiles.reserve(state->analyzingFilesCount);
     for (size_t i = 0; i < state->analyzingFilesCount; ++i)
-        result.analyzingFiles.emplace_back(state->analyzingFiles[i]);
+        result.analyzingFiles.emplace_back(BinaryNinja::Path::PathFromCoreBorrowed(state->analyzingFiles[i]));
     result.processingFiles.reserve(state->processingFilesCount);
     for (size_t i = 0; i < state->processingFilesCount; ++i)
-        result.processingFiles.emplace_back(state->processingFiles[i]);
+        result.processingFiles.emplace_back(BinaryNinja::Path::PathFromCoreBorrowed(state->processingFiles[i]));
     return result;
 }
 
@@ -561,9 +562,10 @@ Processor::~Processor()
     BNWARPFreeProcessor(m_object);
 }
 
-void Processor::AddPath(const std::string &path) const
+void Processor::AddPath(const std::filesystem::path& path) const
 {
-    BNWARPProcessorAddPath(m_object, path.c_str());
+    BinaryNinja::Path::APIObject corePath(path);
+    BNWARPProcessorAddPath(m_object, corePath);
 }
 
 void Processor::AddProject(const BinaryNinja::Project &project) const

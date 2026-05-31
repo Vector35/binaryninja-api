@@ -33,6 +33,12 @@ string TransformContext::GetFileName() const
 }
 
 
+std::filesystem::path TransformContext::GetFilePath() const
+{
+	return Path::PathFromCore(BNTransformContextGetFilePath(m_object));
+}
+
+
 vector<string> TransformContext::GetAvailableTransforms() const
 {
 	size_t count;

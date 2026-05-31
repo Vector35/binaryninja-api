@@ -1,4 +1,5 @@
 #include "binaryninjaapi.h"
+#include "pathhelpers.h"
 #include <cstring>
 
 using namespace BinaryNinja;
@@ -27,9 +28,10 @@ Ref<Settings> Settings::Instance(const std::string& instanceId)
 }
 
 
-bool Settings::LoadSettingsFile(const string& fileName, BNSettingsScope scope, Ref<BinaryView> view)
+bool Settings::LoadSettingsFile(const std::filesystem::path& fileName, BNSettingsScope scope, Ref<BinaryView> view)
 {
-	return BNLoadSettingsFile(m_object, fileName.c_str(), scope, view ? view->GetObject() : nullptr);
+	Path::APIObject coreFileName(fileName);
+	return BNLoadSettingsFile(m_object, coreFileName, scope, view ? view->GetObject() : nullptr);
 }
 
 
@@ -259,6 +261,13 @@ string Settings::Get<string>(const string& key, Ref<BinaryView> view, BNSettings
 
 
 template <>
+std::filesystem::path Settings::Get<std::filesystem::path>(const string& key, Ref<BinaryView> view, BNSettingsScope* scope)
+{
+	return Path::Utf8ToPath(Get<string>(key, view, scope));
+}
+
+
+template <>
 vector<string> Settings::Get<vector<string>>(const string& key, Ref<BinaryView> view, BNSettingsScope* scope)
 {
 	size_t size = 0;
@@ -323,6 +332,12 @@ bool Settings::Set(const string& key, const char* value, Ref<BinaryView> view, B
 bool Settings::Set(const string& key, const string& value, Ref<BinaryView> view, BNSettingsScope scope)
 {
 	return BNSettingsSetString(m_object, view ? view->GetObject() : nullptr, nullptr, scope, key.c_str(), value.c_str());
+}
+
+
+bool Settings::Set(const string& key, const std::filesystem::path& value, Ref<BinaryView> view, BNSettingsScope scope)
+{
+	return Set(key, Path::PathToUtf8String(value), view, scope);
 }
 
 
@@ -423,6 +438,13 @@ string Settings::Get<string>(const string& key, Ref<Function> func, BNSettingsSc
 
 
 template <>
+std::filesystem::path Settings::Get<std::filesystem::path>(const string& key, Ref<Function> func, BNSettingsScope* scope)
+{
+	return Path::Utf8ToPath(Get<string>(key, func, scope));
+}
+
+
+template <>
 vector<string> Settings::Get<vector<string>>(const string& key, Ref<Function> func, BNSettingsScope* scope)
 {
 	size_t size = 0;
@@ -487,6 +509,12 @@ bool Settings::Set(const string& key, const char* value, Ref<Function> func, BNS
 bool Settings::Set(const string& key, const string& value, Ref<Function> func, BNSettingsScope scope)
 {
 	return BNSettingsSetString(m_object, nullptr, func ? func->GetObject() : nullptr, scope, key.c_str(), value.c_str());
+}
+
+
+bool Settings::Set(const string& key, const std::filesystem::path& value, Ref<Function> func, BNSettingsScope scope)
+{
+	return Set(key, Path::PathToUtf8String(value), func, scope);
 }
 
 

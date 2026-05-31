@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <filesystem>
 #include <map>
+#include <string_view>
 
 #include "binaryninjaapi.h"
 
@@ -42,9 +44,10 @@ uint64_t readValidULEB128(const uint8_t*& current, const uint8_t* end);
 void ApplySymbol(BinaryNinja::Ref<BinaryNinja::BinaryView> view, BinaryNinja::Ref<BinaryNinja::TypeLibrary> typeLib,
 	BinaryNinja::Ref<BinaryNinja::Symbol> symbol, BinaryNinja::Ref<BinaryNinja::Type> type = nullptr);
 
-// Returns the "image name" for a given path.
-// /blah/foo/bar/libObjCThing.dylib -> libObjCThing.dylib
-std::string BaseFileName(const std::string& path);
+// Mach-O image paths are stored in the file format as UTF-8-ish POSIX paths, not native filesystem paths.
+std::filesystem::path ImagePathFromString(std::string_view imagePath);
+std::string ImagePathToUtf8String(const std::filesystem::path& imagePath);
+std::string ImageNameFromPath(const std::filesystem::path& imagePath);
 
 bool IsSameFolderForFile(BinaryNinja::Ref<BinaryNinja::ProjectFile> a, BinaryNinja::Ref<BinaryNinja::ProjectFile> b);
 bool IsSameFolder(BinaryNinja::Ref<BinaryNinja::ProjectFolder> a, BinaryNinja::Ref<BinaryNinja::ProjectFolder> b);

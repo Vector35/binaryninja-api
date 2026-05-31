@@ -100,9 +100,9 @@ use std::collections::HashMap;
 use std::ffi::{c_char, c_void, CStr};
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
-use string::BnString;
 use string::IntoCStr;
 use string::IntoJson;
+use string::{BnPath, BnString};
 
 use crate::project::file::ProjectFile;
 pub use binaryninjacore_sys::BNDataFlowQueryOption as DataFlowQueryOption;
@@ -124,11 +124,11 @@ pub fn load_with_progress<P: ProgressCallback>(
     file_path: impl AsRef<Path>,
     mut progress: P,
 ) -> Option<Ref<BinaryView>> {
-    let file_path = file_path.as_ref().to_cstr();
+    let file_path = BnPath::new(file_path.as_ref());
     let options = c"";
     let handle = unsafe {
         BNLoadFilename(
-            file_path.as_ptr() as *mut _,
+            file_path.as_ptr(),
             true,
             options.as_ptr() as *mut c_char,
             Some(P::cb_progress_callback),
@@ -189,7 +189,7 @@ where
     O: IntoJson,
     P: ProgressCallback,
 {
-    let file_path = file_path.as_ref().to_cstr();
+    let file_path = BnPath::new(file_path.as_ref());
     let options_or_default = if let Some(opt) = options {
         opt.get_json_string()
             .ok()?
@@ -201,7 +201,7 @@ where
     };
     let handle = unsafe {
         BNLoadFilename(
-            file_path.as_ptr() as *mut _,
+            file_path.as_ptr(),
             update_analysis_and_wait,
             options_or_default.as_ptr() as *mut c_char,
             Some(P::cb_progress_callback),
@@ -313,55 +313,50 @@ where
 }
 
 pub fn install_directory() -> PathBuf {
-    let install_dir_ptr: *mut c_char = unsafe { BNGetInstallDirectory() };
+    let install_dir_ptr = unsafe { BNGetInstallDirectory() };
     assert!(!install_dir_ptr.is_null());
-    let install_dir_str = unsafe { BnString::into_string(install_dir_ptr) };
-    PathBuf::from(install_dir_str)
+    unsafe { BnString::into_path_buf(install_dir_ptr) }
 }
 
 pub fn bundled_plugin_directory() -> Result<PathBuf, ()> {
-    let s: *mut c_char = unsafe { BNGetBundledPluginDirectory() };
+    let s = unsafe { BNGetBundledPluginDirectory() };
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(unsafe { BnString::into_string(s) }))
+    Ok(unsafe { BnString::into_path_buf(s) })
 }
 
 pub fn set_bundled_plugin_directory(new_dir: impl AsRef<Path>) {
-    let new_dir = new_dir.as_ref().to_cstr();
+    let new_dir = BnPath::new(new_dir.as_ref());
     unsafe { BNSetBundledPluginDirectory(new_dir.as_ptr()) };
 }
 
 pub fn user_directory() -> PathBuf {
-    let user_dir_ptr: *mut c_char = unsafe { BNGetUserDirectory() };
+    let user_dir_ptr = unsafe { BNGetUserDirectory() };
     assert!(!user_dir_ptr.is_null());
-    let user_dir_str = unsafe { BnString::into_string(user_dir_ptr) };
-    PathBuf::from(user_dir_str)
+    unsafe { BnString::into_path_buf(user_dir_ptr) }
 }
 
 pub fn user_plugin_directory() -> Result<PathBuf, ()> {
-    let s: *mut c_char = unsafe { BNGetUserPluginDirectory() };
+    let s = unsafe { BNGetUserPluginDirectory() };
     if s.is_null() {
         return Err(());
     }
-    let user_plugin_dir_str = unsafe { BnString::into_string(s) };
-    Ok(PathBuf::from(user_plugin_dir_str))
+    Ok(unsafe { BnString::into_path_buf(s) })
 }
 
 pub fn repositories_directory() -> Result<PathBuf, ()> {
-    let s: *mut c_char = unsafe { BNGetRepositoriesDirectory() };
+    let s = unsafe { BNGetRepositoriesDirectory() };
     if s.is_null() {
         return Err(());
     }
-    let repo_dir_str = unsafe { BnString::into_string(s) };
-    Ok(PathBuf::from(repo_dir_str))
+    Ok(unsafe { BnString::into_path_buf(s) })
 }
 
 pub fn settings_file_path() -> PathBuf {
-    let settings_file_name_ptr: *mut c_char = unsafe { BNGetSettingsFileName() };
+    let settings_file_name_ptr = unsafe { BNGetSettingsFileName() };
     assert!(!settings_file_name_ptr.is_null());
-    let settings_file_path_str = unsafe { BnString::into_string(settings_file_name_ptr) };
-    PathBuf::from(settings_file_path_str)
+    unsafe { BnString::into_path_buf(settings_file_name_ptr) }
 }
 
 /// Write the installation directory of the currently running core instance to disk.
@@ -372,30 +367,30 @@ pub fn save_last_run() {
 }
 
 pub fn path_relative_to_bundled_plugin_directory(path: impl AsRef<Path>) -> Result<PathBuf, ()> {
-    let path_raw = path.as_ref().to_cstr();
-    let s: *mut c_char = unsafe { BNGetPathRelativeToBundledPluginDirectory(path_raw.as_ptr()) };
+    let path_raw = BnPath::new(path.as_ref());
+    let s = unsafe { BNGetPathRelativeToBundledPluginDirectory(path_raw.as_ptr()) };
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(unsafe { BnString::into_string(s) }))
+    Ok(unsafe { BnString::into_path_buf(s) })
 }
 
 pub fn path_relative_to_user_plugin_directory(path: impl AsRef<Path>) -> Result<PathBuf, ()> {
-    let path_raw = path.as_ref().to_cstr();
-    let s: *mut c_char = unsafe { BNGetPathRelativeToUserPluginDirectory(path_raw.as_ptr()) };
+    let path_raw = BnPath::new(path.as_ref());
+    let s = unsafe { BNGetPathRelativeToUserPluginDirectory(path_raw.as_ptr()) };
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(unsafe { BnString::into_string(s) }))
+    Ok(unsafe { BnString::into_path_buf(s) })
 }
 
 pub fn path_relative_to_user_directory(path: impl AsRef<Path>) -> Result<PathBuf, ()> {
-    let path_raw = path.as_ref().to_cstr();
-    let s: *mut c_char = unsafe { BNGetPathRelativeToUserDirectory(path_raw.as_ptr()) };
+    let path_raw = BnPath::new(path.as_ref());
+    let s = unsafe { BNGetPathRelativeToUserDirectory(path_raw.as_ptr()) };
     if s.is_null() {
         return Err(());
     }
-    Ok(PathBuf::from(unsafe { BnString::into_string(s) }))
+    Ok(unsafe { BnString::into_path_buf(s) })
 }
 
 /// Returns if the running thread is the "main thread"
@@ -572,7 +567,7 @@ pub fn is_ui_enabled() -> bool {
 }
 
 pub fn is_database(file: &Path) -> bool {
-    let filename = file.to_cstr();
+    let filename = BnPath::new(file);
     unsafe { BNIsDatabase(filename.as_ptr()) }
 }
 

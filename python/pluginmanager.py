@@ -20,9 +20,10 @@
 
 import ctypes
 import json
+import os
 from dataclasses import dataclass
 from datetime import datetime, date
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union
 
 import binaryninja
 from . import _binaryninjacore as core
@@ -64,7 +65,7 @@ class Extension:
 		return f"<{self.path} {'installed' if self.installed else 'not-installed'}/{'enabled' if self.enabled else 'disabled'}>"
 
 	@property
-	def path(self) -> str:
+	def path(self) -> os.PathLike:
 		"""Relative path from the base of the repository to the actual plugin"""
 		result = core.BNPluginGetPath(self.handle)
 		assert result is not None, "core.BNPluginGetPath returned None"
@@ -390,9 +391,10 @@ class Repository:
 	def __repr__(self) -> str:
 		return f"<Repository: {self.path}>"
 
-	def __getitem__(self, plugin_path: str):
+	def __getitem__(self, plugin_path: Union[str, os.PathLike]):
+		plugin_path = os.fspath(plugin_path)
 		for plugin in self.plugins:
-			if plugin_path == plugin.path:
+			if plugin_path == os.fspath(plugin.path):
 				return plugin
 		raise KeyError()
 
@@ -404,14 +406,14 @@ class Repository:
 		return result
 
 	@property
-	def path(self) -> str:
+	def path(self) -> os.PathLike:
 		"""String local path to store the given plugin repository"""
 		result = core.BNRepositoryGetRepoPath(self.handle)
 		assert result is not None
 		return result
 
 	@property
-	def full_path(self) -> str:
+	def full_path(self) -> os.PathLike:
 		"""String full path the repository"""
 		result = core.BNRepositoryGetPluginsPath(self.handle)
 		assert result is not None
@@ -443,9 +445,10 @@ class RepositoryManager:
 	def __init__(self):
 		binaryninja._init_plugins()
 
-	def __getitem__(self, repo_path: str) -> Repository:
+	def __getitem__(self, repo_path: Union[str, os.PathLike]) -> Repository:
+		repo_path = os.fspath(repo_path)
 		for repo in self.repositories:
-			if repo_path == repo.path:
+			if repo_path == os.fspath(repo.path):
 				return repo
 		raise KeyError()
 
@@ -486,7 +489,7 @@ class RepositoryManager:
 		assert repo_handle_ref is not None, "core.BNNewRepositoryReference returned None"
 		return Repository(repo_handle_ref)
 
-	def add_repository(self, url: Optional[str] = None, repopath: Optional[str] = None) -> bool:
+	def add_repository(self, url: Optional[str] = None, repopath: Optional[Union[str, os.PathLike]] = None) -> bool:
 		"""
 		``add_repository`` adds a new plugin repository for the manager to track.
 
@@ -507,7 +510,7 @@ class RepositoryManager:
 			>>> mgr.check_for_updates()
 			>>>
 		"""
-		if not isinstance(url, str) or not isinstance(repopath, str):
-			raise ValueError("Expected url or repopath to be of type str.")
+		if not isinstance(url, str) or not isinstance(repopath, (str, os.PathLike)):
+			raise ValueError("Expected url to be a str and repopath to be path-like.")
 
 		return core.BNRepositoryManagerAddRepository(url, repopath)

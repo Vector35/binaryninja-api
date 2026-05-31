@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include "pathhelpers.h"
 
 using namespace std;
 using namespace BinaryNinja;
@@ -51,7 +52,7 @@ Platform::Platform(Architecture* arch, const string& name)
 }
 
 
-Platform::Platform(Architecture* arch, const string& name, const string& typeFile, const vector<string>& includeDirs)
+Platform::Platform(Architecture* arch, const string& name, const filesystem::path& typeFile, const vector<filesystem::path>& includeDirs)
 {
 	BNCustomPlatform plat;
 	plat.context = this;
@@ -64,13 +65,11 @@ Platform::Platform(Architecture* arch, const string& name, const string& typeFil
 	plat.adjustTypeParserInput = AdjustTypeParserInputCallback;
 	plat.freeTypeParserInput = FreeTypeParserInputCallback;
 	plat.getFallbackEnabled = GetFallbackEnabledCallback;
-	const char** includeDirList = new const char*[includeDirs.size()];
-	for (size_t i = 0; i < includeDirs.size(); i++)
-		includeDirList[i] = includeDirs[i].c_str();
+	Path::APIObjectList includeDirList(includeDirs);
+	Path::APIObject coreTypeFile(typeFile);
 	m_object = BNCreateCustomPlatformWithTypes(
 	    arch->GetObject(), name.c_str(), &plat,
-			typeFile.c_str(), includeDirList, includeDirs.size());
-	delete[] includeDirList;
+		coreTypeFile, includeDirList.data(), includeDirList.size());
 	AddRefForRegistration();
 }
 
@@ -775,26 +774,23 @@ string Platform::GetAutoPlatformTypeIdSource()
 }
 
 
-bool Platform::ParseTypesFromSource(const string& source, const string& fileName, map<QualifiedName, Ref<Type>>& types,
+bool Platform::ParseTypesFromSource(const string& source, const filesystem::path& fileName, map<QualifiedName, Ref<Type>>& types,
     map<QualifiedName, Ref<Type>>& variables, map<QualifiedName, Ref<Type>>& functions, string& errors,
-    const vector<string>& includeDirs, const string& autoTypeSource)
+    const vector<filesystem::path>& includeDirs, const string& autoTypeSource)
 {
 	BNTypeParserResult result;
 	char* errorStr;
-	const char** includeDirList = new const char*[includeDirs.size()];
-
-	for (size_t i = 0; i < includeDirs.size(); i++)
-		includeDirList[i] = includeDirs[i].c_str();
+	Path::APIObjectList includeDirList(includeDirs);
 
 	types.clear();
 	variables.clear();
 	functions.clear();
 
-	bool ok = BNParseTypesFromSource(m_object, source.c_str(), fileName.c_str(), &result, &errorStr, includeDirList,
-	    includeDirs.size(), autoTypeSource.c_str());
+	Path::APIObject coreFileName(fileName);
+	bool ok = BNParseTypesFromSource(m_object, source.c_str(), coreFileName, &result, &errorStr, includeDirList.data(),
+	    includeDirList.size(), autoTypeSource.c_str());
 	errors = errorStr;
 	BNFreeString(errorStr);
-	delete[] includeDirList;
 	if (!ok)
 		return false;
 
@@ -818,26 +814,23 @@ bool Platform::ParseTypesFromSource(const string& source, const string& fileName
 }
 
 
-bool Platform::ParseTypesFromSourceFile(const string& fileName, map<QualifiedName, Ref<Type>>& types,
+bool Platform::ParseTypesFromSourceFile(const filesystem::path& fileName, map<QualifiedName, Ref<Type>>& types,
     map<QualifiedName, Ref<Type>>& variables, map<QualifiedName, Ref<Type>>& functions, string& errors,
-    const vector<string>& includeDirs, const string& autoTypeSource)
+    const vector<filesystem::path>& includeDirs, const string& autoTypeSource)
 {
 	BNTypeParserResult result;
 	char* errorStr;
-	const char** includeDirList = new const char*[includeDirs.size()];
-
-	for (size_t i = 0; i < includeDirs.size(); i++)
-		includeDirList[i] = includeDirs[i].c_str();
+	Path::APIObjectList includeDirList(includeDirs);
 
 	types.clear();
 	variables.clear();
 	functions.clear();
 
+	Path::APIObject coreFileName(fileName);
 	bool ok = BNParseTypesFromSourceFile(
-	    m_object, fileName.c_str(), &result, &errorStr, includeDirList, includeDirs.size(), autoTypeSource.c_str());
+	    m_object, coreFileName, &result, &errorStr, includeDirList.data(), includeDirList.size(), autoTypeSource.c_str());
 	errors = errorStr;
 	BNFreeString(errorStr);
-	delete[] includeDirList;
 	if (!ok)
 		return false;
 

@@ -14,7 +14,7 @@ use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::file::ProjectFile;
 use crate::project::folder::ProjectFolder;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::string::{BnString, IntoCStr};
+use crate::string::{BnPath, BnString, IntoCStr};
 
 pub mod file;
 pub mod folder;
@@ -45,7 +45,7 @@ impl Project {
     /// * `path` - Path to the project directory (.bnpr)
     /// * `name` - Name of the new project
     pub fn create(path: impl AsRef<Path>, name: &str) -> Option<Ref<Self>> {
-        let path_raw = path.as_ref().to_cstr();
+        let path_raw = BnPath::new(path.as_ref());
         let name_raw = name.to_cstr();
         let handle = unsafe { BNCreateProject(path_raw.as_ptr(), name_raw.as_ptr()) };
         NonNull::new(handle).map(|h| unsafe { Self::ref_from_raw(h) })
@@ -55,7 +55,7 @@ impl Project {
     ///
     /// * `path` - Path to the project directory (.bnpr) or project metadata file (.bnpm)
     pub fn open_project(path: impl AsRef<Path>) -> Option<Ref<Self>> {
-        let path_raw = path.as_ref().to_cstr();
+        let path_raw = BnPath::new(path.as_ref());
         let handle = unsafe { BNOpenProject(path_raw.as_ptr()) };
         NonNull::new(handle).map(|h| unsafe { Self::ref_from_raw(h) })
     }
@@ -90,8 +90,7 @@ impl Project {
 
     /// Get the path on disk for the project
     pub fn path(&self) -> PathBuf {
-        let path_str = unsafe { BnString::into_string(BNProjectGetPath(self.handle.as_ptr())) };
-        PathBuf::from(path_str)
+        unsafe { BnString::into_path_buf(BNProjectGetPath(self.handle.as_ptr())) }
     }
 
     /// Get the name of the project
@@ -173,7 +172,7 @@ impl Project {
     where
         PC: ProgressCallback,
     {
-        let path_raw = path.as_ref().to_cstr();
+        let path_raw = BnPath::new(path.as_ref());
         let description_raw = description.to_cstr();
         let parent_ptr = parent.map(|p| p.handle.as_ptr()).unwrap_or(null_mut());
 
@@ -338,7 +337,7 @@ impl Project {
     where
         PC: ProgressCallback,
     {
-        let path_raw = path.as_ref().to_cstr();
+        let path_raw = BnPath::new(path.as_ref());
         let name_raw = name.to_cstr();
         let description_raw = description.to_cstr();
         let folder_ptr = folder.map(|p| p.handle.as_ptr()).unwrap_or(null_mut());
@@ -408,7 +407,7 @@ impl Project {
     where
         PC: ProgressCallback,
     {
-        let path_raw = path.as_ref().to_cstr();
+        let path_raw = BnPath::new(path.as_ref());
         let name_raw = name.to_cstr();
         let description_raw = description.to_cstr();
         let id_raw = id.to_cstr();
@@ -574,7 +573,7 @@ impl Project {
 
     /// Retrieve a file in the project by the `path` on disk
     pub fn file_by_path(&self, path: &Path) -> Option<Ref<ProjectFile>> {
-        let path_raw = path.to_cstr();
+        let path_raw = BnPath::new(path);
         let result =
             unsafe { BNProjectGetFileByPathOnDisk(self.handle.as_ptr(), path_raw.as_ptr()) };
         let handle = NonNull::new(result)?;

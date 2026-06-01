@@ -416,16 +416,10 @@ void ObjCProcessor::DefineObjCSymbol(
 
 	auto defineSymbol = [this](Ref<Symbol> symbol, const Confidence<Ref<Type>>& type) {
 		uint64_t symbolAddress = symbol->GetAddress();
-		if (Ref<Symbol> existingSymbol = m_data->GetSymbolByAddress(symbolAddress))
-		{
-			if (existingSymbol->IsAutoDefined() && existingSymbol->GetType() == symbol->GetType() && existingSymbol->GetRawNameRef() == symbol->GetRawNameRef())
-				return;
-
-			m_data->UndefineAutoSymbol(existingSymbol);
-		}
-
 		// Armv7/Thumb: This will rewrite the symbol's address.
 		// e.g. We pass in 0xc001, it will rewrite it to 0xc000 and create the function w/ the "thumb2" arch.
+		if (Ref<Symbol> existingSymbol = m_data->GetSymbolByAddress(symbolAddress))
+			m_data->UndefineAutoSymbol(existingSymbol);
 		Ref<Platform> targetPlatform = m_data->GetDefaultPlatform()->GetAssociatedPlatformByAddress(symbolAddress);
 		if (symbol->GetType() == FunctionSymbol)
 		{
@@ -1179,11 +1173,6 @@ void ObjCProcessor::GenerateClassTypes()
 {
 	for (auto& [_, cls] : m_classes)
 	{
-		QualifiedName classTypeName = cls.name;
-		std::string classTypeId = Type::GenerateAutoTypeId("objc", classTypeName);
-		if (m_data->GetTypeById(classTypeId))
-			continue;
-
 		QualifiedName typeName;
 		StructureBuilder classTypeBuilder;
 		bool failedToDecodeType = false;
@@ -1216,6 +1205,8 @@ void ObjCProcessor::GenerateClassTypes()
 		if (failedToDecodeType)
 			continue;
 		auto classTypeStruct = classTypeBuilder.Finalize();
+		QualifiedName classTypeName = cls.name;
+		std::string classTypeId = Type::GenerateAutoTypeId("objc", classTypeName);
 		Ref<Type> classType = Type::StructureType(classTypeStruct);
 		QualifiedName classQualName = m_data->DefineType(classTypeId, classTypeName, classType);
 		cls.associatedName = classTypeName;

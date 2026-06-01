@@ -622,7 +622,12 @@ Ref<LowLevelILFunction> FunctionLifterContext::GetForeignFunctionLiftedIL(Ref<Fu
 	size_t inlinedCallsCount = m_inlinedCalls.size();
 	uint64_t* inlinedCalls = nullptr;
 	if (inlinedCallsCount)
+	{
 		inlinedCalls = new uint64_t[inlinedCallsCount];
+		size_t i = 0;
+		for (uint64_t addr : m_inlinedCalls)
+			inlinedCalls[i++] = addr;
+	}
 
 	BNLowLevelILFunction* il =
 		BNGetForeignFunctionLiftedIL(func->GetObject(), m_logger->GetObject(), inlinedCallsCount, inlinedCalls);

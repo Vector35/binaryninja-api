@@ -15,6 +15,107 @@ using namespace std;
 /* helper prototypes */
 int get_reg_name(int reg_idx, char *reg_name);
 
+static bool thumb_decode_crc32(struct decomp_request *info, struct decomp_result *result)
+{
+	uint32_t instr = info->instr_word32;
+	if ((instr & 0xffe0f0c0) != 0xfac0f080)
+		return false;
+
+	uint32_t size = (instr >> 4) & 3;
+	uint32_t castagnoli = (instr >> 20) & 1;
+	if (size == 3)
+		return false;
+
+	static const instruction_format instrFormats[] =
+	{
+		{ /* CRC32B <Rd>,<Rn>,<Rm> */
+			"crc32b",
+			0,
+			{
+				{OPERAND_FORMAT_REG,FIELD_Rd,FIELD_UNINIT,"","",WRITEBACK_NO},
+				{OPERAND_FORMAT_REG,FIELD_Rn,FIELD_UNINIT,"","",WRITEBACK_NO},
+				{OPERAND_FORMAT_REG,FIELD_Rm,FIELD_UNINIT,"","",WRITEBACK_NO},
+				{OPERAND_FORMAT_END,FIELD_UNINIT,FIELD_UNINIT,"","",WRITEBACK_NO},
+			},
+			3
+		},
+		{ /* CRC32H <Rd>,<Rn>,<Rm> */
+			"crc32h",
+			0,
+			{
+				{OPERAND_FORMAT_REG,FIELD_Rd,FIELD_UNINIT,"","",WRITEBACK_NO},
+				{OPERAND_FORMAT_REG,FIELD_Rn,FIELD_UNINIT,"","",WRITEBACK_NO},
+				{OPERAND_FORMAT_REG,FIELD_Rm,FIELD_UNINIT,"","",WRITEBACK_NO},
+				{OPERAND_FORMAT_END,FIELD_UNINIT,FIELD_UNINIT,"","",WRITEBACK_NO},
+			},
+			3
+		},
+		{ /* CRC32W <Rd>,<Rn>,<Rm> */
+			"crc32w",
+			0,
+			{
+				{OPERAND_FORMAT_REG,FIELD_Rd,FIELD_UNINIT,"","",WRITEBACK_NO},
+				{OPERAND_FORMAT_REG,FIELD_Rn,FIELD_UNINIT,"","",WRITEBACK_NO},
+				{OPERAND_FORMAT_REG,FIELD_Rm,FIELD_UNINIT,"","",WRITEBACK_NO},
+				{OPERAND_FORMAT_END,FIELD_UNINIT,FIELD_UNINIT,"","",WRITEBACK_NO},
+			},
+			3
+		},
+		{ /* CRC32CB <Rd>,<Rn>,<Rm> */
+			"crc32cb",
+			0,
+			{
+				{OPERAND_FORMAT_REG,FIELD_Rd,FIELD_UNINIT,"","",WRITEBACK_NO},
+				{OPERAND_FORMAT_REG,FIELD_Rn,FIELD_UNINIT,"","",WRITEBACK_NO},
+				{OPERAND_FORMAT_REG,FIELD_Rm,FIELD_UNINIT,"","",WRITEBACK_NO},
+				{OPERAND_FORMAT_END,FIELD_UNINIT,FIELD_UNINIT,"","",WRITEBACK_NO},
+			},
+			3
+		},
+		{ /* CRC32CH <Rd>,<Rn>,<Rm> */
+			"crc32ch",
+			0,
+			{
+				{OPERAND_FORMAT_REG,FIELD_Rd,FIELD_UNINIT,"","",WRITEBACK_NO},
+				{OPERAND_FORMAT_REG,FIELD_Rn,FIELD_UNINIT,"","",WRITEBACK_NO},
+				{OPERAND_FORMAT_REG,FIELD_Rm,FIELD_UNINIT,"","",WRITEBACK_NO},
+				{OPERAND_FORMAT_END,FIELD_UNINIT,FIELD_UNINIT,"","",WRITEBACK_NO},
+			},
+			3
+		},
+		{ /* CRC32CW <Rd>,<Rn>,<Rm> */
+			"crc32cw",
+			0,
+			{
+				{OPERAND_FORMAT_REG,FIELD_Rd,FIELD_UNINIT,"","",WRITEBACK_NO},
+				{OPERAND_FORMAT_REG,FIELD_Rn,FIELD_UNINIT,"","",WRITEBACK_NO},
+				{OPERAND_FORMAT_REG,FIELD_Rm,FIELD_UNINIT,"","",WRITEBACK_NO},
+				{OPERAND_FORMAT_END,FIELD_UNINIT,FIELD_UNINIT,"","",WRITEBACK_NO},
+			},
+			3
+		},
+	};
+	static const armv7::Operation operations[] = {
+		ARMV7_CRC32B, ARMV7_CRC32H, ARMV7_CRC32W,
+		ARMV7_CRC32CB, ARMV7_CRC32CH, ARMV7_CRC32CW,
+	};
+
+	uint32_t index = castagnoli ? size + 3 : size;
+	result->instrSize = 32;
+	result->group = INSN_GROUP_CRC;
+	result->fields[FIELD_Rn] = (instr >> 16) & 0xf;
+	result->fields_mask[FIELD_Rn >> 6] |= 1LL << (FIELD_Rn & 63);
+	result->fields[FIELD_Rd] = (instr >> 8) & 0xf;
+	result->fields_mask[FIELD_Rd >> 6] |= 1LL << (FIELD_Rd & 63);
+	result->fields[FIELD_Rm] = instr & 0xf;
+	result->fields_mask[FIELD_Rm >> 6] |= 1LL << (FIELD_Rm & 63);
+	result->formats = &instrFormats[index];
+	result->formatCount = 1;
+	result->format = &instrFormats[index];
+	result->mnem = operations[index];
+	return true;
+}
+
 /* decompose an instruction stream into a decomposition result */
 int thumb_decompose(struct decomp_request *info, struct decomp_result *result)
 {
@@ -29,6 +130,9 @@ int thumb_decompose(struct decomp_request *info, struct decomp_result *result)
 	result->formats = nullptr;
 	result->formatCount = 0;
 	result->pc = info->addr + 4;
+
+	if (thumb_decode_crc32(info, result))
+		return STATUS_OK;
 
 	/* jump into generated code */
 	rc = thumb_root(info, result);
@@ -521,4 +625,3 @@ cleanup:
 	//printf("in response to %d, returned %s and rc=%d\n", reg_idx, reg_name, rc);
 	return rc;
 }
-

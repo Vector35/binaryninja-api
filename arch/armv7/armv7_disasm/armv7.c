@@ -48,6 +48,32 @@ static Register regMap[2] = {REG_D0, REG_Q0};
 #define SET_REGISTER(x) (1<<((x)))
 #define DECODE_DT(s,u) (enum DataType)(1+((((u&1))<<2) | ((s)&3)))
 
+static uint32_t armv7_crc32(uint32_t instructionValue, Instruction* restrict instruction)
+{
+	if ((instructionValue & 0x0f900df0) != 0x01000040)
+		return 1;
+
+	uint32_t size = (instructionValue >> 21) & 3;
+	uint32_t castagnoli = (instructionValue >> 9) & 1;
+	if (size == 3)
+		return 1;
+
+	static Operation crc32Operation[2][3] = {
+		{ ARMV7_CRC32B, ARMV7_CRC32H, ARMV7_CRC32W },
+		{ ARMV7_CRC32CB, ARMV7_CRC32CH, ARMV7_CRC32CW },
+	};
+
+	instruction->operation = crc32Operation[castagnoli][size];
+	instruction->cond = (enum Condition)(instructionValue >> 28);
+	instruction->operands[0].cls = REG;
+	instruction->operands[0].reg = (enum Register)((instructionValue >> 12) & 0xf);
+	instruction->operands[1].cls = REG;
+	instruction->operands[1].reg = (enum Register)((instructionValue >> 16) & 0xf);
+	instruction->operands[2].cls = REG;
+	instruction->operands[2].reg = (enum Register)(instructionValue & 0xf);
+	return 0;
+}
+
 static const char* operationString[] = {
 	"UNDEFINED",
 	"UNPREDICTABLE",
@@ -77,6 +103,12 @@ static const char* operationString[] = {
 	"cdp2",
 	"clrex",
 	"clz",
+	"crc32b",
+	"crc32cb",
+	"crc32ch",
+	"crc32cw",
+	"crc32h",
+	"crc32w",
 	"cmn",
 	"cmp",
 	"cps",
@@ -1081,6 +1113,9 @@ uint32_t armv7_data_processing_and_misc(uint32_t instructionValue, Instruction* 
 	} decode;
 
 	decode.value = instructionValue;
+	if (armv7_crc32(instructionValue, instruction) == 0)
+		return 0;
+
 	if (decode.op == 0)
 	{
 		if ((decode.op1 & 0x19) == 0x10) //10xx0
@@ -4443,9 +4478,7 @@ uint32_t armv7_simd_data_processing(uint32_t instructionValue, Instruction* rest
 		instruction->operands[2].cls = REG;
 		instruction->operands[2].reg = (Register)(regMap[decode.vext.q] + ((decode.vext.m << 4 | decode.vext.vm) >> decode.vext.q));
 		instruction->operands[3].cls = IMM;
-		instruction->operands[3].imm = decode.vext.imm4 * 8;
-		if (decode.vext.q)
-			instruction->operands[3].imm <<= 1;
+		instruction->operands[3].imm = decode.vext.imm4;
 	}
 	else if (decode.com.b <= 7)
 	{

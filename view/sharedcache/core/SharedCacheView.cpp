@@ -981,14 +981,6 @@ bool SharedCacheView::InitController()
 	return true;
 }
 
-
-void SharedCacheView::OnAfterSnapshotDataApplied()
-{
-	if (auto controller = SharedCacheController::FromView(*this))
-		controller->ProcessObjCForLoadedImages(*this);
-}
-
-
 void SharedCacheView::SetPrimaryFileName(std::string primaryFileName)
 {
 	m_primaryFileName = std::move(primaryFileName);

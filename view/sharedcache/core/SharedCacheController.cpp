@@ -292,27 +292,3 @@ void SharedCacheController::LoadMetadata(const Metadata& metadata)
 			m_loadedImages.insert(region);
 	}
 }
-
-
-void SharedCacheController::ProcessObjCForLoadedImages(BinaryView& view)
-{
-	if (!m_processObjC || m_loadedImages.empty())
-		return;
-
-	for (const auto& headerAddress : m_loadedImages)
-	{
-		auto image = m_cache.GetImageAt(headerAddress);
-		if (!image)
-			continue;
-
-		auto objcProcessor = DSCObjC::SharedCacheObjCProcessor(&view, image->headerAddress);
-		try
-		{
-			objcProcessor.ProcessObjCData();
-		}
-		catch (std::exception& e)
-		{
-			m_logger->LogErrorForExceptionF(e, "Failed to restore ObjC metadata for image at {:#x}: {}", headerAddress, e.what());
-		}
-	}
-}

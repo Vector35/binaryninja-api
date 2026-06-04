@@ -1,10 +1,10 @@
 # Migrating from Other Tools
 
-Thank you for trying Binary Ninja! We know that it can be a bit different from what you're used to, so this page dedicated to getting you oriented in your new favorite decompiler!
+Thank you for trying Binary Ninja! We know that it can be a bit different from what you're used to, so this page is dedicated to getting you oriented in your new favorite decompiler!
 
 If you haven't already installed Binary Ninja, you can follow our [installation guide](../../getting-started.md#installing-binary-ninja).
 
-And be sure to check out some of our additional resource below before you click away!
+And be sure to check out some of our additional resources below before you click away!
 
 We have quick start guides for the following:
 

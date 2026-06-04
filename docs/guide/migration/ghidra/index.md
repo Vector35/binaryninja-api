@@ -79,11 +79,11 @@ Binary Ninja's layout is also a bit different from what you're used to in Ghidra
 
 ![xref icon >](../../../img/xref-icon.png "Xref Icon")
 
-The default behavior of cross-references to open in a tabbed reference UI element simila to how ghidra does it, however the `X` hotkey is used by default (and can be changed in the [keybindings UI](index.md#custom-hotkeys)).
+The default behavior of cross-references to open in a tabbed reference UI element similar to how ghidra does it, however the `X` hotkey is used by default (and can be changed in the [keybindings UI](index.md#custom-hotkeys)).
 
 ### Theme
 
-This doesn't exactly have to do with your layout, but it go a long way towards making the interface feel a bit more familiar. We have an expansive list of [community themes](https://github.com/Vector35/community-themes), and [a guide](../../../dev/themes.md) and a [blog post](https://binary.ninja/2021/07/08/creating-great-themes.html) on how to make your own. The built-in "Classic" theme should feel nostalgic, but if you're looking for a light theme that's slightly easier on the eyes, try out Summer or Solarized Light.
+This doesn't exactly have to do with your layout, but it goes a long way towards making the interface feel a bit more familiar. We have an expansive list of [community themes](https://github.com/Vector35/community-themes), and [a guide](../../../dev/themes.md) and a [blog post](https://binary.ninja/2021/07/08/creating-great-themes.html) on how to make your own. The built-in "Classic" theme should feel nostalgic, but if you're looking for a light theme that's slightly easier on the eyes, try out Summer or Solarized Light.
 
 ### Feature Map
 

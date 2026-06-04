@@ -104,13 +104,14 @@ Permissions can be set on *users* or *groups* of users. Available permissions ar
 * **Admin**: Lets the user or group modify the project permissions, in addition to edit permissions
 
 #### Server Area
-Across the of the Remote Dialog are five buttons:
+Across the top of the Remote Dialog are five buttons:
 
 * **Refresh**: Refreshes the projects and files shown from the currently active server.
 * **Connect**/**Disconnect**: Connects to (or disconnect from) an Enterprise server. If connecting, it will show the "Connect to Remote" window (see below).
 * **Manage Users...**: Opens a dialog that allows adding, editing, and removing users from the current server. (Only available to server administrators.)
 * **Manage Groups...**: Opens a dialog that allows adding, editing, and removing groups from the current server. (Only available to server administrators.)
 * **Actions**: Opens a context menu with the following options:
+  
   * **Create Project...**: Opens a dialog box for creating a new project.
   * **Import Local Project...**: Opens a file picker to select a local project to upload in its entirety.
   * **Edit Properties...**: Opens a dialog box for editing the current project's name and description.

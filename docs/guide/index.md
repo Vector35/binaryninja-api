@@ -40,9 +40,9 @@ The contents of the user folder includes:
 The following files and folders may be created in the user folder but are not created by default without some additional action:
 
 - `keybindings.json`: Custom key bindings (see [key bindings](#custom-hotkeys))
-- `startup.py`: Default python commands run once the UI is loaded in the context of the scripting console
+- `startup.py`: Default Python commands run once the UI is loaded in the context of the scripting console
 - `signatures/`: Any user-created signatures can be stored in platform-specific sub-folders in this location
-- `pythonVER/`: Any pip dependencies from plugin manager plugins are installed to the appropriate python version subfolder such as `python310`, or `python311`
+- `pythonVER/`: Any pip dependencies from plugin manager plugins are installed to the appropriate Python version subfolder such as `python310`, or `python311`
 - `symbols/`: Used to store automatically downloaded PDBs
 - `update/`: Used to store update caches for pending updates
 - `snippets/`: Used to store snippets created using the official Snippet plugin
@@ -487,7 +487,7 @@ The following are only available when the cross-references pane is in focus:
 
 The Console panel by default only contains a single Python scripting console, however it is possible to create additional consoles using the `Create Python Console` command palette item.
 
-For many more details about using the python console, see below in the [Python console documentation](#script-python-console).
+For many more details about using the Python console, see below in the [Python console documentation](#script-python-console).
 
 ### Variables
 
@@ -729,10 +729,10 @@ The Triage Summary view is intended to give a quick overview of a file. There is
 files for triage (`File/Open for Triage`) so a high level overview can be viewed before deciding whether to trigger a
 full analysis. If a file is opened in this way, a button at the bottom appears titled, "Start Full Analysis".
 
-Triage Summary was originally a [python
+Triage Summary was originally a [Python
 plugin](https://github.com/Vector35/binaryninja-api/tree/dev/python/examples/triage) implemented as a proof-of-concept
 for extending the UI. The functionality was so useful it was re-written in C++ and integrated into the official UI,
-however the python plugin contains a feature that the C++ one does not: the ability to resolve some dynamic imports. To
+however the Python plugin contains a feature that the C++ one does not: the ability to resolve some dynamic imports. To
 use this version, copy the folder linked above into your [plugins folder](#user-folder) and disable the built-in C++ UI
 using the [`corePlugins.triage`](settings.md#corePlugins.triage) setting.
 
@@ -744,7 +744,7 @@ entropy map to navigate to that location in your default view.
 
 ### 2. File Info
 
-File Info: The file info section contains some summary information for the file, each result can be clicked to copy
+The file info section contains some summary information for the file, each result can be clicked to copy
 it into your clipboard.
 
 ### 3. Headers
@@ -763,7 +763,7 @@ summary when the file doesn't specify a load address such as a raw or mapped fil
 switching the view in the upper-left from the `BinaryView` name to `raw` will force the BASE UI to show up in the
 Triage Summary.
 
-See our recent [blog
+See our [blog
 post](https://binary.ninja/2024/05/21/automatically-identifying-base-addresses.html) for more information on how
 BASE works. The following settings describe the advanced settings and how they influence the process.
 
@@ -1042,7 +1042,7 @@ To trigger the console, either use `<BACKTICK>`, or use the `View`/`Python Conso
 
 When both the Script Console and the Log view are open, the title of both acts as a tab that can be dragged to either a tabbed view showing only one at a time (the default) or a split view showing both. Currently, the console and log views are part of a "Global Area", meaning they are always visible in the same position when switching between open binary tabs in the same window. This means they can only dock with each other, and not with the sidebar or the main pane view area. It is possible to open additional scripting consoles via the `Create Python Console` action in the [command palette](#command-palette), and these new consoles will appear as additional tabs in the topmost, leftmost tab in the global area. Note that `<BACKTICK>` will always focus the original main scripting console, and while any of the other created consoles can be closed (using the button that will appear when hovering over the right edge of its tab), the original one cannot be closed.
 
-Multi-line input is possible just by doing what you'd normally do in python. If you leave a trailing `:` at the end of a line, the box will automatically turn into a multi-line edit box, complete with a command-history. To submit that multi-line input, use `<CTRL>-<ENTER>`. You can also force multi-line input with `<SHIFT>-<ENTER>`.
+Multi-line input is possible just by doing what you'd normally do in Python. If you leave a trailing `:` at the end of a line, the box will automatically turn into a multi-line edit box, complete with a command-history. To submit that multi-line input, use `<CTRL>-<ENTER>`. You can also force multi-line input with `<SHIFT>-<ENTER>`.
 
 The scripting console is not a full IDE, but it has several convenience features that make it more pleasant to use:
 
@@ -1051,11 +1051,11 @@ The scripting console is not a full IDE, but it has several convenience features
 - `<UP>` and `<DOWN>` can be used to view the command-history
 
 ???+ Tip "Tip"
-    All scripting consoles share a single python instance. This is an intentional design choice and has the following benefits: you can create variables in one tab/window and then access it in another. The downside is that if you run a long-running script for example, the console will still be blocked in other tabs and windows. This is a known trade-off and not expected to change.
+    All scripting consoles share a single Python instance. This is an intentional design choice and has the following benefits: you can create variables in one tab/window and then access it in another. The downside is that if you run a long-running script for example, the console will still be blocked in other tabs and windows. This is a known trade-off and not expected to change.
 
 ### Magic Console Variables
 
-The interactive python prompt also has several built-in "magic" functions and variables. Some are read-only, and some are writable to provide convenient interactivity between the UI and console:
+The interactive Python prompt also has several built-in "magic" functions and variables. Some are read-only, and some are writable to provide convenient interactivity between the UI and console:
 
 - `here` / `current_address`: address of the current selection. It's settable too and will navigate the UI if changed
 - `current_selection`: a tuple of the start and end addresses of the current selection. It's settable and will change the current selection
@@ -1089,7 +1089,7 @@ The interactive python prompt also has several built-in "magic" functions and va
 
 ### startup.py
 
-The python interpreter can be customized to run scripts on startup using `startup.py` in your user folder. Simply enter commands into that file, and they will be executed every time Binary Ninja starts. By default, it comes with an import helper:
+The Python interpreter can be customized to run scripts on startup using `startup.py` in your user folder. Simply enter commands into that file, and they will be executed every time Binary Ninja starts. By default, it comes with an import helper:
 
 ```python
 # Commands in this file will be run in the interactive python console on startup
@@ -1103,7 +1103,7 @@ From here, you can add any custom functions or objects you want to be available 
 ???+ Danger "Warning"
     When you run commands in the scripting console, the UI will automatically update analysis. This is because quite often when you make a change in the console you expect it to be immediately reflected in the UI. The same is not true when running a script where you must trigger `bv.update_analysis_and_wait()` or `current_function.reanalyze()` to experience the same behavior.
 
-The "Run Script..." option in the File Menu allows loading a python script from your filesystem and executing it
+The "Run Script..." option in the File Menu allows loading a Python script from your filesystem and executing it
 within the console. It can also be run via the Command Palette or bound to a key.
 
 The script will have access to the same variables the Python console does, including the built-in special functions and
@@ -1127,7 +1127,7 @@ Plugins can be installed by one of two methods. First, they can be installed via
 
 ![plugin manager](../img/plugin-manager.png "Plugin Manager"){ width="1000" }
 
-Second, they can be manually installed by adding the plugin (either a `.py` file or a folder implementing a python module with a `__init__.py` file) to the appropriate path:
+Second, they can be manually installed by adding the plugin (either a `.py` file or a folder implementing a Python module with a `__init__.py` file) to the appropriate path:
 
 - macOS: `~/Library/Application Support/Binary Ninja/plugins/`
 - Linux: `~/.binaryninja/plugins/`

@@ -176,7 +176,7 @@ impl IDBMapper {
         for data in &self.info.data_items {
             let mut rebased_data = data.clone();
             rebased_data.address = rebase(data.address);
-            self.map_data_item_to_view(view, &rebased_data);
+            self.map_data_item_to_view(view, &til_translator, &rebased_data);
         }
 
         for name in &self.info.merged_names() {
@@ -645,7 +645,12 @@ impl IDBMapper {
     }
 
     /// Define a typed data variable for a data item IDA recorded in its byte flags.
-    pub fn map_data_item_to_view(&self, view: &BinaryView, data: &DataInfo) {
+    pub fn map_data_item_to_view(
+        &self,
+        view: &BinaryView,
+        til_translator: &TILTranslator,
+        data: &DataInfo,
+    ) {
         // Skip the synthetic extern section, and anything that lives inside code/functions.
         let within_extern_section = view
             .sections_at(data.address)
@@ -662,12 +667,29 @@ impl IDBMapper {
             return;
         }
 
-        let data_ty = match data.kind {
-            DataKind::Int(bytes) => Type::int(bytes as usize, false),
-            DataKind::Float(bytes) => Type::float(bytes as usize),
-            DataKind::String(len) => Type::array(&Type::char(), len),
+        // Prefer the explicit IDA type (e.g. a struct) over the byte-flag-derived scalar kind.
+        let data_ty = if let Some(ty) = &data.ty {
+            match til_translator.translate_type_info(ty) {
+                Ok(translated) => translated,
+                Err(err) => {
+                    tracing::warn!(
+                        "Failed to translate data type at {:0x}: {}",
+                        data.address,
+                        err
+                    );
+                    return;
+                }
+            }
+        } else if let Some(kind) = data.kind {
+            match kind {
+                DataKind::Int(bytes) => Type::int(bytes as usize, false),
+                DataKind::Float(bytes) => Type::float(bytes as usize),
+                DataKind::String(len) => Type::array(&Type::char(), len),
+            }
+        } else {
+            return;
         };
-        tracing::debug!("Mapping data item: {:0x} ({:?})", data.address, data.kind);
+        tracing::debug!("Mapping data item: {:0x}", data.address);
         view.define_auto_data_var(data.address, &data_ty);
     }
 

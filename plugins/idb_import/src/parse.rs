@@ -73,13 +73,16 @@ pub struct NameInfo {
     pub exported: bool,
 }
 
-/// A typed data item IDA has defined at an address (e.g. a dword, a float, a string), recovered
-/// from the byte flags so that even unnamed/untyped-in-the-TIL data still gets a Binary Ninja
-/// data variable of the right kind.
+/// A typed data item IDA has defined at an address (e.g. a dword, a float, a string, or a
+/// struct), recovered from the byte flags so that even unnamed/untyped-in-the-TIL data still gets
+/// a Binary Ninja data variable of the right type.
 #[derive(Debug, Clone, Serialize)]
 pub struct DataInfo {
     pub address: u64,
-    pub kind: DataKind,
+    /// The explicit IDA type for this item, when one is recorded (e.g. a struct instance).
+    pub ty: Option<idb_rs::til::Type>,
+    /// The byte-flag-derived kind, used when there is no explicit type.
+    pub kind: Option<DataKind>,
 }
 
 /// The kind of a [`DataInfo`], with the size IDA recorded for the item.
@@ -385,10 +388,10 @@ impl IDBFileParser {
         let id0_info = id0.as_ref().map(|id0| self.parse_id0(id0)).transpose()?;
 
         // Recover typed data items from the byte flags so unnamed data still gets a data variable.
-        let data_items = id1
-            .as_ref()
-            .map(|id1| self.parse_data_items(id1))
-            .unwrap_or_default();
+        let data_items = match (id0.as_ref(), id1.as_ref()) {
+            (Some(id0), Some(id1)) => self.parse_data_items(id0, id1, id2.as_ref())?,
+            _ => Vec::new(),
+        };
 
         // Recover per-operand number formats (applied only when the user opts in).
         let operand_formats = id1
@@ -440,8 +443,16 @@ impl IDBFileParser {
     /// Walk the byte flags and recover every defined data item along with the kind/size IDA gave
     /// it. Items whose data type has no straightforward Binary Ninja scalar/string equivalent
     /// (structs, alignment fill, vector/custom types) are left for the type-driven name path.
-    pub fn parse_data_items<K: IDAKind>(&self, id1: &ID1Section<K>) -> Vec<DataInfo> {
+    pub fn parse_data_items<K: IDAKind>(
+        &self,
+        id0: &ID0Section<K>,
+        id1: &ID1Section<K>,
+        id2: Option<&ID2Section<K>>,
+    ) -> anyhow::Result<Vec<DataInfo>> {
         use idb_rs::id1::{ByteDataType, ByteType};
+
+        let root_info = id0.ida_info(id0.root_node()?)?;
+        let netdelta = root_info.netdelta();
 
         let mut data_items = Vec::new();
         for (address, byte_info, size) in id1.all_bytes_no_tails() {
@@ -449,25 +460,39 @@ impl IDBFileParser {
                 continue;
             };
             let kind = match data.data_type() {
-                ByteDataType::Byte => DataKind::Int(1),
-                ByteDataType::Word => DataKind::Int(2),
-                ByteDataType::Dword => DataKind::Int(4),
-                ByteDataType::Qword => DataKind::Int(8),
-                ByteDataType::Oword => DataKind::Int(16),
-                ByteDataType::Float => DataKind::Float(4),
-                ByteDataType::Double => DataKind::Float(8),
-                ByteDataType::Tbyte => DataKind::Float(10),
-                ByteDataType::Strlit => DataKind::String(size as u64),
-                // Structs carry their type through the TIL/name path; alignment, vector and
-                // custom kinds have no simple scalar mapping, so skip them here.
-                _ => continue,
+                ByteDataType::Byte => Some(DataKind::Int(1)),
+                ByteDataType::Word => Some(DataKind::Int(2)),
+                ByteDataType::Dword => Some(DataKind::Int(4)),
+                ByteDataType::Qword => Some(DataKind::Int(8)),
+                ByteDataType::Oword => Some(DataKind::Int(16)),
+                ByteDataType::Float => Some(DataKind::Float(4)),
+                ByteDataType::Double => Some(DataKind::Float(8)),
+                ByteDataType::Tbyte => Some(DataKind::Float(10)),
+                ByteDataType::Strlit => Some(DataKind::String(size as u64)),
+                // Structs carry their actual type in the TIL; resolve it below. Alignment fill
+                // and vector/custom kinds have no simple mapping and are skipped.
+                _ => None,
             };
+
+            // A struct item only makes sense with its real type; look it up. Avoid the per-item
+            // type lookup for the (vastly more common) scalar/string items.
+            let ty = if matches!(data.data_type(), ByteDataType::Struct) {
+                AddressInfo::new(id0, id1, id2, netdelta, address)
+                    .and_then(|info| info.tinfo(&root_info).ok().flatten())
+            } else {
+                None
+            };
+
+            if ty.is_none() && kind.is_none() {
+                continue;
+            }
             data_items.push(DataInfo {
                 address: address.into_raw().into_u64(),
+                ty,
                 kind,
             });
         }
-        data_items
+        Ok(data_items)
     }
 
     pub fn parse_id0<K: IDAKind>(&self, id0: &ID0Section<K>) -> anyhow::Result<ID0Info> {

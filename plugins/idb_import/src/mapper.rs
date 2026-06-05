@@ -14,6 +14,7 @@ use binaryninja::symbol::{Binding, Symbol, SymbolType};
 use binaryninja::types::Type;
 use idb_rs::id0::SegmentType;
 use idb_rs::til::TypeVariant;
+use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 
 /// Maps IDB data into a [`BinaryView`].
@@ -34,12 +35,26 @@ impl IDBMapper {
             return;
         };
 
-        // NOTE: `self.info.sha256` carries the SHA256 of the original input file as recorded in
-        // the IDB. A dedicated IDB verifier that compares this against the file backing `view`
-        // and refuses to map on mismatch (to avoid applying stale data to the wrong binary) is
-        // left as future work; for now we log it for traceability and proceed with mapping.
-        if let Some(sha256) = &self.info.sha256 {
-            tracing::debug!("IDB recorded input file SHA256: {}", sha256);
+        // Verify the IDB was built from the binary we are about to map into. The IDB records the
+        // SHA256 of its original input file; the root of the view's parent chain is the raw view,
+        // whose bytes are that same on-disk file, so we can hash it and compare.
+        if let Some(expected_sha256) = &self.info.sha256 {
+            match sha256_of_raw_view(view) {
+                Some(actual_sha256) if actual_sha256 == *expected_sha256 => {
+                    tracing::debug!("Verified IDB matches loaded binary (SHA256 {expected_sha256})");
+                }
+                Some(actual_sha256) => {
+                    tracing::warn!(
+                        "IDB input file SHA256 ({expected_sha256}) does not match the loaded \
+                         binary ({actual_sha256}); imported data may not correspond to this binary."
+                    );
+                }
+                None => {
+                    tracing::debug!(
+                        "Could not hash the loaded binary to verify against IDB SHA256 {expected_sha256}"
+                    );
+                }
+            }
         }
 
         // Rebase the address from ida -> binja without this rebased views will fail to map.
@@ -457,6 +472,41 @@ impl IDBMapper {
             view.set_comment_at(comment.address, &comment.comment);
         }
     }
+}
+
+/// Compute the SHA256 of the raw (on-disk) bytes backing `view`.
+///
+/// Walks to the root of the parent-view chain, which is the raw view whose contents are the
+/// original input file, then hashes its full contents. Returns `None` if the view is empty.
+fn sha256_of_raw_view(view: &BinaryView) -> Option<String> {
+    let mut raw_view = view.to_owned();
+    while let Some(parent) = raw_view.parent_view() {
+        raw_view = parent;
+    }
+
+    let length = raw_view.len();
+    if length == 0 {
+        return None;
+    }
+
+    // Hash in chunks so we never hold the whole binary in memory at once.
+    const CHUNK_SIZE: usize = 1 << 20;
+    let mut hasher = Sha256::new();
+    let mut offset = raw_view.start();
+    let end = offset + length;
+    while offset < end {
+        let want = CHUNK_SIZE.min((end - offset) as usize);
+        let chunk = raw_view.read_vec(offset, want);
+        if chunk.is_empty() {
+            // The view reported a length we cannot fully read; treat as unverifiable.
+            return None;
+        }
+        hasher.update(&chunk);
+        offset += chunk.len() as u64;
+    }
+
+    let digest = hasher.finalize();
+    Some(digest.iter().map(|b| format!("{:02x}", b)).collect())
 }
 
 fn symbol_from_func(func: &FunctionInfo) -> Option<Ref<Symbol>> {

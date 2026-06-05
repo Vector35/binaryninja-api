@@ -279,10 +279,18 @@ impl IDBFileParser {
             _ => None,
         };
 
+        // The IDB records the SHA256 of the original input file; surface it so consumers (and a
+        // future verifier) can confirm the IDB matches the binary being mapped.
+        let sha256 = id0.as_ref().and_then(|id0| {
+            let root_idx = id0.root_node().ok()?;
+            let hash = id0.input_file_sha256(root_idx).ok()??;
+            Some(hash.iter().map(|b| format!("{:02x}", b)).collect::<String>())
+        });
+
         let id0_info = id0.as_ref().map(|id0| self.parse_id0(id0)).transpose()?;
 
         Ok(IDBInfo {
-            sha256: None,
+            sha256,
             id0: id0_info,
             til,
             dir_tree: dir_tree_info,
@@ -446,8 +454,6 @@ impl IDBFileParser {
         let root_info_idx = id0.root_node()?;
         let root_info = id0.ida_info(root_info_idx)?;
         let netdelta = root_info.netdelta();
-
-        // sha256
 
         let func_info_from_addr =
             |addr_info: &AddressInfo<K>| -> anyhow::Result<Option<FunctionInfo>> {

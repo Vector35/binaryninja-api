@@ -34,9 +34,13 @@ impl IDBMapper {
             return;
         };
 
-        // TODO: Actually the below comment belongs in an IDBVerifier that tries to determine if the idb
-        // TODO: Will process correctly for the given view.
-        // TODO: Have a shasum check of the file to make sure we are not mapping to bad data?
+        // NOTE: `self.info.sha256` carries the SHA256 of the original input file as recorded in
+        // the IDB. A dedicated IDB verifier that compares this against the file backing `view`
+        // and refuses to map on mismatch (to avoid applying stale data to the wrong binary) is
+        // left as future work; for now we log it for traceability and proceed with mapping.
+        if let Some(sha256) = &self.info.sha256 {
+            tracing::debug!("IDB recorded input file SHA256: {}", sha256);
+        }
 
         // Rebase the address from ida -> binja without this rebased views will fail to map.
         let bn_base_address = view.start();
@@ -78,12 +82,16 @@ impl IDBMapper {
 
         // Create the type translator, adding all referencable types from both the TIL and the binary view.
         let platform = view.default_platform().unwrap();
-        // TODO: Need to remove this, but for now keeping this since it gets referenced a lot.
-        view.define_auto_type(
-            "size_t",
-            "IDA",
-            &Type::int(platform.arch().default_integer_size(), false),
-        );
+        // Provide a fallback `size_t` only when the view does not already define one. Many IDA
+        // types reference `size_t`, so we keep this safety net, but defining it conditionally
+        // avoids clobbering a real platform/view definition with our generic integer.
+        if view.type_by_name("size_t").is_none() {
+            view.define_auto_type(
+                "size_t",
+                "IDA",
+                &Type::int(platform.arch().default_integer_size(), false),
+            );
+        }
         let til_translator =
             TILTranslator::new_from_platform(&platform).with_type_container(&view.type_container());
         let til_translator = match &self.info.til {
@@ -105,8 +113,10 @@ impl IDBMapper {
             self.map_export_to_view(view, &til_translator, &rebased_export);
         }
 
-        // TODO: The below undo and ignore is not thread safe, this means that the mapper itself
-        // TODO: should be the only thing running at the time of the mapping process.
+        // NOTE: The undo bracketing below is not thread safe, so the mapper must be the only
+        // writer mutating the view while it runs. This invariant holds because mapping is
+        // registered as a single run-once analysis activity (see `plugin_init`) rather than being
+        // invoked concurrently.
         let undo = view.file().begin_undo_actions(true);
         for comment in &self.info.merged_comments() {
             let mut rebased_comment = comment.clone();
@@ -175,8 +185,10 @@ impl IDBMapper {
         if let Ok(_used_types) = til_translator.used_types.lock() {
             used_types = _used_types.clone();
         }
-        // TODO: Adding types to view after the types have been applied to the functions is not a
-        // TODO: great idea, I imagine the NTR's will have stale references until the analysis runs again.
+        // NOTE: Types are resolved here after they have already been applied to functions, so any
+        // named type references that get defined in this pass will read as stale until analysis
+        // re-runs and re-resolves them. Acceptable for this best-effort backfill, but a reason to
+        // resolve referenced types before applying function types if this path is wired in.
         'found: for used_ty in &used_types {
             // 0. Make sure the type doesn't already exist in the view
             if view.type_by_name(&used_ty.name).is_some() {
@@ -210,8 +222,9 @@ impl IDBMapper {
                 }
             }
 
+            // NOTE: A further lookup source would be the TILs attached to the IDB (e.g. imported
+            // library TILs) before giving up; not yet wired in.
             tracing::warn!("Failed to find type: {:?}", used_ty);
-            // 4. TODO: Look through the idb attached tils?
         }
     }
 
@@ -243,7 +256,10 @@ impl IDBMapper {
             SegmentType::Imem => Semantics::DefaultSection,
         };
 
-        // TODO: Is this section already mapped using address range not name.
+        // NOTE: We dedup on section name rather than address range on purpose. The BN loader has
+        // usually already mapped the whole address space, so an IDA segment would always overlap
+        // an existing section and a range-based check would suppress every segment. Name-based
+        // dedup only skips re-adding a section we (or the loader) already named identically.
         if view.section_by_name(&segment.name).is_some() {
             tracing::debug!(
                 "Section with name '{}' already exists, skipping...",
@@ -344,7 +360,9 @@ impl IDBMapper {
             }
         }
 
-        // TODO: Attach a platform tuple to the FunctionInfo?
+        // NOTE: We let the function inherit the view's default platform. Carrying an explicit
+        // platform on FunctionInfo would let mixed-architecture databases (e.g. ARM/Thumb
+        // interworking) map each function with its own platform; that is a future enhancement.
         if let Some(func_sym) = symbol_from_func(func) {
             tracing::debug!(
                 "Mapping function symbol: {:0x} => {}",

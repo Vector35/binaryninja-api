@@ -260,6 +260,8 @@ impl TILTranslator {
         // one is available (see `with_til_info`), falling back to the standard C ABI defaults.
         match basic_ty {
             Basic::Void => Ok(TypeBuilder::void()),
+            // An unknown type of unspecified size has no integer representation; treat it as void.
+            Basic::Unknown { bytes: 0 } => Ok(TypeBuilder::void()),
             Basic::Unknown { bytes } => {
                 // In the samples provided it appears that unknown can be used to represent a byte,
                 // so we are going to be liberal and allow unknown basic types to be treated as a sized int.

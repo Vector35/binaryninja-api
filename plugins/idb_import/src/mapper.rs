@@ -147,6 +147,14 @@ impl IDBMapper {
             self.map_name_to_view(view, &til_translator, &rebased_name);
         }
 
+        // IDA's local labels are named locations inside functions (e.g. loop targets). They live
+        // in code, so `map_name_to_view` skips them; apply them as local-label symbols instead.
+        for label in &id0.labels {
+            let mut rebased_label = label.clone();
+            rebased_label.address = rebase(label.address);
+            self.map_label_to_view(view, &rebased_label);
+        }
+
         // self.map_used_types_to_view(view, &til_translator);
     }
 
@@ -360,6 +368,13 @@ impl IDBMapper {
             tracing::warn!("Failed to add function for {:0x}", func.address);
             return;
         };
+
+        // IDA marks functions that never return (e.g. `abort`, `exit`); carry that over so BN's
+        // analysis does not fall through past calls to them.
+        if func.is_no_return {
+            tracing::debug!("Marking function as no-return: {:0x}", func.address);
+            bn_func.set_auto_can_return(false);
+        }
 
         if let Some(func_ty) = &func.ty {
             match til_translator.translate_type_info(&func_ty) {

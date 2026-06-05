@@ -12,6 +12,7 @@ use binaryninja::types::{
     TypeContainer,
 };
 use idb_rs::til::function::CallingConvention;
+use idb_rs::til::pointer::PointerModifier;
 use idb_rs::til::r#enum::EnumMembers;
 use idb_rs::til::{Basic, TILTypeInfo, TypeVariant, TyperefType, TyperefValue};
 use std::collections::{HashMap, HashSet};
@@ -64,6 +65,18 @@ pub struct TILTranslator {
     pub address_size: usize,
     /// Default size of enumerations.
     pub enum_size: usize,
+    /// Default size of a `bool` in bytes.
+    pub bool_size: usize,
+    /// Default size of a `short` in bytes.
+    pub short_size: usize,
+    /// Default size of an `int` in bytes.
+    pub int_size: usize,
+    /// Default size of a `long` in bytes.
+    pub long_size: usize,
+    /// Default size of a `long long` in bytes.
+    pub long_long_size: usize,
+    /// Default size of a `long double` in bytes.
+    pub long_double_size: usize,
     /// Reference types, for use with typedefs.
     ///
     /// This is necessary because ordinals do not have names and can't be made into a [`NamedTypeReference`].
@@ -88,6 +101,12 @@ impl TILTranslator {
         Self {
             address_size,
             enum_size: address_size / 2,
+            bool_size: 1,
+            short_size: 2,
+            int_size: 4,
+            long_size: 4,
+            long_long_size: 8,
+            long_double_size: 8,
             reference_types_by_ord: HashMap::new(),
             reference_types_by_name: HashMap::new(),
             used_types: Rc::new(Mutex::new(HashSet::new())),
@@ -102,6 +121,12 @@ impl TILTranslator {
         Self {
             address_size: platform.address_size(),
             enum_size: platform.arch().default_integer_size(),
+            bool_size: 1,
+            short_size: 2,
+            int_size: 4,
+            long_size: 4,
+            long_long_size: 8,
+            long_double_size: 8,
             reference_types_by_ord: HashMap::new(),
             reference_types_by_name: HashMap::new(),
             used_types: Rc::new(Mutex::new(HashSet::new())),
@@ -116,6 +141,12 @@ impl TILTranslator {
         Self {
             address_size: arch.address_size(),
             enum_size: arch.default_integer_size(),
+            bool_size: 1,
+            short_size: 2,
+            int_size: 4,
+            long_size: 4,
+            long_long_size: 8,
+            long_double_size: 8,
             reference_types_by_ord: HashMap::new(),
             reference_types_by_name: HashMap::new(),
             used_types: Rc::new(Mutex::new(HashSet::new())),
@@ -131,13 +162,28 @@ impl TILTranslator {
             self.enum_size = size_enum.get() as usize;
         }
 
+        // The TIL header carries the C basic-type sizing for the compiler the IDB was built
+        // for; prefer it over our architecture-derived defaults so types translate with the
+        // same widths IDA used.
+        self.bool_size = til.header.size_bool.get() as usize;
+        self.int_size = til.header.size_int.get() as usize;
+        self.short_size = til.sizeof_short().get() as usize;
+        self.long_size = til.sizeof_long().get() as usize;
+        self.long_long_size = til.sizeof_long_long().get() as usize;
+        if let Some(size_long_double) = til.header.size_long_double {
+            self.long_double_size = size_long_double.get() as usize;
+        }
+
         // Add referencable types so that type def lookups can occur.
         self.reference_types_by_ord.reserve(til.types.len());
         for (_idx, ty) in til.types.iter().enumerate() {
             self.add_referenced_type_info(ty);
         }
 
-        // TODO: Handle address (pointer) size information?
+        // NOTE: The TIL exposes `addr_size()`, but it is derived from the compiler model and
+        // defaults to 4 when that is absent, which would silently truncate pointers on a
+        // 64-bit binary. The platform/architecture `address_size` we were constructed with is
+        // authoritative for pointer widths, so we intentionally keep it.
         self
     }
 
@@ -192,7 +238,8 @@ impl TILTranslator {
 
     pub fn build_basic_ty(&self, basic_ty: &idb_rs::til::Basic) -> anyhow::Result<TypeBuilder> {
         use idb_rs::til::Basic;
-        // TODO: Grab the sizing information of these types from the TIL instead of hardcoding.
+        // The variable-width C types (short/int/long/...) are sized from the TIL header when
+        // one is available (see `with_til_info`), falling back to the standard C ABI defaults.
         match basic_ty {
             Basic::Void => Ok(TypeBuilder::void()),
             Basic::Unknown { bytes } => {
@@ -200,17 +247,26 @@ impl TILTranslator {
                 // so we are going to be liberal and allow unknown basic types to be treated as a sized int.
                 Ok(TypeBuilder::int(*bytes as usize, false))
             }
-            Basic::Bool => Ok(TypeBuilder::bool()),
-            Basic::BoolSized { .. } => {
-                // TODO: This needs to be resized, if that cannot be done, make a NTR to an int named BOOL?
-                Ok(TypeBuilder::bool())
-            }
+            Basic::Bool if self.bool_size == 1 => Ok(TypeBuilder::bool()),
+            // Binary Ninja's `bool` is always a single byte; a wider `bool` is represented as an
+            // unsigned integer of the requested size.
+            Basic::Bool => Ok(TypeBuilder::int(self.bool_size, false)),
+            Basic::BoolSized { bytes } if bytes.get() == 1 => Ok(TypeBuilder::bool()),
+            Basic::BoolSized { bytes } => Ok(TypeBuilder::int(bytes.get() as usize, false)),
             Basic::Char => Ok(TypeBuilder::char()),
             Basic::SegReg => Err(anyhow::anyhow!("SegReg is not supported")),
-            Basic::Short { is_signed } => Ok(TypeBuilder::int(2, is_signed.unwrap_or(true))),
-            Basic::Long { is_signed } => Ok(TypeBuilder::int(4, is_signed.unwrap_or(true))),
-            Basic::LongLong { is_signed } => Ok(TypeBuilder::int(8, is_signed.unwrap_or(true))),
-            Basic::Int { is_signed } => Ok(TypeBuilder::int(4, is_signed.unwrap_or(true))),
+            Basic::Short { is_signed } => {
+                Ok(TypeBuilder::int(self.short_size, is_signed.unwrap_or(true)))
+            }
+            Basic::Long { is_signed } => {
+                Ok(TypeBuilder::int(self.long_size, is_signed.unwrap_or(true)))
+            }
+            Basic::LongLong { is_signed } => {
+                Ok(TypeBuilder::int(self.long_long_size, is_signed.unwrap_or(true)))
+            }
+            Basic::Int { is_signed } => {
+                Ok(TypeBuilder::int(self.int_size, is_signed.unwrap_or(true)))
+            }
             Basic::IntSized { bytes, is_signed } => {
                 let bytes: u8 = u8::try_from(*bytes).unwrap_or(4);
                 Ok(TypeBuilder::int(bytes as usize, is_signed.unwrap_or(true)))
@@ -219,7 +275,7 @@ impl TILTranslator {
                 let bytes: u8 = u8::try_from(*bytes).unwrap_or(4);
                 Ok(TypeBuilder::float(bytes as usize))
             }
-            Basic::LongDouble => Ok(TypeBuilder::float(8)),
+            Basic::LongDouble => Ok(TypeBuilder::float(self.long_double_size)),
         }
     }
 
@@ -227,11 +283,21 @@ impl TILTranslator {
         &self,
         pointer_ty: &idb_rs::til::pointer::Pointer,
     ) -> anyhow::Result<TypeBuilder> {
-        // TODO: Consult pointer_ty.closure (is this how we can get based pointers?)
+        // A `__ptr32` / `__ptr64` modifier overrides the platform address size for this pointer
+        // (e.g. a 32-bit pointer embedded in an otherwise 64-bit binary).
+        //
+        // NOTE: `closure` (based pointers) and `shifted` pointers have no direct Binary Ninja
+        // representation, so the pointee type and width are preserved but those attributes are
+        // intentionally dropped.
+        let pointer_width = match pointer_ty.modifier {
+            Some(PointerModifier::Ptr32) => 4,
+            Some(PointerModifier::Ptr64) => 8,
+            Some(PointerModifier::Restricted) | None => self.address_size,
+        };
         let inner_ty = self.translate_type_info(&pointer_ty.typ)?;
         Ok(TypeBuilder::pointer_of_width(
             &inner_ty,
-            self.address_size,
+            pointer_width,
             // NOTE: Set later in `translate_type_info`.
             false,
             // NOTE: Set later in `translate_type_info`.
@@ -244,10 +310,16 @@ impl TILTranslator {
         &self,
         function_ty: &idb_rs::til::function::Function,
     ) -> anyhow::Result<TypeBuilder> {
-        // TODO: Once branch `test_call_layout` lands use function_ty.retloc to recover return location.
+        // NOTE: `function_ty.retloc` carries the explicit return-value location, but mapping an
+        // IDA `ArgLoc` onto a Binary Ninja variable storage location is not yet implemented, so
+        // the return location is left to be derived by analysis.
         let return_ty = self.translate_type_info(&function_ty.ret)?;
         let params: Vec<FunctionParameter> = self.build_function_params(&function_ty.args)?;
-        let has_variable_args = false;
+        // An ellipsis calling convention is IDA's marker for a variadic function.
+        let has_variable_args = matches!(
+            function_ty.calling_convention,
+            Some(CallingConvention::Ellipsis)
+        );
         let stack_adjust = Conf::new(0, 0);
 
         let builder = match function_ty.calling_convention {
@@ -403,8 +475,10 @@ impl TILTranslator {
             builder.insert_member(member, false);
         }
 
+        // `extra_padding` records trailing padding bytes IDA stores for fixed-size UDTs; add it
+        // to the member-derived width so the structure occupies its true storage size.
+        let width = width + udt_ty.extra_padding.unwrap_or(0);
         builder.width(width);
-        // TODO: Handle udt_ty.extra_padding (is that tail padding?)
         Ok(TypeBuilder::structure(&builder.finalize()))
     }
 
@@ -478,7 +552,10 @@ impl TILTranslator {
             }
             EnumMembers::Groups(groups) => {
                 for (idx, group) in groups.iter().enumerate() {
-                    // TODO: How does this grouping actually impact the enum besides the name?
+                    // IDA's grouped (bitmask) enums partition the members into named bitmask
+                    // groups. Binary Ninja enumerations are flat and have no equivalent grouping
+                    // concept, so we flatten the groups, qualifying each member with its group
+                    // name to keep the names unique and preserve the original grouping intent.
                     let group_name = group
                         .field
                         .name
@@ -526,26 +603,31 @@ impl TILTranslator {
     /// Computes the width of a type, in bytes.
     pub fn width_of_type(&self, ty: &idb_rs::til::Type) -> anyhow::Result<usize> {
         match &ty.type_variant {
+            // Keep these widths in lockstep with `build_basic_ty` so that NTR placeholder widths
+            // match the types they stand in for.
             TypeVariant::Basic(basic) => match basic {
                 Basic::Void => Ok(0),
                 Basic::Unknown { bytes } => Ok(*bytes as usize),
-                Basic::Bool => Ok(1),
+                Basic::Bool => Ok(self.bool_size),
                 Basic::BoolSized { bytes } => Ok(bytes.get() as usize),
                 Basic::Char => Ok(1),
                 Basic::SegReg => Ok(8),
-                Basic::Short { .. } => Ok(2),
-                Basic::Long { .. } => Ok(4),
-                Basic::LongLong { .. } => Ok(8),
-                Basic::Int { .. } => Ok(4),
+                Basic::Short { .. } => Ok(self.short_size),
+                Basic::Long { .. } => Ok(self.long_size),
+                Basic::LongLong { .. } => Ok(self.long_long_size),
+                Basic::Int { .. } => Ok(self.int_size),
                 Basic::IntSized { bytes, .. } => Ok(bytes.get() as usize),
                 Basic::Float { bytes } => Ok(bytes.get() as usize),
-                Basic::LongDouble => Ok(8),
+                Basic::LongDouble => Ok(self.long_double_size),
             },
             TypeVariant::Pointer(_) => Ok(self.address_size),
             TypeVariant::Function(_) => Err(anyhow::anyhow!("Function types do not have a width")),
             TypeVariant::Array(arr) => {
                 let elem_width = self.width_of_type(&arr.elem_type)?;
-                // TODO: A DST array is unsized or what? I think we should error IMO.
+                // A flexible array member (no element count) contributes no storage of its own;
+                // it only names the tail of the containing structure. Treat it as zero-width to
+                // mirror `build_array_ty`, rather than erroring, so structures ending in one can
+                // still be sized.
                 let count = arr.nelem.map(|n| n.get()).unwrap_or(0);
                 Ok(elem_width * count as usize)
             }
@@ -565,17 +647,23 @@ impl TILTranslator {
                 for member in &s.members {
                     total_width += self.width_of_type(&member.member_type)?;
                 }
-                // TODO: Handle alignment and bitfields.
+                // NOTE: This is the tightly-packed lower bound on the size. It does not
+                // reintroduce the inter-member alignment padding (or bitfield storage sharing)
+                // that `build_udt_members` accounts for, because that requires per-type alignment
+                // which an unresolved type reference does not expose here. It is only used to give
+                // a referenced struct a placeholder width, so an underestimate is acceptable; the
+                // authoritative layout comes from `build_udt_ty` once the type is fully resolved.
                 Ok(total_width)
             }
             TypeVariant::Union(u) => {
-                // Size of the largest member + alignment
+                // Size of the largest member. As with the struct case above, the union's own
+                // alignment padding is not applied here; this is the placeholder lower bound used
+                // for type-reference widths, not the final laid-out size.
                 let mut max_width = 0;
                 for member in &u.members {
                     let member_width = self.width_of_type(&member.member_type)?;
                     max_width = max_width.max(member_width);
                 }
-                // TODO: Handle alignment
                 Ok(max_width)
             }
             TypeVariant::Enum(e) => Ok(e

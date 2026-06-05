@@ -73,6 +73,26 @@ pub struct NameInfo {
     pub exported: bool,
 }
 
+/// A typed data item IDA has defined at an address (e.g. a dword, a float, a string), recovered
+/// from the byte flags so that even unnamed/untyped-in-the-TIL data still gets a Binary Ninja
+/// data variable of the right kind.
+#[derive(Debug, Clone, Serialize)]
+pub struct DataInfo {
+    pub address: u64,
+    pub kind: DataKind,
+}
+
+/// The kind of a [`DataInfo`], with the size IDA recorded for the item.
+#[derive(Debug, Clone, Copy, Serialize)]
+pub enum DataKind {
+    /// Integer of the given size in bytes.
+    Int(u8),
+    /// Floating point value of the given size in bytes.
+    Float(u8),
+    /// String literal of the given total length in bytes.
+    String(u64),
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct CommentInfo {
     pub address: u64,
@@ -149,6 +169,8 @@ pub struct IDBInfo {
     // NOTE: TILSection is self-contained, so we do no pre-processing.
     pub til: Option<TILSection>,
     pub dir_tree: Option<DirTreeInfo>,
+    /// Typed data items recovered from the byte flags (id1).
+    pub data_items: Vec<DataInfo>,
 }
 
 impl IDBInfo {
@@ -341,12 +363,52 @@ impl IDBFileParser {
 
         let id0_info = id0.as_ref().map(|id0| self.parse_id0(id0)).transpose()?;
 
+        // Recover typed data items from the byte flags so unnamed data still gets a data variable.
+        let data_items = id1
+            .as_ref()
+            .map(|id1| self.parse_data_items(id1))
+            .unwrap_or_default();
+
         Ok(IDBInfo {
             sha256,
             id0: id0_info,
             til,
             dir_tree: dir_tree_info,
+            data_items,
         })
+    }
+
+    /// Walk the byte flags and recover every defined data item along with the kind/size IDA gave
+    /// it. Items whose data type has no straightforward Binary Ninja scalar/string equivalent
+    /// (structs, alignment fill, vector/custom types) are left for the type-driven name path.
+    pub fn parse_data_items<K: IDAKind>(&self, id1: &ID1Section<K>) -> Vec<DataInfo> {
+        use idb_rs::id1::{ByteDataType, ByteType};
+
+        let mut data_items = Vec::new();
+        for (address, byte_info, size) in id1.all_bytes_no_tails() {
+            let ByteType::Data(data) = byte_info.byte_type() else {
+                continue;
+            };
+            let kind = match data.data_type() {
+                ByteDataType::Byte => DataKind::Int(1),
+                ByteDataType::Word => DataKind::Int(2),
+                ByteDataType::Dword => DataKind::Int(4),
+                ByteDataType::Qword => DataKind::Int(8),
+                ByteDataType::Oword => DataKind::Int(16),
+                ByteDataType::Float => DataKind::Float(4),
+                ByteDataType::Double => DataKind::Float(8),
+                ByteDataType::Tbyte => DataKind::Float(10),
+                ByteDataType::Strlit => DataKind::String(size as u64),
+                // Structs carry their type through the TIL/name path; alignment, vector and
+                // custom kinds have no simple scalar mapping, so skip them here.
+                _ => continue,
+            };
+            data_items.push(DataInfo {
+                address: address.into_raw().into_u64(),
+                kind,
+            });
+        }
+        data_items
     }
 
     pub fn parse_id0<K: IDAKind>(&self, id0: &ID0Section<K>) -> anyhow::Result<ID0Info> {

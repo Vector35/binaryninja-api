@@ -1,8 +1,8 @@
 //! Map the IDB data we parsed into the [`BinaryView`].
 
 use crate::parse::{
-    BaseAddressInfo, CommentInfo, ExportInfo, FunctionFolderEntry, FunctionInfo, IDBInfo,
-    LabelInfo, NameInfo, SegmentInfo,
+    BaseAddressInfo, CommentInfo, DataInfo, DataKind, ExportInfo, FunctionFolderEntry,
+    FunctionInfo, IDBInfo, LabelInfo, NameInfo, SegmentInfo,
 };
 use crate::translate::TILTranslator;
 use binaryninja::architecture::{Architecture, ArchitectureExt, Register, RegisterInfo};
@@ -155,6 +155,17 @@ impl IDBMapper {
             self.map_comment_to_view(view, &rebased_comment);
         }
         view.file().forget_undo_actions(&undo);
+
+        // Apply typed data items before names so that a more precise type from the name/TIL path
+        // takes precedence over the byte-flag-derived type on the same address.
+        if !self.info.data_items.is_empty() {
+            tracing::info!("Mapping {} typed data items", self.info.data_items.len());
+        }
+        for data in &self.info.data_items {
+            let mut rebased_data = data.clone();
+            rebased_data.address = rebase(data.address);
+            self.map_data_item_to_view(view, &rebased_data);
+        }
 
         for name in &self.info.merged_names() {
             let mut rebased_name = name.clone();
@@ -560,6 +571,33 @@ impl IDBMapper {
             );
             bn_func.create_user_var(&var, &Type::int(reg_width, false), &reg_var.name, false);
         }
+    }
+
+    /// Define a typed data variable for a data item IDA recorded in its byte flags.
+    pub fn map_data_item_to_view(&self, view: &BinaryView, data: &DataInfo) {
+        // Skip the synthetic extern section, and anything that lives inside code/functions.
+        let within_extern_section = view
+            .sections_at(data.address)
+            .iter()
+            .any(|s| s.semantics() == Semantics::External);
+        if within_extern_section {
+            return;
+        }
+        let within_code_section = view
+            .sections_at(data.address)
+            .iter()
+            .any(|s| s.semantics() == Semantics::ReadOnlyCode);
+        if within_code_section || !view.functions_containing(data.address).is_empty() {
+            return;
+        }
+
+        let data_ty = match data.kind {
+            DataKind::Int(bytes) => Type::int(bytes as usize, false),
+            DataKind::Float(bytes) => Type::float(bytes as usize),
+            DataKind::String(len) => Type::array(&Type::char(), len),
+        };
+        tracing::debug!("Mapping data item: {:0x} ({:?})", data.address, data.kind);
+        view.define_auto_data_var(data.address, &data_ty);
     }
 
     /// Recreate an IDA function folder tree in the view.

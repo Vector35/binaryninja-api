@@ -439,23 +439,25 @@ impl IDBFileParser {
         id2: Option<&ID2Section<K>>,
         til: &TILSection,
     ) -> anyhow::Result<Vec<OperandEnumInfo>> {
-        use idb_rs::id1::{ByteOp, ByteType};
+        use idb_rs::id1::ByteType;
 
         let root_info = id0.ida_info(id0.root_node()?)?;
         let netdelta = root_info.netdelta();
 
         let mut operand_enums = Vec::new();
         for (address, byte_info, _size) in id1.all_bytes_no_tails() {
-            let ByteType::Code(code) = byte_info.byte_type() else {
+            if !matches!(byte_info.byte_type(), ByteType::Code(_)) {
+                continue;
+            }
+            // Probe the enum altval directly for operands 0 and 1 rather than gating on the
+            // operand-representation flag: IDA records the referenced enum independently of that
+            // nibble, so instructions like `orr w8, w8, #imm` carry the enum altval even when the
+            // flag does not read back as `Enum`. `op_enum_type` returns `None` when there is no
+            // enum reference, so the probe is self-gating.
+            let Some(info) = AddressInfo::new(id0, id1, id2, netdelta, address) else {
                 continue;
             };
-            for (operand, op) in [(0u8, code.operand0()), (1u8, code.operand1())] {
-                if !matches!(op, Ok(Some(ByteOp::Enum))) {
-                    continue;
-                }
-                let Some(info) = AddressInfo::new(id0, id1, id2, netdelta, address) else {
-                    continue;
-                };
+            for operand in 0u8..2 {
                 if let Some(enum_ty) = info.op_enum_type(operand, til) {
                     operand_enums.push(OperandEnumInfo {
                         address: address.into_raw().into_u64(),

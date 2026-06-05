@@ -92,8 +92,9 @@ pub enum DataKind {
     Int(u8),
     /// Floating point value of the given size in bytes.
     Float(u8),
-    /// String literal of the given total length in bytes.
-    String(u64),
+    /// String literal of the given total length in bytes, with the character width in bytes
+    /// (1 for C/UTF-8, 2 for UTF-16, 4 for UTF-32).
+    String { len: u64, char_width: u8 },
 }
 
 /// The per-operand number formats IDA recorded for an instruction.
@@ -468,14 +469,25 @@ impl IDBFileParser {
                 ByteDataType::Float => Some(DataKind::Float(4)),
                 ByteDataType::Double => Some(DataKind::Float(8)),
                 ByteDataType::Tbyte => Some(DataKind::Float(10)),
-                ByteDataType::Strlit => Some(DataKind::String(size as u64)),
+                ByteDataType::Strlit => {
+                    // Recover the character width so wide (UTF-16/32) strings are not mistyped as
+                    // single-byte. Defaults to one byte when no explicit string type is recorded.
+                    let char_width = AddressInfo::new(id0, id1, id2, netdelta, address)
+                        .and_then(|info| info.str_type())
+                        .map(|str_type| str_char_width(str_type.width))
+                        .unwrap_or(1);
+                    Some(DataKind::String {
+                        len: size as u64,
+                        char_width,
+                    })
+                }
                 // Structs carry their actual type in the TIL; resolve it below. Alignment fill
                 // and vector/custom kinds have no simple mapping and are skipped.
                 _ => None,
             };
 
             // A struct item only makes sense with its real type; look it up. Avoid the per-item
-            // type lookup for the (vastly more common) scalar/string items.
+            // type lookup for the (vastly more common) scalar items.
             let ty = if matches!(data.data_type(), ByteDataType::Struct) {
                 AddressInfo::new(id0, id1, id2, netdelta, address)
                     .and_then(|info| info.tinfo(&root_info).ok().flatten())
@@ -813,6 +825,16 @@ impl IDBFileParser {
             comments,
             function_folders,
         })
+    }
+}
+
+/// The byte width of an IDA string character width.
+fn str_char_width(width: idb_rs::addr_info::StrWidth) -> u8 {
+    use idb_rs::addr_info::StrWidth;
+    match width {
+        StrWidth::Byte => 1,
+        StrWidth::Word => 2,
+        StrWidth::Dword => 4,
     }
 }
 

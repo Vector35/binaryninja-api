@@ -684,7 +684,17 @@ impl IDBMapper {
             match kind {
                 DataKind::Int(bytes) => Type::int(bytes as usize, false),
                 DataKind::Float(bytes) => Type::float(bytes as usize),
-                DataKind::String(len) => Type::array(&Type::char(), len),
+                DataKind::String { len, char_width } => {
+                    // Use a wide character for UTF-16/UTF-32 so the string renders correctly
+                    // instead of as a byte array; the element count is the character count.
+                    let element = if char_width <= 1 {
+                        Type::char()
+                    } else {
+                        Type::wide_char(char_width as usize)
+                    };
+                    let count = len / char_width.max(1) as u64;
+                    Type::array(&element, count)
+                }
             }
         } else {
             return;

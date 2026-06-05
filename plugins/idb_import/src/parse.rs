@@ -116,6 +116,15 @@ pub enum OperandFormat {
     Offset,
 }
 
+/// An instruction operand IDA displays as a member of an enumeration.
+#[derive(Debug, Clone, Serialize)]
+pub struct OperandEnumInfo {
+    pub address: u64,
+    pub operand: u8,
+    /// The name of the enumeration the operand is displayed against.
+    pub enum_name: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct CommentInfo {
     pub address: u64,
@@ -194,6 +203,8 @@ pub struct IDBInfo {
     pub dir_tree: Option<DirTreeInfo>,
     /// Typed data items recovered from the byte flags (id1).
     pub data_items: Vec<DataInfo>,
+    /// Operands IDA displays as enumeration members.
+    pub operand_enums: Vec<OperandEnumInfo>,
     /// Per-operand number formats recovered from the byte flags (id1).
     pub operand_formats: Vec<OperandFormatInfo>,
 }
@@ -400,14 +411,61 @@ impl IDBFileParser {
             .map(|id1| self.parse_operand_formats(id1))
             .unwrap_or_default();
 
+        // Recover operands displayed as enumeration members, resolved to their enumeration.
+        let operand_enums = match (id0.as_ref(), id1.as_ref(), til.as_ref()) {
+            (Some(id0), Some(id1), Some(til)) => {
+                self.parse_operand_enums(id0, id1, id2.as_ref(), til)?
+            }
+            _ => Vec::new(),
+        };
+
         Ok(IDBInfo {
             sha256,
             id0: id0_info,
             til,
             dir_tree: dir_tree_info,
             data_items,
+            operand_enums,
             operand_formats,
         })
+    }
+
+    /// Walk the byte flags and recover operands IDA displays as enumeration members, resolving
+    /// each to the enumeration it belongs to.
+    pub fn parse_operand_enums<K: IDAKind>(
+        &self,
+        id0: &ID0Section<K>,
+        id1: &ID1Section<K>,
+        id2: Option<&ID2Section<K>>,
+        til: &TILSection,
+    ) -> anyhow::Result<Vec<OperandEnumInfo>> {
+        use idb_rs::id1::{ByteOp, ByteType};
+
+        let root_info = id0.ida_info(id0.root_node()?)?;
+        let netdelta = root_info.netdelta();
+
+        let mut operand_enums = Vec::new();
+        for (address, byte_info, _size) in id1.all_bytes_no_tails() {
+            let ByteType::Code(code) = byte_info.byte_type() else {
+                continue;
+            };
+            for (operand, op) in [(0u8, code.operand0()), (1u8, code.operand1())] {
+                if !matches!(op, Ok(Some(ByteOp::Enum))) {
+                    continue;
+                }
+                let Some(info) = AddressInfo::new(id0, id1, id2, netdelta, address) else {
+                    continue;
+                };
+                if let Some(enum_ty) = info.op_enum_type(operand, til) {
+                    operand_enums.push(OperandEnumInfo {
+                        address: address.into_raw().into_u64(),
+                        operand,
+                        enum_name: enum_ty.name.to_string(),
+                    });
+                }
+            }
+        }
+        Ok(operand_enums)
     }
 
     /// Walk the byte flags and recover the per-operand number formats IDA assigned to code.

@@ -2,7 +2,8 @@
 
 use crate::parse::{
     BaseAddressInfo, CommentInfo, DataInfo, DataKind, ExportInfo, FunctionFolderEntry,
-    FunctionInfo, IDBInfo, LabelInfo, NameInfo, OperandFormat, OperandFormatInfo, SegmentInfo,
+    FunctionInfo, IDBInfo, LabelInfo, NameInfo, OperandEnumInfo, OperandFormat, OperandFormatInfo,
+    SegmentInfo,
 };
 use crate::translate::TILTranslator;
 use binaryninja::architecture::{Architecture, ArchitectureExt, Register, RegisterInfo};
@@ -229,7 +230,63 @@ impl IDBMapper {
             }
         }
 
+        // Apply enum-displayed operands (same gating, since it also disassembles each operand).
+        if self.apply_operand_formats && !self.info.operand_enums.is_empty() {
+            tracing::info!(
+                "Applying {} enum-displayed operands",
+                self.info.operand_enums.len()
+            );
+            for operand_enum in &self.info.operand_enums {
+                let mut rebased = operand_enum.clone();
+                rebased.address = rebase(operand_enum.address);
+                self.map_operand_enum_to_view(view, &rebased);
+            }
+        }
+
         // self.map_used_types_to_view(view, &til_translator);
+    }
+
+    /// Display an operand against its enumeration, as IDA does.
+    ///
+    /// Resolves the enumeration's Binary Ninja type id and sets it on the operand for every
+    /// immediate value in the instruction; like the number-format pass, an entry only takes
+    /// effect for the exact (value, operand) Binary Ninja renders.
+    fn map_operand_enum_to_view(&self, view: &BinaryView, operand_enum: &OperandEnumInfo) {
+        let Some(type_id) = view.type_id_by_name(operand_enum.enum_name.as_str()) else {
+            tracing::debug!(
+                "No Binary Ninja type for enum '{}', skipping operand at {:0x}",
+                operand_enum.enum_name,
+                operand_enum.address
+            );
+            return;
+        };
+
+        let functions = view.functions_containing(operand_enum.address);
+        let Some(func) = functions.iter().next() else {
+            return;
+        };
+        let arch = func.arch();
+
+        let bytes = view.read_vec(operand_enum.address, 16);
+        if bytes.is_empty() {
+            return;
+        }
+        let Some((_consumed, tokens)) = arch.instruction_text(&bytes, operand_enum.address) else {
+            return;
+        };
+
+        for token in &tokens {
+            if let Some(value) = integer_token_value(&token.kind) {
+                func.set_int_display_type(
+                    operand_enum.address,
+                    value,
+                    operand_enum.operand as usize,
+                    IntegerDisplayType::EnumerationDisplayType,
+                    Some(arch),
+                    Some(type_id.as_str()),
+                );
+            }
+        }
     }
 
     /// Apply IDA's per-operand number formats to the instruction at an address.

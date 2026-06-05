@@ -27,6 +27,19 @@ pub struct FunctionInfo {
     pub address: u64,
     pub is_library: bool,
     pub is_no_return: bool,
+    pub register_vars: Vec<RegisterVarInfo>,
+}
+
+/// A register renamed by the user within a function (IDA "regvar"), e.g. `eax` -> `count`.
+#[derive(Debug, Clone, Serialize)]
+pub struct RegisterVarInfo {
+    /// Architecture register the variable lives in (e.g. `eax`).
+    pub register: String,
+    /// User-assigned name for the register over its range.
+    pub name: String,
+    pub start: u64,
+    pub end: u64,
+    pub comment: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -133,6 +146,9 @@ impl IDBInfo {
             }
             if a.ty.is_some() {
                 b.ty = a.ty.clone();
+            }
+            if !a.register_vars.is_empty() {
+                b.register_vars = a.register_vars.clone();
             }
             true
         });
@@ -341,25 +357,44 @@ impl IDBFileParser {
                     IDBFunctionType::Tail(_) => {
                         tracing::debug!("Skipping tail function... {:0x}", func_start);
                     }
-                    IDBFunctionType::NonTail(_func_ext) => {
+                    IDBFunctionType::NonTail(func_ext) => {
                         if func.flags.is_outline() {
                             tracing::debug!("Skipping outlined function... {:0x}", func_start);
                             continue;
                         }
 
-                        // NOTE: `id0.function_defined_registers(netdelta, &func, &func_ext)` and
-                        // `id0.function_defined_variables(&root_info, &func, &func_ext)` expose the
-                        // function's register definitions and named stack variables. Surfacing
-                        // those requires extending `FunctionInfo` to carry them and teaching the
-                        // mapper how to apply named stack variables / register names to a BN
-                        // function, which depends on the analysed stack frame. That is tracked as a
-                        // follow-up feature rather than parsed here.
+                        // Collect register variables (IDA "regvars"): registers the user renamed
+                        // over a range within the function. The register is given by name, so it
+                        // maps cleanly onto a Binary Ninja register in the mapper.
+                        let mut register_vars = Vec::new();
+                        for reg in id0.function_defined_registers(netdelta, &func, func_ext) {
+                            let reg = match reg {
+                                Ok(reg) => reg,
+                                Err(err) => {
+                                    tracing::warn!(
+                                        "Failed to read register variable for {:0x}: {}",
+                                        func_start,
+                                        err
+                                    );
+                                    continue;
+                                }
+                            };
+                            register_vars.push(RegisterVarInfo {
+                                register: reg.register_name.to_string(),
+                                name: reg.variable_name.to_string(),
+                                start: reg.range.start.into_raw().into_u64(),
+                                end: reg.range.end.into_raw().into_u64(),
+                                comment: reg.cmt.to_string(),
+                            });
+                        }
+
                         functions.push(FunctionInfo {
                             name: None,
                             ty: None,
                             address: func_start,
                             is_library: func.flags.is_lib(),
                             is_no_return: func.flags.is_no_return(),
+                            register_vars,
                         });
                     }
                 }
@@ -466,6 +501,7 @@ impl IDBFileParser {
                     address: func_addr,
                     is_library: false,
                     is_no_return: false,
+                    register_vars: Vec::new(),
                 }))
             };
 

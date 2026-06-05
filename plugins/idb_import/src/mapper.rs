@@ -5,13 +5,14 @@ use crate::parse::{
     SegmentInfo,
 };
 use crate::translate::TILTranslator;
-use binaryninja::architecture::Architecture;
+use binaryninja::architecture::{Architecture, ArchitectureExt, Register, RegisterInfo};
 use binaryninja::binary_view::{BinaryView, BinaryViewBase};
 use binaryninja::qualified_name::QualifiedName;
 use binaryninja::rc::Ref;
 use binaryninja::section::{SectionBuilder, Semantics};
 use binaryninja::symbol::{Binding, Symbol, SymbolType};
 use binaryninja::types::Type;
+use binaryninja::variable::Variable;
 use idb_rs::id0::SegmentType;
 use idb_rs::til::TypeVariant;
 use sha2::{Digest, Sha256};
@@ -321,6 +322,7 @@ impl IDBMapper {
                 address: export.address,
                 is_library: false,
                 is_no_return: false,
+                register_vars: Vec::new(),
             };
             self.map_func_to_view(view, til_translator, &func_info);
         } else {
@@ -385,6 +387,44 @@ impl IDBMapper {
                 func_sym
             );
             view.define_auto_symbol(&func_sym);
+        }
+
+        self.map_register_vars_to_func(&bn_func, func);
+    }
+
+    /// Apply IDA register variables ("regvars") to a function.
+    ///
+    /// IDA records that a register holds a user-named value over an address range. Binary Ninja
+    /// variables are function-scoped, so the range is not modeled; we name the architecture
+    /// register over the whole function, typed as an unsigned int of the register's width.
+    fn map_register_vars_to_func(
+        &self,
+        bn_func: &binaryninja::function::Function,
+        func: &FunctionInfo,
+    ) {
+        if func.register_vars.is_empty() {
+            return;
+        }
+        let arch = bn_func.arch();
+        for reg_var in &func.register_vars {
+            let Some(register) = arch.register_by_name(&reg_var.register) else {
+                tracing::warn!(
+                    "Skipping register variable '{}': unknown register '{}' at {:0x}",
+                    reg_var.name,
+                    reg_var.register,
+                    func.address
+                );
+                continue;
+            };
+            let reg_width = register.info().size().max(1);
+            let var = Variable::from_register(register);
+            tracing::debug!(
+                "Mapping register variable {} => {} at {:0x}",
+                reg_var.register,
+                reg_var.name,
+                func.address
+            );
+            bn_func.create_user_var(&var, &Type::int(reg_width, false), &reg_var.name, false);
         }
     }
 

@@ -9,9 +9,10 @@ use binaryninja::rc::Ref;
 use binaryninja::types::{
     EnumerationBuilder, FunctionParameter, MemberAccess, MemberScope, NamedTypeReference,
     NamedTypeReferenceClass, StructureBuilder, StructureMember, StructureType, TypeBuilder,
-    TypeContainer,
+    TypeContainer, ValueLocation, ValueLocationComponent, ValueLocationSource,
 };
-use idb_rs::til::function::CallingConvention;
+use binaryninja::variable::Variable;
+use idb_rs::til::function::{ArgLoc, CallingConvention};
 use idb_rs::til::pointer::PointerModifier;
 use idb_rs::til::r#enum::EnumMembers;
 use idb_rs::til::{Basic, TILTypeInfo, TypeVariant, TyperefType, TyperefValue};
@@ -310,9 +311,12 @@ impl TILTranslator {
         &self,
         function_ty: &idb_rs::til::function::Function,
     ) -> anyhow::Result<TypeBuilder> {
-        // NOTE: `function_ty.retloc` carries the explicit return-value location, but mapping an
-        // IDA `ArgLoc` onto a Binary Ninja variable storage location is not yet implemented, so
-        // the return location is left to be derived by analysis.
+        // NOTE: `function_ty.retloc` (and the per-argument `arg.loc`) carry explicit storage
+        // locations as IDA `ArgLoc`s. Honoring them requires translating IDA's register-relative
+        // encodings (`Reg1`/`Reg2`/`RRel` hold raw IDA register indices) into BN register ids,
+        // which is processor-specific and has no general mapping available here. Until that
+        // per-architecture register map exists we let the calling convention derive locations,
+        // which is correct for the standard conventions we already map.
         let return_ty = self.translate_type_info(&function_ty.ret)?;
         let params: Vec<FunctionParameter> = self.build_function_params(&function_ty.args)?;
         // An ellipsis calling convention is IDA's marker for a variadic function.
@@ -373,8 +377,9 @@ impl TILTranslator {
                     .clone()
                     .map(|s| s.to_string())
                     .unwrap_or_else(|| format!("arg{}", idx));
+                let location = value_location_from_arg_loc(arg.loc.as_ref());
                 self.translate_type_info(&arg.ty)
-                    .map(|ty| FunctionParameter::new(ty, arg_name, None))
+                    .map(|ty| FunctionParameter::new(ty, arg_name, location))
             })
             .collect()
     }
@@ -642,30 +647,13 @@ impl TILTranslator {
                     anyhow::anyhow!("Type reference has no width: {:?}", resolved_ty)
                 })
             }
-            TypeVariant::Struct(s) => {
-                let mut total_width = 0;
-                for member in &s.members {
-                    total_width += self.width_of_type(&member.member_type)?;
-                }
-                // NOTE: This is the tightly-packed lower bound on the size. It does not
-                // reintroduce the inter-member alignment padding (or bitfield storage sharing)
-                // that `build_udt_members` accounts for, because that requires per-type alignment
-                // which an unresolved type reference does not expose here. It is only used to give
-                // a referenced struct a placeholder width, so an underestimate is acceptable; the
-                // authoritative layout comes from `build_udt_ty` once the type is fully resolved.
-                Ok(total_width)
-            }
-            TypeVariant::Union(u) => {
-                // Size of the largest member. As with the struct case above, the union's own
-                // alignment padding is not applied here; this is the placeholder lower bound used
-                // for type-reference widths, not the final laid-out size.
-                let mut max_width = 0;
-                for member in &u.members {
-                    let member_width = self.width_of_type(&member.member_type)?;
-                    max_width = max_width.max(member_width);
-                }
-                Ok(max_width)
-            }
+            // Build the structure/union through the same path used for real translation and read
+            // back its finalized width, so alignment padding, bitfield storage sharing and tail
+            // padding are all accounted for instead of approximated. This recurses, but C types
+            // can only nest by value finitely (self-reference is only possible through a pointer,
+            // which is sized by `address_size`), so it always terminates.
+            TypeVariant::Struct(s) => Ok(self.build_udt_ty(s, false)?.finalize().width() as usize),
+            TypeVariant::Union(u) => Ok(self.build_udt_ty(u, true)?.finalize().width() as usize),
             TypeVariant::Enum(e) => Ok(e
                 .storage_size
                 .map(|s| s.get() as usize)
@@ -690,5 +678,26 @@ impl TILTranslator {
             }
             _ => None,
         }
+    }
+}
+
+/// Translate an IDA argument storage location into a Binary Ninja value location.
+///
+/// Stack-passed arguments translate directly (the offset is architecture independent). The
+/// register-based encodings (`Reg1`/`Reg2`/`RRel`) hold raw IDA register indices, and `Dist`/
+/// `Static`/custom forms have no straightforward equivalent, so those are left for analysis to
+/// derive rather than guessing at a register mapping.
+fn value_location_from_arg_loc(loc: Option<&ArgLoc>) -> ValueLocationSource {
+    match loc {
+        Some(ArgLoc::Stack(offset)) => ValueLocationSource::Custom(ValueLocation {
+            components: vec![ValueLocationComponent {
+                variable: Variable::from_stack_offset(*offset as i64),
+                offset: 0,
+                size: None,
+            }],
+            indirect: false,
+            returned_pointer: None,
+        }),
+        _ => ValueLocationSource::Default,
     }
 }

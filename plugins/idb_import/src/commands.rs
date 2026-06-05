@@ -27,7 +27,8 @@ impl LoadFileField {
     pub fn field(&self) -> FormInputField {
         FormInputField::OpenFileName {
             prompt: "File Path".to_string(),
-            // TODO: This is called extension but is really a filter.
+            // NOTE: Binary Ninja's `OpenFileName` field names this `extension`, but it accepts a
+            // full file filter expression (e.g. "*.idb;*.i64"), which is what we pass here.
             extension: Some(self.filter.clone()),
             default: self.default.clone(),
             value: None,

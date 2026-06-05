@@ -3,7 +3,7 @@ use binaryninja::settings::{QueryOptions, Settings};
 use serde_json::json;
 use std::path::PathBuf;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct LoadSettings {
     pub auto_load_file: Option<PathBuf>,
 }
@@ -38,13 +38,5 @@ impl LoadSettings {
             }
         }
         load_settings
-    }
-}
-
-impl Default for LoadSettings {
-    fn default() -> Self {
-        Self {
-            auto_load_file: None,
-        }
     }
 }

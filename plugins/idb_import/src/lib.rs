@@ -31,16 +31,14 @@ fn plugin_init() -> Result<(), ()> {
             tracing::debug!("No IDB file specified, skipping...");
             return;
         };
-        let Ok(file) = File::open(&file_path) else {
+        let Ok(file) = File::open(file_path) else {
             tracing::error!("Failed to open file: {}", file_path.display());
             return;
         };
         let mut file_reader = BufReader::new(file);
         let file_parser = IDBFileParser::new();
         match file_parser.parse(&mut file_reader) {
-            Ok(idb_info) => {
-                IDBMapper::new(idb_info).map_to_view(&view);
-            }
+            Ok(idb_info) => IDBMapper::new(idb_info).map_to_view(&view),
             Err(e) => {
                 tracing::error!("Failed to parse IDB file: {}", e);
             }

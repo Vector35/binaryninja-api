@@ -2,7 +2,7 @@
 
 use idb_rs::addr_info::{all_address_info, AddressInfo};
 use idb_rs::id0::function::{FuncIdx, FuncordsIdx, IDBFunctionType};
-use idb_rs::id0::{ID0Section, Netdelta, SegmentType};
+use idb_rs::id0::{DirTreeEntry, ID0Section, Netdelta, SegmentType};
 use idb_rs::id1::ID1Section;
 use idb_rs::id2::ID2Section;
 use idb_rs::til::section::TILSection;
@@ -27,6 +27,35 @@ pub struct FunctionInfo {
     pub address: u64,
     pub is_library: bool,
     pub is_no_return: bool,
+    pub register_vars: Vec<RegisterVarInfo>,
+    pub stack_frame: Option<StackFrameInfo>,
+}
+
+/// A register renamed by the user within a function (IDA "regvar"), e.g. `eax` -> `count`.
+#[derive(Debug, Clone, Serialize)]
+pub struct RegisterVarInfo {
+    /// Architecture register the variable lives in (e.g. `eax`).
+    pub register: String,
+    /// User-assigned name for the register over its range.
+    pub name: String,
+    pub start: u64,
+    pub end: u64,
+    pub comment: String,
+}
+
+/// A function's stack frame, as recorded by IDA.
+///
+/// The `frame` UDT describes every member of the frame (locals, saved registers, return
+/// address and arguments). `local_size` (IDA's `frsize`) and `saved_regs_size` (`frregs`) give
+/// the geometry needed to translate IDA frame offsets into Binary Ninja's frame convention.
+#[derive(Debug, Clone, Serialize)]
+pub struct StackFrameInfo {
+    /// Size in bytes of the local variables area (IDA `frsize`).
+    pub local_size: u64,
+    /// Size in bytes of the saved registers area (IDA `frregs`).
+    pub saved_regs_size: u64,
+    /// The frame structure describing each stack member.
+    pub frame: idb_rs::til::udt::UDT,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -42,6 +71,30 @@ pub struct NameInfo {
     pub ty: Option<idb_rs::til::Type>,
     pub label: Option<String>,
     pub exported: bool,
+}
+
+/// A typed data item IDA has defined at an address (e.g. a dword, a float, a string, or a
+/// struct), recovered from the byte flags so that even unnamed/untyped-in-the-TIL data still gets
+/// a Binary Ninja data variable of the right type.
+#[derive(Debug, Clone, Serialize)]
+pub struct DataInfo {
+    pub address: u64,
+    /// The explicit IDA type for this item, when one is recorded (e.g. a struct instance).
+    pub ty: Option<idb_rs::til::Type>,
+    /// The byte-flag-derived kind, used when there is no explicit type.
+    pub kind: Option<DataKind>,
+}
+
+/// The kind of a [`DataInfo`], with the size IDA recorded for the item.
+#[derive(Debug, Clone, Copy, Serialize)]
+pub enum DataKind {
+    /// Integer of the given size in bytes.
+    Int(u8),
+    /// Floating point value of the given size in bytes.
+    Float(u8),
+    /// String literal of the given total length in bytes, with the character width in bytes
+    /// (1 for C/UTF-8, 2 for UTF-16, 4 for UTF-32).
+    String { len: u64, char_width: u8 },
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -85,6 +138,12 @@ pub struct ID0Info {
     pub comments: Vec<CommentInfo>,
     pub labels: Vec<LabelInfo>,
     pub exports: Vec<ExportInfo>,
+    /// Processor register names indexed by IDA register number, used to resolve the registers
+    /// referenced by argument/return value locations into Binary Ninja registers.
+    ///
+    /// Invariant: IDA register numbers start at 0 with no gaps, so the vec index is the register
+    /// number. `register_names[n]` is the name of IDA register `n`.
+    pub register_names: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -94,6 +153,20 @@ pub struct DirTreeInfo {
     /// Contains both function and data names (along with their types).
     pub names: Vec<NameInfo>,
     pub comments: Vec<CommentInfo>,
+    /// The IDA "Functions" window folder hierarchy (root-level folders).
+    pub function_folders: Vec<FunctionFolder>,
+}
+
+/// A named folder in IDA's Functions window.
+///
+/// Functions at the dirtree root are deliberately absent from this model because they do not
+/// belong to a folder. Keeping only real folders removes the need for the mapper to interpret a
+/// synthetic root or distinguish root-level leaves from nested leaves.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct FunctionFolder {
+    pub name: String,
+    pub functions: Vec<u64>,
+    pub children: Vec<FunctionFolder>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -103,6 +176,8 @@ pub struct IDBInfo {
     // NOTE: TILSection is self-contained, so we do no pre-processing.
     pub til: Option<TILSection>,
     pub dir_tree: Option<DirTreeInfo>,
+    /// Typed data items recovered from the byte flags (id1).
+    pub data_items: Vec<DataInfo>,
 }
 
 impl IDBInfo {
@@ -133,6 +208,12 @@ impl IDBInfo {
             }
             if a.ty.is_some() {
                 b.ty = a.ty.clone();
+            }
+            if !a.register_vars.is_empty() {
+                b.register_vars = a.register_vars.clone();
+            }
+            if a.stack_frame.is_some() {
+                b.stack_frame = a.stack_frame.clone();
             }
             true
         });
@@ -188,11 +269,17 @@ impl IDBInfo {
             types.extend(til.types.clone());
         }
         types.sort_by_key(|t| t.name.to_string());
+        // `a` is the later (dir_tree-then-til) duplicate being removed and `b` is the one we
+        // keep. In practice the dir_tree types are clones pulled from the same TIL (see
+        // `parse_dir_tree`), so the definitions are identical; we still carry over an ordinal if
+        // the kept entry happens to be missing one, so name/ordinal lookups stay resolvable.
         types.dedup_by(|a, b| {
             if a.name.to_string() != b.name.to_string() {
                 return false;
             }
-            // TODO: Merge types instead of just picking b and not transferring.
+            if b.ordinal == 0 && a.ordinal != 0 {
+                b.ordinal = a.ordinal;
+            }
             true
         });
         types
@@ -218,11 +305,12 @@ impl IDBInfo {
 }
 
 /// Parsed the IDB data into [`IDBInfo`].
+#[derive(Default)]
 pub struct IDBFileParser;
 
 impl IDBFileParser {
     pub fn new() -> Self {
-        Self {}
+        Self
     }
 
     pub fn parse<I: BufRead + Seek>(&self, data: &mut I) -> anyhow::Result<IDBInfo> {
@@ -261,7 +349,8 @@ impl IDBFileParser {
             id2 = Some(format.read_id2(&mut *data, id2_loc)?);
         }
 
-        // TODO: Decompress til
+        // NOTE: `read_til` reads the section header and transparently inflates Zlib/Zstd
+        // compressed TIL sections, so no explicit decompression step is needed here.
         let mut til = None;
         if let Some(til_loc) = format.til_location() {
             til = Some(format.read_til(&mut *data, til_loc)?);
@@ -272,14 +361,99 @@ impl IDBFileParser {
             _ => None,
         };
 
+        // The IDB records the SHA256 of the original input file; surface it so consumers (and a
+        // future verifier) can confirm the IDB matches the binary being mapped.
+        let sha256 = id0.as_ref().and_then(|id0| {
+            let root_idx = id0.root_node().ok()?;
+            let hash = id0.input_file_sha256(root_idx).ok()??;
+            Some(
+                hash.iter()
+                    .map(|b| format!("{:02x}", b))
+                    .collect::<String>(),
+            )
+        });
+
         let id0_info = id0.as_ref().map(|id0| self.parse_id0(id0)).transpose()?;
 
+        // Recover typed data items from the byte flags so unnamed data still gets a data variable.
+        let data_items = match (id0.as_ref(), id1.as_ref()) {
+            (Some(id0), Some(id1)) => self.parse_data_items(id0, id1, id2.as_ref())?,
+            _ => Vec::new(),
+        };
+
         Ok(IDBInfo {
-            sha256: None,
+            sha256,
             id0: id0_info,
             til,
             dir_tree: dir_tree_info,
+            data_items,
         })
+    }
+
+    /// Walk the byte flags and recover every defined data item along with the kind/size IDA gave
+    /// it. Items whose data type has no straightforward Binary Ninja scalar/string equivalent
+    /// (structs, alignment fill, vector/custom types) are left for the type-driven name path.
+    pub fn parse_data_items<K: IDAKind>(
+        &self,
+        id0: &ID0Section<K>,
+        id1: &ID1Section<K>,
+        id2: Option<&ID2Section<K>>,
+    ) -> anyhow::Result<Vec<DataInfo>> {
+        use idb_rs::id1::{ByteDataType, ByteType};
+
+        let root_info = id0.ida_info(id0.root_node()?)?;
+        let netdelta = root_info.netdelta();
+
+        let mut data_items = Vec::new();
+        for (address, byte_info, size) in id1.all_bytes_no_tails() {
+            let ByteType::Data(data) = byte_info.byte_type() else {
+                continue;
+            };
+            let kind = match data.data_type() {
+                ByteDataType::Byte => Some(DataKind::Int(1)),
+                ByteDataType::Word => Some(DataKind::Int(2)),
+                ByteDataType::Dword => Some(DataKind::Int(4)),
+                ByteDataType::Qword => Some(DataKind::Int(8)),
+                ByteDataType::Oword => Some(DataKind::Int(16)),
+                ByteDataType::Float => Some(DataKind::Float(4)),
+                ByteDataType::Double => Some(DataKind::Float(8)),
+                ByteDataType::Tbyte => Some(DataKind::Float(10)),
+                ByteDataType::Strlit => {
+                    // Recover the character width so wide (UTF-16/32) strings are not mistyped as
+                    // single-byte. Defaults to one byte when no explicit string type is recorded.
+                    let char_width = AddressInfo::new(id0, id1, id2, netdelta, address)
+                        .and_then(|info| info.str_type())
+                        .map(|str_type| str_char_width(str_type.width))
+                        .unwrap_or(1);
+                    Some(DataKind::String {
+                        len: size as u64,
+                        char_width,
+                    })
+                }
+                // Structs carry their actual type in the TIL; resolve it below. Alignment fill
+                // and vector/custom kinds have no simple mapping and are skipped.
+                _ => None,
+            };
+
+            // A struct item only makes sense with its real type; look it up. Avoid the per-item
+            // type lookup for the (vastly more common) scalar items.
+            let ty = if matches!(data.data_type(), ByteDataType::Struct) {
+                AddressInfo::new(id0, id1, id2, netdelta, address)
+                    .and_then(|info| info.tinfo(&root_info).ok().flatten())
+            } else {
+                None
+            };
+
+            if ty.is_none() && kind.is_none() {
+                continue;
+            }
+            data_items.push(DataInfo {
+                address: address.into_raw().into_u64(),
+                ty,
+                kind,
+            });
+        }
+        Ok(data_items)
     }
 
     pub fn parse_id0<K: IDAKind>(&self, id0: &ID0Section<K>) -> anyhow::Result<ID0Info> {
@@ -310,7 +484,7 @@ impl IDBFileParser {
         let mut labels = Vec::new();
         if let Some(funcs_idx) = id0.funcs_idx()? {
             if let Some(funcords_idx) = id0.funcords_idx()? {
-                let info = self.parse_func_cord(&id0, netdelta, funcords_idx, funcs_idx)?;
+                let info = self.parse_func_cord(id0, netdelta, funcords_idx, funcs_idx)?;
                 comments.extend(info.comments);
                 labels.extend(info.labels);
             }
@@ -326,30 +500,55 @@ impl IDBFileParser {
                     IDBFunctionType::Tail(_) => {
                         tracing::debug!("Skipping tail function... {:0x}", func_start);
                     }
-                    IDBFunctionType::NonTail(_func_ext) => {
+                    IDBFunctionType::NonTail(func_ext) => {
                         if func.flags.is_outline() {
                             tracing::debug!("Skipping outlined function... {:0x}", func_start);
                             continue;
                         }
 
-                        // TODO: Parse function registers and params
-                        // for def_reg in id0.function_defined_registers(netdelta, &func, &func_ext) {
-                        //     tracing::info!("{:0x} : Function register: {:?}", func_start, def_reg);
-                        //     let Ok(_def_reg) = def_reg else {
-                        //         tracing::warn!("Failed to read function register entry");
-                        //         continue;
-                        //     };
-                        // }
+                        // Collect register variables (IDA "regvars"): registers the user renamed
+                        // over a range within the function. The register is given by name, so it
+                        // maps cleanly onto a Binary Ninja register in the mapper.
+                        let mut register_vars = Vec::new();
+                        for reg in id0.function_defined_registers(netdelta, &func, func_ext) {
+                            let reg = match reg {
+                                Ok(reg) => reg,
+                                Err(err) => {
+                                    tracing::warn!(
+                                        "Failed to read register variable for {:0x}: {}",
+                                        func_start,
+                                        err
+                                    );
+                                    continue;
+                                }
+                            };
+                            register_vars.push(RegisterVarInfo {
+                                register: reg.register_name.to_string(),
+                                name: reg.variable_name.to_string(),
+                                start: reg.range.start.into_raw().into_u64(),
+                                end: reg.range.end.into_raw().into_u64(),
+                                comment: reg.cmt.to_string(),
+                            });
+                        }
 
-                        // if let Ok(stack_names) =
-                        //     id0.function_defined_variables(&root_info, &func, &func_ext)
-                        // {
-                        //     tracing::info!(
-                        //         "{:0x} : Function stack variables: {:#?}",
-                        //         func_start,
-                        //         stack_names
-                        //     );
-                        // }
+                        // Collect the function's stack frame (named locals, saved registers and
+                        // stack arguments) along with the frame geometry needed to place them.
+                        let stack_frame =
+                            match id0.function_defined_variables(&root_info, &func, func_ext) {
+                                Ok(stack_names) => stack_names.ty.map(|frame| StackFrameInfo {
+                                    local_size: func_ext.frsize.into_u64(),
+                                    saved_regs_size: func_ext.frregs as u64,
+                                    frame,
+                                }),
+                                Err(err) => {
+                                    tracing::warn!(
+                                        "Failed to read stack frame for {:0x}: {}",
+                                        func_start,
+                                        err
+                                    );
+                                    None
+                                }
+                            };
 
                         functions.push(FunctionInfo {
                             name: None,
@@ -357,6 +556,8 @@ impl IDBFileParser {
                             address: func_start,
                             is_library: func.flags.is_lib(),
                             is_no_return: func.flags.is_no_return(),
+                            register_vars,
+                            stack_frame,
                         });
                     }
                 }
@@ -385,6 +586,14 @@ impl IDBFileParser {
             (loading_base, _) => BaseAddressInfo::BaseSegment(loading_base.into_u64()),
         };
 
+        // The processor module defines the register names by index; this lets us resolve the
+        // registers referenced by argument/return value locations into real registers.
+        let register_names = id0
+            .processor(&root_info)
+            .and_then(|processor| processor.registers_info())
+            .map(|info| info.names.iter().map(|name| name.to_string()).collect())
+            .unwrap_or_default();
+
         Ok(ID0Info {
             base_address,
             segments,
@@ -392,6 +601,7 @@ impl IDBFileParser {
             comments,
             labels,
             exports,
+            register_names,
         })
     }
 
@@ -452,21 +662,34 @@ impl IDBFileParser {
         let root_info = id0.ida_info(root_info_idx)?;
         let netdelta = root_info.netdelta();
 
-        // sha256
-
-        let func_info_from_addr =
-            |addr_info: &AddressInfo<K>| -> anyhow::Result<Option<FunctionInfo>> {
-                let func_name = addr_info.label()?.map(|s| s.to_string());
-                let func_ty = addr_info.tinfo(&root_info)?;
-                let func_addr = addr_info.address().into_raw().into_u64();
-                Ok(Some(FunctionInfo {
-                    name: func_name,
-                    ty: func_ty,
-                    address: func_addr,
-                    is_library: false,
-                    is_no_return: false,
-                }))
+        let mut parse_function = |address: K::Usize| -> Option<FunctionInfo> {
+            let address = Address::from_raw(address);
+            let info = AddressInfo::new(id0, id1, id2, netdelta, address)?;
+            let raw_address = address.into_raw().into_u64();
+            let name = match info.label() {
+                Ok(name) => name.map(|name| name.to_string()),
+                Err(err) => {
+                    tracing::warn!("Failed to read function name at {raw_address:#x}: {err}");
+                    None
+                }
             };
+            let ty = match info.tinfo(&root_info) {
+                Ok(ty) => ty,
+                Err(err) => {
+                    tracing::warn!("Failed to read function type at {raw_address:#x}: {err}");
+                    None
+                }
+            };
+            Some(FunctionInfo {
+                name,
+                ty,
+                address: raw_address,
+                is_library: false,
+                is_no_return: false,
+                register_vars: Vec::new(),
+                stack_frame: None,
+            })
+        };
 
         let comment_info_from_addr = |addr_info: &AddressInfo<K>| -> Vec<CommentInfo> {
             let mut comments = Vec::new();
@@ -510,17 +733,12 @@ impl IDBFileParser {
             comments.extend(comment_info_from_addr(&addr_info));
         }
 
-        let mut functions = Vec::new();
-        if let Some(func_dir_tree) = id0.dirtree_function_address()? {
-            func_dir_tree.visit_leafs(|addr_raw| {
-                let addr = Address::from_raw(*addr_raw);
-                if let Some(info) = AddressInfo::new(id0, id1, id2, netdelta, addr) {
-                    if let Ok(Some(func_info)) = func_info_from_addr(&info) {
-                        functions.push(func_info);
-                    }
-                }
-            });
-        }
+        // Parse every function and the folder hierarchy in one pass. Root-level function leaves
+        // are still parsed as functions, but are intentionally not represented as a folder.
+        let (functions, function_folders) = id0
+            .dirtree_function_address()?
+            .map(|tree| parse_function_tree(&tree.entries, &mut parse_function))
+            .unwrap_or_default();
 
         let mut names = Vec::new();
         if let Some(names_dir_tree) = id0.dirtree_names()? {
@@ -529,7 +747,7 @@ impl IDBFileParser {
                 if let Some(info) = AddressInfo::new(id0, id1, id2, netdelta, addr) {
                     names.push(NameInfo {
                         address: info.address().into_raw().into_u64(),
-                        ty: info.tinfo(&root_info).ok().flatten().map(|t| t.clone()),
+                        ty: info.tinfo(&root_info).ok().flatten(),
                         label: info.label().ok().flatten().map(|s| s.to_string()),
                         exported: false,
                     });
@@ -553,6 +771,126 @@ impl IDBFileParser {
             types,
             names,
             comments,
+            function_folders,
         })
+    }
+}
+
+/// The byte width of an IDA string character width.
+fn str_char_width(width: idb_rs::addr_info::StrWidth) -> u8 {
+    use idb_rs::addr_info::StrWidth;
+    match width {
+        StrWidth::Byte => 1,
+        StrWidth::Word => 2,
+        StrWidth::Dword => 4,
+    }
+}
+
+/// Parse every function leaf while extracting the real folders from IDA's function dirtree.
+fn parse_function_tree<T: IDAUsize>(
+    entries: &[DirTreeEntry<T>],
+    parse_function: &mut impl FnMut(T) -> Option<FunctionInfo>,
+) -> (Vec<FunctionInfo>, Vec<FunctionFolder>) {
+    let mut functions = Vec::new();
+    let (_, folders) = parse_function_entries(entries, &mut functions, parse_function);
+    (functions, folders)
+}
+
+/// Parse one dirtree level, returning the function addresses and child folders owned by that
+/// level. The caller discards the root addresses because those functions are not foldered.
+fn parse_function_entries<T: IDAUsize>(
+    entries: &[DirTreeEntry<T>],
+    parsed_functions: &mut Vec<FunctionInfo>,
+    parse_function: &mut impl FnMut(T) -> Option<FunctionInfo>,
+) -> (Vec<u64>, Vec<FunctionFolder>) {
+    let mut functions = Vec::new();
+    let mut folders = Vec::new();
+
+    for entry in entries {
+        match entry {
+            DirTreeEntry::Leaf(address) => {
+                functions.push(address.into_u64());
+                if let Some(function) = parse_function(*address) {
+                    parsed_functions.push(function);
+                }
+            }
+            DirTreeEntry::Directory { name, entries } => {
+                let (functions, children) =
+                    parse_function_entries(entries, parsed_functions, parse_function);
+                folders.push(FunctionFolder {
+                    name: String::from_utf8_lossy(name).into_owned(),
+                    functions,
+                    children,
+                });
+            }
+        }
+    }
+
+    (functions, folders)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn function_tree_separates_root_functions_and_preserves_folder_membership() {
+        let entries = vec![
+            DirTreeEntry::Leaf(1u32),
+            DirTreeEntry::Directory {
+                name: b"first".to_vec(),
+                entries: vec![
+                    DirTreeEntry::Leaf(2),
+                    DirTreeEntry::Directory {
+                        name: b"nested".to_vec(),
+                        entries: vec![DirTreeEntry::Leaf(3)],
+                    },
+                ],
+            },
+            DirTreeEntry::Directory {
+                name: b"empty".to_vec(),
+                entries: Vec::new(),
+            },
+        ];
+        let mut parse_function = |address| {
+            (address != 2).then_some(FunctionInfo {
+                name: None,
+                ty: None,
+                address: u64::from(address),
+                is_library: false,
+                is_no_return: false,
+                register_vars: Vec::new(),
+                stack_frame: None,
+            })
+        };
+
+        let (functions, folders) = parse_function_tree(&entries, &mut parse_function);
+
+        assert_eq!(
+            functions
+                .iter()
+                .map(|function| function.address)
+                .collect::<Vec<_>>(),
+            vec![1, 3]
+        );
+        assert_eq!(
+            folders,
+            vec![
+                FunctionFolder {
+                    name: "first".to_string(),
+                    functions: vec![2],
+                    children: vec![FunctionFolder {
+                        name: "nested".to_string(),
+                        functions: vec![3],
+                        children: Vec::new(),
+                    }],
+                },
+                FunctionFolder {
+                    name: "empty".to_string(),
+                    functions: Vec::new(),
+                    children: Vec::new(),
+                },
+            ]
+        );
     }
 }

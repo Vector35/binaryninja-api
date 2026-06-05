@@ -314,13 +314,27 @@ impl IDBMapper {
             SegmentType::Imem => Semantics::DefaultSection,
         };
 
-        // NOTE: We dedup on section name rather than address range on purpose. The BN loader has
-        // usually already mapped the whole address space, so an IDA segment would always overlap
-        // an existing section and a range-based check would suppress every segment. Name-based
-        // dedup only skips re-adding a section we (or the loader) already named identically.
+        // Skip a segment we have already mapped. We check both the name and the exact address
+        // range: an overlap-based check would be wrong because the loader normally maps the whole
+        // address space (so every IDA segment overlaps something), but an IDA segment that covers
+        // the exact same range as an existing section — even under a different name — is the same
+        // region and should not be added twice.
         if view.section_by_name(&segment.name).is_some() {
             tracing::debug!(
                 "Section with name '{}' already exists, skipping...",
+                segment.name
+            );
+            return;
+        }
+        if view
+            .sections()
+            .iter()
+            .any(|existing| existing.address_range() == segment.region)
+        {
+            tracing::debug!(
+                "Section covering {:0x}-{:0x} already exists, skipping '{}'...",
+                segment.region.start,
+                segment.region.end,
                 segment.name
             );
             return;

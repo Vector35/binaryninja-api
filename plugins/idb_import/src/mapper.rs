@@ -45,13 +45,18 @@ impl IDBMapper {
             BaseAddressInfo::None => bn_base_address,
             BaseAddressInfo::BaseSegment(start_addr) => bn_base_address.wrapping_sub(start_addr),
             BaseAddressInfo::BaseSection(section_addr) => {
-                let bn_section_addr = view
-                    .sections()
+                // Align against the lowest mapped *segment*, not the lowest section.
+                // IDA's `min_ea` is the image base (it maps the file header too), but a
+                // Mach-O's first section (`__text`) starts after the header + load
+                // commands. Using the lowest section here over-shifts every imported
+                // address by the header size; segments include the header region.
+                let bn_segment_addr = view
+                    .segments()
                     .iter()
-                    .min_by_key(|s| s.start())
-                    .map(|s| s.start());
-                match bn_section_addr {
-                    Some(bn_section) => bn_section.wrapping_sub(section_addr),
+                    .map(|s| s.address_range().start)
+                    .min();
+                match bn_segment_addr {
+                    Some(bn_segment) => bn_segment.wrapping_sub(section_addr),
                     None => bn_base_address,
                 }
             }

@@ -323,6 +323,7 @@ impl IDBMapper {
                 is_library: false,
                 is_no_return: false,
                 register_vars: Vec::new(),
+                stack_frame: None,
             };
             self.map_func_to_view(view, til_translator, &func_info);
         } else {
@@ -390,6 +391,70 @@ impl IDBMapper {
         }
 
         self.map_register_vars_to_func(&bn_func, func);
+        self.map_stack_frame_to_func(&bn_func, til_translator, func);
+    }
+
+    /// Apply a function's IDA stack frame as Binary Ninja stack variables.
+    ///
+    /// IDA stores the frame as a structure whose members run from the bottom of the local
+    /// variable area upward through the saved registers, return address and stack arguments.
+    /// Binary Ninja measures stack offsets from the return address (locals negative, arguments
+    /// positive), so an IDA frame offset is shifted down by `local_size + saved_regs_size`. The
+    /// frame members do not carry explicit offsets, so each member's offset is the running sum of
+    /// the preceding member widths; the synthetic saved-register and return-address members are
+    /// skipped (but still advance the offset) since they are not user variables.
+    fn map_stack_frame_to_func(
+        &self,
+        bn_func: &binaryninja::function::Function,
+        til_translator: &TILTranslator,
+        func: &FunctionInfo,
+    ) {
+        let Some(stack_frame) = &func.stack_frame else {
+            return;
+        };
+        let base = (stack_frame.local_size + stack_frame.saved_regs_size) as i64;
+        let mut frame_offset: u64 = 0;
+        for (i, member) in stack_frame.frame.members.iter().enumerate() {
+            let member_width = til_translator
+                .width_of_type(&member.member_type)
+                .unwrap_or(0);
+
+            // Skip the saved-register / return-address regions, but keep advancing the offset so
+            // the members after them still land at the right place.
+            if member.is_frame_r || member.is_frame_s {
+                frame_offset += member_width as u64;
+                continue;
+            }
+
+            let name = member
+                .name
+                .as_ref()
+                .map(|n| n.to_string())
+                .unwrap_or_else(|| format!("var_{i}"));
+            let bn_offset = frame_offset as i64 - base;
+            match til_translator.translate_type_info(&member.member_type) {
+                Ok(ty) => {
+                    tracing::debug!(
+                        "Mapping stack variable '{}' at frame offset {} (bn {}) for {:0x}",
+                        name,
+                        frame_offset,
+                        bn_offset,
+                        func.address
+                    );
+                    bn_func.create_auto_stack_var(bn_offset, &ty, &name);
+                }
+                Err(err) => {
+                    tracing::warn!(
+                        "Failed to translate stack variable '{}' type for {:0x}: {}",
+                        name,
+                        func.address,
+                        err
+                    );
+                }
+            }
+
+            frame_offset += member_width as u64;
+        }
     }
 
     /// Apply IDA register variables ("regvars") to a function.

@@ -28,6 +28,7 @@ pub struct FunctionInfo {
     pub is_library: bool,
     pub is_no_return: bool,
     pub register_vars: Vec<RegisterVarInfo>,
+    pub stack_frame: Option<StackFrameInfo>,
 }
 
 /// A register renamed by the user within a function (IDA "regvar"), e.g. `eax` -> `count`.
@@ -40,6 +41,21 @@ pub struct RegisterVarInfo {
     pub start: u64,
     pub end: u64,
     pub comment: String,
+}
+
+/// A function's stack frame, as recorded by IDA.
+///
+/// The `frame` UDT describes every member of the frame (locals, saved registers, return
+/// address and arguments). `local_size` (IDA's `frsize`) and `saved_regs_size` (`frregs`) give
+/// the geometry needed to translate IDA frame offsets into Binary Ninja's frame convention.
+#[derive(Debug, Clone, Serialize)]
+pub struct StackFrameInfo {
+    /// Size in bytes of the local variables area (IDA `frsize`).
+    pub local_size: u64,
+    /// Size in bytes of the saved registers area (IDA `frregs`).
+    pub saved_regs_size: u64,
+    /// The frame structure describing each stack member.
+    pub frame: idb_rs::til::udt::UDT,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -149,6 +165,9 @@ impl IDBInfo {
             }
             if !a.register_vars.is_empty() {
                 b.register_vars = a.register_vars.clone();
+            }
+            if a.stack_frame.is_some() {
+                b.stack_frame = a.stack_frame.clone();
             }
             true
         });
@@ -388,6 +407,26 @@ impl IDBFileParser {
                             });
                         }
 
+                        // Collect the function's stack frame (named locals, saved registers and
+                        // stack arguments) along with the frame geometry needed to place them.
+                        let stack_frame = match id0
+                            .function_defined_variables(&root_info, &func, func_ext)
+                        {
+                            Ok(stack_names) => stack_names.ty.map(|frame| StackFrameInfo {
+                                local_size: func_ext.frsize.into_u64(),
+                                saved_regs_size: func_ext.frregs as u64,
+                                frame,
+                            }),
+                            Err(err) => {
+                                tracing::warn!(
+                                    "Failed to read stack frame for {:0x}: {}",
+                                    func_start,
+                                    err
+                                );
+                                None
+                            }
+                        };
+
                         functions.push(FunctionInfo {
                             name: None,
                             ty: None,
@@ -395,6 +434,7 @@ impl IDBFileParser {
                             is_library: func.flags.is_lib(),
                             is_no_return: func.flags.is_no_return(),
                             register_vars,
+                            stack_frame,
                         });
                     }
                 }
@@ -502,6 +542,7 @@ impl IDBFileParser {
                     is_library: false,
                     is_no_return: false,
                     register_vars: Vec::new(),
+                    stack_frame: None,
                 }))
             };
 

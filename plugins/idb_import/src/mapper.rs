@@ -1,12 +1,13 @@
 //! Map the IDB data we parsed into the [`BinaryView`].
 
 use crate::parse::{
-    BaseAddressInfo, CommentInfo, ExportInfo, FunctionInfo, IDBInfo, LabelInfo, NameInfo,
-    SegmentInfo,
+    BaseAddressInfo, CommentInfo, ExportInfo, FunctionFolderEntry, FunctionInfo, IDBInfo,
+    LabelInfo, NameInfo, SegmentInfo,
 };
 use crate::translate::TILTranslator;
 use binaryninja::architecture::{Architecture, ArchitectureExt, Register, RegisterInfo};
 use binaryninja::binary_view::{BinaryView, BinaryViewBase};
+use binaryninja::component::{Component, ComponentBuilder};
 use binaryninja::qualified_name::QualifiedName;
 use binaryninja::rc::Ref;
 use binaryninja::section::{SectionBuilder, Semantics};
@@ -153,6 +154,18 @@ impl IDBMapper {
             let mut rebased_label = label.clone();
             rebased_label.address = rebase(label.address);
             self.map_label_to_view(view, &rebased_label);
+        }
+
+        // Recreate IDA's "Functions" window folder hierarchy as Binary Ninja components.
+        if let Some(dir_tree) = &self.info.dir_tree {
+            if !dir_tree.function_folders.is_empty() {
+                self.map_function_folders_to_view(
+                    view,
+                    &dir_tree.function_folders,
+                    None,
+                    &rebase,
+                );
+            }
         }
 
         // self.map_used_types_to_view(view, &til_translator);
@@ -505,6 +518,50 @@ impl IDBMapper {
                 func.address
             );
             bn_func.create_user_var(&var, &Type::int(reg_width, false), &reg_var.name, false);
+        }
+    }
+
+    /// Recreate an IDA function folder tree as Binary Ninja components.
+    ///
+    /// Each IDA folder becomes a component nested under its parent (the root view component for
+    /// top-level folders), and each function leaf is added to the component for its folder.
+    /// Functions sitting directly at the dirtree root are left uncomponented, matching their
+    /// "no folder" status in IDA.
+    fn map_function_folders_to_view(
+        &self,
+        view: &BinaryView,
+        entries: &[FunctionFolderEntry],
+        parent: Option<&Component>,
+        rebase: &impl Fn(u64) -> u64,
+    ) {
+        for entry in entries {
+            match entry {
+                FunctionFolderEntry::Function(address) => {
+                    let Some(parent) = parent else {
+                        continue;
+                    };
+                    let rebased = rebase(*address);
+                    let functions_at = view.functions_at(rebased);
+                    let func = functions_at.iter().find(|func| func.start() == rebased);
+                    if let Some(func) = func {
+                        parent.add_function(&func);
+                    } else {
+                        tracing::debug!(
+                            "No function at {:0x} to place in folder, skipping",
+                            rebased
+                        );
+                    }
+                }
+                FunctionFolderEntry::Folder { name, entries } => {
+                    let mut builder = ComponentBuilder::new(view.to_owned()).name(name.clone());
+                    if let Some(parent) = parent {
+                        builder = builder.parent(parent.guid());
+                    }
+                    let component = builder.finalize();
+                    tracing::debug!("Created component for folder '{}'", name);
+                    self.map_function_folders_to_view(view, entries, Some(&component), rebase);
+                }
+            }
         }
     }
 

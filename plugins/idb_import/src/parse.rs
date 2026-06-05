@@ -2,7 +2,7 @@
 
 use idb_rs::addr_info::{all_address_info, AddressInfo};
 use idb_rs::id0::function::{FuncIdx, FuncordsIdx, IDBFunctionType};
-use idb_rs::id0::{ID0Section, Netdelta, SegmentType};
+use idb_rs::id0::{DirTreeEntry, ID0Section, Netdelta, SegmentType};
 use idb_rs::id1::ID1Section;
 use idb_rs::id2::ID2Section;
 use idb_rs::til::section::TILSection;
@@ -123,6 +123,20 @@ pub struct DirTreeInfo {
     /// Contains both function and data names (along with their types).
     pub names: Vec<NameInfo>,
     pub comments: Vec<CommentInfo>,
+    /// The IDA "Functions" window folder hierarchy (root-level entries).
+    pub function_folders: Vec<FunctionFolderEntry>,
+}
+
+/// An entry in IDA's function folder tree: either a function (by address) or a named folder
+/// containing further entries. Mirrors IDA's dirtree so it can be recreated as Binary Ninja
+/// components.
+#[derive(Debug, Clone, Serialize)]
+pub enum FunctionFolderEntry {
+    Function(u64),
+    Folder {
+        name: String,
+        entries: Vec<FunctionFolderEntry>,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -588,8 +602,9 @@ impl IDBFileParser {
             comments.extend(comment_info_from_addr(&addr_info));
         }
 
+        let func_dir_tree = id0.dirtree_function_address()?;
         let mut functions = Vec::new();
-        if let Some(func_dir_tree) = id0.dirtree_function_address()? {
+        if let Some(func_dir_tree) = &func_dir_tree {
             func_dir_tree.visit_leafs(|addr_raw| {
                 let addr = Address::from_raw(*addr_raw);
                 if let Some(info) = AddressInfo::new(id0, id1, id2, netdelta, addr) {
@@ -599,6 +614,13 @@ impl IDBFileParser {
                 }
             });
         }
+
+        // Preserve the folder hierarchy (not just the leaf functions) so it can be recreated as
+        // Binary Ninja components.
+        let function_folders = func_dir_tree
+            .as_ref()
+            .map(|tree| build_function_folders::<K>(&tree.entries))
+            .unwrap_or_default();
 
         let mut names = Vec::new();
         if let Some(names_dir_tree) = id0.dirtree_names()? {
@@ -631,6 +653,23 @@ impl IDBFileParser {
             types,
             names,
             comments,
+            function_folders,
         })
     }
+}
+
+/// Recursively convert an IDA function dirtree into our [`FunctionFolderEntry`] tree.
+fn build_function_folders<K: IDAKind>(
+    entries: &[DirTreeEntry<K::Usize>],
+) -> Vec<FunctionFolderEntry> {
+    entries
+        .iter()
+        .map(|entry| match entry {
+            DirTreeEntry::Leaf(address) => FunctionFolderEntry::Function((*address).into_u64()),
+            DirTreeEntry::Directory { name, entries } => FunctionFolderEntry::Folder {
+                name: String::from_utf8_lossy(name).to_string(),
+                entries: build_function_folders::<K>(entries),
+            },
+        })
+        .collect()
 }

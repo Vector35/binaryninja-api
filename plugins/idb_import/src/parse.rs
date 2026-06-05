@@ -188,11 +188,17 @@ impl IDBInfo {
             types.extend(til.types.clone());
         }
         types.sort_by_key(|t| t.name.to_string());
+        // `a` is the later (dir_tree-then-til) duplicate being removed and `b` is the one we
+        // keep. In practice the dir_tree types are clones pulled from the same TIL (see
+        // `parse_dir_tree`), so the definitions are identical; we still carry over an ordinal if
+        // the kept entry happens to be missing one, so name/ordinal lookups stay resolvable.
         types.dedup_by(|a, b| {
             if a.name.to_string() != b.name.to_string() {
                 return false;
             }
-            // TODO: Merge types instead of just picking b and not transferring.
+            if b.ordinal == 0 && a.ordinal != 0 {
+                b.ordinal = a.ordinal;
+            }
             true
         });
         types
@@ -261,7 +267,8 @@ impl IDBFileParser {
             id2 = Some(format.read_id2(&mut *data, id2_loc)?);
         }
 
-        // TODO: Decompress til
+        // NOTE: `read_til` reads the section header and transparently inflates Zlib/Zstd
+        // compressed TIL sections, so no explicit decompression step is needed here.
         let mut til = None;
         if let Some(til_loc) = format.til_location() {
             til = Some(format.read_til(&mut *data, til_loc)?);
@@ -332,25 +339,13 @@ impl IDBFileParser {
                             continue;
                         }
 
-                        // TODO: Parse function registers and params
-                        // for def_reg in id0.function_defined_registers(netdelta, &func, &func_ext) {
-                        //     tracing::info!("{:0x} : Function register: {:?}", func_start, def_reg);
-                        //     let Ok(_def_reg) = def_reg else {
-                        //         tracing::warn!("Failed to read function register entry");
-                        //         continue;
-                        //     };
-                        // }
-
-                        // if let Ok(stack_names) =
-                        //     id0.function_defined_variables(&root_info, &func, &func_ext)
-                        // {
-                        //     tracing::info!(
-                        //         "{:0x} : Function stack variables: {:#?}",
-                        //         func_start,
-                        //         stack_names
-                        //     );
-                        // }
-
+                        // NOTE: `id0.function_defined_registers(netdelta, &func, &func_ext)` and
+                        // `id0.function_defined_variables(&root_info, &func, &func_ext)` expose the
+                        // function's register definitions and named stack variables. Surfacing
+                        // those requires extending `FunctionInfo` to carry them and teaching the
+                        // mapper how to apply named stack variables / register names to a BN
+                        // function, which depends on the analysed stack frame. That is tracked as a
+                        // follow-up feature rather than parsed here.
                         functions.push(FunctionInfo {
                             name: None,
                             ty: None,

@@ -95,6 +95,10 @@ pub struct TILTranslator {
     pub cdecl_calling_convention: Option<Ref<CoreCallingConvention>>,
     pub stdcall_calling_convention: Option<Ref<CoreCallingConvention>>,
     pub fastcall_calling_convention: Option<Ref<CoreCallingConvention>>,
+    /// Architecture used to resolve register names into register ids for value locations.
+    pub arch: Option<CoreArchitecture>,
+    /// Processor register names indexed by IDA register number (see [`crate::parse::ID0Info`]).
+    pub register_names: Vec<String>,
 }
 
 impl TILTranslator {
@@ -115,6 +119,8 @@ impl TILTranslator {
             cdecl_calling_convention: None,
             stdcall_calling_convention: None,
             fastcall_calling_convention: None,
+            arch: None,
+            register_names: Vec::new(),
         }
     }
 
@@ -135,6 +141,8 @@ impl TILTranslator {
             cdecl_calling_convention: platform.get_cdecl_calling_convention(),
             stdcall_calling_convention: platform.get_stdcall_calling_convention(),
             fastcall_calling_convention: platform.get_fastcall_calling_convention(),
+            arch: Some(platform.arch()),
+            register_names: Vec::new(),
         }
     }
 
@@ -155,7 +163,16 @@ impl TILTranslator {
             cdecl_calling_convention: arch.get_cdecl_calling_convention(),
             stdcall_calling_convention: arch.get_stdcall_calling_convention(),
             fastcall_calling_convention: arch.get_fastcall_calling_convention(),
+            arch: Some(*arch),
+            register_names: Vec::new(),
         }
+    }
+
+    /// Provide the processor register names (indexed by IDA register number) used to resolve
+    /// register-based argument and return value locations.
+    pub fn with_register_names(mut self, register_names: Vec<String>) -> Self {
+        self.register_names = register_names;
+        self
     }
 
     pub fn with_til_info(mut self, til: &idb_rs::til::section::TILSection) -> Self {
@@ -377,7 +394,7 @@ impl TILTranslator {
                     .clone()
                     .map(|s| s.to_string())
                     .unwrap_or_else(|| format!("arg{}", idx));
-                let location = value_location_from_arg_loc(arg.loc.as_ref());
+                let location = self.value_location_from_arg_loc(arg.loc.as_ref());
                 self.translate_type_info(&arg.ty)
                     .map(|ty| FunctionParameter::new(ty, arg_name, location))
             })
@@ -679,25 +696,67 @@ impl TILTranslator {
             _ => None,
         }
     }
+
+    /// Translate an IDA argument/return storage location into a Binary Ninja value location.
+    ///
+    /// Returns [`ValueLocationSource::Default`] for locations we cannot represent (or whose
+    /// registers cannot be resolved), letting the calling convention derive the location.
+    fn value_location_from_arg_loc(&self, loc: Option<&ArgLoc>) -> ValueLocationSource {
+        match self.value_location_components(loc) {
+            Some((components, indirect)) => ValueLocationSource::Custom(ValueLocation {
+                components,
+                indirect,
+                returned_pointer: None,
+            }),
+            None => ValueLocationSource::Default,
+        }
+    }
+
+    /// Resolve an IDA [`ArgLoc`] into Binary Ninja value-location components and whether the
+    /// location is indirect (the value lives in memory at the component). Returns `None` for
+    /// forms with no representation, or when a referenced register cannot be resolved.
+    fn value_location_components(
+        &self,
+        loc: Option<&ArgLoc>,
+    ) -> Option<(Vec<ValueLocationComponent>, bool)> {
+        match loc? {
+            ArgLoc::Stack(offset) => Some((vec![stack_component(*offset as i64)], false)),
+            ArgLoc::Reg1(reg) => Some((vec![self.register_component(*reg, 0)?], false)),
+            ArgLoc::Reg2(regs) => {
+                // The low and high 16 bits each hold a register index; the value is split across
+                // the two registers.
+                let low = self.register_component(regs & 0xFFFF, 0)?;
+                let high = self.register_component((regs >> 16) & 0xFFFF, 0)?;
+                Some((vec![low, high], false))
+            }
+            ArgLoc::RRel { reg, off } => {
+                // Register-relative: the value lives in memory at register + offset.
+                Some((vec![self.register_component(u32::from(*reg), *off as i64)?], true))
+            }
+            // Distributed, static (global address) and none/custom forms have no direct mapping.
+            ArgLoc::Dist(_) | ArgLoc::Static(_) | ArgLoc::None => None,
+        }
+    }
+
+    /// Build a value-location component for an IDA register index, resolving it through the
+    /// processor register names and the architecture.
+    fn register_component(&self, reg_index: u32, offset: i64) -> Option<ValueLocationComponent> {
+        let arch = self.arch.as_ref()?;
+        let name = self.register_names.get(reg_index as usize)?;
+        let register = arch.register_by_name(name)?;
+        Some(ValueLocationComponent {
+            variable: Variable::from_register(register),
+            offset,
+            size: None,
+        })
+    }
 }
 
-/// Translate an IDA argument storage location into a Binary Ninja value location.
-///
-/// Stack-passed arguments translate directly (the offset is architecture independent). The
-/// register-based encodings (`Reg1`/`Reg2`/`RRel`) hold raw IDA register indices, and `Dist`/
-/// `Static`/custom forms have no straightforward equivalent, so those are left for analysis to
-/// derive rather than guessing at a register mapping.
-fn value_location_from_arg_loc(loc: Option<&ArgLoc>) -> ValueLocationSource {
-    match loc {
-        Some(ArgLoc::Stack(offset)) => ValueLocationSource::Custom(ValueLocation {
-            components: vec![ValueLocationComponent {
-                variable: Variable::from_stack_offset(*offset as i64),
-                offset: 0,
-                size: None,
-            }],
-            indirect: false,
-            returned_pointer: None,
-        }),
-        _ => ValueLocationSource::Default,
+/// Build a value-location component for a stack offset.
+fn stack_component(offset: i64) -> ValueLocationComponent {
+    ValueLocationComponent {
+        variable: Variable::from_stack_offset(offset),
+        offset: 0,
+        size: None,
     }
 }

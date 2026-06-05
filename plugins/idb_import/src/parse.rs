@@ -114,6 +114,9 @@ pub struct ID0Info {
     pub comments: Vec<CommentInfo>,
     pub labels: Vec<LabelInfo>,
     pub exports: Vec<ExportInfo>,
+    /// Processor register names indexed by IDA register number, used to resolve the registers
+    /// referenced by argument/return value locations into Binary Ninja registers.
+    pub register_names: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -477,6 +480,14 @@ impl IDBFileParser {
             (loading_base, _) => BaseAddressInfo::BaseSegment(loading_base.into_u64()),
         };
 
+        // The processor module defines the register names by index; this lets us resolve the
+        // registers referenced by argument/return value locations into real registers.
+        let register_names = id0
+            .processor(&root_info)
+            .and_then(|processor| processor.registers_info())
+            .map(|info| info.names.iter().map(|name| name.to_string()).collect())
+            .unwrap_or_default();
+
         Ok(ID0Info {
             base_address,
             segments,
@@ -484,6 +495,7 @@ impl IDBFileParser {
             comments,
             labels,
             exports,
+            register_names,
         })
     }
 

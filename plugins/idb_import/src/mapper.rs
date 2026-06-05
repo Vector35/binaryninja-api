@@ -109,8 +109,9 @@ impl IDBMapper {
                 &Type::int(platform.arch().default_integer_size(), false),
             );
         }
-        let til_translator =
-            TILTranslator::new_from_platform(&platform).with_type_container(&view.type_container());
+        let til_translator = TILTranslator::new_from_platform(&platform)
+            .with_type_container(&view.type_container())
+            .with_register_names(id0.register_names.clone());
         let til_translator = match &self.info.til {
             Some(til) => til_translator.with_til_info(&til),
             None => til_translator,

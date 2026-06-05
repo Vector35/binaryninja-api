@@ -16,6 +16,37 @@ static bool GetNextFunctionAfterAddress(Ref<BinaryView> data, Ref<Platform> plat
 	return nextFunc != nullptr;
 }
 
+static bool IsZeroConstant(LowLevelILInstruction expr)
+{
+	return ((expr.operation == LLIL_CONST) || (expr.operation == LLIL_CONST_PTR)) && (expr.GetConstant() == 0);
+}
+
+
+static bool IsConstantPointer(LowLevelILInstruction expr, uint64_t value)
+{
+	return ((expr.operation == LLIL_CONST) || (expr.operation == LLIL_CONST_PTR)) && ((uint64_t)expr.GetConstant() == value);
+}
+
+
+static bool IsReturnAddressRegisterExpr(LowLevelILInstruction expr, const set<uint32_t>& returnAddressRegisters)
+{
+	switch (expr.operation)
+	{
+	case LLIL_REG:
+		return returnAddressRegisters.count(expr.GetSourceRegister<LLIL_REG>()) != 0;
+	case LLIL_ADD:
+		return (IsReturnAddressRegisterExpr(expr.GetLeftExpr<LLIL_ADD>(), returnAddressRegisters)
+				&& IsZeroConstant(expr.GetRightExpr<LLIL_ADD>()))
+			|| (IsZeroConstant(expr.GetLeftExpr<LLIL_ADD>())
+				&& IsReturnAddressRegisterExpr(expr.GetRightExpr<LLIL_ADD>(), returnAddressRegisters));
+	case LLIL_SUB:
+		return IsReturnAddressRegisterExpr(expr.GetLeftExpr<LLIL_SUB>(), returnAddressRegisters)
+			&& IsZeroConstant(expr.GetRightExpr<LLIL_SUB>());
+	default:
+		return false;
+	}
+}
+
 
 void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnalysisContext& context)
 {
@@ -992,7 +1023,18 @@ void FunctionLifterContext::CheckForInlinedCall(BasicBlock* block, size_t instrC
 			m_function->MarkLabel(start);
 			m_function->ReplaceExpr(lastInstr.exprIndex, m_function->Goto(start, lastInstr));
 
-			if (lastInstr.operation == LLIL_CALL)
+			set<uint32_t> returnAddressRegisters;
+			for (size_t instrIndex = instrCountBefore; instrIndex < instrCountAfter - 1; instrIndex++)
+			{
+				LowLevelILInstruction instr = m_function->GetInstruction(instrIndex);
+				if (instr.operation != LLIL_SET_REG)
+					continue;
+
+				if (IsConstantPointer(instr.GetSourceExpr<LLIL_SET_REG>(), addr))
+					returnAddressRegisters.insert(instr.GetDestRegister<LLIL_SET_REG>());
+			}
+
+			if (lastInstr.operation == LLIL_CALL && returnAddressRegisters.empty())
 			{
 				// Set up return address according to the architecture
 				// TODO: Handle architectures that use a nonstandard way of calling functions
@@ -1024,6 +1066,7 @@ void FunctionLifterContext::CheckForInlinedCall(BasicBlock* block, size_t instrC
 			}
 
 			// Copy the inlined code from the target function
+			Ref<Architecture> callArch = block->GetArchitecture();
 			auto blocks = PrepareToCopyForeignFunction(targetIL);
 			auto unresolvedIndirectBranches = targetFunc->GetUnresolvedIndirectBranches();
 			auto sourceLocation = inlineDuringAnalysis == InlineUsingCallAddress ? ILSourceLocation(lastInstr) : ILSourceLocation();
@@ -1044,6 +1087,13 @@ void FunctionLifterContext::CheckForInlinedCall(BasicBlock* block, size_t instrC
 						// that jump to the return address in nonstandard ways
 						//m_liftedIL->AddInstruction(m_liftedIL->Jump(instr.GetDestExpr<LLIL_RET>().CopyTo(m_liftedIL), instr));
 						m_function->AddInstruction(instr.GetDestExpr<LLIL_RET>().CopyTo(m_function, sourceLocation));
+						m_function->AddInstruction(m_function->Goto(end, sourceLocation));
+					}
+					else if (lastInstr.operation == LLIL_CALL && instr.operation == LLIL_JUMP
+						&& (block->GetArchitecture() == callArch)
+						&& (IsConstantPointer(instr.GetDestExpr<LLIL_JUMP>(), addr)
+							|| IsReturnAddressRegisterExpr(instr.GetDestExpr<LLIL_JUMP>(), returnAddressRegisters)))
+					{
 						m_function->AddInstruction(m_function->Goto(end, sourceLocation));
 					}
 					else if (lastInstr.operation == LLIL_CALL && instr.operation == LLIL_JUMP

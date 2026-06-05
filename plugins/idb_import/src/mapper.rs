@@ -2,13 +2,15 @@
 
 use crate::parse::{
     BaseAddressInfo, CommentInfo, DataInfo, DataKind, ExportInfo, FunctionFolderEntry,
-    FunctionInfo, IDBInfo, LabelInfo, NameInfo, SegmentInfo,
+    FunctionInfo, IDBInfo, LabelInfo, NameInfo, OperandFormat, OperandFormatInfo, SegmentInfo,
 };
 use crate::translate::TILTranslator;
 use binaryninja::architecture::{Architecture, ArchitectureExt, Register, RegisterInfo};
 use binaryninja::binary_view::{BinaryView, BinaryViewBase};
 use binaryninja::component::{Component, ComponentBuilder};
+use binaryninja::disassembly::InstructionTextTokenKind;
 use binaryninja::function::Function;
+use binaryninja::types::IntegerDisplayType;
 use binaryninja::qualified_name::QualifiedName;
 use binaryninja::rc::Ref;
 use binaryninja::section::{SectionBuilder, Semantics};
@@ -25,11 +27,21 @@ use std::collections::{HashMap, HashSet};
 /// The mapper can be re-used if mapping into multiple views.
 pub struct IDBMapper {
     info: IDBInfo,
+    apply_operand_formats: bool,
 }
 
 impl IDBMapper {
     pub fn new(info: IDBInfo) -> Self {
-        Self { info }
+        Self {
+            info,
+            apply_operand_formats: false,
+        }
+    }
+
+    /// Enable applying the IDB's per-operand number formats to the disassembly.
+    pub fn with_operand_formats(mut self, enabled: bool) -> Self {
+        self.apply_operand_formats = enabled;
+        self
     }
 
     pub fn map_to_view(&self, view: &BinaryView) {
@@ -203,7 +215,66 @@ impl IDBMapper {
             }
         }
 
+        // Apply per-operand number formats to the disassembly, if the user opted in. This is
+        // gated because it disassembles each formatted instruction.
+        if self.apply_operand_formats && !self.info.operand_formats.is_empty() {
+            tracing::info!(
+                "Applying {} operand formats",
+                self.info.operand_formats.len()
+            );
+            for operand_format in &self.info.operand_formats {
+                let mut rebased = operand_format.clone();
+                rebased.address = rebase(operand_format.address);
+                self.map_operand_format_to_view(view, &rebased);
+            }
+        }
+
         // self.map_used_types_to_view(view, &til_translator);
+    }
+
+    /// Apply IDA's per-operand number formats to the instruction at an address.
+    ///
+    /// `set_int_display_type` only takes effect when Binary Ninja renders a token with the exact
+    /// (value, operand) we set, so disassembling the instruction to recover its immediate values
+    /// and setting each value under every formatted operand index is safe: combinations that do
+    /// not occur are simply never matched.
+    fn map_operand_format_to_view(&self, view: &BinaryView, operand_format: &OperandFormatInfo) {
+        let functions = view.functions_containing(operand_format.address);
+        let Some(func) = functions.iter().next() else {
+            return;
+        };
+        let arch = func.arch();
+
+        // The longest instruction we may encounter; reading a few extra bytes is harmless.
+        let bytes = view.read_vec(operand_format.address, 16);
+        if bytes.is_empty() {
+            return;
+        }
+        let Some((_consumed, tokens)) = arch.instruction_text(&bytes, operand_format.address) else {
+            return;
+        };
+
+        let values: Vec<u64> = tokens
+            .iter()
+            .filter_map(|token| integer_token_value(&token.kind))
+            .collect();
+        if values.is_empty() {
+            return;
+        }
+
+        for (operand_index, format) in &operand_format.formats {
+            let display_type = integer_display_type(*format);
+            for value in &values {
+                func.set_int_display_type(
+                    operand_format.address,
+                    *value,
+                    *operand_index as usize,
+                    display_type,
+                    Some(arch),
+                    None,
+                );
+            }
+        }
     }
 
     pub fn map_types_to_view(
@@ -764,6 +835,28 @@ struct FolderStats {
     folders_created: usize,
     functions_placed: usize,
     functions_missing: usize,
+}
+
+/// Extract the integer value carried by a disassembly token, if any.
+fn integer_token_value(kind: &InstructionTextTokenKind) -> Option<u64> {
+    match kind {
+        InstructionTextTokenKind::Integer { value, .. } => Some(*value),
+        InstructionTextTokenKind::PossibleAddress { value, .. } => Some(*value),
+        InstructionTextTokenKind::CodeRelativeAddress { value, .. } => Some(*value),
+        _ => None,
+    }
+}
+
+/// Map an IDA operand number format to the Binary Ninja integer display type.
+fn integer_display_type(format: OperandFormat) -> IntegerDisplayType {
+    match format {
+        OperandFormat::Hex => IntegerDisplayType::UnsignedHexadecimalDisplayType,
+        OperandFormat::Dec => IntegerDisplayType::SignedDecimalDisplayType,
+        OperandFormat::Char => IntegerDisplayType::CharacterConstantDisplayType,
+        OperandFormat::Oct => IntegerDisplayType::UnsignedOctalDisplayType,
+        OperandFormat::Bin => IntegerDisplayType::BinaryDisplayType,
+        OperandFormat::Offset => IntegerDisplayType::PointerDisplayType,
+    }
 }
 
 /// Compute the SHA256 of the raw (on-disk) bytes backing `view`.

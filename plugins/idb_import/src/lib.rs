@@ -39,7 +39,9 @@ fn plugin_init() -> Result<(), ()> {
         let file_parser = IDBFileParser::new();
         match file_parser.parse(&mut file_reader) {
             Ok(idb_info) => {
-                IDBMapper::new(idb_info).map_to_view(&view);
+                IDBMapper::new(idb_info)
+                    .with_operand_formats(load_settings.apply_operand_formats)
+                    .map_to_view(&view);
             }
             Err(e) => {
                 tracing::error!("Failed to parse IDB file: {}", e);

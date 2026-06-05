@@ -93,6 +93,25 @@ pub enum DataKind {
     String(u64),
 }
 
+/// The per-operand number formats IDA recorded for an instruction.
+#[derive(Debug, Clone, Serialize)]
+pub struct OperandFormatInfo {
+    pub address: u64,
+    /// `(operand index, format)` pairs for the operands that have a non-default format.
+    pub formats: Vec<(u8, OperandFormat)>,
+}
+
+/// How IDA displays an instruction operand's number.
+#[derive(Debug, Clone, Copy, Serialize)]
+pub enum OperandFormat {
+    Hex,
+    Dec,
+    Char,
+    Oct,
+    Bin,
+    Offset,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct CommentInfo {
     pub address: u64,
@@ -171,6 +190,8 @@ pub struct IDBInfo {
     pub dir_tree: Option<DirTreeInfo>,
     /// Typed data items recovered from the byte flags (id1).
     pub data_items: Vec<DataInfo>,
+    /// Per-operand number formats recovered from the byte flags (id1).
+    pub operand_formats: Vec<OperandFormatInfo>,
 }
 
 impl IDBInfo {
@@ -369,13 +390,51 @@ impl IDBFileParser {
             .map(|id1| self.parse_data_items(id1))
             .unwrap_or_default();
 
+        // Recover per-operand number formats (applied only when the user opts in).
+        let operand_formats = id1
+            .as_ref()
+            .map(|id1| self.parse_operand_formats(id1))
+            .unwrap_or_default();
+
         Ok(IDBInfo {
             sha256,
             id0: id0_info,
             til,
             dir_tree: dir_tree_info,
             data_items,
+            operand_formats,
         })
+    }
+
+    /// Walk the byte flags and recover the per-operand number formats IDA assigned to code.
+    pub fn parse_operand_formats<K: IDAKind>(
+        &self,
+        id1: &ID1Section<K>,
+    ) -> Vec<OperandFormatInfo> {
+        let mut operand_formats = Vec::new();
+        for (address, byte_info, _size) in id1.all_bytes_no_tails() {
+            let idb_rs::id1::ByteType::Code(code) = byte_info.byte_type() else {
+                continue;
+            };
+            let mut formats = Vec::new();
+            if let Ok(Some(op)) = code.operand0() {
+                if let Some(format) = operand_format_from_byte_op(op) {
+                    formats.push((0, format));
+                }
+            }
+            if let Ok(Some(op)) = code.operand1() {
+                if let Some(format) = operand_format_from_byte_op(op) {
+                    formats.push((1, format));
+                }
+            }
+            if !formats.is_empty() {
+                operand_formats.push(OperandFormatInfo {
+                    address: address.into_raw().into_u64(),
+                    formats,
+                });
+            }
+        }
+        operand_formats
     }
 
     /// Walk the byte flags and recover every defined data item along with the kind/size IDA gave
@@ -729,6 +788,23 @@ impl IDBFileParser {
             comments,
             function_folders,
         })
+    }
+}
+
+/// Map an IDA operand representation to the subset of number formats we can apply directly.
+///
+/// Enum, segment, stack-variable, struct-offset, forced and custom representations need extra
+/// context (a resolved enum/struct/variable) and are left to other paths.
+fn operand_format_from_byte_op(op: idb_rs::id1::ByteOp) -> Option<OperandFormat> {
+    use idb_rs::id1::ByteOp;
+    match op {
+        ByteOp::Hex => Some(OperandFormat::Hex),
+        ByteOp::Dec => Some(OperandFormat::Dec),
+        ByteOp::Char => Some(OperandFormat::Char),
+        ByteOp::Oct => Some(OperandFormat::Oct),
+        ByteOp::Bin => Some(OperandFormat::Bin),
+        ByteOp::Offset => Some(OperandFormat::Offset),
+        _ => None,
     }
 }
 

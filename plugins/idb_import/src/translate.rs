@@ -3,13 +3,13 @@
 
 use binaryninja::architecture::{Architecture, ArchitectureExt, CoreArchitecture};
 use binaryninja::calling_convention::CoreCallingConvention;
-use binaryninja::confidence::Conf;
+use binaryninja::confidence::{Conf, MAX_CONFIDENCE};
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
 use binaryninja::types::{
     EnumerationBuilder, FunctionParameter, MemberAccess, MemberScope, NamedTypeReference,
-    NamedTypeReferenceClass, StructureBuilder, StructureMember, StructureType, TypeBuilder,
-    TypeContainer, ValueLocation, ValueLocationComponent, ValueLocationSource,
+    NamedTypeReferenceClass, ReturnValue, StructureBuilder, StructureMember, StructureType, Type,
+    TypeBuilder, TypeContainer, ValueLocation, ValueLocationComponent, ValueLocationSource,
 };
 use binaryninja::variable::Variable;
 use idb_rs::til::function::{ArgLoc, CallingConvention};
@@ -328,13 +328,10 @@ impl TILTranslator {
         &self,
         function_ty: &idb_rs::til::function::Function,
     ) -> anyhow::Result<TypeBuilder> {
-        // NOTE: `function_ty.retloc` (and the per-argument `arg.loc`) carry explicit storage
-        // locations as IDA `ArgLoc`s. Honoring them requires translating IDA's register-relative
-        // encodings (`Reg1`/`Reg2`/`RRel` hold raw IDA register indices) into BN register ids,
-        // which is processor-specific and has no general mapping available here. Until that
-        // per-architecture register map exists we let the calling convention derive locations,
-        // which is correct for the standard conventions we already map.
         let return_ty = self.translate_type_info(&function_ty.ret)?;
+        // Recover the explicit return-value location (e.g. a non-default return register) when the
+        // database records one; otherwise the calling convention derives it.
+        let return_value = self.build_return_value(&return_ty, function_ty.retloc.as_ref());
         let params: Vec<FunctionParameter> = self.build_function_params(&function_ty.args)?;
         // An ellipsis calling convention is IDA's marker for a variadic function.
         let has_variable_args = matches!(
@@ -349,7 +346,7 @@ impl TILTranslator {
             {
                 let cc = self.cdecl_calling_convention.clone().unwrap();
                 TypeBuilder::function_with_opts(
-                    &return_ty,
+                    return_value,
                     &params,
                     has_variable_args,
                     cc,
@@ -359,7 +356,7 @@ impl TILTranslator {
             Some(CallingConvention::Stdcall) if self.stdcall_calling_convention.is_some() => {
                 let cc = self.stdcall_calling_convention.clone().unwrap();
                 TypeBuilder::function_with_opts(
-                    &return_ty,
+                    return_value,
                     &params,
                     has_variable_args,
                     cc,
@@ -369,7 +366,7 @@ impl TILTranslator {
             Some(CallingConvention::Fastcall) if self.fastcall_calling_convention.is_some() => {
                 let cc = self.fastcall_calling_convention.clone().unwrap();
                 TypeBuilder::function_with_opts(
-                    &return_ty,
+                    return_value,
                     &params,
                     has_variable_args,
                     cc,
@@ -380,6 +377,27 @@ impl TILTranslator {
         };
 
         Ok(builder)
+    }
+
+    /// Build a [`ReturnValue`] for a function, attaching an explicit storage location when the
+    /// database records a return location that we can resolve to registers/stack.
+    fn build_return_value(&self, return_ty: &Ref<Type>, retloc: Option<&ArgLoc>) -> ReturnValue {
+        let location = self
+            .value_location_components(retloc)
+            .map(|(components, indirect)| {
+                Conf::new(
+                    ValueLocation {
+                        components,
+                        indirect,
+                        returned_pointer: None,
+                    },
+                    MAX_CONFIDENCE,
+                )
+            });
+        ReturnValue {
+            ty: Conf::new(return_ty.clone(), MAX_CONFIDENCE),
+            location,
+        }
     }
 
     pub fn build_function_params(

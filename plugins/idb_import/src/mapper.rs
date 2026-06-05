@@ -8,6 +8,7 @@ use crate::translate::TILTranslator;
 use binaryninja::architecture::{Architecture, ArchitectureExt, Register, RegisterInfo};
 use binaryninja::binary_view::{BinaryView, BinaryViewBase};
 use binaryninja::component::{Component, ComponentBuilder};
+use binaryninja::function::Function;
 use binaryninja::qualified_name::QualifiedName;
 use binaryninja::rc::Ref;
 use binaryninja::section::{SectionBuilder, Semantics};
@@ -17,7 +18,7 @@ use binaryninja::variable::Variable;
 use idb_rs::id0::SegmentType;
 use idb_rs::til::TypeVariant;
 use sha2::{Digest, Sha256};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 /// Maps IDB data into a [`BinaryView`].
 ///
@@ -119,16 +120,25 @@ impl IDBMapper {
 
         self.map_types_to_view(view, &til_translator, &self.info.merged_types());
 
+        // Keep the created functions keyed by their (rebased) address so we can place them into
+        // folders later without depending on the analysis having indexed them yet.
+        let mut functions_by_address: HashMap<u64, Ref<Function>> = HashMap::new();
         for func in &self.info.merged_functions() {
             let mut rebased_func = func.clone();
             rebased_func.address = rebase(func.address);
-            self.map_func_to_view(view, &til_translator, &rebased_func);
+            if let Some(bn_func) = self.map_func_to_view(view, &til_translator, &rebased_func) {
+                functions_by_address.insert(rebased_func.address, bn_func);
+            }
         }
 
         for export in &id0.exports {
             let mut rebased_export = export.clone();
             rebased_export.address = rebase(export.address);
-            self.map_export_to_view(view, &til_translator, &rebased_export);
+            if let Some(bn_func) =
+                self.map_export_to_view(view, &til_translator, &rebased_export)
+            {
+                functions_by_address.insert(rebased_export.address, bn_func);
+            }
         }
 
         // NOTE: The undo bracketing below is not thread safe, so the mapper must be the only
@@ -157,14 +167,24 @@ impl IDBMapper {
             self.map_label_to_view(view, &rebased_label);
         }
 
-        // Recreate IDA's "Functions" window folder hierarchy as Binary Ninja components.
+        // Recreate IDA's "Functions" window folder hierarchy. Binary Ninja's component API backs
+        // what the UI shows as function folders.
         if let Some(dir_tree) = &self.info.dir_tree {
             if !dir_tree.function_folders.is_empty() {
+                let mut stats = FolderStats::default();
                 self.map_function_folders_to_view(
                     view,
                     &dir_tree.function_folders,
                     None,
                     &rebase,
+                    &functions_by_address,
+                    &mut stats,
+                );
+                tracing::info!(
+                    "Mapped function folders: {} folders created, {} functions placed, {} not found",
+                    stats.folders_created,
+                    stats.functions_placed,
+                    stats.functions_missing
                 );
             }
         }
@@ -325,7 +345,7 @@ impl IDBMapper {
         view: &BinaryView,
         til_translator: &TILTranslator,
         export: &ExportInfo,
-    ) {
+    ) -> Option<Ref<Function>> {
         let within_code_section = view
             .sections_at(export.address)
             .iter()
@@ -347,7 +367,7 @@ impl IDBMapper {
                 register_vars: Vec::new(),
                 stack_frame: None,
             };
-            self.map_func_to_view(view, til_translator, &func_info);
+            return self.map_func_to_view(view, til_translator, &func_info);
         } else {
             tracing::debug!("Mapping data export: {:0x}", export.address);
             let name_info = NameInfo {
@@ -358,6 +378,7 @@ impl IDBMapper {
             };
             self.map_name_to_view(view, til_translator, &name_info);
         }
+        None
     }
 
     pub fn map_func_to_view(
@@ -365,7 +386,7 @@ impl IDBMapper {
         view: &BinaryView,
         til_translator: &TILTranslator,
         func: &FunctionInfo,
-    ) {
+    ) -> Option<Ref<Function>> {
         // We need to skip things that hit the extern section, since they do not have a bearing in the
         // actual context of the binary, and can be derived differently between IDA and Binja.
         let within_extern_section = view
@@ -375,12 +396,12 @@ impl IDBMapper {
             .is_some();
         if within_extern_section {
             tracing::debug!("Skipping function in extern section: {:0x}", func.address);
-            return;
+            return None;
         }
 
         let Some(bn_func) = view.add_auto_function(func.address) else {
             tracing::warn!("Failed to add function for {:0x}", func.address);
-            return;
+            return None;
         };
 
         // IDA marks functions that never return (e.g. `abort`, `exit`); carry that over so BN's
@@ -421,6 +442,8 @@ impl IDBMapper {
 
         self.map_register_vars_to_func(&bn_func, func);
         self.map_stack_frame_to_func(&bn_func, til_translator, func);
+
+        Some(bn_func)
     }
 
     /// Apply a function's IDA stack frame as Binary Ninja stack variables.
@@ -522,18 +545,21 @@ impl IDBMapper {
         }
     }
 
-    /// Recreate an IDA function folder tree as Binary Ninja components.
+    /// Recreate an IDA function folder tree in the view.
     ///
-    /// Each IDA folder becomes a component nested under its parent (the root view component for
-    /// top-level folders), and each function leaf is added to the component for its folder.
-    /// Functions sitting directly at the dirtree root are left uncomponented, matching their
-    /// "no folder" status in IDA.
+    /// Binary Ninja models function folders with the component API (`Component`), which the UI
+    /// presents as folders. Each IDA folder becomes a component nested under its parent (the root
+    /// view component for top-level folders), and each function leaf is added to the folder it
+    /// belongs to. Functions sitting directly at the dirtree root are left in no folder, matching
+    /// their state in IDA.
     fn map_function_folders_to_view(
         &self,
         view: &BinaryView,
         entries: &[FunctionFolderEntry],
         parent: Option<&Component>,
         rebase: &impl Fn(u64) -> u64,
+        functions_by_address: &HashMap<u64, Ref<Function>>,
+        stats: &mut FolderStats,
     ) {
         for entry in entries {
             match entry {
@@ -542,15 +568,32 @@ impl IDBMapper {
                         continue;
                     };
                     let rebased = rebase(*address);
-                    let functions_at = view.functions_at(rebased);
-                    let func = functions_at.iter().find(|func| func.start() == rebased);
-                    if let Some(func) = func {
-                        parent.add_function(&func);
-                    } else {
-                        tracing::debug!(
-                            "No function at {:0x} to place in folder, skipping",
-                            rebased
-                        );
+                    // Prefer the function we created during mapping; fall back to a view lookup in
+                    // case it came from another source.
+                    let func = functions_by_address.get(&rebased).cloned().or_else(|| {
+                        view.functions_at(rebased)
+                            .iter()
+                            .find(|func| func.start() == rebased)
+                            .map(|func| func.to_owned())
+                    });
+                    match func {
+                        Some(func) if parent.add_function(&func) => {
+                            stats.functions_placed += 1;
+                        }
+                        Some(_) => {
+                            tracing::debug!(
+                                "Component rejected function at {:0x}",
+                                rebased
+                            );
+                            stats.functions_missing += 1;
+                        }
+                        None => {
+                            tracing::debug!(
+                                "No function at {:0x} to place in folder, skipping",
+                                rebased
+                            );
+                            stats.functions_missing += 1;
+                        }
                     }
                 }
                 FunctionFolderEntry::Folder { name, entries } => {
@@ -559,8 +602,16 @@ impl IDBMapper {
                         builder = builder.parent(parent.guid());
                     }
                     let component = builder.finalize();
-                    tracing::debug!("Created component for folder '{}'", name);
-                    self.map_function_folders_to_view(view, entries, Some(&component), rebase);
+                    stats.folders_created += 1;
+                    tracing::debug!("Created folder '{}'", name);
+                    self.map_function_folders_to_view(
+                        view,
+                        entries,
+                        Some(&component),
+                        rebase,
+                        functions_by_address,
+                        stats,
+                    );
                 }
             }
         }
@@ -650,6 +701,14 @@ impl IDBMapper {
             view.set_comment_at(comment.address, &comment.comment);
         }
     }
+}
+
+/// Running totals for the folder mapping, used for a single summary log line.
+#[derive(Default)]
+struct FolderStats {
+    folders_created: usize,
+    functions_placed: usize,
+    functions_missing: usize,
 }
 
 /// Compute the SHA256 of the raw (on-disk) bytes backing `view`.

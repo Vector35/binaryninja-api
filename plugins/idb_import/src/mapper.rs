@@ -22,6 +22,185 @@ use idb_rs::id0::SegmentType;
 use idb_rs::til::TypeVariant;
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
+use std::sync::{Mutex, OnceLock};
+
+/// Per-operand display overrides (number formats and enum displays) that have been parsed and
+/// rebased but cannot be applied yet because they require the view's functions to exist.
+///
+/// `set_int_display_type` needs the [`Function`] containing an instruction, but the IDB import runs
+/// as an early analysis activity, before functions are created. We stash the rebased overrides here
+/// keyed by the view, then a [`crate`]-level analysis-completion handler applies them once functions
+/// are available (see `lib.rs`).
+pub struct PendingOperandDisplay {
+    pub operand_formats: Vec<OperandFormatInfo>,
+    pub operand_enums: Vec<OperandEnumInfo>,
+}
+
+fn pending_operand_display() -> &'static Mutex<HashMap<usize, PendingOperandDisplay>> {
+    static REGISTRY: OnceLock<Mutex<HashMap<usize, PendingOperandDisplay>>> = OnceLock::new();
+    REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// A stable per-view key shared between the import activity and the completion handler. The
+/// completion event wraps the same underlying `BNBinaryView`, so its handle pointer matches.
+fn view_key(view: &BinaryView) -> usize {
+    view.handle as usize
+}
+
+/// Stash rebased operand-display overrides to be applied once the view's functions exist.
+fn stash_operand_display(view: &BinaryView, pending: PendingOperandDisplay) {
+    if let Ok(mut registry) = pending_operand_display().lock() {
+        registry.insert(view_key(view), pending);
+    }
+}
+
+/// Apply (and remove) any operand-display overrides stashed for this view.
+///
+/// Enum displays (a handful) are applied first and rendered promptly; the much larger number-format
+/// set is applied afterwards. Each phase requests its own re-analysis so the overrides become
+/// visible. Returns whether any overrides were applied.
+pub fn apply_pending_operand_display(view: &BinaryView) -> bool {
+    let key = view_key(view);
+    let Some(pending) = pending_operand_display()
+        .lock()
+        .ok()
+        .and_then(|mut registry| registry.remove(&key))
+    else {
+        tracing::debug!("No pending operand display overrides for view {key:#x}");
+        return false;
+    };
+
+    tracing::info!(
+        "Applying deferred operand display: {} enums, {} number formats",
+        pending.operand_enums.len(),
+        pending.operand_formats.len()
+    );
+
+    // Addresses whose operand is displayed as an enumeration. IDA shows the enum even when the
+    // operand also carries a number-format flag, so the enum must win: skip the format pass for
+    // these addresses, otherwise it would overwrite the enum override at the same operand.
+    let enum_addresses: HashSet<u64> =
+        pending.operand_enums.iter().map(|e| e.address).collect();
+
+    if !pending.operand_enums.is_empty() {
+        for operand_enum in &pending.operand_enums {
+            apply_operand_enum_display(view, operand_enum);
+        }
+        tracing::info!("Applied {} enum-displayed operands", pending.operand_enums.len());
+        view.update_analysis();
+    }
+
+    if !pending.operand_formats.is_empty() {
+        let mut applied_formats = 0usize;
+        for operand_format in &pending.operand_formats {
+            if enum_addresses.contains(&operand_format.address) {
+                continue;
+            }
+            apply_operand_format_display(view, operand_format);
+            applied_formats += 1;
+        }
+        tracing::info!("Applied {applied_formats} operand number formats");
+        view.update_analysis();
+    }
+
+    !pending.operand_enums.is_empty() || !pending.operand_formats.is_empty()
+}
+
+/// Display an operand against its enumeration, as IDA does.
+///
+/// Resolves the enumeration's Binary Ninja type id and sets it on each immediate token in the
+/// instruction. The override is keyed by Binary Ninja's operand index, which `set_int_display_type`
+/// defines as the number of operand-separator tokens preceding the token in the rendered line (not
+/// IDA's operand number). Counting separators here makes the override match what Binary Ninja
+/// renders, so the enumeration member is displayed once analysis re-renders the function.
+fn apply_operand_enum_display(view: &BinaryView, operand_enum: &OperandEnumInfo) {
+    let Some(type_id) = view.type_id_by_name(operand_enum.enum_name.as_str()) else {
+        tracing::debug!(
+            "No Binary Ninja type for enum '{}', skipping operand at {:0x}",
+            operand_enum.enum_name,
+            operand_enum.address
+        );
+        return;
+    };
+
+    let functions = view.functions_containing(operand_enum.address);
+    let Some(func) = functions.iter().next() else {
+        tracing::info!(
+            "apply_operand_enum_display: no function containing {:#x} for enum '{}'",
+            operand_enum.address,
+            operand_enum.enum_name
+        );
+        return;
+    };
+    let arch = func.arch();
+
+    let bytes = view.read_vec(operand_enum.address, 16);
+    if bytes.is_empty() {
+        return;
+    }
+    let Some((_consumed, tokens)) = arch.instruction_text(&bytes, operand_enum.address) else {
+        return;
+    };
+
+    let mut separators = 0usize;
+    for token in &tokens {
+        if matches!(token.kind, InstructionTextTokenKind::OperandSeparator) {
+            separators += 1;
+        }
+        if let Some(value) = integer_token_value(&token.kind) {
+            func.set_int_display_type(
+                operand_enum.address,
+                value,
+                separators,
+                IntegerDisplayType::EnumerationDisplayType,
+                Some(arch),
+                Some(type_id.as_str()),
+            );
+        }
+    }
+}
+
+/// Apply IDA's per-operand number formats to the instruction at an address.
+///
+/// Like the enum pass, the override is keyed by Binary Ninja's operand index (the count of
+/// operand-separator tokens before the token), not IDA's operand number. Each recovered format is
+/// applied to every immediate token at its rendered operand index; instructions carrying a format
+/// almost always have a single immediate, so this matches what IDA formatted.
+fn apply_operand_format_display(view: &BinaryView, operand_format: &OperandFormatInfo) {
+    let functions = view.functions_containing(operand_format.address);
+    let Some(func) = functions.iter().next() else {
+        return;
+    };
+    let arch = func.arch();
+
+    // The longest instruction we may encounter; reading a few extra bytes is harmless.
+    let bytes = view.read_vec(operand_format.address, 16);
+    if bytes.is_empty() {
+        return;
+    }
+    let Some((_consumed, tokens)) = arch.instruction_text(&bytes, operand_format.address) else {
+        return;
+    };
+
+    let mut separators = 0usize;
+    for token in &tokens {
+        if matches!(token.kind, InstructionTextTokenKind::OperandSeparator) {
+            separators += 1;
+        }
+        if let Some(value) = integer_token_value(&token.kind) {
+            for (_operand_index, format) in &operand_format.formats {
+                func.set_int_display_type(
+                    operand_format.address,
+                    value,
+                    separators,
+                    integer_display_type(*format),
+                    Some(arch),
+                    None,
+                );
+            }
+        }
+    }
+}
 
 /// Maps IDB data into a [`BinaryView`].
 ///
@@ -216,122 +395,48 @@ impl IDBMapper {
             }
         }
 
-        // Apply per-operand number formats to the disassembly, if the user opted in. This is
-        // gated because it disassembles each formatted instruction.
-        if self.apply_operand_formats && !self.info.operand_formats.is_empty() {
+        // Per-operand number formats and enum displays need the containing function to exist, but
+        // this import runs before functions are created. Rebase and stash them; the
+        // analysis-completion handler in `lib.rs` applies them once functions are available. Gated
+        // because applying them disassembles each affected instruction.
+        if self.apply_operand_formats
+            && (!self.info.operand_formats.is_empty() || !self.info.operand_enums.is_empty())
+        {
             tracing::info!(
-                "Applying {} operand formats",
-                self.info.operand_formats.len()
-            );
-            for operand_format in &self.info.operand_formats {
-                let mut rebased = operand_format.clone();
-                rebased.address = rebase(operand_format.address);
-                self.map_operand_format_to_view(view, &rebased);
-            }
-        }
-
-        // Apply enum-displayed operands (same gating, since it also disassembles each operand).
-        if self.apply_operand_formats && !self.info.operand_enums.is_empty() {
-            tracing::info!(
-                "Applying {} enum-displayed operands",
+                "Deferring {} operand formats and {} enum-displayed operands until analysis completes",
+                self.info.operand_formats.len(),
                 self.info.operand_enums.len()
             );
-            for operand_enum in &self.info.operand_enums {
-                let mut rebased = operand_enum.clone();
-                rebased.address = rebase(operand_enum.address);
-                self.map_operand_enum_to_view(view, &rebased);
-            }
+            let operand_formats = self
+                .info
+                .operand_formats
+                .iter()
+                .map(|operand_format| {
+                    let mut rebased = operand_format.clone();
+                    rebased.address = rebase(operand_format.address);
+                    rebased
+                })
+                .collect();
+            let operand_enums = self
+                .info
+                .operand_enums
+                .iter()
+                .map(|operand_enum| {
+                    let mut rebased = operand_enum.clone();
+                    rebased.address = rebase(operand_enum.address);
+                    rebased
+                })
+                .collect();
+            stash_operand_display(
+                view,
+                PendingOperandDisplay {
+                    operand_formats,
+                    operand_enums,
+                },
+            );
         }
 
         // self.map_used_types_to_view(view, &til_translator);
-    }
-
-    /// Display an operand against its enumeration, as IDA does.
-    ///
-    /// Resolves the enumeration's Binary Ninja type id and sets it on the operand for every
-    /// immediate value in the instruction; like the number-format pass, an entry only takes
-    /// effect for the exact (value, operand) Binary Ninja renders.
-    fn map_operand_enum_to_view(&self, view: &BinaryView, operand_enum: &OperandEnumInfo) {
-        let Some(type_id) = view.type_id_by_name(operand_enum.enum_name.as_str()) else {
-            tracing::debug!(
-                "No Binary Ninja type for enum '{}', skipping operand at {:0x}",
-                operand_enum.enum_name,
-                operand_enum.address
-            );
-            return;
-        };
-
-        let functions = view.functions_containing(operand_enum.address);
-        let Some(func) = functions.iter().next() else {
-            return;
-        };
-        let arch = func.arch();
-
-        let bytes = view.read_vec(operand_enum.address, 16);
-        if bytes.is_empty() {
-            return;
-        }
-        let Some((_consumed, tokens)) = arch.instruction_text(&bytes, operand_enum.address) else {
-            return;
-        };
-
-        for token in &tokens {
-            if let Some(value) = integer_token_value(&token.kind) {
-                func.set_int_display_type(
-                    operand_enum.address,
-                    value,
-                    operand_enum.operand as usize,
-                    IntegerDisplayType::EnumerationDisplayType,
-                    Some(arch),
-                    Some(type_id.as_str()),
-                );
-            }
-        }
-    }
-
-    /// Apply IDA's per-operand number formats to the instruction at an address.
-    ///
-    /// `set_int_display_type` only takes effect when Binary Ninja renders a token with the exact
-    /// (value, operand) we set, so disassembling the instruction to recover its immediate values
-    /// and setting each value under every formatted operand index is safe: combinations that do
-    /// not occur are simply never matched.
-    fn map_operand_format_to_view(&self, view: &BinaryView, operand_format: &OperandFormatInfo) {
-        let functions = view.functions_containing(operand_format.address);
-        let Some(func) = functions.iter().next() else {
-            return;
-        };
-        let arch = func.arch();
-
-        // The longest instruction we may encounter; reading a few extra bytes is harmless.
-        let bytes = view.read_vec(operand_format.address, 16);
-        if bytes.is_empty() {
-            return;
-        }
-        let Some((_consumed, tokens)) = arch.instruction_text(&bytes, operand_format.address) else {
-            return;
-        };
-
-        let values: Vec<u64> = tokens
-            .iter()
-            .filter_map(|token| integer_token_value(&token.kind))
-            .collect();
-        if values.is_empty() {
-            return;
-        }
-
-        for (operand_index, format) in &operand_format.formats {
-            let display_type = integer_display_type(*format);
-            for value in &values {
-                func.set_int_display_type(
-                    operand_format.address,
-                    *value,
-                    *operand_index as usize,
-                    display_type,
-                    Some(arch),
-                    None,
-                );
-            }
-        }
     }
 
     pub fn map_types_to_view(

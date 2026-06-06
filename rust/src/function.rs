@@ -1945,7 +1945,11 @@ impl Function {
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
         let enum_display_typeid = enum_display_typeid.map(IntoCStr::to_cstr);
+        // Borrow the owned C string rather than moving it into `map`, otherwise it is dropped
+        // before the FFI call below and `BNSetIntegerConstantDisplayType` reads freed memory,
+        // storing a garbage type id for the enumeration.
         let enum_display_typeid_ptr = enum_display_typeid
+            .as_ref()
             .map(|x| x.as_ptr())
             .unwrap_or(std::ptr::null());
         unsafe {

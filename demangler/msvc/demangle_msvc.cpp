@@ -16,195 +16,391 @@
 // See https://llvm.org/LICENSE.txt for license information.
 
 #include "demangle_msvc.h"
+#include "unicode.h"
+#include <limits>
 #include <memory>
+#include <ranges>
+#include <utility>
 
 
 #ifdef BINARYNINJACORE_LIBRARY
 using namespace BinaryNinjaCore;
-#define GetClass GetTypeClass
 #else
 using namespace BinaryNinja;
 using namespace std;
 #endif
 
 
-#define MAX_DEMANGLE_LENGTH 4096
+// The largest observed depth in a real-world corpus of roughly 200k MSVC symbols was 54.
+static constexpr size_t MAX_DEMANGLE_NESTING_DEPTH = 256;
+static constexpr size_t MAX_ENCODED_NUMBER_HEX_DIGITS = 16;
+static constexpr size_t MAX_BACKREFS = 10;
 
-Demangle::Reader::Reader(string data)
+static int64_t EncodedNumberToInt64(uint64_t magnitude, bool negative)
 {
-	m_data = data;
-	//Check for non-ascii characters
-	for (auto a : m_data)
+	constexpr auto int64Max = static_cast<uint64_t>(std::numeric_limits<int64_t>::max());
+	constexpr auto int64MinMagnitude = int64Max + 1;
+
+	if (!negative)
 	{
-		if (a < 0x20 || a > 0x7e)
-			throw DemangleException();
+		if (magnitude > int64Max)
+			throw DemangleException("Invalid encoded number");
+		return static_cast<int64_t>(magnitude);
 	}
+
+	if (magnitude > int64MinMagnitude)
+		throw DemangleException("Invalid encoded number");
+	if (magnitude == int64MinMagnitude)
+		return std::numeric_limits<int64_t>::min();
+	return -static_cast<int64_t>(magnitude);
 }
 
+static _STD_STRING FormatEncodedNumberLiteral(uint64_t magnitude, bool negative)
+{
+	if (negative)
+		return "-" + to_string(magnitude);
+	return to_string(magnitude);
+}
 
-string Demangle::Reader::PeekString(size_t count)
+// Define MSVC_DEMANGLE_DEBUG to enable trace logging
+#ifdef MSVC_DEMANGLE_DEBUG
+#define MSVC_TRACE(...) LogTraceF(__VA_ARGS__)
+#else
+#define MSVC_TRACE(...) do {} while(0)
+#endif
+
+_STD_STRING Demangle::Reader::ReadString(size_t count)
 {
 	if (count > Length())
 		throw DemangleException();
-	return m_data.substr(0, count);
-}
-
-
-char Demangle::Reader::Peek()
-{
-	if (1 > Length())
-		throw DemangleException();
-	return (char)m_data[0];
-}
-
-
-const char* Demangle::Reader::GetRaw()
-{
-	return m_data.c_str();
-}
-
-
-char Demangle::Reader::Read()
-{
-	if (1 > Length())
-		throw DemangleException();
-	char out = m_data[0];
-	m_data = m_data.substr(1);
+	_STD_STRING out(m_ptr, count);
+	m_ptr += count;
 	return out;
 }
 
 
-string Demangle::Reader::ReadString(size_t count)
+_STD_STRING Demangle::Reader::ReadUntil(char sentinel)
 {
-	if (count > Length())
+	const char* found = static_cast<const char*>(memchr(m_ptr, sentinel, m_end - m_ptr));
+	if (!found)
 		throw DemangleException();
-	string out = m_data.substr(0, count);
-	m_data = m_data.substr(count + 1);
+	size_t count = found - m_ptr;
+	_STD_STRING out = ReadString(count);
+	Consume(); // sentinel
 	return out;
 }
 
 
-string Demangle::Reader::ReadUntil(char sentinal)
+DemangledTypeNode::NodeRef Demangle::BackrefList::GetTypeBackrefRef(size_t reference)
 {
-	size_t pos = m_data.find_first_of(sentinal);
-	if (pos == string::npos)
-		throw DemangleException();
-	return ReadString(pos);
-}
-
-
-void Demangle::Reader::Consume(size_t count)
-{
-	if (count > Length())
-		throw DemangleException();
-	m_data = m_data.substr(count);
-}
-
-
-size_t Demangle::Reader::Length()
-{
-	return m_data.length();
-}
-
-
-const TypeBuilder& Demangle::BackrefList::GetTypeBackref(size_t reference)
-{
-	if (reference < typeList.size())
+	if (reference < typeList.size() && typeList[reference])
 		return typeList[reference];
-	// LogDebug("type: %llx - : %d/%d\n", this, typeList.size(), reference);
-	throw DemangleException(string("Backref too large " + std::to_string(reference)));
+	throw DemangleException(_STD_STRING("Backref too large " + std::to_string(reference)));
 }
 
 
-string Demangle::BackrefList::GetStringBackref(size_t reference)
+DemangledNamePart::Ref Demangle::BackrefList::GetNameBackrefRef(size_t reference)
 {
-	// LogDebug("type: %llx - ref: %d\n", this, reference);
-	if (reference < nameList.size())
+	if (reference < nameList.size() && nameList[reference])
 		return nameList[reference];
-	LogDebug("type: %p - Backref too large: %zu/%zu\n", this, nameList.size(), reference);
-	throw DemangleException(string("Backref too large " + std::to_string(reference)));
+	MSVC_TRACE("type: {} - Backref too large: {}/{}", fmt::ptr(this), nameList.size(), reference);
+	throw DemangleException(_STD_STRING("Backref too large " + std::to_string(reference)));
 }
 
 
-void Demangle::BackrefList::PushTypeBackref(TypeBuilder t)
+const DemangledTypeNode& Demangle::BackrefList::GetTypeBackref(size_t reference)
 {
-	// LogDebug("this: %llx - TypeBackref: %lld  %s\n", this, nameList.size(), t.GetString().c_str());
-	if (typeList.size() <= 9)
-		typeList.push_back(t);
+	return *GetTypeBackrefRef(reference);
 }
 
 
-void Demangle::BackrefList::PushStringBackref(string& s)
+const DemangledNamePart& Demangle::BackrefList::GetNameBackref(size_t reference)
 {
-	if (s.size() > MAX_DEMANGLE_LENGTH)
-		throw DemangleException();
-	LogDebug("this: %p - Backref: %zu - %s\n", this, nameList.size(), s.c_str());
+	return *GetNameBackrefRef(reference);
+}
+
+
+DemangledTypeNode::NodeRef Demangle::BackrefList::PushTypeBackref(DemangledTypeNode::NodeRef t)
+{
+	if (!t)
+		return nullptr;
+	if (typeList.size() >= MAX_BACKREFS)
+		return nullptr;
+	typeList.push_back(t);
+	return t;
+}
+
+
+DemangledTypeNode::NodeRef Demangle::BackrefList::PushTypeBackref(const DemangledTypeNode& t)
+{
+	if (typeList.size() < MAX_BACKREFS)
+		return PushTypeBackref(DemangledTypeNode::CreateSharedCopy(t));
+	return nullptr;
+}
+
+
+DemangledTypeNode::NodeRef Demangle::BackrefList::PushTypeBackref(DemangledTypeNode&& t)
+{
+	if (typeList.size() < MAX_BACKREFS)
+		return PushTypeBackref(DemangledTypeNode::CreateShared(std::move(t)));
+	return nullptr;
+}
+
+
+DemangledNamePart::Ref Demangle::BackrefList::PushNameBackref(DemangledNamePart::Ref t)
+{
+	if (!t)
+		return nullptr;
+	MSVC_TRACE("this: {} - Backref: {}", fmt::ptr(this), nameList.size());
 	for (const auto& name : nameList)
-		if (name == s)
-			return;
-	nameList.push_back(s);
+		if (name && ((name == t) || name->IsStructurallyEqual(*t)))
+			return name;
+	if (nameList.size() < MAX_BACKREFS)
+	{
+		nameList.push_back(t);
+		return t;
+	}
+	return nullptr;
 }
 
 
-void Demangle::BackrefList::PushFrontStringBackref(string& s)
+DemangledNamePart::Ref Demangle::BackrefList::PushNameBackref(const DemangledNamePart& t)
 {
-	if (s.size() > MAX_DEMANGLE_LENGTH)
-		throw DemangleException();
-	// LogDebug("this: %llx - F-Backref: %lld - %s\n", this, nameList.size(), s.c_str());
-	nameList.insert(nameList.begin(), s);
+	MSVC_TRACE("this: {} - Backref: {}", fmt::ptr(this), nameList.size());
+	for (const auto& name : nameList)
+		if (name && name->IsStructurallyEqual(t))
+			return name;
+	if (nameList.size() < MAX_BACKREFS)
+	{
+		auto ref = DemangledNamePart::CreateSharedCopy(t);
+		nameList.push_back(ref);
+		return ref;
+	}
+	return nullptr;
 }
 
 
-Demangle::Demangle(Architecture* arch, string mangledName) :
-	reader(mangledName),
+DemangledNamePart::Ref Demangle::BackrefList::PushNameBackref(DemangledNamePart&& t)
+{
+	MSVC_TRACE("this: {} - Backref: {}", fmt::ptr(this), nameList.size());
+	for (const auto& name : nameList)
+		if (name && name->IsStructurallyEqual(t))
+			return name;
+	if (nameList.size() < MAX_BACKREFS)
+	{
+		auto ref = DemangledNamePart::CreateShared(std::move(t));
+		nameList.push_back(ref);
+		return ref;
+	}
+	return nullptr;
+}
+
+
+DemangledNamePart::Ref Demangle::BackrefList::PushTemplateSpecialization(DemangledNamePart::Ref t)
+{
+	if (!t)
+		return nullptr;
+	templateList.push_back(t);
+	return t;
+}
+
+
+DemangledNamePart::Ref Demangle::BackrefList::PushTemplateSpecialization(const DemangledNamePart& t)
+{
+	return PushTemplateSpecialization(DemangledNamePart::CreateSharedCopy(t));
+}
+
+
+DemangledNamePart::Ref Demangle::BackrefList::PushTemplateSpecialization(DemangledNamePart&& t)
+{
+	return PushTemplateSpecialization(DemangledNamePart::CreateShared(std::move(t)));
+}
+
+
+Demangle::BackrefContextSwitch::BackrefContextSwitch(BackrefList& active): active(active)
+{
+	Swap(active, saved);
+}
+
+
+Demangle::BackrefContextSwitch::~BackrefContextSwitch()
+{
+	Swap(active, saved);
+}
+
+
+void Demangle::BackrefContextSwitch::Swap(BackrefList& left, BackrefList& right)
+{
+	std::swap(left.typeList, right.typeList);
+	std::swap(left.nameList, right.nameList);
+	std::swap(left.templateList, right.templateList);
+}
+
+
+
+Demangle::Demangle(Architecture* arch, _STD_STRING  mangledName) :
+	m_mangledName(std::move(mangledName)),
+	m_reader(m_mangledName),
 	m_arch(arch),
 	m_platform(nullptr),
 	m_view(nullptr)
 {
-	m_logger = LogRegistry::CreateLogger("MSVCDemangle");
-	//m_logger->ResetIndent();
 }
 
 
-Demangle::Demangle(Ref<Platform> platform, string mangledName) :
-	reader(mangledName),
-	m_arch(platform->GetArchitecture()),
-	m_platform(platform),
+Demangle::Demangle(Ref<Platform> platform, _STD_STRING  mangledName) :
+	m_mangledName(std::move(mangledName)),
+	m_reader(m_mangledName),
+	m_arch(nullptr),
+	m_platform(std::move(platform)),
 	m_view(nullptr)
 {
-	m_logger = LogRegistry::CreateLogger("MSVCDemangle");
-	//m_logger->ResetIndent();
 }
 
 
-Demangle::Demangle(Ref<BinaryView> view, string mangledName) :
-	reader(mangledName),
-	m_view(view)
+Demangle::Demangle(Ref<BinaryView> view, _STD_STRING  mangledName) :
+	m_mangledName(std::move(mangledName)),
+	m_reader(m_mangledName),
+	m_arch(nullptr),
+	m_platform(nullptr),
+	m_view(std::move(view))
 {
-	m_platform = view->GetDefaultPlatform();
-	if (!m_platform)
-		throw DemangleException();
-	m_arch = m_platform->GetArchitecture();
-	m_logger = LogRegistry::CreateLogger("MSVCDemangle");
-	//m_logger->ResetIndent();
 }
 
 
-TypeBuilder Demangle::DemangleVarType(BackrefList& varList, bool isReturn, QualifiedName& name)
+Demangle::NestingGuard::NestingGuard(Demangle& demangler) : m_demangler(demangler)
 {
-	m_logger->LogDebug("%s: '%s' - %lu\n", __FUNCTION__, reader.GetRaw(), varList.nameList.size());
-	TypeBuilder newType;
-	bool _const = false, _volatile = false, isMember = false; //TODO: use this info, _signed = false;
-	BNReferenceType refType;
+	m_demangler.m_nestingDepth++;
+	if (m_demangler.m_nestingDepth > MAX_DEMANGLE_NESTING_DEPTH)
+	{
+		m_demangler.m_nestingDepth--;
+		throw DemangleException("Detected adversarial mangled string");
+	}
+}
+
+
+Demangle::NestingGuard::~NestingGuard()
+{
+	m_demangler.m_nestingDepth--;
+}
+
+
+void Demangle::Reset(Architecture* arch, const _STD_STRING& mangledName)
+{
+	m_mangledName = mangledName;
+	m_reader.Reset(m_mangledName);
+	m_backrefList.Clear();
+	m_arch = arch;
+	m_platform = nullptr;
+	m_view = nullptr;
+	m_templateParamDepth = 0;
+	m_nestingDepth = 0;
+}
+
+
+void Demangle::RewriteTemplateBackrefName(NameList& typeName, const BackrefList& nameBackrefList)
+{
+	if (typeName.empty())
+		return;
+
+	DemangledNamePart& baseName = typeName.back();
+	if (baseName.HasTemplateArguments())
+		return;
+	_STD_STRING base = baseName.GetBase();
+
+	for (const auto & it : std::views::reverse(nameBackrefList.templateList))
+	{
+		if (!it)
+			continue;
+		const DemangledNamePart& candidate = *it;
+		if (!candidate.HasTemplateArguments())
+			continue;
+		if (candidate.GetBase() != base)
+			continue;
+		baseName = candidate;
+		return;
+	}
+}
+
+_STD_STRING Demangle::FormatTypeAndName(const DemangledTypeNode& type, const NameList& name) const
+{
+	StringList nameSegments = FinalizeNameList(name);
+	if (type.GetNameType() == OperatorReturnTypeNameType)
+	{
+		Ref<Type> finalizedType = type.Finalize(m_platform.GetPtr());
+		if (finalizedType)
+			return finalizedType->GetTypeAndName(QualifiedName(nameSegments));
+	}
+	return type.GetTypeAndName(nameSegments);
+}
+
+DemangledTypeNode Demangle::DemangleReferencedSymbolValue(BackrefList& varList)
+{
+	// Match LLVM's TemplateParameterReferenceNode parsing: referenced-symbol
+	// non-type template arguments are parsed in the active backref context, so
+	// later template arguments may refer to names/types introduced inside the
+	// referenced symbol.
+	BackrefList symbolBackrefs = varList;
+
+	auto context = DemangleSymbol(symbolBackrefs);
+	varList = symbolBackrefs;
+	_STD_STRING value = "&" + FormatTypeAndName(context.type, context.name);
+	return DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{value});
+}
+
+
+DemangledTypeNode Demangle::DemangleAutoNonTypeTemplateParam(BackrefList& varList)
+{
+	if (m_reader.ConsumeIf('0'))
+	{
+		return DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{DecodeEncodedNumberLiteral()});
+	}
+	if (m_reader.ConsumeIf('1'))
+	{
+		return DemangleReferencedSymbolValue(varList);
+	}
+	throw DemangleException();
+}
+
+
+DemangledTypeNode Demangle::DemangleVarType(BackrefList& varList, bool isReturn,
+	bool includeImplicitThis, DemangledTypeNode::NodeRef* outTypeBackref, TypeBackrefMode typeBackrefMode)
+{
+	NestingGuard nestingGuard(*this);
+	MSVC_TRACE("{}: '{}' - {}", __FUNCTION__, m_reader.GetRaw(), varList.nameList.size());
+	if (outTypeBackref)
+		*outTypeBackref = nullptr;
+	auto recordTypeBackref = [&](const DemangledTypeNode& type) -> DemangledTypeNode::NodeRef {
+		if (isReturn || typeBackrefMode == TypeBackrefMode::SuppressTopLevel)
+			return nullptr;
+		auto ref = varList.PushTypeBackref(type);
+		if (outTypeBackref)
+			*outTypeBackref = ref;
+		return ref;
+	};
+	DemangledTypeNode newType;
+	bool _const = false, _volatile = false;
+	BNReferenceType refType = PointerReferenceType;
 	BNTypeClass typeClass = IntegerTypeClass;
-	BNStructureVariant structType;
-	QualifiedName varName;
-	QualifiedName typeName;
+	BNStructureVariant structType = StructStructureType;
+	NameList typeName;
 	BNNameType classFunctionType;
+	size_t width = 0;
+	bool _enumSigned = false;
+	auto demangleArrayExtents = [this]() -> _STD_VECTOR<uint64_t> {
+		uint64_t dimensionCount = DecodeEncodedUnsignedNumber();
+		if (dimensionCount > static_cast<uint64_t>(m_reader.Length()))
+			throw DemangleException("Array dimension count is too large");
 
-	size_t width;
-	char elm = reader.Read();
-	switch (elm)
+		_STD_VECTOR<uint64_t> elementList;
+		for (uint64_t i = 0; i < dimensionCount; i++)
+		{
+			uint64_t element = DecodeEncodedUnsignedNumber();
+			elementList.push_back(element);
+		}
+		return elementList;
+	};
+	switch (char elm = m_reader.Read())
 	{
 	case 'A':
 		typeClass = PointerTypeClass;
@@ -218,18 +414,18 @@ TypeBuilder Demangle::DemangleVarType(BackrefList& varList, bool isReturn, Quali
 		_const = false;
 		_volatile = true;
 		break;
-	case 'C': return TypeBuilder::IntegerType(1, true);
-	case 'D': return TypeBuilder::IntegerType(1, true);
-	case 'E': return TypeBuilder::IntegerType(1, false);
-	case 'F': return TypeBuilder::IntegerType(2, true);
-	case 'G': return TypeBuilder::IntegerType(2, false);
-	case 'H': return TypeBuilder::IntegerType(4, true);
-	case 'I': return TypeBuilder::IntegerType(4, false);
-	case 'J': return TypeBuilder::IntegerType(4, true, "long");
-	case 'K': return TypeBuilder::IntegerType(4, false, "unsigned long");
-	case 'M': return TypeBuilder::FloatType(4);
-	case 'N': return TypeBuilder::FloatType(8);
-	case 'O': return TypeBuilder::FloatType(10, "long double");
+	case 'C': return DemangledTypeNode::IntegerType(1, true, "signed char");
+	case 'D': return DemangledTypeNode::IntegerType(1, true);
+	case 'E': return DemangledTypeNode::IntegerType(1, false);
+	case 'F': return DemangledTypeNode::IntegerType(2, true);
+	case 'G': return DemangledTypeNode::IntegerType(2, false);
+	case 'H': return DemangledTypeNode::IntegerType(4, true);
+	case 'I': return DemangledTypeNode::IntegerType(4, false);
+	case 'J': return DemangledTypeNode::IntegerType(4, true, "long");
+	case 'K': return DemangledTypeNode::IntegerType(4, false, "unsigned long");
+	case 'M': return DemangledTypeNode::FloatType(4);
+	case 'N': return DemangledTypeNode::FloatType(8);
+	case 'O': return DemangledTypeNode::FloatType(10, "long double");
 	case 'P': // *
 		typeClass = PointerTypeClass;
 		refType = PointerReferenceType;
@@ -259,111 +455,205 @@ TypeBuilder Demangle::DemangleVarType(BackrefList& varList, bool isReturn, Quali
 	case 'V': typeClass = StructureTypeClass; structType = ClassStructureType;  break;
 	case 'W':
 		typeClass = EnumerationTypeClass;
-		switch (reader.Read())
+		switch (m_reader.Read())
 		{
-		case '0': width = 1; /* TODO: use these _signed = true;  */ break;
-		case '1': width = 1; /* TODO: use these _signed = false; */ break;
-		case '2': width = 2; /* TODO: use these _signed = true;  */ break;
-		case '3': width = 2; /* TODO: use these _signed = false; */ break;
-		case '4': width = 4; /* TODO: use these _signed = true;  */ break;
-		case '5': width = 4; /* TODO: use these _signed = false; */ break;
-		case '6': width = 4; /* TODO: use these _signed = true;  */ break;
-		case '7': width = 4; /* TODO: use these _signed = false; */ break;
+		case '0': width = 1; _enumSigned = true;  break;
+		case '1': width = 1; _enumSigned = false; break;
+		case '2': width = 2; _enumSigned = true;  break;
+		case '3': width = 2; _enumSigned = false; break;
+		case '4': width = 4; _enumSigned = true;  break;
+		case '5': width = 4; _enumSigned = false; break;
+		case '6': width = 4; _enumSigned = true;  break;
+		case '7': width = 4; _enumSigned = false; break;
 		default: throw DemangleException();
 		}
 		break;
-	case 'X': return TypeBuilder::VoidType(); break;
+	case 'X': return DemangledTypeNode::VoidType(); break;
 	case 'Y':
-		throw DemangleException(); //TODO: handle cointerfaces
-	case 'Z': return TypeBuilder::VarArgsType(); break;
-	case '_':
-		switch (reader.Read())
+	{
+		// Multi-dimensional array type: Y<ndims><dim1><dim2>...@<elemtype>
+		_STD_VECTOR<uint64_t> elementList = demangleArrayExtents();
+		newType = DemangleVarType(varList, false);
+		for (uint64_t i : std::views::reverse(elementList))
 		{
-		case 'D': newType = TypeBuilder::IntegerType(1, true); break;
-		case 'E': newType = TypeBuilder::IntegerType(1, false); break;
-		case 'F': newType = TypeBuilder::IntegerType(2, true); break;
-		case 'G': newType = TypeBuilder::IntegerType(2, false); break;
-		case 'H': newType = TypeBuilder::IntegerType(4, true); break;
-		case 'I': newType = TypeBuilder::IntegerType(4, false); break;
-		case 'J': newType = TypeBuilder::IntegerType(8, true); break;
-		case 'K': newType = TypeBuilder::IntegerType(8, false); break;
-		case 'L': newType = TypeBuilder::IntegerType(16, true); break;
-		case 'M': newType = TypeBuilder::IntegerType(16, false); break;
-		case 'N': newType = TypeBuilder::BoolType(); break;
+			newType = DemangledTypeNode::ArrayType(std::move(newType), i);
+		}
+		recordTypeBackref(newType);
+		return newType;
+	}
+	case 'Z': return DemangledTypeNode::VarArgsType();
+	case '?':
+	{
+		char next = m_reader.PeekOr();
+		if (next >= '0' && next <= '9')
+		{
+			size_t reference = m_reader.Read() - '0';
+			if (reference < varList.typeList.size() && varList.typeList[reference])
+			{
+				auto ref = varList.typeList[reference];
+				if (outTypeBackref)
+					*outTypeBackref = ref;
+				return *ref;
+			}
+			// Legacy fallback: old generated symbols used `?2` here for
+			// a deduced-auto placeholder before clang/MSVC settled on
+			// the explicit `?<auto>@` spelling handled below.
+			if (reference == 2)
+				return DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{"auto"});
+			throw DemangleException(_STD_STRING("Backref too large " + std::to_string(reference)));
+		}
+		if (next != '<')
+			throw DemangleException();
+
+		_STD_STRING placeholder = m_reader.ReadUntil('@');
+		m_reader.ConsumeIf('@');
+		if (placeholder == "<auto>")
+			return DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{"auto"});
+		if (placeholder == "<decltype-auto>")
+			return DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{"decltype(auto)"});
+		return DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{placeholder});
+	}
+	case '_':
+		switch (m_reader.Read())
+		{
+		case 'D': newType = DemangledTypeNode::IntegerType(1, true); break;
+		case 'E': newType = DemangledTypeNode::IntegerType(1, false); break;
+		case 'F': newType = DemangledTypeNode::IntegerType(2, true); break;
+		case 'G': newType = DemangledTypeNode::IntegerType(2, false); break;
+		case 'H': newType = DemangledTypeNode::IntegerType(4, true); break;
+		case 'I': newType = DemangledTypeNode::IntegerType(4, false); break;
+		case 'J': newType = DemangledTypeNode::IntegerType(8, true); break;
+		case 'K': newType = DemangledTypeNode::IntegerType(8, false); break;
+		case 'L': newType = DemangledTypeNode::IntegerType(16, true); break;
+		case 'M': newType = DemangledTypeNode::IntegerType(16, false); break;
+		case 'N': newType = DemangledTypeNode::BoolType(); break;
 		case 'O':
 		{
-			QualifiedName name;
-			//m_logger->Indent();
-			auto childType = DemangleVarType(varList, false, name);
-			//m_logger->Dedent();
-			newType = TypeBuilder::ArrayType(childType.Finalize(), 0);
+			auto childType = DemangleVarType(varList, false);
+			newType = DemangledTypeNode::ArrayType(std::move(childType), 0);
 			break;
 		}
-		case 'S': newType = TypeBuilder::IntegerType(2, true, "char16_t"); break;
-		case 'U': newType = TypeBuilder::IntegerType(4, true, "char32_t"); break;
-		case 'W': newType = TypeBuilder::IntegerType(2, false, "wchar_t"); break;
-		case 'X': typeClass = StructureTypeClass; structType = ClassStructureType; break; //Coclass
-		case 'Y': typeClass = StructureTypeClass; structType = ClassStructureType; break; //Cointerface
+		case 'S': newType = DemangledTypeNode::WideCharType(2, "char16_t"); break;
+		case 'U': newType = DemangledTypeNode::WideCharType(4, "char32_t"); break;
+		case 'W': newType = DemangledTypeNode::WideCharType(2, "wchar_t"); break;
+		// `_P` (auto) and `_T` (decltype(auto)) are placeholder return-type
+		// encodings. For normal source code they are deduced at the function
+		// definition and mangled as the deduced type — you will not see `_P`
+		// or `_T` from something like `auto foo() { return 0; }` (that becomes
+		// `?foo@@YAHXZ`). They do appear in compiler-emitted symbols for
+		// function templates whose declared return type is literally `auto`
+		// or `decltype(auto)` and which are mangled before/without deduction
+		// settling on a concrete type — e.g. `??$seq@HX@llvm@@YA?A_PH@Z`
+		// (llvm::seq) or `??$_Get_unwrapped@...@std@@YA?A_T...@Z`. Handle
+		// them as named-type placeholders so downstream type consumers get
+		// something sensible (rather than a `<FAILED>` demangle) even though
+		// the underlying type is not expressible as a Binary Ninja Type.
+		case 'P': newType = DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{"auto"}); break;
+		case 'Q': newType = DemangledTypeNode::IntegerType(1, true, "char8_t"); break; // C++20 char8_t
+		case 'T': newType = DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{"decltype(auto)"}); break;
+		// NOTE: `_X` and `_Y` were previously mapped to coclass/cointerface
+		// here, but those encodings are not emitted by any real toolchain.
+		// LLVM's MicrosoftDemangle / MicrosoftMangle and Wine's undname
+		// reimplementation none of them recognize `_X` or `_Y` as type
+		// codes. Real cointerface is plain `Y<name>@@` (no underscore) at
+		// the top-level type switch, grouped with T/U/V; coclass has no
+		// dedicated mangling and is emitted as `V<name>@@` (class). Let
+		// `_X` / `_Y` fall through to the `default: throw` so malformed
+		// input is rejected instead of producing a bogus class type.
 		default:
 			throw DemangleException();
 		}
 		break;
 	case '$':
-		if (reader.PeekString(2) == "$Q") // &&
+		if (m_reader.ConsumeIf("$Q")) // &&
 		{
-			reader.Consume(2);
 			typeClass = PointerTypeClass;
 			refType = RValueReferenceType;
 			_const = false;
 			_volatile = false;
 		}
-		else if (reader.PeekString(2) == "$R") // && volatile
+		else if (m_reader.ConsumeIf("$R")) // && volatile
 		{
-			reader.Consume(2);
 			typeClass = PointerTypeClass;
 			refType = RValueReferenceType;
 			_const = false;
 			_volatile = true;
 		}
-		else if (reader.PeekString(2) == "$A")
+		else if (m_reader.ConsumeIf("$A"))
 		{
-			reader.Consume(2);
-			char num = reader.Read();
-			if (num == 8)
-				return DemangleFunction(NoNameType, true,  varList);
-			if (num == '6' || num == '7')
-				return DemangleFunction(NoNameType, false, varList);
+			char num = m_reader.Read();
+			if (num >= '6' && num <= '9')
+			{
+				// For member function types (8/9), skip the class scope marker @@
+				if (num == '8' || num == '9')
+					m_reader.ConsumeIf("@@");
+				return DemangleFunction(NoNameType, num >= '7', varList).type;
+			}
 			throw DemangleException();
 		}
-		else if (reader.PeekString(2) == "$C")
+		else if (m_reader.ConsumeIf("$C"))
 		{
-			reader.Consume(2);
+			bool isMember = false;
 			DemangleModifiers(_const, _volatile, isMember);
-			QualifiedName name;
-			//m_logger->Indent();
-			newType = DemangleVarType(varList, false, name);
-			//m_logger->Dedent();
+			newType = DemangleVarType(varList, isReturn, includeImplicitThis, nullptr,
+				TypeBackrefMode::SuppressTopLevel);
 			newType.SetConst(_const);
 			newType.SetVolatile(_volatile);
+			recordTypeBackref(newType);
 			return newType;
 		}
-		else if (reader.PeekString(2) == "$T")
+		else if (m_reader.ConsumeIf("$T"))
 		{
-			reader.Consume(2);
-			return TypeBuilder::ValueType("std::nullptr");
+			auto t = DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{"std::nullptr_t"});
+			recordTypeBackref(t);
+			return t;
 		}
-		else if (reader.Peek() == '0')
+		else if (m_reader.ConsumeIf("$B"))
 		{
-			reader.Consume();
-			int64_t value;
-			DemangleNumber(value);
-			return TypeBuilder::ValueType(to_string(value));
+			// $$B is a type modifier (managed/const) - strip and parse underlying type
+			return DemangleVarType(varList, isReturn, includeImplicitThis, outTypeBackref, typeBackrefMode);
 		}
-		else if (reader.Peek() == '1')
+		else if (m_reader.ConsumeIf('0'))
 		{
-			reader.Consume();
-			auto context = DemangleSymbol();
-			return TypeBuilder::PointerType(m_arch, context.type.Finalize());
+			return DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{DecodeEncodedNumberLiteral()});
+		}
+		else if (m_reader.ConsumeIf('D'))
+		{
+			// $D<type> - template type alias / anonymous type parameter
+			return DemangleVarType(varList, isReturn, includeImplicitThis, outTypeBackref, typeBackrefMode);
+		}
+		else if (m_reader.ConsumeIf('M'))
+		{
+			// $M<type><value> - C++17 `auto` non-type template parameter.
+			// The encoded type is the deduced type for the following bare
+			// non-type payload and is not itself printed as a template arg.
+			DemangleVarType(varList, false);
+			return DemangleAutoNonTypeTemplateParam(varList);
+		}
+		else if (char next = m_reader.PeekOr(); next == 'H' || next == 'I' || next == 'J')
+		{
+			// $H/$I/$J - member function pointer value as a non-type template
+			// parameter. Format: $H<mangled-symbol><adjustment-number>@;
+			// $I has two adjustment numbers, $J has three.
+			char kind = m_reader.Read();
+			BackrefList symbolBackrefs = varList;
+			auto context = DemangleSymbol(symbolBackrefs);
+			varList = symbolBackrefs;
+			_STD_STRING value = "{" + FormatTypeAndName(context.type, context.name);
+
+			// Read adjustment number(s) — NOT $-prefixed, just raw numbers.
+			int adjustments = (kind == 'H') ? 1 : (kind == 'I') ? 2 : 3;
+			for (int i = 0; i < adjustments; i++)
+			{
+				int64_t adj = DecodeEncodedSignedNumber();
+				value += "," + to_string(adj);
+			}
+			value += "}";
+			return DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{value});
+		}
+		else if (m_reader.ConsumeIf('1'))
+		{
+			return DemangleReferencedSymbolValue(varList);
 		}
 		else
 			throw DemangleException();
@@ -378,9 +668,13 @@ TypeBuilder Demangle::DemangleVarType(BackrefList& varList, bool isReturn, Quali
 	case '7':
 	case '8':
 	case '9':
-		//Make a copy of the item in the backref list. Exit early since we don't want this added to the backref list.
-		m_logger->LogDebug("Backref %u %lu", elm - '0', varList.typeList.size());
-		return varList.GetTypeBackref(elm - '0');
+	{
+		MSVC_TRACE("Backref {} {}", elm - '0', varList.typeList.size());
+		auto ref = varList.GetTypeBackrefRef(elm - '0');
+		if (outTypeBackref)
+			*outTypeBackref = ref;
+		return *ref;
+	}
 	default:
 		throw DemangleException();
 	}
@@ -389,7 +683,28 @@ TypeBuilder Demangle::DemangleVarType(BackrefList& varList, bool isReturn, Quali
 	{
 	case PointerTypeClass:
 	{
-		switch (reader.Peek())
+		if (m_reader.ConsumeIf('6'))
+		{
+			auto childType = DemangleFunction(NoNameType, false, varList).type;
+			newType = DemangledTypeNode::PointerType(std::move(childType),
+			                                         _const,
+			                                         _volatile,
+			                                         refType);
+			break;
+		}
+		if (m_reader.ConsumeIf('8'))
+		{
+			NameList ownerName;
+			DemangleName(ownerName, classFunctionType, varList, true);
+			RewriteTemplateBackrefName(ownerName, varList);
+			auto childType = DemangleFunction(NoNameType, true, varList).type;
+			newType = DemangledTypeNode::MemberPointerType(std::move(childType),
+			                                         std::move(ownerName),
+			                                         _const,
+			                                         _volatile);
+			break;
+		}
+		switch (m_reader.PeekOr())
 		{
 		case '0':
 		case '1':
@@ -397,209 +712,166 @@ TypeBuilder Demangle::DemangleVarType(BackrefList& varList, bool isReturn, Quali
 		case '3':
 		case '4':
 		case '5':
+		case '7':
+		case '9':
 			throw DemangleException();
-		case '6':
-		{
-			if (refType != PointerReferenceType) //No references to functions
-			{
-				throw DemangleException();
-			}
-			reader.Consume();
-			auto childType = DemangleFunction(NoNameType, false, varList);
-			newType = TypeBuilder::PointerType(m_arch,
-			                                   childType.Finalize(),
-			                                   _const,
-			                                   _volatile,
-			                                   refType);
-			break;
-		}
-		case '7': //Function pointer
-		case '9': //Class Function pointer
-		{
-			if (refType != PointerReferenceType) //No references to functions
-			{
-				throw DemangleException();
-			}
-			reader.Consume();
-			auto childType = DemangleFunction(NoNameType, true, varList);
-			newType = TypeBuilder::PointerType(m_arch,
-			                                   childType.Finalize(),
-			                                   _const,
-			                                   _volatile,
-			                                   refType);
-			break;
-		}
-		case '8': //Named class function pointer
-		{
-			if (refType != PointerReferenceType) //No references to functions
-			{
-				throw DemangleException();
-			}
-			reader.Consume();
-			DemangleName(name, classFunctionType, varList);
-			name.push_back("");
-			auto childType = DemangleFunction(NoNameType, true, varList);
-			newType = TypeBuilder::PointerType(m_arch,
-			                                   childType.Finalize(),
-			                                   _const,
-			                                   _volatile,
-			                                   refType);
-			break;
-		}
 		default:  // Non-numeric
 		{
-			m_logger->LogDebug("Demangle pointer subtype: '%s'\n", reader.GetRaw());
-			TypeBuilder child;
-			bool _const2 = false, _volatile2 = false, isMember = false;
+			MSVC_TRACE("Demangle pointer subtype: '{}'", m_reader.GetRaw());
+			DemangledTypeNode child;
+			bool _const2 = false, _volatile2 = false, localIsMember = false;
+			NameList ownerName;
 			auto suffix = DemanglePointerSuffix();
-			DemangleModifiers(_const2, _volatile2, isMember);
-			if (reader.Peek() == 'Y') //Multi-dimentional array
+			ConsumeExtendedModifierPrefix();
+			DemangleModifiers(_const2, _volatile2, localIsMember);
+			if (localIsMember)
 			{
-				m_logger->LogDebug("Demangle multi-dimentional array");
-				int64_t nDimentions;
-				reader.Consume();
-				DemangleNumber(nDimentions);
-				vector<uint64_t> elementList;
-				while (nDimentions--)
-				{
-					int64_t element = 0;
-					DemangleNumber(element);
-					elementList.push_back(element);
-				}
-				QualifiedName name;
-				//m_logger->Indent();
-				child = DemangleVarType(varList, false, name);
-				//m_logger->Dedent();
+				DemangleName(ownerName, classFunctionType, varList, true);
+				RewriteTemplateBackrefName(ownerName, varList);
+			}
+			if (m_reader.ConsumeIf('Y')) //Multi-dimensions array
+			{
+				MSVC_TRACE("Demangle multi-dimensions array");
+				_STD_VECTOR<uint64_t> elementList = demangleArrayExtents();
+				child = DemangleVarType(varList, false);
 
-				for (auto i = elementList.rbegin(); i != elementList.rend(); i++)
+				for (uint64_t i : std::views::reverse(elementList))
 				{
-					child = TypeBuilder::ArrayType(child.Finalize(), *i);
+					child = DemangledTypeNode::ArrayType(std::move(child), i);
 				}
 			}
 			else
 			{
-				QualifiedName name;
-				//m_logger->Indent();
-				child = DemangleVarType(varList, true, name);
-				//m_logger->Dedent();
+				child = DemangleVarType(varList, true, includeImplicitThis && !localIsMember);
 			}
 
 			child.SetConst(_const2);
 			child.SetVolatile(_volatile2);
-			newType = TypeBuilder::PointerType(m_arch,
-			                                   child.Finalize(),
-			                                   _const,
-			                                   _volatile,
-			                                   refType);
+			if (localIsMember)
+			{
+				newType = DemangledTypeNode::MemberPointerType(
+					std::move(child), std::move(ownerName), _const, _volatile);
+			}
+			else
+			{
+				newType = DemangledTypeNode::PointerType(std::move(child),
+				                                         _const,
+				                                         _volatile,
+				                                         refType);
+			}
 
-			newType.SetPointerSuffix(suffix);
-			m_logger->LogDebug("Name: %s\n", newType.GetString().c_str());
+			newType.SetPointerSuffixBits(suffix);
+			MSVC_TRACE("Name: {}", newType.GetString());
 			break;
 		}
 		}
 		break;
 	}
 	case EnumerationTypeClass:
-		m_logger->LogDebug("Demangle enumeration\n");
-		//m_logger->Indent();
-		DemangleName(typeName, classFunctionType, varList);
-		//m_logger->Dedent();
-		newType = TypeBuilder::NamedType(NamedTypeReference::GenerateAutoDemangledTypeReference(EnumNamedTypeClass, typeName),
-		                                 width, width);
+		MSVC_TRACE("Demangle enumeration");
+		DemangleName(typeName, classFunctionType, varList, true);
+		newType = DemangledTypeNode::NamedType(EnumNamedTypeClass, typeName, width, _enumSigned);
 		break;
 	case StructureTypeClass:
-		m_logger->LogDebug("Demangle structure\n");
-		//m_logger->Indent();
-		DemangleName(typeName, classFunctionType, varList);
-		//m_logger->Dedent();
+		MSVC_TRACE("Demangle structure");
+		DemangleName(typeName, classFunctionType, varList, true);
+		RewriteTemplateBackrefName(typeName, varList);
 		switch (structType)
 		{
 		case ClassStructureType:
-			newType = TypeBuilder::NamedType(NamedTypeReference::GenerateAutoDemangledTypeReference(
-				ClassNamedTypeClass, typeName));
+			newType = DemangledTypeNode::NamedType(ClassNamedTypeClass, typeName);
 			break;
 		case StructStructureType:
-			newType = TypeBuilder::NamedType(NamedTypeReference::GenerateAutoDemangledTypeReference(
-				StructNamedTypeClass, typeName));
+			newType = DemangledTypeNode::NamedType(StructNamedTypeClass, typeName);
 			break;
 		case UnionStructureType:
-			newType = TypeBuilder::NamedType(NamedTypeReference::GenerateAutoDemangledTypeReference(
-				UnionNamedTypeClass, typeName));
+			newType = DemangledTypeNode::NamedType(UnionNamedTypeClass, typeName);
 			break;
 		default:
-			newType = TypeBuilder::NamedType(NamedTypeReference::GenerateAutoDemangledTypeReference(
-				UnknownNamedTypeClass, typeName));
+			newType = DemangledTypeNode::NamedType(UnknownNamedTypeClass, typeName);
 			break;
 		}
 		break;
 	default:
 		break;
 	}
-	if (!isReturn)
-	{
-		varList.PushTypeBackref(newType);
-	}
+	recordTypeBackref(newType);
 	return newType;
 }
 
-
-void Demangle::DemangleNumber(int64_t& num)
+Demangle::EncodedNumber Demangle::DecodeEncodedNumber()
 {
-	m_logger->LogDebug("%s: '%s'\n", __FUNCTION__, reader.GetRaw());
-	num = 0;
-	int mult = 1;
-	if (reader.Peek() == '?')
+	MSVC_TRACE("{}: '{}'", __FUNCTION__, m_reader.GetRaw());
+	bool negative = m_reader.ConsumeIf('?');
+	if (m_reader.Length() == 0)
+		throw DemangleException("Invalid encoded number");
+
+	char next = m_reader.PeekOr();
+	if (next >= '0' && next <= '9')
 	{
-		mult = -1;
-		reader.Consume();
+		uint64_t magnitude = static_cast<uint64_t>(m_reader.Read() + 1 - '0');
+		return {magnitude, negative};
 	}
 
-	//The number is decimal 1-10
-	if (reader.Peek() >= '0' && reader.Peek() <= '9')
+	uint64_t magnitude = 0;
+	size_t digitCount = 0;
+	while (!m_reader.ConsumeIf('@'))
 	{
-		num = mult * (reader.Read() + 1 - '0');
-		return;
+		char ch = m_reader.Read();
+		if (ch < 'A' || ch > 'P')
+			throw DemangleException("Invalid encoded number");
+		if (digitCount >= MAX_ENCODED_NUMBER_HEX_DIGITS)
+			throw DemangleException("Invalid encoded number");
+		magnitude = (magnitude << 4) | static_cast<uint64_t>(ch - 'A');
+		digitCount++;
 	}
-	else
-	{
-		//The number is hexidecimal
-		string strnum = reader.ReadUntil('@');
-		for (auto a : strnum)
-		{
-			num *= 16;
-			if (a >= 'A' && a <= 'P')
-				num += a - 'A';
-			else
-				throw DemangleException();
-		}
-		num *= mult;
-		return;
-	}
+
+	return {magnitude, negative};
+}
+
+int64_t Demangle::DecodeEncodedSignedNumber()
+{
+	EncodedNumber number = DecodeEncodedNumber();
+	return EncodedNumberToInt64(number.magnitude, number.negative);
+}
+
+uint64_t Demangle::DecodeEncodedUnsignedNumber()
+{
+	EncodedNumber number = DecodeEncodedNumber();
+	if (number.negative)
+		throw DemangleException("Invalid encoded number");
+	return number.magnitude;
+}
+
+int32_t Demangle::DecodeEncodedSignedInt32()
+{
+	uint32_t lowBits = static_cast<uint32_t>(DecodeEncodedUnsignedNumber());
+	if ((lowBits & 0x80000000U) != 0)
+		return static_cast<int32_t>(static_cast<int64_t>(lowBits) - 0x100000000LL);
+	return static_cast<int32_t>(lowBits);
+}
+
+_STD_STRING Demangle::DecodeEncodedNumberLiteral()
+{
+	EncodedNumber number = DecodeEncodedNumber();
+	return FormatEncodedNumberLiteral(number.magnitude, number.negative);
 }
 
 
-void Demangle::DemangleChar(char& ch)
+char Demangle::DemangleChar()
 {
-	m_logger->LogDebug("%s: '%s'\n", __FUNCTION__, reader.GetRaw());
+	MSVC_TRACE("{}: '{}'", __FUNCTION__, m_reader.GetRaw());
 	// Basic char is just the char
-	if (reader.Peek() != '?')
-	{
-		ch = reader.Peek();
-		reader.Consume();
-		return;
-	}
-	reader.Consume();
+	if (!m_reader.ConsumeIf('?'))
+		return m_reader.Read();
 
 	// Hex char is ?$XX for 2 hex digits XX
-	if (reader.Peek() == '$')
+	if (m_reader.ConsumeIf('$'))
 	{
-		m_logger->LogDebug("%s: Hex digit '%s'\n", __FUNCTION__, reader.GetRaw());
+		MSVC_TRACE("{}: Hex digit '{}'", __FUNCTION__, m_reader.GetRaw());
 
-		reader.Consume();
-		char c1 = reader.Peek();
-		reader.Consume();
-		char c2 = reader.Peek();
-		reader.Consume();
+		char c1 = m_reader.Read();
+		char c2 = m_reader.Read();
 
 		if (c1 < 'A' || c1 > 'P')
 			throw DemangleException("Invalid character");
@@ -609,224 +881,256 @@ void Demangle::DemangleChar(char& ch)
 		uint8_t b1 = c1 - 'A';
 		uint8_t b2 = c2 - 'A';
 
-		ch = (char)((b1 << 4) | b2);
-		return;
+		return static_cast<char>((b1 << 4) | b2);
 	}
 
-	m_logger->LogDebug("%s: Table lookup '%s'\n", __FUNCTION__, reader.GetRaw());
+	MSVC_TRACE("{}: Table lookup '{}'", __FUNCTION__, m_reader.GetRaw());
 
 	// Otherwise it's a lookup based on some big table
 	// Thanks, LLVM!
-	switch (reader.Peek())
+	switch (m_reader.Read())
 	{
-	case '0': ch = ','; reader.Consume(); return;
-	case '1': ch = '/'; reader.Consume(); return;
-	case '2': ch = '\\'; reader.Consume(); return;
-	case '3': ch = ':'; reader.Consume(); return;
-	case '4': ch = '.'; reader.Consume(); return;
-	case '5': ch = ' '; reader.Consume(); return;
-	case '6': ch = '\n'; reader.Consume(); return;
-	case '7': ch = '\t'; reader.Consume(); return;
-	case '8': ch = '\''; reader.Consume(); return;
-	case '9': ch = '-'; reader.Consume(); return;
-	case 'a': ch = '\xE1'; reader.Consume(); return;
-	case 'b': ch = '\xE2'; reader.Consume(); return;
-	case 'c': ch = '\xE3'; reader.Consume(); return;
-	case 'd': ch = '\xE4'; reader.Consume(); return;
-	case 'e': ch = '\xE5'; reader.Consume(); return;
-	case 'f': ch = '\xE6'; reader.Consume(); return;
-	case 'g': ch = '\xE7'; reader.Consume(); return;
-	case 'h': ch = '\xE8'; reader.Consume(); return;
-	case 'i': ch = '\xE9'; reader.Consume(); return;
-	case 'j': ch = '\xEA'; reader.Consume(); return;
-	case 'k': ch = '\xEB'; reader.Consume(); return;
-	case 'l': ch = '\xEC'; reader.Consume(); return;
-	case 'm': ch = '\xED'; reader.Consume(); return;
-	case 'n': ch = '\xEE'; reader.Consume(); return;
-	case 'o': ch = '\xEF'; reader.Consume(); return;
-	case 'p': ch = '\xF0'; reader.Consume(); return;
-	case 'q': ch = '\xF1'; reader.Consume(); return;
-	case 'r': ch = '\xF2'; reader.Consume(); return;
-	case 's': ch = '\xF3'; reader.Consume(); return;
-	case 't': ch = '\xF4'; reader.Consume(); return;
-	case 'u': ch = '\xF5'; reader.Consume(); return;
-	case 'v': ch = '\xF6'; reader.Consume(); return;
-	case 'w': ch = '\xF7'; reader.Consume(); return;
-	case 'x': ch = '\xF8'; reader.Consume(); return;
-	case 'y': ch = '\xF9'; reader.Consume(); return;
-	case 'z': ch = '\xFA'; reader.Consume(); return;
-	case 'A': ch = '\xC1'; reader.Consume(); return;
-	case 'B': ch = '\xC2'; reader.Consume(); return;
-	case 'C': ch = '\xC3'; reader.Consume(); return;
-	case 'D': ch = '\xC4'; reader.Consume(); return;
-	case 'E': ch = '\xC5'; reader.Consume(); return;
-	case 'F': ch = '\xC6'; reader.Consume(); return;
-	case 'G': ch = '\xC7'; reader.Consume(); return;
-	case 'H': ch = '\xC8'; reader.Consume(); return;
-	case 'I': ch = '\xC9'; reader.Consume(); return;
-	case 'J': ch = '\xCA'; reader.Consume(); return;
-	case 'K': ch = '\xCB'; reader.Consume(); return;
-	case 'L': ch = '\xCC'; reader.Consume(); return;
-	case 'M': ch = '\xCD'; reader.Consume(); return;
-	case 'N': ch = '\xCE'; reader.Consume(); return;
-	case 'O': ch = '\xCF'; reader.Consume(); return;
-	case 'P': ch = '\xD0'; reader.Consume(); return;
-	case 'Q': ch = '\xD1'; reader.Consume(); return;
-	case 'R': ch = '\xD2'; reader.Consume(); return;
-	case 'S': ch = '\xD3'; reader.Consume(); return;
-	case 'T': ch = '\xD4'; reader.Consume(); return;
-	case 'U': ch = '\xD5'; reader.Consume(); return;
-	case 'V': ch = '\xD6'; reader.Consume(); return;
-	case 'W': ch = '\xD7'; reader.Consume(); return;
-	case 'X': ch = '\xD8'; reader.Consume(); return;
-	case 'Y': ch = '\xD9'; reader.Consume(); return;
-	case 'Z': ch = '\xDA'; reader.Consume(); return;
+	case '0': return ',';
+	case '1': return '/';
+	case '2': return '\\';
+	case '3': return ':';
+	case '4': return '.';
+	case '5': return ' ';
+	case '6': return '\n';
+	case '7': return '\t';
+	case '8': return '\'';
+	case '9': return '-';
+	case 'a': return '\xE1';
+	case 'b': return '\xE2';
+	case 'c': return '\xE3';
+	case 'd': return '\xE4';
+	case 'e': return '\xE5';
+	case 'f': return '\xE6';
+	case 'g': return '\xE7';
+	case 'h': return '\xE8';
+	case 'i': return '\xE9';
+	case 'j': return '\xEA';
+	case 'k': return '\xEB';
+	case 'l': return '\xEC';
+	case 'm': return '\xED';
+	case 'n': return '\xEE';
+	case 'o': return '\xEF';
+	case 'p': return '\xF0';
+	case 'q': return '\xF1';
+	case 'r': return '\xF2';
+	case 's': return '\xF3';
+	case 't': return '\xF4';
+	case 'u': return '\xF5';
+	case 'v': return '\xF6';
+	case 'w': return '\xF7';
+	case 'x': return '\xF8';
+	case 'y': return '\xF9';
+	case 'z': return '\xFA';
+	case 'A': return '\xC1';
+	case 'B': return '\xC2';
+	case 'C': return '\xC3';
+	case 'D': return '\xC4';
+	case 'E': return '\xC5';
+	case 'F': return '\xC6';
+	case 'G': return '\xC7';
+	case 'H': return '\xC8';
+	case 'I': return '\xC9';
+	case 'J': return '\xCA';
+	case 'K': return '\xCB';
+	case 'L': return '\xCC';
+	case 'M': return '\xCD';
+	case 'N': return '\xCE';
+	case 'O': return '\xCF';
+	case 'P': return '\xD0';
+	case 'Q': return '\xD1';
+	case 'R': return '\xD2';
+	case 'S': return '\xD3';
+	case 'T': return '\xD4';
+	case 'U': return '\xD5';
+	case 'V': return '\xD6';
+	case 'W': return '\xD7';
+	case 'X': return '\xD8';
+	case 'Y': return '\xD9';
+	case 'Z': return '\xDA';
 	default:
 		throw DemangleException("Unknown character");
 	}
 }
 
 
-void Demangle::DemangleWideChar(uint16_t& wch)
+void Demangle::DemangleVariableList(_STD_VECTOR<DemangledTypeNode::Param>& paramList, BackrefList& varList, bool typeBackrefs)
 {
-	char c1, c2;
-	DemangleChar(c1);
-	DemangleChar(c2);
-
-	wch = (uint16_t)(((uint16_t)c1 << 8) | (uint16_t)c2);
-}
-
-
-void Demangle::DemangleVariableList(vector<FunctionParameter>& paramList, BackrefList& varList)
-{
-	m_logger->LogDebug("%s: '%s'\n", __FUNCTION__, reader.GetRaw());
+	MSVC_TRACE("{}: '{}'", __FUNCTION__, m_reader.GetRaw());
 	bool _const = false, _volatile = false, isMember = false;
-	set<BNPointerSuffix> suffix;
-	for (size_t i = 0; reader.Peek() != 'Z'; i++)
+	uint8_t suffix = 0;
+	for (;;)
 	{
 		bool hasModifiers = false;
-		if (reader.Peek() == '@')
+			if (m_reader.PeekOr() == 'Z')
 		{
-			reader.Consume();
+			if (m_reader.PeekMatch("ZZ", 2))
+			{
+				paramList.push_back({"", DemangledTypeNode::CreateShared(DemangledTypeNode::VarArgsType())});
+				m_reader.Consume();
+				continue;
+			}
 			break;
 		}
-		else if (reader.Peek() == '?')
+		if (m_reader.ConsumeIf('@'))
 		{
-			reader.Consume();
+			break;
+		}
+		else if (m_reader.ConsumeIf("$$$V"))
+		{
+			// $$$V = empty expanded type / template-template pack (post-MSVC2015 mangling).
+			// See clang/lib/AST/MicrosoftMangle.cpp: for MSVC2015-compat this emits $$V,
+			// otherwise $$$V.
+			continue;
+		}
+		else if (m_reader.ConsumeIf("$$V") || m_reader.ConsumeIf("$$Z"))
+		{
+			// $$V = empty expanded type / template-template pack (MSVC2015-compat mangling).
+			// $$Z = separator between two consecutive packs (emitted between non-empty packs,
+			//       not as a lone template argument). LLVM's demangler leniently skips it in
+			//       any position; we follow suit.
+			// NB: $$S is NOT emitted by any known toolchain - only $S (single $) is a real
+			//     token, handled below.
+			continue;
+		}
+		else if (m_reader.ConsumeIf("$S"))
+		{
+			// $S = empty expanded non-type template pack
+			// (e.g. `template<int... Ns>` or `template<auto... Vs>` instantiated with zero args).
+			continue;
+		}
+		else if (m_reader.ConsumeIf('?'))
+		{
 			suffix = DemanglePointerSuffix();
+			ConsumeExtendedModifierPrefix();
 			DemangleModifiers(_const, _volatile, isMember);
 			hasModifiers = true;
 		}
 
-		FunctionParameter vt;
-		QualifiedName name;
-		m_logger->LogDebug("Argument %d: %s", i, reader.GetRaw());
-		//m_logger->Indent();
-		TypeBuilder type = DemangleVarType(varList, false, name);
-		//m_logger->Dedent();
+		MSVC_TRACE("Argument {}: {}", paramList.size(), m_reader.GetRaw());
+		DemangledTypeNode::NodeRef parsedType;
+		DemangledTypeNode type = DemangleVarType(varList, false, true, &parsedType,
+			typeBackrefs ? TypeBackrefMode::RecordTopLevel : TypeBackrefMode::SuppressTopLevel);
 		if (hasModifiers)
 		{
 			type.SetConst(_const);
 			type.SetVolatile(_volatile);
-			type.SetPointerSuffix(suffix);
+			type.SetPointerSuffixBits(suffix);
 		}
-		vt.name = name.GetString();
-		vt.type = type.Finalize();
-		vt.locationSource = DefaultLocationSource;
 
-		paramList.push_back(vt);
-		m_logger->LogDebug("Argument %zu: '%s' - '%s'\n", i, vt.type->GetString().c_str(), reader.GetRaw());
-	}
-	if (reader.Peek() == 'Z')
-		reader.Consume();
-	m_logger->LogDebug("%s: done '%s'\n", __FUNCTION__, reader.GetRaw());
-}
-
-
-Demangle::NameType Demangle::GetNameType()
-{
-	if (reader.Peek() == '?')
-	{
-		reader.Consume();
-		if (reader.Peek()== '?')
-		{
-			reader.Consume();
-			return GetNameType();
-		}
-		else if (reader.Peek() == '$')
-		{
-			reader.Consume();
-			return NameTemplate;
-		}
-		else if (reader.Peek() == '0')
-		{
-			reader.Consume();
-			return NameConstructor;
-		}
-		else if (reader.Peek() == '1')
-		{
-			reader.Consume();
-			return NameDestructor;
-		}
-		else if (reader.Peek() == 'B')
-		{
-			reader.Consume();
-			return NameReturn;
-		}
-		else if (reader.PeekString(2) == "_R")
-		{
-			reader.Consume(2);
-			return NameRtti;
-		}
-			// else if (reader.PeekString(3) == "__E")
-			// {
-			// 	reader.Consume(2);
-			// 	return NameDynamicInitializer;
-			// }
+		DemangledTypeNode::Param vt;
+		if (hasModifiers || !parsedType)
+			vt.type = DemangledTypeNode::CreateShared(std::move(type));
 		else
-		{
-			return NameLookup;
-		}
+			vt.type = parsedType;
+		paramList.push_back(std::move(vt));
+		MSVC_TRACE("Argument {}: '{}' - '{}'", paramList.size() - 1, paramList.back().type->GetString(), m_reader.GetRaw());
 	}
-	else if (reader.Peek() >= '0' && reader.Peek() <= '9')
-	{
-		return NameBackref;
-	}
-	return NameString;
+	MSVC_TRACE("{}: done '{}'", __FUNCTION__, m_reader.GetRaw());
 }
 
 
-void Demangle::DemangleNameTypeString(string& out)
+void Demangle::DemangleNameTypeString(_STD_STRING& out)
 {
-	out = reader.ReadUntil('@');
+	out = m_reader.ReadUntil('@');
+}
+
+
+static bool IsWinRTEscapedScopeNameChar(char ch)
+{
+	return (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z')
+	    || (ch >= 'a' && ch <= 'z') || (ch == '_') || (ch == '$');
+}
+
+
+bool Demangle::TryDemangleWinRTEscapedScopeName(NameList& nameList, BackrefList& nameBackrefList)
+{
+	// LLVM's Microsoft demangler rejects these WinRT interface-scope spellings:
+	//   ?get@?QIXamlType@Markup@Xaml@UI@Windows@@Outer@@...
+	// We accept them for compatibility with existing BN test cases. At entry,
+	// DemangleName has consumed the leading '?' and `m_reader` points at the first
+	// simple scope component. The escaped chain ends at its inner '@@'; the
+	// normal outer qualified-name '@' is intentionally left for the DemangleName
+	// loop to consume.
+	const char* start = m_reader.GetRaw();
+	if (m_reader.Length() < 4)
+		return false;
+
+	char prefix = start[0];
+	if (!((prefix >= 'A' && prefix <= 'Z') || (prefix == '_')))
+		return false;
+	if (start[1] == '@' || start[1] == '?')
+		return false;
+
+	const char* limit = start + m_reader.Length();
+	const char* end = nullptr;
+	for (const char* cur = start + 1; (cur + 1) < limit; cur++)
+	{
+		if ((cur[0] == '@') && (cur[1] == '@'))
+		{
+			end = cur;
+			break;
+		}
+	}
+	if (!end)
+		return false;
+
+	_STD_VECTOR<_STD_STRING> scopeNames;
+	const char* componentStart = start;
+	while (componentStart < end)
+	{
+		const char* componentEnd = componentStart;
+		while ((componentEnd < end) && (*componentEnd != '@'))
+		{
+			if (!IsWinRTEscapedScopeNameChar(*componentEnd))
+				return false;
+			componentEnd++;
+		}
+		if (componentEnd == componentStart)
+			return false;
+
+		scopeNames.emplace_back(componentStart, componentEnd - componentStart);
+		componentStart = componentEnd + 1;
+	}
+
+	for (const auto& scopeName: scopeNames)
+	{
+		DemangledNamePart scope = MakeNameSegment(scopeName);
+		nameList.insert(nameList.begin(), scope);
+		nameBackrefList.PushNameBackref(std::move(scope));
+	}
+	m_reader.SetRaw(end + 2);
+	return true;
 }
 
 
 void Demangle::DemangleNameTypeRtti(BNNameType& classFunctionType,
                                     BackrefList& nameBackrefList,
-                                    string& out)
+                                    _STD_STRING& out)
 {
-	TypeBuilder rtti;
-	switch (reader.Read())
+	switch (m_reader.Read())
 	{
 	case '0':
 	{
-		if (reader.Peek() != '?')
-			throw DemangleException();
-		reader.Consume();
+		bool _const = false, _volatile = false;
+		uint8_t suffix = 0;
+		if (m_reader.ConsumeIf('?'))
+		{
+			bool isMember = false;
+			suffix = DemanglePointerSuffix();
+			ConsumeExtendedModifierPrefix();
+			DemangleModifiers(_const, _volatile, isMember);
+		}
 
-		bool _const = false, _volatile = false, isMember = false;
-		auto suffix = DemanglePointerSuffix();
-		DemangleModifiers(_const, _volatile, isMember);
-
-		QualifiedName name;
-		//m_logger->Indent();
-		rtti = DemangleVarType(nameBackrefList, false, name);
-		//m_logger->Dedent();
+		DemangledTypeNode rtti = DemangleVarType(nameBackrefList, false);
 		rtti.SetConst(_const);
 		rtti.SetVolatile(_volatile);
-		rtti.SetPointerSuffix(suffix);
-		out = rtti.GetString() + " `RTTI Type Descriptor' ";
+		rtti.SetPointerSuffixBits(suffix);
+		out = rtti.GetString() + " `RTTI Type Descriptor'";
 		classFunctionType = RttiTypeDescriptor;
 		break;
 	}
@@ -834,11 +1138,10 @@ void Demangle::DemangleNameTypeRtti(BNNameType& classFunctionType,
 		out = "`RTTI Base Class Descriptor at (";
 		for (int i = 0; i < 4; i++)
 		{
-			int64_t num = 0;
-			DemangleNumber(num);
+			int64_t num = DecodeEncodedSignedNumber();
 			if (i > 0)
 			{
-				out += ",";
+				out += ", ";
 			}
 			out += to_string(num);
 		}
@@ -862,12 +1165,15 @@ void Demangle::DemangleNameTypeRtti(BNNameType& classFunctionType,
 }
 
 
-void Demangle::DemangleTypeNameLookup(string& out, BNNameType& functionType)
+void Demangle::DemangleTypeNameLookup(_STD_STRING& out, BNNameType& functionType)
 {
-	m_logger->LogDebug("%s: '%s'\n", __FUNCTION__, reader.GetRaw());
-	switch (reader.Read())
+	MSVC_TRACE("{}: '{}'", __FUNCTION__, m_reader.GetRaw());
+	switch (m_reader.Read())
 	{
 	case '?': functionType = NoNameType; break;
+	case '0': functionType = ConstructorNameType; break;
+	case '1': functionType = ConstructorNameType; out = "~"; break; // destructor
+	case 'B': functionType = OperatorReturnTypeNameType; out = "operator"; break; // conversion operator
 	case '2': functionType = OperatorNewNameType; break;
 	case '3': functionType = OperatorDeleteNameType; break;
 	case '4': functionType = OperatorAssignNameType; break;
@@ -903,8 +1209,8 @@ void Demangle::DemangleTypeNameLookup(string& out, BNNameType& functionType)
 	case 'Z': functionType = OperatorMinusEqualNameType; break;
 	case '_':
 	{
-		m_logger->LogDebug(" %s: '%s'\n", __FUNCTION__, reader.GetRaw());
-		switch (reader.Read())
+		MSVC_TRACE(" {}: '{}'", __FUNCTION__, m_reader.GetRaw());
+		switch (m_reader.Read())
 		{
 		case '0': functionType = OperatorDivideEqualNameType; break;
 		case '1': functionType = OperatorModulusEqualNameType; break;
@@ -942,23 +1248,46 @@ void Demangle::DemangleTypeNameLookup(string& out, BNNameType& functionType)
 		case 'W': // Fallthrough
 		case 'Z': functionType = NoNameType; break;
 		case '_':
-			m_logger->LogDebug("  %s: '%s'\n", __FUNCTION__, reader.GetRaw());
-			switch (reader.Read())
+		{
+			MSVC_TRACE("  {}: '{}'", __FUNCTION__, m_reader.GetRaw());
+			switch (const char extendedNameType = m_reader.Read())
 			{
 			case 'A': functionType = ManagedVectorConstructorIteratorNameType; break;
 			case 'B': functionType = ManagedVectorDestructorIteratorNameType; break;
 			case 'C': functionType = EHVectorCopyConstructorIteratorNameType; break;
-			case 'D': functionType = EHVectorVBaseConstructorIteratorNameType; break;
-			case 'E': functionType = DynamicInitializerNameType; break;
-			case 'F': functionType = DynamicAtExitDestructorNameType; break;
+			// ??__D is the *copy* variant per LLVM (MicrosoftDemangle.cpp:701).
+			// Previously routed to EHVectorVBaseConstructorIteratorNameType
+			// (the non-copy enum used by ??_O), which dropped the "copy" word.
+			case 'D': functionType = EHVectorVBaseCopyConstructorIteratorNameType; break;
+			// ??__E and ??__F are not reached here — they're handled at the
+			// top level in DemangleSymbol, matching LLVM's special-intrinsic
+			// dispatch. See DemangleDynamicInitFini.
+			case 'E': // fall through — unreachable in practice
+			case 'F': functionType = (extendedNameType == 'E') ? DynamicInitializerNameType : DynamicAtExitDestructorNameType; break;
 			case 'G': functionType = VectorCopyConstructorIteratorNameType; break;
 			case 'H': functionType = VectorVBaseCopyConstructorIteratorNameType; break;
 			case 'I': functionType = ManagedVectorCopyConstructorIteratorNameType; break;
-			case 'J': functionType = LocalStaticGuardNameType; break;
-			case 'K': functionType = UserDefinedLiteralOperatorNameType; break;
+			case 'J': functionType = LocalStaticThreadGuardNameType; break;
+			case 'K':
+			{
+				// User-defined literal operator: ??__K<suffix>@<scope-chain>
+				// LLVM's demangleLiteralOperatorIdentifier consumes a simple
+				// string terminated by '@' as the literal suffix and renders it
+				// as `operator ""<suffix>`. The outer DemangleName loop then
+				// picks up any enclosing scope chain as a normal prefix.
+				functionType = UserDefinedLiteralOperatorNameType;
+				_STD_STRING suffix = m_reader.ReadUntil('@');
+				if (suffix.empty())
+					throw DemangleException("??__K requires a non-empty literal suffix");
+				out = "operator \"\"" + suffix;
+				break;
+			}
+			case 'L': functionType = NoNameType; out = "operator co_await"; break;
+			case 'M': functionType = NoNameType; out = "operator<=>"; break; // spaceship operator
 			default: throw DemangleException("Demangle Lookup Failed"); // fall through
 			}
 			break;
+		}
 		default:
 			throw DemangleException("Demangle Lookup Failed");
 		}
@@ -966,108 +1295,145 @@ void Demangle::DemangleTypeNameLookup(string& out, BNNameType& functionType)
 	}
 	default: throw DemangleException("Demangle Lookup Failed");
 	}
-	out = Type::GetNameTypeString(functionType);
+	if (out.empty())
+		out = Type::GetNameTypeString(functionType);
 }
 
 
-string Demangle::DemangleTemplateInstantiationName(BackrefList& nameBackrefList)
+DemangledNamePart Demangle::DemangleTemplateInstantiationName(BackrefList& nameBackrefList)
 {
-	string out;
-	BackrefList templateBackref;
-	reader.Consume(2);
-	m_logger->LogDebug("DemangleTemplateInstantiationName: '%s'\n", reader.GetRaw());
-	if (reader.Peek() >= '0' && reader.Peek() <= '9')
+	DemangledNamePart out;
+	MSVC_TRACE("DemangleTemplateInstantiationName: '{}'", m_reader.GetRaw());
+	if (!m_reader.ConsumeIf("?$"))
+		throw DemangleException();
+	char next = m_reader.PeekOr();
+	if (next >= '0' && next <= '9')
 	{
-		out = nameBackrefList.GetStringBackref(reader.Read() - '0');
+		out = nameBackrefList.GetNameBackref(m_reader.Read() - '0');
 	}
 	else
 	{
-		DemangleNameTypeString(out);
+		_STD_STRING name;
+		DemangleNameTypeString(name);
+		out = MakeNameSegment(name);
 	}
-	nameBackrefList.PushStringBackref(out);
+	nameBackrefList.PushNameBackref(out);
 	return out;
 }
 
 
-string Demangle::DemangleTemplateParams(vector<FunctionParameter>& params, BackrefList& nameBackrefList, string& out)
+DemangledNamePart Demangle::DemangleTemplateInstantiationNameInLocalContext(BackrefList& nameBackrefList)
 {
-	//m_logger->Indent();
-	DemangleVariableList(params, nameBackrefList);
-	//m_logger->Dedent();
-	m_logger->LogDebug("VariableList done\n");
-	out += "<";
-	for (size_t i = 0; i < params.size(); i++)
-	{
-		if (i == 0)
-		{
-			out += params[i].type->GetString();
-		}
-		else
-		{
-			out += "," + params[i].type->GetString();
-		}
-	}
-	if (out[out.size()-1] == '>')
-		out += " "; //Be c++03 compliant where we can
-	out += ">";
+	DemangledNamePart out;
+	BNNameType dummyFunctionType = NoNameType;
+	MSVC_TRACE("DemangleTemplateInstantiationNameInLocalContext: '{}'", m_reader.GetRaw());
 
-	nameBackrefList.PushStringBackref(out);
+	{
+		_STD_VECTOR<DemangledTypeNode::Param> params;
+		bool backrefEligible = true;
+		BackrefContextSwitch localContext(nameBackrefList);
+		if (!m_reader.ConsumeIf("?$"))
+			throw DemangleException();
+		out = DemangleUnqualifiedSymbolName(nameBackrefList, dummyFunctionType, backrefEligible);
+		if (backrefEligible && dummyFunctionType == NoNameType)
+			nameBackrefList.PushNameBackref(out);
+		DemangleTemplateParams(params, nameBackrefList, out);
+	}
+
+	// DemangleTemplateParams pushed into the temporary local context above.
+	// Record the completed specialization again after BackrefContextSwitch
+	// restores the enclosing context.
+	nameBackrefList.PushTemplateSpecialization(out);
+	nameBackrefList.PushNameBackref(out);
 	return out;
 }
 
-// void Demangle::DemangleInitFiniStub(bool destructor, QualifiedName& nameList, BackrefList& nameBackrefList, BNNameType& classFunctionType)
-// {
-// 	bool isStatic = false;
-// 	if (reader.Peek() == '?')
-// 	{
-// 		reader.Consume();
-// 		isStatic = true;
-// 	}
-// 	string out = DemangleUnqualifiedSymbolName(nameList, nameBackrefList, classFunctionType);
-// }
 
-
-string Demangle::DemangleUnqualifiedSymbolName(QualifiedName& nameList, BackrefList& nameBackrefList, BNNameType& classFunctionType)
+void Demangle::DemangleTemplateParams(_STD_VECTOR<DemangledTypeNode::Param>& params, BackrefList& nameBackrefList, DemangledNamePart& out)
 {
-	string out;
-	if (reader.PeekString(2) == "?$")
+	NestingGuard nestingGuard(*this);
+	params.clear();
+	const bool nestedTemplateContext = (m_templateParamDepth > 0);
+	struct NameBackrefScopeGuard
 	{
-		reader.Consume(2);
-		out = DemangleTemplateInstantiationName(nameBackrefList);
-		nameList.insert(nameList.begin(), out);
+		BackrefList& backrefs;
+		size_t typeCount;
+		size_t nameCount;
+		~NameBackrefScopeGuard()
+		{
+			backrefs.typeList.resize(typeCount);
+			backrefs.nameList.resize(nameCount);
+		}
+	};
+	struct TemplateDepthGuard
+	{
+		size_t& depth;
+		TemplateDepthGuard(size_t& depth): depth(depth) { depth++; }
+		~TemplateDepthGuard() { depth--; }
+	};
+
+	{
+		TemplateDepthGuard depthGuard(m_templateParamDepth);
+		NameBackrefScopeGuard scopeGuard {
+			nameBackrefList,
+			nameBackrefList.typeList.size(),
+			nameBackrefList.nameList.size()
+		};
+
+		DemangleVariableList(params, nameBackrefList, false);
 	}
-	else if (reader.Peek() == '?')
+
+	out.SetTemplateArguments(params);
+	nameBackrefList.PushTemplateSpecialization(out);
+	if (nestedTemplateContext)
+		nameBackrefList.PushNameBackref(out);
+}
+
+
+DemangledNamePart Demangle::DemangleUnqualifiedSymbolName(BackrefList& nameBackrefList, BNNameType& classFunctionType,
+	bool& backrefEligible)
+{
+	backrefEligible = true;
+	DemangledNamePart out;
+	_STD_STRING text;
+	if (m_reader.ConsumeIf('?'))
 	{
-		reader.Consume();
-		DemangleTypeNameLookup(out, classFunctionType);
+		text.clear();
+		DemangleTypeNameLookup(text, classFunctionType);
+		out = MakeNameSegment(text);
+		// Lookup-based operator names are not normal identifier components and
+		// should not satisfy later scope backrefs such as strong_ordering@0@.
+		backrefEligible = false;
 	}
-	else if (reader.Peek() >= '0' && reader.Peek() <= '9')
+	else if (char next = m_reader.PeekOr(); next >= '0' && next <= '9')
 	{
-		out = nameBackrefList.GetStringBackref(reader.Read() - '0');
+		out = nameBackrefList.GetNameBackref(m_reader.Read() - '0');
 	}
 	else
 	{
-		DemangleNameTypeString(out);
+		DemangleNameTypeString(text);
+		out = MakeNameSegment(text);
 	}
 	return out;
 }
 
 
-TypeBuilder Demangle::DemangleString()
+DemangledTypeNode Demangle::DemangleString(NameList& symbolName)
 {
-	m_logger->LogDebug("%s: '%s'\n", __FUNCTION__, reader.GetRaw());
+	MSVC_TRACE("{}: '{}'", __FUNCTION__, m_reader.GetRaw());
 	// ??_C@_<length><crc32>@<name>
-	if (reader.Peek() != '_')
+	if (!m_reader.ConsumeIf('_'))
 	{
 		throw DemangleException("Invalid mangled string name");
 	}
-	reader.Consume();
 
 	// Wide char flag (1 yes / 0 no)
 	bool isWideChar = false;
-	switch (reader.Peek())
+	switch (m_reader.Read())
 	{
 	case '1':
+	case '2': // UTF-16/UTF-32 encoding variants
+	case '3':
 		isWideChar = true;
 		break;
 	case '0':
@@ -1075,66 +1441,67 @@ TypeBuilder Demangle::DemangleString()
 	default:
 		throw DemangleException("Invalid mangled string name");
 	}
-	reader.Consume();
 
 	// Length is just a number
 
-	int64_t lengthRaw;
-	DemangleNumber(lengthRaw);
-	if (lengthRaw < 0)
-	{
-		throw DemangleException("Invalid mangled string name");
-	}
-	uint64_t length = (uint64_t)lengthRaw;
+	uint64_t length = DecodeEncodedUnsignedNumber();
 
-	m_logger->LogDebug("%s: Before CRC32 '%s'\n", __FUNCTION__, reader.GetRaw());
+	MSVC_TRACE("{}: Before CRC32 '{}'", __FUNCTION__, m_reader.GetRaw());
 
 	// CRC32 (ignored)
-	while (reader.Peek() != '@')
+	while (m_reader.Peek() != '@')
 	{
 		// Usually 8 bytes but I've seen it be 7 for some ungodly reason
-		reader.Consume();
+		m_reader.Consume();
 	}
 
-	reader.Consume();
+	m_reader.Consume();
 
 	bool truncated = false;
-	string name = "";
-	TypeBuilder type;
+	_STD_STRING name;
+	_STD_STRING literalPrefix;
+	DemangledTypeNode type;
 
 	// String bytes
 	if (isWideChar)
 	{
-		m_logger->LogDebug("%s: Wide string '%s'\n", __FUNCTION__, reader.GetRaw());
-		string utf8name;
-		truncated = (length > 64);
-		while (reader.Peek() != '@')
+		MSVC_TRACE("{}: Wide string '{}'", __FUNCTION__, m_reader.GetRaw());
+		_STD_STRING utf8name;
+		literalPrefix = "L";
+		// Track the last wide char so we can detect missing null terminator.
+		bool lastWideCharWasNull = false;
+		size_t wcharCount = 0;
+		while (m_reader.Peek() != '@')
 		{
-			uint16_t wch;
-			DemangleWideChar(wch);
-
-			uint8_t chs[2];
-			chs[0] = wch & 0xFF;
-			chs[1] = wch >> 8;
+			char highByte = DemangleChar();
+			char lowByte = DemangleChar();
+			uint8_t chs[2] = {static_cast<uint8_t>(lowByte), static_cast<uint8_t>(highByte)};
+			lastWideCharWasNull = (chs[0] == 0) && (chs[1] == 0);
+			wcharCount++;
 
 			// TODO: This is actually UCS2 but we don't have an easy decoder for that
 			utf8name += Unicode::UTF16ToUTF8(&chs[0], 2);
 		}
-		reader.Consume();
+		m_reader.Consume();
+
+		// MSVC string literals always mangle their trailing null. A payload
+		// that doesn't end in a wide null means the original was too long to
+		// fit in the mangling and was truncated. Matches LLVM's demangler.
+		if (wcharCount == 0 || !lastWideCharWasNull)
+			truncated = true;
 
 		name = Unicode::ToEscapedString(Unicode::GetBlocksForNames({}), false, utf8name.data(), utf8name.size());
-		type = Type::ArrayType(Type::WideCharType(2), length / 2);
+		type = DemangledTypeNode::ArrayType(DemangledTypeNode::WideCharType(2), length / 2);
 	}
 	else
 	{
-		m_logger->LogDebug("%s: Non-wide string '%s'\n", __FUNCTION__, reader.GetRaw());
+		MSVC_TRACE("{}: Non-wide string '{}'", __FUNCTION__, m_reader.GetRaw());
 		uint64_t numNulls = 0;
 		size_t endNulls = 0;
-		vector<uint8_t> chars;
-		while (reader.Peek() != '@')
+		_STD_VECTOR<uint8_t> chars;
+		while (m_reader.Peek() != '@')
 		{
-			char ch;
-			DemangleChar(ch);
+			char ch = DemangleChar();
 			if (ch == 0)
 			{
 				numNulls++;
@@ -1146,233 +1513,435 @@ TypeBuilder Demangle::DemangleString()
 			}
 			chars.push_back(ch);
 		}
-		reader.Consume();
+		m_reader.Consume();
 
-		if (length > (uint64_t)chars.size() + 1)
+		if (length > static_cast<uint64_t>(chars.size()) + 1)
 		{
 			truncated = true;
 		}
+		// MSVC includes the trailing '\0' in the mangled payload. If the last
+		// byte isn't a null, the original string was truncated to fit the
+		// encoding's size limit — LLVM signals this with a `...` suffix.
+		if (!chars.empty() && chars.back() != 0)
+			truncated = true;
 
-		// Now time to guess encoding
-		if (chars.size() % 1 != 0)
+		// Now time to guess encoding. Only take a wide-character guess if both
+		// the decoded byte payload and declared array length are aligned for it.
+		const size_t payloadBytes = chars.size() - endNulls;
+		if ((payloadBytes % 4 == 0) && (length % 4 == 0) && numNulls > length * 2 / 3)
 		{
-			m_logger->LogDebug("%s: Looks like UTF8 '%s'\n", __FUNCTION__, reader.GetRaw());
-			name = Unicode::ToEscapedString(Unicode::GetBlocksForNames({}), false, chars.data(), chars.size() - endNulls);
-			type = Type::ArrayType(Type::IntegerType(1, true), length);
+			MSVC_TRACE("{}: Looks like UTF32 '{}'", __FUNCTION__, m_reader.GetRaw());
+			_STD_STRING utf8name;
+			for (size_t i = 0; i < payloadBytes; i += 4)
+			{
+				utf8name += Unicode::UTF32ToUTF8(chars.data() + i);
+			}
+			name = Unicode::ToEscapedString(Unicode::GetBlocksForNames({}), false, utf8name.data(), utf8name.size());
+			literalPrefix = "U";
+			type = DemangledTypeNode::ArrayType(DemangledTypeNode::WideCharType(4), length / 4);
+		}
+		else if ((payloadBytes % 2 == 0) && (length % 2 == 0) && numNulls > length / 3)
+		{
+			MSVC_TRACE("{}: Looks like UTF16 '{}'", __FUNCTION__, m_reader.GetRaw());
+			_STD_STRING utf8name;
+			for (size_t i = 0; i < payloadBytes; i += 2)
+			{
+				utf8name += Unicode::UTF16ToUTF8(chars.data() + i, 2);
+			}
+			name = Unicode::ToEscapedString(Unicode::GetBlocksForNames({}), false, utf8name.data(), utf8name.size());
+			literalPrefix = "L";
+			type = DemangledTypeNode::ArrayType(DemangledTypeNode::WideCharType(2), length / 2);
 		}
 		else
 		{
-			if (chars.size() % 4 == 0 && numNulls > length * 2 / 3)
-			{
-				m_logger->LogDebug("%s: Looks like UTF32 '%s'\n", __FUNCTION__, reader.GetRaw());
-				string utf8name;
-				for (size_t i = 0; i < chars.size() - endNulls; i += 4)
-				{
-					utf8name += Unicode::UTF32ToUTF8(chars.data() + i);
-				}
-				name = Unicode::ToEscapedString(Unicode::GetBlocksForNames({}), false, utf8name.data(), utf8name.size());
-				type = Type::ArrayType(Type::WideCharType(4), length / 4);
-			}
-			else if (numNulls > length / 3)
-			{
-				m_logger->LogDebug("%s: Looks like UTF16 '%s'\n", __FUNCTION__, reader.GetRaw());
-				string utf8name;
-				for (size_t i = 0; i < chars.size() - endNulls; i += 2)
-				{
-					utf8name += Unicode::UTF16ToUTF8(chars.data() + i, 2);
-				}
-				name = Unicode::ToEscapedString(Unicode::GetBlocksForNames({}), false, utf8name.data(), utf8name.size());
-				type = Type::ArrayType(Type::WideCharType(2), length / 2);
-			}
-			else
-			{
-				m_logger->LogDebug("%s: Looks like UTF8 '%s'\n", __FUNCTION__, reader.GetRaw());
+			MSVC_TRACE("{}: Looks like UTF8 '{}'", __FUNCTION__, m_reader.GetRaw());
 
-				name = Unicode::ToEscapedString(Unicode::GetBlocksForNames({}), false, chars.data(), chars.size() - endNulls);
-				type = Type::ArrayType(Type::IntegerType(1, true), length);
-			}
+			name = Unicode::ToEscapedString(Unicode::GetBlocksForNames({}), false, chars.data(), chars.size() - endNulls);
+			type = DemangledTypeNode::ArrayType(DemangledTypeNode::IntegerType(1, true), length);
 		}
 	}
-	if (truncated)
-	{
-		name += "...";
-	}
-	m_varName.push_back(name);
+	symbolName.clear();
+	symbolName.push_back(MakeNameSegment(fmt::bnformat("{}\"{}\"{}", literalPrefix, name, truncated ? "..." : "")));
 	return type;
 }
 
 
-TypeBuilder Demangle::DemangleTypeInfoName()
+DemangledTypeNode Demangle::DemangleTypeInfoName(NameList& symbolName)
 {
-	if (reader.Read() != '?')
+	if (m_reader.Read() != '?')
 		throw DemangleException("Unknown raw name type");
 	bool _const = false;
 	bool _volatile = false;
 	bool isMember = false;
 	DemangleModifiers(_const, _volatile, isMember);
 
-	m_logger->LogDebug("%s: '%s'\n", __FUNCTION__, reader.GetRaw());
+	MSVC_TRACE("{}: '{}'", __FUNCTION__, m_reader.GetRaw());
 
-	QualifiedName name;
-	TypeBuilder type = DemangleVarType(m_backrefList, false, name);
+	DemangledTypeNode type = DemangleVarType(m_backrefList, false);
 	type.SetConst(_const);
 	type.SetVolatile(_volatile);
 
 	switch (type.GetClass())
 	{
 	case NamedTypeReferenceClass:
-		m_varName = type.GetNamedTypeReference()->GetName();
-		return type;
+	{
+		// Match LLVM's demangler: a raw type-info name (.?A...) renders as
+		// `<rendered-type> `RTTI Type Descriptor Name''`. Bake the type
+		// keyword + name into the symbol's qualified name, then return a
+		// fresh NamedType marked RttiTypeDescriptor so BN's core type
+		// formatter skips its own class/struct prefix - this mirrors the
+		// treatment of ??_R0 in DemangleNameTypeRtti case '0'.
+		_STD_STRING rendered = type.GetString() + " `RTTI Type Descriptor Name'";
+		symbolName = { MakeNameSegment(rendered) };
+		NameList rttiTypeName = type.GetName();
+		if (rttiTypeName.empty())
+			for (const auto& segment: type.RenderTypeNameSegments())
+				rttiTypeName.push_back(MakeNameSegment(segment));
+		DemangledTypeNode newType = DemangledTypeNode::NamedType(StructNamedTypeClass, std::move(rttiTypeName));
+		newType.SetNameType(RttiTypeDescriptor);
+		return newType;
+	}
 	default:
 		throw DemangleException("Unexpected type of RTTI Type Name");
 	}
 }
 
 
-void Demangle::DemangleName(QualifiedName& nameList,
-                            BNNameType& classFunctionType,
-                            BackrefList& nameBackrefList)
+void Demangle::PrependNameComponent(NameList& nameList, DemangledNamePart name)
 {
-	string out;
-	BNNameType functionType;
-	BNNameType dummyFunctionType;
-	vector<FunctionParameter> params;
-	while(1)
+	nameList.insert(nameList.begin(), std::move(name));
+}
+
+
+void Demangle::AppendStringName(NameList& nameList, BackrefList& nameBackrefList)
+{
+	_STD_STRING text;
+	DemangleNameTypeString(text);
+	DemangledNamePart name = MakeNameSegment(text);
+	PrependNameComponent(nameList, name);
+	nameBackrefList.PushNameBackref(std::move(name));
+}
+
+
+void Demangle::FinalizeConstructorTemplateName(NameList& nameList, size_t nameListSizeAtEntry, bool pending)
+{
+	if (!pending)
+		return;
+
+	if (nameList.size() <= nameListSizeAtEntry + 1)
+		throw DemangleException("Constructor template missing class scope");
+
+	DemangledNamePart& constructorTemplateName = nameList.back();
+	if (!constructorTemplateName.HasTemplateArguments())
+		throw DemangleException("Invalid constructor template name");
+
+	// `??$?0...@Class@@` is a templated constructor. LLVM models `?0` as a
+	// structor identifier and attaches the parsed enclosing class to it after
+	// the qualified name is complete; Wine's undname does the same as a string
+	// post-process. Keep the parsed template args and only fill in the
+	// constructor's base name here:
+	// `?0<Args>` becomes `Class<Args>`.
+	constructorTemplateName.SetBase(nameList[nameList.size() - 2].GetString() +
+		constructorTemplateName.GetBase());
+}
+
+
+bool Demangle::FunctionTypeHasPointerSuffix(char functionType)
+{
+	return functionType != 'C' && functionType != 'D' && functionType != 'K' && functionType != 'L'
+		&& functionType != 'S' && functionType != 'T' && functionType != 'Y' && functionType != 'Z';
+}
+
+
+_STD_STRING Demangle::FormatFunctionScopeSignature(const DemangledTypeNode& type, const NameList& scopeName)
+{
+	_STD_STRING out = type.GetTypeAndName(FinalizeNameList(scopeName));
+	while (!out.empty() && out.back() == ' ')
+		out.pop_back();
+	return out;
+}
+
+
+void Demangle::AppendLocalScope(NameList& nameList, BackrefList& nameBackrefList, uint64_t scopeOrdinal,
+	bool typeNameContext)
+{
+	NameList scopeName;
+	BNNameType scopeFunctionType = NoNameType;
+	DemangleName(scopeName, scopeFunctionType, nameBackrefList, typeNameContext);
+
+	if (m_reader.Length() == 0)
+		throw DemangleException("Missing local scope function encoding");
+
+	char ft = m_reader.Read();
+	if (ft == '9' && m_reader.PeekOr() == '@')
 	{
-		m_logger->LogDebug("%s: '%s'\n", __FUNCTION__, reader.GetRaw());
-		switch (GetNameType())
+		PrependNameComponent(nameList, MakeNameSegment("`" + to_string(scopeOrdinal) + "'"));
+		nameList.insert(nameList.begin(), scopeName.begin(), scopeName.end());
+		return;
+	}
+	if (ft < 'A' || ft > 'Z')
+		throw DemangleException("Invalid local scope function encoding");
+
+	DemangledTypeNode scopeType = DemangleFunction(
+		scopeFunctionType, FunctionTypeHasPointerSuffix(ft), nameBackrefList).type;
+
+	PrependNameComponent(nameList, MakeNameSegment("`" + to_string(scopeOrdinal) + "'"));
+	PrependNameComponent(nameList, MakeNameSegment("`" + FormatFunctionScopeSignature(scopeType, scopeName) + "'"));
+}
+
+
+bool Demangle::TryAppendLocalScopeAt(NameList& nameList, BackrefList& nameBackrefList,
+	const char* encodedNumberStart, bool typeNameContext)
+{
+	struct LocalScopeParseCheckpoint
+	{
+		Demangle& demangler;
+		BackrefList& backrefs;
+		NameList& nameList;
+		const char* reader;
+		NameList savedNameList;
+		size_t typeBackrefs;
+		size_t nameBackrefs;
+		size_t templateBackrefs;
+
+		LocalScopeParseCheckpoint(Demangle& demangler, NameList& nameList, BackrefList& backrefs) :
+			demangler(demangler),
+			backrefs(backrefs),
+			nameList(nameList),
+			reader(demangler.m_reader.GetRaw()),
+			savedNameList(nameList),
+			typeBackrefs(backrefs.typeList.size()),
+			nameBackrefs(backrefs.nameList.size()),
+			templateBackrefs(backrefs.templateList.size())
 		{
-		case NameString:
-			m_logger->LogDebug("Demangle String\n");
-			DemangleNameTypeString(out);
-			nameList.insert(nameList.begin(), out);
-			m_logger->LogDebug("Pushing backref NameString %s", out.c_str());
-			nameBackrefList.PushStringBackref(out);
-			m_logger->LogDebug("nameList.front(): %s\n", nameList.front().c_str());
-			m_logger->LogDebug("%s: '%s'\n", __FUNCTION__, reader.GetRaw());
-			break;
-		case NameLookup:
-			m_logger->LogDebug("Demangle Lookup\n");
-			DemangleTypeNameLookup(out, functionType);
-			classFunctionType = functionType;
-			nameList.insert(nameList.begin(), out);
-			break;
-		case NameBackref:
-			m_logger->LogDebug("Demangle Backref");
-			out = nameBackrefList.GetStringBackref(reader.Read() - '0');
-			m_logger->LogDebug("Demangle Backref: %s", out.c_str());
-			nameList.insert(nameList.begin(), out);
-			break;
-		case NameTemplate:
-		{
-			m_logger->LogDebug("Demangle Template: '%s'\n", reader.GetRaw());
-			BackrefList templateBackref;
-			out = DemangleUnqualifiedSymbolName(nameList, templateBackref, functionType);
-			m_logger->LogDebug("Pushing backref NameTemplate %s", out.c_str());
-			templateBackref.PushStringBackref(out);
-			m_logger->LogDebug("Demangling Template variables %s\n", reader.GetRaw());
-			DemangleTemplateParams(params, templateBackref, out);
-			nameList.insert(nameList.begin(), out);
-			nameBackrefList.PushStringBackref(out);
-			break;
 		}
-		case NameConstructor:
-			m_logger->LogDebug("NameConstructor\n");
-			classFunctionType = ConstructorNameType;
-			DemangleName(nameList, dummyFunctionType, nameBackrefList);
-			if (nameList.size() == 0)
-				throw DemangleException();
-			nameList.push_back(nameList[nameList.size()-1]);
-			return;
-		case NameDestructor:
-			classFunctionType = ConstructorNameType;
-			m_logger->LogDebug("NameDestructor\n");
-			DemangleName(nameList, dummyFunctionType, nameBackrefList);
-			if (nameList.size() == 0)
-				throw DemangleException();
-			nameList.push_back("~" + nameList[nameList.size()-1]);
-			return;
-		case NameRtti:
-			m_logger->LogDebug("NameRtti\n");
-			DemangleNameTypeRtti(classFunctionType, nameBackrefList, out);
-			nameList.insert(nameList.begin(), out);
-			break;
-			// case NameDynamicInitializer:
-			// 	m_logger->LogDebug("NameDynamicInitializer\n");
-			// 	DemangleInitFiniStub(false);
-			// 	break;
-			// case NameDynamicAtExitDestructor:
-			// 	m_logger->LogDebug("NameDynamicAtExitDestructor\n");
-			// 	DemangleInitFiniStub(false);
-			// 	break;
-		case NameReturn:
-			m_logger->LogDebug("NameReturn\n");
-			classFunctionType = OperatorReturnTypeNameType;
-			if (reader.PeekString(2) == "?$")
+
+		void Restore()
+		{
+			demangler.m_reader.SetRaw(reader);
+			nameList = savedNameList;
+			backrefs.typeList.resize(typeBackrefs);
+			backrefs.nameList.resize(nameBackrefs);
+			backrefs.templateList.resize(templateBackrefs);
+		}
+	};
+
+	LocalScopeParseCheckpoint checkpoint(*this, nameList, nameBackrefList);
+
+	m_reader.SetRaw(encodedNumberStart);
+	uint64_t scopeOrdinal = 0;
+	try
+	{
+		scopeOrdinal = DecodeEncodedUnsignedNumber();
+	}
+	catch (DemangleException&)
+	{
+		checkpoint.Restore();
+		return false;
+	}
+
+	if (m_reader.PeekMatch("??", 2))
+	{
+		AppendLocalScope(nameList, nameBackrefList, scopeOrdinal, typeNameContext);
+		return true;
+	}
+
+	checkpoint.Restore();
+	return false;
+}
+
+
+void Demangle::DemangleName(NameList& nameList,
+                            BNNameType& classFunctionType,
+                            BackrefList& nameBackrefList,
+                            bool typeNameContext)
+{
+	NestingGuard nestingGuard(*this);
+	// NameList is stored outermost-first for QualifiedName, but MSVC encodes
+	// names leaf-first. Ordinary parsed components are prepended; constructor
+	// and destructor branches recurse to parse the class scope, then append the
+	// synthesized leaf intentionally.
+	size_t nameListSizeAtEntry = nameList.size();
+	bool pendingConstructorTemplateName = false;
+
+	DemangledNamePart out;
+	_STD_STRING outText;
+	BNNameType functionType = NoNameType;
+	BNNameType dummyFunctionType = NoNameType;
+	_STD_VECTOR<DemangledTypeNode::Param> params;
+
+	size_t strippedNestedNamePrefixes = 0;
+	while(true)
+	{
+		MSVC_TRACE("{}: '{}'", __FUNCTION__, m_reader.GetRaw());
+		if (m_reader.ConsumeIf("??@"))
+		{
+			AppendStringName(nameList, nameBackrefList);
+		}
+		else if (m_reader.ConsumeIf("??"))
+		{
+			if (m_nestingDepth + strippedNestedNamePrefixes >= MAX_DEMANGLE_NESTING_DEPTH)
+				throw DemangleException("Demangle nesting depth exceeded");
+			strippedNestedNamePrefixes++;
+			continue;
+		}
+		else if (m_reader.PeekMatch("?$", 2))
+		{
+			MSVC_TRACE("Demangle Template: '{}'", m_reader.GetRaw());
+			if (typeNameContext || (m_templateParamDepth > 0) || (nameList.size() > nameListSizeAtEntry))
 			{
-				out = DemangleTemplateInstantiationName(nameBackrefList);
-				DemangleTemplateParams(params, nameBackrefList, out);
+				out = DemangleTemplateInstantiationNameInLocalContext(nameBackrefList);
 			}
 			else
 			{
-				DemangleNameTypeString(out);
-				nameBackrefList.PushStringBackref(out);
+				if (!m_reader.ConsumeIf("?$"))
+					throw DemangleException();
+				BNNameType localFunctionType = NoNameType;
+				bool backrefEligible = true;
+				out = DemangleUnqualifiedSymbolName(nameBackrefList, localFunctionType, backrefEligible);
+				if (backrefEligible && localFunctionType == NoNameType)
+				{
+					MSVC_TRACE("Pushing backref NameTemplate {}", out.GetString());
+					nameBackrefList.PushNameBackref(out);
+				}
+				MSVC_TRACE("Demangling Template variables {}", m_reader.GetRaw());
+				DemangleTemplateParams(params, nameBackrefList, out);
+				if (localFunctionType == ConstructorNameType)
+				{
+					classFunctionType = ConstructorNameType;
+					pendingConstructorTemplateName = true;
+				}
 			}
-			nameList.insert(nameList.begin(), out);
-			break;
-		default:
-			throw DemangleException();
+			PrependNameComponent(nameList, out);
 		}
-		if (nameList.StringSize() > MAX_DEMANGLE_LENGTH)
-			throw DemangleException();
-		if (reader.Peek() == '@')
+		else if (char next = m_reader.PeekOr(); next >= '0' && next <= '9')
 		{
-			reader.Consume();
+			MSVC_TRACE("Demangle Backref");
+			out = nameBackrefList.GetNameBackref(m_reader.Read() - '0');
+			MSVC_TRACE("Demangle Backref: {}", out.GetString());
+			PrependNameComponent(nameList, out);
+		}
+		else if (m_reader.ConsumeIf('?'))
+		{
+			if (char next = m_reader.PeekOr(); next >= 'a' && next <= 'z')
+			{
+				// Lowercase after ? indicates a non-standard extension name
+				// (e.g., ??null$initializer$ for thread-safe static init guards).
+				AppendStringName(nameList, nameBackrefList);
+			}
+			else if (m_reader.PeekMatch("A0x", 3))
+			{
+				m_reader.Consume();
+				DemangleNameTypeString(outText); // discard compiler-generated hash
+				out = MakeNameSegment("`anonymous namespace'");
+				PrependNameComponent(nameList, out);
+				nameBackrefList.PushNameBackref(std::move(out));
+			}
+			else if (m_reader.ConsumeIf("_R"))
+			{
+				MSVC_TRACE("NameRtti");
+				DemangleNameTypeRtti(classFunctionType, nameBackrefList, outText);
+				out = MakeNameSegment(outText);
+				PrependNameComponent(nameList, out);
+			}
+			else
+			{
+				bool parsedScopePrefix = false;
+				if (nameList.size() > nameListSizeAtEntry)
+				{
+					parsedScopePrefix = TryAppendLocalScopeAt(nameList, nameBackrefList, m_reader.GetRaw(), typeNameContext) ||
+						TryDemangleWinRTEscapedScopeName(nameList, nameBackrefList);
+				}
+
+				if (!parsedScopePrefix)
+				{
+					if (m_reader.ConsumeIf('0'))
+					{
+						MSVC_TRACE("NameConstructor");
+						classFunctionType = ConstructorNameType;
+						DemangleName(nameList, dummyFunctionType, nameBackrefList, typeNameContext);
+						if (nameList.empty())
+							throw DemangleException();
+						nameList.push_back(nameList[nameList.size()-1]);
+						return;
+					}
+					if (m_reader.ConsumeIf('1'))
+					{
+						MSVC_TRACE("NameDestructor");
+						classFunctionType = ConstructorNameType;
+						DemangleName(nameList, dummyFunctionType, nameBackrefList, typeNameContext);
+						if (nameList.empty())
+							throw DemangleException();
+						nameList.push_back(MakeNameSegment("~" + nameList[nameList.size()-1].GetString()));
+						return;
+					}
+					if (m_reader.ConsumeIf('B'))
+					{
+						MSVC_TRACE("NameReturn");
+						classFunctionType = OperatorReturnTypeNameType;
+						if (m_reader.PeekMatch("?$", 2))
+						{
+							if (m_templateParamDepth > 0)
+							{
+								out = DemangleTemplateInstantiationNameInLocalContext(nameBackrefList);
+							}
+							else
+							{
+								out = DemangleTemplateInstantiationName(nameBackrefList);
+								DemangleTemplateParams(params, nameBackrefList, out);
+							}
+						}
+						else
+						{
+							DemangleNameTypeString(outText);
+							out = MakeNameSegment(outText);
+							nameBackrefList.PushNameBackref(out);
+						}
+						PrependNameComponent(nameList, out);
+					}
+					else
+					{
+						MSVC_TRACE("Demangle Lookup");
+						outText.clear();
+						DemangleTypeNameLookup(outText, functionType);
+						out = MakeNameSegment(outText);
+						classFunctionType = functionType;
+						PrependNameComponent(nameList, out);
+						// Check if this is a scope specifier. Scope specifiers are ?<char>
+						// followed by either @?? or directly ?? (for digit scopes like ?3??func@...)
+						// When nameList has prior components, the operator name is actually a scope index
+						// Also handle dynamic init/dtor wrapping ??@ (MD5 hash)
+						if (m_reader.ConsumeIf("??@"))
+						{
+							_STD_STRING hash = m_reader.ReadUntil('@');
+							PrependNameComponent(nameList, MakeNameSegment("??@" + hash + "@"));
+							// Consume the trailing @ (name terminator) — the ??@hash@ pattern
+							// is followed by @@ (end of scoped name) before the function type
+							if (m_reader.Length() > 0)
+								m_reader.ConsumeIf('@');
+						}
+					}
+				}
+			}
+		}
+		else
+		{
+			AppendStringName(nameList, nameBackrefList);
+		}
+		if (m_reader.ConsumeIf('@'))
+		{
+			FinalizeConstructorTemplateName(nameList, nameListSizeAtEntry, pendingConstructorTemplateName);
 			return;
 		}
 	}
 }
 
-Ref<CallingConvention> Demangle::GetCallingConventionForType(BNCallingConventionName ccName)
-{
-	string name;
-	switch (ccName)
-	{
-	case NoCallingConvention: name = ""; break;
-	case CdeclCallingConvention: name = "cdecl"; break;
-	case PascalCallingConvention: name = "pascal"; break;
-	case ThisCallCallingConvention: name = "thiscall"; break;
-	case STDCallCallingConvention: name = "stdcall"; break;
-	case FastcallCallingConvention: name = "fastcall"; break;
-	case CLRCallCallingConvention: name = "clrcall"; break;
-	case EabiCallCallingConvention: name = "eabi"; break;
-	case VectorCallCallingConvention: name = "vectorcall"; break;
-	case SwiftCallingConvention: name = "swiftcall"; break;
-	case SwiftAsyncCallingConvention: name = "swiftasync"; break;
-	default: break;
-	}
 
-	if (m_platform)
-	{
-		for (const auto& cc : m_platform->GetCallingConventions())
-		{
-			if (cc->GetName() == name)
-				return cc;
-		}
-	}
-
-	for (const auto& cc : m_arch->GetCallingConventions())
-	{
-		if (cc->GetName() == name)
-			return cc;
-	}
-	return nullptr;
-}
 
 BNCallingConventionName Demangle::DemangleCallingConvention()
 {
-	m_logger->LogDebug("%s: '%s'\n", __FUNCTION__, reader.GetRaw());
-	switch (reader.Read())
+	MSVC_TRACE("{}: '{}'", __FUNCTION__, m_reader.GetRaw());
+	switch (m_reader.Read())
 	{
 	case 'A': //Exported function
 	case 'B': return CdeclCallingConvention;
@@ -1397,298 +1966,323 @@ BNCallingConventionName Demangle::DemangleCallingConvention()
 	}
 }
 
-set<BNPointerSuffix> Demangle::DemanglePointerSuffix()
+
+void Demangle::ConsumeExtendedModifierPrefix()
 {
-	m_logger->LogDebug("%s: '%s'\n", __FUNCTION__, reader.GetRaw());
-	set<BNPointerSuffix> suffix;
-	if (reader.Peek() == '@')
+	while (m_reader.ConsumeIf("$A"))
+	{
+	}
+}
+
+
+uint8_t Demangle::DemanglePointerSuffix()
+{
+	MSVC_TRACE("{}: '{}'", __FUNCTION__, m_reader.GetRaw());
+	uint8_t suffix = 0;
+	if (m_reader.PeekOr() == '@')
 		return suffix;
 
-	char elm = reader.Peek();
-	for (int i = 0; i < 5; i++, elm = reader.Peek())
+	char elm = m_reader.PeekOr();
+	for (int i = 0; i < 5; i++, elm = m_reader.PeekOr())
 	{
 		if (elm == 'E')
-			suffix.insert(suffix.end(), Ptr64Suffix);
+			suffix |= (1u << Ptr64Suffix);
 		else if (elm == 'F')
-			suffix.insert(suffix.end(), UnalignedSuffix);
+			suffix |= (1u << UnalignedSuffix);
 		else if (elm == 'G')
-			suffix.insert(suffix.end(), ReferenceSuffix);
+			suffix |= (1u << ReferenceSuffix);
 		else if (elm == 'H')
-			suffix.insert(suffix.end(), LvalueSuffix);
+			suffix |= (1u << LvalueSuffix);
 		else if (elm == 'I')
-			suffix.insert(suffix.end(), RestrictSuffix);
+			suffix |= (1u << RestrictSuffix);
 		else
 			break;
-		reader.Consume(1);
+		m_reader.Consume();
 	}
 	return suffix;
 }
 
 void Demangle::DemangleModifiers(bool& _const, bool& _volatile, bool &isMember)
 {
-	m_logger->LogDebug("%s: '%s'\n", __FUNCTION__, reader.GetRaw());
-	if (reader.Peek() == '@')
-		return;
-
+	MSVC_TRACE("{}: '{}'", __FUNCTION__, m_reader.GetRaw());
+	// Always write the out params, even when `@` marks the no-modifiers case.
 	_const = false;
 	_volatile = false;
 	isMember = false;
-	char elm = reader.Read();
-	switch (elm)
+	if (m_reader.PeekOr() == '@')
+		return;
+
+	switch (m_reader.Read())
 	{
 	case 'A': break;
-	case 'B': _const = true; break;
+	case 'B': //fall through
 	case 'J': _const = true; break;
-	case 'C': _volatile = true; break;
-	case 'G': _volatile = true; break;
+	case 'C': //fall through
+	case 'G': //fall through
 	case 'K': _volatile = true; break;
-	case 'D': _const = true; _volatile = true; break;
-	case 'H': _const = true; _volatile = true; break;
+	case 'D': //fall through
+	case 'H': //fall through
 	case 'L': _const = true; _volatile = true; break;
-	case '6': break;
-	case '7': break;
-	case 'M': break;
+	case '6': //fall through
+	case '7': //fall through
+	case 'M': //fall through
 	case 'N': break;
 	case 'O': _volatile = true; break;
 	case 'P': _volatile = true; _const = true; break;
 	case 'Q': isMember = true; break;
-	case 'U': break;
+	case 'U': //fall through
 	case 'Y': break;
 	case 'R': _const = true; isMember = true; break;
-	case 'V': _const = true; break;
+	case 'V': //fall through
 	case 'Z': _const = true; break;
 	case 'S': _volatile = true; isMember = true; break;
-	case 'W': _volatile = true; break;
+	case 'W': //fall through
 	case '0': _volatile = true; break;
 	case 'T': _const = true; _volatile = true; isMember = true; break;
-	case 'X': _const = true; _volatile = true; break;
+	case 'X': //fall through
 	case '1': _const = true; _volatile = true; break;
-	case '8': break;
-	case '9': break;
+	case '8': //fall through
+	case '9': //fall through
 	case '2': break;
 	case '3': _const = true; break;
 	case '4': _volatile = true; break;
 	case '5': _const = true; _volatile = true; break;
 	case '_':
-		elm = reader.Read();
-		if (elm == 'A' || elm == 'B')
+		switch (m_reader.Read())
 		{
-			//For unhandled "member" and "based" parameters
+		case 'A':
+		case 'B':
+		case 'C':
+		case 'D':
+			// Accepted but not currently modeled.
 			break;
-		}
-		else if (elm == 'C' || elm == 'D')
-		{
-			//For unhandled "member" and "based" parameters
-			break;
-		}
-		else
-		{
+		default:
 			throw DemangleException();
 		}
 		break;
 	default: throw DemangleException();
 	}
-	return;
 }
 
 
-TypeBuilder Demangle::DemangleFunction(BNNameType classFunctionType, bool pointerSuffix, BackrefList& nameBackrefList, int funcClass)
+bool Demangle::FunctionClassNeedsImplicitThis(int funcClass)
 {
-	m_logger->LogDebug("%s: '%s'\n", __FUNCTION__, reader.GetRaw());
-	bool _const = false, _volatile = false, isMember = false;
-	set<BNPointerSuffix> suffix;
-	TypeBuilder returnType;
-	BNCallingConventionName cc;
+	return funcClass != NoneFunctionClass
+		&& (funcClass & StaticFunctionClass) != StaticFunctionClass
+		&& (funcClass & GlobalFunctionClass) != GlobalFunctionClass;
+}
 
-	//Demangle adjustor which we don't do anything with for now
+
+void Demangle::AppendThunkAdjustorToName(NameList& nameList, const ThunkAdjustor& adjustor)
+{
+	switch (adjustor.kind)
+	{
+	case ThunkAdjustorKind::Static:
+		AppendToLastNameSegment(nameList, "`adjustor{" + to_string(adjustor.adjustor) + "}'");
+		return;
+	case ThunkAdjustorKind::Vtordisp:
+		AppendToLastNameSegment(nameList, "`vtordisp{" + to_string(adjustor.vtorDispOffset) + ", " +
+			to_string(adjustor.staticOffset) + "}'");
+		return;
+	case ThunkAdjustorKind::Vtordispex:
+		AppendToLastNameSegment(nameList, "`vtordispex{" + to_string(adjustor.vbptrOffset) + ", " +
+			to_string(adjustor.vbOffsetOffset) + ", " + to_string(adjustor.vtorDispOffset) + ", " +
+			to_string(adjustor.staticOffset) + "}'");
+		return;
+	}
+}
+
+
+void Demangle::SetImplicitThisParameter(DemangledTypeNode& type, BNNameType classFunctionType, const NameList& enclosingName)
+{
+	NameList thisName = enclosingName;
+	if (classFunctionType != OperatorReturnTypeNameType && !thisName.empty())
+		thisName.pop_back();
+	auto thisNamedType = DemangledTypeNode::NamedType(TypedefNamedTypeClass, std::move(thisName));
+	type.SetImplicitThisParameter(DemangledTypeNode::PointerType(
+		std::move(thisNamedType), false, false, PointerReferenceType));
+}
+
+
+void Demangle::ApplySymbolFunctionContext(DemangledFunction& function, NameList& symbolName,
+	BNNameType classFunctionType, int funcClass)
+{
+	if (function.thunkAdjustor)
+		AppendThunkAdjustorToName(symbolName, *function.thunkAdjustor);
+	if (FunctionClassNeedsImplicitThis(funcClass))
+		SetImplicitThisParameter(function.type, classFunctionType, symbolName);
+}
+
+
+Demangle::DemangledFunction Demangle::DemangleFunction(BNNameType classFunctionType, bool pointerSuffix,
+	BackrefList& nameBackrefList, int funcClass)
+{
+	NestingGuard nestingGuard(*this);
+	MSVC_TRACE("{}: '{}'", __FUNCTION__, m_reader.GetRaw());
+	bool _const = false, _volatile = false;
+	uint8_t suffix = 0;
+	DemangledTypeNode returnType;
+	BNCallingConventionName cc;
+	std::optional<ThunkAdjustor> thunkAdjustor;
+
+	// Thunk adjustors are part of the function grammar, but the symbol parser
+	// owns the name that displays them.
 	if ((funcClass & StaticThunkFunctionClass) == StaticThunkFunctionClass)
 	{
-		int64_t adjustor;
-		DemangleNumber(adjustor);
-		m_varName.back() += "`adjustor{" + to_string(adjustor) + "}'";
+		ThunkAdjustor adjustor {};
+		adjustor.kind = ThunkAdjustorKind::Static;
+		adjustor.adjustor = DecodeEncodedUnsignedNumber();
+		thunkAdjustor = adjustor;
 	}
 	else if ((funcClass & VirtualThunkFunctionClass) == VirtualThunkFunctionClass)
 	{
 		if ((funcClass & VirtualThunkExFunctionClass) == VirtualThunkExFunctionClass)
 		{
-			int64_t vbptrOffset;
-			int64_t vbOffsetOffset;
-			int64_t vtorDispOffset;
-			int64_t staticOffset;
-			DemangleNumber(vbptrOffset);
-			DemangleNumber(vbOffsetOffset);
-			DemangleNumber(vtorDispOffset);
-			DemangleNumber(staticOffset);
-			m_varName.back() += "`vtordispex{" + to_string(vbptrOffset) + ", " + to_string(vbOffsetOffset) + ", " + to_string(vtorDispOffset) + ", " + to_string(staticOffset) + "}'";
+			ThunkAdjustor adjustor {};
+			adjustor.kind = ThunkAdjustorKind::Vtordispex;
+			adjustor.vbptrOffset = DecodeEncodedSignedInt32();
+			adjustor.vbOffsetOffset = DecodeEncodedSignedInt32();
+			adjustor.vtorDispOffset = DecodeEncodedSignedInt32();
+			adjustor.staticOffset = DecodeEncodedUnsignedNumber();
+			thunkAdjustor = adjustor;
 		}
 		else
 		{
-			int64_t vtorDispOffset;
-			int64_t staticOffset;
-			DemangleNumber(vtorDispOffset);
-			DemangleNumber(staticOffset);
-			m_varName.back() += "`vtordisp{" + to_string(vtorDispOffset) + ", " + to_string(staticOffset) + "}'";
+			ThunkAdjustor adjustor {};
+			adjustor.kind = ThunkAdjustorKind::Vtordisp;
+			adjustor.vtorDispOffset = DecodeEncodedSignedInt32();
+			adjustor.staticOffset = DecodeEncodedUnsignedNumber();
+			thunkAdjustor = adjustor;
 		}
 	}
 
 	if (pointerSuffix)
 	{
+		bool isMember = false;
 		suffix = DemanglePointerSuffix();
+		ConsumeExtendedModifierPrefix();
 		DemangleModifiers(_const, _volatile, isMember);
 	}
-	if (reader.Peek() == '?')
-		reader.Consume();
+	m_reader.ConsumeIf('?');
 	cc = DemangleCallingConvention();
 	bool shouldHaveReturnType = true;
-	if (reader.Peek() == '@')
+	if (m_reader.ConsumeIf('@'))
 	{
 		//No return type
 		shouldHaveReturnType = false;
-		reader.Consume();
-		m_logger->LogDebug("Function has no return type %s", reader.GetRaw());
+		MSVC_TRACE("Function has no return type {}", m_reader.GetRaw());
 	}
 	else
 	{
 		//Demangle function return type
-		bool return_const = false, return_volatile = false, isMember = false;
-		set<BNPointerSuffix> return_suffix;
+		bool return_const = false, return_volatile = false;
+		uint8_t return_suffix = 0;
 		bool hasModifiers = false;
 		//Check for modifiers before return type
-		if (reader.Peek() == '?')
+		if (m_reader.ConsumeIf('?'))
 		{
-			reader.Consume(1);
+			bool localIsMember = false;
 			return_suffix = DemanglePointerSuffix();
-			DemangleModifiers(return_const, return_volatile, isMember);
+			DemangleModifiers(return_const, return_volatile, localIsMember);
 			hasModifiers = true;
 		}
 
-		QualifiedName name;
-		m_logger->LogDebug("Demangle function return type %s", reader.GetRaw());
-		//m_logger->Indent();
-		returnType = DemangleVarType(nameBackrefList, true, name);
-		m_logger->LogDebug("Return type: %s", returnType.GetString().c_str());
-		//m_logger->Dedent();
+		MSVC_TRACE("Demangle function return type {}", m_reader.GetRaw());
+		returnType = DemangleVarType(nameBackrefList, true);
+		MSVC_TRACE("Return type: {}", returnType.GetString());
+		// '...' (varargs) is only legal as the trailing parameter marker,
+		// never as a return type. Reject so we don't build a bogus type.
+		if (returnType.GetClass() == VarArgsTypeClass)
+			throw DemangleException("Varargs ('Z') is not a valid function return type");
 		if (hasModifiers)
 		{
 			returnType.SetConst(return_const);
 			returnType.SetVolatile(return_volatile);
-			returnType.SetPointerSuffix(return_suffix);
+			returnType.SetPointerSuffixBits(return_suffix);
 		}
 	}
-	if (reader.Peek() == '@')
-		reader.Consume();
+	m_reader.ConsumeIf('@');
 
-	m_logger->LogDebug("\tDemangle Function Parameters %s", reader.GetRaw());
-	vector<FunctionParameter> params;
-	bool needsThisPtr = false;
-	if (cc == ThisCallCallingConvention)
-	{
-		needsThisPtr = true;
-	}
-	if (funcClass != NoneFunctionClass)
-	{
-		if ((funcClass & VirtualFunctionClass) == VirtualFunctionClass
-		    || (funcClass & StaticThunkFunctionClass) == StaticThunkFunctionClass
-		    || (funcClass & VirtualThunkFunctionClass) == VirtualThunkFunctionClass)
-		{
-			needsThisPtr = true;
-		}
-		else if ((funcClass & StaticFunctionClass) != StaticFunctionClass
-		         && (funcClass & GlobalFunctionClass) != GlobalFunctionClass)
-		{
-			needsThisPtr = true;
-		}
-	}
+	MSVC_TRACE("\tDemangle Function Parameters {}", m_reader.GetRaw());
+	_STD_VECTOR<DemangledTypeNode::Param> params;
 
-	if (needsThisPtr)
-	{
-		// Insert implicit "this" parameter for thiscall
-		// TODO: Replace this with calling convention / platform callbacks to insert thisptr (ask rss)
-		QualifiedName thisName = m_varName;
-		if (thisName.size() > 0)
-			thisName.erase(thisName.end() - 1);
-		params.push_back(FunctionParameter("this", Type::PointerType(m_arch, Type::NamedType(thisName, Type::VoidType())), DefaultLocationSource, {}));
-	}
+	DemangleVariableList(params, nameBackrefList);
+	m_reader.ConsumeIf('Z');
 
-	DemangleVariableList(params, m_backrefList);
-
-	if (params.size() >= 1 && params.back().type->GetClass() == VoidTypeClass)
+	if (!params.empty() && params.back().type && params.back().type->GetClass() == VoidTypeClass)
 		params.pop_back();
 
-	// TODO: fix calling convention
-	Ref<Type> returnTypeObj;
-	if (shouldHaveReturnType)
-		returnTypeObj = returnType.Finalize();
-	else
-		returnTypeObj = Type::VoidType();
-	TypeBuilder newType = TypeBuilder::FunctionType(returnTypeObj, nullptr, params);
+	if (!shouldHaveReturnType)
+		returnType = DemangledTypeNode::VoidType();
+	DemangledTypeNode newType = DemangledTypeNode::FunctionType(std::move(returnType), nullptr, std::move(params));
 	newType.SetConst(_const);
 	newType.SetVolatile(_volatile);
-	newType.SetPointerSuffix(suffix);
+	newType.SetPointerSuffixBits(suffix);
 	newType.SetNameType(classFunctionType);
 	newType.SetCallingConventionName(cc);
-	auto convention = GetCallingConventionForType(cc);
-	if (convention)
-		newType.SetCallingConvention(convention);
 
-	m_logger->LogDebug("Successfully Created Function Type!\n");
-	return newType;
+	MSVC_TRACE("Successfully Created Function Type!");
+	return {std::move(newType), std::move(thunkAdjustor)};
 }
 
 
-TypeBuilder Demangle::DemangleData()
+DemangledTypeNode Demangle::DemangleData(BackrefList& varList)
 {
-	m_logger->LogDebug("%s: '%s'\n", __FUNCTION__, reader.GetRaw());
+	MSVC_TRACE("{}: '{}'", __FUNCTION__, m_reader.GetRaw());
 	bool _const = false, _volatile = false, isMember = false;
-	QualifiedName name;
-	//m_logger->Indent();
-	TypeBuilder newType = DemangleVarType(m_backrefList, false, name);
-	//m_logger->Dedent();
+	DemangledTypeNode newType = DemangleVarType(varList, false);
 	auto suffix = DemanglePointerSuffix();
 	DemangleModifiers(_const, _volatile, isMember);
-	newType.SetConst(_const);
-	newType.SetVolatile(_volatile);
-	newType.SetPointerSuffix(suffix);
+	if (newType.GetClass() == PointerTypeClass)
+	{
+		newType.AddPointerSuffixBits(suffix);
+		newType.AddQualifiersToPointerChild(_const, _volatile);
+	}
+	else
+	{
+		newType.SetConst(_const);
+		newType.SetVolatile(_volatile);
+		newType.SetPointerSuffixBits(suffix);
+	}
 	return newType;
 }
 
 
-TypeBuilder Demangle::DemanagleRTTI(BNNameType nameType)
+DemangledTypeNode Demangle::DemangleRTTI(BNNameType nameType, const NameList& symbolName)
 {
-	m_logger->LogDebug("%s: '%s'\n", __FUNCTION__, reader.GetRaw());
+	MSVC_TRACE("{}: '{}'", __FUNCTION__, m_reader.GetRaw());
 	bool _const = false, _volatile = false, isMember = false;
-	if (reader.Length() > 0)
+	if (m_reader.Length() > 0)
 		DemangleModifiers(_const, _volatile, isMember);
-	QualifiedName typeName = m_varName;
-	m_logger->LogDebug("new struct type\n");
-	TypeBuilder newType = TypeBuilder::NamedType(NamedTypeReference::GenerateAutoDemangledTypeReference(
-		StructNamedTypeClass, typeName));
+	NameList typeName = symbolName;
+	MSVC_TRACE("new struct type");
+	DemangledTypeNode newType = DemangledTypeNode::NamedType(StructNamedTypeClass, typeName);
 	newType.SetNameType(nameType);
 	newType.SetConst(_const);
 	newType.SetVolatile(_volatile);
-	m_logger->LogDebug("log: %s\n", newType.GetString().c_str());
+	MSVC_TRACE("log: {}", newType.GetString());
 	return newType;
 }
 
 
-TypeBuilder Demangle::DemangleVTable()
+DemangledTypeNode Demangle::DemangleVTable(BackrefList& nameBackrefList, NameList& symbolName)
 {
-	m_logger->LogDebug("%s: '%s'\n", __FUNCTION__, reader.GetRaw());
+	MSVC_TRACE("{}: '{}'", __FUNCTION__, m_reader.GetRaw());
 	bool _const = false, _volatile = false, isMember = false;
 	DemangleModifiers(_const, _volatile, isMember);
-	TypeBuilder newType = TypeBuilder::NamedType(NamedTypeReference::GenerateAutoDemangledTypeReference(
-		StructNamedTypeClass, m_varName));
-	if (reader.Peek() != '@')
+	DemangledTypeNode newType = DemangledTypeNode::NamedType(StructNamedTypeClass, symbolName);
+	if (m_reader.PeekOr() != '@')
 	{
-		QualifiedName typeName;
+		NameList typeName;
 		BNNameType classFunctionType = NoNameType;
-		DemangleName(typeName, classFunctionType, m_backrefList);
-		string suffix = m_varName.back();
-		m_varName.back() += "{for `" + typeName.GetString() + "'}";
+		DemangleName(typeName, classFunctionType, nameBackrefList, true);
+		if (symbolName.empty())
+			throw DemangleException("VTable name missing suffix");
+		DemangledNamePart suffix = symbolName.back();
+		AppendToLastNameSegment(symbolName, "{for `" + JoinNameList(typeName) + "'}");
 
 		typeName.push_back(suffix);
-		newType = TypeBuilder::NamedType(NamedTypeReference::GenerateAutoDemangledTypeReference(
-			StructNamedTypeClass, typeName));
+		newType = DemangledTypeNode::NamedType(StructNamedTypeClass, typeName);
 	}
 	newType.SetConst(_const);
 	newType.SetVolatile(_volatile);
@@ -1697,164 +2291,456 @@ TypeBuilder Demangle::DemangleVTable()
 }
 
 
+// ??__E (dynamic initializer) / ??__F (dynamic atexit destructor).
+//
+// LLVM dispatches these at the top level via demangleSpecialIntrinsic -->
+// demangleInitFiniStub. The mangling wraps another symbol (either a variable
+// or a function) and emits a new function stub that initializes/destroys it:
+//
+//   ??__E<fn-symbol>                   function form, e.g. ??__Efoo@@YAXXZ
+//   ??__E?<var-symbol>@@<fn-encoding>  variable form, e.g. ??__E?foo@@3HA@@YAXXZ
+//
+// LLVM's output places the descriptor (`dynamic initializer for '<target>'`)
+// at file scope — not as a member of the target's enclosing class — and
+// interpolates the target name inside backticks/quotes. For the variable
+// form, it additionally renders the variable's type inside the inner
+// backtick pair: `dynamic initializer for `int foo''.
+Demangle::DemangleContext Demangle::DemangleDynamicInitFini(bool isDtor, BackrefList& backrefList)
+{
+	MSVC_TRACE("{}: '{}'", __FUNCTION__, m_reader.GetRaw());
+
+	// /d2FH4 may replace a long wrapped target with an MD5 name (??@<hash>@).
+	// Parse it before the optional '?' marker below; otherwise the first '?'
+	// of the hash spelling is mistaken for IsKnownStaticDataMember.
+	NameList innerNameList;
+	BNNameType innerClassFunctionType = NoNameType;
+	bool isMD5Name = false;
+	if (m_reader.ConsumeIf("??@"))
+	{
+		_STD_STRING hash = m_reader.ReadUntil('@');
+		innerNameList.push_back(MakeNameSegment("??@" + hash + "@"));
+		isMD5Name = true;
+	}
+
+	// Optional leading '?' flags the "known static data member" form. LLVM
+	// calls this IsKnownStaticDataMember — when present, the mangling is
+	// required to carry two trailing '@' before the outer function encoding
+	// rather than one.
+	bool isKnownStaticDataMember = false;
+	if (!isMD5Name && m_reader.ConsumeIf('?'))
+	{
+		isKnownStaticDataMember = true;
+	}
+
+	// Parse the inner symbol's qualified name exactly as any other symbol
+	// would. DemangleName handles locally-scoped pieces, anonymous namespaces,
+	// templates, etc. so a target like
+	//   instance@?1??Get@Globals@@SAAEAU1@XZ@
+	// resolves correctly.
+	if (!isMD5Name)
+		DemangleName(innerNameList, innerClassFunctionType, backrefList);
+
+	const char* prefix = isDtor
+		? "`dynamic atexit destructor for "
+		: "`dynamic initializer for ";
+	BNNameType classFunctionType = isDtor
+		? DynamicAtExitDestructorNameType
+		: DynamicInitializerNameType;
+
+	_STD_STRING descriptor;
+
+	if (m_reader.Length() == 0)
+		throw DemangleException("Truncated ??__E/??__F");
+
+	char next = m_reader.Peek();
+	if (next >= '0' && next <= '4')
+	{
+		// Variable form: <storage-class><type-encoding> <@-terminators>
+		// <outer-function-encoding>. We don't attach the storage class to
+		// anything — it exists only to disambiguate variable-vs-function
+		// inside the wrapper and to match the mangling grammar.
+		m_reader.Consume(); // storage class
+		DemangledTypeNode varType = DemangleData(backrefList);
+		_STD_STRING varTypeStr = varType.GetString();
+		_STD_STRING innerJoined = JoinNameList(innerNameList);
+		descriptor = _STD_STRING(prefix) + "`" + varTypeStr + " " + innerJoined + "''";
+
+		// Consume the @-terminators between the inner variable encoding and
+		// the outer function encoding. LLVM requires two when the optional
+		// leading '?' was present, one otherwise.
+		int atCount = isKnownStaticDataMember ? 2 : 1;
+		for (int i = 0; i < atCount; i++)
+		{
+			if (m_reader.Length() == 0 || m_reader.Read() != '@')
+				throw DemangleException("Expected '@' terminator in ??__E/??__F variable form");
+		}
+	}
+	else
+	{
+		// Function form: the inner symbol's function encoding follows
+		// directly. The outer stub reuses that encoding (there's no separate
+		// outer signature).
+		if (isKnownStaticDataMember)
+			throw DemangleException("??__E/??__F with leading '?' but no variable form");
+		if (isMD5Name)
+		{
+			while (m_reader.ConsumeIf('@'))
+			{
+			}
+		}
+		_STD_STRING innerJoined = JoinNameList(innerNameList);
+		descriptor = _STD_STRING(prefix) + "'" + innerJoined + "''";
+	}
+
+	// Replace the symbol's qualified name with just the descriptor — this is
+	// what puts the output at file scope with no enclosing class prefix.
+	NameList descriptorName = { MakeNameSegment(descriptor) };
+
+	auto parseOuterFunction = [&](bool pointerSuffix, int funcClass, BNMemberAccess access, BNMemberScope scope) {
+		DemangledFunction function = DemangleFunction(classFunctionType, pointerSuffix, backrefList, funcClass);
+		ApplySymbolFunctionContext(function, descriptorName, classFunctionType, funcClass);
+		return DemangleContext{std::move(descriptorName), std::move(function.type), access, scope};
+	};
+
+	// Parse the outer function encoding. MSVC emits a global cdecl stub
+	// ('Y'/'Z') in practice but we dispatch through the full table for
+	// robustness (private/public/static/etc.).
+	if (m_reader.Length() == 0)
+		throw DemangleException("Truncated ??__E/??__F outer function encoding");
+	switch (char funcType = m_reader.Read())
+	{
+	case 'A': //fall through
+	case 'B': return parseOuterFunction(true,  PrivateFunctionClass,                         PrivateAccess,   NoScope    );
+	case 'C': //fall through
+	case 'D': return parseOuterFunction(false, PrivateFunctionClass | StaticFunctionClass,   PrivateAccess,   StaticScope);
+	case 'I': //fall through
+	case 'J': return parseOuterFunction(true,  ProtectedFunctionClass,                       ProtectedAccess, NoScope    );
+	case 'K': //fall through
+	case 'L': return parseOuterFunction(false, ProtectedFunctionClass | StaticFunctionClass, ProtectedAccess, StaticScope);
+	case 'Q': //fall through
+	case 'R': return parseOuterFunction(true,  PublicFunctionClass,                          PublicAccess,    NoScope    );
+	case 'S': //fall through
+	case 'T': return parseOuterFunction(false, PublicFunctionClass | StaticFunctionClass,    PublicAccess,    StaticScope);
+	case 'Y': //fall through
+	case 'Z': return parseOuterFunction(false, GlobalFunctionClass,                          NoAccess,        NoScope    );
+	default:
+		throw DemangleException(_STD_STRING("Unexpected outer function type '") + funcType + "' in ??__E/??__F");
+	}
+}
+
 
 Demangle::DemangleContext Demangle::DemangleSymbol()
 {
-	m_logger->LogDebug("%s: '%s'\n", __FUNCTION__, reader.GetRaw());
-	//m_logger->Indent();
+	return DemangleSymbol(m_backrefList);
+}
+
+
+Demangle::DemangleContext Demangle::DemangleSymbol(BackrefList& backrefList)
+{
+	NestingGuard nestingGuard(*this);
+	MSVC_TRACE("{}: '{}'", __FUNCTION__, m_reader.GetRaw());
 	BNNameType classFunctionType = NoNameType;
-	QualifiedName varName;
+	NameList varName;
 
-	if (reader.Peek() == '.')
+	if (m_reader.ConsumeIf('.'))
 	{
-		reader.Consume();
-
-		return { DemangleTypeInfoName(), NoAccess, NoScope };
+		NameList typeInfoName;
+		DemangledTypeNode type = DemangleTypeInfoName(typeInfoName);
+		return { std::move(typeInfoName), std::move(type), NoAccess, NoScope };
 	}
 
-	if (reader.Read() != '?')
+	if (m_reader.Read() != '?')
 	{
 		throw DemangleException();
 	}
 
-	DemangleName(varName, classFunctionType, m_backrefList);
-	m_logger->LogDebug("Done demangling Name: '%s' - '%s'", varName.GetString().c_str(), reader.GetRaw());
-	m_varName = varName;
+	// MD5-hashed names: ??@<32hex>@
+	if (m_reader.ConsumeIf("?@"))
+	{
+		_STD_STRING hash = m_reader.ReadUntil('@');
+		NameList md5Name = { MakeNameSegment("??@" + hash + "@") };
+		return { std::move(md5Name), DemangledTypeNode::VoidType(), NoAccess, NoScope };
+	}
+
+	// Special intrinsics dispatched at the top level (matches LLVM's
+	// demangleSpecialIntrinsic). ??__E/??__F have a non-uniform grammar
+	// that the normal DemangleName scope-chain loop can't express — the
+	// bytes after the code are a wrapped inner symbol, not scope prefixes.
+	if (m_reader.ConsumeIf("?__E"))
+		return DemangleDynamicInitFini(false, backrefList);
+	if (m_reader.ConsumeIf("?__F"))
+		return DemangleDynamicInitFini(true, backrefList);
+
+	DemangleName(varName, classFunctionType, backrefList);
+	MSVC_TRACE("Done demangling Name: '{}' - '{}'", JoinNameList(varName), m_reader.GetRaw());
 
 	DemangleContext context;
+	auto setContext = [&](DemangledTypeNode type, BNMemberAccess access, BNMemberScope scope) {
+		context.type = std::move(type);
+		context.access = access;
+		context.scope = scope;
+	};
+	auto finishContext = [&]() {
+		context.name = std::move(varName);
+		return std::move(context);
+	};
 
 	if (classFunctionType == StringNameType)
 	{
-		context = { DemangleString(), NoAccess, NoScope };
-		return context;
+		setContext(DemangleString(varName), NoAccess, NoScope);
+		return finishContext();
 	}
 
-	char funcType = reader.Read();
-	switch(funcType)
+	// ??__J (local static thread guard) and local-scope ??_B guards are
+	// variables, not functions. The storage marker is '4' (not visible) or '5'
+	// (visible). Some local guard names then carry a one-digit local ordinal
+	// instead of a type encoding, e.g. `...@51` -> `{2}`.
+	char nextSymbolByte = m_reader.PeekOr();
+	if ((classFunctionType == LocalStaticThreadGuardNameType)
+		|| (classFunctionType == LocalStaticGuardNameType && m_reader.Length() >= 2
+			&& (nextSymbolByte == '4' || nextSymbolByte == '5')
+			&& m_reader.PeekAt(1) >= '0' && m_reader.PeekAt(1) <= '9'))
 	{
-	case '0': context = {DemangleData(),                      PrivateAccess,   StaticScope }; break;
-	case '1': context = {DemangleData(),                      ProtectedAccess, StaticScope }; break;
-	case '2': context = {DemangleData(),                      PublicAccess,    StaticScope }; break;
-	case '3': context = {DemangleData(),                      NoAccess,        NoScope     }; break;
-	case '4': context = {DemangleData(),                      NoAccess,        NoScope     }; break;
-	case '5': context = {DemangleVTable(),                    NoAccess,        NoScope     }; break;
-	case '6': context = {DemangleVTable(),                    NoAccess,        NoScope     }; break;
-	case '7': context = {DemangleVTable(),                    NoAccess,        NoScope     }; break;
-	case '8': context = {DemanagleRTTI(classFunctionType),    NoAccess,        NoScope     }; break;
-	case '9': context = {DemanagleRTTI(classFunctionType),    NoAccess,        NoScope     }; break;
-	case 'A': context = {DemangleFunction(classFunctionType, true,  m_backrefList, PrivateFunctionClass),                              PrivateAccess,   NoScope     }; break;
-	case 'B': context = {DemangleFunction(classFunctionType, true,  m_backrefList, PrivateFunctionClass),                              PrivateAccess,   NoScope     }; break;
-	case 'C': context = {DemangleFunction(classFunctionType, false, m_backrefList, PrivateFunctionClass | StaticFunctionClass),        PrivateAccess,   StaticScope }; break;
-	case 'D': context = {DemangleFunction(classFunctionType, false, m_backrefList, PrivateFunctionClass | StaticFunctionClass),        PrivateAccess,   StaticScope }; break;
-	case 'E': context = {DemangleFunction(classFunctionType, true,  m_backrefList, PrivateFunctionClass | VirtualFunctionClass),       PrivateAccess,   VirtualScope}; break;
-	case 'F': context = {DemangleFunction(classFunctionType, true,  m_backrefList, PrivateFunctionClass | VirtualFunctionClass),       PrivateAccess,   VirtualScope}; break;
-	case 'G': context = {DemangleFunction(classFunctionType, true,  m_backrefList, PrivateFunctionClass | StaticThunkFunctionClass),   PrivateAccess,   ThunkScope  }; break;
-	case 'H': context = {DemangleFunction(classFunctionType, true,  m_backrefList, PrivateFunctionClass | StaticThunkFunctionClass),   PrivateAccess,   ThunkScope  }; break;
-	case 'I': context = {DemangleFunction(classFunctionType, true,  m_backrefList, ProtectedFunctionClass),                            ProtectedAccess, NoScope     }; break;
-	case 'J': context = {DemangleFunction(classFunctionType, true,  m_backrefList, ProtectedFunctionClass),                            ProtectedAccess, NoScope     }; break;
-	case 'K': context = {DemangleFunction(classFunctionType, false, m_backrefList, ProtectedFunctionClass | StaticFunctionClass),      ProtectedAccess, StaticScope }; break;
-	case 'L': context = {DemangleFunction(classFunctionType, false, m_backrefList, ProtectedFunctionClass | StaticFunctionClass),      ProtectedAccess, StaticScope }; break;
-	case 'M': context = {DemangleFunction(classFunctionType, true,  m_backrefList, ProtectedFunctionClass | VirtualFunctionClass),     ProtectedAccess, VirtualScope}; break;
-	case 'N': context = {DemangleFunction(classFunctionType, true,  m_backrefList, ProtectedFunctionClass | VirtualFunctionClass),     ProtectedAccess, VirtualScope}; break;
-	case 'O': context = {DemangleFunction(classFunctionType, true,  m_backrefList, ProtectedFunctionClass | StaticThunkFunctionClass), ProtectedAccess, ThunkScope  }; break;
-	case 'P': context = {DemangleFunction(classFunctionType, true,  m_backrefList, ProtectedFunctionClass | StaticThunkFunctionClass), ProtectedAccess, ThunkScope  }; break;
-	case 'Q': context = {DemangleFunction(classFunctionType, true,  m_backrefList, PublicFunctionClass),                               PublicAccess,    NoScope     }; break;
-	case 'R': context = {DemangleFunction(classFunctionType, true,  m_backrefList, PublicFunctionClass),                               PublicAccess,    NoScope     }; break;
-	case 'S': context = {DemangleFunction(classFunctionType, false, m_backrefList, PublicFunctionClass | StaticFunctionClass),         PublicAccess,    StaticScope }; break;
-	case 'T': context = {DemangleFunction(classFunctionType, false, m_backrefList, PublicFunctionClass | StaticFunctionClass),         PublicAccess,    StaticScope }; break;
-	case 'U': context = {DemangleFunction(classFunctionType, true,  m_backrefList, PublicFunctionClass | VirtualFunctionClass),        PublicAccess,    VirtualScope}; break;
-	case 'V': context = {DemangleFunction(classFunctionType, true,  m_backrefList, PublicFunctionClass | VirtualFunctionClass),        PublicAccess,    VirtualScope}; break;
-	case 'W': context = {DemangleFunction(classFunctionType, true,  m_backrefList, PublicFunctionClass | StaticThunkFunctionClass),    PublicAccess,    ThunkScope  }; break;
-	case 'X': context = {DemangleFunction(classFunctionType, true,  m_backrefList, PublicFunctionClass | StaticThunkFunctionClass),    PublicAccess,    ThunkScope  }; break;
-	case 'Y': context = {DemangleFunction(classFunctionType, false, m_backrefList, GlobalFunctionClass),                               NoAccess,        NoScope     }; break;
-	case 'Z': context = {DemangleFunction(classFunctionType, false, m_backrefList, GlobalFunctionClass),                               NoAccess,        NoScope     }; break;
+		if (m_reader.Length() == 0)
+			throw DemangleException("Truncated local static guard");
+		char next = m_reader.Read();
+		if (next != '4' && next != '5')
+			throw DemangleException("local static guard requires variable storage class ('4' or '5'), got '" + _STD_STRING(1, next) + "'");
+		if (char next = m_reader.PeekOr(); next >= '0' && next <= '9')
+		{
+			int64_t guardOrdinal = m_reader.Read() - '0' + 1;
+			AppendToLastNameSegment(varName, "{" + to_string(guardOrdinal) + "}");
+			setContext(DemangledTypeNode::IntegerType(4, false), NoAccess, NoScope);
+			return finishContext();
+		}
+		setContext(DemangleData(backrefList), NoAccess, NoScope);
+		return finishContext();
+	}
+
+	auto setDataContext = [&](BNMemberAccess access, BNMemberScope scope) {
+		setContext(DemangleData(backrefList), access, scope);
+	};
+	auto setFunctionContext = [&](bool pointerSuffix, int funcClass, BNMemberAccess access, BNMemberScope scope) {
+		DemangledFunction function = DemangleFunction(classFunctionType, pointerSuffix, backrefList, funcClass);
+		ApplySymbolFunctionContext(function, varName, classFunctionType, funcClass);
+		setContext(std::move(function.type), access, scope);
+	};
+
+	switch(char funcType = m_reader.Read())
+	{
+	case '0': setDataContext(PrivateAccess,   StaticScope); break;
+	case '1': setDataContext(ProtectedAccess, StaticScope); break;
+	case '2': setDataContext(PublicAccess,    StaticScope); break;
+	case '3': //fall through
+	case '4': setDataContext(NoAccess,        NoScope    ); break;
+	case '5':  //fall through
+	case '6':  //fall through
+	case '7':
+		setContext(DemangleVTable(backrefList, varName), NoAccess, NoScope);
+		break;
+	case '8':  //fall through
+	case '9':
+		setContext(DemangleRTTI(classFunctionType, varName), NoAccess, NoScope);
+		break;
+	case 'A':  //fall through
+	case 'B': setFunctionContext(true,  PrivateFunctionClass,                                  PrivateAccess,   NoScope     ); break;
+	case 'C': //fall through
+	case 'D': setFunctionContext(false, PrivateFunctionClass | StaticFunctionClass,            PrivateAccess,   StaticScope ); break;
+	case 'E': //fall through
+	case 'F': setFunctionContext(true,  PrivateFunctionClass | VirtualFunctionClass,           PrivateAccess,   VirtualScope); break;
+	case 'G': //fall through
+	case 'H': setFunctionContext(true,  PrivateFunctionClass | StaticThunkFunctionClass,       PrivateAccess,   ThunkScope  ); break;
+	case 'I': //fall through
+	case 'J': setFunctionContext(true,  ProtectedFunctionClass,                                ProtectedAccess, NoScope     ); break;
+	case 'K': //fall through
+	case 'L': setFunctionContext(false, ProtectedFunctionClass | StaticFunctionClass,          ProtectedAccess, StaticScope ); break;
+	case 'M': //fall through
+	case 'N': setFunctionContext(true,  ProtectedFunctionClass | VirtualFunctionClass,         ProtectedAccess, VirtualScope); break;
+	case 'O': //fall through
+	case 'P': setFunctionContext(true,  ProtectedFunctionClass | StaticThunkFunctionClass,     ProtectedAccess, ThunkScope  ); break;
+	case 'Q': //fall through
+	case 'R': setFunctionContext(true,  PublicFunctionClass,                                   PublicAccess,    NoScope     ); break;
+	case 'S': //fall through
+	case 'T': setFunctionContext(false, PublicFunctionClass | StaticFunctionClass,             PublicAccess,    StaticScope ); break;
+	case 'U': //fall through
+	case 'V': setFunctionContext(true,  PublicFunctionClass | VirtualFunctionClass,            PublicAccess,    VirtualScope); break;
+	case 'W': //fall through
+	case 'X': setFunctionContext(true,  PublicFunctionClass | StaticThunkFunctionClass,        PublicAccess,    ThunkScope  ); break;
+	case 'Y': //fall through
+	case 'Z': setFunctionContext(false, GlobalFunctionClass,                                   NoAccess,        NoScope     ); break;
 	case '$':
 	{
-		int funcClass = VirtualThunkFunctionClass;
-		if (reader.Peek() == 'R')
+		if (m_reader.ConsumeIf('B'))
 		{
-			reader.Consume();
+			// Vcall thunk: $B<encoded_offset><calling_convention><this_type>
+			uint64_t offset = DecodeEncodedUnsignedNumber();
+			if (varName.empty())
+				throw DemangleException("Vcall thunk missing name");
+			varName.back() = MakeNameSegment("`vcall'{" + to_string(offset) + ", {flat}}'");
+			// Consume calling convention char + this-type flag char
+			if (m_reader.Length() >= 1)
+				m_reader.Consume(); // calling convention (A=cdecl, etc.)
+			char next = m_reader.PeekOr();
+			if (next != '\0' && next != '@')
+				m_reader.Consume(); // this-type flag
+			setContext(DemangledTypeNode::VoidType(), NoAccess, NoScope);
+			break;
+		}
+		int funcClass = VirtualThunkFunctionClass;
+		if (m_reader.ConsumeIf('R'))
+		{
 			funcClass |= VirtualThunkExFunctionClass;
 		}
-		char thunkType = reader.Read();
-		switch (thunkType)
+		switch (char thunkType = m_reader.Read())
 		{
-		case '0': context = {DemangleFunction(classFunctionType, true, m_backrefList, funcClass | VirtualFunctionClass | PrivateFunctionClass),   PrivateAccess,   ThunkScope}; break;
-		case '1': context = {DemangleFunction(classFunctionType, true, m_backrefList, funcClass | VirtualFunctionClass | PrivateFunctionClass),   PrivateAccess,   ThunkScope}; break;
-		case '2': context = {DemangleFunction(classFunctionType, true, m_backrefList, funcClass | VirtualFunctionClass | ProtectedFunctionClass), ProtectedAccess, ThunkScope}; break;
-		case '3': context = {DemangleFunction(classFunctionType, true, m_backrefList, funcClass | VirtualFunctionClass | ProtectedFunctionClass), ProtectedAccess, ThunkScope}; break;
-		case '4': context = {DemangleFunction(classFunctionType, true, m_backrefList, funcClass | VirtualFunctionClass | PublicFunctionClass),    PublicAccess,    ThunkScope}; break;
-		case '5': context = {DemangleFunction(classFunctionType, true, m_backrefList, funcClass | VirtualFunctionClass | PublicFunctionClass),    PublicAccess,    ThunkScope}; break;
-		default: throw DemangleException("Unknown virtual thunk type " + string(1, thunkType));
+		case '0': //fall through
+		case '1': setFunctionContext(true, funcClass | VirtualFunctionClass | PrivateFunctionClass,   PrivateAccess,   ThunkScope); break;
+		case '2': //fall through
+		case '3': setFunctionContext(true, funcClass | VirtualFunctionClass | ProtectedFunctionClass, ProtectedAccess, ThunkScope); break;
+		case '4': //fall through
+		case '5': setFunctionContext(true, funcClass | VirtualFunctionClass | PublicFunctionClass,    PublicAccess,    ThunkScope); break;
+		default: throw DemangleException("Unknown virtual thunk type " + _STD_STRING(1, thunkType));
 		}
 		break;
 	}
-	default:  throw DemangleException("Unknown function type " + string(1, funcType));
+	default:  throw DemangleException("Unknown function type " + _STD_STRING(1, funcType));
 	}
-	return context;
+	return finishContext();
 }
 
-bool Demangle::DemangleMS(Architecture* arch, const string& mangledName, Ref<Type>& outType,
+std::pair<Ref<Type>, QualifiedName> Demangle::Finalize(BinaryView* view)
+{
+	DemangleContext context = DemangleSymbol();
+	if (m_reader.Length() != 0)
+		LogDebugF("Demangling Succeeded with trailing characters '{}' in '{}'", m_reader.GetRaw(), m_mangledName);
+
+	Ref<Platform> platform = m_platform;
+	if (!platform && view)
+		platform = view->GetDefaultPlatform();
+
+	Architecture* arch = m_arch;
+#ifdef BINARYNINJACORE_LIBRARY
+	if (!arch && platform)
+		arch = platform->GetArchitecture();
+	if (!arch && view)
+		arch = view->GetDefaultArchitecture();
+#else
+	Ref<Architecture> viewArch;
+	Ref<Architecture> platformArch;
+	if (!arch && platform)
+	{
+		platformArch = platform->GetArchitecture();
+		arch = platformArch.GetPtr();
+	}
+	if (!arch && view)
+	{
+		viewArch = view->GetDefaultArchitecture();
+		arch = viewArch.GetPtr();
+	}
+#endif
+	if (!arch)
+		throw DemangleException();
+
+	if (!platform)
+		platform = arch->GetStandalonePlatform();
+
+	return {context.type.Finalize(platform.GetPtr()), QualifiedName(FinalizeNameList(context.name))};
+}
+
+std::pair<Ref<Type>, QualifiedName> Demangle::Finalize()
+{
+	return Finalize(m_view.GetPtr());
+}
+
+template <typename DemangleBody>
+static bool DemangleMSImpl(const _STD_STRING& mangledName, Ref<Type>& outType, QualifiedName& outVarName,
+	DemangleBody&& demangleBody)
+{
+	outType = nullptr;
+	if (mangledName.empty() || (mangledName[0] != '?' && mangledName[0] != '.'))
+		return false;
+
+	try
+	{
+		auto result = demangleBody();
+		outType = std::move(result.first);
+		outVarName = std::move(result.second);
+		return true;
+	}
+	catch (DemangleException& e)
+	{
+		LogDebugF("Demangling Failed '{}' '{}'", mangledName, e.what());
+		return false;
+	}
+	catch (std::exception& e)
+	{
+		LogDebugF("Demangling Failed '{}' '{}'", mangledName, e.what());
+		return false;
+	}
+}
+
+bool Demangle::DemangleMS(Architecture* arch, const _STD_STRING& mangledName, Ref<Type>& outType,
                           QualifiedName& outVarName, const Ref<BinaryView>& view)
 {
-	outType = nullptr;
-	if (mangledName.empty() || (mangledName[0] != '?' && mangledName[0] != '.'))
-		return false;
+	if (view)
+	{
+		return DemangleMSImpl(mangledName, outType, outVarName, [&]() {
+			Demangle demangle(arch, mangledName);
+			return demangle.Finalize(view.GetPtr());
+		});
+	}
 	return DemangleMS(arch, mangledName, outType, outVarName);
 }
 
-bool Demangle::DemangleMS(Architecture* arch, const string& mangledName, Ref<Type>& outType,
+bool Demangle::DemangleMS(Architecture* arch, const _STD_STRING& mangledName, Ref<Type>& outType,
                           QualifiedName& outVarName, BinaryView* view)
 {
-	outType = nullptr;
-	if (mangledName.empty() || (mangledName[0] != '?' && mangledName[0] != '.'))
-		return false;
+	if (view)
+		return DemangleMS(arch, mangledName, outType, outVarName, Ref<BinaryView>(view));
 	return DemangleMS(arch, mangledName, outType, outVarName);
 }
 
-bool Demangle::DemangleMS(Architecture* arch, const string& mangledName, Ref<Type>& outType,
+bool Demangle::DemangleMS(Platform* platform, const _STD_STRING& mangledName, Ref<Type>& outType,
                           QualifiedName& outVarName)
 {
 	outType = nullptr;
-	if (mangledName.empty() || (mangledName[0] != '?' && mangledName[0] != '.'))
+	if (!platform)
 		return false;
-	try
-	{
-		Demangle demangle(arch, mangledName);
-		// For now we're throwing away MemberScope and MemberAccess
-		outType = demangle.DemangleSymbol().type.Finalize();
-		outVarName = demangle.GetVarName();
 
-	}
-	catch (DemangleException &e)
-	{
-		LogDebugForException(e, "Demangling Failed '%s' '%s;", mangledName.c_str(), e.what());
-		return false;
-	}
-	return true;
+	return DemangleMSImpl(mangledName, outType, outVarName, [&]() {
+		Demangle demangle(Ref<Platform>(platform), mangledName);
+		return demangle.Finalize();
+	});
+}
+
+bool Demangle::DemangleMS(Architecture* arch, const _STD_STRING& mangledName, Ref<Type>& outType,
+                          QualifiedName& outVarName)
+{
+	return DemangleMSImpl(mangledName, outType, outVarName, [&]() {
+		thread_local Demangle demangle(arch, mangledName);
+		demangle.Reset(arch, mangledName);
+		return demangle.Finalize();
+	});
 }
 
 
-bool Demangle::DemangleMS(const string& mangledName, Ref<Type>& outType,
+bool Demangle::DemangleMS(const _STD_STRING& mangledName, Ref<Type>& outType,
                           QualifiedName& outVarName, const Ref<BinaryView>& view)
 {
-	outType = nullptr;
-	if (mangledName.empty() || (mangledName[0] != '?' && mangledName[0] != '.'))
-		return false;
-	try
-	{
+	return DemangleMSImpl(mangledName, outType, outVarName, [&]() {
+		// Can't use thread_local here — BinaryView overload needs platform/view state
 		Demangle demangle(view, mangledName);
-		// For now we're throwing away MemberScope and MemberAccess
-		outType = demangle.DemangleSymbol().type.Finalize();
-		outVarName = demangle.GetVarName();
+		return demangle.Finalize();
+	});
+}
 
-	}
-	catch (DemangleException &e)
-	{
-		LogDebugForException(e, "Demangling Failed '%s' '%s;", mangledName.c_str(), e.what());
+bool Demangle::DemangleMS(const _STD_STRING& mangledName, Ref<Type>& outType,
+                          QualifiedName& outVarName, BinaryView* view)
+{
+	outType = nullptr;
+	if (!view)
 		return false;
-	}
-	return true;
+	return DemangleMS(mangledName, outType, outVarName, Ref<BinaryView>(view));
 }
 
 
@@ -1864,18 +2750,18 @@ public:
 	MSDemangler(): Demangler("MS")
 	{
 	}
-	~MSDemangler() override {}
+	~MSDemangler() override = default;
 
-	virtual bool IsMangledString(const string& name) override
+	bool IsMangledString(const _STD_STRING& name) override
 	{
-		return name[0] == '?';
+		return !name.empty() && (name[0] == '?' || name[0] == '.');
 	}
 
 #ifdef BINARYNINJACORE_LIBRARY
-	virtual bool Demangle(Architecture* arch, const string& name, Ref<Type>& outType, QualifiedName& outVarName,
+	bool Demangle(Architecture* arch, const _STD_STRING& name, Ref<Type>& outType, QualifiedName& outVarName,
 	                      BinaryView* view) override
 #else
-	virtual bool Demangle(Ref<Architecture> arch, const string& name, Ref<Type>& outType, QualifiedName& outVarName,
+	virtual bool Demangle(Ref<Architecture> arch, const _STD_STRING& name, Ref<Type>& outType, QualifiedName& outVarName,
 	                      Ref<BinaryView> view) override
 #endif
 	{
@@ -1899,7 +2785,7 @@ extern "C"
 	BINARYNINJAPLUGIN bool CorePluginInit()
 #endif
 	{
-		static MSDemangler* demangler = new MSDemangler();
+		static auto demangler = new MSDemangler();
 		Demangler::Register(demangler);
 		return true;
 	}

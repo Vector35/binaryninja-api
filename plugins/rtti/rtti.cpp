@@ -3,6 +3,20 @@
 using namespace BinaryNinja;
 using namespace BinaryNinja::RTTI;
 
+namespace
+{
+	std::string NormalizeRTTIClassName(std::string name)
+	{
+		size_t beginFind = name.find_first_of(' ');
+		if (beginFind != std::string::npos)
+			name.erase(0, beginFind + 1);
+		size_t endFind = name.find(" `RTTI Type Descriptor Name'");
+		if (endFind != std::string::npos)
+			name.erase(endFind, name.length());
+		return name;
+	}
+}
+
 
 Ref<Symbol> RTTI::GetRealSymbol(BinaryView *view, uint64_t relocAddr, uint64_t symAddr)
 {
@@ -24,9 +38,9 @@ std::optional<std::string> RTTI::DemangleNameMS(BinaryView* view, bool allowMang
 {
     QualifiedName demangledName = {};
     Ref<Type> outType = {};
-    if (!DemangleMS(view->GetDefaultArchitecture(), mangledName, outType, demangledName, true))
+    if (!DemangleMS(view->GetDefaultArchitecture(), mangledName, outType, demangledName, view))
         return DemangleNameLLVM(allowMangled, mangledName);
-    return demangledName.GetString();
+    return NormalizeRTTIClassName(demangledName.GetString());
 }
 
 
@@ -90,14 +104,7 @@ std::optional<std::string> RTTI::DemangleNameLLVM(bool allowMangled, const std::
     Ref<Type> outType = {};
     if (!DemangleLLVM(mangledName, demangledName, true))
         return allowMangled ? std::optional(mangledName) : std::nullopt;
-    auto demangledNameStr = demangledName.GetString();
-    size_t beginFind = demangledNameStr.find_first_of(' ');
-    if (beginFind != std::string::npos)
-        demangledNameStr.erase(0, beginFind + 1);
-    size_t endFind = demangledNameStr.find(" `RTTI Type Descriptor Name'");
-    if (endFind != std::string::npos)
-        demangledNameStr.erase(endFind, demangledNameStr.length());
-    return demangledNameStr;
+    return NormalizeRTTIClassName(demangledName.GetString());
 }
 
 

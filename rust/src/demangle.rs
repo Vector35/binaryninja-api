@@ -165,6 +165,46 @@ pub fn demangle_ms(
     }
 }
 
+pub fn demangle_ms_with_view(
+    arch: &CoreArchitecture,
+    mangled_name: &str,
+    view: Option<&BinaryView>,
+) -> Option<(QualifiedName, Option<Ref<Type>>)> {
+    let mangled_name = mangled_name.to_cstr();
+    let mut out_type: *mut BNType = std::ptr::null_mut();
+    let mut out_name: *mut *mut std::os::raw::c_char = std::ptr::null_mut();
+    let mut out_size: usize = 0;
+    let res = unsafe {
+        BNDemangleMSWithOptions(
+            arch.handle,
+            mangled_name.as_ptr(),
+            &mut out_type,
+            &mut out_name,
+            &mut out_size,
+            view.map(|v| v.handle).unwrap_or(std::ptr::null_mut()),
+        )
+    };
+
+    match res {
+        true => {
+            assert!(!out_name.is_null());
+            let names: Vec<_> = unsafe { ArrayGuard::<BnString>::new(out_name, out_size, ()) }
+                .iter()
+                .map(str::to_string)
+                .collect();
+            unsafe { BNFreeDemangledName(&mut out_name, out_size) };
+
+            let out_type = match out_type.is_null() {
+                true => None,
+                false => Some(unsafe { Type::ref_from_raw(out_type) }),
+            };
+
+            Some((names.into(), out_type))
+        }
+        false => None,
+    }
+}
+
 #[derive(PartialEq, Eq, Hash)]
 pub struct Demangler {
     pub(crate) handle: *mut BNDemangler,

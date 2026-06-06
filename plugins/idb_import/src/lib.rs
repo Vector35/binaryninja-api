@@ -64,7 +64,9 @@ fn plugin_init() -> Result<(), ()> {
         match file_parser.parse(&mut file_reader) {
             Ok(idb_info) => {
                 IDBMapper::new(idb_info)
+                    .with_operand_enums(load_settings.apply_operand_enums)
                     .with_operand_formats(load_settings.apply_operand_formats)
+                    .with_skip_default_operand_formats(load_settings.skip_default_operand_formats)
                     .map_to_view(&view);
             }
             Err(e) => {

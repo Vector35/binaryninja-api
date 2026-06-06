@@ -207,20 +207,37 @@ fn apply_operand_format_display(view: &BinaryView, operand_format: &OperandForma
 /// The mapper can be re-used if mapping into multiple views.
 pub struct IDBMapper {
     info: IDBInfo,
+    apply_operand_enums: bool,
     apply_operand_formats: bool,
+    skip_default_operand_formats: bool,
 }
 
 impl IDBMapper {
     pub fn new(info: IDBInfo) -> Self {
         Self {
             info,
+            apply_operand_enums: false,
             apply_operand_formats: false,
+            skip_default_operand_formats: true,
         }
+    }
+
+    /// Enable displaying operands against the enumeration IDA assigned them.
+    pub fn with_operand_enums(mut self, enabled: bool) -> Self {
+        self.apply_operand_enums = enabled;
+        self
     }
 
     /// Enable applying the IDB's per-operand number formats to the disassembly.
     pub fn with_operand_formats(mut self, enabled: bool) -> Self {
         self.apply_operand_formats = enabled;
+        self
+    }
+
+    /// Skip per-operand number formats that already match Binary Ninja's default rendering
+    /// (hexadecimal) when applying number formats.
+    pub fn with_skip_default_operand_formats(mut self, enabled: bool) -> Self {
+        self.skip_default_operand_formats = enabled;
         self
     }
 
@@ -397,28 +414,10 @@ impl IDBMapper {
 
         // Per-operand number formats and enum displays need the containing function to exist, but
         // this import runs before functions are created. Rebase and stash them; the
-        // analysis-completion handler in `lib.rs` applies them once functions are available. Gated
-        // because applying them disassembles each affected instruction.
-        if self.apply_operand_formats
-            && (!self.info.operand_formats.is_empty() || !self.info.operand_enums.is_empty())
-        {
-            tracing::info!(
-                "Deferring {} operand formats and {} enum-displayed operands until analysis completes",
-                self.info.operand_formats.len(),
-                self.info.operand_enums.len()
-            );
-            let operand_formats = self
-                .info
-                .operand_formats
-                .iter()
-                .map(|operand_format| {
-                    let mut rebased = operand_format.clone();
-                    rebased.address = rebase(operand_format.address);
-                    rebased
-                })
-                .collect();
-            let operand_enums = self
-                .info
+        // analysis-completion handler in `lib.rs` applies them once functions are available. Each
+        // kind is gated by its own setting because applying them disassembles each instruction.
+        let operand_enums: Vec<OperandEnumInfo> = if self.apply_operand_enums {
+            self.info
                 .operand_enums
                 .iter()
                 .map(|operand_enum| {
@@ -426,7 +425,46 @@ impl IDBMapper {
                     rebased.address = rebase(operand_enum.address);
                     rebased
                 })
-                .collect();
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let operand_formats: Vec<OperandFormatInfo> = if self.apply_operand_formats {
+            self.info
+                .operand_formats
+                .iter()
+                .filter_map(|operand_format| {
+                    // When skipping defaults, drop formats that match Binary Ninja's default
+                    // rendering (hexadecimal); they make up the bulk on large databases and
+                    // changing them would not alter the displayed text.
+                    let formats: Vec<_> = operand_format
+                        .formats
+                        .iter()
+                        .filter(|(_, format)| {
+                            !(self.skip_default_operand_formats
+                                && operand_format_matches_default(*format))
+                        })
+                        .cloned()
+                        .collect();
+                    if formats.is_empty() {
+                        return None;
+                    }
+                    Some(OperandFormatInfo {
+                        address: rebase(operand_format.address),
+                        formats,
+                    })
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
+
+        if !operand_enums.is_empty() || !operand_formats.is_empty() {
+            tracing::info!(
+                "Deferring {} enum-displayed operands and {} operand number formats until analysis completes",
+                operand_enums.len(),
+                operand_formats.len()
+            );
             stash_operand_display(
                 view,
                 PendingOperandDisplay {
@@ -1039,6 +1077,13 @@ fn integer_token_value(kind: &InstructionTextTokenKind) -> Option<u64> {
         InstructionTextTokenKind::CodeRelativeAddress { value, .. } => Some(*value),
         _ => None,
     }
+}
+
+/// Whether a number format already matches Binary Ninja's default integer rendering
+/// (hexadecimal). Applying such a format as an override would not change the displayed text, so it
+/// can be skipped to avoid disassembling the bulk of formatted operands on large databases.
+fn operand_format_matches_default(format: OperandFormat) -> bool {
+    matches!(format, OperandFormat::Hex)
 }
 
 /// Map an IDA operand number format to the Binary Ninja integer display type.

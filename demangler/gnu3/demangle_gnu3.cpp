@@ -30,6 +30,7 @@ using namespace std;
 
 
 static constexpr size_t MAX_DEMANGLE_NESTING_DEPTH = 1024;
+static constexpr size_t MAX_DEMANGLE_NODE_LENGTH = 8192;
 
 static BNTypeClass GetFinalizedTypeClass(const Ref<Type>& type)
 {
@@ -343,6 +344,8 @@ string DemangleGNU3Reader::ReadString(size_t count)
 {
 	if (count > Length())
 		throw DemangleException();
+	if (count > MAX_DEMANGLE_NODE_LENGTH)
+		throw DemangleException("Demangled node exceeds maximum length");
 
 	const string out = m_data.substr(m_offset, count);
 	m_offset += count;

@@ -35,7 +35,7 @@
 #define _STD_VECTOR std::vector
 #endif
 
-#include "demangled_type_node.h"
+#include "demangler/demangled_type_node.h"
 
 class DemangleException: public std::exception
 {

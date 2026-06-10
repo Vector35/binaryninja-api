@@ -36,11 +36,7 @@
 #define _STD_VECTOR std::vector
 #endif
 
-#ifdef BINARYNINJACORE_LIBRARY
-#include "demangler/gnu3/demangled_type_node.h"
-#else
-#include "../gnu3/demangled_type_node.h"
-#endif
+#include "demangler/demangled_type_node.h"
 
 class DemangleException: public std::exception
 {

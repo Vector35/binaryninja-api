@@ -5,7 +5,9 @@ project(demangle_gnu3)
 file(GLOB SOURCES CONFIGURE_DEPENDS
 	*.cpp
 	*.c
-	*.h)
+	*.h
+	../demangled_type_node.cpp
+	../demangled_type_node.h)
 
 if(DEMO)
 	add_library(${PROJECT_NAME} STATIC ${SOURCES})

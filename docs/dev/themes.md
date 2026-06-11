@@ -4,7 +4,7 @@ User themes are loaded from JSON files (with the `.bntheme` extension) found in 
 - Windows: `%APPDATA%\Binary Ninja\{themes,community-themes}`
 - Linux: `~/.binaryninja/{themes,community-themes}`
 
-To get started, create a new `.bntheme` file in the themes folder for your platform. You may want to copy one of the [example themes](https://github.com/Vector35/binaryninja-api/tree/dev/themes) to start with to avoid lots of "missing required color" errors.
+To get started, create a new `.bntheme` file in the themes folder for your platform. You may want to copy one of the [default themes](https://github.com/Vector35/binaryninja-api/tree/dev/themes) to start with to avoid lots of "missing required color" errors. The default themes use the same file format as community themes.
 
 ## Theme File Structure
 
@@ -37,7 +37,13 @@ The `styleSheet` key can be used to customize the Qt style above with a [stylesh
 }
 ```
 
+Binary Ninja applies this string globally with Qt's `QApplication::setStyleSheet`. Any valid Qt stylesheet selector may therefore affect matching widgets anywhere in the application, including widgets that are unrelated to the view you were trying to customize. Prefer narrow selectors when possible.
+
+Qt stylesheet palette references such as `palette(window)` and `palette(text)` are resolved by Qt from the active theme palette. These values are not custom theme aliases from the `colors` section below.
+
 If you need to determine what a specific control's class is in order to style it, you can use the `ui.uiDeveloperTools` setting to enable the Widget Inspector.
+
+Theme files currently cannot override Binary Ninja icons, and the theme file format currently only supports palette colors, not palette brushes such as pixmap or image-backed backgrounds.
 
 ### Colors
 The `colors` key allows you (the theme author) to define color aliases to be used throughout the rest of the theme file. For example, the following sets up two color aliases, `red` and `blue`:

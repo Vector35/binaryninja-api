@@ -106,7 +106,7 @@
     "linearDisassemblyBlockColor": "block",
     "linearDisassemblyNoteColor": ["~", "block", "green", 24],
     "linearDisassemblySeparatorColor": "black",
-    "stringColor": [0, 192, 0],
+    "stringColor": [0, 128, 0],
     "typeNameColor": "blue",
     "fieldNameColor": "cyan",
     "keywordColor": "darkBlue",

@@ -51,7 +51,7 @@ The `colors` key allows you (the theme author) to define color aliases to be use
 }
 ```
 
-Colors can be specified as hex strings or as an `[R, G, B]` array.
+Colors can be specified as hex strings, an `[R, G, B]` array, or an `[R, G, B, A]` array. Alpha values are optional and use the same 0-255 range as the red, green, and blue channels. Not specifying an alpha value will default to 255 (full opacity).
 
 #### Blending Functions
 In addition to color aliases, the theming engine provides the ability to blend colors by passing an array of blending functions and arguments in [prefix notation](https://en.wikipedia.org/wiki/Polish_notation) in place of a color. We provide two blending functions: **average** (`"+"`) and **mix** (`"~"`), as seen in the example below:
@@ -98,7 +98,7 @@ The `palette` key is the primary interface for theming Qt UI elements and enable
 }
 ```
 
-The `PlaceholderText` sub-key is currently not themeable and will be automatically set to the "disabled" `Text` value specified below.
+The optional `PlaceholderText` sub-key controls placeholder text in controls such as search boxes. It will be automatically set to the disabled `Text` value specified below if no color is specified.
 
 ### Disabled Palette
 The `disabledPalette` key matches the `palette` key above, but specifies colors to use for disabled controls instead. While not required, providing entries for the `Button`, `ButtonText`, `Text`, `WindowText`, and `ToolTipText` roles is highly recommended.

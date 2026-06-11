@@ -1,0 +1,127 @@
+{
+  "name": "Summer",
+  "style": "Fusion",
+  "styleSheet": "QMenu { background-color: palette(base); border: 1px solid palette(window); } QMenu::separator { background-color: palette(light); height: 1px; } QMenu::item:selected { background-color: palette(highlight); }",
+
+  "colors": {
+    "fg": "#424747",
+    "bg": "#ffffff",
+    "bg-alt": "#f6f7f7",
+    "bg-mid": "#f0f1f1",
+    "bg-sep": "#c5c7c7",
+
+    "sel": "#d3eaf4",
+    "sel-alt": "#e1ebd4",
+
+    "debug": "#ff0000",
+
+    "red": "#c34b1a",
+    "green": "#6a9a27",
+    "yellow": "#b47413",
+    "blue": "#1a4386",
+    "pink": "#d13f57",
+    "cyan": "#0f6b6f",
+    "grey": "#8a9392",
+    "purp": "#9ba7b9"
+  },
+
+  "palette": {
+    "Window": "bg-mid",
+    "WindowText": "fg",
+    "Base": "bg",
+    "AlternateBase": "bg",
+    "ToolTipBase": "bg",
+    "ToolTipText": "fg",
+    "Text": "fg",
+    "Button": "bg",
+    "ButtonText": "fg",
+    "BrightText": "fg",
+    "Link": "blue",
+    "Highlight": "sel",
+    "HighlightedText": "fg",
+    "Light": "bg-mid"
+  },
+
+  "disabledPalette": {
+    "Text": "grey",
+    "ButtonText": "grey",
+    "Button": "bg-mid"
+  },
+
+  "theme-colors": {
+    "modifiedColor": "yellow",
+    "insertedColor": "cyan",
+    "notPresentColor": "grey",
+    "selectionColor": "sel",
+    "outlineColor": "sel",
+
+    "addressColor": "green",
+    "instructionColor": "green",
+    "registerColor": "fg",
+    "numberColor": "green",
+    "codeSymbolColor": "blue",
+    "dataSymbolColor": "pink",
+    "stackVariableColor": "yellow",
+    "localVariableColor": "fg",
+    "importColor": "blue",
+    "exportColor": "pink",
+    "stringColor": "red",
+    "typeNameColor": "green",
+    "fieldNameColor": "pink",
+    "keywordColor": "green",
+    "uncertainColor": "purp",
+    "annotationColor": "purp",
+    "opcodeColor": "grey",
+
+    "graphBackgroundDarkColor": "bg-mid",
+    "graphBackgroundLightColor": "bg-mid",
+    "graphNodeDarkColor": "bg",
+    "graphNodeLightColor": "bg",
+    "graphNodeOutlineColor": "bg-sep",
+    "graphNodeShadowColor": "bg-mid",
+
+    "trueBranchColor": "green",
+    "falseBranchColor": "red",
+    "unconditionalBranchColor": "blue",
+
+    "altTrueBranchColor": "blue",
+    "altFalseBranchColor": "pink",
+    "altUnconditionalBranchColor": "grey",
+
+    "backgroundHighlightDarkColor": "bg",
+    "backgroundHighlightLightColor": "bg",
+    "boldBackgroundHighlightDarkColor": "sel",
+    "boldBackgroundHighlightLightColor": "sel",
+    "alphanumericHighlightColor": "green",
+    "printableHighlightColor": "cyan",
+    "instructionHighlightColor": "sel",
+    "relatedInstructionHighlightColor": "sel-alt",
+    "tokenHighlightColor": "sel",
+
+    "linearDisassemblyFunctionHeaderColor": "bg-alt",
+    "linearDisassemblyBlockColor": "bg",
+    "linearDisassemblyNoteColor": "bg",
+    "linearDisassemblySeparatorColor": "bg-sep",
+
+    "scriptConsoleOutputColor": "fg",
+    "scriptConsoleErrorColor": "red",
+    "scriptConsoleWarningColor": "yellow",
+    "scriptConsoleEchoColor": "grey",
+
+    "sidebarBackgroundColor": "bg-mid",
+    "sidebarActiveIconColor": "green",
+    "sidebarInactiveIconColor": "bg-sep",
+    "sidebarHeaderBackgroundColor": "bg-mid",
+    "sidebarHeaderTextColor": "green",
+
+    "blueStandardHighlightColor": ["~", "bg", "blue", 64],
+    "greenStandardHighlightColor": ["~", "bg", "green", 64],
+    "cyanStandardHighlightColor": ["~", "bg", "cyan", 64],
+    "redStandardHighlightColor": ["~", "bg", "red", 64],
+    "magentaStandardHighlightColor": ["~", "bg", "pink", 64],
+    "yellowStandardHighlightColor": ["~", "bg", "yellow", 64],
+    "orangeStandardHighlightColor": ["~", "bg", "red", 64],
+    "whiteStandardHighlightColor": ["~", "bg", "bg", 64],
+    "blackStandardHighlightColor": ["~", "bg", "fg", 64]
+  }
+}

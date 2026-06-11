@@ -1,0 +1,118 @@
+{
+  "name": "Reflection",
+  "style": "Fusion",
+  "styleSheet": "QMenu { background-color: #27272A; border: 1px solid #52525B; } QMenu::separator { background-color: #3F3F46; height: 1px; } QMenu::item:selected { background-color: #4D6B95; } QMenu::item:disabled { color: #71717A; }",
+
+  "colors": {
+    "dark": [39, 39, 42],
+    "semi-dark": [63, 63, 70],
+    "semi-light": [113, 113, 122],
+    "dodrant-light": [161, 161, 170],
+    "light": [228, 228, 231],
+    "white": [255, 255, 255],
+
+    "highlight": [78, 88, 115],
+    "highlight-bright": [77, 107, 149],
+
+    "red": [252, 165, 165],
+    "pink": [240, 171, 252],
+    "green": [134, 239, 172],
+    "orange": [253, 186, 116],
+    "blue": [125, 211, 252],
+    "indigo": [165, 180, 252],
+    "yellow": [253, 230, 138]
+  },
+
+  "palette": {
+    "Window": "semi-dark",
+    "WindowText": "light",
+    "Base": "dark",
+    "AlternateBase": "dark",
+    "ToolTipBase": "semi-dark",
+    "ToolTipText": "light",
+    "Text": "light",
+    "Button": "semi-dark",
+    "ButtonText": "light",
+    "BrightText": "yellow",
+    "Link": "blue",
+    "Highlight": "highlight-bright",
+    "HighlightedText": "white",
+    "Light": "semi-light"
+  },
+
+  "disabledPalette": {
+    "Button": ["~", "dark", "semi-dark", 191],
+    "ButtonText": "semi-light",
+    "Text": "dodrant-light",
+    "WindowText": "dodrant-light"
+  },
+
+  "theme-colors": {
+    "modifiedColor": "indigo",
+    "insertedColor": "orange",
+    "notPresentColor": "semi-light",
+    "selectionColor": "highlight",
+    "outlineColor": "light",
+
+    "addressColor": "green",
+    "instructionColor": "pink",
+    "registerColor": "light",
+    "numberColor": "green",
+    "codeSymbolColor": "yellow",
+    "dataSymbolColor": "red",
+    "stackVariableColor": "blue",
+    "localVariableColor": "light",
+    "importColor": "orange",
+    "exportColor": "pink",
+    "stringColor": "indigo",
+    "typeNameColor": "pink",
+    "fieldNameColor": "light",
+    "keywordColor": "pink",
+    "uncertainColor": "dodrant-light",
+    "annotationColor": "dodrant-light",
+    "opcodeColor": "dodrant-light",
+
+    "graphBackgroundDarkColor": "dark",
+    "graphBackgroundLightColor": "dark",
+    "graphNodeDarkColor": "semi-dark",
+    "graphNodeLightColor": "semi-dark",
+    "graphNodeOutlineColor": "semi-light",
+
+    "trueBranchColor": "green",
+    "falseBranchColor": "red",
+    "unconditionalBranchColor": "blue",
+
+    "altTrueBranchColor": "blue",
+    "altFalseBranchColor": "orange",
+    "altUnconditionalBranchColor": "semi-light",
+
+    "backgroundHighlightDarkColor": "dark",
+    "backgroundHighlightLightColor": ["~", "dark", "semi-dark", 127],
+    "boldBackgroundHighlightDarkColor": "semi-light",
+    "boldBackgroundHighlightLightColor": "semi-light",
+    "alphanumericHighlightColor": "pink",
+    "printableHighlightColor": "indigo",
+    "instructionHighlightColor": "highlight",
+    "tokenHighlightColor": "highlight-bright",
+
+    "linearDisassemblyFunctionHeaderColor": "semi-dark",
+    "linearDisassemblyBlockColor": "dark",
+    "linearDisassemblyNoteColor": "semi-dark",
+    "linearDisassemblySeparatorColor": "semi-light",
+
+    "scriptConsoleOutputColor": "green",
+    "scriptConsoleWarningColor": "yellow",
+    "scriptConsoleErrorColor": "red",
+    "scriptConsoleEchoColor": "light",
+
+    "blueStandardHighlightColor": "indigo",
+    "greenStandardHighlightColor": "green",
+    "cyanStandardHighlightColor": "blue",
+    "redStandardHighlightColor": "red",
+    "magentaStandardHighlightColor": "pink",
+    "yellowStandardHighlightColor": "yellow",
+    "orangeStandardHighlightColor": "orange",
+    "whiteStandardHighlightColor": "light",
+    "blackStandardHighlightColor": "dark"
+  }
+}

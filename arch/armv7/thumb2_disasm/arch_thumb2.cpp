@@ -20,6 +20,55 @@ using namespace std;
 #define snprintf _snprintf
 #endif
 
+static bool IsConditionalBranch(const decomp_result& decomp)
+{
+	return (decomp.mnem == ARMV7_B) && (decomp.format->operationFlags & INSTR_FORMAT_FLAG_CONDITIONAL)
+		&& (decomp.fields[FIELD_cond] != COND_AL);
+}
+
+static bool IsSameOrInvertedCondition(uint32_t lhs, uint32_t rhs)
+{
+	return (lhs == rhs) || ((lhs < COND_AL) && (rhs < COND_AL) && ((lhs ^ 1) == rhs));
+}
+
+static bool ThumbITInstructionWritesAPSR(const decomp_result& decomp)
+{
+	switch (decomp.mnem)
+	{
+	case ARMV7_CMN:
+	case ARMV7_CMP:
+	case ARMV7_TEQ:
+	case ARMV7_TST:
+		return true;
+	default:
+		return false;
+	}
+}
+
+static uint32_t GetConditionalBranchTarget(const decomp_result& decomp)
+{
+	return decomp.pc + decomp.fields[decomp.format->operands[0].field0];
+}
+
+static void EmitDirectThumbJump(Architecture* arch, LowLevelILFunction& il, uint32_t target)
+{
+	BNLowLevelILLabel* label = il.GetLabelForAddress(arch, target);
+	if (label)
+		il.AddInstruction(il.Goto(*label));
+	else
+		il.AddInstruction(il.Jump(il.ConstPointer(4, target)));
+}
+
+struct ThumbITSlot
+{
+	uint32_t addr = 0;
+	decomp_result decomp = {};
+	bool thenSlot = false;
+	bool lift = false;
+	bool directBranch = false;
+	uint32_t branchTarget = 0;
+};
+
 static Ref<Enumeration> get_msr_op_enum()
 {
 	EnumerationBuilder builder;
@@ -167,7 +216,9 @@ public:
 
 	virtual size_t GetMaxInstructionLength() const override
 	{
-		return 18; // IT blocks can have up to four following associated instructions
+		// IT blocks can have up to four following associated instructions, and
+		// may be coalesced with a following conditional branch.
+		return 22;
 	}
 
 	virtual size_t GetInstructionAlignment() const override
@@ -232,6 +283,8 @@ public:
 			bool falseBranched = false;
 			bool trueReturned = false;
 			bool falseReturned = false;
+			bool trueWroteFlags = false;
+			bool falseWroteFlags = false;
 
 			uint64_t trueBranchTargetAddr = 0;
 			uint64_t falseBranchTargetAddr = 0;
@@ -240,56 +293,96 @@ public:
 			{
 				bool isTrue = (i == 0) || (((mask >> (4 - i)) & 1) == (cond & 1));
 
-				InstructionInfo innerResult;
-				if (!GetInstructionInfo(data + offset, addr + offset, maxLen - offset, innerResult))
+				if (offset >= maxLen || (maxLen - offset) < 2)
 					break;
-				if ((offset + innerResult.length) > maxLen)
+
+				decomp_result innerDecomp;
+				size_t remainingLen = maxLen - offset;
+				bool decoded = populateDecomposeRequest(&request, data + offset, remainingLen, addr + offset,
+					IFTHEN_YES, ((i + 1) >= instrCount) ? IFTHENLAST_YES : IFTHENLAST_NO)
+					&& (thumb_decompose(&request, &innerDecomp) == STATUS_OK)
+					&& !(innerDecomp.status & STATUS_UNDEFINED) && innerDecomp.format;
+				if (!decoded)
+					break;
+				size_t innerLen = innerDecomp.instrSize / 8;
+				if ((innerLen == 0) || (innerLen > remainingLen))
 					break;
 
 				bool& terminated = isTrue ? trueTerminated : falseTerminated;
 				bool& branched = isTrue ? trueBranched : falseBranched;
 				bool& returned = isTrue ? trueReturned : falseReturned;
+				bool& wroteFlags = isTrue ? trueWroteFlags : falseWroteFlags;
 				uint64_t& branchTarget = isTrue ? trueBranchTargetAddr : falseBranchTargetAddr;
 
 				// Only process if the conditional branch we're following isn't terminated
 				// Otherwise, just track if the arch is switching and the offset
 				if (!terminated)
 				{
-					for (size_t j = 0; j < innerResult.branchCount; j++)
+					wroteFlags |= ThumbITInstructionWritesAPSR(innerDecomp);
+
+					InstructionInfo innerResult;
+					if (GetInstructionInfo(data + offset, addr + offset, remainingLen, innerResult))
 					{
-						switch (innerResult.branchType[j])
+						for (size_t j = 0; j < innerResult.branchCount; j++)
 						{
-						case UnconditionalBranch:
-						case TrueBranch:
-						case FalseBranch:
-							branched = true;
-							terminated = true;
-							branchTarget = innerResult.branchTarget[j];
-							break;
-						case FunctionReturn:
-							returned = true;
-							terminated = true;
-							break;
-						case CallDestination:
-							result.AddBranch(CallDestination, innerResult.branchTarget[j],
-								innerResult.branchArch[j] ? m_armArch : this);
-							break;
-						case UnresolvedBranch:
-						case IndirectBranch:
-						case ExceptionBranch:
-							// We don't know the branch target so just set terminated
-							terminated = true;
-							break;
-						default:
-							break;
+							switch (innerResult.branchType[j])
+							{
+							case UnconditionalBranch:
+							case TrueBranch:
+							case FalseBranch:
+								branched = true;
+								terminated = true;
+								branchTarget = innerResult.branchTarget[j];
+								break;
+							case FunctionReturn:
+								returned = true;
+								terminated = true;
+								break;
+							case CallDestination:
+								result.AddBranch(CallDestination, innerResult.branchTarget[j],
+									innerResult.branchArch[j] ? m_armArch : this);
+								wroteFlags = true;
+								break;
+							case UnresolvedBranch:
+							case IndirectBranch:
+							case ExceptionBranch:
+								// We don't know the branch target so just set terminated
+								terminated = true;
+								break;
+							default:
+								break;
+							}
 						}
+
+						if (innerResult.archTransitionByTargetAddr)
+							result.archTransitionByTargetAddr = true;
 					}
 				}
 
-				if (innerResult.archTransitionByTargetAddr)
-					result.archTransitionByTargetAddr = true;
+				offset += innerLen;
+			}
 
-				offset += innerResult.length;
+			decomp_result branchDecomp;
+			if ((offset < maxLen) && ((maxLen - offset) >= 2)
+				&& populateDecomposeRequest(&request, data + offset, maxLen - offset, addr + offset, IFTHEN_NO, IFTHENLAST_NO)
+				&& (thumb_decompose(&request, &branchDecomp) == STATUS_OK)
+				&& ((offset + (branchDecomp.instrSize / 8)) <= maxLen)
+				&& !(branchDecomp.status & STATUS_UNDEFINED) && branchDecomp.format && IsConditionalBranch(branchDecomp)
+				&& IsSameOrInvertedCondition(branchDecomp.fields[FIELD_cond], cond))
+			{
+				bool branchOnTrue = branchDecomp.fields[FIELD_cond] == cond;
+				bool& terminated = branchOnTrue ? trueTerminated : falseTerminated;
+				bool& branched = branchOnTrue ? trueBranched : falseBranched;
+				bool& wroteFlags = branchOnTrue ? trueWroteFlags : falseWroteFlags;
+				uint64_t& branchTarget = branchOnTrue ? trueBranchTargetAddr : falseBranchTargetAddr;
+
+				if (!terminated && !wroteFlags)
+				{
+					branched = true;
+					terminated = true;
+					branchTarget = GetConditionalBranchTarget(branchDecomp);
+					offset += branchDecomp.instrSize / 8;
+				}
 			}
 
 			result.length = offset;
@@ -2787,50 +2880,103 @@ public:
 			uint32_t mask = decomp.fields[FIELD_mask];
 			uint32_t cond = decomp.fields[FIELD_firstcond];
 
-			// Calculate number of instructions
 			size_t instrCount;
-			if (decomp.fields[FIELD_mask] & 1)
+			if (mask & 1)
 				instrCount = 4;
-			else if (decomp.fields[FIELD_mask] & 2)
+			else if (mask & 2)
 				instrCount = 3;
-			else if (decomp.fields[FIELD_mask] & 4)
+			else if (mask & 4)
 				instrCount = 2;
 			else
 				instrCount = 1;
 
-			// decompose all instructions in the if-then block
-			vector<uint32_t> addrsTrue, addrsFalse;
-			vector<decomp_result> decompsTrue, decompsFalse;
+			// Decompose all instructions in the IT block and keep their original
+			// mask slot. A path may skip later slots once it has branched/returned.
+			vector<ThumbITSlot> slots;
+			bool pathTerminated[2] = {false, false};
+			bool pathHasBody[2] = {false, false};
+			bool pathWroteFlags[2] = {false, false};
 
 			for (size_t i = 0; i < instrCount; i++)
 			{
 				if (offset >= len || (len - offset) < 2)
 					return false;
 
-				bool isTrue = (i == 0) || (((mask >> (4 - i)) & 1) == (cond & 1));
+				bool thenSlot = (i == 0) || (((mask >> (4 - i)) & 1) == (cond & 1));
+				size_t stateIdx = thenSlot ? 0 : 1;
 				size_t remainingLen = len - offset;
 
-				if (!populateDecomposeRequest(&request, data+offset, remainingLen, addr+offset,
-					IFTHEN_YES, ((i + 1) >= instrCount) ? IFTHENLAST_YES : IFTHENLAST_NO))
-					return false;
-
-				if (thumb_decompose(&request, &decomp) != STATUS_OK)
+				bool decoded = populateDecomposeRequest(&request, data + offset, remainingLen, addr + offset,
+					IFTHEN_YES, ((i + 1) >= instrCount) ? IFTHENLAST_YES : IFTHENLAST_NO)
+					&& (thumb_decompose(&request, &decomp) == STATUS_OK)
+					&& !(decomp.status & STATUS_UNDEFINED) && decomp.format;
+				if (!decoded)
 					return false;
 				if ((decomp.instrSize / 8) > remainingLen)
 					return false;
-				if ((decomp.status & STATUS_UNDEFINED) || (!decomp.format))
-					return false;
 
-				if (isTrue) {
-					addrsTrue.push_back(request.addr);
-					decompsTrue.push_back(decomp);
-				}
-				else {
-					addrsFalse.push_back(request.addr);
-					decompsFalse.push_back(decomp);
+				ThumbITSlot slot;
+				slot.addr = request.addr;
+				slot.decomp = decomp;
+				slot.thenSlot = thenSlot;
+				slot.lift = !pathTerminated[stateIdx];
+				slots.push_back(slot);
+				pathHasBody[stateIdx] |= slot.lift;
+
+				if (slot.lift)
+				{
+					pathWroteFlags[stateIdx] |= ThumbITInstructionWritesAPSR(decomp);
+
+					InstructionInfo innerResult;
+					if (GetInstructionInfo(data + offset, addr + offset, remainingLen, innerResult))
+					{
+						for (size_t j = 0; j < innerResult.branchCount; j++)
+						{
+							switch (innerResult.branchType[j])
+							{
+							case UnconditionalBranch:
+							case TrueBranch:
+							case FalseBranch:
+							case FunctionReturn:
+							case UnresolvedBranch:
+							case IndirectBranch:
+							case ExceptionBranch:
+								pathTerminated[stateIdx] = true;
+								break;
+							default:
+								break;
+							}
+						}
+					}
 				}
 
 				offset += decomp.instrSize / 8;
+			}
+
+			decomp_result branchDecomp;
+
+			if ((offset < len) && ((len - offset) >= 2)
+				&& populateDecomposeRequest(&request, data + offset, len - offset, addr + offset, IFTHEN_NO, IFTHENLAST_NO)
+				&& (thumb_decompose(&request, &branchDecomp) == STATUS_OK)
+				&& ((offset + (branchDecomp.instrSize / 8)) <= len)
+				&& !(branchDecomp.status & STATUS_UNDEFINED) && branchDecomp.format && IsConditionalBranch(branchDecomp)
+				&& IsSameOrInvertedCondition(branchDecomp.fields[FIELD_cond], cond))
+			{
+				bool branchOnTrue = branchDecomp.fields[FIELD_cond] == cond;
+				size_t stateIdx = branchOnTrue ? 0 : 1;
+				if (!pathTerminated[stateIdx] && !pathWroteFlags[stateIdx])
+				{
+					ThumbITSlot slot;
+					slot.addr = request.addr;
+					slot.thenSlot = branchOnTrue;
+					slot.lift = true;
+					slot.directBranch = true;
+					slot.branchTarget = GetConditionalBranchTarget(branchDecomp);
+					slots.push_back(slot);
+					pathHasBody[stateIdx] = true;
+					pathTerminated[stateIdx] = true;
+					offset += branchDecomp.instrSize / 8;
+				}
 			}
 
 			// generate IL
@@ -2838,31 +2984,33 @@ public:
 
 			il.AddInstruction(il.If(GetCondition(il, cond), labelTrue, labelFalse));
 
-			// generate IL for "true" if-else members
-			il.MarkLabel(labelTrue);
-
-			for (size_t i = 0; i < decompsTrue.size(); i++)
+			auto liftPath = [&](bool thenPath, LowLevelILLabel& label)
 			{
-				il.SetCurrentAddress(this, addrsTrue[i]);
-				GetLowLevelILForThumbInstruction(this, il, &(decompsTrue[i]), true);
-			}
+				size_t stateIdx = thenPath ? 0 : 1;
 
-			if (decompsFalse.empty()) {
-				il.MarkLabel(labelFalse);
-			}
-			else {
-				il.AddInstruction(il.Goto(labelDone));
-				il.MarkLabel(labelFalse);
+				il.MarkLabel(label);
 
-				// generate IL for "false" if-else members
-				for (int i = 0; i < decompsFalse.size(); i++)
+				for (auto& slot : slots)
 				{
-					il.SetCurrentAddress(this, addrsFalse[i]);
-					GetLowLevelILForThumbInstruction(this, il, &(decompsFalse[i]), true);
+					if (!slot.lift || (slot.thenSlot != thenPath))
+						continue;
+
+					il.SetCurrentAddress(this, slot.addr);
+					if (slot.directBranch)
+						EmitDirectThumbJump(this, il, slot.branchTarget);
+					else
+						GetLowLevelILForThumbInstruction(this, il, &slot.decomp, true);
 				}
 
+				if (thenPath && pathHasBody[1] && !pathTerminated[stateIdx])
+					il.AddInstruction(il.Goto(labelDone));
+			};
+
+			liftPath(true, labelTrue);
+			liftPath(false, labelFalse);
+
+			if (pathHasBody[1])
 				il.MarkLabel(labelDone);
-			}
 
 			len = offset;
 			return true;

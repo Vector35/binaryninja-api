@@ -766,6 +766,8 @@ test_cases = \
 info_test_cases = [
     # ldm.w r0!, {r1, pc}
     ('T', b'\xb0\xe8\x02\x80', 4, [('UnresolvedBranch', 0)], True),
+    # it eq; bleq 0x8; beq 0xc -- the call may clobber flags, so do not coalesce the following branch
+    ('T', b'\x08\xbf\x00\xf0\x04\xf8\x06\xd0', 6, [('CallDestination', 14)], False),
 ]
 
 import re

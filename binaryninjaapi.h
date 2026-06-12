@@ -38,6 +38,7 @@
 #include <cstddef>
 #include <string>
 #include <vector>
+#include <array>
 #include <map>
 #include <unordered_map>
 #include <unordered_set>
@@ -2947,6 +2948,16 @@ namespace BinaryNinja {
 	std::string GetUniqueIdentifierString();
 
 	std::map<std::string, uint64_t> GetMemoryUsageInfo();
+
+	// Per-tag bit-length histograms from the StatCollector sampling facility.
+	// buckets[k] counts samples whose value has bit_width == k (k in 0..64); total is
+	// the sum of sampled values. Empty unless a StatCollector was instantiated somewhere.
+	struct StatHistogram
+	{
+		uint64_t total = 0;
+		std::array<uint64_t, 65> buckets {};
+	};
+	std::map<std::string, StatHistogram> GetStatHistograms();
 
 	void SetThreadName(const std::string& name);
 

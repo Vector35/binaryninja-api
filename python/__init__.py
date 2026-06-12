@@ -411,6 +411,30 @@ def get_memory_usage_info() -> Mapping[str, int]:
 	return result
 
 
+def get_stat_histograms() -> Mapping[str, dict]:
+	"""
+	Get per-tag bit-length histograms gathered by StatCollector instrumentation.
+
+	Each entry maps a tag name to ``{"total": int, "buckets": [int; 65]}`` where
+	``buckets[k]`` counts samples whose value has ``bit_width == k`` (k in 0..64) and
+	``total`` is the sum of the sampled values. Empty unless a ``StatCollector`` was
+	instantiated somewhere in the core during analysis.
+
+	:return: Dictionary of {tag name: {"total": int, "buckets": list[int]}}
+	"""
+	count = ctypes.c_ulonglong()
+	info = core.BNGetStatHistograms(count)
+	assert info is not None, "core.BNGetStatHistograms returned None"
+	result = {}
+	for i in range(0, count.value):
+		result[info[i].name] = {
+			"total": info[i].total,
+			"buckets": list(info[i].buckets),
+		}
+	core.BNFreeStatHistograms(info, count.value)
+	return result
+
+
 def load(*args, **kwargs) -> BinaryView:
 	"""
 	Opens a BinaryView object.

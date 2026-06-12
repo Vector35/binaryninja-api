@@ -416,6 +416,25 @@ map<string, uint64_t> BinaryNinja::GetMemoryUsageInfo()
 }
 
 
+map<string, BinaryNinja::StatHistogram> BinaryNinja::GetStatHistograms()
+{
+	size_t count;
+	BNStatHistogram* info = BNGetStatHistograms(&count);
+
+	map<string, StatHistogram> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		StatHistogram h;
+		h.total = info[i].total;
+		for (size_t k = 0; k < 65; k++)
+			h.buckets[k] = info[i].buckets[k];
+		result[info[i].name] = h;
+	}
+	BNFreeStatHistograms(info, count);
+	return result;
+}
+
+
 bool BinaryNinja::DefaultProgressFunction(size_t, size_t)
 {
 	return true;

@@ -175,6 +175,9 @@ class BINARYNINJAUIAPI ArrayStringSettingEditor : public QWidget
 	QSet<QString> m_defaultValueSet;
 	bool m_readOnly = false;
 	bool m_reorderable = false;
+	// When the schema supplies an enum, existing rows are read-only and added
+	// values must be members of the enum (enforced in onAddClicked).
+	bool m_restrictToEnum = false;
 	QVBoxLayout* m_rowLayout = nullptr;
 	QWidget* m_addRowWidget = nullptr;
 	QLineEdit* m_addLineEdit = nullptr;
@@ -185,6 +188,11 @@ class BINARYNINJAUIAPI ArrayStringSettingEditor : public QWidget
 	int m_dropIndicatorY = -1;
 	QPoint m_dragStartPos;
 	int m_dragSourceIndex = -1;
+	// Bumped whenever the row set is rebuilt (setValues/clearRows). A drag
+	// captures the current value and dropEvent aborts if it changed during the
+	// nested drag event loop (e.g. an external settings repopulate).
+	unsigned m_revision = 0;
+	int m_dragRevision = -1;
 
 	QLineEdit* addRowInputField() const;
 	void clearRows();
@@ -192,7 +200,7 @@ class BINARYNINJAUIAPI ArrayStringSettingEditor : public QWidget
 	void appendRow(const QString& text);
 	void updateTabOrder();
 	int rowIndexAtY(int y) const;
-	QToolButton* findRowGrip(QWidget* row) const;
+	void removeRowWidget(QWidget* row, bool restoreFocus);
 
   private Q_SLOTS:
 	void onAddClicked();

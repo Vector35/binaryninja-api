@@ -122,6 +122,7 @@ bool KernelCacheController::ApplyImage(BinaryView& view, const CacheImage& image
 	if (!view.IsValidOffset(image.headerVirtualAddress))
 	{
 		loadedRegion = true;
+		auto memoryMap = view.GetMemoryMap();
 		for (const auto& segment : image.header->segments)
 		{
 			if (segment.vmsize == 0)
@@ -129,6 +130,25 @@ bool KernelCacheController::ApplyImage(BinaryView& view, const CacheImage& image
 
 			auto flags = SegmentFlagsForSegment(segment);
 			view.AddAutoSegment(segment.vmaddr, segment.vmsize, segment.fileoff, segment.filesize, flags);
+
+			if (memoryMap)
+			{
+				std::string segmentName(segment.segname, std::find(segment.segname, std::end(segment.segname), '\0'));
+				std::string displayName = image.GetName() + "::" + segmentName;
+
+				auto region = memoryMap->GetActiveMemoryRegionAt(segment.vmaddr);
+				if (!region.empty())
+					memoryMap->SetMemoryRegionDisplayName(region, displayName);
+
+				if (segment.vmsize != segment.filesize)
+				{
+					auto fillStart = segment.vmaddr + segment.filesize;
+					auto fillRegion = memoryMap->GetActiveMemoryRegionAt(fillStart);
+
+					if (!fillRegion.empty() && fillRegion != region)
+						memoryMap->SetMemoryRegionDisplayName(fillRegion, displayName + " (zero fill)");
+				}
+			}
 
 			const auto& relocations = m_cache.GetRelocations();
 

@@ -1219,7 +1219,7 @@ class PythonScriptingProvider(ScriptingProvider):
 
 		if sys.platform == "darwin":
 			if using_bundled_python:
-				python_bin = Path(binaryninja.get_install_directory()).parent / f"Frameworks/Python.framework/Versions/Current/bin/python3"
+				python_bin = Path(binaryninja.get_install_directory()).parent / "Frameworks" / "Python.framework" / "Versions" / "Current" / "bin" / "python3"
 			else:
 				python_bin = str(Path(python_lib).parent / f"bin/python{python_lib_version}")
 		elif sys.platform == "linux":
@@ -1241,27 +1241,25 @@ class PythonScriptingProvider(ScriptingProvider):
 				return os.path.realpath(dlinfo.dli_fname.decode())
 
 			if using_bundled_python:
-				python_lib = _linked_libpython()
-				if python_lib is None:
-					return (
-					    None,
-					    "Failed: No python specified. Specify a full python installation in your 'Python Interpreter' and try again"
-					)
+				python_home = Path(binaryninja.get_install_directory()) / "plugins" / "python"
+				python_lib = python_home / "lib" / f"libpython{python_lib_version}.so.1.0"
+				python_bin = python_home / "bin" / f"python{python_lib_version}"
 
-			if python_lib == os.path.realpath(sys.executable):
-				python_bin = python_lib
-			else:
-				python_path = Path(python_lib)
-				for path in python_path.parents:
-					if path.name in ["lib", "lib64"]:
-						break
+			if python_bin is None or python_bin == "":
+				if os.path.realpath(str(python_lib)) == os.path.realpath(sys.executable):
+					python_bin = python_lib
 				else:
-					return (None, f"Failed to find python binary from {python_lib}")
+					python_path = Path(python_lib)
+					for path in python_path.parents:
+						if path.name in ["lib", "lib64"]:
+							break
+					else:
+						return (None, f"Failed to find python binary from {python_lib}")
 
-				python_bin = path.parent / f"bin/python{python_lib_version}"
+					python_bin = path.parent / f"bin/python{python_lib_version}"
 		else:
 			if using_bundled_python:
-				python_bin = Path(binaryninja.get_install_directory()) / "plugins\\python\\python.exe"
+				python_bin = Path(binaryninja.get_install_directory()) / "plugins" / "python" / "python.exe"
 			else:
 				python_bin = Path(python_lib).parent / "python.exe"
 		python_bin_version = self._bin_version(python_bin, python_env=python_env)
@@ -1271,13 +1269,25 @@ class PythonScriptingProvider(ScriptingProvider):
 		return (python_bin, "Success")
 
 	def _get_python_environment(self, using_bundled_python: bool=False) -> Optional[Dict]:
-		if using_bundled_python and sys.platform == "darwin":
-			env = os.environ.copy()
-			env.pop("PYTHONPATH", None)
-			env.pop("PYTHONSTARTUP", None)
-			env["PYTHONHOME"] = str(Path(binaryninja.get_install_directory()).parent / "Resources/bundled-python3")
-			return env
-		return None
+		if not using_bundled_python:
+			return None
+
+		env = os.environ.copy()
+		env.pop("PYTHONPATH", None)
+		env.pop("PYTHONSTARTUP", None)
+
+		if sys.platform == "darwin":
+			env["PYTHONHOME"] = str(Path(binaryninja.get_install_directory()).parent / "Resources" / "bundled-python3")
+		elif sys.platform == "linux":
+			python_home = Path(binaryninja.get_install_directory()) / "plugins" / "python"
+			env["PYTHONHOME"] = str(python_home / "bundled-python3")
+			env.pop("LD_LIBRARY_PATH", None)
+		elif sys.platform == "win32":
+			python_home = Path(binaryninja.get_install_directory()) / "plugins" / "python"
+			env["PYTHONHOME"] = str(python_home)
+			env["PATH"] = str(python_home) + os.pathsep + env["PATH"] if env.get("PATH") else str(python_home)
+
+		return env
 
 	def _install_modules(self, ctx, _modules: bytes) -> bool:
 		# This callback should not be called directly

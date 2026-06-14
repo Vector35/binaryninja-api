@@ -1700,13 +1700,21 @@ bool MachoView::Init()
 	Ref<Type> filesetEntryCommandType = Type::StructureType(filesetEntryCommandStruct);
 	m_typeNames.filesetEntryCommandQualName = DefineType(filesetEntryCommandTypeId, filesetEntryCommandName, filesetEntryCommandType);
 
-	if (!InitializeHeader(m_header, true, preferredImageBase, preferredImageBaseDesc, platformSetByUser))
-		return false;
-
-	for (auto& it : m_subHeaders)
+	try
 	{
-		if (!InitializeHeader(it.second, false, it.first, "", platformSetByUser))
+		if (!InitializeHeader(m_header, true, preferredImageBase, preferredImageBaseDesc, platformSetByUser))
 			return false;
+
+		for (auto& it : m_subHeaders)
+		{
+			if (!InitializeHeader(it.second, false, it.first, "", platformSetByUser))
+				return false;
+		}
+	}
+	catch (std::exception& e)
+	{
+		m_logger->LogErrorForExceptionF(e, "MachoView failed to InitializeHeader! {:?}", e.what());
+		return false;
 	}
 
 	std::chrono::steady_clock::time_point endTime = std::chrono::steady_clock::now();

@@ -2734,7 +2734,7 @@ void ElfView::ApplyTypesToStringTable(const Elf64SectionHeader& section, const i
 
 string ElfView::ReadStringTable(BinaryReader& reader, const Elf64SectionHeader& section, uint64_t offset)
 {
-	if (offset == 0 || offset > section.size)
+	if (offset == 0 || offset > section.size || section.size > 0x1000000)
 		return "";
 
 	auto itr = m_stringTableCache.find(section.offset);

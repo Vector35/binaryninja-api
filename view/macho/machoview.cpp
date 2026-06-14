@@ -2862,9 +2862,9 @@ bool MachoView::AddExportTerminalSymbol(
 void MachoView::ParseExportTrie(BinaryReader& reader, linkedit_data_command exportTrie)
 {
 	try {
-		uint32_t endGuard = exportTrie.datasize;
 		DataBuffer buffer = GetParentView()
 								->ReadBuffer(m_universalImageOffset + exportTrie.dataoff, exportTrie.datasize);
+		uint32_t endGuard = buffer.GetLength() - 1;
 
 		struct Node
 		{

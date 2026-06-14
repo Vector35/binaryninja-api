@@ -2754,7 +2754,7 @@ string ElfView::ReadStringTable(BinaryReader& reader, const Elf64SectionHeader& 
 	}
 
 	const std::vector<char>& tableCache = itr->second;
-	return std::string(&tableCache[offset], strlen(tableCache.data() + offset));
+	return std::string(&tableCache[offset], strnlen(tableCache.data() + offset, tableCache.size() - offset));
 }
 
 

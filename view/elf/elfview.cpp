@@ -2754,6 +2754,10 @@ string ElfView::ReadStringTable(BinaryReader& reader, const Elf64SectionHeader& 
 	}
 
 	const std::vector<char>& tableCache = itr->second;
+	if (offset > tableCache.size()) {
+		m_logger->LogError("Unable to read string from table cache offset: 0x%" PRIx64 " size: 0x%" PRIx64, section.offset, section.size);
+		return "";
+	}
 	return std::string(&tableCache[offset], strnlen(tableCache.data() + offset, tableCache.size() - offset));
 }
 

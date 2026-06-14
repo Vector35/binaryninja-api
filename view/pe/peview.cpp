@@ -783,7 +783,7 @@ bool PEView::Init()
 		else
 		{
 			uint64_t sizeOfImage = opt.sizeOfImage;
-			if (opt.sizeOfImage % resolvedSectionAlignment)
+			if (resolvedSectionAlignment && opt.sizeOfImage % resolvedSectionAlignment)
 				sizeOfImage = (opt.sizeOfImage + resolvedSectionAlignment) & ~(resolvedSectionAlignment - 1);
 			uint64_t dataLength = GetParentView()->GetEnd();
 			dataLength = std::min(std::max((uint64_t)m_sizeOfHeaders, sizeOfImage), dataLength);

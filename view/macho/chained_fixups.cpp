@@ -244,8 +244,14 @@ ImportEntry ReadChainedImport32(BinaryReader& reader, std::span<const char> symb
 {
 	dyld_chained_import import;
 	reader.Read(&import, sizeof(import));
+	std::string_view view;
+	if (symbolData.size() > import.name_offset) {
+		view = std::string_view(&symbolData[import.name_offset]);
+	} else {
+		view = std::string_view();
+	}
 	return {
-		std::string_view(&symbolData[import.name_offset]),
+		view,
 		0,
 		import.lib_ordinal > 0xF0 ? static_cast<int8_t>(import.lib_ordinal) : static_cast<int32_t>(import.lib_ordinal),
 		(bool)import.weak_import,
@@ -435,7 +441,7 @@ void ChainedFixupProcessor::ProcessChainsInSegment(const dyld_chained_starts_in_
 
 		bool done = false;
 		while (!done)
-		{ 
+		{
 			uint64_t position = reader.GetOffset();
 			auto [raw, fixupInfo] = fixupReader(reader);
 

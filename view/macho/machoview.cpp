@@ -2884,7 +2884,8 @@ void MachoView::ParseExportTrie(BinaryReader& reader, linkedit_data_command expo
 		stack.reserve(64);
 		stack.push_back({ /* cursor */ 0, /* text */ "" });
 
-		while (!stack.empty())
+		uint32_t stack_guard = 0;
+		while (!stack.empty() && stack_guard++ < 0x1000)
 		{
 			m_logger->LogTraceF("Export Trie: Processing node {:?} with cursor {:#x}", stack.back().text, stack.back().cursor);
 			Node node = std::move(stack.back());

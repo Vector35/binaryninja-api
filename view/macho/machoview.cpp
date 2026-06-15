@@ -5,6 +5,7 @@
 #include "lowlevelilinstruction.h"
 #include "rapidjsonwrapper.h"
 #include "universaltransform.h"
+#include "protectedtransform.h"
 #include "universalview.h"
 
 #include <algorithm>
@@ -4030,6 +4031,7 @@ extern "C"
 		InitFatMachoViewType();
 		InitUniversalViewType();
 		InitUniversalTransform();
+		InitProtectedTransform();
 		return true;
 	}
 }

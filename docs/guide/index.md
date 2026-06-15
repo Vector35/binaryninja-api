@@ -170,6 +170,20 @@ The following settings control Container Browser behavior:
 
 Binary Ninja's container system is extensible through the Transform API. Developers can create custom container decoders for proprietary or specialized formats. For information on implementing custom container transforms, see the [Container Transforms developer guide](../dev/containertransforms.md).
 
+### Apple Protected Mach-O Binaries
+
+Some macOS Mach-O binaries contain segments flagged `SG_PROTECTED_VERSION_1` (the legacy "DSMOS"/Apple-protect scheme), whose pages are encrypted on disk and decrypted by the kernel at runtime. Historically a handful of Apple system binaries used this (for example `Finder` and `Dock` on macOS 10.6–10.14), and it is occasionally abused by malware to hide code from static analysis.
+
+Binary Ninja can transparently decrypt these segments at load time. Because the scheme relies on a fixed, well-known unwrap key that Binary Ninja does **not** ship, the feature is off by default and only activates once you supply the key:
+
+1. Set the `loader.macho.protectionUnwrapKey` setting (a string) to the static DSMOS unwrap key.
+2. Open a Mach-O that contains a protected segment. When the key is configured and a protected segment is present, decryption runs automatically as a container transform. It also composes with fat/Universal binaries.
+
+With no key configured, protected binaries load unchanged (their protected segments stay encrypted). The key is intentionally not bundled with Binary Ninja; it is publicly documented and can be found in open-source implementations of this scheme, such as the [class-dump](https://github.com/nygard/class-dump) project, and in published write-ups of the Apple protection format.
+
+???+ Note "Note"
+    Both cipher variants are supported (the 10.6+ Blowfish variant and the legacy 10.5 AES variant). FairPlay-encrypted binaries (`LC_ENCRYPTION_INFO` with a non-zero `cryptid`) use a different, on-device scheme and are not decrypted by this feature.
+
 ## Saving Files
 
 ![save choices >](../img/save-choices.png "Save Menu Choices"){ width="400" }

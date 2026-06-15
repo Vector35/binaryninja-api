@@ -19,6 +19,9 @@ pub struct CreateArgs {
     pub include_directories: Vec<PathBuf>,
     #[clap(long)]
     pub dry_run: bool,
+
+    #[arg(last = true, allow_hyphen_values = true, num_args = 0..)]
+    compiler_flags: Vec<String>,
 }
 
 impl CreateArgs {
@@ -41,7 +44,8 @@ impl CreateArgs {
         std::fs::create_dir_all(&output_path).expect("Failed to create output directory");
 
         let processor = TypeLibProcessor::new(&self.name, &self.platform)
-            .with_include_directories(self.include_directories.clone());
+            .with_include_directories(self.include_directories.clone())
+            .with_options(self.compiler_flags.clone());
         // TODO: Need progress indicator here, when downloading files.
         let resolved_input = self.input.resolve().expect("Failed to resolve input");
 

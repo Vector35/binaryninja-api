@@ -2276,9 +2276,10 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		// Handle indirect symbols
 		if (header.dysymtab.nindirectsyms)
 		{
-			indirectSymbols.resize(header.dysymtab.nindirectsyms);
+		    auto nindirectsyms_fix = header.dysymtab.nindirectsyms % 0x1000;
+			indirectSymbols.resize(nindirectsyms_fix);
 			reader.Seek(header.dysymtab.indirectsymoff);
-			reader.Read(&indirectSymbols[0], header.dysymtab.nindirectsyms * sizeof(uint32_t));
+			reader.Read(&indirectSymbols[0], nindirectsyms_fix * sizeof(uint32_t));
 		}
 	}
 	catch (ReadException&)

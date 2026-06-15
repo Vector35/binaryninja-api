@@ -1384,8 +1384,14 @@ BinaryView::BinaryView(BNBinaryView* view)
 
 bool BinaryView::InitCallback(void* ctxt)
 {
-	CallbackRef<BinaryView> view(ctxt);
-	return view->Init();
+	try
+	{
+		CallbackRef<BinaryView> view(ctxt);
+		return view->Init();
+	} catch (std::exception& e)
+	{
+		return false;
+	}
 }
 
 

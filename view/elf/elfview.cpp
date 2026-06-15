@@ -1149,7 +1149,8 @@ bool ElfView::Init()
 	{
 		if (mipsSymValid && (gotStart != 0))
 		{
-			for (size_t i = 2; i < localMipsSyms; i++)
+		    auto localMipsSymsFixed = localMipsSyms % 0x1000;
+			for (size_t i = 2; i < localMipsSymsFixed; i++)
 			{
 				m_gotEntryLocations.emplace(gotStart + i * (m_elf32 ? 4 : 8));
 			}

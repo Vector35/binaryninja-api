@@ -1522,7 +1522,8 @@ bool PEView::Init()
 			size_t numImportEntries = 0;
 			vector<Ref<Metadata>> libraries;
 			vector<Ref<Metadata>> libraryFound;
-			while (true)
+			uint32_t guard_1 = 0;
+			while (guard_1++ < 0x100)
 			{
 				// Read in next directory entry
 				reader.Seek(RVAToFileOffset(dir.virtualAddress + (numImportEntries * 20)));
@@ -1614,7 +1615,8 @@ bool PEView::Init()
 				// We should make this second unused data a structure containing this information information
 				// and default it to collapsed...IDA Just doesn't show anything at all
 				m_logger->LogDebug("Name: %s\n", dllName.c_str());
-				while (true)
+				uint32_t guard_2 = 0;
+				while (guard_2++ < 0x1000)
 				{
 					uint64_t entry;
 					bool isOrdinal;

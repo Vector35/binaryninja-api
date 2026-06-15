@@ -124,6 +124,23 @@ impl PlatformField {
     }
 }
 
+pub struct FlagsField;
+
+impl FlagsField {
+    pub fn field() -> FormInputField {
+        FormInputField::MultilineText { 
+            prompt: "Compiler flags".to_string(), 
+            default: None, 
+            value: None, 
+        }
+    }
+
+    pub fn from_form(form: &Form) -> Option<String> {
+        let field = form.get_field_with_name("Compiler flags")?;
+        field.try_value_string()
+    }
+}
+
 pub struct CreateFromDirectory;
 
 impl CreateFromDirectory {
@@ -134,6 +151,8 @@ impl CreateFromDirectory {
         form.add_field(PlatformField::field());
         form.add_field(NameField::field());
         form.add_field(OutputDirectoryField::field());
+        form.add_field(FlagsField::field());
+        
         if !form.prompt() {
             return;
         }
@@ -141,13 +160,15 @@ impl CreateFromDirectory {
         let platform_name = PlatformField::from_form(&form).unwrap();
         let default_name = NameField::from_form(&form).unwrap();
         let output_dir = OutputDirectoryField::from_form(&form).unwrap();
+        let flags = FlagsField::from_form(&form).unwrap();
 
         let Some(default_platform) = Platform::by_name(&platform_name) else {
             tracing::error!("Invalid platform name: {}", platform_name);
             return;
         };
 
-        let processor = TypeLibProcessor::new(&default_name, &default_platform.name());
+        let processor = TypeLibProcessor::new(&default_name, &default_platform.name())
+            .with_options(split_args(flags.as_str()));
 
         let background_task = BackgroundTask::new("Processing started...", true);
         new_processing_state_background_thread(background_task.clone(), processor.state());
@@ -273,4 +294,23 @@ impl ProjectCommand for CreateFromProject {
     fn valid(&self, _project: &Project) -> bool {
         true
     }
+}
+
+fn split_args(input: &str) -> Vec<String> {
+    let mut args = Vec::new();
+    let mut cur = String::new();
+    let mut in_quote = false;
+    let mut has_token = false;
+
+    for c in input.chars() {
+        match c {
+            '"' => { in_quote = !in_quote; has_token = true; }
+            c if c.is_whitespace() && !in_quote => {
+                if has_token { args.push(std::mem::take(&mut cur)); has_token = false; }
+            }
+            c => { cur.push(c); has_token = true; }
+        }
+    }
+    if has_token { args.push(cur); }
+    args
 }

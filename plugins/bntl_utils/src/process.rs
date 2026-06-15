@@ -434,6 +434,8 @@ pub struct TypeLibProcessor {
     include_directories: Vec<PathBuf>,
     /// Whether to process existing type libraries when processing a binary file.
     process_existing_type_libraries: bool,
+    /// The compiler flags to use when processing header files.
+    options: Vec<String>,
 }
 
 impl TypeLibProcessor {
@@ -448,6 +450,7 @@ impl TypeLibProcessor {
             default_platform_name: default_platform_name.to_owned(),
             include_directories: Vec::new(),
             process_existing_type_libraries: false,
+            options: Vec::new(),
         }
     }
 
@@ -458,6 +461,11 @@ impl TypeLibProcessor {
 
     pub fn with_include_directories(mut self, include_directories: Vec<PathBuf>) -> Self {
         self.include_directories = include_directories;
+        self
+    }
+
+    pub fn with_options(mut self, options: Vec<String>) -> Self {
+        self.options = options;
         self
     }
 
@@ -988,7 +996,7 @@ impl TypeLibProcessor {
                 &file_name,
                 &platform,
                 &platform_type_container,
-                &[],
+                &self.options,
                 &include_dirs,
                 "",
             )

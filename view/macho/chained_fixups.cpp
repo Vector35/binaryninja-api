@@ -240,18 +240,21 @@ auto FixupReaderForFormat(int format) -> std::pair<uint64_t, FixupInfo>(*)(Binar
 	throw std::invalid_argument("Unknown chained pointer format: " + std::to_string(format));
 }
 
+// Returns the NUL-terminated string starting at `offset` within `symbolData`, or an
+// empty view if `offset` does not fall within `symbolData`.
+std::string_view SymbolNameAt(std::span<const char> symbolData, uint32_t offset)
+{
+	if (symbolData.size() <= offset)
+		return std::string_view();
+	return std::string_view(&symbolData[offset], strnlen(&symbolData[offset], symbolData.size() - offset));
+}
+
 ImportEntry ReadChainedImport32(BinaryReader& reader, std::span<const char> symbolData)
 {
 	dyld_chained_import import;
 	reader.Read(&import, sizeof(import));
-	std::string_view view;
-	if (symbolData.size() > import.name_offset) {
-		view = std::string_view(&symbolData[import.name_offset]);
-	} else {
-		view = std::string_view();
-	}
 	return {
-		view,
+		SymbolNameAt(symbolData, import.name_offset),
 		0,
 		import.lib_ordinal > 0xF0 ? static_cast<int8_t>(import.lib_ordinal) : static_cast<int32_t>(import.lib_ordinal),
 		(bool)import.weak_import,
@@ -263,7 +266,7 @@ ImportEntry ReadChainedImportAddend32(BinaryReader& reader, std::span<const char
 	dyld_chained_import_addend import;
 	reader.Read(&import, sizeof(import));
 	return {
-		std::string_view(&symbolData[import.name_offset]),
+		SymbolNameAt(symbolData, import.name_offset),
 		static_cast<uint32_t>(import.addend),
 		import.lib_ordinal > 0xF0 ? static_cast<int8_t>(import.lib_ordinal) : static_cast<int32_t>(import.lib_ordinal),
 		(bool)import.weak_import,
@@ -275,7 +278,7 @@ ImportEntry ReadChainedImportAddend64(BinaryReader& reader, std::span<const char
 	dyld_chained_import_addend64 import;
 	reader.Read(&import, sizeof(import));
 	return {
-		std::string_view(&symbolData[import.name_offset]),
+		SymbolNameAt(symbolData, import.name_offset),
 		import.addend,
 		import.lib_ordinal > 0xFFF0 ? static_cast<int16_t>(import.lib_ordinal) : static_cast<int32_t>(import.lib_ordinal),
 		(bool)import.weak_import,

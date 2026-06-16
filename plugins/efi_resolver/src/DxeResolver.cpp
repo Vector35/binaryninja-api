@@ -17,8 +17,15 @@ bool DxeResolver::resolveBootServices()
 			continue;
 
 		auto mlilSsa = mlil->GetSSAForm();
+		if (!mlilSsa)
+			continue;
 		size_t mlilIdx = mlil->GetInstructionStart(m_view->GetDefaultArchitecture(), ref.addr);
-		auto instr = mlilSsa->GetInstruction(mlil->GetSSAInstructionIndex(mlilIdx));
+		if (mlilIdx >= mlil->GetInstructionCount())
+			continue;
+		size_t mlilSsaIdx = mlil->GetSSAInstructionIndex(mlilIdx);
+		if (mlilSsaIdx >= mlilSsa->GetInstructionCount())
+			continue;
+		auto instr = mlilSsa->GetInstruction(mlilSsaIdx);
 
 		if (instr.operation == MLIL_CALL_SSA || instr.operation == MLIL_TAILCALL_SSA)
 		{
@@ -59,8 +66,15 @@ bool DxeResolver::resolveRuntimeServices()
 			continue;
 
 		auto mlilSsa = mlil->GetSSAForm();
+		if (!mlilSsa)
+			continue;
 		size_t mlilIdx = mlil->GetInstructionStart(m_view->GetDefaultArchitecture(), ref.addr);
-		auto instr = mlilSsa->GetInstruction(mlil->GetSSAInstructionIndex(mlilIdx));
+		if (mlilIdx >= mlil->GetInstructionCount())
+			continue;
+		size_t mlilSsaIdx = mlil->GetSSAInstructionIndex(mlilIdx);
+		if (mlilSsaIdx >= mlilSsa->GetInstructionCount())
+			continue;
+		auto instr = mlilSsa->GetInstruction(mlilSsaIdx);
 
 		if (instr.operation == MLIL_CALL_SSA || instr.operation == MLIL_TAILCALL_SSA)
 		{
@@ -94,8 +108,15 @@ bool DxeResolver::resolveSmmTables(string serviceName, string tableName)
 			continue;
 
 		auto mlilSsa = mlil->GetSSAForm();
+		if (!mlilSsa)
+			continue;
 		size_t mlilIdx = mlil->GetInstructionStart(m_view->GetDefaultArchitecture(), ref.addr);
-		auto instr = mlilSsa->GetInstruction(mlil->GetSSAInstructionIndex(mlilIdx));
+		if (mlilIdx >= mlil->GetInstructionCount())
+			continue;
+		size_t mlilSsaIdx = mlil->GetSSAInstructionIndex(mlilIdx);
+		if (mlilSsaIdx >= mlilSsa->GetInstructionCount())
+			continue;
+		auto instr = mlilSsa->GetInstruction(mlilSsaIdx);
 
 		if (instr.operation != MLIL_CALL_SSA && instr.operation != MLIL_TAILCALL_SSA)
 			continue;
@@ -146,8 +167,15 @@ bool DxeResolver::resolveSmmServices()
 			continue;
 
 		auto mlilSsa = mlil->GetSSAForm();
+		if (!mlilSsa)
+			continue;
 		size_t mlilIdx = mlil->GetInstructionStart(m_view->GetDefaultArchitecture(), ref.addr);
-		auto instr = mlilSsa->GetInstruction(mlil->GetSSAInstructionIndex(mlilIdx));
+		if (mlilIdx >= mlil->GetInstructionCount())
+			continue;
+		size_t mlilSsaIdx = mlil->GetSSAInstructionIndex(mlilIdx);
+		if (mlilSsaIdx >= mlilSsa->GetInstructionCount())
+			continue;
+		auto instr = mlilSsa->GetInstruction(mlilSsaIdx);
 
 		if (instr.operation == MLIL_CALL_SSA || instr.operation == MLIL_TAILCALL_SSA)
 		{
@@ -195,8 +223,15 @@ bool DxeResolver::resolveSmiHandlers()
 			continue;
 
 		auto mlilSsa = mlil->GetSSAForm();
+		if (!mlilSsa)
+			continue;
 		size_t mlilIdx = mlil->GetInstructionStart(m_view->GetDefaultArchitecture(), ref.addr);
-		auto instr = mlilSsa->GetInstruction(mlil->GetSSAInstructionIndex(mlilIdx));
+		if (mlilIdx >= mlil->GetInstructionCount())
+			continue;
+		size_t mlilSsaIdx = mlil->GetSSAInstructionIndex(mlilIdx);
+		if (mlilSsaIdx >= mlilSsa->GetInstructionCount())
+			continue;
+		auto instr = mlilSsa->GetInstruction(mlilSsaIdx);
 
 		if (instr.operation == MLIL_CALL_SSA || instr.operation == MLIL_TAILCALL_SSA)
 		{
@@ -218,6 +253,15 @@ bool DxeResolver::resolveSmiHandlers()
 					continue;
 				auto funcAddr = static_cast<uint64_t>(dispatchFunction.GetConstant());
 				auto targetFunc = m_view->GetAnalysisFunction(m_view->GetDefaultPlatform(), funcAddr);
+				if (!targetFunc)
+				{
+					uint64_t associatedFuncAddr = funcAddr;
+					auto associatedPlatform = m_view->GetDefaultPlatform()->GetAssociatedPlatformByAddress(associatedFuncAddr);
+					targetFunc = m_view->GetAnalysisFunction(associatedPlatform, associatedFuncAddr);
+				}
+				if (!targetFunc)
+					continue;
+
 				auto funcType = targetFunc->GetType();
 				std::ostringstream ss;
 				ss << "SmiHandler_" << std::hex << funcAddr;

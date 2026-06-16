@@ -237,7 +237,11 @@ bool Resolver::setModuleEntry(EFIModuleType fileType)
 	for (auto callsite : entryFunc->GetCallSites())
 	{
 		auto mlil = entryFunc->GetMediumLevelIL();
+		if (!mlil)
+			continue;
 		size_t mlilIdx = mlil->GetInstructionStart(m_view->GetDefaultArchitecture(), callsite.addr);
+		if (mlilIdx >= mlil->GetInstructionCount())
+			continue;
 		auto instr = mlil->GetInstruction(mlilIdx);
 		LogDebugF("Checking Callsite at {:#x}", callsite.addr);
 		if (instr.operation == MLIL_CALL || instr.operation == MLIL_TAILCALL)
@@ -250,7 +254,17 @@ bool Resolver::setModuleEntry(EFIModuleType fileType)
 				if (constantPtr.operation == MLIL_CONST_PTR)
 				{
 					auto addr = constantPtr.GetConstant();
-					auto funcType = m_view->GetAnalysisFunction(m_view->GetDefaultPlatform(), addr)->GetType();
+					auto targetFunc = m_view->GetAnalysisFunction(m_view->GetDefaultPlatform(), addr);
+					if (!targetFunc)
+					{
+						uint64_t associatedAddr = addr;
+						auto associatedPlatform = m_view->GetDefaultPlatform()->GetAssociatedPlatformByAddress(associatedAddr);
+						targetFunc = m_view->GetAnalysisFunction(associatedPlatform, associatedAddr);
+					}
+					if (!targetFunc)
+						continue;
+
+					auto funcType = targetFunc->GetType();
 					entryFunc->SetUserCallTypeAdjustment(m_view->GetDefaultArchitecture(), callsite.addr, funcType);
 					m_view->UpdateAnalysisAndWait();
 				}
@@ -304,21 +318,30 @@ bool Resolver::setModuleEntry(EFIModuleType fileType)
 
 vector<HighLevelILInstruction> Resolver::HighLevelILExprsAt(Ref<Function> func, Ref<Architecture> arch, uint64_t addr)
 {
+	vector<HighLevelILInstruction> hlils;
 	auto llil = func->GetLowLevelIL();
 	auto mlil = func->GetMediumLevelIL();
 	auto hlil = func->GetHighLevelIL();
+	if (!llil || !mlil || !hlil)
+		return hlils;
 
 	size_t llilIdx = llil->GetInstructionStart(arch, addr);
+	if (llilIdx >= llil->GetInstructionCount())
+		return hlils;
 	size_t llilExprIdx = llil->GetIndexForInstruction(llilIdx);
+	if (llilExprIdx >= llil->GetExprCount())
+		return hlils;
 	auto mlilIdxes = llil->GetMediumLevelILExprIndexes(llilExprIdx);
-
-	vector<HighLevelILInstruction> hlils;
 
 	for (size_t mlilIdx : mlilIdxes)
 	{
+		if (mlilIdx >= mlil->GetExprCount())
+			continue;
 		auto hlilIdxes = mlil->GetHighLevelILExprIndexes(mlilIdx);
 		for (auto hlilIdx : hlilIdxes)
 		{
+			if (hlilIdx >= hlil->GetExprCount())
+				continue;
 			auto hlilExpr = hlil->GetExpr(hlilIdx);
 			hlils.push_back(hlilExpr);
 		}
@@ -399,16 +422,23 @@ bool Resolver::resolveGuidInterface(Ref<Function> func, uint64_t addr, int guidP
 		else if (params[guidPos].operation == HLIL_VAR)
 		{
 			// want to check whether is a protocol wrapper
+			auto hlil = func->GetHighLevelIL();
+			if (!hlil)
+				continue;
+			auto hlilSsa = hlil->GetSSAForm();
+			if (!hlilSsa)
+				continue;
+
 			auto ssa = params[guidPos].GetSSAForm();
 			HighLevelILInstruction ssaExpr;
 			if (ssa.operation != HLIL_VAR_SSA)
 				continue;
 			if (ssa.GetSSAVariable().version != 0)
 			{
-				auto incomming_def = func->GetHighLevelIL()->GetSSAVarDefinition(ssa.GetSSAVariable());
-				if (!incomming_def)
+				auto incomming_def = hlil->GetSSAVarDefinition(ssa.GetSSAVariable());
+				if (incomming_def >= hlilSsa->GetExprCount())
 					continue;
-				auto incomming_def_ssa = func->GetHighLevelIL()->GetSSAForm()->GetExpr(incomming_def);
+				auto incomming_def_ssa = hlilSsa->GetExpr(incomming_def);
 				if (incomming_def_ssa.operation != HLIL_VAR_INIT_SSA)
 					continue;
 				if (incomming_def_ssa.GetSourceExpr().operation != HLIL_VAR_SSA)
@@ -442,9 +472,10 @@ bool Resolver::resolveGuidInterface(Ref<Function> func, uint64_t addr, int guidP
 
 			if (interfaceInstrSsa.GetSSAVariable().version != 0)
 			{
-				auto incomingDef =
-					func->GetHighLevelIL()->GetSSAForm()->GetSSAVarDefinition(interfaceInstrSsa.GetSSAVariable());
-				auto defExpr = func->GetHighLevelIL()->GetSSAForm()->GetExpr(incomingDef);
+				auto incomingDef = hlilSsa->GetSSAVarDefinition(interfaceInstrSsa.GetSSAVariable());
+				if (incomingDef >= hlilSsa->GetExprCount())
+					continue;
+				auto defExpr = hlilSsa->GetExpr(incomingDef);
 				if (defExpr.operation != HLIL_VAR_INIT_SSA)
 					continue;
 				if (defExpr.GetSourceExpr().operation != HLIL_VAR_SSA)
@@ -580,7 +611,13 @@ bool Resolver::defineTypeAtCallsite(
 	Ref<Function> func, uint64_t addr, const string typeName, int paramIdx, bool followFields)
 {
 	auto mlil = func->GetMediumLevelIL();
+	if (!mlil)
+		return false;
+
 	size_t mlilIdx = mlil->GetInstructionStart(m_view->GetDefaultArchitecture(), addr);
+	if (mlilIdx >= mlil->GetInstructionCount())
+		return false;
+
 	auto instr = mlil->GetInstruction(mlilIdx);
 
 	auto params = instr.GetParameterExprs();
@@ -596,7 +633,11 @@ bool Resolver::defineTypeAtCallsite(
 	auto ok = m_view->GetDataVariableAtAddress(varAddr, datavar);
 	if (ok)
 	{
-		string datavarTypeName = datavar.type.GetValue()->GetTypeName().GetString();
+		auto dataVarType = datavar.type.GetValue();
+		if (!dataVarType)
+			return false;
+
+		string datavarTypeName = dataVarType->GetTypeName().GetString();
 		if (datavarTypeName.find(typeName) != datavarTypeName.npos)
 			// the variable already has this type, return
 			return false;
@@ -632,11 +673,16 @@ bool Resolver::defineTypeAtCallsite(
 	if (!ok)
 		return false;
 
-	if (!structVar.type.GetValue()->IsNamedTypeRefer())
+	auto structVarType = structVar.type.GetValue();
+	if (!structVarType || !structVarType->IsNamedTypeRefer())
 		return false;
 
-	auto structTypeId = structVar.type.GetValue()->GetNamedTypeReference()->GetTypeId();
-	auto structStructureType = m_view->GetTypeById(structTypeId)->GetStructure();
+	auto structTypeId = structVarType->GetNamedTypeReference()->GetTypeId();
+	auto structType = m_view->GetTypeById(structTypeId);
+	if (!structType)
+		return false;
+
+	auto structStructureType = structType->GetStructure();
 
 	if (!structStructureType)
 		return false;
@@ -651,13 +697,16 @@ bool Resolver::defineTypeAtCallsite(
 		auto memberName = member.name;
 
 		// we only want to define pointers
+		if (!memberType)
+			continue;
 		if (!memberType->IsPointer() && !(memberType->IsNamedTypeRefer() && memberName == "Notify"))
 			continue;
 
 		if (memberName == "Guid")
 		{
 			uint64_t guidAddr = 0;
-			m_view->Read(&guidAddr, varAddr + memberOffset, m_view->GetAddressSize());
+			if (m_view->Read(&guidAddr, varAddr + memberOffset, m_view->GetAddressSize()) < m_view->GetAddressSize())
+				continue;
 			auto name = defineAndLookupGuid(guidAddr);
 			guidName = name.second;
 		}
@@ -666,7 +715,8 @@ bool Resolver::defineTypeAtCallsite(
 			// Notify has the type EFI_NOTIFY_ENTRY_POINT
 			// which is a NamedTypeRefer
 			uint64_t funcAddr;
-			m_view->Read(&funcAddr, varAddr + memberOffset, m_view->GetAddressSize());
+			if (m_view->Read(&funcAddr, varAddr + memberOffset, m_view->GetAddressSize()) < m_view->GetAddressSize())
+				continue;
 			auto notifyFunc = m_view->GetAnalysisFunction(m_view->GetDefaultPlatform(), funcAddr);
 			if (!notifyFunc)
 				continue;

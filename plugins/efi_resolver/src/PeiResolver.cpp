@@ -16,7 +16,11 @@ bool PeiResolver::resolvePeiIdt()
 			return false;
 
 		auto mlil = ref.func->GetMediumLevelIL();
+		if (!mlil)
+			continue;
 		auto instrIdx = mlil->GetInstructionStart(m_view->GetDefaultArchitecture(), ref.addr);
+		if (instrIdx >= mlil->GetInstructionCount())
+			continue;
 		auto instr = mlil->GetInstruction(instrIdx);
 
 		auto hlil = ref.func->GetHighLevelIL();
@@ -55,7 +59,11 @@ bool PeiResolver::resolvePeiIdt()
 			return false;
 
 		auto mlil = ref.func->GetMediumLevelIL();
+		if (!mlil)
+			continue;
 		auto instrIdx = mlil->GetInstructionStart(m_view->GetDefaultArchitecture(), ref.addr);
+		if (instrIdx >= mlil->GetInstructionCount())
+			continue;
 		auto instr = mlil->GetInstruction(instrIdx);
 
 		if (instr.operation != MLIL_SET_VAR)
@@ -64,9 +72,12 @@ bool PeiResolver::resolvePeiIdt()
 		if (instr.GetSourceExpr<MLIL_SET_VAR>().operation != MLIL_LOAD_STRUCT)
 			continue;
 
+		auto sourceType = mlil->GetExprType(instr.GetSourceExpr<MLIL_SET_VAR>()).GetValue();
+		if (!sourceType)
+			continue;
+
 		ref.func->CreateUserVariable(instr.GetDestVariable<MLIL_SET_VAR>(),
-									 mlil->GetExprType(instr.GetSourceExpr<MLIL_SET_VAR>()).GetValue(),
-									 nonConflictingLocalName(ref.func, "EfiPeiServices"));
+									 sourceType, nonConflictingLocalName(ref.func, "EfiPeiServices"));
 		m_view->UpdateAnalysisAndWait();
 	}
 
@@ -82,11 +93,17 @@ bool PeiResolver::resolvePeiMrc()
 			return false;
 
 		auto mlil = func->GetMediumLevelIL();
+		if (!mlil)
+			continue;
+
 		auto blocks = mlil->GetBasicBlocks();
 		for (auto block : blocks)
 		{
 			for (size_t i = block->GetStart(); i < block->GetEnd(); i++)
 			{
+				if (i >= mlil->GetInstructionCount())
+					continue;
+
 				auto instr = mlil->GetInstruction(i);
 				if (instr.operation != MLIL_INTRINSIC)
 					continue;
@@ -147,7 +164,11 @@ bool PeiResolver::resolvePeiMrs()
 			return false;
 
 		auto mlil = ref.func->GetMediumLevelIL();
+		if (!mlil)
+			continue;
 		auto instrIdx = mlil->GetInstructionStart(m_view->GetDefaultArchitecture(), ref.addr);
+		if (instrIdx >= mlil->GetInstructionCount())
+			continue;
 		auto instr = mlil->GetInstruction(instrIdx);
 		if (instr.operation == MLIL_INTRINSIC)
 		{
@@ -200,7 +221,11 @@ bool PeiResolver::resolvePeiDescriptors()
 				return false;
 
 			auto mlil = ref.func->GetMediumLevelIL();
+			if (!mlil)
+				continue;
 			auto instrIdx = mlil->GetInstructionStart(m_view->GetDefaultArchitecture(), ref.addr);
+			if (instrIdx >= mlil->GetInstructionCount())
+				continue;
 			auto instr = mlil->GetInstruction(instrIdx);
 
 			if (instr.operation != MLIL_CALL && instr.operation != MLIL_TAILCALL)
@@ -211,18 +236,25 @@ bool PeiResolver::resolvePeiDescriptors()
 				continue;
 
 			// at this point this instruction is probably a call to LocatPpi, InstallPpi or NotifyPpi
-			if (!mlil->GetExprType(destExpr).GetValue()->IsPointer())
+			auto destExprType = mlil->GetExprType(destExpr).GetValue();
+			if (!destExprType || !destExprType->IsPointer())
 				continue;
 
-			auto funcType = mlil->GetExprType(destExpr).GetValue()->GetChildType().GetValue();
+			auto funcType = destExprType->GetChildType().GetValue();
+			if (!funcType)
+				continue;
 			auto params = funcType->GetParameters();
 			int targetParamIdx = -1;
 			for (int i = 0; i < params.size(); i++)
 			{
 				auto param = params[i];
-				if (!param.type.GetValue()->IsPointer())
+				auto paramType = param.type.GetValue();
+				if (!paramType || !paramType->IsPointer())
 					continue;
-				auto paramTypeName = param.type.GetValue()->GetChildType().GetValue()->GetTypeName().GetString();
+				auto childType = paramType->GetChildType().GetValue();
+				if (!childType)
+					continue;
+				auto paramTypeName = childType->GetTypeName().GetString();
 				if (paramTypeName.find(descriptor) != paramTypeName.npos)
 				{
 					// this is the param
@@ -256,8 +288,15 @@ bool PeiResolver::resolvePeiServices()
 			continue;
 
 		auto mlilSsa = mlil->GetSSAForm();
+		if (!mlilSsa)
+			continue;
 		size_t mlilIdx = mlil->GetInstructionStart(m_view->GetDefaultArchitecture(), ref.addr);
-		auto instr = mlilSsa->GetInstruction(mlil->GetSSAInstructionIndex(mlilIdx));
+		if (mlilIdx >= mlil->GetInstructionCount())
+			continue;
+		size_t mlilSsaIdx = mlil->GetSSAInstructionIndex(mlilIdx);
+		if (mlilSsaIdx >= mlilSsa->GetInstructionCount())
+			continue;
+		auto instr = mlilSsa->GetInstruction(mlilSsaIdx);
 
 		if (instr.operation == MLIL_CALL_SSA || instr.operation == MLIL_TAILCALL_SSA)
 		{

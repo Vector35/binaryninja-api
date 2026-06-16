@@ -24,6 +24,9 @@ bool TypePropagation::propagateFuncParamTypes(Function* func)
 		m_queue.pop_front();
 
 		Ref<Function> target_func = m_view->GetAnalysisFunction(m_platform, addr);
+		if (!target_func)
+			continue;
+
 		auto params = target_func->GetType()->GetParameters();
 		bool update = false;
 
@@ -32,16 +35,22 @@ bool TypePropagation::propagateFuncParamTypes(Function* func)
 		{
 			bool propagate = false;
 			auto var_type = target_func->GetVariableType(var).GetValue();
+			if (!var_type)
+				continue;
 
 			if (var_type->IsPointer())
 			{
 				Ref<Type> target_type = var_type->GetChildType().GetValue();
+				if (!target_type)
+					continue;
 				if (target_type->IsPointer() || target_type->IsNamedTypeRefer())
 					propagate = true;
 			}
 			else if (var_type->IsNamedTypeRefer())
 			{
 				Ref<Type> target_type = m_view->GetTypeById(var_type->GetNamedTypeReference()->GetTypeId());
+				if (!target_type)
+					continue;
 				if (target_type->IsPointer())
 					propagate = true;
 			}
@@ -50,7 +59,12 @@ bool TypePropagation::propagateFuncParamTypes(Function* func)
 
 			// Check whether the param is an aliased var. If it's an aliased var, it may not be directly used in the
 			// function
-			Ref<HighLevelILFunction> hlil_func_ssa = target_func->GetHighLevelIL()->GetSSAForm();
+			auto hlil = target_func->GetHighLevelIL();
+			if (!hlil)
+				continue;
+			Ref<HighLevelILFunction> hlil_func_ssa = hlil->GetSSAForm();
+			if (!hlil_func_ssa)
+				continue;
 			std::set<Variable> aliased_vars = target_func->GetHighLevelILAliasedVariables();
 
 			auto it = aliased_vars.find(var);
@@ -62,10 +76,12 @@ bool TypePropagation::propagateFuncParamTypes(Function* func)
 			else
 			{
 				// this param is an aliased var, get the ssa_var
-				auto uses = target_func->GetHighLevelIL()->GetVariableUses(var);
+				auto uses = hlil->GetVariableUses(var);
 				for (auto use : uses)
 				{
-					auto hlil_instr = target_func->GetHighLevelIL()->GetExpr(use);
+					if (use >= hlil->GetExprCount())
+						continue;
+					auto hlil_instr = hlil->GetExpr(use);
 					hlil_instr = hlil_instr.GetParent();
 					if (hlil_instr.operation != HLIL_VAR_INIT)
 						continue;
@@ -84,10 +100,19 @@ bool TypePropagation::propagateFuncParamTypes(Function* func)
 bool TypePropagation::propagateFuncParamTypes(Function* func, SSAVariable ssa_var)
 {
 	bool update = false;
-	auto mlil_func_ssa = func->GetMediumLevelIL()->GetSSAForm();
+	auto mlil = func->GetMediumLevelIL();
+	if (!mlil)
+		return false;
+	auto mlil_func_ssa = mlil->GetSSAForm();
+	if (!mlil_func_ssa)
+		return false;
+
 	auto uses = mlil_func_ssa->GetSSAVarUses(ssa_var);
 	for (auto use : uses)
 	{
+		if (use >= mlil_func_ssa->GetInstructionCount())
+			continue;
+
 		auto instr = mlil_func_ssa->GetInstruction(use);
 		switch (instr.operation)
 		{
@@ -98,7 +123,15 @@ bool TypePropagation::propagateFuncParamTypes(Function* func, SSAVariable ssa_va
 			auto dest = instr.GetDestExpr();
 			if (!dest.GetValue().IsConstant())
 				continue;
-			Ref<Function> subfunc = m_view->GetAnalysisFunction(m_platform, dest.GetValue().value);
+
+			uint64_t target = dest.GetValue().value;
+			Ref<Function> subfunc = m_view->GetAnalysisFunction(m_platform, target);
+			if (!subfunc)
+			{
+				uint64_t associatedTarget = target;
+				Ref<Platform> associatedPlatform = m_platform->GetAssociatedPlatformByAddress(associatedTarget);
+				subfunc = m_view->GetAnalysisFunction(associatedPlatform, associatedTarget);
+			}
 
 			if (!subfunc)
 				continue;
@@ -116,6 +149,9 @@ bool TypePropagation::propagateFuncParamTypes(Function* func, SSAVariable ssa_va
 				if (i >= subfunc_params.size())
 					break;
 				auto ssa_var_type = func->GetVariableType(ssa_var.var).GetValue();
+				if (!ssa_var_type)
+					continue;
+
 				auto typeName = GetOriginalTypeName(ssa_var_type);
 
 				auto changeFuncType =
@@ -146,6 +182,9 @@ bool TypePropagation::propagateFuncParamTypes(Function* func, SSAVariable ssa_va
 				continue;
 			auto constant = target.GetValue().value;
 			auto ssa_var_type = func->GetVariableType(ssa_var.var).GetValue();
+			if (!ssa_var_type)
+				continue;
+
 			auto typeName = GetOriginalTypeName(ssa_var_type);
 
 			auto it = defaultName.find(typeName);

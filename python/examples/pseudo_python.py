@@ -24,7 +24,7 @@ from binaryninja import (Architecture, BraceRequirement, DisassemblySettings, Di
                          HighLevelILTokenEmitter, HighLevelILOperation, OperatorPrecedence, ScopeType,
                          SymbolDisplayType, SymbolDisplayResult, SymbolType, BoolType, VoidType, PointerType,
                          NamedTypeReferenceType, StructureType, InstructionTextTokenContext, StructureMember,
-                         BinaryView, BuiltinType)
+                         BinaryView, BuiltinType, DataBuffer)
 from typing import Optional
 import struct
 
@@ -1166,6 +1166,19 @@ class PseudoPythonFunction(LanguageRepresentationFunction):
                 self.perform_get_expr_text(instr.low, tokens, settings)
                 tokens.append_close_paren()
             elif instr.operation == HighLevelILOperation.HLIL_STRUCT_INIT:
+                # Check for a recognized string before rendering as a structure initializer
+                derived_string = instr.derived_string_reference
+                if derived_string is not None and derived_string.custom_type is not None:
+                    prefix = derived_string.custom_type.string_prefix
+                    postfix = derived_string.custom_type.string_postfix
+                    tokens.append(InstructionTextToken(InstructionTextTokenType.BraceToken, f'{prefix}"'))
+                    tokens.append(InstructionTextToken(InstructionTextTokenType.StringToken,
+                        DataBuffer(bytes(derived_string.value)).escape(),
+                        address=instr.address, value=instr.expr_index,
+                        context=InstructionTextTokenContext.DerivedStringReferenceTokenContext))
+                    tokens.append(InstructionTextToken(InstructionTextTokenType.BraceToken, f'"{postfix}'))
+                    return
+
                 # Render the structure type if it is known, otherwise just the `struct` keyword. Use
                 # Python-style constructor syntax for the initializer.
                 struct_type = instr.expr_type

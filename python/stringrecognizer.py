@@ -18,7 +18,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-from typing import Optional, Union, Any
+from typing import Optional, Union, Any, Dict
 from dataclasses import dataclass
 import ctypes
 
@@ -198,6 +198,8 @@ class StringRecognizer(metaclass=_StringRecognizerMetaClass):
 		if self.recognize_constant_data.__func__ != StringRecognizer.recognize_constant_data:
 			self._cb.recognizeConstantData = self._cb.recognizeConstantData.__class__(
 				self._recognize_constant_data)
+		if self.recognize_struct_init.__func__ != StringRecognizer.recognize_struct_init:
+			self._cb.recognizeStructInit = self._cb.recognizeStructInit.__class__(self._recognize_struct_init)
 		self.handle = core.BNRegisterStringRecognizer(self.__class__.recognizer_name, self._cb)
 		self.__class__._registered_recognizers.append(self)
 
@@ -277,6 +279,21 @@ class StringRecognizer(metaclass=_StringRecognizerMetaClass):
 			return True
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in StringRecognizer._recognize_constant_data")
+			return False
+
+	def _recognize_struct_init(self, ctxt, hlil, expr, type, field_offsets, field_values, field_count, result):
+		try:
+			hlil = highlevelil.HighLevelILFunction(handle=core.BNNewHighLevelILFunctionReference(hlil))
+			type = types.Type.create(handle=core.BNNewTypeReference(type))
+			instr = hlil.get_expr(highlevelil.ExpressionIndex(expr))
+			vals = {field_offsets[i]: field_values[i] for i in range(field_count)}
+			ref = self.recognize_struct_init(instr, type, vals)
+			if ref is None:
+				return False
+			result[0] = ref._to_core_struct(True)
+			return True
+		except Exception:
+			log_error_for_exception("Unhandled Python exception in StringRecognizer._recognize_struct_init")
 			return False
 
 	@property
@@ -379,6 +396,25 @@ class StringRecognizer(metaclass=_StringRecognizerMetaClass):
 		"""
 		return None
 
+	def recognize_struct_init(
+		self, instr: 'highlevelil.HighLevelILInstruction', type: 'types.Type', vals: Dict[int, int]
+	) -> Optional['binaryview.DerivedString']:
+		"""
+		Can be overridden to recognize strings for a structure initializer expression (HLIL_STRUCT_INIT).
+		These are produced when the optimizer folds a run of structure field assignments into a single
+		initializer. This is only called when all fields of the structure are assigned constants.
+		The ``vals`` dictionary maps each field's byte offset within the structure to the constant value
+		assigned to that field. If no string is found, this method should return `None`.
+
+		If a string is found, return a :py:class:`~binaryninja.binaryview.DerivedString` with the string information.
+
+		:param instr: High level structure initializer expression
+		:param type: Structure type of the initializer
+		:param vals: Dictionary mapping field offset to the constant value assigned to that field
+		:return: Optional :py:class:`~binaryninja.binaryview.DerivedString` for any string that is found.
+		"""
+		return None
+
 
 _recognizer_cache = {}
 
@@ -440,5 +476,19 @@ class CoreStringRecognizer(StringRecognizer):
 	) -> Optional['binaryview.DerivedString']:
 		string = core.BNDerivedString()
 		if not core.BNStringRecognizerRecognizeConstantData(self.handle, instr.function.handle, instr.expr_index, string):
+			return None
+		return binaryview.DerivedString._from_core_struct(string, True)
+
+	def recognize_struct_init(
+		self, instr: 'highlevelil.HighLevelILInstruction', type: 'types.Type', vals: Dict[int, int]
+	) -> Optional['binaryview.DerivedString']:
+		count = len(vals)
+		field_offsets = (ctypes.c_ulonglong * count)()
+		field_values = (ctypes.c_longlong * count)()
+		for i, (offset, value) in enumerate(vals.items()):
+			field_offsets[i] = offset
+			field_values[i] = value
+		string = core.BNDerivedString()
+		if not core.BNStringRecognizerRecognizeStructInit(self.handle, instr.function.handle, instr.expr_index, type.handle, field_offsets, field_values, count, string):
 			return None
 		return binaryview.DerivedString._from_core_struct(string, True)

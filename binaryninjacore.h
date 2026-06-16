@@ -4241,6 +4241,8 @@ extern "C"
 			void* ctxt, BNHighLevelILFunction* hlil, size_t expr, BNType* type, int64_t val, BNDerivedString* result);
 		bool (*recognizeConstantData)(
 			void* ctxt, BNHighLevelILFunction* hlil, size_t expr, BNDerivedString* result);
+		bool (*recognizeStructInit)(void* ctxt, BNHighLevelILFunction* hlil, size_t expr, BNType* type,
+			const uint64_t* fieldOffsets, const int64_t* fieldValues, size_t fieldCount, BNDerivedString* result);
 	} BNCustomStringRecognizer;
 
 	typedef struct BNCustomStringTypeInfo
@@ -9409,6 +9411,9 @@ extern "C"
 		size_t exprIndex, BNType* type, int64_t val, BNDerivedString* out);
 	BINARYNINJACOREAPI bool BNStringRecognizerRecognizeConstantData(BNStringRecognizer* recognizer,
 		BNHighLevelILFunction* il, size_t exprIndex, BNDerivedString* out);
+	BINARYNINJACOREAPI bool BNStringRecognizerRecognizeStructInit(BNStringRecognizer* recognizer,
+		BNHighLevelILFunction* il, size_t exprIndex, BNType* type, const uint64_t* fieldOffsets,
+		const int64_t* fieldValues, size_t fieldCount, BNDerivedString* out);
 
 	// PossibleValueSet operations
 	BINARYNINJACOREAPI void BNFreePossibleValueSet(BNPossibleValueSet* object);

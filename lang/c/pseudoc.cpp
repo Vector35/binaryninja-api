@@ -3053,6 +3053,17 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 	case HLIL_STRUCT_INIT:
 		[&]() {
 			const auto hlilFunc = GetHighLevelILFunction();
+			auto str = hlilFunc->GetDerivedStringReferenceForExpr(instr.exprIndex);
+			if (str.has_value() && str.value().customType)
+			{
+				tokens.Append(BraceToken, str.value().customType->GetStringPrefix() + string("\""));
+				tokens.Append(StringToken, DerivedStringReferenceTokenContext,
+					DataBuffer(str.value().value.c_str(), str.value().value.size()).ToEscapedString(), instr.address,
+					instr.exprIndex);
+				tokens.Append(BraceToken, string("\"") + str.value().customType->GetStringPostfix());
+				return;
+			}
+
 			auto type = instr.GetType();
 			if (type.GetValue())
 			{

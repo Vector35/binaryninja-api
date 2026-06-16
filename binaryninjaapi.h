@@ -23303,6 +23303,22 @@ namespace BinaryNinja {
 		virtual std::optional<DerivedString> RecognizeConstantData(
 			const HighLevelILInstruction& instr);
 
+		/*! Can be overridden to recognize strings for a structure initializer expression
+			(HLIL_STRUCT_INIT). These are produced when the optimizer folds a run of structure field
+			assignments into a single initializer. This is only called when all fields of the
+			structure are assigned constants. The \c values map provides the constant value
+			assigned to each field, keyed by the field's byte offset within the structure.
+
+			If a string is found, return a \c DerivedString with the string information.
+
+		    \param instr High level structure initializer expression
+		    \param type Structure type of the initializer
+		    \param values Map from field offset to the constant value assigned to that field
+		    \return Optional \c DerivedString for any string that is found
+		*/
+		virtual std::optional<DerivedString> RecognizeStructInit(
+			const HighLevelILInstruction& instr, Type* type, const std::map<uint64_t, int64_t>& values);
+
 		/*! Registers the string recognizer.
 
 		    \param recognizer The string recognizer to register.
@@ -23324,6 +23340,8 @@ namespace BinaryNinja {
 			void* ctxt, BNHighLevelILFunction* hlil, size_t expr, BNType* type, int64_t val, BNDerivedString* result);
 		static bool RecognizeConstantDataCallback(
 			void* ctxt, BNHighLevelILFunction* hlil, size_t expr, BNDerivedString* result);
+		static bool RecognizeStructInitCallback(void* ctxt, BNHighLevelILFunction* hlil, size_t expr, BNType* type,
+			const uint64_t* fieldOffsets, const int64_t* fieldValues, size_t fieldCount, BNDerivedString* result);
 	};
 
 	class CoreStringRecognizer : public StringRecognizer
@@ -23341,6 +23359,8 @@ namespace BinaryNinja {
 			const HighLevelILInstruction& instr, Type* type, int64_t val) override;
 		std::optional<DerivedString> RecognizeConstantData(
 			const HighLevelILInstruction& instr) override;
+		std::optional<DerivedString> RecognizeStructInit(
+			const HighLevelILInstruction& instr, Type* type, const std::map<uint64_t, int64_t>& values) override;
 	};
 }  // namespace BinaryNinja
 

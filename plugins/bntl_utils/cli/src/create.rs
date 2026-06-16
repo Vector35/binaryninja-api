@@ -19,9 +19,9 @@ pub struct CreateArgs {
     pub include_directories: Vec<PathBuf>,
     #[clap(long)]
     pub dry_run: bool,
-
+    /// A list of additional compiler options to pass to the compiler when parsing C header files.
     #[arg(last = true, allow_hyphen_values = true, num_args = 0..)]
-    compiler_flags: Vec<String>,
+    compiler_options: Vec<String>,
 }
 
 impl CreateArgs {
@@ -45,7 +45,7 @@ impl CreateArgs {
 
         let processor = TypeLibProcessor::new(&self.name, &self.platform)
             .with_include_directories(self.include_directories.clone())
-            .with_options(self.compiler_flags.clone());
+            .with_compiler_options(self.compiler_options.clone());
         // TODO: Need progress indicator here, when downloading files.
         let resolved_input = self.input.resolve().expect("Failed to resolve input");
 

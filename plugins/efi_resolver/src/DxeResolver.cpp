@@ -1,14 +1,111 @@
 #include "DxeResolver.h"
 
+bool DxeResolver::resolveProtocolGuid(Ref<Function> func, uint64_t addr, size_t guidParam)
+{
+	bool changed = false;
+	auto hlils = GetCallExprs(HighLevelILExprsAt(func, m_view->GetDefaultArchitecture(), addr), addr);
+	for (auto hlil : hlils)
+	{
+		auto params = hlil.GetParameterExprs();
+		if (params.size() <= guidParam)
+			continue;
+
+		auto guidDataAddr = GetConstantDataAddress(params[guidParam]);
+		if (!guidDataAddr || *guidDataAddr == 0)
+			continue;
+
+		EFI_GUID guid;
+		if (m_view->Read(&guid, *guidDataAddr, 16) < 16)
+			continue;
+
+		auto info = Resolver::resolveProtocolGuid(guid, addr);
+		if (defineGuidDataVariable(*guidDataAddr, info.guidName))
+			changed = true;
+	}
+	if (changed)
+		m_view->UpdateAnalysis();
+	return changed;
+}
+
+bool DxeResolver::resolveProtocolInterfaces(
+	Ref<Function> func, uint64_t addr, size_t guidParam, const vector<size_t>& interfaceParams)
+{
+	bool changed = false;
+	auto hlils = GetCallExprs(HighLevelILExprsAt(func, m_view->GetDefaultArchitecture(), addr), addr);
+	for (auto hlil : hlils)
+	{
+		auto params = hlil.GetParameterExprs();
+		if (params.size() <= guidParam)
+			continue;
+
+		auto guidDataAddr = GetConstantDataAddress(params[guidParam]);
+		if (!guidDataAddr || *guidDataAddr == 0)
+			continue;
+
+		EFI_GUID guid;
+		if (m_view->Read(&guid, *guidDataAddr, 16) < 16)
+			continue;
+
+		auto info = Resolver::resolveProtocolGuid(guid, addr);
+		if (defineGuidDataVariable(*guidDataAddr, info.guidName))
+			changed = true;
+
+		for (auto interfaceParam : interfaceParams)
+		{
+			if (params.size() <= interfaceParam)
+				continue;
+			if (applyProtocolInterface(func, params[interfaceParam], info, false))
+				changed = true;
+		}
+	}
+	if (changed)
+		m_view->UpdateAnalysis();
+	return changed;
+}
+
+bool DxeResolver::resolveProtocolInterfaceList(Ref<Function> func, uint64_t addr, size_t firstGuidParam)
+{
+	// InstallMultipleProtocolInterfaces and UninstallMultipleProtocolInterfaces take varargs shaped as:
+	//   Handle, ProtocolGuid, Interface, ..., nullptr
+	// The interface is the protocol implementation pointer itself, not an output parameter.
+	bool changed = false;
+	auto hlils = GetCallExprs(HighLevelILExprsAt(func, m_view->GetDefaultArchitecture(), addr), addr);
+	for (auto hlil : hlils)
+	{
+		auto params = hlil.GetParameterExprs();
+		for (size_t guidParam = firstGuidParam; guidParam + 1 < params.size(); guidParam += 2)
+		{
+			auto guidDataAddr = GetConstantDataAddress(params[guidParam]);
+			if (!guidDataAddr || *guidDataAddr == 0)
+				break;
+
+			EFI_GUID guid;
+			if (m_view->Read(&guid, *guidDataAddr, 16) < 16)
+				continue;
+
+			auto info = Resolver::resolveProtocolGuid(guid, addr);
+			if (!defineGuidDataVariable(*guidDataAddr, info.guidName))
+				continue;
+			changed = true;
+
+			if (applyProtocolInterface(func, params[guidParam + 1], info, false))
+				changed = true;
+		}
+	}
+	if (changed)
+		m_view->UpdateAnalysis();
+	return changed;
+}
+
 bool DxeResolver::resolveBootServices()
 {
-	m_task->SetProgressText("Resolving Boot Services...");
+	SetProgressText("Resolving Boot Services...");
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_BOOT_SERVICES"));
 	// search reference of `EFI_BOOT_SERVICES` so that we can easily parse different services
 
 	for (auto& ref : refs)
 	{
-		if (m_task->IsCancelled())
+		if (IsCancelled())
 			return false;
 
 		auto func = ref.func;
@@ -17,8 +114,15 @@ bool DxeResolver::resolveBootServices()
 			continue;
 
 		auto mlilSsa = mlil->GetSSAForm();
+		if (!mlilSsa)
+			continue;
 		size_t mlilIdx = mlil->GetInstructionStart(m_view->GetDefaultArchitecture(), ref.addr);
-		auto instr = mlilSsa->GetInstruction(mlil->GetSSAInstructionIndex(mlilIdx));
+		if (mlilIdx >= mlil->GetInstructionCount())
+			continue;
+		size_t mlilSsaIdx = mlil->GetSSAInstructionIndex(mlilIdx);
+		if (mlilSsaIdx >= mlilSsa->GetInstructionCount())
+			continue;
+		auto instr = mlilSsa->GetInstruction(mlilSsaIdx);
 
 		if (instr.operation == MLIL_CALL_SSA || instr.operation == MLIL_TAILCALL_SSA)
 		{
@@ -27,16 +131,52 @@ bool DxeResolver::resolveBootServices()
 				continue;
 			auto offset = dest.GetOffset();
 
-			if (offset == 0x18 + m_width * 16 || offset == 0x18 + m_width * 32)
+			if (offset == 0x18 + m_width * 13)
+			{
+				// InstallProtocolInterface
+				// Guid:1, Interface:3
+				resolveProtocolInterfaces(ref.func, ref.addr, 1, {3});
+			}
+			else if (offset == 0x18 + m_width * 14)
+			{
+				// ReinstallProtocolInterface
+				// Guid:1, OldInterface:2, NewInterface:3
+				resolveProtocolInterfaces(ref.func, ref.addr, 1, {2, 3});
+			}
+			else if (offset == 0x18 + m_width * 15)
+			{
+				// UninstallProtocolInterface
+				// Guid:1, Interface:2
+				resolveProtocolInterfaces(ref.func, ref.addr, 1, {2});
+			}
+			else if (offset == 0x18 + m_width * 16 || offset == 0x18 + m_width * 32)
 			{
 				// HandleProtocol, OpenProtocol
 				// Guid:1, Interface:2
 				resolveGuidInterface(ref.func, ref.addr, 1, 2);
 			}
+			else if (offset == 0x18 + m_width * 18 || offset == 0x18 + m_width * 19)
+			{
+				// RegisterProtocolNotify, LocateHandle
+				// Guid:0 for RegisterProtocolNotify, Guid:1 for LocateHandle
+				resolveProtocolGuid(ref.func, ref.addr, offset == 0x18 + m_width * 18 ? 0 : 1);
+			}
+			else if (offset == 0x18 + m_width * 34 || offset == 0x18 + m_width * 36)
+			{
+				// OpenProtocolInformation, LocateHandleBuffer
+				// Guid:1
+				resolveProtocolGuid(ref.func, ref.addr, 1);
+			}
 			else if (offset == 0x18 + m_width * 37)
 			{
 				// LocateProtocol
 				resolveGuidInterface(ref.func, ref.addr, 0, 2);
+			}
+			else if (offset == 0x18 + m_width * 38 || offset == 0x18 + m_width * 39)
+			{
+				// InstallMultipleProtocolInterfaces, UninstallMultipleProtocolInterfaces
+				// Varargs start after the handle parameter.
+				resolveProtocolInterfaceList(ref.func, ref.addr, 1);
 			}
 		}
 	}
@@ -45,12 +185,12 @@ bool DxeResolver::resolveBootServices()
 
 bool DxeResolver::resolveRuntimeServices()
 {
-	m_task->SetProgressText("Resolving Runtime Services...");
+	SetProgressText("Resolving Runtime Services...");
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_RUNTIME_SERVICES"));
 
 	for (auto& ref : refs)
 	{
-		if (m_task->IsCancelled())
+		if (IsCancelled())
 			return false;
 
 		auto func = ref.func;
@@ -59,8 +199,15 @@ bool DxeResolver::resolveRuntimeServices()
 			continue;
 
 		auto mlilSsa = mlil->GetSSAForm();
+		if (!mlilSsa)
+			continue;
 		size_t mlilIdx = mlil->GetInstructionStart(m_view->GetDefaultArchitecture(), ref.addr);
-		auto instr = mlilSsa->GetInstruction(mlil->GetSSAInstructionIndex(mlilIdx));
+		if (mlilIdx >= mlil->GetInstructionCount())
+			continue;
+		size_t mlilSsaIdx = mlil->GetSSAInstructionIndex(mlilIdx);
+		if (mlilSsaIdx >= mlilSsa->GetInstructionCount())
+			continue;
+		auto instr = mlilSsa->GetInstruction(mlilSsaIdx);
 
 		if (instr.operation == MLIL_CALL_SSA || instr.operation == MLIL_TAILCALL_SSA)
 		{
@@ -80,12 +227,12 @@ bool DxeResolver::resolveRuntimeServices()
 
 bool DxeResolver::resolveSmmTables(string serviceName, string tableName)
 {
-	m_task->SetProgressText("Defining MM tables...");
+	SetProgressText("Defining MM tables...");
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName(serviceName));
 	// both versions use the same type, so we only need to search for this one
 	for (auto& ref : refs)
 	{
-		if (m_task->IsCancelled())
+		if (IsCancelled())
 			return false;
 
 		auto func = ref.func;
@@ -94,8 +241,15 @@ bool DxeResolver::resolveSmmTables(string serviceName, string tableName)
 			continue;
 
 		auto mlilSsa = mlil->GetSSAForm();
+		if (!mlilSsa)
+			continue;
 		size_t mlilIdx = mlil->GetInstructionStart(m_view->GetDefaultArchitecture(), ref.addr);
-		auto instr = mlilSsa->GetInstruction(mlil->GetSSAInstructionIndex(mlilIdx));
+		if (mlilIdx >= mlil->GetInstructionCount())
+			continue;
+		size_t mlilSsaIdx = mlil->GetSSAInstructionIndex(mlilIdx);
+		if (mlilSsaIdx >= mlilSsa->GetInstructionCount())
+			continue;
+		auto instr = mlilSsa->GetInstruction(mlilSsaIdx);
 
 		if (instr.operation != MLIL_CALL_SSA && instr.operation != MLIL_TAILCALL_SSA)
 			continue;
@@ -122,14 +276,14 @@ bool DxeResolver::resolveSmmTables(string serviceName, string tableName)
 			return false;
 		m_view->DefineDataVariable(smstAddr.GetValue().value, result.type);
 		m_view->DefineUserSymbol(new Symbol(DataSymbol, "gMmst", smstAddr.GetValue().value));
-		m_view->UpdateAnalysisAndWait();
+		m_view->UpdateAnalysis();
 	}
 	return true;
 }
 
 bool DxeResolver::resolveSmmServices()
 {
-	m_task->SetProgressText("Resolving MM services...");
+	SetProgressText("Resolving MM services...");
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_MM_SYSTEM_TABLE"));
 	auto refs_smm = m_view->GetCodeReferencesForType(QualifiedName("EFI_SMM_SYSTEM_TABLE2"));
 	// These tables have same type information, we can just iterate once
@@ -137,7 +291,7 @@ bool DxeResolver::resolveSmmServices()
 
 	for (auto& ref : refs)
 	{
-		if (m_task->IsCancelled())
+		if (IsCancelled())
 			return false;
 
 		auto func = ref.func;
@@ -146,8 +300,15 @@ bool DxeResolver::resolveSmmServices()
 			continue;
 
 		auto mlilSsa = mlil->GetSSAForm();
+		if (!mlilSsa)
+			continue;
 		size_t mlilIdx = mlil->GetInstructionStart(m_view->GetDefaultArchitecture(), ref.addr);
-		auto instr = mlilSsa->GetInstruction(mlil->GetSSAInstructionIndex(mlilIdx));
+		if (mlilIdx >= mlil->GetInstructionCount())
+			continue;
+		size_t mlilSsaIdx = mlil->GetSSAInstructionIndex(mlilIdx);
+		if (mlilSsaIdx >= mlilSsa->GetInstructionCount())
+			continue;
+		auto instr = mlilSsa->GetInstruction(mlilSsaIdx);
 
 		if (instr.operation == MLIL_CALL_SSA || instr.operation == MLIL_TAILCALL_SSA)
 		{
@@ -173,7 +334,7 @@ bool DxeResolver::resolveSmmServices()
 
 bool DxeResolver::resolveSmiHandlers()
 {
-	m_task->SetProgressText("Resolving SMI Handlers...");
+	SetProgressText("Resolving SMI Handlers...");
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_MM_SW_REGISTER"));
 	auto refs_smm_sw = m_view->GetCodeReferencesForType(QualifiedName("EFI_SMM_SW_REGISTER2"));
 	auto refs_mm_sx = m_view->GetCodeReferencesForType(QualifiedName("EFI_MM_SX_REGISTER"));
@@ -181,12 +342,12 @@ bool DxeResolver::resolveSmiHandlers()
 	// Define them together
 
 	refs.insert(refs.end(), refs_smm_sw.begin(), refs_smm_sw.end());
-	refs.insert(refs.end(), refs_smm_sx.begin(), refs_smm_sw.end());
+	refs.insert(refs.end(), refs_smm_sx.begin(), refs_smm_sx.end());
 	refs.insert(refs.end(), refs_mm_sx.begin(), refs_mm_sx.end());
 
 	for (auto& ref : refs)
 	{
-		if (m_task->IsCancelled())
+		if (IsCancelled())
 			return false;
 
 		auto func = ref.func;
@@ -195,8 +356,15 @@ bool DxeResolver::resolveSmiHandlers()
 			continue;
 
 		auto mlilSsa = mlil->GetSSAForm();
+		if (!mlilSsa)
+			continue;
 		size_t mlilIdx = mlil->GetInstructionStart(m_view->GetDefaultArchitecture(), ref.addr);
-		auto instr = mlilSsa->GetInstruction(mlil->GetSSAInstructionIndex(mlilIdx));
+		if (mlilIdx >= mlil->GetInstructionCount())
+			continue;
+		size_t mlilSsaIdx = mlil->GetSSAInstructionIndex(mlilIdx);
+		if (mlilSsaIdx >= mlilSsa->GetInstructionCount())
+			continue;
+		auto instr = mlilSsa->GetInstruction(mlilSsaIdx);
 
 		if (instr.operation == MLIL_CALL_SSA || instr.operation == MLIL_TAILCALL_SSA)
 		{
@@ -218,6 +386,15 @@ bool DxeResolver::resolveSmiHandlers()
 					continue;
 				auto funcAddr = static_cast<uint64_t>(dispatchFunction.GetConstant());
 				auto targetFunc = m_view->GetAnalysisFunction(m_view->GetDefaultPlatform(), funcAddr);
+				if (!targetFunc)
+				{
+					uint64_t associatedFuncAddr = funcAddr;
+					auto associatedPlatform = m_view->GetDefaultPlatform()->GetAssociatedPlatformByAddress(associatedFuncAddr);
+					targetFunc = m_view->GetAnalysisFunction(associatedPlatform, associatedFuncAddr);
+				}
+				if (!targetFunc)
+					continue;
+
 				auto funcType = targetFunc->GetType();
 				std::ostringstream ss;
 				ss << "SmiHandler_" << std::hex << funcAddr;
@@ -234,7 +411,7 @@ bool DxeResolver::resolveSmiHandlers()
 					return false;
 				targetFunc->SetUserType(result.type);
 				m_view->DefineUserSymbol(new Symbol(FunctionSymbol, funcName, funcAddr));
-				m_view->UpdateAnalysisAndWait();
+				m_view->UpdateAnalysis();
 
 				// After setting the type, we want to propagate the parameters' type
 				TypePropagation propagator(m_view);
@@ -270,5 +447,4 @@ bool DxeResolver::resolveSmm()
 DxeResolver::DxeResolver(Ref<BinaryView> view, Ref<BackgroundTask> task) : Resolver(view, task)
 {
 	initProtocolMapping();
-	setModuleEntry(DXE);
 }

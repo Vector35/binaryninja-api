@@ -2,7 +2,7 @@
 
 #include "Resolver.h"
 
-class PeiResolver : Resolver
+class PeiResolver : public Resolver
 {
 	bool resolvePeiIdt();
 	bool resolvePeiMrc();

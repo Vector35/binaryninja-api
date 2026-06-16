@@ -1,6 +1,7 @@
 #pragma once
 
 #include <fstream>
+#include <optional>
 #include <thread>
 
 #include "GuidRenderer.h"
@@ -19,6 +20,12 @@ typedef array<uint8_t, 16> EFI_GUID;
 class Resolver
 {
 protected:
+	struct ProtocolGuidInfo
+	{
+		string protocolName;
+		string guidName;
+	};
+
 	Ref<BinaryView> m_view;
 	Ref<BackgroundTask> m_task;
 	size_t m_width;
@@ -30,6 +37,9 @@ protected:
 	vector<pair<uint64_t, EFI_GUID>> m_guid_usages;
 	vector<pair<uint64_t, string>> m_variable_usages;
 
+	bool IsCancelled() const;
+	void SetProgressText(const string& text) const;
+
 	bool parseUserGuidIfExists(const string& filePath);
 	bool parseProtocolMapping(const string& filePath);
 
@@ -39,11 +49,19 @@ protected:
 	in BinaryView
 	*/
 	Ref<Type> GetTypeFromViewAndPlatform(string type_name);
+	optional<uint64_t> GetConstantDataAddress(const HighLevelILInstruction& expr);
+	vector<HighLevelILInstruction> GetCallExprs(const vector<HighLevelILInstruction>& exprs, uint64_t addr);
+	ProtocolGuidInfo resolveProtocolGuid(const EFI_GUID& guid, uint64_t addr);
+	bool defineGuidDataVariable(uint64_t addr, const string& guidName);
+	bool applyProtocolInterface(Ref<Function> func, const HighLevelILInstruction& interfaceParam,
+		const ProtocolGuidInfo& info, bool outputInterface);
 	void initProtocolMapping();
 
 public:
 	bool setModuleEntry(EFIModuleType fileType);
+	bool propagateEntryTypes();
 	bool resolveGuidInterface(Ref<Function> func, uint64_t addr, int guid_pos, int interface_pos);
+	bool defineOutputAtCallsite(Ref<Function> func, uint64_t addr, int paramIdx, string typeName, string name);
 	Resolver(Ref<BinaryView> view, Ref<BackgroundTask> task);
 
 	pair<string, string> lookupGuid(EFI_GUID guidBytes);

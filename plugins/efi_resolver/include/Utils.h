@@ -7,11 +7,15 @@ using namespace BinaryNinja;
 static inline std::string GetOriginalTypeName(Ref<Type> type)
 {
 	std::string result;
+	if (!type)
+		return result;
+
 	if (type->IsPointer())
 	{
-		if (type->GetChildType().GetValue()->IsNamedTypeRefer())
+		auto childType = type->GetChildType().GetValue();
+		if (childType && childType->IsNamedTypeRefer())
 		{
-			return type->GetChildType().GetValue()->GetNamedTypeReference()->GetName().GetString();
+			return childType->GetNamedTypeReference()->GetName().GetString();
 		}
 		return type->GetTypeName().GetString();
 	}

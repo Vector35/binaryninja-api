@@ -2667,7 +2667,7 @@ void ElfView::ApplyTypesToParentStringTable(const Elf64SectionHeader& section, c
 {
 	m_logger->LogInfo("Found string table of size %p at offset %p", section.size, section.offset);
 	DataBuffer buffer = GetParentView()->ReadBuffer(section.offset, section.size);
-	if (buffer.GetLength() != section.size)
+	if (section.size > 0x1000 || buffer.GetLength() != section.size)
 		return;
 	unordered_map<size_t, Ref<Type>> cachedTypes;
 	for (size_t start_address = (offset ? 1 : 0); start_address < section.size; ++start_address)

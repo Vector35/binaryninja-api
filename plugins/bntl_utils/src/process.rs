@@ -435,7 +435,7 @@ pub struct TypeLibProcessor {
     /// Whether to process existing type libraries when processing a binary file.
     process_existing_type_libraries: bool,
     /// The compiler flags to use when processing header files.
-    options: Vec<String>,
+    compiler_options: Vec<String>,
 }
 
 impl TypeLibProcessor {
@@ -450,7 +450,7 @@ impl TypeLibProcessor {
             default_platform_name: default_platform_name.to_owned(),
             include_directories: Vec::new(),
             process_existing_type_libraries: false,
-            options: Vec::new(),
+            compiler_options: Vec::new(),
         }
     }
 
@@ -464,8 +464,8 @@ impl TypeLibProcessor {
         self
     }
 
-    pub fn with_options(mut self, options: Vec<String>) -> Self {
-        self.options = options;
+    pub fn with_compiler_options(mut self, options: Vec<String>) -> Self {
+        self.compiler_options = options;
         self
     }
 
@@ -996,7 +996,7 @@ impl TypeLibProcessor {
                 &file_name,
                 &platform,
                 &platform_type_container,
-                &self.options,
+                &self.compiler_options,
                 &include_dirs,
                 "",
             )

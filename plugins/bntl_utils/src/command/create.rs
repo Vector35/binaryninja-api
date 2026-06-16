@@ -124,19 +124,19 @@ impl PlatformField {
     }
 }
 
-pub struct FlagsField;
+pub struct CompilerOptionsField;
 
-impl FlagsField {
+impl CompilerOptionsField {
     pub fn field() -> FormInputField {
         FormInputField::MultilineText { 
-            prompt: "Compiler flags".to_string(), 
+            prompt: "Compiler options".to_string(), 
             default: None, 
             value: None, 
         }
     }
 
     pub fn from_form(form: &Form) -> Option<String> {
-        let field = form.get_field_with_name("Compiler flags")?;
+        let field = form.get_field_with_name("Compiler options")?;
         field.try_value_string()
     }
 }
@@ -151,7 +151,7 @@ impl CreateFromDirectory {
         form.add_field(PlatformField::field());
         form.add_field(NameField::field());
         form.add_field(OutputDirectoryField::field());
-        form.add_field(FlagsField::field());
+        form.add_field(CompilerOptionsField::field());
         
         if !form.prompt() {
             return;
@@ -160,7 +160,7 @@ impl CreateFromDirectory {
         let platform_name = PlatformField::from_form(&form).unwrap();
         let default_name = NameField::from_form(&form).unwrap();
         let output_dir = OutputDirectoryField::from_form(&form).unwrap();
-        let flags = FlagsField::from_form(&form).unwrap();
+        let flags = CompilerOptionsField::from_form(&form).unwrap();
 
         let Some(default_platform) = Platform::by_name(&platform_name) else {
             tracing::error!("Invalid platform name: {}", platform_name);
@@ -168,7 +168,7 @@ impl CreateFromDirectory {
         };
 
         let processor = TypeLibProcessor::new(&default_name, &default_platform.name())
-            .with_options(split_args(flags.as_str()));
+            .with_compiler_options(split_args(flags.as_str()));
 
         let background_task = BackgroundTask::new("Processing started...", true);
         new_processing_state_background_thread(background_task.clone(), processor.state());

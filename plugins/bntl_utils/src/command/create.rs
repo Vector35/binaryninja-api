@@ -128,10 +128,10 @@ pub struct CompilerOptionsField;
 
 impl CompilerOptionsField {
     pub fn field() -> FormInputField {
-        FormInputField::MultilineText { 
-            prompt: "Compiler options".to_string(), 
-            default: None, 
-            value: None, 
+        FormInputField::MultilineText {
+            prompt: "Compiler options".to_string(),
+            default: None,
+            value: None,
         }
     }
 
@@ -152,7 +152,7 @@ impl CreateFromDirectory {
         form.add_field(NameField::field());
         form.add_field(OutputDirectoryField::field());
         form.add_field(CompilerOptionsField::field());
-        
+
         if !form.prompt() {
             return;
         }
@@ -304,13 +304,24 @@ fn split_args(input: &str) -> Vec<String> {
 
     for c in input.chars() {
         match c {
-            '"' => { in_quote = !in_quote; has_token = true; }
-            c if c.is_whitespace() && !in_quote => {
-                if has_token { args.push(std::mem::take(&mut cur)); has_token = false; }
+            '"' => {
+                in_quote = !in_quote;
+                has_token = true;
             }
-            c => { cur.push(c); has_token = true; }
+            c if c.is_whitespace() && !in_quote => {
+                if has_token {
+                    args.push(std::mem::take(&mut cur));
+                    has_token = false;
+                }
+            }
+            c => {
+                cur.push(c);
+                has_token = true;
+            }
         }
     }
-    if has_token { args.push(cur); }
+    if has_token {
+        args.push(cur);
+    }
     args
 }

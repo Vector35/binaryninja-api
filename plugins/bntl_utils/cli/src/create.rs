@@ -21,7 +21,7 @@ pub struct CreateArgs {
     pub dry_run: bool,
     /// A list of additional compiler options to pass to the compiler when parsing C header files.
     #[arg(last = true, allow_hyphen_values = true, num_args = 0..)]
-    compiler_options: Vec<String>,
+    pub compiler_options: Vec<String>,
 }
 
 impl CreateArgs {

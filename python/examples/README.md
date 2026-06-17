@@ -51,6 +51,7 @@ These plugins are able to operate in either the GUI or as stand-alone plugins
 * nes.py - 6502 CPU architecture including LLIL lifting and `.NES` file format parser
 * nfs.py - nsf file format loader (music files extracted from NES roms)
 * notification_callbacks.py - example plugin showing notification callbacks that can be used in the UI or headless
+* rust_string.py - recovers Rust `&str` strings using a [StringRecognizer](https://api.binary.ninja/binaryninja.stringrecognizer-module.html) (for structure initializers and constant pointers to `&str` data variables) and a matching [DataRenderer](https://api.binary.ninja/binaryninja.datarender-module.html#binaryninja.datarender.DataRenderer)
 * typelib_create.py - Example script from the [Type Library documentation](https://docs.binary.ninja/dev/annotation.html#type-libraries)
 * typelib_dump.py - Example script from the [Type Library documentation](https://docs.binary.ninja/dev/annotation.html#type-libraries)
 

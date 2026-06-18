@@ -380,13 +380,15 @@ class RenderLayer(metaclass=_RenderLayerMetaclass):
 							disasm_lines = self.apply_to_block(last_block, disasm_lines)
 							func = block_lines[0].function
 							block = block_lines[0].block
+							view = block_lines[0].view
 							for block_line in disasm_lines:
 								new_block_lines.append(
 									LinearDisassemblyLine(
 										LinearDisassemblyLineType.CodeDisassemblyLineType,
 										func,
 										block,
-										block_line
+										block_line,
+										view
 									)
 								)
 							disasm_lines = []

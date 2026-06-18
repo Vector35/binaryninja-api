@@ -215,11 +215,13 @@ void RenderLayer::ApplyToLinearViewObject(
 					if (!disasmLines.empty())
 					{
 						ApplyToBlock(lastBlock, disasmLines);
+						Ref<BinaryView> view = blockLines[0].view;
 						Ref<Function> func = blockLines[0].function;
 						Ref<BasicBlock> block = blockLines[0].block;
 						for (auto& blockLine: disasmLines)
 						{
 							LinearDisassemblyLine newLine;
+							newLine.view = view;
 							newLine.type = CodeDisassemblyLineType;
 							newLine.function = func;
 							newLine.block = block;

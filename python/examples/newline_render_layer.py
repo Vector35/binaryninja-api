@@ -178,7 +178,8 @@ class NewlineSplitRenderLayer(RenderLayer):
                 line.type,
                 line.function,
                 line.block,
-                first_contents
+                first_contents,
+                line.view
             )
             new_lines.append(first_line)
 
@@ -200,7 +201,8 @@ class NewlineSplitRenderLayer(RenderLayer):
                     line.type,
                     line.function,
                     line.block,
-                    cont_contents
+                    cont_contents,
+                    line.view
                 )
 
                 new_lines.append(cont_line)

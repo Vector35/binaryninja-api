@@ -99,6 +99,7 @@ pub trait RenderLayer: Sized {
             |function: &Function, block: &BasicBlock<NativeBlock>, text: DisassemblyTextLine| {
                 LinearDisassemblyLine {
                     ty: LinearDisassemblyLineType::CodeDisassemblyLineType,
+                    view: Some(function.view()),
                     function: Some(function.to_owned()),
                     basic_block: Some(block.to_owned()),
                     contents: text,

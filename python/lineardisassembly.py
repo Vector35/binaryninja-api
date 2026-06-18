@@ -31,8 +31,11 @@ from .enums import (LinearDisassemblyLineType, LinearViewObjectIdentifierType)
 
 
 class LinearDisassemblyLine:
-	def __init__(self, line_type: LinearDisassemblyLineType, func: Optional[_function.Function], block: Optional[basicblock.BasicBlock], contents: _function.DisassemblyTextLine):
+	def __init__(self, line_type: LinearDisassemblyLineType, func: Optional[_function.Function], block: Optional[basicblock.BasicBlock], contents: _function.DisassemblyTextLine, view: Optional['binaryview.BinaryView'] = None):
 		self.type = line_type
+		if view is None and func is not None:
+			view = func.view
+		self.view = view
 		self.function = func
 		self.block = block
 		self.contents = contents
@@ -45,6 +48,9 @@ class LinearDisassemblyLine:
 
 	@classmethod
 	def _from_core_struct(cls, struct: core.BNLinearDisassemblyLine, obj: Optional['LinearViewObject'] = None) -> 'LinearDisassemblyLine':
+		view = None
+		if struct.view:
+			view = binaryview.BinaryView(handle=core.BNNewViewReference(struct.view))
 		function = None
 		if struct.function:
 			function = _function.Function(handle=core.BNNewFunctionReference(struct.function))
@@ -66,11 +72,14 @@ class LinearDisassemblyLine:
 				il_func = function.hlil
 
 		contents = _function.DisassemblyTextLine._from_core_struct(struct.contents, il_func)
-		return LinearDisassemblyLine(LinearDisassemblyLineType(struct.type), function, block, contents)
+		return LinearDisassemblyLine(LinearDisassemblyLineType(struct.type), function, block, contents, view)
 
 	def _to_core_struct(self) -> core.BNLinearDisassemblyLine:
 		result = core.BNLinearDisassemblyLine()
 		result.type = self.type
+		result.view = None
+		if self.view is not None:
+			result.view = self.view.handle
 		result.function = None
 		if self.function is not None:
 			result.function = self.function.handle

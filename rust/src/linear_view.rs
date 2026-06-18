@@ -426,6 +426,7 @@ unsafe impl Sync for LinearViewCursor {}
 #[derive(Clone, PartialEq, Debug, Eq)]
 pub struct LinearDisassemblyLine {
     pub ty: LinearDisassemblyLineType,
+    pub view: Option<Ref<BinaryView>>,
     pub function: Option<Ref<Function>>,
     pub basic_block: Option<Ref<BasicBlock<NativeBlock>>>,
     pub contents: DisassemblyTextLine,
@@ -433,6 +434,11 @@ pub struct LinearDisassemblyLine {
 
 impl LinearDisassemblyLine {
     pub(crate) unsafe fn from_raw(value: &BNLinearDisassemblyLine) -> Self {
+        let view = if !value.view.is_null() {
+            Some(unsafe { BinaryView::from_raw(value.view).to_owned() })
+        } else {
+            None
+        };
         let function = if !value.function.is_null() {
             Some(unsafe { Function::from_raw(value.function).to_owned() })
         } else {
@@ -445,6 +451,7 @@ impl LinearDisassemblyLine {
         };
         Self {
             ty: value.type_,
+            view,
             function,
             basic_block,
             contents: DisassemblyTextLine::from_raw(&value.contents),
@@ -459,6 +466,10 @@ impl LinearDisassemblyLine {
     }
 
     pub(crate) fn into_raw(value: Self) -> BNLinearDisassemblyLine {
+        let view_ptr = value
+            .view
+            .map(|v| unsafe { Ref::into_raw(v) }.handle)
+            .unwrap_or(std::ptr::null_mut());
         let function_ptr = value
             .function
             .map(|f| unsafe { Ref::into_raw(f) }.handle)
@@ -469,6 +480,7 @@ impl LinearDisassemblyLine {
             .unwrap_or(std::ptr::null_mut());
         BNLinearDisassemblyLine {
             type_: value.ty,
+            view: view_ptr,
             function: function_ptr,
             block: block_ptr,
             contents: DisassemblyTextLine::into_raw(value.contents),
@@ -476,6 +488,9 @@ impl LinearDisassemblyLine {
     }
 
     pub(crate) fn free_raw(value: BNLinearDisassemblyLine) {
+        if !value.view.is_null() {
+            let _ = unsafe { BinaryView::ref_from_raw(value.view) };
+        }
         if !value.function.is_null() {
             let _ = unsafe { Function::ref_from_raw(value.function) };
         }

@@ -53,19 +53,19 @@ class LinearMLILView(TokenizedTextView):
 		result.append(
 		  LinearDisassemblyLine(
 		    LinearDisassemblyLineType.FunctionHeaderStartLineType, self.function, None,
-		    DisassemblyTextLine([], self.function.start)
+		    DisassemblyTextLine([], self.function.start), self.data
 		  )
 		)
 		result.append(
 		  LinearDisassemblyLine(
 		    LinearDisassemblyLineType.FunctionHeaderLineType, self.function, None,
-		    DisassemblyTextLine(self.function.type_tokens, self.function.start)
+		    DisassemblyTextLine(self.function.type_tokens, self.function.start), self.data
 		  )
 		)
 		result.append(
 		  LinearDisassemblyLine(
 		    LinearDisassemblyLineType.FunctionHeaderEndLineType, self.function, None,
-		    DisassemblyTextLine([], self.function.start)
+		    DisassemblyTextLine([], self.function.start), self.data
 		  )
 		)
 
@@ -78,7 +78,7 @@ class LinearMLILView(TokenizedTextView):
 				# Blank line between basic blocks
 				result.append(
 				  LinearDisassemblyLine(
-				    LinearDisassemblyLineType.CodeDisassemblyLineType, self.function, block, DisassemblyTextLine([], lastAddr)
+				    LinearDisassemblyLineType.CodeDisassemblyLineType, self.function, block, DisassemblyTextLine([], lastAddr), self.data
 				  )
 				)
 			for i in block:
@@ -87,14 +87,14 @@ class LinearMLILView(TokenizedTextView):
 				lineIndex = 0
 				for line in lines:
 					result.append(
-					  LinearDisassemblyLine(LinearDisassemblyLineType.CodeDisassemblyLineType, self.function, block, line[0])
+					  LinearDisassemblyLine(LinearDisassemblyLineType.CodeDisassemblyLineType, self.function, block, line[0], self.data)
 					)
 					lineIndex += 1
 			lastBlock = block
 
 		result.append(
 		  LinearDisassemblyLine(
-		    LinearDisassemblyLineType.FunctionEndLineType, self.function, lastBlock, DisassemblyTextLine([], lastAddr)
+		    LinearDisassemblyLineType.FunctionEndLineType, self.function, lastBlock, DisassemblyTextLine([], lastAddr), self.data
 		  )
 		)
 

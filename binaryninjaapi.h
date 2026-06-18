@@ -5100,6 +5100,7 @@ namespace BinaryNinja {
 	struct LinearDisassemblyLine
 	{
 		BNLinearDisassemblyLineType type;
+		Ref<BinaryView> view;
 		Ref<Function> function;
 		Ref<BasicBlock> block;
 		DisassemblyTextLine contents;

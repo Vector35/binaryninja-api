@@ -2577,6 +2577,7 @@ extern "C"
 	typedef struct BNLinearDisassemblyLine
 	{
 		BNLinearDisassemblyLineType type;
+		BNBinaryView* view;
 		BNFunction* function;
 		BNBasicBlock* block;
 		BNDisassemblyTextLine contents;

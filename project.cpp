@@ -23,6 +23,19 @@
 
 using namespace BinaryNinja;
 
+namespace
+{
+	std::string StringOrEmpty(char* value)
+	{
+		if (!value)
+			return "";
+
+		std::string result = value;
+		BNFreeString(value);
+		return result;
+	}
+}
+
 
 bool ProjectNotification::BeforeOpenProjectCallback(void* ctxt, BNProject* object)
 {
@@ -288,9 +301,7 @@ std::string Project::GetPath() const
 std::string Project::GetFilePathInProject(const Ref<ProjectFile>& file) const
 {
 	char* path = BNProjectGetFilePathInProject(m_object, file->m_object);
-	std::string result = path;
-	BNFreeString(path);
-	return result;
+	return StringOrEmpty(path);
 }
 
 
@@ -594,17 +605,13 @@ Ref<Project> ProjectFile::GetProject() const
 std::string ProjectFile::GetPathOnDisk() const
 {
 	char* path = BNProjectFileGetPathOnDisk(m_object);
-	std::string result = path;
-	BNFreeString(path);
-	return result;
+	return StringOrEmpty(path);
 }
 
 std::string ProjectFile::GetPathInProject() const
 {
 	char* path = BNProjectFileGetPathInProject(m_object);
-	std::string result = path;
-	BNFreeString(path);
-	return result;
+	return StringOrEmpty(path);
 }
 
 

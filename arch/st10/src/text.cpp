@@ -3,6 +3,7 @@
 
 #include <binaryninjaapi.h>
 
+#include <cinttypes>
 #include <cstdint>
 #include <cstdio>
 #include <vector>
@@ -38,7 +39,7 @@ bool Add::Text(const uint8_t op, const uint8_t* data, const uint64_t addr,
       len = 4;
       return Instruction::TextOpMemReg(addr, data, len, 2, result, "add");
     default:
-      BN::LogError("0x%lx: Add::%s received invalid opcode 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Add::%s received invalid opcode 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -63,7 +64,7 @@ bool Addb::Text(const uint8_t op, const uint8_t* data, const uint64_t addr,
       len = 4;
       return Instruction::TextOpMemReg(addr, data, len, 1, result, "addb");
     default:
-      BN::LogError("0x%lx: Addb::%s received invalid opcode 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Addb::%s received invalid opcode 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -89,7 +90,7 @@ bool Addc::Text(const uint8_t op, const uint8_t* data, const uint64_t addr,
       len = 4;
       return Instruction::TextOpMemReg(addr, data, len, 2, result, "addc");
     default:
-      BN::LogError("0x%lx: Addc::%s received invalid opcode 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Addc::%s received invalid opcode 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -114,7 +115,7 @@ bool Addcb::Text(const uint8_t op, const uint8_t* data, const uint64_t addr,
       len = 4;
       return Instruction::TextOpMemReg(addr, data, len, 1, result, "addcb");
     default:
-      BN::LogError("0x%lx: Addcb::%s received invalid opcode 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Addcb::%s received invalid opcode 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -139,7 +140,7 @@ bool And::Text(const uint8_t op, const uint8_t* data, const uint64_t addr,
       len = 4;
       return Instruction::TextOpMemReg(addr, data, len, 2, result, "and");
     default:
-      BN::LogError("0x%lx: And::%s received invalid opcode 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": And::%s received invalid opcode 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -164,7 +165,7 @@ bool Andb::Text(const uint8_t op, const uint8_t* data, const uint64_t addr,
       len = 4;
       return Instruction::TextOpMemReg(addr, data, len, 1, result, "andb");
     default:
-      BN::LogError("0x%lx: Andb::%s received invalid opcode 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Andb::%s received invalid opcode 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -627,7 +628,7 @@ bool Cmp::Text(const uint8_t op, const uint8_t* data, const uint64_t addr,
       len = 4;
       return Instruction::TextOpRegMem(addr, data, len, 2, result, "cmp");
     default:
-      BN::LogError("0x%lx: Cmp::%s received invalid opcode 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Cmp::%s received invalid opcode 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -649,7 +650,7 @@ bool Cmpb::Text(const uint8_t op, const uint8_t* data, const uint64_t addr,
       len = 4;
       return Instruction::TextOpRegMem(addr, data, len, 1, result, "cmpb");
     default:
-      BN::LogError("0x%lx: Cmpb::%s received invalid opcode 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Cmpb::%s received invalid opcode 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -997,7 +998,7 @@ bool ExtrAtomic::Text(const uint8_t* data, const uint64_t addr, size_t& len,
   } else if (scode == 0b00) {
     ITEXT("atomic")
   } else {
-    BN::LogError("0x%lx: Malformed %s instruction (invalid subopcode)", addr,
+    BN::LogError("0x%" PRIx64 ": Malformed %s instruction (invalid subopcode)", addr,
                  "ExtrAtomic");
     return false;
   }
@@ -2183,7 +2184,7 @@ bool Or::Text(const uint8_t op, const uint8_t* data, const uint64_t addr,
       len = 4;
       return Instruction::TextOpMemReg(addr, data, len, 2, result, "or");
     default:
-      BN::LogError("0x%lx: Or::%s received invalid opcode 0x%x", addr, __func__,
+      BN::LogError("0x%" PRIx64 ": Or::%s received invalid opcode 0x%x", addr, __func__,
                    op);
       return false;
   }
@@ -2208,7 +2209,7 @@ bool Orb::Text(const uint8_t op, const uint8_t* data, const uint64_t addr,
       len = 4;
       return Instruction::TextOpMemReg(addr, data, len, 1, result, "orb");
     default:
-      BN::LogError("0x%lx: Orb::%s received invalid opcode 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Orb::%s received invalid opcode 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -2544,7 +2545,7 @@ bool Sub::Text(const uint8_t op, const uint8_t* data, const uint64_t addr,
       len = 4;
       return Instruction::TextOpMemReg(addr, data, len, 2, result, "sub");
     default:
-      BN::LogError("0x%lx: Sub::%s received invalid opcode 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Sub::%s received invalid opcode 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -2569,7 +2570,7 @@ bool Subb::Text(const uint8_t op, const uint8_t* data, const uint64_t addr,
       len = 4;
       return Instruction::TextOpMemReg(addr, data, len, 1, result, "subb");
     default:
-      BN::LogError("0x%lx: Subb::%s received invalid opcode 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Subb::%s received invalid opcode 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -2595,7 +2596,7 @@ bool Subc::Text(const uint8_t op, const uint8_t* data, const uint64_t addr,
       len = 4;
       return Instruction::TextOpMemReg(addr, data, len, 2, result, "subc");
     default:
-      BN::LogError("0x%lx: Subc::%s received invalid opcode 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Subc::%s received invalid opcode 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -2620,7 +2621,7 @@ bool Subcb::Text(const uint8_t op, const uint8_t* data, const uint64_t addr,
       len = 4;
       return Instruction::TextOpMemReg(addr, data, len, 1, result, "subcb");
     default:
-      BN::LogError("0x%lx: Subcb::%s received invalid opcode 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Subcb::%s received invalid opcode 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -2660,7 +2661,7 @@ bool Xor::Text(const uint8_t op, const uint8_t* data, const uint64_t addr,
       len = 4;
       return Instruction::TextOpMemReg(addr, data, len, 2, result, "xor");
     default:
-      BN::LogError("0x%lx: Xor::%s received invalid opcode 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Xor::%s received invalid opcode 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -2685,7 +2686,7 @@ bool Xorb::Text(const uint8_t op, const uint8_t* data, const uint64_t addr,
       len = 4;
       return Instruction::TextOpMemReg(addr, data, len, 1, result, "xorb");
     default:
-      BN::LogError("0x%lx: Xorb::%s received invalid opcode 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Xorb::%s received invalid opcode 0x%x", addr,
                    __func__, op);
       return false;
   }

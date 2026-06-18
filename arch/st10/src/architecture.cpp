@@ -5,6 +5,7 @@
 
 #include <binaryninjaapi.h>
 
+#include <cinttypes>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -295,9 +296,6 @@ bool C166Architecture::GetInstructionInfo(const uint8_t* data,
                                           BN::InstructionInfo& result) {
   const auto wdata = (const uint16_t*)data;
   const uint16_t raw = *wdata;
-  uint8_t seg;
-  uint16_t caddr;
-  uint32_t target;
 
   switch (raw & 0xFFu) {
     /* 2-byte non-branching instructions */
@@ -1500,7 +1498,7 @@ void apply_extp_pag10(BinaryNinja::BinaryView* view, uint64_t start,
 
   // Try to apply to all 2-byte addresses in the specified (highlighted range)
   for (uint64_t a = start; a < (start + length);) {
-    BN::LogInfo("Apply EXTP to address: 0x%lx", a);
+    BN::LogInfo("Apply EXTP to address: 0x%" PRIx64, a);
     Instruction::SetExtpPag10(a, pag10, 0);
     a += 2;
   }
@@ -1517,7 +1515,7 @@ void apply_exts_seg8(BinaryNinja::BinaryView* view, uint64_t start,
 
   // Try to apply to all 2-byte addresses in the specified (highlighted range)
   for (uint64_t a = start; a < (start + length);) {
-    BN::LogInfo("Apply EXTS to address: 0x%lx", a);
+    BN::LogInfo("Apply EXTS to address: 0x%" PRIx64, a);
     Instruction::SetExtsSeg8(a, seg8, 0);
     a += 2;
   }
@@ -1529,7 +1527,7 @@ void apply_extr(BinaryNinja::BinaryView* view, uint64_t start,
                 uint64_t length) {
   // Try to apply to all 2-byte addresses in the specified (highlighted range)
   for (uint64_t a = start; a < (start + length);) {
-    BN::LogInfo("Apply EXTR to address: 0x%lx", a);
+    BN::LogInfo("Apply EXTR to address: 0x%" PRIx64, a);
     Instruction::SetExtr(a, 0);
     a += 2;
   }

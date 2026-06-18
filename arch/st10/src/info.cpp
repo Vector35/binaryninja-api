@@ -3,6 +3,7 @@
 
 #include <binaryninjaapi.h>
 
+#include <cinttypes>
 #include <cstdint>
 
 #include "conditions.h"
@@ -36,7 +37,7 @@ bool Calli::Info(const uint8_t* data, const uint64_t addr, const size_t maxLen,
       code == Conditions::CC_UC)
     result.AddBranch(UnresolvedBranch);
   else {
-    BN::LogDebug("[I] 0x%lx: Unhandled CALLI variant", addr);
+    BN::LogDebug("[I] 0x%" PRIx64 ": Unhandled CALLI variant", addr);
     return false;
   }
 
@@ -102,7 +103,7 @@ bool Jmpi::Info(const uint8_t* data, const uint64_t addr, const size_t maxLen,
       code == Conditions::CC_UC)
     result.AddBranch(UnresolvedBranch);
   else {
-    BN::LogDebug("0x%lx: Jmpi::%s -- unhandled conditional code", addr,
+    BN::LogDebug("0x%" PRIx64 ": Jmpi::%s -- unhandled conditional code", addr,
                  __func__);
     return false;
   }

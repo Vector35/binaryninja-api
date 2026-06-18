@@ -15,25 +15,6 @@ namespace BN = BinaryNinja;
 
 namespace C166 {
 
-// Indirect Addressing Expressions (using EXTS)
-static BN::ExprId GetIndAddrExpr_Exts_Rw(BN::LowLevelILFunction& il,
-                                         uint32_t seg8, uint32_t Rw);
-static BN::ExprId GetIndAddrExpr_Exts_Rw_data16(BN::LowLevelILFunction& il,
-                                                uint32_t seg8, uint32_t Rw,
-                                                uint16_t data16);
-
-// Indirect Addressing Expressions (using EXTP)
-static BN::ExprId GetIndAddrExpr_Extp_Rw(BN::LowLevelILFunction& il,
-                                         uint32_t pag10, uint32_t Rw);
-static BN::ExprId GetIndAddrExpr_Extp_Rw_data16(BN::LowLevelILFunction& il,
-                                                uint32_t pag10, uint32_t Rw,
-                                                uint16_t data16);
-
-// Indirect Addressing Expressions (Using DPP by default)
-// static BN::ExprId GetIndAddrExpr_Rw(BN::LowLevelILFunction &il, uint32_t Rw);
-static BN::ExprId GetIndAddrExpr_Rw_data16(BN::LowLevelILFunction& il,
-                                           uint32_t Rw, uint16_t data16);
-
 class Add {
   static constexpr uint32_t flags = Flags::WRITE_ALL;
 

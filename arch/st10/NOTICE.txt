@@ -1,4 +1,19 @@
-﻿This project contains code from Idaho National Laboratory.
+This directory contains code derived from Idaho National Laboratory's
+bn-st10-arch project:
+  https://github.com/idaholab/bn-st10-arch
+
+Original portions:
+  Copyright (c) 2025 Battelle Energy Alliance, LLC
+  Licensed under the MIT License.
+
+Vector 35 modifications:
+  Copyright (c) 2026 Vector 35 Inc.
+  Licensed under the MIT License.
+
+
+Original upstream notice:
+
+This project contains code from Idaho National Laboratory.
 Github URL: https://github.com/idaholab/bn-st10-arch
 Licensed under MIT
 
@@ -36,15 +51,12 @@ Garrett Larsen
 
 Matthew Crepeau
 
-Hannah C. Kleinheider 
+Hannah C. Kleinheider
 
 Jason Pace
 
-Joseph Jauregui 
+Joseph Jauregui
 
 Daniel Belin
 
 Matthew Bjork
-
-
-

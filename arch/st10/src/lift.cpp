@@ -4,6 +4,7 @@
 #include <binaryninjaapi.h>
 #include <lowlevelilinstruction.h>
 
+#include <cinttypes>
 #include <cstdint>
 #include <vector>
 
@@ -94,7 +95,7 @@ bool Add::Lift(const uint8_t op, const uint8_t *data, const uint64_t addr,
       return Instruction::LiftOpMemReg(addr, data, len, 2, flags, true, il,
                                        IL_OP(BN::LowLevelILFunction::Add));
     default:
-      BN::LogError("0x%lx: Add::%s received invalid opcode: 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Add::%s received invalid opcode: 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -124,7 +125,7 @@ bool Addb::Lift(const uint8_t op, const uint8_t *data, const uint64_t addr,
       return Instruction::LiftOpMemReg(addr, data, len, 1, flags, true, il,
                                        IL_OP(BN::LowLevelILFunction::Add));
     default:
-      BN::LogError("0x%lx: Add::%s received invalid opcode: 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Add::%s received invalid opcode: 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -155,7 +156,7 @@ bool Addc::Lift(const uint8_t op, const uint8_t *data, const uint64_t addr,
       return Instruction::LiftOpMemReg(addr, data, len, 2, flags, true, il,
                                        IL_OP(BN::LowLevelILFunction::Add));
     default:
-      BN::LogError("0x%lx: Addc::%s received invalid opcode: 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Addc::%s received invalid opcode: 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -185,7 +186,7 @@ bool Addcb::Lift(const uint8_t op, const uint8_t *data, const uint64_t addr,
       return Instruction::LiftOpMemReg(addr, data, len, 1, flags, true, il,
                                        IL_OP(BN::LowLevelILFunction::Add));
     default:
-      BN::LogError("0x%lx: Addcb::%s received invalid opcode: 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Addcb::%s received invalid opcode: 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -215,7 +216,7 @@ bool And::Lift(const uint8_t op, const uint8_t *data, const uint64_t addr,
       return Instruction::LiftOpMemReg(addr, data, len, 2, flags, true, il,
                                        IL_OP(BN::LowLevelILFunction::And));
     default:
-      BN::LogError("0x%lx: And::%s received invalid opcode: 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": And::%s received invalid opcode: 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -245,7 +246,7 @@ bool Andb::Lift(const uint8_t op, const uint8_t *data, const uint64_t addr,
       return Instruction::LiftOpMemReg(addr, data, len, 1, flags, true, il,
                                        IL_OP(BN::LowLevelILFunction::And));
     default:
-      BN::LogError("0x%lx: Andb::%s received invalid opcode: 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Andb::%s received invalid opcode: 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -401,10 +402,7 @@ bool Bcmp::Lift(const uint8_t *data, const uint64_t addr, size_t &len,
 
 bool Bfldh::Lift(const uint8_t *data, const uint64_t addr, size_t &len,
                  BN::LowLevelILFunction &il) {  // TODO: Fully implement
-  char buf[32];
   uint32_t bitoff = Instruction::TranslateBitOff(addr, *(data + 1));
-  uint8_t data8 = *(data + 2);
-  uint8_t mask8 = *(data + 3);
 
   if (bitoff < 0xF) {
     il.Unimplemented();  // TODO: Reference byte register (+17)
@@ -421,10 +419,7 @@ bool Bfldh::Lift(const uint8_t *data, const uint64_t addr, size_t &len,
 
 bool Bfldl::Lift(const uint8_t *data, const uint64_t addr, size_t &len,
                  BN::LowLevelILFunction &il) {  // TODO: Fully implement
-  char buf[32];
   uint32_t bitoff = Instruction::TranslateBitOff(addr, *(data + 1));
-  uint8_t mask8 = *(data + 2);
-  uint8_t data8 = *(data + 3);
 
   if (bitoff < 0xF) {
     il.Unimplemented();  // TODO: Reference byte register (+16)
@@ -655,7 +650,7 @@ bool Calla::Lift(BN::Architecture *arch, const uint8_t *data,
     BNLowLevelILLabel *f = il.GetLabelForAddress(arch, addr + length);
 
     if (!t || !f) {  // This should never happen!
-      BN::LogDebug("0x%lx: Calla::%s Failed to find true/false labels!", addr,
+      BN::LogDebug("0x%" PRIx64 ": Calla::%s Failed to find true/false labels!", addr,
                    __func__);
       return false;
     }
@@ -676,7 +671,7 @@ bool Calli::Lift(BN::Architecture *arch, const uint8_t *data,
   if (code == Conditions::CC_UC) {
     il.AddInstruction(il.Call(il.Register(2, rwn)));
   } else {
-    BN::LogDebug("[L] 0x%lx: Unhandled Calli variant", addr);
+    BN::LogDebug("[L] 0x%" PRIx64 ": Unhandled Calli variant", addr);
   }
 
   len = length;
@@ -729,7 +724,7 @@ bool Cmp::Lift(const uint8_t op, const uint8_t *data, const uint64_t addr,
       return Instruction::LiftOpRegMem(addr, data, len, 2, flags, false, il,
                                        IL_OP(BN::LowLevelILFunction::Sub));
     default:
-      BN::LogError("0x%lx: Cmp::%s received invalid opcode: 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Cmp::%s received invalid opcode: 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -759,7 +754,7 @@ bool Cmpb::Lift(const uint8_t op, const uint8_t *data, const uint64_t addr,
       return Instruction::LiftOpRegMem(addr, data, len, 1, flags, false, il,
                                        IL_OP(BN::LowLevelILFunction::Sub));
     default:
-      BN::LogError("0x%lx: Cmpb::%s received invalid opcode: 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Cmpb::%s received invalid opcode: 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -1126,7 +1121,7 @@ bool Jb::Lift(BN::Architecture *arch, const uint8_t *data, const uint64_t addr,
   f = il.GetLabelForAddress(arch, addr + length);
 
   if (!t || !f) {  // This should never happen!
-    BN::LogDebug("0x%lx: Jb::%s Failed to find true/false labels!", addr,
+    BN::LogDebug("0x%" PRIx64 ": Jb::%s Failed to find true/false labels!", addr,
                  __func__);
     return false;
   }
@@ -1168,7 +1163,7 @@ bool Jbc::Lift(BN::Architecture *arch, const uint8_t *data, const uint64_t addr,
   f = il.GetLabelForAddress(arch, addr + length);
 
   if (!t || !f) {  // This should never happen!
-    BN::LogDebug("0x%lx: Jbc::%s Failed to find true/false labels!", addr,
+    BN::LogDebug("0x%" PRIx64 ": Jbc::%s Failed to find true/false labels!", addr,
                  __func__);
     return false;
   }
@@ -1197,7 +1192,7 @@ bool Jmpa::Lift(BN::Architecture *arch, const uint8_t *data,
     BNLowLevelILLabel *f = il.GetLabelForAddress(arch, addr + length);
 
     if (!t || !f) {  // This should never happen!
-      BN::LogDebug("0x%lx: Jmpa::%s Failed to find true/false labels!", addr,
+      BN::LogDebug("0x%" PRIx64 ": Jmpa::%s Failed to find true/false labels!", addr,
                    __func__);
       return false;
     }
@@ -1221,7 +1216,7 @@ bool Jmpi::Lift(BN::Architecture *arch, const uint8_t *data,
 
     return Instruction::JumpIndirect(arch, il, rwn, addr);
   } else {
-    BN::LogDebug("0x%lx: Jmpi::%s -- unhandled conditional code", addr,
+    BN::LogDebug("0x%" PRIx64 ": Jmpi::%s -- unhandled conditional code", addr,
                  __func__);
     return false;
   }
@@ -1244,7 +1239,7 @@ bool Jmpr::Lift(BN::Architecture *arch, const uint8_t *data,
     BNLowLevelILLabel *f = il.GetLabelForAddress(arch, addr + length);
 
     if (!t || !f) {  // This should never happen!
-      BN::LogDebug("0x%lx: Jmpr::%s Failed to find true/false labels!", addr,
+      BN::LogDebug("0x%" PRIx64 ": Jmpr::%s Failed to find true/false labels!", addr,
                    __func__);
       return false;
     }
@@ -1287,7 +1282,7 @@ bool Jnb::Lift(BN::Architecture *arch, const uint8_t *data, const uint64_t addr,
   f = il.GetLabelForAddress(arch, addr + length);
 
   if (!t || !f) {  // This should never happen!
-    BN::LogDebug("0x%lx: Jnb::%s Failed to find true/false labels!", addr,
+    BN::LogDebug("0x%" PRIx64 ": Jnb::%s Failed to find true/false labels!", addr,
                  __func__);
     return false;
   }
@@ -1327,7 +1322,7 @@ bool Jnbs::Lift(BN::Architecture *arch, const uint8_t *data,
   f = il.GetLabelForAddress(arch, addr + length);
 
   if (!t || !f) {  // This should never happen!
-    BN::LogDebug("0x%lx: Jnbs::%s Failed to find true/false labels!", addr,
+    BN::LogDebug("0x%" PRIx64 ": Jnbs::%s Failed to find true/false labels!", addr,
                  __func__);
     return false;
   }
@@ -1375,7 +1370,7 @@ bool Mov::Liftx88(const uint8_t *data, const uint64_t addr, size_t &len,
   auto arch = il.GetArchitecture();
   uint32_t sp;
   if (arch.GetPtr() == nullptr) {
-    BN::LogDebug("0x%lx: %s GetBN::Architecture returned nullptr", addr,
+    BN::LogDebug("0x%" PRIx64 ": %s GetBN::Architecture returned nullptr", addr,
                  __PRETTY_FUNCTION__);
     sp = Registers::R0;
   } else {
@@ -1432,7 +1427,7 @@ bool Mov::Liftx98(const uint8_t *data, const uint64_t addr, size_t &len,
   auto arch = il.GetArchitecture();
   uint32_t sp;
   if (arch.GetPtr() == nullptr) {
-    BN::LogDebug("0x%lx: %s GetBN::Architecture returned nullptr", addr,
+    BN::LogDebug("0x%" PRIx64 ": %s GetBN::Architecture returned nullptr", addr,
                  __PRETTY_FUNCTION__);
     sp = Registers::R0;
   } else {
@@ -1758,7 +1753,7 @@ bool Movb::Liftx89(const uint8_t *data, const uint64_t addr, size_t &len,
   auto arch = il.GetArchitecture();
   uint32_t sp;
   if (arch.GetPtr() == nullptr) {
-    BN::LogDebug("0x%lx: %s GetBN::Architecture returned nullptr", addr,
+    BN::LogDebug("0x%" PRIx64 ": %s GetBN::Architecture returned nullptr", addr,
                  __PRETTY_FUNCTION__);
     sp = Registers::R0;
   } else {
@@ -1800,7 +1795,7 @@ bool Movb::Liftx99(const uint8_t *data, const uint64_t addr, size_t &len,
   auto arch = il.GetArchitecture();
   uint32_t sp;
   if (arch.GetPtr() == nullptr) {
-    BN::LogDebug("0x%lx: %s GetBN::Architecture returned nullptr", addr,
+    BN::LogDebug("0x%" PRIx64 ": %s GetBN::Architecture returned nullptr", addr,
                  __PRETTY_FUNCTION__);
     sp = Registers::R0;
   } else {
@@ -2373,7 +2368,7 @@ bool Or::Lift(const uint8_t op, const uint8_t *data, const uint64_t addr,
       return Instruction::LiftOpMemReg(addr, data, len, 2, flags, true, il,
                                        IL_OP(BN::LowLevelILFunction::Or));
     default:
-      BN::LogError("0x%lx: Or::%s received invalid opcode: 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Or::%s received invalid opcode: 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -2413,7 +2408,7 @@ bool Orb::Lift(const uint8_t op, const uint8_t *data, const uint64_t addr,
       return Instruction::LiftOpMemReg(addr, data, len, 1, flags, true, il,
                                        IL_OP(BN::LowLevelILFunction::Or));
     default:
-      BN::LogError("0x%lx: Orb::%s received invalid opcode: 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Orb::%s received invalid opcode: 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -2707,7 +2702,7 @@ bool Sub::Lift(const uint8_t op, const uint8_t *data, const uint64_t addr,
       return Instruction::LiftOpMemReg(addr, data, len, 2, flags, true, il,
                                        IL_OP(BN::LowLevelILFunction::Sub));
     default:
-      BN::LogError("0x%lx: Sub::%s received invalid opcode: 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Sub::%s received invalid opcode: 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -2747,7 +2742,7 @@ bool Subb::Lift(const uint8_t op, const uint8_t *data, const uint64_t addr,
       return Instruction::LiftOpMemReg(addr, data, len, 1, flags, true, il,
                                        IL_OP(BN::LowLevelILFunction::Sub));
     default:
-      BN::LogError("0x%lx: Subb::%s received invalid opcode: 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Subb::%s received invalid opcode: 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -2788,7 +2783,7 @@ bool Subc::Lift(const uint8_t op, const uint8_t *data, const uint64_t addr,
       return Instruction::LiftOpMemReg(addr, data, len, 2, flags, true, il,
                                        IL_OP(BN::LowLevelILFunction::Sub));
     default:
-      BN::LogError("0x%lx: Subc::%s received invalid opcode: 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Subc::%s received invalid opcode: 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -2828,7 +2823,7 @@ bool Subcb::Lift(const uint8_t op, const uint8_t *data, const uint64_t addr,
       return Instruction::LiftOpMemReg(addr, data, len, 1, flags, true, il,
                                        IL_OP(BN::LowLevelILFunction::Sub));
     default:
-      BN::LogError("0x%lx: Subcb::%s received invalid opcode: 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Subcb::%s received invalid opcode: 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -2874,7 +2869,7 @@ bool Xor::Lift(const uint8_t op, const uint8_t *data, const uint64_t addr,
       return Instruction::LiftOpMemReg(addr, data, len, 2, flags, true, il,
                                        IL_OP(BN::LowLevelILFunction::Xor));
     default:
-      BN::LogError("0x%lx: Xor::%s received invalid opcode: 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Xor::%s received invalid opcode: 0x%x", addr,
                    __func__, op);
       return false;
   }
@@ -2914,7 +2909,7 @@ bool Xorb::Lift(const uint8_t op, const uint8_t *data, const uint64_t addr,
       return Instruction::LiftOpMemReg(addr, data, len, 1, flags, true, il,
                                        IL_OP(BN::LowLevelILFunction::Xor));
     default:
-      BN::LogError("0x%lx: Xorb::%s received invalid opcode: 0x%x", addr,
+      BN::LogError("0x%" PRIx64 ": Xorb::%s received invalid opcode: 0x%x", addr,
                    __func__, op);
       return false;
   }

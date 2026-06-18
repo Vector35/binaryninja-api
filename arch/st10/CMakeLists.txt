@@ -1,32 +1,39 @@
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
-set(CMAKE_POLICY_DEFAULT_CMP0135 NEW)
 
-project(bn-st10-arch CXX)
+project(arch_st10 CXX)
 
-add_library(${PROJECT_NAME} SHARED
-        src/architecture.cpp
-        src/architecture.h
-        src/conditions.h
-        src/flags.h
-        src/info.cpp
-        src/instructions.h
-        src/lift.cpp
-        src/opcodes.h
-        src/registers.h
-        src/sfr.h
-        src/text.cpp
-        src/util.cpp
-        src/util.h
+if(NOT BN_INTERNAL_BUILD)
+	add_subdirectory(${PROJECT_SOURCE_DIR}/../.. ${PROJECT_BINARY_DIR}/api)
+endif()
+
+file(GLOB SOURCES CONFIGURE_DEPENDS
+	src/*.cpp
+	src/*.h
 )
 
-target_link_libraries(${PROJECT_NAME}
-        binaryninjaapi)
+if(DEMO)
+	add_library(${PROJECT_NAME} STATIC ${SOURCES})
+else()
+	add_library(${PROJECT_NAME} SHARED ${SOURCES})
+endif()
+
+target_include_directories(${PROJECT_NAME}
+	PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
+target_link_libraries(${PROJECT_NAME} binaryninjaapi)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-        CXX_STANDARD 20
-        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/bin)
+	CXX_STANDARD 20
+	CXX_VISIBILITY_PRESET hidden
+	CXX_STANDARD_REQUIRED ON
+	VISIBILITY_INLINES_HIDDEN ON
+	POSITION_INDEPENDENT_CODE ON)
 
-set(CMAKE_CXX_FLAGS_DEBUG "-Og -g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-
-bn_install_plugin(${PROJECT_NAME})
+if(BN_INTERNAL_BUILD)
+	plugin_rpath(${PROJECT_NAME})
+	set_target_properties(${PROJECT_NAME} PROPERTIES
+		LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
+		RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
+else()
+	bn_install_plugin(${PROJECT_NAME})
+endif()

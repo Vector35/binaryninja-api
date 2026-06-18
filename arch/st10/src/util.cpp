@@ -3,6 +3,7 @@
 
 #include "util.h"
 
+#include <cinttypes>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -64,7 +65,7 @@ void Instruction::GetDefaultDpps(uint32_t* dpps) {
 // Assumes DPP usage implies no EXT sequence active.
 void Instruction::SetDpps(uint64_t addr, uint16_t dpp0, uint16_t dpp1,
                           uint16_t dpp2, uint16_t dpp3) {
-  // BN::LogInfo("util.cpp: SetDpps: addr=0x%lx", addr);
+  // BN::LogInfo("util.cpp: SetDpps: addr=0x%" PRIx64, addr);
   std::lock_guard<std::mutex> guard(StateMapMutex);
 
   auto it = StateMap.find(addr);
@@ -118,7 +119,7 @@ void Instruction::SetDppsRange(uint64_t start, uint64_t end, uint16_t dpp0,
 
 void Instruction::SetExtpPag10(uint64_t addr, uint16_t pag10,
                                uint8_t num_insns) {
-  // BN::LogInfo("util.cpp: SetExtpPagSeg: addr=0x%lx, pag10=0x%hx", addr,
+  // BN::LogInfo("util.cpp: SetExtpPagSeg: addr=0x%" PRIx64 ", pag10=0x%hx", addr,
   // pag10);
   std::lock_guard<std::mutex> guard(StateMapMutex);
 
@@ -138,7 +139,7 @@ void Instruction::SetExtpPag10(uint64_t addr, uint16_t pag10,
 }
 
 void Instruction::SetExtsSeg8(uint64_t addr, uint16_t seg8, uint8_t num_insns) {
-  // BN::LogInfo("util.cpp: SetExtsSeg8: addr=0x%lx, seg8=0x%hx", addr, seg8);
+  // BN::LogInfo("util.cpp: SetExtsSeg8: addr=0x%" PRIx64 ", seg8=0x%hx", addr, seg8);
   std::lock_guard<std::mutex> guard(StateMapMutex);
 
   auto it = StateMap.find(addr);
@@ -157,7 +158,7 @@ void Instruction::SetExtsSeg8(uint64_t addr, uint16_t seg8, uint8_t num_insns) {
 }
 
 void Instruction::SetExtr(uint64_t addr, uint8_t num_insns) {
-  // BN::LogInfo("util.cpp: SetExtr: addr=0x%lx", addr);
+  // BN::LogInfo("util.cpp: SetExtr: addr=0x%" PRIx64, addr);
   std::lock_guard<std::mutex> guard(StateMapMutex);
 
   if (const auto it = StateMap.find(addr); it != StateMap.end()) {
@@ -1125,7 +1126,7 @@ const char* Extprs::GetInstruction(const uint8_t* data, uint64_t addr,
     case 0b01:
       return "extp";
     default:
-      BN::LogDebug("0x%lx: Encountered unimplemented extended instruction",
+      BN::LogDebug("0x%" PRIx64 ": Encountered unimplemented extended instruction",
                    addr);
       return "UNIMPLEMENTED_EXT";
   }

@@ -6,8 +6,8 @@ Binary Ninja provides two MCP server variants:
 
 | Variant | Binary | Transport | Availability |
 | --- | --- | --- | --- |
-| GUI MCP server | `binaryninja` | HTTP only | Runs inside the Binary Ninja GUI |
-| Headless MCP server | `binaryninja_mcp` | stdio only | Runs as a standalone command-line server; not included with Binary Ninja Free |
+| GUI MCP server | `binaryninja` | HTTP only | Runs inside the Binary Ninja GUI; not included with Binary Ninja Free or Personal |
+| Headless MCP server | `binaryninja_mcp` | stdio only | Runs as a standalone command-line server; not included with Binary Ninja Free or Personal |
 
 ## Tool Overview
 
@@ -98,16 +98,25 @@ The GUI MCP server is hosted inside the Binary Ninja application. It uses HTTP o
 ### Enable and Start
 
 1. Open Settings with `[CMD/CTRL] ,`.
-2. Enable `ui.mcp.enabled`.
+2. Enable `ui.mcp.enabled`. This setting requires a restart.
 3. Optionally configure the HTTP settings:
     - `ui.mcp.host`: Local interface to bind. Default: `127.0.0.1`
     - `ui.mcp.port`: HTTP port. Default: `24642`; use `0` for an OS-assigned port
     - `ui.mcp.endpoint`: HTTP endpoint path. Default: `/mcp`
     - `ui.mcp.token`: Optional bearer token. Leave blank to disable HTTP authorization
-4. Start the server with `Plugins > MCP > Start Server`.
-5. Use `Plugins > MCP > Copy Connection Info` to copy the exact URL and authorization header for your current session.
+4. Restart Binary Ninja.
+5. Start the server with `Plugins > MCP > Start Server`.
+6. Use `Plugins > MCP > Copy Connection Info` to copy the exact URL and authorization header for your current session.
 
 Use `Plugins > MCP > Stop Server` to stop the server.
+
+### GUI Commands
+
+The GUI server adds these commands under `Plugins > MCP`. They are also registered as UI commands, so they can be found by name from command search or key binding configuration:
+
+- `MCP\Start Server`: Start the GUI MCP HTTP server. This command is available when the server is not already running.
+- `MCP\Stop Server`: Stop the GUI MCP HTTP server. This command is available while the server is running.
+- `MCP\Copy Connection Info`: Copy the current connection details to the clipboard and write them to the log. When the server is running, the copied text includes the URL and, if configured, the `Authorization` header. When the server is not running, the copied text reports that the server is not running.
 
 With default settings, the GUI MCP server listens at:
 
@@ -127,7 +136,7 @@ If `ui.mcp.port` is `0`, the operating system chooses a port when the server sta
 
 The standalone `binaryninja_mcp` server is for headless operation and uses stdio only. Configure your MCP client to launch `binaryninja_mcp` as a local command-line MCP server.
 
-The headless server opens and analyzes files without the GUI and exposes the same file manager and read-only BinaryView inspection tools as the GUI server. The `binaryninja_mcp` binary is not included with Binary Ninja Free.
+The headless server opens and analyzes files without the GUI and exposes the same file manager and read-only BinaryView inspection tools as the GUI server. The `binaryninja_mcp` binary is not included with Binary Ninja Free or Personal.
 
 Use the full path to `binaryninja_mcp` in client configuration unless it is already on your `PATH`.
 

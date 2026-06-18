@@ -2865,6 +2865,44 @@ public:
 		}
 		return result;
 	}
+
+	virtual ValueLocation GetReturnValueLocation(BinaryView* view, const ReturnValue& returnValue) override
+	{
+		Ref<Type> type = returnValue.type.GetValue();
+		if (!type || type->IsVoid())
+			return ValueLocation();
+
+		if (type->GetClass() == NamedTypeReferenceClass && type->GetWidth() == 0)
+			return GetDefaultReturnValueLocation(view, returnValue);
+
+		const size_t width = type->GetWidth();
+
+		// PS2 scalar float returns only use the FP return register for 32-bit float.
+		// 64-bit double returns are handled below as a v0/v1 integer-register pair.
+		if (type->IsFloat() && (width == 4) && GetFloatReturnValueRegister() != BN_INVALID_REGISTER)
+		{
+			ValueLocation result;
+			result.components.emplace_back(Variable::Register(GetFloatReturnValueRegister()), 0, 4);
+			return result;
+		}
+
+		if (width <= 4)
+		{
+			ValueLocation result;
+			result.components.emplace_back(Variable::Register(REG_V0), 0, 4);
+			return result;
+		}
+
+		if (width <= 8 && GetHighIntegerReturnValueRegister() != BN_INVALID_REGISTER)
+		{
+			ValueLocation result;
+			result.components.emplace_back(Variable::Register(REG_V0), 0, 4);
+			result.components.emplace_back(Variable::Register(REG_V1), 4, 4);
+			return result;
+		}
+
+		return ValueLocation({GetIndirectReturnValueLocation()}, true, GetReturnedIndirectReturnValuePointer());
+	}
 };
 
 class MipsN64CallingConvention: public CallingConvention

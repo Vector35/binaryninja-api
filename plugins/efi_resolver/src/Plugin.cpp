@@ -1,11 +1,10 @@
 #include "DxeResolver.h"
 #include "PeiResolver.h"
 #include "binaryninjaapi.h"
+#include <exception>
 #include <thread>
 
 using namespace BinaryNinja;
-
-static Ref<BackgroundTask> m_efiBackgroundTask = nullptr;
 
 bool IsValid(BinaryView* view)
 {
@@ -17,33 +16,56 @@ bool IsValid(BinaryView* view)
 }
 
 
-void RunCommand(Ref<BinaryView> view)
+static void RunResolver(Ref<BinaryView> view, Ref<BackgroundTask> task)
 {
-	m_efiBackgroundTask = new BackgroundTask("Running EFI resolver...", true);
-	thread resolverThread([view]() {
-		LogInfo("Identifying EFI module type...");
-		EFIModuleType moduleType = identifyModuleType(view);
+	LogInfo("Identifying EFI module type...");
+	EFIModuleType moduleType = identifyModuleType(view);
 
-		auto undo = view->BeginUndoActions();
-		if (moduleType == PEI)
+	auto undo = view->BeginUndoActions();
+	if (moduleType == PEI)
+	{
+		task->SetProgressText("Resolving PEIM...");
+		auto resolver = PeiResolver(view, task);
+		resolver.resolvePei();
+	}
+	else if (moduleType == DXE)
+	{
+		task->SetProgressText("Resolving DXE protocols...");
+		auto resolver = DxeResolver(view, task);
+		resolver.resolveDxe();
+		task->SetProgressText("Resolving MM related protocols...");
+		resolver.resolveSmm();
+	}
+	view->CommitUndoActions(undo);
+	task->Finish();
+}
+
+
+static void StartResolverThread(Ref<BinaryView> view)
+{
+	Ref<BackgroundTask> task = new BackgroundTask("Running EFI resolver...", true);
+	thread resolverThread([view, task]() {
+		try
 		{
-			m_efiBackgroundTask->SetProgressText("Resolving PEIM...");
-			auto resolver = PeiResolver(view, m_efiBackgroundTask);
-			resolver.resolvePei();
+			RunResolver(view, task);
 		}
-		else if (moduleType == DXE)
+		catch (std::exception& e)
 		{
-			m_efiBackgroundTask->SetProgressText("Resolving DXE protocols...");
-			auto resolver = DxeResolver(view, m_efiBackgroundTask);
-			resolver.resolveDxe();
-			m_efiBackgroundTask->SetProgressText("Resolving MM related protocols...");
-			resolver.resolveSmm();
+			LogErrorForException(e, "EFI resolver failed with uncaught exception: %s", e.what());
 		}
-		view->CommitUndoActions(undo);
-		m_efiBackgroundTask->Finish();
+		catch (...)
+		{
+			LogError("EFI resolver failed with unknown uncaught exception.");
+		}
 	});
 
 	resolverThread.detach();
+}
+
+
+void RunCommand(Ref<BinaryView> view)
+{
+	StartResolverThread(view);
 }
 
 
@@ -51,7 +73,7 @@ void RunWorkflow(const Ref<AnalysisContext>& analysisContext)
 {
 	auto view = analysisContext->GetBinaryView();
 	if (IsValid(view))
-		RunCommand(view);
+		StartResolverThread(view);
 }
 
 

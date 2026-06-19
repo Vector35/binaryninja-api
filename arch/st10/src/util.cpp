@@ -16,7 +16,6 @@
 #include "conditions.h"
 #include "instructions.h"
 #include "registers.h"
-#include "sfr.h"
 
 namespace BN = BinaryNinja;
 
@@ -25,6 +24,181 @@ namespace BN = BinaryNinja;
   result.emplace_back(TextToken, " ");
 
 namespace C166 {
+namespace {
+struct SfrRegister {
+  uint32_t addr;
+  uint32_t reg;
+  const char* name;
+};
+
+constexpr SfrRegister kSfrRegisters[] = {
+    {0xF000, 0xF000, "qx0"}, {0xF002, 0xF002, "qx1"},
+    {0xF004, 0xF004, "qr0"}, {0xF006, 0xF006, "qr1"},
+    {0xF00C, 0xF00C, "cpuid"}, {0xF050, 0xF050, "cc2_t7"},
+    {0xF052, 0xF052, "cc2_t8"}, {0xF054, 0xF054, "cc2_t7rel"},
+    {0xF056, 0xF056, "cc2_t8rel"}, {0xF05A, 0xF05A, "ssc1_tb"},
+    {0xF05C, 0xF05C, "ssc1_rb"}, {0xF05E, 0xF05E, "ssc1_br"},
+    {0xF060, 0xF060, "cc1_pisel"}, {0xF062, 0xF062, "cc1_ioc"},
+    {0xF064, 0xF064, "cc2_pisel"}, {0xF066, 0xF066, "cc2_ioc"},
+    {0xF068, 0xF068, "comdata"}, {0xF06A, 0xF06A, "rwdata"},
+    {0xF06C, 0xF06C, "iosr"}, {0xF070, 0xF070, "idrt"},
+    {0xF076, 0xF076, "idmem2"}, {0xF078, 0xF078, "idprog"},
+    {0xF07A, 0xF07A, "idmem"}, {0xF07C, 0xF07C, "idchip"},
+    {0xF07E, 0xF07E, "idmanuf"}, {0xF080, 0xF080, "pocon0l"},
+    {0xF082, 0xF082, "pocon0h"}, {0xF084, 0xF084, "pocon1l"},
+    {0xF086, 0xF086, "pocon1h"}, {0xF088, 0xF088, "pocon2"},
+    {0xF08A, 0xF08A, "pocon3"}, {0xF08C, 0xF08C, "pocon4"},
+    {0xF08E, 0xF08E, "pocon6"}, {0xF090, 0xF090, "pocon7"},
+    {0xF094, 0xF094, "pocon9"}, {0xF09C, 0xF09C, "adc_ctr2"},
+    {0xF09E, 0xF09E, "adc_ctr2in"}, {0xF0A0, 0xF0A0, "adc_dat2"},
+    {0xF0A4, 0xF0A4, "asc1_txfcon"}, {0xF0A6, 0xF0A6, "asc1_rxfcon"},
+    {0xF0AA, 0xF0AA, "pocon20"}, {0xF0B0, 0xF0B0, "ssc0_tb"},
+    {0xF0B2, 0xF0B2, "ssc0_rb"}, {0xF0B4, 0xF0B4, "ssc0_br"},
+    {0xF0B8, 0xF0B8, "asc0_abstat"}, {0xF0BA, 0xF0BA, "asc0_fstat"},
+    {0xF0BC, 0xF0BC, "asc1_abstat"}, {0xF0BE, 0xF0BE, "asc1_fstat"},
+    {0xF0C0, 0xF0C0, "scuslc"}, {0xF0C2, 0xF0C2, "scusls"},
+    {0xF0C4, 0xF0C4, "asc0_txfcon"}, {0xF0C6, 0xF0C6, "asc0_rxfcon"},
+    {0xF0CC, 0xF0CC, "rtc_rell"}, {0xF0CE, 0xF0CE, "rtc_relh"},
+    {0xF0D0, 0xF0D0, "rtc_t14rel"}, {0xF0D2, 0xF0D2, "rtc_t14"},
+    {0xF0D4, 0xF0D4, "rtc_rtcl"}, {0xF0D6, 0xF0D6, "rtc_rtch"},
+    {0xF0D8, 0xF0D8, "dtidr"}, {0xF0EC, 0xF0EC, "dcmpsp"},
+    {0xF0EE, 0xF0EE, "dcmpdp"}, {0xF0F0, 0xF0F0, "dtrevt"},
+    {0xF0F2, 0xF0F2, "dexevt"}, {0xF0F4, 0xF0F4, "dswevt"},
+    {0xF0F8, 0xF0F8, "cmadr"}, {0xF0FA, 0xF0FA, "cmctr"},
+    {0xF0FC, 0xF0FC, "dbgsr"}, {0xF0FE, 0xF0FE, "imbctr"},
+    {0xF100, 0xF100, "dp0l"}, {0xF102, 0xF102, "dp0h"},
+    {0xF104, 0xF104, "dp1l"}, {0xF106, 0xF106, "dp1h"},
+    {0xF108, 0xF108, "rstcfg"}, {0xF10C, 0xF10C, "rtc_isnc"},
+    {0xF10E, 0xF10E, "rtc_isnch"}, {0xF110, 0xF110, "rtc_con"},
+    {0xF112, 0xF112, "rtc_conh"}, {0xF120, 0xF120, "altsel0p1h"},
+    {0xF122, 0xF122, "altsel0p2"}, {0xF126, 0xF126, "altsel0p3"},
+    {0xF128, 0xF128, "altsel1p3"}, {0xF12A, 0xF12A, "altsel0p4"},
+    {0xF12C, 0xF12C, "altsel0p6"}, {0xF130, 0xF130, "altsel0p1l"},
+    {0xF136, 0xF136, "altsel1p4"}, {0xF138, 0xF138, "altsel0p9"},
+    {0xF13A, 0xF13A, "altsel1p9"}, {0xF13C, 0xF13C, "altsel0p7"},
+    {0xF13E, 0xF13E, "altsel1p7"}, {0xF140, 0xF140, "ccu6_ic"},
+    {0xF142, 0xF142, "can_1ic"}, {0xF144, 0xF144, "can_2ic"},
+    {0xF146, 0xF146, "can_3ic"}, {0xF148, 0xF148, "can_4ic"},
+    {0xF14A, 0xF14A, "can_5ic"}, {0xF14C, 0xF14C, "can_6ic"},
+    {0xF14E, 0xF14E, "can_7ic"}, {0xF150, 0xF150, "asc1_tbic"},
+    {0xF15C, 0xF15C, "asc0_abic"}, {0xF160, 0xF160, "cc2_cc16ic"},
+    {0xF162, 0xF162, "cc2_cc17ic"}, {0xF164, 0xF164, "cc2_cc18ic"},
+    {0xF166, 0xF166, "cc2_cc19ic"}, {0xF168, 0xF168, "cc2_cc20ic"},
+    {0xF16A, 0xF16A, "cc2_cc21ic"}, {0xF16C, 0xF16C, "cc2_cc22ic"},
+    {0xF16E, 0xF16E, "cc2_cc23ic"}, {0xF170, 0xF170, "cc2_cc24ic"},
+    {0xF172, 0xF172, "cc2_cc25ic"}, {0xF174, 0xF174, "cc2_cc26ic"},
+    {0xF176, 0xF176, "cc2_cc27ic"}, {0xF178, 0xF178, "cc2_cc28ic"},
+    {0xF17A, 0xF17A, "cc2_t7ic"}, {0xF17C, 0xF17C, "cc2_t8ic"},
+    {0xF180, 0xF180, "eopic"}, {0xF182, 0xF182, "asc1_tic"},
+    {0xF184, 0xF184, "cc2_cc29ic"}, {0xF186, 0xF186, "iic_dic"},
+    {0xF188, 0xF188, "ccu6_eic"}, {0xF18A, 0xF18A, "asc1_ric"},
+    {0xF18C, 0xF18C, "cc2_cc30ic"}, {0xF18E, 0xF18E, "iic_peic"},
+    {0xF190, 0xF190, "ccu6_t12ic"}, {0xF192, 0xF192, "asc1_eic"},
+    {0xF194, 0xF194, "cc2_cc31ic"}, {0xF196, 0xF196, "can_0ic"},
+    {0xF198, 0xF198, "ccu6_t13ic"}, {0xF19A, 0xF19A, "sdlm_ic"},
+    {0xF19C, 0xF19C, "asc0_tbic"}, {0xF19E, 0xF19E, "pllic"},
+    {0xF1A0, 0xF1A0, "rtc_ic"}, {0xF1AA, 0xF1AA, "ssc1_tic"},
+    {0xF1AC, 0xF1AC, "ssc1_ric"}, {0xF1AE, 0xF1AE, "ssc1_eic"},
+    {0xF1B8, 0xF1B8, "asc0_abcon"}, {0xF1BA, 0xF1BA, "asc1_abic"},
+    {0xF1BC, 0xF1BC, "asc1_abcon"}, {0xF1BE, 0xF1BE, "syscon0"},
+    {0xF1C0, 0xF1C0, "exicon"}, {0xF1C2, 0xF1C2, "odp2"},
+    {0xF1C4, 0xF1C4, "picon"}, {0xF1C6, 0xF1C6, "odp3"},
+    {0xF1CA, 0xF1CA, "odp4"}, {0xF1CE, 0xF1CE, "odp6"},
+    {0xF1D0, 0xF1D0, "pllcon"}, {0xF1D2, 0xF1D2, "odp7"},
+    {0xF1D4, 0xF1D4, "syscon3"}, {0xF1D8, 0xF1D8, "exisel1"},
+    {0xF1DA, 0xF1DA, "exisel0"}, {0xF1DC, 0xF1DC, "syscon1"},
+    {0xFE00, Registers::DPP0, "dpp0"}, {0xFE02, Registers::DPP1, "dpp1"},
+    {0xFE04, Registers::DPP2, "dpp2"}, {0xFE06, Registers::DPP3, "dpp3"},
+    {0xFE08, Registers::CSP, "csp"}, {0xFE0A, 0xFE0A, "emucon"},
+    {0xFE0C, 0xFE0C, "mdh"}, {0xFE0E, 0xFE0E, "mdl"},
+    {0xFE10, Registers::CP, "cp"}, {0xFE12, 0xFE12, "sp"},
+    {0xFE14, 0xFE14, "stkov"}, {0xFE16, 0xFE16, "stkun"},
+    {0xFE18, Registers::CPUCON1, "cpucon1"}, {0xFE1A, Registers::CPUCON2, "cpucon2"},
+    {0xFE28, 0xFE28, "cc2_sem"}, {0xFE2A, 0xFE2A, "cc2_see"},
+    {0xFE2C, 0xFE2C, "cc1_sem"}, {0xFE2E, 0xFE2E, "cc1_see"},
+    {0xFE40, 0xFE40, "gpt12e_t2"}, {0xFE42, 0xFE42, "gpt12e_t3"},
+    {0xFE44, 0xFE44, "gpt12e_t4"}, {0xFE46, 0xFE46, "gpt12e_t5"},
+    {0xFE48, 0xFE48, "gpt12e_t6"}, {0xFE4A, 0xFE4A, "gpt12e_caprel"},
+    {0xFE4C, 0xFE4C, "gpt12e_pisel"}, {0xFE50, 0xFE50, "cc1_t0"},
+    {0xFE52, 0xFE52, "cc1_t1"}, {0xFE54, 0xFE54, "cc1_t0rel"},
+    {0xFE56, 0xFE56, "cc1_t1rel"}, {0xFE58, 0xFE58, "opsen"},
+    {0xFE5A, 0xFE5A, "tstmod"}, {0xFE5C, 0xFE5C, "mal"},
+    {0xFE5E, 0xFE5E, "mah"}, {0xFE60, 0xFE60, "cc2_cc16"},
+    {0xFE62, 0xFE62, "cc2_cc17"}, {0xFE64, 0xFE64, "cc2_cc18"},
+    {0xFE66, 0xFE66, "cc2_cc19"}, {0xFE68, 0xFE68, "cc2_cc20"},
+    {0xFE6A, 0xFE6A, "cc2_cc21"}, {0xFE6C, 0xFE6C, "cc2_cc22"},
+    {0xFE6E, 0xFE6E, "cc2_cc23"}, {0xFE70, 0xFE70, "cc2_cc24"},
+    {0xFE72, 0xFE72, "cc2_cc25"}, {0xFE74, 0xFE74, "cc2_cc26"},
+    {0xFE76, 0xFE76, "cc2_cc27"}, {0xFE78, 0xFE78, "cc2_cc28"},
+    {0xFE7A, 0xFE7A, "cc2_cc29"}, {0xFE7C, 0xFE7C, "cc2_cc30"},
+    {0xFE7E, 0xFE7E, "cc2_cc31"}, {0xFE80, 0xFE80, "cc1_cc0"},
+    {0xFE82, 0xFE82, "cc1_cc1"}, {0xFE84, 0xFE84, "cc1_cc2"},
+    {0xFE86, 0xFE86, "cc1_cc3"}, {0xFE88, 0xFE88, "cc1_cc4"},
+    {0xFE8A, 0xFE8A, "cc1_cc5"}, {0xFE8C, 0xFE8C, "cc1_cc6"},
+    {0xFE8E, 0xFE8E, "cc1_cc7"}, {0xFE90, 0xFE90, "cc1_cc8"},
+    {0xFE92, 0xFE92, "cc1_cc9"}, {0xFE94, 0xFE94, "cc1_cc10"},
+    {0xFE96, 0xFE96, "cc1_cc11"}, {0xFE98, 0xFE98, "cc1_cc12"},
+    {0xFE9A, 0xFE9A, "cc1_cc13"}, {0xFE9C, 0xFE9C, "cc1_cc14"},
+    {0xFE9E, 0xFE9E, "cc1_cc15"}, {0xFEA0, 0xFEA0, "adc_dat"},
+    {0xFEA8, 0xFEA8, "adc_id"}, {0xFEAA, 0xFEAA, "asc0_pmw"},
+    {0xFEAC, 0xFEAC, "asc1_pmw"}, {0xFEAE, 0xFEAE, "wdt"},
+    {0xFEB0, 0xFEB0, "asc0_tbuf"}, {0xFEB2, 0xFEB2, "asc0_rbuf"},
+    {0xFEB4, 0xFEB4, "asc0_bg"}, {0xFEB6, 0xFEB6, "asc0_fdv"},
+    {0xFEB8, 0xFEB8, "asc1_tbuf"}, {0xFEBA, 0xFEBA, "asc1_rbuf"},
+    {0xFEBC, 0xFEBC, "asc1_bg"}, {0xFEBE, 0xFEBE, "asc1_fdv"},
+    {0xFEC0, 0xFEC0, "pecc0"}, {0xFEC2, 0xFEC2, "pecc1"},
+    {0xFEC4, 0xFEC4, "pecc2"}, {0xFEC6, 0xFEC6, "pecc3"},
+    {0xFEC8, 0xFEC8, "pecc4"}, {0xFECA, 0xFECA, "pecc5"},
+    {0xFECC, 0xFECC, "pecc6"}, {0xFECE, 0xFECE, "pecc7"},
+    {0xFF00, 0xFF00, "p0l"}, {0xFF02, 0xFF02, "p0h"},
+    {0xFF04, 0xFF04, "p1l"}, {0xFF06, 0xFF06, "p1h"},
+    {0xFF08, 0xFF08, "idx0"}, {0xFF0A, 0xFF0A, "idx1"},
+    {0xFF0C, 0xFF0C, "spseg"}, {0xFF0E, 0xFF0E, "mdc"},
+    {0xFF10, Registers::PSW, "psw"}, {0xFF12, 0xFF12, "vecseg"},
+    {0xFF16, 0xFF16, "p9"}, {0xFF18, 0xFF18, "dp9"},
+    {0xFF1A, 0xFF1A, "odp9"}, {0xFF1C, 0xFF1C, "zeros"},
+    {0xFF1E, 0xFF1E, "ones"}, {0xFF20, 0xFF20, "cc2_t78con"},
+    {0xFF22, 0xFF22, "cc2_m4"}, {0xFF24, 0xFF24, "cc2_m5"},
+    {0xFF26, 0xFF26, "cc2_m6"}, {0xFF28, 0xFF28, "cc2_m7"},
+    {0xFF2A, 0xFF2A, "cc2_drm"}, {0xFF2C, 0xFF2C, "cc2_out"},
+    {0xFF40, 0xFF40, "gpt12e_t2con"}, {0xFF42, 0xFF42, "gpt12e_t3con"},
+    {0xFF44, 0xFF44, "gpt12e_t4con"}, {0xFF46, 0xFF46, "gpt12e_t5con"},
+    {0xFF48, 0xFF48, "gpt12e_t6con"}, {0xFF50, 0xFF50, "cc1_t01con"},
+    {0xFF52, 0xFF52, "cc1_m0"}, {0xFF54, 0xFF54, "cc1_m1"},
+    {0xFF56, 0xFF56, "cc1_m2"}, {0xFF58, 0xFF58, "cc1_m3"},
+    {0xFF5A, 0xFF5A, "cc1_drm"}, {0xFF5C, 0xFF5C, "cc1_out"},
+    {0xFF5E, 0xFF5E, "ssc1_con"}, {0xFF60, 0xFF60, "gpt12e_t2ic"},
+    {0xFF62, 0xFF62, "gpt12e_t3ic"}, {0xFF64, 0xFF64, "gpt12e_t4ic"},
+    {0xFF66, 0xFF66, "gpt12e_t5ic"}, {0xFF68, 0xFF68, "gpt12e_t6ic"},
+    {0xFF6A, 0xFF6A, "gpt12e_cric"}, {0xFF6C, 0xFF6C, "asc0_tic"},
+    {0xFF6E, 0xFF6E, "asc0_ric"}, {0xFF70, 0xFF70, "asc0_eic"},
+    {0xFF72, 0xFF72, "ssc0_tic"}, {0xFF74, 0xFF74, "ssc0_ric"},
+    {0xFF76, 0xFF76, "ssc0_eic"}, {0xFF78, 0xFF78, "cc1_cc0ic"},
+    {0xFF7A, 0xFF7A, "cc1_cc1ic"}, {0xFF7C, 0xFF7C, "cc1_cc2ic"},
+    {0xFF7E, 0xFF7E, "cc1_cc3ic"}, {0xFF80, 0xFF80, "cc1_cc4ic"},
+    {0xFF82, 0xFF82, "cc1_cc5ic"}, {0xFF84, 0xFF84, "cc1_cc6ic"},
+    {0xFF86, 0xFF86, "cc1_cc7ic"}, {0xFF88, 0xFF88, "cc1_cc8ic"},
+    {0xFF8A, 0xFF8A, "cc1_cc9ic"}, {0xFF8C, 0xFF8C, "cc1_cc10ic"},
+    {0xFF8E, 0xFF8E, "cc1_cc11ic"}, {0xFF90, 0xFF90, "cc1_cc12ic"},
+    {0xFF92, 0xFF92, "cc1_cc13ic"}, {0xFF94, 0xFF94, "cc1_cc14ic"},
+    {0xFF96, 0xFF96, "cc1_cc15ic"}, {0xFF98, 0xFF98, "adc_cic"},
+    {0xFF9A, 0xFF9A, "adc_eic"}, {0xFF9C, 0xFF9C, "cc1_t0ic"},
+    {0xFF9E, 0xFF9E, "cc1_t1ic"}, {0xFFA0, 0xFFA0, "adc_con"},
+    {0xFFA2, 0xFFA2, "p5"}, {0xFFA4, 0xFFA4, "p5didis"},
+    {0xFFA6, 0xFFA6, "adc_con1"}, {0xFFA8, 0xFFA8, "pecisnc"},
+    {0xFFAA, 0xFFAA, "focon"}, {0xFFAC, 0xFFAC, "tfr"},
+    {0xFFAE, 0xFFAE, "wdtcon"}, {0xFFB0, 0xFFB0, "asc0_con"},
+    {0xFFB2, 0xFFB2, "ssc0_con"}, {0xFFB4, 0xFFB4, "p20"},
+    {0xFFB6, 0xFFB6, "dp20"}, {0xFFB8, 0xFFB8, "asc1_con"},
+    {0xFFBE, 0xFFBE, "adc_ctr0"}, {0xFFC0, 0xFFC0, "p2"},
+    {0xFFC2, 0xFFC2, "dp2"}, {0xFFC4, 0xFFC4, "p3"},
+    {0xFFC6, 0xFFC6, "dp3"}, {0xFFC8, 0xFFC8, "p4"},
+    {0xFFCA, 0xFFCA, "dp4"}, {0xFFCC, 0xFFCC, "p6"},
+    {0xFFCE, 0xFFCE, "dp6"}, {0xFFD0, 0xFFD0, "p7"},
+    {0xFFD2, 0xFFD2, "dp7"}, {0xFFDA, 0xFFDA, "mrw"},
+    {0xFFDC, 0xFFDC, "mcw"}, {0xFFDE, 0xFFDE, "msw"},
+};
+}  // namespace
 
 // Maintain a "global" (map/hashtable) of {address: state} pairings.
 // State will be an object that can be extended to include any relevant
@@ -33,7 +207,6 @@ namespace C166 {
 //     disassembly (text).
 std::unordered_map<uint64_t, InstructionState> StateMap;
 std::mutex StateMapMutex;
-uint32_t default_dpp[4] = {0x0000, 0x0001, 0x0002, 0x0003};  // Reset Value(s)
 
 // Default Constructor
 InstructionState::InstructionState() {
@@ -41,80 +214,6 @@ InstructionState::InstructionState() {
   pag10 = 0x0;
   seg8 = 0x0;
   num_insns = 0;
-  dpp[0] = default_dpp[0];
-  dpp[1] = default_dpp[1];
-  dpp[2] = default_dpp[2];
-  dpp[3] = default_dpp[3];
-}
-
-void Instruction::SetDefaultDpps(uint16_t dpp0, uint16_t dpp1, uint16_t dpp2,
-                                 uint16_t dpp3) {
-  default_dpp[0] = dpp0;
-  default_dpp[1] = dpp1;
-  default_dpp[2] = dpp2;
-  default_dpp[3] = dpp3;
-}
-
-void Instruction::GetDefaultDpps(uint32_t* dpps) {
-  dpps[0] = default_dpp[0];
-  dpps[1] = default_dpp[1];
-  dpps[2] = default_dpp[2];
-  dpps[3] = default_dpp[3];
-}
-
-// Assumes DPP usage implies no EXT sequence active.
-void Instruction::SetDpps(uint64_t addr, uint16_t dpp0, uint16_t dpp1,
-                          uint16_t dpp2, uint16_t dpp3) {
-  // BN::LogInfo("util.cpp: SetDpps: addr=0x%" PRIx64, addr);
-  std::lock_guard<std::mutex> guard(StateMapMutex);
-
-  auto it = StateMap.find(addr);
-  if (it != StateMap.end()) {
-    StateMap[addr].ext_state = ExtNoneCustomDpps;
-    StateMap[addr].dpp[0] = dpp0;
-    StateMap[addr].dpp[1] = dpp1;
-    StateMap[addr].dpp[2] = dpp2;
-    StateMap[addr].dpp[3] = dpp3;
-  } else {
-    // Insert new element
-    InstructionState new_insn_state;
-    new_insn_state.ext_state = ExtNoneCustomDpps;
-    new_insn_state.dpp[0] = dpp0;
-    new_insn_state.dpp[1] = dpp1;
-    new_insn_state.dpp[2] = dpp2;
-    new_insn_state.dpp[3] = dpp3;
-    StateMap[addr] = new_insn_state;
-  }
-}
-
-// Sets DPP values in a range if no EXT sequence detected.
-void Instruction::SetDppsRange(uint64_t start, uint64_t end, uint16_t dpp0,
-                               uint16_t dpp1, uint16_t dpp2, uint16_t dpp3) {
-  std::lock_guard<std::mutex> guard(StateMapMutex);
-
-  for (auto addr = start; addr <= end; addr += 2) {
-    auto it = StateMap.find(addr);
-    if (it != StateMap.end()) {
-      // Only overwrite if no EXT sequence is active
-      if (it->second.ext_state == ExtNoneCustomDpps ||
-          it->second.ext_state == ExtNone) {
-        it->second.ext_state = ExtNoneCustomDpps;
-        it->second.dpp[0] = dpp0;
-        it->second.dpp[1] = dpp1;
-        it->second.dpp[2] = dpp2;
-        it->second.dpp[3] = dpp3;
-      }
-    } else {
-      // Address not in map, insert new element
-      InstructionState new_insn_state;
-      new_insn_state.ext_state = ExtNoneCustomDpps;
-      new_insn_state.dpp[0] = dpp0;
-      new_insn_state.dpp[1] = dpp1;
-      new_insn_state.dpp[2] = dpp2;
-      new_insn_state.dpp[3] = dpp3;
-      StateMap[addr] = new_insn_state;
-    }
-  }
 }
 
 void Instruction::SetExtpPag10(uint64_t addr, uint16_t pag10,
@@ -220,25 +319,6 @@ bool Instruction::ShouldUseExtp(const uint64_t addr, uint32_t* pag10) {
   }
 
   return use_extp;
-}
-
-bool Instruction::ShouldUseCustomDpps(const uint64_t addr, uint32_t* dpps) {
-  std::lock_guard<std::mutex> guard(StateMapMutex);
-  bool use_custom_dpps = false;
-
-  // If there's an entry containing extra state information for this address,
-  // use it.
-  if (const auto it = StateMap.find(addr); it != StateMap.end()) {
-    if (StateMap[addr].ext_state & ExtNoneCustomDpps) {
-      use_custom_dpps = true;
-      dpps[0] = StateMap[addr].dpp[0];
-      dpps[1] = StateMap[addr].dpp[1];
-      dpps[2] = StateMap[addr].dpp[2];
-      dpps[3] = StateMap[addr].dpp[3];
-    }
-  }
-
-  return use_custom_dpps;
 }
 
 InstructionState Instruction::GetInstructionState(const uint64_t addr) {
@@ -356,16 +436,28 @@ BN::ExprId Instruction::GetIndAddrExpr_Extp_Rw_data16(
  * Indirect Addressing (DPP) Expressions
  */
 
+static BN::ExprId SelectDppRegister(BN::LowLevelILFunction& il,
+                                    BN::ExprId dppIndex) {
+  auto select = [&](uint32_t index, uint32_t reg) {
+    return il.Mult(2, il.Register(2, reg),
+                   il.CompareEqual(2, dppIndex, il.Const(2, index)));
+  };
+
+  return il.Or(2,
+               il.Or(2, select(0, Registers::DPP0),
+                     select(1, Registers::DPP1)),
+               il.Or(2, select(2, Registers::DPP2),
+                     select(3, Registers::DPP3)));
+}
+
 // [Rw]
 BN::ExprId Instruction::GetIndAddrExpr_Rw(BN::LowLevelILFunction& il,
                                           uint32_t Rw) {
   const BN::ExprId Ind = il.Register(2, Rw);
   const BN::ExprId DppIndex = il.LogicalShiftRight(
       2, il.And(2, il.Const(2, 0xC000), Ind), il.Const(2, 14));
-  const BN::ExprId DppAddr = il.Add(3, il.ConstPointer(2, Sfr::DPP0),
-                                    il.ShiftLeft(2, DppIndex, il.Const(2, 1)));
   const BN::ExprId IndAddrUpper =
-      il.ShiftLeft(3, il.Load(2, DppAddr), il.Const(2, 14));
+      il.ShiftLeft(3, SelectDppRegister(il, DppIndex), il.Const(2, 14));
   const BN::ExprId IndAddrLower = il.And(2, Ind, il.Const(2, 0x3FFF));
   const BN::ExprId IndAddr = il.Or(3, IndAddrUpper, IndAddrLower);
   return IndAddr;
@@ -378,10 +470,8 @@ BN::ExprId Instruction::GetIndAddrExpr_Rw_data16(BN::LowLevelILFunction& il,
              il.Const(2, 0xFFFF));
   const BN::ExprId DppIndex = il.LogicalShiftRight(
       2, il.And(2, il.Const(2, 0xC000), Ind), il.Const(2, 14));
-  const BN::ExprId DppAddr = il.Add(3, il.ConstPointer(2, 0xFE00),
-                                    il.ShiftLeft(2, DppIndex, il.Const(2, 1)));
   const BN::ExprId IndAddrUpper =
-      il.ShiftLeft(3, il.Load(2, DppAddr), il.Const(2, 14));
+      il.ShiftLeft(3, SelectDppRegister(il, DppIndex), il.Const(2, 14));
   const BN::ExprId IndAddrLower = il.And(2, Ind, il.Const(2, 0x3FFF));
   const BN::ExprId IndAddr = il.Or(3, IndAddrUpper, IndAddrLower);
   return IndAddr;
@@ -533,7 +623,6 @@ uint32_t Instruction::GetMem(const uint64_t addr, const uint8_t* data,
 
   const auto wdata = (const uint16_t*)data;
   uint32_t mem = (*(wdata + 1) & (0xFFFFu));
-  uint32_t dpp_index = (mem & 0xC000) >> 14;
   uint32_t offset;
 
   // If there's an entry containing extra state information for this address,
@@ -545,14 +634,10 @@ uint32_t Instruction::GetMem(const uint64_t addr, const uint8_t* data,
       return (StateMap[addr].pag10 << 14) | offset;
     } else if (StateMap[addr].ext_state & ExtSegment) {  // EXTS Overrides DPP
       return (StateMap[addr].seg8 << 16) | mem;
-    } else if (StateMap[addr].ext_state & ExtNoneCustomDpps) {  // Use DPP
-      offset = mem & 0x3FFF;
-      return (StateMap[addr].dpp[dpp_index] << 14) | offset;
     }
   }
 
-  offset = mem & 0x3FFF;
-  return (default_dpp[dpp_index] << 14) | offset;
+  return mem;
 }
 
 uint16_t Instruction::GetOpCaddr(const uint8_t* data, const size_t len) {
@@ -568,6 +653,20 @@ uint8_t Instruction::GetOpSeg(const uint8_t* data, const size_t len) {
 uint32_t Instruction::GetRegSfrAddress(const uint8_t value, bool extr) {
   uint32_t base = (extr) ? 0xF000 : 0xFE00;
   return base + 2 * value;
+}
+
+uint32_t Instruction::TranslateSfrRegister(uint32_t reg) {
+  for (const auto& sfr : kSfrRegisters) {
+    if (sfr.addr == reg) return sfr.reg;
+  }
+  return reg;
+}
+
+const char* Instruction::GetSfrRegisterName(uint32_t reg) {
+  for (const auto& sfr : kSfrRegisters) {
+    if (sfr.reg == reg) return sfr.name;
+  }
+  return nullptr;
 }
 
 uint8_t Instruction::GetRegShortAddr(const uint8_t* data, const size_t len) {
@@ -595,6 +694,37 @@ bool Instruction::JumpIndirect(BN::Architecture* arch,
   return true;
 }
 
+BN::ExprId Instruction::ReadRegisterOrMemory(BN::LowLevelILFunction& il,
+                                             const uint32_t operand,
+                                             const size_t width) {
+  if (Instruction::IsRegister(operand, width))
+    return il.Register(width, operand);
+  return il.Load(width, il.ConstPointer(3, operand));
+}
+
+BN::ExprId Instruction::WriteRegisterOrMemory(BN::LowLevelILFunction& il,
+                                              const uint32_t operand,
+                                              const size_t width,
+                                              BN::ExprId value,
+                                              const uint32_t flags) {
+  if (Instruction::IsRegister(operand, width))
+    return il.SetRegister(width, operand, value, flags);
+  return il.Store(width, il.ConstPointer(3, operand), value, flags);
+}
+
+void Instruction::AddRegisterOrAddressToken(
+    std::vector<BN::InstructionTextToken>& result, const uint32_t operand,
+    const size_t width) {
+  char buf[32];
+  if (Instruction::IsRegister(operand, width)) {
+    std::snprintf(buf, sizeof(buf), "%s", Instruction::RegToStr(operand));
+    result.emplace_back(RegisterToken, buf, operand);
+  } else {
+    std::snprintf(buf, sizeof(buf), "0x%x", operand);
+    result.emplace_back(PossibleAddressToken, buf, operand);
+  }
+}
+
 bool Instruction::LiftOpMemReg(
     const uint64_t addr, const uint8_t* data, size_t len, size_t width,
     uint32_t flags, bool store, BN::LowLevelILFunction& il,
@@ -606,21 +736,21 @@ bool Instruction::LiftOpMemReg(
       Instruction::TranslateReg(addr, Instruction::GetRegShortAddr(data, 4));
 
   BN::ExprId op2;
-  if (reg <= 0xF) {
-    if (width == 1) reg += 16;
+  if (Instruction::IsRegister(reg, width)) {
+    if (width == 1 && reg <= Registers::R15) reg += 16;
     op2 = il.Register(width, reg);
   } else {
     op2 = Instruction::ElideReg(il, reg, width);
   }
 
+  const BN::ExprId op1 = Instruction::ReadRegisterOrMemory(il, mem, width);
   if (store)
-    il.AddInstruction(
-        il.Store(width, il.ConstPointer(3, mem),
-                 operation(width, il.Load(width, il.ConstPointer(3, mem)), op2,
-                           flags, BN::ILSourceLocation())));
+    il.AddInstruction(Instruction::WriteRegisterOrMemory(
+        il, mem, width,
+        operation(width, op1, op2, flags, BN::ILSourceLocation()), flags));
   else
-    operation(width, il.Load(width, il.ConstPointer(3, mem)), op2, flags,
-              BN::ILSourceLocation());
+    il.AddInstruction(
+        operation(width, op1, op2, flags, BN::ILSourceLocation()));
 
   return true;
 }
@@ -648,8 +778,8 @@ bool Instruction::LiftOpRegData(
       return false;
   }
 
-  if (reg <= 0xF) {
-    if (width == 1) reg += 16;
+  if (Instruction::IsRegister(reg, width)) {
+    if (width == 1 && reg <= Registers::R15) reg += 16;
     if (store)
       il.AddInstruction(il.SetRegister(
           width, reg,
@@ -684,30 +814,28 @@ bool Instruction::LiftOpRegMem(
       Instruction::TranslateReg(addr, Instruction::GetRegShortAddr(data, 4));
   uint32_t mem = Instruction::TranslateMem(Instruction::GetMem(addr, data, 4));
 
-  if (reg <= 0xF) {
-    if (width == 1) reg += 16;
+  const BN::ExprId memValue =
+      Instruction::ReadRegisterOrMemory(il, mem, width);
+  if (Instruction::IsRegister(reg, width)) {
+    if (width == 1 && reg <= Registers::R15) reg += 16;
     if (store)
       il.AddInstruction(
           il.SetRegister(width, reg,
                          operation(width, il.Register(width, reg),
-                                   il.Load(width, il.ConstPointer(3, mem)),
-                                   flags, BN::ILSourceLocation())));
+                                   memValue, flags, BN::ILSourceLocation())));
     else
       il.AddInstruction(operation(width, il.Register(width, reg),
-                                  il.Load(width, il.ConstPointer(3, mem)),
-                                  flags, BN::ILSourceLocation()));
+                                  memValue, flags, BN::ILSourceLocation()));
   } else {
     if (store)
       il.AddInstruction(
           il.Store(width, il.ConstPointer(3, reg),
                    operation(width, il.Load(width, il.ConstPointer(3, reg)),
-                             il.Load(width, il.ConstPointer(3, mem)), flags,
-                             BN::ILSourceLocation())));
+                             memValue, flags, BN::ILSourceLocation())));
     else
       il.AddInstruction(operation(width,
                                   il.Load(width, il.ConstPointer(3, reg)),
-                                  il.Load(width, il.ConstPointer(3, mem)),
-                                  flags, BN::ILSourceLocation()));
+                                  memValue, flags, BN::ILSourceLocation()));
   }
 
   return true;
@@ -811,13 +939,12 @@ bool Instruction::TextOpMemReg(const uint64_t addr, const uint8_t* data,
 
   ITEXT(instr)
 
-  std::snprintf(buf, sizeof(buf), "0x%x", mem);
-  result.emplace_back(PossibleAddressToken, buf, mem);
+  Instruction::AddRegisterOrAddressToken(result, mem, width);
 
   result.emplace_back(OperandSeparatorToken, ", ");
 
-  if (reg <= 0xF) {
-    if (width == 1) reg += 16;
+  if (Instruction::IsRegister(reg, width)) {
+    if (width == 1 && reg <= Registers::R15) reg += 16;
     std::snprintf(buf, sizeof(buf), "%s", Instruction::RegToStr(reg));
     result.emplace_back(RegisterToken, buf, reg);
   } else {
@@ -852,8 +979,8 @@ bool Instruction::TextOpRegData(const uint64_t addr, const uint8_t* data,
 
   ITEXT(instr)
 
-  if (reg <= 0xF) {
-    if (width == 1) reg += 16;
+  if (Instruction::IsRegister(reg, width)) {
+    if (width == 1 && reg <= Registers::R15) reg += 16;
     std::snprintf(buf, sizeof(buf), "%s", Instruction::RegToStr(reg));
     result.emplace_back(RegisterToken, buf, reg);
   } else {
@@ -879,8 +1006,8 @@ bool Instruction::TextOpRegMem(const uint64_t addr, const uint8_t* data,
 
   ITEXT(instr)
 
-  if (reg <= 0xF) {
-    if (width == 1) reg += 16;
+  if (Instruction::IsRegister(reg, width)) {
+    if (width == 1 && reg <= Registers::R15) reg += 16;
     std::snprintf(buf, sizeof(buf), "%s", Instruction::RegToStr(reg));
     result.emplace_back(RegisterToken, buf, reg);
   } else {
@@ -889,8 +1016,7 @@ bool Instruction::TextOpRegMem(const uint64_t addr, const uint8_t* data,
   }
   result.emplace_back(OperandSeparatorToken, ", ");
 
-  std::snprintf(buf, sizeof(buf), "0x%x", mem);
-  result.emplace_back(PossibleAddressToken, buf, mem);
+  Instruction::AddRegisterOrAddressToken(result, mem, width);
 
   return true;
 }
@@ -972,17 +1098,45 @@ uint32_t Instruction::TranslateBitOff(const uint64_t addr,
   }
 }
 
-uint32_t Instruction::TranslateMem(const uint32_t mem) { return mem; }
+uint32_t Instruction::TranslateMem(const uint32_t mem) {
+  return TranslateSfrRegister(mem);
+}
 
 uint32_t Instruction::TranslateReg(const uint64_t addr, const uint32_t reg) {
   if (reg <= 0xEF) {
-    return GetRegSfrAddress(reg, ShouldUseExtr(addr));
+    return TranslateSfrRegister(GetRegSfrAddress(reg, ShouldUseExtr(addr)));
   } else {
     return reg & 0xFu;
   }
 }
 
+bool Instruction::IsRegister(const uint32_t reg, const size_t width) {
+  if (reg <= Registers::R15) return true;
+  if (width == 2) {
+    return GetSfrRegisterName(reg) != nullptr;
+  }
+  return false;
+}
+
+std::vector<uint32_t> Instruction::GetSfrRegisters() {
+  std::vector<uint32_t> result;
+  for (const auto& sfr : kSfrRegisters) {
+    bool found = false;
+    for (const auto reg : result) {
+      if (reg == sfr.reg) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) result.push_back(sfr.reg);
+  }
+  return result;
+}
+
 const char* Instruction::RegToStr(const uint32_t rid) {
+  if (const auto* sfrName = GetSfrRegisterName(rid); sfrName != nullptr)
+    return sfrName;
+
   switch (rid) {
     /* Full-Width GPRs + Stack Pointer */
     case Registers::R0:
@@ -1059,6 +1213,16 @@ const char* Instruction::RegToStr(const uint32_t rid) {
       return "psw";
     case Registers::CP:
       return "cp";
+    case Registers::VIRTUAL_LR:
+      return "virtual_lr";
+    case Registers::DPP0:
+      return "dpp0";
+    case Registers::DPP1:
+      return "dpp1";
+    case Registers::DPP2:
+      return "dpp2";
+    case Registers::DPP3:
+      return "dpp3";
     default:
       return nullptr;
   }
@@ -1081,6 +1245,8 @@ BN::ExprId Instruction::ElideReg(BN::LowLevelILFunction& il, const uint32_t reg,
                                  const int width) {
   if (uint16_t constant = 0; GetConstantRegister(reg, constant)) {
     return il.Const(width, constant);
+  } else if (IsRegister(reg, width)) {
+    return il.Register(width, reg);
   } else {
     return il.Load(width, il.ConstPointer(3, reg));
   }

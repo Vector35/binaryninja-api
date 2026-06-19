@@ -48,6 +48,10 @@ constexpr uint8_t CPUCON2 = 34;
 constexpr uint8_t PSW = 35;
 constexpr uint8_t CP = 36;
 constexpr uint8_t VIRTUAL_LR = 37;
+constexpr uint8_t DPP0 = 38;
+constexpr uint8_t DPP1 = 39;
+constexpr uint8_t DPP2 = 40;
+constexpr uint8_t DPP3 = 41;
 }  // namespace C166::Registers
 
 #endif  // SRC_REGISTERS_H_

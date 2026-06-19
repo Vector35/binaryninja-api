@@ -1266,8 +1266,7 @@ bool Mov::Textx84(const uint8_t* data, const uint64_t addr, size_t& len,
   result.emplace_back(RegisterToken, buf, rwn);
   result.emplace_back(OperandSeparatorToken, "], ");
 
-  std::snprintf(buf, sizeof(buf), "0x%x", mem);
-  result.emplace_back(PossibleAddressToken, buf, mem);
+  Instruction::AddRegisterOrAddressToken(result, mem, 2);
 
   len = 4;
   return true;
@@ -1303,8 +1302,7 @@ bool Mov::Textx94(const uint8_t* data, const uint64_t addr, size_t& len,
 
   ITEXT("mov")
 
-  std::snprintf(buf, sizeof(buf), "0x%x", mem);
-  result.emplace_back(PossibleAddressToken, buf, mem);
+  Instruction::AddRegisterOrAddressToken(result, mem, 2);
   result.emplace_back(OperandSeparatorToken, ", [");
 
   std::snprintf(buf, sizeof(buf), "%s", Instruction::RegToStr(rwn));
@@ -1495,7 +1493,7 @@ bool Mov::TextxE6(const uint8_t* data, const uint64_t addr, size_t& len,
 
   ITEXT("mov")
 
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 2)) {
     std::snprintf(buf, sizeof(buf), "%s", Instruction::RegToStr(reg));
     result.emplace_back(RegisterToken, buf, reg);
   } else {
@@ -1560,7 +1558,7 @@ bool Mov::TextxF2(const uint8_t* data, const uint64_t addr, size_t& len,
 
   ITEXT("mov")
 
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 2)) {
     std::snprintf(buf, sizeof(buf), "%s", Instruction::RegToStr(reg));
     result.emplace_back(RegisterToken, buf, reg);
   } else {
@@ -1590,7 +1588,7 @@ bool Mov::TextxF6(const uint8_t* data, const uint64_t addr, size_t& len,
   std::snprintf(buf, sizeof(buf), "0x%x", mem);
   result.emplace_back(PossibleAddressToken, buf, mem);
   result.emplace_back(OperandSeparatorToken, ", ");
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 2)) {
     std::snprintf(buf, sizeof(buf), "%s", Instruction::RegToStr(reg));
     result.emplace_back(RegisterToken, buf, reg);
   } else {
@@ -1838,7 +1836,7 @@ bool Movb::TextxE7(const uint8_t* data, const uint64_t addr, size_t& len,
 
   ITEXT("movb")
 
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 1)) {
     reg += 16;
     std::snprintf(buf, sizeof(buf), "%s", Instruction::RegToStr(reg));
     result.emplace_back(RegisterToken, buf, reg);
@@ -1883,7 +1881,7 @@ bool Movb::TextxF3(const uint8_t* data, const uint64_t addr, size_t& len,
 
   ITEXT("movb")
 
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 1)) {
     reg += 16;
     std::snprintf(buf, sizeof(buf), "%s", Instruction::RegToStr(reg));
     result.emplace_back(RegisterToken, buf, reg);
@@ -1940,7 +1938,7 @@ bool Movb::TextxF7(const uint8_t* data, const uint64_t addr, size_t& len,
   std::snprintf(buf, sizeof(buf), "0x%x", mem);
   result.emplace_back(PossibleAddressToken, buf, mem);
   result.emplace_back(OperandSeparatorToken, ", ");
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 1)) {
     reg += 16;
     std::snprintf(buf, sizeof(buf), "%s", Instruction::RegToStr(reg));
     result.emplace_back(RegisterToken, buf, reg);
@@ -1981,7 +1979,7 @@ bool Movbs::TextxD2(const uint8_t* data, const uint64_t addr, size_t& len,
 
   ITEXT("movbs")
 
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 2)) {
     std::snprintf(buf, sizeof(buf), "%s", Instruction::RegToStr(reg));
     result.emplace_back(RegisterToken, buf, reg);
   } else {
@@ -2010,7 +2008,7 @@ bool Movbs::TextxD5(const uint8_t* data, const uint64_t addr, size_t& len,
   std::snprintf(buf, sizeof(buf), "0x%x", mem);
   result.emplace_back(PossibleAddressToken, buf, mem);
   result.emplace_back(OperandSeparatorToken, ", ");
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 1)) {
     reg += 16;
     std::snprintf(buf, sizeof(buf), "%s", Instruction::RegToStr(reg));
     result.emplace_back(RegisterToken, buf, reg);
@@ -2051,7 +2049,7 @@ bool Movbz::TextxC2(const uint8_t* data, const uint64_t addr, size_t& len,
 
   ITEXT("movbz")
 
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 2)) {
     std::snprintf(buf, sizeof(buf), "%s", Instruction::RegToStr(reg));
     result.emplace_back(RegisterToken, buf, reg);
   } else {
@@ -2080,7 +2078,7 @@ bool Movbz::TextxC5(const uint8_t* data, const uint64_t addr, size_t& len,
   std::snprintf(buf, sizeof(buf), "0x%x", mem);
   result.emplace_back(PossibleAddressToken, buf, mem);
   result.emplace_back(OperandSeparatorToken, ", ");
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 1)) {
     reg += 16;
     std::snprintf(buf, sizeof(buf), "%s", Instruction::RegToStr(reg));
     result.emplace_back(RegisterToken, buf, reg);
@@ -2223,7 +2221,7 @@ bool Pop::Text(const uint8_t* data, const uint64_t addr, size_t& len,
 
   ITEXT("pop")
 
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 2)) {
     std::snprintf(buf, sizeof(buf), "%s", Instruction::RegToStr(reg));
     result.emplace_back(RegisterToken, buf, reg);
   } else {
@@ -2262,7 +2260,7 @@ bool Push::Text(const uint8_t* data, const uint64_t addr, size_t& len,
 
   ITEXT("push")
 
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 2)) {
     std::snprintf(buf, sizeof(buf), "%s", Instruction::RegToStr(reg));
     result.emplace_back(RegisterToken, buf, reg);
   } else {
@@ -2394,7 +2392,7 @@ bool Scxt::TextxC6(const uint8_t* data, const uint64_t addr, size_t& len,
 
   ITEXT("scxt")
 
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 2)) {
     std::snprintf(buf, sizeof(buf), "%s", Instruction::RegToStr(reg));
     result.emplace_back(RegisterToken, buf, reg);
   } else {
@@ -2420,7 +2418,7 @@ bool Scxt::TextxD6(const uint8_t* data, const uint64_t addr, size_t& len,
 
   ITEXT("scxt")
 
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 2)) {
     std::snprintf(buf, sizeof(buf), "%s", Instruction::RegToStr(reg));
     result.emplace_back(RegisterToken, buf, reg);
   } else {

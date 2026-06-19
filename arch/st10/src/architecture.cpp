@@ -19,6 +19,25 @@
 namespace BN = BinaryNinja;
 
 namespace C166 {
+static std::vector<uint32_t> GetDppRegisters() {
+  return std::vector<uint32_t>{Registers::DPP0, Registers::DPP1,
+                               Registers::DPP2, Registers::DPP3};
+}
+
+static void AppendUnique(std::vector<uint32_t>& regs,
+                         const std::vector<uint32_t>& extraRegs) {
+  for (const auto reg : extraRegs) {
+    bool found = false;
+    for (const auto existingReg : regs) {
+      if (existingReg == reg) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) regs.push_back(reg);
+  }
+}
+
 C166Architecture::C166Architecture(const std::string& name)
     : Architecture(name) {}
 
@@ -53,7 +72,7 @@ BNRegisterInfo C166Architecture::RegisterInfo(const uint32_t fullWidthReg,
 }
 
 std::vector<uint32_t> C166Architecture::GetAllRegisters() {
-  return std::vector<uint32_t>{
+  std::vector<uint32_t> regs{
       Registers::R0,  Registers::R1,        Registers::R2,      Registers::R3,
       Registers::R4,  Registers::R5,        Registers::R6,      Registers::R7,
       Registers::R8,  Registers::R9,        Registers::R10,     Registers::R11,
@@ -63,23 +82,30 @@ std::vector<uint32_t> C166Architecture::GetAllRegisters() {
       Registers::RL4, Registers::RH4,       Registers::RL5,     Registers::RH5,
       Registers::RL6, Registers::RH6,       Registers::RL7,     Registers::RH7,
       Registers::CSP, Registers::CPUCON1,   Registers::CPUCON2, Registers::PSW,
-      Registers::CP,  Registers::VIRTUAL_LR};
+      Registers::CP,  Registers::VIRTUAL_LR, Registers::DPP0,   Registers::DPP1,
+      Registers::DPP2, Registers::DPP3};
+  AppendUnique(regs, Instruction::GetSfrRegisters());
+  return regs;
 }
 
 std::vector<uint32_t> C166Architecture::GetFullWidthRegisters() {
-  return std::vector<uint32_t>{
+  std::vector<uint32_t> regs{
       Registers::R0,  Registers::R1,        Registers::R2,      Registers::R3,
       Registers::R4,  Registers::R5,        Registers::R6,      Registers::R7,
       Registers::R8,  Registers::R9,        Registers::R10,     Registers::R11,
       Registers::R12, Registers::R13,       Registers::R14,     Registers::R15,
       Registers::CSP, Registers::CPUCON1,   Registers::CPUCON2, Registers::PSW,
-      Registers::CP,  Registers::VIRTUAL_LR};
+      Registers::CP,  Registers::VIRTUAL_LR, Registers::DPP0,   Registers::DPP1,
+      Registers::DPP2, Registers::DPP3};
+  AppendUnique(regs, Instruction::GetSfrRegisters());
+  return regs;
 }
 
 std::vector<uint32_t> C166Architecture::GetGlobalRegisters() {
-  return std::vector<uint32_t>{Registers::CSP,     Registers::CPUCON1,
-                               Registers::CPUCON2, Registers::PSW,
-                               Registers::CP,      Registers::VIRTUAL_LR};
+  std::vector<uint32_t> regs{Registers::CSP, Registers::CPUCON1,
+    Registers::CPUCON2, Registers::PSW, Registers::CP, Registers::VIRTUAL_LR};
+  AppendUnique(regs, Instruction::GetSfrRegisters());
+  return regs;
 }
 
 BNRegisterInfo C166Architecture::GetRegisterInfo(const uint32_t rid) {
@@ -160,7 +186,16 @@ BNRegisterInfo C166Architecture::GetRegisterInfo(const uint32_t rid) {
       return RegisterInfo(Registers::CP, 0, 2);
     case Registers::VIRTUAL_LR:
       return RegisterInfo(Registers::VIRTUAL_LR, 0, 2);
+    case Registers::DPP0:
+      return RegisterInfo(Registers::DPP0, 0, 2);
+    case Registers::DPP1:
+      return RegisterInfo(Registers::DPP1, 0, 2);
+    case Registers::DPP2:
+      return RegisterInfo(Registers::DPP2, 0, 2);
+    case Registers::DPP3:
+      return RegisterInfo(Registers::DPP3, 0, 2);
     default:
+      if (Instruction::IsRegister(rid, 2)) return RegisterInfo(rid, 0, 2);
       return RegisterInfo(0, 0, 0);
   }
 }
@@ -1405,14 +1440,14 @@ class TaskingVXCallingConvention final : public BN::CallingConvention {
   }
 
   std::vector<uint32_t> GetCallerSavedRegisters() override {
-    return std::vector<uint32_t>{
-        Registers::R2,  Registers::RL2, Registers::RH2, Registers::R3,
-        Registers::RL3, Registers::RH3, Registers::R4,  Registers::RL4,
-        Registers::RH4, Registers::R5,  Registers::RL5, Registers::RH5,
-        Registers::R11, Registers::R12, Registers::R13, Registers::R14};
+    return std::vector<uint32_t>{};
   }
 
   uint32_t GetIntegerReturnValueRegister() override { return Registers::R2; }
+
+  std::vector<uint32_t> GetGlobalPointerRegisters() override {
+    return GetDppRegisters();
+  }
 };
 
 class TaskingClassicCallingConvention final : public BN::CallingConvention {
@@ -1432,19 +1467,17 @@ class TaskingClassicCallingConvention final : public BN::CallingConvention {
   }
 
   std::vector<uint32_t> GetCallerSavedRegisters() override {
-    return std::vector<uint32_t>{
-        Registers::R1,  Registers::RL1, Registers::RH1, Registers::R2,
-        Registers::RL2, Registers::RH2, Registers::R3,  Registers::RL3,
-        Registers::RH3, Registers::R4,  Registers::RL4, Registers::RH4,
-        Registers::R5,  Registers::RL5, Registers::RH5, Registers::R10,
-        Registers::R11,
-    };
+    return std::vector<uint32_t>{};
   }
 
   uint32_t GetIntegerReturnValueRegister() override { return Registers::R4; }
 
   uint32_t GetHighIntegerReturnValueRegister() override {
     return Registers::R5;
+  }
+
+  std::vector<uint32_t> GetGlobalPointerRegisters() override {
+    return GetDppRegisters();
   }
 };
 
@@ -1469,15 +1502,7 @@ class TaskingV2CallingConvention : public BN::CallingConvention {
   }
 
   std::vector<uint32_t> GetCallerSavedRegisters() override {
-    return std::vector<uint32_t>{
-        Registers::R1,  Registers::RL1, Registers::RH1, Registers::R2,
-        Registers::RL2, Registers::RH2, Registers::R3,  Registers::RL3,
-        Registers::RH3, Registers::R4,  Registers::RL4, Registers::RH4,
-        Registers::R5,  Registers::RL5, Registers::RH5, Registers::R6,
-        Registers::RL6, Registers::RH6, Registers::R7,  Registers::RL7,
-        Registers::RH7, Registers::R8,  Registers::R9,  Registers::R10,
-        Registers::R11, Registers::R12,
-    };
+    return std::vector<uint32_t>{};
   }
 
   uint32_t GetIntegerReturnValueRegister() override { return Registers::R4; }
@@ -1487,6 +1512,10 @@ class TaskingV2CallingConvention : public BN::CallingConvention {
   }
 
   bool IsStackReservedForArgumentRegisters() override { return true; }
+
+  std::vector<uint32_t> GetGlobalPointerRegisters() override {
+    return GetDppRegisters();
+  }
 };
 
 void apply_extp_pag10(BinaryNinja::BinaryView* view, uint64_t start,
@@ -1532,65 +1561,6 @@ void apply_extr(BinaryNinja::BinaryView* view, uint64_t start,
     a += 2;
   }
 
-  view->Reanalyze();
-}
-
-void apply_dpp_range(BinaryNinja::BinaryView* view, uint64_t start,
-                     uint64_t length) {
-  uint32_t current_dpps[4];
-  Instruction::GetDefaultDpps(current_dpps);
-
-  std::vector<BN::FormInputField> fields;
-
-  auto startField = BN::FormInputField::Address("Start address", view, start);
-  startField.hasDefault = true;
-  startField.addressDefault = start;
-  fields.push_back(startField);
-
-  auto lengthField = BN::FormInputField::Integer("Length (bytes)");
-  lengthField.hasDefault = true;
-  lengthField.intDefault = static_cast<int64_t>(length);
-  fields.push_back(lengthField);
-
-  fields.push_back(BN::FormInputField::Separator());
-
-  for (int i = 0; i < 4; i++) {
-    auto f = BN::FormInputField::Integer("DPP" + std::to_string(i));
-    f.hasDefault = true;
-    f.intDefault = static_cast<int64_t>(current_dpps[i]);
-    fields.push_back(f);
-  }
-
-  if (!BN::GetFormInput(fields, "Apply DPP (range)")) return;
-
-  uint64_t rangeStart = fields[0].addressResult;
-  int64_t rangeLength = fields[1].intResult;
-  if (rangeLength <= 0) return;
-
-  uint64_t rangeEnd = rangeStart + static_cast<uint64_t>(rangeLength) - 2;
-
-  Instruction::SetDppsRange(rangeStart, rangeEnd, fields[3].intResult,
-                            fields[4].intResult, fields[5].intResult,
-                            fields[6].intResult);
-  view->Reanalyze();
-}
-
-void apply_dpp_global(BinaryNinja::BinaryView* view) {
-  uint32_t current_dpps[4];
-  Instruction::GetDefaultDpps(current_dpps);
-
-  std::vector<BN::FormInputField> fields;
-  for (int i = 0; i < 4; i++) {
-    auto f = BN::FormInputField::Integer("DPP" + std::to_string(i));
-    f.hasDefault = true;
-    f.intDefault = static_cast<int64_t>(current_dpps[i]);
-    fields.push_back(f);
-  }
-
-  if (!BN::GetFormInput(fields, "Apply DPP (global)")) return;
-
-  Instruction::SetDefaultDpps(fields[0].intResult, fields[1].intResult,
-                              fields[2].intResult, fields[3].intResult);
   view->Reanalyze();
 }
 
@@ -1661,7 +1631,7 @@ BINARYNINJAPLUGIN bool CorePluginInit() {
   C166V2->RegisterCallingConvention(cc);
   C166V2->SetDefaultCallingConvention(cc);
 
-  // Register plugin commands to support manual identification of EXT/DPP values
+  // Register plugin commands to support manual identification of EXT values
   // for instruction lifting
   BN::PluginCommand::RegisterForRange(
       "C166 Architecture\\Apply EXTP #pag10",
@@ -1677,20 +1647,6 @@ BINARYNINJAPLUGIN bool CorePluginInit() {
       "C166 Architecture\\Apply EXTR",
       "Highlight a range of instructions to apply EXTR to.", &C166::apply_extr,
       &C166::func_is_valid);
-
-  BN::PluginCommand::RegisterForRange(
-      "C166 Architecture\\Apply DPP (range)",
-      "Apply specific DPP values to a range of instructions.",
-      &C166::apply_dpp_range, &C166::func_is_valid);
-
-  // Assign Default DPP values (hardware reset values)
-  uint32_t dpp[] = {0x0, 0x1, 0x2, 0x3};
-  C166::Instruction::SetDefaultDpps(dpp[0], dpp[1], dpp[2], dpp[3]);
-
-  BN::PluginCommand::Register(
-      "C166 Architecture\\Apply DPP (global)",
-      "Set default DPP values for all instructions in the binary.",
-      &C166::apply_dpp_global);
 
   BN::PluginCommand::Register(
       "C166 Architecture\\Save C166 StateMap",

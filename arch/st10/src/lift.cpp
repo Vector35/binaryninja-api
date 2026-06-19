@@ -1635,7 +1635,7 @@ bool Mov::LiftxE6(const uint8_t *data, const uint64_t addr, size_t &len,
       Instruction::TranslateReg(addr, Instruction::GetRegShortAddr(data, len));
   const auto data16 = Instruction::GetData16(data, 4);
 
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 2)) {
     il.AddInstruction(il.SetRegister(2, reg, il.Const(2, data16), flags));
   } else {
     il.AddInstruction(
@@ -1696,14 +1696,14 @@ bool Mov::LiftxF2(const uint8_t *data, const uint64_t addr, size_t &len,
                   BN::LowLevelILFunction &il) {
   const auto reg =
       Instruction::TranslateReg(addr, Instruction::GetRegShortAddr(data, len));
-  const auto mem = Instruction::GetMem(addr, data, len);
+  const auto mem = Instruction::TranslateMem(Instruction::GetMem(addr, data, len));
 
-  if (reg <= 0xF) {
-    il.AddInstruction(
-        il.SetRegister(2, reg, il.Load(2, il.ConstPointer(3, mem)), flags));
+  if (Instruction::IsRegister(reg, 2)) {
+    il.AddInstruction(il.SetRegister(
+        2, reg, Instruction::ReadRegisterOrMemory(il, mem, 2), flags));
   } else {
-    il.AddInstruction(il.Store(2, il.ConstPointer(3, reg),
-                               il.Load(2, il.ConstPointer(3, mem)), flags));
+    il.AddInstruction(Instruction::WriteRegisterOrMemory(
+        il, reg, 2, Instruction::ReadRegisterOrMemory(il, mem, 2), flags));
   }
 
   len = 4;
@@ -1714,16 +1714,16 @@ bool Mov::LiftxF2(const uint8_t *data, const uint64_t addr, size_t &len,
 
 bool Mov::LiftxF6(const uint8_t *data, const uint64_t addr, size_t &len,
                   BN::LowLevelILFunction &il) {
-  const auto mem = Instruction::GetMem(addr, data, len);
+  const auto mem = Instruction::TranslateMem(Instruction::GetMem(addr, data, len));
   const auto reg =
       Instruction::TranslateReg(addr, Instruction::GetRegShortAddr(data, len));
 
-  if (reg <= 0xF) {
-    il.AddInstruction(
-        il.Store(2, il.ConstPointer(3, mem), il.Register(2, reg), flags));
+  if (Instruction::IsRegister(reg, 2)) {
+    il.AddInstruction(Instruction::WriteRegisterOrMemory(
+        il, mem, 2, il.Register(2, reg), flags));
   } else {
-    il.AddInstruction(il.Store(2, il.ConstPointer(3, mem),
-                               Instruction::ElideReg(il, reg, 2), flags));
+    il.AddInstruction(Instruction::WriteRegisterOrMemory(
+        il, mem, 2, Instruction::ElideReg(il, reg, 2), flags));
   }
 
   len = 4;
@@ -2059,7 +2059,7 @@ bool Movb::LiftxE7(const uint8_t *data, const uint64_t addr, size_t &len,
       Instruction::TranslateReg(addr, Instruction::GetRegShortAddr(data, len));
   const auto data8 = Instruction::GetData8Low(data, 4);
 
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 1)) {
     reg += 16;
     il.AddInstruction(il.SetRegister(1, reg, il.Const(1, data8), flags));
   } else {
@@ -2092,7 +2092,7 @@ bool Movb::LiftxF3(const uint8_t *data, const uint64_t addr, size_t &len,
       Instruction::TranslateReg(addr, Instruction::GetRegShortAddr(data, len));
   const auto mem = Instruction::GetMem(addr, data, len);
 
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 1)) {
     reg += 16;
     il.AddInstruction(
         il.SetRegister(1, reg, il.Load(1, il.ConstPointer(3, mem)), flags));
@@ -2141,7 +2141,7 @@ bool Movb::LiftxF7(const uint8_t *data, const uint64_t addr, size_t &len,
   uint32_t reg =
       Instruction::TranslateReg(addr, Instruction::GetRegShortAddr(data, len));
 
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 1)) {
     reg += 16;
     il.AddInstruction(
         il.Store(1, il.ConstPointer(3, mem), il.Register(1, reg), flags));
@@ -2176,7 +2176,7 @@ bool Movbs::LiftxD2(const uint8_t *data, const uint64_t addr, size_t &len,
       Instruction::TranslateReg(addr, Instruction::GetRegShortAddr(data, len));
   const auto mem = Instruction::GetMem(addr, data, len);
 
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 2)) {
     il.AddInstruction(il.SetRegister(
         2, reg, il.SignExtend(2, il.Load(1, il.ConstPointer(3, mem))), flags));
   } else {
@@ -2197,7 +2197,7 @@ bool Movbs::LiftxD5(const uint8_t *data, const uint64_t addr, size_t &len,
   uint32_t reg =
       Instruction::TranslateReg(addr, Instruction::GetRegShortAddr(data, len));
 
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 1)) {
     reg += 16;
     il.AddInstruction(il.Store(2, il.ConstPointer(3, mem),
                                il.SignExtend(2, il.Register(1, reg)), flags));
@@ -2233,7 +2233,7 @@ bool Movbz::LiftxC2(const uint8_t *data, const uint64_t addr, size_t &len,
       Instruction::TranslateReg(addr, Instruction::GetRegShortAddr(data, len));
   const auto mem = Instruction::GetMem(addr, data, len);
 
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 2)) {
     il.AddInstruction(il.SetRegister(
         2, reg, il.ZeroExtend(2, il.Load(1, il.ConstPointer(3, mem))), flags));
   } else {
@@ -2254,7 +2254,7 @@ bool Movbz::LiftxC5(const uint8_t *data, const uint64_t addr, size_t &len,
   uint32_t reg =
       Instruction::TranslateReg(addr, Instruction::GetRegShortAddr(data, len));
 
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 1)) {
     reg += 16;
     il.AddInstruction(il.Store(2, il.ConstPointer(3, mem),
                                il.ZeroExtend(2, il.Register(1, reg)), flags));
@@ -2418,7 +2418,7 @@ bool Pop::Lift(const uint8_t *data, const uint64_t addr, size_t &len,
                BN::LowLevelILFunction &il) {
   const auto reg =
       Instruction::TranslateReg(addr, Instruction::GetRegShortAddr(data, len));
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 2)) {
     il.AddInstruction(il.SetRegister(2, reg, il.Pop(2), flags));
   } else {
     il.AddInstruction(il.Store(2, il.ConstPointer(3, reg), il.Pop(2), flags));
@@ -2434,7 +2434,7 @@ bool Push::Lift(const uint8_t *data, const uint64_t addr, size_t &len,
                 BN::LowLevelILFunction &il) {
   const auto reg =
       Instruction::TranslateReg(addr, Instruction::GetRegShortAddr(data, len));
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 2)) {
     il.AddInstruction(il.Push(2, il.Register(2, reg), flags));
   } else {
     il.AddInstruction(il.Push(2, il.Load(2, il.Const(3, reg)), flags));
@@ -2559,7 +2559,7 @@ bool Scxt::LiftxC6(const uint8_t *data, const uint64_t addr, size_t &len,
       Instruction::TranslateReg(addr, Instruction::GetRegShortAddr(data, len));
   const auto data16 = Instruction::GetData16(data, len);
 
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 2)) {
     il.AddInstruction(il.Push(2, il.Register(2, reg)));
     il.AddInstruction(il.SetRegister(2, reg, il.Const(2, data16)));
   } else {
@@ -2581,7 +2581,7 @@ bool Scxt::LiftxD6(const uint8_t *data, const uint64_t addr, size_t &len,
   const auto mem =
       Instruction::TranslateMem(Instruction::GetMem(addr, data, length));
 
-  if (reg <= 0xF) {
+  if (Instruction::IsRegister(reg, 2)) {
     il.AddInstruction(il.Push(2, il.Register(2, reg)));
     il.AddInstruction(
         il.SetRegister(2, reg, il.Load(2, il.ConstPointer(3, mem))));

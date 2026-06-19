@@ -20,7 +20,6 @@ enum ExtState {
   ExtSegment = 0x2,
   ExtPage = 0x4,
   ExtAtomic = 0x8,
-  ExtNoneCustomDpps = 0x10,
 };
 
 class InstructionState {
@@ -29,7 +28,6 @@ class InstructionState {
   uint8_t num_insns;
   uint32_t pag10;
   uint32_t seg8;
-  uint32_t dpp[4];
 
   InstructionState();
 };
@@ -39,6 +37,8 @@ class Instruction {
   static uint32_t GetBitoffSfrAddress(uint8_t value, bool extr);
   static uint32_t GetRegSfrAddress(uint8_t value, bool extr);
   static bool GetConstantRegister(uint32_t mem, uint16_t &value);
+  static uint32_t TranslateSfrRegister(uint32_t reg);
+  static const char *GetSfrRegisterName(uint32_t reg);
 
  public:
   // Indirect Addressing Expressions (using EXTS)
@@ -53,25 +53,17 @@ class Instruction {
   static BN::ExprId GetIndAddrExpr_Extp_Rw_data16(BN::LowLevelILFunction &il,
                                                   uint32_t pag10, uint32_t Rw,
                                                   uint16_t data16);
-  // Indirect Addressing Expressions (Using DPP by default)
+  // Indirect Addressing Expressions (using DPP registers by default)
   static BN::ExprId GetIndAddrExpr_Rw(BN::LowLevelILFunction &il, uint32_t Rw);
   static BN::ExprId GetIndAddrExpr_Rw_data16(BN::LowLevelILFunction &il,
                                              uint32_t Rw, uint16_t data16);
 
-  static void SetDefaultDpps(uint16_t dpp0, uint16_t dpp1, uint16_t dpp2,
-                             uint16_t dpp3);
-  static void GetDefaultDpps(uint32_t *dpps);
-  static void SetDpps(uint64_t addr, uint16_t dpp0, uint16_t dpp1,
-                      uint16_t dpp2, uint16_t dpp3);
-  static void SetDppsRange(uint64_t start, uint64_t end, uint16_t dpp0,
-                           uint16_t dpp1, uint16_t dpp2, uint16_t dpp3);
   static void SetExtpPag10(uint64_t addr, uint16_t pag10, uint8_t num_insns);
   static void SetExtsSeg8(uint64_t addr, uint16_t seg8, uint8_t num_insns);
   static void SetExtr(uint64_t addr, uint8_t num_insns);
   static bool ShouldUseExtr(uint64_t addr);
   static bool ShouldUseExts(uint64_t addr, uint32_t *seg8);
   static bool ShouldUseExtp(uint64_t addr, uint32_t *pag10);
-  static bool ShouldUseCustomDpps(uint64_t addr, uint32_t *dpps);
   static void writeStateMapToFile(std::string filename);
   static void loadStateMapFromFile(std::string filename);
   static size_t SerializeStateMap(uint8_t *buf, size_t size);
@@ -150,6 +142,16 @@ class Instruction {
   static uint32_t TranslateBitOff(uint64_t addr, uint32_t bitoff);
   static uint32_t TranslateMem(uint32_t mem);
   static uint32_t TranslateReg(uint64_t addr, uint32_t reg);
+  static bool IsRegister(uint32_t reg, size_t width = 2);
+  static std::vector<uint32_t> GetSfrRegisters();
+  static BN::ExprId ReadRegisterOrMemory(BN::LowLevelILFunction &il,
+                                          uint32_t operand, size_t width);
+  static BN::ExprId WriteRegisterOrMemory(BN::LowLevelILFunction &il,
+                                           uint32_t operand, size_t width,
+                                           BN::ExprId value, uint32_t flags);
+  static void AddRegisterOrAddressToken(
+      std::vector<BN::InstructionTextToken> &result, uint32_t operand,
+      size_t width);
   static const char *RegToStr(uint32_t rid);
   static BN::ExprId ElideReg(BN::LowLevelILFunction &il, uint32_t reg,
                              int width);

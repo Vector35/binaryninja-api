@@ -47,6 +47,8 @@ In the GUI server, the active BinaryView follows the Binary Ninja UI unless an M
 
 Address parameters are strings, not JSON numbers. They are parsed as Binary Ninja expressions in the active BinaryView, so clients can use plain addresses, symbols, and expressions supported by Binary Ninja.
 
+Binary-view-domain numeric parameters, such as byte counts for memory reads and ranges, accept either JSON integers or strings when the tool input schema advertises them. JSON integers are consumed directly. String values are parsed as Binary Ninja expressions in the active BinaryView. Binary Ninja expression syntax applies to string values; use `0n` for decimal strings when needed, for example `0n64`.
+
 Examples:
 
 ```json
@@ -58,10 +60,10 @@ Examples:
 ```
 
 ```json
-{"start": ".text", "length": "0x100"}
+{"start": ".text", "length": "0n256"}
 ```
 
-Use address expressions for fields named `address`, `start`, `end`, and `function`. Use integers or decimal/hex strings for byte counts such as `length`.
+Use address expressions for fields named `address`, `start`, `end`, `function`, `symbol`, `comment`, and `datavar`. Use JSON integers or expression strings for byte-span input parameters such as `length` when the tool input schema advertises them. A `length` output column is returned metadata and does not imply that the tool accepts a `length` input. Metadata parameters such as pagination `offset` and `limit`, symbol `ordinal`, and collection caps such as `maxItems` are JSON integers only.
 
 Function tools identify a function by its start address expression:
 
@@ -77,7 +79,7 @@ If more than one function has the same start address, pass `arch` with the archi
 
 ### Ranges, Queries, and Pagination
 
-List tools commonly accept range filters:
+List tools accept range filters only when their input schema advertises these fields:
 
 - `address`: exact address match
 - `start` plus `length`: byte range
@@ -86,6 +88,8 @@ List tools commonly accept range filters:
 Use either `address` or `start`, not both. Use either `length` or `end`, not both.
 
 `query` fields are case-insensitive substring filters, not regular expressions.
+
+Entry point, segment, and section list tools are pagination-only; use their returned address, start, end, and length columns as output metadata.
 
 Large lists are paginated with `offset` and `limit`. Responses include `count`, `total`, `nextOffset`, and `truncated`; if `truncated` is true, call the same tool again with `offset` set to `nextOffset`.
 

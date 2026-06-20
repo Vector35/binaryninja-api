@@ -140,6 +140,9 @@ The headless server opens and analyzes files without the GUI and exposes the sam
 
 Use the full path to `binaryninja_mcp` in client configuration unless it is already on your `PATH`.
 
+!!! warning "Headless Server Availability"
+    The `binaryninja_mcp` headless server is not available in Binary Ninja Free or Personal. The headless stdio examples below require an edition that includes the headless server.
+
 ## Client Configuration Examples
 
 MCP client configuration formats change over time. Use these examples as starting points, and check each client's own documentation for the latest supported fields.

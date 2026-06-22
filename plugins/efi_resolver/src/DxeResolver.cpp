@@ -1,5 +1,102 @@
 #include "DxeResolver.h"
 
+bool DxeResolver::resolveProtocolGuid(Ref<Function> func, uint64_t addr, size_t guidParam)
+{
+	bool changed = false;
+	auto hlils = GetCallExprs(HighLevelILExprsAt(func, m_view->GetDefaultArchitecture(), addr), addr);
+	for (auto hlil : hlils)
+	{
+		auto params = hlil.GetParameterExprs();
+		if (params.size() <= guidParam)
+			continue;
+
+		auto guidDataAddr = GetConstantDataAddress(params[guidParam]);
+		if (!guidDataAddr || *guidDataAddr == 0)
+			continue;
+
+		EFI_GUID guid;
+		if (m_view->Read(&guid, *guidDataAddr, 16) < 16)
+			continue;
+
+		auto info = Resolver::resolveProtocolGuid(guid, addr);
+		if (defineGuidDataVariable(*guidDataAddr, info.guidName))
+			changed = true;
+	}
+	if (changed)
+		m_view->UpdateAnalysisAndWait();
+	return changed;
+}
+
+bool DxeResolver::resolveProtocolInterfaces(
+	Ref<Function> func, uint64_t addr, size_t guidParam, const vector<size_t>& interfaceParams)
+{
+	bool changed = false;
+	auto hlils = GetCallExprs(HighLevelILExprsAt(func, m_view->GetDefaultArchitecture(), addr), addr);
+	for (auto hlil : hlils)
+	{
+		auto params = hlil.GetParameterExprs();
+		if (params.size() <= guidParam)
+			continue;
+
+		auto guidDataAddr = GetConstantDataAddress(params[guidParam]);
+		if (!guidDataAddr || *guidDataAddr == 0)
+			continue;
+
+		EFI_GUID guid;
+		if (m_view->Read(&guid, *guidDataAddr, 16) < 16)
+			continue;
+
+		auto info = Resolver::resolveProtocolGuid(guid, addr);
+		if (defineGuidDataVariable(*guidDataAddr, info.guidName))
+			changed = true;
+
+		for (auto interfaceParam : interfaceParams)
+		{
+			if (params.size() <= interfaceParam)
+				continue;
+			if (applyProtocolInterface(func, params[interfaceParam], info, false))
+				changed = true;
+		}
+	}
+	if (changed)
+		m_view->UpdateAnalysisAndWait();
+	return changed;
+}
+
+bool DxeResolver::resolveProtocolInterfaceList(Ref<Function> func, uint64_t addr, size_t firstGuidParam)
+{
+	// InstallMultipleProtocolInterfaces and UninstallMultipleProtocolInterfaces take varargs shaped as:
+	//   Handle, ProtocolGuid, Interface, ..., nullptr
+	// The interface is the protocol implementation pointer itself, not an output parameter.
+	bool changed = false;
+	auto hlils = GetCallExprs(HighLevelILExprsAt(func, m_view->GetDefaultArchitecture(), addr), addr);
+	for (auto hlil : hlils)
+	{
+		auto params = hlil.GetParameterExprs();
+		for (size_t guidParam = firstGuidParam; guidParam + 1 < params.size(); guidParam += 2)
+		{
+			auto guidDataAddr = GetConstantDataAddress(params[guidParam]);
+			if (!guidDataAddr || *guidDataAddr == 0)
+				break;
+
+			EFI_GUID guid;
+			if (m_view->Read(&guid, *guidDataAddr, 16) < 16)
+				continue;
+
+			auto info = Resolver::resolveProtocolGuid(guid, addr);
+			if (!defineGuidDataVariable(*guidDataAddr, info.guidName))
+				continue;
+			changed = true;
+
+			if (applyProtocolInterface(func, params[guidParam + 1], info, false))
+				changed = true;
+		}
+	}
+	if (changed)
+		m_view->UpdateAnalysisAndWait();
+	return changed;
+}
+
 bool DxeResolver::resolveBootServices()
 {
 	SetProgressText("Resolving Boot Services...");
@@ -34,16 +131,52 @@ bool DxeResolver::resolveBootServices()
 				continue;
 			auto offset = dest.GetOffset();
 
-			if (offset == 0x18 + m_width * 16 || offset == 0x18 + m_width * 32)
+			if (offset == 0x18 + m_width * 13)
+			{
+				// InstallProtocolInterface
+				// Guid:1, Interface:3
+				resolveProtocolInterfaces(ref.func, ref.addr, 1, {3});
+			}
+			else if (offset == 0x18 + m_width * 14)
+			{
+				// ReinstallProtocolInterface
+				// Guid:1, OldInterface:2, NewInterface:3
+				resolveProtocolInterfaces(ref.func, ref.addr, 1, {2, 3});
+			}
+			else if (offset == 0x18 + m_width * 15)
+			{
+				// UninstallProtocolInterface
+				// Guid:1, Interface:2
+				resolveProtocolInterfaces(ref.func, ref.addr, 1, {2});
+			}
+			else if (offset == 0x18 + m_width * 16 || offset == 0x18 + m_width * 32)
 			{
 				// HandleProtocol, OpenProtocol
 				// Guid:1, Interface:2
 				resolveGuidInterface(ref.func, ref.addr, 1, 2);
 			}
+			else if (offset == 0x18 + m_width * 18 || offset == 0x18 + m_width * 19)
+			{
+				// RegisterProtocolNotify, LocateHandle
+				// Guid:0 for RegisterProtocolNotify, Guid:1 for LocateHandle
+				resolveProtocolGuid(ref.func, ref.addr, offset == 0x18 + m_width * 18 ? 0 : 1);
+			}
+			else if (offset == 0x18 + m_width * 34 || offset == 0x18 + m_width * 36)
+			{
+				// OpenProtocolInformation, LocateHandleBuffer
+				// Guid:1
+				resolveProtocolGuid(ref.func, ref.addr, 1);
+			}
 			else if (offset == 0x18 + m_width * 37)
 			{
 				// LocateProtocol
 				resolveGuidInterface(ref.func, ref.addr, 0, 2);
+			}
+			else if (offset == 0x18 + m_width * 38 || offset == 0x18 + m_width * 39)
+			{
+				// InstallMultipleProtocolInterfaces, UninstallMultipleProtocolInterfaces
+				// Varargs start after the handle parameter.
+				resolveProtocolInterfaceList(ref.func, ref.addr, 1);
 			}
 		}
 	}

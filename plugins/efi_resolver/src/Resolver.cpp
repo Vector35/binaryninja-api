@@ -370,12 +370,10 @@ Ref<Type> Resolver::GetTypeFromViewAndPlatform(string typeName)
 	return result.type;
 }
 
-
-static optional<uint64_t> GetConstantDataAddress(const HighLevelILInstruction& expr)
+optional<uint64_t> Resolver::GetConstantDataAddress(const HighLevelILInstruction& expr)
 {
-	// HLIL represents "address of this global GUID/interface slot" in several ways depending on analysis state:
-	// direct constants, address-of wrappers, and extern-pointer expressions.  Normalize those shapes before reading
-	// GUID bytes or defining a data variable at the callsite.
+	// HLIL represents "address of this global GUID/interface slot" in several ways depending on analysis state.
+	// Normalize those shapes before reading GUID bytes or defining a data variable at the callsite.
 	auto value = expr.GetValue();
 	if (value.state == ConstantValue || value.state == ConstantPointerValue)
 		return value.value;
@@ -392,12 +390,8 @@ static optional<uint64_t> GetConstantDataAddress(const HighLevelILInstruction& e
 	return nullopt;
 }
 
-
-static vector<HighLevelILInstruction> GetCallExprs(const vector<HighLevelILInstruction>& exprs, uint64_t addr)
+vector<HighLevelILInstruction> Resolver::GetCallExprs(const vector<HighLevelILInstruction>& exprs, uint64_t addr)
 {
-	// A machine address can map to a top-level HLIL statement, a nested call expression, or occasionally a wrapper whose
-	// child is the call we care about.  Prefer calls with the exact address to avoid acting on unrelated nested calls, but
-	// fall back to all mapped calls when HLIL did not preserve the address on the nested expression.
 	vector<HighLevelILInstruction> calls;
 	vector<HighLevelILInstruction> fallbackCalls;
 	for (const auto& expr : exprs)
@@ -417,11 +411,119 @@ static vector<HighLevelILInstruction> GetCallExprs(const vector<HighLevelILInstr
 	return calls;
 }
 
+Resolver::ProtocolGuidInfo Resolver::resolveProtocolGuid(const EFI_GUID& guid, uint64_t addr)
+{
+	auto names = lookupGuid(guid);
+	ProtocolGuidInfo info { names.first, names.second };
+
+	if (!info.protocolName.empty())
+		return info;
+
+	if (!info.guidName.empty())
+	{
+		string possibleProtocolType = info.guidName;
+		size_t pos = possibleProtocolType.rfind("_GUID");
+		if (pos != string::npos)
+			possibleProtocolType.erase(pos, 5);
+
+		QualifiedNameAndType result;
+		string errors;
+		if (m_view->ParseTypeString(possibleProtocolType, result, errors))
+			info.protocolName = possibleProtocolType;
+		return info;
+	}
+
+	LogWarnF("Unknown EFI Protocol referenced at {:#x}", addr);
+	info.guidName = nonConflictingName("UnknownProtocolGuid");
+	return info;
+}
+
+bool Resolver::defineGuidDataVariable(uint64_t addr, const string& guidName)
+{
+	QualifiedNameAndType result;
+	string errors;
+	if (!m_view->ParseTypeString("EFI_GUID", result, errors))
+		return false;
+
+	auto sym = m_view->GetSymbolByAddress(addr);
+	auto guidVarName = guidName;
+	if (sym)
+		guidVarName = sym->GetRawName();
+
+	m_view->DefineDataVariable(addr, result.type);
+	m_view->DefineUserSymbol(new Symbol(DataSymbol, guidVarName, addr));
+	return true;
+}
+
+bool Resolver::applyProtocolInterface(Ref<Function> func, const HighLevelILInstruction& interfaceParam,
+	const ProtocolGuidInfo& info, bool outputInterface)
+{
+	string protocolName = info.protocolName;
+	string guidName = info.guidName;
+	if (protocolName.empty())
+	{
+		LogWarnF("Found unknown protocol at {:#x}", interfaceParam.address);
+		protocolName = "VOID*";
+	}
+
+	auto protocolType = GetTypeFromViewAndPlatform(protocolName);
+	if (!protocolType)
+		return false;
+
+	auto localType = outputInterface ? Type::PointerType(m_view->GetDefaultArchitecture(), protocolType) : protocolType;
+	if (interfaceParam.operation == HLIL_ADDRESS_OF)
+	{
+		auto source = interfaceParam.GetSourceExpr<HLIL_ADDRESS_OF>();
+		if (source.operation != HLIL_VAR)
+			return false;
+
+		string interfaceName = guidName;
+		if (guidName.substr(0, 19) == "UnknownProtocolGuid")
+		{
+			interfaceName.replace(0, 19, "UnknownProtocolInterface");
+			interfaceName = nonConflictingLocalName(func, interfaceName);
+		}
+		else
+		{
+			interfaceName = GetVarNameForTypeStr(protocolName);
+		}
+		func->CreateUserVariable(source.GetVariable(), localType, interfaceName);
+		return true;
+	}
+
+	if (interfaceParam.operation == HLIL_VAR)
+	{
+		auto interfaceName = GetVarNameForTypeStr(protocolName);
+		func->CreateUserVariable(interfaceParam.GetVariable(), localType, interfaceName);
+		return true;
+	}
+
+	if (auto dataVarAddr = GetConstantDataAddress(interfaceParam))
+	{
+		m_view->DefineDataVariable(*dataVarAddr,
+			outputInterface ? Type::PointerType(m_view->GetDefaultArchitecture(), protocolType) : protocolType);
+
+		string interfaceName = guidName;
+		if (interfaceName.find("GUID") != interfaceName.npos)
+		{
+			interfaceName = interfaceName.replace(interfaceName.find("GUID"), 4, "INTERFACE");
+			interfaceName = GetVarNameForTypeStr(interfaceName);
+		}
+		else if (guidName.substr(0, 19) == "UnknownProtocolGuid")
+		{
+			interfaceName.replace(15, 4, "Interface");
+		}
+		m_view->DefineUserSymbol(new Symbol(DataSymbol, interfaceName, *dataVarAddr));
+		return true;
+	}
+
+	return false;
+}
 
 bool Resolver::defineOutputAtCallsite(Ref<Function> func, uint64_t addr, int paramIdx, string typeName, string name)
 {
 	// Generic HLIL output-parameter annotator for service calls where the target is visible as either &local/global or a
-	// data variable address.  MLIL-specific fallbacks live in PeiResolver because their safety depends on PEI call shape.
+	// data variable address. MLIL-specific fallbacks live in PeiResolver because their safety depends on PEI call shape.
 	auto outputType = GetTypeFromViewAndPlatform(typeName);
 	if (!outputType)
 		return false;
@@ -608,126 +710,11 @@ bool Resolver::resolveGuidInterface(Ref<Function> func, uint64_t addr, int guidP
 		if (guid.empty())
 			continue;
 
-		auto names = lookupGuid(guid);
-		string protocol_name = names.first;
-		string guidName = names.second;
-
-		if (protocol_name.empty())
-		{
-			// protocol name is empty
-			if (!guidName.empty())
-			{
-				// user added guid, check whether the user has added the protocol type
-				string possible_protocol_type = guidName;
-				size_t pos = possible_protocol_type.rfind("_GUID");
-				if (pos != string::npos)
-					possible_protocol_type.erase(pos, 5);
-
-				// check whether `possible_protocol_type` is in bv.types
-				QualifiedNameAndType result;
-				string errors;
-				bool ok = m_view->ParseTypeString(possible_protocol_type, result, errors);
-				if (ok)
-					protocol_name = possible_protocol_type;
-			}
-			else
-			{
-				// use UnknownProtocol as defult
-				LogWarnF("Unknown EFI Protocol referenced at {:#x}", addr);
-				guidName = nonConflictingName("UnknownProtocolGuid");
-			}
-		}
-
-		// Define/rename the GUID object when it lives in data.  Stack-constructed GUIDs still fall through to interface
-		// typing below; there simply is no stable data address to annotate for those cases.
-		if (guidDataAddr)
-		{
-			auto sym = m_view->GetSymbolByAddress(*guidDataAddr);
-			auto guidVarName = guidName;
-			if (sym)
-				guidVarName = sym->GetRawName();
-
-			QualifiedNameAndType result;
-			string errors;
-			bool ok = m_view->ParseTypeString("EFI_GUID", result, errors);
-			if (!ok)
-				return false;
-			m_view->DefineDataVariable(*guidDataAddr, result.type);
-			m_view->DefineUserSymbol(new Symbol(DataSymbol, guidVarName, *guidDataAddr));
-		}
-
-		if (protocol_name.empty())
-		{
-			// Known GUID bytes are useful even if we cannot find a protocol type.  Use VOID* so the output still reflects that
-			// an interface pointer is produced, while avoiding a misleading concrete type.
-			LogWarnF("Found unknown protocol at {:#x}", addr);
-			protocol_name = "VOID*";
-		}
-
-		auto protocolType = GetTypeFromViewAndPlatform(protocol_name);
-		if (!protocolType)
-			continue;
-		protocolType = Type::PointerType(m_view->GetDefaultArchitecture(), protocolType);
-		auto interfaceParam = params[interfacePos];
-
-		// TODO we need to check whether it is an aliased var, or it can probably overwrite the other interfaces
-
-		if (interfaceParam.operation == HLIL_ADDRESS_OF)
-		{
-			// Local out-parameter: LocateProtocol/LocatePpi-style calls generally pass &local, so type/name that local as the
-			// resolved protocol pointer.
-			interfaceParam = interfaceParam.GetSourceExpr();
-			if (interfaceParam.operation == HLIL_VAR)
-			{
-				string interfaceName = guidName;
-				if (guidName.substr(0, 19) == "UnknownProtocolGuid")
-				{
-					interfaceName.replace(0, 19, "UnknownProtocolInterface");
-					interfaceName = nonConflictingLocalName(func, interfaceName);
-				}
-				else
-				{
-					interfaceName = nonConflictingLocalName(func, GetVarNameForTypeStr(protocol_name));
-				}
-				func->CreateUserVariable(interfaceParam.GetVariable(), protocolType, interfaceName);
-			}
-		}
-		else if (interfaceParam.operation == HLIL_VAR)
-		{
-			// HLIL sometimes strips the address-of when the parameter is already modeled as an output location.  Treat the
-			// variable itself as the interface local in that case.
-			string interfaceName = guidName;
-			if (guidName.substr(0, 19) == "UnknownProtocolGuid")
-			{
-				interfaceName.replace(0, 19, "UnknownProtocolInterface");
-				interfaceName = nonConflictingLocalName(func, interfaceName);
-			}
-			else
-			{
-				interfaceName = nonConflictingLocalName(func, GetVarNameForTypeStr(protocol_name));
-			}
-			func->CreateUserVariable(interfaceParam.GetVariable(), protocolType, interfaceName);
-		}
-		else if (interfaceParam.operation == HLIL_CONST_PTR)
-		{
-			// Global/static output slot: type the data variable at the destination address and give it a protocol-derived name.
-			auto dataVarAddr = GetConstantDataAddress(interfaceParam);
-			if (!dataVarAddr)
-				continue;
-			string interfaceName = guidName;
-			if (interfaceName.find("GUID") != interfaceName.npos)
-			{
-				interfaceName = interfaceName.replace(interfaceName.find("GUID"), 4, "INTERFACE");
-				interfaceName = GetVarNameForTypeStr(interfaceName);
-			}
-			else if (guidName.substr(0, 19) == "UnknownProtocolGuid")
-			{
-				interfaceName.replace(15, 4, "Interface");
-			}
-			m_view->DefineDataVariable(*dataVarAddr, protocolType);
-			m_view->DefineUserSymbol(new Symbol(DataSymbol, interfaceName, *dataVarAddr));
-		}
-		m_view->UpdateAnalysis();
+		auto info = resolveProtocolGuid(guid, addr);
+		if (guidDataAddr && !defineGuidDataVariable(*guidDataAddr, info.guidName))
+			return false;
+		applyProtocolInterface(func, params[interfacePos], info, true);
+		m_view->UpdateAnalysisAndWait();
 	}
 
 	return true;

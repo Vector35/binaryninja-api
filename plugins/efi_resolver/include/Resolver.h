@@ -1,7 +1,6 @@
 #pragma once
 
 #include <fstream>
-#include <thread>
 
 #include "GuidRenderer.h"
 #include "ModuleType.h"
@@ -30,6 +29,9 @@ protected:
 	vector<pair<uint64_t, EFI_GUID>> m_guid_usages;
 	vector<pair<uint64_t, string>> m_variable_usages;
 
+	bool IsCancelled() const;
+	void SetProgressText(const string& text) const;
+
 	bool parseUserGuidIfExists(const string& filePath);
 	bool parseProtocolMapping(const string& filePath);
 
@@ -43,7 +45,9 @@ protected:
 
 public:
 	bool setModuleEntry(EFIModuleType fileType);
+	bool propagateEntryTypes();
 	bool resolveGuidInterface(Ref<Function> func, uint64_t addr, int guid_pos, int interface_pos);
+	bool defineOutputAtCallsite(Ref<Function> func, uint64_t addr, int paramIdx, string typeName, string name);
 	Resolver(Ref<BinaryView> view, Ref<BackgroundTask> task);
 
 	pair<string, string> lookupGuid(EFI_GUID guidBytes);

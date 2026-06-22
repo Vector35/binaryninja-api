@@ -2,7 +2,7 @@
 
 #include "Resolver.h"
 
-class DxeResolver : Resolver
+class DxeResolver : public Resolver
 {
 	bool resolveBootServices();
 	bool resolveRuntimeServices();

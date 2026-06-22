@@ -92,7 +92,7 @@ bool TypePropagation::propagateFuncParamTypes(Function* func)
 		}
 
 		if (update)
-			m_view->UpdateAnalysisAndWait();
+			m_view->UpdateAnalysis();
 	}
 	return true;
 }
@@ -165,7 +165,7 @@ bool TypePropagation::propagateFuncParamTypes(Function* func, SSAVariable ssa_va
 
 				subfunc->SetUserType(
 					changeFuncType(m_view, subfunc_type, GetVarNameForTypeStr(typeName), ssa_var_type, i));
-				m_view->UpdateAnalysisAndWait();
+				m_view->UpdateAnalysis();
 
 				if (std::find(m_queue.begin(), m_queue.end(), subfunc->GetStart()) == m_queue.end())
 					m_queue.push_back(subfunc->GetStart());

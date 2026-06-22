@@ -6,6 +6,14 @@
 
 using namespace BinaryNinja;
 
+struct EfiWorkflowState
+{
+	EFIModuleType moduleType = UNKNOWN;
+	bool initializedEntry = false;
+	bool propagatedEntryTypes = false;
+	bool resolvedProtocols = false;
+};
+
 bool IsValid(BinaryView* view)
 {
 	if (!view)
@@ -16,38 +24,113 @@ bool IsValid(BinaryView* view)
 }
 
 
-static void RunResolver(Ref<BinaryView> view, Ref<BackgroundTask> task)
+static bool IdentifyAndInitializeEntry(Ref<BinaryView> view, Ref<BackgroundTask> task, EfiWorkflowState& state)
 {
 	LogInfo("Identifying EFI module type...");
-	EFIModuleType moduleType = identifyModuleType(view);
+	state.moduleType = identifyModuleType(view);
 
-	auto undo = view->BeginUndoActions();
-	if (moduleType == PEI)
+	if (state.moduleType == PEI)
 	{
-		task->SetProgressText("Resolving PEIM...");
-		auto resolver = PeiResolver(view, task);
-		resolver.resolvePei();
+		if (task)
+			task->SetProgressText("Initializing PEIM entry...");
+		PeiResolver resolver(view, task);
+		state.initializedEntry = resolver.setModuleEntry(PEI);
 	}
-	else if (moduleType == DXE)
+	else if (state.moduleType == DXE)
 	{
-		task->SetProgressText("Resolving DXE protocols...");
-		auto resolver = DxeResolver(view, task);
-		resolver.resolveDxe();
-		task->SetProgressText("Resolving MM related protocols...");
-		resolver.resolveSmm();
+		if (task)
+			task->SetProgressText("Initializing DXE entry...");
+		DxeResolver resolver(view, task);
+		state.initializedEntry = resolver.setModuleEntry(DXE);
 	}
-	view->CommitUndoActions(undo);
-	task->Finish();
+	else
+	{
+		LogAlertF("Could not identify EFI module type");
+		return false;
+	}
+
+	return state.initializedEntry;
 }
 
 
-static void StartResolverThread(Ref<BinaryView> view)
+static bool PropagateEntryTypes(Ref<BinaryView> view, Ref<BackgroundTask> task, EfiWorkflowState& state)
+{
+	if (!state.initializedEntry)
+		return false;
+
+	if (state.moduleType == PEI)
+	{
+		if (task)
+			task->SetProgressText("Propagating PEIM entry types...");
+		PeiResolver resolver(view, task);
+		state.propagatedEntryTypes = resolver.propagateEntryTypes();
+	}
+	else if (state.moduleType == DXE)
+	{
+		if (task)
+			task->SetProgressText("Propagating DXE entry types...");
+		DxeResolver resolver(view, task);
+		state.propagatedEntryTypes = resolver.propagateEntryTypes();
+	}
+
+	return state.propagatedEntryTypes;
+}
+
+
+static bool ResolveProtocols(Ref<BinaryView> view, Ref<BackgroundTask> task, EfiWorkflowState& state)
+{
+	if (!state.propagatedEntryTypes)
+		return false;
+
+	if (state.moduleType == PEI)
+	{
+		if (task)
+			task->SetProgressText("Resolving PEIM...");
+		auto resolver = PeiResolver(view, task);
+		state.resolvedProtocols = resolver.resolvePei();
+	}
+	else if (state.moduleType == DXE)
+	{
+		if (task)
+			task->SetProgressText("Resolving DXE protocols...");
+		auto resolver = DxeResolver(view, task);
+		state.resolvedProtocols = resolver.resolveDxe();
+		if (state.resolvedProtocols)
+		{
+			if (task)
+				task->SetProgressText("Resolving MM related protocols...");
+			state.resolvedProtocols = resolver.resolveSmm();
+		}
+	}
+
+	return state.resolvedProtocols;
+}
+
+
+static void RunCommandStages(Ref<BinaryView> view, Ref<BackgroundTask> task)
+{
+	EfiWorkflowState state;
+	if (!IdentifyAndInitializeEntry(view, task, state))
+		return;
+	view->UpdateAnalysisAndWait();
+
+	if (!PropagateEntryTypes(view, task, state))
+		return;
+	view->UpdateAnalysisAndWait();
+
+	if (!ResolveProtocols(view, task, state))
+		return;
+	view->UpdateAnalysisAndWait();
+}
+
+
+void RunCommand(Ref<BinaryView> view)
 {
 	Ref<BackgroundTask> task = new BackgroundTask("Running EFI resolver...", true);
-	thread resolverThread([view, task]() {
+	std::thread resolverThread([view, task]() {
 		try
 		{
-			RunResolver(view, task);
+			RunCommandStages(view, task);
 		}
 		catch (std::exception& e)
 		{
@@ -57,15 +140,10 @@ static void StartResolverThread(Ref<BinaryView> view)
 		{
 			LogError("EFI resolver failed with unknown uncaught exception.");
 		}
+		task->Finish();
 	});
 
 	resolverThread.detach();
-}
-
-
-void RunCommand(Ref<BinaryView> view)
-{
-	StartResolverThread(view);
 }
 
 
@@ -73,7 +151,7 @@ void RunWorkflow(const Ref<AnalysisContext>& analysisContext)
 {
 	auto view = analysisContext->GetBinaryView();
 	if (IsValid(view))
-		StartResolverThread(view);
+		RunCommand(view);
 }
 
 
@@ -88,7 +166,7 @@ extern "C"
 			"title": "EFI Resolver",
 			"name": "analysis.efi.efiResolver",
 			"role": "action",
-			"description": "This analysis step resolves EFI protocol interfaces and propagates type information.",
+			"description": "Resolve EFI protocol interfaces and propagate type information.",
 			"eligibility": {
 				"runOnce": true,
 				"auto": {}

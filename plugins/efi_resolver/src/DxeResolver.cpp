@@ -2,13 +2,13 @@
 
 bool DxeResolver::resolveBootServices()
 {
-	m_task->SetProgressText("Resolving Boot Services...");
+	SetProgressText("Resolving Boot Services...");
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_BOOT_SERVICES"));
 	// search reference of `EFI_BOOT_SERVICES` so that we can easily parse different services
 
 	for (auto& ref : refs)
 	{
-		if (m_task->IsCancelled())
+		if (IsCancelled())
 			return false;
 
 		auto func = ref.func;
@@ -52,12 +52,12 @@ bool DxeResolver::resolveBootServices()
 
 bool DxeResolver::resolveRuntimeServices()
 {
-	m_task->SetProgressText("Resolving Runtime Services...");
+	SetProgressText("Resolving Runtime Services...");
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_RUNTIME_SERVICES"));
 
 	for (auto& ref : refs)
 	{
-		if (m_task->IsCancelled())
+		if (IsCancelled())
 			return false;
 
 		auto func = ref.func;
@@ -94,12 +94,12 @@ bool DxeResolver::resolveRuntimeServices()
 
 bool DxeResolver::resolveSmmTables(string serviceName, string tableName)
 {
-	m_task->SetProgressText("Defining MM tables...");
+	SetProgressText("Defining MM tables...");
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName(serviceName));
 	// both versions use the same type, so we only need to search for this one
 	for (auto& ref : refs)
 	{
-		if (m_task->IsCancelled())
+		if (IsCancelled())
 			return false;
 
 		auto func = ref.func;
@@ -143,14 +143,14 @@ bool DxeResolver::resolveSmmTables(string serviceName, string tableName)
 			return false;
 		m_view->DefineDataVariable(smstAddr.GetValue().value, result.type);
 		m_view->DefineUserSymbol(new Symbol(DataSymbol, "gMmst", smstAddr.GetValue().value));
-		m_view->UpdateAnalysisAndWait();
+		m_view->UpdateAnalysis();
 	}
 	return true;
 }
 
 bool DxeResolver::resolveSmmServices()
 {
-	m_task->SetProgressText("Resolving MM services...");
+	SetProgressText("Resolving MM services...");
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_MM_SYSTEM_TABLE"));
 	auto refs_smm = m_view->GetCodeReferencesForType(QualifiedName("EFI_SMM_SYSTEM_TABLE2"));
 	// These tables have same type information, we can just iterate once
@@ -158,7 +158,7 @@ bool DxeResolver::resolveSmmServices()
 
 	for (auto& ref : refs)
 	{
-		if (m_task->IsCancelled())
+		if (IsCancelled())
 			return false;
 
 		auto func = ref.func;
@@ -201,7 +201,7 @@ bool DxeResolver::resolveSmmServices()
 
 bool DxeResolver::resolveSmiHandlers()
 {
-	m_task->SetProgressText("Resolving SMI Handlers...");
+	SetProgressText("Resolving SMI Handlers...");
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_MM_SW_REGISTER"));
 	auto refs_smm_sw = m_view->GetCodeReferencesForType(QualifiedName("EFI_SMM_SW_REGISTER2"));
 	auto refs_mm_sx = m_view->GetCodeReferencesForType(QualifiedName("EFI_MM_SX_REGISTER"));
@@ -209,12 +209,12 @@ bool DxeResolver::resolveSmiHandlers()
 	// Define them together
 
 	refs.insert(refs.end(), refs_smm_sw.begin(), refs_smm_sw.end());
-	refs.insert(refs.end(), refs_smm_sx.begin(), refs_smm_sw.end());
+	refs.insert(refs.end(), refs_smm_sx.begin(), refs_smm_sx.end());
 	refs.insert(refs.end(), refs_mm_sx.begin(), refs_mm_sx.end());
 
 	for (auto& ref : refs)
 	{
-		if (m_task->IsCancelled())
+		if (IsCancelled())
 			return false;
 
 		auto func = ref.func;
@@ -278,7 +278,7 @@ bool DxeResolver::resolveSmiHandlers()
 					return false;
 				targetFunc->SetUserType(result.type);
 				m_view->DefineUserSymbol(new Symbol(FunctionSymbol, funcName, funcAddr));
-				m_view->UpdateAnalysisAndWait();
+				m_view->UpdateAnalysis();
 
 				// After setting the type, we want to propagate the parameters' type
 				TypePropagation propagator(m_view);
@@ -314,5 +314,4 @@ bool DxeResolver::resolveSmm()
 DxeResolver::DxeResolver(Ref<BinaryView> view, Ref<BackgroundTask> task) : Resolver(view, task)
 {
 	initProtocolMapping();
-	setModuleEntry(DXE);
 }

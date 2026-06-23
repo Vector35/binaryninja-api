@@ -7,7 +7,7 @@ namespace BinaryNinja {
 	bool DemangleGeneric(Ref<Architecture> arch, const std::string& name, Ref<Type>& outType,
 		QualifiedName& outVarName, Ref<BinaryView> view, bool simplify)
 	{
-		BNType* apiType;
+		BNType* apiType = nullptr;
 		BNQualifiedName apiVarName;
 		bool success = BNDemangleGeneric(
 			arch->m_object, name.c_str(), &apiType, &apiVarName, view ? view->m_object : nullptr, simplify);
@@ -15,8 +15,7 @@ namespace BinaryNinja {
 		if (!success)
 			return false;
 
-		if (apiType)
-			outType = new Type(apiType);
+		outType = apiType ? new Type(apiType) : nullptr;
 		outVarName = QualifiedName::FromAPIObject(&apiVarName);
 		BNFreeQualifiedName(&apiVarName);
 		return true;
@@ -89,7 +88,7 @@ namespace BinaryNinja {
 	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Ref<Type>& outType, QualifiedName& outVarName,
 	    const bool simplify)
 	{
-		BNType* localType;
+		BNType* localType = nullptr;
 		char** localVarName = nullptr;
 		size_t localSize = 0;
 		if (!BNDemangleGNU3(arch->GetObject(), mangledName.c_str(), &localType, &localVarName, &localSize, simplify))
@@ -242,7 +241,7 @@ namespace BinaryNinja {
 	bool CoreDemangler::Demangle(Ref<Architecture> arch, const std::string& name, Ref<Type>& outType,
 		QualifiedName& outVarName, Ref<BinaryView> view)
 	{
-		BNType* apiType;
+		BNType* apiType = nullptr;
 		BNQualifiedName apiVarName;
 		bool success = BNDemanglerDemangle(
 			m_object, arch->m_object, name.c_str(), &apiType, &apiVarName, view ? view->m_object : nullptr);
@@ -250,8 +249,7 @@ namespace BinaryNinja {
 		if (!success)
 			return false;
 
-		if (apiType)
-			outType = new Type(apiType);
+		outType = apiType ? new Type(apiType) : nullptr;
 		outVarName = QualifiedName::FromAPIObject(&apiVarName);
 		BNFreeQualifiedName(&apiVarName);
 		return true;

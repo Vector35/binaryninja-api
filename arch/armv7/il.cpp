@@ -123,7 +123,41 @@ static void ConditionExecute(LowLevelILFunction& il, Condition cond, ExprId true
 	il.AddInstruction(trueCase);
 	il.MarkLabel(falseCode);
 }
-
+// Returns an instructions datatype size in bits
+static size_t GetDataTypeSize(DataType dt)
+{
+	switch (dt)
+	{
+	case DT_P8:
+	case DT_U8:
+	case DT_I8:
+	case DT_8:
+		return 8;
+	case DT_P16:
+	case DT_U16:
+	case DT_S16:
+	case DT_F16:
+	case DT_I16:
+	case DT_16:
+		return 16;
+	case DT_P32:
+	case DT_U32:
+	case DT_S32
+	case DT_F32:
+	case DT_I32:
+	case DT_32:
+		return 32;
+	case DT_P64:
+	case DT_U64:
+	case DT_S64:
+	case DT_F64:
+	case DT_I64:
+	case DT_64:
+		return 64;
+	default:
+		return 0;
+	}
+}
 
 static ExprId GetShifted(LowLevelILFunction& il, Register reg, uint32_t ShiftAmount, Shift shift)
 {
@@ -159,7 +193,22 @@ static ExprId GetShifted(LowLevelILFunction& il, Register reg, uint32_t ShiftAmo
 			return 0;
 	}
 }
+static DoubleWordRegisterList ReadRegisterList(const InstructionOperand& instr) {
+	uint32_t val = instr.reg;
+	DoubleWordRegisterList dwrl;
+	#ifdef _MSC_VER
+	dwrl.size = __popcnt(val);
+	DWORD pos = 0;
+	_BitScanForward(&pos, val);
+	dwrl.start = pos;
+	
+	#else
+	dwrl.size = __builtin_popcount(val);
+	dwrl.start = __builtin_ctz(val);
 
+	#endif
+	return dwrl;
+}
 
 static ExprId GetShiftedOffset(LowLevelILFunction& il, InstructionOperand& op)
 {
@@ -5037,6 +5086,34 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 					)
 				)
 			);
+			break;
+		case ARMV7_VLD1:
+			ConditionExecute(addrSize, instr.cond, instr, il, [&](size_t addrSize, Instruction& instr, LowLevelILFunction& il) {
+				switch (op1.cls)
+					{
+					case OperandClass::REG_LIST_DOUBLE:
+						DoubleWordRegisterList reglist = ReadRegisterList(op1);
+						uint32_t dregsize = get_register_size(REG_D0);
+						uint32_t regsize = get_register_size(op2.reg);
+						uint32_t dataSizeInBytes = GetDataTypeSize(instr.dataType) / 8;
+						for (unsigned int i = 0; i < reglist.size; i++)
+						{
+							uint32_t curOffset = i * dataSizeInBytes;
+							uint32_t curregind = REG_D0 + reglist.start + i;
+
+							il.AddInstruction(il.SetRegister(dregsize, curregind,
+								il.Load(dataSizeInBytes, il.Add(regsize, ILREG(op2), il.Const(regsize, curOffset)))));
+						}
+						if (op2.flags.wb)
+						{
+							il.AddInstruction(il.SetRegister(
+								regsize, op2.reg, il.Add(regsize, ILREG(op2), il.Const(regsize, dataSizeInBytes * reglist.size))));
+						}
+					default:
+						il.AddInstruction(il.Unimplemented());
+						break;
+					}
+				});
 			break;
 		default:
 			//printf("Instruction: %s\n", get_operation(instr.operation));

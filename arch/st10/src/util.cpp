@@ -436,45 +436,84 @@ BN::ExprId Instruction::GetIndAddrExpr_Extp_Rw_data16(
  * Indirect Addressing (DPP) Expressions
  */
 
-static BN::ExprId SelectDppRegister(BN::LowLevelILFunction& il,
-                                    BN::ExprId dppIndex) {
-  auto select = [&](uint32_t index, uint32_t reg) {
-    return il.Mult(2, il.Register(2, reg),
-                   il.CompareEqual(2, dppIndex, il.Const(2, index)));
-  };
+static uint32_t GetNextTempRegister(BN::LowLevelILFunction& il,
+                                    uint32_t offset = 0) {
+  return LLIL_TEMP(il.GetTemporaryRegisterCount() + offset);
+}
 
-  return il.Or(2,
-               il.Or(2, select(0, Registers::DPP0),
-                     select(1, Registers::DPP1)),
-               il.Or(2, select(2, Registers::DPP2),
-                     select(3, Registers::DPP3)));
+static void SelectDppRegister(BN::LowLevelILFunction& il, BN::ExprId dppIndex,
+                              uint32_t selectedDppReg) {
+  BN::LowLevelILLabel useDpp0, checkDpp1, useDpp1, checkDpp2, useDpp2, useDpp3,
+      done;
+
+  il.AddInstruction(
+      il.If(il.CompareEqual(2, dppIndex, il.Const(2, 0)), useDpp0, checkDpp1));
+
+  il.MarkLabel(useDpp0);
+  il.AddInstruction(
+      il.SetRegister(2, selectedDppReg, il.Register(2, Registers::DPP0)));
+  il.AddInstruction(il.Goto(done));
+
+  il.MarkLabel(checkDpp1);
+  il.AddInstruction(
+      il.If(il.CompareEqual(2, dppIndex, il.Const(2, 1)), useDpp1, checkDpp2));
+
+  il.MarkLabel(useDpp1);
+  il.AddInstruction(
+      il.SetRegister(2, selectedDppReg, il.Register(2, Registers::DPP1)));
+  il.AddInstruction(il.Goto(done));
+
+  il.MarkLabel(checkDpp2);
+  il.AddInstruction(
+      il.If(il.CompareEqual(2, dppIndex, il.Const(2, 2)), useDpp2, useDpp3));
+
+  il.MarkLabel(useDpp2);
+  il.AddInstruction(
+      il.SetRegister(2, selectedDppReg, il.Register(2, Registers::DPP2)));
+  il.AddInstruction(il.Goto(done));
+
+  il.MarkLabel(useDpp3);
+  il.AddInstruction(
+      il.SetRegister(2, selectedDppReg, il.Register(2, Registers::DPP3)));
+
+  il.MarkLabel(done);
+}
+
+static BN::ExprId BuildDppAddress(BN::LowLevelILFunction& il,
+                                  BN::ExprId ind) {
+  const uint32_t dppIndexReg = GetNextTempRegister(il);
+  const uint32_t selectedDppReg = GetNextTempRegister(il, 1);
+  const uint32_t addrReg = GetNextTempRegister(il, 2);
+
+  il.AddInstruction(il.SetRegister(
+      2, dppIndexReg, il.LogicalShiftRight(2, ind, il.Const(2, 14))));
+
+  const BN::ExprId DppIndex = il.Register(2, dppIndexReg);
+  SelectDppRegister(il, DppIndex, selectedDppReg);
+
+  const BN::ExprId IndAddrUpper =
+      il.ShiftLeft(3, il.Register(2, selectedDppReg), il.Const(2, 14));
+  const BN::ExprId IndAddrLower = il.And(2, ind, il.Const(2, 0x3FFF));
+
+  il.AddInstruction(
+      il.SetRegister(3, addrReg, il.Or(3, IndAddrUpper, IndAddrLower)));
+  return il.Register(3, addrReg);
 }
 
 // [Rw]
 BN::ExprId Instruction::GetIndAddrExpr_Rw(BN::LowLevelILFunction& il,
                                           uint32_t Rw) {
-  const BN::ExprId Ind = il.Register(2, Rw);
-  const BN::ExprId DppIndex = il.LogicalShiftRight(
-      2, il.And(2, il.Const(2, 0xC000), Ind), il.Const(2, 14));
-  const BN::ExprId IndAddrUpper =
-      il.ShiftLeft(3, SelectDppRegister(il, DppIndex), il.Const(2, 14));
-  const BN::ExprId IndAddrLower = il.And(2, Ind, il.Const(2, 0x3FFF));
-  const BN::ExprId IndAddr = il.Or(3, IndAddrUpper, IndAddrLower);
-  return IndAddr;
+  return BuildDppAddress(il, il.Register(2, Rw));
 }
 
 BN::ExprId Instruction::GetIndAddrExpr_Rw_data16(BN::LowLevelILFunction& il,
                                                  uint32_t Rw, uint16_t data16) {
-  const BN::ExprId Ind =
+  const uint32_t indReg = GetNextTempRegister(il);
+  il.AddInstruction(il.SetRegister(
+      2, indReg,
       il.And(2, il.Add(2, il.Const(2, data16), il.Register(2, Rw)),
-             il.Const(2, 0xFFFF));
-  const BN::ExprId DppIndex = il.LogicalShiftRight(
-      2, il.And(2, il.Const(2, 0xC000), Ind), il.Const(2, 14));
-  const BN::ExprId IndAddrUpper =
-      il.ShiftLeft(3, SelectDppRegister(il, DppIndex), il.Const(2, 14));
-  const BN::ExprId IndAddrLower = il.And(2, Ind, il.Const(2, 0x3FFF));
-  const BN::ExprId IndAddr = il.Or(3, IndAddrUpper, IndAddrLower);
-  return IndAddr;
+             il.Const(2, 0xFFFF))));
+  return BuildDppAddress(il, il.Register(2, indReg));
 }
 
 const char* Instruction::ConditionCodeToString(const uint8_t code) {

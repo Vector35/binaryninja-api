@@ -548,6 +548,11 @@ namespace BinaryNinja
 
 		void ParseMiniDebugInfo();
 		uint64_t ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonHeader& commonHeader, Elf64Header& header, Ref<Architecture>* arch, Ref<Platform>* plat, std::string& errorMsg, BNEndianness& endianness);
+
+		// Parse the Linux kernel __bug_table section and define a synthetic
+		// LINUX_BUG_TABLE_WARN_NOP_RELOC relocation at every WARN_ON site so
+		// that ApplyRelocation can patch those bytes to NOP at cache-build time.
+		void ParseLinuxKernelBugTable();
 	public:
 		ElfView(BinaryView* data, bool parseOnly = false);
 		~ElfView();

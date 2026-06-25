@@ -13,6 +13,7 @@
 #include "il.h"
 #include "lowlevelilinstruction.h"
 #include "neon_intrinsics.h"
+#include "linux_bug_table_reloc.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -3159,6 +3160,15 @@ class Arm64ElfRelocationHandler : public RelocationHandler
 		Instruction inst;
 		switch (info.nativeType)
 		{
+		case LINUX_BUG_TABLE_WARN_NOP_RELOC:
+			// Overwrite a Linux kernel WARN_ON brk instruction with a NOP so the
+			// arch naturally produces fallthrough CFG edges and LLIL.
+			// arm64 NOP = 0xD503201F (little-endian bytes: 1F 20 03 D5).
+			if (len < 4)
+				return false;
+			dest[0] = 0x1F; dest[1] = 0x20; dest[2] = 0x03; dest[3] = 0xD5;
+			return true;
+
 		case R_ARM_NONE:
 		case R_AARCH64_NONE:
 			return true;

@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <cstring>
 #include "elfview.h"
+#include "linux_bug_table_reloc.h"
 
 #define STRING_READ_CHUNK_SIZE 32
 
@@ -2537,7 +2538,316 @@ bool ElfView::Init()
 	double t = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count() / 1000.0;
 	m_logger->LogInfo("ELF parsing took %.3f seconds\n", t);
 	m_stringTableCache.clear();
+
+	ParseLinuxKernelBugTable();
+
 	return true;
+}
+
+
+// ---------------------------------------------------------------------------
+// Linux kernel __bug_table parser
+//
+// Reads the __bug_table ELF section and registers a synthetic
+// LINUX_BUG_TABLE_WARN_NOP_RELOC relocation at every WARN_ON brk/ud2 site.
+// The arch relocation handlers (Arm64ElfRelocationHandler,
+// x64ElfRelocationHandler) recognise this nativeType and overwrite those
+// instruction bytes with a NOP when the segment cache is first built, giving
+// the instruction fallthrough semantics without any ArchitectureHook.
+//
+// Entry layouts (from include/asm-generic/bug.h, bug_table.py):
+//   x86_64 verbose (HAVE_ARCH_BUG_FORMAT)   16 B
+//     s32 bug_disp | s32 fmt_disp | s32 file_disp | u16 line | u16 flags
+//   arm64 / x86_32 verbose                  12 B
+//     s32 bug_disp | s32 file_disp | u16 line | u16 flags
+//   Any relative-ptr arch, non-verbose       6 B
+//     s32 bug_disp | u16 flags
+//   Absolute 64-bit verbose                 20 B  (old big-endian arches)
+//   Absolute 64-bit non-verbose             10 B
+//   Absolute 32-bit verbose                 12 B
+//   Absolute 32-bit non-verbose              6 B
+// ---------------------------------------------------------------------------
+
+// Linux kernel bug flags (include/linux/bug.h)
+static constexpr uint16_t BUGFLAG_WARNING       = (1u << 0); // WARN* — fallthrough
+static constexpr uint16_t BUGFLAG_RESERVED_MASK = 0x00F0u;   // bits 4-7 must be zero
+
+static bool BugTableUseRelativePtrs(const string& arch)
+{
+	return arch == "x86_64" || arch == "x86" || arch == "aarch64";
+}
+
+static bool BugTableHasFormatField(const string& arch)
+{
+	// x86_64 adds an extra s32 fmt_disp (HAVE_ARCH_BUG_FORMAT) making verbose 16 B
+	return arch == "x86_64";
+}
+
+// How many bytes the NOP replacement occupies at the instruction site:
+// arm64 NOP = 4 bytes; x86 ud2 = 2 bytes.
+static size_t BugTableNopSize(const string& arch)
+{
+	return (arch == "aarch64") ? 4 : 2;
+}
+
+// Validate that a candidate entry at entry_addr looks like a real bug_table entry:
+// resolve bug_addr, verify it holds the expected trap opcode, check flags.
+static bool BugTableProbeEntry(BinaryView* bv, const string& arch,
+                               uint64_t entry_addr, size_t entry_size)
+{
+	uint64_t bug_addr = 0;
+
+	if (BugTableUseRelativePtrs(arch))
+	{
+		int32_t disp = 0;
+		if (bv->Read(&disp, entry_addr, sizeof(disp)) != sizeof(disp))
+			return false;
+		bug_addr = entry_addr + static_cast<uint64_t>(static_cast<int64_t>(disp));
+	}
+	else if (bv->GetAddressSize() == 8)
+	{
+		uint64_t ptr = 0;
+		if (bv->Read(&ptr, entry_addr, sizeof(ptr)) != sizeof(ptr))
+			return false;
+		bug_addr = ptr;
+	}
+	else
+	{
+		uint32_t ptr = 0;
+		if (bv->Read(&ptr, entry_addr, sizeof(ptr)) != sizeof(ptr))
+			return false;
+		bug_addr = static_cast<uint64_t>(ptr);
+	}
+
+	// Verify the expected trap opcode at bug_addr.
+	if (arch == "x86" || arch == "x86_64")
+	{
+		uint8_t bytes[2] = {};
+		if (bv->Read(bytes, bug_addr, 2) != 2)
+			return false;
+		if (bytes[0] != 0x0F || bytes[1] != 0x0B) // ud2
+			return false;
+	}
+	else if (arch == "aarch64")
+	{
+		uint32_t word = 0;
+		if (bv->Read(&word, bug_addr, sizeof(word)) != sizeof(word))
+			return false;
+		if ((word & 0xFFE0001Fu) != 0xD4200000u) // brk #imm
+			return false;
+	}
+	else
+	{
+		if (!bv->IsValidOffset(bug_addr))
+			return false;
+	}
+
+	// flags is the last u16 in every known layout.
+	uint16_t flags = 0;
+	if (bv->Read(&flags, entry_addr + entry_size - sizeof(uint16_t), sizeof(flags)) != sizeof(flags))
+		return false;
+
+	if (flags == 0)
+		return true; // BUG() — valid, terminates
+
+	if (!(flags & BUGFLAG_WARNING))
+		return false; // non-zero without WARNING bit: corrupt
+
+	if (flags & BUGFLAG_RESERVED_MASK)
+		return false; // reserved bits set: garbage
+
+	return true;
+}
+
+static size_t BugTableDetectEntrySize(BinaryView* bv, Ref<Logger> logger,
+                                      const string& arch,
+                                      uint64_t section_start, uint64_t section_len)
+{
+	bool useRel = BugTableUseRelativePtrs(arch);
+	bool hasFmt = BugTableHasFormatField(arch);
+	size_t addrSz = bv->GetAddressSize();
+
+	size_t verboseSz, nonVerboseSz;
+	if (useRel)
+	{
+		verboseSz    = hasFmt ? 16 : 12;
+		nonVerboseSz = 6;
+	}
+	else
+	{
+		verboseSz    = (addrSz == 8) ? 20 : 12;
+		nonVerboseSz = (addrSz == 8) ? 10 :  6;
+	}
+
+	// Candidate list: verbose, then (for x86_64) verbose-without-fmt, then non-verbose.
+	size_t candidates[3];
+	size_t numCandidates = 0;
+	candidates[numCandidates++] = verboseSz;
+	if (useRel && hasFmt)
+		candidates[numCandidates++] = 12; // x86_64 without HAVE_ARCH_BUG_FORMAT
+	candidates[numCandidates++] = nonVerboseSz;
+
+	for (size_t ci = 0; ci < numCandidates; ++ci)
+	{
+		const size_t sz = candidates[ci];
+		if (section_len < sz)
+			continue;
+
+		const size_t entry_count = section_len / sz;
+		const size_t probe_count = entry_count < 3 ? entry_count : 3;
+
+		bool ok = true;
+		for (size_t i = 0; i < probe_count; ++i)
+		{
+			if (!BugTableProbeEntry(bv, arch, section_start + i * sz, sz))
+			{
+				ok = false;
+				break;
+			}
+		}
+		if (ok)
+		{
+			logger->LogDebug("linux: __bug_table: detected entry_size=%zu (arch=%s)", sz, arch.c_str());
+			return sz;
+		}
+	}
+
+	logger->LogWarn("linux: __bug_table: could not detect entry size (section_len=%llu, arch=%s)",
+	                (unsigned long long)section_len, arch.c_str());
+	return 0;
+}
+
+void ElfView::ParseLinuxKernelBugTable()
+{
+	Ref<Section> section = GetSectionByName("__bug_table");
+	if (!section)
+		return; // Not a Linux kernel ELF — silently skip.
+
+	const uint64_t start = section->GetStart();
+	const uint64_t len   = section->GetLength();
+	if (len == 0)
+		return;
+
+	const string arch = m_arch ? m_arch->GetName() : "";
+
+	m_logger->LogInfo("linux: __bug_table found at 0x%llx len=%llu arch=%s — parsing WARN_ON sites",
+	                  (unsigned long long)start, (unsigned long long)len, arch.c_str());
+
+	const bool useRel  = BugTableUseRelativePtrs(arch);
+	const bool hasFmt  = BugTableHasFormatField(arch);
+	const size_t addrSz = GetAddressSize();
+
+	const size_t entry_size = BugTableDetectEntrySize(this, m_logger, arch, start, len);
+	if (entry_size == 0)
+	{
+		m_logger->LogWarn("linux: __bug_table: skipping — entry size detection failed");
+		return;
+	}
+
+	// Infer whether entries carry file/line verbose info from the detected size.
+	bool hasVerbose;
+	if (useRel)
+		hasVerbose = (entry_size != 6);
+	else if (addrSz == 8)
+		hasVerbose = (entry_size == 20);
+	else
+		hasVerbose = (entry_size == 12);
+
+	m_logger->LogDebug("linux: __bug_table: entry_size=%zu verbose=%d format_field=%d",
+	                   entry_size, (int)hasVerbose, (int)hasFmt);
+
+	const size_t nopSize = BugTableNopSize(arch);
+	size_t warnCount = 0;
+	size_t bugCount  = 0;
+
+	for (uint64_t off = 0; off + entry_size <= len; off += entry_size)
+	{
+		const uint64_t entry_addr = start + off;
+		uint64_t bug_addr = 0;
+		uint16_t flags    = 0;
+
+		// Decode bug_addr and flags according to the detected layout.
+		if (useRel && hasVerbose && hasFmt && entry_size == 16)
+		{
+			// x86_64 verbose+fmt: s32 bug_disp(0) | s32 fmt_disp(4) | s32 file_disp(8) | u16 line(12) | u16 flags(14)
+			int32_t disp = 0;
+			if (Read(&disp, entry_addr, sizeof(disp)) != sizeof(disp)) continue;
+			bug_addr = entry_addr + static_cast<uint64_t>(static_cast<int64_t>(disp));
+			if (Read(&flags, entry_addr + 14, sizeof(flags)) != sizeof(flags)) continue;
+		}
+		else if (useRel && hasVerbose)
+		{
+			// arm64 / x86_32 verbose: s32 bug_disp(0) | s32 file_disp(4) | u16 line(8) | u16 flags(10)
+			int32_t disp = 0;
+			if (Read(&disp, entry_addr, sizeof(disp)) != sizeof(disp)) continue;
+			bug_addr = entry_addr + static_cast<uint64_t>(static_cast<int64_t>(disp));
+			if (Read(&flags, entry_addr + 10, sizeof(flags)) != sizeof(flags)) continue;
+		}
+		else if (useRel && !hasVerbose)
+		{
+			// Non-verbose relative: s32 bug_disp(0) | u16 flags(4)
+			int32_t disp = 0;
+			if (Read(&disp, entry_addr, sizeof(disp)) != sizeof(disp)) continue;
+			bug_addr = entry_addr + static_cast<uint64_t>(static_cast<int64_t>(disp));
+			if (Read(&flags, entry_addr + 4, sizeof(flags)) != sizeof(flags)) continue;
+		}
+		else if (!useRel && hasVerbose && addrSz == 8)
+		{
+			// Absolute 64-bit verbose: u64(0) | u64(8) | u16 line(16) | u16 flags(18)
+			uint64_t ptr = 0;
+			if (Read(&ptr, entry_addr, sizeof(ptr)) != sizeof(ptr)) continue;
+			bug_addr = ptr;
+			if (Read(&flags, entry_addr + 18, sizeof(flags)) != sizeof(flags)) continue;
+		}
+		else if (!useRel && hasVerbose)
+		{
+			// Absolute 32-bit verbose: u32(0) | u32(4) | u16 line(8) | u16 flags(10)
+			uint32_t ptr = 0;
+			if (Read(&ptr, entry_addr, sizeof(ptr)) != sizeof(ptr)) continue;
+			bug_addr = static_cast<uint64_t>(ptr);
+			if (Read(&flags, entry_addr + 10, sizeof(flags)) != sizeof(flags)) continue;
+		}
+		else if (!useRel && addrSz == 8)
+		{
+			// Absolute 64-bit non-verbose: u64(0) | u16 flags(8)
+			uint64_t ptr = 0;
+			if (Read(&ptr, entry_addr, sizeof(ptr)) != sizeof(ptr)) continue;
+			bug_addr = ptr;
+			if (Read(&flags, entry_addr + 8, sizeof(flags)) != sizeof(flags)) continue;
+		}
+		else
+		{
+			// Absolute 32-bit non-verbose: u32(0) | u16 flags(4)
+			uint32_t ptr = 0;
+			if (Read(&ptr, entry_addr, sizeof(ptr)) != sizeof(ptr)) continue;
+			bug_addr = static_cast<uint64_t>(ptr);
+			if (Read(&flags, entry_addr + 4, sizeof(flags)) != sizeof(flags)) continue;
+		}
+
+		if (!(flags & BUGFLAG_WARNING))
+		{
+			++bugCount;
+			continue; // BUG() — real trap, leave instruction bytes untouched.
+		}
+
+		// WARN_ON site: define a synthetic relocation so ApplyRelocation will
+		// overwrite the brk/ud2 bytes with a NOP when the segment cache is built.
+		BNRelocationInfo relocInfo;
+		memset(&relocInfo, 0, sizeof(relocInfo));
+		relocInfo.type       = StandardRelocationType;
+		relocInfo.nativeType = LINUX_BUG_TABLE_WARN_NOP_RELOC;
+		relocInfo.size       = static_cast<size_t>(nopSize);
+		relocInfo.address    = bug_addr;
+
+		DefineRelocation(m_arch, relocInfo, bug_addr, bug_addr);
+		m_logger->LogDebug("linux: __bug_table: WARN site 0x%llx → NOP relocation registered (flags=0x%04x)",
+		                   (unsigned long long)bug_addr, (unsigned)flags);
+		++warnCount;
+	}
+
+	m_logger->LogInfo(
+	    "linux: __bug_table: %zu WARN_ON sites patched to NOP via relocation, %zu BUG() sites left as traps",
+	    warnCount, bugCount);
 }
 
 

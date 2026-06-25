@@ -23,7 +23,7 @@ bool DxeResolver::resolveProtocolGuid(Ref<Function> func, uint64_t addr, size_t 
 			changed = true;
 	}
 	if (changed)
-		m_view->UpdateAnalysisAndWait();
+		m_view->UpdateAnalysis();
 	return changed;
 }
 
@@ -59,7 +59,7 @@ bool DxeResolver::resolveProtocolInterfaces(
 		}
 	}
 	if (changed)
-		m_view->UpdateAnalysisAndWait();
+		m_view->UpdateAnalysis();
 	return changed;
 }
 
@@ -93,7 +93,7 @@ bool DxeResolver::resolveProtocolInterfaceList(Ref<Function> func, uint64_t addr
 		}
 	}
 	if (changed)
-		m_view->UpdateAnalysisAndWait();
+		m_view->UpdateAnalysis();
 	return changed;
 }
 

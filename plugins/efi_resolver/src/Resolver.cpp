@@ -714,7 +714,7 @@ bool Resolver::resolveGuidInterface(Ref<Function> func, uint64_t addr, int guidP
 		if (guidDataAddr && !defineGuidDataVariable(*guidDataAddr, info.guidName))
 			return false;
 		applyProtocolInterface(func, params[interfacePos], info, true);
-		m_view->UpdateAnalysisAndWait();
+		m_view->UpdateAnalysis();
 	}
 
 	return true;

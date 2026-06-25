@@ -648,15 +648,24 @@ bool PeiResolver::resolvePei()
 {
 	if (!resolvePlatformPointers())
 		return false;
-	m_view->UpdateAnalysisAndWait();
+	if (m_task)
+		m_view->UpdateAnalysisAndWait();
+	else
+		m_view->UpdateAnalysis();
 
 	if (!resolvePeiDescriptors())
 		return false;
-	m_view->UpdateAnalysisAndWait();
+	if (m_task)
+		m_view->UpdateAnalysisAndWait();
+	else
+		m_view->UpdateAnalysis();
 
 	if (!resolvePeiServices())
 		return false;
-	m_view->UpdateAnalysisAndWait();
+	if (m_task)
+		m_view->UpdateAnalysisAndWait();
+	else
+		m_view->UpdateAnalysis();
 
 	return true;
 }

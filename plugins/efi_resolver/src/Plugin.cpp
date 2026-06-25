@@ -112,15 +112,24 @@ static void RunCommandStages(Ref<BinaryView> view, Ref<BackgroundTask> task)
 	EfiWorkflowState state;
 	if (!IdentifyAndInitializeEntry(view, task, state))
 		return;
-	view->UpdateAnalysisAndWait();
+	if (task)
+		view->UpdateAnalysisAndWait();
+	else
+		view->UpdateAnalysis();
 
 	if (!PropagateEntryTypes(view, task, state))
 		return;
-	view->UpdateAnalysisAndWait();
+	if (task)
+		view->UpdateAnalysisAndWait();
+	else
+		view->UpdateAnalysis();
 
 	if (!ResolveProtocols(view, task, state))
 		return;
-	view->UpdateAnalysisAndWait();
+	if (task)
+		view->UpdateAnalysisAndWait();
+	else
+		view->UpdateAnalysis();
 }
 
 
@@ -151,7 +160,20 @@ void RunWorkflow(const Ref<AnalysisContext>& analysisContext)
 {
 	auto view = analysisContext->GetBinaryView();
 	if (IsValid(view))
-		RunCommand(view);
+	{
+		try
+		{
+			RunCommandStages(view, nullptr);
+		}
+		catch (std::exception& e)
+		{
+			LogErrorForException(e, "EFI resolver failed with uncaught exception: %s", e.what());
+		}
+		catch (...)
+		{
+			LogError("EFI resolver failed with unknown uncaught exception.");
+		}
+	}
 }
 
 

@@ -83,3 +83,16 @@
 #else
 #define BN_NO_UNIQUE_ADDRESS [[no_unique_address]]
 #endif
+
+// BN_EMPTY_BASES
+//
+// Applied to a class definition to enable the empty base optimization across multiple
+// empty base classes. Clang and GCC do this unconditionally, but MSVC only collapses a
+// single empty base unless the class is annotated with __declspec(empty_bases). Without
+// it, a class with several empty bases is padded larger than the sum of its data members.
+
+#if defined(_MSC_VER)
+#define BN_EMPTY_BASES __declspec(empty_bases)
+#else
+#define BN_EMPTY_BASES
+#endif

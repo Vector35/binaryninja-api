@@ -168,6 +168,9 @@ pub struct ID0Info {
     pub exports: Vec<ExportInfo>,
     /// Processor register names indexed by IDA register number, used to resolve the registers
     /// referenced by argument/return value locations into Binary Ninja registers.
+    ///
+    /// Invariant: IDA register numbers start at 0 with no gaps, so the vec index is the register
+    /// number. `register_names[n]` is the name of IDA register `n`.
     pub register_names: Vec<String>,
 }
 

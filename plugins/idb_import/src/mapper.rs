@@ -10,7 +10,7 @@ use binaryninja::architecture::{Architecture, ArchitectureExt, Register, Registe
 use binaryninja::binary_view::{BinaryView, BinaryViewBase};
 use binaryninja::component::{Component, ComponentBuilder};
 use binaryninja::disassembly::InstructionTextTokenKind;
-use binaryninja::function::Function;
+use binaryninja::function::{Function, Location};
 use binaryninja::types::IntegerDisplayType;
 use binaryninja::qualified_name::QualifiedName;
 use binaryninja::rc::Ref;
@@ -276,23 +276,7 @@ impl IDBMapper {
             BaseAddressInfo::None => bn_base_address,
             BaseAddressInfo::BaseSegment(start_addr) => bn_base_address.wrapping_sub(start_addr),
             BaseAddressInfo::BaseSection(section_addr) => {
-                // Align against the lowest mapped *segment*, not the lowest section.
-                // IDA's `min_ea` is the image base, and it maps the file header region too.
-                // Across executable formats the first *section* generally begins after the
-                // format's headers/metadata (e.g. the Mach-O header + load commands, the PE
-                // headers, the ELF header + program headers), so aligning to the lowest section
-                // over-shifts every imported address by the header size. Segments include the
-                // header region, so the lowest segment matches IDA's image base regardless of
-                // format.
-                let bn_segment_addr = view
-                    .segments()
-                    .iter()
-                    .map(|s| s.address_range().start)
-                    .min();
-                match bn_segment_addr {
-                    Some(bn_segment) => bn_segment.wrapping_sub(section_addr),
-                    None => bn_base_address,
-                }
+                bn_base_address.wrapping_sub(section_addr)
             }
         };
 
@@ -334,12 +318,12 @@ impl IDBMapper {
 
         // Keep the created functions keyed by their (rebased) address so we can place them into
         // folders later without depending on the analysis having indexed them yet.
-        let mut functions_by_address: HashMap<u64, Ref<Function>> = HashMap::new();
+        let mut functions_by_address: HashMap<Location, Ref<Function>> = HashMap::new();
         for func in &self.info.merged_functions() {
             let mut rebased_func = func.clone();
             rebased_func.address = rebase(func.address);
             if let Some(bn_func) = self.map_func_to_view(view, &til_translator, &rebased_func) {
-                functions_by_address.insert(rebased_func.address, bn_func);
+                functions_by_address.insert(Location::from(rebased_func.address), bn_func);
             }
         }
 
@@ -349,14 +333,12 @@ impl IDBMapper {
             if let Some(bn_func) =
                 self.map_export_to_view(view, &til_translator, &rebased_export)
             {
-                functions_by_address.insert(rebased_export.address, bn_func);
+                functions_by_address.insert(Location::from(rebased_export.address), bn_func);
             }
         }
 
-        // NOTE: The undo bracketing below is not thread safe, so the mapper must be the only
-        // writer mutating the view while it runs. This invariant holds because mapping is
-        // registered as a single run-once analysis activity (see `plugin_init`) rather than being
-        // invoked concurrently.
+        // TODO: The below undo and ignore is not thread safe, this means that the mapper itself
+        // should be the only thing running at the time of the mapping process.
         let undo = view.file().begin_undo_actions(true);
         for comment in &self.info.merged_comments() {
             let mut rebased_comment = comment.clone();
@@ -528,10 +510,8 @@ impl IDBMapper {
         if let Ok(_used_types) = til_translator.used_types.lock() {
             used_types = _used_types.clone();
         }
-        // NOTE: Types are resolved here after they have already been applied to functions, so any
-        // named type references that get defined in this pass will read as stale until analysis
-        // re-runs and re-resolves them. Acceptable for this best-effort backfill, but a reason to
-        // resolve referenced types before applying function types if this path is wired in.
+        // TODO: Adding types to view after the types have been applied to the functions is not a
+        // great idea, I imagine the NTR's will have stale references until the analysis runs again.
         'found: for used_ty in &used_types {
             // 0. Make sure the type doesn't already exist in the view
             if view.type_by_name(&used_ty.name).is_some() {
@@ -565,8 +545,7 @@ impl IDBMapper {
                 }
             }
 
-            // NOTE: A further lookup source would be the TILs attached to the IDB (e.g. imported
-            // library TILs) before giving up; not yet wired in.
+            // TODO: Look through the idb attached tils?
             tracing::warn!("Failed to find type: {:?}", used_ty);
         }
     }
@@ -705,6 +684,7 @@ impl IDBMapper {
 
         // IDA marks functions that never return (e.g. `abort`, `exit`); carry that over so BN's
         // analysis does not fall through past calls to them.
+        // TODO: Verify that set_auto_can_return persists across database saves.
         if func.is_no_return {
             tracing::debug!("Marking function as no-return: {:0x}", func.address);
             bn_func.set_auto_can_return(false);
@@ -727,9 +707,7 @@ impl IDBMapper {
             }
         }
 
-        // NOTE: We let the function inherit the view's default platform. Carrying an explicit
-        // platform on FunctionInfo would let mixed-architecture databases (e.g. ARM/Thumb
-        // interworking) map each function with its own platform; that is a future enhancement.
+        // TODO: Attach a platform tuple to the FunctionInfo?
         if let Some(func_sym) = symbol_from_func(func) {
             tracing::debug!(
                 "Mapping function symbol: {:0x} => {}",
@@ -739,8 +717,10 @@ impl IDBMapper {
             view.define_auto_symbol(&func_sym);
         }
 
+        let undo = view.file().begin_undo_actions(true);
         self.map_register_vars_to_func(&bn_func, func);
         self.map_stack_frame_to_func(&bn_func, til_translator, func);
+        view.file().forget_undo_actions(&undo);
 
         Some(bn_func)
     }
@@ -792,7 +772,7 @@ impl IDBMapper {
                         bn_offset,
                         func.address
                     );
-                    bn_func.create_auto_stack_var(bn_offset, &ty, &name);
+                    bn_func.create_user_stack_var(bn_offset, &ty, &name);
                 }
                 Err(err) => {
                     tracing::warn!(
@@ -916,7 +896,7 @@ impl IDBMapper {
         entries: &[FunctionFolderEntry],
         parent: Option<&Component>,
         rebase: &impl Fn(u64) -> u64,
-        functions_by_address: &HashMap<u64, Ref<Function>>,
+        functions_by_address: &HashMap<Location, Ref<Function>>,
         stats: &mut FolderStats,
     ) {
         for entry in entries {
@@ -928,10 +908,10 @@ impl IDBMapper {
                     let rebased = rebase(*address);
                     // Prefer the function we created during mapping; fall back to a view lookup in
                     // case it came from another source.
-                    let func = functions_by_address.get(&rebased).cloned().or_else(|| {
+                    let func = functions_by_address.get(&Location::from(rebased)).cloned().or_else(|| {
                         view.functions_at(rebased)
                             .iter()
-                            .find(|func| func.start() == rebased)
+                            .next()
                             .map(|func| func.to_owned())
                     });
                     match func {

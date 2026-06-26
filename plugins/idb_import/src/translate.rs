@@ -8,12 +8,13 @@ use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
 use binaryninja::types::{
     EnumerationBuilder, FunctionParameter, MemberAccess, MemberScope, NamedTypeReference,
-    NamedTypeReferenceClass, ReturnValue, StructureBuilder, StructureMember, StructureType, Type,
-    TypeBuilder, TypeContainer, ValueLocation, ValueLocationComponent, ValueLocationSource,
+    NamedTypeReferenceClass, PointerBaseType, ReturnValue, StructureBuilder, StructureMember,
+    StructureType, Type, TypeBuilder, TypeContainer, ValueLocation, ValueLocationComponent,
+    ValueLocationSource,
 };
 use binaryninja::variable::Variable;
 use idb_rs::til::function::{ArgLoc, CallingConvention};
-use idb_rs::til::pointer::PointerModifier;
+use idb_rs::til::pointer::{PointerModifier, PointerType};
 use idb_rs::til::r#enum::EnumMembers;
 use idb_rs::til::{Basic, TILTypeInfo, TypeVariant, TyperefType, TyperefValue};
 use std::collections::{HashMap, HashSet};
@@ -263,9 +264,11 @@ impl TILTranslator {
             // An unknown type of unspecified size has no integer representation; treat it as void.
             Basic::Unknown { bytes: 0 } => Ok(TypeBuilder::void()),
             Basic::Unknown { bytes } => {
-                // In the samples provided it appears that unknown can be used to represent a byte,
-                // so we are going to be liberal and allow unknown basic types to be treated as a sized int.
-                Ok(TypeBuilder::int(*bytes as usize, false))
+                // Represent as a named integer NTR so the type has a descriptive name in the UI
+                // rather than appearing as an anonymous integer. The name encodes the bit width.
+                let name = format!("__unk_u{}", bytes * 8);
+                let ntr = NamedTypeReference::new(NamedTypeReferenceClass::TypedefNamedTypeClass, name);
+                Ok(TypeBuilder::named_type(&ntr))
             }
             Basic::Bool if self.bool_size == 1 => Ok(TypeBuilder::bool()),
             // Binary Ninja's `bool` is always a single byte; a wider `bool` is represented as an
@@ -305,17 +308,15 @@ impl TILTranslator {
     ) -> anyhow::Result<TypeBuilder> {
         // A `__ptr32` / `__ptr64` modifier overrides the platform address size for this pointer
         // (e.g. a 32-bit pointer embedded in an otherwise 64-bit binary).
-        //
-        // NOTE: `closure` (based pointers) and `shifted` pointers have no direct Binary Ninja
-        // representation, so the pointee type and width are preserved but those attributes are
-        // intentionally dropped.
+        // `shifted` pointers have no direct Binary Ninja representation; the pointee type and
+        // width are preserved but the shift attribute is dropped.
         let pointer_width = match pointer_ty.modifier {
             Some(PointerModifier::Ptr32) => 4,
             Some(PointerModifier::Ptr64) => 8,
             Some(PointerModifier::Restricted) | None => self.address_size,
         };
         let inner_ty = self.translate_type_info(&pointer_ty.typ)?;
-        Ok(TypeBuilder::pointer_of_width(
+        let builder = TypeBuilder::pointer_of_width(
             &inner_ty,
             pointer_width,
             // NOTE: Set later in `translate_type_info`.
@@ -323,7 +324,14 @@ impl TILTranslator {
             // NOTE: Set later in `translate_type_info`.
             false,
             None,
-        ))
+        );
+        // IDA `__based` pointers are relative to a variable address; wire up the BN pointer base
+        // so the relationship is preserved. The base register index carried in the IDA type has no
+        // direct equivalent in BN's type system, so only the base kind is recorded.
+        if matches!(pointer_ty.closure, PointerType::PointerBased(_)) {
+            builder.set_pointer_base(PointerBaseType::RelativeToVariableAddressPointerBaseType, 0);
+        }
+        Ok(builder)
     }
 
     pub fn build_function_ty(

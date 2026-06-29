@@ -8,6 +8,7 @@
 #include <mutex>
 #include <sstream>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include "coffview.h"
 
@@ -258,21 +259,25 @@ bool COFFView::Init()
 				if (errno == 0 && offset > 0)
 				{
 					BinaryReader stringReader(GetParentView(), LittleEndian);
-					uint64_t stringTableBase = header.coffSymbolTable + (header.coffSymbolCount * 18);
+					// Compute the string table offset using 64-bit arithmetic and the
+					// actual per-symbol record size (18 bytes normally, 20 for BigCOFF).
+					uint64_t stringTableBase = header.coffSymbolTable + ((uint64_t)header.coffSymbolCount * sizeofCOFFSymbol);
 					stringReader.Seek(stringTableBase);
 					uint32_t stringTableLen = stringReader.Read32();
 					if ((stringTableBase + stringTableLen) > GetParentView()->GetEnd())
 					{
 						m_logger->LogError("Cannot resolve section name \"%s\": String table is invalid length", name);
 					}
-					else if (stringTableBase + offset < GetParentView()->GetEnd())
+					else if (offset < stringTableLen)
 					{
 						sectionNameReader.Seek(stringTableBase + offset);
-						resolvedName = sectionNameReader.ReadCString();
+						// Section names longer than 1024 bytes are not meaningful; cap the read
+						// to bound the allocation.
+						resolvedName = sectionNameReader.ReadCString(1024);
 					}
 					else
 					{
-						m_logger->LogError("Cannot resolve section name \"%s\": Offset is past end of string table", name);
+						m_logger->LogError("Cannot resolve section name \"%s\": Offset %u exceeds the string table size %u", name, offset, stringTableLen);
 					}
 				}
 			}
@@ -866,6 +871,29 @@ bool COFFView::Init()
 			// TODO: combine the aux symbol record struct types into a union:
 			// StructureBuilder coffAuxSymbolRecordBuilder(UnionStructureType);
 
+			// A limit of 0 disables the corresponding check.
+			uint64_t maxSymCount = PE_DEFAULT_MAX_COFF_SYMBOL_COUNT;
+			uint64_t maxSymNameLen = PE_DEFAULT_MAX_COFF_SYMBOL_NAME_LENGTH;
+			uint64_t maxTotalSymNameBytes = PE_DEFAULT_MAX_TOTAL_COFF_SYMBOL_NAME_MB * 1024 * 1024;
+			if (settings && settings->Contains("loader.coff.maxCoffSymbolCount"))
+				maxSymCount = settings->Get<uint64_t>("loader.coff.maxCoffSymbolCount", this);
+			if (settings && settings->Contains("loader.coff.maxCoffSymbolNameLength"))
+				maxSymNameLen = settings->Get<uint64_t>("loader.coff.maxCoffSymbolNameLength", this);
+			if (settings && settings->Contains("loader.coff.maxTotalCoffSymbolNameBytes"))
+				maxTotalSymNameBytes = settings->Get<uint64_t>("loader.coff.maxTotalCoffSymbolNameBytes", this)
+				                       * 1024 * 1024;
+			// A name length limit of 0 means no limit; ReadCString takes an actual byte count,
+			// so map it to the largest representable value instead of reading zero bytes.
+			if (!maxSymNameLen)
+				maxSymNameLen = UINT64_MAX;
+
+			// Every symbol table slot gets a data variable and a marker symbol below, so that
+			// relocations can resolve any symbol index the file declares. maxCoffSymbolCount only
+			// bounds how many of those slots also get full name resolution, typing, and aux
+			// record definitions, which are the more expensive per-symbol steps.
+			uint64_t symbolAnnotationLimit =
+				maxSymCount ? std::min<uint64_t>(header.coffSymbolCount, maxSymCount) : header.coffSymbolCount;
+
 			size_t symbolTableSize = header.coffSymbolCount * sizeofCOFFSymbol;
 			auto lastSection = m_sections.back();
 			symbolTableAdjustedOffset = header.coffSymbolTable - lastSection.pointerToRawData + lastSection.virtualAddress;
@@ -887,11 +915,11 @@ bool COFFView::Init()
 			DefineAutoSymbol(new Symbol(DataSymbol, "__symtab", coffSymbolTableBase, NoBinding));
 
 			BinaryReader stringReader(GetParentView(), LittleEndian);
-			uint64_t stringTableBaseRaw = header.coffSymbolTable + ((uint64_t) header.coffSymbolCount * sizeofCOFFSymbol);
+			uint64_t stringTableBaseRaw = header.coffSymbolTable + ((uint64_t)header.coffSymbolCount * sizeofCOFFSymbol);
 
 			stringReader.Seek(stringTableBaseRaw);
-			uint32_t stringTableSize = stringReader.Read32();
-			if ((stringTableBaseRaw + stringTableSize) > GetParentView()->GetEnd())
+			uint32_t stringTableSize;
+			if (!stringReader.TryRead32(stringTableSize) || (stringTableBaseRaw + stringTableSize) > GetParentView()->GetEnd())
 			{
 				throw COFFFormatException("invalid COFF string table size");
 			}
@@ -914,8 +942,18 @@ bool COFFView::Init()
 
 			DefineAutoSymbol(new Symbol(DataSymbol, "__strtab", m_imageBase + stringTableBase + 4, NoBinding));
 
+			// Symbol names are looked up by string table offset before being read, so entries
+			// that share an offset only pay for one read and count once toward the name budget.
+			std::unordered_map<uint32_t, string> symbolNameCache;
+			uint64_t totalSymNameBytesRead = 0;
+			bool nameBudgetExceeded = false;
 			for (size_t i = 0; i < header.coffSymbolCount; i++)
 			{
+				// Every slot still gets the marker symbol below regardless of this limit, so
+				// relocations can resolve symbols past it; only the richer per-symbol work
+				// (name resolution, typing, aux records) is bounded.
+				bool annotate = ((uint64_t)i < symbolAnnotationLimit) && !nameBudgetExceeded;
+
 				reader.Seek(header.coffSymbolTable + (i * sizeofCOFFSymbol));
 				uint32_t e_zeroes = reader.Read32();
 				uint32_t e_offset = reader.Read32();
@@ -946,10 +984,29 @@ bool COFFView::Init()
 					symbolName = stringReader.ReadCString(8);
 					symbolName = symbolName.substr(0, strlen(symbolName.c_str()));
 				}
-				else
+				else if (annotate && e_offset < stringTableSize)
 				{
-					stringReader.Seek(stringTableBaseRaw + e_offset);
-					symbolName = stringReader.ReadCString();
+					auto cached = symbolNameCache.find(e_offset);
+					if (cached != symbolNameCache.end())
+					{
+						symbolName = cached->second;
+					}
+					else if (!maxTotalSymNameBytes || totalSymNameBytesRead < maxTotalSymNameBytes)
+					{
+						stringReader.Seek(stringTableBaseRaw + e_offset);
+						symbolName = stringReader.ReadCString(maxSymNameLen);
+						// Each name ends up retained in more than one copy once a symbol is
+						// created for it, so weight the budget accordingly rather than counting
+						// only the bytes read here.
+						totalSymNameBytesRead += (uint64_t)symbolName.size() * 4;
+						symbolNameCache.emplace(e_offset, symbolName);
+					}
+					else
+					{
+						m_logger->LogWarn("Total COFF symbol name bytes exceeded limit %" PRIu64
+							", limiting further symbol name resolution.", maxTotalSymNameBytes);
+						nameBudgetExceeded = true;
+					}
 				}
 
 				BNSymbolBinding binding;
@@ -972,54 +1029,60 @@ bool COFFView::Init()
 				}
 
 				uint8_t baseType = (e_type >> 4) & 0x3;
-				switch (baseType)
+				if (annotate)
 				{
-					case IMAGE_SYM_DTYPE_NULL: // no derived type
+					switch (baseType)
 					{
-						if (virtualAddress)
-							AddCOFFSymbol(DataSymbol, "", symbolName, virtualAddress, binding);
-						break;
-					}
-					case IMAGE_SYM_DTYPE_POINTER: // pointer to base type
-					{
-						break;
-					}
-					case IMAGE_SYM_DTYPE_FUNCTION: // function that returns base type
-					{
-						if (virtualAddress)
+						case IMAGE_SYM_DTYPE_NULL: // no derived type
 						{
-							if (!isCLRBinary)
-							{
-								auto functionAddress = virtualAddress;
-								if (header.machine == IMAGE_FILE_MACHINE_ARMNT)
-								{
-									// NOTE: for IMAGE_FILE_MACHINE_ARMNT, there are only thumb2 functions,
-									// so we force the low bit on for all function symbols
-									functionAddress |= 1;
-								}
-								AddCOFFSymbol(FunctionSymbol, "", symbolName, functionAddress, binding);
-							}
-							else if (!clrFunction)
-							{
+							if (virtualAddress)
 								AddCOFFSymbol(DataSymbol, "", symbolName, virtualAddress, binding);
-							}
+							break;
 						}
-						break;
+						case IMAGE_SYM_DTYPE_POINTER: // pointer to base type
+						{
+							break;
+						}
+						case IMAGE_SYM_DTYPE_FUNCTION: // function that returns base type
+						{
+							if (virtualAddress)
+							{
+								if (!isCLRBinary)
+								{
+									auto functionAddress = virtualAddress;
+									if (header.machine == IMAGE_FILE_MACHINE_ARMNT)
+									{
+										// NOTE: for IMAGE_FILE_MACHINE_ARMNT, there are only thumb2 functions,
+										// so we force the low bit on for all function symbols
+										functionAddress |= 1;
+									}
+									AddCOFFSymbol(FunctionSymbol, "", symbolName, functionAddress, binding);
+								}
+								else if (!clrFunction)
+								{
+									AddCOFFSymbol(DataSymbol, "", symbolName, virtualAddress, binding);
+								}
+							}
+							break;
+						}
+						case IMAGE_SYM_DTYPE_ARRAY: // array of base type
+						{
+							break;
+						}
+						default:
+							break;
 					}
-					case IMAGE_SYM_DTYPE_ARRAY: // array of base type
-					{
-						break;
-					}
-					default:
-						break;
 				}
 
+				// Define a data variable and marker symbol for every raw table slot,
+				// independent of the annotation limit, so relocations can look up any
+				// symbol index the file declares.
 				auto symbolVirtualAddress = symbolTableAdjustedOffset + (i * sizeofCOFFSymbol);
 				DefineDataVariable(m_imageBase + symbolVirtualAddress, Type::NamedType(this, coffSymbolTypeName));
 				string symbolStructName = "__symbol(" + symbolName + ")";
 				DefineAutoSymbol(new Symbol(DataSymbol, symbolStructName, m_imageBase + symbolVirtualAddress, NoBinding));
 
-				if (e_zeroes == 0)
+				if (annotate && e_zeroes == 0 && e_offset < stringTableSize)
 				{
 					DefineDataVariable(m_imageBase + stringTableBase + e_offset, Type::ArrayType(Type::IntegerType(1, true, "char"), symbolName.length() + 1));
 					string symbolStringName = "__symbol_name(" + symbolName + ")";
@@ -1027,13 +1090,13 @@ bool COFFView::Init()
 					DEBUG_COFF(AddDataReference(m_imageBase + symbolVirtualAddress, m_imageBase + stringTableBase + e_offset));
 				}
 
-				if (e_sclass == IMAGE_SYM_CLASS_STATIC && e_value == 0)
+				if (annotate && e_sclass == IMAGE_SYM_CLASS_STATIC && e_value == 0)
 				{
 					size_t sectionHeaderOffset = sectionHeadersOffset + (e_scnum - 1) * sizeof(COFFSectionHeader);
 					(void)sectionHeaderOffset;
 					DEBUG_COFF(AddDataReference(m_imageBase + symbolVirtualAddress, m_imageBase + sectionHeaderOffset));
 				}
-				else if (e_sclass == IMAGE_SYM_CLASS_EXTERNAL && e_value == 0 && e_scnum == IMAGE_SYM_UNDEFINED)
+				else if (annotate && e_sclass == IMAGE_SYM_CLASS_EXTERNAL && e_value == 0 && e_scnum == IMAGE_SYM_UNDEFINED)
 				{
 					if (baseType == IMAGE_SYM_DTYPE_FUNCTION)
 					{
@@ -1046,7 +1109,7 @@ bool COFFView::Init()
 				}
 
 				// Reify auxiliary symbol record entries
-				for (size_t j = 0; j < e_numaux; j++)
+				for (size_t j = 0; annotate && j < e_numaux; j++)
 				{
 					auto auxSymbolAddress = symbolVirtualAddress + ((1 + j) * sizeofCOFFSymbol);
 					if (e_sclass == IMAGE_SYM_CLASS_EXTERNAL && baseType == IMAGE_SYM_DTYPE_FUNCTION && e_scnum > 0)
@@ -1709,6 +1772,35 @@ Ref<Settings> COFFViewType::GetLoadSettingsForData(BinaryView* data)
 	// 		"description" : "Add function starts sourced from the Structured Exception Handling (SEH) table to the core for analysis."
 	// 		})");
 
+	settings->RegisterSetting("loader.coff.maxCoffSymbolCount",
+			R"({
+			"title" : "Maximum COFF Symbol Count",
+			"type" : "number",
+			"default" : 1000000,
+			"minValue" : 0,
+			"maxValue" : 100000000,
+			"description" : "Maximum number of COFF symbol table entries to fully annotate with names and types. Set to 0 to disable this limit."
+			})");
+
+	settings->RegisterSetting("loader.coff.maxCoffSymbolNameLength",
+			R"({
+			"title" : "Maximum COFF Symbol Name Length",
+			"type" : "number",
+			"default" : 32768,
+			"minValue" : 0,
+			"maxValue" : 1000000,
+			"description" : "Maximum number of bytes read for a single COFF symbol name from the string table. 32768 comfortably covers the longest real-world Rust mangled names. Set to 0 to disable this limit."
+			})");
+
+	settings->RegisterSetting("loader.coff.maxTotalCoffSymbolNameBytes",
+			R"json({
+			"title" : "Maximum COFF Total Symbol Name Budget (MB)",
+			"type" : "number",
+			"default" : 1024,
+			"minValue" : 0,
+			"maxValue" : 10240,
+			"description" : "Maximum total memory (in MB) budgeted for all COFF symbol names combined. Set to 0 to disable this limit."
+			})json");
 
 	return settings;
 }

@@ -8,6 +8,7 @@
 #include <mutex>
 #include <sstream>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include "peview.h"
 #include "coffview.h"
@@ -808,7 +809,8 @@ bool PEView::Init()
 				if (errno == 0 && offset > 0)
 				{
 					BinaryReader stringReader(GetParentView(), LittleEndian);
-					uint64_t stringTableBase = header.coffSymbolTable + (header.coffSymbolCount * 18);
+					// Compute the string table offset using 64-bit arithmetic.
+					uint64_t stringTableBase = header.coffSymbolTable + ((uint64_t)header.coffSymbolCount * 18);
 					stringReader.Seek(stringTableBase);
 					uint32_t stringTableLen;
 					if (!stringReader.TryRead32(stringTableLen))
@@ -819,14 +821,16 @@ bool PEView::Init()
 					{
 						m_logger->LogError("Cannot resolve section name \"%s\": String table is invalid length", name);
 					}
-					else if (stringTableBase + offset < GetParentView()->GetEnd())
+					else if (offset < stringTableLen)
 					{
 						sectionNameReader.Seek(stringTableBase + offset);
-						resolvedName = sectionNameReader.ReadCString();
+						// Section names longer than 1024 bytes are not meaningful; cap the read
+						// to bound the allocation.
+						resolvedName = sectionNameReader.ReadCString(1024);
 					}
 					else
 					{
-						m_logger->LogError("Cannot resolve section name \"%s\": Offset is past end of string table", name);
+						m_logger->LogError("Cannot resolve section name \"%s\": Offset %u exceeds the string table size %u", name, offset, stringTableLen);
 					}
 				}
 			}
@@ -838,11 +842,40 @@ bool PEView::Init()
 			section.virtualAddress = reader.Read32();
 			section.sizeOfRawData = reader.Read32();
 			section.pointerToRawData = reader.Read32();
-			if (fileAlignmentValid && (section.pointerToRawData & (resolvedFileAlignment - 1)))
+			// Windows always rounds PointerToRawData down to a 0x200 boundary for PE32/PE32+,
+			// regardless of the FileAlignment field value. Apply the same behavior here so that
+			// our view matches what the Windows loader actually maps into memory.
+			if ((opt.magic == 0x10b || opt.magic == 0x20b) && (section.pointerToRawData & (PE_SECTION_RAW_DATA_ALIGNMENT - 1)))
 			{
-				m_logger->LogWarn("PE section[%u] violates file alignment: pointerToRawData: 0x%x. Aligning to 0x%x.", i,
-					section.pointerToRawData, resolvedFileAlignment);
-				section.pointerToRawData &= ~(resolvedFileAlignment - 1);
+				m_logger->LogWarn("PE section[%u]: pointerToRawData 0x%x is not 0x200-aligned, "
+					"rounding down to 0x%x per Windows loader behavior.",
+					i, section.pointerToRawData, section.pointerToRawData & ~(PE_SECTION_RAW_DATA_ALIGNMENT - 1));
+				section.pointerToRawData &= ~(PE_SECTION_RAW_DATA_ALIGNMENT - 1);
+			}
+			// Windows rounds SizeOfRawData up to the nearest FileAlignment multiple for PE32/PE32+.
+			// Without this, bytes between the raw value and the rounded value are invisible to
+			// analysis even though the Windows loader maps them.
+			// Cap at the remaining file bytes to avoid mapping data past the end of the file.
+			if ((opt.magic == 0x10b || opt.magic == 0x20b)
+				&& section.sizeOfRawData
+				&& (section.sizeOfRawData % resolvedFileAlignment))
+			{
+				// Use uint64_t to avoid overflow when sizeOfRawData is near UINT32_MAX.
+				uint64_t aligned = ((uint64_t)section.sizeOfRawData + resolvedFileAlignment - 1)
+				                   & ~(uint64_t)(resolvedFileAlignment - 1);
+				uint64_t fileEnd = GetParentView()->GetEnd();
+				uint64_t remaining = (fileEnd > section.pointerToRawData)
+				                     ? (fileEnd - section.pointerToRawData) : 0;
+				// Clamp before narrowing to uint32_t: aligned or remaining can exceed UINT32_MAX
+				// even though sizeOfRawData itself is a 32-bit field.
+				uint64_t clampedSize = std::min(aligned, remaining);
+				if (clampedSize > UINT32_MAX)
+					clampedSize = UINT32_MAX;
+				uint32_t newSize = (uint32_t)clampedSize;
+				m_logger->LogWarn("PE section[%u]: sizeOfRawData 0x%x is not FileAlignment "
+					"(0x%x) aligned, rounding up to 0x%x per Windows loader behavior.",
+					i, section.sizeOfRawData, resolvedFileAlignment, newSize);
+				section.sizeOfRawData = newSize;
 			}
 			section.pointerToRelocs = reader.Read32();
 			section.pointerToLineNumbers = reader.Read32();
@@ -1358,14 +1391,46 @@ bool PEView::Init()
 		// Process COFF symbol table
 		if (header.coffSymbolCount)
 		{
+			uint64_t maxSymCount = PE_DEFAULT_MAX_COFF_SYMBOL_COUNT;
+			uint64_t maxSymNameLen = PE_DEFAULT_MAX_COFF_SYMBOL_NAME_LENGTH;
+			uint64_t maxTotalSymNameBytes = PE_DEFAULT_MAX_TOTAL_COFF_SYMBOL_NAME_MB * 1024 * 1024;
+			if (settings && settings->Contains("loader.pe.maxCoffSymbolCount"))
+				maxSymCount = settings->Get<uint64_t>("loader.pe.maxCoffSymbolCount", this);
+			if (settings && settings->Contains("loader.pe.maxCoffSymbolNameLength"))
+				maxSymNameLen = settings->Get<uint64_t>("loader.pe.maxCoffSymbolNameLength", this);
+			if (settings && settings->Contains("loader.pe.maxTotalCoffSymbolNameBytes"))
+				maxTotalSymNameBytes = settings->Get<uint64_t>("loader.pe.maxTotalCoffSymbolNameBytes", this)
+				                       * 1024 * 1024;
+			// A name length limit of 0 means no limit; ReadCString takes an actual byte count,
+			// so map it to the largest representable value instead of reading zero bytes.
+			if (!maxSymNameLen)
+				maxSymNameLen = UINT64_MAX;
+
+			// Preserve the original count for locating the string table, which sits immediately
+			// after all symbol table entries. Truncating coffSymbolCount for the loop must not
+			// affect the string table offset calculation.
+			// A limit of 0 disables the corresponding check.
+			uint32_t originalCoffSymbolCount = header.coffSymbolCount;
+			if (maxSymCount && header.coffSymbolCount > maxSymCount)
+			{
+				m_logger->LogWarn("COFF symbol count %u exceeds limit %" PRIu64 ", truncating.",
+					header.coffSymbolCount, maxSymCount);
+				header.coffSymbolCount = (uint32_t)maxSymCount;
+			}
+
 			BinaryReader stringReader(GetParentView(), LittleEndian);
-			uint64_t stringTableBase = header.coffSymbolTable + (header.coffSymbolCount * 18);
+			uint64_t stringTableBase = header.coffSymbolTable + ((uint64_t)originalCoffSymbolCount * 18);
 			stringReader.Seek(stringTableBase);
-			if ((stringTableBase + stringReader.Read32()) > GetParentView()->GetEnd())
+			uint32_t stringTableLen;
+			if (!stringReader.TryRead32(stringTableLen) || (stringTableBase + stringTableLen) > GetParentView()->GetEnd())
 			{
 				throw PEFormatException("invalid COFF string table size");
 			}
 
+			// Symbol names are looked up by string table offset before being read, so entries
+			// that share an offset only pay for one read and count once toward the name budget.
+			std::unordered_map<uint32_t, string> symbolNameCache;
+			uint64_t totalSymNameBytesRead = 0;
 			for (size_t i = 0; i < header.coffSymbolCount; i++)
 			{
 				reader.Seek(header.coffSymbolTable + (i * 18));
@@ -1399,10 +1464,29 @@ bool PEView::Init()
 						stringReader.Seek(header.coffSymbolTable + (i * 18));
 						symbolName = stringReader.ReadCString(8);
 					}
-					else
+					else if (e_offset < stringTableLen)
 					{
-						stringReader.Seek(stringTableBase + e_offset);
-						symbolName = stringReader.ReadCString();
+						auto cached = symbolNameCache.find(e_offset);
+						if (cached != symbolNameCache.end())
+						{
+							symbolName = cached->second;
+						}
+						else if (!maxTotalSymNameBytes || totalSymNameBytesRead < maxTotalSymNameBytes)
+						{
+							stringReader.Seek(stringTableBase + e_offset);
+							symbolName = stringReader.ReadCString(maxSymNameLen);
+							// Each name ends up retained in more than one copy once a symbol is
+							// created for it (raw, short, and full demangled forms), so weight
+							// the budget accordingly rather than counting only the bytes read here.
+							totalSymNameBytesRead += (uint64_t)symbolName.size() * 4;
+							symbolNameCache.emplace(e_offset, symbolName);
+						}
+						else
+						{
+							m_logger->LogWarn("Total COFF symbol name bytes exceeded limit %" PRIu64
+								", stopping symbol processing at index %zu.", maxTotalSymNameBytes, i);
+							break;
+						}
 					}
 				}
 
@@ -3734,6 +3818,36 @@ Ref<Settings> PEViewType::GetLoadSettingsForData(BinaryView* data)
 			"maxValue" : 1000000,
 			"description" : "Maximum number of resource directory tables to parse. This limit prevents infinite loops when processing malformed or malicious PE files with circular resource directory references."
 			})");
+
+	settings->RegisterSetting("loader.pe.maxCoffSymbolCount",
+			R"({
+			"title" : "Maximum PE COFF Symbol Count",
+			"type" : "number",
+			"default" : 1000000,
+			"minValue" : 0,
+			"maxValue" : 100000000,
+			"description" : "Maximum number of COFF symbol table entries to process. Symbol counts above this are truncated. Set to 0 to disable this limit."
+			})");
+
+	settings->RegisterSetting("loader.pe.maxCoffSymbolNameLength",
+			R"({
+			"title" : "Maximum PE COFF Symbol Name Length",
+			"type" : "number",
+			"default" : 32768,
+			"minValue" : 0,
+			"maxValue" : 1000000,
+			"description" : "Maximum number of bytes read for a single COFF symbol name from the string table. 32768 comfortably covers the longest real-world Rust mangled names. Set to 0 to disable this limit."
+			})");
+
+	settings->RegisterSetting("loader.pe.maxTotalCoffSymbolNameBytes",
+			R"json({
+			"title" : "Maximum PE COFF Total Symbol Name Budget (MB)",
+			"type" : "number",
+			"default" : 1024,
+			"minValue" : 0,
+			"maxValue" : 10240,
+			"description" : "Maximum total memory (in MB) budgeted for all COFF symbol names combined. Set to 0 to disable this limit."
+			})json");
 
 	return settings;
 }

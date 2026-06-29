@@ -5,7 +5,6 @@
 #include <sstream>
 #include "binaryninjaapi.h"
 #include "il.h"
-#include "linux_bug_table_reloc.h"
 extern "C" {
     #include "xed-interface.h"
 }
@@ -5563,15 +5562,6 @@ public:
 		BNRelocationInfo info = reloc->GetInfo();
 		switch (info.nativeType)
 		{
-		case LINUX_BUG_TABLE_WARN_NOP_RELOC:
-			// Overwrite a Linux kernel WARN_ON ud2 instruction with a 2-byte NOP
-			// (data16 nop = 0x66 0x90) so the arch naturally produces fallthrough
-			// CFG edges and LLIL instead of a terminating ExceptionBranch/Trap.
-			if (len < 2)
-				return false;
-			dest[0] = 0x66; dest[1] = 0x90;
-			return true;
-
 		case R_X86_64_REX_GOTPCRELX: {
 			// When we're actually applying this we don't need to change the 3 first bytes,
 			// just apply it to the immediate and it's fine. However, we track all seven

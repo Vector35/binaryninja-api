@@ -5,7 +5,6 @@
 #include <inttypes.h>
 #include <cstring>
 #include "elfview.h"
-#include "linux_bug_table_reloc.h"
 
 #define STRING_READ_CHUNK_SIZE 32
 
@@ -2548,12 +2547,14 @@ bool ElfView::Init()
 // ---------------------------------------------------------------------------
 // Linux kernel __bug_table parser
 //
-// Reads the __bug_table ELF section and registers a synthetic
-// LINUX_BUG_TABLE_WARN_NOP_RELOC relocation at every WARN_ON brk/ud2 site.
-// The arch relocation handlers (Arm64ElfRelocationHandler,
-// x64ElfRelocationHandler) recognise this nativeType and overwrite those
-// instruction bytes with a NOP when the segment cache is first built, giving
-// the instruction fallthrough semantics without any ArchitectureHook.
+// Reads the __bug_table ELF section and for each WARN_ON brk/ud2 site
+// writes NOP bytes directly to the parent view at the corresponding file
+// offset.  Writing to the parent view during Init() ensures the segment
+// cache is always built from patched bytes, so:
+//   (a) analysis never sees the original trap instruction, and
+//   (b) no code reference is created at the patch site (which would cause
+//       BN to recognise a spurious function start and split the containing
+//       function into incorrectly-classified tail calls).
 //
 // Entry layouts (from include/asm-generic/bug.h, bug_table.py):
 //   x86_64 verbose (HAVE_ARCH_BUG_FORMAT)   16 B
@@ -2830,23 +2831,48 @@ void ElfView::ParseLinuxKernelBugTable()
 			continue; // BUG() — real trap, leave instruction bytes untouched.
 		}
 
-		// WARN_ON site: define a synthetic relocation so ApplyRelocation will
-		// overwrite the brk/ud2 bytes with a NOP when the segment cache is built.
-		BNRelocationInfo relocInfo;
-		memset(&relocInfo, 0, sizeof(relocInfo));
-		relocInfo.type       = StandardRelocationType;
-		relocInfo.nativeType = LINUX_BUG_TABLE_WARN_NOP_RELOC;
-		relocInfo.size       = static_cast<size_t>(nopSize);
-		relocInfo.address    = bug_addr;
+		// WARN_ON site: write NOP bytes directly to the parent view at the
+		// corresponding file offset, so the bytes are patched before BN builds
+		// any segment cache.  This avoids DefineRelocation() which would create a
+		// code reference at bug_addr and cause BN to recognise a spurious function
+		// start there, splitting the containing function at every WARN_ON site.
+		static const uint8_t arm64Nop[4] = {0x1F, 0x20, 0x03, 0xD5};
+		static const uint8_t x86Nop[2]   = {0x66, 0x90};
+		const uint8_t* nop = (arch == "aarch64") ? arm64Nop : x86Nop;
 
-		DefineRelocation(m_arch, relocInfo, bug_addr, bug_addr);
-		m_logger->LogDebug("linux: __bug_table: WARN site 0x%llx → NOP relocation registered (flags=0x%04x)",
-		                   (unsigned long long)bug_addr, (unsigned)flags);
+		bool patched = false;
+		for (const auto& seg : GetSegments())
+		{
+			const uint64_t segStart = seg->GetStart();
+			const uint64_t dataLen  = seg->GetDataLength();
+			if (bug_addr < segStart || bug_addr + nopSize > segStart + dataLen)
+				continue;
+
+			const uint64_t fileOffset = seg->GetDataOffset() + (bug_addr - segStart);
+			if (GetParentView()->Write(fileOffset, nop, nopSize) == nopSize)
+			{
+				m_logger->LogDebug(
+				    "linux: __bug_table: WARN site 0x%llx → NOP at file+0x%llx (flags=0x%04x)",
+				    (unsigned long long)bug_addr, (unsigned long long)fileOffset, (unsigned)flags);
+				patched = true;
+			}
+			else
+			{
+				m_logger->LogWarn(
+				    "linux: __bug_table: WARN site 0x%llx → parent view write failed",
+				    (unsigned long long)bug_addr);
+			}
+			break;
+		}
+		if (!patched)
+			m_logger->LogWarn(
+			    "linux: __bug_table: WARN site 0x%llx → no matching segment found",
+			    (unsigned long long)bug_addr);
 		++warnCount;
 	}
 
 	m_logger->LogInfo(
-	    "linux: __bug_table: %zu WARN_ON sites patched to NOP via relocation, %zu BUG() sites left as traps",
+	    "linux: __bug_table: %zu WARN_ON sites patched to NOP (direct write), %zu BUG() sites left as traps",
 	    warnCount, bugCount);
 }
 

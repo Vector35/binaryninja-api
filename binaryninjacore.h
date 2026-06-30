@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 178
+#define BN_CURRENT_CORE_ABI_VERSION 179
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 178
+#define BN_MINIMUM_CORE_ABI_VERSION 179
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -250,6 +250,7 @@ extern "C"
 	typedef struct BNArchitecture BNArchitecture;
 	typedef struct BNFunction BNFunction;
 	typedef struct BNBasicBlock BNBasicBlock;
+	typedef struct BNLifterInstructionData BNLifterInstructionData;
 	typedef struct BNDownloadProvider BNDownloadProvider;
 	typedef struct BNDownloadInstance BNDownloadInstance;
 	typedef struct BNWebsocketProvider BNWebsocketProvider;
@@ -2168,6 +2169,7 @@ extern "C"
 		BNArchitectureAndAddress* inlinedUnresolvedIndirectBranches;
 
 		void* functionArchContext;
+		BNLifterInstructionData* lifterInstructionData;
 	} BNBasicBlockAnalysisContext;
 
 	typedef struct BNFunctionLifterContext {
@@ -2195,6 +2197,7 @@ extern "C"
 		uint64_t* inlinedCalls;
 
 		void* functionArchContext;
+		BNLifterInstructionData* lifterInstructionData;
 
 		// OUT
 		bool* containsInlinedFunctions;
@@ -5414,6 +5417,14 @@ extern "C"
 
 	BINARYNINJACOREAPI BNBasicBlock* BNNewBasicBlockReference(BNBasicBlock* block);
 	BINARYNINJACOREAPI void BNFreeBasicBlock(BNBasicBlock* block);
+
+	BINARYNINJACOREAPI BNLifterInstructionData* BNNewLifterInstructionDataReference(
+		BNLifterInstructionData* instrData);
+	BINARYNINJACOREAPI void BNFreeLifterInstructionData(BNLifterInstructionData* instrData);
+	BINARYNINJACOREAPI void BNLifterInstructionDataAppend(
+		BNLifterInstructionData* instrData, BNBasicBlock* block, const void* data, size_t len);
+	BINARYNINJACOREAPI const uint8_t* BNLifterInstructionDataGet(
+		BNLifterInstructionData* instrData, BNBasicBlock* block, uint64_t addr, size_t* len);
 	BINARYNINJACOREAPI BNBasicBlock** BNGetFunctionBasicBlockList(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI void BNFreeBasicBlockList(BNBasicBlock** blocks, size_t count);
 	BINARYNINJACOREAPI BNBasicBlock* BNGetFunctionBasicBlockAtAddress(
@@ -5573,9 +5584,6 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreePendingBasicBlockEdgeList(BNPendingBasicBlockEdge* edges);
 	BINARYNINJACOREAPI void BNClearBasicBlockPendingOutgoingEdges(BNBasicBlock* block);
 	BINARYNINJACOREAPI void BNBasicBlockSetUndeterminedOutgoingEdges(BNBasicBlock* block, bool value);
-	BINARYNINJACOREAPI const bool BNBasicBlockHasInstructionData(BNBasicBlock* block);
-	BINARYNINJACOREAPI const uint8_t* BNBasicBlockGetInstructionData(BNBasicBlock* block, uint64_t addr, size_t* len);
-	BINARYNINJACOREAPI void BNBasicBlockAddInstructionData(BNBasicBlock* block, const void* data, size_t len);
 	BINARYNINJACOREAPI void BNBasicBlockSetFallThroughToFunction(BNBasicBlock* block, bool value);
 	BINARYNINJACOREAPI bool BNBasicBlockIsFallThroughToFunction(BNBasicBlock* block);
 	BINARYNINJACOREAPI bool BNBasicBlockCanExit(BNBasicBlock* block);

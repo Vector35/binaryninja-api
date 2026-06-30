@@ -31,6 +31,54 @@ pub struct BasicBlockAnalysisContext {
     inlined_unresolved_indirect_branches: HashSet<Location>,
 }
 
+/// Per-function store of basic block instruction bytes, populated during basic block analysis and
+/// read during lifting. Obtained from [`BasicBlockAnalysisContext::lifter_instruction_data`] or
+/// [`crate::architecture::FunctionLifterContext::lifter_instruction_data`].
+pub struct LifterInstructionData {
+    handle: *mut BNLifterInstructionData,
+}
+
+impl LifterInstructionData {
+    pub(crate) unsafe fn from_raw(handle: *mut BNLifterInstructionData) -> Self {
+        Self {
+            handle: BNNewLifterInstructionDataReference(handle),
+        }
+    }
+
+    /// Append decoded bytes for a block. Call during basic block analysis only.
+    pub fn append(&self, block: &BasicBlock<NativeBlock>, data: &[u8]) {
+        unsafe {
+            BNLifterInstructionDataAppend(
+                self.handle,
+                block.handle,
+                data.as_ptr() as *const _,
+                data.len(),
+            );
+        }
+    }
+
+    /// The bytes from `addr` to the end of its block, or an empty slice when the block has no stored
+    /// data. Read-only, call during lifting.
+    pub fn get(&self, block: &BasicBlock<NativeBlock>, addr: u64) -> &[u8] {
+        unsafe {
+            let mut len: usize = 0;
+            let data = BNLifterInstructionDataGet(self.handle, block.handle, addr, &mut len);
+            if data.is_null() {
+                return &[];
+            }
+            std::slice::from_raw_parts(data, len)
+        }
+    }
+}
+
+impl Drop for LifterInstructionData {
+    fn drop(&mut self) {
+        unsafe {
+            BNFreeLifterInstructionData(self.handle);
+        }
+    }
+}
+
 impl BasicBlockAnalysisContext {
     pub unsafe fn from_raw(handle: *mut BNBasicBlockAnalysisContext) -> Self {
         debug_assert!(!handle.is_null());
@@ -232,6 +280,17 @@ impl BasicBlockAnalysisContext {
     pub fn add_basic_block(&self, block: Ref<BasicBlock<NativeBlock>>) {
         unsafe {
             BNAnalyzeBasicBlocksContextAddBasicBlockToFunction(self.handle, block.handle);
+        }
+    }
+
+    /// The per-function instruction byte store. Populate it here during basic block analysis so that
+    /// lifting can read instruction bytes without touching the view from the multi-threaded stage.
+    pub fn lifter_instruction_data(&self) -> Option<LifterInstructionData> {
+        let handle = unsafe { (*self.handle).lifterInstructionData };
+        if handle.is_null() {
+            None
+        } else {
+            Some(unsafe { LifterInstructionData::from_raw(handle) })
         }
     }
 

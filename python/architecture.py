@@ -68,6 +68,34 @@ SemanticGroupType = Union[SemanticGroupName, 'lowlevelil.ILSemanticFlagGroup', S
 IntrinsicType = Union[IntrinsicName, 'lowlevelil.ILIntrinsic', IntrinsicIndex]
 
 
+class LifterInstructionData:
+	"""Per-function store of basic block instruction bytes, populated during basic block analysis and
+	read during lifting.
+
+    .. note:: This class is meant to be used by Architecture plugins only
+    """
+
+	def __init__(self, handle: core.BNLifterInstructionDataHandle):
+		self.handle = handle
+
+	def __del__(self):
+		if core is not None:
+			core.BNFreeLifterInstructionData(self.handle)
+
+	def append(self, block: "basicblock.BasicBlock", data: bytes) -> None:
+		"""Append decoded bytes for a block. Call during basic block analysis only."""
+		core.BNLifterInstructionDataAppend(self.handle, block.handle, data, len(data))
+
+	def get(self, block: "basicblock.BasicBlock", addr: int) -> bytes:
+		"""Returns the bytes from ``addr`` to the end of its block, or ``b''`` when the block has no
+		stored data. Read-only, call during lifting."""
+		size = ctypes.c_ulonglong(0)
+		ptr = core.BNLifterInstructionDataGet(self.handle, block.handle, addr, ctypes.byref(size))
+		if not ptr:
+			return b''
+		return ctypes.string_at(ptr, size.value)
+
+
 @dataclass
 class BasicBlockAnalysisContext:
 	"""Used by ``analyze_basic_blocks`` and contains analysis settings and other contextual information.
@@ -216,6 +244,16 @@ class BasicBlockAnalysisContext:
 		"""Get the maximum function size setting for this context."""
 
 		return self._max_function_size
+
+	@property
+	def lifter_instruction_data(self) -> Optional["LifterInstructionData"]:
+		"""The per-function instruction byte store. Populate it during basic block analysis so that
+		lifting can read instruction bytes without touching the view from the multi-threaded stage."""
+
+		handle = self._handle.lifterInstructionData
+		if not handle:
+			return None
+		return LifterInstructionData(core.BNNewLifterInstructionDataReference(handle))
 
 	@property
 	def halt_on_invalid_instruction(self) -> bool:
@@ -532,6 +570,15 @@ class FunctionLifterContext:
 		"""Get the function architecture context"""
 
 		return self._function.arch.function_arch_contexts.get(self._function_arch_context_token, None)
+
+	@property
+	def lifter_instruction_data(self) -> Optional["LifterInstructionData"]:
+		"""The per-function instruction byte store populated during basic block analysis."""
+
+		handle = self._handle.lifterInstructionData
+		if not handle:
+			return None
+		return LifterInstructionData(core.BNNewLifterInstructionDataReference(handle))
 
 @dataclass(frozen=True)
 class RegisterInfo:

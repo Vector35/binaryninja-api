@@ -52,6 +52,7 @@
 #include <type_traits>
 #include <optional>
 #include <memory>
+#include <span>
 #include <any>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
@@ -9647,6 +9648,19 @@ namespace BinaryNinja {
 
 	typedef size_t ExprId;
 
+	/*! Per-function store of basic block instruction bytes, populated during basic block analysis
+	    and read during lifting. Reached through BasicBlockAnalysisContext and FunctionLifterContext.
+	*/
+	class LifterInstructionData : public CoreRefCountObject<BNLifterInstructionData,
+		BNNewLifterInstructionDataReference, BNFreeLifterInstructionData>
+	{
+	public:
+		LifterInstructionData(BNLifterInstructionData* instrData);
+
+		void Append(BasicBlock* block, std::span<const uint8_t> data);
+		std::span<const uint8_t> Get(BasicBlock* block, uint64_t addr);
+	};
+
 	class BasicBlockAnalysisContext
 	{
 	private:
@@ -9662,6 +9676,8 @@ namespace BinaryNinja {
 		std::optional<std::set<ArchAndAddr>> m_directNoReturnCalls;
 		std::optional<std::set<ArchAndAddr>> m_haltedDisassemblyAddresses;
 		std::optional<std::map<ArchAndAddr, ArchAndAddr>> m_inlinedUnresolvedIndirectBranches;
+
+		Ref<LifterInstructionData> m_lifterInstructionData;
 
 	public:
 		BNBasicBlockAnalysisContext* m_context;
@@ -9690,6 +9706,8 @@ namespace BinaryNinja {
 
 		bool SetFunctionArchContextRaw(void* p);
 		void* GetFunctionArchContextRaw() const { return m_context->functionArchContext; }
+
+		Ref<LifterInstructionData> GetLifterInstructionData();
 
 		template <class ArchT>
 		bool SetFunctionArchContext(const ArchT* arch, typename ArchT::FunctionArchContext* context)
@@ -9726,6 +9744,7 @@ namespace BinaryNinja {
 		std::set<uint64_t> m_inlinedCalls;
 		bool* m_containsInlinedFunctions;
 		void* m_functionArchContext;
+		Ref<LifterInstructionData> m_lifterInstructionData;
 
 	public:
 		BNFunctionLifterContext* m_context;
@@ -9742,6 +9761,7 @@ namespace BinaryNinja {
 		std::set<uint64_t>& GetInlinedCalls();
 		void SetContainsInlinedFunctions(bool value);
 		void* GetFunctionArchContextRaw() const { return m_functionArchContext; }
+		Ref<LifterInstructionData>& GetLifterInstructionData() { return m_lifterInstructionData; }
 		template <class ArchT>
 		typename ArchT::FunctionArchContext* GetFunctionArchContext(const ArchT* arch)
 		{
@@ -12734,21 +12754,6 @@ namespace BinaryNinja {
 		*/
 		void SetUndeterminedOutgoingEdges(bool value);
 
-		/*! Get the instruction data for a specific address in this basic block
-
-			\param addr Address of the instruction
-			\param len Pointer to a size_t variable to store the length of the instruction data
-			\return Pointer to the instruction data
-		*/
-		const uint8_t* GetInstructionData(uint64_t addr, size_t* len) const;
-
-		/*! Add instruction data to the basic block
-
-			\param data Pointer to the instruction data
-			\param len Length of the instruction data
-		*/
-		void AddInstructionData(const void* data, size_t len);
-
 		/*! Set whether the basic blocks falls through to a function
 
 			\param value Whether the basic block falls through to a function
@@ -12772,12 +12777,6 @@ namespace BinaryNinja {
 			\param value Sets whether basic block can return or is tagged as 'No Return'
 		*/
 		void SetCanExit(bool value);
-
-		/*! Determine whether this basic block has instruction data
-
-			\return Whether this basic block has instruction data
-		*/
-		bool HasInstructionData() const;
 
 		/*! List of dominators for this basic block
 

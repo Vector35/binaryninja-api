@@ -204,9 +204,42 @@ vector<InstructionTextToken> InstructionTextToken::ConvertInstructionTextTokenLi
 	return result;
 }
 
+LifterInstructionData::LifterInstructionData(BNLifterInstructionData* instrData)
+{
+	m_object = instrData;
+}
+
+
+void LifterInstructionData::Append(BasicBlock* block, std::span<const uint8_t> data)
+{
+	BNLifterInstructionDataAppend(m_object, block->GetObject(), data.data(), data.size());
+}
+
+
+std::span<const uint8_t> LifterInstructionData::Get(BasicBlock* block, uint64_t addr)
+{
+	size_t len = 0;
+	const uint8_t* opcode = BNLifterInstructionDataGet(m_object, block->GetObject(), addr, &len);
+	if (!opcode)
+		return {};
+	return std::span<const uint8_t>(opcode, len);
+}
+
+
 BasicBlockAnalysisContext::BasicBlockAnalysisContext(BNBasicBlockAnalysisContext* context)
 {
 	m_context = context;
+	if (context->lifterInstructionData)
+	{
+		m_lifterInstructionData =
+			new LifterInstructionData(BNNewLifterInstructionDataReference(context->lifterInstructionData));
+	}
+}
+
+
+Ref<LifterInstructionData> BasicBlockAnalysisContext::GetLifterInstructionData()
+{
+	return m_lifterInstructionData;
 }
 
 const std::map<ArchAndAddr, std::set<ArchAndAddr>> BasicBlockAnalysisContext::GetIndirectBranches()
@@ -526,6 +559,11 @@ FunctionLifterContext::FunctionLifterContext(LowLevelILFunction* func, BNFunctio
 	}
 
 	m_functionArchContext = context->functionArchContext;
+	if (context->lifterInstructionData)
+	{
+		m_lifterInstructionData =
+			new LifterInstructionData(BNNewLifterInstructionDataReference(context->lifterInstructionData));
+	}
 	m_containsInlinedFunctions = context->containsInlinedFunctions;
 }
 

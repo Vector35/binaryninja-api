@@ -1522,11 +1522,13 @@ bool PEView::Init()
 			size_t numImportEntries = 0;
 			vector<Ref<Metadata>> libraries;
 			vector<Ref<Metadata>> libraryFound;
-			uint32_t guard_1 = 0;
-			while (guard_1++ < 0x100)
+			while (true)
 			{
 				// Read in next directory entry
-				reader.Seek(RVAToFileOffset(dir.virtualAddress + (numImportEntries * 20)));
+				uint64_t entryRva = dir.virtualAddress + (uint64_t)numImportEntries * 20;
+				if (!IsRVARangeBackedByFile(entryRva, 20))
+					break;
+				reader.Seek(RVAToFileOffset(entryRva));
 				PEImportDirectoryEntry importDirEntry;
 				importDirEntry.lookup = reader.Read32();
 				importDirEntry.timestamp = reader.Read32();
@@ -1615,9 +1617,26 @@ bool PEView::Init()
 				// We should make this second unused data a structure containing this information information
 				// and default it to collapsed...IDA Just doesn't show anything at all
 				m_logger->LogDebug("Name: %s\n", dllName.c_str());
-				uint32_t guard_2 = 0;
-				while (guard_2++ < 0x1000)
+				const uint32_t importEntrySize = m_is64 ? 8 : 4;
+
+				// Find the section containing entryOffset once so the inner loop needs no per-entry section scan.
+				uint64_t importSecEnd = 0;
+				for (const auto& sec : m_sections)
 				{
+					if ((uint64_t)entryOffset >= sec.virtualAddress &&
+					    (uint64_t)entryOffset < (uint64_t)sec.virtualAddress + sec.sizeOfRawData &&
+					    sec.virtualSize != 0)
+					{
+						// Only trust this section's declared extent up to what the file actually backs.
+						if ((uint64_t)sec.pointerToRawData + sec.sizeOfRawData <= (uint64_t)GetParentView()->GetLength())
+							importSecEnd = (uint64_t)sec.virtualAddress + sec.sizeOfRawData;
+						break;
+					}
+				}
+				while (true)
+				{
+					if ((uint64_t)entryOffset + importEntrySize > importSecEnd)
+						break;
 					uint64_t entry;
 					bool isOrdinal;
 					if (m_is64)
@@ -3450,6 +3469,36 @@ uint32_t PEView::GetRVACharacteristics(uint64_t offset)
 			return i.characteristics;
 	}
 	return 0;
+}
+
+
+// Returns true only if the entire range [rva, rva+size) maps to file-backed data.
+bool PEView::IsRVARangeBackedByFile(uint64_t rva, uint64_t size) const
+{
+	if (size == 0)
+		return false;
+	if (size > UINT64_MAX - rva)
+		return false;
+	for (uint64_t offset = rva; offset < rva + size; offset++)
+	{
+		bool found = false;
+		for (const auto& i : m_sections)
+		{
+			if (offset >= (uint64_t)i.virtualAddress &&
+			    offset < (uint64_t)i.virtualAddress + (uint64_t)i.sizeOfRawData &&
+			    i.virtualSize != 0)
+			{
+				uint64_t fileOfs = (uint64_t)i.pointerToRawData + (offset - (uint64_t)i.virtualAddress);
+				if (!GetParentView()->IsOffsetBackedByFile(fileOfs))
+					return false;
+				found = true;
+				break;
+			}
+		}
+		if (!found)
+			return false;
+	}
+	return true;
 }
 
 

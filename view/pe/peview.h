@@ -467,6 +467,7 @@ namespace BinaryNinja
 
 		uint64_t RVAToFileOffset(uint64_t rva, bool except = true);
 		uint32_t GetRVACharacteristics(uint64_t rva);
+		bool IsRVARangeBackedByFile(uint64_t rva, uint64_t size) const;
 		std::string ReadString(uint64_t rva);
 		uint16_t Read16(uint64_t rva);
 		uint32_t Read32(uint64_t rva);

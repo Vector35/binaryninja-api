@@ -5,6 +5,7 @@
 #include <sstream>
 #include "binaryninjaapi.h"
 #include "il.h"
+#include "lowlevelilinstruction.h"
 extern "C" {
     #include "xed-interface.h"
 }
@@ -2105,6 +2106,69 @@ bool X86CommonArchitecture::GetInstructionLowLevelIL(const uint8_t* data, uint64
 size_t X86CommonArchitecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, size_t size, uint32_t flagWriteType,
 	uint32_t flag, BNRegisterOrConstant* operands, size_t operandCount, LowLevelILFunction& il)
 {
+	auto undefinedFlag = [&il]() {
+		return il.Unknown();
+	};
+	auto boolChoice = [&il](ExprId condition, ExprId inverseCondition, ExprId trueValue, ExprId falseValue) {
+		return il.Or(0,
+			il.And(0, condition, trueValue),
+			il.And(0, inverseCondition, falseValue));
+	};
+	auto rotateCarryCount = [](size_t operandSize, uint64_t maskedCount) {
+		switch (operandSize)
+		{
+		case 1:
+			return maskedCount % 9;
+		case 2:
+			return maskedCount % 17;
+		default:
+			return maskedCount;
+		}
+	};
+
+	if ((flag == IL_FLAG_O) && (flagWriteType == IL_FLAGWRITE_SHRD1))
+	{
+		size_t bitWidth = size * 8;
+		ExprId result = il.GetExprForRegisterOrConstantOperation(op, size, operands, operandCount);
+		return il.CompareNotEqual(size,
+			il.And(size,
+				il.Xor(size,
+					il.LogicalShiftRight(size, result, il.Const(size, bitWidth - 1)),
+					il.LogicalShiftRight(size, result, il.Const(size, bitWidth - 2))),
+				il.Const(size, 1)),
+			il.Const(size, 0));
+	}
+
+	if (flagWriteType == IL_FLAGWRITE_PTEST)
+	{
+		switch (flag)
+		{
+		case IL_FLAG_Z:
+			if (operandCount < 2)
+				return undefinedFlag();
+			return il.CompareEqual(size,
+				il.And(size,
+					il.GetExprForRegisterOrConstant(operands[0], size),
+					il.GetExprForRegisterOrConstant(operands[1], size)),
+				il.Const(size, 0));
+		case IL_FLAG_C:
+			if (operandCount < 2)
+				return undefinedFlag();
+			return il.CompareEqual(size,
+				il.And(size,
+					il.GetExprForRegisterOrConstant(operands[1], size),
+					il.Not(size, il.GetExprForRegisterOrConstant(operands[0], size))),
+				il.Const(size, 0));
+		case IL_FLAG_O:
+		case IL_FLAG_S:
+		case IL_FLAG_A:
+		case IL_FLAG_P:
+			return il.Const(0, 0);
+		default:
+			break;
+		}
+	}
+
 	switch (op)
 	{
 	case LLIL_NEG:
@@ -2124,7 +2188,478 @@ size_t X86CommonArchitecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, s
 		case IL_FLAG_O:
 			return il.Const(0, 0);
 		case IL_FLAG_A:
-			return il.Unimplemented();
+			return undefinedFlag();
+		}
+		break;
+	case LLIL_ROL:
+		if ((flagWriteType == IL_FLAGWRITE_CO) && ((flag == IL_FLAG_C) || (flag == IL_FLAG_O)))
+		{
+			if (operandCount < 2)
+				return undefinedFlag();
+
+			size_t bitWidth = size * 8;
+			uint64_t countMask = (size == 8) ? 0x3f : 0x1f;
+			if (operands[1].constant)
+			{
+				uint64_t maskedCount = operands[1].value & countMask;
+				uint64_t effectiveCount = maskedCount % bitWidth;
+				if (maskedCount == 0)
+					return il.Flag(flag);
+
+				BNRegisterOrConstant effectiveOperands[2] = {operands[0], operands[1]};
+				effectiveOperands[1].value = effectiveCount;
+				ExprId result = il.GetExprForRegisterOrConstantOperation(op, size, effectiveOperands, 2);
+				ExprId carry = il.CompareNotEqual(size,
+					il.And(size, result, il.Const(size, 1)), il.Const(size, 0));
+				if (flag == IL_FLAG_C)
+					return carry;
+
+				if (maskedCount == 1)
+				{
+					ExprId sign = il.CompareNotEqual(size,
+						il.And(size, result, il.Const(size, 1ULL << (bitWidth - 1))), il.Const(size, 0));
+					return il.Xor(0, sign, carry);
+				}
+
+				return undefinedFlag();
+			}
+
+			ExprId result = il.GetExprForRegisterOrConstantOperation(op, size, operands, operandCount);
+			ExprId carry = il.CompareNotEqual(size,
+				il.And(size, result, il.Const(size, 1)), il.Const(size, 0));
+			ExprId count = il.GetExprForRegisterOrConstant(operands[1], size);
+			ExprId countIsZero = il.CompareEqual(size, count, il.Const(size, 0));
+			ExprId countNotZero = il.CompareNotEqual(size, count, il.Const(size, 0));
+			if (flag == IL_FLAG_C)
+				return boolChoice(countIsZero, countNotZero, il.Flag(flag), carry);
+
+			ExprId countIsOne = il.CompareEqual(size, count, il.Const(size, 1));
+			ExprId countGreaterThanOne = il.And(0, countNotZero, il.Not(0, countIsOne));
+			ExprId sign = il.CompareNotEqual(size,
+				il.And(size, result, il.Const(size, 1ULL << (bitWidth - 1))), il.Const(size, 0));
+			return il.Or(0,
+				il.And(0, countIsZero, il.Flag(flag)),
+				il.Or(0,
+					il.And(0, countIsOne, il.Xor(0, sign, carry)),
+					il.And(0, countGreaterThanOne, undefinedFlag())));
+		}
+		break;
+	case LLIL_ROR:
+		if ((flagWriteType == IL_FLAGWRITE_CO) && ((flag == IL_FLAG_C) || (flag == IL_FLAG_O)))
+		{
+			if (operandCount < 2)
+				return undefinedFlag();
+
+			size_t bitWidth = size * 8;
+			uint64_t countMask = (size == 8) ? 0x3f : 0x1f;
+			if (operands[1].constant)
+			{
+				uint64_t maskedCount = operands[1].value & countMask;
+				uint64_t effectiveCount = maskedCount % bitWidth;
+				if (maskedCount == 0)
+					return il.Flag(flag);
+
+				BNRegisterOrConstant effectiveOperands[2] = {operands[0], operands[1]};
+				effectiveOperands[1].value = effectiveCount;
+				ExprId result = il.GetExprForRegisterOrConstantOperation(op, size, effectiveOperands, 2);
+				if (flag == IL_FLAG_C)
+					return il.AddExpr(LLIL_CMP_SLT, size, 0, result, il.Const(size, 0));
+
+				if (maskedCount == 1)
+					return il.CompareNotEqual(size,
+						il.And(size,
+							il.Xor(size,
+								il.LogicalShiftRight(size, result, il.Const(size, bitWidth - 1)),
+								il.LogicalShiftRight(size, result, il.Const(size, bitWidth - 2))),
+							il.Const(size, 1)),
+						il.Const(size, 0));
+
+				return undefinedFlag();
+			}
+
+			ExprId result = il.GetExprForRegisterOrConstantOperation(op, size, operands, operandCount);
+			ExprId carry = il.AddExpr(LLIL_CMP_SLT, size, 0, result, il.Const(size, 0));
+			ExprId count = il.GetExprForRegisterOrConstant(operands[1], size);
+			ExprId countIsZero = il.CompareEqual(size, count, il.Const(size, 0));
+			ExprId countNotZero = il.CompareNotEqual(size, count, il.Const(size, 0));
+			if (flag == IL_FLAG_C)
+				return boolChoice(countIsZero, countNotZero, il.Flag(flag), carry);
+
+			ExprId countIsOne = il.CompareEqual(size, count, il.Const(size, 1));
+			ExprId countGreaterThanOne = il.And(0, countNotZero, il.Not(0, countIsOne));
+			ExprId overflow = il.CompareNotEqual(size,
+				il.And(size,
+					il.Xor(size,
+						il.LogicalShiftRight(size, result, il.Const(size, bitWidth - 1)),
+						il.LogicalShiftRight(size, result, il.Const(size, bitWidth - 2))),
+					il.Const(size, 1)),
+				il.Const(size, 0));
+			return il.Or(0,
+				il.And(0, countIsZero, il.Flag(flag)),
+				il.Or(0,
+					il.And(0, countIsOne, overflow),
+					il.And(0, countGreaterThanOne, undefinedFlag())));
+		}
+		break;
+	case LLIL_RLC:
+		if (((flagWriteType == IL_FLAGWRITE_CO) || (flagWriteType == IL_FLAGWRITE_CUO)) &&
+			((flag == IL_FLAG_C) || (flag == IL_FLAG_O)))
+		{
+			if (operandCount < 3)
+				return undefinedFlag();
+
+			size_t bitWidth = size * 8;
+			uint64_t countMask = (size == 8) ? 0x3f : 0x1f;
+			ExprId count = il.GetExprForRegisterOrConstant(operands[1], size);
+			uint64_t maskedCount = 0;
+			if (operands[1].constant)
+			{
+				maskedCount = operands[1].value & countMask;
+				uint64_t effectiveCount = rotateCarryCount(size, maskedCount);
+				if (effectiveCount == 0)
+					return il.Flag(flag);
+				count = il.Const(size, effectiveCount);
+			}
+
+			if ((flag == IL_FLAG_O) && (flagWriteType == IL_FLAGWRITE_CUO))
+				return undefinedFlag();
+
+			ExprId left = il.GetExprForRegisterOrConstant(operands[0], size);
+			ExprId carry = il.CompareNotEqual(size,
+				il.And(size,
+					il.LogicalShiftRight(size, left, il.Sub(size, il.Const(size, bitWidth), count)),
+					il.Const(size, 1)),
+				il.Const(size, 0));
+			if (flag == IL_FLAG_C)
+				return carry;
+
+			if (!operands[1].constant)
+				return undefinedFlag();
+
+			uint64_t effectiveCount = rotateCarryCount(size, maskedCount);
+			if (maskedCount != 1)
+				return undefinedFlag();
+
+			BNRegisterOrConstant effectiveOperands[3] = {operands[0], operands[1], operands[2]};
+			effectiveOperands[1].value = effectiveCount;
+			ExprId result = il.GetExprForRegisterOrConstantOperation(op, size, effectiveOperands, 3);
+			ExprId sign = il.CompareNotEqual(size,
+				il.And(size, result, il.Const(size, 1ULL << (bitWidth - 1))),
+				il.Const(size, 0));
+			return il.Xor(0, sign, carry);
+		}
+		break;
+	case LLIL_RRC:
+		if (((flagWriteType == IL_FLAGWRITE_CO) || (flagWriteType == IL_FLAGWRITE_CUO)) &&
+			((flag == IL_FLAG_C) || (flag == IL_FLAG_O)))
+		{
+			if (operandCount < 3)
+				return undefinedFlag();
+
+			size_t bitWidth = size * 8;
+			uint64_t countMask = (size == 8) ? 0x3f : 0x1f;
+			ExprId count = il.GetExprForRegisterOrConstant(operands[1], size);
+			uint64_t maskedCount = 0;
+			if (operands[1].constant)
+			{
+				maskedCount = operands[1].value & countMask;
+				uint64_t effectiveCount = rotateCarryCount(size, maskedCount);
+				if (effectiveCount == 0)
+					return il.Flag(flag);
+				count = il.Const(size, effectiveCount);
+			}
+
+			if ((flag == IL_FLAG_O) && (flagWriteType == IL_FLAGWRITE_CUO))
+				return undefinedFlag();
+
+			if (flag == IL_FLAG_C)
+			{
+				ExprId left = il.GetExprForRegisterOrConstant(operands[0], size);
+				return il.CompareNotEqual(size,
+					il.And(size,
+						il.LogicalShiftRight(size, left, il.Sub(size, count, il.Const(size, 1))),
+						il.Const(size, 1)),
+					il.Const(size, 0));
+			}
+
+			if (!operands[1].constant)
+				return undefinedFlag();
+
+			uint64_t effectiveCount = rotateCarryCount(size, maskedCount);
+			if (maskedCount != 1)
+				return undefinedFlag();
+
+			BNRegisterOrConstant effectiveOperands[3] = {operands[0], operands[1], operands[2]};
+			effectiveOperands[1].value = effectiveCount;
+			ExprId result = il.GetExprForRegisterOrConstantOperation(op, size, effectiveOperands, operandCount);
+			return il.CompareNotEqual(size,
+				il.And(size,
+					il.Xor(size,
+						il.LogicalShiftRight(size, result, il.Const(size, bitWidth - 1)),
+						il.LogicalShiftRight(size, result, il.Const(size, bitWidth - 2))),
+					il.Const(size, 1)),
+				il.Const(size, 0));
+		}
+		break;
+	case LLIL_ADC:
+		if ((flag == IL_FLAG_O) && (flagWriteType == IL_FLAGWRITE_ALL) && (operandCount >= 3))
+		{
+			ExprId left = il.GetExprForRegisterOrConstant(operands[0], size);
+			ExprId right = il.GetExprForRegisterOrConstant(operands[1], size);
+			ExprId result = il.GetExprForRegisterOrConstantOperation(op, size, operands, operandCount);
+			return il.CompareNotEqual(size,
+				il.And(size,
+					il.And(size, il.Xor(size, left, result), il.Xor(size, right, result)),
+					il.Const(size, 1ULL << ((size * 8) - 1))),
+				il.Const(size, 0));
+		}
+		break;
+	case LLIL_SBB:
+		if ((flagWriteType == IL_FLAGWRITE_ALL) && (operandCount >= 3))
+		{
+			ExprId left = il.GetExprForRegisterOrConstant(operands[0], size);
+			ExprId right = il.GetExprForRegisterOrConstant(operands[1], size);
+			ExprId carry = il.GetExprForFlagOrConstant(operands[2]);
+			switch (flag)
+			{
+			case IL_FLAG_C:
+				return il.Or(0,
+					il.CompareUnsignedLessThan(size, left, right),
+					il.And(0, carry, il.CompareEqual(size, left, right)));
+			case IL_FLAG_O:
+			{
+				ExprId result = il.GetExprForRegisterOrConstantOperation(op, size, operands, operandCount);
+				return il.CompareNotEqual(size,
+					il.And(size,
+						il.And(size, il.Xor(size, left, right), il.Xor(size, left, result)),
+						il.Const(size, 1ULL << ((size * 8) - 1))),
+					il.Const(size, 0));
+			}
+			default:
+				break;
+			}
+		}
+		break;
+	case LLIL_MUL:
+		if ((flagWriteType == IL_FLAGWRITE_CO) && ((flag == IL_FLAG_C) || (flag == IL_FLAG_O)) && (operandCount >= 2))
+		{
+			if ((operands[0].constant && (operands[0].value == 0)) ||
+				(operands[1].constant && (operands[1].value == 0)))
+				return il.Const(0, 0);
+
+			ExprId left = il.GetExprForRegisterOrConstant(operands[0], size);
+			ExprId right = il.GetExprForRegisterOrConstant(operands[1], size);
+			ExprId result = il.GetExprForRegisterOrConstantOperation(op, size, operands, operandCount);
+			size_t fullSize = size * 2;
+			ExprId fullResult = il.Mult(fullSize, il.SignExtend(fullSize, left), il.SignExtend(fullSize, right));
+			return il.CompareNotEqual(fullSize, fullResult, il.SignExtend(fullSize, result));
+		}
+		break;
+	case LLIL_LSL:
+		if (((flagWriteType == IL_FLAGWRITE_ALL) || (flagWriteType == IL_FLAGWRITE_NOCARRY) ||
+			(flagWriteType == IL_FLAGWRITE_CO) || (flagWriteType == IL_FLAGWRITE_C)) && (operandCount >= 2))
+		{
+			size_t bitWidth = size * 8;
+			uint64_t resultMask = (size == 8) ? UINT64_MAX : ((1ULL << bitWidth) - 1);
+			uint64_t signBit = 1ULL << (bitWidth - 1);
+			ExprId left = il.GetExprForRegisterOrConstant(operands[0], size);
+			ExprId result = il.GetExprForRegisterOrConstantOperation(op, size, operands, operandCount);
+			ExprId maskedResult = il.And(size, result, il.Const(size, resultMask));
+			ExprId count = il.GetExprForRegisterOrConstant(operands[1], size);
+			ExprId countIsZero = il.CompareEqual(size, count, il.Const(size, 0));
+			ExprId countNotZero = il.CompareNotEqual(size, count, il.Const(size, 0));
+
+			switch (flag)
+			{
+			case IL_FLAG_C:
+			{
+				if (!operands[1].constant)
+				{
+					ExprId carry = il.CompareNotEqual(size,
+						il.And(size,
+							il.LogicalShiftRight(size, left, il.Sub(size, il.Const(size, bitWidth), count)),
+							il.Const(size, 1)),
+						il.Const(size, 0));
+					return boolChoice(countIsZero, countNotZero, il.Flag(flag), carry);
+				}
+
+				uint64_t countMask = (size == 8) ? 0x3f : 0x1f;
+				uint64_t maskedCount = operands[1].value & countMask;
+				if (maskedCount == 0)
+					return il.Flag(flag);
+				if (maskedCount >= bitWidth)
+					return undefinedFlag();
+				if (maskedCount == 1)
+					return il.CompareNotEqual(size, il.And(size, left, il.Const(size, signBit)), il.Const(size, 0));
+				return il.CompareNotEqual(size,
+					il.And(size,
+						il.LogicalShiftRight(size, left, il.Const(size, bitWidth - maskedCount)),
+						il.Const(size, 1)),
+					il.Const(size, 0));
+			}
+			case IL_FLAG_P:
+			{
+				ExprId lowByte = il.LowPart(1, maskedResult);
+				ExprId parity = il.And(1, il.PopulationCount(1, lowByte), il.Const(1, 1));
+				ExprId computed = il.CompareEqual(1, parity, il.Const(1, 0));
+				if (!operands[1].constant)
+					return boolChoice(countIsZero, countNotZero, il.Flag(flag), computed);
+				return computed;
+			}
+			case IL_FLAG_Z:
+			{
+				ExprId computed = il.CompareEqual(size, maskedResult, il.Const(size, 0));
+				if (!operands[1].constant)
+					return boolChoice(countIsZero, countNotZero, il.Flag(flag), computed);
+				return computed;
+			}
+			case IL_FLAG_S:
+			{
+				ExprId computed = il.CompareNotEqual(size, il.And(size, maskedResult, il.Const(size, signBit)), il.Const(size, 0));
+				if (!operands[1].constant)
+					return boolChoice(countIsZero, countNotZero, il.Flag(flag), computed);
+				return computed;
+			}
+			case IL_FLAG_O:
+			{
+				if (!operands[1].constant)
+				{
+					ExprId countIsOne = il.CompareEqual(size, count, il.Const(size, 1));
+					ExprId countGreaterThanOne = il.And(0, countNotZero, il.Not(0, countIsOne));
+					ExprId computed = il.CompareNotEqual(size,
+						il.And(size, il.Xor(size, left, maskedResult), il.Const(size, signBit)),
+						il.Const(size, 0));
+					return il.Or(0,
+						il.And(0, countIsZero, il.Flag(flag)),
+						il.Or(0,
+							il.And(0, countIsOne, computed),
+							il.And(0, countGreaterThanOne, undefinedFlag())));
+				}
+
+				uint64_t countMask = (size == 8) ? 0x3f : 0x1f;
+				uint64_t maskedCount = operands[1].value & countMask;
+				if (maskedCount == 0)
+					return il.Flag(flag);
+				if (maskedCount != 1)
+					return undefinedFlag();
+
+				return il.CompareNotEqual(size,
+					il.And(size, il.Xor(size, left, maskedResult), il.Const(size, signBit)),
+					il.Const(size, 0));
+			}
+			case IL_FLAG_A:
+				if (!operands[1].constant)
+					return boolChoice(countIsZero, countNotZero, il.Flag(flag), undefinedFlag());
+				break;
+			default:
+				break;
+			}
+		}
+		break;
+	case LLIL_LSR:
+	case LLIL_ASR:
+		if (((flag == IL_FLAG_C) || (flag == IL_FLAG_O) || (flag == IL_FLAG_P) || (flag == IL_FLAG_A) ||
+			(flag == IL_FLAG_Z) || (flag == IL_FLAG_S)) &&
+			((flagWriteType == IL_FLAGWRITE_ALL) || (flagWriteType == IL_FLAGWRITE_NOCARRY) ||
+				(flagWriteType == IL_FLAGWRITE_CO) || (flagWriteType == IL_FLAGWRITE_C)))
+		{
+			if (operandCount < 2)
+				return undefinedFlag();
+
+			uint64_t countMask = (size == 8) ? 0x3f : 0x1f;
+			ExprId left = il.GetExprForRegisterOrConstant(operands[0], size);
+			ExprId count = il.GetExprForRegisterOrConstant(operands[1], size);
+			ExprId countIsZero = il.CompareEqual(size, count, il.Const(size, 0));
+			ExprId countNotZero = il.CompareNotEqual(size, count, il.Const(size, 0));
+			ExprId result = il.GetExprForRegisterOrConstantOperation(op, size, operands, operandCount);
+			ExprId sign = il.And(size, left, il.Const(size, 1ULL << ((size * 8) - 1)));
+			if (operands[1].constant)
+			{
+				uint64_t effectiveCount = operands[1].value & countMask;
+				if (effectiveCount == 0)
+					return il.Flag(flag);
+				count = il.Const(size, effectiveCount);
+				if ((flag == IL_FLAG_O) && (effectiveCount != 1))
+					return undefinedFlag();
+			}
+
+			if (flag == IL_FLAG_C)
+			{
+				ExprId carry = il.CompareNotEqual(size,
+					il.And(size,
+						il.LogicalShiftRight(size, left, il.Sub(size, count, il.Const(size, 1))),
+						il.Const(size, 1)),
+					il.Const(size, 0));
+				if (!operands[1].constant)
+					return boolChoice(countIsZero, countNotZero, il.Flag(flag), carry);
+				return carry;
+			}
+
+			switch (op)
+			{
+			case LLIL_LSR:
+				if (flag == IL_FLAG_O)
+				{
+					ExprId overflow = il.CompareNotEqual(size, sign, il.Const(size, 0));
+					if (!operands[1].constant)
+					{
+						ExprId countIsOne = il.CompareEqual(size, count, il.Const(size, 1));
+						ExprId countGreaterThanOne = il.And(0, countNotZero, il.Not(0, countIsOne));
+						return il.Or(0,
+							il.And(0, countIsZero, il.Flag(flag)),
+							il.Or(0,
+								il.And(0, countIsOne, overflow),
+								il.And(0, countGreaterThanOne, undefinedFlag())));
+					}
+					return overflow;
+				}
+				break;
+			case LLIL_ASR:
+				if (flag == IL_FLAG_O)
+				{
+					ExprId overflow = il.Const(0, 0);
+					if (!operands[1].constant)
+					{
+						ExprId countIsOne = il.CompareEqual(size, count, il.Const(size, 1));
+						ExprId countGreaterThanOne = il.And(0, countNotZero, il.Not(0, countIsOne));
+						return il.Or(0,
+							il.And(0, countIsZero, il.Flag(flag)),
+							il.Or(0,
+								il.And(0, countIsOne, overflow),
+								il.And(0, countGreaterThanOne, undefinedFlag())));
+					}
+					return overflow;
+				}
+				break;
+			default:
+				break;
+			}
+
+			if (!operands[1].constant)
+			{
+				switch (flag)
+				{
+				case IL_FLAG_P:
+				{
+					ExprId lowByte = il.LowPart(1, result);
+					ExprId parity = il.And(1, il.PopulationCount(1, lowByte), il.Const(1, 1));
+					return boolChoice(countIsZero, countNotZero, il.Flag(flag),
+						il.CompareEqual(1, parity, il.Const(1, 0)));
+				}
+				case IL_FLAG_Z:
+					return boolChoice(countIsZero, countNotZero, il.Flag(flag),
+						il.CompareEqual(size, result, il.Const(size, 0)));
+				case IL_FLAG_S:
+					return boolChoice(countIsZero, countNotZero, il.Flag(flag),
+						il.CompareNotEqual(size,
+							il.And(size, result, il.Const(size, 1ULL << ((size * 8) - 1))),
+							il.Const(size, 0)));
+				case IL_FLAG_A:
+					return boolChoice(countIsZero, countNotZero, il.Flag(flag), undefinedFlag());
+				default:
+					break;
+				}
+			}
 		}
 		break;
 	case LLIL_MULU_DP:
@@ -2135,6 +2670,19 @@ size_t X86CommonArchitecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, s
 			return il.AddExpr(LLIL_CMP_NE, size * 2, 0, il.AddExpr(LLIL_LSR, size * 2, 0,
 				il.GetExprForRegisterOrConstantOperation(op, size, operands, operandCount),
 				il.AddExpr(LLIL_CONST, 1, 0, size * 8)), il.AddExpr(LLIL_CONST, size * 2, 0, 0));
+		}
+		break;
+	case LLIL_MULS_DP:
+		switch (flag)
+		{
+		case IL_FLAG_C:
+		case IL_FLAG_O:
+		{
+			size_t fullSize = size * 2;
+			ExprId fullResult = il.GetExprForRegisterOrConstantOperation(op, size, operands, operandCount);
+			return il.CompareNotEqual(fullSize, fullResult,
+				il.SignExtend(fullSize, il.LowPart(size, fullResult)));
+		}
 		}
 	default:
 		break;
@@ -2151,6 +2699,52 @@ size_t X86CommonArchitecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, s
 		default:
 			break;
 		}
+	}
+
+	if ((flag == IL_FLAG_A) && ((flagWriteType == IL_FLAGWRITE_ALL) || (flagWriteType == IL_FLAGWRITE_NOCARRY)))
+	{
+		switch (op)
+		{
+		case LLIL_ADD:
+		case LLIL_ADC:
+		case LLIL_SUB:
+		case LLIL_SBB:
+			if (operandCount < 2)
+				break;
+			return il.AddExpr(LLIL_CMP_NE, size, 0,
+				il.And(size,
+					il.Xor(size,
+						il.Xor(size, il.GetExprForRegisterOrConstant(operands[0], size),
+							il.GetExprForRegisterOrConstant(operands[1], size)),
+						il.GetExprForRegisterOrConstantOperation(op, size, operands, operandCount)),
+					il.Const(size, 0x10)),
+				il.Const(size, 0));
+		case LLIL_NEG:
+			if (operandCount < 1)
+				break;
+			return il.AddExpr(LLIL_CMP_NE, size, 0,
+				il.And(size,
+					il.Xor(size, il.GetExprForRegisterOrConstant(operands[0], size),
+						il.GetExprForRegisterOrConstantOperation(op, size, operands, operandCount)),
+					il.Const(size, 0x10)),
+				il.Const(size, 0));
+		default:
+			break;
+		}
+
+		return undefinedFlag();
+	}
+	if ((flag == IL_FLAG_A) && (flagWriteType == IL_FLAGWRITE_PAZS))
+		return undefinedFlag();
+	if ((flag == IL_FLAG_A) && (flagWriteType == IL_FLAGWRITE_SHRD1))
+		return undefinedFlag();
+
+	if ((flag == IL_FLAG_P) && ((flagWriteType == IL_FLAGWRITE_ALL) || (flagWriteType == IL_FLAGWRITE_NOCARRY) ||
+		(flagWriteType == IL_FLAGWRITE_PAZS) || (flagWriteType == IL_FLAGWRITE_SHRD1)))
+	{
+		ExprId lowByte = il.LowPart(1, il.GetExprForRegisterOrConstantOperation(op, size, operands, operandCount));
+		ExprId parity = il.And(1, il.PopulationCount(1, lowByte), il.Const(1, 1));
+		return il.AddExpr(LLIL_CMP_E, 1, 0, parity, il.Const(1, 0));
 	}
 
 	// POPCNT sets ZF from the result and clears every other flag. ZF falls through to the default
@@ -2333,6 +2927,16 @@ string X86CommonArchitecture::GetFlagWriteTypeName(uint32_t flags)
 		return "popcnt";
 	case IL_FLAGWRITE_LZTZCNT:
 		return "lztzcnt";
+	case IL_FLAGWRITE_PAZS:
+		return "pazs";
+	case IL_FLAGWRITE_C:
+		return "c";
+	case IL_FLAGWRITE_SHRD1:
+		return "shrd1";
+	case IL_FLAGWRITE_CUO:
+		return "cuo";
+	case IL_FLAGWRITE_PTEST:
+		return "ptest";
 	default:
 		return "";
 	}
@@ -2359,7 +2963,8 @@ vector<uint32_t> X86CommonArchitecture::GetAllFlagWriteTypes()
 {
 	return vector<uint32_t> {IL_FLAGWRITE_ALL, IL_FLAGWRITE_NOCARRY, IL_FLAGWRITE_CO,
 		IL_FLAGWRITE_X87COM, IL_FLAGWRITE_X87COMI, IL_FLAGWRITE_X87C1Z, IL_FLAGWRITE_X87RND,
-		IL_FLAGWRITE_VCOMI, IL_FLAGWRITE_POPCNT, IL_FLAGWRITE_LZTZCNT};
+		IL_FLAGWRITE_VCOMI, IL_FLAGWRITE_POPCNT, IL_FLAGWRITE_LZTZCNT, IL_FLAGWRITE_PAZS,
+		IL_FLAGWRITE_C, IL_FLAGWRITE_SHRD1, IL_FLAGWRITE_CUO, IL_FLAGWRITE_PTEST};
 }
 
 BNFlagRole X86CommonArchitecture::GetFlagRole(uint32_t flag, uint32_t semClass)
@@ -2577,6 +3182,16 @@ vector<uint32_t> X86CommonArchitecture::GetFlagsWrittenByFlagWriteType(uint32_t 
 		return vector<uint32_t>{ IL_FLAG_C, IL_FLAG_P, IL_FLAG_A, IL_FLAG_Z, IL_FLAG_S, IL_FLAG_O };
 	case IL_FLAGWRITE_LZTZCNT:
 		return vector<uint32_t>{ IL_FLAG_C, IL_FLAG_Z };
+	case IL_FLAGWRITE_PAZS:
+		return vector<uint32_t>{ IL_FLAG_P, IL_FLAG_A, IL_FLAG_Z, IL_FLAG_S };
+	case IL_FLAGWRITE_C:
+		return vector<uint32_t>{ IL_FLAG_C };
+	case IL_FLAGWRITE_SHRD1:
+		return vector<uint32_t>{ IL_FLAG_P, IL_FLAG_A, IL_FLAG_Z, IL_FLAG_S, IL_FLAG_O };
+	case IL_FLAGWRITE_CUO:
+		return vector<uint32_t>{ IL_FLAG_C, IL_FLAG_O };
+	case IL_FLAGWRITE_PTEST:
+		return vector<uint32_t>{ IL_FLAG_C, IL_FLAG_P, IL_FLAG_A, IL_FLAG_Z, IL_FLAG_S, IL_FLAG_O };
 	default:
 		return vector<uint32_t>();
 	}

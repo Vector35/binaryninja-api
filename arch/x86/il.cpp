@@ -48,6 +48,34 @@ static xed_reg_enum_t GetCountRegister(const size_t addrSize)
 	}
 }
 
+
+static uint64_t GetRotateCarryEffectiveCount(size_t opSize, uint64_t maskedCount)
+{
+	switch (opSize)
+	{
+	case 1:
+		return maskedCount % 9;
+	case 2:
+		return maskedCount % 17;
+	default:
+		return maskedCount;
+	}
+}
+
+
+static ExprId GetRotateCarryEffectiveCount(LowLevelILFunction& il, size_t opSize, size_t countSize, ExprId maskedCount)
+{
+	switch (opSize)
+	{
+	case 1:
+		return il.ModUnsigned(countSize, maskedCount, il.Const(countSize, 9));
+	case 2:
+		return il.ModUnsigned(countSize, maskedCount, il.Const(countSize, 17));
+	default:
+		return maskedCount;
+	}
+}
+
 //TODO handle imms for MPX args
 // For most instructions, instruction_index == operand_index, but some instructions (floating point, some others) have an implicit first operand (st0), so we have to remap things a bit
 // Instruction index represents the 'nth' argument/opcode in the instruction, whereas the operand index is index that XED holds that operand in the instruction
@@ -595,7 +623,7 @@ static void AssignEvexDfv(const xed_decoded_inst_t* xedd, LowLevelILFunction& il
 			il.Const(1, defaultFlagValues.s.cf)));
 	il.AddInstruction(
 		il.SetFlag(IL_FLAG_P,
-			il.Const(1, defaultFlagValues.s.cf)));
+			il.Const(1, 0)));
 	il.AddInstruction(
 		il.SetFlag(IL_FLAG_A,
 			il.Const(1, 0)));
@@ -1633,7 +1661,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		break;
 
 	case XED_ICLASS_CCMPNL:
-		ConditionalCmp(addr, xedd, il, opOneLen, il.FlagCondition(LLFC_SLT));
+		ConditionalCmp(addr, xedd, il, opOneLen, il.FlagCondition(LLFC_SGE));
 		break;
 
 	case XED_ICLASS_CCMPLE:
@@ -1929,20 +1957,25 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 
 	case XED_ICLASS_ENTER:
 	{
-		uint32_t baseReg = addrSize == 4 ? XED_REG_EBP : XED_REG_RBP;
-		uint32_t stackReg = addrSize == 4 ? XED_REG_ESP : XED_REG_RSP;
-		if (xed_decoded_inst_get_second_immediate(xedd) != 0)
-		{
-			il.AddInstruction(il.Unimplemented());
-			break;
-		}
+		uint32_t baseReg = GetFramePointer(addrSize);
+		uint32_t stackReg = GetStackPointer(addrSize);
+		uint64_t nestingLevel = xed_decoded_inst_get_second_immediate(xedd) & 0x1f;
 		il.AddInstruction(il.Push(addrSize, il.Register(addrSize, baseReg)));
-		il.AddInstruction(il.SetRegister(addrSize, baseReg, il.Register(addrSize, stackReg)));
+		il.AddInstruction(il.SetRegister(addrSize, LLIL_TEMP(0), il.Register(addrSize, stackReg)));
+		for (uint64_t i = 1; i < nestingLevel; i++)
+		{
+			il.AddInstruction(il.SetRegister(addrSize, baseReg,
+				il.Sub(addrSize, il.Register(addrSize, baseReg), il.Const(addrSize, addrSize))));
+			il.AddInstruction(il.Push(addrSize, il.Load(addrSize, il.Register(addrSize, baseReg))));
+		}
+		if (nestingLevel != 0)
+			il.AddInstruction(il.Push(addrSize, il.Register(addrSize, LLIL_TEMP(0))));
+		il.AddInstruction(il.SetRegister(addrSize, baseReg, il.Register(addrSize, LLIL_TEMP(0))));
 		if (immediateOne)
 			il.AddInstruction(il.SetRegister(addrSize, stackReg,
 				il.Sub(addrSize,
 					il.Register(addrSize, stackReg),
-					il.Const(2, immediateOne))));
+					il.Const(addrSize, immediateOne))));
 		break;
 	}
 
@@ -3307,6 +3340,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 	{
 		ExprId left, right;
 		size_t opSize = opOneLen;
+		size_t countSize = opTwoLen;
 		if (!newDataDestination)
 		{
 			// nothing special
@@ -3319,18 +3353,71 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 			left = ReadILOperand(il, xedd, addr, 1, 1);
 			right = ReadILOperand(il, xedd, addr, 2, 2);
 			opSize = opTwoLen;
+			countSize = opTreLen;
 		}
 
-		il.AddInstruction(
-			WriteILOperand(il, xedd, addr, 0, 0,
-				il.RotateLeftCarry(opSize, left, right,
-					il.Flag(IL_FLAG_C), IL_FLAGWRITE_ALL)));
+		uint64_t countMask = (opSize == 8) ? 0x3f : 0x1f;
+		xed_operand_enum_t countOperand = newDataDestination ? opTre_name : opTwo_name;
+		bool immediateCount = countOperand == XED_OPERAND_IMM0;
+		uint64_t maskedImmediateCount = immediateOne & countMask;
+		uint64_t effectiveImmediateCount = GetRotateCarryEffectiveCount(opSize, maskedImmediateCount);
+		ExprId maskedCount = immediateCount ?
+			il.Const(countSize, maskedImmediateCount) :
+			il.And(countSize, right, il.Const(countSize, countMask));
+		ExprId effectiveCount = immediateCount ? maskedCount :
+			GetRotateCarryEffectiveCount(il, opSize, countSize, maskedCount);
+		if (immediateCount)
+			effectiveCount = il.Const(countSize, effectiveImmediateCount);
+		if (immediateCount && effectiveImmediateCount == 0)
+		{
+			il.AddInstruction(il.Nop());
+			break;
+		}
+
+		il.AddInstruction(il.SetRegister(opSize, LLIL_TEMP(0), left));
+		if (noFlags)
+		{
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.RotateLeftCarry(opSize, il.Register(opSize, LLIL_TEMP(0)), effectiveCount,
+						il.Flag(IL_FLAG_C))));
+		}
+		else if (immediateCount)
+		{
+			uint32_t flagWriteType = (maskedImmediateCount == 1) ? IL_FLAGWRITE_CO : IL_FLAGWRITE_CUO;
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.RotateLeftCarry(opSize, il.Register(opSize, LLIL_TEMP(0)), effectiveCount,
+						il.Flag(IL_FLAG_C), flagWriteType)));
+		}
+		else
+		{
+			LowLevelILLabel nonZeroCount, singleBitCount, multiBitCount, done;
+			il.AddInstruction(il.If(
+				il.CompareNotEqual(countSize, effectiveCount, il.Const(countSize, 0)), nonZeroCount, done));
+			il.MarkLabel(nonZeroCount);
+			il.AddInstruction(il.SetRegister(1, LLIL_TEMP(1), il.BoolToInt(1, il.Flag(IL_FLAG_C))));
+			ExprId oldCarry = il.CompareNotEqual(1, il.Register(1, LLIL_TEMP(1)), il.Const(1, 0));
+			il.AddInstruction(il.If(
+				il.CompareEqual(countSize, maskedCount, il.Const(countSize, 1)), singleBitCount, multiBitCount));
+			il.MarkLabel(singleBitCount);
+			il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0,
+				il.RotateLeftCarry(opSize, il.Register(opSize, LLIL_TEMP(0)), il.Const(countSize, 1),
+					oldCarry, IL_FLAGWRITE_CO)));
+			il.AddInstruction(il.Goto(done));
+			il.MarkLabel(multiBitCount);
+			il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0,
+				il.RotateLeftCarry(opSize, il.Register(opSize, LLIL_TEMP(0)), effectiveCount,
+					oldCarry, IL_FLAGWRITE_CUO)));
+			il.MarkLabel(done);
+		}
 		break;
 	}
 	case XED_ICLASS_RCR:
 	{
 		ExprId left, right;
 		size_t opSize = opOneLen;
+		size_t countSize = opTwoLen;
 		if (!newDataDestination)
 		{
 			// nothing special
@@ -3343,12 +3430,63 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 			left = ReadILOperand(il, xedd, addr, 1, 1);
 			right = ReadILOperand(il, xedd, addr, 2, 2);
 			opSize = opTwoLen;
+			countSize = opTreLen;
 		}
 
-		il.AddInstruction(
-			WriteILOperand(il, xedd, addr, 0, 0,
-				il.RotateRightCarry(opSize, left, right,
-					il.Flag(IL_FLAG_C), IL_FLAGWRITE_ALL)));
+		uint64_t countMask = (opSize == 8) ? 0x3f : 0x1f;
+		xed_operand_enum_t countOperand = newDataDestination ? opTre_name : opTwo_name;
+		bool immediateCount = countOperand == XED_OPERAND_IMM0;
+		uint64_t maskedImmediateCount = immediateOne & countMask;
+		uint64_t effectiveImmediateCount = GetRotateCarryEffectiveCount(opSize, maskedImmediateCount);
+		ExprId maskedCount = immediateCount ?
+			il.Const(countSize, maskedImmediateCount) :
+			il.And(countSize, right, il.Const(countSize, countMask));
+		ExprId effectiveCount = immediateCount ?
+			il.Const(countSize, effectiveImmediateCount) :
+			GetRotateCarryEffectiveCount(il, opSize, countSize, maskedCount);
+		if (immediateCount && effectiveImmediateCount == 0)
+		{
+			il.AddInstruction(il.Nop());
+			break;
+		}
+		il.AddInstruction(il.SetRegister(opSize, LLIL_TEMP(0), left));
+		if (noFlags)
+		{
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.RotateRightCarry(opSize, il.Register(opSize, LLIL_TEMP(0)), effectiveCount,
+						il.Flag(IL_FLAG_C))));
+		}
+		else
+		{
+			if (immediateCount)
+			{
+				uint32_t flagWriteType = (maskedImmediateCount == 1) ? IL_FLAGWRITE_CO : IL_FLAGWRITE_CUO;
+				il.AddInstruction(
+					WriteILOperand(il, xedd, addr, 0, 0,
+						il.RotateRightCarry(opSize, il.Register(opSize, LLIL_TEMP(0)), effectiveCount,
+							il.Flag(IL_FLAG_C), flagWriteType)));
+			}
+			else
+			{
+				LowLevelILLabel nonZeroCount, singleBitCount, multiBitCount, done;
+				il.AddInstruction(il.If(
+					il.CompareNotEqual(countSize, effectiveCount, il.Const(countSize, 0)), nonZeroCount, done));
+				il.MarkLabel(nonZeroCount);
+				il.AddInstruction(il.If(
+					il.CompareEqual(countSize, maskedCount, il.Const(countSize, 1)), singleBitCount, multiBitCount));
+				il.MarkLabel(singleBitCount);
+				il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0,
+					il.RotateRightCarry(opSize, il.Register(opSize, LLIL_TEMP(0)), il.Const(countSize, 1),
+						il.Flag(IL_FLAG_C), IL_FLAGWRITE_CO)));
+				il.AddInstruction(il.Goto(done));
+				il.MarkLabel(multiBitCount);
+				il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0,
+					il.RotateRightCarry(opSize, il.Register(opSize, LLIL_TEMP(0)), effectiveCount,
+						il.Flag(IL_FLAG_C), IL_FLAGWRITE_CUO)));
+				il.MarkLabel(done);
+			}
+		}
 		break;
 	}
 
@@ -3373,6 +3511,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 	{
 		ExprId left, right;
 		size_t opSize = opOneLen;
+		size_t countSize = opTwoLen;
 		if (!newDataDestination)
 		{
 			// nothing special
@@ -3385,18 +3524,52 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 			left = ReadILOperand(il, xedd, addr, 1, 1);
 			right = ReadILOperand(il, xedd, addr, 2, 2);
 			opSize = opTwoLen;
+			countSize = opTreLen;
 		}
 
-		il.AddInstruction(
-			WriteILOperand(il, xedd, addr, 0, 0,
-				il.RotateLeft(opSize, left, right,
-					noFlags ? 0 : IL_FLAGWRITE_ALL)));
+		uint64_t countMask = (opSize == 8) ? 0x3f : 0x1f;
+		xed_operand_enum_t countOperand = newDataDestination ? opTre_name : opTwo_name;
+		bool immediateCount = countOperand == XED_OPERAND_IMM0;
+		uint64_t maskedImmediateCount = immediateOne & countMask;
+		ExprId maskedCount = immediateCount ?
+			il.Const(countSize, maskedImmediateCount) :
+			il.And(countSize, right, il.Const(countSize, countMask));
+		if (immediateCount && (maskedImmediateCount == 0))
+		{
+			il.AddInstruction(il.Nop());
+			break;
+		}
+
+		if (immediateCount || (noFlags &&
+			(xed_operand_is_register(opOne_name) || xed_operand_is_memory_addressing_register(opOne_name))))
+		{
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.RotateLeft(opSize, left, maskedCount, noFlags ? 0 : IL_FLAGWRITE_CO)));
+		}
+		else if (!noFlags && (xed_operand_is_register(opOne_name) || xed_operand_is_memory_addressing_register(opOne_name)))
+		{
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.RotateLeft(opSize, left, maskedCount, IL_FLAGWRITE_CO)));
+		}
+		else
+		{
+			LowLevelILLabel nonZeroCount, done;
+			il.AddInstruction(il.If(
+				il.CompareNotEqual(countSize, maskedCount, il.Const(countSize, 0)), nonZeroCount, done));
+			il.MarkLabel(nonZeroCount);
+			il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0,
+				il.RotateLeft(opSize, left, maskedCount, noFlags ? 0 : IL_FLAGWRITE_CO)));
+			il.MarkLabel(done);
+		}
 		break;
 	}
 	case XED_ICLASS_ROR:
 	{
 		ExprId left, right;
 		size_t opSize = opOneLen;
+		size_t countSize = opTwoLen;
 		if (!newDataDestination)
 		{
 			// nothing special
@@ -3409,12 +3582,45 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 			left = ReadILOperand(il, xedd, addr, 1, 1);
 			right = ReadILOperand(il, xedd, addr, 2, 2);
 			opSize = opTwoLen;
+			countSize = opTreLen;
 		}
 
-		il.AddInstruction(
-			WriteILOperand(il, xedd, addr, 0, 0,
-				il.RotateRight(opSize, left, right,
-					noFlags ? 0 : IL_FLAGWRITE_ALL)));
+		uint64_t countMask = (opSize == 8) ? 0x3f : 0x1f;
+		xed_operand_enum_t countOperand = newDataDestination ? opTre_name : opTwo_name;
+		bool immediateCount = countOperand == XED_OPERAND_IMM0;
+		uint64_t maskedImmediateCount = immediateOne & countMask;
+		ExprId maskedCount = immediateCount ?
+			il.Const(countSize, maskedImmediateCount) :
+			il.And(countSize, right, il.Const(countSize, countMask));
+		if (immediateCount && (maskedImmediateCount == 0))
+		{
+			il.AddInstruction(il.Nop());
+			break;
+		}
+
+		if (immediateCount || (noFlags &&
+			(xed_operand_is_register(opOne_name) || xed_operand_is_memory_addressing_register(opOne_name))))
+		{
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.RotateRight(opSize, left, maskedCount, noFlags ? 0 : IL_FLAGWRITE_CO)));
+		}
+		else if (!noFlags && (xed_operand_is_register(opOne_name) || xed_operand_is_memory_addressing_register(opOne_name)))
+		{
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.RotateRight(opSize, left, maskedCount, IL_FLAGWRITE_CO)));
+		}
+		else
+		{
+			LowLevelILLabel nonZeroCount, done;
+			il.AddInstruction(il.If(
+				il.CompareNotEqual(countSize, maskedCount, il.Const(countSize, 0)), nonZeroCount, done));
+			il.MarkLabel(nonZeroCount);
+			il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0,
+				il.RotateRight(opSize, left, maskedCount, noFlags ? 0 : IL_FLAGWRITE_CO)));
+			il.MarkLabel(done);
+		}
 		break;
 	}
 	// there is no ROLX instruciton
@@ -3431,6 +3637,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 	{
 		ExprId left, right;
 		size_t opSize = opOneLen;
+		size_t countSize = opTwoLen;
 		if (!newDataDestination)
 		{
 			// nothing special
@@ -3443,12 +3650,53 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 			left = ReadILOperand(il, xedd, addr, 1, 1);
 			right = ReadILOperand(il, xedd, addr, 2, 2);
 			opSize = opTwoLen;
+			countSize = opTreLen;
 		}
 
-		il.AddInstruction(
-			WriteILOperand(il, xedd, addr, 0, 0,
-				il.ArithShiftRight(opSize, left, right,
-					noFlags ? 0 : IL_FLAGWRITE_ALL)));
+		uint64_t countMask = (opSize == 8) ? 0x3f : 0x1f;
+		xed_operand_enum_t countOperand = newDataDestination ? opTre_name : opTwo_name;
+		bool immediateCount = countOperand == XED_OPERAND_IMM0;
+		uint64_t effectiveImmediateCount = immediateOne & countMask;
+		ExprId effectiveCount = immediateCount ?
+			il.Const(countSize, effectiveImmediateCount) :
+			il.And(countSize, right, il.Const(countSize, countMask));
+		if (immediateCount && (effectiveImmediateCount == 0))
+		{
+			il.AddInstruction(il.Nop());
+			break;
+		}
+
+		if (noFlags)
+		{
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.ArithShiftRight(opSize, left, effectiveCount)));
+		}
+		else if (immediateCount)
+		{
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.ArithShiftRight(opSize, left, effectiveCount, IL_FLAGWRITE_ALL)));
+		}
+		else if (xed_operand_is_register(opOne_name) || xed_operand_is_memory_addressing_register(opOne_name))
+		{
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.ArithShiftRight(opSize, left, effectiveCount, IL_FLAGWRITE_ALL)));
+		}
+		else
+		{
+			LowLevelILLabel nonZeroCount, done;
+			il.AddInstruction(il.SetRegister(opSize, LLIL_TEMP(0), left));
+			il.AddInstruction(il.If(
+				il.CompareNotEqual(countSize, effectiveCount, il.Const(countSize, 0)), nonZeroCount, done));
+			il.MarkLabel(nonZeroCount);
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.ArithShiftRight(opSize, il.Register(opSize, LLIL_TEMP(0)), effectiveCount,
+						IL_FLAGWRITE_ALL)));
+			il.MarkLabel(done);
+		}
 		break;
 	}
 
@@ -3651,6 +3899,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 	{
 		ExprId left, right;
 		size_t opSize = opOneLen;
+		size_t countSize = opTwoLen;
 		if (!newDataDestination)
 		{
 			// nothing special
@@ -3663,21 +3912,62 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 			left = ReadILOperand(il, xedd, addr, 1, 1);
 			right = ReadILOperand(il, xedd, addr, 2, 2);
 			opSize = opTwoLen;
+			countSize = opTreLen;
 		}
 
-		il.AddInstruction(
-			WriteILOperand(il, xedd, addr, 0, 0,
-				il.ShiftLeft(opSize, left, right,
-					noFlags ? 0 : IL_FLAGWRITE_ALL)));
+		uint64_t countMask = (opSize == 8) ? 0x3f : 0x1f;
+		xed_operand_enum_t countOperand = newDataDestination ? opTre_name : opTwo_name;
+		bool immediateCount = countOperand == XED_OPERAND_IMM0;
+		uint64_t effectiveImmediateCount = immediateOne & countMask;
+		ExprId effectiveCount = immediateCount ?
+			il.Const(countSize, effectiveImmediateCount) :
+			il.And(countSize, right, il.Const(countSize, countMask));
+		if (immediateCount && (effectiveImmediateCount == 0))
+		{
+			il.AddInstruction(il.Nop());
+			break;
+		}
+
+		if (noFlags)
+		{
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.ShiftLeft(opSize, left, effectiveCount)));
+		}
+		else if (immediateCount)
+		{
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.ShiftLeft(opSize, left, effectiveCount, IL_FLAGWRITE_ALL)));
+		}
+		else if (xed_operand_is_register(opOne_name) || xed_operand_is_memory_addressing_register(opOne_name))
+		{
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.ShiftLeft(opSize, left, effectiveCount, IL_FLAGWRITE_ALL)));
+		}
+		else
+		{
+			LowLevelILLabel nonZeroCount, done;
+			il.AddInstruction(il.SetRegister(opSize, LLIL_TEMP(0), left));
+			il.AddInstruction(il.If(
+				il.CompareNotEqual(countSize, effectiveCount, il.Const(countSize, 0)), nonZeroCount, done));
+			il.MarkLabel(nonZeroCount);
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.ShiftLeft(opSize, il.Register(opSize, LLIL_TEMP(0)), effectiveCount, IL_FLAGWRITE_ALL)));
+			il.MarkLabel(done);
+		}
 		break;
 	}
 
 	// This is imprecise since it does NOT move the last shifted bit into CF
-	// the same problem also happens on SHL, SAR
+	// the same problem also happens on SAR
 	case XED_ICLASS_SHR:
 	{
 		ExprId left, right;
 		size_t opSize = opOneLen;
+		size_t countSize = opTwoLen;
 		if (!newDataDestination)
 		{
 			// nothing special
@@ -3690,12 +3980,52 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 			left = ReadILOperand(il, xedd, addr, 1, 1);
 			right = ReadILOperand(il, xedd, addr, 2, 2);
 			opSize = opTwoLen;
+			countSize = opTreLen;
 		}
 
-		il.AddInstruction(
-			WriteILOperand(il, xedd, addr, 0, 0,
-				il.LogicalShiftRight(opSize, left, right,
-					noFlags ? 0 : IL_FLAGWRITE_ALL)));
+		uint64_t countMask = (opSize == 8) ? 0x3f : 0x1f;
+		xed_operand_enum_t countOperand = newDataDestination ? opTre_name : opTwo_name;
+		bool immediateCount = countOperand == XED_OPERAND_IMM0;
+		uint64_t effectiveImmediateCount = immediateOne & countMask;
+		ExprId effectiveCount = immediateCount ?
+			il.Const(countSize, effectiveImmediateCount) :
+			il.And(countSize, right, il.Const(countSize, countMask));
+		if (immediateCount && (effectiveImmediateCount == 0))
+		{
+			il.AddInstruction(il.Nop());
+			break;
+		}
+
+		if (noFlags)
+		{
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.LogicalShiftRight(opSize, left, effectiveCount)));
+		}
+		else if (immediateCount)
+		{
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.LogicalShiftRight(opSize, left, effectiveCount, IL_FLAGWRITE_ALL)));
+		}
+		else if (xed_operand_is_register(opOne_name) || xed_operand_is_memory_addressing_register(opOne_name))
+		{
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.LogicalShiftRight(opSize, left, effectiveCount, IL_FLAGWRITE_ALL)));
+		}
+		else
+		{
+			LowLevelILLabel nonZeroCount, done;
+			il.AddInstruction(il.SetRegister(opSize, LLIL_TEMP(0), left));
+			il.AddInstruction(il.If(
+				il.CompareNotEqual(countSize, effectiveCount, il.Const(countSize, 0)), nonZeroCount, done));
+			il.MarkLabel(nonZeroCount);
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.LogicalShiftRight(opSize, il.Register(opSize, LLIL_TEMP(0)), effectiveCount, IL_FLAGWRITE_ALL)));
+			il.MarkLabel(done);
+		}
 		break;
 	}
 
@@ -3721,84 +4051,136 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 	{
 		// TODO: Might need to swap for new data?
 		size_t opSize = opOneLen;
-		size_t mask = opSize == 4 ? 31 : 63;
+		size_t countSize = opTreLen;
+		size_t mask = opSize == 8 ? 0x3f : 0x1f;
 
 		// Shift left double: operand[0] = operand[0]:operand[1] << operand[3]
 		// this since we can't easily operation on a combined register we do it like this
 		// operand[0] = (operand[0] << operand[3]) | (operand[1] >> (63|32 - operand[3]))
 		// One final caveat operand[3] must be masked with 63|32
-		ExprId left, right, count;
+		ExprId left, right, rawCount;
 		if (!newDataDestination)
 		{
 			// nothing special
 			left = ReadILOperand(il, xedd, addr, 0, 0);
 			right = ReadILOperand(il, xedd, addr, 1, 1);
-
-			count = il.And(opSize,
-				il.Const(1, mask),
-				ReadILOperand(il, xedd, addr, 2, 2));
+			rawCount = ReadILOperand(il, xedd, addr, 2, 2);
 		}
 		else
 		{
 			// new data destination
 			left = ReadILOperand(il, xedd, addr, 1, 1);
 			right = ReadILOperand(il, xedd, addr, 2, 2);
-
-			count = il.And(opSize,
-				il.Const(1, mask),
-				ReadILOperand(il, xedd, addr, 3, 3));
+			countSize = xed_decoded_inst_operand_length_bits(xedd, 3) / 8;
+			rawCount = ReadILOperand(il, xedd, addr, 3, 3);
 		}
 
-		il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0,
-			il.Or(opSize,
-				il.ShiftLeft(opSize, left, count,
-					noFlags ? 0 : IL_FLAGWRITE_ALL),
-				il.LogicalShiftRight(opSize,
-					right,
-					il.Sub(opSize, count, il.Const(1, opSize * 8))))));
+		xed_operand_enum_t countOperand = xed_operand_name(xed_inst_operand(xi, newDataDestination ? 3 : 2));
+		bool immediateCount = countOperand == XED_OPERAND_IMM0;
+		uint64_t effectiveImmediateCount = immediateOne & mask;
+		ExprId count = immediateCount ?
+			il.Const(countSize, effectiveImmediateCount) :
+			il.And(countSize, rawCount, il.Const(countSize, mask));
+		if (immediateCount && (effectiveImmediateCount == 0))
+		{
+			il.AddInstruction(il.Nop());
+			break;
+		}
+
+		auto liftShld = [&]() {
+			return WriteILOperand(il, xedd, addr, 0, 0,
+				il.Or(opSize,
+					il.ShiftLeft(opSize, left, count, noFlags ? 0 : IL_FLAGWRITE_CO),
+					il.LogicalShiftRight(opSize,
+						right,
+						il.Sub(countSize, il.Const(countSize, opSize * 8), count)),
+					noFlags ? 0 : IL_FLAGWRITE_PAZS));
+		};
+
+		if (immediateCount)
+			il.AddInstruction(liftShld());
+		else
+		{
+			LowLevelILLabel nonZeroCount, done;
+			il.AddInstruction(il.If(
+				il.CompareNotEqual(countSize, count, il.Const(countSize, 0)), nonZeroCount, done));
+			il.MarkLabel(nonZeroCount);
+			il.AddInstruction(liftShld());
+			il.MarkLabel(done);
+		}
 		break;
 	}
 	case XED_ICLASS_SHRD:
 	{
 		// TODO: Might need to swap for new data?
 		size_t opSize = opOneLen;
-		size_t mask = opSize == 4 ? 31 : 63;
+		size_t countSize = opTreLen;
+		size_t mask = opSize == 8 ? 0x3f : 0x1f;
 
 		// Shift right double: operand[0] = operand[0]:operand[1] >> operand[3]
 		// this since we can't easily operation on a combined register we do it like this
 		// operand[0] = (operand[0] >> operand[3]) | (operand[1] << (63|31 - operand[3]))
 		// One final caveat operand[3] must be masked with 63|31
-		ExprId left, right, count;
+		ExprId left, right, rawCount;
 		if (!newDataDestination)
 		{
 			// nothing special
 			left = ReadILOperand(il, xedd, addr, 0, 0);
 			right = ReadILOperand(il, xedd, addr, 1, 1);
-
-			count = il.And(opSize,
-				il.Const(1, mask),
-				ReadILOperand(il, xedd, addr, 2, 2));
+			rawCount = ReadILOperand(il, xedd, addr, 2, 2);
 		}
 		else
 		{
 			// new data destination
 			left = ReadILOperand(il, xedd, addr, 1, 1);
 			right = ReadILOperand(il, xedd, addr, 2, 2);
-
-			count = il.And(opSize,
-				il.Const(1, mask),
-				ReadILOperand(il, xedd, addr, 3, 3));
+			countSize = xed_decoded_inst_operand_length_bits(xedd, 3) / 8;
+			rawCount = ReadILOperand(il, xedd, addr, 3, 3);
 		}
 
-		il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0,
-			il.Or(opSize,
-				il.LogicalShiftRight(opSize,
-					left,
-					count,
-				noFlags ? 0 : IL_FLAGWRITE_ALL),
-				il.ShiftLeft(opSize,
-					right,
-					il.Sub(opSize, il.Const(1, opSize * 8), count)))));
+		xed_operand_enum_t countOperand = xed_operand_name(xed_inst_operand(xi, newDataDestination ? 3 : 2));
+		bool immediateCount = countOperand == XED_OPERAND_IMM0;
+		uint64_t effectiveImmediateCount = immediateOne & mask;
+		ExprId count = immediateCount ?
+			il.Const(countSize, effectiveImmediateCount) :
+			il.And(countSize, rawCount, il.Const(countSize, mask));
+		if (immediateCount && (effectiveImmediateCount == 0))
+		{
+			il.AddInstruction(il.Nop());
+			break;
+		}
+
+		auto liftShrd = [&](ExprId dest, ExprId shiftCount, uint32_t shiftFlagWrite, uint32_t resultFlagWrite) {
+			return WriteILOperand(il, xedd, addr, 0, 0,
+				il.Or(opSize,
+					il.LogicalShiftRight(opSize, dest, shiftCount, shiftFlagWrite),
+					il.ShiftLeft(opSize, right, il.Sub(countSize, il.Const(countSize, opSize * 8), shiftCount)),
+					resultFlagWrite));
+		};
+
+		if (noFlags)
+			il.AddInstruction(liftShrd(left, count, 0, 0));
+		else if (immediateCount)
+		{
+			uint32_t shiftFlagWrite = (effectiveImmediateCount == 1) ? IL_FLAGWRITE_C : IL_FLAGWRITE_CO;
+			uint32_t resultFlagWrite = (effectiveImmediateCount == 1) ? IL_FLAGWRITE_SHRD1 : IL_FLAGWRITE_PAZS;
+			il.AddInstruction(liftShrd(left, count, shiftFlagWrite, resultFlagWrite));
+		}
+		else
+		{
+			LowLevelILLabel nonZeroCount, singleBitCount, multiBitCount, done;
+			il.AddInstruction(il.If(
+				il.CompareNotEqual(countSize, count, il.Const(countSize, 0)), nonZeroCount, done));
+			il.MarkLabel(nonZeroCount);
+			il.AddInstruction(il.If(
+				il.CompareEqual(countSize, count, il.Const(countSize, 1)), singleBitCount, multiBitCount));
+			il.MarkLabel(singleBitCount);
+			il.AddInstruction(liftShrd(left, il.Const(countSize, 1), IL_FLAGWRITE_C, IL_FLAGWRITE_SHRD1));
+			il.AddInstruction(il.Goto(done));
+			il.MarkLabel(multiBitCount);
+			il.AddInstruction(liftShrd(left, count, IL_FLAGWRITE_CO, IL_FLAGWRITE_PAZS));
+			il.MarkLabel(done);
+		}
 		break;
 	}
 	case XED_ICLASS_STOSB:
@@ -3956,39 +4338,10 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 	case XED_ICLASS_PTEST:
 	case XED_ICLASS_VPTEST:
 		il.AddInstruction(
-			il.SetFlag(IL_FLAG_Z,
-				il.BoolToInt(
-					1,
-					il.CompareEqual(
-						opOneLen,
-						il.And(
-							opOneLen,
-							ReadILOperand(il, xedd, addr, 0, 0),
-							ReadILOperand(il, xedd, addr, 1, 1)
-						),
-						il.Const(opOneLen, 0)
-					)
-				)
-			)
-		);
-		il.AddInstruction(
-			il.SetFlag(IL_FLAG_C,
-				il.BoolToInt(
-					1,
-					il.CompareEqual(
-						opOneLen,
-						il.And(
-							opOneLen,
-							ReadILOperand(il, xedd, addr, 0, 0),
-							il.Not(opTwoLen,
-								ReadILOperand(il, xedd, addr, 1, 1)
-							)
-						),
-						il.Const(opOneLen, 0)
-					)
-				)
-			)
-		);
+			il.And(opOneLen,
+				ReadILOperand(il, xedd, addr, 0, 0),
+				ReadILOperand(il, xedd, addr, 1, 1),
+			IL_FLAGWRITE_PTEST));
 		break;
 
 	case XED_ICLASS_CTESTO:
@@ -4036,7 +4389,7 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		break;
 
 	case XED_ICLASS_CTESTNL:
-		ConditionalTest(addr, xedd, il, opOneLen, il.FlagCondition(LLFC_SLT));
+		ConditionalTest(addr, xedd, il, opOneLen, il.FlagCondition(LLFC_SGE));
 		break;
 
 	case XED_ICLASS_CTESTLE:

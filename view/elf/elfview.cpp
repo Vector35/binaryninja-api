@@ -51,14 +51,14 @@ void BinaryNinja::InitElfViewType()
 		"ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
 		})~");
 
-	settings->RegisterSetting("files.elf.maxMipsLocalGotEntries",
+	settings->RegisterSetting("files.elf.maxMipsGotMB",
 		R"({
-		"title" : "Maximum MIPS Local GOT Entry Count",
+		"title" : "Maximum MIPS GOT Data Size in MB",
 		"type" : "number",
-		"default" : 1048576,
+		"default" : 4,
 		"minValue" : 0,
-		"maxValue" : 67108864,
-		"description" : "Maximum number of local GOT entries to process in MIPS ELF files",
+		"maxValue" : 64,
+		"description" : "Maximum total GOT data size in megabytes to process in MIPS ELF files",
 		"ignore" : ["SettingsProjectScope"]
 		})");
 
@@ -1173,7 +1173,8 @@ bool ElfView::Init()
 		{
 			const uint64_t entrySize = m_elf32 ? 4 : 8;
 			Ref<Settings> viewSettings = Settings::Instance();
-			const uint64_t entryBudget = viewSettings->Get<uint64_t>("files.elf.maxMipsLocalGotEntries", this);
+			const uint64_t mbBudget = viewSettings->Get<uint64_t>("files.elf.maxMipsGotMB", this);
+			const uint64_t entryBudget = (mbBudget * 1024 * 1024) / entrySize;
 
 			// Find the file-backed region containing gotStart once, so the loop needs no per-entry check.
 			uint64_t gotFileEnd = gotStart;

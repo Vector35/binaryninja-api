@@ -3381,7 +3381,7 @@ pub extern "C" fn CorePluginInit() -> bool {
             _dis: PhantomData,
         });
     let arch_wch =
-        architecture::register_architecture("rv32-wch", |custom_handle, core_arch| RiscVArch::<
+        architecture::register_architecture("rv32gc_wch", |custom_handle, core_arch| RiscVArch::<
             RiscVWCHDisassembler,
         > {
             handle: core_arch,
@@ -3427,17 +3427,13 @@ pub extern "C" fn CorePluginInit() -> bool {
         RiscVCC::<RiscVIMACDisassembler<Rv32GRegs>>::new(core)
     });
     arch32.set_default_calling_convention(&cc32);
+    let cc32_wch = register_calling_convention(arch_wch, "default", |core| {
+        RiscVCC::<RiscVWCHDisassembler>::new(core)
+    });
+    arch_wch.set_default_calling_convention(&cc32_wch);
     let cc64 = register_calling_convention(arch64, "default", |core| {
         RiscVCC::<RiscVIMACDisassembler<Rv64GRegs>>::new(core)
     });
-    let cc32_wch =
-        register_calling_convention(arch_wch, "default", RiscVCC::<RiscVWCHDisassembler>::new());
-    arch_wch.set_default_calling_convention(&cc32_wch);
-    let cc64 = register_calling_convention(
-        arch64,
-        "default",
-        RiscVCC::<RiscVIMACDisassembler<Rv64GRegs>>::new(),
-    );
     arch64.set_default_calling_convention(&cc64);
 
     if let Some(bvt) = BinaryViewType::by_name("ELF") {

@@ -51,6 +51,28 @@ void BinaryNinja::InitElfViewType()
 		"ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
 		})~");
 
+	settings->RegisterSetting("files.elf.maxMipsLocalGotEntries",
+		R"({
+		"title" : "Maximum MIPS Local GOT Entry Count",
+		"type" : "number",
+		"default" : 1048576,
+		"minValue" : 0,
+		"maxValue" : 67108864,
+		"description" : "Maximum number of local GOT entries to process in MIPS ELF files",
+		"ignore" : ["SettingsProjectScope"]
+		})");
+
+	settings->RegisterSetting("files.elf.maxStringTableTypeSizeMB",
+		R"~({
+		"title" : "Maximum ELF String Table Size for Type Application (MB)",
+		"type" : "number",
+		"default" : 4,
+		"minValue" : 0,
+		"maxValue" : 256,
+		"description" : "Maximum string table size in megabytes when applying types from string tables",
+		"ignore" : ["SettingsProjectScope"]
+		})~");
+
 }
 
 
@@ -1149,15 +1171,33 @@ bool ElfView::Init()
 	{
 		if (mipsSymValid && (gotStart != 0))
 		{
-		    auto localMipsSymsFixed = localMipsSyms % 0x1000;
-			for (size_t i = 2; i < localMipsSymsFixed; i++)
+			const uint64_t entrySize = m_elf32 ? 4 : 8;
+			Ref<Settings> viewSettings = Settings::Instance();
+			const uint64_t entryBudget = viewSettings->Get<uint64_t>("files.elf.maxMipsLocalGotEntries", this);
+
+			// Find the file-backed region containing gotStart once, so the loop needs no per-entry check.
+			uint64_t gotFileEnd = gotStart;
+			for (const auto& hdr : m_programHeaders)
 			{
-				m_gotEntryLocations.emplace(gotStart + i * (m_elf32 ? 4 : 8));
+				if (hdr.type != ELF_PT_LOAD || hdr.fileSize == 0 || hdr.fileSize > UINT64_MAX - hdr.virtualAddress)
+					continue;
+				uint64_t segEnd = hdr.virtualAddress + hdr.fileSize;
+				if (hdr.virtualAddress > gotStart || gotStart >= segEnd)
+					continue;
+				// Only trust this segment's declared extent up to what the file actually backs.
+				if (hdr.fileSize > UINT64_MAX - hdr.offset || hdr.offset + hdr.fileSize > (uint64_t)GetParentView()->GetLength())
+					continue;
+				gotFileEnd = segEnd;
+				break;
 			}
+			const uint64_t maxFromFile = (gotFileEnd > gotStart) ? (gotFileEnd - gotStart) / entrySize : 0;
+			const uint64_t limit = std::min({localMipsSyms, entryBudget, maxFromFile});
+			for (size_t i = 2; i < limit; i++)
+				m_gotEntryLocations.emplace(gotStart + i * entrySize);
 			for (uint64_t i = firstMipsSym; i < (m_auxSymbolTable.size / (m_elf32 ? 16 : 24)); i++)
 			{
-				uint64_t gotEntry = gotStart + ((localMipsSyms + i - firstMipsSym) * (m_elf32 ? 4 : 8));
-				if (!IsValidOffset(gotEntry))
+				uint64_t gotEntry = gotStart + ((localMipsSyms + i - firstMipsSym) * entrySize);
+				if (!IsRangeBackedByFile(gotEntry, entrySize))
 				{
 					m_logger->LogWarn("ELF GOT entry %" PRIx64 " is invalid", gotEntry);
 					break;
@@ -1797,7 +1837,7 @@ bool ElfView::Init()
 		}
 
 		// Perform fixup processing on the local GOT entries if the view is relocatable.
-		if (m_relocatable)
+		if (m_relocatable && localMipsSyms > 0)
 		{
 			uint64_t lastLocalGotEntry = gotStart + (localMipsSyms - 1) * (m_elf32 ? 4 : 8);
 			for (auto gotEntry : m_gotEntryLocations)
@@ -2666,8 +2706,16 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 void ElfView::ApplyTypesToParentStringTable(const Elf64SectionHeader& section, const bool offset)
 {
 	m_logger->LogInfo("Found string table of size %p at offset %p", section.size, section.offset);
+	if (section.size == 0 ||
+	    section.size > UINT64_MAX - section.offset ||
+	    section.offset + section.size > GetParentView()->GetLength())
+		return;
+	Ref<Settings> viewSettings = Settings::Instance();
+	const uint64_t sizeBudget = viewSettings->Get<uint64_t>("files.elf.maxStringTableTypeSizeMB", this) * 1024 * 1024;
+	if (section.size > sizeBudget)
+		return;
 	DataBuffer buffer = GetParentView()->ReadBuffer(section.offset, section.size);
-	if (section.size > 0x1000 || buffer.GetLength() != section.size)
+	if (buffer.GetLength() != section.size)
 		return;
 	unordered_map<size_t, Ref<Type>> cachedTypes;
 	for (size_t start_address = (offset ? 1 : 0); start_address < section.size; ++start_address)
@@ -2735,7 +2783,7 @@ void ElfView::ApplyTypesToStringTable(const Elf64SectionHeader& section, const i
 
 string ElfView::ReadStringTable(BinaryReader& reader, const Elf64SectionHeader& section, uint64_t offset)
 {
-	if (offset == 0 || offset > section.size || section.size > 0x1000000)
+	if (offset == 0 || offset >= section.size || section.size > GetParentView()->GetLength())
 		return "";
 
 	auto itr = m_stringTableCache.find(section.offset);
@@ -2760,6 +2808,22 @@ string ElfView::ReadStringTable(BinaryReader& reader, const Elf64SectionHeader& 
 		return "";
 	}
 	return std::string(&tableCache[offset], strnlen(tableCache.data() + offset, tableCache.size() - offset));
+}
+
+
+// Returns true only if the entire range [start, start+size) is backed by file data.
+bool ElfView::IsRangeBackedByFile(uint64_t start, uint64_t size) const
+{
+	if (size == 0)
+		return false;
+	if (size > UINT64_MAX - start)
+		return false;
+	for (uint64_t offset = start; offset < start + size; offset++)
+	{
+		if (!IsOffsetBackedByFile(offset))
+			return false;
+	}
+	return true;
 }
 
 

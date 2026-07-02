@@ -357,6 +357,24 @@ Q_SIGNALS:
 };
 
 
+/*! Options controlling the address input dialog shown by \ref ViewFrame::getAddressFromInput
+
+	\ingroup viewframe
+*/
+struct BINARYNINJAUIAPI AddressFromInputOptions
+{
+	/// Title shown in the dialog's title bar.
+	QString title = "Go to Address";
+	/// Prompt shown next to the input field.
+	QString message = "Address:";
+	/// Pre-fill the input with the current address.
+	bool defaultToCurrent = false;
+	/// Show the "Relative" checkbox, allowing the entered value to be interpreted relative to an address.
+	/// Defaults to true; set to false for inputs where a relative value is meaningless (e.g. a size or count).
+	bool showRelativeCheckbox = true;
+};
+
+
 /*!
 
 	\ingroup viewframe
@@ -490,7 +508,7 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	static bool getAddressFromString(QWidget* parent, BinaryViewRef data, uint64_t& offset, uint64_t currentAddress,
 	    const QString& addrStr, std::string& errorString);
 	static bool getAddressFromInput(QWidget* parent, BinaryViewRef data, uint64_t& offset, uint64_t currentAddress,
-	    const QString& title = "Go to Address", const QString& msg = "Address:", bool defaultToCurrent = false);
+	    const AddressFromInputOptions& options = {});
 	static bool getFileOffsetFromInput(QWidget* parent, BinaryViewRef data, uint64_t& offset, uint64_t currentAddress,
 	    const QString& title = "Go to File Offset", const QString& msg = "File Offset:", bool defaultToCurrent = false);
 

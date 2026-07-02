@@ -3382,7 +3382,10 @@ void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, cons
 			sym.n_value = (m_addressSize == 4) ? reader.Read32() : reader.Read64();
 			if (sym.n_value)
 				sym.n_value += m_imageBaseAdjustment;
-			if (sym.n_strx >= symtab.strsize || ((sym.n_type & N_TYPE) == N_INDR))
+			// Use GetLength() rather than symtab.strsize because Read() may return
+			// fewer bytes than requested; checking strsize would allow n_strx to pass
+			// while still being past the end of the actual buffer.
+			if (sym.n_strx >= header.stringList.GetLength() || ((sym.n_type & N_TYPE) == N_INDR))
 				continue;
 
 			const char* symbolName = (const char*)header.stringList.GetDataAt(sym.n_strx);

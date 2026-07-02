@@ -52,8 +52,13 @@
 #endif
 
 // Forward-declare BNLogError so this header is self-contained, without
-// pulling in all of binaryninjacore.h.
+// pulling in all of binaryninjacore.h. For MSVC, the __declspec on this
+// declaration must match BINARYNINJACOREAPI.
+#if defined(_MSC_VER) && defined(BINARYNINJACORE_LIBRARY) && !defined(DEMO_EDITION)
+extern "C" __declspec(dllexport) void BNLogError(const char* fmt, ...);
+#else
 extern "C" void BNLogError(const char* fmt, ...);
+#endif
 
 #if BN_ASSERTIONS_ENABLED
 

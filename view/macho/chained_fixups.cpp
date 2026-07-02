@@ -313,10 +313,9 @@ std::vector<ImportEntry> ChainedFixupProcessor::ProcessImports() const
 
 	auto header = ReadHeader(reader);
 
-	uint64_t symbolDataSize = m_fixupsSize - header.symbols_offset;
-	if (!symbolDataSize) {
+	if (header.symbols_offset >= m_fixupsSize)
 		return imports;
-	}
+	uint64_t symbolDataSize = m_fixupsSize - header.symbols_offset;
 	m_symbolData.resize(symbolDataSize);
 	m_raw->Read(&m_symbolData[0], OffsetInFixups(header.symbols_offset), symbolDataSize);
 

@@ -148,6 +148,7 @@ Below are a few of the most common problems with Linux installations:
  ```
 
  - Permissions: ensure that the user you are running Binary Ninja as has write permission to `~/.binaryninja` as it needs to be able to update user settings and other files in this folder.
+ - In some virtual environments where GPU drivers aren't installed, `libOpenGL.so.0` won't be available and Binary Ninja will fail to start. This is currently a requirement for the UI and will need to be installed.
 
 
 #### Debian

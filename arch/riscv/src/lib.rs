@@ -1289,34 +1289,32 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
             Op::RorI(i) => simple_i!(i, |rs1, imm| il.ror(max_width, rs1, imm)),
             Op::Clz(i) => {
                 let rd = Register::from(i.rd());
-                let rs1 = LiftableLowLevelIL::lift(il, Register::from(i.rs1()));
 
                 if i.rd().id() == 0 {
                     il.nop().append();
                 } else {
-                    il.intrinsic([rd], RiscVIntrinsic::<D>::from(Intrinsic::Clz), [rs1])
-                        .append();
+                    let rs1 = Register::from(i.rs1());
+                    il.set_reg(max_width, rd, il.clz(max_width, rs1)).append();
                 }
             }
             Op::Ctz(i) => {
                 let rd = Register::from(i.rd());
-                let rs1 = LiftableLowLevelIL::lift(il, Register::from(i.rs1()));
 
                 if i.rd().id() == 0 {
                     il.nop().append();
                 } else {
-                    il.intrinsic([rd], RiscVIntrinsic::<D>::from(Intrinsic::Ctz), [rs1])
-                        .append();
+                    let rs1 = Register::from(i.rs1());
+                    il.set_reg(max_width, rd, il.ctz(max_width, rs1)).append();
                 }
             }
             Op::Cpop(i) => {
                 let rd = Register::from(i.rd());
-                let rs1 = LiftableLowLevelIL::lift(il, Register::from(i.rs1()));
 
                 if i.rd().id() == 0 {
                     il.nop().append();
                 } else {
-                    il.intrinsic([rd], RiscVIntrinsic::<D>::from(Intrinsic::Popcount), [rs1])
+                    let rs1 = Register::from(i.rs1());
+                    il.set_reg(max_width, rd, il.popcnt(max_width, rs1))
                         .append();
                 }
             }
@@ -1333,13 +1331,12 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
             }
             Op::Rev8(i) => {
                 let rd = Register::from(i.rd());
-                let rs1 = LiftableLowLevelIL::lift(il, Register::from(i.rs1()));
 
                 if i.rd().id() == 0 {
                     il.nop().append();
                 } else {
-                    il.intrinsic([rd], RiscVIntrinsic::<D>::from(Intrinsic::Rev8), [rs1])
-                        .append();
+                    let rs1 = Register::from(i.rs1());
+                    il.set_reg(max_width, rd, il.bswap(max_width, rs1)).append();
                 }
             }
 
@@ -1396,37 +1393,10 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                 let shamt = il.and(max_width, rs2, (max_width * 8 - 1) as u64);
                 il.ror(max_width, rs1, shamt)
             }),
-            Op::Max(r) | Op::MaxU(r) | Op::Min(r) | Op::MinU(r) => {
-                let rd = Register::from(r.rd());
-                if rd.id.0 == 0 {
-                    il.nop().append()
-                } else {
-                    let rs1 = Register::from(r.rs1());
-                    let rs2 = Register::from(r.rs2());
-
-                    let cond = match op {
-                        Op::Max(..) => il.cmp_sgt(max_width, rs1, rs2),
-                        Op::MaxU(..) => il.cmp_ugt(max_width, rs1, rs2),
-                        Op::Min(..) => il.cmp_slt(max_width, rs1, rs2),
-                        Op::MinU(..) => il.cmp_ult(max_width, rs1, rs2),
-                        _ => unreachable!(),
-                    };
-
-                    let mut t = LowLevelILLabel::new();
-                    let mut f = LowLevelILLabel::new();
-                    let mut end = LowLevelILLabel::new();
-
-                    il.if_expr(cond, &mut t, &mut f).append();
-
-                    il.mark_label(&mut t);
-                    il.set_reg(max_width, rd, rs1).append();
-                    il.goto(&mut end).append();
-
-                    il.mark_label(&mut f);
-                    il.set_reg(max_width, rd, rs2).append();
-                    il.mark_label(&mut end);
-                }
-            }
+            Op::Max(r) => simple_r!(r, |rs1, rs2| il.max_signed(max_width, rs1, rs2)),
+            Op::MaxU(r) => simple_r!(r, |rs1, rs2| il.max_unsigned(max_width, rs1, rs2)),
+            Op::Min(r) => simple_r!(r, |rs1, rs2| il.min_signed(max_width, rs1, rs2)),
+            Op::MinU(r) => simple_r!(r, |rs1, rs2| il.min_unsigned(max_width, rs1, rs2)),
 
             Op::WchMcpy(r) => {
                 let dst = LiftableLowLevelIL::lift(il, Register::from(r.rd()));
@@ -1453,37 +1423,37 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
             Op::RorIW(i) => simple_i!(i, |rs1, imm| il.sx(max_width, il.ror(4, rs1, imm))),
             Op::ClzW(i) => {
                 let rd = Register::from(i.rd());
-                let rs1 =
-                    LiftableLowLevelILWithSize::lift_with_size(il, Register::from(i.rs1()), 4);
 
                 if i.rd().id() == 0 {
                     il.nop().append();
                 } else {
-                    il.intrinsic([rd], RiscVIntrinsic::<D>::from(Intrinsic::Clz), [rs1])
+                    let rs1 =
+                        LiftableLowLevelILWithSize::lift_with_size(il, Register::from(i.rs1()), 4);
+                    il.set_reg(max_width, rd, il.zx(max_width, il.clz(4, rs1)))
                         .append();
                 }
             }
             Op::CtzW(i) => {
                 let rd = Register::from(i.rd());
-                let rs1 =
-                    LiftableLowLevelILWithSize::lift_with_size(il, Register::from(i.rs1()), 4);
 
                 if i.rd().id() == 0 {
                     il.nop().append();
                 } else {
-                    il.intrinsic([rd], RiscVIntrinsic::<D>::from(Intrinsic::Ctz), [rs1])
+                    let rs1 =
+                        LiftableLowLevelILWithSize::lift_with_size(il, Register::from(i.rs1()), 4);
+                    il.set_reg(max_width, rd, il.zx(max_width, il.ctz(4, rs1)))
                         .append();
                 }
             }
             Op::CpopW(i) => {
                 let rd = Register::from(i.rd());
-                let rs1 =
-                    LiftableLowLevelILWithSize::lift_with_size(il, Register::from(i.rs1()), 4);
 
                 if i.rd().id() == 0 {
                     il.nop().append();
                 } else {
-                    il.intrinsic([rd], RiscVIntrinsic::<D>::from(Intrinsic::Popcount), [rs1])
+                    let rs1 =
+                        LiftableLowLevelILWithSize::lift_with_size(il, Register::from(i.rs1()), 4);
+                    il.set_reg(max_width, rd, il.zx(max_width, il.popcnt(4, rs1)))
                         .append();
                 }
             }

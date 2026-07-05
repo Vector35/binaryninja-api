@@ -4511,6 +4511,24 @@ class MediumLevelILFunction:
 	def _get_llil_ssa_to_mlil_expr_map(self, from_builders: bool) -> LLILSSAToMLILExpressionMapping:
 		llil_ssa_to_mlil_expr_map = []
 
+		# Memoize the reverse (LLIL-SSA -> MLIL) expr lookups, per LLIL-SSA function. The same LLIL-SSA expr is
+		# reached from many MLIL exprs, and a reverse query derives its result by walking the LLIL-SSA use-def graph
+		# rather than reading a stored table, so repeating it for each recurrence is what dominates a whole-function
+		# map build.
+		reverse_memo: Dict['lowlevelil.LowLevelILFunction', Dict[ExpressionIndex, Tuple[
+			Optional[ExpressionIndex], List[ExpressionIndex]]]] = {}
+
+		def reverse_lookup(llil_ssa, llil_ssa_expr):
+			entries = reverse_memo.setdefault(llil_ssa, {})
+			entry = entries.get(llil_ssa_expr)
+			if entry is None:
+				entry = (
+					llil_ssa.get_medium_level_il_expr_index(llil_ssa_expr),
+					llil_ssa.get_medium_level_il_expr_indexes(llil_ssa_expr)
+				)
+				entries[llil_ssa_expr] = entry
+			return entry
+
 		if from_builders:
 			# TODO: Handle LLIL SSA -> MLIL mappings in case someone is brave enough to try
 			# lifting LLILSSA->MLIL themselves instead of an MLIL->MLIL translation
@@ -4523,11 +4541,11 @@ class MediumLevelILFunction:
 				# Look up the LLIL SSA expression for the old expr in its function
 				# And then store that mapping for the new function
 
+				old_llil_ssa = old_expr.function.low_level_il.ssa_form
 				old_llil_ssa_direct = old_expr.function.get_low_level_il_expr_index(old_expr.expr_index)
 				old_llil_ssa_indices = old_expr.function.get_low_level_il_expr_indexes(old_expr.expr_index)
 				for old_index in old_llil_ssa_indices:
-					old_reverse_direct = old_expr.function.low_level_il.ssa_form.get_medium_level_il_expr_index(old_index)
-					old_reverse_all = old_expr.function.low_level_il.ssa_form.get_medium_level_il_expr_indexes(old_index)
+					old_reverse_direct, old_reverse_all = reverse_lookup(old_llil_ssa, old_index)
 
 					for (new_index, new_direct) in new_indices:
 						lower_to_higher_direct = new_direct and old_reverse_direct == old_expr.expr_index
@@ -4544,13 +4562,13 @@ class MediumLevelILFunction:
 							higher_to_lower_direct
 						))
 		else:
+			llil_ssa = self.low_level_il.ssa_form
 			for instr in self.instructions:
 				for expr in instr.traverse(lambda e: e):
 					llil_ssa_direct = self.get_low_level_il_expr_index(expr.expr_index)
 					llil_ssa_indices = self.get_low_level_il_expr_indexes(expr.expr_index)
 					for llil_ssa_index in llil_ssa_indices:
-						reverse_direct = self.low_level_il.ssa_form.get_medium_level_il_expr_index(llil_ssa_index)
-						reverse_all = self.low_level_il.ssa_form.get_medium_level_il_expr_indexes(llil_ssa_index)
+						reverse_direct, reverse_all = reverse_lookup(llil_ssa, llil_ssa_index)
 
 						lower_to_higher_direct = reverse_direct == expr.expr_index
 						higher_to_lower_direct = llil_ssa_index == llil_ssa_direct

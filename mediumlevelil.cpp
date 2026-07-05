@@ -24,6 +24,37 @@
 using namespace BinaryNinja;
 using namespace std;
 
+namespace {
+
+// Memoizes the reverse (LLIL-SSA -> MLIL) expr lookups for one LLIL-SSA function.
+// The same LLIL-SSA expr is reached from many MLIL exprs, and a reverse query
+// derives its result by walking the LLIL-SSA use-def graph rather than reading a
+// stored table, so repeating it for each recurrence is what dominates a
+// whole-function map build.
+class ReverseExprMemo
+{
+	Ref<LowLevelILFunction> m_llilSsa;
+	std::unordered_map<size_t, std::pair<size_t, std::set<size_t>>> m_entries;
+
+public:
+	explicit ReverseExprMemo(Ref<LowLevelILFunction> llilSsa) : m_llilSsa(std::move(llilSsa)) {}
+
+	// The MLIL expr that `llilSsaExpr` maps to directly, paired with every MLIL expr it maps to.
+	const std::pair<size_t, std::set<size_t>>& Get(size_t llilSsaExpr)
+	{
+		auto entry = m_entries.find(llilSsaExpr);
+		if (entry == m_entries.end())
+		{
+			entry = m_entries.emplace(llilSsaExpr,
+				std::make_pair(m_llilSsa->GetMediumLevelILExprIndex(llilSsaExpr), m_llilSsa->GetMediumLevelILExprIndexes(llilSsaExpr))
+			).first;
+		}
+		return entry->second;
+	}
+};
+
+}  // unnamed namespace
+
 
 ILSourceLocation::ILSourceLocation(const struct MediumLevelILInstruction& instr):
 	address(instr.address), sourceOperand(instr.sourceOperand), valid(true),
@@ -117,12 +148,14 @@ std::unordered_map<size_t /* llil ssa */, size_t /* mlil */> MediumLevelILFuncti
 std::vector<BNExprMapInfo> MediumLevelILFunction::GetLLILSSAToMLILExprMap(bool fromTranslation)
 {
 	std::vector<BNExprMapInfo> result;
+
 	if (fromTranslation)
 	{
 		// TODO: Handle LLIL SSA -> MLIL mappings in case someone is brave enough to try
 		// lifting LLILSSA->MLIL themselves instead of an MLIL->MLIL translation
 		// (which is the only one I've seen people do so far)
 
+		ReverseExprMemo reverse(m_translationData->copyingFunction->GetLowLevelIL()->GetSSAForm());
 		for (auto& [oldExprIndex, newExprIndices]: m_translationData->mlilToMlilExprMap)
 		{
 			// Look up the LLIL SSA expression for the old expr in its function
@@ -132,8 +165,7 @@ std::vector<BNExprMapInfo> MediumLevelILFunction::GetLLILSSAToMLILExprMap(bool f
 			auto oldLLILSSAIndices = m_translationData->copyingFunction->GetLowLevelILExprIndexes(oldExprIndex);
 			for (auto& oldLLILSSAIndex: oldLLILSSAIndices)
 			{
-				size_t oldReverseDirect = m_translationData->copyingFunction->GetLowLevelIL()->GetSSAForm()->GetMediumLevelILExprIndex(oldLLILSSAIndex);
-				auto oldReverseAll = m_translationData->copyingFunction->GetLowLevelIL()->GetSSAForm()->GetMediumLevelILExprIndexes(oldLLILSSAIndex);
+				const auto& [oldReverseDirect, oldReverseAll] = reverse.Get(oldLLILSSAIndex);
 				for (auto& [newExprIndex, newDirect]: newExprIndices)
 				{
 					BNExprMapInfo info;
@@ -150,6 +182,7 @@ std::vector<BNExprMapInfo> MediumLevelILFunction::GetLLILSSAToMLILExprMap(bool f
 	}
 	else
 	{
+		ReverseExprMemo reverse(GetLowLevelIL()->GetSSAForm());
 		for (auto& block: GetBasicBlocks())
 		{
 			for (size_t instrIndex = block->GetStart(); instrIndex < block->GetEnd(); instrIndex++)
@@ -160,8 +193,7 @@ std::vector<BNExprMapInfo> MediumLevelILFunction::GetLLILSSAToMLILExprMap(bool f
 					auto llilSSAIndices = GetLowLevelILExprIndexes(expr.exprIndex);
 					for (auto& llilSSAIndex: llilSSAIndices)
 					{
-						size_t reverseDirect = GetLowLevelIL()->GetSSAForm()->GetMediumLevelILExprIndex(llilSSAIndex);
-						auto reverseAll = GetLowLevelIL()->GetSSAForm()->GetMediumLevelILExprIndexes(llilSSAIndex);
+						const auto& [reverseDirect, reverseAll] = reverse.Get(llilSSAIndex);
 
 						BNExprMapInfo info;
 						info.lowerIndex = llilSSAIndex;

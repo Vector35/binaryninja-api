@@ -1551,7 +1551,7 @@ static void SaturatingVectorMoveNarrow(LowLevelILFunction& il, decomp_result* in
 		}));
 }
 
-static void HalvingVectorAdd(LowLevelILFunction& il, decomp_result* instr)
+static void HalvingVectorAdd(LowLevelILFunction& il, decomp_result* instr, uint32_t intrinsic)
 {
 	if (instr->format->operandCount < 3 || !IS_FIELD_PRESENT(instr, FIELD_esize))
 	{
@@ -1562,6 +1562,11 @@ static void HalvingVectorAdd(LowLevelILFunction& il, decomp_result* instr)
 	size_t regSize = GetRegisterSize(instr, 0);
 	size_t elementSize = instr->fields[FIELD_esize] / 8;
 	if (regSize == 0 || elementSize == 0)
+	{
+		il.AddInstruction(il.Unimplemented());
+		return;
+	}
+	if (intrinsic == ARMV7_INTRIN_VRHADD && elementSize != 1 && elementSize != 2 && elementSize != 4)
 	{
 		il.AddInstruction(il.Unimplemented());
 		return;
@@ -1577,12 +1582,45 @@ static void HalvingVectorAdd(LowLevelILFunction& il, decomp_result* instr)
 
 	il.AddInstruction(il.Intrinsic(
 		{ RegisterOrFlag::Register(GetRegisterOperand(instr, 0)) },
-		ARMV7_INTRIN_VHADD,
+		intrinsic,
 		{
 			il.Const(1, instr->fields[FIELD_esize]),
 			il.Const(1, IsSignedVectorElement(instr) ? 0 : 1),
 			il.Register(GetRegisterSize(instr, 1), source1),
 			il.Register(GetRegisterSize(instr, 2), source2),
+		}));
+}
+
+static void VectorReciprocalEstimate(LowLevelILFunction& il, decomp_result* instr)
+{
+	if (instr->format->operandCount < 2 || !IS_FIELD_PRESENT(instr, FIELD_esize))
+	{
+		il.AddInstruction(il.Unimplemented());
+		return;
+	}
+
+	uint32_t dest = GetRegisterOperand(instr, 0);
+	if (dest == armv7::REG_INVALID)
+	{
+		il.AddInstruction(il.Unimplemented());
+		return;
+	}
+
+	size_t sourceSize = GetRegisterSize(instr, 1);
+	if (GetRegisterSize(instr, 0) == 0 || sourceSize == 0)
+	{
+		il.AddInstruction(il.Unimplemented());
+		return;
+	}
+
+	bool isFloat = (instr->format->operationFlags & INSTR_FORMAT_FLAG_F32) != 0;
+	il.AddInstruction(il.Intrinsic(
+		{ RegisterOrFlag::Register(dest) },
+		ARMV7_INTRIN_VRECPE,
+		{
+			il.Const(1, instr->fields[FIELD_esize]),
+			il.Const(1, isFloat ? 1 : 0),
+			ReadILOperand(il, instr, 1, sourceSize),
 		}));
 }
 
@@ -3976,6 +4014,9 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 	case armv7::ARMV7_VRADDHN:
 		VectorRoundingAddNarrow(il, instr);
 		break;
+	case armv7::ARMV7_VRECPE:
+		VectorReciprocalEstimate(il, instr);
+		break;
 	case armv7::ARMV7_VQSHL:
 		SaturatingVectorShiftLeft(il, instr, ARMV7_INTRIN_VQSHL);
 		break;
@@ -4062,7 +4103,10 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 			}
 			break;
 	case armv7::ARMV7_VHADD:
-		HalvingVectorAdd(il, instr);
+		HalvingVectorAdd(il, instr, ARMV7_INTRIN_VHADD);
+		break;
+	case armv7::ARMV7_VRHADD:
+		HalvingVectorAdd(il, instr, ARMV7_INTRIN_VRHADD);
 		break;
 	case armv7::ARMV7_VFNMS:
 	case armv7::ARMV7_VNMLS:

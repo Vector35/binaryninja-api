@@ -199,6 +199,8 @@ enum Armv7Intrinsic : uint32_t
 	ARMV7_INTRIN_SMLATT,
 	ARMV7_INTRIN_VADD,
 	ARMV7_INTRIN_VSUB,
+	ARMV7_INTRIN_VRHADD,
+	ARMV7_INTRIN_VRECPE,
 };
 
 enum ArmFakeRegister: uint32_t

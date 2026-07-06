@@ -1597,6 +1597,10 @@ public:
 			return "__vqadd";
 		case ARMV7_INTRIN_VHADD:
 			return "__vhadd";
+		case ARMV7_INTRIN_VRHADD:
+			return "__vrhadd";
+		case ARMV7_INTRIN_VRECPE:
+			return "__vrecpe";
 		case ARMV7_INTRIN_VQSHL:
 			return "__vqshl";
 		case ARMV7_INTRIN_VQRSHL:
@@ -1860,6 +1864,8 @@ public:
 			ARMV7_INTRIN_VBSL,
 			ARMV7_INTRIN_VQADD,
 			ARMV7_INTRIN_VHADD,
+			ARMV7_INTRIN_VRHADD,
+			ARMV7_INTRIN_VRECPE,
 			ARMV7_INTRIN_VQSHL,
 			ARMV7_INTRIN_VQRSHL,
 			ARMV7_INTRIN_VQSHRN,
@@ -2175,6 +2181,7 @@ public:
 		case ARMV7_INTRIN_VPMIN:
 		case ARMV7_INTRIN_VCGT:
 		case ARMV7_INTRIN_VHADD:
+		case ARMV7_INTRIN_VRHADD:
 			return {
 				NameAndType("size", Type::IntegerType(1, false)),
 				NameAndType("is_unsigned", Type::BoolType()),
@@ -2187,6 +2194,12 @@ public:
 				NameAndType("is_float", Type::BoolType()),
 				NameAndType("source1", Type::IntegerType(8, false)),
 				NameAndType("source2", Type::IntegerType(8, false)),
+			};
+		case ARMV7_INTRIN_VRECPE:
+			return {
+				NameAndType("size", Type::IntegerType(1, false)),
+				NameAndType("is_float", Type::BoolType()),
+				NameAndType("source", Type::IntegerType(8, false)),
 			};
 		case ARMV7_INTRIN_VREV16:
 		case ARMV7_INTRIN_VREV32:
@@ -2535,6 +2548,8 @@ public:
 		case ARMV7_INTRIN_VSUB:
 		case ARMV7_INTRIN_VQADD:
 		case ARMV7_INTRIN_VHADD:
+		case ARMV7_INTRIN_VRHADD:
+		case ARMV7_INTRIN_VRECPE:
 		case ARMV7_INTRIN_VQSHL:
 		case ARMV7_INTRIN_VQRSHL:
 		case ARMV7_INTRIN_VQSHRN:

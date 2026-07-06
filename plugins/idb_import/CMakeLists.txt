@@ -54,6 +54,8 @@ endif()
 add_custom_target(${PROJECT_NAME} ALL DEPENDS ${OUTPUT_FILE_PATH})
 add_dependencies(${PROJECT_NAME} binaryninjaapi)
 
+get_target_property(BN_API_SOURCE_DIR binaryninjaapi SOURCE_DIR)
+
 set_property(TARGET ${PROJECT_NAME} PROPERTY OUTPUT_FILE_PATH ${OUTPUT_FILE_PATH})
 
 find_program(RUSTUP_PATH rustup REQUIRED HINTS ~/.cargo/bin)
@@ -127,6 +129,7 @@ else()
             OUTPUT ${OUTPUT_FILE_PATH}
             COMMAND ${CMAKE_COMMAND} -E env BINARYNINJADIR=${BINJA_LIB_DIR} ${RUSTUP_COMMAND} build ${CARGO_OPTS} ${CARGO_FEATURES}
             COMMAND ${CMAKE_COMMAND} -E copy ${TARGET_DIR}/${OUTPUT_FILE_NAME} ${OUTPUT_FILE_PATH}
+            COMMAND ${CMAKE_COMMAND} -DRPATH_KIND=plugin -DBINARY_PATH=${OUTPUT_FILE_PATH} -P "${BN_API_SOURCE_DIR}/cmake/SetElfRpath.cmake"
             WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
             DEPENDS ${PLUGIN_SOURCES} ${API_SOURCES})
 endif()

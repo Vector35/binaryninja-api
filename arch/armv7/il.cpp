@@ -480,7 +480,7 @@ static ExprId VectorTableLookup(LowLevelILFunction& il, Instruction& instr)
 		inputs);
 }
 
-static void HalvingVectorAdd(LowLevelILFunction& il, Instruction& instr)
+static void HalvingVectorAdd(LowLevelILFunction& il, Instruction& instr, uint32_t intrinsic)
 {
 	InstructionOperand& dst = instr.operands[0];
 	InstructionOperand& src1 = instr.operands[1];
@@ -493,16 +493,48 @@ static void HalvingVectorAdd(LowLevelILFunction& il, Instruction& instr)
 		il.AddInstruction(il.Unimplemented());
 		return;
 	}
+	if (intrinsic == ARMV7_INTRIN_VRHADD && elementSize != 1 && elementSize != 2 && elementSize != 4)
+	{
+		il.AddInstruction(il.Unimplemented());
+		return;
+	}
 
 	il.AddInstruction(il.Intrinsic(
 		{ RegisterOrFlag::Register(dst.reg) },
-		ARMV7_INTRIN_VHADD,
+		intrinsic,
 		{
 			il.Const(1, elementSize * 8),
 			il.Const(1, IsSignedDataType(instr.dataType) ? 0 : 1),
 			il.Register(get_register_size(src1.reg), src1.reg),
 			il.Register(get_register_size(src2.reg), src2.reg),
 		}));
+}
+
+static ExprId VectorReciprocalEstimate(LowLevelILFunction& il, Instruction& instr)
+{
+	InstructionOperand& dst = instr.operands[0];
+	InstructionOperand& src = instr.operands[1];
+
+	if (dst.cls != REG || src.cls != REG)
+		return il.Unimplemented();
+
+	if (instr.dataType != DT_U32 && instr.dataType != DT_F32)
+		return il.Unimplemented();
+
+	size_t elementSize = GetDataTypeSize(instr.dataType);
+	size_t destSize = get_register_size(dst.reg);
+	size_t sourceSize = get_register_size(src.reg);
+	if (elementSize == 0 || destSize == 0 || sourceSize == 0)
+		return il.Unimplemented();
+
+	return il.Intrinsic(
+		{ RegisterOrFlag::Register(dst.reg) },
+		ARMV7_INTRIN_VRECPE,
+		{
+			il.Const(1, elementSize * 8),
+			il.Const(1, instr.dataType == DT_F32 ? 1 : 0),
+			il.Register(sourceSize, src.reg),
+		});
 }
 
 static ExprId SaturatingVectorShiftRightNarrow(LowLevelILFunction& il, Instruction& instr)
@@ -3359,7 +3391,7 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 					SetRegisterOrBranch(il, op1.reg,
 						il.SubBorrow(get_register_size(op2.reg),
 							ReadILOperand(il, op2, addr),
-							ReadRegisterOrPointer(il, op3, addr),
+							ReadILOperand(il, op3, addr),
 							il.Not(1,il.Flag(IL_FLAG_C))),
 							flagOperation[instr.setsFlags]));
 			break;
@@ -4723,7 +4755,15 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 				[&](size_t addrSize, Instruction& instr, LowLevelILFunction& il)
 				{
 					(void) addrSize;
-					HalvingVectorAdd(il, instr);
+					HalvingVectorAdd(il, instr, ARMV7_INTRIN_VHADD);
+				});
+			break;
+		case ARMV7_VRHADD:
+			ConditionExecute(addrSize, instr.cond, instr, il,
+				[&](size_t addrSize, Instruction& instr, LowLevelILFunction& il)
+				{
+					(void) addrSize;
+					HalvingVectorAdd(il, instr, ARMV7_INTRIN_VRHADD);
 				});
 			break;
 		case ARMV7_VSQRT:
@@ -4839,6 +4879,9 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 			break;
 		case ARMV7_VRADDHN:
 			ConditionExecute(il, instr.cond, VectorRoundingAddNarrow(il, instr));
+			break;
+		case ARMV7_VRECPE:
+			ConditionExecute(il, instr.cond, VectorReciprocalEstimate(il, instr));
 			break;
 		case ARMV7_VQSHL:
 			ConditionExecute(il, instr.cond, SaturatingVectorShiftLeft(il, instr, ARMV7_INTRIN_VQSHL));

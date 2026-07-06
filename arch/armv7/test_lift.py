@@ -15,6 +15,10 @@ def scalar_q_intrinsic_expected(dst, intrinsic, *sources):
 def vector_intrinsic_expected(dst, intrinsic, size, modifier, src1, src2):
     return f'LLIL_INTRINSIC([{dst}],__{intrinsic},[LLIL_CONST.b(0x{size:X}),LLIL_CONST.b(0x{modifier:X}),LLIL_REG.q({src1}),LLIL_REG.q({src2})])'
 
+def vector_unary_intrinsic_expected(dst, intrinsic, size, modifier, src):
+    src_size = 'o' if src.startswith('q') else 'q'
+    return f'LLIL_INTRINSIC([{dst}],__{intrinsic},[LLIL_CONST.b(0x{size:X}),LLIL_CONST.b(0x{modifier:X}),LLIL_REG.{src_size}({src})])'
+
 def saturating_scalar_expected(dst, src1, src2, intrinsic):
     return scalar_q_intrinsic_expected(dst, intrinsic, src1, src2)
 
@@ -184,6 +188,8 @@ test_cases = \
     ('T', b'\x50\xea\x4c\x00', 'LLIL_SET_REG.d(r0,LLIL_OR.d{*}(LLIL_REG.d(r0),LLIL_LSL.d(LLIL_REG.d(r12),LLIL_CONST.d(0x1))))'),
     # asrs r5, r5, #0x1e
     ('T', b'\xad\x17', 'LLIL_SET_REG.d(r5,LLIL_ASR.d{cnz}(LLIL_REG.d(r5),LLIL_CONST.d(0x1E)))'),
+    # sbcs r3, r7, #0
+    ('A', b'\x00\x30\xd7\xe2', 'LLIL_SET_REG.d{*}(r3,LLIL_SBB.d(LLIL_REG.d(r7),LLIL_CONST.d(0x0),LLIL_NOT.b(LLIL_FLAG(c))))'),
     # adcs r2, r7
     ('T', b'\x7a\x41', 'LLIL_SET_REG.d(r2,LLIL_ADC.d{*}(LLIL_REG.d(r2),LLIL_REG.d(r7),LLIL_FLAG(c)))'),
     # strht r3, [r3, #0x7f]
@@ -630,6 +636,22 @@ test_cases = \
     ('T', b'\x0d\xff\x08\x08', 'LLIL_INTRINSIC([d0],__vsub,[LLIL_CONST.b(0x8),LLIL_CONST.b(0x1),LLIL_REG.q(d13),LLIL_REG.q(d8)])'),
     # vhadd.u8 d0, d0, d0
     ('T', b'\x00\xff\x00\x00', vector_intrinsic_expected('d0', 'vhadd', 8, 1, 'd0', 'd0')),
+    # vrhadd.u16 d14, d14, d31
+    ('A', b'\x2f\xe1\x1e\xf3', vector_intrinsic_expected('d14', 'vrhadd', 16, 1, 'd14', 'd31')),
+    # vrhadd.u16 d14, d14, d31
+    ('T', b'\x1e\xff\x2f\xe1', vector_intrinsic_expected('d14', 'vrhadd', 16, 1, 'd14', 'd31')),
+    # vrecpe.f32 q13, q2
+    ('A', b'\x44\xa5\xfb\xf3', vector_unary_intrinsic_expected('q13', 'vrecpe', 32, 1, 'q2')),
+    # vrecpe.f32 d26, d23
+    ('A', b'\x27\xa5\xfb\xf3', vector_unary_intrinsic_expected('d26', 'vrecpe', 32, 1, 'd23')),
+    # vrecpe.f32 q13, q2
+    ('T', b'\xfb\xff\x44\xa5', vector_unary_intrinsic_expected('q13', 'vrecpe', 32, 1, 'q2')),
+    # vrecpe.f32 d26, d23
+    ('T', b'\xfb\xff\x27\xa5', vector_unary_intrinsic_expected('d26', 'vrecpe', 32, 1, 'd23')),
+    # vrecpe.u32 q13, q2
+    ('A', b'\x44\xa4\xfb\xf3', vector_unary_intrinsic_expected('q13', 'vrecpe', 32, 0, 'q2')),
+    # vrecpe.u32 q13, q2
+    ('T', b'\xfb\xff\x44\xa4', vector_unary_intrinsic_expected('q13', 'vrecpe', 32, 0, 'q2')),
     # vceq.s16 d16, d0, d13
     ('T', b'\x50\xff\x1d\x08', vector_intrinsic_expected('d16', 'vceq', 16, 0, 'd0', 'd13')),
     # vcgt.s32 d0, d19, #0

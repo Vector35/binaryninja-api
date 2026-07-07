@@ -142,6 +142,7 @@ fn get_info_string<R: Reader>(
                 InstructionTextTokenKind::Integer {
                     value: addr,
                     size: None,
+                    operand: None,
                 },
             ));
         } else if let Ok(attr_reader) = dwarf.attr_string(unit, attr.value()) {
@@ -180,6 +181,7 @@ fn get_info_string<R: Reader>(
                 InstructionTextTokenKind::Integer {
                     value: 1,
                     size: None,
+                    operand: None,
                 },
             ));
         } else if let Flag(false) = attr.value() {
@@ -188,6 +190,7 @@ fn get_info_string<R: Reader>(
                 InstructionTextTokenKind::Integer {
                     value: 0,
                     size: None,
+                    operand: None,
                 },
             ));
 
@@ -199,6 +202,7 @@ fn get_info_string<R: Reader>(
                 InstructionTextTokenKind::Integer {
                     value: value as u64,
                     size: None,
+                    operand: None,
                 },
             ));
         } else if let Some(value) = attr.u16_value() {
@@ -208,13 +212,18 @@ fn get_info_string<R: Reader>(
                 InstructionTextTokenKind::Integer {
                     value: value as u64,
                     size: None,
+                    operand: None,
                 },
             ));
         } else if let Some(value) = attr.udata_value() {
             let value_string = format!("{}", value);
             attr_line.push(InstructionTextToken::new(
                 &value_string,
-                InstructionTextTokenKind::Integer { value, size: None },
+                InstructionTextTokenKind::Integer {
+                    value,
+                    size: None,
+                    operand: None,
+                },
             ));
         } else if let Some(value) = attr.sdata_value() {
             let value_string = format!("{}", value);
@@ -223,6 +232,7 @@ fn get_info_string<R: Reader>(
                 InstructionTextTokenKind::Integer {
                     value: value as u64,
                     size: None,
+                    operand: None,
                 },
             ));
         } else {

@@ -464,6 +464,7 @@ fn generate_jxx_tokens(inst: &impl Jxx, addr: u64) -> Vec<InstructionTextToken> 
         InstructionTextTokenKind::CodeRelativeAddress {
             value: fixed_addr,
             size: None,
+            operand: None,
         },
     ));
 
@@ -560,6 +561,7 @@ fn generate_operand_tokens(source: &Operand, addr: u64, call: bool) -> Vec<Instr
                         InstructionTextTokenKind::Integer {
                             value: *i as u64,
                             size: None,
+                            operand: None,
                         },
                     ),
                     InstructionTextToken::new("(", InstructionTextTokenKind::Text),
@@ -579,6 +581,7 @@ fn generate_operand_tokens(source: &Operand, addr: u64, call: bool) -> Vec<Instr
                         InstructionTextTokenKind::Integer {
                             value: *i as u64,
                             size: None,
+                            operand: None,
                         },
                     ),
                     InstructionTextToken::new("(", InstructionTextTokenKind::Text),
@@ -598,6 +601,7 @@ fn generate_operand_tokens(source: &Operand, addr: u64, call: bool) -> Vec<Instr
                         InstructionTextTokenKind::Integer {
                             value: *i as u64,
                             size: None,
+                            operand: None,
                         },
                     ),
                     InstructionTextToken::new("(", InstructionTextTokenKind::Text),
@@ -617,6 +621,7 @@ fn generate_operand_tokens(source: &Operand, addr: u64, call: bool) -> Vec<Instr
                         InstructionTextTokenKind::Integer {
                             value: *i as u64,
                             size: None,
+                            operand: None,
                         },
                     ),
                     InstructionTextToken::new("(", InstructionTextTokenKind::Text),
@@ -636,6 +641,7 @@ fn generate_operand_tokens(source: &Operand, addr: u64, call: bool) -> Vec<Instr
                         InstructionTextTokenKind::Integer {
                             value: *i as u64,
                             size: None,
+                            operand: None,
                         },
                     ),
                     InstructionTextToken::new("(", InstructionTextTokenKind::Text),
@@ -673,7 +679,11 @@ fn generate_operand_tokens(source: &Operand, addr: u64, call: bool) -> Vec<Instr
             let value = (addr as i64 + *i as i64) as u64;
             vec![InstructionTextToken::new(
                 format!("{value:#x}"),
-                InstructionTextTokenKind::CodeRelativeAddress { value, size: None },
+                InstructionTextTokenKind::CodeRelativeAddress {
+                    value,
+                    size: None,
+                    operand: None,
+                },
             )]
         }
         Operand::Immediate(i) => {
@@ -683,6 +693,7 @@ fn generate_operand_tokens(source: &Operand, addr: u64, call: bool) -> Vec<Instr
                     InstructionTextTokenKind::CodeRelativeAddress {
                         value: *i as u64,
                         size: None,
+                        operand: None,
                     },
                 )]
             } else {
@@ -691,6 +702,7 @@ fn generate_operand_tokens(source: &Operand, addr: u64, call: bool) -> Vec<Instr
                     InstructionTextTokenKind::PossibleAddress {
                         value: *i as u64,
                         size: None,
+                        operand: None,
                     },
                 )]
             }
@@ -702,6 +714,7 @@ fn generate_operand_tokens(source: &Operand, addr: u64, call: bool) -> Vec<Instr
                     InstructionTextTokenKind::CodeRelativeAddress {
                         value: *a as u64,
                         size: None,
+                        operand: None,
                     },
                 )]
             } else {
@@ -710,6 +723,7 @@ fn generate_operand_tokens(source: &Operand, addr: u64, call: bool) -> Vec<Instr
                     InstructionTextTokenKind::PossibleAddress {
                         value: *a as u64,
                         size: None,
+                        operand: None,
                     },
                 )]
             }
@@ -728,6 +742,7 @@ fn generate_operand_tokens(source: &Operand, addr: u64, call: bool) -> Vec<Instr
                     InstructionTextTokenKind::Integer {
                         value: *i as u64,
                         size: None,
+                        operand: None,
                     },
                 ),
             ]

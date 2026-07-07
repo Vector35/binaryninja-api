@@ -394,17 +394,34 @@ unsafe impl CoreArrayProviderInner for Array<InstructionTextToken> {
 pub enum InstructionTextTokenKind {
     Text,
     Instruction,
+    /// Separator between operands, such as `,` or `+`.
+    ///
+    /// This is primarily used to identify the tokens associated with a given operand.
     OperandSeparator,
     Register,
     Integer {
         value: u64,
         /// Size of the integer
         size: Option<usize>,
+        /// The operand this integer is associated with.
+        ///
+        /// This is primarily used to change the display type of the integer.
+        ///
+        /// NOTE: This will be populated by a post-processing step when rendering, so you can leave this
+        /// as `None` when emitting in [`Architecture::instruction_text`] and other similar methods.
+        operand: Option<usize>,
     },
     PossibleAddress {
         value: u64,
         /// Size of the address
         size: Option<usize>,
+        /// The operand this integer is associated with.
+        ///
+        /// This is primarily used to change the display type of the integer.
+        ///
+        /// NOTE: This will be populated by a post-processing step when rendering, so you can leave this
+        /// as `None` when emitting in [`Architecture::instruction_text`] and other similar methods.
+        operand: Option<usize>,
     },
     BeginMemoryOperand,
     EndMemoryOperand,
@@ -416,7 +433,15 @@ pub enum InstructionTextTokenKind {
     Annotation,
     CodeRelativeAddress {
         value: u64,
+        /// Size of the address
         size: Option<usize>,
+        /// The operand this integer is associated with.
+        ///
+        /// This is primarily used to change the display type of the integer.
+        ///
+        /// NOTE: This will be populated by a post-processing step when rendering, so you can leave this
+        /// as `None` when emitting in [`Architecture::instruction_text`] and other similar methods.
+        operand: Option<usize>,
     },
     ArgumentName {
         // TODO: The argument index?
@@ -443,7 +468,15 @@ pub enum InstructionTextTokenKind {
     StringContent {
         ty: StringType,
     },
-    CharacterConstant,
+    CharacterConstant {
+        /// The operand this character is associated with.
+        ///
+        /// This is primarily used to change the display type of the character.
+        ///
+        /// NOTE: This will be populated by a post-processing step when rendering, so you can leave this
+        /// as `None` when emitting in [`Architecture::instruction_text`] and other similar methods.
+        operand: Option<usize>,
+    },
     Keyword {
         // Example usage can be found for `BNAnalysisWarningActionType`.
         value: u64,
@@ -579,6 +612,7 @@ impl InstructionTextTokenKind {
                     0 => None,
                     size => Some(size),
                 },
+                operand: Some(value.operand),
             },
             BNInstructionTextTokenType::PossibleAddressToken => Self::PossibleAddress {
                 value: value.value,
@@ -586,6 +620,7 @@ impl InstructionTextTokenKind {
                     0 => None,
                     size => Some(size),
                 },
+                operand: Some(value.operand),
             },
             BNInstructionTextTokenType::BeginMemoryOperandToken => Self::BeginMemoryOperand,
             BNInstructionTextTokenType::EndMemoryOperandToken => Self::EndMemoryOperand,
@@ -603,6 +638,7 @@ impl InstructionTextTokenKind {
                     0 => None,
                     size => Some(size),
                 },
+                operand: Some(value.operand),
             },
             BNInstructionTextTokenType::ArgumentNameToken => {
                 Self::ArgumentName { value: value.value }
@@ -640,7 +676,9 @@ impl InstructionTextTokenKind {
                 }
                 _ => Self::String { value: value.value },
             },
-            BNInstructionTextTokenType::CharacterConstantToken => Self::CharacterConstant,
+            BNInstructionTextTokenType::CharacterConstantToken => Self::CharacterConstant {
+                operand: Some(value.operand),
+            },
             BNInstructionTextTokenType::KeywordToken => Self::Keyword { value: value.value },
             BNInstructionTextTokenType::TypeNameToken => Self::TypeName,
             BNInstructionTextTokenType::FieldNameToken => Self::FieldName {
@@ -799,6 +837,10 @@ impl InstructionTextTokenKind {
     /// Mapping to the [`BNInstructionTextTokenType::operand`] field.
     fn try_operand(&self) -> Option<usize> {
         match self {
+            InstructionTextTokenKind::Integer { operand, .. } => *operand,
+            InstructionTextTokenKind::PossibleAddress { operand, .. } => *operand,
+            InstructionTextTokenKind::CodeRelativeAddress { operand, .. } => *operand,
+            InstructionTextTokenKind::CharacterConstant { operand, .. } => *operand,
             InstructionTextTokenKind::LocalVariable { ssa_version, .. } => Some(*ssa_version),
             InstructionTextTokenKind::IndirectImport { source_operand, .. } => {
                 Some(*source_operand)
@@ -866,7 +908,7 @@ impl From<InstructionTextTokenKind> for BNInstructionTextTokenType {
             InstructionTextTokenKind::StringContent { .. } => {
                 BNInstructionTextTokenType::StringToken
             }
-            InstructionTextTokenKind::CharacterConstant => {
+            InstructionTextTokenKind::CharacterConstant { .. } => {
                 BNInstructionTextTokenType::CharacterConstantToken
             }
             InstructionTextTokenKind::Keyword { .. } => BNInstructionTextTokenType::KeywordToken,

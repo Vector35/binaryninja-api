@@ -1125,6 +1125,7 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                                 CodeRelativeAddress {
                                     value: target,
                                     size: Some(self.address_size()),
+                                    operand: None,
                                 },
                             ));
                         }
@@ -1137,6 +1138,7 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                                 Integer {
                                     value: i as u64,
                                     size: None,
+                                    operand: None,
                                 },
                             ));
                         }
@@ -1155,6 +1157,7 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                         Integer {
                             value: i as u64,
                             size: None,
+                            operand: None,
                         },
                     ));
 

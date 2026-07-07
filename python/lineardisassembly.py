@@ -666,6 +666,9 @@ class LinearViewCursor:
 		count = ctypes.c_ulonglong(0)
 		return LinearViewCursor._make_lines(core.BNGetLinearViewCursorLines(self.handle, count), count.value, current)
 
+	def expand_collapsed_regions_for_line(self, line_index: int) -> bool:
+		return core.BNExpandLinearViewCursorCollapsedRegionsForLine(self.handle, line_index)
+
 	def duplicate(self) -> 'LinearViewCursor':
 		return LinearViewCursor(None, handle=core.BNDuplicateLinearViewCursor(self.handle))
 

@@ -726,7 +726,7 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 
 	auto function = m_highLevelIL->GetFunction();
 	if (instr.ast)
-		tokens.PrependCollapseIndicator(function, instr);
+		tokens.PrependCollapseIndicator(function, instr, settings);
 	if (instr.operation != HLIL_BLOCK)
 		tokens.InitLine();
 	switch (instr.operation)
@@ -846,7 +846,7 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 						GetExprText(updateExpr, tokens, settings);
 				}
 
-				if (function->IsInstructionCollapsed(instr))
+				if (HighLevelILTokenEmitter::IsInstructionCollapsed(function, instr, settings))
 				{
 					tokens.Append(CollapsedInformationToken, " {...}");
 				}
@@ -878,7 +878,7 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 			if (!instr.ast)
 				return;
 
-			if (function->IsInstructionCollapsed(instr))
+			if (HighLevelILTokenEmitter::IsInstructionCollapsed(function, instr, settings))
 			{
 				tokens.Append(CollapsedInformationToken, " {...}");
 			}
@@ -899,9 +899,9 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 			else if (falseExpr.operation != HLIL_NOP)
 			{
 				tokens.ScopeContinuation(false);
-				tokens.PrependCollapseIndicator(function, instr, 1);
+				tokens.PrependCollapseIndicator(function, instr, settings, 1);
 				tokens.Append(KeywordToken, "else");
-				if (function->IsInstructionCollapsed(instr, 1))
+				if (HighLevelILTokenEmitter::IsInstructionCollapsed(function, instr, settings, 1))
 				{
 					tokens.Append(CollapsedInformationToken, " {...}");
 				}
@@ -938,7 +938,7 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 			if (!instr.ast)
 				return;
 
-			if (function->IsInstructionCollapsed(instr))
+			if (HighLevelILTokenEmitter::IsInstructionCollapsed(function, instr, settings))
 			{
 				tokens.Append(CollapsedInformationToken, " {...}");
 			}
@@ -960,7 +960,7 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 			if (instr.ast)
 			{
 				tokens.Append(KeywordToken, "do");
-				if (function->IsInstructionCollapsed(instr))
+				if (HighLevelILTokenEmitter::IsInstructionCollapsed(function, instr, settings))
 				{
 					tokens.Append(CollapsedInformationToken, " {...}");
 					tokens.NewLine();
@@ -1002,7 +1002,7 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 			if (!instr.ast)
 				return;
 
-			if (function->IsInstructionCollapsed(instr))
+			if (HighLevelILTokenEmitter::IsInstructionCollapsed(function, instr, settings))
 			{
 				tokens.Append(CollapsedInformationToken, " {...}");
 			}
@@ -1017,9 +1017,9 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 				// Check for default case
 				if (defaultExpr.operation != HLIL_NOP && defaultExpr.operation != HLIL_UNREACHABLE)
 				{
-					tokens.PrependCollapseIndicator(function, instr, 1);
+					tokens.PrependCollapseIndicator(function, instr, settings, 1);
 					tokens.Append(TextToken, "_ =>");
-					if (function->IsInstructionCollapsed(instr, 1))
+					if (HighLevelILTokenEmitter::IsInstructionCollapsed(function, instr, settings, 1))
 					{
 						tokens.Append(CollapsedInformationToken, " {...}");
 					}
@@ -1056,7 +1056,7 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 			if (!instr.ast)
 				return;
 
-			if (function->IsInstructionCollapsed(instr))
+			if (HighLevelILTokenEmitter::IsInstructionCollapsed(function, instr, settings))
 			{
 				tokens.Append(CollapsedInformationToken, " {...}");
 			}

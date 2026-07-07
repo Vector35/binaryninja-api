@@ -870,6 +870,7 @@ extern "C"
 		ShowILTypes = 130,
 		ShowILOpcodes = 131,
 		ShowCollapseIndicators = 132,
+		ShowCollapsedRegions = 133,
 	};
 
 	BN_ENUM(uint32_t, BNDisassemblyAddressMode)
@@ -6072,6 +6073,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNLinearViewCursorNext(BNLinearViewCursor* cursor);
 	BINARYNINJACOREAPI bool BNLinearViewCursorPrevious(BNLinearViewCursor* cursor);
 	BINARYNINJACOREAPI BNLinearDisassemblyLine* BNGetLinearViewCursorLines(BNLinearViewCursor* cursor, size_t* count);
+	BINARYNINJACOREAPI bool BNExpandLinearViewCursorCollapsedRegionsForLine(
+		BNLinearViewCursor* cursor, size_t lineIndex);
 	BINARYNINJACOREAPI int BNCompareLinearViewCursors(BNLinearViewCursor* a, BNLinearViewCursor* b);
 
 	BINARYNINJACOREAPI BNRenderLayer** BNGetLinearViewCursorRenderLayers(BNLinearViewCursor* cursor, size_t* count);

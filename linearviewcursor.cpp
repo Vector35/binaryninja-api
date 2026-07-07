@@ -207,6 +207,12 @@ vector<LinearDisassemblyLine> LinearViewCursor::GetLines()
 }
 
 
+bool LinearViewCursor::ExpandCollapsedRegionsForLine(size_t lineIndex)
+{
+	return BNExpandLinearViewCursorCollapsedRegionsForLine(m_object, lineIndex);
+}
+
+
 Ref<LinearViewCursor> LinearViewCursor::Duplicate()
 {
 	return new LinearViewCursor(BNDuplicateLinearViewCursor(m_object));

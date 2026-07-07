@@ -316,6 +316,7 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 
 	BinaryNinja::Ref<BinaryNinja::LinearViewObject> createLinearViewObject();
 	LinearViewCursorPosition getPositionForCursor(BinaryNinja::LinearViewCursor* cursor);
+	bool revealHiddenAddress(uint64_t addr, FunctionRef func, size_t instrIndex);
 	bool updateCursor(LinearViewCursorPosition& cursorToUpdate, BinaryNinja::LinearViewCursor* matched, bool fullMatch);
 	bool updateCursor(LinearViewCursorPosition& cursorToUpdate, BinaryNinja::LinearViewCursor* newCursor);
 	bool updateCursor(LinearViewCursorPosition& cursorToUpdate,

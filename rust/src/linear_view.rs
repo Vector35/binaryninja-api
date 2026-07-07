@@ -356,6 +356,10 @@ impl LinearViewCursor {
         }
     }
 
+    pub fn expand_collapsed_regions_for_line(&self, line_index: usize) -> bool {
+        unsafe { BNExpandLinearViewCursorCollapsedRegionsForLine(self.handle, line_index) }
+    }
+
     /// A list of the currently applied [`CoreRenderLayer`]'s
     pub fn render_layers(&self) -> Array<CoreRenderLayer> {
         let mut count: usize = 0;

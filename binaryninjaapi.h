@@ -20685,6 +20685,7 @@ namespace BinaryNinja {
 		bool Previous();
 
 		std::vector<LinearDisassemblyLine> GetLines();
+		bool ExpandCollapsedRegionsForLine(size_t lineIndex);
 
 		Ref<LinearViewCursor> Duplicate();
 
@@ -22704,7 +22705,11 @@ namespace BinaryNinja {
 
 		void PrependCollapseIndicator();
 		void PrependCollapseIndicator(Ref<Function> function, const HighLevelILInstruction& instr, uint64_t designator = 0);
+		void PrependCollapseIndicator(Ref<Function> function, const HighLevelILInstruction& instr,
+			DisassemblySettings* settings, uint64_t designator = 0);
 		void PrependCollapseIndicator(BNInstructionTextTokenContext context, uint64_t hash);
+		static bool IsInstructionCollapsed(Ref<Function> function, const HighLevelILInstruction& instr,
+			DisassemblySettings* settings, uint64_t designator = 0);
 		bool HasCollapsableRegions();
 		void SetHasCollapsableRegions(bool state);
 

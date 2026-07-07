@@ -6002,6 +6002,21 @@ class BinaryView:
 	def toggle_data_variable_region(self, region_hash: int) -> None:
 		core.BNToggleDataVariableRegion(self.handle, region_hash)
 
+	def is_section_region_collapsed(self, section: Section) -> bool:
+		return core.BNIsSectionRegionCollapsed(self.handle, section.handle)
+
+	def collapse_section_region(self, section: Section) -> None:
+		core.BNCollapseSectionRegion(self.handle, section.handle)
+
+	def expand_section_region(self, section: Section) -> None:
+		core.BNExpandSectionRegion(self.handle, section.handle)
+
+	def expand_all_section_regions(self) -> None:
+		core.BNExpandAllSectionRegions(self.handle)
+
+	def toggle_section_region(self, section: Section) -> None:
+		core.BNToggleSectionRegion(self.handle, section.handle)
+
 	def get_functions_containing(self, addr: int,
 	                             plat: Optional['_platform.Platform'] = None) -> List['_function.Function']:
 		"""

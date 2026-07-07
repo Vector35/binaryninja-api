@@ -2340,6 +2340,36 @@ void BinaryView::ToggleDataVariableRegion(uint64_t hash)
 }
 
 
+bool BinaryView::IsSectionRegionCollapsed(Section* section) const
+{
+	return BNIsSectionRegionCollapsed(m_object, section ? section->GetObject() : nullptr);
+}
+
+
+void BinaryView::CollapseSectionRegion(Section* section)
+{
+	BNCollapseSectionRegion(m_object, section ? section->GetObject() : nullptr);
+}
+
+
+void BinaryView::ExpandSectionRegion(Section* section)
+{
+	BNExpandSectionRegion(m_object, section ? section->GetObject() : nullptr);
+}
+
+
+void BinaryView::ExpandAllSectionRegions()
+{
+	BNExpandAllSectionRegions(m_object);
+}
+
+
+void BinaryView::ToggleSectionRegion(Section* section)
+{
+	BNToggleSectionRegion(m_object, section ? section->GetObject() : nullptr);
+}
+
+
 vector<Ref<Function>> BinaryView::GetAnalysisFunctionList()
 {
 	size_t count;

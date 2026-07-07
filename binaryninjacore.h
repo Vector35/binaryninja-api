@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 177
+#define BN_CURRENT_CORE_ABI_VERSION 178
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -5362,6 +5362,11 @@ extern "C"
 	BINARYNINJACOREAPI void BNExpandDataVariableRegion(BNBinaryView* view, uint64_t hash);
 	BINARYNINJACOREAPI void BNExpandAllDataVariableRegions(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNToggleDataVariableRegion(BNBinaryView* view, uint64_t hash);
+	BINARYNINJACOREAPI bool BNIsSectionRegionCollapsed(BNBinaryView* view, BNSection* section);
+	BINARYNINJACOREAPI void BNCollapseSectionRegion(BNBinaryView* view, BNSection* section);
+	BINARYNINJACOREAPI void BNExpandSectionRegion(BNBinaryView* view, BNSection* section);
+	BINARYNINJACOREAPI void BNExpandAllSectionRegions(BNBinaryView* view);
+	BINARYNINJACOREAPI void BNToggleSectionRegion(BNBinaryView* view, BNSection* section);
 	BINARYNINJACOREAPI BNFunction* BNGetAnalysisFunction(BNBinaryView* view, BNPlatform* platform, uint64_t addr);
 	BINARYNINJACOREAPI BNFunction* BNGetRecentAnalysisFunctionForAddress(BNBinaryView* view, uint64_t addr);
 	BINARYNINJACOREAPI BNFunction** BNGetAnalysisFunctionsForAddress(BNBinaryView* view, uint64_t addr, size_t* count);

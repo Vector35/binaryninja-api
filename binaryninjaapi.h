@@ -6460,6 +6460,11 @@ namespace BinaryNinja {
 		void ExpandDataVariableRegion(uint64_t hash);
 		void ExpandAllDataVariableRegions();
 		void ToggleDataVariableRegion(uint64_t hash);
+		bool IsSectionRegionCollapsed(Section* section) const;
+		void CollapseSectionRegion(Section* section);
+		void ExpandSectionRegion(Section* section);
+		void ExpandAllSectionRegions();
+		void ToggleSectionRegion(Section* section);
 
 		/*! Get a list of functions within this BinaryView
 

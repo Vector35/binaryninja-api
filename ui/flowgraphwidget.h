@@ -345,6 +345,8 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	bool getEdgeForMouseEvent(QMouseEvent* event, FlowGraphNodeRef& source, BinaryNinja::FlowGraphEdge& edge, bool& incoming);
 
 	FlowGraphWidget* duplicate();
+	std::vector<BinaryNinja::TagReference> getTagsAtCurrentLocation(bool includeBookmarks);
+	void removeTagAtCurrentLocation();
 
   Q_SIGNALS:
 	void layoutComplete();

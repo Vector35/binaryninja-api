@@ -5987,6 +5987,21 @@ class BinaryView:
 		core.BNFreeDataVariable(var)
 		return result
 
+	def is_data_variable_region_collapsed(self, region_hash: int) -> bool:
+		return core.BNIsDataVariableRegionCollapsed(self.handle, region_hash)
+
+	def collapse_data_variable_region(self, region_hash: int) -> None:
+		core.BNCollapseDataVariableRegion(self.handle, region_hash)
+
+	def expand_data_variable_region(self, region_hash: int) -> None:
+		core.BNExpandDataVariableRegion(self.handle, region_hash)
+
+	def expand_all_data_variable_regions(self) -> None:
+		core.BNExpandAllDataVariableRegions(self.handle)
+
+	def toggle_data_variable_region(self, region_hash: int) -> None:
+		core.BNToggleDataVariableRegion(self.handle, region_hash)
+
 	def get_functions_containing(self, addr: int,
 	                             plat: Optional['_platform.Platform'] = None) -> List['_function.Function']:
 		"""

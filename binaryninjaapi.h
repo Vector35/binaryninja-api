@@ -6455,6 +6455,12 @@ namespace BinaryNinja {
 		*/
 		bool GetDataVariableAtAddress(uint64_t addr, DataVariable& var);
 
+		bool IsDataVariableRegionCollapsed(uint64_t hash) const;
+		void CollapseDataVariableRegion(uint64_t hash);
+		void ExpandDataVariableRegion(uint64_t hash);
+		void ExpandAllDataVariableRegions();
+		void ToggleDataVariableRegion(uint64_t hash);
+
 		/*! Get a list of functions within this BinaryView
 
 		    \return vector of Functions within the BinaryView

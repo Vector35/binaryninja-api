@@ -2310,6 +2310,36 @@ bool BinaryView::GetDataVariableAtAddress(uint64_t addr, DataVariable& var)
 }
 
 
+bool BinaryView::IsDataVariableRegionCollapsed(uint64_t hash) const
+{
+	return BNIsDataVariableRegionCollapsed(m_object, hash);
+}
+
+
+void BinaryView::CollapseDataVariableRegion(uint64_t hash)
+{
+	BNCollapseDataVariableRegion(m_object, hash);
+}
+
+
+void BinaryView::ExpandDataVariableRegion(uint64_t hash)
+{
+	BNExpandDataVariableRegion(m_object, hash);
+}
+
+
+void BinaryView::ExpandAllDataVariableRegions()
+{
+	BNExpandAllDataVariableRegions(m_object);
+}
+
+
+void BinaryView::ToggleDataVariableRegion(uint64_t hash)
+{
+	BNToggleDataVariableRegion(m_object, hash);
+}
+
+
 vector<Ref<Function>> BinaryView::GetAnalysisFunctionList()
 {
 	size_t count;

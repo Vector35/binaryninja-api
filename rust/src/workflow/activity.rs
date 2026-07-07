@@ -61,9 +61,9 @@ impl Activity {
 
     pub fn new_with_action<F>(config: impl AsConfig, mut action: F) -> Ref<Self>
     where
-        F: FnMut(&AnalysisContext),
+        F: Fn(&AnalysisContext) + Send + Sync + 'static,
     {
-        unsafe extern "C" fn cb_action<F: FnMut(&AnalysisContext)>(
+        unsafe extern "C" fn cb_action<F: Fn(&AnalysisContext)>(
             ctxt: *mut c_void,
             analysis: *mut BNAnalysisContext,
         ) {

@@ -12773,10 +12773,118 @@ tests_cssc = [
     (b'\x20\xb8\xe0\x4e', 'LLIL_UNIMPL()'),
 ]
 
+# Apple's vendor-specific instructions, which occupy encoding space that ARM leaves unallocated.
+# See arch/arm64/apple_vendor.cpp.
+tests_apple_vendor = [
+    # genter #0
+    (b'\x20\x14\x20\x00', 'LLIL_INTRINSIC([],__genter,[LLIL_CONST.d(0x0)])'),
+    # genter #5
+    (b'\x25\x14\x20\x00', 'LLIL_INTRINSIC([],__genter,[LLIL_CONST.d(0x5)])'),
+    # genter #31
+    (b'\x3f\x14\x20\x00', 'LLIL_INTRINSIC([],__genter,[LLIL_CONST.d(0x1F)])'),
+    # gexit (leaves guarded mode like eret, so the block ends here)
+    (b'\x00\x14\x20\x00', 'LLIL_INTRINSIC([],__gexit,[]); LLIL_TRAP(0)'),
+    # sdsb osh
+    (b'\x60\x14\x20\x00', 'LLIL_INTRINSIC([],__sdsb,[LLIL_CONST.d(0x0)])'),
+    # sdsb nsh
+    (b'\x61\x14\x20\x00', 'LLIL_INTRINSIC([],__sdsb,[LLIL_CONST.d(0x1)])'),
+    # sdsb ish
+    (b'\x62\x14\x20\x00', 'LLIL_INTRINSIC([],__sdsb,[LLIL_CONST.d(0x2)])'),
+    # sdsb sy
+    (b'\x63\x14\x20\x00', 'LLIL_INTRINSIC([],__sdsb,[LLIL_CONST.d(0x3)])'),
+    # at_as1elx x0
+    (b'\x40\x14\x20\x00', 'LLIL_INTRINSIC([x0],__at_as1elx,[LLIL_REG.q(x0)])'),
+    # at_as1elx x3
+    (b'\x43\x14\x20\x00', 'LLIL_INTRINSIC([x3],__at_as1elx,[LLIL_REG.q(x3)])'),
+    # at_as1elx xzr
+    (b'\x5f\x14\x20\x00', 'LLIL_INTRINSIC([xzr],__at_as1elx,[LLIL_REG.q(xzr)])'),
+    # wkdmc x0, x1 (reads both addresses, writes a status back into the source)
+    (b'\x01\x08\x20\x00', 'LLIL_INTRINSIC([x1],__wkdmc,[LLIL_REG.q(x0),LLIL_REG.q(x1)])'),
+    # wkdmc x14, xzr
+    (b'\xdf\x09\x20\x00', 'LLIL_INTRINSIC([xzr],__wkdmc,[LLIL_REG.q(x14),LLIL_REG.q(xzr)])'),
+    # wkdmd x2, x3
+    (b'\x43\x0c\x20\x00', 'LLIL_INTRINSIC([x3],__wkdmd,[LLIL_REG.q(x2),LLIL_REG.q(x3)])'),
+    # mul53lo v4.2d, v5.2d
+    (b'\xa4\x00\x20\x00', 'LLIL_INTRINSIC([v4],__mul53lo,[LLIL_REG.o(v4),LLIL_REG.o(v5)])'),
+    # mul53hi v6.2d, v7.2d
+    (b'\xe6\x04\x20\x00', 'LLIL_INTRINSIC([v6],__mul53hi,[LLIL_REG.o(v6),LLIL_REG.o(v7)])'),
+
+    # AMX and the SPTM monitor entry are disassembled but not yet lifted
+    # amx_ldx x3
+    (b'\x03\x10\x20\x00', 'LLIL_UNIMPL()'),
+    # amx_set
+    (b'\x20\x12\x20\x00', 'LLIL_UNIMPL()'),
+    # amx_genlut x3
+    (b'\xc3\x12\x20\x00', 'LLIL_UNIMPL()'),
+    # apple_unknown_sptm #0
+    (b'\x00\x00\xe0\xd4', 'LLIL_UNIMPL()'),
+    # apple_unknown_sptm #0x1234
+    (b'\x80\x46\xe2\xd4', 'LLIL_UNIMPL()'),
+
+    # Encodings adjacent to the vendor instructions that must stay undefined
+    # AMX op 23, one of the reserved holes above amx_genlut
+    (b'\xe0\x12\x20\x00', 'LLIL_UNDEF()'),
+    # 0x00201401, unallocated between gexit and genter
+    (b'\x01\x14\x20\x00', 'LLIL_UNDEF()'),
+    # the SPTM encoding requires a zero LL field, so 0xd4e00001 is not one
+    (b'\x01\x00\xe0\xd4', 'LLIL_UNDEF()'),
+]
+
 disasm_test_cases = [
+    # genter's immediate renders like the base disassembler's, bare for zero and 0x-prefixed otherwise
+    (b'\x20\x14\x20\x00', 'genter  #0'),
+    (b'\x25\x14\x20\x00', 'genter  #0x5'),
+    (b'\x3f\x14\x20\x00', 'genter  #0x1f'),
+    (b'\x00\x14\x20\x00', 'gexit   '),
+    (b'\x60\x14\x20\x00', 'sdsb    osh'),
+    (b'\x61\x14\x20\x00', 'sdsb    nsh'),
+    (b'\x62\x14\x20\x00', 'sdsb    ish'),
+    (b'\x63\x14\x20\x00', 'sdsb    sy'),
+    (b'\x40\x14\x20\x00', 'at_as1elx x0'),
+    (b'\x5f\x14\x20\x00', 'at_as1elx xzr'),
+    (b'\x01\x08\x20\x00', 'wkdmc   x0, x1'),
+    (b'\xdf\x09\x20\x00', 'wkdmc   x14, xzr'),
+    (b'\x43\x0c\x20\x00', 'wkdmd   x2, x3'),
+    (b'\xa4\x00\x20\x00', 'mul53lo v4.2d, v5.2d'),
+    (b'\xe6\x04\x20\x00', 'mul53hi v6.2d, v7.2d'),
+    (b'\x1f\x00\x20\x00', 'mul53lo v31.2d, v0.2d'),
+    (b'\xe0\x07\x20\x00', 'mul53hi v0.2d, v31.2d'),
+    (b'\x80\x46\xe2\xd4', 'apple_unknown_sptm #0x1234'),
+
+    # every AMX operation, indexed by the op field at bits [9:5], each with a different GPR so that
+    # the operand field is exercised across its range
+    (b'\x00\x10\x20\x00', 'amx_ldx x0'),
+    (b'\x21\x10\x20\x00', 'amx_ldy x1'),
+    (b'\x42\x10\x20\x00', 'amx_stx x2'),
+    (b'\x63\x10\x20\x00', 'amx_sty x3'),
+    (b'\x84\x10\x20\x00', 'amx_ldz x4'),
+    (b'\xa5\x10\x20\x00', 'amx_stz x5'),
+    (b'\xc6\x10\x20\x00', 'amx_ldzi x6'),
+    (b'\xe7\x10\x20\x00', 'amx_stzi x7'),
+    (b'\x08\x11\x20\x00', 'amx_extrx x8'),
+    (b'\x29\x11\x20\x00', 'amx_extry x9'),
+    (b'\x4a\x11\x20\x00', 'amx_fma64 x10'),
+    (b'\x6b\x11\x20\x00', 'amx_fms64 x11'),
+    (b'\x8c\x11\x20\x00', 'amx_fma32 x12'),
+    (b'\xad\x11\x20\x00', 'amx_fms32 x13'),
+    (b'\xce\x11\x20\x00', 'amx_mac16 x14'),
+    (b'\xef\x11\x20\x00', 'amx_fma16 x15'),
+    (b'\x10\x12\x20\x00', 'amx_fms16 x16'),
+    (b'\x52\x12\x20\x00', 'amx_vecint x18'),
+    (b'\x73\x12\x20\x00', 'amx_vecfp x19'),
+    (b'\x94\x12\x20\x00', 'amx_matint x20'),
+    (b'\xb5\x12\x20\x00', 'amx_matfp x21'),
+    (b'\xd6\x12\x20\x00', 'amx_genlut x22'),
+    # operand field 31 is xzr, not x31
+    (b'\x1f\x10\x20\x00', 'amx_ldx xzr'),
+
+    # op 17 is the enable/disable pair, whose operand selects between them
+    (b'\x20\x12\x20\x00', 'amx_set '),
+    (b'\x21\x12\x20\x00', 'amx_clr '),
 ]
 
 test_cases = \
+	tests_apple_vendor + \
 	tests_cssc + \
 	tests_shll + \
 	tests_udf + \

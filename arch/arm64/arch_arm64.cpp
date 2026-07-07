@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "apple_vendor.h"
 #include "arm64dis.h"
 #include "binaryninjaapi.h"
 #include "il.h"
@@ -782,6 +783,13 @@ class Arm64Architecture : public Architecture
 		if (maxLen < 4)
 			return false;
 
+		if (m_onlyDisassembleOnAlignedAddresses && (addr % 4 != 0))
+			return false;
+
+		uint32_t insn = *(const uint32_t*)data;
+		if (IsAppleVendorEncoding(insn) && AppleVendorGetInstructionInfo(insn, addr, result))
+			return true;
+
 		Instruction instr;
 		if (!Disassemble(data, addr, maxLen, instr))
 			return false;
@@ -795,6 +803,14 @@ class Arm64Architecture : public Architecture
 	    vector<InstructionTextToken>& result) override
 	{
 		len = 4;
+
+		if (m_onlyDisassembleOnAlignedAddresses && (addr % 4 != 0))
+			return false;
+
+		uint32_t insn = *(const uint32_t*)data;
+		if (IsAppleVendorEncoding(insn) && AppleVendorGetInstructionText(insn, result))
+			return true;
+
 		Instruction instr;
 		bool tokenizeSuccess = false;
 		char buf[9];
@@ -932,6 +948,9 @@ class Arm64Architecture : public Architecture
 
 	virtual string GetIntrinsicName(uint32_t intrinsic) override
 	{
+		if (AppleVendorIsIntrinsic(intrinsic))
+			return AppleVendorGetIntrinsicName(intrinsic);
+
 		switch (intrinsic)
 		{
 		case ARM64_INTRIN_AUTDA:
@@ -1102,12 +1121,17 @@ class Arm64Architecture : public Architecture
 			result.push_back(id);
 		}
 
+		AppleVendorGetAllIntrinsics(result);
+
 		return result;
 	}
 
 
 	virtual vector<NameAndType> GetIntrinsicInputs(uint32_t intrinsic) override
 	{
+		if (AppleVendorIsIntrinsic(intrinsic))
+			return AppleVendorGetIntrinsicInputs(intrinsic);
+
 		switch (intrinsic)
 		{
 		case ARM64_INTRIN_MRS:
@@ -1165,6 +1189,9 @@ class Arm64Architecture : public Architecture
 
 	virtual vector<Confidence<Ref<Type>>> GetIntrinsicOutputs(uint32_t intrinsic) override
 	{
+		if (AppleVendorIsIntrinsic(intrinsic))
+			return AppleVendorGetIntrinsicOutputs(intrinsic);
+
 		switch (intrinsic)
 		{
 		case ARM64_INTRIN_MSR:
@@ -1192,6 +1219,15 @@ class Arm64Architecture : public Architecture
 		}
 
 		return NeonGetIntrinsicOutputs(intrinsic);
+	}
+
+
+	virtual BNIntrinsicClass GetIntrinsicClass(uint32_t intrinsic) override
+	{
+		if (AppleVendorIsIntrinsic(intrinsic))
+			return AppleVendorGetIntrinsicClass(intrinsic);
+
+		return GeneralIntrinsicClass;
 	}
 
 
@@ -1315,6 +1351,22 @@ class Arm64Architecture : public Architecture
 	virtual bool GetInstructionLowLevelIL(
 	    const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override
 	{
+		if (m_onlyDisassembleOnAlignedAddresses && (addr % 4 != 0))
+		{
+			il.AddInstruction(il.Undefined());
+			return false;
+		}
+
+		uint32_t insn = *(const uint32_t*)data;
+		if (IsAppleVendorEncoding(insn))
+		{
+			if (optional<bool> handled = AppleVendorGetInstructionLowLevelIL(insn, il))
+			{
+				len = 4;
+				return *handled;
+			}
+		}
+
 		Instruction instr;
 		if (!Disassemble(data, addr, len, instr))
 		{

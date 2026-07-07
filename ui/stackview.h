@@ -222,6 +222,9 @@ class BINARYNINJAUIAPI StackView : public QAbstractScrollArea, public View, publ
 	//! Get the beginning of the current selection (min position).
 	void getSelectionRange(size_t& startLine, size_t& startToken, size_t& endLine, size_t& endToken) const;
 
+	//! Whether the current selection represents exactly one cursor position.
+	bool hasSingleItemSelection() const;
+
 	//! Update scrollbar ranges after content, font, or viewport size changes.
 	void updateScrollBars();
 

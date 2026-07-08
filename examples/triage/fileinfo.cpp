@@ -5,8 +5,6 @@
 #include "copyablelabel.h"
 #include <QClipboard>
 #include <QApplication>
-#include <QGuiApplication>
-#include <QScreen>
 #include <QToolTip>
 #include <QPainter>
 #include <QFontMetrics>
@@ -33,7 +31,8 @@ void FileInfoWidget::addCopyableFieldWithElide(const QString& name, const QVaria
 	const auto fullText = value.toString();
 	const auto font = getMonospaceFont(this);
 	const QFontMetrics fontMetrics(font);
-	const auto elidedText = fontMetrics.elidedText(fullText, Qt::ElideMiddle, maxWidth);
+	auto elidedText = fontMetrics.elidedText(fullText, Qt::ElideMiddle, maxWidth);
+	elidedText.replace(QChar(0x2026), "...");
 
 	const auto valueLabel = new CopyableLabel(elidedText, getThemeColor(AlphanumericHighlightColor));
 	valueLabel->setFont(font);
@@ -141,10 +140,8 @@ FileInfoWidget::FileInfoWidget(QWidget* parent, BinaryViewRef bv, EntropyWidget*
 	const auto file = bv->GetFile();
 	const auto filePath = file->GetOriginalFilename();
 
-	// Calculate max path width as 50% of screen width
-	// Using screen width since the scroll area viewport isn't sized yet during construction
-	const int screenWidth = QGuiApplication::primaryScreen()->availableGeometry().width();
-	const int maxPathWidth = screenWidth / 2;
+	const QFontMetrics monoMetrics(getMonospaceFont(this));
+	const int maxPathWidth = monoMetrics.horizontalAdvance(QString(64, '0'));
 
 	this->addCopyableFieldWithElide("Path on disk: ", filePath.c_str(), maxPathWidth);
 

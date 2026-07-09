@@ -237,7 +237,7 @@ def main():
 				print(f"Unknown File: {args.name}")
 				sys.exit(1)
 			with TqdmProgress(desc="", leave=False) as t:
-				file.download_contents(lambda cur, max: t.progress(cur, max))
+				file.download(lambda cur, max: t.progress(cur, max))
 			print_file_info(file)
 		elif args.file_command == "delete":
 			file = project.get_file_by_name(args.name)

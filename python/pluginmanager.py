@@ -92,8 +92,6 @@ class Extension:
 	def install(self, version_id=None) -> bool:
 		"""Attempt to install the given plugin. Defaults to the latest available version."""
 		self.install_dependencies()
-		if version_id is None:
-			version_id = self.current_version.id
 		return core.BNPluginInstall(self.handle, version_id)
 
 	def uninstall(self) -> bool:
@@ -267,6 +265,13 @@ class Extension:
 			)
 		finally:
 			core.BNPluginFreeVersion(version)
+
+	@property
+	def latest_version_id(self) -> str:
+		"""Latest version id available for this platform"""
+		result = core.BNPluginGetLatestVersionID(self.handle)
+		assert result is not None, "core.BNPluginGetLatestVersionID returned None"
+		return result
 
 	@property
 	def versions(self) -> List[ExtensionVersion]:

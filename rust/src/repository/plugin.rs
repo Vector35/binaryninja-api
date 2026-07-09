@@ -136,6 +136,13 @@ impl Extension {
         ExtensionVersion::from_owned_raw(result)
     }
 
+    /// Latest version id available for this platform
+    pub fn latest_version_id(&self) -> String {
+        let result = unsafe { BNPluginGetLatestVersionID(self.handle.as_ptr()) };
+        assert!(!result.is_null());
+        unsafe { BnString::into_string(result as *mut c_char) }
+    }
+
     /// String plugin name
     pub fn name(&self) -> String {
         let result = unsafe { BNPluginGetName(self.handle.as_ptr()) };

@@ -3363,21 +3363,21 @@ void Function::SetUserInlinedDuringAnalysis(Confidence<BNInlineDuringAnalysis> i
 }
 
 
-void Function::ToggleRegion(uint64_t hash)
+void Function::ToggleRegion(BNCollapseRegionId id)
 {
-	BNFunctionToggleRegion(m_object, hash);
+	BNFunctionToggleRegion(m_object, id);
 }
 
 
-void Function::CollapseRegion(uint64_t hash)
+void Function::CollapseRegion(BNCollapseRegionId id)
 {
-	BNFunctionCollapseRegion(m_object, hash);
+	BNFunctionCollapseRegion(m_object, id);
 }
 
 
-void Function::ExpandRegion(uint64_t hash)
+void Function::ExpandRegion(BNCollapseRegionId id)
 {
-	BNFunctionExpandRegion(m_object, hash);
+	BNFunctionExpandRegion(m_object, id);
 }
 
 
@@ -3387,15 +3387,16 @@ bool Function::IsCollapsed() const
 }
 
 
-bool Function::IsInstructionCollapsed(const HighLevelILInstruction& instr, uint64_t designator) const
+bool Function::IsInstructionCollapsed(
+	const HighLevelILInstruction& instr, BNCollapseRegionDesignator designator) const
 {
 	return IsRegionCollapsed(instr.GetInstructionHash(designator));
 }
 
 
-bool Function::IsRegionCollapsed(uint64_t hash) const
+bool Function::IsRegionCollapsed(BNCollapseRegionId id) const
 {
-	return BNFunctionIsRegionCollapsed(m_object, hash);
+	return BNFunctionIsRegionCollapsed(m_object, id);
 }
 
 

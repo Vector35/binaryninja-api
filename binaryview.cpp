@@ -2310,21 +2310,21 @@ bool BinaryView::GetDataVariableAtAddress(uint64_t addr, DataVariable& var)
 }
 
 
-bool BinaryView::IsDataVariableRegionCollapsed(uint64_t hash) const
+bool BinaryView::IsDataVariableRegionCollapsed(BNCollapseRegionId id) const
 {
-	return BNIsDataVariableRegionCollapsed(m_object, hash);
+	return BNIsDataVariableRegionCollapsed(m_object, id);
 }
 
 
-void BinaryView::CollapseDataVariableRegion(uint64_t hash)
+void BinaryView::CollapseDataVariableRegion(BNCollapseRegionId id)
 {
-	BNCollapseDataVariableRegion(m_object, hash);
+	BNCollapseDataVariableRegion(m_object, id);
 }
 
 
-void BinaryView::ExpandDataVariableRegion(uint64_t hash)
+void BinaryView::ExpandDataVariableRegion(BNCollapseRegionId id)
 {
-	BNExpandDataVariableRegion(m_object, hash);
+	BNExpandDataVariableRegion(m_object, id);
 }
 
 
@@ -2334,9 +2334,9 @@ void BinaryView::ExpandAllDataVariableRegions()
 }
 
 
-void BinaryView::ToggleDataVariableRegion(uint64_t hash)
+void BinaryView::ToggleDataVariableRegion(BNCollapseRegionId id)
 {
-	BNToggleDataVariableRegion(m_object, hash);
+	BNToggleDataVariableRegion(m_object, id);
 }
 
 

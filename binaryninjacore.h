@@ -141,6 +141,12 @@
 
 #define BN_MAX_STRING_LENGTH 128
 
+/*! Identifier for a collapsible region in a rendered view. */
+typedef uint64_t BNCollapseRegionId;
+
+/*! Selector used to distinguish collapsible regions associated with the same rendered object. */
+typedef uint64_t BNCollapseRegionDesignator;
+
 #define LLVM_SVCS_CB_NOTE    0
 #define LLVM_SVCS_CB_WARNING 1
 #define LLVM_SVCS_CB_ERROR   2
@@ -5358,11 +5364,11 @@ extern "C"
 	BINARYNINJACOREAPI bool BNHasFunctions(BNBinaryView* view);
 	BINARYNINJACOREAPI bool BNHasSymbols(BNBinaryView* view);
 	BINARYNINJACOREAPI bool BNHasDataVariables(BNBinaryView* view);
-	BINARYNINJACOREAPI bool BNIsDataVariableRegionCollapsed(BNBinaryView* view, uint64_t hash);
-	BINARYNINJACOREAPI void BNCollapseDataVariableRegion(BNBinaryView* view, uint64_t hash);
-	BINARYNINJACOREAPI void BNExpandDataVariableRegion(BNBinaryView* view, uint64_t hash);
+	BINARYNINJACOREAPI bool BNIsDataVariableRegionCollapsed(BNBinaryView* view, BNCollapseRegionId id);
+	BINARYNINJACOREAPI void BNCollapseDataVariableRegion(BNBinaryView* view, BNCollapseRegionId id);
+	BINARYNINJACOREAPI void BNExpandDataVariableRegion(BNBinaryView* view, BNCollapseRegionId id);
 	BINARYNINJACOREAPI void BNExpandAllDataVariableRegions(BNBinaryView* view);
-	BINARYNINJACOREAPI void BNToggleDataVariableRegion(BNBinaryView* view, uint64_t hash);
+	BINARYNINJACOREAPI void BNToggleDataVariableRegion(BNBinaryView* view, BNCollapseRegionId id);
 	BINARYNINJACOREAPI bool BNIsSectionRegionCollapsed(BNBinaryView* view, BNSection* section);
 	BINARYNINJACOREAPI void BNCollapseSectionRegion(BNBinaryView* view, BNSection* section);
 	BINARYNINJACOREAPI void BNExpandSectionRegion(BNBinaryView* view, BNSection* section);
@@ -5868,11 +5874,11 @@ extern "C"
 	BINARYNINJACOREAPI BNArchitectureAndAddress* BNGetUnresolvedIndirectBranches(BNFunction* func, size_t* count);
 	BINARYNINJACOREAPI bool BNHasUnresolvedIndirectBranches(BNFunction* func);
 
-	BINARYNINJACOREAPI void BNFunctionToggleRegion(BNFunction* func, uint64_t hash);
-	BINARYNINJACOREAPI bool BNFunctionIsRegionCollapsed(BNFunction* func, uint64_t hash);
+	BINARYNINJACOREAPI void BNFunctionToggleRegion(BNFunction* func, BNCollapseRegionId id);
+	BINARYNINJACOREAPI bool BNFunctionIsRegionCollapsed(BNFunction* func, BNCollapseRegionId id);
 	BINARYNINJACOREAPI void BNFunctionExpandAll(BNFunction* func);
-	BINARYNINJACOREAPI void BNFunctionCollapseRegion(BNFunction* func,  uint64_t hash);
-	BINARYNINJACOREAPI void BNFunctionExpandRegion(BNFunction* func, uint64_t hash);
+	BINARYNINJACOREAPI void BNFunctionCollapseRegion(BNFunction* func, BNCollapseRegionId id);
+	BINARYNINJACOREAPI void BNFunctionExpandRegion(BNFunction* func, BNCollapseRegionId id);
 
 	BINARYNINJACOREAPI void BNFunctionStoreMetadata(
 	    BNFunction* func, const char* key, BNMetadata* value, bool isAuto);
@@ -9197,7 +9203,8 @@ extern "C"
 	// High level token emitter
 	BINARYNINJACOREAPI BNHighLevelILTokenEmitter* BNNewHighLevelILTokenEmitterReference(BNHighLevelILTokenEmitter* emitter);
 	BINARYNINJACOREAPI void BNHighLevelILTokenPrependCollapseBlankIndicator(BNHighLevelILTokenEmitter* emitter);
-	BINARYNINJACOREAPI void BNHighLevelILTokenPrependCollapseIndicator(BNHighLevelILTokenEmitter* emitter, BNInstructionTextTokenContext context, uint64_t hash);
+	BINARYNINJACOREAPI void BNHighLevelILTokenPrependCollapseIndicator(
+		BNHighLevelILTokenEmitter* emitter, BNInstructionTextTokenContext context, BNCollapseRegionId id);
 	BINARYNINJACOREAPI bool BNHighLevelILTokenEmitterHasCollapsableRegions(BNHighLevelILTokenEmitter* emitter);
 	BINARYNINJACOREAPI void BNHighLevelILTokenEmitterSetHasCollapsableRegions(BNHighLevelILTokenEmitter* emitter, bool state);
 	BINARYNINJACOREAPI void BNFreeHighLevelILTokenEmitter(BNHighLevelILTokenEmitter* emitter);

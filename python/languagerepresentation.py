@@ -137,9 +137,9 @@ class HighLevelILTokenEmitter:
 	def prepend_region_collapse_indicator(
 		self,
 		context: InstructionTextTokenContext,
-		hash: int
+		region_id: int
 	):
-		core.BNHighLevelILTokenPrependCollapseIndicator(self.handle, context, hash)
+		core.BNHighLevelILTokenPrependCollapseIndicator(self.handle, context, region_id)
 
 	@property
 	def has_collapsable_regions(self) -> bool:

@@ -420,7 +420,7 @@ namespace BinaryNinja
 
 		bool HasParent() const;
 		HighLevelILInstruction GetParent() const;
-		uint64_t GetInstructionHash(size_t discriminator = 0) const
+		BNCollapseRegionId GetInstructionHash(BNCollapseRegionDesignator discriminator = 0) const
 		{
 			constexpr auto rotl = [](uint64_t value, int shift)
 			{ return (value << shift) | (value >> (64 - shift)); };

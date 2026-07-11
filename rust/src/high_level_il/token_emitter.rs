@@ -44,9 +44,13 @@ impl HighLevelILTokenEmitter {
         unsafe { BNHighLevelILTokenPrependCollapseBlankIndicator(self.handle.as_ptr()) };
     }
 
-    pub fn prepend_collapse_indicator(&self, context: InstructionTextTokenContext, hash: u64) {
+    pub fn prepend_collapse_indicator(
+        &self,
+        context: InstructionTextTokenContext,
+        id: BNCollapseRegionId,
+    ) {
         unsafe {
-            BNHighLevelILTokenPrependCollapseIndicator(self.handle.as_ptr(), context.into(), hash)
+            BNHighLevelILTokenPrependCollapseIndicator(self.handle.as_ptr(), context.into(), id)
         };
     }
 

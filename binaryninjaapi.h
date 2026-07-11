@@ -6455,11 +6455,11 @@ namespace BinaryNinja {
 		*/
 		bool GetDataVariableAtAddress(uint64_t addr, DataVariable& var);
 
-		bool IsDataVariableRegionCollapsed(uint64_t hash) const;
-		void CollapseDataVariableRegion(uint64_t hash);
-		void ExpandDataVariableRegion(uint64_t hash);
+		bool IsDataVariableRegionCollapsed(BNCollapseRegionId id) const;
+		void CollapseDataVariableRegion(BNCollapseRegionId id);
+		void ExpandDataVariableRegion(BNCollapseRegionId id);
 		void ExpandAllDataVariableRegions();
-		void ToggleDataVariableRegion(uint64_t hash);
+		void ToggleDataVariableRegion(BNCollapseRegionId id);
 		bool IsSectionRegionCollapsed(Section* section) const;
 		void CollapseSectionRegion(Section* section);
 		void ExpandSectionRegion(Section* section);
@@ -13151,7 +13151,7 @@ namespace BinaryNinja {
 	{
 		int m_advancedAnalysisRequests;
 
-		bool IsRegionCollapsed(uint64_t hash) const;
+		bool IsRegionCollapsed(BNCollapseRegionId id) const;
 
 	  public:
 		Function(BNFunction* func);
@@ -13862,11 +13862,12 @@ namespace BinaryNinja {
 		};
 
 		// TODO: Documentation
-		bool IsInstructionCollapsed(const HighLevelILInstruction& instr, uint64_t designator = 0) const;
+		bool IsInstructionCollapsed(
+			const HighLevelILInstruction& instr, BNCollapseRegionDesignator designator = 0) const;
 		bool IsCollapsed() const;
-		void ToggleRegion(uint64_t hash);
-		void CollapseRegion(uint64_t hash);
-		void ExpandRegion(uint64_t hash);
+		void ToggleRegion(BNCollapseRegionId id);
+		void CollapseRegion(BNCollapseRegionId id);
+		void ExpandRegion(BNCollapseRegionId id);
 		void ExpandAll();
 
 		void StoreMetadata(const std::string& key, Ref<Metadata> value, bool isAuto = false);
@@ -22704,12 +22705,13 @@ namespace BinaryNinja {
 		}
 
 		void PrependCollapseIndicator();
-		void PrependCollapseIndicator(Ref<Function> function, const HighLevelILInstruction& instr, uint64_t designator = 0);
 		void PrependCollapseIndicator(Ref<Function> function, const HighLevelILInstruction& instr,
-			DisassemblySettings* settings, uint64_t designator = 0);
-		void PrependCollapseIndicator(BNInstructionTextTokenContext context, uint64_t hash);
+			BNCollapseRegionDesignator designator = 0);
+		void PrependCollapseIndicator(Ref<Function> function, const HighLevelILInstruction& instr,
+			DisassemblySettings* settings, BNCollapseRegionDesignator designator = 0);
+		void PrependCollapseIndicator(BNInstructionTextTokenContext context, BNCollapseRegionId id);
 		static bool IsInstructionCollapsed(Ref<Function> function, const HighLevelILInstruction& instr,
-			DisassemblySettings* settings, uint64_t designator = 0);
+			DisassemblySettings* settings, BNCollapseRegionDesignator designator = 0);
 		bool HasCollapsableRegions();
 		void SetHasCollapsableRegions(bool state);
 

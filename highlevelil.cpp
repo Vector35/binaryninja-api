@@ -691,13 +691,15 @@ void HighLevelILTokenEmitter::PrependCollapseIndicator()
 }
 
 
-void HighLevelILTokenEmitter::PrependCollapseIndicator(Ref<Function> function, const HighLevelILInstruction& instr, uint64_t designator)
+void HighLevelILTokenEmitter::PrependCollapseIndicator(
+	Ref<Function> function, const HighLevelILInstruction& instr, BNCollapseRegionDesignator designator)
 {
 	PrependCollapseIndicator(function, instr, nullptr, designator);
 }
 
 void HighLevelILTokenEmitter::PrependCollapseIndicator(
-	Ref<Function> function, const HighLevelILInstruction& instr, DisassemblySettings* settings, uint64_t designator)
+	Ref<Function> function, const HighLevelILInstruction& instr, DisassemblySettings* settings,
+	BNCollapseRegionDesignator designator)
 {
 	if (!HasCollapsableRegions())
 		return;
@@ -712,13 +714,14 @@ void HighLevelILTokenEmitter::PrependCollapseIndicator(
 	PrependCollapseIndicator(context, instr.GetInstructionHash(designator));
 }
 
-void HighLevelILTokenEmitter::PrependCollapseIndicator(BNInstructionTextTokenContext context, uint64_t hash)
+void HighLevelILTokenEmitter::PrependCollapseIndicator(BNInstructionTextTokenContext context, BNCollapseRegionId id)
 {
-	BNHighLevelILTokenPrependCollapseIndicator(m_object, context, hash);
+	BNHighLevelILTokenPrependCollapseIndicator(m_object, context, id);
 }
 
 bool HighLevelILTokenEmitter::IsInstructionCollapsed(
-	Ref<Function> function, const HighLevelILInstruction& instr, DisassemblySettings* settings, uint64_t designator)
+	Ref<Function> function, const HighLevelILInstruction& instr, DisassemblySettings* settings,
+	BNCollapseRegionDesignator designator)
 {
 	if (settings && settings->IsOptionSet(ShowCollapsedRegions))
 		return false;

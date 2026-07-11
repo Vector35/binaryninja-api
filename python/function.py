@@ -3699,26 +3699,26 @@ class Function:
 		value = self._inline_during_analysis_with_confidence(value)
 		core.BNSetUserFunctionInlinedDuringAnalysis(self.handle, value)
 
-	def toggle_region(self, hash):
+	def toggle_region(self, region_id: int):
 		"""
-		Toggle the collapsed state of a region during rendering, by hash value
-		:param hash: Hash value of region
+		Toggle the collapsed state of a region during rendering.
+		:param region_id: Identifier of the region
 		"""
-		core.BNFunctionToggleRegion(self.handle, hash)
+		core.BNFunctionToggleRegion(self.handle, region_id)
 
-	def collapse_region(self, hash):
+	def collapse_region(self, region_id: int):
 		"""
 		Collapse a region during rendering
-		:param hash: Hash value of region
+		:param region_id: Identifier of the region
 		"""
-		core.BNFunctionCollapseRegion(self.handle, hash)
+		core.BNFunctionCollapseRegion(self.handle, region_id)
 
-	def expand_region(self, hash):
+	def expand_region(self, region_id: int):
 		"""
 		Un-collapse a region during rendering
-		:param hash: Hash value of region
+		:param region_id: Identifier of the region
 		"""
-		core.BNFunctionExpandRegion(self.handle, hash)
+		core.BNFunctionExpandRegion(self.handle, region_id)
 
 	def expand_all(self):
 		"""
@@ -3744,13 +3744,13 @@ class Function:
 		"""
 		return self.is_region_collapsed(instr.get_instruction_hash(discriminator))
 
-	def is_region_collapsed(self, hash) -> bool:
+	def is_region_collapsed(self, region_id: int) -> bool:
 		"""
 		Determine if a given region is collapsed during rendering.
-		:param hash: Hash value of region
+		:param region_id: Identifier of the region
 		:return: True if the region should be rendered as collapsed
 		"""
-		return core.BNFunctionIsRegionCollapsed(self.handle, hash)
+		return core.BNFunctionIsRegionCollapsed(self.handle, region_id)
 
 	def store_metadata(self, key: str, md: metadata.MetadataValueType, isAuto: bool = False) -> None:
 		"""

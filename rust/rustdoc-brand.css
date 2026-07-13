@@ -1,0 +1,227 @@
+/* Shared tokens are loaded first through doc-header.html. */
+
+@font-face {
+  font-display: swap;
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/brand/OpenSans-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Open Sans';
+  font-style: italic;
+  font-weight: 400;
+  src: url('/brand/OpenSans-Italic.ttf') format('truetype');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/brand/OpenSans-Bold.ttf') format('truetype');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Open Sans';
+  font-style: italic;
+  font-weight: 700;
+  src: url('/brand/OpenSans-BoldItalic.ttf') format('truetype');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Roboto Mono';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/brand/roboto-mono-v22-latin-regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Roboto Mono';
+  font-style: italic;
+  font-weight: 400;
+  src: url('/brand/roboto-mono-v22-latin-italic.woff2') format('woff2');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Roboto Mono';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/brand/roboto-mono-v22-latin-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Roboto Mono';
+  font-style: italic;
+  font-weight: 700;
+  src: url('/brand/roboto-mono-v22-latin-700italic.woff2') format('woff2');
+}
+
+:root,
+:root.sans-serif-fonts {
+  --font-family: var(--bn-font-body);
+  --font-family-code: var(--bn-font-mono);
+}
+
+#crate-search,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.sidebar,
+rustdoc-topbar,
+.search-input,
+.search-results .result-name,
+.item-table dt > a,
+.out-of-band,
+.sub-heading,
+span.since,
+a.src,
+rustdoc-toolbar,
+summary.hideme,
+.scraped-example-list,
+.rustdoc-breadcrumbs,
+.search-switcher,
+ul.all-items,
+.deprecated-count {
+  font-family: var(--bn-font-body);
+}
+.content .docblock div.warning {
+  margin: var(--bn-adm-margin-block) 0;
+  border: none;
+  border-radius: var(--bn-adm-radius);
+  padding: 0 var(--bn-adm-padding-inline) var(--bn-adm-padding-block-end);
+  background: var(--bn-adm-card-bg);
+  color: var(--bn-adm-card-fg);
+}
+.content .docblock div.warning::before {
+  content: "Warning";
+  position: static;
+  display: block;
+  margin: 0 calc(-1 * var(--bn-adm-padding-inline)) var(--bn-adm-title-gap);
+  padding: var(--bn-adm-title-padding-block) var(--bn-adm-padding-inline)
+    var(--bn-adm-title-padding-block)
+    calc(var(--bn-adm-padding-inline) + var(--bn-adm-icon-size) + var(--bn-adm-icon-gap));
+  border-radius: var(--bn-adm-radius) var(--bn-adm-radius) 0 0;
+  background: transparent;
+  color: inherit;
+  font-family: var(--bn-font-body);
+  font-weight: var(--bn-adm-title-font-weight);
+  font-size: var(--bn-adm-title-font-size);
+  line-height: var(--bn-adm-title-line-height);
+  text-transform: var(--bn-adm-title-text-transform);
+  letter-spacing: var(--bn-adm-title-letter-spacing);
+}
+.content .docblock div.warning::after {
+  content: "";
+  position: absolute;
+  left: var(--bn-adm-padding-inline);
+  top: 13px;
+  width: var(--bn-adm-icon-size);
+  height: var(--bn-adm-icon-size);
+  background-color: currentColor;
+  -webkit-mask-image: var(--bn-adm-card-icon);
+  mask-image: var(--bn-adm-card-icon);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+.content .docblock div.warning a {
+  color: inherit;
+  text-decoration: underline;
+}
+.content .docblock div.warning code {
+  background: rgba(128, 128, 128, 0.18);
+  color: inherit;
+}
+
+/* The logo includes the crate name, so only the version remains below it. */
+.sidebar-crate:has(.logo-container) {
+  flex-flow: column nowrap;
+  gap: 0.5rem;
+}
+.sidebar-crate .logo-container {
+  align-self: center;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+}
+.sidebar-crate .logo-container img {
+  width: auto;
+  height: 150px;
+}
+:root[data-theme="dark"] .sidebar-crate .logo-container img,
+:root[data-theme="ayu"] .sidebar-crate .logo-container img {
+  content: url("/brand/logo-vertical-light.svg");
+}
+.sidebar-crate:has(.logo-container) h2 > a {
+  display: none;
+}
+.sidebar-crate:has(.logo-container) h2 {
+  align-self: stretch;
+  flex: none;
+  margin: 0;
+  text-align: center;
+}
+.sidebar-crate:has(.logo-container) h2 .version {
+  display: block;
+}
+
+/* Map each rustdoc link category to the surface-appropriate brand tone. */
+:root:not([data-theme]),
+:root[data-theme="light"] {
+  --link-color: var(--bn-link-light);
+  --sidebar-link-color: var(--bn-link-light);
+  --type-link-color: var(--bn-link-light);
+  --trait-link-color: var(--bn-link-light);
+  --function-link-color: var(--bn-link-light);
+  --macro-link-color: var(--bn-link-light);
+  --keyword-link-color: var(--bn-link-light);
+  --mod-link-color: var(--bn-link-light);
+  --assoc-item-link-color: var(--bn-link-light);
+  --attribute-link-color: var(--bn-link-light);
+}
+:root[data-theme="dark"],
+:root[data-theme="ayu"] {
+  --link-color: var(--bn-link-dark);
+  --sidebar-link-color: var(--bn-link-dark);
+  --type-link-color: var(--bn-link-dark);
+  --trait-link-color: var(--bn-link-dark);
+  --function-link-color: var(--bn-link-dark);
+  --macro-link-color: var(--bn-link-dark);
+  --keyword-link-color: var(--bn-link-dark);
+  --mod-link-color: var(--bn-link-dark);
+  --assoc-item-link-color: var(--bn-link-dark);
+  --attribute-link-color: var(--bn-link-dark);
+}
+
+/* Inline code follows the link tone; syntax highlighting owns block code. */
+:root:not([data-theme]) .docblock code,
+:root[data-theme="light"] .docblock code {
+  color: var(--bn-link-light);
+}
+:root[data-theme="dark"] .docblock code,
+:root[data-theme="ayu"] .docblock code {
+  color: var(--bn-link-dark);
+}
+.docblock pre code {
+  color: inherit;
+}
+
+/* BEGIN GENERATED (scripts/gen_admonitions.py) — do not hand-edit */
+.content .docblock div.warning {
+  --bn-adm-card-bg: var(--bn-adm-warning-bg);
+  --bn-adm-card-fg: var(--bn-adm-warning-fg);
+  --bn-adm-card-icon: var(--bn-adm-icon-warning);
+}
+/* END GENERATED (scripts/gen_admonitions.py) */

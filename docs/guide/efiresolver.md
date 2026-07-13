@@ -37,7 +37,7 @@ steps:
     * Linux: `~/.binaryninja/types/efi-guids.json`
     * Windows: `%APPDATA%\Binary Ninja\types`
 
-    ???+ Important "GUID Database"
+    !!! Important "GUID Database"
         An excellent source of proprietary EFI GUIDs is Binarly's
         [GUID DB](https://github.com/binarly-io/guiddb/blob/main/guids.json). This file is in the expected format for
         EFI Resolver's `efi-guids.json`, and can be copied directly to your user folder as a starting point.
@@ -55,7 +55,7 @@ steps:
 
 3. Create a type named `EFI_EXAMPLE_CUSTOM_PROTOCOL` using the types widget
 
-    ???+ Important "Unassociated EFI Types"
+    !!! Important "Unassociated EFI Types"
         If there is not a type for a GUID defined in `efi-guids.json`, EFI Resolver will still use the GUID name to name
         the protocol interface and GUID data variables.
 
@@ -64,6 +64,6 @@ steps:
 In this example, the workflow will apply the `EFI_EXAMPLE_CUSTOM_PROTOCOL` type to identified protocol interfaces that
 were queried in the binary via the `EFI_EXAMPLE_CUSTOM_PROTOCOL_GUID` EFI GUID.
 
-???+ Important "Platform Types"
+!!! Important "Platform Types"
 	To make a custom EFI protocol type accessible when loading future EFI binaries, it is recommended to add the type to
 	[platform types](types/platformtypes.md)

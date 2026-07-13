@@ -45,7 +45,7 @@ Files are automatically loaded from two locations when Binary Ninja starts:
 - [User Directory] + `/signatures/`
     - Can be disabled using the setting `warp.container.loadUserFiles`.
 
-???+ Danger "Warning"
+!!! Warning "Warning"
     Always place your signature libraries in your user directory. The installation path is wiped whenever Binary Ninja 
     auto-updates. You can locate it with `Open Plugin Folder` in the command palette and navigate "up" a directory.
 
@@ -55,7 +55,7 @@ Aside from using the signature directory you can load any WARP file manually usi
 the UI sidebar, they both do the same thing. Once the file is loaded, you do not need to load it for every view, any view
 that performs function matching will have access to the loaded file.
 
-???+ Info "Tip"
+!!! Tip "Tip"
     When loading signatures you may encounter a dialog asking to "Override file target?" this happens when your file
     has a different platform, which is common if you are working with firmware where the intermediate libraries may be
     detected as a different target, this is OK you can continue loading, and it will change the file target to fit the view.
@@ -72,7 +72,7 @@ The processor dialog will allow you to select the files you want to process, inc
 add more files, you can use the "+" button and select the files you want to add. If you have more than one file to process 
 the worker count will control how many entries are processed in parallel.
 
-???+ Info "Tip"
+!!! Tip "Tip"
     You can also create signature files using the provided API, see the [API section](#api) for more details.
 
 The following file formats are supported:
@@ -134,7 +134,7 @@ or removed by the server admin.
 
 ![Fetch Dialog](../img/warp/fetch_dialog.png "Fetch Dialog"){ width="600" }
 
-???+ Info "Tip"
+!!! Tip "Tip"
     Fetching of function information from the server will also be done on demand when navigating to a function for the first time
     with the WARP sidebar open. The fetched functions will be shown in the "Matched Functions" sidebar automatically, however,
     you will need to run the matcher to apply the information to the analysis.

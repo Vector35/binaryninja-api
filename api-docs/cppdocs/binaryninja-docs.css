@@ -1,77 +1,100 @@
-/* Binary Ninja C++ API Documentation Styles
- * Clean CSS implementation replacing Doxygen defaults
- * No !important declarations needed
- */
+@font-face {
+    font-display: swap;
+    font-family: "Open Sans";
+    font-style: normal;
+    font-weight: 400;
+    src: url("OpenSans-Regular.ttf") format("truetype");
+}
 
-/* ============================================================================
- * CSS VARIABLES - LIGHT MODE (Base)
- * ============================================================================ */
+@font-face {
+    font-display: swap;
+    font-family: "Open Sans";
+    font-style: italic;
+    font-weight: 400;
+    src: url("OpenSans-Italic.ttf") format("truetype");
+}
+
+@font-face {
+    font-display: swap;
+    font-family: "Open Sans";
+    font-style: normal;
+    font-weight: 700;
+    src: url("OpenSans-Bold.ttf") format("truetype");
+}
+
+@font-face {
+    font-display: swap;
+    font-family: "Open Sans";
+    font-style: italic;
+    font-weight: 700;
+    src: url("OpenSans-BoldItalic.ttf") format("truetype");
+}
+
+@font-face {
+    font-display: swap;
+    font-family: "Roboto Mono";
+    font-style: normal;
+    font-weight: 400;
+    src: url("roboto-mono-v22-latin-regular.woff2") format("woff2");
+}
+
+@font-face {
+    font-display: swap;
+    font-family: "Roboto Mono";
+    font-style: italic;
+    font-weight: 400;
+    src: url("roboto-mono-v22-latin-italic.woff2") format("woff2");
+}
+
+@font-face {
+    font-display: swap;
+    font-family: "Roboto Mono";
+    font-style: normal;
+    font-weight: 700;
+    src: url("roboto-mono-v22-latin-700.woff2") format("woff2");
+}
+
+@font-face {
+    font-display: swap;
+    font-family: "Roboto Mono";
+    font-style: italic;
+    font-weight: 700;
+    src: url("roboto-mono-v22-latin-700italic.woff2") format("woff2");
+}
+
 :root {
-    /* Binary Ninja Brand Colors */
-    --bn-red: #c74433;
-    --bn-red-dark: #d0584d;
-    --bn-red-light: #a2382a;
+    color-scheme: light;
+    --bn-link: light-dark(var(--bn-link-light), var(--bn-link-dark));
+    --page-bg: light-dark(#ffffff, #1c1d1f);
+    --page-text: light-dark(#2f4153, #d2dbde);
+    --page-text-secondary: light-dark(#6f7e8e, #859399);
+    --border-color: light-dark(#dedede, #38393b);
+    --sidebar-bg: light-dark(#fbfbfb, #252628);
+    --sidebar-text: light-dark(#2f4153, #d2dbde);
+    --code-bg: light-dark(#f5f5f5, #2a2c2f);
+    --code-text: light-dark(#2f4153, #d2dbde);
+    --fragment-bg: light-dark(#f8f9fa, #282c34);
+    --fragment-text: light-dark(#37474f, #dbe4eb);
+    --fragment-border: light-dark(#e3e5e7, #1f1f1f);
+    --syntax-keyword: light-dark(#bb6bb2, #cc99cd);
+    --syntax-type: light-dark(#8258b3, #ab99cd);
+    --syntax-flow: light-dark(#d67c3b, #e08000);
+    --syntax-string: light-dark(#438a59, #7ec699);
+    --syntax-comment: light-dark(#969696, #999999);
+    --syntax-preprocessor: light-dark(#46aaa5, #65cabe);
+    --syntax-link: light-dark(#5383d6, #98c0e3);
+    --table-header-bg: light-dark(#f1f1f1, #2a2c2f);
+    --table-row-odd: light-dark(#ffffff, #1c1d1f);
+    --table-row-even: light-dark(#f7f7f7, #252628);
 
-    /* Complementary Colors (Teal - complementary to red) */
-    --bn-teal: #33b6c7;
-    --bn-teal-bright: #16b9ce;
-    --bn-teal-light: #eaf8f9;
-    --bn-teal-dark: #163f44;
-    --bn-teal-accent: #36cee2;
-
-    /* Page Structure */
-    --page-bg: #ffffff;
-    --page-text: #2f4153;
-    --page-text-secondary: #6f7e8e;
-    --border-color: #dedede;
-
-    /* Sidebar */
-    --sidebar-bg: #fbfbfb;
-    --sidebar-text: #2f4153;
-
-    /* Code/Fragments */
-    --code-bg: #f5f5f5;
-    --code-text: #2f4153;
-    --fragment-bg: #F8F9FA;
-    --fragment-text: #37474F;
-    --fragment-border: #e3e5e7;
-
-    /* Syntax Highlighting (Light) */
-    --syntax-keyword: #bb6bb2;
-    --syntax-type: #8258b3;
-    --syntax-flow: #d67c3b;
-    --syntax-string: #438a59;
-    --syntax-comment: #969696;
-    --syntax-preprocessor: #46aaa5;
-    --syntax-link: #5383d6;
-
-    /* Tables */
-    --table-header-bg: #f1f1f1;
-    --table-row-odd: #ffffff;
-    --table-row-even: #f7f7f7;
-
-    /* Content Boxes */
-    --warning-bg: #faf3d8;
-    --warning-border: #f3a600;
-    --note-bg: var(--bn-teal-light);
-    --note-border: var(--bn-teal-bright);
-    --deprecated-bg: #ecf0f3;
-    --deprecated-border: #5b6269;
-    --bug-bg: #f8d1cc;
-    --bug-border: #b61825;
-    --todo-bg: #e4dafd;
-    --todo-border: #5b2bdd;
-
-    /* Typography */
-    --font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
-    --font-family-monospace: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+    --font-family: var(--bn-font-body);
+    --font-family-monospace: var(--bn-font-mono);
     --font-size-base: 15.6px;
     --font-size-code: 14px;
     --font-size-nav: 14.4px;
     --font-size-title: 22px;
     --line-height-content: 27px;
 
-    /* Layout */
     --sidebar-width: 450px;
     --top-height: 120px;
     --content-maxwidth: 1050px;
@@ -87,125 +110,16 @@
     --tree-item-height: 30px;
 }
 
-/* ============================================================================
- * CSS VARIABLES - DARK MODE
- * ============================================================================ */
 html.dark-mode {
     color-scheme: dark;
-
-    /* Brand Colors (same) */
-    --bn-red: #c74433;
-    --bn-red-dark: #d0584d;
-    --bn-red-light: #a2382a;
-
-    /* Complementary Colors (Teal - same base) */
-    --bn-teal: #33b6c7;
-    --bn-teal-bright: #16b9ce;
-    --bn-teal-light: #eaf8f9;
-    --bn-teal-dark: #163f44;
-    --bn-teal-accent: #36cee2;
-
-    /* Page Structure */
-    --page-bg: #1C1D1F;
-    --page-text: #d2dbde;
-    --page-text-secondary: #859399;
-    --border-color: #38393b;
-
-    /* Sidebar */
-    --sidebar-bg: #252628;
-    --sidebar-text: #d2dbde;
-
-    /* Code/Fragments */
-    --code-bg: #2a2c2f;
-    --code-text: #d2dbde;
-    --fragment-bg: #282c34;
-    --fragment-text: #dbe4eb;
-    --fragment-border: #1f1f1f;
-
-    /* Syntax Highlighting (Dark) */
-    --syntax-keyword: #cc99cd;
-    --syntax-type: #ab99cd;
-    --syntax-flow: #e08000;
-    --syntax-string: #7ec699;
-    --syntax-comment: #999999;
-    --syntax-preprocessor: #65cabe;
-    --syntax-link: #98c0e3;
-
-    /* Tables */
-    --table-header-bg: #2a2c2f;
-    --table-row-odd: #1C1D1F;
-    --table-row-even: #252628;
-
-    /* Content Boxes */
-    --warning-bg: #3b2e04;
-    --warning-border: #f1b602;
-    --note-bg: var(--bn-teal-dark);
-    --note-border: var(--bn-teal-accent);
-    --deprecated-bg: #2e323b;
-    --deprecated-border: #738396;
-    --bug-bg: #2e1917;
-    --bug-border: #ad2617;
-    --todo-bg: #2a2536;
-    --todo-border: #7661b3;
 }
 
-/* Respect system color preference */
 @media (prefers-color-scheme: dark) {
     html:not(.light-mode) {
         color-scheme: dark;
-
-        --bn-red: #c74433;
-        --bn-red-dark: #d0584d;
-        --bn-red-light: #a2382a;
-
-        --bn-teal: #33b6c7;
-        --bn-teal-bright: #16b9ce;
-        --bn-teal-light: #eaf8f9;
-        --bn-teal-dark: #163f44;
-        --bn-teal-accent: #36cee2;
-
-        --page-bg: #1C1D1F;
-        --page-text: #d2dbde;
-        --page-text-secondary: #859399;
-        --border-color: #38393b;
-
-        --sidebar-bg: #252628;
-        --sidebar-text: #d2dbde;
-
-        --code-bg: #2a2c2f;
-        --code-text: #d2dbde;
-        --fragment-bg: #282c34;
-        --fragment-text: #dbe4eb;
-        --fragment-border: #1f1f1f;
-
-        --syntax-keyword: #cc99cd;
-        --syntax-type: #ab99cd;
-        --syntax-flow: #e08000;
-        --syntax-string: #7ec699;
-        --syntax-comment: #999999;
-        --syntax-preprocessor: #65cabe;
-        --syntax-link: #98c0e3;
-
-        --table-header-bg: #2a2c2f;
-        --table-row-odd: #1C1D1F;
-        --table-row-even: #252628;
-
-        --warning-bg: #3b2e04;
-        --warning-border: #f1b602;
-        --note-bg: var(--bn-teal-dark);
-        --note-border: var(--bn-teal-accent);
-        --deprecated-bg: #2e323b;
-        --deprecated-border: #738396;
-        --bug-bg: #2e1917;
-        --bug-border: #ad2617;
-        --todo-bg: #2a2536;
-        --todo-border: #7661b3;
     }
 }
 
-/* ============================================================================
- * BASE STYLES
- * ============================================================================ */
 * {
     box-sizing: border-box;
 }
@@ -224,9 +138,6 @@ body {
     background-color: var(--page-bg);
 }
 
-/* ============================================================================
- * TYPOGRAPHY
- * ============================================================================ */
 h1, h2, h3, h4, h5, h6 {
     margin: 1em 0 0.5em 0;
     font-weight: 600;
@@ -246,29 +157,26 @@ p, div, table, dl {
 }
 
 a {
-    color: var(--bn-red);
-    text-decoration: none;
+    color: var(--bn-link);
+    text-decoration: underline;
     font-weight: 500;
 }
 
 a:hover {
-    text-decoration: underline;
+    text-decoration: none;
 }
 
 code, tt {
     font-family: var(--font-family-monospace);
     font-size: var(--font-size-code);
     background-color: var(--code-bg);
-    color: var(--code-text);
+    color: var(--bn-link);
     padding: 2px 6px;
     border-radius: var(--border-radius-small);
     word-wrap: break-word;
     overflow-wrap: break-word;
 }
 
-/* ============================================================================
- * HEADER AND TOP NAVIGATION
- * ============================================================================ */
 #top {
     background: var(--sidebar-bg);
     border-bottom: 1px solid var(--border-color);
@@ -330,9 +238,6 @@ tr#projectrow {
     display: block;
 }
 
-/* ============================================================================
- * SIDEBAR LAYOUT (Desktop)
- * ============================================================================ */
 #side-nav {
     min-width: var(--sidebar-width);
     max-width: var(--sidebar-width);
@@ -421,11 +326,6 @@ tr#projectrow {
     display: none;
 }
 
-/* ============================================================================
- * RESPONSIVE (Tablet and Mobile)
- * ============================================================================ */
-
-/* Tablet: Hide sidebar, adjust margins */
 @media screen and (max-width: 1024px) {
     #side-nav {
         display: none;
@@ -461,7 +361,6 @@ tr#projectrow {
     }
 }
 
-/* Mobile: Compact layout */
 @media screen and (max-width: 767px) {
     #top {
         height: 125px;
@@ -482,7 +381,6 @@ tr#projectrow {
     }
 }
 
-/* Small mobile: Even more compact */
 @media screen and (max-width: 480px) {
     #titlearea {
         padding: var(--spacing-small);
@@ -498,9 +396,6 @@ tr#projectrow {
     }
 }
 
-/* ============================================================================
- * SEARCH BAR
- * ============================================================================ */
 #titlearea #projectalign + td {
     position: absolute;
     left: 20px;
@@ -563,9 +458,6 @@ tr#projectrow {
     border: 1px solid var(--border-color);
 }
 
-/* ============================================================================
- * NAVIGATION TREE
- * ============================================================================ */
 #side-nav {
     background-color: var(--sidebar-bg);
 }
@@ -604,8 +496,8 @@ tr#projectrow {
 }
 
 #nav-tree .selected {
-    background-color: var(--bn-red);
-    color: #ffffff;
+    background-color: var(--bn-night);
+    color: var(--bn-white);
     display: inline-block;
     line-height: 1.4;
     padding: 0 4px;
@@ -613,16 +505,7 @@ tr#projectrow {
 }
 
 #nav-tree .selected a {
-    color: #ffffff;
-}
-
-html.dark-mode #nav-tree .selected {
-    background-color: var(--bn-red);
-    color: #ffffff;
-}
-
-html.dark-mode #nav-tree .selected a {
-    color: #ffffff;
+    color: var(--bn-white);
 }
 
 #nav-tree .item {
@@ -635,7 +518,6 @@ html.dark-mode #nav-tree .selected a {
     align-items: center;
 }
 
-/* Undecorated root node */
 .children_ul a.index\.html {
     display: initial;
 }
@@ -644,23 +526,19 @@ a.index\.html {
     display: none;
 }
 
-/* Doxygen 1.15 creates a wrapper node - hide it but show its children */
 #nav-tree-contents > ul > li:first-child > .item {
     display: none !important;
 }
 
-/* Make the wrapper's children appear at the top level by removing their indentation */
 #nav-tree-contents > ul > li:first-child > ul {
     padding-left: 0 !important;
     margin-left: 0 !important;
 }
 
-/* No compensation needed - arrows are now consistent */
 #nav-tree-contents > ul > li:first-child > ul > li > .item {
     margin-left: 0;
 }
 
-/* Add spacing between top-level items */
 #nav-tree-contents > ul > li:first-child > ul > li {
     margin-top: 2px;
 }
@@ -669,9 +547,6 @@ a.index\.html {
     margin-top: 0;
 }
 
-/* ============================================================================
- * COLLAPSIBLE SECTIONS (dynsections.js)
- * ============================================================================ */
 .arrowhead {
     display: inline-block;
     margin-right: 5px;
@@ -679,7 +554,7 @@ a.index\.html {
     transition: opacity 0.2s;
     font-size: 11px;
     line-height: 1;
-    color: var(--text-color);
+    color: var(--page-text);
 }
 
 .arrow:hover .arrowhead,
@@ -688,19 +563,14 @@ tr:hover .arrowhead,
     opacity: 1;
 }
 
-/* Right-pointing triangle when closed */
 .arrowhead.closed::before {
     content: '▶';
 }
 
-/* Down-pointing triangle when opened */
 .arrowhead.opened::before {
     content: '▼';
 }
 
-/* ============================================================================
- * CONTENT AREA
- * ============================================================================ */
 div.contents, div.header .title, div.header .summary {
     max-width: 100%;
 }
@@ -759,10 +629,6 @@ div.contents div.dyncontent {
     margin: var(--spacing-large) 0;
 }
 
-/* ============================================================================
- * TABLES
- * ============================================================================ */
-/* Only apply to content tables, not Doxygen structural tables */
 div.contents > table:not(.memberdecls):not(.mlabels):not(.memname):not(.params),
 div.contents p + table,
 div.textblock table:not(.memname):not(.params) {
@@ -772,17 +638,16 @@ div.textblock table:not(.memname):not(.params) {
     word-wrap: break-word;
 }
 
-/* Content tables (HTML tables in documentation) */
-div.contents > table,
-div.contents p + table,
-div.textblock table {
+div.contents > table:not(.memberdecls):not(.mlabels):not(.memname):not(.params),
+div.contents p + table:not(.memberdecls):not(.mlabels):not(.memname):not(.params),
+div.textblock table:not(.memname):not(.params) {
     margin: var(--spacing-medium) 0;
     border: 1px solid var(--border-color);
 }
 
-div.contents > table th,
-div.contents p + table th,
-div.textblock table th {
+div.contents > table:not(.memberdecls):not(.mlabels):not(.memname):not(.params) th,
+div.contents p + table:not(.memberdecls):not(.mlabels):not(.memname):not(.params) th,
+div.textblock table:not(.memname):not(.params) th {
     background-color: var(--table-header-bg);
     color: var(--page-text);
     padding: var(--spacing-small) var(--spacing-medium);
@@ -791,52 +656,62 @@ div.textblock table th {
     font-weight: 600;
 }
 
-div.contents > table td,
-div.contents p + table td,
-div.textblock table td {
+div.contents > table:not(.memberdecls):not(.mlabels):not(.memname):not(.params) td,
+div.contents p + table:not(.memberdecls):not(.mlabels):not(.memname):not(.params) td,
+div.textblock table:not(.memname):not(.params) td {
     padding: var(--spacing-small) var(--spacing-medium);
     border: 1px solid var(--border-color);
     vertical-align: top;
 }
 
-div.contents > table tr:nth-child(odd),
-div.contents p + table tr:nth-child(odd),
-div.textblock table tr:nth-child(odd) {
+div.contents > table:not(.memberdecls):not(.mlabels):not(.memname):not(.params) tr:nth-child(odd),
+div.contents p + table:not(.memberdecls):not(.mlabels):not(.memname):not(.params) tr:nth-child(odd),
+div.textblock table:not(.memname):not(.params) tr:nth-child(odd) {
     background-color: var(--page-bg);
 }
 
-div.contents > table tr:nth-child(even),
-div.contents p + table tr:nth-child(even),
-div.textblock table tr:nth-child(even) {
+div.contents > table:not(.memberdecls):not(.mlabels):not(.memname):not(.params) tr:nth-child(even),
+div.contents p + table:not(.memberdecls):not(.mlabels):not(.memname):not(.params) tr:nth-child(even),
+div.textblock table:not(.memname):not(.params) tr:nth-child(even) {
     background-color: var(--table-row-even);
 }
 
 table.memberdecls {
     width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+    margin: var(--spacing-medium) 0;
+    border: 1px solid var(--border-color);
+}
+
+table.memberdecls td {
+    padding: var(--spacing-small) var(--spacing-medium);
+    border: 1px solid var(--border-color);
+    vertical-align: top;
+}
+
+table.memberdecls tr:nth-child(odd) {
+    background-color: var(--table-row-odd);
+}
+
+table.memberdecls tr:nth-child(even) {
+    background-color: var(--table-row-even);
 }
 
 table.memberdecls .memItemLeft {
     white-space: normal;
     word-wrap: break-word;
     overflow-wrap: break-word;
-    padding: var(--spacing-small) var(--spacing-medium);
-    border-bottom: 1px solid var(--border-color);
     width: 40%;
 }
 
 table.memberdecls .memItemRight {
-    padding: var(--spacing-small) var(--spacing-medium);
-    border-bottom: 1px solid var(--border-color);
     word-wrap: break-word;
     overflow-wrap: break-word;
     width: 60%;
 }
 
-table.memberdecls td {
-    vertical-align: top;
-}
-
-/* Markdown tables */
+table.doxtable,
 table.markdownTable {
     border-collapse: collapse;
     width: 100%;
@@ -844,30 +719,33 @@ table.markdownTable {
     border: 1px solid var(--border-color);
 }
 
+table.doxtable th,
 table.markdownTable th {
-    background-color: var(--sidebar-bg);
-    color: var(--sidebar-text);
+    background-color: var(--table-header-bg);
+    color: var(--page-text);
     padding: var(--spacing-small) var(--spacing-medium);
     text-align: left;
     border: 1px solid var(--border-color);
     font-weight: 600;
 }
 
+table.doxtable td,
 table.markdownTable td {
     padding: var(--spacing-small) var(--spacing-medium);
     border: 1px solid var(--border-color);
     vertical-align: top;
 }
 
-table.markdownTable tr.markdownTableRowOdd {
-    background-color: var(--fragment-bg);
+table.doxtable tr:nth-child(odd),
+table.markdownTable tr:nth-child(odd) {
+    background-color: var(--table-row-odd);
 }
 
-table.markdownTable tr.markdownTableRowEven {
-    background-color: var(--page-bg);
+table.doxtable tr:nth-child(even),
+table.markdownTable tr:nth-child(even) {
+    background-color: var(--table-row-even);
 }
 
-/* Directory table (class list) */
 .directory {
     margin: var(--spacing-medium) 0;
 }
@@ -888,7 +766,6 @@ table.markdownTable tr.markdownTableRowEven {
     color: var(--page-text);
 }
 
-/* Make the numbers much dimmer */
 .directory .levels span[onclick] {
     opacity: 0.4;
 }
@@ -924,7 +801,6 @@ table.directory td.desc {
     color: var(--page-text-secondary);
 }
 
-/* Detail level labels (default, inline, virtual, etc.) */
 table.mlabels {
     border-spacing: 0;
     width: 100%;
@@ -940,7 +816,7 @@ table.mlabels td.mlabels-right {
 
 span.mlabel {
     background: var(--bn-red);
-    color: #ffffff;
+    color: var(--bn-white);
     margin-left: 2px;
     padding: 2px 5px;
     border-radius: 6px;
@@ -949,7 +825,6 @@ span.mlabel {
     font-weight: 600;
 }
 
-/* Function signature tables */
 table.memname {
     border-collapse: collapse;
 }
@@ -963,12 +838,10 @@ div.memproto table.memname {
     vertical-align: bottom;
 }
 
-
-/* Type/Namespace icons (C, N, S, etc.) */
 .icon {
     display: inline-block;
     background-color: var(--bn-red);
-    color: #ffffff;
+    color: var(--bn-white);
     font-family: var(--font-family-monospace);
     font-size: 11px;
     font-weight: 700;
@@ -989,9 +862,6 @@ table thead th {
     border-bottom: 1px solid var(--border-color);
 }
 
-/* ============================================================================
- * CODE BLOCKS AND FRAGMENTS
- * ============================================================================ */
 pre.fragment, div.fragment {
     font-family: var(--font-family-monospace);
     font-size: var(--font-size-code);
@@ -1024,7 +894,6 @@ html.dark-mode .lineno {
     background-color: #35393c;
 }
 
-/* Syntax highlighting */
 span.keyword { color: var(--syntax-keyword); }
 span.keywordtype { color: var(--syntax-type); }
 span.keywordflow { color: var(--syntax-flow); }
@@ -1033,52 +902,71 @@ span.comment { color: var(--syntax-comment); }
 span.preprocessor { color: var(--syntax-preprocessor); }
 span.lineno a { color: var(--syntax-comment); }
 
-/* ============================================================================
- * CONTENT BOXES (@note, @warning, etc.)
- * ============================================================================ */
-dl.warning, dl.attention {
-    background-color: var(--warning-bg);
-    border-left: 4px solid var(--warning-border);
-    padding: var(--spacing-medium);
-    border-radius: var(--border-radius-small);
-    margin: var(--spacing-medium) 0;
+dl:is(.note, .warning, .attention, .todo, .deprecated, .bug, .remark, .see) {
+    --bn-adm-card-bg: var(--bn-adm-info-bg);
+    --bn-adm-card-fg: var(--bn-adm-info-fg);
+    --bn-adm-card-icon: var(--bn-adm-icon-info);
 }
 
-dl.note {
-    background-color: var(--note-bg);
-    border-left: 4px solid var(--note-border);
-    padding: var(--spacing-medium);
+body dl:is(.note, .warning, .attention, .todo, .deprecated, .bug, .remark, .see) {
+    overflow: hidden;
+    margin: var(--bn-adm-margin-block) 0;
+    padding: 0;
     border-radius: var(--border-radius-small);
-    margin: var(--spacing-medium) 0;
+    background: var(--bn-adm-card-bg);
+    color: var(--bn-adm-card-fg);
 }
 
-dl.todo {
-    background-color: var(--todo-bg);
-    border-left: 4px solid var(--todo-border);
-    padding: var(--spacing-medium);
-    border-radius: var(--border-radius-small);
-    margin: var(--spacing-medium) 0;
+body dl:is(.note, .warning, .attention, .todo, .deprecated, .bug, .remark, .see) > dt {
+    position: relative;
+    display: block;
+    padding: var(--bn-adm-title-padding-block) var(--bn-adm-padding-inline)
+        var(--bn-adm-title-padding-block)
+        calc(var(--bn-adm-padding-inline) + var(--bn-adm-icon-size) + var(--bn-adm-icon-gap));
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    font-size: var(--bn-adm-title-font-size);
+    font-weight: var(--bn-adm-title-font-weight);
+    line-height: var(--bn-adm-title-line-height);
+    letter-spacing: var(--bn-adm-title-letter-spacing);
+    text-transform: var(--bn-adm-title-text-transform);
 }
 
-dl.deprecated {
-    background-color: var(--deprecated-bg);
-    border-left: 4px solid var(--deprecated-border);
-    padding: var(--spacing-medium);
-    border-radius: var(--border-radius-small);
-    margin: var(--spacing-medium) 0;
+body dl:is(.note, .warning, .attention, .todo, .deprecated, .bug, .remark, .see) > dt::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: var(--bn-adm-padding-inline);
+    display: block;
+    width: var(--bn-adm-icon-size);
+    height: var(--bn-adm-icon-size);
+    transform: translateY(-55%);
+    background-color: currentColor;
+    -webkit-mask-image: var(--bn-adm-card-icon);
+    mask-image: var(--bn-adm-card-icon);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: contain;
+    mask-size: contain;
 }
 
-dl.bug {
-    background-color: var(--bug-bg);
-    border-left: 4px solid var(--bug-border);
-    padding: var(--spacing-medium);
-    border-radius: var(--border-radius-small);
-    margin: var(--spacing-medium) 0;
+body dl:is(.note, .warning, .attention, .todo, .deprecated, .bug, .remark, .see) > dd {
+    margin: 0;
+    padding: var(--bn-adm-title-gap) var(--bn-adm-padding-inline)
+        var(--bn-adm-padding-block-end);
 }
 
-/* ============================================================================
- * MEMBER DOCUMENTATION
- * ============================================================================ */
+body dl:is(.note, .warning, .attention, .todo, .deprecated, .bug, .remark, .see) a {
+    color: inherit;
+    text-decoration: underline;
+}
+
+body dl:is(.note, .warning, .attention, .todo, .deprecated, .bug, .remark, .see) code {
+    background: rgba(128, 128, 128, 0.18);
+    color: inherit;
+}
+
 .memitem {
     margin-bottom: var(--spacing-large);
     position: relative;
@@ -1115,17 +1003,10 @@ dl.bug {
 
 .paramname em,
 .paramname span.paramname {
-    color: var(--bn-red-light);
+    color: var(--bn-link);
     font-style: italic;
 }
 
-.paramtype .el {
-    color: var(--bn-red-dark);
-}
-
-/* ============================================================================
- * THREAD SAFETY BADGES (Binary Ninja specific)
- * ============================================================================ */
 dl.threadsafe {
     position: absolute;
     top: 0px;
@@ -1159,7 +1040,7 @@ html.dark-mode dl.threadsafe {
     right: 0px;
     padding: 3px 8px;
     background-color: #6b9d63;
-    color: #ffffff;
+    color: var(--bn-white);
     border-bottom-right-radius: 3px;
     border-top-right-radius: 3px;
     min-width: 28px;
@@ -1180,7 +1061,7 @@ html.dark-mode .threadsafe.Yes dd {
     right: 0px;
     padding: 3px 8px;
     background-color: #c76058;
-    color: #ffffff;
+    color: var(--bn-white);
     border-bottom-right-radius: 3px;
     border-top-right-radius: 3px;
     min-width: 28px;
@@ -1201,7 +1082,7 @@ html.dark-mode .threadsafe.No dd {
     right: 0px;
     padding: 3px 8px;
     background-color: #c76058;
-    color: #ffffff;
+    color: var(--bn-white);
     border-bottom-right-radius: 3px;
     border-top-right-radius: 3px;
     min-width: 145px;
@@ -1225,21 +1106,14 @@ html.dark-mode img.thread {
     filter: invert(0.7);
 }
 
-/* ============================================================================
- * BINARY NINJA CUSTOMIZATIONS
- * ============================================================================ */
-
-/* External link icon */
 div.contents a[href^="http"]:after {
     content: " " url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAVklEQVR4Xn3PgQkAMQhDUXfqTu7kTtkpd5RA8AInfArtQ2iRXFWT2QedAfttj2FsPIOE1eCOlEuoWWjgzYaB/IkeGOrxXhqB+uA9Bfcm0lAZuh+YIeAD+cAqSz4kCMUAAAAASUVORK5CYII=);
 }
 
-/* GitHub logo */
 .githublogo {
     content: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyRpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuNS1jMDIxIDc5LjE1NDkxMSwgMjAxMy8xMC8yOS0xMTo0NzoxNiAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6RERCMUIwOUY4NkNFMTFFM0FBNTJFRTMzNTJEMUJDNDYiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6RERCMUIwOUU4NkNFMTFFM0FBNTJFRTMzNTJEMUJDNDYiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoTWFjaW50b3NoKSI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkU1MTc4QTJBOTlBMDExRTI5QTE1QkMxMDQ2QTg5MDREIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOkU1MTc4QTJCOTlBMDExRTI5QTE1QkMxMDQ2QTg5MDREIi8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+jUqS1wAAApVJREFUeNq0l89rE1EQx3e3gVJoSPzZeNEWPKgHoa0HBak0iHiy/4C3WvDmoZ56qJ7txVsPQu8qlqqHIhRKJZceesmhioQEfxTEtsoSpdJg1u/ABJ7Pmc1m8zLwgWTmzcw3L+/te+tHUeQltONgCkyCi2AEDHLsJ6iBMlgHL8FeoqokoA2j4CloRMmtwTmj7erHBXPgCWhG6a3JNXKdCiDl1sidVbXZkJoXQRi5t5BrxwoY71FzU8S4JuAIqFkJ2+BFSlEh525b/hr3+k/AklDkNsf6wTT4yv46KIMNpsy+iMdMc47HNWxbsgVcUn7FmLAzzoFAWDsBx+wVP6bUpp5ewI+DOeUx0Wd9D8F70BTGNjkWtqnhmT1JQAHcUgZd8Lo3rQb1LAT8eJVUfgGvHQigGp+V2Z0iAUUl8QH47kAA1XioxIo+bRN8OG8F/oBjwv+Z1nJgX5jpdzQDw0LCjsPmrcW7I/iHScCAEDj03FtD8A0EyuChHgg4KTlJQF3wZ7WELppnBX+dBFSVpJsOBWi1qiRgSwnOgoyD5hmuJdkWCVhTgnTvW3AgYIFrSbZGh0UW/Io5Vp+DQoK7o80pztWMemZbgxeNwCNwDbw1fIfgGZjhU6xPaJgBV8BdsMw5cbZoHsenwYFxkZzl83xTSKTiviCAfCsJLysH3POfC8m8NegyGAGfLP/VmGmfSChgXroR0RSWjEFv2J/nG84cuKFMf4sTCZqXuJd4KaXFVjEG3+tw4eXbNK/YC9oXXs3O8NY8y99L4BXY5cvLY/Bb2VZ58EOJVcB18DHJq9lRsKr8inyKGVjlmh29mtHs3AHfuhCwy1vXT/Nu2GKQt+UHsGdctyX6eQyNvc+5sfX9Dl7Pe2J/BRgAl2CpwmrsHR0AAAAASUVORK5CYII=);
 }
 
-/* Group headers */
 td h2.groupheader, h2.groupheader {
     border-bottom: 0px;
     color: var(--page-text);
@@ -1248,7 +1122,6 @@ td h2.groupheader, h2.groupheader {
     margin-top: var(--spacing-large);
 }
 
-/* Table of Contents - Disabled */
 div.contents .toc {
     display: none;
 }
@@ -1257,9 +1130,6 @@ div.toc {
     display: none;
 }
 
-/* ============================================================================
- * SCROLLBAR STYLING
- * ============================================================================ */
 ::-webkit-scrollbar {
     width: 7px;
     height: 7px;
@@ -1297,7 +1167,6 @@ pre.fragment:hover::-webkit-scrollbar-thumb {
     background-color: var(--sidebar-bg);
 }
 
-/* Firefox scrollbar */
 #nav-tree,
 div.fragment,
 pre.fragment {
@@ -1305,9 +1174,6 @@ pre.fragment {
     scrollbar-color: var(--border-color) transparent;
 }
 
-/* ============================================================================
- * DARK MODE TOGGLE
- * ============================================================================ */
 .bn-darkmode-toggle {
     display: inline-block;
     width: 33px;
@@ -1316,6 +1182,7 @@ pre.fragment {
     background-color: var(--page-bg);
     color: var(--page-text);
     cursor: pointer;
+    font-family: var(--font-family);
     font-size: 16px;
     line-height: var(--searchbar-height);
     border-radius: var(--searchbar-border-radius);
@@ -1337,9 +1204,6 @@ pre.fragment {
     }
 }
 
-/* ============================================================================
- * IMAGE HANDLING IN DARK MODE
- * ============================================================================ */
 html.dark-mode div.contents div.dyncontent img,
 html.dark-mode div.contents center img,
 html.dark-mode div.contents > table img {
@@ -1350,10 +1214,6 @@ html.dark-mode .darkmode_inverted_image img,
 html.dark-mode .darkmode_inverted_image object[type="image/svg+xml"] {
     filter: brightness(89%) hue-rotate(180deg) invert();
 }
-
-/* ============================================================================
- * SIDEBAR COLLAPSE
- * ============================================================================ */
 
 .sidebar-toggle {
     position: fixed;
@@ -1366,6 +1226,7 @@ html.dark-mode .darkmode_inverted_image object[type="image/svg+xml"] {
     background-color: var(--page-bg);
     color: var(--page-text);
     cursor: pointer;
+    font-family: var(--font-family);
     font-size: 18px;
     font-weight: bold;
     border-radius: 3px;
@@ -1377,10 +1238,9 @@ html.dark-mode .darkmode_inverted_image object[type="image/svg+xml"] {
 
 .sidebar-toggle:hover {
     background-color: var(--table-header-bg);
-    border-color: var(--link-color);
+    border-color: var(--bn-red);
 }
 
-/* Collapsed sidebar state */
 #side-nav.collapsed {
     width: 0 !important;
     min-width: 0 !important;
@@ -1392,7 +1252,6 @@ html.dark-mode .darkmode_inverted_image object[type="image/svg+xml"] {
     left: 10px;
 }
 
-/* Hide header/top when collapsed */
 #top.collapsed,
 #titlearea.collapsed {
     display: none !important;
@@ -1415,3 +1274,23 @@ html.dark-mode .darkmode_inverted_image object[type="image/svg+xml"] {
     left: 0 !important;
     display: none;
 }
+
+/* BEGIN GENERATED (scripts/gen_admonitions.py) — do not hand-edit */
+dl:is(.note, .todo, .remark, .see) {
+  --bn-adm-card-bg: var(--bn-adm-info-bg);
+  --bn-adm-card-fg: var(--bn-adm-info-fg);
+  --bn-adm-card-icon: var(--bn-adm-icon-info);
+}
+
+dl:is(.warning, .attention, .deprecated) {
+  --bn-adm-card-bg: var(--bn-adm-warning-bg);
+  --bn-adm-card-fg: var(--bn-adm-warning-fg);
+  --bn-adm-card-icon: var(--bn-adm-icon-warning);
+}
+
+dl:is(.bug) {
+  --bn-adm-card-bg: var(--bn-adm-danger-bg);
+  --bn-adm-card-fg: var(--bn-adm-danger-fg);
+  --bn-adm-card-icon: var(--bn-adm-icon-danger);
+}
+/* END GENERATED (scripts/gen_admonitions.py) */

@@ -1,4 +1,4 @@
-// Collapsible navigation sidebar for the API docs (issue #7867).
+// Collapsible navigation sidebar for the API docs.
 (() => {
 	const KEY = "bn_api_sidebar_collapsed";
 	const CLS = "bn-sidebar-collapsed";

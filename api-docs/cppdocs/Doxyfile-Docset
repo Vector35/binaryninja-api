@@ -1175,7 +1175,7 @@ HTML_FOOTER            = footer.html
 # obsolete.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_STYLESHEET        =
+HTML_STYLESHEET        = binaryninja-docs.css
 
 # The HTML_EXTRA_STYLESHEET tag can be used to specify additional user-defined
 # cascading style sheets that are included after the standard style sheets
@@ -1188,10 +1188,7 @@ HTML_STYLESHEET        =
 # list). For an example see the documentation.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_EXTRA_STYLESHEET  = doxygen-awesome-css/doxygen-awesome.css \
-                         doxygen-awesome-css/doxygen-awesome-sidebar-only.css \
-                         doxygen-awesome-css/doxygen-awesome-sidebar-only-darkmode-toggle.css \
-                         custom.css
+HTML_EXTRA_STYLESHEET  = ../../docs/brand.css
 
 # The HTML_EXTRA_FILES tag can be used to specify one or more extra images or
 # other source files which should be copied to the HTML output directory. Note
@@ -1201,7 +1198,15 @@ HTML_EXTRA_STYLESHEET  = doxygen-awesome-css/doxygen-awesome.css \
 # files will be copied as-is; there are no commands or markers available.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_EXTRA_FILES       = doxygen-awesome-css/doxygen-awesome-darkmode-toggle.js
+HTML_EXTRA_FILES       = binaryninja-darkmode.js \
+                         ../../docs/fonts/OpenSans-Regular.ttf \
+                         ../../docs/fonts/OpenSans-Italic.ttf \
+                         ../../docs/fonts/OpenSans-Bold.ttf \
+                         ../../docs/fonts/OpenSans-BoldItalic.ttf \
+                         ../../docs/fonts/roboto-mono-v22-latin-regular.woff2 \
+                         ../../docs/fonts/roboto-mono-v22-latin-italic.woff2 \
+                         ../../docs/fonts/roboto-mono-v22-latin-700.woff2 \
+                         ../../docs/fonts/roboto-mono-v22-latin-700italic.woff2
 
 # The HTML_COLORSTYLE_HUE tag controls the color of the HTML output. Doxygen
 # will adjust the colors in the style sheet and background images according to

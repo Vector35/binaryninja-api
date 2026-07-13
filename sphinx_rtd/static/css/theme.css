@@ -418,15 +418,13 @@ textarea {
 
 @font-face {
     font-family: FontAwesome;
-    src: url(fonts/fontawesome-webfont.eot?674f50d287a8c48dc19ba404d20fe713);
-    src: url(fonts/fontawesome-webfont.eot?674f50d287a8c48dc19ba404d20fe713?#iefix&v=4.7.0) format("embedded-opentype"), url(fonts/fontawesome-webfont.woff2?af7ae505a9eed503f8b8e6982036873e) format("woff2"), url(fonts/fontawesome-webfont.woff?fee66e712a8a08eef5805a46892932ad) format("woff"), url(fonts/fontawesome-webfont.ttf?b06871f281fee6b241d60582ae9369b9) format("truetype"), url(fonts/fontawesome-webfont.svg?912ec66d7572ff821749319396470bde#fontawesomeregular) format("svg");
+    src: url(fonts/fontawesome-webfont.woff2?af7ae505a9eed503f8b8e6982036873e) format("woff2");
     font-weight: 400;
     font-style: normal
 }
 
 .fa,
 .icon,
-.rst-content .admonition-title,
 .rst-content .code-block-caption .headerlink,
 .rst-content .eqno .headerlink,
 .rst-content code.download span:first-child,
@@ -4342,7 +4340,7 @@ button[disabled] {
     background-color: #000;
     text-decoration: none;
     font-weight: 400;
-    font-family: Lato, proxima-nova, Helvetica Neue, Arial, sans-serif;
+    font-family: var(--bn-font-body);
     box-shadow: inset 0 1px 2px -1px hsla(0, 0%, 100%, .5), inset 0 -2px 0 0 rgba(0, 0, 0, .1);
     outline-none: false;
     vertical-align: middle;
@@ -4858,7 +4856,7 @@ input[type=reset],
 input[type=submit] {
     -webkit-appearance: button;
     cursor: pointer;
-    font-family: Lato, proxima-nova, Helvetica Neue, Arial, sans-serif;
+    font-family: var(--bn-font-body);
     *overflow: visible
 }
 
@@ -4881,7 +4879,7 @@ input[type=week] {
     display: inline-block;
     border: 1px solid #ccc;
     font-size: 80%;
-    font-family: Lato, proxima-nova, Helvetica Neue, Arial, sans-serif;
+    font-family: var(--bn-font-body);
     box-shadow: inset 0 1px 3px #ddd;
     border-radius: 0;
     -webkit-transition: border .3s linear;
@@ -4994,7 +4992,7 @@ textarea {
     overflow: auto;
     vertical-align: top;
     width: 100%;
-    font-family: Lato, proxima-nova, Helvetica Neue, Arial, sans-serif
+    font-family: var(--bn-font-body)
 }
 
 select,
@@ -5504,7 +5502,7 @@ html {
 }
 
 body {
-    font-family: Lato, proxima-nova, Helvetica Neue, Arial, sans-serif;
+    font-family: var(--bn-font-body);
     font-weight: 400;
     color: #222222;
     min-height: 100%;
@@ -5590,7 +5588,7 @@ h6,
 legend {
     margin-top: 0;
     font-weight: 700;
-    font-family: Roboto Slab, ff-tisa-web-pro, Georgia, Arial, sans-serif
+    font-family: var(--bn-font-body)
 }
 
 p {
@@ -5642,7 +5640,7 @@ code {
     border: 1px solid #e1e4e5;
     font-size: 75%;
     padding: 0 5px;
-    font-family: SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, Courier, monospace;
+    font-family: var(--bn-font-mono);
     color: #e74c3c;
     overflow-x: auto
 }
@@ -6395,7 +6393,7 @@ footer p {
 footer span.commit .rst-content tt,
 footer span.commit code {
     padding: 0;
-    font-family: SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, Courier, monospace;
+    font-family: var(--bn-font-mono);
     font-size: 1em;
     background: none;
     border: none;
@@ -6521,7 +6519,7 @@ footer span.commit code {
     width: 300px;
     color: #fcfcfc;
     background: #1f1d1d;
-    font-family: Lato, proxima-nova, Helvetica Neue, Arial, sans-serif;
+    font-family: var(--bn-font-body);
     z-index: 400
 }
 
@@ -6751,7 +6749,7 @@ footer span.commit code {
     white-space: pre;
     margin: 0;
     padding: 12px;
-    font-family: SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, Courier, monospace;
+    font-family: var(--bn-font-mono);
     display: block;
     overflow: auto
 }
@@ -6778,7 +6776,7 @@ footer span.commit code {
     border-right: 1px solid #e6e9ea;
     margin: 0;
     padding: 12px;
-    font-family: SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, Courier, monospace;
+    font-family: var(--bn-font-mono);
     user-select: none;
     pointer-events: none
 }
@@ -6800,7 +6798,7 @@ footer span.commit code {
 .rst-content .linenodiv pre,
 .rst-content div[class^=highlight] pre,
 .rst-content pre.literal-block {
-    font-family: SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, Courier, monospace;
+    font-family: var(--bn-font-mono);
     font-size: 12px;
     line-height: 1.4
 }
@@ -7116,7 +7114,7 @@ footer span.commit code {
 
 .rst-content .sidebar .sidebar-title {
     display: block;
-    font-family: Roboto Slab, ff-tisa-web-pro, Georgia, Arial, sans-serif;
+    font-family: var(--bn-font-body);
     font-weight: 700;
     background: #e1e4e5;
     padding: 6px 12px;
@@ -7311,7 +7309,7 @@ html.writer-html5 .rst-content table.docutils th>p {
 .rst-content code,
 .rst-content tt {
     color: #000;
-    font-family: SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, Courier, monospace;
+    font-family: var(--bn-font-mono);
     padding: 2px 5px
 }
 
@@ -7340,7 +7338,7 @@ a .rst-content tt {
 .rst-content kbd,
 .rst-content pre,
 .rst-content samp {
-    font-family: SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, Courier, monospace
+    font-family: var(--bn-font-mono)
 }
 
 .rst-content a code,
@@ -7463,7 +7461,7 @@ html.writer-html4 .rst-content dl:not(.docutils) .sig-name,
 html.writer-html5 .rst-content dl[class]:not(.option-list):not(.field-list):not(.footnote):not(.glossary):not(.simple) .descclassname,
 html.writer-html5 .rst-content dl[class]:not(.option-list):not(.field-list):not(.footnote):not(.glossary):not(.simple) .descname,
 html.writer-html5 .rst-content dl[class]:not(.option-list):not(.field-list):not(.footnote):not(.glossary):not(.simple) .sig-name {
-    font-family: SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, Courier, monospace;
+    font-family: var(--bn-font-mono);
     color: #000
 }
 
@@ -7533,52 +7531,4 @@ span[id*=MathJax-Span] {
 
 .math {
     text-align: center
-}
-
-@font-face {
-    font-family: Lato;
-    src: url(fonts/lato-normal.woff2?bd03a2cc277bbbc338d464e679fe9942) format("woff2"), url(fonts/lato-normal.woff?27bd77b9162d388cb8d4c4217c7c5e2a) format("woff");
-    font-weight: 400;
-    font-style: normal;
-    font-display: block
-}
-
-@font-face {
-    font-family: Lato;
-    src: url(fonts/lato-bold.woff2?cccb897485813c7c256901dbca54ecf2) format("woff2"), url(fonts/lato-bold.woff?d878b6c29b10beca227e9eef4246111b) format("woff");
-    font-weight: 700;
-    font-style: normal;
-    font-display: block
-}
-
-@font-face {
-    font-family: Lato;
-    src: url(fonts/lato-bold-italic.woff2?0b6bb6725576b072c5d0b02ecdd1900d) format("woff2"), url(fonts/lato-bold-italic.woff?9c7e4e9eb485b4a121c760e61bc3707c) format("woff");
-    font-weight: 700;
-    font-style: italic;
-    font-display: block
-}
-
-@font-face {
-    font-family: Lato;
-    src: url(fonts/lato-normal-italic.woff2?4eb103b4d12be57cb1d040ed5e162e9d) format("woff2"), url(fonts/lato-normal-italic.woff?f28f2d6482446544ef1ea1ccc6dd5892) format("woff");
-    font-weight: 400;
-    font-style: italic;
-    font-display: block
-}
-
-@font-face {
-    font-family: Roboto Slab;
-    font-style: normal;
-    font-weight: 400;
-    src: url(fonts/Roboto-Slab-Regular.woff2?7abf5b8d04d26a2cafea937019bca958) format("woff2"), url(fonts/Roboto-Slab-Regular.woff?c1be9284088d487c5e3ff0a10a92e58c) format("woff");
-    font-display: block
-}
-
-@font-face {
-    font-family: Roboto Slab;
-    font-style: normal;
-    font-weight: 700;
-    src: url(fonts/Roboto-Slab-Bold.woff2?9984f4a9bda09be08e83f2506954adbe) format("woff2"), url(fonts/Roboto-Slab-Bold.woff?bed5564a116b05148e3b3bea6fb1162a) format("woff");
-    font-display: block
 }

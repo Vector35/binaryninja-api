@@ -8,7 +8,7 @@ This document describes some general tips and tricks for effective batch process
 
 While MacOS, Linux, and Windows all ship with python interpreters, those are only tested and intended for use within the scripting console. For headless automation, first install a dedicated python and using the steps in the next section to add the Binary Ninja libraries to the paths of that environment.
 
-???+ Danger "Warning"
+!!! Warning "Warning"
     Do NOT use the Python available in the Windows App Store as its sandbox protections prevent it from working with other libraries.
 
 ## Install the API
@@ -20,7 +20,7 @@ python3 ~/binaryninja/scripts/install_api.py
 ```
 
 Note
-???+ Info "Tip"
+!!! Tip "Tip"
     If you have multiple python copies installed, you'll want to make sure to specify the full path to the correct python when running as shown above.
 
 This script adds appropriate `.pth` files so that your Python can find the Binary Ninja libraries.

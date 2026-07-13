@@ -1,0 +1,102 @@
+/* Canonical Binary Ninja brand tokens for documentation.
+ *
+ * Each documentation surface loads this file at build time:
+ *   - Zensical user docs  -> loaded directly (first entry in zensical.toml
+ *                            `extra_css`); docs.css maps onto --md-* variables
+ *   - Sphinx Python API   -> api-docs/source/conf.py copies it into _static/css/
+ *                            (gitignored) and registers it before other.css
+ *   - Doxygen C++ API     -> Doxyfile HTML_EXTRA_STYLESHEET references
+ *                            ../../docs/brand.css
+ *   - rustdoc Rust API    -> scripts/build-rust-docs.sh copies it into
+ *                            target/doc/brand/, linked by rust/doc-header.html
+ */
+
+:root {
+  /* Links use a lightness-adjusted brand teal. Dark surfaces use a generated 50% blend. */
+  --bn-link-dark:      var(--bn-link-dark-blend);
+  --bn-link-light:     #0078A8;
+
+  /* ---- Brand red: marks, fills, and accents only ----------------------- */
+  --bn-red:            #E91A12;  /* marks, fills, primary accent */
+
+  /* ---- Neutrals (from guide p.16) --------------------------------------- */
+  --bn-black:          #000000;
+  --bn-gray-dark:      #2F2F2F;
+  --bn-gray-light:     #E6E7E8;
+  --bn-white:          #FFFFFF;
+
+  /* Docs-specific neutral surfaces. */
+  --bn-night:          #1B1818;  /* darkest doc surface */
+  --bn-jet:            #2B2727;
+  --bn-platinum:       #EBE1E0;
+  --bn-white-smoke:    #F3F1F1;
+  --bn-sea-salt:       #FAFAFA;
+
+  /* Docs-only deep-red surface tint used for dark-scheme search highlights. */
+  --bn-rosewood:       #57160F;
+
+  /* ---- Accent / gradient field colors ----------------------------------
+   * Each pairs with black as a linear gradient in the guide.
+   */
+  --bn-accent-navy:    #232D67;  /* also Sidekick's field color */
+  --bn-accent-maroon:  #64272D;
+  --bn-accent-teal:    #003E57;
+  --bn-gradient-navy:   linear-gradient(180deg, #232D67 0%, #000000 100%);
+  --bn-gradient-maroon: linear-gradient(180deg, #64272D 0%, #000000 100%);
+  --bn-gradient-teal:   linear-gradient(180deg, #003E57 0%, #000000 100%);
+
+  /* ---- Status colors ---------------------------------------------------- */
+  --bn-info:           #008CFF;
+  --bn-success:        #12C99B;
+  --bn-warning:        #FFA900;
+  --bn-danger:         #DC143C;  /* == CSS crimson */
+
+  /* ---- Type -------------------------------------------------------------
+   * Bebas Neue: selected display headings only (caps-only display face).
+   * Open Sans: body and general in-page headings.
+   * Roboto Mono: code.
+   */
+  --bn-font-display:   "Bebas Neue", sans-serif;
+  --bn-font-body:      "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --bn-font-mono:      "Roboto Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+/* BEGIN GENERATED (scripts/gen_admonitions.py) — do not hand-edit */
+:root {
+  /* 20% canonical brand color mixed with 80% white. */
+  --bn-info-light: #CCE8FF;
+  --bn-success-light: #D0F4EB;
+  --bn-warning-light: #FFEECC;
+  --bn-danger-light: #F8D0D8;
+  --bn-accent-navy-light: #D3D5E1;
+  /* Dark-surface links use a distinct 50% blend of the light link color. */
+  --bn-link-dark-blend: #80BCD4;
+  --bn-adm-radius: 0.4rem;
+  --bn-adm-margin-block: 24px;
+  --bn-adm-padding-inline: 20px;
+  --bn-adm-padding-block-end: 16px;
+  --bn-adm-title-gap: 12px;
+  --bn-adm-title-padding-block: 8px;
+  --bn-adm-title-font-size: 18px;
+  --bn-adm-title-font-weight: 700;
+  --bn-adm-title-line-height: 1.4;
+  --bn-adm-title-letter-spacing: 0;
+  --bn-adm-title-text-transform: none;
+  --bn-adm-icon-size: 22px;
+  --bn-adm-icon-gap: 12px;
+  --bn-adm-info-bg: var(--bn-info-light);
+  --bn-adm-info-fg: var(--bn-night);
+  --bn-adm-success-bg: var(--bn-success-light);
+  --bn-adm-success-fg: var(--bn-night);
+  --bn-adm-warning-bg: var(--bn-warning-light);
+  --bn-adm-warning-fg: var(--bn-night);
+  --bn-adm-danger-bg: var(--bn-danger-light);
+  --bn-adm-danger-fg: var(--bn-night);
+  --bn-adm-example-bg: var(--bn-accent-navy-light);
+  --bn-adm-example-fg: var(--bn-night);
+  --bn-adm-icon-info: url("data:image/svg+xml;charset=utf-8,%3C%3Fxml%20version%3D%221.0%22%20encoding%3D%22UTF-8%22%3F%3E%20%3Csvg%20id%3D%22Layer_1%22%20data-name%3D%22Layer%201%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20503.3%20503.3%22%3E%20%3Cdefs%3E%20%3Cstyle%3E%20.cls-1%20%7B%20opacity%3A%20.31%3B%20%7D%20.cls-1%2C%20.cls-2%20%7B%20fill%3A%20%23fff%3B%20%7D%20%3C%2Fstyle%3E%20%3C%2Fdefs%3E%20%3Ccircle%20class%3D%22cls-1%22%20cx%3D%22251.65%22%20cy%3D%22251.65%22%20r%3D%22251.65%22%2F%3E%20%3Cpath%20class%3D%22cls-2%22%20d%3D%22M341.65%2C353.62h-62.72l-2.12-2.1L123.35%2C198.04l67.56-67.54%2C155.56%2C155.58v62.72l-4.82%2C4.82ZM284.89%2C339.22h47.18v-47.18l-141.16-141.14-47.16%2C47.15%2C141.14%2C141.18Z%22%2F%3E%20%3C%2Fsvg%3E");
+  --bn-adm-icon-success: url("data:image/svg+xml;charset=utf-8,%3C%3Fxml%20version%3D%221.0%22%20encoding%3D%22UTF-8%22%3F%3E%20%3Csvg%20id%3D%22Layer_1%22%20data-name%3D%22Layer%201%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20503.3%20503.3%22%3E%20%3Cdefs%3E%20%3Cstyle%3E%20.cls-1%20%7B%20opacity%3A%20.31%3B%20%7D%20.cls-1%2C%20.cls-2%20%7B%20fill%3A%20%23fff%3B%20%7D%20%3C%2Fstyle%3E%20%3C%2Fdefs%3E%20%3Ccircle%20class%3D%22cls-1%22%20cx%3D%22251.65%22%20cy%3D%22251.65%22%20r%3D%22251.65%22%2F%3E%20%3Cpolygon%20class%3D%22cls-2%22%20points%3D%22222.37%20342.19%20155.66%20275.49%20165.86%20265.29%20222.37%20321.79%20368.57%20175.61%20378.77%20185.81%20222.37%20342.19%22%2F%3E%20%3C%2Fsvg%3E");
+  --bn-adm-icon-warning: url("data:image/svg+xml;charset=utf-8,%3C%3Fxml%20version%3D%221.0%22%20encoding%3D%22UTF-8%22%3F%3E%20%3Csvg%20id%3D%22Layer_1%22%20data-name%3D%22Layer%201%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20503.3%20503.3%22%3E%20%3Cdefs%3E%20%3Cstyle%3E%20.cls-1%20%7B%20opacity%3A%20.31%3B%20%7D%20.cls-1%2C%20.cls-2%20%7B%20fill%3A%20%23fff%3B%20%7D%20%3C%2Fstyle%3E%20%3C%2Fdefs%3E%20%3Ccircle%20class%3D%22cls-1%22%20cx%3D%22251.65%22%20cy%3D%22251.65%22%20r%3D%22251.65%22%2F%3E%20%3Cpath%20class%3D%22cls-2%22%20d%3D%22M381.32%2C349.2H121.99l-2.08-3.59c-1.95-3.37-1.95-8.06%2C0-11.43l126.36-220.11%2C5.38-.87c3.03%2C0%2C5.83%2C1.68%2C7.45%2C4.47l124.33%2C216.54c1.94%2C3.35%2C1.94%2C8.04-.02%2C11.41l-2.08%2C3.59ZM370.91%2C341.36s.02.04.02.04l-.02-.04ZM132.41%2C341.32l-.02.06s.02-.04.02-.06ZM136.17%2C334.79h230.96l-115.49-201.16-115.47%2C201.16Z%22%2F%3E%20%3Crect%20class%3D%22cls-2%22%20x%3D%22244.44%22%20y%3D%22201.84%22%20width%3D%2214.41%22%20height%3D%2254.93%22%2F%3E%20%3Crect%20class%3D%22cls-2%22%20x%3D%22244.44%22%20y%3D%22281%22%20width%3D%2214.41%22%20height%3D%2227.45%22%2F%3E%20%3C%2Fsvg%3E");
+  --bn-adm-icon-danger: url("data:image/svg+xml;charset=utf-8,%3C%3Fxml%20version%3D%221.0%22%20encoding%3D%22UTF-8%22%3F%3E%20%3Csvg%20id%3D%22Layer_1%22%20data-name%3D%22Layer%201%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20503.3%20503.3%22%3E%20%3Cdefs%3E%20%3Cstyle%3E%20.cls-1%20%7B%20opacity%3A%20.31%3B%20%7D%20.cls-1%2C%20.cls-2%20%7B%20fill%3A%20%23fff%3B%20%7D%20%3C%2Fstyle%3E%20%3C%2Fdefs%3E%20%3Ccircle%20class%3D%22cls-1%22%20cx%3D%22251.65%22%20cy%3D%22251.65%22%20r%3D%22251.65%22%2F%3E%20%3Cpath%20class%3D%22cls-2%22%20d%3D%22M210.42%2C424.52v-143.78h-59.36l127.46-207.85v143.78h59.36l-127.46%2C207.85ZM176.82%2C266.33h48v107.12l87.29-142.37h-48v-107.12l-87.29%2C142.37Z%22%2F%3E%20%3C%2Fsvg%3E");
+}
+/* END GENERATED (scripts/gen_admonitions.py) */

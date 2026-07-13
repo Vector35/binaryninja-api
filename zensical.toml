@@ -8,8 +8,8 @@ repo_url = "https://binary.ninja/"
 repo_name = "binary.ninja"
 dev_addr = "0.0.0.0:8000"
 use_directory_urls = false
-extra_css = ["docs.css", "github.min.css", "juxtapose.min.css"]
-extra_javascript = ["highlight.min.js", "cpp.min.js", "python.min.js", "juxtapose.min.js", "tabsync.js"]
+extra_css = ["brand.css", "docs.css", "highlight-theme.css", "juxtapose.min.css"]
+extra_javascript = ["juxtapose.min.js", "tabsync.js"]
 
 nav = [
     { "User Documentation" = [
@@ -114,6 +114,7 @@ nav = [
 [project.theme]
 custom_dir = "docs/overrides"
 favicon = "img/favicon.ico"
+logo = "img/wordmark-two-color.svg"
 font = false
 highlightjs = false
 features = [
@@ -162,7 +163,6 @@ separator = '[\s\-,:!=\[\]()"/]+|\.(?!\d)|&[lg]t;'
 [project.markdown_extensions.md_in_html]
 [project.markdown_extensions.codehilite]
 [project.markdown_extensions.admonition]
-[project.markdown_extensions.pymdownx.details]
 
 [project.markdown_extensions.pymdownx.superfences]
 preserve_tabs = true
@@ -177,4 +177,3 @@ permalink = true
 
 [project.extra]
 disablesearch = true
-logo = "images/logo.png"

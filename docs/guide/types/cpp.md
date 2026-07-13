@@ -138,7 +138,7 @@ struct __base(Foo, 0) Bar
 };
 ```
 
-???+ Warning "Tip"
+!!! Warning "Warning"
     Do not leave the `vtable` members deriving from the base class. You should always make a
     derived virtual function table structure for each new class, and override the `vtable`
     member to point at the corresponding structure. This will significantly improve Binary
@@ -284,7 +284,7 @@ int64_t Animal::greet(struct Animal* this)
 }
 ```
 
-???+ Warning "Tip"
+!!! Warning "Warning"
     `this` is a keyword in the type parser, so if you try to define the function prototype with
     `this` as the name of a parameter, you will get an error. You can enclose the parameter name
     with backticks to work around this. Here, the parameter declaration would need to be

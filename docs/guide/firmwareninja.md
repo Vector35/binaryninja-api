@@ -3,7 +3,7 @@
 Firmware Ninja (FWN) speeds up firmware analysis by offering analytical capabilities tailored to the complexities of
 embedded reverse engineering.
 
-???+ Important "Supported Editions"
+!!! Important "Supported Editions"
     Firmware Ninja is only available in the Ultimate edition of Binary Ninja
 
 ## Entropy Analysis
@@ -92,7 +92,7 @@ Once a board is selected, information about each of the board's hardware periphe
 regions for the peripherals, shift-click and select one or more rows in the table. Right-click and select `Create
 memory regions for selected devices`.
 
-???+ Important "Loading an SVD File"
+!!! Important "Loading an SVD File"
 
     Binary Ninja can load System View Description (SVD) files and create memory regions for peripherals as well as create
     and name data variables to represent control and status registers. SVD files typically contain more information than
@@ -134,7 +134,7 @@ entity. The secondary entity can be in the currently opened binary or in an exte
 contained in the current project. To specify that the secondary entity is in an external bndb, click the
 `External File` button and select the bndb file.
 
-???+ Important "External Relationship Criteria"
+!!! Important "External Relationship Criteria"
 
     If the current binary is not part of a Binary Ninja project, the `External File` button will be disabled, providing
     only the option to define internal relationships.

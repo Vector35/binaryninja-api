@@ -27,7 +27,7 @@ $mathjax
 $extrastylesheet
 <script type="text/javascript" src="$relpath^binaryninja-darkmode.js"></script>
 <script type="text/javascript">
-$(document).ready(function() {
+document.addEventListener('DOMContentLoaded', function() {
     setTimeout(function() {
         var selected = document.querySelector('#nav-tree .selected');
         if (selected) {

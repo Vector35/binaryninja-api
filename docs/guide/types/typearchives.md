@@ -8,7 +8,7 @@ Type Archives are files you can use to share types between analysis databases. Y
 
 Using the context menu in the [Type List](basictypes.md#the-type-list) in Types View, you can create Type Archives using **Create Type Archive**. Simply pick a file location, and one will be created and attached to your analysis. Once you have done this, you can attach that Type Archive to other analyses in the same menu, by instead using **Attach Type Archive**. If you don't want to use a specific Type Archive in your analysis, you can right-click it in the Type List and use **Detach Type Archive**, which will remove any associations made to types it contains, but will not remove any types in your analysis.
 
-???+ Tip "Tip"
+!!! Tip "Tip"
     Type Archives have an associated Platform (e.g. windows-x86_64), which will determine
     various Platform-specific type details, like pointer width. You may attach a
     Type Archive to files with a different Platform, but note that these details may

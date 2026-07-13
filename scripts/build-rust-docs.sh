@@ -37,7 +37,23 @@ rm -rf target/doc
 
 # Build the documentation (without dependencies by default)
 echo "Building documentation..."
-cargo doc --no-deps "$@"
+RUSTDOCFLAGS="${RUSTDOCFLAGS:+$RUSTDOCFLAGS }--html-in-header $(pwd)/rust/doc-header.html" cargo doc --no-deps "$@"
+
+# Copy brand assets referenced by doc-header.html and the crate doc attrs
+echo "Copying brand assets..."
+mkdir -p target/doc/brand
+cp docs/brand.css rust/rustdoc-brand.css target/doc/brand/
+cp docs/fonts/OpenSans-Regular.ttf target/doc/brand/
+cp docs/fonts/OpenSans-Italic.ttf target/doc/brand/
+cp docs/fonts/OpenSans-Bold.ttf target/doc/brand/
+cp docs/fonts/OpenSans-BoldItalic.ttf target/doc/brand/
+cp docs/fonts/roboto-mono-v22-latin-regular.woff2 target/doc/brand/
+cp docs/fonts/roboto-mono-v22-latin-italic.woff2 target/doc/brand/
+cp docs/fonts/roboto-mono-v22-latin-700.woff2 target/doc/brand/
+cp docs/fonts/roboto-mono-v22-latin-700italic.woff2 target/doc/brand/
+cp docs/img/favicon.ico docs/img/favicon-32x32.png target/doc/brand/
+cp docs/img/logo-vertical-light.svg docs/img/logo-vertical-dark.svg target/doc/brand/
+cp docs/img/wordmark-white.svg target/doc/brand/
 
 # Create redirect index.html
 echo "Creating redirect index.html..."
@@ -47,13 +63,33 @@ cat > target/doc/index.html <<'EOF'
 <head>
     <meta charset="utf-8">
     <meta http-equiv="refresh" content="0; url=/binaryninja/index.html">
+    <link rel="icon" href="/brand/favicon-32x32.png">
+    <link rel="stylesheet" href="/brand/brand.css">
     <title>Binary Ninja Rust Documentation</title>
+    <style>
+        html { height: 100%; }
+        body {
+            margin: 0;
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+            background: var(--bn-night);
+            color: var(--bn-white-smoke);
+            font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        img { width: min(420px, 80vw); }
+        a { color: var(--bn-link-dark); }
+    </style>
     <script>
         window.location.href = "/binaryninja/index.html";
     </script>
 </head>
 <body>
-    <p>Redirecting to <a href="/binaryninja/index.html">Binary Ninja Rust documentation</a>...</p>
+    <img src="/brand/wordmark-white.svg" alt="Binary Ninja">
+    <p>Redirecting to the <a href="/binaryninja/index.html">Binary Ninja Rust documentation</a>...</p>
 </body>
 </html>
 EOF

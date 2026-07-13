@@ -13,7 +13,7 @@ When you are interacting in the UI with an executable file, you can access `bv` 
 140
 ```
 
-???+ Info "Tip"
+!!! Tip "Tip"
     Note the use of `bv` here as a shortcut to the currently open BinaryView. For other "magic" variables, see the [user guide](../guide/index.md#magic-console-variables)
 
 If you want to start writing a plugin, most top-level methods will exist off of the BinaryView. Conceptually, you can think about the organization as a hierarchy starting with a BinaryView, then functions, then basic blocks, then instructions. There are of course lots of other ways to access parts of the binary, but this is the most common organization. Check out the tab completion in the scripting console for `bv.get<TAB>` for example (a common prefix for many APIs):
@@ -167,7 +167,7 @@ Alternatively, the property `current_function.llil_if_available` will immediatel
 
 Even in cases where `.llil` returns `None`, it is possible to override the analysis limits by using the [`analysis_skip_override`](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.analysis_skip_override) setter.
 
-???+ Danger "Warning"
+!!! Warning "Warning"
     Overriding analysis limits is DANGEROUS! These limits exist for a reason. Whether they are because the function is too large, because analysis was taking too long, or whatever the reason, you override these limits at your own risk.
 
 It's possible to query the reason for the override by querying the [`analysis_skip_reason`](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.analysis_skip_reason) property.
@@ -179,7 +179,7 @@ Memory permissions and annotations directly impact Binary Ninja's analysis. The 
 
 So, for example, an annotation such as **`const`** takes precedence over a memory [section](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.Section) with [ReadWriteDataSectionSemantics](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SectionSemantics), while an annotation such as **`volatile`** takes precedence over a memory [section](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.Section) with [ReadOnlyDataSectionSemantics](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SectionSemantics). Additionally, a section with [ReadOnlyDataSectionSemantics](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SectionSemantics) over a [segment](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.Segment) with a [SegmentExecutable](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SegmentFlag) flag will still block linear sweep from creating functions in that region of memory.
 
-???+ Note "Note"
+!!! Note "Note"
     If both **`const`** and **`volatile`** annotations are applied, the **`volatile`** annotation will take precedence. This means that analysis treats the data as mutable, ignoring the immutability implied by **`const`**.
 
 This is most notable for how the data flow system works and for how linear sweep/code identification works.
@@ -270,7 +270,7 @@ If you're opening a file with non-ASCII string encodings, make sure to use one o
 
 ![Sample Binary With CJK Unified Ideographs](../img/hanyu-with-codepage.png "Sample Binary With CJK Unified Ideographs")
 
-???+ Info "Tip"
+!!! Tip "Tip"
     Note that there is a small bug and some string length calculations will be off with certain characters as shown above.
 
 ### Wide Strings in the UI

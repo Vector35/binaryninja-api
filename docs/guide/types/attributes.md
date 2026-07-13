@@ -144,7 +144,7 @@ The following built-in calling conventions without dedicated keywords are availa
 |`gcc-thiscall`|x86|The `thiscall` calling convention as implemented in GCC on non-Windows platforms|
 |`clang-thiscall`|x86|The `thiscall` calling convention as implemented in Clang on non-Windows platforms|
 
-???+ Warning "Linux x86 / x86_64 default convention rename"
+!!! Warning "Linux x86 / x86_64 default convention rename"
     Prior to version 5.4, the default Linux convention on x86/x86_64 was named `cdecl` (and the stdcall variant was `stdcall`). It is now `sysv` (and `sysv-stdcall`) to deconflict with the Windows behavior of `cdecl`/`stdcall`. Both names continue to be registered on the architecture, so `__convention("cdecl")` will still resolve to the Windows version of `cdecl` even on Linux. If you have scripts that match calling conventions by string name, update them to recognize `sysv` and `sysv-stdcall`.
 
 ## Custom Parameter and Return Value Locations
@@ -327,7 +327,7 @@ while (leader != event)
     event = event->sibling_list_next - 0x10
 ```
 
-???+ Tip "Tip"
+!!! Tip "Tip"
     Normally, intrusive linked lists are a structure containing pointers to that structure
     inside the next object, but we're inlining the structure members here, so we can
     specialize their pointer offsets.

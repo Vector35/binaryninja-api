@@ -19,6 +19,7 @@
 from __future__ import annotations
 from io import StringIO
 import os
+import shutil
 from pathlib import Path
 import sys
 import platform
@@ -196,15 +197,32 @@ def write_summary_table(output, header, members):
 	output.write("\n")
 
 def setup(app):
+	# Copy canonical brand assets into Sphinx's static tree.
+	shutil.copyfile(os.path.join(os.path.dirname(__file__), '..', '..', 'docs', 'brand.css'),
+	                os.path.join(os.path.dirname(__file__), '_static', 'css', 'brand.css'))
+	os.makedirs(os.path.join(os.path.dirname(__file__), '_static', 'fonts'), exist_ok=True)
+	for font in (
+		'bebas-neue-bold.woff2',
+		'OpenSans-Regular.ttf',
+		'OpenSans-Italic.ttf',
+		'OpenSans-Bold.ttf',
+		'OpenSans-BoldItalic.ttf',
+		'roboto-mono-v22-latin-regular.woff2',
+		'roboto-mono-v22-latin-italic.woff2',
+		'roboto-mono-v22-latin-700.woff2',
+		'roboto-mono-v22-latin-700italic.woff2',
+	):
+		shutil.copyfile(
+			os.path.join(os.path.dirname(__file__), '..', '..', 'docs', 'fonts', font),
+			os.path.join(os.path.dirname(__file__), '_static', 'fonts', font),
+		)
+	app.add_css_file('css/brand.css')
 	app.add_css_file('css/other.css')
 	app.add_js_file('js/sidebar_toggle.js')
 	app.is_parallel_allowed('write')
 
 def generaterst():
-	# Generate and index.rst and .rst files for modules, removing any unneeded/old .rst files.
-	# This should only write to the files if the contents have changed,
-	# because sphinx uses that .rst mtime to determine if the corresponding .html file should be regenerated.
-	# Maybe eventually they'll check file contents to see if the file contents changed but until then this works.
+	# Preserve mtimes for unchanged generated RST so Sphinx can skip rebuilding it.
 	used_rst_files: List[Path] = []
 	index_rst = StringIO()
 	index_rst.write('''Binary Ninja Python API Reference
@@ -469,9 +487,8 @@ html_title = u'Binary Ninja API Documentation v' + version
 html_short_title = u'BN API'
 
 # The name of an image file (relative to this directory) to place at the top
-# of the sidebar.
-#
-# html_logo = None
+# of the sidebar. White-art wordmark — the sidebar header background is brand red.
+html_logo = u'../../docs/img/wordmark-white.svg'
 
 # The name of an image file (relative to this directory) to use as a favicon of
 # the docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -664,4 +681,3 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
-

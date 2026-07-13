@@ -35,7 +35,7 @@ echo C++ API documentation available in html/
 ## Changing
 Changing documentation for the API itself is fairly straightforward. Use [doxygen style comment blocks](https://www.doxygen.nl/manual/docblocks.html) in C++ and C, and [restructured text blocks](https://sphinx-tutorial.readthedocs.io/step-1/) for python for the source. The user documentation is located in the `docs/` folder and the API documentation is generated from the config in the `api-docs` folder.
 
-???+ Info "Tip"
+!!! Tip "Tip"
     When updating user documentation, the `poetry run zensical serve` feature is particularly helpful for live previews.
 
 [contribution license agreement]: https://binary.ninja/cla.pdf

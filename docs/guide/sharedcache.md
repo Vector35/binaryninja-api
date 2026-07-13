@@ -50,7 +50,7 @@ Binary Ninja currently only supports `dyld_shared_cache` files that have been ex
 
 To load the shared cache, open the **Primary** file in Binary Ninja. In the example above this would be `dyld_shared_cache_arm64`.
 
-???+ Danger "Warning"
+!!! Warning "Warning"
     Opening any other file (e.g. `dyld_shared_cache_arm64.01`) will result in a partial shared cache, with only the information present in the file you opened.
 
 ### Original Cache Files Are Required
@@ -136,7 +136,7 @@ for image in dsc.loaded_images:
         dsc.apply_image(bv, dep_image)
 ```
 
-???+ Note "Note"
+!!! Note "Note"
     If you are processing `dyld_shared_cache` files headlessly, [`loader.dsc.autoLoadPattern`](settings.md) is a *very* useful setting to override. This is a regex you can have match all the files you *want* to analyze, skipping the need to use the Python or C++ API to load them manually.
 
 ## Glossary

@@ -15,7 +15,7 @@ Kernel caches from these platforms, architectures, and OS versions can be loaded
 | macOS    | arm64  | 11 - 27  |
 | iOS      | arm64  | 16 - 27  |
 
-???+ Note "Note"
+!!! Note "Note"
     This plugin currently only supports `kernelcache` files in the `MH_FILESET` format.
 
 ## Obtaining a Kernel Cache
@@ -80,7 +80,7 @@ image = kc.get_image_with_name('com.apple.kernel')
 kc.apply_image(bv, image)
 ```
 
-???+ Note "Note"
+!!! Note "Note"
     When using the Python console in the UI, the `kernel_cache` variable is automatically available for the current view.
 
 **Note:** *We do not support single-section loading at this time and can only load entire images.*

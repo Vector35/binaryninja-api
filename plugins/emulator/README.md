@@ -72,6 +72,8 @@ Emulating an unsupported instruction stops the emulator with an `Unimplemented` 
   `DIVU_DP`, `DIVS_DP`, `MODU`, `MODS`, `MODU_DP`, `MODS_DP`, `NEG`, `ADD_OVERFLOW`
 - **Bitwise / shifts:** `AND`, `OR`, `XOR`, `NOT`, `LSL`, `LSR`, `ASR`, `ROL`, `ROR`, `RLC`,
   `RRC`, `SX`, `ZX`, `LOW_PART`, `TEST_BIT`, `BOOL_TO_INT`
+- **Bit operations:** `BSWAP`, `POPCNT`, `CLZ`, `CTZ`, `RBIT`, `CLS`, `ABS`, `MINS`, `MAXS`,
+  `MINU`, `MAXU`
 - **Comparisons:** `CMP_E`, `CMP_NE`, `CMP_SLT`, `CMP_SLE`, `CMP_SGE`, `CMP_SGT`, `CMP_ULT`,
   `CMP_ULE`, `CMP_UGE`, `CMP_UGT`
 - **Flags:** `FLAG`, `SET_FLAG`, `FLAG_BIT`, `FLAG_COND`, `FLAG_GROUP`
@@ -86,8 +88,6 @@ Emulating an unsupported instruction stops the emulator with an `Unimplemented` 
   (float *constants* are read, but float arithmetic is not evaluated)
 - **Register stacks (x87/FPU-style):** `REG_STACK_REL`, `SET_REG_STACK_REL`, `REG_STACK_PUSH`,
   `REG_STACK_POP`, `REG_STACK_FREE_REG`, `REG_STACK_FREE_REL`
-- **Bit operations:** `BSWAP`, `CLZ`, `CTZ`, `CLS`, `POPCNT`, `RBIT`, `ABS`, `MINS`, `MAXS`,
-  `MINU`, `MAXU`
 - **System / hooks** (no built-in semantics — stop unless the embedding code registers a
   hook): `SYSCALL`, `INTRINSIC`
 - **Halting / non-representable** (stop the emulator): `BP`, `TRAP`, `UNDEF`, `UNIMPL`,

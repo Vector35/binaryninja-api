@@ -1246,6 +1246,117 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	case LLIL_LOW_PART:
 		return MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
 
+	// --- Bit operations ---
+	case LLIL_BSWAP:
+	{
+		// Reverse the byte order of the sz-byte value.
+		intx::uint512 val = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		intx::uint512 result(0);
+		for (size_t i = 0; i < sz; i++)
+		{
+			intx::uint512 byte = (val >> (8 * i)) & intx::uint512(0xff);
+			result |= byte << (8 * (sz - 1 - i));
+		}
+		return result;
+	}
+
+	case LLIL_POPCNT:
+	{
+		intx::uint512 val = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		uint64_t count = 0;
+		for (size_t i = 0; i < sz * 8; i++)
+			if (((val >> i) & intx::uint512(1)) != 0)
+				count++;
+		return intx::uint512(count);
+	}
+
+	case LLIL_CLZ:
+	{
+		// Count leading zero bits; clz(0) == 8 * size.
+		intx::uint512 val = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		size_t bits = sz * 8;
+		uint64_t count = 0;
+		for (size_t i = bits; i-- > 0;)
+		{
+			if (((val >> i) & intx::uint512(1)) != 0)
+				break;
+			count++;
+		}
+		return intx::uint512(count);
+	}
+
+	case LLIL_CTZ:
+	{
+		// Count trailing zero bits; ctz(0) == 8 * size.
+		intx::uint512 val = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		size_t bits = sz * 8;
+		uint64_t count = 0;
+		for (size_t i = 0; i < bits; i++)
+		{
+			if (((val >> i) & intx::uint512(1)) != 0)
+				break;
+			count++;
+		}
+		return intx::uint512(count);
+	}
+
+	case LLIL_RBIT:
+	{
+		// Reverse the bit order of the sz-byte value.
+		intx::uint512 val = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		size_t bits = sz * 8;
+		intx::uint512 result(0);
+		for (size_t i = 0; i < bits; i++)
+			if (((val >> i) & intx::uint512(1)) != 0)
+				result |= intx::uint512(1) << (bits - 1 - i);
+		return result;
+	}
+
+	case LLIL_CLS:
+	{
+		// Count leading sign bits: number of bits below the sign bit that match it.
+		intx::uint512 val = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		size_t bits = sz * 8;
+		intx::uint512 sign = (val >> (bits - 1)) & intx::uint512(1);
+		uint64_t count = 0;
+		for (size_t i = bits - 1; i-- > 0;)
+		{
+			if (((val >> i) & intx::uint512(1)) != sign)
+				break;
+			count++;
+		}
+		return intx::uint512(count);
+	}
+
+	case LLIL_ABS:
+	{
+		// Signed absolute value; abs(INT_MIN) == INT_MIN.
+		intx::uint512 val = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		size_t bits = sz * 8;
+		bool neg = ((val >> (bits - 1)) & intx::uint512(1)) != 0;
+		return neg ? MaskToSize(~val + 1, sz) : val;
+	}
+
+	case LLIL_MINS:
+	case LLIL_MAXS:
+	{
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		int64_t sl = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(left, sz, 8)));
+		int64_t sr = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(right, sz, 8)));
+		bool leftWins = (expr.operation == LLIL_MINS) ? (sl <= sr) : (sl >= sr);
+		return leftWins ? left : right;
+	}
+
+	case LLIL_MINU:
+	case LLIL_MAXU:
+	{
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		bool leftWins = (expr.operation == LLIL_MINU) ? (left <= right) : (left >= right);
+		return leftWins ? left : right;
+	}
+
 	// --- Comparisons ---
 	case LLIL_CMP_E:
 	{

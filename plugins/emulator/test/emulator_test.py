@@ -49,8 +49,9 @@ STORE_RDI = b'\x89\x07\xc3'
 
 
 class EmulatorTestBase(unittest.TestCase):
-    def emulator_for(self, code: bytes, entries=(0,), entry_point=0, max_instructions=1000):
-        bv = make_bv(code, entries=entries)
+    def emulator_for(self, code: bytes, entries=(0,), entry_point=0, max_instructions=1000,
+                     arch='x86_64'):
+        bv = make_bv(code, entries=entries, arch=arch)
         emu = LLILEmulator(bv)
         self.assertTrue(emu.set_entry_point(entry_point))
         emu.set_max_instructions(max_instructions)
@@ -312,6 +313,48 @@ class HookTests(EmulatorTestBase):
         for setter, fn in setters:
             setter(fn)
             setter(None)  # must not raise
+
+
+class BitOpTests(EmulatorTestBase):
+    # x86-64 snippets whose lifted LLIL exercises the bit ops (BSWAP/POPCNT/CLZ/CTZ),
+    # and aarch64 snippets for the ops with direct A64 instructions (RBIT/CLS).
+    def test_bswap(self):
+        # mov eax, 0x12345678 ; bswap eax ; ret
+        emu = self.emulator_for(b'\xb8\x78\x56\x34\x12\x0f\xc8\xc3')
+        emu.run()
+        self.assertEqual(emu.get_register('rax'), 0x78563412)
+
+    def test_popcnt(self):
+        # mov ecx, 0xff ; popcnt eax, ecx ; ret
+        emu = self.emulator_for(b'\xb9\xff\x00\x00\x00\xf3\x0f\xb8\xc1\xc3')
+        emu.run()
+        self.assertEqual(emu.get_register('rax'), 8)
+
+    def test_clz(self):
+        # mov ecx, 1 ; lzcnt eax, ecx ; ret   -> 31 leading zeros in a 32-bit 1
+        emu = self.emulator_for(b'\xb9\x01\x00\x00\x00\xf3\x0f\xbd\xc1\xc3')
+        emu.run()
+        self.assertEqual(emu.get_register('rax'), 31)
+
+    def test_ctz(self):
+        # mov ecx, 8 ; tzcnt eax, ecx ; ret   -> 3 trailing zeros
+        emu = self.emulator_for(b'\xb9\x08\x00\x00\x00\xf3\x0f\xbc\xc1\xc3')
+        emu.run()
+        self.assertEqual(emu.get_register('rax'), 3)
+
+    def test_rbit(self):
+        # aarch64: movz w0, #1 ; rbit w0, w0 ; ret   -> bit 0 -> bit 31
+        emu = self.emulator_for(
+            b'\x20\x00\x80\x52\x00\x00\xc0\x5a\xc0\x03\x5f\xd6', arch='aarch64')
+        emu.run()
+        self.assertEqual(emu.get_register('x0'), 0x80000000)
+
+    def test_cls(self):
+        # aarch64: movz w0, #1 ; cls w0, w0 ; ret   -> 30 leading sign (zero) bits below MSB
+        emu = self.emulator_for(
+            b'\x20\x00\x80\x52\x00\x14\xc0\x5a\xc0\x03\x5f\xd6', arch='aarch64')
+        emu.run()
+        self.assertEqual(emu.get_register('x0'), 30)
 
 
 class StateSerializationTests(EmulatorTestBase):

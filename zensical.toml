@@ -30,6 +30,7 @@ nav = [
             { "WARP" = "guide/warp.md" },
             { "BinExport / BinDiff" = "guide/binexport.md" },
             { "Guided Analysis" = "guide/guided_analysis.md" },
+            { "BNIL Emulator" = "guide/emulator.md" },
         ] },
         { "Debugger" = [
             { "Overview" = "guide/debugger/index.md" },

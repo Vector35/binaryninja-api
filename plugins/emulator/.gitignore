@@ -1,0 +1,28 @@
+# Build output
+/build
+/artifacts
+cmake-build-*/
+out/
+
+# Compiled objects / libraries
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+*.pdb
+*.ilk
+
+# Generated Python bindings
+/api/python/_emulatorcore.py
+/api/python/emulator_enums.py
+*/__pycache__/
+*.pyc
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+/.claude/

@@ -2142,19 +2142,25 @@ ExprId LowLevelILInstruction::CopyTo(
 		    GetLowSSARegister<LLIL_SET_REG_SPLIT_SSA>(), subExprHandler(GetSourceExpr<LLIL_SET_REG_SPLIT_SSA>()),
 		    loc);
 	case LLIL_SET_REG_STACK_REL:
-		return dest->SetRegisterStackTopRelative(size, GetDestRegisterStack<LLIL_SET_REG_STACK_REL>(),
-		    subExprHandler(GetDestExpr<LLIL_SET_REG_STACK_REL>()),
-		    subExprHandler(GetSourceExpr<LLIL_SET_REG_STACK_REL>()), flags, loc);
+	{
+		ExprId destExpr = subExprHandler(GetDestExpr<LLIL_SET_REG_STACK_REL>());
+		ExprId source = subExprHandler(GetSourceExpr<LLIL_SET_REG_STACK_REL>());
+		return dest->SetRegisterStackTopRelative(
+		    size, GetDestRegisterStack<LLIL_SET_REG_STACK_REL>(), destExpr, source, flags, loc);
+	}
 	case LLIL_REG_STACK_PUSH:
 		return dest->RegisterStackPush(size, GetDestRegisterStack<LLIL_REG_STACK_PUSH>(),
 		    subExprHandler(GetSourceExpr<LLIL_REG_STACK_PUSH>()), flags, loc);
 	case LLIL_SET_REG_STACK_REL_SSA:
+	{
+		ExprId destExpr = subExprHandler(GetDestExpr<LLIL_SET_REG_STACK_REL_SSA>());
+		ExprId source = subExprHandler(GetSourceExpr<LLIL_SET_REG_STACK_REL_SSA>());
 		return dest->SetRegisterStackTopRelativeSSA(size,
 		    GetDestSSARegisterStack<LLIL_SET_REG_STACK_REL_SSA>().regStack,
 		    GetDestSSARegisterStack<LLIL_SET_REG_STACK_REL_SSA>().version,
-		    GetSourceSSARegisterStack<LLIL_SET_REG_STACK_REL_SSA>().version,
-		    subExprHandler(GetDestExpr<LLIL_SET_REG_STACK_REL_SSA>()), GetTopSSARegister<LLIL_SET_REG_STACK_REL_SSA>(),
-		    subExprHandler(GetSourceExpr<LLIL_SET_REG_STACK_REL_SSA>()), loc);
+		    GetSourceSSARegisterStack<LLIL_SET_REG_STACK_REL_SSA>().version, destExpr,
+		    GetTopSSARegister<LLIL_SET_REG_STACK_REL_SSA>(), source, loc);
+	}
 	case LLIL_SET_REG_STACK_ABS_SSA:
 		return dest->SetRegisterStackAbsoluteSSA(size, GetDestSSARegisterStack<LLIL_SET_REG_STACK_ABS_SSA>().regStack,
 		    GetDestSSARegisterStack<LLIL_SET_REG_STACK_ABS_SSA>().version,
@@ -2180,12 +2186,18 @@ ExprId LowLevelILInstruction::CopyTo(
 		return dest->LoadSSA(
 		    size, subExprHandler(GetSourceExpr<LLIL_LOAD_SSA>()), GetSourceMemoryVersion<LLIL_LOAD_SSA>(), loc);
 	case LLIL_STORE:
-		return dest->Store(
-		    size, subExprHandler(GetDestExpr<LLIL_STORE>()), subExprHandler(GetSourceExpr<LLIL_STORE>()), flags, loc);
+	{
+		ExprId destExpr = subExprHandler(GetDestExpr<LLIL_STORE>());
+		ExprId source = subExprHandler(GetSourceExpr<LLIL_STORE>());
+		return dest->Store(size, destExpr, source, flags, loc);
+	}
 	case LLIL_STORE_SSA:
-		return dest->StoreSSA(size, subExprHandler(GetDestExpr<LLIL_STORE_SSA>()),
-		    subExprHandler(GetSourceExpr<LLIL_STORE_SSA>()), GetDestMemoryVersion<LLIL_STORE_SSA>(),
+	{
+		ExprId destExpr = subExprHandler(GetDestExpr<LLIL_STORE_SSA>());
+		ExprId source = subExprHandler(GetSourceExpr<LLIL_STORE_SSA>());
+		return dest->StoreSSA(size, destExpr, source, GetDestMemoryVersion<LLIL_STORE_SSA>(),
 		    GetSourceMemoryVersion<LLIL_STORE_SSA>(), loc);
+	}
 	case LLIL_REG:
 		return dest->Register(size, GetSourceRegister<LLIL_REG>(), loc);
 	case LLIL_REG_SSA:
@@ -2397,16 +2409,21 @@ ExprId LowLevelILInstruction::CopyTo(
 	case LLIL_FCMP_GT:
 	case LLIL_FCMP_O:
 	case LLIL_FCMP_UO:
-		return dest->AddExprWithLocation(operation, loc, size, flags, subExprHandler(AsTwoOperand().GetLeftExpr()),
-		    subExprHandler(AsTwoOperand().GetRightExpr()));
+	{
+		ExprId left = subExprHandler(AsTwoOperand().GetLeftExpr());
+		ExprId right = subExprHandler(AsTwoOperand().GetRightExpr());
+		return dest->AddExprWithLocation(operation, loc, size, flags, left, right);
+	}
 	case LLIL_ADC:
 	case LLIL_SBB:
 	case LLIL_RLC:
 	case LLIL_RRC:
-		return dest->AddExprWithLocation(operation, loc, size, flags,
-		    subExprHandler(AsTwoOperandWithCarry().GetLeftExpr()),
-		    subExprHandler(AsTwoOperandWithCarry().GetRightExpr()),
-		    subExprHandler(AsTwoOperandWithCarry().GetCarryExpr()));
+	{
+		ExprId left = subExprHandler(AsTwoOperandWithCarry().GetLeftExpr());
+		ExprId right = subExprHandler(AsTwoOperandWithCarry().GetRightExpr());
+		ExprId carry = subExprHandler(AsTwoOperandWithCarry().GetCarryExpr());
+		return dest->AddExprWithLocation(operation, loc, size, flags, left, right, carry);
+	}
 	case LLIL_INTRINSIC:
 		for (auto i : GetParameterExprs<LLIL_INTRINSIC>())
 			params.push_back(subExprHandler(i));

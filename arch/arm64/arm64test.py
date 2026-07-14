@@ -12773,6 +12773,9 @@ tests_cssc = [
     (b'\x20\xb8\xe0\x4e', 'LLIL_UNIMPL()'),
 ]
 
+disasm_test_cases = [
+]
+
 test_cases = \
 	tests_cssc + \
 	tests_shll + \
@@ -12830,6 +12833,29 @@ test_cases = \
     tests_ldrsw + \
 	tests_grab_bag
 
+# Instructions whose lifted IL depends on the address they are lifted at: adrp forms an address from
+# the page the instruction sits in, and the literal load addresses its operand relative to the
+# instruction. Each case gives the address to lift at and the IL that must be produced there, which
+# pins the address arithmetic rather than just the fact that it changes. Every other test expects the
+# IL produced at address 0, so these instructions are excluded from the shared view the rest are
+# lifted from.
+tests_position_dependent = [
+    # adrp x8, 0x4364000 -- (address & ~0xfff) + 0x4364000
+    (b'\x28\x1b\x02\x90', 0x0, 'LLIL_SET_REG.q(x8,LLIL_CONST.q(0x4364000))'),
+    (b'\x28\x1b\x02\x90', 0x8000, 'LLIL_SET_REG.q(x8,LLIL_CONST.q(0x436C000))'),
+    (b'\x28\x1b\x02\x90', 0x8004, 'LLIL_SET_REG.q(x8,LLIL_CONST.q(0x436C000))'),
+    # adrp x0, 0x11000 -- (address & ~0xfff) + 0x11000
+    (b'\x80\x00\x00\xb0', 0x0, 'LLIL_SET_REG.q(x0,LLIL_CONST.q(0x11000))'),
+    (b'\x80\x00\x00\xb0', 0x8000, 'LLIL_SET_REG.q(x0,LLIL_CONST.q(0x19000))'),
+    # ldrsw x6, 0x20 -- address + 0x20
+    (b'\x06\x01\x00\x98', 0x0, 'LLIL_SET_REG.q(x6,LLIL_SX.q(LLIL_LOAD.d(LLIL_CONST.q(0x20))))'),
+    (b'\x06\x01\x00\x98', 0x8000, 'LLIL_SET_REG.q(x6,LLIL_SX.q(LLIL_LOAD.d(LLIL_CONST.q(0x8020))))'),
+    (b'\x06\x01\x00\x98', 0x8004, 'LLIL_SET_REG.q(x6,LLIL_SX.q(LLIL_LOAD.d(LLIL_CONST.q(0x8024))))'),
+]
+
+# The encodings above, which must not be lifted from the shared view.
+position_dependent_encodings = {data for data, _, _ in tests_position_dependent}
+
 def il2str(il):
     sz_lookup = {1:'.b', 2:'.w', 4:'.d', 8:'.q', 16:'.o'}
     if isinstance(il, lowlevelil.LowLevelILInstruction):
@@ -12849,46 +12875,103 @@ def il2str(il):
     else:
         return str(il)
 
-# TODO: make this less hacky
-def lift(data, disasm=False):
-    EPILOG = b'\xa0\xd5\x9b\xd2' + b'\xc0\x03\x5f\xd6' # mov x0, 0xDEAD; return
+EPILOG = b'\xa0\xd5\x9b\xd2' + b'\xc0\x03\x5f\xd6' # mov x0, 0xDEAD; return
 
-    platform = binaryninja.Platform['linux-aarch64']
-    # make a pretend function that returns
-    bv = binaryview.BinaryView.new(data + EPILOG)
-    bv.add_function(0, plat=platform)
-    assert len(bv.functions) == 1
+# Layout of the view every position-independent case is lifted from. Each case is its instruction
+# followed by the epilogue, padded out to a fixed stride. The first case sits at BATCH_BASE rather
+# than at 0 so that no case shares the page that address 0 is in, which is what makes an adrp that has
+# lost its dependence on the address show up as a mismatch instead of agreeing with the IL expected at
+# address 0.
+BATCH_BASE = 0x1000
+BATCH_STRIDE = 16
 
-    asm = []
+def platform():
+    return binaryninja.Platform['linux-aarch64']
 
+def new_view(data):
+    """A view of data that carries analysis no further than the IL these tests read."""
+    bv = binaryview.BinaryView.new(data)
+    binaryninja.Settings().set_string('analysis.mode', 'basic', bv)
+    return bv
+
+def function_il(func):
     tokens = []
     attributes = set()
-    #for block in bv.functions[0].low_level_il:
-    for block in bv.functions[0].lifted_il:
+    for block in func.lifted_il:
         for il in block:
             attributes = attributes.union(il.attributes)
             tokens.append(il2str(il))
-            if disasm:
-                info = block.arch.get_instruction_info(bv[il.address:il.address+block.arch._get_max_instruction_length(None)], il.address)
-                if info:
-                    asm.append(''.join(map(str, block.arch.get_instruction_text(bv[il.address:il.address + info.length], il.address)[0])))
-                else:
-                    asm.append(''.join(map(str, block.arch.get_instruction_text(bv[il.address:il.address+4], il.address)[0])))
     il_str = '; '.join(tokens)
 
     i = len(il_str)
     try:
         i = il_str.rindex('; LLIL_SET_REG.q(x0,LLIL_CONST.q(0xDEAD))')
-    except:
-        # ValueError: substring not found
+    except ValueError:
         pass
-    il_str = il_str[0:i]
-    asm = asm[0:1]
 
+    return il_str[0:i], attributes
+
+def disassemble(data, addr=0):
+    arch = binaryninja.Architecture['aarch64']
+    tokens = arch.get_instruction_text(data, addr)[0]
+    return ''.join(map(str, tokens)) if tokens else ''
+
+def lift_at(data, addr):
+    """Lift a single instruction placed at addr, in a BinaryView of its own."""
+    bv = new_view(b'\x00' * addr + data + EPILOG)
+    bv.add_function(addr, plat=platform())
+    func = bv.get_function_at(addr)
+    assert func is not None
+    return function_il(func)
+
+def lift(data, disasm=False):
+    il_str, attributes = lift_at(data, 0)
     if disasm:
-        return il_str, attributes, asm
+        return il_str, attributes, [disassemble(data)]
     else:
         return il_str, attributes
+
+class BatchLift:
+    """Every test case as its own function within a single BinaryView.
+
+    Constructing a BinaryView costs far more than lifting an instruction does, so the cases are laid
+    out together and lifted from one view. Each function is created at a known address rather than
+    left to be discovered, so nothing depends on what analysis finds on its own.
+    """
+    def __init__(self, cases):
+        blob = bytearray(b'\x00' * BATCH_BASE)
+        for data, *_ in cases:
+            body = data + EPILOG
+            assert len(body) <= BATCH_STRIDE
+            blob += body + b'\x00' * (BATCH_STRIDE - len(body))
+
+        self.bv = new_view(bytes(blob))
+        for index in range(len(cases)):
+            self.bv.add_function(self.address(index), plat=platform())
+        self.bv.update_analysis_and_wait()
+
+    def address(self, index):
+        return BATCH_BASE + index * BATCH_STRIDE
+
+    def il(self, index):
+        func = self.bv.get_function_at(self.address(index))
+        assert func is not None
+        return function_il(func)
+
+batch_lift = None
+
+def lifted_case(index):
+    """The lifted IL and attributes for test_cases[index], as produced at address 0."""
+    global batch_lift
+
+    data = test_cases[index][0]
+    if data in position_dependent_encodings:
+        return lift_at(data, 0)
+
+    if batch_lift is None:
+        batch_lift = BatchLift(test_cases)
+
+    return batch_lift.il(index)
 
 def il_str_to_tree(ilstr):
     result = ''
@@ -12916,7 +12999,8 @@ def test_all_lifts(no_fail=False):
         data, expected_lift = test_info[0], test_info[1]
         il_attrs = test_info[2] if len(test_info) == 3 else None
 
-        actual_lift, actual_attrs, asm = lift(data, True)
+        actual_lift, actual_attrs = lifted_case(test_i)
+        asm = [disassemble(data)]
         if actual_lift != expected_lift:
             print('LIFT MISMATCH AT TEST %d!' % test_i)
             print('\t   input: %s %s' % (data.hex(), '\n'.join(asm)))
@@ -12941,17 +13025,42 @@ def test_all_lifts(no_fail=False):
 
     return True
 
-if __name__ == '__main__':
-    no_fail = False
-    if len(sys.argv) > 1:
-        if sys.argv[1] == '--no-fail':
-            no_fail = True
-    if test_all_lifts(no_fail):
-        print('success!', file=sys.stderr)
-        sys.exit(0)
-    else:
-        sys.exit(-1)
+def test_all_disassembly(no_fail=False):
+    for test_i, (data, expected_text) in enumerate(disasm_test_cases):
+        actual_text = disassemble(data)
+        if actual_text != expected_text:
+            print('DISASSEMBLY MISMATCH AT TEST %d!' % test_i)
+            print('\t   input: %s' % data.hex())
+            print('\texpected: %s' % expected_text)
+            print('\t  actual: %s' % actual_text)
+            if not no_fail:
+                return False
 
-if __name__ == 'arm64test':
-    if test_all_lifts():
-        print('success!')
+    return True
+
+def test_all_position_dependent(no_fail=False):
+    for test_i, (data, addr, expected_lift) in enumerate(tests_position_dependent):
+        actual_lift, _ = lift_at(data, addr)
+        if actual_lift != expected_lift:
+            print('POSITION-DEPENDENT LIFT MISMATCH AT TEST %d!' % test_i)
+            print('\t   input: %s %s at %#x' % (data.hex(), disassemble(data, addr), addr))
+            print('\texpected: %s' % expected_lift)
+            print('\t  actual: %s' % actual_lift)
+            if not no_fail:
+                return False
+
+    return True
+
+def run_all(no_fail=False):
+    lifts_ok = test_all_lifts(no_fail)
+    position_dependent_ok = test_all_position_dependent(no_fail)
+    disassembly_ok = test_all_disassembly(no_fail)
+    if lifts_ok and position_dependent_ok and disassembly_ok:
+        print('success!', file=sys.stderr)
+        return True
+
+    return False
+
+if __name__ == '__main__':
+    no_fail = len(sys.argv) > 1 and sys.argv[1] == '--no-fail'
+    sys.exit(0 if run_all(no_fail) else -1)

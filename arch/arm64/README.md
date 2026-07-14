@@ -22,9 +22,10 @@ Personal Binary Ninja users can test via the built in console:
 >>> sys.path.append('C:/users/x/onedrive/documents/binja/binaryninja-api/arch/arm64') # Path directory containing arm64test.py
 >>> from importlib import reload
 >>> import arm64test
+>>> arm64test.run_all()
 success!
 >>> # Add or fix any testcases
->>> reload(arm64test)
+>>> reload(arm64test).run_all()
 success!
 ```
 

@@ -72,11 +72,19 @@ void LLILEmulator::SetArgument(size_t index, const intx::uint512& value)
 	if (!m_view)
 		return;
 
-	Ref<Platform> platform = m_view->GetDefaultPlatform();
-	if (!platform)
-		return;
-
-	Ref<CallingConvention> cc = platform->GetDefaultCallingConvention();
+	// Place arguments using the calling convention of the function being emulated, falling
+	// back to the platform default only when the function has none.
+	Ref<CallingConvention> cc;
+	if (m_il)
+	{
+		if (Ref<Function> func = m_il->GetFunction())
+			cc = func->GetCallingConvention().GetValue();
+	}
+	if (!cc)
+	{
+		if (Ref<Platform> platform = m_view->GetDefaultPlatform())
+			cc = platform->GetDefaultCallingConvention();
+	}
 	if (!cc)
 		return;
 
@@ -87,7 +95,9 @@ void LLILEmulator::SetArgument(size_t index, const intx::uint512& value)
 		return;
 	}
 
-	// Stack argument
+	// Stack argument. Note: the stack slot size is taken to be the address size, which holds
+	// for the common ABIs but not exotic ones like the x86-64 x32 ABI (4-byte address size,
+	// 8-byte stack slots).
 	size_t addrSize = m_arch->GetAddressSize();
 	uint32_t sp = m_arch->GetStackPointerRegister();
 	uint64_t spVal = static_cast<uint64_t>(GetRegister(sp));

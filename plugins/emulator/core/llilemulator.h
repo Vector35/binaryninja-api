@@ -160,7 +160,8 @@ namespace BinaryNinjaEmulator
 		bool SetEntryPoint(uint64_t addr);
 		void SetEntryPoint(BinaryNinja::LowLevelILFunction* il, size_t instrIndex);
 
-		// Argument setup (uses default calling convention)
+		// Argument setup (uses the emulated function's calling convention, falling back to
+		// the platform default)
 		void SetArgument(size_t index, const intx::uint512& value);
 		void SetArguments(const std::vector<uint64_t>& values);
 

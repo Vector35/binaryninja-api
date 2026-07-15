@@ -1483,10 +1483,14 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_ADD_OVERFLOW:
 	{
+		// Signed overflow flag: set when both operands share a sign and the result's sign
+		// differs from them (not the unsigned carry-out).
 		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
 		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
-		intx::uint512 result = left + right;
-		return MaskToSize(result, sz) < left ? intx::uint512(1) : intx::uint512(0);
+		intx::uint512 result = MaskToSize(left + right, sz);
+		intx::uint512 signBit = intx::uint512(1) << (sz * 8 - 1);
+		bool overflow = ((left ^ result) & (right ^ result) & signBit) != 0;
+		return overflow ? intx::uint512(1) : intx::uint512(0);
 	}
 
 	// --- Flag conditions (Lifted IL) ---

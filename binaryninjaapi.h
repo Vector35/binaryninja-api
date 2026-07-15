@@ -31,23 +31,6 @@
 #include "binaryninjacore.h"
 #include "exceptions.h"
 
-// intx provides the wide-integer type used by the emulator plugin's API. If a
-// translation unit includes <windows.h> before this header (as several debugger
-// adapters do), its min/max macros would break intx's numeric_limits<>::min()/max()
-// member definitions. Neutralize those macros just for the intx include, then
-// restore them so any later code that relies on windows.h min/max is unaffected.
-#if defined(_WIN32)
-	#pragma push_macro("min")
-	#pragma push_macro("max")
-	#undef min
-	#undef max
-#endif
-#include "vendor/intx/intx.hpp"
-#if defined(_WIN32)
-	#pragma pop_macro("min")
-	#pragma pop_macro("max")
-#endif
-
 #include "json/json.h"
 #include "rapidjsonwrapper.h"
 #include "vendor/nlohmann/json.hpp"

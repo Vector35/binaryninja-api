@@ -17,6 +17,7 @@ limitations under the License.
 #pragma once
 
 #include "binaryninjaapi.h"
+#include "emulator_intx.h"
 #include "ffi.h"
 #include <functional>
 #include <string>

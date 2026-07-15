@@ -132,6 +132,46 @@ intx::uint512 LLILEmulator::SignExtend(const intx::uint512& value, size_t fromSi
 }
 
 
+bool LLILEmulator::IsNegative(const intx::uint512& value, size_t size)
+{
+	if (size == 0 || size > 64)
+		return false;
+	intx::uint512 signBit = intx::uint512(1) << (size * 8 - 1);
+	return (MaskToSize(value, size) & signBit) != 0;
+}
+
+
+bool LLILEmulator::SignedLess(const intx::uint512& a, const intx::uint512& b, size_t size)
+{
+	bool an = IsNegative(a, size);
+	bool bn = IsNegative(b, size);
+	if (an != bn)
+		return an;  // negative < non-negative
+	// Same sign: the unsigned comparison of the masked values gives the correct order.
+	return MaskToSize(a, size) < MaskToSize(b, size);
+}
+
+
+intx::uint512 LLILEmulator::SignedDivideOrModulo(
+	const intx::uint512& a, const intx::uint512& b, size_t size, bool modulo)
+{
+	// Work with magnitudes as unsigned wide integers, then reapply the sign. This is correct
+	// for operands of any width up to 64 bytes and, unlike native signed division, does not
+	// trap on INT_MIN / -1 (which wraps to INT_MIN for divide and 0 for modulo).
+	intx::uint512 am = MaskToSize(a, size);
+	intx::uint512 bm = MaskToSize(b, size);
+	bool an = IsNegative(am, size);
+	bool bn = IsNegative(bm, size);
+	intx::uint512 au = an ? MaskToSize(~am + 1, size) : am;
+	intx::uint512 bu = bn ? MaskToSize(~bm + 1, size) : bm;
+	intx::uint512 result = modulo ? (au % bu) : (au / bu);
+	bool resultNeg = modulo ? an : (an != bn);
+	if (resultNeg)
+		result = MaskToSize(~result + 1, size);
+	return MaskToSize(result, size);
+}
+
+
 BNEndianness LLILEmulator::GetEndianness() const
 {
 	if (m_arch)
@@ -1105,15 +1145,14 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_DIVS:
 	{
-		// For signed division, work with 64-bit values since intx doesn't provide signed types
-		int64_t left = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(EvalExpr(expr.GetRawOperandAsExpr(0)), sz, 8)));
-		int64_t right = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(EvalExpr(expr.GetRawOperandAsExpr(1)), sz, 8)));
-		if (right == 0)
+		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
+		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		if (MaskToSize(right, sz) == 0)
 		{
 			SetStopReason(ILEmulatorStopReason::Error, "division by zero");
 			return 0;
 		}
-		return MaskToSize(intx::uint512(static_cast<uint64_t>(left / right)), sz);
+		return SignedDivideOrModulo(left, right, sz, false);
 	}
 
 	case LLIL_MODU:
@@ -1130,14 +1169,14 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_MODS:
 	{
-		int64_t left = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(EvalExpr(expr.GetRawOperandAsExpr(0)), sz, 8)));
-		int64_t right = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(EvalExpr(expr.GetRawOperandAsExpr(1)), sz, 8)));
-		if (right == 0)
+		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
+		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		if (MaskToSize(right, sz) == 0)
 		{
 			SetStopReason(ILEmulatorStopReason::Error, "modulo by zero");
 			return 0;
 		}
-		return MaskToSize(intx::uint512(static_cast<uint64_t>(left % right)), sz);
+		return SignedDivideOrModulo(left, right, sz, true);
 	}
 
 	// --- Double-precision ---
@@ -1150,18 +1189,11 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_MULS_DP:
 	{
-		// Signed multiply double-precision: sign extend operands, multiply, mask
-		int64_t left = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(EvalExpr(expr.GetRawOperandAsExpr(0)), sz / 2, 8)));
-		int64_t right = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(EvalExpr(expr.GetRawOperandAsExpr(1)), sz / 2, 8)));
-		// Sign-extend both operands to full width as two's-complement intx values and
-		// multiply; the low bits of the product are correct regardless of sign. This
-		// avoids __int128, which MSVC does not support.
-		intx::uint512 l(static_cast<uint64_t>(left));
-		intx::uint512 r(static_cast<uint64_t>(right));
-		if (left < 0)
-			l |= ~intx::uint512(0) << 64;
-		if (right < 0)
-			r |= ~intx::uint512(0) << 64;
+		// Signed multiply double-precision: sign-extend each sz/2-byte operand to the full
+		// wide value, then multiply as two's-complement. The low sz bytes of the product are
+		// correct regardless of sign, and this handles operands wider than 8 bytes.
+		intx::uint512 l = SignExtend(EvalExpr(expr.GetRawOperandAsExpr(0)), sz / 2, 64);
+		intx::uint512 r = SignExtend(EvalExpr(expr.GetRawOperandAsExpr(1)), sz / 2, 64);
 		return MaskToSize(l * r, sz);
 	}
 
@@ -1342,9 +1374,9 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	{
 		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
 		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
-		int64_t sl = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(left, sz, 8)));
-		int64_t sr = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(right, sz, 8)));
-		bool leftWins = (expr.operation == LLIL_MINS) ? (sl <= sr) : (sl >= sr);
+		// leftWins for MINS when left <= right, for MAXS when left >= right (i.e. !(left < right))
+		bool leftWins = (expr.operation == LLIL_MINS) ? !SignedLess(right, left, sz)
+		                                              : !SignedLess(left, right, sz);
 		return leftWins ? left : right;
 	}
 
@@ -1374,9 +1406,9 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_CMP_SLT:
 	{
-		int64_t left = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(EvalExpr(expr.GetRawOperandAsExpr(0)), sz, 8)));
-		int64_t right = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(EvalExpr(expr.GetRawOperandAsExpr(1)), sz, 8)));
-		return left < right ? intx::uint512(1) : intx::uint512(0);
+		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
+		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		return SignedLess(left, right, sz) ? intx::uint512(1) : intx::uint512(0);
 	}
 
 	case LLIL_CMP_ULT:
@@ -1388,9 +1420,9 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_CMP_SLE:
 	{
-		int64_t left = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(EvalExpr(expr.GetRawOperandAsExpr(0)), sz, 8)));
-		int64_t right = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(EvalExpr(expr.GetRawOperandAsExpr(1)), sz, 8)));
-		return left <= right ? intx::uint512(1) : intx::uint512(0);
+		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
+		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		return !SignedLess(right, left, sz) ? intx::uint512(1) : intx::uint512(0);
 	}
 
 	case LLIL_CMP_ULE:
@@ -1402,9 +1434,9 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_CMP_SGE:
 	{
-		int64_t left = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(EvalExpr(expr.GetRawOperandAsExpr(0)), sz, 8)));
-		int64_t right = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(EvalExpr(expr.GetRawOperandAsExpr(1)), sz, 8)));
-		return left >= right ? intx::uint512(1) : intx::uint512(0);
+		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
+		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		return !SignedLess(left, right, sz) ? intx::uint512(1) : intx::uint512(0);
 	}
 
 	case LLIL_CMP_UGE:
@@ -1416,9 +1448,9 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_CMP_SGT:
 	{
-		int64_t left = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(EvalExpr(expr.GetRawOperandAsExpr(0)), sz, 8)));
-		int64_t right = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(EvalExpr(expr.GetRawOperandAsExpr(1)), sz, 8)));
-		return left > right ? intx::uint512(1) : intx::uint512(0);
+		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
+		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		return SignedLess(right, left, sz) ? intx::uint512(1) : intx::uint512(0);
 	}
 
 	case LLIL_CMP_UGT:

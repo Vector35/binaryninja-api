@@ -144,8 +144,10 @@ extern "C"
 		bool (*callback)(void* ctxt, BNILEmulator* emu, size_t instrIndex));
 	EMULATOR_FFI_API void BNILEmulatorSetStdoutCallback(BNILEmulator* emu, void* ctxt,
 		void (*callback)(void* ctxt, BNILEmulator* emu, const char* data, size_t len));
+	// buf is a writable output buffer of maxLen bytes (typed void* so the generated bindings
+	// expose it as a writable pointer rather than an immutable string).
 	EMULATOR_FFI_API void BNILEmulatorSetStdinCallback(BNILEmulator* emu, void* ctxt,
-		size_t (*callback)(void* ctxt, BNILEmulator* emu, char* buf, size_t maxLen));
+		size_t (*callback)(void* ctxt, BNILEmulator* emu, void* buf, size_t maxLen));
 	EMULATOR_FFI_API void BNILEmulatorRequestStop(BNILEmulator* emu);
 	EMULATOR_FFI_API void BNILEmulatorReset(BNILEmulator* emu);
 

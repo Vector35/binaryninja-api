@@ -304,10 +304,10 @@ void LLILEmulator::StdoutCallbackBridge(void* ctxt, BNILEmulator*, const char* d
 }
 
 
-size_t LLILEmulator::StdinCallbackBridge(void* ctxt, BNILEmulator*, char* buf, size_t maxLen)
+size_t LLILEmulator::StdinCallbackBridge(void* ctxt, BNILEmulator*, void* buf, size_t maxLen)
 {
 	LLILEmulator* self = (LLILEmulator*)ctxt;
-	return self->m_stdinCallback(self, buf, maxLen);
+	return self->m_stdinCallback(self, static_cast<char*>(buf), maxLen);
 }
 
 

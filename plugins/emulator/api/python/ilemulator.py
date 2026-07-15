@@ -551,9 +551,12 @@ class LLILEmulator:
         Return ``b''`` for EOF. Pass ``None`` to remove the callback.
         """
         self._stdin_callback = callback
+        # buf is a writable, non-null-terminated output buffer. It is typed void* in the FFI
+        # (hence c_void_p here) so the callback receives the raw address to memmove into,
+        # rather than the immutable bytes copy ctypes produces for a c_char_p parameter.
         _CB_T = ctypes.CFUNCTYPE(ctypes.c_ulonglong, ctypes.c_void_p,
             ctypes.POINTER(core.BNILEmulator),
-            ctypes.c_char_p, ctypes.c_ulonglong)
+            ctypes.c_void_p, ctypes.c_ulonglong)
         if callback is None:
             core.BNILEmulatorSetStdinCallback(self._get_base(), None, ctypes.cast(None, _CB_T))
             self._stdin_cb = None

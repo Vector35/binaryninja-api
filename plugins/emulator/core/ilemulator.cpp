@@ -806,7 +806,7 @@ void BNILEmulatorSetStdoutCallback(BNILEmulator* emu, void* ctxt,
 
 
 void BNILEmulatorSetStdinCallback(BNILEmulator* emu, void* ctxt,
-	size_t (*callback)(void*, BNILEmulator*, char*, size_t))
+	size_t (*callback)(void*, BNILEmulator*, void*, size_t))
 {
 	if (callback)
 	{

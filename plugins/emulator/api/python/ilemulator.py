@@ -393,7 +393,11 @@ class LLILEmulator:
             try:
                 result = self._memory_read_hook(self, addr, size)
                 if result is not None:
-                    raw = result.to_bytes(buf_len, 'little', signed=(result < 0))
+                    # Mask to the buffer width so a value that does not fit (or is negative)
+                    # is truncated to its low bytes instead of raising OverflowError and
+                    # silently dropping the hook result.
+                    mask = (1 << (buf_len * 8)) - 1
+                    raw = (result & mask).to_bytes(buf_len, 'little')
                     for i in range(buf_len):
                         out_buf[i] = raw[i]
                     return True

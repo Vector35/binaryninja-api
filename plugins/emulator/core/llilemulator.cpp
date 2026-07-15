@@ -152,23 +152,34 @@ bool LLILEmulator::SignedLess(const intx::uint512& a, const intx::uint512& b, si
 }
 
 
-intx::uint512 LLILEmulator::SignedDivideOrModulo(
-	const intx::uint512& a, const intx::uint512& b, size_t size, bool modulo)
+intx::uint512 LLILEmulator::SignedDivideOrModuloWide(
+	const intx::uint512& dividend, size_t dividendSize,
+	const intx::uint512& divisor, size_t divisorSize,
+	size_t resultSize, bool modulo)
 {
 	// Work with magnitudes as unsigned wide integers, then reapply the sign. This is correct
 	// for operands of any width up to 64 bytes and, unlike native signed division, does not
-	// trap on INT_MIN / -1 (which wraps to INT_MIN for divide and 0 for modulo).
-	intx::uint512 am = MaskToSize(a, size);
-	intx::uint512 bm = MaskToSize(b, size);
-	bool an = IsNegative(am, size);
-	bool bn = IsNegative(bm, size);
-	intx::uint512 au = an ? MaskToSize(~am + 1, size) : am;
-	intx::uint512 bu = bn ? MaskToSize(~bm + 1, size) : bm;
+	// trap on INT_MIN / -1 (which wraps to INT_MIN for divide and 0 for modulo). The dividend,
+	// divisor and result may have different widths (the double-precision ops divide a
+	// double-width dividend by a single-width divisor to produce a single-width result).
+	intx::uint512 am = MaskToSize(dividend, dividendSize);
+	intx::uint512 bm = MaskToSize(divisor, divisorSize);
+	bool an = IsNegative(am, dividendSize);
+	bool bn = IsNegative(bm, divisorSize);
+	intx::uint512 au = an ? MaskToSize(~am + 1, dividendSize) : am;
+	intx::uint512 bu = bn ? MaskToSize(~bm + 1, divisorSize) : bm;
 	intx::uint512 result = modulo ? (au % bu) : (au / bu);
 	bool resultNeg = modulo ? an : (an != bn);
 	if (resultNeg)
-		result = MaskToSize(~result + 1, size);
-	return MaskToSize(result, size);
+		result = MaskToSize(~result + 1, resultSize);
+	return MaskToSize(result, resultSize);
+}
+
+
+intx::uint512 LLILEmulator::SignedDivideOrModulo(
+	const intx::uint512& a, const intx::uint512& b, size_t size, bool modulo)
+{
+	return SignedDivideOrModuloWide(a, size, b, size, size, modulo);
 }
 
 
@@ -1213,52 +1224,55 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 		return MaskToSize(l * r, sz);
 	}
 
+	// The double-precision divide/modulo ops divide a double-width (2*sz) dividend by an
+	// sz-wide divisor, producing an sz-wide result. (Contrast with the *_DP multiplies above,
+	// whose `sz` is the double-width product.)
 	case LLIL_DIVU_DP:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz / 2);
-		if (right == 0)
+		intx::uint512 dividend = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz * 2);
+		intx::uint512 divisor = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		if (divisor == 0)
 		{
 			SetStopReason(ILEmulatorStopReason::Error, "division by zero");
 			return 0;
 		}
-		return MaskToSize(left / right, sz / 2);
+		return MaskToSize(dividend / divisor, sz);
 	}
 
 	case LLIL_DIVS_DP:
 	{
-		int64_t left = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(EvalExpr(expr.GetRawOperandAsExpr(0)), sz, 8)));
-		int64_t right = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(EvalExpr(expr.GetRawOperandAsExpr(1)), sz / 2, 8)));
-		if (right == 0)
+		intx::uint512 dividend = EvalExpr(expr.GetRawOperandAsExpr(0));
+		intx::uint512 divisor = EvalExpr(expr.GetRawOperandAsExpr(1));
+		if (MaskToSize(divisor, sz) == 0)
 		{
 			SetStopReason(ILEmulatorStopReason::Error, "division by zero");
 			return 0;
 		}
-		return MaskToSize(intx::uint512(static_cast<uint64_t>(left / right)), sz / 2);
+		return SignedDivideOrModuloWide(dividend, sz * 2, divisor, sz, sz, false);
 	}
 
 	case LLIL_MODU_DP:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz / 2);
-		if (right == 0)
+		intx::uint512 dividend = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz * 2);
+		intx::uint512 divisor = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		if (divisor == 0)
 		{
 			SetStopReason(ILEmulatorStopReason::Error, "modulo by zero");
 			return 0;
 		}
-		return MaskToSize(left % right, sz / 2);
+		return MaskToSize(dividend % divisor, sz);
 	}
 
 	case LLIL_MODS_DP:
 	{
-		int64_t left = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(EvalExpr(expr.GetRawOperandAsExpr(0)), sz, 8)));
-		int64_t right = static_cast<int64_t>(static_cast<uint64_t>(SignExtend(EvalExpr(expr.GetRawOperandAsExpr(1)), sz / 2, 8)));
-		if (right == 0)
+		intx::uint512 dividend = EvalExpr(expr.GetRawOperandAsExpr(0));
+		intx::uint512 divisor = EvalExpr(expr.GetRawOperandAsExpr(1));
+		if (MaskToSize(divisor, sz) == 0)
 		{
 			SetStopReason(ILEmulatorStopReason::Error, "modulo by zero");
 			return 0;
 		}
-		return MaskToSize(intx::uint512(static_cast<uint64_t>(left % right)), sz / 2);
+		return SignedDivideOrModuloWide(dividend, sz * 2, divisor, sz, sz, true);
 	}
 
 	// --- Unary ---

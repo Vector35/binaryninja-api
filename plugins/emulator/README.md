@@ -52,10 +52,6 @@ PYTHONPATH=<bn install>/python python3 -m pytest test/emulator_test.py
 PYTHONPATH=<bn install>/python python3 test/emulator_test.py
 ```
 
-Inside the Binary Ninja source tree these same tests also run as part of the main
-Binary Ninja test suite (`tests/python/test_emulator.py` loads this module), so
-`cd tests && pytest python` exercises them alongside everything else.
-
 ## Support status
 
 Only **LLIL** emulation is supported today. **MLIL and HLIL emulation are planned** for the

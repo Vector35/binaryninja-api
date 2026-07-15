@@ -204,7 +204,18 @@ void EmulatorMemory::Map(uint64_t addr, const void* data, size_t len, const std:
 	}
 	Segment seg;
 	seg.start = addr;
-	seg.data.assign((const uint8_t*)data, (const uint8_t*)data + len);
+	try
+	{
+		seg.data.assign((const uint8_t*)data, (const uint8_t*)data + len);
+	}
+	catch (const std::exception& e)
+	{
+		// Do not let an allocation failure for a caller-controlled length escape across the
+		// extern "C" ABI boundary (that would be undefined behavior).
+		LogWarn("Emulator: failed to map region '%s' at 0x%llx (size 0x%zx): %s",
+			name.c_str(), (unsigned long long)addr, len, e.what());
+		return;
+	}
 	seg.name = name;
 	m_segments.push_back(std::move(seg));
 }
@@ -222,7 +233,18 @@ void EmulatorMemory::Map(uint64_t addr, size_t len, const std::string& name)
 	}
 	Segment seg;
 	seg.start = addr;
-	seg.data.resize(len, 0);
+	try
+	{
+		seg.data.resize(len, 0);
+	}
+	catch (const std::exception& e)
+	{
+		// Do not let an allocation failure for a caller-controlled length escape across the
+		// extern "C" ABI boundary (that would be undefined behavior).
+		LogWarn("Emulator: failed to map region '%s' at 0x%llx (size 0x%zx): %s",
+			name.c_str(), (unsigned long long)addr, len, e.what());
+		return;
+	}
 	seg.name = name;
 	m_segments.push_back(std::move(seg));
 }

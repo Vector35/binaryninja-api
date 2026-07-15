@@ -49,6 +49,9 @@ namespace BinaryNinjaEmulator
 		// Find the lowest-start segment whose start > addr, or nullptr
 		const Segment* FindNextSegment(uint64_t addr) const;
 
+		// True if [addr, addr + len) intersects any existing segment.
+		bool OverlapsExisting(uint64_t addr, size_t len) const;
+
 	public:
 		EmulatorMemory() = default;
 

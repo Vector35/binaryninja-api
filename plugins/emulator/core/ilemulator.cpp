@@ -177,8 +177,31 @@ size_t EmulatorMemory::Write(uint64_t addr, const void* src, size_t len)
 }
 
 
+bool EmulatorMemory::OverlapsExisting(uint64_t addr, size_t len) const
+{
+	if (len == 0)
+		return false;
+	uint64_t end = addr + len;
+	for (auto& seg : m_segments)
+	{
+		// Intersection of [addr, end) and [seg.start, seg.End()); handles end wraparound.
+		if (addr < seg.End() && seg.start < end)
+			return true;
+	}
+	return false;
+}
+
+
 void EmulatorMemory::Map(uint64_t addr, const void* data, size_t len, const std::string& name)
 {
+	if (len == 0)
+		return;
+	if (OverlapsExisting(addr, len))
+	{
+		LogWarn("Emulator: refusing to map region '%s' at 0x%llx (size 0x%zx): "
+			"overlaps an already-mapped region", name.c_str(), (unsigned long long)addr, len);
+		return;
+	}
 	Segment seg;
 	seg.start = addr;
 	seg.data.assign((const uint8_t*)data, (const uint8_t*)data + len);
@@ -189,6 +212,14 @@ void EmulatorMemory::Map(uint64_t addr, const void* data, size_t len, const std:
 
 void EmulatorMemory::Map(uint64_t addr, size_t len, const std::string& name)
 {
+	if (len == 0)
+		return;
+	if (OverlapsExisting(addr, len))
+	{
+		LogWarn("Emulator: refusing to map region '%s' at 0x%llx (size 0x%zx): "
+			"overlaps an already-mapped region", name.c_str(), (unsigned long long)addr, len);
+		return;
+	}
 	Segment seg;
 	seg.start = addr;
 	seg.data.resize(len, 0);

@@ -5,7 +5,8 @@ project(emulator-python-api)
 if(BN_API_PATH)
 	include(${BN_API_PATH}/cmake/PythonBindings.cmake)
 else()
-	include(${CMAKE_SOURCE_DIR}/api/cmake/PythonBindings.cmake)
+	# api/plugins/emulator/api/python -> api root is four levels up
+	include(${PROJECT_SOURCE_DIR}/../../../../cmake/PythonBindings.cmake)
 endif()
 
 file(GLOB PYTHON_SOURCES CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/*.py)

@@ -242,7 +242,7 @@ emu.set_pre_instruction_hook(lambda emu, index: True)
 emu.set_intrinsic_hook(lambda emu, intrinsic, params: None)
 
 # stdout from emulated printf/puts/putchar; data is bytes.
-emu.set_stdout_callback(lambda emu, data: sys.stdout.write(data.decode('latin1')))
+emu.set_stdout_callback(lambda emu, data: print(data.decode('latin1'), end=''))
 
 # stdin for emulated getchar/fgets/fread; return up to max_len bytes, b'' for EOF.
 emu.set_stdin_callback(lambda emu, max_len: b'')

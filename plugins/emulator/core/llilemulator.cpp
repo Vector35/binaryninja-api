@@ -69,7 +69,7 @@ void LLILEmulator::SetEntryPoint(LowLevelILFunction* il, size_t instrIndex)
 
 void LLILEmulator::SetArgument(size_t index, const intx::uint512& value)
 {
-	if (!m_view || !m_arch)
+	if (!m_view)
 		return;
 
 	Ref<Platform> platform = m_view->GetDefaultPlatform();
@@ -185,9 +185,8 @@ intx::uint512 LLILEmulator::SignedDivideOrModulo(
 
 BNEndianness LLILEmulator::GetEndianness() const
 {
-	if (m_arch)
-		return m_arch->GetEndianness();
-	return LittleEndian;
+	// A valid architecture is an invariant established at construction.
+	return m_arch->GetEndianness();
 }
 
 
@@ -516,7 +515,7 @@ uint64_t LLILEmulator::GetNativeReturnAddress() const
 	uint64_t callAddr = m_il->GetInstruction(m_instrIndex).address;
 
 	// Use the architecture to get the native instruction length
-	if (m_view && m_arch)
+	if (m_view)
 	{
 		uint8_t buf[16];
 		size_t bytesRead = m_view->Read(buf, callAddr, sizeof(buf));
@@ -3598,13 +3597,30 @@ bool LLILEmulator::StubFread(uint64_t)
 
 BNLLILEmulator* BNCreateLLILEmulatorForView(BNBinaryView* view)
 {
-	return EMU_API_OBJECT_CREATE(new LLILEmulator(new BinaryView(BNNewViewReference(view))));
+	LLILEmulator* emu = new LLILEmulator(new BinaryView(BNNewViewReference(view)));
+	// A valid architecture is an invariant of the emulator; reject creation without one
+	// rather than half-supporting a null architecture throughout.
+	if (!emu->GetArchitecture())
+	{
+		LogError("Cannot create LLIL emulator: the binary view has no default architecture");
+		emu->ReleaseAPIRef();
+		return nullptr;
+	}
+	return EMU_API_OBJECT_CREATE(emu);
 }
 
 
 BNLLILEmulator* BNCreateLLILEmulator(BNLowLevelILFunction* il, BNBinaryView* view)
 {
-	return EMU_API_OBJECT_CREATE(new LLILEmulator(new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)), new BinaryView(BNNewViewReference(view))));
+	LLILEmulator* emu = new LLILEmulator(
+		new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)), new BinaryView(BNNewViewReference(view)));
+	if (!emu->GetArchitecture())
+	{
+		LogError("Cannot create LLIL emulator: the IL function has no architecture");
+		emu->ReleaseAPIRef();
+		return nullptr;
+	}
+	return EMU_API_OBJECT_CREATE(emu);
 }
 
 

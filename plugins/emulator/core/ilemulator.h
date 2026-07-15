@@ -1,7 +1,7 @@
 #pragma once
 
 #include "binaryninjaapi.h"
-#include "../api/emulator_intx.h"
+#include "vendor/intx/intx.hpp"
 #include "ffi_global.h"
 #include "refcountobject.h"
 #include <atomic>

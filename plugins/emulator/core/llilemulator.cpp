@@ -1048,12 +1048,16 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 		return result;
 	}
 
+	// Shifts perform a literal shift by the (unmasked) count: a shift of >= the operand width
+	// yields 0 for the logical shifts and a full sign-fill for the arithmetic shift. Any
+	// architecture-specific masking of the count (e.g. x86's `& 0x1f` / `& 0x3f`) is already
+	// encoded in the lifted IL by the architecture, so the emulator must not re-apply it.
 	case LLIL_LSL:
 	{
 		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
 		intx::uint512 right = EvalExpr(expr.GetRightExpr());
-		size_t shiftAmt = static_cast<uint64_t>(right) & (sz * 8 - 1);
-		intx::uint512 result = MaskToSize(left << shiftAmt, sz);
+		uint64_t shiftAmt = static_cast<uint64_t>(right);
+		intx::uint512 result = (shiftAmt >= sz * 8) ? intx::uint512(0) : MaskToSize(left << shiftAmt, sz);
 		m_lastArithmetic = {left, right, result, sz, LLIL_LSL, true};
 		return result;
 	}
@@ -1062,8 +1066,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	{
 		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
 		intx::uint512 right = EvalExpr(expr.GetRightExpr());
-		size_t shiftAmt = static_cast<uint64_t>(right) & (sz * 8 - 1);
-		intx::uint512 result = MaskToSize(left >> shiftAmt, sz);
+		uint64_t shiftAmt = static_cast<uint64_t>(right);
+		intx::uint512 result = (shiftAmt >= sz * 8) ? intx::uint512(0) : MaskToSize(left >> shiftAmt, sz);
 		m_lastArithmetic = {left, right, result, sz, LLIL_LSR, true};
 		return result;
 	}
@@ -1073,11 +1077,17 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 		intx::uint512 left = EvalExpr(expr.GetLeftExpr());
 		intx::uint512 right = EvalExpr(expr.GetRightExpr());
 		intx::uint512 maskedLeft = MaskToSize(left, sz);
-		// Sign-extend to full 512 bits, then arithmetic shift right
-		intx::uint512 extended = SignExtend(maskedLeft, sz, 64);
-		size_t shiftAmt = static_cast<uint64_t>(right) & (sz * 8 - 1);
-		// Logical shift on the sign-extended value, then mask back
-		intx::uint512 result = MaskToSize(extended >> shiftAmt, sz);
+		uint64_t shiftAmt = static_cast<uint64_t>(right);
+		intx::uint512 result;
+		if (shiftAmt >= sz * 8)
+			// Shifted out entirely: fill with the sign bit.
+			result = IsNegative(maskedLeft, sz) ? MaskToSize(~intx::uint512(0), sz) : intx::uint512(0);
+		else
+		{
+			// Sign-extend to full width, logical-shift, then mask back.
+			intx::uint512 extended = SignExtend(maskedLeft, sz, 64);
+			result = MaskToSize(extended >> shiftAmt, sz);
+		}
 		m_lastArithmetic = {maskedLeft, right, result, sz, LLIL_ASR, true};
 		return result;
 	}

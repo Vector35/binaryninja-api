@@ -461,6 +461,14 @@ class ShiftRotateTests(EmulatorTestBase):
         emu.run()
         self.assertEqual(emu.get_register('rax') & 0xffffffff, 0xffffffff)
 
+    def test_shr_by_full_operand_width_is_zero(self):
+        # mov al, 0xff ; mov cl, 8 ; shr al, cl ; ret
+        # Lifts to `al u>> (cl & 0x1f)` = `al u>> 8`, which must be 0 (the emulator must not
+        # re-mask the count to the operand width, which would make it a no-op).
+        emu = self.emulator_for(b'\xb0\xff\xb1\x08\xd2\xe8\xc3')
+        emu.run()
+        self.assertEqual(emu.get_register('rax') & 0xff, 0)
+
     def test_rcl_rotates_through_carry(self):
         # stc ; mov al, 1 ; rcl al, 1 ; ret
         # The 9-bit value {carry=1, al=0x01} rotated left by 1 -> al = 0x03.

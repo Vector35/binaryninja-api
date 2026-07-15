@@ -733,8 +733,6 @@ class Arm64Architecture : public Architecture
 
 	bool Assemble(const string& code, uint64_t addr, DataBuffer& result, string& errors) override
 	{
-		(void)addr;
-
 		int assembleResult;
 		char *instrBytes = NULL, *err = NULL;
 		int instrBytesLen = 0, errLen = 0;
@@ -757,8 +755,8 @@ class Arm64Architecture : public Architecture
 
 		errors.clear();
 		assembleResult =
-		    BNLlvmServicesAssemble((prepend + code).c_str(), LLVM_SVCS_DIALECT_UNSPEC, "aarch64-none-none",
-		        LLVM_SVCS_CM_DEFAULT, LLVM_SVCS_RM_STATIC, &instrBytes, &instrBytesLen, &err, &errLen);
+		    BNLlvmServicesAssembleAtAddress((prepend + code).c_str(), LLVM_SVCS_DIALECT_UNSPEC, "aarch64-none-none",
+		        LLVM_SVCS_CM_DEFAULT, LLVM_SVCS_RM_STATIC, addr, &instrBytes, &instrBytesLen, &err, &errLen);
 
 		if (assembleResult || errLen)
 		{

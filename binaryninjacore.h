@@ -8398,6 +8398,12 @@ extern "C"
 	BINARYNINJACOREAPI int BNLlvmServicesAssemble(const char* src, int dialect, const char* triplet, int codeModel,
 	    int relocMode, char** outBytes, int* outBytesLen, char** err, int* errLen);
 
+	// Like BNLlvmServicesAssemble, but resolves PC-relative operands (e.g. branch targets) as if the
+	// assembled code were located at `addr`, so patching a `bl <absolute-target>` produces the correct
+	// relative displacement instead of one computed against address 0.
+	BINARYNINJACOREAPI int BNLlvmServicesAssembleAtAddress(const char* src, int dialect, const char* triplet,
+	    int codeModel, int relocMode, uint64_t addr, char** outBytes, int* outBytesLen, char** err, int* errLen);
+
 	BINARYNINJACOREAPI void BNLlvmServicesAssembleFree(char* outBytes, char* err);
 	BINARYNINJACOREAPI int BNLlvmServicesDisasmInstruction(const char *triplet, uint8_t *src, int srcLen,
 		uint64_t addr, char *result, size_t resultMaxSize);

@@ -977,58 +977,62 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	}
 
 	// --- Two-operand arithmetic ---
+	// Convention: operands are masked to the operation size `sz` up front, and the same
+	// masked values are used both for the computation and for the flag context recorded in
+	// m_lastArithmetic. (Double-precision ops below intentionally use sz/2-wide operands
+	// producing an sz-wide result, which is why they mask differently.)
 	case LLIL_ADD:
 	{
-		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
 		intx::uint512 result = MaskToSize(left + right, sz);
-		m_lastArithmetic = {MaskToSize(left, sz), MaskToSize(right, sz), result, sz, LLIL_ADD, true};
+		m_lastArithmetic = {left, right, result, sz, LLIL_ADD, true};
 		return result;
 	}
 
 	case LLIL_SUB:
 	{
-		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
 		intx::uint512 result = MaskToSize(left - right, sz);
-		m_lastArithmetic = {MaskToSize(left, sz), MaskToSize(right, sz), result, sz, LLIL_SUB, true};
+		m_lastArithmetic = {left, right, result, sz, LLIL_SUB, true};
 		return result;
 	}
 
 	case LLIL_AND:
 	{
-		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
 		intx::uint512 result = MaskToSize(left & right, sz);
-		m_lastArithmetic = {MaskToSize(left, sz), MaskToSize(right, sz), result, sz, LLIL_AND, true};
+		m_lastArithmetic = {left, right, result, sz, LLIL_AND, true};
 		return result;
 	}
 
 	case LLIL_OR:
 	{
-		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
 		intx::uint512 result = MaskToSize(left | right, sz);
-		m_lastArithmetic = {MaskToSize(left, sz), MaskToSize(right, sz), result, sz, LLIL_OR, true};
+		m_lastArithmetic = {left, right, result, sz, LLIL_OR, true};
 		return result;
 	}
 
 	case LLIL_XOR:
 	{
-		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
 		intx::uint512 result = MaskToSize(left ^ right, sz);
-		m_lastArithmetic = {MaskToSize(left, sz), MaskToSize(right, sz), result, sz, LLIL_XOR, true};
+		m_lastArithmetic = {left, right, result, sz, LLIL_XOR, true};
 		return result;
 	}
 
 	case LLIL_LSL:
 	{
-		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
 		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
 		size_t shiftAmt = static_cast<uint64_t>(right) & (sz * 8 - 1);
 		intx::uint512 result = MaskToSize(left << shiftAmt, sz);
-		m_lastArithmetic = {MaskToSize(left, sz), right, result, sz, LLIL_LSL, true};
+		m_lastArithmetic = {left, right, result, sz, LLIL_LSL, true};
 		return result;
 	}
 
@@ -1080,10 +1084,10 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_MUL:
 	{
-		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
 		intx::uint512 result = MaskToSize(left * right, sz);
-		m_lastArithmetic = {MaskToSize(left, sz), MaskToSize(right, sz), result, sz, LLIL_MUL, true};
+		m_lastArithmetic = {left, right, result, sz, LLIL_MUL, true};
 		return result;
 	}
 

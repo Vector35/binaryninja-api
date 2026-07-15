@@ -1110,24 +1110,36 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_RLC:
 	{
+		// Rotate left through carry: rotate the (bits + 1)-bit quantity {carry : value},
+		// with carry as the most-significant bit.
 		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
 		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
 		intx::uint512 carry = EvalExpr(expr.GetRawOperandAsExpr(2)) & 1;
 		size_t bits = sz * 8;
-		size_t shift = static_cast<size_t>(static_cast<uint64_t>(right) % (bits + 1));
-		intx::uint512 extended = (left << 1) | carry;
-		return MaskToSize((extended << shift) | (left >> (bits - shift)), sz);
+		size_t width = bits + 1;
+		size_t shift = static_cast<size_t>(static_cast<uint64_t>(right) % width);
+		intx::uint512 extended = left | (carry << bits);
+		intx::uint512 rotated = (shift == 0) ? extended : ((extended << shift) | (extended >> (width - shift)));
+		intx::uint512 result = MaskToSize(rotated, sz);
+		m_lastArithmetic = {left, right, result, sz, LLIL_RLC, true};
+		return result;
 	}
 
 	case LLIL_RRC:
 	{
+		// Rotate right through carry: rotate the (bits + 1)-bit quantity {carry : value},
+		// with carry as the most-significant bit.
 		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
 		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
 		intx::uint512 carry = EvalExpr(expr.GetRawOperandAsExpr(2)) & 1;
 		size_t bits = sz * 8;
-		size_t shift = static_cast<size_t>(static_cast<uint64_t>(right) % (bits + 1));
+		size_t width = bits + 1;
+		size_t shift = static_cast<size_t>(static_cast<uint64_t>(right) % width);
 		intx::uint512 extended = left | (carry << bits);
-		return MaskToSize(extended >> shift, sz);
+		intx::uint512 rotated = (shift == 0) ? extended : ((extended >> shift) | (extended << (width - shift)));
+		intx::uint512 result = MaskToSize(rotated, sz);
+		m_lastArithmetic = {left, right, result, sz, LLIL_RRC, true};
+		return result;
 	}
 
 	// --- Division ---

@@ -3583,13 +3583,13 @@ bool LLILEmulator::StubFread(uint64_t)
 
 BNLLILEmulator* BNCreateLLILEmulatorForView(BNBinaryView* view)
 {
-	return EMU_API_OBJECT_REF(new LLILEmulator(new BinaryView(BNNewViewReference(view))));
+	return EMU_API_OBJECT_CREATE(new LLILEmulator(new BinaryView(BNNewViewReference(view))));
 }
 
 
 BNLLILEmulator* BNCreateLLILEmulator(BNLowLevelILFunction* il, BNBinaryView* view)
 {
-	return EMU_API_OBJECT_REF(new LLILEmulator(new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)), new BinaryView(BNNewViewReference(view))));
+	return EMU_API_OBJECT_CREATE(new LLILEmulator(new LowLevelILFunction(BNNewLowLevelILFunctionReference(il)), new BinaryView(BNNewViewReference(view))));
 }
 
 

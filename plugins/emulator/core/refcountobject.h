@@ -27,7 +27,10 @@ namespace BinaryNinjaEmulator
 	{
 	public:
 		std::atomic<int> m_refs;
-		EmuRefCountObject() : m_refs(0) {}
+		// Born with one reference (the one handed to whoever creates the object), mirroring
+		// core's RefCountObject. Starting at 0 would leave the object destructible by any
+		// transient AddRef/Release that happens before the creator takes its reference.
+		EmuRefCountObject() : m_refs(1) {}
 		virtual ~EmuRefCountObject() {}
 
 		void AddRef() { m_refs.fetch_add(1); }
@@ -44,12 +47,13 @@ namespace BinaryNinjaEmulator
 
 
 	// Macro-like helpers to hand referenced objects across the external C ABI.
+	// Hand a freshly-created object's birth reference to the caller (no extra AddRef; the
+	// object is constructed with a reference count of 1).
 	template <class T>
-	static typename T::APIHandle EMU_API_OBJECT_REF(T* obj)
+	static typename T::APIHandle EMU_API_OBJECT_CREATE(T* obj)
 	{
 		if (obj == nullptr)
 			return nullptr;
-		obj->AddAPIRef();
 		return obj->GetAPIObject();
 	}
 

@@ -23378,7 +23378,6 @@ namespace BinaryNinja {
 		std::optional<DerivedString> RecognizeStructInit(
 			const HighLevelILInstruction& instr, Type* type, const std::map<uint64_t, int64_t>& values) override;
 	};
-
 }  // namespace BinaryNinja
 
 

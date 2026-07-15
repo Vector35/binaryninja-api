@@ -201,6 +201,6 @@ namespace BinaryNinjaEmulator
 		// State serialization
 		std::string SaveState() const;
 		bool LoadState(const std::string& json, BinaryNinja::BinaryView* view);
-		BinaryNinja::BinaryView* GetView() const { return m_view; }
+		BinaryNinja::Ref<BinaryNinja::BinaryView> GetView() const { return m_view; }
 	};
 }

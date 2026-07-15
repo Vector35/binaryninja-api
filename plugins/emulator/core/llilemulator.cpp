@@ -1888,6 +1888,11 @@ void LLILEmulator::ExecuteCurrentInstruction()
 		if (m_callHook && m_callHook(this, dest))
 			break;
 
+		// A builtin stub or call hook may have requested a stop (e.g. an error) without
+		// returning true; don't fall through into the call in that case.
+		if (m_stopReason != ILEmulatorStopReason::Running)
+			return;
+
 		// 3) Try to enter the callee's LLIL
 		{
 			// Compute return address before EnterFunction changes m_il/m_arch
@@ -1939,6 +1944,11 @@ void LLILEmulator::ExecuteCurrentInstruction()
 			break;
 		}
 
+		// A builtin stub or call hook may have requested a stop (e.g. an error) without
+		// returning true; don't fall through into the call in that case.
+		if (m_stopReason != ILEmulatorStopReason::Running)
+			return;
+
 		{
 			uint64_t returnAddr = GetNativeReturnAddress();
 			size_t addrSize = m_arch->GetAddressSize();
@@ -1979,6 +1989,11 @@ void LLILEmulator::ExecuteCurrentInstruction()
 
 		if (m_callHook && m_callHook(this, dest))
 			break;
+
+		// A builtin stub or call hook may have requested a stop (e.g. an error) without
+		// returning true; don't fall through into the tailcall in that case.
+		if (m_stopReason != ILEmulatorStopReason::Running)
+			return;
 
 		// Tailcall: don't push a frame, replace current function
 		if (m_view)

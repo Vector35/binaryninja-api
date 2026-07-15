@@ -396,5 +396,115 @@ class LibcStubSettingTests(EmulatorTestBase):
             self.assertEqual(getattr(emu, prop), original)
 
 
+class FlagTests(EmulatorTestBase):
+    # Flags are read back through setcc: Binary Ninja elides dead flag writes when lifting,
+    # so a flag is only computed when a later instruction actually consumes it.
+    def test_add_sets_overflow_and_sign(self):
+        # mov eax, 0x7fffffff ; add eax, 1 ; seto cl ; sets dl ; ret
+        # 0x7fffffff + 1 -> 0x80000000: signed overflow and negative.
+        emu = self.emulator_for(b'\xb8\xff\xff\xff\x7f\x83\xc0\x01\x0f\x90\xc1\x0f\x98\xc2\xc3')
+        emu.run()
+        self.assertEqual(emu.get_register('rcx') & 0xff, 1)  # overflow
+        self.assertEqual(emu.get_register('rdx') & 0xff, 1)  # sign
+
+    def test_add_sets_carry_and_zero(self):
+        # mov eax, 0xffffffff ; add eax, 1 ; setc cl ; setz dl ; ret
+        # 0xffffffff + 1 -> wraps to 0 with a carry out.
+        emu = self.emulator_for(b'\xb8\xff\xff\xff\xff\x83\xc0\x01\x0f\x92\xc1\x0f\x94\xc2\xc3')
+        emu.run()
+        self.assertEqual(emu.get_register('rcx') & 0xff, 1)  # carry
+        self.assertEqual(emu.get_register('rdx') & 0xff, 1)  # zero
+
+    def test_cmp_equal_sets_zero(self):
+        # mov eax, 5 ; cmp eax, 5 ; setz al ; ret
+        emu = self.emulator_for(b'\xb8\x05\x00\x00\x00\x83\xf8\x05\x0f\x94\xc0\xc3')
+        emu.run()
+        self.assertEqual(emu.get_register('rax') & 0xff, 1)
+
+    def test_signed_less_via_setl(self):
+        # mov eax, -1 ; cmp eax, 1 ; setl al ; ret   -> -1 < 1 signed, so al = 1
+        emu = self.emulator_for(b'\xb8\xff\xff\xff\xff\x83\xf8\x01\x0f\x9c\xc0\xc3')
+        emu.run()
+        self.assertEqual(emu.get_register('rax') & 0xff, 1)
+
+
+class ExtendTests(EmulatorTestBase):
+    def test_movsx_sign_extends(self):
+        # mov bl, 0xff ; movsx eax, bl ; ret   -> 0xffffffff
+        emu = self.emulator_for(b'\xb3\xff\x0f\xbe\xc3\xc3')
+        emu.run()
+        self.assertEqual(emu.get_register('rax') & 0xffffffff, 0xffffffff)
+
+    def test_movzx_zero_extends(self):
+        # mov bl, 0xff ; movzx eax, bl ; ret   -> 0xff
+        emu = self.emulator_for(b'\xb3\xff\x0f\xb6\xc3\xc3')
+        emu.run()
+        self.assertEqual(emu.get_register('rax') & 0xffffffff, 0xff)
+
+
+class ShiftRotateTests(EmulatorTestBase):
+    def test_shl(self):
+        # mov eax, 1 ; shl eax, 4 ; ret -> 16
+        emu = self.emulator_for(b'\xb8\x01\x00\x00\x00\xc1\xe0\x04\xc3')
+        emu.run()
+        self.assertEqual(emu.get_register('rax'), 16)
+
+    def test_shr(self):
+        # mov eax, 0xff ; shr eax, 4 ; ret -> 0x0f
+        emu = self.emulator_for(b'\xb8\xff\x00\x00\x00\xc1\xe8\x04\xc3')
+        emu.run()
+        self.assertEqual(emu.get_register('rax'), 0x0f)
+
+    def test_sar_sign_fill(self):
+        # mov eax, 0x80000000 ; sar eax, 31 ; ret -> 0xffffffff (arithmetic shift)
+        emu = self.emulator_for(b'\xb8\x00\x00\x00\x80\xc1\xf8\x1f\xc3')
+        emu.run()
+        self.assertEqual(emu.get_register('rax') & 0xffffffff, 0xffffffff)
+
+    def test_rcl_rotates_through_carry(self):
+        # stc ; mov al, 1 ; rcl al, 1 ; ret
+        # The 9-bit value {carry=1, al=0x01} rotated left by 1 -> al = 0x03.
+        # (mov does not affect flags, so stc's carry survives to rcl.)
+        emu = self.emulator_for(b'\xf9\xb0\x01\xd0\xd0\xc3')
+        emu.run()
+        self.assertEqual(emu.get_register('rax') & 0xff, 0x03)
+
+
+class DivisionTests(EmulatorTestBase):
+    def test_signed_div_intmin_by_neg1_does_not_crash(self):
+        # mov eax, 0x80000000 ; cdq ; mov ecx, -1 ; idiv ecx ; ret
+        # edx:eax is INT32_MIN sign-extended; dividing by -1 overflows on hardware but the
+        # emulator must wrap (to INT32_MIN) rather than trap (SIGFPE) on INT_MIN / -1.
+        emu = self.emulator_for(
+            b'\xb8\x00\x00\x00\x80\x99\xb9\xff\xff\xff\xff\xf7\xf9\xc3')
+        emu.run()
+        self.assertEqual(emu.get_register('rax') & 0xffffffff, 0x80000000)
+
+    def test_div_by_zero_stops_with_error(self):
+        # xor edx,edx ; mov eax, 10 ; mov ecx, 0 ; div ecx ; ret
+        emu = self.emulator_for(
+            b'\x31\xd2\xb8\x0a\x00\x00\x00\xb9\x00\x00\x00\x00\xf7\xf1\xc3')
+        reason = emu.run()
+        self.assertEqual(reason, ILEmulatorStopReason.ILEmulatorError)
+
+
+class MemoryBoundaryTests(EmulatorTestBase):
+    def test_read_spans_gap_between_segments(self):
+        # Two mapped segments with an unmapped gap between them; a read across the gap
+        # zero-fills the hole and still returns the second segment's bytes.
+        emu = self.emulator_for(ADD_CONSTS)
+        emu.map_memory(0x500000, b'\xAA\xBB')
+        emu.map_memory(0x500004, b'\xCC\xDD')  # gap at 0x500002..0x500003
+        self.assertEqual(emu.read_memory(0x500000, 6), b'\xAA\xBB\x00\x00\xCC\xDD')
+
+    def test_overlapping_map_is_rejected(self):
+        emu = self.emulator_for(ADD_CONSTS)
+        emu.map_memory(0x600000, 0x1000)
+        emu.map_memory(0x600800, 0x1000)  # overlaps the first region
+        starts = [r['start'] for r in emu.get_mapped_regions()]
+        self.assertIn(0x600000, starts)
+        self.assertNotIn(0x600800, starts)
+
+
 if __name__ == '__main__':
     unittest.main()

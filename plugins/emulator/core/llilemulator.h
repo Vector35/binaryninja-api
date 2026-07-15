@@ -45,6 +45,10 @@ namespace BinaryNinjaEmulator
 			size_t size;
 			BNLowLevelILOperation operation;
 			bool valid;
+			// Carry/borrow input for ADC/SBB (0 otherwise). Kept separate from `right` so the
+			// carry-out flag can be computed from the full-width sum without the +carry wrapping
+			// at the operand-size boundary.
+			uint8_t carryIn;
 		};
 		ArithmeticContext m_lastArithmetic {};
 

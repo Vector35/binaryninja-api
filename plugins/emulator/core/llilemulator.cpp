@@ -1094,21 +1094,21 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	// --- With carry ---
 	case LLIL_ADC:
 	{
-		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
-		intx::uint512 carry = EvalExpr(expr.GetRawOperandAsExpr(2));
-		intx::uint512 result = MaskToSize(left + right + (carry & 1), sz);
-		m_lastArithmetic = {MaskToSize(left, sz), MaskToSize(right + (carry & 1), sz), result, sz, LLIL_ADC, true};
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		uint8_t carryIn = static_cast<uint8_t>(EvalExpr(expr.GetRawOperandAsExpr(2)) & 1);
+		intx::uint512 result = MaskToSize(left + right + intx::uint512(carryIn), sz);
+		m_lastArithmetic = {left, right, result, sz, LLIL_ADC, true, carryIn};
 		return result;
 	}
 
 	case LLIL_SBB:
 	{
-		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
-		intx::uint512 carry = EvalExpr(expr.GetRawOperandAsExpr(2));
-		intx::uint512 result = MaskToSize(left - right - (carry & 1), sz);
-		m_lastArithmetic = {MaskToSize(left, sz), MaskToSize(right + (carry & 1), sz), result, sz, LLIL_SBB, true};
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		uint8_t carryIn = static_cast<uint8_t>(EvalExpr(expr.GetRawOperandAsExpr(2)) & 1);
+		intx::uint512 result = MaskToSize(left - right - intx::uint512(carryIn), sz);
+		m_lastArithmetic = {left, right, result, sz, LLIL_SBB, true, carryIn};
 		return result;
 	}
 
@@ -1634,16 +1634,25 @@ uint8_t LLILEmulator::ComputeFlagForRole(BNFlagRole role) const
 
 	case CarryFlagRole:
 		if (isAdd)
-			return ctx.result < ctx.left ? 1 : 0;
+		{
+			// Carry-out = bit `size*8` of the full-width sum left + right + carryIn.
+			intx::uint512 fullSum = ctx.left + ctx.right + intx::uint512(ctx.carryIn);
+			return ((fullSum >> (ctx.size * 8)) != 0) ? 1 : 0;
+		}
 		if (isSub)
-			return ctx.left < ctx.right ? 1 : 0;
+			// Borrow-out = left < right + borrowIn, computed at full width so right + borrowIn
+			// does not wrap at the operand-size boundary.
+			return (ctx.left < ctx.right + intx::uint512(ctx.carryIn)) ? 1 : 0;
 		return 0;
 
 	case CarryFlagWithInvertedSubtractRole:
 		if (isSub)
-			return ctx.left >= ctx.right ? 1 : 0;
+			return (ctx.left >= ctx.right + intx::uint512(ctx.carryIn)) ? 1 : 0;
 		if (isAdd)
-			return ctx.result < ctx.left ? 1 : 0;
+		{
+			intx::uint512 fullSum = ctx.left + ctx.right + intx::uint512(ctx.carryIn);
+			return ((fullSum >> (ctx.size * 8)) != 0) ? 1 : 0;
+		}
 		return 0;
 
 	case OverflowFlagRole:
@@ -1661,9 +1670,11 @@ uint8_t LLILEmulator::ComputeFlagForRole(BNFlagRole role) const
 
 	case HalfCarryFlagRole:
 		if (isAdd)
-			return ((ctx.left & intx::uint512(0xf)) + (ctx.right & intx::uint512(0xf))) > intx::uint512(0xf) ? 1 : 0;
+			return ((ctx.left & intx::uint512(0xf)) + (ctx.right & intx::uint512(0xf)) + intx::uint512(ctx.carryIn))
+			        > intx::uint512(0xf) ? 1 : 0;
 		if (isSub)
-			return (ctx.left & intx::uint512(0xf)) < (ctx.right & intx::uint512(0xf)) ? 1 : 0;
+			return (ctx.left & intx::uint512(0xf)) < ((ctx.right & intx::uint512(0xf)) + intx::uint512(ctx.carryIn))
+			        ? 1 : 0;
 		return 0;
 
 	case EvenParityFlagRole:

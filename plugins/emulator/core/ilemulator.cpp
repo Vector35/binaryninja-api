@@ -119,11 +119,16 @@ size_t EmulatorMemory::Read(void* dest, uint64_t addr, size_t len)
 			// On real hardware this would fault, but we silently return zeros.
 			const Segment* next = FindNextSegment(cur);
 			size_t remaining = len - totalRead;
-			size_t skipSize;
-			if (next && next->start <= addr + len)
-				skipSize = std::min((size_t)(next->start - cur), remaining);
-			else
-				skipSize = remaining;
+			// Distance from the cursor to the next mapped segment; if it falls within the
+			// bytes still to read, only skip up to it. Computed relative to `cur` (not
+			// addr + len, which can overflow for high addresses).
+			size_t skipSize = remaining;
+			if (next && next->start > cur)
+			{
+				uint64_t gap = next->start - cur;
+				if (gap < remaining)
+					skipSize = static_cast<size_t>(gap);
+			}
 			memset(out + totalRead, 0, skipSize);
 			totalRead += skipSize;
 		}
@@ -155,11 +160,16 @@ size_t EmulatorMemory::Write(uint64_t addr, const void* src, size_t len)
 			// On real hardware this would fault, but we silently discard the data.
 			const Segment* next = FindNextSegment(cur);
 			size_t remaining = len - totalWritten;
-			size_t skipSize;
-			if (next && next->start <= addr + len)
-				skipSize = std::min((size_t)(next->start - cur), remaining);
-			else
-				skipSize = remaining;
+			// Distance from the cursor to the next mapped segment; if it falls within the
+			// bytes still to write, only skip up to it. Computed relative to `cur` (not
+			// addr + len, which can overflow for high addresses).
+			size_t skipSize = remaining;
+			if (next && next->start > cur)
+			{
+				uint64_t gap = next->start - cur;
+				if (gap < remaining)
+					skipSize = static_cast<size_t>(gap);
+			}
 			totalWritten += skipSize;
 		}
 	}

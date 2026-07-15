@@ -957,18 +957,20 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	// --- Constants ---
 	case LLIL_CONST:
 	case LLIL_CONST_PTR:
-		return MaskToSize(intx::uint512((uint64_t)expr.GetRawOperandAsInteger(0)), sz);
+		return MaskToSize(intx::uint512((uint64_t)expr.GetConstant()), sz);
 
 	case LLIL_EXTERN_PTR:
+		// EXTERN_PTR's typed GetConstant()/GetOffset() read the operands via GetRawOperandAsIndex,
+		// which is not equivalent to the GetRawOperandAsInteger reads used here; keep raw access.
 		return MaskToSize(intx::uint512((uint64_t)(expr.GetRawOperandAsInteger(0) + expr.GetRawOperandAsInteger(1))), sz);
 
 	case LLIL_FLOAT_CONST:
-		return intx::uint512((uint64_t)expr.GetRawOperandAsInteger(0));
+		return intx::uint512((uint64_t)expr.GetConstant());
 
 	// --- Registers ---
 	case LLIL_REG:
 	{
-		uint32_t reg = expr.GetRawOperandAsRegister(0);
+		uint32_t reg = expr.GetSourceRegister();
 		if (LLIL_REG_IS_TEMP(reg))
 			return MaskToSize(GetTempRegister(LLIL_GET_TEMP_REG_INDEX(reg)), sz);
 		return MaskToSize(GetRegister(reg), sz);
@@ -976,8 +978,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_REG_SPLIT:
 	{
-		uint32_t hi = expr.GetRawOperandAsRegister(0);
-		uint32_t lo = expr.GetRawOperandAsRegister(1);
+		uint32_t hi = expr.GetHighRegister();
+		uint32_t lo = expr.GetLowRegister();
 		intx::uint512 hiVal = LLIL_REG_IS_TEMP(hi)
 			? GetTempRegister(LLIL_GET_TEMP_REG_INDEX(hi)) : GetRegister(hi);
 		intx::uint512 loVal = LLIL_REG_IS_TEMP(lo)
@@ -987,12 +989,12 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	}
 
 	case LLIL_FLAG:
-		return intx::uint512(GetFlag(expr.GetRawOperandAsRegister(0)));
+		return intx::uint512(GetFlag(expr.GetSourceFlag()));
 
 	case LLIL_FLAG_BIT:
 	{
-		uint8_t flagVal = GetFlag(expr.GetRawOperandAsRegister(0));
-		size_t bitIndex = expr.GetRawOperandAsIndex(1);
+		uint8_t flagVal = GetFlag(expr.GetSourceFlag());
+		size_t bitIndex = expr.GetBitIndex();
 		return intx::uint512((flagVal >> bitIndex) & 1);
 	}
 
@@ -1003,8 +1005,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	// producing an sz-wide result, which is why they mask differently.)
 	case LLIL_ADD:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRightExpr()), sz);
 		intx::uint512 result = MaskToSize(left + right, sz);
 		m_lastArithmetic = {left, right, result, sz, LLIL_ADD, true};
 		return result;
@@ -1012,8 +1014,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_SUB:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRightExpr()), sz);
 		intx::uint512 result = MaskToSize(left - right, sz);
 		m_lastArithmetic = {left, right, result, sz, LLIL_SUB, true};
 		return result;
@@ -1021,8 +1023,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_AND:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRightExpr()), sz);
 		intx::uint512 result = MaskToSize(left & right, sz);
 		m_lastArithmetic = {left, right, result, sz, LLIL_AND, true};
 		return result;
@@ -1030,8 +1032,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_OR:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRightExpr()), sz);
 		intx::uint512 result = MaskToSize(left | right, sz);
 		m_lastArithmetic = {left, right, result, sz, LLIL_OR, true};
 		return result;
@@ -1039,8 +1041,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_XOR:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRightExpr()), sz);
 		intx::uint512 result = MaskToSize(left ^ right, sz);
 		m_lastArithmetic = {left, right, result, sz, LLIL_XOR, true};
 		return result;
@@ -1048,8 +1050,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_LSL:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = EvalExpr(expr.GetRightExpr());
 		size_t shiftAmt = static_cast<uint64_t>(right) & (sz * 8 - 1);
 		intx::uint512 result = MaskToSize(left << shiftAmt, sz);
 		m_lastArithmetic = {left, right, result, sz, LLIL_LSL, true};
@@ -1058,8 +1060,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_LSR:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = EvalExpr(expr.GetRightExpr());
 		size_t shiftAmt = static_cast<uint64_t>(right) & (sz * 8 - 1);
 		intx::uint512 result = MaskToSize(left >> shiftAmt, sz);
 		m_lastArithmetic = {left, right, result, sz, LLIL_LSR, true};
@@ -1068,8 +1070,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_ASR:
 	{
-		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 left = EvalExpr(expr.GetLeftExpr());
+		intx::uint512 right = EvalExpr(expr.GetRightExpr());
 		intx::uint512 maskedLeft = MaskToSize(left, sz);
 		// Sign-extend to full 512 bits, then arithmetic shift right
 		intx::uint512 extended = SignExtend(maskedLeft, sz, 64);
@@ -1082,8 +1084,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_ROL:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = EvalExpr(expr.GetRightExpr());
 		size_t bits = sz * 8;
 		size_t shift = static_cast<size_t>(static_cast<uint64_t>(right) % bits);
 		intx::uint512 result = (shift == 0) ? left : MaskToSize((left << shift) | (left >> (bits - shift)), sz);
@@ -1093,8 +1095,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_ROR:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = EvalExpr(expr.GetRightExpr());
 		size_t bits = sz * 8;
 		size_t shift = static_cast<size_t>(static_cast<uint64_t>(right) % bits);
 		intx::uint512 result = (shift == 0) ? left : MaskToSize((left >> shift) | (left << (bits - shift)), sz);
@@ -1104,8 +1106,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_MUL:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRightExpr()), sz);
 		intx::uint512 result = MaskToSize(left * right, sz);
 		m_lastArithmetic = {left, right, result, sz, LLIL_MUL, true};
 		return result;
@@ -1114,9 +1116,9 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	// --- With carry ---
 	case LLIL_ADC:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
-		uint8_t carryIn = static_cast<uint8_t>(EvalExpr(expr.GetRawOperandAsExpr(2)) & 1);
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRightExpr()), sz);
+		uint8_t carryIn = static_cast<uint8_t>(EvalExpr(expr.GetCarryExpr()) & 1);
 		intx::uint512 result = MaskToSize(left + right + intx::uint512(carryIn), sz);
 		m_lastArithmetic = {left, right, result, sz, LLIL_ADC, true, carryIn};
 		return result;
@@ -1124,9 +1126,9 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_SBB:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
-		uint8_t carryIn = static_cast<uint8_t>(EvalExpr(expr.GetRawOperandAsExpr(2)) & 1);
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRightExpr()), sz);
+		uint8_t carryIn = static_cast<uint8_t>(EvalExpr(expr.GetCarryExpr()) & 1);
 		intx::uint512 result = MaskToSize(left - right - intx::uint512(carryIn), sz);
 		m_lastArithmetic = {left, right, result, sz, LLIL_SBB, true, carryIn};
 		return result;
@@ -1136,9 +1138,9 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	{
 		// Rotate left through carry: rotate the (bits + 1)-bit quantity {carry : value},
 		// with carry as the most-significant bit.
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
-		intx::uint512 carry = EvalExpr(expr.GetRawOperandAsExpr(2)) & 1;
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = EvalExpr(expr.GetRightExpr());
+		intx::uint512 carry = EvalExpr(expr.GetCarryExpr()) & 1;
 		size_t bits = sz * 8;
 		size_t width = bits + 1;
 		size_t shift = static_cast<size_t>(static_cast<uint64_t>(right) % width);
@@ -1153,9 +1155,9 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	{
 		// Rotate right through carry: rotate the (bits + 1)-bit quantity {carry : value},
 		// with carry as the most-significant bit.
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
-		intx::uint512 carry = EvalExpr(expr.GetRawOperandAsExpr(2)) & 1;
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = EvalExpr(expr.GetRightExpr());
+		intx::uint512 carry = EvalExpr(expr.GetCarryExpr()) & 1;
 		size_t bits = sz * 8;
 		size_t width = bits + 1;
 		size_t shift = static_cast<size_t>(static_cast<uint64_t>(right) % width);
@@ -1169,8 +1171,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	// --- Division ---
 	case LLIL_DIVU:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRightExpr()), sz);
 		if (right == 0)
 		{
 			SetStopReason(ILEmulatorStopReason::Error, "division by zero");
@@ -1181,8 +1183,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_DIVS:
 	{
-		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 left = EvalExpr(expr.GetLeftExpr());
+		intx::uint512 right = EvalExpr(expr.GetRightExpr());
 		if (MaskToSize(right, sz) == 0)
 		{
 			SetStopReason(ILEmulatorStopReason::Error, "division by zero");
@@ -1193,8 +1195,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_MODU:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRightExpr()), sz);
 		if (right == 0)
 		{
 			SetStopReason(ILEmulatorStopReason::Error, "modulo by zero");
@@ -1205,8 +1207,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_MODS:
 	{
-		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 left = EvalExpr(expr.GetLeftExpr());
+		intx::uint512 right = EvalExpr(expr.GetRightExpr());
 		if (MaskToSize(right, sz) == 0)
 		{
 			SetStopReason(ILEmulatorStopReason::Error, "modulo by zero");
@@ -1218,8 +1220,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	// --- Double-precision ---
 	case LLIL_MULU_DP:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz / 2);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz / 2);
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz / 2);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRightExpr()), sz / 2);
 		return MaskToSize(left * right, sz);
 	}
 
@@ -1228,8 +1230,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 		// Signed multiply double-precision: sign-extend each sz/2-byte operand to the full
 		// wide value, then multiply as two's-complement. The low sz bytes of the product are
 		// correct regardless of sign, and this handles operands wider than 8 bytes.
-		intx::uint512 l = SignExtend(EvalExpr(expr.GetRawOperandAsExpr(0)), sz / 2, 64);
-		intx::uint512 r = SignExtend(EvalExpr(expr.GetRawOperandAsExpr(1)), sz / 2, 64);
+		intx::uint512 l = SignExtend(EvalExpr(expr.GetLeftExpr()), sz / 2, 64);
+		intx::uint512 r = SignExtend(EvalExpr(expr.GetRightExpr()), sz / 2, 64);
 		return MaskToSize(l * r, sz);
 	}
 
@@ -1238,8 +1240,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	// whose `sz` is the double-width product.)
 	case LLIL_DIVU_DP:
 	{
-		intx::uint512 dividend = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz * 2);
-		intx::uint512 divisor = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		intx::uint512 dividend = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz * 2);
+		intx::uint512 divisor = MaskToSize(EvalExpr(expr.GetRightExpr()), sz);
 		if (divisor == 0)
 		{
 			SetStopReason(ILEmulatorStopReason::Error, "division by zero");
@@ -1250,8 +1252,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_DIVS_DP:
 	{
-		intx::uint512 dividend = EvalExpr(expr.GetRawOperandAsExpr(0));
-		intx::uint512 divisor = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 dividend = EvalExpr(expr.GetLeftExpr());
+		intx::uint512 divisor = EvalExpr(expr.GetRightExpr());
 		if (MaskToSize(divisor, sz) == 0)
 		{
 			SetStopReason(ILEmulatorStopReason::Error, "division by zero");
@@ -1262,8 +1264,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_MODU_DP:
 	{
-		intx::uint512 dividend = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz * 2);
-		intx::uint512 divisor = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		intx::uint512 dividend = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz * 2);
+		intx::uint512 divisor = MaskToSize(EvalExpr(expr.GetRightExpr()), sz);
 		if (divisor == 0)
 		{
 			SetStopReason(ILEmulatorStopReason::Error, "modulo by zero");
@@ -1274,8 +1276,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_MODS_DP:
 	{
-		intx::uint512 dividend = EvalExpr(expr.GetRawOperandAsExpr(0));
-		intx::uint512 divisor = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 dividend = EvalExpr(expr.GetLeftExpr());
+		intx::uint512 divisor = EvalExpr(expr.GetRightExpr());
 		if (MaskToSize(divisor, sz) == 0)
 		{
 			SetStopReason(ILEmulatorStopReason::Error, "modulo by zero");
@@ -1287,7 +1289,7 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	// --- Unary ---
 	case LLIL_NEG:
 	{
-		intx::uint512 val = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		intx::uint512 val = MaskToSize(EvalExpr(expr.GetSourceExpr()), sz);
 		intx::uint512 result = MaskToSize(~val + 1, sz);
 		m_lastArithmetic = {intx::uint512(0), val, result, sz, LLIL_NEG, true};
 		return result;
@@ -1295,7 +1297,7 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_NOT:
 	{
-		intx::uint512 val = EvalExpr(expr.GetRawOperandAsExpr(0));
+		intx::uint512 val = EvalExpr(expr.GetSourceExpr());
 		intx::uint512 result = MaskToSize(~val, sz);
 		m_lastArithmetic = {val, intx::uint512(0), result, sz, LLIL_NOT, true};
 		return result;
@@ -1303,25 +1305,25 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_SX:
 	{
-		LowLevelILInstruction src = expr.GetRawOperandAsExpr(0);
+		LowLevelILInstruction src = expr.GetSourceExpr();
 		intx::uint512 val = EvalExpr(src);
 		return MaskToSize(SignExtend(val, src.size, sz), sz);
 	}
 
 	case LLIL_ZX:
 	{
-		LowLevelILInstruction src = expr.GetRawOperandAsExpr(0);
+		LowLevelILInstruction src = expr.GetSourceExpr();
 		return MaskToSize(EvalExpr(src), sz);
 	}
 
 	case LLIL_LOW_PART:
-		return MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		return MaskToSize(EvalExpr(expr.GetSourceExpr()), sz);
 
 	// --- Bit operations ---
 	case LLIL_BSWAP:
 	{
 		// Reverse the byte order of the sz-byte value.
-		intx::uint512 val = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		intx::uint512 val = MaskToSize(EvalExpr(expr.GetSourceExpr()), sz);
 		intx::uint512 result(0);
 		for (size_t i = 0; i < sz; i++)
 		{
@@ -1333,7 +1335,7 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_POPCNT:
 	{
-		intx::uint512 val = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		intx::uint512 val = MaskToSize(EvalExpr(expr.GetSourceExpr()), sz);
 		uint64_t count = 0;
 		for (size_t i = 0; i < sz * 8; i++)
 			if (((val >> i) & intx::uint512(1)) != 0)
@@ -1344,7 +1346,7 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	case LLIL_CLZ:
 	{
 		// Count leading zero bits; clz(0) == 8 * size.
-		intx::uint512 val = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		intx::uint512 val = MaskToSize(EvalExpr(expr.GetSourceExpr()), sz);
 		size_t bits = sz * 8;
 		uint64_t count = 0;
 		for (size_t i = bits; i-- > 0;)
@@ -1359,7 +1361,7 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	case LLIL_CTZ:
 	{
 		// Count trailing zero bits; ctz(0) == 8 * size.
-		intx::uint512 val = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		intx::uint512 val = MaskToSize(EvalExpr(expr.GetSourceExpr()), sz);
 		size_t bits = sz * 8;
 		uint64_t count = 0;
 		for (size_t i = 0; i < bits; i++)
@@ -1374,7 +1376,7 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	case LLIL_RBIT:
 	{
 		// Reverse the bit order of the sz-byte value.
-		intx::uint512 val = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		intx::uint512 val = MaskToSize(EvalExpr(expr.GetSourceExpr()), sz);
 		size_t bits = sz * 8;
 		intx::uint512 result(0);
 		for (size_t i = 0; i < bits; i++)
@@ -1386,7 +1388,7 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	case LLIL_CLS:
 	{
 		// Count leading sign bits: number of bits below the sign bit that match it.
-		intx::uint512 val = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		intx::uint512 val = MaskToSize(EvalExpr(expr.GetSourceExpr()), sz);
 		size_t bits = sz * 8;
 		intx::uint512 sign = (val >> (bits - 1)) & intx::uint512(1);
 		uint64_t count = 0;
@@ -1402,7 +1404,7 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	case LLIL_ABS:
 	{
 		// Signed absolute value; abs(INT_MIN) == INT_MIN.
-		intx::uint512 val = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
+		intx::uint512 val = MaskToSize(EvalExpr(expr.GetSourceExpr()), sz);
 		size_t bits = sz * 8;
 		bool neg = ((val >> (bits - 1)) & intx::uint512(1)) != 0;
 		return neg ? MaskToSize(~val + 1, sz) : val;
@@ -1411,8 +1413,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	case LLIL_MINS:
 	case LLIL_MAXS:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRightExpr()), sz);
 		// leftWins for MINS when left <= right, for MAXS when left >= right (i.e. !(left < right))
 		bool leftWins = (expr.operation == LLIL_MINS) ? !SignedLess(right, left, sz)
 		                                              : !SignedLess(left, right, sz);
@@ -1422,8 +1424,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	case LLIL_MINU:
 	case LLIL_MAXU:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRightExpr()), sz);
 		bool leftWins = (expr.operation == LLIL_MINU) ? (left <= right) : (left >= right);
 		return leftWins ? left : right;
 	}
@@ -1431,78 +1433,78 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	// --- Comparisons ---
 	case LLIL_CMP_E:
 	{
-		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 left = EvalExpr(expr.GetLeftExpr());
+		intx::uint512 right = EvalExpr(expr.GetRightExpr());
 		return MaskToSize(left, sz) == MaskToSize(right, sz) ? intx::uint512(1) : intx::uint512(0);
 	}
 
 	case LLIL_CMP_NE:
 	{
-		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 left = EvalExpr(expr.GetLeftExpr());
+		intx::uint512 right = EvalExpr(expr.GetRightExpr());
 		return MaskToSize(left, sz) != MaskToSize(right, sz) ? intx::uint512(1) : intx::uint512(0);
 	}
 
 	case LLIL_CMP_SLT:
 	{
-		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 left = EvalExpr(expr.GetLeftExpr());
+		intx::uint512 right = EvalExpr(expr.GetRightExpr());
 		return SignedLess(left, right, sz) ? intx::uint512(1) : intx::uint512(0);
 	}
 
 	case LLIL_CMP_ULT:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRightExpr()), sz);
 		return left < right ? intx::uint512(1) : intx::uint512(0);
 	}
 
 	case LLIL_CMP_SLE:
 	{
-		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 left = EvalExpr(expr.GetLeftExpr());
+		intx::uint512 right = EvalExpr(expr.GetRightExpr());
 		return !SignedLess(right, left, sz) ? intx::uint512(1) : intx::uint512(0);
 	}
 
 	case LLIL_CMP_ULE:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRightExpr()), sz);
 		return left <= right ? intx::uint512(1) : intx::uint512(0);
 	}
 
 	case LLIL_CMP_SGE:
 	{
-		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 left = EvalExpr(expr.GetLeftExpr());
+		intx::uint512 right = EvalExpr(expr.GetRightExpr());
 		return !SignedLess(left, right, sz) ? intx::uint512(1) : intx::uint512(0);
 	}
 
 	case LLIL_CMP_UGE:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRightExpr()), sz);
 		return left >= right ? intx::uint512(1) : intx::uint512(0);
 	}
 
 	case LLIL_CMP_SGT:
 	{
-		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 left = EvalExpr(expr.GetLeftExpr());
+		intx::uint512 right = EvalExpr(expr.GetRightExpr());
 		return SignedLess(right, left, sz) ? intx::uint512(1) : intx::uint512(0);
 	}
 
 	case LLIL_CMP_UGT:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRightExpr()), sz);
 		return left > right ? intx::uint512(1) : intx::uint512(0);
 	}
 
 	// --- Memory ---
 	case LLIL_LOAD:
 	{
-		uint64_t addr = static_cast<uint64_t>(EvalExpr(expr.GetRawOperandAsExpr(0)));
+		uint64_t addr = static_cast<uint64_t>(EvalExpr(expr.GetSourceExpr()));
 		return ReadMemoryValue(addr, sz);
 	}
 
@@ -1511,12 +1513,12 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	// --- Misc ---
 	case LLIL_BOOL_TO_INT:
-		return EvalExpr(expr.GetRawOperandAsExpr(0)) != 0 ? intx::uint512(1) : intx::uint512(0);
+		return EvalExpr(expr.GetSourceExpr()) != 0 ? intx::uint512(1) : intx::uint512(0);
 
 	case LLIL_TEST_BIT:
 	{
-		intx::uint512 left = EvalExpr(expr.GetRawOperandAsExpr(0));
-		intx::uint512 right = EvalExpr(expr.GetRawOperandAsExpr(1));
+		intx::uint512 left = EvalExpr(expr.GetLeftExpr());
+		intx::uint512 right = EvalExpr(expr.GetRightExpr());
 		return (left & right) != 0 ? intx::uint512(1) : intx::uint512(0);
 	}
 
@@ -1524,8 +1526,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	{
 		// Signed overflow flag: set when both operands share a sign and the result's sign
 		// differs from them (not the unsigned carry-out).
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(0)), sz);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRawOperandAsExpr(1)), sz);
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRightExpr()), sz);
 		intx::uint512 result = MaskToSize(left + right, sz);
 		intx::uint512 signBit = intx::uint512(1) << (sz * 8 - 1);
 		bool overflow = ((left ^ result) & (right ^ result) & signBit) != 0;
@@ -1535,14 +1537,14 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	// --- Flag conditions (Lifted IL) ---
 	case LLIL_FLAG_COND:
 	{
-		BNLowLevelILFlagCondition cond = expr.GetRawOperandAsFlagCondition(0);
-		uint32_t semClass = expr.GetRawOperandAsRegister(1);
+		BNLowLevelILFlagCondition cond = expr.GetFlagCondition();
+		uint32_t semClass = expr.GetSemanticFlagClass();
 		return EvalFlagCondition(cond, semClass);
 	}
 
 	case LLIL_FLAG_GROUP:
 	{
-		uint32_t semGroup = expr.GetRawOperandAsRegister(0);
+		uint32_t semGroup = expr.GetSemanticFlagGroup();
 		auto condMap = m_arch->GetFlagConditionsForSemanticFlagGroup(semGroup);
 		if (!condMap.empty())
 			return EvalFlagCondition(condMap.begin()->second, condMap.begin()->first);
@@ -1756,9 +1758,9 @@ void LLILEmulator::ExecuteCurrentInstruction()
 
 	case LLIL_SET_REG:
 	{
-		uint32_t reg = instr.GetRawOperandAsRegister(0);
+		uint32_t reg = instr.GetDestRegister();
 		m_lastArithmetic.valid = false;
-		intx::uint512 val = EvalExpr(instr.GetRawOperandAsExpr(1));
+		intx::uint512 val = EvalExpr(instr.GetSourceExpr());
 		if (m_stopReason != ILEmulatorStopReason::Running)
 			return;
 		if (LLIL_REG_IS_TEMP(reg))
@@ -1772,10 +1774,10 @@ void LLILEmulator::ExecuteCurrentInstruction()
 
 	case LLIL_SET_REG_SPLIT:
 	{
-		uint32_t hi = instr.GetRawOperandAsRegister(0);
-		uint32_t lo = instr.GetRawOperandAsRegister(1);
+		uint32_t hi = instr.GetHighRegister();
+		uint32_t lo = instr.GetLowRegister();
 		m_lastArithmetic.valid = false;
-		intx::uint512 val = EvalExpr(instr.GetRawOperandAsExpr(2));
+		intx::uint512 val = EvalExpr(instr.GetSourceExpr());
 		if (m_stopReason != ILEmulatorStopReason::Running)
 			return;
 
@@ -1805,8 +1807,8 @@ void LLILEmulator::ExecuteCurrentInstruction()
 
 	case LLIL_SET_FLAG:
 	{
-		uint32_t flag = instr.GetRawOperandAsRegister(0);
-		intx::uint512 val = EvalExpr(instr.GetRawOperandAsExpr(1));
+		uint32_t flag = instr.GetDestFlag();
+		intx::uint512 val = EvalExpr(instr.GetSourceExpr());
 		if (m_stopReason != ILEmulatorStopReason::Running)
 			return;
 		SetFlag(flag, static_cast<uint8_t>(static_cast<uint64_t>(val) & 1));
@@ -1815,8 +1817,8 @@ void LLILEmulator::ExecuteCurrentInstruction()
 
 	case LLIL_STORE:
 	{
-		uint64_t addr = static_cast<uint64_t>(EvalExpr(instr.GetRawOperandAsExpr(0)));
-		intx::uint512 val = EvalExpr(instr.GetRawOperandAsExpr(1));
+		uint64_t addr = static_cast<uint64_t>(EvalExpr(instr.GetDestExpr()));
+		intx::uint512 val = EvalExpr(instr.GetSourceExpr());
 		if (m_stopReason != ILEmulatorStopReason::Running)
 			return;
 		WriteMemoryValue(addr, val, instr.size);
@@ -1825,7 +1827,7 @@ void LLILEmulator::ExecuteCurrentInstruction()
 
 	case LLIL_PUSH:
 	{
-		intx::uint512 val = EvalExpr(instr.GetRawOperandAsExpr(0));
+		intx::uint512 val = EvalExpr(instr.GetSourceExpr());
 		if (m_stopReason != ILEmulatorStopReason::Running)
 			return;
 		Push(val, instr.size);
@@ -1834,24 +1836,24 @@ void LLILEmulator::ExecuteCurrentInstruction()
 
 	case LLIL_GOTO:
 	{
-		size_t target = instr.GetRawOperandAsIndex(0);
+		size_t target = instr.GetTarget();
 		m_instrIndex = target;
 		return;
 	}
 
 	case LLIL_IF:
 	{
-		intx::uint512 cond = EvalExpr(instr.GetRawOperandAsExpr(0));
+		intx::uint512 cond = EvalExpr(instr.GetConditionExpr());
 		if (m_stopReason != ILEmulatorStopReason::Running)
 			return;
-		size_t target = (cond != 0) ? instr.GetRawOperandAsIndex(1) : instr.GetRawOperandAsIndex(2);
+		size_t target = (cond != 0) ? instr.GetTrueTarget() : instr.GetFalseTarget();
 		m_instrIndex = target;
 		return;
 	}
 
 	case LLIL_JUMP:
 	{
-		uint64_t dest = static_cast<uint64_t>(EvalExpr(instr.GetRawOperandAsExpr(0)));
+		uint64_t dest = static_cast<uint64_t>(EvalExpr(instr.GetDestExpr()));
 		if (m_stopReason != ILEmulatorStopReason::Running)
 			return;
 
@@ -1868,7 +1870,7 @@ void LLILEmulator::ExecuteCurrentInstruction()
 
 	case LLIL_JUMP_TO:
 	{
-		uint64_t dest = static_cast<uint64_t>(EvalExpr(instr.GetRawOperandAsExpr(0)));
+		uint64_t dest = static_cast<uint64_t>(EvalExpr(instr.GetDestExpr()));
 		if (m_stopReason != ILEmulatorStopReason::Running)
 			return;
 
@@ -1885,7 +1887,7 @@ void LLILEmulator::ExecuteCurrentInstruction()
 
 	case LLIL_CALL:
 	{
-		uint64_t dest = static_cast<uint64_t>(EvalExpr(instr.GetRawOperandAsExpr(0)));
+		uint64_t dest = static_cast<uint64_t>(EvalExpr(instr.GetDestExpr()));
 		if (m_stopReason != ILEmulatorStopReason::Running)
 			return;
 
@@ -1931,13 +1933,13 @@ void LLILEmulator::ExecuteCurrentInstruction()
 
 	case LLIL_CALL_STACK_ADJUST:
 	{
-		uint64_t dest = static_cast<uint64_t>(EvalExpr(instr.GetRawOperandAsExpr(0)));
+		uint64_t dest = static_cast<uint64_t>(EvalExpr(instr.GetDestExpr()));
 		if (m_stopReason != ILEmulatorStopReason::Running)
 			return;
 
 		if (m_builtinLibcStubs && HandleBuiltinCall(dest))
 		{
-			int64_t adj = (int64_t)instr.GetRawOperandAsInteger(1);
+			int64_t adj = (int64_t)instr.GetStackAdjustment();
 			uint32_t sp = m_arch->GetStackPointerRegister();
 			uint64_t spVal = static_cast<uint64_t>(GetRegister(sp));
 			SetRegister(sp, intx::uint512(spVal + (uint64_t)adj));
@@ -1946,7 +1948,7 @@ void LLILEmulator::ExecuteCurrentInstruction()
 
 		if (m_callHook && m_callHook(this, dest))
 		{
-			int64_t adj = (int64_t)instr.GetRawOperandAsInteger(1);
+			int64_t adj = (int64_t)instr.GetStackAdjustment();
 			uint32_t sp = m_arch->GetStackPointerRegister();
 			uint64_t spVal = static_cast<uint64_t>(GetRegister(sp));
 			SetRegister(sp, intx::uint512(spVal + (uint64_t)adj));
@@ -1975,7 +1977,7 @@ void LLILEmulator::ExecuteCurrentInstruction()
 
 		if (HandleUnknownCall(dest))
 		{
-			int64_t adj = (int64_t)instr.GetRawOperandAsInteger(1);
+			int64_t adj = (int64_t)instr.GetStackAdjustment();
 			uint32_t sp = m_arch->GetStackPointerRegister();
 			uint64_t spVal = static_cast<uint64_t>(GetRegister(sp));
 			SetRegister(sp, intx::uint512(spVal + (uint64_t)adj));
@@ -1989,7 +1991,7 @@ void LLILEmulator::ExecuteCurrentInstruction()
 
 	case LLIL_TAILCALL:
 	{
-		uint64_t dest = static_cast<uint64_t>(EvalExpr(instr.GetRawOperandAsExpr(0)));
+		uint64_t dest = static_cast<uint64_t>(EvalExpr(instr.GetDestExpr()));
 		if (m_stopReason != ILEmulatorStopReason::Running)
 			return;
 
@@ -2039,7 +2041,7 @@ void LLILEmulator::ExecuteCurrentInstruction()
 	{
 		// Evaluate the return address expression for side effects
 		// (pops RA from stack on x86, reads LR on ARM — no-op)
-		EvalExpr(instr.GetRawOperandAsExpr(0));
+		EvalExpr(instr.GetDestExpr());
 
 		if (ReturnToCaller())
 			return;
@@ -2070,16 +2072,15 @@ void LLILEmulator::ExecuteCurrentInstruction()
 
 	case LLIL_TRAP:
 		SetStopReason(ILEmulatorStopReason::Halt,
-			fmt::format("trap {}", instr.GetRawOperandAsInteger(0)));
+			fmt::format("trap {}", instr.GetVector()));
 		return;
 
 	case LLIL_INTRINSIC:
 	{
 		if (m_intrinsicHook)
 		{
-			uint32_t intrinsic = instr.GetRawOperandAsRegister(2);
-			LowLevelILInstruction paramExpr = instr.GetRawOperandAsExpr(3);
-			LowLevelILInstructionList paramList = paramExpr.GetRawOperandAsExprList(0);
+			uint32_t intrinsic = instr.GetIntrinsic();
+			LowLevelILInstructionList paramList = instr.GetParameterExprs();
 			std::vector<uint64_t> params;
 			for (auto& p : paramList)
 			{

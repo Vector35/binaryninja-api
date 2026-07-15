@@ -272,7 +272,7 @@ bool LLILEmulator::PreInstructionHookCallback(void* ctxt, BNILEmulator*, size_t 
 
 bool LLILEmulator::IntrinsicHookCallback(void* ctxt, BNLLILEmulator*,
 	uint32_t intrinsic, const uint64_t* params, size_t paramCount,
-	uint64_t* outValues, uint32_t* outRegs, size_t* outCount)
+	uint64_t* outValues, uint32_t* outRegs, size_t maxCount, size_t* outCount)
 {
 	LLILEmulator* self = (LLILEmulator*)ctxt;
 	std::vector<uint64_t> paramVec(params, params + paramCount);
@@ -280,7 +280,9 @@ bool LLILEmulator::IntrinsicHookCallback(void* ctxt, BNLLILEmulator*,
 
 	bool result = self->m_intrinsicHook(self, intrinsic, paramVec, outputs);
 
-	size_t count = outputs.size();
+	// Never write past the caller-provided capacity, even if the user hook returns more
+	// outputs than the core allocated space for.
+	size_t count = std::min(outputs.size(), maxCount);
 	if (outCount)
 		*outCount = count;
 	for (size_t i = 0; i < count; i++)

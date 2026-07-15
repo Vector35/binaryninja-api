@@ -54,7 +54,7 @@ namespace BinaryNinja
 		static bool PreInstructionHookCallback(void* ctxt, BNILEmulator* emu, size_t instrIndex);
 		static bool IntrinsicHookCallback(void* ctxt, BNLLILEmulator* emu,
 			uint32_t intrinsic, const uint64_t* params, size_t paramCount,
-			uint64_t* outValues, uint32_t* outRegs, size_t* outCount);
+			uint64_t* outValues, uint32_t* outRegs, size_t maxCount, size_t* outCount);
 		static void StdoutCallbackBridge(void* ctxt, BNILEmulator* emu, const char* data, size_t len);
 		static size_t StdinCallbackBridge(void* ctxt, BNILEmulator* emu, char* buf, size_t maxLen);
 

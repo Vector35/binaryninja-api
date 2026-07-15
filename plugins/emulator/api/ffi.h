@@ -159,11 +159,13 @@ extern "C"
 	EMULATOR_FFI_API uint8_t BNLLILEmulatorGetFlag(BNLLILEmulator* emu, uint32_t flag);
 	EMULATOR_FFI_API void BNLLILEmulatorSetFlag(BNLLILEmulator* emu, uint32_t flag, uint8_t value);
 
-	// LLIL Emulator — intrinsic hook
+	// LLIL Emulator — intrinsic hook.
+	// The callback receives output buffers outValues/outRegs with capacity maxCount entries;
+	// it must write at most maxCount pairs and set *outCount to the number written.
 	EMULATOR_FFI_API void BNLLILEmulatorSetIntrinsicHook(BNLLILEmulator* emu, void* ctxt,
 		bool (*callback)(void* ctxt, BNLLILEmulator* emu, uint32_t intrinsic,
 			const uint64_t* params, size_t paramCount,
-			uint64_t* outValues, uint32_t* outRegs, size_t* outCount));
+			uint64_t* outValues, uint32_t* outRegs, size_t maxCount, size_t* outCount));
 
 	// LLIL Emulator — call stack
 	EMULATOR_FFI_API size_t BNLLILEmulatorGetCallStackDepth(BNLLILEmulator* emu);

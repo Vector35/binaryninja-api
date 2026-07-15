@@ -480,22 +480,26 @@ class LLILEmulator:
             ctypes.POINTER(core.BNLLILEmulator), ctypes.c_uint,
             ctypes.POINTER(ctypes.c_ulonglong), ctypes.c_ulonglong,
             ctypes.POINTER(ctypes.c_ulonglong), ctypes.POINTER(ctypes.c_uint),
-            ctypes.POINTER(ctypes.c_ulonglong))
+            ctypes.c_ulonglong, ctypes.POINTER(ctypes.c_ulonglong))
         if callback is None:
             core.BNLLILEmulatorSetIntrinsicHook(self.handle, None, ctypes.cast(None, _CB_T))
             self._intrinsic_hook_cb = None
             return
 
         @_CB_T
-        def _cb(ctxt, emu, intrinsic, params, param_count, out_values, out_regs, out_count):
+        def _cb(ctxt, emu, intrinsic, params, param_count, out_values, out_regs, max_count, out_count):
             try:
                 param_list = [params[i] for i in range(param_count)]
                 result = self._intrinsic_hook(self, intrinsic, param_list)
                 if result is not None:
-                    out_count[0] = len(result)
-                    for i, (reg, val) in enumerate(result):
-                        out_regs[i] = reg
-                        out_values[i] = val
+                    # Never write past the buffers the core provided (max_count entries).
+                    n = min(len(result), max_count)
+                    out_count[0] = n
+                    mask = (1 << 64) - 1
+                    for i in range(n):
+                        reg, val = result[i]
+                        out_regs[i] = reg & 0xffffffff
+                        out_values[i] = val & mask
                     return True
                 return False
             except:

@@ -3693,7 +3693,7 @@ void BNLLILEmulatorSetFlag(BNLLILEmulator* emu, uint32_t flag, uint8_t value)
 
 
 void BNLLILEmulatorSetIntrinsicHook(BNLLILEmulator* emu, void* ctxt,
-	bool (*callback)(void*, BNLLILEmulator*, uint32_t, const uint64_t*, size_t, uint64_t*, uint32_t*, size_t*))
+	bool (*callback)(void*, BNLLILEmulator*, uint32_t, const uint64_t*, size_t, uint64_t*, uint32_t*, size_t, size_t*))
 {
 	if (callback)
 	{
@@ -3701,14 +3701,15 @@ void BNLLILEmulatorSetIntrinsicHook(BNLLILEmulator* emu, void* ctxt,
 			[ctxt, callback, emu](LLILEmulator* e, uint32_t intrinsic,
 				const std::vector<uint64_t>& params,
 				std::vector<std::pair<uint32_t, uint64_t>>& outputs) -> bool {
+				constexpr size_t kMaxOutputs = 64;
 				size_t outCount = 0;
-				uint64_t outValues[64];
-				uint32_t outRegs[64];
+				uint64_t outValues[kMaxOutputs];
+				uint32_t outRegs[kMaxOutputs];
 				bool result = callback(ctxt, emu, intrinsic,
-					params.data(), params.size(), outValues, outRegs, &outCount);
+					params.data(), params.size(), outValues, outRegs, kMaxOutputs, &outCount);
 				if (result)
 				{
-					for (size_t i = 0; i < outCount && i < 64; i++)
+					for (size_t i = 0; i < outCount && i < kMaxOutputs; i++)
 						outputs.push_back({outRegs[i], outValues[i]});
 				}
 				return result;

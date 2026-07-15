@@ -23,6 +23,7 @@
 #include "emulatorapi.h"
 
 using namespace BinaryNinja;
+using namespace BinaryNinjaEmulatorAPI;
 
 
 LLILEmulator::LLILEmulator(Ref<BinaryView> view)

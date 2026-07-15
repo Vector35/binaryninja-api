@@ -25,7 +25,11 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-namespace BinaryNinja
+using namespace BinaryNinja;
+
+// The plugin's public C++ API lives in its own namespace (mirroring
+// BinaryNinjaDebuggerAPI) rather than in BinaryNinja, which is reserved for the core API.
+namespace BinaryNinjaEmulatorAPI
 {
 	/*!
 		\ingroup emulator
@@ -153,4 +157,4 @@ namespace BinaryNinja
 		std::string SaveState() const;
 		bool LoadState(const std::string& json);
 	};
-}  // namespace BinaryNinja
+}  // namespace BinaryNinjaEmulatorAPI

@@ -50,6 +50,7 @@ from . import basicblock
 from . import function
 from . import log
 from .pluginmanager import RepositoryManager
+from .requirementcheck import pip_requirements_from_dependency_metadata, pip_requirements_satisfied
 from .enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
 from .settings import Settings
 from .enums import SettingsScope
@@ -476,8 +477,11 @@ class ScriptingProvider(metaclass=_ScriptingProviderMetaclass):
 		self._cb.createInstance = self._cb.createInstance.__class__(self._create_instance)
 		self._cb.loadModule = self._cb.loadModule.__class__(self._load_module)
 		self._cb.installModules = self._cb.installModules.__class__(self._install_modules)
-		self._cb.moduleInstalled = self._cb.installModules.__class__(self._module_installed)
 		self.handle = core.BNRegisterScriptingProvider(self.__class__.name, self.__class__.apiName, self._cb)
+		self._module_installed_cb = core.BNScriptingProviderModuleInstalledCallbacks()
+		self._module_installed_cb.context = None
+		self._module_installed_cb.moduleInstalled = self._module_installed_cb.moduleInstalled.__class__(self._module_installed)
+		core.BNSetScriptingProviderModuleInstalledCallback(self.handle, self._module_installed_cb)
 		self.__class__._registered_providers.append(self)
 
 	def _create_instance(self, ctxt):
@@ -505,7 +509,7 @@ class ScriptingProvider(metaclass=_ScriptingProviderMetaclass):
 	def _install_modules(self, ctx, modules: bytes) -> bool:
 		return False
 
-	def _module_installed(self, ctx, module: str) -> bool:
+	def _module_installed(self, ctx, modules: bytes) -> bool:
 		return False
 
 
@@ -1291,12 +1295,7 @@ class PythonScriptingProvider(ScriptingProvider):
 
 	def _install_modules(self, ctx, _modules: bytes) -> bool:
 		# This callback should not be called directly
-		dependencies_json = json.loads(_modules.decode("utf-8"))
-		modules = ""
-		if "pip" in dependencies_json:
-			if len(dependencies_json["pip"].strip()) == 0:
-				return True
-			modules = [line.split('#', 1)[0].strip() for line in dependencies_json["pip"].split('\n') if line.split('#', 1)[0].strip()]
+		modules = pip_requirements_from_dependency_metadata(_modules)
 		if len(modules) == 0:
 			return True
 		python_lib = settings.Settings().get_string("python.interpreter")
@@ -1358,10 +1357,21 @@ class PythonScriptingProvider(ScriptingProvider):
 			)
 		return status
 
-	def _module_installed(self, ctx, module: str) -> bool:
-		if self._python_bin is None:
+	def _module_installed(self, ctx, _modules: bytes) -> bool:
+		try:
+			modules = pip_requirements_from_dependency_metadata(_modules)
+		except Exception:
+			logger.log_error_for_exception("Failed to parse plugin dependency metadata")
 			return False
-		return re.split('>|=|,', module.strip(), 1)[0] in self._satisfied_dependencies(self._python_bin)
+
+		if len(modules) == 0:
+			return True
+
+		try:
+			return pip_requirements_satisfied(modules)
+		except Exception:
+			logger.log_error_for_exception("Failed to check plugin dependency requirements")
+			return False
 
 	@classmethod
 	def register_magic_variable(

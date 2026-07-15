@@ -3280,6 +3280,34 @@ extern "C"
 		ScriptExecutionCancelled
 	};
 
+	BN_ENUM(uint8_t, BNPluginDependencyDecision)
+	{
+		PluginDependencyReinstall,
+		PluginDependencyDisable,
+		PluginDependencyLoadAnyway
+	};
+
+	typedef struct BNPluginDependencyIssue
+	{
+		const char* repository;
+		const char* name;
+		const char* path;
+		const char* dependencies;
+	} BNPluginDependencyIssue;
+
+	typedef struct BNPluginDependencyStartupCallbacks
+	{
+		void* context;
+		bool (*checkDependencies)(void* ctxt, const BNPluginDependencyIssue* issues, size_t count,
+			BNPluginDependencyDecision* decisions);
+	} BNPluginDependencyStartupCallbacks;
+
+	typedef struct BNScriptingProviderModuleInstalledCallbacks
+	{
+		void* context;
+		bool (*moduleInstalled)(void* ctxt, const char* modules);
+	} BNScriptingProviderModuleInstalledCallbacks;
+
 
 	typedef struct BNScriptingInstanceCallbacks
 	{
@@ -8127,6 +8155,10 @@ extern "C"
 	BINARYNINJACOREAPI bool BNLoadScriptingProviderModule(
 	    BNScriptingProvider* provider, const char* repository, const char* module, bool force);
 	BINARYNINJACOREAPI bool BNInstallScriptingProviderModules(BNScriptingProvider* provider, const char* modules);
+	BINARYNINJACOREAPI bool BNIsScriptingProviderModuleInstalled(BNScriptingProvider* provider, const char* modules);
+	BINARYNINJACOREAPI void BNSetScriptingProviderModuleInstalledCallback(BNScriptingProvider* provider,
+	    BNScriptingProviderModuleInstalledCallbacks* callbacks);
+	BINARYNINJACOREAPI void BNSetPluginDependencyStartupCallback(BNPluginDependencyStartupCallbacks* callbacks);
 
 	BINARYNINJACOREAPI BNScriptingInstance* BNInitScriptingInstance(
 	    BNScriptingProvider* provider, BNScriptingInstanceCallbacks* callbacks);

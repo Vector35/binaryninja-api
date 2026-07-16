@@ -1,8 +1,12 @@
 # x86 per-iclass lifting coverage
 
-Generates a test binary containing **one instruction per XED iclass** so that
-changes in x86 lifting (particularly intrinsic lifting) can be tracked. See
+Generates **one instruction per XED iclass, per machine mode** so that changes
+in x86 lifting (particularly intrinsic lifting) can be tracked. See
 Vector35/binaryninja#1668.
+
+An iclass valid in both long and legacy modes appears in both manifests,
+because its lifting can legitimately differ between them (stack width, flag
+handling, operand size, etc.).
 
 The regression test that consumes these files lives in the main Binary Ninja
 repository at `tests/python/test_x86_iclass_lifting.py`; it lifts every
@@ -18,16 +22,18 @@ change shows up as a diff naming the exact instruction that changed.
 
 ## Coverage
 
-All 1858 iclasses. Most are produced by XED's encoder. `BND*` and `NOP2`..`NOP9`
-are recorded as forced known-good bytes: this XED build (and Binary Ninja) has
-MPX disabled and decodes every multi-byte NOP as the plain `NOP` iclass, so
-those bytes lift as `NOP` -- keeping the iclass in the dataset flags any future
-change (e.g. if MPX decoding is enabled).
+All 1858 iclasses appear in the long-mode manifest; the ~1700 of them that are
+also valid in legacy 32-bit mode appear in `x86.manifest` as well. The gap is
+the 64-bit-only iclasses (REX/APX forms, `PUSHFQ`, `MOVSXD`, ...).
 
-A handful of iclasses that
-XED's *encoder* cannot emit (the `XSAVE` family, `JMPABS`, `JCXZ`, and the
-legacy `LDS`/`LES`/`BOUND`) are supplied as known-good bytes and classified by
-XED's *decoder*, so a wrong guess can never be mislabeled.
+Most instructions are produced by XED's encoder. `BND*` and `NOP2`..`NOP9` are
+recorded as forced known-good bytes: this XED build (and Binary Ninja) has MPX
+disabled and decodes every multi-byte NOP as the plain `NOP` iclass, so those
+bytes lift as `NOP` -- keeping the iclass in the dataset flags any future change
+(e.g. if MPX decoding is enabled). A handful of iclasses that XED's *encoder*
+cannot emit (the `XSAVE` family, `JMPABS`, `JCXZ`, and the legacy
+`LDS`/`LES`/`BOUND`) are supplied as known-good bytes and classified by XED's
+*decoder*, so a wrong guess can never be mislabeled.
 
 ## Regenerating
 

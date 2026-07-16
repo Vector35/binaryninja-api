@@ -1,15 +1,14 @@
-// Generate one encoded instruction per XED iclass.
+// Generate one encoded instruction per XED iclass, per machine mode.
 //
 // For every entry in XED's instruction table (one per iform) we synthesize
-// canonical operands and try to encode it. The first iform that encodes
-// successfully for a given iclass is kept. 64-bit (long mode) encodings are
-// preferred; iclasses that only encode in 32-bit legacy mode go to a separate
-// manifest so they disassemble correctly.
+// canonical operands and try to encode it in long mode and in legacy 32-bit
+// mode independently. The first iform that encodes for a given (iclass, mode)
+// is kept, so an iclass valid in both modes appears in both manifests -- its
+// lifting can legitimately differ between them (stack width, flags, etc.).
 //
 // Outputs (into the directory given as argv[1]):
 //   x86_64.manifest  - long-mode instructions
-//   x86.manifest     - legacy-32 instructions (iclasses that could not be
-//                      encoded in long mode)
+//   x86.manifest     - legacy 32-bit instructions
 //
 // The manifest lines are: <iclass> <iform> <hexbytes>
 
@@ -75,8 +74,10 @@ static unsigned try_encode(const xed_inst_t* inst, const xed_state_t* dstate,
 	xed_encoder_request_zero_set_mode(&req, dstate);
 	xed_encoder_request_set_iclass(&req, xed_inst_iclass(inst));
 	xed_encoder_request_set_effective_operand_width(&req, eff_bits);
-	xed_encoder_request_set_effective_address_size(&req,
-		dstate->mmode == XED_MACHINE_MODE_LONG_64 ? 64 : 32);
+	int long64 = (dstate->mmode == XED_MACHINE_MODE_LONG_64);
+	xed_encoder_request_set_effective_address_size(&req, long64 ? 64 : 32);
+	// Memory base must match the address size (RAX in long mode, EAX in legacy).
+	xed_reg_enum_t mem_base = long64 ? XED_REG_RAX : XED_REG_EAX;
 
 	unsigned order = 0;
 	unsigned n = xed_inst_noperands(inst);
@@ -102,7 +103,7 @@ static unsigned try_encode(const xed_inst_t* inst, const xed_state_t* dstate,
 		}
 		else if (name == XED_OPERAND_MEM0) {
 			xed_encoder_request_set_mem0(&req);
-			xed_encoder_request_set_base0(&req, XED_REG_RAX);
+			xed_encoder_request_set_base0(&req, mem_base);
 			if (index_reg != XED_REG_INVALID) {
 				// VSIB (gather/scatter): the index is a vector register.
 				xed_encoder_request_set_index(&req, index_reg);
@@ -113,7 +114,7 @@ static unsigned try_encode(const xed_inst_t* inst, const xed_state_t* dstate,
 		}
 		else if (name == XED_OPERAND_AGEN) {
 			xed_encoder_request_set_agen(&req);
-			xed_encoder_request_set_base0(&req, XED_REG_RAX);
+			xed_encoder_request_set_base0(&req, mem_base);
 			xed_encoder_request_set_operand_order(&req, order++, XED_OPERAND_AGEN);
 		}
 		else if (name == XED_OPERAND_IMM0) {
@@ -149,7 +150,6 @@ typedef struct {
 	unsigned len;
 	xed_iform_enum_t iform;
 	const char* iform_override;  // manifest iform label when iform is INVALID
-	int mode64;                 // 1 = long mode, 0 = legacy 32
 	xed_uint8_t bytes[XED_MAX_INSTRUCTION_BYTES];
 } Encoding;
 
@@ -197,8 +197,13 @@ int main(int argc, char** argv)
 	const unsigned imm_sizes[]  = {4, 1, 2};
 	const unsigned br_sizes[]   = {4, 1};
 
-	Encoding* best = calloc(XED_ICLASS_LAST, sizeof(Encoding));
-	for (int i = 0; i < XED_ICLASS_LAST; i++) best[i].len = 0;
+	// Two independent slots per iclass: [0] = long mode, [1] = legacy 32-bit.
+	// An iclass valid in both modes is emitted to both manifests, since its
+	// lifting can legitimately differ between them (stack width, flags, etc.).
+	Encoding* best[2];
+	best[0] = calloc(XED_ICLASS_LAST, sizeof(Encoding));
+	best[1] = calloc(XED_ICLASS_LAST, sizeof(Encoding));
+	const xed_state_t* modes[2] = {&s64, &s32};
 
 	// Memory-operand length candidates (0 lets XED infer for special widths
 	// like MXSAVE / MPREFETCH) and VSIB vector index candidates (for gather /
@@ -212,7 +217,7 @@ int main(int argc, char** argv)
 		const xed_inst_t* inst = table + i;
 		xed_iclass_enum_t ic = xed_inst_iclass(inst);
 		if (ic == XED_ICLASS_INVALID) continue;
-		if (best[ic].len && best[ic].mode64) continue;  // already have a 64-bit one
+		if (best[0][ic].len && best[1][ic].len) continue;  // both slots filled
 
 		// Only widen the (expensive) memory/VSIB search when this iform
 		// actually has an explicit memory operand.
@@ -228,11 +233,8 @@ int main(int argc, char** argv)
 		unsigned n_idx = has_mem ? (unsigned)(sizeof(vsib_idx) / sizeof(vsib_idx[0])) : 1;
 
 		xed_uint8_t out[XED_MAX_INSTRUCTION_BYTES];
-		// Prefer long mode, fall back to legacy 32.
-		const xed_state_t* modes[2] = {&s64, &s32};
 		for (int m = 0; m < 2; m++) {
-			int is64 = (m == 0);
-			if (best[ic].len && (best[ic].mode64 || !is64)) break;
+			if (best[m][ic].len) continue;  // this mode's slot already filled
 			unsigned got = 0;
 			for (unsigned wi = 0; wi < 4 && !got; wi++)
 			for (unsigned ii = 0; ii < 3 && !got; ii++)
@@ -244,10 +246,9 @@ int main(int argc, char** argv)
 				                 has_mem ? mem_lens[mi] : eff_widths[wi] / 8,
 				                 vsib_idx[xi], out);
 				if (got) {
-					best[ic].len = got;
-					best[ic].iform = xed_inst_iform_enum(inst);
-					best[ic].mode64 = is64;
-					memcpy(best[ic].bytes, out, got);
+					best[m][ic].len = got;
+					best[m][ic].iform = xed_inst_iform_enum(inst);
+					memcpy(best[m][ic].bytes, out, got);
 				}
 			}
 		}
@@ -257,11 +258,7 @@ int main(int argc, char** argv)
 	// XSAVE family, legacy far-pointer loads, JCXZ and the APX JMPABS all
 	// return GENERAL_ERROR even from a correct request). We supply known-good
 	// machine code and let XED's *decoder* classify it, so a wrong guess can
-	// never mislabel an entry. Each candidate is decoded in long mode first,
-	// then legacy 32-bit; the first mode yielding an as-yet-uncovered iclass
-	// wins. (MPX BND* and the NOP2..NOP9 multi-byte-NOP iclasses are
-	// deliberately omitted: this XED build has MPX disabled and decodes every
-	// multi-byte NOP as plain NOP, so no byte sequence reaches those iclasses.)
+	// never mislabel an entry, filling each mode slot the bytes decode to.
 	static const char* fallbacks[] = {
 		"0fae20", "480fae20",       // XSAVE / XSAVE64
 		"0fae30", "480fae30",       // XSAVEOPT / XSAVEOPT64
@@ -283,21 +280,18 @@ int main(int argc, char** argv)
 		for (const char* p = h; p[0] && p[1] && blen < XED_MAX_INSTRUCTION_BYTES; p += 2) {
 			unsigned v; sscanf(p, "%2x", &v); bytes[blen++] = (xed_uint8_t)v;
 		}
-		// Long mode first, then legacy 32-bit; record the first mode that
-		// classifies to a not-yet-covered iclass.
+		// Fill whichever mode slots the bytes decode to (a candidate valid in
+		// both long and legacy mode populates both).
 		for (int m = 0; m < 2; m++) {
-			int is64 = (m == 0);
 			xed_decoded_inst_t xedd;
-			xed_decoded_inst_zero_set_mode(&xedd, is64 ? &s64 : &s32);
+			xed_decoded_inst_zero_set_mode(&xedd, modes[m]);
 			if (xed_decode(&xedd, bytes, blen) != XED_ERROR_NONE) continue;
 			xed_iclass_enum_t ic = xed_decoded_inst_get_iclass(&xedd);
 			unsigned dlen = xed_decoded_inst_get_length(&xedd);
-			if (ic == XED_ICLASS_INVALID || best[ic].len) continue;
-			best[ic].len = dlen;
-			best[ic].iform = xed_decoded_inst_get_iform_enum(&xedd);
-			best[ic].mode64 = is64;
-			memcpy(best[ic].bytes, bytes, dlen);
-			break;
+			if (ic == XED_ICLASS_INVALID || best[m][ic].len) continue;
+			best[m][ic].len = dlen;
+			best[m][ic].iform = xed_decoded_inst_get_iform_enum(&xedd);
+			memcpy(best[m][ic].bytes, bytes, dlen);
 		}
 	}
 
@@ -327,18 +321,23 @@ int main(int argc, char** argv)
 	};
 	for (int fi = 0; forced[fi].iclass; fi++) {
 		xed_iclass_enum_t ic = str2xed_iclass_enum_t(forced[fi].iclass);
-		if (ic == XED_ICLASS_INVALID || best[ic].len) continue;
+		if (ic == XED_ICLASS_INVALID) continue;
+		xed_uint8_t bytes[XED_MAX_INSTRUCTION_BYTES];
 		unsigned blen = 0;
 		for (const char* p = forced[fi].hex; p[0] && p[1] && blen < XED_MAX_INSTRUCTION_BYTES; p += 2) {
-			unsigned v; sscanf(p, "%2x", &v); best[ic].bytes[blen++] = (xed_uint8_t)v;
+			unsigned v; sscanf(p, "%2x", &v); bytes[blen++] = (xed_uint8_t)v;
 		}
-		best[ic].len = blen;
-		best[ic].mode64 = 1;
 		xed_iform_enum_t f = xed_iform_first_per_iclass(ic);
-		if (f != XED_IFORM_INVALID)
-			best[ic].iform = f;
-		else
-			best[ic].iform_override = forced[fi].iclass;
+		// These bytes are valid in both modes, so record them in both slots.
+		for (int m = 0; m < 2; m++) {
+			if (best[m][ic].len) continue;
+			best[m][ic].len = blen;
+			memcpy(best[m][ic].bytes, bytes, blen);
+			if (f != XED_IFORM_INVALID)
+				best[m][ic].iform = f;
+			else
+				best[m][ic].iform_override = forced[fi].iclass;
+		}
 	}
 
 	// Emit manifests. Each line is: <iclass> <iform> <hexbytes>. The bytes are
@@ -352,24 +351,25 @@ int main(int argc, char** argv)
 		man[k] = fopen(path, "w");
 		if (!man[k]) { perror("fopen"); return 1; }
 	}
-	int covered = 0, cov64 = 0, cov32 = 0;
-	for (int ic = 1; ic < XED_ICLASS_LAST; ic++) {
-		if (!best[ic].len) continue;
-		covered++;
-		int k = best[ic].mode64 ? 0 : 1;
-		if (k == 0) cov64++; else cov32++;
-		fprintf(man[k], "%s %s ",
-		        xed_iclass_enum_t2str((xed_iclass_enum_t)ic),
-		        best[ic].iform_override ? best[ic].iform_override
-		                                : xed_iform_enum_t2str(best[ic].iform));
-		for (unsigned b = 0; b < best[ic].len; b++)
-			fprintf(man[k], "%02x", best[ic].bytes[b]);
-		fprintf(man[k], "\n");
+	int count[2] = {0, 0};
+	for (int m = 0; m < 2; m++) {
+		for (int ic = 1; ic < XED_ICLASS_LAST; ic++) {
+			if (!best[m][ic].len) continue;
+			count[m]++;
+			fprintf(man[m], "%s %s ",
+			        xed_iclass_enum_t2str((xed_iclass_enum_t)ic),
+			        best[m][ic].iform_override ? best[m][ic].iform_override
+			                                   : xed_iform_enum_t2str(best[m][ic].iform));
+			for (unsigned b = 0; b < best[m][ic].len; b++)
+				fprintf(man[m], "%02x", best[m][ic].bytes[b]);
+			fprintf(man[m], "\n");
+		}
+		fclose(man[m]);
 	}
-	for (int k = 0; k < 2; k++) fclose(man[k]);
 
-	fprintf(stderr, "covered %d / %d iclasses (%d long, %d legacy)\n",
-	        covered, XED_ICLASS_LAST - 1, cov64, cov32);
-	free(best);
+	fprintf(stderr, "%d long-mode, %d legacy-32 instructions (of %d iclasses)\n",
+	        count[0], count[1], XED_ICLASS_LAST - 1);
+	free(best[0]);
+	free(best[1]);
 	return 0;
 }

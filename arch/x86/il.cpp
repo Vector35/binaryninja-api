@@ -955,34 +955,31 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		il.AddInstruction(
 			WriteILOperand(il, xedd, addr, 0, 0,
 				il.And(opOneLen,
-					ReadILOperand(il, xedd, addr, 0, 0),
 					il.Not(
 						opTwoLen,
 						ReadILOperand(il, xedd, addr, 1, 1)
 					),
+					ReadILOperand(il, xedd, addr, 2, 2),
 					IL_FLAGWRITE_ALL)));
 		break;
 	case XED_ICLASS_PANDN:
 		il.AddInstruction(
 			WriteILOperand(il, xedd, addr, 0, 0,
 				il.And(opOneLen,
-					ReadILOperand(il, xedd, addr, 0, 0),
-					il.Not(
-						opTwoLen,
-						ReadILOperand(il, xedd, addr, 1, 1)
-					),
-					0))); // Does not affect flags
+					il.Not(opOneLen, ReadILOperand(il, xedd, addr, 0, 0)),
+					ReadILOperand(il, xedd, addr, 1, 1),
+				0))); // PANDN doesn't modify any flag.
 		break;
 	case XED_ICLASS_VPANDN:
 		il.AddInstruction(
 			WriteILOperand(il, xedd, addr, 0, 0,
 				il.And(opOneLen,
-					ReadILOperand(il, xedd, addr, 1, 1),
 					il.Not(
 						opTwoLen,
-						ReadILOperand(il, xedd, addr, 2, 2)
+						ReadILOperand(il, xedd, addr, 1, 1)
 					),
-				IL_FLAGWRITE_ALL)));
+					ReadILOperand(il, xedd, addr, 2, 2),
+				0)));
 		break;
 
 	case XED_ICLASS_BT:

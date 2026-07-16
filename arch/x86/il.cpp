@@ -2573,10 +2573,26 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		break;
 	}
 
-	// despite MOVSS and VMOVSS both move floating point values,
-	// the move is the same as an ordinary move
 	case XED_ICLASS_MOVSS:
-		il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0, ReadILOperand(il, xedd, addr, 1, 1)));
+		if (xed_operand_is_register(opTwo_name))
+		{
+			// movss xmm, xmm / movss mem, xmm
+			// low 32 bits of dst equals low 32 bits of src xmm reg;
+			// for an xmm dst the upper bits are left unchanged
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.LowPart(4, il.Register(16, regTwo))));
+		}
+		else // movss xmm, m32
+		{
+			// low 32 bits of dst xmm reg equals the 32-bit load;
+			// the high bits are zeroed
+			il.AddInstruction(
+				WriteILOperand(il, xedd, addr, 0, 0,
+					il.ZeroExtend(16,
+						il.Load(4,
+							GetILOperandMemoryAddress(il, xedd, addr, 1, 1)))));
+		}
 		break;
 
 	case XED_ICLASS_VMOVSS:

@@ -803,6 +803,43 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		}
 	};
 
+	// Lift a two-operand packed SSE/MMX instruction (dest = dest OP src)
+	// element-wise instead of as an opaque intrinsic, so that dataflow can see
+	// through the individual lanes. The operand is split into `elemSize`-byte
+	// lanes; `laneFn` receives the two lane values (from operand 0 and operand
+	// 1) and returns the `elemSize`-byte result for that lane, which is then
+	// reassembled into the full-width destination. Only the legacy two-operand
+	// forms are routed here; VEX/EVEX forms still fall through to intrinsic
+	// lifting because they additionally have to zero or merge the upper
+	// destination bits.
+	auto LiftPackedBinaryOp = [&il, xedd, addr, opOneLen](
+		size_t elemSize, std::function<ExprId(ExprId, ExprId)> laneFn) mutable {
+		const size_t fullSize = opOneLen;
+		const size_t numLanes = fullSize / elemSize;
+		// Read both operands once into temporaries so a memory source is only
+		// loaded a single time even though every lane reads from it.
+		il.AddInstruction(il.SetRegister(fullSize, LLIL_TEMP(0), ReadILOperand(il, xedd, addr, 0, 0)));
+		il.AddInstruction(il.SetRegister(fullSize, LLIL_TEMP(1), ReadILOperand(il, xedd, addr, 1, 1)));
+
+		ExprId result = 0;
+		for (size_t lane = 0; lane < numLanes; lane++)
+		{
+			const uint32_t shiftBits = (uint32_t)(lane * elemSize * 8);
+			auto readLane = [&](uint32_t temp) {
+				ExprId reg = il.Register(fullSize, LLIL_TEMP(temp));
+				if (shiftBits != 0)
+					reg = il.LogicalShiftRight(fullSize, reg, il.Const(1, shiftBits));
+				return il.LowPart(elemSize, reg);
+			};
+			ExprId laneResult = laneFn(readLane(0), readLane(1));
+			ExprId placed = il.ZeroExtend(fullSize, laneResult);
+			if (shiftBits != 0)
+				placed = il.ShiftLeft(fullSize, placed, il.Const(1, shiftBits));
+			result = (lane == 0) ? placed : il.Or(fullSize, result, placed);
+		}
+		il.AddInstruction(WriteILOperand(il, xedd, addr, 0, 0, result));
+	};
+
 	switch (xedd_iClass)
 	{
 	case XED_ICLASS_ADC_LOCK: // TODO: Add Lock construct
@@ -949,6 +986,150 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 					ReadILOperand(il, xedd, addr, 1, 1),
 					ReadILOperand(il, xedd, addr, 2, 2),
 				0))); // VPAND doesn't modify any flag
+		break;
+
+	// Packed integer/float arithmetic: lift element-wise so dataflow can see
+	// through the lanes rather than treating them as opaque intrinsics. Each
+	// lambda computes a single lane; LiftPackedBinaryOp splits the operands
+	// into lanes and reassembles the result. Only the legacy two-operand
+	// SSE/MMX forms are handled; VEX/EVEX forms still lift as intrinsics.
+
+	// Packed integer add/subtract (wrap-around, non-saturating).
+	case XED_ICLASS_PADDB:
+		LiftPackedBinaryOp(1, [&il](ExprId a, ExprId b) { return il.Add(1, a, b); });
+		break;
+	case XED_ICLASS_PADDW:
+		LiftPackedBinaryOp(2, [&il](ExprId a, ExprId b) { return il.Add(2, a, b); });
+		break;
+	case XED_ICLASS_PADDD:
+		LiftPackedBinaryOp(4, [&il](ExprId a, ExprId b) { return il.Add(4, a, b); });
+		break;
+	case XED_ICLASS_PADDQ:
+		LiftPackedBinaryOp(8, [&il](ExprId a, ExprId b) { return il.Add(8, a, b); });
+		break;
+	case XED_ICLASS_PSUBB:
+		LiftPackedBinaryOp(1, [&il](ExprId a, ExprId b) { return il.Sub(1, a, b); });
+		break;
+	case XED_ICLASS_PSUBW:
+		LiftPackedBinaryOp(2, [&il](ExprId a, ExprId b) { return il.Sub(2, a, b); });
+		break;
+	case XED_ICLASS_PSUBD:
+		LiftPackedBinaryOp(4, [&il](ExprId a, ExprId b) { return il.Sub(4, a, b); });
+		break;
+	case XED_ICLASS_PSUBQ:
+		LiftPackedBinaryOp(8, [&il](ExprId a, ExprId b) { return il.Sub(8, a, b); });
+		break;
+
+	// Packed integer multiply, low half of each product.
+	case XED_ICLASS_PMULLW:
+		LiftPackedBinaryOp(2, [&il](ExprId a, ExprId b) { return il.Mult(2, a, b); });
+		break;
+	case XED_ICLASS_PMULLD:
+		LiftPackedBinaryOp(4, [&il](ExprId a, ExprId b) { return il.Mult(4, a, b); });
+		break;
+
+	// Packed 16-bit multiply, high half of each product (signed / unsigned).
+	case XED_ICLASS_PMULHW:
+		LiftPackedBinaryOp(2, [&il](ExprId a, ExprId b) {
+			return il.LowPart(2, il.LogicalShiftRight(4,
+				il.Mult(4, il.SignExtend(4, a), il.SignExtend(4, b)),
+				il.Const(1, 16)));
+		});
+		break;
+	case XED_ICLASS_PMULHUW:
+		LiftPackedBinaryOp(2, [&il](ExprId a, ExprId b) {
+			return il.LowPart(2, il.LogicalShiftRight(4,
+				il.Mult(4, il.ZeroExtend(4, a), il.ZeroExtend(4, b)),
+				il.Const(1, 16)));
+		});
+		break;
+
+	// Packed unsigned rounded average: (a + b + 1) >> 1, computed wide to
+	// avoid overflow.
+	case XED_ICLASS_PAVGB:
+		LiftPackedBinaryOp(1, [&il](ExprId a, ExprId b) {
+			return il.LowPart(1, il.LogicalShiftRight(2,
+				il.Add(2, il.Add(2, il.ZeroExtend(2, a), il.ZeroExtend(2, b)), il.Const(2, 1)),
+				il.Const(1, 1)));
+		});
+		break;
+	case XED_ICLASS_PAVGW:
+		LiftPackedBinaryOp(2, [&il](ExprId a, ExprId b) {
+			return il.LowPart(2, il.LogicalShiftRight(4,
+				il.Add(4, il.Add(4, il.ZeroExtend(4, a), il.ZeroExtend(4, b)), il.Const(4, 1)),
+				il.Const(1, 1)));
+		});
+		break;
+
+	// Packed compare-equal: each lane becomes all-ones when equal, else zero
+	// (0 - (a == b) sign-extends the boolean into the lane mask).
+	case XED_ICLASS_PCMPEQB:
+		LiftPackedBinaryOp(1, [&il](ExprId a, ExprId b) {
+			return il.Sub(1, il.Const(1, 0), il.CompareEqual(1, a, b));
+		});
+		break;
+	case XED_ICLASS_PCMPEQW:
+		LiftPackedBinaryOp(2, [&il](ExprId a, ExprId b) {
+			return il.Sub(2, il.Const(2, 0), il.CompareEqual(2, a, b));
+		});
+		break;
+	case XED_ICLASS_PCMPEQD:
+		LiftPackedBinaryOp(4, [&il](ExprId a, ExprId b) {
+			return il.Sub(4, il.Const(4, 0), il.CompareEqual(4, a, b));
+		});
+		break;
+	case XED_ICLASS_PCMPEQQ:
+		LiftPackedBinaryOp(8, [&il](ExprId a, ExprId b) {
+			return il.Sub(8, il.Const(8, 0), il.CompareEqual(8, a, b));
+		});
+		break;
+
+	// Packed compare-greater (signed): all-ones lane when a > b, else zero.
+	case XED_ICLASS_PCMPGTB:
+		LiftPackedBinaryOp(1, [&il](ExprId a, ExprId b) {
+			return il.Sub(1, il.Const(1, 0), il.CompareSignedGreaterThan(1, a, b));
+		});
+		break;
+	case XED_ICLASS_PCMPGTW:
+		LiftPackedBinaryOp(2, [&il](ExprId a, ExprId b) {
+			return il.Sub(2, il.Const(2, 0), il.CompareSignedGreaterThan(2, a, b));
+		});
+		break;
+	case XED_ICLASS_PCMPGTD:
+		LiftPackedBinaryOp(4, [&il](ExprId a, ExprId b) {
+			return il.Sub(4, il.Const(4, 0), il.CompareSignedGreaterThan(4, a, b));
+		});
+		break;
+	case XED_ICLASS_PCMPGTQ:
+		LiftPackedBinaryOp(8, [&il](ExprId a, ExprId b) {
+			return il.Sub(8, il.Const(8, 0), il.CompareSignedGreaterThan(8, a, b));
+		});
+		break;
+
+	// Packed single/double precision float arithmetic.
+	case XED_ICLASS_ADDPS:
+		LiftPackedBinaryOp(4, [&il](ExprId a, ExprId b) { return il.FloatAdd(4, a, b); });
+		break;
+	case XED_ICLASS_ADDPD:
+		LiftPackedBinaryOp(8, [&il](ExprId a, ExprId b) { return il.FloatAdd(8, a, b); });
+		break;
+	case XED_ICLASS_SUBPS:
+		LiftPackedBinaryOp(4, [&il](ExprId a, ExprId b) { return il.FloatSub(4, a, b); });
+		break;
+	case XED_ICLASS_SUBPD:
+		LiftPackedBinaryOp(8, [&il](ExprId a, ExprId b) { return il.FloatSub(8, a, b); });
+		break;
+	case XED_ICLASS_MULPS:
+		LiftPackedBinaryOp(4, [&il](ExprId a, ExprId b) { return il.FloatMult(4, a, b); });
+		break;
+	case XED_ICLASS_MULPD:
+		LiftPackedBinaryOp(8, [&il](ExprId a, ExprId b) { return il.FloatMult(8, a, b); });
+		break;
+	case XED_ICLASS_DIVPS:
+		LiftPackedBinaryOp(4, [&il](ExprId a, ExprId b) { return il.FloatDiv(4, a, b); });
+		break;
+	case XED_ICLASS_DIVPD:
+		LiftPackedBinaryOp(8, [&il](ExprId a, ExprId b) { return il.FloatDiv(8, a, b); });
 		break;
 
 	case XED_ICLASS_ANDN:

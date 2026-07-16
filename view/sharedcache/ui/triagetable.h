@@ -72,7 +72,7 @@ public:
 
 
 /*! A row that resolves to an image and region, so it can be displayed and ranked in the Image
-	column. `imageStart` is 0 when the row is outside any image; `regionStart` is 0 when it is
+	column. \c imageStart is 0 when the row is outside any image; \c regionStart is 0 when it is
 	outside any region.
 */
 template <typename Row>
@@ -142,7 +142,7 @@ std::function<std::strong_ordering(const Row&, const Row&)> ImageColumnOrdering(
 
 
 /*! Shared portion of the triage view's flat table models: the filter state and the text matching
-	common to the tables. Row storage lives in the typed subclass `TriageTableRowsModel`.
+	common to the tables. Row storage lives in the typed subclass \c TriageTableRowsModel.
 */
 class TriageTableModel : public QAbstractTableModel
 {

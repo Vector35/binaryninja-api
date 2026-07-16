@@ -153,7 +153,7 @@ namespace BinaryNinja {
 	public:
 		virtual ~ObjCReader() = default;
 
-		/*! Read from the current cursor position into buffer `dest` and advance the cursor that many bytes
+		/*! Read from the current cursor position into buffer \c dest and advance the cursor that many bytes
 
 		    \throws Exception
 			\param dest Address to write the read bytes to

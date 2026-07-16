@@ -14,7 +14,7 @@
 
 /*!
     \ingroup globalarea
-    \deprecated Use `SidebarWidget` with `SidebarContextSensitivity::Global` instead
+    \deprecated Use \c SidebarWidget with \c SidebarContextSensitivity::Global instead
 */
 class BINARYNINJAUIAPI GlobalAreaWidget : public SidebarWidget
 {

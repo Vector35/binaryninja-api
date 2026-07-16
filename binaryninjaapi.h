@@ -1284,7 +1284,7 @@ namespace BinaryNinja {
 	*/
 	void LogToStderr(BNLogLevel minimumLevel);
 
-	/*! Redirects minimum log level to the file at `path`, optionally appending rather than overwriting.
+	/*! Redirects minimum log level to the file at \c path, optionally appending rather than overwriting.
 
 	    @threadsafe
 
@@ -2337,17 +2337,17 @@ namespace BinaryNinja {
 	    If there is any error loading the file, nullptr will be returned and a log error will
 	    be printed.
 
-	    \warn You will need to call bv->GetFile()->Close() when you are finished using the
+	    \warning You will need to call bv->GetFile()->Close() when you are finished using the
 	    view returned by this function to free the resources it opened.
 
-	    If no BinaryViewType is available to load the file, the `Mapped` view type will
+	    If no BinaryViewType is available to load the file, the \c Mapped view type will
 	    attempt to load it, and will try to auto-detect the architecture. If no architecture
-	    is detected or specified in the load options, the `Mapped` type will fail and this
+	    is detected or specified in the load options, the \c Mapped type will fail and this
 	    function will also return nullptr.
 
 	    \note Although general container file support is not complete, support for Universal
 	    archives exists. It's possible to control the architecture preference with the
-	    `files.universal.architecturePreference` setting. This setting is scoped to
+	    \c files.universal.architecturePreference setting. This setting is scoped to
 	    SettingsUserScope and can be modified as follows:
 
 	 	\code{.cpp}
@@ -2778,7 +2778,7 @@ namespace BinaryNinja {
 		Multiple file selection groups can be included if separated by two semicolons. Multiple file wildcards may be
 	 	specified by using a space within the parenthesis.
 
-		Also, a simple selector of "\*.extension" by itself may also be used instead of specifying the description.
+		Also, a simple selector of "*.extension" by itself may also be used instead of specifying the description.
 
 	 	\ingroup interaction
 
@@ -2832,7 +2832,7 @@ namespace BinaryNinja {
 		const int64_t& defaultChoice
 	);
 
-	/*! Prompts the user for a set of inputs specified in `fields` with given title.
+	/*! Prompts the user for a set of inputs specified in \c fields with given title.
 		The fields parameter is a list containing FieldInputFields
 
 		@threadsafe
@@ -3202,10 +3202,10 @@ namespace BinaryNinja {
 		std::string GetId();
 	};
 
-	/*! `InstructionTextToken` is used to tell the core about the various components in the disassembly views.
+	/*! \c InstructionTextToken is used to tell the core about the various components in the disassembly views.
 
 		The below table is provided for documentation purposes but the complete list of TokenTypes is available at
-		`InstructionTextTokenType`. Note that types marked as `Not emitted by architectures` are not intended to be used
+		\c InstructionTextTokenType. Note that types marked as <code>Not emitted by architectures</code> are not intended to be used
 		by Architectures during lifting. Rather, they are added by the core during analysis or display. UI plugins,
 		however, may make use of them as appropriate.
 
@@ -3814,7 +3814,7 @@ namespace BinaryNinja {
 
 			* Empty - not yet processed by the transform system.
 			* Equal to GetFilename() - processed, no transform chain applied (plain file,
-			  database, or container system disabled via ``files.container.mode``).
+			  database, or container system disabled via <code>files.container.mode</code>).
 			* Non-empty and different from GetFilename() - derived container entry.
 
 			Session-scoped: save-as does not persist the chain. Reopening the saved artifact
@@ -4044,7 +4044,7 @@ namespace BinaryNinja {
 		std::optional<std::string> GetLastRedoEntryTitle();
 		void ClearUndoEntries();
 
-		/*! Get the current View name, e.g. ``Linear:ELF``, ``Graph:PE``
+		/*! Get the current View name, e.g. <code>Linear:ELF</code>, <code>Graph:PE</code>
 
 		    \return The current view name
 		*/
@@ -4058,7 +4058,7 @@ namespace BinaryNinja {
 
 		/*! Navigate to the specified virtual address in the specified view
 
-		 	\param view View name. e.g. ``Linear:ELF``, ``Graph:PE``
+			\param view View name. e.g. <code>Linear:ELF</code>, <code>Graph:PE</code>
 		 	\param offset Virtual address to navigate to
 		 	\return Whether the navigation was successful.
 		*/
@@ -4066,7 +4066,7 @@ namespace BinaryNinja {
 
 		/*! Get the BinaryView for a specific View type
 
-		    \param name View type. e.g. ``ELF``, ``PE``
+		    \param name View type. e.g. <code>ELF</code>, <code>PE</code>
 		    \return The BinaryView, if it exists
 		*/
 		BinaryNinja::Ref<BinaryNinja::BinaryView> GetViewOfType(const std::string& name);
@@ -5641,10 +5641,10 @@ namespace BinaryNinja {
 		Since BinaryNinja's analysis is multi-threaded this can also be done in the background
 		by using the \c UpdateAnalysis method instead.
 
-		\note An important note on the \c \*User\*() methods. Binary Ninja makes a distinction between edits
+		\note An important note on the \c *User*() methods. Binary Ninja makes a distinction between edits
 		performed by the user and actions performed by auto analysis.  Auto analysis actions that can quickly be recalculated
 		are not saved to the database. Auto analysis actions that take a long time and all user edits are stored in the
-		database (e.g. \c RemoveUserFunction rather than \c RemoveFunction ). Thus use \c \*User\*() methods if saving
+		database (e.g. \c RemoveUserFunction rather than \c RemoveFunction ). Thus use \c *User*() methods if saving
 		to the database is desired.
 
 		\ingroup binaryview
@@ -5702,7 +5702,7 @@ namespace BinaryNinja {
 		}
 
 		/*! PerformInsert provides a mapping between the flat file and virtual offsets in the file,
-				inserting `len` bytes from `data` to virtual address `offset`
+				inserting \c len bytes from \c data to virtual address \c offset
 
 		    \note This method **may** be overridden by custom BinaryViews.
 
@@ -5722,7 +5722,7 @@ namespace BinaryNinja {
 		}
 
 		/*! PerformRemove provides a mapping between the flat file and virtual offsets in the file,
-		    	removing `len` bytes from virtual address `offset`
+			removing \c len bytes from virtual address \c offset
 
 		    \note This method **may** be overridden by custom BinaryViews.
 
@@ -5739,7 +5739,7 @@ namespace BinaryNinja {
 			return 0;
 		}
 
-		/*! PerformGetModification implements a query as to whether the virtual address `offset` is modified.
+		/*! PerformGetModification implements a query as to whether the virtual address \c offset is modified.
 
 		    \note This method **may** be overridden by custom BinaryViews.
 
@@ -5754,7 +5754,7 @@ namespace BinaryNinja {
 			return Original;
 		}
 
-		/*! PerformIsValidOffset implements a check as to whether a virtual address `offset` is valid
+		/*! PerformIsValidOffset implements a check as to whether a virtual address \c offset is valid
 
 		    \note This method **may** be overridden by custom BinaryViews.
 
@@ -5805,7 +5805,7 @@ namespace BinaryNinja {
 		*/
 		virtual bool PerformIsOffsetBackedByFile(uint64_t offset);
 
-		/*! PerformGetNextValidOffset implements a query for the next valid readable, writable, or executable virtual memory address after `offset`
+		/*! PerformGetNextValidOffset implements a query for the next valid readable, writable, or executable virtual memory address after \c offset
 
 		    \note This method **may** be overridden by custom BinaryViews.
 
@@ -6013,7 +6013,7 @@ namespace BinaryNinja {
 		bool Redo();
 
 		/*!
-		    Get the current View name, e.g. ``Linear:ELF``, ``Graph:PE``
+		    Get the current View name, e.g. <code>Linear:ELF</code>, <code>Graph:PE</code>
 
 		    \return The current view name
 		*/
@@ -6029,13 +6029,13 @@ namespace BinaryNinja {
 		/*!
 			Navigate to the specified virtual address in the specified view
 
-		 	\param view View name. e.g. ``Linear:ELF``, ``Graph:PE``
+			\param view View name. e.g. <code>Linear:ELF</code>, <code>Graph:PE</code>
 		 	\param offset Virtual address to navigate to
 		 	\return Whether the navigation was successful.
 		*/
 		bool Navigate(const std::string& view, uint64_t offset);
 
-		/*! Read writes `len` bytes at virtual address `offset` to address `dest`
+		/*! Read writes \c len bytes at virtual address \c offset to address \c dest
 
 		    \param dest Virtual address to write to
 		    \param offset virtual address to read from
@@ -6064,7 +6064,7 @@ namespace BinaryNinja {
 		*/
 		size_t GetDataLength() const;
 
-		/*! Write writes `len` bytes data at address `dest` to virtual address `offset`
+		/*! Write writes \c len bytes data at address \c dest to virtual address \c offset
 
 			\param offset virtual address to write to
 			\param data address to read from
@@ -6081,7 +6081,7 @@ namespace BinaryNinja {
 		*/
 		size_t WriteBuffer(uint64_t offset, const DataBuffer& data);
 
-		/*! Insert inserts `len` bytes data at address `dest` starting from virtual address `offset`
+		/*! Insert inserts \c len bytes data at address \c dest starting from virtual address \c offset
 
 			\param offset virtual address to start inserting from
 			\param data address to read from
@@ -6098,7 +6098,7 @@ namespace BinaryNinja {
 		*/
 		size_t InsertBuffer(uint64_t offset, const DataBuffer& data);
 
-		/*! PerformRemove removes `len` bytes from virtual address `offset`
+		/*! PerformRemove removes \c len bytes from virtual address \c offset
 
 			\param offset the virtual offset to find and remove bytes from
 		    \param len the number of bytes to be removed
@@ -6108,7 +6108,7 @@ namespace BinaryNinja {
 
 		std::vector<float> GetEntropy(uint64_t offset, size_t len, size_t blockSize);
 
-		/*! GetModification checks whether the virtual address `offset` is modified.
+		/*! GetModification checks whether the virtual address \c offset is modified.
 
 		    \param offset a virtual address to be checked
 		    \return one of Original, Changed, Inserted
@@ -6116,7 +6116,7 @@ namespace BinaryNinja {
 		BNModificationStatus GetModification(uint64_t offset);
 		std::vector<BNModificationStatus> GetModification(uint64_t offset, size_t len);
 
-		/*! IsValidOffset checks whether a virtual address `offset` is valid
+		/*! IsValidOffset checks whether a virtual address \c offset is valid
 
 		    \param offset the virtual address to check
 		    \return whether the offset is valid
@@ -6155,7 +6155,7 @@ namespace BinaryNinja {
 		bool IsOffsetWritableSemantics(uint64_t offset) const;
 		bool IsOffsetReadOnlySemantics(uint64_t offset) const;
 
-		/*! GetNextValidOffset implements a query for the next valid readable, writable, or executable virtual memory address after `offset`
+		/*! GetNextValidOffset implements a query for the next valid readable, writable, or executable virtual memory address after \c offset
 
 		    \param offset a virtual address to start checking from
 		    \return the next valid address
@@ -6291,7 +6291,7 @@ namespace BinaryNinja {
 		 	Finalizing a segment involves optimizing the relocation info stored in that segment, so if a segment is added
 		 		and relocations are defined for that segment by some automated process, this function should be called afterwards.
 
-		 	An example of this can be seen in the KernelCache plugin, in `KernelCache::LoadImageWithInstallName`.
+			An example of this can be seen in the KernelCache plugin, in \c KernelCache::LoadImageWithInstallName.
 		 		After we load an image, map new segments, and define relocations for all of them, we call this function
 		 		to let core know it is now safe to finalize the new segments
 
@@ -6941,7 +6941,7 @@ namespace BinaryNinja {
 		/*! Adds a symbol to the internal list of automatically discovered Symbol objects in a given namespace
 
 			\warning If multiple symbols for the same address are defined, the symbol with the highest confidence
-			and lowest `BNSymbolType` value will be used. Ties are broken by symbol name.
+			and lowest \c BNSymbolType value will be used. Ties are broken by symbol name.
 
 			\param sym Symbol to define
 		*/
@@ -6950,7 +6950,7 @@ namespace BinaryNinja {
 		/*! Defines an "Auto" symbol, and a Variable/Function alongside it
 
 			\warning If multiple symbols for the same address are defined, the symbol with the highest confidence
-			and lowest `BNSymbolType` value will be used. Ties are broken by symbol name.
+			and lowest \c BNSymbolType value will be used. Ties are broken by symbol name.
 
 			\param platform Platform for the Type being defined
 			\param sym Symbol being defined
@@ -6968,7 +6968,7 @@ namespace BinaryNinja {
 		/*! Define a user symbol
 
 			\warning If multiple symbols for the same address are defined, the symbol with the highest confidence
-			and lowest `BNSymbolType` value will be used. Ties are broken by symbol name.
+			and lowest \c BNSymbolType value will be used. Ties are broken by symbol name.
 
 			\param sym Symbol to define
 		*/
@@ -7383,7 +7383,7 @@ namespace BinaryNinja {
 
 		/*! Sets up a call back function to be called when analysis has been completed.
 
-			This is helpful when using `UpdateAnalysis` which does not wait for analysis completion before returning.
+			This is helpful when using \c UpdateAnalysis which does not wait for analysis completion before returning.
 
 			The callee of this function is not responsible for maintaining the lifetime of the returned AnalysisCompletionEvent object
 
@@ -7397,14 +7397,14 @@ namespace BinaryNinja {
 		BNAnalysisState GetAnalysisState();
 		Ref<BackgroundTask> GetBackgroundAnalysisTask();
 
-		/*! Returns the virtual address of the Function that occurs after the virtual address `addr`
+		/*! Returns the virtual address of the Function that occurs after the virtual address \c addr
 
 			\param addr Address to start searching
 			\return Next function start
 		*/
 		uint64_t GetNextFunctionStartAfterAddress(uint64_t addr);
 
-		/*! Returns the virtual address of the BasicBlock that occurs after the virtual address `addr`
+		/*! Returns the virtual address of the BasicBlock that occurs after the virtual address \c addr
 
 			\param addr Address to start searching
 			\return Next basic block start
@@ -7529,7 +7529,7 @@ namespace BinaryNinja {
 			in type dependencies, order for types in a cycle is not guaranteed.
 
 			\note Dependency order is based on named type references for all non-structure types, i.e.
-			``struct Foo m_foo`` will induce a dependency, whereas ``struct Foo* m_pFoo`` will not.
+			<code>struct Foo m_foo</code> will induce a dependency, whereas <code>struct Foo* m_pFoo</code> will not.
 
 			\return Sorted types as defined above
 		*/
@@ -7580,32 +7580,32 @@ namespace BinaryNinja {
 		std::vector<Ref<TypeLibrary>> GetTypeLibraries();
 
 		/*! Recursively imports a type from the specified type library, or, if no library was explicitly provided,
-			the first type library associated with the current `BinaryView` that provides the name requested.
+			the first type library associated with the current \c BinaryView that provides the name requested.
 
 			This may have the impact of loading other type libraries as dependencies on other type libraries are lazily resolved
 			when references to types provided by them are first encountered.
 
 			Note that the name actually inserted into the view may not match the name as it exists in the type library in
-			the event of a name conflict. To aid in this, the `Type` object returned is a `NamedTypeReference` to
+			the event of a name conflict. To aid in this, the \c Type object returned is a \c NamedTypeReference to
 			the deconflicted name used.
 
 			\param lib
 			\param name
-			\return A `NamedTypeReference` to the type, taking into account any renaming performed
+			\return A \c NamedTypeReference to the type, taking into account any renaming performed
 		*/
 		Ref<Type> ImportTypeLibraryType(Ref<TypeLibrary>& lib, const QualifiedName& name);
 		/*! Recursively imports an object from the specified type library, or, if no library was explicitly provided,
-			the first type library associated with the current `BinaryView` that provides the name requested.
+			the first type library associated with the current \c BinaryView that provides the name requested.
 
 			This may have the impact of loading other type libraries as dependencies on other type libraries are lazily resolved
 			when references to types provided by them are first encountered.
 
 			.. note:: If you are implementing a custom BinaryView and use this method to import object types,
-			you should then call ``RecordImportedObjectLibrary`` with the details of where the object is located.
+			you should then call \c RecordImportedObjectLibrary with the details of where the object is located.
 
 			\param lib
 			\param name
-			\return The object type, with any interior `NamedTypeReferences` renamed as necessary to be appropriate for the current view
+			\return The object type, with any interior \c NamedTypeReferences renamed as necessary to be appropriate for the current view
 		*/
 		Ref<Type> ImportTypeLibraryObject(Ref<TypeLibrary>& lib, const QualifiedName& name);
 
@@ -7631,7 +7631,7 @@ namespace BinaryNinja {
 		 */
 		std::optional<QualifiedName> GetTypeNameByGuid(const std::string& guid);
 
-		/*! Recursively exports ``type`` into ``lib`` as a type with name ``name``
+		/*! Recursively exports \c type into \c lib as a type with name \c name
 
 			As other referenced types are encountered, they are either copied into the destination type library or
 			else the type library that provided the referenced type is added as a dependency for the destination library.
@@ -7641,7 +7641,7 @@ namespace BinaryNinja {
 			\param type
 		*/
 		void ExportTypeToTypeLibrary(TypeLibrary* lib, const QualifiedName& name, Type* type);
-		/*! Recursively exports ``type`` into ``lib`` as an object with name ``name``
+		/*! Recursively exports \c type into \c lib as an object with name \c name
 
 			As other referenced types are encountered, they are either copied into the destination type library or
 			else the type library that provided the referenced type is added as a dependency for the destination library.
@@ -7652,8 +7652,8 @@ namespace BinaryNinja {
 		*/
 		void ExportObjectToTypeLibrary(TypeLibrary* lib, const QualifiedName& name, Type* type);
 
-		/*! Should be called by custom `BinaryView` implementations when they have successfully imported an object
-			from a type library (eg a symbol's type). Values recorded with this function will then be queryable via ``LookupImportedObjectLibrary``.
+		/*! Should be called by custom \c BinaryView implementations when they have successfully imported an object
+			from a type library (eg a symbol's type). Values recorded with this function will then be queryable via <code>LookupImportedObjectLibrary</code>.
 
 			\param tgtPlatform Platform of symbol at import site
 			\param tgtAddr Address of symbol at import site
@@ -7870,10 +7870,10 @@ namespace BinaryNinja {
 
 		/*! Begin a bulk segment addition operation.
 
-			This function prepares the `BinaryView` for bulk addition of both auto and user-defined segments.
-			During the bulk operation, segments can be added using `AddAutoSegment`, `AddAutoSegments`,
-			`AddUserSegment`, or `AddUserSegments` without immediately triggering the MemoryMap update process.
-			The queued segments will not take effect until `EndBulkAddSegments` is called.
+			This function prepares the \c BinaryView for bulk addition of both auto and user-defined segments.
+			During the bulk operation, segments can be added using \c AddAutoSegment, \c AddAutoSegments,
+			\c AddUserSegment, or \c AddUserSegments without immediately triggering the MemoryMap update process.
+			The queued segments will not take effect until \c EndBulkAddSegments is called.
 
 			\sa EndBulkAddSegments
 			\sa CancelBulkAddSegments
@@ -7882,11 +7882,11 @@ namespace BinaryNinja {
 
 		/*! Finalize and apply all queued segments (auto and user) added during a bulk segment addition operation.
 
-			This function commits all segments that were queued since the last call to `BeginBulkAddSegments`.
+			This function commits all segments that were queued since the last call to \c BeginBulkAddSegments.
 			The MemoryMap update process is executed at this point, applying all changes in one batch for
 			improved performance.
 
-			\note This function must be called after `BeginBulkAddSegments` to apply the queued segments.
+			\note This function must be called after \c BeginBulkAddSegments to apply the queued segments.
 
 			\sa BeginBulkAddSegments
 			\sa CancelBulkAddSegments
@@ -7896,7 +7896,7 @@ namespace BinaryNinja {
 		/*! Cancel a bulk segment addition operation.
 
 			This function discards all auto and user segments that were queued since the last call to
-			`BeginBulkAddSegments` without applying them. It allows you to abandon the changes in case
+			\c BeginBulkAddSegments without applying them. It allows you to abandon the changes in case
 			they are no longer needed.
 
 			\note If no bulk operation is in progress, calling this function has no effect.
@@ -8180,29 +8180,29 @@ namespace BinaryNinja {
 
 			The parser uses the following rules:
 
-			- Symbols are defined by the lexer as ``[A-Za-z0-9_:<>][A-Za-z0-9_:$\-<>]+`` or anything enclosed in either single or double quotes
-			- Symbols are everything in ``bv.GetSymbols()``, unnamed DataVariables (i.e. ``data_00005000``), unnamed functions (i.e. ``sub_00005000``), or section names (i.e. ``.text``)
-			- Numbers are defaulted to hexadecimal thus `_printf + 10` is equivalent to `printf + 0x10` If decimal numbers required use the decimal prefix.
+			- Symbols are defined by the lexer as <code>[A-Za-z0-9_:&lt;&gt;][A-Za-z0-9_:$\-&lt;&gt;]+</code> or anything enclosed in either single or double quotes
+			- Symbols are everything in <code>bv.GetSymbols()</code>, unnamed DataVariables (i.e. <code>data_00005000</code>), unnamed functions (i.e. <code>sub_00005000</code>), or section names (i.e. <code>.text</code>)
+			- Numbers are defaulted to hexadecimal thus <code>_printf + 10</code> is equivalent to <code>printf + 0x10</code> If decimal numbers required use the decimal prefix.
 			- Since numbers and symbols can be ambiguous its recommended that you prefix your numbers with the following:
 
-					- ``0x`` - Hexadecimal
-					- ``0n`` - Decimal
-					- ``0`` - Octal
+					- \c 0x - Hexadecimal
+					- \c 0n - Decimal
+					- \c 0 - Octal
 
-			- In the case of an ambiguous number/symbol (one with no prefix) for instance ``12345`` we will first attempt
+			- In the case of an ambiguous number/symbol (one with no prefix) for instance \c 12345 we will first attempt
 			  to look up the string as a symbol, if a symbol is found its address is used, otherwise we attempt to convert
 			  it to a hexadecimal number.
-			- The following operations are valid: ``+, -, \*, /, %, (), &, \|, ^, ~``
+			- The following operations are valid: <code>+, -, *, /, %, (), &, |, ^, ~</code>
 			- In addition to the above operators there are dereference operators similar to BNIL style IL:
 
-					- ``[<expression>]`` - read the `current address size` at ``<expression>``
-					- ``[<expression>].b`` - read the byte at ``<expression>``
-					- ``[<expression>].w`` - read the word (2 bytes) at ``<expression>``
-					- ``[<expression>].d`` - read the dword (4 bytes) at ``<expression>``
-					- ``[<expression>].q`` - read the quadword (8 bytes) at ``<expression>``
+					- <code>[&lt;expression&gt;]</code> - read the <code>current address size</code> at <code>&lt;expression&gt;</code>
+					- <code>[&lt;expression&gt;].b</code> - read the byte at <code>&lt;expression&gt;</code>
+					- <code>[&lt;expression&gt;].w</code> - read the word (2 bytes) at <code>&lt;expression&gt;</code>
+					- <code>[&lt;expression&gt;].d</code> - read the dword (4 bytes) at <code>&lt;expression&gt;</code>
+					- <code>[&lt;expression&gt;].q</code> - read the quadword (8 bytes) at <code>&lt;expression&gt;</code>
 
-			- The ``$here`` (or more succinctly: ``$``) keyword can be used in calculations and is defined as the ``here`` parameter, or the currently selected address
-			- The ``$start``/``$end`` keyword represents the address of the first/last bytes in the file respectively
+			- The <code>$here</code> (or more succinctly: <code>$</code>) keyword can be used in calculations and is defined as the \c here parameter, or the currently selected address
+			- The <code>$start</code>/<code>$end</code> keyword represents the address of the first/last bytes in the file respectively
 
 
 			\param[in] view View object for relative selections
@@ -8246,8 +8246,8 @@ namespace BinaryNinja {
 		/*! Add a magic value to the expression parser
 
 			If the magic value already exists, its value gets updated.
-			The magic value can be used in the expression by a `$` followed by its name, e.g., `$foobar`.
-		 	It is optional to include the `$` when calling this function, i.e., calling with `foobar` and `$foobar`
+			The magic value can be used in the expression by a \c $ followed by its name, e.g., \c $foobar.
+			It is optional to include the \c $ when calling this function, i.e., calling with \c foobar and \c $foobar
 		 	has the same effect.
 
 			\param name Name for the magic value to add or update
@@ -8266,12 +8266,12 @@ namespace BinaryNinja {
 
 		/*! Add a list of magic value to the expression parser
 
-		 	The vector `names` and `values` must have the same size. The ith name in the `names` will correspond to
-		 	the ith value in the `values`.
+			The vector \c names and \c values must have the same size. The ith name in the \c names will correspond to
+			the ith value in the \c values.
 
 			If a magic value already exists, its value gets updated.
-			The magic value can be used in the expression by a `$` followed by its name, e.g., `$foobar`.
-		 	It is optional to include the `$` when calling this function, i.e., calling with `foobar` and `$foobar`
+			The magic value can be used in the expression by a \c $ followed by its name, e.g., \c $foobar.
+			It is optional to include the \c $ when calling this function, i.e., calling with \c foobar and \c $foobar
 		 	has the same effect.
 
 			\param name Names for the magic values to add or update
@@ -8289,7 +8289,7 @@ namespace BinaryNinja {
 
 		/*! Get the value of an expression parser magic value
 
-		 	If the queried magic value exists, the function returns true and the magic value is returned in `value`.
+			If the queried magic value exists, the function returns true and the magic value is returned in \c value.
 		 	If the queried magic value does not exist, the function returns false.
 
 			\param[in] name Name for the magic value to query
@@ -8960,7 +8960,7 @@ namespace BinaryNinja {
 		*/
 		void SetEndianness(BNEndianness endian);
 
-		/*! Read from the current cursor position into buffer `dest`
+		/*! Read from the current cursor position into buffer \c dest
 
 		    \throws ReadException
 			\param dest Address to write the read bytes to
@@ -11900,7 +11900,7 @@ namespace BinaryNinja {
 		    \param overwriteExisting Whether to overwrite an existing member at that offset, Optional, default true
 		    \param access One of NoAccess, PrivateAccess, ProtectedAccess, PublicAccess
 		    \param scope One of NoScope, StaticScope, VirtualScope, ThunkScope, FriendScope
-			\param bitPosition The number of bits from the start of the `offset` to place this member, used for bitfields
+			\param bitPosition The number of bits from the start of the \c offset to place this member, used for bitfields
 			\param bitWidth The number of bits wide to make the member, this is analogous to a bitfield width in C
 		    \return Reference to the StructureBuilder
 		*/
@@ -12340,7 +12340,7 @@ namespace BinaryNinja {
 	};
 
 	/*! Workflows are represented as Directed Acyclic Graphs (DAGs), where each node corresponds to an Activity (an individual analysis or action).
-		Workflows are used to tailor the analysis process for :class:`BinaryView` or :class:`Function` objects, providing granular control over
+		Workflows are used to tailor the analysis process for :class:\c BinaryView or :class:\c Function objects, providing granular control over
 		analysis tasks at module or function levels.
 
 		A Workflow starts in an unregistered state, either by creating a new empty Workflow or by cloning an existing one. While unregistered, it
@@ -12381,7 +12381,7 @@ namespace BinaryNinja {
 			be created and returned.
 
 			\note If a new workflow is returned it will have no activities. Attempting
-			to register new activities on it via `Insert` and `InsertAfter` will fail.
+			to register new activities on it via \c Insert and \c InsertAfter will fail.
 
 			\param name Workflow name
 			\return The workflow.
@@ -12392,10 +12392,10 @@ namespace BinaryNinja {
 			this will return the registered Workflow. If not, a new Workflow will
 			be created and returned.
 
-			\deprecated Use `Get` or `GetOrCreate` instead.
+			\deprecated Use \c Get or \c GetOrCreate instead.
 
 			\note If a new workflow is returned it will have no activities. Attempting
-			to register new activities on it via `Insert` and `InsertAfter` will fail.
+			to register new activities on it via \c Insert and \c InsertAfter will fail.
 
 			\param name Workflow name
 			\return The workflow.
@@ -12414,7 +12414,7 @@ namespace BinaryNinja {
 		/*! Clone a workflow, copying all Activities and the execution strategy
 
 			\param name If specified, name the new Workflow, otherwise the name is copied from the original
-			\param activity If specified, perform the clone with `activity` as the root
+			\param activity If specified, perform the clone with \c activity as the root
 			\return A new Workflow
 		*/
 		Ref<Workflow> Clone(const std::string& name = "", const std::string& activity = "");
@@ -12451,9 +12451,9 @@ namespace BinaryNinja {
 		bool Contains(const std::string& activity);
 
 		/*! Retrieve the configuration as an adjacency list in JSON for the Workflow,
-			or if specified just for the given ``activity``.
+			or if specified just for the given <code>activity</code>.
 
-			\param activity If specified, return the configuration for the ``activity``
+			\param activity If specified, return the configuration for the \c activity
 			\return An adjacency list representation of the configuration in JSON
 		*/
 		std::string GetConfiguration(const std::string& activity = "");
@@ -12483,22 +12483,22 @@ namespace BinaryNinja {
 		*/
 		Ref<Activity> GetActivity(const std::string& activity);
 
-		/*! Retrieve the list of activity roots for the Workflow, or if specified just for the given `activity`.
+		/*! Retrieve the list of activity roots for the Workflow, or if specified just for the given \c activity.
 
-			\param activity If specified, return the roots for `activity`
+			\param activity If specified, return the roots for \c activity
 			\return A list of root activity names.
 		*/
 		std::vector<std::string> GetActivityRoots(const std::string& activity = "");
 
 		/*! Retrieve the list of all activities, or optionally a filtered list.
 
-			\param activity If specified, return the direct children and optionally the descendants of the `activity` (includes `activity`)
-			\param immediate whether to include only direct children of `activity` or all descendants
+			\param activity If specified, return the direct children and optionally the descendants of the \c activity (includes \c activity)
+			\param immediate whether to include only direct children of \c activity or all descendants
 			\return A list of Activity names
 		*/
 		std::vector<std::string> GetSubactivities(const std::string& activity = "", bool immediate = true);
 
-		/*! Assign the list of `activities` as the new set of children for the specified `activity`.
+		/*! Assign the list of \c activities as the new set of children for the specified \c activity.
 
 			\param activity The activity node to assign children
 			\param subactivities the list of Activities to assign
@@ -12561,7 +12561,7 @@ namespace BinaryNinja {
 
 		/*! Generate a FlowGraph object for the current Workflow
 
-			\param activity if specified, generate the Flowgraph using ``activity`` as the root
+			\param activity if specified, generate the Flowgraph using \c activity as the root
 			\param sequential whether to generate a **Composite** or **Sequential** style graph
 			\return FlowGraph on success
 		*/
@@ -12857,7 +12857,7 @@ namespace BinaryNinja {
 		/*! Set the analysis basic block highlight color
 
 			\param color Highlight Color
-			\param mixColor Highlight Color to mix with `color`
+			\param mixColor Highlight Color to mix with \c color
 			\param mix Mix point
 			\param alpha Transparency of the colors
 		*/
@@ -12889,7 +12889,7 @@ namespace BinaryNinja {
 		/*! Set the basic block highlight color
 
 			\param color Highlight Color
-			\param mixColor Highlight Color to mix with `color`
+			\param mixColor Highlight Color to mix with \c color
 			\param mix Mix point
 			\param alpha Transparency of the colors
 		*/
@@ -13277,7 +13277,7 @@ namespace BinaryNinja {
 			the given address and architecture to the specified target address.
 
 		 	If the specified source instruction is not contained within this function, no action is performed.
-			To remove the reference, use `RemoveUserCodeReference`.
+			To remove the reference, use \c RemoveUserCodeReference.
 
 			\param fromArch Architecture of the source instruction
 			\param fromAddr Virtual address of the source instruction
@@ -13300,7 +13300,7 @@ namespace BinaryNinja {
 				the given address and architecture to the specified type.
 
 		 	If the specified source instruction is not contained within this function, no action is performed.
-			To remove the reference, use `RemoveUserTypeReference`.
+			To remove the reference, use \c RemoveUserTypeReference.
 
 		    \param fromArch Architecture of the source instruction
 		    \param fromAddr Virtual address of the source instruction
@@ -13323,7 +13323,7 @@ namespace BinaryNinja {
 			instruction at the given address and architecture to the specified type.
 
 			If the specified source instruction is not contained within this function, no action is performed.
-			To remove the reference, use :func:`remove_user_type_field_ref`.
+			To remove the reference, use :func:\c remove_user_type_field_ref.
 
 			\param fromArch Architecture of the source instruction
 			\param fromAddr Virtual address of the source instruction
@@ -13565,7 +13565,7 @@ namespace BinaryNinja {
 		std::set<ArchAndAddr> GetUnresolvedIndirectBranches();
 		bool HasUnresolvedIndirectBranches();
 
-		/*! \brief Apply an automatic type adjustment to the call at `addr` in `arch`.
+		/*! \brief Apply an automatic type adjustment to the call at \c addr in \c arch.
 
 			The adjustment will take effect if the new confidence level is higher than the confidence
 			level of any existing adjustment at the given address, whether automatic or user-defined.
@@ -13576,7 +13576,7 @@ namespace BinaryNinja {
 		*/
 		void SetAutoCallTypeAdjustment(Architecture* arch, uint64_t addr, const Confidence<Ref<Type>>& adjust);
 
-		/*! \brief Apply an automatic stack adjustment to the call at `addr` in `arch`.
+		/*! \brief Apply an automatic stack adjustment to the call at \c addr in \c arch.
 
 			The adjustment will take effect if the new confidence level is higher than the confidence
 			level of any existing adjustment at the given address, whether automatic or user-defined.
@@ -13587,7 +13587,7 @@ namespace BinaryNinja {
 		*/
 		void SetAutoCallStackAdjustment(Architecture* arch, uint64_t addr, const Confidence<int64_t>& adjust);
 
-		/*! \brief Apply automatic register stack adjustments to the call at `addr` in `arch`.
+		/*! \brief Apply automatic register stack adjustments to the call at \c addr in \c arch.
 
 			\note This overwrites any existing register stack adjustments at the given address,
 			irrespective of their confidence level.
@@ -13599,7 +13599,7 @@ namespace BinaryNinja {
 		void SetAutoCallRegisterStackAdjustment(
 		    Architecture* arch, uint64_t addr, const std::map<uint32_t, Confidence<int32_t>>& adjust);
 
-		/*! \brief Apply an automatic register stack adjustment for a specific register stack to the call at `addr` in `arch`.
+		/*! \brief Apply an automatic register stack adjustment for a specific register stack to the call at \c addr in \c arch.
 
 			The adjustment will take effect if the new confidence level is higher than the confidence
 			level of any existing adjustment at the given address, whether automatic or user-defined.
@@ -13820,7 +13820,7 @@ namespace BinaryNinja {
 		/*! Set whether the function should be inlined during analysis.
 
 		This will take effect if the new confidence level is higher than the confidence
-		level of the existing value of `IsInlinedDuringAnalysis`, whether automatic or
+		level of the existing value of \c IsInlinedDuringAnalysis, whether automatic or
 		user-defined.
 
 		\param inlined Whether the function should be inlined.
@@ -13834,7 +13834,7 @@ namespace BinaryNinja {
 		void SetUserInlinedDuringAnalysis(BNInlineDuringAnalysis inlined) { SetUserInlinedDuringAnalysis(Confidence(inlined)); }
 
 		/*!
-			\deprecated Use the overload that takes `BNInlineDuringAnalysis`.
+			\deprecated Use the overload that takes \c BNInlineDuringAnalysis.
 		*/
 		void SetAutoInlinedDuringAnalysis(Confidence<bool> inlined)
 		{
@@ -13843,7 +13843,7 @@ namespace BinaryNinja {
 		};
 
 		/*!
-			\deprecated Use the overload that takes `BNInlineDuringAnalysis`.
+			\deprecated Use the overload that takes \c BNInlineDuringAnalysis.
 		*/
 		void SetUserInlinedDuringAnalysis(Confidence<bool> inlined)
 		{
@@ -14549,7 +14549,7 @@ namespace BinaryNinja {
 		*/
 		ExprId Push(size_t size, ExprId val, uint32_t flags = 0, const ILSourceLocation& loc = ILSourceLocation());
 
-		/*! Reads ``size`` bytes from the stack, adjusting the stack by ``size``.
+		/*! Reads \c size bytes from the stack, adjusting the stack by <code>size</code>.
 
 			\param size Number of bytes to read from the stack
 			\param flags Flags set by this expression
@@ -14570,7 +14570,7 @@ namespace BinaryNinja {
 		ExprId RegisterSSAPartial(size_t size, const SSARegister& fullReg, uint32_t partialReg,
 		    const ILSourceLocation& loc = ILSourceLocation());
 
-		/*! Combines registers of size ``size`` with names ``hi`` and ``lo``
+		/*! Combines registers of size \c size with names \c hi and \c lo
 
 			\param size The size of the register in bytes
 			\param high Register holding high part of value
@@ -14638,7 +14638,7 @@ namespace BinaryNinja {
 		*/
 		ExprId ConstPointer(size_t size, uint64_t val, const ILSourceLocation& loc = ILSourceLocation());
 
-		/*! Returns an expression for the constant relocated pointer ``value`` with size ``size``
+		/*! Returns an expression for the constant relocated pointer \c value with size \c size
 
 			\param size The size of the pointer in bytes
 			\param val Address referenced by pointer
@@ -15751,7 +15751,7 @@ namespace BinaryNinja {
 		ExprId Goto(BNLowLevelILLabel& label, const ILSourceLocation& loc = ILSourceLocation());
 
 		/*! Returns the \c if expression which depending on condition \c operand jumps to the LowLevelILLabel
-			\c t when the condition expression \c operand is non-zero and \c f`` when it's zero.
+			\c t when the condition expression \c operand is non-zero and \c f when it's zero.
 
 			\param operand Comparison expression to evaluate.
 			\param t Label for the true branch
@@ -19014,7 +19014,7 @@ namespace BinaryNinja {
 		std::string GetAutoPlatformTypeIdSource();
 
 		/*! Parses the source string and any needed headers searching for them in
-			the optional list of directories provided in ``includeDirs``.
+			the optional list of directories provided in <code>includeDirs</code>.
 
 		 	\note This API does not allow the source to rely on existing types that only exist in a specific view. Use BinaryView->ParseTypeString instead.
 
@@ -19035,7 +19035,7 @@ namespace BinaryNinja {
 		    const std::string& autoTypeSource = "");
 
 		/*! Parses the source string and any needed headers searching for them in
-			the optional list of directories provided in ``includeDirs``.
+			the optional list of directories provided in <code>includeDirs</code>.
 
 			\note This API does not allow the source to rely on existing types that only exist in a specific view. Use BinaryView->ParseTypeString instead.
 
@@ -19899,7 +19899,7 @@ namespace BinaryNinja {
 		/*!
 			Provides a mechanism for reporting progress of
 			an optionally cancelable task to the user via the status bar in the UI.
-			If canCancel is is `True`, then the task can be cancelled either
+			If canCancel is is \c True, then the task can be cancelled either
 			programmatically or by the user via the UI.
 
 			\note This API does not provide a means to execute a task. The caller is responsible to execute (and possibly cancel) the task.
@@ -20441,17 +20441,17 @@ namespace BinaryNinja {
 
 	/*! DataRenderer objects tell the Linear View how to render specific types.
 
-		The `IsValidForData` method returns a boolean to indicate if your derived class
-		is able to render the type, given the `addr` and `context`. The `context` is a list of Type
+		The \c IsValidForData method returns a boolean to indicate if your derived class
+		is able to render the type, given the \c addr and \c context. The \c context is a list of Type
 		objects which represents the chain of nested objects that is being displayed.
 
-		The `GetLinesForData` method returns a list of `DisassemblyTextLine` objects, each one
-		representing a single line of Linear View output. The `prefix` variable is a list of `InstructionTextToken`'s
-		which have already been generated by other `DataRenderer`'s.
+		The \c GetLinesForData method returns a list of \c DisassemblyTextLine objects, each one
+		representing a single line of Linear View output. The \c prefix variable is a list of \c InstructionTextToken's
+		which have already been generated by other \c DataRenderer's.
 
-		After defining the `DataRenderer` subclass you must then register it with the core. This is done by calling
-		either `DataRendererContainer::RegisterGenericDataRenderer()` or
-	 	`DataRendererContainer::RegisterTypeSpecificDataRenderer()`.
+		After defining the \c DataRenderer subclass you must then register it with the core. This is done by calling
+		either \c DataRendererContainer::RegisterGenericDataRenderer() or
+		\c DataRendererContainer::RegisterTypeSpecificDataRenderer().
 	 	A "generic" type renderer is able to be overridden by a "type specific" renderer. For instance there is a
 	 	generic struct render which renders any struct that hasn't been explicitly overridden by a "type specific" renderer.
 
@@ -21171,7 +21171,7 @@ namespace BinaryNinja {
 		*/
 		std::string GetName();
 
-		/*! A list of extra names that will be considered a match by ``Platform::GetTypeLibrariesByName``
+		/*! A list of extra names that will be considered a match by \c Platform::GetTypeLibrariesByName
 
 			\return
 		*/
@@ -21181,7 +21181,7 @@ namespace BinaryNinja {
 			type libraries. This allows, for example, a library with the name "musl_libc" to have
 			dependencies on it recorded as "libc_generic", allowing a type library to be used across
 			multiple platforms where each has a specific libc that also provides the name "libc_generic"
-			as an `alternate_name`.
+			as an \c alternate_name.
 
 			\return
 		*/
@@ -21225,7 +21225,7 @@ namespace BinaryNinja {
 		Ref<Type> GetNamedObject(const QualifiedName& name);
 
 		/*! Direct extracts a reference to a contained type -- when attempting to extract types from a library
-			into a BinaryView, consider using BinaryView.ImportTypeLibraryType>` instead.
+			into a BinaryView, consider using BinaryView::ImportTypeLibraryType() instead.
 
 			\param name
 			\return
@@ -21954,7 +21954,7 @@ namespace BinaryNinja {
 		);
 
 		/*!
-			\deprecated Use `ParseTypeString` with the extra `importDependencies` param
+			\deprecated Use \c ParseTypeString with the extra \c importDependencies param
 		 */
 		BN_DEPRECATED("Use ParseTypeString overload with the extra importDependencies param")
 		bool ParseTypeString(
@@ -21988,7 +21988,7 @@ namespace BinaryNinja {
 		);
 
 		/*!
-			\deprecated Use `ParseTypesFromSource` with the extra `importDependencies` param
+			\deprecated Use \c ParseTypesFromSource with the extra \c importDependencies param
 		 */
 		BN_DEPRECATED("Use ParseTypesFromSource overload with the extra importDependencies param")
 		bool ParseTypesFromSource(
@@ -22941,7 +22941,7 @@ namespace BinaryNinja {
 		BNRenderLayerDefaultEnableState GetDefaultEnableState() const;
 
 		/*! Apply this Render Layer to a single Basic Block of Disassembly lines.
-			Subclasses should modify the input `lines` list to make modifications to
+			Subclasses should modify the input \c lines list to make modifications to
 			the presentation of the block.
 
 			\note This function will only handle Disassembly lines, and not any ILs.
@@ -22959,11 +22959,11 @@ namespace BinaryNinja {
 		}
 
 		/*! Apply this Render Layer to a single Basic Block of Low Level IL lines.
-			Subclasses should modify the input `lines` list to make modifications to
+			Subclasses should modify the input \c lines list to make modifications to
 			the presentation of the block.
 
 			\note This function will only handle Lifted IL/LLIL/LLIL(SSA) lines.
-			You can use the block's `function_graph_type` property to determine which is being handled.
+			You can use the block's \c function_graph_type property to determine which is being handled.
 
 			\param block Basic Block containing those lines
 			\param lines Lines of text for the block, to be modified by this function
@@ -22978,11 +22978,11 @@ namespace BinaryNinja {
 		}
 
 		/*! Apply this Render Layer to a single Basic Block of Medium Level IL lines.
-			Subclasses should modify the input `lines` list to make modifications to
+			Subclasses should modify the input \c lines list to make modifications to
 			the presentation of the block.
 
 			\note This function will only handle MLIL/MLIL(SSA)/Mapped MLIL/Mapped MLIL(SSA) lines.
-			You can use the block's `function_graph_type` property to determine which is being handled.
+			You can use the block's \c function_graph_type property to determine which is being handled.
 
 			\param block Basic Block containing those lines
 			\param lines Lines of text for the block, to be modified by this function
@@ -22997,14 +22997,14 @@ namespace BinaryNinja {
 		}
 
 		/*! Apply this Render Layer to a single Basic Block of High Level IL lines.
-			Subclasses should modify the input `lines` list to make modifications to
+			Subclasses should modify the input \c lines list to make modifications to
 			the presentation of the block.
 
 			\note This function will only handle HLIL/HLIL(SSA)/Language Representation lines.
-			You can use the block's `function_graph_type` property to determine which is being handled.
+			You can use the block's \c function_graph_type property to determine which is being handled.
 
 			\warning This function will NOT apply to High Level IL bodies as displayed
-			in Linear View! Those are handled by `ApplyToHighLevelILBody` instead as they
+			in Linear View! Those are handled by \c ApplyToHighLevelILBody instead as they
 			do not have a Basic Block associated with them.
 
 			\param block Basic Block containing those lines
@@ -23020,11 +23020,11 @@ namespace BinaryNinja {
 		}
 
 		/*! Apply this Render Layer to the entire body of a High Level IL function.
-			Subclasses should modify the input `lines` list to make modifications to
+			Subclasses should modify the input \c lines list to make modifications to
 			the presentation of the function.
 
 			\warning This function only applies to Linear View, and not to Graph View!
-			If you want to handle Graph View too, you will need to use `ApplyToHighLevelILBlock`
+			If you want to handle Graph View too, you will need to use \c ApplyToHighLevelILBlock
 			and handle the lines one block at a time.
 
 			\param function Function containing those lines
@@ -23046,7 +23046,7 @@ namespace BinaryNinja {
 			\param obj Linear View Object being rendered
 			\param prev Linear View Object located directly above this one
 			\param next Linear View Object located directly below this one
-			\param lines Lines rendered by `obj`, to be modified by this function
+			\param lines Lines rendered by \c obj, to be modified by this function
 		 */
 		virtual void ApplyToMiscLinearLines(
 			Ref<LinearViewObject> obj,

@@ -39,7 +39,7 @@ public:
 
 	/// Get the desired array element type from the accepted dialog.
 	///
-	/// The returned value will NOT be of `Type::ArrayType(...)`, but rather
+	/// The returned value will NOT be of \c Type::ArrayType(...), but rather
 	/// the element inside.
 	[[nodiscard]] TypeRef elementType() const;
 

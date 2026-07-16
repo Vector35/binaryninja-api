@@ -253,12 +253,12 @@ public:
 	const QString& name() const { return m_name; }
 
 	/*!
-	    \deprecated Use `defaultLocation()`
+	    \deprecated Use \c defaultLocation()
 	*/
 	virtual bool isInReferenceArea() const { return false; }
 
 	/*!
-	    \deprecated Use `contextSensitivity()`
+	    \deprecated Use \c contextSensitivity()
 	*/
 	virtual bool viewSensitive() const { return true; }
 
@@ -267,7 +267,7 @@ public:
 	virtual bool alwaysShowTabs() const { return false; }
 
 	/*!
-	    \deprecated Use `defaultIconVisibility()`
+	    \deprecated Use \c defaultIconVisibility()
 	*/
 	virtual bool hideIfNoContent() const { return false; }
 

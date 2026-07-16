@@ -414,7 +414,7 @@ private Q_SLOTS:
 
 	//! Get the length of of the string (if there is one) starting at the
 	//! given address. String type is assumed to be UTF-8 by default, but the
-	//! `charSize` parameter can be set to 2 or 4 to look for UTF-16 or
+	//! \c charSize parameter can be set to 2 or 4 to look for UTF-16 or
 	//! UTF-32 string, respectively.
 	//!
 	//! Returns the length of the string in bytes, NOT the number of characters.

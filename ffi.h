@@ -77,7 +77,7 @@ namespace BinaryNinja
 			};
 
 		If you get weird compiler errors around here, make sure you've implemented
-		the above interface correctly (with the `const`s too!).
+		the above interface correctly (with the \c consts too!).
 	 */
 	template<
 		typename T,
@@ -158,7 +158,7 @@ namespace BinaryNinja
 		\tparam F Throwable block
 		\tparam C Catch handler
 		\param func Throwable block to execute
-		\param catcher Catch handler to execute if `func` throws
+		\param catcher Catch handler to execute if \c func throws
 		\return Either the func's result or the handler's result
 	 */
 	template<typename T, typename F, typename C>

@@ -270,15 +270,15 @@ class BINARYNINJAUIAPI StackView : public QAbstractScrollArea, public View, publ
 	//! Show the "Create Variable" dialog.
 	void showCreateVariableDialog();
 
-	//! Create an integer of the given size at the cursor position. Pass `0`
-	//! for `size` to cycle through integer sizes automatically.
+	//! Create an integer of the given size at the cursor position. Pass \c 0
+	//! for \c size to cycle through integer sizes automatically.
 	void quickCreateIntegerAtCursor(size_t size);
 
 	//! Toggle the sign of the integer at the cursor position.
 	void quickInvertIntegerSignAtCursor();
 
-	//! Create an float of the given size at the cursor position. Pass `0`
-	//! for `size` to cycle through float sizes automatically.
+	//! Create an float of the given size at the cursor position. Pass \c 0
+	//! for \c size to cycle through float sizes automatically.
 	void quickCreateFloatAtCursor(size_t size);
 
 	//! Create a pointer the cursor.

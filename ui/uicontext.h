@@ -317,12 +317,12 @@ class BINARYNINJAUIAPI UIContextNotification
 
 	/*!
 	    Callback when an action is executed, allowing plugins to intercept and modify
-	    the behavior of the action. Plugins may modify the `action` parameter and
+	    the behavior of the action. Plugins may modify the \c action parameter and
 	    specify new behavior for the action to execute, which will happen immediately
 	    after all registered notifications have been notified.
 
 	    The original behavior (potentially modified by another notification) can be
-	    executed by saving a copy of the value of `action` and calling it from within
+	    executed by saving a copy of the value of \c action and calling it from within
 	    your modified value.
 
 	    \param context

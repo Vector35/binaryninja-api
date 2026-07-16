@@ -10,7 +10,6 @@
 //   x86_64.manifest  - long-mode instructions
 //   x86.manifest     - legacy-32 instructions (iclasses that could not be
 //                      encoded in long mode)
-//   coverage.txt     - covered/uncovered iclass summary
 //
 // The manifest lines are: <iclass> <iform> <hexbytes>
 
@@ -149,6 +148,7 @@ static unsigned try_encode(const xed_inst_t* inst, const xed_state_t* dstate,
 typedef struct {
 	unsigned len;
 	xed_iform_enum_t iform;
+	const char* iform_override;  // manifest iform label when iform is INVALID
 	int mode64;                 // 1 = long mode, 0 = legacy 32
 	xed_uint8_t bytes[XED_MAX_INSTRUCTION_BYTES];
 } Encoding;
@@ -301,6 +301,46 @@ int main(int argc, char** argv)
 		}
 	}
 
+	// Forced entries: iclasses that this XED build cannot decode to (MPX is
+	// disabled, so BND* decode as NOP; every multi-byte NOP decodes to the
+	// plain NOP iclass). We record known-good bytes under the intended iclass
+	// anyway -- Binary Ninja decodes them the same way (as NOP), but keeping
+	// the iclass in the dataset means the test will notice if that ever
+	// changes (e.g. if MPX decoding is enabled).
+	static const struct { const char* iclass; const char* hex; } forced[] = {
+		{"BNDMK",  "f30f1b00"},           // bndmk  bnd0, [rax]
+		{"BNDCL",  "f30f1a00"},           // bndcl  bnd0, [rax]
+		{"BNDCU",  "f20f1a00"},           // bndcu  bnd0, [rax]
+		{"BNDCN",  "f20f1b00"},           // bndcn  bnd0, [rax]
+		{"BNDMOV", "660f1ac1"},           // bndmov bnd0, bnd1
+		{"BNDLDX", "0f1a0408"},           // bndldx bnd0, [rax+rcx]
+		{"BNDSTX", "0f1b0408"},           // bndstx [rax+rcx], bnd0
+		{"NOP2", "6690"},                 // recommended multi-byte NOPs
+		{"NOP3", "0f1f00"},
+		{"NOP4", "0f1f4000"},
+		{"NOP5", "0f1f440000"},
+		{"NOP6", "660f1f440000"},
+		{"NOP7", "0f1f8000000000"},
+		{"NOP8", "0f1f840000000000"},
+		{"NOP9", "660f1f840000000000"},
+		{NULL, NULL},
+	};
+	for (int fi = 0; forced[fi].iclass; fi++) {
+		xed_iclass_enum_t ic = str2xed_iclass_enum_t(forced[fi].iclass);
+		if (ic == XED_ICLASS_INVALID || best[ic].len) continue;
+		unsigned blen = 0;
+		for (const char* p = forced[fi].hex; p[0] && p[1] && blen < XED_MAX_INSTRUCTION_BYTES; p += 2) {
+			unsigned v; sscanf(p, "%2x", &v); best[ic].bytes[blen++] = (xed_uint8_t)v;
+		}
+		best[ic].len = blen;
+		best[ic].mode64 = 1;
+		xed_iform_enum_t f = xed_iform_first_per_iclass(ic);
+		if (f != XED_IFORM_INVALID)
+			best[ic].iform = f;
+		else
+			best[ic].iform_override = forced[fi].iclass;
+	}
+
 	// Emit manifests. Each line is: <iclass> <iform> <hexbytes>. The bytes are
 	// stored inline (no separate .bin), and consumers recover the instruction
 	// length from the hex string, so no offset/length columns are needed.
@@ -320,32 +360,16 @@ int main(int argc, char** argv)
 		if (k == 0) cov64++; else cov32++;
 		fprintf(man[k], "%s %s ",
 		        xed_iclass_enum_t2str((xed_iclass_enum_t)ic),
-		        xed_iform_enum_t2str(best[ic].iform));
+		        best[ic].iform_override ? best[ic].iform_override
+		                                : xed_iform_enum_t2str(best[ic].iform));
 		for (unsigned b = 0; b < best[ic].len; b++)
 			fprintf(man[k], "%02x", best[ic].bytes[b]);
 		fprintf(man[k], "\n");
 	}
 	for (int k = 0; k < 2; k++) fclose(man[k]);
 
-	// Coverage report.
-	snprintf(path, sizeof(path), "%s/coverage.txt", outdir);
-	FILE* cov = fopen(path, "w");
-	int total = XED_ICLASS_LAST - 1;
-	fprintf(cov, "covered %d / %d iclasses (%d long-mode, %d legacy-32)\n",
-	        covered, total, cov64, cov32);
-	fprintf(cov,
-		"\nThe uncovered iclasses below are unreachable in Binary Ninja's XED\n"
-		"build and therefore cannot appear in any test binary:\n"
-		"  BND* (MPX)  - MPX decoding is disabled; F3/F2 0F 1A/1B decode as NOP.\n"
-		"  NOP2..NOP9  - every multi-byte NOP decodes to the plain NOP iclass.\n");
-	fprintf(cov, "\nUNCOVERED:\n");
-	for (int ic = 1; ic < XED_ICLASS_LAST; ic++)
-		if (!best[ic].len)
-			fprintf(cov, "%s\n", xed_iclass_enum_t2str((xed_iclass_enum_t)ic));
-	fclose(cov);
-
 	fprintf(stderr, "covered %d / %d iclasses (%d long, %d legacy)\n",
-	        covered, total, cov64, cov32);
+	        covered, XED_ICLASS_LAST - 1, cov64, cov32);
 	free(best);
 	return 0;
 }

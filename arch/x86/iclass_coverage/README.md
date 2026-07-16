@@ -13,20 +13,18 @@ change shows up as a diff naming the exact instruction that changed.
 
 | File | Purpose |
 | --- | --- |
-| `generate.c` | Generator: encodes one instruction per iclass with XED and writes the manifests and coverage report. |
+| `generate.c` | Generator: encodes one instruction per iclass with XED and writes the manifests. |
 | `x86_64.manifest`, `x86.manifest` | `<iclass> <iform> <hexbytes>` per instruction (long mode / legacy 32-bit). The bytes are inline; length is recovered from the hex string. |
-| `coverage.txt` | Covered / uncovered iclass summary. |
 
 ## Coverage
 
-1843 / 1858 iclasses. The 15 that are not covered are unreachable in Binary
-Ninja's XED build and so cannot appear in any test binary (details in
-`coverage.txt`):
+All 1858 iclasses. Most are produced by XED's encoder. `BND*` and `NOP2`..`NOP9`
+are recorded as forced known-good bytes: this XED build (and Binary Ninja) has
+MPX disabled and decodes every multi-byte NOP as the plain `NOP` iclass, so
+those bytes lift as `NOP` -- keeping the iclass in the dataset flags any future
+change (e.g. if MPX decoding is enabled).
 
-* `BND*` — MPX decoding is disabled, so the MPX opcodes decode as `NOP`.
-* `NOP2`..`NOP9` — every multi-byte NOP decodes to the plain `NOP` iclass.
-
-Most instructions are produced by XED's encoder. A handful of iclasses that
+A handful of iclasses that
 XED's *encoder* cannot emit (the `XSAVE` family, `JMPABS`, `JCXZ`, and the
 legacy `LDS`/`LES`/`BOUND`) are supplied as known-good bytes and classified by
 XED's *decoder*, so a wrong guess can never be mislabeled.
@@ -46,7 +44,7 @@ python3 mfile.py --ar=/usr/bin/ar --build-dir=/tmp/xedbuild install \
 cd ../iclass_coverage
 cc -std=c11 -O2 -I/tmp/xedbuild/kit/include generate.c \
     /tmp/xedbuild/kit/lib/libxed.a -o generate
-./generate .          # writes *.manifest, coverage.txt
+./generate .          # writes *.manifest
 ```
 
 After regenerating, refresh the test oracle in the main repo:

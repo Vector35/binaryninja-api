@@ -13,9 +13,8 @@ change shows up as a diff naming the exact instruction that changed.
 
 | File | Purpose |
 | --- | --- |
-| `generate.c` | Generator: encodes one instruction per iclass with XED and writes the blobs, manifests and coverage report. |
-| `x86_64.bin`, `x86.bin` | The instructions: concatenated encodings (long mode / legacy 32-bit). |
-| `x86_64.manifest`, `x86.manifest` | `<offset> <len> <iclass> <iform> <hexbytes>` for every instruction in the matching blob. |
+| `generate.c` | Generator: encodes one instruction per iclass with XED and writes the manifests and coverage report. |
+| `x86_64.manifest`, `x86.manifest` | `<iclass> <iform> <hexbytes>` per instruction (long mode / legacy 32-bit). The bytes are inline; length is recovered from the hex string. |
 | `coverage.txt` | Covered / uncovered iclass summary. |
 
 ## Coverage
@@ -47,7 +46,7 @@ python3 mfile.py --ar=/usr/bin/ar --build-dir=/tmp/xedbuild install \
 cd ../iclass_coverage
 cc -std=c11 -O2 -I/tmp/xedbuild/kit/include generate.c \
     /tmp/xedbuild/kit/lib/libxed.a -o generate
-./generate .          # writes *.bin, *.manifest, coverage.txt
+./generate .          # writes *.manifest, coverage.txt
 ```
 
 After regenerating, refresh the test oracle in the main repo:

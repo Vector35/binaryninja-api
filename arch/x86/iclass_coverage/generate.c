@@ -1,18 +1,18 @@
-// Generate a test binary containing one encoded instruction per XED iclass.
+// Generate one encoded instruction per XED iclass.
 //
 // For every entry in XED's instruction table (one per iform) we synthesize
 // canonical operands and try to encode it. The first iform that encodes
 // successfully for a given iclass is kept. 64-bit (long mode) encodings are
-// preferred; iclasses that only encode in 32-bit legacy mode are emitted to a
-// separate 32-bit blob so they disassemble correctly.
+// preferred; iclasses that only encode in 32-bit legacy mode go to a separate
+// manifest so they disassemble correctly.
 //
 // Outputs (into the directory given as argv[1]):
-//   x86_64.bin / x86_64.manifest  - long-mode instructions
-//   x86.bin    / x86.manifest     - legacy-32 instructions (iclasses that
-//                                   could not be encoded in long mode)
-//   coverage.txt                  - covered/uncovered iclass summary
+//   x86_64.manifest  - long-mode instructions
+//   x86.manifest     - legacy-32 instructions (iclasses that could not be
+//                      encoded in long mode)
+//   coverage.txt     - covered/uncovered iclass summary
 //
-// The manifest lines are: <hexoffset> <len> <iclass> <iform> <hexbytes>
+// The manifest lines are: <iclass> <iform> <hexbytes>
 
 #include <xed/xed-interface.h>
 #include <stdio.h>
@@ -301,34 +301,31 @@ int main(int argc, char** argv)
 		}
 	}
 
-	// Emit blobs + manifests.
+	// Emit manifests. Each line is: <iclass> <iform> <hexbytes>. The bytes are
+	// stored inline (no separate .bin), and consumers recover the instruction
+	// length from the hex string, so no offset/length columns are needed.
 	char path[1024];
-	FILE* bin[2]; FILE* man[2];
+	FILE* man[2];
 	const char* names[2] = {"x86_64", "x86"};
 	for (int k = 0; k < 2; k++) {
-		snprintf(path, sizeof(path), "%s/%s.bin", outdir, names[k]);
-		bin[k] = fopen(path, "wb");
 		snprintf(path, sizeof(path), "%s/%s.manifest", outdir, names[k]);
 		man[k] = fopen(path, "w");
-		if (!bin[k] || !man[k]) { perror("fopen"); return 1; }
+		if (!man[k]) { perror("fopen"); return 1; }
 	}
-	unsigned long off[2] = {0, 0};
 	int covered = 0, cov64 = 0, cov32 = 0;
 	for (int ic = 1; ic < XED_ICLASS_LAST; ic++) {
 		if (!best[ic].len) continue;
 		covered++;
 		int k = best[ic].mode64 ? 0 : 1;
 		if (k == 0) cov64++; else cov32++;
-		fwrite(best[ic].bytes, 1, best[ic].len, bin[k]);
-		fprintf(man[k], "%08lx %2u %s %s ", off[k], best[ic].len,
+		fprintf(man[k], "%s %s ",
 		        xed_iclass_enum_t2str((xed_iclass_enum_t)ic),
 		        xed_iform_enum_t2str(best[ic].iform));
 		for (unsigned b = 0; b < best[ic].len; b++)
 			fprintf(man[k], "%02x", best[ic].bytes[b]);
 		fprintf(man[k], "\n");
-		off[k] += best[ic].len;
 	}
-	for (int k = 0; k < 2; k++) { fclose(bin[k]); fclose(man[k]); }
+	for (int k = 0; k < 2; k++) fclose(man[k]);
 
 	// Coverage report.
 	snprintf(path, sizeof(path), "%s/coverage.txt", outdir);

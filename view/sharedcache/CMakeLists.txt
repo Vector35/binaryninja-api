@@ -13,7 +13,7 @@ if(NOT BN_INTERNAL_BUILD)
 endif()
 
 if (NOT BN_INTERNAL_BUILD)
-    set(QT_VERSION 6.10.1 CACHE STRING "Version of Qt to use")
+    set(QT_VERSION 6.11.1 CACHE STRING "Version of Qt to use")
 
     if(NOT CMAKE_PREFIX_PATH)
         if(WIN32)

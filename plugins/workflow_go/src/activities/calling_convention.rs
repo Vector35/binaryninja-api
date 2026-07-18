@@ -50,21 +50,22 @@ impl GoCallingConventionWorkflow {
 
         // 1) if the function has a symbol and ends with ".abi0", then we apply the go-stack
         // convention
-        let name = func.symbol().full_name();
-        let name = name.to_str().unwrap_or_default().to_ascii_lowercase();
-
-        let cc_name = match name.as_str() {
-            // explicit ABI0 wrapper
-            n if n.ends_with(".abi0") => "go-stack",
-            // stripped / no usable name: fall back to the stack-read heuristic
-            n if n.is_empty() || n.starts_with("sub_") => {
-                match unsafe { Self::reads_args_from_stack(ctx) } {
-                    true => "go-stack",
-                    false => "go-abiinternal",
-                }
+        let cc_name = match func.defined_symbol() {
+            Some(symb)
+                if symb
+                    .full_name()
+                    .to_str()
+                    .unwrap_or_default()
+                    .to_ascii_lowercase()
+                    .ends_with(".abi0") =>
+            {
+                "go-stack"
             }
-            // named non-.abi0 function: register-based
-            _ => "go-abiinternal",
+            Some(_) => "go-abiinternal",
+            _ => match unsafe { Self::reads_args_from_stack(ctx) } {
+                true => "go-stack",
+                false => "go-abiinternal",
+            },
         };
 
         let arch = func.arch();

@@ -15,6 +15,7 @@ TEXT_RVA = 0x1000
 TEXT_RAW_OFFSET = 0x200
 TEXT_RAW_SIZE = 0x1200
 TARGET_RVA = 0x1010
+ENTRY_RVA = 0x1020
 
 RDATA_RVA = 0x3000
 RDATA_RAW_OFFSET = 0x1400
@@ -93,7 +94,7 @@ def build_image():
         TEXT_RAW_SIZE,
         RDATA_RAW_SIZE,
         0,
-        TARGET_RVA,
+        ENTRY_RVA,
         TEXT_RVA,
         RDATA_RVA,
         IMAGE_BASE,
@@ -153,6 +154,10 @@ def build_image():
     # mov eax, 42; ret
     target_offset = TEXT_RAW_OFFSET + TARGET_RVA - TEXT_RVA
     image[target_offset : target_offset + 6] = b"\xB8\x2A\x00\x00\x00\xC3"
+    # xor eax, eax; ret -- keep the PE entry point distinct from `legacy` so
+    # Binary Ninja's automatic `_start` symbol does not hide it in the UI.
+    entry_offset = TEXT_RAW_OFFSET + ENTRY_RVA - TEXT_RVA
+    image[entry_offset : entry_offset + 3] = b"\x31\xC0\xC3"
 
     # IMAGE_DEBUG_DIRECTORY. The payload is deliberately raw-only.
     struct.pack_into(

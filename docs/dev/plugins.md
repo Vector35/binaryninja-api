@@ -25,24 +25,24 @@ Binary Ninja displays plugin descriptions differently depending on the contents 
 
 When you include images for preview in the Extension Manager, be aware that animated gifs are not fully supported. They will be rendered as static images of the first frame.
 
-Additionally, all images should be included using FULL github URLs as they will not render in the Extension Manager without that.
+Additionally, all images should be included using FULL GitHub URLs as they will not render in the Extension Manager without that.
 
 For example:
 
 ![](https://raw.githubusercontent.com/Vector35/6502/refs/heads/master/media/nes.png)
   
-### Submitting to the Plugin Manager
+### Submitting to the Extension Manager
 
-If your plugin was created as described above, there's only two steps to get it submitted to the plugin manager!
+If your plugin was created as described above, there's only two steps to get it submitted to the Extension Manager!
 
 1. First, create a release either [manually](https://binary.ninja/2019/07/04/plugin-manager-2.0.html#5-create-a-release) or using our [release helper](https://github.com/Vector35/release_helper).
-1. Next, just [file an issue](https://github.com/Vector35/community-plugins/issues/new/choose) letting us know about your plugin.
+2. Next, just [file an issue](https://github.com/Vector35/community-plugins/issues/new/choose) letting us know about your plugin.
 
 For future releases all you need to do is increment the version and create a new release.
 
 ### Using Your Own Plugin Repository
 
-The simplest way to run your own plugin repository using the new V2 plugin manager is to use the [mock server](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/mock_extension_server.py) helper script (a copy is available offline as well in the install path, in the python exapmle scripts subfolder).
+The simplest way to run your own plugin repository using the new Extension Manager is to use the [mock server](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/mock_extension_server.py) helper script (a copy is available offline as well in the install path, in the python exapmle scripts subfolder).
 
 Once you've created your test repository, use the `pluginManager.unofficialName` and `pluginManager.unofficialUrl` settings to add your third-party repository.
 
@@ -398,9 +398,9 @@ There are a few other options you can use to assist in debugging:
 As a footnote, it should be noted that most of the team at Vector 35 use VSCode as a bare text editor
 and use command-line lldb or gdb to debug their code. Shout-outs to people trying to get this working in Vim.
 
-## Submitting to the plugin manager
+## Submitting to the Extension Manager
 
-While native plugins are not fully supported in the plugin manager at this time, it's possible to work around this limitation by pre-building a native plugin for all three platforms and using a python plugin that acts as a loader for the native plugin. Additionally, you can submit a plugin as "view_only" which helps with discoverability.
+While native plugins are not fully supported in the Extension Manager at this time, it's possible to work around this limitation by pre-building a native plugin for all three platforms and using a python plugin that acts as a loader for the native plugin. Additionally, you can submit a plugin as "view_only" which helps with discoverability.
 
 ## Examples
 

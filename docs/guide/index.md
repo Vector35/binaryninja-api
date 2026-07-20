@@ -662,68 +662,6 @@ To search in the keybindings list, just click to make sure it's focused and star
  - `[CTRL-SHIFT] -` (Windows/Linux) : Graph view zoom out
  - Other hotkeys specifically for working with types are listed in the [type guide](types/type.md#direct-ui-manipulation)
 
-## Graph View
-
-![graph view](../img/graphview.png "Graph View"){ width="800" }
-
-Binary Ninja offers a graph view that groups the basic blocks of disassembly into visually distinct blocks with edges showing control flow between them.
-
-Features of the graph view include:
-
-- Ability to double-click edges to quickly jump between locations
-- Zoom (CTRL-mouse wheel)
-- Zoom to Fit - Zooms out until the whole graph is visible (`w`)
-- Zoom to Cursor - Zooms to 100% at the position of the cursor (`z`)
-- Vertical Scrolling (Side scroll bar as well as mouse wheel)
-- Horizontal Scrolling (Bottom scroll bar as well as SHIFT-mouse wheel)
-- Individual highlighting of arguments, addresses, immediate values, types, etc.
-- Full type signature of current function shown in an interactive header:
-    - Selecting elements in the header highlights them in the graph view
-    - Change type (`y`) and Rename (`n`) shortcuts work on elements in the header
-    - Reanalyze function button on left edge of the header
-- Edge colors indicate whether the path is the true (green) or false (red) case of a conditional jump (a color-blind option in the preferences is useful for those with red-green color blindness) and blue for unconditional branches
-- Context menu that can trigger some function-wide actions as well as some specific to the highlighted instruction (such as inverting branch logic or replacing a specific function with a NOP)
-
-## View Options
-
-![options >](../img/options.png "View options"){ width="400" }
-
-Each of the views (Hex, Graph, Linear) have a variety of options configurable from the ☰ menu on the top right of the view pane.
-
-Current options include:
-
-- Hex (and Linear View where hex values are shown)
-    - Background highlight
-        - None
-        - Column
-        - Byte value
-    - Color highlight
-        - None
-        - ASCII and printable
-        - Modification
-    - Contrast
-        - Normal
-        - Medium
-        - Highlight
-- Graph & Linear Views
-    - Expand Long Opcode
-    - Indent HLIL Function Body (HLIL only)
-    - Show Address
-    - Show Call Parameter Names (MLIL/HLIL only)
-    - Show Function Address
-    - Show Opcode Bytes
-    - Show Register Set Highlighting
-    - Show Type Casts (`[SHIFT+CMD/CTRL] + C`)
-    - Show Variable Types
-        - At Assignment (MLIL graph only)
-        - At Top of Function
-    - Single Function View
-    - Advanced
-        - Show All Expression Types (MLIL/HLIL only)
-        - Show IL Flag Usage (Lifted IL only)
-        - Show IL Opcodes
-        - Show Stack Pointer Value (LLIL only)
-
 ## Triage Summary
 
 ![triage summary](../img/triagesummary.png "Triage Summary"){ width="800" }
@@ -805,17 +743,95 @@ clickable to navigate to the virtual address.
 Strings can be double-clicked to navigate to them, and the table can be sorted or the list filtered by
 typing in the search box.
 
-## Byte Overview
+## View Options
 
-![byte overview](../img/byteoverview.png "Byte Overview"){ width="800" }
+![options >](../img/options.png "View options"){ width="400" }
 
-The Byte Overview (or "Bytes" when selected in the view switcher) shows the binary (mapped or raw, depending on the
-top-level selection) as a [Code Page 437](https://en.wikipedia.org/wiki/Code_page_437) view. This view is commonly used
-by malware analysis researchers using the [Hiew](http://hiew.ru) tool.
+Each of the views (Hex, Graph, Linear) have a variety of options configurable from the ☰ menu on the top right of the view pane.
 
-While this view is less feature-rich than the Hex view, it allows for a much higher information density as every byte is
-represented by one character as opposed to four total characters when in Hex view (including the space between hex
-digits and the ASCII representation).
+Current options include:
+
+- Hex (and Linear View where hex values are shown)
+    - Background highlight
+        - None
+        - Column
+        - Byte value
+    - Color highlight
+        - None
+        - ASCII and printable
+        - Modification
+    - Contrast
+        - Normal
+        - Medium
+        - Highlight
+- Graph & Linear Views
+    - Expand Long Opcode
+    - Indent HLIL Function Body (HLIL only)
+    - Show Address
+    - Show Call Parameter Names (MLIL/HLIL only)
+    - Show Function Address
+    - Show Opcode Bytes
+    - Show Register Set Highlighting
+    - Show Type Casts (`[SHIFT+CMD/CTRL] + C`)
+    - Show Variable Types
+        - At Assignment (MLIL graph only)
+        - At Top of Function
+    - Single Function View
+    - Advanced
+        - Show All Expression Types (MLIL/HLIL only)
+        - Show IL Flag Usage (Lifted IL only)
+        - Show IL Opcodes
+        - Show Stack Pointer Value (LLIL only)
+
+## Linear View
+
+![linear](../img/linear.png "Linear View"){ width="1000" }
+
+Linear view is a hybrid view between a graph-based disassembly window and the raw hex view. It lists the entire binary's memory in a linear fashion and is especially useful when trying to find sections of a binary that were not properly identified as code or even just examining data.
+
+Linear view is commonly used for identifying and adding type information for unknown data. To this end, as you scroll, you'll see data and code interspersed. Much like the graph view, you can turn on and off addresses via the command palette `Show Address` or the ☰ menu on the top right of the linear view pane. Many other [options](#view-options) are also available.
+
+### High Level IL
+
+![HLIL Scoping Options >](../img/hlil-scope.png "HLIL Scoping Options"){ width="400" }
+
+Binary Ninja features a decompiler that produces High Level IL (HLIL) as output. HLIL is not intended to be a representation of the code in C, but some users prefer to have a more C-like scoping style.
+
+You can control the way HLIL appears in the settings.
+
+The different options are shown below:
+
+![HLIL Scoping Display](../img/hlil-braces.png "HLIL Scoping Display"){ width="500" }
+
+### Pseudo C
+
+![Pseudo C](../img/pseudo-c.png "Pseudo C View"){ width="800" }
+
+Binary Ninja offers an option to render the HLIL as a decompilation to "Pseudo C". This decompilation is intended to be more familiar to the user than the HLIL. It is not necessarily intended to be "compliant" C or even recompilable. In some cases, it may be possible to edit it into a form that a C compiler will accept, but the amount of effort required will vary widely, and no guarantee is made that it will be possible in all cases.
+
+
+## Graph View
+
+![graph view](../img/graphview.png "Graph View"){ width="800" }
+
+Binary Ninja offers a graph view that groups the basic blocks of disassembly into visually distinct blocks with edges showing control flow between them.
+
+Features of the graph view include:
+
+- Ability to double-click edges to quickly jump between locations
+- Zoom (CTRL-mouse wheel)
+- Zoom to Fit - Zooms out until the whole graph is visible (`w`)
+- Zoom to Cursor - Zooms to 100% at the position of the cursor (`z`)
+- Vertical Scrolling (Side scroll bar as well as mouse wheel)
+- Horizontal Scrolling (Bottom scroll bar as well as SHIFT-mouse wheel)
+- Individual highlighting of arguments, addresses, immediate values, types, etc.
+- Full type signature of current function shown in an interactive header:
+    - Selecting elements in the header highlights them in the graph view
+    - Change type (`y`) and Rename (`n`) shortcuts work on elements in the header
+    - Reanalyze function button on left edge of the header
+- Edge colors indicate whether the path is the true (green) or false (red) case of a conditional jump (a color-blind option in the preferences is useful for those with red-green color blindness) and blue for unconditional branches
+- Context menu that can trigger some function-wide actions as well as some specific to the highlighted instruction (such as inverting branch logic or replacing a specific function with a NOP)
+
 
 ## Hex View
 
@@ -827,17 +843,11 @@ The hex view is particularly good for transforming data in various ways via the 
 
 If you're using the hex view for a Binary View like ELF, Mach-O or PE, you probably want to make sure you're also in the `Raw` view if you want to see the file as it exists on disk in hex view.
 
+
 ### Live Preview
 
 Any changes made in the Hex view will take effect immediately in any other views open into the same file (new views can be created via the `Split to new tab`, or `Split to new window` options under `View`, or via [splitting panes](#tiling-panes)). This can, however, cause large amounts of re-analysis so be warned before making large edits or transformations in a large binary file.
 
-## Linear View
-
-![linear](../img/linear.png "Linear View"){ width="1000" }
-
-Linear view is a hybrid view between a graph-based disassembly window and the raw hex view. It lists the entire binary's memory in a linear fashion and is especially useful when trying to find sections of a binary that were not properly identified as code or even just examining data.
-
-Linear view is commonly used for identifying and adding type information for unknown data. To this end, as you scroll, you'll see data and code interspersed. Much like the graph view, you can turn on and off addresses via the command palette `Show Address` or the ☰ menu on the top right of the linear view pane. Many other [options](#view-options) are also available.
 
 ## Edit Function Properties Dialog
 
@@ -903,23 +913,6 @@ This element is a table containing a row for each register stack (e.g. x87) in t
 
 This dropdown selects the [function-level workflow](https://docs.binary.ninja/dev/workflows.html#workflow) which is used to analyze this function.
 
-## High Level IL
-
-![HLIL Scoping Options >](../img/hlil-scope.png "HLIL Scoping Options"){ width="400" }
-
-Binary Ninja features a decompiler that produces High Level IL (HLIL) as output. HLIL is not intended to be a representation of the code in C, but some users prefer to have a more C-like scoping style.
-
-You can control the way HLIL appears in the settings.
-
-The different options are shown below:
-
-![HLIL Scoping Display](../img/hlil-braces.png "HLIL Scoping Display"){ width="500" }
-
-## Pseudo C
-
-![Pseudo C](../img/pseudo-c.png "Pseudo C View"){ width="800" }
-
-Binary Ninja offers an option to render the HLIL as a decompilation to "Pseudo C". This decompilation is intended to be more familiar to the user than the HLIL. It is not necessarily intended to be "compliant" C or even recompilable. In some cases, it may be possible to edit it into a form that a C compiler will accept, but the amount of effort required will vary widely, and no guarantee is made that it will be possible in all cases.
 
 ## Dead Store Elimination
 

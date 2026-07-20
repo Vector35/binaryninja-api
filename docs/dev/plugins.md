@@ -14,6 +14,23 @@ To start, we suggest you download the [sample plugin](https://github.com/Vector3
 - For small scripts, you can include all the code inside `__init__.py`, though we recommend for larger scripts that `__init__.py` just act as an initializer and calls into functions organized appropriately in other files.
 - If you have python dependencies, create a [requirements.txt](https://pip.pypa.io/en/latest/cli/pip_freeze/) listing any python dependencies.
 
+### Plugin Description Display
+
+Binary Ninja displays plugin descriptions differently depending on the contents of the `plugin.json` file.
+
+- If `longdescription` exists **and is longer than 100 characters**, the Extension Manager displays the `longdescription`.
+- If `longdescription` is missing, or is **100 characters or fewer**, the Extension Manager instead displays the contents of the plugin repository's `README.md`.
+
+### Images in README Files
+
+When you include images for preview in the Extension Manager, be aware that animated gifs are not fully supported. They will be rendered as static images of the first frame.
+
+Additionally, all images should be included using FULL github URLs as they will not render in the Extension Manager without that.
+
+For example:
+
+![](https://raw.githubusercontent.com/Vector35/6502/refs/heads/master/media/nes.png)
+  
 ### Submitting to the Plugin Manager
 
 If your plugin was created as described above, there's only two steps to get it submitted to the plugin manager!

@@ -159,6 +159,19 @@ Debian requires one package be manually installed to support the emoji icons use
 apt install fonts-noto-color-emoji
 ```
 
+#### glibc Version Requirements
+
+Binary Ninja targets the glibc shipped with the latest and previous-latest Ubuntu LTS releases. With the release of Ubuntu 26.04, that baseline moved from 22.04/24.04 to 24.04/26.04, which raised the minimum required glibc version for development builds. Distributions with an older glibc will fail to launch — notably Debian 12, which ships glibc 2.36 rather than the 2.38 now required.
+
+If you hit this, the two supported options are:
+
+* **Stay on the 5.3 stable release**, which targets an older glibc that remains compatible with Debian 12.
+* **Upgrade to Debian 13**, which ships glibc 2.41 and will remain compatible until Ubuntu 28.04 is released.
+
+If your current install no longer runs and you need a fresh installer, download one from the [Portal](https://portal.binary.ninja/).
+
+If you must run development builds on Debian 12, several unsupported work-arounds exist, though none are particularly clean. The most promising are a rootless Podman container or a `debootstrap` chroot with access to your X/Wayland server, either of which lets you run Debian 13 packages while keeping the host on Debian 12. Compiling glibc 2.38 and its dependencies yourself and injecting them via `LD_PRELOAD` or `LD_LIBRARY_PATH` is theoretically possible but significantly more effort. None of these configurations are tested or supported.
+
 #### Headless Ubuntu
 
 If you're having trouble getting Binary Ninja installed in a headless server install where you want to be able to X-Forward the GUI on a remote machine, the following should meet requirements (for at least 14.04 LTS):

@@ -36,8 +36,10 @@ pub struct Settings {
 
 impl Settings {
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNSettings) -> Ref<Self> {
-        debug_assert!(!handle.is_null());
-        Ref::new(Self { handle })
+        unsafe {
+            debug_assert!(!handle.is_null());
+            Ref::new(Self { handle })
+        }
     }
 
     /// Retrieve the global settings instance, this will be populated by both the core and plugins.
@@ -546,13 +548,17 @@ impl ToOwned for Settings {
 
 unsafe impl RefCountable for Settings {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewSettingsReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewSettingsReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeSettings(handle.handle);
+        unsafe {
+            BNFreeSettings(handle.handle);
+        }
     }
 }
 

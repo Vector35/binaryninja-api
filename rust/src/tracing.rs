@@ -57,7 +57,7 @@ macro_rules! tracing_init {
         let layer = $crate::tracing::BinaryNinjaLayer::default();
         $crate::tracing::init_with_layer(layer);
     };
-    ($name:expr) => {
+    ($name:expr_2021) => {
         let layer = $crate::tracing::BinaryNinjaLayer::default()
             .with_target_mapping(env!("CARGO_CRATE_NAME"), $name);
         $crate::tracing::init_with_layer(layer);

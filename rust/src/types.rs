@@ -653,8 +653,10 @@ impl Type {
     }
 
     pub unsafe fn ref_from_raw(handle: *mut BNType) -> Ref<Self> {
-        debug_assert!(!handle.is_null());
-        Ref::new(Self { handle })
+        unsafe {
+            debug_assert!(!handle.is_null());
+            Ref::new(Self { handle })
+        }
     }
 
     pub fn to_builder(&self) -> TypeBuilder {
@@ -1143,11 +1145,13 @@ unsafe impl Sync for Type {}
 
 unsafe impl RefCountable for Type {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Self::ref_from_raw(BNNewTypeReference(handle.handle))
+        unsafe { Self::ref_from_raw(BNNewTypeReference(handle.handle)) }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeType(handle.handle);
+        unsafe {
+            BNFreeType(handle.handle);
+        }
     }
 }
 
@@ -1167,12 +1171,14 @@ impl CoreArrayProvider for Type {
 
 unsafe impl CoreArrayProviderInner for Type {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeTypeList(raw, count)
+        unsafe { BNFreeTypeList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        // TODO: This is assuming &'a Type is &*mut BNType
-        std::mem::transmute(raw)
+        unsafe {
+            // TODO: This is assuming &'a Type is &*mut BNType
+            std::mem::transmute(raw)
+        }
     }
 }
 
@@ -1554,8 +1560,10 @@ impl NamedTypeReference {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNNamedTypeReference) -> Ref<Self> {
-        debug_assert!(!handle.is_null());
-        Ref::new(Self { handle })
+        unsafe {
+            debug_assert!(!handle.is_null());
+            Ref::new(Self { handle })
+        }
     }
 
     /// Create an NTR to a type that did not come directly from a BinaryView's types list.
@@ -1649,11 +1657,11 @@ impl ToOwned for NamedTypeReference {
 
 unsafe impl RefCountable for NamedTypeReference {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Self::ref_from_raw(BNNewNamedTypeReference(handle.handle))
+        unsafe { Self::ref_from_raw(BNNewNamedTypeReference(handle.handle)) }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeNamedTypeReference(handle.handle)
+        unsafe { BNFreeNamedTypeReference(handle.handle) }
     }
 }
 
@@ -1733,7 +1741,9 @@ impl CoreArrayProvider for QualifiedNameAndType {
 
 unsafe impl CoreArrayProviderInner for QualifiedNameAndType {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeTypeAndNameList(raw, count);
+        unsafe {
+            BNFreeTypeAndNameList(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -1788,7 +1798,9 @@ impl CoreArrayProvider for QualifiedNameTypeAndId {
 
 unsafe impl CoreArrayProviderInner for QualifiedNameTypeAndId {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeTypeIdList(raw, count);
+        unsafe {
+            BNFreeTypeIdList(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -1855,7 +1867,9 @@ impl CoreArrayProvider for NameAndType {
 
 unsafe impl CoreArrayProviderInner for NameAndType {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeNameAndTypeList(raw, count);
+        unsafe {
+            BNFreeNameAndTypeList(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {

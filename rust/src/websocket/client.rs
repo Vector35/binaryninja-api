@@ -75,12 +75,12 @@ pub struct CoreWebsocketClient {
 
 impl CoreWebsocketClient {
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNWebsocketClient>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     #[allow(clippy::mut_from_ref)]
     pub(crate) unsafe fn as_raw(&self) -> &mut BNWebsocketClient {
-        &mut *self.handle.as_ptr()
+        unsafe { &mut *self.handle.as_ptr() }
     }
 
     /// Call the connect callback function, forward the callback returned value
@@ -208,17 +208,21 @@ impl ToOwned for CoreWebsocketClient {
 
 unsafe impl RefCountable for CoreWebsocketClient {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        let result = BNNewWebsocketClientReference(handle.as_raw());
-        unsafe { Self::ref_from_raw(NonNull::new(result).unwrap()) }
+        unsafe {
+            let result = BNNewWebsocketClientReference(handle.as_raw());
+            Self::ref_from_raw(NonNull::new(result).unwrap())
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeWebsocketClient(handle.as_raw())
+        unsafe { BNFreeWebsocketClient(handle.as_raw()) }
     }
 }
 
 pub(crate) unsafe extern "C" fn cb_destroy_client<W: WebsocketClient>(ctxt: *mut c_void) {
-    let _ = Box::from_raw(ctxt as *mut W);
+    unsafe {
+        let _ = Box::from_raw(ctxt as *mut W);
+    }
 }
 
 pub(crate) unsafe extern "C" fn cb_connect<W: WebsocketClient>(
@@ -228,18 +232,21 @@ pub(crate) unsafe extern "C" fn cb_connect<W: WebsocketClient>(
     header_keys: *const *const c_char,
     header_values: *const *const c_char,
 ) -> bool {
-    let ctxt: &mut W = &mut *(ctxt as *mut W);
-    let host = CStr::from_ptr(host);
-    // SAFETY BnString and *mut c_char are transparent
-    let header_count = usize::try_from(header_count).unwrap();
-    let header_keys = core::slice::from_raw_parts(header_keys as *const BnString, header_count);
-    let header_values = core::slice::from_raw_parts(header_values as *const BnString, header_count);
-    let header_keys_str = header_keys.iter().map(|s| s.to_string_lossy().to_string());
-    let header_values_str = header_values
-        .iter()
-        .map(|s| s.to_string_lossy().to_string());
-    let header = header_keys_str.zip(header_values_str);
-    ctxt.connect(&host.to_string_lossy(), header)
+    unsafe {
+        let ctxt: &mut W = &mut *(ctxt as *mut W);
+        let host = CStr::from_ptr(host);
+        // SAFETY BnString and *mut c_char are transparent
+        let header_count = usize::try_from(header_count).unwrap();
+        let header_keys = core::slice::from_raw_parts(header_keys as *const BnString, header_count);
+        let header_values =
+            core::slice::from_raw_parts(header_values as *const BnString, header_count);
+        let header_keys_str = header_keys.iter().map(|s| s.to_string_lossy().to_string());
+        let header_values_str = header_values
+            .iter()
+            .map(|s| s.to_string_lossy().to_string());
+        let header = header_keys_str.zip(header_values_str);
+        ctxt.connect(&host.to_string_lossy(), header)
+    }
 }
 
 pub(crate) unsafe extern "C" fn cb_write<W: WebsocketClient>(
@@ -247,31 +254,41 @@ pub(crate) unsafe extern "C" fn cb_write<W: WebsocketClient>(
     len: u64,
     ctxt: *mut c_void,
 ) -> bool {
-    let ctxt: &mut W = &mut *(ctxt as *mut W);
-    let len = usize::try_from(len).unwrap();
-    let data = core::slice::from_raw_parts(data, len);
-    ctxt.write(data)
+    unsafe {
+        let ctxt: &mut W = &mut *(ctxt as *mut W);
+        let len = usize::try_from(len).unwrap();
+        let data = core::slice::from_raw_parts(data, len);
+        ctxt.write(data)
+    }
 }
 
 pub(crate) unsafe extern "C" fn cb_disconnect<W: WebsocketClient>(ctxt: *mut c_void) -> bool {
-    let ctxt: &mut W = &mut *(ctxt as *mut W);
-    ctxt.disconnect()
+    unsafe {
+        let ctxt: &mut W = &mut *(ctxt as *mut W);
+        ctxt.disconnect()
+    }
 }
 
 unsafe extern "C" fn cb_connected<W: WebsocketClientCallback>(ctxt: *mut c_void) -> bool {
-    let ctxt: &mut W = &mut *(ctxt as *mut W);
-    ctxt.connected()
+    unsafe {
+        let ctxt: &mut W = &mut *(ctxt as *mut W);
+        ctxt.connected()
+    }
 }
 
 unsafe extern "C" fn cb_disconnected<W: WebsocketClientCallback>(ctxt: *mut c_void) {
-    let ctxt: &mut W = &mut *(ctxt as *mut W);
-    ctxt.disconnected()
+    unsafe {
+        let ctxt: &mut W = &mut *(ctxt as *mut W);
+        ctxt.disconnected()
+    }
 }
 
 unsafe extern "C" fn cb_error<W: WebsocketClientCallback>(msg: *const c_char, ctxt: *mut c_void) {
-    let ctxt: &mut W = &mut *(ctxt as *mut W);
-    let msg = CStr::from_ptr(msg);
-    ctxt.error(&msg.to_string_lossy())
+    unsafe {
+        let ctxt: &mut W = &mut *(ctxt as *mut W);
+        let msg = CStr::from_ptr(msg);
+        ctxt.error(&msg.to_string_lossy())
+    }
 }
 
 unsafe extern "C" fn cb_read<W: WebsocketClientCallback>(
@@ -279,8 +296,10 @@ unsafe extern "C" fn cb_read<W: WebsocketClientCallback>(
     len: u64,
     ctxt: *mut c_void,
 ) -> bool {
-    let ctxt: &mut W = &mut *(ctxt as *mut W);
-    let len = usize::try_from(len).unwrap();
-    let data = core::slice::from_raw_parts_mut(data, len);
-    ctxt.read(data)
+    unsafe {
+        let ctxt: &mut W = &mut *(ctxt as *mut W);
+        let len = usize::try_from(len).unwrap();
+        let data = core::slice::from_raw_parts_mut(data, len);
+        ctxt.read(data)
+    }
 }

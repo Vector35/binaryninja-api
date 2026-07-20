@@ -300,8 +300,10 @@ unsafe extern "C" fn cb_custom_interaction_handler_task<P: FnMut(usize, usize) -
     cur: usize,
     max: usize,
 ) -> bool {
-    let ctxt = ctxt as *mut P;
-    (*ctxt)(cur, max)
+    unsafe {
+        let ctxt = ctxt as *mut P;
+        (*ctxt)(cur, max)
+    }
 }
 
 unsafe extern "C" fn cb_show_plain_text_report<R: InteractionHandler>(
@@ -310,14 +312,16 @@ unsafe extern "C" fn cb_show_plain_text_report<R: InteractionHandler>(
     title: *const c_char,
     contents: *const c_char,
 ) {
-    let ctxt = ctxt as *mut R;
-    let title = raw_to_string(title).unwrap();
-    let contents = raw_to_string(contents).unwrap();
-    let view = match !view.is_null() {
-        true => Some(BinaryView::from_raw(view)),
-        false => None,
-    };
-    (*ctxt).show_plain_text_report(view.as_ref(), &title, &contents)
+    unsafe {
+        let ctxt = ctxt as *mut R;
+        let title = raw_to_string(title).unwrap();
+        let contents = raw_to_string(contents).unwrap();
+        let view = match !view.is_null() {
+            true => Some(BinaryView::from_raw(view)),
+            false => None,
+        };
+        (*ctxt).show_plain_text_report(view.as_ref(), &title, &contents)
+    }
 }
 
 unsafe extern "C" fn cb_show_markdown_report<R: InteractionHandler>(
@@ -327,15 +331,17 @@ unsafe extern "C" fn cb_show_markdown_report<R: InteractionHandler>(
     contents: *const c_char,
     plaintext: *const c_char,
 ) {
-    let ctxt = ctxt as *mut R;
-    let title = raw_to_string(title).unwrap();
-    let contents = raw_to_string(contents).unwrap();
-    let plaintext = raw_to_string(plaintext).unwrap();
-    let view = match !view.is_null() {
-        true => Some(BinaryView::from_raw(view)),
-        false => None,
-    };
-    (*ctxt).show_markdown_report(view.as_ref(), &title, &contents, &plaintext)
+    unsafe {
+        let ctxt = ctxt as *mut R;
+        let title = raw_to_string(title).unwrap();
+        let contents = raw_to_string(contents).unwrap();
+        let plaintext = raw_to_string(plaintext).unwrap();
+        let view = match !view.is_null() {
+            true => Some(BinaryView::from_raw(view)),
+            false => None,
+        };
+        (*ctxt).show_markdown_report(view.as_ref(), &title, &contents, &plaintext)
+    }
 }
 
 unsafe extern "C" fn cb_show_html_report<R: InteractionHandler>(
@@ -345,15 +351,17 @@ unsafe extern "C" fn cb_show_html_report<R: InteractionHandler>(
     contents: *const c_char,
     plaintext: *const c_char,
 ) {
-    let ctxt = ctxt as *mut R;
-    let title = raw_to_string(title).unwrap();
-    let contents = raw_to_string(contents).unwrap();
-    let plaintext = raw_to_string(plaintext).unwrap();
-    let view = match !view.is_null() {
-        true => Some(BinaryView::from_raw(view)),
-        false => None,
-    };
-    (*ctxt).show_html_report(view.as_ref(), &title, &contents, &plaintext)
+    unsafe {
+        let ctxt = ctxt as *mut R;
+        let title = raw_to_string(title).unwrap();
+        let contents = raw_to_string(contents).unwrap();
+        let plaintext = raw_to_string(plaintext).unwrap();
+        let view = match !view.is_null() {
+            true => Some(BinaryView::from_raw(view)),
+            false => None,
+        };
+        (*ctxt).show_html_report(view.as_ref(), &title, &contents, &plaintext)
+    }
 }
 
 unsafe extern "C" fn cb_show_graph_report<R: InteractionHandler>(
@@ -362,13 +370,15 @@ unsafe extern "C" fn cb_show_graph_report<R: InteractionHandler>(
     title: *const c_char,
     graph: *mut BNFlowGraph,
 ) {
-    let ctxt = ctxt as *mut R;
-    let title = raw_to_string(title).unwrap();
-    let view = match !view.is_null() {
-        true => Some(BinaryView::from_raw(view)),
-        false => None,
-    };
-    (*ctxt).show_graph_report(view.as_ref(), &title, &FlowGraph::from_raw(graph))
+    unsafe {
+        let ctxt = ctxt as *mut R;
+        let title = raw_to_string(title).unwrap();
+        let view = match !view.is_null() {
+            true => Some(BinaryView::from_raw(view)),
+            false => None,
+        };
+        (*ctxt).show_graph_report(view.as_ref(), &title, &FlowGraph::from_raw(graph))
+    }
 }
 
 unsafe extern "C" fn cb_show_report_collection<R: InteractionHandler>(
@@ -376,12 +386,14 @@ unsafe extern "C" fn cb_show_report_collection<R: InteractionHandler>(
     title: *const c_char,
     report: *mut BNReportCollection,
 ) {
-    let ctxt = ctxt as *mut R;
-    let title = raw_to_string(title).unwrap();
-    (*ctxt).show_report_collection(
-        &title,
-        &ReportCollection::from_raw(ptr::NonNull::new(report).unwrap()),
-    )
+    unsafe {
+        let ctxt = ctxt as *mut R;
+        let title = raw_to_string(title).unwrap();
+        (*ctxt).show_report_collection(
+            &title,
+            &ReportCollection::from_raw(ptr::NonNull::new(report).unwrap()),
+        )
+    }
 }
 
 unsafe extern "C" fn cb_get_text_line_input<R: InteractionHandler>(
@@ -390,16 +402,22 @@ unsafe extern "C" fn cb_get_text_line_input<R: InteractionHandler>(
     prompt: *const c_char,
     title: *const c_char,
 ) -> bool {
-    let ctxt = ctxt as *mut R;
-    let prompt = raw_to_string(prompt).unwrap();
-    let title = raw_to_string(title).unwrap();
-    let result = (*ctxt).get_text_line_input(&prompt, &title);
-    if let Some(result) = result {
-        unsafe { *result_ffi = BnString::into_raw(BnString::new(result)) };
-        true
-    } else {
-        unsafe { *result_ffi = ptr::null_mut() };
-        false
+    unsafe {
+        let ctxt = ctxt as *mut R;
+        let prompt = raw_to_string(prompt).unwrap();
+        let title = raw_to_string(title).unwrap();
+        let result = (*ctxt).get_text_line_input(&prompt, &title);
+        if let Some(result) = result {
+            {
+                *result_ffi = BnString::into_raw(BnString::new(result))
+            };
+            true
+        } else {
+            {
+                *result_ffi = ptr::null_mut()
+            };
+            false
+        }
     }
 }
 
@@ -409,16 +427,22 @@ unsafe extern "C" fn cb_get_integer_input<R: InteractionHandler>(
     prompt: *const c_char,
     title: *const c_char,
 ) -> bool {
-    let ctxt = ctxt as *mut R;
-    let prompt = raw_to_string(prompt).unwrap();
-    let title = raw_to_string(title).unwrap();
-    let result = (*ctxt).get_integer_input(&prompt, &title);
-    if let Some(result) = result {
-        unsafe { *result_ffi = result };
-        true
-    } else {
-        unsafe { *result_ffi = 0 };
-        false
+    unsafe {
+        let ctxt = ctxt as *mut R;
+        let prompt = raw_to_string(prompt).unwrap();
+        let title = raw_to_string(title).unwrap();
+        let result = (*ctxt).get_integer_input(&prompt, &title);
+        if let Some(result) = result {
+            {
+                *result_ffi = result
+            };
+            true
+        } else {
+            {
+                *result_ffi = 0
+            };
+            false
+        }
     }
 }
 
@@ -430,17 +454,23 @@ unsafe extern "C" fn cb_get_address_input<R: InteractionHandler>(
     view: *mut BNBinaryView,
     current_addr: u64,
 ) -> bool {
-    let ctxt = ctxt as *mut R;
-    let prompt = raw_to_string(prompt).unwrap();
-    let title = raw_to_string(title).unwrap();
-    let view = (!view.is_null()).then(|| BinaryView::from_raw(view));
-    let result = (*ctxt).get_address_input(&prompt, &title, view.as_ref(), current_addr);
-    if let Some(result) = result {
-        unsafe { *result_ffi = result };
-        true
-    } else {
-        unsafe { *result_ffi = 0 };
-        false
+    unsafe {
+        let ctxt = ctxt as *mut R;
+        let prompt = raw_to_string(prompt).unwrap();
+        let title = raw_to_string(title).unwrap();
+        let view = (!view.is_null()).then(|| BinaryView::from_raw(view));
+        let result = (*ctxt).get_address_input(&prompt, &title, view.as_ref(), current_addr);
+        if let Some(result) = result {
+            {
+                *result_ffi = result
+            };
+            true
+        } else {
+            {
+                *result_ffi = 0
+            };
+            false
+        }
     }
 }
 
@@ -452,23 +482,29 @@ unsafe extern "C" fn cb_get_choice_input<R: InteractionHandler>(
     choices: *mut *const c_char,
     count: usize,
 ) -> bool {
-    let ctxt = ctxt as *mut R;
-    let prompt = raw_to_string(prompt).unwrap();
-    let title = raw_to_string(title).unwrap();
-    let choices = unsafe { core::slice::from_raw_parts(choices, count) };
-    // SAFETY: BnString and *const c_char are transparent
-    let choices = unsafe { core::mem::transmute::<&[*const c_char], &[BnString]>(choices) };
-    let choices: Vec<String> = choices
-        .iter()
-        .map(|x| x.to_string_lossy().to_string())
-        .collect();
-    let result = (*ctxt).get_choice_input(&prompt, &title, choices);
-    if let Some(result) = result {
-        unsafe { *result_ffi = result };
-        true
-    } else {
-        unsafe { *result_ffi = 0 };
-        false
+    unsafe {
+        let ctxt = ctxt as *mut R;
+        let prompt = raw_to_string(prompt).unwrap();
+        let title = raw_to_string(title).unwrap();
+        let choices = { core::slice::from_raw_parts(choices, count) };
+        // SAFETY: BnString and *const c_char are transparent
+        let choices = { core::mem::transmute::<&[*const c_char], &[BnString]>(choices) };
+        let choices: Vec<String> = choices
+            .iter()
+            .map(|x| x.to_string_lossy().to_string())
+            .collect();
+        let result = (*ctxt).get_choice_input(&prompt, &title, choices);
+        if let Some(result) = result {
+            {
+                *result_ffi = result
+            };
+            true
+        } else {
+            {
+                *result_ffi = 0
+            };
+            false
+        }
     }
 }
 
@@ -480,23 +516,29 @@ unsafe extern "C" fn cb_get_large_choice_input<R: InteractionHandler>(
     choices: *mut *const c_char,
     count: usize,
 ) -> bool {
-    let ctxt = ctxt as *mut R;
-    let prompt = raw_to_string(prompt).unwrap();
-    let title = raw_to_string(title).unwrap();
-    let choices = unsafe { core::slice::from_raw_parts(choices, count) };
-    // SAFETY: BnString and *const c_char are transparent
-    let choices = unsafe { core::mem::transmute::<&[*const c_char], &[BnString]>(choices) };
-    let choices: Vec<String> = choices
-        .iter()
-        .map(|x| x.to_string_lossy().to_string())
-        .collect();
-    let result = (*ctxt).get_large_choice_input(&prompt, &title, choices);
-    if let Some(result) = result {
-        unsafe { *result_ffi = result };
-        true
-    } else {
-        unsafe { *result_ffi = 0 };
-        false
+    unsafe {
+        let ctxt = ctxt as *mut R;
+        let prompt = raw_to_string(prompt).unwrap();
+        let title = raw_to_string(title).unwrap();
+        let choices = { core::slice::from_raw_parts(choices, count) };
+        // SAFETY: BnString and *const c_char are transparent
+        let choices = { core::mem::transmute::<&[*const c_char], &[BnString]>(choices) };
+        let choices: Vec<String> = choices
+            .iter()
+            .map(|x| x.to_string_lossy().to_string())
+            .collect();
+        let result = (*ctxt).get_large_choice_input(&prompt, &title, choices);
+        if let Some(result) = result {
+            {
+                *result_ffi = result
+            };
+            true
+        } else {
+            {
+                *result_ffi = 0
+            };
+            false
+        }
     }
 }
 
@@ -506,17 +548,23 @@ unsafe extern "C" fn cb_get_open_file_name_input<R: InteractionHandler>(
     prompt: *const c_char,
     ext: *const c_char,
 ) -> bool {
-    let ctxt = ctxt as *mut R;
-    let prompt = raw_to_string(prompt).unwrap();
-    let ext = (!ext.is_null()).then(|| unsafe { CStr::from_ptr(ext) });
-    let result =
-        (*ctxt).get_open_file_name_input(&prompt, ext.map(|x| x.to_string_lossy().to_string()));
-    if let Some(result) = result {
-        unsafe { *result_ffi = BnString::into_raw(BnString::new(result)) };
-        true
-    } else {
-        unsafe { *result_ffi = ptr::null_mut() };
-        false
+    unsafe {
+        let ctxt = ctxt as *mut R;
+        let prompt = raw_to_string(prompt).unwrap();
+        let ext = (!ext.is_null()).then(|| CStr::from_ptr(ext));
+        let result =
+            (*ctxt).get_open_file_name_input(&prompt, ext.map(|x| x.to_string_lossy().to_string()));
+        if let Some(result) = result {
+            {
+                *result_ffi = BnString::into_raw(BnString::new(result))
+            };
+            true
+        } else {
+            {
+                *result_ffi = ptr::null_mut()
+            };
+            false
+        }
     }
 }
 
@@ -527,17 +575,23 @@ unsafe extern "C" fn cb_get_save_file_name_input<R: InteractionHandler>(
     ext: *const c_char,
     default_name: *const c_char,
 ) -> bool {
-    let ctxt = ctxt as *mut R;
-    let prompt = raw_to_string(prompt).unwrap();
-    let ext = raw_to_string(ext);
-    let default_name = raw_to_string(default_name);
-    let result = (*ctxt).get_save_file_name_input(&prompt, ext, default_name);
-    if let Some(result) = result {
-        unsafe { *result_ffi = BnString::into_raw(BnString::new(result)) };
-        true
-    } else {
-        unsafe { *result_ffi = ptr::null_mut() };
-        false
+    unsafe {
+        let ctxt = ctxt as *mut R;
+        let prompt = raw_to_string(prompt).unwrap();
+        let ext = raw_to_string(ext);
+        let default_name = raw_to_string(default_name);
+        let result = (*ctxt).get_save_file_name_input(&prompt, ext, default_name);
+        if let Some(result) = result {
+            {
+                *result_ffi = BnString::into_raw(BnString::new(result))
+            };
+            true
+        } else {
+            {
+                *result_ffi = ptr::null_mut()
+            };
+            false
+        }
     }
 }
 
@@ -547,16 +601,22 @@ unsafe extern "C" fn cb_get_directory_name_input<R: InteractionHandler>(
     prompt: *const c_char,
     default_name: *const c_char,
 ) -> bool {
-    let ctxt = ctxt as *mut R;
-    let prompt = raw_to_string(prompt).unwrap();
-    let default_name = raw_to_string(default_name);
-    let result = (*ctxt).get_directory_name_input(&prompt, default_name);
-    if let Some(result) = result {
-        unsafe { *result_ffi = BnString::into_raw(BnString::new(result)) };
-        true
-    } else {
-        unsafe { *result_ffi = ptr::null_mut() };
-        false
+    unsafe {
+        let ctxt = ctxt as *mut R;
+        let prompt = raw_to_string(prompt).unwrap();
+        let default_name = raw_to_string(default_name);
+        let result = (*ctxt).get_directory_name_input(&prompt, default_name);
+        if let Some(result) = result {
+            {
+                *result_ffi = BnString::into_raw(BnString::new(result))
+            };
+            true
+        } else {
+            {
+                *result_ffi = ptr::null_mut()
+            };
+            false
+        }
     }
 }
 
@@ -567,17 +627,23 @@ unsafe extern "C" fn cb_get_checkbox_input<R: InteractionHandler>(
     title: *const c_char,
     default_choice: *const i64,
 ) -> bool {
-    let ctxt = ctxt as *mut R;
-    let prompt = raw_to_string(prompt).unwrap();
-    let title = raw_to_string(title).unwrap();
-    let default = (!default_choice.is_null()).then(|| *default_choice);
-    let result = (*ctxt).get_checkbox_input(&prompt, &title, default);
-    if let Some(result) = result {
-        unsafe { *result_ffi = result };
-        true
-    } else {
-        unsafe { *result_ffi = 0 };
-        false
+    unsafe {
+        let ctxt = ctxt as *mut R;
+        let prompt = raw_to_string(prompt).unwrap();
+        let title = raw_to_string(title).unwrap();
+        let default = (!default_choice.is_null()).then(|| *default_choice);
+        let result = (*ctxt).get_checkbox_input(&prompt, &title, default);
+        if let Some(result) = result {
+            {
+                *result_ffi = result
+            };
+            true
+        } else {
+            {
+                *result_ffi = 0
+            };
+            false
+        }
     }
 }
 
@@ -587,24 +653,26 @@ unsafe extern "C" fn cb_get_form_input<R: InteractionHandler>(
     count: usize,
     title: *const c_char,
 ) -> bool {
-    let ctxt = ctxt as *mut R;
-    let raw_fields = unsafe { core::slice::from_raw_parts_mut(fields, count) };
-    let fields: Vec<_> = raw_fields
-        .iter_mut()
-        .map(|x| FormInputField::from_raw(x))
-        .collect();
-    let title = raw_to_string(title).unwrap();
-    let mut form = Form::new_with_fields(title, fields);
-    let results = (*ctxt).get_form_input(&mut form);
-    // Update the fields with the new values. Freeing the old ones.
-    raw_fields
-        .iter_mut()
-        .enumerate()
-        .for_each(|(idx, raw_field)| {
-            FormInputField::free_raw(*raw_field);
-            *raw_field = form.fields[idx].into_raw();
-        });
-    results
+    unsafe {
+        let ctxt = ctxt as *mut R;
+        let raw_fields = { core::slice::from_raw_parts_mut(fields, count) };
+        let fields: Vec<_> = raw_fields
+            .iter_mut()
+            .map(|x| FormInputField::from_raw(x))
+            .collect();
+        let title = raw_to_string(title).unwrap();
+        let mut form = Form::new_with_fields(title, fields);
+        let results = (*ctxt).get_form_input(&mut form);
+        // Update the fields with the new values. Freeing the old ones.
+        raw_fields
+            .iter_mut()
+            .enumerate()
+            .for_each(|(idx, raw_field)| {
+                FormInputField::free_raw(*raw_field);
+                *raw_field = form.fields[idx].into_raw();
+            });
+        results
+    }
 }
 
 unsafe extern "C" fn cb_show_message_box<R: InteractionHandler>(
@@ -614,19 +682,23 @@ unsafe extern "C" fn cb_show_message_box<R: InteractionHandler>(
     buttons: BNMessageBoxButtonSet,
     icon: BNMessageBoxIcon,
 ) -> BNMessageBoxButtonResult {
-    let ctxt = ctxt as *mut R;
-    let title = raw_to_string(title).unwrap();
-    let text = raw_to_string(text).unwrap();
-    (*ctxt).show_message_box(&title, &text, buttons, icon)
+    unsafe {
+        let ctxt = ctxt as *mut R;
+        let title = raw_to_string(title).unwrap();
+        let text = raw_to_string(text).unwrap();
+        (*ctxt).show_message_box(&title, &text, buttons, icon)
+    }
 }
 
 unsafe extern "C" fn cb_open_url<R: InteractionHandler>(
     ctxt: *mut c_void,
     url: *const c_char,
 ) -> bool {
-    let ctxt = ctxt as *mut R;
-    let url = raw_to_string(url).unwrap();
-    (*ctxt).open_url(&url)
+    unsafe {
+        let ctxt = ctxt as *mut R;
+        let url = raw_to_string(url).unwrap();
+        (*ctxt).open_url(&url)
+    }
 }
 
 unsafe extern "C" fn cb_run_progress_dialog<R: InteractionHandler>(
@@ -642,11 +714,13 @@ unsafe extern "C" fn cb_run_progress_dialog<R: InteractionHandler>(
     >,
     task_ctxt: *mut c_void,
 ) -> bool {
-    let ctxt = ctxt as *mut R;
-    let title = raw_to_string(title).unwrap();
-    let task = InteractionHandlerTask {
-        ctxt: task_ctxt,
-        task,
-    };
-    (*ctxt).run_progress_dialog(&title, can_cancel, &task)
+    unsafe {
+        let ctxt = ctxt as *mut R;
+        let title = raw_to_string(title).unwrap();
+        let task = InteractionHandlerTask {
+            ctxt: task_ctxt,
+            task,
+        };
+        (*ctxt).run_progress_dialog(&title, can_cancel, &task)
+    }
 }

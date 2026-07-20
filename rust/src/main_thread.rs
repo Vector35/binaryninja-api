@@ -12,8 +12,10 @@ pub struct MainThreadActionExecutor {
 
 impl MainThreadActionExecutor {
     unsafe extern "C" fn cb_execute(ctx: *mut c_void) {
-        let f: Box<Self> = Box::from_raw(ctx as *mut Self);
-        f.execute();
+        unsafe {
+            let f: Box<Self> = Box::from_raw(ctx as *mut Self);
+            f.execute();
+        }
     }
 
     pub fn execute(&self) {
@@ -58,11 +60,13 @@ pub trait MainThreadHandler: Sized {
     fn add_action(&self, _view: Ref<MainThreadAction>);
 
     unsafe extern "C" fn cb_add_action(ctxt: *mut c_void, action: *mut BNMainThreadAction) {
-        ffi_wrap!("MainThread::add_action", {
-            let main_thread = &*(ctxt as *mut Self);
-            let action = MainThreadAction::ref_from_raw(action);
-            main_thread.add_action(action);
-        })
+        unsafe {
+            ffi_wrap!("MainThread::add_action", {
+                let main_thread = &*(ctxt as *mut Self);
+                let action = MainThreadAction::ref_from_raw(action);
+                main_thread.add_action(action);
+            })
+        }
     }
 
     /// Register the main thread handler. Leaking [`Self`] in the process.
@@ -116,13 +120,17 @@ impl ToOwned for MainThreadAction {
 
 unsafe impl RefCountable for MainThreadAction {
     unsafe fn inc_ref(action: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewMainThreadActionReference(action.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewMainThreadActionReference(action.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(action: &Self) {
-        BNFreeMainThreadAction(action.handle);
+        unsafe {
+            BNFreeMainThreadAction(action.handle);
+        }
     }
 }
 

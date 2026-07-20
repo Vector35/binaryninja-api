@@ -18,7 +18,7 @@ impl RemoteFolder {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNRemoteFolder>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     // TODO: Rename to local folder?
@@ -157,13 +157,17 @@ unsafe impl Sync for RemoteFolder {}
 
 unsafe impl RefCountable for RemoteFolder {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewRemoteFolderReference(handle.handle.as_ptr())).unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewRemoteFolderReference(handle.handle.as_ptr())).unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeRemoteFolder(handle.handle.as_ptr());
+        unsafe {
+            BNFreeRemoteFolder(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -175,11 +179,13 @@ impl CoreArrayProvider for RemoteFolder {
 
 unsafe impl CoreArrayProviderInner for RemoteFolder {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeRemoteFolderList(raw, count)
+        unsafe { BNFreeRemoteFolderList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }

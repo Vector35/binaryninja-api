@@ -302,8 +302,10 @@ pub fn register_license_changed_callback<'a, F: FnMut(bool) + 'a>(
         ctxt: *mut c_void,
         still_valid: bool,
     ) {
-        let ctxt: &mut F = &mut *(ctxt as *mut F);
-        ctxt(still_valid)
+        unsafe {
+            let ctxt: &mut F = &mut *(ctxt as *mut F);
+            ctxt(still_valid)
+        }
     }
     let mut handle = binaryninjacore_sys::BNEnterpriseServerCallbacks {
         context: Box::leak(Box::new(callback)) as *mut F as *mut c_void,

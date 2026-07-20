@@ -18,7 +18,7 @@ impl RemoteGroup {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNCollaborationGroup>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// Owning Remote
@@ -110,13 +110,18 @@ impl ToOwned for RemoteGroup {
 
 unsafe impl RefCountable for RemoteGroup {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewCollaborationGroupReference(handle.handle.as_ptr())).unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewCollaborationGroupReference(handle.handle.as_ptr()))
+                    .unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeCollaborationGroup(handle.handle.as_ptr());
+        unsafe {
+            BNFreeCollaborationGroup(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -128,12 +133,14 @@ impl CoreArrayProvider for RemoteGroup {
 
 unsafe impl CoreArrayProviderInner for RemoteGroup {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeCollaborationGroupList(raw, count)
+        unsafe { BNFreeCollaborationGroupList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }
 
@@ -155,7 +162,7 @@ impl CoreArrayProvider for GroupId {
 
 unsafe impl CoreArrayProviderInner for GroupId {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNCollaborationFreeIdList(raw, count)
+        unsafe { BNCollaborationFreeIdList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {

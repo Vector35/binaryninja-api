@@ -49,12 +49,14 @@ impl CoreArrayProvider for TypeArchiveSnapshotId {
 
 unsafe impl CoreArrayProviderInner for TypeArchiveSnapshotId {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeStringList(raw, count)
+        unsafe { BNFreeStringList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let str = CStr::from_ptr(*raw).to_str().unwrap().to_string();
-        TypeArchiveSnapshotId(str)
+        unsafe {
+            let str = CStr::from_ptr(*raw).to_str().unwrap().to_string();
+            TypeArchiveSnapshotId(str)
+        }
     }
 }
 
@@ -79,7 +81,7 @@ impl TypeArchive {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNTypeArchive>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// Open the Type Archive at the given path, if it exists.
@@ -698,9 +700,11 @@ impl TypeArchive {
             ctxt: *mut c_void,
             id: *const c_char,
         ) -> bool {
-            let fun: &mut F = &mut *(ctxt as *mut F);
-            let id_str = raw_to_string(id).unwrap();
-            fun(&TypeArchiveSnapshotId(id_str))
+            unsafe {
+                let fun: &mut F = &mut *(ctxt as *mut F);
+                let id_str = raw_to_string(id).unwrap();
+                fun(&TypeArchiveSnapshotId(id_str))
+            }
         }
 
         let parents_cstr: Vec<_> = parents.iter().map(|p| p.clone().to_cstr()).collect();
@@ -823,13 +827,17 @@ impl ToOwned for TypeArchive {
 
 unsafe impl RefCountable for TypeArchive {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewTypeArchiveReference(handle.handle.as_ptr())).unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewTypeArchiveReference(handle.handle.as_ptr())).unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeTypeArchiveReference(handle.handle.as_ptr());
+        unsafe {
+            BNFreeTypeArchiveReference(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -865,12 +873,14 @@ impl CoreArrayProvider for TypeArchive {
 
 unsafe impl CoreArrayProviderInner for TypeArchive {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeTypeArchiveList(raw, count)
+        unsafe { BNFreeTypeArchiveList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }
 
@@ -1001,14 +1011,13 @@ unsafe extern "C" fn cb_type_added<T: TypeArchiveNotificationCallback>(
     id: *const ::std::os::raw::c_char,
     definition: *mut BNType,
 ) {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
-    // `archive` is owned by the caller.
-    let archive = unsafe { TypeArchive::from_raw(NonNull::new(archive).unwrap()) };
-    ctxt.type_added(
-        &archive,
-        unsafe { CStr::from_ptr(id).to_string_lossy().as_ref() },
-        &Type { handle: definition },
-    )
+    unsafe {
+        let ctxt: &mut T = &mut *(ctxt as *mut T);
+        // `archive` is owned by the caller.
+        let archive = { TypeArchive::from_raw(NonNull::new(archive).unwrap()) };
+        let id = CStr::from_ptr(id).to_string_lossy();
+        ctxt.type_added(&archive, id.as_ref(), &Type { handle: definition })
+    }
 }
 unsafe extern "C" fn cb_type_updated<T: TypeArchiveNotificationCallback>(
     ctxt: *mut ::std::os::raw::c_void,
@@ -1017,19 +1026,22 @@ unsafe extern "C" fn cb_type_updated<T: TypeArchiveNotificationCallback>(
     old_definition: *mut BNType,
     new_definition: *mut BNType,
 ) {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
-    // `archive` is owned by the caller.
-    let archive = unsafe { TypeArchive::from_raw(NonNull::new(archive).unwrap()) };
-    ctxt.type_updated(
-        &archive,
-        unsafe { CStr::from_ptr(id).to_string_lossy().as_ref() },
-        &Type {
-            handle: old_definition,
-        },
-        &Type {
-            handle: new_definition,
-        },
-    )
+    unsafe {
+        let ctxt: &mut T = &mut *(ctxt as *mut T);
+        // `archive` is owned by the caller.
+        let archive = { TypeArchive::from_raw(NonNull::new(archive).unwrap()) };
+        let id = CStr::from_ptr(id).to_string_lossy();
+        ctxt.type_updated(
+            &archive,
+            id.as_ref(),
+            &Type {
+                handle: old_definition,
+            },
+            &Type {
+                handle: new_definition,
+            },
+        )
+    }
 }
 unsafe extern "C" fn cb_type_renamed<T: TypeArchiveNotificationCallback>(
     ctxt: *mut ::std::os::raw::c_void,
@@ -1038,19 +1050,17 @@ unsafe extern "C" fn cb_type_renamed<T: TypeArchiveNotificationCallback>(
     old_name: *const BNQualifiedName,
     new_name: *const BNQualifiedName,
 ) {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
-    // `old_name` is freed by the caller
-    let old_name = QualifiedName::from_raw(&*old_name);
-    // `new_name` is freed by the caller
-    let new_name = QualifiedName::from_raw(&*new_name);
-    // `archive` is owned by the caller.
-    let archive = unsafe { TypeArchive::from_raw(NonNull::new(archive).unwrap()) };
-    ctxt.type_renamed(
-        &archive,
-        unsafe { CStr::from_ptr(id).to_string_lossy().as_ref() },
-        &old_name,
-        &new_name,
-    )
+    unsafe {
+        let ctxt: &mut T = &mut *(ctxt as *mut T);
+        // `old_name` is freed by the caller
+        let old_name = QualifiedName::from_raw(&*old_name);
+        // `new_name` is freed by the caller
+        let new_name = QualifiedName::from_raw(&*new_name);
+        // `archive` is owned by the caller.
+        let archive = { TypeArchive::from_raw(NonNull::new(archive).unwrap()) };
+        let id = CStr::from_ptr(id).to_string_lossy();
+        ctxt.type_renamed(&archive, id.as_ref(), &old_name, &new_name)
+    }
 }
 unsafe extern "C" fn cb_type_deleted<T: TypeArchiveNotificationCallback>(
     ctxt: *mut ::std::os::raw::c_void,
@@ -1058,14 +1068,13 @@ unsafe extern "C" fn cb_type_deleted<T: TypeArchiveNotificationCallback>(
     id: *const ::std::os::raw::c_char,
     definition: *mut BNType,
 ) {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
-    // `archive` is owned by the caller.
-    let archive = unsafe { TypeArchive::from_raw(NonNull::new(archive).unwrap()) };
-    ctxt.type_deleted(
-        &archive,
-        unsafe { CStr::from_ptr(id).to_string_lossy().as_ref() },
-        &Type { handle: definition },
-    )
+    unsafe {
+        let ctxt: &mut T = &mut *(ctxt as *mut T);
+        // `archive` is owned by the caller.
+        let archive = { TypeArchive::from_raw(NonNull::new(archive).unwrap()) };
+        let id = CStr::from_ptr(id).to_string_lossy();
+        ctxt.type_deleted(&archive, id.as_ref(), &Type { handle: definition })
+    }
 }
 
 #[repr(transparent)]
@@ -1080,7 +1089,7 @@ impl TypeArchiveMergeConflict {
 
     #[allow(unused)]
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNTypeArchiveMergeConflict>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     pub fn get_type_archive(&self) -> Option<Ref<TypeArchive>> {
@@ -1143,16 +1152,20 @@ impl ToOwned for TypeArchiveMergeConflict {
 
 unsafe impl RefCountable for TypeArchiveMergeConflict {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewTypeArchiveMergeConflictReference(
-                handle.handle.as_ptr(),
-            ))
-            .unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewTypeArchiveMergeConflictReference(
+                    handle.handle.as_ptr(),
+                ))
+                .unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeTypeArchiveMergeConflict(handle.handle.as_ptr());
+        unsafe {
+            BNFreeTypeArchiveMergeConflict(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -1164,11 +1177,13 @@ impl CoreArrayProvider for TypeArchiveMergeConflict {
 
 unsafe impl CoreArrayProviderInner for TypeArchiveMergeConflict {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeTypeArchiveMergeConflictList(raw, count)
+        unsafe { BNFreeTypeArchiveMergeConflictList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }

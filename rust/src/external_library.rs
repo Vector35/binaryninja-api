@@ -19,7 +19,7 @@ impl ExternalLibrary {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNExternalLibrary>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// Get the name of this external library
@@ -55,13 +55,18 @@ impl ToOwned for ExternalLibrary {
 
 unsafe impl RefCountable for ExternalLibrary {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewExternalLibraryReference(handle.handle.as_ptr())).unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewExternalLibraryReference(handle.handle.as_ptr()))
+                    .unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeExternalLibrary(handle.handle.as_ptr());
+        unsafe {
+            BNFreeExternalLibrary(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -82,12 +87,14 @@ impl CoreArrayProvider for ExternalLibrary {
 
 unsafe impl CoreArrayProviderInner for ExternalLibrary {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeExternalLibraryList(raw, count)
+        unsafe { BNFreeExternalLibraryList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }
 
@@ -104,7 +111,7 @@ impl ExternalLocation {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNExternalLocation>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// Get the source symbol for this ExternalLocation
@@ -200,13 +207,18 @@ impl ToOwned for ExternalLocation {
 
 unsafe impl RefCountable for ExternalLocation {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewExternalLocationReference(handle.handle.as_ptr())).unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewExternalLocationReference(handle.handle.as_ptr()))
+                    .unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeExternalLocation(handle.handle.as_ptr());
+        unsafe {
+            BNFreeExternalLocation(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -218,11 +230,13 @@ impl CoreArrayProvider for ExternalLocation {
 
 unsafe impl CoreArrayProviderInner for ExternalLocation {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeExternalLocationList(raw, count)
+        unsafe { BNFreeExternalLocationList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }

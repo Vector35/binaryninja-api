@@ -69,7 +69,7 @@ impl CoreArrayProvider for CoreLineFormatter {
 
 unsafe impl CoreArrayProviderInner for CoreLineFormatter {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeLineFormatterList(raw)
+        unsafe { BNFreeLineFormatterList(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -137,21 +137,23 @@ unsafe extern "C" fn cb_format_lines<C: LineFormatter>(
     raw_settings: *const BNLineFormatterSettings,
     out_count: *mut usize,
 ) -> *mut BNDisassemblyTextLine {
-    // NOTE dropped by line_formatter_free_lines_ffi
-    let ctxt = ctxt as *mut C;
-    let lines_slice = core::slice::from_raw_parts(in_lines, in_count);
-    let lines: Vec<_> = lines_slice
-        .iter()
-        .map(DisassemblyTextLine::from_raw)
-        .collect();
-    let settings = LineFormatterSettings::from_raw(&*raw_settings);
-    let result = (*ctxt).format_lines(&lines, &settings);
-    *out_count = result.len();
-    let result: Box<[BNDisassemblyTextLine]> = result
-        .into_iter()
-        .map(DisassemblyTextLine::into_raw)
-        .collect();
-    Box::leak(result).as_mut_ptr()
+    unsafe {
+        // NOTE dropped by line_formatter_free_lines_ffi
+        let ctxt = ctxt as *mut C;
+        let lines_slice = core::slice::from_raw_parts(in_lines, in_count);
+        let lines: Vec<_> = lines_slice
+            .iter()
+            .map(DisassemblyTextLine::from_raw)
+            .collect();
+        let settings = LineFormatterSettings::from_raw(&*raw_settings);
+        let result = (*ctxt).format_lines(&lines, &settings);
+        *out_count = result.len();
+        let result: Box<[BNDisassemblyTextLine]> = result
+            .into_iter()
+            .map(DisassemblyTextLine::into_raw)
+            .collect();
+        Box::leak(result).as_mut_ptr()
+    }
 }
 
 unsafe extern "C" fn cb_free_lines(
@@ -159,9 +161,11 @@ unsafe extern "C" fn cb_free_lines(
     raw_lines: *mut BNDisassemblyTextLine,
     count: usize,
 ) {
-    let lines: Box<[BNDisassemblyTextLine]> =
-        Box::from_raw(std::ptr::slice_from_raw_parts_mut(raw_lines, count));
-    for line in lines {
-        DisassemblyTextLine::free_raw(line);
+    unsafe {
+        let lines: Box<[BNDisassemblyTextLine]> =
+            Box::from_raw(std::ptr::slice_from_raw_parts_mut(raw_lines, count));
+        for line in lines {
+            DisassemblyTextLine::free_raw(line);
+        }
     }
 }

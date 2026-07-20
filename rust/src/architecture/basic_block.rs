@@ -33,119 +33,124 @@ pub struct BasicBlockAnalysisContext {
 
 impl BasicBlockAnalysisContext {
     pub unsafe fn from_raw(handle: *mut BNBasicBlockAnalysisContext) -> Self {
-        debug_assert!(!handle.is_null());
+        unsafe {
+            debug_assert!(!handle.is_null());
 
-        let ctx_ref = &*handle;
+            let ctx_ref = &*handle;
 
-        let raw_indirect_branches: &[BNIndirectBranchInfo] =
-            std::slice::from_raw_parts(ctx_ref.indirectBranches, ctx_ref.indirectBranchesCount);
-        let indirect_branches: Vec<IndirectBranchInfo> = raw_indirect_branches
-            .iter()
-            .map(IndirectBranchInfo::from)
-            .collect();
+            let raw_indirect_branches: &[BNIndirectBranchInfo] =
+                std::slice::from_raw_parts(ctx_ref.indirectBranches, ctx_ref.indirectBranchesCount);
+            let indirect_branches: Vec<IndirectBranchInfo> = raw_indirect_branches
+                .iter()
+                .map(IndirectBranchInfo::from)
+                .collect();
 
-        let raw_indirect_no_return_calls: &[BNArchitectureAndAddress] = std::slice::from_raw_parts(
-            ctx_ref.indirectNoReturnCalls,
-            ctx_ref.indirectNoReturnCallsCount,
-        );
-        let indirect_no_return_calls: HashSet<Location> = raw_indirect_no_return_calls
-            .iter()
-            .map(Location::from)
-            .collect();
-
-        let raw_contextual_return_locs: &[BNArchitectureAndAddress] = unsafe {
-            std::slice::from_raw_parts(
-                ctx_ref.contextualFunctionReturnLocations,
-                ctx_ref.contextualFunctionReturnCount,
-            )
-        };
-        let raw_contextual_return_vals: &[bool] = unsafe {
-            std::slice::from_raw_parts(
-                ctx_ref.contextualFunctionReturnValues,
-                ctx_ref.contextualFunctionReturnCount,
-            )
-        };
-        let contextual_returns: HashMap<Location, bool> = raw_contextual_return_locs
-            .iter()
-            .map(Location::from)
-            .zip(raw_contextual_return_vals.iter().copied())
-            .collect();
-
-        // The lists below this are out params and are possibly not initialized.
-        let raw_direct_ref_sources: &[BNArchitectureAndAddress] = match ctx_ref
-            .directRefSources
-            .is_null()
-        {
-            true => &[],
-            false => std::slice::from_raw_parts(ctx_ref.directRefSources, ctx_ref.directRefCount),
-        };
-        let raw_direct_ref_targets: &[u64] = match ctx_ref.directRefTargets.is_null() {
-            true => &[],
-            false => std::slice::from_raw_parts(ctx_ref.directRefTargets, ctx_ref.directRefCount),
-        };
-        let direct_code_references: HashMap<u64, Location> = raw_direct_ref_targets
-            .iter()
-            .copied()
-            .zip(raw_direct_ref_sources.iter().map(Location::from))
-            .collect();
-
-        let raw_direct_no_return_calls: &[BNArchitectureAndAddress] =
-            match ctx_ref.directNoReturnCalls.is_null() {
-                true => &[],
-                false => std::slice::from_raw_parts(
-                    ctx_ref.directNoReturnCalls,
-                    ctx_ref.directNoReturnCallsCount,
-                ),
-            };
-        let direct_no_return_calls: HashSet<Location> = raw_direct_no_return_calls
-            .iter()
-            .map(Location::from)
-            .collect();
-
-        let raw_halted_disassembly_address: &[BNArchitectureAndAddress] =
-            match ctx_ref.haltedDisassemblyAddresses.is_null() {
-                true => &[],
-                false => std::slice::from_raw_parts(
-                    ctx_ref.haltedDisassemblyAddresses,
-                    ctx_ref.haltedDisassemblyAddressesCount,
-                ),
-            };
-        let halted_disassembly_addresses: HashSet<Location> = raw_halted_disassembly_address
-            .iter()
-            .map(Location::from)
-            .collect();
-
-        let raw_inlined_unresolved_indirect_branches: &[BNArchitectureAndAddress] =
-            match ctx_ref.inlinedUnresolvedIndirectBranches.is_null() {
-                true => &[],
-                false => std::slice::from_raw_parts(
-                    ctx_ref.inlinedUnresolvedIndirectBranches,
-                    ctx_ref.inlinedUnresolvedIndirectBranchCount,
-                ),
-            };
-        let inlined_unresolved_indirect_branches: HashSet<Location> =
-            raw_inlined_unresolved_indirect_branches
+            let raw_indirect_no_return_calls: &[BNArchitectureAndAddress] =
+                std::slice::from_raw_parts(
+                    ctx_ref.indirectNoReturnCalls,
+                    ctx_ref.indirectNoReturnCallsCount,
+                );
+            let indirect_no_return_calls: HashSet<Location> = raw_indirect_no_return_calls
                 .iter()
                 .map(Location::from)
                 .collect();
 
-        BasicBlockAnalysisContext {
-            handle,
-            contextual_returns_dirty: false,
-            indirect_branches,
-            indirect_no_return_calls,
-            analysis_skip_override: ctx_ref.analysisSkipOverride,
-            guided_analysis_mode: ctx_ref.guidedAnalysisMode,
-            trigger_guided_on_invalid_instruction: ctx_ref.triggerGuidedOnInvalidInstruction,
-            translate_tail_calls: ctx_ref.translateTailCalls,
-            disallow_branch_to_string: ctx_ref.disallowBranchToString,
-            max_function_size: ctx_ref.maxFunctionSize,
-            max_size_reached: ctx_ref.maxSizeReached,
-            contextual_returns,
-            direct_code_references,
-            direct_no_return_calls,
-            halted_disassembly_addresses,
-            inlined_unresolved_indirect_branches,
+            let raw_contextual_return_locs: &[BNArchitectureAndAddress] = {
+                std::slice::from_raw_parts(
+                    ctx_ref.contextualFunctionReturnLocations,
+                    ctx_ref.contextualFunctionReturnCount,
+                )
+            };
+            let raw_contextual_return_vals: &[bool] = {
+                std::slice::from_raw_parts(
+                    ctx_ref.contextualFunctionReturnValues,
+                    ctx_ref.contextualFunctionReturnCount,
+                )
+            };
+            let contextual_returns: HashMap<Location, bool> = raw_contextual_return_locs
+                .iter()
+                .map(Location::from)
+                .zip(raw_contextual_return_vals.iter().copied())
+                .collect();
+
+            // The lists below this are out params and are possibly not initialized.
+            let raw_direct_ref_sources: &[BNArchitectureAndAddress] =
+                match ctx_ref.directRefSources.is_null() {
+                    true => &[],
+                    false => {
+                        std::slice::from_raw_parts(ctx_ref.directRefSources, ctx_ref.directRefCount)
+                    }
+                };
+            let raw_direct_ref_targets: &[u64] = match ctx_ref.directRefTargets.is_null() {
+                true => &[],
+                false => {
+                    std::slice::from_raw_parts(ctx_ref.directRefTargets, ctx_ref.directRefCount)
+                }
+            };
+            let direct_code_references: HashMap<u64, Location> = raw_direct_ref_targets
+                .iter()
+                .copied()
+                .zip(raw_direct_ref_sources.iter().map(Location::from))
+                .collect();
+
+            let raw_direct_no_return_calls: &[BNArchitectureAndAddress] =
+                match ctx_ref.directNoReturnCalls.is_null() {
+                    true => &[],
+                    false => std::slice::from_raw_parts(
+                        ctx_ref.directNoReturnCalls,
+                        ctx_ref.directNoReturnCallsCount,
+                    ),
+                };
+            let direct_no_return_calls: HashSet<Location> = raw_direct_no_return_calls
+                .iter()
+                .map(Location::from)
+                .collect();
+
+            let raw_halted_disassembly_address: &[BNArchitectureAndAddress] =
+                match ctx_ref.haltedDisassemblyAddresses.is_null() {
+                    true => &[],
+                    false => std::slice::from_raw_parts(
+                        ctx_ref.haltedDisassemblyAddresses,
+                        ctx_ref.haltedDisassemblyAddressesCount,
+                    ),
+                };
+            let halted_disassembly_addresses: HashSet<Location> = raw_halted_disassembly_address
+                .iter()
+                .map(Location::from)
+                .collect();
+
+            let raw_inlined_unresolved_indirect_branches: &[BNArchitectureAndAddress] =
+                match ctx_ref.inlinedUnresolvedIndirectBranches.is_null() {
+                    true => &[],
+                    false => std::slice::from_raw_parts(
+                        ctx_ref.inlinedUnresolvedIndirectBranches,
+                        ctx_ref.inlinedUnresolvedIndirectBranchCount,
+                    ),
+                };
+            let inlined_unresolved_indirect_branches: HashSet<Location> =
+                raw_inlined_unresolved_indirect_branches
+                    .iter()
+                    .map(Location::from)
+                    .collect();
+
+            BasicBlockAnalysisContext {
+                handle,
+                contextual_returns_dirty: false,
+                indirect_branches,
+                indirect_no_return_calls,
+                analysis_skip_override: ctx_ref.analysisSkipOverride,
+                guided_analysis_mode: ctx_ref.guidedAnalysisMode,
+                trigger_guided_on_invalid_instruction: ctx_ref.triggerGuidedOnInvalidInstruction,
+                translate_tail_calls: ctx_ref.translateTailCalls,
+                disallow_branch_to_string: ctx_ref.disallowBranchToString,
+                max_function_size: ctx_ref.maxFunctionSize,
+                max_size_reached: ctx_ref.maxSizeReached,
+                contextual_returns,
+                direct_code_references,
+                direct_no_return_calls,
+                halted_disassembly_addresses,
+                inlined_unresolved_indirect_branches,
+            }
         }
     }
 

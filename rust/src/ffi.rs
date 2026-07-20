@@ -17,7 +17,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 pub(crate) const INVALID_REGISTER: u32 = 0xffff_ffff;
 
 macro_rules! ffi_wrap {
-    ($n:expr, $b:expr) => {{
+    ($n:expr_2021, $b:expr_2021) => {{
         use std::panic;
         use std::process;
 
@@ -48,12 +48,12 @@ pub(crate) unsafe fn slice_from_raw_parts<'a, T>(data: *const T, len: usize) -> 
 
 #[macro_export]
 macro_rules! ffi_span {
-    ($name:expr, $bv:expr) => {{
+    ($name:expr_2021, $bv:expr_2021) => {{
         #[allow(unused_imports)]
         use $crate::file_metadata::FileMetadata;
         ::tracing::info_span!($name, session_id = $bv.file().session_id().0).entered()
     }};
-    ($name:expr) => {
+    ($name:expr_2021) => {
         ::tracing::info_span!($name).entered()
     };
 }

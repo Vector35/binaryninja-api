@@ -21,7 +21,7 @@ impl MergeConflict {
 
     #[allow(unused)]
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNAnalysisMergeConflict>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// Database backing all snapshots in the merge conflict
@@ -160,14 +160,18 @@ impl ToOwned for MergeConflict {
 
 unsafe impl RefCountable for MergeConflict {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewAnalysisMergeConflictReference(handle.handle.as_ptr()))
-                .unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewAnalysisMergeConflictReference(handle.handle.as_ptr()))
+                    .unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeAnalysisMergeConflict(handle.handle.as_ptr());
+        unsafe {
+            BNFreeAnalysisMergeConflict(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -179,11 +183,13 @@ impl CoreArrayProvider for MergeConflict {
 
 unsafe impl CoreArrayProviderInner for MergeConflict {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeAnalysisMergeConflictList(raw, count)
+        unsafe { BNFreeAnalysisMergeConflictList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }

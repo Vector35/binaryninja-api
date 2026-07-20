@@ -78,7 +78,7 @@ impl Extension {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNPlugin>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// String indicating the API used by the plugin
@@ -343,11 +343,13 @@ impl ToOwned for Extension {
 
 unsafe impl RefCountable for Extension {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Self::ref_from_raw(NonNull::new(BNNewPluginReference(handle.handle.as_ptr())).unwrap())
+        unsafe {
+            Self::ref_from_raw(NonNull::new(BNNewPluginReference(handle.handle.as_ptr())).unwrap())
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreePlugin(handle.handle.as_ptr())
+        unsafe { BNFreePlugin(handle.handle.as_ptr()) }
     }
 }
 
@@ -359,11 +361,11 @@ impl CoreArrayProvider for Extension {
 
 unsafe impl CoreArrayProviderInner for Extension {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeRepositoryPluginList(raw)
+        unsafe { BNFreeRepositoryPluginList(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Self::from_raw(NonNull::new(*raw).unwrap()), context)
+        unsafe { Guard::new(Self::from_raw(NonNull::new(*raw).unwrap()), context) }
     }
 }
 
@@ -375,7 +377,7 @@ impl CoreArrayProvider for ExtensionVersion {
 
 unsafe impl CoreArrayProviderInner for ExtensionVersion {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreePluginVersions(raw, count)
+        unsafe { BNFreePluginVersions(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {

@@ -61,13 +61,15 @@ impl CoreArrayProvider for BaseAddressDetectionReason {
 
 unsafe impl CoreArrayProviderInner for BaseAddressDetectionReason {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeBaseAddressDetectionReasons(raw)
+        unsafe { BNFreeBaseAddressDetectionReasons(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        // SAFETY BNBaseAddressDetectionReason and BaseAddressDetectionReason
-        // are transparent
-        std::mem::transmute::<&BNBaseAddressDetectionReason, &BaseAddressDetectionReason>(raw)
+        unsafe {
+            // SAFETY BNBaseAddressDetectionReason and BaseAddressDetectionReason
+            // are transparent
+            std::mem::transmute::<&BNBaseAddressDetectionReason, &BaseAddressDetectionReason>(raw)
+        }
     }
 }
 
@@ -82,7 +84,7 @@ impl BaseAddressDetection {
 
     #[allow(clippy::mut_from_ref)]
     pub(crate) unsafe fn as_raw(&self) -> &mut BNBaseAddressDetection {
-        &mut *self.handle.as_ptr()
+        unsafe { &mut *self.handle.as_ptr() }
     }
 
     /// Indicates whether base address detection analysis was aborted early

@@ -102,8 +102,10 @@ impl Segment {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNSegment) -> Ref<Self> {
-        assert!(!handle.is_null());
-        Ref::new(Self { handle })
+        unsafe {
+            assert!(!handle.is_null());
+            Ref::new(Self { handle })
+        }
     }
 
     /// You need to create a segment builder, customize that segment, then add it to a binary view:
@@ -194,13 +196,17 @@ impl ToOwned for Segment {
 
 unsafe impl RefCountable for Segment {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewSegmentReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewSegmentReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeSegment(handle.handle);
+        unsafe {
+            BNFreeSegment(handle.handle);
+        }
     }
 }
 
@@ -212,11 +218,13 @@ impl CoreArrayProvider for Segment {
 
 unsafe impl CoreArrayProviderInner for Segment {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeSegmentList(raw, count);
+        unsafe {
+            BNFreeSegmentList(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Segment::from_raw(*raw), context)
+        unsafe { Guard::new(Segment::from_raw(*raw), context) }
     }
 }
 

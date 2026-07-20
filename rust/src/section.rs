@@ -73,8 +73,10 @@ impl Section {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNSection) -> Ref<Self> {
-        debug_assert!(!handle.is_null());
-        Ref::new(Self { handle })
+        unsafe {
+            debug_assert!(!handle.is_null());
+            Ref::new(Self { handle })
+        }
     }
 
     /// You need to create a section builder, customize that section, then add it to a binary view:
@@ -194,13 +196,17 @@ impl ToOwned for Section {
 
 unsafe impl RefCountable for Section {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewSectionReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewSectionReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeSection(handle.handle);
+        unsafe {
+            BNFreeSection(handle.handle);
+        }
     }
 }
 
@@ -212,11 +218,13 @@ impl CoreArrayProvider for Section {
 
 unsafe impl CoreArrayProviderInner for Section {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeSectionList(raw, count);
+        unsafe {
+            BNFreeSectionList(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Section::from_raw(*raw), context)
+        unsafe { Guard::new(Section::from_raw(*raw), context) }
     }
 }
 

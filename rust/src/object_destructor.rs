@@ -63,31 +63,37 @@ unsafe extern "C" fn cb_destruct_binary_view<D: ObjectDestructor>(
     ctxt: *mut c_void,
     view: *mut BNBinaryView,
 ) {
-    ffi_wrap!("ObjectDestructor::destruct_view", {
-        let destructor = &*(ctxt as *mut D);
-        let view = BinaryView { handle: view };
-        destructor.destruct_view(&view);
-    })
+    unsafe {
+        ffi_wrap!("ObjectDestructor::destruct_view", {
+            let destructor = &*(ctxt as *mut D);
+            let view = BinaryView { handle: view };
+            destructor.destruct_view(&view);
+        })
+    }
 }
 
 unsafe extern "C" fn cb_destruct_file_metadata<D: ObjectDestructor>(
     ctxt: *mut c_void,
     file: *mut BNFileMetadata,
 ) {
-    ffi_wrap!("ObjectDestructor::destruct_file_metadata", {
-        let destructor = &*(ctxt as *mut D);
-        let file = FileMetadata::from_raw(file);
-        destructor.destruct_file_metadata(&file);
-    })
+    unsafe {
+        ffi_wrap!("ObjectDestructor::destruct_file_metadata", {
+            let destructor = &*(ctxt as *mut D);
+            let file = FileMetadata::from_raw(file);
+            destructor.destruct_file_metadata(&file);
+        })
+    }
 }
 
 unsafe extern "C" fn cb_destruct_function<D: ObjectDestructor>(
     ctxt: *mut c_void,
     func: *mut BNFunction,
 ) {
-    ffi_wrap!("ObjectDestructor::destruct_function", {
-        let destructor = &*(ctxt as *mut D);
-        let func = Function { handle: func };
-        destructor.destruct_function(&func);
-    })
+    unsafe {
+        ffi_wrap!("ObjectDestructor::destruct_function", {
+            let destructor = &*(ctxt as *mut D);
+            let func = Function { handle: func };
+            destructor.destruct_function(&func);
+        })
+    }
 }

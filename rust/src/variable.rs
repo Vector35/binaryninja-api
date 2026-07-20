@@ -90,7 +90,9 @@ impl CoreArrayProvider for DataVariable {
 
 unsafe impl CoreArrayProviderInner for DataVariable {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeDataVariables(raw, count);
+        unsafe {
+            BNFreeDataVariables(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -160,7 +162,7 @@ impl CoreArrayProvider for NamedDataVariableWithType {
 
 unsafe impl CoreArrayProviderInner for NamedDataVariableWithType {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeDataVariablesAndName(raw, count)
+        unsafe { BNFreeDataVariablesAndName(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -230,7 +232,7 @@ impl CoreArrayProvider for NamedVariableWithType {
 
 unsafe impl CoreArrayProviderInner for NamedVariableWithType {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeVariableNameAndTypeList(raw, count)
+        unsafe { BNFreeVariableNameAndTypeList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -276,7 +278,7 @@ impl CoreArrayProvider for UserVariableValue {
 
 unsafe impl CoreArrayProviderInner for UserVariableValue {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeUserVariableValues(raw)
+        unsafe { BNFreeUserVariableValues(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -344,7 +346,7 @@ impl CoreArrayProvider for StackVariableReference {
 
 unsafe impl CoreArrayProviderInner for StackVariableReference {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeStackVariableReferenceList(raw, count)
+        unsafe { BNFreeStackVariableReferenceList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -372,7 +374,7 @@ impl CoreArrayProvider for SSAVariable {
 
 unsafe impl CoreArrayProviderInner for SSAVariable {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeILInstructionList(raw)
+        unsafe { BNFreeILInstructionList(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -487,7 +489,7 @@ impl CoreArrayProvider for Variable {
 
 unsafe impl CoreArrayProviderInner for Variable {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeVariableList(raw)
+        unsafe { BNFreeVariableList(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -521,7 +523,7 @@ impl CoreArrayProvider for MergedVariable {
 
 unsafe impl CoreArrayProviderInner for MergedVariable {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeMergedVariableList(raw, count)
+        unsafe { BNFreeMergedVariableList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {

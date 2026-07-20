@@ -126,8 +126,10 @@ impl CoreArrayProvider for Location {
 
 unsafe impl CoreArrayProviderInner for Location {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        // NOTE: Does not use _count because freeing does not require iterating the list.
-        BNFreeArchitectureAndAddressList(raw)
+        unsafe {
+            // NOTE: Does not use _count because freeing does not require iterating the list.
+            BNFreeArchitectureAndAddressList(raw)
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -345,8 +347,10 @@ impl Function {
     }
 
     pub unsafe fn ref_from_raw(handle: *mut BNFunction) -> Ref<Self> {
-        debug_assert!(!handle.is_null());
-        Ref::new(Self { handle })
+        unsafe {
+            debug_assert!(!handle.is_null());
+            Ref::new(Self { handle })
+        }
     }
 
     pub fn arch(&self) -> CoreArchitecture {
@@ -2770,13 +2774,17 @@ impl ToOwned for Function {
 
 unsafe impl RefCountable for Function {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewFunctionReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewFunctionReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeFunction(handle.handle);
+        unsafe {
+            BNFreeFunction(handle.handle);
+        }
     }
 }
 
@@ -2788,11 +2796,13 @@ impl CoreArrayProvider for Function {
 
 unsafe impl CoreArrayProviderInner for Function {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeFunctionList(raw, count);
+        unsafe {
+            BNFreeFunctionList(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Self::from_raw(*raw), context)
+        unsafe { Guard::new(Self::from_raw(*raw), context) }
     }
 }
 
@@ -2865,7 +2875,9 @@ impl CoreArrayProvider for PerformanceInfo {
 
 unsafe impl CoreArrayProviderInner for PerformanceInfo {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeAnalysisPerformanceInfo(raw, count);
+        unsafe {
+            BNFreeAnalysisPerformanceInfo(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -2890,7 +2902,7 @@ impl CoreArrayProvider for UnresolvedIndirectBranches {
 
 unsafe impl CoreArrayProviderInner for UnresolvedIndirectBranches {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeAddressList(raw)
+        unsafe { BNFreeAddressList(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -2936,7 +2948,7 @@ impl CoreArrayProvider for ConstantReference {
 
 unsafe impl CoreArrayProviderInner for ConstantReference {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeConstantReferenceList(raw)
+        unsafe { BNFreeConstantReferenceList(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -2986,7 +2998,7 @@ impl CoreArrayProvider for RegisterStackAdjustment {
 
 unsafe impl CoreArrayProviderInner for RegisterStackAdjustment {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeRegisterStackAdjustments(raw)
+        unsafe { BNFreeRegisterStackAdjustments(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -3096,7 +3108,9 @@ impl CoreArrayProvider for Comment {
 
 unsafe impl CoreArrayProviderInner for Comment {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeAddressList(raw);
+        unsafe {
+            BNFreeAddressList(raw);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, function: &'a Self::Context) -> Self::Wrapped<'a> {

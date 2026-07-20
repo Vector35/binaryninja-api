@@ -58,32 +58,36 @@ impl<'a, C: 'a + BlockContext> CoreArrayProvider for Edge<'a, C> {
 
 unsafe impl<'a, C: 'a + BlockContext> CoreArrayProviderInner for Edge<'a, C> {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeBasicBlockEdgeList(raw, count);
+        unsafe {
+            BNFreeBasicBlockEdgeList(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'b>(raw: &'b Self::Raw, context: &'b Self::Context) -> Self::Wrapped<'b> {
-        let edge_target = Guard::new(
-            BasicBlock::from_raw(raw.target, context.orig_block.context.clone()),
-            raw,
-        );
-        let orig_block = Guard::new(
-            BasicBlock::from_raw(
-                context.orig_block.handle,
-                context.orig_block.context.clone(),
-            ),
-            raw,
-        );
+        unsafe {
+            let edge_target = Guard::new(
+                BasicBlock::from_raw(raw.target, context.orig_block.context.clone()),
+                raw,
+            );
+            let orig_block = Guard::new(
+                BasicBlock::from_raw(
+                    context.orig_block.handle,
+                    context.orig_block.context.clone(),
+                ),
+                raw,
+            );
 
-        let (source, target) = match context.dir {
-            EdgeDirection::Incoming => (edge_target, orig_block),
-            EdgeDirection::Outgoing => (orig_block, edge_target),
-        };
+            let (source, target) = match context.dir {
+                EdgeDirection::Incoming => (edge_target, orig_block),
+                EdgeDirection::Outgoing => (orig_block, edge_target),
+            };
 
-        Edge {
-            branch: raw.type_,
-            back_edge: raw.backEdge,
-            source,
-            target,
+            Edge {
+                branch: raw.type_,
+                back_edge: raw.backEdge,
+                source,
+                target,
+            }
         }
     }
 }
@@ -134,7 +138,9 @@ impl CoreArrayProvider for PendingBasicBlockEdge {
 
 unsafe impl CoreArrayProviderInner for PendingBasicBlockEdge {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreePendingBasicBlockEdgeList(raw);
+        unsafe {
+            BNFreePendingBasicBlockEdgeList(raw);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -170,7 +176,7 @@ impl<C: BlockContext> BasicBlock<C> {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNBasicBlock, context: C) -> Ref<Self> {
-        Ref::new(Self::from_raw(handle, context))
+        unsafe { Ref::new(Self::from_raw(handle, context)) }
     }
 
     // TODO native bb vs il bbs
@@ -459,14 +465,18 @@ impl<C: BlockContext> ToOwned for BasicBlock<C> {
 
 unsafe impl<C: BlockContext> RefCountable for BasicBlock<C> {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewBasicBlockReference(handle.handle),
-            context: handle.context.clone(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewBasicBlockReference(handle.handle),
+                context: handle.context.clone(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeBasicBlock(handle.handle);
+        unsafe {
+            BNFreeBasicBlock(handle.handle);
+        }
     }
 }
 
@@ -481,11 +491,13 @@ impl<C: BlockContext> CoreArrayProvider for BasicBlock<C> {
 
 unsafe impl<C: BlockContext> CoreArrayProviderInner for BasicBlock<C> {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeBasicBlockList(raw, count);
+        unsafe {
+            BNFreeBasicBlockList(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(BasicBlock::from_raw(*raw, context.clone()), context)
+        unsafe { Guard::new(BasicBlock::from_raw(*raw, context.clone()), context) }
     }
 }
 

@@ -192,7 +192,8 @@ impl Relocation {
     }
 
     pub fn info(&self) -> RelocationInfo {
-        RelocationInfo::from_raw(unsafe { &BNRelocationGetInfo(self.0) })
+        let info = unsafe { BNRelocationGetInfo(self.0) };
+        RelocationInfo::from_raw(&info)
     }
 
     pub fn architecture(&self) -> Option<CoreArchitecture> {
@@ -230,11 +231,13 @@ impl CoreArrayProvider for Relocation {
 
 unsafe impl CoreArrayProviderInner for Relocation {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeRelocationList(raw, count);
+        unsafe {
+            BNFreeRelocationList(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Relocation(*raw), &())
+        unsafe { Guard::new(Relocation(*raw), &()) }
     }
 }
 
@@ -394,11 +397,13 @@ impl ToOwned for CoreRelocationHandler {
 
 unsafe impl RefCountable for CoreRelocationHandler {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self(BNNewRelocationHandlerReference(handle.0)))
+        unsafe { Ref::new(Self(BNNewRelocationHandlerReference(handle.0))) }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeRelocationHandler(handle.0);
+        unsafe {
+            BNFreeRelocationHandler(handle.0);
+        }
     }
 }
 

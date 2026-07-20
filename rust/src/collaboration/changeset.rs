@@ -21,7 +21,7 @@ impl Changeset {
 
     #[allow(unused)]
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNCollaborationChangeset>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// Owning database for snapshots
@@ -81,14 +81,18 @@ impl ToOwned for Changeset {
 
 unsafe impl RefCountable for Changeset {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewCollaborationChangesetReference(handle.handle.as_ptr()))
-                .unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewCollaborationChangesetReference(handle.handle.as_ptr()))
+                    .unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeCollaborationChangeset(handle.handle.as_ptr());
+        unsafe {
+            BNFreeCollaborationChangeset(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -100,11 +104,13 @@ impl CoreArrayProvider for Changeset {
 
 unsafe impl CoreArrayProviderInner for Changeset {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeCollaborationChangesetList(raw, count)
+        unsafe { BNFreeCollaborationChangesetList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }

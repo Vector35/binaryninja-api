@@ -27,7 +27,7 @@ impl ProjectFile {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNProjectFile>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// Get the project that owns this file
@@ -180,13 +180,17 @@ impl ToOwned for ProjectFile {
 
 unsafe impl RefCountable for ProjectFile {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewProjectFileReference(handle.handle.as_ptr())).unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewProjectFileReference(handle.handle.as_ptr())).unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeProjectFile(handle.handle.as_ptr());
+        unsafe {
+            BNFreeProjectFile(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -198,11 +202,13 @@ impl CoreArrayProvider for ProjectFile {
 
 unsafe impl CoreArrayProviderInner for ProjectFile {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeProjectFileList(raw, count)
+        unsafe { BNFreeProjectFileList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }

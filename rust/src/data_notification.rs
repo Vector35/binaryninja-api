@@ -26,7 +26,7 @@ macro_rules! trait_handler {
                 $arg_name:ident:
                 $raw_arg_type:ty:
                 $arg_type:ty =
-                $value_calculated:expr
+                $value_calculated:expr_2021
             ),* $(,)?
         ) $(-> $ret_type:ty)?
     ),* $(,)?
@@ -70,10 +70,10 @@ macro_rules! trait_handler {
     unsafe extern "C" fn $fun_name<H: CustomDataNotification>(
         ctxt: *mut ::std::os::raw::c_void,
         $($arg_name: $raw_arg_type),*
-    ) $(-> $ret_type)* {
+    ) $(-> $ret_type)* { unsafe {
         let handle: &mut H = &mut *(ctxt as *mut H);
         handle.$fun_name($($value_calculated),*)
-    }
+    }}
     )*
 
     fn register_data_notification<'a, H: CustomDataNotification + 'a>(
@@ -422,11 +422,11 @@ where
 
 impl<T: CustomDataNotification> DataNotificationHandle<'_, T> {
     unsafe fn unregister_bv(&mut self) {
-        BNUnregisterDataNotification(self.bv.handle, self.handle.as_mut())
+        unsafe { BNUnregisterDataNotification(self.bv.handle, self.handle.as_mut()) }
     }
 
     unsafe fn extract_context(&mut self) -> Box<T> {
-        Box::from_raw(self.handle.context as *mut T)
+        unsafe { Box::from_raw(self.handle.context as *mut T) }
     }
 
     pub fn unregister(self) -> T {

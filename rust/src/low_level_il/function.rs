@@ -72,19 +72,21 @@ where
     }
 
     pub unsafe fn from_raw(handle: *mut BNLowLevelILFunction) -> Self {
-        Self::from_raw_with_arch(handle, None)
+        unsafe { Self::from_raw_with_arch(handle, None) }
     }
 
     pub(crate) unsafe fn ref_from_raw_with_arch(
         handle: *mut BNLowLevelILFunction,
         arch: Option<CoreArchitecture>,
     ) -> Ref<Self> {
-        debug_assert!(!handle.is_null());
-        Ref::new(Self::from_raw_with_arch(handle, arch))
+        unsafe {
+            debug_assert!(!handle.is_null());
+            Ref::new(Self::from_raw_with_arch(handle, arch))
+        }
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNLowLevelILFunction) -> Ref<Self> {
-        Self::ref_from_raw_with_arch(handle, None)
+        unsafe { Self::ref_from_raw_with_arch(handle, None) }
     }
 
     pub(crate) fn arch(&self) -> CoreArchitecture {
@@ -395,16 +397,20 @@ where
     F: FunctionForm,
 {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewLowLevelILFunctionReference(handle.handle),
-            arch: handle.arch,
-            _mutability: PhantomData,
-            _form: PhantomData,
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewLowLevelILFunctionReference(handle.handle),
+                arch: handle.arch,
+                _mutability: PhantomData,
+                _form: PhantomData,
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeLowLevelILFunction(handle.handle);
+        unsafe {
+            BNFreeLowLevelILFunction(handle.handle);
+        }
     }
 }
 

@@ -52,7 +52,7 @@ impl FlowGraph {
     }
 
     pub(crate) unsafe fn ref_from_raw(raw: *mut BNFlowGraph) -> Ref<Self> {
-        Ref::new(Self { handle: raw })
+        unsafe { Ref::new(Self { handle: raw }) }
     }
 
     /// Create an empty flowgraph.
@@ -322,13 +322,17 @@ impl FlowGraph {
 
 unsafe impl RefCountable for FlowGraph {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewFlowGraphReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewFlowGraphReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeFlowGraph(handle.handle);
+        unsafe {
+            BNFreeFlowGraph(handle.handle);
+        }
     }
 }
 

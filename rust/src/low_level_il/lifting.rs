@@ -303,7 +303,7 @@ impl<R: ArchReg> LowLevelILFlagWriteOp<R> {
         }
 
         macro_rules! op {
-            ($x:ident, $($ops:expr),*) => {
+            ($x:ident, $($ops:expr_2021),*) => {
                 ( $x(size, $( build_op(arch, size, &operands[$ops]), )* ) )
             };
         }
@@ -1059,14 +1059,16 @@ impl LowLevelILMutableFunction {
         replaced_expr_index: LowLevelExpressionIndex,
         replacement: E,
     ) -> bool {
-        use binaryninjacore_sys::BNReplaceLowLevelILExpr;
-        if replaced_expr_index.0 >= self.expression_count() {
-            // Invalid expression index, cant replace expression.
-            return false;
+        unsafe {
+            use binaryninjacore_sys::BNReplaceLowLevelILExpr;
+            if replaced_expr_index.0 >= self.expression_count() {
+                // Invalid expression index, cant replace expression.
+                return false;
+            }
+            let expr = self.expression(replacement);
+            BNReplaceLowLevelILExpr(self.handle, replaced_expr_index.0, expr.index.0);
+            true
         }
-        let expr = self.expression(replacement);
-        BNReplaceLowLevelILExpr(self.handle, replaced_expr_index.0, expr.index.0);
-        true
     }
 
     pub fn const_int(&self, size: usize, val: u64) -> LowLevelILMutableExpression<'_, ValueExpr> {

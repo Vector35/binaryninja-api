@@ -150,7 +150,7 @@ impl CoreArrayProvider for IndirectBranchInfo {
 
 unsafe impl CoreArrayProviderInner for IndirectBranchInfo {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeIndirectBranchList(raw)
+        unsafe { BNFreeIndirectBranchList(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {

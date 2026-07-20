@@ -27,7 +27,7 @@ impl Database {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNDatabase>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// Get a [`Snapshot`] by its `id`, or `None` if no snapshot with that `id` exists.
@@ -233,12 +233,16 @@ impl ToOwned for Database {
 
 unsafe impl RefCountable for Database {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewDatabaseReference(handle.handle.as_ptr())).unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewDatabaseReference(handle.handle.as_ptr())).unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeDatabase(handle.handle.as_ptr());
+        unsafe {
+            BNFreeDatabase(handle.handle.as_ptr());
+        }
     }
 }

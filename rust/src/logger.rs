@@ -130,13 +130,17 @@ impl ToOwned for Logger {
 
 unsafe impl RefCountable for Logger {
     unsafe fn inc_ref(logger: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewLoggerReference(logger.handle.as_ptr())).unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewLoggerReference(logger.handle.as_ptr())).unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(logger: &Self) {
-        BNFreeLogger(logger.handle.as_ptr());
+        unsafe {
+            BNFreeLogger(logger.handle.as_ptr());
+        }
     }
 }
 

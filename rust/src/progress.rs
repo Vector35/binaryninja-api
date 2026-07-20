@@ -13,8 +13,10 @@ pub trait ProgressCallback: Sized {
         progress: usize,
         total: usize,
     ) -> bool {
-        let ctxt: &mut Self = &mut *(ctxt as *mut Self);
-        ctxt.progress(progress, total)
+        unsafe {
+            let ctxt: &mut Self = &mut *(ctxt as *mut Self);
+            ctxt.progress(progress, total)
+        }
     }
 
     #[allow(clippy::wrong_self_convention)]

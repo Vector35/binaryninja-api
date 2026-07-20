@@ -30,14 +30,16 @@ pub struct TypeContainer {
 
 impl TypeContainer {
     pub(crate) unsafe fn from_raw(handle: NonNull<BNTypeContainer>) -> Self {
-        // NOTE: There does not seem to be any shared ref counting for type containers, it seems if the
-        // NOTE: binary view is freed the type container will be freed and cause this to become invalid
-        // NOTE: but this is how the C++ and Python bindings operate so i guess its fine?
-        // TODO: I really dont get how some of the usage of the TypeContainer doesnt free the underlying container.
-        // TODO: So for now we always duplicate the type container
-        let cloned_ptr = NonNull::new(BNDuplicateTypeContainer(handle.as_ptr()));
-        Self {
-            handle: cloned_ptr.unwrap(),
+        unsafe {
+            // NOTE: There does not seem to be any shared ref counting for type containers, it seems if the
+            // NOTE: binary view is freed the type container will be freed and cause this to become invalid
+            // NOTE: but this is how the C++ and Python bindings operate so i guess its fine?
+            // TODO: I really dont get how some of the usage of the TypeContainer doesnt free the underlying container.
+            // TODO: So for now we always duplicate the type container
+            let cloned_ptr = NonNull::new(BNDuplicateTypeContainer(handle.as_ptr()));
+            Self {
+                handle: cloned_ptr.unwrap(),
+            }
         }
     }
 

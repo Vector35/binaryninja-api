@@ -78,7 +78,7 @@ impl CoreArrayProvider for CodeReference {
 
 unsafe impl CoreArrayProviderInner for CodeReference {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeCodeReferences(raw, count)
+        unsafe { BNFreeCodeReferences(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -103,7 +103,7 @@ impl CoreArrayProvider for DataReference {
 
 unsafe impl CoreArrayProviderInner for DataReference {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeDataReferences(raw)
+        unsafe { BNFreeDataReferences(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {

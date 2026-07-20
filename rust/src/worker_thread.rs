@@ -8,8 +8,10 @@ pub struct WorkerThreadActionExecutor {
 
 impl WorkerThreadActionExecutor {
     unsafe extern "C" fn cb_execute(ctx: *mut c_void) {
-        let f: Box<Self> = Box::from_raw(ctx as *mut Self);
-        f.execute();
+        unsafe {
+            let f: Box<Self> = Box::from_raw(ctx as *mut Self);
+            f.execute();
+        }
     }
 
     pub fn execute(&self) {

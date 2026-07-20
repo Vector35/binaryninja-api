@@ -30,7 +30,7 @@ impl Repository {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNRepository>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// String URL of the git repository where the plugin repository's are stored
@@ -92,11 +92,15 @@ impl ToOwned for Repository {
 
 unsafe impl RefCountable for Repository {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Self::ref_from_raw(NonNull::new(BNNewRepositoryReference(handle.handle.as_ptr())).unwrap())
+        unsafe {
+            Self::ref_from_raw(
+                NonNull::new(BNNewRepositoryReference(handle.handle.as_ptr())).unwrap(),
+            )
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeRepository(handle.handle.as_ptr())
+        unsafe { BNFreeRepository(handle.handle.as_ptr()) }
     }
 }
 
@@ -108,11 +112,11 @@ impl CoreArrayProvider for Repository {
 
 unsafe impl CoreArrayProviderInner for Repository {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeRepositoryManagerRepositoriesList(raw)
+        unsafe { BNFreeRepositoryManagerRepositoriesList(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Self::from_raw(NonNull::new(*raw).unwrap()), context)
+        unsafe { Guard::new(Self::from_raw(NonNull::new(*raw).unwrap()), context) }
     }
 }
 
@@ -124,7 +128,7 @@ impl CoreArrayProvider for PluginType {
 
 unsafe impl CoreArrayProviderInner for PluginType {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreePluginTypes(raw)
+        unsafe { BNFreePluginTypes(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {

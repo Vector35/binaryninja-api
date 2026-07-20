@@ -56,9 +56,11 @@ impl<T: RefCountable> Ref<T> {
     }
 
     pub unsafe fn into_raw(obj: Self) -> T {
-        let res = ptr::read(&obj.contents);
-        mem::forget(obj);
-        res
+        unsafe {
+            let res = ptr::read(&obj.contents);
+            mem::forget(obj);
+            res
+        }
     }
 }
 

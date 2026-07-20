@@ -352,13 +352,15 @@ unsafe impl Sync for HighLevelILTokenEmitter {}
 
 unsafe impl RefCountable for HighLevelILTokenEmitter {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        let handle = BNNewHighLevelILTokenEmitterReference(handle.handle.as_ptr());
-        let handle = NonNull::new(handle).unwrap();
-        Ref::new(HighLevelILTokenEmitter { handle })
+        unsafe {
+            let handle = BNNewHighLevelILTokenEmitterReference(handle.handle.as_ptr());
+            let handle = NonNull::new(handle).unwrap();
+            Ref::new(HighLevelILTokenEmitter { handle })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeHighLevelILTokenEmitter(handle.handle.as_ptr())
+        unsafe { BNFreeHighLevelILTokenEmitter(handle.handle.as_ptr()) }
     }
 }
 

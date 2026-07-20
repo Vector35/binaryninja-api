@@ -1800,7 +1800,7 @@ impl CoreArrayProvider for MediumLevelILInstruction {
 
 unsafe impl CoreArrayProviderInner for MediumLevelILInstruction {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeILInstructionList(raw)
+        unsafe { BNFreeILInstructionList(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {

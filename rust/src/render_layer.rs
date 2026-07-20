@@ -365,7 +365,7 @@ impl CoreArrayProvider for CoreRenderLayer {
 
 unsafe impl CoreArrayProviderInner for CoreRenderLayer {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeRenderLayerList(raw)
+        unsafe { BNFreeRenderLayerList(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -379,10 +379,12 @@ unsafe extern "C" fn cb_apply_to_flow_graph<T: RenderLayer>(
     ctxt: *mut c_void,
     graph: *mut BNFlowGraph,
 ) {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
-    // SAFETY: We do not own the flowgraph, do not take it as Ref.
-    let mut flow_graph = FlowGraph::from_raw(graph);
-    ctxt.apply_to_flow_graph(&mut flow_graph);
+    unsafe {
+        let ctxt: &mut T = &mut *(ctxt as *mut T);
+        // SAFETY: We do not own the flowgraph, do not take it as Ref.
+        let mut flow_graph = FlowGraph::from_raw(graph);
+        ctxt.apply_to_flow_graph(&mut flow_graph);
+    }
 }
 
 unsafe extern "C" fn cb_apply_to_linear_view_object<T: RenderLayer>(
@@ -395,43 +397,45 @@ unsafe extern "C" fn cb_apply_to_linear_view_object<T: RenderLayer>(
     out_lines: *mut *mut BNLinearDisassemblyLine,
     out_line_count: *mut usize,
 ) {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
-    // SAFETY: We do not own the flowgraph, do not take it as Ref.
-    let mut object = LinearViewObject::from_raw(object);
-    let mut prev_object = if !prev.is_null() {
-        Some(LinearViewObject::from_raw(prev))
-    } else {
-        None
-    };
-    let mut next_object = if !next.is_null() {
-        Some(LinearViewObject::from_raw(next))
-    } else {
-        None
-    };
-
-    let raw_lines = std::slice::from_raw_parts(in_lines, in_line_count);
-    // NOTE: The caller is owned of the inLines.
-    let lines: Vec<_> = raw_lines
-        .iter()
-        .map(|line| LinearDisassemblyLine::from_raw(line))
-        .collect();
-
-    let new_lines = ctxt.apply_to_linear_object(
-        &mut object,
-        prev_object.as_mut(),
-        next_object.as_mut(),
-        lines,
-    );
-
     unsafe {
-        *out_line_count = new_lines.len();
-        let boxed_new_lines: Box<[_]> = new_lines
-            .into_iter()
-            // NOTE: Freed by cb_free_lines
-            .map(LinearDisassemblyLine::into_raw)
+        let ctxt: &mut T = &mut *(ctxt as *mut T);
+        // SAFETY: We do not own the flowgraph, do not take it as Ref.
+        let mut object = LinearViewObject::from_raw(object);
+        let mut prev_object = if !prev.is_null() {
+            Some(LinearViewObject::from_raw(prev))
+        } else {
+            None
+        };
+        let mut next_object = if !next.is_null() {
+            Some(LinearViewObject::from_raw(next))
+        } else {
+            None
+        };
+
+        let raw_lines = std::slice::from_raw_parts(in_lines, in_line_count);
+        // NOTE: The caller is owned of the inLines.
+        let lines: Vec<_> = raw_lines
+            .iter()
+            .map(|line| LinearDisassemblyLine::from_raw(line))
             .collect();
-        // NOTE: Dropped by cb_free_lines
-        *out_lines = Box::leak(boxed_new_lines).as_mut_ptr();
+
+        let new_lines = ctxt.apply_to_linear_object(
+            &mut object,
+            prev_object.as_mut(),
+            next_object.as_mut(),
+            lines,
+        );
+
+        {
+            *out_line_count = new_lines.len();
+            let boxed_new_lines: Box<[_]> = new_lines
+                .into_iter()
+                // NOTE: Freed by cb_free_lines
+                .map(LinearDisassemblyLine::into_raw)
+                .collect();
+            // NOTE: Dropped by cb_free_lines
+            *out_lines = Box::leak(boxed_new_lines).as_mut_ptr();
+        }
     }
 }
 
@@ -440,9 +444,11 @@ unsafe extern "C" fn cb_free_lines(
     lines: *mut BNLinearDisassemblyLine,
     line_count: usize,
 ) {
-    let lines_ptr = std::ptr::slice_from_raw_parts_mut(lines, line_count);
-    let boxed_lines = Box::from_raw(lines_ptr);
-    for line in boxed_lines {
-        LinearDisassemblyLine::free_raw(line);
+    unsafe {
+        let lines_ptr = std::ptr::slice_from_raw_parts_mut(lines, line_count);
+        let boxed_lines = Box::from_raw(lines_ptr);
+        for line in boxed_lines {
+            LinearDisassemblyLine::free_raw(line);
+        }
     }
 }

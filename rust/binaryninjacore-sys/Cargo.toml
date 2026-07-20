@@ -3,7 +3,7 @@ name = "binaryninjacore-sys"
 version = "0.1.0"
 authors = ["Ryan Snyder <ryan@vector35.com>", "Kyle Martin <kyle@vector35.com>"]
 build = "build.rs"
-edition = "2021"
+edition = "2024"
 links = "binaryninjacore"
 license = "Apache-2.0"
 

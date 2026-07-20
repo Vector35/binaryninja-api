@@ -39,12 +39,12 @@ impl TypeLibrary {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNTypeLibrary>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     #[allow(clippy::mut_from_ref)]
     pub(crate) unsafe fn as_raw(&self) -> &mut BNTypeLibrary {
-        &mut *self.handle.as_ptr()
+        unsafe { &mut *self.handle.as_ptr() }
     }
 
     /// Duplicate the type library. This creates a new, non-finalized type library object that shares
@@ -386,13 +386,17 @@ impl Hash for TypeLibrary {
 
 unsafe impl RefCountable for TypeLibrary {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewTypeLibraryReference(handle.handle.as_ptr())).unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewTypeLibraryReference(handle.handle.as_ptr())).unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeTypeLibrary(handle.handle.as_ptr());
+        unsafe {
+            BNFreeTypeLibrary(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -412,11 +416,11 @@ impl CoreArrayProvider for TypeLibrary {
 
 unsafe impl CoreArrayProviderInner for TypeLibrary {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeTypeLibraryList(raw, count)
+        unsafe { BNFreeTypeLibraryList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Self::from_raw(NonNull::new(*raw).unwrap()), context)
+        unsafe { Guard::new(Self::from_raw(NonNull::new(*raw).unwrap()), context) }
     }
 }
 

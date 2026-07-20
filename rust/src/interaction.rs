@@ -205,22 +205,24 @@ pub fn run_progress_dialog<F: Fn(Box<dyn Fn(usize, usize) -> Result<(), ()>>)>(
         progress: Option<unsafe extern "C" fn(*mut c_void, usize, usize) -> bool>,
         progress_ctxt: *mut c_void,
     ) {
-        ffi_wrap!("run_progress_dialog", {
-            let context = ctxt as *mut TaskContext<F>;
-            let progress_fn = Box::new(move |cur: usize, max: usize| -> Result<(), ()> {
-                match progress {
-                    Some(func) => {
-                        if (func)(progress_ctxt, cur, max) {
-                            Ok(())
-                        } else {
-                            Err(())
+        unsafe {
+            ffi_wrap!("run_progress_dialog", {
+                let context = ctxt as *mut TaskContext<F>;
+                let progress_fn = Box::new(move |cur: usize, max: usize| -> Result<(), ()> {
+                    match progress {
+                        Some(func) => {
+                            if (func)(progress_ctxt, cur, max) {
+                                Ok(())
+                            } else {
+                                Err(())
+                            }
                         }
+                        None => Ok(()),
                     }
-                    None => Ok(()),
-                }
-            });
-            ((*context).0)(progress_fn);
-        })
+                });
+                ((*context).0)(progress_fn);
+            })
+        }
     }
 
     let title = title.to_cstr();

@@ -410,11 +410,13 @@ impl CoreArrayProvider for BinaryViewType {
 
 unsafe impl CoreArrayProviderInner for BinaryViewType {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeBinaryViewTypeList(raw);
+        unsafe {
+            BNFreeBinaryViewTypeList(raw);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(BinaryViewType::from_raw(*raw), &())
+        unsafe { Guard::new(BinaryViewType::from_raw(*raw), &()) }
     }
 }
 
@@ -648,8 +650,10 @@ impl BinaryView {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNBinaryView) -> Ref<Self> {
-        debug_assert!(!handle.is_null());
-        Ref::new(Self { handle })
+        unsafe {
+            debug_assert!(!handle.is_null());
+            Ref::new(Self { handle })
+        }
     }
 
     /// Create a core instance of the [`CustomBinaryView`].
@@ -874,9 +878,11 @@ impl BinaryView {
             offset: u64,
             data: *mut BNDataBuffer,
         ) -> bool {
-            let f = ctx as *mut C;
-            let buffer = DataBuffer::from_raw(data);
-            (*f)(offset, &buffer)
+            unsafe {
+                let f = ctx as *mut C;
+                let buffer = DataBuffer::from_raw(data);
+                (*f)(offset, &buffer)
+            }
         }
 
         let query = query.to_json().to_cstr();
@@ -3089,13 +3095,17 @@ impl BinaryViewBase for BinaryView {
 
 unsafe impl RefCountable for BinaryView {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewViewReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewViewReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeBinaryView(handle.handle);
+        unsafe {
+            BNFreeBinaryView(handle.handle);
+        }
     }
 }
 
@@ -3187,10 +3197,12 @@ where
         ctx: *mut c_void,
         view: *mut BNBinaryView,
     ) {
-        ffi_wrap!("EventHandler::on_event", {
-            let context = unsafe { &*(ctx as *const Handler) };
-            context.on_event(&BinaryView::ref_from_raw(BNNewViewReference(view)));
-        })
+        unsafe {
+            ffi_wrap!("EventHandler::on_event", {
+                let context = { &*(ctx as *const Handler) };
+                context.on_event(&BinaryView::ref_from_raw(BNNewViewReference(view)));
+            })
+        }
     }
 
     let boxed = Box::new(handler);
@@ -3220,7 +3232,7 @@ impl CoreArrayProvider for CommentReference {
 
 unsafe impl CoreArrayProviderInner for CommentReference {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeAddressList(raw)
+        unsafe { BNFreeAddressList(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -3263,7 +3275,7 @@ impl CoreArrayProvider for StringReference {
 
 unsafe impl CoreArrayProviderInner for StringReference {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeStringReferenceList(raw)
+        unsafe { BNFreeStringReferenceList(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -3303,7 +3315,9 @@ impl CoreArrayProvider for AddressRange {
 
 unsafe impl CoreArrayProviderInner for AddressRange {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeAddressRanges(raw);
+        unsafe {
+            BNFreeAddressRanges(raw);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {

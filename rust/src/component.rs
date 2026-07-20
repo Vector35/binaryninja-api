@@ -83,7 +83,7 @@ impl Component {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNComponent>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     pub fn guid(&self) -> String {
@@ -278,13 +278,17 @@ impl ToOwned for Component {
 
 unsafe impl RefCountable for Component {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewComponentReference(handle.handle.as_ptr())).unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewComponentReference(handle.handle.as_ptr())).unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeComponent(handle.handle.as_ptr());
+        unsafe {
+            BNFreeComponent(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -296,12 +300,14 @@ impl CoreArrayProvider for Component {
 
 unsafe impl CoreArrayProviderInner for Component {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeComponents(raw, count)
+        unsafe { BNFreeComponents(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }
 
@@ -317,11 +323,13 @@ impl CoreArrayProvider for ComponentReferencedType {
 
 unsafe impl CoreArrayProviderInner for ComponentReferencedType {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNComponentFreeReferencedTypes(raw, count)
+        unsafe { BNComponentFreeReferencedTypes(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        // SAFETY: &*mut BNType == &Type (*mut BNType == Type)
-        std::mem::transmute(raw)
+        unsafe {
+            // SAFETY: &*mut BNType == &Type (*mut BNType == Type)
+            std::mem::transmute(raw)
+        }
     }
 }

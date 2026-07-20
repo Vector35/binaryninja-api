@@ -283,13 +283,15 @@ impl CoreArrayProvider for CoreTypeParser {
 
 unsafe impl CoreArrayProviderInner for CoreTypeParser {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeTypeParserList(raw)
+        unsafe { BNFreeTypeParserList(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        // TODO: Because handle is a NonNull we should prob make Self::Raw that as well...
-        let handle = NonNull::new(*raw).unwrap();
-        CoreTypeParser::from_raw(handle)
+        unsafe {
+            // TODO: Because handle is a NonNull we should prob make Self::Raw that as well...
+            let handle = NonNull::new(*raw).unwrap();
+            CoreTypeParser::from_raw(handle)
+        }
     }
 }
 
@@ -519,15 +521,17 @@ unsafe extern "C" fn cb_get_option_text<T: TypeParser>(
     value: *const c_char,
     result: *mut *mut c_char,
 ) -> bool {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
-    if let Some(inner_result) = ctxt.get_option_text(option, &raw_to_string(value).unwrap()) {
-        let bn_inner_result = BnString::new(inner_result);
-        // NOTE: Dropped by `cb_free_string`
-        *result = BnString::into_raw(bn_inner_result);
-        true
-    } else {
-        *result = std::ptr::null_mut();
-        false
+    unsafe {
+        let ctxt: &mut T = &mut *(ctxt as *mut T);
+        if let Some(inner_result) = ctxt.get_option_text(option, &raw_to_string(value).unwrap()) {
+            let bn_inner_result = BnString::new(inner_result);
+            // NOTE: Dropped by `cb_free_string`
+            *result = BnString::into_raw(bn_inner_result);
+            true
+        } else {
+            *result = std::ptr::null_mut();
+            false
+        }
     }
 }
 
@@ -545,47 +549,49 @@ unsafe extern "C" fn cb_preprocess_source<T: TypeParser>(
     errors: *mut *mut BNTypeParserError,
     error_count: *mut usize,
 ) -> bool {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
-    let platform = Platform { handle: platform };
-    let existing_types_ptr = NonNull::new(existing_types).unwrap();
-    let existing_types = TypeContainer::from_raw(existing_types_ptr);
-    let options_raw = unsafe { std::slice::from_raw_parts(options, option_count) };
-    let options: Vec<_> = options_raw
-        .iter()
-        .filter_map(|&r| raw_to_string(r))
-        .collect();
-    let includes_raw = unsafe { std::slice::from_raw_parts(include_dirs, include_dir_count) };
-    let includes: Vec<_> = includes_raw
-        .iter()
-        .filter_map(|&r| Some(PathBuf::from(raw_to_string(r)?)))
-        .collect();
-    match ctxt.preprocess_source(
-        &raw_to_string(source).unwrap(),
-        &raw_to_string(file_name).unwrap(),
-        &platform,
-        &existing_types,
-        &options,
-        &includes,
-    ) {
-        Ok(inner_result) => {
-            let bn_inner_result = BnString::new(inner_result);
-            // NOTE: Dropped by `cb_free_string`
-            *result = BnString::into_raw(bn_inner_result);
-            *errors = std::ptr::null_mut();
-            *error_count = 0;
-            true
-        }
-        Err(inner_errors) => {
-            *result = std::ptr::null_mut();
-            *error_count = inner_errors.len();
-            // NOTE: Leaking errors here, dropped by `cb_free_error_list`.
-            let inner_errors: Box<[_]> = inner_errors
-                .into_iter()
-                .map(TypeParserError::into_raw)
-                .collect();
-            // NOTE: Dropped by `cb_free_error_list`
-            *errors = Box::leak(inner_errors).as_mut_ptr();
-            false
+    unsafe {
+        let ctxt: &mut T = &mut *(ctxt as *mut T);
+        let platform = Platform { handle: platform };
+        let existing_types_ptr = NonNull::new(existing_types).unwrap();
+        let existing_types = TypeContainer::from_raw(existing_types_ptr);
+        let options_raw = unsafe { std::slice::from_raw_parts(options, option_count) };
+        let options: Vec<_> = options_raw
+            .iter()
+            .filter_map(|&r| raw_to_string(r))
+            .collect();
+        let includes_raw = unsafe { std::slice::from_raw_parts(include_dirs, include_dir_count) };
+        let includes: Vec<_> = includes_raw
+            .iter()
+            .filter_map(|&r| Some(PathBuf::from(raw_to_string(r)?)))
+            .collect();
+        match ctxt.preprocess_source(
+            &raw_to_string(source).unwrap(),
+            &raw_to_string(file_name).unwrap(),
+            &platform,
+            &existing_types,
+            &options,
+            &includes,
+        ) {
+            Ok(inner_result) => {
+                let bn_inner_result = BnString::new(inner_result);
+                // NOTE: Dropped by `cb_free_string`
+                *result = BnString::into_raw(bn_inner_result);
+                *errors = std::ptr::null_mut();
+                *error_count = 0;
+                true
+            }
+            Err(inner_errors) => {
+                *result = std::ptr::null_mut();
+                *error_count = inner_errors.len();
+                // NOTE: Leaking errors here, dropped by `cb_free_error_list`.
+                let inner_errors: Box<[_]> = inner_errors
+                    .into_iter()
+                    .map(TypeParserError::into_raw)
+                    .collect();
+                // NOTE: Dropped by `cb_free_error_list`
+                *errors = Box::leak(inner_errors).as_mut_ptr();
+                false
+            }
         }
     }
 }
@@ -605,45 +611,47 @@ unsafe extern "C" fn cb_parse_types_from_source<T: TypeParser>(
     errors: *mut *mut BNTypeParserError,
     error_count: *mut usize,
 ) -> bool {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
-    let platform = Platform { handle: platform };
-    let existing_types_ptr = NonNull::new(existing_types).unwrap();
-    let existing_types = TypeContainer::from_raw(existing_types_ptr);
-    let options_raw = unsafe { std::slice::from_raw_parts(options, option_count) };
-    let options: Vec<_> = options_raw
-        .iter()
-        .filter_map(|&r| raw_to_string(r))
-        .collect();
-    let includes_raw = unsafe { std::slice::from_raw_parts(include_dirs, include_dir_count) };
-    let includes: Vec<_> = includes_raw
-        .iter()
-        .filter_map(|&r| Some(PathBuf::from(raw_to_string(r)?)))
-        .collect();
-    match ctxt.parse_types_from_source(
-        &raw_to_string(source).unwrap(),
-        &raw_to_string(file_name).unwrap(),
-        &platform,
-        &existing_types,
-        &options,
-        &includes,
-        &raw_to_string(auto_type_source).unwrap(),
-    ) {
-        Ok(type_parser_result) => {
-            *result = TypeParserResult::into_raw(type_parser_result);
-            *errors = std::ptr::null_mut();
-            *error_count = 0;
-            true
-        }
-        Err(inner_errors) => {
-            *error_count = inner_errors.len();
-            let inner_errors: Box<[_]> = inner_errors
-                .into_iter()
-                .map(TypeParserError::into_raw)
-                .collect();
-            *result = Default::default();
-            // NOTE: Dropped by cb_free_error_list
-            *errors = Box::leak(inner_errors).as_mut_ptr();
-            false
+    unsafe {
+        let ctxt: &mut T = &mut *(ctxt as *mut T);
+        let platform = Platform { handle: platform };
+        let existing_types_ptr = NonNull::new(existing_types).unwrap();
+        let existing_types = TypeContainer::from_raw(existing_types_ptr);
+        let options_raw = unsafe { std::slice::from_raw_parts(options, option_count) };
+        let options: Vec<_> = options_raw
+            .iter()
+            .filter_map(|&r| raw_to_string(r))
+            .collect();
+        let includes_raw = unsafe { std::slice::from_raw_parts(include_dirs, include_dir_count) };
+        let includes: Vec<_> = includes_raw
+            .iter()
+            .filter_map(|&r| Some(PathBuf::from(raw_to_string(r)?)))
+            .collect();
+        match ctxt.parse_types_from_source(
+            &raw_to_string(source).unwrap(),
+            &raw_to_string(file_name).unwrap(),
+            &platform,
+            &existing_types,
+            &options,
+            &includes,
+            &raw_to_string(auto_type_source).unwrap(),
+        ) {
+            Ok(type_parser_result) => {
+                *result = TypeParserResult::into_raw(type_parser_result);
+                *errors = std::ptr::null_mut();
+                *error_count = 0;
+                true
+            }
+            Err(inner_errors) => {
+                *error_count = inner_errors.len();
+                let inner_errors: Box<[_]> = inner_errors
+                    .into_iter()
+                    .map(TypeParserError::into_raw)
+                    .collect();
+                *result = Default::default();
+                // NOTE: Dropped by cb_free_error_list
+                *errors = Box::leak(inner_errors).as_mut_ptr();
+                false
+            }
         }
     }
 }
@@ -657,38 +665,44 @@ unsafe extern "C" fn cb_parse_type_string<T: TypeParser>(
     errors: *mut *mut BNTypeParserError,
     error_count: *mut usize,
 ) -> bool {
-    let ctxt: &mut T = &mut *(ctxt as *mut T);
-    let platform = Platform { handle: platform };
-    let existing_types_ptr = NonNull::new(existing_types).unwrap();
-    let existing_types = TypeContainer::from_raw(existing_types_ptr);
-    match ctxt.parse_type_string(&raw_to_string(source).unwrap(), &platform, &existing_types) {
-        Ok(inner_result) => {
-            *result = QualifiedNameAndType::into_raw(inner_result);
-            *errors = std::ptr::null_mut();
-            *error_count = 0;
-            true
-        }
-        Err(inner_errors) => {
-            *error_count = inner_errors.len();
-            let inner_errors: Box<[_]> = inner_errors
-                .into_iter()
-                .map(TypeParserError::into_raw)
-                .collect();
-            *result = Default::default();
-            // NOTE: Dropped by cb_free_error_list
-            *errors = Box::leak(inner_errors).as_mut_ptr();
-            false
+    unsafe {
+        let ctxt: &mut T = &mut *(ctxt as *mut T);
+        let platform = Platform { handle: platform };
+        let existing_types_ptr = NonNull::new(existing_types).unwrap();
+        let existing_types = TypeContainer::from_raw(existing_types_ptr);
+        match ctxt.parse_type_string(&raw_to_string(source).unwrap(), &platform, &existing_types) {
+            Ok(inner_result) => {
+                *result = QualifiedNameAndType::into_raw(inner_result);
+                *errors = std::ptr::null_mut();
+                *error_count = 0;
+                true
+            }
+            Err(inner_errors) => {
+                *error_count = inner_errors.len();
+                let inner_errors: Box<[_]> = inner_errors
+                    .into_iter()
+                    .map(TypeParserError::into_raw)
+                    .collect();
+                *result = Default::default();
+                // NOTE: Dropped by cb_free_error_list
+                *errors = Box::leak(inner_errors).as_mut_ptr();
+                false
+            }
         }
     }
 }
 
 unsafe extern "C" fn cb_free_string(_ctxt: *mut c_void, string: *mut c_char) {
-    // SAFETY: The returned string is just BnString
-    BnString::free_raw(string);
+    unsafe {
+        // SAFETY: The returned string is just BnString
+        BnString::free_raw(string);
+    }
 }
 
 unsafe extern "C" fn cb_free_result(_ctxt: *mut c_void, result: *mut BNTypeParserResult) {
-    TypeParserResult::free_owned_raw(*result);
+    unsafe {
+        TypeParserResult::free_owned_raw(*result);
+    }
 }
 
 unsafe extern "C" fn cb_free_error_list(
@@ -696,9 +710,11 @@ unsafe extern "C" fn cb_free_error_list(
     errors: *mut BNTypeParserError,
     error_count: usize,
 ) {
-    let errors = std::ptr::slice_from_raw_parts_mut(errors, error_count);
-    let boxed_errors = Box::from_raw(errors);
-    for error in boxed_errors {
-        TypeParserError::free_raw(error);
+    unsafe {
+        let errors = std::ptr::slice_from_raw_parts_mut(errors, error_count);
+        let boxed_errors = Box::from_raw(errors);
+        for error in boxed_errors {
+            TypeParserError::free_raw(error);
+        }
     }
 }

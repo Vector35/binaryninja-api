@@ -84,13 +84,15 @@ impl CoreArrayProvider for CoreFlowGraphLayout {
 
 unsafe impl CoreArrayProviderInner for CoreFlowGraphLayout {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeFlowGraphLayoutList(raw)
+        unsafe { BNFreeFlowGraphLayoutList(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        // TODO: Because handle is a NonNull we should prob make Self::Raw that as well...
-        let handle = NonNull::new(*raw).unwrap();
-        CoreFlowGraphLayout::from_raw(handle)
+        unsafe {
+            // TODO: Because handle is a NonNull we should prob make Self::Raw that as well...
+            let handle = NonNull::new(*raw).unwrap();
+            CoreFlowGraphLayout::from_raw(handle)
+        }
     }
 }
 
@@ -106,7 +108,7 @@ impl FlowGraphLayoutRequest {
     pub(crate) unsafe fn ref_from_raw(
         handle: NonNull<BNFlowGraphLayoutRequest>,
     ) -> Ref<FlowGraphLayoutRequest> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// The flow graph that this request is for.
@@ -137,14 +139,18 @@ impl ToOwned for FlowGraphLayoutRequest {
 
 unsafe impl RefCountable for FlowGraphLayoutRequest {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewFlowGraphLayoutRequestReference(handle.handle.as_ptr()))
-                .unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewFlowGraphLayoutRequestReference(handle.handle.as_ptr()))
+                    .unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeFlowGraphLayoutRequest(handle.handle.as_ptr());
+        unsafe {
+            BNFreeFlowGraphLayoutRequest(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -154,11 +160,13 @@ unsafe extern "C" fn cb_layout<C: FlowGraphLayout>(
     nodes: *mut *mut BNFlowGraphNode,
     node_count: usize,
 ) -> bool {
-    let ctxt = ctxt as *mut C;
-    let nodes_slice = core::slice::from_raw_parts(nodes, node_count);
-    let nodes: Vec<_> = nodes_slice
-        .iter()
-        .map(|ptr| unsafe { FlowGraphNode::from_raw(*ptr) })
-        .collect();
-    (*ctxt).layout(&FlowGraph::from_raw(graph), &nodes)
+    unsafe {
+        let ctxt = ctxt as *mut C;
+        let nodes_slice = core::slice::from_raw_parts(nodes, node_count);
+        let nodes: Vec<_> = nodes_slice
+            .iter()
+            .map(|ptr| FlowGraphNode::from_raw(*ptr))
+            .collect();
+        (*ctxt).layout(&FlowGraph::from_raw(graph), &nodes)
+    }
 }

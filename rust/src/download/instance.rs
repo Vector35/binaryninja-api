@@ -193,7 +193,7 @@ impl DownloadInstance {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNDownloadInstance) -> Ref<Self> {
-        Ref::new(Self::from_raw(handle))
+        unsafe { Ref::new(Self::from_raw(handle)) }
     }
 
     fn get_error(&self) -> String {
@@ -452,94 +452,112 @@ impl ToOwned for DownloadInstance {
 
 unsafe impl RefCountable for DownloadInstance {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewDownloadInstanceReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewDownloadInstanceReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeDownloadInstance(handle.handle);
+        unsafe {
+            BNFreeDownloadInstance(handle.handle);
+        }
     }
 }
 
 unsafe extern "C" fn cb_read_input(data: *mut u8, len: u64, ctxt: *mut c_void) -> i64 {
-    let callbacks = ctxt as *mut DownloadInstanceInputOutputCallbacks;
-    if let Some(func) = &mut (*callbacks).read {
-        let slice = slice::from_raw_parts_mut(data, len as usize);
-        let result = (func)(slice);
-        if let Some(count) = result {
-            count as i64
+    unsafe {
+        let callbacks = ctxt as *mut DownloadInstanceInputOutputCallbacks;
+        if let Some(func) = &mut (*callbacks).read {
+            let slice = slice::from_raw_parts_mut(data, len as usize);
+            let result = (func)(slice);
+            if let Some(count) = result {
+                count as i64
+            } else {
+                -1
+            }
         } else {
-            -1
+            0
         }
-    } else {
-        0
     }
 }
 
 unsafe extern "C" fn cb_write_input(data: *mut u8, len: u64, ctxt: *mut c_void) -> u64 {
-    let callbacks = ctxt as *mut DownloadInstanceInputOutputCallbacks;
-    if let Some(func) = &mut (*callbacks).write {
-        let slice = slice::from_raw_parts(data, len as usize);
-        let result = (func)(slice);
-        result as u64
-    } else {
-        0
+    unsafe {
+        let callbacks = ctxt as *mut DownloadInstanceInputOutputCallbacks;
+        if let Some(func) = &mut (*callbacks).write {
+            let slice = slice::from_raw_parts(data, len as usize);
+            let result = (func)(slice);
+            result as u64
+        } else {
+            0
+        }
     }
 }
 
 unsafe extern "C" fn cb_progress_input(ctxt: *mut c_void, progress: usize, total: usize) -> bool {
-    let callbacks = ctxt as *mut DownloadInstanceInputOutputCallbacks;
-    if let Some(func) = &mut (*callbacks).progress {
-        (func)(progress, total)
-    } else {
-        true
+    unsafe {
+        let callbacks = ctxt as *mut DownloadInstanceInputOutputCallbacks;
+        if let Some(func) = &mut (*callbacks).progress {
+            (func)(progress, total)
+        } else {
+            true
+        }
     }
 }
 
 unsafe extern "C" fn cb_write_output(data: *mut u8, len: u64, ctxt: *mut c_void) -> u64 {
-    let callbacks = ctxt as *mut DownloadInstanceOutputCallbacks;
-    if let Some(func) = &mut (*callbacks).write {
-        let slice = slice::from_raw_parts(data, len as usize);
-        let result = (func)(slice);
-        result as u64
-    } else {
-        0u64
+    unsafe {
+        let callbacks = ctxt as *mut DownloadInstanceOutputCallbacks;
+        if let Some(func) = &mut (*callbacks).write {
+            let slice = slice::from_raw_parts(data, len as usize);
+            let result = (func)(slice);
+            result as u64
+        } else {
+            0u64
+        }
     }
 }
 
 unsafe extern "C" fn cb_progress_output(ctxt: *mut c_void, progress: usize, total: usize) -> bool {
-    let callbacks = ctxt as *mut DownloadInstanceOutputCallbacks;
-    if let Some(func) = &mut (*callbacks).progress {
-        (func)(progress, total)
-    } else {
-        true
+    unsafe {
+        let callbacks = ctxt as *mut DownloadInstanceOutputCallbacks;
+        if let Some(func) = &mut (*callbacks).progress {
+            (func)(progress, total)
+        } else {
+            true
+        }
     }
 }
 
 pub unsafe extern "C" fn cb_destroy_instance<C: CustomDownloadInstance>(ctxt: *mut c_void) {
-    let _ = Box::from_raw(ctxt as *mut C);
+    unsafe {
+        let _ = Box::from_raw(ctxt as *mut C);
+    }
 }
 
 pub unsafe extern "C" fn cb_perform_request<C: CustomDownloadInstance>(
     ctxt: *mut c_void,
     url: *const c_char,
 ) -> i32 {
-    let c = ManuallyDrop::new(Box::from_raw(ctxt as *mut C));
+    unsafe {
+        let c = ManuallyDrop::new(Box::from_raw(ctxt as *mut C));
 
-    let url = match CStr::from_ptr(url).to_str() {
-        Ok(url) => url,
-        Err(e) => {
-            c.handle().set_error(&format!("Invalid URL: {}", e));
-            return -1;
-        }
-    };
+        let url = match CStr::from_ptr(url).to_str() {
+            Ok(url) => url,
+            Err(e) => {
+                c.handle().set_error(&format!("Invalid URL: {}", e));
+                return -1;
+            }
+        };
 
-    match c.perform_request(url) {
-        Ok(()) => 0,
-        Err(e) => {
-            c.handle().set_error(&e);
-            -1
+        match c.perform_request(url) {
+            Ok(()) => 0,
+            Err(e) => {
+                c.handle().set_error(&e);
+                -1
+            }
         }
     }
 }
@@ -553,51 +571,55 @@ pub unsafe extern "C" fn cb_perform_custom_request<C: CustomDownloadInstance>(
     header_values: *const *const c_char,
     response: *mut *mut BNDownloadInstanceResponse,
 ) -> i32 {
-    let c = ManuallyDrop::new(Box::from_raw(ctxt as *mut C));
+    unsafe {
+        let c = ManuallyDrop::new(Box::from_raw(ctxt as *mut C));
 
-    let method = match CStr::from_ptr(method).to_str() {
-        Ok(method) => method,
-        Err(e) => {
-            c.handle().set_error(&format!("Invalid Method: {}", e));
-            return -1;
-        }
-    };
+        let method = match CStr::from_ptr(method).to_str() {
+            Ok(method) => method,
+            Err(e) => {
+                c.handle().set_error(&format!("Invalid Method: {}", e));
+                return -1;
+            }
+        };
 
-    let url = match CStr::from_ptr(url).to_str() {
-        Ok(url) => url,
-        Err(e) => {
-            c.handle().set_error(&format!("Invalid URL: {}", e));
-            return -1;
-        }
-    };
+        let url = match CStr::from_ptr(url).to_str() {
+            Ok(url) => url,
+            Err(e) => {
+                c.handle().set_error(&format!("Invalid URL: {}", e));
+                return -1;
+            }
+        };
 
-    // SAFETY BnString and *mut c_char are transparent
-    let header_count = usize::try_from(header_count).unwrap();
-    let header_keys = slice::from_raw_parts(header_keys as *const BnString, header_count);
-    let header_values = slice::from_raw_parts(header_values as *const BnString, header_count);
-    let header_keys_str = header_keys.iter().map(|s| s.to_string_lossy().to_string());
-    let header_values_str = header_values
-        .iter()
-        .map(|s| s.to_string_lossy().to_string());
-    let headers = header_keys_str.zip(header_values_str);
+        // SAFETY BnString and *mut c_char are transparent
+        let header_count = usize::try_from(header_count).unwrap();
+        let header_keys = slice::from_raw_parts(header_keys as *const BnString, header_count);
+        let header_values = slice::from_raw_parts(header_values as *const BnString, header_count);
+        let header_keys_str = header_keys.iter().map(|s| s.to_string_lossy().to_string());
+        let header_values_str = header_values
+            .iter()
+            .map(|s| s.to_string_lossy().to_string());
+        let headers = header_keys_str.zip(header_values_str);
 
-    match c.perform_custom_request(method, url, headers) {
-        Ok(res) => {
-            let res_header_keys_ptr = strings_to_string_list(res.headers.keys());
-            let res_header_values_ptr = strings_to_string_list(res.headers.values());
-            let raw_response = BNDownloadInstanceResponse {
-                statusCode: res.status_code,
-                headerCount: res.headers.len() as u64,
-                headerKeys: res_header_keys_ptr,
-                headerValues: res_header_values_ptr,
-            };
-            // Leak the response and free it with cb_free_response
-            unsafe { *response = Box::leak(Box::new(raw_response)) };
-            0
-        }
-        Err(e) => {
-            c.handle().set_error(&e);
-            -1
+        match c.perform_custom_request(method, url, headers) {
+            Ok(res) => {
+                let res_header_keys_ptr = strings_to_string_list(res.headers.keys());
+                let res_header_values_ptr = strings_to_string_list(res.headers.values());
+                let raw_response = BNDownloadInstanceResponse {
+                    statusCode: res.status_code,
+                    headerCount: res.headers.len() as u64,
+                    headerKeys: res_header_keys_ptr,
+                    headerValues: res_header_values_ptr,
+                };
+                // Leak the response and free it with cb_free_response
+                {
+                    *response = Box::leak(Box::new(raw_response))
+                };
+                0
+            }
+            Err(e) => {
+                c.handle().set_error(&e);
+                -1
+            }
         }
     }
 }
@@ -606,5 +628,7 @@ unsafe extern "C" fn cb_free_response(
     _ctxt: *mut c_void,
     response: *mut BNDownloadInstanceResponse,
 ) {
-    let _ = Box::from_raw(response);
+    unsafe {
+        let _ = Box::from_raw(response);
+    }
 }

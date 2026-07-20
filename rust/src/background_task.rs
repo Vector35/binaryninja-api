@@ -141,13 +141,17 @@ impl Debug for BackgroundTask {
 
 unsafe impl RefCountable for BackgroundTask {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewBackgroundTaskReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewBackgroundTaskReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeBackgroundTask(handle.handle);
+        unsafe {
+            BNFreeBackgroundTask(handle.handle);
+        }
     }
 }
 
@@ -159,10 +163,12 @@ impl CoreArrayProvider for BackgroundTask {
 
 unsafe impl CoreArrayProviderInner for BackgroundTask {
     unsafe fn free(raw: *mut *mut BNBackgroundTask, count: usize, _context: &()) {
-        BNFreeBackgroundTaskList(raw, count);
+        unsafe {
+            BNFreeBackgroundTaskList(raw, count);
+        }
     }
     unsafe fn wrap_raw<'a>(raw: &'a *mut BNBackgroundTask, context: &'a ()) -> Self::Wrapped<'a> {
-        Guard::new(BackgroundTask::from_raw(*raw), context)
+        unsafe { Guard::new(BackgroundTask::from_raw(*raw), context) }
     }
 }
 

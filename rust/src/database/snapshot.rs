@@ -29,7 +29,7 @@ impl Snapshot {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNSnapshot>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// Get the owning database
@@ -223,13 +223,17 @@ impl ToOwned for Snapshot {
 
 unsafe impl RefCountable for Snapshot {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewSnapshotReference(handle.handle.as_ptr())).unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewSnapshotReference(handle.handle.as_ptr())).unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeSnapshot(handle.handle.as_ptr());
+        unsafe {
+            BNFreeSnapshot(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -241,12 +245,16 @@ impl CoreArrayProvider for Snapshot {
 
 unsafe impl CoreArrayProviderInner for Snapshot {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeSnapshotList(raw, count);
+        unsafe {
+            BNFreeSnapshotList(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }
 
@@ -268,7 +276,7 @@ impl CoreArrayProvider for SnapshotId {
 
 unsafe impl CoreArrayProviderInner for SnapshotId {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNCollaborationFreeSnapshotIdList(raw, count)
+        unsafe { BNCollaborationFreeSnapshotIdList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {

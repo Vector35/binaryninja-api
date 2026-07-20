@@ -76,7 +76,7 @@ impl BnString {
     ///
     /// This expects the passed raw string to be owned, as in, freed by us.
     pub unsafe fn into_string(raw: *mut c_char) -> String {
-        Self::from_raw(raw).to_string_lossy().to_string()
+        unsafe { Self::from_raw(raw).to_string_lossy().to_string() }
     }
 
     /// Construct a BnString from an owned const char* allocated by [`BNAllocString`].
@@ -86,8 +86,10 @@ impl BnString {
 
     /// Free a raw string allocated by [`BNAllocString`].
     pub unsafe fn free_raw(raw: *mut c_char) {
-        if !raw.is_null() {
-            BNFreeString(raw);
+        unsafe {
+            if !raw.is_null() {
+                BNFreeString(raw);
+            }
         }
     }
 
@@ -176,11 +178,13 @@ impl CoreArrayProvider for BnString {
 
 unsafe impl CoreArrayProviderInner for BnString {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeStringList(raw, count);
+        unsafe {
+            BNFreeStringList(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        CStr::from_ptr(*raw).to_str().unwrap()
+        unsafe { CStr::from_ptr(*raw).to_str().unwrap() }
     }
 }
 

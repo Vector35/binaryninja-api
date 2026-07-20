@@ -2,7 +2,7 @@
 name = "binaryninja"
 version = "0.1.0"
 authors = ["Ryan Snyder <ryan@vector35.com>", "Kyle Martin <kyle@vector35.com>"]
-edition = "2021"
+edition = "2024"
 rust-version = "1.91.1"
 license = "Apache-2.0"
 

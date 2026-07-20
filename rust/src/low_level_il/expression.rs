@@ -664,7 +664,7 @@ where
         use LowLevelILExpressionKind::*;
 
         macro_rules! visit {
-            ($expr:expr) => {
+            ($expr:expr_2021) => {
                 if let VisitorAction::Halt = visitor($expr) {
                     return VisitorAction::Halt;
                 }
@@ -672,50 +672,46 @@ where
         }
 
         match self {
-            CmpE(ref op) | CmpNe(ref op) | CmpSlt(ref op) | CmpUlt(ref op) | CmpSle(ref op)
-            | CmpUle(ref op) | CmpSge(ref op) | CmpUge(ref op) | CmpSgt(ref op)
-            | CmpUgt(ref op) | FcmpE(ref op) | FcmpNE(ref op) | FcmpLT(ref op) | FcmpLE(ref op)
-            | FcmpGE(ref op) | FcmpGT(ref op) | FcmpO(ref op) | FcmpUO(ref op) => {
+            CmpE(op) | CmpNe(op) | CmpSlt(op) | CmpUlt(op) | CmpSle(op) | CmpUle(op)
+            | CmpSge(op) | CmpUge(op) | CmpSgt(op) | CmpUgt(op) | FcmpE(op) | FcmpNE(op)
+            | FcmpLT(op) | FcmpLE(op) | FcmpGE(op) | FcmpGT(op) | FcmpO(op) | FcmpUO(op) => {
                 visit!(op.left());
                 visit!(op.right());
             }
-            Adc(ref op) | Sbb(ref op) | Rlc(ref op) | Rrc(ref op) => {
+            Adc(op) | Sbb(op) | Rlc(op) | Rrc(op) => {
                 visit!(op.left());
                 visit!(op.right());
                 visit!(op.carry());
             }
-            Add(ref op) | AddOverflow(ref op) | Sub(ref op) | And(ref op) | Or(ref op)
-            | Xor(ref op) | Lsl(ref op) | Lsr(ref op) | Asr(ref op) | Rol(ref op) | Ror(ref op)
-            | Mul(ref op) | MulsDp(ref op) | MuluDp(ref op) | Divu(ref op) | Divs(ref op)
-            | Modu(ref op) | Mods(ref op) | Fadd(ref op) | Fsub(ref op) | Fmul(ref op)
-            | DivuDp(ref op) | DivsDp(ref op) | ModuDp(ref op) | ModsDp(ref op) | Fdiv(ref op)
-            | MinSigned(ref op) | MaxSigned(ref op) | MinUnsigned(ref op) | MaxUnsigned(ref op)
-            | TestBit(ref op) => {
+            Add(op) | AddOverflow(op) | Sub(op) | And(op) | Or(op) | Xor(op) | Lsl(op)
+            | Lsr(op) | Asr(op) | Rol(op) | Ror(op) | Mul(op) | MulsDp(op) | MuluDp(op)
+            | Divu(op) | Divs(op) | Modu(op) | Mods(op) | Fadd(op) | Fsub(op) | Fmul(op)
+            | DivuDp(op) | DivsDp(op) | ModuDp(op) | ModsDp(op) | Fdiv(op) | MinSigned(op)
+            | MaxSigned(op) | MinUnsigned(op) | MaxUnsigned(op) | TestBit(op) => {
                 visit!(op.left());
                 visit!(op.right());
             }
-            Neg(ref op) | Not(ref op) | Bswap(ref op) | Popcnt(ref op) | Clz(ref op)
-            | Ctz(ref op) | Rbit(ref op) | Cls(ref op) | Abs(ref op) | Sx(ref op) | Zx(ref op)
-            | LowPart(ref op) | BoolToInt(ref op) | Fsqrt(ref op) | Fneg(ref op) | Fabs(ref op)
-            | FloatToInt(ref op) | IntToFloat(ref op) | FloatConv(ref op) | RoundToInt(ref op)
-            | Floor(ref op) | Ceil(ref op) | Ftrunc(ref op) => {
+            Neg(op) | Not(op) | Bswap(op) | Popcnt(op) | Clz(op) | Ctz(op) | Rbit(op) | Cls(op)
+            | Abs(op) | Sx(op) | Zx(op) | LowPart(op) | BoolToInt(op) | Fsqrt(op) | Fneg(op)
+            | Fabs(op) | FloatToInt(op) | IntToFloat(op) | FloatConv(op) | RoundToInt(op)
+            | Floor(op) | Ceil(op) | Ftrunc(op) => {
                 visit!(op.operand());
             }
-            UnimplMem(ref op) => {
+            UnimplMem(op) => {
                 visit!(op.mem_expr());
             }
-            Load(ref op) => {
+            Load(op) => {
                 visit!(op.source_expr());
             }
-            LoadSsa(ref op) => {
+            LoadSsa(op) => {
                 visit!(op.source_expr());
             }
-            CallParamSsa(ref op) => {
+            CallParamSsa(op) => {
                 for param_expr in op.param_exprs() {
                     visit!(param_expr);
                 }
             }
-            SeparateParamListSsa(ref op) => {
+            SeparateParamListSsa(op) => {
                 for param_expr in op.param_exprs() {
                     visit!(param_expr);
                 }

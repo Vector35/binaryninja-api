@@ -24,7 +24,7 @@ impl RemoteSnapshot {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNCollaborationSnapshot>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// Get the remote snapshot associated with a local snapshot (if it exists)
@@ -339,14 +339,18 @@ impl ToOwned for RemoteSnapshot {
 
 unsafe impl RefCountable for RemoteSnapshot {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewCollaborationSnapshotReference(handle.handle.as_ptr()))
-                .unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewCollaborationSnapshotReference(handle.handle.as_ptr()))
+                    .unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeCollaborationSnapshot(handle.handle.as_ptr());
+        unsafe {
+            BNFreeCollaborationSnapshot(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -358,11 +362,13 @@ impl CoreArrayProvider for RemoteSnapshot {
 
 unsafe impl CoreArrayProviderInner for RemoteSnapshot {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeCollaborationSnapshotList(raw, count)
+        unsafe { BNFreeCollaborationSnapshotList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }

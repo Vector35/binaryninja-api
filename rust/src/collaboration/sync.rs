@@ -794,11 +794,13 @@ pub trait NameChangeset: Sized {
         ctxt: *mut ::std::os::raw::c_void,
         changeset: *mut BNCollaborationChangeset,
     ) -> bool {
-        let ctxt: &mut Self = &mut *(ctxt as *mut Self);
-        let raw_changeset_ptr = NonNull::new(changeset).unwrap();
-        // TODO: Do we take ownership with a ref here or not?
-        let changeset = Changeset::from_raw(raw_changeset_ptr);
-        ctxt.name_changeset(&changeset)
+        unsafe {
+            let ctxt: &mut Self = &mut *(ctxt as *mut Self);
+            let raw_changeset_ptr = NonNull::new(changeset).unwrap();
+            // TODO: Do we take ownership with a ref here or not?
+            let changeset = Changeset::from_raw(raw_changeset_ptr);
+            ctxt.name_changeset(&changeset)
+        }
     }
 }
 
@@ -841,16 +843,18 @@ pub trait DatabaseConflictHandler: Sized {
         conflicts: *mut *mut BNAnalysisMergeConflict,
         conflict_count: usize,
     ) -> bool {
-        let ctxt: &mut Self = &mut *(ctxt as *mut Self);
-        let keys = core::slice::from_raw_parts(keys, conflict_count);
-        let conflicts = core::slice::from_raw_parts(conflicts, conflict_count);
-        keys.iter().zip(conflicts.iter()).all(|(key, conflict)| {
-            let key = raw_to_string(*key).unwrap();
-            // TODO I guess dont drop here?
-            let raw_ptr = NonNull::new(*conflict).unwrap();
-            let conflict = MergeConflict::from_raw(raw_ptr);
-            ctxt.handle_conflict(&key, &conflict)
-        })
+        unsafe {
+            let ctxt: &mut Self = &mut *(ctxt as *mut Self);
+            let keys = core::slice::from_raw_parts(keys, conflict_count);
+            let conflicts = core::slice::from_raw_parts(conflicts, conflict_count);
+            keys.iter().zip(conflicts.iter()).all(|(key, conflict)| {
+                let key = raw_to_string(*key).unwrap();
+                // TODO I guess dont drop here?
+                let raw_ptr = NonNull::new(*conflict).unwrap();
+                let conflict = MergeConflict::from_raw(raw_ptr);
+                ctxt.handle_conflict(&key, &conflict)
+            })
+        }
     }
 }
 
@@ -887,14 +891,16 @@ pub trait TypeArchiveConflictHandler: Sized {
         conflicts: *mut *mut BNTypeArchiveMergeConflict,
         conflict_count: usize,
     ) -> bool {
-        let ctx: &mut Self = &mut *(ctxt as *mut Self);
-        // TODO: Verify that we dont own the merge conflict, or this list passed to us.
-        let conflicts_raw = core::slice::from_raw_parts(conflicts, conflict_count);
-        conflicts_raw
-            .iter()
-            .map(|t| NonNull::new_unchecked(*t))
-            .map(|t| TypeArchiveMergeConflict::from_raw(t))
-            .all(|conflict| ctx.handle_conflict(&conflict))
+        unsafe {
+            let ctx: &mut Self = &mut *(ctxt as *mut Self);
+            // TODO: Verify that we dont own the merge conflict, or this list passed to us.
+            let conflicts_raw = core::slice::from_raw_parts(conflicts, conflict_count);
+            conflicts_raw
+                .iter()
+                .map(|t| NonNull::new_unchecked(*t))
+                .map(|t| TypeArchiveMergeConflict::from_raw(t))
+                .all(|conflict| ctx.handle_conflict(&conflict))
+        }
     }
 }
 

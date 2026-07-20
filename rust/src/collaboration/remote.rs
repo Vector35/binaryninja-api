@@ -25,7 +25,7 @@ impl Remote {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNRemote>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// Create a Remote and add it to the list of known remotes (saved to Settings)
@@ -784,11 +784,14 @@ impl PartialEq for Remote {
         // don't pull metadata if we hand't yet
         if !self.has_loaded_metadata() || other.has_loaded_metadata() {
             self.address() == other.address()
-        } else if let Some((slf, oth)) = self.unique_id().ok().zip(other.unique_id().ok()) {
-            slf == oth
         } else {
-            // falback to comparing address
-            self.address() == other.address()
+            match self.unique_id().ok().zip(other.unique_id().ok()) {
+                Some((slf, oth)) => slf == oth,
+                _ => {
+                    // falback to comparing address
+                    self.address() == other.address()
+                }
+            }
         }
     }
 }
@@ -804,13 +807,17 @@ impl ToOwned for Remote {
 
 unsafe impl RefCountable for Remote {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewRemoteReference(handle.handle.as_ptr())).unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewRemoteReference(handle.handle.as_ptr())).unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeRemote(handle.handle.as_ptr());
+        unsafe {
+            BNFreeRemote(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -822,12 +829,14 @@ impl CoreArrayProvider for Remote {
 
 unsafe impl CoreArrayProviderInner for Remote {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeRemoteList(raw, count)
+        unsafe { BNFreeRemoteList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }
 

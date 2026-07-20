@@ -621,7 +621,7 @@ impl FunctionLifterContext {
         function: *mut BNLowLevelILFunction,
         handle: *mut BNFunctionLifterContext,
     ) -> Self {
-        Self::from_raw_with_arch(function, handle, None)
+        unsafe { Self::from_raw_with_arch(function, handle, None) }
     }
 
     pub(crate) unsafe fn from_raw_with_arch(
@@ -629,105 +629,107 @@ impl FunctionLifterContext {
         handle: *mut BNFunctionLifterContext,
         arch: Option<CoreArchitecture>,
     ) -> Self {
-        debug_assert!(!function.is_null());
-        debug_assert!(!handle.is_null());
-        let flc_ref = &*handle;
-        let platform = unsafe { Platform::ref_from_raw(BNNewPlatformReference(flc_ref.platform)) };
-        let logger = unsafe { Logger::ref_from_raw(BNNewLoggerReference(flc_ref.logger)) };
+        unsafe {
+            debug_assert!(!function.is_null());
+            debug_assert!(!handle.is_null());
+            let flc_ref = &*handle;
+            let platform = { Platform::ref_from_raw(BNNewPlatformReference(flc_ref.platform)) };
+            let logger = { Logger::ref_from_raw(BNNewLoggerReference(flc_ref.logger)) };
 
-        let mut blocks = Vec::new();
-        for i in 0..flc_ref.basicBlockCount {
-            let block = unsafe {
-                Some(BasicBlock::ref_from_raw(
-                    BNNewBasicBlockReference(*flc_ref.basicBlocks.add(i)),
-                    NativeBlock::new(),
-                ))
+            let mut blocks = Vec::new();
+            for i in 0..flc_ref.basicBlockCount {
+                let block = {
+                    Some(BasicBlock::ref_from_raw(
+                        BNNewBasicBlockReference(*flc_ref.basicBlocks.add(i)),
+                        NativeBlock::new(),
+                    ))
+                };
+
+                blocks.push(block.unwrap());
+            }
+
+            let raw_no_return_calls: &[BNArchitectureAndAddress] =
+                lifter_context_slice(flc_ref.noReturnCalls, flc_ref.noReturnCallsCount);
+            let no_return_calls: HashSet<Location> =
+                raw_no_return_calls.iter().map(Location::from).collect();
+
+            let raw_contextual_return_locs: &[BNArchitectureAndAddress] = {
+                lifter_context_slice(
+                    flc_ref.contextualFunctionReturnLocations,
+                    flc_ref.contextualFunctionReturnCount,
+                )
             };
-
-            blocks.push(block.unwrap());
-        }
-
-        let raw_no_return_calls: &[BNArchitectureAndAddress] =
-            lifter_context_slice(flc_ref.noReturnCalls, flc_ref.noReturnCallsCount);
-        let no_return_calls: HashSet<Location> =
-            raw_no_return_calls.iter().map(Location::from).collect();
-
-        let raw_contextual_return_locs: &[BNArchitectureAndAddress] = unsafe {
-            lifter_context_slice(
-                flc_ref.contextualFunctionReturnLocations,
-                flc_ref.contextualFunctionReturnCount,
-            )
-        };
-        let raw_contextual_return_vals: &[bool] = unsafe {
-            lifter_context_slice(
-                flc_ref.contextualFunctionReturnValues,
-                flc_ref.contextualFunctionReturnCount,
-            )
-        };
-        let contextual_returns: HashMap<Location, bool> = raw_contextual_return_locs
-            .iter()
-            .map(Location::from)
-            .zip(raw_contextual_return_vals.iter().copied())
-            .collect();
-
-        let inlined_remapping: HashMap<Location, Location> = {
-            let raw_inline_remap_locs: &[BNArchitectureAndAddress] = lifter_context_slice(
-                flc_ref.inlinedRemappingKeys,
-                flc_ref.inlinedRemappingEntryCount,
-            );
-
-            let raw_inline_remap_dests: &[BNArchitectureAndAddress] = lifter_context_slice(
-                flc_ref.inlinedRemappingValues,
-                flc_ref.inlinedRemappingEntryCount,
-            );
-
-            raw_inline_remap_locs
+            let raw_contextual_return_vals: &[bool] = {
+                lifter_context_slice(
+                    flc_ref.contextualFunctionReturnValues,
+                    flc_ref.contextualFunctionReturnCount,
+                )
+            };
+            let contextual_returns: HashMap<Location, bool> = raw_contextual_return_locs
                 .iter()
                 .map(Location::from)
-                .zip(raw_inline_remap_dests.iter().map(Location::from))
-                .collect()
-        };
-
-        let mut user_indirect_branches: HashMap<Location, HashSet<Location>> = HashMap::new();
-        let mut auto_indirect_branches: HashMap<Location, HashSet<Location>> = HashMap::new();
-        for i in 0..flc_ref.indirectBranchesCount {
-            let entry = unsafe { *flc_ref.indirectBranches.add(i) };
-            let src = Location::new(
-                Some(CoreArchitecture::from_raw(entry.sourceArch)),
-                entry.sourceAddr,
-            );
-            let dest = Location::new(
-                Some(CoreArchitecture::from_raw(entry.destArch)),
-                entry.destAddr,
-            );
-            if entry.autoDefined {
-                auto_indirect_branches.entry(src).or_default().insert(dest);
-            } else {
-                user_indirect_branches.entry(src).or_default().insert(dest);
-            }
-        }
-
-        let inlined_calls: HashSet<u64> =
-            lifter_context_slice(flc_ref.inlinedCalls, flc_ref.inlinedCallsCount)
-                .iter()
-                .copied()
+                .zip(raw_contextual_return_vals.iter().copied())
                 .collect();
 
-        FunctionLifterContext {
-            handle,
-            function: LowLevelILMutableFunction::ref_from_raw_with_arch(
-                BNNewLowLevelILFunctionReference(function),
-                arch,
-            ),
-            platform,
-            logger,
-            blocks,
-            no_return_calls,
-            contextual_returns,
-            inlined_remapping,
-            user_indirect_branches,
-            auto_indirect_branches,
-            inlined_calls,
+            let inlined_remapping: HashMap<Location, Location> = {
+                let raw_inline_remap_locs: &[BNArchitectureAndAddress] = lifter_context_slice(
+                    flc_ref.inlinedRemappingKeys,
+                    flc_ref.inlinedRemappingEntryCount,
+                );
+
+                let raw_inline_remap_dests: &[BNArchitectureAndAddress] = lifter_context_slice(
+                    flc_ref.inlinedRemappingValues,
+                    flc_ref.inlinedRemappingEntryCount,
+                );
+
+                raw_inline_remap_locs
+                    .iter()
+                    .map(Location::from)
+                    .zip(raw_inline_remap_dests.iter().map(Location::from))
+                    .collect()
+            };
+
+            let mut user_indirect_branches: HashMap<Location, HashSet<Location>> = HashMap::new();
+            let mut auto_indirect_branches: HashMap<Location, HashSet<Location>> = HashMap::new();
+            for i in 0..flc_ref.indirectBranchesCount {
+                let entry = { *flc_ref.indirectBranches.add(i) };
+                let src = Location::new(
+                    Some(CoreArchitecture::from_raw(entry.sourceArch)),
+                    entry.sourceAddr,
+                );
+                let dest = Location::new(
+                    Some(CoreArchitecture::from_raw(entry.destArch)),
+                    entry.destAddr,
+                );
+                if entry.autoDefined {
+                    auto_indirect_branches.entry(src).or_default().insert(dest);
+                } else {
+                    user_indirect_branches.entry(src).or_default().insert(dest);
+                }
+            }
+
+            let inlined_calls: HashSet<u64> =
+                lifter_context_slice(flc_ref.inlinedCalls, flc_ref.inlinedCallsCount)
+                    .iter()
+                    .copied()
+                    .collect();
+
+            FunctionLifterContext {
+                handle,
+                function: LowLevelILMutableFunction::ref_from_raw_with_arch(
+                    BNNewLowLevelILFunctionReference(function),
+                    arch,
+                ),
+                platform,
+                logger,
+                blocks,
+                no_return_calls,
+                contextual_returns,
+                inlined_remapping,
+                user_indirect_branches,
+                auto_indirect_branches,
+                inlined_calls,
+            }
         }
     }
 

@@ -342,15 +342,19 @@ where
     }
 
     unsafe fn from_ctxt<'a, C: CallingConvention>(ctxt: *mut c_void) -> &'a C {
-        (*(ctxt as *mut CustomCallingConventionContext<C>))
-            .cc
-            .assume_init_ref()
+        unsafe {
+            (*(ctxt as *mut CustomCallingConventionContext<C>))
+                .cc
+                .assume_init_ref()
+        }
     }
 
     unsafe fn register_list(regs: Vec<RegisterId>, count: *mut usize) -> *mut u32 {
-        let regs: Box<[u32]> = regs.iter().map(|r| r.0).collect();
-        *count = regs.len();
-        Box::leak(regs).as_mut_ptr()
+        unsafe {
+            let regs: Box<[u32]> = regs.iter().map(|r| r.0).collect();
+            *count = regs.len();
+            Box::leak(regs).as_mut_ptr()
+        }
     }
 
     unsafe fn permitted_registers(
@@ -1101,10 +1105,12 @@ impl CoreCallingConvention {
         handle: *mut BNCallingConvention,
         arch: CoreArchitecture,
     ) -> Ref<Self> {
-        Ref::new(CoreCallingConvention {
-            handle,
-            arch_handle: arch,
-        })
+        unsafe {
+            Ref::new(CoreCallingConvention {
+                handle,
+                arch_handle: arch,
+            })
+        }
     }
 
     pub fn name(&self) -> String {
@@ -1957,14 +1963,18 @@ impl ToOwned for CoreCallingConvention {
 
 unsafe impl RefCountable for CoreCallingConvention {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewCallingConventionReference(handle.handle),
-            arch_handle: handle.arch_handle,
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewCallingConventionReference(handle.handle),
+                arch_handle: handle.arch_handle,
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeCallingConvention(handle.handle);
+        unsafe {
+            BNFreeCallingConvention(handle.handle);
+        }
     }
 }
 
@@ -1976,17 +1986,21 @@ impl CoreArrayProvider for CoreCallingConvention {
 
 unsafe impl CoreArrayProviderInner for CoreCallingConvention {
     unsafe fn free(raw: *mut *mut BNCallingConvention, count: usize, _content: &Self::Context) {
-        BNFreeCallingConventionList(raw, count);
+        unsafe {
+            BNFreeCallingConventionList(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(
-            CoreCallingConvention {
-                handle: *raw,
-                arch_handle: *context,
-            },
-            context,
-        )
+        unsafe {
+            Guard::new(
+                CoreCallingConvention {
+                    handle: *raw,
+                    arch_handle: *context,
+                },
+                context,
+            )
+        }
     }
 }
 

@@ -32,7 +32,7 @@ impl FlowGraphNode {
     }
 
     pub(crate) unsafe fn ref_from_raw(raw: *mut BNFlowGraphNode) -> Ref<Self> {
-        Ref::new(Self { handle: raw })
+        unsafe { Ref::new(Self { handle: raw }) }
     }
 
     pub fn new(graph: &FlowGraph) -> Ref<Self> {
@@ -173,13 +173,17 @@ impl Debug for FlowGraphNode {
 
 unsafe impl RefCountable for FlowGraphNode {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewFlowGraphNodeReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewFlowGraphNodeReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeFlowGraphNode(handle.handle);
+        unsafe {
+            BNFreeFlowGraphNode(handle.handle);
+        }
     }
 }
 
@@ -199,10 +203,12 @@ impl CoreArrayProvider for FlowGraphNode {
 
 unsafe impl CoreArrayProviderInner for FlowGraphNode {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _: &Self::Context) {
-        BNFreeFlowGraphNodeList(raw, count);
+        unsafe {
+            BNFreeFlowGraphNodeList(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::from_raw(*raw)
+        unsafe { Self::from_raw(*raw) }
     }
 }

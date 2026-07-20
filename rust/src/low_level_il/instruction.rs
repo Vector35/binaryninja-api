@@ -61,7 +61,7 @@ impl CoreArrayProvider for LowLevelInstructionIndex {
 
 unsafe impl CoreArrayProviderInner for LowLevelInstructionIndex {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeILInstructionList(raw)
+        unsafe { BNFreeILInstructionList(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -398,7 +398,7 @@ where
         use LowLevelILInstructionKind::*;
 
         macro_rules! visit {
-            ($expr:expr) => {
+            ($expr:expr_2021) => {
                 if let VisitorAction::Halt = visitor($expr) {
                     return VisitorAction::Halt;
                 }
@@ -406,35 +406,35 @@ where
         }
 
         match self {
-            SetReg(ref op) => visit!(&op.source_expr()),
-            SetRegSsa(ref op) => visit!(&op.source_expr()),
-            SetRegPartialSsa(ref op) => visit!(&op.source_expr()),
-            SetRegSplit(ref op) => visit!(&op.source_expr()),
-            SetRegSplitSsa(ref op) => visit!(&op.source_expr()),
-            SetFlag(ref op) => visit!(&op.source_expr()),
-            SetFlagSsa(ref op) => visit!(&op.source_expr()),
-            Store(ref op) => {
+            SetReg(op) => visit!(&op.source_expr()),
+            SetRegSsa(op) => visit!(&op.source_expr()),
+            SetRegPartialSsa(op) => visit!(&op.source_expr()),
+            SetRegSplit(op) => visit!(&op.source_expr()),
+            SetRegSplitSsa(op) => visit!(&op.source_expr()),
+            SetFlag(op) => visit!(&op.source_expr()),
+            SetFlagSsa(op) => visit!(&op.source_expr()),
+            Store(op) => {
                 visit!(&op.dest_expr());
                 visit!(&op.source_expr());
             }
-            StoreSsa(ref op) => {
+            StoreSsa(op) => {
                 visit!(&op.dest_expr());
                 visit!(&op.source_expr());
             }
-            Push(ref op) => visit!(&op.operand()),
-            RegStackPush(ref op) => visit!(&op.source_expr()),
-            Jump(ref op) => visit!(&op.target()),
-            JumpTo(ref op) => visit!(&op.target()),
-            SyscallSsa(ref op) => {
+            Push(op) => visit!(&op.operand()),
+            RegStackPush(op) => visit!(&op.source_expr()),
+            Jump(op) => visit!(&op.target()),
+            JumpTo(op) => visit!(&op.target()),
+            SyscallSsa(op) => {
                 visit!(&op.output_expr());
                 visit!(&op.param_expr());
                 visit!(&op.stack_expr());
             }
-            Call(ref op) | TailCall(ref op) => visit!(&op.target()),
-            CallSsa(ref op) | TailCallSsa(ref op) => visit!(&op.target()),
-            Ret(ref op) => visit!(&op.target()),
-            If(ref op) => visit!(&op.condition()),
-            Intrinsic(ref _op) => {
+            Call(op) | TailCall(op) => visit!(&op.target()),
+            CallSsa(op) | TailCallSsa(op) => visit!(&op.target()),
+            Ret(op) => visit!(&op.target()),
+            If(op) => visit!(&op.condition()),
+            Intrinsic(_op) => {
                 // TODO: Visit when we support expression lists
             }
             Value(e) => visit!(e),

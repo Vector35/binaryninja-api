@@ -79,23 +79,15 @@ impl InteractionHandler for MyInteractionHandler {
         }
 
         match &mut form.fields[0] {
-            FormInputField::Integer { ref mut value, .. } => {
+            FormInputField::Integer { value, .. } => {
                 *value = 1337;
                 true
             }
-            FormInputField::Address {
-                ref mut value,
-                default,
-                ..
-            } => {
+            FormInputField::Address { value, default, .. } => {
                 *value = default.unwrap_or(0) + 0x10;
                 true
             }
-            FormInputField::DirectoryName {
-                ref mut value,
-                default,
-                ..
-            } => {
+            FormInputField::DirectoryName { value, default, .. } => {
                 let new_value = format!("example{}", default.clone().unwrap_or_default(),);
                 *value = Some(new_value);
                 true

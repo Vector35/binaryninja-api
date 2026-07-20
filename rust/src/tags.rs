@@ -39,8 +39,10 @@ impl Tag {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNTag) -> Ref<Self> {
-        debug_assert!(!handle.is_null());
-        Ref::new(Self { handle })
+        unsafe {
+            debug_assert!(!handle.is_null());
+            Ref::new(Self { handle })
+        }
     }
 
     pub fn new(t: &TagType, data: &str) -> Ref<Self> {
@@ -88,13 +90,17 @@ impl Eq for Tag {}
 
 unsafe impl RefCountable for Tag {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewTagReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewTagReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeTag(handle.handle);
+        unsafe {
+            BNFreeTag(handle.handle);
+        }
     }
 }
 
@@ -114,11 +120,11 @@ impl CoreArrayProvider for Tag {
 
 unsafe impl CoreArrayProviderInner for Tag {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeTagList(raw, count)
+        unsafe { BNFreeTagList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Self { handle: *raw }, &context)
+        unsafe { Guard::new(Self { handle: *raw }, &context) }
     }
 }
 
@@ -137,11 +143,11 @@ impl CoreArrayProvider for TagType {
 
 unsafe impl CoreArrayProviderInner for TagType {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeTagTypeList(raw, count)
+        unsafe { BNFreeTagTypeList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Self::from_raw(*raw), context)
+        unsafe { Guard::new(Self::from_raw(*raw), context) }
     }
 }
 
@@ -152,8 +158,10 @@ impl TagType {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNTagType) -> Ref<Self> {
-        debug_assert!(!handle.is_null());
-        Ref::new(Self { handle })
+        unsafe {
+            debug_assert!(!handle.is_null());
+            Ref::new(Self { handle })
+        }
     }
 
     pub fn create(view: &BinaryView, name: &str, icon: &str) -> Ref<Self> {
@@ -235,13 +243,17 @@ impl Eq for TagType {}
 
 unsafe impl RefCountable for TagType {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewTagTypeReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewTagTypeReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeTagType(handle.handle);
+        unsafe {
+            BNFreeTagType(handle.handle);
+        }
     }
 }
 
@@ -300,7 +312,7 @@ impl CoreArrayProvider for TagReference {
 
 unsafe impl CoreArrayProviderInner for TagReference {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeTagReferences(raw, count)
+        unsafe { BNFreeTagReferences(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {

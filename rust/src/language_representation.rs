@@ -221,16 +221,18 @@ impl CoreArrayProvider for CoreLanguageRepresentationFunctionType {
 
 unsafe impl CoreArrayProviderInner for CoreLanguageRepresentationFunctionType {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeLanguageRepresentationFunctionTypeList(raw)
+        unsafe { BNFreeLanguageRepresentationFunctionTypeList(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        // SAFETY: CoreLanguageRepresentationFunctionType and BNCoreLanguageRepresentationFunctionType
-        // transparent
-        std::mem::transmute::<
-            &*mut BNLanguageRepresentationFunctionType,
-            &CoreLanguageRepresentationFunctionType,
-        >(raw)
+        unsafe {
+            // SAFETY: CoreLanguageRepresentationFunctionType and BNCoreLanguageRepresentationFunctionType
+            // transparent
+            std::mem::transmute::<
+                &*mut BNLanguageRepresentationFunctionType,
+                &CoreLanguageRepresentationFunctionType,
+            >(raw)
+        }
     }
 }
 
@@ -407,16 +409,18 @@ impl CoreLanguageRepresentationFunction {
 
 unsafe impl RefCountable for CoreLanguageRepresentationFunction {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Self::ref_from_raw(
-            NonNull::new(BNNewLanguageRepresentationFunctionReference(
-                handle.handle.as_ptr(),
-            ))
-            .unwrap(),
-        )
+        unsafe {
+            Self::ref_from_raw(
+                NonNull::new(BNNewLanguageRepresentationFunctionReference(
+                    handle.handle.as_ptr(),
+                ))
+                .unwrap(),
+            )
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeLanguageRepresentationFunction(handle.handle.as_ptr())
+        unsafe { BNFreeLanguageRepresentationFunction(handle.handle.as_ptr()) }
     }
 }
 
@@ -434,53 +438,63 @@ unsafe extern "C" fn cb_create<C: LanguageRepresentationFunctionType>(
     owner: *mut BNFunction,
     high_level_il: *mut BNHighLevelILFunction,
 ) -> *mut BNLanguageRepresentationFunction {
-    let ctxt = ctxt as *mut C;
-    let arch = CoreArchitecture::from_raw(arch);
-    let owner = Function::from_raw(owner);
-    let high_level_il = HighLevelILFunction {
-        full_ast: false,
-        handle: high_level_il,
-    };
-    let result = (*ctxt).create(&arch, &owner, &high_level_il);
-    Ref::into_raw(result).handle.as_ptr()
+    unsafe {
+        let ctxt = ctxt as *mut C;
+        let arch = CoreArchitecture::from_raw(arch);
+        let owner = Function::from_raw(owner);
+        let high_level_il = HighLevelILFunction {
+            full_ast: false,
+            handle: high_level_il,
+        };
+        let result = (*ctxt).create(&arch, &owner, &high_level_il);
+        Ref::into_raw(result).handle.as_ptr()
+    }
 }
 
 unsafe extern "C" fn cb_is_valid<C: LanguageRepresentationFunctionType>(
     ctxt: *mut c_void,
     view: *mut BNBinaryView,
 ) -> bool {
-    let ctxt = ctxt as *mut C;
-    let view = BinaryView::from_raw(view);
-    (*ctxt).is_valid(&view)
+    unsafe {
+        let ctxt = ctxt as *mut C;
+        let view = BinaryView::from_raw(view);
+        (*ctxt).is_valid(&view)
+    }
 }
 
 unsafe extern "C" fn cb_get_type_printer<C: LanguageRepresentationFunctionType>(
     ctxt: *mut c_void,
 ) -> *mut BNTypePrinter {
-    let ctxt = ctxt as *mut C;
-    match (*ctxt).type_printer() {
-        None => std::ptr::null_mut(),
-        Some(printer) => printer.handle.as_ptr(),
+    unsafe {
+        let ctxt = ctxt as *mut C;
+        match (*ctxt).type_printer() {
+            None => std::ptr::null_mut(),
+            Some(printer) => printer.handle.as_ptr(),
+        }
     }
 }
 
 unsafe extern "C" fn cb_get_type_parser<C: LanguageRepresentationFunctionType>(
     ctxt: *mut c_void,
 ) -> *mut BNTypeParser {
-    let ctxt = ctxt as *mut C;
-    match (*ctxt).type_parser() {
-        None => std::ptr::null_mut(),
-        Some(parser) => parser.handle.as_ptr(),
+    unsafe {
+        let ctxt = ctxt as *mut C;
+        match (*ctxt).type_parser() {
+            None => std::ptr::null_mut(),
+            Some(parser) => parser.handle.as_ptr(),
+        }
     }
 }
 
 unsafe extern "C" fn cb_get_line_formatter<C: LanguageRepresentationFunctionType>(
     ctxt: *mut c_void,
 ) -> *mut BNLineFormatter {
-    let ctxt = ctxt as *mut C;
-    match (*ctxt).line_formatter() {
-        None => std::ptr::null_mut(),
-        Some(formatter) => formatter.handle.as_ptr(),
+    unsafe {
+        let ctxt = ctxt as *mut C;
+        match (*ctxt).line_formatter() {
+            None => std::ptr::null_mut(),
+            Some(formatter) => formatter.handle.as_ptr(),
+        }
     }
 }
 
@@ -490,17 +504,19 @@ unsafe extern "C" fn cb_get_function_type_tokens<C: LanguageRepresentationFuncti
     settings: *mut BNDisassemblySettings,
     count: *mut usize,
 ) -> *mut BNDisassemblyTextLine {
-    let ctxt = ctxt as *mut C;
-    let func = Function::from_raw(func);
-    let settings = DisassemblySettings { handle: settings };
-    let result = (*ctxt).function_type_tokens(&func, &settings);
-    *count = result.len();
-    let result: Box<[BNDisassemblyTextLine]> = result
-        .into_iter()
-        .map(DisassemblyTextLine::into_raw)
-        .collect();
-    // NOTE freed by function_type_free_lines_ffi
-    Box::leak(result).as_mut_ptr()
+    unsafe {
+        let ctxt = ctxt as *mut C;
+        let func = Function::from_raw(func);
+        let settings = DisassemblySettings { handle: settings };
+        let result = (*ctxt).function_type_tokens(&func, &settings);
+        *count = result.len();
+        let result: Box<[BNDisassemblyTextLine]> = result
+            .into_iter()
+            .map(DisassemblyTextLine::into_raw)
+            .collect();
+        // NOTE freed by function_type_free_lines_ffi
+        Box::leak(result).as_mut_ptr()
+    }
 }
 
 unsafe extern "C" fn cb_free_lines(
@@ -508,16 +524,20 @@ unsafe extern "C" fn cb_free_lines(
     lines: *mut BNDisassemblyTextLine,
     count: usize,
 ) {
-    let lines: Box<[BNDisassemblyTextLine]> =
-        Box::from_raw(std::ptr::slice_from_raw_parts_mut(lines, count));
-    for line in lines {
-        DisassemblyTextLine::free_raw(line);
+    unsafe {
+        let lines: Box<[BNDisassemblyTextLine]> =
+            Box::from_raw(std::ptr::slice_from_raw_parts_mut(lines, count));
+        for line in lines {
+            DisassemblyTextLine::free_raw(line);
+        }
     }
 }
 
 unsafe extern "C" fn cb_free_object<C: LanguageRepresentationFunction>(ctxt: *mut c_void) {
-    let ctxt = ctxt as *mut C;
-    drop(Box::from_raw(ctxt))
+    unsafe {
+        let ctxt = ctxt as *mut C;
+        drop(Box::from_raw(ctxt))
+    }
 }
 
 unsafe extern "C" fn cb_external_ref_taken<C: LanguageRepresentationFunction>(_ctxt: *mut c_void) {
@@ -534,9 +554,11 @@ unsafe extern "C" fn cb_init_token_emitter<C: LanguageRepresentationFunction>(
     ctxt: *mut c_void,
     tokens: *mut BNHighLevelILTokenEmitter,
 ) {
-    let ctxt = ctxt as *mut C;
-    let tokens = HighLevelILTokenEmitter::from_raw(NonNull::new(tokens).unwrap());
-    (*ctxt).on_token_emitter_init(&tokens)
+    unsafe {
+        let ctxt = ctxt as *mut C;
+        let tokens = HighLevelILTokenEmitter::from_raw(NonNull::new(tokens).unwrap());
+        (*ctxt).on_token_emitter_init(&tokens)
+    }
 }
 
 unsafe extern "C" fn cb_get_expr_text<C: LanguageRepresentationFunction>(
@@ -549,22 +571,24 @@ unsafe extern "C" fn cb_get_expr_text<C: LanguageRepresentationFunction>(
     precedence: BNOperatorPrecedence,
     statement: bool,
 ) {
-    let ctxt = ctxt as *mut C;
-    let il = HighLevelILFunction {
-        full_ast: as_full_ast,
-        handle: il,
-    };
-    let tokens = HighLevelILTokenEmitter::from_raw(NonNull::new(tokens).unwrap());
-    let settings = DisassemblySettings { handle: settings };
-    (*ctxt).expr_text(
-        &il,
-        expr_index.into(),
-        &tokens,
-        &settings,
-        as_full_ast,
-        precedence,
-        statement,
-    );
+    unsafe {
+        let ctxt = ctxt as *mut C;
+        let il = HighLevelILFunction {
+            full_ast: as_full_ast,
+            handle: il,
+        };
+        let tokens = HighLevelILTokenEmitter::from_raw(NonNull::new(tokens).unwrap());
+        let settings = DisassemblySettings { handle: settings };
+        (*ctxt).expr_text(
+            &il,
+            expr_index.into(),
+            &tokens,
+            &settings,
+            as_full_ast,
+            precedence,
+            statement,
+        );
+    }
 }
 
 unsafe extern "C" fn cb_begin_lines<C: LanguageRepresentationFunction>(
@@ -573,13 +597,15 @@ unsafe extern "C" fn cb_begin_lines<C: LanguageRepresentationFunction>(
     expr_index: usize,
     tokens: *mut BNHighLevelILTokenEmitter,
 ) {
-    let ctxt = ctxt as *mut C;
-    let il = HighLevelILFunction {
-        full_ast: false,
-        handle: il,
-    };
-    let tokens = HighLevelILTokenEmitter::from_raw(NonNull::new(tokens).unwrap());
-    (*ctxt).begin_lines(&il, expr_index.into(), &tokens)
+    unsafe {
+        let ctxt = ctxt as *mut C;
+        let il = HighLevelILFunction {
+            full_ast: false,
+            handle: il,
+        };
+        let tokens = HighLevelILTokenEmitter::from_raw(NonNull::new(tokens).unwrap());
+        (*ctxt).begin_lines(&il, expr_index.into(), &tokens)
+    }
 }
 
 unsafe extern "C" fn cb_end_lines<C: LanguageRepresentationFunction>(
@@ -588,43 +614,53 @@ unsafe extern "C" fn cb_end_lines<C: LanguageRepresentationFunction>(
     expr_index: usize,
     tokens: *mut BNHighLevelILTokenEmitter,
 ) {
-    let ctxt = ctxt as *mut C;
-    let il = HighLevelILFunction {
-        full_ast: false,
-        handle: il,
-    };
-    let tokens = HighLevelILTokenEmitter::from_raw(NonNull::new(tokens).unwrap());
-    (*ctxt).end_lines(&il, expr_index.into(), &tokens)
+    unsafe {
+        let ctxt = ctxt as *mut C;
+        let il = HighLevelILFunction {
+            full_ast: false,
+            handle: il,
+        };
+        let tokens = HighLevelILTokenEmitter::from_raw(NonNull::new(tokens).unwrap());
+        (*ctxt).end_lines(&il, expr_index.into(), &tokens)
+    }
 }
 
 unsafe extern "C" fn cb_get_comment_start_string<C: LanguageRepresentationFunction>(
     ctxt: *mut c_void,
 ) -> *mut c_char {
-    let ctxt = ctxt as *mut C;
-    let result = (*ctxt).comment_start_string();
-    BnString::into_raw(BnString::new(result))
+    unsafe {
+        let ctxt = ctxt as *mut C;
+        let result = (*ctxt).comment_start_string();
+        BnString::into_raw(BnString::new(result))
+    }
 }
 
 unsafe extern "C" fn cb_get_comment_end_string<C: LanguageRepresentationFunction>(
     ctxt: *mut c_void,
 ) -> *mut c_char {
-    let ctxt = ctxt as *mut C;
-    let result = (*ctxt).comment_end_string();
-    BnString::into_raw(BnString::new(result))
+    unsafe {
+        let ctxt = ctxt as *mut C;
+        let result = (*ctxt).comment_end_string();
+        BnString::into_raw(BnString::new(result))
+    }
 }
 
 unsafe extern "C" fn cb_get_annotation_start_string<C: LanguageRepresentationFunction>(
     ctxt: *mut c_void,
 ) -> *mut c_char {
-    let ctxt = ctxt as *mut C;
-    let result = (*ctxt).annotation_start_string();
-    BnString::into_raw(BnString::new(result))
+    unsafe {
+        let ctxt = ctxt as *mut C;
+        let result = (*ctxt).annotation_start_string();
+        BnString::into_raw(BnString::new(result))
+    }
 }
 
 unsafe extern "C" fn cb_get_annotation_end_string<C: LanguageRepresentationFunction>(
     ctxt: *mut c_void,
 ) -> *mut c_char {
-    let ctxt = ctxt as *mut C;
-    let result = (*ctxt).annotation_end_string();
-    BnString::into_raw(BnString::new(result))
+    unsafe {
+        let ctxt = ctxt as *mut C;
+        let result = (*ctxt).annotation_end_string();
+        BnString::into_raw(BnString::new(result))
+    }
 }

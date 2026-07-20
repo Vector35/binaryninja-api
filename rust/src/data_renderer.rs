@@ -173,7 +173,9 @@ impl Debug for TypeContext {
 }
 
 unsafe extern "C" fn cb_free_object<C: CustomDataRenderer>(ctxt: *mut c_void) {
-    let _ = Box::from_raw(ctxt as *mut C);
+    unsafe {
+        let _ = Box::from_raw(ctxt as *mut C);
+    }
 }
 
 unsafe extern "C" fn cb_is_valid_for_data<C: CustomDataRenderer>(
@@ -184,15 +186,17 @@ unsafe extern "C" fn cb_is_valid_for_data<C: CustomDataRenderer>(
     type_ctx: *mut BNTypeContext,
     ctx_count: usize,
 ) -> bool {
-    let ctxt = ctxt as *mut C;
-    // SAFETY BNTypeContext and TypeContext are transparent
-    let types = core::slice::from_raw_parts(type_ctx as *mut TypeContext, ctx_count);
-    (*ctxt).is_valid_for_data(
-        &BinaryView::from_raw(view),
-        addr,
-        &Type::from_raw(type_),
-        types,
-    )
+    unsafe {
+        let ctxt = ctxt as *mut C;
+        // SAFETY BNTypeContext and TypeContext are transparent
+        let types = core::slice::from_raw_parts(type_ctx as *mut TypeContext, ctx_count);
+        (*ctxt).is_valid_for_data(
+            &BinaryView::from_raw(view),
+            addr,
+            &Type::from_raw(type_),
+            types,
+        )
+    }
 }
 
 unsafe extern "C" fn cb_get_lines_for_data<C: CustomDataRenderer>(
@@ -208,28 +212,30 @@ unsafe extern "C" fn cb_get_lines_for_data<C: CustomDataRenderer>(
     ctx_count: usize,
     language: *const ffi::c_char,
 ) -> *mut BNDisassemblyTextLine {
-    let ctxt = ctxt as *mut C;
-    // SAFETY BNTypeContext and TypeContext are transparent
-    let types = core::slice::from_raw_parts(type_ctx as *mut TypeContext, ctx_count);
-    let prefix = core::slice::from_raw_parts(prefix, prefix_count)
-        .iter()
-        .map(InstructionTextToken::from_raw)
-        .collect::<Vec<_>>();
-    let result = (*ctxt).lines_for_data(
-        &BinaryView::from_raw(view),
-        addr,
-        &Type::from_raw(type_),
-        prefix,
-        width,
-        types,
-        ffi::CStr::from_ptr(language).to_str().unwrap(),
-    );
-    let result: Box<[BNDisassemblyTextLine]> = result
-        .into_iter()
-        .map(DisassemblyTextLine::into_raw)
-        .collect();
-    *count = result.len();
-    Box::leak(result).as_mut_ptr()
+    unsafe {
+        let ctxt = ctxt as *mut C;
+        // SAFETY BNTypeContext and TypeContext are transparent
+        let types = core::slice::from_raw_parts(type_ctx as *mut TypeContext, ctx_count);
+        let prefix = core::slice::from_raw_parts(prefix, prefix_count)
+            .iter()
+            .map(InstructionTextToken::from_raw)
+            .collect::<Vec<_>>();
+        let result = (*ctxt).lines_for_data(
+            &BinaryView::from_raw(view),
+            addr,
+            &Type::from_raw(type_),
+            prefix,
+            width,
+            types,
+            ffi::CStr::from_ptr(language).to_str().unwrap(),
+        );
+        let result: Box<[BNDisassemblyTextLine]> = result
+            .into_iter()
+            .map(DisassemblyTextLine::into_raw)
+            .collect();
+        *count = result.len();
+        Box::leak(result).as_mut_ptr()
+    }
 }
 
 unsafe extern "C" fn cb_free_lines(
@@ -237,8 +243,10 @@ unsafe extern "C" fn cb_free_lines(
     lines: *mut BNDisassemblyTextLine,
     count: usize,
 ) {
-    let lines = Box::from_raw(std::ptr::slice_from_raw_parts_mut(lines, count));
-    for line in lines {
-        let _ = DisassemblyTextLine::from_raw(&line);
+    unsafe {
+        let lines = Box::from_raw(std::ptr::slice_from_raw_parts_mut(lines, count));
+        for line in lines {
+            let _ = DisassemblyTextLine::from_raw(&line);
+        }
     }
 }

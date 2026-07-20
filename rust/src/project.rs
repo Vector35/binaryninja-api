@@ -29,7 +29,7 @@ impl Project {
     }
 
     pub unsafe fn ref_from_raw(handle: NonNull<BNProject>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// All of the open [`Project`]s
@@ -374,15 +374,17 @@ impl Project {
         id: &str,
         creation_time: SystemTime,
     ) -> Result<Ref<ProjectFile>, ()> {
-        self.create_file_from_path_unsafe_with_progress(
-            path,
-            folder,
-            name,
-            description,
-            id,
-            creation_time,
-            NoProgressCallback,
-        )
+        unsafe {
+            self.create_file_from_path_unsafe_with_progress(
+                path,
+                folder,
+                name,
+                description,
+                id,
+                creation_time,
+                NoProgressCallback,
+            )
+        }
     }
 
     /// Create a file in the project from a path on disk
@@ -500,15 +502,17 @@ impl Project {
         id: &str,
         creation_time: SystemTime,
     ) -> Result<Ref<ProjectFile>, ()> {
-        self.create_file_unsafe_with_progress(
-            contents,
-            folder,
-            name,
-            description,
-            id,
-            creation_time,
-            NoProgressCallback,
-        )
+        unsafe {
+            self.create_file_unsafe_with_progress(
+                contents,
+                folder,
+                name,
+                description,
+                id,
+                creation_time,
+                NoProgressCallback,
+            )
+        }
     }
 
     /// Create a file in the project
@@ -666,13 +670,17 @@ impl ToOwned for Project {
 
 unsafe impl RefCountable for Project {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewProjectReference(handle.handle.as_ptr())).unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewProjectReference(handle.handle.as_ptr())).unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeProject(handle.handle.as_ptr());
+        unsafe {
+            BNFreeProject(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -687,12 +695,14 @@ impl CoreArrayProvider for Project {
 
 unsafe impl CoreArrayProviderInner for Project {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeProjectList(raw, count)
+        unsafe { BNFreeProjectList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }
 

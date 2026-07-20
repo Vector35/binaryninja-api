@@ -25,7 +25,7 @@ impl RemoteUndoEntry {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNCollaborationUndoEntry>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// Owning Snapshot
@@ -111,14 +111,18 @@ impl ToOwned for RemoteUndoEntry {
 
 unsafe impl RefCountable for RemoteUndoEntry {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewCollaborationUndoEntryReference(handle.handle.as_ptr()))
-                .unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewCollaborationUndoEntryReference(handle.handle.as_ptr()))
+                    .unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeCollaborationUndoEntry(handle.handle.as_ptr());
+        unsafe {
+            BNFreeCollaborationUndoEntry(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -130,12 +134,14 @@ impl CoreArrayProvider for RemoteUndoEntry {
 
 unsafe impl CoreArrayProviderInner for RemoteUndoEntry {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeCollaborationUndoEntryList(raw, count)
+        unsafe { BNFreeCollaborationUndoEntryList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }
 
@@ -157,7 +163,7 @@ impl CoreArrayProvider for RemoteUndoEntryId {
 
 unsafe impl CoreArrayProviderInner for RemoteUndoEntryId {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNCollaborationFreeIdList(raw, count)
+        unsafe { BNCollaborationFreeIdList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {

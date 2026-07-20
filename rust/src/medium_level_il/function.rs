@@ -28,8 +28,10 @@ impl MediumLevelILFunction {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNMediumLevelILFunction) -> Ref<Self> {
-        debug_assert!(!handle.is_null());
-        Ref::new(Self::from_raw(handle))
+        unsafe {
+            debug_assert!(!handle.is_null());
+            Ref::new(Self::from_raw(handle))
+        }
     }
 
     pub fn instruction_at<L: Into<Location>>(&self, loc: L) -> Option<MediumLevelILInstruction> {
@@ -485,13 +487,17 @@ impl ToOwned for MediumLevelILFunction {
 
 unsafe impl RefCountable for MediumLevelILFunction {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewMediumLevelILFunctionReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewMediumLevelILFunctionReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeMediumLevelILFunction(handle.handle);
+        unsafe {
+            BNFreeMediumLevelILFunction(handle.handle);
+        }
     }
 }
 
@@ -560,7 +566,7 @@ impl CoreArrayProvider for ILReferenceSource {
 
 unsafe impl CoreArrayProviderInner for ILReferenceSource {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeILReferences(raw, count)
+        unsafe { BNFreeILReferences(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -601,7 +607,7 @@ impl CoreArrayProvider for VariableReferenceSource {
 
 unsafe impl CoreArrayProviderInner for VariableReferenceSource {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeVariableReferenceSourceList(raw, count)
+        unsafe { BNFreeVariableReferenceSourceList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {

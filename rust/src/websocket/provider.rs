@@ -104,24 +104,28 @@ impl CoreArrayProvider for CoreWebsocketProvider {
 
 unsafe impl CoreArrayProviderInner for CoreWebsocketProvider {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeWebsocketProviderList(raw)
+        unsafe { BNFreeWebsocketProviderList(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let handle = NonNull::new(*raw).unwrap();
-        Self::from_raw(handle)
+        unsafe {
+            let handle = NonNull::new(*raw).unwrap();
+            Self::from_raw(handle)
+        }
     }
 }
 
 unsafe extern "C" fn cb_create_client<W: WebsocketProvider>(
     ctxt: *mut c_void,
 ) -> *mut BNWebsocketClient {
-    let ctxt: &mut W = &mut *(ctxt as *mut W);
-    match ctxt.create_client() {
-        Ok(owned_client) => {
-            // SAFETY: The caller is assumed to have picked up this ref.
-            Ref::into_raw(owned_client).handle.as_ptr()
+    unsafe {
+        let ctxt: &mut W = &mut *(ctxt as *mut W);
+        match ctxt.create_client() {
+            Ok(owned_client) => {
+                // SAFETY: The caller is assumed to have picked up this ref.
+                Ref::into_raw(owned_client).handle.as_ptr()
+            }
+            Err(_) => std::ptr::null_mut(),
         }
-        Err(_) => std::ptr::null_mut(),
     }
 }

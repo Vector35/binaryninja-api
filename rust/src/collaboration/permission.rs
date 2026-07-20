@@ -19,7 +19,7 @@ impl Permission {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNCollaborationPermission>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     pub fn remote(&self) -> Result<Ref<Remote>, ()> {
@@ -128,16 +128,20 @@ impl ToOwned for Permission {
 
 unsafe impl RefCountable for Permission {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewCollaborationPermissionReference(
-                handle.handle.as_ptr(),
-            ))
-            .unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewCollaborationPermissionReference(
+                    handle.handle.as_ptr(),
+                ))
+                .unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeCollaborationPermission(handle.handle.as_ptr());
+        unsafe {
+            BNFreeCollaborationPermission(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -149,11 +153,13 @@ impl CoreArrayProvider for Permission {
 
 unsafe impl CoreArrayProviderInner for Permission {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeCollaborationPermissionList(raw, count)
+        unsafe { BNFreeCollaborationPermissionList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }

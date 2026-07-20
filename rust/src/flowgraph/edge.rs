@@ -37,7 +37,9 @@ impl CoreArrayProvider for FlowGraphEdge {
 
 unsafe impl CoreArrayProviderInner for FlowGraphEdge {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _: &Self::Context) {
-        BNFreeFlowGraphNodeEdgeList(raw, count);
+        unsafe {
+            BNFreeFlowGraphNodeEdgeList(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {

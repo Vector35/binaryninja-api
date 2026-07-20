@@ -48,7 +48,7 @@ impl Activity {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNActivity>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     pub fn new(config: impl AsConfig) -> Ref<Self> {
@@ -67,11 +67,13 @@ impl Activity {
             ctxt: *mut c_void,
             analysis: *mut BNAnalysisContext,
         ) {
-            let ctxt = &mut *(ctxt as *mut F);
-            if let Some(analysis) = NonNull::new(analysis) {
-                let analysis = AnalysisContext::from_raw(analysis);
-                let _span = ffi_span!("Activity::action", analysis.view());
-                ctxt(&analysis)
+            unsafe {
+                let ctxt = &mut *(ctxt as *mut F);
+                if let Some(analysis) = NonNull::new(analysis) {
+                    let analysis = AnalysisContext::from_raw(analysis);
+                    let _span = ffi_span!("Activity::action", analysis.view());
+                    ctxt(&analysis)
+                }
             }
         }
         let config = config.as_config();
@@ -102,14 +104,18 @@ impl ToOwned for Activity {
 
 unsafe impl RefCountable for Activity {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewActivityReference(handle.handle.as_ptr()))
-                .expect("valid handle"),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewActivityReference(handle.handle.as_ptr()))
+                    .expect("valid handle"),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeActivity(handle.handle.as_ptr());
+        unsafe {
+            BNFreeActivity(handle.handle.as_ptr());
+        }
     }
 }
 

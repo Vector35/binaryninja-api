@@ -30,7 +30,7 @@ impl RemoteProject {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNRemoteProject>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// Determine if the project is open (it needs to be opened before you can access its files)
@@ -900,13 +900,17 @@ unsafe impl Sync for RemoteProject {}
 
 unsafe impl RefCountable for RemoteProject {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewRemoteProjectReference(handle.handle.as_ptr())).unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewRemoteProjectReference(handle.handle.as_ptr())).unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeRemoteProject(handle.handle.as_ptr());
+        unsafe {
+            BNFreeRemoteProject(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -918,11 +922,13 @@ impl CoreArrayProvider for RemoteProject {
 
 unsafe impl CoreArrayProviderInner for RemoteProject {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeRemoteProjectList(raw, count)
+        unsafe { BNFreeRemoteProjectList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }

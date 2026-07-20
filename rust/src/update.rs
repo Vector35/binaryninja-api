@@ -203,7 +203,7 @@ impl CoreArrayProvider for UpdateChannel {
 
 unsafe impl CoreArrayProviderInner for UpdateChannel {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeUpdateChannelList(raw, count)
+        unsafe { BNFreeUpdateChannelList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -258,7 +258,7 @@ impl CoreArrayProvider for UpdateVersion {
 
 unsafe impl CoreArrayProviderInner for UpdateVersion {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeUpdateChannelVersionList(raw, count)
+        unsafe { BNFreeUpdateChannelVersionList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {

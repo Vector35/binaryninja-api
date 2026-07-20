@@ -19,7 +19,7 @@ pub struct KeyValueStore {
 
 impl KeyValueStore {
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNKeyValueStore>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     pub fn to_hashmap(&self) -> HashMap<String, DataBuffer> {
@@ -110,13 +110,17 @@ impl ToOwned for KeyValueStore {
 
 unsafe impl RefCountable for KeyValueStore {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewKeyValueStoreReference(handle.handle.as_ptr())).unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewKeyValueStoreReference(handle.handle.as_ptr())).unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeKeyValueStore(handle.handle.as_ptr());
+        unsafe {
+            BNFreeKeyValueStore(handle.handle.as_ptr());
+        }
     }
 }
 

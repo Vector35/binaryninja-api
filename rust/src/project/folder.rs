@@ -26,7 +26,7 @@ impl ProjectFolder {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNProjectFolder>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// Get the project that owns this folder
@@ -140,13 +140,17 @@ impl ToOwned for ProjectFolder {
 
 unsafe impl RefCountable for ProjectFolder {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewProjectFolderReference(handle.handle.as_ptr())).unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewProjectFolderReference(handle.handle.as_ptr())).unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeProjectFolder(handle.handle.as_ptr());
+        unsafe {
+            BNFreeProjectFolder(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -158,11 +162,13 @@ impl CoreArrayProvider for ProjectFolder {
 
 unsafe impl CoreArrayProviderInner for ProjectFolder {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeProjectFolderList(raw, count)
+        unsafe { BNFreeProjectFolderList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }

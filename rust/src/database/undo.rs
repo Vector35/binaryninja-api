@@ -23,7 +23,7 @@ impl UndoEntry {
 
     #[allow(dead_code)]
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNUndoEntry>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     pub fn id(&self) -> String {
@@ -65,13 +65,17 @@ impl ToOwned for UndoEntry {
 
 unsafe impl RefCountable for UndoEntry {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewUndoEntryReference(handle.handle.as_ptr())).unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewUndoEntryReference(handle.handle.as_ptr())).unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeUndoEntry(handle.handle.as_ptr());
+        unsafe {
+            BNFreeUndoEntry(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -83,12 +87,16 @@ impl CoreArrayProvider for UndoEntry {
 
 unsafe impl CoreArrayProviderInner for UndoEntry {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeUndoEntryList(raw, count);
+        unsafe {
+            BNFreeUndoEntryList(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }
 
@@ -104,7 +112,7 @@ impl UndoAction {
 
     #[allow(dead_code)]
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNUndoAction>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     pub fn summary(&self) -> Array<InstructionTextToken> {
@@ -140,13 +148,17 @@ impl ToOwned for UndoAction {
 
 unsafe impl RefCountable for UndoAction {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewUndoActionReference(handle.handle.as_ptr())).unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewUndoActionReference(handle.handle.as_ptr())).unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeUndoAction(handle.handle.as_ptr());
+        unsafe {
+            BNFreeUndoAction(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -158,11 +170,15 @@ impl CoreArrayProvider for UndoAction {
 
 unsafe impl CoreArrayProviderInner for UndoAction {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeUndoActionList(raw, count);
+        unsafe {
+            BNFreeUndoActionList(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }

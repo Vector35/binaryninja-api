@@ -311,7 +311,7 @@ impl CoreArrayProvider for CoreRegister {
 
 unsafe impl CoreArrayProviderInner for CoreRegister {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeRegisterList(raw)
+        unsafe { BNFreeRegisterList(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {

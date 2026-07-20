@@ -16,7 +16,7 @@ impl RemoteUser {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNCollaborationUser>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// Owning Remote
@@ -117,13 +117,18 @@ impl ToOwned for RemoteUser {
 
 unsafe impl RefCountable for RemoteUser {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewCollaborationUserReference(handle.handle.as_ptr())).unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewCollaborationUserReference(handle.handle.as_ptr()))
+                    .unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeCollaborationUser(handle.handle.as_ptr());
+        unsafe {
+            BNFreeCollaborationUser(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -135,11 +140,13 @@ impl CoreArrayProvider for RemoteUser {
 
 unsafe impl CoreArrayProviderInner for RemoteUser {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeCollaborationUserList(raw, count)
+        unsafe { BNFreeCollaborationUserList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }

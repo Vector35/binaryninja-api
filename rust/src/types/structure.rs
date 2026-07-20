@@ -322,8 +322,10 @@ pub struct Structure {
 
 impl Structure {
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNStructure) -> Ref<Self> {
-        debug_assert!(!handle.is_null());
-        Ref::new(Self { handle })
+        unsafe {
+            debug_assert!(!handle.is_null());
+            Ref::new(Self { handle })
+        }
     }
 
     pub fn builder() -> StructureBuilder {
@@ -442,11 +444,13 @@ impl Debug for Structure {
 
 unsafe impl RefCountable for Structure {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Self::ref_from_raw(BNNewStructureReference(handle.handle))
+        unsafe { Self::ref_from_raw(BNNewStructureReference(handle.handle)) }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeStructure(handle.handle);
+        unsafe {
+            BNFreeStructure(handle.handle);
+        }
     }
 }
 
@@ -590,7 +594,7 @@ impl CoreArrayProvider for StructureMember {
 
 unsafe impl CoreArrayProviderInner for StructureMember {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeStructureMemberList(raw, count)
+        unsafe { BNFreeStructureMemberList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {

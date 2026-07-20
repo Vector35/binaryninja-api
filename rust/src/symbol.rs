@@ -222,7 +222,7 @@ pub struct Symbol {
 
 impl Symbol {
     pub(crate) unsafe fn ref_from_raw(raw: *mut BNSymbol) -> Ref<Self> {
-        Ref::new(Self { handle: raw })
+        unsafe { Ref::new(Self { handle: raw }) }
     }
 
     pub(crate) unsafe fn from_raw(raw: *mut BNSymbol) -> Self {
@@ -322,13 +322,17 @@ impl ToOwned for Symbol {
 
 unsafe impl RefCountable for Symbol {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewSymbolReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewSymbolReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeSymbol(handle.handle);
+        unsafe {
+            BNFreeSymbol(handle.handle);
+        }
     }
 }
 
@@ -340,11 +344,13 @@ impl CoreArrayProvider for Symbol {
 
 unsafe impl CoreArrayProviderInner for Symbol {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeSymbolList(raw, count);
+        unsafe {
+            BNFreeSymbolList(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Symbol::from_raw(*raw), context)
+        unsafe { Guard::new(Symbol::from_raw(*raw), context) }
     }
 }
 

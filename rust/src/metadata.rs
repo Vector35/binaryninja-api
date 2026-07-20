@@ -20,7 +20,7 @@ impl Metadata {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNMetadata) -> Ref<Self> {
-        Ref::new(Self::from_raw(handle))
+        unsafe { Ref::new(Self::from_raw(handle)) }
     }
 
     pub fn new_of_type(metadata_type: MetadataType) -> Ref<Self> {
@@ -394,13 +394,17 @@ unsafe impl Send for Metadata {}
 
 unsafe impl RefCountable for Metadata {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewMetadataReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewMetadataReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeMetadata(handle.handle);
+        unsafe {
+            BNFreeMetadata(handle.handle);
+        }
     }
 }
 
@@ -412,12 +416,14 @@ impl CoreArrayProvider for Metadata {
 
 unsafe impl CoreArrayProviderInner for Metadata {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        // TODO: `count` is not passed into the core here...
-        BNFreeMetadataArray(raw);
+        unsafe {
+            // TODO: `count` is not passed into the core here...
+            BNFreeMetadataArray(raw);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Self::from_raw(*raw), context)
+        unsafe { Guard::new(Self::from_raw(*raw), context) }
     }
 }
 

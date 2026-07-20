@@ -100,8 +100,10 @@ pub struct Enumeration {
 
 impl Enumeration {
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNEnumeration) -> Ref<Self> {
-        debug_assert!(!handle.is_null());
-        Ref::new(Self { handle })
+        unsafe {
+            debug_assert!(!handle.is_null());
+            Ref::new(Self { handle })
+        }
     }
 
     pub fn builder() -> EnumerationBuilder {
@@ -135,11 +137,13 @@ impl Debug for Enumeration {
 
 unsafe impl RefCountable for Enumeration {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Self::ref_from_raw(BNNewEnumerationReference(handle.handle))
+        unsafe { Self::ref_from_raw(BNNewEnumerationReference(handle.handle)) }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeEnumeration(handle.handle);
+        unsafe {
+            BNFreeEnumeration(handle.handle);
+        }
     }
 }
 

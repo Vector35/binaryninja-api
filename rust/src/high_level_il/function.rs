@@ -26,8 +26,10 @@ impl HighLevelILFunction {
         handle: *mut BNHighLevelILFunction,
         full_ast: bool,
     ) -> Ref<Self> {
-        debug_assert!(!handle.is_null());
-        Ref::new(Self { handle, full_ast })
+        unsafe {
+            debug_assert!(!handle.is_null());
+            Ref::new(Self { handle, full_ast })
+        }
     }
 
     pub fn instruction_from_index(
@@ -288,13 +290,17 @@ impl ToOwned for HighLevelILFunction {
 
 unsafe impl RefCountable for HighLevelILFunction {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewHighLevelILFunctionReference(handle.handle),
-            full_ast: handle.full_ast,
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewHighLevelILFunctionReference(handle.handle),
+                full_ast: handle.full_ast,
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeHighLevelILFunction(handle.handle);
+        unsafe {
+            BNFreeHighLevelILFunction(handle.handle);
+        }
     }
 }

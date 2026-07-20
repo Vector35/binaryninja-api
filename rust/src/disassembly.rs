@@ -187,7 +187,7 @@ impl CoreArrayProvider for DisassemblyTextLine {
 
 unsafe impl CoreArrayProviderInner for DisassemblyTextLine {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeDisassemblyTextLines(raw, count)
+        unsafe { BNFreeDisassemblyTextLines(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -363,8 +363,10 @@ impl CoreArrayProvider for InstructionTextToken {
 
 unsafe impl CoreArrayProviderInner for InstructionTextToken {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        // SAFETY: The Array MUST have been allocated on the core side. This will `delete[] raw`.
-        BNFreeInstructionText(raw, count)
+        unsafe {
+            // SAFETY: The Array MUST have been allocated on the core side. This will `delete[] raw`.
+            BNFreeInstructionText(raw, count)
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
@@ -380,13 +382,17 @@ impl CoreArrayProvider for Array<InstructionTextToken> {
 
 unsafe impl CoreArrayProviderInner for Array<InstructionTextToken> {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        // SAFETY: The Array MUST have been allocated on the core side. This will `delete[] raw`.
-        BNFreeInstructionTextLines(raw, count)
+        unsafe {
+            // SAFETY: The Array MUST have been allocated on the core side. This will `delete[] raw`.
+            BNFreeInstructionTextLines(raw, count)
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        // TODO: This is insane.
-        std::mem::ManuallyDrop::new(Self::new(raw.tokens, raw.count, ()))
+        unsafe {
+            // TODO: This is insane.
+            std::mem::ManuallyDrop::new(Self::new(raw.tokens, raw.count, ()))
+        }
     }
 }
 
@@ -1091,7 +1097,7 @@ pub struct DisassemblyTextRenderer {
 
 impl DisassemblyTextRenderer {
     pub unsafe fn ref_from_raw(handle: NonNull<BNDisassemblyTextRenderer>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     pub fn from_function(func: &Function, settings: Option<&DisassemblySettings>) -> Ref<Self> {
@@ -1362,16 +1368,20 @@ impl ToOwned for DisassemblyTextRenderer {
 
 unsafe impl RefCountable for DisassemblyTextRenderer {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewDisassemblyTextRendererReference(
-                handle.handle.as_ptr(),
-            ))
-            .unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewDisassemblyTextRendererReference(
+                    handle.handle.as_ptr(),
+                ))
+                .unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeDisassemblyTextRenderer(handle.handle.as_ptr());
+        unsafe {
+            BNFreeDisassemblyTextRenderer(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -1411,12 +1421,16 @@ impl ToOwned for DisassemblySettings {
 
 unsafe impl RefCountable for DisassemblySettings {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewDisassemblySettingsReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewDisassemblySettingsReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeDisassemblySettings(handle.handle);
+        unsafe {
+            BNFreeDisassemblySettings(handle.handle);
+        }
     }
 }

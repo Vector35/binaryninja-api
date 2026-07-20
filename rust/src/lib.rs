@@ -613,7 +613,7 @@ pub fn add_optional_plugin_dependency(name: &str) {
 
 /// Exported function to tell the core what core ABI version this plugin was compiled against.
 #[cfg(not(feature = "no_exports"))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[allow(non_snake_case)]
 pub extern "C" fn CorePluginABIVersion() -> u32 {
     plugin_abi_version()
@@ -621,7 +621,7 @@ pub extern "C" fn CorePluginABIVersion() -> u32 {
 
 /// Exported function to tell the core what UI ABI version this plugin was compiled against.
 #[cfg(not(feature = "no_exports"))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn UIPluginABIVersion() -> u32 {
     plugin_ui_abi_version()
 }

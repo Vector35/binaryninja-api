@@ -33,7 +33,7 @@ impl RemoteFile {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNRemoteFile>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// Look up the remote File for a local database, or None if there is no matching
@@ -600,13 +600,17 @@ unsafe impl Sync for RemoteFile {}
 
 unsafe impl RefCountable for RemoteFile {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewRemoteFileReference(handle.handle.as_ptr())).unwrap(),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewRemoteFileReference(handle.handle.as_ptr())).unwrap(),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeRemoteFile(handle.handle.as_ptr());
+        unsafe {
+            BNFreeRemoteFile(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -618,11 +622,13 @@ impl CoreArrayProvider for RemoteFile {
 
 unsafe impl CoreArrayProviderInner for RemoteFile {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeRemoteFileList(raw, count)
+        unsafe { BNFreeRemoteFileList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Guard::new(Self::from_raw(raw_ptr), context)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Guard::new(Self::from_raw(raw_ptr), context)
+        }
     }
 }

@@ -80,8 +80,10 @@ impl Platform {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNPlatform) -> Ref<Self> {
-        debug_assert!(!handle.is_null());
-        Ref::new(Self { handle })
+        unsafe {
+            debug_assert!(!handle.is_null());
+            Ref::new(Self { handle })
+        }
     }
 
     pub fn by_name(name: &str) -> Option<Ref<Self>> {
@@ -441,13 +443,17 @@ impl ToOwned for Platform {
 
 unsafe impl RefCountable for Platform {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewPlatformReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewPlatformReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreePlatform(handle.handle);
+        unsafe {
+            BNFreePlatform(handle.handle);
+        }
     }
 }
 
@@ -459,11 +465,15 @@ impl CoreArrayProvider for Platform {
 
 unsafe impl CoreArrayProviderInner for Platform {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreePlatformList(raw, count);
+        unsafe {
+            BNFreePlatformList(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        debug_assert!(!raw.is_null());
-        Guard::new(Self::from_raw(*raw), context)
+        unsafe {
+            debug_assert!(!raw.is_null());
+            Guard::new(Self::from_raw(*raw), context)
+        }
     }
 }

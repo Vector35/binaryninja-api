@@ -104,12 +104,14 @@ impl CoreArrayProvider for CoreSecretsProvider {
 
 unsafe impl CoreArrayProviderInner for CoreSecretsProvider {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeSecretsProviderList(raw)
+        unsafe { BNFreeSecretsProviderList(raw) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        let raw_ptr = NonNull::new(*raw).unwrap();
-        Self::from_raw(raw_ptr)
+        unsafe {
+            let raw_ptr = NonNull::new(*raw).unwrap();
+            Self::from_raw(raw_ptr)
+        }
     }
 }
 
@@ -117,18 +119,22 @@ unsafe extern "C" fn cb_has_data<C: SecretsProvider>(
     ctxt: *mut c_void,
     key: *const c_char,
 ) -> bool {
-    let ctxt: &mut C = &mut *(ctxt as *mut C);
-    ctxt.has_data(&CStr::from_ptr(key).to_string_lossy())
+    unsafe {
+        let ctxt: &mut C = &mut *(ctxt as *mut C);
+        ctxt.has_data(&CStr::from_ptr(key).to_string_lossy())
+    }
 }
 
 unsafe extern "C" fn cb_get_data<C: SecretsProvider>(
     ctxt: *mut c_void,
     key: *const c_char,
 ) -> *mut c_char {
-    let ctxt: &mut C = &mut *(ctxt as *mut C);
-    match ctxt.get_data(&CStr::from_ptr(key).to_string_lossy()) {
-        Some(result) => BnString::into_raw(BnString::new(result)),
-        None => std::ptr::null_mut(),
+    unsafe {
+        let ctxt: &mut C = &mut *(ctxt as *mut C);
+        match ctxt.get_data(&CStr::from_ptr(key).to_string_lossy()) {
+            Some(result) => BnString::into_raw(BnString::new(result)),
+            None => std::ptr::null_mut(),
+        }
     }
 }
 
@@ -137,16 +143,20 @@ unsafe extern "C" fn cb_store_data<C: SecretsProvider>(
     key: *const c_char,
     data: *const c_char,
 ) -> bool {
-    let ctxt: &mut C = &mut *(ctxt as *mut C);
-    let key = CStr::from_ptr(key).to_string_lossy();
-    let data = CStr::from_ptr(data).to_string_lossy();
-    ctxt.store_data(&key, &data)
+    unsafe {
+        let ctxt: &mut C = &mut *(ctxt as *mut C);
+        let key = CStr::from_ptr(key).to_string_lossy();
+        let data = CStr::from_ptr(data).to_string_lossy();
+        ctxt.store_data(&key, &data)
+    }
 }
 
 unsafe extern "C" fn cb_delete_data<C: SecretsProvider>(
     ctxt: *mut c_void,
     key: *const c_char,
 ) -> bool {
-    let ctxt: &mut C = &mut *(ctxt as *mut C);
-    ctxt.delete_data(&CStr::from_ptr(key).to_string_lossy())
+    unsafe {
+        let ctxt: &mut C = &mut *(ctxt as *mut C);
+        ctxt.delete_data(&CStr::from_ptr(key).to_string_lossy())
+    }
 }

@@ -35,7 +35,7 @@ impl AnalysisContext {
 
     #[allow(unused)]
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNAnalysisContext>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// BinaryView for the current AnalysisContext
@@ -141,14 +141,18 @@ impl ToOwned for AnalysisContext {
 
 unsafe impl RefCountable for AnalysisContext {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewAnalysisContextReference(handle.handle.as_ptr()))
-                .expect("valid handle"),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewAnalysisContextReference(handle.handle.as_ptr()))
+                    .expect("valid handle"),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeAnalysisContext(handle.handle.as_ptr());
+        unsafe {
+            BNFreeAnalysisContext(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -163,7 +167,7 @@ impl Workflow {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNWorkflow>) -> Ref<Self> {
-        Ref::new(Self { handle })
+        unsafe { Ref::new(Self { handle }) }
     }
 
     /// Create a new unregistered [Workflow] with no activities.
@@ -346,14 +350,18 @@ impl ToOwned for Workflow {
 
 unsafe impl RefCountable for Workflow {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: NonNull::new(BNNewWorkflowReference(handle.handle.as_ptr()))
-                .expect("valid handle"),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: NonNull::new(BNNewWorkflowReference(handle.handle.as_ptr()))
+                    .expect("valid handle"),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeWorkflow(handle.handle.as_ptr());
+        unsafe {
+            BNFreeWorkflow(handle.handle.as_ptr());
+        }
     }
 }
 
@@ -365,14 +373,16 @@ impl CoreArrayProvider for Workflow {
 
 unsafe impl CoreArrayProviderInner for Workflow {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeWorkflowList(raw, count)
+        unsafe { BNFreeWorkflowList(raw, count) }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(
-            Workflow::from_raw(NonNull::new(*raw).expect("valid handle")),
-            context,
-        )
+        unsafe {
+            Guard::new(
+                Workflow::from_raw(NonNull::new(*raw).expect("valid handle")),
+                context,
+            )
+        }
     }
 }
 

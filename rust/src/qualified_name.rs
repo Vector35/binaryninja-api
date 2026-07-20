@@ -270,7 +270,9 @@ impl CoreArrayProvider for QualifiedName {
 
 unsafe impl CoreArrayProviderInner for QualifiedName {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeTypeNameList(raw, count);
+        unsafe {
+            BNFreeTypeNameList(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {

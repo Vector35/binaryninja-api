@@ -90,13 +90,17 @@ impl ToOwned for SaveSettings {
 
 unsafe impl RefCountable for SaveSettings {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewSaveSettingsReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewSaveSettingsReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeSaveSettings(handle.handle);
+        unsafe {
+            BNFreeSaveSettings(handle.handle);
+        }
     }
 }
 
@@ -658,12 +662,16 @@ impl ToOwned for FileMetadata {
 
 unsafe impl RefCountable for FileMetadata {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewFileReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewFileReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeFileMetadata(handle.handle);
+        unsafe {
+            BNFreeFileMetadata(handle.handle);
+        }
     }
 }

@@ -109,9 +109,11 @@ pub struct DebugInfoParser {
 
 impl DebugInfoParser {
     pub(crate) unsafe fn from_raw(handle: *mut BNDebugInfoParser) -> Ref<Self> {
-        debug_assert!(!handle.is_null());
+        unsafe {
+            debug_assert!(!handle.is_null());
 
-        Ref::new(Self { handle })
+            Ref::new(Self { handle })
+        }
     }
 
     /// Returns debug info parser of the given name, if it exists
@@ -272,13 +274,17 @@ impl DebugInfoParser {
 
 unsafe impl RefCountable for DebugInfoParser {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewDebugInfoParserReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewDebugInfoParserReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeDebugInfoParserReference(handle.handle);
+        unsafe {
+            BNFreeDebugInfoParserReference(handle.handle);
+        }
     }
 }
 
@@ -298,11 +304,13 @@ impl CoreArrayProvider for DebugInfoParser {
 
 unsafe impl CoreArrayProviderInner for DebugInfoParser {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _: &Self::Context) {
-        BNFreeDebugInfoParserList(raw, count);
+        unsafe {
+            BNFreeDebugInfoParserList(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Guard::new(Self { handle: *raw }, context)
+        unsafe { Guard::new(Self { handle: *raw }, context) }
     }
 }
 
@@ -409,8 +417,10 @@ pub struct DebugInfo {
 
 impl DebugInfo {
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNDebugInfo) -> Ref<Self> {
-        debug_assert!(!handle.is_null());
-        Ref::new(Self { handle })
+        unsafe {
+            debug_assert!(!handle.is_null());
+            Ref::new(Self { handle })
+        }
     }
 
     /// Returns all types within the parser
@@ -752,13 +762,17 @@ impl DebugInfo {
 
 unsafe impl RefCountable for DebugInfo {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewDebugInfoReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewDebugInfoReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeDebugInfoReference(handle.handle);
+        unsafe {
+            BNFreeDebugInfoReference(handle.handle);
+        }
     }
 }
 

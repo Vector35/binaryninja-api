@@ -40,8 +40,10 @@ impl LinearViewObject {
     }
 
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNLinearViewObject) -> Ref<Self> {
-        debug_assert!(!handle.is_null());
-        Ref::new(Self { handle })
+        unsafe {
+            debug_assert!(!handle.is_null());
+            Ref::new(Self { handle })
+        }
     }
 
     pub fn identifier(&self) -> LinearViewObjectIdentifier {
@@ -211,13 +213,17 @@ impl LinearViewObject {
 
 unsafe impl RefCountable for LinearViewObject {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewLinearViewObjectReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewLinearViewObjectReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeLinearViewObject(handle.handle);
+        unsafe {
+            BNFreeLinearViewObject(handle.handle);
+        }
     }
 }
 
@@ -279,8 +285,10 @@ pub struct LinearViewCursor {
 
 impl LinearViewCursor {
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNLinearViewCursor) -> Ref<Self> {
-        debug_assert!(!handle.is_null());
-        Ref::new(Self { handle })
+        unsafe {
+            debug_assert!(!handle.is_null());
+            Ref::new(Self { handle })
+        }
     }
 
     /// Gets the current [`LinearViewObject`] associated with this cursor.
@@ -402,13 +410,17 @@ impl Ord for LinearViewCursor {
 
 unsafe impl RefCountable for LinearViewCursor {
     unsafe fn inc_ref(handle: &Self) -> Ref<Self> {
-        Ref::new(Self {
-            handle: BNNewLinearViewCursorReference(handle.handle),
-        })
+        unsafe {
+            Ref::new(Self {
+                handle: BNNewLinearViewCursorReference(handle.handle),
+            })
+        }
     }
 
     unsafe fn dec_ref(handle: &Self) {
-        BNFreeLinearViewCursor(handle.handle);
+        unsafe {
+            BNFreeLinearViewCursor(handle.handle);
+        }
     }
 }
 
@@ -460,9 +472,11 @@ impl LinearDisassemblyLine {
 
     #[allow(unused)]
     pub(crate) unsafe fn from_owned_raw(value: BNLinearDisassemblyLine) -> Self {
-        let owned = Self::from_raw(&value);
-        Self::free_raw(value);
-        owned
+        unsafe {
+            let owned = Self::from_raw(&value);
+            Self::free_raw(value);
+            owned
+        }
     }
 
     pub(crate) fn into_raw(value: Self) -> BNLinearDisassemblyLine {
@@ -522,10 +536,12 @@ impl CoreArrayProvider for LinearDisassemblyLine {
 
 unsafe impl CoreArrayProviderInner for LinearDisassemblyLine {
     unsafe fn free(raw: *mut Self::Raw, count: usize, _context: &Self::Context) {
-        BNFreeLinearDisassemblyLines(raw, count);
+        unsafe {
+            BNFreeLinearDisassemblyLines(raw, count);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Self::from_raw(raw)
+        unsafe { Self::from_raw(raw) }
     }
 }

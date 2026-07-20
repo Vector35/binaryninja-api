@@ -377,11 +377,13 @@ impl CoreArrayProvider for Demangler {
 
 unsafe impl CoreArrayProviderInner for Demangler {
     unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
-        BNFreeDemanglerList(raw);
+        unsafe {
+            BNFreeDemanglerList(raw);
+        }
     }
 
     unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
-        Demangler::from_raw(*raw)
+        unsafe { Demangler::from_raw(*raw) }
     }
 }
 

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import html
+import json
 import sys
 from pathlib import Path
 from posixpath import relpath as posix_relpath
@@ -19,12 +21,12 @@ REDIRECT_TEMPLATE = """\
 <head>
     <meta charset="utf-8">
     <title>Redirecting...</title>
-    <link rel="canonical" href="{target}">
-    <script>var anchor=window.location.hash.substr(1);location.href="{target}"+(anchor?"#"+anchor:"")</script>
-    <meta http-equiv="refresh" content="0; url={target}">
+    <link rel="canonical" href="{target_html}">
+    <script>location.replace({target_js} + location.search + location.hash)</script>
+    <meta http-equiv="refresh" content="0; url={target_html}">
 </head>
 <body>
-You're being redirected to a <a href="{target}">new destination</a>.
+You're being redirected to a <a href="{target_html}">new destination</a>.
 </body>
 </html>
 """
@@ -53,7 +55,12 @@ def main() -> int:
         src_html = args.site_dir / md_to_html(src)
         dst_rel = posix_relpath(md_to_html(dst), start=str(Path(md_to_html(src)).parent))
         src_html.parent.mkdir(parents=True, exist_ok=True)
-        src_html.write_text(REDIRECT_TEMPLATE.format(target=dst_rel))
+        src_html.write_text(
+            REDIRECT_TEMPLATE.format(
+                target_html=html.escape(dst_rel, quote=True),
+                target_js=json.dumps(dst_rel),
+            )
+        )
         written += 1
     print(f"zensical_redirects: wrote {written} redirect stub(s)")
     return 0

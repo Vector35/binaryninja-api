@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Regenerate shared admonition tokens and per-backend family mappings."""
 
+import argparse
 import pathlib
 import re
+import sys
 import urllib.parse
 
 
@@ -124,7 +126,7 @@ FAMILIES = {
 }
 
 
-def replace_fenced(path, generated):
+def fenced_source(path, generated):
     source = path.read_text()
     block = f"{BEGIN}\n{generated.rstrip()}\n{END}\n"
     begin, end = source.find(BEGIN), source.find(END)
@@ -138,7 +140,7 @@ def replace_fenced(path, generated):
                 break
         else:
             source = source.rstrip() + "\n\n" + block
-    path.write_text(source)
+    return source
 
 
 def variable_lines(family):
@@ -297,15 +299,44 @@ for family, values in FAMILIES.items():
             ".content .docblock div.warning {\n" + variable_lines(family) + "\n}"
         )
 
-replace_fenced(API / "docs" / "brand.css", brand_block)
-replace_fenced(API / "docs" / "docs.css", "\n\n".join(zensical_parts))
-replace_fenced(
-    API / "api-docs" / "source" / "_static" / "css" / "other.css",
-    "\n\n".join(sphinx_parts),
-)
-replace_fenced(
-    API / "api-docs" / "cppdocs" / "binaryninja-docs.css",
-    "\n\n".join(doxygen_parts),
-)
-replace_fenced(API / "rust" / "rustdoc-brand.css", "\n\n".join(rust_parts))
-print("regenerated shared admonition tokens and backend mappings")
+OUTPUTS = {
+    API / "docs" / "brand.css": brand_block,
+    API / "docs" / "docs.css": "\n\n".join(zensical_parts),
+    API / "api-docs" / "source" / "_static" / "css" / "other.css": "\n\n".join(sphinx_parts),
+    API / "api-docs" / "cppdocs" / "binaryninja-docs.css": "\n\n".join(doxygen_parts),
+    API / "rust" / "rustdoc-brand.css": "\n\n".join(rust_parts),
+}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="fail if generated CSS is not current without modifying files",
+    )
+    args = parser.parse_args()
+
+    stale = []
+    for path, generated in OUTPUTS.items():
+        expected = fenced_source(path, generated)
+        if expected == path.read_text():
+            continue
+        if args.check:
+            stale.append(path.relative_to(API))
+        else:
+            path.write_text(expected)
+
+    if stale:
+        for path in stale:
+            print(f"stale generated admonition CSS: {path}", file=sys.stderr)
+        print("run scripts/gen_admonitions.py to regenerate", file=sys.stderr)
+        return 1
+
+    action = "verified" if args.check else "regenerated"
+    print(f"{action} shared admonition tokens and backend mappings")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

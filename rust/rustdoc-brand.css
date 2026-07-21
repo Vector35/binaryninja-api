@@ -1,11 +1,9 @@
-/* Shared tokens are loaded first through doc-header.html. */
-
 @font-face {
   font-display: swap;
   font-family: 'Open Sans';
   font-style: normal;
   font-weight: 400;
-  src: url('/brand/OpenSans-Regular.ttf') format('truetype');
+  src: url('brand/OpenSans-Regular.ttf') format('truetype');
 }
 
 @font-face {
@@ -13,7 +11,7 @@
   font-family: 'Open Sans';
   font-style: italic;
   font-weight: 400;
-  src: url('/brand/OpenSans-Italic.ttf') format('truetype');
+  src: url('brand/OpenSans-Italic.ttf') format('truetype');
 }
 
 @font-face {
@@ -21,7 +19,7 @@
   font-family: 'Open Sans';
   font-style: normal;
   font-weight: 700;
-  src: url('/brand/OpenSans-Bold.ttf') format('truetype');
+  src: url('brand/OpenSans-Bold.ttf') format('truetype');
 }
 
 @font-face {
@@ -29,7 +27,7 @@
   font-family: 'Open Sans';
   font-style: italic;
   font-weight: 700;
-  src: url('/brand/OpenSans-BoldItalic.ttf') format('truetype');
+  src: url('brand/OpenSans-BoldItalic.ttf') format('truetype');
 }
 
 @font-face {
@@ -37,7 +35,7 @@
   font-family: 'Roboto Mono';
   font-style: normal;
   font-weight: 400;
-  src: url('/brand/roboto-mono-v22-latin-regular.woff2') format('woff2');
+  src: url('brand/roboto-mono-v22-latin-regular.woff2') format('woff2');
 }
 
 @font-face {
@@ -45,7 +43,7 @@
   font-family: 'Roboto Mono';
   font-style: italic;
   font-weight: 400;
-  src: url('/brand/roboto-mono-v22-latin-italic.woff2') format('woff2');
+  src: url('brand/roboto-mono-v22-latin-italic.woff2') format('woff2');
 }
 
 @font-face {
@@ -53,7 +51,7 @@
   font-family: 'Roboto Mono';
   font-style: normal;
   font-weight: 700;
-  src: url('/brand/roboto-mono-v22-latin-700.woff2') format('woff2');
+  src: url('brand/roboto-mono-v22-latin-700.woff2') format('woff2');
 }
 
 @font-face {
@@ -61,7 +59,7 @@
   font-family: 'Roboto Mono';
   font-style: italic;
   font-weight: 700;
-  src: url('/brand/roboto-mono-v22-latin-700italic.woff2') format('woff2');
+  src: url('brand/roboto-mono-v22-latin-700italic.woff2') format('woff2');
 }
 
 :root,
@@ -95,6 +93,26 @@ ul.all-items,
 .deprecated-count {
   font-family: var(--bn-font-body);
 }
+
+:root:not([data-theme]),
+:root[data-theme="light"] {
+  --target-background-color: var(--bn-night);
+  --target-border-color: var(--bn-night);
+  --bn-target-fg: var(--bn-white);
+}
+
+:root[data-theme="dark"],
+:root[data-theme="ayu"] {
+  --target-background-color: var(--bn-white);
+  --target-border-color: var(--bn-white);
+  --bn-target-fg: var(--bn-night);
+}
+
+:target:not([data-nosnippet]),
+:target:not([data-nosnippet]) a {
+  color: var(--bn-target-fg);
+}
+
 .content .docblock div.warning {
   margin: var(--bn-adm-margin-block) 0;
   border: none;
@@ -162,7 +180,7 @@ ul.all-items,
 }
 :root[data-theme="dark"] .sidebar-crate .logo-container img,
 :root[data-theme="ayu"] .sidebar-crate .logo-container img {
-  content: url("/brand/logo-vertical-light.svg");
+  content: url("brand/logo-vertical-light.svg");
 }
 .sidebar-crate:has(.logo-container) h2 > a {
   display: none;

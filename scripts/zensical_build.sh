@@ -7,5 +7,5 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 CONFIG="$DIR/zensical.toml"
 SITE_DIR="$DIR/site"
 
-zensical build -f "$CONFIG" "$@"
+zensical build --strict -f "$CONFIG" "$@"
 python3 "$DIR/scripts/zensical_redirects.py" --config "$CONFIG" --site-dir "$SITE_DIR"

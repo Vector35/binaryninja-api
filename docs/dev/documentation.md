@@ -20,7 +20,7 @@ The Python documentation tools are managed with [poetry]. Building every documen
 git clone https://github.com/Vector35/binaryninja-api/
 cd binaryninja-api
 poetry install
-poetry run bash scripts/zensical_build.sh
+poetry run python scripts/zensical_build.py
 echo User documentation available in site/
 cd api-docs
 poetry run make html
@@ -30,7 +30,7 @@ poetry run make html
 echo C++ API documentation available in html/
 ```
 
-`scripts/zensical_build.sh` runs `zensical build` and then writes the redirect stubs described by `[project.plugins.redirects.redirect_maps]` in `zensical.toml`.
+`scripts/zensical_build.py` runs `zensical build` and then writes the redirect stubs described by `[project.plugins.redirects.redirect_maps]` in `zensical.toml`.
 
 ## Changing
 Changing documentation for the API itself is fairly straightforward. Use [doxygen style comment blocks](https://www.doxygen.nl/manual/docblocks.html) in C++ and C, and [restructured text blocks](https://sphinx-tutorial.readthedocs.io/step-1/) for python for the source. The user documentation is located in the `docs/` folder and the API documentation is generated from the config in the `api-docs` folder.

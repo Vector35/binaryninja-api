@@ -107,6 +107,25 @@ namespace BinaryNinjaEmulator
 		void WriteMemoryValue(uint64_t addr, const intx::uint512& value, size_t size);
 		virtual BNEndianness GetEndianness() const = 0;
 
+		// Wide-integer helpers shared by IL emulators. These operate purely on intx::uint512
+		// values and byte sizes with no dependence on a specific IL, so they live here for
+		// reuse across emulator implementations.
+		static intx::uint512 MaskToSize(const intx::uint512& value, size_t size);
+		static intx::uint512 SignExtend(const intx::uint512& value, size_t fromSize, size_t toSize);
+		// Signed-integer helpers that operate directly on the wide value, so operands wider
+		// than 8 bytes are handled correctly (and INT_MIN / -1 does not trap as it would on
+		// native signed division).
+		static bool IsNegative(const intx::uint512& value, size_t size);
+		static bool SignedLess(const intx::uint512& a, const intx::uint512& b, size_t size);
+		static intx::uint512 SignedDivideOrModulo(
+			const intx::uint512& a, const intx::uint512& b, size_t size, bool modulo);
+		// Generalized signed divide/modulo where the dividend, divisor and result may have
+		// different widths (used by the double-precision divide/modulo ops).
+		static intx::uint512 SignedDivideOrModuloWide(
+			const intx::uint512& dividend, size_t dividendSize,
+			const intx::uint512& divisor, size_t divisorSize,
+			size_t resultSize, bool modulo);
+
 		// Stdout/stdin helpers for stubs
 		void EmitStdout(const std::string& data);
 		void EmitStdout(const char* data, size_t len);

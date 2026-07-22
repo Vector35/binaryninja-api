@@ -73,21 +73,6 @@ namespace BinaryNinjaEmulator
 		BNEndianness GetEndianness() const override;
 
 		// Helpers
-		static intx::uint512 MaskToSize(const intx::uint512& value, size_t size);
-		static intx::uint512 SignExtend(const intx::uint512& value, size_t fromSize, size_t toSize);
-		// Signed-integer helpers that operate directly on the wide value, so operands wider
-		// than 8 bytes are handled correctly (and INT_MIN / -1 does not trap as it would on
-		// native signed division).
-		static bool IsNegative(const intx::uint512& value, size_t size);
-		static bool SignedLess(const intx::uint512& a, const intx::uint512& b, size_t size);
-		static intx::uint512 SignedDivideOrModulo(
-			const intx::uint512& a, const intx::uint512& b, size_t size, bool modulo);
-		// Generalized signed divide/modulo where the dividend, divisor and result may have
-		// different widths (used by the double-precision divide/modulo ops).
-		static intx::uint512 SignedDivideOrModuloWide(
-			const intx::uint512& dividend, size_t dividendSize,
-			const intx::uint512& divisor, size_t divisorSize,
-			size_t resultSize, bool modulo);
 		void Push(const intx::uint512& value, size_t size);
 		intx::uint512 Pop(size_t size);
 		intx::uint512 EvalFlagCondition(BNLowLevelILFlagCondition cond, uint32_t semClass);

@@ -14,6 +14,7 @@ namespace BinaryNinjaEmulator
 		BinaryNinja::Ref<BinaryNinja::BinaryView> m_view;
 		BinaryNinja::Ref<BinaryNinja::LowLevelILFunction> m_il;
 		BinaryNinja::Ref<BinaryNinja::Architecture> m_arch;
+		bool m_multiArchWarned = false;
 
 		// LLIL-specific state
 		std::unordered_map<uint32_t, intx::uint512> m_registers;
@@ -92,6 +93,11 @@ namespace BinaryNinjaEmulator
 		intx::uint512 EvalFlagCondition(BNLowLevelILFlagCondition cond, uint32_t semClass);
 		void WriteFlags(uint32_t flagWriteType);
 		uint8_t ComputeFlagForRole(BNFlagRole role) const;
+
+		// Set the architecture the emulator is currently executing under, warning once if it
+		// differs from the binary's default architecture (e.g. ARM/Thumb), since the emulator
+		// resolves everything through a single architecture at a time.
+		void SetActiveArchitecture(BinaryNinja::Architecture* arch);
 
 		// Cross-function call support
 		bool EnterFunction(uint64_t addr, size_t returnIndex);

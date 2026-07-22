@@ -26,12 +26,35 @@ LLILEmulator::LLILEmulator(BinaryView* backingView) :
 
 
 LLILEmulator::LLILEmulator(LowLevelILFunction* il, BinaryView* backingView) :
-	m_view(backingView), m_il(il), m_arch(il->GetArchitecture())
+	m_view(backingView), m_il(il), m_arch(nullptr)
 {
 	Ref<Settings> settings = Settings::Instance();
 	m_builtinLibcStubs = settings->Get<bool>("emulator.builtinLibcStubs");
 	m_logLibcCalls = settings->Get<bool>("emulator.logLibcCalls");
+	SetActiveArchitecture(il->GetArchitecture());
 	INIT_EMULATOR_API_OBJECT();
+}
+
+
+void LLILEmulator::SetActiveArchitecture(Architecture* arch)
+{
+	m_arch = arch;
+
+	// Warn once when we begin emulating a function whose architecture differs from the
+	// binary's default — most commonly ARM/Thumb interworking. The emulator resolves
+	// registers, endianness and memory access through this single architecture, so functions
+	// of the non-default architecture may not emulate correctly.
+	if (m_multiArchWarned || !m_view || !arch)
+		return;
+	Ref<Architecture> defaultArch = m_view->GetDefaultArchitecture();
+	if (defaultArch && defaultArch != arch)
+	{
+		LogWarn("BNIL Emulator: emulating a function of architecture %s, which differs from the "
+			"binary's default architecture %s; mixed-architecture binaries (e.g. ARM/Thumb) may "
+			"not emulate correctly",
+			arch->GetName().c_str(), defaultArch->GetName().c_str());
+		m_multiArchWarned = true;
+	}
 }
 
 
@@ -49,7 +72,7 @@ bool LLILEmulator::SetEntryPoint(uint64_t addr)
 		return false;
 
 	m_il = targetIL;
-	m_arch = targetIL->GetArchitecture();
+	SetActiveArchitecture(targetIL->GetArchitecture());
 	m_instrIndex = 0;
 	m_currentAddress = GetCurrentInstructionAddress();
 	m_callStack.clear();
@@ -60,7 +83,7 @@ bool LLILEmulator::SetEntryPoint(uint64_t addr)
 void LLILEmulator::SetEntryPoint(LowLevelILFunction* il, size_t instrIndex)
 {
 	m_il = il;
-	m_arch = il->GetArchitecture();
+	SetActiveArchitecture(il->GetArchitecture());
 	m_instrIndex = instrIndex;
 	m_currentAddress = GetCurrentInstructionAddress();
 	m_callStack.clear();
@@ -494,7 +517,7 @@ bool LLILEmulator::EnterFunction(uint64_t addr, size_t returnIndex)
 
 	// Switch to callee
 	m_il = targetIL;
-	m_arch = targetIL->GetArchitecture();
+	SetActiveArchitecture(targetIL->GetArchitecture());
 	m_instrIndex = entryInstr;
 
 	return true;
@@ -913,7 +936,7 @@ bool LLILEmulator::LoadState(const std::string& json, BinaryView* view)
 		if (func)
 		{
 			m_il = func->GetLowLevelIL();
-			m_arch = func->GetArchitecture();
+			SetActiveArchitecture(func->GetArchitecture());
 		}
 	}
 
@@ -2031,7 +2054,7 @@ void LLILEmulator::ExecuteCurrentInstruction()
 					if (entry < targetIL->GetInstructionCount())
 					{
 						m_il = targetIL;
-						m_arch = targetIL->GetArchitecture();
+						SetActiveArchitecture(targetIL->GetArchitecture());
 						m_instrIndex = entry;
 						return;
 					}

@@ -18,6 +18,7 @@ nav = [
             "guide/index.md",
             { "Using Plugins" = "guide/plugins.md" },
             { "Settings" = "guide/settings.md" },
+            { "MCP Server" = "guide/mcp.md" },
             { "Projects" = "guide/projects.md" },
             { "Enterprise" = "guide/enterprise/index.md" },
             { "Troubleshooting" = "guide/troubleshooting.md" },

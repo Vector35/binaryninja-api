@@ -2227,7 +2227,7 @@ std::string LLILEmulator::ResolveCallTargetName(uint64_t addr)
 	BNSymbolType type = sym->GetType();
 	if (type == ImportedFunctionSymbol || type == FunctionSymbol
 		|| type == LibraryFunctionSymbol || type == ExternalSymbol)
-		return std::string(sym->GetShortName());
+		return sym->GetShortName();
 
 	return "";
 }

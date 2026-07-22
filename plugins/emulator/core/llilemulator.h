@@ -2,6 +2,7 @@
 
 #include "ilemulator.h"
 #include "lowlevelilinstruction.h"
+#include <optional>
 
 DECLARE_EMULATOR_API_OBJECT(BNLLILEmulator, LLILEmulator);
 
@@ -98,7 +99,7 @@ namespace BinaryNinjaEmulator
 		void WriteReturnValue(uint64_t value);
 		intx::uint512 ReadArgumentWide(size_t index);
 		void WriteReturnValueWide(const intx::uint512& value);
-		std::string ResolveCallTargetName(uint64_t addr);
+		std::optional<std::string> ResolveCallTargetName(uint64_t addr);
 		static std::string NormalizeLibcName(const std::string& name);
 		bool HandleBuiltinCall(uint64_t dest);
 		bool HandleUnknownCall(uint64_t dest);

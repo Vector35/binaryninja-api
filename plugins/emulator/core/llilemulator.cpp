@@ -2215,21 +2215,21 @@ void LLILEmulator::WriteReturnValue(uint64_t value)
 }
 
 
-std::string LLILEmulator::ResolveCallTargetName(uint64_t addr)
+std::optional<std::string> LLILEmulator::ResolveCallTargetName(uint64_t addr)
 {
 	if (!m_view)
-		return "";
+		return std::nullopt;
 
 	Ref<Symbol> sym = m_view->GetSymbolByAddress(addr);
 	if (!sym)
-		return "";
+		return std::nullopt;
 
 	BNSymbolType type = sym->GetType();
 	if (type == ImportedFunctionSymbol || type == FunctionSymbol
 		|| type == LibraryFunctionSymbol || type == ExternalSymbol)
 		return sym->GetShortName();
 
-	return "";
+	return std::nullopt;
 }
 
 
@@ -2308,11 +2308,11 @@ const std::unordered_map<std::string, LLILEmulator::StubFn>& LLILEmulator::GetSt
 
 bool LLILEmulator::HandleBuiltinCall(uint64_t dest)
 {
-	std::string name = ResolveCallTargetName(dest);
-	if (name.empty())
+	std::optional<std::string> name = ResolveCallTargetName(dest);
+	if (!name)
 		return false;
 
-	std::string normalized = NormalizeLibcName(name);
+	std::string normalized = NormalizeLibcName(*name);
 
 	auto& table = GetStubTable();
 	auto it = table.find(normalized);
@@ -2328,12 +2328,12 @@ bool LLILEmulator::HandleUnknownCall(uint64_t dest)
 	if (!m_nopUnknownExternals)
 		return false;
 
-	std::string name = ResolveCallTargetName(dest);
-	if (name.empty())
+	std::optional<std::string> name = ResolveCallTargetName(dest);
+	if (!name)
 		return false;
 
 	if (m_logLibcCalls)
-		LogInfo("BNIL Emulator: unhandled call to %s (0x%" PRIx64 "), returning 0", name.c_str(), dest);
+		LogInfo("BNIL Emulator: unhandled call to %s (0x%" PRIx64 "), returning 0", name->c_str(), dest);
 
 	WriteReturnValue(0);
 	return true;

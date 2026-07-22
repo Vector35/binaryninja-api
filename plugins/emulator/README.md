@@ -42,14 +42,19 @@ The resulting `emulatorcore` plugin is written to `build/out/plugins/`.
 
 ## Testing
 
-The Python test suite is self-contained — it assembles tiny `BinaryView`s from raw
-machine code rather than shipping test binaries — so it runs headless against any
-Binary Ninja install that has the emulator plugin:
+The Python test suite is self-contained — it runs headless against any Binary Ninja
+install that has the emulator plugin. There are two files:
+
+- [`test/emulator_test.py`](test/emulator_test.py) — end-to-end behaviour, assembling
+  tiny `BinaryView`s from raw machine code and emulating the lifted LLIL.
+- [`test/emulator_il_test.py`](test/emulator_il_test.py) — per-instruction coverage,
+  building LLIL directly so that every LLIL operation the emulator implements is
+  exercised in isolation by at least one test.
 
 ```sh
-PYTHONPATH=<bn install>/python python3 -m pytest test/emulator_test.py
-# or, without pytest:
-PYTHONPATH=<bn install>/python python3 test/emulator_test.py
+PYTHONPATH=<bn install>/python python3 -m pytest test/
+# or a single file, without pytest:
+PYTHONPATH=<bn install>/python python3 test/emulator_il_test.py
 ```
 
 ## Support status

@@ -638,7 +638,7 @@ class _PythonScriptingInstanceInput:
 
 class BlacklistedDict(dict):
 	def __init__(self, blacklist, *args):
-		super(BlacklistedDict, self).__init__(*args)
+		super().__init__(*args)
 		self.__blacklist = set(blacklist)
 		self._blacklist_enabled = True
 
@@ -648,7 +648,7 @@ class BlacklistedDict(dict):
 			    'Setting variable "{}" will have no affect as it is automatically controlled by the ScriptingProvider.\n'.
 			    format(k)
 			)
-		super(BlacklistedDict, self).__setitem__(k, v)
+		super().__setitem__(k, v)
 
 	def enable_blacklist(self, enabled):
 		self.__enable_blacklist = enabled
@@ -947,7 +947,7 @@ from binaryninja import *
 				return self.active_view.insert(self.active_selection_begin, data)
 
 	def __init__(self, provider):
-		super(PythonScriptingInstance, self).__init__(provider)
+		super().__init__(provider)
 		self.interpreter = PythonScriptingInstance.InterpreterThread(self)
 		self.interpreter.start()
 		self.queued_input = ""

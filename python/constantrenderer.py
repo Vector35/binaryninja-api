@@ -205,7 +205,7 @@ _renderer_cache = {}
 
 class CoreConstantRenderer(ConstantRenderer):
 	def __init__(self, handle: core.BNConstantRenderer):
-		super(CoreConstantRenderer, self).__init__(handle=handle)
+		super().__init__(handle=handle)
 		if type(self) is CoreConstantRenderer:
 			global _renderer_cache
 			_renderer_cache[ctypes.addressof(handle.contents)] = self

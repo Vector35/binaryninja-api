@@ -247,7 +247,7 @@ _formatter_cache = {}
 
 class CoreLineFormatter(LineFormatter):
     def __init__(self, handle: core.BNLineFormatter):
-        super(CoreLineFormatter, self).__init__(handle=handle)
+        super().__init__(handle=handle)
         if type(self) is CoreLineFormatter:
             global _formatter_cache
             _formatter_cache[ctypes.addressof(handle.contents)] = self

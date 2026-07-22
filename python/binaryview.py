@@ -280,7 +280,7 @@ class BinaryDataNotification:
 
 	>>> class NotifyTest(binaryninja.BinaryDataNotification):
 	... 	def __init__(self):
-	... 		super(NotifyTest, self).__init__(binaryninja.NotificationType.NotificationBarrier | binaryninja.NotificationType.FunctionLifetime | binaryninja.NotificationType.FunctionUpdated)
+	... 		super().__init__(binaryninja.NotificationType.NotificationBarrier | binaryninja.NotificationType.FunctionLifetime | binaryninja.NotificationType.FunctionUpdated)
 	... 		self.received_event = False
 	... 	def notification_barrier(self, view: 'BinaryView') -> int:
 	... 		has_events = self.received_event
@@ -12228,7 +12228,7 @@ class CoreDataVariable:
 
 class DataVariable(CoreDataVariable):
 	def __init__(self, view: BinaryView, address: int, type: '_types.Type', auto_discovered: bool):
-		super(DataVariable, self).__init__(address, type, auto_discovered)
+		super().__init__(address, type, auto_discovered)
 		self.view = view
 		self._accessor = TypedDataAccessor(self.type, self.address, self.view, self.view.endianness)
 
@@ -12324,7 +12324,7 @@ class DataVariable(CoreDataVariable):
 
 class DataVariableAndName(CoreDataVariable):
 	def __init__(self, addr: int, var_type: '_types.Type', var_name: str, auto_discovered: bool) -> None:
-		super(DataVariableAndName, self).__init__(addr, var_type, auto_discovered)
+		super().__init__(addr, var_type, auto_discovered)
 		self.name = var_name
 
 	def __repr__(self) -> str:

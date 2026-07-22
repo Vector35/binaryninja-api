@@ -872,7 +872,7 @@ _language_cache = {}
 
 class CoreLanguageRepresentationFunctionType(LanguageRepresentationFunctionType):
 	def __init__(self, handle: core.BNLanguageRepresentationFunctionTypeHandle):
-		super(CoreLanguageRepresentationFunctionType, self).__init__(handle=handle)
+		super().__init__(handle=handle)
 		if type(self) is CoreLanguageRepresentationFunctionType:
 			global _language_cache
 			_language_cache[ctypes.addressof(handle.contents)] = self

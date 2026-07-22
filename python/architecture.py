@@ -2734,7 +2734,7 @@ _architecture_cache = {}
 
 class CoreArchitecture(Architecture):
 	def __init__(self, handle: core.BNArchitecture):
-		super(CoreArchitecture, self).__init__()
+		super().__init__()
 
 		self.handle = core.handle_of_type(handle, core.BNArchitecture)
 		self.name = core.BNGetArchitectureName(self.handle)
@@ -3408,7 +3408,7 @@ _registered_architecture_hooks: List['ArchitectureHook'] = []
 class ArchitectureHook(CoreArchitecture):
 	def __init__(self, base_arch: 'Architecture'):
 		self._base_arch = base_arch
-		super(ArchitectureHook, self).__init__(base_arch.handle)
+		super().__init__(base_arch.handle)
 
 		# To improve performance of simpler hooks, use null callback for functions that are not being overridden
 		if self.get_associated_arch_by_address.__code__ == CoreArchitecture.get_associated_arch_by_address.__code__:

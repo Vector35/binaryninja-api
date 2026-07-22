@@ -7035,7 +7035,7 @@ class MediumLevelILBasicBlock(basicblock.BasicBlock):
 	    self, handle: core.BNBasicBlockHandle, owner: MediumLevelILFunction,
 	    view: Optional['binaryview.BinaryView'] = None
 	):
-		super(MediumLevelILBasicBlock, self).__init__(handle, view)
+		super().__init__(handle, view)
 		self._il_function = owner
 
 	def __iter__(self):

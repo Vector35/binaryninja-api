@@ -5186,7 +5186,7 @@ class HighLevelILBasicBlock(basicblock.BasicBlock):
 	def __init__(
 	    self, handle: core.BNBasicBlockHandle, owner: HighLevelILFunction, view: Optional['binaryview.BinaryView']
 	):
-		super(HighLevelILBasicBlock, self).__init__(handle, view)
+		super().__init__(handle, view)
 		self._il_function = owner
 
 	def __iter__(self) -> Generator[HighLevelILInstruction, None, None]:

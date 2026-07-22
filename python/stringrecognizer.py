@@ -421,7 +421,7 @@ _recognizer_cache = {}
 
 class CoreStringRecognizer(StringRecognizer):
 	def __init__(self, handle: core.BNStringRecognizer):
-		super(CoreStringRecognizer, self).__init__(handle=handle)
+		super().__init__(handle=handle)
 		if type(self) is CoreStringRecognizer:
 			global _recognizer_cache
 			_recognizer_cache[ctypes.addressof(handle.contents)] = self

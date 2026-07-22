@@ -436,7 +436,7 @@ class Symbol(CoreSymbol):
 		_namespace = NameSpace.get_core_struct(namespace)
 		_handle = core.BNCreateSymbol(sym_type, short_name, full_name, raw_name, addr, binding, _namespace, ordinal)
 		assert _handle is not None, "core.BNCreateSymbol return None"
-		super(Symbol, self).__init__(_handle)
+		super().__init__(_handle)
 
 
 @dataclass
@@ -805,7 +805,7 @@ class MutableTypeBuilder(Generic[TB]):
 
 class TypeBuilderAttributes(dict):
 	def __init__(self, builder: 'TypeBuilder', *args):
-		super(TypeBuilderAttributes, self).__init__(*args)
+		super().__init__(*args)
 		self._builder = builder
 
 	def __setitem__(self, key: str, value: str):
@@ -814,13 +814,13 @@ class TypeBuilderAttributes(dict):
 		if not isinstance(value, str):
 			raise TypeError("Type attribute value must be a string")
 		core.BNSetTypeBuilderAttribute(self._builder._handle, key, value)
-		super(TypeBuilderAttributes, self).__setitem__(key, value)
+		super().__setitem__(key, value)
 
 	def __delitem__(self, key: str):
 		if not isinstance(key, str):
 			raise TypeError("Type attribute key must be a string")
 		core.BNRemoveTypeBuilderAttribute(self._builder._handle, key)
-		super(TypeBuilderAttributes, self).__delitem__(key)
+		super().__delitem__(key)
 
 
 class TypeBuilder:
@@ -1780,7 +1780,7 @@ class StructureBuilder(TypeBuilder):
 	    self, handle: core.BNTypeBuilderHandle, builder_handle: core.BNStructureBuilderHandle,
 	    platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence
 	):
-		super(StructureBuilder, self).__init__(handle, platform, confidence)
+		super().__init__(handle, platform, confidence)
 		assert builder_handle is not None, "Can't instantiate Structure with builder_handle set to None"
 		self.builder_handle = builder_handle
 
@@ -2028,7 +2028,7 @@ class EnumerationBuilder(TypeBuilder):
 	    self, handle: core.BNTypeBuilderHandle, enum_builder_handle: core.BNEnumerationBuilderHandle,
 	    platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence
 	):
-		super(EnumerationBuilder, self).__init__(handle, platform, confidence)
+		super().__init__(handle, platform, confidence)
 		assert isinstance(enum_builder_handle, core.BNEnumerationBuilderHandle)
 		self.enum_builder_handle = enum_builder_handle
 
@@ -2155,7 +2155,7 @@ class NamedTypeReferenceBuilder(TypeBuilder):
 		assert isinstance(
 		    ntr_builder_handle, core.BNNamedTypeReferenceBuilderHandle
 		), "Failed to construct NameTypeReference"
-		super(NamedTypeReferenceBuilder, self).__init__(handle, platform, confidence)
+		super().__init__(handle, platform, confidence)
 		self.ntr_builder_handle = ntr_builder_handle
 
 	@classmethod
@@ -2911,7 +2911,7 @@ class BoolType(Type):
 
 class IntegerType(Type):
 	def __init__(self, handle, platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence):
-		super(IntegerType, self).__init__(handle, platform, confidence)
+		super().__init__(handle, platform, confidence)
 
 	@classmethod
 	def create(
@@ -2957,7 +2957,7 @@ class FloatType(Type):
 class StructureType(Type):
 	def __init__(self, handle, platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence):
 		assert handle is not None, "Attempted to create EnumerationType with handle which is None"
-		super(StructureType, self).__init__(handle, platform, confidence)
+		super().__init__(handle, platform, confidence)
 		struct_handle = core.BNGetTypeStructure(handle)
 		assert struct_handle is not None, "core.BNGetTypeStructure returned None"
 		self.struct_handle = struct_handle
@@ -2994,7 +2994,7 @@ class StructureType(Type):
 	def __del__(self):
 		if core is not None:
 			core.BNFreeStructure(self.struct_handle)
-		super(StructureType, self).__del__()
+		super().__del__()
 
 	def __hash__(self):
 		return hash(ctypes.addressof(self.struct_handle.contents))
@@ -3234,7 +3234,7 @@ class StructureType(Type):
 class EnumerationType(IntegerType):
 	def __init__(self, handle, platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence):
 		assert handle is not None, "Attempted to create EnumerationType without handle"
-		super(EnumerationType, self).__init__(handle, platform, confidence)
+		super().__init__(handle, platform, confidence)
 		enum_handle = core.BNGetTypeEnumeration(handle)
 		assert enum_handle is not None, "core.BNGetTypeEnumeration returned None"
 		self.enum_handle = enum_handle
@@ -3242,7 +3242,7 @@ class EnumerationType(IntegerType):
 	def __del__(self):
 		if core is not None:
 			core.BNFreeEnumeration(self.enum_handle)
-		super(EnumerationType, self).__del__()
+		super().__del__()
 
 	def __hash__(self):
 		return hash(ctypes.addressof(self.enum_handle.contents))
@@ -3622,7 +3622,7 @@ class NamedTypeReferenceType(Type):
 	    self, handle, platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence, ntr_handle=None
 	):
 		assert handle is not None, "Attempting to create NamedTypeReferenceType handle which is None"
-		super(NamedTypeReferenceType, self).__init__(handle, platform, confidence)
+		super().__init__(handle, platform, confidence)
 		if ntr_handle is None:
 			ntr_handle = core.BNGetTypeNamedTypeReference(handle)
 		assert ntr_handle is not None, "core.BNGetTypeNamedTypeReference returned None"
@@ -3700,7 +3700,7 @@ class NamedTypeReferenceType(Type):
 	def __del__(self):
 		if core is not None:
 			core.BNFreeNamedTypeReference(self.ntr_handle)
-		super(NamedTypeReferenceType, self).__del__()
+		super().__del__()
 
 	def __repr__(self):
 		if self.named_type_class == NamedTypeReferenceClass.TypedefNamedTypeClass:

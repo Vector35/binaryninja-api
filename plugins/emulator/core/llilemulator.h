@@ -19,7 +19,7 @@ namespace BinaryNinjaEmulator
 		// LLIL-specific state
 		std::unordered_map<uint32_t, intx::uint512> m_registers;
 		std::unordered_map<uint32_t, intx::uint512> m_tempRegisters;
-		std::unordered_map<uint32_t, uint8_t> m_flags;
+		std::unordered_map<uint32_t, bool> m_flags;
 
 		// Call stack for cross-function emulation
 		struct CallFrame
@@ -162,8 +162,8 @@ namespace BinaryNinjaEmulator
 		intx::uint512 GetTempRegister(uint32_t index) const;
 		void SetTempRegister(uint32_t index, const intx::uint512& value);
 		const std::unordered_map<uint32_t, intx::uint512>& GetAllTempRegisters() const;
-		uint8_t GetFlag(uint32_t flag) const;
-		void SetFlag(uint32_t flag, uint8_t value);
+		bool GetFlag(uint32_t flag) const;
+		void SetFlag(uint32_t flag, bool value);
 
 		void SetIntrinsicHook(IntrinsicHook hook);
 

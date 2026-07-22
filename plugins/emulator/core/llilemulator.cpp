@@ -268,16 +268,16 @@ const std::unordered_map<uint32_t, intx::uint512>& LLILEmulator::GetAllTempRegis
 }
 
 
-uint8_t LLILEmulator::GetFlag(uint32_t flag) const
+bool LLILEmulator::GetFlag(uint32_t flag) const
 {
 	auto it = m_flags.find(flag);
-	return (it != m_flags.end()) ? it->second : 0;
+	return it != m_flags.end() && it->second;
 }
 
 
-void LLILEmulator::SetFlag(uint32_t flag, uint8_t value)
+void LLILEmulator::SetFlag(uint32_t flag, bool value)
 {
-	m_flags[flag] = value ? 1 : 0;
+	m_flags[flag] = value;
 }
 
 
@@ -792,7 +792,7 @@ bool LLILEmulator::LoadState(const std::string& json, BinaryView* view)
 		for (auto it = doc["flags"].MemberBegin(); it != doc["flags"].MemberEnd(); ++it)
 		{
 			uint32_t flagId = std::stoul(it->name.GetString());
-			m_flags[flagId] = (uint8_t)it->value.GetInt();
+			m_flags[flagId] = it->value.GetInt() != 0;
 		}
 	}
 
@@ -1797,7 +1797,7 @@ void LLILEmulator::ExecuteCurrentInstruction()
 		intx::uint512 val = EvalExpr(instr.GetSourceExpr());
 		if (m_stopReason != ILEmulatorStopReason::Running)
 			return;
-		SetFlag(flag, static_cast<uint8_t>(static_cast<uint64_t>(val) & 1));
+		SetFlag(flag, (static_cast<uint64_t>(val) & 1) != 0);
 		break;
 	}
 

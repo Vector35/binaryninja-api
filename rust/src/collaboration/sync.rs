@@ -243,7 +243,7 @@ where
 
 /// Completely sync a database, pushing/pulling/merging/applying changes
 ///
-/// * `metadata` - File openend from database to sync
+/// * `metadata` - File opened from database to sync
 /// * `file` - File to sync with
 /// * `conflict_handler` - Function to call to resolve snapshot conflicts
 /// * `name_changeset` - Function to call for naming a pushed changeset, if necessary
@@ -264,7 +264,7 @@ pub fn sync_database<C: DatabaseConflictHandler, N: NameChangeset>(
 
 /// Completely sync a database, pushing/pulling/merging/applying changes
 ///
-/// * `metadata` - File openend from database to sync
+/// * `metadata` - File opened from database to sync
 /// * `file` - File to sync with
 /// * `conflict_handler` - Function to call to resolve snapshot conflicts
 /// * `name_changeset` - Function to call for naming a pushed changeset, if necessary

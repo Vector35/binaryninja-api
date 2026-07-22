@@ -459,9 +459,7 @@ impl HighLevelILLiftedInstruction {
                 ("offset", Operand::Int(op.offset)),
                 ("member_index", Operand::MemberIndex(op.member_index)),
             ],
-            StructInit(op) => vec![
-                ("fields", Operand::ExprList(op.fields.clone())),
-            ],
+            StructInit(op) => vec![("fields", Operand::ExprList(op.fields.clone()))],
             StructInitField(op) => vec![
                 ("offset", Operand::Int(op.offset)),
                 ("member_index", Operand::MemberIndex(op.member_index)),

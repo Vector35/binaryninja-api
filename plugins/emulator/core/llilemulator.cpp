@@ -1879,11 +1879,11 @@ void LLILEmulator::ExecuteCurrentInstruction()
 
 		// 1) Try built-in stubs first
 		if (m_builtinLibcStubs && HandleBuiltinCall(dest))
-			break;
+			return;
 
 		// 2) Let the hook handle it (e.g., stub a library call)
 		if (m_callHook && m_callHook(this, dest))
-			break;
+			return;
 
 		// A builtin stub or call hook may have requested a stop (e.g. an error) without
 		// returning true; don't fall through into the call in that case.
@@ -1909,7 +1909,7 @@ void LLILEmulator::ExecuteCurrentInstruction()
 
 		// 4) Treat unknown external calls as no-op if enabled
 		if (HandleUnknownCall(dest))
-			break;
+			return;
 
 		// 5) Cannot resolve — stop
 		SetStopReason(ILEmulatorStopReason::CallHook,
@@ -1929,7 +1929,7 @@ void LLILEmulator::ExecuteCurrentInstruction()
 			uint32_t sp = m_arch->GetStackPointerRegister();
 			uint64_t spVal = static_cast<uint64_t>(GetRegister(sp));
 			SetRegister(sp, intx::uint512(spVal + (uint64_t)adj));
-			break;
+			return;
 		}
 
 		if (m_callHook && m_callHook(this, dest))
@@ -1938,7 +1938,7 @@ void LLILEmulator::ExecuteCurrentInstruction()
 			uint32_t sp = m_arch->GetStackPointerRegister();
 			uint64_t spVal = static_cast<uint64_t>(GetRegister(sp));
 			SetRegister(sp, intx::uint512(spVal + (uint64_t)adj));
-			break;
+			return;
 		}
 
 		// A builtin stub or call hook may have requested a stop (e.g. an error) without
@@ -1967,7 +1967,7 @@ void LLILEmulator::ExecuteCurrentInstruction()
 			uint32_t sp = m_arch->GetStackPointerRegister();
 			uint64_t spVal = static_cast<uint64_t>(GetRegister(sp));
 			SetRegister(sp, intx::uint512(spVal + (uint64_t)adj));
-			break;
+			return;
 		}
 
 		SetStopReason(ILEmulatorStopReason::CallHook,

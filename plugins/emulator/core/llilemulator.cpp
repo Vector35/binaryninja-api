@@ -130,17 +130,7 @@ void LLILEmulator::SetArgument(size_t index, const intx::uint512& value)
 
 	// Place arguments using the calling convention of the function being emulated, falling
 	// back to the platform default only when the function has none.
-	Ref<CallingConvention> cc;
-	if (m_il)
-	{
-		if (Ref<Function> func = m_il->GetFunction())
-			cc = func->GetCallingConvention().GetValue();
-	}
-	if (!cc)
-	{
-		if (Ref<Platform> platform = m_view->GetDefaultPlatform())
-			cc = platform->GetDefaultCallingConvention();
-	}
+	Ref<CallingConvention> cc = ResolveCallingConvention();
 	if (!cc)
 		return;
 
@@ -2167,16 +2157,33 @@ void LLILEmulator::EnsureHeapMapped()
 }
 
 
+Ref<CallingConvention> LLILEmulator::ResolveCallingConvention()
+{
+	if (!m_view)
+		return nullptr;
+
+	// Use the calling convention of the function being emulated, falling back to the platform
+	// default only when the function has none.
+	if (m_il)
+	{
+		if (Ref<Function> func = m_il->GetFunction())
+		{
+			if (Ref<CallingConvention> cc = func->GetCallingConvention().GetValue())
+				return cc;
+		}
+	}
+	if (Ref<Platform> platform = m_view->GetDefaultPlatform())
+		return platform->GetDefaultCallingConvention();
+	return nullptr;
+}
+
+
 uint64_t LLILEmulator::ReadArgument(size_t index)
 {
 	if (!m_view)
 		return 0;
 
-	Ref<Platform> platform = m_view->GetDefaultPlatform();
-	if (!platform)
-		return 0;
-
-	Ref<CallingConvention> cc = platform->GetDefaultCallingConvention();
+	Ref<CallingConvention> cc = ResolveCallingConvention();
 	if (!cc)
 		return 0;
 
@@ -2199,11 +2206,7 @@ void LLILEmulator::WriteReturnValue(uint64_t value)
 	if (!m_view)
 		return;
 
-	Ref<Platform> platform = m_view->GetDefaultPlatform();
-	if (!platform)
-		return;
-
-	Ref<CallingConvention> cc = platform->GetDefaultCallingConvention();
+	Ref<CallingConvention> cc = ResolveCallingConvention();
 	if (!cc)
 		return;
 

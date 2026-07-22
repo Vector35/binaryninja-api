@@ -89,6 +89,10 @@ namespace BinaryNinjaEmulator
 		bool ReturnToCaller();
 		uint64_t GetNativeReturnAddress() const;
 
+		// Resolve the calling convention used to place/read arguments and return values: the
+		// emulated function's own convention, falling back to the platform default.
+		BinaryNinja::Ref<BinaryNinja::CallingConvention> ResolveCallingConvention();
+
 		// Built-in libc stub helpers
 		uint64_t ReadArgument(size_t index);
 		void WriteReturnValue(uint64_t value);

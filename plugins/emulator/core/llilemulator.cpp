@@ -95,6 +95,39 @@ void LLILEmulator::SetArgument(size_t index, const intx::uint512& value)
 	if (!m_view)
 		return;
 
+	// Prefer the emulated function's actual parameter variables, which honor non-default
+	// argument locations (registers or stack slots the user or type system assigned rather
+	// than the calling convention's defaults). Register- and stack-located parameters are
+	// placed precisely here; anything else falls through to the calling convention's default
+	// placement below.
+	if (m_il)
+	{
+		if (Ref<Function> func = m_il->GetFunction())
+		{
+			auto params = func->GetParameterVariables().GetValue();
+			if (index < params.size())
+			{
+				const Variable& loc = params[index];
+				if (loc.type == RegisterVariableSourceType)
+				{
+					SetRegister(static_cast<uint32_t>(loc.storage), value);
+					return;
+				}
+				if (loc.type == StackVariableSourceType)
+				{
+					// A stack parameter's storage is its offset from the stack pointer on
+					// entry to the function, which is the current stack pointer at the point
+					// arguments are set up.
+					size_t addrSize = m_arch->GetAddressSize();
+					uint32_t sp = m_arch->GetStackPointerRegister();
+					uint64_t spVal = static_cast<uint64_t>(GetRegister(sp));
+					WriteMemoryValue(spVal + static_cast<uint64_t>(loc.storage), value, addrSize);
+					return;
+				}
+			}
+		}
+	}
+
 	// Place arguments using the calling convention of the function being emulated, falling
 	// back to the platform default only when the function has none.
 	Ref<CallingConvention> cc;

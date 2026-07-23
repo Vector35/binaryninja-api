@@ -13,17 +13,13 @@
 // limitations under the License.
 
 #pragma once
-#include <exception>
 #include <optional>
-#include <utility>
 
-// XXX: Compiled directly into the core for performance reasons
-// Will still work fine compiled independently, just at about a
-// 50-100% performance penalty due to FFI overhead
+// Compiled directly into the core for performance reasons. It also works when
+// compiled independently, but benchmarks after the DemangledTypeNode and
+// template simplifier refactors showed approximately 25% better performance
+// when compiled directly into the core instead of through the FFI.
 #ifdef BINARYNINJACORE_LIBRARY
-#include "qualifiedname.h"
-#include "type.h"
-#include "architecture.h"
 #include "binaryview.h"
 #include "demangle.h"
 #define BN BinaryNinjaCore
@@ -36,16 +32,7 @@
 #define _STD_VECTOR std::vector
 #endif
 
-#include "demangler/demangled_type_node.h"
-
-class DemangleException: public std::exception
-{
-	_STD_STRING m_message;
-public:
-	DemangleException(_STD_STRING msg="Attempt to read beyond bounds or missing expected character"): m_message(std::move(msg)){}
-	[[nodiscard]] const char* what() const noexcept override { return m_message.c_str(); }
-};
-
+#include "demangler/demangled_reader.h"
 
 class Demangle
 {
@@ -74,90 +61,6 @@ public:
 	};
 
 private:
-	class Reader
-	{
-	public:
-		Reader(const _STD_STRING& data)
-		{
-			Reset(data);
-		}
-		void Reset(const _STD_STRING& data)
-		{
-			m_ptr = data.c_str();
-			m_end = data.c_str() + data.size();
-			ValidatePrintableAscii();
-		}
-		bool PeekMatch(const char* str, size_t len) const
-		{
-			if (len > Length())
-				return false;
-			return memcmp(m_ptr, str, len) == 0;
-		}
-		[[nodiscard]] char PeekAt(size_t offset) const
-		{
-			if (offset >= Length())
-				throw DemangleException();
-			return m_ptr[offset];
-		}
-		[[nodiscard]] char Peek() const
-		{
-			if (m_ptr >= m_end)
-				throw DemangleException();
-			return *m_ptr;
-		}
-		[[nodiscard]] char PeekOr(char fallback = '\0') const
-		{
-			if (Length() == 0)
-				return fallback;
-			return *m_ptr;
-		}
-		[[nodiscard]] const char* GetRaw() const { return m_ptr; }
-		void SetRaw(const char* p) { m_ptr = p; }
-		[[nodiscard]] char Read()
-		{
-			if (m_ptr >= m_end)
-				throw DemangleException();
-			return *m_ptr++;
-		}
-		bool ConsumeIf(char ch)
-		{
-			if (PeekOr() != ch)
-				return false;
-			Consume();
-			return true;
-		}
-		bool ConsumeIf(const char* str, size_t len)
-		{
-			if (!PeekMatch(str, len))
-				return false;
-			Consume(len);
-			return true;
-		}
-		template <size_t N>
-		bool ConsumeIf(const char (&str)[N])
-		{
-			return ConsumeIf(str, N - 1);
-		}
-		void Consume(size_t count = 1)
-		{
-			if (count > Length())
-				throw DemangleException();
-			m_ptr += count;
-		}
-		[[nodiscard]] size_t Length() const { return static_cast<size_t>(m_end - m_ptr); }
-		_STD_STRING ReadString(size_t count);
-		_STD_STRING ReadUntil(char sentinel);
-	private:
-		void ValidatePrintableAscii() const
-		{
-			for (const char* p = m_ptr; p < m_end; p++)
-				if (*p < 0x20 || *p > 0x7e)
-					throw DemangleException();
-		}
-		const char* m_ptr;
-		const char* m_end;
-	};
-
 	class BackrefList
 	{
 	public:
@@ -239,31 +142,27 @@ private:
 	}
 
 	_STD_STRING m_mangledName; // Owns the string; Reader points into it
-	Reader m_reader;
+	DemangleReader m_reader;
 	BackrefList m_backrefList;
-	BN::Architecture* m_arch;
-	BN::Ref<BN::Platform> m_platform;
-	BN::Ref<BN::BinaryView> m_view;
+	BN::DemanglerConfig m_config;
 	size_t m_templateParamDepth = 0;
 	size_t m_nestingDepth = 0;
-	class NestingGuard
-	{
-		Demangle& m_demangler;
-	public:
-		NestingGuard(Demangle& demangler);
-		~NestingGuard();
-	};
+	// The largest observed depth in a real-world corpus of roughly 200k MSVC symbols was 54.
+	static constexpr size_t MAX_DEMANGLE_NESTING_DEPTH = 256;
+	using NestingGuard = DemangleNestingGuard<MAX_DEMANGLE_NESTING_DEPTH>;
 
 	static void RewriteTemplateBackrefName(NameList& typeName, const BackrefList& nameBackrefList);
 	static void PrependNameComponent(NameList& nameList, DemangledNamePart name);
 	void AppendStringName(NameList& nameList, BackrefList& nameBackrefList);
 	static void FinalizeConstructorTemplateName(NameList& nameList, size_t nameListSizeAtEntry, bool pending);
 	static bool FunctionTypeHasPointerSuffix(char functionType);
-	static _STD_STRING FormatFunctionScopeSignature(const DemangledTypeNode& type, const NameList& scopeName);
+	static _STD_STRING FormatFunctionScopeSignature(
+		const DemangledTypeNode& type, const NameList& scopeName, BN::Platform& platform);
+	[[nodiscard]] BN::Platform& GetRenderingPlatform() const;
 	void AppendLocalScope(NameList& nameList, BackrefList& nameBackrefList, uint64_t scopeOrdinal, bool typeNameContext);
 	bool TryAppendLocalScopeAt(NameList& nameList, BackrefList& nameBackrefList, const char* encodedNumberStart,
 		bool typeNameContext);
-	_STD_STRING FormatTypeAndName(const DemangledTypeNode& type, const NameList& name) const;
+	[[nodiscard]] _STD_STRING FormatTypeAndName(const DemangledTypeNode& type, const NameList& name) const;
 	enum class TypeBackrefMode
 	{
 		RecordTopLevel,
@@ -339,32 +238,14 @@ private:
 	DemangledTypeNode DemangleTypeInfoName(NameList& symbolName);
 	DemangleContext DemangleDynamicInitFini(bool isDtor, BackrefList& backrefList);
 	DemangleContext DemangleSymbol(BackrefList& backrefList);
-	std::pair<BN::Ref<BN::Type>, BN::QualifiedName> Finalize(BN::BinaryView* view);
 
 public:
-	Demangle(BN::Architecture* arch, _STD_STRING  mangledName);
-	Demangle(BN::Ref<BN::BinaryView> view, _STD_STRING  mangledName);
-	Demangle(BN::Ref<BN::Platform> platform, _STD_STRING  mangledName);
+	Demangle(const BN::DemanglerConfig& config, _STD_STRING  mangledName);
+	void Reset(const BN::DemanglerConfig& config, const _STD_STRING& mangledName);
 	Demangle(const Demangle&) = delete;
 	Demangle(Demangle&&) = delete;
 	Demangle& operator=(const Demangle&) = delete;
 	Demangle& operator=(Demangle&&) = delete;
-	void Reset(BN::Architecture* arch, const _STD_STRING& mangledName);
 	DemangleContext DemangleSymbol();
-	std::pair<BN::Ref<BN::Type>, BN::QualifiedName> Finalize();
-
-	// Be careful not to accidentally implicitly cast a BinaryView* to a bool
-	static bool DemangleMS(BN::Architecture* arch, const _STD_STRING& mangledName, BN::Ref<BN::Type>& outType,
-	                       BN::QualifiedName& outVarName, const BN::Ref<BN::BinaryView>& view);
-	static bool DemangleMS(BN::Architecture* arch, const _STD_STRING& mangledName, BN::Ref<BN::Type>& outType,
-	                       BN::QualifiedName& outVarName, BN::BinaryView* view);
-	static bool DemangleMS(BN::Platform* platform, const _STD_STRING& mangledName, BN::Ref<BN::Type>& outType,
-	                       BN::QualifiedName& outVarName);
-	static bool DemangleMS(BN::Architecture* arch, const _STD_STRING& mangledName, BN::Ref<BN::Type>& outType,
-	                       BN::QualifiedName& outVarName);
-
-	static bool DemangleMS(const _STD_STRING& mangledName, BN::Ref<BN::Type>& outType,
-	                       BN::QualifiedName& outVarName, const BN::Ref<BN::BinaryView>& view);
-	static bool DemangleMS(const _STD_STRING& mangledName, BN::Ref<BN::Type>& outType,
-	                       BN::QualifiedName& outVarName, BN::BinaryView* view);
+	BN::DemanglerResult Finalize();
 };

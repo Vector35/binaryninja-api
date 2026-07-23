@@ -16,10 +16,10 @@
 #ifdef BINARYNINJACORE_LIBRARY
 #include "binaryview.h"
 #endif
+#include "base/assertions.h"
 #include <algorithm>
-#include <cassert>
-#include <cinttypes>
-#include <cstdint>
+#include <fmt/format.h>
+#include <unordered_set>
 
 #ifdef BINARYNINJACORE_LIBRARY
 using namespace BinaryNinjaCore;
@@ -31,11 +31,73 @@ using namespace std;
 
 namespace
 {
-	static constexpr uint8_t DemangledPtr64Bit = 1u << 0;
-	static constexpr uint8_t DemangledUnalignedBit = 1u << 1;
-	static constexpr uint8_t DemangledRestrictBit = 1u << 2;
-	static constexpr uint8_t DemangledReferenceBit = 1u << 3;
-	static constexpr uint8_t DemangledLvalueBit = 1u << 4;
+	constexpr uint8_t DemangledPtr64Bit = 1u << 0;
+	constexpr uint8_t DemangledUnalignedBit = 1u << 1;
+	constexpr uint8_t DemangledRestrictBit = 1u << 2;
+	constexpr uint8_t DemangledReferenceBit = 1u << 3;
+	constexpr uint8_t DemangledLvalueBit = 1u << 4;
+
+	class DemanglerFallbackArchitecture : public Architecture
+	{
+	public:
+		DemanglerFallbackArchitecture() : Architecture("demangler_fallback") {}
+
+		BNEndianness GetEndianness() const override { return LittleEndian; }
+		size_t GetAddressSize() const override { return 8; }
+		size_t GetDefaultIntegerSize() const override { return 4; }
+		size_t GetInstructionAlignment() const override { return 1; }
+		size_t GetMaxInstructionLength() const override { return 1; }
+		size_t GetOpcodeDisplayLength() const override { return 1; }
+
+#ifdef BINARYNINJACORE_LIBRARY
+		bool GetInstructionInfo(const uint8_t*, uint64_t, size_t, InstructionInfo&) override { return false; }
+		bool GetInstructionText(const uint8_t*, uint64_t, size_t&, vector<InstructionTextToken>&) override { return false; }
+		bool GetInstructionTextWithContext(const uint8_t*, uint64_t, size_t&, void*, vector<InstructionTextToken>&) override { return false; }
+		bool GetInstructionLowLevelIL(const uint8_t*, uint64_t, size_t&, LowLevelILFunction&) override { return false; }
+		void AnalyzeBasicBlocks(Function&, BNBasicBlockAnalysisContext*) override {}
+		bool LiftFunction(LowLevelILFunction&, BNFunctionLifterContext*) override { return false; }
+		void FreeFunctionArchContext(void*) override {}
+		string GetRegisterName(uint32_t) override { return {}; }
+		string GetFlagName(uint32_t) override { return {}; }
+		string GetFlagWriteTypeName(uint32_t) override { return {}; }
+		string GetSemanticFlagClassName(uint32_t) override { return {}; }
+		string GetSemanticFlagGroupName(uint32_t) override { return {}; }
+		vector<uint32_t> GetFullWidthRegisters() override { return {}; }
+		vector<uint32_t> GetAllRegisters() override { return {}; }
+		vector<uint32_t> GetAllFlags() override { return {}; }
+		vector<uint32_t> GetAllFlagWriteTypes() override { return {}; }
+		vector<uint32_t> GetAllSemanticFlagClasses() override { return {}; }
+		vector<uint32_t> GetAllSemanticFlagGroups() override { return {}; }
+		BNFlagRole GetFlagRole(uint32_t, uint32_t = 0) override { return SpecialFlagRole; }
+		vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition, uint32_t = 0) override { return {}; }
+		vector<uint32_t> GetFlagsRequiredForSemanticFlagGroup(uint32_t) override { return {}; }
+		map<uint32_t, BNLowLevelILFlagCondition> GetFlagConditionsForSemanticFlagGroup(uint32_t) override { return {}; }
+		uint32_t GetSemanticClassForFlagWriteType(uint32_t) override { return 0; }
+		BNRegisterInfo GetRegisterInfo(uint32_t) override { return {}; }
+		uint32_t GetStackPointerRegister() override { return 0; }
+		BNIntrinsicClass GetIntrinsicClass(uint32_t) override { return GeneralIntrinsicClass; }
+		string GetIntrinsicName(uint32_t) override { return {}; }
+		vector<uint32_t> GetAllIntrinsics() override { return {}; }
+		vector<NameAndType> GetIntrinsicInputs(uint32_t) override { return {}; }
+		vector<Confidence<Ref<Type>>> GetIntrinsicOutputs(uint32_t) override { return {}; }
+		bool CanAssemble() override { return false; }
+		bool Assemble(const string&, uint64_t, DataBuffer&, string&) override { return false; }
+		bool IsNeverBranchPatchAvailable(const uint8_t*, uint64_t, size_t) override { return false; }
+		bool IsAlwaysBranchPatchAvailable(const uint8_t*, uint64_t, size_t) override { return false; }
+		bool IsInvertBranchPatchAvailable(const uint8_t*, uint64_t, size_t) override { return false; }
+		bool IsSkipAndReturnZeroPatchAvailable(const uint8_t*, uint64_t, size_t) override { return false; }
+		bool IsSkipAndReturnValuePatchAvailable(const uint8_t*, uint64_t, size_t) override { return false; }
+		bool ConvertToNop(uint8_t*, uint64_t, size_t) override { return false; }
+		bool AlwaysBranch(uint8_t*, uint64_t, size_t) override { return false; }
+		bool InvertBranch(uint8_t*, uint64_t, size_t) override { return false; }
+		bool SkipAndReturnValue(uint8_t*, uint64_t, size_t, uint64_t) override { return false; }
+		Architecture* RegisterArchitectureHook(BNCustomArchitecture*) override { return nullptr; }
+#else
+		bool GetInstructionInfo(const uint8_t*, uint64_t, size_t, InstructionInfo&) override { return false; }
+		bool GetInstructionText(const uint8_t*, uint64_t, size_t&, vector<InstructionTextToken>&) override { return false; }
+		bool GetInstructionLowLevelIL(const uint8_t*, uint64_t, size_t&, LowLevelILFunction&) override { return false; }
+#endif
+	};
 
 	static void AppendPointerSuffixToken(string& out, const char* token)
 	{
@@ -67,7 +129,7 @@ namespace
 	}
 
 	static void AppendTemplateArgumentList(string& out, const vector<DemangledTypeNode::Param>& args,
-		bool spaceAfterComma, Platform* platform)
+		bool spaceAfterComma, Platform& platform)
 	{
 		if (args.empty())
 			return;
@@ -109,97 +171,56 @@ namespace
 		return empty;
 	}
 
-	static size_t ResolveAddressWidth(Platform* platform)
+	static size_t ResolveAddressWidth(const Platform& platform)
 	{
-		if (platform)
-			return platform->GetAddressSize();
-		return 8;
+		return platform.GetAddressSize();
 	}
 
-	static size_t ResolveDefaultIntegerWidth(Platform* platform)
+	static size_t ResolveDefaultIntegerWidth(const Platform& platform)
 	{
-		if (platform)
-		{
-#ifdef BINARYNINJACORE_LIBRARY
-			Architecture* platformArch = platform->GetArchitecture();
-#else
-			Ref<Architecture> platformArch = platform->GetArchitecture();
-#endif
-			if (platformArch)
-				return platformArch->GetDefaultIntegerSize();
-		}
-		return 4;
+		auto platformArch = platform.GetArchitecture();
+		return platformArch->GetDefaultIntegerSize();
 	}
 
-	static Ref<CallingConvention> ResolveCallingConvention(BNCallingConventionName cc, Platform* platform)
+	static Ref<CallingConvention> ResolveCallingConvention(BNCallingConventionName cc, const Platform& platform)
 	{
-#ifndef BINARYNINJACORE_LIBRARY
-		Ref<Architecture> platformArch;
-#endif
-		Architecture* arch = nullptr;
-		if (platform)
-		{
-#ifdef BINARYNINJACORE_LIBRARY
-			arch = platform->GetArchitecture();
-#else
-			platformArch = platform->GetArchitecture();
-			arch = platformArch.GetPtr();
-#endif
-		}
+		auto platformArch = platform.GetArchitecture();
+		Architecture* arch = platformArch;
 
 		switch (cc)
 		{
 		case CdeclCallingConvention:
-			if (platform)
-			{
-				auto platformCC = platform->GetCdeclCallingConvention();
-				if (platformCC)
-					return platformCC;
-			}
-			if (arch)
-			{
-				auto archCC = arch->GetCdeclCallingConvention();
-				if (archCC)
-					return archCC;
-			}
-			return arch ? arch->GetCallingConventionByName("cdecl") : nullptr;
+			if (auto platformCC = platform.GetCdeclCallingConvention())
+				return platformCC;
+			if (auto archCC = arch->GetCdeclCallingConvention())
+				return archCC;
+			return arch->GetCallingConventionByName("cdecl");
 		case STDCallCallingConvention:
-			if (platform)
-			{
-				auto platformCC = platform->GetStdcallCallingConvention();
-				if (platformCC)
-					return platformCC;
-			}
-			if (arch)
-			{
-				auto archCC = arch->GetStdcallCallingConvention();
-				if (archCC)
-					return archCC;
-			}
-			return arch ? arch->GetCallingConventionByName("stdcall") : nullptr;
+			if (auto platformCC = platform.GetStdcallCallingConvention())
+				return platformCC;
+			if (auto archCC = arch->GetStdcallCallingConvention())
+				return archCC;
+			return arch->GetCallingConventionByName("stdcall");
 		case FastcallCallingConvention:
-			if (platform)
-			{
-				auto platformCC = platform->GetFastcallCallingConvention();
-				if (platformCC)
-					return platformCC;
-			}
-			if (arch)
-			{
-				auto archCC = arch->GetFastcallCallingConvention();
-				if (archCC)
-					return archCC;
-			}
-			return arch ? arch->GetCallingConventionByName("fastcall") : nullptr;
+			if (auto platformCC = platform.GetFastcallCallingConvention())
+				return platformCC;
+			if (auto archCC = arch->GetFastcallCallingConvention())
+				return archCC;
+			return arch->GetCallingConventionByName("fastcall");
 		case ThisCallCallingConvention:
-			if (arch)
-				return arch->GetCallingConventionByName("thiscall");
-			return nullptr;
+			return arch->GetCallingConventionByName("thiscall");
 		default:
 			return nullptr;
 		}
 	}
 
+}
+
+Platform& GetDemanglerFallbackPlatform()
+{
+	static DemanglerFallbackArchitecture arch;
+	static auto platform = arch.GetStandalonePlatform();
+	return *platform;
 }
 
 #define HAS_POINTER_SUFFIX(bit) ((m_pointerSuffixBits & (bit)) != 0)
@@ -231,6 +252,18 @@ DemangledNamePart::DemangledNamePart(string base):
 }
 
 
+DemangledNamePart::DemangledNamePart(const char* base):
+	m_base(base), m_hasTemplateArgs(false), m_spaceAfterTemplateComma(false)
+{
+}
+
+
+DemangledNamePart::DemangledNamePart(std::string_view base):
+	m_base(base), m_hasTemplateArgs(false), m_spaceAfterTemplateComma(false)
+{
+}
+
+
 DemangledNamePart::DemangledNamePart(string base, std::shared_ptr<DemangledTypeNode> baseTypeSuffix):
 	m_base(std::move(base)), m_baseTypeSuffix(std::move(baseTypeSuffix)), m_hasTemplateArgs(false),
 	m_spaceAfterTemplateComma(false)
@@ -254,7 +287,15 @@ void DemangledNamePart::SetTemplateArguments(vector<DemangledTypeNodeParam> args
 }
 
 
-void DemangledNamePart::AppendString(string& out, Platform* platform) const
+void DemangledNamePart::ClearTemplateArguments()
+{
+	m_templateArgs.clear();
+	m_hasTemplateArgs = false;
+	m_spaceAfterTemplateComma = false;
+}
+
+
+void DemangledNamePart::AppendString(string& out, Platform& platform) const
 {
 	out += m_base;
 	if (m_baseTypeSuffix)
@@ -268,7 +309,7 @@ void DemangledNamePart::AppendString(string& out, Platform* platform) const
 }
 
 
-string DemangledNamePart::GetString(Platform* platform) const
+string DemangledNamePart::GetString(Platform& platform) const
 {
 	string out;
 	AppendString(out, platform);
@@ -491,7 +532,7 @@ void DemangledTypeNode::SetImplicitThisParameter(DemangledTypeNode type)
 		payload->implicitThisParameterType = CreateShared(std::move(type));
 		return;
 	}
-	assert(false && "SetImplicitThisParameter called for non-function demangled type");
+	BN_ASSERT(false && "SetImplicitThisParameter called for non-function demangled type");
 }
 
 
@@ -504,6 +545,14 @@ DemangledTypeNode DemangledTypeNode::NamedType(BNNamedTypeReferenceClass cls,
 }
 
 DemangledTypeNode DemangledTypeNode::NamedType(BNNamedTypeReferenceClass cls,
+	std::string_view nameSegment, size_t width, bool isSigned)
+{
+	DemangledQualifiedName nameSegments;
+	nameSegments.emplace_back(nameSegment);
+	return NamedType(cls, std::move(nameSegments), width, isSigned);
+}
+
+DemangledTypeNode DemangledTypeNode::NamedType(BNNamedTypeReferenceClass cls,
 	DemangledQualifiedName nameSegments, size_t width, bool isSigned)
 {
 	DemangledTypeNode n;
@@ -511,15 +560,20 @@ DemangledTypeNode DemangledTypeNode::NamedType(BNNamedTypeReferenceClass cls,
 	return n;
 }
 
-DemangledTypeNode DemangledTypeNode::NamedTypeWithDefaultIntegerWidth(BNNamedTypeReferenceClass cls,
-	StringList nameSegments, bool isSigned)
+DemangledTypeNode DemangledTypeNode::NamedType(StringList nameSegments, size_t width, bool isSigned)
 {
-	DemangledTypeNode n = NamedType(cls, std::move(nameSegments), 0, isSigned);
-	if (auto payload = std::get_if<NamedTypePayload>(&n.m_payload))
-		payload->widthKind = DefaultIntegerWidth;
-	return n;
+	return NamedType(UnknownNamedTypeClass, std::move(nameSegments), width, isSigned);
 }
 
+DemangledTypeNode DemangledTypeNode::NamedType(std::string_view nameSegment, size_t width, bool isSigned)
+{
+	return NamedType(UnknownNamedTypeClass, nameSegment, width, isSigned);
+}
+
+DemangledTypeNode DemangledTypeNode::NamedType(DemangledQualifiedName nameSegments, size_t width, bool isSigned)
+{
+	return NamedType(UnknownNamedTypeClass, std::move(nameSegments), width, isSigned);
+}
 
 DemangledTypeNode DemangledTypeNode::PostfixType(NodeRef child, string suffix)
 {
@@ -531,9 +585,25 @@ DemangledTypeNode DemangledTypeNode::PostfixType(NodeRef child, string suffix)
 
 DemangledTypeNode DemangledTypeNode::PostfixType(NodeRef child, string separator, NodeRef suffixType)
 {
-	DemangledTypeNode n = PostfixType(child, std::move(separator));
+	DemangledTypeNode n = PostfixType(std::move(child), std::move(separator));
 	if (auto payload = std::get_if<PostfixPayload>(&n.m_payload))
 		payload->suffixType = std::move(suffixType);
+	return n;
+}
+
+
+DemangledTypeNode DemangledTypeNode::UnaryExpression(string op, NodeRef child)
+{
+	DemangledTypeNode n;
+	n.m_payload = UnaryExpressionPayload{std::move(op), std::move(child)};
+	return n;
+}
+
+
+DemangledTypeNode DemangledTypeNode::BinaryExpression(NodeRef left, string op, NodeRef right)
+{
+	DemangledTypeNode n;
+	n.m_payload = BinaryExpressionPayload{std::move(left), std::move(op), std::move(right)};
 	return n;
 }
 
@@ -558,7 +628,7 @@ uint8_t DemangledTypeNode::PointerSuffixBit(BNPointerSuffix ps)
 }
 
 
-size_t DemangledTypeNode::ResolveWidth(size_t width, WidthKind widthKind, Platform* platform)
+size_t DemangledTypeNode::ResolveWidth(size_t width, WidthKind widthKind, const Platform& platform)
 {
 	switch (widthKind)
 	{
@@ -591,7 +661,9 @@ BNTypeClass DemangledTypeNode::GetPayloadClass() const
 	case 9: return FunctionTypeClass;
 	case 10:
 	case 11:
-		// PostfixPayload is an internal named-type rendering form, so it reports as a named type.
+	case 12:
+	case 13:
+		// Internal expression rendering forms report as named types so they can be carried as template args.
 		return NamedTypeReferenceClass;
 	default:
 		return VoidTypeClass;
@@ -611,7 +683,66 @@ DemangledTypeNode::NodeRef DemangledTypeNode::GetPrimaryChild() const
 		return payload->returnType;
 	if (auto payload = std::get_if<PostfixPayload>(&m_payload))
 		return payload->childType;
+	if (auto payload = std::get_if<UnaryExpressionPayload>(&m_payload))
+		return payload->childType;
+	if (auto payload = std::get_if<BinaryExpressionPayload>(&m_payload))
+		return payload->leftType;
 	return nullptr;
+}
+
+
+bool DemangledTypeNode::MutateChildTypes(const std::function<bool(DemangledTypeNode&)>& mutator)
+{
+	bool changed = false;
+	auto mutateRef = [&](NodeRef& typeRef) {
+		if (!typeRef)
+			return;
+		DemangledTypeNode mutableType = *typeRef;
+		if (mutator(mutableType))
+		{
+			typeRef = CreateShared(std::move(mutableType));
+			changed = true;
+		}
+	};
+
+	if (auto payload = std::get_if<PointerPayload>(&m_payload))
+		mutateRef(payload->childType);
+	else if (auto payload = std::get_if<MemberPointerPayload>(&m_payload))
+		mutateRef(payload->childType);
+	else if (auto payload = std::get_if<ArrayPayload>(&m_payload))
+		mutateRef(payload->childType);
+	else if (auto payload = std::get_if<FunctionPayload>(&m_payload))
+	{
+		mutateRef(payload->returnType);
+		mutateRef(payload->implicitThisParameterType);
+		for (auto& param: payload->params)
+			mutateRef(param.type);
+	}
+	else if (auto payload = std::get_if<PostfixPayload>(&m_payload))
+	{
+		mutateRef(payload->childType);
+		mutateRef(payload->suffixType);
+	}
+	else if (auto payload = std::get_if<UnaryExpressionPayload>(&m_payload))
+	{
+		mutateRef(payload->childType);
+	}
+	else if (auto payload = std::get_if<BinaryExpressionPayload>(&m_payload))
+	{
+		mutateRef(payload->leftType);
+		mutateRef(payload->rightType);
+	}
+	return changed;
+}
+
+
+bool DemangledTypeNode::MutateQualifiedNames(const std::function<bool(DemangledQualifiedName&)>& mutator)
+{
+	if (auto payload = std::get_if<MemberPointerPayload>(&m_payload))
+		return mutator(payload->ownerName);
+	else if (auto payload = std::get_if<NamedTypePayload>(&m_payload))
+		return mutator(payload->name);
+	return false;
 }
 
 
@@ -627,7 +758,7 @@ bool DemangledTypeNode::AddQualifiersToPointerChild(bool cnst, bool vltl)
 
 	if (!*childType)
 		return true;
-	if ((*childType).use_count() > 1)
+	if (childType->use_count() > 1)
 		*childType = CreateSharedCopy(**childType);
 	if (cnst)
 		(*childType)->SetConst(true);
@@ -649,7 +780,7 @@ DemangledQualifiedName& DemangledTypeNode::GetMutableName()
 {
 	if (auto payload = std::get_if<NamedTypePayload>(&m_payload))
 		return payload->name;
-	assert(false && "GetMutableName called for non-named demangled type");
+	BN_ASSERT(false && "GetMutableName called for non-named demangled type");
 	static thread_local DemangledQualifiedName empty;
 	empty.clear();
 	return empty;
@@ -663,7 +794,7 @@ void DemangledTypeNode::SetName(DemangledQualifiedName name)
 		payload->name = std::move(name);
 		return;
 	}
-	assert(false && "SetName called for non-named demangled type");
+	BN_ASSERT(false && "SetName called for non-named demangled type");
 }
 
 
@@ -675,6 +806,53 @@ BNNamedTypeReferenceClass DemangledTypeNode::GetNTRClass() const
 }
 
 
+bool DemangledTypeNode::GetIntegerTypeInfo(size_t& width, WidthKind& widthKind, bool& isSigned,
+	std::string_view& altName) const
+{
+	width = 0;
+	widthKind = FixedWidth;
+	isSigned = false;
+	altName = {};
+	if (auto payload = std::get_if<IntegerPayload>(&m_payload))
+	{
+		width = payload->width;
+		widthKind = payload->widthKind;
+		isSigned = payload->isSigned;
+		altName = std::string_view(payload->altName.data(), payload->altName.size());
+		return true;
+	}
+	return false;
+}
+
+
+bool DemangledTypeNode::GetWideCharTypeInfo(size_t& width, std::string_view& altName) const
+{
+	width = 0;
+	altName = {};
+	if (auto payload = std::get_if<WideCharPayload>(&m_payload))
+	{
+		width = payload->width;
+		altName = std::string_view(payload->altName.data(), payload->altName.size());
+		return true;
+	}
+	return false;
+}
+
+
+bool DemangledTypeNode::GetPointerChildType(const DemangledTypeNode*& childType, BNReferenceType& referenceType) const
+{
+	childType = nullptr;
+	referenceType = PointerReferenceType;
+	if (auto payload = std::get_if<PointerPayload>(&m_payload))
+	{
+		childType = payload->childType.get();
+		referenceType = payload->referenceType;
+		return true;
+	}
+	return false;
+}
+
+
 void DemangledTypeNode::SetNTRType(BNNamedTypeReferenceClass cls)
 {
 	if (auto payload = std::get_if<NamedTypePayload>(&m_payload))
@@ -682,7 +860,7 @@ void DemangledTypeNode::SetNTRType(BNNamedTypeReferenceClass cls)
 		payload->ntrClass = cls;
 		return;
 	}
-	assert(false && "SetNTRType called for non-named demangled type");
+	BN_ASSERT(false && "SetNTRType called for non-named demangled type");
 }
 
 
@@ -693,7 +871,7 @@ void DemangledTypeNode::SetParenthesizedMemberPointer(bool parenthesized)
 		payload->parenthesized = parenthesized;
 		return;
 	}
-	assert(false && "SetParenthesizedMemberPointer called for non-member-pointer demangled type");
+	BN_ASSERT(false && "SetParenthesizedMemberPointer called for non-member-pointer demangled type");
 }
 
 
@@ -704,19 +882,94 @@ void DemangledTypeNode::SetCallingConventionName(BNCallingConventionName cc)
 		payload->callingConventionName = cc;
 		return;
 	}
-	assert(false && "SetCallingConventionName called for non-function demangled type");
+	BN_ASSERT(false && "SetCallingConventionName called for non-function demangled type");
 }
 
 
 bool DemangledTypeNode::HasTemplateArguments() const
 {
-	const auto* payload = std::get_if<NamedTypePayload>(&m_payload);
-	if (!payload)
-		return false;
-	for (const auto& segment: payload->name)
-		if (segment.HasTemplateArguments())
-			return true;
+	if (const auto* payload = std::get_if<NamedTypePayload>(&m_payload))
+		return std::ranges::any_of(payload->name, &DemangledNamePart::HasTemplateArguments);
+	if (const auto* payload = std::get_if<UnaryExpressionPayload>(&m_payload))
+		return payload->childType && payload->childType->HasTemplateArguments();
+	if (const auto* payload = std::get_if<BinaryExpressionPayload>(&m_payload))
+		return (payload->leftType && payload->leftType->HasTemplateArguments()) ||
+			(payload->rightType && payload->rightType->HasTemplateArguments());
 	return false;
+}
+
+
+bool DemangledTypeNode::ContainsNodeRef(const NodeRef& target) const
+{
+	if (!target)
+		return false;
+
+	std::unordered_set<const DemangledTypeNode*> visited;
+	std::function<bool(const DemangledTypeNode*)> containsNode;
+	std::function<bool(const NodeRef&)> containsRef;
+
+	containsRef = [&](const NodeRef& ref) {
+		if (!ref)
+			return false;
+		if (ref == target)
+			return true;
+		return containsNode(ref.get());
+	};
+
+	auto containsName = [&](const DemangledQualifiedName& name) {
+		for (const auto& part : name)
+		{
+			if (containsRef(part.m_baseTypeSuffix))
+				return true;
+			for (const auto& arg : part.m_templateArgs)
+			{
+				if (containsRef(arg.type))
+					return true;
+			}
+		}
+		return false;
+	};
+
+	auto containsParams = [&](const vector<Param>& params) {
+		for (const auto& param : params)
+		{
+			if (containsRef(param.type))
+				return true;
+		}
+		return false;
+	};
+
+	containsNode = [&](const DemangledTypeNode* node) {
+		if (!node)
+			return false;
+		if (node == target.get())
+			return true;
+		if (!visited.insert(node).second)
+			return false;
+
+		if (auto payload = std::get_if<PointerPayload>(&node->m_payload))
+			return containsRef(payload->childType);
+		if (auto payload = std::get_if<MemberPointerPayload>(&node->m_payload))
+			return containsRef(payload->childType) || containsName(payload->ownerName);
+		if (auto payload = std::get_if<ArrayPayload>(&node->m_payload))
+			return containsRef(payload->childType);
+		if (auto payload = std::get_if<FunctionPayload>(&node->m_payload))
+		{
+			return containsRef(payload->returnType) || containsRef(payload->implicitThisParameterType) ||
+				containsParams(payload->params);
+		}
+		if (auto payload = std::get_if<NamedTypePayload>(&node->m_payload))
+			return containsName(payload->name);
+		if (auto payload = std::get_if<PostfixPayload>(&node->m_payload))
+			return containsRef(payload->childType) || containsRef(payload->suffixType);
+		if (auto payload = std::get_if<UnaryExpressionPayload>(&node->m_payload))
+			return containsRef(payload->childType);
+		if (auto payload = std::get_if<BinaryExpressionPayload>(&node->m_payload))
+			return containsRef(payload->leftType) || containsRef(payload->rightType);
+		return false;
+	};
+
+	return containsNode(this);
 }
 
 
@@ -758,12 +1011,12 @@ bool DemangledTypeNode::IsStructurallyEqual(const DemangledTypeNode& other) cons
 		return true;
 	};
 
-	if (auto payload = std::get_if<VoidPayload>(&m_payload))
-		return payload && std::get_if<VoidPayload>(&other.m_payload);
-	if (auto payload = std::get_if<BoolPayload>(&m_payload))
-		return payload && std::get_if<BoolPayload>(&other.m_payload);
-	if (auto payload = std::get_if<VarArgsPayload>(&m_payload))
-		return payload && std::get_if<VarArgsPayload>(&other.m_payload);
+	if (std::get_if<VoidPayload>(&m_payload))
+		return std::get_if<VoidPayload>(&other.m_payload);
+	if (std::get_if<BoolPayload>(&m_payload))
+		return std::get_if<BoolPayload>(&other.m_payload);
+	if (std::get_if<VarArgsPayload>(&m_payload))
+		return std::get_if<VarArgsPayload>(&other.m_payload);
 	if (auto payload = std::get_if<IntegerPayload>(&m_payload))
 	{
 		auto otherPayload = std::get_if<IntegerPayload>(&other.m_payload);
@@ -823,25 +1076,48 @@ bool DemangledTypeNode::IsStructurallyEqual(const DemangledTypeNode& other) cons
 			typePtrsEqual(payload->childType, otherPayload->childType) &&
 			typePtrsEqual(payload->suffixType, otherPayload->suffixType);
 	}
+	if (auto payload = std::get_if<UnaryExpressionPayload>(&m_payload))
+	{
+		auto otherPayload = std::get_if<UnaryExpressionPayload>(&other.m_payload);
+		return otherPayload && payload->op == otherPayload->op &&
+			typePtrsEqual(payload->childType, otherPayload->childType);
+	}
+	if (auto payload = std::get_if<BinaryExpressionPayload>(&m_payload))
+	{
+		auto otherPayload = std::get_if<BinaryExpressionPayload>(&other.m_payload);
+		return otherPayload && payload->op == otherPayload->op &&
+			typePtrsEqual(payload->leftType, otherPayload->leftType) &&
+			typePtrsEqual(payload->rightType, otherPayload->rightType);
+	}
 
 	return false;
 }
 
 
-StringList DemangledTypeNode::RenderTypeNameSegments(Platform* platform) const
+StringList DemangledTypeNode::RenderTypeNameSegments(Platform& platform) const
 {
 	StringList result;
-	if (auto payload = std::get_if<PostfixPayload>(&m_payload))
+	if (std::get_if<PostfixPayload>(&m_payload))
 	{
 		result.push_back(GetString(platform));
 		return result;
 	}
-	auto payload = std::get_if<NamedTypePayload>(&m_payload);
-	if (!payload)
+	if (std::get_if<UnaryExpressionPayload>(&m_payload))
+	{
+		result.push_back(GetString(platform));
 		return result;
-	result.reserve(payload->name.size());
-	for (const auto& segment: payload->name)
-		result.push_back(segment.GetString(platform));
+	}
+	if (std::get_if<BinaryExpressionPayload>(&m_payload))
+	{
+		result.push_back(GetString(platform));
+		return result;
+	}
+	if (auto payload = std::get_if<NamedTypePayload>(&m_payload))
+	{
+		result.reserve(payload->name.size());
+		for (const auto& segment: payload->name)
+			result.push_back(segment.GetString(platform));
+	}
 	return result;
 }
 
@@ -867,7 +1143,7 @@ bool DemangledTypeNode::HasPostfixType() const
 }
 
 
-void DemangledTypeNode::AppendPostfixType(string& out, Platform* platform) const
+void DemangledTypeNode::AppendPostfixType(string& out, Platform& platform) const
 {
 	const auto* payload = std::get_if<PostfixPayload>(&m_payload);
 	if (!payload)
@@ -880,13 +1156,41 @@ void DemangledTypeNode::AppendPostfixType(string& out, Platform* platform) const
 }
 
 
+void DemangledTypeNode::AppendUnaryExpression(string& out, Platform& platform) const
+{
+	const auto* payload = std::get_if<UnaryExpressionPayload>(&m_payload);
+	if (!payload)
+		return;
+	out += payload->op;
+	out += '(';
+	if (payload->childType)
+		payload->childType->AppendString(out, platform);
+	out += ')';
+}
+
+
+void DemangledTypeNode::AppendBinaryExpression(string& out, Platform& platform) const
+{
+	const auto* payload = std::get_if<BinaryExpressionPayload>(&m_payload);
+	if (!payload)
+		return;
+	out += '(';
+	if (payload->leftType)
+		payload->leftType->AppendString(out, platform);
+	out += ") ";
+	out += payload->op;
+	out += " (";
+	if (payload->rightType)
+		payload->rightType->AppendString(out, platform);
+	out += ')';
+}
+
+
 void DemangledTypeNode::AppendModifiers(string& out) const
 {
-	if (m_const && m_volatile)
-		out += " const volatile";
-	else if (m_const)
+	if (m_const)
 		out += " const";
-	else if (m_volatile)
+	if (m_volatile)
 		out += " volatile";
 }
 
@@ -905,7 +1209,7 @@ void DemangledTypeNode::AppendPointerSuffix(string& out) const
 
 
 void DemangledTypeNode::AppendNamePartList(
-	string& out, const DemangledQualifiedName& name, Platform* platform)
+	string& out, const DemangledQualifiedName& name, Platform& platform)
 {
 	if (name.empty())
 		return;
@@ -918,14 +1222,14 @@ void DemangledTypeNode::AppendNamePartList(
 }
 
 
-void DemangledTypeNode::AppendTypeName(string& out, Platform* platform) const
+void DemangledTypeNode::AppendTypeName(string& out, Platform& platform) const
 {
 	if (auto payload = std::get_if<NamedTypePayload>(&m_payload))
 		AppendNamePartList(out, payload->name, platform);
 }
 
 
-string DemangledTypeNode::GetStringBeforeName(Platform* platform) const
+string DemangledTypeNode::GetStringBeforeName(Platform& platform) const
 {
 	string out;
 	AppendBeforeName(out, nullptr, platform);
@@ -933,7 +1237,7 @@ string DemangledTypeNode::GetStringBeforeName(Platform* platform) const
 }
 
 
-string DemangledTypeNode::GetStringAfterName(Platform* platform) const
+string DemangledTypeNode::GetStringAfterName(Platform& platform) const
 {
 	string out;
 	AppendAfterName(out, nullptr, platform);
@@ -941,7 +1245,7 @@ string DemangledTypeNode::GetStringAfterName(Platform* platform) const
 }
 
 
-void DemangledTypeNode::AppendBeforeName(string& out, const DemangledTypeNode* parentType, Platform* platform) const
+void DemangledTypeNode::AppendBeforeName(string& out, const DemangledTypeNode* parentType, Platform& platform) const
 {
 	switch (GetPayloadClass())
 	{
@@ -1092,6 +1396,18 @@ void DemangledTypeNode::AppendBeforeName(string& out, const DemangledTypeNode* p
 			AppendModifiers(out);
 			break;
 		}
+		if (std::get_if<UnaryExpressionPayload>(&m_payload))
+		{
+			AppendUnaryExpression(out, platform);
+			AppendModifiers(out);
+			break;
+		}
+		if (std::get_if<BinaryExpressionPayload>(&m_payload))
+		{
+			AppendBinaryExpression(out, platform);
+			AppendModifiers(out);
+			break;
+		}
 	{
 		const auto& payload = std::get<NamedTypePayload>(m_payload);
 		switch (payload.ntrClass)
@@ -1124,13 +1440,7 @@ void DemangledTypeNode::AppendBeforeName(string& out, const DemangledTypeNode* p
 }
 
 
-static string FormatArrayCount(uint64_t elements)
-{
-	return string(fmt::format("{:#x}", elements));
-}
-
-
-void DemangledTypeNode::AppendAfterName(string& out, const DemangledTypeNode* parentType, Platform* platform) const
+void DemangledTypeNode::AppendAfterName(string& out, const DemangledTypeNode* parentType, Platform& platform) const
 {
 	switch (GetPayloadClass())
 	{
@@ -1180,7 +1490,7 @@ void DemangledTypeNode::AppendAfterName(string& out, const DemangledTypeNode* pa
 		const auto& payload = std::get<ArrayPayload>(m_payload);
 		if (parentType && parentType->GetPayloadClass() == PointerTypeClass)
 			out += ")";
-		out += "[" + FormatArrayCount(payload.elements) + "]";
+		out += fmt::format("[{:#x}]", payload.elements);
 		if (payload.childType)
 			payload.childType->AppendAfterName(out, this, platform);
 		break;
@@ -1191,11 +1501,10 @@ void DemangledTypeNode::AppendAfterName(string& out, const DemangledTypeNode* pa
 }
 
 
-void DemangledTypeNode::AppendString(string& out, Platform* platform) const
+void DemangledTypeNode::AppendString(string& out, Platform& platform) const
 {
-	size_t beforeEnd = out.size();
 	AppendBeforeName(out, nullptr, platform);
-	beforeEnd = out.size(); // track where "before" ends
+	size_t beforeEnd = out.size(); // track where "before" ends
 
 	string after;
 	AppendAfterName(after, nullptr, platform);
@@ -1215,13 +1524,7 @@ void DemangledTypeNode::AppendString(string& out, Platform* platform) const
 }
 
 
-string DemangledTypeNode::GetString() const
-{
-	return GetString(nullptr);
-}
-
-
-string DemangledTypeNode::GetString(Platform* platform) const
+string DemangledTypeNode::GetString(Platform& platform) const
 {
 	string out;
 	AppendString(out, platform);
@@ -1229,13 +1532,7 @@ string DemangledTypeNode::GetString(Platform* platform) const
 }
 
 
-string DemangledTypeNode::GetTypeAndName(const StringList& name) const
-{
-	return GetTypeAndName(name, nullptr);
-}
-
-
-string DemangledTypeNode::GetTypeAndName(const StringList& name, Platform* platform) const
+string DemangledTypeNode::GetTypeAndName(const StringList& name, Platform& platform) const
 {
 	const string before = GetStringBeforeName(platform);
 	const string qName = JoinNameList(name);
@@ -1253,6 +1550,10 @@ bool DemangledTypeNode::HasUndeterminedTopLevelSize() const
 		return payload->widthKind == FixedWidth && payload->width == 0;
 	if (std::holds_alternative<PostfixPayload>(m_payload))
 		return true;
+	if (std::holds_alternative<UnaryExpressionPayload>(m_payload))
+		return true;
+	if (std::holds_alternative<BinaryExpressionPayload>(m_payload))
+		return true;
 	if (auto payload = std::get_if<ArrayPayload>(&m_payload))
 		return payload->childType && payload->childType->HasUndeterminedTopLevelSize();
 	return false;
@@ -1265,7 +1566,7 @@ uint8_t DemangledTypeNode::GetValueConfidence() const
 }
 
 
-Ref<Type> DemangledTypeNode::Finalize(Platform* platform) const
+Ref<Type> DemangledTypeNode::Finalize(Platform& platform) const
 {
 	switch (GetPayloadClass())
 	{
@@ -1371,14 +1672,14 @@ Ref<Type> DemangledTypeNode::Finalize(Platform* platform) const
 		if (payload.implicitThisParameterType)
 		{
 			Ref<Type> thisType = payload.implicitThisParameterType->Finalize(platform);
-			finalParams.push_back({"this", thisType->WithConfidence(payload.implicitThisParameterType->GetValueConfidence()),
-				DefaultLocationSource, Variable()});
+			finalParams.emplace_back("this", thisType->WithConfidence(payload.implicitThisParameterType->GetValueConfidence()),
+				DefaultLocationSource, Variable());
 		}
 		for (auto& p : payload.params)
 		{
 			Ref<Type> pType = p.type ? p.type->Finalize(platform) : Ref<Type>(Type::VoidType());
 			uint8_t pTypeConfidence = p.type ? p.type->GetValueConfidence() : BN_FULL_CONFIDENCE;
-			finalParams.push_back({p.name, pType->WithConfidence(pTypeConfidence), DefaultLocationSource, Variable()});
+			finalParams.emplace_back(p.name, pType->WithConfidence(pTypeConfidence), DefaultLocationSource, Variable());
 		}
 		Confidence<Ref<CallingConvention>> callingConvention;
 		if (payload.callingConventionName != NoCallingConvention)
@@ -1400,7 +1701,8 @@ Ref<Type> DemangledTypeNode::Finalize(Platform* platform) const
 
 	case NamedTypeReferenceClass:
 	{
-		if (auto payload = std::get_if<PostfixPayload>(&m_payload))
+		if (std::get_if<PostfixPayload>(&m_payload) || std::get_if<UnaryExpressionPayload>(&m_payload) ||
+			std::get_if<BinaryExpressionPayload>(&m_payload))
 		{
 			QualifiedName name(RenderTypeNameSegments(platform));
 			TypeBuilder tb = TypeBuilder::NamedType(

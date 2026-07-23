@@ -46,6 +46,10 @@
 // existing types or functions.
 #define BN_MINIMUM_CORE_ABI_VERSION 179
 
+#define BN_DEMANGLER_MSVC "MS"
+#define BN_DEMANGLER_GNU3 "GNU3"
+#define BN_DEMANGLER_LLVM "LLVM"
+
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
 		#define BINARYNINJACOREAPI __attribute__((visibility("default")))
@@ -3931,13 +3935,26 @@ extern "C"
 		void (*freeConflictList)(void* context, BNAnalysisMergeConflict** conflictList, size_t count);
 	} BNAnalysisMergeConflictSplitterCallbacks;
 
+	typedef struct BNDemanglerConfig
+	{
+		BNPlatform* platform;
+		BNBinaryView* view;
+		bool simplifyTemplates;
+	} BNDemanglerConfig;
+
+	typedef struct BNDemanglerResult
+	{
+		BNQualifiedName name;
+		BNType* type;
+	} BNDemanglerResult;
+
 	typedef struct BNDemanglerCallbacks
 	{
 		void* context;
 		bool (*isMangledString)(void* ctxt, const char* name);
-		bool (*demangle)(void* ctxt, BNArchitecture* arch, const char* name, BNType** outType,
-			BNQualifiedName* outVarName, BNBinaryView* view);
-		void (*freeVarName)(void* ctxt, BNQualifiedName* name);
+		bool (*demangle)(void* ctxt, const char* name, const BNDemanglerConfig* config,
+			BNDemanglerResult* result);
+		void (*freeResult)(void* ctxt, BNDemanglerResult* result);
 	} BNDemanglerCallbacks;
 
 	BN_ENUM(uint8_t, BNScopeType)
@@ -8291,37 +8308,28 @@ extern "C"
 	BINARYNINJACOREAPI void BNUpdateReportFlowGraph(BNReportCollection* reports, size_t i, BNFlowGraph* graph);
 
 	// Demangler
-	BINARYNINJACOREAPI bool BNDemangleMS(BNArchitecture* arch, const char* mangledName, BNType** outType,
-	    char*** outVarName, size_t* outVarNameElements, const bool simplify);
-	BINARYNINJACOREAPI bool BNDemangleMSWithOptions(BNArchitecture* arch, const char* mangledName, BNType** outType,
-	    char*** outVarName, size_t* outVarNameElements, const BNBinaryView* const view);
-	BINARYNINJACOREAPI bool BNDemangleMSPlatform(BNPlatform* platform, const char* mangledName, BNType** outType,
-	    char*** outVarName, size_t* outVarNameElements, const bool simplify);
+	BINARYNINJACOREAPI BNDemanglerConfig BNGetDefaultDemanglerConfig(void);
+	BINARYNINJACOREAPI BNDemanglerConfig BNGetDemanglerConfigForPlatform(BNPlatform* platform,
+	    bool simplifyTemplates);
+	BINARYNINJACOREAPI BNDemanglerConfig BNGetDemanglerConfigForBinaryView(BNBinaryView* view);
+	BINARYNINJACOREAPI bool BNDemangle(const char* name, const BNDemanglerConfig* config,
+	    BNDemanglerResult* result);
+	BINARYNINJACOREAPI bool BNDemangleWithDemangler(const BNDemangler* demangler, const char* name,
+	    const BNDemanglerConfig* config, BNDemanglerResult* result);
+	BINARYNINJACOREAPI void BNFreeDemanglerResult(BNDemanglerResult* result);
+	BINARYNINJACOREAPI bool BNSimplifyDemangledTemplateName(
+	    const BNQualifiedName* name, BNQualifiedName* result);
 
-	BINARYNINJACOREAPI bool BNIsGNU3MangledString(const char* mangledName);
-	BINARYNINJACOREAPI bool BNDemangleGNU3(BNArchitecture* arch, const char* mangledName, BNType** outType,
-	    char*** outVarName, size_t* outVarNameElements, const bool simplify);
-	BINARYNINJACOREAPI bool BNDemangleGNU3WithOptions(BNArchitecture* arch, const char* mangledName, BNType** outType,
-	    char*** outVarName, size_t* outVarNameElements, const BNBinaryView* const view);
-	BINARYNINJACOREAPI void BNFreeDemangledName(char*** name, size_t nameElements);
-
-	BINARYNINJACOREAPI bool BNDemangleLLVM(const char* mangledName,
-	    char*** outVarName, size_t* outVarNameElements, const bool simplify);
-	BINARYNINJACOREAPI bool BNDemangleLLVMWithOptions(const char* mangledName,
-	    char*** outVarName, size_t* outVarNameElements, const BNBinaryView* const view);
-
-	BINARYNINJACOREAPI BNDemangler* BNRegisterDemangler(const char* name, BNDemanglerCallbacks* callbacks);
+	BINARYNINJACOREAPI BNDemangler* BNRegisterDemangler(const char* name, const BNDemanglerCallbacks* callbacks);
 	BINARYNINJACOREAPI BNDemangler** BNGetDemanglerList(size_t* count);
 	BINARYNINJACOREAPI void BNFreeDemanglerList(BNDemangler** demanglers);
 	BINARYNINJACOREAPI BNDemangler* BNGetDemanglerByName(const char* name);
-	BINARYNINJACOREAPI char* BNGetDemanglerName(BNDemangler* demangler);
-	BINARYNINJACOREAPI void BNPromoteDemangler(BNDemangler* demangler);
-
-	BINARYNINJACOREAPI bool BNIsDemanglerMangledName(BNDemangler* demangler, const char* name);
-	BINARYNINJACOREAPI bool BNDemanglerDemangle(BNDemangler* demangler, BNArchitecture* arch, const char* name,
-	    BNType** outType, BNQualifiedName* outVarName, BNBinaryView* view);
-	BINARYNINJACOREAPI bool BNDemangleGeneric(BNArchitecture* arch, const char* name,
-	    BNType** outType, BNQualifiedName* outVarName, BNBinaryView* view, bool simplify);
+	BINARYNINJACOREAPI BNDemangler* BNGetMSVCDemangler(void);
+	BINARYNINJACOREAPI BNDemangler* BNGetGNU3Demangler(void);
+	BINARYNINJACOREAPI BNDemangler* BNGetLLVMDemangler(void);
+	BINARYNINJACOREAPI char* BNGetDemanglerName(const BNDemangler* demangler);
+	BINARYNINJACOREAPI bool BNPromoteDemangler(const BNDemangler* demangler);
+	BINARYNINJACOREAPI bool BNIsDemanglerMangledName(const BNDemangler* demangler, const char* name);
 
 // Plugin repository APIs
 	BINARYNINJACOREAPI char** BNPluginGetApis(BNPlugin* p, size_t* count);
@@ -8682,9 +8690,6 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeMemoryUsageInfo(BNMemoryUsageInfo* info, size_t count);
 
 	BINARYNINJACOREAPI uint32_t BNGetAddressRenderedWidth(uint64_t addr);
-
-	BINARYNINJACOREAPI BNQualifiedName BNRustSimplifyStrToFQN(const char* const, bool);
-	BINARYNINJACOREAPI char* BNRustSimplifyStrToStr(const char* const);
 
 	BINARYNINJACOREAPI BNDebugInfoParser* BNRegisterDebugInfoParser(const char* name,
 		bool (*isValid)(void*, BNBinaryView*),

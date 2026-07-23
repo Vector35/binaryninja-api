@@ -3319,7 +3319,7 @@ namespace
 class GNU3Demangler: public Demangler
 {
 public:
-	GNU3Demangler(): Demangler("GNU3")
+	GNU3Demangler(): Demangler(BN_DEMANGLER_GNU3)
 	{
 	}
 	~GNU3Demangler() override = default;

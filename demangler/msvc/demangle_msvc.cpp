@@ -2632,7 +2632,7 @@ namespace
 class MSDemangler: public Demangler
 {
 public:
-	MSDemangler(): Demangler("MS")
+	MSDemangler(): Demangler(BN_DEMANGLER_MSVC)
 	{
 	}
 	~MSDemangler() override = default;

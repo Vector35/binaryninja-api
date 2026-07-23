@@ -326,7 +326,7 @@ class Demangler(metaclass=_DemanglerMetaclass):
 	The list of Demanglers can be queried:
 
 		>>> list(Demangler)
-		[<Demangler: MS>, <Demangler: GNU3>]
+		[<Demangler: MS>, <Demangler: GNU3>, <Demangler: LLVM>]
 	"""
 
 	name = None

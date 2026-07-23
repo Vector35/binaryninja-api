@@ -202,7 +202,6 @@ class QualifiedName:
 	def unescape(name: QualifiedNameType, escaping: TokenEscapingType) -> str:
 		return core.BNUnescapeTypeName(str(QualifiedName(name)), escaping)
 
-
 @dataclass(frozen=True)
 class TypeReferenceSource:
 	name: QualifiedName

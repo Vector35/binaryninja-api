@@ -81,6 +81,7 @@ file(GLOB_RECURSE API_SOURCES CONFIGURE_DEPENDS
         ${PROJECT_SOURCE_DIR}/../../rust/binaryninjacore-sys/Cargo.toml
         ${PROJECT_SOURCE_DIR}/../../rust/binaryninjacore-sys/src/*.rs
         ${PROJECT_SOURCE_DIR}/../../rust/Cargo.toml
+        ${PROJECT_SOURCE_DIR}/../../rust/src/*.rs
         ${PROJECT_SOURCE_DIR}/../../rust/src/*/*.rs)
 
 find_program(RUSTUP_PATH rustup REQUIRED HINTS ~/.cargo/bin)

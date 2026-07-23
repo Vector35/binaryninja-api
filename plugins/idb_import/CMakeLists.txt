@@ -12,6 +12,7 @@ file(GLOB API_SOURCES CONFIGURE_DEPENDS
         ${PROJECT_SOURCE_DIR}/../../rust/binaryninjacore-sys/Cargo.toml
         ${PROJECT_SOURCE_DIR}/../../rust/binaryninjacore-sys/src/*
         ${PROJECT_SOURCE_DIR}/../../rust/Cargo.toml
+        ${PROJECT_SOURCE_DIR}/../../rust/src/*.rs
         ${PROJECT_SOURCE_DIR}/../../rust/src/*/*.rs)
 
 if(CMAKE_BUILD_TYPE MATCHES Debug)

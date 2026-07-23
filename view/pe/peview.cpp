@@ -636,7 +636,6 @@ bool PEView::Init()
 
 		Ref<Settings> viewSettings = Settings::Instance();
 		m_extractMangledTypes = viewSettings->Get<bool>("analysis.extractTypesFromMangledNames", this);
-		m_simplifyTemplates = viewSettings->Get<bool>("analysis.types.templateSimplifier", this);
 
 		bool platformSetByUser = false;
 		settings = GetLoadSettings(GetTypeName());
@@ -1351,6 +1350,7 @@ bool PEView::Init()
 
 	BulkSymbolModification bulkSymbolModification(this);
 	m_symbolQueue = new SymbolQueue();
+	m_simplifyTemplates = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", this);
 	m_symExternMappingMetadata = new Metadata(KeyValueDataType);
 
 	try
@@ -3507,7 +3507,7 @@ uint64_t PEView::Read64(uint64_t rva)
 
 // The addr is RVA
 void PEView::AddPESymbol(BNSymbolType type, const string& dll, const string& name, uint64_t addr,
-		BNSymbolBinding binding, uint64_t ordinal, vector<Ref<TypeLibrary>> libs)
+	BNSymbolBinding binding, uint64_t ordinal, vector<Ref<TypeLibrary>> libs)
 {
 	// Don't create symbols that are present in the database snapshot now
 	if (type != ExternalSymbol && m_backedByDatabase)
@@ -3565,11 +3565,11 @@ void PEView::AddPESymbol(BNSymbolType type, const string& dll, const string& nam
 
 			if (m_arch && name.size() > 0)
 			{
-				QualifiedName demangledName;
-				Ref<Type> demangledType;
-				if (DemangleGeneric(m_arch, rawName, demangledType, demangledName, this, m_simplifyTemplates))
+				DemanglerConfig demanglerConfig(GetDefaultPlatform(), this, m_simplifyTemplates);
+				if (auto result = Demangler::DemangleAny(rawName, demanglerConfig))
 				{
-					shortName = demangledName.GetString();
+					auto demangledType = result->type;
+					shortName = result->name.GetString();
 					fullName = shortName;
 					if (demangledType)
 						fullName += demangledType->GetStringAfterName();

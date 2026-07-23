@@ -497,7 +497,6 @@ bool ElfView::Init()
 	uint64_t preferredImageBase = initialImageBase;
 	Ref<Settings> viewSettings = Settings::Instance();
 	m_extractMangledTypes = viewSettings->Get<bool>("analysis.extractTypesFromMangledNames", this);
-	m_simplifyTemplates = viewSettings->Get<bool>("analysis.types.templateSimplifier", this);
 
 	bool platformSetByUser = false;
 	Ref<Settings> settings = GetLoadSettings(GetTypeName());
@@ -808,8 +807,10 @@ bool ElfView::Init()
 	if (!platform)
 		platform = entryPointArch->GetStandalonePlatform();
 
+	m_plat = platform;
 	SetDefaultPlatform(platform);
 	GetParentView()->SetDefaultPlatform(platform);
+	m_simplifyTemplates = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", this);
 
 	// Finished for parse only mode
 	if (m_parseOnly)
@@ -2617,19 +2618,17 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 		string shortName = rawName;
 		string fullName = rawName;
 		Confidence<Ref<Type>> typeRef = symbolTypeRef;
-		if (m_arch)
+
+		DemanglerConfig demanglerConfig(GetDefaultPlatform(), this, m_simplifyTemplates);
+		if (auto result = Demangler::DemangleAny(rawName, demanglerConfig))
 		{
-			QualifiedName demangledName;
-			Ref<Type> demangledType;
-			if (DemangleGeneric(m_arch, rawName, demangledType, demangledName, this, m_simplifyTemplates))
-			{
-				shortName = demangledName.GetString();
-				fullName = shortName;
-				if (demangledType)
-					fullName += demangledType->GetStringAfterName();
-				if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
-					typeRef = demangledType;
-			}
+			auto demangledType = result->type;
+			shortName = result->name.GetString();
+			fullName = shortName;
+			if (demangledType)
+				fullName += demangledType->GetStringAfterName();
+			if (!typeRef && m_extractMangledTypes && !m_plat->GetFunctionByName(rawName))
+				typeRef = demangledType;
 		}
 
 		if (!typeRef && m_arch && (m_arch->GetName() == "hexagon" || m_arch->GetName() == "tms320c6x"))

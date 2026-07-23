@@ -60,6 +60,7 @@ file(GLOB API_SOURCES CONFIGURE_DEPENDS
 	${BN_API_SOURCE_DIR}/rust/binaryninjacore-sys/Cargo.toml
 	${BN_API_SOURCE_DIR}/rust/binaryninjacore-sys/src/*
 	${BN_API_SOURCE_DIR}/rust/Cargo.toml
+	${BN_API_SOURCE_DIR}/rust/src/*.rs
 	${BN_API_SOURCE_DIR}/rust/src/*/*.rs)
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY OUTPUT_FILE_PATH ${OUTPUT_FILE_PATH})

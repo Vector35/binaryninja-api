@@ -8,19 +8,15 @@
 
 using namespace BinaryNinja;
 
-std::pair<std::string, Ref<Type>> CacheSymbol::DemangledName(BinaryView &view) const
+std::pair<Ref<Symbol>, Ref<Type>> CacheSymbol::GetBNSymbolAndType(const DemanglerConfig& config) const
 {
-	QualifiedName qname;
-	Ref<Type> outType;
+	Ref<Type> demangledType;
 	std::string shortName = name;
-	if (DemangleGeneric(view.GetDefaultArchitecture(), name, outType, qname, &view, true))
-		shortName = qname.GetString();
-	return { shortName, outType };
-}
-
-std::pair<Ref<Symbol>, Ref<Type>> CacheSymbol::GetBNSymbolAndType(BinaryView& view) const
-{
-	auto [shortName, demangledType] = DemangledName(view);
+	if (auto result = Demangler::DemangleAny(name, config))
+	{
+		shortName = result->name.GetString();
+		demangledType = result->type;
+	}
 	auto symbol = new Symbol(type, shortName, shortName, name, address, binding);
 	return {symbol, demangledType};
 }

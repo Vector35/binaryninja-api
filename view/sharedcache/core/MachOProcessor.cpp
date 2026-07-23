@@ -3,12 +3,11 @@
 
 using namespace BinaryNinja;
 
-SharedCacheMachOProcessor::SharedCacheMachOProcessor(Ref<BinaryView> view, std::shared_ptr<VirtualMemory> vm)
+SharedCacheMachOProcessor::SharedCacheMachOProcessor(Ref<BinaryView> view, std::shared_ptr<VirtualMemory> vm) :
+	m_view(std::move(view)),
+	m_logger(new Logger("SharedCache.MachOProcessor", m_view->GetFile()->GetSessionId())),
+	m_vm(std::move(vm))
 {
-	m_view = view;
-	m_logger = new Logger("SharedCache.MachOProcessor", view->GetFile()->GetSessionId());
-	m_vm = std::move(vm);
-
 	// Adjust processor settings.
 	if (Ref<Settings> settings = m_view->GetLoadSettings(VIEW_NAME))
 	{
@@ -19,6 +18,7 @@ SharedCacheMachOProcessor::SharedCacheMachOProcessor(Ref<BinaryView> view, std::
 
 void SharedCacheMachOProcessor::ApplyHeader(const SharedCache& cache, SharedCacheMachOHeader& header)
 {
+	const auto demanglerConfig = DemanglerConfig::ForBinaryView(m_view);
 	auto typeLibraryFromName = [&](const std::string& name) -> Ref<TypeLibrary> {
 		// Check to see if we have already loaded the type library.
 		if (auto typeLib = m_view->GetTypeLibrary(name))
@@ -67,7 +67,7 @@ void SharedCacheMachOProcessor::ApplyHeader(const SharedCache& cache, SharedCach
 			const auto symbols = header.ReadSymbolTable(*m_vm, symbolInfo, stringInfo);
 			for (const auto& sym : symbols)
 			{
-				auto [symbol, symbolType] = sym.GetBNSymbolAndType(*m_view);
+				auto [symbol, symbolType] = sym.GetBNSymbolAndType(demanglerConfig);
 				ApplySymbol(m_view, typeLib, symbol, symbolType);
 			}
 		}
@@ -79,7 +79,7 @@ void SharedCacheMachOProcessor::ApplyHeader(const SharedCache& cache, SharedCach
 			const auto exportSymbols = header.ReadExportSymbolTrie(*m_vm);
 			for (const auto& sym : exportSymbols)
 			{
-				auto [symbol, symbolType] = sym.GetBNSymbolAndType(*m_view);
+				auto [symbol, symbolType] = sym.GetBNSymbolAndType(demanglerConfig);
 				ApplySymbol(m_view, typeLib, symbol, symbolType);
 			}
 		}
@@ -91,6 +91,7 @@ void SharedCacheMachOProcessor::ApplyHeader(const SharedCache& cache, SharedCach
 
 void SharedCacheMachOProcessor::ApplyUnmappedLocalSymbols(const SharedCache& cache, const SharedCacheMachOHeader& header, Ref<TypeLibrary> typeLib)
 {
+	const auto demanglerConfig = DemanglerConfig::ForBinaryView(m_view);
 	const auto& localSymbolsCacheEntry = cache.GetLocalSymbolsEntry();
 	auto localSymbolsVM = cache.GetLocalSymbolsVM();
 	if (!localSymbolsCacheEntry || !localSymbolsVM)
@@ -133,7 +134,7 @@ void SharedCacheMachOProcessor::ApplyUnmappedLocalSymbols(const SharedCache& cac
 		const auto symbols = header.ReadSymbolTable(*localSymbolsVM, symbolInfo, stringInfo, LocalBinding);
 		for (const auto &sym: symbols)
 		{
-			auto [symbol, symbolType] = sym.GetBNSymbolAndType(*m_view);
+			auto [symbol, symbolType] = sym.GetBNSymbolAndType(demanglerConfig);
 			ApplySymbol(m_view, typeLib, std::move(symbol), std::move(symbolType));
 		}
 		return;

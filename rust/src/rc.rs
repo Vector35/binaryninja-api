@@ -318,14 +318,6 @@ where
 
 #[allow(private_bounds)]
 impl<P: CoreArrayProviderInner> ArrayGuard<P> {
-    pub(crate) unsafe fn new(raw: *mut P::Raw, count: usize, context: P::Context) -> Self {
-        Self {
-            contents: raw,
-            count,
-            context,
-        }
-    }
-
     #[inline]
     pub fn len(&self) -> usize {
         self.count

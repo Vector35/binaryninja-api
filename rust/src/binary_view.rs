@@ -1468,7 +1468,10 @@ impl BinaryView {
         let name_handle = unsafe {
             let id_str =
                 BNGenerateAutoTypeId(source_str.as_ref().as_ptr() as *const _, &mut raw_name);
-            BNDefineAnalysisType(self.handle, id_str, &mut raw_name, type_obj.handle)
+            let name_handle =
+                BNDefineAnalysisType(self.handle, id_str, &mut raw_name, type_obj.handle);
+            BNFreeString(id_str);
+            name_handle
         };
         QualifiedName::free_raw(raw_name);
         QualifiedName::from_owned_raw(name_handle)

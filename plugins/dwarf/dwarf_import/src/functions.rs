@@ -18,7 +18,6 @@ use crate::dwarfdebuginfo::{DebugInfoBuilder, DebugInfoBuilderContext, TypeUID};
 use crate::types::get_type;
 use crate::{helpers::*, ReaderType};
 
-use binaryninja::template_simplifier::simplify_str_to_str;
 use cpp_demangle::DemangleOptions;
 use gimli::{constants, AttributeValue, DebuggingInformationEntry, Dwarf, Operation, Unit};
 use regex::Regex;
@@ -134,8 +133,7 @@ pub(crate) fn parse_function_entry<R: ReaderType>(
             if let Ok(sym) = cpp_demangle::Symbol::new(possibly_mangled_name) {
                 if let Ok(demangled) = sym.demangle(demangle_options) {
                     let cleaned = abi_regex.replace_all(&demangled, "");
-                    let simplified = simplify_str_to_str(&cleaned);
-                    full_name = Some(simplified.to_string_lossy().to_string());
+                    full_name = Some(cleaned.to_string());
                 }
             }
         }

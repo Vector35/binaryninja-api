@@ -441,7 +441,7 @@ fn symbol_from_func(func: &FunctionInfo) -> Option<Ref<Symbol>> {
         return None;
     };
     let short_func_name = binaryninja::demangle::demangle_llvm(&func_name, true)
-        .map(|qn| qn.to_string())
+        .map(|result| result.name.to_string())
         .unwrap_or(func_name.clone());
     let sym_type = match func.is_library {
         true => SymbolType::LibraryFunction,

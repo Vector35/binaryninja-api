@@ -149,347 +149,10 @@ typedef struct context_
 	uint64_t FPCR;   // floating point control register
 	bool EDSCR_HDE;  // External Debug Status and Control Register, Halting debug enable
 
-	/* specification scratchpad: ~300 possible named fields */
-	uint64_t A;
-	uint64_t ADD;
-	uint64_t AccType_NORMAL;
-	uint64_t AccType_STREAM;
-	uint64_t AccType_UNPRIV;
-	uint64_t AccType_VEC;
-	uint64_t AccType_VECSTREAM;
-	uint64_t B;
-	uint64_t C;
-	uint64_t CRm;
-	uint64_t CRn;
-	uint64_t dst, D;
-	uint64_t E;
-	uint64_t H;
-	uint64_t HCR_EL2_E2H, HCR_EL2_NV, HCR_EL2_NV1, HCR_EL2_TGE;
-	uint64_t k;
-	uint64_t L;
-	uint64_t LL;
-	uint64_t M;
-	uint64_t N;
-	uint64_t O;
-	uint64_t Op0, Op3;
-	uint64_t P;
-	uint64_t Pd, Pdm, Pdn, Pg, Pm, Pn, Pt;
-	uint64_t Q, Qa, Qd, Qm, Qn, Qt, Qt2;
-	uint64_t reason, retry;
-	uint64_t R, Ra, Rd, Rdn, Rm, Rmhi, Rn, Rs, Rt, Rt2, Rv;
-	uint64_t s1, s2, sel1, sel2, S, Sa, Sd, Sm, Sn, St, St2;
-	uint64_t S10;
-	uint64_t SCTLR_EL1_UMA;
-	uint64_t T;
-	uint64_t U;
-	uint64_t US;
-	uint64_t V, Va, Vd, Vdn, Vm, Vn, Vt, Vt2;
-	uint64_t W, Wa, Wd, Wdn, Wm, Wn, Ws, Wt, Wt2;
-	uint64_t Xa, Xd, Xdn, Xm, Xn, Xs, Xt, Xt2;
-	uint64_t Z, Za, Zd, Zda, Zdn, Zm, Zn, Zt;
-	uint64_t a;
-	uint64_t abs;
-	uint64_t ac;
-	uint64_t acc;
-	uint64_t acctype;
-	uint64_t accumulate;
-	bool acqrel;
-	bool acquire;
-	bool acquirepc;
-	uint64_t alias;
-	uint64_t amount;
-	uint64_t and_test;
-	uint64_t asimdimm;
-	bool auth_combined;
-	bool auth_then_branch;
-	bool autia1716;
-	bool autib1716;
-	uint64_t b;
-	uint64_t b40;
-	uint64_t b5;
-	uint64_t bit_pos;
-	uint64_t bit_val;
-	uint64_t branch_type;
-	uint64_t c;
-	uint64_t cc;
-	uint64_t cmode;
-	uint64_t cmp, cmph, cmpl, cmp_eq, cmp_with_zero;
-	uint64_t cmp_op;
-	uint64_t comment;
-	uint64_t comparison;
-	uint64_t cond; /* careful! this is the pcode scratchpad .cond, NOT the .cond field of a struct
-	                  InstructionOperand */
-	uint64_t condition;
-	uint64_t container_size;
-	uint64_t containers;
-	uint64_t countop;
-	uint64_t crc32c;
-	uint64_t csize;
-	uint64_t d0;
-	uint64_t d1;
-	uint64_t d, da, data, datasize, double_table;
-	uint64_t dtype, dtypeh, dtypel;
-	uint64_t d_esize;
-	uint64_t decode_fltsize;
-	uint64_t decrypt;
-	uint64_t destsize;
-	uint64_t dm;
-	uint64_t dn;
-	uint64_t domain;
-	uint64_t dst_index;
-	uint64_t dst_unsigned;
-	uint64_t dstride;
-	uint64_t dstsize;
-	uint64_t e;
-	uint64_t elements;
-	uint64_t elements_per_container;
-	uint64_t else_inc;
-	uint64_t else_inv;
-	uint64_t elsize;
-	uint64_t eq;
-	uint64_t esize;
-	uint64_t exact;
-	uint64_t extend;
-	uint64_t extend_type;
-	uint64_t f, ff;
-	uint64_t field;
-	uint64_t flagmask;
-	uint64_t flags;
-	uint64_t fltsize;
-	uint64_t fpop;
-	uint64_t fracbits;
-	uint64_t ftype;
-	uint64_t g;
-	uint64_t h;
-	uint64_t has_result;
-	uint64_t hi;
-	uint64_t hw;
-	uint64_t i, i1, i2, i2h, i2l, i3h, i3l;
-	uint64_t idxdsize;
-	uint64_t i3;
-	uint64_t i4;
-	uint64_t i4A;
-	uint64_t i4B;
-	uint64_t i4C;
-	uint64_t i4h;
-	uint64_t i4l;
-	uint64_t imm;
-	uint64_t imm1;
-	uint64_t imm12;
-	uint64_t imm13;
-	uint64_t imm14;
-	uint64_t imm16;
-	uint64_t imm19;
-	uint64_t imm2;
-	uint64_t imm26;
-	uint64_t imm3;
-	uint64_t imm4;
-	uint64_t imm5;
-	uint64_t imm5b;
-	uint64_t imm6;
-	uint64_t imm64;
-	uint64_t imm7;
-	uint64_t imm8;
-	uint64_t imm8h;
-	uint64_t imm8l;
-	uint64_t imm9;
-	uint64_t imm9h;
-	uint64_t imm9l;
-	uint64_t immb;
-	uint64_t immh;
-	uint64_t immhi;
-	uint64_t immlo;
-	uint64_t immr;
-	uint64_t imms;
-	uint64_t index;
-	uint64_t init_scale;
-	uint64_t intsize;
-	uint64_t int_U;
-	uint64_t invert;
-	uint64_t inzero;
-	uint64_t isBefore;
-	uint64_t is_tbl;
-    bool ispair;
-	bool issrc2;
-	uint64_t isize;
-	uint64_t iszero;
-	uint64_t K;
-	uint64_t ldacctype;
-	uint64_t len;
-	uint64_t level;
-	uint64_t lsb;
-	uint64_t lt;
-	uint64_t m;
-	uint64_t mask;
-	uint64_t mbytes;
-	uint64_t memop;
-	uint64_t memcpy_d;
-	uint64_t memcpy_n;
-	uint64_t memcpy_s;
-	uint64_t memcpy_stage;
-	uint64_t memset_stage;
-	uint64_t memset_d;
-	uint64_t memset_n;
-	uint64_t memset_s;
-	uint64_t merging;
-	uint64_t min;
-	uint64_t min_EL;
-	uint64_t minimum;
-	uint64_t mreg;
-	uint64_t msb;
-	uint64_t msize;
-	uint64_t msz;
-	uint64_t mulx_op;
-	uint64_t n;
-	uint64_t ne;
-	uint64_t need_secure;
-	uint64_t neg;
-	uint64_t neg_i;
-	uint64_t neg_r;
-	uint64_t negated;
-	uint64_t ngrp;
-	uint64_t nvec;
-	bool nontemporal;
-	uint64_t nreg;
-	uint64_t ntblr;
-	uint64_t num;
-	uint64_t nzcv;
-	uint64_t nXS;
-	uint64_t o0, o1, o2, o3;
-	uint64_t offs_size;
-	uint64_t offs_unsigned;
-	uint64_t offset;
-	uint64_t off2;
-	uint64_t off3;
-	uint64_t off4;
-	uint64_t op1_neg;
-	uint64_t op1_unsigned;
-	uint64_t op, op0, op1, op2, op3, op4, op21, op31, op54;
-	uint64_t op2_unsigned;
-	uint64_t op3_neg;
-	uint64_t opa_neg;
-	uint64_t opc;
-	uint64_t opc2;
-	uint64_t opc3;
-	uint64_t opcode, opcode2;
-	uint64_t operand;
-	uint64_t operation_;
-	uint64_t opt, option;
-	uint64_t options;
-	uint64_t osize;
-	uint64_t pac;
-	bool pacia1716;
-	bool pacib1716;
-	uint64_t pacinst;
-	uint64_t page;
-	uint64_t pair;
-	uint64_t pairs;
-	uint64_t part;
-	uint64_t part1;
-	uint64_t pat;
-	uint64_t pattern;
-	uint64_t PNd;
-	uint64_t PNg;
-	uint64_t PNn;
-	uint64_t Pv;
-	uint64_t poly;
-	uint64_t pos;
-	uint64_t position;
-	uint64_t postindex;
-	uint64_t pref_hint;
-	uint64_t prfop;
-	bool priority;
-	uint64_t ptype;
-	uint64_t r;
-	uint64_t rd;
-	uint64_t read;
-	uint64_t regs;
-	uint64_t regsize;
-	bool release;
-	uint64_t replicate;
-	uint64_t rmode;
-	bool rnontemporal;
-	uint64_t rot;
-	uint64_t round;
-	uint64_t rounding;
-	uint64_t rpt;
-	uint64_t rsize;
-	uint64_t rn_unknown, rt_unknown;
-	uint64_t rw;
-	uint64_t s;
-	uint64_t s_esize;
-	uint64_t saturating;
-	uint64_t scale;
-	uint64_t sel;
-	uint64_t sel_a;
-	uint64_t sel_b;
-	uint64_t selem;
-	uint64_t select;
-	uint64_t setflags;
-	uint64_t sf;
-	uint64_t sh;
-	uint64_t shift;
-	uint64_t shift_amount;
-	uint64_t shift_type;
-	uint64_t signal_all_nans;
-	uint64_t signed_;
-	uint64_t simm7;
-	uint64_t size;
-	bool soft;
-	uint64_t source_is_sp;
-	uint64_t src_index;
-	uint64_t src_unsigned;
-	uint64_t srcsize;
-	uint64_t ssize, ssz;
-	uint64_t stacctype;
-	uint64_t stream;
-	uint64_t sub_i;
-	uint64_t sub_op;
-	uint64_t sub_r;
-	uint64_t swsize;
-	uint64_t sys_crm;
-	uint64_t sys_crn;
-	uint64_t sys_op0;
-	uint64_t sys_op1;
-	uint64_t sys_op2;
-	uint64_t sys_L;
-	uint64_t sz;
-	uint64_t t, t2, tb;
-	uint64_t tagchecked;
-	uint64_t tag_checked;
-	uint64_t tag_offset;
-	uint64_t target_level;
-	uint64_t tmask;
-	uint64_t tsize;
-	uint64_t tstride;
-	uint64_t tsz;
-	uint64_t tszh;
-	uint64_t tszl;
-	uint64_t TT;
-	uint64_t types;
-	uint64_t u0, u1;
-	uint64_t uimm4;
-	uint64_t uimm6;
-	uint64_t unpriv_at_el1;
-	uint64_t unpriv_at_el2;
-	uint64_t uns;
-	uint64_t unsigned_;
-	uint64_t use_key_a;
-	uint64_t user_access_override;
-	uint64_t v, vertical;
-	uint64_t value2;
-	uint64_t vl;
-	uint64_t VR;
-	uint64_t wback;
-	uint64_t wb_unknown;
-	uint64_t width;
-	bool withstatus;
-	uint64_t wmask;
-	bool wnontemporal;
-	uint64_t writeback;
-	uint64_t xs;
-	uint64_t ZAda, ZAd, ZAn, ZAt, Zk, zero_data;
-
+	/* specification scratchpad. The fields are declared in context_fields.h
+	   and packed by gen_ctx_layout.py into context_layout.h so that fields
+	   never used by the same instruction share storage. */
+#include "context_layout.h"
 } context;
 
 //-----------------------------------------------------------------------------
@@ -846,34 +509,35 @@ struct InstructionOperand
 {
 	OperandClass operandClass;
 	ArrangementSpec arrSpec;
-	Register reg[MAX_REGISTERS];
 
-	/* for class CONDITION */
-	Condition cond;
+	// These fields are used by disjoint sets of operand classes, so they share storage.
+	union
+	{
+		Register reg[MAX_REGISTERS];
+		char name[MAX_NAME];    // for class NAME
+		Condition cond;         // for class CONDITION
+		SystemReg sysreg;       // for class SYS_REG
+	};
 
-	/* for class IMPLEMENTATION_SPECIFIC */
-	uint8_t implspec[MAX_REGISTERS];
+	union
+	{
+		struct                  // for class SME_TILE
+		{
+			uint16_t tile;
+			SliceIndicator slice;
+		};
+		uint8_t implspec[MAX_REGISTERS];  // for class IMPLEMENTATION_SPECIFIC
+	};
 
-	/* for class SYS_REG */
-	SystemReg sysreg;
-
-	bool laneUsed;
 	uint32_t lane;
 	uint64_t immediate;
 	ShiftType shiftType;
-	bool shiftValueUsed;
 	uint32_t shiftValue;
-	ShiftType extend;
+	bool laneUsed;
+	bool shiftValueUsed;
 	bool signedImm;
 	char pred_qual;			// predicate register qualifier ('z' or 'm')
 	bool mul_vl;			// whether MEM_OFFSET has the offset "mul vl"
-
-	/* for class SME_TILE */
-	uint16_t tile;
-	SliceIndicator slice;
-
-	/* for class NAME */
-	char name[MAX_NAME];
 };
 
 #ifndef __cplusplus

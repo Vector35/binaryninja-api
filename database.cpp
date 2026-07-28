@@ -551,6 +551,12 @@ void Database::ReloadConnection()
 }
 
 
+bool Database::ReloadConnection(const std::string& path)
+{
+	return BNDatabaseReloadConnectionToPath(m_object, path.c_str());
+}
+
+
 Ref<KeyValueStore> Database::ReadAnalysisCache() const
 {
 	BNKeyValueStore* store = BNReadDatabaseAnalysisCache(m_object);

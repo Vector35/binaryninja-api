@@ -3276,6 +3276,7 @@ namespace BinaryNinja {
 		void WriteGlobalData(const std::string& key, const DataBuffer& val);
 
 		void ReloadConnection();
+		bool ReloadConnection(const std::string& path);
 
 		Ref<KeyValueStore> ReadAnalysisCache() const;
 		void WriteAnalysisCache(Ref<KeyValueStore> val);

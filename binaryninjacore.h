@@ -4709,6 +4709,7 @@ extern "C"
 	BINARYNINJACOREAPI BNDataBuffer* BNReadDatabaseGlobalData(BNDatabase* database, const char* key);
 	BINARYNINJACOREAPI bool BNWriteDatabaseGlobalData(BNDatabase* database, const char* key, BNDataBuffer* val);
 	BINARYNINJACOREAPI void BNDatabaseReloadConnection(BNDatabase* database);
+	BINARYNINJACOREAPI bool BNDatabaseReloadConnectionToPath(BNDatabase* database, const char* path);
 	BINARYNINJACOREAPI BNKeyValueStore* BNReadDatabaseAnalysisCache(BNDatabase* database);
 	BINARYNINJACOREAPI bool BNWriteDatabaseAnalysisCache(BNDatabase* database, BNKeyValueStore* val);
 	BINARYNINJACOREAPI bool BNSnapshotHasData(BNDatabase* db, int64_t id);

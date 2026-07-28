@@ -96,3 +96,13 @@
 #else
 #define BN_EMPTY_BASES
 #endif
+
+// BN_NOINLINE
+//
+// Suppress inlining of a function at its call sites.
+
+#if defined(_MSC_VER)
+#define BN_NOINLINE __declspec(noinline)
+#else
+#define BN_NOINLINE __attribute__((noinline))
+#endif

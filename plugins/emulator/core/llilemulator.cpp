@@ -1507,9 +1507,15 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 
 	case LLIL_TEST_BIT:
 	{
-		intx::uint512 left = EvalExpr(expr.GetLeftExpr());
-		intx::uint512 right = EvalExpr(expr.GetRightExpr());
-		return (left & right) != 0 ? intx::uint512(1) : intx::uint512(0);
+		// TEST_BIT(value, index) selects a single bit by index, not a mask: x86 `bt rax, 2`
+		// lifts to `flag:c = test_bit(rax, 2)` and must yield bit 2 of rax, not rax & 2.
+		// The index is used literally (the lifter is responsible for any modulo the
+		// instruction applies); guard only against shifting past the emulator's value width.
+		intx::uint512 value = EvalExpr(expr.GetLeftExpr());
+		intx::uint512 index = EvalExpr(expr.GetRightExpr());
+		if (index >= 512)
+			return 0;
+		return (value >> static_cast<unsigned>(index)) & intx::uint512(1);
 	}
 
 	case LLIL_ADD_OVERFLOW:

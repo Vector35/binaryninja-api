@@ -38,21 +38,32 @@ LLILEmulator::LLILEmulator(LowLevelILFunction* il, BinaryView* backingView) :
 
 void LLILEmulator::SetActiveArchitecture(Architecture* arch)
 {
-	m_arch = arch;
+	// A standalone LowLevelILFunction — one built directly through the API rather than lifted
+	// from a Function — reports no architecture, because GetArchitecture() derives it from the
+	// owner Function. Fall back to the view's default instead of clearing m_arch: a valid
+	// architecture is an emulator invariant, and every register, flag and memory access
+	// dereferences it unguarded.
+	Ref<Architecture> resolved = arch;
+	if (!resolved && m_view)
+		resolved = m_view->GetDefaultArchitecture();
+	if (!resolved)
+		return;
+
+	m_arch = resolved;
 
 	// Warn once when we begin emulating a function whose architecture differs from the
 	// binary's default — most commonly ARM/Thumb interworking. The emulator resolves
 	// registers, endianness and memory access through this single architecture, so functions
 	// of the non-default architecture may not emulate correctly.
-	if (m_multiArchWarned || !m_view || !arch)
+	if (m_multiArchWarned || !m_view)
 		return;
 	Ref<Architecture> defaultArch = m_view->GetDefaultArchitecture();
-	if (defaultArch && defaultArch != arch)
+	if (defaultArch && defaultArch != resolved)
 	{
 		LogWarn("BNIL Emulator: emulating a function of architecture %s, which differs from the "
 			"binary's default architecture %s; mixed-architecture binaries (e.g. ARM/Thumb) may "
 			"not emulate correctly",
-			arch->GetName().c_str(), defaultArch->GetName().c_str());
+			resolved->GetName().c_str(), defaultArch->GetName().c_str());
 		m_multiArchWarned = true;
 	}
 }

@@ -109,9 +109,12 @@ class RegisterOpTests(ILTestBase):
         self.assertEqual(self.eval_to_reg(lambda il: il.reg(8, 'rdi'), regs={'rdi': 0xdead}), 0xdead)
 
     def test_set_reg_split(self):
-        # rdx:rax = 0x1_00000000_00000002 -> rax = low, rdx = high
+        # rdx:rax = 0x1_00000000_00000002 -> rax = low, rdx = high.
+        # LLIL constants carry a 64-bit value, so the 128-bit source is built with a shift
+        # rather than il.const(16, 1 << 64), which would silently truncate to 0.
         def emit(il):
-            il.append(il.set_reg_split(8, 'rdx', 'rax', il.const(16, (1 << 64) | 2)))
+            hi = il.shift_left(16, il.const(16, 1), il.const(1, 64))
+            il.append(il.set_reg_split(8, 'rdx', 'rax', il.or_expr(16, hi, il.const(16, 2))))
         emu = self.build(emit)
         emu.step()
         self.assertEqual(emu.get_register('rax'), 2)
@@ -136,18 +139,22 @@ class ValueOpTests(ILTestBase):
     def test_arithmetic(self):
         C = lambda il, v, s=8: il.const(s, v)
         self.check('ADD', lambda il: il.add(8, C(il, 5), C(il, 3)), 8)
-        self.check('ADC', lambda il: il.add_carry(8, C(il, 5), C(il, 3), C(il, 1, 0)), 9)
+        self.check('ADC', lambda il: il.add_carry(8, C(il, 5), C(il, 3), C(il, 1, 1)), 9)
         self.check('SUB', lambda il: il.sub(8, C(il, 5), C(il, 3)), 2)
-        self.check('SBB', lambda il: il.sub_borrow(8, C(il, 5), C(il, 3), C(il, 1, 0)), 1)  # 5 - 3 - borrow(1)
+        self.check('SBB', lambda il: il.sub_borrow(8, C(il, 5), C(il, 3), C(il, 1, 1)), 1)  # 5 - 3 - borrow(1)
         self.check('MUL', lambda il: il.mult(8, C(il, 6), C(il, 7)), 42)
         self.check('DIVU', lambda il: il.div_unsigned(8, C(il, 17), C(il, 5)), 3)
         self.check('DIVS', lambda il: il.div_signed(8, C(il, -17), C(il, 5)), (-3) & U64)
         self.check('MODU', lambda il: il.mod_unsigned(8, C(il, 17), C(il, 5)), 2)
         self.check('MODS', lambda il: il.mod_signed(8, C(il, -17), C(il, 5)), (-2) & U64)
         self.check('DIVU_DP', lambda il: il.div_double_prec_unsigned(8, C(il, 17, 16), C(il, 5)), 3)
-        self.check('DIVS_DP', lambda il: il.div_double_prec_signed(8, C(il, -17, 16), C(il, 5)), (-3) & U64)
+        # The 16-byte dividend must be sign-extended from a 64-bit constant: il.const(16, -17)
+        # would truncate to a large *positive* 128-bit value and silently pass as unsigned.
+        self.check('DIVS_DP', lambda il: il.div_double_prec_signed(
+            8, il.sign_extend(16, C(il, -17)), C(il, 5)), (-3) & U64)
         self.check('MODU_DP', lambda il: il.mod_double_prec_unsigned(8, C(il, 17, 16), C(il, 5)), 2)
-        self.check('MODS_DP', lambda il: il.mod_double_prec_signed(8, C(il, -17, 16), C(il, 5)), (-2) & U64)
+        self.check('MODS_DP', lambda il: il.mod_double_prec_signed(
+            8, il.sign_extend(16, C(il, -17)), C(il, 5)), (-2) & U64)
         self.check('NEG', lambda il: il.neg_expr(8, C(il, 5)), (-5) & U64)
         self.check('ABS', lambda il: il.expr(LowLevelILOperation.LLIL_ABS, C(il, -5), size=8), 5)
 
@@ -236,7 +243,7 @@ class ValueOpTests(ILTestBase):
 class MemoryStackOpTests(ILTestBase):
     def test_load(self):
         val = self.eval_to_reg(lambda il: il.load(4, il.const(8, 0x2000)),
-                               mem={0x2000: (0xefbeadde).to_bytes(4, 'little')})
+                               mem={0x2000: (0xdeadbeef).to_bytes(4, 'little')})
         self.assertEqual(val, 0xdeadbeef)
 
     def test_store(self):
@@ -269,7 +276,7 @@ class FlagOpTests(ILTestBase):
     def test_set_flag_and_flag(self):
         # SET_FLAG writes c; FLAG reads it back into a register.
         def emit(il):
-            il.append(il.set_flag('c', il.const(0, 1)))
+            il.append(il.set_flag('c', il.const(1, 1)))
             il.append(il.set_reg(8, 'rax', il.flag('c')))
         emu = self.build(emit)
         emu.step()
@@ -316,7 +323,7 @@ class ControlFlowOpTests(ILTestBase):
             def emit(il):
                 t = LowLevelILLabel()
                 f = LowLevelILLabel()
-                il.append(il.if_expr(il.const(0, 1 if cond_true else 0), t, f))
+                il.append(il.if_expr(il.const(1, 1 if cond_true else 0), t, f))
                 il.mark_label(t)
                 il.append(il.set_reg(8, 'rax', il.const(8, 1)))
                 il.append(il.no_ret())
@@ -427,9 +434,11 @@ class SpecialOpTests(ILTestBase):
         # With an intrinsic hook installed, LLIL_INTRINSIC is delegated to it.
         seen = {}
 
-        def hook(emu, intrinsic, params, outputs):
+        # The hook contract is (emulator, intrinsic_id, params) -> list of (reg, value)
+        # pairs when handled, or None to fall through to Unimplemented.
+        def hook(emu, intrinsic, params):
             seen['called'] = True
-            return True
+            return []
 
         def emit(il):
             il.append(il.intrinsic([], 0, []))

@@ -46,11 +46,13 @@ bool BINARYNINJAUIAPI makeLocalVariableEnum(
 struct BINARYNINJAUIAPI StructureMemberTypeActionContext
 {
 	BinaryNinja::DataVariable var;
+	uint64_t address = 0;
 	TypeRef rootType;
 	BinaryNinja::QualifiedName rootName;
 	TypeRef parentType;
 	size_t fieldIndex = (size_t)-1;
 	TypeRef fieldType;
+	bool isBitfield = false;
 };
 bool BINARYNINJAUIAPI replaceStructureMemberType(
 	BinaryViewRef view, const StructureMemberTypeActionContext& memberContext, TypeRef newType);

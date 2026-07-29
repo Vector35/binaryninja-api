@@ -15,6 +15,10 @@ out/
 *.pdb
 *.ilk
 
+# The known-answer-test kernels are checked in deliberately, so the suite does not
+# need a cross-compiler. Rebuild them with test/kat/build.sh.
+!/test/kat/prebuilt/*.o
+
 # Generated Python bindings
 /api/python/_emulatorcore.py
 /api/python/emulator_enums.py

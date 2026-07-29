@@ -1870,7 +1870,18 @@ void LLILEmulator::ExecuteCurrentInstruction()
 		if (m_stopReason != ILEmulatorStopReason::Running)
 			return;
 
-		size_t target = m_il->GetInstructionStart(m_arch, dest);
+		// Prefer the target map carried by the instruction itself, which maps each candidate
+		// address directly to an IL instruction index. Falling back to GetInstructionStart is
+		// only correct for IL lifted from a real function, since that resolves an address
+		// through the owning function's mapping.
+		size_t target;
+		std::map<uint64_t, size_t> targets = instr.GetTargets();
+		auto match = targets.find(dest);
+		if (match != targets.end())
+			target = match->second;
+		else
+			target = m_il->GetInstructionStart(m_arch, dest);
+
 		if (target >= m_il->GetInstructionCount())
 		{
 			SetStopReason(ILEmulatorStopReason::Error,

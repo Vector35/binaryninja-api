@@ -1514,6 +1514,7 @@ namespace BinaryNinja
 		void ReadExportNode(uint64_t viewStart, DataBuffer& buffer, const std::string& currentText,
 			size_t cursor, uint32_t endGuard);
 
+		uint64_t GetRebaseBindEntryLimit();
 		void ParseRebaseTable(BinaryReader& reader, MachOHeader& header, uint32_t tableOffset, uint32_t tableSize);
 		void ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNSymbolType type, uint32_t tableOffset, uint32_t tableSize,
 			BNSymbolBinding binding);

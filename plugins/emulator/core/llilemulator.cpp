@@ -1205,26 +1205,29 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	}
 
 	// --- Double-precision ---
+	// For the *_DP multiplies, `sz` is the width of each operand and the product is twice
+	// that: x86 `mul rbx` lifts to `rdx:rax = mulu.dp.q(rax, rbx)`, where the .q operands are
+	// 8 bytes and the destination register pair is 16.
 	case LLIL_MULU_DP:
 	{
-		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz / 2);
-		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRightExpr()), sz / 2);
-		return MaskToSize(left * right, sz);
+		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
+		intx::uint512 right = MaskToSize(EvalExpr(expr.GetRightExpr()), sz);
+		return MaskToSize(left * right, sz * 2);
 	}
 
 	case LLIL_MULS_DP:
 	{
-		// Signed multiply double-precision: sign-extend each sz/2-byte operand to the full
-		// wide value, then multiply as two's-complement. The low sz bytes of the product are
+		// Signed multiply double-precision: sign-extend each sz-byte operand to the full wide
+		// value, then multiply as two's-complement. The low 2*sz bytes of the product are
 		// correct regardless of sign, and this handles operands wider than 8 bytes.
-		intx::uint512 l = SignExtend(EvalExpr(expr.GetLeftExpr()), sz / 2, 64);
-		intx::uint512 r = SignExtend(EvalExpr(expr.GetRightExpr()), sz / 2, 64);
-		return MaskToSize(l * r, sz);
+		intx::uint512 l = SignExtend(EvalExpr(expr.GetLeftExpr()), sz, 64);
+		intx::uint512 r = SignExtend(EvalExpr(expr.GetRightExpr()), sz, 64);
+		return MaskToSize(l * r, sz * 2);
 	}
 
 	// The double-precision divide/modulo ops divide a double-width (2*sz) dividend by an
 	// sz-wide divisor, producing an sz-wide result. (Contrast with the *_DP multiplies above,
-	// whose `sz` is the double-width product.)
+	// whose `sz` is the width of a single operand.)
 	case LLIL_DIVU_DP:
 	{
 		intx::uint512 dividend = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz * 2);

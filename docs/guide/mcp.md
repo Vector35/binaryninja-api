@@ -6,8 +6,8 @@ Binary Ninja provides two MCP server variants:
 
 | Variant | Binary | Transport | Availability |
 | --- | --- | --- | --- |
-| GUI MCP server | `binaryninja` | HTTP only | Runs inside the Binary Ninja GUI; not included with Binary Ninja Free or Personal |
-| Headless MCP server | `binaryninja_mcp` | stdio only | Runs as a standalone command-line server; not included with Binary Ninja Free or Personal |
+| GUI MCP server | `binaryninja` | HTTP only | Runs inside the Binary Ninja GUI. Included with Binary Ninja Free or Personal. |
+| Headless MCP server | `binaryninja_mcp` | stdio only | Runs as a standalone command-line server. Included with Binary Ninja Commercial or Ultimate. |
 
 ## Tool Overview
 

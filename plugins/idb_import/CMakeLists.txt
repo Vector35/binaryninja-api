@@ -125,11 +125,16 @@ elseif(WIN32)
                 DEPENDS ${PLUGIN_SOURCES} ${API_SOURCES})
     endif()
 else()
+    if(DEMO)
+        set(BN_FIX_RPATH_COMMAND ${CMAKE_COMMAND} -E true)
+    else()
+        set(BN_FIX_RPATH_COMMAND ${CMAKE_COMMAND} -DRPATH_KIND=plugin -DBINARY_PATH=${OUTPUT_FILE_PATH} -P "${BN_API_SOURCE_DIR}/cmake/SetElfRpath.cmake")
+    endif()
     add_custom_command(
             OUTPUT ${OUTPUT_FILE_PATH}
             COMMAND ${CMAKE_COMMAND} -E env BINARYNINJADIR=${BINJA_LIB_DIR} ${RUSTUP_COMMAND} build ${CARGO_OPTS} ${CARGO_FEATURES}
             COMMAND ${CMAKE_COMMAND} -E copy ${TARGET_DIR}/${OUTPUT_FILE_NAME} ${OUTPUT_FILE_PATH}
-            COMMAND ${CMAKE_COMMAND} -DRPATH_KIND=plugin -DBINARY_PATH=${OUTPUT_FILE_PATH} -P "${BN_API_SOURCE_DIR}/cmake/SetElfRpath.cmake"
+            COMMAND ${BN_FIX_RPATH_COMMAND}
             WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
             DEPENDS ${PLUGIN_SOURCES} ${API_SOURCES})
 endif()

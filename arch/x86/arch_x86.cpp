@@ -196,20 +196,18 @@ static const char* GetRelocationString(PeRelocationType relocType)
 {
 	static const char* relocTable[] =
 	{
-		"PE_IMAGE_REL_BASED_ABSOLUTE",
-		"PE_IMAGE_REL_BASED_HIGH",
-		"PE_IMAGE_REL_BASED_LOW",
-		"PE_IMAGE_REL_BASED_HIGHLOW",
-		"PE_IMAGE_REL_BASED_HIGHADJ",
-		"PE_IMAGE_REL_BASED_MIPS_JMPADDR",
-		"PE_IMAGE_REL_BASED_ARM_MOV32",
-		"PE_IMAGE_REL_BASED_RISCV_HIGH20",
-		"PE_IMAGE_REL_BASE_RESERVED",
-		"PE_IMAGE_REL_BASED_THUMB_MOV32",
-		"PE_IMAGE_REL_BASED_RISCV_LOW12I",
-		"PE_IMAGE_REL_BASED_RISCV_LOW12S",
-		"PE_IMAGE_REL_BASED_MIPS_JMPADDR16",
-		"PE_IMAGE_REL_BASED_DIR64"
+		/*  0 */ "PE_IMAGE_REL_BASED_ABSOLUTE",
+		/*  1 */ "PE_IMAGE_REL_BASED_HIGH",
+		/*  2 */ "PE_IMAGE_REL_BASED_LOW",
+		/*  3 */ "PE_IMAGE_REL_BASED_HIGHLOW",
+		/*  4 */ "PE_IMAGE_REL_BASED_HIGHADJ",
+		// These are the same value
+		/*  5 */ "PE_IMAGE_REL_BASED_MIPS_JMPADDR/ARM_MOV32/RISCV_HIGH20",
+		/*  6 */ "PE_IMAGE_REL_BASE_RESERVED",
+		/*  7 */ "PE_IMAGE_REL_BASED_THUMB_MOV32/RISCV_LOW12I",
+		/*  8 */ "PE_IMAGE_REL_BASED_RISCV_LOW12S",
+		/*  9 */ "PE_IMAGE_REL_BASED_MIPS_JMPADDR16",
+		/* 10 */ "PE_IMAGE_REL_BASED_DIR64"
 	};
 
 	if (relocType < MAX_PE_RELOCATION)
@@ -6591,40 +6589,60 @@ public:
 		// Note: info.base contains preferred base address and the base where the image is actually loaded
 		(void)view;
 		(void)arch;
-		(void)len;
 		uint64_t* data64 = (uint64_t*)dest;
 		uint32_t* data32 = (uint32_t*)dest;
 		uint16_t* data16 = (uint16_t*)dest;
 		auto info = reloc->GetInfo();
-		if ((uint32_t)info.nativeType == PE_IMAGE_USER_DEFINED)
+		switch (info.nativeType)
 		{
+		case PE_IMAGE_USER_DEFINED:
 			if (info.size == 8)
 			{
+				if (len < 8)
+					return false;
 				data64[0] = info.target;
 			}
 			else if (info.size == 4)
 			{
+				if (len < 4)
+					return false;
 				data32[0] = (uint32_t)info.target;
 			}
-		}
-		else if (info.size == 8)
-		{
+			break;
+		case PE_IMAGE_REL_BASED_DIR64:
+			if (len < 8)
+				return false;
 			data64[0] += info.base;
-		}
-		else if (info.size == 4)
-		{
+			break;
+		case PE_IMAGE_REL_BASED_HIGHLOW:
+			if (len < 4)
+				return false;
 			data32[0] += (uint32_t)info.base;
-		}
-		else if (info.size == 2)
+			break;
+		case PE_IMAGE_REL_BASED_HIGH:
+			if (len < 2)
+				return false;
+			data16[0] = data16[0] + (uint16_t)(info.base >> 16);
+			break;
+		case PE_IMAGE_REL_BASED_LOW:
+			if (len < 2)
+				return false;
+			data16[0] = data16[0] + (uint16_t)(info.base & 0xffff);
+			break;
+		case PE_IMAGE_REL_BASED_HIGHADJ:
 		{
-			if (info.nativeType == PE_IMAGE_REL_BASED_HIGH)
-			{
-				data16[0] = data16[0] + (uint16_t)(info.base >> 16);
-			}
-			else if (info.nativeType == PE_IMAGE_REL_BASED_LOW)
-			{
-				data16[0] = data16[0] + (uint16_t)(info.base & 0xffff);
-			}
+			if (len < 2)
+				return false;
+			uint64_t value = ((uint64_t)data16[0] << 16) + (int16_t)info.addend + info.base + 0x8000;
+			data16[0] = (uint16_t)(value >> 16);
+			break;
+		}
+		// Fun fact: the windows x64 emulation on an arm64 host ALSO applies these
+		// relocations if they are contained within x64 binaries, causing a divergence
+		// in loader behavior when emulating. We're not handling that nuance, though.
+		// case PE_IMAGE_REL_BASED_THUMB_MOV32:
+		default:
+			return RelocationHandler::ApplyRelocation(view, arch, reloc, dest, len);
 		}
 		return true;
 	}
@@ -6636,6 +6654,8 @@ public:
 		set<uint64_t> relocTypes;
 		for (auto& reloc : result)
 		{
+			reloc.type = StandardRelocationType;
+			reloc.pcRelative = false;
 			switch (reloc.nativeType)
 			{
 			case PE_IMAGE_REL_BASED_ABSOLUTE:
@@ -6653,6 +6673,9 @@ public:
 			case PE_IMAGE_REL_BASED_LOW:
 				reloc.size = 2;
 				break;
+			case PE_IMAGE_REL_BASED_HIGHADJ:
+				reloc.size = 2;
+				break;
 			case PE_IMAGE_USER_DEFINED:
 				reloc.type = StandardRelocationType;
 				break;
@@ -6666,7 +6689,7 @@ public:
 
 		for (auto& reloc : relocTypes)
 			logger->LogWarn("Unsupported PE relocation: %s", GetRelocationString((PeRelocationType)reloc));
-		return false;
+		return true;
 	}
 
 	virtual size_t GetOperandForExternalRelocation(const uint8_t* data, uint64_t addr, size_t length,

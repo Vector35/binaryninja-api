@@ -116,7 +116,7 @@ enum ElfArm64RelocationType : uint32_t
 	R_AARCH64_IRELATIVE = 1032,
 };
 
-enum PeArm64RelocationType : uint32_t
+enum COFFArm64RelocationType : uint32_t
 {
 	PE_IMAGE_REL_ARM64_ABSOLUTE       = 0x0000, //	The relocation is ignored.
 	PE_IMAGE_REL_ARM64_ADDR32         = 0x0001, //	The 32-bit VA of the target.
@@ -139,6 +139,27 @@ enum PeArm64RelocationType : uint32_t
 	MAX_PE_ARM64_RELOCATION           = 0x0012
 };
 
+enum PeRelocationType : uint32_t
+{
+	PE_IMAGE_USER_DEFINED             = 0xffffffff, // User defined relocation type for synthesized relocations at IAT sites.
+	PE_IMAGE_REL_BASED_ABSOLUTE       = 0,  // The base relocation is skipped. This type can be used to pad a block.
+	PE_IMAGE_REL_BASED_HIGH           = 1,  // The base relocation adds the high 16 bits of the difference to the 16-bit field at offset. The 16-bit field represents the high value of a 32-bit word.
+	PE_IMAGE_REL_BASED_LOW            = 2,  // The base relocation adds the low 16 bits of the difference to the 16-bit field at offset. The 16-bit field represents the low half of a 32-bit word.
+	PE_IMAGE_REL_BASED_HIGHLOW        = 3,  // The base relocation applies all 32 bits of the difference to the 32-bit field at offset.
+	PE_IMAGE_REL_BASED_HIGHADJ        = 4,  // The base relocation adds the high 16 bits of the difference to the 16-bit field at offset. The 16-bit field represents the high value of a 32-bit word. The low 16 bits of the 32-bit value are stored in the 16-bit word that follows this base relocation. This means that this base relocation occupies two slots.
+	PE_IMAGE_REL_BASED_MIPS_JMPADDR   = 5,  // The relocation interpretation is dependent on the machine type. When the machine type is MIPS, the base relocation applies to a MIPS jump instruction.
+	PE_IMAGE_REL_BASED_ARM_MOV32      = 5,  // This relocation is meaningful only when the machine type is ARM or Thumb. The base relocation applies the 32-bit address of a symbol across a consecutive MOVW/MOVT instruction pair.
+	PE_IMAGE_REL_BASED_RISCV_HIGH20   = 5,  // This relocation is only meaningful when the machine type is RISC-V. The base relocation applies to the high 20 bits of a 32-bit absolute address.
+	PE_IMAGE_REL_BASE_RESERVED        = 6,  // Reserved, must be zero.
+	PE_IMAGE_REL_BASED_THUMB_MOV32    = 7,  // This relocation is meaningful only when the machine type is Thumb. The base relocation applies the 32-bit address of a symbol to a consecutive MOVW/MOVT instruction pair.
+	PE_IMAGE_REL_BASED_RISCV_LOW12I   = 7,  // This relocation is only meaningful when the machine type is RISC-V. The base relocation applies to the low 12 bits of a 32-bit absolute address formed in RISC-V I-type instruction format.
+	PE_IMAGE_REL_BASED_RISCV_LOW12S   = 8,  // This relocation is only meaningful when the machine type is RISC-V. The base relocation applies to the low 12 bits of a 32-bit absolute address formed in RISC-V S-type instruction format.
+	PE_IMAGE_REL_BASED_MIPS_JMPADDR16 = 9,  // The relocation is only meaningful when the machine type is MIPS. The base relocation applies to a MIPS16 jump instruction.
+	PE_IMAGE_REL_BASED_DIR64          = 10, // The base relocation applies the difference to the 64-bit field at offset.
+	MAX_PE_RELOCATION
+};
+
+
 static const char* GetRelocationString(MachoArm64RelocationType rel)
 {
 	static const char* relocTable[] = {"ARM64_RELOC_UNSIGNED", "ARM64_RELOC_SUBTRACTOR",
@@ -153,7 +174,31 @@ static const char* GetRelocationString(MachoArm64RelocationType rel)
 }
 
 
-static const char* GetRelocationString(PeArm64RelocationType rel)
+static const char* GetRelocationString(PeRelocationType relocType)
+{
+	static const char* relocTable[] =
+	{
+		/*  0 */ "PE_IMAGE_REL_BASED_ABSOLUTE",
+		/*  1 */ "PE_IMAGE_REL_BASED_HIGH",
+		/*  2 */ "PE_IMAGE_REL_BASED_LOW",
+		/*  3 */ "PE_IMAGE_REL_BASED_HIGHLOW",
+		/*  4 */ "PE_IMAGE_REL_BASED_HIGHADJ",
+		// These are the same value
+		/*  5 */ "PE_IMAGE_REL_BASED_MIPS_JMPADDR/ARM_MOV32/RISCV_HIGH20",
+		/*  6 */ "PE_IMAGE_REL_BASE_RESERVED",
+		/*  7 */ "PE_IMAGE_REL_BASED_THUMB_MOV32/RISCV_LOW12I",
+		/*  8 */ "PE_IMAGE_REL_BASED_RISCV_LOW12S",
+		/*  9 */ "PE_IMAGE_REL_BASED_MIPS_JMPADDR16",
+		/* 10 */ "PE_IMAGE_REL_BASED_DIR64"
+	};
+
+	if (relocType < MAX_PE_RELOCATION)
+		return relocTable[relocType];
+	return "Unknown relocation";
+}
+
+
+static const char* GetRelocationString(COFFArm64RelocationType rel)
 {
 	static const char* relocTable[] = {
 		"IMAGE_REL_ARM64_ABSOLUTE",
@@ -3486,24 +3531,186 @@ class Arm64ElfRelocationHandler : public RelocationHandler
 };
 
 
+static uint32_t ReadPeThumbMov32RelocationInstruction(const uint8_t* data)
+{
+	uint32_t instruction;
+	memcpy(&instruction, data, sizeof(instruction));
+	return ToLE32(instruction);
+}
+
+static void WritePeThumbMov32RelocationInstruction(uint8_t* data, uint32_t instruction)
+{
+	instruction = ToLE32(instruction);
+	memcpy(data, &instruction, sizeof(instruction));
+}
+
+static uint16_t GetPeThumbMov32RelocationImmediate(uint32_t instruction)
+{
+	return (uint16_t)(((instruction >> 16) & 0xff) |
+		(((instruction >> 28) & 7) << 8) |
+		(((instruction >> 10) & 1) << 11) |
+		((instruction & 0xf) << 12));
+}
+
+static uint32_t SetPeThumbMov32RelocationImmediate(uint32_t instruction, uint16_t value)
+{
+	const uint32_t immediateMask =
+		0x00ff0000 |
+		0x70000000 |
+		0x00000400 |
+		0x0000000f;
+	instruction &= ~immediateMask;
+	instruction |= ((uint32_t)(value & 0xff) << 16) |
+		((uint32_t)((value >> 8) & 7) << 28) |
+		((uint32_t)((value >> 11) & 1) << 10) |
+		((uint32_t)((value >> 12) & 0xf));
+	return instruction;
+}
+
+static bool ApplyPeThumbMov32Relocation(uint8_t* dest, size_t len, uint64_t delta)
+{
+	if (len < 8)
+		return false;
+
+	uint32_t movw = ReadPeThumbMov32RelocationInstruction(dest);
+	uint32_t movt = ReadPeThumbMov32RelocationInstruction(dest + 4);
+	uint32_t value = GetPeThumbMov32RelocationImmediate(movw) |
+		((uint32_t)GetPeThumbMov32RelocationImmediate(movt) << 16);
+	value += (uint32_t)delta;
+	movw = SetPeThumbMov32RelocationImmediate(movw, value & 0xffff);
+	movt = SetPeThumbMov32RelocationImmediate(movt, (value >> 16) & 0xffff);
+	WritePeThumbMov32RelocationInstruction(dest, movw);
+	WritePeThumbMov32RelocationInstruction(dest + 4, movt);
+	return true;
+}
+
+
 class Arm64PeRelocationHandler : public RelocationHandler
 {
- public:
-	virtual bool GetRelocationInfo(
-	    Ref<BinaryView> view, Ref<Architecture> arch, vector<BNRelocationInfo>& result) override
+public:
+	virtual bool ApplyRelocation(Ref<BinaryView> view, Ref<Architecture> arch, Ref<Relocation> reloc, uint8_t* dest, size_t len) override
+	{
+		// Note: info.base contains preferred base address and the base where the image is actually loaded
+		(void)view;
+		(void)arch;
+		uint64_t* data64 = (uint64_t*)dest;
+		uint32_t* data32 = (uint32_t*)dest;
+		uint16_t* data16 = (uint16_t*)dest;
+		auto info = reloc->GetInfo();
+		switch (info.nativeType)
+		{
+		case PE_IMAGE_USER_DEFINED:
+			if (info.size == 8)
+			{
+				if (len < 8)
+					return false;
+				data64[0] = info.target;
+			}
+			else if (info.size == 4)
+			{
+				if (len < 4)
+					return false;
+				data32[0] = (uint32_t)info.target;
+			}
+			break;
+		case PE_IMAGE_REL_BASED_DIR64:
+			if (len < 8)
+				return false;
+			data64[0] += info.base;
+			break;
+		case PE_IMAGE_REL_BASED_HIGHLOW:
+			if (len < 4)
+				return false;
+			data32[0] += (uint32_t)info.base;
+			break;
+		case PE_IMAGE_REL_BASED_HIGH:
+			if (len < 2)
+				return false;
+			data16[0] = data16[0] + (uint16_t)(info.base >> 16);
+			break;
+		case PE_IMAGE_REL_BASED_LOW:
+			if (len < 2)
+				return false;
+			data16[0] = data16[0] + (uint16_t)(info.base & 0xffff);
+			break;
+		case PE_IMAGE_REL_BASED_HIGHADJ:
+		{
+			if (len < 2)
+				return false;
+			uint64_t value = ((uint64_t)data16[0] << 16) + (int16_t)info.addend + info.base + 0x8000;
+			data16[0] = (uint16_t)(value >> 16);
+			break;
+		}
+		case PE_IMAGE_REL_BASED_THUMB_MOV32:
+			// Despite this being the arm64 platform, in practice these thumb mov32
+			// relocations are applied to binaries by Windows.
+			// Fun fact: the windows x64 emulation on an arm64 host ALSO applies these
+			// relocations if they are contained within x64 binaries, causing a divergence
+			// in loader behavior when emulating. We're not handling that nuance, though.
+			return ApplyPeThumbMov32Relocation(dest, len, info.base);
+		default:
+			return RelocationHandler::ApplyRelocation(view, arch, reloc, dest, len);
+		}
+		return true;
+	}
+
+	virtual bool GetRelocationInfo(Ref<BinaryView> view, Ref<Architecture> arch, vector<BNRelocationInfo>& result) override
 	{
 		(void)arch;
 		Ref<Logger> logger = view->CreateLogger("Arm64PeReloc");
 		set<uint64_t> relocTypes;
 		for (auto& reloc : result)
 		{
-			reloc.type = UnhandledRelocation;
-			relocTypes.insert(reloc.nativeType);
+			reloc.type = StandardRelocationType;
+			reloc.pcRelative = false;
+			switch (reloc.nativeType)
+			{
+			case PE_IMAGE_REL_BASED_ABSOLUTE:
+				reloc.type = IgnoredRelocation;
+				break;
+			case PE_IMAGE_REL_BASED_HIGHLOW:
+				reloc.size = 4;
+				break;
+			case PE_IMAGE_REL_BASED_DIR64:
+				reloc.size = 8;
+				break;
+			case PE_IMAGE_REL_BASED_HIGH:
+				reloc.size = 2;
+				break;
+			case PE_IMAGE_REL_BASED_LOW:
+				reloc.size = 2;
+				break;
+			case PE_IMAGE_REL_BASED_HIGHADJ:
+				reloc.size = 2;
+				break;
+			case PE_IMAGE_REL_BASED_THUMB_MOV32:
+				reloc.size = 8;
+				break;
+			case PE_IMAGE_USER_DEFINED:
+				reloc.type = StandardRelocationType;
+				break;
+			default:
+				// By default, PE relocations are correct when not rebased.
+				// Upon rebasing, support would need to be added to correctly process the relocation
+				reloc.type = UnhandledRelocation;
+				relocTypes.insert(reloc.nativeType);
+			}
 		}
+
 		for (auto& reloc : relocTypes)
-			logger->LogWarn(
-			    "Unsupported PE relocation type: %s", GetRelocationString((PeArm64RelocationType)reloc));
-		return false;
+			logger->LogWarn("Unsupported PE relocation: %s", GetRelocationString((PeRelocationType)reloc));
+		return true;
+	}
+
+	virtual size_t GetOperandForExternalRelocation(const uint8_t* data, uint64_t addr, size_t length,
+		Ref<LowLevelILFunction> il, Ref<Relocation> relocation) override
+	{
+		(void)data;
+		(void)addr;
+		(void)length;
+		(void)il;
+		(void)relocation;
+		return BN_AUTOCOERCE_EXTERN_PTR;
 	}
 };
 
@@ -3622,7 +3829,7 @@ public:
 		set<uint64_t> relocTypes;
 		for (auto& reloc : result)
 		{
-			// LogDebug("%s COFF relocation %s at 0x%" PRIx64, __func__, GetRelocationString((PeArm64RelocationType)reloc.nativeType), reloc.address);
+			// LogDebug("%s COFF relocation %s at 0x%" PRIx64, __func__, GetRelocationString((COFFArm64RelocationType)reloc.nativeType), reloc.address);
 			switch (reloc.nativeType)
 			{
 			case PE_IMAGE_REL_ARM64_ABSOLUTE:
@@ -3687,7 +3894,7 @@ public:
 			}
 		}
 		for (auto& reloc : relocTypes)
-			logger->LogWarn("Unsupported PE relocation type: %s", GetRelocationString((PeArm64RelocationType)reloc));
+			logger->LogWarn("Unsupported PE relocation type: %s", GetRelocationString((COFFArm64RelocationType)reloc));
 		return false;
 	}
 };

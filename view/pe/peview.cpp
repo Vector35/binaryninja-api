@@ -2723,9 +2723,37 @@ bool PEView::Init()
 							if (!reloc.nativeType) // IMAGE_REL_BASED_ABSOLUTE relocations are skipped/used for padding
 								continue;
 							reloc.address = baseReloc.VirtualAddress + (relocEntries[i] & 0xfff);
-							reloc.size = m_is64 ? 8 : 4;
+							reloc.type = StandardRelocationType;
 							reloc.pcRelative = false;
 							reloc.base = m_imageBase - m_peImageBase;
+							switch (reloc.nativeType)
+							{
+							case 1: // IMAGE_REL_BASED_HIGH
+							case 2: // IMAGE_REL_BASED_LOW
+								reloc.size = 2;
+								break;
+							case 3: // IMAGE_REL_BASED_HIGHLOW
+								reloc.size = 4;
+								break;
+							case 4: // IMAGE_REL_BASED_HIGHADJ consumes the next relocation slot as an addend.
+								if ((i + 1) >= nEntries)
+									continue;
+								reloc.size = 2;
+								reloc.addend = relocEntries[++i];
+								break;
+							case 7: // IMAGE_REL_BASED_THUMB_MOV32
+								reloc.size = 8;
+								if (header.machine != IMAGE_FILE_MACHINE_ARM64)
+									reloc.type = UnhandledRelocation;
+								break;
+							case 10: // IMAGE_REL_BASED_DIR64
+								reloc.size = 8;
+								break;
+							default:
+								reloc.size = m_is64 ? 8 : 4;
+								reloc.type = UnhandledRelocation;
+								break;
+							}
 							DefineRelocation(m_arch, reloc, 0, reloc.address);
 						}
 						delete[] relocEntries;

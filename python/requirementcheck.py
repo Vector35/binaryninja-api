@@ -20,19 +20,42 @@
 
 
 import json
+import re
 from typing import Dict, Iterable, List, Optional
 
 
 def pip_requirements_from_dependency_metadata(dependencies: bytes) -> List[str]:
 	raw_text = dependencies.decode("utf-8")
 	try:
-        # Dependencies might be specified in JSON format, which we need to translate to text.
+		# Dependencies might be specified in JSON format, which we need to translate to text.
 		dependencies_json = json.loads(raw_text)
-		dependency_text = dependencies_json.get("pip", "")
+		pip_dependencies = dependencies_json.get("pip", "") if isinstance(dependencies_json, dict) else ""
 	except json.JSONDecodeError:
 		# If we can't parse input as JSON, it's probably already in text format.
-		dependency_text = raw_text
-	return [line.split('#', 1)[0].strip() for line in dependency_text.split('\n') if line.split('#', 1)[0].strip()]
+		pip_dependencies = raw_text
+
+	if isinstance(pip_dependencies, list):
+		lines = [
+			line
+			for requirement in pip_dependencies if isinstance(requirement, str)
+			for line in requirement.split('\n')
+		]
+	elif isinstance(pip_dependencies, str):
+		lines = pip_dependencies.split('\n')
+	else:
+		return []
+
+	result = []
+	for line in lines:
+		line = line.strip()
+		if not line or line.startswith('#'):
+			continue
+		comment = re.search(r'\s+#', line)
+		if comment:
+			line = line[:comment.start()].rstrip()
+		if line:
+			result.append(line)
+	return result
 
 
 def pip_requirements_satisfied(requirements: Iterable[str], installed_versions: Optional[Dict[str, str]] = None) -> bool:

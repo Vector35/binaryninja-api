@@ -336,7 +336,7 @@ void PseudoRustFunction::AppendTwoOperand(const string& operand, const HighLevel
 	GetExprText(leftExpr, emitter, settings, leftPrecedence, InnerExpression, signedHint);
 
 	auto lessThanZero = [](uint64_t value, uint64_t width) -> bool {
-		return ((1UL << ((width * 8) - 1UL)) & value) != 0;
+		return ((uint64_t(1) << ((width * 8) - uint64_t(1))) & value) != 0;
 	};
 
 	if ((operand == " + ") && (rightExpr.operation == HLIL_CONST) && lessThanZero(rightExpr.GetConstant<HLIL_CONST>(), rightExpr.size) &&
@@ -1588,7 +1588,7 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 					&& (srcExpr.GetLeftExpr() == destExpr))
 				{
 					auto lessThanZero = [](uint64_t value, uint64_t width) -> bool {
-						return ((1UL << ((width * 8) - 1UL)) & value) != 0;
+						return ((uint64_t(1) << ((width * 8) - uint64_t(1))) & value) != 0;
 					};
 					switch (srcExpr.operation)
 					{

@@ -296,7 +296,7 @@ void PseudoCFunction::AppendTwoOperand(const string& operand, const HighLevelILI
 	GetExprTextInternal(leftExpr, emitter, settings, leftPrecedence, false, signedHint);
 
 	auto lessThanZero = [](uint64_t value, uint64_t width) -> bool {
-		return ((1UL << ((width * 8) - 1UL)) & value) != 0;
+		return ((uint64_t(1) << ((width * 8) - uint64_t(1))) & value) != 0;
 	};
 
 	if ((operand == " + ") && (rightExpr.operation == HLIL_CONST) && lessThanZero(rightExpr.GetConstant<HLIL_CONST>(), rightExpr.size) &&
@@ -1530,7 +1530,7 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 					&& (srcExpr.GetLeftExpr() == destExpr))
 				{
 					auto lessThanZero = [](uint64_t value, uint64_t width) -> bool {
-						return ((1UL << ((width * 8) - 1UL)) & value) != 0;
+						return ((uint64_t(1) << ((width * 8) - uint64_t(1))) & value) != 0;
 					};
 					switch (srcExpr.operation)
 					{

@@ -83,6 +83,10 @@ function(generate_python_bindings)
 		VERBATIM
 	)
 	
-	# Create target that depends on all output files
-	add_custom_target(${ARGS_TARGET_NAME} ALL DEPENDS ${PYTHON_OUTPUT_FILES})
+	# Create target that depends on all output files. SOURCES lists the Python sources
+	# so IDEs see them as belonging to a target; without it CLion treats the binding
+	# directories as build I/O only and drops them from the project index.
+	add_custom_target(${ARGS_TARGET_NAME} ALL
+		DEPENDS ${PYTHON_OUTPUT_FILES}
+		SOURCES ${ARGS_PYTHON_SOURCES})
 endfunction()

@@ -211,8 +211,9 @@ typedef enum
 
 enum PPCIntrinsic : uint32_t
 {
-    PPC_INTRIN_CNTLZW,
     PPC_INTRIN_FRSP,
+    PPC_INTRIN_SET_RESERVATION,   // lwarx/ldarx: establish a reservation
+    PPC_INTRIN_CHECK_RESERVATION, // stwcx./stdcx.: is the reservation still held?
     PPC_INTRIN_END,
     PPC_PS_INTRIN_QUANTIZE,
     PPC_PS_INTRIN_DEQUANTIZE,

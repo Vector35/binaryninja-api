@@ -667,6 +667,10 @@ class PowerpcArchitecture: public Architecture
 		{
 		case PPC_INTRIN_FRSP:
 			return "float_round";
+		case PPC_INTRIN_SET_RESERVATION:
+			return "__set_reservation";
+		case PPC_INTRIN_CHECK_RESERVATION:
+			return "__check_reservation";
 		default:
 			if ((decodeFlags & DECODE_FLAGS_PS))
 			{
@@ -724,6 +728,9 @@ class PowerpcArchitecture: public Architecture
 		{
 		case PPC_INTRIN_FRSP:
 			return {NameAndType(Type::FloatType(4))};
+		case PPC_INTRIN_SET_RESERVATION:
+		case PPC_INTRIN_CHECK_RESERVATION:
+			return {NameAndType("address", Type::IntegerType(addressSize, false))};
 		// for now, quantize is operating on the float in, and the gqr that holds the scale
 		default:
 			if ((decodeFlags & DECODE_FLAGS_PS))
@@ -756,6 +763,8 @@ class PowerpcArchitecture: public Architecture
 		{
 		case PPC_INTRIN_FRSP:
 			return {Type::FloatType(4)};
+		case PPC_INTRIN_CHECK_RESERVATION:
+			return {Type::IntegerType(0, false)};
 		default:
 			if ((decodeFlags & DECODE_FLAGS_PS))
 			{

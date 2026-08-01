@@ -380,12 +380,23 @@ void FillOperands32(Instruction* instruction, uint32_t word32, uint64_t address)
 		case PPC_ID_MTBR7:
 		case PPC_ID_MTCTR:
 		case PPC_ID_MTLR:
-		case PPC_ID_MTMSR:
-		case PPC_ID_MTMSRD:
 		case PPC_ID_MTXER:
 		case PPC_ID_WRTEE:
 			PushRS(instruction, word32);
 			break;
+
+		// <op> rS [, L]
+		case PPC_ID_MTMSR:
+		case PPC_ID_MTMSRD:
+		{
+			uint32_t l = (word32 >> 16) & 0x1;
+
+			PushRS(instruction, word32);
+			if (l != 0)
+				PushUIMMValue(instruction, l);
+
+			break;
+		}
 
 		// <op> rA
 		case PPC_ID_TABORT:

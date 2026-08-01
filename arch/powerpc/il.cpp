@@ -2279,10 +2279,33 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			il.AddInstruction(ei1);
 			break;
 
+		// count leading/trailing zeros: <op>[.] rA, rS
 		case PPC_ID_CNTLZWx:
-			ei0 = il.Intrinsic({RegisterOrFlag::Register(oper1->reg)}, PPC_INTRIN_CNTLZW,
-				{operToIL(il, oper0)});
-			il.AddInstruction(ei0);
+			REQUIRE2OPS
+			ei0 = il.CountLeadingZeros(4, il.Register(4, oper1->reg));
+			il.AddInstruction(il.SetRegister(4, oper0->reg, ei0,
+					instruction->flags.rc ? IL_FLAGWRITE_CR0_S : 0));
+			break;
+
+		case PPC_ID_CNTLZDx:
+			REQUIRE2OPS
+			ei0 = il.CountLeadingZeros(8, il.Register(8, oper1->reg));
+			il.AddInstruction(il.SetRegister(8, oper0->reg, ei0,
+					instruction->flags.rc ? IL_FLAGWRITE_CR0_S : 0));
+			break;
+
+		case PPC_ID_CNTTZWx:
+			REQUIRE2OPS
+			ei0 = il.CountTrailingZeros(4, il.Register(4, oper1->reg));
+			il.AddInstruction(il.SetRegister(4, oper0->reg, ei0,
+					instruction->flags.rc ? IL_FLAGWRITE_CR0_S : 0));
+			break;
+
+		case PPC_ID_CNTTZDx:
+			REQUIRE2OPS
+			ei0 = il.CountTrailingZeros(8, il.Register(8, oper1->reg));
+			il.AddInstruction(il.SetRegister(8, oper0->reg, ei0,
+					instruction->flags.rc ? IL_FLAGWRITE_CR0_S : 0));
 			break;
 
 		case PPC_ID_PAIREDSINGLE_PSQ_ST:

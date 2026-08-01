@@ -665,8 +665,6 @@ class PowerpcArchitecture: public Architecture
 	{
 		switch (intrinsic)
 		{
-		case PPC_INTRIN_CNTLZW:
-			return "__builtin_clz";
 		case PPC_INTRIN_FRSP:
 			return "float_round";
 		default:
@@ -688,11 +686,11 @@ class PowerpcArchitecture: public Architecture
 
 		// Double check someone didn't insert a new intrinsic at the beginning of our enum since we rely
 		// on it to fill the next array.
-		static_assert(PPCIntrinsic::PPC_INTRIN_CNTLZW == 0,
+		static_assert(PPCIntrinsic::PPC_INTRIN_FRSP == 0,
 			"Invalid first PPCIntrinsic value. Please add your intrinsic further in the enum.");
 
 		// Normal intrinsics.
-		for (uint32_t id = PPC_INTRIN_CNTLZW; id < PPCIntrinsic::PPC_INTRIN_END; id++) {
+		for (uint32_t id = PPC_INTRIN_FRSP; id < PPCIntrinsic::PPC_INTRIN_END; id++) {
 			result.push_back(id);
 		}
 
@@ -724,8 +722,6 @@ class PowerpcArchitecture: public Architecture
 	{
 		switch (intrinsic)
 		{
-		case PPC_INTRIN_CNTLZW:		// rs
-			return {NameAndType(Type::IntegerType(4, false))};
 		case PPC_INTRIN_FRSP:
 			return {NameAndType(Type::FloatType(4))};
 		// for now, quantize is operating on the float in, and the gqr that holds the scale
@@ -758,8 +754,6 @@ class PowerpcArchitecture: public Architecture
 	{
 		switch (intrinsic)
 		{
-		case PPC_INTRIN_CNTLZW:		// ra
-			return {Type::IntegerType(4, false)};
 		case PPC_INTRIN_FRSP:
 			return {Type::FloatType(4)};
 		default:

@@ -2912,7 +2912,7 @@ InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 			return PPC_ID_MTCRF;
 
 		case 0x124:
-			if ((a != 0) || (b != 0))
+			if (((a & 0x1e) != 0) || (b != 0))
 				return PPC_ID_INVALID;
 
 			return PPC_ID_MTMSR;
@@ -2948,7 +2948,7 @@ InstructionId Decode0x1F(uint32_t word32, uint32_t decodeFlags)
 			return PPC_ID_INVALID;
 
 		case 0x164:
-			if ((a != 0) || (b != 0))
+			if (((a & 0x1e) != 0) || (b != 0))
 				return PPC_ID_INVALID;
 
 			return PPC_ID_MTMSRD;

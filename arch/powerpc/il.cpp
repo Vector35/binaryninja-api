@@ -462,11 +462,11 @@ static void load_float(LowLevelILFunction& il,
 	Operand* operand1, /* register that gets read/written */
 	Operand* operand2, /* location the read/write occurs */
 	Operand* operand3=0,
-	bool update=false
+	bool update=false,
+	size_t addrsz=4
 	)
 {
 	ExprId tmp = BN_INVALID_EXPR;
-	const int addrsz = 4;
 	// assume single
 	if (!load_sz)
 		load_sz = 4;
@@ -481,21 +481,21 @@ static void load_float(LowLevelILFunction& il,
 		else
 		{
 			tmp = il.Add(addrsz, il.Register(addrsz, operand2->mem.reg), il.Const(addrsz, operand2->mem.offset));
-		}		
+		}
 	}
 	else if(operand2->cls == PPC_OP_REG_RA)
 	{
 		if ((operand3 != 0) && (operand3->cls == PPC_OP_REG_RB))
 		{
-			tmp = il.Add(4, il.Register(addrsz, operand2->reg), il.Register(addrsz, operand3->reg));
+			tmp = il.Add(addrsz, il.Register(addrsz, operand2->reg), il.Register(addrsz, operand3->reg));
 		}
 	}
 
 	il.AddInstruction(il.SetRegister(load_sz, operand1->reg, il.FloatConvert(load_sz, il.Operand(1, il.Load(load_sz, tmp)))));
-	
+
 	if (update == true)
 	{
-		tmp = il.SetRegister(4, operand2->reg, tmp);
+		tmp = il.SetRegister(addrsz, operand2->reg, tmp);
 		il.AddInstruction(tmp);
 	}
 }
@@ -633,6 +633,8 @@ static void LiftTrap(LowLevelILFunction& il, Instruction* instruction, size_t si
 	Operand* aOp;
 	Operand* bOp;
 
+	size_t neededOps;
+
 	switch (instruction->id)
 	{
 		// generic forms carry an explicit TO operand
@@ -640,24 +642,43 @@ static void LiftTrap(LowLevelILFunction& il, Instruction* instruction, size_t si
 		case PPC_ID_TW:
 		case PPC_ID_TDI:
 		case PPC_ID_TWI:
+			if (instruction->numOperands < 3)
+			{
+				il.AddInstruction(il.Unimplemented());
+				return;
+			}
+
 			to = (uint32_t)instruction->operands[0].uimm;
 			aOp = &instruction->operands[1];
 			bOp = &instruction->operands[2];
+			neededOps = 3;
 			break;
 
 		default:
 			to = TrapConditionMask(instruction->id);
 			aOp = &instruction->operands[0];
 			bOp = &instruction->operands[1];
+			neededOps = 2;
 			break;
 	}
 
+	// TO=0 never traps; the instruction is an architectural no-op
 	if ((to & 0x1f) == 0)
+	{
+		il.AddInstruction(il.Nop());
 		return;
+	}
 
 	if ((to & 0x1f) == 0x1f)
 	{
 		il.AddInstruction(il.Trap(0));
+		return;
+	}
+
+	// only the conditional forms read their comparison operands
+	if (instruction->numOperands < neededOps)
+	{
+		il.AddInstruction(il.Unimplemented());
 		return;
 	}
 
@@ -1142,7 +1163,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 			// if update, rA is set to effective address (d(rA))
 			if(instruction->id == PPC_ID_LBZU) {
-				ei0 = il.SetRegister(addressSize_l, oper1->mem.reg, operToIL(il, oper1, addressSize_l));
+				ei0 = il.SetRegister(addressSize_l, oper1->mem.reg, operToIL_a(il, oper1, addressSize_l));
 				il.AddInstruction(ei0);
 			}
 
@@ -1161,10 +1182,11 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			ei0 = il.SetRegister(addressSize_l, oper0->reg, ei0);              // rD = [d(rA)]
 			il.AddInstruction(ei0);
 
-			// if update, rA is set to effective address (d(rA))
+			// if update, rA is set to effective address (rA + rB)
 			if (instruction->id == PPC_ID_LBZUX && oper1->reg != oper0->reg && oper1->reg != PPC_REG_GPR0)
 			{
-				ei0 = il.SetRegister(addressSize_l, oper1->reg, operToIL_a(il, oper1, addressSize_l));
+				ei0 = il.SetRegister(addressSize_l, oper1->reg,
+					il.Add(addressSize_l, operToIL_a(il, oper1, addressSize_l), operToIL_a(il, oper2, addressSize_l)));
 				il.AddInstruction(ei0);
 			}
 
@@ -1221,9 +1243,10 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			ei0 = il.SetRegister(addressSize_l, oper0->reg, ei0);              // rD = [d(rA)]
 			il.AddInstruction(ei0);
 
-			// if update, rA is set to effective address (d(rA))
+			// if update, rA is set to effective address (rA + rB)
 			if((instruction->id == PPC_ID_LHZUX || instruction->id == PPC_ID_LHAUX) && oper1->reg != oper0->reg && oper1->reg != PPC_REG_GPR0) {
-				ei0 = il.SetRegister(addressSize_l, oper1->reg, operToIL_a(il, oper1, addressSize_l));
+				ei0 = il.SetRegister(addressSize_l, oper1->reg,
+					il.Add(addressSize_l, operToIL_a(il, oper1, addressSize_l), operToIL_a(il, oper2, addressSize_l)));
 				il.AddInstruction(ei0);
 			}
 
@@ -1276,9 +1299,10 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			ei0 = il.SetRegister(addressSize_l, oper0->reg, ei0);              // rD = [d(rA)]
 			il.AddInstruction(ei0);
 
-			// if update, rA is set to effective address (d(rA))
+			// if update, rA is set to effective address (rA + rB)
 			if(instruction->id == PPC_ID_LWZUX && oper1->reg != oper0->reg && oper1->reg != PPC_REG_GPR0) {
-				ei0 = il.SetRegister(addressSize_l, oper1->reg, operToIL_a(il, oper1, addressSize_l));
+				ei0 = il.SetRegister(addressSize_l, oper1->reg,
+					il.Add(addressSize_l, operToIL_a(il, oper1, addressSize_l), operToIL_a(il, oper2, addressSize_l)));
 				il.AddInstruction(ei0);
 			}
 
@@ -1295,14 +1319,14 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_LD:
 		case PPC_ID_LDU:
 			REQUIRE2OPS
-			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO); // d(rA) or 0
+			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, 8); // d(rA) or 0
 			ei0 = il.Load(8, ei0);                    // [d(rA)]
 			ei0 = il.SetRegister(8, oper0->reg, ei0); // rD = [d(rA)]
 			il.AddInstruction(ei0);
 
 			// if update, rA is set to effective address (d(rA))
-			if(instruction->id == PPC_ID_LWZU) {
-				ei0 = il.SetRegister(8, oper1->mem.reg, operToIL(il, oper1));
+			if(instruction->id == PPC_ID_LDU) {
+				ei0 = il.SetRegister(8, oper1->mem.reg, operToIL_a(il, oper1, 8));
 				il.AddInstruction(ei0);
 			}
 
@@ -1315,14 +1339,14 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_LDUX:
 		case PPC_ID_LDARX:
 			REQUIRE3OPS
-			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO);              // d(rA) or 0
-			ei0 = il.Load(8, il.Add(8, ei0, operToIL(il, oper2))); // [d(rA) + d(rB)]
+			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, 8);   // d(rA) or 0
+			ei0 = il.Load(8, il.Add(8, ei0, operToIL_a(il, oper2, 8))); // [d(rA) + d(rB)]
 			ei0 = il.SetRegister(8, oper0->reg, ei0);              // rD = [d(rA)]
 			il.AddInstruction(ei0);
 
 			// if update, rA is set to effective address (d(rA))
 			if(instruction->id == PPC_ID_LDUX && oper1->reg != oper0->reg && oper1->reg != PPC_REG_GPR0) {
-				ei0 = il.SetRegister(8, oper1->reg, il.Add(8, operToIL(il, oper1), operToIL(il, oper2)));
+				ei0 = il.SetRegister(8, oper1->reg, il.Add(8, operToIL_a(il, oper1, 8), operToIL_a(il, oper2, 8)));
 				il.AddInstruction(ei0);
 			}
 
@@ -1721,7 +1745,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			il.AddInstruction(ei0);
 
 			// if update, then rA gets updated address
-			if(instruction->id == PPC_ID_STWU) {
+			if(instruction->id == PPC_ID_STDU) {
 				ei0 = il.SetRegister(8, oper1->mem.reg, operToIL_a(il, oper1, 8));
 				il.AddInstruction(ei0);
 			}
@@ -1733,8 +1757,8 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_STDUX: /* store(size, addr, val) */
 			REQUIRE3OPS
 			ei0 = il.Store(8,
-				il.Add(8, operToIL(il, oper1, OTI_GPR0_ZERO), operToIL_a(il, oper2, addressSize_l)),
-				operToIL(il, oper0)
+				il.Add(8, operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, 8), operToIL_a(il, oper2, 8)),
+				operToIL_a(il, oper0, 8)
 			);
 			il.AddInstruction(ei0);
 
@@ -2411,7 +2435,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		    // il.AddInstruction(ei1);
 
 			// alternatively, do it the way arm64 does it
-			load_float(il, 4, oper0, oper1);
+			load_float(il, 4, oper0, oper1, 0, false, addressSize_l);
 			break;
 
 		case PPC_ID_LFSX:
@@ -2424,17 +2448,17 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			// // alternatively, do it the way arm64 does it
 			// il.AddInstruction(ei0);
 
-			load_float(il, 4, oper0, oper1, oper2);
+			load_float(il, 4, oper0, oper1, oper2, false, addressSize_l);
 			break;
 
 		case PPC_ID_LFSU:
 			REQUIRE2OPS
-			load_float(il, 4, oper0, oper1, 0, true);
+			load_float(il, 4, oper0, oper1, 0, true, addressSize_l);
 			break;
 
 		case PPC_ID_LFSUX:
 			REQUIRE3OPS
-			load_float(il, 4, oper0, oper1, oper2, true);
+			load_float(il, 4, oper0, oper1, oper2, true, addressSize_l);
 			break;
 
 		case PPC_ID_LFD:
@@ -2445,7 +2469,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		    // il.AddInstruction(ei0);
 
 			// same as lfs
-			load_float(il, 8, oper0, oper1);
+			load_float(il, 8, oper0, oper1, 0, false, addressSize_l);
 			break;
 
 		case PPC_ID_FMULx:

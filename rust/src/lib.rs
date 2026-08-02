@@ -53,6 +53,7 @@ pub mod external_library;
 pub mod file_accessor;
 pub mod file_metadata;
 pub mod flowgraph;
+pub mod format_string_resolution_provider;
 pub mod function;
 pub mod function_recognizer;
 pub mod headless;

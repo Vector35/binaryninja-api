@@ -19,20 +19,10 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
-#include "cstyleformatstringresolutionprovider.h"
 #include <numeric>
 
 using namespace BinaryNinja;
 using namespace std;
-
-namespace
-{
-	const bool g_cStyleFormatStringResolutionProviderRegistered = []() {
-		RegisterCStyleFormatStringResolutionProvider();
-		return true;
-	}();
-}
-
 
 struct WorkerThreadActionContext
 {

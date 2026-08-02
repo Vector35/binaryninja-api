@@ -1142,6 +1142,91 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 			break;
 
+		/* load string word immediate: NB bytes from (rA|0), packed big-endian
+		   into successive registers (wrapping r31 -> r0) */
+		case PPC_ID_LSWI:
+		{
+			REQUIRE3OPS
+			uint32_t nb = (uint32_t)oper2->uimm;
+			if (nb == 0)
+				nb = 32;
+
+			uint32_t dIndex = oper0->reg - PPC_REG_GPR0;
+			uint32_t offset = 0;
+			for (uint32_t r = 0; offset < nb; r++)
+			{
+				uint32_t reg = PPC_REG_GPR0 + ((dIndex + r) & 31);
+				uint32_t remaining = nb - offset;
+
+				if (remaining >= 4)
+				{
+					il.AddInstruction(il.SetRegister(4, reg, il.Load(4, il.Add(addressSize_l,
+						operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l),
+						il.Const(addressSize_l, offset)))));
+					offset += 4;
+				}
+				else
+				{
+					// final partial register: bytes are left-justified, the rest zeroed
+					ei0 = BN_INVALID_EXPR;
+					for (uint32_t j = 0; j < remaining; j++)
+					{
+						ei1 = il.ShiftLeft(4,
+							il.ZeroExtend(4, il.Load(1, il.Add(addressSize_l,
+								operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l),
+								il.Const(addressSize_l, offset + j)))),
+							il.Const(1, (3 - j) * 8));
+						ei0 = (j == 0) ? ei1 : il.Or(4, ei0, ei1);
+					}
+					il.AddInstruction(il.SetRegister(4, reg, ei0));
+					offset = nb;
+				}
+			}
+
+			break;
+		}
+
+		/* store string word immediate: NB bytes to (rA|0) from successive
+		   registers (wrapping r31 -> r0), most-significant byte first */
+		case PPC_ID_STSWI:
+		{
+			REQUIRE3OPS
+			uint32_t nb = (uint32_t)oper2->uimm;
+			if (nb == 0)
+				nb = 32;
+
+			uint32_t sIndex = oper0->reg - PPC_REG_GPR0;
+			uint32_t offset = 0;
+			for (uint32_t r = 0; offset < nb; r++)
+			{
+				uint32_t reg = PPC_REG_GPR0 + ((sIndex + r) & 31);
+				uint32_t remaining = nb - offset;
+
+				if (remaining >= 4)
+				{
+					il.AddInstruction(il.Store(4, il.Add(addressSize_l,
+						operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l),
+						il.Const(addressSize_l, offset)),
+						il.Register(4, reg)));
+					offset += 4;
+				}
+				else
+				{
+					// final partial register: leftmost bytes stored first
+					for (uint32_t j = 0; j < remaining; j++)
+					{
+						il.AddInstruction(il.Store(1, il.Add(addressSize_l,
+							operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l),
+							il.Const(addressSize_l, offset + j)),
+							il.LowPart(1, il.LogicalShiftRight(4, il.Register(4, reg), il.Const(1, (3 - j) * 8)))));
+					}
+					offset = nb;
+				}
+			}
+
+			break;
+		}
+
 		/*
 			load byte and zero extend [and update]
 		*/
@@ -2296,6 +2381,70 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			));
 			break;
 
+		/* divide extended: rD = (rA << 32) / rB */
+		case PPC_ID_DIVWEx:
+			REQUIRE3OPS
+			ei0 = il.DivSigned(8,
+				il.ShiftLeft(8, il.SignExtend(8, il.Register(4, oper1->reg)), il.Const(1, 32)),
+				il.SignExtend(8, il.Register(4, oper2->reg)));
+			il.AddInstruction(il.SetRegister(4, oper0->reg, il.LowPart(4, ei0),
+					instruction->flags.rc ? IL_FLAGWRITE_CR0_S : 0
+			));
+			break;
+
+		case PPC_ID_DIVWEUx:
+			REQUIRE3OPS
+			ei0 = il.DivUnsigned(8,
+				il.ShiftLeft(8, il.ZeroExtend(8, il.Register(4, oper1->reg)), il.Const(1, 32)),
+				il.ZeroExtend(8, il.Register(4, oper2->reg)));
+			il.AddInstruction(il.SetRegister(4, oper0->reg, il.LowPart(4, ei0),
+					instruction->flags.rc ? IL_FLAGWRITE_CR0_S : 0
+			));
+			break;
+
+		/* divide extended doubleword: rD = (rA << 64) / rB */
+		case PPC_ID_DIVDEx:
+			REQUIRE3OPS
+			ei0 = il.DivDoublePrecSigned(8,
+				il.ShiftLeft(16, il.SignExtend(16, il.Register(8, oper1->reg)), il.Const(1, 64)),
+				il.Register(8, oper2->reg));
+			il.AddInstruction(il.SetRegister(8, oper0->reg, ei0,
+					instruction->flags.rc ? IL_FLAGWRITE_CR0_S : 0
+			));
+			break;
+
+		case PPC_ID_DIVDEUx:
+			REQUIRE3OPS
+			ei0 = il.DivDoublePrecUnsigned(8,
+				il.ShiftLeft(16, il.ZeroExtend(16, il.Register(8, oper1->reg)), il.Const(1, 64)),
+				il.Register(8, oper2->reg));
+			il.AddInstruction(il.SetRegister(8, oper0->reg, ei0,
+					instruction->flags.rc ? IL_FLAGWRITE_CR0_S : 0
+			));
+			break;
+
+		/* rA = (rS sign-extended from 32 bits) << SH */
+		case PPC_ID_EXTSWSLIx:
+			REQUIRE3OPS
+			ei0 = il.SignExtend(8, il.Register(4, oper1->reg));
+			ei0 = il.ShiftLeft(8, ei0, il.Const(1, oper2->uimm));
+			il.AddInstruction(il.SetRegister(8, oper0->reg, ei0,
+					instruction->flags.rc ? IL_FLAGWRITE_CR0_S : 0
+			));
+			break;
+
+		/* rD = -1, 1, or 0 from the LT/GT bits of the given CR field */
+		case PPC_ID_SETB:
+		{
+			REQUIRE2OPS
+			uint32_t crf = oper1->reg - PPC_REG_CRF0;
+			ei0 = il.Sub(addressSize_l,
+				il.BoolToInt(addressSize_l, il.Flag(4*crf + IL_FLAG_GT)),
+				il.BoolToInt(addressSize_l, il.Flag(4*crf + IL_FLAG_LT)));
+			il.AddInstruction(il.SetRegister(addressSize_l, oper0->reg, ei0));
+			break;
+		}
+
 		case PPC_ID_MODSW:
 			REQUIRE3OPS
 			ei0 = il.ModSigned(4, il.Register(4, oper1->reg), il.Register(4, oper2->reg));
@@ -2456,6 +2605,124 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			il.AddInstruction(ei0);
 			break;
 
+		case PPC_ID_FSQRTx:
+			REQUIRE2OPS
+			ei0 = il.FloatSqrt(8, operToIL_a(il, oper1, 8));
+			ei0 = il.SetRegister(8, oper0->reg, ei0, (instruction->flags.rc) ? IL_FLAGWRITE_CR0_F : 0);
+			il.AddInstruction(ei0);
+			break;
+
+		case PPC_ID_FSQRTSx:
+			REQUIRE2OPS
+			ei0 = il.FloatSqrt(4, operToIL(il, oper1));
+			ei0 = il.SetRegister(4, oper0->reg, ei0, (instruction->flags.rc) ? IL_FLAGWRITE_CR0_F : 0);
+			il.AddInstruction(ei0);
+			break;
+
+		/* round to double-precision integer: frin to nearest, friz toward zero,
+		   frip toward +inf, frim toward -inf */
+		case PPC_ID_FRINx:
+			REQUIRE2OPS
+			ei0 = il.RoundToInt(8, operToIL_a(il, oper1, 8));
+			ei0 = il.SetRegister(8, oper0->reg, ei0, (instruction->flags.rc) ? IL_FLAGWRITE_CR0_F : 0);
+			il.AddInstruction(ei0);
+			break;
+
+		case PPC_ID_FRIZx:
+			REQUIRE2OPS
+			ei0 = il.FloatTrunc(8, operToIL_a(il, oper1, 8));
+			ei0 = il.SetRegister(8, oper0->reg, ei0, (instruction->flags.rc) ? IL_FLAGWRITE_CR0_F : 0);
+			il.AddInstruction(ei0);
+			break;
+
+		case PPC_ID_FRIPx:
+			REQUIRE2OPS
+			ei0 = il.Ceil(8, operToIL_a(il, oper1, 8));
+			ei0 = il.SetRegister(8, oper0->reg, ei0, (instruction->flags.rc) ? IL_FLAGWRITE_CR0_F : 0);
+			il.AddInstruction(ei0);
+			break;
+
+		case PPC_ID_FRIMx:
+			REQUIRE2OPS
+			ei0 = il.Floor(8, operToIL_a(il, oper1, 8));
+			ei0 = il.SetRegister(8, oper0->reg, ei0, (instruction->flags.rc) ? IL_FLAGWRITE_CR0_F : 0);
+			il.AddInstruction(ei0);
+			break;
+
+		/* convert to integer word: the result occupies the low 32 bits of frD.
+		   LLIL has no unsigned or rounding-mode-aware conversions, so the u/z
+		   variants all map to the same signed conversion. */
+		case PPC_ID_FCTIWx:
+		case PPC_ID_FCTIWZx:
+			REQUIRE2OPS
+			ei0 = il.SignExtend(8, il.FloatToInt(4, operToIL_a(il, oper1, 8)));
+			ei0 = il.SetRegister(8, oper0->reg, ei0, (instruction->flags.rc) ? IL_FLAGWRITE_CR0_F : 0);
+			il.AddInstruction(ei0);
+			break;
+
+		case PPC_ID_FCTIWUx:
+		case PPC_ID_FCTIWUZx:
+			REQUIRE2OPS
+			ei0 = il.ZeroExtend(8, il.FloatToInt(4, operToIL_a(il, oper1, 8)));
+			ei0 = il.SetRegister(8, oper0->reg, ei0, (instruction->flags.rc) ? IL_FLAGWRITE_CR0_F : 0);
+			il.AddInstruction(ei0);
+			break;
+
+		/* convert to integer doubleword */
+		case PPC_ID_FCTIDx:
+		case PPC_ID_FCTIDZx:
+		case PPC_ID_FCTIDUx:
+		case PPC_ID_FCTIDUZx:
+			REQUIRE2OPS
+			ei0 = il.FloatToInt(8, operToIL_a(il, oper1, 8));
+			ei0 = il.SetRegister(8, oper0->reg, ei0, (instruction->flags.rc) ? IL_FLAGWRITE_CR0_F : 0);
+			il.AddInstruction(ei0);
+			break;
+
+		/* convert integer doubleword to floating point */
+		case PPC_ID_FCFIDx:
+		case PPC_ID_FCFIDUx:
+			REQUIRE2OPS
+			ei0 = il.IntToFloat(8, operToIL_a(il, oper1, 8));
+			ei0 = il.SetRegister(8, oper0->reg, ei0, (instruction->flags.rc) ? IL_FLAGWRITE_CR0_F : 0);
+			il.AddInstruction(ei0);
+			break;
+
+		case PPC_ID_FCFIDSx:
+		case PPC_ID_FCFIDUSx:
+			REQUIRE2OPS
+			ei0 = il.IntToFloat(4, operToIL_a(il, oper1, 8));
+			ei0 = il.SetRegister(4, oper0->reg, ei0, (instruction->flags.rc) ? IL_FLAGWRITE_CR0_F : 0);
+			il.AddInstruction(ei0);
+			break;
+
+		/* frD = sign of frA with magnitude of frB */
+		case PPC_ID_FCPSGNx:
+			REQUIRE3OPS
+			ei0 = il.Or(8,
+				il.And(8, operToIL_a(il, oper1, 8), il.Const(8, 0x8000000000000000ULL)),
+				il.And(8, operToIL_a(il, oper2, 8), il.Const(8, 0x7fffffffffffffffULL)));
+			ei0 = il.SetRegister(8, oper0->reg, ei0, (instruction->flags.rc) ? IL_FLAGWRITE_CR0_F : 0);
+			il.AddInstruction(ei0);
+			break;
+
+		/* frD = (frA >= 0.0) ? frC : frB */
+		case PPC_ID_FSELx:
+		{
+			REQUIRE4OPS
+			LowLevelILLabel selTrue, selFalse, selDone;
+			il.AddInstruction(il.If(
+				il.FloatCompareGreaterEqual(8, operToIL_a(il, oper1, 8), il.FloatConstDouble(0.0)),
+				selTrue, selFalse));
+			il.MarkLabel(selTrue);
+			il.AddInstruction(il.SetRegister(8, oper0->reg, operToIL_a(il, oper2, 8)));
+			il.AddInstruction(il.Goto(selDone));
+			il.MarkLabel(selFalse);
+			il.AddInstruction(il.SetRegister(8, oper0->reg, operToIL_a(il, oper3, 8)));
+			il.MarkLabel(selDone);
+			break;
+		}
+
 		case PPC_ID_STFS:
 		case PPC_ID_STFSU:
 			REQUIRE2OPS
@@ -2524,6 +2791,16 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 			break;
 
+		/* store the low integer word of frS */
+		case PPC_ID_STFIWX:
+			REQUIRE3OPS
+			il.AddInstruction(il.Store(4,
+				il.Add(addressSize_l,
+					operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l),
+					operToIL_a(il, oper2, addressSize_l)),
+				il.LowPart(4, operToIL_a(il, oper0, 8))));
+			break;
+
 		case PPC_ID_LFS:
 			REQUIRE2OPS
 			// ei0 = operToIL(il, oper1); // d(rA) or 0
@@ -2583,6 +2860,20 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_LFDUX:
 			REQUIRE3OPS
 			load_float(il, 8, oper0, oper1, oper2, true, addressSize_l);
+			break;
+
+		/* load integer word into frD, sign/zero extended */
+		case PPC_ID_LFIWAX:
+		case PPC_ID_LFIWZX:
+			REQUIRE3OPS
+			ei0 = il.Load(4, il.Add(addressSize_l,
+				operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l),
+				operToIL_a(il, oper2, addressSize_l)));
+			if (instruction->id == PPC_ID_LFIWAX)
+				ei0 = il.SignExtend(8, ei0);
+			else
+				ei0 = il.ZeroExtend(8, ei0);
+			il.AddInstruction(il.SetRegister(8, oper0->reg, ei0));
 			break;
 
 		case PPC_ID_FMULx:
@@ -2647,19 +2938,6 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			ei0 = il.FloatSub(4, ei0, operToIL(il, oper3));
 			ei1 = il.SetRegister(4, oper0->reg, ei0, (instruction->flags.rc) ? IL_FLAGWRITE_CR0_F : 0);
 			il.AddInstruction(ei1);
-			break;
-
-		// this is a weird one, its described as round a float to an int towards 0, then set
-		// bits 32-63 of a double reg to that result, ignoring the lower 32 bits 0-31.
-		// TODO: needs further testing to verify that this is functional, and verify that the
-		// method used was correct, as well as the registers afffected, like FPSCR.
-		case PPC_ID_FCTIWZx:
-			REQUIRE2OPS
-			ei0 = il.FloatTrunc(RZF, operToIL(il, oper1));
-			ei1 = il.Const(4, 32);
-			ei2 = il.ShiftLeft(8, ei0, ei1);
-			ei0 = il.SetRegister(8, oper0->reg, ei2, (instruction->flags.rc) ? IL_FLAGWRITE_CR0_F : 0);
-			il.AddInstruction(ei0);
 			break;
 
 		case PPC_ID_FNEGx:

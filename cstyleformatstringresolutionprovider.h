@@ -14,7 +14,7 @@ namespace BinaryNinja
 		CStyleFormatStringResolutionProvider();
 
 		std::optional<std::vector<Confidence<Ref<Type>>>> IsValid(
-			const std::string& format) override;
+			const std::string& format, Platform* platform) override;
 	};
 
 	/*! Registers the built-in C-style format string provider if it is not already registered. */

@@ -34,10 +34,14 @@ FormatStringResolutionProvider::FormatStringResolutionProvider(BNFormatStringRes
 
 
 bool FormatStringResolutionProvider::IsValidCallback(
-	void* ctxt, const char* format, BNTypeWithConfidence** types, size_t* count)
+	void* ctxt, const char* format, BNPlatform* platform,
+	BNTypeWithConfidence** types, size_t* count)
 {
 	FormatStringResolutionProvider* provider = (FormatStringResolutionProvider*)ctxt;
-	auto result = provider->IsValid(format);
+	Ref<Platform> resolvedPlatform;
+	if (platform)
+		resolvedPlatform = new CorePlatform(BNNewPlatformReference(platform));
+	auto result = provider->IsValid(format, resolvedPlatform);
 	if (!result.has_value())
 	{
 		*types = nullptr;
@@ -118,11 +122,13 @@ CoreFormatStringResolutionProvider::CoreFormatStringResolutionProvider(BNFormatS
 {}
 
 
-optional<vector<Confidence<Ref<Type>>>> CoreFormatStringResolutionProvider::IsValid(const string& format)
+optional<vector<Confidence<Ref<Type>>>> CoreFormatStringResolutionProvider::IsValid(
+	const string& format, Platform* platform)
 {
 	BNTypeWithConfidence* types = nullptr;
 	size_t count = 0;
-	if (!BNFormatStringResolutionProviderIsValid(m_object, format.c_str(), &types, &count))
+	if (!BNFormatStringResolutionProviderIsValid(
+		m_object, format.c_str(), platform ? platform->GetObject() : nullptr, &types, &count))
 		return nullopt;
 
 	vector<Confidence<Ref<Type>>> result;

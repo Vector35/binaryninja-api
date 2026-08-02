@@ -29,6 +29,54 @@ namespace
 		ZeroPadFlag = 1 << 4
 	};
 
+	bool IsWindowsPlatform(Platform* platform)
+	{
+		return platform && (platform->GetName().find("windows") != string::npos);
+	}
+
+	bool IsApplePlatform(Platform* platform)
+	{
+		if (!platform)
+			return false;
+		const string name = platform->GetName();
+		return name.starts_with("mac-") || name.starts_with("ios-") || name.starts_with("tvos-")
+			|| name.starts_with("watchos-");
+	}
+
+	optional<size_t> GetAddressSize(Platform* platform)
+	{
+		if (!platform)
+			return nullopt;
+		auto arch = platform->GetArchitecture();
+		if (!arch)
+			return nullopt;
+		return arch->GetAddressSize();
+	}
+
+	optional<size_t> GetPlatformTypeWidth(const string& name, Platform* platform)
+	{
+		auto addressSize = GetAddressSize(platform);
+		if (!addressSize.has_value())
+			return nullopt;
+
+		if ((name == "long") || (name == "unsigned long"))
+			return IsWindowsPlatform(platform) ? 4 : *addressSize;
+		if ((name == "ssize_t") || (name == "size_t") || (name == "ptrdiff_t")
+			|| (name == "unsigned ptrdiff_t"))
+		{
+			return *addressSize;
+		}
+		if (name == "wchar_t")
+			return IsWindowsPlatform(platform) ? 2 : 4;
+		if (name == "long double")
+		{
+			if (IsWindowsPlatform(platform) || IsApplePlatform(platform))
+				return 8;
+			return *addressSize == 4 ? 12 : 16;
+		}
+		return nullopt;
+	}
+
 	Confidence<Ref<Type>> IntegerArgument(
 		size_t width, bool isSigned, uint8_t confidence = BN_FULL_CONFIDENCE,
 		uint8_t signednessConfidence = BN_FULL_CONFIDENCE)
@@ -38,26 +86,32 @@ namespace
 	}
 
 	Confidence<Ref<Type>> PlatformIntegerArgument(
-		const string& name, bool isSigned, uint8_t confidence = BN_FULL_CONFIDENCE,
+		Platform* platform, const string& name, bool isSigned, uint8_t confidence = BN_FULL_CONFIDENCE,
 		uint8_t signednessConfidence = BN_FULL_CONFIDENCE)
 	{
+		auto width = GetPlatformTypeWidth(name, platform);
+		if (!width.has_value())
+			return nullptr;
 		return Confidence<Ref<Type>>(
-			Type::IntegerType(0, Confidence<bool>(isSigned, signednessConfidence), name), confidence);
+			Type::IntegerType(*width, Confidence<bool>(isSigned, signednessConfidence)), confidence);
 	}
 
-	Confidence<Ref<Type>> FloatArgument(size_t width, const string& name = "",
-		uint8_t confidence = BN_FULL_CONFIDENCE)
+	Confidence<Ref<Type>> FloatArgument(size_t width, uint8_t confidence = BN_FULL_CONFIDENCE)
 	{
-		return Confidence<Ref<Type>>(Type::FloatType(width, name), confidence);
+		return Confidence<Ref<Type>>(Type::FloatType(width), confidence);
 	}
 
 	Confidence<Ref<Type>> PointerArgument(
-		const Confidence<Ref<Type>>& child, uint8_t confidence = BN_FULL_CONFIDENCE)
+		Platform* platform, const Confidence<Ref<Type>>& child,
+		uint8_t confidence = BN_FULL_CONFIDENCE)
 	{
-		return Confidence<Ref<Type>>(Type::PointerType(static_cast<size_t>(0), child), confidence);
+		auto width = GetAddressSize(platform);
+		if (!width.has_value() || !child.GetValue())
+			return nullptr;
+		return Confidence<Ref<Type>>(Type::PointerType(*width, child), confidence);
 	}
 
-	Confidence<Ref<Type>> SignedIntegerArgument(LengthModifier length)
+	Confidence<Ref<Type>> SignedIntegerArgument(LengthModifier length, Platform* platform)
 	{
 		switch (length)
 		{
@@ -67,20 +121,20 @@ namespace
 			// Signed char and signed short always promote to int.
 			return IntegerArgument(4, true);
 		case LengthModifier::L:
-			return PlatformIntegerArgument("long", true);
+			return PlatformIntegerArgument(platform, "long", true);
 		case LengthModifier::LL:
 		case LengthModifier::J:
 			return IntegerArgument(8, true);
 		case LengthModifier::Z:
-			return PlatformIntegerArgument("ssize_t", true);
+			return PlatformIntegerArgument(platform, "ssize_t", true);
 		case LengthModifier::T:
-			return PlatformIntegerArgument("ptrdiff_t", true);
+			return PlatformIntegerArgument(platform, "ptrdiff_t", true);
 		default:
 			return nullptr;
 		}
 	}
 
-	Confidence<Ref<Type>> UnsignedIntegerArgument(LengthModifier length)
+	Confidence<Ref<Type>> UnsignedIntegerArgument(LengthModifier length, Platform* platform)
 	{
 		switch (length)
 		{
@@ -91,20 +145,20 @@ namespace
 			// The promotion is int when it can represent every value, and unsigned int otherwise.
 			return IntegerArgument(4, true, BN_HEURISTIC_CONFIDENCE, 0);
 		case LengthModifier::L:
-			return PlatformIntegerArgument("unsigned long", false);
+			return PlatformIntegerArgument(platform, "unsigned long", false);
 		case LengthModifier::LL:
 		case LengthModifier::J:
 			return IntegerArgument(8, false);
 		case LengthModifier::Z:
-			return PlatformIntegerArgument("size_t", false);
+			return PlatformIntegerArgument(platform, "size_t", false);
 		case LengthModifier::T:
-			return PlatformIntegerArgument("unsigned ptrdiff_t", false);
+			return PlatformIntegerArgument(platform, "unsigned ptrdiff_t", false);
 		default:
 			return nullptr;
 		}
 	}
 
-	Confidence<Ref<Type>> CountPointerArgument(LengthModifier length)
+	Confidence<Ref<Type>> CountPointerArgument(LengthModifier length, Platform* platform)
 	{
 		Confidence<Ref<Type>> child;
 		switch (length)
@@ -119,22 +173,39 @@ namespace
 			child = IntegerArgument(2, true);
 			break;
 		case LengthModifier::L:
-			child = PlatformIntegerArgument("long", true);
+			child = PlatformIntegerArgument(platform, "long", true);
 			break;
 		case LengthModifier::LL:
 		case LengthModifier::J:
 			child = IntegerArgument(8, true);
 			break;
 		case LengthModifier::Z:
-			child = PlatformIntegerArgument("ssize_t", true);
+			child = PlatformIntegerArgument(platform, "ssize_t", true);
 			break;
 		case LengthModifier::T:
-			child = PlatformIntegerArgument("ptrdiff_t", true);
+			child = PlatformIntegerArgument(platform, "ptrdiff_t", true);
 			break;
 		default:
 			return nullptr;
 		}
-		return PointerArgument(child);
+		return PointerArgument(platform, child);
+	}
+
+	Confidence<Ref<Type>> LongDoubleArgument(Platform* platform)
+	{
+		auto width = GetPlatformTypeWidth("long double", platform);
+		if (!width.has_value())
+			return nullptr;
+		return FloatArgument(*width);
+	}
+
+	bool AppendArgument(
+		vector<Confidence<Ref<Type>>>& result, const Confidence<Ref<Type>>& argument)
+	{
+		if (!argument.GetValue())
+			return false;
+		result.push_back(argument);
+		return true;
 	}
 
 	bool ValidateFlags(char conversion, uint8_t flags)
@@ -214,7 +285,8 @@ namespace
 		return true;
 	}
 
-	optional<vector<Confidence<Ref<Type>>>> ResolveCStyleFormatString(const string& format)
+	optional<vector<Confidence<Ref<Type>>>> ResolveCStyleFormatString(
+		const string& format, Platform* platform)
 	{
 		vector<Confidence<Ref<Type>>> result;
 		for (size_t i = 0; i < format.size(); i++)
@@ -319,13 +391,15 @@ namespace
 			{
 			case 'd':
 			case 'i':
-				result.push_back(SignedIntegerArgument(length));
+				if (!AppendArgument(result, SignedIntegerArgument(length, platform)))
+					return nullopt;
 				break;
 			case 'o':
 			case 'u':
 			case 'x':
 			case 'X':
-				result.push_back(UnsignedIntegerArgument(length));
+				if (!AppendArgument(result, UnsignedIntegerArgument(length, platform)))
+					return nullopt;
 				break;
 			case 'f':
 			case 'F':
@@ -335,33 +409,57 @@ namespace
 			case 'G':
 			case 'a':
 			case 'A':
-				result.push_back(length == LengthModifier::CapitalL
-					? FloatArgument(0, "long double") : FloatArgument(8));
+				if (!AppendArgument(result, length == LengthModifier::CapitalL
+					? LongDoubleArgument(platform) : FloatArgument(8)))
+				{
+					return nullopt;
+				}
 				break;
 			case 'c':
 				if (length == LengthModifier::L)
-					result.push_back(IntegerArgument(4, true, BN_HEURISTIC_CONFIDENCE, 0));
+				{
+					if (!AppendArgument(
+						result, IntegerArgument(4, true, BN_HEURISTIC_CONFIDENCE, 0)))
+					{
+						return nullopt;
+					}
+				}
 				else
-					result.push_back(IntegerArgument(4, true));
+				{
+					if (!AppendArgument(result, IntegerArgument(4, true)))
+						return nullopt;
+				}
 				break;
 			case 's':
 				if (length == LengthModifier::L)
 				{
-					result.push_back(PointerArgument(
-						Confidence<Ref<Type>>(Type::WideCharType(0, "wchar_t"), BN_FULL_CONFIDENCE)));
+					auto width = GetPlatformTypeWidth("wchar_t", platform);
+					if (!width.has_value() || !AppendArgument(result, PointerArgument(platform,
+						Confidence<Ref<Type>>(
+							Type::WideCharType(*width, "wchar_t"), BN_FULL_CONFIDENCE))))
+					{
+						return nullopt;
+					}
 				}
 				else
 				{
-					result.push_back(PointerArgument(Confidence<Ref<Type>>(
-						Type::IntegerType(1, Confidence<bool>(true, 0), "char"), BN_FULL_CONFIDENCE)));
+					if (!AppendArgument(result, PointerArgument(platform, Confidence<Ref<Type>>(
+						Type::IntegerType(1, Confidence<bool>(true, 0), "char"), BN_FULL_CONFIDENCE))))
+					{
+						return nullopt;
+					}
 				}
 				break;
 			case 'p':
-				result.push_back(PointerArgument(
-					Confidence<Ref<Type>>(Type::VoidType(), BN_FULL_CONFIDENCE)));
+				if (!AppendArgument(result, PointerArgument(platform,
+					Confidence<Ref<Type>>(Type::VoidType(), BN_FULL_CONFIDENCE))))
+				{
+					return nullopt;
+				}
 				break;
 			case 'n':
-				result.push_back(CountPointerArgument(length));
+				if (!AppendArgument(result, CountPointerArgument(length, platform)))
+					return nullopt;
 				break;
 			case '%':
 				break;
@@ -379,9 +477,10 @@ CStyleFormatStringResolutionProvider::CStyleFormatStringResolutionProvider() :
 {}
 
 
-optional<vector<Confidence<Ref<Type>>>> CStyleFormatStringResolutionProvider::IsValid(const string& format)
+optional<vector<Confidence<Ref<Type>>>> CStyleFormatStringResolutionProvider::IsValid(
+	const string& format, Platform* platform)
 {
-	return ResolveCStyleFormatString(format);
+	return ResolveCStyleFormatString(format, platform);
 }
 
 

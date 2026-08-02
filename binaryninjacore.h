@@ -3748,7 +3748,8 @@ extern "C"
 	typedef struct BNFormatStringResolutionProviderCallbacks
 	{
 		void* context;
-		bool (*isValid)(void* ctxt, const char* format, BNTypeWithConfidence** types, size_t* count);
+		bool (*isValid)(void* ctxt, const char* format, BNPlatform* platform,
+		    BNTypeWithConfidence** types, size_t* count);
 		void (*freeTypeList)(void* ctxt, BNTypeWithConfidence* types, size_t count);
 	} BNFormatStringResolutionProviderCallbacks;
 
@@ -8745,7 +8746,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetFormatStringResolutionProviderName(
 	    BNFormatStringResolutionProvider* provider);
 	BINARYNINJACOREAPI bool BNFormatStringResolutionProviderIsValid(
-	    BNFormatStringResolutionProvider* provider, const char* format,
+	    BNFormatStringResolutionProvider* provider, const char* format, BNPlatform* platform,
 	    BNTypeWithConfidence** types, size_t* count);
 	BINARYNINJACOREAPI void BNFreeTypeWithConfidenceList(BNTypeWithConfidence* types, size_t count);
 

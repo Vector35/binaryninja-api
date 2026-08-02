@@ -1540,8 +1540,8 @@ void FillOperands32(Instruction* instruction, uint32_t word32, uint64_t address)
 		{
 			uint32_t fxm = (word32 >> 12) & 0xff;
 
-			PushRS(instruction, word32);
 			PushUIMMValue(instruction, fxm);
+			PushRS(instruction, word32);
 			break;
 		}
 

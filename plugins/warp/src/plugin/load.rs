@@ -12,7 +12,6 @@ use binaryninja::interaction::{
 use binaryninja::rc::Ref;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::atomic::AtomicBool;
 use std::thread;
 use warp::WarpFile;
 
@@ -136,14 +135,14 @@ impl LoadSignatureFile {
         };
 
         // Verify we have not already loaded the file.
-        let already_exists = AtomicBool::new(false);
+        let mut already_exists = false;
         for_cached_containers(|c| {
-            if let Ok(_) = c.source_path(&source_file_id) {
+            if c.source_path(&source_file_id).is_ok() {
                 // TODO: What happens if path differs? Warn?
-                already_exists.store(true, std::sync::atomic::Ordering::SeqCst);
+                already_exists = true;
             }
         });
-        if already_exists.load(std::sync::atomic::Ordering::SeqCst) {
+        if already_exists {
             let res = show_message_box(
                 "Load again?",
                 "File already loaded, would you like to load it again?",

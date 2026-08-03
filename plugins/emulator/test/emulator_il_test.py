@@ -193,7 +193,11 @@ class ValueOpTests(ILTestBase):
         self.check('ROL', lambda il: il.rotate_left(8, C(il, 1), C(il, 4)), 16)
         self.check('ROR', lambda il: il.rotate_right(1, C(il, 1, 1), C(il, 1)), 0x80)
         self.check('RLC', lambda il: il.rotate_left_carry(8, C(il, 1), C(il, 0), C(il, 1, 1)), 1)
-        self.check('RRC', lambda il: il.rotate_right_carry(8, C(il, 2), C(il, 1), C(il, 1, 0)), 1)
+        self.check('RRC', lambda il: il.rotate_right_carry(8, C(il, 2), C(il, 1), C(il, 0, 1)), 1)
+        # Carry-in truth is bit 0 (core's size-0 convention): 3 & 1 rotates in, 2 & 1 does not.
+        self.check('RRC carry-in set', lambda il: il.rotate_right_carry(8, C(il, 2), C(il, 1), C(il, 3, 1)),
+                   0x8000000000000001)
+        self.check('RRC carry-in clear', lambda il: il.rotate_right_carry(8, C(il, 2), C(il, 1), C(il, 2, 1)), 1)
 
     def test_extend_and_parts(self):
         C = lambda il, v, s=8: il.const(s, v)
@@ -298,6 +302,31 @@ class FlagOpTests(ILTestBase):
         # x86 semantic flag groups map to flag conditions; drive one that reads z.
         val = self.eval_to_reg(lambda il: il.flag_group('e'), flags={'z': 1})
         self.assertIn(val, (0, 1))
+
+    def test_size_zero_cmp_against_flag(self):
+        # Comparisons against flags are unsized (size 0). Masking their operands to zero
+        # bytes must not squash true booleans to false: cmp_e.0(flag:z, 1) is true only
+        # when z is actually set.
+        expr = lambda il: il.compare_equal(0, il.flag('z'), il.const(0, 1))
+        self.assertEqual(self.eval_to_reg(expr, flags={'z': 1}), 1)
+        self.assertEqual(self.eval_to_reg(expr, flags={'z': 0}), 0)
+
+    def test_size_zero_not_is_logical(self):
+        # not.0 negates an unsized boolean rather than bitwise-complementing it.
+        expr = lambda il: il.not_expr(0, il.flag('z'))
+        self.assertEqual(self.eval_to_reg(expr, flags={'z': 1}) & 1, 0)
+        self.assertNotEqual(self.eval_to_reg(expr, flags={'z': 0}), 0)
+
+    def test_set_flag_bit0(self):
+        # SET_FLAG takes boolean truth from bit 0 (core's size-0 masking convention).
+        def emit(il):
+            il.append(il.set_flag('c', il.const(1, 3)))
+            il.append(il.set_flag('z', il.const(1, 2)))
+        emu = self.build(emit)
+        emu.step()
+        emu.step()
+        self.assertEqual(emu.get_flag('c'), 1)
+        self.assertEqual(emu.get_flag('z'), 0)
 
 
 # ────────────────────────────────────────────────────────────────────────────

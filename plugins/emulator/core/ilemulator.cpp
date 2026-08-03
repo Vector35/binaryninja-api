@@ -484,7 +484,7 @@ intx::uint512 ILEmulator::MaskToSize(const intx::uint512& value, size_t size)
 	if (size >= 64)
 		return value;
 	if (size == 0)
-		return 0;
+		return value & 1;
 	intx::uint512 mask = (intx::uint512(1) << (size * 8)) - 1;
 	return value & mask;
 }

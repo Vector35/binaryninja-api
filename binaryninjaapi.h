@@ -14699,13 +14699,16 @@ namespace BinaryNinja {
 		ExprId Flag(uint32_t flag, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FlagSSA(const SSAFlag& flag, const ILSourceLocation& loc = ILSourceLocation());
 
-		/*! Sets the flag with index \c flag and size \c size to the constant integer value \c bit
+		/*! Reads the flag with index \c flag and positions it at bit \c bitIndex of a
+			\c size byte integer: the result is <tt>1 << bitIndex</tt> if the flag is set
+			and \c 0 otherwise. Used to materialize flags into status registers
+			(e.g. x86 \c lahf , PowerPC \c mfcr ).
 
-			\param size The size of the flag
+			\param size The size of the result in bytes
 			\param flag Flag index
-			\param bitIndex Bit of the flag to set
+			\param bitIndex Bit position the flag value is shifted to
 			\param loc Optional IL Location this expression was added from.
-			\return A constant expression of given value and size <tt>FLAG.reg = bit</tt>
+			\return The expression <tt>bool_to_int.size(FLAG.flag) << bitIndex</tt>
 		*/
 		ExprId FlagBit(size_t size, uint32_t flag, size_t bitIndex, const ILSourceLocation& loc = ILSourceLocation());
 		ExprId FlagBitSSA(

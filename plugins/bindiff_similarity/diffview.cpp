@@ -3,9 +3,8 @@
 #include "processor.h"
 
 #include <third_party/zynamics/bindiff/differ.h>
-#include <filesystem>
 
-std::unique_ptr<BinDiffView> BinDiffView::FromFilePath(const std::filesystem::path& filePath)
+std::unique_ptr<BinDiffView> BinDiffView::FromFilePath(const std::string& filePath)
 {
 	auto view = std::make_unique<BinDiffView>();
 	security::bindiff::Instruction::Cache instrCache;
@@ -13,7 +12,7 @@ std::unique_ptr<BinDiffView> BinDiffView::FromFilePath(const std::filesystem::pa
 		filePath, &view->m_callGraph, &view->m_flowGraphs, &view->m_flowGraphInfos, &instrCache);
 	if (!status.ok())
 	{
-		BinaryNinja::LogErrorF("Failed to read bindiff data from {}: {}", filePath.c_str(), status.message());
+		BinaryNinja::LogErrorF("Failed to read bindiff data from {}: {}", filePath, status.message());
 		return nullptr;
 	}
 	return view;

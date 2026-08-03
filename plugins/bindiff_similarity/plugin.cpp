@@ -1,7 +1,5 @@
 #include <binaryninjaapi.h>
 
-#include <filesystem>
-
 #include "processor.h"
 #include "provider.h"
 
@@ -11,14 +9,21 @@ namespace {
 	void ExportBinExport(BinaryView* view)
 	{
 		const std::string inputFilename = view->GetFile()->GetFilename();
-		std::filesystem::path outputPath = inputFilename.empty() ? "export.BinExport" : inputFilename;
-		outputPath.replace_extension(".BinExport");
+		std::string outputPath = inputFilename.empty() ? "export.BinExport" : inputFilename;
+		if (!inputFilename.empty())
+		{
+			const size_t separator = outputPath.find_last_of("/\\");
+			const size_t filenameStart = separator == std::string::npos ? 0 : separator + 1;
+			const size_t extension = outputPath.find_last_of('.');
+			if ((extension != std::string::npos) && (extension > filenameStart))
+				outputPath.resize(extension);
+			outputPath += ".BinExport";
+		}
 
 		if (IsUIEnabled())
 		{
 			std::string selectedPath;
-			if (!GetSaveFileNameInput(
-					selectedPath, "Export BinExport", "BinExport files (*.BinExport)", outputPath.string()))
+			if (!GetSaveFileNameInput(selectedPath, "Export BinExport", "BinExport files (*.BinExport)", outputPath))
 				return;
 			outputPath = selectedPath;
 		}
@@ -33,7 +38,7 @@ namespace {
 			BinDiffProcessor processor(*view);
 			for (const auto& function : view->GetAnalysisFunctionList())
 				processor.AddFunction(*function);
-			success = processor.Process(outputPath.string());
+			success = processor.Process(outputPath);
 		}
 		if (!success && IsUIEnabled())
 		{

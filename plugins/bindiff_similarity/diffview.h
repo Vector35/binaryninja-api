@@ -8,6 +8,7 @@
 
 #include <third_party/zynamics/binexport/virtual_memory.h>
 #include <functional>
+#include <string>
 
 class BinDiffView
 {
@@ -20,7 +21,7 @@ public:
 
 	BinDiffView() = default;
 
-	static std::unique_ptr<BinDiffView> FromFilePath(const std::filesystem::path& filePath);
+	static std::unique_ptr<BinDiffView> FromFilePath(const std::string& filePath);
 
 	// Generate a view from the given node, the nodes view must be available before calling.
 	static std::unique_ptr<BinDiffView> FromSessionNode(

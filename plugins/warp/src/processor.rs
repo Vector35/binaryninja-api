@@ -23,7 +23,7 @@ use binaryninja::binary_view::BinaryView;
 use binaryninja::function::Function as BNFunction;
 use binaryninja::project::file::ProjectFile;
 use binaryninja::project::Project;
-use binaryninja::rc::{Guard, Ref};
+use binaryninja::rc::Ref;
 
 use crate::cache::cached_type_references;
 use crate::convert::platform_to_target;
@@ -666,12 +666,66 @@ impl WarpFileProcessor {
         path: PathBuf,
         view: &BinaryView,
     ) -> Result<WarpFile<'static>, ProcessingError> {
+        let functions = view
+            .functions()
+            .iter()
+            .map(|function| function.to_owned())
+            .collect::<Vec<_>>();
+        self.process_view_with_functions(path, view, &functions)
+    }
+
+    pub fn process_view_with_functions(
+        &self,
+        path: PathBuf,
+        view: &BinaryView,
+        functions: &[Ref<BNFunction>],
+    ) -> Result<WarpFile<'static>, ProcessingError> {
+        self.process_view_with_functions_and_progress(path, view, functions, |_| {})
+    }
+
+    pub fn process_view_with_functions_and_progress<F>(
+        &self,
+        path: PathBuf,
+        view: &BinaryView,
+        functions: &[Ref<BNFunction>],
+        progress: F,
+    ) -> Result<WarpFile<'static>, ProcessingError>
+    where
+        F: Fn(f64) + Sync,
+    {
         self.state
             .set_file_state(path.clone(), ProcessingFileState::Processing);
+        let result =
+            self.process_view_with_functions_and_progress_inner(view, functions, &progress);
+        let final_state = match &result {
+            Ok(_) => ProcessingFileState::Processed,
+            Err(_) => ProcessingFileState::Unprocessed,
+        };
+        self.state.set_file_state(path, final_state);
+        if result.is_ok() {
+            progress(1.0);
+        }
+        result
+    }
+
+    fn process_view_with_functions_and_progress_inner<F>(
+        &self,
+        view: &BinaryView,
+        functions: &[Ref<BNFunction>],
+        progress: &F,
+    ) -> Result<WarpFile<'static>, ProcessingError>
+    where
+        F: Fn(f64) + Sync,
+    {
+        progress(0.0);
 
         let mut chunks = Vec::new();
         if self.file_data != IncludedDataField::Types {
-            let mut signature_chunks = self.create_signature_chunks(view)?;
+            let mut signature_chunks = self
+                .create_signature_chunks_for_functions_and_progress(functions, &|value| {
+                    progress(value * 0.9)
+                })?;
+            self.check_cancelled()?;
             for (target, mut target_chunks) in signature_chunks.drain() {
                 for signature_chunk in target_chunks.drain(..) {
                     if signature_chunk.raw_functions().next().is_some() {
@@ -685,8 +739,11 @@ impl WarpFileProcessor {
                 }
             }
         }
+        self.check_cancelled()?;
+        progress(0.9);
 
         if self.file_data != IncludedDataField::Signatures {
+            self.check_cancelled()?;
             let type_chunk = self.create_type_chunk(view)?;
             if type_chunk.raw_types().next().is_some() {
                 chunks.push(Chunk::new(
@@ -695,9 +752,6 @@ impl WarpFileProcessor {
                 ));
             }
         }
-
-        self.state
-            .set_file_state(path, ProcessingFileState::Processed);
 
         Ok(WarpFile::new(WarpFileHeader::new(), chunks))
     }
@@ -709,20 +763,42 @@ impl WarpFileProcessor {
         &self,
         view: &BinaryView,
     ) -> Result<HashMap<Target, Vec<SignatureChunk<'static>>>, ProcessingError> {
-        let is_function_named = |f: &Guard<BNFunction>| {
+        let functions = view
+            .functions()
+            .iter()
+            .map(|function| function.to_owned())
+            .collect::<Vec<_>>();
+        self.create_signature_chunks_for_functions(&functions)
+    }
+
+    pub fn create_signature_chunks_for_functions(
+        &self,
+        functions: &[Ref<BNFunction>],
+    ) -> Result<HashMap<Target, Vec<SignatureChunk<'static>>>, ProcessingError> {
+        self.create_signature_chunks_for_functions_and_progress(functions, &|_| {})
+    }
+
+    fn create_signature_chunks_for_functions_and_progress<F>(
+        &self,
+        functions: &[Ref<BNFunction>],
+        progress: &F,
+    ) -> Result<HashMap<Target, Vec<SignatureChunk<'static>>>, ProcessingError>
+    where
+        F: Fn(f64) + Sync,
+    {
+        let is_function_named = |f: &&Ref<BNFunction>| {
             self.included_functions == IncludedFunctionsField::All
                 || f.defined_symbol().is_some()
                 || f.has_user_annotations()
         };
-        let is_function_tagged = |f: &Guard<BNFunction>| {
+        let is_function_tagged = |f: &&Ref<BNFunction>| {
             self.included_functions != IncludedFunctionsField::Selected
                 || !f.function_tags(None, Some(INCLUDE_TAG_NAME)).is_empty()
         };
         // TODO: is_function_blacklisted (use tag)
 
         // TODO: Move this background task to use the ProcessingState.
-        let view_functions = view.functions();
-        let total_functions = view_functions.len();
+        let total_functions = functions.len();
         let done_functions = AtomicUsize::default();
         let background_task = BackgroundTask::new(
             &format!("Generating signatures... ({}/{})", 0, total_functions),
@@ -735,29 +811,37 @@ impl WarpFileProcessor {
         // a desired function is not in the created chunk.
         // TODO: Make this interruptable. with background_task.is_cancelled.
         let start = Instant::now();
-        let built_functions: DashMap<Target, Vec<Function>> = view_functions
+        let built_functions: DashMap<Target, Vec<Function>> = functions
             .par_iter()
-            .inspect(|_| {
-                done_functions.fetch_add(1, Relaxed);
+            .map(|func| {
+                if self.state.is_cancelled() {
+                    return None;
+                }
+                let result = if is_function_tagged(&func)
+                    && is_function_named(&func)
+                    && !func.analysis_skipped()
+                {
+                    let target = platform_to_target(&func.platform());
+                    build_function(
+                        func,
+                        || func.lifted_il().ok(),
+                        self.file_data == IncludedDataField::Symbols,
+                    )
+                    .map(|built_function| (target, built_function))
+                } else {
+                    None
+                };
+                let completed = done_functions.fetch_add(1, Relaxed) + 1;
                 background_task.set_progress_text(&format!(
                     "Generating signatures... ({}/{}) [{}s]",
-                    done_functions.load(Relaxed),
+                    completed,
                     total_functions,
                     start.elapsed().as_secs_f32()
-                ))
+                ));
+                progress(completed as f64 / total_functions.max(1) as f64);
+                result
             })
-            .filter(is_function_tagged)
-            .filter(is_function_named)
-            .filter(|f| !f.analysis_skipped())
-            .filter_map(|func| {
-                let target = platform_to_target(&func.platform());
-                let built_function = build_function(
-                    &func,
-                    || func.lifted_il().ok(),
-                    self.file_data == IncludedDataField::Symbols,
-                )?;
-                Some((target, built_function))
-            })
+            .filter_map(|result| result)
             .fold(
                 DashMap::new,
                 |acc: DashMap<Target, Vec<Function>>, (target, function)| {
@@ -771,6 +855,10 @@ impl WarpFileProcessor {
                 });
                 acc
             });
+        self.check_cancelled()?;
+        if total_functions == 0 {
+            progress(1.0);
+        }
 
         // Split into multiple chunks if a target has more than MAX_FUNCTIONS_PER_CHUNK functions.
         // We do this because otherwise some chunks may have too many flatbuffer tables for the verifier to handle.

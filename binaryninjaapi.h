@@ -28,6 +28,7 @@
 #endif
 
 #include "base/compiler.h"
+#include "base/strong_typedef.h"
 #include "binaryninjacore.h"
 #include "exceptions.h"
 
@@ -36,6 +37,7 @@
 #include "vendor/nlohmann/json.hpp"
 
 #include <cstddef>
+#include <chrono>
 #include <string>
 #include <vector>
 #include <map>
@@ -50,6 +52,7 @@
 #include <cstdint>
 #include <typeinfo>
 #include <type_traits>
+#include <tuple>
 #include <optional>
 #include <memory>
 #include <span>
@@ -71,6 +74,8 @@
 #endif
 
 namespace BinaryNinja {
+	namespace st = ::bn::base::strong_typedef;
+
 #ifdef __GNUC__
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 	static inline uint16_t ToLE16(uint16_t val) { return val; }
@@ -623,6 +628,7 @@ namespace BinaryNinja {
 	class InteractionHandler;
 	class QualifiedName;
 	class FlowGraph;
+	class LinearViewObject;
 	class ReportCollection;
 	struct FormInputField;
 	struct ArchAndAddr;
@@ -16663,6 +16669,730 @@ namespace BinaryNinja {
 		std::optional<DerivedString> GetDerivedStringReferenceForExpr(size_t expr);
 	};
 
+	class SimilarityProviderType;
+
+	/*! Identifies an entity within a similarity-session node. */
+	using SimilarityEntityId =
+		bn::base::StrongTypedef<uint32_t, struct SimilarityEntityIdTag,
+			st::FfiWrapper<BNSimilarityEntityId, &BNSimilarityEntityId::value>, st::Ordered, st::Hashable,
+			st::Incrementable>;
+	/*! Identifies a provider result within a similarity-session node. */
+	using SimilarityResultId =
+		bn::base::StrongTypedef<uint64_t, struct SimilarityResultIdTag,
+			st::FfiWrapper<BNSimilarityResultId, &BNSimilarityResultId::value>, st::Ordered, st::Hashable,
+			st::Incrementable>;
+	/*! Identifies a node across similarity sessions. */
+	using SimilaritySessionNodeId =
+		bn::base::StrongTypedef<uint32_t, struct SimilaritySessionNodeIdTag,
+			st::FfiWrapper<BNSimilaritySessionNodeId, &BNSimilaritySessionNodeId::value>, st::Ordered,
+			st::Hashable>;
+	/*! Identifies a similarity session. */
+	using SimilaritySessionId =
+		bn::base::StrongTypedef<uint32_t, struct SimilaritySessionIdTag,
+			st::FfiWrapper<BNSimilaritySessionId, &BNSimilaritySessionId::value>, st::Ordered, st::Hashable>;
+	/*! Identifies a provider instance. */
+	using SimilarityProviderId =
+		bn::base::StrongTypedef<uint32_t, struct SimilarityProviderIdTag,
+			st::FfiWrapper<BNSimilarityProviderId, &BNSimilarityProviderId::value>, st::Ordered, st::Hashable>;
+	/*! Identifies a resolver instance. */
+	using SimilaritySessionResolverId =
+		bn::base::StrongTypedef<uint32_t, struct SimilaritySessionResolverIdTag,
+			st::FfiWrapper<BNSimilaritySessionResolverId, &BNSimilaritySessionResolverId::value>, st::Ordered,
+			st::Hashable>;
+
+	/*! Chooses which session completion data to read or update.
+
+	    A query cannot select both a provider and a resolver. Omitting all IDs selects the whole session. */
+	struct SimilaritySessionCompletionQuery
+	{
+		std::optional<SimilaritySessionNodeId> nodeId;
+		std::optional<SimilarityProviderId> providerId;
+		std::optional<SimilaritySessionResolverId> resolverId;
+
+		static SimilaritySessionCompletionQuery ForSession() { return {}; }
+		static SimilaritySessionCompletionQuery ForNode(SimilaritySessionNodeId node) { return {.nodeId = node}; }
+		static SimilaritySessionCompletionQuery ForProvider(SimilarityProviderId provider)
+		{
+			return {.providerId = provider};
+		}
+		static SimilaritySessionCompletionQuery ForResolver(SimilaritySessionResolverId resolver)
+		{
+			return {.resolverId = resolver};
+		}
+		SimilaritySessionCompletionQuery WithProvider(SimilarityProviderId provider) const
+		{
+			return {.nodeId = nodeId, .providerId = provider};
+		}
+		SimilaritySessionCompletionQuery WithResolver(SimilaritySessionResolverId resolver) const
+		{
+			return {.nodeId = nodeId, .resolverId = resolver};
+		}
+
+		[[nodiscard]] BNSimilaritySessionCompletionQuery ToRaw() const
+		{
+			return {nodeId.has_value(), nodeId.value_or(SimilaritySessionNodeId(0)), providerId.has_value(),
+				providerId.value_or(SimilarityProviderId(0)), resolverId.has_value(),
+				resolverId.value_or(SimilaritySessionResolverId(0))};
+		}
+	};
+
+	/*! Identifies an entity within a session node. */
+	struct SimilarityEntityRef
+	{
+		SimilaritySessionNodeId nodeId;
+		SimilarityEntityId entityId;
+
+		SimilarityEntityRef(SimilaritySessionNodeId nodeId, SimilarityEntityId entityId) :
+			nodeId(nodeId), entityId(entityId)
+		{}
+		SimilarityEntityRef(const BNSimilarityEntityRef& ref) : nodeId(ref.nodeId), entityId(ref.entityId) {}
+		bool operator==(const SimilarityEntityRef& other) const = default;
+		bool operator<(const SimilarityEntityRef& other) const
+		{
+			return std::tie(nodeId, entityId) < std::tie(other.nodeId, other.entityId);
+		}
+
+		[[nodiscard]] BNSimilarityEntityRef ToRaw() const
+		{
+			return {nodeId, entityId};
+		}
+	};
+
+	/*! A match produced by a provider.
+
+	    Similarity and confidence range from 0 to 255, where 255 is strongest. Automatic metadata transfer requires
+	    `target` to identify an active function. */
+	struct SimilarityResult
+	{
+		/*! The provider which produced the match. */
+		SimilarityProviderId providerId;
+		/*! The similarity of the two entities. */
+		uint8_t similarity;
+		/*! The provider's confidence in the match. */
+		uint8_t confidence;
+		/*! The matched entity, which may be used as the source for metadata transfer. */
+		SimilarityEntityRef target;
+
+		SimilarityResult(SimilarityProviderId provider, uint8_t similarity, uint8_t confidence,
+			const SimilarityEntityRef& target) :
+			providerId(provider), similarity(similarity), confidence(confidence), target(target)
+		{}
+		SimilarityResult(const BNSimilarityResult& result) :
+			providerId(result.providerId), similarity(result.similarity), confidence(result.confidence),
+			target(result.target)
+		{}
+		bool operator==(const SimilarityResult& other) const = default;
+
+		[[nodiscard]] BNSimilarityResult ToRaw() const
+		{
+			return {providerId, similarity, confidence, target.ToRaw()};
+		}
+	};
+
+	/*! Describes an entity, including its display name. */
+	struct SimilarityEntityInfo
+	{
+		BNSimilarityEntityType type;
+		uint64_t address;
+		std::string name;
+
+		SimilarityEntityInfo(BNSimilarityEntityType type, uint64_t address, std::string name = {}) :
+			type(type), address(address), name(std::move(name))
+		{}
+		SimilarityEntityInfo(const BNSimilarityEntityInfo& info) :
+			type(info.type), address(info.address), name(info.name ? info.name : "")
+		{}
+		bool operator==(const SimilarityEntityInfo& other) const = default;
+
+		[[nodiscard]] BNSimilarityEntityInfo ToRaw() const { return {type, address, name.c_str()}; }
+	};
+
+	/*! Applies a diff annotation to the half-open address range `[start, end)`. */
+	struct SimilarityRangeAnnotation
+	{
+		uint64_t start;
+		uint64_t end;
+		BNSimilarityAnnotationType type;
+
+		SimilarityRangeAnnotation(uint64_t start, uint64_t end, BNSimilarityAnnotationType type) :
+			start(start), end(end), type(type)
+		{}
+		SimilarityRangeAnnotation(const BNSimilarityRangeAnnotation& annotation) :
+			start(annotation.start), end(annotation.end), type(annotation.type)
+		{}
+		[[nodiscard]] BNSimilarityRangeAnnotation ToRaw() const { return {start, end, type}; }
+	};
+
+	/*! A flow-graph or linear view produced while rendering a similarity result. */
+	class SimilarityView :
+		public CoreRefCountObject<BNSimilarityView, BNNewSimilarityViewReference, BNFreeSimilarityView>
+	{
+	public:
+		SimilarityView(BNSimilarityView* view);
+
+		std::string GetGroup() const;
+		BNSimilarityViewType GetType() const;
+		/*! Returns the flow graph, or `nullptr` for a linear view. */
+		Ref<FlowGraph> GetFlowGraph() const;
+		/*! Returns the data view, or `nullptr` for a flow graph. */
+		Ref<BinaryView> GetLinearViewData() const;
+		/*! Returns the linear view, or `nullptr` for a flow graph. */
+		Ref<LinearViewObject> GetLinearView() const;
+		/*! Returns the session entity for this view, if its renderer provided one. */
+		std::optional<SimilarityEntityRef> GetEntity() const;
+	};
+
+	/*! Holds the grouped views used to display a similarity result. */
+	class SimilarityRenderContext :
+		public CoreRefCountObject<BNSimilarityRenderContext, BNNewSimilarityRenderContextReference,
+			BNFreeSimilarityRenderContext>
+	{
+	public:
+		SimilarityRenderContext();
+		SimilarityRenderContext(BNSimilarityRenderContext* context);
+
+		/*! Sets the function representation preferred by renderers writing to this context. */
+		void SetPreferredViewType(const FunctionViewType& type);
+		/*! Returns the function representation preferred by renderers writing to this context. */
+		FunctionViewType GetPreferredViewType() const;
+		/*! Adds a flow graph to a view group. */
+		void AddFlowGraph(const std::string& group, FlowGraph& graph);
+		/*! Adds a flow graph for a session entity to a view group. */
+		void AddFlowGraph(const std::string& group, FlowGraph& graph, const SimilarityEntityRef& entity);
+		/*! Adds a linear view to a view group. */
+		void AddLinearView(const std::string& group, BinaryView& data, LinearViewObject& linearView);
+		/*! Adds a linear view for a session entity to a view group. */
+		void AddLinearView(const std::string& group, BinaryView& data, LinearViewObject& linearView,
+			const SimilarityEntityRef& entity);
+		/*! Returns views in insertion order. */
+		std::vector<Ref<SimilarityView>> GetViews() const;
+	};
+
+	/*! Highlights annotated address ranges in flow-graph and linear views. */
+	class DiffRenderer : public CoreRefCountObject<BNDiffRenderer, BNNewDiffRendererReference, BNFreeDiffRenderer>
+	{
+	public:
+		DiffRenderer();
+		DiffRenderer(BNDiffRenderer* renderer);
+
+		/*! Adds a half-open address range to annotate.
+
+		    \note Empty ranges are ignored. */
+		void AddRangeAnnotation(const SimilarityRangeAnnotation& annotation);
+		void AddRangeAnnotation(uint64_t start, uint64_t end, BNSimilarityAnnotationType type);
+
+		/*! Renders graph and linear views for a function. */
+		void Render(SimilarityRenderContext& context, Function& function);
+		/*! Renders graph and linear views for a function and session entity. */
+		void Render(SimilarityRenderContext& context, Function& function, const SimilarityEntityRef& entity);
+		/*! Renders an annotated flow graph. */
+		void Render(SimilarityRenderContext& context, const std::string& group, FlowGraph& graph);
+		/*! Renders an annotated flow graph for a session entity. */
+		void Render(SimilarityRenderContext& context, const std::string& group, FlowGraph& graph,
+			const SimilarityEntityRef& entity);
+		/*! Renders an annotated linear view. */
+		void Render(
+			SimilarityRenderContext& context, const std::string& group, BinaryView& data, LinearViewObject& linearView);
+		/*! Renders an annotated linear view for a session entity. */
+		void Render(SimilarityRenderContext& context, const std::string& group, BinaryView& data,
+			LinearViewObject& linearView, const SimilarityEntityRef& entity);
+	};
+
+	class SimilaritySessionNode;
+	class SimilaritySessionCompletion;
+
+	/*! Holds the provider results produced by a node or edge visit.
+	 *
+	 * Only use an instance during the provider callback that received it. A successful visit replaces earlier results
+	 * for the same provider and node or edge. Results for unscheduled entities remain unchanged. */
+	class SimilarityProviderResults
+	{
+		BNSimilarityProviderResults* m_object;
+
+	public:
+		explicit SimilarityProviderResults(BNSimilarityProviderResults* results) : m_object(results) {}
+
+		BNSimilarityProviderResults* GetObject() const { return m_object; }
+
+		/*! Adds a result to the current visit.
+		 *
+		 * The result must belong to an entity scheduled for this visit. Node results belong to `source`; edge results
+		 * belong to the entity on the destination node. Returns zero if the result could not be added. A later visit
+		 * replaces the result and gives it a new ID. */
+		SimilarityResultId AddResult(const SimilarityEntityRef& source, const SimilarityEntityRef& target,
+			uint8_t similarity, uint8_t confidence);
+	};
+
+	/*! Produces, applies, and renders similarity results for session entities.
+	 * C++ implementations must be thread safe because callbacks may overlap across nodes and sessions. Provider visits
+	 * must write changes through the given SimilarityProviderResults. Visits made by a session keep the visited node and
+	 * both edge endpoints active. Direct calls must provide active views. */
+	class SimilarityProvider :
+		public CoreRefCountObject<BNSimilarityProvider, BNNewSimilarityProviderReference, BNFreeSimilarityProvider>
+	{
+		static bool UpdateSettingsCallback(void* ctxt, BNSettings* settings);
+		static bool VisitNodeCallback(void* ctxt, BNSimilaritySessionNode* node, BNSimilarityProviderResults* results,
+			BNSimilaritySessionCompletion* completion);
+		static bool VisitNodeEdgeCallback(void* ctxt, BNSimilaritySessionNode* from, BNSimilaritySessionNode* to,
+			BNSimilarityProviderResults* results, BNSimilaritySessionCompletion* completion);
+		static char* GetNameCallback(
+			void* ctxt, BNSimilaritySessionNode* node, BNSimilarityEntityId entity, BNSimilarityResultId result);
+		static BNSimilarityApplyStatus ApplyCallback(
+			void* ctxt, BNSimilaritySessionNode* node, BNSimilarityEntityId entity, BNSimilarityResultId result);
+		static void RenderCallback(void* ctxt, BNSimilaritySessionNode* node, BNSimilarityEntityId entity,
+			BNSimilarityRenderContext* context, BNSimilarityResultId result);
+		static void FreeContextCallback(void* ctxt);
+
+	public:
+		SimilarityProvider(SimilarityProviderType* type);
+		SimilarityProvider(BNSimilarityProvider* provider);
+
+		Ref<SimilarityProviderType> GetType() const;
+		SimilarityProviderId GetId() const;
+
+		/*! Replaces this provider's settings only if they are valid.
+
+		    Return false without changing the current settings when the new settings are invalid or updates are not
+		    supported. Use SimilaritySession::UpdateProviderSettings so affected entities are scheduled again. */
+		virtual bool UpdateSettings(Settings&) { return false; }
+
+		/*! Performs a complete node visit. The core manages the result updates. */
+		void VisitNode(SimilaritySessionNode& node, SimilaritySessionCompletion& completion);
+		/*! Performs a complete edge visit. The core manages the result updates. */
+		void VisitNodeEdge(
+			SimilaritySessionNode& from, SimilaritySessionNode& to, SimilaritySessionCompletion& completion);
+
+		/*! Visits a node and writes results for it. Return `false` to discard the visit. */
+		virtual bool VisitNode(SimilaritySessionNode&, SimilarityProviderResults&, SimilaritySessionCompletion&)
+		{
+			return true;
+		}
+
+		/*! Visits an edge after both endpoint nodes have been visited and writes results for the edge.
+		 * Return `false` to discard the visit. */
+		virtual bool VisitNodeEdge(
+			SimilaritySessionNode&, SimilaritySessionNode&, SimilarityProviderResults&, SimilaritySessionCompletion&)
+		{
+			return true;
+		}
+
+		/*! Returns the display name for a result, if available. */
+		virtual std::optional<std::string> GetName(SimilaritySessionNode& node,
+			SimilarityEntityId entity, SimilarityResultId result) = 0;
+
+		/*! Applies a result. The default implementation transfers metadata from the result target; overrides can call it
+		    before adding provider-specific metadata. */
+		virtual BNSimilarityApplyStatus Apply(SimilaritySessionNode& node, SimilarityEntityId entity,
+			SimilarityResultId result);
+
+		/*! Adds views for a result to `context`. */
+		virtual void Render(SimilaritySessionNode& node, SimilarityEntityId entity,
+			SimilarityRenderContext& context, SimilarityResultId result) = 0;
+	};
+
+	class CoreSimilarityProvider : public SimilarityProvider
+	{
+	public:
+		CoreSimilarityProvider(BNSimilarityProvider* provider);
+
+		using SimilarityProvider::VisitNode;
+		using SimilarityProvider::VisitNodeEdge;
+
+		bool VisitNode(SimilaritySessionNode& node, SimilarityProviderResults& results,
+			SimilaritySessionCompletion& completion) override;
+		bool VisitNodeEdge(SimilaritySessionNode& from, SimilaritySessionNode& to, SimilarityProviderResults& results,
+			SimilaritySessionCompletion& completion) override;
+
+		std::optional<std::string> GetName(SimilaritySessionNode& node,
+			SimilarityEntityId entity, SimilarityResultId result) override;
+
+		BNSimilarityApplyStatus Apply(
+			SimilaritySessionNode& node, SimilarityEntityId entity, SimilarityResultId result) override;
+
+		void Render(SimilaritySessionNode& node, SimilarityEntityId entity,
+			SimilarityRenderContext& context, SimilarityResultId result) override;
+	};
+
+	/*! Creates similarity providers with the given settings. */
+	class SimilarityProviderType : public StaticCoreRefCountObject<BNSimilarityProviderType>
+	{
+		std::string m_nameForRegister;
+		std::string m_descForRegister;
+
+		static BNSimilarityProvider* CreateCallback(void* ctxt, BNSettings* settings);
+		static BNSettings* GetDefaultSettingsCallback(void* ctxt);
+
+	public:
+		SimilarityProviderType(std::string name, std::string description);
+		SimilarityProviderType(BNSimilarityProviderType* formatter);
+
+		/*! Registers a provider type for the lifetime of the process. */
+		static void Register(SimilarityProviderType* type);
+
+		static std::vector<Ref<SimilarityProviderType>> GetList();
+		static Ref<SimilarityProviderType> GetByName(const std::string& name);
+
+		std::string GetName() const;
+		std::string GetDescription() const;
+
+		/*! Creates a provider with the given settings, or returns null. */
+		virtual Ref<SimilarityProvider> Create(Settings& settings) = 0;
+
+		/*! Returns the settings schema and defaults for this provider type, or null. */
+		virtual Ref<Settings> GetDefaultSettings() = 0;
+	};
+
+	class CoreSimilarityProviderType : public SimilarityProviderType
+	{
+	public:
+		CoreSimilarityProviderType(BNSimilarityProviderType* type);
+
+		/*! Returns null outside the Ultimate edition. */
+		Ref<SimilarityProvider> Create(Settings& settings) override;
+
+		Ref<Settings> GetDefaultSettings() override;
+	};
+
+	class SimilaritySession;
+	class SimilaritySessionReceiver;
+	class SimilaritySessionGraphReceiver;
+	class SimilaritySessionResolverType;
+
+	/*! Selects a preferred result for each scheduled entity.
+	 * C++ implementations must be thread safe because callbacks may overlap across nodes in the same processing group. */
+	class SimilaritySessionResolver :
+		public CoreRefCountObject<BNSimilaritySessionResolver, BNNewSimilaritySessionResolverReference,
+			BNFreeSimilaritySessionResolver>
+	{
+		static bool UpdateSettingsCallback(void* ctxt, BNSettings* settings);
+		static void PrepareForNodeCallback(void* ctxt, BNSimilaritySession* session, BNSimilaritySessionNode* node,
+			BNSimilaritySessionCompletion* completion, BNSimilaritySessionResolverId resolverId);
+		static void ResolveForNodeCallback(void* ctxt, BNSimilaritySession* session, BNSimilaritySessionNode* node,
+			const BNSimilarityEntityId* entities, size_t entityCount, BNSimilaritySessionCompletion* completion,
+			BNSimilaritySessionResolverId resolverId);
+		static void FreeContextCallback(void* ctxt);
+
+	public:
+		/*! Creates a resolver for `session`. */
+		SimilaritySessionResolver(SimilaritySessionResolverType* type, Ref<SimilaritySession> session);
+		SimilaritySessionResolver(BNSimilaritySessionResolver* resolver);
+
+		SimilaritySessionResolverId GetId() const;
+		Ref<SimilaritySessionResolverType> GetType() const;
+
+		/*! Replaces this resolver's settings only if they are valid.
+
+		    Return false without changing the current settings when the new settings are invalid or updates are not
+		    supported. Use SimilaritySession::UpdateResolverSettings so affected entities are resolved again. */
+		virtual bool UpdateSettings(Settings&) { return false; }
+
+		/*! Prepares a node before providers run.
+
+		    This is useful for large graphs where views may be unavailable, but the resolver needs to change the scheduled
+		    entities or add entities itself. */
+		virtual void PrepareForNode(SimilaritySession& session, SimilaritySessionNode& node,
+			SimilaritySessionCompletion& completion) {}
+		/*! Resolves provider results after all providers have visited the node.
+
+		    Call SetResolvedResult to select a result. Call AddScheduledEntity to request another provider and resolver
+		    round for an entity. Only schedule work for `node`; the session owns scheduling between nodes. */
+		virtual void ResolveForNode(SimilaritySession& session, SimilaritySessionNode& node,
+			const std::vector<SimilarityEntityId>& entities, SimilaritySessionCompletion& completion) = 0;
+	};
+
+	class CoreSimilaritySessionResolver : public SimilaritySessionResolver
+	{
+	public:
+		CoreSimilaritySessionResolver(BNSimilaritySessionResolver* resolver);
+
+		void PrepareForNode(SimilaritySession& session, SimilaritySessionNode& node,
+			SimilaritySessionCompletion& completion) override;
+		void ResolveForNode(SimilaritySession& session, SimilaritySessionNode& node,
+			const std::vector<SimilarityEntityId>& entities, SimilaritySessionCompletion& completion) override;
+	};
+
+	/*! Creates resolvers with the given settings. */
+	class SimilaritySessionResolverType : public StaticCoreRefCountObject<BNSimilaritySessionResolverType>
+	{
+		std::string m_nameForRegister;
+		std::string m_descForRegister;
+
+		static BNSimilaritySessionResolver* CreateCallback(
+			void* ctxt, BNSimilaritySession* session, BNSettings* settings);
+		static BNSettings* GetDefaultSettingsCallback(void* ctxt);
+
+	public:
+		SimilaritySessionResolverType(std::string name, std::string description);
+		SimilaritySessionResolverType(BNSimilaritySessionResolverType* type);
+
+		/*! Registers a resolver type for the lifetime of the process. */
+		static void Register(SimilaritySessionResolverType* type);
+		static Ref<SimilaritySessionResolverType> GetByName(const std::string& name);
+		static std::vector<Ref<SimilaritySessionResolverType>> GetList();
+
+		std::string GetName() const;
+		std::string GetDescription() const;
+
+		/*! Creates a resolver for `session`, or returns null. The resolver must not keep `session` after this call. */
+		virtual Ref<SimilaritySessionResolver> Create(Ref<SimilaritySession> session, Settings& settings) = 0;
+		/*! Returns the settings schema and defaults for this resolver type, or null. */
+		virtual Ref<Settings> GetDefaultSettings() = 0;
+	};
+
+	class CoreSimilaritySessionResolverType : public SimilaritySessionResolverType
+	{
+	public:
+		CoreSimilaritySessionResolverType(BNSimilaritySessionResolverType* type);
+
+		Ref<SimilaritySessionResolver> Create(Ref<SimilaritySession> session, Settings& settings) override;
+		Ref<Settings> GetDefaultSettings() override;
+	};
+
+	/*! The main unit of similarity processing. */
+	class SimilaritySessionNode :
+		public CoreRefCountObject<BNSimilaritySessionNode, BNNewSimilaritySessionNodeReference,
+			BNFreeSimilaritySessionNode>
+	{
+	public:
+		SimilaritySessionNode(BNSimilaritySessionNode* node);
+		/*! Creates a node for a non-null active view, keeps the view alive, and schedules its analyzed functions. */
+		SimilaritySessionNode(Ref<BinaryView> view);
+		/*! Creates a node whose view will be loaded from `file` when the session runs.
+
+		    `file` must be non-null. The session closes the view when the run no longer needs it, so the view may be
+		    unavailable at other times. */
+		SimilaritySessionNode(Ref<FileMetadata> file);
+
+		/*! Returns the active view, or `nullptr` if the node is not loaded.
+
+		    A file-backed node may be unavailable outside a session run. */
+		Ref<BinaryView> GetView() const;
+		/*! Sets the active view. A view backed by a different FileMetadata is ignored.
+
+		    \note Do not mix files. */
+		void SetView(Ref<BinaryView> view);
+		/*! Returns the file used by the node. This is always valid. */
+		Ref<FileMetadata> GetFile() const;
+		/*! Returns mutable settings used when the session loads this node's view. Modify them before running the session. */
+		Ref<Settings> GetLoadOptions() const;
+		SimilaritySessionNodeId GetId() const;
+
+		/*! Adds an entity without scheduling it. Existing entities are reused, and a non-empty
+		    name refreshes their display name. */
+		SimilarityEntityId CreateEntity(const SimilarityEntityInfo& info);
+		/*! Removes an entity, its schedule, its provider results, and its selected result.
+
+		    To only unschedule it, call RemoveScheduledEntity. */
+		bool RemoveEntity(SimilarityEntityId id);
+		/*! Returns information about an entity, or no value if `id` is not found. */
+		std::optional<SimilarityEntityInfo> GetEntity(SimilarityEntityId id);
+		/*! Returns every entity in the node, including entities used only as match targets. */
+		std::vector<SimilarityEntityId> GetEntities();
+		/*! Schedules an entity for the next provider round.
+
+		    Nodes initially schedule all available entities. The session consumes each scheduled batch after providers
+		    visit it. During a run, only the resolver currently processing this node may request another round. Schedule
+		    entities from other contexts between runs. */
+		bool AddScheduledEntity(SimilarityEntityId id);
+		/*! Unschedules an entity without removing it from the node.
+
+		    To remove it, call RemoveEntity. */
+		bool RemoveScheduledEntity(SimilarityEntityId id);
+		/*! Returns the entities waiting for provider processing. */
+		std::vector<SimilarityEntityId> GetScheduledEntities();
+		/*! Resolves a function entity against the active view, or returns `nullptr`. */
+		Ref<Function> GetEntityFunction(SimilarityEntityId id);
+		/*! Returns the result IDs for an entity. */
+		std::vector<SimilarityResultId> GetResults(SimilarityEntityId entity);
+		/*! Returns a stored result by its ID, which is unique within the node. */
+		std::optional<SimilarityResult> GetResult(SimilarityResultId result);
+		/*! Selects one of the entity's results. */
+		bool SetResolvedResult(SimilarityEntityId entity, SimilarityResultId result);
+		std::optional<SimilarityResultId> GetResolvedResult(SimilarityEntityId entity);
+		bool ClearResolvedResult(SimilarityEntityId entity);
+
+		/*! Returns incoming node IDs in ascending order. */
+		std::vector<SimilaritySessionNodeId> GetIncomingEdges();
+		/*! Returns outgoing node IDs in ascending order. */
+		std::vector<SimilaritySessionNodeId> GetOutgoingEdges();
+		/*! Returns incoming nodes ordered by ID. */
+		std::vector<Ref<SimilaritySessionNode>> GetIncomingNodes();
+		/*! Returns outgoing nodes ordered by ID. */
+		std::vector<Ref<SimilaritySessionNode>> GetOutgoingNodes();
+	};
+
+	/*! A graph that controls which binaries are compared and in what order. The graph cannot contain cycles.
+
+	    An edge from A to B makes A available as an incoming comparison node while B is processed. */
+	class SimilaritySessionGraph :
+		public CoreRefCountObject<BNSimilaritySessionGraph, BNNewSimilaritySessionGraphReference,
+			BNFreeSimilaritySessionGraph>
+	{
+	public:
+		SimilaritySessionGraph(BNSimilaritySessionGraph* graph);
+
+		/*! Adds a node, moving it from its previous graph if necessary. If either graph is running, the node is unchanged. */
+		void AddNode(Ref<SimilaritySessionNode> node);
+		/*! Removes a node and its incident edges. Graph mutations are ignored during a run. */
+		void RemoveNode(SimilaritySessionNode& node);
+		/*! Returns a node, or `nullptr` if `id` is absent. */
+		Ref<SimilaritySessionNode> GetNode(SimilaritySessionNodeId id);
+		std::vector<Ref<SimilaritySessionNode>> GetNodes();
+
+		/*! Returns whether an edge joins two graph members without duplicating an edge or creating a cycle.
+		 * Returns false during a run. */
+		bool IsValidEdge(SimilaritySessionNode& from, SimilaritySessionNode& to);
+		/*! Adds an edge. Returns false if invalid or while the graph is running. */
+		bool AddEdge(SimilaritySessionNode& from, SimilaritySessionNode& to);
+		/*! Removes an edge. Returns false if absent or while the graph is running. */
+		bool RemoveEdge(SimilaritySessionNode& from, SimilaritySessionNode& to);
+		void AddReceiver(Ref<SimilaritySessionGraphReceiver> receiver);
+		void RemoveReceiver(SimilaritySessionGraphReceiver& receiver);
+		std::vector<Ref<SimilaritySessionGraphReceiver>> GetReceivers();
+
+		/*! Returns groups of nodes in processing order. Nodes in the same group may run concurrently. */
+		std::vector<std::vector<Ref<SimilaritySessionNode>>> GetSchedule();
+	};
+
+	/*! Receives notifications after nodes or edges are added to or removed from a session graph. */
+	class SimilaritySessionGraphReceiver :
+		public CoreRefCountObject<BNSimilaritySessionGraphReceiver, BNNewSimilaritySessionGraphReceiverReference,
+			BNFreeSimilaritySessionGraphReceiver>
+	{
+		static void OnGraphChangedCallback(void* ctxt);
+		static void FreeContextCallback(void* ctxt);
+
+	public:
+		SimilaritySessionGraphReceiver();
+		SimilaritySessionGraphReceiver(BNSimilaritySessionGraphReceiver* receiver);
+
+		virtual void NotifyGraphChanged() {}
+	};
+
+	class CoreSimilaritySessionGraphReceiver : public SimilaritySessionGraphReceiver
+	{
+	public:
+		CoreSimilaritySessionGraphReceiver(BNSimilaritySessionGraphReceiver* receiver);
+
+		void NotifyGraphChanged() override;
+	};
+
+	/*! Receives session-start and entity-batch notifications.
+	 * C++ implementations must be thread safe. NotifyStart is called before Run returns. NotifyBatch runs on workers
+	 * and may overlap across nodes and sessions. Receivers are observers and must not
+	 * schedule work or mutate the active session. */
+	class SimilaritySessionReceiver :
+		public CoreRefCountObject<BNSimilaritySessionReceiver, BNNewSimilaritySessionReceiverReference,
+			BNFreeSimilaritySessionReceiver>
+	{
+		static void OnStartedCallback(void* ctxt, BNSimilaritySessionCompletion* completion);
+		static void OnUpdatedCallback(void* ctxt, BNSimilaritySessionNode* node, BNSimilarityProvider* provider,
+			const BNSimilarityEntityId* entities, size_t count);
+		static void FreeContextCallback(void* ctxt);
+
+	public:
+		SimilaritySessionReceiver();
+		SimilaritySessionReceiver(BNSimilaritySessionReceiver* receiver);
+
+		/*! Called when the session starts a run.
+
+		    This is mainly used to get the completion state for the run. */
+		virtual void NotifyStart(SimilaritySessionCompletion& completion) {}
+		/*! Called when a provider's results, resolution state, or applied metadata changes for a batch of entities. */
+		virtual void NotifyBatch(SimilaritySessionNode& node, SimilarityProvider& provider,
+			const std::vector<SimilarityEntityId>& entities)
+		{}
+	};
+
+	class CoreSimilaritySessionReceiver : public SimilaritySessionReceiver
+	{
+	public:
+		CoreSimilaritySessionReceiver(BNSimilaritySessionReceiver* receiver);
+
+		void NotifyStart(SimilaritySessionCompletion& completion) override;
+		void NotifyBatch(SimilaritySessionNode& node, SimilarityProvider& provider,
+			const std::vector<SimilarityEntityId>& entities) override;
+	};
+
+	/*! Tracks stop requests, progress, and timing for a session run. */
+	class SimilaritySessionCompletion :
+		public CoreRefCountObject<BNSimilaritySessionCompletion, BNNewSimilaritySessionCompletionReference,
+			BNFreeSimilaritySessionCompletion>
+	{
+	public:
+		SimilaritySessionCompletion(BNSimilaritySessionCompletion* completion);
+		/*! Creates an independent completion state, normally only for calling providers or resolvers directly. */
+		SimilaritySessionCompletion();
+
+		bool IsFinished() const;
+		/*! Asks the run to stop. Long-running callbacks should check IsStopRequested regularly. */
+		void RequestStop();
+		bool IsStopRequested() const;
+		/*! Returns progress from 0.0 to 1.0. Exactly 1.0 means the selected part of the run has finished. */
+		double GetProgress(const SimilaritySessionCompletionQuery& query) const;
+		/*! Increases progress for a node and one provider or resolver. Progress cannot decrease.
+
+		    \note Call this only from the provider or resolver selected by `query`. */
+		void SetProgress(const SimilaritySessionCompletionQuery& query, double progress);
+		/*! Returns elapsed time for the selected part of the run. */
+		std::chrono::milliseconds GetTiming(const SimilaritySessionCompletionQuery& query) const;
+	};
+
+	/*! Runs providers and resolvers over binaries arranged in a session graph. */
+	class SimilaritySession :
+		public CoreRefCountObject<BNSimilaritySession, BNNewSimilaritySessionReference, BNFreeSimilaritySession>
+	{
+	public:
+		SimilaritySession(BNSimilaritySession* session);
+		SimilaritySession();
+
+		SimilaritySessionId GetId() const;
+
+		/*! Adds a provider and schedules entities processed by earlier runs for the next run.
+
+		    \note Ignored while a run is active. */
+		void AddProvider(Ref<SimilarityProvider> provider);
+		/*! Removes a provider, clears its results, and marks affected entities for resolution.
+
+		    \note Ignored while a run is active. */
+		void RemoveProvider(SimilarityProvider& provider);
+		/*! Updates a provider already in the session and schedules previously processed entities again.
+
+		    Returns false during a run, when the provider is absent, or when it rejects the settings. */
+		bool UpdateProviderSettings(SimilarityProvider& provider, Settings& settings);
+		/*! Returns a provider, or `nullptr` if `id` is absent. */
+		Ref<SimilarityProvider> GetProvider(SimilarityProviderId id);
+		std::vector<Ref<SimilarityProvider>> GetProviders();
+
+		/*! Adds a resolver created for this session and marks entities processed by earlier runs for resolution.
+
+		    \note Returns false during a run, for a duplicate, or for a resolver from another session. */
+		bool AddResolver(Ref<SimilaritySessionResolver> resolver);
+		/*! Removes a resolver.
+
+		    \note Returns false during a run, or if it is absent or belongs to another session. */
+		bool RemoveResolver(SimilaritySessionResolver& resolver);
+		/*! Updates a resolver already in the session and marks previously processed entities for resolution.
+
+		    Returns false during a run, when the resolver is absent or belongs to another session, or when it rejects the
+		    settings. */
+		bool UpdateResolverSettings(SimilaritySessionResolver& resolver, Settings& settings);
+		/*! Returns a resolver, or `nullptr` if `id` is absent. */
+		Ref<SimilaritySessionResolver> GetResolver(SimilaritySessionResolverId id);
+		std::vector<Ref<SimilaritySessionResolver>> GetResolvers();
+		/*! Adds a receiver. A running session keeps using the receiver list it started with. */
+		void AddReceiver(Ref<SimilaritySessionReceiver> receiver);
+		/*! Removes a receiver. A running session keeps using the receiver list it started with. */
+		void RemoveReceiver(SimilaritySessionReceiver& receiver);
+		std::vector<Ref<SimilaritySessionReceiver>> GetReceivers();
+
+		Ref<SimilaritySessionGraph> GetGraph();
+		/*! Starts a background run with the current graph, providers, and resolvers. Changes are ignored until it finishes.
+
+		    \note Returns the active run's completion handle when already running. */
+		Ref<SimilaritySessionCompletion> Run();
+	};
+
 	struct LineFormatterSettings
 	{
 		Ref<HighLevelILFunction> highLevelIL;
@@ -24458,6 +25188,17 @@ namespace std
 		size_t operator()(argument_type const& value) const
 		{
 			return std::hash<std::string_view>()(value.operator std::string_view());
+		}
+	};
+
+	template <>
+	struct hash<BinaryNinja::SimilarityEntityRef>
+	{
+		size_t operator()(BinaryNinja::SimilarityEntityRef const& value) const
+		{
+			const size_t nodeHash = std::hash<BinaryNinja::SimilaritySessionNodeId>()(value.nodeId);
+			const size_t entityHash = std::hash<BinaryNinja::SimilarityEntityId>()(value.entityId);
+			return nodeHash ^ (entityHash + 0x9e3779b9 + (nodeHash << 6) + (nodeHash >> 2));
 		}
 	};
 }  // namespace std

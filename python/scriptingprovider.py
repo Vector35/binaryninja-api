@@ -1783,6 +1783,19 @@ def _get_current_ui_context(instance: PythonScriptingInstance):
 PythonScriptingProvider.register_magic_variable("current_ui_context", _get_current_ui_context)
 
 
+def _get_current_similarity_session(instance: PythonScriptingInstance):
+	if instance.interpreter.locals["current_ui_context"] is not None:
+		return instance.interpreter.locals["current_ui_context"].getCurrentSimilaritySession()
+	return None
+
+
+PythonScriptingProvider.register_magic_variable(
+	"current_similarity_session",
+	_get_current_similarity_session,
+	depends_on=["current_ui_context"],
+)
+
+
 def _get_current_ui_action_handler(instance: PythonScriptingInstance):
 	if instance.interpreter.locals["current_ui_context"] is not None:
 		return instance.interpreter.locals["current_ui_context"].getCurrentActionHandler()

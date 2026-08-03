@@ -27,8 +27,8 @@ nav = [
             { "Shared Cache" = "guide/sharedcache.md" },
             { "Kernel Cache" = "guide/kernelcache.md" },
             { "EFI Resolver" = "guide/efiresolver.md" },
+            { "Binary Similarity" = "guide/similarity.md" },
             { "WARP" = "guide/warp.md" },
-            { "BinExport / BinDiff" = "guide/binexport.md" },
             { "Guided Analysis" = "guide/guided_analysis.md" },
         ] },
         { "Debugger" = [

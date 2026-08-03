@@ -972,7 +972,7 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	{
 		uint8_t flagVal = GetFlag(expr.GetSourceFlag());
 		size_t bitIndex = expr.GetBitIndex();
-		return intx::uint512((flagVal >> bitIndex) & 1);
+		return MaskToSize(intx::uint512(flagVal) << bitIndex, sz);
 	}
 
 	// --- Two-operand arithmetic ---

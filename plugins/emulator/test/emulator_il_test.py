@@ -307,6 +307,12 @@ class FlagOpTests(ILTestBase):
         val = self.eval_to_reg(lambda il: il.flag_bit(8, 'c', 0), flags={'c': 1})
         self.assertEqual(val, 1)
 
+    def test_flag_bit_nonzero_index(self):
+        # FLAG_BIT places the flag AT the bit index (a left shift, like core's
+        # bool_to_int(flag) << index translation).
+        self.assertEqual(self.eval_to_reg(lambda il: il.flag_bit(8, 'c', 3), flags={'c': 1}), 8)
+        self.assertEqual(self.eval_to_reg(lambda il: il.flag_bit(8, 'c', 3), flags={'c': 0}), 0)
+
     def test_flag_cond(self):
         # LLIL_FCONDITION for "equal" is true when z is set.
         val = self.eval_to_reg(lambda il: il.flag_condition(LowLevelILFlagCondition_E), flags={'z': 1})

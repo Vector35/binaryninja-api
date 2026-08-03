@@ -505,5 +505,24 @@ except Exception:  # pragma: no cover - only for very old cores
     LowLevelILFlagCondition_E = 0
 
 
+class InvertedCarryConditionTests(ILTestBase):
+    """armv7's carry has CarryFlagWithInvertedSubtractRole: C set means no borrow,
+    so unsigned conditions must read the carry inverted relative to x86."""
+    arch_name = 'armv7'
+
+    def cond_value(self, cond, c):
+        from binaryninja import LowLevelILFlagCondition
+        return self.eval_to_reg(lambda il: il.flag_condition(LowLevelILFlagCondition[cond]),
+                                dest='r0', size=4, flags={'c': c})
+
+    def test_ult_is_not_carry(self):
+        self.assertEqual(self.cond_value('LLFC_ULT', c=0), 1)
+        self.assertEqual(self.cond_value('LLFC_ULT', c=1), 0)
+
+    def test_uge_is_carry(self):
+        self.assertEqual(self.cond_value('LLFC_UGE', c=1), 1)
+        self.assertEqual(self.cond_value('LLFC_UGE', c=0), 0)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -1596,8 +1596,13 @@ intx::uint512 LLILEmulator::EvalFlagCondition(BNLowLevelILFlagCondition cond, ui
 			s = val ? 0 : 1;
 			break;
 		case CarryFlagRole:
-		case CarryFlagWithInvertedSubtractRole:
 			c = val;
+			break;
+		case CarryFlagWithInvertedSubtractRole:
+			// The architecture's carry is inverted for subtracts (e.g. ARM): C set means no
+			// borrow. Normalize to "borrow occurred" so the condition formulas below apply
+			// unchanged, matching core's GetDefaultFlagConditionLowLevelIL.
+			c = val ? 0 : 1;
 			break;
 		case OverflowFlagRole:
 			o = val;

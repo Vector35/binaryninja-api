@@ -19,3 +19,9 @@
 [submodule "plugins/snippets"]
 	path = plugins/snippets
 	url = https://github.com/Vector35/snippets.git
+[submodule "vendor/bindiff"]
+	path = vendor/bindiff
+	url = https://github.com/Vector35/google_bindiff.git
+[submodule "vendor/binexport"]
+	path = vendor/binexport
+	url = https://github.com/Vector35/binexport.git

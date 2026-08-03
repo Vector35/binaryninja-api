@@ -309,6 +309,12 @@ bool Extension::Uninstall()
 }
 
 
+bool Extension::CancelUninstall()
+{
+	return BNPluginCancelUninstall(m_object);
+}
+
+
 bool Extension::Install(std::string versionID)
 {
 	char* versionIDStr = BNAllocString(versionID.c_str());

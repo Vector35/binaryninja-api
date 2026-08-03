@@ -20094,6 +20094,7 @@ namespace BinaryNinja {
 		bool AreDependenciesBeingInstalled() const;
 
 		bool Uninstall();
+		bool CancelUninstall();
 		bool Install(std::string versionID);
 		bool InstallDependencies();
 		// `force` ignores optional checks for platform/api compliance

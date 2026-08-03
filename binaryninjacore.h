@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 179
+#define BN_CURRENT_CORE_ABI_VERSION 180
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -8371,6 +8371,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNPluginInstall(BNPlugin* p, const char* versionID);
 	BINARYNINJACOREAPI bool BNPluginInstallDependencies(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginUninstall(BNPlugin* p);
+	BINARYNINJACOREAPI bool BNPluginCancelUninstall(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginUpdate(BNPlugin* p, const char* versionID);
 	BINARYNINJACOREAPI char** BNPluginGetPlatforms(BNPlugin* p, size_t* count);
 	BINARYNINJACOREAPI void BNFreePluginPlatforms(char** platforms, size_t count);

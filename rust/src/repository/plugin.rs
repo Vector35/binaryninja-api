@@ -253,6 +253,11 @@ impl Extension {
         unsafe { BNPluginUninstall(self.handle.as_ptr()) }
     }
 
+    /// Cancel an uninstall that is pending until restart.
+    pub fn cancel_uninstall(&self) -> bool {
+        unsafe { BNPluginCancelUninstall(self.handle.as_ptr()) }
+    }
+
     pub fn updated(&self, version_id: &str) -> bool {
         let version_id_raw = version_id.to_cstr();
         unsafe { BNPluginUpdate(self.handle.as_ptr(), version_id_raw.as_ptr()) }

@@ -127,6 +127,20 @@ class RegisterOpTests(ILTestBase):
         # low 64 bits land in rbx
         self.assertEqual(val, 0x2)
 
+    def test_reg_split_combined_width(self):
+        # reg_split size is the width of each half, so edx:eax (size 4) is an 8-byte value
+        # and the high register must survive into the combined result.
+        val = self.eval_to_reg(lambda il: il.reg_split(4, 'edx', 'eax'),
+                               regs={'rax': 0x2, 'rdx': 0x1}, size=8, dest='rbx')
+        self.assertEqual(val, 0x1_00000002)
+
+    def test_reg_split_divu_dp(self):
+        # divu.dp.4(edx:eax, ecx): the full 8-byte dividend 0x1_00000000 / 0x10 must use edx.
+        expr = lambda il: il.div_double_prec_unsigned(4, il.reg_split(4, 'edx', 'eax'),
+                                                      il.const(4, 0x10))
+        val = self.eval_to_reg(expr, regs={'rax': 0, 'rdx': 1}, size=4, dest='rbx')
+        self.assertEqual(val, 0x10000000)
+
 
 # ────────────────────────────────────────────────────────────────────────────
 # Arithmetic, logic, shifts, comparisons — one table entry per op

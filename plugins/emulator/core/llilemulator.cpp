@@ -961,8 +961,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 			? GetTempRegister(LLIL_GET_TEMP_REG_INDEX(hi)) : GetRegister(hi);
 		intx::uint512 loVal = LLIL_REG_IS_TEMP(lo)
 			? GetTempRegister(LLIL_GET_TEMP_REG_INDEX(lo)) : GetRegister(lo);
-		size_t loSize = LLIL_REG_IS_TEMP(lo) ? sz / 2 : m_arch->GetRegisterInfo(lo).size;
-		return MaskToSize((hiVal << (loSize * 8)) | loVal, sz);
+		// sz is the width of each half; the combined value is 2*sz wide
+		return (MaskToSize(hiVal, sz) << (sz * 8)) | MaskToSize(loVal, sz);
 	}
 
 	case LLIL_FLAG:
@@ -978,8 +978,8 @@ intx::uint512 LLILEmulator::EvalExpr(const LowLevelILInstruction& expr)
 	// --- Two-operand arithmetic ---
 	// Convention: operands are masked to the operation size `sz` up front, and the same
 	// masked values are used both for the computation and for the flag context recorded in
-	// m_lastArithmetic. (Double-precision ops below intentionally use sz/2-wide operands
-	// producing an sz-wide result, which is why they mask differently.)
+	// m_lastArithmetic. (Double-precision ops below involve 2*sz-wide values, which is why
+	// they mask differently.)
 	case LLIL_ADD:
 	{
 		intx::uint512 left = MaskToSize(EvalExpr(expr.GetLeftExpr()), sz);
@@ -1756,7 +1756,7 @@ void LLILEmulator::ExecuteCurrentInstruction()
 	{
 		uint32_t reg = instr.GetDestRegister();
 		m_lastArithmetic.valid = false;
-		intx::uint512 val = EvalExpr(instr.GetSourceExpr());
+		intx::uint512 val = MaskToSize(EvalExpr(instr.GetSourceExpr()), instr.size);
 		if (m_stopReason != ILEmulatorStopReason::Running)
 			return;
 		if (LLIL_REG_IS_TEMP(reg))
@@ -1777,20 +1777,13 @@ void LLILEmulator::ExecuteCurrentInstruction()
 		if (m_stopReason != ILEmulatorStopReason::Running)
 			return;
 
-		size_t loSize;
+		// instr.size is the width of each half: low gets the bottom sz bytes, high the next sz
+		intx::uint512 loVal = MaskToSize(val, instr.size);
+		intx::uint512 hiVal = MaskToSize(val >> (instr.size * 8), instr.size);
 		if (LLIL_REG_IS_TEMP(lo))
-		{
-			loSize = instr.size / 2;
-			SetTempRegister(LLIL_GET_TEMP_REG_INDEX(lo), MaskToSize(val, loSize));
-		}
+			SetTempRegister(LLIL_GET_TEMP_REG_INDEX(lo), loVal);
 		else
-		{
-			BNRegisterInfo loInfo = m_arch->GetRegisterInfo(lo);
-			loSize = loInfo.size;
-			SetRegister(lo, MaskToSize(val, loSize));
-		}
-
-		intx::uint512 hiVal = val >> (loSize * 8);
+			SetRegister(lo, loVal);
 		if (LLIL_REG_IS_TEMP(hi))
 			SetTempRegister(LLIL_GET_TEMP_REG_INDEX(hi), hiVal);
 		else

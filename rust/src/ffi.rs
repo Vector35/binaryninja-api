@@ -59,7 +59,8 @@ macro_rules! ffi_span {
 }
 
 macro_rules! new_id_type {
-    ($name:ident, $inner_type:ty) => {
+    ($(#[$meta:meta])* $name:ident, $inner_type:ty $(, $ffi_type:ty, $ffi_field:ident)?) => {
+        $(#[$meta])*
         #[derive(std::fmt::Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
         pub struct $name(pub $inner_type);
 
@@ -80,5 +81,19 @@ macro_rules! new_id_type {
                 write!(f, "{}", self.0)
             }
         }
+
+        $(
+            impl From<$ffi_type> for $name {
+                fn from(value: $ffi_type) -> Self {
+                    Self(value.$ffi_field)
+                }
+            }
+
+            impl From<$name> for $ffi_type {
+                fn from(value: $name) -> Self {
+                    Self { $ffi_field: value.0 }
+                }
+            }
+        )?
     };
 }

@@ -54,6 +54,7 @@ class BINARYNINJAUIAPI TokenizedTextView :
 
 	RenderContext m_render;
 	int m_cols, m_rows;
+	size_t m_contentCols = 0;
 	int m_wheelDelta;
 	bool m_updatingScrollBar;
 
@@ -73,6 +74,7 @@ class BINARYNINJAUIAPI TokenizedTextView :
 	QPointer<CommentDialog> m_commentDialog;
 
 	void adjustSize(int width, int height);
+	void updateContentWidth();
 
 	void scrollLines(int count);
 

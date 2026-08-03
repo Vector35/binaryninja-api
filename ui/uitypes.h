@@ -101,6 +101,7 @@ typedef BinaryNinja::Ref<BinaryNinja::Section> SectionRef;
 typedef BinaryNinja::Ref<BinaryNinja::Segment> SegmentRef;
 typedef BinaryNinja::Ref<BinaryNinja::MemoryMap> MemoryMapRef;
 typedef BinaryNinja::Ref<BinaryNinja::Settings> SettingsRef;
+typedef BinaryNinja::Ref<BinaryNinja::SimilaritySession> SimilaritySessionRef;
 typedef BinaryNinja::Ref<BinaryNinja::Snapshot> SnapshotRef;
 typedef BinaryNinja::Ref<BinaryNinja::Structure> StructureRef;
 typedef BinaryNinja::Ref<BinaryNinja::Symbol> SymbolRef;

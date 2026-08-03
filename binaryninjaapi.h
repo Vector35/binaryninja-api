@@ -14049,8 +14049,6 @@ namespace BinaryNinja {
 	  protected:
 		bool m_queryMode = false;
 
-		FlowGraph(BNFlowGraph* graph);
-
 		void FinishPrepareForLayout();
 		virtual void PrepareForLayout();
 		virtual void PopulateNodes();
@@ -14058,6 +14056,7 @@ namespace BinaryNinja {
 
 	  public:
 		FlowGraph();
+		FlowGraph(BNFlowGraph* graph);
 
 		/*! Get the Function associated with this FlowGraph
 

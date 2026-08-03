@@ -37,6 +37,12 @@ struct BINARYNINJAUIAPI SidebarIcon
 	static SidebarIcon generate(const QImage& src);
 };
 
+enum SidebarHeaderBehavior
+{
+	SidebarHeaderVisible,
+	SidebarHeaderHidden
+};
+
 /*!
     \ingroup sidebar
 */
@@ -75,6 +81,7 @@ public:
 	virtual void setPrimaryOrientation(Qt::Orientation /*orientation*/) {}
 
 	virtual QWidget* headerWidget() { return nullptr; }
+	virtual SidebarHeaderBehavior headerBehavior() const { return SidebarHeaderVisible; }
 };
 
 /*!

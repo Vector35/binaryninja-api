@@ -457,6 +457,12 @@ NameSpace NameSpace::FromAPIStruct(const BNNameSpace* name)
 }
 
 
+NameSpace NameSpace::ForSymbolType(BNSymbolType type)
+{
+	return NameSpace(type == ExternalSymbol ? DEFAULT_EXTERNAL_NAMESPACE : DEFAULT_INTERNAL_NAMESPACE);
+}
+
+
 TypeDefinitionLine TypeDefinitionLine::FromAPIStruct(BNTypeDefinitionLine* line)
 {
 	TypeDefinitionLine result;

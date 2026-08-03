@@ -4923,6 +4923,7 @@ namespace BinaryNinja {
 		BNNameSpace ToAPIStruct() const;
 		static void FreeAPIStruct(BNNameSpace* name);
 		static NameSpace FromAPIStruct(const BNNameSpace* name);
+		static NameSpace ForSymbolType(BNSymbolType type);
 	};
 
 	class StringRef

@@ -5701,19 +5701,13 @@ set<NameSpace> BinaryView::GetNameSpaces() const
 
 NameSpace BinaryView::GetInternalNameSpace()
 {
-	BNNameSpace ns = BNGetInternalNameSpace();
-	NameSpace nameSpace = NameSpace::FromAPIStruct(&ns);
-	BNFreeNameSpace(&ns);
-	return nameSpace;
+	return NameSpace(DEFAULT_INTERNAL_NAMESPACE);
 }
 
 
 NameSpace BinaryView::GetExternalNameSpace()
 {
-	BNNameSpace ns = BNGetExternalNameSpace();
-	NameSpace nameSpace = NameSpace::FromAPIStruct(&ns);
-	BNFreeNameSpace(&ns);
-	return nameSpace;
+	return NameSpace(DEFAULT_EXTERNAL_NAMESPACE);
 }
 
 

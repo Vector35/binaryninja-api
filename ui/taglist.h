@@ -162,6 +162,7 @@ class BINARYNINJAUIAPI TagList : public QTreeView, public FilterTarget
 	virtual void mousePressEvent(QMouseEvent* e) override;
 	virtual void wheelEvent(QWheelEvent* e) override;
 	virtual void resizeEvent(QResizeEvent* event) override;
+	virtual void scrollContentsBy(int dx, int dy) override;
 	void goToReference(const QModelIndex& idx);
 
 	void setFilter(const std::string& filter, FilterOptions options) override;

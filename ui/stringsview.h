@@ -228,6 +228,7 @@ class BINARYNINJAUIAPI StringsView : public QTableView, public View, public Filt
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
 	virtual void mousePressEvent(QMouseEvent* event) override;
 	virtual void paintEvent(QPaintEvent* event) override;
+	virtual void scrollContentsBy(int dx, int dy) override;
 	virtual bool event(QEvent* event) override;
 
   private Q_SLOTS:

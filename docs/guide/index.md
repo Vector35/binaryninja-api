@@ -1064,6 +1064,7 @@ The interactive Python prompt also has several built-in "magic" functions and va
 - `current_selection`: a tuple of the start and end addresses of the current selection. It's settable and will change the current selection
 - `current_raw_offset`: the file offset that corresponds to the current address. It's settable and will navigate to the corresponding file offset
 - `bv` / `current_view` / : the current [`BinaryView`](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView)
+- `current_similarity_session`: the active window's [`SimilaritySession`](https://api.binary.ninja/binaryninja.similarity-module.html#binaryninja.similarity.SimilaritySession), or `None` if the Binary Similarity sidebar has not been opened
 - `current_function`: the current [`Function`](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function)
 - `current_basic_block`: the current [`BasicBlock`](https://api.binary.ninja/binaryninja.basicblock-module.html#binaryninja.basicblock.BasicBlock)
 - `current_llil`: the current [`LowLevelILFunction`](https://api.binary.ninja/binaryninja.lowlevelil-module.html#binaryninja.lowlevelil.LowLevelILFunction)

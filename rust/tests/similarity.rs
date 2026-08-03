@@ -248,6 +248,10 @@ impl SimilaritySessionReceiver for TestReceiver {
 #[test]
 fn similarity_session_workflow() {
     let _headless_session = HeadlessSession::new().expect("Failed to initialize session");
+    let is_ultimate = matches!(
+        binaryninja::product().as_str(),
+        "Binary Ninja Enterprise Client" | "Binary Ninja Ultimate"
+    );
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let fixture = out_dir.join("atox.obj");
     let root_view = binaryninja::load(&fixture).expect("Failed to create root view");
@@ -264,9 +268,12 @@ fn similarity_session_workflow() {
     let provider_settings = provider_type
         .default_settings()
         .expect("test provider has default settings");
-    let provider = provider_type
-        .create_provider(&provider_settings)
-        .expect("test provider can be created");
+    let provider = provider_type.create_provider(&provider_settings);
+    if !is_ultimate {
+        assert!(provider.is_none());
+        return;
+    }
+    let provider = provider.expect("test provider can be created in Ultimate");
     assert_eq!(provider.provider_type().name(), TestProviderType::NAME);
 
     let session = SimilaritySession::new();

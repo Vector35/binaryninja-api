@@ -1,4 +1,4 @@
-# Binary Similarity
+# Binary Similarity (Experimental)
 
 Binary Similarity compares functions across two or more related binaries. It can help identify new or removed functions, port
 analysis information to new versions, and show how matched functions changed. Comparisons are organized into a session so

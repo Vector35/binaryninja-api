@@ -55,7 +55,7 @@ While you might associate actions with UI based actions in the product, many act
 
 ```python
 cxt = PluginCommandContext(bv)
-PluginCommand.get_valid_list(cxt)['BinExport (Quick)'].execute(cxt)
+PluginCommand.get_valid_list(cxt)['BinExport'].execute(cxt)
 ```
 
 ### Multiple files
@@ -189,4 +189,3 @@ import binaryninja
 ```
 
 Other alternative solutions include setting the environment variable before running your script, or manually moving your settings file from your [user folder](../guide/index.md#user-folder) before running your automation.
-

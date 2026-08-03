@@ -45,6 +45,8 @@
 #include "clickablelabel.h"
 #include "theme.h"
 
+class QSplitter;
+
 /*!
 
 	\defgroup settingsview SettingsView
@@ -524,6 +526,7 @@ class BINARYNINJAUIAPI SettingsView : public QWidget
   private:
 	QWidget* m_owner = nullptr;
 	SettingsRef m_settings;
+	QSplitter* m_splitter = nullptr;
 	SettingsFilterProxyModel* m_proxyModel = nullptr;
 	SettingsOutlineProxyModel* m_outlineProxyModel = nullptr;
 	QTreeView* m_outlineView = nullptr;
@@ -548,6 +551,7 @@ class BINARYNINJAUIAPI SettingsView : public QWidget
 	void refreshCurrentScope();
 	void setData(BinaryViewRef view, const QString& name = "");
 	void setScope(BNSettingsScope scope);
+	void setOutlineVisible(bool visible);
 	void setDefaultGroupSelection(const QString& group, const QString& subgroup = "");
 	void focusSearch();
 	void setSearchFilter(const QString& filter) { if (m_search) m_search->setText(filter); };

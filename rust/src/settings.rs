@@ -35,6 +35,10 @@ pub struct Settings {
 }
 
 impl Settings {
+    pub(crate) unsafe fn from_raw(handle: *mut BNSettings) -> Self {
+        Self { handle }
+    }
+
     pub(crate) unsafe fn ref_from_raw(handle: *mut BNSettings) -> Ref<Self> {
         debug_assert!(!handle.is_null());
         Ref::new(Self { handle })
@@ -517,11 +521,11 @@ impl Settings {
         unsafe { BNSettingsRegisterGroup(self.handle, group.as_ptr(), title.as_ptr()) }
     }
 
-    pub fn register_setting_json(&self, group: &str, properties: &str) -> bool {
-        let group = group.to_cstr();
+    pub fn register_setting_json(&self, key: &str, properties: &str) -> bool {
+        let key = key.to_cstr();
         let properties = properties.to_cstr();
 
-        unsafe { BNSettingsRegisterSetting(self.handle, group.as_ptr(), properties.as_ptr()) }
+        unsafe { BNSettingsRegisterSetting(self.handle, key.as_ptr(), properties.as_ptr()) }
     }
 
     // TODO: register_setting but type-safely turn it into json

@@ -22,6 +22,7 @@
 
 #include <compare>  // IWYU pragma: keep
 #include <stddef.h>
+#include <concepts>
 #include <functional>
 #include <type_traits>
 #include <utility>
@@ -89,6 +90,8 @@
 //     Hashable        usable as a key in std and absl hash containers
 //     Formattable     formattable with fmt, forwarding format specs such as {:#x} to the
 //                     underlying type's formatter
+//     FfiWrapper      implicit conversion to and from a C-style wrapper structure through
+//                     the specified member, without making the underlying type implicit
 //     NonExtractable  removes the explicit operator T() and the Value() accessor, so the
 //                     underlying value can be constructed but never read back out. Every
 //                     other modifier continues to function as normal.
@@ -114,6 +117,25 @@ namespace detail {
 // True when Modifier appears in the Mods pack.
 template <typename Modifier, typename... Mods>
 inline constexpr bool HasModifier = (std::is_same_v<Modifier, Mods> || ...);
+
+template <typename Mod, typename Ffi, typename T>
+concept FfiWrapperFor = requires(const Ffi& value) {
+	typename Mod::FfiType;
+	requires std::same_as<typename Mod::FfiType, Ffi>;
+	{ Mod::template FromFfi<T>(value) } -> std::same_as<T>;
+};
+
+template <typename Ffi, typename T, typename... Mods>
+inline constexpr bool HasFfiWrapper = (FfiWrapperFor<Mods, Ffi, T> || ...);
+
+template <typename T, typename Ffi, typename First, typename... Rest>
+constexpr T FromFfi(const Ffi& value)
+{
+	if constexpr (FfiWrapperFor<First, Ffi, T>)
+		return First::template FromFfi<T>(value);
+	else
+		return FromFfi<T, Ffi, Rest...>(value);
+}
 
 // Internal access to a StrongTypedef's underlying value so that modifiers have
 // access to it even when NonExtractable is in use.
@@ -409,6 +431,33 @@ struct Formattable
 	};
 };
 
+// Enables implicit conversion to and from a C-style wrapper structure whose selected
+// member stores the StrongTypedef's underlying value. Conversion to the underlying type
+// itself remains explicit.
+template <typename Ffi, auto ValueMember>
+struct FfiWrapper
+{
+	using FfiType = Ffi;
+
+	template <typename T>
+	static constexpr T FromFfi(const Ffi& value)
+	{
+		return T(value.*ValueMember);
+	}
+
+	template <typename Self, typename T>
+		requires requires(Ffi ffi, const T& value) { ffi.*ValueMember = value; }
+	struct Apply
+	{
+		constexpr operator Ffi() const
+		{
+			Ffi result {};
+			result.*ValueMember = detail::Access::Get(static_cast<const Self&>(*this));
+			return result;
+		}
+	};
+};
+
 // Disable both the explicit operator T() and the Value() accessor.
 // All other modifiers continue to function as normal.
 struct NonExtractable
@@ -434,6 +483,13 @@ public:
 
 	explicit constexpr StrongTypedef(T&& value) noexcept(std::is_nothrow_move_constructible_v<T>)
 		: m_value(std::move(value))
+	{
+	}
+
+	template <typename Ffi>
+		requires detail::HasFfiWrapper<std::remove_cvref_t<Ffi>, T, Mods...>
+	constexpr StrongTypedef(Ffi&& value)
+		: m_value(detail::FromFfi<T, std::remove_cvref_t<Ffi>, Mods...>(value))
 	{
 	}
 

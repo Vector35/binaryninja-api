@@ -376,6 +376,16 @@ struct BINARYNINJAUIAPI AddressFromInputOptions
 
 
 /*!
+	Controls whether navigation transfers keyboard and window focus to the destination view.
+	\ingroup viewframe
+*/
+enum class ViewNavigationFocusBehavior
+{
+	FocusDestination,
+	PreserveCurrentFocus
+};
+
+/*!
 
 	\ingroup viewframe
 */
@@ -413,6 +423,7 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	bool gestureEvent(QGestureEvent* event);
 
 	void setView(QWidget* view);
+	void setView(QWidget* view, ViewNavigationFocusBehavior focusBehavior);
 
 	bool tryMainSymbolsNavigation();
 
@@ -443,6 +454,7 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 	bool isGraphViewPreferred();
 	void setPriorityView(const QString& viewType, bool isBinaryDataNavigable);
 	bool setViewType(const QString& viewType);
+	bool setViewType(const QString& viewType, ViewNavigationFocusBehavior focusBehavior);
 	void focus();
 
 	Sidebar* getSidebar();
@@ -461,10 +473,14 @@ class BINARYNINJAUIAPI ViewFrame : public QWidget
 
 	bool navigate(const QString& type, uint64_t offset, bool updateInfo = true, bool addHistoryEntry = true, bool checkNavigable = false);
 	bool navigate(const QString& type, const std::function<bool(View*)>& handler, bool updateInfo = true, bool addHistoryEntry = true, bool checkNavigable = false);
+	bool navigate(const QString& type, const std::function<bool(View*)>& handler, bool updateInfo,
+		bool addHistoryEntry, bool checkNavigable, ViewNavigationFocusBehavior focusBehavior);
 	bool navigate(BinaryViewRef data, uint64_t offset, bool updateInfo = true, bool addHistoryEntry = true);
 	bool navigateToFunction(FunctionRef func, uint64_t offset, bool updateInfo = true, bool addHistoryEntry = true);
 	bool goToReference(BinaryViewRef data, FunctionRef func, uint64_t source, uint64_t target, bool addHistoryEntry = true);
 	bool navigateToViewLocation(BinaryViewRef data, const ViewLocation& viewLocation, bool addHistoryEntry = true, bool center = false);
+	bool navigateToViewLocation(BinaryViewRef data, const ViewLocation& viewLocation, bool addHistoryEntry,
+		bool center, ViewNavigationFocusBehavior focusBehavior);
 	bool navigateToHistoryEntry(BinaryNinja::Ref<HistoryEntry> entry);
 	QString getTypeForView(QWidget* view) const;
 	QString getDataTypeForView(const QString& type) const;

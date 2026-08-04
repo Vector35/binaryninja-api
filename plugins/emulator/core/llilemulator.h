@@ -93,6 +93,7 @@ namespace BinaryNinjaEmulator
 		// Cross-function call support
 		bool EnterFunction(uint64_t addr, size_t returnIndex);
 		bool ReturnToCaller();
+		void ReturnFromEmulatedTailCall();
 		uint64_t GetNativeReturnAddress() const;
 
 		// Resolve the calling convention used to place/read arguments and return values: the

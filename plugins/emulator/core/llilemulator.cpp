@@ -490,6 +490,19 @@ bool LLILEmulator::ReturnToCaller()
 }
 
 
+void LLILEmulator::ReturnFromEmulatedTailCall()
+{
+	// The target of a tailcall would have returned straight to our caller. Pop the native
+	// return address its return would have consumed (pushed by the caller's CALL when the
+	// architecture links through the stack), then resume in the caller; at the top level
+	// this halts just like a top-level return.
+	if (m_arch->GetLinkRegister() == BN_INVALID_REGISTER)
+		Pop(m_arch->GetAddressSize());
+	if (!ReturnToCaller())
+		SetStopReason(ILEmulatorStopReason::Halt, "return");
+}
+
+
 uint64_t LLILEmulator::GetNativeReturnAddress() const
 {
 	if (!m_il || m_instrIndex >= m_il->GetInstructionCount())
@@ -1997,11 +2010,17 @@ void LLILEmulator::ExecuteCurrentInstruction()
 		if (m_stopReason != ILEmulatorStopReason::Running)
 			return;
 
-		if (m_builtinLibcStubs && HandleBuiltinCall(dest))
-			break;
-
-		if (m_callHook && m_callHook(this, dest))
-			break;
+		// A tailcall's target never returns to the tailcall site: when the target is
+		// emulated out (builtin stub or call hook), continue as if it returned — back to
+		// the current function's caller — instead of falling through to the instruction
+		// after the tailcall.
+		if ((m_builtinLibcStubs && HandleBuiltinCall(dest))
+			|| (m_callHook && m_callHook(this, dest)))
+		{
+			if (m_stopReason == ILEmulatorStopReason::Running)
+				ReturnFromEmulatedTailCall();
+			return;
+		}
 
 		// A builtin stub or call hook may have requested a stop (e.g. an error) without
 		// returning true; don't fall through into the tailcall in that case.
@@ -2032,7 +2051,10 @@ void LLILEmulator::ExecuteCurrentInstruction()
 		}
 
 		if (HandleUnknownCall(dest))
-			break;
+		{
+			ReturnFromEmulatedTailCall();
+			return;
+		}
 
 		SetStopReason(ILEmulatorStopReason::CallHook,
 			fmt::format("tailcall to 0x{:x}", dest));

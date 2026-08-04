@@ -366,6 +366,24 @@ class ControlFlowOpTests(ILTestBase):
         emu.run()
         self.assertEqual(emu.get_register('rax'), 0x600d)
 
+    def test_handled_tailcall_returns_instead_of_falling_through(self):
+        # A tailcall is terminal: it has no fall-through successor, and its target returns
+        # to the current function's caller. When the call hook emulates the target, the
+        # emulator must behave as if the target returned (here: top-level, so it halts).
+        # The set_reg after the tailcall stands in for whatever unrelated instruction sits
+        # next in the flat IL array (e.g. another basic block) — it must never execute.
+        seen = []
+        def emit(il):
+            il.append(il.set_reg(8, 'rax', il.const(8, 1)))
+            il.append(il.tailcall(il.const_pointer(8, 0x111000)))
+            il.append(il.set_reg(8, 'rax', il.const(8, 0xbad)))
+        emu = self.build(emit, terminate=False)
+        emu.set_call_hook(lambda e, target: (seen.append(target), True)[1])
+        reason = emu.run()
+        self.assertEqual(seen, [0x111000])
+        self.assertEqual(reason, ILEmulatorStopReason.ILEmulatorHalt)
+        self.assertEqual(emu.get_register('rax'), 1)
+
     def test_goto_self_does_not_advance(self):
         # A branch that lands on its own index must stay put (the step loop used to
         # treat "index unchanged" as fall-through and advance past it).

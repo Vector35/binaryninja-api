@@ -99,9 +99,23 @@ namespace BinaryNinjaEmulator
 		std::string m_stopMessage;
 		std::atomic<bool> m_stopRequested {false};
 
+		// Executes the instruction at m_instrIndex and must leave m_instrIndex pointing at
+		// the next instruction to execute — advancing past the instruction for fall-through,
+		// or setting the branch/call/return target. The driver loops never move the index
+		// themselves: only the implementation knows whether an instruction transferred
+		// control (comparing indices is ambiguous, since a call or return can land on the
+		// same numeric index in a different function).
 		virtual void ExecuteCurrentInstruction() = 0;
 		virtual size_t GetInstructionCount() const = 0;
 		virtual uint64_t GetCurrentInstructionAddress() const = 0;
+
+		// Halts with "ran off end of IL" and returns true when the current instruction
+		// index is past the end of the current function's IL.
+		bool CheckEndOfIL();
+		// Executes the current instruction via ExecuteCurrentInstruction. Returns false
+		// when execution cannot continue (end of IL, or a stop condition was raised by
+		// the instruction).
+		bool StepOnce();
 
 		intx::uint512 ReadMemoryValue(uint64_t addr, size_t size);
 		void WriteMemoryValue(uint64_t addr, const intx::uint512& value, size_t size);
@@ -142,7 +156,7 @@ namespace BinaryNinjaEmulator
 
 		// State
 		size_t GetInstructionIndex() const;
-		void SetInstructionIndex(size_t index);
+		virtual void SetInstructionIndex(size_t index);
 		uint64_t GetCurrentAddress() const;
 		ILEmulatorStopReason GetStopReason() const;
 		const std::string& GetStopMessage() const;

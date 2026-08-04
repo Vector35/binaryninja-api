@@ -279,6 +279,28 @@ ILEmulator::ILEmulator()
 ILEmulator::~ILEmulator() {}
 
 
+bool ILEmulator::CheckEndOfIL()
+{
+	if (m_instrIndex >= GetInstructionCount())
+	{
+		SetStopReason(ILEmulatorStopReason::Halt, "ran off end of IL");
+		return true;
+	}
+	return false;
+}
+
+
+bool ILEmulator::StepOnce()
+{
+	if (CheckEndOfIL())
+		return false;
+
+	ExecuteCurrentInstruction();
+	m_instructionsExecuted++;
+	return m_stopReason == ILEmulatorStopReason::Running;
+}
+
+
 ILEmulatorStopReason ILEmulator::Run()
 {
 	m_stopReason = ILEmulatorStopReason::Running;
@@ -305,11 +327,8 @@ ILEmulatorStopReason ILEmulator::Run()
 			break;
 		}
 
-		if (m_instrIndex >= GetInstructionCount())
-		{
-			SetStopReason(ILEmulatorStopReason::Halt, "ran off end of IL");
+		if (CheckEndOfIL())
 			break;
-		}
 
 		m_currentAddress = GetCurrentInstructionAddress();
 
@@ -328,13 +347,8 @@ ILEmulatorStopReason ILEmulator::Run()
 			break;
 		}
 
-		size_t prevIndex = m_instrIndex;
-		ExecuteCurrentInstruction();
-		m_instructionsExecuted++;
-
-		// If ExecuteCurrentInstruction didn't change the index, advance to next
-		if (m_instrIndex == prevIndex && m_stopReason == ILEmulatorStopReason::Running)
-			m_instrIndex++;
+		if (!StepOnce())
+			break;
 	}
 	return m_stopReason;
 }
@@ -354,18 +368,8 @@ ILEmulatorStopReason ILEmulator::StepN(size_t n)
 
 	for (size_t i = 0; i < n && m_stopReason == ILEmulatorStopReason::Running; i++)
 	{
-		if (m_instrIndex >= GetInstructionCount())
-		{
-			SetStopReason(ILEmulatorStopReason::Halt, "ran off end of IL");
+		if (!StepOnce())
 			break;
-		}
-
-		size_t prevIndex = m_instrIndex;
-		ExecuteCurrentInstruction();
-		m_instructionsExecuted++;
-
-		if (m_instrIndex == prevIndex && m_stopReason == ILEmulatorStopReason::Running)
-			m_instrIndex++;
 	}
 
 	m_currentAddress = GetCurrentInstructionAddress();

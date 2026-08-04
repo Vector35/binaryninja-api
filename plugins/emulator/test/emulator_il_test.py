@@ -366,6 +366,21 @@ class ControlFlowOpTests(ILTestBase):
         emu.run()
         self.assertEqual(emu.get_register('rax'), 0x600d)
 
+    def test_goto_self_does_not_advance(self):
+        # A branch that lands on its own index must stay put (the step loop used to
+        # treat "index unchanged" as fall-through and advance past it).
+        from binaryninja import LowLevelILLabel
+        def emit(il):
+            top = LowLevelILLabel()
+            il.mark_label(top)
+            il.append(il.goto(top))
+        emu = self.build(emit)
+        emu.step()
+        self.assertEqual(emu.instruction_index, 0)
+        emu.set_max_instructions(16)
+        self.assertEqual(emu.run(), ILEmulatorStopReason.ILEmulatorInstructionLimit)
+        self.assertEqual(emu.instruction_index, 0)
+
     def test_if_taken_and_not_taken(self):
         from binaryninja import LowLevelILLabel
         def make(cond_true):

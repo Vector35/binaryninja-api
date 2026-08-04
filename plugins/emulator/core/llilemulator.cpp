@@ -96,8 +96,16 @@ void LLILEmulator::SetEntryPoint(LowLevelILFunction* il, size_t instrIndex)
 	m_il = il;
 	SetActiveArchitecture(il->GetArchitecture());
 	m_instrIndex = instrIndex;
+	m_pcRedirected = true;
 	m_currentAddress = GetCurrentInstructionAddress();
 	m_callStack.clear();
+}
+
+
+void LLILEmulator::SetInstructionIndex(size_t index)
+{
+	ILEmulator::SetInstructionIndex(index);
+	m_pcRedirected = true;
 }
 
 
@@ -370,18 +378,12 @@ ILEmulatorStopReason LLILEmulator::StepOver()
 	m_stopMessage.clear();
 	m_stopRequested.store(false, std::memory_order_relaxed);
 
-	if (m_instrIndex >= GetInstructionCount())
+	// Execute one instruction
+	if (!StepOnce())
 	{
-		SetStopReason(ILEmulatorStopReason::Halt, "ran off end of IL");
+		m_currentAddress = GetCurrentInstructionAddress();
 		return m_stopReason;
 	}
-
-	// Execute one instruction
-	size_t prevIndex = m_instrIndex;
-	ExecuteCurrentInstruction();
-	m_instructionsExecuted++;
-	if (m_instrIndex == prevIndex && m_stopReason == ILEmulatorStopReason::Running)
-		m_instrIndex++;
 
 	// If we didn't enter a deeper function, we're done
 	if (m_callStack.size() <= targetDepth || m_stopReason != ILEmulatorStopReason::Running)
@@ -412,11 +414,8 @@ ILEmulatorStopReason LLILEmulator::StepOver()
 			break;
 		}
 
-		if (m_instrIndex >= GetInstructionCount())
-		{
-			SetStopReason(ILEmulatorStopReason::Halt, "ran off end of IL");
+		if (CheckEndOfIL())
 			break;
-		}
 
 		m_currentAddress = GetCurrentInstructionAddress();
 
@@ -432,11 +431,8 @@ ILEmulatorStopReason LLILEmulator::StepOver()
 			break;
 		}
 
-		prevIndex = m_instrIndex;
-		ExecuteCurrentInstruction();
-		m_instructionsExecuted++;
-		if (m_instrIndex == prevIndex && m_stopReason == ILEmulatorStopReason::Running)
-			m_instrIndex++;
+		if (!StepOnce())
+			break;
 	}
 
 	m_currentAddress = GetCurrentInstructionAddress();
@@ -1751,6 +1747,7 @@ void LLILEmulator::ExecuteCurrentInstruction()
 {
 	LowLevelILInstruction instr = m_il->GetInstruction(m_instrIndex);
 	m_currentAddress = instr.address;
+	m_pcRedirected = false;
 
 	switch (instr.operation)
 	{
@@ -1898,11 +1895,11 @@ void LLILEmulator::ExecuteCurrentInstruction()
 
 		// 1) Try built-in stubs first
 		if (m_builtinLibcStubs && HandleBuiltinCall(dest))
-			return;
+			break;
 
 		// 2) Let the hook handle it (e.g., stub a library call)
 		if (m_callHook && m_callHook(this, dest))
-			return;
+			break;
 
 		// A builtin stub or call hook may have requested a stop (e.g. an error) without
 		// returning true; don't fall through into the call in that case.
@@ -1928,7 +1925,7 @@ void LLILEmulator::ExecuteCurrentInstruction()
 
 		// 4) Treat unknown external calls as no-op if enabled
 		if (HandleUnknownCall(dest))
-			return;
+			break;
 
 		// 5) Cannot resolve — stop
 		SetStopReason(ILEmulatorStopReason::CallHook,
@@ -1948,7 +1945,7 @@ void LLILEmulator::ExecuteCurrentInstruction()
 			uint32_t sp = m_arch->GetStackPointerRegister();
 			uint64_t spVal = static_cast<uint64_t>(GetRegister(sp));
 			SetRegister(sp, intx::uint512(spVal + (uint64_t)adj));
-			return;
+			break;
 		}
 
 		if (m_callHook && m_callHook(this, dest))
@@ -1957,7 +1954,7 @@ void LLILEmulator::ExecuteCurrentInstruction()
 			uint32_t sp = m_arch->GetStackPointerRegister();
 			uint64_t spVal = static_cast<uint64_t>(GetRegister(sp));
 			SetRegister(sp, intx::uint512(spVal + (uint64_t)adj));
-			return;
+			break;
 		}
 
 		// A builtin stub or call hook may have requested a stop (e.g. an error) without
@@ -1986,7 +1983,7 @@ void LLILEmulator::ExecuteCurrentInstruction()
 			uint32_t sp = m_arch->GetStackPointerRegister();
 			uint64_t spVal = static_cast<uint64_t>(GetRegister(sp));
 			SetRegister(sp, intx::uint512(spVal + (uint64_t)adj));
-			return;
+			break;
 		}
 
 		SetStopReason(ILEmulatorStopReason::CallHook,
@@ -2129,6 +2126,12 @@ void LLILEmulator::ExecuteCurrentInstruction()
 				(int)instr.operation, instr.address));
 		return;
 	}
+
+	// Reaching here means the instruction fell through (control-transfer handlers return
+	// above after setting m_instrIndex). Advance to the next instruction unless a hook
+	// redirected the PC or a stop was raised mid-instruction.
+	if (m_stopReason == ILEmulatorStopReason::Running && !m_pcRedirected)
+		m_instrIndex++;
 }
 
 

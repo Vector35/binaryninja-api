@@ -66,6 +66,11 @@ namespace BinaryNinjaEmulator
 		bool m_heapMapped = false;
 		std::unordered_map<uint64_t, size_t> m_heapAllocations;
 
+		// Set when the PC is redirected from outside ExecuteCurrentInstruction's own
+		// dispatch (SetInstructionIndex/SetEntryPoint called by a hook mid-instruction),
+		// so the fall-through advance at the end of the dispatch is suppressed.
+		bool m_pcRedirected = false;
+
 		// Core dispatch
 		intx::uint512 EvalExpr(const BinaryNinja::LowLevelILInstruction& expr);
 		void ExecuteCurrentInstruction() override;
@@ -155,6 +160,8 @@ namespace BinaryNinjaEmulator
 
 		bool SetEntryPoint(uint64_t addr);
 		void SetEntryPoint(BinaryNinja::LowLevelILFunction* il, size_t instrIndex);
+
+		void SetInstructionIndex(size_t index) override;
 
 		// Argument setup (uses the emulated function's calling convention, falling back to
 		// the platform default)

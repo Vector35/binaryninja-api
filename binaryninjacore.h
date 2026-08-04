@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 179
+#define BN_CURRENT_CORE_ABI_VERSION 180
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 179
+#define BN_MINIMUM_CORE_ABI_VERSION 180
 
 #define BN_DEMANGLER_MSVC "MS"
 #define BN_DEMANGLER_GNU3 "GNU3"
@@ -4082,6 +4082,17 @@ extern "C"
 		uint64_t infoData;
 	} BNSectionInfo;
 
+	// Classification of a memory region by its backing. Display/diagnostic only.
+	BN_ENUM(uint8_t, BNMemoryRegionKind)
+	{
+		LoadSegmentMemoryRegion,   // projection of an auto/user Segment (the loaded image)
+		MappedMemoryRegion,        // maps a range of the parent file (see BNAddMappedMemoryRegion)
+		DataMemoryRegion,          // backed by an in-memory data buffer
+		UnbackedMemoryRegion,      // no backing; reads return the fill byte
+		RemoteMemoryRegion,        // backed by an external FileAccessor or foreign BinaryView (ephemeral)
+		LogicalMemoryRegion        // backed by another MemoryMap (logical view)
+	};
+
 	typedef struct BNMemoryRegionInfo {
 		char* name;
 		char* displayName;
@@ -4094,6 +4105,8 @@ extern "C"
 		bool hasTarget;
 		bool absoluteAddressMode;
 		bool local;
+		uint64_t dataOffset;
+		BNMemoryRegionKind kind;
 	} BNMemoryRegionInfo;
 
 	typedef struct BNResolvedMemoryRange {
@@ -4825,6 +4838,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNAddBinaryMemoryRegion(BNBinaryView* view, const char* name, uint64_t start, BNBinaryView* data, uint32_t flags);
 	BINARYNINJACOREAPI bool BNAddDataMemoryRegion(BNBinaryView* view, const char* name, uint64_t start, BNDataBuffer* data, uint32_t flags);
 	BINARYNINJACOREAPI bool BNAddUnbackedMemoryRegion(BNBinaryView* view, const char* name, uint64_t start, uint64_t length, uint32_t flags, uint8_t fill);
+	BINARYNINJACOREAPI bool BNAddMappedMemoryRegion(BNBinaryView* view, const char* name, uint64_t start, uint64_t length, uint64_t fileOffset, uint32_t flags);
 	BINARYNINJACOREAPI bool BNAddRemoteMemoryRegion(BNBinaryView* view, const char* name, uint64_t start, BNFileAccessor* accessor, uint32_t flags);
 	BINARYNINJACOREAPI bool BNRemoveMemoryRegion(BNBinaryView* view, const char* name);
 	BINARYNINJACOREAPI char* BNGetActiveMemoryRegionAt(BNBinaryView* view, uint64_t addr);
@@ -4987,8 +5001,11 @@ extern "C"
 	BINARYNINJACOREAPI void BNAddAutoSegment(BNBinaryView* view, uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags);
 	BINARYNINJACOREAPI void BNAddAutoSegments(BNBinaryView* view, const BNSegmentInfo* segmentInfo, size_t count);
 	BINARYNINJACOREAPI void BNRemoveAutoSegment(BNBinaryView* view, uint64_t start, uint64_t length);
+	// Deprecated: user segments are superseded by mapped memory regions; use BNAddMappedMemoryRegion
 	BINARYNINJACOREAPI void BNAddUserSegment(BNBinaryView* view, uint64_t start, uint64_t length, uint64_t dataOffset, uint64_t dataLength, uint32_t flags);
+	// Deprecated: user segments are superseded by mapped memory regions; use BNAddMappedMemoryRegion
 	BINARYNINJACOREAPI void BNAddUserSegments(BNBinaryView* view, const BNSegmentInfo* segmentInfo, size_t count);
+	// Deprecated: user segments are superseded by mapped memory regions; use BNRemoveMemoryRegion
 	BINARYNINJACOREAPI void BNRemoveUserSegment(BNBinaryView* view, uint64_t start, uint64_t length);
 	BINARYNINJACOREAPI BNSegment** BNGetSegments(BNBinaryView* view, size_t* count);
 	BINARYNINJACOREAPI void BNFreeSegmentList(BNSegment** segments, size_t count);

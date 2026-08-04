@@ -6,6 +6,37 @@ use crate::segment::SegmentFlags;
 use crate::string::{raw_to_string, BnString, IntoCStr};
 use binaryninjacore_sys::*;
 
+/// Classification of a memory region by its backing (display/diagnostic only).
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum MemoryRegionKind {
+    /// Projection of an auto/user segment (the loaded image).
+    LoadSegment,
+    /// Maps a range of the parent file.
+    Mapped,
+    /// Backed by an in-memory data buffer.
+    Data,
+    /// No backing; reads return the fill byte.
+    Unbacked,
+    /// Backed by an external FileAccessor or foreign BinaryView (ephemeral).
+    Remote,
+    /// Backed by another MemoryMap (logical view).
+    Logical,
+}
+
+impl From<BNMemoryRegionKind> for MemoryRegionKind {
+    fn from(kind: BNMemoryRegionKind) -> Self {
+        use BNMemoryRegionKind::*;
+        match kind {
+            LoadSegmentMemoryRegion => Self::LoadSegment,
+            MappedMemoryRegion => Self::Mapped,
+            DataMemoryRegion => Self::Data,
+            UnbackedMemoryRegion => Self::Unbacked,
+            RemoteMemoryRegion => Self::Remote,
+            LogicalMemoryRegion => Self::Logical,
+        }
+    }
+}
+
 /// Snapshot of a memory region's properties at the time of query.
 ///
 /// This is a value type — modifying the memory map will not update existing
@@ -24,6 +55,8 @@ pub struct MemoryRegionInfo {
     pub has_target: bool,
     pub absolute_address_mode: bool,
     pub local: bool,
+    pub data_offset: u64,
+    pub kind: MemoryRegionKind,
 }
 
 impl MemoryRegionInfo {
@@ -44,6 +77,8 @@ impl MemoryRegionInfo {
             has_target: region.hasTarget,
             absolute_address_mode: region.absoluteAddressMode,
             local: region.local,
+            data_offset: region.dataOffset,
+            kind: region.kind.into(),
         }
     }
 }
@@ -352,6 +387,33 @@ impl MemoryMap {
                 length,
                 segment_flags.unwrap_or_default().into_raw(),
                 fill.unwrap_or_default(),
+            )
+        }
+    }
+
+    /// Adds a persistent memory region mapping `[start, start + length)` to the current file,
+    /// fully backed by `length` bytes at `file_offset`. Fails if the mapping runs past the end of
+    /// the parent file; add a separate unbacked region for any additional virtual span.
+    ///
+    /// This is the memory-region replacement for user segments: the region is identified by its
+    /// stable `name`.
+    pub fn add_mapped_memory_region(
+        &mut self,
+        name: &str,
+        start: u64,
+        length: u64,
+        file_offset: u64,
+        segment_flags: Option<SegmentFlags>,
+    ) -> bool {
+        let name_raw = name.to_cstr();
+        unsafe {
+            BNAddMappedMemoryRegion(
+                self.view.handle,
+                name_raw.as_ptr(),
+                start,
+                length,
+                file_offset,
+                segment_flags.unwrap_or_default().into_raw(),
             )
         }
     }

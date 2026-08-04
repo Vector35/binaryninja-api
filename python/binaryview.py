@@ -45,7 +45,7 @@ from . import decorators
 from .enums import (
     AnalysisState, SymbolType, Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics, FindFlag,
     TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, RegisterValueType, DisassemblyOption,
-	RelocationType, DerivedStringLocationType
+	RelocationType, DerivedStringLocationType, MemoryRegionKind
 )
 from .exceptions import RelocationWriteException, ExternalLinkException
 
@@ -2692,6 +2692,8 @@ class MemoryRegionInfo:
 	has_target: bool
 	absolute_address_mode: bool
 	local: bool
+	data_offset: int
+	kind: MemoryRegionKind
 
 	@staticmethod
 	def _from_core_struct(r) -> 'MemoryRegionInfo':
@@ -2705,6 +2707,8 @@ class MemoryRegionInfo:
 			has_target=r.hasTarget,
 			absolute_address_mode=r.absoluteAddressMode,
 			local=r.local,
+			data_offset=r.dataOffset,
+			kind=MemoryRegionKind(r.kind),
 		)
 
 	@property
@@ -3104,6 +3108,28 @@ class MemoryMap:
 			return core.BNAddRemoteMemoryRegion(self.handle, name, start, source._cb, flags)
 		else:
 			raise NotImplementedError(f"Unsupported memory region source type: {type(source)}")
+
+	def add_mapped_memory_region(self, name: str, start: int, length: int, file_offset: int, flags: SegmentFlag = SegmentFlag(0)) -> bool:
+		"""
+		Adds a persistent memory region that maps ``[start, start + length)`` to the current file,
+		fully backed by ``length`` bytes starting at ``file_offset``. Fails if the mapping runs past the
+		end of the parent file; add a separate unbacked region (:py:func:`add_memory_region` with
+		``source=None``) for any additional virtual span.
+
+		This is the memory-region replacement for :py:func:`~BinaryView.add_user_segment`: the region is
+		identified by its stable ``name`` (usable with the flag/enable/rebase/remove/display-name methods).
+
+		Parameters:
+			name (str): A unique name for the memory region.
+			start (int): Starting virtual address.
+			length (int): Number of bytes mapped (both the virtual span and the file-backed length).
+			file_offset (int): Offset into the current file where the backing bytes begin.
+			flags (SegmentFlag): Flags to apply to the memory region. Defaults to 0 (no flags).
+
+		Returns:
+			bool: ``True`` if the memory region was successfully added, ``False`` otherwise.
+		"""
+		return core.BNAddMappedMemoryRegion(self.handle, name, start, length, file_offset, flags)
 
 	def remove_memory_region(self, name: str) -> bool:
 		"""Remove a memory region by name. Returns True on success."""
@@ -10592,6 +10618,8 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		"""
 		``add_user_segment`` creates a user-defined segment that specifies how data from the raw file is mapped into a virtual address space.
 
+		.. note:: User segments are deprecated in favor of mapped memory regions. Use :py:func:`MemoryMap.add_mapped_memory_region` instead. User segments remain supported for cases the memory-region API does not yet cover (e.g. a segment whose virtual length exceeds its file-backed data).
+
 		:param int start: virtual address of the start of the segment
 		:param int length: length of the segment (may be larger than the source data)
 		:param int data_offset: offset from the parent view
@@ -10605,6 +10633,8 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		"""
 		``add_user_segments`` Adds user-defined segments that specify how data from the raw file is mapped into a virtual address space
 
+		.. note:: User segments are deprecated in favor of mapped memory regions. Use :py:func:`MemoryMap.add_mapped_memory_region` instead.
+
 		:param List[core.BNSegmentInfo] segments: list of segments to add
 		:rtype: None
 		"""
@@ -10614,6 +10644,8 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 	def remove_user_segment(self, start: int, length: int = 0) -> None:
 		"""
 		``remove_user_segment`` Removes a user-defined segment from the current segment mapping. This method removes the most recently added 'user' segment that either matches the specified start address or contains it.
+
+		.. note:: User segments are deprecated in favor of mapped memory regions. Use :py:func:`MemoryMap.remove_memory_region` instead.
 
 		:param int start: virtual address of the start of the segment
 		:param int length: length of the segment (unused)

@@ -37,7 +37,7 @@ static string TrimString(const string& str)
 	bool start = true;
 	for (size_t i = 0; i < str.size(); i++)
 	{
-		if (isspace(str[i]))
+		if (isspace((unsigned char)str[i]))
 		{
 			if (start)
 			{
@@ -61,7 +61,7 @@ static string TrimLeadingWhitespace(const string& str)
 	size_t startPos = 0;
 	for (size_t i = 0; i < str.size(); i++)
 	{
-		if (!isspace(str[i]))
+		if (!isspace((unsigned char)str[i]))
 		{
 			startPos = i;
 			break;
@@ -79,7 +79,7 @@ static string TrimTrailingWhitespace(const string& str)
 	size_t endPos = str.size();
 	for (size_t i = str.size() - 1; i > 0; i--)
 	{
-		if (!isspace(str[i]))
+		if (!isspace((unsigned char)str[i]))
 		{
 			endPos = i + 1;
 			break;
@@ -322,7 +322,7 @@ static vector<InstructionTextToken> ParseStringToken(
 	{
 		InstructionTextToken token = unprocessedStringToken;
 		token.text = string(src.substr(start, end - start));
-		token.width = token.text.size();
+		token.width = Unicode::GetDisplayWidth(token.text);
 		result.emplace_back(std::move(token));
 	};
 
@@ -351,7 +351,7 @@ static vector<InstructionTextToken> ParseStringToken(
 
             size_t start = curEnd;
             curEnd++;
-            while (curEnd < tail && (isalnum(src[curEnd]) || src[curEnd]=='.' || src[curEnd]=='-'))
+            while (curEnd < tail && (isalnum((unsigned char)src[curEnd]) || src[curEnd]=='.' || src[curEnd]=='-'))
                 curEnd++;
             ConstructToken(start, curEnd);
             curStart = curEnd;
@@ -368,13 +368,13 @@ static vector<InstructionTextToken> ParseStringToken(
             ConstructToken(start, curEnd);
             curStart = curEnd;
         }
-    	else if (isspace(c))
+    	else if (isspace((unsigned char)c))
     	{
     		// Flush before whitespace
     		flushToken(curStart, curEnd);
 
     		size_t start = curEnd;
-    		while (curEnd < tail && isspace(src[curEnd]))
+    		while (curEnd < tail && isspace((unsigned char)src[curEnd]))
     			curEnd++;
     		ConstructToken(start, curEnd);
     		curStart = curEnd;
@@ -399,13 +399,26 @@ static vector<InstructionTextToken> ParseStringToken(
         // Check if we've exceeded max parsing length
         if (curEnd > maxParsingLength)
         {
+	        // Never cut in the middle of a grapheme cluster, which would leave both sides holding a piece
+	        // of a character that neither renders nor measures on its own. Walking the clusters gives the
+	        // last boundary that stays within the limit.
+	        size_t splitPos = 0;
+	        while (splitPos < src.size())
+	        {
+		        size_t next = Unicode::GetNextGraphemeClusterBoundary(unprocessedStringToken.text, splitPos);
+	        	// Always consume at least one cluster to guarantee making progress
+		        if (splitPos > 0 && next > maxParsingLength)
+			        break;
+		        splitPos = next;
+	        }
+
 	        // Flush any pending token
-	        flushToken(curStart, maxParsingLength);
+	        flushToken(curStart, splitPos);
 
 	        // Create single token with remaining text
 	        InstructionTextToken remainingToken = unprocessedStringToken;
-	        remainingToken.text = string(src.substr(maxParsingLength));
-	        remainingToken.width = remainingToken.text.size();
+	        remainingToken.text = string(src.substr(splitPos));
+	        remainingToken.width = Unicode::GetDisplayWidth(remainingToken.text);
 	        result.emplace_back(std::move(remainingToken));
 	        return result;
         }
@@ -979,7 +992,7 @@ vector<DisassemblyTextLine> GenericLineFormatter::FormatLines(
 					items.emplace_back(Item {StartOfContainer, {}, {token}, 0});
 				}
 				// End of string
-				else if (trimmedText == "\"" && tokenIndex > 0 && currentLine.tokens[tokenIndex - 1].type == StringToken)
+				else if (trimmedText.starts_with('"') && tokenIndex > 0 && currentLine.tokens[tokenIndex - 1].type == StringToken)
 				{
 					items.emplace_back(Item {EndOfContainer, {}, {token}, 0});
 

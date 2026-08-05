@@ -22623,6 +22623,65 @@ namespace BinaryNinja {
 			const void* data,
 			const size_t dataLen
 		);
+
+		/*! Escape a string for display using the Unicode blocks enabled for the given view.
+
+		    Text that decodes to a codepoint in one of the enabled Unicode blocks is passed through as
+		    unaltered UTF8. Everything else is escaped, including bytes that are part of a truncated or
+		    otherwise invalid encoding, so the input does not need to be valid UTF8.
+
+		    This is the escaping renderers should use when emitting string contents, such as the value of
+		    a derived string produced by a StringRecognizer.
+
+		    \param view View whose settings determine the enabled blocks, or nullptr for global settings
+		    \param data Bytes to escape
+		    \param dataLen Length of \c data in bytes
+		    \return The escaped string
+		*/
+		std::string ToEscapedString(BinaryView* view, const void* data, size_t dataLen);
+
+		/*! Escape a string for display using the Unicode blocks enabled for the given view.
+
+		    \param view View whose settings determine the enabled blocks, or nullptr for global settings
+		    \param str String to escape, which need not be valid UTF8
+		    \return The escaped string
+		*/
+		std::string ToEscapedString(BinaryView* view, std::string_view str);
+
+		/*! Width of a string in character cells, following Unicode Standard Annex #11 (East Asian Width).
+
+		    Wide and fullwidth code points, such as CJK ideographs and kana, occupy two cells; combining
+		    marks and other zero-width code points occupy none; everything else occupies one. Text that is
+		    not valid UTF8 is measured as one cell per byte.
+
+		    Binary Ninja renders text on a fixed character cell grid, so this, rather than a byte or code
+		    point count, is the measurement that InstructionTextToken widths are expressed in.
+
+		    \param str String to measure
+		    \return Width of the string in character cells
+		*/
+		size_t GetDisplayWidth(const std::string& str);
+
+		/*! Byte offset of the grapheme cluster boundary following the one at \c offset, which is to say
+		    the end of the cluster that starts there.
+
+		    It is the caller's responsibility to pass a boundary: \c offset must be zero, the length of the
+		    string, or a value this returned. Only the cluster at \c offset is examined, so walking a
+		    string a cluster at a time this way costs no more than the clusters it visits.
+
+		    \code{.cpp}
+		    for (size_t start = 0, end; start < str.size(); start = end)
+		    {
+		        end = Unicode::GetNextGraphemeClusterBoundary(str, start);
+		        // The cluster is the byte range [start, end)
+		    }
+		    \endcode
+
+		    \param str String the offset refers to, which need not be valid UTF8
+		    \param offset Byte offset of a cluster boundary
+		    \return The offset of the next cluster boundary, or the length of the string if there is none
+		*/
+		size_t GetNextGraphemeClusterBoundary(const std::string& str, size_t offset);
 	} // namespace Unicode
 
 	/*! HighLevelILTokenEmitter contains methods for emitting text tokens for High Level IL instructions.

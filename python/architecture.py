@@ -42,6 +42,7 @@ from . import binaryview
 from . import variable
 from . import basicblock
 from . import log
+from . import unicode
 
 RegisterIndex = NewType('RegisterIndex', int)
 RegisterStackIndex = NewType('RegisterStackIndex', int)
@@ -3517,7 +3518,7 @@ class InstructionTextToken:
 
 	def __post_init__(self):
 		if self.width == 0:
-			self.width = len(self.text)
+			self.width = unicode.unicode_display_width(self.text)
 
 	@staticmethod
 	def _from_core_struct(tokens: 'ctypes.pointer[core.BNInstructionTextToken]',

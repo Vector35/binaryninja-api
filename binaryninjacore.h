@@ -8871,6 +8871,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeUnicodeRangeList(uint32_t* starts, uint32_t* ends);
 	BINARYNINJACOREAPI char* BNUnicodeGetUTF8String(uint32_t** starts, uint32_t** ends, size_t* blockListCounts, size_t blockCount, const uint8_t* data, const size_t offset, const size_t dataLen);
 	BINARYNINJACOREAPI char* BNUnicodeToEscapedString(uint32_t** starts, uint32_t** ends, size_t* blockListCounts, size_t blockCount, bool utf8Enabled, const void* data, const size_t dataLen);
+	BINARYNINJACOREAPI char* BNUnicodeToEscapedStringForView(BNBinaryView* view, const void* data, size_t dataLen);
+	BINARYNINJACOREAPI size_t BNUnicodeGetDisplayWidth(const char* str);
+	BINARYNINJACOREAPI size_t BNUnicodeGetNextGraphemeClusterBoundary(const char* str, size_t len, size_t offset);
 
 	// Collaboration
 	BINARYNINJACOREAPI BNRemote* BNCollaborationGetActiveRemote();

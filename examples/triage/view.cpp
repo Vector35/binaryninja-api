@@ -12,7 +12,7 @@
 #include "librariesinfo.h"
 #include "headers.h"
 #include "strings.h"
-#include "baseaddress.h"
+#include "clickablelabel.h"
 #include "fontsettings.h"
 #include "analysisinfo.h"
 #include <binaryninjacore.h>
@@ -56,14 +56,20 @@ TriageView::TriageView(QWidget* parent, BinaryViewRef data) : QScrollArea(parent
 		delete hdr;
 	}
 
-	auto fileMetadata = m_data->GetFile();
-	if (m_data == fileMetadata->GetViewOfType("Raw") || m_data == fileMetadata->GetViewOfType("Mapped"))
+	if ((m_data->GetTypeName() == "Mapped") || (m_data->GetTypeName() == "Raw"))
 	{
-		QGroupBox* baseDetectionGroup = new QGroupBox("Base Address Detection", container);
-		QVBoxLayout* baseDetectionLayout = new QVBoxLayout();
-		baseDetectionLayout->addWidget(new BaseAddressDetectionWidget(this, data));
-		baseDetectionGroup->setLayout(baseDetectionLayout);
-		layout->addWidget(baseDetectionGroup);
+		auto baseAddressDetectionGroup = new QGroupBox("Base Address Detection", container);
+		auto baseAddressDetectionLayout = new QVBoxLayout();
+		auto label = new ClickableLabel(baseAddressDetectionGroup, "Detect Base Address...");
+		label->setCursor(QCursor(Qt::PointingHandCursor));
+		auto labelFont = label->font();
+		labelFont.setUnderline(true);
+		label->setFont(labelFont);
+		connect(label, &ClickableLabel::clicked,
+			this, [this]() { actionHandler()->executeAction("Detect Base Address..."); });
+		baseAddressDetectionLayout->addWidget(label, 0, Qt::AlignLeft);
+		baseAddressDetectionGroup->setLayout(baseAddressDetectionLayout);
+		layout->addWidget(baseAddressDetectionGroup);
 	}
 
 	if (m_data->IsExecutable())

@@ -8363,6 +8363,7 @@ extern "C"
 	BINARYNINJACOREAPI const char* BNPluginGetLongdescription(BNPlugin* p);
 	BINARYNINJACOREAPI uint64_t BNPluginGetLastUpdate(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginIsInstalled(BNPlugin* p);
+	BINARYNINJACOREAPI bool BNPluginIsListed(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginIsEnabled(BNPlugin* p);
 	BINARYNINJACOREAPI BNPluginStatus BNPluginGetPluginStatus(BNPlugin* p);
 	BINARYNINJACOREAPI BNPluginType* BNPluginGetPluginTypes(BNPlugin* p, size_t* count);

@@ -37,6 +37,12 @@ bool Extension::IsInstalled() const
 	return BNPluginIsInstalled(m_object);
 }
 
+
+bool Extension::IsListed() const
+{
+	return BNPluginIsListed(m_object);
+}
+
 bool Extension::IsEnabled() const
 {
 	return BNPluginIsEnabled(m_object);

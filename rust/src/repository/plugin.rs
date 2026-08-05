@@ -211,6 +211,11 @@ impl Extension {
         unsafe { BNPluginIsInstalled(self.handle.as_ptr()) }
     }
 
+    /// true if the plugin is present in its repository's latest successful listing
+    pub fn is_listed(&self) -> bool {
+        unsafe { BNPluginIsListed(self.handle.as_ptr()) }
+    }
+
     /// true if the plugin is enabled, false otherwise
     pub fn is_enabled(&self) -> bool {
         unsafe { BNPluginIsEnabled(self.handle.as_ptr()) }

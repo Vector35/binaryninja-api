@@ -19,7 +19,6 @@
 # IN THE SOFTWARE.
 
 import ctypes
-import inspect
 import warnings
 
 # Binary Ninja components
@@ -445,6 +444,7 @@ class Demangler(metaclass=_DemanglerMetaclass):
 	_cached_name = None
 
 	def __init__(self, handle=None):
+		self._uses_legacy_demangle_signature = False
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNDemangler)
 			self.__dict__["name"] = core.BNGetDemanglerName(handle)
@@ -463,6 +463,22 @@ class Demangler(metaclass=_DemanglerMetaclass):
 
 		assert demangler.__class__.name is not None
 		assert demangler.handle is None
+
+		try:
+			parameter_count = binaryninja._get_parameter_count(demangler.demangle)
+		except (TypeError, ValueError):
+			parameter_count = 2
+		demangler._uses_legacy_demangle_signature = parameter_count == 3
+		if demangler._uses_legacy_demangle_signature:
+			warnings.warn(
+				deprecation.DeprecatedWarning(
+					"Custom Demangler.demangle(arch, name, view)",
+					"5.4",
+					None,
+					"Use Demangler.demangle(name, config) instead."
+				),
+				stacklevel=2
+			)
 
 		demangler._cb = core.BNDemanglerCallbacks()
 		demangler._cb.context = 0
@@ -518,18 +534,7 @@ class Demangler(metaclass=_DemanglerMetaclass):
 			api_config = DemanglerConfig._from_core_struct(config)
 
 			demangle = self.demangle
-			try:
-				parameter_count = len(inspect.signature(demangle).parameters)
-			except (TypeError, ValueError):
-				parameter_count = 2
-
-			if parameter_count == 3:
-				warnings.warn(
-					"Custom Demangler.demangle(arch, name, view) is deprecated; "
-					"use Demangler.demangle(name, config)",
-					DeprecationWarning,
-					stacklevel=2
-				)
+			if self._uses_legacy_demangle_signature:
 				arch = api_config.platform.arch if api_config.platform is not None else None
 				demangle_result = demangle(arch, core.pyNativeStr(name), api_config.view)
 			else:

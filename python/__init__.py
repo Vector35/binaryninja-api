@@ -21,6 +21,7 @@
 import atexit
 import sys
 import ctypes
+import inspect
 from time import gmtime, struct_time
 import os
 from typing import Mapping, Optional
@@ -102,6 +103,13 @@ warnings.filterwarnings('once', '', DeprecatedWarning)
 if core.BNGetProduct() == "Binary Ninja Enterprise Client" or core.BNGetProduct() == "Binary Ninja Ultimate":
 	from .enterprise import *
 	from .firmwareninja import *
+
+
+def _get_parameter_count(callback):
+	if sys.version_info >= (3, 14):
+		import annotationlib
+		return len(inspect.signature(callback, annotation_format=annotationlib.Format.STRING).parameters)
+	return len(inspect.signature(callback).parameters)
 
 
 def shutdown():

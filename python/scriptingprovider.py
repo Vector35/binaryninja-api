@@ -59,6 +59,7 @@ import json
 _WARNING_REGEX = re.compile(r'^\S+:\d+: \w+Warning: ')
 
 logger = log.Logger(0, "ScriptingProvider")
+dependency_installer_logger = log.Logger(0, "DependencyInstaller")
 
 class _ThreadActionContext:
 	_actions = []
@@ -476,7 +477,7 @@ class ScriptingProvider(metaclass=_ScriptingProviderMetaclass):
 		self._cb.context = 0
 		self._cb.createInstance = self._cb.createInstance.__class__(self._create_instance)
 		self._cb.loadModule = self._cb.loadModule.__class__(self._load_module)
-		self._cb.installModules = self._cb.installModules.__class__(self._install_modules)
+		self._cb.installModules = self._cb.installModules.__class__(self._install_modules_for_callback)
 		self.handle = core.BNRegisterScriptingProvider(self.__class__.name, self.__class__.apiName, self._cb)
 		self._module_installed_cb = core.BNScriptingProviderModuleInstalledCallbacks()
 		self._module_installed_cb.context = None
@@ -1174,14 +1175,37 @@ class PythonScriptingProvider(ScriptingProvider):
 			logger.log_info(f"Ignored python UI plugin: {repo_path}/{module}")
 		return False
 
-	# This function can only be used to execute commands that return ASCII-only output, otherwise the decoding will fail
-	def _run_args(self, args, env: Optional[Dict]=None):
+	def _run_args(self, args, env: Optional[Dict]=None, output_logger=None):
 		si = None
 		if sys.platform == "win32":
 			si = subprocess.STARTUPINFO()
 			si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
 		try:
+			if output_logger is not None:
+				with subprocess.Popen(
+				    args,
+				    startupinfo=si,
+				    stdout=subprocess.PIPE,
+				    stderr=subprocess.STDOUT,
+				    env=env,
+				    text=True,
+				    encoding="utf-8",
+				    errors="replace",
+				    bufsize=1,
+				) as process:
+					output_lines = []
+					assert process.stdout is not None
+					for line in process.stdout:
+						output_lines.append(line)
+						output_logger.log_debug(line.rstrip("\r\n"))
+					result = "".join(output_lines)
+					return_code = process.wait()
+					if return_code == 0:
+						return (True, result)
+					error = subprocess.CalledProcessError(return_code, args)
+					output_logger.log_debug(str(error))
+					return (False, f"{error}\n{result}" if result else str(error))
 			return (True, subprocess.check_output(args, startupinfo=si, stderr=subprocess.STDOUT, env=env).decode("utf-8"))
 		except subprocess.CalledProcessError as se:
 			output = se.output.decode("utf-8", errors="replace") if se.output else ""
@@ -1293,6 +1317,13 @@ class PythonScriptingProvider(ScriptingProvider):
 
 		return env
 
+	def _install_modules_for_callback(self, ctx, modules: bytes) -> bool:
+		try:
+			return self._install_modules(ctx, modules)
+		except Exception:
+			dependency_installer_logger.log_error_for_exception("Dependency installation failed")
+			return False
+
 	def _install_modules(self, ctx, _modules: bytes) -> bool:
 		# This callback should not be called directly
 		modules = pip_requirements_from_dependency_metadata(_modules)
@@ -1303,13 +1334,13 @@ class PythonScriptingProvider(ScriptingProvider):
 		python_env = self._get_python_environment(using_bundled_python=not python_lib)
 		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override, python_env=python_env)
 		if python_bin is not None and not self._pip_exists(str(python_bin), python_env=python_env):
-			logger.log_error(
+			dependency_installer_logger.log_error(
 			    f"Pip not installed for configured python: {python_bin}.\n"
 			    "Please install pip or switch python versions."
 			)
 			return False
 		if python_bin is None:
-			logger.log_error(
+			dependency_installer_logger.log_error(
 			    f"Unable to discover python executable required for installing python modules: {status}\n"
 			    "Please specify a path to a python binary in the 'Python Path Override'"
 			)
@@ -1320,7 +1351,7 @@ class PythonScriptingProvider(ScriptingProvider):
 		], env=python_env).decode("utf-8")
 		python_lib_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 		if (python_bin_version != python_lib_version):
-			logger.log_error(
+			dependency_installer_logger.log_error(
 			    f"Python Binary Setting {python_bin_version} incompatible with python library {python_lib_version}"
 			)
 			return False
@@ -1346,7 +1377,7 @@ class PythonScriptingProvider(ScriptingProvider):
 			args.extend(["--target", str(site_package_dir)])
 		args.extend(list(filter(len, modules)))
 		logger.log_info(f"Running pip {args}")
-		status, result = self._run_args(args, env=python_env)
+		status, result = self._run_args(args, env=python_env, output_logger=dependency_installer_logger)
 		if status:
 			logger.log_debug(f"pip output: {result}")
 			importlib.invalidate_caches()

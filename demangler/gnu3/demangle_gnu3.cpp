@@ -288,6 +288,19 @@ namespace
 	}
 
 
+	bool IsStaticOnlyMemberFunction(BNNameType nameType)
+	{
+		return nameType == OperatorNewNameType || nameType == OperatorNewArrayNameType ||
+			nameType == OperatorDeleteNameType || nameType == OperatorDeleteArrayNameType;
+	}
+
+
+	bool IsDirectAnonymousNamespaceFunction(const DemangledQualifiedName& name)
+	{
+		return name.size() == 2 && name.front().GetBase() == "(anonymous namespace)";
+	}
+
+
 	// Decode a big-endian hex string into a float or double.
 	// Returns the decimal string representation, or the raw hex with a type
 	// prefix if decoding fails or the result is NaN/Inf.
@@ -2540,7 +2553,7 @@ DemangledTypeNode DemangleGNU3::DemangleLocalName()
 }
 
 
-DemangledTypeNode DemangleGNU3::DemangleName()
+DemangledTypeNode DemangleGNU3::DemangleName(bool* mayHaveImplicitThis)
 {
 	NestingGuard nestingGuard(m_nestingDepth);
 	LOG_INDENTATION_SCOPE;
@@ -2559,6 +2572,8 @@ DemangledTypeNode DemangleGNU3::DemangleName()
 	*/
 	DemangledTypeNode type;
 	bool substitute = false;
+	if (mayHaveImplicitThis)
+		*mayHaveImplicitThis = false;
 	switch (m_reader.Read())
 	{
 	case 'S':
@@ -2591,6 +2606,8 @@ DemangledTypeNode DemangleGNU3::DemangleName()
 		break;
 	case 'N': //<nested-name>
 	{
+		if (mayHaveImplicitThis)
+			*mayHaveImplicitThis = true;
 		bool allTypeArgs = false;
 		type = DemangleNestedName(&allTypeArgs);
 		if (!m_inLocalName && allTypeArgs)
@@ -2598,6 +2615,8 @@ DemangledTypeNode DemangleGNU3::DemangleName()
 		break;
 	}
 	case 'Z': //<local-name>
+		if (mayHaveImplicitThis)
+			*mayHaveImplicitThis = true;
 		type = DemangleLocalName();
 		break;
 	default: //<unscoped-name> | <substitution>
@@ -2624,7 +2643,8 @@ DemangledTypeNode DemangleGNU3::DemangleName()
 }
 
 
-DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName, bool simplifyTemplates)
+DemangledTypeNode DemangleGNU3::DemangleSymbol(
+	StringList& varName, bool simplifyTemplates, bool recoverImplicitThis)
 {
 	NestingGuard nestingGuard(m_nestingDepth);
 	LOG_INDENTATION_SCOPE;
@@ -3002,7 +3022,8 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName, bool simplif
 	}
 
 	//<function name> or <data name>
-	type = DemangleName();
+	bool mayHaveImplicitThis = false;
+	type = DemangleName(&mayHaveImplicitThis);
 	if (m_reader.Length() == 0)
 	{
 		return type;
@@ -3033,8 +3054,13 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName, bool simplif
 	const bool nameRequiresReturnType = m_isParameter || LastTypeNameSegmentHasTemplateArguments(type);
 	if (simplifyTemplates)
 		DemangledTemplateSimplifier::SimplifyTypeNodeInPlace(type);
+	DemangledQualifiedName enclosingName = type.GetName();
 	varName = type.RenderTypeNameSegments(m_platform);
 	BNNameType nameType = type.GetNameType();
+	mayHaveImplicitThis = recoverImplicitThis && mayHaveImplicitThis && !IsStaticOnlyMemberFunction(nameType) &&
+		!IsDirectAnonymousNamespaceFunction(enclosingName) && enclosingName.size() > 1;
+	if (mayHaveImplicitThis)
+		enclosingName.pop_back();
 	if (m_isOperatorOverload ||
 		nameType == ConstructorNameType ||
 		nameType == DestructorNameType ||
@@ -3115,6 +3141,12 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName, bool simplif
 	if (!returnTypeRef)
 		returnTypeRef = DemangledTypeNode::CreateShared(std::move(returnType));
 	type = DemangledTypeNode::FunctionType(returnTypeRef, nullptr, std::move(params));
+	if (mayHaveImplicitThis)
+	{
+		auto thisType = DemangledTypeNode::NamedType(StructNamedTypeClass, std::move(enclosingName));
+		type.SetImplicitThisParameter(DemangledTypeNode::PointerType(
+			std::move(thisType), false, false, PointerReferenceType));
+	}
 	if (isReturnTypeUnknown)
 		type.SetReturnTypeConfidence(BN_MINIMUM_CONFIDENCE);
 
@@ -3187,7 +3219,8 @@ bool DemangleGNU3Static::DemangleGlobalHeader(string& name, string& header)
 
 namespace
 {
-	std::optional<DemanglerResult> DemangleGNU3WithConfig(const DemanglerConfig& config, std::string_view name)
+	std::optional<DemanglerResult> DemangleGNU3WithConfig(
+		const DemanglerConfig& config, std::string_view name, bool recoverImplicitThis = true)
 	{
 		if (name.empty())
 			return std::nullopt;
@@ -3222,7 +3255,7 @@ namespace
 				{
 					string normalized = "_";
 					normalized.append(base.substr(zPos));
-					if (auto baseResult = DemangleGNU3WithConfig(config, normalized))
+					if (auto baseResult = DemangleGNU3WithConfig(config, normalized, false))
 					{
 						DemanglerResult result;
 						result.name = QualifiedName(StringList{
@@ -3241,7 +3274,7 @@ namespace
 			name.compare(name.size() - tlvInitSuffix.size(), tlvInitSuffix.size(), tlvInitSuffix) == 0)
 		{
 			std::string_view base = name.substr(0, name.size() - tlvInitSuffix.size());
-			if (auto result = DemangleGNU3WithConfig(config, base))
+			if (auto result = DemangleGNU3WithConfig(config, base, recoverImplicitThis))
 			{
 				if (result->name.size() > 0)
 					result->name[result->name.size() - 1] += "$tlv$init";
@@ -3276,7 +3309,8 @@ namespace
 		{
 			DemanglerResult result;
 			StringList nameSegments;
-			DemangledTypeNode type = demangle.DemangleSymbol(nameSegments, simplifyTemplates);
+			DemangledTypeNode type = demangle.DemangleSymbol(
+				nameSegments, simplifyTemplates, recoverImplicitThis && !foundHeader);
 			if (simplifyTemplates)
 				DemangledTemplateSimplifier::SimplifyTypeNodeInPlace(type);
 			result.type = type.Finalize(platform);

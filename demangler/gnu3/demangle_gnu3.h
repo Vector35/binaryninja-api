@@ -140,7 +140,7 @@ private:
 	_STD_STRING DemanglePrimaryExpression();
 	NodeRef DemangleTemplateSubstitutionEntry(NodeRef* outTypeRef = nullptr);
 	bool TryDemangleTemplateParamExpressionPackExpansion(_STD_STRING& expr, bool& emptyPack);
-	DemangledTypeNode DemangleName();
+	DemangledTypeNode DemangleName(bool* mayHaveImplicitThis = nullptr);
 	DemangledTypeNode DemangleLocalName();
 
 	void DemangleCVQualifiers(bool& cnst, bool& vltl, bool& rstrct);
@@ -167,7 +167,8 @@ private:
 public:
 	DemangleGNU3(BN::Platform& platform, _STD_STRING mangledName);
 	void Reset(BN::Platform& platform, _STD_STRING mangledName);
-	DemangledTypeNode DemangleSymbol(StringList& varName, bool simplifyTemplates = false);
+	DemangledTypeNode DemangleSymbol(
+		StringList& varName, bool simplifyTemplates = false, bool recoverImplicitThis = true);
 };
 
 

@@ -32,15 +32,6 @@ using namespace std;
 
 namespace
 {
-	BNTypeClass GetFinalizedTypeClass(const Ref<Type>& type)
-	{
-#ifdef BINARYNINJACORE_LIBRARY
-		return type->GetTypeClass();
-#else
-		return type->GetClass();
-#endif
-	}
-
 #define hash(x,y) (64 * (x) + (y))
 
 #ifdef GNUDEMANGLE_DEBUG
@@ -3220,7 +3211,13 @@ bool DemangleGNU3Static::DemangleGlobalHeader(string& name, string& header)
 
 namespace
 {
-	std::optional<DemanglerResult> DemangleGNU3WithConfig(
+	struct PreparedGNU3Result
+	{
+		QualifiedName name;
+		std::optional<DemangledTypeNode> type;
+	};
+
+	std::optional<PreparedGNU3Result> PrepareGNU3WithConfig(
 		const DemanglerConfig& config, std::string_view name, bool recoverImplicitThis = true)
 	{
 		if (name.empty())
@@ -3256,12 +3253,12 @@ namespace
 				{
 					string normalized = "_";
 					normalized.append(base.substr(zPos));
-					if (auto baseResult = DemangleGNU3WithConfig(config, normalized, false))
+					if (auto baseResult = PrepareGNU3WithConfig(config, normalized, false))
 					{
-						DemanglerResult result;
+						PreparedGNU3Result result;
 						result.name = QualifiedName(StringList{
 							"invocation_function_for_block_in_" + JoinNameSegments(StringList(baseResult->name.begin(), baseResult->name.end()))});
-						result.type = baseResult->type;
+						result.type = std::move(baseResult->type);
 						return result;
 					}
 				}
@@ -3275,7 +3272,7 @@ namespace
 			name.compare(name.size() - tlvInitSuffix.size(), tlvInitSuffix.size(), tlvInitSuffix) == 0)
 		{
 			std::string_view base = name.substr(0, name.size() - tlvInitSuffix.size());
-			if (auto result = DemangleGNU3WithConfig(config, base, recoverImplicitThis))
+			if (auto result = PrepareGNU3WithConfig(config, base, recoverImplicitThis))
 			{
 				if (result->name.size() > 0)
 					result->name[result->name.size() - 1] += "$tlv$init";
@@ -3295,10 +3292,10 @@ namespace
 			encoding = encoding.substr(3);
 		else if (foundHeader && !header.empty())
 		{
-			DemanglerResult result;
+			PreparedGNU3Result result;
 			StringList nameSegments{header, encoding};
 			result.name = QualifiedName(nameSegments);
-			result.type = DemangledTypeNode::NamedType(nameSegments).Finalize(platform);
+			result.type = DemangledTypeNode::NamedType(nameSegments);
 			return result;
 		}
 		else
@@ -3308,26 +3305,24 @@ namespace
 		{
 			thread_local ::DemangleGNU3 demangle(platform, encoding);
 			demangle.Reset(platform, encoding);
-			DemanglerResult result;
+			PreparedGNU3Result result;
 			StringList nameSegments;
 			DemangledTypeNode type = demangle.DemangleSymbol(
 				nameSegments, simplifyTemplates, recoverImplicitThis && !foundHeader);
 			if (simplifyTemplates)
 				DemangledTemplateSimplifier::SimplifyTypeNodeInPlace(type);
-			result.type = type.Finalize(platform);
+			bool hasType = true;
 
 			if (nameSegments.empty())
 			{
-				if (GetFinalizedTypeClass(result.type) == NamedTypeReferenceClass &&
-					result.type->GetNamedTypeReference()->GetTypeReferenceClass() == UnknownNamedTypeClass)
+				if (type.GetClass() == NamedTypeReferenceClass && type.GetNTRClass() == UnknownNamedTypeClass)
 				{
-					const auto typeName = result.type->GetTypeName();
-					nameSegments = StringList(typeName.begin(), typeName.end());
-					result.type = nullptr;
+					nameSegments = type.RenderTypeNameSegments(platform);
+					hasType = false;
 				}
-				else if (GetFinalizedTypeClass(result.type) == NamedTypeReferenceClass)
+				else if (type.GetClass() == NamedTypeReferenceClass)
 				{
-					auto typeName = result.type->GetTypeName();
+					auto typeName = type.RenderTypeNameSegments(platform);
 					if (typeName.size() > 0)
 						nameSegments = StringList{"_" + typeName[typeName.size() - 1]};
 				}
@@ -3336,6 +3331,8 @@ namespace
 			if (foundHeader && !header.empty())
 				nameSegments.insert(nameSegments.begin(), header);
 			result.name = QualifiedName(nameSegments);
+			if (hasType)
+				result.type = std::move(type);
 			return result;
 		}
 		catch (DemangleException& e)
@@ -3347,6 +3344,20 @@ namespace
 			LogDebugF("GNU3 demangling failed '{}' '{}'", name, e.what());
 		}
 		return std::nullopt;
+	}
+
+	std::optional<DemanglerResult> DemangleGNU3WithConfig(
+		const DemanglerConfig& config, std::string_view name)
+	{
+		auto prepared = PrepareGNU3WithConfig(config, name);
+		if (!prepared)
+			return std::nullopt;
+
+		DemanglerResult result;
+		result.name = std::move(prepared->name);
+		if (prepared->type)
+			result.type = prepared->type->Finalize(config.GetPlatform());
+		return result;
 	}
 }
 
@@ -3368,6 +3379,18 @@ public:
 	{
 		return DemangleGNU3WithConfig(config, name);
 	}
+
+#ifdef BINARYNINJACORE_LIBRARY
+	std::optional<Demangler::PreparedResult> Prepare(const string& name, const Config& config) override
+	{
+		auto prepared = PrepareGNU3WithConfig(config, name);
+		if (!prepared)
+			return std::nullopt;
+		return Demangler::PreparedResult(
+			std::move(prepared->name), prepared->type ?
+				std::make_unique<DemangledTypeNode>(std::move(*prepared->type)) : nullptr);
+	}
+#endif
 };
 
 

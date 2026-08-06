@@ -240,6 +240,12 @@ private:
 	DemangleContext DemangleSymbol(BackrefList& backrefList);
 
 public:
+	struct PreparedResult
+	{
+		BN::QualifiedName name;
+		DemangledTypeNode type;
+	};
+
 	Demangle(const BN::DemanglerConfig& config, _STD_STRING  mangledName);
 	void Reset(const BN::DemanglerConfig& config, const _STD_STRING& mangledName);
 	Demangle(const Demangle&) = delete;
@@ -247,5 +253,6 @@ public:
 	Demangle& operator=(const Demangle&) = delete;
 	Demangle& operator=(Demangle&&) = delete;
 	DemangleContext DemangleSymbol();
+	PreparedResult Prepare();
 	BN::DemanglerResult Finalize();
 };

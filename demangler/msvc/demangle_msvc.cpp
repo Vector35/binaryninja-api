@@ -2586,7 +2586,7 @@ Demangle::DemangleContext Demangle::DemangleSymbol(BackrefList& backrefList)
 	return finishContext();
 }
 
-DemanglerResult Demangle::Finalize()
+Demangle::PreparedResult Demangle::Prepare()
 {
 	DemangleContext context = DemangleSymbol();
 	if (m_reader.Length() != 0)
@@ -2598,15 +2598,19 @@ DemanglerResult Demangle::Finalize()
 		DemangledTemplateSimplifier::SimplifyNameSegmentsInPlace(context.name);
 	}
 
-	DemanglerResult result;
-	result.type = context.type.Finalize(m_config.GetPlatform());
-	result.name = QualifiedName(FinalizeNameList(context.name));
-	return result;
+	return {QualifiedName(FinalizeNameList(context.name)), std::move(context.type)};
+}
+
+DemanglerResult Demangle::Finalize()
+{
+	auto prepared = Prepare();
+	return {std::move(prepared.name), prepared.type.Finalize(m_config.GetPlatform())};
 }
 
 namespace
 {
-	std::optional<DemanglerResult> DemangleMSWithConfig(const DemanglerConfig& config, const _STD_STRING& mangledName)
+	std::optional<Demangle::PreparedResult> PrepareMSWithConfig(
+		const DemanglerConfig& config, const _STD_STRING& mangledName)
 	{
 		if (mangledName.empty() || (mangledName[0] != '?' && mangledName[0] != '.'))
 			return std::nullopt;
@@ -2615,7 +2619,7 @@ namespace
 		{
 			thread_local Demangle demangle(config, mangledName);
 			demangle.Reset(config, mangledName);
-			return demangle.Finalize();
+			return demangle.Prepare();
 		}
 		catch (DemangleException& e)
 		{
@@ -2626,6 +2630,16 @@ namespace
 			LogDebugF("Demangling Failed '{}' '{}'", mangledName, e.what());
 		}
 		return std::nullopt;
+	}
+
+	std::optional<DemanglerResult> DemangleMSWithConfig(
+		const DemanglerConfig& config, const _STD_STRING& mangledName)
+	{
+		auto prepared = PrepareMSWithConfig(config, mangledName);
+		if (!prepared)
+			return std::nullopt;
+		return DemanglerResult{
+			std::move(prepared->name), prepared->type.Finalize(config.GetPlatform())};
 	}
 }
 
@@ -2646,6 +2660,17 @@ public:
 	{
 		return DemangleMSWithConfig(config, name);
 	}
+
+#ifdef BINARYNINJACORE_LIBRARY
+	std::optional<Demangler::PreparedResult> Prepare(const string& name, const Config& config) override
+	{
+		auto prepared = PrepareMSWithConfig(config, name);
+		if (!prepared)
+			return std::nullopt;
+		return Demangler::PreparedResult(
+			std::move(prepared->name), std::make_unique<DemangledTypeNode>(std::move(prepared->type)));
+	}
+#endif
 };
 
 extern "C"

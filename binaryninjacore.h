@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 179
+#define BN_CURRENT_CORE_ABI_VERSION 180
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -320,6 +320,7 @@ extern "C"
 	typedef struct BNDebugInfo BNDebugInfo;
 	typedef struct BNDebugInfoParser BNDebugInfoParser;
 	typedef struct BNSecretsProvider BNSecretsProvider;
+	typedef struct BNFormatStringResolutionProvider BNFormatStringResolutionProvider;
 	typedef struct BNLogger BNLogger;
 	typedef struct BNSymbolQueue BNSymbolQueue;
 	typedef struct BNTypeArchive BNTypeArchive;
@@ -3775,6 +3776,14 @@ extern "C"
 		bool (*storeData)(void* ctxt, const char* key, const char* data);
 		bool (*deleteData)(void* ctxt, const char* key);
 	} BNSecretsProviderCallbacks;
+
+	typedef struct BNFormatStringResolutionProviderCallbacks
+	{
+		void* context;
+		bool (*isValid)(void* ctxt, const char* format, BNPlatform* platform,
+		    BNTypeWithConfidence** types, size_t* count);
+		void (*freeTypeList)(void* ctxt, BNTypeWithConfidence* types, size_t count);
+	} BNFormatStringResolutionProviderCallbacks;
 
 	typedef struct BNMergedVariable
 	{
@@ -8763,6 +8772,20 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetSecretsProviderData(BNSecretsProvider* provider, const char* key);
 	BINARYNINJACOREAPI bool BNStoreSecretsProviderData(BNSecretsProvider* provider, const char* key, const char* data);
 	BINARYNINJACOREAPI bool BNDeleteSecretsProviderData(BNSecretsProvider* provider, const char* key);
+
+	// Format string resolution providers
+	BINARYNINJACOREAPI BNFormatStringResolutionProvider* BNRegisterFormatStringResolutionProvider(
+	    const char* name, BNFormatStringResolutionProviderCallbacks* callbacks);
+	BINARYNINJACOREAPI BNFormatStringResolutionProvider** BNGetFormatStringResolutionProviderList(size_t* count);
+	BINARYNINJACOREAPI void BNFreeFormatStringResolutionProviderList(
+	    BNFormatStringResolutionProvider** providers);
+	BINARYNINJACOREAPI BNFormatStringResolutionProvider* BNGetFormatStringResolutionProviderByName(const char* name);
+	BINARYNINJACOREAPI char* BNGetFormatStringResolutionProviderName(
+	    BNFormatStringResolutionProvider* provider);
+	BINARYNINJACOREAPI bool BNFormatStringResolutionProviderIsValid(
+	    BNFormatStringResolutionProvider* provider, const char* format, BNPlatform* platform,
+	    BNTypeWithConfidence** types, size_t* count);
+	BINARYNINJACOREAPI void BNFreeTypeWithConfidenceList(BNTypeWithConfidence* types, size_t count);
 
 	BINARYNINJACOREAPI BNSymbolQueue* BNCreateSymbolQueue(void);
 	BINARYNINJACOREAPI void BNDestroySymbolQueue(BNSymbolQueue* queue);

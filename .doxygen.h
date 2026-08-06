@@ -98,6 +98,10 @@
 	\ingroup coreapi
 */
 /*!
+	\defgroup formatstringresolutionprovider Format String Resolution Provider
+	\ingroup coreapi
+*/
+/*!
 	\defgroup function Function
 	\ingroup coreapi
 */

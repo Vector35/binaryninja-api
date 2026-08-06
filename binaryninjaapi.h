@@ -20902,6 +20902,52 @@ namespace BinaryNinja {
 		virtual bool DeleteData(const std::string& key) override;
 	};
 
+	/*! Resolves the argument types described by a format string.
+
+		\ingroup formatstringresolutionprovider
+	*/
+	class FormatStringResolutionProvider : public StaticCoreRefCountObject<BNFormatStringResolutionProvider>
+	{
+		std::string m_nameForRegister;
+
+	  protected:
+		FormatStringResolutionProvider(const std::string& name);
+		FormatStringResolutionProvider(BNFormatStringResolutionProvider* provider);
+
+		static bool IsValidCallback(
+			void* ctxt, const char* format, BNPlatform* platform,
+			BNTypeWithConfidence** types, size_t* count);
+		static void FreeTypeListCallback(void* ctxt, BNTypeWithConfidence* types, size_t count);
+
+	  public:
+		/*! Resolve the argument types described by a format string.
+
+		    \param format Format string to validate and resolve
+		    \param platform Platform whose ABI and C data model should be used to resolve types
+		    \return A list of argument types when valid, including an empty list for a valid format with no
+		            arguments, or an empty optional when invalid
+		*/
+		virtual std::optional<std::vector<Confidence<Ref<Type>>>> IsValid(
+			const std::string& format, Platform* platform) = 0;
+
+		std::string GetName() const;
+		static std::vector<Ref<FormatStringResolutionProvider>> GetList();
+		static Ref<FormatStringResolutionProvider> GetByName(const std::string& name);
+		static void Register(FormatStringResolutionProvider* provider);
+	};
+
+	/*!
+		\ingroup formatstringresolutionprovider
+	*/
+	class CoreFormatStringResolutionProvider : public FormatStringResolutionProvider
+	{
+	  public:
+		CoreFormatStringResolutionProvider(BNFormatStringResolutionProvider* provider);
+
+		virtual std::optional<std::vector<Confidence<Ref<Type>>>> IsValid(
+			const std::string& format, Platform* platform) override;
+	};
+
 	/*! Components are objects that can contain Functions and other Components.
 
 		\note Components should not be instantiated directly. Instead use BinaryView::CreateComponent()

@@ -24,7 +24,6 @@
 using namespace BinaryNinja;
 using namespace std;
 
-
 struct WorkerThreadActionContext
 {
 	std::function<void()> action;

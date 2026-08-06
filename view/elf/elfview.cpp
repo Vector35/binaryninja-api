@@ -496,7 +496,7 @@ bool ElfView::Init()
 	SetOriginalImageBase(initialImageBase);
 	uint64_t preferredImageBase = initialImageBase;
 	Ref<Settings> viewSettings = Settings::Instance();
-	m_extractMangledTypes = viewSettings->Get<bool>("analysis.extractTypesFromMangledNames", this);
+	m_applyRecoveredTypes = viewSettings->Get<bool>("analysis.applyTypesFromMangledNames", this);
 
 	bool platformSetByUser = false;
 	Ref<Settings> settings = GetLoadSettings(GetTypeName());
@@ -2622,7 +2622,7 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 			fullName = shortName;
 			if (demangledType)
 				fullName += demangledType->GetStringAfterName();
-			if (!typeRef && m_extractMangledTypes && !m_plat->GetFunctionByName(rawName))
+			if (!typeRef && m_applyRecoveredTypes && !m_plat->GetFunctionByName(rawName))
 				typeRef = demangledType;
 		}
 

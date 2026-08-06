@@ -499,7 +499,7 @@ namespace BinaryNinja
 		bool m_elf32;
 		bool m_objectFile;
 		Ref<Logger> m_logger;
-		bool m_extractMangledTypes;
+		bool m_applyRecoveredTypes;
 		bool m_simplifyTemplates = false;
 		bool m_relocatable = false;
 		std::map<uint64_t, std::vector<char>> m_stringTableCache;

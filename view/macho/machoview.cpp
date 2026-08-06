@@ -1287,7 +1287,7 @@ bool MachoView::Init()
 	SetOriginalImageBase(initialImageBase);
 	uint64_t preferredImageBase = initialImageBase;
 	Ref<Settings> viewSettings = Settings::Instance();
-	m_extractMangledTypes = viewSettings->Get<bool>("analysis.extractTypesFromMangledNames", this);
+	m_applyRecoveredTypes = viewSettings->Get<bool>("analysis.applyTypesFromMangledNames", this);
 
 	bool platformSetByUser = false;
 	if (settings)
@@ -2750,7 +2750,7 @@ Ref<Symbol> MachoView::DefineMachoSymbol(
 			fullName = shortName;
 			if (demangledType)
 				fullName += demangledType->GetStringAfterName();
-			if (!typeRef && m_extractMangledTypes && !m_plat->GetFunctionByName(rawName))
+			if (!typeRef && m_applyRecoveredTypes && !m_plat->GetFunctionByName(rawName))
 				typeRef = demangledType;
 		}
 

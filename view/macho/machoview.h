@@ -1490,7 +1490,7 @@ namespace BinaryNinja
 
 		bool m_relocatable = false;
 
-		bool m_extractMangledTypes;
+		bool m_applyRecoveredTypes;
 		bool m_simplifyTemplates = false;
 
 		SymbolQueue* m_symbolQueue = nullptr;

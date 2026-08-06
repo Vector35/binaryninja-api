@@ -456,7 +456,7 @@ namespace BinaryNinja
 		std::vector<PESection> m_sections;
 		Ref<Architecture> m_arch;
 		bool m_is64;
-		bool m_extractMangledTypes;
+		bool m_applyRecoveredTypes;
 		bool m_simplifyTemplates = false;
 		Ref<Logger> m_logger;
 		bool m_relocatable = false;

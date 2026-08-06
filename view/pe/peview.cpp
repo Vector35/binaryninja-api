@@ -635,7 +635,7 @@ bool PEView::Init()
 		m_entryPoint = opt.addressOfEntry;
 
 		Ref<Settings> viewSettings = Settings::Instance();
-		m_extractMangledTypes = viewSettings->Get<bool>("analysis.extractTypesFromMangledNames", this);
+		m_applyRecoveredTypes = viewSettings->Get<bool>("analysis.applyTypesFromMangledNames", this);
 
 		bool platformSetByUser = false;
 		settings = GetLoadSettings(GetTypeName());
@@ -3761,7 +3761,7 @@ void PEView::AddPESymbol(BNSymbolType type, const string& dll, const string& nam
 					fullName = shortName;
 					if (demangledType)
 						fullName += demangledType->GetStringAfterName();
-					if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
+					if (!typeRef && m_applyRecoveredTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
 						typeRef = demangledType;
 				}
 				else

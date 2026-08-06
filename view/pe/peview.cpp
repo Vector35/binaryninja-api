@@ -635,7 +635,10 @@ bool PEView::Init()
 		m_entryPoint = opt.addressOfEntry;
 
 		Ref<Settings> viewSettings = Settings::Instance();
-		m_applyRecoveredTypes = viewSettings->Get<bool>("analysis.applyTypesFromMangledNames", this);
+		if (viewSettings->Get<bool>("analysis.applyTypesFromMangledNames", this))
+			m_symbolQueueFlags |= ApplyRecoveredTypes;
+		if (viewSettings->Get<bool>("analysis.defineTypesFromMangledNames", this))
+			m_symbolQueueFlags |= DefineRecoveredTypes;
 
 		bool platformSetByUser = false;
 		settings = GetLoadSettings(GetTypeName());
@@ -1344,8 +1347,9 @@ bool PEView::Init()
 	vector<pair<BNRelocationInfo, string>> relocs;
 
 	BulkSymbolModification bulkSymbolModification(this);
-	m_symbolQueue = new SymbolQueue();
-	m_simplifyTemplates = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", this);
+	SymbolQueue symbolDemangleQueue(
+		[this](const SymbolResult& symbol) { return ApplyQueuedPESymbol(symbol); },
+		DemanglerConfig::ForBinaryView(this), m_symbolQueueFlags);
 	m_symExternMappingMetadata = new Metadata(KeyValueDataType);
 
 	try
@@ -1472,7 +1476,7 @@ bool PEView::Init()
 						case IMAGE_SYM_DTYPE_NULL: // no derived type
 						{
 							if (virtualAddress)
-								AddPESymbol(DataSymbol, "", symbolName, virtualAddress, binding);
+								AddPESymbol(symbolDemangleQueue, DataSymbol, "", symbolName, virtualAddress, binding);
 							break;
 						}
 						case IMAGE_SYM_DTYPE_POINTER: // pointer to base type
@@ -1483,7 +1487,7 @@ bool PEView::Init()
 						{
 							//LogError("%x StorageClass:%u Type:%x NumAux:%x COFF_DT_FCN at %x section:%x %s ", header.coffSymbolTable + (i * 18), e_sclass, e_type, e_numaux, virtualAddress + m_imageBase, e_scnum, symbolName.c_str());
 							if (virtualAddress)
-								AddPESymbol(FunctionSymbol, "", symbolName, virtualAddress, binding);
+								AddPESymbol(symbolDemangleQueue, FunctionSymbol, "", symbolName, virtualAddress, binding);
 							break;
 						}
 						case IMAGE_SYM_DTYPE_ARRAY: // array of base type
@@ -1661,8 +1665,9 @@ bool PEView::Init()
 						DefineAutoSymbol(new Symbol(DataSymbol, "__import_lookup_table_" + to_string(numImportEntries) + "(" + dllName + ":" + func + ")", m_imageBase + entryOffset, NoBinding));
 					}
 					m_logger->LogDebug("FuncString: %s\n", func.c_str());
-					AddPESymbol(ImportAddressSymbol, dllName, func, iatOffset, NoBinding, ordinal, typeLibs);
-					AddPESymbol(ExternalSymbol, dllName, func, 0, NoBinding, ordinal, typeLibs);
+					AddPESymbol(
+						symbolDemangleQueue, ImportAddressSymbol, dllName, func, iatOffset, NoBinding, ordinal, typeLibs);
+					AddPESymbol(symbolDemangleQueue, ExternalSymbol, dllName, func, 0, NoBinding, ordinal, typeLibs);
 
 					if (externLib)
 						m_symExternMappingMetadata->SetValueForKey(func, new Metadata(externLib->GetName()));
@@ -2040,7 +2045,7 @@ bool PEView::Init()
 							{
 								m_logger->LogInfo("Found TLS entrypoint %s: 0x%" PRIx64, name, address);
 								Ref<Platform> assPlatform = platform->GetAssociatedPlatformByAddress(address);
-								AddPESymbol(FunctionSymbol, "", name, address - m_imageBase);
+								AddPESymbol(symbolDemangleQueue, FunctionSymbol, "", name, address - m_imageBase);
 								auto func = AddFunctionForAnalysis(platform, address);
 								AddToEntryFunctions(func);
 							}
@@ -2224,8 +2229,9 @@ bool PEView::Init()
 						DefineAutoSymbol(new Symbol(DataSymbol, "__delay_import_lookup_table_" + to_string(numImportDelayEntries) + "(" + dllName + ":" + func + ")", m_imageBase + entryOffset, NoBinding));
 					}
 					m_logger->LogDebug("FuncString: %s\n", func.c_str());
-					AddPESymbol(ImportAddressSymbol, dllName, func, iatOffset, NoBinding, ordinal, typeLibs);
-					AddPESymbol(ExternalSymbol, dllName, func, 0, NoBinding, ordinal, typeLibs);
+					AddPESymbol(
+						symbolDemangleQueue, ImportAddressSymbol, dllName, func, iatOffset, NoBinding, ordinal, typeLibs);
+					AddPESymbol(symbolDemangleQueue, ExternalSymbol, dllName, func, 0, NoBinding, ordinal, typeLibs);
 					BNRelocationInfo reloc;
 					memset(&reloc, 0, sizeof(reloc));
 					reloc.nativeType = -1;
@@ -2654,9 +2660,9 @@ bool PEView::Init()
 				else
 				{
 					if ((characteristics & (PE_ATTR_CODE | PE_ATTR_EXEC)) != 0)
-						AddPESymbol(FunctionSymbol, "", name, rvAddr, GlobalBinding, i + dir.base);
+						AddPESymbol(symbolDemangleQueue, FunctionSymbol, "", name, rvAddr, GlobalBinding, i + dir.base);
 					else if (characteristics != 0)
-						AddPESymbol(DataSymbol, "", name, rvAddr, GlobalBinding, i + dir.base);
+						AddPESymbol(symbolDemangleQueue, DataSymbol, "", name, rvAddr, GlobalBinding, i + dir.base);
 					//else // TODO need to handle other data symbols
 				}
 			}
@@ -2667,9 +2673,7 @@ bool PEView::Init()
 		m_logger->LogWarn("Failed to parse export directory: %s\n", e.what());
 	}
 
-	m_symbolQueue->Process();
-	delete m_symbolQueue;
-	m_symbolQueue = nullptr;
+	symbolDemangleQueue.Drain();
 
 	bulkSymbolModification.End();
 
@@ -3694,8 +3698,8 @@ uint64_t PEView::Read64(uint64_t rva)
 
 
 // The addr is RVA
-void PEView::AddPESymbol(BNSymbolType type, const string& dll, const string& name, uint64_t addr,
-	BNSymbolBinding binding, uint64_t ordinal, vector<Ref<TypeLibrary>> libs)
+void PEView::AddPESymbol(SymbolQueue& queue, BNSymbolType type, const string& dll, const string& name,
+	uint64_t addr, BNSymbolBinding binding, uint64_t ordinal, vector<Ref<TypeLibrary>> libs)
 {
 	// Don't create symbols that are present in the database snapshot now
 	if (type != ExternalSymbol && m_backedByDatabase)
@@ -3739,48 +3743,17 @@ void PEView::AddPESymbol(BNSymbolType type, const string& dll, const string& nam
 		}
 	}
 
-	m_symbolQueue->Append(
-		[=, this]() {
-			// If name does not start with alphabetic character or symbol, prepend an underscore
-			string rawName = name;
-			if (!(((name[0] >= 'A') && (name[0] <= 'Z')) || ((name[0] >= 'a') && (name[0] <= 'z')) || (name[0] == '_')
-					|| (name[0] == '?') || (name[0] == '$') || (name[0] == '@')))
-				rawName = "_" + name;
+	PendingSymbol symbol(type, NormalizeSymbolName(name), address, binding, symbolTypeRef,
+		type == ExternalSymbol ? NameSpace::ForSymbolType(type) : NameSpace(dll));
+	symbol.ordinal = ordinal;
+	queue.Append(symbol);
+}
 
-			string shortName = rawName;
-			string fullName = rawName;
-			Ref<Type> typeRef = symbolTypeRef;
 
-			if (m_arch && name.size() > 0)
-			{
-				DemanglerConfig demanglerConfig(GetDefaultPlatform(), this, m_simplifyTemplates);
-				if (auto result = Demangler::DemangleAny(rawName, demanglerConfig))
-				{
-					auto demangledType = result->type;
-					shortName = result->name.GetString();
-					fullName = shortName;
-					if (demangledType)
-						fullName += demangledType->GetStringAfterName();
-					if (!typeRef && m_applyRecoveredTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
-						typeRef = demangledType;
-				}
-				else
-				{
-					m_logger->LogDebug("Failed to demangle: '%s'\n", name.c_str());
-				}
-			}
-
-			NameSpace ns(dll);
-			if (type == ExternalSymbol)
-				ns = GetExternalNameSpace();
-
-			return pair<Ref<Symbol>, Ref<Type>>(
-				new Symbol(type, shortName, fullName, rawName, address, binding, ns, ordinal),
-				typeRef);
-		},
-		[this](Symbol* symbol, const Confidence<Ref<Type>>& type) {
-			DefineAutoSymbolAndVariableOrFunction(GetDefaultPlatform(), symbol, type);
-		});
+Ref<Symbol> PEView::ApplyQueuedPESymbol(const SymbolResult& symbol)
+{
+	return DefineAutoSymbolAndVariableOrFunction(
+		GetDefaultPlatform(), symbol.GetSymbol(), symbol.GetType());
 }
 
 

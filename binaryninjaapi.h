@@ -47,6 +47,7 @@
 #include <exception>
 #include <functional>
 #include <set>
+#include <string_view>
 #include <mutex>
 #include <atomic>
 #include <memory>
@@ -5050,6 +5051,8 @@ namespace BinaryNinja {
 
 		static Ref<Symbol> ImportedFunctionFromImportAddressSymbol(Symbol* sym, uint64_t addr);
 	};
+
+	std::string NormalizeSymbolName(std::string name);
 
 	struct FunctionViewType
 	{
@@ -22821,19 +22824,112 @@ namespace BinaryNinja {
 	/*!
 	    \ingroup binaryview
 	*/
-	class SymbolQueue
+	struct PendingSymbol
 	{
-		BNSymbolQueue* m_object;
+		BNSymbolType type;
+		std::string name;
+		uint64_t address;
+		BNSymbolBinding binding;
+		uint64_t ordinal = 0;
+		size_t symbolSize = 0;
+		Confidence<Ref<Type>> suppliedType;
+		NameSpace nameSpace;
 
-		static void ResolveCallback(void* ctxt, BNSymbol** symbol, BNTypeWithConfidence* type);
-		static void AddCallback(void* ctxt, BNSymbol* symbol, BNTypeWithConfidence* type);
+		PendingSymbol(BNSymbolType type, std::string name, uint64_t address, BNSymbolBinding binding,
+			Confidence<Ref<Type>> suppliedType, std::optional<NameSpace> nameSpace = std::nullopt) :
+			type(type), name(std::move(name)), address(address), binding(binding), suppliedType(std::move(suppliedType)),
+			nameSpace(nameSpace ? std::move(*nameSpace) : NameSpace::ForSymbolType(type))
+		{}
+	};
+
+	class SymbolResult
+	{
+		Ref<Symbol> m_symbol;
+		Confidence<Ref<Type>> m_type;
+		size_t m_symbolSize = 0;
+
+		explicit SymbolResult(const BNSymbolQueueResult* result);
+		friend class SymbolQueue;
 
 	public:
-		SymbolQueue();
+		[[nodiscard]] Ref<Symbol> GetSymbol() const { return m_symbol; }
+		[[nodiscard]] Confidence<Ref<Type>> GetType() const { return m_type; }
+		[[nodiscard]] size_t GetSymbolSize() const { return m_symbolSize; }
+	};
+
+	/*!
+		\brief Resolves and applies symbols using ordered, parallel preparation.
+
+		Symbol preparation, including demangling, may begin on worker threads as symbols are appended. Preparation is
+		still batched: full batches are dispatched eagerly, while the final partially filled batch is dispatched by
+		Drain. The apply callback is never invoked by worker threads. It is invoked on the thread calling Drain, in the
+		same order that the symbols were appended. ApplyNow performs the same resolution and application synchronously
+		on the calling thread.
+
+		The SymbolResult passed to the callback and its borrowed data are valid only for the duration of the
+		callback. References returned by its accessors may be retained normally.
+
+		Drain must be called to dispatch and complete the final partially filled batch and to apply all queued symbols.
+		Destroying a queue waits for already-dispatched preparation to finish, but does not invoke the apply callback
+		for undrained symbols.
+
+		\ingroup binaryview
+	*/
+	class SymbolQueue
+	{
+	public:
+		/*! Callback invoked to apply a resolved symbol. Return the symbol that was applied, or nullptr if no symbol
+			was applied. */
+		using ApplyFunction = std::function<Ref<Symbol>(const SymbolResult& symbol)>;
+
+	private:
+		BNSymbolQueue* m_object;
+		ApplyFunction m_apply;
+
+		static BNSymbol* ApplyCallback(void* ctxt, const BNSymbolQueueResult* symbol);
+
+	public:
+		/*!
+			Construct a symbol queue.
+
+			\param apply Callback used to apply each resolved symbol. Queued callbacks run on the thread calling Drain.
+			\param demangleConfig Configuration used to demangle symbol names. Its BinaryView, when present, is provided
+				to demanglers regardless of the recovered-type policies.
+			\param flags Recovered-type policies. ApplyRecoveredTypes uses types recovered by demangling when no supplied
+				or platform type takes precedence. DefineRecoveredTypes defines recovered named type references in the
+				configured BinaryView.
+		*/
+		SymbolQueue(ApplyFunction apply, const DemanglerConfig& demangleConfig,
+			BNSymbolQueueFlags flags = NoSymbolQueueFlags);
+		SymbolQueue(const SymbolQueue&) = delete;
+		SymbolQueue& operator=(const SymbolQueue&) = delete;
+		SymbolQueue(SymbolQueue&&) = delete;
+		SymbolQueue& operator=(SymbolQueue&&) = delete;
+
+		/*! Wait for already-dispatched preparation and discard all undrained symbols without applying them. */
 		~SymbolQueue();
-		void Append(const std::function<std::pair<Ref<Symbol>, Confidence<Ref<Type>>>()>& resolve,
-			const std::function<void(Symbol*, const Confidence<Ref<Type>>&)>& add);
-		void Process();
+
+		/*!
+			Queue a symbol for resolution. This copies the PendingSymbol and may dispatch a full batch for preparation
+			immediately, but does not invoke the apply callback. Call Drain to process a final partially filled batch.
+
+			\param symbol Symbol metadata to resolve and apply during Drain.
+		*/
+		void Append(const PendingSymbol& symbol);
+
+		/*!
+			Resolve and apply a symbol synchronously using the same path as queued symbols.
+
+			\param symbol Symbol metadata to resolve and apply.
+			\return The symbol returned by the apply callback, or nullptr if no symbol was applied.
+		*/
+		Ref<Symbol> ApplyNow(const PendingSymbol& symbol);
+
+		/*!
+			Dispatch the final partially filled batch, wait for all queued preparation, and invoke the apply callback for
+			each resolved symbol in append order. Named type references are finalized before each callback is invoked.
+		*/
+		void Drain();
 	};
 
 	struct BaseAddressDetectionSettings

@@ -1490,10 +1490,9 @@ namespace BinaryNinja
 
 		bool m_relocatable = false;
 
-		bool m_applyRecoveredTypes;
+		BNSymbolQueueFlags m_symbolQueueFlags = NoSymbolQueueFlags;
 		bool m_simplifyTemplates = false;
 
-		SymbolQueue* m_symbolQueue = nullptr;
 		Ref<Logger> m_logger;
 
 		std::vector<segment_command_64> m_allSegments; //only three types of sections __TEXT, __DATA, __IMPORT
@@ -1504,17 +1503,20 @@ namespace BinaryNinja
 			std::string preferredImageBaseDesc, bool platformSetByUser);
 
 		void RebaseThreadStarts(BinaryReader& virtualReader, std::vector<uint32_t>& threadStarts, uint64_t stepMultiplier);
-		Ref<Symbol> DefineMachoSymbol(
+		Ref<Symbol> DefineMachoSymbol(SymbolQueue& queue,
 			BNSymbolType type, const std::string& name, uint64_t addr, BNSymbolBinding binding, bool deferred);
-		void ParseSymbolTable(BinaryReader& reader, MachOHeader& header, const symtab_command& symtab,
+		Ref<Symbol> ApplyQueuedMachoSymbol(const SymbolResult& symbol);
+		void ParseSymbolTable(SymbolQueue& queue, BinaryReader& reader, MachOHeader& header,
+			const symtab_command& symtab,
 			const std::vector<uint32_t>& symbolStubsList, MachoObjCProcessor*,
 			std::unordered_map<std::string, std::string>& symbolLibraryMapping);
 		bool IsValidFunctionStart(uint64_t addr);
 		void ParseFunctionStarts(Platform* platform, uint64_t textBase, function_starts_command functionStarts);
 		bool ParseRelocationEntry(const relocation_info& info, uint64_t start, BNRelocationInfo& result);
 
-		bool AddExportTerminalSymbol(const std::string& symbolName, uint64_t symbolFlags, uint64_t imageOffset);
-		void ParseExportTrie(BinaryReader& reader, linkedit_data_command exportTrie);
+		bool AddExportTerminalSymbol(SymbolQueue& queue,
+			const std::string& symbolName, uint64_t symbolFlags, uint64_t imageOffset);
+		void ParseExportTrie(SymbolQueue& queue, BinaryReader& reader, linkedit_data_command exportTrie);
 		void ReadExportNode(uint64_t viewStart, DataBuffer& buffer, const std::string& currentText,
 			size_t cursor, uint32_t endGuard);
 

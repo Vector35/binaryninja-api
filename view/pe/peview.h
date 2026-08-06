@@ -456,12 +456,9 @@ namespace BinaryNinja
 		std::vector<PESection> m_sections;
 		Ref<Architecture> m_arch;
 		bool m_is64;
-		bool m_applyRecoveredTypes;
-		bool m_simplifyTemplates = false;
+		BNSymbolQueueFlags m_symbolQueueFlags = NoSymbolQueueFlags;
 		Ref<Logger> m_logger;
 		bool m_relocatable = false;
-
-		SymbolQueue* m_symbolQueue = nullptr;
 
 		Ref<Metadata> m_symExternMappingMetadata;
 
@@ -472,8 +469,10 @@ namespace BinaryNinja
 		uint16_t Read16(uint64_t rva);
 		uint32_t Read32(uint64_t rva);
 		uint64_t Read64(uint64_t rva);
-		void AddPESymbol(BNSymbolType type, const std::string& dll, const std::string& name, uint64_t addr,
-			BNSymbolBinding binding = NoBinding, uint64_t ordinal = 0, std::vector<Ref<TypeLibrary>> lib = {});
+		void AddPESymbol(SymbolQueue& queue, BNSymbolType type, const std::string& dll,
+			const std::string& name, uint64_t addr, BNSymbolBinding binding = NoBinding, uint64_t ordinal = 0,
+			std::vector<Ref<TypeLibrary>> lib = {});
+		Ref<Symbol> ApplyQueuedPESymbol(const SymbolResult& symbol);
 
 	protected:
 		virtual uint64_t PerformGetEntryPoint() const override;

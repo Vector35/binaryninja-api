@@ -669,7 +669,7 @@ DemangleGNU3::NodeRef DemangleGNU3::DemangleTemplateSubstitutionEntry(NodeRef* o
 	// replaced once the outer template args are known.
 	if (m_permitForwardTemplateRefs)
 	{
-		auto typeRef = DemangledTypeNode::CreateShared(DemangledTypeNode::NamedType("auto"));
+		auto typeRef = DemangledTypeNode::CreateShared(DemangledTypeNode::UnregisteredNamedType("auto"));
 		m_pendingForwardRefs.push_back({number, typeRef});
 		if (outTypeRef)
 			*outTypeRef = typeRef;
@@ -678,7 +678,7 @@ DemangleGNU3::NodeRef DemangleGNU3::DemangleTemplateSubstitutionEntry(NodeRef* o
 
 	if (m_parsingLambdaParams && number >= m_lambdaTemplateParamBase)
 	{
-		auto typeRef = DemangledTypeNode::CreateShared(DemangledTypeNode::NamedType("auto"));
+		auto typeRef = DemangledTypeNode::CreateShared(DemangledTypeNode::UnregisteredNamedType("auto"));
 		if (outTypeRef)
 			*outTypeRef = typeRef;
 		return typeRef;
@@ -932,12 +932,12 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 		case 'u': type = DemangledTypeNode::IntegerType(1, false, "char8_t"); break;
 		case 'i': type = DemangledTypeNode::WideCharType(4, "char32_t"); break;
 		case 's': type = DemangledTypeNode::WideCharType(2, "char16_t"); break;
-		case 'a': type = DemangledTypeNode::NamedType("auto"); break; //auto type
-		case 'c': type = DemangledTypeNode::NamedType("decltype(auto)"); break; //decltype(auto)
+		case 'a': type = DemangledTypeNode::UnregisteredNamedType("auto"); break; //auto type
+		case 'c': type = DemangledTypeNode::UnregisteredNamedType("decltype(auto)"); break; //decltype(auto)
 		case 'n':
 		{
 			static const StringList stdNullptrTName(vector<string>{"std", "nullptr_t"});
-			type = DemangledTypeNode::NamedType(stdNullptrTName);
+			type = DemangledTypeNode::UnregisteredNamedType(stdNullptrTName);
 			break;
 		}
 		case 'p':
@@ -956,7 +956,7 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 		}
 		case 't':
 		case 'T':
-			type = DemangledTypeNode::NamedType("decltype(" + DemangleExpression() + ")");
+			type = DemangledTypeNode::UnregisteredNamedType("decltype(" + DemangleExpression() + ")");
 			if (!m_reader.ConsumeIf('E'))
 				throw DemangleException();
 			break;
@@ -1682,7 +1682,7 @@ DemangledTypeNode DemangleGNU3::DemangleUnresolvedType()
 		const string name = "decltype(" + DemangleExpression() + ")";
 		if (!m_reader.ConsumeIf('E'))
 			throw DemangleException();
-		type = DemangledTypeNode::NamedType(name);
+		type = DemangledTypeNode::UnregisteredNamedType(name);
 	}
 	else if (m_reader.ConsumeIf('S'))
 	{

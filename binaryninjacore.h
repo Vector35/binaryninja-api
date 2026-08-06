@@ -322,6 +322,7 @@ extern "C"
 	typedef struct BNSecretsProvider BNSecretsProvider;
 	typedef struct BNLogger BNLogger;
 	typedef struct BNSymbolQueue BNSymbolQueue;
+	typedef struct BNSymbolQueueResult BNSymbolQueueResult;
 	typedef struct BNTypeArchive BNTypeArchive;
 	typedef struct BNTypeContainer BNTypeContainer;
 	typedef struct BNProject BNProject;
@@ -9315,12 +9316,51 @@ extern "C"
 	BINARYNINJACOREAPI bool BNStoreSecretsProviderData(BNSecretsProvider* provider, const char* key, const char* data);
 	BINARYNINJACOREAPI bool BNDeleteSecretsProviderData(BNSecretsProvider* provider, const char* key);
 
-	BINARYNINJACOREAPI BNSymbolQueue* BNCreateSymbolQueue(void);
+	BN_OPTIONS(uint8_t, BNSymbolQueueFlags)
+	{
+		NoSymbolQueueFlags = 0,
+		ApplyRecoveredTypes = 1,
+		DefineRecoveredTypes = 2
+	};
+
+	typedef struct BNPendingSymbol
+	{
+		BNSymbolType type;
+		const char* name;
+		uint64_t address;
+		BNSymbolBinding binding;
+		uint64_t ordinal;
+		size_t symbolSize;
+		BNTypeWithConfidence typeRef;
+		const BNNameSpace* nameSpace;
+	} BNPendingSymbol;
+
+	typedef struct BNSymbolQueueResultData
+	{
+		BNSymbol* symbol;
+		BNTypeWithConfidence type;
+		size_t symbolSize;
+	} BNSymbolQueueResultData;
+
+	typedef struct BNSymbolQueueCallbacks
+	{
+		void* context;
+		/*
+		 * The result and all data it references are borrowed and valid only for the duration of this callback.
+		 * The returned symbol reference is consumed by the queue.
+		 */
+		BNSymbol* (*apply)(void* ctxt, const BNSymbolQueueResult* symbol);
+		void (*freeContext)(void* ctxt);
+	} BNSymbolQueueCallbacks;
+
+	BINARYNINJACOREAPI BNSymbolQueue* BNCreateSymbolQueue(const BNDemanglerConfig* demangleConfig,
+		BNSymbolQueueFlags flags, BNSymbolQueueCallbacks* callbacks);
 	BINARYNINJACOREAPI void BNDestroySymbolQueue(BNSymbolQueue* queue);
-	BINARYNINJACOREAPI void BNAppendSymbolQueue(BNSymbolQueue* queue,
-		void (*resolve)(void* ctxt, BNSymbol** symbol, BNTypeWithConfidence* type), void* resolveContext,
-		void (*add)(void* ctxt, BNSymbol* symbol, BNTypeWithConfidence* type), void* addContext);
-	BINARYNINJACOREAPI void BNProcessSymbolQueue(BNSymbolQueue* queue);
+	BINARYNINJACOREAPI void BNAppendSymbolQueue(BNSymbolQueue* queue, const BNPendingSymbol* symbol);
+	BINARYNINJACOREAPI BNSymbol* BNApplyPendingSymbolNow(const BNSymbolQueue* queue, const BNPendingSymbol* symbol);
+	BINARYNINJACOREAPI void BNDrainSymbolQueue(BNSymbolQueue* queue);
+	BINARYNINJACOREAPI bool BNGetSymbolQueueResultData(
+		const BNSymbolQueueResult* symbol, BNSymbolQueueResultData* result);
 
 	BINARYNINJACOREAPI bool BNCoreEnumToString(const char* enumName, size_t value, char** result);
 	BINARYNINJACOREAPI bool BNCoreEnumFromString(const char* enumName, const char* value, size_t* result);
@@ -10037,6 +10077,19 @@ extern "C"
 	BINARYNINJACOREAPI BNPossibleValueSet BNPossibleValueSetNot(const BNPossibleValueSet* object, size_t size);
 
 #ifdef __cplusplus
+}
+#endif
+
+#if defined(__cplusplus) && !defined(BN_TYPE_PARSER)
+constexpr BNSymbolQueueFlags operator|(BNSymbolQueueFlags left, BNSymbolQueueFlags right)
+{
+	return static_cast<BNSymbolQueueFlags>(static_cast<uint8_t>(left) | static_cast<uint8_t>(right));
+}
+
+constexpr BNSymbolQueueFlags& operator|=(BNSymbolQueueFlags& left, BNSymbolQueueFlags right)
+{
+	left = left | right;
+	return left;
 }
 #endif
 

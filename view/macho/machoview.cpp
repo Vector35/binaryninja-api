@@ -1287,7 +1287,10 @@ bool MachoView::Init()
 	SetOriginalImageBase(initialImageBase);
 	uint64_t preferredImageBase = initialImageBase;
 	Ref<Settings> viewSettings = Settings::Instance();
-	m_applyRecoveredTypes = viewSettings->Get<bool>("analysis.applyTypesFromMangledNames", this);
+	if (viewSettings->Get<bool>("analysis.applyTypesFromMangledNames", this))
+		m_symbolQueueFlags |= ApplyRecoveredTypes;
+	if (viewSettings->Get<bool>("analysis.defineTypesFromMangledNames", this))
+		m_symbolQueueFlags |= DefineRecoveredTypes;
 
 	bool platformSetByUser = false;
 	if (settings)
@@ -2322,8 +2325,10 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	}
 
 	BulkSymbolModification bulkSymbolModification(this);
-	m_symbolQueue = new SymbolQueue();
 	m_simplifyTemplates = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", this);
+	SymbolQueue symbolDemangleQueue(
+		[this](const SymbolResult& symbol) { return ApplyQueuedMachoSymbol(symbol); },
+		DemanglerConfig(GetDefaultPlatform(), this, m_simplifyTemplates), m_symbolQueueFlags);
 
 	std::unordered_map<std::string, std::string> symbolLibraryMapping;
 
@@ -2331,16 +2336,15 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	{
 		// Add functions for all function symbols
 		m_logger->LogDebug("Parsing symbol table\n");
-		ParseSymbolTable(reader, header, header.symtab, indirectSymbols, objcProcessor.get(), symbolLibraryMapping);
+		ParseSymbolTable(
+			symbolDemangleQueue, reader, header, header.symtab, indirectSymbols, objcProcessor.get(), symbolLibraryMapping);
 	}
 	catch (std::exception&)
 	{
 		m_logger->LogError("Failed to parse symbol table!");
 	}
 
-	m_symbolQueue->Process();
-	delete m_symbolQueue;
-	m_symbolQueue = nullptr;
+	symbolDemangleQueue.Drain();
 	bulkSymbolModification.End();
 
 	for (auto& relocation : header.rebaseRelocations)
@@ -2677,7 +2681,7 @@ void MachoView::OnAfterSnapshotDataApplied()
 }
 
 
-Ref<Symbol> MachoView::DefineMachoSymbol(
+Ref<Symbol> MachoView::DefineMachoSymbol(SymbolQueue& queue,
 	BNSymbolType type, const string& name, uint64_t addr, BNSymbolBinding binding, bool deferred)
 {
 	// If name is empty, symbol is not valid
@@ -2724,61 +2728,39 @@ Ref<Symbol> MachoView::DefineMachoSymbol(
 
 	}
 
-	auto process = [=, this]() {
-		// If name does not start with alphabetic character or symbol, prepend an underscore
-		string rawName = name;
-		if (!(((name[0] >= 'A') && (name[0] <= 'Z')) || ((name[0] >= 'a') && (name[0] <= 'z')) || (name[0] == '_')
-				|| (name[0] == '?') || (name[0] == '$') || (name[0] == '@')))
-			rawName = "_" + name;
-
-		NameSpace nameSpace = GetInternalNameSpace();
-		if (type == ExternalSymbol)
-		{
-			nameSpace = GetExternalNameSpace();
-		}
-
-		// Try to demangle any C++ symbols
-		string shortName = rawName;
-		string fullName = rawName;
-		Ref<Type> typeRef = symbolTypeRef;
-
-		DemanglerConfig demanglerConfig(GetDefaultPlatform(), this, m_simplifyTemplates);
-		if (auto result = Demangler::DemangleAny(rawName, demanglerConfig))
-		{
-			auto demangledType = result->type;
-			shortName = result->name.GetString();
-			fullName = shortName;
-			if (demangledType)
-				fullName += demangledType->GetStringAfterName();
-			if (!typeRef && m_applyRecoveredTypes && !m_plat->GetFunctionByName(rawName))
-				typeRef = demangledType;
-		}
-
-		if ((type == ExternalSymbol || type == ImportAddressSymbol)
-			&& (name.find("_objc_retain_x") != std::string::npos || name.find("_objc_release_x") != std::string::npos))
-		{
-			auto x = name.rfind('x');
-			auto num = name.substr(x + 1);
-
-			auto cc = GetDefaultArchitecture()->GetCallingConventionByName("apple-arm64-objc-fast-arc-" + num);
-			if (auto idType = GetTypeByName({"id"}); cc && idType)
-				typeRef = Type::FunctionType(idType, cc, {{"obj", idType}});
-		}
-
-		return std::pair<Ref<Symbol>, Ref<Type>>(
-			new Symbol(type, shortName, fullName, rawName, addr, binding, nameSpace), typeRef);
-	};
+	PendingSymbol symbol(type, NormalizeSymbolName(name), addr, binding, symbolTypeRef);
 
 	if (deferred)
 	{
-		m_symbolQueue->Append(process, [this](Symbol* symbol, const Confidence<Ref<Type>>& type) {
-			DefineAutoSymbolAndVariableOrFunction(GetDefaultPlatform(), symbol, type);
-		});
+		queue.Append(symbol);
 		return nullptr;
 	}
+	return queue.ApplyNow(symbol);
+}
 
-	auto result = process();
-	return DefineAutoSymbolAndVariableOrFunction(GetDefaultPlatform(), result.first, result.second);
+
+Ref<Symbol> MachoView::ApplyQueuedMachoSymbol(const SymbolResult& symbol)
+{
+	auto resolvedSymbol = symbol.GetSymbol();
+	if (!resolvedSymbol)
+		return nullptr;
+	const auto rawNameRef = resolvedSymbol->GetRawNameRef();
+	const std::string_view rawName = rawNameRef;
+
+	auto typeRef = symbol.GetType();
+	if ((resolvedSymbol->GetType() == ExternalSymbol || resolvedSymbol->GetType() == ImportAddressSymbol)
+		&& (rawName.find("_objc_retain_x") != std::string_view::npos
+			|| rawName.find("_objc_release_x") != std::string_view::npos))
+	{
+		auto x = rawName.rfind('x');
+		auto num = rawName.substr(x + 1);
+
+		auto cc = GetDefaultArchitecture()->GetCallingConventionByName("apple-arm64-objc-fast-arc-" + std::string(num));
+		if (auto idType = GetTypeByName({"id"}); cc && idType)
+			typeRef = Type::FunctionType(idType, cc, {{"obj", idType}});
+	}
+
+	return DefineAutoSymbolAndVariableOrFunction(GetDefaultPlatform(), resolvedSymbol, typeRef);
 }
 
 bool MachoView::GetSegmentPermissions(MachOHeader& header, uint64_t address, uint32_t &flags)
@@ -2816,7 +2798,7 @@ bool MachoView::GetSectionPermissions(MachOHeader& header, uint64_t address, uin
 }
 
 
-bool MachoView::AddExportTerminalSymbol(
+bool MachoView::AddExportTerminalSymbol(SymbolQueue& queue,
 	const std::string& symbolName, uint64_t symbolFlags, uint64_t imageOffset)
 {
 	if (symbolFlags & EXPORT_SYMBOL_FLAGS_REEXPORT)
@@ -2861,11 +2843,11 @@ bool MachoView::AddExportTerminalSymbol(
 	case EXPORT_SYMBOL_FLAGS_KIND_REGULAR:
 	case EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL:
 		m_logger->LogTraceF("Export symbol is a regular or thread local symbol: {} {:?}", sectionSymbolType(), symbolName);
-		DefineMachoSymbol(sectionSymbolType(), symbolName, symbolAddress, GlobalBinding, false);
+		DefineMachoSymbol(queue, sectionSymbolType(), symbolName, symbolAddress, GlobalBinding, false);
 		break;
 	case EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE:
 		m_logger->LogTraceF("Export symbol is an absolute symbol: {:?}", symbolName);
-		DefineMachoSymbol(DataSymbol, symbolName, symbolAddress, GlobalBinding, false);
+		DefineMachoSymbol(queue, DataSymbol, symbolName, symbolAddress, GlobalBinding, false);
 		break;
 	default:
 		m_logger->LogWarnF("Unhandled export symbol kind: {:#x}", symbolFlags & EXPORT_SYMBOL_FLAGS_KIND_MASK);
@@ -2877,7 +2859,8 @@ bool MachoView::AddExportTerminalSymbol(
 	return true;
 }
 
-void MachoView::ParseExportTrie(BinaryReader& reader, linkedit_data_command exportTrie)
+void MachoView::ParseExportTrie(
+	SymbolQueue& queue, BinaryReader& reader, linkedit_data_command exportTrie)
 {
 	try {
 		DataBuffer buffer = GetParentView()
@@ -2925,7 +2908,7 @@ void MachoView::ParseExportTrie(BinaryReader& reader, linkedit_data_command expo
 				uint64_t imageOffset = readValidULEB128(buffer, localCursor);
 				m_logger->LogTraceF("Export Trie: Found terminal node {:?} with flags {:#x} and image offset {:#x}", currentText, flags, imageOffset);
 
-				AddExportTerminalSymbol(currentText, flags, imageOffset);
+				AddExportTerminalSymbol(queue, currentText, flags, imageOffset);
 			}
 
 			localCursor = childOffset;
@@ -3285,7 +3268,8 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 }
 
 
-void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, const symtab_command& symtab,
+void MachoView::ParseSymbolTable(SymbolQueue& queue, BinaryReader& reader, MachOHeader& header,
+	const symtab_command& symtab,
 	const vector<uint32_t>& indirectSymbols, MachoObjCProcessor* objcProcessor,
 	std::unordered_map<std::string, std::string>& symbolLibraryMapping)
 {
@@ -3323,7 +3307,7 @@ void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, cons
 			ParseChainedStarts(header, header.chainStarts, objcProcessor);
 		}
 		if (header.exportTriePresent && header.isMainHeader)
-			ParseExportTrie(reader, header.exportTrie);
+			ParseExportTrie(queue, reader, header.exportTrie);
 
 		//Then process the symtab
 		if (header.stringListSize == 0)
@@ -3475,7 +3459,7 @@ void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, cons
 			else if (type == ExternalSymbol && (sym.n_desc & N_WEAK_REF))
 				binding = WeakBinding;
 
-			Ref<Symbol> symbolObj = DefineMachoSymbol(type, symbol, sym.n_value, binding, deferred);
+			Ref<Symbol> symbolObj = DefineMachoSymbol(queue, type, symbol, sym.n_value, binding, deferred);
 
 			if (!symbolObj)
 			{
@@ -3493,8 +3477,8 @@ void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, cons
 					info.size = j.first->reserved2;
 					info.pcRelative = true;
 					DefineRelocation(m_arch, info, symbolObj, j.first->addr + (j.second * j.first->reserved2));
-					DefineMachoSymbol(ImportedFunctionSymbol, symbol, j.first->addr + (j.second * j.first->reserved2),
-						GlobalBinding, true);
+					DefineMachoSymbol(queue, ImportedFunctionSymbol, symbol,
+						j.first->addr + (j.second * j.first->reserved2), GlobalBinding, true);
 				}
 			}
 
@@ -3510,8 +3494,8 @@ void MachoView::ParseSymbolTable(BinaryReader& reader, MachOHeader& header, cons
 					info.size = m_addressSize;
 					info.pcRelative = false;
 					DefineRelocation(m_arch, info, symbolObj, j.first->addr + (j.second * m_addressSize));
-					DefineMachoSymbol(
-						ImportAddressSymbol, symbol, j.first->addr + (j.second * m_addressSize), GlobalBinding, true);
+					DefineMachoSymbol(queue, ImportAddressSymbol, symbol,
+						j.first->addr + (j.second * m_addressSize), GlobalBinding, true);
 				}
 			}
 		}

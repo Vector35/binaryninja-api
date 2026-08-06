@@ -575,6 +575,20 @@ DemangledTypeNode DemangledTypeNode::NamedType(DemangledQualifiedName nameSegmen
 	return NamedType(UnknownNamedTypeClass, std::move(nameSegments), width, isSigned);
 }
 
+DemangledTypeNode DemangledTypeNode::UnregisteredNamedType(StringList nameSegments)
+{
+	DemangledTypeNode result = NamedType(std::move(nameSegments));
+	std::get<NamedTypePayload>(result.m_payload).registration = DemangledTypeReferenceRegistration::DoNotRegister;
+	return result;
+}
+
+DemangledTypeNode DemangledTypeNode::UnregisteredNamedType(std::string_view nameSegment)
+{
+	DemangledTypeNode result = NamedType(nameSegment);
+	std::get<NamedTypePayload>(result.m_payload).registration = DemangledTypeReferenceRegistration::DoNotRegister;
+	return result;
+}
+
 DemangledTypeNode DemangledTypeNode::PostfixType(NodeRef child, string suffix)
 {
 	DemangledTypeNode n;
@@ -1066,7 +1080,7 @@ bool DemangledTypeNode::IsStructurallyEqual(const DemangledTypeNode& other) cons
 		auto otherPayload = std::get_if<NamedTypePayload>(&other.m_payload);
 		return otherPayload && payload->ntrClass == otherPayload->ntrClass &&
 			payload->width == otherPayload->width && payload->widthKind == otherPayload->widthKind &&
-			payload->isSigned == otherPayload->isSigned &&
+			payload->isSigned == otherPayload->isSigned && payload->registration == otherPayload->registration &&
 			namePartsEqual(payload->name, otherPayload->name);
 	}
 	if (auto payload = std::get_if<PostfixPayload>(&m_payload))
@@ -1568,6 +1582,19 @@ uint8_t DemangledTypeNode::GetValueConfidence() const
 
 Ref<Type> DemangledTypeNode::Finalize(Platform& platform) const
 {
+	return Finalize(platform, nullptr);
+}
+
+
+Ref<Type> DemangledTypeNode::Finalize(Platform& platform, TypeReferenceResolver resolveTypeReference) const
+{
+	return Finalize(platform, &resolveTypeReference);
+}
+
+
+Ref<Type> DemangledTypeNode::Finalize(
+	Platform& platform, const TypeReferenceResolver* resolveTypeReference) const
+{
 	switch (GetPayloadClass())
 	{
 	case VoidTypeClass:
@@ -1631,16 +1658,28 @@ Ref<Type> DemangledTypeNode::Finalize(Platform& platform) const
 	{
 		if (auto payload = std::get_if<MemberPointerPayload>(&m_payload))
 		{
-			Ref<Type> child = payload->childType ? payload->childType->Finalize(platform) : Ref<Type>(Type::VoidType());
+			Ref<Type> child = payload->childType ?
+				payload->childType->Finalize(platform, resolveTypeReference) : Ref<Type>(Type::VoidType());
 			TypeBuilder tb = TypeBuilder::PointerType(
 				ResolveWidth(0, AddressWidth, platform), child, m_const, m_volatile, PointerReferenceType);
 			AddPointerSuffixes(tb, true);
 			Ref<Type> normalized = tb.Finalize();
-			return Type::NamedType(QualifiedName({GetString(platform)}), normalized.GetPtr());
+
+			DemangledTypeReferenceRequest request;
+			request.typeClass = TypedefNamedTypeClass;
+			request.name = QualifiedName({GetString(platform)});
+			request.proposedDefinition = normalized;
+			Ref<NamedTypeReference> reference;
+			if (resolveTypeReference)
+				reference = (*resolveTypeReference)(request);
+			else
+				reference = NamedTypeReference::GenerateAutoDemangledTypeReference(request.typeClass, request.name);
+			return Type::NamedType(reference, normalized->GetWidth(), normalized->GetAlignment());
 		}
 
 		const auto& payload = std::get<PointerPayload>(m_payload);
-		Ref<Type> child = payload.childType ? payload.childType->Finalize(platform) : Ref<Type>(Type::VoidType());
+		Ref<Type> child = payload.childType ?
+			payload.childType->Finalize(platform, resolveTypeReference) : Ref<Type>(Type::VoidType());
 		TypeBuilder tb = TypeBuilder::PointerType(
 			ResolveWidth(0, AddressWidth, platform), child, m_const, m_volatile, payload.referenceType);
 		AddPointerSuffixes(tb, true);
@@ -1651,7 +1690,8 @@ Ref<Type> DemangledTypeNode::Finalize(Platform& platform) const
 	case ArrayTypeClass:
 	{
 		const auto& payload = std::get<ArrayPayload>(m_payload);
-		Ref<Type> child = payload.childType ? payload.childType->Finalize(platform) : Ref<Type>(Type::VoidType());
+		Ref<Type> child = payload.childType ?
+			payload.childType->Finalize(platform, resolveTypeReference) : Ref<Type>(Type::VoidType());
 		TypeBuilder tb = TypeBuilder::ArrayType(child, payload.elements);
 		if (m_const)
 			tb.SetConst(m_const);
@@ -1663,7 +1703,8 @@ Ref<Type> DemangledTypeNode::Finalize(Platform& platform) const
 	case FunctionTypeClass:
 	{
 		const auto& payload = std::get<FunctionPayload>(m_payload);
-		Ref<Type> retType = payload.returnType ? payload.returnType->Finalize(platform) : Ref<Type>(Type::VoidType());
+		Ref<Type> retType = payload.returnType ?
+			payload.returnType->Finalize(platform, resolveTypeReference) : Ref<Type>(Type::VoidType());
 		uint8_t retTypeConfidence = payload.returnType ? payload.returnType->GetValueConfidence() : BN_FULL_CONFIDENCE;
 		retTypeConfidence = std::min(retTypeConfidence, m_returnTypeConfidence);
 
@@ -1671,13 +1712,14 @@ Ref<Type> DemangledTypeNode::Finalize(Platform& platform) const
 		finalParams.reserve(payload.params.size() + (payload.implicitThisParameterType ? 1 : 0));
 		if (payload.implicitThisParameterType)
 		{
-			Ref<Type> thisType = payload.implicitThisParameterType->Finalize(platform);
+			Ref<Type> thisType = payload.implicitThisParameterType->Finalize(platform, resolveTypeReference);
 			finalParams.emplace_back("this", thisType->WithConfidence(payload.implicitThisParameterType->GetValueConfidence()),
 				DefaultLocationSource, Variable());
 		}
 		for (auto& p : payload.params)
 		{
-			Ref<Type> pType = p.type ? p.type->Finalize(platform) : Ref<Type>(Type::VoidType());
+			Ref<Type> pType = p.type ?
+				p.type->Finalize(platform, resolveTypeReference) : Ref<Type>(Type::VoidType());
 			uint8_t pTypeConfidence = p.type ? p.type->GetValueConfidence() : BN_FULL_CONFIDENCE;
 			finalParams.emplace_back(p.name, pType->WithConfidence(pTypeConfidence), DefaultLocationSource, Variable());
 		}
@@ -1704,9 +1746,15 @@ Ref<Type> DemangledTypeNode::Finalize(Platform& platform) const
 		if (std::get_if<PostfixPayload>(&m_payload) || std::get_if<UnaryExpressionPayload>(&m_payload) ||
 			std::get_if<BinaryExpressionPayload>(&m_payload))
 		{
-			QualifiedName name(RenderTypeNameSegments(platform));
-			TypeBuilder tb = TypeBuilder::NamedType(
-				NamedTypeReference::GenerateAutoDemangledTypeReference(UnknownNamedTypeClass, name), 0, 1);
+			DemangledTypeReferenceRequest request;
+			request.name = QualifiedName(RenderTypeNameSegments(platform));
+			request.registration = DemangledTypeReferenceRegistration::DoNotRegister;
+			Ref<NamedTypeReference> reference;
+			if (resolveTypeReference)
+				reference = (*resolveTypeReference)(request);
+			else
+				reference = NamedTypeReference::GenerateAutoDemangledTypeReference(request.typeClass, request.name);
+			TypeBuilder tb = TypeBuilder::NamedType(reference, 0, 1);
 			tb.SetConst(m_const);
 			tb.SetVolatile(m_volatile);
 			AddPointerSuffixes(tb);
@@ -1716,10 +1764,18 @@ Ref<Type> DemangledTypeNode::Finalize(Platform& platform) const
 		}
 
 		const auto& payload = std::get<NamedTypePayload>(m_payload);
-		QualifiedName name(RenderTypeNameSegments(platform));
-		TypeBuilder tb = TypeBuilder::NamedType(
-			NamedTypeReference::GenerateAutoDemangledTypeReference(payload.ntrClass, name),
-			ResolveWidth(payload.width, payload.widthKind, platform), 1);
+		DemangledTypeReferenceRequest request;
+		request.typeClass = payload.ntrClass;
+		request.name = QualifiedName(RenderTypeNameSegments(platform));
+		request.width = ResolveWidth(payload.width, payload.widthKind, platform);
+		request.isSigned = payload.isSigned;
+		request.registration = payload.registration;
+		Ref<NamedTypeReference> reference;
+		if (resolveTypeReference)
+			reference = (*resolveTypeReference)(request);
+		else
+			reference = NamedTypeReference::GenerateAutoDemangledTypeReference(request.typeClass, request.name);
+		TypeBuilder tb = TypeBuilder::NamedType(reference, request.width, 1);
 		tb.SetConst(m_const);
 		tb.SetVolatile(m_volatile);
 		AddPointerSuffixes(tb);

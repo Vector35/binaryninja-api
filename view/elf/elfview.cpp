@@ -496,7 +496,10 @@ bool ElfView::Init()
 	SetOriginalImageBase(initialImageBase);
 	uint64_t preferredImageBase = initialImageBase;
 	Ref<Settings> viewSettings = Settings::Instance();
-	m_applyRecoveredTypes = viewSettings->Get<bool>("analysis.applyTypesFromMangledNames", this);
+	if (viewSettings->Get<bool>("analysis.applyTypesFromMangledNames", this))
+		m_symbolQueueFlags |= ApplyRecoveredTypes;
+	if (viewSettings->Get<bool>("analysis.defineTypesFromMangledNames", this))
+		m_symbolQueueFlags |= DefineRecoveredTypes;
 
 	bool platformSetByUser = false;
 	Ref<Settings> settings = GetLoadSettings(GetTypeName());
@@ -1251,7 +1254,9 @@ bool ElfView::Init()
 
 	// No longer need to look up symbols during creation, start a parallelized queue for
 	// demangling and preparing symbols.
-	m_symbolQueue = new SymbolQueue();
+	SymbolQueue symbolDemangleQueue(
+		[this](const SymbolResult& symbol) { return ApplyQueuedElfSymbol(symbol); },
+		DemanglerConfig(GetDefaultPlatform(), this, m_simplifyTemplates), m_symbolQueueFlags);
 
 	// Now define symbols and resolve relocations
 	vector<ElfSymbolTableEntry> combinedSymbolTable;
@@ -1299,7 +1304,8 @@ bool ElfView::Init()
 			// Common symbols are special as their entry value holds the alignment of the entry instead of an offset.
 			auto alignedExistingOffset = commonSegmentOffset + (entry->value - 1);
 			alignedExistingOffset &= ~(entry->value - 1);
-			DefineElfSymbol(DataSymbol, entry->name, commonSegmentStartAddr + alignedExistingOffset, false, entry->binding, entry->size);
+			QueueElfSymbol(symbolDemangleQueue, DataSymbol, entry->name,
+				commonSegmentStartAddr + alignedExistingOffset, false, entry->binding, entry->size);
 			commonSegmentOffset = alignedExistingOffset + entry->size;
 			continue;
 		}
@@ -1328,7 +1334,7 @@ bool ElfView::Init()
 
 		if (entry->section == ELF_SHN_UNDEF)
 		{
-			DefineElfSymbol(ExternalSymbol, entry->name, 0, false, entry->binding, entry->size);
+			QueueElfSymbol(symbolDemangleQueue, ExternalSymbol, entry->name, 0, false, entry->binding, entry->size);
 		}
 		else
 		{
@@ -1338,7 +1344,7 @@ bool ElfView::Init()
 				// Only handle this symbol type if the platform is a linux. Otherwise, we don't know what it is.
 				if (GetDefaultPlatform()->GetName().rfind("linux", 0) != 0)
 					goto unknownType;
-				DefineElfSymbol(FunctionSymbol, entry->name, entry->value, false, entry->binding);
+				QueueElfSymbol(symbolDemangleQueue, FunctionSymbol, entry->name, entry->value, false, entry->binding);
 				break;
 			case ELF_STT_FUNC:
 				{
@@ -1348,7 +1354,7 @@ bool ElfView::Init()
 						// TMS320C6x ELFs use ELF_STT_FUNC *$* and LOOP symbols for labeling blocks
 						symbolType = LocalLabelSymbol;
 					}
-					DefineElfSymbol(symbolType, entry->name, entry->value, false, entry->binding);
+					QueueElfSymbol(symbolDemangleQueue, symbolType, entry->name, entry->value, false, entry->binding);
 					break;
 				}
 			case ELF_STT_TLS:
@@ -1360,7 +1366,8 @@ bool ElfView::Init()
 				if (m_tlsSegment.virtualAddress == 0 || (entry->value + entry->size) > m_tlsSegment.memorySize)
 					break;
 				/* the value is the offset into the TLS template, specified by program header type 7 (PT_TLS) */
-				DefineElfSymbol(DataSymbol, entry->name, m_tlsSegment.virtualAddress + entry->value, false, entry->binding, entry->size);
+				QueueElfSymbol(symbolDemangleQueue, DataSymbol, entry->name,
+					m_tlsSegment.virtualAddress + entry->value, false, entry->binding, entry->size);
 				break;
 			case ELF_STT_NOTYPE:
 				// TODO: ARM specific local entry handling to be moved to architecture extension for ELF
@@ -1425,15 +1432,17 @@ bool ElfView::Init()
 								continue;
 							entryName = entryName.substr(pos + 1);
 							if (entryName.size())
-								DefineElfSymbol(isMappingFunctionSymbol ? FunctionSymbol : DataSymbol, entryName, entry->value, false, entry->binding, entry->size);
+								QueueElfSymbol(symbolDemangleQueue,
+									isMappingFunctionSymbol ? FunctionSymbol : DataSymbol, entryName, entry->value,
+									false, entry->binding, entry->size);
 						}
 						break;
 					}
 				}
-				DefineElfSymbol(DataSymbol, entry->name, entry->value, false, entry->binding, entry->size);
+				QueueElfSymbol(symbolDemangleQueue, DataSymbol, entry->name, entry->value, false, entry->binding, entry->size);
 				break;
 			case ELF_STT_OBJECT:
-				DefineElfSymbol(DataSymbol, entry->name, entry->value, false, entry->binding, entry->size);
+				QueueElfSymbol(symbolDemangleQueue, DataSymbol, entry->name, entry->value, false, entry->binding, entry->size);
 				break;
 			default:
 			unknownType:
@@ -1443,12 +1452,10 @@ bool ElfView::Init()
 		}
 	}
 
-	ParseMiniDebugInfo();
+	ParseMiniDebugInfo(symbolDemangleQueue);
 
-	// Process the queued symbols
-	m_symbolQueue->Process();
-	delete m_symbolQueue;
-	m_symbolQueue = nullptr;
+	// Drain the queued symbols
+	symbolDemangleQueue.Drain();
 
 	bulkSymbolModification.End();
 
@@ -2537,12 +2544,13 @@ bool ElfView::Init()
 }
 
 
-void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uint64_t addr, bool gotEntry,
-	BNSymbolBinding binding, size_t size, const Confidence<Ref<Type>>& typeObj)
+std::optional<PendingSymbol> ElfView::CreatePendingElfSymbol(BNSymbolType type, const string& incomingName,
+	uint64_t addr, bool gotEntry,
+	BNSymbolBinding binding, size_t symbolSize, const Confidence<Ref<Type>>& typeObj)
 {
 	// Ensure symbol is within the executable
 	if (type != ExternalSymbol && !IsValidOffset(addr))
-		return;
+		return std::nullopt;
 
 	string name = incomingName;
 	Confidence<Ref<Type>> symbolTypeRef;
@@ -2588,7 +2596,7 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 
 	// If name is empty, symbol is not valid
 	if (name.size() == 0)
-		return;
+		return std::nullopt;
 
 	if (!symbolTypeRef)
 		symbolTypeRef = typeObj;
@@ -2596,64 +2604,54 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 	if (gotEntry)
 		m_gotEntryLocations.emplace(addr);
 
-	auto process = [=, this]() {
-		NameSpace nameSpace = GetInternalNameSpace();
-		if (type == ExternalSymbol)
-		{
-			nameSpace = GetExternalNameSpace();
-		}
+	PendingSymbol symbol(type, NormalizeSymbolName(std::move(name)), addr, binding, symbolTypeRef);
+	symbol.symbolSize = symbolSize;
+	return symbol;
+}
 
-		// If name does not start with alphabetic character or symbol, prepend an underscore
-		string rawName = name;
-		if (!(((name[0] >= 'A') && (name[0] <= 'Z')) || ((name[0] >= 'a') && (name[0] <= 'z')) || (name[0] == '_')
-				|| (name[0] == '?') || (name[0] == '$') || (name[0] == '@') || (name[0] == '.')))
-			rawName = "_" + name;
 
-		// Try to demangle any C++ symbols
-		string shortName = rawName;
-		string fullName = rawName;
-		Confidence<Ref<Type>> typeRef = symbolTypeRef;
+void ElfView::QueueElfSymbol(SymbolQueue& queue, BNSymbolType type, const string& name, uint64_t addr,
+	bool gotEntry, BNSymbolBinding binding, size_t symbolSize, const Confidence<Ref<Type>>& typeObj)
+{
+	auto symbol = CreatePendingElfSymbol(type, name, addr, gotEntry, binding, symbolSize, typeObj);
+	if (symbol)
+		queue.Append(*symbol);
+}
 
-		DemanglerConfig demanglerConfig(GetDefaultPlatform(), this, m_simplifyTemplates);
-		if (auto result = Demangler::DemangleAny(rawName, demanglerConfig))
-		{
-			auto demangledType = result->type;
-			shortName = result->name.GetString();
-			fullName = shortName;
-			if (demangledType)
-				fullName += demangledType->GetStringAfterName();
-			if (!typeRef && m_applyRecoveredTypes && !m_plat->GetFunctionByName(rawName))
-				typeRef = demangledType;
-		}
 
-		if (!typeRef && m_arch && (m_arch->GetName() == "hexagon" || m_arch->GetName() == "tms320c6x"
-			|| (type == FunctionSymbol && (m_arch->GetName() == "mips32" || m_arch->GetName() == "mipsel32"))))
-		{
-			// Apply platform types to static runtime helpers, even without a shared-library dependency.
-			typeRef = GetDefaultPlatform()->GetFunctionByName(rawName);
-		}
+void ElfView::DefineElfSymbol(BNSymbolType type, const string& name, uint64_t addr, bool gotEntry,
+	BNSymbolBinding binding, size_t symbolSize, const Confidence<Ref<Type>>& typeObj)
+{
+	auto symbol = CreatePendingElfSymbol(type, name, addr, gotEntry, binding, symbolSize, typeObj);
+	if (!symbol)
+		return;
 
-		// If unable to extract type information, create a default type with the given size and heuristic confidence
-		if (!typeRef && (size > 0 && size <= 8))
-		{
-			typeRef = Type::IntegerType(size, false)->WithConfidence(BN_HEURISTIC_CONFIDENCE);
-		}
+	SymbolQueue queue(
+		[this](const SymbolResult& resolved) { return ApplyQueuedElfSymbol(resolved); },
+		DemanglerConfig(GetDefaultPlatform(), this, m_simplifyTemplates), m_symbolQueueFlags);
+	queue.ApplyNow(*symbol);
+}
 
-		return std::pair<Ref<Symbol>, Confidence<Ref<Type>>>(
-			new Symbol(type, shortName, fullName, rawName, addr, binding, nameSpace), typeRef);
-	};
 
-	if (m_symbolQueue)
+Ref<Symbol> ElfView::ApplyQueuedElfSymbol(const SymbolResult& symbol)
+{
+	auto resolvedSymbol = symbol.GetSymbol();
+	if (!resolvedSymbol)
+		return nullptr;
+
+	auto typeRef = symbol.GetType();
+	if (!typeRef && m_arch && (m_arch->GetName() == "hexagon" || m_arch->GetName() == "tms320c6x"
+		|| (resolvedSymbol->GetType() == FunctionSymbol && (m_arch->GetName() == "mips32" || m_arch->GetName() == "mipsel32"))))
 	{
-		m_symbolQueue->Append(process, [this](Symbol* symbol, const Confidence<Ref<Type>>& type) {
-			DefineAutoSymbolAndVariableOrFunction(GetDefaultPlatform(), symbol, type);
-		});
+		// Apply platform types to static runtime helpers, even without a shared-library dependency.
+		typeRef = GetDefaultPlatform()->GetFunctionByName(resolvedSymbol->GetRawName());
 	}
-	else
-	{
-		auto result = process();
-		DefineAutoSymbolAndVariableOrFunction(GetDefaultPlatform(), result.first, result.second);
-	}
+
+	// If unable to extract type information, create a default type with the given size and heuristic confidence
+	if (!typeRef && (symbol.GetSymbolSize() > 0 && symbol.GetSymbolSize() <= 8))
+		typeRef = Type::IntegerType(symbol.GetSymbolSize(), false)->WithConfidence(BN_HEURISTIC_CONFIDENCE);
+
+	return DefineAutoSymbolAndVariableOrFunction(GetDefaultPlatform(), resolvedSymbol, typeRef);
 }
 
 
@@ -2777,7 +2775,7 @@ bool ElfView::DerefPpc64Descriptor(BinaryReader& reader, uint64_t addr, uint64_t
 }
 
 
-void ElfView::ParseMiniDebugInfo()
+void ElfView::ParseMiniDebugInfo(SymbolQueue& queue)
 {
 	Ref<Section> gnuDebugdata = GetParentView()->GetSectionByName(".gnu_debugdata");
 	if (!gnuDebugdata)
@@ -2818,7 +2816,8 @@ void ElfView::ParseMiniDebugInfo()
 			}
 		}
 
-		DefineElfSymbol(
+		QueueElfSymbol(
+			queue,
 			symbol->GetType(),
 			symbol->GetRawName(),
 			addr,

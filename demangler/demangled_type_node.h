@@ -44,6 +44,8 @@
 #include <string_view>
 #include <variant>
 
+#include "base/function_ref.h"
+
 #ifdef BINARYNINJACORE_LIBRARY
 namespace BinaryNinjaCore { class Platform; }
 #else
@@ -55,6 +57,26 @@ using StringList = _STD_VECTOR<_STD_STRING>;
 BN::Platform& GetDemanglerFallbackPlatform();
 
 class DemangledTypeNode;
+
+enum class DemangledTypeReferenceRegistration : uint8_t
+{
+	Register,
+	DoNotRegister
+};
+
+struct DemangledTypeReferenceRequest
+{
+	BNNamedTypeReferenceClass typeClass = UnknownNamedTypeClass;
+	BN::QualifiedName name;
+	// Existing identity from an already-finalized named type, when available.
+	_STD_STRING typeId;
+	// Exact definition proposed by the demangler for representations such as member-pointer typedefs.
+	BN::Ref<BN::Type> proposedDefinition;
+	// Resolved metadata for a proposed enum definition.
+	size_t width = 0;
+	bool isSigned = false;
+	DemangledTypeReferenceRegistration registration = DemangledTypeReferenceRegistration::Register;
+};
 
 struct DemangledTypeNodeParam
 {
@@ -117,6 +139,8 @@ class DemangledTypeNode
 public:
 	using NodeRef = std::shared_ptr<DemangledTypeNode>;
 	using Param = DemangledTypeNodeParam;
+	using TypeReferenceResolver = bn::base::function_ref<BN::Ref<BN::NamedTypeReference>(
+		const DemangledTypeReferenceRequest&)>;
 
 	enum WidthKind : uint8_t
 	{
@@ -161,6 +185,9 @@ public:
 	static DemangledTypeNode NamedType(StringList nameSegments, size_t width = 0, bool isSigned = false);
 	static DemangledTypeNode NamedType(std::string_view nameSegment, size_t width = 0, bool isSigned = false);
 	static DemangledTypeNode NamedType(DemangledQualifiedName nameSegments, size_t width = 0, bool isSigned = false);
+	// Use for rendered placeholders that should remain in the recovered type without defining a database type.
+	static DemangledTypeNode UnregisteredNamedType(StringList nameSegments);
+	static DemangledTypeNode UnregisteredNamedType(std::string_view nameSegment);
 	static DemangledTypeNode PostfixType(NodeRef child, _STD_STRING suffix);
 	static DemangledTypeNode PostfixType(NodeRef child, _STD_STRING separator, NodeRef suffixType);
 	static DemangledTypeNode UnaryExpression(_STD_STRING op, NodeRef child);
@@ -207,6 +234,7 @@ public:
 	_STD_STRING GetTypeAndName(const StringList& name, BN::Platform& platform = GetDemanglerFallbackPlatform()) const;
 
 	BN::Ref<BN::Type> Finalize(BN::Platform& platform = GetDemanglerFallbackPlatform()) const;
+	BN::Ref<BN::Type> Finalize(BN::Platform& platform, TypeReferenceResolver resolveTypeReference) const;
 
 private:
 	struct VoidPayload {};
@@ -267,6 +295,7 @@ private:
 		size_t width = 0;
 		WidthKind widthKind = FixedWidth;
 		bool isSigned = false;
+		DemangledTypeReferenceRegistration registration = DemangledTypeReferenceRegistration::Register;
 	};
 
 	struct PostfixPayload
@@ -308,6 +337,7 @@ private:
 	[[nodiscard]] bool HasUndeterminedTopLevelSize() const;
 	[[nodiscard]] uint8_t GetValueConfidence() const;
 	[[nodiscard]] BNTypeClass GetPayloadClass() const;
+	BN::Ref<BN::Type> Finalize(BN::Platform& platform, const TypeReferenceResolver* resolveTypeReference) const;
 	[[nodiscard]] NodeRef GetPrimaryChild() const;
 	static size_t ResolveWidth(size_t width, WidthKind widthKind, const BN::Platform& platform = GetDemanglerFallbackPlatform());
 

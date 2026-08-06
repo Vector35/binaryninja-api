@@ -2,6 +2,7 @@
 
 #include "binaryninjaapi.h"
 #include <exception>
+#include <optional>
 
 #define ELF_PT_NULL    0
 #define ELF_PT_LOAD    1
@@ -499,7 +500,7 @@ namespace BinaryNinja
 		bool m_elf32;
 		bool m_objectFile;
 		Ref<Logger> m_logger;
-		bool m_applyRecoveredTypes;
+		BNSymbolQueueFlags m_symbolQueueFlags = NoSymbolQueueFlags;
 		bool m_simplifyTemplates = false;
 		bool m_relocatable = false;
 		std::map<uint64_t, std::vector<char>> m_stringTableCache;
@@ -522,10 +523,15 @@ namespace BinaryNinja
 		uint64_t m_hashHeader = 0;
 		uint64_t m_gnuHashHeader = 0;
 
-		SymbolQueue* m_symbolQueue = nullptr;
-
+		std::optional<PendingSymbol> CreatePendingElfSymbol(BNSymbolType type, const std::string& name,
+			uint64_t addr, bool gotEntry, BNSymbolBinding binding, size_t symbolSize,
+			const Confidence<Ref<Type>>& typeObj);
+		void QueueElfSymbol(SymbolQueue& queue, BNSymbolType type, const std::string& name, uint64_t addr,
+			bool gotEntry, BNSymbolBinding binding, size_t symbolSize = 0,
+			const Confidence<Ref<Type>>& typeObj = nullptr);
 		void DefineElfSymbol(BNSymbolType type, const std::string& name, uint64_t addr, bool gotEntry,
-			BNSymbolBinding binding, size_t size = 0, const Confidence<Ref<Type>>& typeObj = nullptr);
+			BNSymbolBinding binding, size_t symbolSize = 0, const Confidence<Ref<Type>>& typeObj = nullptr);
+		Ref<Symbol> ApplyQueuedElfSymbol(const SymbolResult& symbol);
 
 		void ApplyTypesToParentStringTable(const Elf64SectionHeader& section, const bool offset = true);
 		void ApplyTypesToStringTable(const Elf64SectionHeader& section, const int64_t imageBaseAdjustment, const bool offset = true);
@@ -546,7 +552,7 @@ namespace BinaryNinja
 			bool implicit, std::vector<ELFRelocEntry>& result);
 		bool DerefPpc64Descriptor(BinaryReader& reader, uint64_t addr, uint64_t& result);
 
-		void ParseMiniDebugInfo();
+		void ParseMiniDebugInfo(SymbolQueue& queue);
 		uint64_t ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonHeader& commonHeader, Elf64Header& header, Ref<Architecture>* arch, Ref<Platform>* plat, std::string& errorMsg, BNEndianness& endianness);
 	public:
 		ElfView(BinaryView* data, bool parseOnly = false);

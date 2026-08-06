@@ -455,7 +455,7 @@ DemangledTypeNode Demangle::DemangleVarType(BackrefList& varList, bool isReturn,
 			// a deduced-auto placeholder before clang/MSVC settled on
 			// the explicit `?<auto>@` spelling handled below.
 			if (reference == 2)
-				return DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{"auto"});
+				return DemangledTypeNode::UnregisteredNamedType("auto");
 			throw DemangleException(_STD_STRING("Backref too large " + std::to_string(reference)));
 		}
 		if (next != '<')
@@ -464,9 +464,9 @@ DemangledTypeNode Demangle::DemangleVarType(BackrefList& varList, bool isReturn,
 		_STD_STRING placeholder = m_reader.ReadUntil('@');
 		m_reader.ConsumeIf('@');
 		if (placeholder == "<auto>")
-			return DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{"auto"});
+			return DemangledTypeNode::UnregisteredNamedType("auto");
 		if (placeholder == "<decltype-auto>")
-			return DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{"decltype(auto)"});
+			return DemangledTypeNode::UnregisteredNamedType("decltype(auto)");
 		return DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{placeholder});
 	}
 	case '_':
@@ -504,9 +504,9 @@ DemangledTypeNode Demangle::DemangleVarType(BackrefList& varList, bool isReturn,
 		// them as named-type placeholders so downstream type consumers get
 		// something sensible (rather than a `<FAILED>` demangle) even though
 		// the underlying type is not expressible as a Binary Ninja Type.
-		case 'P': newType = DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{"auto"}); break;
+		case 'P': newType = DemangledTypeNode::UnregisteredNamedType("auto"); break;
 		case 'Q': newType = DemangledTypeNode::IntegerType(1, true, "char8_t"); break; // C++20 char8_t
-		case 'T': newType = DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{"decltype(auto)"}); break;
+		case 'T': newType = DemangledTypeNode::UnregisteredNamedType("decltype(auto)"); break;
 		// NOTE: `_X` and `_Y` were previously mapped to coclass/cointerface
 		// here, but those encodings are not emitted by any real toolchain.
 		// LLVM's MicrosoftDemangle / MicrosoftMangle and Wine's undname
@@ -560,7 +560,7 @@ DemangledTypeNode Demangle::DemangleVarType(BackrefList& varList, bool isReturn,
 		}
 		else if (m_reader.ConsumeIf("$T"))
 		{
-			auto t = DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{"std::nullptr_t"});
+			auto t = DemangledTypeNode::UnregisteredNamedType("std::nullptr_t");
 			recordTypeBackref(t);
 			return t;
 		}
@@ -2070,7 +2070,7 @@ void Demangle::SetImplicitThisParameter(DemangledTypeNode& type, BNNameType clas
 	NameList thisName = enclosingName;
 	if (classFunctionType != OperatorReturnTypeNameType && !thisName.empty())
 		thisName.pop_back();
-	auto thisNamedType = DemangledTypeNode::NamedType(TypedefNamedTypeClass, std::move(thisName));
+	auto thisNamedType = DemangledTypeNode::NamedType(StructNamedTypeClass, std::move(thisName));
 	type.SetImplicitThisParameter(DemangledTypeNode::PointerType(
 		std::move(thisNamedType), false, false, PointerReferenceType));
 }

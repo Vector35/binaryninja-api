@@ -43,6 +43,16 @@ class DemangleResult(NamedTuple):
 	type: Optional['types.Type']
 	name: 'types.QualifiedName'
 
+	def _to_core_struct(self) -> core.BNDemanglerResult:
+		"""Create an allocator-owned result that must be released with BNFreeDemanglerResult."""
+		borrowed_name = self.name._to_core_struct()
+		result = core.BNDemanglerResult()
+		result.name.name = core.BNAllocStringList(borrowed_name.name, borrowed_name.nameCount)
+		result.name.nameCount = borrowed_name.nameCount
+		result.name._join = ctypes.cast(core.BNAllocString(self.name.join), ctypes.c_char_p)
+		result.type = core.BNNewTypeReference(self.type.handle) if self.type is not None else None
+		return result
+
 	@classmethod
 	def _from_core_struct(cls, result: core.BNDemanglerResult) -> 'DemangleResult':
 		if hasattr(result, "contents"):
@@ -441,7 +451,6 @@ class Demangler(metaclass=_DemanglerMetaclass):
 
 	name = None
 	_registered_demanglers = []
-	_cached_name = None
 
 	def __init__(self, handle=None):
 		self._uses_legacy_demangle_signature = False
@@ -546,13 +555,7 @@ class Demangler(metaclass=_DemanglerMetaclass):
 			if not isinstance(var_name, types.QualifiedName):
 				var_name = types.QualifiedName(var_name)
 
-			Demangler._cached_name = core.BNDemanglerResult()
-			Demangler._cached_name.name = var_name._to_core_struct()
-			if type is not None:
-				Demangler._cached_name.type = core.BNNewTypeReference(type.handle)
-			else:
-				Demangler._cached_name.type = None
-			result[0] = Demangler._cached_name
+			result[0] = DemangleResult(type, var_name)._to_core_struct()
 			return True
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in Demangler._demangle")
@@ -560,9 +563,8 @@ class Demangler(metaclass=_DemanglerMetaclass):
 
 	def _free_result(self, ctxt, result):
 		try:
-			if result is not None and result.contents.type:
-				core.BNFreeType(result.contents.type)
-			Demangler._cached_name = None
+			if result:
+				core.BNFreeDemanglerResult(result)
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in Demangler._free_result")
 

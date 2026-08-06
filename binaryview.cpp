@@ -27,17 +27,6 @@ using namespace BinaryNinja;
 using namespace std;
 
 
-struct SymbolQueueResolveContext
-{
-	std::function<std::pair<Ref<Symbol>, Confidence<Ref<Type>>>()> resolve;
-};
-
-struct SymbolQueueAddContext
-{
-	std::function<void(Symbol*, const Confidence<Ref<Type>>&)> add;
-};
-
-
 uint64_t BinaryDataNotification::NotificationBarrierCallback(void* ctxt, BNBinaryView* object)
 {
 	BinaryDataNotification* notify = (BinaryDataNotification*)ctxt;
@@ -880,6 +869,20 @@ bool Symbol::IsAutoDefined() const
 Ref<Symbol> Symbol::ImportedFunctionFromImportAddressSymbol(Symbol* sym, uint64_t addr)
 {
 	return new Symbol(BNImportedFunctionFromImportAddressSymbol(sym->GetObject(), addr));
+}
+
+
+std::string BinaryNinja::NormalizeSymbolName(std::string name)
+{
+	if (name.empty())
+		return name;
+
+	if (((name[0] >= 'A') && (name[0] <= 'Z')) || ((name[0] >= 'a') && (name[0] <= 'z')) ||
+		(name[0] == '_') || (name[0] == '?') || (name[0] == '$') || (name[0] == '@') || (name[0] == '.'))
+		return name;
+
+	name.insert(name.begin(), '_');
+	return name;
 }
 
 
@@ -6194,9 +6197,58 @@ Ref<BinaryView> BinaryNinja::ParseTextFormat(const std::string& filename)
 }
 
 
-SymbolQueue::SymbolQueue()
+namespace {
+	struct PendingSymbolAPIObject
+	{
+		BNPendingSymbol object {};
+		std::optional<BNNameSpace> nameSpace;
+
+		explicit PendingSymbolAPIObject(const PendingSymbol& symbol)
+		{
+			object.type = symbol.type;
+			object.name = symbol.name.c_str();
+			object.address = symbol.address;
+			object.binding = symbol.binding;
+			object.ordinal = symbol.ordinal;
+			object.symbolSize = symbol.symbolSize;
+			object.typeRef.type = symbol.suppliedType.GetValue() ? symbol.suppliedType.GetValue()->GetObject() : nullptr;
+			object.typeRef.confidence = symbol.suppliedType.GetConfidence();
+			nameSpace = symbol.nameSpace.ToAPIStruct();
+			object.nameSpace = &*nameSpace;
+		}
+
+		~PendingSymbolAPIObject()
+		{
+			if (nameSpace)
+				NameSpace::FreeAPIStruct(&*nameSpace);
+		}
+	};
+}  // namespace
+
+
+SymbolResult::SymbolResult(const BNSymbolQueueResult* result)
 {
-	m_object = BNCreateSymbolQueue();
+	BNSymbolQueueResultData data {};
+	if (!BNGetSymbolQueueResultData(result, &data))
+		return;
+	m_symbol = data.symbol ? new Symbol(BNNewSymbolReference(data.symbol)) : nullptr;
+	m_type = Confidence<Ref<Type>>(
+		data.type.type ? new Type(BNNewTypeReference(data.type.type)) : nullptr, data.type.confidence);
+	m_symbolSize = data.symbolSize;
+}
+
+
+SymbolQueue::SymbolQueue(
+	ApplyFunction apply, const DemanglerConfig& demangleConfig,
+	BNSymbolQueueFlags flags) :
+	m_apply(std::move(apply))
+{
+	BNSymbolQueueCallbacks callbacks {};
+	callbacks.context = this;
+	callbacks.apply = ApplyCallback;
+
+	BNDemanglerConfig apiConfig = demangleConfig.ToAPIStruct();
+	m_object = BNCreateSymbolQueue(&apiConfig, flags, &callbacks);
 }
 
 
@@ -6206,37 +6258,34 @@ SymbolQueue::~SymbolQueue()
 }
 
 
-void SymbolQueue::ResolveCallback(void* ctxt, BNSymbol** symbol, BNTypeWithConfidence* type)
+BNSymbol* SymbolQueue::ApplyCallback(void* ctxt, const BNSymbolQueueResult* symbol)
 {
-	SymbolQueueResolveContext* resolve = (SymbolQueueResolveContext*)ctxt;
-	auto result = resolve->resolve();
-	delete resolve;
-	*symbol = result.first ? BNNewSymbolReference(result.first->GetObject()) : nullptr;
-	type->type = result.second.GetValue() ? BNNewTypeReference(result.second.GetValue()->GetObject()) : nullptr;
-	type->confidence = result.second.GetConfidence();
+	auto* queue = static_cast<SymbolQueue*>(ctxt);
+	if (!queue || !queue->m_apply)
+		return nullptr;
+
+	SymbolResult result(symbol);
+	Ref<Symbol> applied = queue->m_apply(result);
+	return applied ? BNNewSymbolReference(applied->GetObject()) : nullptr;
 }
 
 
-void SymbolQueue::AddCallback(void* ctxt, BNSymbol* symbol, BNTypeWithConfidence* type)
+void SymbolQueue::Append(const PendingSymbol& symbol)
 {
-	SymbolQueueAddContext* add = (SymbolQueueAddContext*)ctxt;
-	Ref<Symbol> apiSymbol = new Symbol(symbol);
-	Confidence<Ref<Type>> apiType(type->type ? new Type(type->type) : nullptr, type->confidence);
-	add->add(apiSymbol, apiType);
-	delete add;
+	PendingSymbolAPIObject apiSymbol(symbol);
+	BNAppendSymbolQueue(m_object, &apiSymbol.object);
 }
 
 
-void SymbolQueue::Append(
-	const std::function<std::pair<Ref<Symbol>, Confidence<Ref<Type>>>()>& resolve, const std::function<void(Symbol*, const Confidence<Ref<Type>>&)>& add)
+Ref<Symbol> SymbolQueue::ApplyNow(const PendingSymbol& symbol)
 {
-	SymbolQueueResolveContext* resolveCtxt = new SymbolQueueResolveContext {resolve};
-	SymbolQueueAddContext* addCtxt = new SymbolQueueAddContext {add};
-	BNAppendSymbolQueue(m_object, ResolveCallback, resolveCtxt, AddCallback, addCtxt);
+	PendingSymbolAPIObject apiSymbol(symbol);
+	BNSymbol* result = BNApplyPendingSymbolNow(m_object, &apiSymbol.object);
+	return result ? new Symbol(result) : nullptr;
 }
 
 
-void SymbolQueue::Process()
+void SymbolQueue::Drain()
 {
-	BNProcessSymbolQueue(m_object);
+	BNDrainSymbolQueue(m_object);
 }

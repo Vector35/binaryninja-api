@@ -330,8 +330,8 @@ namespace BinaryNinja
 		Ref<Architecture> m_arch;
 		Ref<Logger> m_logger;
 		bool m_is64;
-		bool m_applyRecoveredTypes;
-		bool m_simplifyTemplates = false;
+		BNSymbolQueueFlags m_symbolQueueFlags = NoSymbolQueueFlags;
+		SymbolQueue* m_symbolQueue = nullptr;
 		bool m_relocatable = false;
 
 		virtual uint64_t PerformGetEntryPoint() const override;
@@ -349,7 +349,9 @@ namespace BinaryNinja
 		uint64_t Read64(uint64_t rva);
 		void AddCOFFSymbol(BNSymbolType type, const std::string& dll, const std::string& name, uint64_t addr,
 			BNSymbolBinding binding = NoBinding, uint64_t ordinal = 0, TypeLibrary* lib = nullptr);
-		// void COFFView::GetRelocs(BinaryReader& reader, const vector<COFFSection>& sections, vector<COFFRelocation>& result, const QualifiedName& coffRelocTypeName, const map<uint64_t, string>& symbolNames);
+		Ref<Symbol> ApplyQueuedCOFFSymbol(const SymbolResult& symbol);
+		// void COFFView::GetRelocs(BinaryReader& reader, const vector<COFFSection>& sections, vector<COFFRelocation>&
+		// result, const QualifiedName& coffRelocTypeName, const map<uint64_t, string>& symbolNames);
 
 	public:
 		COFFView(BinaryView* data, bool parseOnly = false);

@@ -217,7 +217,10 @@ bool COFFView::Init()
 		}
 
 		Ref<Settings> viewSettings = Settings::Instance();
-		m_applyRecoveredTypes = viewSettings->Get<bool>("analysis.applyTypesFromMangledNames", this);
+		if (viewSettings->Get<bool>("analysis.applyTypesFromMangledNames", this))
+			m_symbolQueueFlags |= ApplyRecoveredTypes;
+		if (viewSettings->Get<bool>("analysis.defineTypesFromMangledNames", this))
+			m_symbolQueueFlags |= DefineRecoveredTypes;
 
 		// Add extra segment to hold header so that it can be viewed.  This must be first so
 		// that real sections take priority.
@@ -499,7 +502,9 @@ bool COFFView::Init()
 		if (m_parseOnly)
 			return true;
 
-		m_simplifyTemplates = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", this);
+		m_symbolQueue = new SymbolQueue(
+			[this](const SymbolResult& symbol) { return ApplyQueuedCOFFSymbol(symbol); },
+			DemanglerConfig::ForBinaryView(this), m_symbolQueueFlags);
 
 		// Create various COFF header yypes
 
@@ -684,6 +689,8 @@ bool COFFView::Init()
 	catch (std::exception& e)
 	{
 		m_logger->LogError("Failed to parse COFF headers: %s\n", e.what());
+		delete m_symbolQueue;
+		m_symbolQueue = nullptr;
 		return false;
 	}
 
@@ -1368,6 +1375,9 @@ bool COFFView::Init()
 		m_logger->LogError("Failed to parse COFF relocations: %s\n", e.what());
 	}
 
+	delete m_symbolQueue;
+	m_symbolQueue = nullptr;
+
 	// Add a symbol for the entry point
 	// if (entryPointAddress)
 	// 	DefineAutoSymbol(new Symbol(FunctionSymbol, "_start", m_imageBase + entryPointAddress));
@@ -1518,37 +1528,15 @@ void COFFView::AddCOFFSymbol(BNSymbolType type, const string& dll, const string&
 		}
 	}
 
-	// If name does not start with alphabetic character or symbol, prepend an underscore
-	string rawName = name;
-	if (!(((name[0] >= 'A') && (name[0] <= 'Z')) ||
-				((name[0] >= 'a') && (name[0] <= 'z')) ||
-				(name[0] == '_') || (name[0] == '?') || (name[0] == '$') || (name[0] == '@')))
-		rawName = "_" + name;
+	PendingSymbol symbol(type, NormalizeSymbolName(name), address, binding, symbolTypeRef, nameSpace);
+	symbol.ordinal = ordinal;
+	m_symbolQueue->ApplyNow(symbol);
+}
 
-	string shortName = rawName;
-	string fullName = rawName;
 
-	if (m_arch && name.size() > 0)
-	{
-		DemanglerConfig demanglerConfig(GetDefaultPlatform(), this, m_simplifyTemplates);
-		if (auto result = Demangler::DemangleAny(rawName, demanglerConfig))
-		{
-			auto demangledType = result->type;
-			shortName = result->name.GetString();
-			fullName = shortName;
-			if (demangledType)
-				fullName += demangledType->GetStringAfterName();
-			if (!symbolTypeRef && m_applyRecoveredTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
-				symbolTypeRef = demangledType;
-		}
-		else
-		{
-			m_logger->LogDebug("Failed to demangle: '%s'\n", name.c_str());
-		}
-	}
-
-	DefineAutoSymbolAndVariableOrFunction(GetDefaultPlatform(),
-		new Symbol(type, shortName, fullName, rawName, address, binding, nameSpace, ordinal), symbolTypeRef);
+Ref<Symbol> COFFView::ApplyQueuedCOFFSymbol(const SymbolResult& symbol)
+{
+	return DefineAutoSymbolAndVariableOrFunction(GetDefaultPlatform(), symbol.GetSymbol(), symbol.GetType());
 }
 
 

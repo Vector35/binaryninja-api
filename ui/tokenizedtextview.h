@@ -8,6 +8,7 @@
 #include "commentdialog.h"
 #include "menus.h"
 #include "uicontext.h"
+#include "tokennavigation.h"
 
 /*!
 
@@ -45,6 +46,7 @@ class BINARYNINJAUIAPI TokenizedTextViewHistoryEntry : public HistoryEntry
 class BINARYNINJAUIAPI TokenizedTextView :
     public QAbstractScrollArea,
     public View,
+    public TokenNavigationHandler,
     public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
@@ -96,6 +98,14 @@ class BINARYNINJAUIAPI TokenizedTextView :
 	void reanalyze();
 	void comment();
 	void commentAccepted();
+
+	BinaryViewRef getBinaryViewForTokenActivation() override;
+	QWidget* getWidgetForTokenActivation() override;
+	View* getViewForTokenActivation() override;
+	FunctionRef getFunctionForTokenActivation() override;
+	void navigateToTokenTarget(uint64_t addr) override;
+	void defineNameForSelectedToken() override;
+	void editCommentForSelectedToken() override;
 
 	void convertToNop();
 	void alwaysBranch();

@@ -10,6 +10,7 @@
 #include "commentdialog.h"
 #include "commands.h"
 #include "instructionedit.h"
+#include "tokennavigation.h"
 
 /*!
 
@@ -72,6 +73,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
     public QAbstractScrollArea,
     public View,
     public PreviewScrollHandler,
+    public TokenNavigationHandler,
     public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
@@ -204,6 +206,16 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	void navigateToAddress(uint64_t addr);
 	void navigateToGotoLabel(uint64_t label);
 
+	BinaryViewRef getBinaryViewForTokenActivation() override;
+	QWidget* getWidgetForTokenActivation() override;
+	View* getViewForTokenActivation() override;
+	FunctionRef getFunctionForTokenActivation() override;
+	std::optional<std::vector<BinaryNinja::InstructionTextToken>> getTokensForLineWithSelection() override;
+	void navigateToTokenTarget(uint64_t addr) override;
+	bool navigateToTokenGotoLabel(uint64_t label) override;
+	void defineNameForSelectedToken() override;
+	void editCommentForSelectedToken() override;
+
 	void setGraphInternal(FlowGraphRef graph, BinaryNinja::Ref<FlowGraphHistoryEntry> entry, bool useAddr,
 	    uint64_t addr, bool notify, bool recenterWithPreviousGraph, size_t index = BN_INVALID_EXPR);
 
@@ -221,7 +233,7 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	void moveToEndOfView();
 	void selectAll();
 	void selectNone();
-	void navigateToHighlightedToken();
+	void activateHighlightedToken();
 	std::optional<uint64_t> addressForCall();
 
 	uint64_t getTokenAddress();

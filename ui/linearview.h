@@ -16,6 +16,7 @@
 #include "instructionedit.h"
 #include "ilchooser.h"
 #include "commands.h"
+#include "tokennavigation.h"
 #include <assembledialog.h>
 
 #define LINEAR_VIEW_UPDATE_CHECK_INTERVAL 200
@@ -156,7 +157,11 @@ public:
 
     \ingroup linearview
 */
-class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, public BinaryNinja::BinaryDataNotification
+class BINARYNINJAUIAPI LinearView :
+	public QAbstractScrollArea,
+	public View,
+	public TokenNavigationHandler,
+	public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
 
@@ -279,7 +284,22 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 		FunctionRef func, uint64_t offset, size_t instrIndex, bool center, bool updateHighlight, bool navByRef = false);
 	bool navigateToGotoLabel(uint64_t label);
 	bool navigateToMatchingBrace();
-	bool navigateToExternalLink(uint64_t linkSourceAddr);
+
+	bool getLineForCursorPosition(LinearViewLine& result);
+
+	BinaryViewRef getBinaryViewForTokenActivation() override;
+	QWidget* getWidgetForTokenActivation() override;
+	View* getViewForTokenActivation() override;
+	ViewFrame* getViewFrameForTokenActivation() override;
+	FunctionRef getFunctionForTokenActivation() override;
+	std::optional<std::vector<BinaryNinja::InstructionTextToken>> getTokensForLineWithSelection() override;
+	TokenActivationAction getActionForLineWithSelection() override;
+	void navigateToTokenTarget(uint64_t addr) override;
+	bool navigateToTokenGotoLabel(uint64_t label) override;
+	bool navigateToTokenMatchingBrace() override;
+	void defineNameForSelectedToken() override;
+	void editCommentForSelectedToken() override;
+
 	void setSelectionOffsetsInternal(BNAddressRange range, bool navigateToStart = true);
 	void viewData();
 
@@ -577,7 +597,7 @@ protected:
 	void moveToEndOfView();
 	void selectNone();
 	void selectAll();
-	void navigateToHighlightedToken();
+	void activateHighlightedToken();
 	void splitToNewTabAndNavigateFromCursorPosition();
 	void splitToNewWindowAndNavigateFromCursorPosition();
 	void splitToNewPaneAndNavigateFromCursorPosition();

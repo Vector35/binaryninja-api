@@ -21,6 +21,8 @@ pub use plugin::{
 
 pub type PluginType = BNPluginType;
 pub type PluginStatus = BNPluginStatus;
+pub type PluginSource = BNPluginSource;
+pub type PluginLoadStatus = binaryninjacore_sys::PluginLoadStatus;
 
 #[repr(transparent)]
 pub struct Repository {

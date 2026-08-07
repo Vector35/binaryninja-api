@@ -284,6 +284,33 @@ string Extension::GetRepository() const
 }
 
 
+PluginSource Extension::GetSource() const
+{
+	return BNPluginGetSource(m_object);
+}
+
+
+PluginLoadStatus Extension::GetLoadStatus() const
+{
+	return BNPluginGetLoadStatus(m_object);
+}
+
+
+string Extension::GetLoadError() const
+{
+	RETURN_STRING(BNPluginGetLoadError(m_object));
+}
+
+
+std::optional<uint32_t> Extension::GetReportedABIVersion() const
+{
+	uint32_t version;
+	if (BNPluginGetReportedABIVersion(m_object, &version))
+		return version;
+	return std::nullopt;
+}
+
+
 vector<string> Extension::GetInstallPlatforms() const
 {
 	vector<string> result;
@@ -310,6 +337,12 @@ bool Extension::IsBeingUpdated() const
 bool Extension::IsRunning() const
 {
 	return BNPluginIsRunning(m_object);
+}
+
+
+bool Extension::IsShadowed() const
+{
+	return BNPluginIsShadowed(m_object);
 }
 
 

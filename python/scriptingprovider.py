@@ -1194,10 +1194,32 @@ class PythonScriptingProvider(ScriptingProvider):
 				plugin.installed = True
 
 			plugin_full_path = str(Path(repo.full_path) / plugin.path)
-			if repo.full_path not in sys.path:
-				sys.path.append(repo.full_path)
-			if plugin_full_path not in sys.path:
-				sys.path.append(plugin_full_path)
+			loaded_module = sys.modules.get(module)
+			if loaded_module is not None:
+				loaded_path = getattr(loaded_module, "__file__", None)
+				try:
+					plugin_path = Path(plugin_full_path)
+					if plugin_path.is_dir():
+						expected_path = plugin_path / "__init__.py"
+					elif plugin_path.with_suffix(".py").is_file():
+						expected_path = plugin_path.with_suffix(".py")
+					else:
+						expected_path = plugin_path
+					if loaded_path is None or Path(loaded_path).resolve() != expected_path.resolve():
+						# A duplicate may have been imported as another plugin's dependency before
+						# selection completed. Remove it so the selected path is executed below.
+						for loaded_name in list(sys.modules):
+							if loaded_name == module or loaded_name.startswith(module + "."):
+								del sys.modules[loaded_name]
+				except OSError as error:
+					raise ValueError(f"Unable to validate loaded module '{module}': {error}") from error
+			# The core has already selected the active plugin. Put its repository first so
+			# Python import order cannot substitute a lower-priority duplicate.
+			for path in (plugin_full_path, repo.full_path):
+				if path in sys.path:
+					sys.path.remove(path)
+				sys.path.insert(0, path)
+			importlib.invalidate_caches()
 
 			if plugin.subdir:
 				__import__(module + "." + plugin.subdir.replace("/", "."))
@@ -1210,6 +1232,8 @@ class PythonScriptingProvider(ScriptingProvider):
 			logger.log_error_for_exception(f"Failed to import python plugin: {repo_path}/{module}: {ie}")
 		except binaryninja.UIPluginInHeadlessError:
 			logger.log_info(f"Ignored python UI plugin: {repo_path}/{module}")
+		except Exception:
+			logger.log_error_for_exception(f"Failed to initialize python plugin: {repo_path}/{module}")
 		return False
 
 	def _run_args(self, args, env: Optional[Dict]=None, output_logger=None):

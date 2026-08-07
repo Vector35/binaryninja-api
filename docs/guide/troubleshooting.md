@@ -17,11 +17,11 @@ We recommend the following steps to produce the best bug-reports:
 
 ### Disabling Plugins
 
-Disabling plugins can be a quick way to diagnose whether some unexpected behavior is caused by Binary Ninja itself or a plugin. Simply launch the process with the extra command-line option `-p` to disable all user plugins at load time. Note that repository plugins are currently not disabled with this switch.
+Disabling plugins can be a quick way to diagnose whether some unexpected behavior is caused by Binary Ninja itself or a plugin. Launch the process with the extra command-line option `-p` to disable local plugins at load time. Managed plugins are not disabled with this switch.
 
 ### Disabling User Settings
 
-In addition to the above-mentioned method of disabling user-plugins, you can also set the environment variable `BN_DISABLE_USER_PLUGINS` (the value doesn't matter, the mere existence of the variable is enough). Related, there is another setting: `BN_DISABLE_USER_SETTINGS` that will launch BN without relying on any user settings which is useful for identifying whether a particular behavior is the result of a setting without having to manually change a number of settings.
+In addition to the above method of disabling local plugins, you can set the environment variable `BN_DISABLE_USER_PLUGINS` (the value does not matter, the variable only needs to exist). `BN_DISABLE_USER_SETTINGS` launches Binary Ninja without user settings, which helps identify setting-related behavior without manually changing multiple settings.
 
 ### Resetting QSettings
 
@@ -285,8 +285,8 @@ The following environment variables may be helpful when troubleshooting issues:
 | BN_LICENSE | File Contents (String) | This variable is useful for using Binary Ninja with a license passed from outside a docker image without storing the raw license file inside. [Must contain](https://github.com/Vector35/debugger/blob/dev/scripts/build.py#L195-L196) the full contents of the license file.  |
 | BN_USER_DIRECTORY | Path (String) | This variable overrides the [default user folder](https://docs.binary.ninja/guide/index.html#user-folder) path. |
 | BN_QSETTINGS_POSTFIX | Postfix (String) | This environment variable is treated as a string postfix that can be used to separate saved QSettings for testing purposes. |
-| BN_DISABLE_REPOSITORY_PLUGINS | Flag (True if exists) | This setting will only disable plugins installed via the extension manager. |
-| BN_DISABLE_USER_PLUGINS | Flag (True if exists) | This environment variable will disable all plugins loaded from the [plugins user folder](https://docs.binary.ninja/guide/index.html#user-folder). |
+| BN_DISABLE_REPOSITORY_PLUGINS | Flag (True if exists) | Disables managed plugins installed through the Extension Manager. |
+| BN_DISABLE_USER_PLUGINS | Flag (True if exists) | Disables local plugins loaded from the [user plugin folder](https://docs.binary.ninja/guide/index.html#user-folder). |
 | BN_DISABLE_USER_SETTINGS | Flag (True if exists) | This flag will cause Binary Ninja to ignore any [`settings.json`](https://docs.binary.ninja/guide/settings.html).|
 | BN_SCREENSHOT | Flag (True if exists) | This flag removes some small UI clutter to enable cleaner screenshots. |
 | BN_DEBUG_HTTP | Flag (True if exists) | This flag enables additional debug logging of HTTP activity. |

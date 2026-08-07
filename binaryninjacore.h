@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 188
+#define BN_CURRENT_CORE_ABI_VERSION 190
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -1324,6 +1324,13 @@ extern "C"
 		OtherPluginOrigin
 	};
 
+	BN_ENUM(uint8_t, BNPluginSource)
+	{
+		LocalPluginSource,
+		ManagedPluginSource,
+		BundledPluginSource
+	};
+
 	BN_OPTIONS(uint32_t, BNPluginStatus)
 	{
 		NotInstalledPluginStatus = 0x00000000,
@@ -1336,7 +1343,8 @@ extern "C"
 		PendingRestartPluginStatus = 0x00000200,
 		BeingUpdatedPluginStatus = 0x00000400,
 		BeingDeletedPluginStatus = 0x00000800,
-		DependenciesBeingInstalledStatus = 0x00001000
+		DependenciesBeingInstalledStatus = 0x00001000,
+		ShadowedPluginStatus = 0x00002000
 	};
 
 	BN_ENUM(uint8_t, BNPluginType)
@@ -8923,6 +8931,11 @@ extern "C"
 	BINARYNINJACOREAPI char** BNPluginGetPlatforms(BNPlugin* p, size_t* count);
 	BINARYNINJACOREAPI void BNFreePluginPlatforms(char** platforms, size_t count);
 	BINARYNINJACOREAPI const char* BNPluginGetRepository(BNPlugin* p);
+	BINARYNINJACOREAPI BNPluginSource BNPluginGetSource(BNPlugin* p);
+	BINARYNINJACOREAPI bool BNPluginIsShadowed(BNPlugin* p);
+	BINARYNINJACOREAPI PluginLoadStatus BNPluginGetLoadStatus(BNPlugin* p);
+	BINARYNINJACOREAPI const char* BNPluginGetLoadError(BNPlugin* p);
+	BINARYNINJACOREAPI bool BNPluginGetReportedABIVersion(BNPlugin* p, uint32_t* version);
 	BINARYNINJACOREAPI bool BNPluginIsBeingDeleted(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginIsBeingUpdated(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginIsRunning(BNPlugin* p);

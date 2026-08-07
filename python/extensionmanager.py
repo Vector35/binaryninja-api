@@ -27,7 +27,7 @@ from typing import List, Dict, Optional
 import binaryninja
 from . import _binaryninjacore as core
 from . import deprecation
-from .enums import PluginDependencyConflictStatus, PluginType
+from .enums import PluginDependencyConflictStatus, PluginLoadStatus, PluginSource, PluginType
 
 
 @dataclass(frozen=True)
@@ -64,8 +64,8 @@ class PluginDependencyConflict:
 
 class Extension:
 	"""
-	``Extension`` is mostly read-only, however you can install/uninstall enable/disable plugins. Extensions are
-	created by parsing the plugins.json in a plugin repository.
+	``Extension`` describes a local, managed, or bundled plugin. Managed extensions can be installed, updated,
+	enabled, disabled, and uninstalled through the Extension Manager.
 	"""
 	def __init__(self, handle: 'core.BNRepoPluginHandle'):
 		self.handle = handle
@@ -412,6 +412,34 @@ class Extension:
 	def running(self) -> bool:
 		"""Boolean status indicating that the plugin is currently running"""
 		return core.BNPluginIsRunning(self.handle)
+
+	@property
+	def source(self) -> PluginSource:
+		"""Installation source for this plugin: local, managed, or bundled."""
+		return PluginSource(core.BNPluginGetSource(self.handle))
+
+	@property
+	def load_status(self) -> PluginLoadStatus:
+		"""Current load state, including native discovery failures."""
+		return PluginLoadStatus(core.BNPluginGetLoadStatus(self.handle))
+
+	@property
+	def load_error(self) -> str:
+		"""Diagnostic from plugin discovery or initialization, if available."""
+		return core.BNPluginGetLoadError(self.handle) or ""
+
+	@property
+	def reported_abi_version(self) -> Optional[int]:
+		"""ABI reported by a rejected native core plugin, if available."""
+		version = ctypes.c_uint32()
+		if core.BNPluginGetReportedABIVersion(self.handle, version):
+			return version.value
+		return None
+
+	@property
+	def shadowed(self) -> bool:
+		"""Whether a higher-priority plugin with the same runtime identity is selected."""
+		return core.BNPluginIsShadowed(self.handle)
 
 	@property
 	def update_pending(self) -> bool:

@@ -12,11 +12,9 @@ directory. Once that is complete, run `make` in the build directory to compile t
 The plugin can be found in the root of the build directory as `libplatform_decree.so`,
 `libplatform_decree.dylib` or `platform_decree.dll` depending on your platform.
 
-To install the plugin, first launch Binary Ninja and uncheck the "DECREE platform plugin"
-option in the "Core Plugins" section. This will cause Binary Ninja to stop loading the
-bundled plugin so that its replacement can be loaded. Once this is complete, you can copy
-the plugin into the user plugins directory (you can locate this by using the "Open Plugin Folder"
-option in the Binary Ninja UI).
+To install the plugin, copy it into the user plugins directory (you can locate this by using
+the "Open Plugin Folder" option in the Binary Ninja UI). This local plugin takes precedence
+over the bundled DECREE platform plugin. Restart Binary Ninja to load the local version.
 
 **Do not replace the architecture plugin in the Binary Ninja install directory. This will
 be overwritten every time there is a Binary Ninja update. Use the above process to ensure that

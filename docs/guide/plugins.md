@@ -2,13 +2,13 @@
 
 The most common Binary Ninja plugins are written in Python which we are covering here. That said, there are some C++ plugins which must be built for the appropriate native architecture and will usually include build instructions for each platform. Several [C++ examples](https://github.com/Vector35/binaryninja-api/tree/dev/examples) are included in the API repository. Binary Ninja also bundles native plugins such as the [Google BinDiff similarity and BinExport integration](./similarity.md#binexport). Finally, there is preliminary support for [Rust plugins](https://github.com/Vector35/binaryninja-api/tree/dev/rust), but the Rust API is still in the early stages of development, and should be considered a moving target, so proceed with caution and develop at your own risk.
 
-Plugins are loaded from the user's plugin folder:
+Local plugins are installed manually in the user's plugin folder:
 
 - macOS: `~/Library/Application Support/Binary Ninja/plugins/`
 - Linux: `~/.binaryninja/plugins/`
 - Windows: `%APPDATA%\Binary Ninja\plugins`
 
-Note that plugins installed via the [Extension Manager API](https://api.binary.ninja/binaryninja.extensionmanager-module.html) are installed in the `repositories` folder in the same path as the previous `plugin` folder listed above.  You should not need to manually adjust anything in that folder, but should access them via the API instead.
+Managed plugins installed via the [Extension Manager API](https://api.binary.ninja/binaryninja.extensionmanager-module.html) are stored in the `repositories` folder alongside the `plugins` folder listed above. You should not manually adjust managed plugin files and should access them through the API or Extension Manager instead. Binary Ninja also ships bundled plugins as part of the product installation.
 
 ## Extension Manager
 
@@ -39,6 +39,8 @@ In addition to finding plugins by name or description content, the search box in
  - `@disabled` to show plugins that are installed but not enabled
  - `@update_available` to show plugins that have updates to install
  - `@failed_to_load` to show plugins that failed to load
+ - `@local` to show plugins installed manually in the user plugin folder
+ - `@shadowed` to show plugins replaced by a higher-priority plugin with the same identity
 
 The following plugin categories are also searchable:
 
@@ -50,7 +52,19 @@ The following plugin categories are also searchable:
 
 ## Manual installation
 
-You can manually install a plugin either by adding a folder which contains it (the plugin folder must contain an `__init__.py` at the top of the folder, or a python file can be included directly in the plugin folder -- though this is not recommended).
+You can install a local Python plugin by adding a folder with an `__init__.py` at its top level, or by placing a Python file directly in the plugin folder (though this is not recommended). Native core plugins can also be placed in the plugin folder. The Extension Manager lists local plugins as unmanaged, shows their path and load status, and reports errors such as a missing or incompatible core ABI. Local plugins cannot be installed, updated, or uninstalled through the Extension Manager. Native UI plugins use a separate loader and are not included in the Extension Manager at this time.
+
+### Plugin precedence and load failures
+
+When plugins have the same runtime identity, the first match from the following will take precedence:
+
+1. Local plugin (in user plugins folder)
+2. Managed plugin (from Extension Manager)
+3. Bundled plugin (from Binary Ninja install)
+
+The lower-priority plugins are *shadowed* and will not be loaded. This includes when the higher-priority plugin fails to load. You can use `@failed_to_load` and `@shadowed` in the Extension Manager to find the affected entries.
+
+Disabling a plugin lets the next eligible plugin load. Managed plugins can be disabled in the Extension Manager. For a local plugin, set its `enabled` property to `False` through the [Extension Manager API](https://api.binary.ninja/binaryninja.extensionmanager-module.html) to disable it for the current session, or move its file or directory out of the user plugin folder and restart to keep it disabled. Local plugin enable/disable state is not saved across restarts. If a plugin is already running, disabling it cannot unload it. Restart Binary Ninja to activate the lower-priority plugin. Likewise, restart after fixing a failed plugin so it can be loaded again.
 
 Note, if manually cloning the [api repository](https://github.com/Vector35/binaryninja-api), make sure to:
 
@@ -110,7 +124,7 @@ When troubleshooting Binary Ninja problems, it may help to enable debug logging 
 
 And check `/tmp/bnlog.txt` when you're done.
 
-Additionally, running a python plugin with an environment variable of `BN_DISABLE_USER_PLUGINS` will prevent the API from initializing user-plugins. This is helpful for identifying when a plugin is causing problems. Furthermore, by setting `BN_USER_DIRECTORY` you can override your 'user' directory where all your settings and plugins are loaded.
+Additionally, the `BN_DISABLE_USER_PLUGINS` environment variable prevents the API from initializing local plugins from the user plugin folder. This is helpful for identifying when a local plugin is causing problems. Setting `BN_USER_DIRECTORY` overrides the user directory where settings and local plugins are loaded.
 
 ## Writing Plugins
 

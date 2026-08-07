@@ -147,7 +147,7 @@ Native Windows packages do not yet include `binaryninja_mcp.exe`. On Windows, co
 
 Use the full path to `binaryninja_mcp` in client configuration unless it is already on your `PATH`.
 
-By default, `binaryninja_mcp` loads plugins the same way as the main Binary Ninja executable. Launch it with `-p`, or set `BN_DISABLE_USER_PLUGINS`, to disable user and Extension Manager plugins for that server process.
+By default, `binaryninja_mcp` loads plugins the same way as the main Binary Ninja executable. Launch it with `-p`, or set `BN_DISABLE_USER_PLUGINS`, to disable local plugins for that server process. Set `BN_DISABLE_REPOSITORY_PLUGINS` to disable managed plugins.
 
 !!! warning "Headless Server Availability"
     The `binaryninja_mcp` headless server is not available in Binary Ninja Free or Personal and is not yet available in native Windows packages. The headless stdio examples below require an edition and platform that include the headless server, or a Linux installation running under WSL.

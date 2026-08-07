@@ -33,8 +33,8 @@ The contents of the user folder includes:
 
 - `lastrun`: A text file containing the directory of the last Binary Ninja binary path -- very useful for plugins to resolve the installation locations in non-default settings or on Linux
 - `license.dat`: License file
-- `plugins/`: Folder containing all manually installed user plugins
-- `repositories/`: Folder containing files and plugins managed by the [Extension Manager API](https://api.binary.ninja/binaryninja.extensionmanager-module.html)
+- `plugins/`: Folder containing local plugins installed manually by the user
+- `repositories/`: Folder containing managed plugins installed by the [Extension Manager API](https://api.binary.ninja/binaryninja.extensionmanager-module.html)
 - `settings.json`: User settings file (see [settings](settings.md))
 
 The following files and folders may be created in the user folder but are not created by default without some additional action:
@@ -42,7 +42,7 @@ The following files and folders may be created in the user folder but are not cr
 - `keybindings.json`: Custom key bindings (see [key bindings](#custom-hotkeys))
 - `startup.py`: Default Python commands run once the UI is loaded in the context of the scripting console
 - `signatures/`: Any user-created signatures can be stored in platform-specific sub-folders in this location
-- `pythonVER/`: Any pip dependencies from extension manager plugins are installed to the appropriate Python version subfolder such as `python313`
+- `pythonVER/`: Pip dependencies from managed plugins are installed to the appropriate Python version subfolder such as `python313`
 - `symbols/`: Used to store automatically downloaded PDBs
 - `update/`: Used to store update caches for pending updates
 - `snippets/`: Used to store snippets created using the official Snippet plugin

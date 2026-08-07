@@ -1,5 +1,5 @@
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
-use crate::repository::{PluginStatus, PluginType};
+use crate::repository::{PluginLoadStatus, PluginSource, PluginStatus, PluginType};
 use crate::string::{raw_to_string, BnString, IntoCStr};
 use crate::VersionInfo;
 use binaryninjacore_sys::*;
@@ -441,6 +441,34 @@ impl Extension {
         let result = unsafe { BNPluginGetRepository(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { BnString::into_string(result as *mut c_char) }
+    }
+
+    /// Installation source for this plugin: local, managed, or bundled.
+    pub fn source(&self) -> PluginSource {
+        unsafe { BNPluginGetSource(self.handle.as_ptr()) }
+    }
+
+    /// Current load state, including native discovery failures.
+    pub fn load_status(&self) -> PluginLoadStatus {
+        unsafe { BNPluginGetLoadStatus(self.handle.as_ptr()) }
+    }
+
+    /// Diagnostic from discovery or initialization, if available.
+    pub fn load_error(&self) -> String {
+        let result = unsafe { BNPluginGetLoadError(self.handle.as_ptr()) };
+        unsafe { BnString::into_string(result as *mut c_char) }
+    }
+
+    /// ABI reported by a rejected native core plugin, if available.
+    pub fn reported_abi_version(&self) -> Option<u32> {
+        let mut version = 0;
+        unsafe { BNPluginGetReportedABIVersion(self.handle.as_ptr(), &mut version) }
+            .then_some(version)
+    }
+
+    /// Whether a higher-priority plugin with the same runtime identity is selected.
+    pub fn is_shadowed(&self) -> bool {
+        unsafe { BNPluginIsShadowed(self.handle.as_ptr()) }
     }
 
     /// Boolean status indicating that the plugin is being deleted

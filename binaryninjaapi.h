@@ -20843,7 +20843,9 @@ namespace BinaryNinja {
 	};
 
 	typedef BNPluginOrigin PluginOrigin;
+	typedef BNPluginSource PluginSource;
 	typedef BNPluginStatus PluginStatus;
+	typedef ::PluginLoadStatus PluginLoadStatus;
 	typedef BNPluginType PluginType;
 	typedef BNPluginDependencyConflictStatus PluginDependencyConflictStatus;
 
@@ -20913,6 +20915,10 @@ namespace BinaryNinja {
 		bool IsVersionIDLessThan(const std::string& smaller, const std::string& larger) const;
 		std::string GetCommit() const;
 		std::string GetRepository() const;
+		PluginSource GetSource() const;
+		PluginLoadStatus GetLoadStatus() const;
+		std::string GetLoadError() const;
+		std::optional<uint32_t> GetReportedABIVersion() const;
 		std::string GetProjectData();
 		VersionInfo GetMinimumVersionInfo() const;
 		VersionInfo GetMaximumVersionInfo() const;
@@ -20926,6 +20932,7 @@ namespace BinaryNinja {
 		bool IsDeprecated() const;
 		bool IsEnabled() const;
 		bool IsRunning() const;
+		bool IsShadowed() const;
 		bool IsUpdatePending() const;
 		bool IsDisablePending() const;
 		bool IsDeletePending() const;

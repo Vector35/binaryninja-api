@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 184
+#define BN_CURRENT_CORE_ABI_VERSION 185
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -3633,6 +3633,17 @@ extern "C"
 		char* name;
 		double seconds;
 	} BNPerformanceInfo;
+
+	// Per-tag bit-length histogram produced by the StatCollector sampling facility.
+	// Bucket k counts samples whose value has bit width k, for k in 0..64; total is the
+	// sum of the sampled values (the sample count is recoverable as the sum of buckets).
+#define BN_STAT_HISTOGRAM_BUCKET_COUNT 65
+	typedef struct BNStatHistogram
+	{
+		char* name;
+		uint64_t total;
+		uint64_t buckets[BN_STAT_HISTOGRAM_BUCKET_COUNT];
+	} BNStatHistogram;
 
 	typedef struct BNMemoryUsageInfo
 	{
@@ -8715,6 +8726,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNUnregisterObjectRefDebugTrace(const char* typeName, void* trace);
 	BINARYNINJACOREAPI BNMemoryUsageInfo* BNGetMemoryUsageInfo(size_t* count);
 	BINARYNINJACOREAPI void BNFreeMemoryUsageInfo(BNMemoryUsageInfo* info, size_t count);
+
+	BINARYNINJACOREAPI BNStatHistogram* BNGetStatHistograms(size_t* count);
+	BINARYNINJACOREAPI void BNFreeStatHistograms(BNStatHistogram* stats, size_t count);
 
 	BINARYNINJACOREAPI uint32_t BNGetAddressRenderedWidth(uint64_t addr);
 

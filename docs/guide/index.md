@@ -743,6 +743,10 @@ clickable to navigate to the virtual address.
 Strings can be double-clicked to navigate to them, and the table can be sorted or the list filtered by
 typing in the search box.
 
+## Views
+Binary Ninja provides multiple views for analyzing a binary. Views can be switched using the view selector in the top-left corner of the main window. 
+![views](../img/views.png "Views"){ width="400" }
+
 ## View Options
 
 ![options >](../img/options.png "View options"){ width="400" }

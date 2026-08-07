@@ -5684,7 +5684,8 @@ public:
 		return vector<uint32_t> {
 			XED_REG_RAX, XED_REG_RCX, XED_REG_RDX,
 			XED_REG_R8, XED_REG_R9, XED_REG_R10, XED_REG_R11,
-			XED_REG_ZMM4, XED_REG_ZMM5 };
+			XED_REG_ZMM0, XED_REG_ZMM1, XED_REG_ZMM2,
+			XED_REG_ZMM3, XED_REG_ZMM4, XED_REG_ZMM5 };
 	}
 
 	virtual vector<uint32_t> GetCalleeSavedRegisters() override

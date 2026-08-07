@@ -751,41 +751,72 @@ Binary Ninja provides multiple views for analyzing a binary. Views can be switch
 
 ![options >](../img/options.png "View options"){ width="400" }
 
-Each of the views (Hex, Graph, Linear) have a variety of options configurable from the ☰ menu on the top right of the view pane.
+Each view provides options for customizing how information is displayed. View options can be accessed from the ☰ menu in the top-right corner of the view pane.
 
-Current options include:
+### Hex View Options
 
-- Hex (and Linear View where hex values are shown)
-    - Background highlight
-        - None
-        - Column
-        - Byte value
-    - Color highlight
-        - None
-        - ASCII and printable
-        - Modification
-    - Contrast
-        - Normal
-        - Medium
-        - Highlight
-- Graph & Linear Views
-    - Expand Long Opcode
-    - Indent HLIL Function Body (HLIL only)
-    - Show Address
-    - Show Call Parameter Names (MLIL/HLIL only)
-    - Show Function Address
-    - Show Opcode Bytes
-    - Show Register Set Highlighting
-    - Show Type Casts (`[SHIFT+CMD/CTRL] + C`)
-    - Show Variable Types
-        - At Assignment (MLIL graph only)
-        - At Top of Function
-    - Single Function View
-    - Advanced
-        - Show All Expression Types (MLIL/HLIL only)
-        - Show IL Flag Usage (Lifted IL only)
-        - Show IL Opcodes
-        - Show Stack Pointer Value (LLIL only)
+These options control the appearance of bytes and data displayed in Hex View. Some options are also available in Linear View when hex values are shown.
+
+#### Background Highlight
+
+Controls the background highlighting applied to displayed bytes.
+
+- **None** - Disables background highlighting.
+- **Column** - Highlights the column containing the selected byte.
+- **Byte Value** - Highlights bytes based on their value.
+
+#### Color Highlight
+
+Controls additional color highlighting applied to displayed bytes.
+
+- **None** - Disables color highlighting.
+- **ASCII and Printable** - Highlights printable ASCII characters.
+- **Modification** - Highlights modified bytes.
+
+#### Contrast
+
+Controls the contrast level used for highlighted bytes.
+
+- **Normal** - Uses the default contrast level.
+- **Medium** - Applies increased contrast.
+- **Highlight** - Applies the highest contrast level.
+
+### Graph and Linear View Options
+
+These options control how information is displayed in Graph View and Linear View.
+
+#### Display
+
+- **Expand Long Opcode** - Displays long instructions in their expanded form.
+- **Show Address** - Displays instruction addresses.
+- **Show Function Address** - Displays the starting address of each function.
+- **Show Opcode Bytes** - Displays the raw instruction bytes alongside the disassembly.
+
+#### Variables and Types
+
+- **Show Call Parameter Names (MLIL/HLIL only)** - Displays parameter names for function calls.
+- **Show Type Casts** (`Shift`+`Cmd`/`Ctrl`+`C`) - Displays explicit type casts in MLIL and HLIL views.
+- **Show Variable Types** - Displays inferred variable types.
+
+Variable types can be displayed in one of two locations:
+
+- **At Assignment (MLIL Graph only)** - Displays variable types at the point where they are assigned.
+- **At Top of Function** - Displays variable types at the beginning of the function.
+
+#### Layout
+
+- **Indent HLIL Function Body (HLIL only)** - Indents the body of High Level IL functions to improve readability.
+- **Single Function View** - Restricts the view to the currently selected function.
+
+#### Advanced
+
+These options expose additional Intermediate Language information useful during advanced analysis.
+
+- **Show All Expression Types (MLIL/HLIL only)** - Displays all available expression type information.
+- **Show IL Flag Usage (Lifted IL only)** - Displays flag usage in Lifted IL.
+- **Show IL Opcodes** - Displays Intermediate Language opcode names.
+- **Show Register Set Highlighting** - Highlights register set information in the current view.
+- **Show Stack Pointer Value (LLIL only)** - Displays the stack pointer value for each Low Level IL instruction.
 
 ## Linear View
 

@@ -6226,10 +6226,10 @@ namespace {
 }  // namespace
 
 
-SymbolResult::SymbolResult(const BNSymbolQueueResult* result)
+SymbolResult::SymbolResult(const BNSymbolDemangleQueueResult* result)
 {
-	BNSymbolQueueResultData data {};
-	if (!BNGetSymbolQueueResultData(result, &data))
+	BNSymbolDemangleQueueResultData data {};
+	if (!BNGetSymbolDemangleQueueResultData(result, &data))
 		return;
 	m_symbol = data.symbol ? new Symbol(BNNewSymbolReference(data.symbol)) : nullptr;
 	m_type = Confidence<Ref<Type>>(
@@ -6238,29 +6238,29 @@ SymbolResult::SymbolResult(const BNSymbolQueueResult* result)
 }
 
 
-SymbolQueue::SymbolQueue(
+SymbolDemangleQueue::SymbolDemangleQueue(
 	ApplyFunction apply, const DemanglerConfig& demangleConfig,
-	BNSymbolQueueFlags flags) :
+	BNSymbolDemangleQueueFlags flags) :
 	m_apply(std::move(apply))
 {
-	BNSymbolQueueCallbacks callbacks {};
+	BNSymbolDemangleQueueCallbacks callbacks {};
 	callbacks.context = this;
 	callbacks.apply = ApplyCallback;
 
 	BNDemanglerConfig apiConfig = demangleConfig.ToAPIStruct();
-	m_object = BNCreateSymbolQueue(&apiConfig, flags, &callbacks);
+	m_object = BNCreateSymbolDemangleQueue(&apiConfig, flags, &callbacks);
 }
 
 
-SymbolQueue::~SymbolQueue()
+SymbolDemangleQueue::~SymbolDemangleQueue()
 {
-	BNDestroySymbolQueue(m_object);
+	BNDestroySymbolDemangleQueue(m_object);
 }
 
 
-BNSymbol* SymbolQueue::ApplyCallback(void* ctxt, const BNSymbolQueueResult* symbol)
+BNSymbol* SymbolDemangleQueue::ApplyCallback(void* ctxt, const BNSymbolDemangleQueueResult* symbol)
 {
-	auto* queue = static_cast<SymbolQueue*>(ctxt);
+	auto* queue = static_cast<SymbolDemangleQueue*>(ctxt);
 	if (!queue || !queue->m_apply)
 		return nullptr;
 
@@ -6270,14 +6270,14 @@ BNSymbol* SymbolQueue::ApplyCallback(void* ctxt, const BNSymbolQueueResult* symb
 }
 
 
-void SymbolQueue::Append(const PendingSymbol& symbol)
+void SymbolDemangleQueue::Append(const PendingSymbol& symbol)
 {
 	PendingSymbolAPIObject apiSymbol(symbol);
-	BNAppendSymbolQueue(m_object, &apiSymbol.object);
+	BNAppendSymbolDemangleQueue(m_object, &apiSymbol.object);
 }
 
 
-Ref<Symbol> SymbolQueue::ApplyNow(const PendingSymbol& symbol)
+Ref<Symbol> SymbolDemangleQueue::ApplyNow(const PendingSymbol& symbol)
 {
 	PendingSymbolAPIObject apiSymbol(symbol);
 	BNSymbol* result = BNApplyPendingSymbolNow(m_object, &apiSymbol.object);
@@ -6285,7 +6285,7 @@ Ref<Symbol> SymbolQueue::ApplyNow(const PendingSymbol& symbol)
 }
 
 
-void SymbolQueue::Drain()
+void SymbolDemangleQueue::Drain()
 {
-	BNDrainSymbolQueue(m_object);
+	BNDrainSymbolDemangleQueue(m_object);
 }

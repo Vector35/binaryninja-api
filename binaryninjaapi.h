@@ -22848,8 +22848,8 @@ namespace BinaryNinja {
 		Confidence<Ref<Type>> m_type;
 		size_t m_symbolSize = 0;
 
-		explicit SymbolResult(const BNSymbolQueueResult* result);
-		friend class SymbolQueue;
+		explicit SymbolResult(const BNSymbolDemangleQueueResult* result);
+		friend class SymbolDemangleQueue;
 
 	public:
 		[[nodiscard]] Ref<Symbol> GetSymbol() const { return m_symbol; }
@@ -22875,7 +22875,7 @@ namespace BinaryNinja {
 
 		\ingroup binaryview
 	*/
-	class SymbolQueue
+	class SymbolDemangleQueue
 	{
 	public:
 		/*! Callback invoked to apply a resolved symbol. Return the symbol that was applied, or nullptr if no symbol
@@ -22883,14 +22883,14 @@ namespace BinaryNinja {
 		using ApplyFunction = std::function<Ref<Symbol>(const SymbolResult& symbol)>;
 
 	private:
-		BNSymbolQueue* m_object;
+		BNSymbolDemangleQueue* m_object;
 		ApplyFunction m_apply;
 
-		static BNSymbol* ApplyCallback(void* ctxt, const BNSymbolQueueResult* symbol);
+		static BNSymbol* ApplyCallback(void* ctxt, const BNSymbolDemangleQueueResult* symbol);
 
 	public:
 		/*!
-			Construct a symbol queue.
+			Construct a symbol demangle queue.
 
 			\param apply Callback used to apply each resolved symbol. Queued callbacks run on the thread calling Drain.
 			\param demangleConfig Configuration used to demangle symbol names. Its BinaryView, when present, is provided
@@ -22899,15 +22899,15 @@ namespace BinaryNinja {
 				or platform type takes precedence. DefineRecoveredTypes defines recovered named type references in the
 				configured BinaryView.
 		*/
-		SymbolQueue(ApplyFunction apply, const DemanglerConfig& demangleConfig,
-			BNSymbolQueueFlags flags = NoSymbolQueueFlags);
-		SymbolQueue(const SymbolQueue&) = delete;
-		SymbolQueue& operator=(const SymbolQueue&) = delete;
-		SymbolQueue(SymbolQueue&&) = delete;
-		SymbolQueue& operator=(SymbolQueue&&) = delete;
+		SymbolDemangleQueue(ApplyFunction apply, const DemanglerConfig& demangleConfig,
+			BNSymbolDemangleQueueFlags flags = NoSymbolDemangleQueueFlags);
+		SymbolDemangleQueue(const SymbolDemangleQueue&) = delete;
+		SymbolDemangleQueue& operator=(const SymbolDemangleQueue&) = delete;
+		SymbolDemangleQueue(SymbolDemangleQueue&&) = delete;
+		SymbolDemangleQueue& operator=(SymbolDemangleQueue&&) = delete;
 
 		/*! Wait for already-dispatched preparation and discard all undrained symbols without applying them. */
-		~SymbolQueue();
+		~SymbolDemangleQueue();
 
 		/*!
 			Queue a symbol for resolution. This copies the PendingSymbol and may dispatch a full batch for preparation

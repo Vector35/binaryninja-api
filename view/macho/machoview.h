@@ -1490,7 +1490,7 @@ namespace BinaryNinja
 
 		bool m_relocatable = false;
 
-		BNSymbolQueueFlags m_symbolQueueFlags = NoSymbolQueueFlags;
+		BNSymbolDemangleQueueFlags m_symbolDemangleQueueFlags = NoSymbolDemangleQueueFlags;
 		bool m_simplifyTemplates = false;
 
 		Ref<Logger> m_logger;
@@ -1503,10 +1503,10 @@ namespace BinaryNinja
 			std::string preferredImageBaseDesc, bool platformSetByUser);
 
 		void RebaseThreadStarts(BinaryReader& virtualReader, std::vector<uint32_t>& threadStarts, uint64_t stepMultiplier);
-		Ref<Symbol> DefineMachoSymbol(SymbolQueue& queue,
+		Ref<Symbol> DefineMachoSymbol(SymbolDemangleQueue& queue,
 			BNSymbolType type, const std::string& name, uint64_t addr, BNSymbolBinding binding, bool deferred);
 		Ref<Symbol> ApplyQueuedMachoSymbol(const SymbolResult& symbol);
-		void ParseSymbolTable(SymbolQueue& queue, BinaryReader& reader, MachOHeader& header,
+		void ParseSymbolTable(SymbolDemangleQueue& queue, BinaryReader& reader, MachOHeader& header,
 			const symtab_command& symtab,
 			const std::vector<uint32_t>& symbolStubsList, MachoObjCProcessor*,
 			std::unordered_map<std::string, std::string>& symbolLibraryMapping);
@@ -1514,9 +1514,9 @@ namespace BinaryNinja
 		void ParseFunctionStarts(Platform* platform, uint64_t textBase, function_starts_command functionStarts);
 		bool ParseRelocationEntry(const relocation_info& info, uint64_t start, BNRelocationInfo& result);
 
-		bool AddExportTerminalSymbol(SymbolQueue& queue,
+		bool AddExportTerminalSymbol(SymbolDemangleQueue& queue,
 			const std::string& symbolName, uint64_t symbolFlags, uint64_t imageOffset);
-		void ParseExportTrie(SymbolQueue& queue, BinaryReader& reader, linkedit_data_command exportTrie);
+		void ParseExportTrie(SymbolDemangleQueue& queue, BinaryReader& reader, linkedit_data_command exportTrie);
 		void ReadExportNode(uint64_t viewStart, DataBuffer& buffer, const std::string& currentText,
 			size_t cursor, uint32_t endGuard);
 

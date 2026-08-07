@@ -330,8 +330,8 @@ namespace BinaryNinja
 		Ref<Architecture> m_arch;
 		Ref<Logger> m_logger;
 		bool m_is64;
-		BNSymbolQueueFlags m_symbolQueueFlags = NoSymbolQueueFlags;
-		SymbolQueue* m_symbolQueue = nullptr;
+		BNSymbolDemangleQueueFlags m_symbolDemangleQueueFlags = NoSymbolDemangleQueueFlags;
+		SymbolDemangleQueue* m_symbolDemangleQueue = nullptr;
 		bool m_relocatable = false;
 
 		virtual uint64_t PerformGetEntryPoint() const override;

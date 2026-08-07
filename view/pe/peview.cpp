@@ -636,9 +636,9 @@ bool PEView::Init()
 
 		Ref<Settings> viewSettings = Settings::Instance();
 		if (viewSettings->Get<bool>("analysis.applyTypesFromMangledNames", this))
-			m_symbolQueueFlags |= ApplyRecoveredTypes;
+			m_symbolDemangleQueueFlags |= ApplyRecoveredTypes;
 		if (viewSettings->Get<bool>("analysis.defineTypesFromMangledNames", this))
-			m_symbolQueueFlags |= DefineRecoveredTypes;
+			m_symbolDemangleQueueFlags |= DefineRecoveredTypes;
 
 		bool platformSetByUser = false;
 		settings = GetLoadSettings(GetTypeName());
@@ -1347,9 +1347,9 @@ bool PEView::Init()
 	vector<pair<BNRelocationInfo, string>> relocs;
 
 	BulkSymbolModification bulkSymbolModification(this);
-	SymbolQueue symbolDemangleQueue(
+	SymbolDemangleQueue symbolDemangleQueue(
 		[this](const SymbolResult& symbol) { return ApplyQueuedPESymbol(symbol); },
-		DemanglerConfig::ForBinaryView(this), m_symbolQueueFlags);
+		DemanglerConfig::ForBinaryView(this), m_symbolDemangleQueueFlags);
 	m_symExternMappingMetadata = new Metadata(KeyValueDataType);
 
 	try
@@ -3698,7 +3698,7 @@ uint64_t PEView::Read64(uint64_t rva)
 
 
 // The addr is RVA
-void PEView::AddPESymbol(SymbolQueue& queue, BNSymbolType type, const string& dll, const string& name,
+void PEView::AddPESymbol(SymbolDemangleQueue& queue, BNSymbolType type, const string& dll, const string& name,
 	uint64_t addr, BNSymbolBinding binding, uint64_t ordinal, vector<Ref<TypeLibrary>> libs)
 {
 	// Don't create symbols that are present in the database snapshot now

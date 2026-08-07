@@ -497,9 +497,9 @@ bool ElfView::Init()
 	uint64_t preferredImageBase = initialImageBase;
 	Ref<Settings> viewSettings = Settings::Instance();
 	if (viewSettings->Get<bool>("analysis.applyTypesFromMangledNames", this))
-		m_symbolQueueFlags |= ApplyRecoveredTypes;
+		m_symbolDemangleQueueFlags |= ApplyRecoveredTypes;
 	if (viewSettings->Get<bool>("analysis.defineTypesFromMangledNames", this))
-		m_symbolQueueFlags |= DefineRecoveredTypes;
+		m_symbolDemangleQueueFlags |= DefineRecoveredTypes;
 
 	bool platformSetByUser = false;
 	Ref<Settings> settings = GetLoadSettings(GetTypeName());
@@ -1254,9 +1254,9 @@ bool ElfView::Init()
 
 	// No longer need to look up symbols during creation, start a parallelized queue for
 	// demangling and preparing symbols.
-	SymbolQueue symbolDemangleQueue(
+	SymbolDemangleQueue symbolDemangleQueue(
 		[this](const SymbolResult& symbol) { return ApplyQueuedElfSymbol(symbol); },
-		DemanglerConfig(GetDefaultPlatform(), this, m_simplifyTemplates), m_symbolQueueFlags);
+		DemanglerConfig(GetDefaultPlatform(), this, m_simplifyTemplates), m_symbolDemangleQueueFlags);
 
 	// Now define symbols and resolve relocations
 	vector<ElfSymbolTableEntry> combinedSymbolTable;
@@ -2610,7 +2610,7 @@ std::optional<PendingSymbol> ElfView::CreatePendingElfSymbol(BNSymbolType type, 
 }
 
 
-void ElfView::QueueElfSymbol(SymbolQueue& queue, BNSymbolType type, const string& name, uint64_t addr,
+void ElfView::QueueElfSymbol(SymbolDemangleQueue& queue, BNSymbolType type, const string& name, uint64_t addr,
 	bool gotEntry, BNSymbolBinding binding, size_t symbolSize, const Confidence<Ref<Type>>& typeObj)
 {
 	auto symbol = CreatePendingElfSymbol(type, name, addr, gotEntry, binding, symbolSize, typeObj);
@@ -2626,9 +2626,9 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& name, uint64_t ad
 	if (!symbol)
 		return;
 
-	SymbolQueue queue(
+	SymbolDemangleQueue queue(
 		[this](const SymbolResult& resolved) { return ApplyQueuedElfSymbol(resolved); },
-		DemanglerConfig(GetDefaultPlatform(), this, m_simplifyTemplates), m_symbolQueueFlags);
+		DemanglerConfig(GetDefaultPlatform(), this, m_simplifyTemplates), m_symbolDemangleQueueFlags);
 	queue.ApplyNow(*symbol);
 }
 
@@ -2775,7 +2775,7 @@ bool ElfView::DerefPpc64Descriptor(BinaryReader& reader, uint64_t addr, uint64_t
 }
 
 
-void ElfView::ParseMiniDebugInfo(SymbolQueue& queue)
+void ElfView::ParseMiniDebugInfo(SymbolDemangleQueue& queue)
 {
 	Ref<Section> gnuDebugdata = GetParentView()->GetSectionByName(".gnu_debugdata");
 	if (!gnuDebugdata)

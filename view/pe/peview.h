@@ -456,7 +456,7 @@ namespace BinaryNinja
 		std::vector<PESection> m_sections;
 		Ref<Architecture> m_arch;
 		bool m_is64;
-		BNSymbolQueueFlags m_symbolQueueFlags = NoSymbolQueueFlags;
+		BNSymbolDemangleQueueFlags m_symbolDemangleQueueFlags = NoSymbolDemangleQueueFlags;
 		Ref<Logger> m_logger;
 		bool m_relocatable = false;
 
@@ -469,7 +469,7 @@ namespace BinaryNinja
 		uint16_t Read16(uint64_t rva);
 		uint32_t Read32(uint64_t rva);
 		uint64_t Read64(uint64_t rva);
-		void AddPESymbol(SymbolQueue& queue, BNSymbolType type, const std::string& dll,
+		void AddPESymbol(SymbolDemangleQueue& queue, BNSymbolType type, const std::string& dll,
 			const std::string& name, uint64_t addr, BNSymbolBinding binding = NoBinding, uint64_t ordinal = 0,
 			std::vector<Ref<TypeLibrary>> lib = {});
 		Ref<Symbol> ApplyQueuedPESymbol(const SymbolResult& symbol);

@@ -1288,9 +1288,9 @@ bool MachoView::Init()
 	uint64_t preferredImageBase = initialImageBase;
 	Ref<Settings> viewSettings = Settings::Instance();
 	if (viewSettings->Get<bool>("analysis.applyTypesFromMangledNames", this))
-		m_symbolQueueFlags |= ApplyRecoveredTypes;
+		m_symbolDemangleQueueFlags |= ApplyRecoveredTypes;
 	if (viewSettings->Get<bool>("analysis.defineTypesFromMangledNames", this))
-		m_symbolQueueFlags |= DefineRecoveredTypes;
+		m_symbolDemangleQueueFlags |= DefineRecoveredTypes;
 
 	bool platformSetByUser = false;
 	if (settings)
@@ -2326,9 +2326,9 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 	BulkSymbolModification bulkSymbolModification(this);
 	m_simplifyTemplates = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", this);
-	SymbolQueue symbolDemangleQueue(
+	SymbolDemangleQueue symbolDemangleQueue(
 		[this](const SymbolResult& symbol) { return ApplyQueuedMachoSymbol(symbol); },
-		DemanglerConfig(GetDefaultPlatform(), this, m_simplifyTemplates), m_symbolQueueFlags);
+		DemanglerConfig(GetDefaultPlatform(), this, m_simplifyTemplates), m_symbolDemangleQueueFlags);
 
 	std::unordered_map<std::string, std::string> symbolLibraryMapping;
 
@@ -2681,7 +2681,7 @@ void MachoView::OnAfterSnapshotDataApplied()
 }
 
 
-Ref<Symbol> MachoView::DefineMachoSymbol(SymbolQueue& queue,
+Ref<Symbol> MachoView::DefineMachoSymbol(SymbolDemangleQueue& queue,
 	BNSymbolType type, const string& name, uint64_t addr, BNSymbolBinding binding, bool deferred)
 {
 	// If name is empty, symbol is not valid
@@ -2735,6 +2735,7 @@ Ref<Symbol> MachoView::DefineMachoSymbol(SymbolQueue& queue,
 		queue.Append(symbol);
 		return nullptr;
 	}
+
 	return queue.ApplyNow(symbol);
 }
 
@@ -2798,7 +2799,7 @@ bool MachoView::GetSectionPermissions(MachOHeader& header, uint64_t address, uin
 }
 
 
-bool MachoView::AddExportTerminalSymbol(SymbolQueue& queue,
+bool MachoView::AddExportTerminalSymbol(SymbolDemangleQueue& queue,
 	const std::string& symbolName, uint64_t symbolFlags, uint64_t imageOffset)
 {
 	if (symbolFlags & EXPORT_SYMBOL_FLAGS_REEXPORT)
@@ -2860,7 +2861,7 @@ bool MachoView::AddExportTerminalSymbol(SymbolQueue& queue,
 }
 
 void MachoView::ParseExportTrie(
-	SymbolQueue& queue, BinaryReader& reader, linkedit_data_command exportTrie)
+	SymbolDemangleQueue& queue, BinaryReader& reader, linkedit_data_command exportTrie)
 {
 	try {
 		DataBuffer buffer = GetParentView()
@@ -3268,7 +3269,7 @@ void MachoView::ParseDynamicTable(BinaryReader& reader, MachOHeader& header, BNS
 }
 
 
-void MachoView::ParseSymbolTable(SymbolQueue& queue, BinaryReader& reader, MachOHeader& header,
+void MachoView::ParseSymbolTable(SymbolDemangleQueue& queue, BinaryReader& reader, MachOHeader& header,
 	const symtab_command& symtab,
 	const vector<uint32_t>& indirectSymbols, MachoObjCProcessor* objcProcessor,
 	std::unordered_map<std::string, std::string>& symbolLibraryMapping)

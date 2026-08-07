@@ -321,8 +321,8 @@ extern "C"
 	typedef struct BNDebugInfoParser BNDebugInfoParser;
 	typedef struct BNSecretsProvider BNSecretsProvider;
 	typedef struct BNLogger BNLogger;
-	typedef struct BNSymbolQueue BNSymbolQueue;
-	typedef struct BNSymbolQueueResult BNSymbolQueueResult;
+	typedef struct BNSymbolDemangleQueue BNSymbolDemangleQueue;
+	typedef struct BNSymbolDemangleQueueResult BNSymbolDemangleQueueResult;
 	typedef struct BNTypeArchive BNTypeArchive;
 	typedef struct BNTypeContainer BNTypeContainer;
 	typedef struct BNProject BNProject;
@@ -9316,9 +9316,9 @@ extern "C"
 	BINARYNINJACOREAPI bool BNStoreSecretsProviderData(BNSecretsProvider* provider, const char* key, const char* data);
 	BINARYNINJACOREAPI bool BNDeleteSecretsProviderData(BNSecretsProvider* provider, const char* key);
 
-	BN_OPTIONS(uint8_t, BNSymbolQueueFlags)
+	BN_OPTIONS(uint8_t, BNSymbolDemangleQueueFlags)
 	{
-		NoSymbolQueueFlags = 0,
+		NoSymbolDemangleQueueFlags = 0,
 		ApplyRecoveredTypes = 1,
 		DefineRecoveredTypes = 2
 	};
@@ -9335,32 +9335,33 @@ extern "C"
 		const BNNameSpace* nameSpace;
 	} BNPendingSymbol;
 
-	typedef struct BNSymbolQueueResultData
+	typedef struct BNSymbolDemangleQueueResultData
 	{
 		BNSymbol* symbol;
 		BNTypeWithConfidence type;
 		size_t symbolSize;
-	} BNSymbolQueueResultData;
+	} BNSymbolDemangleQueueResultData;
 
-	typedef struct BNSymbolQueueCallbacks
+	typedef struct BNSymbolDemangleQueueCallbacks
 	{
 		void* context;
 		/*
 		 * The result and all data it references are borrowed and valid only for the duration of this callback.
 		 * The returned symbol reference is consumed by the queue.
 		 */
-		BNSymbol* (*apply)(void* ctxt, const BNSymbolQueueResult* symbol);
+		BNSymbol* (*apply)(void* ctxt, const BNSymbolDemangleQueueResult* symbol);
 		void (*freeContext)(void* ctxt);
-	} BNSymbolQueueCallbacks;
+	} BNSymbolDemangleQueueCallbacks;
 
-	BINARYNINJACOREAPI BNSymbolQueue* BNCreateSymbolQueue(const BNDemanglerConfig* demangleConfig,
-		BNSymbolQueueFlags flags, BNSymbolQueueCallbacks* callbacks);
-	BINARYNINJACOREAPI void BNDestroySymbolQueue(BNSymbolQueue* queue);
-	BINARYNINJACOREAPI void BNAppendSymbolQueue(BNSymbolQueue* queue, const BNPendingSymbol* symbol);
-	BINARYNINJACOREAPI BNSymbol* BNApplyPendingSymbolNow(const BNSymbolQueue* queue, const BNPendingSymbol* symbol);
-	BINARYNINJACOREAPI void BNDrainSymbolQueue(BNSymbolQueue* queue);
-	BINARYNINJACOREAPI bool BNGetSymbolQueueResultData(
-		const BNSymbolQueueResult* symbol, BNSymbolQueueResultData* result);
+	BINARYNINJACOREAPI BNSymbolDemangleQueue* BNCreateSymbolDemangleQueue(const BNDemanglerConfig* demangleConfig,
+		BNSymbolDemangleQueueFlags flags, BNSymbolDemangleQueueCallbacks* callbacks);
+	BINARYNINJACOREAPI void BNDestroySymbolDemangleQueue(BNSymbolDemangleQueue* queue);
+	BINARYNINJACOREAPI void BNAppendSymbolDemangleQueue(BNSymbolDemangleQueue* queue, const BNPendingSymbol* symbol);
+	BINARYNINJACOREAPI BNSymbol* BNApplyPendingSymbolNow(
+		const BNSymbolDemangleQueue* queue, const BNPendingSymbol* symbol);
+	BINARYNINJACOREAPI void BNDrainSymbolDemangleQueue(BNSymbolDemangleQueue* queue);
+	BINARYNINJACOREAPI bool BNGetSymbolDemangleQueueResultData(
+		const BNSymbolDemangleQueueResult* symbol, BNSymbolDemangleQueueResultData* result);
 
 	BINARYNINJACOREAPI bool BNCoreEnumToString(const char* enumName, size_t value, char** result);
 	BINARYNINJACOREAPI bool BNCoreEnumFromString(const char* enumName, const char* value, size_t* result);
@@ -10081,12 +10082,12 @@ extern "C"
 #endif
 
 #if defined(__cplusplus) && !defined(BN_TYPE_PARSER)
-constexpr BNSymbolQueueFlags operator|(BNSymbolQueueFlags left, BNSymbolQueueFlags right)
+constexpr BNSymbolDemangleQueueFlags operator|(BNSymbolDemangleQueueFlags left, BNSymbolDemangleQueueFlags right)
 {
-	return static_cast<BNSymbolQueueFlags>(static_cast<uint8_t>(left) | static_cast<uint8_t>(right));
+	return static_cast<BNSymbolDemangleQueueFlags>(static_cast<uint8_t>(left) | static_cast<uint8_t>(right));
 }
 
-constexpr BNSymbolQueueFlags& operator|=(BNSymbolQueueFlags& left, BNSymbolQueueFlags right)
+constexpr BNSymbolDemangleQueueFlags& operator|=(BNSymbolDemangleQueueFlags& left, BNSymbolDemangleQueueFlags right)
 {
 	left = left | right;
 	return left;

@@ -218,9 +218,9 @@ bool COFFView::Init()
 
 		Ref<Settings> viewSettings = Settings::Instance();
 		if (viewSettings->Get<bool>("analysis.applyTypesFromMangledNames", this))
-			m_symbolQueueFlags |= ApplyRecoveredTypes;
+			m_symbolDemangleQueueFlags |= ApplyRecoveredTypes;
 		if (viewSettings->Get<bool>("analysis.defineTypesFromMangledNames", this))
-			m_symbolQueueFlags |= DefineRecoveredTypes;
+			m_symbolDemangleQueueFlags |= DefineRecoveredTypes;
 
 		// Add extra segment to hold header so that it can be viewed.  This must be first so
 		// that real sections take priority.
@@ -502,9 +502,9 @@ bool COFFView::Init()
 		if (m_parseOnly)
 			return true;
 
-		m_symbolQueue = new SymbolQueue(
+		m_symbolDemangleQueue = new SymbolDemangleQueue(
 			[this](const SymbolResult& symbol) { return ApplyQueuedCOFFSymbol(symbol); },
-			DemanglerConfig::ForBinaryView(this), m_symbolQueueFlags);
+			DemanglerConfig::ForBinaryView(this), m_symbolDemangleQueueFlags);
 
 		// Create various COFF header yypes
 
@@ -689,8 +689,8 @@ bool COFFView::Init()
 	catch (std::exception& e)
 	{
 		m_logger->LogError("Failed to parse COFF headers: %s\n", e.what());
-		delete m_symbolQueue;
-		m_symbolQueue = nullptr;
+		delete m_symbolDemangleQueue;
+		m_symbolDemangleQueue = nullptr;
 		return false;
 	}
 
@@ -1375,8 +1375,8 @@ bool COFFView::Init()
 		m_logger->LogError("Failed to parse COFF relocations: %s\n", e.what());
 	}
 
-	delete m_symbolQueue;
-	m_symbolQueue = nullptr;
+	delete m_symbolDemangleQueue;
+	m_symbolDemangleQueue = nullptr;
 
 	// Add a symbol for the entry point
 	// if (entryPointAddress)
@@ -1530,7 +1530,7 @@ void COFFView::AddCOFFSymbol(BNSymbolType type, const string& dll, const string&
 
 	PendingSymbol symbol(type, NormalizeSymbolName(name), address, binding, symbolTypeRef, nameSpace);
 	symbol.ordinal = ordinal;
-	m_symbolQueue->ApplyNow(symbol);
+	m_symbolDemangleQueue->ApplyNow(symbol);
 }
 
 

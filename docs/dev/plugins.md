@@ -21,6 +21,8 @@ Binary Ninja displays plugin descriptions differently depending on the contents 
 - If `longdescription` exists **and is longer than 100 characters**, the Extension Manager displays the `longdescription`.
 - If `longdescription` is missing, or is **100 characters or fewer**, the Extension Manager instead displays the contents of the plugin repository's `README.md`.
 
+**Tip:** If you want the Extension Manager to display your full README as the plugin description, leave the `longdescription` field blank. When longdescription is omitted, Binary Ninja falls back to displaying the contents of your `README.md`, which generally provides a richer and better-formatted description of your plugin.
+
 ### Images in README Files
 
 When you include images for preview in the Extension Manager, be aware that animated gifs are not fully supported. They will be rendered as static images of the first frame.

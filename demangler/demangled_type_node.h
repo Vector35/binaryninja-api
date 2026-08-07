@@ -225,6 +225,7 @@ public:
 	void SetReturnTypeConfidence(uint8_t c) { m_returnTypeConfidence = c; }
 	void SetCallingConventionName(BNCallingConventionName cc);
 	void SetNTRType(BNNamedTypeReferenceClass cls);
+	void SetTypeReferenceRegistration(DemangledTypeReferenceRegistration registration);
 	void SetImplicitThisParameter(DemangledTypeNode type);
 
 	void AppendString(_STD_STRING& out, BN::Platform& platform) const;

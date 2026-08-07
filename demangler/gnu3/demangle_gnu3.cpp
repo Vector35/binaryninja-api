@@ -292,6 +292,31 @@ namespace
 	}
 
 
+	bool IsKnownNamespace(const DemangledQualifiedName& name)
+	{
+		if (name.size() == 1)
+			return name.front().GetBase() == "std" || name.front().GetBase() == "__gnu_cxx";
+		if (name.size() != 2 || name.front().GetBase() != "std")
+			return false;
+
+		const std::string_view inlineNamespace = name.back().GetBase();
+		return inlineNamespace.size() > 2 && inlineNamespace[0] == '_' && inlineNamespace[1] == '_';
+	}
+
+
+	bool NamesHaveSameBases(const DemangledQualifiedName& left, const DemangledQualifiedName& right)
+	{
+		if (left.size() != right.size())
+			return false;
+		for (size_t i = 0; i < left.size(); i++)
+		{
+			if (left[i].GetBase() != right[i].GetBase())
+				return false;
+		}
+		return true;
+	}
+
+
 	// Decode a big-endian hex string into a float or double.
 	// Returns the decimal string representation, or the raw hex with a type
 	// prefix if decoding fails or the result is NaN/Inf.
@@ -3015,6 +3040,7 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(
 
 	//<function name> or <data name>
 	bool mayHaveImplicitThis = false;
+	const size_t firstNameSubstitution = m_substitute.size();
 	type = DemangleName(&mayHaveImplicitThis);
 	if (m_reader.Length() == 0)
 	{
@@ -3024,6 +3050,20 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(
 	if (m_reader.ConsumeIf('E'))
 	{
 		return type;
+	}
+	if (type.GetClass() == NamedTypeReferenceClass)
+	{
+		type.SetTypeReferenceRegistration(DemangledTypeReferenceRegistration::DoNotRegister);
+		const auto& functionName = type.GetName();
+		for (size_t i = firstNameSubstitution; i < m_substitute.size(); i++)
+		{
+			auto& substitution = m_substitute[i];
+			if (!substitution || substitution.IsTemplateParamPack() ||
+				substitution->GetClass() != NamedTypeReferenceClass)
+				continue;
+			if (NamesHaveSameBases(substitution->GetName(), functionName))
+				substitution->SetTypeReferenceRegistration(DemangledTypeReferenceRegistration::DoNotRegister);
+		}
 	}
 
 	cnst = type.IsConst();
@@ -3136,6 +3176,8 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(
 	if (mayHaveImplicitThis)
 	{
 		auto thisType = DemangledTypeNode::NamedType(StructNamedTypeClass, std::move(enclosingName));
+		if (IsKnownNamespace(thisType.GetName()))
+			thisType.SetTypeReferenceRegistration(DemangledTypeReferenceRegistration::DoNotRegister);
 		type.SetImplicitThisParameter(DemangledTypeNode::PointerType(
 			std::move(thisType), false, false, PointerReferenceType));
 	}
@@ -3295,7 +3337,6 @@ namespace
 			PreparedGNU3Result result;
 			StringList nameSegments{header, encoding};
 			result.name = QualifiedName(nameSegments);
-			result.type = DemangledTypeNode::NamedType(nameSegments);
 			return result;
 		}
 		else

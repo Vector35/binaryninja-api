@@ -878,6 +878,17 @@ void DemangledTypeNode::SetNTRType(BNNamedTypeReferenceClass cls)
 }
 
 
+void DemangledTypeNode::SetTypeReferenceRegistration(DemangledTypeReferenceRegistration registration)
+{
+	if (auto payload = std::get_if<NamedTypePayload>(&m_payload))
+	{
+		payload->registration = registration;
+		return;
+	}
+	BN_ASSERT(false && "SetTypeReferenceRegistration called for non-named demangled type");
+}
+
+
 void DemangledTypeNode::SetParenthesizedMemberPointer(bool parenthesized)
 {
 	if (auto payload = std::get_if<MemberPointerPayload>(&m_payload))
@@ -1769,7 +1780,8 @@ Ref<Type> DemangledTypeNode::Finalize(
 		request.name = QualifiedName(RenderTypeNameSegments(platform));
 		request.width = ResolveWidth(payload.width, payload.widthKind, platform);
 		request.isSigned = payload.isSigned;
-		request.registration = payload.registration;
+		request.registration = m_nameType == NoNameType ? payload.registration :
+			DemangledTypeReferenceRegistration::DoNotRegister;
 		Ref<NamedTypeReference> reference;
 		if (resolveTypeReference)
 			reference = (*resolveTypeReference)(request);

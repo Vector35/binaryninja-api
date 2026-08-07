@@ -596,7 +596,7 @@ class Demangler(metaclass=_DemanglerMetaclass):
 		(type, name).
 
 		Any unresolved named types referenced by the resulting Type will be created as
-		empty structures or void typedefs in the view, if the result is used on
+		empty structures, unions, or enumerations in the view, if the result is used on
 		a data structure in the view. Given this, the call to :py:func:`demangle`
 		should NOT cause any side-effects creating types in the view trying to resolve this
 		and instead just return a type with unresolved named type references.

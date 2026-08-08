@@ -2194,7 +2194,8 @@ bool DemangleGNU3::TryDemangleTemplateParamExpressionPackExpansion(string& expr,
 }
 
 
-bool DemangleGNU3::AppendTemplateParamPackExpansion(ParamList& params, const NodeRef& expansion, bool functionParameter)
+// `expansion` is by value because some callers pass m_lastTypeRef, which the loop below overwrites.
+bool DemangleGNU3::AppendTemplateParamPackExpansion(ParamList& params, NodeRef expansion, bool functionParameter)
 {
 	if (!expansion.IsTemplateParamPackExpansion())
 		return false;

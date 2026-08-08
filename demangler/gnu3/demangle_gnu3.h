@@ -157,7 +157,7 @@ private:
 	NodeRef PushType(DemangledTypeNode&& type);
 	NodeRef GetTypeRef(size_t ref);
 	const DemangledTypeNode& GetType(size_t ref);
-	bool AppendTemplateParamPackExpansion(ParamList& params, const NodeRef& expansion, bool functionParameter);
+	bool AppendTemplateParamPackExpansion(ParamList& params, NodeRef expansion, bool functionParameter);
 
 #ifdef GNUDEMANGLE_DEBUG
 	const DemangledTypeNode& GetTemplateType(size_t ref);

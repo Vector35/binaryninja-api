@@ -310,8 +310,9 @@ namespace BinaryNinja {
 		Ref<Metadata> SerializeMetadata();
 
 		std::vector<QualifiedNameOrType> ParseEncodedType(const std::string& type);
-		void DefineObjCSymbol(BNSymbolType symbolType, QualifiedName typeName, const std::string& name, uint64_t addr, bool deferred);
-		void DefineObjCSymbol(BNSymbolType symbolType, Ref<Type> type, const std::string& name, uint64_t addr, bool deferred);
+		void DefineObjCSymbol(
+			BNSymbolType symbolType, QualifiedName typeName, const std::string& name, uint64_t addr);
+		void DefineObjCSymbol(BNSymbolType symbolType, Ref<Type> type, const std::string& name, uint64_t addr);
 		void ReadIvarList(ObjCReader* reader, ClassBase& cls, std::string_view name, view_ptr_t start);
 		void ReadMethodList(ObjCReader* reader, ClassBase& cls, std::string_view name, view_ptr_t start);
 		void ReadListOfMethodLists(ObjCReader* reader, ClassBase& cls, std::string_view name, view_ptr_t start);
@@ -354,4 +355,3 @@ namespace BinaryNinja {
 		void AddRelocatedPointer(uint64_t location, uint64_t rewrite);
 	};
 }
-

@@ -4,8 +4,6 @@
 #include <string>
 #include <type_traits>
 
-#define RELEASE_ASSERT(condition) ((condition) ? (void)0 : (std::abort(), (void)0))
-
 #define MAX_PROTOCOL_COUNT 0x1000
 #define MAX_METHOD_LIST_COUNT 0x1000
 #define MAX_IVAR_LIST_COUNT 0x1000
@@ -13,55 +11,6 @@
 using namespace BinaryNinja;
 
 namespace {
-
-	// ScopedSingleton is a thread-local singleton that allows for scoped
-	// instantiation and destruction of an object. It is useful for managing
-	// resources that should only exist during a specific scope, but where it
-	// would be inconvenient to pass the object around explicitly.
-	//
-	// Calling `Make` initializes the thread-local singleton and returns a `Guard`
-	// object. When the `Guard` object goes out of scope, the singleton is destroyed.
-	template <typename T>
-	class ScopedSingleton
-	{
-		static thread_local T* current;
-
-	public:
-		class Guard
-		{
-			friend class ScopedSingleton;
-			Guard() = default;
-
-		public:
-			~Guard()
-			{
-				delete current;
-				current = nullptr;
-			}
-			Guard(Guard&&) = default;
-			Guard(const Guard&) = delete;
-			Guard& operator=(const Guard&) = delete;
-		};
-
-		static T& Get()
-		{
-			RELEASE_ASSERT(current);
-			return *current;
-		}
-
-		static Guard Make()
-		{
-			RELEASE_ASSERT(!current);
-			current = new T();
-			return Guard {};
-		}
-	};
-
-	template <typename T>
-	thread_local T* ScopedSingleton<T>::current = nullptr;
-
-	using ScopedSymbolQueue = ScopedSingleton<SymbolQueue>;
-
 	// Attempt to recover an Objective-C class name from the symbol's name.
 	// Note: classes defined in the current image should be looked up in m_classes
 	// rather than using this function.
@@ -387,71 +336,52 @@ std::vector<QualifiedNameOrType> ObjCProcessor::ParseEncodedType(const std::stri
 }
 
 void ObjCProcessor::DefineObjCSymbol(
-	BNSymbolType type, QualifiedName typeName, const std::string& name, uint64_t addr, bool deferred)
+	BNSymbolType type, QualifiedName typeName, const std::string& name, uint64_t addr)
 {
-	DefineObjCSymbol(type, m_data->GetTypeByName(typeName), name, addr, deferred);
+	DefineObjCSymbol(type, m_data->GetTypeByName(typeName), name, addr);
 }
 
 void ObjCProcessor::DefineObjCSymbol(
-	BNSymbolType type, Ref<Type> typeRef, const std::string& name, uint64_t addr, bool deferred)
+	BNSymbolType type, Ref<Type> typeRef, const std::string& name, uint64_t addr)
 {
 	if (name.size() == 0 || addr == 0)
 		return;
 
-	auto process = [=, this]() {
-		NameSpace nameSpace = m_data->GetInternalNameSpace();
-		if (type == ExternalSymbol)
-		{
-			nameSpace = m_data->GetExternalNameSpace();
-		}
-
-		std::string shortName = name;
-		std::string fullName = name;
-
-		QualifiedName varName;
-
-		return std::pair<Ref<Symbol>, Ref<Type>>(
-			new Symbol(type, shortName, fullName, name, addr, LocalBinding, nameSpace), typeRef);
-	};
-
-	auto defineSymbol = [this](Ref<Symbol> symbol, const Confidence<Ref<Type>>& type) {
-		uint64_t symbolAddress = symbol->GetAddress();
-		if (Ref<Symbol> existingSymbol = m_data->GetSymbolByAddress(symbolAddress))
-		{
-			if (existingSymbol->IsAutoDefined() && existingSymbol->GetType() == symbol->GetType() && existingSymbol->GetRawNameRef() == symbol->GetRawNameRef())
-				return;
-
-			m_data->UndefineAutoSymbol(existingSymbol);
-		}
-
-		// Armv7/Thumb: This will rewrite the symbol's address.
-		// e.g. We pass in 0xc001, it will rewrite it to 0xc000 and create the function w/ the "thumb2" arch.
-		Ref<Platform> targetPlatform = m_data->GetDefaultPlatform()->GetAssociatedPlatformByAddress(symbolAddress);
-		if (symbol->GetType() == FunctionSymbol)
-		{
-			// For thumb2 we want to get the adjusted address, we can do that using the target function.
-			Ref<Function> targetFunction = m_data->GetAnalysisFunction(targetPlatform, symbolAddress);
-			if (targetFunction && type.GetValue())
-				targetFunction->ApplyAutoDiscoveredType(type.GetValue());
-
-			auto adjustedSym = new Symbol(FunctionSymbol, symbol->GetShortName(), symbol->GetFullName(), symbol->GetRawName(), symbolAddress);
-			m_data->DefineAutoSymbol(adjustedSym);
-		}
-		else
-		{
-			// Other symbol types can just use this, they don't need to worry about linear sweep removing them.
-			m_data->DefineAutoSymbolAndVariableOrFunction(targetPlatform, symbol, type);
-		}
-	};
-
-	if (!deferred)
+	NameSpace nameSpace = m_data->GetInternalNameSpace();
+	if (type == ExternalSymbol)
 	{
-		ScopedSymbolQueue::Get().Append(process, defineSymbol);
+		nameSpace = m_data->GetExternalNameSpace();
+	}
+
+	Ref<Symbol> symbol = new Symbol(type, name, name, name, addr, LocalBinding, nameSpace);
+	uint64_t symbolAddress = symbol->GetAddress();
+	if (Ref<Symbol> existingSymbol = m_data->GetSymbolByAddress(symbolAddress))
+	{
+		if (existingSymbol->IsAutoDefined() && existingSymbol->GetType() == symbol->GetType()
+			&& existingSymbol->GetRawNameRef() == symbol->GetRawNameRef())
+			return;
+
+		m_data->UndefineAutoSymbol(existingSymbol);
+	}
+
+	// Armv7/Thumb: This will rewrite the symbol's address.
+	// e.g. We pass in 0xc001, it will rewrite it to 0xc000 and create the function w/ the "thumb2" arch.
+	Ref<Platform> targetPlatform = m_data->GetDefaultPlatform()->GetAssociatedPlatformByAddress(symbolAddress);
+	if (symbol->GetType() == FunctionSymbol)
+	{
+		// For thumb2 we want to get the adjusted address, we can do that using the target function.
+		Ref<Function> targetFunction = m_data->GetAnalysisFunction(targetPlatform, symbolAddress);
+		if (targetFunction && typeRef)
+			targetFunction->ApplyAutoDiscoveredType(typeRef);
+
+		auto adjustedSym =
+			new Symbol(FunctionSymbol, symbol->GetShortName(), symbol->GetFullName(), symbol->GetRawName(), symbolAddress);
+		m_data->DefineAutoSymbol(adjustedSym);
 	}
 	else
 	{
-		auto [symbol, type]  = process();
-		defineSymbol(symbol, type);
+		// Other symbol types can just use this, they don't need to worry about linear sweep removing them.
+		m_data->DefineAutoSymbolAndVariableOrFunction(targetPlatform, symbol, typeRef);
 	}
 }
 
@@ -552,15 +482,15 @@ void ObjCProcessor::LoadClasses(ObjCReader* reader, Ref<Section> classPtrSection
 
 		DefineObjCSymbol(BNSymbolType::DataSymbol,
 			Type::PointerType(m_data->GetAddressSize(), m_data->GetTypeByName(m_typeNames.cls)), "clsPtr_" + name,
-			classPointerLocation, true);
-		DefineObjCSymbol(BNSymbolType::DataSymbol, m_typeNames.cls, "cls_" + name, classPtr, true);
-		DefineObjCSymbol(BNSymbolType::DataSymbol, m_typeNames.classRO, "cls_ro_" + name, classROPtr, true);
+			classPointerLocation);
+		DefineObjCSymbol(BNSymbolType::DataSymbol, m_typeNames.cls, "cls_" + name, classPtr);
+		DefineObjCSymbol(BNSymbolType::DataSymbol, m_typeNames.classRO, "cls_ro_" + name, classROPtr);
 		DefineObjCSymbol(BNSymbolType::DataSymbol, Type::ArrayType(Type::IntegerType(1, true), name.size() + 1),
-			"clsName_" + name, classRO.name, true);
+			"clsName_" + name, classRO.name);
 		if (classRO.baseProtocols && !m_skipClassBaseProtocols)
 		{
 			DefineObjCSymbol(BNSymbolType::DataSymbol, Type::NamedType(m_data, m_typeNames.protocolList),
-				"clsProtocols_" + name, classRO.baseProtocols, true);
+				"clsProtocols_" + name, classRO.baseProtocols);
 			reader->Seek(classRO.baseProtocols);
 			uint32_t count = reader->Read64();
 			view_ptr_t addr = reader->GetOffset();
@@ -582,7 +512,7 @@ void ObjCProcessor::LoadClasses(ObjCReader* reader, Ref<Section> classPtrSection
 				metaClsStruct.cache = reader->ReadPointer();
 				metaClsStruct.vtable = reader->ReadPointer();
 				metaClsStruct.data = ReadPointerAccountingForRelocations(reader) & ~1;
-				DefineObjCSymbol(BNSymbolType::DataSymbol, m_typeNames.cls, "metacls_" + name, clsStruct.isa, true);
+				DefineObjCSymbol(BNSymbolType::DataSymbol, m_typeNames.cls, "metacls_" + name, clsStruct.isa);
 				hasValidMetaClass = true;
 			}
 			catch (...)
@@ -614,7 +544,7 @@ void ObjCProcessor::LoadClasses(ObjCReader* reader, Ref<Section> classPtrSection
 				metaClassRO.weakIvarLayout = ReadPointerAccountingForRelocations(reader);
 				metaClassRO.baseProperties = ReadPointerAccountingForRelocations(reader);
 				DefineObjCSymbol(
-					BNSymbolType::DataSymbol, m_typeNames.classRO, "metacls_ro_" + name, metaClsStruct.data, true);
+					BNSymbolType::DataSymbol, m_typeNames.classRO, "metacls_ro_" + name, metaClsStruct.data);
 				hasValidMetaClassRO = true;
 			}
 			catch (...)
@@ -670,8 +600,6 @@ std::optional<std::string> ObjCProcessor::ClassNameForTargetOfPointerAt(ObjCRead
 	reader->Seek(savedOffset);
 
 	if (target) {
-		// Classes defined in the current image must be looked up in m_classes
-		// as adding their symbol may be deferred.
 		if (auto it = m_classes.find(target); it != m_classes.end())
 			return it->second.name;
 
@@ -755,8 +683,8 @@ void ObjCProcessor::LoadCategories(ObjCReader* reader, Ref<Section> classPtrSect
 			categoryAdditionsName = fmt::format("{:x}", catLocation);
 		}
 		category.name = categoryBaseClassName + " (" + categoryAdditionsName + ")";
-		DefineObjCSymbol(BNSymbolType::DataSymbol, ptrType, "categoryPtr_" + category.name, i, true);
-		DefineObjCSymbol(BNSymbolType::DataSymbol, catType, "category_" + category.name, catLocation, true);
+		DefineObjCSymbol(BNSymbolType::DataSymbol, ptrType, "categoryPtr_" + category.name, i);
+		DefineObjCSymbol(BNSymbolType::DataSymbol, catType, "category_" + category.name, catLocation);
 
 		if (cat.instanceMethods)
 		{
@@ -831,7 +759,7 @@ void ObjCProcessor::LoadProtocols(ObjCReader* reader, Ref<Section> listSection)
 			protocolName = reader->ReadCString();
 			DefineObjCSymbol(BNSymbolType::DataSymbol,
 				Type::ArrayType(Type::IntegerType(1, true), protocolName.size() + 1), "protocolName_" + protocolName,
-				protocol.mangledName, true);
+				protocol.mangledName);
 		}
 		catch (...)
 		{
@@ -843,12 +771,12 @@ void ObjCProcessor::LoadProtocols(ObjCReader* reader, Ref<Section> listSection)
 
 		Protocol protocolClass;
 		protocolClass.name = protocolName;
-		DefineObjCSymbol(BNSymbolType::DataSymbol, ptrType, "protocolPtr_" + protocolName, i, true);
-		DefineObjCSymbol(BNSymbolType::DataSymbol, protocolType, "protocol_" + protocolName, protocolLocation, true);
+		DefineObjCSymbol(BNSymbolType::DataSymbol, ptrType, "protocolPtr_" + protocolName, i);
+		DefineObjCSymbol(BNSymbolType::DataSymbol, protocolType, "protocol_" + protocolName, protocolLocation);
 		if (protocol.protocols)
 		{
 			DefineObjCSymbol(BNSymbolType::DataSymbol, Type::NamedType(m_data, m_typeNames.protocolList),
-				"protoProtocols_" + protocolName, protocol.protocols, true);
+				"protoProtocols_" + protocolName, protocol.protocols);
 			reader->Seek(protocol.protocols);
 			uint32_t count = reader->Read64();
 			if (count > MAX_PROTOCOL_COUNT)
@@ -985,7 +913,7 @@ void ObjCProcessor::ReadMethodList(ObjCReader* reader, ClassBase& cls, std::stri
 	bool directSelectors = (head.entsizeAndFlags & 0xFFFF0000) & 0x40000000;
 	bool typesAreOffsetsFromSelectorBase = (head.entsizeAndFlags & 0xFFFF0000) & 0x20000000;
 	auto methodSize = relativeOffsets ? 12 : pointerSize * 3;
-	DefineObjCSymbol(DataSymbol, m_typeNames.methodList, "method_list_" + std::string(name), start, true);
+	DefineObjCSymbol(DataSymbol, m_typeNames.methodList, "method_list_" + std::string(name), start);
 
 	for (unsigned i = 0; i < head.count; i++)
 	{
@@ -1017,9 +945,9 @@ void ObjCProcessor::ReadMethodList(ObjCReader* reader, ClassBase& cls, std::stri
 				reader->Seek(meth.types);
 				method.types = reader->ReadCString();
 				DefineObjCSymbol(DataSymbol, Type::ArrayType(Type::IntegerType(1, true), method.name.size() + 1),
-					"sel_" + method.name, meth.name, true);
+					"sel_" + method.name, meth.name);
 				DefineObjCSymbol(DataSymbol, Type::ArrayType(Type::IntegerType(1, true), method.types.size() + 1),
-					"selTypes_" + method.name, meth.types, true);
+					"selTypes_" + method.name, meth.types);
 			}
 			else
 			{
@@ -1040,11 +968,11 @@ void ObjCProcessor::ReadMethodList(ObjCReader* reader, ClassBase& cls, std::stri
 					m_selectorCache[selRef] = method.name;
 				}
 				auto selType = Type::ArrayType(Type::IntegerType(1, true), method.name.size() + 1);
-				DefineObjCSymbol(DataSymbol, selType, "sel_" + method.name, selRef, true);
+				DefineObjCSymbol(DataSymbol, selType, "sel_" + method.name, selRef);
 				DefineObjCSymbol(DataSymbol, Type::ArrayType(Type::IntegerType(1, true), method.types.size() + 1),
-					"selTypes_" + method.name, meth.types, true);
+					"selTypes_" + method.name, meth.types);
 				DefineObjCSymbol(DataSymbol, Type::PointerType(m_data->GetAddressSize(), selType),
-					"selRef_" + method.name, meth.name, true);
+					"selRef_" + method.name, meth.name);
 			}
 
 			// workflow objc support
@@ -1059,7 +987,7 @@ void ObjCProcessor::ReadMethodList(ObjCReader* reader, ClassBase& cls, std::stri
 				methodTypeName = typesAreOffsetsFromSelectorBase && !m_typeNames.methodEntryTypeOffsets.IsEmpty()
 					? m_typeNames.methodEntryTypeOffsets
 					: m_typeNames.methodEntry;
-			DefineObjCSymbol(DataSymbol, methodTypeName, "method_" + method.name, cursor, true);
+			DefineObjCSymbol(DataSymbol, methodTypeName, "method_" + method.name, cursor);
 			method.imp = meth.imp;
 			cls.methodList[cursor] = method;
 			m_localMethods[cursor] = method;
@@ -1093,7 +1021,7 @@ void ObjCProcessor::ReadIvarList(ObjCReader* reader, ClassBase& cls, std::string
 		return;
 	}
 	auto addressSize = m_data->GetAddressSize();
-	DefineObjCSymbol(DataSymbol, m_typeNames.ivarList, "ivar_list_" + std::string(name), start, true);
+	DefineObjCSymbol(DataSymbol, m_typeNames.ivarList, "ivar_list_" + std::string(name), start);
 	for (unsigned i = 0; i < head.count; i++)
 	{
 		try
@@ -1124,11 +1052,11 @@ void ObjCProcessor::ReadIvarList(ObjCReader* reader, ClassBase& cls, std::string
 			reader->Seek(ivarStruct.type);
 			ivar.type = reader->ReadCString();
 
-			DefineObjCSymbol(DataSymbol, m_typeNames.ivar, "ivar_" + ivar.name, cursor, true);
+			DefineObjCSymbol(DataSymbol, m_typeNames.ivar, "ivar_" + ivar.name, cursor);
 			DefineObjCSymbol(DataSymbol, Type::ArrayType(Type::IntegerType(1, true), ivar.name.size() + 1),
-				"ivarName_" + ivar.name, ivarStruct.name, true);
+				"ivarName_" + ivar.name, ivarStruct.name);
 			DefineObjCSymbol(DataSymbol, Type::ArrayType(Type::IntegerType(1, true), ivar.type.size() + 1),
-				"ivarType_" + ivar.name, ivarStruct.type, true);
+				"ivarType_" + ivar.name, ivarStruct.type);
 
 			cls.ivarList[cursor] = ivar;
 		}
@@ -1303,7 +1231,7 @@ bool ObjCProcessor::ApplyMethodType(Class& cls, Method& method, bool isInstanceM
 	std::string prefix = isInstanceMethod ? "-" : "+";
 	auto name = prefix + "[" + cls.name + " " + method.name + "]";
 
-	DefineObjCSymbol(FunctionSymbol, funcType, name, method.imp, true);
+	DefineObjCSymbol(FunctionSymbol, funcType, name, method.imp);
 
 	return true;
 }
@@ -1352,9 +1280,9 @@ void ObjCProcessor::PostProcessObjCSections(ObjCReader* reader)
 				sel = reader->ReadCString();
 				m_selectorCache[selLoc] = sel;
 				DefineObjCSymbol(DataSymbol, Type::ArrayType(Type::IntegerType(1, true), sel.size() + 1), "sel_" + sel,
-					selLoc, true);
+					selLoc);
 			}
-			DefineObjCSymbol(DataSymbol, type, "selRef_" + sel, i, true);
+			DefineObjCSymbol(DataSymbol, type, "selRef_" + sel, i);
 		}
 	}
 	if (auto superRefs = GetSectionWithName("__objc_classrefs"))
@@ -1365,7 +1293,7 @@ void ObjCProcessor::PostProcessObjCSections(ObjCReader* reader)
 		for (view_ptr_t i = start; i < end; i += ptrSize)
 		{
 			if (auto className = ClassNameForTargetOfPointerAt(reader, i))
-				DefineObjCSymbol(DataSymbol, type, "clsRef_" + *className, i, true);
+				DefineObjCSymbol(DataSymbol, type, "clsRef_" + *className, i);
 		}
 	}
 	if (auto superRefs = GetSectionWithName("__objc_superrefs"))
@@ -1382,7 +1310,7 @@ void ObjCProcessor::PostProcessObjCSections(ObjCReader* reader)
 				auto& cls = it->second;
 				std::string name = cls.name;
 				if (!name.empty())
-					DefineObjCSymbol(DataSymbol, type, "superRef_" + name, i, true);
+					DefineObjCSymbol(DataSymbol, type, "superRef_" + name, i);
 			}
 		}
 	}
@@ -1400,7 +1328,7 @@ void ObjCProcessor::PostProcessObjCSections(ObjCReader* reader)
 				auto& proto = it->second;
 				std::string name = proto.name;
 				if (!name.empty())
-					DefineObjCSymbol(DataSymbol, type, "protoRef_" + name, i, true);
+					DefineObjCSymbol(DataSymbol, type, "protoRef_" + name, i);
 			}
 		}
 	}
@@ -1454,8 +1382,6 @@ Ref<Symbol> ObjCProcessor::GetSymbol(uint64_t address)
 
 void ObjCProcessor::ProcessObjCData()
 {
-	auto guard = ScopedSymbolQueue::Make();
-
 	auto addrSize = m_data->GetAddressSize();
 	m_typeNames.nsInteger = defineTypedef(m_data, {"NSInteger"}, Type::IntegerType(addrSize, true));
 	m_typeNames.nsuInteger = defineTypedef(m_data, {"NSUInteger"}, Type::IntegerType(addrSize, false));
@@ -1658,8 +1584,6 @@ void ObjCProcessor::ProcessObjCData()
 
 	PostProcessObjCSections(reader.get());
 
-	ScopedSymbolQueue::Get().Process();
-
 	auto meta = SerializeMetadata();
 	m_data->StoreMetadata("Objective-C", meta, true);
 
@@ -1678,8 +1602,6 @@ void ObjCProcessor::ProcessObjCLiterals()
 
 void ObjCProcessor::ProcessCFStrings()
 {
-	auto guard = ScopedSymbolQueue::Make();
-
 	uint64_t ptrSize = m_data->GetAddressSize();
 	// https://github.com/apple/llvm-project/blob/next/clang/lib/CodeGen/CodeGenModule.cpp#L6129
 	// See also ASTContext.cpp ctrl+f __NSConstantString_tag
@@ -1759,9 +1681,9 @@ void ObjCProcessor::ProcessCFStrings()
 					}
 				}
 				DefineObjCSymbol(
-					DataSymbol, Type::ArrayType(Type::WideCharType(2), strLen + 1), "ustr_" + str, strLoc, true);
+					DataSymbol, Type::ArrayType(Type::WideCharType(2), strLen + 1), "ustr_" + str, strLoc);
 				DefineObjCSymbol(
-					DataSymbol, Type::NamedType(m_data, m_typeNames.cfStringUTF16), "cfstr_" + str, i, true);
+					DataSymbol, Type::NamedType(m_data, m_typeNames.cfStringUTF16), "cfstr_" + str, i);
 			}
 			else  // UTF8 / ASCII
 			{
@@ -1788,18 +1710,16 @@ void ObjCProcessor::ProcessCFStrings()
 					}
 				}
 				DefineObjCSymbol(DataSymbol, Type::ArrayType(Type::IntegerType(1, true), str.size() + 1), "cstr_" + str,
-					strLoc, true);
-				DefineObjCSymbol(DataSymbol, Type::NamedType(m_data, m_typeNames.cfString), "cfstr_" + str, i, true);
+					strLoc);
+				DefineObjCSymbol(DataSymbol, Type::NamedType(m_data, m_typeNames.cfString), "cfstr_" + str, i);
 			}
 		}
 
-		ScopedSymbolQueue::Get().Process();
 	}
 }
 
 void ObjCProcessor::ProcessNSConstantArrays()
 {
-	auto guard = ScopedSymbolQueue::Make();
 	uint64_t ptrSize = m_data->GetAddressSize();
 
 	StructureBuilder nsConstantArrayBuilder;
@@ -1822,18 +1742,16 @@ void ObjCProcessor::ProcessNSConstantArrays()
 			uint64_t count = reader->ReadPointer();
 			auto dataLoc = ReadPointerAccountingForRelocations(reader.get());
 			DefineObjCSymbol(
-				DataSymbol, Type::ArrayType(m_types.id, count), fmt::format("nsarray_{:x}_data", i), dataLoc, true);
+				DataSymbol, Type::ArrayType(m_types.id, count), fmt::format("nsarray_{:x}_data", i), dataLoc);
 			DefineObjCSymbol(DataSymbol, Type::NamedType(m_data, m_typeNames.nsConstantArray),
-				fmt::format("nsarray_{:x}", i), i, true);
+				fmt::format("nsarray_{:x}", i), i);
 		}
-		ScopedSymbolQueue::Get().Process();
 	}
 
 }
 
 void ObjCProcessor::ProcessNSConstantDictionaries()
 {
-	auto guard = ScopedSymbolQueue::Make();
 	uint64_t ptrSize = m_data->GetAddressSize();
 
 	StructureBuilder nsConstantDictionaryBuilder;
@@ -1860,19 +1778,17 @@ void ObjCProcessor::ProcessNSConstantDictionaries()
 			auto keysLoc = ReadPointerAccountingForRelocations(reader.get());
 			auto objectsLoc = ReadPointerAccountingForRelocations(reader.get());
 			DefineObjCSymbol(
-				DataSymbol, Type::ArrayType(m_types.id, count), fmt::format("nsdict_{:x}_keys", i), keysLoc, true);
+				DataSymbol, Type::ArrayType(m_types.id, count), fmt::format("nsdict_{:x}_keys", i), keysLoc);
 			DefineObjCSymbol(DataSymbol, Type::ArrayType(m_types.id, count), fmt::format("nsdict_{:x}_objects", i),
-				objectsLoc, true);
+				objectsLoc);
 			DefineObjCSymbol(DataSymbol, Type::NamedType(m_data, m_typeNames.nsConstantDictionary),
-				fmt::format("nsdict_{:x}", i), i, true);
+				fmt::format("nsdict_{:x}", i), i);
 		}
-		ScopedSymbolQueue::Get().Process();
 	}
 }
 
 void ObjCProcessor::ProcessNSConstantIntegerNumbers()
 {
-	auto guard = ScopedSymbolQueue::Make();
 	uint64_t ptrSize = m_data->GetAddressSize();
 
 	StructureBuilder nsConstantIntegerNumberBuilder;
@@ -1905,7 +1821,7 @@ void ObjCProcessor::ProcessNSConstantIntegerNumbers()
 			case 'l':
 			case 'q':
 				DefineObjCSymbol(DataSymbol, Type::NamedType(m_data, m_typeNames.nsConstantIntegerNumber),
-					fmt::format("nsint_{:x}_{}", i, (int64_t)value), i, true);
+					fmt::format("nsint_{:x}_{}", i, (int64_t)value), i);
 				break;
 			case 'C':
 			case 'S':
@@ -1913,14 +1829,13 @@ void ObjCProcessor::ProcessNSConstantIntegerNumbers()
 			case 'L':
 			case 'Q':
 				DefineObjCSymbol(DataSymbol, Type::NamedType(m_data, m_typeNames.nsConstantIntegerNumber),
-					fmt::format("nsint_{:x}_{}", i, value), i, true);
+					fmt::format("nsint_{:x}_{}", i, value), i);
 				break;
 			default:
 				m_logger->LogWarn("Unknown type encoding '%c' in number literal object at %p", encoding, i);
 				continue;
 			}
 		}
-		ScopedSymbolQueue::Get().Process();
 	}
 }
 
@@ -1966,7 +1881,6 @@ void ObjCProcessor::ProcessNSConstantFloatingPointNumbers()
 		if (!numbers)
 			continue;
 
-		auto guard = ScopedSymbolQueue::Make();
 		auto start = numbers->GetStart();
 		auto end = numbers->GetEnd();
 		auto typeWidth = Type::NamedType(m_data, m_typeNames.nsConstantDoubleNumber)->GetWidth();
@@ -2005,15 +1919,13 @@ void ObjCProcessor::ProcessNSConstantFloatingPointNumbers()
 				break;
 			}
 			}
-			DefineObjCSymbol(DataSymbol, Type::NamedType(m_data, *typeName), name, i, true);
+			DefineObjCSymbol(DataSymbol, Type::NamedType(m_data, *typeName), name, i);
 		}
-		ScopedSymbolQueue::Get().Process();
 	}
 }
 
 void ObjCProcessor::ProcessNSConstantDatas()
 {
-	auto guard = ScopedSymbolQueue::Make();
 	uint64_t ptrSize = m_data->GetAddressSize();
 
 	StructureBuilder nsConstantDataBuilder;
@@ -2036,11 +1948,10 @@ void ObjCProcessor::ProcessNSConstantDatas()
 			uint64_t length = reader->ReadPointer();
 			auto dataLoc = ReadPointerAccountingForRelocations(reader.get());
 			DefineObjCSymbol(DataSymbol, Type::ArrayType(Type::IntegerType(1, false), length),
-				fmt::format("nsdata_{:x}_data", i), dataLoc, true);
+				fmt::format("nsdata_{:x}_data", i), dataLoc);
 			DefineObjCSymbol(
-				DataSymbol, Type::NamedType(m_data, m_typeNames.nsConstantData), fmt::format("nsdata_{:x}", i), i, true);
+				DataSymbol, Type::NamedType(m_data, m_typeNames.nsConstantData), fmt::format("nsdata_{:x}", i), i);
 		}
-		ScopedSymbolQueue::Get().Process();
 	}
 }
 

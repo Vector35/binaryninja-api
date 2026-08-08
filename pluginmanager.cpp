@@ -43,6 +43,12 @@ bool Extension::IsListed() const
 	return BNPluginIsListed(m_object);
 }
 
+
+bool Extension::IsDeprecated() const
+{
+	return BNPluginIsDeprecated(m_object);
+}
+
 bool Extension::IsEnabled() const
 {
 	return BNPluginIsEnabled(m_object);

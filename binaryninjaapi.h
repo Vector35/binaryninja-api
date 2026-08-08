@@ -20087,6 +20087,7 @@ namespace BinaryNinja {
 		bool IsBeingUpdated() const;
 		bool IsInstalled() const;
 		bool IsListed() const;
+		bool IsDeprecated() const;
 		bool IsEnabled() const;
 		bool IsRunning() const;
 		bool IsUpdatePending() const;

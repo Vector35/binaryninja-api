@@ -94,6 +94,11 @@ class Extension:
 		"""Boolean True if the plugin is present in its repository's latest successful listing"""
 		return core.BNPluginIsListed(self.handle)
 
+	@property
+	def deprecated(self) -> bool:
+		"""Boolean True if the plugin is marked deprecated by its repository"""
+		return core.BNPluginIsDeprecated(self.handle)
+
 	def install(self, version_id=None) -> bool:
 		"""Attempt to install the given plugin. Defaults to the latest available version."""
 		if self.delete_pending:

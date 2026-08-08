@@ -216,6 +216,11 @@ impl Extension {
         unsafe { BNPluginIsListed(self.handle.as_ptr()) }
     }
 
+    /// true if the plugin is marked deprecated by its repository
+    pub fn is_deprecated(&self) -> bool {
+        unsafe { BNPluginIsDeprecated(self.handle.as_ptr()) }
+    }
+
     /// true if the plugin is enabled, false otherwise
     pub fn is_enabled(&self) -> bool {
         unsafe { BNPluginIsEnabled(self.handle.as_ptr()) }

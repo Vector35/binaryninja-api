@@ -1363,8 +1363,9 @@ class PythonScriptingProvider(ScriptingProvider):
 
 		args.extend(["install", "--upgrade", "--upgrade-strategy", "only-if-needed"])
 		venv = settings.Settings().get_string("python.virtualenv")
+		venv_path = Path(os.path.normpath(venv)) if venv is not None else None
 		in_virtual_env = 'VIRTUAL_ENV' in os.environ
-		if venv is not None and venv.endswith("site-packages") and Path(venv).is_dir() and not in_virtual_env:
+		if venv_path is not None and venv_path.name == "site-packages" and venv_path.is_dir() and not in_virtual_env:
 			args.extend(["--target", venv])
 		else:
 			user_dir = binaryninja.user_directory()

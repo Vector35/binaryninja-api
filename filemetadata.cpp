@@ -235,6 +235,12 @@ Ref<BinaryView> FileMetadata::OpenDatabaseForConfiguration(const string& path)
 }
 
 
+bool FileMetadata::ReopenMovedDatabase(const string& path)
+{
+	return BNReopenMovedDatabase(m_object, path.c_str());
+}
+
+
 bool FileMetadata::SaveAutoSnapshot(BinaryView* data, Ref<SaveSettings> settings)
 {
 	return BNSaveAutoSnapshot(data->GetObject(), settings ? settings->GetObject() : nullptr);

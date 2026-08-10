@@ -3807,6 +3807,7 @@ namespace BinaryNinja {
 		Ref<BinaryView> OpenExistingDatabase(
 		    const std::string& path, const ProgressFunction& progressCallback);
 		Ref<BinaryView> OpenDatabaseForConfiguration(const std::string& path);
+		bool ReopenMovedDatabase(const std::string& path);
 
 		/*! Save the current database to the already created file.
 

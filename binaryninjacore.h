@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 180
+#define BN_CURRENT_CORE_ABI_VERSION 181
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 179
+#define BN_MINIMUM_CORE_ABI_VERSION 181
 
 #define BN_DEMANGLER_MSVC "MS"
 #define BN_DEMANGLER_GNU3 "GNU3"
@@ -4709,8 +4709,6 @@ extern "C"
 	BINARYNINJACOREAPI bool BNWriteDatabaseGlobal(BNDatabase* database, const char* key, const char* val);
 	BINARYNINJACOREAPI BNDataBuffer* BNReadDatabaseGlobalData(BNDatabase* database, const char* key);
 	BINARYNINJACOREAPI bool BNWriteDatabaseGlobalData(BNDatabase* database, const char* key, BNDataBuffer* val);
-	BINARYNINJACOREAPI void BNDatabaseReloadConnection(BNDatabase* database);
-	BINARYNINJACOREAPI bool BNDatabaseReloadConnectionToPath(BNDatabase* database, const char* path);
 	BINARYNINJACOREAPI BNKeyValueStore* BNReadDatabaseAnalysisCache(BNDatabase* database);
 	BINARYNINJACOREAPI bool BNWriteDatabaseAnalysisCache(BNDatabase* database, BNKeyValueStore* val);
 	BINARYNINJACOREAPI bool BNSnapshotHasData(BNDatabase* db, int64_t id);

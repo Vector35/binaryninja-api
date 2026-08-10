@@ -3275,9 +3275,8 @@ namespace BinaryNinja {
 		DataBuffer ReadGlobalData(const std::string& key) const;
 		void WriteGlobalData(const std::string& key, const DataBuffer& val);
 
+		BN_DEPRECATED("Use FileMetadata::ReopenMovedDatabase")
 		void ReloadConnection();
-		bool ReloadConnection(const std::string& path);
-
 		Ref<KeyValueStore> ReadAnalysisCache() const;
 		void WriteAnalysisCache(Ref<KeyValueStore> val);
 	};

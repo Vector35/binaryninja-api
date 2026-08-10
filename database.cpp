@@ -545,16 +545,7 @@ void Database::WriteGlobalData(const std::string& key, const DataBuffer& val)
 }
 
 
-void Database::ReloadConnection()
-{
-	BNDatabaseReloadConnection(m_object);
-}
-
-
-bool Database::ReloadConnection(const std::string& path)
-{
-	return BNDatabaseReloadConnectionToPath(m_object, path.c_str());
-}
+void Database::ReloadConnection() {}
 
 
 Ref<KeyValueStore> Database::ReadAnalysisCache() const

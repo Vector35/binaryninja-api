@@ -2,7 +2,7 @@
 
 use idb_rs::addr_info::{all_address_info, AddressInfo};
 use idb_rs::id0::function::{FuncIdx, FuncordsIdx, IDBFunctionType};
-use idb_rs::id0::{ID0Section, Netdelta, SegmentType};
+use idb_rs::id0::{DirTreeEntry, ID0Section, Netdelta, SegmentType};
 use idb_rs::id1::ID1Section;
 use idb_rs::id2::ID2Section;
 use idb_rs::til::section::TILSection;
@@ -27,6 +27,35 @@ pub struct FunctionInfo {
     pub address: u64,
     pub is_library: bool,
     pub is_no_return: bool,
+    pub register_vars: Vec<RegisterVarInfo>,
+    pub stack_frame: Option<StackFrameInfo>,
+}
+
+/// A register renamed by the user within a function (IDA "regvar"), e.g. `eax` -> `count`.
+#[derive(Debug, Clone, Serialize)]
+pub struct RegisterVarInfo {
+    /// Architecture register the variable lives in (e.g. `eax`).
+    pub register: String,
+    /// User-assigned name for the register over its range.
+    pub name: String,
+    pub start: u64,
+    pub end: u64,
+    pub comment: String,
+}
+
+/// A function's stack frame, as recorded by IDA.
+///
+/// The `frame` UDT describes every member of the frame (locals, saved registers, return
+/// address and arguments). `local_size` (IDA's `frsize`) and `saved_regs_size` (`frregs`) give
+/// the geometry needed to translate IDA frame offsets into Binary Ninja's frame convention.
+#[derive(Debug, Clone, Serialize)]
+pub struct StackFrameInfo {
+    /// Size in bytes of the local variables area (IDA `frsize`).
+    pub local_size: u64,
+    /// Size in bytes of the saved registers area (IDA `frregs`).
+    pub saved_regs_size: u64,
+    /// The frame structure describing each stack member.
+    pub frame: idb_rs::til::udt::UDT,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -42,6 +71,58 @@ pub struct NameInfo {
     pub ty: Option<idb_rs::til::Type>,
     pub label: Option<String>,
     pub exported: bool,
+}
+
+/// A typed data item IDA has defined at an address (e.g. a dword, a float, a string, or a
+/// struct), recovered from the byte flags so that even unnamed/untyped-in-the-TIL data still gets
+/// a Binary Ninja data variable of the right type.
+#[derive(Debug, Clone, Serialize)]
+pub struct DataInfo {
+    pub address: u64,
+    /// The explicit IDA type for this item, when one is recorded (e.g. a struct instance).
+    pub ty: Option<idb_rs::til::Type>,
+    /// The byte-flag-derived kind, used when there is no explicit type.
+    pub kind: Option<DataKind>,
+}
+
+/// The kind of a [`DataInfo`], with the size IDA recorded for the item.
+#[derive(Debug, Clone, Copy, Serialize)]
+pub enum DataKind {
+    /// Integer of the given size in bytes.
+    Int(u8),
+    /// Floating point value of the given size in bytes.
+    Float(u8),
+    /// String literal of the given total length in bytes, with the character width in bytes
+    /// (1 for C/UTF-8, 2 for UTF-16, 4 for UTF-32).
+    String { len: u64, char_width: u8 },
+}
+
+/// The per-operand number formats IDA recorded for an instruction.
+#[derive(Debug, Clone, Serialize)]
+pub struct OperandFormatInfo {
+    pub address: u64,
+    /// `(operand index, format)` pairs for the operands that have a non-default format.
+    pub formats: Vec<(u8, OperandFormat)>,
+}
+
+/// How IDA displays an instruction operand's number.
+#[derive(Debug, Clone, Copy, Serialize)]
+pub enum OperandFormat {
+    Hex,
+    Dec,
+    Char,
+    Oct,
+    Bin,
+    Offset,
+}
+
+/// An instruction operand IDA displays as a member of an enumeration.
+#[derive(Debug, Clone, Serialize)]
+pub struct OperandEnumInfo {
+    pub address: u64,
+    pub operand: u8,
+    /// The name of the enumeration the operand is displayed against.
+    pub enum_name: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -85,6 +166,12 @@ pub struct ID0Info {
     pub comments: Vec<CommentInfo>,
     pub labels: Vec<LabelInfo>,
     pub exports: Vec<ExportInfo>,
+    /// Processor register names indexed by IDA register number, used to resolve the registers
+    /// referenced by argument/return value locations into Binary Ninja registers.
+    ///
+    /// Invariant: IDA register numbers start at 0 with no gaps, so the vec index is the register
+    /// number. `register_names[n]` is the name of IDA register `n`.
+    pub register_names: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -94,6 +181,20 @@ pub struct DirTreeInfo {
     /// Contains both function and data names (along with their types).
     pub names: Vec<NameInfo>,
     pub comments: Vec<CommentInfo>,
+    /// The IDA "Functions" window folder hierarchy (root-level entries).
+    pub function_folders: Vec<FunctionFolderEntry>,
+}
+
+/// An entry in IDA's function folder tree: either a function (by address) or a named folder
+/// containing further entries. Mirrors IDA's dirtree so it can be recreated as Binary Ninja
+/// components.
+#[derive(Debug, Clone, Serialize)]
+pub enum FunctionFolderEntry {
+    Function(u64),
+    Folder {
+        name: String,
+        entries: Vec<FunctionFolderEntry>,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -103,6 +204,12 @@ pub struct IDBInfo {
     // NOTE: TILSection is self-contained, so we do no pre-processing.
     pub til: Option<TILSection>,
     pub dir_tree: Option<DirTreeInfo>,
+    /// Typed data items recovered from the byte flags (id1).
+    pub data_items: Vec<DataInfo>,
+    /// Operands IDA displays as enumeration members.
+    pub operand_enums: Vec<OperandEnumInfo>,
+    /// Per-operand number formats recovered from the byte flags (id1).
+    pub operand_formats: Vec<OperandFormatInfo>,
 }
 
 impl IDBInfo {
@@ -133,6 +240,12 @@ impl IDBInfo {
             }
             if a.ty.is_some() {
                 b.ty = a.ty.clone();
+            }
+            if !a.register_vars.is_empty() {
+                b.register_vars = a.register_vars.clone();
+            }
+            if a.stack_frame.is_some() {
+                b.stack_frame = a.stack_frame.clone();
             }
             true
         });
@@ -188,11 +301,17 @@ impl IDBInfo {
             types.extend(til.types.clone());
         }
         types.sort_by_key(|t| t.name.to_string());
+        // `a` is the later (dir_tree-then-til) duplicate being removed and `b` is the one we
+        // keep. In practice the dir_tree types are clones pulled from the same TIL (see
+        // `parse_dir_tree`), so the definitions are identical; we still carry over an ordinal if
+        // the kept entry happens to be missing one, so name/ordinal lookups stay resolvable.
         types.dedup_by(|a, b| {
             if a.name.to_string() != b.name.to_string() {
                 return false;
             }
-            // TODO: Merge types instead of just picking b and not transferring.
+            if b.ordinal == 0 && a.ordinal != 0 {
+                b.ordinal = a.ordinal;
+            }
             true
         });
         types
@@ -261,7 +380,8 @@ impl IDBFileParser {
             id2 = Some(format.read_id2(&mut *data, id2_loc)?);
         }
 
-        // TODO: Decompress til
+        // NOTE: `read_til` reads the section header and transparently inflates Zlib/Zstd
+        // compressed TIL sections, so no explicit decompression step is needed here.
         let mut til = None;
         if let Some(til_loc) = format.til_location() {
             til = Some(format.read_til(&mut *data, til_loc)?);
@@ -272,14 +392,182 @@ impl IDBFileParser {
             _ => None,
         };
 
+        // The IDB records the SHA256 of the original input file; surface it so consumers (and a
+        // future verifier) can confirm the IDB matches the binary being mapped.
+        let sha256 = id0.as_ref().and_then(|id0| {
+            let root_idx = id0.root_node().ok()?;
+            let hash = id0.input_file_sha256(root_idx).ok()??;
+            Some(hash.iter().map(|b| format!("{:02x}", b)).collect::<String>())
+        });
+
         let id0_info = id0.as_ref().map(|id0| self.parse_id0(id0)).transpose()?;
 
+        // Recover typed data items from the byte flags so unnamed data still gets a data variable.
+        let data_items = match (id0.as_ref(), id1.as_ref()) {
+            (Some(id0), Some(id1)) => self.parse_data_items(id0, id1, id2.as_ref())?,
+            _ => Vec::new(),
+        };
+
+        // Recover per-operand number formats (applied only when the user opts in).
+        let operand_formats = id1
+            .as_ref()
+            .map(|id1| self.parse_operand_formats(id1))
+            .unwrap_or_default();
+
+        // Recover operands displayed as enumeration members, resolved to their enumeration.
+        let operand_enums = match (id0.as_ref(), id1.as_ref(), til.as_ref()) {
+            (Some(id0), Some(id1), Some(til)) => {
+                self.parse_operand_enums(id0, id1, id2.as_ref(), til)?
+            }
+            _ => Vec::new(),
+        };
+
         Ok(IDBInfo {
-            sha256: None,
+            sha256,
             id0: id0_info,
             til,
             dir_tree: dir_tree_info,
+            data_items,
+            operand_enums,
+            operand_formats,
         })
+    }
+
+    /// Walk the byte flags and recover operands IDA displays as enumeration members, resolving
+    /// each to the enumeration it belongs to.
+    pub fn parse_operand_enums<K: IDAKind>(
+        &self,
+        id0: &ID0Section<K>,
+        id1: &ID1Section<K>,
+        id2: Option<&ID2Section<K>>,
+        til: &TILSection,
+    ) -> anyhow::Result<Vec<OperandEnumInfo>> {
+        use idb_rs::id1::ByteType;
+
+        let root_info = id0.ida_info(id0.root_node()?)?;
+        let netdelta = root_info.netdelta();
+
+        let mut operand_enums = Vec::new();
+        for (address, byte_info, _size) in id1.all_bytes_no_tails() {
+            if !matches!(byte_info.byte_type(), ByteType::Code(_)) {
+                continue;
+            }
+            // Probe the enum altval directly for operands 0 and 1 rather than gating on the
+            // operand-representation flag: IDA records the referenced enum independently of that
+            // nibble, so instructions like `orr w8, w8, #imm` carry the enum altval even when the
+            // flag does not read back as `Enum`. `op_enum_type` returns `None` when there is no
+            // enum reference, so the probe is self-gating.
+            let Some(info) = AddressInfo::new(id0, id1, id2, netdelta, address) else {
+                continue;
+            };
+            for operand in 0u8..2 {
+                if let Some(enum_ty) = info.op_enum_type(operand, til) {
+                    operand_enums.push(OperandEnumInfo {
+                        address: address.into_raw().into_u64(),
+                        operand,
+                        enum_name: enum_ty.name.to_string(),
+                    });
+                }
+            }
+        }
+        Ok(operand_enums)
+    }
+
+    /// Walk the byte flags and recover the per-operand number formats IDA assigned to code.
+    pub fn parse_operand_formats<K: IDAKind>(
+        &self,
+        id1: &ID1Section<K>,
+    ) -> Vec<OperandFormatInfo> {
+        let mut operand_formats = Vec::new();
+        for (address, byte_info, _size) in id1.all_bytes_no_tails() {
+            let idb_rs::id1::ByteType::Code(code) = byte_info.byte_type() else {
+                continue;
+            };
+            let mut formats = Vec::new();
+            if let Ok(Some(op)) = code.operand0() {
+                if let Some(format) = operand_format_from_byte_op(op) {
+                    formats.push((0, format));
+                }
+            }
+            if let Ok(Some(op)) = code.operand1() {
+                if let Some(format) = operand_format_from_byte_op(op) {
+                    formats.push((1, format));
+                }
+            }
+            if !formats.is_empty() {
+                operand_formats.push(OperandFormatInfo {
+                    address: address.into_raw().into_u64(),
+                    formats,
+                });
+            }
+        }
+        operand_formats
+    }
+
+    /// Walk the byte flags and recover every defined data item along with the kind/size IDA gave
+    /// it. Items whose data type has no straightforward Binary Ninja scalar/string equivalent
+    /// (structs, alignment fill, vector/custom types) are left for the type-driven name path.
+    pub fn parse_data_items<K: IDAKind>(
+        &self,
+        id0: &ID0Section<K>,
+        id1: &ID1Section<K>,
+        id2: Option<&ID2Section<K>>,
+    ) -> anyhow::Result<Vec<DataInfo>> {
+        use idb_rs::id1::{ByteDataType, ByteType};
+
+        let root_info = id0.ida_info(id0.root_node()?)?;
+        let netdelta = root_info.netdelta();
+
+        let mut data_items = Vec::new();
+        for (address, byte_info, size) in id1.all_bytes_no_tails() {
+            let ByteType::Data(data) = byte_info.byte_type() else {
+                continue;
+            };
+            let kind = match data.data_type() {
+                ByteDataType::Byte => Some(DataKind::Int(1)),
+                ByteDataType::Word => Some(DataKind::Int(2)),
+                ByteDataType::Dword => Some(DataKind::Int(4)),
+                ByteDataType::Qword => Some(DataKind::Int(8)),
+                ByteDataType::Oword => Some(DataKind::Int(16)),
+                ByteDataType::Float => Some(DataKind::Float(4)),
+                ByteDataType::Double => Some(DataKind::Float(8)),
+                ByteDataType::Tbyte => Some(DataKind::Float(10)),
+                ByteDataType::Strlit => {
+                    // Recover the character width so wide (UTF-16/32) strings are not mistyped as
+                    // single-byte. Defaults to one byte when no explicit string type is recorded.
+                    let char_width = AddressInfo::new(id0, id1, id2, netdelta, address)
+                        .and_then(|info| info.str_type())
+                        .map(|str_type| str_char_width(str_type.width))
+                        .unwrap_or(1);
+                    Some(DataKind::String {
+                        len: size as u64,
+                        char_width,
+                    })
+                }
+                // Structs carry their actual type in the TIL; resolve it below. Alignment fill
+                // and vector/custom kinds have no simple mapping and are skipped.
+                _ => None,
+            };
+
+            // A struct item only makes sense with its real type; look it up. Avoid the per-item
+            // type lookup for the (vastly more common) scalar items.
+            let ty = if matches!(data.data_type(), ByteDataType::Struct) {
+                AddressInfo::new(id0, id1, id2, netdelta, address)
+                    .and_then(|info| info.tinfo(&root_info).ok().flatten())
+            } else {
+                None
+            };
+
+            if ty.is_none() && kind.is_none() {
+                continue;
+            }
+            data_items.push(DataInfo {
+                address: address.into_raw().into_u64(),
+                ty,
+                kind,
+            });
+        }
+        Ok(data_items)
     }
 
     pub fn parse_id0<K: IDAKind>(&self, id0: &ID0Section<K>) -> anyhow::Result<ID0Info> {
@@ -326,30 +614,56 @@ impl IDBFileParser {
                     IDBFunctionType::Tail(_) => {
                         tracing::debug!("Skipping tail function... {:0x}", func_start);
                     }
-                    IDBFunctionType::NonTail(_func_ext) => {
+                    IDBFunctionType::NonTail(func_ext) => {
                         if func.flags.is_outline() {
                             tracing::debug!("Skipping outlined function... {:0x}", func_start);
                             continue;
                         }
 
-                        // TODO: Parse function registers and params
-                        // for def_reg in id0.function_defined_registers(netdelta, &func, &func_ext) {
-                        //     tracing::info!("{:0x} : Function register: {:?}", func_start, def_reg);
-                        //     let Ok(_def_reg) = def_reg else {
-                        //         tracing::warn!("Failed to read function register entry");
-                        //         continue;
-                        //     };
-                        // }
+                        // Collect register variables (IDA "regvars"): registers the user renamed
+                        // over a range within the function. The register is given by name, so it
+                        // maps cleanly onto a Binary Ninja register in the mapper.
+                        let mut register_vars = Vec::new();
+                        for reg in id0.function_defined_registers(netdelta, &func, func_ext) {
+                            let reg = match reg {
+                                Ok(reg) => reg,
+                                Err(err) => {
+                                    tracing::warn!(
+                                        "Failed to read register variable for {:0x}: {}",
+                                        func_start,
+                                        err
+                                    );
+                                    continue;
+                                }
+                            };
+                            register_vars.push(RegisterVarInfo {
+                                register: reg.register_name.to_string(),
+                                name: reg.variable_name.to_string(),
+                                start: reg.range.start.into_raw().into_u64(),
+                                end: reg.range.end.into_raw().into_u64(),
+                                comment: reg.cmt.to_string(),
+                            });
+                        }
 
-                        // if let Ok(stack_names) =
-                        //     id0.function_defined_variables(&root_info, &func, &func_ext)
-                        // {
-                        //     tracing::info!(
-                        //         "{:0x} : Function stack variables: {:#?}",
-                        //         func_start,
-                        //         stack_names
-                        //     );
-                        // }
+                        // Collect the function's stack frame (named locals, saved registers and
+                        // stack arguments) along with the frame geometry needed to place them.
+                        let stack_frame = match id0
+                            .function_defined_variables(&root_info, &func, func_ext)
+                        {
+                            Ok(stack_names) => stack_names.ty.map(|frame| StackFrameInfo {
+                                local_size: func_ext.frsize.into_u64(),
+                                saved_regs_size: func_ext.frregs as u64,
+                                frame,
+                            }),
+                            Err(err) => {
+                                tracing::warn!(
+                                    "Failed to read stack frame for {:0x}: {}",
+                                    func_start,
+                                    err
+                                );
+                                None
+                            }
+                        };
 
                         functions.push(FunctionInfo {
                             name: None,
@@ -357,6 +671,8 @@ impl IDBFileParser {
                             address: func_start,
                             is_library: func.flags.is_lib(),
                             is_no_return: func.flags.is_no_return(),
+                            register_vars,
+                            stack_frame,
                         });
                     }
                 }
@@ -385,6 +701,14 @@ impl IDBFileParser {
             (loading_base, _) => BaseAddressInfo::BaseSegment(loading_base.into_u64()),
         };
 
+        // The processor module defines the register names by index; this lets us resolve the
+        // registers referenced by argument/return value locations into real registers.
+        let register_names = id0
+            .processor(&root_info)
+            .and_then(|processor| processor.registers_info())
+            .map(|info| info.names.iter().map(|name| name.to_string()).collect())
+            .unwrap_or_default();
+
         Ok(ID0Info {
             base_address,
             segments,
@@ -392,6 +716,7 @@ impl IDBFileParser {
             comments,
             labels,
             exports,
+            register_names,
         })
     }
 
@@ -452,8 +777,6 @@ impl IDBFileParser {
         let root_info = id0.ida_info(root_info_idx)?;
         let netdelta = root_info.netdelta();
 
-        // sha256
-
         let func_info_from_addr =
             |addr_info: &AddressInfo<K>| -> anyhow::Result<Option<FunctionInfo>> {
                 let func_name = addr_info.label()?.map(|s| s.to_string());
@@ -465,6 +788,8 @@ impl IDBFileParser {
                     address: func_addr,
                     is_library: false,
                     is_no_return: false,
+                    register_vars: Vec::new(),
+                    stack_frame: None,
                 }))
             };
 
@@ -510,8 +835,9 @@ impl IDBFileParser {
             comments.extend(comment_info_from_addr(&addr_info));
         }
 
+        let func_dir_tree = id0.dirtree_function_address()?;
         let mut functions = Vec::new();
-        if let Some(func_dir_tree) = id0.dirtree_function_address()? {
+        if let Some(func_dir_tree) = &func_dir_tree {
             func_dir_tree.visit_leafs(|addr_raw| {
                 let addr = Address::from_raw(*addr_raw);
                 if let Some(info) = AddressInfo::new(id0, id1, id2, netdelta, addr) {
@@ -521,6 +847,13 @@ impl IDBFileParser {
                 }
             });
         }
+
+        // Preserve the folder hierarchy (not just the leaf functions) so it can be recreated as
+        // Binary Ninja components.
+        let function_folders = func_dir_tree
+            .as_ref()
+            .map(|tree| build_function_folders::<K>(&tree.entries))
+            .unwrap_or_default();
 
         let mut names = Vec::new();
         if let Some(names_dir_tree) = id0.dirtree_names()? {
@@ -553,6 +886,50 @@ impl IDBFileParser {
             types,
             names,
             comments,
+            function_folders,
         })
     }
+}
+
+/// The byte width of an IDA string character width.
+fn str_char_width(width: idb_rs::addr_info::StrWidth) -> u8 {
+    use idb_rs::addr_info::StrWidth;
+    match width {
+        StrWidth::Byte => 1,
+        StrWidth::Word => 2,
+        StrWidth::Dword => 4,
+    }
+}
+
+/// Map an IDA operand representation to the subset of number formats we can apply directly.
+///
+/// Enum, segment, stack-variable, struct-offset, forced and custom representations need extra
+/// context (a resolved enum/struct/variable) and are left to other paths.
+fn operand_format_from_byte_op(op: idb_rs::id1::ByteOp) -> Option<OperandFormat> {
+    use idb_rs::id1::ByteOp;
+    match op {
+        ByteOp::Hex => Some(OperandFormat::Hex),
+        ByteOp::Dec => Some(OperandFormat::Dec),
+        ByteOp::Char => Some(OperandFormat::Char),
+        ByteOp::Oct => Some(OperandFormat::Oct),
+        ByteOp::Bin => Some(OperandFormat::Bin),
+        ByteOp::Offset => Some(OperandFormat::Offset),
+        _ => None,
+    }
+}
+
+/// Recursively convert an IDA function dirtree into our [`FunctionFolderEntry`] tree.
+fn build_function_folders<K: IDAKind>(
+    entries: &[DirTreeEntry<K::Usize>],
+) -> Vec<FunctionFolderEntry> {
+    entries
+        .iter()
+        .map(|entry| match entry {
+            DirTreeEntry::Leaf(address) => FunctionFolderEntry::Function((*address).into_u64()),
+            DirTreeEntry::Directory { name, entries } => FunctionFolderEntry::Folder {
+                name: String::from_utf8_lossy(name).to_string(),
+                entries: build_function_folders::<K>(entries),
+            },
+        })
+        .collect()
 }

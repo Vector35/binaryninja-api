@@ -1,10 +1,28 @@
 use crate::mapper::IDBMapper;
 use crate::parse::IDBFileParser;
 use crate::settings::LoadSettings;
-use binaryninja::binary_view::AnalysisContext;
+use binaryninja::binary_view::{
+    register_binary_view_event, AnalysisContext, BinaryView, BinaryViewEventHandler,
+    BinaryViewEventType,
+};
 use binaryninja::workflow::{activity, Activity, Workflow};
 use std::fs::File;
 use std::io::BufReader;
+
+/// Applies the per-operand display overrides (number formats and enum displays) that the import
+/// deferred because they require the view's functions to exist. By the time initial analysis
+/// completes the functions are present, so the overrides can be set and a re-analysis requested to
+/// render them.
+struct OperandDisplayApplier;
+
+impl BinaryViewEventHandler for OperandDisplayApplier {
+    fn on_event(&self, view: &BinaryView) {
+        if crate::mapper::apply_pending_operand_display(view) {
+            // The overrides only affect rendering once analysis re-runs over the functions.
+            view.update_analysis();
+        }
+    }
+}
 
 mod commands;
 pub mod mapper;
@@ -24,6 +42,12 @@ fn plugin_init() -> Result<(), ()> {
     // Register settings globally.
     LoadSettings::register();
 
+    // Apply deferred per-operand display overrides once functions exist.
+    register_binary_view_event(
+        BinaryViewEventType::BinaryViewInitialAnalysisCompletionEvent,
+        OperandDisplayApplier,
+    );
+
     let loader_activity = |ctx: &AnalysisContext| {
         let view = ctx.view();
         let load_settings = LoadSettings::from_view_settings(&view);
@@ -39,7 +63,11 @@ fn plugin_init() -> Result<(), ()> {
         let file_parser = IDBFileParser::new();
         match file_parser.parse(&mut file_reader) {
             Ok(idb_info) => {
-                IDBMapper::new(idb_info).map_to_view(&view);
+                IDBMapper::new(idb_info)
+                    .with_operand_enums(load_settings.apply_operand_enums)
+                    .with_operand_formats(load_settings.apply_operand_formats)
+                    .with_skip_default_operand_formats(load_settings.skip_default_operand_formats)
+                    .map_to_view(&view);
             }
             Err(e) => {
                 tracing::error!("Failed to parse IDB file: {}", e);

@@ -1,31 +1,244 @@
 //! Map the IDB data we parsed into the [`BinaryView`].
 
 use crate::parse::{
-    BaseAddressInfo, CommentInfo, ExportInfo, FunctionInfo, IDBInfo, LabelInfo, NameInfo,
+    BaseAddressInfo, CommentInfo, DataInfo, DataKind, ExportInfo, FunctionFolderEntry,
+    FunctionInfo, IDBInfo, LabelInfo, NameInfo, OperandEnumInfo, OperandFormat, OperandFormatInfo,
     SegmentInfo,
 };
 use crate::translate::TILTranslator;
-use binaryninja::architecture::Architecture;
+use binaryninja::architecture::{Architecture, ArchitectureExt, Register, RegisterInfo};
 use binaryninja::binary_view::{BinaryView, BinaryViewBase};
+use binaryninja::component::{Component, ComponentBuilder};
+use binaryninja::disassembly::InstructionTextTokenKind;
+use binaryninja::function::{Function, Location};
+use binaryninja::types::IntegerDisplayType;
 use binaryninja::qualified_name::QualifiedName;
 use binaryninja::rc::Ref;
 use binaryninja::section::{SectionBuilder, Semantics};
 use binaryninja::symbol::{Binding, Symbol, SymbolType};
 use binaryninja::types::Type;
+use binaryninja::variable::Variable;
 use idb_rs::id0::SegmentType;
 use idb_rs::til::TypeVariant;
-use std::collections::HashSet;
+use sha2::{Digest, Sha256};
+use std::collections::{HashMap, HashSet};
+use std::sync::{Mutex, OnceLock};
+
+/// Per-operand display overrides (number formats and enum displays) that have been parsed and
+/// rebased but cannot be applied yet because they require the view's functions to exist.
+///
+/// `set_int_display_type` needs the [`Function`] containing an instruction, but the IDB import runs
+/// as an early analysis activity, before functions are created. We stash the rebased overrides here
+/// keyed by the view, then a [`crate`]-level analysis-completion handler applies them once functions
+/// are available (see `lib.rs`).
+pub struct PendingOperandDisplay {
+    pub operand_formats: Vec<OperandFormatInfo>,
+    pub operand_enums: Vec<OperandEnumInfo>,
+}
+
+fn pending_operand_display() -> &'static Mutex<HashMap<usize, PendingOperandDisplay>> {
+    static REGISTRY: OnceLock<Mutex<HashMap<usize, PendingOperandDisplay>>> = OnceLock::new();
+    REGISTRY.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// A stable per-view key shared between the import activity and the completion handler. The
+/// completion event wraps the same underlying `BNBinaryView`, so its handle pointer matches.
+fn view_key(view: &BinaryView) -> usize {
+    view.handle as usize
+}
+
+/// Stash rebased operand-display overrides to be applied once the view's functions exist.
+fn stash_operand_display(view: &BinaryView, pending: PendingOperandDisplay) {
+    if let Ok(mut registry) = pending_operand_display().lock() {
+        registry.insert(view_key(view), pending);
+    }
+}
+
+/// Apply (and remove) any operand-display overrides stashed for this view.
+///
+/// Enum displays (a handful) are applied first and rendered promptly; the much larger number-format
+/// set is applied afterwards. Each phase requests its own re-analysis so the overrides become
+/// visible. Returns whether any overrides were applied.
+pub fn apply_pending_operand_display(view: &BinaryView) -> bool {
+    let key = view_key(view);
+    let Some(pending) = pending_operand_display()
+        .lock()
+        .ok()
+        .and_then(|mut registry| registry.remove(&key))
+    else {
+        tracing::debug!("No pending operand display overrides for view {key:#x}");
+        return false;
+    };
+
+    tracing::info!(
+        "Applying deferred operand display: {} enums, {} number formats",
+        pending.operand_enums.len(),
+        pending.operand_formats.len()
+    );
+
+    // Addresses whose operand is displayed as an enumeration. IDA shows the enum even when the
+    // operand also carries a number-format flag, so the enum must win: skip the format pass for
+    // these addresses, otherwise it would overwrite the enum override at the same operand.
+    let enum_addresses: HashSet<u64> =
+        pending.operand_enums.iter().map(|e| e.address).collect();
+
+    if !pending.operand_enums.is_empty() {
+        for operand_enum in &pending.operand_enums {
+            apply_operand_enum_display(view, operand_enum);
+        }
+        tracing::info!("Applied {} enum-displayed operands", pending.operand_enums.len());
+        view.update_analysis();
+    }
+
+    if !pending.operand_formats.is_empty() {
+        let mut applied_formats = 0usize;
+        for operand_format in &pending.operand_formats {
+            if enum_addresses.contains(&operand_format.address) {
+                continue;
+            }
+            apply_operand_format_display(view, operand_format);
+            applied_formats += 1;
+        }
+        tracing::info!("Applied {applied_formats} operand number formats");
+        view.update_analysis();
+    }
+
+    !pending.operand_enums.is_empty() || !pending.operand_formats.is_empty()
+}
+
+/// Display an operand against its enumeration, as IDA does.
+///
+/// Resolves the enumeration's Binary Ninja type id and sets it on each immediate token in the
+/// instruction. The override is keyed by Binary Ninja's operand index, which `set_int_display_type`
+/// defines as the number of operand-separator tokens preceding the token in the rendered line (not
+/// IDA's operand number). Counting separators here makes the override match what Binary Ninja
+/// renders, so the enumeration member is displayed once analysis re-renders the function.
+fn apply_operand_enum_display(view: &BinaryView, operand_enum: &OperandEnumInfo) {
+    let Some(type_id) = view.type_id_by_name(operand_enum.enum_name.as_str()) else {
+        tracing::debug!(
+            "No Binary Ninja type for enum '{}', skipping operand at {:0x}",
+            operand_enum.enum_name,
+            operand_enum.address
+        );
+        return;
+    };
+
+    let functions = view.functions_containing(operand_enum.address);
+    let Some(func) = functions.iter().next() else {
+        tracing::info!(
+            "apply_operand_enum_display: no function containing {:#x} for enum '{}'",
+            operand_enum.address,
+            operand_enum.enum_name
+        );
+        return;
+    };
+    let arch = func.arch();
+
+    let bytes = view.read_vec(operand_enum.address, 16);
+    if bytes.is_empty() {
+        return;
+    }
+    let Some((_consumed, tokens)) = arch.instruction_text(&bytes, operand_enum.address) else {
+        return;
+    };
+
+    let mut separators = 0usize;
+    for token in &tokens {
+        if matches!(token.kind, InstructionTextTokenKind::OperandSeparator) {
+            separators += 1;
+        }
+        if let Some(value) = integer_token_value(&token.kind) {
+            func.set_int_display_type(
+                operand_enum.address,
+                value,
+                separators,
+                IntegerDisplayType::EnumerationDisplayType,
+                Some(arch),
+                Some(type_id.as_str()),
+            );
+        }
+    }
+}
+
+/// Apply IDA's per-operand number formats to the instruction at an address.
+///
+/// Like the enum pass, the override is keyed by Binary Ninja's operand index (the count of
+/// operand-separator tokens before the token), not IDA's operand number. Each recovered format is
+/// applied to every immediate token at its rendered operand index; instructions carrying a format
+/// almost always have a single immediate, so this matches what IDA formatted.
+fn apply_operand_format_display(view: &BinaryView, operand_format: &OperandFormatInfo) {
+    let functions = view.functions_containing(operand_format.address);
+    let Some(func) = functions.iter().next() else {
+        return;
+    };
+    let arch = func.arch();
+
+    // The longest instruction we may encounter; reading a few extra bytes is harmless.
+    let bytes = view.read_vec(operand_format.address, 16);
+    if bytes.is_empty() {
+        return;
+    }
+    let Some((_consumed, tokens)) = arch.instruction_text(&bytes, operand_format.address) else {
+        return;
+    };
+
+    let mut separators = 0usize;
+    for token in &tokens {
+        if matches!(token.kind, InstructionTextTokenKind::OperandSeparator) {
+            separators += 1;
+        }
+        if let Some(value) = integer_token_value(&token.kind) {
+            for (_operand_index, format) in &operand_format.formats {
+                func.set_int_display_type(
+                    operand_format.address,
+                    value,
+                    separators,
+                    integer_display_type(*format),
+                    Some(arch),
+                    None,
+                );
+            }
+        }
+    }
+}
 
 /// Maps IDB data into a [`BinaryView`].
 ///
 /// The mapper can be re-used if mapping into multiple views.
 pub struct IDBMapper {
     info: IDBInfo,
+    apply_operand_enums: bool,
+    apply_operand_formats: bool,
+    skip_default_operand_formats: bool,
 }
 
 impl IDBMapper {
     pub fn new(info: IDBInfo) -> Self {
-        Self { info }
+        Self {
+            info,
+            apply_operand_enums: false,
+            apply_operand_formats: false,
+            skip_default_operand_formats: true,
+        }
+    }
+
+    /// Enable displaying operands against the enumeration IDA assigned them.
+    pub fn with_operand_enums(mut self, enabled: bool) -> Self {
+        self.apply_operand_enums = enabled;
+        self
+    }
+
+    /// Enable applying the IDB's per-operand number formats to the disassembly.
+    pub fn with_operand_formats(mut self, enabled: bool) -> Self {
+        self.apply_operand_formats = enabled;
+        self
+    }
+
+    /// Skip per-operand number formats that already match Binary Ninja's default rendering
+    /// (hexadecimal) when applying number formats.
+    pub fn with_skip_default_operand_formats(mut self, enabled: bool) -> Self {
+        self.skip_default_operand_formats = enabled;
+        self
     }
 
     pub fn map_to_view(&self, view: &BinaryView) {
@@ -34,9 +247,27 @@ impl IDBMapper {
             return;
         };
 
-        // TODO: Actually the below comment belongs in an IDBVerifier that tries to determine if the idb
-        // TODO: Will process correctly for the given view.
-        // TODO: Have a shasum check of the file to make sure we are not mapping to bad data?
+        // Verify the IDB was built from the binary we are about to map into. The IDB records the
+        // SHA256 of its original input file; the root of the view's parent chain is the raw view,
+        // whose bytes are that same on-disk file, so we can hash it and compare.
+        if let Some(expected_sha256) = &self.info.sha256 {
+            match sha256_of_raw_view(view) {
+                Some(actual_sha256) if actual_sha256 == *expected_sha256 => {
+                    tracing::debug!("Verified IDB matches loaded binary (SHA256 {expected_sha256})");
+                }
+                Some(actual_sha256) => {
+                    tracing::warn!(
+                        "IDB input file SHA256 ({expected_sha256}) does not match the loaded \
+                         binary ({actual_sha256}); imported data may not correspond to this binary."
+                    );
+                }
+                None => {
+                    tracing::debug!(
+                        "Could not hash the loaded binary to verify against IDB SHA256 {expected_sha256}"
+                    );
+                }
+            }
+        }
 
         // Rebase the address from ida -> binja without this rebased views will fail to map.
         let bn_base_address = view.start();
@@ -45,15 +276,7 @@ impl IDBMapper {
             BaseAddressInfo::None => bn_base_address,
             BaseAddressInfo::BaseSegment(start_addr) => bn_base_address.wrapping_sub(start_addr),
             BaseAddressInfo::BaseSection(section_addr) => {
-                let bn_section_addr = view
-                    .sections()
-                    .iter()
-                    .min_by_key(|s| s.start())
-                    .map(|s| s.start());
-                match bn_section_addr {
-                    Some(bn_section) => bn_section.wrapping_sub(section_addr),
-                    None => bn_base_address,
-                }
+                bn_base_address.wrapping_sub(section_addr)
             }
         };
 
@@ -73,14 +296,19 @@ impl IDBMapper {
 
         // Create the type translator, adding all referencable types from both the TIL and the binary view.
         let platform = view.default_platform().unwrap();
-        // TODO: Need to remove this, but for now keeping this since it gets referenced a lot.
-        view.define_auto_type(
-            "size_t",
-            "IDA",
-            &Type::int(platform.arch().default_integer_size(), false),
-        );
-        let til_translator =
-            TILTranslator::new_from_platform(&platform).with_type_container(&view.type_container());
+        // Provide a fallback `size_t` only when the view does not already define one. Many IDA
+        // types reference `size_t`, so we keep this safety net, but defining it conditionally
+        // avoids clobbering a real platform/view definition with our generic integer.
+        if view.type_by_name("size_t").is_none() {
+            view.define_auto_type(
+                "size_t",
+                "IDA",
+                &Type::int(platform.arch().default_integer_size(), false),
+            );
+        }
+        let til_translator = TILTranslator::new_from_platform(&platform)
+            .with_type_container(&view.type_container())
+            .with_register_names(id0.register_names.clone());
         let til_translator = match &self.info.til {
             Some(til) => til_translator.with_til_info(&til),
             None => til_translator,
@@ -88,20 +316,29 @@ impl IDBMapper {
 
         self.map_types_to_view(view, &til_translator, &self.info.merged_types());
 
+        // Keep the created functions keyed by their (rebased) address so we can place them into
+        // folders later without depending on the analysis having indexed them yet.
+        let mut functions_by_address: HashMap<Location, Ref<Function>> = HashMap::new();
         for func in &self.info.merged_functions() {
             let mut rebased_func = func.clone();
             rebased_func.address = rebase(func.address);
-            self.map_func_to_view(view, &til_translator, &rebased_func);
+            if let Some(bn_func) = self.map_func_to_view(view, &til_translator, &rebased_func) {
+                functions_by_address.insert(Location::from(rebased_func.address), bn_func);
+            }
         }
 
         for export in &id0.exports {
             let mut rebased_export = export.clone();
             rebased_export.address = rebase(export.address);
-            self.map_export_to_view(view, &til_translator, &rebased_export);
+            if let Some(bn_func) =
+                self.map_export_to_view(view, &til_translator, &rebased_export)
+            {
+                functions_by_address.insert(Location::from(rebased_export.address), bn_func);
+            }
         }
 
         // TODO: The below undo and ignore is not thread safe, this means that the mapper itself
-        // TODO: should be the only thing running at the time of the mapping process.
+        // should be the only thing running at the time of the mapping process.
         let undo = view.file().begin_undo_actions(true);
         for comment in &self.info.merged_comments() {
             let mut rebased_comment = comment.clone();
@@ -110,10 +347,113 @@ impl IDBMapper {
         }
         view.file().forget_undo_actions(&undo);
 
+        // Apply typed data items before names so that a more precise type from the name/TIL path
+        // takes precedence over the byte-flag-derived type on the same address.
+        if !self.info.data_items.is_empty() {
+            tracing::info!("Mapping {} typed data items", self.info.data_items.len());
+        }
+        for data in &self.info.data_items {
+            let mut rebased_data = data.clone();
+            rebased_data.address = rebase(data.address);
+            self.map_data_item_to_view(view, &til_translator, &rebased_data);
+        }
+
         for name in &self.info.merged_names() {
             let mut rebased_name = name.clone();
             rebased_name.address = rebase(name.address);
             self.map_name_to_view(view, &til_translator, &rebased_name);
+        }
+
+        // IDA's local labels are named locations inside functions (e.g. loop targets). They live
+        // in code, so `map_name_to_view` skips them; apply them as local-label symbols instead.
+        for label in &id0.labels {
+            let mut rebased_label = label.clone();
+            rebased_label.address = rebase(label.address);
+            self.map_label_to_view(view, &rebased_label);
+        }
+
+        // Recreate IDA's "Functions" window folder hierarchy. Binary Ninja's component API backs
+        // what the UI shows as function folders.
+        if let Some(dir_tree) = &self.info.dir_tree {
+            if !dir_tree.function_folders.is_empty() {
+                let mut stats = FolderStats::default();
+                self.map_function_folders_to_view(
+                    view,
+                    &dir_tree.function_folders,
+                    None,
+                    &rebase,
+                    &functions_by_address,
+                    &mut stats,
+                );
+                tracing::info!(
+                    "Mapped function folders: {} folders created, {} functions placed, {} not found",
+                    stats.folders_created,
+                    stats.functions_placed,
+                    stats.functions_missing
+                );
+            }
+        }
+
+        // Per-operand number formats and enum displays need the containing function to exist, but
+        // this import runs before functions are created. Rebase and stash them; the
+        // analysis-completion handler in `lib.rs` applies them once functions are available. Each
+        // kind is gated by its own setting because applying them disassembles each instruction.
+        let operand_enums: Vec<OperandEnumInfo> = if self.apply_operand_enums {
+            self.info
+                .operand_enums
+                .iter()
+                .map(|operand_enum| {
+                    let mut rebased = operand_enum.clone();
+                    rebased.address = rebase(operand_enum.address);
+                    rebased
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let operand_formats: Vec<OperandFormatInfo> = if self.apply_operand_formats {
+            self.info
+                .operand_formats
+                .iter()
+                .filter_map(|operand_format| {
+                    // When skipping defaults, drop formats that match Binary Ninja's default
+                    // rendering (hexadecimal); they make up the bulk on large databases and
+                    // changing them would not alter the displayed text.
+                    let formats: Vec<_> = operand_format
+                        .formats
+                        .iter()
+                        .filter(|(_, format)| {
+                            !(self.skip_default_operand_formats
+                                && operand_format_matches_default(*format))
+                        })
+                        .cloned()
+                        .collect();
+                    if formats.is_empty() {
+                        return None;
+                    }
+                    Some(OperandFormatInfo {
+                        address: rebase(operand_format.address),
+                        formats,
+                    })
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
+
+        if !operand_enums.is_empty() || !operand_formats.is_empty() {
+            tracing::info!(
+                "Deferring {} enum-displayed operands and {} operand number formats until analysis completes",
+                operand_enums.len(),
+                operand_formats.len()
+            );
+            stash_operand_display(
+                view,
+                PendingOperandDisplay {
+                    operand_formats,
+                    operand_enums,
+                },
+            );
         }
 
         // self.map_used_types_to_view(view, &til_translator);
@@ -171,7 +511,7 @@ impl IDBMapper {
             used_types = _used_types.clone();
         }
         // TODO: Adding types to view after the types have been applied to the functions is not a
-        // TODO: great idea, I imagine the NTR's will have stale references until the analysis runs again.
+        // great idea, I imagine the NTR's will have stale references until the analysis runs again.
         'found: for used_ty in &used_types {
             // 0. Make sure the type doesn't already exist in the view
             if view.type_by_name(&used_ty.name).is_some() {
@@ -205,8 +545,8 @@ impl IDBMapper {
                 }
             }
 
+            // TODO: Look through the idb attached tils?
             tracing::warn!("Failed to find type: {:?}", used_ty);
-            // 4. TODO: Look through the idb attached tils?
         }
     }
 
@@ -238,10 +578,27 @@ impl IDBMapper {
             SegmentType::Imem => Semantics::DefaultSection,
         };
 
-        // TODO: Is this section already mapped using address range not name.
+        // Skip a segment we have already mapped. We check both the name and the exact address
+        // range: an overlap-based check would be wrong because the loader normally maps the whole
+        // address space (so every IDA segment overlaps something), but an IDA segment that covers
+        // the exact same range as an existing section — even under a different name — is the same
+        // region and should not be added twice.
         if view.section_by_name(&segment.name).is_some() {
             tracing::debug!(
                 "Section with name '{}' already exists, skipping...",
+                segment.name
+            );
+            return;
+        }
+        if view
+            .sections()
+            .iter()
+            .any(|existing| existing.address_range() == segment.region)
+        {
+            tracing::debug!(
+                "Section covering {:0x}-{:0x} already exists, skipping '{}'...",
+                segment.region.start,
+                segment.region.end,
                 segment.name
             );
             return;
@@ -266,7 +623,7 @@ impl IDBMapper {
         view: &BinaryView,
         til_translator: &TILTranslator,
         export: &ExportInfo,
-    ) {
+    ) -> Option<Ref<Function>> {
         let within_code_section = view
             .sections_at(export.address)
             .iter()
@@ -285,8 +642,10 @@ impl IDBMapper {
                 address: export.address,
                 is_library: false,
                 is_no_return: false,
+                register_vars: Vec::new(),
+                stack_frame: None,
             };
-            self.map_func_to_view(view, til_translator, &func_info);
+            return self.map_func_to_view(view, til_translator, &func_info);
         } else {
             tracing::debug!("Mapping data export: {:0x}", export.address);
             let name_info = NameInfo {
@@ -297,6 +656,7 @@ impl IDBMapper {
             };
             self.map_name_to_view(view, til_translator, &name_info);
         }
+        None
     }
 
     pub fn map_func_to_view(
@@ -304,7 +664,7 @@ impl IDBMapper {
         view: &BinaryView,
         til_translator: &TILTranslator,
         func: &FunctionInfo,
-    ) {
+    ) -> Option<Ref<Function>> {
         // We need to skip things that hit the extern section, since they do not have a bearing in the
         // actual context of the binary, and can be derived differently between IDA and Binja.
         let within_extern_section = view
@@ -314,13 +674,21 @@ impl IDBMapper {
             .is_some();
         if within_extern_section {
             tracing::debug!("Skipping function in extern section: {:0x}", func.address);
-            return;
+            return None;
         }
 
         let Some(bn_func) = view.add_auto_function(func.address) else {
             tracing::warn!("Failed to add function for {:0x}", func.address);
-            return;
+            return None;
         };
+
+        // IDA marks functions that never return (e.g. `abort`, `exit`); carry that over so BN's
+        // analysis does not fall through past calls to them.
+        // TODO: Verify that set_auto_can_return persists across database saves.
+        if func.is_no_return {
+            tracing::debug!("Marking function as no-return: {:0x}", func.address);
+            bn_func.set_auto_can_return(false);
+        }
 
         if let Some(func_ty) = &func.ty {
             match til_translator.translate_type_info(&func_ty) {
@@ -347,6 +715,243 @@ impl IDBMapper {
                 func_sym
             );
             view.define_auto_symbol(&func_sym);
+        }
+
+        let undo = view.file().begin_undo_actions(true);
+        self.map_register_vars_to_func(&bn_func, func);
+        self.map_stack_frame_to_func(&bn_func, til_translator, func);
+        view.file().forget_undo_actions(&undo);
+
+        Some(bn_func)
+    }
+
+    /// Apply a function's IDA stack frame as Binary Ninja stack variables.
+    ///
+    /// IDA stores the frame as a structure whose members run from the bottom of the local
+    /// variable area upward through the saved registers, return address and stack arguments.
+    /// Binary Ninja measures stack offsets from the return address (locals negative, arguments
+    /// positive), so an IDA frame offset is shifted down by `local_size + saved_regs_size`. The
+    /// frame members do not carry explicit offsets, so each member's offset is the running sum of
+    /// the preceding member widths; the synthetic saved-register and return-address members are
+    /// skipped (but still advance the offset) since they are not user variables.
+    fn map_stack_frame_to_func(
+        &self,
+        bn_func: &binaryninja::function::Function,
+        til_translator: &TILTranslator,
+        func: &FunctionInfo,
+    ) {
+        let Some(stack_frame) = &func.stack_frame else {
+            return;
+        };
+        let base = (stack_frame.local_size + stack_frame.saved_regs_size) as i64;
+        let mut frame_offset: u64 = 0;
+        for (i, member) in stack_frame.frame.members.iter().enumerate() {
+            let member_width = til_translator
+                .width_of_type(&member.member_type)
+                .unwrap_or(0);
+
+            // Skip the saved-register / return-address regions, but keep advancing the offset so
+            // the members after them still land at the right place.
+            if member.is_frame_r || member.is_frame_s {
+                frame_offset += member_width as u64;
+                continue;
+            }
+
+            let name = member
+                .name
+                .as_ref()
+                .map(|n| n.to_string())
+                .unwrap_or_else(|| format!("var_{i}"));
+            let bn_offset = frame_offset as i64 - base;
+            match til_translator.translate_type_info(&member.member_type) {
+                Ok(ty) => {
+                    tracing::debug!(
+                        "Mapping stack variable '{}' at frame offset {} (bn {}) for {:0x}",
+                        name,
+                        frame_offset,
+                        bn_offset,
+                        func.address
+                    );
+                    bn_func.create_user_stack_var(bn_offset, &ty, &name);
+                }
+                Err(err) => {
+                    tracing::warn!(
+                        "Failed to translate stack variable '{}' type for {:0x}: {}",
+                        name,
+                        func.address,
+                        err
+                    );
+                }
+            }
+
+            frame_offset += member_width as u64;
+        }
+    }
+
+    /// Apply IDA register variables ("regvars") to a function.
+    ///
+    /// IDA records that a register holds a user-named value over an address range. Binary Ninja
+    /// variables are function-scoped, so the range is not modeled; we name the architecture
+    /// register over the whole function, typed as an unsigned int of the register's width.
+    fn map_register_vars_to_func(
+        &self,
+        bn_func: &binaryninja::function::Function,
+        func: &FunctionInfo,
+    ) {
+        if func.register_vars.is_empty() {
+            return;
+        }
+        let arch = bn_func.arch();
+        for reg_var in &func.register_vars {
+            let Some(register) = arch.register_by_name(&reg_var.register) else {
+                tracing::warn!(
+                    "Skipping register variable '{}': unknown register '{}' at {:0x}",
+                    reg_var.name,
+                    reg_var.register,
+                    func.address
+                );
+                continue;
+            };
+            let reg_width = register.info().size().max(1);
+            let var = Variable::from_register(register);
+            tracing::debug!(
+                "Mapping register variable {} => {} at {:0x}",
+                reg_var.register,
+                reg_var.name,
+                func.address
+            );
+            bn_func.create_user_var(&var, &Type::int(reg_width, false), &reg_var.name, false);
+        }
+    }
+
+    /// Define a typed data variable for a data item IDA recorded in its byte flags.
+    pub fn map_data_item_to_view(
+        &self,
+        view: &BinaryView,
+        til_translator: &TILTranslator,
+        data: &DataInfo,
+    ) {
+        // Skip the synthetic extern section, and anything that lives inside code/functions.
+        let within_extern_section = view
+            .sections_at(data.address)
+            .iter()
+            .any(|s| s.semantics() == Semantics::External);
+        if within_extern_section {
+            return;
+        }
+        let within_code_section = view
+            .sections_at(data.address)
+            .iter()
+            .any(|s| s.semantics() == Semantics::ReadOnlyCode);
+        if within_code_section || !view.functions_containing(data.address).is_empty() {
+            return;
+        }
+
+        // Prefer the explicit IDA type (e.g. a struct) over the byte-flag-derived scalar kind.
+        let data_ty = if let Some(ty) = &data.ty {
+            match til_translator.translate_type_info(ty) {
+                Ok(translated) => translated,
+                Err(err) => {
+                    tracing::warn!(
+                        "Failed to translate data type at {:0x}: {}",
+                        data.address,
+                        err
+                    );
+                    return;
+                }
+            }
+        } else if let Some(kind) = data.kind {
+            match kind {
+                DataKind::Int(bytes) => Type::int(bytes as usize, false),
+                DataKind::Float(bytes) => Type::float(bytes as usize),
+                DataKind::String { len, char_width } => {
+                    // Use a wide character for UTF-16/UTF-32 so the string renders correctly
+                    // instead of as a byte array; the element count is the character count.
+                    let element = if char_width <= 1 {
+                        Type::char()
+                    } else {
+                        Type::wide_char(char_width as usize)
+                    };
+                    let count = len / char_width.max(1) as u64;
+                    Type::array(&element, count)
+                }
+            }
+        } else {
+            return;
+        };
+        tracing::debug!("Mapping data item: {:0x}", data.address);
+        view.define_auto_data_var(data.address, &data_ty);
+    }
+
+    /// Recreate an IDA function folder tree in the view.
+    ///
+    /// Binary Ninja models function folders with the component API (`Component`), which the UI
+    /// presents as folders. Each IDA folder becomes a component nested under its parent (the root
+    /// view component for top-level folders), and each function leaf is added to the folder it
+    /// belongs to. Functions sitting directly at the dirtree root are left in no folder, matching
+    /// their state in IDA.
+    fn map_function_folders_to_view(
+        &self,
+        view: &BinaryView,
+        entries: &[FunctionFolderEntry],
+        parent: Option<&Component>,
+        rebase: &impl Fn(u64) -> u64,
+        functions_by_address: &HashMap<Location, Ref<Function>>,
+        stats: &mut FolderStats,
+    ) {
+        for entry in entries {
+            match entry {
+                FunctionFolderEntry::Function(address) => {
+                    let Some(parent) = parent else {
+                        continue;
+                    };
+                    let rebased = rebase(*address);
+                    // Prefer the function we created during mapping; fall back to a view lookup in
+                    // case it came from another source.
+                    let func = functions_by_address.get(&Location::from(rebased)).cloned().or_else(|| {
+                        view.functions_at(rebased)
+                            .iter()
+                            .next()
+                            .map(|func| func.to_owned())
+                    });
+                    match func {
+                        Some(func) if parent.add_function(&func) => {
+                            stats.functions_placed += 1;
+                        }
+                        Some(_) => {
+                            tracing::debug!(
+                                "Component rejected function at {:0x}",
+                                rebased
+                            );
+                            stats.functions_missing += 1;
+                        }
+                        None => {
+                            tracing::debug!(
+                                "No function at {:0x} to place in folder, skipping",
+                                rebased
+                            );
+                            stats.functions_missing += 1;
+                        }
+                    }
+                }
+                FunctionFolderEntry::Folder { name, entries } => {
+                    let mut builder = ComponentBuilder::new(view.to_owned()).name(name.clone());
+                    if let Some(parent) = parent {
+                        builder = builder.parent(parent.guid());
+                    }
+                    let component = builder.finalize();
+                    stats.folders_created += 1;
+                    tracing::debug!("Created folder '{}'", name);
+                    self.map_function_folders_to_view(
+                        view,
+                        entries,
+                        Some(&component),
+                        rebase,
+                        functions_by_address,
+                        stats,
+                    );
+                }
+            }
         }
     }
 
@@ -434,6 +1039,78 @@ impl IDBMapper {
             view.set_comment_at(comment.address, &comment.comment);
         }
     }
+}
+
+/// Running totals for the folder mapping, used for a single summary log line.
+#[derive(Default)]
+struct FolderStats {
+    folders_created: usize,
+    functions_placed: usize,
+    functions_missing: usize,
+}
+
+/// Extract the integer value carried by a disassembly token, if any.
+fn integer_token_value(kind: &InstructionTextTokenKind) -> Option<u64> {
+    match kind {
+        InstructionTextTokenKind::Integer { value, .. } => Some(*value),
+        InstructionTextTokenKind::PossibleAddress { value, .. } => Some(*value),
+        InstructionTextTokenKind::CodeRelativeAddress { value, .. } => Some(*value),
+        _ => None,
+    }
+}
+
+/// Whether a number format already matches Binary Ninja's default integer rendering
+/// (hexadecimal). Applying such a format as an override would not change the displayed text, so it
+/// can be skipped to avoid disassembling the bulk of formatted operands on large databases.
+fn operand_format_matches_default(format: OperandFormat) -> bool {
+    matches!(format, OperandFormat::Hex)
+}
+
+/// Map an IDA operand number format to the Binary Ninja integer display type.
+fn integer_display_type(format: OperandFormat) -> IntegerDisplayType {
+    match format {
+        OperandFormat::Hex => IntegerDisplayType::UnsignedHexadecimalDisplayType,
+        OperandFormat::Dec => IntegerDisplayType::SignedDecimalDisplayType,
+        OperandFormat::Char => IntegerDisplayType::CharacterConstantDisplayType,
+        OperandFormat::Oct => IntegerDisplayType::UnsignedOctalDisplayType,
+        OperandFormat::Bin => IntegerDisplayType::BinaryDisplayType,
+        OperandFormat::Offset => IntegerDisplayType::PointerDisplayType,
+    }
+}
+
+/// Compute the SHA256 of the raw (on-disk) bytes backing `view`.
+///
+/// Walks to the root of the parent-view chain, which is the raw view whose contents are the
+/// original input file, then hashes its full contents. Returns `None` if the view is empty.
+fn sha256_of_raw_view(view: &BinaryView) -> Option<String> {
+    let mut raw_view = view.to_owned();
+    while let Some(parent) = raw_view.parent_view() {
+        raw_view = parent;
+    }
+
+    let length = raw_view.len();
+    if length == 0 {
+        return None;
+    }
+
+    // Hash in chunks so we never hold the whole binary in memory at once.
+    const CHUNK_SIZE: usize = 1 << 20;
+    let mut hasher = Sha256::new();
+    let mut offset = raw_view.start();
+    let end = offset + length;
+    while offset < end {
+        let want = CHUNK_SIZE.min((end - offset) as usize);
+        let chunk = raw_view.read_vec(offset, want);
+        if chunk.is_empty() {
+            // The view reported a length we cannot fully read; treat as unverifiable.
+            return None;
+        }
+        hasher.update(&chunk);
+        offset += chunk.len() as u64;
+    }
+
+    let digest = hasher.finalize();
+    Some(digest.iter().map(|b| format!("{:02x}", b)).collect())
 }
 
 fn symbol_from_func(func: &FunctionInfo) -> Option<Ref<Symbol>> {

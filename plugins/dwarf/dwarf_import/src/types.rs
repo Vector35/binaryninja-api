@@ -166,8 +166,7 @@ fn do_structure_parse<R: ReaderType>(
     // This reference type will be used by any children to grab while we're still building this type
     //  it will also be how any other types refer to this struct
     if let Some(full_name) = &full_name {
-        let ntr =
-            Type::named_type_from_type(full_name, &Type::structure(&structure_builder.finalize()));
+        let ntr = debug_info_builder.structure_placeholder(full_name, structure_type, size);
         debug_info_builder.add_type(
             get_uid(dwarf, unit, entry),
             full_name.to_owned(),

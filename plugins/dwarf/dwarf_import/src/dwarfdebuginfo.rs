@@ -25,7 +25,7 @@ use binaryninja::{
     platform::Platform,
     rc::*,
     symbol::SymbolType,
-    types::{FunctionParameter, Type},
+    types::{FunctionParameter, StructureBuilder, StructureType, Type, TypeClass},
     variable::NamedVariableWithType,
 };
 
@@ -221,6 +221,9 @@ pub(crate) struct DebugInfoBuilder {
     types: IndexMap<TypeUID, DebugType>,
     data_variables: HashMap<u64, (Option<String>, TypeUID)>,
     range_data_offsets: iset::IntervalMap<u64, i64>,
+    structure_placeholders: HashMap<(String, StructureType, u64), Ref<Type>>,
+    typedef_placeholders:
+        HashMap<(String, TypeClass, Option<StructureType>, u64, usize), Ref<Type>>,
     unnamed_function_placeholder: Option<Ref<Type>>,
 }
 
@@ -233,8 +236,57 @@ impl DebugInfoBuilder {
             types: IndexMap::new(),
             data_variables: HashMap::new(),
             range_data_offsets: iset::IntervalMap::new(),
+            structure_placeholders: HashMap::new(),
+            typedef_placeholders: HashMap::new(),
             unnamed_function_placeholder: None,
         }
+    }
+
+    // A placeholder named type reference carries nothing but its name and the reference class,
+    // width and alignment that its target contributes, so the same declaration appearing in
+    // another compilation unit produces the same placeholder. Debug info repeats the common
+    // typedefs and structures in every unit that includes their header, so building each one once
+    // saves marshalling the name across the API, building the target, and asking the core for a
+    // reference, every time after the first.
+    pub(crate) fn structure_placeholder(
+        &mut self,
+        name: &str,
+        structure_type: StructureType,
+        size: u64,
+    ) -> Ref<Type> {
+        let key = (name.to_string(), structure_type, size);
+        if let Some(existing) = self.structure_placeholders.get(&key) {
+            return existing.clone();
+        }
+
+        let mut structure_builder = StructureBuilder::new();
+        structure_builder
+            .packed(true)
+            .width(size)
+            .structure_type(structure_type);
+        let placeholder =
+            Type::named_type_from_type(name, &Type::structure(&structure_builder.finalize()));
+        self.structure_placeholders.insert(key, placeholder.clone());
+        placeholder
+    }
+
+    pub(crate) fn typedef_placeholder(&mut self, name: &str, target: &Type) -> Ref<Type> {
+        // A structure target gives the reference its class according to whether it is a struct, a
+        // union or a class, so which of those it is has to identify the placeholder as well.
+        let key = (
+            name.to_string(),
+            target.type_class(),
+            target.get_structure().map(|s| s.structure_type()),
+            target.width(),
+            target.alignment(),
+        );
+        if let Some(existing) = self.typedef_placeholders.get(&key) {
+            return existing.clone();
+        }
+
+        let placeholder = Type::named_type_from_type(name, target);
+        self.typedef_placeholders.insert(key, placeholder.clone());
+        placeholder
     }
 
     // Function types carry no width or alignment of their own, so every anonymous subroutine

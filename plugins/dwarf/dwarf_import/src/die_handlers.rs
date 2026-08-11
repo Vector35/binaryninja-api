@@ -175,8 +175,10 @@ pub(crate) fn handle_typedef(
     // This will fail in the case where we have a typedef to a type that doesn't exist (failed to parse, incomplete, etc)
     if let Some(entry_type_offset) = entry_type {
         if let Some(t) = debug_info_builder.get_type(entry_type_offset) {
-            let typedef_type = Type::named_type_from_type(typedef_name, &t.get_type());
-            return (Some(typedef_type), typedef_name != t.name);
+            let target = t.get_type();
+            let renames_target = typedef_name != t.name;
+            let typedef_type = debug_info_builder.typedef_placeholder(typedef_name, &target);
+            return (Some(typedef_type), renames_target);
         }
     }
 

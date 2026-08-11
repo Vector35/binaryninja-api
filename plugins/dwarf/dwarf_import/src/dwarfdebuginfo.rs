@@ -101,6 +101,9 @@ impl FunctionInfoBuilder {
 //////////////////////
 // DebugInfoBuilder
 
+// The name given to a subroutine type that has none of its own.
+pub(crate) const UNNAMED_FUNCTION_NAME: &str = "_unnamed_func";
+
 // TODO : Don't make this pub...fix the value thing
 pub(crate) struct DebugType {
     pub name: String,
@@ -218,6 +221,7 @@ pub(crate) struct DebugInfoBuilder {
     types: IndexMap<TypeUID, DebugType>,
     data_variables: HashMap<u64, (Option<String>, TypeUID)>,
     range_data_offsets: iset::IntervalMap<u64, i64>,
+    unnamed_function_placeholder: Option<Ref<Type>>,
 }
 
 impl DebugInfoBuilder {
@@ -229,7 +233,21 @@ impl DebugInfoBuilder {
             types: IndexMap::new(),
             data_variables: HashMap::new(),
             range_data_offsets: iset::IntervalMap::new(),
+            unnamed_function_placeholder: None,
         }
+    }
+
+    // Function types carry no width or alignment of their own, so every anonymous subroutine
+    // produces the same placeholder whatever it returns.
+    pub(crate) fn unnamed_function_placeholder(&mut self, return_type: &Type) -> Ref<Type> {
+        self.unnamed_function_placeholder
+            .get_or_insert_with(|| {
+                Type::named_type_from_type(
+                    UNNAMED_FUNCTION_NAME,
+                    &Type::function(return_type, vec![], false),
+                )
+            })
+            .clone()
     }
 
     pub(crate) fn set_range_data_offsets(&mut self, offsets: iset::IntervalMap<u64, i64>) {

@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::dwarfdebuginfo::{DebugInfoBuilder, DebugInfoBuilderContext, TypeUID};
+use crate::dwarfdebuginfo::{
+    DebugInfoBuilder, DebugInfoBuilderContext, TypeUID, UNNAMED_FUNCTION_NAME,
+};
 use crate::types::get_type;
 use crate::{helpers::*, ReaderType};
 
@@ -333,11 +335,19 @@ pub(crate) fn handle_function<R: ReaderType>(
     };
 
     // Alias function type in the case that it contains itself
-    let name = debug_info_builder_context
-        .get_name(dwarf, unit, entry)
-        .unwrap_or("_unnamed_func".to_string());
-    let ntr =
-        Type::named_type_from_type(&name, &Type::function(return_type.as_ref(), vec![], false));
+    let (name, ntr) = match debug_info_builder_context.get_name(dwarf, unit, entry) {
+        Some(name) => {
+            let ntr = Type::named_type_from_type(
+                &name,
+                &Type::function(return_type.as_ref(), vec![], false),
+            );
+            (name, ntr)
+        }
+        None => {
+            let ntr = debug_info_builder.unnamed_function_placeholder(return_type.as_ref());
+            (UNNAMED_FUNCTION_NAME.to_string(), ntr)
+        }
+    };
     debug_info_builder.add_type(get_uid(dwarf, unit, entry), name, ntr, false, None);
 
     let mut parameters: Vec<FunctionParameter> = vec![];

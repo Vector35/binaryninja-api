@@ -26,6 +26,8 @@ bool BINARYNINJAUIAPI canDisplayIntegerTokenAs(const HighlightTokenState& token,
 BNIntegerDisplayType BINARYNINJAUIAPI getInvertedIntegerDisplayType(BNIntegerDisplayType displayType, const std::string& text);
 BNIntegerDisplayType BINARYNINJAUIAPI getToggledIntegerRadixDisplayType(BNIntegerDisplayType displayType, const std::string& text);
 BNIntegerDisplayType BINARYNINJAUIAPI getToggledIntegerComplementDisplayType(BNIntegerDisplayType displayType, const std::string& text);
+uint64_t BINARYNINJAUIAPI getIntegerConstantDisplayAddress(
+	View* view, const HighlightTokenState& token, uint64_t fallbackAddress);
 TypeRef BINARYNINJAUIAPI getIntegerTypePreservingDisplay(TypeRef type, size_t width, BinaryNinja::Confidence<bool> isSigned);
 TypeRef BINARYNINJAUIAPI getIntegerTypeWithWidthPreservingAttributes(TypeRef type, size_t width);
 TypeRef BINARYNINJAUIAPI getIntegerTypeWithSignPreservingAttributes(TypeRef type, BinaryNinja::Confidence<bool> isSigned);

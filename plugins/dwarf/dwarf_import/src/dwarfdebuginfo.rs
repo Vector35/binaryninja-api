@@ -692,6 +692,7 @@ impl DebugInfoBuilder {
                 if let Some(target_uid) = debug_type.target_type_uid {
                     if let Some(target_type) = self.get_type(target_uid) {
                         debug_info.add_type(&debug_type_name, &target_type.get_type(), &[]);
+                        type_uids_by_name.insert(debug_type_name, *debug_type_uid);
                     } else {
                         tracing::error!(
                             "Failed to find typedef {} target for uid {}",
@@ -708,8 +709,8 @@ impl DebugInfoBuilder {
                 }
             } else {
                 debug_info.add_type(&debug_type_name, &debug_type.ty, &[]);
+                type_uids_by_name.insert(debug_type_name, *debug_type_uid);
             }
-            type_uids_by_name.insert(debug_type_name, *debug_type_uid);
         }
     }
 

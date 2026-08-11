@@ -636,6 +636,17 @@ impl DebugInfoBuilder {
         }
     }
 
+    // What committing a type actually stores. A typedef contributes its target, because its own
+    // type is the self-referential placeholder that stands in for it while its children are built.
+    fn committed_type(&self, debug_type: &DebugType) -> Option<Ref<Type>> {
+        if debug_type.get_type().get_named_type_reference().is_none() {
+            return Some(debug_type.get_type());
+        }
+
+        let target_uid = debug_type.target_type_uid?;
+        Some(self.get_type(target_uid)?.get_type())
+    }
+
     fn commit_types(&self, debug_info: &mut DebugInfo) {
         let mut type_uids_by_name: HashMap<String, TypeUID> = HashMap::new();
 
@@ -652,6 +663,20 @@ impl DebugInfoBuilder {
                     tracing::error!("Stored type name without storing a type! Please report this error. UID: {}, name: {}", stored_uid, debug_type_name);
                     continue;
                 };
+
+                // This name already describes this definition. Debug info repeats a type in every
+                // compilation unit that includes its header, so committing it again would have the
+                // core walk and re-resolve every named reference in it for no gain.
+                let same_definition = match (
+                    self.committed_type(stored_debug_type),
+                    self.committed_type(debug_type),
+                ) {
+                    (Some(stored), Some(current)) => stored.as_ref() == current.as_ref(),
+                    _ => false,
+                };
+                if same_definition {
+                    continue;
+                }
 
                 let mut skip_adding_type = false;
                 if stored_debug_type.ty != debug_type.ty {

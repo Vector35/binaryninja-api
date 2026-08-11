@@ -7225,6 +7225,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetTypeLibraryName(BNTypeLibrary* lib);
 
 	BINARYNINJACOREAPI void BNAddTypeLibraryAlternateName(BNTypeLibrary* lib, const char* name);
+	BINARYNINJACOREAPI void BNRemoveTypeLibraryAlternateName(BNTypeLibrary* lib, const char* name);
 	BINARYNINJACOREAPI char** BNGetTypeLibraryAlternateNames(BNTypeLibrary* lib, size_t* count);  // BNFreeStringList
 
 	BINARYNINJACOREAPI void BNSetTypeLibraryDependencyName(BNTypeLibrary* lib, const char* name);

@@ -40,7 +40,9 @@ If your plugin was created as described above, there's only two steps to get it 
 1. First, create a release either [manually](https://binary.ninja/2019/07/04/plugin-manager-2.0.html#5-create-a-release) or using our [release helper](https://github.com/Vector35/release_helper).
 2. Next, just [file an issue](https://github.com/Vector35/community-plugins/issues/new/choose) letting us know about your plugin.
 
-For future releases all you need to do is increment the version and create a new release.
+For future releases all you need to do is increment the version and create a new release. 
+
+**Make sure to update the version number in the `plugin.json` for your release to appear in the extension manager.**
 
 ### Using Your Own Plugin Repository
 

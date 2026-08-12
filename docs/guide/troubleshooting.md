@@ -9,7 +9,7 @@
 
 We recommend the following steps to produce the best bug-reports:
 
-1. Try to reproduce your issue with both the latest stable release and [the latest development release](index.md#updates).
+1. Try to reproduce your issue with both the latest stable release and [the latest development release](index.md#updates). See [Side-by-Side Installations](#side-by-side-installations) to run both at once.
 2. Try temporarily [disabling plugins](#disabling-plugins)
 3. Try temporarily [disabling user settings](#disabling-user-settings)
 4. Try temporarily [resetting QSettings](#resetting-qsettings)
@@ -44,6 +44,24 @@ Alternatively, it might be easier to save debug logs to a file instead:
 ```
 
 (note that both long and short-form of the command-line arguments are demonstrated in the above examples)
+
+## Side-by-Side Installations
+
+When investigating bugs it can be useful to keep a stable and a development build installed simultaneously.
+
+Each installation updates only itself and the update setting and [update channels](index.md#updates) are settings that are saved per-install. Othewise however they share the same [user folder](index.md#user-folder), sharing settings, plugins, license, and the `lastrun` file that records the most recently launched install path. If you want to keep separate profiles, use the `BN_USER_DIRECTORY` environment variable along with the [`BN_QSETTINGS_POSTFIX`](#resetting-qsettings) variable to also separate window layout, recent files, and dialog history.
+
+### Installing
+
+Install the second copy to a path of its own:
+
+- macOS: rename the bundle, for example `/Applications/Binary Ninja Dev.app`
+- Linux: extract to a separate directory
+- Windows: combine a user install (`%LOCALAPPDATA%\Vector35\BinaryNinja`) with a global one (`C:\Program Files\Vector35\BinaryNinja`), or point the installer at a different directory
+
+### URL Handler
+
+Only one installation can own the [`binaryninja:` URL handler](index.md#loading-files), and the registration is global rather than per-install: macOS registers the scheme from each bundle's `Info.plist`, Windows writes the handler command during installation, and Linux registers `x-scheme-handler/binaryninja` from `linux-setup.sh`. Whichever copy registered most recently generally wins, so expect URLs to open in only one of the two. On Linux, re-run [`linux-setup.sh`](https://github.com/Vector35/binaryninja-api/blob/dev/scripts/linux-setup.sh) from the install you want to handle URLs.
 
 ## Troubleshooting Plugins
 

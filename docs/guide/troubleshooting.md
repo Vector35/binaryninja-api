@@ -335,6 +335,7 @@ By default, Binary Ninja does full analysis of the binary and decompiles every f
 
 Other [analysis settings](settings.md#settings-reference) can also help. Check the descriptions to see what they do.
 
+One workflow we recommend is to use an [initial analysis hold](settings.md#analysis.initialAnalysisHold) specified in [Open With Options](index.md#opening-with-options) as well as disabling [linear sweep](settings.md#analysis.linearSweep.autorun), then manually using [memory map permissions](index.md#memory-map) to control where functions will be automatically created. You can add or remove execute permissions to a segment or section and then either manually run linear sweep, or create functions via a script or by hand. In cases of firmware blobs where large parts of a file are data, this can prevent Binary Ninja from trying to automatically create code in regions that are known to be data-only.
 
 ## Collaboration Issues
 

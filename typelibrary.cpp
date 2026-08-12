@@ -195,6 +195,12 @@ void TypeLibrary::AddAlternateName(const std::string& alternate)
 }
 
 
+void TypeLibrary::RemoveAlternateName(const std::string& alternate)
+{
+	BNRemoveTypeLibraryAlternateName(m_object, alternate.c_str());
+}
+
+
 void TypeLibrary::SetDependencyName(const std::string& depName)
 {
 	BNSetTypeLibraryDependencyName(m_object, depName.c_str());

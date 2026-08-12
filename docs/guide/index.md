@@ -237,6 +237,22 @@ The Recent files list can be cleared via using the Command Palette (`[CTRL] + P`
 
 Hotkeys (macOS: `[CMD] + 0` - `[CMD] + 9`, Windows/Linux: `[CTRL] + 0` - `[CTRL] + 9`) can also be used to quickly open a file. The hotkey for a given entry will be shown on the right.
 
+#### Recent Files Context Menu
+
+Right-clicking an entry in the recent files list offers:
+
+| Action | Description |
+| --- | --- |
+| Copy Path | Copy the full path of the selected entry to the clipboard |
+| Open Selection with Options... | Open using the [Open with Options](#opening-with-options) dialog |
+| Open Selection with Container Browser... | Open using the [Container Browser](#container-browser) |
+| Open File Location... | Reveal the containing folder in your system file manager |
+| Remove from Recent Files | Drop the entry from the list, leaving its saved state intact |
+| Forget This File | Drop the entry *and* purge the state saved for that file: the view state restored by [`ui.files.restore.viewState`](settings.md#ui.files.restore.viewState) (window layout, pane splits, sidebar, and location) and the load settings restored by [`ui.files.restore.viewOptions`](settings.md#ui.files.restore.viewOptions). |
+| Clear All Recent Files | Empty the whole list |
+| Clear All Recent Projects | Empty the Recent Projects list (Commercial and Ultimate only) |
+| Compact Mode | Toggle the compact display described above |
+
 ### Plugins
 
 The status of currently installed plugins will be displayed in the bottom right.

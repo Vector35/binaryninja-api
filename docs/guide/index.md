@@ -743,6 +743,8 @@ Features of the graph view include:
 - Edge colors indicate whether the path is the true (green) or false (red) case of a conditional jump (a color-blind option in the preferences is useful for those with red-green color blindness) and blue for unconditional branches
 - Context menu that can trigger some function-wide actions as well as some specific to the highlighted instruction (such as inverting branch logic or replacing a specific function with a NOP)
 
+For HLIL and pseudo-C, graph view renders the non-AST form: an `if` shows its condition alone, with the body in a separate block. [Linear view](#linear-view) renders the AST form, nesting bodies under the statement that contains them. See [AST and Non-AST Forms](../dev/bnil-hlil.md#ast-and-non-ast-forms) for the API implications.
+
 ## View Options
 
 ![options >](../img/options.png "View options"){ width="400" }
@@ -897,6 +899,8 @@ Any changes made in the Hex view will take effect immediately in any other views
 Linear view is a hybrid view between a graph-based disassembly window and the raw hex view. It lists the entire binary's memory in a linear fashion and is especially useful when trying to find sections of a binary that were not properly identified as code or even just examining data.
 
 Linear view is commonly used for identifying and adding type information for unknown data. To this end, as you scroll, you'll see data and code interspersed. Much like the graph view, you can turn on and off addresses via the command palette `Show Address` or the ☰ menu on the top right of the linear view pane. Many other [options](#view-options) are also available.
+
+For HLIL and pseudo-C, linear view renders the AST form: the body of an `if`, `while`, `for`, or `switch` is indented under the statement that contains it. [Graph view](#graph-view) renders the non-AST form, expressing that nesting through the edges between basic blocks instead. See [AST and Non-AST Forms](../dev/bnil-hlil.md#ast-and-non-ast-forms) for the API implications.
 
 ## Edit Function Properties Dialog
 

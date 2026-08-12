@@ -13,6 +13,49 @@ The High Level Intermediate Language (HLIL) is Binary Ninja's decompiler output.
 * Small discrete operations
 * Enables source-level forms of queries and analysis
 
+## AST and Non-AST Forms
+
+HLIL exists in two forms, depending on how the instruction is retrieved:
+
+* The **AST form** is what linear view shows. The whole function is one tree of statements rooted at [`HighLevelILFunction.root`](https://api.binary.ninja/binaryninja.highlevelil-module.html#binaryninja.highlevelil.HighLevelILFunction.root); the body of an `if`, `while`, `for`, or `switch` is a child of that statement, so it renders as indented, multi-line decompiler output.
+* The **non-AST form** is what graph view shows. Each basic block holds a flat list of statements and the nesting is expressed by the control flow graph instead, so a statement renders as a single unindented line. This is what [`HighLevelILFunction.instructions`](https://api.binary.ninja/binaryninja.highlevelil-module.html#binaryninja.highlevelil.HighLevelILFunction.instructions), indexing a function (`hlil[0]`), and iterating basic blocks return.
+
+Both describe the same function. Use the non-AST form to walk every statement without regard to nesting, the AST form when structure or rendered output matters.
+
+Iterating the root walks a function in AST form:
+
+```pycon
+>>> for insn in current_function.hlil.root:
+...  print(insn)
+...
+int64_t x8 = *___stack_chk_guard
+_strlen(*arg2)
+void var_20
+void* __s = &var_20 - ((___chkstk_darwin() + 0xf) & 0xfffffffffffffff0)
+__builtin_strcpy(__s, "Hello, world!\n")
+uint64_t result = _strlen(__s)
+if (*___stack_chk_guard == x8)
+    return result
+___stack_chk_fail()
+noreturn
+```
+
+Iterating `current_function.hlil.instructions` walks the same function in non-AST form, where the `if` body is not nested under it.
+
+Individual instructions convert between the two with the [`ast`](https://api.binary.ninja/binaryninja.highlevelil-module.html#binaryninja.highlevelil.HighLevelILInstruction.ast) and [`non_ast`](https://api.binary.ninja/binaryninja.highlevelil-module.html#binaryninja.highlevelil.HighLevelILInstruction.non_ast) properties; [`HighLevelILFunction.get_expr`](https://api.binary.ninja/binaryninja.highlevelil-module.html#binaryninja.highlevelil.HighLevelILFunction.get_expr) also accepts an `as_ast` parameter:
+
+```pycon
+>>> insn = current_function.hlil[6]
+>>> insn.as_ast
+False
+>>> insn.ast.as_ast
+True
+```
+
+[`HighLevelILInstruction.get_lines`](https://api.binary.ninja/binaryninja.highlevelil-module.html#binaryninja.highlevelil.HighLevelILInstruction.get_lines) renders an instruction in whichever form it's in: an AST `if` produces its condition plus an indented body, the non-AST form produces the condition alone. [`DisassemblyOption`](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.DisassemblyOption) settings acting on nested bodies, such as `ShowCollapseIndicators`, therefore do nothing on a non-AST instruction — render the AST form if they appear to be ignored.
+
+`IndentHLILBody` and `ShowAddress` are applied by linear view when it assembles lines instead of `get_lines`. 
+
 ## Debug Report
 
 To observe the transformations that occur from MLIL to HLIL, you can use the built-in [`debug report`](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function.request_debug_report) API:

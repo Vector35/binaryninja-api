@@ -70,13 +70,13 @@ class NavigationHandler:
 			return False
 
 	def get_current_view(self) -> str:
-		return NotImplemented
+		raise NotImplementedError
 
 	def get_current_offset(self) -> int:
-		return NotImplemented
+		raise NotImplementedError
 
 	def navigate(self, view: ViewName, offset: int) -> bool:
-		return NotImplemented
+		raise NotImplementedError
 
 
 class SaveSettings:
@@ -655,6 +655,16 @@ class FileMetadata:
 			)
 
 	# TODO : When this is removed, you can probably remove `BNOpenExistingDatabase` and `BNOpenExistingDatabaseWithProgress` too
+
+	def reopen_moved_database(self, filename: str) -> bool:
+		"""
+		``reopen_moved_database`` reopens the database backing this file metadata from a new path.
+
+		:param str filename: path and filename to the moved bndb.
+		:return: true on success, false on failure
+		:rtype: bool
+		"""
+		return core.BNReopenMovedDatabase(self.handle, str(filename))
 
 	def save_auto_snapshot(self, progress_func: Optional[ProgressFuncType] = None, settings: Optional[SaveSettings] = None) -> bool:
 		_settings = None

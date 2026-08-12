@@ -1,9 +1,55 @@
+/* Brand colors come from css/brand.css; local colors are structural only. */
+
 .wy-nav-content {
 	max-width: 2000px !important;
 }
 
+/* Keep brand overrides outside the vendored Read the Docs stylesheet. */
+.rst-content a,
+.rst-content a:visited,
+.rst-content a code,
+.rst-content a tt {
+	color: var(--bn-link-light);
+}
+
+.rst-content code.literal,
+.rst-content tt.literal {
+	color: var(--bn-accent-teal);
+}
+
+.rst-content a:hover {
+	color: var(--bn-accent-teal);
+}
+
+.wy-tray-container li.wy-tray-item-info,
+.wy-dropdown-menu > dd > a:hover,
+.wy-dropdown.wy-dropdown-bubble .wy-dropdown-menu a:hover,
+.wy-menu-vertical a:active,
+.wy-nav .wy-menu-vertical a:hover {
+	background: var(--bn-red);
+}
+
+.btn-info,
+.wy-side-nav-search,
+.wy-side-nav-search > a img.logo,
+.wy-side-nav-search .wy-dropdown > a img.logo {
+	background-color: var(--bn-red) !important;
+}
+
+.btn-link,
+.btn-link:visited,
+.btn-link:active,
+.btn-link:hover,
+.wy-inline-validate.wy-inline-validate-info .wy-input-context,
+.wy-text-info,
+a.wy-text-info:hover,
+.wy-nav .wy-menu-vertical header,
+.rst-versions a {
+	color: var(--bn-link-light) !important;
+}
+
 .cpplink, .cpplink a, .cpplink a:visited{
-	color: #fff;
+	color: var(--bn-white);
 	font-size: small;
 }
 
@@ -15,6 +61,206 @@
     display: none !important;
 }
 
+/* Sidebar header: wordmark on top, one "Binary Ninja {version} Python API"
+   home-link line below it, then the search box. */
+.wy-side-nav-search > a.bn-logo-link {
+	display: block;
+	padding: 0;
+	margin: 0 0 0.35em;
+}
+
+.wy-side-nav-search > a.bn-logo-link:hover {
+	background: transparent;
+}
+
+.wy-side-nav-search > a img.logo,
+.wy-side-nav-search .wy-dropdown > a img.logo {
+	height: 42px;
+	width: auto;
+	margin: 0.2em auto 0;
+}
+
+.wy-side-nav-search > a.bn-home-line {
+	display: block;
+	color: var(--bn-white);
+	font-size: 90%;
+	font-weight: 600;
+	padding: 0 6px;
+	margin-bottom: 0.6em;
+}
+
+/* Mobile/narrow top bar: dark like the user docs header. Brand red stays
+   only on the sidebar header above the module list (.wy-side-nav-search). */
+.wy-nav-top {
+	background: var(--bn-night);
+}
+
+@font-face {
+	font-display: swap;
+	font-family: 'Bebas Neue';
+	font-style: normal;
+	font-weight: 700;
+	src: url('../fonts/bebas-neue-bold.woff2') format('woff2');
+}
+
+@font-face {
+	font-display: swap;
+	font-family: 'Open Sans';
+	font-style: normal;
+	font-weight: 400;
+	src: url('../fonts/OpenSans-Regular.ttf') format('truetype');
+}
+
+@font-face {
+	font-display: swap;
+	font-family: 'Open Sans';
+	font-style: italic;
+	font-weight: 400;
+	src: url('../fonts/OpenSans-Italic.ttf') format('truetype');
+}
+
+@font-face {
+	font-display: swap;
+	font-family: 'Open Sans';
+	font-style: normal;
+	font-weight: 700;
+	src: url('../fonts/OpenSans-Bold.ttf') format('truetype');
+}
+
+@font-face {
+	font-display: swap;
+	font-family: 'Open Sans';
+	font-style: italic;
+	font-weight: 700;
+	src: url('../fonts/OpenSans-BoldItalic.ttf') format('truetype');
+}
+
+@font-face {
+	font-display: swap;
+	font-family: 'Roboto Mono';
+	font-style: normal;
+	font-weight: 400;
+	src: url('../fonts/roboto-mono-v22-latin-regular.woff2') format('woff2');
+}
+
+@font-face {
+	font-display: swap;
+	font-family: 'Roboto Mono';
+	font-style: italic;
+	font-weight: 400;
+	src: url('../fonts/roboto-mono-v22-latin-italic.woff2') format('woff2');
+}
+
+@font-face {
+	font-display: swap;
+	font-family: 'Roboto Mono';
+	font-style: normal;
+	font-weight: 700;
+	src: url('../fonts/roboto-mono-v22-latin-700.woff2') format('woff2');
+}
+
+@font-face {
+	font-display: swap;
+	font-family: 'Roboto Mono';
+	font-style: italic;
+	font-weight: 700;
+	src: url('../fonts/roboto-mono-v22-latin-700italic.woff2') format('woff2');
+}
+
+code,
+kbd,
+pre,
+samp,
+tt,
+.rst-content code,
+.rst-content kbd,
+.rst-content pre,
+.rst-content samp,
+.rst-content tt,
+.rst-content .pre {
+	font-family: var(--bn-font-mono);
+}
+
+.rst-content section[id^="module-"] > h1,
+.rst-content div.section[id^="module-"] > h1 {
+	font-family: var(--bn-font-display);
+	font-weight: 700;
+	letter-spacing: 0;
+}
+
+.rst-content :is(.admonition, .admonition-todo, .attention, .caution, .danger, .error, .hint, .important, .note, .seealso, .tip, .warning),
+.wy-alert {
+	--bn-adm-card-bg: var(--bn-adm-info-bg);
+	--bn-adm-card-fg: var(--bn-adm-info-fg);
+	--bn-adm-card-icon: var(--bn-adm-icon-info);
+	overflow: hidden;
+	margin: var(--bn-adm-margin-block) 0;
+	padding: 0 var(--bn-adm-padding-inline) var(--bn-adm-padding-block-end);
+	border-radius: var(--bn-adm-radius);
+	background: var(--bn-adm-card-bg);
+	color: var(--bn-adm-card-fg);
+}
+
+.rst-content :is(.admonition, .admonition-todo, .attention, .caution, .danger, .error, .hint, .important, .note, .seealso, .tip, .warning) a,
+.wy-alert a {
+	color: inherit;
+	text-decoration: underline;
+}
+
+.rst-content :is(.admonition, .admonition-todo, .attention, .caution, .danger, .error, .hint, .important, .note, .seealso, .tip, .warning) code.literal,
+.wy-alert code.literal {
+	border-color: transparent;
+	background: rgba(128, 128, 128, 0.18);
+	color: inherit;
+}
+
+.rst-content :is(.admonition, .admonition-todo, .attention, .caution, .danger, .error, .hint, .important, .note, .seealso, .tip, .warning) > .admonition-title,
+.wy-alert > .wy-alert-title {
+	position: relative;
+	margin: 0 calc(-1 * var(--bn-adm-padding-inline)) var(--bn-adm-title-gap);
+	padding: var(--bn-adm-title-padding-block) var(--bn-adm-padding-inline)
+		var(--bn-adm-title-padding-block)
+		calc(var(--bn-adm-padding-inline) + var(--bn-adm-icon-size) + var(--bn-adm-icon-gap));
+	background: transparent;
+	color: inherit;
+	text-transform: var(--bn-adm-title-text-transform);
+	letter-spacing: var(--bn-adm-title-letter-spacing);
+	font-family: inherit;
+	font-weight: var(--bn-adm-title-font-weight);
+	font-size: var(--bn-adm-title-font-size);
+	line-height: var(--bn-adm-title-line-height);
+}
+
+.rst-content :is(.admonition, .admonition-todo, .attention, .caution, .danger, .error, .hint, .important, .note, .seealso, .tip, .warning) > .admonition-title:before,
+.wy-alert > .wy-alert-title:before {
+	content: "";
+	position: absolute;
+	top: 50%;
+	left: var(--bn-adm-padding-inline);
+	display: block;
+	width: var(--bn-adm-icon-size);
+	height: var(--bn-adm-icon-size);
+	margin: 0;
+	transform: translateY(-55%);
+	background-color: currentColor;
+	-webkit-mask-image: var(--bn-adm-card-icon);
+	mask-image: var(--bn-adm-card-icon);
+	-webkit-mask-repeat: no-repeat;
+	mask-repeat: no-repeat;
+	-webkit-mask-size: contain;
+	mask-size: contain;
+	font-family: inherit;
+}
+
+.rst-content :is(.admonition, .admonition-todo, .attention, .caution, .danger, .error, .hint, .important, .note, .seealso, .tip, .warning) > .admonition-title + *,
+.wy-alert > .wy-alert-title + * {
+	margin-top: 0;
+}
+
+.rst-content :is(.admonition, .admonition-todo, .attention, .caution, .danger, .error, .hint, .important, .note, .seealso, .tip, .warning) > :last-child,
+.wy-alert > :last-child {
+	margin-bottom: 0;
+}
 /* Desktop only; mobile keeps the theme's slide-in nav and top-bar hamburger. */
 @media screen and (min-width: 769px) {
 	/* Toggled by js/sidebar_toggle.js; reuses the theme's off-screen nav. */
@@ -29,8 +275,9 @@
 		align-items: center;
 		justify-content: center;
 		border: none;
-		background: #fff;
-		color: #111;
+		background: var(--bn-white);
+		color: #111; /* structural neutral (button glyph), local by policy */
+		font-family: var(--bn-font-body);
 		font-size: 18px;
 		cursor: pointer;
 		opacity: 0.85;
@@ -58,3 +305,45 @@
 		display: none;
 	}
 }
+
+/* Match the vendored signature selector at equal specificity; this file loads
+   later and supplies the documentation palette. */
+html.writer-html4 .rst-content dl:not(.docutils)>dt,
+html.writer-html5 .rst-content dl[class]:not(.option-list):not(.field-list):not(.footnote):not(.glossary):not(.simple)>dt {
+	background: var(--bn-white-smoke);
+	border-top: 3px solid var(--bn-night);
+}
+
+/* BEGIN GENERATED (scripts/gen_admonitions.py) — do not hand-edit */
+.rst-content :is(.note, .seealso, .important),
+.rst-content .wy-alert-info,
+.wy-alert.wy-alert-info {
+  --bn-adm-card-bg: var(--bn-adm-info-bg);
+  --bn-adm-card-fg: var(--bn-adm-info-fg);
+  --bn-adm-card-icon: var(--bn-adm-icon-info);
+}
+
+.rst-content :is(.hint, .tip),
+.rst-content .wy-alert-success,
+.wy-alert.wy-alert-success {
+  --bn-adm-card-bg: var(--bn-adm-success-bg);
+  --bn-adm-card-fg: var(--bn-adm-success-fg);
+  --bn-adm-card-icon: var(--bn-adm-icon-success);
+}
+
+.rst-content :is(.admonition-todo, .attention, .caution, .warning),
+.rst-content .wy-alert-warning,
+.wy-alert.wy-alert-warning {
+  --bn-adm-card-bg: var(--bn-adm-warning-bg);
+  --bn-adm-card-fg: var(--bn-adm-warning-fg);
+  --bn-adm-card-icon: var(--bn-adm-icon-warning);
+}
+
+.rst-content :is(.danger, .error),
+.rst-content .wy-alert-danger,
+.wy-alert.wy-alert-danger {
+  --bn-adm-card-bg: var(--bn-adm-danger-bg);
+  --bn-adm-card-fg: var(--bn-adm-danger-fg);
+  --bn-adm-card-icon: var(--bn-adm-icon-danger);
+}
+/* END GENERATED (scripts/gen_admonitions.py) */

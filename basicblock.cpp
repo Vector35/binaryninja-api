@@ -454,24 +454,6 @@ void BasicBlock::SetUndeterminedOutgoingEdges(bool value)
 }
 
 
-bool BasicBlock::HasInstructionData() const
-{
-	return BNBasicBlockHasInstructionData(m_object);
-}
-
-
-const uint8_t* BasicBlock::GetInstructionData(uint64_t addr, size_t* len) const
-{
-	return BNBasicBlockGetInstructionData(m_object, addr, len);
-}
-
-
-void BasicBlock::AddInstructionData(const void* data, size_t len)
-{
-	BNBasicBlockAddInstructionData(m_object, data, len);
-}
-
-
 void BasicBlock::SetFallThroughToFunction(bool value)
 {
 	BNBasicBlockSetFallThroughToFunction(m_object, value);

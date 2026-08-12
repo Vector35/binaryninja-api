@@ -2,6 +2,7 @@ use crate::data_buffer::DataBuffer;
 use crate::database::kvs::KeyValueStore;
 use crate::database::undo::UndoEntry;
 use crate::database::Database;
+use crate::file_metadata::FileMetadata;
 use crate::progress::ProgressCallback;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnString, IntoCStr};
@@ -112,16 +113,18 @@ impl Snapshot {
     }
 
     /// Get a list of undo entries at the time of the snapshot
-    pub fn undo_entries(&self) -> Array<UndoEntry> {
+    pub fn undo_entries(&self, file: &FileMetadata) -> Array<UndoEntry> {
         assert!(self.has_undo());
         let mut count = 0;
-        let result = unsafe { BNGetSnapshotUndoEntries(self.handle.as_ptr(), &mut count) };
+        let result =
+            unsafe { BNGetSnapshotUndoEntries(self.handle.as_ptr(), file.handle, &mut count) };
         assert!(!result.is_null());
         unsafe { Array::new(result, count, ()) }
     }
 
     pub fn undo_entries_with_progress<P: ProgressCallback>(
         &self,
+        file: &FileMetadata,
         mut progress: P,
     ) -> Array<UndoEntry> {
         assert!(self.has_undo());
@@ -130,6 +133,7 @@ impl Snapshot {
         let result = unsafe {
             BNGetSnapshotUndoEntriesWithProgress(
                 self.handle.as_ptr(),
+                file.handle,
                 &mut progress as *mut P as *mut c_void,
                 Some(P::cb_progress_callback),
                 &mut count,

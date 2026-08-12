@@ -20,7 +20,7 @@
 #include "base/assertions.h"
 #include "binaryninjacore.h"
 
-/*! The non-template portion of `BackgroundSortFilterRows`.
+/*! The non-template portion of \c BackgroundSortFilterRows.
 	Contains the background job state machine, watcher lifecycle, and abandonment protocol,
 	which are independent of the row type.
 

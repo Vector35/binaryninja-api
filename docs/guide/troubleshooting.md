@@ -9,7 +9,7 @@
 
 We recommend the following steps to produce the best bug-reports:
 
-1. Try to reproduce your issue with both the latest stable release and [the latest development release](index.md#updates).
+1. Try to reproduce your issue with both the latest stable release and [the latest development release](index.md#updates). See [Side-by-Side Installations](#side-by-side-installations) to run both at once.
 2. Try temporarily [disabling plugins](#disabling-plugins)
 3. Try temporarily [disabling user settings](#disabling-user-settings)
 4. Try temporarily [resetting QSettings](#resetting-qsettings)
@@ -45,13 +45,31 @@ Alternatively, it might be easier to save debug logs to a file instead:
 
 (note that both long and short-form of the command-line arguments are demonstrated in the above examples)
 
+## Side-by-Side Installations
+
+When investigating bugs it can be useful to keep a stable and a development build installed simultaneously.
+
+Each installation updates only itself and the update setting and [update channels](index.md#updates) are settings that are saved per-install. Othewise however they share the same [user folder](index.md#user-folder), sharing settings, plugins, license, and the `lastrun` file that records the most recently launched install path. If you want to keep separate profiles, use the `BN_USER_DIRECTORY` environment variable along with the [`BN_QSETTINGS_POSTFIX`](#resetting-qsettings) variable to also separate window layout, recent files, and dialog history.
+
+### Installing
+
+Install the second copy to a path of its own:
+
+- macOS: rename the bundle, for example `/Applications/Binary Ninja Dev.app`
+- Linux: extract to a separate directory
+- Windows: combine a user install (`%LOCALAPPDATA%\Vector35\BinaryNinja`) with a global one (`C:\Program Files\Vector35\BinaryNinja`), or point the installer at a different directory
+
+### URL Handler
+
+Only one installation can own the [`binaryninja:` URL handler](index.md#loading-files), and the registration is global rather than per-install: macOS registers the scheme from each bundle's `Info.plist`, Windows writes the handler command during installation, and Linux registers `x-scheme-handler/binaryninja` from `linux-setup.sh`. Whichever copy registered most recently generally wins, so expect URLs to open in only one of the two. On Linux, re-run [`linux-setup.sh`](https://github.com/Vector35/binaryninja-api/blob/dev/scripts/linux-setup.sh) from the install you want to handle URLs.
+
 ## Troubleshooting Plugins
 
 While third party plugins are not officially supported, there are a number of troubleshooting tips that can help identify the cause. The most important is to enable debug logging as suggested in the previous section. This will often highlight problems with python paths or any other issues that prevent plugins from running.
 
 Additionally, if you're having trouble running a plugin in headless mode (without a GUI calling directly into the core), make sure you're running the Commercial or Ultimate edition of Binary Ninja as the Non-Commercial edition does not support headless processing.
 
-Next, if running a python plugin, make sure the python requirements are met by your existing installation. Note that on Windows, the bundled python is used and python requirements should be installed either by manually copying the modules to the `plugins` [folder](./index.md#directories), or by switching to a different interpreter in the settings.
+Next, if running a python plugin, make sure the python requirements are met by the bundled Python runtime or your configured custom interpreter. Plugin requirements can be installed by the plugin manager, by manually copying modules to the `plugins` [folder](./index.md#directories), or by switching to a different interpreter in the settings.
 
 ## License Problems
 
@@ -158,6 +176,19 @@ Debian requires one package be manually installed to support the emoji icons use
 ``` bash
 apt install fonts-noto-color-emoji
 ```
+
+#### glibc Version Requirements
+
+Binary Ninja targets the glibc shipped with the latest and previous-latest Ubuntu LTS releases. With the release of Ubuntu 26.04, that baseline moved from 22.04/24.04 to 24.04/26.04, which raised the minimum required glibc version for development builds. Distributions with an older glibc will fail to launch — notably Debian 12, which ships glibc 2.36 rather than the 2.38 now required.
+
+If you hit this, the two supported options are:
+
+* **Stay on the 5.3 stable release**, which targets an older glibc that remains compatible with Debian 12.
+* **Upgrade to Debian 13**, which ships glibc 2.41 and will remain compatible until Ubuntu 28.04 is released.
+
+If your current install no longer runs and you need a fresh installer, download one from the [Portal](https://portal.binary.ninja/).
+
+If you must run development builds on Debian 12, several unsupported work-arounds exist, though none are particularly clean. The most promising are a rootless Podman container or a `debootstrap` chroot with access to your X/Wayland server, either of which lets you run Debian 13 packages while keeping the host on Debian 12. Compiling glibc 2.38 and its dependencies yourself and injecting them via `LD_PRELOAD` or `LD_LIBRARY_PATH` is theoretically possible but significantly more effort. None of these configurations are tested or supported.
 
 #### Headless Ubuntu
 
@@ -304,6 +335,7 @@ By default, Binary Ninja does full analysis of the binary and decompiles every f
 
 Other [analysis settings](settings.md#settings-reference) can also help. Check the descriptions to see what they do.
 
+One workflow we recommend is to use an [initial analysis hold](settings.md#analysis.initialAnalysisHold) specified in [Open With Options](index.md#opening-with-options) as well as disabling [linear sweep](settings.md#analysis.linearSweep.autorun), then manually using [memory map permissions](index.md#memory-map) to control where functions will be automatically created. You can add or remove execute permissions to a segment or section and then either manually run linear sweep, or create functions via a script or by hand. In cases of firmware blobs where large parts of a file are data, this can prevent Binary Ninja from trying to automatically create code in regions that are known to be data-only.
 
 ## Collaboration Issues
 

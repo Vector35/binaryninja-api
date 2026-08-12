@@ -227,24 +227,6 @@ impl<C: BlockContext> BasicBlock<C> {
         }
     }
 
-    pub fn add_instruction_data(&self, data: &[u8]) {
-        unsafe {
-            BNBasicBlockAddInstructionData(self.handle, data.as_ptr() as *const _, data.len());
-        }
-    }
-
-    pub fn instruction_data(&self, addr: u64) -> &[u8] {
-        unsafe {
-            let mut size: usize = 0;
-            let data = BNBasicBlockGetInstructionData(self.handle, addr, &mut size);
-            if data.is_null() {
-                return &[];
-            }
-
-            std::slice::from_raw_parts(data, size)
-        }
-    }
-
     pub fn set_has_invalid_instructions(&self, value: bool) {
         unsafe {
             BNBasicBlockSetHasInvalidInstructions(self.handle, value);

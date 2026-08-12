@@ -306,19 +306,19 @@ DataBuffer Snapshot::GetUndoData()
 }
 
 
-vector<Ref<UndoEntry>> Snapshot::GetUndoEntries()
+vector<Ref<UndoEntry>> Snapshot::GetUndoEntries(Ref<FileMetadata> file)
 {
-	return GetUndoEntries([](size_t, size_t) { return true; });
+	return GetUndoEntries(file, [](size_t, size_t) { return true; });
 }
 
 
-vector<Ref<UndoEntry>> Snapshot::GetUndoEntries(const ProgressFunction& progress)
+vector<Ref<UndoEntry>> Snapshot::GetUndoEntries(Ref<FileMetadata> file, const ProgressFunction& progress)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
 
 	size_t count;
-	BNUndoEntry** entries = BNGetSnapshotUndoEntriesWithProgress(m_object, &pctxt, ProgressCallback, &count);
+	BNUndoEntry** entries = BNGetSnapshotUndoEntriesWithProgress(m_object, file->GetObject(), &pctxt, ProgressCallback, &count);
 	if (entries == nullptr)
 	{
 		throw DatabaseException("BNGetSnapshotUndoEntriesWithProgress");
@@ -377,6 +377,15 @@ bool Snapshot::HasAncestor(Ref<Snapshot> other)
 Database::Database(BNDatabase* database)
 {
 	m_object = database;
+}
+
+
+Ref<Database> Database::OpenExisting(const std::string& path)
+{
+	Ref<Database> db = new Database(BNCreateDatabaseInstance());
+	if (!BNDatabaseOpenExisting(db->GetObject(), path.c_str()))
+		throw DatabaseException("BNDatabaseOpenExisting");
+	return db;
 }
 
 
@@ -536,16 +545,7 @@ void Database::WriteGlobalData(const std::string& key, const DataBuffer& val)
 }
 
 
-Ref<FileMetadata> Database::GetFile()
-{
-	return new FileMetadata(BNGetDatabaseFile(m_object));
-}
-
-
-void Database::ReloadConnection()
-{
-	BNDatabaseReloadConnection(m_object);
-}
+void Database::ReloadConnection() {}
 
 
 Ref<KeyValueStore> Database::ReadAnalysisCache() const

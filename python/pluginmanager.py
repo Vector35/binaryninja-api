@@ -89,14 +89,30 @@ class Extension:
 		"""Boolean True if the plugin is installed, False otherwise"""
 		return core.BNPluginIsInstalled(self.handle)
 
+	@property
+	def listed(self) -> bool:
+		"""Boolean True if the plugin is present in its repository's latest successful listing"""
+		return core.BNPluginIsListed(self.handle)
+
+	@property
+	def deprecated(self) -> bool:
+		"""Boolean True if the plugin is marked deprecated by its repository"""
+		return core.BNPluginIsDeprecated(self.handle)
+
 	def install(self, version_id=None) -> bool:
 		"""Attempt to install the given plugin. Defaults to the latest available version."""
+		if self.delete_pending:
+			return self.cancel_uninstall()
 		self.install_dependencies()
 		return core.BNPluginInstall(self.handle, version_id)
 
 	def uninstall(self) -> bool:
 		"""Attempt to uninstall the given plugin"""
 		return core.BNPluginUninstall(self.handle)
+
+	def cancel_uninstall(self) -> bool:
+		"""Cancel an uninstall that is pending until restart."""
+		return core.BNPluginCancelUninstall(self.handle)
 
 	@installed.setter
 	def installed(self, state: bool):

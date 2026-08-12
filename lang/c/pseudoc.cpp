@@ -697,6 +697,53 @@ void PseudoCFunction::AppendFieldTextTokens(const HighLevelILInstruction& instr,
 }
 
 
+void PseudoCFunction::AppendStructInitFieldTextTokens(const HighLevelILInstruction& init, uint64_t offset,
+	size_t memberIndex, size_t size, HighLevelILTokenEmitter& tokens)
+{
+	Ref<Type> type = init.GetType().GetValue();
+	if (type && (type->GetClass() == NamedTypeReferenceClass))
+		type = GetFunction()->GetView()->GetTypeByRef(type->GetNamedTypeReference());
+
+	if (type && (type->GetClass() == StructureTypeClass))
+	{
+		std::optional<size_t> memberIndexHint;
+		if (memberIndex != BN_INVALID_EXPR)
+			memberIndexHint = memberIndex;
+
+		bool hasField = false;
+		bool correctSize = false;
+		type->GetStructure()->ResolveMemberOrBaseMember(
+			GetFunction()->GetView(), offset, 0,
+			[&](NamedTypeReference*, Structure* s, size_t memberIndex, uint64_t structOffset, uint64_t adjustedOffset,
+				const StructureMember& member) {
+				tokens.Append(OperationToken, ".");
+
+				vector<string> nameList {member.name};
+				tokens.AddNamesForOuterStructureMembers(GetFunction()->GetView(), type, init, nameList);
+
+				tokens.Append(
+					FieldNameToken, member.name, structOffset + member.offset, 0, 0, BN_FULL_CONFIDENCE, nameList);
+
+				offset = adjustedOffset - member.offset;
+				hasField = true;
+				correctSize = member.type.GetValue() && size == member.type->GetWidth();
+			},
+			memberIndexHint);
+		if (hasField && correctSize)
+			return;
+	}
+
+	char offsetStr[64];
+	tokens.Append(OperationToken, ".");
+	snprintf(offsetStr, sizeof(offsetStr), "__offset(0x%" PRIx64 ")", offset);
+
+	vector<string> nameList {offsetStr};
+	tokens.AddNamesForOuterStructureMembers(GetFunction()->GetView(), type, init, nameList);
+
+	tokens.Append(StructOffsetToken, offsetStr, offset, size, 0, BN_FULL_CONFIDENCE, nameList);
+}
+
+
 void PseudoCFunction::GetExprText(const HighLevelILInstruction& instr, HighLevelILTokenEmitter& tokens,
 	DisassemblySettings* settings, BNOperatorPrecedence precedence, bool statement)
 {
@@ -3002,6 +3049,70 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 				tokens.AppendSemicolon();
 		}();
 		break;
+
+	case HLIL_STRUCT_INIT:
+		[&]() {
+			const auto hlilFunc = GetHighLevelILFunction();
+			auto str = hlilFunc->GetDerivedStringReferenceForExpr(instr.exprIndex);
+			if (str.has_value() && str.value().customType)
+			{
+				tokens.Append(BraceToken, str.value().customType->GetStringPrefix() + string("\""));
+				tokens.Append(StringToken, DerivedStringReferenceTokenContext,
+					Unicode::ToEscapedString(GetFunction()->GetView(), str.value().value), instr.address,
+					instr.exprIndex);
+				tokens.Append(BraceToken, string("\"") + str.value().customType->GetStringPostfix());
+				return;
+			}
+
+			auto type = instr.GetType();
+			if (type.GetValue())
+			{
+				Ref<Platform> platform;
+				if (hlilFunc->GetFunction())
+					platform = hlilFunc->GetFunction()->GetPlatform();
+				vector<InstructionTextToken> typeTokens = TypePrinter::GetDefault()->GetTypeTokens(
+					type.GetValue(), platform, QualifiedName(), type.GetConfidence());
+				for (auto& i : typeTokens)
+					tokens.Append(i);
+				tokens.Append(TextToken, " ");
+			}
+			else
+			{
+				tokens.Append(KeywordToken, "struct ");
+			}
+			tokens.AppendOpenBrace();
+			tokens.IncreaseIndent();
+			bool first = true;
+			for (auto i : instr.GetFieldExprs<HLIL_STRUCT_INIT>())
+			{
+				if (i.operation != HLIL_STRUCT_INIT_FIELD)
+					continue;
+				if (!first)
+					tokens.Append(OperandSeparatorToken, ",");
+				first = false;
+				tokens.NewLine();
+				tokens.PrependCollapseIndicator();
+				AppendStructInitFieldTextTokens(instr, i.GetOffset<HLIL_STRUCT_INIT_FIELD>(),
+					i.GetMemberIndex<HLIL_STRUCT_INIT_FIELD>(), i.size, tokens);
+				tokens.Append(OperationToken, " = ");
+				GetExprText(i.GetSourceExpr<HLIL_STRUCT_INIT_FIELD>(), tokens, settings, AssignmentOperatorPrecedence);
+			}
+			tokens.DecreaseIndent();
+			tokens.NewLine();
+			tokens.PrependCollapseIndicator();
+			tokens.AppendCloseBrace();
+		}();
+		break;
+
+	case HLIL_STRUCT_INIT_FIELD:
+		[&]() {
+			AppendStructInitFieldTextTokens(instr, instr.GetOffset<HLIL_STRUCT_INIT_FIELD>(),
+				instr.GetMemberIndex<HLIL_STRUCT_INIT_FIELD>(), instr.size, tokens);
+			tokens.Append(OperationToken, " = ");
+			GetExprText(instr.GetSourceExpr<HLIL_STRUCT_INIT_FIELD>(), tokens, settings, AssignmentOperatorPrecedence);
+		}();
+		break;
+
 	default:
 		[&]() {
 			char buf[64]{};

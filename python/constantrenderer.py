@@ -77,6 +77,11 @@ class ConstantRenderer(metaclass=_ConstantRendererMetaClass):
 	:py:func:`render_constant_pointer` method will be called when rendering constant pointers. The
 	:py:func:`is_valid_for_type` method can be optionally overridden to call the rendering methods only when
 	the expression type matches a custom filter.
+
+	.. warning:: Python constant renderers can be slow. The callbacks run while rendering every \
+	constant, and each call crosses the FFI boundary, builds wrapper objects, and takes the GIL, \
+	serializing analysis threads. Always override :py:func:`is_valid_for_type` to reject types you do \
+	not handle. For large binaries, write the renderer in C++ instead.
 	"""
 	_registered_renderers = []
 	renderer_name = None
@@ -205,7 +210,7 @@ _renderer_cache = {}
 
 class CoreConstantRenderer(ConstantRenderer):
 	def __init__(self, handle: core.BNConstantRenderer):
-		super(CoreConstantRenderer, self).__init__(handle=handle)
+		super().__init__(handle=handle)
 		if type(self) is CoreConstantRenderer:
 			global _renderer_cache
 			_renderer_cache[ctypes.addressof(handle.contents)] = self

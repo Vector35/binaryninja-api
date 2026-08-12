@@ -241,8 +241,8 @@ namespace BinaryNinja
 		public:
 			/*!
 			    RAII constructor that checks out a license. License will be refreshed
-			    automatically in a background thread while checked out, in intervals of `duration`
-			    In the event of program crash, the license will expire `duration` seconds after
+			    automatically in a background thread while checked out, in intervals of \c duration
+			    In the event of program crash, the license will expire \c duration seconds after
 			    the most recent background refresh, so you may want a smaller value like 60 if
 			    you expect your program to crash / be killed often.
 			    See class docs for example usage.

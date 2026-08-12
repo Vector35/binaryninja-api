@@ -243,18 +243,18 @@ where
 
 /// Completely sync a database, pushing/pulling/merging/applying changes
 ///
-/// * `database` - Database to sync
+/// * `metadata` - File opened from database to sync
 /// * `file` - File to sync with
 /// * `conflict_handler` - Function to call to resolve snapshot conflicts
 /// * `name_changeset` - Function to call for naming a pushed changeset, if necessary
 pub fn sync_database<C: DatabaseConflictHandler, N: NameChangeset>(
-    database: &Database,
+    metadata: &FileMetadata,
     file: &RemoteFile,
     conflict_handler: C,
     name_changeset: N,
 ) -> Result<(), ()> {
     sync_database_with_progress(
-        database,
+        metadata,
         file,
         conflict_handler,
         name_changeset,
@@ -264,7 +264,7 @@ pub fn sync_database<C: DatabaseConflictHandler, N: NameChangeset>(
 
 /// Completely sync a database, pushing/pulling/merging/applying changes
 ///
-/// * `database` - Database to sync
+/// * `metadata` - File opened from database to sync
 /// * `file` - File to sync with
 /// * `conflict_handler` - Function to call to resolve snapshot conflicts
 /// * `name_changeset` - Function to call for naming a pushed changeset, if necessary
@@ -274,7 +274,7 @@ pub fn sync_database_with_progress<
     P: ProgressCallback,
     N: NameChangeset,
 >(
-    database: &Database,
+    metadata: &FileMetadata,
     file: &RemoteFile,
     mut conflict_handler: C,
     mut name_changeset: N,
@@ -282,7 +282,7 @@ pub fn sync_database_with_progress<
 ) -> Result<(), ()> {
     let success = unsafe {
         BNCollaborationSyncDatabase(
-            database.handle.as_ptr(),
+            metadata.handle,
             file.handle.as_ptr(),
             Some(C::cb_handle_conflict),
             &mut conflict_handler as *mut C as *mut c_void,

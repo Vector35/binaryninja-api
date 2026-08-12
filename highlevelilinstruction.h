@@ -118,6 +118,7 @@ namespace BinaryNinja
 		BlockExprsHighLevelOperandUsage,
 		CasesHighLevelOperandUsage,
 		ValueExprsHighLevelOperandUsage,
+		FieldExprsHighLevelOperandUsage,
 		SourceSSAVariablesHighLevelOperandUsage,
 		SourceMemoryVersionHighLevelOperandUsage,
 		SourceMemoryVersionsHighLevelOperandUsage,
@@ -671,6 +672,11 @@ namespace BinaryNinja
 			return As<N>().GetValueExprs();
 		}
 		template <BNHighLevelILOperation N>
+		HighLevelILInstructionList GetFieldExprs() const
+		{
+			return As<N>().GetFieldExprs();
+		}
+		template <BNHighLevelILOperation N>
 		HighLevelILSSAVariableList GetSourceSSAVariables() const
 		{
 			return As<N>().GetSourceSSAVariables();
@@ -820,6 +826,7 @@ namespace BinaryNinja
 		HighLevelILInstructionList GetBlockExprs() const;
 		HighLevelILInstructionList GetCases() const;
 		HighLevelILInstructionList GetValueExprs() const;
+		HighLevelILInstructionList GetFieldExprs() const;
 		HighLevelILSSAVariableList GetSourceSSAVariables() const;
 		size_t GetSourceMemoryVersion() const;
 		HighLevelILIndexList GetSourceMemoryVersions() const;
@@ -1163,6 +1170,18 @@ namespace BinaryNinja
 	{
 		HighLevelILInstruction GetHighExpr() const { return GetRawOperandAsExpr(0); }
 		HighLevelILInstruction GetLowExpr() const { return GetRawOperandAsExpr(1); }
+	};
+	template <>
+	struct HighLevelILInstructionAccessor<HLIL_STRUCT_INIT> : public HighLevelILInstructionBase
+	{
+		HighLevelILInstructionList GetFieldExprs() const { return GetRawOperandAsExprList(0); }
+	};
+	template <>
+	struct HighLevelILInstructionAccessor<HLIL_STRUCT_INIT_FIELD> : public HighLevelILInstructionBase
+	{
+		uint64_t GetOffset() const { return GetRawOperandAsInteger(0); }
+		size_t GetMemberIndex() const { return GetRawOperandAsIndex(1); }
+		HighLevelILInstruction GetSourceExpr() const { return GetRawOperandAsExpr(2); }
 	};
 
 	template <>

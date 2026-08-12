@@ -69,6 +69,9 @@ class BINARYNINJAUIAPI FilterEdit : public QLineEdit
   public:
 	FilterEdit(FilterTarget* target);
 
+	QAction* addFilterAction(const QString& iconName, const QString& toolTip, bool checkable = false);
+	void setFilterActionActive(QAction* action, const QString& iconName, bool active);
+
 	void showRegexToggle(bool enabled);
 
 	void setRegexValidationError(const QString& error);

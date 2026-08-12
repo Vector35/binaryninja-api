@@ -15,7 +15,6 @@
 #pragma once
 
 #ifdef BINARYNINJACORE_LIBRARY
-#include "qualifiedname.h"
 #include "type.h"
 #include "architecture.h"
 #ifndef BN
@@ -40,8 +39,9 @@
 #endif
 #endif
 
-#include <cstdint>
+#include <functional>
 #include <memory>
+#include <string_view>
 #include <variant>
 
 #ifdef BINARYNINJACORE_LIBRARY
@@ -51,6 +51,8 @@ namespace BinaryNinja { class Platform; }
 #endif
 
 using StringList = _STD_VECTOR<_STD_STRING>;
+
+BN::Platform& GetDemanglerFallbackPlatform();
 
 class DemangledTypeNode;
 
@@ -67,25 +69,36 @@ public:
 
 	DemangledNamePart();
 	explicit DemangledNamePart(_STD_STRING base);
+	explicit DemangledNamePart(const char* base);
+	explicit DemangledNamePart(std::string_view base);
 	DemangledNamePart(_STD_STRING base, std::shared_ptr<DemangledTypeNode> baseTypeSuffix);
 	DemangledNamePart(_STD_STRING base, _STD_VECTOR<DemangledTypeNodeParam> templateArgs,
 		bool spaceAfterComma = false);
 
-	const _STD_STRING& GetBase() const { return m_base; }
+	[[nodiscard]] const _STD_STRING& GetBase() const { return m_base; }
 	void SetBase(_STD_STRING base) { m_base = std::move(base); }
 	void AppendBase(const _STD_STRING& suffix) { m_base += suffix; }
-	bool HasTemplateArguments() const { return m_hasTemplateArgs || !m_templateArgs.empty(); }
+	void AppendBase(std::string_view suffix)
+	{
+		if (!suffix.empty())
+			m_base.append(suffix.data(), suffix.size());
+	}
+	[[nodiscard]] bool HasTemplateArguments() const { return m_hasTemplateArgs || !m_templateArgs.empty(); }
+	[[nodiscard]] const _STD_VECTOR<DemangledTypeNodeParam>& GetTemplateArguments() const { return m_templateArgs; }
 	_STD_VECTOR<DemangledTypeNodeParam>& GetMutableTemplateArguments() { return m_templateArgs; }
 	void SetTemplateArguments(_STD_VECTOR<DemangledTypeNodeParam> args, bool spaceAfterComma = false);
+	void ClearTemplateArguments();
 
-	void AppendString(_STD_STRING& out, BN::Platform* platform) const;
-	_STD_STRING GetString(BN::Platform* platform = nullptr) const;
-	bool IsStructurallyEqual(const DemangledNamePart& other) const;
+	void AppendString(_STD_STRING& out, BN::Platform& platform) const;
+	_STD_STRING GetString(BN::Platform& platform = GetDemanglerFallbackPlatform()) const;
+	[[nodiscard]] bool IsStructurallyEqual(const DemangledNamePart& other) const;
 
 	static Ref CreateShared(DemangledNamePart part);
 	static Ref CreateSharedCopy(const DemangledNamePart& part);
 
 private:
+	friend class DemangledTypeNode;
+
 	_STD_STRING m_base;
 	std::shared_ptr<DemangledTypeNode> m_baseTypeSuffix;
 	_STD_VECTOR<DemangledTypeNodeParam> m_templateArgs;
@@ -141,26 +154,38 @@ public:
 	static DemangledTypeNode NamedType(BNNamedTypeReferenceClass cls,
 		StringList nameSegments, size_t width = 0, bool isSigned = false);
 	static DemangledTypeNode NamedType(BNNamedTypeReferenceClass cls,
+		std::string_view nameSegment, size_t width = 0, bool isSigned = false);
+	static DemangledTypeNode NamedType(BNNamedTypeReferenceClass cls,
 		DemangledQualifiedName nameSegments, size_t width = 0, bool isSigned = false);
-	static DemangledTypeNode NamedTypeWithDefaultIntegerWidth(BNNamedTypeReferenceClass cls,
-		StringList nameSegments, bool isSigned = false);
+	// Use when the mangling provides a name but not a struct/class/union/enum kind.
+	static DemangledTypeNode NamedType(StringList nameSegments, size_t width = 0, bool isSigned = false);
+	static DemangledTypeNode NamedType(std::string_view nameSegment, size_t width = 0, bool isSigned = false);
+	static DemangledTypeNode NamedType(DemangledQualifiedName nameSegments, size_t width = 0, bool isSigned = false);
 	static DemangledTypeNode PostfixType(NodeRef child, _STD_STRING suffix);
 	static DemangledTypeNode PostfixType(NodeRef child, _STD_STRING separator, NodeRef suffixType);
+	static DemangledTypeNode UnaryExpression(_STD_STRING op, NodeRef child);
+	static DemangledTypeNode BinaryExpression(NodeRef left, _STD_STRING op, NodeRef right);
 	static NodeRef CreateShared(DemangledTypeNode node);
 	static NodeRef CreateSharedCopy(const DemangledTypeNode& node);
 
-	BNTypeClass GetClass() const { return GetPayloadClass(); }
-	const DemangledQualifiedName& GetName() const;
-	DemangledQualifiedName& GetMutableName();
-	bool IsConst() const { return m_const; }
-	bool IsVolatile() const { return m_volatile; }
-	BNNameType GetNameType() const { return m_nameType; }
-	bool HasTemplateArguments() const;
-	uint8_t GetPointerSuffixBits() const { return m_pointerSuffixBits; }
-	BNNamedTypeReferenceClass GetNTRClass() const;
+	[[nodiscard]] BNTypeClass GetClass() const { return GetPayloadClass(); }
+	[[nodiscard]] const DemangledQualifiedName& GetName() const;
+	[[nodiscard]] DemangledQualifiedName& GetMutableName();
+	[[nodiscard]] bool IsConst() const { return m_const; }
+	[[nodiscard]] bool IsVolatile() const { return m_volatile; }
+	[[nodiscard]] BNNameType GetNameType() const { return m_nameType; }
+	[[nodiscard]] bool HasTemplateArguments() const;
+	[[nodiscard]] uint8_t GetPointerSuffixBits() const { return m_pointerSuffixBits; }
+	[[nodiscard]] BNNamedTypeReferenceClass GetNTRClass() const;
+	bool GetIntegerTypeInfo(size_t& width, WidthKind& widthKind, bool& isSigned, std::string_view& altName) const;
+	bool GetWideCharTypeInfo(size_t& width, std::string_view& altName) const;
+	bool GetPointerChildType(const DemangledTypeNode*& childType, BNReferenceType& referenceType) const;
 	void SetParenthesizedMemberPointer(bool parenthesized);
-	StringList RenderTypeNameSegments(BN::Platform* platform = nullptr) const;
-	bool IsStructurallyEqual(const DemangledTypeNode& other) const;
+	[[nodiscard]] StringList RenderTypeNameSegments(BN::Platform& platform = GetDemanglerFallbackPlatform()) const;
+	[[nodiscard]] bool IsStructurallyEqual(const DemangledTypeNode& other) const;
+	[[nodiscard]] bool ContainsNodeRef(const NodeRef& target) const;
+	bool MutateChildTypes(const std::function<bool(DemangledTypeNode&)>& mutator);
+	bool MutateQualifiedNames(const std::function<bool(DemangledQualifiedName&)>& mutator);
 
 	void SetName(DemangledQualifiedName name);
 	void SetConst(bool c) { m_const = c; }
@@ -175,15 +200,13 @@ public:
 	void SetNTRType(BNNamedTypeReferenceClass cls);
 	void SetImplicitThisParameter(DemangledTypeNode type);
 
-	void AppendString(_STD_STRING& out, BN::Platform* platform) const;
-	_STD_STRING GetString() const;
-	_STD_STRING GetString(BN::Platform* platform) const;
-	_STD_STRING GetStringBeforeName(BN::Platform* platform) const;
-	_STD_STRING GetStringAfterName(BN::Platform* platform) const;
-	_STD_STRING GetTypeAndName(const StringList& name) const;
-	_STD_STRING GetTypeAndName(const StringList& name, BN::Platform* platform) const;
+	void AppendString(_STD_STRING& out, BN::Platform& platform) const;
+	_STD_STRING GetString(BN::Platform& platform = GetDemanglerFallbackPlatform()) const;
+	_STD_STRING GetStringBeforeName(BN::Platform& platform = GetDemanglerFallbackPlatform()) const;
+	_STD_STRING GetStringAfterName(BN::Platform& platform = GetDemanglerFallbackPlatform()) const;
+	_STD_STRING GetTypeAndName(const StringList& name, BN::Platform& platform = GetDemanglerFallbackPlatform()) const;
 
-	BN::Ref<BN::Type> Finalize(BN::Platform* platform = nullptr) const;
+	BN::Ref<BN::Type> Finalize(BN::Platform& platform = GetDemanglerFallbackPlatform()) const;
 
 private:
 	struct VoidPayload {};
@@ -253,6 +276,19 @@ private:
 		NodeRef suffixType;
 	};
 
+	struct UnaryExpressionPayload
+	{
+		_STD_STRING op;
+		NodeRef childType;
+	};
+
+	struct BinaryExpressionPayload
+	{
+		NodeRef leftType;
+		_STD_STRING op;
+		NodeRef rightType;
+	};
+
 	using Payload = std::variant<
 		VoidPayload,
 		BoolPayload,
@@ -265,13 +301,15 @@ private:
 		ArrayPayload,
 		FunctionPayload,
 		NamedTypePayload,
-		PostfixPayload>;
+		PostfixPayload,
+		UnaryExpressionPayload,
+		BinaryExpressionPayload>;
 
-	bool HasUndeterminedTopLevelSize() const;
-	uint8_t GetValueConfidence() const;
-	BNTypeClass GetPayloadClass() const;
-	NodeRef GetPrimaryChild() const;
-	static size_t ResolveWidth(size_t width, WidthKind widthKind, BN::Platform* platform = nullptr);
+	[[nodiscard]] bool HasUndeterminedTopLevelSize() const;
+	[[nodiscard]] uint8_t GetValueConfidence() const;
+	[[nodiscard]] BNTypeClass GetPayloadClass() const;
+	[[nodiscard]] NodeRef GetPrimaryChild() const;
+	static size_t ResolveWidth(size_t width, WidthKind widthKind, const BN::Platform& platform = GetDemanglerFallbackPlatform());
 
 	BNNameType m_nameType;
 	uint8_t m_pointerSuffixBits;
@@ -283,13 +321,15 @@ private:
 	// Helpers for string formatting
 	static uint8_t PointerSuffixBit(BNPointerSuffix ps);
 	void AddPointerSuffixes(BN::TypeBuilder& tb, bool omitPtr64 = true) const;
-	bool HasPostfixType() const;
-	void AppendPostfixType(_STD_STRING& out, BN::Platform* platform) const;
+	[[nodiscard]] bool HasPostfixType() const;
+	void AppendPostfixType(_STD_STRING& out, BN::Platform& platform) const;
+	void AppendUnaryExpression(_STD_STRING& out, BN::Platform& platform) const;
+	void AppendBinaryExpression(_STD_STRING& out, BN::Platform& platform) const;
 	void AppendModifiers(_STD_STRING& out) const;
 	void AppendPointerSuffix(_STD_STRING& out) const;
 	static void AppendNamePartList(_STD_STRING& out, const DemangledQualifiedName& name,
-		BN::Platform* platform);
-	void AppendTypeName(_STD_STRING& out, BN::Platform* platform) const;
-	void AppendBeforeName(_STD_STRING& out, const DemangledTypeNode* parentType, BN::Platform* platform) const;
-	void AppendAfterName(_STD_STRING& out, const DemangledTypeNode* parentType, BN::Platform* platform) const;
+		BN::Platform& platform);
+	void AppendTypeName(_STD_STRING& out, BN::Platform& platform) const;
+	void AppendBeforeName(_STD_STRING& out, const DemangledTypeNode* parentType, BN::Platform& platform) const;
+	void AppendAfterName(_STD_STRING& out, const DemangledTypeNode* parentType, BN::Platform& platform) const;
 };

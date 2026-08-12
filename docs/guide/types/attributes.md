@@ -144,7 +144,7 @@ The following built-in calling conventions without dedicated keywords are availa
 |`gcc-thiscall`|x86|The `thiscall` calling convention as implemented in GCC on non-Windows platforms|
 |`clang-thiscall`|x86|The `thiscall` calling convention as implemented in Clang on non-Windows platforms|
 
-???+ Warning "Linux x86 / x86_64 default convention rename"
+!!! Warning "Linux x86 / x86_64 default convention rename"
     Prior to version 5.4, the default Linux convention on x86/x86_64 was named `cdecl` (and the stdcall variant was `stdcall`). It is now `sysv` (and `sysv-stdcall`) to deconflict with the Windows behavior of `cdecl`/`stdcall`. Both names continue to be registered on the architecture, so `__convention("cdecl")` will still resolve to the Windows version of `cdecl` even on Linux. If you have scripts that match calling conventions by string name, update them to recognize `sysv` and `sysv-stdcall`.
 
 ## Custom Parameter and Return Value Locations
@@ -327,7 +327,7 @@ while (leader != event)
     event = event->sibling_list_next - 0x10
 ```
 
-???+ Tip "Tip"
+!!! Tip "Tip"
     Normally, intrusive linked lists are a structure containing pointers to that structure
     inside the next object, but we're inlining the structure members here, so we can
     specialize their pointer offsets.
@@ -425,7 +425,7 @@ struct BaseClassDescriptor* __ptr32 __based(start) `type_info::\`RTTI Base Class
 
 ## Custom Attributes
 
-Binary Ninja allows you to add custom attributes to types, which do not affect analysis but can be used by plugins and scripts. You can add these with the `__attr` annotation. Scripts can then query a `Type` object's `annotations` field to see the annotation keys and values.
+Binary Ninja allows you to add custom attributes to types, which do not affect analysis but can be used by plugins and scripts. You can add these with the `__attr` annotation. Scripts can then query a `Type` object's `attributes` field to see the attribute keys and values.
 
 ### Examples
 
@@ -445,4 +445,10 @@ typedef void (*__attr("ptr", "attr") test)();      // Applies to the pointer
 typedef void (__attr("function", "attr")* test)(); // Applies to the function
 typedef __attr("return", "attr") void (* test)();  // Applies to the return type
 typedef void __attr("return", "attr") (* test)();  // Applies to the return type
+```
+
+Attributes propagate with the type during analysis, so they can select and parameterize a [string recognizer or constant renderer](../../dev/customstrings.md). With the [encoded_strings.py](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/encoded_strings.py) example plugin loaded, applying this type to a decoding routine's parameter deobfuscates every string passed to it:
+
+``` C
+typedef char __attr("sub_encoded", "31656537366531313932396130373434")* deobfuscate;
 ```

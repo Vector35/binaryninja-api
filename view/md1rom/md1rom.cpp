@@ -194,16 +194,10 @@ bool Md1romView::Init()
 		GetParentView()->AddAutoSection(seg.name + "_data", seg.dataStart, seg.length);
 	}
 
-	m_symbolQueue = new SymbolQueue();
 	ParseDebugInfo();
 	// This does not seem to work, see
 	// https://github.com/FirmWire/FirmWire/blob/main/firmwire/vendor/mtk/mtkdb/parse_mdb.py#L30
 	// ParseDebugDatabase();
-
-	// Process the queued symbols
-	m_symbolQueue->Process();
-	delete m_symbolQueue;
-	m_symbolQueue = nullptr;
 
 	return true;
 }
@@ -216,29 +210,15 @@ void Md1romView::DefineMd1RomSymbol(BNSymbolType type, const string& name, uint6
 	if (name.size() == 0)
 		return;
 
-	auto process = [=]() {
-		NameSpace nameSpace = GetInternalNameSpace();
-		// If name does not start with alphabetic character or symbol, prepend an underscore
-		string rawName = name;
-		if (!(((name[0] >= 'A') && (name[0] <= 'Z')) || ((name[0] >= 'a') && (name[0] <= 'z')) || (name[0] == '_')
-				|| (name[0] == '?') || (name[0] == '$') || (name[0] == '@') || (name[0] == '.')))
-			rawName = "_" + name;
+	NameSpace nameSpace = GetInternalNameSpace();
+	// If name does not start with alphabetic character or symbol, prepend an underscore
+	string rawName = name;
+	if (!(((name[0] >= 'A') && (name[0] <= 'Z')) || ((name[0] >= 'a') && (name[0] <= 'z')) || (name[0] == '_')
+			|| (name[0] == '?') || (name[0] == '$') || (name[0] == '@') || (name[0] == '.')))
+		rawName = "_" + name;
 
-		return std::pair<Ref<Symbol>, Ref<Type>>(
-			new Symbol(type, rawName, rawName, rawName, addr, binding, nameSpace), typeObj);
-	};
-
-	if (m_symbolQueue)
-	{
-		m_symbolQueue->Append(process, [this](Symbol* symbol, const Confidence<Ref<Type>>& type) {
-			DefineAutoSymbolAndVariableOrFunction(GetDefaultPlatform(), symbol, type);
-		});
-	}
-	else
-	{
-		auto result = process();
-		DefineAutoSymbolAndVariableOrFunction(GetDefaultPlatform(), result.first, result.second);
-	}
+	Ref<Symbol> symbol = new Symbol(type, rawName, rawName, rawName, addr, binding, nameSpace);
+	DefineAutoSymbolAndVariableOrFunction(GetDefaultPlatform(), symbol, typeObj);
 }
 
 

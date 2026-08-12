@@ -91,7 +91,7 @@ Binary Ninja can automatically install pip requirements for python plugins  inst
 
 The `Install python3 module` action (available from the [command palette](index.md#command-palette)) can be used to install python3 modules to the local [python folder](index.md#user-folder).
 
-Binary Ninja ships with an embedded version of Python on Windows and macOS. On Linux, default Python paths and versions are used instead. All plugin dependencies installed are placed in the [user folder](index.md#user-folder) / pythonVER. For example on Linux with Python 3.10: `~/.binaryninja/python310/`.
+Binary Ninja ships with an embedded version of Python on Windows, macOS, and Linux. All plugin dependencies installed are placed in the [user folder](index.md#user-folder) / pythonVER. For example with Python 3.13: `~/.binaryninja/python313/`.
 
 You may also wish to use your own custom interpreter which you can set with the [python.interpreter setting](settings.md#python.interpreter) to point to the appropriate install location. Note that the file being pointed to should be a `.dll`, `.dylib`, or `.so` though homebrew will often install libraries without any extension. For example:
 

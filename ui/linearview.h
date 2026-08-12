@@ -233,6 +233,7 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	BinaryNinja::FunctionViewType m_ilViewType, m_prevILViewType = InvalidILViewType;
 	HexEditorHighlightState m_highlightState;
 	bool m_singleFunctionView = false;
+	bool m_simplifyTemplates = false;
 
 	InstructionEdit* m_instrEdit = nullptr;
 
@@ -311,7 +312,7 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	StructureRef defineInnerName(TypeRef type, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
 	StructureRef defineInnerIntegerSize(TypeRef type, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
 	StructureRef defineInnerSign(TypeRef type, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
-	TypeRef getPointerTypeAndName(ArchitectureRef arch, uint64_t addr, std::string& name);
+	TypeRef getPointerTypeAndName(uint64_t addr, std::string& name);
 	std::string getVariableName(uint64_t addr);
 
 	BinaryNinja::Ref<BinaryNinja::LinearViewObject> createLinearViewObject();
@@ -414,7 +415,7 @@ private Q_SLOTS:
 
 	//! Get the length of of the string (if there is one) starting at the
 	//! given address. String type is assumed to be UTF-8 by default, but the
-	//! `charSize` parameter can be set to 2 or 4 to look for UTF-16 or
+	//! \c charSize parameter can be set to 2 or 4 to look for UTF-16 or
 	//! UTF-32 string, respectively.
 	//!
 	//! Returns the length of the string in bytes, NOT the number of characters.

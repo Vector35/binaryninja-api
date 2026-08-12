@@ -69,6 +69,7 @@ fn test_architecture_disassembly() {
             kind: InstructionTextTokenKind::PossibleAddress {
                 value: 16,
                 size: Some(8),
+                operand: None,
             },
         },
     ];

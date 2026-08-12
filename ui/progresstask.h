@@ -201,8 +201,8 @@ std::function<QVariant(QVariant)> convertToQVariantFunction(Func&& func);
 
     \b Example:
     \code{.cpp}
-        // Passing `this` into create() will make the thread stop if `this` is deleted before it finishes.
-        // Though note that `this` could still be deleted during a background action,
+        // Passing \c this into create() will make the thread stop if \c this is deleted before it finishes.
+        // Though note that \c this could still be deleted during a background action,
         // and the thread will only be stopped *after* the action is done, so you must be
         // sure to always guard data accessed in background actions with something like
         // a std::shared_ptr<T>.
@@ -502,7 +502,7 @@ class BINARYNINJAUIAPI BackgroundThread : public QObject
 	}
 
 	/*!
-	    Add another BackgroundThread's functions to the end of this one's. Will move functions out of `other`
+	    Add another BackgroundThread's functions to the end of this one's. Will move functions out of \c other
 	    \param other BackgroundThread whose functions will be used
 	    \return This BackgroundThread
 	 */

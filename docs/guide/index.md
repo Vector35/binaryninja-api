@@ -15,10 +15,10 @@ Binaries are installed in the following locations by default:
 - Windows (global install): `C:\Program Files\Vector35\BinaryNinja`
 - Windows (user install): `%LOCALAPPDATA%\Vector35\BinaryNinja`
 
-???+ Tip "Tip"
+!!! Tip "Tip"
     If you want a silent installation on Windows, because we use the [NSIS](https://nsis.sourceforge.io/Docs/) installer, simply use: `BinaryNinjaInstaller.exe /S`
 
-???+ Danger "Warning"
+!!! Danger "Danger"
     Do not put any user content in the install-path of Binary Ninja. The auto-update process of Binary Ninja WILL remove any files included in these locations.
 
 ### User Folder
@@ -155,7 +155,7 @@ This virtual path is also stored in the file's metadata for the 'Raw' BinaryView
 {'chain': [{'transform': 'Zip'}, {'transform': 'Base64'}], 'virtualPath': 'Zip(.../papi_b64.zip)::Base64(papi_b64)::extracted'}
 ```
 
-???+ Note "Note"
+!!! Note "Note"
      The virtual path and associated metadata are not persisted when saving to a database (`.bndb` file). Additionally, the format of the virtual path string may change in future releases.
 
 #### Settings
@@ -207,7 +207,7 @@ This menu allows for saving a `.bndb` without additional undo information, or by
 
 ![save with options](../img/save-with-options.png "Save With Options"){ width="600" }
 
-!!! note "Tip"
+!!! tip "Tip"
     If you just want a smaller database with prior history removed, ["Save As"](#2-save-as) is usually faster, since it writes a fresh database rather than cleaning up the existing one in place.
 
 ## New Files
@@ -236,6 +236,22 @@ Recent files can be opened on double click. They can also be navigated using the
 The Recent files list can be cleared via using the Command Palette (`[CTRL] + P`) action `Clear All Recent Files`.
 
 Hotkeys (macOS: `[CMD] + 0` - `[CMD] + 9`, Windows/Linux: `[CTRL] + 0` - `[CTRL] + 9`) can also be used to quickly open a file. The hotkey for a given entry will be shown on the right.
+
+#### Recent Files Context Menu
+
+Right-clicking an entry in the recent files list offers:
+
+| Action | Description |
+| --- | --- |
+| Copy Path | Copy the full path of the selected entry to the clipboard |
+| Open Selection with Options... | Open using the [Open with Options](#opening-with-options) dialog |
+| Open Selection with Container Browser... | Open using the [Container Browser](#container-browser) |
+| Open File Location... | Reveal the containing folder in your system file manager |
+| Remove from Recent Files | Drop the entry from the list, leaving its saved state intact |
+| Forget This File | Drop the entry *and* purge the state saved for that file: the view state restored by [`ui.files.restore.viewState`](settings.md#ui.files.restore.viewState) (window layout, pane splits, sidebar, and location) and the load settings restored by [`ui.files.restore.viewOptions`](settings.md#ui.files.restore.viewOptions). |
+| Clear All Recent Files | Empty the whole list |
+| Clear All Recent Projects | Empty the Recent Projects list (Commercial and Ultimate only) |
+| Compact Mode | Toggle the compact display described above |
 
 ### Plugins
 
@@ -308,7 +324,7 @@ There's also [many](#using-the-keyboard) keyboard-based navigation options.
 
 Switching views happens multiple ways. In some instances, it is automatic, such as clicking a data reference from graph view. This will navigate to linear view as data is not shown in the graph view. While navigating, you can use the [view hotkeys](#default-hotkeys) to switch to a specific view at the same location as the current selection. Next you can use the [command palette](#command-palette). Additionally, the view menu in the header at the top of each pane can be used to change views without navigating to any given location. Finally, you can also use the `View` application menu.
 
-???+ Tip "Tip"
+!!! Tip "Tip"
     Any loaded `BinaryView` will show up in the upper-left of the main pane. You can switch between (for example), `ELF` and `Raw` to switch between multiple loaded [`BinaryView`s](../dev/concepts.md#binary-views).
 
 ## The Sidebar
@@ -321,7 +337,7 @@ Once you have a file open, the sidebar lets you quickly access the most common f
  - 3-4: This section is primarily for smaller panels where you may wish to toggle multiple on or off. Clicking a panel here will toggle its visibility without impacting other panels. Note that despite 4 not having any items in it by default, when you drag a panel icon to this region, you'll see the separator that separates 1/2 from 3/4 appear.
  - 5-6: Primarily for horizontal content, the bottom-most panel icon regions behave much like sections 1-2 except they are applied to two regions in the bottom of the window. Clicking a different icon in this region will switch to that panel, or hide that panel entirely if it is already selected.
 
-???+ Info "Tip"
+!!! Tip "Tip"
     Note that you can also right-click on sidebar icons and choose from `Docked`, `Floating`, and `Window` options to expose even more possible layout options. From the right-click menu, you can also control if and when a sidebar icon is hidden.
 
 Here's a more detailed look into each of those panels:
@@ -330,7 +346,7 @@ Here's a more detailed look into each of those panels:
 
 The Symbols List is a powerful symbol organization and navigation tool. It allows sorting symbols by a variety of attributes, organizing them into folders (both manually, and automatically via the [API](https://api.binary.ninja/binaryninja.component-module.html#binaryninja.component.Component)), and much more.
 
-???+ Tip "Tip"
+!!! Tip "Tip"
     Searching in the symbol list doesn't require focusing the search box. That the filter list here (and in the string panel) is a "fuzzy" search. Each space-separated keyword is used as a substring match and order matters. So: "M C N" for example would match `MyClassName`.
 
 #### Columns
@@ -386,19 +402,62 @@ The Tags panel allows you to change existing tag categories, add your own catego
 
 ![memory map ><](../img/memory-map.png "Memory Map"){ width="600" }
 
-The "Memory Map" pane and sidebar widget show segments and sections currently present in the binary, allows some modification of automatically added sections, and allows adding, modifying, and deleting user segments and sections.
-
-Double-clicking an address in the "start" or "end" column will navigate in the address in the current view. If an address in the "Data Offset" column is double-clicked, that address will always be navigated to in the `Raw` view which may be confusing at first.
+The "Memory Map" pane and sidebar widget show the segments and sections currently present in the binary and allow adding, editing, and removing your own. Segments map bytes into the address space and carry read/write/execute permissions, while sections annotate ranges of that address space with a name and [semantics](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SectionSemantics).
 
 ![memory map icon <](../img/memory-map-icon.png "Memory Map Icon")
 
-To access it, use either the icon in the sidebar to open the panel, or use the view drop-down in the main pane, or use the Command Palette!
+To access it, use either the icon in the sidebar to open the panel, the view drop-down in the main pane, or the Command Palette!
 
-When a segment is selected (highlighted in blue) related sections will be outlined (white border).
+#### Reading the Tables
 
-Likewise, when a section is selected, related segments will be outlined.
+Double-clicking an address in the "Start" or "End" column will navigate to that address in the current view. If an address in the "Data Offset" column is double-clicked, that address will always be navigated to in the `Raw` view which may be confusing at first.
 
-The sorting order of segments and sections can be changed by clicking on any column header.
+When a segment is selected (highlighted in blue) related sections will be outlined (white border), and likewise when a section is selected.
+
+The sorting order of segments and sections can be changed by clicking on any column header. The segment table's "Data Offset" and "Data Length" columns are hidden by default; right-click the segment header to toggle columns or restore the defaults.
+
+Two segment columns describe where a segment's bytes come from:
+
+- `Region`: the name of the memory region backing the segment
+- `Source`: `Mapped Load Region` for bytes mapped from the analyzed file, `Backed Region` for bytes supplied by a memory region, or `Unbacked Region` for a range with no backing bytes
+
+#### Working with Segments
+
+Right-clicking in the segment table shows:
+
+- **Add Segment...**: maps a range of the analyzed file into the address space given a start, length, offset and length within the file, along with r/w/x flags.
+- **Edit Segment...**: automatically-created segments only allow their flags to be changed; user segments allow every field to be edited.
+- **Disable Segment...**: takes the segment's backing memory region out of the map without deleting it.
+- **Re-enable Segment**: only shown when disabled regions exist, and lists each of them for restoration.
+- **Remove Segment...**: only available for user segments and user memory regions.
+- **Add Memory Region...**: see below.
+
+All address and length fields accept full [expressions](#navigating), not just hexadecimal values, and all changes can be undone.
+
+The segment table shows the *resolved* memory map, where overlapping memory regions have been flattened into non-overlapping rows and the most recently added region takes precedence. Adding a region that only partially covers an existing segment therefore splits that segment into several rows, each showing the flags and `Region` of whichever region wins over that range. Disabling a region doesn't leave a hole, it just makes whatever was beneath it visible again.
+
+#### Adding a Memory Region
+
+Memory regions supply bytes for addresses the file itself doesn't provide. This is useful for firmware, memory dumps, or any address range that only exists at runtime. The dialog is available from the segment table's context menu, from `Analysis` → `Add Memory Region...`, and automatically when writing in the hex editor at an address with no backing bytes. Choose one of four sources:
+
+- **File Backed Region**: the contents of a file on disk. The length and default name come from the selected file.
+- **Pattern Backed Region**: a repeating hexadecimal pattern (such as `FF`, `A5A5`, or `DEADBEEF`) filling the given length.
+- **Unbacked Region**: a range filled with a single byte, `0x00` by default.
+- **Mapped Load Region**: bytes mapped from the analyzed file at a given data offset and length. This is the same as adding a segment, but allows naming the result.
+
+When invoked on an existing segment, the dialog is pre-filled with that segment's bounds and flags.
+
+#### Working with Sections
+
+Right-clicking in the section table shows:
+
+- **Add Section...**: takes a name, start, length, and semantics (`Default`, `Read-only code`, `Read-only data`, `Writable data`, or `External`).
+- **Edit Section...**: automatically-created sections can be edited but not renamed, and doing so creates a user section that overrides the original. Removing that user section restores the original.
+- **Remove Section...**: only available for user sections.
+
+Unlike segments, sections are never split. Sections that overlap each other all remain listed, and their semantics are combined.
+
+Because section semantics have precedence over segment permissions, adding a section is usually the way to correct analysis over a range that was mapped with the wrong permissions.
 
 ### External Links
 
@@ -467,7 +526,7 @@ By default, Binary Ninja's cross-reference pane is dynamic, allowing quick navig
 1. Third, you can use the `X` hotkey or select `Pin Cross References` in the context menu or command palette. 
 1. The final way is to select (or multi-select in table view) a set of cross-references then right-click `Tag Selected Rows`. The tag pane can then be used to navigate those references. Tags allow for persistent lists to be saved to an analysis database whereas the other options only last for the current session.
 
-???+ Tip "Tip"
+!!! Tip "Tip"
     The dynamic cross-reference pane limits the number of references that are displayed at one time to keep the user interface responsive. If the list of references is not complete, a `+` will appear next to the count of references. Clicking the `Pin Cross References to New Pane` button will increase the limit substantially and allow you to see the missing references. The limits for both the dynamic pane and the pinned references can be controlled in [settings](settings.md#ui.maxXrefItems).
 
 #### Cross-Reference Hotkeys
@@ -621,7 +680,7 @@ The settings themselves are saved directly in the `keybindings.json` file in you
 
 To search in the keybindings list, just click to make sure it's focused and start typing!
 
-???+ Tip "Tip"
+!!! Tip "Tip"
     On macOS, within the `keybindings.json`, `Ctrl` refers to the Command key, while `Meta` refers to the Option key. This is a remapping performed by Qt to make cross-platform keybindings easier to define.
 
 ### Default Hotkeys
@@ -1064,7 +1123,7 @@ The integrated script console is useful for small scripts that aren't worth writ
 
 To trigger the console, either use `<BACKTICK>`, or use the `View`/`Python Console` menu.
 
-???+ Tip "Tip"
+!!! Tip "Tip"
     Note that `<BACKTICK>` will work in most contexts to open the console and focus its command line, unless the UI focus is in an editor widget.
 
 ![console](../img/console-split.png "Console Split"){ width="800" }
@@ -1079,7 +1138,7 @@ The scripting console is not a full IDE, but it has several convenience features
 - `<CTRL>-R` allows for reverse-searching your console history
 - `<UP>` and `<DOWN>` can be used to view the command-history
 
-???+ Tip "Tip"
+!!! Tip "Tip"
     All scripting consoles share a single Python instance. This is an intentional design choice and has the following benefits: you can create variables in one tab/window and then access it in another. The downside is that if you run a long-running script for example, the console will still be blocked in other tabs and windows. This is a known trade-off and not expected to change.
 
 ### Magic Console Variables
@@ -1129,7 +1188,7 @@ From here, you can add any custom functions or objects you want to be available 
 
 ### "Run Script..."
 
-???+ Danger "Warning"
+!!! Warning "Warning"
     When you run commands in the scripting console, the UI will automatically update analysis. This is because quite often when you make a change in the console you expect it to be immediately reflected in the UI. The same is not true when running a script where you must trigger `bv.update_analysis_and_wait()` or `current_function.reanalyze()` to experience the same behavior.
 
 The "Run Script..." option in the File Menu allows loading a Python script from your filesystem and executing it
@@ -1147,7 +1206,7 @@ Any variables or functions defined globally within the script will be available 
 ### Python Debugging
 See the [plugin development guide](../dev/plugins.md#debugging-using-other-ides).
 
-???+ Tip "Tip"
+!!! Tip "Tip"
     The current script console only supports Python at the moment, but it's fully extensible for other programming languages for advanced users who wish to implement their own bindings.
 
 ## Using Plugins
@@ -1200,7 +1259,7 @@ When you launch Binary Ninja from the command-line, you can control whether a ne
     3. Open those files in a new instance of Binary Ninja.
 * Passing the `-n` or `--new-instance` command line argument will cause a new Binary Ninja application to be launched and any files or URLs on the command line will be opened in the new instance.
 
-???+ Danger "Warning"
+!!! Warning "Warning"
     Due to [bug](https://github.com/Vector35/binaryninja-api/issues/7523) on macOS, the above behavior is only correct for Windows and Linux. On macOS, the default behavior is to always launch a new window.
 
 ## Debugger
@@ -1219,7 +1278,7 @@ Updates are silently downloaded in the background and when complete an option to
 
 On Windows, this is achieved through a separate launcher that loads first and replaces the installation before launching the new version which you'll notice as a separate window. On macOS and Linux, the original installation is overwritten after the update occurs as these operating systems allow files to be replaced while running. The update on restart is thus immediate.
 
-???+ Tip "Tip"
+!!! Tip "Tip"
     If you have any trouble with the self-updater, you can always [request](https://binary.ninja/recover/) a fresh set of download links as long as you are under active support.
 
 ### Development Branch

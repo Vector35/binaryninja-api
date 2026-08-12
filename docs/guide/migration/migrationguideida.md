@@ -89,4 +89,4 @@ Check out the [tiling panes](../index.md#tiling-panes) docs for more information
 
 ---
 
-Don't forget to check out our [additional resources](../index.md#additional-resources)!
+Don't forget to check out our [additional resources](index.md#additional-resources)!

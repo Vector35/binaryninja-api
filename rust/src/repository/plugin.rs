@@ -211,6 +211,16 @@ impl Extension {
         unsafe { BNPluginIsInstalled(self.handle.as_ptr()) }
     }
 
+    /// true if the plugin is present in its repository's latest successful listing
+    pub fn is_listed(&self) -> bool {
+        unsafe { BNPluginIsListed(self.handle.as_ptr()) }
+    }
+
+    /// true if the plugin is marked deprecated by its repository
+    pub fn is_deprecated(&self) -> bool {
+        unsafe { BNPluginIsDeprecated(self.handle.as_ptr()) }
+    }
+
     /// true if the plugin is enabled, false otherwise
     pub fn is_enabled(&self) -> bool {
         unsafe { BNPluginIsEnabled(self.handle.as_ptr()) }
@@ -251,6 +261,11 @@ impl Extension {
     /// Attempt to uninstall the given plugin
     pub fn uninstall(&self) -> bool {
         unsafe { BNPluginUninstall(self.handle.as_ptr()) }
+    }
+
+    /// Cancel an uninstall that is pending until restart.
+    pub fn cancel_uninstall(&self) -> bool {
+        unsafe { BNPluginCancelUninstall(self.handle.as_ptr()) }
     }
 
     pub fn updated(&self, version_id: &str) -> bool {

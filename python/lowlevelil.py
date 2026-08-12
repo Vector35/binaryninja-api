@@ -6678,7 +6678,7 @@ class LowLevelILBasicBlock(basicblock.BasicBlock):
 	def __init__(
 	    self, handle: core.BNBasicBlockHandle, owner: LowLevelILFunction, view: Optional['binaryview.BinaryView']
 	):
-		super(LowLevelILBasicBlock, self).__init__(handle, view)
+		super().__init__(handle, view)
 		self._il_function = owner
 
 	def __hash__(self):

@@ -372,6 +372,9 @@ class BINARYNINJAUIAPI TypeBrowserTreeView : public QTreeView
 	Q_OBJECT
 	UIActionHandler m_actionHandler;
 
+protected:
+	virtual void scrollContentsBy(int dx, int dy) override;
+
 public:
 	explicit TypeBrowserTreeView(class TypeBrowserView* parent);
 };

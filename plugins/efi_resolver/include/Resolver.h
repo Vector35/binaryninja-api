@@ -53,8 +53,8 @@ public:
 	static string nonConflictingLocalName(Ref<Function> func, const string& basename);
 
 	/*!
-	Define the structure used at the callsite with type `typeName`, propagate it to the data section. If it's a
-	structure type, define it fields according to the `followFields` parameter. The input `addr` should be a call
+	Define the structure used at the callsite with type \c typeName, propagate it to the data section. If it's a
+	structure type, define it fields according to the \c followFields parameter. The input \c addr should be a call
 	instruction \param func the function that contains the callsite (it's parent function) \param addr address of the
 	callsite \param typeName the type that need to define \param paramIdx the parameter index that want to define \param
 	followFields whether to define the structure's fields if they are pointers \return False if failed

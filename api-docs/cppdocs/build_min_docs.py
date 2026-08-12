@@ -13,6 +13,7 @@
 # =-=--
 
 import argparse
+import glob
 import os
 import sys
 import json
@@ -31,6 +32,18 @@ def system_with_output(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE):
 							universal_newlines=True)
 	std_out, std_err = proc.communicate()
 	return proc.returncode, std_out, std_err
+
+
+def system_checked(cmd, description):
+	stat, std_out, std_err = system_with_output(cmd)
+	if stat != 0:
+		print(f"{description} failed with status code {stat}: {cmd}", file=sys.stderr)
+		if std_out:
+			print(std_out, file=sys.stderr)
+		if std_err:
+			print(std_err, file=sys.stderr)
+		sys.exit(1)
+	return std_out
 
 
 deletion_queue = []
@@ -312,7 +325,7 @@ def minifier():
 
 	# The navtree indices also need to be loaded in since we're modifying how navbar.js::getScript works.
 	# This also saves another ~60 files.
-	for nav_tree_index_file in os.listdir("html"):
+	for nav_tree_index_file in sorted(os.listdir("html")):
 		if 'navtreeindex' in nav_tree_index_file:
 			with open("html/" + nav_tree_index_file, "r") as fp:
 				navtree_built_data += fp.read() + "\n"
@@ -349,7 +362,7 @@ def build_doxygen(args):
 	if not os.path.exists('./Doxyfile-HTML'):
 		print('No Doxyfile found. Are you in the right directory?')
 		sys.exit(1)
-	_, vers, _ = system_with_output(f"{doxygen} -V")
+	vers = system_checked(f"{doxygen} -V", "Querying doxygen version")
 
 	if args.docset:
 		stat, _, _ = system_with_output("doxygen2docset --help")
@@ -368,25 +381,19 @@ def build_doxygen(args):
 			shutil.rmtree("./html/")
 	print(f'Building doxygen docs...')
 
-	if args.docset:
-		stat, out, err = system_with_output(f"{doxygen} Doxyfile-Docset")
-	else:
-		stat, out, err = system_with_output(f"{doxygen} Doxyfile-HTML")
-	print(f"Built Doxygen with status code {stat}")
+	doxyfile = "Doxyfile-Docset" if args.docset else "Doxyfile-HTML"
+	system_checked(f"{doxygen} {doxyfile}", "Building doxygen docs")
 	print("Output dir is ./html/")
-	stat, out, err = system_with_output("cp _static/img/* html/")
-	print(f"Copied images with status code {stat}")
+	system_checked("cp _static/img/* html/", "Copying images")
 	if args.docset:
-		stat, out, err = system_with_output("doxygen2docset --doxygen html --docset docset")
-		print(f"Created docset with status code {stat}")
+		system_checked("doxygen2docset --doxygen html --docset docset", "Creating docset")
 
 
 def remove_navtreedata_references():
 	"""
 	Remove references to navtreedata.js from HTML files since we've inlined it into navtree.js
 	"""
-	import glob
-	html_files = glob.glob("html/**/*.html", recursive=True)
+	html_files = sorted(glob.glob("html/**/*.html", recursive=True))
 	count = 0
 	for html_file in html_files:
 		with open(html_file, 'r') as f:
@@ -406,6 +413,22 @@ def remove_navtreedata_references():
 	print(f'Removed navtreedata.js references from {count} HTML files')
 
 
+def remove_missing_jquery_references():
+	if os.path.exists("html/jquery.js"):
+		return
+
+	for html_file in sorted(glob.glob("html/**/*.html", recursive=True)):
+		with open(html_file, 'r') as f:
+			content = f.read()
+		content = re.sub(
+			r'<script type="text/javascript" src="(?:\.\./)*jquery\.js"></script>\s*\n',
+			'',
+			content
+		)
+		with open(html_file, 'w') as f:
+			f.write(content)
+
+
 def main():
 	parser = argparse.ArgumentParser(prog=sys.argv[0])
 	parser.add_argument("--docset", action="store_true", default=False, help="Generate Dash docset")
@@ -413,9 +436,14 @@ def main():
 
 	build_doxygen(args)
 	print("Minifying Output")
+	# The docset Doxyfile sets GENERATE_TREEVIEW = NO, so navtree.js only exists for HTML builds
 	if os.path.exists("html/navtree.js"):
 		minifier()
 		remove_navtreedata_references()
+	elif not args.docset:
+		print("html/navtree.js missing after doxygen build, cannot minify output", file=sys.stderr)
+		sys.exit(1)
+	remove_missing_jquery_references()
 	for file in deletion_queue:
 		file = "./" + file
 		os.remove(file)

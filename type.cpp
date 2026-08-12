@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include "ffi.h"
 #include <cinttypes>
 
 using namespace BinaryNinja;
@@ -349,21 +350,16 @@ QualifiedName QualifiedName::operator+(const QualifiedName& other) const
 BNQualifiedName QualifiedName::GetAPIObject() const
 {
 	BNQualifiedName result;
-	result.nameCount = m_name.size();
-	result.join = BNAllocString(m_join.c_str());
-	result.name = new char*[m_name.size()];
-	for (size_t i = 0; i < m_name.size(); i++)
-		result.name[i] = BNAllocString(m_name[i].c_str());
+	result.join = AllocApiString(m_join);
+	result.name = AllocApiStringList(m_name, &result.nameCount);
 	return result;
 }
 
 
 void QualifiedName::FreeAPIObject(BNQualifiedName* name)
 {
-	for (size_t i = 0; i < name->nameCount; i++)
-		BNFreeString(name->name[i]);
-	BNFreeString(name->join);
-	delete[] name->name;
+	FreeApiStringList(name->name, name->nameCount);
+	FreeApiString(name->join);
 }
 
 

@@ -27,10 +27,9 @@ struct CacheSymbol
 	CacheSymbol(CacheSymbol&& other) noexcept = default;
 	CacheSymbol& operator=(CacheSymbol&& other) noexcept = default;
 
-	std::pair<std::string, BinaryNinja::Ref<BinaryNinja::Type>> DemangledName(BinaryNinja::BinaryView& view) const;
-
 	// NOTE: you should really only call this when adding the symbol to the view.
-	std::pair<BinaryNinja::Ref<BinaryNinja::Symbol>, BinaryNinja::Ref<BinaryNinja::Type>> GetBNSymbolAndType(BinaryNinja::BinaryView& view) const;
+	std::pair<BinaryNinja::Ref<BinaryNinja::Symbol>, BinaryNinja::Ref<BinaryNinja::Type>>
+		GetBNSymbolAndType(const BinaryNinja::DemanglerConfig& config) const;
 };
 
 struct CacheRegion

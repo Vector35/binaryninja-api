@@ -299,7 +299,11 @@ class HighLevelILInstruction(BaseILInstruction):
 	                                             ], HighLevelILOperation.HLIL_UNDEF: [],
 	    HighLevelILOperation.HLIL_UNIMPL: [], HighLevelILOperation.HLIL_UNIMPL_MEM: [
 	        ("src", "expr")
-	    ], HighLevelILOperation.HLIL_FADD: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_FSUB: [
+	    ], HighLevelILOperation.HLIL_STRUCT_INIT: [
+			("fields", "expr_list")
+		], HighLevelILOperation.HLIL_STRUCT_INIT_FIELD: [
+			("offset", "int"), ("member_index", "member_index"), ("src", "expr")
+		], HighLevelILOperation.HLIL_FADD: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_FSUB: [
 	        ("left", "expr"), ("right", "expr")
 	    ], HighLevelILOperation.HLIL_FMUL: [("left", "expr"), ("right", "expr")], HighLevelILOperation.HLIL_FDIV: [
 	        ("left", "expr"), ("right", "expr")
@@ -452,14 +456,22 @@ class HighLevelILInstruction(BaseILInstruction):
 
 	@property
 	def ast(self) -> 'HighLevelILInstruction':
-		"""This expression with full AST printing (read-only)"""
+		"""
+		This expression with full AST printing (read-only)
+
+		See `AST and Non-AST Forms <https://docs.binary.ninja/dev/bnil-hlil.html#ast-and-non-ast-forms>`_
+		"""
 		if self.as_ast:
 			return self
 		return HighLevelILInstruction.create(self.function, self.expr_index, True)
 
 	@property
 	def non_ast(self) -> 'HighLevelILInstruction':
-		"""This expression without full AST printing (read-only)"""
+		"""
+		This expression without full AST printing (read-only)
+
+		See `AST and Non-AST Forms <https://docs.binary.ninja/dev/bnil-hlil.html#ast-and-non-ast-forms>`_
+		"""
 		if not self.as_ast:
 			return self
 		return HighLevelILInstruction.create(self.function, self.expr_index, False)
@@ -943,7 +955,16 @@ class HighLevelILInstruction(BaseILInstruction):
 		return core.BNHighLevelILHasSideEffects(self.function.handle, self.expr_index)
 
 	def get_lines(self, settings: Optional['function.DisassemblySettings'] = None) -> LinesType:
-		"""Gets HLIL text lines with optional settings"""
+		"""
+		Gets HLIL text lines with optional settings
+
+		.. note::
+			The instruction renders in whichever form it is currently in, so one that is not in AST form renders
+			without its nested body and ignores ``DisassemblyOption`` settings acting on nested bodies (such as
+			``ShowCollapseIndicators``). Instructions from iterating a function or its basic blocks are not in AST
+			form; use :py:func:`ast` or :py:func:`HighLevelILFunction.root`. See `AST and Non-AST Forms
+			<https://docs.binary.ninja/dev/bnil-hlil.html#ast-and-non-ast-forms>`_.
+		"""
 		if settings is not None:
 			settings = settings.handle
 		count = ctypes.c_ulonglong()
@@ -1691,6 +1712,42 @@ class HighLevelILSplit(HighLevelILInstruction):
 		return [
 			("high", self.high, "HighLevelILInstruction"),
 			("low", self.low, "HighLevelILInstruction"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILStructInit(HighLevelILInstruction):
+	@property
+	def fields(self) -> List[HighLevelILInstruction]:
+		return self._get_expr_list(0, 1)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("fields", self.fields, "List[HighLevelILInstruction]"),
+		]
+
+
+@dataclass(frozen=True, repr=False, eq=False)
+class HighLevelILStructInitField(HighLevelILInstruction):
+	@property
+	def offset(self) -> int:
+		return self._get_int(0)
+
+	@property
+	def member_index(self) -> Optional[int]:
+		return self._get_member_index(1)
+
+	@property
+	def src(self) -> HighLevelILInstruction:
+		return self._get_expr(2)
+
+	@property
+	def detailed_operands(self) -> List[Tuple[str, HighLevelILOperandType, str]]:
+		return [
+			("offset", self.offset, "int"),
+			("member_index", self.member_index, "Optional[int]"),
+			("src", self.src, "HighLevelILInstruction"),
 		]
 
 
@@ -2608,6 +2665,9 @@ ILInstruction = {
     HighLevelILOperation.HLIL_UNDEF: HighLevelILUndef,  #  ,
     HighLevelILOperation.HLIL_UNIMPL: HighLevelILUnimpl,  #  ,
     HighLevelILOperation.HLIL_UNIMPL_MEM: HighLevelILUnimplMem,  #  ("src", "expr"),
+	HighLevelILOperation.HLIL_STRUCT_INIT: HighLevelILStructInit,  #  ("fields", "expr_list"),
+	HighLevelILOperation.HLIL_STRUCT_INIT_FIELD:
+		HighLevelILStructInitField,  #  ("offset", "int"), ("member_index", "member_index"), ("src", "expr"),
     HighLevelILOperation.HLIL_FADD: HighLevelILFadd,  #  ("left", "expr"), ("right", "expr"),
     HighLevelILOperation.HLIL_FSUB: HighLevelILFsub,  #  ("left", "expr"), ("right", "expr"),
     HighLevelILOperation.HLIL_FMUL: HighLevelILFmul,  #  ("left", "expr"), ("right", "expr"),
@@ -2747,7 +2807,13 @@ class HighLevelILFunction:
 
 	@property
 	def root(self) -> Optional[HighLevelILInstruction]:
-		"""Root of the abstract syntax tree"""
+		"""
+		Root of the abstract syntax tree
+
+		This is the AST form shown in linear view, where nested bodies are children of the statement containing them.
+		:py:func:`instructions` and the function's basic blocks yield non-AST instructions instead. See `AST and
+		Non-AST Forms <https://docs.binary.ninja/dev/bnil-hlil.html#ast-and-non-ast-forms>`_.
+		"""
 		expr_index = core.BNGetHighLevelILRootExpr(self.handle)
 		if expr_index >= core.BNGetHighLevelILExprCount(self.handle):
 			return None
@@ -2861,7 +2927,13 @@ class HighLevelILFunction:
 
 	@property
 	def instructions(self) -> Generator[HighLevelILInstruction, None, None]:
-		"""A generator of hlil instructions of the current function"""
+		"""
+		A generator of hlil instructions of the current function
+
+		These instructions are not in AST form; nested bodies are not children of the statements containing them. Use
+		:py:func:`root` for the AST form shown in linear view. See `AST and Non-AST Forms
+		<https://docs.binary.ninja/dev/bnil-hlil.html#ast-and-non-ast-forms>`_.
+		"""
 		for block in self.basic_blocks:
 			yield from block
 
@@ -3455,6 +3527,36 @@ class HighLevelILFunction:
 		:rtype: ExpressionIndex
 		"""
 		return self.expr(HighLevelILOperation.HLIL_ARRAY_INDEX, src, idx, size=size, source_location=loc)
+
+	def struct_init(self, size: int, fields: List[ExpressionIndex], loc: Optional['ILSourceLocation'] = None) -> ExpressionIndex:
+		"""
+		``struct_init`` initializes a structure with ``fields``. Each field should be a ``struct_init_field``.
+
+		:param int size: the size of the structure in bytes
+		:param List[ExpressionIndex] fields: list of fields to initialize
+		:param ILSourceLocation loc: location of returned expression
+		:return: The expression ``struct { .field = expr, ... }``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_STRUCT_INIT, len(fields), self.add_operand_list(fields), size=size, source_location=loc)
+
+	def struct_init_field(
+		self, size: int, offset: int, member_index: int, src: ExpressionIndex, loc: Optional['ILSourceLocation'] = None
+	) -> ExpressionIndex:
+		"""
+		``struct_init_field`` returns an initialization of the structure field at offset ``offset`` and index
+		``member_index`` from expression ``src`` of size ``size``. This should only be used inside a ``struct_init``
+		expression.
+
+		:param int size: the size of the field in bytes
+		:param int offset: offset of field in the structure
+		:param int member_index: index of field in the structure
+		:param ExpressionIndex src: the expression containing the value
+		:param ILSourceLocation loc: location of returned expression
+		:return: The expression ``.field = src``
+		:rtype: ExpressionIndex
+		"""
+		return self.expr(HighLevelILOperation.HLIL_STRUCT_INIT_FIELD, offset, member_index, src, size=size, source_location=loc)
 
 	def deref(self, size: int, src: ExpressionIndex, loc: Optional['ILSourceLocation']) -> ExpressionIndex:
 		"""
@@ -5113,7 +5215,7 @@ class HighLevelILBasicBlock(basicblock.BasicBlock):
 	def __init__(
 	    self, handle: core.BNBasicBlockHandle, owner: HighLevelILFunction, view: Optional['binaryview.BinaryView']
 	):
-		super(HighLevelILBasicBlock, self).__init__(handle, view)
+		super().__init__(handle, view)
 		self._il_function = owner
 
 	def __iter__(self) -> Generator[HighLevelILInstruction, None, None]:

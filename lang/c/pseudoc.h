@@ -54,6 +54,8 @@ class PseudoCFunction: public BinaryNinja::LanguageRepresentationFunction
 	void AppendFieldTextTokens(const BinaryNinja::HighLevelILInstruction& instr,
 		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
 		std::optional<bool> signedHint, bool addrOf);
+	void AppendStructInitFieldTextTokens(const BinaryNinja::HighLevelILInstruction& init, uint64_t offset,
+		size_t memberIndex, size_t size, BinaryNinja::HighLevelILTokenEmitter& tokens);
 	void AppendDefaultSplitExpr(const BinaryNinja::HighLevelILInstruction& instr, BinaryNinja::HighLevelILTokenEmitter& tokens,
 		BinaryNinja::DisassemblySettings* settings, BNOperatorPrecedence precedence);
 	void GetExprTextInternal(const BinaryNinja::HighLevelILInstruction& instr,

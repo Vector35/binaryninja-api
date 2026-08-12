@@ -6,33 +6,42 @@ To contribute to the Binary Ninja documentation, first sign the [contribution li
 
 ## Prerequisites
 
-- [sphinx]
-- [breathe]
-- [properdocs]
-- [doxygen]
-- The following plugins: `mkdocs-callouts mkdocs-click mkdocs-include-markdown-plugin mkdocs-material mkdocs-glightbox mkdocs-htmlproofer-plugin mkdocs-redirects`
+The Python documentation tools are managed with [poetry]. Building every documentation surface requires:
+
+- Python 3.10 or newer and [poetry].
+- Doxygen 1.12 or newer available on `PATH` for the C++ API reference.
+- A matching Binary Ninja installation whose `binaryninja` Python module can be imported. The API revision must match the installation's `api_REVISION.txt`.
+
+`poetry install` installs [zensical], [sphinx], and [breathe]. It does not install Doxygen or Binary Ninja.
 
 ## Building
 
 ```bash
 git clone https://github.com/Vector35/binaryninja-api/
 cd binaryninja-api
-properdocs build
+poetry install
+poetry run python scripts/zensical_build.py
 echo User documentation available in site/
 cd api-docs
-make html
-echo API documentation available in build/html
+poetry run make html
+echo Python API documentation available in build/html
+cd cppdocs
+poetry run make html
+echo C++ API documentation available in html/
 ```
 
-## Changing
-Changing documentation for the API itself is fairly straightforward. Use [doxygen style comment blocks](https://www.doxygen.nl/manual/docblocks.html) in C++ and C, and [restructured text blocks](https://sphinx-tutorial.readthedocs.io/step-1/) for python for the source. The user documentation is located in the `api/docs/` folder and the API documentation is generated from the config in the `api/api-docs` folder.
+`scripts/zensical_build.py` runs `zensical build` and then writes the redirect stubs described by `[project.plugins.redirects.redirect_maps]` in `zensical.toml`.
 
-???+ Info "Tip"
-    When updating user documentation, the `properdocs serve` feature is particularly helpful.
+## Changing
+Changing documentation for the API itself is fairly straightforward. Use [doxygen style comment blocks](https://www.doxygen.nl/manual/docblocks.html) in C++ and C, and [restructured text blocks](https://sphinx-tutorial.readthedocs.io/step-1/) for python for the source. The user documentation is located in the `docs/` folder and the API documentation is generated from the config in the `api-docs` folder.
+
+!!! Tip "Tip"
+    When updating user documentation, the `poetry run zensical serve` feature is particularly helpful for live previews.
 
 [contribution license agreement]: https://binary.ninja/cla.pdf
 [Vector 35]: https://vector35.com/
-[properdocs]: https://properdocs.org/
+[poetry]: https://python-poetry.org/
+[zensical]: https://zensical.org/
 [breathe]: https://github.com/michaeljones/breathe
 [sphinx]:  https://www.sphinx-doc.org/en/master/
 [doxygen]: https://www.doxygen.nl

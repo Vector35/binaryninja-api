@@ -50,6 +50,7 @@ from . import basicblock
 from . import function
 from . import log
 from .pluginmanager import RepositoryManager
+from .requirementcheck import pip_requirements_from_dependency_metadata, pip_requirements_satisfied
 from .enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
 from .settings import Settings
 from .enums import SettingsScope
@@ -58,6 +59,7 @@ import json
 _WARNING_REGEX = re.compile(r'^\S+:\d+: \w+Warning: ')
 
 logger = log.Logger(0, "ScriptingProvider")
+dependency_installer_logger = log.Logger(0, "DependencyInstaller")
 
 class _ThreadActionContext:
 	_actions = []
@@ -475,9 +477,12 @@ class ScriptingProvider(metaclass=_ScriptingProviderMetaclass):
 		self._cb.context = 0
 		self._cb.createInstance = self._cb.createInstance.__class__(self._create_instance)
 		self._cb.loadModule = self._cb.loadModule.__class__(self._load_module)
-		self._cb.installModules = self._cb.installModules.__class__(self._install_modules)
-		self._cb.moduleInstalled = self._cb.installModules.__class__(self._module_installed)
+		self._cb.installModules = self._cb.installModules.__class__(self._install_modules_for_callback)
 		self.handle = core.BNRegisterScriptingProvider(self.__class__.name, self.__class__.apiName, self._cb)
+		self._module_installed_cb = core.BNScriptingProviderModuleInstalledCallbacks()
+		self._module_installed_cb.context = None
+		self._module_installed_cb.moduleInstalled = self._module_installed_cb.moduleInstalled.__class__(self._module_installed)
+		core.BNSetScriptingProviderModuleInstalledCallback(self.handle, self._module_installed_cb)
 		self.__class__._registered_providers.append(self)
 
 	def _create_instance(self, ctxt):
@@ -505,7 +510,7 @@ class ScriptingProvider(metaclass=_ScriptingProviderMetaclass):
 	def _install_modules(self, ctx, modules: bytes) -> bool:
 		return False
 
-	def _module_installed(self, ctx, module: str) -> bool:
+	def _module_installed(self, ctx, modules: bytes) -> bool:
 		return False
 
 
@@ -638,7 +643,7 @@ class _PythonScriptingInstanceInput:
 
 class BlacklistedDict(dict):
 	def __init__(self, blacklist, *args):
-		super(BlacklistedDict, self).__init__(*args)
+		super().__init__(*args)
 		self.__blacklist = set(blacklist)
 		self._blacklist_enabled = True
 
@@ -648,7 +653,7 @@ class BlacklistedDict(dict):
 			    'Setting variable "{}" will have no affect as it is automatically controlled by the ScriptingProvider.\n'.
 			    format(k)
 			)
-		super(BlacklistedDict, self).__setitem__(k, v)
+		super().__setitem__(k, v)
 
 	def enable_blacklist(self, enabled):
 		self.__enable_blacklist = enabled
@@ -947,7 +952,7 @@ from binaryninja import *
 				return self.active_view.insert(self.active_selection_begin, data)
 
 	def __init__(self, provider):
-		super(PythonScriptingInstance, self).__init__(provider)
+		super().__init__(provider)
 		self.interpreter = PythonScriptingInstance.InterpreterThread(self)
 		self.interpreter.start()
 		self.queued_input = ""
@@ -1170,14 +1175,37 @@ class PythonScriptingProvider(ScriptingProvider):
 			logger.log_info(f"Ignored python UI plugin: {repo_path}/{module}")
 		return False
 
-	# This function can only be used to execute commands that return ASCII-only output, otherwise the decoding will fail
-	def _run_args(self, args, env: Optional[Dict]=None):
+	def _run_args(self, args, env: Optional[Dict]=None, output_logger=None):
 		si = None
 		if sys.platform == "win32":
 			si = subprocess.STARTUPINFO()
 			si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
 		try:
+			if output_logger is not None:
+				with subprocess.Popen(
+				    args,
+				    startupinfo=si,
+				    stdout=subprocess.PIPE,
+				    stderr=subprocess.STDOUT,
+				    env=env,
+				    text=True,
+				    encoding="utf-8",
+				    errors="replace",
+				    bufsize=1,
+				) as process:
+					output_lines = []
+					assert process.stdout is not None
+					for line in process.stdout:
+						output_lines.append(line)
+						output_logger.log_debug(line.rstrip("\r\n"))
+					result = "".join(output_lines)
+					return_code = process.wait()
+					if return_code == 0:
+						return (True, result)
+					error = subprocess.CalledProcessError(return_code, args)
+					output_logger.log_debug(str(error))
+					return (False, f"{error}\n{result}" if result else str(error))
 			return (True, subprocess.check_output(args, startupinfo=si, stderr=subprocess.STDOUT, env=env).decode("utf-8"))
 		except subprocess.CalledProcessError as se:
 			output = se.output.decode("utf-8", errors="replace") if se.output else ""
@@ -1219,7 +1247,7 @@ class PythonScriptingProvider(ScriptingProvider):
 
 		if sys.platform == "darwin":
 			if using_bundled_python:
-				python_bin = Path(binaryninja.get_install_directory()).parent / f"Frameworks/Python.framework/Versions/Current/bin/python3"
+				python_bin = Path(binaryninja.get_install_directory()).parent / "Frameworks" / "Python.framework" / "Versions" / "Current" / "bin" / "python3"
 			else:
 				python_bin = str(Path(python_lib).parent / f"bin/python{python_lib_version}")
 		elif sys.platform == "linux":
@@ -1241,27 +1269,25 @@ class PythonScriptingProvider(ScriptingProvider):
 				return os.path.realpath(dlinfo.dli_fname.decode())
 
 			if using_bundled_python:
-				python_lib = _linked_libpython()
-				if python_lib is None:
-					return (
-					    None,
-					    "Failed: No python specified. Specify a full python installation in your 'Python Interpreter' and try again"
-					)
+				python_home = Path(binaryninja.get_install_directory()) / "plugins" / "python"
+				python_lib = python_home / "lib" / f"libpython{python_lib_version}.so.1.0"
+				python_bin = python_home / "bin" / f"python{python_lib_version}"
 
-			if python_lib == os.path.realpath(sys.executable):
-				python_bin = python_lib
-			else:
-				python_path = Path(python_lib)
-				for path in python_path.parents:
-					if path.name in ["lib", "lib64"]:
-						break
+			if python_bin is None or python_bin == "":
+				if os.path.realpath(str(python_lib)) == os.path.realpath(sys.executable):
+					python_bin = python_lib
 				else:
-					return (None, f"Failed to find python binary from {python_lib}")
+					python_path = Path(python_lib)
+					for path in python_path.parents:
+						if path.name in ["lib", "lib64"]:
+							break
+					else:
+						return (None, f"Failed to find python binary from {python_lib}")
 
-				python_bin = path.parent / f"bin/python{python_lib_version}"
+					python_bin = path.parent / f"bin/python{python_lib_version}"
 		else:
 			if using_bundled_python:
-				python_bin = Path(binaryninja.get_install_directory()) / "plugins\\python\\python.exe"
+				python_bin = Path(binaryninja.get_install_directory()) / "plugins" / "python" / "python.exe"
 			else:
 				python_bin = Path(python_lib).parent / "python.exe"
 		python_bin_version = self._bin_version(python_bin, python_env=python_env)
@@ -1271,22 +1297,36 @@ class PythonScriptingProvider(ScriptingProvider):
 		return (python_bin, "Success")
 
 	def _get_python_environment(self, using_bundled_python: bool=False) -> Optional[Dict]:
-		if using_bundled_python and sys.platform == "darwin":
-			env = os.environ.copy()
-			env.pop("PYTHONPATH", None)
-			env.pop("PYTHONSTARTUP", None)
-			env["PYTHONHOME"] = str(Path(binaryninja.get_install_directory()).parent / "Resources/bundled-python3")
-			return env
-		return None
+		if not using_bundled_python:
+			return None
+
+		env = os.environ.copy()
+		env.pop("PYTHONPATH", None)
+		env.pop("PYTHONSTARTUP", None)
+
+		if sys.platform == "darwin":
+			env["PYTHONHOME"] = str(Path(binaryninja.get_install_directory()).parent / "Resources" / "bundled-python3")
+		elif sys.platform == "linux":
+			python_home = Path(binaryninja.get_install_directory()) / "plugins" / "python"
+			env["PYTHONHOME"] = str(python_home / "bundled-python3")
+			env.pop("LD_LIBRARY_PATH", None)
+		elif sys.platform == "win32":
+			python_home = Path(binaryninja.get_install_directory()) / "plugins" / "python"
+			env["PYTHONHOME"] = str(python_home)
+			env["PATH"] = str(python_home) + os.pathsep + env["PATH"] if env.get("PATH") else str(python_home)
+
+		return env
+
+	def _install_modules_for_callback(self, ctx, modules: bytes) -> bool:
+		try:
+			return self._install_modules(ctx, modules)
+		except Exception:
+			dependency_installer_logger.log_error_for_exception("Dependency installation failed")
+			return False
 
 	def _install_modules(self, ctx, _modules: bytes) -> bool:
 		# This callback should not be called directly
-		dependencies_json = json.loads(_modules.decode("utf-8"))
-		modules = ""
-		if "pip" in dependencies_json:
-			if len(dependencies_json["pip"].strip()) == 0:
-				return True
-			modules = [line.split('#', 1)[0].strip() for line in dependencies_json["pip"].split('\n') if line.split('#', 1)[0].strip()]
+		modules = pip_requirements_from_dependency_metadata(_modules)
 		if len(modules) == 0:
 			return True
 		python_lib = settings.Settings().get_string("python.interpreter")
@@ -1294,13 +1334,13 @@ class PythonScriptingProvider(ScriptingProvider):
 		python_env = self._get_python_environment(using_bundled_python=not python_lib)
 		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override, python_env=python_env)
 		if python_bin is not None and not self._pip_exists(str(python_bin), python_env=python_env):
-			logger.log_error(
+			dependency_installer_logger.log_error(
 			    f"Pip not installed for configured python: {python_bin}.\n"
 			    "Please install pip or switch python versions."
 			)
 			return False
 		if python_bin is None:
-			logger.log_error(
+			dependency_installer_logger.log_error(
 			    f"Unable to discover python executable required for installing python modules: {status}\n"
 			    "Please specify a path to a python binary in the 'Python Path Override'"
 			)
@@ -1311,7 +1351,7 @@ class PythonScriptingProvider(ScriptingProvider):
 		], env=python_env).decode("utf-8")
 		python_lib_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 		if (python_bin_version != python_lib_version):
-			logger.log_error(
+			dependency_installer_logger.log_error(
 			    f"Python Binary Setting {python_bin_version} incompatible with python library {python_lib_version}"
 			)
 			return False
@@ -1323,8 +1363,9 @@ class PythonScriptingProvider(ScriptingProvider):
 
 		args.extend(["install", "--upgrade", "--upgrade-strategy", "only-if-needed"])
 		venv = settings.Settings().get_string("python.virtualenv")
+		venv_path = Path(os.path.normpath(venv)) if venv is not None else None
 		in_virtual_env = 'VIRTUAL_ENV' in os.environ
-		if venv is not None and venv.endswith("site-packages") and Path(venv).is_dir() and not in_virtual_env:
+		if venv_path is not None and venv_path.name == "site-packages" and venv_path.is_dir() and not in_virtual_env:
 			args.extend(["--target", venv])
 		else:
 			user_dir = binaryninja.user_directory()
@@ -1337,7 +1378,7 @@ class PythonScriptingProvider(ScriptingProvider):
 			args.extend(["--target", str(site_package_dir)])
 		args.extend(list(filter(len, modules)))
 		logger.log_info(f"Running pip {args}")
-		status, result = self._run_args(args, env=python_env)
+		status, result = self._run_args(args, env=python_env, output_logger=dependency_installer_logger)
 		if status:
 			logger.log_debug(f"pip output: {result}")
 			importlib.invalidate_caches()
@@ -1348,10 +1389,21 @@ class PythonScriptingProvider(ScriptingProvider):
 			)
 		return status
 
-	def _module_installed(self, ctx, module: str) -> bool:
-		if self._python_bin is None:
+	def _module_installed(self, ctx, _modules: bytes) -> bool:
+		try:
+			modules = pip_requirements_from_dependency_metadata(_modules)
+		except Exception:
+			logger.log_error_for_exception("Failed to parse plugin dependency metadata")
 			return False
-		return re.split('>|=|,', module.strip(), 1)[0] in self._satisfied_dependencies(self._python_bin)
+
+		if len(modules) == 0:
+			return True
+
+		try:
+			return pip_requirements_satisfied(modules)
+		except Exception:
+			logger.log_error_for_exception("Failed to check plugin dependency requirements")
+			return False
 
 	@classmethod
 	def register_magic_variable(

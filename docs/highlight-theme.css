@@ -1,0 +1,47 @@
+/*
+Scheme-aware code-block syntax highlighting.
+
+Code blocks are highlighted at build time by Pygments. Zensical maps Pygments
+token classes onto --md-code-hl-* variables; this file assigns a GitHub syntax
+palette for each color scheme:
+
+  - light ("binja"): highlight.js "github" theme colors (github.com light)
+  - dark  ("slate"): highlight.js "github-dark" theme colors (github.com dark)
+
+Token slots not set here retain the theme's per-scheme defaults.
+
+Backgrounds are not set here: code-block background/foreground
+come from --md-code-bg-color / --md-code-fg-color in docs.css so blocks stay
+on the brand surfaces (--bn-white-smoke light, --bn-night dark).
+
+Syntax colors are functional rather than brand colors and remain local to this
+file. Reusable brand colors belong in brand.css.
+*/
+
+[data-md-color-scheme="binja"] {
+    --md-code-hl-keyword-color: #d73a49;   /* keywords, types, tags */
+    --md-code-hl-function-color: #6f42c1;  /* class / function names */
+    --md-code-hl-string-color: #032f62;    /* strings */
+    --md-code-hl-number-color: #005cc5;    /* numbers */
+    --md-code-hl-constant-color: #e36209;  /* builtins */
+    --md-code-hl-special-color: #005cc5;   /* preprocessor, escapes, regex */
+    --md-code-hl-variable-color: #005cc5;  /* variables, attributes */
+    --md-code-hl-comment-color: #6a737d;   /* comments, docstrings */
+}
+
+[data-md-color-scheme="slate"] {
+    --md-code-hl-keyword-color: #ff7b72;
+    --md-code-hl-function-color: #d2a8ff;
+    --md-code-hl-string-color: #a5d6ff;
+    --md-code-hl-number-color: #79c0ff;
+    --md-code-hl-constant-color: #ffa657;
+    --md-code-hl-special-color: #79c0ff;
+    --md-code-hl-variable-color: #79c0ff;
+    --md-code-hl-comment-color: #8b949e;
+}
+
+/* Pygments puts True/False/None (kc) in the "name" bucket; GitHub renders
+   language constants like numbers/literals, so give them the number slot. */
+.md-typeset .highlight .kc {
+    color: var(--md-code-hl-number-color);
+}

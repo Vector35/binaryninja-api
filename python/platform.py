@@ -796,7 +796,7 @@ _platform_cache = {}
 
 class CorePlatform(Platform):
 	def __init__(self, handle: core.BNPlatform):
-		super(CorePlatform, self).__init__(handle=handle)
+		super().__init__(handle=handle)
 		if type(self) is CorePlatform:
 			global _platform_cache
 			_platform_cache[ctypes.addressof(handle.contents)] = self

@@ -742,6 +742,17 @@ impl FunctionLifterContext {
         }
     }
 
+    /// The per-function instruction byte store populated during basic block analysis. Read it here
+    /// to avoid reading the view during lifting.
+    pub fn lifter_instruction_data(&self) -> Option<LifterInstructionData> {
+        let handle = unsafe { (*self.handle).lifterInstructionData };
+        if handle.is_null() {
+            None
+        } else {
+            Some(unsafe { LifterInstructionData::from_raw(handle) })
+        }
+    }
+
     pub fn get_function_arch_context<A: ArchitectureWithFunctionContext>(
         &self,
         _arch: &A,

@@ -99,6 +99,16 @@ class _FunctionAssociatedDataStore(associateddatastore._AssociatedDataStore):
 
 
 class DisassemblySettings:
+	"""
+	``class DisassemblySettings`` contains the options used when rendering disassembly or IL text.
+
+	.. note::
+		Not every :py:class:`~binaryninja.enums.DisassemblyOption` applies to every representation. ``IndentHLILBody``
+		and ``ShowAddress`` are applied by linear view, not by
+		:py:func:`~binaryninja.highlevelil.HighLevelILInstruction.get_lines`; options acting on nested bodies, such as
+		``ShowCollapseIndicators``, only apply to HLIL in AST form. See `AST and Non-AST Forms
+		<https://docs.binary.ninja/dev/bnil-hlil.html#ast-and-non-ast-forms>`_.
+	"""
 	def __init__(self, handle: Optional[core.BNDisassemblySettingsHandle] = None):
 		if handle is None:
 			self.handle = core.BNCreateDisassemblySettings()

@@ -359,7 +359,7 @@ After all of this, we can now get names and types for the rest of the system cal
 
 ## Statically Linked Standard Library
 
-You may ask: What if your standard library is fully statically linked and your targets never dynamically link any libraries? You could use WARP to match all the statically linked functions and assign them types ([see below](#standard-library-signatures)), but if any fail to match, you likely will want to have a Type Library so you can set their type yourself. You would have to import that Type Library into your analysis and pull types manually. Instead, you can add it to every binary automatically by using the Platform's `view_init` callback. That is relatively easy to do:
+You may ask: What if your standard library is fully statically linked and your targets never dynamically link any libraries? You could use WARP to match all the statically linked functions and assign them types ([see below](#function-signatures)), but if any fail to match, you likely will want to have a Type Library so you can set their type yourself. You would have to import that Type Library into your analysis and pull types manually. Instead, you can add it to every binary automatically by using the Platform's `view_init` callback. That is relatively easy to do:
 
 ```python
 class LinuxQuarkPlatform(Platform):

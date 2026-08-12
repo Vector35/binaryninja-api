@@ -14,6 +14,7 @@
 *.so.1.0.0
 .DS_Store
 .env
+.venv/
 Thumbs.db
 bin/
 binaryninjaapi.lib
@@ -98,3 +99,7 @@ docs/guide/debugger
 
 # AI
 .claude
+
+# Sphinx build copies of canonical brand assets
+api-docs/source/_static/css/brand.css
+api-docs/source/_static/fonts/

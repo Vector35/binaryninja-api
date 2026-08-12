@@ -88,9 +88,9 @@ public:
 	static Animation* createCopy(Animation* animation);
 	/*! Whether reduced motion is enabled for the BinaryNinja Application.
 
-	    This will return true if the `binaryninja.ui.motion` setting is enabled.
+	    This will return true if the \c binaryninja.ui.motion setting is enabled.
 
-	    The `binaryninja.ui.motion` setting will be enabled automatically if the Operating System's reduce motion
+	    The \c binaryninja.ui.motion setting will be enabled automatically if the Operating System's reduce motion
 	    setting is turned on.
 
 	    \return Whether reduced motion is enabled.

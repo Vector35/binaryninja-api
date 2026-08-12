@@ -42,6 +42,7 @@ from . import binaryview
 from . import variable
 from . import basicblock
 from . import log
+from . import unicode
 
 RegisterIndex = NewType('RegisterIndex', int)
 RegisterStackIndex = NewType('RegisterStackIndex', int)
@@ -66,6 +67,34 @@ RegisterStackType = Union[RegisterStackName, 'lowlevelil.ILRegisterStack', Regis
 SemanticClassType = Union[SemanticClassName, 'lowlevelil.ILSemanticFlagClass', SemanticClassIndex]
 SemanticGroupType = Union[SemanticGroupName, 'lowlevelil.ILSemanticFlagGroup', SemanticGroupIndex]
 IntrinsicType = Union[IntrinsicName, 'lowlevelil.ILIntrinsic', IntrinsicIndex]
+
+
+class LifterInstructionData:
+	"""Per-function store of basic block instruction bytes, populated during basic block analysis and
+	read during lifting.
+
+    .. note:: This class is meant to be used by Architecture plugins only
+    """
+
+	def __init__(self, handle: core.BNLifterInstructionDataHandle):
+		self.handle = handle
+
+	def __del__(self):
+		if core is not None:
+			core.BNFreeLifterInstructionData(self.handle)
+
+	def append(self, block: "basicblock.BasicBlock", data: bytes) -> None:
+		"""Append decoded bytes for a block. Call during basic block analysis only."""
+		core.BNLifterInstructionDataAppend(self.handle, block.handle, data, len(data))
+
+	def get(self, block: "basicblock.BasicBlock", addr: int) -> bytes:
+		"""Returns the bytes from ``addr`` to the end of its block, or ``b''`` when the block has no
+		stored data. Read-only, call during lifting."""
+		size = ctypes.c_ulonglong(0)
+		ptr = core.BNLifterInstructionDataGet(self.handle, block.handle, addr, ctypes.byref(size))
+		if not ptr:
+			return b''
+		return ctypes.string_at(ptr, size.value)
 
 
 @dataclass
@@ -216,6 +245,16 @@ class BasicBlockAnalysisContext:
 		"""Get the maximum function size setting for this context."""
 
 		return self._max_function_size
+
+	@property
+	def lifter_instruction_data(self) -> Optional["LifterInstructionData"]:
+		"""The per-function instruction byte store. Populate it during basic block analysis so that
+		lifting can read instruction bytes without touching the view from the multi-threaded stage."""
+
+		handle = self._handle.lifterInstructionData
+		if not handle:
+			return None
+		return LifterInstructionData(core.BNNewLifterInstructionDataReference(handle))
 
 	@property
 	def halt_on_invalid_instruction(self) -> bool:
@@ -532,6 +571,15 @@ class FunctionLifterContext:
 		"""Get the function architecture context"""
 
 		return self._function.arch.function_arch_contexts.get(self._function_arch_context_token, None)
+
+	@property
+	def lifter_instruction_data(self) -> Optional["LifterInstructionData"]:
+		"""The per-function instruction byte store populated during basic block analysis."""
+
+		handle = self._handle.lifterInstructionData
+		if not handle:
+			return None
+		return LifterInstructionData(core.BNNewLifterInstructionDataReference(handle))
 
 @dataclass(frozen=True)
 class RegisterInfo:
@@ -2402,7 +2450,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			b'\\x0f\\x84\\x04\\x00\\x00\\x00'
 			>>>
 		"""
-		return NotImplemented
+		raise NotImplementedError
 
 	def is_never_branch_patch_available(self, data: bytes, addr: int = 0) -> bool:
 		"""
@@ -2422,7 +2470,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			False
 			>>>
 		"""
-		return NotImplemented
+		return False
 
 	def is_always_branch_patch_available(self, data: bytes, addr: int = 0) -> bool:
 		"""
@@ -2443,7 +2491,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			False
 			>>>
 		"""
-		return NotImplemented
+		return False
 
 	def is_invert_branch_patch_available(self, data: bytes, addr: int = 0) -> bool:
 		"""
@@ -2463,7 +2511,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			False
 			>>>
 		"""
-		return NotImplemented
+		return False
 
 	def is_skip_and_return_zero_patch_available(self, data: bytes, addr: int = 0) -> bool:
 		"""
@@ -2486,7 +2534,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			False
 			>>>
 		"""
-		return NotImplemented
+		return False
 
 	def is_skip_and_return_value_patch_available(self, data: bytes, addr: int = 0) -> bool:
 		"""
@@ -2507,7 +2555,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			False
 			>>>
 		"""
-		return NotImplemented
+		return False
 
 	def convert_to_nop(self, data: bytes, addr: int = 0) -> Optional[bytes]:
 		"""
@@ -2526,7 +2574,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			b'\\x90\\x90'
 			>>>
 		"""
-		return NotImplemented
+		raise NotImplementedError
 
 	def always_branch(self, data: bytes, addr: int = 0) -> Optional[bytes]:
 		"""
@@ -2548,7 +2596,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			(['jmp', '     ', '0x9'], 5)
 			>>>
 		"""
-		return NotImplemented
+		raise NotImplementedError
 
 	def invert_branch(self, data: bytes, addr: int = 0) -> Optional[bytes]:
 		"""
@@ -2571,7 +2619,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			(['jl', '      ', '0xa'], 6)
 			>>>
 		"""
-		return NotImplemented
+		raise NotImplementedError
 
 	def skip_and_return_value(self, data: bytes, addr: int, value: int) -> Optional[bytes]:
 		"""
@@ -2590,7 +2638,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			(['mov', '     ', 'eax', ', ', '0x0'], 5)
 			>>>
 		"""
-		return NotImplemented
+		raise NotImplementedError
 
 	def register_calling_convention(self, cc: 'callingconvention.CallingConvention') -> None:
 		"""
@@ -2687,7 +2735,7 @@ _architecture_cache = {}
 
 class CoreArchitecture(Architecture):
 	def __init__(self, handle: core.BNArchitecture):
-		super(CoreArchitecture, self).__init__()
+		super().__init__()
 
 		self.handle = core.handle_of_type(handle, core.BNArchitecture)
 		self.name = core.BNGetArchitectureName(self.handle)
@@ -3361,7 +3409,7 @@ _registered_architecture_hooks: List['ArchitectureHook'] = []
 class ArchitectureHook(CoreArchitecture):
 	def __init__(self, base_arch: 'Architecture'):
 		self._base_arch = base_arch
-		super(ArchitectureHook, self).__init__(base_arch.handle)
+		super().__init__(base_arch.handle)
 
 		# To improve performance of simpler hooks, use null callback for functions that are not being overridden
 		if self.get_associated_arch_by_address.__code__ == CoreArchitecture.get_associated_arch_by_address.__code__:
@@ -3470,7 +3518,7 @@ class InstructionTextToken:
 
 	def __post_init__(self):
 		if self.width == 0:
-			self.width = len(self.text)
+			self.width = unicode.unicode_display_width(self.text)
 
 	@staticmethod
 	def _from_core_struct(tokens: 'ctypes.pointer[core.BNInstructionTextToken]',

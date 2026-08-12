@@ -37,6 +37,18 @@ bool Extension::IsInstalled() const
 	return BNPluginIsInstalled(m_object);
 }
 
+
+bool Extension::IsListed() const
+{
+	return BNPluginIsListed(m_object);
+}
+
+
+bool Extension::IsDeprecated() const
+{
+	return BNPluginIsDeprecated(m_object);
+}
+
 bool Extension::IsEnabled() const
 {
 	return BNPluginIsEnabled(m_object);
@@ -306,6 +318,12 @@ string Extension::GetProjectData()
 bool Extension::Uninstall()
 {
 	return BNPluginUninstall(m_object);
+}
+
+
+bool Extension::CancelUninstall()
+{
+	return BNPluginCancelUninstall(m_object);
 }
 
 

@@ -89,6 +89,7 @@ static constexpr std::array s_operandTypeForUsage = {
 	OperandUsageType{BlockExprsHighLevelOperandUsage, ExprListHighLevelOperand},
 	OperandUsageType{CasesHighLevelOperandUsage, ExprListHighLevelOperand},
 	OperandUsageType{ValueExprsHighLevelOperandUsage, ExprListHighLevelOperand},
+	OperandUsageType{FieldExprsHighLevelOperandUsage, ExprListHighLevelOperand},
 	OperandUsageType{SourceSSAVariablesHighLevelOperandUsage, SSAVariableListHighLevelOperand},
 	OperandUsageType{SourceMemoryVersionHighLevelOperandUsage, IndexHighLevelOperand},
 	OperandUsageType{SourceMemoryVersionsHighLevelOperandUsage, IndexListHighLevelOperand},
@@ -226,6 +227,8 @@ static constexpr std::array s_instructionOperandUsage = {
 	OperandUsage{HLIL_UNDEF},
 	OperandUsage{HLIL_UNIMPL},
 	OperandUsage{HLIL_UNIMPL_MEM, {SourceExprHighLevelOperandUsage}},
+	OperandUsage{HLIL_STRUCT_INIT, {FieldExprsHighLevelOperandUsage}},
+	OperandUsage{HLIL_STRUCT_INIT_FIELD, {OffsetHighLevelOperandUsage, MemberIndexHighLevelOperandUsage, SourceExprHighLevelOperandUsage}},
 	OperandUsage{HLIL_FADD, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
 	OperandUsage{HLIL_FSUB, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
 	OperandUsage{HLIL_FMUL, {LeftExprHighLevelOperandUsage, RightExprHighLevelOperandUsage}},
@@ -1249,6 +1252,14 @@ void HighLevelILInstruction::CollectSubExprs(stack<size_t>& toProcess) const
 	case HLIL_DEREF_FIELD_SSA:
 		toProcess.push(GetSourceExpr<HLIL_DEREF_FIELD_SSA>().exprIndex);
 		break;
+	case HLIL_STRUCT_INIT:
+		exprs = GetFieldExprs<HLIL_STRUCT_INIT>();
+		for (auto i = exprs.rbegin(); i != exprs.rend(); ++i)
+			toProcess.push(i->exprIndex);
+		break;
+	case HLIL_STRUCT_INIT_FIELD:
+		toProcess.push(GetSourceExpr<HLIL_STRUCT_INIT_FIELD>().exprIndex);
+		break;
 	case HLIL_CALL:
 		toProcess.push(GetDestExpr<HLIL_CALL>().exprIndex);
 		exprs = GetParameterExprs<HLIL_CALL>();
@@ -1560,6 +1571,13 @@ ExprId HighLevelILInstruction::CopyTo(
 		return dest->ArrayIndexSSA(size, subExprHandler(GetSourceExpr<HLIL_ARRAY_INDEX_SSA>()),
 		    GetSourceMemoryVersion<HLIL_ARRAY_INDEX_SSA>(), subExprHandler(GetIndexExpr<HLIL_ARRAY_INDEX_SSA>()),
 		    loc);
+	case HLIL_STRUCT_INIT:
+		for (auto i : GetFieldExprs<HLIL_STRUCT_INIT>())
+			params.push_back(subExprHandler(i));
+		return dest->StructInit(size, params, loc);
+	case HLIL_STRUCT_INIT_FIELD:
+		return dest->StructInitField(size, GetOffset<HLIL_STRUCT_INIT_FIELD>(),
+			GetMemberIndex<HLIL_STRUCT_INIT_FIELD>(), subExprHandler(GetSourceExpr<HLIL_STRUCT_INIT_FIELD>()), loc);
 	case HLIL_SPLIT:
 		return dest->Split(
 		    size, subExprHandler(GetHighExpr<HLIL_SPLIT>()), subExprHandler(GetLowExpr<HLIL_SPLIT>()), loc);
@@ -1992,6 +2010,26 @@ bool HighLevelILInstruction::operator<(const HighLevelILInstruction& other) cons
 		if (other.GetIndexExpr<HLIL_ARRAY_INDEX_SSA>() < GetIndexExpr<HLIL_ARRAY_INDEX_SSA>())
 			return false;
 		return GetSourceMemoryVersion<HLIL_ARRAY_INDEX_SSA>() < other.GetSourceMemoryVersion<HLIL_ARRAY_INDEX_SSA>();
+	case HLIL_STRUCT_INIT:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		return CompareExprList(GetFieldExprs<HLIL_STRUCT_INIT>(), other.GetFieldExprs<HLIL_STRUCT_INIT>());
+	case HLIL_STRUCT_INIT_FIELD:
+		if (size < other.size)
+			return true;
+		if (size > other.size)
+			return false;
+		if (GetOffset<HLIL_STRUCT_INIT_FIELD>() < other.GetOffset<HLIL_STRUCT_INIT_FIELD>())
+			return true;
+		if (other.GetOffset<HLIL_STRUCT_INIT_FIELD>() < GetOffset<HLIL_STRUCT_INIT_FIELD>())
+			return false;
+		if (GetMemberIndex<HLIL_STRUCT_INIT_FIELD>() < other.GetMemberIndex<HLIL_STRUCT_INIT_FIELD>())
+			return true;
+		if (other.GetMemberIndex<HLIL_STRUCT_INIT_FIELD>() < GetMemberIndex<HLIL_STRUCT_INIT_FIELD>())
+			return false;
+		return GetSourceExpr<HLIL_STRUCT_INIT_FIELD>() < other.GetSourceExpr<HLIL_STRUCT_INIT_FIELD>();
 	case HLIL_SPLIT:
 		if (size < other.size)
 			return true;
@@ -2614,6 +2652,15 @@ HighLevelILInstructionList HighLevelILInstruction::GetValueExprs() const
 }
 
 
+HighLevelILInstructionList HighLevelILInstruction::GetFieldExprs() const
+{
+	size_t operandIndex;
+	if (GetOperandIndexForUsage(FieldExprsHighLevelOperandUsage, operandIndex))
+		return GetRawOperandAsExprList(operandIndex);
+	throw HighLevelILInstructionAccessException();
+}
+
+
 HighLevelILSSAVariableList HighLevelILInstruction::GetSourceSSAVariables() const
 {
 	size_t operandIndex;
@@ -2913,6 +2960,19 @@ ExprId HighLevelILFunction::ArrayIndexSSA(
     size_t size, ExprId src, size_t srcMemVersion, ExprId idx, const ILSourceLocation& loc)
 {
 	return AddExprWithLocation(HLIL_ARRAY_INDEX_SSA, loc, size, src, srcMemVersion, idx);
+}
+
+
+ExprId HighLevelILFunction::StructInit(size_t size, const vector<ExprId>& fields, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_STRUCT_INIT, loc, size, fields.size(), AddOperandList(fields));
+}
+
+
+ExprId HighLevelILFunction::StructInitField(
+	size_t size, uint64_t offset, size_t memberIndex, ExprId src, const ILSourceLocation& loc)
+{
+	return AddExprWithLocation(HLIL_STRUCT_INIT_FIELD, loc, size, offset, memberIndex, src);
 }
 
 

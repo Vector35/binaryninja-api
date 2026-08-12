@@ -583,7 +583,7 @@ Binary Ninja loads signature libraries from 2 locations:
  - [$INSTALL_DIR](https://docs.binary.ninja/guide/#binary-path)/signatures/$PLATFORM
  - [$USER_DIR](https://docs.binary.ninja/guide/#user-folder)/signatures/$PLATFORM
 
-???+ Danger "Warning"
+!!! Warning "Warning"
     Always place your signature libraries in your user directory. The install path is wiped whenever Binary Ninja auto-updates. You can locate it with `Open Plugin Folder` in the command palette and navigate "up" a directory.
 
 Inside the signatures folder, each platform has its own folder for its set of signatures. For example, `windows-x86_64` and `linux-ppc32` are two sample platforms. When the signature matcher runs, it uses the signature libraries that are relevant to the current binary's platform. (You can check the platform of any binary you have open in the UI using the console and typing `bv.platform`)

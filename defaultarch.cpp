@@ -101,6 +101,8 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 	auto& haltedDisassemblyAddresses = context.GetHaltedDisassemblyAddresses();
 	auto& inlinedUnresolvedIndirectBranches = context.GetInlinedUnresolvedIndirectBranches();
 
+	Ref<LifterInstructionData> instrData = context.GetLifterInstructionData();
+
 	bool hasInvalidInstructions = false;
 	set<ArchAndAddr> guidedSourceBlockTargets;
 	auto guidedSourceBlocks = function->GetGuidedSourceBlocks();
@@ -211,9 +213,13 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 					{
 						// Instruction is in the middle of a block, need to split the basic block into two
 						Ref<BasicBlock> splitBlock = context.CreateBasicBlock(location.arch, location.address);
-						size_t instrDataLen;
-						const uint8_t* instrData = targetBlock->GetInstructionData(location.address, &instrDataLen);
-						splitBlock->AddInstructionData(instrData, instrDataLen);
+						if (instrData)
+						{
+							// Copy before appending, as Append can invalidate the span returned by Get
+							std::span<const uint8_t> tail = instrData->Get(targetBlock, location.address);
+							std::vector<uint8_t> splitData(tail.begin(), tail.end());
+							instrData->Append(splitBlock, splitData);
+						}
 						splitBlock->SetFallThroughToFunction(targetBlock->IsFallThroughToFunction());
 						splitBlock->SetUndeterminedOutgoingEdges(targetBlock->HasUndeterminedOutgoingEdges());
 						splitBlock->SetCanExit(targetBlock->CanExit());
@@ -594,7 +600,8 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 			}
 
 			location.address += info.length;
-			block->AddInstructionData(opcode, info.length);
+			if (instrData)
+				instrData->Append(block, std::span<const uint8_t>(opcode, info.length));
 
 			if (endsBlock && !info.delaySlots)
 				break;
@@ -780,12 +787,13 @@ static void ApplyExternPointerForRelocation(
 
 bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLifterContext& context)
 {
-	std::unique_ptr<FastBasicBlockMap<DataBuffer>> instrData;
 	Ref<BinaryView> data = context.GetView();
 	Ref<Logger> logger = context.GetLogger();
 	Ref<Platform> platform = context.GetPlatform();
 	std::set<ArchAndAddr> noReturnCalls = context.GetNoReturnCalls();
 	std::vector<Ref<BasicBlock>> blocks = context.GetBasicBlocks();
+	Ref<LifterInstructionData> lifterInstructionData = context.GetLifterInstructionData();
+	FastBasicBlockMap<DataBuffer> instrData(blocks);
 	std::map<ArchAndAddr, bool> contextualReturns = context.GetContextualReturns();
 	std::map<ArchAndAddr, ArchAndAddr> inlinedRemapping = context.GetInlinedRemapping();
 	std::optional<pair<ArchAndAddr, ArchAndAddr>> indirectSource;
@@ -835,26 +843,20 @@ bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLif
 			}
 
 			size_t len = 0;
-			const uint8_t* opcode;
-
-			if (i->HasInstructionData())
+			const uint8_t* opcode = nullptr;
+			if (lifterInstructionData)
 			{
-				opcode = i->GetInstructionData(addr, &len);
-
-				if (len == 0)
-				{
-					// Instruction data not found, emit undefined IL instruction
-					function->AddInstruction(function->AddExpr(LLIL_UNDEF, 0, 0));
-					logger->LogDebug("Instruction data not found, inserted LLIL_UNDEF at %#" PRIx64, addr);
-					break;
-				}
+				std::span<const uint8_t> bytes = lifterInstructionData->Get(i, addr);
+				opcode = bytes.data();
+				len = bytes.size();
 			}
-			else
-			{
-				if (!instrData)
-					instrData = std::make_unique<FastBasicBlockMap<DataBuffer>>(blocks);
 
-				DataBuffer& buffer = (*instrData)[i];
+			if (!opcode)
+			{
+				// The instruction data has no bytes for this block (a function loaded from the
+				// database, a block split after analysis, or an architecture that does not populate
+				// it). Read the block from the view instead.
+				DataBuffer& buffer = instrData[i];
 				if (buffer.GetLength() == 0)
 					buffer = data->ReadBuffer(i->GetStart(), i->GetEnd() - i->GetStart());
 

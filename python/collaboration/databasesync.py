@@ -184,11 +184,11 @@ def get_local_snapshot_for_remote(snapshot: snapshot.CollabSnapshot, database: D
 	return Snapshot(handle=ctypes.cast(value, ctypes.POINTER(core.BNSnapshot)))
 
 
-def sync_database(database: Database, file_: 'file.RemoteFile', conflict_handler: 'util.ConflictHandlerType', progress: 'util.ProgressFuncType' = util.nop, name_changeset: 'util.NameChangesetFuncType' = util.nop):
+def sync_database(metadata: FileMetadata, file_: 'file.RemoteFile', conflict_handler: 'util.ConflictHandlerType', progress: 'util.ProgressFuncType' = util.nop, name_changeset: 'util.NameChangesetFuncType' = util.nop):
 	"""
 	Completely sync a database, pushing/pulling/merging/applying changes
 
-	:param database: Database to sync
+	:param metadata: File opened from database to sync
 	:param file_: File to sync with
 	:param conflict_handler: Function to call to resolve snapshot conflicts
 	:param progress: Function to call for progress updates
@@ -196,7 +196,7 @@ def sync_database(database: Database, file_: 'file.RemoteFile', conflict_handler
 	:raises RuntimeError: If there was an error (or the operation was cancelled)
 	"""
 
-	if not core.BNCollaborationSyncDatabase(ctypes.cast(database.handle, core.BNDatabaseHandle), file_._handle, util.wrap_conflict_handler(conflict_handler), None, util.wrap_progress(progress), None, util.wrap_name_changeset(name_changeset), None):
+	if not core.BNCollaborationSyncDatabase(ctypes.cast(metadata.handle, core.BNFileMetadataHandle), file_._handle, util.wrap_conflict_handler(conflict_handler), None, util.wrap_progress(progress), None, util.wrap_name_changeset(name_changeset), None):
 		raise RuntimeError(util._last_error())
 
 

@@ -448,9 +448,8 @@ impl RemoteFile {
             path.as_ref(),
             progress.next_subpart().unwrap(),
         )?;
-        let database = file.database().ok_or(())?;
         self.sync_with_progress(
-            &database,
+            &file,
             DatabaseConflictHandlerFail,
             NoNameChangeset,
             progress.next_subpart().unwrap(),
@@ -465,11 +464,11 @@ impl RemoteFile {
     /// * `name_changeset` - Function to call for naming a pushed changeset, if necessary
     pub fn sync<C: DatabaseConflictHandler, N: NameChangeset>(
         &self,
-        database: &Database,
+        metadata: &FileMetadata,
         conflict_handler: C,
         name_changeset: N,
     ) -> Result<(), ()> {
-        sync::sync_database(database, self, conflict_handler, name_changeset)
+        sync::sync_database(metadata, self, conflict_handler, name_changeset)
     }
 
     /// Completely sync a file, pushing/pulling/merging/applying changes
@@ -480,13 +479,13 @@ impl RemoteFile {
     /// * `progress` - Function to call for progress updates
     pub fn sync_with_progress<C: DatabaseConflictHandler, P: ProgressCallback, N: NameChangeset>(
         &self,
-        database: &Database,
+        metadata: &FileMetadata,
         conflict_handler: C,
         name_changeset: N,
         progress: P,
     ) -> Result<(), ()> {
         sync::sync_database_with_progress(
-            database,
+            metadata,
             self,
             conflict_handler,
             name_changeset,

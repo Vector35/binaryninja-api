@@ -2,7 +2,7 @@
 
 Projects provide a way to keep and organize related binaries, databases, and resources in a managed format.
 
-???+ Important "Supported Editions"
+!!! Important "Supported Editions"
     Projects are only available in the Commercial and Ultimate editions of Binary Ninja
 
 ## Creating a Project

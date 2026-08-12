@@ -54,6 +54,7 @@ class BINARYNINJAUIAPI TokenizedTextView :
 
 	RenderContext m_render;
 	int m_cols, m_rows;
+	size_t m_contentCols = 0;
 	int m_wheelDelta;
 	bool m_updatingScrollBar;
 
@@ -73,6 +74,7 @@ class BINARYNINJAUIAPI TokenizedTextView :
 	QPointer<CommentDialog> m_commentDialog;
 
 	void adjustSize(int width, int height);
+	void updateContentWidth();
 
 	void scrollLines(int count);
 
@@ -117,7 +119,7 @@ class BINARYNINJAUIAPI TokenizedTextView :
 
 	//! Get the length of of the string (if there is one) starting at the
 	//! given address. String type is assumed to be UTF-8 by default, but the
-	//! `charSize` parameter can be set to 2 or 4 to look for UTF-16 or
+	//! \c charSize parameter can be set to 2 or 4 to look for UTF-16 or
 	//! UTF-32 string, respectively.
 	//!
 	//! Returns the length of the string in bytes, NOT the number of characters.

@@ -6,13 +6,13 @@ use binaryninjacore_sys::*;
 use std::collections::HashMap;
 use std::ffi::c_void;
 use std::fmt::Debug;
+use std::path::Path;
 use std::ptr::NonNull;
 
 use crate::binary_view::BinaryView;
 use crate::data_buffer::DataBuffer;
 use crate::database::kvs::KeyValueStore;
 use crate::database::snapshot::{Snapshot, SnapshotId};
-use crate::file_metadata::FileMetadata;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::rc::{Array, Ref, RefCountable};
 use crate::string::{BnString, IntoCStr};
@@ -28,6 +28,17 @@ impl Database {
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNDatabase>) -> Ref<Self> {
         Ref::new(Self { handle })
+    }
+
+    /// Open a database with the given file path
+    pub fn open_existing(path: impl AsRef<Path>) -> Result<Ref<Self>, ()> {
+        let db = unsafe { Self::ref_from_raw(NonNull::new(BNCreateDatabaseInstance()).ok_or(())?) };
+        let path_raw = path.as_ref().to_cstr();
+        if unsafe { BNDatabaseOpenExisting(db.handle.as_ptr(), path_raw.as_ptr()) } {
+            Ok(db)
+        } else {
+            Err(())
+        }
     }
 
     /// Get a [`Snapshot`] by its `id`, or `None` if no snapshot with that `id` exists.
@@ -181,23 +192,15 @@ impl Database {
         unsafe { BNWriteDatabaseGlobalData(self.handle.as_ptr(), key_raw.as_ptr(), value.as_raw()) }
     }
 
-    /// Get the owning FileMetadata
-    pub fn file(&self) -> Ref<FileMetadata> {
-        let result = unsafe { BNGetDatabaseFile(self.handle.as_ptr()) };
-        assert!(!result.is_null());
-        FileMetadata::ref_from_raw(result)
-    }
-
     /// Get the backing analysis cache kvs
     pub fn analysis_cache(&self) -> Ref<KeyValueStore> {
         let result = unsafe { BNReadDatabaseAnalysisCache(self.handle.as_ptr()) };
         unsafe { KeyValueStore::ref_from_raw(NonNull::new(result).unwrap()) }
     }
 
+    #[deprecated(note = "Use crate::file_metadata::FileMetadata::reopen_moved_database instead")]
     /// Closes then reopens the database.
-    pub fn reload_connection(&self) {
-        unsafe { BNDatabaseReloadConnection(self.handle.as_ptr()) }
-    }
+    pub fn reload_connection(&self) {}
 
     pub fn write_analysis_cache(&self, val: &KeyValueStore) -> Result<(), ()> {
         if unsafe { BNWriteDatabaseAnalysisCache(self.handle.as_ptr(), val.handle.as_ptr()) } {

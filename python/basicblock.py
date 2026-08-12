@@ -505,35 +505,6 @@ class BasicBlock:
 		"""
 		core.BNClearBasicBlockPendingOutgoingEdges(self.handle)
 
-	def get_instruction_data(self, addr: int) -> bytes:
-		"""
-		Returns the raw instruction data for the basic block at the specified address.
-
-		.. note:: This method is intended for use by architecture plugins only.
-
-		:return: Raw instruction data as bytes.
-		"""
-
-		size = ctypes.c_ulonglong(0)
-		data = core.BNBasicBlockGetInstructionData(self.handle, addr, ctypes.byref(size))
-		if data is None:
-			return b''
-
-		return ctypes.string_at(data, size.value)
-
-	def add_instruction_data(self, data: bytes) -> None:
-		"""
-		Adds raw instruction data to the basic block.
-
-		.. note:: This method is intended for use by architecture plugins only.
-
-		:param bytes data: Raw instruction data to add to the basic block.
-		"""
-		if not isinstance(data, bytes):
-			raise TypeError("data must be of type bytes")
-
-		core.BNBasicBlockAddInstructionData(self.handle, data, len(data))
-
 	@property
 	def fallthrough_to_function(self) -> bool:
 		"""Whether the basic block has a fallthrough edge to a function."""

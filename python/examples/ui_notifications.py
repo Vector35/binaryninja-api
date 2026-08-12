@@ -98,6 +98,10 @@ class UINotification(UIContextNotification):
 		# This function only works in C++: Name is an out param (cpp: &name), and not modifiable by python.
 		print(f"py OnContextMenuCreated {context} {view} {menu}")
 
+	def OnTokenDoubleClicked(self, context, frame, view, location, token):
+		print(f"py OnTokenDoubleClicked {token.token.text!r} @ {location.getOffset():#x}")
+		return False  # return False to let the default double-click behavior run
+
 	def OnActionExecutedImmutable(self, context, handler, name, ctx):
 		print(f"py OnActionExecutedImmutable {context} {handler} {name} {ctx}")
 

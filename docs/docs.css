@@ -1,161 +1,159 @@
-/* roboto-mono-regular - latin */
 @font-face {
-  font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+  font-display: swap;
   font-family: 'Roboto Mono';
   font-style: normal;
   font-weight: 400;
-  src: url('../fonts/roboto-mono-v22-latin-regular.eot'); /* IE9 Compat Modes */
-  src: url('../fonts/roboto-mono-v22-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
-       url('../fonts/roboto-mono-v22-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
-       url('../fonts/roboto-mono-v22-latin-regular.woff') format('woff'), /* Modern Browsers */
-       url('../fonts/roboto-mono-v22-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
-       url('../fonts/roboto-mono-v22-latin-regular.svg#RobotoMono') format('svg'); /* Legacy iOS */
+  src: url('./fonts/roboto-mono-v22-latin-regular.woff2') format('woff2');
 }
-/* roboto-mono-italic - latin */
 @font-face {
-  font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+  font-display: swap;
   font-family: 'Roboto Mono';
   font-style: italic;
   font-weight: 400;
-  src: url('../fonts/roboto-mono-v22-latin-italic.eot'); /* IE9 Compat Modes */
-  src: url('../fonts/roboto-mono-v22-latin-italic.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
-       url('../fonts/roboto-mono-v22-latin-italic.woff2') format('woff2'), /* Super Modern Browsers */
-       url('../fonts/roboto-mono-v22-latin-italic.woff') format('woff'), /* Modern Browsers */
-       url('../fonts/roboto-mono-v22-latin-italic.ttf') format('truetype'), /* Safari, Android, iOS */
-       url('../fonts/roboto-mono-v22-latin-italic.svg#RobotoMono') format('svg'); /* Legacy iOS */
+  src: url('./fonts/roboto-mono-v22-latin-italic.woff2') format('woff2');
 }
-/* roboto-mono-700 - latin */
 @font-face {
-  font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+  font-display: swap;
   font-family: 'Roboto Mono';
   font-style: normal;
   font-weight: 700;
-  src: url('../fonts/roboto-mono-v22-latin-700.eot'); /* IE9 Compat Modes */
-  src: url('../fonts/roboto-mono-v22-latin-700.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
-       url('../fonts/roboto-mono-v22-latin-700.woff2') format('woff2'), /* Super Modern Browsers */
-       url('../fonts/roboto-mono-v22-latin-700.woff') format('woff'), /* Modern Browsers */
-       url('../fonts/roboto-mono-v22-latin-700.ttf') format('truetype'), /* Safari, Android, iOS */
-       url('../fonts/roboto-mono-v22-latin-700.svg#RobotoMono') format('svg'); /* Legacy iOS */
+  src: url('./fonts/roboto-mono-v22-latin-700.woff2') format('woff2');
 }
-/* roboto-mono-700italic - latin */
 @font-face {
-  font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
+  font-display: swap;
   font-family: 'Roboto Mono';
   font-style: italic;
   font-weight: 700;
-  src: url('../fonts/roboto-mono-v22-latin-700italic.eot'); /* IE9 Compat Modes */
-  src: url('../fonts/roboto-mono-v22-latin-700italic.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
-       url('../fonts/roboto-mono-v22-latin-700italic.woff2') format('woff2'), /* Super Modern Browsers */
-       url('../fonts/roboto-mono-v22-latin-700italic.woff') format('woff'), /* Modern Browsers */
-       url('../fonts/roboto-mono-v22-latin-700italic.ttf') format('truetype'), /* Safari, Android, iOS */
-       url('../fonts/roboto-mono-v22-latin-700italic.svg#RobotoMono') format('svg'); /* Legacy iOS */
+  src: url('./fonts/roboto-mono-v22-latin-700italic.woff2') format('woff2');
 }
 
-/* roboto-300 - latin */
 @font-face {
-  font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
-  font-family: 'Roboto';
-  font-style: normal;
-  font-weight: 300;
-  src: url('./fonts/roboto-v30-latin-300.eot'); /* IE9 Compat Modes */
-  src: url('./fonts/roboto-v30-latin-300.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
-       url('./fonts/roboto-v30-latin-300.woff2') format('woff2'), /* Super Modern Browsers */
-       url('./fonts/roboto-v30-latin-300.woff') format('woff'), /* Modern Browsers */
-       url('./fonts/roboto-v30-latin-300.ttf') format('truetype'), /* Safari, Android, iOS */
-       url('./fonts/roboto-v30-latin-300.svg#Roboto') format('svg'); /* Legacy iOS */
-}
-/* roboto-300italic - latin */
-@font-face {
-  font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
-  font-family: 'Roboto';
-  font-style: italic;
-  font-weight: 300;
-  src: url('./fonts/roboto-v30-latin-300italic.eot'); /* IE9 Compat Modes */
-  src: url('./fonts/roboto-v30-latin-300italic.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
-       url('./fonts/roboto-v30-latin-300italic.woff2') format('woff2'), /* Super Modern Browsers */
-       url('./fonts/roboto-v30-latin-300italic.woff') format('woff'), /* Modern Browsers */
-       url('./fonts/roboto-v30-latin-300italic.ttf') format('truetype'), /* Safari, Android, iOS */
-       url('./fonts/roboto-v30-latin-300italic.svg#Roboto') format('svg'); /* Legacy iOS */
-}
-/* roboto-regular - latin */
-@font-face {
-  font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
-  font-family: 'Roboto';
+  font-display: swap;
+  font-family: 'Open Sans';
   font-style: normal;
   font-weight: 400;
-  src: url('./fonts/roboto-v30-latin-regular.eot'); /* IE9 Compat Modes */
-  src: url('./fonts/roboto-v30-latin-regular.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
-       url('./fonts/roboto-v30-latin-regular.woff2') format('woff2'), /* Super Modern Browsers */
-       url('./fonts/roboto-v30-latin-regular.woff') format('woff'), /* Modern Browsers */
-       url('./fonts/roboto-v30-latin-regular.ttf') format('truetype'), /* Safari, Android, iOS */
-       url('./fonts/roboto-v30-latin-regular.svg#Roboto') format('svg'); /* Legacy iOS */
+  src: url('./fonts/OpenSans-Regular.ttf') format('truetype');
 }
-/* roboto-italic - latin */
+
 @font-face {
-  font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
-  font-family: 'Roboto';
+  font-display: swap;
+  font-family: 'Open Sans';
   font-style: italic;
   font-weight: 400;
-  src: url('./fonts/roboto-v30-latin-italic.eot'); /* IE9 Compat Modes */
-  src: url('./fonts/roboto-v30-latin-italic.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
-       url('./fonts/roboto-v30-latin-italic.woff2') format('woff2'), /* Super Modern Browsers */
-       url('./fonts/roboto-v30-latin-italic.woff') format('woff'), /* Modern Browsers */
-       url('./fonts/roboto-v30-latin-italic.ttf') format('truetype'), /* Safari, Android, iOS */
-       url('./fonts/roboto-v30-latin-italic.svg#Roboto') format('svg'); /* Legacy iOS */
+  src: url('./fonts/OpenSans-Italic.ttf') format('truetype');
 }
-/* roboto-700 - latin */
 @font-face {
-  font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
-  font-family: 'Roboto';
+  font-display: swap;
+  font-family: 'Open Sans';
   font-style: normal;
   font-weight: 700;
-  src: url('./fonts/roboto-v30-latin-700.eot'); /* IE9 Compat Modes */
-  src: url('./fonts/roboto-v30-latin-700.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
-       url('./fonts/roboto-v30-latin-700.woff2') format('woff2'), /* Super Modern Browsers */
-       url('./fonts/roboto-v30-latin-700.woff') format('woff'), /* Modern Browsers */
-       url('./fonts/roboto-v30-latin-700.ttf') format('truetype'), /* Safari, Android, iOS */
-       url('./fonts/roboto-v30-latin-700.svg#Roboto') format('svg'); /* Legacy iOS */
+  src: url('./fonts/OpenSans-Bold.ttf') format('truetype');
 }
-/* roboto-700italic - latin */
 @font-face {
-  font-display: swap; /* Check https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/font-display for other options. */
-  font-family: 'Roboto';
+  font-display: swap;
+  font-family: 'Open Sans';
   font-style: italic;
   font-weight: 700;
-  src: url('./fonts/roboto-v30-latin-700italic.eot'); /* IE9 Compat Modes */
-  src: url('./fonts/roboto-v30-latin-700italic.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
-       url('./fonts/roboto-v30-latin-700italic.woff2') format('woff2'), /* Super Modern Browsers */
-       url('./fonts/roboto-v30-latin-700italic.woff') format('woff'), /* Modern Browsers */
-       url('./fonts/roboto-v30-latin-700italic.ttf') format('truetype'), /* Safari, Android, iOS */
-       url('./fonts/roboto-v30-latin-700italic.svg#Roboto') format('svg'); /* Legacy iOS */
+  src: url('./fonts/OpenSans-BoldItalic.ttf') format('truetype');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Bebas Neue';
+  font-style: normal;
+  font-weight: 700;
+  src: url('./fonts/bebas-neue-bold.woff2') format('woff2');
 }
 
 :root {
-    --md-text-font: "Roboto";
+    --md-text-font: "Open Sans";
     --md-code-font: "Roboto Mono";
 }
 
-/* Add the matching padding they forgot at the bottom of the page */
+/* Display headings retain source casing for copy/paste and accessibility. */
+.md-typeset h1,
+.md-typeset h2 {
+    font-family: var(--bn-font-display);
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+.md-typeset .admonition :is(h1, h2) {
+    font-family: inherit;
+}
+
+.md-nav--primary .md-nav__item .md-nav__link--active,
+.md-nav--primary .md-nav__item .md-nav__link--active:is(:focus, :hover) {
+    background: var(--bn-night);
+    border-radius: 0;
+    color: var(--bn-white);
+}
+
+.md-nav--primary .md-nav__container:has(> .md-nav__link--active) {
+    background: var(--bn-night);
+}
+
+/* Balance the theme's top page spacing. */
 .md-main__inner { margin-bottom: 1.5rem; }
 
-/* Workaround for them using :first-child in the header topic for no good reason */
+/* Keep both header topic states at the same weight. */
 .md-header__topic { font-weight: 700; }
 
-/* Make headings stand out more */
+/* Header wordmark (img/wordmark-white.svg, white art — the header is dark in
+   both schemes). Sized from the ~2.4rem header height; the wordmark replaces
+   the site-name text on desktop, while the page-topic scroll swap stays. On
+   mobile the theme hides the logo, so the text brand stays there. */
+.md-header__button.md-logo { padding: .25rem .4rem; }
+.md-header__button.md-logo img { height: 1.5rem; }
+@media screen and (min-width: 76.25em) {
+    .md-header__topic:first-child { display: none; }
+}
+
+/* Drawer (mobile nav) header: just the wordmark, centered ("User
+   Documentation" already appears as the first nav item below, and the
+   repo/source box is redundant in the drawer). The raw site_name text
+   node is hidden via font-size:0. Scoped to the theme's drawer breakpoint —
+   above it the theme hides this element (it duplicates the header logo).
+   On the light scheme the drawer background is light, so the logo swaps
+   to the dark-art wordmark variant (a filter can't be used: invert() would
+   turn the red NINJA cyan). */
+@media screen and (max-width: 76.1875em) {
+    .md-nav--primary .md-nav__title[for="__drawer"] {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0;
+        height: auto;
+        padding: 0.9rem 0.8rem;
+    }
+    .md-nav .md-nav__title[for="__drawer"] .md-logo {
+        height: auto;
+        width: auto;
+        margin: 0;
+        padding: 0;
+    }
+    .md-nav .md-nav__title[for="__drawer"] .md-logo img { height: 1.4rem; width: auto; }
+    [data-md-color-scheme="binja"] .md-nav .md-nav__title[for="__drawer"] .md-logo img {
+        content: url("img/wordmark-two-color-dark.svg");
+    }
+    .md-nav--primary .md-nav__source { display: none; }
+}
+
+/* Strengthen the in-page heading hierarchy. */
 .md-typeset h1 { font-weight: 700; color: var(--md-typeset-color); }
 .md-typeset h2 { font-weight: 700; border-bottom: 2px solid var(--md-typeset-color); padding-bottom: 4px; }
 .md-typeset h3 { font-weight: 700; }
 .md-typeset h4 { font-weight: 700; }
 .md-typeset h5 { font-weight: 700; }
 
-/* Make links in main text underlined so you actually know they're clickable */
+/* Preserve a non-color link affordance in body content. */
 .md-typeset a { text-decoration: underline; }
 .md-typeset a:hover { text-decoration: none; }
 
-/* Also make the "more on this page" text underlined so you know it's clickable */
+/* Match the search result expansion affordance to body links. */
 .md-search-result__more summary div { text-decoration: underline; }
 
-/* Implement a highlight behind search results instead of changing text color */
+/* Highlight search matches without reducing text contrast. */
 .md-search-result mark {
     color: var(--md-default-fg-color--light);
     text-decoration: none;
@@ -259,61 +257,180 @@ h3#all-settings+p+div table tbody tr>td:nth-child(6) {
     max-width: 95%;
 }
 
+/* Map explicit brand tokens onto the theme palette. Local color literals are
+ * limited to structural translucencies; reusable colors belong in brand.css. */
 
-/*
-Internally, the theme uses an --md-hue variable to determine the "accent color" and then calculates all other colors
-based off of that value depending on the element's usage. This doesn't actually work that well and it's a huge pain to
-work with because most people can't answer "What does 54% of this slightly-bluish green color look like?" when they're
-designing. So, below, I've replaced a whole bunch of these values with RGBs to force the theme to stop being bad in
-multiple different contexts.
-
-Since we also don't use variables for any of the colors, I'm putting a list of them below. We have based the entire
-theme off of variants of the Binary Ninja Red color (which is our main accent):
-
-Sea Salt                #FAFAFA         hsla(var(--md-hue),5%,98%,1)
-White Smoke             #F3F1F1         hsla(var(--md-hue),8%,95%,1)
-Platinum                #EBE1E0         hsla(var(--md-hue),20%,90%,1)
-Binary Ninja            #D63826         hsla(var(--md-hue),70%,49%,1)
-Rosewood                #57160F         hsla(var(--md-hue),70%,20%,1)
-Jet                     #2B2727         hsla(var(--md-hue),5%,16%,1)
-Night                   #1B1818         hsla(var(--md-hue),5%,10%,1)
- */
-
-[data-md-color-scheme="slate"] {
+/* Match the theme's two-attribute palette selectors so these overrides win. */
+[data-md-color-scheme="slate"][data-md-color-primary] {
     --md-hue: 6;
-    --md-default-bg-color: #2B2727;
-    --md-default-fg-color: #F3F1F1;
-    --md-default-fg-color--light: #F3F1F1C0;  /* Change the alpha to be not so transparent */
-    --md-primary-fg-color: #D63826;
-    --md-primary-fg-color--light: #EBE1E0;
-    --md-primary-fg-color--dark: #57160F;
-    --md-code-bg-color: #1B1818;
-    --md-code-fg-color: #EBE1E0;
-    --md-typeset-color: #F3F1F1;
-    --md-typeset-a-color: #D63826;
-    --md-nav-primary: #D63826;
-    --md-search-highlight-color: #57160F;
+    --md-default-bg-color: var(--bn-jet);
+    --md-default-fg-color: var(--bn-white-smoke);
+    --md-default-fg-color--light: color-mix(in srgb, var(--bn-white-smoke) 75%, transparent);  /* less transparent than theme default */
+    --md-primary-fg-color: var(--bn-red);
+    --md-primary-fg-color--light: var(--bn-platinum);
+    --md-primary-fg-color--dark: var(--bn-rosewood);
+    --md-code-bg-color: var(--bn-night);
+    --md-code-fg-color: var(--bn-platinum);
+    --md-typeset-color: var(--bn-white-smoke);
+    --md-typeset-a-color: var(--bn-link-dark);
+    --md-accent-fg-color: var(--bn-link-dark);
+    --md-nav-primary: var(--bn-red);
+    --md-search-highlight-color: var(--bn-rosewood);
 }
 
-[data-md-color-scheme="binja"] {
+[data-md-color-scheme="binja"][data-md-color-primary] {
     --md-hue: 6;
-    --md-default-bg-color: #FAFAFA;
-    --md-default-fg-color: #1B1818;
-    --md-default-fg-color--light: #1B1818C0;  /* Change the alpha to be not so transparent */
-    --md-primary-fg-color: #D63826;
-    --md-primary-fg-color--light: #EBE1E0;
-    --md-primary-fg-color--dark: #57160F;
-    --md-code-bg-color: #F3F1F1;
-    --md-code-fg-color: #2B2727;
-    --md-typeset-color: #1B1818;
-    --md-typeset-a-color: #D63826;
-    --md-nav-primary: #D63826;
-    --md-search-highlight-color: #EBE1E0;
+    --md-default-bg-color: var(--bn-sea-salt);
+    --md-default-fg-color: var(--bn-night);
+    --md-default-fg-color--light: color-mix(in srgb, var(--bn-night) 75%, transparent);  /* less transparent than theme default */
+    --md-primary-fg-color: var(--bn-red);
+    --md-primary-fg-color--light: var(--bn-platinum);
+    --md-primary-fg-color--dark: var(--bn-rosewood);
+    --md-code-bg-color: var(--bn-white-smoke);
+    --md-code-fg-color: var(--bn-jet);
+    --md-typeset-color: var(--bn-night);
+    --md-typeset-a-color: var(--bn-link-light);
+    --md-accent-fg-color: var(--bn-link-light);
+    --md-nav-primary: var(--bn-red);
+    --md-search-highlight-color: var(--bn-platinum);
 }
 
-
-/* Experimenting
-.md-sidebar--secondary {
-    order: 0;
+/* Black header (and nav tabs, which sit inside it) in the light "binja" theme. */
+[data-md-color-scheme="binja"] .md-header,
+[data-md-color-scheme="binja"] .md-tabs {
+    background-color: var(--md-default-fg-color);
+    color: var(--md-default-bg-color);
 }
-*/
+
+/* Dark scheme: the theme's default header is the primary color (brand red),
+   which would swallow the two-color wordmark's red NINJA; use night, one
+   step darker than the jet page background. */
+[data-md-color-scheme="slate"] .md-header,
+[data-md-color-scheme="slate"] .md-tabs {
+    background-color: var(--bn-night);
+}
+
+/* The search button's default (body-oriented) colors are dark-on-dark against
+   the black header, so give it light text/icon on a translucent light pill. */
+[data-md-color-scheme="binja"] .md-header .md-search__button {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: var(--md-default-bg-color);
+}
+[data-md-color-scheme="binja"] .md-header .md-search__button:hover {
+    background-color: rgba(255, 255, 255, 0.22);
+    color: var(--md-default-bg-color);
+}
+[data-md-color-scheme="binja"] .md-header .md-search__button::before {
+    background-color: var(--md-default-bg-color);
+}
+[data-md-color-scheme="binja"] .md-header .md-search__button::after {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+/* Inline code uses the link tone; syntax highlighting owns code-block color. */
+[data-md-color-scheme="binja"] .md-typeset code { color: var(--bn-link-light); }
+[data-md-color-scheme="slate"] .md-typeset code { color: var(--bn-link-dark); }
+.md-typeset pre > code { color: var(--md-code-fg-color); }
+
+/* BEGIN GENERATED (scripts/gen_admonitions.py) — do not hand-edit */
+.md-typeset .admonition {
+  margin: var(--bn-adm-margin-block) 0;
+  padding: 0 var(--bn-adm-padding-inline) var(--bn-adm-padding-block-end);
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--bn-adm-radius);
+  background: var(--bn-adm-card-bg);
+  color: var(--bn-adm-card-fg);
+}
+
+.md-typeset .admonition > .admonition-title + * {
+  margin-top: 0;
+}
+
+.md-typeset .admonition > :last-child {
+  margin-bottom: 0 !important;
+}
+
+.md-typeset .admonition a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.md-typeset .admonition code {
+  color: inherit;
+  background: rgba(128, 128, 128, 0.18);
+}
+
+.md-typeset .admonition > .admonition-title {
+  position: relative;
+  margin: 0 calc(-1 * var(--bn-adm-padding-inline)) var(--bn-adm-title-gap);
+  padding: var(--bn-adm-title-padding-block) var(--bn-adm-padding-inline)
+    var(--bn-adm-title-padding-block)
+    calc(var(--bn-adm-padding-inline) + var(--bn-adm-icon-size) + var(--bn-adm-icon-gap));
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: var(--bn-adm-title-font-size);
+  font-weight: var(--bn-adm-title-font-weight);
+  line-height: var(--bn-adm-title-line-height);
+  letter-spacing: var(--bn-adm-title-letter-spacing);
+  text-transform: var(--bn-adm-title-text-transform);
+}
+
+.md-typeset .admonition > .admonition-title::before {
+  position: absolute;
+  top: 50%;
+  left: var(--bn-adm-padding-inline);
+  width: var(--bn-adm-icon-size);
+  height: var(--bn-adm-icon-size);
+  transform: translateY(-55%);
+  background-color: currentColor;
+  -webkit-mask-image: var(--bn-adm-card-icon);
+  mask-image: var(--bn-adm-card-icon);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.md-typeset .admonition:is(.note, .info, .abstract, .summary, .tldr, .question, .help, .faq, .important, .seealso) {
+  --bn-adm-card-bg: var(--bn-adm-info-bg);
+  --bn-adm-card-fg: var(--bn-adm-info-fg);
+  --bn-adm-card-icon: var(--bn-adm-icon-info);
+  background-color: var(--bn-adm-card-bg);
+  color: var(--bn-adm-card-fg);
+}
+
+.md-typeset .admonition:is(.tip, .hint, .success, .check, .done) {
+  --bn-adm-card-bg: var(--bn-adm-success-bg);
+  --bn-adm-card-fg: var(--bn-adm-success-fg);
+  --bn-adm-card-icon: var(--bn-adm-icon-success);
+  background-color: var(--bn-adm-card-bg);
+  color: var(--bn-adm-card-fg);
+}
+
+.md-typeset .admonition:is(.warning, .caution, .attention) {
+  --bn-adm-card-bg: var(--bn-adm-warning-bg);
+  --bn-adm-card-fg: var(--bn-adm-warning-fg);
+  --bn-adm-card-icon: var(--bn-adm-icon-warning);
+  background-color: var(--bn-adm-card-bg);
+  color: var(--bn-adm-card-fg);
+}
+
+.md-typeset .admonition:is(.danger, .error, .failure, .fail, .missing, .bug) {
+  --bn-adm-card-bg: var(--bn-adm-danger-bg);
+  --bn-adm-card-fg: var(--bn-adm-danger-fg);
+  --bn-adm-card-icon: var(--bn-adm-icon-danger);
+  background-color: var(--bn-adm-card-bg);
+  color: var(--bn-adm-card-fg);
+}
+
+.md-typeset .admonition:is(.example, .quote, .cite) {
+  --bn-adm-card-bg: var(--bn-adm-example-bg);
+  --bn-adm-card-fg: var(--bn-adm-example-fg);
+  --bn-adm-card-icon: var(--bn-adm-icon-info);
+  background-color: var(--bn-adm-card-bg);
+  color: var(--bn-adm-card-fg);
+}
+/* END GENERATED (scripts/gen_admonitions.py) */

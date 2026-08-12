@@ -455,7 +455,7 @@ bool BinaryNinja::Collaboration::NameChangesetCallback(void* ctxt, BNCollaborati
 };
 
 
-void BinaryNinja::Collaboration::SyncDatabase(Ref<Database> database, Ref<RemoteFile> file, std::function<bool(const std::unordered_map<std::string, Ref<AnalysisMergeConflict>>& conflicts)> conflictHandler, ProgressFunction progress, NameChangesetFunction nameChangeset)
+void BinaryNinja::Collaboration::SyncDatabase(Ref<FileMetadata> metadata, Ref<RemoteFile> file, std::function<bool(const std::unordered_map<std::string, Ref<AnalysisMergeConflict>>& conflicts)> conflictHandler, ProgressFunction progress, NameChangesetFunction nameChangeset)
 {
 	ProgressContext pctxt;
 	pctxt.callback = progress;
@@ -466,7 +466,7 @@ void BinaryNinja::Collaboration::SyncDatabase(Ref<Database> database, Ref<Remote
 	NameChangesetContext ncctxt;
 	ncctxt.callback = nameChangeset;
 
-	BNCollaborationSyncDatabase(database->m_object, file->m_object,
+	BNCollaborationSyncDatabase(metadata->m_object, file->m_object,
 		DatabaseConflictHandlerCallback, &chctxt,
 		ProgressCallback, &pctxt,
 		NameChangesetCallback, &ncctxt

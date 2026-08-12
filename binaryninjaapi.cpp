@@ -272,6 +272,27 @@ string BinaryNinja::GetSerialNumber()
 }
 
 
+vector<LicenseAddon> BinaryNinja::GetLicenseAddons()
+{
+	size_t count = 0;
+	BNLicenseAddon* addons = BNGetLicenseAddons(&count);
+	vector<LicenseAddon> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		result.push_back({
+			addons[i].id,
+			addons[i].licenseSerial,
+			addons[i].product,
+			addons[i].createdTimestamp,
+			addons[i].expirationTimestamp,
+			addons[i].signature});
+	}
+	BNFreeLicenseAddons(addons, count);
+	return result;
+}
+
+
 int BinaryNinja::GetLicenseCount()
 {
 	return BNGetLicenseCount();

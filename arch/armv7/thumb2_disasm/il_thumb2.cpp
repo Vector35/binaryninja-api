@@ -3939,16 +3939,54 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 	switch (instr->mnem)
 	{
 	case armv7::ARMV7_VABS:
-		if (instr->format->operationFlags & (INSTR_FORMAT_FLAG_F32 | INSTR_FORMAT_FLAG_F64))
+	{
+		uint32_t dest = GetRegisterOperand(instr, 0);
+		uint32_t source = GetRegisterOperand(instr, 1);
+		size_t destSize = GetRegisterSize(instr, 0);
+		size_t sourceSize = GetRegisterSize(instr, 1);
+		size_t elementSize = 0;
+		bool isFloat = false;
+
+		if (instr->format->operationFlags & INSTR_FORMAT_FLAG_F32)
 		{
-			il.AddInstruction(
-				WriteILOperand(il, instr, 0, il.FloatAbs(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1))));
+			elementSize = 4;
+			isFloat = true;
 		}
-		else
+		else if (instr->format->operationFlags & INSTR_FORMAT_FLAG_F64)
+		{
+			elementSize = 8;
+			isFloat = true;
+		}
+		else if (IS_FIELD_PRESENT(instr, FIELD_esize))
+		{
+			elementSize = instr->fields[FIELD_esize] / 8;
+			isFloat = IS_FIELD_PRESENT(instr, FIELD_floating_point)
+				&& instr->fields[FIELD_floating_point] != 0;
+		}
+
+		if (dest == armv7::REG_INVALID || source == armv7::REG_INVALID || elementSize == 0
+			|| destSize == 0 || sourceSize == 0 || destSize != sourceSize)
 		{
 			il.AddInstruction(il.Unimplemented());
 		}
+		else if (isFloat && elementSize == destSize)
+		{
+			il.AddInstruction(WriteILOperand(
+				il, instr, 0, il.FloatAbs(destSize, ReadILOperand(il, instr, 1, sourceSize))));
+		}
+		else
+		{
+			il.AddInstruction(il.Intrinsic(
+				{ RegisterOrFlag::Register(dest) },
+				destSize == 16 ? ARMV7_INTRIN_VABS_Q : ARMV7_INTRIN_VABS,
+				{
+					il.Const(1, elementSize * 8),
+					il.Const(1, isFloat ? 1 : 0),
+					ReadILOperand(il, instr, 1, sourceSize),
+				}));
+		}
 		break;
+	}
 	case armv7::ARMV7_VADD:
 		if (instr->format->operationFlags & (INSTR_FORMAT_FLAG_F32 | INSTR_FORMAT_FLAG_F64))
 		{
@@ -4386,9 +4424,16 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 					ExprId scaled = il.FloatMult(floatSize,
 						ReadILOperand(il, instr, 1, floatSize),
 						FixedPointScale(il, floatSize, fractionalBits));
-					ExprId converted = il.FloatToInt(floatSize, il.RoundToInt(floatSize, scaled));
-					if (isUnsigned)
-						converted = il.ZeroExtend(floatSize, converted);
+					// LLIL_FLOAT_TO_INT is signed. Use the next wider integer size for unsigned
+					// conversions so values in the upper half of the fixed-point range do not
+					// overflow before they are zero-extended.
+					size_t conversionSize = isUnsigned ? fixedSize * 2 : fixedSize;
+					ExprId converted = il.FloatToInt(conversionSize, il.FloatTrunc(floatSize, scaled));
+					if (conversionSize > fixedSize)
+						converted = il.LowPart(fixedSize, converted);
+					converted = isUnsigned
+						? il.ZeroExtend(floatSize, converted)
+						: il.SignExtend(floatSize, converted);
 					il.AddInstruction(WriteILOperand(il, instr, 0, converted, floatSize));
 				}
 				else
@@ -4405,7 +4450,31 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 				// VCVT (between floating-point and fixed-point, Advanced SIMD)
 				/* VCVT<c>.<dt> <Dd>,<Dm>,#<fbits> */
 				/* VCVT<c>.<dt> <Qd>,<Qm>,#<fbits> */
-				// TODO: vector and fixed-point unsupported.
+				uint32_t dest = GetRegisterOperand(instr, 0);
+				uint32_t source = GetRegisterOperand(instr, 1);
+				size_t destSize = GetRegisterSize(instr, 0);
+				size_t sourceSize = GetRegisterSize(instr, 1);
+				size_t elementSize = IS_FIELD_PRESENT(instr, FIELD_esize)
+					? instr->fields[FIELD_esize] / 8
+					: 0;
+				if (dest == armv7::REG_INVALID || source == armv7::REG_INVALID || elementSize != 4
+					|| destSize != sourceSize || (destSize != 8 && destSize != 16))
+				{
+					il.AddInstruction(il.Unimplemented());
+				}
+				else
+				{
+					il.AddInstruction(il.Intrinsic(
+						{ RegisterOrFlag::Register(dest) },
+						destSize == 16 ? ARMV7_INTRIN_VCVT_FIXED_Q : ARMV7_INTRIN_VCVT_FIXED,
+						{
+							il.Const(1, elementSize * 8),
+							il.Const(1, instr->fields[FIELD_fbits]),
+							il.Const(1, instr->fields[FIELD_to_fixed] ? 1 : 0),
+							il.Const(1, instr->fields[FIELD_unsigned] ? 1 : 0),
+							ReadILOperand(il, instr, 1, sourceSize),
+						}));
+				}
 			}
 		}
 		else if (IS_FIELD_PRESENT(instr, FIELD_half_to_single))
@@ -4422,7 +4491,7 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 			/* VCVT<c>.F64.F32 <Dd>,<Sm> */
 			/* VCVT<c>.F32.F64 <Sd>,<Dm> */
 			il.AddInstruction(WriteILOperand(
-				il, instr, 0, il.FloatConvert(GetRegisterSize(instr, 1), ReadILOperand(il, instr, 1))));
+				il, instr, 0, il.FloatConvert(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1))));
 			break;
 		}
 		else if (IS_FIELD_PRESENT(instr, FIELD_to_integer))

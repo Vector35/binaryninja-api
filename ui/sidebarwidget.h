@@ -37,6 +37,12 @@ struct BINARYNINJAUIAPI SidebarIcon
 	static SidebarIcon generate(const QImage& src);
 };
 
+enum SidebarHeaderBehavior
+{
+	SidebarHeaderVisible,
+	SidebarHeaderHidden
+};
+
 /*!
     \ingroup sidebar
 */
@@ -75,6 +81,7 @@ public:
 	virtual void setPrimaryOrientation(Qt::Orientation /*orientation*/) {}
 
 	virtual QWidget* headerWidget() { return nullptr; }
+	virtual SidebarHeaderBehavior headerBehavior() const { return SidebarHeaderVisible; }
 };
 
 /*!
@@ -253,12 +260,12 @@ public:
 	const QString& name() const { return m_name; }
 
 	/*!
-	    \deprecated Use `defaultLocation()`
+	    \deprecated Use \c defaultLocation()
 	*/
 	virtual bool isInReferenceArea() const { return false; }
 
 	/*!
-	    \deprecated Use `contextSensitivity()`
+	    \deprecated Use \c contextSensitivity()
 	*/
 	virtual bool viewSensitive() const { return true; }
 
@@ -267,7 +274,7 @@ public:
 	virtual bool alwaysShowTabs() const { return false; }
 
 	/*!
-	    \deprecated Use `defaultIconVisibility()`
+	    \deprecated Use \c defaultIconVisibility()
 	*/
 	virtual bool hideIfNoContent() const { return false; }
 

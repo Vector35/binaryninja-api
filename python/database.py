@@ -246,6 +246,18 @@ class Database:
 	def __del__(self):
 		core.BNFreeDatabase(self.handle)
 
+	@classmethod
+	def open_existing(cls, path: str) -> 'Database':
+		"""
+		Open a Database from a file
+		:param path: Path to file containing database
+		:return: Database instance
+		"""
+		db = Database(handle=core.BNCreateDatabaseInstance())
+		if not core.BNDatabaseOpenExisting(db.handle, path):
+			raise RuntimeError("BNDatabaseOpenExisting returned False")
+		return db
+
 	def __getitem__(self, item: int) -> Optional[Snapshot]:
 		return self.get_snapshot(item)
 
@@ -350,13 +362,6 @@ class Database:
 	def write_global_data(self, key: str, value: databuffer.DataBuffer):
 		"""Write a binary buffer into a global in the database"""
 		core.BNWriteDatabaseGlobalData(self.handle, key, value.handle)
-
-	@property
-	def file(self) -> 'filemetadata.FileMetadata':
-		"""Get the owning FileMetadata (read-only)"""
-		handle = core.BNGetDatabaseFile(self.handle)
-		assert handle is not None
-		return filemetadata.FileMetadata(handle=handle)
 
 	@property
 	def analysis_cache(self) -> KeyValueStore:

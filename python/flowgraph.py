@@ -921,7 +921,7 @@ class FlowGraph:
 
 class CoreFlowGraph(FlowGraph):
 	def __init__(self, handle):
-		super(CoreFlowGraph, self).__init__(handle)
+		super().__init__(handle)
 
 	def update(self):
 		graph = core.BNUpdateFlowGraph(self.handle)

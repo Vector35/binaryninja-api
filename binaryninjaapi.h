@@ -21231,6 +21231,12 @@ namespace BinaryNinja {
 		*/
 		void AddAlternateName(const std::string& alternate);
 
+		/*! Removes an extra name from this type library used during library lookups and dependency resolution
+
+			\param alternate
+		*/
+		void RemoveAlternateName(const std::string& alternate);
+
 		/*! Sets the dependency name of a type library instance that has not been finalized
 
 			\param depName

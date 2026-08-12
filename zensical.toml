@@ -86,6 +86,7 @@ nav = [
         ] },
         { "Important Concepts" = [
             "dev/concepts.md",
+            { "Custom Strings and Constants" = "dev/customstrings.md" },
             { "Outlining" = "dev/outlining.md" },
             { "User Informed Data Flow" = "dev/uidf.md" },
             { "Workflows" = "dev/workflows.md" },

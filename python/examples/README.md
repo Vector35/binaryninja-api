@@ -46,6 +46,8 @@ These plugins require the UI to be running
 These plugins are able to operate in either the GUI or as stand-alone plugins
 
 * arch_hook.py - a plugin to demonstrate an architecture hook that allows modifying the behavior of a built in architecture without having to modify/rebuild the [open source architectures](https://github.com/vector35/?q=arch-&type=all&language=&sort=)
+* bid64_constant.py - renders 64-bit binary integer decimal floating point constants using a [ConstantRenderer](https://api.binary.ninja/binaryninja.constantrenderer-module.html) (see [Custom Strings and Constants](https://docs.binary.ninja/dev/customstrings.html))
+* encoded_strings.py - deobfuscates XOR/add/sub encoded strings using a [StringRecognizer](https://api.binary.ninja/binaryninja.stringrecognizer-module.html) driven by [custom type attributes](https://docs.binary.ninja/guide/types/attributes.html#custom-attributes)
 * debug_info.py - a custom debug info implementation that can be used to load additional debug information at initial file load time (used internally for DWARF and PDB support for example, but may be used for other custom formats)
 * nds.py - File format loader for NDS rom files creating multiple views
 * nes.py - 6502 CPU architecture including LLIL lifting and `.NES` file format parser

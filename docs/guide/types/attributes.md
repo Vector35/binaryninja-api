@@ -425,7 +425,7 @@ struct BaseClassDescriptor* __ptr32 __based(start) `type_info::\`RTTI Base Class
 
 ## Custom Attributes
 
-Binary Ninja allows you to add custom attributes to types, which do not affect analysis but can be used by plugins and scripts. You can add these with the `__attr` annotation. Scripts can then query a `Type` object's `annotations` field to see the annotation keys and values.
+Binary Ninja allows you to add custom attributes to types, which do not affect analysis but can be used by plugins and scripts. You can add these with the `__attr` annotation. Scripts can then query a `Type` object's `attributes` field to see the attribute keys and values.
 
 ### Examples
 
@@ -445,4 +445,10 @@ typedef void (*__attr("ptr", "attr") test)();      // Applies to the pointer
 typedef void (__attr("function", "attr")* test)(); // Applies to the function
 typedef __attr("return", "attr") void (* test)();  // Applies to the return type
 typedef void __attr("return", "attr") (* test)();  // Applies to the return type
+```
+
+Attributes propagate with the type during analysis, so they can select and parameterize a [string recognizer or constant renderer](../../dev/customstrings.md). With the [encoded_strings.py](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/encoded_strings.py) example plugin loaded, applying this type to a decoding routine's parameter deobfuscates every string passed to it:
+
+``` C
+typedef char __attr("sub_encoded", "31656537366531313932396130373434")* deobfuscate;
 ```

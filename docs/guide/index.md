@@ -402,19 +402,62 @@ The Tags panel allows you to change existing tag categories, add your own catego
 
 ![memory map ><](../img/memory-map.png "Memory Map"){ width="600" }
 
-The "Memory Map" pane and sidebar widget show segments and sections currently present in the binary, allows some modification of automatically added sections, and allows adding, modifying, and deleting user segments and sections.
-
-Double-clicking an address in the "start" or "end" column will navigate in the address in the current view. If an address in the "Data Offset" column is double-clicked, that address will always be navigated to in the `Raw` view which may be confusing at first.
+The "Memory Map" pane and sidebar widget show the segments and sections currently present in the binary and allow adding, editing, and removing your own. Segments map bytes into the address space and carry read/write/execute permissions, while sections annotate ranges of that address space with a name and [semantics](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SectionSemantics).
 
 ![memory map icon <](../img/memory-map-icon.png "Memory Map Icon")
 
-To access it, use either the icon in the sidebar to open the panel, or use the view drop-down in the main pane, or use the Command Palette!
+To access it, use either the icon in the sidebar to open the panel, the view drop-down in the main pane, or the Command Palette!
 
-When a segment is selected (highlighted in blue) related sections will be outlined (white border).
+#### Reading the Tables
 
-Likewise, when a section is selected, related segments will be outlined.
+Double-clicking an address in the "Start" or "End" column will navigate to that address in the current view. If an address in the "Data Offset" column is double-clicked, that address will always be navigated to in the `Raw` view which may be confusing at first.
 
-The sorting order of segments and sections can be changed by clicking on any column header.
+When a segment is selected (highlighted in blue) related sections will be outlined (white border), and likewise when a section is selected.
+
+The sorting order of segments and sections can be changed by clicking on any column header. The segment table's "Data Offset" and "Data Length" columns are hidden by default; right-click the segment header to toggle columns or restore the defaults.
+
+Two segment columns describe where a segment's bytes come from:
+
+- `Region`: the name of the memory region backing the segment
+- `Source`: `Mapped Load Region` for bytes mapped from the analyzed file, `Backed Region` for bytes supplied by a memory region, or `Unbacked Region` for a range with no backing bytes
+
+#### Working with Segments
+
+Right-clicking in the segment table shows:
+
+- **Add Segment...**: maps a range of the analyzed file into the address space given a start, length, offset and length within the file, along with r/w/x flags.
+- **Edit Segment...**: automatically-created segments only allow their flags to be changed; user segments allow every field to be edited.
+- **Disable Segment...**: takes the segment's backing memory region out of the map without deleting it.
+- **Re-enable Segment**: only shown when disabled regions exist, and lists each of them for restoration.
+- **Remove Segment...**: only available for user segments and user memory regions.
+- **Add Memory Region...**: see below.
+
+All address and length fields accept full [expressions](#navigating), not just hexadecimal values, and all changes can be undone.
+
+The segment table shows the *resolved* memory map, where overlapping memory regions have been flattened into non-overlapping rows and the most recently added region takes precedence. Adding a region that only partially covers an existing segment therefore splits that segment into several rows, each showing the flags and `Region` of whichever region wins over that range. Disabling a region doesn't leave a hole, it just makes whatever was beneath it visible again.
+
+#### Adding a Memory Region
+
+Memory regions supply bytes for addresses the file itself doesn't provide. This is useful for firmware, memory dumps, or any address range that only exists at runtime. The dialog is available from the segment table's context menu, from `Analysis` → `Add Memory Region...`, and automatically when writing in the hex editor at an address with no backing bytes. Choose one of four sources:
+
+- **File Backed Region**: the contents of a file on disk. The length and default name come from the selected file.
+- **Pattern Backed Region**: a repeating hexadecimal pattern (such as `FF`, `A5A5`, or `DEADBEEF`) filling the given length.
+- **Unbacked Region**: a range filled with a single byte, `0x00` by default.
+- **Mapped Load Region**: bytes mapped from the analyzed file at a given data offset and length. This is the same as adding a segment, but allows naming the result.
+
+When invoked on an existing segment, the dialog is pre-filled with that segment's bounds and flags.
+
+#### Working with Sections
+
+Right-clicking in the section table shows:
+
+- **Add Section...**: takes a name, start, length, and semantics (`Default`, `Read-only code`, `Read-only data`, `Writable data`, or `External`).
+- **Edit Section...**: automatically-created sections can be edited but not renamed, and doing so creates a user section that overrides the original. Removing that user section restores the original.
+- **Remove Section...**: only available for user sections.
+
+Unlike segments, sections are never split. Sections that overlap each other all remain listed, and their semantics are combined.
+
+Because section semantics have precedence over segment permissions, adding a section is usually the way to correct analysis over a range that was mapped with the wrong permissions.
 
 ### External Links
 

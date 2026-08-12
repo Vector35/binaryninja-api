@@ -42,7 +42,7 @@ The following files and folders may be created in the user folder but are not cr
 - `keybindings.json`: Custom key bindings (see [key bindings](#custom-hotkeys))
 - `startup.py`: Default Python commands run once the UI is loaded in the context of the scripting console
 - `signatures/`: Any user-created signatures can be stored in platform-specific sub-folders in this location
-- `pythonVER/`: Any pip dependencies from Extension Manager plugins are installed to the appropriate Python version subfolder such as `python310`, or `python311`
+- `pythonVER/`: Any pip dependencies from Extension Manager plugins are installed to the appropriate Python version subfolder such as `python313`
 - `symbols/`: Used to store automatically downloaded PDBs
 - `update/`: Used to store update caches for pending updates
 - `snippets/`: Used to store snippets created using the official Snippet plugin
@@ -819,6 +819,9 @@ Linear view is a hybrid view between a graph-based disassembly window and the ra
 
 Linear view is commonly used for identifying and adding type information for unknown data. To this end, as you scroll, you'll see data and code interspersed. Much like the graph view, you can turn on and off addresses via the command palette `Show Address` or the ☰ menu on the top right of the linear view pane. Many other [options](#view-options) are also available.
 
+For HLIL and pseudo-C, linear view renders the AST form: the body of an `if`, `while`, `for`, or `switch` is indented under the statement that contains it. [Graph view](#graph-view) renders the non-AST form, expressing that nesting through the edges between basic blocks instead. See [AST and Non-AST Forms](../dev/bnil-hlil.md#ast-and-non-ast-forms) for the API implications.
+
+
 ### High Level IL
 
 ![HLIL Scoping Options >](../img/hlil-scope.png "HLIL Scoping Options"){ width="400" }
@@ -859,6 +862,8 @@ Features of the graph view include:
     - Reanalyze function button on left edge of the header
 - Edge colors indicate whether the path is the true (green) or false (red) case of a conditional jump (a color-blind option in the preferences is useful for those with red-green color blindness) and blue for unconditional branches
 - Context menu that can trigger some function-wide actions as well as some specific to the highlighted instruction (such as inverting branch logic or replacing a specific function with a NOP)
+
+For HLIL and pseudo-C, graph view renders the non-AST form: an `if` shows its condition alone, with the body in a separate block. [Linear view](#linear-view) renders the AST form, nesting bodies under the statement that contains them. See [AST and Non-AST Forms](../dev/bnil-hlil.md#ast-and-non-ast-forms) for the API implications.
 
 
 ## Hex View

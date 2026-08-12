@@ -18,6 +18,7 @@
 #
 from __future__ import annotations
 from io import StringIO
+import dataclasses
 import os
 import shutil
 from pathlib import Path
@@ -196,7 +197,27 @@ def write_summary_table(output, header, members):
 		output.write(f"     - {summary}\n")
 	output.write("\n")
 
+def strip_dataclass_signature_docstring(app, what, name, obj, options, lines):
+	"""Drops the ``Name(field: type, ...)`` docstring Python auto-generates for dataclasses
+	that don't have one of their own.
+
+	With autodoc_class_signature = 'mixed' Sphinx consumed that line as the class signature,
+	so it was never visible. With 'separated' the signature is taken from __init__ instead and
+	the synthetic docstring is left behind, rendering as a wall of ForwardRef(...) noise in the
+	class description. See https://github.com/Vector35/binaryninja-api/issues/8200
+	"""
+	if what not in ('class', 'exception') or not lines or not dataclasses.is_dataclass(obj):
+		return
+	try:
+		generated = obj.__name__ + str(inspect.signature(obj)).replace(' -> None', '')
+	except (TypeError, ValueError):
+		return
+	if '\n'.join(lines).strip() == generated.strip():
+		del lines[:]
+
 def setup(app):
+	app.connect('autodoc-process-docstring', strip_dataclass_signature_docstring)
+
 	# Copy canonical brand assets into Sphinx's static tree.
 	shutil.copyfile(os.path.join(os.path.dirname(__file__), '..', '..', 'docs', 'brand.css'),
 	                os.path.join(os.path.dirname(__file__), '_static', 'css', 'brand.css'))

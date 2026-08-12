@@ -761,62 +761,55 @@ These options control the appearance of bytes and data displayed in Hex View. So
 
 Controls the background highlighting applied to displayed bytes.
 
-- **None** - Disables background highlighting.
-- **Column** - Highlights the column containing the selected byte.
-- **Byte Value** - Highlights bytes based on their value.
+* **Byte Value** - Highlights bytes based on their value.
+* **Column** - Highlights the column containing the selected byte.
+* **None** - Disables background highlighting.
 
 #### Color Highlight
 
 Controls additional color highlighting applied to displayed bytes.
 
-- **None** - Disables color highlighting.
-- **ASCII and Printable** - Highlights printable ASCII characters.
-- **Modification** - Highlights modified bytes.
+* **ASCII and Printable** - Highlights printable ASCII characters.
+* **Modification** - Highlights modified bytes.
+* **None** - Disables color highlighting.
 
 #### Contrast
 
 Controls the contrast level used for highlighted bytes.
 
-- **Normal** - Uses the default contrast level.
-- **Medium** - Applies increased contrast.
-- **Highlight** - Applies the highest contrast level.
+* **High** - Applies the highest contrast level.
+* **Medium** - Applies increased contrast.
+* **Normal** - Uses the default contrast level.
 
-### Graph and Linear View Options
+### Linear and Graph View Options
 
-These options control how information is displayed in Graph View and Linear View.
+These options control how information is displayed in Linear and Graph Views.
 
-#### Display
-
-- **Expand Long Opcode** - Displays long instructions in their expanded form.
-- **Show Address** - Displays instruction addresses.
-- **Show Function Address** - Displays the starting address of each function.
-- **Show Opcode Bytes** - Displays the raw instruction bytes alongside the disassembly.
-
-#### Variables and Types
-
-- **Show Call Parameter Names (MLIL/HLIL only)** - Displays parameter names for function calls.
-- **Show Type Casts** (`Shift`+`Cmd`/`Ctrl`+`C`) - Displays explicit type casts in MLIL and HLIL views.
-- **Show Variable Types** - Displays inferred variable types.
-
-Variable types can be displayed in one of two locations:
-
-- **At Assignment (MLIL Graph only)** - Displays variable types at the point where they are assigned.
-- **At Top of Function** - Displays variable types at the beginning of the function.
-
-#### Layout
-
-- **Indent HLIL Function Body (HLIL only)** - Indents the body of High Level IL functions to improve readability.
-- **Single Function View** - Restricts the view to the currently selected function.
-
-#### Advanced
-
-These options expose additional Intermediate Language information useful during advanced analysis.
-
-- **Show All Expression Types (MLIL/HLIL only)** - Displays all available expression type information.
-- **Show IL Flag Usage (Lifted IL only)** - Displays flag usage in Lifted IL.
-- **Show IL Opcodes** - Displays Intermediate Language opcode names.
-- **Show Register Set Highlighting** - Highlights register set information in the current view.
-- **Show Stack Pointer Value (LLIL only)** - Displays the stack pointer value for each Low Level IL instruction.
+* **Expand Long Opcode** - Instructions that are nine bytes or longer will automatically be truncated if this setting is off. 
+* **Show Address** - Displays the memory address of each instruction in the view.
+* **Show Function Address** - Displays the starting address next to a function's name in its header.
+* **Show Opcode Bytes** - Displays each instruction's raw encoded bytes next to its disassembly.
+* **Show Register Set Highlighting** - When checked, clicking a register highlights every other instruction that reads or writes that same value of the register, so you can visually trace where it's used and where it's eventually overwritten.
+* **Show Type Casts** - Displays explicit type casts in MLIL and HLIL views.
+* **Show Variable Types** - Variable types can be displayed in one of two locations:
+  * **At Assignment (MLIL Graph only)** - Displays variable types at the point where they are assigned.
+  * **At Top of Function** - Displays variable types at the beginning of the function.
+* **Single Function View** - Restricts the view to the currently selected function.
+* **Address Display** - Controls the format and visibility of addresses shown alongside instructions.
+* **Block Labels** - Controls when a basic block's label is shown in Graph view:
+  * **Never Show Default** - Hides the auto-generated default label but still displays any label you've manually renamed.
+  * **Always Show** - Shows every block's label.
+  * **Never Show** - Hides all block labels.
+* **Call Parameter Hints** - When a call target's parameter names are known, annotates each argument at the call site with that name. Never Show Matching only displays it when the name adds information beyond the default, Always Show forces it on every call, and Never Show turns it off entirely.
+* **Render Layers** - Toggles independent visual overlays on the disassembly; more than one can be active at once, and which layers are available depends on context (e.g. an active debug session, WARP signatures loaded):
+  * Annotate Stack Offset - Adds a column showing the cumulative stack frame size at each instruction, marking (with \*) the instruction that changed it.
+  * TTD Coverage - Highlights instructions that were executed during a Time Travel Debugging trace.
+  * WARP Highlight Layer - Highlights bytes/instructions matched against a WARP function signature.
+* **Advanced -** These options expose additional Intermediate Language information useful during advanced analysis.
+  * **Show All Expression Types (MLIL/HLIL only)** - Displays all available expression type information.
+  * **Show IL Flag Usage (Lifted IL only)** - Displays flag usage in Lifted IL.
+  * **Show IL Opcodes** - Displays Intermediate Language opcode names.
+  * **Show Stack Pointer Value (LLIL only)** - Displays the stack pointer value for each Low Level IL instruction.
 
 ## Linear View
 

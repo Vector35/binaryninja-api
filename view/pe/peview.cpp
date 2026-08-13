@@ -707,31 +707,31 @@ bool PEView::Init()
 		m_relocatable = (opt.dllCharacteristics & IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE) > 0;
 		m_logger->LogDebug(
 			"OptionalHeaderComponents:\n"
-			"\topt.baseOfData            %08lx\n"
-			"\topt.imageBase             %016lx\n"
-			"\topt.sectionAlign          %08lx\n"
-			"\topt.fileAlign             %08lx\n"
+			"\topt.baseOfData            %08x\n"
+			"\topt.imageBase             %016" PRIx64 "\n"
+			"\topt.sectionAlign          %08x\n"
+			"\topt.fileAlign             %08x\n"
 			"\topt.majorOSVersion        %04hx\n"
 			"\topt.minorOSVersion        %04hx\n"
 			"\topt.majorImageVersion     %04hx\n"
 			"\topt.minorImageVersion     %04hx\n"
 			"\topt.majorSubsystemVersion %04hx\n"
 			"\topt.minorSubsystemVersion %04hx\n"
-			"\topt.win32Version          %08lx\n"
-			"\topt.sizeOfImage           %08lx\n"
-			"\topt.sizeOfHeaders         %08lx\n"
-			"\topt.checksum              %08lx\n"
+			"\topt.win32Version          %08x\n"
+			"\topt.sizeOfImage           %08x\n"
+			"\topt.sizeOfHeaders         %08x\n"
+			"\topt.checksum              %08x\n"
 			"\topt.subsystem             %04hx\n"
 			"\topt.dllCharacteristics    %04hx\n"
-			"\topt.sizeOfStackReserve    %016lx\n"
-			"\topt.sizeOfStackCommit     %016lx\n"
-			"\topt.sizeOfHeapReserve     %016lx\n"
-			"\topt.sizeOfHeapCommit      %016lx\n"
-			"\topt.loaderFlags           %08lx\n"
-			"\topt.dataDirCount          %016llx\n"
-			"\topt.imageBase             %016llx\n"
-			"\topt.sizeOfHeaders         %08lx\n"
-			"\topt.addressOfEntry        %08lx\n",
+			"\topt.sizeOfStackReserve    %016" PRIx64 "\n"
+			"\topt.sizeOfStackCommit     %016" PRIx64 "\n"
+			"\topt.sizeOfHeapReserve     %016" PRIx64 "\n"
+			"\topt.sizeOfHeapCommit      %016" PRIx64 "\n"
+			"\topt.loaderFlags           %08x\n"
+			"\topt.dataDirCount          %016x\n"
+			"\topt.imageBase             %016" PRIx64 "\n"
+			"\topt.sizeOfHeaders         %08x\n"
+			"\topt.addressOfEntry        %08x\n",
 			opt.baseOfData,
 			opt.imageBase,
 			opt.sectionAlign,
@@ -796,7 +796,7 @@ bool PEView::Init()
 		for (uint16_t i = 0; i < header.sectionCount; i++)
 		{
 			PESection section;
-			m_logger->LogDebug("Offset: %lx\n", reader.GetOffset());
+			m_logger->LogDebug("Offset: %" PRIx64 "\n", reader.GetOffset());
 			char name[9];
 			memset(name, 0, sizeof(name));
 			reader.Read(name, 8);
@@ -874,15 +874,15 @@ bool PEView::Init()
 			m_logger->LogDebug(
 				"Section [%d]\n"
 				"\tsection.name                  %s\n"
-				"\tsection.virtualSize:          %lx\n"
-				"\tsection.virtualAddress:       %lx\n"
-				"\tsection.sizeOfRawData:        %lx\n"
-				"\tsection.pointerToRawData:     %lx\n"
-				"\tsection.pointerToRelocs:      %lx\n"
-				"\tsection.pointerToLineNumbers: %lx\n"
+				"\tsection.virtualSize:          %x\n"
+				"\tsection.virtualAddress:       %x\n"
+				"\tsection.sizeOfRawData:        %x\n"
+				"\tsection.pointerToRawData:     %x\n"
+				"\tsection.pointerToRelocs:      %x\n"
+				"\tsection.pointerToLineNumbers: %x\n"
 				"\tsection.relocCount:           %hx\n"
 				"\tsection.lineNumberCount:      %hx\n"
-				"\tsection.characteristics:      %lx\n",
+				"\tsection.characteristics:      %x\n",
 				i,
 				section.name.c_str(),
 				section.virtualSize,
@@ -895,7 +895,7 @@ bool PEView::Init()
 				section.lineNumberCount,
 				section.characteristics);
 
-			m_logger->LogDebug("Segment: Vaddr: %08" PRIx64 " Vsize: %08" PRIx64 " Offset: %08" PRIx64 " Rawsize: %08" PRIx64
+			m_logger->LogDebug("Segment: Vaddr: %08" PRIx64 " Vsize: %08x Offset: %08x Rawsize: %08x"
 				" %c%c%c %s\n",
 				section.virtualAddress + m_imageBase,
 				section.virtualSize,
@@ -1541,7 +1541,7 @@ bool PEView::Init()
 						m_logger->LogWarn(
 							"The number of Import_Directory_Table reported by the Data Directories is different from "
 							"its correct amount. "
-							"There are actually %d Import_Directory_Table in the file, but SizeOfImportTable reports "
+							"There are actually %zu Import_Directory_Table in the file, but SizeOfImportTable reports "
 							"%d. "
 							"The PE parsing continues with the actual number of Import_Directory_Table",
 							numImportEntries + 1, dir.size / 20);
@@ -1632,7 +1632,7 @@ bool PEView::Init()
 						entry &= 0x7fffffff;
 						DefineDataVariable(m_imageBase + entryOffset, Type::IntegerType(4, false));
 					}
-					m_logger->LogDebug("Entry 0x%llx isOrdinal: %s\n", entry, isOrdinal ? "True" : "False");
+					m_logger->LogDebug("Entry 0x%" PRIx64 " isOrdinal: %s\n", entry, isOrdinal ? "True" : "False");
 
 					if ((!isOrdinal) && (entry == 0))
 						break;
@@ -1868,7 +1868,7 @@ bool PEView::Init()
 						"\tminorVersion:     %08x\n"
 						"\ttype:             %08x\n"
 						"\tsizeOfData:       %08x\n"
-						"\taddressOfRawData: %08x\n"
+						"\taddressOfRawData: %08" PRIx64 "\n"
 						"\tpointerToRawData: %08x\n",
 						debugDir.characteristics,
 						debugDir.timeDateStamp,
@@ -2000,10 +2000,10 @@ bool PEView::Init()
 
 				m_logger->LogDebug(
 					"Parsing IMAGE_DIRECTORY_ENTRY_TLS: %08x\n"
-					"\tstartAddressOfRawData %016x\n"
-					"\tendAddressOfRawData   %016x\n"
-					"\taddressOfIndex        %016x\n"
-					"\taddressOfCallBacks    %016x\n"
+					"\tstartAddressOfRawData %016" PRIx64 "\n"
+					"\tendAddressOfRawData   %016" PRIx64 "\n"
+					"\taddressOfIndex        %016" PRIx64 "\n"
+					"\taddressOfCallBacks    %016" PRIx64 "\n"
 					"\tsizeOfZeroFill        %08x\n"
 					"\tcharacteristics       %08x\n",
 					dir.size,
@@ -2116,7 +2116,7 @@ bool PEView::Init()
 						m_logger->LogWarn(
 							"The number of Import_Directory_Table reported by the Data Directories is different from "
 							"its correct amount. "
-							"There are actually %d Import_Directory_Table in the file, but SizeOfImportTable reports %d. "
+							"There are actually %zu Import_Directory_Table in the file, but SizeOfImportTable reports %d. "
 							"The PE parsing continues with the actual number of Import_Directory_Table",
 							numImportDelayEntries + 1, dir.size / 32);
 					break;
@@ -2192,7 +2192,7 @@ bool PEView::Init()
 						entry &= 0x7fffffff;
 						DefineDataVariable(m_imageBase + entryOffset, Type::IntegerType(4, false));
 					}
-					m_logger->LogDebug("Entry 0x%llx isOrdinal: %s\n", entry, isOrdinal ? "True" : "False");
+					m_logger->LogDebug("Entry 0x%" PRIx64 " isOrdinal: %s\n", entry, isOrdinal ? "True" : "False");
 
 					if ((!isOrdinal) && (entry == 0))
 						break;

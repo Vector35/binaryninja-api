@@ -1354,6 +1354,7 @@ namespace BinaryNinja {
 	    		\param fmt C-style format string.
 	    		\param ... Variable arguments corresponding to the format string.
 			*/
+			BN_PRINTF_ATTRIBUTE(3, 4)
 			void Log(BNLogLevel level, const char* fmt, ...);
 
 			/*! LogTrace only writes text to the error console if the console is set to log level: DebugLog
@@ -1364,6 +1365,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 			*/
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogTrace(const char* fmt, ...);
 
 			/*! LogDebug only writes text to the error console if the console is set to log level: DebugLog
@@ -1374,6 +1376,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 			*/
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogDebug(const char* fmt, ...);
 
 			/*! LogInfo always writes text to the error console, and corresponds to the log level: InfoLog.
@@ -1384,6 +1387,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 			*/
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogInfo(const char* fmt, ...);
 
 			/*! LogWarn writes text to the error console including a warning icon,
@@ -1394,6 +1398,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 			*/
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogWarn(const char* fmt, ...);
 
 			/*! LogError writes text to the error console and pops up the error console. Additionally,
@@ -1404,6 +1409,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 			*/
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogError(const char* fmt, ...);
 
 			/*! LogAlert pops up a message box displaying the alert message and logs to the error console.
@@ -1414,6 +1420,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 			*/
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogAlert(const char* fmt, ...);
 
 			/*! Logs to the error console with the given BNLogLevel.
@@ -1425,6 +1432,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(4, 5)
 			void LogForException(BNLogLevel level, const std::exception& e, const char* fmt, ...);
 
 			/*! LogTraceForException only writes text to the error console if the console is set to log level:
@@ -1436,6 +1444,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(3, 4)
 			void LogTraceForException(const std::exception& e, const char* fmt, ...);
 
 			/*! LogDebugForException only writes text to the error console if the console is set to log level:
@@ -1447,6 +1456,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(3, 4)
 			void LogDebugForException(const std::exception& e, const char* fmt, ...);
 
 			/*! LogInfoForException always writes text to the error console, and corresponds to the log level:
@@ -1458,6 +1468,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(3, 4)
 			void LogInfoForException(const std::exception& e, const char* fmt, ...);
 
 			/*! LogWarnForException writes text to the error console including a warning icon,
@@ -1469,6 +1480,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(3, 4)
 			void LogWarnForException(const std::exception& e, const char* fmt, ...);
 
 			/*! LogErrorForException writes text to the error console and pops up the error console. Additionally,
@@ -1480,6 +1492,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(3, 4)
 			void LogErrorForException(const std::exception& e, const char* fmt, ...);
 
 			/*! LogAlertForException pops up a message box displaying the alert message and logs to the error console.
@@ -1491,6 +1504,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(3, 4)
 			void LogAlertForException(const std::exception& e, const char* fmt, ...);
 
 			/*! Logs to the error console with the given BNLogLevel.
@@ -1501,6 +1515,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(3, 4)
 			void LogWithStackTrace(BNLogLevel level, const char* fmt, ...);
 
 			/*! LogTraceWithStackTrace only writes text to the error console if the console is set to log level:
@@ -1511,6 +1526,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogTraceWithStackTrace(const char* fmt, ...);
 
 			/*! LogDebugWithStackTrace only writes text to the error console if the console is set to log level:
@@ -1521,6 +1537,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogDebugWithStackTrace(const char* fmt, ...);
 
 			/*! LogInfoWithStackTrace always writes text to the error console, and corresponds to the log level:
@@ -1531,6 +1548,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogInfoWithStackTrace(const char* fmt, ...);
 
 			/*! LogWarnWithStackTrace writes text to the error console including a warning icon,
@@ -1541,6 +1559,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogWarnWithStackTrace(const char* fmt, ...);
 
 			/*! LogErrorWithStackTrace writes text to the error console and pops up the error console. Additionally,
@@ -1551,6 +1570,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogErrorWithStackTrace(const char* fmt, ...);
 
 			/*! LogAlertWithStackTrace pops up a message box displaying the alert message and logs to the error console.
@@ -1561,6 +1581,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogAlertWithStackTrace(const char* fmt, ...);
 
 			/*! Logs to the error console with the given BNLogLevel.

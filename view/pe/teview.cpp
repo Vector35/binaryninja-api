@@ -4,6 +4,8 @@
 //   - https://uefi.org/specs/PI/1.8/V1_TE_Image.html
 //   - edk2/BaseTools/Source/C/GenFw/GenFw.c
 
+#include <inttypes.h>
+
 #include "teview.h"
 
 using namespace BinaryNinja;
@@ -42,7 +44,7 @@ void TEView::ReadTEImageHeader(BinaryReader& reader, struct TEImageHeader& heade
 		"\tstrippedSize:                    0x%04x\n"
 		"\taddressOfEntrypoint:             0x%08x\n"
 		"\tbaseOfCode:                      0x%08x\n"
-		"\timageBase:                       0x%016x\n"
+		"\timageBase:                       0x%016" PRIx64 "\n"
 		"\tdataDirectory[0].virtualAddress: 0x%08x\n"
 		"\tdataDirectory[0].size:           0x%08x\n"
 		"\tdataDirectory[1].virtualAddress: 0x%08x\n"

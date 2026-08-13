@@ -424,13 +424,13 @@ void ObjCProcessor::LoadClasses(ObjCReader* reader, Ref<Section> classPtrSection
 		}
 		catch (...)
 		{
-			m_logger->LogError("Failed to read class data at 0x%llx pointed to by @ 0x%llx", reader->GetOffset(),
+			m_logger->LogError("Failed to read class data at 0x%" PRIx64 " pointed to by @ 0x%" PRIx64, reader->GetOffset(),
 				classPointerLocation);
 			continue;
 		}
 		if (clsStruct.data & 1)
 		{
-			m_logger->LogInfo("Skipping class at 0x%llx as it contains swift types", classPtr);
+			m_logger->LogInfo("Skipping class at 0x%" PRIx64 " as it contains swift types", classPtr);
 			continue;
 		}
 		// unset first two bits
@@ -453,7 +453,7 @@ void ObjCProcessor::LoadClasses(ObjCReader* reader, Ref<Section> classPtrSection
 		}
 		catch (...)
 		{
-			m_logger->LogError("Failed to read class RO data at 0x%llx. 0x%llx, objc_class_t @ 0x%llx",
+			m_logger->LogError("Failed to read class RO data at 0x%" PRIx64 ". 0x%" PRIx64 ", objc_class_t @ 0x%" PRIx64,
 				reader->GetOffset(), classPointerLocation, classROPtr);
 			continue;
 		}
@@ -470,7 +470,7 @@ void ObjCProcessor::LoadClasses(ObjCReader* reader, Ref<Section> classPtrSection
 		catch (...)
 		{
 			m_logger->LogWarn(
-				"Failed to read class name at 0x%llx. Class has been given the placeholder name \"0x%llx\" ", namePtr,
+				"Failed to read class name at 0x%" PRIx64 ". Class has been given the placeholder name \"0x%" PRIx64 "\" ", namePtr,
 				classPtr);
 			char hexString[9];
 			hexString[8] = 0;
@@ -517,13 +517,13 @@ void ObjCProcessor::LoadClasses(ObjCReader* reader, Ref<Section> classPtrSection
 			}
 			catch (...)
 			{
-				m_logger->LogWarn("Failed to read metaclass data at 0x%llx pointed to by objc_class_t @ 0x%llx",
+				m_logger->LogWarn("Failed to read metaclass data at 0x%" PRIx64 " pointed to by objc_class_t @ 0x%" PRIx64,
 					reader->GetOffset(), classPtr);
 			}
 		}
 		if (hasValidMetaClass && (metaClsStruct.data & 1))
 		{
-			m_logger->LogInfo("Skipping metaclass at 0x%llx as it contains swift types", classPtr);
+			m_logger->LogInfo("Skipping metaclass at 0x%" PRIx64 " as it contains swift types", classPtr);
 			hasValidMetaClass = false;
 		}
 		if (hasValidMetaClass)
@@ -549,7 +549,7 @@ void ObjCProcessor::LoadClasses(ObjCReader* reader, Ref<Section> classPtrSection
 			}
 			catch (...)
 			{
-				m_logger->LogWarn("Failed to read metaclass RO data at 0x%llx pointed to by meta objc_class_t @ 0x%llx",
+				m_logger->LogWarn("Failed to read metaclass RO data at 0x%" PRIx64 " pointed to by meta objc_class_t @ 0x%" PRIx64,
 					reader->GetOffset(), clsStruct.isa);
 			}
 		}
@@ -562,7 +562,7 @@ void ObjCProcessor::LoadClasses(ObjCReader* reader, Ref<Section> classPtrSection
 			}
 			catch (...)
 			{
-				m_logger->LogError("Failed to read the method list for class pointed to by 0x%llx", clsStruct.data);
+				m_logger->LogError("Failed to read the method list for class pointed to by 0x%" PRIx64, clsStruct.data);
 			}
 		}
 		if (hasValidMetaClassRO && metaClassRO.baseMethods)
@@ -573,7 +573,7 @@ void ObjCProcessor::LoadClasses(ObjCReader* reader, Ref<Section> classPtrSection
 			}
 			catch (...)
 			{
-				m_logger->LogError("Failed to read the method list for metaclass pointed to by 0x%llx", clsStruct.data);
+				m_logger->LogError("Failed to read the method list for metaclass pointed to by 0x%" PRIx64, clsStruct.data);
 			}
 		}
 
@@ -585,7 +585,7 @@ void ObjCProcessor::LoadClasses(ObjCReader* reader, Ref<Section> classPtrSection
 			}
 			catch (...)
 			{
-				m_logger->LogError("Failed to process ivars for class at 0x%llx", clsStruct.data);
+				m_logger->LogError("Failed to process ivars for class at 0x%" PRIx64, clsStruct.data);
 			}
 		}
 		m_classes[classPtr] = cls;
@@ -657,7 +657,7 @@ void ObjCProcessor::LoadCategories(ObjCReader* reader, Ref<Section> classPtrSect
 		}
 		catch (...)
 		{
-			m_logger->LogError("Failed to read category pointed to by 0x%llx", i);
+			m_logger->LogError("Failed to read category pointed to by 0x%zx", i);
 			continue;
 		}
 
@@ -667,7 +667,7 @@ void ObjCProcessor::LoadCategories(ObjCReader* reader, Ref<Section> classPtrSect
 
 		if (categoryBaseClassName.empty())
 		{
-			m_logger->LogInfo("Using base address as stand-in classname for category at 0x%llx", catLocation);
+			m_logger->LogInfo("Using base address as stand-in classname for category at 0x%" PRIx64, catLocation);
 			categoryBaseClassName = fmt::format("{:x}", catLocation);
 		}
 		try
@@ -678,7 +678,7 @@ void ObjCProcessor::LoadCategories(ObjCReader* reader, Ref<Section> classPtrSect
 		catch (...)
 		{
 			m_logger->LogWarn(
-				"Failed to read category name for category at 0x%llx. Using base address as stand-in category name",
+				"Failed to read category name for category at 0x%" PRIx64 ". Using base address as stand-in category name",
 				catLocation);
 			categoryAdditionsName = fmt::format("{:x}", catLocation);
 		}
@@ -695,7 +695,7 @@ void ObjCProcessor::LoadCategories(ObjCReader* reader, Ref<Section> classPtrSect
 			catch (...)
 			{
 				m_logger->LogError(
-					"Failed to read the instance method list for category pointed to by 0x%llx", catLocation);
+					"Failed to read the instance method list for category pointed to by 0x%" PRIx64, catLocation);
 			}
 		}
 		if (cat.classMethods)
@@ -707,7 +707,7 @@ void ObjCProcessor::LoadCategories(ObjCReader* reader, Ref<Section> classPtrSect
 			catch (...)
 			{
 				m_logger->LogError(
-					"Failed to read the class method list for category pointed to by 0x%llx", catLocation);
+					"Failed to read the class method list for category pointed to by 0x%" PRIx64, catLocation);
 			}
 		}
 		m_categories[catLocation] = category;
@@ -748,7 +748,7 @@ void ObjCProcessor::LoadProtocols(ObjCReader* reader, Ref<Section> listSection)
 		}
 		catch (...)
 		{
-			m_logger->LogError("Failed to read protocol pointed to by 0x%llx", i);
+			m_logger->LogError("Failed to read protocol pointed to by 0x%zx", i);
 			continue;
 		}
 
@@ -764,7 +764,7 @@ void ObjCProcessor::LoadProtocols(ObjCReader* reader, Ref<Section> listSection)
 		catch (...)
 		{
 			m_logger->LogError(
-				"Failed to read protocol name for protocol at 0x%llx. Using base address as stand-in protocol name",
+				"Failed to read protocol name for protocol at 0x%" PRIx64 ". Using base address as stand-in protocol name",
 				protocolLocation);
 			protocolName = fmt::format("{:x}", protocolLocation);
 		}
@@ -781,7 +781,7 @@ void ObjCProcessor::LoadProtocols(ObjCReader* reader, Ref<Section> listSection)
 			uint32_t count = reader->Read64();
 			if (count > MAX_PROTOCOL_COUNT)
 			{
-				m_logger->LogWarn("List of protocols at 0x%llx has too large a count of 0x%x, skipping...", protocol.protocols, count);
+				m_logger->LogWarn("List of protocols at 0x%" PRIx64 " has too large a count of 0x%x, skipping...", protocol.protocols, count);
 				continue;
 			}
 			view_ptr_t addr = reader->GetOffset();
@@ -802,7 +802,7 @@ void ObjCProcessor::LoadProtocols(ObjCReader* reader, Ref<Section> listSection)
 			catch (...)
 			{
 				m_logger->LogError(
-					"Failed to read the instance method list for protocol pointed to by 0x%llx", protocolLocation);
+					"Failed to read the instance method list for protocol pointed to by 0x%" PRIx64, protocolLocation);
 			}
 		}
 		if (protocol.classMethods)
@@ -814,7 +814,7 @@ void ObjCProcessor::LoadProtocols(ObjCReader* reader, Ref<Section> listSection)
 			catch (...)
 			{
 				m_logger->LogError(
-					"Failed to read the class method list for protocol pointed to by 0x%llx", protocolLocation);
+					"Failed to read the class method list for protocol pointed to by 0x%" PRIx64, protocolLocation);
 			}
 		}
 		if (protocol.optionalInstanceMethods)
@@ -826,7 +826,7 @@ void ObjCProcessor::LoadProtocols(ObjCReader* reader, Ref<Section> listSection)
 			}
 			catch (...)
 			{
-				m_logger->LogError("Failed to read the optional instance method list for protocol pointed to by 0x%llx",
+				m_logger->LogError("Failed to read the optional instance method list for protocol pointed to by 0x%" PRIx64,
 					protocolLocation);
 			}
 		}
@@ -838,7 +838,7 @@ void ObjCProcessor::LoadProtocols(ObjCReader* reader, Ref<Section> listSection)
 			}
 			catch (...)
 			{
-				m_logger->LogError("Failed to read the optional class method list for protocol pointed to by 0x%llx",
+				m_logger->LogError("Failed to read the optional class method list for protocol pointed to by 0x%" PRIx64,
 					protocolLocation);
 			}
 		}
@@ -870,7 +870,7 @@ void ObjCProcessor::ReadListOfMethodLists(ObjCReader* reader, ClassBase& cls, st
 
 	if (head.count > MAX_METHOD_LIST_COUNT)
 	{
-		m_logger->LogError("List of method lists at 0x%llx has an invalid count of 0x%x", start, head.count);
+		m_logger->LogError("List of method lists at 0x%" PRIx64 " has an invalid count of 0x%x", start, head.count);
 		return;
 	}
 
@@ -893,7 +893,7 @@ void ObjCProcessor::ReadMethodList(ObjCReader* reader, ClassBase& cls, std::stri
 		case 1:
 			return ReadListOfMethodLists(reader, cls, name, start - 1);
 		default:
-			m_logger->LogDebug("ReadMethodList: Unknown method list type at 0x%llx: %d", start, start & 0x3);
+			m_logger->LogDebug("ReadMethodList: Unknown method list type at 0x%" PRIx64 ": %" PRIu64, start, start & 0x3);
 			return;
 	}
 
@@ -904,7 +904,7 @@ void ObjCProcessor::ReadMethodList(ObjCReader* reader, ClassBase& cls, std::stri
 
 	if (head.count > MAX_METHOD_LIST_COUNT)
 	{
-		m_logger->LogError("Method list at 0x%llx has an invalid count of 0x%x", start, head.count);
+		m_logger->LogError("Method list at 0x%" PRIx64 " has an invalid count of 0x%x", start, head.count);
 		return;
 	}
 
@@ -1017,7 +1017,7 @@ void ObjCProcessor::ReadIvarList(ObjCReader* reader, ClassBase& cls, std::string
 	head.count = reader->Read32();
 	if (head.count > MAX_IVAR_LIST_COUNT)
 	{
-		m_logger->LogWarn("Ivar list at 0x%llx has an invalid count of 0x%x, skipping..", start, head.count);
+		m_logger->LogWarn("Ivar list at 0x%" PRIx64 " has an invalid count of 0x%x, skipping..", start, head.count);
 		return;
 	}
 	auto addressSize = m_data->GetAddressSize();
@@ -1062,7 +1062,7 @@ void ObjCProcessor::ReadIvarList(ObjCReader* reader, ClassBase& cls, std::string
 		}
 		catch (...)
 		{
-			m_logger->LogError("Failed to process an ivar at offset 0x%llx",
+			m_logger->LogError("Failed to process an ivar at offset 0x%" PRIx64,
 				start + (sizeof(ivar_list_t)) + (i * ((addressSize * 3) + 8)));
 		}
 	}
@@ -1391,7 +1391,7 @@ void ObjCProcessor::ProcessObjCData()
 	uint64_t relativeSelectorBaseOffset = 0;
 	auto reader = GetReader();
 	if (auto objCRelativeMethodsBaseAddr = GetObjCRelativeMethodBaseAddress(reader.get())) {
-		m_logger->LogDebug("RelativeMethodSelector Base: 0x%llx", objCRelativeMethodsBaseAddr);
+		m_logger->LogDebug("RelativeMethodSelector Base: 0x%" PRIx64, objCRelativeMethodsBaseAddr);
 		relativeSelectorBaseType = RelativeToConstantPointerBaseType;
 		relativeSelectorBaseOffset = objCRelativeMethodsBaseAddr;
 	}
@@ -1652,7 +1652,7 @@ void ObjCProcessor::ProcessCFStrings()
 				const auto strSize = strLen * 2;
 				if (!m_data->IsValidOffset(strLoc + strSize))
 				{
-					m_logger->LogWarn("CFString at 0x%llx has invalid length 0x%llx, skipping...", i, strLen);
+					m_logger->LogWarn("CFString at 0x%" PRIx64 " has invalid length 0x%" PRIx64 ", skipping...", i, strLen);
 					continue;
 				}
 				auto data = m_data->ReadBuffer(strLoc, strSize);
@@ -1832,7 +1832,7 @@ void ObjCProcessor::ProcessNSConstantIntegerNumbers()
 					fmt::format("nsint_{:x}_{}", i, value), i);
 				break;
 			default:
-				m_logger->LogWarn("Unknown type encoding '%c' in number literal object at %p", encoding, i);
+				m_logger->LogWarn("Unknown type encoding '%c' in number literal object at %#" PRIx64, encoding, i);
 				continue;
 			}
 		}

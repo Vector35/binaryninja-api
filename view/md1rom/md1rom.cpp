@@ -48,7 +48,7 @@ Md1romView::Md1romView(BinaryNinja::BinaryView* data, bool parseOnly): BinaryVie
 				break;
 
 			m_segments.emplace_back(seg);
-			m_logger->LogDebug("segment: %s, offset: 0x%x, length: 0x%x, addr: 0x%x, file offset: 0x%llx",
+			m_logger->LogDebug("segment: %s, offset: 0x%x, length: 0x%x, addr: 0x%x, file offset: 0x%" PRIx64,
 				seg.name.c_str(), seg.offset, seg.length, seg.addr, offset);
 
 			if (seg.name == "md1rom")

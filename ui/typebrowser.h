@@ -62,7 +62,11 @@ struct TypeBrowserDelta
 };
 
 
-class BINARYNINJAUIAPI TypeBrowserTreeNode : public std::enable_shared_from_this<TypeBrowserTreeNode>
+// The tree nodes are owned by their parent (RootTreeNode owns the model's root; each node owns
+// its children via m_children). All access is on the main thread — the background worker only
+// touches the pure-data snapshot/delta — so plain owning/raw pointers are used rather than
+// shared_ptr. QModelIndex::internalPointer holds a raw node pointer, the standard Qt pattern.
+class BINARYNINJAUIAPI TypeBrowserTreeNode
 {
 public:
 	struct UpdateData
@@ -75,34 +79,38 @@ public:
 			UpdatesFinished,
 		};
 
-		UpdateType type;
-		std::shared_ptr<TypeBrowserTreeNode> parent;
-		std::shared_ptr<TypeBrowserTreeNode> node;
-		std::function<void(const UpdateData&)> commit;
+		UpdateType type = UpdatesFinished;
+		TypeBrowserTreeNode* parent = nullptr;
+		TypeBrowserTreeNode* node = nullptr;
+		// For NodeInserted, owns the freshly-created node until commit links it into the tree.
+		// `node` aliases this until then. commit() takes a mutable UpdateData so it can move it.
+		std::unique_ptr<TypeBrowserTreeNode> ownedNode;
+		std::function<void(UpdateData&)> commit;
 	};
 
-	typedef std::function<void(UpdateData)> UpdateNodeCallback;
+	// UpdateData is move-only (it can own a pending node), so updates are handed off by move.
+	typedef std::function<void(UpdateData&&)> UpdateNodeCallback;
 
 protected:
 	class TypeBrowserModelData* m_model;
-	std::optional<std::weak_ptr<TypeBrowserTreeNode>> m_parent;
-	std::vector<std::shared_ptr<TypeBrowserTreeNode>> m_children;
+	TypeBrowserTreeNode* m_parent;
+	std::vector<std::unique_ptr<TypeBrowserTreeNode>> m_children;
 	std::unordered_map<const TypeBrowserTreeNode*, size_t> m_childIndices;
-	bool m_hasGeneratedChildren;
 
-	TypeBrowserTreeNode(class TypeBrowserModelData* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent);
-	virtual ~TypeBrowserTreeNode() = default;
-	virtual void generateChildren() = 0;
+	TypeBrowserTreeNode(class TypeBrowserModelData* model, TypeBrowserTreeNode* parent);
 	void updateChildIndices();
 
-	void removeChild(std::shared_ptr<TypeBrowserTreeNode> child);
-	void addChild(std::shared_ptr<TypeBrowserTreeNode> child);
+	void removeChild(TypeBrowserTreeNode* child);
+	// Takes ownership of `child` and appends it. Returns the raw pointer for the caller to index.
+	TypeBrowserTreeNode* addChild(std::unique_ptr<TypeBrowserTreeNode> child);
 
 public:
+	// Public so std::unique_ptr<TypeBrowserTreeNode> can delete derived nodes through a base pointer.
+	virtual ~TypeBrowserTreeNode() = default;
 	class TypeBrowserModelData* model() const { return m_model; }
-	std::optional<std::shared_ptr<TypeBrowserTreeNode>> parent() const;
-	const std::vector<std::shared_ptr<TypeBrowserTreeNode>>& children();
-	int indexOfChild(std::shared_ptr<const TypeBrowserTreeNode> child) const;
+	TypeBrowserTreeNode* parent() const;
+	const std::vector<std::unique_ptr<TypeBrowserTreeNode>>& children();
+	int indexOfChild(const TypeBrowserTreeNode* child) const;
 
 	virtual std::string text(int column) const = 0;
 	virtual bool lessThan(const TypeBrowserTreeNode& other, int column) const = 0;
@@ -116,24 +124,22 @@ public:
 class BINARYNINJAUIAPI EmptyTreeNode : public TypeBrowserTreeNode
 {
 public:
-	EmptyTreeNode(class TypeBrowserModelData* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent);
+	EmptyTreeNode(class TypeBrowserModelData* model, TypeBrowserTreeNode* parent);
 	virtual ~EmptyTreeNode() = default;
 
 	virtual std::string text(int column) const override;
 	virtual bool lessThan(const TypeBrowserTreeNode& other, int column) const override;
 	virtual bool filter(const std::string& filter, TypeBrowserFilterMode mode, bool caseSensitive) const override;
 
-protected:
-	virtual void generateChildren() override;
 };
 
 
 class BINARYNINJAUIAPI RootTreeNode : public TypeBrowserTreeNode
 {
-	std::map<std::string, std::shared_ptr<class TypeContainerTreeNode>> m_containerNodes;
+	std::map<std::string, class TypeContainerTreeNode*> m_containerNodes;  // non-owning; owned via m_children
 
 public:
-	RootTreeNode(class TypeBrowserModelData* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent);
+	RootTreeNode(class TypeBrowserModelData* model, TypeBrowserTreeNode* parent);
 	virtual ~RootTreeNode() = default;
 
 	virtual std::string text(int column) const override;
@@ -142,8 +148,6 @@ public:
 
 	virtual void applyDelta(const TypeBrowserDelta& delta, UpdateNodeCallback update) override;
 
-protected:
-	virtual void generateChildren() override;
 };
 
 
@@ -175,7 +179,7 @@ private:
 	std::optional<BinaryNinja::QualifiedName> m_sourceOriginalName;
 
 public:
-	TypeTreeNode(class TypeBrowserModelData* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent, const std::string& id, BinaryNinja::QualifiedName name, TypeRef type);
+	TypeTreeNode(class TypeBrowserModelData* model, TypeBrowserTreeNode* parent, const std::string& id, BinaryNinja::QualifiedName name, TypeRef type);
 	virtual ~TypeTreeNode() = default;
 
 	const std::string& id() const { return m_id; }
@@ -193,8 +197,6 @@ public:
 	virtual bool lessThan(const TypeBrowserTreeNode& other, int column) const override;
 	virtual bool filter(const std::string& filter, TypeBrowserFilterMode mode, bool caseSensitive) const override;
 
-protected:
-	virtual void generateChildren() override;
 };
 
 
@@ -202,10 +204,10 @@ class BINARYNINJAUIAPI TypeContainerTreeNode : public TypeBrowserTreeNode
 {
 	std::string m_containerId;
 	// TODO: Gross
-	std::map<std::string, std::pair<std::pair<BinaryNinja::QualifiedName, TypeRef>, std::shared_ptr<TypeTreeNode>>> m_typeNodes;
+	std::map<std::string, std::pair<std::pair<BinaryNinja::QualifiedName, TypeRef>, TypeTreeNode*>> m_typeNodes;  // node non-owning
 
 public:
-	TypeContainerTreeNode(class TypeBrowserModelData* model, std::optional<std::weak_ptr<TypeBrowserTreeNode>> parent, const std::string& m_containerId);
+	TypeContainerTreeNode(class TypeBrowserModelData* model, TypeBrowserTreeNode* parent, const std::string& m_containerId);
 	virtual ~TypeContainerTreeNode();
 
 	virtual std::string text(int column) const override;
@@ -220,18 +222,18 @@ public:
 	// RootTreeNode::applyDelta.
 	void applyTypeDelta(const TypeBrowserTypeDelta& delta, UpdateNodeCallback update);
 
-protected:
-	virtual void generateChildren() override;
 };
 
 //-----------------------------------------------------------------------------
 
-/*! Cursed data struct behind a shared_ptr so Qt stops deleting our model while the background updates run */
-class TypeBrowserModelData: public std::enable_shared_from_this<TypeBrowserModelData> // TODO enable_shared is not necessary
+// Backing data for the type browser model. Lifetime is now managed by TypeBrowserModel (a plain
+// owned member); the background worker only reads the view/core into snapshots and never touches
+// this or the tree, so the previous shared_ptr / enable_shared_from_this juggling is gone.
+class TypeBrowserModelData
 {
 	BinaryViewRef m_data;
 
-	std::shared_ptr<TypeBrowserTreeNode> m_rootNode;
+	std::unique_ptr<TypeBrowserTreeNode> m_rootNode;
 
 	std::vector<std::string> m_containerIds;
 	std::map<std::string, std::string> m_containerNames;
@@ -279,7 +281,7 @@ public:
 	TypeBrowserModelData& operator=(TypeBrowserModelData&&) = delete;
 
 	BinaryViewRef getData();
-	std::shared_ptr<TypeBrowserTreeNode> getRootNode();
+	TypeBrowserTreeNode* getRootNode();
 
 	std::vector<std::string> containerIds() const;
 
@@ -306,7 +308,7 @@ public:
 	// pre-fetched `types` are left intact for the caller to drive the tree diff.
 	void applySnapshot(Snapshot& snapshot);
 
-	std::vector<std::shared_ptr<TypeContainerTreeNode>> containerNodes() const;
+	std::vector<TypeContainerTreeNode*> containerNodes() const;
 
 private:
 	void addContainer(BinaryNinja::TypeContainer cont, Snapshot& out) const;
@@ -328,21 +330,20 @@ class BINARYNINJAUIAPI TypeBrowserModel : public QAbstractItemModel
 	Q_OBJECT
 
 	BinaryViewRef m_data;
-	std::shared_ptr<class TypeBrowserModelData> m_modelData;
+	std::unique_ptr<class TypeBrowserModelData> m_modelData;
 	std::unique_ptr<NotificationsDispatcher> m_dispatcher = nullptr;
 	std::unique_ptr<TypeArchiveNotificationDispatcher> m_typeArchiveDispatcher = nullptr;
 
-	void commitUpdate(const TypeBrowserTreeNode::UpdateData& update);
-	void commitUpdates(const std::vector<TypeBrowserTreeNode::UpdateData>& updates);
+	void commitUpdates(std::vector<TypeBrowserTreeNode::UpdateData>& updates);
 
 public:
 	TypeBrowserModel(BinaryViewRef data, QObject* parent);
 	virtual ~TypeBrowserModel();
 	BinaryViewRef getData();
-	std::shared_ptr<TypeBrowserTreeNode> getRootNode();
+	TypeBrowserTreeNode* getRootNode();
 
 	std::vector<std::string> containerIds() const;
-	std::vector<std::shared_ptr<TypeContainerTreeNode>> containerNodes() const;
+	std::vector<TypeContainerTreeNode*> containerNodes() const;
 
 	std::string nameForContainerId(const std::string& id) const;
 	std::optional<std::reference_wrapper<BinaryNinja::TypeContainer>> containerForContainerId(const std::string& id);
@@ -363,8 +364,8 @@ public:
 	QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const override;
 	QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 
-	std::shared_ptr<TypeBrowserTreeNode> nodeForIndex(const QModelIndex& index) const;
-	QModelIndex indexForNode(std::shared_ptr<TypeBrowserTreeNode> node, int column = 0) const;
+	TypeBrowserTreeNode* nodeForIndex(const QModelIndex& index) const;
+	QModelIndex indexForNode(TypeBrowserTreeNode* node, int column = 0) const;
 
 	bool filter(const QModelIndex& index, const std::string& filter, TypeBrowserFilterMode mode, bool caseSensitive) const;
 	bool lessThan(const QModelIndex& left, const QModelIndex& right) const;
@@ -517,7 +518,7 @@ public:
 	// Selection helpers
 
 	// All nodes
-	std::vector<std::shared_ptr<TypeBrowserTreeNode>> selectedNodes() const;
+	std::vector<TypeBrowserTreeNode*> selectedNodes() const;
 	// BV selected or BV relevant to selected types, only if JUST bv stuff is selected
 	std::optional<BinaryViewRef> selectedBV() const;
 	// If selectedBV exists, names of selected types

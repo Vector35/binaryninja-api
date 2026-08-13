@@ -9,6 +9,7 @@
 #include "sidebar.h"
 #include "viewframe.h"
 #include "filter.h"
+#include "notificationsdispatcher.h"
 #include "progresstask.h"
 #include "typeeditor.h"
 
@@ -18,6 +19,46 @@ enum BINARYNINJAUIAPI TypeBrowserFilterMode
 	NamesOnly = 0,
 	NamesAndMembers = 1,
 	FullDefinitions = 2
+};
+
+
+// A single container's types: type id -> (name, definition). This is a plain snapshot of
+// TypeContainer::GetTypes() with no ties to live model/tree state, so it can be built on a
+// background thread (the expensive part) and consumed by the tree diff on the main thread.
+using TypeBrowserContainerTypes = std::map<std::string, std::pair<BinaryNinja::QualifiedName, TypeRef>>;
+// All containers' pre-fetched types, keyed by container id.
+using TypeBrowserTypeSnapshot = std::map<std::string, TypeBrowserContainerTypes>;
+
+
+// A pure-data description of what changed between two snapshots, computed off the main thread
+// (including the deep Type comparisons) so the main thread only has to apply it to the tree.
+struct TypeBrowserTypeEntry
+{
+	std::string id;
+	BinaryNinja::QualifiedName name;
+	TypeRef type;
+};
+
+// Type-level changes within a single container.
+struct TypeBrowserTypeDelta
+{
+	std::vector<std::string> removed;          // type ids that disappeared
+	std::vector<TypeBrowserTypeEntry> added;   // types that appeared
+	std::vector<TypeBrowserTypeEntry> updated; // types whose name or definition changed
+
+	bool empty() const { return removed.empty() && added.empty() && updated.empty(); }
+};
+
+// The full delta applied to the tree in one update cycle.
+struct TypeBrowserDelta
+{
+	std::vector<std::string> removedContainerIds;
+	// Newly-added containers, in display order, each carrying its full type list.
+	std::vector<std::pair<std::string, std::vector<TypeBrowserTypeEntry>>> addedContainers;
+	// Type-level changes for containers that persist across the update.
+	std::map<std::string, TypeBrowserTypeDelta> typeChanges;
+
+	bool empty() const { return removedContainerIds.empty() && addedContainers.empty() && typeChanges.empty(); }
 };
 
 
@@ -66,7 +107,9 @@ public:
 	virtual std::string text(int column) const = 0;
 	virtual bool lessThan(const TypeBrowserTreeNode& other, int column) const = 0;
 	virtual bool filter(const std::string& filter, TypeBrowserFilterMode mode, bool caseSensitive) const = 0;
-	virtual void updateChildren(bool recursive, UpdateNodeCallback update);
+	// Apply a pre-computed delta to the tree, emitting one UpdateData per change. Only the root
+	// implements this; the default is a no-op.
+	virtual void applyDelta(const TypeBrowserDelta& delta, UpdateNodeCallback update);
 };
 
 
@@ -82,7 +125,6 @@ public:
 
 protected:
 	virtual void generateChildren() override;
-	virtual void updateChildren(bool recursive, UpdateNodeCallback update) override;
 };
 
 
@@ -98,9 +140,10 @@ public:
 	virtual bool lessThan(const TypeBrowserTreeNode& other, int column) const override;
 	virtual bool filter(const std::string& filter, TypeBrowserFilterMode mode, bool caseSensitive) const override;
 
+	virtual void applyDelta(const TypeBrowserDelta& delta, UpdateNodeCallback update) override;
+
 protected:
 	virtual void generateChildren() override;
-	virtual void updateChildren(bool recursive, UpdateNodeCallback update) override;
 };
 
 
@@ -173,7 +216,9 @@ public:
 	std::optional<PlatformRef> platform() const;
 	std::optional<BinaryNinja::TypeContainer> typeContainer() const;
 	std::optional<BNTypeContainerType> containerType() const;
-	virtual void updateChildren(bool recursive, UpdateNodeCallback update) override;
+	// Apply a container's type-level delta, emitting one UpdateData per change. Called by
+	// RootTreeNode::applyDelta.
+	void applyTypeDelta(const TypeBrowserTypeDelta& delta, UpdateNodeCallback update);
 
 protected:
 	virtual void generateChildren() override;
@@ -182,18 +227,11 @@ protected:
 //-----------------------------------------------------------------------------
 
 /*! Cursed data struct behind a shared_ptr so Qt stops deleting our model while the background updates run */
-class TypeBrowserModelData: public std::enable_shared_from_this<TypeBrowserModelData>
+class TypeBrowserModelData: public std::enable_shared_from_this<TypeBrowserModelData> // TODO enable_shared is not necessary
 {
 	BinaryViewRef m_data;
 
-	mutable std::recursive_mutex m_rootNodeMutex; // Controls m_rootNode
 	std::shared_ptr<TypeBrowserTreeNode> m_rootNode;
-
-	std::recursive_mutex m_stateMutex; // Controls m_needsUpdate, m_updating
-	bool m_needsUpdate;
-	bool m_updating;
-
-	std::mutex m_backgroundTaskMutex;
 
 	std::vector<std::string> m_containerIds;
 	std::map<std::string, std::string> m_containerNames;
@@ -207,11 +245,32 @@ class TypeBrowserModelData: public std::enable_shared_from_this<TypeBrowserModel
 	std::map<std::string, DebugInfoRef> m_containerDebugInfos;
 	std::map<std::string, PlatformRef> m_containerPlatforms;
 
-	void addContainer(BinaryNinja::TypeContainer cont);
-
 	friend class TypeBrowserModel;
 
 public:
+	/*! Self-contained snapshot of the container/type state, built from the core with no ties
+	    to the live model. The enumeration and the (expensive) per-container type reads run on
+	    a background thread; the main thread then resolves the deferred display names and swaps
+	    the descriptor maps into the model via applySnapshot(). */
+	struct Snapshot
+	{
+		std::vector<std::string> containerIds;
+		std::map<std::string, std::string> containerNames;
+		std::map<std::string, BNTypeContainerType> containerTypes;
+		std::map<std::string, BinaryNinja::TypeContainer> containers;
+		std::map<std::string, BinaryViewRef> containerViews;
+		std::map<std::string, TypeArchiveRef> containerArchives;
+		std::map<std::string, std::string> containerArchiveIds;
+		std::map<std::string, TypeLibraryRef> containerLibraries;
+		std::map<std::string, DebugInfoRef> containerDebugInfos;
+		std::map<std::string, PlatformRef> containerPlatforms;
+		// Display names that require the UI context (main-thread only) are deferred here as
+		// id -> (prefix, rawPath); applySnapshot() resolves them via filePathToName().
+		std::map<std::string, std::pair<std::string, std::string>> pendingNames;
+		// Pre-fetched per-container types (the expensive read), keyed by container id.
+		TypeBrowserTypeSnapshot types;
+	};
+
 	explicit TypeBrowserModelData(BinaryViewRef data);
 	~TypeBrowserModelData();
 	TypeBrowserModelData(const TypeBrowserModelData&) = delete;
@@ -234,29 +293,44 @@ public:
 	std::optional<DebugInfoRef> debugInfoForContainerId(const std::string& id) const;
 	std::optional<PlatformRef> platformForContainerId(const std::string& id) const;
 
-	void addAllContainersForView(BinaryViewRef view);
-
-	void addContainerForView(BinaryViewRef view);
-	void addUserContainerForView(BinaryViewRef view);
-	void addAutoContainerForView(BinaryViewRef view);
-	void addContainerForArchive(TypeArchiveRef archive);
-	void addContainerForArchiveId(const std::string& archiveId, const std::string& path);
-	void addContainerForLibrary(TypeLibraryRef library);
-	void addContainerForDebugInfo(DebugInfoRef debugInfo, const std::string& parser);
-	void addContainerForPlatform(PlatformRef platform);
-	void clearContainers();
+	// Build a full self-contained snapshot from the core (all containers + their types). Safe
+	// to call off the main thread; touches no model or tree state and defers UI-context-
+	// dependent naming. Used when a rebuild is warranted (initial load / archive changes).
+	Snapshot buildSnapshot() const;
+	// Fetch just the view's own (user/auto) container types. This is the common incremental
+	// case: a view-level type edit cannot change any other container's contents, so re-reading
+	// only these two avoids the full GetTypes() sweep. Safe to call off the main thread.
+	TypeBrowserTypeSnapshot buildViewTypeSnapshot() const;
+	// Adopt a snapshot: resolve deferred names and move its descriptor maps into the model.
+	// Must run on the main thread (resolves names + is read by the Qt model). The snapshot's
+	// pre-fetched `types` are left intact for the caller to drive the tree diff.
+	void applySnapshot(Snapshot& snapshot);
 
 	std::vector<std::shared_ptr<TypeContainerTreeNode>> containerNodes() const;
+
+private:
+	void addContainer(BinaryNinja::TypeContainer cont, Snapshot& out) const;
+	void addAllContainersForView(BinaryViewRef view, Snapshot& out) const;
+	void addContainerForView(BinaryViewRef view, Snapshot& out) const;
+	void addUserContainerForView(BinaryViewRef view, Snapshot& out) const;
+	void addAutoContainerForView(BinaryViewRef view, Snapshot& out) const;
+	void addContainerForArchive(TypeArchiveRef archive, Snapshot& out) const;
+	void addContainerForArchiveId(const std::string& archiveId, const std::string& path, Snapshot& out) const;
+	void addContainerForLibrary(TypeLibraryRef library, Snapshot& out) const;
+	void addContainerForDebugInfo(DebugInfoRef debugInfo, const std::string& parser, Snapshot& out) const;
+	void addContainerForPlatform(PlatformRef platform, Snapshot& out) const;
 };
 
 //-----------------------------------------------------------------------------
 
-class BINARYNINJAUIAPI TypeBrowserModel : public QAbstractItemModel, public BinaryNinja::BinaryDataNotification, public BinaryNinja::TypeArchiveNotification
+class BINARYNINJAUIAPI TypeBrowserModel : public QAbstractItemModel
 {
 	Q_OBJECT
 
 	BinaryViewRef m_data;
 	std::shared_ptr<class TypeBrowserModelData> m_modelData;
+	std::unique_ptr<NotificationsDispatcher> m_dispatcher = nullptr;
+	std::unique_ptr<TypeArchiveNotificationDispatcher> m_typeArchiveDispatcher = nullptr;
 
 	void commitUpdate(const TypeBrowserTreeNode::UpdateData& update);
 	void commitUpdates(const std::vector<TypeBrowserTreeNode::UpdateData>& updates);
@@ -281,7 +355,6 @@ public:
 	std::optional<PlatformRef> platformForContainerId(const std::string& id) const;
 
 	void updateFonts();
-	void runAfterUpdate(std::function<void()> callback);
 
 	int columnCount(const QModelIndex& parent = QModelIndex()) const override;
 	int rowCount(const QModelIndex& parent = QModelIndex()) const override;
@@ -296,27 +369,11 @@ public:
 	bool filter(const QModelIndex& index, const std::string& filter, TypeBrowserFilterMode mode, bool caseSensitive) const;
 	bool lessThan(const QModelIndex& left, const QModelIndex& right) const;
 
-	void OnTypeDefined(BinaryNinja::BinaryView* data, const BinaryNinja::QualifiedName& name, BinaryNinja::Type* type) override;
-	void OnTypeUndefined(BinaryNinja::BinaryView* data, const BinaryNinja::QualifiedName& name, BinaryNinja::Type* type) override;
-	void OnTypeReferenceChanged(BinaryNinja::BinaryView* data, const BinaryNinja::QualifiedName& name, BinaryNinja::Type* type) override;
-	void OnTypeFieldReferenceChanged(BinaryNinja::BinaryView* data, const BinaryNinja::QualifiedName& name, uint64_t offset) override;
-
-	void OnTypeAdded(TypeArchiveRef archive, const std::string& id, TypeRef definition) override;
-	void OnTypeUpdated(TypeArchiveRef archive, const std::string& id, TypeRef oldDefinition, TypeRef newDefinition) override;
-	void OnTypeRenamed(TypeArchiveRef archive, const std::string& id, const BinaryNinja::QualifiedName& oldName, const BinaryNinja::QualifiedName& newName) override;
-	void OnTypeDeleted(TypeArchiveRef archive, const std::string& id, TypeRef definition) override;
-
-	void OnTypeArchiveAttached(BinaryNinja::BinaryView* data, const std::string& id, const std::string& path) override;
-	void OnTypeArchiveDetached(BinaryNinja::BinaryView* data, const std::string& id, const std::string& path) override;
-	void OnTypeArchiveConnected(BinaryNinja::BinaryView* data, BinaryNinja::TypeArchive* archive) override;
-	void OnTypeArchiveDisconnected(BinaryNinja::BinaryView* data, BinaryNinja::TypeArchive* archive) override;
-
 Q_SIGNALS:
 	void updatesAboutToHappen();
 	void updateComplete(bool didAnyHappen);
 
 public Q_SLOTS:
-	void markDirty();
 	void notifyRefresh();
 };
 

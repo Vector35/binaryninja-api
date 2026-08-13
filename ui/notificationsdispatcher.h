@@ -5,6 +5,8 @@
 #include <condition_variable>
 #include <deque>
 #include <functional>
+#include <map>
+#include <memory>
 #include <mutex>
 #include <variant>
 #include <vector>
@@ -320,5 +322,54 @@ public:
 	void setUpdateHandler(std::function<void(bool refresh, std::vector<NotificationEvent>&&)>&& updateHandler) { m_worker->setUpdateHandler(std::move(updateHandler)); }
 
 	void asyncRefresh() { m_worker->asyncRefresh(); }
+};
+
+
+/*!
+	A lightweight companion to NotificationsDispatcher for BinaryNinja::TypeArchiveNotification.
+
+	Unlike BinaryDataNotification (registered on the view and delivered as a firehose that
+	warrants a dedicated worker thread), TypeArchiveNotification is registered per-archive and
+	its callbacks carry no payload a consumer typically needs beyond "something changed". This
+	helper therefore does not run its own worker; it exists to make the mechanism safe:
+
+	  - it owns the notification receiver, decoupling its lifetime from any QObject consumer so
+	    the receiver can outlive registrations and be torn down deterministically;
+	  - it tracks the set of archives it is subscribed to and reconciles that set on demand; and
+	  - it guarantees every registration is removed before the receiver is destroyed.
+
+	Callbacks arrive on background threads, so the supplied onChange handler must be thread-safe.
+	Consumers typically wire it to an existing NotificationsDispatcher::asyncRefresh(), reusing
+	that dispatcher's background/main-thread marshaling.
+*/
+class TypeArchiveNotificationDispatcher
+{
+	class Receiver: public BinaryNinja::TypeArchiveNotification
+	{
+		std::function<void()> m_onChange;
+
+	public:
+		explicit Receiver(std::function<void()>&& onChange): m_onChange(std::move(onChange)) { }
+
+		void OnTypeAdded(TypeArchiveRef, const std::string&, TypeRef) override { if (m_onChange) m_onChange(); }
+		void OnTypeUpdated(TypeArchiveRef, const std::string&, TypeRef, TypeRef) override { if (m_onChange) m_onChange(); }
+		void OnTypeRenamed(TypeArchiveRef, const std::string&, const BinaryNinja::QualifiedName&, const BinaryNinja::QualifiedName&) override { if (m_onChange) m_onChange(); }
+		void OnTypeDeleted(TypeArchiveRef, const std::string&, TypeRef) override { if (m_onChange) m_onChange(); }
+	};
+
+	std::mutex m_mutex;
+	std::unique_ptr<Receiver> m_receiver;
+	std::map<std::string, TypeArchiveRef> m_registered;  // keyed by TypeArchive id
+
+public:
+	explicit TypeArchiveNotificationDispatcher(std::function<void()>&& onChange);
+	~TypeArchiveNotificationDispatcher();
+
+	// Reconcile the subscribed set with `archives`: register any newly-present archive and
+	// unregister any that is no longer present. Safe to call repeatedly.
+	void updateRegistrations(const std::vector<TypeArchiveRef>& archives);
+
+	// Unregister from every archive.
+	void clear();
 };
 

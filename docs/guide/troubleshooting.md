@@ -98,7 +98,7 @@ Analysis databases (`.bndb`) may grow in size after repeated saving/loading due 
 
 ## Platforms
 
-The below steps are specific to different platforms that Binary Ninja runs on.  See the [FAQ] for currently supported versions.
+The below steps are specific to different platforms that Binary Ninja runs on.  See the [requirements](../about/requirements.md#supported-platforms) page for currently supported versions.
 
 ### Windows
 
@@ -152,7 +152,7 @@ rm -rf /Applications/Binary\ Ninja.app/Contents/Frameworks/Python.framework/Vers
 
 ### Linux
 
-Given the diversity of Linux distributions, some workarounds are required to run Binary Ninja on platforms that are not [officially supported][FAQ].
+Given the diversity of Linux distributions, some workarounds are required to run Binary Ninja on platforms that are not [officially supported](../about/requirements.md#supported-platforms).
 
 #### Common Problems
 
@@ -270,7 +270,6 @@ stdenv.mkDerivation rec {
 [archrepo]: https://wiki.archlinux.org/index.php/Official_repositories
 [recover]: https://binary.ninja/recover.html
 [support]: https://binary.ninja/support.html
-[FAQ]: https://binary.ninja/faq.html
 [purchase]: https://binary.ninja/purchase.html
 [unofficial script]: https://gist.github.com/0x1F9F1/64725fbe9acdeafaf39e048e03f4dd9d
 [slack]: https://slack.binary.ninja

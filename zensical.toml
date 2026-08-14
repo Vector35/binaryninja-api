@@ -96,6 +96,7 @@ nav = [
     ] },
     { "About" = [
         "about/index.md",
+        { "Requirements" = "about/requirements.md" },
         { "License" = [
             "about/license.md",
             { "Non-commercial (Named)" = "about/license/noncommercial-named.md" },

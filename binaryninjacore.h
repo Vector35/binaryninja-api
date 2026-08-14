@@ -4347,6 +4347,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetProductType(void);
 	BINARYNINJACOREAPI BNLicenseAddon* BNGetLicenseAddons(size_t* count);
 	BINARYNINJACOREAPI void BNFreeLicenseAddons(BNLicenseAddon* addons, size_t count);
+	BINARYNINJACOREAPI bool BNHasCollaborationEntitlement(void);
 	BINARYNINJACOREAPI int BNGetLicenseCount(void);
 	BINARYNINJACOREAPI bool BNIsUIEnabled(void);
 	BINARYNINJACOREAPI void BNSetLicense(const char* licenseData);

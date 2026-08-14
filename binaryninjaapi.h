@@ -2060,6 +2060,7 @@ namespace BinaryNinja {
 	std::string GetProductType();
 	std::string GetSerialNumber();
 	std::vector<LicenseAddon> GetLicenseAddons();
+	bool HasCollaborationEntitlement();
 	int GetLicenseCount();
 	bool IsUIEnabled();
 	uint32_t GetBuildId();

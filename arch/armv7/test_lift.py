@@ -97,6 +97,14 @@ test_cases = \
     ('T', b'\x28\x40', 'LLIL_SET_REG.d(r0,LLIL_AND.d{*}(LLIL_REG.d(r0),LLIL_REG.d(r5)))'),
     # bics r3, r3
     ('T', b'\x9b\x43', 'LLIL_SET_REG.d(r3,LLIL_AND.d{*}(LLIL_REG.d(r3),LLIL_NOT.d(LLIL_REG.d(r3))))'),
+    # bfi r2, r1, #0, #32 -- a full-width insert copies the source register
+    ('A', b'\x11\x20\xdf\xe7', 'LLIL_SET_REG.d(r2,LLIL_OR.d(LLIL_AND.d(LLIL_REG.d(r2),LLIL_CONST.d(0x0)),LLIL_LSL.d(LLIL_AND.d(LLIL_REG.d(r1),LLIL_CONST.d(0xFFFFFFFF)),LLIL_CONST.d(0x0))))'),
+    ('T', b'\x61\xf3\x1f\x02', 'LLIL_SET_REG.d(r2,LLIL_OR.d(LLIL_AND.d(LLIL_REG.d(r2),LLIL_CONST.d(0x0)),LLIL_LSL.d(LLIL_AND.d(LLIL_REG.d(r1),LLIL_CONST.d(0xFFFFFFFF)),LLIL_CONST.d(0x0))))'),
+    # bfc r2, #0, #32 -- a full-width clear zeros the destination register
+    ('A', b'\x1f\x20\xdf\xe7', 'LLIL_SET_REG.d(r2,LLIL_AND.d(LLIL_REG.d(r2),LLIL_CONST.d(0x0)))'),
+    ('T', b'\x6f\xf3\x1f\x02', 'LLIL_SET_REG.d(r2,LLIL_AND.d(LLIL_REG.d(r2),LLIL_CONST.d(0x0)))'),
+    # ubfx r2, r1, #0, #32 -- a full-width extract copies the source register
+    ('T', b'\xc1\xf3\x1f\x02', 'LLIL_SET_REG.d(r2,LLIL_AND.d(LLIL_LSR.d(LLIL_REG.d(r1),LLIL_CONST.d(0x0)),LLIL_CONST.d(0xFFFFFFFF)))'),
     # mvns r3, r6
     ('T', b'\xf3\x43', 'LLIL_SET_REG.d(r3,LLIL_NOT.d{*}(LLIL_REG.d(r6)))'),
     # eors r2, r0

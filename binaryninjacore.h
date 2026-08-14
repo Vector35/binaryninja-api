@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 183
+#define BN_CURRENT_CORE_ABI_VERSION 184
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -4338,6 +4338,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetProductType(void);
 	BINARYNINJACOREAPI BNLicenseAddon* BNGetLicenseAddons(size_t* count);
 	BINARYNINJACOREAPI void BNFreeLicenseAddons(BNLicenseAddon* addons, size_t count);
+	BINARYNINJACOREAPI bool BNHasCollaborationEntitlement(void);
 	BINARYNINJACOREAPI int BNGetLicenseCount(void);
 	BINARYNINJACOREAPI bool BNIsUIEnabled(void);
 	BINARYNINJACOREAPI void BNSetLicense(const char* licenseData);

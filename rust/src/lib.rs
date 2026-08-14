@@ -584,6 +584,11 @@ pub fn license_addons() -> Vec<LicenseAddon> {
     result
 }
 
+/// Returns whether the active license permits access to collaboration services.
+pub fn has_collaboration_entitlement() -> bool {
+    unsafe { BNHasCollaborationEntitlement() }
+}
+
 /// Set the license that will be used once the core initializes. You can reset the license by passing `None`.
 ///
 /// If not set, the normal license retrieval will occur:

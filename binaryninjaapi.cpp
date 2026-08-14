@@ -293,6 +293,12 @@ vector<LicenseAddon> BinaryNinja::GetLicenseAddons()
 }
 
 
+bool BinaryNinja::HasCollaborationEntitlement()
+{
+	return BNHasCollaborationEntitlement();
+}
+
+
 int BinaryNinja::GetLicenseCount()
 {
 	return BNGetLicenseCount();

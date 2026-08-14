@@ -414,6 +414,15 @@ def core_license_addons() -> List[LicenseAddon]:
 		core.BNFreeLicenseAddons(addons, count.value)
 
 
+def core_has_collaboration_entitlement() -> bool:
+	'''Whether the active license permits access to collaboration services.'''
+	try:
+		_init_plugins()
+	except RuntimeError:
+		return core.BNHasCollaborationEntitlement()
+	return core.BNHasCollaborationEntitlement()
+
+
 def core_ui_enabled() -> bool:
 	'''Indicates that a UI exists and the UI has invoked BNInitUI'''
 	return core.BNIsUIEnabled()

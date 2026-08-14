@@ -63,6 +63,7 @@ class BINARYNINJAUIAPI Sidebar : public QObject
 	static std::set<SidebarWidgetType*> m_defaultTypes;
 	static std::optional<SidebarMetrics> m_metrics;
 	static std::map<QString, SidebarIconVisibility> m_iconVisibility;
+	static std::set<QString> m_unavailableTypeNames;
 
 private Q_SLOTS:
 	void containerUpdated();
@@ -148,6 +149,10 @@ public:
 	static void moveSidebarWidgetType(SidebarWidgetType* type, SidebarWidgetLocation newLocation, size_t newIndex);
 	static SidebarWidgetType* typeFromName(const QString& name);
 	static bool isTypeRegistered(const QString& name);
+	static bool isTypeAvailable(SidebarWidgetType* type);
+	static bool isTypeAvailable(const QString& name);
+	static void setTypeAvailable(SidebarWidgetType* type, bool available);
+	static void setTypeAvailable(const QString& name, bool available);
 	static std::vector<SidebarWidgetType*> types();
 	static const std::vector<SidebarWidgetType*>& typesForLocation(SidebarWidgetLocation location);
 	static std::vector<SidebarWidgetType*> typesForContainerLocation(SidebarContainerLocation location);
@@ -197,7 +202,7 @@ public:
 	static T* activateWidget(SidebarWidgetType* type)
 	{
 		Sidebar* sidebar = current();
-		if (!type || !sidebar)
+		if (!type || !sidebar || !isTypeAvailable(type))
 			return (T*)nullptr;
 		sidebar->activate(type);
 		QWidget* widget = sidebar->widget(type);

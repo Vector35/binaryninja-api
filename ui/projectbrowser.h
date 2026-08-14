@@ -401,6 +401,7 @@ class BINARYNINJAUIAPI ProjectBrowser: public QWidget, public UIContextNotificat
 
 	ClickableIcon* m_refreshButton;
 	ClickableIcon* m_editDetailsButton;
+	QToolButton* m_projectLinkButton = nullptr;
 
 	UIActionHandler* m_projectTreeActionHandler = nullptr;
 	UIActionHandler* m_projectTableActionHandler = nullptr;
@@ -463,6 +464,7 @@ public:
 	~ProjectBrowser();
 
 	ProjectRef GetProject() const { return m_project; };
+	void setCollaborationAvailable(bool available);
 
 	static void registerActions();
 };

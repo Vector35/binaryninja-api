@@ -2405,7 +2405,7 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 	{
 		uint32_t lsb = instr->fields[instr->format->operands[1].field0];
 		uint32_t clear_width = instr->fields[instr->format->operands[2].field0];
-		uint32_t mask = ((1 << clear_width) - 1) << lsb;
+		uint32_t mask = ((1ULL << clear_width) - 1) << lsb;
 		il.AddInstruction(WriteILOperand(il, instr, 0,
 					il.And(4,
 						ReadILOperand(il, instr, 0),
@@ -2421,7 +2421,7 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 
 		width = instr->fields[instr->format->operands[3].field0];
 		lsb = instr->fields[instr->format->operands[2].field0];
-		width_mask = (1 << width) - 1;
+		width_mask = (1ULL << width) - 1;
 		mask = width_mask << lsb;
 		//bit field insert: op1 = (op1 & (~(<width_mask> << lsb))) | ((op2 & <width_mask>) << lsb)
 		il.AddInstruction(WriteILOperand(il, instr, 0,
@@ -3653,10 +3653,13 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 			{ ReadILOperand(il, instr, 1), ReadILOperand(il, instr, 2) });
 		break;
 	case armv7::ARMV7_UBFX:
+	{
+		uint32_t width = instr->fields[instr->format->operands[3].field0];
+		uint32_t width_mask = (1ULL << width) - 1;
 		il.AddInstruction(WriteILOperand(il, instr, 0, il.And(4, il.LogicalShiftRight(4, ReadILOperand(il, instr, 1),
-												 ReadILOperand(il, instr, 2)),
-									 il.Const(4, (1 << instr->fields[instr->format->operands[3].field0]) - 1))));
+			 ReadILOperand(il, instr, 2)), il.Const(4, width_mask))));
 		break;
+	}
 	case armv7::ARMV7_UDF:
 		il.AddInstruction(il.Trap(instr->fields[instr->format->operands[0].field0]));
 		break;

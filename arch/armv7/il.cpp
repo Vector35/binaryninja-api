@@ -2208,12 +2208,12 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 		case ARMV7_BFC:
 			ConditionExecute(il, instr.cond, SetRegisterOrBranch(il, op1.reg,
 				il.And(get_register_size(op1.reg), ReadRegisterOrPointer(il, op1, addr),
-					il.Const(get_register_size(op1.reg), ~(((1<<op3.imm) - 1) << op2.imm)))));
+					il.Const(get_register_size(op1.reg), ~(((1ULL << op3.imm) - 1) << op2.imm)))));
 			break;
 		case ARMV7_BFI:
 		{
 			uint32_t lsb = op3.imm;
-			uint32_t width_mask = (1<<op4.imm) - 1;
+			uint32_t width_mask = (1ULL << op4.imm) - 1;
 			uint32_t mask = width_mask << lsb;
 
 			//bit field insert: op1 = (op1 & (~(<width_mask> << lsb))) | ((op2 & <width_mask>) << lsb)

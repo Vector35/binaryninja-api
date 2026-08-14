@@ -121,6 +121,7 @@ fn main() {
         .allowlist_var("BN_CURRENT_CORE_ABI_VERSION")
         .allowlist_var("BN_MINIMUM_CORE_ABI_VERSION")
         .allowlist_var("MAX_RELOCATION_SIZE")
+        .allowlist_type("BNLinearSweepAnalysisCapability")
         .raw_line(format!(
             "pub const BN_CURRENT_UI_ABI_VERSION: u32 = {};",
             current_version

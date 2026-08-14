@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 183
+#define BN_CURRENT_CORE_ABI_VERSION 184
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 182
+#define BN_MINIMUM_CORE_ABI_VERSION 184
 
 #define BN_DEMANGLER_MSVC "MS"
 #define BN_DEMANGLER_GNU3 "GNU3"
@@ -2027,6 +2027,12 @@ extern "C"
 		BNArchitecture* branchArch[BN_MAX_INSTRUCTION_BRANCHES];  // If null, same architecture as instruction
 	} BNInstructionInfo;
 
+	BN_ENUM(uint32_t, BNLinearSweepAnalysisCapability)
+	{
+		BNLinearSweepCallTargetAnalysis = 1 << 0,
+		BNLinearSweepGenericControlFlowAnalysis = 1 << 1
+	};
+
 	BN_ENUM(uint8_t, BNRelocationType)
 	{
 		ELFGlobalRelocationType,
@@ -2297,6 +2303,9 @@ extern "C"
 		bool (*alwaysBranch)(void* ctxt, uint8_t* data, uint64_t addr, size_t len);
 		bool (*invertBranch)(void* ctxt, uint8_t* data, uint64_t addr, size_t len);
 		bool (*skipAndReturnValue)(void* ctxt, uint8_t* data, uint64_t addr, size_t len, uint64_t value);
+
+		size_t (*getLinearSweepInitialAlignment)(void* ctxt);
+		uint32_t (*getLinearSweepAnalysisCapabilities)(void* ctxt);
 	} BNCustomArchitecture;
 
 	typedef struct BNCustomPlatform
@@ -5273,6 +5282,8 @@ extern "C"
 	BINARYNINJACOREAPI size_t BNGetArchitectureAddressSize(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureDefaultIntegerSize(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureInstructionAlignment(BNArchitecture* arch);
+	BINARYNINJACOREAPI size_t BNGetArchitectureLinearSweepInitialAlignment(BNArchitecture* arch);
+	BINARYNINJACOREAPI uint32_t BNGetArchitectureLinearSweepAnalysisCapabilities(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureMaxInstructionLength(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureOpcodeDisplayLength(BNArchitecture* arch);
 	BINARYNINJACOREAPI BNArchitecture* BNGetAssociatedArchitectureByAddress(BNArchitecture* arch, uint64_t* addr);

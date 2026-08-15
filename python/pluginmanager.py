@@ -20,9 +20,15 @@
 
 import warnings
 
+from . import deprecation
 from .extensionmanager import *  # noqa: F401,F403
 
 warnings.warn(
-	"binaryninja.pluginmanager is deprecated in 5.4, use binaryninja.extensionmanager instead.",
-	DeprecationWarning, stacklevel=2
+	deprecation.DeprecatedWarning(
+		"binaryninja.pluginmanager",
+		"6.0",
+		None,
+		"Use binaryninja.extensionmanager instead."
+	),
+	stacklevel=2
 )

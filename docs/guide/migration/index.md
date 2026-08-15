@@ -14,7 +14,7 @@ We have quick start guides for the following:
 
 ## Additional Resources
 
-We love our community! Feel free to hang with us and chat in our [Public Slack Server](https://slack.binary.ninja). Our community is great about answering questions for each other, but one of our engineers will often get to your question first as well. We have a lot of different channels for different levels of engineers, different interests, topics, and so on.
+We love our community! Feel free to hang with us and chat in our [Public Slack Server](https://slack.binary.ninja). Our community is great about answering questions for each other, but one of our engineers will often get to your question first as well. We have a lot of different channels for different levels of engineers, different interests, topics, and so on. If you're coming from another tool, the `#from-ghidra` and `#from-ida` channels are great places to ask migration questions.
 
 Our community has also generated a tremendous number of [community plugins](https://github.com/Vector35/community-plugins) that provide support for new architectures, automate different types of analysis, and even some that provide new and advanced visualizations for your programs. That repo also contains instructions for how to get your own plugin into our [extension manager](../plugins.md#extension-manager).
 

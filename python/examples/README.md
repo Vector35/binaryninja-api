@@ -35,6 +35,7 @@ These plugins require the UI to be running
 * hellosidebar.py - example [Sidebar](https://api.binary.ninja/cpp/group__sidebar.html) UI element (like the Symbol list)
 * jump_table.py - heuristic based jump table detection for when the data-flow based computation fails, triggered by right-clicking on the location where the jump value is computed
 * linear_mlil.py - deprecated (now supported internally, left purely as a code example) plugin generating a custom linear MLIL view
+* list_keybindings.py - enumerate every registered (keybindable) action and its current/default key sequence via `UIAction.getAllRegisteredActions()`; useful for discovering valid action names, validating a keybindings.json, or exporting a keybindings.json skeleton
 * make_code.py - plugin to render hex as disassembly without creating a function using a [DataRenderer](https://api.binary.ninja/binaryninja.datarender-module.html#binaryninja.datarender.DataRenderer)
 * mapped_view.py - example view showing how to map regions in memory in a custom [BinaryView](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView)
 * ui_notification_callbacks.py - example showing multiple UI notification callbacks

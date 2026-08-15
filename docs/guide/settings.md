@@ -508,7 +508,7 @@ The following settings are specific to Binary Views. To access these settings, y
 | | | enum: Perform full linear sweep on the binary.|`enum`|`full`| | |
 |triage|Always Prefer Triage Summary View|Always prefer opening binaries in Triage Summary view, even when performing full analysis.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='triage.preferSummaryView'>triage.preferSummaryView</a>|
 |triage|Prefer Triage Summary View for Raw Files|Prefer opening raw files in Triage Summary view.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='triage.preferSummaryViewForRaw'>triage.preferSummaryViewForRaw</a>|
-|ui|Allow Welcome Popup|By default, the welcome window will only show up when it has changed and this install has not seen it. However, disabling this setting will prevent even that.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.allowWelcome'>ui.allowWelcome</a>|
+|ui|Allow First Run Dialog|By default, the First Run dialog will only show up when it has changed and this install has not seen it. However, disabling this setting will prevent even that.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.allowWelcome'>ui.allowWelcome</a>|
 |ui|Default Cross References Interface|Default interface to use when the Show Cross References at Selection action is performed.|`string`|`pinned`|[`SettingsUserScope`]|<a id='ui.defaultXrefInterface'>ui.defaultXrefInterface</a>|
 | | | enum: Create a new Pinned Cross References tab and focus it.|`enum`|`pinned`| | |
 | | | enum: Focus the Cross References sidebar.|`enum`|`sidebar`| | |

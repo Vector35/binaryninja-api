@@ -65,6 +65,30 @@ When you first run Binary Ninja, it will prompt you for your license key. You sh
 
 Once the license key is installed, you can change it, back it up, or otherwise inspect it simply by looking inside the base of the user folder for `license.dat`.
 
+## First Run Wizard
+
+![First Run Wizard ><](../img/first-bn.png "First Run Wizard"){ width="600" }
+
+The first time you launch Binary Ninja, a short setup wizard helps tailor the interface to your preferences. You can revisit it at any time from `Help / First Run Wizard...`.
+
+The wizard has three steps:
+
+1. **Light or dark?** — Pick a starting theme. Many more are available in the [settings](settings.md) and from the [community themes](https://github.com/vector35/community-themes) collection, and the Theme Manager plugin offers a live preview.
+2. **Choose your style** — Select a starting workflow preset. **Binary Ninja Defaults** is recommended for new users, while the **Ghidra-Like** and **IDA-Like** presets adjust keybindings and UI layout to feel more familiar if you are coming from those tools. See the [migration guides](migration/index.md) — [Migrating from IDA](migration/migrationguideida.md) and [Migrating from Ghidra](migration/ghidra/index.md) — for a detailed description of exactly what each preset changes.
+3. **Important Settings** — Toggle a few privacy and network-related options (automatic crash reporting, automatic update checks, and WARP network features). These, like every other setting, can be changed later in [settings](settings.md).
+
+### Applying a Preset
+
+Selecting the **Ghidra-Like** or **IDA-Like** preset replaces your keybindings and updates a handful of UI settings to match that tool. Selecting **Binary Ninja Defaults** resets those same keybindings and settings back to the Binary Ninja defaults if you have existing settings which makes it a convenient way to undo a previously-applied preset.
+
+The exact keybindings and settings each preset applies are defined by the configuration files in [`docs/files`](https://github.com/Vector35/binaryninja-api/tree/dev/docs/files) in the API repository. If you think a preset could be improved, we welcome suggestions — please open a pull request against those files.
+
+If applying your selection would change any of your own settings or keybindings, the wizard backs them up first — `settings.json` and `keybindings.json` are copied to numbered backups (for example `settings.json.1` and `keybindings.json.1`) in your [user folder](#user-folder) — and a warning describes what will be backed up. To restore a backup later, simply rename it back into place.
+
+Presets also change some window state that is stored outside `settings.json`, including the default pane layout and a few view options such as linear view's single-function mode, the feature map size, and the types sidebar detail toggle. That state is reset to match the preset rather than backed up, so it cannot be directly recovered by renaming a file.
+
+Choosing **Cancel** leaves the wizard without touching anything; no changes are applied until you press **Accept**.
+
 ## Linux Setup
 
 Because Linux installation locations can vary widely, we do not assume that Binary Ninja has been installed in any particular folder on Linux. Rather, you can simply run `binaryninja/scripts/linux-setup.sh` after extracting the zip and various file associations, icons, and other settings will be set up. Run it with `-h` to see the customization options.

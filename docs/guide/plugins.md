@@ -87,7 +87,7 @@ Then just restart and the newly-enabled plugin will be loaded.
 
 ### Installing Prerequisites
 
-Binary Ninja can automatically install pip requirements for python plugins  installed using the extension manager. If the plugin author has included a `requirements.txt` file, the extension manager will automatically install those dependencies.
+Binary Ninja can automatically install pip requirements for python plugins installed using the extension manager. If the plugin author has included a `requirements.txt` file, the extension manager will automatically install those dependencies.
 
 The `Install python3 module` action (available from the [command palette](index.md#command-palette)) can be used to install python3 modules to the local [python folder](index.md#user-folder).
 

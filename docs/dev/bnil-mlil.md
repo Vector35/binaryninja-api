@@ -111,7 +111,8 @@ enum TypeClass
 	VarArgsTypeClass = 9,
 	ValueTypeClass = 10,
 	NamedTypeReferenceClass = 11,
-	WideCharTypeClass = 12
+	WideCharTypeClass = 12,
+	FragmentTypeClass = 13
 };
 ```
 
@@ -189,6 +190,14 @@ Array types function similarly to pointer types however the array type knows how
 * `target`/`element_type` - the type of element this array is constructed of
 * `count` - the count of array elements
 * `width` - the size of the array (`count * target.width`)
+
+### FragmentTypeClass
+
+A fragment type describes a bitwise slice of a larger type while that slice is carried in
+integer-like storage. Analysis uses fragments to preserve type information through partial
+register moves, such as calling-convention transfers and optimized inline copies. The live
+fragment size and placement within its container are tracked in bits. See
+[Type Fragments](../guide/types/fragments.md) for its behavior, text syntax, and API examples.
 
 ### EnumerationTypeClass
 

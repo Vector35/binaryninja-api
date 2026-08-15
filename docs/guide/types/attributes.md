@@ -332,6 +332,13 @@ while (leader != event)
     inside the next object, but we're inlining the structure members here, so we can
     specialize their pointer offsets.
 
+## Type Fragments
+
+Fragment types are displayed using `__frag` for a little-endian mapping and `__frag_be` for a
+big-endian mapping. These annotations describe how an in-flight bitwise slice maps back to a
+larger source type; they do not imply that a particular load instruction created the fragment.
+See [Type Fragments](fragments.md) for the analysis model, syntax, and examples.
+
 ## Based Pointers
 
 Many binary formats contain pointers that reference addresses based on the start of memory or the address of the variable itself. You can annotate the base of these pointers using the `__based()` attribute. Binary Ninja supports these formats of based pointers:

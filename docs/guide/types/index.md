@@ -6,6 +6,7 @@ There are so many things to learn about working with Types in Binary Ninja that 
 - [Working with Types](type.md): Interacting with types in disassembly and decompilation
 - [Importing/Exporting Types](typeimportexport.md): How to import or export types from header files, archives, or other BNDBs
 - [Attributes and Annotations](attributes.md): Annotations you can apply to types to influence analysis and presentation
+- [Type Fragments](fragments.md): How analysis tracks bitwise slices of typed values while they move through integer storage
 
 Additionally, several types of containers for type information are documented here:
 

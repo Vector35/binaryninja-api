@@ -52,6 +52,7 @@ nav = [
             "guide/types/index.md",
             { "Basic Types" = "guide/types/basictypes.md" },
             { "Working With Types" = "guide/types/type.md" },
+            { "Type Fragments" = "guide/types/fragments.md" },
             { "Type Attributes and Annotations" = "guide/types/attributes.md" },
             { "Importing/Exporting Types" = "guide/types/typeimportexport.md" },
             { "Type Archives" = "guide/types/typearchives.md" },

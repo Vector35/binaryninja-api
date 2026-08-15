@@ -11217,27 +11217,27 @@ namespace BinaryNinja {
 		    const Confidence<bool>& cnst = Confidence<bool>(false, 0),
 		    const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
 
-		/*! Create a Fragment type, which represents a bounded load from an existing type
+		/*! Create a Fragment type, which represents a bitwise slice of an existing source type
 
-			\param width Width of the fragment in bytes
-			\param type Type that this fragment was loaded from
-			\param offset Offset into type that this fragment represents
-			\param endianness Endianness of the load operation creating the fragment
+			\param width Width of the fragment container in bytes
+			\param type Source type that this fragment originates from
+			\param offset Original byte offset into type where this fragment begins
+			\param endianness Endianness used to map source-layout bytes to fragment container bits
 			\return The created type
 		*/
 		static Ref<Type> FragmentType(size_t width, const Confidence<Ref<Type>>& type, uint64_t offset, BNEndianness endianness);
 
-		/*! Create a Fragment type, which represents a bounded load from an existing type
+		/*! Create a Fragment type, which represents a bitwise slice of an existing source type
 
-			\param width Width of the fragment in its current storage location; can be larger/smaller than the original fragment load
-			\param type Type that this fragment was loaded from
-			\param originalFragmentOffsetBytes Offset into type that this fragment represents
-			\param originalFragmentWidthBytes Width of the initial load that created the fragment
-			\param endianness Endianness of the load operation creating the fragment
+			\param width Width in bytes of the fragment's current storage container; can be larger or smaller than the original fragment width
+			\param type Source type that this fragment originates from
+			\param originalFragmentOffsetBytes Original byte offset into type where this fragment begins
+			\param originalFragmentWidthBytes Width in bytes of the original fragment
+			\param endianness Endianness used to map source-layout bytes to fragment container bits
 			\param fragmentStartBit Logical bit position inside the fragment container where fragment data starts (0 = lsb of fragment type)
-			\param fragmentWidthBits Number of remaining contiguous bits still represented in the fragment type
-			\param fragmentTruncatedStartBits Number of low-order bits of fragment data lost
-			\param wrapBit Logical bit position inside the fragment container where fragment data wraps around (0 = irrelevant)
+			\param fragmentWidthBits Number of remaining valid fragment bits represented in the container
+			\param fragmentTruncatedStartBits Number of original low-order logical fragment bits lost
+			\param wrapBit Saved historical container bit boundary; 0 means the current container width in bits is used
 			\return The created type
 		*/
 		static Ref<Type> FragmentType(size_t width, const Confidence<Ref<Type>>& type,

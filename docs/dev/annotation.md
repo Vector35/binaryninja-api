@@ -122,6 +122,7 @@ There are a number of different type objects available for creation:
 - Void (like an integer but if its size was zero)
 - Functions
 - Arrays
+- Fragment Types
 - Enumeration (kind of an integer)
 - Structures (probably has integers in it)
 - Type Definitions
@@ -210,6 +211,44 @@ Type.array(Type.int(4), 2) # Create an array of 2 - 4 byte integers
 # Similarly through their classes directly
 ArrayType.create(Type.int(4), 2)
 ```
+
+#### Fragment Types
+
+Fragment types describe bitwise slices of larger source types while those slices are carried
+in integer-like storage. Their live size and placement within the container are measured in
+bits. The constructor supplies the larger source type, container width in bytes, original
+source byte offset, and source-to-container byte order. A new fragment begins at container bit
+zero and has a bit size of `width * 8`.
+
+```python
+from binaryninja import Endianness, FragmentType, Type
+
+source = Type.structure([
+    (Type.int(4, False), "header"),
+    (Type.int(4, False), "payload"),
+    (Type.int(4, False), "flags"),
+])
+
+# Model a 64-bit live fragment derived from source bytes 4 through 11.
+fragment = Type.fragment(source, 8, 4, Endianness.LittleEndian)
+
+# Equivalently, construct the concrete class directly.
+same_fragment = FragmentType.create(source, 8, 4, Endianness.LittleEndian)
+
+assert fragment == same_fragment
+assert fragment.target == source
+assert fragment.width == 8
+assert fragment.offset == 4
+assert fragment.fragment_original_width_bytes == 8
+assert fragment.fragment_start_bit == 0
+assert fragment.fragment_width_bits == 64
+assert fragment.fragment_endianness == Endianness.LittleEndian
+```
+
+Binary Ninja generally uses fragments as intermediate types while pieces of larger objects
+move through registers, such as in calling conventions or optimized inline copies. Analysis
+updates their bit-level state as those in-flight values are transformed. See
+[Type Fragments](../guide/types/fragments.md) for the analysis model and text syntax.
 
 #### Function Types
 

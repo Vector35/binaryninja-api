@@ -2777,6 +2777,13 @@ class Type:
 		return PointerType.create_with_width(width, type, const, volatile, ref_type)
 
 	@staticmethod
+	def fragment(
+	    type: SomeType, width: _int, offset: _int,
+	    endianness: Endianness = Endianness.LittleEndian
+	) -> 'FragmentType':
+		return FragmentType.create(type, width, offset, endianness)
+
+	@staticmethod
 	def array(type: 'Type', count: _int) -> 'ArrayType':
 		return ArrayType.create(type, count)
 
@@ -3793,6 +3800,17 @@ class WideCharType(Type):
 		return cls(core_type, platform, confidence)
 
 class FragmentType(Type):
+	@classmethod
+	def create(
+	    cls, type: SomeType, width: int, offset: int,
+	    endianness: Endianness = Endianness.LittleEndian,
+	    platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence
+	) -> 'FragmentType':
+		immutable_type = type.immutable_copy()
+		handle = core.BNCreateFragmentType(width, immutable_type._to_core_struct(), offset, endianness)
+		assert handle is not None, "core.BNCreateFragmentType returned None"
+		return cls(handle, platform, confidence)
+
 	@property
 	def target(self) -> Type:
 		"""Target (read-only)"""

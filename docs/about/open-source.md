@@ -35,7 +35,7 @@ The previous tools are used to generate our documentation but are not distribute
     - [jsoncpp] ([jsoncpp license] - Public Domain / MIT)
     - [llvm] ([llvm license] - BSD-style)
     - [lzf] ([lzf license] - BSD)
-    - [python] ([python license] - Python Software Foundation License 2 -- a Python 3.10 built without GPL components is currently shipped with Windows builds only, other platforms leverage existing Python installs)
+    - [python] ([python license] - Python Software Foundation License 2 -- a Python 3.13.14 built without GPL components is shipped on Windows, macOS, and Linux, see [Bundled Python Packages](open-source.md#bundled-python-packages))
     - [sqlite] ([sqlite license] - public domain)
     - [zlib] ([zlib license] - zlib license)
     - [rapidjson] ([rapidjson license] - MIT)
@@ -50,6 +50,9 @@ The previous tools are used to generate our documentation but are not distribute
     - [zstd] ([zstd license] - BSD)
     - [openssl] ([openssl license] - Apache 2.0)
     - [sentry-native] ([sentry-native license] - MIT)
+    - [xz] ([xz license] - 0BSD) liblzma, linked into the bundled Python
+    - [llhttp] ([llhttp license] - MIT) HTTP parser used by the MCP server's HTTP transport
+    - [cppmcp] ([cppmcp license] - MIT) the MCP protocol dispatcher and transport shape are adapted from it
 
 * Other
     - [yasm] ([yasm license] - 2-clause BSD) used for assembling x86 and x64
@@ -59,6 +62,36 @@ The previous tools are used to generate our documentation but are not distribute
     - [deprecation] ([deprecation license] - Apache License 2.0) used in the Python API for marking deprecated functions/properties/classes
     - [GraalVM CE] ([GraalVM CE license] - GPLv2 with the "Classpath" Exception) used in building the Ghidra DB FFI for the Ghidra plugin
     - [zstd-rs] ([zstd-rs license] - MIT) used by the IDB import plugin
+    - [pygments] ([pygments license] - 2-clause BSD) used for syntax highlighting in the Snippets plugin
+    - [QCodeEditor] ([QCodeEditor license] - MIT) line number rendering in the Snippets plugin editor
+
+## Bundled Python Packages
+
+The Python shipped with Binary Ninja includes the following packages in its `site-packages`
+directory:
+
+* Installed directly
+    - [requests] ([requests license] - Apache 2.0)
+    - [certifi] ([certifi license] - MPLv2)
+    - [chardet] ([chardet license] - LGPLv2.1)
+    - [idna] ([idna license] - 3-clause BSD)
+    - [urllib3] ([urllib3 license] - MIT)
+    - [flatbuffers python] ([flatbuffer license] - Apache 2.0)
+    - [pip] ([pip license] - MIT)
+    - [wheel] ([wheel license] - MIT)
+    - [setuptools] ([setuptools license] - MIT)
+    - [packaging] ([packaging license] - Apache 2.0 / 2-clause BSD)
+
+* Pulled in as dependencies of the above
+    - [autocommand] ([autocommand license] - LGPLv3)
+    - [backports.tarfile] ([backports.tarfile license] - MIT)
+    - [charset-normalizer] ([charset-normalizer license] - MIT)
+    - [jaraco.context] ([jaraco.context license] - MIT)
+    - [jaraco.functools] ([jaraco.functools license] - MIT)
+    - [jaraco.text] ([jaraco.text license] - MIT)
+    - [more-itertools] ([more-itertools license] - MIT)
+    - [platformdirs] ([platformdirs license] - MIT)
+    - [tomli] ([tomli license] - MIT)
 
 ## Rust Licenses
 
@@ -133,8 +166,8 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [fmt license]: https://github.com/fmtlib/fmt/blob/11.2.0/LICENSE
 [jsoncpp]: https://github.com/open-source-parsers/jsoncpp
 [jsoncpp license]: https://github.com/open-source-parsers/jsoncpp/blob/master/LICENSE
-[llvm]: http://llvm.org/releases/3.8.1/
-[llvm license]: http://llvm.org/releases/3.8.1/LICENSE.TXT
+[llvm]: https://github.com/llvm/llvm-project/tree/llvmorg-22.1.8
+[llvm license]: https://github.com/llvm/llvm-project/blob/llvmorg-22.1.8/LICENSE.TXT
 [lzf license]: http://oldhome.schmorp.de/marc/liblzf.html
 [lzf]: http://oldhome.schmorp.de/marc/liblzf.html
 [Open Sans license]: ../fonts/OpenSans-LICENSE.txt
@@ -216,3 +249,50 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [GraalVM CE license]: https://github.com/oracle/graal/blob/master/LICENSE
 [sentry-native]: https://github.com/getsentry/sentry-native
 [sentry-native license]: https://github.com/getsentry/sentry-native/blob/master/LICENSE
+[xz]: https://github.com/tukaani-project/xz
+[xz license]: https://github.com/tukaani-project/xz/blob/v5.6.3/COPYING.0BSD
+[llhttp]: https://github.com/nodejs/llhttp
+[llhttp license]: https://github.com/nodejs/llhttp/blob/main/LICENSE
+[cppmcp]: https://github.com/LostSyscall/cppmcp
+[cppmcp license]: https://github.com/LostSyscall/cppmcp/blob/main/LICENSE
+[pygments]: https://github.com/pygments/pygments
+[pygments license]: https://github.com/pygments/pygments/blob/master/LICENSE
+[QCodeEditor]: https://github.com/luchko/QCodeEditor
+[QCodeEditor license]: https://github.com/luchko/QCodeEditor/blob/master/LICENSE.txt
+[requests]: https://github.com/psf/requests
+[requests license]: https://github.com/psf/requests/blob/main/LICENSE
+[certifi]: https://github.com/certifi/python-certifi
+[certifi license]: https://github.com/certifi/python-certifi/blob/master/LICENSE
+[chardet]: https://github.com/chardet/chardet
+[chardet license]: https://github.com/chardet/chardet/blob/main/LICENSE
+[idna]: https://github.com/kjd/idna
+[idna license]: https://github.com/kjd/idna/blob/master/LICENSE.md
+[urllib3]: https://github.com/urllib3/urllib3
+[urllib3 license]: https://github.com/urllib3/urllib3/blob/main/LICENSE.txt
+[flatbuffers python]: https://github.com/google/flatbuffers/tree/master/python
+[pip]: https://github.com/pypa/pip
+[pip license]: https://github.com/pypa/pip/blob/main/LICENSE.txt
+[wheel]: https://github.com/pypa/wheel
+[wheel license]: https://github.com/pypa/wheel/blob/main/LICENSE.txt
+[setuptools]: https://github.com/pypa/setuptools
+[setuptools license]: https://github.com/pypa/setuptools/blob/main/LICENSE
+[packaging]: https://github.com/pypa/packaging
+[packaging license]: https://github.com/pypa/packaging/blob/main/LICENSE
+[autocommand]: https://github.com/Lucretiel/autocommand
+[autocommand license]: https://github.com/Lucretiel/autocommand/blob/master/LICENSE
+[backports.tarfile]: https://github.com/jaraco/backports.tarfile
+[backports.tarfile license]: https://github.com/jaraco/backports.tarfile/blob/main/pyproject.toml
+[charset-normalizer]: https://github.com/jawah/charset_normalizer
+[charset-normalizer license]: https://github.com/jawah/charset_normalizer/blob/master/LICENSE
+[jaraco.context]: https://github.com/jaraco/jaraco.context
+[jaraco.context license]: https://github.com/jaraco/jaraco.context/blob/main/pyproject.toml
+[jaraco.functools]: https://github.com/jaraco/jaraco.functools
+[jaraco.functools license]: https://github.com/jaraco/jaraco.functools/blob/main/pyproject.toml
+[jaraco.text]: https://github.com/jaraco/jaraco.text
+[jaraco.text license]: https://github.com/jaraco/jaraco.text/blob/main/pyproject.toml
+[more-itertools]: https://github.com/more-itertools/more-itertools
+[more-itertools license]: https://github.com/more-itertools/more-itertools/blob/master/LICENSE
+[platformdirs]: https://github.com/tox-dev/platformdirs
+[platformdirs license]: https://github.com/tox-dev/platformdirs/blob/main/LICENSE
+[tomli]: https://github.com/hukkin/tomli
+[tomli license]: https://github.com/hukkin/tomli/blob/master/LICENSE

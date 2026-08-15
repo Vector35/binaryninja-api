@@ -25,8 +25,8 @@ Plugins can be installed directly via the GUI from Binary Ninja. You can launch 
 
  Or:
 
- - (Linux/Windows) `[CTRL-P]` / `Plugin Manager` / `[ENTER]`
- - (macOS) `[CMD-P]` / `Plugin Manager` / `[ENTER]`
+ - (Linux/Windows) `[CTRL-P]` / `Manage Plugins` / `[ENTER]`
+ - (macOS) `[CMD-P]` / `Manage Plugins` / `[ENTER]`
 
 Note that some plugins may show `Force Install` instead of the normal `Install` button. If that's the case, it means the plugin does not specifically advertise support for your platform or version of python. Often times the plugin will still work, but you must override a warning to confirm installation and be aware that the plugin may not be compatible.
 

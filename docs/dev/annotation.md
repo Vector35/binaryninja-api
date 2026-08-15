@@ -550,7 +550,7 @@ There are now two different signature library systems: [SigKit](#sigkit-signatur
 
 ### SigKit Signature Libraries
 
-While many signatures are [built-in](https://github.com/Vector35/binaryninja-api/issues/1551) and require no interaction to automatically match functions, you may wish to add or modify your own. First, install the [SigKit](https://github.com/Vector35/sigkit/) plugin from the [plugin manager](../guide/plugins.md#plugin-manager).
+While many signatures are built-in and require no interaction to automatically match functions, you may wish to add or modify your own. First, install the [SigKit](https://github.com/Vector35/sigkit/) plugin from the [plugin manager](../guide/plugins.md#plugin-manager).
 
 #### Running the signature matcher
 

@@ -144,7 +144,7 @@ The headless server opens and analyzes files without the GUI and exposes the sam
 
 Use the full path to `binaryninja_mcp` in client configuration unless it is already on your `PATH`.
 
-By default, `binaryninja_mcp` loads plugins the same way as the main Binary Ninja executable. Launch it with `-p`, or set `BN_DISABLE_USER_PLUGINS`, to disable user and Plugin Manager plugins for that server process.
+By default, `binaryninja_mcp` loads plugins the same way as the main Binary Ninja executable. Launch it with `-p`, or set `BN_DISABLE_USER_PLUGINS`, to disable user and Extension Manager plugins for that server process.
 
 !!! warning "Headless Server Availability"
     The `binaryninja_mcp` headless server is not available in Binary Ninja Free or Personal. The headless stdio examples below require an edition that includes the headless server.

@@ -20102,7 +20102,7 @@ namespace BinaryNinja {
 	};
 
 	/*!
-		\ingroup pluginmanager
+		\ingroup extensionmanager
 	*/
 	class Extension : public CoreRefCountObject<BNPlugin, BNNewPluginReference, BNFreePlugin>
 	{
@@ -20160,7 +20160,7 @@ namespace BinaryNinja {
 	};
 
 	/*!
-		\ingroup pluginmanager
+		\ingroup extensionmanager
 	*/
 	class Repository : public CoreRefCountObject<BNRepository, BNNewRepositoryReference, BNFreeRepository>
 	{
@@ -20177,7 +20177,7 @@ namespace BinaryNinja {
 	};
 
 	/*!
-		\ingroup pluginmanager
+		\ingroup extensionmanager
 	*/
 	class RepositoryManager
 	{

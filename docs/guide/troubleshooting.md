@@ -69,7 +69,7 @@ While third party plugins are not officially supported, there are a number of tr
 
 Additionally, if you're having trouble running a plugin in headless mode (without a GUI calling directly into the core), make sure you're running the Commercial or Ultimate edition of Binary Ninja as the Non-Commercial edition does not support headless processing.
 
-Next, if running a python plugin, make sure the python requirements are met by the bundled Python runtime or your configured custom interpreter. Plugin requirements can be installed by the plugin manager, by manually copying modules to the `plugins` [folder](./index.md#directories), or by switching to a different interpreter in the settings.
+Next, if running a python plugin, make sure the python requirements are met by the bundled Python runtime or your configured custom interpreter. Plugin requirements can be installed by the extension manager, by manually copying modules to the `plugins` [folder](./index.md#directories), or by switching to a different interpreter in the settings.
 
 ## License Problems
 
@@ -132,7 +132,7 @@ Without these paths set, Binary Ninja will not be able to locate the Python inte
 
 If you're using Windows virtual machines within virtualbox or VMWare, you may have trouble with the 3d acceleration drivers. If so, disabling the 3d acceleration is the easiest way to get BN working.
 
-You may also manually create a `settings.json` file in your [user folder](./index.md#user-folder) with the contents though using the [plugin manager](plugins.md#plugin-manager) may also have problems:
+You may also manually create a `settings.json` file in your [user folder](./index.md#user-folder) with the contents though using the [extension manager](plugins.md#extension-manager) may also have problems:
 
 ``` js
 {
@@ -288,7 +288,7 @@ The following environment variables may be helpful when troubleshooting issues:
 | BN_LICENSE | File Contents (String) | This variable is useful for using Binary Ninja with a license passed from outside a docker image without storing the raw license file inside. [Must contain](https://github.com/Vector35/debugger/blob/dev/scripts/build.py#L195-L196) the full contents of the license file.  |
 | BN_USER_DIRECTORY | Path (String) | This variable overrides the [default user folder](https://docs.binary.ninja/guide/index.html#user-folder) path. |
 | BN_QSETTINGS_POSTFIX | Postfix (String) | This environment variable is treated as a string postfix that can be used to separate saved QSettings for testing purposes. |
-| BN_DISABLE_REPOSITORY_PLUGINS | Flag (True if exists) | This setting will only disable plugins installed via the plugin manager. |
+| BN_DISABLE_REPOSITORY_PLUGINS | Flag (True if exists) | This setting will only disable plugins installed via the extension manager. |
 | BN_DISABLE_USER_PLUGINS | Flag (True if exists) | This environment variable will disable all plugins loaded from the [plugins user folder](https://docs.binary.ninja/guide/index.html#user-folder). |
 | BN_DISABLE_USER_SETTINGS | Flag (True if exists) | This flag will cause Binary Ninja to ignore any [`settings.json`](https://docs.binary.ninja/guide/settings.html).|
 | BN_SCREENSHOT | Flag (True if exists) | This flag removes some small UI clutter to enable cleaner screenshots. |

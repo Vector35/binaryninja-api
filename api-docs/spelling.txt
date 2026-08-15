@@ -69,7 +69,7 @@ args
 bnpr
 bndb
 bnpm
-pluginmanager
+extensionmanager
 scriptingprovider
 globals
 cancelation

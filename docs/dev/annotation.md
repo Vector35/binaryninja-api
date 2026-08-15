@@ -550,7 +550,7 @@ There are now two different signature library systems: [SigKit](#sigkit-signatur
 
 ### SigKit Signature Libraries
 
-While many signatures are built-in and require no interaction to automatically match functions, you may wish to add or modify your own. First, install the [SigKit](https://github.com/Vector35/sigkit/) plugin from the [plugin manager](../guide/plugins.md#plugin-manager).
+While many signatures are built-in and require no interaction to automatically match functions, you may wish to add or modify your own. First, install the [SigKit](https://github.com/Vector35/sigkit/) plugin from the [extension manager](../guide/plugins.md#extension-manager).
 
 #### Running the signature matcher
 
@@ -570,7 +570,7 @@ To generate a signature library for the currently-open binary, use `Tools > Sign
 
 For headless users, you can generate signature libraries by using the sigkit API ([examples](https://github.com/Vector35/sigkit/tree/master/examples) and [documentation](https://github.com/Vector35/sigkit/blob/master/__init__.py#L46)). For more detailed information, see our blog post describing [signature generation](https://binary.ninja/2020/03/11/signature-libraries.html#signature-generation).
 
-If you are accessing the sigkit API through the Binary Ninja GUI and you've installed the sigkit plugin through the plugin manager, you will need to import sigkit under a different name:
+If you are accessing the sigkit API through the Binary Ninja GUI and you've installed the sigkit plugin through the extension manager, you will need to import sigkit under a different name:
 
 ``` python
 import Vector35_sigkit as sigkit

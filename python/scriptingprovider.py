@@ -49,7 +49,7 @@ from . import binaryview
 from . import basicblock
 from . import function
 from . import log
-from .pluginmanager import RepositoryManager
+from .extensionmanager import RepositoryManager
 from .requirementcheck import pip_requirements_from_dependency_metadata, pip_requirements_satisfied
 from .enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
 from .settings import Settings

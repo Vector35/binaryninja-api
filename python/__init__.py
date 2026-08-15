@@ -58,7 +58,7 @@ from .lineardisassembly import *
 from .highlight import *
 from .scriptingprovider import *
 from .downloadprovider import *
-from .pluginmanager import *
+from .extensionmanager import *
 from .settings import *
 from .metadata import *
 from .flowgraph import *

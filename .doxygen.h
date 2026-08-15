@@ -146,7 +146,7 @@
 	\ingroup coreapi
 */
 /*!
-	\defgroup pluginmanager Plugin Manager
+	\defgroup extensionmanager Extension Manager
 	\ingroup coreapi
 */
 /*!

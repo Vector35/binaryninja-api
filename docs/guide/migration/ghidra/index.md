@@ -40,7 +40,7 @@ Analysis Keybindings:
 | Toggle Graph/Linear  | `[SPACE]`          |
 | Toggle Hex View      | `H`                |
 | Insert Comment       | `;`                |
-| Manage Plugins       | `[CTRL/⌘-SHIFT-B]` |
+| Keybindings          | `[CTRL/⌘-SHIFT-B]` |
 | Open Command Palette | `[CTRL/⌘-P]`       |
 | Open Python Console  | `\``               |
 

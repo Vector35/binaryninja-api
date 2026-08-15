@@ -1170,13 +1170,16 @@ The interactive Python prompt also has several built-in "magic" functions and va
 - `current_comment`: the comment at the current address. Writing to it sets comment at the current address
 - `current_symbol`: the [`Symbol`](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.Symbol) at the current address (`None` if there is no symbol)
 - `current_symbols`: the list of [`Symbol`](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.Symbol)s at the current address
-- `current_var`: the current selected [`Variable`](https://api.binary.ninja/binaryninja.variable-module.html?highlight=variable#binaryninja.variable.Variable) in a function (Not to be confused with `current_data_var`)
+- `current_variable`: the current selected [`Variable`](https://api.binary.ninja/binaryninja.variable-module.html?highlight=variable#binaryninja.variable.Variable) in a function (Not to be confused with `current_data_var`)
+- `current_project`: the [`Project`](https://api.binary.ninja/binaryninja.project-module.html#binaryninja.project.Project) the current view belongs to (`None` if the file is not in a project)
+- `current_thread`: the [`code.InteractiveConsole`](https://docs.python.org/3/library/code.html#code.InteractiveConsole) backing the scripting console
 - `current_ui_context`: the current [`UIContext`](https://api.binary.ninja/cpp/class_u_i_context.html)
 - `current_ui_view_frame`: the current [`ViewFrame`](https://api.binary.ninja/cpp/class_view_frame.html)
 - `current_ui_view`: the current [`View`](https://api.binary.ninja/cpp/class_view.html)
 - `current_ui_action_handler`: the current [`UIActionHandler`](https://api.binary.ninja/cpp/class_u_i_action_handler.html)
 - `current_ui_view_location`: the current [`ViewLocation`](https://api.binary.ninja/cpp/class_view_location.html)
 - `current_ui_action_context`: the current [`UIActionContext`](https://api.binary.ninja/cpp/struct_u_i_action_context.html)
+- `current_ui_token_state`: the current token state from the UI action context, which backs `current_token` and `current_variable`
 
 ### startup.py
 

@@ -34,7 +34,7 @@ The contents of the user folder includes:
 - `lastrun`: A text file containing the directory of the last Binary Ninja binary path -- very useful for plugins to resolve the installation locations in non-default settings or on Linux
 - `license.dat`: License file
 - `plugins/`: Folder containing all manually installed user plugins
-- `repositories/`: Folder containing files and plugins managed by the [Extension Manager API](https://api.binary.ninja/binaryninja.pluginmanager-module.html)
+- `repositories/`: Folder containing files and plugins managed by the [Plugin Manager API](https://api.binary.ninja/binaryninja.pluginmanager-module.html)
 - `settings.json`: User settings file (see [settings](settings.md))
 
 The following files and folders may be created in the user folder but are not created by default without some additional action:
@@ -42,7 +42,7 @@ The following files and folders may be created in the user folder but are not cr
 - `keybindings.json`: Custom key bindings (see [key bindings](#custom-hotkeys))
 - `startup.py`: Default Python commands run once the UI is loaded in the context of the scripting console
 - `signatures/`: Any user-created signatures can be stored in platform-specific sub-folders in this location
-- `pythonVER/`: Any pip dependencies from Extension Manager plugins are installed to the appropriate Python version subfolder such as `python313`
+- `pythonVER/`: Any pip dependencies from plugin manager plugins are installed to the appropriate Python version subfolder such as `python313`
 - `symbols/`: Used to store automatically downloaded PDBs
 - `update/`: Used to store update caches for pending updates
 - `snippets/`: Used to store snippets created using the official Snippet plugin
@@ -259,13 +259,13 @@ The status of currently installed plugins will be displayed in the bottom right.
 
 ![plugin status ><](../img/plugin-status-widget.png "Plugin Status Widget"){ width="400" }
 
-Pressing each of the icons will navigate you to the Extension Manager with the corresponding filter:
+Pressing each of the icons will navigate you to the Plugin Manager with the corresponding filter:
 
 - Green Circle: `@installed`
 - Error Symbol: `@failed_to_load`
 - Update Icon: `@update_available`
 
-Pressing the gear or using the hotkeys (macOS: `[CMD+SHIFT] + M`, Windows/Linux: `[CTRL+SHIFT] + M`) will open the Extension Manager with no filters, so you can browse available plugins.
+Pressing the gear or using the hotkeys (macOS: `[CMD+SHIFT] + M`, Windows/Linux: `[CTRL+SHIFT] + M`) will open the plugin manager with no filters, so you can browse available plugins.
 
 ### Commercial/Ultimate Features
 
@@ -318,14 +318,6 @@ Navigating code in Binary Ninja is usually a case of just double-clicking where 
 Additionally, middle-clicking (scroll-wheel clicking) items that can be double-clicked can be used to navigate to that location in a new Split Pane. Shift + middle-click can also be used to navigate to that location in a new Tab. These bindings can be configured in the Settings ([`ui.middleClickNavigationAction`](settings.md#ui.middleClickNavigationAction), [`ui.middleClickShiftNavigationAction`](settings.md#ui.middleClickShiftNavigationAction)). These "Split and Navigate" actions can also be accessed in the Context (right-click) menu, and can be separately bound to keys in the Keybindings view.
 
 There's also [many](#using-the-keyboard) keyboard-based navigation options.
-
-### Switching Views
-![graph view](../img/view-choices.png "Different Views")
-
-Switching views happens multiple ways. In some instances, it is automatic, such as clicking a data reference from graph view. This will navigate to linear view as data is not shown in the graph view. While navigating, you can use the [view hotkeys](#default-hotkeys) to switch to a specific view at the same location as the current selection. Next you can use the [command palette](#command-palette). Additionally, the view menu in the header at the top of each pane can be used to change views without navigating to any given location. Finally, you can also use the `View` application menu.
-
-!!! Tip "Tip"
-    Any loaded `BinaryView` will show up in the upper-left of the main pane. You can switch between (for example), `ELF` and `Raw` to switch between multiple loaded [`BinaryView`s](../dev/concepts.md#binary-views).
 
 ## The Sidebar
 
@@ -803,74 +795,72 @@ Strings can be double-clicked to navigate to them, and the table can be sorted o
 typing in the search box.
 
 ## Views
-Binary Ninja provides multiple views for analyzing a binary. Views can be switched using the view selector in the top-left corner of the main window. 
+
 ![views](../img/views.png "Views"){ width="400" }
 
-## View Options
+Switching views happens multiple ways. In some instances, it is automatic, such as clicking a data reference from graph view. This will navigate to linear view as data is not shown in the graph view. While navigating, you can use the [view hotkeys](#default-hotkeys) to switch to a specific view at the same location as the current selection. Next you can use the [command palette](#command-palette). Additionally, the view menu in the header at the top of each pane can be used to change views without navigating to any given location. Finally, you can also use the `View` application menu.
+
+!!! Tip "Tip"
+    Any loaded `BinaryView` will show up in the upper-left of the main pane. You can switch between (for example), `ELF` and `Raw` to switch between multiple loaded [`BinaryView`s](../dev/concepts.md#binary-views).
+
+### View Options
 
 ![options >](../img/options.png "View options"){ width="400" }
 
 Each view provides options for customizing how information is displayed. View options can be accessed from the ☰ menu in the top-right corner of the view pane.
 
-### Hex View Options
+#### Hex View Options
 
 These options control the appearance of bytes and data displayed in Hex View. Some options are also available in Linear View when hex values are shown.
 
-#### Background Highlight
+* **Background Highlight** - Controls the background highlighting applied to displayed bytes:
+    * **None** - Disables background highlighting.
+    * **Column** - Highlights the column containing the selected byte.
+    * **Byte Value** - Highlights bytes based on their value.
+* **Color Highlight** - Controls additional color highlighting applied to displayed bytes:
+    * **None** - Disables color highlighting.
+    * **ASCII and Printable** - Highlights printable ASCII characters.
+    * **Modification** - Highlights modified bytes.
+* **Contrast** - Controls the contrast level used for highlighted bytes:
+    * **Normal** - Uses the default contrast level.
+    * **Medium** - Applies increased contrast.
+    * **High** - Applies the highest contrast level.
 
-Controls the background highlighting applied to displayed bytes.
-
-* **Byte Value** - Highlights bytes based on their value.
-* **Column** - Highlights the column containing the selected byte.
-* **None** - Disables background highlighting.
-
-#### Color Highlight
-
-Controls additional color highlighting applied to displayed bytes.
-
-* **ASCII and Printable** - Highlights printable ASCII characters.
-* **Modification** - Highlights modified bytes.
-* **None** - Disables color highlighting.
-
-#### Contrast
-
-Controls the contrast level used for highlighted bytes.
-
-* **High** - Applies the highest contrast level.
-* **Medium** - Applies increased contrast.
-* **Normal** - Uses the default contrast level.
-
-### Linear and Graph View Options
+#### Linear and Graph View Options
 
 These options control how information is displayed in Linear and Graph Views.
 
-* **Expand Long Opcode** - Instructions that are nine bytes or longer will automatically be truncated if this setting is off. 
 * **Show Address** - Displays the memory address of each instruction in the view.
 * **Show Function Address** - Displays the starting address next to a function's name in its header.
 * **Show Opcode Bytes** - Displays each instruction's raw encoded bytes next to its disassembly.
+* **Expand Long Opcode** - Opcode bytes longer than the architecture's display length (eight bytes on x86) are truncated unless this is enabled.
 * **Show Register Set Highlighting** - When checked, clicking a register highlights every other instruction that reads or writes that same value of the register, so you can visually trace where it's used and where it's eventually overwritten.
+* **Indent HLIL Function Body** (Linear view, HLIL only) - Indents the body of the function one level under its declaration.
 * **Show Type Casts** - Displays explicit type casts in MLIL and HLIL views.
+* **Single Function View** (Linear view only) - Restricts the view to the currently selected function.
 * **Show Variable Types** - Variable types can be displayed in one of two locations:
-  * **At Assignment (MLIL Graph only)** - Displays variable types at the point where they are assigned.
-  * **At Top of Function** - Displays variable types at the beginning of the function.
-* **Single Function View** - Restricts the view to the currently selected function.
-* **Address Display** - Controls the format and visibility of addresses shown alongside instructions.
-* **Block Labels** - Controls when a basic block's label is shown in Graph view:
-  * **Never Show Default** - Hides the auto-generated default label but still displays any label you've manually renamed.
-  * **Always Show** - Shows every block's label.
-  * **Never Show** - Hides all block labels.
-* **Call Parameter Hints** - When a call target's parameter names are known, annotates each argument at the call site with that name. Never Show Matching only displays it when the name adds information beyond the default, Always Show forces it on every call, and Never Show turns it off entirely.
+    * **At Top of Function** - Displays variable types at the beginning of the function.
+    * **At Assignment** (Graph view only) - Displays variable types at the point where they are assigned.
+* **Address Display** - Controls the base the address is displayed relative to (absolute, or an offset from the file start, image base, segment, section, function, or a fixed base address you set), whether it's shown in decimal or hexadecimal, and whether a name is included alongside it.
+* **Call Parameter Hints** - When a call target's parameter names are known, annotates each argument at the call site with that name:
+    * **Never Show Matching** - Only displays the name when it adds information beyond the default.
+    * **Always Show** - Displays the name on every call.
+    * **Never Show** - Turns parameter hints off entirely.
+* **Block Labels** - Controls when a basic block's label is shown:
+    * **Never Show Default** - Hides the auto-generated default label but still displays any label you've manually renamed.
+    * **Always Show** - Shows every block's label.
+    * **Never Show** - Hides all block labels.
 * **Render Layers** - Toggles independent visual overlays on the disassembly; more than one can be active at once, and which layers are available depends on context (e.g. an active debug session, WARP signatures loaded):
-  * Annotate Stack Offset - Adds a column showing the cumulative stack frame size at each instruction, marking (with \*) the instruction that changed it.
-  * TTD Coverage - Highlights instructions that were executed during a Time Travel Debugging trace.
-  * WARP Highlight Layer - Highlights bytes/instructions matched against a WARP function signature.
-* **Advanced -** These options expose additional Intermediate Language information useful during advanced analysis.
-  * **Show All Expression Types (MLIL/HLIL only)** - Displays all available expression type information.
-  * **Show IL Flag Usage (Lifted IL only)** - Displays flag usage in Lifted IL.
-  * **Show IL Opcodes** - Displays Intermediate Language opcode names.
-  * **Show Stack Pointer Value (LLIL only)** - Displays the stack pointer value for each Low Level IL instruction.
+    * Annotate Stack Offset - Adds a column showing the cumulative stack frame size at each instruction, marking (with \*) the instruction that changed it.
+    * TTD Coverage - Highlights instructions that were executed during a Time Travel Debugging trace.
+    * WARP Highlight Layer - Highlights bytes/instructions matched against a WARP function signature.
+* **Advanced** - These options expose additional Intermediate Language information useful during advanced analysis.
+    * **Show IL Flag Usage** (Lifted IL only) - Displays flag usage in Lifted IL.
+    * **Show Stack Pointer Value** (LLIL only) - Displays the stack pointer value for each Low Level IL instruction.
+    * **Show All Expression Types** (MLIL/HLIL only) - Displays all available expression type information.
+    * **Show IL Opcodes** - Displays Intermediate Language opcode names.
 
-## Linear View
+### Linear View
 
 ![linear](../img/linear.png "Linear View"){ width="1000" }
 
@@ -880,27 +870,23 @@ Linear view is commonly used for identifying and adding type information for unk
 
 For HLIL and pseudo-C, linear view renders the AST form: the body of an `if`, `while`, `for`, or `switch` is indented under the statement that contains it. [Graph view](#graph-view) renders the non-AST form, expressing that nesting through the edges between basic blocks instead. See [AST and Non-AST Forms](../dev/bnil-hlil.md#ast-and-non-ast-forms) for the API implications.
 
-
-### High Level IL
-
-![HLIL Scoping Options >](../img/hlil-scope.png "HLIL Scoping Options"){ width="400" }
+#### High Level IL
 
 Binary Ninja features a decompiler that produces High Level IL (HLIL) as output. HLIL is not intended to be a representation of the code in C, but some users prefer to have a more C-like scoping style.
 
-You can control the way HLIL appears in the settings.
+You can control the way HLIL appears with the [`rendering.format.scopingStyle`](settings.md#rendering.format.scopingStyle) setting.
 
 The different options are shown below:
 
 ![HLIL Scoping Display](../img/hlil-braces.png "HLIL Scoping Display"){ width="500" }
 
-### Pseudo C
+#### Pseudo C
 
 ![Pseudo C](../img/pseudo-c.png "Pseudo C View"){ width="800" }
 
 Binary Ninja offers an option to render the HLIL as a decompilation to "Pseudo C". This decompilation is intended to be more familiar to the user than the HLIL. It is not necessarily intended to be "compliant" C or even recompilable. In some cases, it may be possible to edit it into a form that a C compiler will accept, but the amount of effort required will vary widely, and no guarantee is made that it will be possible in all cases.
 
-
-## Graph View
+### Graph View
 
 ![graph view](../img/graphview.png "Graph View"){ width="800" }
 
@@ -924,8 +910,7 @@ Features of the graph view include:
 
 For HLIL and pseudo-C, graph view renders the non-AST form: an `if` shows its condition alone, with the body in a separate block. [Linear view](#linear-view) renders the AST form, nesting bodies under the statement that contains them. See [AST and Non-AST Forms](../dev/bnil-hlil.md#ast-and-non-ast-forms) for the API implications.
 
-
-## Hex View
+### Hex View
 
 ![hex](../img/hex.png "hex view"){ width="800" }
 
@@ -935,11 +920,21 @@ The hex view is particularly good for transforming data in various ways via the 
 
 If you're using the hex view for a Binary View like ELF, Mach-O or PE, you probably want to make sure you're also in the `Raw` view if you want to see the file as it exists on disk in hex view.
 
-
-### Live Preview
+#### Live Preview
 
 Any changes made in the Hex view will take effect immediately in any other views open into the same file (new views can be created via the `Split to new tab`, or `Split to new window` options under `View`, or via [splitting panes](#tiling-panes)). This can, however, cause large amounts of re-analysis so be warned before making large edits or transformations in a large binary file.
 
+### Byte Overview
+
+![byte overview](../img/byteoverview.png "Byte Overview"){ width="800" }
+
+The Byte Overview (or "Bytes" when selected in the view switcher) shows the binary (mapped or raw, depending on the
+top-level selection) as a [Code Page 437](https://en.wikipedia.org/wiki/Code_page_437) view. This view is commonly used
+by malware analysis researchers using the [Hiew](http://hiew.ru) tool.
+
+While this view is less feature-rich than the Hex view, it allows for a much higher information density as every byte is
+represented by one character as opposed to four total characters when in Hex view (including the space between hex
+digits and the ASCII representation).
 
 ## Edit Function Properties Dialog
 
@@ -1004,7 +999,6 @@ This element is a table containing a row for each register stack (e.g. x87) in t
 ### 12. Function Workflow
 
 This dropdown selects the [function-level workflow](https://docs.binary.ninja/dev/workflows.html#workflow) which is used to analyze this function.
-
 
 ## Dead Store Elimination
 
@@ -1152,14 +1146,23 @@ The interactive Python prompt also has several built-in "magic" functions and va
 - `current_function`: the current [`Function`](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function)
 - `current_basic_block`: the current [`BasicBlock`](https://api.binary.ninja/binaryninja.basicblock-module.html#binaryninja.basicblock.BasicBlock)
 - `current_llil`: the current [`LowLevelILFunction`](https://api.binary.ninja/binaryninja.lowlevelil-module.html#binaryninja.lowlevelil.LowLevelILFunction)
+- `current_llil_ssa`: the SSA form of `current_llil`
+- `current_lifted_il`: the current function's Lifted IL
 - `current_mlil`: the current [`MediumLevelILFunction`](https://api.binary.ninja/binaryninja.mediumlevelil-module.html#binaryninja.mediumlevelil.MediumLevelILFunction)
+- `current_mlil_ssa`: the SSA form of `current_mlil`
+- `current_mapped_mlil`: the current function's mapped Medium Level IL
+- `current_mapped_mlil_ssa`: the SSA form of `current_mapped_mlil`
 - `current_hlil`: the current [`HighLevelILFunction`](https://api.binary.ninja/binaryninja.highlevelil-module.html#binaryninja.highlevelil.HighLevelILFunction)
+- `current_hlil_ssa`: the SSA form of `current_hlil`
 - `write_at_cursor(data)`: function that writes data to the start of the current selection
 - `get_selected_data()`: function that returns the data in the current selection
 - `current_il_index`: the current index of the IL instruction. It can be LLIL/MLIL/HLIL depending on which one is shown in the UI
 - `current_il_instruction`: the current IL instruction. It can be LLIL/MLIL/HLIL depending on which one is shown in the UI
+- `current_il_instructions`: a generator over the IL instructions covered by the current selection (`None` if there is no valid selection)
 - `current_il_function`: the current IL function. It can be LLIL/MLIL/HLIL depending on which one is shown in the UI
 - `current_il_basic_block`: the current IL basic block. It can be LLIL/MLIL/HLIL depending on which one is shown in the UI
+- `current_il_expr_index`: the expression index of the currently selected token (`None` if no token is selected)
+- `current_il_expr`: the IL expression at `current_il_expr_index`
 - `current_token`: the current selected [`InstructionTextToken`](https://api.binary.ninja/binaryninja.architecture-module.html#binaryninja.architecture.InstructionTextToken) (`None` if no token is selected)
 - `current_data_var`: the current selected [`DataVariable`](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.DataVariable) (`None` if no data variable is selected)
 - `current_sections`: the list of [`Section`](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.Section)s that the current address is in (This list can be empty)
@@ -1211,9 +1214,9 @@ See the [plugin development guide](../dev/plugins.md#debugging-using-other-ides)
 
 ## Using Plugins
 
-Plugins can be installed by one of two methods. First, they can be installed via the Extension Manager accessed via the `Plugins` / `Manage Plugins` menu or `[CMD/CTRL] m` hotkey.
+Plugins can be installed by one of two methods. First, they can be installed via the Plugin Manager accessed via the `Plugins` / `Manage Plugins` menu or `[CMD/CTRL+SHIFT] m` hotkey.
 
-![Extension Manager](../img/plugin-manager.png "Extension Manager"){ width="1000" }
+![plugin manager](../img/plugin-manager.png "Plugin Manager"){ width="1000" }
 
 Second, they can be manually installed by adding the plugin (either a `.py` file or a folder implementing a Python module with a `__init__.py` file) to the appropriate path:
 

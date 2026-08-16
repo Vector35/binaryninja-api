@@ -6,9 +6,14 @@ import argparse
 import html
 import json
 import sys
-import tomllib
 from pathlib import Path
 from posixpath import relpath as posix_relpath
+
+# TODO: drop the tomli fallback once we require Python > 3.10 (tomllib is stdlib there).
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
 
 REDIRECT_TEMPLATE = """\
 <!doctype html>

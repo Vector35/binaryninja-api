@@ -986,7 +986,7 @@ When Inline During Analysis is checked, it causes the function to be [inlined](h
 
 ### 9. Signature Table
 
-This section contains the function's return value and parameters as an editable table with columns for index, type, name, source, and location.
+This section contains the function's return value and parameters as an editable table with columns for index, type, name, source, and location. The location column accepts the value-location syntax described in [Custom Parameter and Return Value Locations](types/attributes.md#custom-parameter-and-return-value-locations).
 
 ### 10. Clobbered Registers
 

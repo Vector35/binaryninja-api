@@ -20822,6 +20822,21 @@ namespace BinaryNinja {
 	typedef BNPluginOrigin PluginOrigin;
 	typedef BNPluginStatus PluginStatus;
 	typedef BNPluginType PluginType;
+	typedef BNPluginDependencyConflictStatus PluginDependencyConflictStatus;
+
+	struct DependencyConflictRequirement
+	{
+		std::string pluginName;
+		std::string requirement;
+	};
+
+	struct DependencyConflict
+	{
+		PluginDependencyConflictStatus status;
+		std::string packageName;
+		std::vector<DependencyConflictRequirement> candidateRequirements;
+		std::vector<DependencyConflictRequirement> installedRequirements;
+	};
 
 	struct ExtensionVersion
 	{
@@ -20856,6 +20871,7 @@ namespace BinaryNinja {
 		std::string GetPath() const;
 		std::string GetSubdir() const;
 		std::string GetDependencies() const;
+		std::vector<DependencyConflict> GetDependencyConflicts() const;
 		std::string GetPluginDirectory() const;
 		std::string GetAuthor() const;
 		std::string GetDescription() const;

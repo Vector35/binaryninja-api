@@ -32,6 +32,33 @@ string Extension::GetDependencies() const
 	RETURN_STRING(BNPluginGetDependencies(m_object));
 }
 
+
+vector<DependencyConflict> Extension::GetDependencyConflicts() const
+{
+	vector<DependencyConflict> result;
+	size_t count = 0;
+	BNPluginDependencyConflict* conflicts = BNPluginGetDependencyConflicts(m_object, &count);
+	if (!conflicts)
+		return result;
+
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		DependencyConflict conflict;
+		conflict.status = conflicts[i].status;
+		conflict.packageName = conflicts[i].packageName ? conflicts[i].packageName : "";
+		for (size_t j = 0; j < conflicts[i].candidateRequirementCount; j++)
+			conflict.candidateRequirements.push_back({conflicts[i].candidateRequirements[j].pluginName ? conflicts[i].candidateRequirements[j].pluginName : "",
+				conflicts[i].candidateRequirements[j].requirement ? conflicts[i].candidateRequirements[j].requirement : ""});
+		for (size_t j = 0; j < conflicts[i].installedRequirementCount; j++)
+			conflict.installedRequirements.push_back({conflicts[i].installedRequirements[j].pluginName ? conflicts[i].installedRequirements[j].pluginName : "",
+				conflicts[i].installedRequirements[j].requirement ? conflicts[i].installedRequirements[j].requirement : ""});
+		result.push_back(std::move(conflict));
+	}
+	BNFreePluginDependencyConflicts(conflicts, count);
+	return result;
+}
+
 bool Extension::IsInstalled() const
 {
 	return BNPluginIsInstalled(m_object);

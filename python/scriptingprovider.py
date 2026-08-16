@@ -50,7 +50,7 @@ from . import basicblock
 from . import function
 from . import log
 from .extensionmanager import RepositoryManager
-from .requirementcheck import pip_requirements_from_dependency_metadata, pip_requirements_satisfied
+from .requirementcheck import pip_dependency_conflicts, pip_requirements_from_dependency_metadata, pip_requirements_satisfied
 from .enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
 from .settings import Settings
 from .enums import SettingsScope
@@ -483,6 +483,10 @@ class ScriptingProvider(metaclass=_ScriptingProviderMetaclass):
 		self._module_installed_cb.context = None
 		self._module_installed_cb.moduleInstalled = self._module_installed_cb.moduleInstalled.__class__(self._module_installed)
 		core.BNSetScriptingProviderModuleInstalledCallback(self.handle, self._module_installed_cb)
+		self._dependency_conflict_cb = core.BNScriptingProviderDependencyConflictCallbacks()
+		self._dependency_conflict_cb.context = None
+		self._dependency_conflict_cb.getDependencyConflicts = self._dependency_conflict_cb.getDependencyConflicts.__class__(self._dependency_conflicts)
+		core.BNSetScriptingProviderDependencyConflictCallback(self.handle, self._dependency_conflict_cb)
 		self.__class__._registered_providers.append(self)
 
 	def _create_instance(self, ctxt):
@@ -512,6 +516,14 @@ class ScriptingProvider(metaclass=_ScriptingProviderMetaclass):
 
 	def _module_installed(self, ctx, modules: bytes) -> bool:
 		return False
+
+	def _dependency_conflicts(self, ctx, candidate, installed_plugins, installed_plugin_count):
+		return core.BNAllocString(json.dumps([{
+			"status": "unknown_compatibility",
+			"package_name": "<unknown>",
+			"candidate_requirements": [],
+			"installed_requirements": [],
+		}]))
 
 
 class _PythonScriptingInstanceOutput:
@@ -1404,6 +1416,29 @@ class PythonScriptingProvider(ScriptingProvider):
 		except Exception:
 			logger.log_error_for_exception("Failed to check plugin dependency requirements")
 			return False
+
+	def _dependency_conflicts(self, ctx, candidate, installed_plugins, installed_plugin_count):
+		try:
+			candidate_info = candidate.contents
+			installed = [(installed_plugins[i].name, installed_plugins[i].dependencies.encode("utf-8"))
+				for i in range(installed_plugin_count)]
+			result = pip_dependency_conflicts(
+				candidate_info.name, candidate_info.dependencies.encode("utf-8"), installed)
+			serialized = [{
+				"status": conflict.status,
+				"package_name": conflict.package_name,
+				"candidate_requirements": [requirement.__dict__ for requirement in conflict.candidate_requirements],
+				"installed_requirements": [requirement.__dict__ for requirement in conflict.installed_requirements],
+			} for conflict in result]
+			return core.BNAllocString(json.dumps(serialized))
+		except Exception:
+			logger.log_error_for_exception("Failed to check plugin dependency conflicts")
+			return core.BNAllocString(json.dumps([{
+				"status": "unknown_compatibility",
+				"package_name": "<unknown>",
+				"candidate_requirements": [],
+				"installed_requirements": [],
+			}]))
 
 	@classmethod
 	def register_magic_variable(

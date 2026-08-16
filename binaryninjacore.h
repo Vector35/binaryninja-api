@@ -3324,6 +3324,34 @@ extern "C"
 		PluginDependencyLoadAnyway
 	};
 
+	BN_ENUM(uint8_t, BNPluginDependencyConflictStatus)
+	{
+		PluginDependencyProvenConflict,
+		PluginDependencyUnknownCompatibility
+	};
+
+	typedef struct BNPluginDependencyInfo
+	{
+		const char* name;
+		const char* dependencies;
+	} BNPluginDependencyInfo;
+
+	typedef struct BNPluginDependencyRequirement
+	{
+		char* pluginName;
+		char* requirement;
+	} BNPluginDependencyRequirement;
+
+	typedef struct BNPluginDependencyConflict
+	{
+		BNPluginDependencyConflictStatus status;
+		char* packageName;
+		BNPluginDependencyRequirement* candidateRequirements;
+		size_t candidateRequirementCount;
+		BNPluginDependencyRequirement* installedRequirements;
+		size_t installedRequirementCount;
+	} BNPluginDependencyConflict;
+
 	typedef struct BNPluginDependencyIssue
 	{
 		const char* repository;
@@ -3344,6 +3372,13 @@ extern "C"
 		void* context;
 		bool (*moduleInstalled)(void* ctxt, const char* modules);
 	} BNScriptingProviderModuleInstalledCallbacks;
+
+	typedef struct BNScriptingProviderDependencyConflictCallbacks
+	{
+		void* context;
+		char* (*getDependencyConflicts)(void* ctxt, const BNPluginDependencyInfo* candidate,
+			const BNPluginDependencyInfo* installedPlugins, size_t installedPluginCount);
+	} BNScriptingProviderDependencyConflictCallbacks;
 
 
 	typedef struct BNScriptingInstanceCallbacks
@@ -8654,6 +8689,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNIsScriptingProviderModuleInstalled(BNScriptingProvider* provider, const char* modules);
 	BINARYNINJACOREAPI void BNSetScriptingProviderModuleInstalledCallback(BNScriptingProvider* provider,
 	    BNScriptingProviderModuleInstalledCallbacks* callbacks);
+	BINARYNINJACOREAPI void BNSetScriptingProviderDependencyConflictCallback(BNScriptingProvider* provider,
+	    BNScriptingProviderDependencyConflictCallbacks* callbacks);
 	BINARYNINJACOREAPI void BNSetPluginDependencyStartupCallback(BNPluginDependencyStartupCallbacks* callbacks);
 
 	BINARYNINJACOREAPI BNScriptingInstance* BNInitScriptingInstance(
@@ -8839,6 +8876,8 @@ extern "C"
 	BINARYNINJACOREAPI const char* BNPluginGetPath(BNPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetSubdir(BNPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetDependencies(BNPlugin* p);
+	BINARYNINJACOREAPI BNPluginDependencyConflict* BNPluginGetDependencyConflicts(BNPlugin* p, size_t* count);
+	BINARYNINJACOREAPI void BNFreePluginDependencyConflicts(BNPluginDependencyConflict* conflicts, size_t count);
 	BINARYNINJACOREAPI const char* BNPluginGetLongdescription(BNPlugin* p);
 	BINARYNINJACOREAPI uint64_t BNPluginGetLastUpdate(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginIsInstalled(BNPlugin* p);

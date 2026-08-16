@@ -27,7 +27,7 @@ from typing import List, Dict, Optional
 import binaryninja
 from . import _binaryninjacore as core
 from . import deprecation
-from .enums import PluginType
+from .enums import PluginDependencyConflictStatus, PluginType
 
 
 @dataclass(frozen=True)
@@ -46,6 +46,20 @@ class ExtensionVersion:
 	minimum_client_version: int
 	platforms: List[ExtensionVersionPlatform]
 	created: str
+
+
+@dataclass(frozen=True)
+class PluginDependencyRequirement:
+	plugin_name: str
+	requirement: str
+
+
+@dataclass(frozen=True)
+class PluginDependencyConflict:
+	status: PluginDependencyConflictStatus
+	package_name: str
+	candidate_requirements: List[PluginDependencyRequirement]
+	installed_requirements: List[PluginDependencyRequirement]
 
 
 class Extension:
@@ -82,6 +96,32 @@ class Extension:
 		"""Dependencies required for installing this plugin"""
 		result = core.BNPluginGetDependencies(self.handle)
 		assert result is not None, "core.BNPluginGetDependencies returned None"
+		return result
+
+	@property
+	def dependency_conflicts(self) -> List[PluginDependencyConflict]:
+		"""Dependency conflicts with installed plugins, or an empty list for custom Python environments."""
+		count = ctypes.c_ulonglong()
+		conflicts = core.BNPluginGetDependencyConflicts(self.handle, count)
+		if conflicts is None:
+			return []
+		result = []
+		try:
+			for i in range(count.value):
+				conflict = conflicts[i]
+				result.append(PluginDependencyConflict(
+					PluginDependencyConflictStatus(conflict.status),
+					conflict.packageName,
+					[PluginDependencyRequirement(
+						conflict.candidateRequirements[j].pluginName,
+						conflict.candidateRequirements[j].requirement)
+						for j in range(conflict.candidateRequirementCount)],
+					[PluginDependencyRequirement(
+						conflict.installedRequirements[j].pluginName,
+						conflict.installedRequirements[j].requirement)
+						for j in range(conflict.installedRequirementCount)]))
+		finally:
+			core.BNFreePluginDependencyConflicts(conflicts, count.value)
 		return result
 
 	@property

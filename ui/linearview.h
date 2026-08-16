@@ -537,6 +537,7 @@ public:
 
 	virtual bool canCopyWithTransform() override;
 	virtual bool canCut() override;
+	virtual bool canCopy() override;
 	virtual void cut() override;
 	virtual void copy(TransformRef xform = nullptr) override;
 	virtual void paste(TransformRef xform = nullptr) override;

@@ -3367,6 +3367,12 @@ extern "C"
 			BNPluginDependencyDecision* decisions);
 	} BNPluginDependencyStartupCallbacks;
 
+	typedef struct BNPluginDependencyResolutionCallbacks
+	{
+		void* context;
+		void (*dependencyResolved)(void* ctxt, const char* repository, const char* path);
+	} BNPluginDependencyResolutionCallbacks;
+
 	typedef struct BNScriptingProviderModuleInstalledCallbacks
 	{
 		void* context;
@@ -8701,6 +8707,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetScriptingProviderDependencyConflictCallback(BNScriptingProvider* provider,
 	    BNScriptingProviderDependencyConflictCallbacks* callbacks);
 	BINARYNINJACOREAPI void BNSetPluginDependencyStartupCallback(BNPluginDependencyStartupCallbacks* callbacks);
+	BINARYNINJACOREAPI void BNSetPluginDependencyResolutionCallback(BNPluginDependencyResolutionCallbacks* callbacks);
 
 	BINARYNINJACOREAPI BNScriptingInstance* BNInitScriptingInstance(
 	    BNScriptingProvider* provider, BNScriptingInstanceCallbacks* callbacks);

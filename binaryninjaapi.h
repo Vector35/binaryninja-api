@@ -20637,6 +20637,7 @@ namespace BinaryNinja {
 
 		std::string GetName();
 		std::string GetAPIName();
+		bool IsModuleInstalled(const std::string& modules);
 
 		static std::vector<Ref<ScriptingProvider>> GetList();
 		static Ref<ScriptingProvider> GetByName(const std::string& name);
@@ -20871,7 +20872,9 @@ namespace BinaryNinja {
 		std::string GetPath() const;
 		std::string GetSubdir() const;
 		std::string GetDependencies() const;
+		std::string GetDependencies(const std::string& versionID) const;
 		std::vector<DependencyConflict> GetDependencyConflicts() const;
+		std::vector<DependencyConflict> GetDependencyConflicts(const std::string& versionID) const;
 		std::string GetPluginDirectory() const;
 		std::string GetAuthor() const;
 		std::string GetDescription() const;
@@ -20911,6 +20914,9 @@ namespace BinaryNinja {
 		bool CancelUninstall();
 		bool Install(std::string versionID);
 		bool InstallDependencies();
+		bool InstallDependencies(const std::string& versionID);
+		bool InstallDependencies(const std::vector<std::string>& excludedPackageNames);
+		bool InstallDependencies(const std::string& versionID, const std::vector<std::string>& excludedPackageNames);
 		// `force` ignores optional checks for platform/api compliance
 		bool Enable(bool force);
 		bool Disable();

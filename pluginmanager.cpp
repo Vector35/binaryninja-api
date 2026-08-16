@@ -33,11 +33,23 @@ string Extension::GetDependencies() const
 }
 
 
+string Extension::GetDependencies(const std::string& versionID) const
+{
+	RETURN_STRING(BNPluginGetDependenciesForVersion(m_object, versionID.c_str()));
+}
+
+
 vector<DependencyConflict> Extension::GetDependencyConflicts() const
+{
+	return GetDependencyConflicts("");
+}
+
+
+vector<DependencyConflict> Extension::GetDependencyConflicts(const std::string& versionID) const
 {
 	vector<DependencyConflict> result;
 	size_t count = 0;
-	BNPluginDependencyConflict* conflicts = BNPluginGetDependencyConflicts(m_object, &count);
+	BNPluginDependencyConflict* conflicts = BNPluginGetDependencyConflictsForVersion(m_object, versionID.c_str(), &count);
 	if (!conflicts)
 		return result;
 
@@ -365,7 +377,30 @@ bool Extension::Install(std::string versionID)
 
 bool Extension::InstallDependencies()
 {
-	return BNPluginInstallDependencies(m_object);
+	return InstallDependencies("");
+}
+
+
+bool Extension::InstallDependencies(const std::string& versionID)
+{
+	return BNPluginInstallDependenciesForVersion(m_object, versionID.c_str());
+}
+
+
+bool Extension::InstallDependencies(const std::vector<std::string>& excludedPackageNames)
+{
+	return InstallDependencies("", excludedPackageNames);
+}
+
+
+bool Extension::InstallDependencies(const std::string& versionID, const std::vector<std::string>& excludedPackageNames)
+{
+	std::vector<const char*> exclusionPointers;
+	exclusionPointers.reserve(excludedPackageNames.size());
+	for (const auto& packageName : excludedPackageNames)
+		exclusionPointers.push_back(packageName.c_str());
+	return BNPluginInstallDependenciesWithExclusionsForVersion(
+		m_object, versionID.c_str(), exclusionPointers.data(), exclusionPointers.size());
 }
 
 

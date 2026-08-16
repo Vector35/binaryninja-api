@@ -3373,6 +3373,13 @@ extern "C"
 		bool (*moduleInstalled)(void* ctxt, const char* modules);
 	} BNScriptingProviderModuleInstalledCallbacks;
 
+	typedef struct BNScriptingProviderInstallModulesWithExclusionsCallbacks
+	{
+		void* context;
+		bool (*installModulesWithExclusions)(void* ctxt, const char* modules,
+			const char* const* excludedPackageNames, size_t excludedPackageNameCount);
+	} BNScriptingProviderInstallModulesWithExclusionsCallbacks;
+
 	typedef struct BNScriptingProviderDependencyConflictCallbacks
 	{
 		void* context;
@@ -8689,6 +8696,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNIsScriptingProviderModuleInstalled(BNScriptingProvider* provider, const char* modules);
 	BINARYNINJACOREAPI void BNSetScriptingProviderModuleInstalledCallback(BNScriptingProvider* provider,
 	    BNScriptingProviderModuleInstalledCallbacks* callbacks);
+	BINARYNINJACOREAPI void BNSetScriptingProviderInstallModulesWithExclusionsCallback(BNScriptingProvider* provider,
+	    BNScriptingProviderInstallModulesWithExclusionsCallbacks* callbacks);
 	BINARYNINJACOREAPI void BNSetScriptingProviderDependencyConflictCallback(BNScriptingProvider* provider,
 	    BNScriptingProviderDependencyConflictCallbacks* callbacks);
 	BINARYNINJACOREAPI void BNSetPluginDependencyStartupCallback(BNPluginDependencyStartupCallbacks* callbacks);
@@ -8876,7 +8885,10 @@ extern "C"
 	BINARYNINJACOREAPI const char* BNPluginGetPath(BNPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetSubdir(BNPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetDependencies(BNPlugin* p);
+	BINARYNINJACOREAPI const char* BNPluginGetDependenciesForVersion(BNPlugin* p, const char* versionID);
 	BINARYNINJACOREAPI BNPluginDependencyConflict* BNPluginGetDependencyConflicts(BNPlugin* p, size_t* count);
+	BINARYNINJACOREAPI BNPluginDependencyConflict* BNPluginGetDependencyConflictsForVersion(BNPlugin* p,
+		const char* versionID, size_t* count);
 	BINARYNINJACOREAPI void BNFreePluginDependencyConflicts(BNPluginDependencyConflict* conflicts, size_t count);
 	BINARYNINJACOREAPI const char* BNPluginGetLongdescription(BNPlugin* p);
 	BINARYNINJACOREAPI uint64_t BNPluginGetLastUpdate(BNPlugin* p);
@@ -8890,6 +8902,11 @@ extern "C"
 	BINARYNINJACOREAPI bool BNPluginDisable(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginInstall(BNPlugin* p, const char* versionID);
 	BINARYNINJACOREAPI bool BNPluginInstallDependencies(BNPlugin* p);
+	BINARYNINJACOREAPI bool BNPluginInstallDependenciesForVersion(BNPlugin* p, const char* versionID);
+	BINARYNINJACOREAPI bool BNPluginInstallDependenciesWithExclusions(BNPlugin* p,
+		const char* const* excludedPackageNames, size_t excludedPackageNameCount);
+	BINARYNINJACOREAPI bool BNPluginInstallDependenciesWithExclusionsForVersion(BNPlugin* p, const char* versionID,
+		const char* const* excludedPackageNames, size_t excludedPackageNameCount);
 	BINARYNINJACOREAPI bool BNPluginUninstall(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginCancelUninstall(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginUpdate(BNPlugin* p, const char* versionID);

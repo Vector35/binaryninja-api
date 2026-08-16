@@ -98,11 +98,21 @@ class Extension:
 		assert result is not None, "core.BNPluginGetDependencies returned None"
 		return result
 
+	def dependencies_for_version(self, version_id: str) -> str:
+		"""Dependencies required for installing a specific plugin version."""
+		result = core.BNPluginGetDependenciesForVersion(self.handle, version_id)
+		assert result is not None, "core.BNPluginGetDependenciesForVersion returned None"
+		return result
+
 	@property
 	def dependency_conflicts(self) -> List[PluginDependencyConflict]:
 		"""Dependency conflicts with installed plugins, or an empty list for custom Python environments."""
+		return self.dependency_conflicts_for_version(None)
+
+	def dependency_conflicts_for_version(self, version_id: Optional[str]) -> List[PluginDependencyConflict]:
+		"""Dependency conflicts for a specific version, or the plugin default when version_id is None."""
 		count = ctypes.c_ulonglong()
-		conflicts = core.BNPluginGetDependencyConflicts(self.handle, count)
+		conflicts = core.BNPluginGetDependencyConflictsForVersion(self.handle, version_id, count)
 		if conflicts is None:
 			return []
 		result = []
@@ -143,7 +153,10 @@ class Extension:
 		"""Attempt to install the given plugin. Defaults to the latest available version."""
 		if self.delete_pending:
 			return self.cancel_uninstall()
-		self.install_dependencies()
+		if version_id is None:
+			version_id = self.latest_version_id
+		if not self.install_dependencies(version_id):
+			return False
 		return core.BNPluginInstall(self.handle, version_id)
 
 	def uninstall(self) -> bool:
@@ -161,8 +174,17 @@ class Extension:
 		else:
 			core.BNPluginUninstall(self.handle)
 
-	def install_dependencies(self) -> bool:
-		return core.BNPluginInstallDependencies(self.handle)
+	def install_dependencies(
+		self, version_id: Optional[str] = None, excluded_package_names: Optional[List[str]] = None
+	) -> bool:
+		"""Install dependencies for a plugin version, optionally excluding packages by canonical name."""
+		if not excluded_package_names:
+			return core.BNPluginInstallDependenciesForVersion(self.handle, version_id)
+		exclusions = (ctypes.c_char_p * len(excluded_package_names))()
+		for i, package_name in enumerate(excluded_package_names):
+			exclusions[i] = package_name.encode("utf-8")
+		return core.BNPluginInstallDependenciesWithExclusionsForVersion(
+			self.handle, version_id, exclusions, len(excluded_package_names))
 
 	@property
 	def enabled(self) -> bool:

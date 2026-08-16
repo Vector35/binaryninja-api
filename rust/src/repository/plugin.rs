@@ -276,10 +276,37 @@ impl Extension {
         unsafe { BnString::into_string(result as *mut c_char) }
     }
 
+    /// Dependencies required for installing a specific version of this plugin
+    pub fn dependencies_for_version(&self, version_id: &str) -> String {
+        let version_id_raw = version_id.to_cstr();
+        let result = unsafe {
+            BNPluginGetDependenciesForVersion(self.handle.as_ptr(), version_id_raw.as_ptr())
+        };
+        assert!(!result.is_null());
+        unsafe { BnString::into_string(result as *mut c_char) }
+    }
+
     /// Dependency conflicts with installed plugins
     pub fn dependency_conflicts(&self) -> Vec<PluginDependencyConflict> {
         let mut count = 0;
         let conflicts = unsafe { BNPluginGetDependencyConflicts(self.handle.as_ptr(), &mut count) };
+        Self::dependency_conflicts_from_raw(conflicts, count)
+    }
+
+    /// Dependency conflicts with installed plugins for a specific plugin version
+    pub fn dependency_conflicts_for_version(
+        &self,
+        version_id: &str,
+    ) -> Vec<PluginDependencyConflict> {
+        let version_id_raw = version_id.to_cstr();
+        let mut count = 0;
+        let conflicts = unsafe {
+            BNPluginGetDependencyConflictsForVersion(
+                self.handle.as_ptr(),
+                version_id_raw.as_ptr(),
+                &mut count,
+            )
+        };
         Self::dependency_conflicts_from_raw(conflicts, count)
     }
 
@@ -352,6 +379,39 @@ impl Extension {
     /// Attempt to install the dependencies of this plugin
     pub fn install_dependencies(&self) -> bool {
         unsafe { BNPluginInstallDependencies(self.handle.as_ptr()) }
+    }
+
+    /// Attempt to install the dependencies of a specific version of this plugin
+    pub fn install_dependencies_for_version(&self, version_id: &str) -> bool {
+        let version_id_raw = version_id.to_cstr();
+        unsafe {
+            BNPluginInstallDependenciesForVersion(self.handle.as_ptr(), version_id_raw.as_ptr())
+        }
+    }
+
+    /// Attempt to install the dependencies of a specific version of this plugin, excluding some packages by canonical name
+    pub fn install_dependencies_for_version_with_exclusions(
+        &self,
+        version_id: &str,
+        excluded_package_names: &[&str],
+    ) -> bool {
+        let version_id_raw = version_id.to_cstr();
+        let excluded_package_names_raw: Vec<_> = excluded_package_names
+            .iter()
+            .map(|package_name| package_name.to_cstr())
+            .collect();
+        let excluded_package_name_ptrs: Vec<_> = excluded_package_names_raw
+            .iter()
+            .map(|package_name| package_name.as_ptr())
+            .collect();
+        unsafe {
+            BNPluginInstallDependenciesWithExclusionsForVersion(
+                self.handle.as_ptr(),
+                version_id_raw.as_ptr(),
+                excluded_package_name_ptrs.as_ptr(),
+                excluded_package_name_ptrs.len(),
+            )
+        }
     }
 
     /// Attempt to uninstall the given plugin

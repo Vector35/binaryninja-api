@@ -50,7 +50,8 @@ from . import basicblock
 from . import function
 from . import log
 from .extensionmanager import RepositoryManager
-from .requirementcheck import pip_dependency_conflicts, pip_requirements_from_dependency_metadata, pip_requirements_satisfied
+from .requirementcheck import (pip_dependency_conflicts, pip_requirements_excluding_packages,
+	pip_requirements_from_dependency_metadata, pip_requirements_satisfied)
 from .enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
 from .settings import Settings
 from .enums import SettingsScope
@@ -483,6 +484,13 @@ class ScriptingProvider(metaclass=_ScriptingProviderMetaclass):
 		self._module_installed_cb.context = None
 		self._module_installed_cb.moduleInstalled = self._module_installed_cb.moduleInstalled.__class__(self._module_installed)
 		core.BNSetScriptingProviderModuleInstalledCallback(self.handle, self._module_installed_cb)
+		self._install_modules_with_exclusions_cb = core.BNScriptingProviderInstallModulesWithExclusionsCallbacks()
+		self._install_modules_with_exclusions_cb.context = None
+		self._install_modules_with_exclusions_cb.installModulesWithExclusions = \
+			self._install_modules_with_exclusions_cb.installModulesWithExclusions.__class__(
+				self._install_modules_with_exclusions_for_callback)
+		core.BNSetScriptingProviderInstallModulesWithExclusionsCallback(
+			self.handle, self._install_modules_with_exclusions_cb)
 		self._dependency_conflict_cb = core.BNScriptingProviderDependencyConflictCallbacks()
 		self._dependency_conflict_cb.context = None
 		self._dependency_conflict_cb.getDependencyConflicts = self._dependency_conflict_cb.getDependencyConflicts.__class__(self._dependency_conflicts)
@@ -513,6 +521,23 @@ class ScriptingProvider(metaclass=_ScriptingProviderMetaclass):
 
 	def _install_modules(self, ctx, modules: bytes) -> bool:
 		return False
+
+	def _install_modules_with_exclusions(self, ctx, modules: bytes, excluded_package_names, excluded_package_name_count: int) -> bool:
+		exclusions = {
+			excluded_package_names[i].decode("utf-8") for i in range(excluded_package_name_count)
+			if excluded_package_names[i] is not None
+		}
+		filtered_modules = pip_requirements_excluding_packages(modules, exclusions)
+		return self._install_modules(ctx, "\n".join(filtered_modules).encode("utf-8"))
+
+	def _install_modules_with_exclusions_for_callback(
+			self, ctx, modules: bytes, excluded_package_names, excluded_package_name_count: int) -> bool:
+		try:
+			return self._install_modules_with_exclusions(
+				ctx, modules, excluded_package_names, excluded_package_name_count)
+		except Exception:
+			dependency_installer_logger.log_error_for_exception("Dependency installation failed")
+			return False
 
 	def _module_installed(self, ctx, modules: bytes) -> bool:
 		return False

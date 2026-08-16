@@ -59,6 +59,31 @@ def pip_requirements_from_dependency_metadata(dependencies: bytes) -> List[str]:
 	return result
 
 
+def pip_requirements_excluding_packages(dependencies: bytes, excluded_package_names: Iterable[str]) -> List[str]:
+	"""Returns dependency requirements without excluded packages.
+
+	Requirements that cannot be parsed are kept to avoid hiding an unsupported or malformed dependency.
+	"""
+	try:
+		from packaging.requirements import Requirement
+		from packaging.utils import canonicalize_name
+	except Exception:
+		from pip._vendor.packaging.requirements import Requirement
+		from pip._vendor.packaging.utils import canonicalize_name
+
+	exclusions = set(excluded_package_names)
+	filtered_requirements = []
+	for requirement_text in pip_requirements_from_dependency_metadata(dependencies):
+		try:
+			package_name = canonicalize_name(Requirement(requirement_text).name)
+		except Exception:
+			filtered_requirements.append(requirement_text)
+			continue
+		if package_name not in exclusions:
+			filtered_requirements.append(requirement_text)
+	return filtered_requirements
+
+
 def pip_requirements_satisfied(requirements: Iterable[str], installed_versions: Optional[Dict[str, str]] = None) -> bool:
 	try:
 		from importlib import metadata as importlib_metadata

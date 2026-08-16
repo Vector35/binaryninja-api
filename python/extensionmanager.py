@@ -21,13 +21,23 @@
 import ctypes
 import json
 from dataclasses import dataclass
-from datetime import datetime, date
+from datetime import date, datetime
 from typing import List, Dict, Optional
 
 import binaryninja
 from . import _binaryninjacore as core
 from . import deprecation
 from .enums import PluginType
+
+
+def _convert_owned_version_info(info: 'core.BNVersionInfo') -> 'binaryninja.CoreVersionInfo':
+	channel = info.channel or ""
+	channel_address = ctypes.c_void_p.from_buffer(info, type(info)._channel.offset).value
+	try:
+		return binaryninja.CoreVersionInfo(info.major, info.minor, info.build, channel)
+	finally:
+		if channel_address:
+			core.BNFreeString(ctypes.cast(channel_address, ctypes.POINTER(ctypes.c_byte)))
 
 
 @dataclass(frozen=True)
@@ -43,6 +53,8 @@ class ExtensionVersion:
 	version: str
 	long_description: str
 	changelog: str
+	subdir: str
+	dependencies: str
 	minimum_client_version: int
 	platforms: List[ExtensionVersionPlatform]
 	created: str
@@ -51,9 +63,9 @@ class ExtensionVersion:
 class Extension:
 	"""
 	``Extension`` is mostly read-only, however you can install/uninstall enable/disable plugins. Extensions are
-	created by parsing the plugins.json in a plugin repository.
+	created from v2 extension and version metadata.
 	"""
-	def __init__(self, handle: 'core.BNRepoPluginHandle'):
+	def __init__(self, handle: 'core.BNPluginHandle'):
 		self.handle = handle
 
 	def __del__(self):
@@ -103,7 +115,8 @@ class Extension:
 		"""Attempt to install the given plugin. Defaults to the latest available version."""
 		if self.delete_pending:
 			return self.cancel_uninstall()
-		self.install_dependencies()
+		version_id = version_id or self.latest_version_id
+		self.install_dependencies(version_id)
 		return core.BNPluginInstall(self.handle, version_id)
 
 	def uninstall(self) -> bool:
@@ -121,8 +134,10 @@ class Extension:
 		else:
 			core.BNPluginUninstall(self.handle)
 
-	def install_dependencies(self) -> bool:
-		return core.BNPluginInstallDependencies(self.handle)
+	def install_dependencies(self, version_id: Optional[str] = None) -> bool:
+		if version_id is None:
+			return core.BNPluginInstallDependencies(self.handle)
+		return core.BNPluginInstallDependenciesForVersion(self.handle, version_id)
 
 	@property
 	def enabled(self) -> bool:
@@ -157,53 +172,38 @@ class Extension:
 				result.append(platforms[i].decode("utf-8"))
 			return result
 		finally:
-			core.BNFreePluginPlatforms(platforms, count.value)
+			core.BNFreeStringList(platforms, count.value)
 
 	@property
-	@deprecation.deprecated(deprecated_in="5.3", details='Use :py:attr:`current_version` in combination with :py:attr:`versions` instead.')
+	@deprecation.deprecated(deprecated_in="5.3", details="Use current_version and versions instead.")
 	def description(self) -> Optional[str]:
 		"""String short description of the plugin"""
 		return core.BNPluginGetDescription(self.handle)
 
 	@property
-	@deprecation.deprecated(deprecated_in="5.3", details='This field will be removed.')
+	@deprecation.deprecated(deprecated_in="5.3", details="This field will be removed.")
 	def license_text(self) -> Optional[str]:
 		"""String complete license text for the given plugin"""
 		return core.BNPluginGetLicenseText(self.handle)
 
 	@property
 	def long_description(self) -> Optional[str]:
-		"""String long description of the plugin"""
 		return core.BNPluginGetLongdescription(self.handle)
 
-	@deprecation.deprecated(deprecated_in="4.0.5366", details='Use :py:func:`minimum_version_info` instead.')
 	@property
+	@deprecation.deprecated(deprecated_in="4.0.5366", details="Use minimum_version_info instead.")
 	def minimum_version(self) -> int:
-		"""Minimum version the plugin was tested on"""
 		return self.minimum_version_info.build
 
 	@property
 	def minimum_version_info(self) -> 'binaryninja.CoreVersionInfo':
-		"""Minimum version info the plugin was tested on"""
 		core_version_info = core.BNPluginGetMinimumVersionInfo(self.handle)
-		return binaryninja.CoreVersionInfo(
-			core_version_info.major,
-			core_version_info.minor,
-			core_version_info.build,
-			core_version_info.channel or ""
-		)
+		return _convert_owned_version_info(core_version_info)
 
 	@property
 	def maximum_version_info(self) -> 'binaryninja.CoreVersionInfo':
-		"""Maximum version info the plugin will support"""
 		core_version_info = core.BNPluginGetMaximumVersionInfo(self.handle)
-		return binaryninja.CoreVersionInfo(
-			core_version_info.major,
-			core_version_info.minor,
-			core_version_info.build,
-			core_version_info.channel or ""
-		)
-
+		return _convert_owned_version_info(core_version_info)
 	@property
 	def name(self) -> str:
 		"""String name of the plugin"""
@@ -231,11 +231,9 @@ class Extension:
 		return core.BNPluginGetProjectUrl(self.handle)
 
 	@property
-	@deprecation.deprecated(deprecated_in="5.3", details='Use :py:attr:`current_version` in combination with :py:attr:`versions` instead.')
+	@deprecation.deprecated(deprecated_in="5.3", details="Use current_version and versions instead.")
 	def package_url(self) -> Optional[str]:
-		"""String URL of the plugin's zip file"""
 		return core.BNPluginGetPackageUrl(self.handle)
-
 	@property
 	def is_paid(self) -> bool:
 		"""Boolean True if this plugin requires payment, False otherwise"""
@@ -243,20 +241,19 @@ class Extension:
 
 	@property
 	def author_url(self) -> Optional[str]:
-		"""String URL of the plugin author's url"""
 		return core.BNPluginGetAuthorUrl(self.handle)
-
 	@property
 	def author(self) -> Optional[str]:
 		"""String of the plugin author"""
 		return core.BNPluginGetAuthor(self.handle)
 
 	@property
-	@deprecation.deprecated(deprecated_in="5.3", details='Use :py:attr:`current_version` in combination with :py:attr:`versions` instead.')
+	@deprecation.deprecated(deprecated_in="5.3", details="Use current_version and versions instead.")
 	def version(self) -> Optional[str]:
-		"""String version of the plugin"""
-		return self.current_version.version
-
+		current = self.current_version
+		if current.id:
+			return current.version
+		return next((version.version for version in self.versions if version.id == self.latest_version_id), None)
 	@property
 	def current_version(self) -> ExtensionVersion:
 		"""Current version metadata for the plugin"""
@@ -275,6 +272,8 @@ class Extension:
 				version=version.versionString or "",
 				long_description=version.longDescription or "",
 				changelog=version.changelog or "",
+				subdir=version.subdir or "",
+				dependencies=version.dependencies or "",
 				minimum_client_version=version.minimumClientVersion,
 				platforms=platforms,
 				created=version.created or ""
@@ -313,6 +312,8 @@ class Extension:
 					version=version.versionString or "",
 					long_description=version.longDescription or "",
 					changelog=version.changelog or "",
+					subdir=version.subdir or "",
+					dependencies=version.dependencies or "",
 					minimum_client_version=version.minimumClientVersion,
 					platforms=platforms,
 					created=version.created or ""
@@ -324,7 +325,6 @@ class Extension:
 
 	@property
 	def install_platforms(self) -> List[str]:
-		"""List of platforms this plugin can execute on"""
 		result = []
 		count = ctypes.c_ulonglong(0)
 		platforms = core.BNPluginGetPlatforms(self.handle, count)
@@ -335,7 +335,6 @@ class Extension:
 			return result
 		finally:
 			core.BNFreePluginPlatforms(platforms, count.value)
-
 	@property
 	def being_deleted(self) -> bool:
 		"""Boolean status indicating that the plugin is being deleted"""
@@ -377,26 +376,22 @@ class Extension:
 		return core.BNPluginAreDependenciesBeingInstalled(self.handle)
 
 	@property
-	@deprecation.deprecated(deprecated_in="5.3", details='This field will be removed.')
+	@deprecation.deprecated(deprecated_in="5.3", details="This field will be removed.")
 	def project_data(self) -> Dict:
-		"""Gets a json object of the project data field"""
 		data = core.BNPluginGetProjectData(self.handle)
 		assert data is not None, "core.BNPluginGetProjectData returned None"
 		return json.loads(data)
 
 	@property
-	@deprecation.deprecated(deprecated_in="5.3", details='Use :py:attr:`versions` in combination with :py:attr:`current_version` to check for updates instead.')
+	@deprecation.deprecated(deprecated_in="5.3", details="Use versions and current_version instead.")
 	def last_update(self) -> date:
-		"""Returns a datetime object representing the plugins last update"""
 		return datetime.fromtimestamp(core.BNPluginGetLastUpdate(self.handle))
 
 
-@deprecation.deprecated(deprecated_in="5.3", details='Use :py:class:`binaryninja.Extension` instead.')
+@deprecation.deprecated(deprecated_in="5.3", details="Use :py:class:`binaryninja.Extension` instead.")
 class RepoPlugin(Extension):
-	def __init__(self, handle: 'core.BNRepoPluginHandle'):
+	def __init__(self, handle: 'core.BNPluginHandle'):
 		super().__init__(handle)
-
-
 class Repository:
 	"""
 	``Repository`` is a read-only class. Use RepositoryManager to Enable/Disable/Install/Uninstall plugins.
@@ -458,8 +453,7 @@ class Repository:
 
 class RepositoryManager:
 	"""
-	``RepositoryManager`` Keeps track of all the repositories and keeps the enabled_plugins.json file coherent with
-	the plugins that are installed/uninstalled enabled/disabled
+	``RepositoryManager`` keeps track of repositories and persists extension state in ``plugin_status.json``.
 	"""
 	def __init__(self):
 		binaryninja._init_plugins()
@@ -512,18 +506,18 @@ class RepositoryManager:
 		``add_repository`` adds a new plugin repository for the manager to track.
 
 		To remove a repository, restart Binary Ninja (and don't re-add the repository!).
-		File artifacts will remain on disk under repositories/ file in the User Folder.
+		File artifacts will remain on disk under ``channels/`` in the User Folder.
 
 		Before you can query plugin metadata from a repository, you need to call ``check_for_updates``.
 
-		:param str url: URL to the plugins.json containing the records for this repository
+		:param str url: v2 manifest extensions URL for this repository
 		:param str repopath: path to where the repository will be stored on disk locally
 		:return: Boolean value True if the repository was successfully added, False otherwise.
 		:rtype: Boolean
 		:Example:
 
 			>>> mgr = RepositoryManager()
-			>>> mgr.add_repository("https://raw.githubusercontent.com/Vector35/community-plugins/master/plugins.json", "community")
+			>>> mgr.add_repository("http://127.0.0.1:8000/v2/manifests/example/extensions", "example")
 			True
 			>>> mgr.check_for_updates()
 			>>>

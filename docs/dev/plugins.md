@@ -48,9 +48,36 @@ For future releases all you need to do is run the workflow again.
 
 ### Using Your Own Plugin Repository
 
-The simplest way to run your own plugin repository using the new V2 extension manager is to use the [mock server](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/mock_extension_server.py) helper script (a copy is available offline as well in the install path, in the python example scripts subfolder).
+The simplest way to run your own plugin repository using the new v2 extension manager is to use the [mock server](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/mock_extension_server.py) helper script (a copy is available offline as well in the install path, in the python example scripts subfolder).
 
-Once you've created your test repository, add its URL to the [`extensionManager.unofficialUrls`](../guide/settings.md#extensionManager.unofficialUrls) setting, which accepts a list of third-party repository URLs.
+Pass the server one or more `plugin.json` files:
+
+```sh
+python mock_extension_server.py /path/to/plugin.json
+```
+
+The mock server accepts both legacy v1 and native v2 metadata within `plugin.json`. It translates either input format into the v2 protocol, so older plugins can be self-hosted without rewriting their metadata. v2 metadata should look something like this:
+
+```json
+{
+  "name": "Example Extension",
+  "path": "example_extension",
+  "short_description": "Example extension",
+  "author_name": "Example Author",
+  "categories": [{"id": 1, "name": "ui"}],
+  "homepage": "https://example.com/extension",
+  "using_apis": ["python3"],
+  "version": {
+    "version_string": "1.0.0",
+    "long_description": "Example extension",
+    "dependencies": {"pip": ["example-package"]},
+    "minimum_client_version": 0,
+    "subdir": ""
+  }
+}
+```
+
+Once you've created your test repository, add its server base URL to the [`extensionManager.unofficialUrls`](../guide/settings.md#extensionManager.unofficialUrls) setting. The server must expose `/v2/manifests`.
 
 The [`add_repository`](https://api.binary.ninja/binaryninja.extensionmanager-module.html#binaryninja.extensionmanager.RepositoryManager.add_repository) API can also be used to add the repository.
 

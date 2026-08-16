@@ -48,7 +48,7 @@ impl Repository {
         PathBuf::from(result_str)
     }
 
-    /// List of RepoPlugin objects contained within this repository
+    /// List of extensions contained within this repository
     pub fn plugins(&self) -> Array<Extension> {
         let mut count = 0;
         let result = unsafe { BNRepositoryGetPlugins(self.handle.as_ptr(), &mut count) };

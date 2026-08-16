@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 185
+#define BN_CURRENT_CORE_ABI_VERSION 186
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 184
+#define BN_MINIMUM_CORE_ABI_VERSION 186
 
 #define BN_DEMANGLER_MSVC "MS"
 #define BN_DEMANGLER_GNU3 "GNU3"
@@ -390,6 +390,8 @@ extern "C"
 		char* versionString;
 		char* longDescription;
 		char* changelog;
+		char* subdir;
+		char* dependencies;
 
 		uint64_t minimumClientVersion;
 		BNPluginVersionPlatform* platforms;
@@ -8419,6 +8421,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNPluginDisable(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginInstall(BNPlugin* p, const char* versionID);
 	BINARYNINJACOREAPI bool BNPluginInstallDependencies(BNPlugin* p);
+	BINARYNINJACOREAPI bool BNPluginInstallDependenciesForVersion(BNPlugin* p, const char* versionID);
 	BINARYNINJACOREAPI bool BNPluginUninstall(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginCancelUninstall(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginUpdate(BNPlugin* p, const char* versionID);

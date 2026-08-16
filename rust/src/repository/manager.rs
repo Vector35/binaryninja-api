@@ -10,8 +10,8 @@ use std::fmt::Debug;
 use std::path::Path;
 use std::ptr::NonNull;
 
-/// Keeps track of all the repositories and keeps the `enabled_plugins.json`
-/// file coherent with the plugins that are installed/uninstalled enabled/disabled
+/// Keeps track of all repositories and persists extension state in
+/// `plugin_status.json`.
 pub struct RepositoryManager;
 
 impl RepositoryManager {
@@ -31,11 +31,11 @@ impl RepositoryManager {
     /// Adds a new plugin repository for the manager to track.
     ///
     /// To remove a repository, restart Binary Ninja (and don't re-add the repository!).
-    /// File artifacts will remain on disk under repositories/ file in the User Folder.
+    /// File artifacts will remain on disk under `channels/` in the User Folder.
     ///
     /// Before you can query plugin metadata from a repository, you need to call [`RepositoryManager::check_for_updates`].
     ///
-    /// * `url` - URL to the plugins.json containing the records for this repository
+    /// * `url` - v2 manifest extensions URL for this repository
     /// * `repository_path` - path to where the repository will be stored on disk locally
     ///
     /// Returns true if the repository was successfully added, false otherwise.

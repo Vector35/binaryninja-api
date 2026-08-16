@@ -65,15 +65,141 @@ def _category_id(name: str) -> int:
 
 
 def _name_to_path(name: str) -> str:
-    p = re.sub(r"[^a-zA-Z0-9]", "_", name.lower())
-    return re.sub(r"_+", "_", p).strip("_")
+    path = re.sub(r"[^a-zA-Z0-9]", "_", name.lower())
+    return re.sub(r"_+", "_", path).strip("_")
+
+
+def _normalize_dependencies(raw_dependencies) -> dict:
+    if not isinstance(raw_dependencies, dict):
+        return {}
+
+    dependencies = {}
+    for name, values in raw_dependencies.items():
+        if isinstance(values, list):
+            normalized = [
+                value.strip()
+                for value in values
+                if isinstance(value, str) and value.strip()
+            ]
+        elif isinstance(values, str):
+            normalized = [
+                value.strip() for value in values.splitlines() if value.strip()
+            ]
+        else:
+            normalized = []
+        if normalized:
+            dependencies[name] = normalized
+    return dependencies
+
+
+def _minimum_client_build(value) -> int:
+    if isinstance(value, dict):
+        builds = [_minimum_client_build(item) for item in value.values()]
+        return max(builds, default=0)
+    if isinstance(value, (int, float)):
+        return int(value)
+    if isinstance(value, str):
+        components = re.findall(r"\d+", value)
+        return int(components[-1]) if components else 0
+    return 0
+
+
+def _normalize_platforms(value) -> list[str]:
+    if value is None:
+        return list(PLATFORMS)
+    if isinstance(value, str):
+        value = [value]
+    if not isinstance(value, list):
+        return []
+
+    aliases = {
+        "darwin": ["darwin-x64", "darwin-arm64"],
+        "macos": ["darwin-x64", "darwin-arm64"],
+        "linux": ["linux-x64", "linux-arm64"],
+        "windows": ["win-x64", "win-arm64"],
+        "win": ["win-x64", "win-arm64"],
+    }
+    selected = set()
+    for item in value:
+        if not isinstance(item, str):
+            continue
+        platform = item.lower()
+        if platform in PLATFORMS:
+            selected.add(platform)
+        else:
+            selected.update(aliases.get(platform, []))
+    return [platform for platform in PLATFORMS if platform in selected]
+
+
+def _normalize_plugin(data: dict) -> dict:
+    if "plugin" in data and isinstance(data["plugin"], dict):
+        data = data["plugin"]
+
+    plugin = dict(data)
+    raw_version = data.get("version", "1.0.0")
+    version = (
+        dict(raw_version)
+        if isinstance(raw_version, dict)
+        else {"version_string": str(raw_version)}
+    )
+    version.setdefault("version_string", "1.0.0")
+    version.setdefault("long_description", data.get("longdescription", ""))
+    version.setdefault("changelog", data.get("changelog", ""))
+    version.setdefault("subdir", data.get("subdir", ""))
+    version.setdefault("created", data.get("created", ""))
+    minimum_client_version = (
+        version.get("minimum_client_version")
+        or data.get("minimum_client_version")
+        or data.get("minimumbinaryninjaversion")
+        or data.get("minimumBinaryNinjaVersion")
+        or 0
+    )
+    version["minimum_client_version"] = _minimum_client_build(
+        minimum_client_version
+    )
+    version["dependencies"] = _normalize_dependencies(
+        version.get("dependencies", data.get("dependencies", {}))
+    )
+    version["platforms"] = _normalize_platforms(
+        version.get("platforms", data.get("platforms"))
+    )
+
+    categories = data.get("categories", data.get("type", []))
+    if isinstance(categories, str):
+        categories = [categories]
+    plugin["categories"] = [
+        {"id": _category_id(category), "name": category}
+        if isinstance(category, str)
+        else category
+        for category in categories
+        if isinstance(category, (str, dict))
+    ]
+    plugin["short_description"] = data.get(
+        "short_description", data.get("description", "")
+    )
+    plugin["author_name"] = data.get("author_name", data.get("author", ""))
+    plugin["homepage"] = data.get("homepage", data.get("projectUrl", ""))
+    plugin["path"] = data.get("path") or _name_to_path(data["name"])
+    using_apis = data.get("using_apis", data.get("api", []))
+    plugin["using_apis"] = (
+        [using_apis] if isinstance(using_apis, str) else using_apis
+    )
+
+    license_data = data.get("license", "")
+    if isinstance(license_data, dict):
+        plugin["license_name"] = data.get(
+            "license_name", license_data.get("name", "")
+        )
+        plugin["license"] = license_data.get("text", "")
+    else:
+        plugin["license_name"] = data.get("license_name", "")
+        plugin["license"] = str(license_data)
+    plugin["version"] = version
+    return plugin
 
 
 def _load_plugin(path: Path) -> dict:
-    data = json.loads(path.read_text())
-    if "plugin" in data and isinstance(data["plugin"], dict):
-        data = data["plugin"]
-    return data
+    return _normalize_plugin(json.loads(path.read_text()))
 
 
 # --- URL helpers ---
@@ -106,29 +232,19 @@ def _extension_response(plugin: dict, base_url: str) -> dict:
     ext_id = _ext_id(plugin)
     mid = str(manifest_uuid)
     ext_pk = str(ext_id)
-    version_string = str(plugin.get("version", "1.0.0"))
+    version_string = str(plugin["version"]["version_string"])
     ver_id = _ver_id(ext_id, version_string)
-
-    license_data = plugin.get("license", {})
-    if isinstance(license_data, dict):
-        license_name = license_data.get("name", "")
-        license_text = license_data.get("text", "")
-    else:
-        license_name = str(license_data)
-        license_text = str(license_data)
 
     return {
         "id": ext_pk,
         "name": plugin["name"],
         "type": 0,
-        "short_description": plugin.get("description", ""),
-        "author_name": plugin.get("author", ""),
-        "categories": [
-            {"id": _category_id(t), "name": t} for t in plugin.get("type", [])
-        ],
-        "homepage": plugin.get("projectUrl", ""),
-        "path": _name_to_path(plugin["name"]),
-        "using_apis": plugin.get("api", []),
+        "short_description": plugin.get("short_description", ""),
+        "author_name": plugin.get("author_name", ""),
+        "categories": plugin.get("categories", []),
+        "homepage": plugin.get("homepage", ""),
+        "path": plugin["path"],
+        "using_apis": plugin.get("using_apis", []),
         "state": 0,
         "versions_url": _url(
             base_url, f"/v2/manifests/{mid}/extensions/{ext_pk}/versions"
@@ -137,8 +253,8 @@ def _extension_response(plugin: dict, base_url: str) -> dict:
         "is_paid": False,
         "latest_version_id": str(ver_id),
         "view_only": False,
-        "license_name": license_name,
-        "license": license_text,
+        "license_name": plugin.get("license_name", ""),
+        "license": plugin.get("license", ""),
     }
 
 
@@ -146,12 +262,13 @@ def _version_response(plugin: dict, base_url: str, path: Path) -> dict:
     ext_id = _ext_id(plugin)
     mid = str(manifest_uuid)
     ext_pk = str(ext_id)
-    version_string = str(plugin.get("version", "1.0.0"))
+    version = plugin["version"]
+    version_string = str(version["version_string"])
     ver_id = _ver_id(ext_id, version_string)
     ver_pk = str(ver_id)
 
     platform_versions = []
-    for platform in PLATFORMS:
+    for platform in version.get("platforms", PLATFORMS):
         pv_pk = str(_pv_id(ver_id, platform))
         dl_url = _url(
             base_url,
@@ -165,30 +282,17 @@ def _version_response(plugin: dict, base_url: str, path: Path) -> dict:
             }
         )
 
-    raw_deps = plugin.get("dependencies", {})
-    deps: dict = {}
-    if isinstance(raw_deps, dict):
-        for k, v in raw_deps.items():
-            deps[k] = "\n".join(v) if isinstance(v, list) else str(v)
-
-    min_ver = (
-        plugin.get("minimumbinaryninjaversion")
-        or plugin.get("minimumBinaryNinjaVersion")
-        or 0
-    )
-
     return {
         "id": ver_pk,
         "version_string": version_string,
-        "long_description": plugin.get("longdescription", ""),
-        "changelog": "",
-        "dependencies": deps,
-        "minimum_client_version": int(min_ver),
-        "created": datetime.fromtimestamp(
-            path.stat().st_mtime, tz=timezone.utc
-        ).isoformat(),
+        "long_description": version.get("long_description", ""),
+        "changelog": version.get("changelog", ""),
+        "dependencies": _normalize_dependencies(version.get("dependencies", {})),
+        "minimum_client_version": int(version.get("minimum_client_version", 0)),
+        "created": version.get("created") or datetime.fromtimestamp(
+            path.stat().st_mtime, tz=timezone.utc).isoformat(),
         "platform_versions": platform_versions,
-        "subdir": "",
+        "subdir": version.get("subdir", ""),
     }
 
 
@@ -367,7 +471,7 @@ if __name__ == "__main__":
         "plugin_files",
         nargs="+",
         metavar="plugin.json",
-        help="plugin.json files to serve",
+        help="v1 or v2 plugin metadata files to serve over the v2 API",
     )
     args = parser.parse_args()
 

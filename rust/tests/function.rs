@@ -15,8 +15,8 @@ fn store_and_query_function_metadata() {
 
     // Store key/value pairs to user and auto metadata
     func.store_metadata("one", "one", MetadataStoreFlags::PERSISTENT);
-    func.store_metadata("two", 2u64, MetadataStoreFlags::NONE);
-    func.store_metadata("three", "three", MetadataStoreFlags::NONE);
+    func.store_metadata("two", 2u64, MetadataStoreFlags::EPHEMERAL);
+    func.store_metadata("three", "three", MetadataStoreFlags::EPHEMERAL);
     func.remove_metadata("three");
 
     // Assert that we can query from both user and auto metadata

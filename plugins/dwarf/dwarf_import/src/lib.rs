@@ -382,6 +382,7 @@ fn parse_unit<R: ReaderType>(
 fn parse_unwind_section<R: Reader, U: UnwindSection<R>>(
     file: &object::File,
     unwind_section: U,
+    section_name: &str,
 ) -> gimli::Result<iset::IntervalMap<u64, i64>>
 where
     <U as UnwindSection<R>>::Offset: std::hash::Hash,
@@ -392,9 +393,7 @@ where
         bases = bases.set_eh_frame_hdr(section.address());
     }
 
-    if let Some(section) = file.section_by_name(".eh_frame") {
-        bases = bases.set_eh_frame(section.address());
-    } else if let Some(section) = file.section_by_name(".debug_frame") {
+    if let Some(section) = file.section_by_name(section_name) {
         bases = bases.set_eh_frame(section.address());
     }
 
@@ -495,46 +494,63 @@ fn parse_range_data_offsets(file: &object::File) -> Result<IntervalMap<u64, i64>
         object::Endianness::Big => gimli::RunTimeEndian::Big,
     };
 
-    let section_reader = |section_id: SectionId| -> _ {
-        create_section_reader_object(section_id, &file, endian, dwo_file)
-    };
+    let address_size = file
+        .architecture()
+        .address_size()
+        .map(|s| s.bytes())
+        .unwrap_or(if file.is_64() { 8 } else { 4 });
+    let aarch64 = file.architecture() == object::Architecture::Aarch64;
 
-    if file.section_by_name(".eh_frame").is_some() {
-        let mut eh_frame = gimli::EhFrame::load(section_reader)
-            .map_err(|e| format!("Failed to load EH frame: {}", e))?;
+    // Merge both sections instead of preferring one. Toolchains targeting ARM Linux routinely emit
+    // a stub .eh_frame holding only a terminator while the real CFI lives in .debug_frame, and
+    // without a CFA offset every local variable in the file gets discarded.
+    let mut cfa_offsets: IntervalMap<u64, i64> = IntervalMap::new();
 
-        if file.architecture() == object::Architecture::Aarch64 {
-            eh_frame.set_vendor(gimli::Vendor::AArch64);
-        }
+    if file.section_by_name(".debug_frame").is_some() {
+        let mut debug_frame = gimli::DebugFrame::load(|section_id: SectionId| -> _ {
+            create_section_reader_object(section_id, &file, endian, dwo_file)
+        })
+        .map_err(|e| format!("Failed to load debug frame: {}", e))?;
 
-        let address_size = file
-            .architecture()
-            .address_size()
-            .map(|s| s.bytes())
-            .unwrap_or(if file.is_64() { 8 } else { 4 });
-        eh_frame.set_address_size(address_size);
-
-        parse_unwind_section(&file, eh_frame).map_err(|e| format!("Error parsing .eh_frame: {}", e))
-    } else if file.section_by_name(".debug_frame").is_some() {
-        let mut debug_frame = gimli::DebugFrame::load(section_reader)
-            .map_err(|e| format!("Failed to load debug frame: {}", e))?;
-
-        if file.architecture() == object::Architecture::Aarch64 {
+        if aarch64 {
             debug_frame.set_vendor(gimli::Vendor::AArch64);
         }
-
-        let address_size = file
-            .architecture()
-            .address_size()
-            .map(|s| s.bytes())
-            .unwrap_or(if file.is_64() { 8 } else { 4 });
         debug_frame.set_address_size(address_size);
 
-        parse_unwind_section(&file, debug_frame)
-            .map_err(|e| format!("Error parsing .debug_frame: {}", e))
-    } else {
-        Ok(Default::default())
+        match parse_unwind_section(&file, debug_frame, ".debug_frame") {
+            Ok(offsets) => {
+                for (range, offset) in offsets {
+                    cfa_offsets.insert(range, offset);
+                }
+            }
+            Err(e) => tracing::error!("Error parsing .debug_frame: {}", e),
+        }
     }
+
+    // Parsed second so that .eh_frame wins on any exactly-matching range, preserving the
+    // precedence this had when it consulted only one section.
+    if file.section_by_name(".eh_frame").is_some() {
+        let mut eh_frame = gimli::EhFrame::load(|section_id: SectionId| -> _ {
+            create_section_reader_object(section_id, &file, endian, dwo_file)
+        })
+        .map_err(|e| format!("Failed to load EH frame: {}", e))?;
+
+        if aarch64 {
+            eh_frame.set_vendor(gimli::Vendor::AArch64);
+        }
+        eh_frame.set_address_size(address_size);
+
+        match parse_unwind_section(&file, eh_frame, ".eh_frame") {
+            Ok(offsets) => {
+                for (range, offset) in offsets {
+                    cfa_offsets.insert(range, offset);
+                }
+            }
+            Err(e) => tracing::error!("Error parsing .eh_frame: {}", e),
+        }
+    }
+
+    Ok(cfa_offsets)
 }
 
 fn parse_dwarf(

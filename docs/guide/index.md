@@ -938,7 +938,7 @@ digits and the ASCII representation).
 
 ## Edit Function Properties Dialog
 
-![Edit Function Properties Dialog >](../img/efp-dialog-diagram.png "Edit Function Properties Dialog"){ width="600" }
+![Edit Function Properties Dialog ><](../img/efp-dialog-diagram.png "Edit Function Properties Dialog"){ width="600" }
 
 The “Edit Function Properties” dialog provides the ability to easily configure some of a function’s more advanced properties. It can be opened via the context menu when a function is focused in the graph or linear views, or via the command palette. An overview of the UI is as follows:
 
@@ -950,15 +950,17 @@ The function prototype section contains the function’s prototype. If the proto
 
 This section contains a list of conditionally-shown tags offering information about the function. Possible tags are as follows:
 
-    - **Function architecture/platform**: The function's architecture/platform (e.g. `windows-x86_64`)
-    - **Analysis skipped (too large)**: Analysis was skipped for this function because it was too large ([`analysis.limits.maxFunctionSize`](settings.md#analysis.limits.maxFunctionSize))
-    - **Analysis timed out**: Analysis for this function was skipped because it exceeded the maximum allowed time ([`analysis.limits.maxFunctionAnalysisTime`](settings.md#analysis.limits.maxFunctionAnalysisTime))
-    - **Analysis was skipped (too many updates)**: Analysis was skipped for this function because it caused too many updates ([`analysis.limits.maxFunctionUpdateCount`](settings.md#analysis.limits.maxFunctionUpdateCount))
-    - **Analysis suppressed**: Analysis was suppressed for this function because analysis of auto-discovered functions was disabled ([`analysis.suppressNewAutoFunctionAnalysis`](settings.md#analysis.suppressNewAutoFunctionAnalysis))
-    - **Basic analysis only**: This function only received basic analysis ([`analysis.mode`](settings.md#analysis.mode) was 'basic')
-    - **Intermediate analysis only**: This function only received intermediate analysis ([`analysis.mode`](settings.md#analysis.mode) was 'intermediate')
-    - **Unresolved stack usage**: The function has unresolved stack usage
-    - **GP = 0xABCD1234**: The global pointer value is 0xABCD1234
+| Tag | Meaning | Related Setting |
+|-----|---------|-----------------|
+| Function architecture/platform | The function's architecture/platform (e.g. `windows-x86_64`) | |
+| Analysis skipped (too large) | Analysis was skipped for this function because it was too large | [`analysis.limits.maxFunctionSize`](settings.md#analysis.limits.maxFunctionSize) |
+| Analysis timed out | Analysis for this function was skipped because it exceeded the maximum allowed time | [`analysis.limits.maxFunctionAnalysisTime`](settings.md#analysis.limits.maxFunctionAnalysisTime) |
+| Analysis was skipped (too many updates) | Analysis was skipped for this function because it caused too many updates | [`analysis.limits.maxFunctionUpdateCount`](settings.md#analysis.limits.maxFunctionUpdateCount) |
+| Analysis suppressed | Analysis was suppressed for this function because analysis of auto-discovered functions was disabled | [`analysis.suppressNewAutoFunctionAnalysis`](settings.md#analysis.suppressNewAutoFunctionAnalysis) |
+| Basic analysis only | This function only received basic analysis | [`analysis.mode`](settings.md#analysis.mode) was 'basic' |
+| Intermediate analysis only | This function only received intermediate analysis | [`analysis.mode`](settings.md#analysis.mode) was 'intermediate' |
+| Unresolved stack usage | The function has unresolved stack usage | |
+| GP = 0xABCD1234 | The global pointer value is 0xABCD1234 | |
 
 ### 3. Calling Convention
 

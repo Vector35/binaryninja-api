@@ -20,37 +20,6 @@ void BinaryNinja::InitElfViewType()
 	static ElfViewType type;
 	BinaryViewType::Register(&type);
 	g_elfViewType = &type;
-
-	Ref<Settings> settings = Settings::Instance();
-	settings->RegisterSetting("files.elf.maxSectionHeaderCount",
-		R"({
-		"title" : "Maximum ELF Section Header Count",
-		"type" : "number",
-		"default" : 100,
-		"minValue" : 0,
-		"maxValue" : 65536,
-		"description" : "Maximum number of entries to include in section header array",
-		"ignore" : ["SettingsProjectScope"]
-		})");
-
-	settings->RegisterSetting("files.elf.detectARMBE8Binary",
-		R"({
-		"title" : "Enable ARM BE8 binary detection",
-		"type" : "boolean",
-		"default" : true,
-		"description" : "Enable ARM BE8 binary detection for mixed little/big endianness for code/data",
-		"ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
-		})");
-
-	settings->RegisterSetting("files.elf.overrideX86Endianness",
-		R"~({
-		"title" : "Override x86 ELF endianness",
-		"type" : "boolean",
-		"default" : true,
-		"description" : "Automatically override endianness to little-endian for x86/x86_64 ELF files (useful for obfuscated binaries)",
-		"ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
-		})~");
-
 }
 
 
@@ -2247,8 +2216,8 @@ bool ElfView::Init()
 	if (m_sectionHeaderCount != 0)
 	{
 		uint64_t configuredSectionCount = 100;
-		if (viewSettings && viewSettings->Contains("files.elf.maxSectionHeaderCount"))
-			configuredSectionCount = viewSettings->Get<uint64_t>("files.elf.maxSectionHeaderCount", this);
+		if (settings && settings->Contains("loader.elf.maxSectionHeaderCount"))
+			configuredSectionCount = settings->Get<uint64_t>("loader.elf.maxSectionHeaderCount", this);
 		uint64_t sectionCount = std::min<uint64_t>(m_sectionHeaderCount, configuredSectionCount);
 		if (GetAddressForDataOffset(m_sectionHeaderOffset, addr))
 		{
@@ -2985,7 +2954,10 @@ uint64_t ElfView::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonHeade
 	endianness = headerEndianness;
 
 	// Check for automatic x86 endianness override
-	bool overrideX86Endianness = Settings::Instance()->Get<bool>("files.elf.overrideX86Endianness");
+	Ref<Settings> loadSettings = data->GetLoadSettings(g_elfViewType->GetName());
+	bool overrideX86Endianness = true;
+	if (loadSettings && loadSettings->Contains("loader.elf.overrideX86Endianness"))
+		overrideX86Endianness = loadSettings->Get<bool>("loader.elf.overrideX86Endianness");
 	if (overrideX86Endianness)
 	{
 		// Peek at e_machine field (2 bytes at offset 0x12) with little-endian interpretation
@@ -3134,7 +3106,9 @@ uint64_t ElfView::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonHeade
 	// retrieve architecture
 	// FIXME: Architecture registration methods should perhaps be virtual and take the raw data, or some additional opaque information.
 
-	bool checkForARMBE8 = Settings::Instance()->Get<bool>("files.elf.detectARMBE8Binary");
+	bool checkForARMBE8 = true;
+	if (loadSettings && loadSettings->Contains("loader.elf.detectARMBE8Binary"))
+		checkForARMBE8 = loadSettings->Get<bool>("loader.elf.detectARMBE8Binary");
 	if (checkForARMBE8)
 		endianness = ((commonHeader.arch == EM_ARM) && (header.flags & EF_ARM_BE8)) ? BigEndian : endianness;
 
@@ -3201,6 +3175,32 @@ Ref<Settings> ElfViewType::GetLoadSettingsForData(BinaryView* data)
 			settings->UpdateProperty(override, "readOnly", false);
 	}
 
+	// register additional settings
+	settings->RegisterSetting("loader.elf.maxSectionHeaderCount",
+			R"({
+			"title" : "Maximum ELF Section Header Count",
+			"type" : "number",
+			"default" : 100,
+			"minValue" : 0,
+			"maxValue" : 65536,
+			"description" : "Maximum number of entries to include in section header array"
+			})");
+
+	settings->RegisterSetting("loader.elf.detectARMBE8Binary",
+			R"({
+			"title" : "Enable ARM BE8 binary detection",
+			"type" : "boolean",
+			"default" : true,
+			"description" : "Enable ARM BE8 binary detection for mixed little/big endianness for code/data"
+			})");
+
+	settings->RegisterSetting("loader.elf.overrideX86Endianness",
+			R"~({
+			"title" : "Override x86 ELF endianness",
+			"type" : "boolean",
+			"default" : true,
+			"description" : "Automatically override endianness to little-endian for x86/x86_64 ELF files (useful for obfuscated binaries)"
+			})~");
 
 	return settings;
 }

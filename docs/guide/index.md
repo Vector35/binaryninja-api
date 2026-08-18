@@ -588,7 +588,11 @@ The normal find dialog also exists as a sidebar panel that allows persistent, ta
 
 The search types are available from a drop-down next to the text input field and include:
 
- - Advanced Binary Search: A new search type using the [bv.search](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.search) syntax (supporting regular expressions and wildcard hex strings)
+ - Advanced Binary Search: A new search type using the [bv.search](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.search) syntax. The mode is auto-detected from the pattern (see [detect_search_mode](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView.detect_search_mode)):
+    - *FlexHex*: a byte pattern with nibble/byte wildcards, e.g. `5? ?? ?5 ff`
+    - *YARA Hex*: YARA-style hex strings — fixed/bounded jumps (`[n]`, `[n-m]`, capped at 1024 bytes), alternation (`( a | b )`), byte/nibble negation (`~aa`), and an optional outer `{ ... }`, e.g. `{ E8 [2-4] (90 | C3) ~00 }`. Unbounded jumps (`[-]`, `[n-]`) are not supported — use Regex for open-ended matching.
+    - *Regex*: a byte-level regular expression, e.g. `[\x20-\x7E]{10,}`
+    - *Raw String*: a literal string match, used as a fallback when the pattern is not valid FlexHex, YARA Hex, or regex
  - Escaped: Escaped strings such as `OneString\x09\Tabsx09Another`
  - Hex: All values must be valid hex characters such as `ebfffc390` and the bytes will only be searched for in this particular order
  - Raw: A simple string search that matches the exact string as specified

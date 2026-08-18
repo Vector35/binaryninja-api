@@ -21512,6 +21512,12 @@ namespace BinaryNinja {
 
 		std::vector<BNAddressRange> ranges;
 		uint64_t totalLength;
+
+		// Forces a specific parser for Advanced Binary Search. Empty string
+		// means auto-detect (FlexHex → YARA Hex → Regex → Raw); other valid
+		// values are "flexhex", "yara", "regex", "raw". Ignored when
+		// advancedSearch is false.
+		std::string searchType;
 	};
 
 	/*!

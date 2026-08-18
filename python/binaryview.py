@@ -10283,7 +10283,8 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			return self.QueueGenerator(t, results)
 
 	def search(self, pattern: str, start: Optional[int] = None, end: Optional[int] = None, raw: bool = False, ignore_case: bool = False, overlap: bool = False, align: int = 1,
-		limit: Optional[int] = None, progress_callback: Optional[ProgressFuncType] = None, match_callback: Optional[DataMatchCallbackType] = None) -> QueueGenerator:
+		limit: Optional[int] = None, progress_callback: Optional[ProgressFuncType] = None, match_callback: Optional[DataMatchCallbackType] = None,
+		mode: Optional[str] = None) -> QueueGenerator:
 		r"""
 		Searches for matches of the specified ``pattern`` within this BinaryView with an optionally provided address range specified by ``start`` and ``end``.
 		This is the API used by the advanced binary search UI option. The pattern is interpreted as one of:
@@ -10311,6 +10312,12 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		:param callback match_callback: A function that gets called when a match is found. The callback takes two parameters: \
 			the address of the match, and the actual DataBuffer that satisfies the search. This function can return a boolean \
 			value that decides whether the search should continue or stop.
+		:param str mode: Force a specific parser for the pattern. One of ``"auto"`` (default — runs the FlexHex → YARA Hex → \
+			Regex → Raw String cascade), ``"flexhex"``, ``"yara"``, ``"regex"``, or ``"raw"``. When set to an explicit mode, \
+			a pattern that fails that mode's parser raises an error rather than silently falling through to another mode. \
+			Explicit ``"yara"`` accepts any valid YARA hex string, including a bare rule body such as ``47 4e 55`` without \
+			the wrapping braces (unlike auto-detect, which only tries YARA for patterns containing a YARA-specific token). \
+			Useful for reproducible scripted searches and for surfacing parse errors that auto-detect would hide.
 
 		:return: A generator object that yields the offset and matched DataBuffer for each match found.
 		:rtype: QueueGenerator
@@ -10343,6 +10350,8 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			"overlap": overlap,
 			"align": align
 		}
+		if mode is not None:
+			query["searchType"] = mode
 
 		if progress_callback:
 			progress_callback_obj = ctypes.CFUNCTYPE(
@@ -10373,7 +10382,7 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		return self.QueueGenerator(t, results)
 
 	@staticmethod
-	def detect_search_mode(pattern: str, raw: bool = False) -> str:
+	def detect_search_mode(pattern: str, raw: bool = False, mode: Optional[str] = None) -> str:
 		"""
 		Detects the search mode that would be used by :py:meth:`search` for the given pattern.
 
@@ -10384,13 +10393,21 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			- ``"Regex"``: a byte-level regular expression.
 			- ``"Raw String"``: a literal string match. Returned when ``raw=True``, or as a fallback when the pattern is neither valid FlexHex, YARA Hex, nor a valid regex.
 
+		When ``mode`` is set to a specific parser (``"flexhex"``, ``"yara"``, ``"regex"``, or ``"raw"``), the return value
+		is either the resolved mode name or a string starting with ``"Error: "`` if the chosen mode rejects the pattern.
+		Explicit ``"yara"`` accepts any valid YARA hex string, including a bare rule body such as ``47 4e 55`` without the
+		wrapping braces, whereas auto-detect only tries YARA for patterns containing a YARA-specific token.
+
 		:param str pattern: The search pattern to analyze.
 		:param bool raw: Whether to interpret the pattern as a raw string (default: False).
-		:return: The detected search mode: ``"FlexHex"``, ``"YARA Hex"``, ``"Regex"``, or ``"Raw String"``.
+		:param str mode: Force a specific parser. One of ``"auto"`` (default), ``"flexhex"``, ``"yara"``, ``"regex"``, or ``"raw"``.
+		:return: The detected search mode, or ``"Error: ..."`` if an explicit ``mode`` rejected the pattern.
 		:rtype: str
 		"""
-		query = json.dumps({"pattern": pattern, "raw": raw})
-		result = core.BNDetectSearchMode(query)
+		query: dict = {"pattern": pattern, "raw": raw}
+		if mode is not None:
+			query["searchType"] = mode
+		result = core.BNDetectSearchMode(json.dumps(query))
 		return result
 
 	def reanalyze(self) -> None:

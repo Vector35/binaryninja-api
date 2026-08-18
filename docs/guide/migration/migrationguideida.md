@@ -76,8 +76,8 @@ These settings can be changed at any time through Binary Ninja's settings menu (
 
 The IDA preset keybindings and settings are stored in JSON configuration files that are easy to review and contribute to:
 
-- **Keybindings**: [`api/docs/files/ida-keybindings.json`](https://github.com/Vector35/binaryninja-api/tree/dev/docs/files/ida-keybindings.json)
-- **Settings**: [`api/docs/files/ida-settings.json`](https://github.com/Vector35/binaryninja-api/tree/dev/docs/files/ida-settings.json)
+- **Keybindings**: [`api/docs/files/ida-keybindings.json`](https://github.com/Vector35/binaryninja-api/blob/dev/docs/files/ida-keybindings.json)
+- **Settings**: [`api/docs/files/ida-settings.json`](https://github.com/Vector35/binaryninja-api/blob/dev/docs/files/ida-settings.json)
 
 If you notice a missing keybinding or a setting that would make the IDA experience more familiar, we welcome contributions via pull requests to the [binaryninja-api](https://github.com/Vector35/binaryninja-api) repository.
 

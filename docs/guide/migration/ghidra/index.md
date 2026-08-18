@@ -46,7 +46,7 @@ When you select the "Ghidra" preset in the First Run dialog, Binary Ninja will c
 - **Visibility**: Hidden by default (you can show/hide the feature map at any time using `View > Show Feature Map`)
 
 ### Sidebar Configuration
-- **Default Sidebars**: Shows only the Symbols sidebar by default (instead of both Symbols and Cross References)
+- **Default Sidebars**: Shows the Symbols and Types sidebars by default, with Types placed beneath Symbols
 
 ### Types Sidebar
 - **Details Section**: Hidden by default to maximize space for the type list
@@ -58,8 +58,8 @@ These settings can be changed at any time through Binary Ninja's settings menu (
 
 The Ghidra preset keybindings and settings are stored in JSON configuration files that are easy to review and contribute to:
 
-- **Keybindings**: [`api/docs/files/ghidra-keybindings.json`](https://github.com/Vector35/binaryninja-api/tree/dev/docs/files/ghidra-keybindings.json)
-- **Settings**: [`api/docs/files/ghidra-settings.json`](https://github.com/Vector35/binaryninja-api/tree/dev/docs/files/ghidra-settings.json)
+- **Keybindings**: [`api/docs/files/ghidra-keybindings.json`](https://github.com/Vector35/binaryninja-api/blob/dev/docs/files/ghidra-keybindings.json)
+- **Settings**: [`api/docs/files/ghidra-settings.json`](https://github.com/Vector35/binaryninja-api/blob/dev/docs/files/ghidra-settings.json)
 
 If you notice a missing keybinding or a setting that would make the Ghidra experience more familiar, we welcome contributions via pull requests to the [binaryninja-api](https://github.com/Vector35/binaryninja-api) repository.
 

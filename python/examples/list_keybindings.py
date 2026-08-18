@@ -25,14 +25,14 @@ from binaryninjaui import UIAction, UIActionHandler, Menu
 
 
 def _seq_to_str(seq_list):
-	"""Join a QList<QKeySequence> into a comma-separated portable string."""
-	return ", ".join(seq.toString() for seq in seq_list if not seq.isEmpty())
+	"""Serialize alternative key sequences using Qt's portable list format."""
+	return QKeySequence.listToString([seq for seq in seq_list if not seq.isEmpty()])
 
 
 def _canon(seq_str):
 	"""Canonicalize a key-sequence string so equivalent spellings compare equal
 	(e.g. "Ctrl+Shift+Z" vs a default returned by Qt)."""
-	return QKeySequence(seq_str).toString()
+	return QKeySequence.listToString(QKeySequence.listFromString(seq_str))
 
 
 def get_all_actions():

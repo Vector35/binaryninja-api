@@ -508,7 +508,7 @@ The following settings are specific to Binary Views. To access these settings, y
 | | | enum: Perform full linear sweep on the binary.|`enum`|`full`| | |
 |triage|Always Prefer Triage Summary View|Always prefer opening binaries in Triage Summary view, even when performing full analysis.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='triage.preferSummaryView'>triage.preferSummaryView</a>|
 |triage|Prefer Triage Summary View for Raw Files|Prefer opening raw files in Triage Summary view.|`boolean`|`False`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='triage.preferSummaryViewForRaw'>triage.preferSummaryViewForRaw</a>|
-|ui|Allow First Run Dialog|By default, the First Run dialog will only show up when it has changed and this install has not seen it. However, disabling this setting will prevent even that.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.allowWelcome'>ui.allowWelcome</a>|
+|ui|Allow First Run Wizard|By default, the First Run Wizard will only show up when it has changed and this install has not seen it. However, disabling this setting will prevent even that.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.allowWelcome'>ui.allowWelcome</a>|
 |ui|Default Cross References Interface|Default interface to use when the Show Cross References at Selection action is performed.|`string`|`pinned`|[`SettingsUserScope`]|<a id='ui.defaultXrefInterface'>ui.defaultXrefInterface</a>|
 | | | enum: Create a new Pinned Cross References tab and focus it.|`enum`|`pinned`| | |
 | | | enum: Focus the Cross References sidebar.|`enum`|`sidebar`| | |
@@ -526,6 +526,10 @@ The following settings are specific to Binary Views. To access these settings, y
 | | | enum: Split to new pane and navigate|`enum`|`NewPane`| | |
 | | | enum: Split to new tab and navigate|`enum`|`NewTab`| | |
 | | | enum: Split to new window and navigate|`enum`|`NewWindow`| | |
+|ui|Onboarding Style|UI style preference set during onboarding, used to configure default window layouts and view options.|`string`|`default`|[`SettingsUserScope`]|<a id='ui.onboardingStyle'>ui.onboardingStyle</a>|
+| | | enum: Default Binary Ninja UI style.|`enum`|`default`| | |
+| | | enum: IDA-like UI style.|`enum`|`ida`| | |
+| | | enum: Ghidra-like UI style.|`enum`|`ghidra`| | |
 |ui|Rainbow Braces|Colorize matching pairs of braces.|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.rainbowBraces'>ui.rainbowBraces</a>|
 |ui|Recent File Display Limit|Number of recent files shown in recent file lists. Set to 0 to hide the list (history is still preserved).|`number`|`10`|[`SettingsUserScope`]|<a id='ui.recentFileLimit'>ui.recentFileLimit</a>|
 |ui|Show Indentation Guides|Show indentation markers in linear high-level IL|`boolean`|`True`|[`SettingsUserScope`]|<a id='ui.renderIndentGuides'>ui.renderIndentGuides</a>|

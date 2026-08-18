@@ -182,3 +182,13 @@ permalink = true
 
 [project.extra]
 disablesearch = true
+
+# Self-host the iframe-worker shim required by the offline plugin for search
+# under file://. Without this Zensical fetches it from unpkg.com, which fails
+# in the offline docs shipped inside the application bundle. The filename must
+# contain "iframe-worker" or Zensical appends the unpkg fallback anyway.
+[[project.extra.polyfills]]
+path = "iframe-worker-shim.js"
+type = "text/javascript"
+async = false
+defer = false

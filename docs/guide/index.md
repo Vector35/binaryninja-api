@@ -1109,6 +1109,31 @@ definitions will be automatically resolved into one or more other variables. If 
 have been included as part of the same variable, use "Merge Variables..." from the context menu after splitting
 to select which of the other definitions should be merged.
 
+
+## Forcing Variable Versions
+
+Binary Ninja supports forcibly inserting synthetic definition sites for a variable in order to create additional opportunities for markup, such as changing a variable's name or type down paths where it is used but not modified within the function. This is useful in situations where a union might be annoying to reach for, or where optimizers have eliminated copies or moves from source code that cast a pointer to different types along different paths. Synthetic definitions are inserted during LLIL generation for non-stack variables and during MLIL generation for stack variables.
+
+Taking this `raw_ioctl_helper` function as an example, `arg2` could be pointing to any of several different structures.
+
+![Forcing Variable Versions](../img/force-ver-before.png "Example Function raw_ioctl_helper (no markup)"){ width="400" }
+
+### Inserting Forced Versions
+
+By selecting a variable and using the "Force New Variable Version..." action from the context menu the synthetic definitions will be inserted just prior to the variable use. The action is available from MLIL and higher views when variables that are not in destination position are selected:
+
+![Forcing Variable Versions Menu](../img/force-ver-mlil-and-menu.png "Force New Variable Version..."){ width="500" }
+
+After applying extra variable versions and applying some markup, we get the following result:
+
+![Forcing Variable Versions After](../img/force-ver-after.png "Example Function raw_ioctl_helper (marked up)"){ width="500" }
+
+In HLIL these synthetic definition sites are represented as normal variable definitions, but in LLIL and MLIL they appear as `FORCE_VER` instructions. These instructions are broadly semantically equivalent to a simple variable assignment, but are explicitly kept separate from such in order to avoid misleading analysis scripts that intend to act on the behavior of the program being analyzed only.
+
+### Clearing Forced Versions
+
+The "Clear Forced Variable Version" action is provided in the context menu for removing forced version markup. It is available on variables with forced versions applied in MLIL and above.
+
 ## Tooltips
 
 ![tooltip](../img/tooltip.png "Tooltip"){ width="800" }

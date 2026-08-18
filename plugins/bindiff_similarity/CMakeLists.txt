@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
 
 project(bindiff_similarity)
 
@@ -32,10 +32,21 @@ set(BINEXPORT_ENABLE_IDAPRO OFF CACHE BOOL "" FORCE)
 set(BINEXPORT_ENABLE_BINARYNINJA OFF CACHE BOOL "" FORCE)
 set(BINEXPORT_MSVC_STATIC_RUNTIME OFF CACHE BOOL "" FORCE)
 
+# Suppress compiler warnings in the vendored bindiff/binexport trees and the
+# dependencies they fetch. The bindiff_similarity target captured the directory's
+# COMPILE_OPTIONS when it was created, so its own sources keep the top-level
+# warning flags.
+if (MSVC)
+    add_compile_options(/w)
+else ()
+    add_compile_options(-w)
+endif ()
+
 add_subdirectory(
         "${CMAKE_CURRENT_LIST_DIR}/../../vendor/bindiff"
         "${CMAKE_CURRENT_BINARY_DIR}/vendor_bindiff"
         EXCLUDE_FROM_ALL
+        SYSTEM
 )
 
 target_link_libraries(${PROJECT_NAME}

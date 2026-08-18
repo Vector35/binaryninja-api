@@ -749,30 +749,31 @@ exist in the virtual memory space of the file can be clicked to navigate to that
 
 ![BASE](../img/base.png "BASE Address Detection"){ width="800" }
 
-The Base Address Scan Engine (or BASE) is used to automatically identify load addresses for embedded files or
-other formats where the load address isn't known and the file isn't relocatable. BASE is only visible in the triage
-summary when the file doesn't specify a load address such as a raw or mapped file. For `BinaryView`s like PE or Mach-O,
-switching the view in the upper-left from the `BinaryView` name to `raw` will force the BASE UI to show up in the
-Triage Summary.
+The Base Address Scan Engine (BASE) automatically identifies load addresses for raw binaries and other non-relocatable
+file formats whose load address is unknown. BASE appears in the Triage Summary when the file is displayed in the
+`Mapped` or `Raw` Binary View.
 
-See our [blog
-post](https://binary.ninja/2024/05/21/automatically-identifying-base-addresses.html) for more information on how
-BASE works. The following settings describe the advanced settings and how they influence the process.
+BASE provides two analysis modes: Sampling Mode and IL Analysis Mode. Sampling Mode is the faster default. IL Analysis
+Mode takes longer but may produce more accurate results for binaries that contain relatively few global pointers and
+strings. Each mode provides advanced settings for balancing analysis speed and accuracy; the defaults are suitable for
+most binaries.
 
-Note that you can cancel the analysis at any time and the current results will be displayed which may be useful for
-large files or files with many pointers being analyzed.
+The available settings are:
 
-If the file format has a header that can be identified before analysis that may help BASE identify the proper load
-address, otherwise the alignment would need to account for the header.
+|Setting|Description|Default|Mode(s)|
+|--- |--- |--- |--- |
+|Analysis Level|Binary Ninja analysis level used to analyze the file (`full`, `basic`, or `controlFlow`)|`full`|IL Analysis Mode|
+|Min. String Length|Minimum string length to treat as a point of interest|`0n10`|All|
+|Alignment|Alignment, in bytes, applied to candidate base addresses|`0n1024`|All|
+|Lower Boundary|Lowest candidate base address to consider|`0x0`|All|
+|Upper Boundary|Highest candidate base address to consider|`0xffffffffffffffff`|All|
+|Points of Interest|Types of points of interest to include (`all`, `strings only`, or `functions only`)|All|IL Analysis Mode|
+|Max Pointers|Maximum number of pointers allowed in each pointer cluster|`0n128`|IL Analysis Mode|
 
-|Setting|Description|Default|
-|--- |--- |--- |
-|Min. String Length|Minimum length of string to be considered a point-of-interest|0n10|
-|Alignment|Byte boundary to align the base address while scanning|0n1024|
-|Lower Boundary|Lowest address to begin search for candidate base address|0x0|
-|Upper Boundary|Highest address to end search for candidate base address|0xffffffffffffffff|
-|Points of Interest|Specifies types of points-of-interest to use for analysis (all, strings only, functions only)|All|
-|Max Pointers|Maximum amount of pointers to allow in each pointer cluster|0n128|
+!!! Note "Note"
+    BASE must analyze the raw binary that contains the runtime code. For container formats such as FIT or uImage,
+    extract the embedded raw binary before running BASE. Analyzing the container directly may reduce the accuracy of
+    the results.
 
 ### 5. Libraries
 
@@ -1001,6 +1002,18 @@ This element is a table containing a row for each register stack (e.g. x87) in t
 ### 12. Function Workflow
 
 This dropdown selects the [function-level workflow](https://docs.binary.ninja/dev/workflows.html#workflow) which is used to analyze this function.
+
+### Global Pointer Registers
+
+Some architectures use one or more registers as global pointers for accessing global data. Examples include TriCore,
+TMS320C6x, MIPS, and Qualcomm Hexagon. Depending on the program, these registers may be initialized once at startup
+and remain constant, or their values may change throughout execution.
+
+Binary Ninja attempts to determine the initial values of global pointer registers automatically. You can override
+these values by opening the Command Palette and running `Global Pointer Values - Set User Values`. The resulting dialog
+lets you specify a value for any global pointer register or mark its value as `undetermined`.
+
+![Global Pointer Registers](../img/global-pointers.png){ width="400" }
 
 ## Dead Store Elimination
 

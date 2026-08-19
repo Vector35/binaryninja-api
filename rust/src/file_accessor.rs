@@ -117,3 +117,82 @@ impl<A: Accessor> Drop for FileAccessor<A> {
         }
     }
 }
+
+/// A non-owning wrapper around a file accessor.
+///
+/// This is passed to callbacks, such as [`crate::binary_view::BinaryViewBase::save`], where the
+/// core retains ownership of the underlying accessor.
+///
+/// Use [`FileAccessor`] instead when you are the owner of the underlying accessor.
+pub struct BorrowedFileAccessor<'a> {
+    pub(crate) raw: &'a mut BNFileAccessor,
+}
+
+impl<'a> BorrowedFileAccessor<'a> {
+    pub(crate) unsafe fn from_raw(raw: *mut BNFileAccessor) -> Self {
+        debug_assert!(!raw.is_null());
+        Self {
+            raw: unsafe { &mut *raw },
+        }
+    }
+
+    pub fn read(&self, addr: u64, len: usize) -> Result<Vec<u8>, ErrorKind> {
+        let cb_read = self.raw.read.unwrap();
+        let mut buf = vec![0; len];
+        let read_len = unsafe { cb_read(self.raw.context, buf.as_mut_ptr() as *mut _, addr, len) };
+        if read_len != len {
+            return Err(ErrorKind::UnexpectedEof);
+        }
+        Ok(buf)
+    }
+
+    pub fn write(&self, addr: u64, data: &[u8]) -> usize {
+        let cb_write = self.raw.write.unwrap();
+        unsafe {
+            cb_write(
+                self.raw.context,
+                addr,
+                data.as_ptr() as *const _,
+                data.len(),
+            )
+        }
+    }
+
+    pub fn length(&self) -> u64 {
+        let cb_get_length = self.raw.getLength.unwrap();
+        unsafe { cb_get_length(self.raw.context) }
+    }
+}
+
+/// Used to provide access to the underlying file accessor.
+mod private {
+    use binaryninjacore_sys::BNFileAccessor;
+
+    pub trait Sealed {
+        fn raw_mut(&mut self) -> &mut BNFileAccessor;
+    }
+}
+
+/// A file accessor that can be passed to core functions like [`crate::binary_view::BinaryView::save_to_accessor`].
+///
+/// This is implemented by both [`FileAccessor`] and [`BorrowedFileAccessor`].
+#[allow(private_bounds)]
+pub trait FileAccessorHandle: private::Sealed {}
+
+impl<T: private::Sealed + ?Sized> FileAccessorHandle for T {}
+
+impl<A: Accessor> private::Sealed for FileAccessor<A> {
+    fn raw_mut(&mut self) -> &mut BNFileAccessor {
+        &mut self.raw
+    }
+}
+
+impl private::Sealed for BorrowedFileAccessor<'_> {
+    fn raw_mut(&mut self) -> &mut BNFileAccessor {
+        self.raw
+    }
+}
+
+pub(crate) fn raw_mut<T: FileAccessorHandle + ?Sized>(accessor: &mut T) -> &mut BNFileAccessor {
+    private::Sealed::raw_mut(accessor)
+}

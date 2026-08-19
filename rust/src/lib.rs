@@ -550,7 +550,9 @@ pub struct LicenseAddon {
     pub id: String,
     pub license_serial: String,
     pub product: String,
+    pub created: String,
     pub created_timestamp: u64,
+    pub expiration: String,
     pub expiration_timestamp: u64,
     pub signature: String,
 }
@@ -572,7 +574,13 @@ pub fn license_addons() -> Vec<LicenseAddon> {
                     .into_owned()
             },
             product: unsafe { CStr::from_ptr(addon.product).to_string_lossy().into_owned() },
+            created: unsafe { CStr::from_ptr(addon.created).to_string_lossy().into_owned() },
             created_timestamp: addon.createdTimestamp,
+            expiration: unsafe {
+                CStr::from_ptr(addon.expiration)
+                    .to_string_lossy()
+                    .into_owned()
+            },
             expiration_timestamp: addon.expirationTimestamp,
             signature: unsafe {
                 CStr::from_ptr(addon.signature)

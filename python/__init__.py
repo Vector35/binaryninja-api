@@ -390,7 +390,9 @@ class LicenseAddon:
 	id: str
 	license_serial: str
 	product: str
+	created: str
 	created_timestamp: int
+	expiration: str
 	expiration_timestamp: int
 	signature: str
 
@@ -407,7 +409,9 @@ def core_license_addons() -> List[LicenseAddon]:
 			id=addons[i].id,
 			license_serial=addons[i].licenseSerial,
 			product=addons[i].product,
+			created=addons[i].created,
 			created_timestamp=addons[i].createdTimestamp,
+			expiration=addons[i].expiration,
 			expiration_timestamp=addons[i].expirationTimestamp,
 			signature=addons[i].signature,
 		) for i in range(count.value)]

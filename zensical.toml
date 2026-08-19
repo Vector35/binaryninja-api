@@ -73,6 +73,7 @@ nav = [
             { "Part 2: Lifting" = "dev/archplatform-lifting.md" },
             { "Part 3: Platform Support" = "dev/archplatform-platform.md" },
             { "Flag Guide" = "dev/flags.md" },
+            { "Context-Aware Analysis" = "dev/archplatform-contextual-analysis.md" },
         ] },
         { "BNIL" = [
             { "BNIL Guide: Overview" = "dev/bnil-overview.md" },

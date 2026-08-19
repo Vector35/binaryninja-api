@@ -201,6 +201,7 @@ impl TypeParser for CoreTypeParser {
         if result {
             Ok(QualifiedNameAndType::from_owned_raw(output))
         } else {
+            unsafe { BNFreeQualifiedNameAndType(&mut output) };
             let errors: Array<TypeParserError> = unsafe { Array::new(errors, error_count, ()) };
             Err(errors.to_vec())
         }

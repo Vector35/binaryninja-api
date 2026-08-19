@@ -74,9 +74,7 @@ class _DebugInfoParserMetaClass(type):
 		parser = core.BNGetDebugInfoParserByName(str(value))
 		if parser is None:
 			raise KeyError(f"'{str(value)}' is not a valid debug-info parser")
-		parser_ref = core.BNNewDebugInfoParserReference(parser)
-		assert parser_ref is not None, "core.BNNewDebugInfoParserReference returned None"
-		return DebugInfoParser(parser_ref)
+		return DebugInfoParser(parser)
 
 	def __contains__(cls: '_DebugInfoParserMetaClass', name: object) -> bool:
 		if not isinstance(name, str):
@@ -162,9 +160,7 @@ class _DebugInfoParserMetaClass(type):
 		_debug_info_parsers[len(_debug_info_parsers)] = (is_valid_cb, parse_info_cb)
 		parser = core.BNRegisterDebugInfoParser(name, is_valid_cb, parse_info_cb, None)
 		assert parser is not None, "core.BNRegisterDebugInfoParser is not None"
-		parser_ref = core.BNNewDebugInfoParserReference(parser)
-		assert parser_ref is not None, "core.BNNewDebugInfoParserReference returned None"
-		return DebugInfoParser(parser_ref)
+		return DebugInfoParser(parser)
 
 
 class DebugInfoParser(object, metaclass=_DebugInfoParserMetaClass):

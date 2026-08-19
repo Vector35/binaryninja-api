@@ -8,6 +8,7 @@
 
 #include "constraint.h"
 #include "misc.h"
+#include "render.h"
 
 WarpFunctionItem::WarpFunctionItem(
 	Warp::Ref<Warp::Function> function, BinaryNinja::Ref<BinaryNinja::Function> analysisFunction)
@@ -189,8 +190,7 @@ WarpFunctionTableWidget::WarpFunctionTableWidget(QWidget* parent) : QWidget(pare
 	m_table->setSortingEnabled(true);
 	// NOTE: We only have a single column right now, so disable header.
 	m_table->horizontalHeader()->hide();
-	// Decrease row height to make it look nice.
-	m_table->verticalHeader()->setDefaultSectionSize(30);
+	m_table->verticalHeader()->setDefaultSectionSize(RenderContext(m_table).getFontHeight() + 10);
 
 	// Make the highlight less bright.
 	QPalette palette = m_table->palette();

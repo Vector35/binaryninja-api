@@ -284,7 +284,9 @@ vector<LicenseAddon> BinaryNinja::GetLicenseAddons()
 			addons[i].id,
 			addons[i].licenseSerial,
 			addons[i].product,
+			addons[i].created,
 			addons[i].createdTimestamp,
+			addons[i].expiration,
 			addons[i].expirationTimestamp,
 			addons[i].signature});
 	}

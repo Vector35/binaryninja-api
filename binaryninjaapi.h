@@ -2013,7 +2013,9 @@ namespace BinaryNinja {
 		std::string id;
 		std::string licenseSerial;
 		std::string product;
+		std::string created;
 		uint64_t createdTimestamp;
+		std::string expiration;
 		uint64_t expirationTimestamp;
 		std::string signature;
 	};

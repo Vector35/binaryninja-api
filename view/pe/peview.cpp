@@ -887,6 +887,14 @@ bool PEView::Init()
 			{
 				section.virtualSize = section.sizeOfRawData;
 			}
+			// Segments, sections, RVA characteristics, and symbol placement are all bounded by
+			// virtualSize elsewhere in this file, while file-backed reads are bounded by
+			// sizeOfRawData. Keep virtualSize at least as large as sizeOfRawData so a section
+			// whose raw data extends past its declared virtual size is still fully mapped.
+			if (section.sizeOfRawData > section.virtualSize)
+			{
+				section.virtualSize = section.sizeOfRawData;
+			}
 			m_sections.push_back(section);
 
 			uint32_t flags = 0;

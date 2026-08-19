@@ -649,9 +649,9 @@ class CoreTypeParser(TypeParser):
 				types.QualifiedName._from_core_struct(result_cpp.name),
 				types.Type.create(handle=core.BNNewTypeReference(result_cpp.type))
 			)
-			core.BNFreeQualifiedNameAndType(result_cpp)
 		else:
 			result = None
+		core.BNFreeQualifiedNameAndType(result_cpp)
 
 		errors = []
 		for i in range(error_count.value):

@@ -1180,10 +1180,13 @@ bool ElfView::Init()
 			uint64_t gotFileEnd = gotStart;
 			for (const auto& hdr : m_programHeaders)
 			{
-				if (hdr.type != ELF_PT_LOAD || hdr.fileSize == 0 || hdr.fileSize > UINT64_MAX - hdr.virtualAddress)
+				if (hdr.type != ELF_PT_LOAD || hdr.fileSize == 0)
 					continue;
-				uint64_t segEnd = hdr.virtualAddress + hdr.fileSize;
-				if (hdr.virtualAddress > gotStart || gotStart >= segEnd)
+				const uint64_t adjustedVirtualAddress = hdr.virtualAddress + imageBaseAdjustment;
+				if (hdr.fileSize > UINT64_MAX - adjustedVirtualAddress)
+					continue;
+				const uint64_t segEnd = adjustedVirtualAddress + hdr.fileSize;
+				if (adjustedVirtualAddress > gotStart || gotStart >= segEnd)
 					continue;
 				// Only trust this segment's declared extent up to what the file actually backs.
 				if (hdr.fileSize > UINT64_MAX - hdr.offset || hdr.offset + hdr.fileSize > (uint64_t)GetParentView()->GetLength())
@@ -1192,17 +1195,27 @@ bool ElfView::Init()
 				break;
 			}
 			const uint64_t maxFromFile = (gotFileEnd > gotStart) ? (gotFileEnd - gotStart) / entrySize : 0;
-			const uint64_t limit = std::min({localMipsSyms, entryBudget, maxFromFile});
+			const uint64_t maxGotEntries = std::min(entryBudget, maxFromFile);
+			const uint64_t limit = std::min(localMipsSyms, maxGotEntries);
 			for (size_t i = 2; i < limit; i++)
 				m_gotEntryLocations.emplace(gotStart + i * entrySize);
 			for (uint64_t i = firstMipsSym; i < (m_auxSymbolTable.size / (m_elf32 ? 16 : 24)); i++)
 			{
-				uint64_t gotEntry = gotStart + ((localMipsSyms + i - firstMipsSym) * entrySize);
-				if (!IsRangeBackedByFile(gotEntry, entrySize))
+				const uint64_t symbolGotIndex = i - firstMipsSym;
+				if (symbolGotIndex > UINT64_MAX - localMipsSyms)
 				{
-					m_logger->LogWarn("ELF GOT entry %" PRIx64 " is invalid", gotEntry);
+					m_logger->LogWarn("ELF GOT entry index for symbol %" PRIx64 " overflows", i);
 					break;
 				}
+
+				const uint64_t gotIndex = localMipsSyms + symbolGotIndex;
+				if (gotIndex >= maxGotEntries)
+				{
+					m_logger->LogWarn("ELF GOT entry index %" PRIx64 " is outside the file-backed range", gotIndex);
+					break;
+				}
+
+				const uint64_t gotEntry = gotStart + gotIndex * entrySize;
 
 				ElfSymbolTableEntry entry;
 				if (!ParseSymbolTableEntry(virtualReader, entry, i, m_auxSymbolTable, m_dynamicStringTable, true))
@@ -2809,22 +2822,6 @@ string ElfView::ReadStringTable(BinaryReader& reader, const Elf64SectionHeader& 
 		return "";
 	}
 	return std::string(&tableCache[offset], strnlen(tableCache.data() + offset, tableCache.size() - offset));
-}
-
-
-// Returns true only if the entire range [start, start+size) is backed by file data.
-bool ElfView::IsRangeBackedByFile(uint64_t start, uint64_t size) const
-{
-	if (size == 0)
-		return false;
-	if (size > UINT64_MAX - start)
-		return false;
-	for (uint64_t offset = start; offset < start + size; offset++)
-	{
-		if (!IsOffsetBackedByFile(offset))
-			return false;
-	}
-	return true;
 }
 
 

@@ -527,8 +527,6 @@ namespace BinaryNinja
 		void DefineElfSymbol(BNSymbolType type, const std::string& name, uint64_t addr, bool gotEntry,
 			BNSymbolBinding binding, size_t size = 0, const Confidence<Ref<Type>>& typeObj = nullptr);
 
-		bool IsRangeBackedByFile(uint64_t start, uint64_t size) const;
-
 		void ApplyTypesToParentStringTable(const Elf64SectionHeader& section, const bool offset = true);
 		void ApplyTypesToStringTable(const Elf64SectionHeader& section, const int64_t imageBaseAdjustment, const bool offset = true);
 		std::string ReadStringTable(BinaryReader& view, const Elf64SectionHeader& section, uint64_t offset);

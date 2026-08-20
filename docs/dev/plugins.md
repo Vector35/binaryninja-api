@@ -14,22 +14,45 @@ To start, we suggest you download the [sample plugin](https://github.com/Vector3
 - For small scripts, you can include all the code inside `__init__.py`, though we recommend for larger scripts that `__init__.py` just act as an initializer and calls into functions organized appropriately in other files.
 - If you have python dependencies, create a [requirements.txt](https://pip.pypa.io/en/latest/cli/pip_freeze/) listing any python dependencies.
 
-### Submitting to the Plugin Manager
+### Plugin Description Display
 
-If your plugin was created as described above, there's only two steps to get it submitted to the plugin manager!
+Binary Ninja displays plugin descriptions differently depending on the contents of the `plugin.json` file.
 
-1. First, create a release either [manually](https://binary.ninja/2019/07/04/plugin-manager-2.0.html#5-create-a-release) or using our [release helper](https://github.com/Vector35/release_helper).
-1. Next, just [file an issue](https://github.com/Vector35/community-plugins/issues/new/choose) letting us know about your plugin.
+- If `longdescription` is **100 characters or longer**, the extension manager displays the `longdescription`.
+- If `longdescription` is **shorter than 100 characters**, the extension manager instead displays the contents of the plugin repository's `README.md`.
 
-For future releases all you need to do is increment the version and create a new release.
+To have your full `README.md` displayed, set `longdescription` to an empty string. The key must still be present -- validation fails if it is missing entirely. The `README.md` is read from the commit your latest release tag points at, so editing it only takes effect after you cut a new release.
+
+### Images in README Files
+
+When you include images for preview in the extension manager, be aware that animated gifs are not fully supported. They will be rendered as static images of the first frame.
+
+Additionally, all images should be included using FULL GitHub URLs as they will not render in the extension manager without that.
+
+For example:
+
+```markdown
+![](https://raw.githubusercontent.com/Vector35/6502/refs/heads/master/media/nes.png)
+```
+
+### Submitting to the Extension Manager
+
+If your plugin was created as described above, there's only two steps to get it submitted to the extension manager!
+
+1. First, cut a release. The [sample plugin](https://github.com/Vector35/sample_plugin#cutting-a-release) includes a release workflow you can copy into your own repository unmodified as long as `plugin.json` is at the repository root. Run it with `Actions` / `Release` / `Run workflow`; it bumps `version` in `plugin.json`, commits and tags that commit, and creates the release from the tag.
+2. Next, just [file an issue](https://github.com/Vector35/community-plugins/issues/new/choose) letting us know about your plugin.
+
+For future releases all you need to do is run the workflow again.
+
+[extensions.binary.ninja](https://extensions.binary.ninja) reads `plugin.json` from the commit the latest release tag points at, and the `version` field in that file is the only version it looks at -- tag names and release titles are never parsed. A release whose version the server already has is silently skipped, so if you cut a release manually, be sure to increment `version` in `plugin.json` yourself.
 
 ### Using Your Own Plugin Repository
 
-The simplest way to run your own plugin repository using the new V2 plugin manager is to use the [mock server](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/mock_extension_server.py) helper script (a copy is available offline as well in the install path, in the python exapmle scripts subfolder).
+The simplest way to run your own plugin repository using the new V2 extension manager is to use the [mock server](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/mock_extension_server.py) helper script (a copy is available offline as well in the install path, in the python example scripts subfolder).
 
-Once you've created your test repository, use the `pluginManager.unofficialName` and `pluginManager.unofficialUrl` settings to add your third-party repository.
+Once you've created your test repository, add its URL to the [`extensionManager.unofficialUrls`](../guide/settings.md#extensionManager.unofficialUrls) setting, which accepts a list of third-party repository URLs.
 
-The [`add_repository`](https://api.binary.ninja/binaryninja.pluginmanager-module.html#binaryninja.pluginmanager.RepositoryManager.add_repository) API can also be used to add the repository, though it [may require manual creation of the repository folder](https://github.com/Vector35/binaryninja-api/issues/2987).
+The [`add_repository`](https://api.binary.ninja/binaryninja.extensionmanager-module.html#binaryninja.extensionmanager.RepositoryManager.add_repository) API can also be used to add the repository.
 
 ### Testing
 
@@ -381,9 +404,9 @@ There are a few other options you can use to assist in debugging:
 As a footnote, it should be noted that most of the team at Vector 35 use VSCode as a bare text editor
 and use command-line lldb or gdb to debug their code. Shout-outs to people trying to get this working in Vim.
 
-## Submitting to the plugin manager
+## Submitting to the extension manager
 
-While native plugins are not fully supported in the plugin manager at this time, it's possible to work around this limitation by pre-building a native plugin for all three platforms and using a python plugin that acts as a loader for the native plugin. Additionally, you can submit a plugin as "view_only" which helps with discoverability.
+While native plugins are not fully supported in the extension manager at this time, it's possible to work around this limitation by pre-building a native plugin for all three platforms and using a python plugin that acts as a loader for the native plugin. Additionally, you can submit a plugin as "view_only" which helps with discoverability.
 
 ## Examples
 

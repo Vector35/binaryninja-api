@@ -183,6 +183,12 @@ impl TypeLibrary {
         unsafe { BNAddTypeLibraryAlternateName(self.as_raw(), value.as_ptr()) }
     }
 
+    /// Removes an extra name from this type library used during library lookups and dependency resolution
+    pub fn remove_alternate_name(&self, value: &str) {
+        let value = value.to_cstr();
+        unsafe { BNRemoveTypeLibraryAlternateName(self.as_raw(), value.as_ptr()) }
+    }
+
     /// Returns a list of all platform names that this type library will register with during platform
     /// type registration.
     ///

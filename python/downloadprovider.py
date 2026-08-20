@@ -370,7 +370,7 @@ try:
 
 	class PythonDownloadInstance(DownloadInstance):
 		def __init__(self, provider):
-			super(PythonDownloadInstance, self).__init__(provider)
+			super().__init__(provider)
 
 		def perform_destroy_instance(self):
 			pass
@@ -466,7 +466,7 @@ if not _loaded and (sys.platform != "win32"):
 
 		class PythonDownloadInstance(DownloadInstance):
 			def __init__(self, provider):
-				super(PythonDownloadInstance, self).__init__(provider)
+				super().__init__(provider)
 
 			def perform_destroy_instance(self):
 				pass

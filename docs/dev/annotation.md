@@ -122,6 +122,7 @@ There are a number of different type objects available for creation:
 - Void (like an integer but if its size was zero)
 - Functions
 - Arrays
+- Fragment Types
 - Enumeration (kind of an integer)
 - Structures (probably has integers in it)
 - Type Definitions
@@ -210,6 +211,44 @@ Type.array(Type.int(4), 2) # Create an array of 2 - 4 byte integers
 # Similarly through their classes directly
 ArrayType.create(Type.int(4), 2)
 ```
+
+#### Fragment Types
+
+Fragment types describe bitwise slices of larger source types while those slices are carried
+in integer-like storage. Their live size and placement within the container are measured in
+bits. The constructor supplies the larger source type, container width in bytes, original
+source byte offset, and source-to-container byte order. A new fragment begins at container bit
+zero and has a bit size of `width * 8`.
+
+```python
+from binaryninja import Endianness, FragmentType, Type
+
+source = Type.structure([
+    (Type.int(4, False), "header"),
+    (Type.int(4, False), "payload"),
+    (Type.int(4, False), "flags"),
+])
+
+# Model a 64-bit live fragment derived from source bytes 4 through 11.
+fragment = Type.fragment(source, 8, 4, Endianness.LittleEndian)
+
+# Equivalently, construct the concrete class directly.
+same_fragment = FragmentType.create(source, 8, 4, Endianness.LittleEndian)
+
+assert fragment == same_fragment
+assert fragment.target == source
+assert fragment.width == 8
+assert fragment.offset == 4
+assert fragment.fragment_original_width_bytes == 8
+assert fragment.fragment_start_bit == 0
+assert fragment.fragment_width_bits == 64
+assert fragment.fragment_endianness == Endianness.LittleEndian
+```
+
+Binary Ninja generally uses fragments as intermediate types while pieces of larger objects
+move through registers, such as in calling conventions or optimized inline copies. Analysis
+updates their bit-level state as those in-flight values are transformed. See
+[Type Fragments](../guide/types/fragments.md) for the analysis model and text syntax.
 
 #### Function Types
 
@@ -550,7 +589,7 @@ There are now two different signature library systems: [SigKit](#sigkit-signatur
 
 ### SigKit Signature Libraries
 
-While many signatures are [built-in](https://github.com/Vector35/binaryninja-api/issues/1551) and require no interaction to automatically match functions, you may wish to add or modify your own. First, install the [SigKit](https://github.com/Vector35/sigkit/) plugin from the [plugin manager](../guide/plugins.md#plugin-manager).
+While many signatures are built-in and require no interaction to automatically match functions, you may wish to add or modify your own. First, install the [SigKit](https://github.com/Vector35/sigkit/) plugin from the [extension manager](../guide/plugins.md#extension-manager).
 
 #### Running the signature matcher
 
@@ -570,7 +609,7 @@ To generate a signature library for the currently-open binary, use `Tools > Sign
 
 For headless users, you can generate signature libraries by using the sigkit API ([examples](https://github.com/Vector35/sigkit/tree/master/examples) and [documentation](https://github.com/Vector35/sigkit/blob/master/__init__.py#L46)). For more detailed information, see our blog post describing [signature generation](https://binary.ninja/2020/03/11/signature-libraries.html#signature-generation).
 
-If you are accessing the sigkit API through the Binary Ninja GUI and you've installed the sigkit plugin through the plugin manager, you will need to import sigkit under a different name:
+If you are accessing the sigkit API through the Binary Ninja GUI and you've installed the sigkit plugin through the extension manager, you will need to import sigkit under a different name:
 
 ``` python
 import Vector35_sigkit as sigkit

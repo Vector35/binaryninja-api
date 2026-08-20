@@ -7,17 +7,20 @@ use crate::container::network::{NetworkClient, NetworkContainer};
 use crate::matcher::MatcherSettings;
 use crate::plugin::render_layer::HighlightRenderLayer;
 use crate::plugin::settings::PluginSettings;
+use crate::plugin::similarity::WarpSimilarityProviderType;
 use crate::{core_signature_dir, user_signature_dir};
 use binaryninja::background_task::BackgroundTask;
 use binaryninja::command::{register_command, register_command_for_function};
 use binaryninja::is_ui_enabled;
 use binaryninja::settings::{QueryOptions, Settings};
+use binaryninja::similarity::register_similarity_provider;
 
 mod ffi;
 mod function;
 mod load;
 mod render_layer;
-mod settings;
+pub(crate) mod settings;
+mod similarity;
 mod workflow;
 
 fn load_bundled_signatures() {
@@ -179,6 +182,8 @@ fn plugin_init() -> bool {
         "Remove the current match from the selected function, to prevent matches in future use 'Ignore Function'",
         function::RemoveFunction {},
     );
+
+    register_similarity_provider(WarpSimilarityProviderType);
 
     true
 }

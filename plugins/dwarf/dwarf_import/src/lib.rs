@@ -33,7 +33,6 @@ use binaryninja::{
     binary_view::BinaryView,
     debuginfo::{CustomDebugInfoParser, DebugInfo, DebugInfoParser},
     settings::Settings,
-    template_simplifier::simplify_str_to_str,
 };
 use dwarfreader::create_section_reader_object;
 
@@ -247,15 +246,11 @@ fn recover_names_internal<R: ReaderType>(
                     }
                     debug_info_builder_context.set_name(
                         get_uid(dwarf, &unit, entry),
-                        simplify_str_to_str(
-                            namespace_qualifiers
-                                .iter()
-                                .map(|(_, namespace)| namespace.to_owned())
-                                .collect::<Vec<String>>()
-                                .join("::"),
-                        )
-                        .to_string_lossy()
-                        .to_string(),
+                        namespace_qualifiers
+                            .iter()
+                            .map(|(_, namespace)| namespace.to_owned())
+                            .collect::<Vec<String>>()
+                            .join("::"),
                     );
                 }
                 constants::DW_TAG_typedef
@@ -264,16 +259,12 @@ fn recover_names_internal<R: ReaderType>(
                     if let Some(name) = get_name(dwarf, &unit, entry, debug_info_builder_context) {
                         debug_info_builder_context.set_name(
                             get_uid(dwarf, &unit, entry),
-                            simplify_str_to_str(
-                                namespace_qualifiers
-                                    .iter()
-                                    .chain(vec![&(-1, name)].into_iter())
-                                    .map(|(_, namespace)| namespace.to_owned())
-                                    .collect::<Vec<String>>()
-                                    .join("::"),
-                            )
-                            .to_string_lossy()
-                            .to_string(),
+                            namespace_qualifiers
+                                .iter()
+                                .chain(vec![&(-1, name)].into_iter())
+                                .map(|(_, namespace)| namespace.to_owned())
+                                .collect::<Vec<String>>()
+                                .join("::"),
                         );
                     }
                 }

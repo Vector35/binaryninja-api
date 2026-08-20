@@ -78,7 +78,7 @@ Many of the IL behaviors and views are customizable via settings. If you prefer 
 
 ## Using Plugins
 
-Plugins can be installed by one of two methods, either automatically by using the [Plugin Manager](./guide/plugins.md#plugin-manager), or manually by copying the plugin to the appropriate [folder](./guide/index.md#user-folder).
+Plugins can be installed by one of two methods, either automatically by using the [Extension Manager](./guide/plugins.md#extension-manager), or manually by copying the plugin to the appropriate [folder](./guide/index.md#user-folder).
 
 ## Debugger
 

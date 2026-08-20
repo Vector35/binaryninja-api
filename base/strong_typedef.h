@@ -22,6 +22,7 @@
 
 #include <compare>  // IWYU pragma: keep
 #include <stddef.h>
+#include <concepts>
 #include <functional>
 #include <type_traits>
 #include <utility>
@@ -89,6 +90,8 @@
 //     Hashable        usable as a key in std and absl hash containers
 //     Formattable     formattable with fmt, forwarding format specs such as {:#x} to the
 //                     underlying type's formatter
+//     APIStruct       implicit conversion to and from a single-member C API structure,
+//                     without making the underlying type implicit
 //     NonExtractable  removes the explicit operator T() and the Value() accessor, so the
 //                     underlying value can be constructed but never read back out. Every
 //                     other modifier continues to function as normal.
@@ -151,6 +154,15 @@ struct AffineOps
 	friend constexpr Self& operator+=(Self& a, const Diff& d) { detail::Access::Get(a) += detail::Access::Get(d); return a; }
 	friend constexpr Self& operator-=(Self& a, const Diff& d) { detail::Access::Get(a) -= detail::Access::Get(d); return a; }
 };
+
+template <typename Mod, typename API>
+concept APIObjectFor = requires {
+	typename Mod::TAPI;
+	requires std::same_as<typename Mod::TAPI, API>;
+};
+
+template <typename API, typename... Mods>
+inline constexpr bool HasAPIObject = (APIObjectFor<Mods, API> || ...);
 
 } // namespace detail
 
@@ -409,6 +421,35 @@ struct Formattable
 	};
 };
 
+// Enables implicit conversion to and from a single-member C API structure. Also provides
+// the GetAPIObject, FromAPIObject, and FreeAPIObject interface expected by APIAble.
+// Conversion to the underlying type itself remains explicit.
+template <typename API>
+struct APIStruct
+{
+	using TAPI = API;
+
+	template <typename Self, typename T>
+		requires requires(const T& value) { TAPI {value}; }
+	struct Apply
+	{
+		[[nodiscard]] constexpr TAPI GetAPIObject() const
+		{
+			return TAPI {detail::Access::Get(static_cast<const Self&>(*this))};
+		}
+
+		static constexpr Self FromAPIObject(const TAPI* object)
+		{
+			const auto& [value] = *object;
+			return Self(value);
+		}
+
+		static constexpr void FreeAPIObject(TAPI*) {}
+
+		constexpr operator TAPI() const { return GetAPIObject(); }
+	};
+};
+
 // Disable both the explicit operator T() and the Value() accessor.
 // All other modifiers continue to function as normal.
 struct NonExtractable
@@ -434,6 +475,13 @@ public:
 
 	explicit constexpr StrongTypedef(T&& value) noexcept(std::is_nothrow_move_constructible_v<T>)
 		: m_value(std::move(value))
+	{
+	}
+
+	template <typename API>
+		requires detail::HasAPIObject<std::remove_cvref_t<API>, Mods...>
+	constexpr StrongTypedef(API&& object)
+		: StrongTypedef(StrongTypedef::FromAPIObject(&object))
 	{
 	}
 

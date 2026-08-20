@@ -67,6 +67,76 @@ impl ExtensionVersion {
     }
 }
 
+pub type PluginDependencyConflictStatus = BNPluginDependencyConflictStatus;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PluginDependencyRequirement {
+    pub plugin_name: String,
+    pub requirement: String,
+}
+
+impl PluginDependencyRequirement {
+    fn from_raw(value: &BNPluginDependencyRequirement) -> Self {
+        Self {
+            plugin_name: raw_to_string(value.pluginName).unwrap_or_default(),
+            requirement: raw_to_string(value.requirement).unwrap_or_default(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PluginDependencyConflict {
+    pub status: PluginDependencyConflictStatus,
+    pub package_name: String,
+    pub candidate_requirements: Vec<PluginDependencyRequirement>,
+    pub installed_requirements: Vec<PluginDependencyRequirement>,
+}
+
+impl PluginDependencyConflict {
+    fn from_raw(value: &BNPluginDependencyConflict) -> Self {
+        let requirements = |requirements: *mut BNPluginDependencyRequirement, count| {
+            if requirements.is_null() || count == 0 {
+                Vec::new()
+            } else {
+                unsafe { slice::from_raw_parts(requirements, count) }
+                    .iter()
+                    .map(PluginDependencyRequirement::from_raw)
+                    .collect()
+            }
+        };
+
+        Self {
+            status: value.status,
+            package_name: raw_to_string(value.packageName).unwrap_or_default(),
+            candidate_requirements: requirements(
+                value.candidateRequirements,
+                value.candidateRequirementCount,
+            ),
+            installed_requirements: requirements(
+                value.installedRequirements,
+                value.installedRequirementCount,
+            ),
+        }
+    }
+}
+
+struct RawPluginDependencyConflicts {
+    conflicts: *mut BNPluginDependencyConflict,
+    count: usize,
+}
+
+impl RawPluginDependencyConflicts {
+    unsafe fn as_slice(&self) -> &[BNPluginDependencyConflict] {
+        slice::from_raw_parts(self.conflicts, self.count)
+    }
+}
+
+impl Drop for RawPluginDependencyConflicts {
+    fn drop(&mut self) {
+        unsafe { BNFreePluginDependencyConflicts(self.conflicts, self.count) };
+    }
+}
+
 #[repr(transparent)]
 pub struct Extension {
     handle: NonNull<BNPlugin>,
@@ -206,9 +276,71 @@ impl Extension {
         unsafe { BnString::into_string(result as *mut c_char) }
     }
 
+    /// Dependencies required for installing a specific version of this plugin
+    pub fn dependencies_for_version(&self, version_id: &str) -> String {
+        let version_id_raw = version_id.to_cstr();
+        let result = unsafe {
+            BNPluginGetDependenciesForVersion(self.handle.as_ptr(), version_id_raw.as_ptr())
+        };
+        assert!(!result.is_null());
+        unsafe { BnString::into_string(result as *mut c_char) }
+    }
+
+    /// Dependency conflicts with installed plugins
+    pub fn dependency_conflicts(&self) -> Vec<PluginDependencyConflict> {
+        let mut count = 0;
+        let conflicts = unsafe { BNPluginGetDependencyConflicts(self.handle.as_ptr(), &mut count) };
+        Self::dependency_conflicts_from_raw(conflicts, count)
+    }
+
+    /// Dependency conflicts with installed plugins for a specific plugin version
+    pub fn dependency_conflicts_for_version(
+        &self,
+        version_id: &str,
+    ) -> Vec<PluginDependencyConflict> {
+        let version_id_raw = version_id.to_cstr();
+        let mut count = 0;
+        let conflicts = unsafe {
+            BNPluginGetDependencyConflictsForVersion(
+                self.handle.as_ptr(),
+                version_id_raw.as_ptr(),
+                &mut count,
+            )
+        };
+        Self::dependency_conflicts_from_raw(conflicts, count)
+    }
+
+    /// Turns raw dependency conflicts into a vector of PluginDependencyConflict
+    fn dependency_conflicts_from_raw(
+        conflicts: *mut BNPluginDependencyConflict,
+        count: usize,
+    ) -> Vec<PluginDependencyConflict> {
+        if conflicts.is_null() {
+            return Vec::new();
+        }
+        let conflicts = RawPluginDependencyConflicts { conflicts, count };
+        unsafe {
+            conflicts
+                .as_slice()
+                .iter()
+                .map(PluginDependencyConflict::from_raw)
+                .collect()
+        }
+    }
+
     /// true if the plugin is installed, false otherwise
     pub fn is_installed(&self) -> bool {
         unsafe { BNPluginIsInstalled(self.handle.as_ptr()) }
+    }
+
+    /// true if the plugin is present in its repository's latest successful listing
+    pub fn is_listed(&self) -> bool {
+        unsafe { BNPluginIsListed(self.handle.as_ptr()) }
+    }
+
+    /// true if the plugin is marked deprecated by its repository
+    pub fn is_deprecated(&self) -> bool {
+        unsafe { BNPluginIsDeprecated(self.handle.as_ptr()) }
     }
 
     /// true if the plugin is enabled, false otherwise
@@ -244,13 +376,52 @@ impl Extension {
         unsafe { BNPluginInstall(self.handle.as_ptr(), version_id_raw.as_ptr()) }
     }
 
+    /// Attempt to install the dependencies of this plugin
     pub fn install_dependencies(&self) -> bool {
         unsafe { BNPluginInstallDependencies(self.handle.as_ptr()) }
+    }
+
+    /// Attempt to install the dependencies of a specific version of this plugin
+    pub fn install_dependencies_for_version(&self, version_id: &str) -> bool {
+        let version_id_raw = version_id.to_cstr();
+        unsafe {
+            BNPluginInstallDependenciesForVersion(self.handle.as_ptr(), version_id_raw.as_ptr())
+        }
+    }
+
+    /// Attempt to install the dependencies of a specific version of this plugin, excluding some packages by canonical name
+    pub fn install_dependencies_for_version_with_exclusions(
+        &self,
+        version_id: &str,
+        excluded_package_names: &[&str],
+    ) -> bool {
+        let version_id_raw = version_id.to_cstr();
+        let excluded_package_names_raw: Vec<_> = excluded_package_names
+            .iter()
+            .map(|package_name| package_name.to_cstr())
+            .collect();
+        let excluded_package_name_ptrs: Vec<_> = excluded_package_names_raw
+            .iter()
+            .map(|package_name| package_name.as_ptr())
+            .collect();
+        unsafe {
+            BNPluginInstallDependenciesWithExclusionsForVersion(
+                self.handle.as_ptr(),
+                version_id_raw.as_ptr(),
+                excluded_package_name_ptrs.as_ptr(),
+                excluded_package_name_ptrs.len(),
+            )
+        }
     }
 
     /// Attempt to uninstall the given plugin
     pub fn uninstall(&self) -> bool {
         unsafe { BNPluginUninstall(self.handle.as_ptr()) }
+    }
+
+    /// Cancel an uninstall that is pending until restart.
+    pub fn cancel_uninstall(&self) -> bool {
+        unsafe { BNPluginCancelUninstall(self.handle.as_ptr()) }
     }
 
     pub fn updated(&self, version_id: &str) -> bool {

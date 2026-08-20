@@ -67,7 +67,7 @@ class DeprecatedWarning(DeprecationWarning):
         self.deprecated_in = deprecated_in
         self.removed_in = removed_in
         self.details = details
-        super(DeprecatedWarning, self).__init__(function, deprecated_in,
+        super().__init__(function, deprecated_in,
                                                 removed_in, details)
 
     def __str__(self):

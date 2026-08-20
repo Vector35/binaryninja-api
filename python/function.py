@@ -29,7 +29,7 @@ from . import _binaryninjacore as core
 from .enums import (
 	AnalysisSkipReason, FunctionGraphType, SymbolType, SymbolBinding, InstructionTextTokenType, HighlightStandardColor,
 	HighlightColorStyle, DisassemblyOption, IntegerDisplayType, FunctionAnalysisSkipOverride, FunctionUpdateType,
-	BuiltinType, ExprFolding, EarlyReturn, SwitchRecovery, VariableSourceType
+	BuiltinType, ExprFolding, EarlyReturn, SwitchRecovery, VariableSourceType, MetadataStoreFlag
 )
 
 from . import associateddatastore  # Required in the main scope due to being an argument for _FunctionAssociatedDataStore
@@ -99,6 +99,16 @@ class _FunctionAssociatedDataStore(associateddatastore._AssociatedDataStore):
 
 
 class DisassemblySettings:
+	"""
+	``class DisassemblySettings`` contains the options used when rendering disassembly or IL text.
+
+	.. note::
+		Not every :py:class:`~binaryninja.enums.DisassemblyOption` applies to every representation. ``IndentHLILBody``
+		and ``ShowAddress`` are applied by linear view, not by
+		:py:func:`~binaryninja.highlevelil.HighLevelILInstruction.get_lines`; options acting on nested bodies, such as
+		``ShowCollapseIndicators``, only apply to HLIL in AST form. See `AST and Non-AST Forms
+		<https://docs.binary.ninja/dev/bnil-hlil.html#ast-and-non-ast-forms>`_.
+	"""
 	def __init__(self, handle: Optional[core.BNDisassemblySettingsHandle] = None):
 		if handle is None:
 			self.handle = core.BNCreateDisassemblySettings()
@@ -3752,20 +3762,36 @@ class Function:
 		"""
 		return core.BNFunctionIsRegionCollapsed(self.handle, hash)
 
-	def store_metadata(self, key: str, md: metadata.MetadataValueType, isAuto: bool = False) -> None:
+	def store_metadata(self, key: str, md: metadata.MetadataValueType,
+			flags: 'MetadataStoreFlag | bool' = MetadataStoreFlag.MetadataStorePersistent,
+			isAuto: Optional[bool] = None) -> None:
 		"""
-		`store_metadata` stores an object for the given key in the current Function. Objects stored using
-		`store_metadata` can be retrieved when the database is reopened unless isAuto is set to True.
+		`store_metadata` stores an object for the given key in the current Function. See
+		:py:meth:`BinaryView.store_metadata` for the meaning of ``flags``.
+
+		Unlike :py:meth:`BinaryView.store_metadata`, the default does not mark the file as
+		modified, preserving the historical behavior of Function metadata writes.
+
+		``flags`` may also be passed as a legacy ``isAuto`` bool: ``False`` maps to the default
+		(persist, don't dirty) and ``True`` maps to ``MetadataStoreEphemeral`` (don't persist,
+		don't dirty). The deprecated ``isAuto`` keyword is still accepted with the same
+		meaning, taking precedence over ``flags``.
 
 		:param str key: key value to associate the Metadata object with
 		:param Varies md: object to store
-		:param bool isAuto: whether the metadata is an auto metadata
+		:param flags: storage flags (see :py:class:`MetadataStoreFlag`), or a legacy ``isAuto`` bool.
+		:param bool isAuto: deprecated alias for passing the legacy bool by keyword.
 		:rtype: None
         """
 		_md = md
 		if not isinstance(_md, metadata.Metadata):
 			_md = metadata.Metadata(_md)
-		core.BNFunctionStoreMetadata(self.handle, key, _md.handle, isAuto)
+		if isAuto is not None:
+			flags = isAuto
+		if isinstance(flags, bool):
+			flags = (MetadataStoreFlag.MetadataStoreEphemeral if flags
+				else MetadataStoreFlag.MetadataStorePersistent)
+		core.BNFunctionStoreMetadata(self.handle, key, _md.handle, flags)
 
 	def query_metadata(self, key: str) -> 'metadata.MetadataValueType':
 		"""

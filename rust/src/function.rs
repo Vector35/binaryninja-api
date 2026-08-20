@@ -40,7 +40,7 @@ pub use binaryninjacore_sys::BNHighlightStandardColor as HighlightStandardColor;
 pub use binaryninjacore_sys::BNInlineDuringAnalysis as InlineDuringAnalysis;
 
 use crate::architecture::{IndirectBranchInfo, RegisterId};
-use crate::binary_view::AddressRange;
+use crate::binary_view::{AddressRange, MetadataStoreFlags};
 use crate::confidence::Conf;
 use crate::high_level_il::HighLevelILFunction;
 use crate::language_representation::CoreLanguageRepresentationFunction;
@@ -1945,7 +1945,11 @@ impl Function {
     ) {
         let arch = arch.unwrap_or_else(|| self.arch());
         let enum_display_typeid = enum_display_typeid.map(IntoCStr::to_cstr);
+        // Borrow the owned C string rather than moving it into `map`, otherwise it is dropped
+        // before the FFI call below and `BNSetIntegerConstantDisplayType` reads freed memory,
+        // storing a garbage type id for the enumeration.
         let enum_display_typeid_ptr = enum_display_typeid
+            .as_ref()
             .map(|x| x.as_ptr())
             .unwrap_or(std::ptr::null());
         unsafe {
@@ -2717,13 +2721,20 @@ impl Function {
         }
     }
 
-    pub fn store_metadata<V>(&self, key: &str, value: V, is_auto: bool)
+    pub fn store_metadata<V>(&self, key: &str, value: V, flags: MetadataStoreFlags)
     where
         V: Into<Ref<Metadata>>,
     {
         let md = value.into();
         let key = key.to_cstr();
-        unsafe { BNFunctionStoreMetadata(self.handle, key.as_ptr(), md.as_ref().handle, is_auto) };
+        unsafe {
+            BNFunctionStoreMetadata(
+                self.handle,
+                key.as_ptr(),
+                md.as_ref().handle,
+                flags.into_raw(),
+            )
+        };
     }
 
     pub fn remove_metadata(&self, key: &str) {

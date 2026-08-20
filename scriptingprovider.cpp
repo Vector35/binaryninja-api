@@ -441,6 +441,12 @@ string ScriptingProvider::GetAPIName()
 }
 
 
+bool ScriptingProvider::IsModuleInstalled(const string& modules)
+{
+	return BNIsScriptingProviderModuleInstalled(m_object, modules.c_str());
+}
+
+
 vector<Ref<ScriptingProvider>> ScriptingProvider::GetList()
 {
 	size_t count;

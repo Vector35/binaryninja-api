@@ -66,8 +66,9 @@ namespace BinaryNinja::DSC {
 
 		void LoadMetadata(const Metadata& metadata);
 
-		// Re-run the ObjC processor for loaded images to restore Objective-C metadata.
-		void ProcessObjCForLoadedImages(BinaryView& view);
+		// Run Obj-C processing for previously-loaded images iff their persisted metadata is
+		// missing or out-of-date (older databases, or databases from before a processor change).
+		void ProcessObjCForLoadedImagesIfNeeded(BinaryView& view);
 
 		std::unique_ptr<CacheStringScanner> CreateStringScanner();
 	};

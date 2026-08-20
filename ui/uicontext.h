@@ -589,6 +589,12 @@ public:
 
 	virtual ProjectRef getProject();
 	virtual ProjectStatusWidget* getProjectStatusWidget();
+	/*!
+	    Get the similarity session owned by the active Binary Similarity main tab, or by the current Binary Similarity
+	    sidebar when another main tab is active.
+	    \return Current similarity session, or nullptr if no session has been created
+	 */
+	virtual SimilaritySessionRef getCurrentSimilaritySession();
 
 	virtual bool openFilename(const QString& path, bool openOptions = false, bool forceContainerBrowser = false);
 	virtual ProjectRef openProject(const QString& path);

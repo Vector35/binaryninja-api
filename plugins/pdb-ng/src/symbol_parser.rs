@@ -39,7 +39,7 @@ use crate::PDBParserInstance;
 use binaryninja::architecture::{Architecture, ArchitectureExt, Register, RegisterId};
 use binaryninja::binary_view::BinaryViewBase;
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE, MIN_CONFIDENCE};
-use binaryninja::demangle::demangle_ms_with_view;
+use binaryninja::demangle::{demangle_ms_with_config, DemanglerConfig};
 use binaryninja::rc::Ref;
 use binaryninja::types::{FunctionParameter, QualifiedName, StructureBuilder, Type, TypeClass};
 use binaryninja::variable::{Variable, VariableSourceType};
@@ -1813,9 +1813,12 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         raw_name: &String,
         rva: Rva,
     ) -> Result<(Option<Conf<Ref<Type>>>, Option<QualifiedName>)> {
-        let (mut t, mut name) = match demangle_ms_with_view(&self.arch, raw_name, Some(self.bv)) {
-            Some((name, Some(t))) => (Some(Conf::new(t, DEMANGLE_CONFIDENCE)), name),
-            Some((name, _)) => (None, name),
+        let demangler_config = DemanglerConfig::for_binary_view(self.bv);
+        let (mut t, mut name) = match demangle_ms_with_config(raw_name, &demangler_config) {
+            Some(result) => (
+                result.ty.map(|ty| Conf::new(ty, DEMANGLE_CONFIDENCE)),
+                result.name,
+            ),
             _ => (None, QualifiedName::new(vec![raw_name.clone()])),
         };
 

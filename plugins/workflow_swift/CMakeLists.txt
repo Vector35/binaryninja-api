@@ -81,12 +81,22 @@ file(GLOB_RECURSE API_SOURCES CONFIGURE_DEPENDS
         ${PROJECT_SOURCE_DIR}/../../rust/binaryninjacore-sys/Cargo.toml
         ${PROJECT_SOURCE_DIR}/../../rust/binaryninjacore-sys/src/*.rs
         ${PROJECT_SOURCE_DIR}/../../rust/Cargo.toml
+        ${PROJECT_SOURCE_DIR}/../../rust/src/*.rs
         ${PROJECT_SOURCE_DIR}/../../rust/src/*/*.rs)
 
 find_program(RUSTUP_PATH rustup REQUIRED HINTS ~/.cargo/bin)
 set(RUSTUP_COMMAND ${RUSTUP_PATH} run ${CARGO_STABLE_VERSION} cargo)
 
 if(APPLE)
+    set(CARGO_DSYM_ENV)
+    if(NOT DEMO)
+        if(CMAKE_BUILD_TYPE MATCHES Debug)
+            set(CARGO_DSYM_ENV CARGO_PROFILE_DEV_SPLIT_DEBUGINFO=packed)
+        else()
+            set(CARGO_DSYM_ENV CARGO_PROFILE_RELEASE_SPLIT_DEBUGINFO=packed)
+        endif()
+    endif()
+
     if(UNIVERSAL)
         if(CMAKE_BUILD_TYPE MATCHES Debug)
             if(DEMO)
@@ -106,34 +116,60 @@ if(APPLE)
             endif()
         endif()
 
+        set(DSYM_BYPRODUCTS)
+        set(DSYM_COMMANDS)
+        if(NOT DEMO)
+            set(DSYM_BYPRODUCTS BYPRODUCTS ${OUTPUT_FILE_PATH}.dSYM)
+            set(DSYM_COMMANDS
+                COMMAND ${CMAKE_COMMAND} -E rm -rf ${OUTPUT_FILE_PATH}.dSYM
+                COMMAND ${CMAKE_COMMAND} -E copy_directory ${AARCH64_LIB_PATH}.dSYM ${OUTPUT_FILE_PATH}.dSYM
+                COMMAND lipo -create
+                    ${AARCH64_LIB_PATH}.dSYM/Contents/Resources/DWARF/${OUTPUT_FILE_NAME}
+                    ${X86_64_LIB_PATH}.dSYM/Contents/Resources/DWARF/${OUTPUT_FILE_NAME}
+                    -output ${OUTPUT_FILE_PATH}.dSYM/Contents/Resources/DWARF/${OUTPUT_FILE_NAME})
+        endif()
+
         add_custom_command(
                 OUTPUT ${OUTPUT_FILE_PATH}
+                ${DSYM_BYPRODUCTS}
                 COMMAND ${CMAKE_COMMAND} -E env
-                MACOSX_DEPLOYMENT_TARGET=10.14 BINARYNINJADIR=${BINJA_LIB_DIR}
+                MACOSX_DEPLOYMENT_TARGET=10.14 BINARYNINJADIR=${BINJA_LIB_DIR} ${CARGO_DSYM_ENV}
                 ${RUSTUP_COMMAND} clean --target=aarch64-apple-darwin ${CARGO_OPTS} --package binaryninjacore-sys
                 COMMAND ${CMAKE_COMMAND} -E env
-                MACOSX_DEPLOYMENT_TARGET=10.14 BINARYNINJADIR=${BINJA_LIB_DIR}
+                MACOSX_DEPLOYMENT_TARGET=10.14 BINARYNINJADIR=${BINJA_LIB_DIR} ${CARGO_DSYM_ENV}
                 ${RUSTUP_COMMAND} clean --target=x86_64-apple-darwin ${CARGO_OPTS} --package binaryninjacore-sys
                 COMMAND ${CMAKE_COMMAND} -E env
-                MACOSX_DEPLOYMENT_TARGET=10.14 BINARYNINJADIR=${BINJA_LIB_DIR}
+                MACOSX_DEPLOYMENT_TARGET=10.14 BINARYNINJADIR=${BINJA_LIB_DIR} ${CARGO_DSYM_ENV}
                 ${RUSTUP_COMMAND} build --target=aarch64-apple-darwin ${CARGO_OPTS} ${CARGO_FEATURES}
                 COMMAND ${CMAKE_COMMAND} -E env
-                MACOSX_DEPLOYMENT_TARGET=10.14 BINARYNINJADIR=${BINJA_LIB_DIR}
+                MACOSX_DEPLOYMENT_TARGET=10.14 BINARYNINJADIR=${BINJA_LIB_DIR} ${CARGO_DSYM_ENV}
                 ${RUSTUP_COMMAND} build --target=x86_64-apple-darwin ${CARGO_OPTS} ${CARGO_FEATURES}
                 COMMAND lipo -create ${AARCH64_LIB_PATH} ${X86_64_LIB_PATH} -output ${OUTPUT_FILE_PATH}
+                ${DSYM_COMMANDS}
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                 DEPENDS ${PLUGIN_SOURCES} ${API_SOURCES}
         )
     else()
+        set(DSYM_BYPRODUCTS)
+        set(DSYM_COMMANDS)
+        if(NOT DEMO)
+            set(DSYM_BYPRODUCTS BYPRODUCTS ${OUTPUT_FILE_PATH}.dSYM)
+            set(DSYM_COMMANDS
+                COMMAND ${CMAKE_COMMAND} -E rm -rf ${OUTPUT_FILE_PATH}.dSYM
+                COMMAND ${CMAKE_COMMAND} -E copy_directory ${TARGET_DIR}/${OUTPUT_FILE_NAME}.dSYM ${OUTPUT_FILE_PATH}.dSYM)
+        endif()
+
         add_custom_command(
                 OUTPUT ${OUTPUT_FILE_PATH}
+                ${DSYM_BYPRODUCTS}
                 COMMAND ${CMAKE_COMMAND} -E env
-                MACOSX_DEPLOYMENT_TARGET=10.14 BINARYNINJADIR=${BINJA_LIB_DIR}
+                MACOSX_DEPLOYMENT_TARGET=10.14 BINARYNINJADIR=${BINJA_LIB_DIR} ${CARGO_DSYM_ENV}
                 ${RUSTUP_COMMAND} clean ${CARGO_OPTS} --package binaryninjacore-sys
                 COMMAND ${CMAKE_COMMAND} -E env
-                MACOSX_DEPLOYMENT_TARGET=10.14 BINARYNINJADIR=${BINJA_LIB_DIR}
+                MACOSX_DEPLOYMENT_TARGET=10.14 BINARYNINJADIR=${BINJA_LIB_DIR} ${CARGO_DSYM_ENV}
                 ${RUSTUP_COMMAND} build ${CARGO_OPTS} ${CARGO_FEATURES}
                 COMMAND ${CMAKE_COMMAND} -E copy ${TARGET_DIR}/${OUTPUT_FILE_NAME} ${OUTPUT_FILE_PATH}
+                ${DSYM_COMMANDS}
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
                 DEPENDS ${PLUGIN_SOURCES} ${API_SOURCES}
         )
@@ -160,11 +196,17 @@ elseif(WIN32)
         )
     endif()
 else()
+    if(DEMO)
+        set(BN_FIX_RPATH_COMMAND ${CMAKE_COMMAND} -E true)
+    else()
+        set(BN_FIX_RPATH_COMMAND ${CMAKE_COMMAND} -DRPATH_KIND=plugin -DBINARY_PATH=${OUTPUT_FILE_PATH} -P "${BN_API_SOURCE_DIR}/cmake/SetElfRpath.cmake")
+    endif()
     add_custom_command(
             OUTPUT ${OUTPUT_FILE_PATH}
             COMMAND ${CMAKE_COMMAND} -E env BINARYNINJADIR=${BINJA_LIB_DIR} ${RUSTUP_COMMAND} clean ${CARGO_OPTS} --package binaryninjacore-sys
             COMMAND ${CMAKE_COMMAND} -E env BINARYNINJADIR=${BINJA_LIB_DIR} ${RUSTUP_COMMAND} build ${CARGO_OPTS} ${CARGO_FEATURES}
             COMMAND ${CMAKE_COMMAND} -E copy ${TARGET_DIR}/${OUTPUT_FILE_NAME} ${OUTPUT_FILE_PATH}
+            COMMAND ${BN_FIX_RPATH_COMMAND}
             WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
             DEPENDS ${PLUGIN_SOURCES} ${API_SOURCES}
     )

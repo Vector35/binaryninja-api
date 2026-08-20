@@ -372,6 +372,9 @@ class BINARYNINJAUIAPI TypeBrowserTreeView : public QTreeView
 	Q_OBJECT
 	UIActionHandler m_actionHandler;
 
+protected:
+	virtual void scrollContentsBy(int dx, int dy) override;
+
 public:
 	explicit TypeBrowserTreeView(class TypeBrowserView* parent);
 };
@@ -562,6 +565,8 @@ public:
 	void collapseAll();
 	bool canSwitchLayout();
 	void switchLayout();
+	bool canToggleDetailsVisibility();
+	void toggleDetailsVisibility();
 
 Q_SIGNALS:
 	void typeNameNavigated(const std::string& typeName, bool newSelection);

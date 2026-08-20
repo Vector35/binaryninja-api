@@ -157,9 +157,9 @@ impl AnalysisInfo {
     fn load_selector_impls(&self, bv: &BinaryView) -> Option<SelectorImplementations> {
         let meta = bv.get_metadata::<HashMap<String, Ref<Metadata>>>("Objective-C")?;
         let version_meta = meta.get("version")?;
-        if version_meta.get_unsigned_integer()? != 1 {
+        if version_meta.get_unsigned_integer()? != 2 {
             tracing::error!(
-                "workflow_objc: Unexpected Objective-C metadata version. Expected 1, got {}.",
+                "workflow_objc: Unexpected Objective-C metadata version. Expected 2, got {}.",
                 version_meta.get_unsigned_integer()?
             );
             return None;

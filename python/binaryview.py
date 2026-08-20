@@ -45,7 +45,7 @@ from . import decorators
 from .enums import (
     AnalysisState, SymbolType, Endianness, ModificationStatus, StringType, SegmentFlag, SectionSemantics, FindFlag,
     TypeClass, BinaryViewEventType, FunctionGraphType, TagReferenceType, TagTypeType, RegisterValueType, DisassemblyOption,
-	RelocationType, DerivedStringLocationType
+	RelocationType, DerivedStringLocationType, MetadataStoreFlag
 )
 from .exceptions import RelocationWriteException, ExternalLinkException
 
@@ -280,7 +280,7 @@ class BinaryDataNotification:
 
 	>>> class NotifyTest(binaryninja.BinaryDataNotification):
 	... 	def __init__(self):
-	... 		super(NotifyTest, self).__init__(binaryninja.NotificationType.NotificationBarrier | binaryninja.NotificationType.FunctionLifetime | binaryninja.NotificationType.FunctionUpdated)
+	... 		super().__init__(binaryninja.NotificationType.NotificationBarrier | binaryninja.NotificationType.FunctionLifetime | binaryninja.NotificationType.FunctionUpdated)
 	... 		self.received_event = False
 	... 	def notification_barrier(self, view: 'BinaryView') -> int:
 	... 		has_events = self.received_event
@@ -10889,20 +10889,32 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			return default
 		return metadata.Metadata(handle=md_handle).value
 
-	def store_metadata(self, key: str, md: metadata.MetadataValueType, isAuto: bool = False) -> None:
+	def store_metadata(self, key: str, md: metadata.MetadataValueType,
+			flags: 'MetadataStoreFlag | bool' = MetadataStoreFlag.MetadataStorePersistent | MetadataStoreFlag.MetadataStoreMarksAnalysisChanged,
+			isAuto: Optional[bool] = None) -> None:
 		"""
-		`store_metadata` stores an object for the given key in the current BinaryView. Objects stored using
-		`store_metadata` can be retrieved when the database is reopened. Objects stored are not arbitrary python
-		objects! The values stored must be able to be held in a Metadata object. See :py:class:`~binaryninja.metadata.Metadata`
-		for more information. Python objects could obviously be serialized using pickle but this intentionally
-		a task left to the user since there is the potential security issues.
+		`store_metadata` stores an object for the given key in the current BinaryView. Objects stored
+		are not arbitrary Python objects! The values stored must be able to be held in a Metadata
+		object — see :py:class:`~binaryninja.metadata.Metadata`.
+
+		``flags`` controls how the value is stored:
+
+		* ``MetadataStorePersistent`` — serialize into the BNDB snapshot so the value survives reload.
+		  Without this bit the value is kept in memory for this session only.
+		* ``MetadataStoreMarksAnalysisChanged`` — mark the file as analysis-changed (drives the
+		  "dirty" indicator). Set for genuine user-visible edits. Leave clear when caching
+		  re-derivable data.
+
+		The default ``MetadataStorePersistent | MetadataStoreMarksAnalysisChanged`` matches the
+		legacy ``isAuto=False`` behavior. For source compatibility, ``flags`` may also be passed
+		as a ``bool`` — ``False`` maps to the default and ``True`` maps to ``MetadataStoreEphemeral``
+		(legacy "auto" behavior: no persistence, no dirtying) — and the deprecated ``isAuto``
+		keyword is still accepted with the same meaning, taking precedence over ``flags``.
 
 		:param str key: key value to associate the Metadata object with
 		:param Varies md: object to store.
-		:param bool isAuto: whether the metadata is an auto metadata. Most metadata should \
-		keep this as False. Only those automatically generated metadata should have this set \
-		to True. Auto metadata is not saved into the database and is presumably re-generated \
-		when re-opening the database.
+		:param flags: storage flags (see :py:class:`MetadataStoreFlag`), or a legacy ``isAuto`` bool.
+		:param bool isAuto: deprecated alias for passing the legacy bool by keyword.
 		:rtype: None
 
 		:Example:
@@ -10920,7 +10932,12 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		_md = md
 		if not isinstance(_md, metadata.Metadata):
 			_md = metadata.Metadata(_md)
-		core.BNBinaryViewStoreMetadata(self.handle, key, _md.handle, isAuto)
+		if isAuto is not None:
+			flags = isAuto
+		if isinstance(flags, bool):
+			flags = (MetadataStoreFlag.MetadataStoreEphemeral if flags
+				else MetadataStoreFlag.MetadataStorePersistent | MetadataStoreFlag.MetadataStoreMarksAnalysisChanged)
+		core.BNBinaryViewStoreMetadata(self.handle, key, _md.handle, flags)
 
 	def remove_metadata(self, key: str) -> None:
 		"""
@@ -12228,7 +12245,7 @@ class CoreDataVariable:
 
 class DataVariable(CoreDataVariable):
 	def __init__(self, view: BinaryView, address: int, type: '_types.Type', auto_discovered: bool):
-		super(DataVariable, self).__init__(address, type, auto_discovered)
+		super().__init__(address, type, auto_discovered)
 		self.view = view
 		self._accessor = TypedDataAccessor(self.type, self.address, self.view, self.view.endianness)
 
@@ -12324,7 +12341,7 @@ class DataVariable(CoreDataVariable):
 
 class DataVariableAndName(CoreDataVariable):
 	def __init__(self, addr: int, var_type: '_types.Type', var_name: str, auto_discovered: bool) -> None:
-		super(DataVariableAndName, self).__init__(addr, var_type, auto_discovered)
+		super().__init__(addr, var_type, auto_discovered)
 		self.name = var_name
 
 	def __repr__(self) -> str:

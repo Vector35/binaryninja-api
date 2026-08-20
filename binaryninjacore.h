@@ -37,14 +37,18 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 179
+#define BN_CURRENT_CORE_ABI_VERSION 186
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 179
+#define BN_MINIMUM_CORE_ABI_VERSION 184
+
+#define BN_DEMANGLER_MSVC "MS"
+#define BN_DEMANGLER_GNU3 "GNU3"
+#define BN_DEMANGLER_LLVM "LLVM"
 
 #ifdef __GNUC__
 	#ifdef BINARYNINJACORE_LIBRARY
@@ -355,6 +359,20 @@ extern "C"
 	typedef struct BNConstantRenderer BNConstantRenderer;
 	typedef struct BNStringRecognizer BNStringRecognizer;
 	typedef struct BNCustomStringType BNCustomStringType;
+	typedef struct BNSimilarityProviderType BNSimilarityProviderType;
+	typedef struct BNSimilarityProvider BNSimilarityProvider;
+	typedef struct BNSimilarityProviderResults BNSimilarityProviderResults;
+	typedef struct BNSimilarityRenderContext BNSimilarityRenderContext;
+	typedef struct BNSimilarityView BNSimilarityView;
+	typedef struct BNDiffRenderer BNDiffRenderer;
+	typedef struct BNSimilaritySessionResolverType BNSimilaritySessionResolverType;
+	typedef struct BNSimilaritySessionResolver BNSimilaritySessionResolver;
+	typedef struct BNSimilaritySessionNode BNSimilaritySessionNode;
+	typedef struct BNSimilaritySessionGraph BNSimilaritySessionGraph;
+	typedef struct BNSimilaritySessionGraphReceiver BNSimilaritySessionGraphReceiver;
+	typedef struct BNSimilaritySessionCompletion BNSimilaritySessionCompletion;
+	typedef struct BNSimilaritySessionReceiver BNSimilaritySessionReceiver;
+	typedef struct BNSimilaritySession BNSimilaritySession;
 
 	typedef struct BNVersionInfo {
 		uint32_t major;
@@ -362,6 +380,16 @@ extern "C"
 		uint32_t build;
 		char* channel;
 	} BNVersionInfo;
+
+	typedef struct BNLicenseAddon
+	{
+		char* id;
+		char* licenseSerial;
+		char* product;
+		uint64_t createdTimestamp;
+		uint64_t expirationTimestamp;
+		char* signature;
+	} BNLicenseAddon;
 
 	typedef struct BNPluginVersionPlatform
 	{
@@ -2013,6 +2041,12 @@ extern "C"
 		BNArchitecture* branchArch[BN_MAX_INSTRUCTION_BRANCHES];  // If null, same architecture as instruction
 	} BNInstructionInfo;
 
+	BN_ENUM(uint32_t, BNLinearSweepAnalysisCapability)
+	{
+		BNLinearSweepCallTargetAnalysis = 1 << 0,
+		BNLinearSweepGenericControlFlowAnalysis = 1 << 1
+	};
+
 	BN_ENUM(uint8_t, BNRelocationType)
 	{
 		ELFGlobalRelocationType,
@@ -2283,6 +2317,9 @@ extern "C"
 		bool (*alwaysBranch)(void* ctxt, uint8_t* data, uint64_t addr, size_t len);
 		bool (*invertBranch)(void* ctxt, uint8_t* data, uint64_t addr, size_t len);
 		bool (*skipAndReturnValue)(void* ctxt, uint8_t* data, uint64_t addr, size_t len, uint64_t value);
+
+		size_t (*getLinearSweepInitialAlignment)(void* ctxt);
+		uint32_t (*getLinearSweepAnalysisCapabilities)(void* ctxt);
 	} BNCustomArchitecture;
 
 	typedef struct BNCustomPlatform
@@ -3280,6 +3317,82 @@ extern "C"
 		ScriptExecutionCancelled
 	};
 
+	BN_ENUM(uint8_t, BNPluginDependencyDecision)
+	{
+		PluginDependencyReinstall,
+		PluginDependencyDisable,
+		PluginDependencyLoadAnyway
+	};
+
+	BN_ENUM(uint8_t, BNPluginDependencyConflictStatus)
+	{
+		PluginDependencyProvenConflict,
+		PluginDependencyUnknownCompatibility
+	};
+
+	typedef struct BNPluginDependencyInfo
+	{
+		const char* name;
+		const char* dependencies;
+	} BNPluginDependencyInfo;
+
+	typedef struct BNPluginDependencyRequirement
+	{
+		char* pluginName;
+		char* requirement;
+	} BNPluginDependencyRequirement;
+
+	typedef struct BNPluginDependencyConflict
+	{
+		BNPluginDependencyConflictStatus status;
+		char* packageName;
+		BNPluginDependencyRequirement* candidateRequirements;
+		size_t candidateRequirementCount;
+		BNPluginDependencyRequirement* installedRequirements;
+		size_t installedRequirementCount;
+	} BNPluginDependencyConflict;
+
+	typedef struct BNPluginDependencyIssue
+	{
+		const char* repository;
+		const char* name;
+		const char* path;
+		const char* dependencies;
+	} BNPluginDependencyIssue;
+
+	typedef struct BNPluginDependencyStartupCallbacks
+	{
+		void* context;
+		bool (*checkDependencies)(void* ctxt, const BNPluginDependencyIssue* issues, size_t count,
+			BNPluginDependencyDecision* decisions);
+	} BNPluginDependencyStartupCallbacks;
+
+	typedef struct BNPluginDependencyResolutionCallbacks
+	{
+		void* context;
+		void (*dependencyResolved)(void* ctxt, const char* repository, const char* path);
+	} BNPluginDependencyResolutionCallbacks;
+
+	typedef struct BNScriptingProviderModuleInstalledCallbacks
+	{
+		void* context;
+		bool (*moduleInstalled)(void* ctxt, const char* modules);
+	} BNScriptingProviderModuleInstalledCallbacks;
+
+	typedef struct BNScriptingProviderInstallModulesWithExclusionsCallbacks
+	{
+		void* context;
+		bool (*installModulesWithExclusions)(void* ctxt, const char* modules,
+			const char* const* excludedPackageNames, size_t excludedPackageNameCount);
+	} BNScriptingProviderInstallModulesWithExclusionsCallbacks;
+
+	typedef struct BNScriptingProviderDependencyConflictCallbacks
+	{
+		void* context;
+		char* (*getDependencyConflicts)(void* ctxt, const BNPluginDependencyInfo* candidate,
+			const BNPluginDependencyInfo* installedPlugins, size_t installedPluginCount);
+	} BNScriptingProviderDependencyConflictCallbacks;
+
 
 	typedef struct BNScriptingInstanceCallbacks
 	{
@@ -3583,6 +3696,17 @@ extern "C"
 		double seconds;
 	} BNPerformanceInfo;
 
+	// Per-tag bit-length histogram produced by the StatCollector sampling facility.
+	// Bucket k counts samples whose value has bit width k, for k in 0..64; total is the
+	// sum of the sampled values (the sample count is recoverable as the sum of buckets).
+#define BN_STAT_HISTOGRAM_BUCKET_COUNT 65
+	typedef struct BNStatHistogram
+	{
+		char* name;
+		uint64_t total;
+		uint64_t buckets[BN_STAT_HISTOGRAM_BUCKET_COUNT];
+	} BNStatHistogram;
+
 	typedef struct BNMemoryUsageInfo
 	{
 		char* name;
@@ -3600,6 +3724,18 @@ extern "C"
 		RawDataType,
 		KeyValueDataType,
 		ArrayDataType
+	};
+
+	// Controls how a metadata write behaves on a BinaryView or Function.
+	BN_OPTIONS(uint8_t, BNMetadataStoreFlag)
+	{
+		// The value is kept in memory for this session only.
+		MetadataStoreEphemeral            = 0,
+		// Serialize the value into the BNDB snapshot so it survives reload.
+		MetadataStorePersistent           = 1,
+		// Mark the file as analysis-changed (drives the "dirty" indicator). Set this for
+		// genuine user-visible edits. Leave it clear when caching re-derivable data.
+		MetadataStoreMarksAnalysisChanged = 2,
 	};
 
 	typedef struct BNRegisterStackAdjustment
@@ -3903,13 +4039,26 @@ extern "C"
 		void (*freeConflictList)(void* context, BNAnalysisMergeConflict** conflictList, size_t count);
 	} BNAnalysisMergeConflictSplitterCallbacks;
 
+	typedef struct BNDemanglerConfig
+	{
+		BNPlatform* platform;
+		BNBinaryView* view;
+		bool simplifyTemplates;
+	} BNDemanglerConfig;
+
+	typedef struct BNDemanglerResult
+	{
+		BNQualifiedName name;
+		BNType* type;
+	} BNDemanglerResult;
+
 	typedef struct BNDemanglerCallbacks
 	{
 		void* context;
 		bool (*isMangledString)(void* ctxt, const char* name);
-		bool (*demangle)(void* ctxt, BNArchitecture* arch, const char* name, BNType** outType,
-			BNQualifiedName* outVarName, BNBinaryView* view);
-		void (*freeVarName)(void* ctxt, BNQualifiedName* name);
+		bool (*demangle)(void* ctxt, const char* name, const BNDemanglerConfig* config,
+			BNDemanglerResult* result);
+		void (*freeResult)(void* ctxt, BNDemanglerResult* result);
 	} BNDemanglerCallbacks;
 
 	BN_ENUM(uint8_t, BNScopeType)
@@ -4255,6 +4404,424 @@ extern "C"
 		char* stringPostfix;
 	} BNCustomStringTypeInfo;
 
+	typedef struct BNSimilarityEntityId
+	{
+		uint32_t value;
+	} BNSimilarityEntityId;
+
+	typedef struct BNSimilarityResultId
+	{
+		uint64_t value;
+	} BNSimilarityResultId;
+
+	typedef struct BNSimilaritySessionNodeId
+	{
+		uint32_t value;
+	} BNSimilaritySessionNodeId;
+
+	typedef struct BNSimilaritySessionId
+	{
+		uint32_t value;
+	} BNSimilaritySessionId;
+
+	typedef struct BNSimilarityProviderId
+	{
+		uint32_t value;
+	} BNSimilarityProviderId;
+
+	typedef struct BNSimilaritySessionResolverId
+	{
+		uint32_t value;
+	} BNSimilaritySessionResolverId;
+
+	typedef struct BNSimilarityEntityRef
+	{
+		BNSimilaritySessionNodeId nodeId;
+		BNSimilarityEntityId entityId;
+	} BNSimilarityEntityRef;
+
+	BN_ENUM(uint8_t, BNSimilarityEntityType)
+	{
+		SimilarityEntityFunction = 0,
+	};
+
+	BN_ENUM(uint8_t, BNSimilarityApplyStatus)
+	{
+		SimilarityApplySuccess = 0,
+		SimilarityApplyNodeInactive = 1,
+		SimilarityApplyEntityNotFound = 2,
+		SimilarityApplyUnsupported = 3,
+		SimilarityApplyFailed = 4,
+	};
+
+	typedef struct BNSimilarityResult
+	{
+		BNSimilarityProviderId providerId;
+		uint8_t similarity;
+		uint8_t confidence;
+		BNSimilarityEntityRef target;
+	} BNSimilarityResult;
+
+	typedef struct BNSimilarityEntityInfo
+	{
+		BNSimilarityEntityType type;
+		uint64_t address;
+		const char* name;
+	} BNSimilarityEntityInfo;
+
+	BN_ENUM(uint8_t, BNSimilarityViewType) {
+		SimilarityViewFlowGraph = 0,
+		SimilarityViewLinear = 1,
+	};
+
+	BN_ENUM(uint8_t, BNSimilarityAnnotationType) {
+		SimilarityAnnotationAdded = 0,
+		SimilarityAnnotationRemoved = 1,
+		SimilarityAnnotationChanged = 2,
+	};
+
+	typedef struct BNSimilarityRangeAnnotation
+	{
+		uint64_t start;
+		uint64_t end;
+		BNSimilarityAnnotationType type;
+	} BNSimilarityRangeAnnotation;
+
+	typedef struct BNSimilaritySessionCompletionQuery
+	{
+		bool hasNodeId;
+		BNSimilaritySessionNodeId nodeId;
+		bool hasProviderId;
+		BNSimilarityProviderId providerId;
+		bool hasResolverId;
+		BNSimilaritySessionResolverId resolverId;
+	} BNSimilaritySessionCompletionQuery;
+
+	typedef struct BNCustomSimilarityProvider
+	{
+		void* context;
+		void (*externalRefTaken)(void* ctxt);
+		void (*externalRefReleased)(void* ctxt);
+		bool (*updateSettings)(void* ctxt, BNSettings* settings);
+		bool (*visitNode)(void* ctxt, BNSimilaritySessionNode* node, BNSimilarityProviderResults* results,
+			BNSimilaritySessionCompletion* completion);
+		bool (*visitNodeEdge)(void* ctxt, BNSimilaritySessionNode* from, BNSimilaritySessionNode* to,
+			BNSimilarityProviderResults* results, BNSimilaritySessionCompletion* completion);
+		char* (*getName)(void* ctxt, BNSimilaritySessionNode* node, BNSimilarityEntityId entity,
+			BNSimilarityResultId result);
+		BNSimilarityApplyStatus (*apply)(void* ctxt, BNSimilaritySessionNode* node, BNSimilarityEntityId entity,
+			BNSimilarityResultId result);
+		void (*render)(void* ctxt, BNSimilaritySessionNode* node, BNSimilarityEntityId entity,
+			BNSimilarityRenderContext* context, BNSimilarityResultId result);
+		void (*free)(void* ctxt);
+	} BNCustomSimilarityProvider;
+
+	typedef struct BNCustomSimilarityProviderType
+	{
+		void* context;
+		BNSimilarityProvider* (*create)(void* ctxt, BNSettings* settings);
+		BNSettings* (*getDefaultSettings)(void* ctxt);
+	} BNCustomSimilarityProviderType;
+
+	typedef struct BNCustomSimilaritySessionResolver
+	{
+		void* context;
+		void (*externalRefTaken)(void* ctxt);
+		void (*externalRefReleased)(void* ctxt);
+		bool (*updateSettings)(void* ctxt, BNSettings* settings);
+		void (*prepareForNode)(void* ctxt, BNSimilaritySession* session, BNSimilaritySessionNode* node,
+			BNSimilaritySessionCompletion* completion, BNSimilaritySessionResolverId resolverId);
+		void (*resolveForNode)(void* ctxt, BNSimilaritySession* session, BNSimilaritySessionNode* node,
+			const BNSimilarityEntityId* entities, size_t entityCount, BNSimilaritySessionCompletion* completion,
+			BNSimilaritySessionResolverId resolverId);
+		void (*free)(void* ctxt);
+	} BNCustomSimilaritySessionResolver;
+
+	typedef struct BNCustomSimilaritySessionResolverType
+	{
+		void* context;
+		BNSimilaritySessionResolver* (*create)(void* ctxt, BNSimilaritySession* session, BNSettings* settings);
+		BNSettings* (*getDefaultSettings)(void* ctxt);
+	} BNCustomSimilaritySessionResolverType;
+
+	typedef struct BNCustomSimilaritySessionReceiver
+	{
+		void* context;
+		void (*externalRefTaken)(void* ctxt);
+		void (*externalRefReleased)(void* ctxt);
+		void (*onStarted)(void* ctxt, BNSimilaritySessionCompletion* completion);
+		void (*onUpdated)(void* ctxt, BNSimilaritySessionNode* node, BNSimilarityProvider* provider,
+			const BNSimilarityEntityId* entities, size_t count);
+		void (*free)(void* ctxt);
+	} BNCustomSimilaritySessionReceiver;
+
+	typedef struct BNCustomSimilaritySessionGraphReceiver
+	{
+		void* context;
+		void (*externalRefTaken)(void* ctxt);
+		void (*externalRefReleased)(void* ctxt);
+		void (*onGraphChanged)(void* ctxt);
+		void (*free)(void* ctxt);
+	} BNCustomSimilaritySessionGraphReceiver;
+
+	BINARYNINJACOREAPI BNSimilarityProviderType* BNRegisterSimilarityProviderType(
+		const char* name, const char* description, BNCustomSimilarityProviderType* type);
+	BINARYNINJACOREAPI BNSimilarityProviderType* BNGetSimilarityProviderTypeByName(const char* name);
+	BINARYNINJACOREAPI BNSimilarityProviderType** BNGetSimilarityProviderTypeList(size_t* count);
+	BINARYNINJACOREAPI void BNFreeSimilarityProviderTypeList(BNSimilarityProviderType** types);
+	BINARYNINJACOREAPI char* BNSimilarityProviderTypeGetName(BNSimilarityProviderType* type);
+	BINARYNINJACOREAPI char* BNSimilarityProviderTypeGetDescription(BNSimilarityProviderType* type);
+	/*! Returns `nullptr` outside the Ultimate edition. */
+	BINARYNINJACOREAPI BNSimilarityProvider* BNSimilarityProviderTypeCreateProvider(
+		BNSimilarityProviderType* type, BNSettings* settings);
+	BINARYNINJACOREAPI BNSettings* BNSimilarityProviderTypeGetDefaultSettings(BNSimilarityProviderType* type);
+
+	/*! Returns `nullptr` outside the Ultimate edition without taking ownership of `callbacks`. */
+	BINARYNINJACOREAPI BNSimilarityProvider* BNCreateCustomSimilarityProvider(
+		BNSimilarityProviderType* type, BNCustomSimilarityProvider* callbacks);
+	BINARYNINJACOREAPI void BNSimilarityProviderVisitNode(
+		BNSimilarityProvider* provider, BNSimilaritySessionNode* node, BNSimilaritySessionCompletion* completion);
+	BINARYNINJACOREAPI void BNSimilarityProviderVisitNodeEdge(BNSimilarityProvider* provider,
+		BNSimilaritySessionNode* from, BNSimilaritySessionNode* to, BNSimilaritySessionCompletion* completion);
+	BINARYNINJACOREAPI bool BNSimilarityProviderPerformVisitNode(BNSimilarityProvider* provider,
+		BNSimilaritySessionNode* node, BNSimilarityProviderResults* results, BNSimilaritySessionCompletion* completion);
+	BINARYNINJACOREAPI bool BNSimilarityProviderPerformVisitNodeEdge(BNSimilarityProvider* provider,
+		BNSimilaritySessionNode* from, BNSimilaritySessionNode* to, BNSimilarityProviderResults* results,
+		BNSimilaritySessionCompletion* completion);
+	BINARYNINJACOREAPI BNSimilarityResultId BNSimilarityProviderResultsAddResult(BNSimilarityProviderResults* results,
+		const BNSimilarityEntityRef* source, const BNSimilarityEntityRef* target,
+		uint8_t similarity, uint8_t confidence);
+	BINARYNINJACOREAPI BNSimilarityProviderType* BNSimilarityProviderGetType(BNSimilarityProvider* provider);
+	BINARYNINJACOREAPI BNSimilarityProviderId BNSimilarityProviderGetId(BNSimilarityProvider* provider);
+	BINARYNINJACOREAPI char* BNSimilarityProviderGetName(BNSimilarityProvider* provider,
+		BNSimilaritySessionNode* node, BNSimilarityEntityId entity, BNSimilarityResultId result);
+	BINARYNINJACOREAPI BNSimilarityApplyStatus BNSimilarityProviderApply(BNSimilarityProvider* provider,
+		BNSimilaritySessionNode* node, BNSimilarityEntityId entity, BNSimilarityResultId result);
+	BINARYNINJACOREAPI BNSimilarityApplyStatus BNSimilaritySessionNodeApplyTarget(BNSimilaritySessionNode* node,
+		BNSimilarityEntityId entity, const BNSimilarityEntityRef* target);
+	BINARYNINJACOREAPI void BNSimilarityProviderRender(
+		BNSimilarityProvider* provider, BNSimilaritySessionNode* node, BNSimilarityEntityId entity,
+		BNSimilarityRenderContext* context, BNSimilarityResultId result);
+
+	BINARYNINJACOREAPI BNSimilarityRenderContext* BNCreateSimilarityRenderContext(void);
+	BINARYNINJACOREAPI void BNSimilarityRenderContextSetPreferredViewType(
+		BNSimilarityRenderContext* context, BNFunctionViewType type);
+	BINARYNINJACOREAPI BNFunctionGraphType BNSimilarityRenderContextGetPreferredViewType(
+		BNSimilarityRenderContext* context);
+	BINARYNINJACOREAPI char* BNSimilarityRenderContextGetPreferredViewTypeName(BNSimilarityRenderContext* context);
+	BINARYNINJACOREAPI void BNSimilarityRenderContextAddFlowGraph(
+		BNSimilarityRenderContext* context, const char* group, BNFlowGraph* graph);
+	BINARYNINJACOREAPI void BNSimilarityRenderContextAddFlowGraphForEntity(
+		BNSimilarityRenderContext* context, const char* group, BNFlowGraph* graph, const BNSimilarityEntityRef* entity);
+	BINARYNINJACOREAPI void BNSimilarityRenderContextAddLinearView(
+		BNSimilarityRenderContext* context, const char* group, BNBinaryView* data, BNLinearViewObject* linearView);
+	BINARYNINJACOREAPI void BNSimilarityRenderContextAddLinearViewForEntity(BNSimilarityRenderContext* context,
+		const char* group, BNBinaryView* data, BNLinearViewObject* linearView, const BNSimilarityEntityRef* entity);
+	BINARYNINJACOREAPI BNSimilarityView** BNGetSimilarityRenderContextViews(
+		BNSimilarityRenderContext* context, size_t* count);
+	BINARYNINJACOREAPI void BNFreeSimilarityViewList(BNSimilarityView** views, size_t count);
+	BINARYNINJACOREAPI char* BNSimilarityViewGetGroup(BNSimilarityView* view);
+	BINARYNINJACOREAPI BNSimilarityViewType BNSimilarityViewGetType(BNSimilarityView* view);
+	BINARYNINJACOREAPI BNFlowGraph* BNSimilarityViewGetFlowGraph(BNSimilarityView* view);
+	BINARYNINJACOREAPI BNBinaryView* BNSimilarityViewGetLinearViewData(BNSimilarityView* view);
+	BINARYNINJACOREAPI BNLinearViewObject* BNSimilarityViewGetLinearView(BNSimilarityView* view);
+	BINARYNINJACOREAPI bool BNSimilarityViewGetEntity(BNSimilarityView* view, BNSimilarityEntityRef* entity);
+	BINARYNINJACOREAPI BNSimilarityView* BNNewSimilarityViewReference(BNSimilarityView* view);
+	BINARYNINJACOREAPI void BNFreeSimilarityView(BNSimilarityView* view);
+	BINARYNINJACOREAPI BNSimilarityRenderContext* BNNewSimilarityRenderContextReference(
+		BNSimilarityRenderContext* context);
+	BINARYNINJACOREAPI void BNFreeSimilarityRenderContext(BNSimilarityRenderContext* context);
+	BINARYNINJACOREAPI BNDiffRenderer* BNCreateDiffRenderer(void);
+	BINARYNINJACOREAPI void BNDiffRendererAddRangeAnnotation(
+		BNDiffRenderer* renderer, uint64_t start, uint64_t end, BNSimilarityAnnotationType type);
+	BINARYNINJACOREAPI void BNDiffRendererRenderFunction(
+		BNDiffRenderer* renderer, BNSimilarityRenderContext* context, BNFunction* function);
+	BINARYNINJACOREAPI void BNDiffRendererRenderFunctionForEntity(BNDiffRenderer* renderer,
+		BNSimilarityRenderContext* context, BNFunction* function, const BNSimilarityEntityRef* entity);
+	BINARYNINJACOREAPI void BNDiffRendererRenderFlowGraph(
+		BNDiffRenderer* renderer, BNSimilarityRenderContext* context, const char* group, BNFlowGraph* graph);
+	BINARYNINJACOREAPI void BNDiffRendererRenderFlowGraphForEntity(BNDiffRenderer* renderer,
+		BNSimilarityRenderContext* context, const char* group, BNFlowGraph* graph, const BNSimilarityEntityRef* entity);
+	BINARYNINJACOREAPI void BNDiffRendererRenderLinearView(BNDiffRenderer* renderer, BNSimilarityRenderContext* context,
+		const char* group, BNBinaryView* data, BNLinearViewObject* linearView);
+	BINARYNINJACOREAPI void BNDiffRendererRenderLinearViewForEntity(BNDiffRenderer* renderer,
+		BNSimilarityRenderContext* context, const char* group, BNBinaryView* data, BNLinearViewObject* linearView,
+		const BNSimilarityEntityRef* entity);
+	BINARYNINJACOREAPI BNDiffRenderer* BNNewDiffRendererReference(BNDiffRenderer* renderer);
+	BINARYNINJACOREAPI void BNFreeDiffRenderer(BNDiffRenderer* renderer);
+	BINARYNINJACOREAPI BNSimilarityProvider* BNNewSimilarityProviderReference(BNSimilarityProvider* provider);
+	BINARYNINJACOREAPI void BNFreeSimilarityProvider(BNSimilarityProvider* provider);
+	BINARYNINJACOREAPI void BNFreeSimilarityResultIdList(BNSimilarityResultId* results);
+
+	BINARYNINJACOREAPI BNSimilaritySessionResolverType* BNRegisterSimilaritySessionResolverType(
+		const char* name, const char* description, BNCustomSimilaritySessionResolverType* type);
+	BINARYNINJACOREAPI BNSimilaritySessionResolverType* BNGetSimilaritySessionResolverTypeByName(const char* name);
+	BINARYNINJACOREAPI BNSimilaritySessionResolverType** BNGetSimilaritySessionResolverTypeList(size_t* count);
+	BINARYNINJACOREAPI void BNFreeSimilaritySessionResolverTypeList(BNSimilaritySessionResolverType** types);
+	BINARYNINJACOREAPI char* BNSimilaritySessionResolverTypeGetName(BNSimilaritySessionResolverType* type);
+	BINARYNINJACOREAPI char* BNSimilaritySessionResolverTypeGetDescription(BNSimilaritySessionResolverType* type);
+	BINARYNINJACOREAPI BNSimilaritySessionResolver* BNSimilaritySessionResolverTypeCreateResolver(
+		BNSimilaritySessionResolverType* type, BNSimilaritySession* session, BNSettings* settings);
+	BINARYNINJACOREAPI BNSettings* BNSimilaritySessionResolverTypeGetDefaultSettings(
+		BNSimilaritySessionResolverType* type);
+
+	BINARYNINJACOREAPI BNSimilaritySessionResolver* BNCreateCustomSimilaritySessionResolver(
+		BNSimilaritySessionResolverType* type, BNSimilaritySession* session,
+		BNCustomSimilaritySessionResolver* callbacks);
+	BINARYNINJACOREAPI BNSimilaritySessionResolverType* BNSimilaritySessionResolverGetType(
+		BNSimilaritySessionResolver* resolver);
+	BINARYNINJACOREAPI BNSimilaritySessionResolverId BNSimilaritySessionResolverGetId(
+		BNSimilaritySessionResolver* resolver);
+	BINARYNINJACOREAPI void BNSimilaritySessionResolverPrepareForNode(
+		BNSimilaritySessionResolver* resolver, BNSimilaritySession* session, BNSimilaritySessionNode* node,
+		BNSimilaritySessionCompletion* completion);
+	BINARYNINJACOREAPI void BNSimilaritySessionResolverResolveForNode(BNSimilaritySessionResolver* resolver,
+		BNSimilaritySession* session, BNSimilaritySessionNode* node, const BNSimilarityEntityId* entities,
+		size_t entityCount, BNSimilaritySessionCompletion* completion);
+	BINARYNINJACOREAPI BNSimilaritySessionResolver* BNNewSimilaritySessionResolverReference(BNSimilaritySessionResolver* resolver);
+	BINARYNINJACOREAPI void BNFreeSimilaritySessionResolver(BNSimilaritySessionResolver* resolver);
+	BINARYNINJACOREAPI void BNFreeSimilaritySessionResolverList(BNSimilaritySessionResolver** resolvers, size_t count);
+
+	BINARYNINJACOREAPI BNSimilaritySessionNode* BNCreateSimilaritySessionNode(BNBinaryView* view);
+	BINARYNINJACOREAPI BNSimilaritySessionNode* BNCreateSimilaritySessionNodeFromFile(BNFileMetadata* file);
+	BINARYNINJACOREAPI BNBinaryView* BNSimilaritySessionNodeGetView(BNSimilaritySessionNode* node);
+	BINARYNINJACOREAPI void BNSimilaritySessionNodeSetView(BNSimilaritySessionNode* node, BNBinaryView* view);
+	BINARYNINJACOREAPI BNFileMetadata* BNSimilaritySessionNodeGetFile(BNSimilaritySessionNode* node);
+	BINARYNINJACOREAPI BNSettings* BNSimilaritySessionNodeGetLoadOptions(BNSimilaritySessionNode* node);
+	BINARYNINJACOREAPI BNSimilaritySessionNodeId BNSimilaritySessionNodeGetId(BNSimilaritySessionNode* node);
+	BINARYNINJACOREAPI BNSimilarityEntityId BNSimilaritySessionNodeCreateEntity(
+		BNSimilaritySessionNode* node, const BNSimilarityEntityInfo* info);
+	BINARYNINJACOREAPI bool BNSimilaritySessionNodeRemoveEntity(
+		BNSimilaritySessionNode* node, BNSimilarityEntityId id);
+	BINARYNINJACOREAPI bool BNSimilaritySessionNodeGetEntity(
+		BNSimilaritySessionNode* node, BNSimilarityEntityId id, BNSimilarityEntityInfo* result);
+	BINARYNINJACOREAPI void BNFreeSimilarityEntityInfo(BNSimilarityEntityInfo* info);
+	BINARYNINJACOREAPI BNSimilarityEntityId* BNSimilaritySessionNodeGetEntities(
+		BNSimilaritySessionNode* node, size_t* count);
+	BINARYNINJACOREAPI bool BNSimilaritySessionNodeAddScheduledEntity(
+		BNSimilaritySessionNode* node, BNSimilarityEntityId id);
+	BINARYNINJACOREAPI bool BNSimilaritySessionNodeRemoveScheduledEntity(
+		BNSimilaritySessionNode* node, BNSimilarityEntityId id);
+	BINARYNINJACOREAPI BNSimilarityEntityId* BNSimilaritySessionNodeGetScheduledEntities(
+		BNSimilaritySessionNode* node, size_t* count);
+	BINARYNINJACOREAPI BNFunction* BNSimilaritySessionNodeGetEntityFunction(
+		BNSimilaritySessionNode* node, BNSimilarityEntityId id);
+	BINARYNINJACOREAPI BNSimilarityResultId* BNSimilaritySessionNodeGetResults(
+		BNSimilaritySessionNode* node, BNSimilarityEntityId entity, size_t* count);
+	BINARYNINJACOREAPI bool BNSimilaritySessionNodeGetResult(
+		BNSimilaritySessionNode* node, BNSimilarityResultId resultId, BNSimilarityResult* result);
+	BINARYNINJACOREAPI bool BNSimilaritySessionNodeSetResolvedResult(
+		BNSimilaritySessionNode* node, BNSimilarityEntityId entity, BNSimilarityResultId result);
+	BINARYNINJACOREAPI bool BNSimilaritySessionNodeGetResolvedResult(
+		BNSimilaritySessionNode* node, BNSimilarityEntityId entity, BNSimilarityResultId* result);
+	BINARYNINJACOREAPI bool BNSimilaritySessionNodeClearResolvedResult(
+		BNSimilaritySessionNode* node, BNSimilarityEntityId entity);
+	BINARYNINJACOREAPI void BNFreeSimilarityEntityList(BNSimilarityEntityId* entities);
+	BINARYNINJACOREAPI BNSimilaritySessionNodeId* BNSimilaritySessionNodeGetIncomingEdges(BNSimilaritySessionNode* node, size_t* count);
+	BINARYNINJACOREAPI BNSimilaritySessionNodeId* BNSimilaritySessionNodeGetOutgoingEdges(BNSimilaritySessionNode* node, size_t* count);
+	BINARYNINJACOREAPI void BNFreeSimilaritySessionNodeEdgeList(BNSimilaritySessionNodeId* edges);
+	BINARYNINJACOREAPI BNSimilaritySessionNode** BNSimilaritySessionNodeGetIncomingNodes(
+		BNSimilaritySessionNode* node, size_t* count);
+	BINARYNINJACOREAPI BNSimilaritySessionNode** BNSimilaritySessionNodeGetOutgoingNodes(
+		BNSimilaritySessionNode* node, size_t* count);
+	BINARYNINJACOREAPI BNSimilaritySessionNode* BNNewSimilaritySessionNodeReference(BNSimilaritySessionNode* node);
+	BINARYNINJACOREAPI void BNFreeSimilaritySessionNode(BNSimilaritySessionNode* node);
+
+	BINARYNINJACOREAPI void BNSimilaritySessionGraphAddNode(
+		BNSimilaritySessionGraph* graph, BNSimilaritySessionNode* node);
+	BINARYNINJACOREAPI void BNSimilaritySessionGraphRemoveNode(
+		BNSimilaritySessionGraph* graph, BNSimilaritySessionNode* node);
+	BINARYNINJACOREAPI bool BNSimilaritySessionGraphIsValidEdge(
+		BNSimilaritySessionGraph* graph, BNSimilaritySessionNode* from, BNSimilaritySessionNode* to);
+	BINARYNINJACOREAPI bool BNSimilaritySessionGraphAddEdge(
+		BNSimilaritySessionGraph* graph, BNSimilaritySessionNode* from, BNSimilaritySessionNode* to);
+	BINARYNINJACOREAPI bool BNSimilaritySessionGraphRemoveEdge(
+		BNSimilaritySessionGraph* graph, BNSimilaritySessionNode* from, BNSimilaritySessionNode* to);
+	BINARYNINJACOREAPI BNSimilaritySessionNode* BNSimilaritySessionGraphGetNode(
+		BNSimilaritySessionGraph* graph, BNSimilaritySessionNodeId id);
+	BINARYNINJACOREAPI BNSimilaritySessionNode** BNSimilaritySessionGraphGetNodes(
+		BNSimilaritySessionGraph* graph, size_t* count);
+	BINARYNINJACOREAPI void BNFreeSimilaritySessionNodeList(BNSimilaritySessionNode** nodes, size_t count);
+	BINARYNINJACOREAPI BNSimilaritySessionNode*** BNSimilaritySessionGraphGetSchedule(
+		BNSimilaritySessionGraph* graph, size_t** nodeCounts, size_t* levelCount);
+	BINARYNINJACOREAPI void BNFreeSimilaritySessionNodeSchedule(
+		BNSimilaritySessionNode*** schedule, size_t* nodeCounts, size_t levelCount);
+	BINARYNINJACOREAPI BNSimilaritySessionGraph* BNNewSimilaritySessionGraphReference(BNSimilaritySessionGraph* node);
+	BINARYNINJACOREAPI void BNFreeSimilaritySessionGraph(BNSimilaritySessionGraph* graph);
+	BINARYNINJACOREAPI BNSimilaritySessionGraphReceiver* BNCreateCustomSimilaritySessionGraphReceiver(
+		BNCustomSimilaritySessionGraphReceiver* callbacks);
+	BINARYNINJACOREAPI BNSimilaritySessionGraphReceiver* BNNewSimilaritySessionGraphReceiverReference(
+		BNSimilaritySessionGraphReceiver* receiver);
+	BINARYNINJACOREAPI void BNFreeSimilaritySessionGraphReceiver(BNSimilaritySessionGraphReceiver* receiver);
+	BINARYNINJACOREAPI void BNFreeSimilaritySessionGraphReceiverList(
+		BNSimilaritySessionGraphReceiver** receivers, size_t count);
+	BINARYNINJACOREAPI void BNSimilaritySessionGraphReceiverNotifyGraphChanged(
+		BNSimilaritySessionGraphReceiver* receiver);
+	BINARYNINJACOREAPI void BNSimilaritySessionGraphAddReceiver(
+		BNSimilaritySessionGraph* graph, BNSimilaritySessionGraphReceiver* receiver);
+	BINARYNINJACOREAPI void BNSimilaritySessionGraphRemoveReceiver(
+		BNSimilaritySessionGraph* graph, BNSimilaritySessionGraphReceiver* receiver);
+	BINARYNINJACOREAPI BNSimilaritySessionGraphReceiver** BNSimilaritySessionGraphGetReceivers(
+		BNSimilaritySessionGraph* graph, size_t* count);
+
+	BINARYNINJACOREAPI BNSimilaritySession* BNCreateSimilaritySession();
+	BINARYNINJACOREAPI BNSimilaritySessionId BNSimilaritySessionGetId(BNSimilaritySession* session);
+	BINARYNINJACOREAPI BNSimilaritySessionReceiver* BNCreateCustomSimilaritySessionReceiver(
+		BNCustomSimilaritySessionReceiver* callbacks);
+	BINARYNINJACOREAPI BNSimilaritySessionReceiver* BNNewSimilaritySessionReceiverReference(
+		BNSimilaritySessionReceiver* receiver);
+	BINARYNINJACOREAPI void BNFreeSimilaritySessionReceiver(BNSimilaritySessionReceiver* receiver);
+	BINARYNINJACOREAPI void BNFreeSimilaritySessionReceiverList(BNSimilaritySessionReceiver** receivers, size_t count);
+	BINARYNINJACOREAPI void BNSimilaritySessionReceiverNotifyStart(
+		BNSimilaritySessionReceiver* receiver, BNSimilaritySessionCompletion* completion);
+	BINARYNINJACOREAPI void BNSimilaritySessionReceiverNotifyBatch(BNSimilaritySessionReceiver* receiver,
+		BNSimilaritySessionNode* node, BNSimilarityProvider* provider,
+		const BNSimilarityEntityId* entities, size_t count);
+	BINARYNINJACOREAPI void BNSimilaritySessionAddProvider(
+		BNSimilaritySession* session, BNSimilarityProvider* provider);
+	BINARYNINJACOREAPI void BNSimilaritySessionRemoveProvider(
+		BNSimilaritySession* session, BNSimilarityProvider* provider);
+	BINARYNINJACOREAPI bool BNSimilaritySessionUpdateProviderSettings(
+		BNSimilaritySession* session, BNSimilarityProvider* provider, BNSettings* settings);
+	BINARYNINJACOREAPI BNSimilarityProvider* BNSimilaritySessionGetProvider(
+		BNSimilaritySession* session, BNSimilarityProviderId id);
+	BINARYNINJACOREAPI BNSimilarityProvider** BNSimilaritySessionGetProviders(
+		BNSimilaritySession* session, size_t* count);
+	BINARYNINJACOREAPI void BNFreeSimilarityProviderList(BNSimilarityProvider** providers, size_t count);
+	BINARYNINJACOREAPI bool BNSimilaritySessionAddResolver(
+		BNSimilaritySession* session, BNSimilaritySessionResolver* resolver);
+	BINARYNINJACOREAPI bool BNSimilaritySessionRemoveResolver(
+		BNSimilaritySession* session, BNSimilaritySessionResolver* resolver);
+	BINARYNINJACOREAPI bool BNSimilaritySessionUpdateResolverSettings(
+		BNSimilaritySession* session, BNSimilaritySessionResolver* resolver, BNSettings* settings);
+	BINARYNINJACOREAPI BNSimilaritySessionResolver* BNSimilaritySessionGetResolver(
+		BNSimilaritySession* session, BNSimilaritySessionResolverId id);
+	BINARYNINJACOREAPI BNSimilaritySessionResolver** BNSimilaritySessionGetResolvers(
+		BNSimilaritySession* session, size_t* count);
+	BINARYNINJACOREAPI void BNSimilaritySessionAddReceiver(
+		BNSimilaritySession* session, BNSimilaritySessionReceiver* receiver);
+	BINARYNINJACOREAPI void BNSimilaritySessionRemoveReceiver(
+		BNSimilaritySession* session, BNSimilaritySessionReceiver* receiver);
+	BINARYNINJACOREAPI BNSimilaritySessionReceiver** BNSimilaritySessionGetReceivers(
+		BNSimilaritySession* session, size_t* count);
+	BINARYNINJACOREAPI BNSimilaritySessionGraph* BNSimilaritySessionGetGraph(BNSimilaritySession* session);
+	BINARYNINJACOREAPI BNSimilaritySessionCompletion* BNSimilaritySessionRun(BNSimilaritySession* session);
+	BINARYNINJACOREAPI BNSimilaritySession* BNNewSimilaritySessionReference(BNSimilaritySession* session);
+	BINARYNINJACOREAPI void BNFreeSimilaritySession(BNSimilaritySession* session);
+
+	BINARYNINJACOREAPI BNSimilaritySessionCompletion* BNCreateSimilaritySessionCompletion();
+	BINARYNINJACOREAPI bool BNSimilaritySessionCompletionIsFinished(BNSimilaritySessionCompletion* completion);
+	BINARYNINJACOREAPI void BNSimilaritySessionCompletionRequestStop(BNSimilaritySessionCompletion* completion);
+	BINARYNINJACOREAPI bool BNSimilaritySessionCompletionIsStopRequested(BNSimilaritySessionCompletion* completion);
+	BINARYNINJACOREAPI double BNSimilaritySessionCompletionGetProgress(
+		BNSimilaritySessionCompletion* completion, const BNSimilaritySessionCompletionQuery* query);
+	BINARYNINJACOREAPI void BNSimilaritySessionCompletionSetProgress(
+		BNSimilaritySessionCompletion* completion, const BNSimilaritySessionCompletionQuery* query, double progress);
+	BINARYNINJACOREAPI uint64_t BNSimilaritySessionCompletionGetTiming(
+		BNSimilaritySessionCompletion* completion, const BNSimilaritySessionCompletionQuery* query);
+	BINARYNINJACOREAPI BNSimilaritySessionCompletion* BNNewSimilaritySessionCompletionReference(BNSimilaritySessionCompletion* completion);
+	BINARYNINJACOREAPI void BNFreeSimilaritySessionCompletion(BNSimilaritySessionCompletion* completion);
+
 	BINARYNINJACOREAPI char* BNAllocString(const char* contents);
 	BINARYNINJACOREAPI char* BNAllocStringWithLength(const char* contents, size_t len);
 	BINARYNINJACOREAPI void BNFreeString(char* str);
@@ -4281,6 +4848,8 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetLicensedUserEmail(void);
 	BINARYNINJACOREAPI char* BNGetProduct(void);
 	BINARYNINJACOREAPI char* BNGetProductType(void);
+	BINARYNINJACOREAPI BNLicenseAddon* BNGetLicenseAddons(size_t* count);
+	BINARYNINJACOREAPI void BNFreeLicenseAddons(BNLicenseAddon* addons, size_t count);
 	BINARYNINJACOREAPI int BNGetLicenseCount(void);
 	BINARYNINJACOREAPI bool BNIsUIEnabled(void);
 	BINARYNINJACOREAPI void BNSetLicense(const char* licenseData);
@@ -4495,6 +5064,7 @@ extern "C"
 	BINARYNINJACOREAPI BNBinaryView* BNOpenExistingDatabaseWithProgress(BNFileMetadata* file, const char* path,
 	    void* ctxt, BNProgressFunction progress);
 	BINARYNINJACOREAPI BNBinaryView* BNOpenDatabaseForConfiguration(BNFileMetadata* file, const char* path);
+	BINARYNINJACOREAPI bool BNReopenMovedDatabase(BNFileMetadata* file, const char* path);
 	BINARYNINJACOREAPI bool BNSaveAutoSnapshot(BNBinaryView* data, BNSaveSettings* settings);
 	BINARYNINJACOREAPI bool BNSaveAutoSnapshotWithProgress(BNBinaryView* data, void* ctxt,
 	    BNProgressFunction progress, BNSaveSettings* settings);
@@ -4663,7 +5233,6 @@ extern "C"
 	BINARYNINJACOREAPI bool BNWriteDatabaseGlobal(BNDatabase* database, const char* key, const char* val);
 	BINARYNINJACOREAPI BNDataBuffer* BNReadDatabaseGlobalData(BNDatabase* database, const char* key);
 	BINARYNINJACOREAPI bool BNWriteDatabaseGlobalData(BNDatabase* database, const char* key, BNDataBuffer* val);
-	BINARYNINJACOREAPI void BNDatabaseReloadConnection(BNDatabase* database);
 	BINARYNINJACOREAPI BNKeyValueStore* BNReadDatabaseAnalysisCache(BNDatabase* database);
 	BINARYNINJACOREAPI bool BNWriteDatabaseAnalysisCache(BNDatabase* database, BNKeyValueStore* val);
 	BINARYNINJACOREAPI bool BNSnapshotHasData(BNDatabase* db, int64_t id);
@@ -5216,6 +5785,8 @@ extern "C"
 	BINARYNINJACOREAPI size_t BNGetArchitectureAddressSize(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureDefaultIntegerSize(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureInstructionAlignment(BNArchitecture* arch);
+	BINARYNINJACOREAPI size_t BNGetArchitectureLinearSweepInitialAlignment(BNArchitecture* arch);
+	BINARYNINJACOREAPI uint32_t BNGetArchitectureLinearSweepAnalysisCapabilities(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureMaxInstructionLength(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureOpcodeDisplayLength(BNArchitecture* arch);
 	BINARYNINJACOREAPI BNArchitecture* BNGetAssociatedArchitectureByAddress(BNArchitecture* arch, uint64_t* addr);
@@ -5877,7 +6448,7 @@ extern "C"
 	BINARYNINJACOREAPI void BNFunctionExpandRegion(BNFunction* func, uint64_t hash);
 
 	BINARYNINJACOREAPI void BNFunctionStoreMetadata(
-	    BNFunction* func, const char* key, BNMetadata* value, bool isAuto);
+	    BNFunction* func, const char* key, BNMetadata* value, BNMetadataStoreFlag flags);
 	BINARYNINJACOREAPI BNMetadata* BNFunctionQueryMetadata(BNFunction* func, const char* key);
 	BINARYNINJACOREAPI void BNFunctionRemoveMetadata(BNFunction* func, const char* key);
 	BINARYNINJACOREAPI BNMetadata* BNFunctionGetMetadata(BNFunction* func);
@@ -7168,6 +7739,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetTypeLibraryName(BNTypeLibrary* lib);
 
 	BINARYNINJACOREAPI void BNAddTypeLibraryAlternateName(BNTypeLibrary* lib, const char* name);
+	BINARYNINJACOREAPI void BNRemoveTypeLibraryAlternateName(BNTypeLibrary* lib, const char* name);
 	BINARYNINJACOREAPI char** BNGetTypeLibraryAlternateNames(BNTypeLibrary* lib, size_t* count);  // BNFreeStringList
 
 	BINARYNINJACOREAPI void BNSetTypeLibraryDependencyName(BNTypeLibrary* lib, const char* name);
@@ -8127,6 +8699,15 @@ extern "C"
 	BINARYNINJACOREAPI bool BNLoadScriptingProviderModule(
 	    BNScriptingProvider* provider, const char* repository, const char* module, bool force);
 	BINARYNINJACOREAPI bool BNInstallScriptingProviderModules(BNScriptingProvider* provider, const char* modules);
+	BINARYNINJACOREAPI bool BNIsScriptingProviderModuleInstalled(BNScriptingProvider* provider, const char* modules);
+	BINARYNINJACOREAPI void BNSetScriptingProviderModuleInstalledCallback(BNScriptingProvider* provider,
+	    BNScriptingProviderModuleInstalledCallbacks* callbacks);
+	BINARYNINJACOREAPI void BNSetScriptingProviderInstallModulesWithExclusionsCallback(BNScriptingProvider* provider,
+	    BNScriptingProviderInstallModulesWithExclusionsCallbacks* callbacks);
+	BINARYNINJACOREAPI void BNSetScriptingProviderDependencyConflictCallback(BNScriptingProvider* provider,
+	    BNScriptingProviderDependencyConflictCallbacks* callbacks);
+	BINARYNINJACOREAPI void BNSetPluginDependencyStartupCallback(BNPluginDependencyStartupCallbacks* callbacks);
+	BINARYNINJACOREAPI void BNSetPluginDependencyResolutionCallback(BNPluginDependencyResolutionCallbacks* callbacks);
 
 	BINARYNINJACOREAPI BNScriptingInstance* BNInitScriptingInstance(
 	    BNScriptingProvider* provider, BNScriptingInstanceCallbacks* callbacks);
@@ -8259,37 +8840,28 @@ extern "C"
 	BINARYNINJACOREAPI void BNUpdateReportFlowGraph(BNReportCollection* reports, size_t i, BNFlowGraph* graph);
 
 	// Demangler
-	BINARYNINJACOREAPI bool BNDemangleMS(BNArchitecture* arch, const char* mangledName, BNType** outType,
-	    char*** outVarName, size_t* outVarNameElements, const bool simplify);
-	BINARYNINJACOREAPI bool BNDemangleMSWithOptions(BNArchitecture* arch, const char* mangledName, BNType** outType,
-	    char*** outVarName, size_t* outVarNameElements, const BNBinaryView* const view);
-	BINARYNINJACOREAPI bool BNDemangleMSPlatform(BNPlatform* platform, const char* mangledName, BNType** outType,
-	    char*** outVarName, size_t* outVarNameElements, const bool simplify);
+	BINARYNINJACOREAPI BNDemanglerConfig BNGetDefaultDemanglerConfig(void);
+	BINARYNINJACOREAPI BNDemanglerConfig BNGetDemanglerConfigForPlatform(BNPlatform* platform,
+	    bool simplifyTemplates);
+	BINARYNINJACOREAPI BNDemanglerConfig BNGetDemanglerConfigForBinaryView(BNBinaryView* view);
+	BINARYNINJACOREAPI bool BNDemangle(const char* name, const BNDemanglerConfig* config,
+	    BNDemanglerResult* result);
+	BINARYNINJACOREAPI bool BNDemangleWithDemangler(const BNDemangler* demangler, const char* name,
+	    const BNDemanglerConfig* config, BNDemanglerResult* result);
+	BINARYNINJACOREAPI void BNFreeDemanglerResult(BNDemanglerResult* result);
+	BINARYNINJACOREAPI bool BNSimplifyDemangledTemplateName(
+	    const BNQualifiedName* name, BNQualifiedName* result);
 
-	BINARYNINJACOREAPI bool BNIsGNU3MangledString(const char* mangledName);
-	BINARYNINJACOREAPI bool BNDemangleGNU3(BNArchitecture* arch, const char* mangledName, BNType** outType,
-	    char*** outVarName, size_t* outVarNameElements, const bool simplify);
-	BINARYNINJACOREAPI bool BNDemangleGNU3WithOptions(BNArchitecture* arch, const char* mangledName, BNType** outType,
-	    char*** outVarName, size_t* outVarNameElements, const BNBinaryView* const view);
-	BINARYNINJACOREAPI void BNFreeDemangledName(char*** name, size_t nameElements);
-
-	BINARYNINJACOREAPI bool BNDemangleLLVM(const char* mangledName,
-	    char*** outVarName, size_t* outVarNameElements, const bool simplify);
-	BINARYNINJACOREAPI bool BNDemangleLLVMWithOptions(const char* mangledName,
-	    char*** outVarName, size_t* outVarNameElements, const BNBinaryView* const view);
-
-	BINARYNINJACOREAPI BNDemangler* BNRegisterDemangler(const char* name, BNDemanglerCallbacks* callbacks);
+	BINARYNINJACOREAPI BNDemangler* BNRegisterDemangler(const char* name, const BNDemanglerCallbacks* callbacks);
 	BINARYNINJACOREAPI BNDemangler** BNGetDemanglerList(size_t* count);
 	BINARYNINJACOREAPI void BNFreeDemanglerList(BNDemangler** demanglers);
 	BINARYNINJACOREAPI BNDemangler* BNGetDemanglerByName(const char* name);
-	BINARYNINJACOREAPI char* BNGetDemanglerName(BNDemangler* demangler);
-	BINARYNINJACOREAPI void BNPromoteDemangler(BNDemangler* demangler);
-
-	BINARYNINJACOREAPI bool BNIsDemanglerMangledName(BNDemangler* demangler, const char* name);
-	BINARYNINJACOREAPI bool BNDemanglerDemangle(BNDemangler* demangler, BNArchitecture* arch, const char* name,
-	    BNType** outType, BNQualifiedName* outVarName, BNBinaryView* view);
-	BINARYNINJACOREAPI bool BNDemangleGeneric(BNArchitecture* arch, const char* name,
-	    BNType** outType, BNQualifiedName* outVarName, BNBinaryView* view, bool simplify);
+	BINARYNINJACOREAPI BNDemangler* BNGetMSVCDemangler(void);
+	BINARYNINJACOREAPI BNDemangler* BNGetGNU3Demangler(void);
+	BINARYNINJACOREAPI BNDemangler* BNGetLLVMDemangler(void);
+	BINARYNINJACOREAPI char* BNGetDemanglerName(const BNDemangler* demangler);
+	BINARYNINJACOREAPI bool BNPromoteDemangler(const BNDemangler* demangler);
+	BINARYNINJACOREAPI bool BNIsDemanglerMangledName(const BNDemangler* demangler, const char* name);
 
 // Plugin repository APIs
 	BINARYNINJACOREAPI char** BNPluginGetApis(BNPlugin* p, size_t* count);
@@ -8320,9 +8892,16 @@ extern "C"
 	BINARYNINJACOREAPI const char* BNPluginGetPath(BNPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetSubdir(BNPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetDependencies(BNPlugin* p);
+	BINARYNINJACOREAPI const char* BNPluginGetDependenciesForVersion(BNPlugin* p, const char* versionID);
+	BINARYNINJACOREAPI BNPluginDependencyConflict* BNPluginGetDependencyConflicts(BNPlugin* p, size_t* count);
+	BINARYNINJACOREAPI BNPluginDependencyConflict* BNPluginGetDependencyConflictsForVersion(BNPlugin* p,
+		const char* versionID, size_t* count);
+	BINARYNINJACOREAPI void BNFreePluginDependencyConflicts(BNPluginDependencyConflict* conflicts, size_t count);
 	BINARYNINJACOREAPI const char* BNPluginGetLongdescription(BNPlugin* p);
 	BINARYNINJACOREAPI uint64_t BNPluginGetLastUpdate(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginIsInstalled(BNPlugin* p);
+	BINARYNINJACOREAPI bool BNPluginIsListed(BNPlugin* p);
+	BINARYNINJACOREAPI bool BNPluginIsDeprecated(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginIsEnabled(BNPlugin* p);
 	BINARYNINJACOREAPI BNPluginStatus BNPluginGetPluginStatus(BNPlugin* p);
 	BINARYNINJACOREAPI BNPluginType* BNPluginGetPluginTypes(BNPlugin* p, size_t* count);
@@ -8330,7 +8909,13 @@ extern "C"
 	BINARYNINJACOREAPI bool BNPluginDisable(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginInstall(BNPlugin* p, const char* versionID);
 	BINARYNINJACOREAPI bool BNPluginInstallDependencies(BNPlugin* p);
+	BINARYNINJACOREAPI bool BNPluginInstallDependenciesForVersion(BNPlugin* p, const char* versionID);
+	BINARYNINJACOREAPI bool BNPluginInstallDependenciesWithExclusions(BNPlugin* p,
+		const char* const* excludedPackageNames, size_t excludedPackageNameCount);
+	BINARYNINJACOREAPI bool BNPluginInstallDependenciesWithExclusionsForVersion(BNPlugin* p, const char* versionID,
+		const char* const* excludedPackageNames, size_t excludedPackageNameCount);
 	BINARYNINJACOREAPI bool BNPluginUninstall(BNPlugin* p);
+	BINARYNINJACOREAPI bool BNPluginCancelUninstall(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginUpdate(BNPlugin* p, const char* versionID);
 	BINARYNINJACOREAPI char** BNPluginGetPlatforms(BNPlugin* p, size_t* count);
 	BINARYNINJACOREAPI void BNFreePluginPlatforms(char** platforms, size_t count);
@@ -8572,7 +9157,7 @@ extern "C"
 
 	// Store/Query structured data to/from a BinaryView
 	BINARYNINJACOREAPI void BNBinaryViewStoreMetadata(
-	    BNBinaryView* view, const char* key, BNMetadata* value, bool isAuto);
+	    BNBinaryView* view, const char* key, BNMetadata* value, BNMetadataStoreFlag flags);
 	BINARYNINJACOREAPI BNMetadata* BNBinaryViewQueryMetadata(BNBinaryView* view, const char* key);
 	BINARYNINJACOREAPI void BNBinaryViewRemoveMetadata(BNBinaryView* view, const char* key);
 	BINARYNINJACOREAPI BNMetadata* BNBinaryViewGetMetadata(BNBinaryView* view);
@@ -8649,10 +9234,10 @@ extern "C"
 	BINARYNINJACOREAPI BNMemoryUsageInfo* BNGetMemoryUsageInfo(size_t* count);
 	BINARYNINJACOREAPI void BNFreeMemoryUsageInfo(BNMemoryUsageInfo* info, size_t count);
 
-	BINARYNINJACOREAPI uint32_t BNGetAddressRenderedWidth(uint64_t addr);
+	BINARYNINJACOREAPI BNStatHistogram* BNGetStatHistograms(size_t* count);
+	BINARYNINJACOREAPI void BNFreeStatHistograms(BNStatHistogram* stats, size_t count);
 
-	BINARYNINJACOREAPI BNQualifiedName BNRustSimplifyStrToFQN(const char* const, bool);
-	BINARYNINJACOREAPI char* BNRustSimplifyStrToStr(const char* const);
+	BINARYNINJACOREAPI uint32_t BNGetAddressRenderedWidth(uint64_t addr);
 
 	BINARYNINJACOREAPI BNDebugInfoParser* BNRegisterDebugInfoParser(const char* name,
 		bool (*isValid)(void*, BNBinaryView*),
@@ -8833,6 +9418,9 @@ extern "C"
 	BINARYNINJACOREAPI void BNFreeUnicodeRangeList(uint32_t* starts, uint32_t* ends);
 	BINARYNINJACOREAPI char* BNUnicodeGetUTF8String(uint32_t** starts, uint32_t** ends, size_t* blockListCounts, size_t blockCount, const uint8_t* data, const size_t offset, const size_t dataLen);
 	BINARYNINJACOREAPI char* BNUnicodeToEscapedString(uint32_t** starts, uint32_t** ends, size_t* blockListCounts, size_t blockCount, bool utf8Enabled, const void* data, const size_t dataLen);
+	BINARYNINJACOREAPI char* BNUnicodeToEscapedStringForView(BNBinaryView* view, const void* data, size_t dataLen);
+	BINARYNINJACOREAPI size_t BNUnicodeGetDisplayWidth(const char* str);
+	BINARYNINJACOREAPI size_t BNUnicodeGetNextGraphemeClusterBoundary(const char* str, size_t len, size_t offset);
 
 	// Collaboration
 	BINARYNINJACOREAPI BNRemote* BNCollaborationGetActiveRemote();

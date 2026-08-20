@@ -969,7 +969,7 @@ class ArchitectureVariable(CoreVariable):
 		self, arch: 'binaryninja.architecture.Architecture', source_type: VariableSourceType, index: int,
 		storage: int
 	):
-		super(ArchitectureVariable, self).__init__(int(source_type), index, storage)
+		super().__init__(int(source_type), index, storage)
 		self._arch = arch
 
 	@property
@@ -1067,7 +1067,7 @@ class Variable(CoreVariable):
 	in medium level IL, so variables objects are only valid for MLIL and above.
 	"""
 	def __init__(self, func: FunctionOrILFunction, source_type: VariableSourceType, index: int, storage: int):
-		super(Variable, self).__init__(int(source_type), index, storage)
+		super().__init__(int(source_type), index, storage)
 		if isinstance(func, binaryninja.function.Function):
 			self._function = func
 			self._il_function = None

@@ -56,8 +56,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 if (BN_INTERNAL_BUILD)
     ui_plugin_rpath(${PROJECT_NAME})
 
-    if (UNIX)
-        # A hack to get the ui plugin to find the warp core plugin.
+    # A hack to get the ui plugin to find the warp core plugin.
+    if (APPLE)
+        set_target_properties(${PROJECT_NAME} PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE INSTALL_RPATH "@loader_path")
+    elseif (UNIX)
         set_target_properties(${PROJECT_NAME} PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE INSTALL_RPATH "$ORIGIN")
     endif()
 

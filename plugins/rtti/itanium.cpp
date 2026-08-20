@@ -672,6 +672,7 @@ ItaniumRTTIProcessor::ItaniumRTTIProcessor(const Ref<BinaryView> &view, bool use
 {
     m_view = view;
     m_logger = view->CreateLogger("Itanium RTTI");
+    m_simplifyTemplates = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", view);
     allowMangledClassNames = useMangled;
     checkWritableRData = checkRData;
     m_classInfo = {};

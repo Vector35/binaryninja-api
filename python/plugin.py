@@ -105,7 +105,7 @@ class PluginCommandContext:
 	def project(self):
 		return self._project
 
-	@function.setter
+	@project.setter
 	def project(self, value):
 		self._project = value
 

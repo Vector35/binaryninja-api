@@ -722,7 +722,7 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		handle = core.BNWorkflowRegisterActivity(self.handle, activity.handle, input_list, len(subactivities))
 		if handle is None:
 			return None
-		return activity
+		return Activity(handle=handle)
 
 	def contains(self, activity: ActivityType) -> bool:
 		"""

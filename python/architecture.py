@@ -28,7 +28,7 @@ import binaryninja
 from . import _binaryninjacore as core
 from .enums import (
     Endianness, ImplicitRegisterExtend, BranchType, LowLevelILFlagCondition, FlagRole, LowLevelILOperation,
-    InstructionTextTokenType, InstructionTextTokenContext, IntrinsicClass
+    InstructionTextTokenType, InstructionTextTokenContext, IntrinsicClass, LinearSweepAnalysisCapability
 )
 from .log import log_error_for_exception, log_debug_for_exception
 from . import lowlevelil
@@ -42,6 +42,7 @@ from . import binaryview
 from . import variable
 from . import basicblock
 from . import log
+from . import unicode
 
 RegisterIndex = NewType('RegisterIndex', int)
 RegisterStackIndex = NewType('RegisterStackIndex', int)
@@ -733,6 +734,11 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 	address_size = 8
 	default_int_size = 4
 	instr_alignment = 1
+	linear_sweep_initial_alignment: Optional[int] = None
+	linear_sweep_analysis_capabilities = (
+	    LinearSweepAnalysisCapability.BNLinearSweepCallTargetAnalysis
+	    | LinearSweepAnalysisCapability.BNLinearSweepGenericControlFlowAnalysis
+	)
 	max_instr_length = 16
 	opcode_display_length = 8
 	regs: Dict[RegisterName, RegisterInfo] = {}
@@ -867,11 +873,19 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		self._cb.alwaysBranch = self._cb.alwaysBranch.__class__(self._always_branch)
 		self._cb.invertBranch = self._cb.invertBranch.__class__(self._invert_branch)
 		self._cb.skipAndReturnValue = self._cb.skipAndReturnValue.__class__(self._skip_and_return_value)
+		self._cb.getLinearSweepInitialAlignment = self._cb.getLinearSweepInitialAlignment.__class__(
+		    self._get_linear_sweep_initial_alignment
+		)
+		self._cb.getLinearSweepAnalysisCapabilities = self._cb.getLinearSweepAnalysisCapabilities.__class__(
+		    self._get_linear_sweep_analysis_capabilities
+		)
 
 		self.__dict__['endianness'] = self.__class__.endianness
 		self.__dict__['address_size'] = self.__class__.address_size
 		self.__dict__['default_int_size'] = self.__class__.default_int_size
 		self.__dict__['instr_alignment'] = self.__class__.instr_alignment
+		self.__dict__['linear_sweep_initial_alignment'] = self.__class__.linear_sweep_initial_alignment
+		self.__dict__['linear_sweep_analysis_capabilities'] = self.__class__.linear_sweep_analysis_capabilities
 		self.__dict__['max_instr_length'] = self.__class__.max_instr_length
 		self.__dict__['opcode_display_length'] = self.__class__.opcode_display_length
 		self.__dict__['stack_pointer'] = self.__class__.stack_pointer
@@ -1159,6 +1173,25 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in Architecture._get_instruction_alignment")
 			return 1
+
+	def _get_linear_sweep_initial_alignment(self, ctxt):
+		try:
+			if self.linear_sweep_initial_alignment is None:
+				return self.instr_alignment
+			return self.linear_sweep_initial_alignment
+		except Exception:
+			log_error_for_exception("Unhandled Python exception in Architecture._get_linear_sweep_initial_alignment")
+			return self.instr_alignment
+
+	def _get_linear_sweep_analysis_capabilities(self, ctxt):
+		try:
+			return int(self.linear_sweep_analysis_capabilities)
+		except Exception:
+			log_error_for_exception("Unhandled Python exception in Architecture._get_linear_sweep_analysis_capabilities")
+			return int(
+			    LinearSweepAnalysisCapability.BNLinearSweepCallTargetAnalysis
+			    | LinearSweepAnalysisCapability.BNLinearSweepGenericControlFlowAnalysis
+			)
 
 	def _get_max_instruction_length(self, ctxt):
 		try:
@@ -2734,7 +2767,7 @@ _architecture_cache = {}
 
 class CoreArchitecture(Architecture):
 	def __init__(self, handle: core.BNArchitecture):
-		super(CoreArchitecture, self).__init__()
+		super().__init__()
 
 		self.handle = core.handle_of_type(handle, core.BNArchitecture)
 		self.name = core.BNGetArchitectureName(self.handle)
@@ -2742,6 +2775,8 @@ class CoreArchitecture(Architecture):
 		self.address_size = core.BNGetArchitectureAddressSize(self.handle)
 		self.default_int_size = core.BNGetArchitectureDefaultIntegerSize(self.handle)
 		self.instr_alignment = core.BNGetArchitectureInstructionAlignment(self.handle)
+		self.linear_sweep_initial_alignment = core.BNGetArchitectureLinearSweepInitialAlignment(self.handle)
+		self.linear_sweep_analysis_capabilities = core.BNGetArchitectureLinearSweepAnalysisCapabilities(self.handle)
 		self.max_instr_length = core.BNGetArchitectureMaxInstructionLength(self.handle)
 		self.opcode_display_length = core.BNGetArchitectureOpcodeDisplayLength(self.handle)
 		self.stack_pointer: str = core.BNGetArchitectureRegisterName(
@@ -3408,7 +3443,7 @@ _registered_architecture_hooks: List['ArchitectureHook'] = []
 class ArchitectureHook(CoreArchitecture):
 	def __init__(self, base_arch: 'Architecture'):
 		self._base_arch = base_arch
-		super(ArchitectureHook, self).__init__(base_arch.handle)
+		super().__init__(base_arch.handle)
 
 		# To improve performance of simpler hooks, use null callback for functions that are not being overridden
 		if self.get_associated_arch_by_address.__code__ == CoreArchitecture.get_associated_arch_by_address.__code__:
@@ -3517,7 +3552,7 @@ class InstructionTextToken:
 
 	def __post_init__(self):
 		if self.width == 0:
-			self.width = len(self.text)
+			self.width = unicode.unicode_display_width(self.text)
 
 	@staticmethod
 	def _from_core_struct(tokens: 'ctypes.pointer[core.BNInstructionTextToken]',

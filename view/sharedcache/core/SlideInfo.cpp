@@ -248,7 +248,7 @@ void SlideInfoProcessor::ApplyMappings(MappedFileRegion& file, const std::vector
 			ApplySlideInfoV5(file, mapping);
 			break;
 		default:
-			m_logger->LogError(
+			m_logger->LogErrorF(
 				"Cannot apply slide info version: {} @ {:#x}", mapping.slideInfoVersion, mapping.mappingInfo.address);
 			break;
 		}

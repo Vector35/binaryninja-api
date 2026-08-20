@@ -2969,7 +2969,7 @@ void PseudoRustFunction::GetExprText(const HighLevelILInstruction& instr, HighLe
 			{
 				tokens.Append(BraceToken, str.value().customType->GetStringPrefix() + string("\""));
 				tokens.Append(StringToken, DerivedStringReferenceTokenContext,
-					DataBuffer(str.value().value.c_str(), str.value().value.size()).ToEscapedString(), instr.address,
+					Unicode::ToEscapedString(GetFunction()->GetView(), str.value().value), instr.address,
 					instr.exprIndex);
 				tokens.Append(BraceToken, string("\"") + str.value().customType->GetStringPostfix());
 				return;

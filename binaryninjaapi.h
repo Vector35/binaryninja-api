@@ -28,6 +28,7 @@
 #endif
 
 #include "base/compiler.h"
+#include "base/strong_typedef.h"
 #include "binaryninjacore.h"
 #include "exceptions.h"
 
@@ -36,8 +37,10 @@
 #include "vendor/nlohmann/json.hpp"
 
 #include <cstddef>
+#include <chrono>
 #include <string>
 #include <vector>
+#include <array>
 #include <map>
 #include <unordered_map>
 #include <unordered_set>
@@ -50,6 +53,7 @@
 #include <cstdint>
 #include <typeinfo>
 #include <type_traits>
+#include <tuple>
 #include <optional>
 #include <memory>
 #include <span>
@@ -71,6 +75,8 @@
 #endif
 
 namespace BinaryNinja {
+	namespace st = ::bn::base::strong_typedef;
+
 #ifdef __GNUC__
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 	static inline uint16_t ToLE16(uint16_t val) { return val; }
@@ -623,6 +629,7 @@ namespace BinaryNinja {
 	class InteractionHandler;
 	class QualifiedName;
 	class FlowGraph;
+	class LinearViewObject;
 	class ReportCollection;
 	struct FormInputField;
 	struct ArchAndAddr;
@@ -1354,6 +1361,7 @@ namespace BinaryNinja {
 	    		\param fmt C-style format string.
 	    		\param ... Variable arguments corresponding to the format string.
 			*/
+			BN_PRINTF_ATTRIBUTE(3, 4)
 			void Log(BNLogLevel level, const char* fmt, ...);
 
 			/*! LogTrace only writes text to the error console if the console is set to log level: DebugLog
@@ -1364,6 +1372,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 			*/
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogTrace(const char* fmt, ...);
 
 			/*! LogDebug only writes text to the error console if the console is set to log level: DebugLog
@@ -1374,6 +1383,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 			*/
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogDebug(const char* fmt, ...);
 
 			/*! LogInfo always writes text to the error console, and corresponds to the log level: InfoLog.
@@ -1384,6 +1394,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 			*/
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogInfo(const char* fmt, ...);
 
 			/*! LogWarn writes text to the error console including a warning icon,
@@ -1394,6 +1405,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 			*/
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogWarn(const char* fmt, ...);
 
 			/*! LogError writes text to the error console and pops up the error console. Additionally,
@@ -1404,6 +1416,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 			*/
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogError(const char* fmt, ...);
 
 			/*! LogAlert pops up a message box displaying the alert message and logs to the error console.
@@ -1414,6 +1427,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 			*/
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogAlert(const char* fmt, ...);
 
 			/*! Logs to the error console with the given BNLogLevel.
@@ -1425,6 +1439,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(4, 5)
 			void LogForException(BNLogLevel level, const std::exception& e, const char* fmt, ...);
 
 			/*! LogTraceForException only writes text to the error console if the console is set to log level:
@@ -1436,6 +1451,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(3, 4)
 			void LogTraceForException(const std::exception& e, const char* fmt, ...);
 
 			/*! LogDebugForException only writes text to the error console if the console is set to log level:
@@ -1447,6 +1463,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(3, 4)
 			void LogDebugForException(const std::exception& e, const char* fmt, ...);
 
 			/*! LogInfoForException always writes text to the error console, and corresponds to the log level:
@@ -1458,6 +1475,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(3, 4)
 			void LogInfoForException(const std::exception& e, const char* fmt, ...);
 
 			/*! LogWarnForException writes text to the error console including a warning icon,
@@ -1469,6 +1487,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(3, 4)
 			void LogWarnForException(const std::exception& e, const char* fmt, ...);
 
 			/*! LogErrorForException writes text to the error console and pops up the error console. Additionally,
@@ -1480,6 +1499,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(3, 4)
 			void LogErrorForException(const std::exception& e, const char* fmt, ...);
 
 			/*! LogAlertForException pops up a message box displaying the alert message and logs to the error console.
@@ -1491,6 +1511,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(3, 4)
 			void LogAlertForException(const std::exception& e, const char* fmt, ...);
 
 			/*! Logs to the error console with the given BNLogLevel.
@@ -1501,6 +1522,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(3, 4)
 			void LogWithStackTrace(BNLogLevel level, const char* fmt, ...);
 
 			/*! LogTraceWithStackTrace only writes text to the error console if the console is set to log level:
@@ -1511,6 +1533,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogTraceWithStackTrace(const char* fmt, ...);
 
 			/*! LogDebugWithStackTrace only writes text to the error console if the console is set to log level:
@@ -1521,6 +1544,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogDebugWithStackTrace(const char* fmt, ...);
 
 			/*! LogInfoWithStackTrace always writes text to the error console, and corresponds to the log level:
@@ -1531,6 +1555,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogInfoWithStackTrace(const char* fmt, ...);
 
 			/*! LogWarnWithStackTrace writes text to the error console including a warning icon,
@@ -1541,6 +1566,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogWarnWithStackTrace(const char* fmt, ...);
 
 			/*! LogErrorWithStackTrace writes text to the error console and pops up the error console. Additionally,
@@ -1551,6 +1577,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogErrorWithStackTrace(const char* fmt, ...);
 
 			/*! LogAlertWithStackTrace pops up a message box displaying the alert message and logs to the error console.
@@ -1561,6 +1588,7 @@ namespace BinaryNinja {
 				\param fmt C-style format string.
 				\param ... Variable arguments corresponding to the format string.
 		    */
+			BN_PRINTF_ATTRIBUTE(2, 3)
 			void LogAlertWithStackTrace(const char* fmt, ...);
 
 			/*! Logs to the error console with the given BNLogLevel.
@@ -1980,6 +2008,16 @@ namespace BinaryNinja {
 		}
 	};
 
+	struct LicenseAddon
+	{
+		std::string id;
+		std::string licenseSerial;
+		std::string product;
+		uint64_t createdTimestamp;
+		uint64_t expirationTimestamp;
+		std::string signature;
+	};
+
 	std::string EscapeString(const std::string& s);
 	std::string UnescapeString(const std::string& s);
 
@@ -2028,6 +2066,7 @@ namespace BinaryNinja {
 	std::string GetProduct();
 	std::string GetProductType();
 	std::string GetSerialNumber();
+	std::vector<LicenseAddon> GetLicenseAddons();
 	int GetLicenseCount();
 	bool IsUIEnabled();
 	uint32_t GetBuildId();
@@ -2434,135 +2473,6 @@ namespace BinaryNinja {
 	*/
 	Ref<BinaryView> Load(Ref<BinaryView> rawData, bool updateAnalysis, ProgressFunction progress, Ref<Metadata> options = new Metadata(MetadataType::KeyValueDataType), bool isDatabase = false);
 
-	/*! Attempt to demangle a mangled name, trying all relevant demanglers and using whichever one accepts it
-
-		\see Demangler::Demangle for a discussion on which demangler will be used.
-
-		\param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
-		\param[in] mangledName a mangled Microsoft Visual Studio C++ name
-		\param[out] outType Pointer to Type to output
-		\param[out] outVarName QualifiedName reference to write the output name to.
-		\param[in] view (Optional) view of the binary containing the mangled name
-		\param[in] simplify (Optional) Whether to simplify demangled names.
-		\return True if the name was demangled and written to the out* parameters
-
-		\ingroup demangle
-	*/
-	bool DemangleGeneric(Ref<Architecture> arch, const std::string& mangledName, Ref<Type>& outType, QualifiedName& outVarName,
-	                     Ref<BinaryView> view = nullptr, const bool simplify = false);
-
-	/*! Demangles using LLVM's demangler
-
-		\param[in] mangledName a mangled (msvc/itanium/rust/dlang) name
-		\param[out] outVarName QualifiedName reference to write the output name to.
-		\param[in] simplify Whether to simplify demangled names.
-	    \return True if the name was demangled and written to the out* parameters
-
-		\ingroup demangle
-	*/
-	bool DemangleLLVM(const std::string& mangledName, QualifiedName& outVarName, const bool simplify = false);
-
-	/*! Demangles using LLVM's demangler
-
-		\param[in] mangledName a mangled (msvc/itanium/rust/dlang) name
-		\param[out] outVarName QualifiedName reference to write the output name to.
-		\param[in] view View to check the analysis.types.templateSimplifier for
-	    \return True if the name was demangled and written to the out* parameters
-
-		\ingroup demangle
-	*/
-	bool DemangleLLVM(const std::string& mangledName, QualifiedName& outVarName, BinaryView* view);
-
-	/*! Demangles a Microsoft Visual Studio C++ name
-
-	    \param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
-	    \param[in] mangledName a mangled Microsoft Visual Studio C++ name
-	    \param[out] outType Reference to Type to output
-	    \param[out] outVarName QualifiedName reference to write the output name to.
-	    \param[in] simplify Whether to simplify demangled names.
-	    \return True if the name was demangled and written to the out* parameters
-
-	    \ingroup demangle
-	*/
-	bool DemangleMS(Architecture* arch, const std::string& mangledName, Ref<Type>& outType, QualifiedName& outVarName,
-		const bool simplify = false);
-
-	/*! Demangles a Microsoft Visual Studio C++ name
-
-	    This overload will use the view's "analysis.types.templateSimplifier" setting
-	        to determine whether to simplify the mangled name.
-
-	    \param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
-	    \param[in] mangledName a mangled Microsoft Visual Studio C++ name
-	    \param[out] outType Reference to Type to output
-	    \param[out] outVarName QualifiedName reference to write the output name to.
-	    \param[in] view View to check the analysis.types.templateSimplifier for
-	    \return True if the name was demangled and written to the out* parameters
-
-	    \ingroup demangle
-	*/
-	bool DemangleMS(Architecture* arch, const std::string& mangledName, Ref<Type>& outType, QualifiedName& outVarName,
-		BinaryView* view);
-
-	/*! Demangles a GNU3 name
-
-	    \param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
-	    \param[in] mangledName a mangled GNU3 name
-	    \param[out] outType Reference to Type to output
-	    \param[out] outVarName QualifiedName reference to write the output name to.
-	    \param[in] simplify Whether to simplify demangled names.
-	    \return True if the name was demangled and written to the out* parameters
-
-	    \ingroup demangle
-	*/
-	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Ref<Type>& outType,
-		QualifiedName& outVarName, const bool simplify = false);
-
-	/*! Demangles a GNU3 name
-
-	    This overload will use the view's "analysis.types.templateSimplifier" setting
-	        to determine whether to simplify the mangled name.
-
-	    \param[in] arch Architecture for the symbol. Required for pointer and integer sizes.
-	    \param[in] mangledName a mangled GNU3 name
-	    \param[out] outType Reference to Type to output
-	    \param[out] outVarName QualifiedName reference to write the output name to.
-	    \param[in] view View to check the analysis.types.templateSimplifier for
-	    \return True if the name was demangled and written to the out* parameters
-
-	    \ingroup demangle
-	*/
-	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Ref<Type>& outType,
-		QualifiedName& outVarName, BinaryView* view);
-
-	/*! Determines if a symbol name is a mangled GNU3 name
-
-	    \param[in] mangledName a potentially mangled name
-
-	    \ingroup demangle
-	*/
-	bool IsGNU3MangledString(const std::string& mangledName);
-
-	/*!
-		\ingroup demangle
-	*/
-	std::string SimplifyToString(const std::string& input);
-
-	/*!
-		\ingroup demangle
-	*/
-	std::string SimplifyToString(const QualifiedName& input);
-
-	/*!
-		\ingroup demangle
-	*/
-	QualifiedName SimplifyToQualifiedName(const std::string& input, bool simplify);
-
-	/*!
-		\ingroup demangle
-	*/
-	QualifiedName SimplifyToQualifiedName(const QualifiedName& input);
-
 	/*!
 		\ingroup mainthread
 	*/
@@ -2948,6 +2858,16 @@ namespace BinaryNinja {
 	std::string GetUniqueIdentifierString();
 
 	std::map<std::string, uint64_t> GetMemoryUsageInfo();
+
+	// Per-tag bit-length histograms from the StatCollector sampling facility.
+	// buckets[k] counts samples whose value has bit_width == k (k in 0..64); total is
+	// the sum of sampled values. Empty unless a StatCollector was instantiated somewhere.
+	struct StatHistogram
+	{
+		uint64_t total = 0;
+		std::array<uint64_t, BN_STAT_HISTOGRAM_BUCKET_COUNT> buckets {};
+	};
+	std::map<std::string, StatHistogram> GetStatHistograms();
 
 	void SetThreadName(const std::string& name);
 
@@ -3404,8 +3324,8 @@ namespace BinaryNinja {
 		DataBuffer ReadGlobalData(const std::string& key) const;
 		void WriteGlobalData(const std::string& key, const DataBuffer& val);
 
+		BN_DEPRECATED("Use FileMetadata::ReopenMovedDatabase")
 		void ReloadConnection();
-
 		Ref<KeyValueStore> ReadAnalysisCache() const;
 		void WriteAnalysisCache(Ref<KeyValueStore> val);
 	};
@@ -3935,6 +3855,7 @@ namespace BinaryNinja {
 		Ref<BinaryView> OpenExistingDatabase(
 		    const std::string& path, const ProgressFunction& progressCallback);
 		Ref<BinaryView> OpenDatabaseForConfiguration(const std::string& path);
+		bool ReopenMovedDatabase(const std::string& path);
 
 		/*! Save the current database to the already created file.
 
@@ -4832,6 +4753,128 @@ namespace BinaryNinja {
 		static void FreeAPIObject(BNQualifiedName* name);
 		static QualifiedName FromAPIObject(const BNQualifiedName* name);
 	};
+
+	struct DemanglerConfig
+	{
+		Ref<Platform> platform;
+		Ref<BinaryView> view;
+		bool simplifyTemplates = false;
+
+		DemanglerConfig(
+			Platform* platform = nullptr, BinaryView* view = nullptr, bool simplifyTemplates = false);
+		static DemanglerConfig Default();
+		static DemanglerConfig ForPlatform(Platform* platform, bool simplifyTemplates = false);
+		static DemanglerConfig ForBinaryView(BinaryView* view);
+		static DemanglerConfig FromAPIObject(const BNDemanglerConfig* config);
+
+		Platform& GetPlatform() const;
+		BNDemanglerConfig ToAPIObject() const;
+	};
+
+	struct DemanglerResult
+	{
+		QualifiedName name;
+		Ref<Type> type;
+
+		static DemanglerResult FromAPIObject(const BNDemanglerResult* result);
+		BNDemanglerResult ToAPIObject() const;
+		static void FreeAPIObject(BNDemanglerResult* result);
+	};
+
+	QualifiedName SimplifyDemangledTemplateName(const QualifiedName& name);
+
+	/*! Demangles using LLVM's demangler.
+
+		\param[in] mangledName A mangled MSVC/GNU3/Rust/D name.
+		\param[in] simplify Whether to simplify demangled names.
+		\return Demangled type/name if successful.
+
+		\ingroup demangle
+	*/
+	std::optional<DemanglerResult> DemangleLLVM(
+		const std::string& mangledName, bool simplify = true);
+
+	/*! Demangles a Microsoft Visual Studio C++ name.
+
+		\param[in] platform Platform for the symbol. Required for pointer/integer sizes and calling conventions.
+		\param[in] mangledName A mangled Microsoft Visual Studio C++ name.
+		\param[in] simplify Whether to simplify demangled names.
+		\return Demangled type/name if successful.
+
+		\ingroup demangle
+	*/
+	std::optional<DemanglerResult> DemangleMS(
+		const Platform* platform, const std::string& mangledName, bool simplify = true);
+
+	/*! Demangles a GNU3 name.
+
+		\param[in] platform Platform for the symbol. Required for pointer/integer sizes and calling conventions.
+		\param[in] mangledName A mangled GNU3 name.
+		\param[in] simplify Whether to simplify demangled names.
+		\return Demangled type/name if successful.
+
+		\ingroup demangle
+	*/
+	std::optional<DemanglerResult> DemangleGNU3(
+		const Platform* platform, const std::string& mangledName, bool simplify = true);
+
+	/*! Determines if a symbol name is a mangled Microsoft Visual Studio C++ name.
+
+		\param[in] mangledName A potentially mangled name.
+		\return True if the name is recognized by the built-in MSVC demangler.
+
+		\ingroup demangle
+	*/
+	bool IsMSVCMangledString(const std::string& mangledName);
+
+	/*! Determines if a symbol name is a mangled GNU3 name.
+
+		\param[in] mangledName A potentially mangled name.
+		\return True if the name is recognized by the built-in GNU3 demangler.
+
+		\ingroup demangle
+	*/
+	bool IsGNU3MangledString(const std::string& mangledName);
+
+	BN_DEPRECATED("Use Demangler::DemangleAny with DemanglerConfig")
+	bool DemangleGeneric(Ref<Architecture> arch, const std::string& mangledName, Ref<Type>& outType,
+		QualifiedName& outVarName, Ref<BinaryView> view = nullptr, bool simplify = false);
+
+	BN_DEPRECATED("Use the DemangleLLVM overload returning std::optional<DemanglerResult>")
+	bool DemangleLLVM(
+		const std::string& mangledName, QualifiedName& outVarName, bool simplify = false);
+
+	BN_DEPRECATED("Use Demangler::DemangleAny with DemanglerConfig::ForBinaryView")
+	bool DemangleLLVM(
+		const std::string& mangledName, QualifiedName& outVarName, BinaryView* view);
+
+	BN_DEPRECATED("Use the DemangleMS overload returning std::optional<DemanglerResult>")
+	bool DemangleMS(Architecture* arch, const std::string& mangledName, Ref<Type>& outType,
+		QualifiedName& outVarName, bool simplify = false);
+
+	BN_DEPRECATED("Use Demangler::DemangleAny with DemanglerConfig::ForBinaryView")
+	bool DemangleMS(Architecture* arch, const std::string& mangledName, Ref<Type>& outType,
+		QualifiedName& outVarName, BinaryView* view);
+
+	BN_DEPRECATED("Use the DemangleGNU3 overload returning std::optional<DemanglerResult>")
+	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Ref<Type>& outType,
+		QualifiedName& outVarName, bool simplify = false);
+
+	BN_DEPRECATED("Use Demangler::DemangleAny with DemanglerConfig::ForBinaryView")
+	bool DemangleGNU3(Ref<Architecture> arch, const std::string& mangledName, Ref<Type>& outType,
+		QualifiedName& outVarName, BinaryView* view);
+
+	BN_DEPRECATED("Use SimplifyDemangledTemplateName")
+	std::string SimplifyToString(const std::string& input);
+
+	BN_DEPRECATED("Use SimplifyDemangledTemplateName")
+	std::string SimplifyToString(const QualifiedName& input);
+
+	BN_DEPRECATED("Use SimplifyDemangledTemplateName")
+	QualifiedName SimplifyToQualifiedName(const std::string& input, bool simplify);
+
+	BN_DEPRECATED("Use SimplifyDemangledTemplateName")
+	QualifiedName SimplifyToQualifiedName(const QualifiedName& input);
 
 	/*!
 
@@ -8128,7 +8171,8 @@ namespace BinaryNinja {
 		*/
 		void SetCommentForAddress(uint64_t addr, const std::string& comment);
 
-		void StoreMetadata(const std::string& key, Ref<Metadata> value, bool isAuto = false);
+		void StoreMetadata(const std::string& key, Ref<Metadata> value,
+			BNMetadataStoreFlag flags = (BNMetadataStoreFlag)(MetadataStorePersistent | MetadataStoreMarksAnalysisChanged));
 		Ref<Metadata> QueryMetadata(const std::string& key);
 		void RemoveMetadata(const std::string& key);
 		Ref<Metadata> GetMetadata();
@@ -9793,6 +9837,8 @@ namespace BinaryNinja {
 		static size_t GetAddressSizeCallback(void* ctxt);
 		static size_t GetDefaultIntegerSizeCallback(void* ctxt);
 		static size_t GetInstructionAlignmentCallback(void* ctxt);
+		static size_t GetLinearSweepInitialAlignmentCallback(void* ctxt);
+		static uint32_t GetLinearSweepAnalysisCapabilitiesCallback(void* ctxt);
 		static size_t GetMaxInstructionLengthCallback(void* ctxt);
 		static size_t GetOpcodeDisplayLengthCallback(void* ctxt);
 		static BNArchitecture* GetAssociatedArchitectureByAddressCallback(void* ctxt, uint64_t* addr);
@@ -9936,6 +9982,21 @@ namespace BinaryNinja {
 		*/
 		virtual size_t GetDefaultIntegerSize() const;
 		virtual size_t GetInstructionAlignment() const;
+
+		/*! Get the alignment at which an independent linear sweep of an unknown region should begin.
+
+		    This is not necessarily the instruction or function-entry alignment. The returned value must be a
+		    nonzero power of two.
+
+			\return Initial linear sweep scan alignment
+		*/
+		virtual size_t GetLinearSweepInitialAlignment() const;
+
+		/*! Get the generic linear sweep algorithms that are valid for this architecture.
+
+			\return Bit mask of BNLinearSweepAnalysisCapability values
+		*/
+		virtual uint32_t GetLinearSweepAnalysisCapabilities() const;
 
 		/*! Get the maximum instruction length
 
@@ -10470,6 +10531,8 @@ namespace BinaryNinja {
 		virtual size_t GetAddressSize() const override;
 		virtual size_t GetDefaultIntegerSize() const override;
 		virtual size_t GetInstructionAlignment() const override;
+		virtual size_t GetLinearSweepInitialAlignment() const override;
+		virtual uint32_t GetLinearSweepAnalysisCapabilities() const override;
 		virtual size_t GetMaxInstructionLength() const override;
 		virtual size_t GetOpcodeDisplayLength() const override;
 		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr) override;
@@ -10560,6 +10623,8 @@ namespace BinaryNinja {
 		virtual size_t GetAddressSize() const override;
 		virtual size_t GetDefaultIntegerSize() const override;
 		virtual size_t GetInstructionAlignment() const override;
+		virtual size_t GetLinearSweepInitialAlignment() const override;
+		virtual uint32_t GetLinearSweepAnalysisCapabilities() const override;
 		virtual size_t GetMaxInstructionLength() const override;
 		virtual size_t GetOpcodeDisplayLength() const override;
 		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr) override;
@@ -11159,27 +11224,27 @@ namespace BinaryNinja {
 		    const Confidence<bool>& cnst = Confidence<bool>(false, 0),
 		    const Confidence<bool>& vltl = Confidence<bool>(false, 0), BNReferenceType refType = PointerReferenceType);
 
-		/*! Create a Fragment type, which represents a bounded load from an existing type
+		/*! Create a Fragment type, which represents a bitwise slice of an existing source type
 
-			\param width Width of the fragment in bytes
-			\param type Type that this fragment was loaded from
-			\param offset Offset into type that this fragment represents
-			\param endianness Endianness of the load operation creating the fragment
+			\param width Width of the fragment container in bytes
+			\param type Source type that this fragment originates from
+			\param offset Original byte offset into type where this fragment begins
+			\param endianness Endianness used to map source-layout bytes to fragment container bits
 			\return The created type
 		*/
 		static Ref<Type> FragmentType(size_t width, const Confidence<Ref<Type>>& type, uint64_t offset, BNEndianness endianness);
 
-		/*! Create a Fragment type, which represents a bounded load from an existing type
+		/*! Create a Fragment type, which represents a bitwise slice of an existing source type
 
-			\param width Width of the fragment in its current storage location; can be larger/smaller than the original fragment load
-			\param type Type that this fragment was loaded from
-			\param originalFragmentOffsetBytes Offset into type that this fragment represents
-			\param originalFragmentWidthBytes Width of the initial load that created the fragment
-			\param endianness Endianness of the load operation creating the fragment
+			\param width Width in bytes of the fragment's current storage container; can be larger or smaller than the original fragment width
+			\param type Source type that this fragment originates from
+			\param originalFragmentOffsetBytes Original byte offset into type where this fragment begins
+			\param originalFragmentWidthBytes Width in bytes of the original fragment
+			\param endianness Endianness used to map source-layout bytes to fragment container bits
 			\param fragmentStartBit Logical bit position inside the fragment container where fragment data starts (0 = lsb of fragment type)
-			\param fragmentWidthBits Number of remaining contiguous bits still represented in the fragment type
-			\param fragmentTruncatedStartBits Number of low-order bits of fragment data lost
-			\param wrapBit Logical bit position inside the fragment container where fragment data wraps around (0 = irrelevant)
+			\param fragmentWidthBits Number of remaining valid fragment bits represented in the container
+			\param fragmentTruncatedStartBits Number of original low-order logical fragment bits lost
+			\param wrapBit Saved historical container bit boundary; 0 means the current container width in bits is used
 			\return The created type
 		*/
 		static Ref<Type> FragmentType(size_t width, const Confidence<Ref<Type>>& type,
@@ -13858,7 +13923,10 @@ namespace BinaryNinja {
 		void ExpandRegion(uint64_t hash);
 		void ExpandAll();
 
-		void StoreMetadata(const std::string& key, Ref<Metadata> value, bool isAuto = false);
+		// Unlike BinaryView::StoreMetadata, the default does not mark the file as modified,
+		// preserving the historical behavior of Function metadata writes.
+		void StoreMetadata(const std::string& key, Ref<Metadata> value,
+			BNMetadataStoreFlag flags = MetadataStorePersistent);
 		Ref<Metadata> QueryMetadata(const std::string& key);
 		Ref<Metadata> GetMetadata();
 		Ref<Metadata> GetAutoMetadata();
@@ -14056,8 +14124,6 @@ namespace BinaryNinja {
 	  protected:
 		bool m_queryMode = false;
 
-		FlowGraph(BNFlowGraph* graph);
-
 		void FinishPrepareForLayout();
 		virtual void PrepareForLayout();
 		virtual void PopulateNodes();
@@ -14065,6 +14131,7 @@ namespace BinaryNinja {
 
 	  public:
 		FlowGraph();
+		FlowGraph(BNFlowGraph* graph);
 
 		/*! Get the Function associated with this FlowGraph
 
@@ -16669,6 +16736,728 @@ namespace BinaryNinja {
 		void SetDerivedStringReferenceForExpr(size_t expr, const DerivedString& str);
 		void RemoveDerivedStringReferenceForExpr(size_t expr);
 		std::optional<DerivedString> GetDerivedStringReferenceForExpr(size_t expr);
+	};
+
+	class SimilarityProviderType;
+
+	/*! Identifies an entity within a similarity-session node. */
+	using SimilarityEntityId =
+		bn::base::StrongTypedef<uint32_t, struct SimilarityEntityIdTag,
+			st::APIStruct<BNSimilarityEntityId>, st::Ordered, st::Hashable,
+			st::Incrementable>;
+	/*! Identifies a provider result within a similarity-session node. */
+	using SimilarityResultId =
+		bn::base::StrongTypedef<uint64_t, struct SimilarityResultIdTag,
+			st::APIStruct<BNSimilarityResultId>, st::Ordered, st::Hashable,
+			st::Incrementable>;
+	/*! Identifies a node across similarity sessions. */
+	using SimilaritySessionNodeId =
+		bn::base::StrongTypedef<uint32_t, struct SimilaritySessionNodeIdTag,
+			st::APIStruct<BNSimilaritySessionNodeId>, st::Ordered, st::Hashable>;
+	/*! Identifies a similarity session. */
+	using SimilaritySessionId =
+		bn::base::StrongTypedef<uint32_t, struct SimilaritySessionIdTag,
+			st::APIStruct<BNSimilaritySessionId>, st::Ordered, st::Hashable>;
+	/*! Identifies a provider instance. */
+	using SimilarityProviderId =
+		bn::base::StrongTypedef<uint32_t, struct SimilarityProviderIdTag,
+			st::APIStruct<BNSimilarityProviderId>, st::Ordered, st::Hashable>;
+	/*! Identifies a resolver instance. */
+	using SimilaritySessionResolverId =
+		bn::base::StrongTypedef<uint32_t, struct SimilaritySessionResolverIdTag,
+			st::APIStruct<BNSimilaritySessionResolverId>, st::Ordered, st::Hashable>;
+
+	/*! Chooses which session completion data to read or update.
+
+	    A query cannot select both a provider and a resolver. Omitting all IDs selects the whole session. */
+	struct SimilaritySessionCompletionQuery
+	{
+		std::optional<SimilaritySessionNodeId> nodeId;
+		std::optional<SimilarityProviderId> providerId;
+		std::optional<SimilaritySessionResolverId> resolverId;
+
+		static SimilaritySessionCompletionQuery ForSession() { return {}; }
+		static SimilaritySessionCompletionQuery ForNode(SimilaritySessionNodeId node) { return {.nodeId = node}; }
+		static SimilaritySessionCompletionQuery ForProvider(SimilarityProviderId provider)
+		{
+			return {.providerId = provider};
+		}
+		static SimilaritySessionCompletionQuery ForResolver(SimilaritySessionResolverId resolver)
+		{
+			return {.resolverId = resolver};
+		}
+		SimilaritySessionCompletionQuery WithProvider(SimilarityProviderId provider) const
+		{
+			return {.nodeId = nodeId, .providerId = provider};
+		}
+		SimilaritySessionCompletionQuery WithResolver(SimilaritySessionResolverId resolver) const
+		{
+			return {.nodeId = nodeId, .resolverId = resolver};
+		}
+
+		[[nodiscard]] BNSimilaritySessionCompletionQuery ToRaw() const
+		{
+			return {nodeId.has_value(), nodeId.value_or(SimilaritySessionNodeId(0)), providerId.has_value(),
+				providerId.value_or(SimilarityProviderId(0)), resolverId.has_value(),
+				resolverId.value_or(SimilaritySessionResolverId(0))};
+		}
+	};
+
+	/*! Identifies an entity within a session node. */
+	struct SimilarityEntityRef
+	{
+		SimilaritySessionNodeId nodeId;
+		SimilarityEntityId entityId;
+
+		SimilarityEntityRef(SimilaritySessionNodeId nodeId, SimilarityEntityId entityId) :
+			nodeId(nodeId), entityId(entityId)
+		{}
+		SimilarityEntityRef(const BNSimilarityEntityRef& ref) : nodeId(ref.nodeId), entityId(ref.entityId) {}
+		bool operator==(const SimilarityEntityRef& other) const = default;
+		bool operator<(const SimilarityEntityRef& other) const
+		{
+			return std::tie(nodeId, entityId) < std::tie(other.nodeId, other.entityId);
+		}
+
+		[[nodiscard]] BNSimilarityEntityRef ToRaw() const
+		{
+			return {nodeId, entityId};
+		}
+	};
+
+	/*! A match produced by a provider.
+
+	    Similarity and confidence range from 0 to 255, where 255 is strongest. Automatic metadata transfer requires
+	    `target` to identify an active function. */
+	struct SimilarityResult
+	{
+		/*! The provider which produced the match. */
+		SimilarityProviderId providerId;
+		/*! The similarity of the two entities. */
+		uint8_t similarity;
+		/*! The provider's confidence in the match. */
+		uint8_t confidence;
+		/*! The matched entity, which may be used as the source for metadata transfer. */
+		SimilarityEntityRef target;
+
+		SimilarityResult(SimilarityProviderId provider, uint8_t similarity, uint8_t confidence,
+			const SimilarityEntityRef& target) :
+			providerId(provider), similarity(similarity), confidence(confidence), target(target)
+		{}
+		SimilarityResult(const BNSimilarityResult& result) :
+			providerId(result.providerId), similarity(result.similarity), confidence(result.confidence),
+			target(result.target)
+		{}
+		bool operator==(const SimilarityResult& other) const = default;
+
+		[[nodiscard]] BNSimilarityResult ToRaw() const
+		{
+			return {providerId, similarity, confidence, target.ToRaw()};
+		}
+	};
+
+	/*! Describes an entity, including its display name. */
+	struct SimilarityEntityInfo
+	{
+		BNSimilarityEntityType type;
+		uint64_t address;
+		std::string name;
+
+		SimilarityEntityInfo(BNSimilarityEntityType type, uint64_t address, std::string name = {}) :
+			type(type), address(address), name(std::move(name))
+		{}
+		SimilarityEntityInfo(const BNSimilarityEntityInfo& info) :
+			type(info.type), address(info.address), name(info.name ? info.name : "")
+		{}
+		bool operator==(const SimilarityEntityInfo& other) const = default;
+
+		[[nodiscard]] BNSimilarityEntityInfo ToRaw() const { return {type, address, name.c_str()}; }
+	};
+
+	/*! Applies a diff annotation to the half-open address range `[start, end)`. */
+	struct SimilarityRangeAnnotation
+	{
+		uint64_t start;
+		uint64_t end;
+		BNSimilarityAnnotationType type;
+
+		SimilarityRangeAnnotation(uint64_t start, uint64_t end, BNSimilarityAnnotationType type) :
+			start(start), end(end), type(type)
+		{}
+		SimilarityRangeAnnotation(const BNSimilarityRangeAnnotation& annotation) :
+			start(annotation.start), end(annotation.end), type(annotation.type)
+		{}
+		[[nodiscard]] BNSimilarityRangeAnnotation ToRaw() const { return {start, end, type}; }
+	};
+
+	/*! A flow-graph or linear view produced while rendering a similarity result. */
+	class SimilarityView :
+		public CoreRefCountObject<BNSimilarityView, BNNewSimilarityViewReference, BNFreeSimilarityView>
+	{
+	public:
+		SimilarityView(BNSimilarityView* view);
+
+		std::string GetGroup() const;
+		BNSimilarityViewType GetType() const;
+		/*! Returns the flow graph, or `nullptr` for a linear view. */
+		Ref<FlowGraph> GetFlowGraph() const;
+		/*! Returns the data view, or `nullptr` for a flow graph. */
+		Ref<BinaryView> GetLinearViewData() const;
+		/*! Returns the linear view, or `nullptr` for a flow graph. */
+		Ref<LinearViewObject> GetLinearView() const;
+		/*! Returns the session entity for this view, if its renderer provided one. */
+		std::optional<SimilarityEntityRef> GetEntity() const;
+	};
+
+	/*! Holds the grouped views used to display a similarity result. */
+	class SimilarityRenderContext :
+		public CoreRefCountObject<BNSimilarityRenderContext, BNNewSimilarityRenderContextReference,
+			BNFreeSimilarityRenderContext>
+	{
+	public:
+		SimilarityRenderContext();
+		SimilarityRenderContext(BNSimilarityRenderContext* context);
+
+		/*! Sets the function representation preferred by renderers writing to this context. */
+		void SetPreferredViewType(const FunctionViewType& type);
+		/*! Returns the function representation preferred by renderers writing to this context. */
+		FunctionViewType GetPreferredViewType() const;
+		/*! Adds a flow graph to a view group. */
+		void AddFlowGraph(const std::string& group, FlowGraph& graph);
+		/*! Adds a flow graph for a session entity to a view group. */
+		void AddFlowGraph(const std::string& group, FlowGraph& graph, const SimilarityEntityRef& entity);
+		/*! Adds a linear view to a view group. */
+		void AddLinearView(const std::string& group, BinaryView& data, LinearViewObject& linearView);
+		/*! Adds a linear view for a session entity to a view group. */
+		void AddLinearView(const std::string& group, BinaryView& data, LinearViewObject& linearView,
+			const SimilarityEntityRef& entity);
+		/*! Returns views in insertion order. */
+		std::vector<Ref<SimilarityView>> GetViews() const;
+	};
+
+	/*! Highlights annotated address ranges in flow-graph and linear views. */
+	class DiffRenderer : public CoreRefCountObject<BNDiffRenderer, BNNewDiffRendererReference, BNFreeDiffRenderer>
+	{
+	public:
+		DiffRenderer();
+		DiffRenderer(BNDiffRenderer* renderer);
+
+		/*! Adds a half-open address range to annotate.
+
+		    \note Empty ranges are ignored. */
+		void AddRangeAnnotation(const SimilarityRangeAnnotation& annotation);
+		void AddRangeAnnotation(uint64_t start, uint64_t end, BNSimilarityAnnotationType type);
+
+		/*! Renders graph and linear views for a function. */
+		void Render(SimilarityRenderContext& context, Function& function);
+		/*! Renders graph and linear views for a function and session entity. */
+		void Render(SimilarityRenderContext& context, Function& function, const SimilarityEntityRef& entity);
+		/*! Renders an annotated flow graph. */
+		void Render(SimilarityRenderContext& context, const std::string& group, FlowGraph& graph);
+		/*! Renders an annotated flow graph for a session entity. */
+		void Render(SimilarityRenderContext& context, const std::string& group, FlowGraph& graph,
+			const SimilarityEntityRef& entity);
+		/*! Renders an annotated linear view. */
+		void Render(
+			SimilarityRenderContext& context, const std::string& group, BinaryView& data, LinearViewObject& linearView);
+		/*! Renders an annotated linear view for a session entity. */
+		void Render(SimilarityRenderContext& context, const std::string& group, BinaryView& data,
+			LinearViewObject& linearView, const SimilarityEntityRef& entity);
+	};
+
+	class SimilaritySessionNode;
+	class SimilaritySessionCompletion;
+
+	/*! Holds the provider results produced by a node or edge visit.
+	 *
+	 * Only use an instance during the provider callback that received it. A successful visit replaces earlier results
+	 * for the same provider and node or edge. Results for unscheduled entities remain unchanged. */
+	class SimilarityProviderResults
+	{
+		BNSimilarityProviderResults* m_object;
+
+	public:
+		explicit SimilarityProviderResults(BNSimilarityProviderResults* results) : m_object(results) {}
+
+		BNSimilarityProviderResults* GetObject() const { return m_object; }
+
+		/*! Adds a result to the current visit.
+		 *
+		 * The result must belong to an entity scheduled for this visit. Node results belong to `source`; edge results
+		 * belong to the entity on the destination node. Returns zero if the result could not be added. A later visit
+		 * replaces the result and gives it a new ID. */
+		SimilarityResultId AddResult(const SimilarityEntityRef& source, const SimilarityEntityRef& target,
+			uint8_t similarity, uint8_t confidence);
+	};
+
+	/*! Produces, applies, and renders similarity results for session entities.
+	 * C++ implementations must be thread safe because callbacks may overlap across nodes and sessions. Provider visits
+	 * must write changes through the given SimilarityProviderResults. Visits made by a session keep the visited node and
+	 * both edge endpoints active. Direct calls must provide active views. */
+	class SimilarityProvider :
+		public CoreRefCountObject<BNSimilarityProvider, BNNewSimilarityProviderReference, BNFreeSimilarityProvider>
+	{
+		static bool UpdateSettingsCallback(void* ctxt, BNSettings* settings);
+		static bool VisitNodeCallback(void* ctxt, BNSimilaritySessionNode* node, BNSimilarityProviderResults* results,
+			BNSimilaritySessionCompletion* completion);
+		static bool VisitNodeEdgeCallback(void* ctxt, BNSimilaritySessionNode* from, BNSimilaritySessionNode* to,
+			BNSimilarityProviderResults* results, BNSimilaritySessionCompletion* completion);
+		static char* GetNameCallback(
+			void* ctxt, BNSimilaritySessionNode* node, BNSimilarityEntityId entity, BNSimilarityResultId result);
+		static BNSimilarityApplyStatus ApplyCallback(
+			void* ctxt, BNSimilaritySessionNode* node, BNSimilarityEntityId entity, BNSimilarityResultId result);
+		static void RenderCallback(void* ctxt, BNSimilaritySessionNode* node, BNSimilarityEntityId entity,
+			BNSimilarityRenderContext* context, BNSimilarityResultId result);
+		static void FreeContextCallback(void* ctxt);
+
+	public:
+		SimilarityProvider(SimilarityProviderType* type);
+		SimilarityProvider(BNSimilarityProvider* provider);
+
+		Ref<SimilarityProviderType> GetType() const;
+		SimilarityProviderId GetId() const;
+
+		/*! Replaces this provider's settings only if they are valid.
+
+		    Return false without changing the current settings when the new settings are invalid or updates are not
+		    supported. Use SimilaritySession::UpdateProviderSettings so affected entities are scheduled again. */
+		virtual bool UpdateSettings(Settings&) { return false; }
+
+		/*! Performs a complete node visit. The core manages the result updates. */
+		void VisitNode(SimilaritySessionNode& node, SimilaritySessionCompletion& completion);
+		/*! Performs a complete edge visit. The core manages the result updates. */
+		void VisitNodeEdge(
+			SimilaritySessionNode& from, SimilaritySessionNode& to, SimilaritySessionCompletion& completion);
+
+		/*! Visits a node and writes results for it. Return `false` to discard the visit. */
+		virtual bool VisitNode(SimilaritySessionNode&, SimilarityProviderResults&, SimilaritySessionCompletion&)
+		{
+			return true;
+		}
+
+		/*! Visits an edge after both endpoint nodes have been visited and writes results for the edge.
+		 * Return `false` to discard the visit. */
+		virtual bool VisitNodeEdge(
+			SimilaritySessionNode&, SimilaritySessionNode&, SimilarityProviderResults&, SimilaritySessionCompletion&)
+		{
+			return true;
+		}
+
+		/*! Returns the display name for a result, if available. */
+		virtual std::optional<std::string> GetName(SimilaritySessionNode& node,
+			SimilarityEntityId entity, SimilarityResultId result) = 0;
+
+		/*! Applies a result. The default implementation transfers metadata from the result target; overrides can call it
+		    before adding provider-specific metadata. */
+		virtual BNSimilarityApplyStatus Apply(SimilaritySessionNode& node, SimilarityEntityId entity,
+			SimilarityResultId result);
+
+		/*! Adds views for a result to `context`. */
+		virtual void Render(SimilaritySessionNode& node, SimilarityEntityId entity,
+			SimilarityRenderContext& context, SimilarityResultId result) = 0;
+	};
+
+	class CoreSimilarityProvider : public SimilarityProvider
+	{
+	public:
+		CoreSimilarityProvider(BNSimilarityProvider* provider);
+
+		using SimilarityProvider::VisitNode;
+		using SimilarityProvider::VisitNodeEdge;
+
+		bool VisitNode(SimilaritySessionNode& node, SimilarityProviderResults& results,
+			SimilaritySessionCompletion& completion) override;
+		bool VisitNodeEdge(SimilaritySessionNode& from, SimilaritySessionNode& to, SimilarityProviderResults& results,
+			SimilaritySessionCompletion& completion) override;
+
+		std::optional<std::string> GetName(SimilaritySessionNode& node,
+			SimilarityEntityId entity, SimilarityResultId result) override;
+
+		BNSimilarityApplyStatus Apply(
+			SimilaritySessionNode& node, SimilarityEntityId entity, SimilarityResultId result) override;
+
+		void Render(SimilaritySessionNode& node, SimilarityEntityId entity,
+			SimilarityRenderContext& context, SimilarityResultId result) override;
+	};
+
+	/*! Creates similarity providers with the given settings. */
+	class SimilarityProviderType : public StaticCoreRefCountObject<BNSimilarityProviderType>
+	{
+		std::string m_nameForRegister;
+		std::string m_descForRegister;
+
+		static BNSimilarityProvider* CreateCallback(void* ctxt, BNSettings* settings);
+		static BNSettings* GetDefaultSettingsCallback(void* ctxt);
+
+	public:
+		SimilarityProviderType(std::string name, std::string description);
+		SimilarityProviderType(BNSimilarityProviderType* formatter);
+
+		/*! Registers a provider type for the lifetime of the process. */
+		static void Register(SimilarityProviderType* type);
+
+		static std::vector<Ref<SimilarityProviderType>> GetList();
+		static Ref<SimilarityProviderType> GetByName(const std::string& name);
+
+		std::string GetName() const;
+		std::string GetDescription() const;
+
+		/*! Creates a provider with the given settings, or returns null. */
+		virtual Ref<SimilarityProvider> Create(Settings& settings) = 0;
+
+		/*! Returns the settings schema and defaults for this provider type, or null. */
+		virtual Ref<Settings> GetDefaultSettings() = 0;
+	};
+
+	class CoreSimilarityProviderType : public SimilarityProviderType
+	{
+	public:
+		CoreSimilarityProviderType(BNSimilarityProviderType* type);
+
+		/*! Returns null outside the Ultimate edition. */
+		Ref<SimilarityProvider> Create(Settings& settings) override;
+
+		Ref<Settings> GetDefaultSettings() override;
+	};
+
+	class SimilaritySession;
+	class SimilaritySessionReceiver;
+	class SimilaritySessionGraphReceiver;
+	class SimilaritySessionResolverType;
+
+	/*! Selects a preferred result for each scheduled entity.
+	 * C++ implementations must be thread safe because callbacks may overlap across nodes in the same processing group. */
+	class SimilaritySessionResolver :
+		public CoreRefCountObject<BNSimilaritySessionResolver, BNNewSimilaritySessionResolverReference,
+			BNFreeSimilaritySessionResolver>
+	{
+		static bool UpdateSettingsCallback(void* ctxt, BNSettings* settings);
+		static void PrepareForNodeCallback(void* ctxt, BNSimilaritySession* session, BNSimilaritySessionNode* node,
+			BNSimilaritySessionCompletion* completion, BNSimilaritySessionResolverId resolverId);
+		static void ResolveForNodeCallback(void* ctxt, BNSimilaritySession* session, BNSimilaritySessionNode* node,
+			const BNSimilarityEntityId* entities, size_t entityCount, BNSimilaritySessionCompletion* completion,
+			BNSimilaritySessionResolverId resolverId);
+		static void FreeContextCallback(void* ctxt);
+
+	public:
+		/*! Creates a resolver for `session`. */
+		SimilaritySessionResolver(SimilaritySessionResolverType* type, Ref<SimilaritySession> session);
+		SimilaritySessionResolver(BNSimilaritySessionResolver* resolver);
+
+		SimilaritySessionResolverId GetId() const;
+		Ref<SimilaritySessionResolverType> GetType() const;
+
+		/*! Replaces this resolver's settings only if they are valid.
+
+		    Return false without changing the current settings when the new settings are invalid or updates are not
+		    supported. Use SimilaritySession::UpdateResolverSettings so affected entities are resolved again. */
+		virtual bool UpdateSettings(Settings&) { return false; }
+
+		/*! Prepares a node before providers run.
+
+		    This is useful for large graphs where views may be unavailable, but the resolver needs to change the scheduled
+		    entities or add entities itself. */
+		virtual void PrepareForNode(SimilaritySession& session, SimilaritySessionNode& node,
+			SimilaritySessionCompletion& completion) {}
+		/*! Resolves provider results after all providers have visited the node.
+
+		    Call SetResolvedResult to select a result. Call AddScheduledEntity to request another provider and resolver
+		    round for an entity. Only schedule work for `node`; the session owns scheduling between nodes. */
+		virtual void ResolveForNode(SimilaritySession& session, SimilaritySessionNode& node,
+			const std::vector<SimilarityEntityId>& entities, SimilaritySessionCompletion& completion) = 0;
+	};
+
+	class CoreSimilaritySessionResolver : public SimilaritySessionResolver
+	{
+	public:
+		CoreSimilaritySessionResolver(BNSimilaritySessionResolver* resolver);
+
+		void PrepareForNode(SimilaritySession& session, SimilaritySessionNode& node,
+			SimilaritySessionCompletion& completion) override;
+		void ResolveForNode(SimilaritySession& session, SimilaritySessionNode& node,
+			const std::vector<SimilarityEntityId>& entities, SimilaritySessionCompletion& completion) override;
+	};
+
+	/*! Creates resolvers with the given settings. */
+	class SimilaritySessionResolverType : public StaticCoreRefCountObject<BNSimilaritySessionResolverType>
+	{
+		std::string m_nameForRegister;
+		std::string m_descForRegister;
+
+		static BNSimilaritySessionResolver* CreateCallback(
+			void* ctxt, BNSimilaritySession* session, BNSettings* settings);
+		static BNSettings* GetDefaultSettingsCallback(void* ctxt);
+
+	public:
+		SimilaritySessionResolverType(std::string name, std::string description);
+		SimilaritySessionResolverType(BNSimilaritySessionResolverType* type);
+
+		/*! Registers a resolver type for the lifetime of the process. */
+		static void Register(SimilaritySessionResolverType* type);
+		static Ref<SimilaritySessionResolverType> GetByName(const std::string& name);
+		static std::vector<Ref<SimilaritySessionResolverType>> GetList();
+
+		std::string GetName() const;
+		std::string GetDescription() const;
+
+		/*! Creates a resolver for `session`, or returns null. The resolver must not keep `session` after this call. */
+		virtual Ref<SimilaritySessionResolver> Create(Ref<SimilaritySession> session, Settings& settings) = 0;
+		/*! Returns the settings schema and defaults for this resolver type, or null. */
+		virtual Ref<Settings> GetDefaultSettings() = 0;
+	};
+
+	class CoreSimilaritySessionResolverType : public SimilaritySessionResolverType
+	{
+	public:
+		CoreSimilaritySessionResolverType(BNSimilaritySessionResolverType* type);
+
+		Ref<SimilaritySessionResolver> Create(Ref<SimilaritySession> session, Settings& settings) override;
+		Ref<Settings> GetDefaultSettings() override;
+	};
+
+	/*! The main unit of similarity processing. */
+	class SimilaritySessionNode :
+		public CoreRefCountObject<BNSimilaritySessionNode, BNNewSimilaritySessionNodeReference,
+			BNFreeSimilaritySessionNode>
+	{
+	public:
+		SimilaritySessionNode(BNSimilaritySessionNode* node);
+		/*! Creates a node for a non-null active view, keeps the view alive, and schedules its analyzed functions. */
+		SimilaritySessionNode(Ref<BinaryView> view);
+		/*! Creates a node whose view will be loaded from `file` when the session runs.
+
+		    `file` must be non-null. The session closes the view when the run no longer needs it, so the view may be
+		    unavailable at other times. */
+		SimilaritySessionNode(Ref<FileMetadata> file);
+
+		/*! Returns the active view, or `nullptr` if the node is not loaded.
+
+		    A file-backed node may be unavailable outside a session run. */
+		Ref<BinaryView> GetView() const;
+		/*! Sets the active view. A view backed by a different FileMetadata is ignored.
+
+		    \note Do not mix files. */
+		void SetView(Ref<BinaryView> view);
+		/*! Returns the file used by the node. This is always valid. */
+		Ref<FileMetadata> GetFile() const;
+		/*! Returns mutable settings used when the session loads this node's view. Modify them before running the session. */
+		Ref<Settings> GetLoadOptions() const;
+		SimilaritySessionNodeId GetId() const;
+
+		/*! Adds an entity without scheduling it. Existing entities are reused, and a non-empty
+		    name refreshes their display name. */
+		SimilarityEntityId CreateEntity(const SimilarityEntityInfo& info);
+		/*! Removes an entity, its schedule, its provider results, and its selected result.
+
+		    To only unschedule it, call RemoveScheduledEntity. */
+		bool RemoveEntity(SimilarityEntityId id);
+		/*! Returns information about an entity, or no value if `id` is not found. */
+		std::optional<SimilarityEntityInfo> GetEntity(SimilarityEntityId id);
+		/*! Returns every entity in the node, including entities used only as match targets. */
+		std::vector<SimilarityEntityId> GetEntities();
+		/*! Schedules an entity for the next provider round.
+
+		    Nodes initially schedule all available entities. The session consumes each scheduled batch after providers
+		    visit it. During a run, only the resolver currently processing this node may request another round. Schedule
+		    entities from other contexts between runs. */
+		bool AddScheduledEntity(SimilarityEntityId id);
+		/*! Unschedules an entity without removing it from the node.
+
+		    To remove it, call RemoveEntity. */
+		bool RemoveScheduledEntity(SimilarityEntityId id);
+		/*! Returns the entities waiting for provider processing. */
+		std::vector<SimilarityEntityId> GetScheduledEntities();
+		/*! Resolves a function entity against the active view, or returns `nullptr`. */
+		Ref<Function> GetEntityFunction(SimilarityEntityId id);
+		/*! Returns the result IDs for an entity. */
+		std::vector<SimilarityResultId> GetResults(SimilarityEntityId entity);
+		/*! Returns a stored result by its ID, which is unique within the node. */
+		std::optional<SimilarityResult> GetResult(SimilarityResultId result);
+		/*! Selects one of the entity's results. */
+		bool SetResolvedResult(SimilarityEntityId entity, SimilarityResultId result);
+		std::optional<SimilarityResultId> GetResolvedResult(SimilarityEntityId entity);
+		bool ClearResolvedResult(SimilarityEntityId entity);
+
+		/*! Returns incoming node IDs in ascending order. */
+		std::vector<SimilaritySessionNodeId> GetIncomingEdges();
+		/*! Returns outgoing node IDs in ascending order. */
+		std::vector<SimilaritySessionNodeId> GetOutgoingEdges();
+		/*! Returns incoming nodes ordered by ID. */
+		std::vector<Ref<SimilaritySessionNode>> GetIncomingNodes();
+		/*! Returns outgoing nodes ordered by ID. */
+		std::vector<Ref<SimilaritySessionNode>> GetOutgoingNodes();
+	};
+
+	/*! A graph that controls which binaries are compared and in what order. The graph cannot contain cycles.
+
+	    An edge from A to B makes A available as an incoming comparison node while B is processed. */
+	class SimilaritySessionGraph :
+		public CoreRefCountObject<BNSimilaritySessionGraph, BNNewSimilaritySessionGraphReference,
+			BNFreeSimilaritySessionGraph>
+	{
+	public:
+		SimilaritySessionGraph(BNSimilaritySessionGraph* graph);
+
+		/*! Adds a node, moving it from its previous graph if necessary. If either graph is running, the node is unchanged. */
+		void AddNode(Ref<SimilaritySessionNode> node);
+		/*! Removes a node and its incident edges. Graph mutations are ignored during a run. */
+		void RemoveNode(SimilaritySessionNode& node);
+		/*! Returns a node, or `nullptr` if `id` is absent. */
+		Ref<SimilaritySessionNode> GetNode(SimilaritySessionNodeId id);
+		std::vector<Ref<SimilaritySessionNode>> GetNodes();
+
+		/*! Returns whether an edge joins two graph members without duplicating an edge or creating a cycle.
+		 * Returns false during a run. */
+		bool IsValidEdge(SimilaritySessionNode& from, SimilaritySessionNode& to);
+		/*! Adds an edge. Returns false if invalid or while the graph is running. */
+		bool AddEdge(SimilaritySessionNode& from, SimilaritySessionNode& to);
+		/*! Removes an edge. Returns false if absent or while the graph is running. */
+		bool RemoveEdge(SimilaritySessionNode& from, SimilaritySessionNode& to);
+		void AddReceiver(Ref<SimilaritySessionGraphReceiver> receiver);
+		void RemoveReceiver(SimilaritySessionGraphReceiver& receiver);
+		std::vector<Ref<SimilaritySessionGraphReceiver>> GetReceivers();
+
+		/*! Returns groups of nodes in processing order. Nodes in the same group may run concurrently. */
+		std::vector<std::vector<Ref<SimilaritySessionNode>>> GetSchedule();
+	};
+
+	/*! Receives notifications after nodes or edges are added to or removed from a session graph. */
+	class SimilaritySessionGraphReceiver :
+		public CoreRefCountObject<BNSimilaritySessionGraphReceiver, BNNewSimilaritySessionGraphReceiverReference,
+			BNFreeSimilaritySessionGraphReceiver>
+	{
+		static void OnGraphChangedCallback(void* ctxt);
+		static void FreeContextCallback(void* ctxt);
+
+	public:
+		SimilaritySessionGraphReceiver();
+		SimilaritySessionGraphReceiver(BNSimilaritySessionGraphReceiver* receiver);
+
+		virtual void NotifyGraphChanged() {}
+	};
+
+	class CoreSimilaritySessionGraphReceiver : public SimilaritySessionGraphReceiver
+	{
+	public:
+		CoreSimilaritySessionGraphReceiver(BNSimilaritySessionGraphReceiver* receiver);
+
+		void NotifyGraphChanged() override;
+	};
+
+	/*! Receives session-start and entity-batch notifications.
+	 * C++ implementations must be thread safe. NotifyStart is called before Run returns. NotifyBatch runs on workers
+	 * and may overlap across nodes and sessions. Receivers are observers and must not
+	 * schedule work or mutate the active session. */
+	class SimilaritySessionReceiver :
+		public CoreRefCountObject<BNSimilaritySessionReceiver, BNNewSimilaritySessionReceiverReference,
+			BNFreeSimilaritySessionReceiver>
+	{
+		static void OnStartedCallback(void* ctxt, BNSimilaritySessionCompletion* completion);
+		static void OnUpdatedCallback(void* ctxt, BNSimilaritySessionNode* node, BNSimilarityProvider* provider,
+			const BNSimilarityEntityId* entities, size_t count);
+		static void FreeContextCallback(void* ctxt);
+
+	public:
+		SimilaritySessionReceiver();
+		SimilaritySessionReceiver(BNSimilaritySessionReceiver* receiver);
+
+		/*! Called when the session starts a run.
+
+		    This is mainly used to get the completion state for the run. */
+		virtual void NotifyStart(SimilaritySessionCompletion& completion) {}
+		/*! Called when a provider's results, resolution state, or applied metadata changes for a batch of entities. */
+		virtual void NotifyBatch(SimilaritySessionNode& node, SimilarityProvider& provider,
+			const std::vector<SimilarityEntityId>& entities)
+		{}
+	};
+
+	class CoreSimilaritySessionReceiver : public SimilaritySessionReceiver
+	{
+	public:
+		CoreSimilaritySessionReceiver(BNSimilaritySessionReceiver* receiver);
+
+		void NotifyStart(SimilaritySessionCompletion& completion) override;
+		void NotifyBatch(SimilaritySessionNode& node, SimilarityProvider& provider,
+			const std::vector<SimilarityEntityId>& entities) override;
+	};
+
+	/*! Tracks stop requests, progress, and timing for a session run. */
+	class SimilaritySessionCompletion :
+		public CoreRefCountObject<BNSimilaritySessionCompletion, BNNewSimilaritySessionCompletionReference,
+			BNFreeSimilaritySessionCompletion>
+	{
+	public:
+		SimilaritySessionCompletion(BNSimilaritySessionCompletion* completion);
+		/*! Creates an independent completion state, normally only for calling providers or resolvers directly. */
+		SimilaritySessionCompletion();
+
+		bool IsFinished() const;
+		/*! Asks the run to stop. Long-running callbacks should check IsStopRequested regularly. */
+		void RequestStop();
+		bool IsStopRequested() const;
+		/*! Returns progress from 0.0 to 1.0. Exactly 1.0 means the selected part of the run has finished. */
+		double GetProgress(const SimilaritySessionCompletionQuery& query) const;
+		/*! Increases progress for a node and one provider or resolver. Progress cannot decrease.
+
+		    \note Call this only from the provider or resolver selected by `query`. */
+		void SetProgress(const SimilaritySessionCompletionQuery& query, double progress);
+		/*! Returns elapsed time for the selected part of the run. */
+		std::chrono::milliseconds GetTiming(const SimilaritySessionCompletionQuery& query) const;
+	};
+
+	/*! Runs providers and resolvers over binaries arranged in a session graph. */
+	class SimilaritySession :
+		public CoreRefCountObject<BNSimilaritySession, BNNewSimilaritySessionReference, BNFreeSimilaritySession>
+	{
+	public:
+		SimilaritySession(BNSimilaritySession* session);
+		SimilaritySession();
+
+		SimilaritySessionId GetId() const;
+
+		/*! Adds a provider and schedules entities processed by earlier runs for the next run.
+
+		    \note Ignored while a run is active. */
+		void AddProvider(Ref<SimilarityProvider> provider);
+		/*! Removes a provider, clears its results, and marks affected entities for resolution.
+
+		    \note Ignored while a run is active. */
+		void RemoveProvider(SimilarityProvider& provider);
+		/*! Updates a provider already in the session and schedules previously processed entities again.
+
+		    Returns false during a run, when the provider is absent, or when it rejects the settings. */
+		bool UpdateProviderSettings(SimilarityProvider& provider, Settings& settings);
+		/*! Returns a provider, or `nullptr` if `id` is absent. */
+		Ref<SimilarityProvider> GetProvider(SimilarityProviderId id);
+		std::vector<Ref<SimilarityProvider>> GetProviders();
+
+		/*! Adds a resolver created for this session and marks entities processed by earlier runs for resolution.
+
+		    \note Returns false during a run, for a duplicate, or for a resolver from another session. */
+		bool AddResolver(Ref<SimilaritySessionResolver> resolver);
+		/*! Removes a resolver.
+
+		    \note Returns false during a run, or if it is absent or belongs to another session. */
+		bool RemoveResolver(SimilaritySessionResolver& resolver);
+		/*! Updates a resolver already in the session and marks previously processed entities for resolution.
+
+		    Returns false during a run, when the resolver is absent or belongs to another session, or when it rejects the
+		    settings. */
+		bool UpdateResolverSettings(SimilaritySessionResolver& resolver, Settings& settings);
+		/*! Returns a resolver, or `nullptr` if `id` is absent. */
+		Ref<SimilaritySessionResolver> GetResolver(SimilaritySessionResolverId id);
+		std::vector<Ref<SimilaritySessionResolver>> GetResolvers();
+		/*! Adds a receiver. A running session keeps using the receiver list it started with. */
+		void AddReceiver(Ref<SimilaritySessionReceiver> receiver);
+		/*! Removes a receiver. A running session keeps using the receiver list it started with. */
+		void RemoveReceiver(SimilaritySessionReceiver& receiver);
+		std::vector<Ref<SimilaritySessionReceiver>> GetReceivers();
+
+		Ref<SimilaritySessionGraph> GetGraph();
+		/*! Starts a background run with the current graph, providers, and resolvers. Changes are ignored until it finishes.
+
+		    \note Returns the active run's completion handle when already running. */
+		Ref<SimilaritySessionCompletion> Run();
 	};
 
 	struct LineFormatterSettings
@@ -19848,6 +20637,7 @@ namespace BinaryNinja {
 
 		std::string GetName();
 		std::string GetAPIName();
+		bool IsModuleInstalled(const std::string& modules);
 
 		static std::vector<Ref<ScriptingProvider>> GetList();
 		static Ref<ScriptingProvider> GetByName(const std::string& name);
@@ -20033,6 +20823,21 @@ namespace BinaryNinja {
 	typedef BNPluginOrigin PluginOrigin;
 	typedef BNPluginStatus PluginStatus;
 	typedef BNPluginType PluginType;
+	typedef BNPluginDependencyConflictStatus PluginDependencyConflictStatus;
+
+	struct DependencyConflictRequirement
+	{
+		std::string pluginName;
+		std::string requirement;
+	};
+
+	struct DependencyConflict
+	{
+		PluginDependencyConflictStatus status;
+		std::string packageName;
+		std::vector<DependencyConflictRequirement> candidateRequirements;
+		std::vector<DependencyConflictRequirement> installedRequirements;
+	};
 
 	struct ExtensionVersion
 	{
@@ -20055,7 +20860,7 @@ namespace BinaryNinja {
 	};
 
 	/*!
-		\ingroup pluginmanager
+		\ingroup extensionmanager
 	*/
 	class Extension : public CoreRefCountObject<BNPlugin, BNNewPluginReference, BNFreePlugin>
 	{
@@ -20067,6 +20872,9 @@ namespace BinaryNinja {
 		std::string GetPath() const;
 		std::string GetSubdir() const;
 		std::string GetDependencies() const;
+		std::string GetDependencies(const std::string& versionID) const;
+		std::vector<DependencyConflict> GetDependencyConflicts() const;
+		std::vector<DependencyConflict> GetDependencyConflicts(const std::string& versionID) const;
 		std::string GetPluginDirectory() const;
 		std::string GetAuthor() const;
 		std::string GetDescription() const;
@@ -20092,6 +20900,8 @@ namespace BinaryNinja {
 		bool IsBeingDeleted() const;
 		bool IsBeingUpdated() const;
 		bool IsInstalled() const;
+		bool IsListed() const;
+		bool IsDeprecated() const;
 		bool IsEnabled() const;
 		bool IsRunning() const;
 		bool IsUpdatePending() const;
@@ -20101,8 +20911,12 @@ namespace BinaryNinja {
 		bool AreDependenciesBeingInstalled() const;
 
 		bool Uninstall();
+		bool CancelUninstall();
 		bool Install(std::string versionID);
 		bool InstallDependencies();
+		bool InstallDependencies(const std::string& versionID);
+		bool InstallDependencies(const std::vector<std::string>& excludedPackageNames);
+		bool InstallDependencies(const std::string& versionID, const std::vector<std::string>& excludedPackageNames);
 		// `force` ignores optional checks for platform/api compliance
 		bool Enable(bool force);
 		bool Disable();
@@ -20110,7 +20924,7 @@ namespace BinaryNinja {
 	};
 
 	/*!
-		\ingroup pluginmanager
+		\ingroup extensionmanager
 	*/
 	class Repository : public CoreRefCountObject<BNRepository, BNNewRepositoryReference, BNFreeRepository>
 	{
@@ -20127,7 +20941,7 @@ namespace BinaryNinja {
 	};
 
 	/*!
-		\ingroup pluginmanager
+		\ingroup extensionmanager
 	*/
 	class RepositoryManager
 	{
@@ -20703,38 +21517,6 @@ namespace BinaryNinja {
 		static int Compare(LinearViewCursor* a, LinearViewCursor* b);
 	};
 
-	/*!
-
-		\ingroup simplifyname
-	*/
-	class SimplifyName
-	{
-	  public:
-		// Use these functions to interface with the simplifier
-		static std::string to_string(const std::string& input);
-		static std::string to_string(const QualifiedName& input);
-		static QualifiedName to_qualified_name(const std::string& input, bool simplify);
-		static QualifiedName to_qualified_name(const QualifiedName& input);
-
-		// Below is everything for the above APIs to work
-		enum SimplifierDest
-		{
-			str,
-			fqn
-		};
-
-		SimplifyName(const std::string&, const SimplifierDest, const bool);
-		~SimplifyName();
-
-		operator std::string() const;
-		operator QualifiedName();
-
-	  private:
-		const char* m_rust_string;
-		const char** m_rust_array;
-		uint64_t m_length;
-	};
-
 	struct FindParameters
 	{
 		BNFindType type;
@@ -21254,6 +22036,12 @@ namespace BinaryNinja {
 			\param alternate
 		*/
 		void AddAlternateName(const std::string& alternate);
+
+		/*! Removes an extra name from this type library used during library lookups and dependency resolution
+
+			\param alternate
+		*/
+		void RemoveAlternateName(const std::string& alternate);
 
 		/*! Sets the dependency name of a type library instance that has not been finalized
 
@@ -22547,36 +23335,44 @@ namespace BinaryNinja {
 	*/
 	class Demangler: public StaticCoreRefCountObject<BNDemangler>
 	{
+	public:
+		using Config = DemanglerConfig;
+		using Result = DemanglerResult;
+
+	private:
 		std::string m_nameForRegister;
 
 	protected:
-		explicit Demangler(const std::string& name);
+		explicit Demangler(std::string demanglerName);
 		Demangler(BNDemangler* demangler);
 		virtual ~Demangler() = default;
 
-		static bool IsMangledStringCallback(void* ctxt, const char* name);
-		static bool DemangleCallback(void* ctxt, BNArchitecture* arch, const char* name, BNType** outType,
-			BNQualifiedName* outVarName, BNBinaryView* view);
-		static void FreeVarNameCallback(void* ctxt, BNQualifiedName* name);
+		static bool IsMangledStringCallback(void* ctxt, const char* mangledName);
+		static bool DemangleCallback(void* ctxt, const char* mangledName, const BNDemanglerConfig* config,
+			BNDemanglerResult* result);
+		static void FreeResultCallback(void* ctxt, BNDemanglerResult* result);
 
 	public:
-		/*! Register a custom Demangler. Newly registered demanglers will get priority over
+		/*! Register a custom Demangler. Newly registered demanglers get priority over
 			previously registered demanglers and built-in demanglers.
+
+			\return True if registration succeeded; false if the demangler was invalid.
 		 */
-		static void Register(Demangler* demangler);
+		static bool Register(Demangler* demangler);
 
 		/*! Get the list of currently registered demanglers, sorted by lowest to highest priority.
 
 			\return List of demanglers
 		 */
 		static std::vector<Ref<Demangler>> GetList();
-		static Ref<Demangler> GetByName(const std::string& name);
+		static Ref<Demangler> GetByName(const std::string& demanglerName);
 
 		/*! Promote a demangler to the highest-priority position.
 
 			\param demangler Demangler to promote
+			\return True if promotion succeeded; false if the demangler was invalid or not registered.
 		 */
-		static void Promote(Ref<Demangler> demangler);
+		static bool Promote(const Ref<Demangler>& demangler);
 
 		std::string GetName() const;
 
@@ -22584,40 +23380,40 @@ namespace BinaryNinja {
 
 			The most recently registered demangler that claims a name is a mangled string
 			(returns true from this function), and then returns a value from Demangle will
-			determine the result of a call to DemangleGeneric. Returning True from this
+			determine the result of a call to DemangleAny. Returning True from this
 			does not require the demangler to succeed the call to Demangle, but simply
 			implies that it may succeed.
 
-			\param name Raw mangled name string
+			\param mangledName Raw mangled name string
 			\return True if the demangler thinks it can handle the name
 		 */
-		virtual bool IsMangledString(const std::string& name) = 0;
+		virtual bool IsMangledString(const std::string& mangledName) = 0;
+
+		/*!
+		    Attempt to demangle a mangled name, trying all relevant demanglers and using whichever one accepts it.
+
+		    \param[in] mangledName Raw mangled name
+		    \param[in] config Platform/view/options used while demangling
+		    \return Demangled type/name if successful
+		 */
+		static std::optional<Result> DemangleAny(
+		    const std::string& mangledName, const Config& config = DemanglerConfig::Default());
 
 		/*! Demangle a raw name into a Type and QualifiedName.
 
-			Any unresolved named types referenced by the resulting Type will be created as
-			empty structures or void typedefs in the view, if the result is used on
-			a data structure in the view. Given this, the call to Demangle should NOT
-			cause any side-effects creating types in the view trying to resolve this
-			and instead just return a type with unresolved named type references.
-
 			The most recently registered demangler that claims a name is a mangled string
 			(returns true from IsMangledString), and then returns a value from
-			this function will determine the result of a call to DemangleGeneric.
+			this function will determine the result of a call to DemangleAny.
 			If this call returns None, the next most recently used demangler(s) will be tried instead.
 
 			If the mangled name has no type information, but a name is still possible to extract,
 			this function may return a successful result with outType=nullptr, which will be accepted.
 
-			\param arch Architecture for context in which the name exists, eg for pointer sizes
-			\param name Raw mangled name
-			\param outType Resulting type, if one can be deduced, will be written here. Otherwise nullptr will be written
-			\param outVarName Resulting variable name
-			\param view (Optional) BinaryView context in which the name exists, eg for type lookup
-			\return True if demangling was successful and results were stored into out-parameters
+			\param mangledName Raw mangled name
+			\param config Platform/view/options used while demangling
+			\return Demangled type/name if successful
 		 */
-		virtual bool Demangle(Ref<Architecture> arch, const std::string& name, Ref<Type>& outType,
-			QualifiedName& outVarName, Ref<BinaryView> view = nullptr) = 0;
+		virtual std::optional<Result> Demangle(const std::string& mangledName, const Config& config) = 0;
 	};
 
 	/*!
@@ -22630,8 +23426,7 @@ namespace BinaryNinja {
 		virtual ~CoreDemangler() = default;
 
 		virtual bool IsMangledString(const std::string& name);
-		virtual bool Demangle(Ref<Architecture> arch, const std::string& name, Ref<Type>& outType,
-			QualifiedName& outVarName, Ref<BinaryView> view);
+		virtual std::optional<Result> Demangle(const std::string& name, const Config& config);
 	};
 
 	namespace Unicode
@@ -22654,6 +23449,65 @@ namespace BinaryNinja {
 			const void* data,
 			const size_t dataLen
 		);
+
+		/*! Escape a string for display using the Unicode blocks enabled for the given view.
+
+		    Text that decodes to a codepoint in one of the enabled Unicode blocks is passed through as
+		    unaltered UTF8. Everything else is escaped, including bytes that are part of a truncated or
+		    otherwise invalid encoding, so the input does not need to be valid UTF8.
+
+		    This is the escaping renderers should use when emitting string contents, such as the value of
+		    a derived string produced by a StringRecognizer.
+
+		    \param view View whose settings determine the enabled blocks, or nullptr for global settings
+		    \param data Bytes to escape
+		    \param dataLen Length of \c data in bytes
+		    \return The escaped string
+		*/
+		std::string ToEscapedString(BinaryView* view, const void* data, size_t dataLen);
+
+		/*! Escape a string for display using the Unicode blocks enabled for the given view.
+
+		    \param view View whose settings determine the enabled blocks, or nullptr for global settings
+		    \param str String to escape, which need not be valid UTF8
+		    \return The escaped string
+		*/
+		std::string ToEscapedString(BinaryView* view, std::string_view str);
+
+		/*! Width of a string in character cells, following Unicode Standard Annex #11 (East Asian Width).
+
+		    Wide and fullwidth code points, such as CJK ideographs and kana, occupy two cells; combining
+		    marks and other zero-width code points occupy none; everything else occupies one. Text that is
+		    not valid UTF8 is measured as one cell per byte.
+
+		    Binary Ninja renders text on a fixed character cell grid, so this, rather than a byte or code
+		    point count, is the measurement that InstructionTextToken widths are expressed in.
+
+		    \param str String to measure
+		    \return Width of the string in character cells
+		*/
+		size_t GetDisplayWidth(const std::string& str);
+
+		/*! Byte offset of the grapheme cluster boundary following the one at \c offset, which is to say
+		    the end of the cluster that starts there.
+
+		    It is the caller's responsibility to pass a boundary: \c offset must be zero, the length of the
+		    string, or a value this returned. Only the cluster at \c offset is examined, so walking a
+		    string a cluster at a time this way costs no more than the clusters it visits.
+
+		    \code{.cpp}
+		    for (size_t start = 0, end; start < str.size(); start = end)
+		    {
+		        end = Unicode::GetNextGraphemeClusterBoundary(str, start);
+		        // The cluster is the byte range [start, end)
+		    }
+		    \endcode
+
+		    \param str String the offset refers to, which need not be valid UTF8
+		    \param offset Byte offset of a cluster boundary
+		    \return The offset of the next cluster boundary, or the length of the string if there is none
+		*/
+		size_t GetNextGraphemeClusterBoundary(const std::string& str, size_t offset);
 	} // namespace Unicode
 
 	/*! HighLevelILTokenEmitter contains methods for emitting text tokens for High Level IL instructions.
@@ -24491,6 +25345,17 @@ namespace std
 		size_t operator()(argument_type const& value) const
 		{
 			return std::hash<std::string_view>()(value.operator std::string_view());
+		}
+	};
+
+	template <>
+	struct hash<BinaryNinja::SimilarityEntityRef>
+	{
+		size_t operator()(BinaryNinja::SimilarityEntityRef const& value) const
+		{
+			const size_t nodeHash = std::hash<BinaryNinja::SimilaritySessionNodeId>()(value.nodeId);
+			const size_t entityHash = std::hash<BinaryNinja::SimilarityEntityId>()(value.entityId);
+			return nodeHash ^ (entityHash + 0x9e3779b9 + (nodeHash << 6) + (nodeHash >> 2));
 		}
 	};
 }  // namespace std

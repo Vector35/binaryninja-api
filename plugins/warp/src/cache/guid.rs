@@ -1,6 +1,7 @@
 use crate::cache::FunctionID;
 use crate::convert::from_bn_symbol;
 use crate::function_guid;
+use binaryninja::binary_view::MetadataStoreFlags;
 use binaryninja::function::Function as BNFunction;
 use binaryninja::low_level_il::function::{FunctionMutability, LowLevelILFunction, NonSSA};
 use binaryninja::rc::Ref as BNRef;
@@ -29,7 +30,7 @@ pub fn cached_function_guid<M: FunctionMutability>(
     function.store_metadata(
         "warp_function_guid",
         &function_guid.as_bytes().to_vec(),
-        false,
+        MetadataStoreFlags::PERSISTENT,
     );
     Some(function_guid)
 }

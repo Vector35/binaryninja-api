@@ -66,7 +66,7 @@ opening a `kernelcache` and is how you add images to the actual binary view.
 
     - Double click on a symbol to load the associated image, or use the "Load Image" button
 
-    ![Kernel Cache Symbols](../img/dsc/triage-symbols.png "Kernel Cache Symbols")
+    ![Kernel Cache Symbols](../img/kc/triage-symbols.png "Kernel Cache Symbols")
 
 ### Scripting
 

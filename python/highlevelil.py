@@ -456,14 +456,22 @@ class HighLevelILInstruction(BaseILInstruction):
 
 	@property
 	def ast(self) -> 'HighLevelILInstruction':
-		"""This expression with full AST printing (read-only)"""
+		"""
+		This expression with full AST printing (read-only)
+
+		See `AST and Non-AST Forms <https://docs.binary.ninja/dev/bnil-hlil.html#ast-and-non-ast-forms>`_
+		"""
 		if self.as_ast:
 			return self
 		return HighLevelILInstruction.create(self.function, self.expr_index, True)
 
 	@property
 	def non_ast(self) -> 'HighLevelILInstruction':
-		"""This expression without full AST printing (read-only)"""
+		"""
+		This expression without full AST printing (read-only)
+
+		See `AST and Non-AST Forms <https://docs.binary.ninja/dev/bnil-hlil.html#ast-and-non-ast-forms>`_
+		"""
 		if not self.as_ast:
 			return self
 		return HighLevelILInstruction.create(self.function, self.expr_index, False)
@@ -947,7 +955,16 @@ class HighLevelILInstruction(BaseILInstruction):
 		return core.BNHighLevelILHasSideEffects(self.function.handle, self.expr_index)
 
 	def get_lines(self, settings: Optional['function.DisassemblySettings'] = None) -> LinesType:
-		"""Gets HLIL text lines with optional settings"""
+		"""
+		Gets HLIL text lines with optional settings
+
+		.. note::
+			The instruction renders in whichever form it is currently in, so one that is not in AST form renders
+			without its nested body and ignores ``DisassemblyOption`` settings acting on nested bodies (such as
+			``ShowCollapseIndicators``). Instructions from iterating a function or its basic blocks are not in AST
+			form; use :py:func:`ast` or :py:func:`HighLevelILFunction.root`. See `AST and Non-AST Forms
+			<https://docs.binary.ninja/dev/bnil-hlil.html#ast-and-non-ast-forms>`_.
+		"""
 		if settings is not None:
 			settings = settings.handle
 		count = ctypes.c_ulonglong()
@@ -2790,7 +2807,13 @@ class HighLevelILFunction:
 
 	@property
 	def root(self) -> Optional[HighLevelILInstruction]:
-		"""Root of the abstract syntax tree"""
+		"""
+		Root of the abstract syntax tree
+
+		This is the AST form shown in linear view, where nested bodies are children of the statement containing them.
+		:py:func:`instructions` and the function's basic blocks yield non-AST instructions instead. See `AST and
+		Non-AST Forms <https://docs.binary.ninja/dev/bnil-hlil.html#ast-and-non-ast-forms>`_.
+		"""
 		expr_index = core.BNGetHighLevelILRootExpr(self.handle)
 		if expr_index >= core.BNGetHighLevelILExprCount(self.handle):
 			return None
@@ -2904,7 +2927,13 @@ class HighLevelILFunction:
 
 	@property
 	def instructions(self) -> Generator[HighLevelILInstruction, None, None]:
-		"""A generator of hlil instructions of the current function"""
+		"""
+		A generator of hlil instructions of the current function
+
+		These instructions are not in AST form; nested bodies are not children of the statements containing them. Use
+		:py:func:`root` for the AST form shown in linear view. See `AST and Non-AST Forms
+		<https://docs.binary.ninja/dev/bnil-hlil.html#ast-and-non-ast-forms>`_.
+		"""
 		for block in self.basic_blocks:
 			yield from block
 
@@ -5186,7 +5215,7 @@ class HighLevelILBasicBlock(basicblock.BasicBlock):
 	def __init__(
 	    self, handle: core.BNBasicBlockHandle, owner: HighLevelILFunction, view: Optional['binaryview.BinaryView']
 	):
-		super(HighLevelILBasicBlock, self).__init__(handle, view)
+		super().__init__(handle, view)
 		self._il_function = owner
 
 	def __iter__(self) -> Generator[HighLevelILInstruction, None, None]:

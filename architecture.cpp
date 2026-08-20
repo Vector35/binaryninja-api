@@ -727,6 +727,20 @@ size_t Architecture::GetInstructionAlignmentCallback(void* ctxt)
 }
 
 
+size_t Architecture::GetLinearSweepInitialAlignmentCallback(void* ctxt)
+{
+	CallbackRef<Architecture> arch(ctxt);
+	return arch->GetLinearSweepInitialAlignment();
+}
+
+
+uint32_t Architecture::GetLinearSweepAnalysisCapabilitiesCallback(void* ctxt)
+{
+	CallbackRef<Architecture> arch(ctxt);
+	return arch->GetLinearSweepAnalysisCapabilities();
+}
+
+
 size_t Architecture::GetMaxInstructionLengthCallback(void* ctxt)
 {
 	CallbackRef<Architecture> arch(ctxt);
@@ -1326,7 +1340,7 @@ void Architecture::Register(BNCustomArchitecture* callbacks)
 
 void Architecture::Register(Architecture* arch)
 {
-	BNCustomArchitecture callbacks;
+	BNCustomArchitecture callbacks{};
 	callbacks.context = arch;
 	callbacks.init = InitCallback;
 	callbacks.getEndianness = GetEndiannessCallback;
@@ -1392,6 +1406,8 @@ void Architecture::Register(Architecture* arch)
 	callbacks.alwaysBranch = AlwaysBranchCallback;
 	callbacks.invertBranch = InvertBranchCallback;
 	callbacks.skipAndReturnValue = SkipAndReturnValueCallback;
+	callbacks.getLinearSweepInitialAlignment = GetLinearSweepInitialAlignmentCallback;
+	callbacks.getLinearSweepAnalysisCapabilities = GetLinearSweepAnalysisCapabilitiesCallback;
 	arch->Register(&callbacks);
 }
 
@@ -1441,6 +1457,18 @@ size_t Architecture::GetDefaultIntegerSize() const
 size_t Architecture::GetInstructionAlignment() const
 {
 	return 1;
+}
+
+
+size_t Architecture::GetLinearSweepInitialAlignment() const
+{
+	return GetInstructionAlignment();
+}
+
+
+uint32_t Architecture::GetLinearSweepAnalysisCapabilities() const
+{
+	return BNLinearSweepCallTargetAnalysis | BNLinearSweepGenericControlFlowAnalysis;
 }
 
 
@@ -2012,6 +2040,18 @@ size_t CoreArchitecture::GetInstructionAlignment() const
 }
 
 
+size_t CoreArchitecture::GetLinearSweepInitialAlignment() const
+{
+	return BNGetArchitectureLinearSweepInitialAlignment(m_object);
+}
+
+
+uint32_t CoreArchitecture::GetLinearSweepAnalysisCapabilities() const
+{
+	return BNGetArchitectureLinearSweepAnalysisCapabilities(m_object);
+}
+
+
 size_t CoreArchitecture::GetMaxInstructionLength() const
 {
 	return BNGetArchitectureMaxInstructionLength(m_object);
@@ -2558,6 +2598,18 @@ size_t ArchitectureExtension::GetDefaultIntegerSize() const
 size_t ArchitectureExtension::GetInstructionAlignment() const
 {
 	return m_base->GetInstructionAlignment();
+}
+
+
+size_t ArchitectureExtension::GetLinearSweepInitialAlignment() const
+{
+	return m_base->GetLinearSweepInitialAlignment();
+}
+
+
+uint32_t ArchitectureExtension::GetLinearSweepAnalysisCapabilities() const
+{
+	return m_base->GetLinearSweepAnalysisCapabilities();
 }
 
 

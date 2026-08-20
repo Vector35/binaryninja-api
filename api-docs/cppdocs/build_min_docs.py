@@ -384,7 +384,8 @@ def build_doxygen(args):
 	doxyfile = "Doxyfile-Docset" if args.docset else "Doxyfile-HTML"
 	system_checked(f"{doxygen} {doxyfile}", "Building doxygen docs")
 	print("Output dir is ./html/")
-	system_checked("cp _static/img/* html/", "Copying images")
+	for image in glob.glob(os.path.join("_static", "img", "*")):
+		shutil.copy(image, "html")
 	if args.docset:
 		system_checked("doxygen2docset --doxygen html --docset docset", "Creating docset")
 

@@ -9,6 +9,7 @@
 #include <QtCore/QMutex>
 #include <QtCore/QWaitCondition>
 #include <QtCore/QSharedPointer>
+#include <QtCore/QTimer>
 #include <queue>
 #include <optional>
 #include "binaryninjaapi.h"
@@ -112,8 +113,9 @@ class BINARYNINJAUIAPI TextBrowser : public QTextBrowser
 	std::set<QUrl> m_requested;
 	std::optional<QUrl> m_markdownUrl;
 	QString m_markdownPrefix;
+	QTimer m_layoutTimer;
 
-	void resizeImageFragment(
+	bool resizeImageFragment(
 	    QTextBlock& block, QTextFragment fragment, QTextImageFormat imgFormat, const QImage& contents);
 
   protected:

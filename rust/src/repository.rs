@@ -14,7 +14,10 @@ use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, Re
 use crate::string::{BnString, IntoCStr};
 
 pub use manager::RepositoryManager;
-pub use plugin::{Extension, ExtensionVersion, ExtensionVersionPlatform};
+pub use plugin::{
+    Extension, ExtensionVersion, ExtensionVersionPlatform, PluginDependencyConflict,
+    PluginDependencyConflictStatus, PluginDependencyRequirement,
+};
 
 pub type PluginType = BNPluginType;
 pub type PluginStatus = BNPluginStatus;

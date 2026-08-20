@@ -21,10 +21,10 @@ use crate::{
 use binaryninja::{
     binary_view::{BinaryView, BinaryViewBase},
     debuginfo::{DebugFunctionInfo, DebugInfo},
+    demangle::simplify_demangled_template_name,
     platform::Platform,
     rc::*,
     symbol::SymbolType,
-    template_simplifier::simplify_str_to_fqn,
     types::{FunctionParameter, Type},
     variable::NamedVariableWithType,
 };
@@ -733,9 +733,8 @@ impl DebugInfoBuilder {
                         let symbol_full_name = symbol.full_name();
 
                         // If our name has fewer namespaces than the existing name, assume we lost the namespace info
-                        if simplify_str_to_fqn(func_full_name, true).items.len()
-                            < simplify_str_to_fqn(symbol_full_name.clone(), true)
-                                .items
+                        if simplify_demangled_template_name(func_full_name).len()
+                            < simplify_demangled_template_name(symbol_full_name.to_string_lossy())
                                 .len()
                         {
                             func.full_name = Some(symbol_full_name.to_string_lossy().to_string());

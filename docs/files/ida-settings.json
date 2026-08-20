@@ -1,0 +1,16 @@
+{
+    "settings": {
+        "ui.view.graph.preferred": true,
+        "ui.featureMap.location": "top",
+        "ui.featureMap.enable": true,
+        "ui.defaultXrefInterface": "dialog",
+        "ui.sidebar.defaultWidgets": ["Symbols"]
+    },
+    "qsettings": {
+        "linear/address": false,
+        "ui/featureMap/size": 32
+    },
+    "qsettings_remove": [
+        "linear/single_function"
+    ]
+}

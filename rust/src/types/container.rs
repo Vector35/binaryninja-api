@@ -310,6 +310,7 @@ impl TypeContainer {
         if success {
             Ok(QualifiedNameAndType::from_owned_raw(result))
         } else {
+            unsafe { BNFreeQualifiedNameAndType(&mut result) };
             assert!(!errors.is_null());
             Err(unsafe { Array::new(errors, error_count, ()) })
         }

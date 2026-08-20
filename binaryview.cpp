@@ -1384,15 +1384,39 @@ BinaryView::BinaryView(BNBinaryView* view)
 
 bool BinaryView::InitCallback(void* ctxt)
 {
-	CallbackRef<BinaryView> view(ctxt);
-	return view->Init();
+	try
+	{
+		CallbackRef<BinaryView> view(ctxt);
+		return view->Init();
+	}
+	catch (const std::exception& e)
+	{
+		LogError("BinaryView::Init failed: %s", e.what());
+		return false;
+	}
+	catch (...)
+	{
+		LogError("BinaryView::Init failed with unknown exception");
+		return false;
+	}
 }
 
 
 void BinaryView::OnAfterSnapshotDataAppliedCallback(void* ctxt)
 {
-	CallbackRef<BinaryView> view(ctxt);
-	view->OnAfterSnapshotDataApplied();
+	try
+	{
+		CallbackRef<BinaryView> view(ctxt);
+		view->OnAfterSnapshotDataApplied();
+	}
+	catch (const std::exception& e)
+	{
+		LogError("BinaryView::OnAfterSnapshotDataApplied failed: %s", e.what());
+	}
+	catch (...)
+	{
+		LogError("BinaryView::OnAfterSnapshotDataApplied failed with unknown exception");
+	}
 }
 
 
@@ -1531,9 +1555,22 @@ size_t BinaryView::GetAddressSizeCallback(void* ctxt)
 
 bool BinaryView::SaveCallback(void* ctxt, BNFileAccessor* file)
 {
-	CallbackRef<BinaryView> view(ctxt);
-	CoreFileAccessor accessor(file);
-	return view->PerformSave(&accessor);
+	try
+	{
+		CallbackRef<BinaryView> view(ctxt);
+		CoreFileAccessor accessor(file);
+		return view->PerformSave(&accessor);
+	}
+	catch (const std::exception& e)
+	{
+		LogError("BinaryView::Save failed: %s", e.what());
+		return false;
+	}
+	catch (...)
+	{
+		LogError("BinaryView::Save failed with unknown exception");
+		return false;
+	}
 }
 
 
@@ -5509,11 +5546,11 @@ void BinaryView::SetCommentForAddress(uint64_t addr, const string& comment)
 }
 
 
-void BinaryView::StoreMetadata(const std::string& key, Ref<Metadata> inValue, bool isAuto)
+void BinaryView::StoreMetadata(const std::string& key, Ref<Metadata> inValue, BNMetadataStoreFlag flags)
 {
 	if (!inValue)
 		return;
-	BNBinaryViewStoreMetadata(m_object, key.c_str(), inValue->GetObject(), isAuto);
+	BNBinaryViewStoreMetadata(m_object, key.c_str(), inValue->GetObject(), flags);
 }
 
 

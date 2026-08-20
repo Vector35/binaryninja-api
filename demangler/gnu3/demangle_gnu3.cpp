@@ -16,7 +16,9 @@
 // See https://llvm.org/LICENSE.txt for license information.
 
 #include "demangle_gnu3.h"
-#include <stdarg.h>
+#include "demangler/demangled_log.h"
+#include "demangler/demangled_template_simplifier.h"
+#include <cstdarg>
 #include <algorithm>
 #include <memory>
 
@@ -28,341 +30,397 @@ using namespace BinaryNinja;
 using namespace std;
 #endif
 
-
-static constexpr size_t MAX_DEMANGLE_NESTING_DEPTH = 1024;
-static constexpr size_t MAX_DEMANGLE_NODE_LENGTH = 8192;
-
-static BNTypeClass GetFinalizedTypeClass(const Ref<Type>& type)
+namespace
 {
+	BNTypeClass GetFinalizedTypeClass(const Ref<Type>& type)
+	{
 #ifdef BINARYNINJACORE_LIBRARY
-	return type->GetTypeClass();
+		return type->GetTypeClass();
 #else
-	return type->GetClass();
+		return type->GetClass();
 #endif
-}
-
-#define hash(x,y) (64 * x + y)
-
-#undef GNUDEMANGLE_DEBUG
-#ifdef GNUDEMANGLE_DEBUG  // This makes it not thread safe!
-static string _indent = "";
-#define indent() _indent += " ";
-#define dedent() do {if (_indent.size() > 0) _indent = _indent.substr(1);}while(0);
-
-void MyLogDebug(const char* fmt, ...)
-{
-	va_list args;
-	va_start(args, fmt);
-	PerformLog(0, DebugLog, "", 0, (_indent + fmt).c_str(), args);
-	va_end(args);
-}
-#else
-#define indent()
-#define dedent()
-#define MyLogDebug(...) do {} while(0)
-#endif
-
-static size_t TotalStringSize(const StringList& v)
-{
-	size_t n = 0;
-	for (const auto& s : v)
-		n += s.size();
-	return n;
-}
-
-
-static string JoinNameSegments(const StringList& name)
-{
-	if (name.empty())
-		return {};
-	if (name.size() == 1)
-		return name[0];
-
-	string out;
-	out.reserve(TotalStringSize(name) + (name.size() - 1) * 2);
-	out += name[0];
-	for (size_t i = 1; i < name.size(); i++)
-	{
-		out += "::";
-		out += name[i];
-	}
-	return out;
-}
-
-
-static bool TemplateArgsReferenceTemplateParam(const string& raw)
-{
-	if (raw.empty() || (raw[0] != 'I' && raw[0] != 'J'))
-		return false;
-
-	size_t i = 0;
-	size_t depth = 0;
-	while (i < raw.size())
-	{
-		char c = raw[i++];
-		if (c == 'I' || c == 'J')
-		{
-			depth++;
-			continue;
-		}
-		if (c == 'E')
-		{
-			if (depth == 0)
-				return false;
-			depth--;
-			if (depth == 0)
-				return false;
-			continue;
-		}
-		if (c == 'T')
-			return true;
-		if (c >= '0' && c <= '9')
-		{
-			size_t len = c - '0';
-			while (i < raw.size() && raw[i] >= '0' && raw[i] <= '9')
-				len = (len * 10) + (raw[i++] - '0');
-			i = std::min(raw.size(), i + len);
-		}
-	}
-	return false;
-}
-
-
-static DemangledNamePart NameSegmentWithTemplateArgs(const string& name, vector<DemangledTypeNode::Param> args)
-{
-	return DemangledNamePart(name, std::move(args), true);
-}
-
-
-static string GetOperator(char elm1, char elm2)
-{
-	switch (hash(elm1, elm2))
-	{
-	case hash('d','c'): return "dynamic_cast";
-	case hash('s','c'): return "static_cast";
-	case hash('c','c'): return "const_cast";
-	case hash('r','c'): return "reinterpret_cast";
-	case hash('t','i'): return "typeid";
-	case hash('t','e'): return "typeid";
-	case hash('s','t'): return "sizeof";
-	case hash('s','z'): return "sizeof";
-	case hash('a','t'): return "alignof";
-	case hash('a','z'): return "alignof";
-	case hash('a','w'): return "co_await";
-	case hash('n','x'): return "noexcept";
-	case hash('s','Z'): return "sizeof...";
-	case hash('s','P'): return "sizeof...";
-	case hash('s','p'): return "";
-	case hash('t','w'): return "throw";
-	case hash('t','r'): return "throw";
-	case hash('l','s'): return "<<";  // <<
-	case hash('r','s'): return ">>";  // >>
-	case hash('a','S'): return "=";   // =
-	case hash('n','t'): return "!";   // !
-	case hash('e','q'): return "==";  // ==
-	case hash('n','e'): return "!=";  // !=
-	case hash('i','x'): return "[]";  // []
-	case hash('d','t'): return ".";   // .
-	case hash('p','t'): return "->";  // ->
-	case hash('m','l'): return "*";   // *
-	case hash('p','p'): return "++";  // ++ (postfix in <expression> context)
-	case hash('m','m'): return "--";  // -- (postfix in <expression> context)
-	case hash('n','g'): return "-";   // - (unary)
-	case hash('m','i'): return "-";   // -
-	case hash('p','s'): return "+";   // + (unary)
-	case hash('p','l'): return "+";   // +
-	case hash('a','d'): return "&";   // & (unary)
-	case hash('a','n'): return "&";   // &
-	case hash('p','m'): return "->*"; // ->*
-	case hash('d','v'): return "/";   // /
-	case hash('r','m'): return "%";   // %
-	case hash('l','t'): return "<";   // <
-	case hash('l','e'): return "<=";  // <=
-	case hash('g','t'): return ">";   // >
-	case hash('g','e'): return ">=";  // >=
-	case hash('c','m'): return ",";   // ,
-	case hash('c','l'): return "()";  // ()
-	case hash('c','o'): return "~";   // ~
-	case hash('e','o'): return "^";   // ^
-	case hash('o','r'): return "|";   // |
-	case hash('a','a'): return "&&";  // &&
-	case hash('o','o'): return "||";  // ||
-	case hash('d','e'): return "*";   // * (unary)
-	case hash('m','L'): return "*=";  // *=
-	case hash('p','L'): return "+=";  // +=
-	case hash('m','I'): return "-=";  // -=
-	case hash('d','V'): return "/=";  // /=
-	case hash('r','M'): return "%=";  // %=
-	case hash('r','S'): return ">>="; // >>=
-	case hash('l','S'): return "<<="; // <<=
-	case hash('a','N'): return "&=";  // &=
-	case hash('o','R'): return "|=";  // |=
-	case hash('e','O'): return "^=";  // ^=
-	case hash('s','s'): return "<=>"; // <=>
-	case hash('d','l'): return "delete";   // delete
-	case hash('d','a'): return "delete[]"; // delete[]
-	case hash('n','w'): return "new";      // new
-	case hash('n','a'): return "new[]";    // new []
-	default: return "";
-	}
-}
-
-static BNNameType GetNameType(char elm1, char elm2)
-{
-	switch (hash(elm1, elm2))
-	{
-	case hash('n','t'): return OperatorNotNameType;              // !
-	case hash('n','g'): return OperatorMinusNameType;       // - (unary)
-	case hash('p','s'): return OperatorPlusNameType;        // + (unary)
-	case hash('a','d'): return OperatorBitAndNameType;      // & (unary)
-	case hash('d','e'): return OperatorStarNameType;        // * (unary)
-	case hash('i','x'): return OperatorArrayNameType;            // []
-	case hash('p','p'): return OperatorIncrementNameType;        // ++ (postfix in <expression> context)
-	case hash('m','m'): return OperatorDecrementNameType;        // -- (postfix in <expression> context)
-	case hash('l','s'): return OperatorLeftShiftNameType;        // <<
-	case hash('r','s'): return OperatorRightShiftNameType;       // >>
-	case hash('a','S'): return OperatorAssignNameType;           // =
-	case hash('e','q'): return OperatorEqualNameType;            // ==
-	case hash('n','e'): return OperatorNotEqualNameType;         // !=
-	case hash('p','t'): return OperatorArrowNameType;            // ->
-	case hash('m','l'): return OperatorStarNameType;             // *
-	case hash('m','i'): return OperatorMinusNameType;            // -
-	case hash('p','l'): return OperatorPlusNameType;             // +
-	case hash('a','n'): return OperatorBitAndNameType;           // &
-	case hash('p','m'): return OperatorArrowStarNameType;        // ->*
-	case hash('d','v'): return OperatorDivideNameType;           // /
-	case hash('r','m'): return OperatorModulusNameType;          // %
-	case hash('l','t'): return OperatorLessThanNameType;         // <
-	case hash('l','e'): return OperatorLessThanEqualNameType;    // <=
-	case hash('g','t'): return OperatorGreaterThanNameType;      // >
-	case hash('g','e'): return OperatorGreaterThanEqualNameType; // >=
-	case hash('c','m'): return OperatorCommaNameType;           // ,
-	case hash('c','l'): return OperatorParenthesesNameType;     // ()
-	case hash('c','o'): return OperatorTildeNameType;           // ~
-	case hash('e','o'): return OperatorXorNameType;             // ^
-	case hash('o','r'): return OperatorBitOrNameType;           // |
-	case hash('a','a'): return OperatorLogicalAndNameType;      // &&
-	case hash('o','o'): return OperatorLogicalOrNameType;       // ||
-	case hash('m','L'): return OperatorStarEqualNameType;       // *=
-	case hash('p','L'): return OperatorPlusEqualNameType;       // +=
-	case hash('m','I'): return OperatorMinusEqualNameType;      // -=
-	case hash('d','V'): return OperatorDivideEqualNameType;     // /=
-	case hash('r','M'): return OperatorModulusEqualNameType;    // %=
-	case hash('r','S'): return OperatorRightShiftEqualNameType; // >>=
-	case hash('l','S'): return OperatorLeftShiftEqualNameType;  // <<=
-	case hash('a','N'): return OperatorAndEqualNameType;        // &=
-	case hash('o','R'): return OperatorOrEqualNameType;         // |=
-	case hash('e','O'): return OperatorXorEqualNameType;        // ^=
-	case hash('d','l'): return OperatorDeleteNameType;          // delete
-	case hash('d','a'): return OperatorDeleteArrayNameType;     // delete[]
-	case hash('n','w'): return OperatorNewNameType;             // new
-	case hash('n','a'): return OperatorNewArrayNameType;        // new []
-	// Note: C1-C5 (constructor) and D0-D5 (destructor) are handled directly
-	// by DemangleUnqualifiedName with their own case blocks, so they never
-	// reach GetNameType.
-	default:
-		return NoNameType;
-	}
-}
-
-
-
-
-// Decode a big-endian hex string into a float or double.
-// Returns the decimal string representation, or the raw hex with a type
-// prefix if decoding fails or the result is NaN/Inf.
-static string DecodeHexFloat(const string& hex, size_t byteCount)
-{
-	if (hex.size() != byteCount * 2)
-		return hex;
-
-	// Parse big-endian hex into an integer, then reinterpret as float/double
-	uint64_t bits = 0;
-	for (size_t i = 0; i < hex.size(); i++)
-	{
-		char c = hex[i];
-		uint64_t nibble;
-		if (c >= '0' && c <= '9')      nibble = c - '0';
-		else if (c >= 'a' && c <= 'f') nibble = c - 'a' + 10;
-		else if (c >= 'A' && c <= 'F') nibble = c - 'A' + 10;
-		else return hex;
-		bits = (bits << 4) | nibble;
 	}
 
-	if (byteCount == 4)
-	{
-		union { uint32_t i; float f; } u;
-		u.i = (uint32_t)bits;
-		if (std::isnan(u.f) || std::isinf(u.f))
-			return "(float)" + hex;
-		return to_string(u.f);
-	}
-	else if (byteCount == 8)
-	{
-		union { uint64_t i; double d; } u;
-		u.i = bits;
-		if (std::isnan(u.d) || std::isinf(u.d))
-			return "(double)" + hex;
-		return to_string(u.d);
-	}
-	return hex;
-}
-
-
-// ===== Reader implementation (non-templated) =====
-
-DemangleGNU3Reader::DemangleGNU3Reader(const string& data): m_data(data), m_offset(0)
-{}
-
-
-void DemangleGNU3Reader::Reset(const string& data)
-{
-	m_data = data;
-	m_offset = 0;
-}
-
-
-string DemangleGNU3Reader::PeekString(size_t count)
-{
-	if (count > Length())
-		return "\0";
-	return m_data.substr(m_offset, count);
-}
-
-
+#define hash(x,y) (64 * (x) + (y))
 
 #ifdef GNUDEMANGLE_DEBUG
-string DemangleGNU3Reader::GetRaw()
-{
-	return m_data.substr(m_offset);
-}
+	void LogWithIndentation(const char* fmt, ...)
+	{
+		va_list args;
+		va_start(args, fmt);
+		_STD_STRING indentedFormat = DemangleLogIndentation::Apply(fmt);
+		PerformLog(0, DebugLog, "", 0, indentedFormat.c_str(), args);
+		va_end(args);
+	}
+
+#define LOG_INDENTATION_SCOPE DemangleLogIndentationScope logIndentationScope
+#else
+#define LogWithIndentation(...) do {} while(0)
+#define LOG_INDENTATION_SCOPE do {} while(0)
 #endif
 
+	size_t TotalStringSize(const StringList& v)
+	{
+		size_t n = 0;
+		for (const auto& s : v)
+			n += s.size();
+		return n;
+	}
 
 
-string DemangleGNU3Reader::ReadString(size_t count)
-{
-	if (count > Length())
-		throw DemangleException();
-	if (count > MAX_DEMANGLE_NODE_LENGTH)
-		throw DemangleException("Demangled node exceeds maximum length");
+	string JoinNameSegments(const StringList& name)
+	{
+		if (name.empty())
+			return {};
+		if (name.size() == 1)
+			return name[0];
 
-	const string out = m_data.substr(m_offset, count);
-	m_offset += count;
-	return out;
+		string out;
+		out.reserve(TotalStringSize(name) + (name.size() - 1) * 2);
+		out += name[0];
+		for (size_t i = 1; i < name.size(); i++)
+		{
+			out += "::";
+			out += name[i];
+		}
+		return out;
+	}
+
+
+	bool TemplateArgsReferenceTemplateParam(std::string_view raw)
+	{
+		if (raw.empty() || (raw[0] != 'I' && raw[0] != 'J'))
+			return false;
+
+		size_t i = 0;
+		size_t depth = 0;
+		while (i < raw.size())
+		{
+			char c = raw[i++];
+			if (c == 'I' || c == 'J')
+			{
+				depth++;
+				continue;
+			}
+			if (c == 'E')
+			{
+				if (depth == 0)
+					return false;
+				depth--;
+				if (depth == 0)
+					return false;
+				continue;
+			}
+			if (c == 'T')
+				return true;
+			if (c >= '0' && c <= '9')
+			{
+				size_t len = c - '0';
+				while (i < raw.size() && raw[i] >= '0' && raw[i] <= '9')
+					len = (len * 10) + (raw[i++] - '0');
+				i = std::min(raw.size(), i + len);
+			}
+		}
+		return false;
+	}
+
+
+	DemangledNamePart NameSegmentWithTemplateArgs(std::string_view name, vector<DemangledTypeNode::Param> args)
+	{
+		return {string(name), std::move(args), true};
+	}
+
+
+	void AppendStructuredNameSegments(DemangledQualifiedName& name, const StringList& segments)
+	{
+		for (const auto& segment: segments)
+			name.emplace_back(segment);
+	}
+
+
+	void SetStructuredExpressionNode(DemangledTypeNode* outNode, const DemangledQualifiedName& name)
+	{
+		if (outNode && !name.empty())
+		{
+			if (name.size() > 1 && !name.back().HasTemplateArguments())
+			{
+				DemangledQualifiedName baseName(name.begin(), name.end() - 1);
+				DemangledTypeNode baseType = DemangledTypeNode::NamedType(std::move(baseName));
+				*outNode = DemangledTypeNode::PostfixType(
+					DemangledTypeNode::CreateShared(std::move(baseType)), "::" + name.back().GetString());
+				return;
+			}
+			*outNode = DemangledTypeNode::NamedType(name);
+		}
+	}
+
+
+	std::string_view GetOperator(char elm1, char elm2)
+	{
+		switch (hash(elm1, elm2))
+		{
+			case hash('d','c'): return "dynamic_cast";
+			case hash('s','c'): return "static_cast";
+			case hash('c','c'): return "const_cast";
+			case hash('r','c'): return "reinterpret_cast";
+			case hash('t','i'): [[fallthrough]];
+			case hash('t','e'): return "typeid";
+			case hash('s','t'): [[fallthrough]];
+			case hash('s','z'): return "sizeof";
+			case hash('a','t'): [[fallthrough]];
+			case hash('a','z'): return "alignof";
+			case hash('a','w'): return "co_await";
+			case hash('n','x'): return "noexcept";
+			case hash('s','Z'): [[fallthrough]];
+			case hash('s','P'): return "sizeof...";
+			case hash('s','p'): return "";
+			case hash('t','w'): [[fallthrough]];
+			case hash('t','r'): return "throw";
+			case hash('l','s'): return "<<";  // <<
+			case hash('r','s'): return ">>";  // >>
+			case hash('a','S'): return "=";   // =
+			case hash('n','t'): return "!";   // !
+			case hash('e','q'): return "==";  // ==
+			case hash('n','e'): return "!=";  // !=
+			case hash('i','x'): return "[]";  // []
+			case hash('d','t'): return ".";   // .
+			case hash('p','t'): return "->";  // ->
+			case hash('m','l'): return "*";   // *
+			case hash('p','p'): return "++";  // ++ (postfix in <expression> context)
+			case hash('m','m'): return "--";  // -- (postfix in <expression> context)
+			case hash('n','g'): [[fallthrough]]; // - (unary)
+			case hash('m','i'): return "-";   // -
+			case hash('p','s'): [[fallthrough]]; // + (unary)
+			case hash('p','l'): return "+";   // +
+			case hash('a','d'): [[fallthrough]]; // & (unary)
+			case hash('a','n'): return "&";   // &
+			case hash('p','m'): return "->*"; // ->*
+			case hash('d','v'): return "/";   // /
+			case hash('r','m'): return "%";   // %
+			case hash('l','t'): return "<";   // <
+			case hash('l','e'): return "<=";  // <=
+			case hash('g','t'): return ">";   // >
+			case hash('g','e'): return ">=";  // >=
+			case hash('c','m'): return ",";   // ,
+			case hash('c','l'): return "()";  // ()
+			case hash('c','o'): return "~";   // ~
+			case hash('e','o'): return "^";   // ^
+			case hash('o','r'): return "|";   // |
+			case hash('a','a'): return "&&";  // &&
+			case hash('o','o'): return "||";  // ||
+			case hash('d','e'): return "*";   // * (unary)
+			case hash('m','L'): return "*=";  // *=
+			case hash('p','L'): return "+=";  // +=
+			case hash('m','I'): return "-=";  // -=
+			case hash('d','V'): return "/=";  // /=
+			case hash('r','M'): return "%=";  // %=
+			case hash('r','S'): return ">>="; // >>=
+			case hash('l','S'): return "<<="; // <<=
+			case hash('a','N'): return "&=";  // &=
+			case hash('o','R'): return "|=";  // |=
+			case hash('e','O'): return "^=";  // ^=
+			case hash('s','s'): return "<=>"; // <=>
+			case hash('d','l'): return "delete";   // delete
+			case hash('d','a'): return "delete[]"; // delete[]
+			case hash('n','w'): return "new";      // new
+			case hash('n','a'): return "new[]";    // new []
+			default: return "";
+		}
+	}
+
+
+	BNNameType GetNameType(char elm1, char elm2)
+	{
+		switch (hash(elm1, elm2))
+		{
+			case hash('n','t'): return OperatorNotNameType;              // !
+			case hash('n','g'): return OperatorMinusNameType;       // - (unary)
+			case hash('p','s'): return OperatorPlusNameType;        // + (unary)
+			case hash('a','d'): return OperatorBitAndNameType;      // & (unary)
+			case hash('d','e'): return OperatorStarNameType;        // * (unary)
+			case hash('i','x'): return OperatorArrayNameType;            // []
+			case hash('p','p'): return OperatorIncrementNameType;        // ++ (postfix in <expression> context)
+			case hash('m','m'): return OperatorDecrementNameType;        // -- (postfix in <expression> context)
+			case hash('l','s'): return OperatorLeftShiftNameType;        // <<
+			case hash('r','s'): return OperatorRightShiftNameType;       // >>
+			case hash('a','S'): return OperatorAssignNameType;           // =
+			case hash('e','q'): return OperatorEqualNameType;            // ==
+			case hash('n','e'): return OperatorNotEqualNameType;         // !=
+			case hash('p','t'): return OperatorArrowNameType;            // ->
+			case hash('m','l'): return OperatorStarNameType;             // *
+			case hash('m','i'): return OperatorMinusNameType;            // -
+			case hash('p','l'): return OperatorPlusNameType;             // +
+			case hash('a','n'): return OperatorBitAndNameType;           // &
+			case hash('p','m'): return OperatorArrowStarNameType;        // ->*
+			case hash('d','v'): return OperatorDivideNameType;           // /
+			case hash('r','m'): return OperatorModulusNameType;          // %
+			case hash('l','t'): return OperatorLessThanNameType;         // <
+			case hash('l','e'): return OperatorLessThanEqualNameType;    // <=
+			case hash('g','t'): return OperatorGreaterThanNameType;      // >
+			case hash('g','e'): return OperatorGreaterThanEqualNameType; // >=
+			case hash('c','m'): return OperatorCommaNameType;           // ,
+			case hash('c','l'): return OperatorParenthesesNameType;     // ()
+			case hash('c','o'): return OperatorTildeNameType;           // ~
+			case hash('e','o'): return OperatorXorNameType;             // ^
+			case hash('o','r'): return OperatorBitOrNameType;           // |
+			case hash('a','a'): return OperatorLogicalAndNameType;      // &&
+			case hash('o','o'): return OperatorLogicalOrNameType;       // ||
+			case hash('m','L'): return OperatorStarEqualNameType;       // *=
+			case hash('p','L'): return OperatorPlusEqualNameType;       // +=
+			case hash('m','I'): return OperatorMinusEqualNameType;      // -=
+			case hash('d','V'): return OperatorDivideEqualNameType;     // /=
+			case hash('r','M'): return OperatorModulusEqualNameType;    // %=
+			case hash('r','S'): return OperatorRightShiftEqualNameType; // >>=
+			case hash('l','S'): return OperatorLeftShiftEqualNameType;  // <<=
+			case hash('a','N'): return OperatorAndEqualNameType;        // &=
+			case hash('o','R'): return OperatorOrEqualNameType;         // |=
+			case hash('e','O'): return OperatorXorEqualNameType;        // ^=
+			case hash('d','l'): return OperatorDeleteNameType;          // delete
+			case hash('d','a'): return OperatorDeleteArrayNameType;     // delete[]
+			case hash('n','w'): return OperatorNewNameType;             // new
+			case hash('n','a'): return OperatorNewArrayNameType;        // new []
+				// Note: C1-C5 (constructor) and D0-D5 (destructor) are handled directly
+				// by DemangleUnqualifiedName with their own case blocks, so they never
+				// reach GetNameType.
+			default:
+				return NoNameType;
+		}
+	}
+
+
+	bool IsStaticOnlyMemberFunction(BNNameType nameType)
+	{
+		return nameType == OperatorNewNameType || nameType == OperatorNewArrayNameType ||
+			nameType == OperatorDeleteNameType || nameType == OperatorDeleteArrayNameType;
+	}
+
+
+	bool IsDirectAnonymousNamespaceFunction(const DemangledQualifiedName& name)
+	{
+		return name.size() == 2 && name.front().GetBase() == "(anonymous namespace)";
+	}
+
+
+	// Decode a big-endian hex string into a float or double.
+	// Returns the decimal string representation, or the raw hex with a type
+	// prefix if decoding fails or the result is NaN/Inf.
+	string DecodeHexFloat(std::string_view hex, size_t byteCount)
+	{
+		if (hex.size() != byteCount * 2)
+			return string(hex);
+
+		// Parse big-endian hex into an integer, then reinterpret as float/double
+		uint64_t bits = 0;
+		for (size_t i = 0; i < hex.size(); i++)
+		{
+			char c = hex[i];
+			uint64_t nibble;
+			if (c >= '0' && c <= '9')      nibble = c - '0';
+			else if (c >= 'a' && c <= 'f') nibble = c - 'a' + 10;
+			else if (c >= 'A' && c <= 'F') nibble = c - 'A' + 10;
+			else return string(hex);
+			bits = (bits << 4) | nibble;
+		}
+
+		if (byteCount == 4)
+		{
+			union { uint32_t i; float f; } u;
+			u.i = static_cast<uint32_t>(bits);
+			if (std::isnan(u.f) || std::isinf(u.f))
+			{
+				string out = "(float)";
+				out.append(hex);
+				return out;
+			}
+			return to_string(u.f);
+		}
+		else if (byteCount == 8)
+		{
+			union { uint64_t i; double d; } u;
+			u.i = bits;
+			if (std::isnan(u.d) || std::isinf(u.d))
+			{
+				string out = "(double)";
+				out.append(hex);
+				return out;
+			}
+			return to_string(u.d);
+		}
+		return string(hex);
+	}
+
+
+	void ExtendTypeName(DemangledTypeNode& type, std::string_view extend)
+	{
+		if (type.GetClass() != NamedTypeReferenceClass)
+			return;
+
+		DemangledQualifiedName name = type.GetName();
+		if (name.empty())
+		{
+			name.emplace_back(extend);
+			type.SetName(std::move(name));
+			return;
+		}
+
+		name.back().AppendBase(extend);
+		type.SetName(std::move(name));
+	}
+
+
+	void ApplyTemplateArgs(DemangledTypeNode& type, DemangleGNU3::ParamList args)
+	{
+		if (type.GetClass() != NamedTypeReferenceClass)
+			return;
+
+		DemangledQualifiedName qn = type.GetName();
+		if (qn.empty())
+			qn.emplace_back("");
+
+		qn.back().SetTemplateArguments(std::move(args), true);
+		type.SetName(std::move(qn));
+	}
+
+
+	void AppendTypeName(DemangledTypeNode& type, const DemangledTypeNode& extend)
+	{
+		if (type.GetClass() != NamedTypeReferenceClass)
+			return;
+
+		DemangledQualifiedName newName = type.GetName();
+		DemangledQualifiedName extendName = extend.GetName();
+		newName.reserve(newName.size() + extendName.size());
+		newName.insert(newName.end(), extendName.begin(), extendName.end());
+		type.SetName(std::move(newName));
+	}
+
+
+	std::string_view LastTypeNameSegmentBase(const DemangledTypeNode& type)
+	{
+		const auto& qn = type.GetName();
+		if (!qn.empty())
+			return qn.back().GetBase();
+		return {};
+	}
+
+
+	bool LastTypeNameSegmentHasTemplateArguments(const DemangledTypeNode& type)
+	{
+		const auto& qn = type.GetName();
+		if (qn.empty())
+			return false;
+		return qn.back().HasTemplateArguments();
+	}
 }
-
-
-
 
 // ===== DemangleGNU3 implementation =====
 
-DemangleGNU3::DemangleGNU3(Platform* platform, const string& mangledName) :
-	m_reader(mangledName),
+DemangleGNU3::DemangleGNU3(Platform& platform, string mangledName) :
+	m_mangledName(std::move(mangledName)),
+	m_reader(m_mangledName, MAX_DEMANGLE_NODE_LENGTH, false),
 	m_platform(platform),
 	m_lastTypeRef(nullptr),
 	m_isParameter(false),
-	m_shouldDeleteReader(true),
 	m_topLevel(true),
 	m_isOperatorOverload(false),
 	m_parsingLambdaParams(false),
@@ -371,41 +429,20 @@ DemangleGNU3::DemangleGNU3(Platform* platform, const string& mangledName) :
 	m_inLocalName(false),
 	m_nestingDepth(0)
 {
-	MyLogDebug("%s : %s\n", __FUNCTION__, m_reader.GetRaw().c_str());
+	LogWithIndentation("%s : %s\n", __FUNCTION__, m_reader.GetRaw());
 }
 
-
-DemangleGNU3::NestingGuard::NestingGuard(DemangleGNU3& demangler) : m_demangler(demangler)
+void DemangleGNU3::Reset(Platform& platform, string mangledName)
 {
-	m_demangler.m_nestingDepth++;
-	if (m_demangler.m_nestingDepth > MAX_DEMANGLE_NESTING_DEPTH)
-	{
-		m_demangler.m_nestingDepth--;
-		throw DemangleException("Detected adversarial mangled string");
-	}
-}
-
-
-DemangleGNU3::NestingGuard::~NestingGuard()
-{
-	m_demangler.m_nestingDepth--;
-}
-
-
-void DemangleGNU3::Reset(Platform* platform, const string& mangledName)
-{
-	m_reader.Reset(mangledName);
-	m_platform = platform;
+	m_mangledName = std::move(mangledName);
+	m_reader.Reset(m_mangledName);
+	m_platform = std::ref(platform);
 	m_substitute.clear();
 	m_templateSubstitute.clear();
 	m_functionSubstitute.clear();
 	m_lastTypeRef = nullptr;
 	m_lastName.clear();
-	m_nameType = {};
-	m_localType = {};
-	m_hasReturnType = {};
 	m_isParameter = false;
-	m_shouldDeleteReader = true;
 	m_topLevel = true;
 	m_isOperatorOverload = false;
 	m_parsingLambdaParams = false;
@@ -417,108 +454,9 @@ void DemangleGNU3::Reset(Platform* platform, const string& mangledName)
 }
 
 
-DemangledTypeNode DemangleGNU3::CreateUnknownType(const StringList& s)
+void DemangleGNU3::PushEmptyTemplateParamSubstitution()
 {
-	return DemangledTypeNode::NamedType(UnknownNamedTypeClass, s);
-}
-
-
-DemangledTypeNode DemangleGNU3::CreateUnknownType(const string& s)
-{
-	return DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{s});
-}
-
-
-static DemangledQualifiedName CopyQualifiedName(const DemangledTypeNode& type)
-{
-	return type.GetName();
-}
-
-
-void DemangleGNU3::ExtendTypeName(DemangledTypeNode& type, const string& extend)
-{
-	if (type.GetClass() != NamedTypeReferenceClass)
-		return;
-
-	DemangledQualifiedName name = CopyQualifiedName(type);
-	if (name.empty())
-	{
-		name.emplace_back(extend);
-		type.SetName(std::move(name));
-		return;
-	}
-
-	name.back().AppendBase(extend);
-	type.SetName(std::move(name));
-}
-
-
-void DemangleGNU3::ApplyTemplateArgs(DemangledTypeNode& type, ParamList args)
-{
-	if (type.GetClass() != NamedTypeReferenceClass)
-		return;
-
-	DemangledQualifiedName qn = CopyQualifiedName(type);
-	if (qn.empty())
-		qn.emplace_back("");
-
-	qn.back().SetTemplateArguments(std::move(args), true);
-	type.SetName(std::move(qn));
-}
-
-
-void DemangleGNU3::AppendTypeName(DemangledTypeNode& type, const DemangledTypeNode& extend)
-{
-	if (type.GetClass() != NamedTypeReferenceClass)
-		return;
-
-	DemangledQualifiedName newName = CopyQualifiedName(type);
-	DemangledQualifiedName extendName = CopyQualifiedName(extend);
-	newName.reserve(newName.size() + extendName.size());
-	newName.insert(newName.end(), extendName.begin(), extendName.end());
-	type.SetName(std::move(newName));
-}
-
-
-string DemangleGNU3::LastTypeNameSegmentBase(const DemangledTypeNode& type)
-{
-	const auto& qn = type.GetName();
-	if (!qn.empty())
-		return qn.back().GetBase();
-	return {};
-}
-
-
-bool DemangleGNU3::LastTypeNameSegmentHasTemplateArguments(const DemangledTypeNode& type)
-{
-	const auto& qn = type.GetName();
-	if (qn.empty())
-		return false;
-	return qn.back().HasTemplateArguments();
-}
-
-
-DemangleGNU3::NodeRef DemangleGNU3::PushTemplateType(NodeRef type)
-{
-	if (type)
-		m_templateSubstitute.push_back(std::move(type));
-	return type;
-}
-
-
-DemangleGNU3::NodeRef DemangleGNU3::PushTemplateType(const DemangledTypeNode& type)
-{
-	auto ref = DemangledTypeNode::CreateSharedCopy(type);
-	m_templateSubstitute.push_back(ref);
-	return ref;
-}
-
-
-DemangleGNU3::NodeRef DemangleGNU3::PushTemplateType(DemangledTypeNode&& type)
-{
-	auto ref = DemangledTypeNode::CreateShared(std::move(type));
-	m_templateSubstitute.push_back(ref);
-	return ref;
+	m_templateSubstitute.emplace_back(NodeRef::TemplateParamPack({}));
 }
 
 
@@ -527,25 +465,17 @@ const DemangledTypeNode& DemangleGNU3::GetTemplateType(size_t ref)
 {
 	if (ref >= m_templateSubstitute.size())
 		throw DemangleException();
-	if (!m_templateSubstitute[ref])
+	if (m_templateSubstitute[ref].emptyTemplatePack || !m_templateSubstitute[ref])
 		throw DemangleException();
 	return *m_templateSubstitute[ref];
 }
 #endif
 
 
-DemangleGNU3::NodeRef DemangleGNU3::PushType(NodeRef type)
-{
-	if (type)
-		m_substitute.push_back(std::move(type));
-	return type;
-}
-
-
 DemangleGNU3::NodeRef DemangleGNU3::PushType(const DemangledTypeNode& type)
 {
 	auto ref = DemangledTypeNode::CreateSharedCopy(type);
-	m_substitute.push_back(ref);
+	m_substitute.emplace_back(ref);
 	return ref;
 }
 
@@ -553,7 +483,7 @@ DemangleGNU3::NodeRef DemangleGNU3::PushType(const DemangledTypeNode& type)
 DemangleGNU3::NodeRef DemangleGNU3::PushType(DemangledTypeNode&& type)
 {
 	auto ref = DemangledTypeNode::CreateShared(std::move(type));
-	m_substitute.push_back(ref);
+	m_substitute.emplace_back(ref);
 	return ref;
 }
 
@@ -562,7 +492,7 @@ DemangleGNU3::NodeRef DemangleGNU3::GetTypeRef(size_t ref)
 {
 	if (ref >= m_substitute.size())
 		throw DemangleException();
-	if (!m_substitute[ref])
+	if (m_substitute[ref].emptyTemplatePack || !m_substitute[ref])
 		throw DemangleException();
 	return m_substitute[ref];
 }
@@ -580,13 +510,19 @@ void DemangleGNU3::PrintTables()
 	LogDebug("Substitution Table\n");
 	for (int i = 0; (size_t)i < m_substitute.size(); i++)
 	{
-		LogDebug("[%d] %s\n", i-1, GetType(i).GetString().c_str());
+		if (m_substitute[i].emptyTemplatePack)
+			LogDebug("[%d] <empty template pack>\n", i - 1);
+		else
+			LogDebug("[%d] %s\n", i - 1, GetType(i).GetString().c_str());
 	}
 
 	LogDebug("Template Table\n");
 	for (int i = 0; (size_t)i < m_templateSubstitute.size(); i++)
 	{
-		LogDebug("[%d] %s\n", i-1, GetTemplateType(i).GetString().c_str());
+		if (m_templateSubstitute[i].emptyTemplatePack)
+			LogDebug("[%d] <empty template pack>\n", i - 1);
+		else
+			LogDebug("[%d] %s\n", i - 1, GetTemplateType(i).GetString().c_str());
 	}
 }
 #endif
@@ -596,40 +532,39 @@ void DemangleGNU3::DemangleCVQualifiers(bool& cnst, bool& vltl, bool& rstrct)
 {
 	cnst = false; vltl = false; rstrct = false;
 	//[<cv-qualifier>]
-	while (1)
+	while (true)
 	{
-		switch (m_reader.Peek())
-		{
-		case 'r': rstrct = true; break;
-		case 'V': vltl = true; break;
-		case 'K': cnst = true; break;
-		default: return;
-		}
-		m_reader.Consume(1);
+		if (m_reader.ConsumeIf('r'))
+			rstrct = true;
+		else if (m_reader.ConsumeIf('V'))
+			vltl = true;
+		else if (m_reader.ConsumeIf('K'))
+			cnst = true;
+		else
+			return;
 	}
 }
 
 
-string DemangleGNU3::DemangleSourceName()
+std::string_view DemangleGNU3::DemangleSourceName()
 {
-	indent();
-	MyLogDebug("%s : %s\n", __FUNCTION__, m_reader.GetRaw().c_str());
-	m_lastName = m_reader.ReadString(DemangleNumber());
-	dedent();
-	return m_lastName;
+	LOG_INDENTATION_SCOPE;
+	LogWithIndentation("%s : %s\n", __FUNCTION__, m_reader.GetRaw());
+	std::string_view name = m_reader.ReadStringView(DemangleNumber());
+	m_lastName = name;
+	return name;
 }
 
 
 DemangledTypeNode DemangleGNU3::DemangleFunction(bool cnst, bool vltl)
 {
-	NestingGuard nestingGuard(*this);
-	indent();
-	MyLogDebug("%s : %s\n", __FUNCTION__, m_reader.GetRaw().c_str());
+	NestingGuard nestingGuard(m_nestingDepth);
+	LOG_INDENTATION_SCOPE;
+	LogWithIndentation("%s : %s\n", __FUNCTION__, m_reader.GetRaw());
 	bool old_isparam;
-	if (m_reader.Peek() == 'Y')
+	if (m_reader.ConsumeIf('Y'))
 	{
 		// TODO: This function is external, should we do anything with that info?
-		m_reader.Consume();
 	}
 
 	DemangledTypeNode retType = DemangleType();
@@ -638,21 +573,22 @@ DemangledTypeNode DemangleGNU3::DemangleFunction(bool cnst, bool vltl)
 	ParamList params;
 	old_isparam = m_isParameter;
 	m_isParameter = true;
-	m_functionSubstitute.push_back({});
+	m_functionSubstitute.emplace_back();
 	[[maybe_unused]] int i = 0;
-	while (m_reader.Peek() != 'E')
+	while (!m_reader.ConsumeIf('E'))
 	{
 		DemangledTypeNode param = DemangleType();
 		NodeRef paramRef = m_lastTypeRef;
+		if (AppendTemplateParamPackExpansion(params, paramRef, true))
+			continue;
 		if (param.GetClass() == VoidTypeClass)
 			continue;
-		MyLogDebug("Var_%d - %s\n", i++, param.GetString().c_str());
+		LogWithIndentation("Var_%d - %s\n", i++, param.GetString().c_str());
 		if (!paramRef)
 			paramRef = DemangledTypeNode::CreateShared(std::move(param));
-		m_functionSubstitute.back().push_back(paramRef);
+		m_functionSubstitute.back().emplace_back(paramRef);
 		params.push_back({"", paramRef});
 	}
-	m_reader.Consume();
 	m_functionSubstitute.pop_back();
 	m_isParameter = old_isparam;
 	if (!retTypeRef)
@@ -665,8 +601,7 @@ DemangledTypeNode DemangleGNU3::DemangleFunction(bool cnst, bool vltl)
 
 	if (cnst || vltl)
 		PushType(newType);
-	MyLogDebug("After %s : %s\n", __FUNCTION__, m_reader.GetRaw().c_str());
-	dedent();
+	LogWithIndentation("After %s : %s\n", __FUNCTION__, m_reader.GetRaw());
 	return newType;
 }
 
@@ -681,20 +616,25 @@ void DemangleGNU3::ResolveForwardTemplateRefs(DemangledTypeNode&, const ParamLis
 			continue;
 		if (ref.index >= args.size() || !args[ref.index].type)
 			throw DemangleException();
+		if (args[ref.index].type->ContainsNodeRef(ref.typeRef))
+		{
+			LogWarnF("Rejecting GNU3 demangle: recursive forward template reference T{}_", ref.index);
+			throw DemangleException("Detected recursive forward template reference");
+		}
 		*ref.typeRef = *args[ref.index].type;
 	}
 	m_pendingForwardRefs.clear();
 }
 
 
-DemangledTypeNode DemangleGNU3::DemangleTemplateSubstitution(NodeRef* outTypeRef)
+DemangleGNU3::NodeRef DemangleGNU3::DemangleTemplateSubstitutionEntry(NodeRef* outTypeRef)
 {
-	indent();
-	MyLogDebug("%s : %s\n", __FUNCTION__, m_reader.GetRaw().c_str());
+	LOG_INDENTATION_SCOPE;
+	LogWithIndentation("%s : %s\n", __FUNCTION__, m_reader.GetRaw());
 	if (outTypeRef)
 		*outTypeRef = nullptr;
 	size_t number = 0;
-	char elm = m_reader.Peek();
+	char elm = m_reader.PeekOr();
 	if (elm == '_')
 	{
 		number = 0;
@@ -702,7 +642,7 @@ DemangledTypeNode DemangleGNU3::DemangleTemplateSubstitution(NodeRef* outTypeRef
 	else if (isdigit(elm))
 	{
 		size_t n = 0;
-		while (isdigit(m_reader.Peek()))
+		while (isdigit(m_reader.PeekOr()))
 			n = n * 10 + (m_reader.Read() - '0');
 		number = n + 1;
 	}
@@ -716,19 +656,21 @@ DemangledTypeNode DemangleGNU3::DemangleTemplateSubstitution(NodeRef* outTypeRef
 		throw DemangleException();
 	}
 
-	if (m_reader.Read() != '_')
+	if (!m_reader.ConsumeIf('_'))
 	{
 		throw DemangleException();
 	}
-	dedent();
 
 	if (number < m_templateSubstitute.size())
 	{
-		if (!m_templateSubstitute[number])
+		const auto& entry = m_templateSubstitute[number];
+		if (entry.emptyTemplatePack)
+			return entry;
+		if (!entry)
 			throw DemangleException();
 		if (outTypeRef)
-			*outTypeRef = m_templateSubstitute[number];
-		return *m_templateSubstitute[number];
+			*outTypeRef = entry;
+		return entry;
 	}
 
 	// If forward template references are permitted (e.g. inside a cv conversion
@@ -736,30 +678,47 @@ DemangledTypeNode DemangleGNU3::DemangleTemplateSubstitution(NodeRef* outTypeRef
 	// replaced once the outer template args are known.
 	if (m_permitForwardTemplateRefs)
 	{
-		auto typeRef = DemangledTypeNode::CreateShared(CreateUnknownType("auto"));
+		auto typeRef = DemangledTypeNode::CreateShared(DemangledTypeNode::NamedType("auto"));
 		m_pendingForwardRefs.push_back({number, typeRef});
 		if (outTypeRef)
 			*outTypeRef = typeRef;
-		return *typeRef;
+		return typeRef;
 	}
 
 	if (m_parsingLambdaParams && number >= m_lambdaTemplateParamBase)
 	{
-		auto typeRef = DemangledTypeNode::CreateShared(CreateUnknownType("auto"));
+		auto typeRef = DemangledTypeNode::CreateShared(DemangledTypeNode::NamedType("auto"));
 		if (outTypeRef)
 			*outTypeRef = typeRef;
-		return *typeRef;
+		return typeRef;
 	}
 
 	throw DemangleException();
 }
 
 
+DemangledTypeNode DemangleGNU3::DemangleTemplateSubstitution(NodeRef* outTypeRef)
+{
+	NodeRef entry = DemangleTemplateSubstitutionEntry(outTypeRef);
+	if (entry.IsTemplateParamPack())
+	{
+		if (outTypeRef)
+			*outTypeRef = entry;
+		if (entry.emptyTemplatePack)
+			return DemangledTypeNode::VoidType();
+		return *entry;
+	}
+	if (entry.emptyTemplatePack || !entry)
+		throw DemangleException();
+	return *entry;
+}
+
+
 DemangledTypeNode DemangleGNU3::DemangleType()
 {
-	NestingGuard nestingGuard(*this);
-	indent();
-	MyLogDebug("%s : %s\n", __FUNCTION__, m_reader.GetRaw().c_str());
+	NestingGuard nestingGuard(m_nestingDepth);
+	LOG_INDENTATION_SCOPE;
+	LogWithIndentation("%s : %s\n", __FUNCTION__, m_reader.GetRaw());
 	m_lastTypeRef = nullptr;
 	DemangledTypeNode type;
 	NodeRef typeRef = nullptr;
@@ -786,12 +745,12 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 	{
 	case 'S':
 	{
-		if (isdigit(m_reader.Peek()) || m_reader.Peek() == '_' || isupper(m_reader.Peek()))
+		char next = m_reader.PeekOr();
+		if (isdigit(next) || next == '_' || isupper(next))
 		{
 			type = DemangleSubstitution(&typeRef);
-			if (m_reader.Peek() == 'I')
+			if (m_reader.ConsumeIf('I'))
 			{
-				m_reader.Consume();
 				ParamList args;
 				DemangleTemplateArgs(args);
 				ApplyTemplateArgs(type, std::move(args));
@@ -801,11 +760,10 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 		}
 		else
 		{
-			if (m_reader.Peek() == 't')
+			if (m_reader.ConsumeIf('t'))
 			{
-				m_reader.Consume(1);
 				type = DemangleUnqualifiedName();
-				auto qn = CopyQualifiedName(type);
+				DemangledQualifiedName qn = type.GetName();
 				qn.insert(qn.begin(), DemangledNamePart("std"));
 				type.SetName(std::move(qn));
 				substitute = true;
@@ -814,9 +772,8 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 			{
 				type = DemangleSubstitution(&typeRef);
 			}
-			if (m_reader.Peek() == 'I')
+			if (m_reader.ConsumeIf('I'))
 			{
-				m_reader.Consume();
 				bool dependentTemplatePrefix = LastTypeNameSegmentBase(type) == "basic_ostream" &&
 					TemplateArgsReferenceTemplateParam("I" + m_reader.PeekString(m_reader.Length()));
 				if (substitute && !dependentTemplatePrefix)
@@ -837,23 +794,20 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 		                      ::= Tu <name>  # dependent elaborated type specifier using 'union'
 		                      ::= Te <name>  # dependent elaborated type specifier using 'enum'
 		*/
-		if (m_reader.Peek() == 's')
+		if (m_reader.ConsumeIf('s'))
 		{
-			m_reader.Consume();
-			type = DemangledTypeNode::NamedType(StructNamedTypeClass, StringList{DemangleSourceName()});
+			type = DemangledTypeNode::NamedType(StructNamedTypeClass, DemangleSourceName());
 			break;
 		}
-		else if (m_reader.Peek() == 'u')
+		else if (m_reader.ConsumeIf('u'))
 		{
-			m_reader.Consume();
-			type = DemangledTypeNode::NamedType(UnionNamedTypeClass, StringList{DemangleSourceName()});
+			type = DemangledTypeNode::NamedType(UnionNamedTypeClass, DemangleSourceName());
 			break;
 		}
-		else if (m_reader.Peek() == 'e')
+		else if (m_reader.ConsumeIf('e'))
 		{
-			m_reader.Consume();
-			type = DemangledTypeNode::NamedTypeWithDefaultIntegerWidth(
-				EnumNamedTypeClass, StringList{DemangleSourceName()});
+			type = DemangledTypeNode::NamedType(
+				EnumNamedTypeClass, DemangleSourceName(), m_platform.get().GetArchitecture()->GetDefaultIntegerSize());
 			break;
 		}
 
@@ -862,10 +816,9 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 		// In forward-ref mode (cv conversion operator type parsing), do not consume
 		// trailing I<args>E — it belongs to the enclosing nested-name and will be
 		// processed by DemangleNestedName's 'I' case, which resolves forward refs.
-		substitute = !m_permitForwardTemplateRefs;
-		if (!m_permitForwardTemplateRefs && m_reader.Peek() == 'I')
+		substitute = !m_permitForwardTemplateRefs && !typeRef.IsTemplateParamPack();
+		if (!m_permitForwardTemplateRefs && m_reader.ConsumeIf('I'))
 		{
-			m_reader.Consume();
 			if (substitute)
 				PushType(type);
 			ParamList args;
@@ -914,17 +867,16 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 		// Commonly used for Objective-C block pointers:
 		//   U13block_pointer <function-type>  ->  "void (params...) block_pointer"
 		DemangledNamePart extName(DemangleSourceName());
-		if (m_reader.Peek() == 'I')
+		if (m_reader.ConsumeIf('I'))
 		{
-			m_reader.Consume();
 			ParamList targs;
 			DemangleTemplateArgs(targs);
 			if (!targs.empty())
 				extName.SetTemplateArguments(std::move(targs), true);
 		}
 		DemangledTypeNode inner = DemangleType();
-		NodeRef innerRef = m_lastTypeRef ? m_lastTypeRef : DemangledTypeNode::CreateShared(std::move(inner));
-		auto extType = DemangledTypeNode::NamedType(UnknownNamedTypeClass, DemangledQualifiedName{std::move(extName)});
+		NodeRef innerRef = m_lastTypeRef ? m_lastTypeRef : NodeRef(DemangledTypeNode::CreateShared(std::move(inner)));
+		auto extType = DemangledTypeNode::NamedType(DemangledQualifiedName{std::move(extName)});
 		NodeRef extNameRef = DemangledTypeNode::CreateShared(std::move(extType));
 		type = DemangledTypeNode::PostfixType(innerRef, " ", extNameRef);
 		substitute = true;
@@ -935,15 +887,14 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 		// Vendor extended type: u <source-name> [<template-args>]
 		// e.g. u14__remove_cvref, u20__remove_reference_t
 		DemangledNamePart extName(DemangleSourceName());
-		if (m_reader.Peek() == 'I')
+		if (m_reader.ConsumeIf('I'))
 		{
-			m_reader.Consume();
 			ParamList targs;
 			DemangleTemplateArgs(targs);
 			if (!targs.empty())
 				extName.SetTemplateArguments(std::move(targs), true);
 		}
-		type = DemangledTypeNode::NamedType(UnknownNamedTypeClass, DemangledQualifiedName{std::move(extName)});
+		type = DemangledTypeNode::NamedType(DemangledQualifiedName{std::move(extName)});
 		substitute = true;
 		break;
 	}
@@ -971,10 +922,10 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 	case 'M': // TODO: Make into pointer to function member
 	{
 		DemangledTypeNode memberName = DemangleType();
-		NodeRef memberNameRef = m_lastTypeRef ? m_lastTypeRef : DemangledTypeNode::CreateShared(std::move(memberName));
+		NodeRef memberNameRef = m_lastTypeRef ? m_lastTypeRef : NodeRef(DemangledTypeNode::CreateShared(std::move(memberName)));
 		DemangledTypeNode member = DemangleType();
-		NodeRef memberRef = m_lastTypeRef ? m_lastTypeRef : DemangledTypeNode::CreateShared(std::move(member));
-		type = DemangledTypeNode::MemberPointerType(memberRef, CopyQualifiedName(*memberNameRef), cnst, vltl);
+		NodeRef memberRef = m_lastTypeRef ? m_lastTypeRef : NodeRef(DemangledTypeNode::CreateShared(std::move(member)));
+		type = DemangledTypeNode::MemberPointerType(memberRef, memberNameRef->GetName(), cnst, vltl);
 		type.SetParenthesizedMemberPointer(true);
 		substitute = true;
 		break;
@@ -987,34 +938,42 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 		case 'e': type = DemangledTypeNode::FloatType(16, "decimal128"); break;
 		case 'f': type = DemangledTypeNode::FloatType(4, "decimal32"); break;
 		case 'h': type = DemangledTypeNode::FloatType(2); break;
+		case 'u': type = DemangledTypeNode::IntegerType(1, false, "char8_t"); break;
 		case 'i': type = DemangledTypeNode::WideCharType(4, "char32_t"); break;
 		case 's': type = DemangledTypeNode::WideCharType(2, "char16_t"); break;
-		case 'a': type = CreateUnknownType("auto"); break; //auto type
-		case 'c': type = CreateUnknownType("decltype(auto)"); break; //decltype(auto)
+		case 'a': type = DemangledTypeNode::NamedType("auto"); break; //auto type
+		case 'c': type = DemangledTypeNode::NamedType("decltype(auto)"); break; //decltype(auto)
 		case 'n':
 		{
 			static const StringList stdNullptrTName(vector<string>{"std", "nullptr_t"});
-			type = CreateUnknownType(stdNullptrTName);
+			type = DemangledTypeNode::NamedType(stdNullptrTName);
 			break;
 		}
 		case 'p':
 		{
 			DemangledTypeNode inner = DemangleType();
-			NodeRef innerRef = m_lastTypeRef ? m_lastTypeRef : DemangledTypeNode::CreateShared(std::move(inner));
+			NodeRef innerRef = (m_lastTypeRef || m_lastTypeRef.IsTemplateParamPack()) ?
+				m_lastTypeRef : NodeRef(DemangledTypeNode::CreateShared(std::move(inner)));
+			if (innerRef.IsTemplateParamPack())
+			{
+				typeRef = NodeRef::TemplateParamPackExpansion(*innerRef.templatePack);
+				type = typeRef ? *typeRef : DemangledTypeNode::VoidType();
+				break;
+			}
 			type = DemangledTypeNode::PostfixType(innerRef, "...");
 			break;
 		}
 		case 't':
 		case 'T':
-			type = CreateUnknownType("decltype(" + DemangleExpression() + ")");
-			if (m_reader.Read() != 'E')
+			type = DemangledTypeNode::NamedType("decltype(" + DemangleExpression() + ")");
+			if (!m_reader.ConsumeIf('E'))
 				throw DemangleException();
 			break;
 		case 'v':
 		{
 			// vector of size
 			uint64_t size = DemangleNumber();
-			if (m_reader.Read() != '_')
+			if (!m_reader.ConsumeIf('_'))
 				throw DemangleException();
 			NodeRef childRef = nullptr;
 			DemangledTypeNode child = DemangleType();
@@ -1024,7 +983,7 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 			break;
 		}
 		default:
-			MyLogDebug("Unsupported type: %s:'%s'\n", __FUNCTION__, m_reader.GetRaw().c_str());
+			LogWithIndentation("Unsupported type: %s:'%s'\n", __FUNCTION__, m_reader.GetRaw());
 			throw DemangleException();
 		}
 		break;
@@ -1035,11 +994,11 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 	case 'A':
 		//  <array-type> ::= A <positive dimension number> _ <element type>
 		//               ::= A [<dimension expression>] _ <element type>
-		if (isdigit(m_reader.Peek()))
+		if (isdigit(m_reader.PeekOr()))
 		{
 			//<positive dimension number> _ <element type>
 			uint64_t size = DemangleNumber();
-			if (m_reader.Read() != '_')
+			if (!m_reader.ConsumeIf('_'))
 				throw DemangleException();
 			NodeRef childRef = nullptr;
 			DemangledTypeNode child = DemangleType();
@@ -1053,15 +1012,15 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 			//Since our type system doesn't support expressions as dimensions
 			//we preserve the element type node and render a synthetic name at finalization.
 			string dimension = "[]";
-			if (m_reader.Peek() != '_')
+			if (m_reader.PeekOr() != '_')
 			{
 				dimension = "[" + DemangleExpression() + "]";
 			}
-			if (m_reader.Read() != '_')
+			if (!m_reader.ConsumeIf('_'))
 				throw DemangleException();
 
 			DemangledTypeNode inner = DemangleType();
-			NodeRef innerRef = m_lastTypeRef ? m_lastTypeRef : DemangledTypeNode::CreateShared(std::move(inner));
+			NodeRef innerRef = m_lastTypeRef ? m_lastTypeRef : NodeRef(DemangledTypeNode::CreateShared(std::move(inner)));
 			type = DemangledTypeNode::PostfixType(innerRef, std::move(dimension));
 		}
 		substitute = true;
@@ -1071,16 +1030,15 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 		m_reader.UnRead();
 
 		type = DemangleName();
-		string lastName = LastTypeNameSegmentBase(type);
+		std::string_view lastName = LastTypeNameSegmentBase(type);
 		if (lastName.empty())
 			throw DemangleException();
 		m_lastName = lastName;
 		substitute = true;
 
-		if (m_reader.Peek() == 'I')
+		if (m_reader.ConsumeIf('I'))
 		{
 			substitute = false;
-			m_reader.Consume();
 			PushType(type);
 			ParamList args;
 			DemangleTemplateArgs(args);
@@ -1093,8 +1051,6 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 	if (substitute)
 		typeRef = PushType(type);
 	m_lastTypeRef = typeRef;
-
-	dedent();
 	return type;
 }
 
@@ -1111,10 +1067,9 @@ DemangledTypeNode DemangleGNU3::DemangleSubstitution(NodeRef* outTypeRef)
 	static const StringList stdStringName(vector<string>{"std", "string"});
 	static const StringList stdName(vector<string>{"std"});
 
-	indent()
-	MyLogDebug("%s: '%s'\n", __FUNCTION__, m_reader.GetRaw().c_str());
-	char elm;
-	elm = m_reader.Read();
+	LOG_INDENTATION_SCOPE;
+	LogWithIndentation("%s: '%s'\n", __FUNCTION__, m_reader.GetRaw());
+	char elm = m_reader.Read();
 	StringList name;
 	size_t number = 0;
 	switch (elm)
@@ -1138,14 +1093,14 @@ DemangledTypeNode DemangleGNU3::DemangleSubstitution(NodeRef* outTypeRef)
 			// The actual substitution index = base36_value + 1.
 			// This handles both single-char (S0_ ... SZ_) and
 			// multi-char (S10_, S11_, ...) seq-ids.
-			size_t base36 = isdigit(elm) ? (size_t)(elm - '0') : (size_t)(elm - 'A' + 10);
-			while (m_reader.Peek() != '_')
+			size_t base36 = isdigit(elm) ? static_cast<size_t>(elm - '0') : static_cast<size_t>(elm - 'A' + 10);
+			while (m_reader.PeekOr() != '_')
 			{
 				char c = m_reader.Read();
 				if (isdigit(c))
-					base36 = base36 * 36 + (size_t)(c - '0');
+					base36 = base36 * 36 + static_cast<size_t>(c - '0');
 				else if (isupper(c))
-					base36 = base36 * 36 + (size_t)(c - 'A' + 10);
+					base36 = base36 * 36 + static_cast<size_t>(c - 'A' + 10);
 				else
 					throw DemangleException();
 			}
@@ -1157,15 +1112,31 @@ DemangledTypeNode DemangleGNU3::DemangleSubstitution(NodeRef* outTypeRef)
 			throw DemangleException();
 		}
 
-		if (m_reader.Read() != '_')
+		if (!m_reader.ConsumeIf('_'))
 		{
 			throw DemangleException();
 		}
-
-		dedent();
-		auto ref = GetTypeRef(number);
+		NodeRef ref;
+		if (number < m_substitute.size())
+		{
+			ref = GetTypeRef(number);
+		}
+		else if (number == m_substitute.size() && m_reader.PeekOr() == 'I' && !m_substitute.empty())
+		{
+			// GNU/libstdc++ pack expansions can elide an empty template-id that
+			// LLVM still effectively treats as occupying this substitution slot.
+			// When the next production immediately replaces template arguments,
+			// use the previous template-id as the prefix.
+			if (m_substitute.back().emptyTemplatePack || !m_substitute.back())
+				throw DemangleException();
+			ref = m_substitute.back();
+		}
+		else
+		{
+			ref = GetTypeRef(number);
+		}
 		const DemangledTypeNode& resolved = *ref;
-		string lastName = LastTypeNameSegmentBase(resolved);
+		std::string_view lastName = LastTypeNameSegmentBase(resolved);
 		if (!lastName.empty())
 			m_lastName = lastName;
 		if (outTypeRef)
@@ -1173,21 +1144,19 @@ DemangledTypeNode DemangleGNU3::DemangleSubstitution(NodeRef* outTypeRef)
 		return resolved;
 	}
 	m_lastName = name.back();
-	dedent();
-	return CreateUnknownType(name);
+	return DemangledTypeNode::NamedType(std::move(name));
 }
 
 string DemangleGNU3::DemangleNumberAsString()
 {
 	bool negativeFactor = false;
-	if (m_reader.Peek() == 'n')
+	if (m_reader.ConsumeIf('n'))
 	{
 		negativeFactor = true;
-		m_reader.Consume();
 	}
 
 	string number;
-	while (isdigit(m_reader.Peek()))
+	while (isdigit(m_reader.PeekOr()))
 	{
 		number += m_reader.Read();
 	}
@@ -1200,36 +1169,34 @@ string DemangleGNU3::DemangleNumberAsString()
 int64_t DemangleGNU3::DemangleNumber()
 {
 	bool negative = false;
-	if (m_reader.Peek() == 'n')
+	if (m_reader.ConsumeIf('n'))
 	{
 		negative = true;
-		m_reader.Consume();
 	}
 
-	if (!isdigit(m_reader.Peek()))
+	if (!isdigit(m_reader.PeekOr()))
 		throw DemangleException();
 
 	int64_t result = 0;
 	do
 	{
 		result = result * 10 + (m_reader.Read() - '0');
-	} while (isdigit(m_reader.Peek()));
+	} while (isdigit(m_reader.PeekOr()));
 	return negative ? -result : result;
 }
 
 
 string DemangleGNU3::DemanglePrimaryExpression()
 {
-	indent();
-	MyLogDebug("%s: '%s'\n", __FUNCTION__, m_reader.GetRaw().c_str());
+	LOG_INDENTATION_SCOPE;
+	LogWithIndentation("%s: '%s'\n", __FUNCTION__, m_reader.GetRaw());
 	char elm1 = '\0';
 	string out;
 	StringList tmpList;
 	bool oldTopLevel;
 	//expr-primary
-	if (m_reader.PeekString(2) == "_Z")
+	if (m_reader.ConsumeIf("_Z"))
 	{
-		m_reader.Consume(2);
 		// The embedded _Z... is an independent mangled name with its own
 		// template scope.  Save and clear the template substitution table
 		// so inner T_ / T0_ etc. resolve within this symbol, not the outer
@@ -1241,14 +1208,12 @@ string DemangleGNU3::DemanglePrimaryExpression()
 		DemangledTypeNode t = DemangleSymbol(tmpList);
 		m_topLevel = oldTopLevel;
 		m_templateSubstitute = std::move(savedTemplateSubstitute);
-		out += t.GetTypeAndName(tmpList, m_platform.GetPtr());
-		dedent()
+		out += t.GetTypeAndName(tmpList, m_platform);
 		return out;
 	}
 	// LZ<encoding>E: function address template arg (GCC/Clang, without leading underscore)
-	if (m_reader.Peek() == 'Z')
+	if (m_reader.ConsumeIf('Z'))
 	{
-		m_reader.Consume(); // 'Z'
 		auto savedTemplateSubstitute2 = m_templateSubstitute;
 		m_templateSubstitute.clear();
 		oldTopLevel = m_topLevel;
@@ -1256,8 +1221,7 @@ string DemangleGNU3::DemanglePrimaryExpression()
 		DemangledTypeNode t2 = DemangleSymbol(tmpList);
 		m_topLevel = oldTopLevel;
 		m_templateSubstitute = std::move(savedTemplateSubstitute2);
-		out += t2.GetTypeAndName(tmpList, m_platform.GetPtr());
-		dedent();
+		out += t2.GetTypeAndName(tmpList, m_platform);
 		return out;
 	}
 	switch (m_reader.Read())
@@ -1302,40 +1266,75 @@ string DemangleGNU3::DemanglePrimaryExpression()
 		break;
 	}
 	}
-	if (m_reader.Read() != 'E')
+	if (!m_reader.ConsumeIf('E'))
 		throw DemangleException();
-
-	dedent();
 	return out;
 }
 
 
-string DemangleGNU3::DemangleUnarySuffixExpression(const string& op)
+string DemangleGNU3::DemangleUnarySuffixExpression(std::string_view op)
 {
-	return "(" + DemangleExpression() + ")" + op;
+	string out = "(" + DemangleExpression() + ")";
+	out += op;
+	return out;
 }
 
 
-string DemangleGNU3::DemangleUnaryPrefixExpression(const string& op)
+string DemangleGNU3::DemangleUnaryPrefixExpression(std::string_view op, DemangledTypeNode* outNode)
 {
-	return op + "(" + DemangleExpression() + ")";
+	DemangledTypeNode exprNode;
+	string expr = DemangleExpression(outNode ? &exprNode : nullptr);
+	if (outNode)
+	{
+		if (exprNode.GetClass() == VoidTypeClass)
+			exprNode = DemangledTypeNode::NamedType(expr);
+		*outNode = DemangledTypeNode::UnaryExpression(
+			string(op), DemangledTypeNode::CreateShared(std::move(exprNode)));
+	}
+	string out(op);
+	out += "(";
+	out += expr;
+	out += ")";
+	return out;
 }
 
 
-string DemangleGNU3::DemangleBinaryExpression(const string& op)
+string DemangleGNU3::DemangleBinaryExpression(std::string_view op, DemangledTypeNode* outNode)
 {
-	indent();
-	MyLogDebug("%s: '%s'\n", __FUNCTION__, m_reader.GetRaw().c_str());
-	const string lhs = "(" + DemangleExpression() + ")";
-	const string rhs = "(" + DemangleExpression() + ")";
-	dedent();
-	return lhs + " " + op + " " + rhs;
+	LOG_INDENTATION_SCOPE;
+	LogWithIndentation("%s: '%s'\n", __FUNCTION__, m_reader.GetRaw());
+	DemangledTypeNode lhsNode;
+	DemangledTypeNode rhsNode;
+	const string lhsExpr = DemangleExpression(outNode ? &lhsNode : nullptr);
+	const string rhsExpr = DemangleExpression(outNode ? &rhsNode : nullptr);
+	const string lhs = "(" + lhsExpr + ")";
+	const string rhs = "(" + rhsExpr + ")";
+	if (outNode)
+	{
+		if (lhsNode.GetClass() == VoidTypeClass)
+			lhsNode = DemangledTypeNode::NamedType(lhsExpr);
+		if (rhsNode.GetClass() == VoidTypeClass)
+			rhsNode = DemangledTypeNode::NamedType(rhsExpr);
+		*outNode = DemangledTypeNode::BinaryExpression(
+			DemangledTypeNode::CreateShared(std::move(lhsNode)), string(op),
+			DemangledTypeNode::CreateShared(std::move(rhsNode)));
+	}
+	string out = lhs;
+	out += " ";
+	out += op;
+	out += " ";
+	out += rhs;
+	return out;
 }
 
 
-string DemangleGNU3::DemangleUnaryPrefixType(const string& op)
+string DemangleGNU3::DemangleUnaryPrefixType(std::string_view op)
 {
-	return op + "(" + DemangleTypeString() + ")";
+	string out(op);
+	out += "(";
+	out += DemangleTypeString();
+	out += ")";
+	return out;
 }
 
 
@@ -1347,31 +1346,30 @@ string DemangleGNU3::DemangleTypeString()
 
 string DemangleGNU3::DemangleExpressionList()
 {
-	indent();
-	MyLogDebug("%s: '%s'\n", __FUNCTION__, m_reader.GetRaw().c_str());
+	LOG_INDENTATION_SCOPE;
+	LogWithIndentation("%s: '%s'\n", __FUNCTION__, m_reader.GetRaw());
 	string expr;
 	bool first = true;
-	m_functionSubstitute.push_back({});
-	while (m_reader.Peek() != 'E')
+	m_functionSubstitute.emplace_back();
+	while (!m_reader.ConsumeIf('E'))
 	{
 		if (!first)
 			expr += ", ";
 		const string e = DemangleExpression();
 		expr += e;
-		m_functionSubstitute.back().push_back(DemangledTypeNode::CreateShared(CreateUnknownType(e)));
+		m_functionSubstitute.back().emplace_back(
+			DemangledTypeNode::CreateShared(DemangledTypeNode::NamedType(e)));
 		first = false;
 	}
 	m_functionSubstitute.pop_back();
-	m_reader.Consume();
-	dedent();
 	return expr;
 }
 
 
 DemangledTypeNode DemangleGNU3::DemangleUnqualifiedName()
 {
-	indent()
-	MyLogDebug("%s: '%s'\n", __FUNCTION__, m_reader.GetRaw().c_str());
+	LOG_INDENTATION_SCOPE;
+	LogWithIndentation("%s: '%s'\n", __FUNCTION__, m_reader.GetRaw());
 
 	DemangledTypeNode outType;
 	char elm1 = m_reader.Read();
@@ -1422,9 +1420,13 @@ DemangledTypeNode DemangleGNU3::DemangleUnqualifiedName()
 	case hash('o','R'): // |=
 	case hash('e','O'): // ^=
 	case hash('s','s'): // <=>
-		outType = CreateUnknownType("operator" + GetOperator(elm1, elm2));
+	{
+		string name = "operator";
+		name += GetOperator(elm1, elm2);
+		outType = DemangledTypeNode::NamedType(name);
 		outType.SetNameType(GetNameType(elm1, elm2));
 		break;
+	}
 	case hash('t','i'):
 	case hash('t','e'):
 	case hash('s','t'):
@@ -1440,9 +1442,13 @@ DemangledTypeNode DemangleGNU3::DemangleUnqualifiedName()
 	case hash('d','a'): // delete[]
 	case hash('n','w'): // new
 	case hash('n','a'): // new []
-		outType = CreateUnknownType("operator " + GetOperator(elm1, elm2));
+	{
+		string name = "operator ";
+		name += GetOperator(elm1, elm2);
+		outType = DemangledTypeNode::NamedType(name);
 		outType.SetNameType(GetNameType(elm1, elm2));
 		break;
+	}
 	case hash('v','0'):
 	case hash('v','1'):
 	case hash('v','2'):
@@ -1460,7 +1466,7 @@ DemangledTypeNode DemangleGNU3::DemangleUnqualifiedName()
 	case hash('C','3'):
 	case hash('C','4'):
 	case hash('C','5'):
-		outType = CreateUnknownType(m_lastName);
+		outType = DemangledTypeNode::NamedType(m_lastName);
 		outType.SetNameType(ConstructorNameType);
 		break;
 	case hash('C','I'): // Inheriting constructor: CI1 <type> or CI2 <type>
@@ -1472,7 +1478,7 @@ DemangledTypeNode DemangleGNU3::DemangleUnqualifiedName()
 		string savedLastName = m_lastName;
 		DemangleType();
 		m_lastName = savedLastName;
-		outType = CreateUnknownType(m_lastName);
+		outType = DemangledTypeNode::NamedType(m_lastName);
 		outType.SetNameType(ConstructorNameType);
 		break;
 	}
@@ -1482,14 +1488,12 @@ DemangledTypeNode DemangleGNU3::DemangleUnqualifiedName()
 	case hash('D','3'):
 	case hash('D','4'):
 	case hash('D','5'):
-		outType = CreateUnknownType("~" + m_lastName);
+		outType = DemangledTypeNode::NamedType("~" + m_lastName);
 		outType.SetNameType(DestructorNameType);
 		break;
 	case hash('D','t'):
 	case hash('D','T'):
-		outType = CreateUnknownType(DemangleExpression());
-		// if (m_reader.Read() != 'E')
-		// 	throw DemangleException();
+		outType = DemangledTypeNode::NamedType(DemangleExpression());
 		break;
 	case hash('U','l'): //Lambda
 	{
@@ -1509,16 +1513,17 @@ DemangledTypeNode DemangleGNU3::DemangleUnqualifiedName()
 			if (param.GetClass() == VoidTypeClass)
 				break;
 			lambdaParams.push_back(std::move(param));
-		}while (m_reader.Peek() != 'E');
-		m_reader.Consume();
+		}while (m_reader.PeekOr() != 'E');
+		if (!m_reader.ConsumeIf('E'))
+			throw DemangleException();
 		m_parsingLambdaParams = savedParsingLambdaParams;
 		m_lambdaTemplateParamBase = savedLambdaTemplateParamBase;
 
-		if (isdigit(m_reader.Peek()))
+		if (isdigit(m_reader.PeekOr()))
 		{
 			name += DemangleNumberAsString();
 		}
-		if (m_reader.Read() != '_')
+		if (!m_reader.ConsumeIf('_'))
 			throw DemangleException();
 
 		name += "'(";
@@ -1530,7 +1535,7 @@ DemangledTypeNode DemangleGNU3::DemangleUnqualifiedName()
 		}
 		name += ")";
 		m_lastName = name;
-		outType = CreateUnknownType(name);
+		outType = DemangledTypeNode::NamedType(name);
 		PushType(outType);
 		break;
 	}
@@ -1539,17 +1544,17 @@ DemangledTypeNode DemangleGNU3::DemangleUnqualifiedName()
 		string name;
 		name = "'unnamed";
 
-		if (isdigit(m_reader.Peek()))
+		if (isdigit(m_reader.PeekOr()))
 		{
 			name += DemangleNumberAsString();
 		}
 		name += "\'";
 
-		if (m_reader.Read() != '_')
+		if (!m_reader.ConsumeIf('_'))
 			throw DemangleException();
 
 		m_lastName = name;
-		outType = CreateUnknownType(name);
+		outType = DemangledTypeNode::NamedType(name);
 		break;
 	}
 	case hash('c','v'): //type (expression)
@@ -1565,21 +1570,20 @@ DemangledTypeNode DemangleGNU3::DemangleUnqualifiedName()
 		m_pendingForwardRefs.clear();
 		m_permitForwardTemplateRefs = true;
 		DemangledTypeNode cvType = DemangleType();
-		NodeRef cvTypeRef = m_lastTypeRef ? m_lastTypeRef : DemangledTypeNode::CreateShared(std::move(cvType));
+		NodeRef cvTypeRef = m_lastTypeRef ? m_lastTypeRef : NodeRef(DemangledTypeNode::CreateShared(std::move(cvType)));
 		m_permitForwardTemplateRefs = savedPermit;
-		outType = DemangledTypeNode::NamedType(UnknownNamedTypeClass,
-			DemangledQualifiedName{DemangledNamePart("operator ", std::move(cvTypeRef))});
+		outType = DemangledTypeNode::NamedType(DemangledQualifiedName{DemangledNamePart("operator ", std::move(cvTypeRef))});
 		break;
 	}
 	default:
 		m_reader.UnRead(2);
-		if (isdigit(m_reader.Peek()) || m_reader.Read() == 'L')
+		if (isdigit(m_reader.PeekOr()) || m_reader.ConsumeIf('L'))
 		{
-			string name = DemangleSourceName();
+			string name(DemangleSourceName());
 			if (name.size() > 11 && name.substr(0, 11) == "_GLOBAL__N_")
 				name = "(anonymous namespace)";
 			m_lastName = name;
-			outType = CreateUnknownType(name);
+			outType = DemangledTypeNode::NamedType(name);
 		}
 		else
 		{
@@ -1588,15 +1592,15 @@ DemangledTypeNode DemangleGNU3::DemangleUnqualifiedName()
 	}
 	// Consume ABI tags: B <source-name>  =>  [abi:tagname]
 	// Applies to source names, operator names, and unnamed types.
-	while (m_reader.Peek() == 'B')
+	while (m_reader.ConsumeIf('B'))
 	{
-		m_reader.Consume();
-		string tag = "[abi:" + DemangleSourceName() + "]";
+		string tag = "[abi:";
+		tag.append(DemangleSourceName());
+		tag += "]";
 		ExtendTypeName(outType, tag);
-		string lastName = LastTypeNameSegmentBase(outType);
-		m_lastName = lastName.empty() ? tag : lastName;
+		std::string_view lastName = LastTypeNameSegmentBase(outType);
+		m_lastName = lastName.empty() ? tag : string(lastName);
 	}
-	dedent();
 	return outType;
 }
 
@@ -1609,69 +1613,66 @@ StringList DemangleGNU3::DemangleBaseUnresolvedName()
 	//                        ::= dn <destructor-name>                       # destructor or pseudo-destructor;
 	//                                                                       # e.g. ~X or ~X<N-1>
 
-	indent()
-	MyLogDebug("%s: '%s'\n", __FUNCTION__, m_reader.GetRaw().c_str());
+	LOG_INDENTATION_SCOPE;
+	LogWithIndentation("%s: '%s'\n", __FUNCTION__, m_reader.GetRaw());
 	StringList out;
 	if (m_reader.Length() > 1)
 	{
-		const string str = m_reader.PeekString(2);
-		if (str == "on")
+		if (m_reader.ConsumeIf("on"))
 		{
-			m_reader.Consume(); m_reader.Consume(); // skip 'o','n' prefix
 			char op1 = m_reader.Read();
 			char op2 = m_reader.Read();
-			out.push_back(GetOperator(op1, op2));
-			if (m_reader.Peek() == 'I')
+			out.emplace_back(GetOperator(op1, op2));
+			if (m_reader.ConsumeIf('I'))
 			{
-				m_reader.Consume();
 				ParamList args;
 				DemangleTemplateArgs(args);
 				out.back() = NameSegmentWithTemplateArgs(out.back(), std::move(args)).GetString();
-				PushType(CreateUnknownType(out));
+				PushType(DemangledTypeNode::NamedType(out));
 			}
 		}
-		else if (str == "dn")
+		else if (m_reader.PeekMatch("dn"))
 		{
 			string name = DemangleUnresolvedType().GetString();
 			if (name.empty())
-				out.push_back("~" + DemangleSourceName());
+			{
+				string dtorName = "~";
+				dtorName.append(DemangleSourceName());
+				out.push_back(std::move(dtorName));
+			}
 			else
 				out.push_back("~" + name);
 		}
 		else
 		{
 			// <simple-id>
-			out.push_back(DemangleSourceName());
-			if (m_reader.Peek() == 'I')
+			out.emplace_back(DemangleSourceName());
+			if (m_reader.ConsumeIf('I'))
 			{
-				m_reader.Consume();
 				ParamList args;
 				DemangleTemplateArgs(args);
 				out.back() = NameSegmentWithTemplateArgs(out.back(), std::move(args)).GetString();
 			}
 		}
 	}
-	dedent();
 	return out;
 }
 
 
 DemangledTypeNode DemangleGNU3::DemangleUnresolvedType()
 {
-	indent();
-	MyLogDebug("%s: '%s'\n", __FUNCTION__, m_reader.GetRaw().c_str());
+	LOG_INDENTATION_SCOPE;
+	LogWithIndentation("%s: '%s'\n", __FUNCTION__, m_reader.GetRaw());
 	//<unresolved-type> ::= <template-param> [ <template-args> ]            # T:: or T<X,Y>::
 	//                  ::= <decltype>                                      # decltype(p)::
 	//                  ::= <substitution>
 	DemangledTypeNode type;
-	if (m_reader.Peek() == 'T')
+	if (m_reader.ConsumeIf('T'))
 	{
-		m_reader.Consume();
 		type = DemangleTemplateSubstitution();
-		if (m_reader.Peek() == 'I')
+		if (m_reader.ConsumeIf('I'))
 		{
 			PushType(type);
-			m_reader.Consume();
 			ParamList args;
 			DemangleTemplateArgs(args);
 			ApplyTemplateArgs(type, std::move(args));
@@ -1685,32 +1686,28 @@ DemangledTypeNode DemangleGNU3::DemangleUnresolvedType()
 			PushType(type);
 		}
 	}
-	else if (m_reader.Length() > 2 && (m_reader.PeekString(2) == "Dt" || m_reader.PeekString(2) == "DT"))
+	else if (m_reader.Length() > 2 && (m_reader.ConsumeIf("Dt") || m_reader.ConsumeIf("DT")))
 	{
-		m_reader.Consume(); // 'D'
-		m_reader.Consume(); // 't' or 'T'
 		const string name = "decltype(" + DemangleExpression() + ")";
-		if (m_reader.Read() != 'E')
+		if (!m_reader.ConsumeIf('E'))
 			throw DemangleException();
-		type = CreateUnknownType(name);
+		type = DemangledTypeNode::NamedType(name);
 	}
-	else if (m_reader.Peek() == 'S')
+	else if (m_reader.ConsumeIf('S'))
 	{
-		m_reader.Consume();
 		type = DemangleSubstitution();
 	}
 	else
 	{
 		throw DemangleException();
 	}
-	dedent();
 	return type;
 }
 
 
-string DemangleGNU3::DemangleExpression()
+string DemangleGNU3::DemangleExpression(DemangledTypeNode* outNode)
 {
-	MyLogDebug("%s: '%s'\n", __FUNCTION__, m_reader.GetRaw().c_str());
+	LogWithIndentation("%s: '%s'\n", __FUNCTION__, m_reader.GetRaw());
 	/*
 	<expression> ::= <unary operator-name> <expression>
 	               ::= <binary operator-name> <expression> <expression>
@@ -1765,7 +1762,10 @@ string DemangleGNU3::DemangleExpression()
 	}
 	else if (elm1 == 'T') //<template-param>
 	{
-		return DemangleTemplateSubstitution().GetString();
+		DemangledTypeNode type = DemangleTemplateSubstitution();
+		if (outNode)
+			*outNode = type;
+		return type.GetString();
 	}
 
 	elm2 = m_reader.Read();
@@ -1793,10 +1793,10 @@ string DemangleGNU3::DemangleExpression()
 	case hash('c','c'):
 	case hash('r','c'):
 	{
-		const string op = GetOperator(elm1, elm2);
+		std::string_view op = GetOperator(elm1, elm2);
 		const string castType = DemangleTypeString();
 		const string castExpr = DemangleExpression();
-		return op + "<" + castType + ">(" + castExpr + ")";
+		return string(op) + "<" + castType + ">(" + castExpr + ")";
 	}
 	case hash('t','i'):
 	case hash('t','e'):
@@ -1805,9 +1805,8 @@ string DemangleGNU3::DemangleExpression()
 	case hash('a','t'):
 	case hash('a','z'):
 	case hash('n','x'):
-		return GetOperator(elm1, elm2) + "(" + DemangleTypeString() + ")";
 	case hash('s','Z'):
-		return GetOperator(elm1, elm2) + "(" + DemangleTypeString() + ")";
+		return string(GetOperator(elm1, elm2)) + "(" + DemangleExpression() + ")";
 	case hash('s','P'):
 	{
 		ParamList args;
@@ -1817,15 +1816,15 @@ string DemangleGNU3::DemangleExpression()
 	case hash('s','p'):
 		return "(" + DemangleExpression() + ")...";
 	case hash('t','w'):
-		return GetOperator(elm1, elm2) + DemangleExpression();
+		return string(GetOperator(elm1, elm2)) + DemangleExpression();
 	case hash('t','r'):
-		return GetOperator(elm1, elm2); //rethrow
+		return string(GetOperator(elm1, elm2)); //rethrow
 	case hash('n','t'): // !
 	case hash('n','g'): // - (unary)
 	case hash('p','s'): // + (unary)
 	case hash('a','d'): // & (unary)
 	case hash('d','e'): // * (unary)
-		return DemangleUnaryPrefixExpression(GetOperator(elm1, elm2));
+		return DemangleUnaryPrefixExpression(GetOperator(elm1, elm2), outNode);
 	case hash('i','x'): // []
 	case hash('p','p'): // ++ (postfix in <expression> context)
 	case hash('m','m'): // -- (postfix in <expression> context)
@@ -1874,7 +1873,7 @@ string DemangleGNU3::DemangleExpression()
 	case hash('a','N'): // &=
 	case hash('o','R'): // |=
 	case hash('e','O'): // ^=
-		return DemangleBinaryExpression(GetOperator(elm1, elm2));
+		return DemangleBinaryExpression(GetOperator(elm1, elm2), outNode);
 	case hash('d','l'): // delete
 	case hash('d','a'): // delete[]
 	case hash('n','w'): // new
@@ -1892,26 +1891,25 @@ string DemangleGNU3::DemangleExpression()
 		const string callable = DemangleExpression();
 		string args;
 		bool firstArg = true;
-		m_functionSubstitute.push_back({});
-		while (m_reader.Peek() != 'E')
+		m_functionSubstitute.emplace_back();
+		while (!m_reader.ConsumeIf('E'))
 		{
 			if (!firstArg) args += ", ";
 			const string e = DemangleExpression();
 			args += e;
-			m_functionSubstitute.back().push_back(DemangledTypeNode::CreateShared(CreateUnknownType(e)));
+			m_functionSubstitute.back().emplace_back(
+				DemangledTypeNode::CreateShared(DemangledTypeNode::NamedType(e)));
 			firstArg = false;
 		}
 		m_functionSubstitute.pop_back();
-		m_reader.Consume(); // 'E'
 		return callable + "(" + args + ")";
 	}
 	case hash('c','v'): //type (expression)
 	{
 		DemangledTypeNode type = DemangleType();
 		out = type.GetString();
-		if (m_reader.Peek() == '_')
+		if (m_reader.ConsumeIf('_'))
 		{
-			m_reader.Consume(); // consume '_' delimiter before expression list
 			out += " (" + DemangleExpressionList() + ")";
 		}
 		else
@@ -1926,7 +1924,7 @@ string DemangleGNU3::DemangleExpression()
 	}
 	case hash('i', 'l'): //{expr-list}, braced-init-list in any other context
 		out = DemangleExpression();
-		if (m_reader.Read() != 'E')
+		if (!m_reader.ConsumeIf('E'))
 			throw DemangleException();
 		return out;
 	case hash('f','p'):
@@ -1949,16 +1947,15 @@ string DemangleGNU3::DemangleExpression()
 			// type before function params are known), the fallback paths below produce
 			// a placeholder string "fp" / "fpN".
 			listNumber = DemangleNumber() + 1;
-			if (listNumber < 0 || m_reader.Read() != 'p')
+			if (listNumber < 0 || !m_reader.ConsumeIf('p'))
 				throw DemangleException();
 		}
 		DemangleCVQualifiers(cnst, vltl, rstrct);
-		elm = m_reader.Peek();
-		if (elm == '_')
+		elm = m_reader.PeekOr();
+		if (m_reader.ConsumeIf('_'))
 		{
-			m_reader.Consume(1);
-			if ((uint64_t)listNumber >= (uint64_t)m_functionSubstitute.size() ||
-			    (size_t)elementNum >= m_functionSubstitute[listNumber].size())
+			if (static_cast<uint64_t>(listNumber) >= static_cast<uint64_t>(m_functionSubstitute.size()) ||
+			    static_cast<uint64_t>(elementNum) >= m_functionSubstitute[listNumber].size())
 			{
 				// fp_ used before params are known (e.g., in decltype return type)
 				out = (elementNum == 0) ? "fp" : "fp" + std::to_string(elementNum - 1);
@@ -1971,11 +1968,11 @@ string DemangleGNU3::DemangleExpression()
 		else if (isdigit(elm) || isupper(elm))
 		{
 			elementNum = DemangleNumber() + 1;
-			if (m_reader.Read() != '_')
+			if (!m_reader.ConsumeIf('_'))
 				throw DemangleException();
 			if (elementNum < 0 ||
-			    (uint64_t)listNumber >= (uint64_t)m_functionSubstitute.size() ||
-			    (size_t)elementNum >= m_functionSubstitute[listNumber].size())
+			    static_cast<uint64_t>(listNumber) >= static_cast<uint64_t>(m_functionSubstitute.size()) ||
+			    static_cast<size_t>(elementNum) >= m_functionSubstitute[listNumber].size())
 			{
 				// fpN_ used before params are known
 				out = "fp" + std::to_string(elementNum - 1);
@@ -1990,9 +1987,12 @@ string DemangleGNU3::DemangleExpression()
 			throw DemangleException();
 		}
 		out = type.GetString();
+		if (outNode)
+			*outNode = type;
 		break;
 	}
 	case hash('s','r'):
+	{
 		/*
 		<unresolved-name> ::=
 		                  ::=   <unresolved-type> <base-unresolved-name>                  # T::x / decltype(p)::x
@@ -2012,39 +2012,50 @@ string DemangleGNU3::DemangleExpression()
 		                       ::= dn <destructor-name>                       # destructor or pseudo-destructor;
 		                                                                      # e.g. ~X or ~X<N-1>
 		*/
-		if (m_reader.Peek() == 'N')
+		DemangledQualifiedName structuredName;
+		if (m_reader.ConsumeIf('N'))
 		{
-			m_reader.Consume();
 			// Standard form: N <unresolved-type> <qualifier-levels>+ E <base>
 			// where <unresolved-type> is T_, Dt, or S.
 			// GCC extension: N <source-name-qualifier>+ E <base>
 			// When the first component is a digit (source name), skip the
 			// unresolved-type and let the loop below handle all qualifiers.
-			if (!isdigit(m_reader.Peek()))
-				out += DemangleUnresolvedType().GetString() + "::";
+			if (!isdigit(m_reader.PeekOr()))
+			{
+				DemangledTypeNode unresolvedType = DemangleUnresolvedType();
+				out += unresolvedType.GetString() + "::";
+				AppendStructuredNameSegments(structuredName, unresolvedType.RenderTypeNameSegments());
+			}
 			do
 			{
-				out += DemangleSourceName();
+				std::string_view segName = DemangleSourceName();
+				const size_t segmentStart = out.size();
+				out.append(segName);
+				DemangledNamePart structuredSegment(segName);
 				// Push bare name (before template args) to substitution table.
-				PushType(DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{out}));
-				if (m_reader.Peek() == 'I')
+				PushType(DemangledTypeNode::NamedType(StringList{out}));
+				if (m_reader.ConsumeIf('I'))
 				{
 					ParamList args;
-					m_reader.Consume();
 					//<tmplate-args>
 					DemangleTemplateArgs(args);
-					out = NameSegmentWithTemplateArgs(out, std::move(args)).GetString();
+					structuredSegment = NameSegmentWithTemplateArgs(segName, std::move(args));
+					out.resize(segmentStart);
+					out += structuredSegment.GetString();
 					// Also push the template instantiation (name+args).
-					PushType(DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{out}));
+					PushType(DemangledTypeNode::NamedType(StringList{out}));
 				}
+				structuredName.push_back(std::move(structuredSegment));
 				out += "::";
-			}while (m_reader.Peek() != 'E');
-			m_reader.Consume();
+			}while (!m_reader.ConsumeIf('E'));
 
-			out += JoinNameSegments(DemangleBaseUnresolvedName());
+			StringList baseName = DemangleBaseUnresolvedName();
+			out += JoinNameSegments(baseName);
+			AppendStructuredNameSegments(structuredName, baseName);
+			SetStructuredExpressionNode(outNode, structuredName);
 			return out;
 		}
-		if (isdigit(m_reader.Peek()))
+		if (isdigit(m_reader.PeekOr()))
 		{
 			// <unresolved-qualifier-level>+ E <base-unresolved-name>
 			// GCC sometimes omits the explicit qualifier-list 'E' when the last
@@ -2060,87 +2071,152 @@ string DemangleGNU3::DemangleExpression()
 			do
 			{
 				hadTemplateArgs = false;
-				const string segName = DemangleSourceName();
-				out += segName;
+				std::string_view segName = DemangleSourceName();
+				const size_t segmentStart = out.size();
+				out.append(segName);
+				DemangledNamePart structuredSegment(segName);
 				// Push bare name to substitution table.
-				PushType(CreateUnknownType(out));
-				if (m_reader.Peek() == 'I')
+				PushType(DemangledTypeNode::NamedType(out));
+				if (m_reader.ConsumeIf('I'))
 				{
 					ParamList args;
-					m_reader.Consume();
 					DemangleTemplateArgs(args); // consumes the trailing 'E'
-					out = NameSegmentWithTemplateArgs(out, std::move(args)).GetString();
+					structuredSegment = NameSegmentWithTemplateArgs(segName, std::move(args));
+					out.resize(segmentStart);
+					out += structuredSegment.GetString();
 					// Also push the template instantiation.
-					PushType(CreateUnknownType(out));
+					PushType(DemangledTypeNode::NamedType(out));
 					hadTemplateArgs = true;
 				}
+				structuredName.push_back(std::move(structuredSegment));
 				out += "::";
-			}while (!hadTemplateArgs && m_reader.Peek() != 'E');
+			}while (!hadTemplateArgs && m_reader.PeekOr() != 'E');
 			// Consume qualifier-list 'E' if present. GCC sometimes omits it when
 			// the last qualifier had template-args whose 'E' served double duty,
 			// so check rather than unconditionally consuming.
-			if (m_reader.Peek() == 'E')
-				m_reader.Consume();
-			out += JoinNameSegments(DemangleBaseUnresolvedName());
+			m_reader.ConsumeIf('E');
+			StringList baseName = DemangleBaseUnresolvedName();
+			out += JoinNameSegments(baseName);
+			AppendStructuredNameSegments(structuredName, baseName);
+			SetStructuredExpressionNode(outNode, structuredName);
 			return out;
 		}
 		else
 		{
-			out += DemangleUnresolvedType().GetString() + "::";
+			DemangledTypeNode unresolvedType = DemangleUnresolvedType();
+			out += unresolvedType.GetString() + "::";
+			AppendStructuredNameSegments(structuredName, unresolvedType.RenderTypeNameSegments());
 			// GCC may encode multi-level scoped names without the 'N' qualifier
 			// prefix, e.g. "sr St 6__and_I<T>E 5value" for std::__and_<T>::value.
 			// Process any digit-started names: if a name has template args AND
 			// another source name follows, it is an intermediate qualifier level;
 			// otherwise it is the final base-unresolved-name.
-			while (isdigit(m_reader.Peek()))
+			while (isdigit(m_reader.PeekOr()))
 			{
-				const string segName = DemangleSourceName();
-				if (m_reader.Peek() == 'I')
+				std::string_view segName = DemangleSourceName();
+				if (m_reader.ConsumeIf('I'))
 				{
 					ParamList args;
-					m_reader.Consume();
 					DemangleTemplateArgs(args);
-					if (isdigit(m_reader.Peek()))
+					DemangledNamePart structuredSegment = NameSegmentWithTemplateArgs(segName, args);
+					if (isdigit(m_reader.PeekOr()))
 					{
 						// Another source name follows — intermediate qualifier.
 						// Push to the substitution table, mirroring what the
 						// N-prefix sr branch does for each nested qualifier.
 						string segment = NameSegmentWithTemplateArgs(segName, std::move(args)).GetString();
-						PushType(CreateUnknownType(out + segment));
+						PushType(DemangledTypeNode::NamedType(out + segment));
 						out += segment + "::";
+						structuredName.push_back(std::move(structuredSegment));
 					}
 					else
 					{
 						// No more source names — this template-id is the final name.
 						out += NameSegmentWithTemplateArgs(segName, std::move(args)).GetString();
+						structuredName.push_back(std::move(structuredSegment));
+						SetStructuredExpressionNode(outNode, structuredName);
 						return out;
 					}
 				}
 				else
 				{
 					// Plain source name with no template args — final base name.
-					out += segName;
+					out.append(segName);
+					structuredName.emplace_back(segName);
+					SetStructuredExpressionNode(outNode, structuredName);
 					return out;
 				}
 			}
 			// peek is not a digit: fall back for operator-names ("on") / destructor-names ("dn").
-			out += JoinNameSegments(DemangleBaseUnresolvedName());
+			StringList baseName = DemangleBaseUnresolvedName();
+			out += JoinNameSegments(baseName);
+			AppendStructuredNameSegments(structuredName, baseName);
+			SetStructuredExpressionNode(outNode, structuredName);
 		}
 		return out;
+	}
 	default:
 		m_reader.UnRead(2);
 		out = DemangleSourceName();
-		if (m_reader.Peek() == 'I')
+		DemangledNamePart structuredSegment(out);
+		if (m_reader.ConsumeIf('I'))
 		{
 			ParamList args;
-			m_reader.Consume();
 			//<tmplate-args>
 			DemangleTemplateArgs(args);
-			out = NameSegmentWithTemplateArgs(out, std::move(args)).GetString();
+			structuredSegment = NameSegmentWithTemplateArgs(out, std::move(args));
+			out = structuredSegment.GetString();
 		}
+		if (outNode)
+			*outNode = DemangledTypeNode::NamedType(DemangledQualifiedName{std::move(structuredSegment)});
 		break;
 	}
 	return out;
+}
+
+
+bool DemangleGNU3::TryDemangleTemplateParamExpressionPackExpansion(string& expr, bool& emptyPack)
+{
+	if (!m_reader.ConsumeIf("spT"))
+		return false;
+
+	NodeRef entry = DemangleTemplateSubstitutionEntry();
+	if (entry.emptyTemplatePack)
+	{
+		emptyPack = true;
+		return true;
+	}
+	if (!entry)
+		throw DemangleException();
+
+	expr = entry->GetString();
+	return true;
+}
+
+
+// `expansion` is by value because some callers pass m_lastTypeRef, which the loop below overwrites.
+bool DemangleGNU3::AppendTemplateParamPackExpansion(ParamList& params, NodeRef expansion, bool functionParameter)
+{
+	if (!expansion.IsTemplateParamPackExpansion())
+		return false;
+
+	if (expansion.emptyTemplatePack)
+	{
+		m_substitute.emplace_back(NodeRef::EmptyTemplatePack());
+		return true;
+	}
+
+	for (const auto& arg : *expansion.templatePack)
+	{
+		if (!arg.type)
+			throw DemangleException();
+		NodeRef paramRef = PushType(*arg.type);
+		m_lastTypeRef = paramRef;
+		if (functionParameter && !m_functionSubstitute.empty())
+			m_functionSubstitute.back().push_back(paramRef);
+		params.push_back({"", paramRef});
+	}
+	return true;
 }
 
 
@@ -2149,23 +2225,39 @@ bool DemangleGNU3::DemangleTemplateArg(ParamList& args, bool* hadNonTypeArg)
 	DemangledTypeNode tmp;
 	NodeRef tmpRef;
 	bool tmpValid = false;
-	string expr;
 	bool topLevel;
 	switch (m_reader.Read())
 	{
 	case 'L':
+	{
+		string expr;
 		expr = DemanglePrimaryExpression();
-		tmp = CreateUnknownType(expr);
+		tmp = DemangledTypeNode::NamedType(expr);
 		tmpRef = DemangledTypeNode::CreateShared(std::move(tmp));
 		args.push_back({"", tmpRef});
 		tmpValid = true;
-		if (hadNonTypeArg) *hadNonTypeArg = true;
+		if (hadNonTypeArg)
+			*hadNonTypeArg = true;
 		break;
+	}
 	case 'X':
 	{
-		DemangledTypeNode exprNode = CreateUnknownType(DemangleExpression());
-		args.push_back({"", DemangledTypeNode::CreateShared(std::move(exprNode))});
-		if (m_reader.Read() != 'E')
+		string expr;
+		DemangledTypeNode exprNode;
+		bool haveExprNode = false;
+		bool emptyPack = false;
+		if (!TryDemangleTemplateParamExpressionPackExpansion(expr, emptyPack))
+		{
+			expr = DemangleExpression(&exprNode);
+			haveExprNode = true;
+		}
+		if (!emptyPack)
+		{
+			if (!haveExprNode || exprNode.GetClass() == VoidTypeClass)
+				exprNode = DemangledTypeNode::NamedType(expr);
+			args.push_back({"", DemangledTypeNode::CreateShared(std::move(exprNode))});
+		}
+		if (!m_reader.ConsumeIf('E'))
 			throw DemangleException();
 		if (hadNonTypeArg) *hadNonTypeArg = true;
 		break;
@@ -2174,13 +2266,19 @@ bool DemangleGNU3::DemangleTemplateArg(ParamList& args, bool* hadNonTypeArg)
 	case 'J':
 	{
 		size_t prevTemplateSize = m_templateSubstitute.size();
+		size_t prevArgSize = args.size();
 		DemangleTemplateArgs(args, hadNonTypeArg);
-		if (m_topLevel && m_templateSubstitute.size() == prevTemplateSize)
-			PushTemplateType(CreateUnknownType("auto"));
+		if (m_topLevel)
+		{
+			ParamList packArgs(args.begin() + prevArgSize, args.end());
+			while (m_templateSubstitute.size() > prevTemplateSize)
+				m_templateSubstitute.pop_back();
+			m_templateSubstitute.emplace_back(NodeRef::TemplateParamPack(std::move(packArgs)));
+		}
 		break;
 	}
 	case 'T':
-		if (m_reader.Peek() == 'n')
+		if (m_reader.ConsumeIf('n'))
 		{
 			// <template-arg> ::= <template-param-decl> <template-arg>
 			// <template-param-decl> ::= Tn <type>  # non-type parameter
@@ -2189,7 +2287,6 @@ bool DemangleGNU3::DemangleTemplateArg(ParamList& args, bool* hadNonTypeArg)
 			// for the following argument. Binary Ninja does not print those
 			// synthetic parameter names, so consume the declaration type and
 			// keep only the actual following template argument.
-			m_reader.Consume();
 			topLevel = m_topLevel;
 			m_topLevel = false;
 			DemangleType();
@@ -2203,14 +2300,16 @@ bool DemangleGNU3::DemangleTemplateArg(ParamList& args, bool* hadNonTypeArg)
 		m_topLevel = false;
 		tmp = DemangleType();
 		m_topLevel = topLevel;
+		if (AppendTemplateParamPackExpansion(args, m_lastTypeRef, false))
+			return true;
 		tmpRef = DemangledTypeNode::CreateShared(std::move(tmp));
 		args.push_back({"", tmpRef});
 		tmpValid = true;
 	}
 	if (m_topLevel && tmpValid)
 	{
-		MyLogDebug("Adding template ref: %s\n", tmpRef ? tmpRef->GetString().c_str() : "");
-		PushTemplateType(tmpRef);
+		LogWithIndentation("Adding template ref: %s\n", tmpRef ? tmpRef->GetString().c_str() : "");
+		m_templateSubstitute.emplace_back(tmpRef);
 	}
 	return true;
 }
@@ -2218,25 +2317,22 @@ bool DemangleGNU3::DemangleTemplateArg(ParamList& args, bool* hadNonTypeArg)
 
 void DemangleGNU3::DemangleTemplateArgs(ParamList& args, bool* hadNonTypeArg)
 {
-	NestingGuard nestingGuard(*this);
-	indent();
-	MyLogDebug("%s:: '%s'\n", __FUNCTION__, m_reader.GetRaw().c_str());
+	NestingGuard nestingGuard(m_nestingDepth);
+	LOG_INDENTATION_SCOPE;
+	LogWithIndentation("%s:: '%s'\n", __FUNCTION__, m_reader.GetRaw());
 	const string lastName = m_lastName;
-	while (m_reader.Peek() != 'E')
+	while (!m_reader.ConsumeIf('E'))
 	{
 		if (!DemangleTemplateArg(args, hadNonTypeArg))
 			break;
 	}
-	m_reader.Consume();
 	m_lastName = lastName;
-	dedent();
-	return;
 }
 
 
 DemangledTypeNode DemangleGNU3::DemangleNestedName(bool* allTypeTemplateArgs, bool pushBareTemplatePrefix)
 {
-	NestingGuard nestingGuard(*this);
+	NestingGuard nestingGuard(m_nestingDepth);
 	/*
 	This can be either a qualified name like: "foo::bar::bas"
 	or it can be a qualified type like: "foo::bar::bas & const" thus we return either
@@ -2267,9 +2363,9 @@ DemangledTypeNode DemangleGNU3::DemangleNestedName(bool* allTypeTemplateArgs, bo
 	<identifier>  ::= <unqualified source code identifier>
 	*/
 
-	indent();
-	MyLogDebug("%s:: '%s'\n", __FUNCTION__, m_reader.GetRaw().c_str());
-	DemangledTypeNode type = DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{});
+	LOG_INDENTATION_SCOPE;
+	LogWithIndentation("%s:: '%s'\n", __FUNCTION__, m_reader.GetRaw());
+	DemangledTypeNode type = DemangledTypeNode::NamedType(StringList{});
 	bool cnst = false, vltl = false, rstrct = false;
 	bool ref = false;
 	bool rvalueRef = false;
@@ -2281,19 +2377,17 @@ DemangledTypeNode DemangleGNU3::DemangleNestedName(bool* allTypeTemplateArgs, bo
 	DemangleCVQualifiers(cnst, vltl, rstrct);
 
 	//[<ref-qualifier>]
-	if (m_reader.Peek() == 'R')
+	if (m_reader.ConsumeIf('R'))
 	{
-		m_reader.Consume();
 		ref = true;
 	}
-	else if (m_reader.Peek() == 'O')
+	else if (m_reader.ConsumeIf('O'))
 	{
-		m_reader.Consume();
 		ref = true;
 		rvalueRef = true;
 	}
 
-	while (m_reader.Peek() != 'E')
+	while (!m_reader.ConsumeIf('E'))
 	{
 		isTemplate = false;
 		substitute = true;
@@ -2350,18 +2444,17 @@ DemangledTypeNode DemangleGNU3::DemangleNestedName(bool* allTypeTemplateArgs, bo
 		// We append them as "[abi:tag]" to the last name segment for display.
 		// Save/restore m_lastName so that a following C1/D1 ctor/dtor name
 		// still resolves to the class name, not the ABI tag string.
-		while (m_reader.Peek() == 'B')
+		while (m_reader.ConsumeIf('B'))
 		{
-			m_reader.Consume();
 			string savedLastName = m_lastName;
-			string abiTag = DemangleSourceName();
+			string abiTag(DemangleSourceName());
 			m_lastName = savedLastName;
 			ExtendTypeName(type, "[abi:" + abiTag + "]");
 		}
-		bool dependentTemplatePrefix = !pushBareTemplatePrefix && m_reader.Peek() == 'I' &&
+		bool dependentTemplatePrefix = !pushBareTemplatePrefix && m_reader.PeekOr() == 'I' &&
 			LastTypeNameSegmentBase(type) == "basic_ostream" &&
 			TemplateArgsReferenceTemplateParam(m_reader.PeekString(m_reader.Length()));
-		if (substitute && m_reader.Peek() != 'E' && !dependentTemplatePrefix)
+		if (substitute && m_reader.PeekOr() != 'E' && !dependentTemplatePrefix)
 		{
 			//Those template arguments were not the primary arguments so clear them from the sub listType
 			while (m_templateSubstitute.size() > startSize)
@@ -2370,9 +2463,8 @@ DemangledTypeNode DemangleGNU3::DemangleNestedName(bool* allTypeTemplateArgs, bo
 			}
 			PushType(type);
 		}
-		MyLogDebug("%s:: '%s'\n", __FUNCTION__, m_reader.GetRaw().c_str());
+		LogWithIndentation("%s:: '%s'\n", __FUNCTION__, m_reader.GetRaw());
 	}
-	m_reader.Consume();
 
 	if (cnst || vltl || rstrct)
 	{
@@ -2387,16 +2479,15 @@ DemangledTypeNode DemangleGNU3::DemangleNestedName(bool* allTypeTemplateArgs, bo
 		type.AddPointerSuffix(rvalueRef?LvalueSuffix:ReferenceSuffix);
 		PushType(type);
 	}
-	dedent();
 	return type;
 }
 
 
 DemangledTypeNode DemangleGNU3::DemangleLocalName()
 {
-	NestingGuard nestingGuard(*this);
-	indent();
-	MyLogDebug("%s '%s'\n", __FUNCTION__, m_reader.GetRaw().c_str());
+	NestingGuard nestingGuard(m_nestingDepth);
+	LOG_INDENTATION_SCOPE;
+	LogWithIndentation("%s '%s'\n", __FUNCTION__, m_reader.GetRaw());
 	DemangledTypeNode type;
 	StringList varName;
 	// The local function has its own template scope. Save the outer template
@@ -2413,25 +2504,23 @@ DemangledTypeNode DemangleGNU3::DemangleLocalName()
 	type = DemangleSymbol(varName);
 	m_inLocalName = savedInLocalName;
 
-	if (varName.size() > 0)
-		varName.back() += type.GetStringAfterName(m_platform.GetPtr());
+	if (!varName.empty())
+		varName.back() += type.GetStringAfterName(m_platform);
 	else
 		varName.push_back(type.GetString());
 
-	if (m_reader.Peek() != 's')
+	if (!m_reader.ConsumeIf('s'))
 	{
 		// Handle default argument context: d [<number>] _ <name>
-		if (m_reader.Peek() == 'd')
+		if (m_reader.ConsumeIf('d'))
 		{
-			m_reader.Consume();
-			if (isdigit(m_reader.Peek()))
+			if (isdigit(m_reader.PeekOr()))
 				DemangleNumber();
-			if (m_reader.Peek() == '_')
-				m_reader.Consume();
+			m_reader.ConsumeIf('_');
 		}
 		//<entity name>
 		DemangledTypeNode tmpType = DemangleName();
-		type = DemangledTypeNode::NamedType(UnknownNamedTypeClass, varName);
+		type = DemangledTypeNode::NamedType(varName);
 		AppendTypeName(type, tmpType);
 		type.SetNTRType(tmpType.GetNTRClass());
 		type.SetConst(tmpType.IsConst());
@@ -2442,21 +2531,18 @@ DemangledTypeNode DemangleGNU3::DemangleLocalName()
 	}
 	else
 	{
-		m_reader.Consume();
-		type = DemangledTypeNode::NamedType(UnknownNamedTypeClass, varName);
+		type = DemangledTypeNode::NamedType(varName);
 		m_templateSubstitute = std::move(savedTemplateSubstitute);
 		m_topLevel = oldTopLevel;
 	}
 	// [<discriminator>]
 	//TODO: What do we do with discriminators?
-	if (m_reader.Peek() == '_')
+	if (m_reader.ConsumeIf('_'))
 	{
-		m_reader.Consume();
-		if (m_reader.Peek() == '_')
+		if (m_reader.ConsumeIf('_'))
 		{
-			m_reader.Consume();
 			DemangleNumberAsString();
-			if (m_reader.Read() != '_')
+			if (!m_reader.ConsumeIf('_'))
 				throw DemangleException();
 		}
 		else
@@ -2464,16 +2550,15 @@ DemangledTypeNode DemangleGNU3::DemangleLocalName()
 			DemangleNumberAsString();
 		}
 	}
-	dedent();
 	return type;
 }
 
 
-DemangledTypeNode DemangleGNU3::DemangleName()
+DemangledTypeNode DemangleGNU3::DemangleName(bool* mayHaveImplicitThis)
 {
-	NestingGuard nestingGuard(*this);
-	indent();
-	MyLogDebug("%s '%s'\n", __FUNCTION__, m_reader.GetRaw().c_str());
+	NestingGuard nestingGuard(m_nestingDepth);
+	LOG_INDENTATION_SCOPE;
+	LogWithIndentation("%s '%s'\n", __FUNCTION__, m_reader.GetRaw());
 	/*
 	<name> ::= <nested-name>
 	       ::= <unscoped-name>
@@ -2488,14 +2573,15 @@ DemangledTypeNode DemangleGNU3::DemangleName()
 	*/
 	DemangledTypeNode type;
 	bool substitute = false;
+	if (mayHaveImplicitThis)
+		*mayHaveImplicitThis = false;
 	switch (m_reader.Read())
 	{
 	case 'S':
-		if (m_reader.Peek() == 't')
+		if (m_reader.ConsumeIf('t'))
 		{
-			m_reader.Consume(1);
 			type = DemangleUnqualifiedName();
-			auto qn = CopyQualifiedName(type);
+			DemangledQualifiedName qn = type.GetName();
 			qn.insert(qn.begin(), DemangledNamePart("std"));
 			type.SetName(std::move(qn));
 			substitute = true;
@@ -2505,9 +2591,8 @@ DemangledTypeNode DemangleGNU3::DemangleName()
 			type = DemangleSubstitution();
 		}
 
-		if (m_reader.Peek() == 'I')
+		if (m_reader.ConsumeIf('I'))
 		{
-			m_reader.Consume();
 			if (substitute)
 				PushType(type);
 			ParamList args;
@@ -2522,6 +2607,8 @@ DemangledTypeNode DemangleGNU3::DemangleName()
 		break;
 	case 'N': //<nested-name>
 	{
+		if (mayHaveImplicitThis)
+			*mayHaveImplicitThis = true;
 		bool allTypeArgs = false;
 		type = DemangleNestedName(&allTypeArgs);
 		if (!m_inLocalName && allTypeArgs)
@@ -2529,6 +2616,8 @@ DemangledTypeNode DemangleGNU3::DemangleName()
 		break;
 	}
 	case 'Z': //<local-name>
+		if (mayHaveImplicitThis)
+			*mayHaveImplicitThis = true;
 		type = DemangleLocalName();
 		break;
 	default: //<unscoped-name> | <substitution>
@@ -2539,36 +2628,34 @@ DemangledTypeNode DemangleGNU3::DemangleName()
 		                         ::= <substitution>
 		*/
 		m_reader.UnRead();
-		if (m_reader.Peek() == 'L')
-			m_reader.Consume();
+		m_reader.ConsumeIf('L');
 		type = DemangleUnqualifiedName();
-		if (m_reader.Peek() == 'I')
+		if (m_reader.ConsumeIf('I'))
 		{
 			PushType(type);
 			//<unscoped-template-name>
 			ParamList args;
-			m_reader.Consume();
 			//<tmplate-args>
 			DemangleTemplateArgs(args);
 			ApplyTemplateArgs(type, std::move(args));
 		}
 	}
-	dedent();
 	return type;
 }
 
 
-DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
+DemangledTypeNode DemangleGNU3::DemangleSymbol(
+	StringList& varName, bool simplifyTemplates, bool recoverImplicitThis)
 {
-	NestingGuard nestingGuard(*this);
-	indent();
-	MyLogDebug("%s: %s\n", __FUNCTION__, m_reader.GetRaw().c_str());
+	NestingGuard nestingGuard(m_nestingDepth);
+	LOG_INDENTATION_SCOPE;
+	LogWithIndentation("%s: %s\n", __FUNCTION__, m_reader.GetRaw());
 	DemangledTypeNode returnType;
 	NodeRef returnTypeRef = nullptr;
 	bool isReturnTypeUnknown = false;
 	DemangledTypeNode type;
 	ParamList params;
-	bool cnst = false, vltl = false, rstrct = false;
+	bool cnst = false, vltl = false;
 	bool oldTopLevel;
 	StringList name;
 
@@ -2578,7 +2665,7 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 	           ::= <special-name>
 	*/
 	//<special-name>
-	switch (m_reader.Peek())
+	switch (m_reader.PeekOr())
 	{
 	case 'G':
 		m_reader.Consume();
@@ -2595,15 +2682,13 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 			DemangledTypeNode nameNode = DemangleName();
 			// Consume optional base-36 seq-id (digits + uppercase A-Z) before '_'.
 			string seqId;
-			while (m_reader.Length() > 0 && m_reader.Peek() != '_')
+			while (m_reader.Length() > 0 && !m_reader.ConsumeIf('_'))
 				seqId += m_reader.Read();
-			if (m_reader.Length() > 0)
-				m_reader.Consume(); // consume '_'
 			string result = "reference_temporary_for_" + nameNode.GetString();
 			if (!seqId.empty())
 				result += "[" + seqId + "]";
 			varName.push_back(result);
-			return DemangledTypeNode::NamedType(UnknownNamedTypeClass, varName);
+			return DemangledTypeNode::NamedType(varName);
 		}
 		case 'T': // transaction clone: GTt<encoding> (safe) or GTn<encoding> (non-safe)
 		{
@@ -2613,17 +2698,16 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 				throw DemangleException();
 			oldTopLevel = m_topLevel;
 			m_topLevel = false;
-			DemangledTypeNode t = DemangleSymbol(name);
+			DemangledTypeNode t = DemangleSymbol(name, simplifyTemplates);
 			m_topLevel = oldTopLevel;
-			return DemangledTypeNode::NamedType(UnknownNamedTypeClass,
-				StringList{JoinNameSegments(name) + " [transaction clone]" + t.GetStringAfterName(m_platform.GetPtr())});
+			return DemangledTypeNode::NamedType(StringList{JoinNameSegments(name) + " [transaction clone]" + t.GetStringAfterName(m_platform)});
 		}
 		case 'V':
 		{
 			// Disambiguate: Intel Vector Function ABI (_ZGV<isa>...) vs guard variable (_ZGV<symbol>).
 			// Intel Vector ABI isa codes: b c d e x y Y z Z
 			// Guard variable encoding starts with: N (nested), L (local), S (substitution), digit, etc.
-			char peekChar = m_reader.Peek();
+			char peekChar = m_reader.PeekOr();
 			bool isVectorABI = (peekChar == 'b' || peekChar == 'c' || peekChar == 'd' || peekChar == 'e' ||
 			                    peekChar == 'x' || peekChar == 'y' || peekChar == 'Y');
 			// 'z'/'Z' are ambiguous: also used as Z-local-name prefix in guard variables
@@ -2635,11 +2719,11 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 			// that don't appear in valid vparameter sequences.
 			if (!isVectorABI && (peekChar == 'z' || peekChar == 'Z'))
 			{
-				_STD_STRING ahead = m_reader.PeekString(std::min((size_t)32, m_reader.Length()));
+				_STD_STRING ahead = m_reader.PeekString(std::min(static_cast<size_t>(32), m_reader.Length()));
 				if (ahead.size() >= 3 && (ahead[1] == 'M' || ahead[1] == 'N'))
 				{
 					size_t pos = 2;
-					while (pos < ahead.size() && isdigit((unsigned char)ahead[pos]))
+					while (pos < ahead.size() && isdigit(static_cast<unsigned char>(ahead[pos])))
 						pos++;
 					if (pos > 2) // had at least one vlen digit
 					{
@@ -2650,7 +2734,7 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 						{
 							char c = ahead[pos];
 							if (c == 'v' || c == 'l' || c == 'u' || c == 'R' ||
-							    c == 'L' || c == 's' || isdigit((unsigned char)c))
+							    c == 'L' || c == 's' || isdigit(static_cast<unsigned char>(c)))
 								pos++;
 							else
 							{
@@ -2665,8 +2749,8 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 			if (!isVectorABI)
 			{
 				// Guard variable (original behavior)
-				DemangledTypeNode t = DemangleSymbol(name);
-				varName.push_back("guard_variable_for_" + t.GetTypeAndName(name, m_platform.GetPtr()));
+				DemangledTypeNode t = DemangleSymbol(name, simplifyTemplates);
+				varName.push_back("guard_variable_for_" + t.GetTypeAndName(name, m_platform));
 				type = DemangledTypeNode::IntegerType(1, false);
 				if (m_reader.Length() == 0)
 					return type;
@@ -2676,18 +2760,18 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 				bool first = true;
 				do
 				{
-					if (m_reader.Peek() == 'v')
+					if (m_reader.ConsumeIf('v'))
 					{
-						m_reader.Consume();
 						break;
 					}
 					if (!first)
 						paramList += ", ";
 					paramList += DemangleTypeString();
-				}while (m_reader.Peek() != 'E');
-				m_reader.Consume();
+				}while (m_reader.PeekOr() != 'E');
+				if (!m_reader.ConsumeIf('E'))
+					throw DemangleException();
 				varName.back() += paramList + ")";
-				varName.push_back(DemangleSourceName());
+				varName.emplace_back(DemangleSourceName());
 
 				return type;
 			}
@@ -2721,10 +2805,10 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 			const char* maskName = (maskChar == 'M') ? "mask" : "nomask";
 
 			// Parse vlen: non-negative decimal integer
-			if (!isdigit(m_reader.Peek()))
+			if (!isdigit(m_reader.PeekOr()))
 				throw DemangleException();
 			string vlenStr;
-			while (isdigit(m_reader.Peek()))
+			while (isdigit(m_reader.PeekOr()))
 				vlenStr += m_reader.Read();
 
 			// Parse vparameters until '_' separator
@@ -2734,7 +2818,7 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 			// <opt-align>  ::= empty | 'a' <decimal>
 			string paramsStr;
 			bool firstParam = true;
-			while (m_reader.Length() > 0 && m_reader.Peek() != '_')
+			while (m_reader.Length() > 0 && m_reader.PeekOr() != '_')
 			{
 				if (!firstParam)
 					paramsStr += ',';
@@ -2755,16 +2839,15 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 
 				if (hasStride)
 				{
-					if (m_reader.Peek() == 's')
+					if (m_reader.ConsumeIf('s'))
 					{
 						// linear_step passed as another argument at given 0-based position
-						m_reader.Consume();
 						string argPos;
-						while (isdigit(m_reader.Peek()))
+						while (isdigit(m_reader.PeekOr()))
 							argPos += m_reader.Read();
 						paramsStr += "(step=arg" + argPos + ")";
 					}
-					else if (isdigit(m_reader.Peek()) || m_reader.Peek() == 'n')
+					else if (isdigit(m_reader.PeekOr()) || m_reader.PeekOr() == 'n')
 					{
 						// Literal stride; 'n' prefix means negative
 						string stride = DemangleNumberAsString();
@@ -2774,19 +2857,18 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 				}
 
 				// Optional alignment: 'a' <non-negative-decimal>
-				if (m_reader.Peek() == 'a')
+				if (m_reader.ConsumeIf('a'))
 				{
-					m_reader.Consume();
-					while (isdigit(m_reader.Peek()))
-						m_reader.Read();
+					while (isdigit(m_reader.PeekOr()))
+						(void)m_reader.Read();
 				}
 			}
 
 			// Consume the '_' separator between parameters and routine name
-			if (m_reader.Length() == 0 || m_reader.Read() != '_')
+			if (!m_reader.ConsumeIf('_'))
 				throw DemangleException();
 
-			// Remainder is the scalar routine name (may be a plain C name or a _Z mangled name)
+			// Remainder is the scalar routine name (maybe a plain C name or a _Z mangled name)
 			string routineName = m_reader.ReadString(m_reader.Length());
 
 			// Build the human-readable annotation
@@ -2804,8 +2886,7 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 			}
 			annotation += ']';
 
-			return DemangledTypeNode::NamedType(UnknownNamedTypeClass,
-				StringList{routineName + annotation});
+			return DemangledTypeNode::NamedType(StringList{routineName + annotation});
 		}
 		default:
 			throw DemangleException();
@@ -2835,16 +2916,16 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 				if (kind == 'h')
 				{
 					DemangleNumberAsString();
-					if (m_reader.Read() != '_')
+					if (!m_reader.ConsumeIf('_'))
 						throw DemangleException();
 				}
 				else if (kind == 'v')
 				{
 					DemangleNumberAsString();
-					if (m_reader.Read() != '_')
+					if (!m_reader.ConsumeIf('_'))
 						throw DemangleException();
 					DemangleNumberAsString();
-					if (m_reader.Read() != '_')
+					if (!m_reader.ConsumeIf('_'))
 						throw DemangleException();
 				}
 				else
@@ -2854,20 +2935,18 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 			consumeCallOffset(); // return-value adjustment
 			oldTopLevel = m_topLevel;
 			m_topLevel = false;
-			DemangledTypeNode t = DemangleSymbol(name);
+			DemangledTypeNode t = DemangleSymbol(name, simplifyTemplates);
 			m_topLevel = oldTopLevel;
-			return DemangledTypeNode::NamedType(UnknownNamedTypeClass,
-				StringList{"covariant_return_thunk_to_" + JoinNameSegments(name) + t.GetStringAfterName(m_platform.GetPtr())});
+			return DemangledTypeNode::NamedType(StringList{"covariant_return_thunk_to_" + JoinNameSegments(name) + t.GetStringAfterName(m_platform)});
 		}
 		case 'C':
 		{
 			DemangledTypeNode t = DemangleType();
 			DemangleNumberAsString();
-			if (m_reader.Read() != '_')
+			if (!m_reader.ConsumeIf('_'))
 				throw DemangleException();
 
-			return DemangledTypeNode::NamedType(UnknownNamedTypeClass,
-				StringList{"construction_vtable_for_" + DemangleTypeString() + "-in-" + t.GetString()});
+			return DemangledTypeNode::NamedType(StringList{"construction_vtable_for_" + DemangleTypeString() + "-in-" + t.GetString()});
 		}
 		case 'D':
 			LogWarn("Unsupported: 'typeinfo common proxy'\n");
@@ -2878,27 +2957,24 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 		case 'h': //TODO: Convert to whatever the actual type is!
 		{
 			DemangleNumberAsString();
-			if (m_reader.Read() != '_')
+			if (!m_reader.ConsumeIf('_'))
 				throw DemangleException();
 			oldTopLevel = m_topLevel;
 			m_topLevel = false;
-			DemangledTypeNode t = DemangleSymbol(name);
+			DemangledTypeNode t = DemangleSymbol(name, simplifyTemplates);
 			m_topLevel = oldTopLevel;
-			return DemangledTypeNode::NamedType(UnknownNamedTypeClass,
-				StringList{"non-virtual_thunk_to_" + JoinNameSegments(name) + t.GetStringAfterName(m_platform.GetPtr())});
+			return DemangledTypeNode::NamedType(StringList{"non-virtual_thunk_to_" + JoinNameSegments(name) + t.GetStringAfterName(m_platform)});
 		}
 		case 'H': // TLS init function
 		{
 			oldTopLevel = m_topLevel;
 			m_topLevel = false;
-			DemangledTypeNode t = DemangleSymbol(name);
+			DemangledTypeNode t = DemangleSymbol(name, simplifyTemplates);
 			m_topLevel = oldTopLevel;
-			return DemangledTypeNode::NamedType(UnknownNamedTypeClass,
-				StringList{"tls_init_function_for_" + t.GetTypeAndName(name, m_platform.GetPtr())});
+			return DemangledTypeNode::NamedType(StringList{"tls_init_function_for_" + t.GetTypeAndName(name, m_platform)});
 		}
 		case 'I':
-			return DemangledTypeNode::NamedType(UnknownNamedTypeClass,
-				StringList{"typeinfo_for_" + DemangleTypeString()});
+			return DemangledTypeNode::NamedType(StringList{"typeinfo_for_" + DemangleTypeString()});
 		case 'J':
 			LogWarn("Unsupported: 'java class'\n");
 			throw DemangleException();
@@ -2918,17 +2994,16 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 		case 'v': // virtual thunk
 		{
 			DemangleNumberAsString();
-			if (m_reader.Read() != '_')
+			if (!m_reader.ConsumeIf('_'))
 				throw DemangleException();
 			DemangleNumberAsString();
-			if (m_reader.Read() != '_')
+			if (!m_reader.ConsumeIf('_'))
 				throw DemangleException();
 			oldTopLevel = m_topLevel;
 			m_topLevel = false;
-			DemangledTypeNode t = DemangleSymbol(name);
+			DemangledTypeNode t = DemangleSymbol(name, simplifyTemplates);
 			m_topLevel = oldTopLevel;
-			return DemangledTypeNode::NamedType(UnknownNamedTypeClass,
-				StringList{"virtual_thunk_to_" + JoinNameSegments(name) + t.GetStringAfterName(m_platform.GetPtr())});
+			return DemangledTypeNode::NamedType(StringList{"virtual_thunk_to_" + JoinNameSegments(name) + t.GetStringAfterName(m_platform)});
 		}
 		case 'V': //Vtable
 			return DemangledTypeNode::NamedType(StructNamedTypeClass,
@@ -2937,10 +3012,9 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 		{
 			oldTopLevel = m_topLevel;
 			m_topLevel = false;
-			DemangledTypeNode t = DemangleSymbol(name);
+			DemangledTypeNode t = DemangleSymbol(name, simplifyTemplates);
 			m_topLevel = oldTopLevel;
-			return DemangledTypeNode::NamedType(UnknownNamedTypeClass,
-				StringList{"tls_wrapper_function_for_" + t.GetTypeAndName(name, m_platform.GetPtr())});
+			return DemangledTypeNode::NamedType(StringList{"tls_wrapper_function_for_" + t.GetTypeAndName(name, m_platform)});
 		}
 		default:
 			throw DemangleException();
@@ -2949,44 +3023,56 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 	}
 
 	//<function name> or <data name>
-	type = DemangleName();
+	bool mayHaveImplicitThis = false;
+	type = DemangleName(&mayHaveImplicitThis);
 	if (m_reader.Length() == 0)
 	{
 		return type;
 	}
 
-	if (m_reader.Peek() == 'E')
+	if (m_reader.ConsumeIf('E'))
 	{
-		m_reader.Consume();
 		return type;
 	}
 
 	cnst = type.IsConst();
 	vltl = type.IsVolatile();
 	auto suffix = type.GetPointerSuffixBits();
-	if (m_reader.Peek() == 'J')
+	if (m_reader.ConsumeIf('J'))
 	{
-		m_reader.Consume();
 		// TODO: If we get here we have a return type. What can we do with this info?
 	}
 	// Consume any ABI tags on the function/data name (e.g. B5cxx11).
 	// For nested names these are already consumed inside DemangleNestedName();
 	// this handles the global-scope case.
-	while (m_reader.Peek() == 'B')
+	while (m_reader.ConsumeIf('B'))
 	{
-		m_reader.Consume();
 		string savedLastName = m_lastName;
-		string abiTag = DemangleSourceName();
+		string abiTag(DemangleSourceName());
 		m_lastName = savedLastName;
 		ExtendTypeName(type, "[abi:" + abiTag + "]");
 	}
 	const bool nameRequiresReturnType = m_isParameter || LastTypeNameSegmentHasTemplateArguments(type);
-	varName = type.RenderTypeNameSegments(m_platform.GetPtr());
+	if (simplifyTemplates)
+		DemangledTemplateSimplifier::SimplifyTypeNodeInPlace(type);
+	DemangledQualifiedName enclosingName = type.GetName();
+	varName = type.RenderTypeNameSegments(m_platform);
+	BNNameType nameType = type.GetNameType();
+	mayHaveImplicitThis = recoverImplicitThis && mayHaveImplicitThis && !IsStaticOnlyMemberFunction(nameType) &&
+		!IsDirectAnonymousNamespaceFunction(enclosingName) && enclosingName.size() > 1;
+	if (mayHaveImplicitThis)
+		enclosingName.pop_back();
 	if (m_isOperatorOverload ||
-		type.GetNameType() == ConstructorNameType ||
-		type.GetNameType() == DestructorNameType)
+		nameType == ConstructorNameType ||
+		nameType == DestructorNameType ||
+		nameType == OperatorDeleteNameType ||
+		nameType == OperatorDeleteArrayNameType)
 	{
 		returnType = DemangledTypeNode::VoidType();
+	}
+	else if (nameType == OperatorNewNameType || nameType == OperatorNewArrayNameType)
+	{
+		returnType = DemangledTypeNode::PointerType(DemangledTypeNode::VoidType(), false, false, PointerReferenceType);
 	}
 	else if (nameRequiresReturnType)
 	{
@@ -2999,15 +3085,14 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 		returnType = DemangledTypeNode::AddressSizedIntegerType(true);
 	}
 
-	m_functionSubstitute.push_back({});
+	m_functionSubstitute.emplace_back();
 	while (m_reader.Length() > 0)
 	{
-		if (m_reader.Peek() == 'E')
+		if (m_reader.ConsumeIf('E'))
 		{
-			m_reader.Consume();
 			break;
 		}
-		if (m_reader.Peek() == '.')
+		if (m_reader.PeekOr() == '.')
 		{
 			// Extension, consume the rest
 			string ext = m_reader.ReadString(m_reader.Length());
@@ -3018,22 +3103,23 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 			else if (ext == ".debug_frame") ext = "debug frame";
 
 			// On the off chance some invalid mangled string is passed in.
-			if (varName.size() > 0)
+			if (!varName.empty())
 				varName.back() += " " + ext;
 			break;
 		}
 
 		m_isParameter = true;
-		MyLogDebug("Var: %s\n", m_reader.GetRaw().c_str());
-		if (m_reader.PeekString(2) == "@@")
+		LogWithIndentation("Var: %s\n", m_reader.GetRaw());
+		if (m_reader.PeekMatch("@@"))
 			break;
 		DemangledTypeNode param = DemangleType();
 		NodeRef paramRef = m_lastTypeRef;
+		if (AppendTemplateParamPackExpansion(params, paramRef, true))
+			continue;
 		if (param.GetClass() == VoidTypeClass)
 		{
-			if (m_reader.Peek() == 'E')
+			if (m_reader.ConsumeIf('E'))
 			{
-				m_reader.Consume();
 				break;
 			}
 			break;
@@ -3045,10 +3131,7 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 		params.push_back({"", paramRef});
 		if (isVarArgs)
 		{
-			if (m_reader.Peek() == 'E')
-			{
-				m_reader.Consume();
-			}
+			m_reader.ConsumeIf('E');
 
 			break;
 		}
@@ -3059,29 +3142,33 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(StringList& varName)
 	if (!returnTypeRef)
 		returnTypeRef = DemangledTypeNode::CreateShared(std::move(returnType));
 	type = DemangledTypeNode::FunctionType(returnTypeRef, nullptr, std::move(params));
+	if (mayHaveImplicitThis)
+	{
+		auto thisType = DemangledTypeNode::NamedType(StructNamedTypeClass, std::move(enclosingName));
+		type.SetImplicitThisParameter(DemangledTypeNode::PointerType(
+			std::move(thisType), false, false, PointerReferenceType));
+	}
 	if (isReturnTypeUnknown)
 		type.SetReturnTypeConfidence(BN_MINIMUM_CONFIDENCE);
 
 	type.SetPointerSuffixBits(suffix);
 	type.SetConst(cnst);
 	type.SetVolatile(vltl);
-	if (rstrct)
-		type.SetPointerSuffixBits(1u << RestrictSuffix);
+	if (simplifyTemplates)
+		DemangledTemplateSimplifier::SimplifyTypeNodeInPlace(type);
 
 	// PrintTables();
-	MyLogDebug("Done: %s%s%s\n", type.GetStringBeforeName(m_platform.GetPtr()).c_str(), JoinNameSegments(varName).c_str(),
-		type.GetStringAfterName(m_platform.GetPtr()).c_str());
-
-	dedent();
+	LogWithIndentation("Done: %s%s%s\n", type.GetStringBeforeName(m_platform).c_str(), JoinNameSegments(varName).c_str(),
+		type.GetStringAfterName(m_platform).c_str());
 	return type;
 }
 
 
 // ===== Non-templated static methods =====
 
-bool DemangleGNU3Static::IsGNU3MangledString(const string& name)
+bool DemangleGNU3Static::IsGNU3MangledString(std::string_view name)
 {
-	string headerless = name;
+	string headerless(name);
 	string header;
 	if (DemangleGlobalHeader(headerless, header))
 		return true;
@@ -3095,12 +3182,17 @@ bool DemangleGNU3Static::IsGNU3MangledString(const string& name)
 
 bool DemangleGNU3Static::DemangleGlobalHeader(string& name, string& header)
 {
+	if (name.empty())
+		return false;
+
 	size_t strippedCount = 0;
 	string encoded = name;
-	while (encoded[0] == '_')
+	while (!encoded.empty() && encoded[0] == '_')
 	{
 		encoded.erase(0, 1);
 		strippedCount ++;
+		if (encoded.empty())
+			return false;
 	}
 
 	if (strippedCount == 0)
@@ -3128,43 +3220,49 @@ bool DemangleGNU3Static::DemangleGlobalHeader(string& name, string& header)
 
 namespace
 {
-	static bool DemangleStringGNU3Segments(
-		Platform* platform, const string& name, Ref<Type>& outType, StringList& outVarName)
+	std::optional<DemanglerResult> DemangleGNU3WithConfig(
+		const DemanglerConfig& config, std::string_view name, bool recoverImplicitThis = true)
 	{
+		if (name.empty())
+			return std::nullopt;
+
+		Platform& platform = config.GetPlatform();
+		bool simplifyTemplates = config.simplifyTemplates;
+
 		// Handle _block_invoke[.N] and _block_invoke_N suffixes (Clang/Apple block invocations).
 		// E.g. ____ZN4dyld5_mainEPK12macho_headermiPPKcS5_S5_Pm_block_invoke.110
 		//   -> "invocation_function_for_block_in_dyld::_main(...)"
-		static const string blockInvokeSuffix = "_block_invoke";
+		static constexpr std::string_view blockInvokeSuffix = "_block_invoke";
 		size_t blockPos = name.rfind(blockInvokeSuffix);
-		if (blockPos != string::npos)
+		if (blockPos != std::string_view::npos)
 		{
 			// Verify the suffix is _block_invoke optionally followed by [._]<digits> only
-			string tail = name.substr(blockPos + blockInvokeSuffix.size());
+			std::string_view tail = name.substr(blockPos + blockInvokeSuffix.size());
 			bool validSuffix = tail.empty();
 			if (!validSuffix && (tail[0] == '.' || tail[0] == '_'))
 			{
 				size_t i = 1;
-				while (i < tail.size() && isdigit((unsigned char)tail[i]))
+				while (i < tail.size() && isdigit(static_cast<unsigned char>(tail[i])))
 					i++;
 				validSuffix = (i == tail.size() && i > 1);
 			}
 			if (validSuffix)
 			{
 				// Extract the base symbol: everything before _block_invoke
-				string base = name.substr(0, blockPos);
+				std::string_view base = name.substr(0, blockPos);
 				// Normalize leading underscores: find 'Z' after underscores, keep one '_' before it
 				size_t zPos = base.find_first_not_of('_');
-				if (zPos != string::npos && base[zPos] == 'Z')
+				if (zPos != std::string_view::npos && base[zPos] == 'Z')
 				{
-					string normalized = "_" + base.substr(zPos);
-					Ref<Type> baseType;
-					StringList baseName;
-					if (DemangleStringGNU3Segments(platform, normalized, baseType, baseName))
+					string normalized = "_";
+					normalized.append(base.substr(zPos));
+					if (auto baseResult = DemangleGNU3WithConfig(config, normalized, false))
 					{
-						outVarName.clear();
-						outVarName.push_back("invocation_function_for_block_in_" + JoinNameSegments(baseName));
-						outType = baseType;
-						return true;
+						DemanglerResult result;
+						result.name = QualifiedName(StringList{
+							"invocation_function_for_block_in_" + JoinNameSegments(StringList(baseResult->name.begin(), baseResult->name.end()))});
+						result.type = baseResult->type;
+						return result;
 					}
 				}
 			}
@@ -3172,26 +3270,22 @@ namespace
 
 		// Handle macOS thread-local variable initializer suffix: $tlv$init
 		// E.g. __ZL9recursive$tlv$init -> demangle "__ZL9recursive" then annotate.
-		static const string tlvInitSuffix = "$tlv$init";
+		static constexpr std::string_view tlvInitSuffix = "$tlv$init";
 		if (name.size() > tlvInitSuffix.size() &&
 			name.compare(name.size() - tlvInitSuffix.size(), tlvInitSuffix.size(), tlvInitSuffix) == 0)
 		{
-			string base = name.substr(0, name.size() - tlvInitSuffix.size());
-			Ref<Type> baseType;
-			StringList baseName;
-			if (DemangleStringGNU3Segments(platform, base, baseType, baseName))
+			std::string_view base = name.substr(0, name.size() - tlvInitSuffix.size());
+			if (auto result = DemangleGNU3WithConfig(config, base, recoverImplicitThis))
 			{
-				outVarName = std::move(baseName);
-				if (outVarName.size() > 0)
-					outVarName[outVarName.size() - 1] += "$tlv$init";
+				if (result->name.size() > 0)
+					result->name[result->name.size() - 1] += "$tlv$init";
 				else
-					outVarName.push_back("$tlv$init");
-				outType = baseType;
-				return true;
+					result->name = QualifiedName(StringList{"$tlv$init"});
+				return result;
 			}
 		}
 
-		string encoding = name;
+		string encoding(name);
 		string header;
 		bool foundHeader = DemangleGNU3Static::DemangleGlobalHeader(encoding, header);
 
@@ -3201,108 +3295,78 @@ namespace
 			encoding = encoding.substr(3);
 		else if (foundHeader && !header.empty())
 		{
-			outVarName.clear();
-			outVarName.push_back(header);
-			outVarName.push_back(encoding);
-			outType = DemangledTypeNode::NamedType(UnknownNamedTypeClass, outVarName).Finalize(platform);
-			return true;
+			DemanglerResult result;
+			StringList nameSegments{header, encoding};
+			result.name = QualifiedName(nameSegments);
+			result.type = DemangledTypeNode::NamedType(nameSegments).Finalize(platform);
+			return result;
 		}
 		else
-			return false;
+			return std::nullopt;
 
-		thread_local DemangleGNU3 demangle(platform, encoding);
+		thread_local ::DemangleGNU3 demangle(platform, encoding);
 		demangle.Reset(platform, encoding);
 		try
 		{
-			outType = demangle.DemangleSymbol(outVarName).Finalize(platform);
+			DemanglerResult result;
+			StringList nameSegments;
+			DemangledTypeNode type = demangle.DemangleSymbol(
+				nameSegments, simplifyTemplates, recoverImplicitThis && !foundHeader);
+			if (simplifyTemplates)
+				DemangledTemplateSimplifier::SimplifyTypeNodeInPlace(type);
+			result.type = type.Finalize(platform);
 
-			if (outVarName.size() == 0)
+			if (nameSegments.empty())
 			{
-				if (GetFinalizedTypeClass(outType) == NamedTypeReferenceClass &&
-					outType->GetNamedTypeReference()->GetTypeReferenceClass() == UnknownNamedTypeClass)
+				if (GetFinalizedTypeClass(result.type) == NamedTypeReferenceClass &&
+					result.type->GetNamedTypeReference()->GetTypeReferenceClass() == UnknownNamedTypeClass)
 				{
-					const auto typeName = outType->GetTypeName();
-					outVarName = StringList(typeName.begin(), typeName.end());
-					outType = nullptr;
+					const auto typeName = result.type->GetTypeName();
+					nameSegments = StringList(typeName.begin(), typeName.end());
+					result.type = nullptr;
 				}
-				else if (GetFinalizedTypeClass(outType) == NamedTypeReferenceClass)
+				else if (GetFinalizedTypeClass(result.type) == NamedTypeReferenceClass)
 				{
-					auto typeName = outType->GetTypeName();
+					auto typeName = result.type->GetTypeName();
 					if (typeName.size() > 0)
-						outVarName = StringList{"_" + typeName[typeName.size() - 1]};
+						nameSegments = StringList{"_" + typeName[typeName.size() - 1]};
 				}
 			}
 
 			if (foundHeader && !header.empty())
-				outVarName.insert(outVarName.begin(), header);
+				nameSegments.insert(nameSegments.begin(), header);
+			result.name = QualifiedName(nameSegments);
+			return result;
 		}
-		catch (const DemangleException&)
+		catch (DemangleException& e)
 		{
-			return false;
+			LogDebugF("GNU3 demangling failed '{}' '{}'", name, e.what());
 		}
-		return true;
+		catch (std::exception& e)
+		{
+			LogDebugF("GNU3 demangling failed '{}' '{}'", name, e.what());
+		}
+		return std::nullopt;
 	}
 }
 
-
-bool DemangleGNU3Static::DemangleStringGNU3(Platform* platform, const string& name, Ref<Type>& outType,
-	QualifiedName& outVarName)
-{
-	StringList outVarNameSegments;
-	if (!DemangleStringGNU3Segments(platform, name, outType, outVarNameSegments))
-		return false;
-	outVarName = QualifiedName(outVarNameSegments);
-	return true;
-}
-
-
-bool DemangleGNU3Static::DemangleStringGNU3(Architecture* arch, const string& name, Ref<Type>& outType,
-	QualifiedName& outVarName)
-{
-	Ref<Platform> platform;
-	if (arch)
-		platform = arch->GetStandalonePlatform();
-	return DemangleStringGNU3(platform.GetPtr(), name, outType, outVarName);
-}
-
-
-// ===== Explicit template instantiation =====
-
-
-// ===== Demangler plugin registration =====
 
 class GNU3Demangler: public Demangler
 {
 public:
-	GNU3Demangler(): Demangler("GNU3")
+	GNU3Demangler(): Demangler(BN_DEMANGLER_GNU3)
 	{
 	}
-	~GNU3Demangler() override {}
+	~GNU3Demangler() override = default;
 
-	virtual bool IsMangledString(const string& name) override
+	bool IsMangledString(const string& name) override
 	{
 		return DemangleGNU3Static::IsGNU3MangledString(name);
 	}
 
-#ifdef BINARYNINJACORE_LIBRARY
-	virtual bool Demangle(Architecture* arch, const string& name, Ref<Type>& outType, QualifiedName& outVarName,
-	                      BinaryView* view) override
-#else
-	virtual bool Demangle(Ref<Architecture> arch, const string& name, Ref<Type>& outType, QualifiedName& outVarName,
-	                      Ref<BinaryView> view) override
-#endif
+	std::optional<Result> Demangle(const string& name, const Config& config) override
 	{
-		if (view)
-		{
-			auto platform = view->GetDefaultPlatform();
-			if (platform)
-#ifdef BINARYNINJACORE_LIBRARY
-				return DemangleGNU3Static::DemangleStringGNU3(platform, name, outType, outVarName);
-#else
-				return DemangleGNU3Static::DemangleStringGNU3(platform.GetPtr(), name, outType, outVarName);
-#endif
-		}
-		return DemangleGNU3Static::DemangleStringGNU3(arch, name, outType, outVarName);
+		return DemangleGNU3WithConfig(config, name);
 	}
 };
 
@@ -3321,8 +3385,7 @@ extern "C"
 	BINARYNINJAPLUGIN bool CorePluginInit()
 #endif
 	{
-		static GNU3Demangler* demangler = new GNU3Demangler();
-		Demangler::Register(demangler);
-		return true;
+		static auto demangler = new GNU3Demangler();
+		return Demangler::Register(demangler);
 	}
 }

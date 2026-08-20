@@ -1811,6 +1811,14 @@ public:
 			return "__vrhadd";
 		case ARMV7_INTRIN_VRECPE:
 			return "__vrecpe";
+		case ARMV7_INTRIN_VABS:
+			return "__vabs";
+		case ARMV7_INTRIN_VCVT_FIXED:
+			return "__vcvt_fixed";
+		case ARMV7_INTRIN_VABS_Q:
+			return "__vabs_q";
+		case ARMV7_INTRIN_VCVT_FIXED_Q:
+			return "__vcvt_fixed_q";
 		case ARMV7_INTRIN_VQSHL:
 			return "__vqshl";
 		case ARMV7_INTRIN_VQRSHL:
@@ -2121,6 +2129,10 @@ public:
 			ARMV7_INTRIN_VHADD,
 			ARMV7_INTRIN_VRHADD,
 			ARMV7_INTRIN_VRECPE,
+			ARMV7_INTRIN_VABS,
+			ARMV7_INTRIN_VCVT_FIXED,
+			ARMV7_INTRIN_VABS_Q,
+			ARMV7_INTRIN_VCVT_FIXED_Q,
 			ARMV7_INTRIN_VQSHL,
 			ARMV7_INTRIN_VQRSHL,
 			ARMV7_INTRIN_VQSHRN,
@@ -2427,10 +2439,23 @@ public:
 				NameAndType("source2", Type::IntegerType(8, false)),
 			};
 		case ARMV7_INTRIN_VRECPE:
+		case ARMV7_INTRIN_VABS:
+		case ARMV7_INTRIN_VABS_Q:
 			return {
 				NameAndType("size", Type::IntegerType(1, false)),
 				NameAndType("is_float", Type::BoolType()),
-				NameAndType("source", Type::IntegerType(8, false)),
+				NameAndType("source", Type::IntegerType(
+					intrinsic == ARMV7_INTRIN_VABS_Q ? 16 : 8, false)),
+			};
+		case ARMV7_INTRIN_VCVT_FIXED:
+		case ARMV7_INTRIN_VCVT_FIXED_Q:
+			return {
+				NameAndType("size", Type::IntegerType(1, false)),
+				NameAndType("fractional_bits", Type::IntegerType(1, false)),
+				NameAndType("to_fixed", Type::BoolType()),
+				NameAndType("is_unsigned", Type::BoolType()),
+				NameAndType("source", Type::IntegerType(
+					intrinsic == ARMV7_INTRIN_VCVT_FIXED_Q ? 16 : 8, false)),
 			};
 		case ARMV7_INTRIN_VREV16:
 		case ARMV7_INTRIN_VREV32:
@@ -2841,6 +2866,8 @@ public:
 		case ARMV7_INTRIN_VHADD:
 		case ARMV7_INTRIN_VRHADD:
 		case ARMV7_INTRIN_VRECPE:
+		case ARMV7_INTRIN_VABS:
+		case ARMV7_INTRIN_VCVT_FIXED:
 		case ARMV7_INTRIN_VQSHL:
 		case ARMV7_INTRIN_VQRSHL:
 		case ARMV7_INTRIN_VQSHRN:
@@ -2856,6 +2883,9 @@ public:
 		case ARMV7_INTRIN_VBIT:
 		case ARMV7_INTRIN_VBSL:
 			return {Type::IntegerType(8, false)};
+		case ARMV7_INTRIN_VABS_Q:
+		case ARMV7_INTRIN_VCVT_FIXED_Q:
+			return {Type::IntegerType(16, false)};
 		case ARMV7_INTRIN_VABAL:
 		case ARMV7_INTRIN_VABDL:
 		case ARMV7_INTRIN_VADDL:

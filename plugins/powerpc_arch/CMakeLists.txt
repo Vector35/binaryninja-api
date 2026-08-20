@@ -25,7 +25,8 @@ endif()
 option(CAPSTONE_BUILD_STATIC_RUNTIME "Embed static runtime" OFF)
 option(CAPSTONE_BUILD_SHARED "Build shared library" OFF)
 option(CAPSTONE_BUILD_TESTS "Build tests" OFF)
-add_subdirectory(capstone)
+set(CAPSTONE_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../vendor/capstone")
+add_subdirectory(${CAPSTONE_SOURCE_DIR} ${PROJECT_BINARY_DIR}/capstone)
 
 target_link_libraries(arch_ppc binaryninjaapi capstone)
 
@@ -40,7 +41,7 @@ set_target_properties(arch_ppc PROPERTIES
     VISIBILITY_INLINES_HIDDEN ON
 	POSITION_INDEPENDENT_CODE ON)
 
-target_include_directories(arch_ppc PRIVATE ${PROJECT_SOURCE_DIR}/capstone/include)
+target_include_directories(arch_ppc PRIVATE ${CAPSTONE_SOURCE_DIR}/include)
 
 if(BN_INTERNAL_BUILD)
 	plugin_rpath(arch_ppc)

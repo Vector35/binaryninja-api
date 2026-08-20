@@ -2,10 +2,12 @@ cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
 project(x86_extension CXX C)
 
+set(ASMX86_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../vendor/asmx86")
+
 add_library(${PROJECT_NAME} SHARED
     src/x86_extension.cpp
-    src/asmx86/asmx86.c
-    src/asmx86/asmx86.h)
+    ${ASMX86_SOURCE_DIR}/asmx86.c
+    ${ASMX86_SOURCE_DIR}/asmx86.h)
 
 if(NOT BN_API_BUILD_EXAMPLES AND NOT BN_INTERNAL_BUILD)
     # Out-of-tree build
@@ -20,6 +22,8 @@ endif()
 
 target_link_libraries(${PROJECT_NAME}
     binaryninjaapi)
+
+target_include_directories(${PROJECT_NAME} PRIVATE ${ASMX86_SOURCE_DIR})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_STANDARD 20

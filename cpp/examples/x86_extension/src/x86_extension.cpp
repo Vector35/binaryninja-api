@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <cstring>
 #include "binaryninjaapi.h"
-#include "asmx86/asmx86.h"
+#include "asmx86.h"
 
 using namespace BinaryNinja;
 using namespace std;

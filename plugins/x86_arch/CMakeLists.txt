@@ -2,17 +2,21 @@ cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
 project(arch_x86)
 
+set(MBUILD_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../vendor/mbuild")
+set(XED_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../vendor/xed")
+set(YASM_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../vendor/yasm")
+
 OPTION(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 OPTION(YASM_BUILD_TESTS "Enable building of tests" OFF)
-add_subdirectory(yasm)
+add_subdirectory(${YASM_SOURCE_DIR} ${PROJECT_BINARY_DIR}/yasm)
 
 set(XED_CONFIGURE_ARGS --no-encoder just-gen)
 if(WIN32)
-	execute_process(COMMAND ${CMAKE_COMMAND} -E env OS=Windows_NT PYTHONPATH=${PROJECT_SOURCE_DIR}/mbuild
-		py -3 ${PROJECT_SOURCE_DIR}/xed/mfile.py ${XED_CONFIGURE_ARGS}
+	execute_process(COMMAND ${CMAKE_COMMAND} -E env OS=Windows_NT PYTHONPATH=${MBUILD_SOURCE_DIR}
+		py -3 ${XED_SOURCE_DIR}/mfile.py ${XED_CONFIGURE_ARGS}
 		WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 else()
-	execute_process(COMMAND python3 ${PROJECT_SOURCE_DIR}/xed/mfile.py ${XED_CONFIGURE_ARGS}
+	execute_process(COMMAND python3 ${XED_SOURCE_DIR}/mfile.py ${XED_CONFIGURE_ARGS}
 		WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 endif()
 
@@ -21,8 +25,8 @@ if(NOT BN_INTERNAL_BUILD)
 endif()
 
 file(GLOB SOURCES CONFIGURE_DEPENDS *.cpp *.h
-	${PROJECT_SOURCE_DIR}/xed/src/common/*.c
-	${PROJECT_SOURCE_DIR}/xed/src/dec/*.c
+	${XED_SOURCE_DIR}/src/common/*.c
+	${XED_SOURCE_DIR}/src/dec/*.c
 	${PROJECT_BINARY_DIR}/obj/*.c)
 
 # This accounts for the source code file replacement in
@@ -30,8 +34,8 @@ file(GLOB SOURCES CONFIGURE_DEPENDS *.cpp *.h
 # See https://github.com/Vector35/binaryninja-api/issues/4617 for more details
 # Note to who updates xed: the path replacement file may change, search for its name in the xed directory to find its
 # newest location
-list(REMOVE_ITEM SOURCES ${PROJECT_SOURCE_DIR}/xed/src/common/xed-operand-values-interface-repl.c)
-list(APPEND SOURCES ${PROJECT_SOURCE_DIR}/xed/datafiles/avx512f/xed-operand-values-interface-uisa.c)
+list(REMOVE_ITEM SOURCES ${XED_SOURCE_DIR}/src/common/xed-operand-values-interface-repl.c)
+list(APPEND SOURCES ${XED_SOURCE_DIR}/datafiles/avx512f/xed-operand-values-interface-uisa.c)
 
 if(DEMO)
 	add_library(arch_x86 STATIC ${SOURCES})
@@ -41,8 +45,8 @@ endif()
 
 target_include_directories(arch_x86
 	PRIVATE ${PROJECT_SOURCE_DIR}
-	PRIVATE ${PROJECT_SOURCE_DIR}/xed/include/public/xed
-	PRIVATE ${PROJECT_SOURCE_DIR}/xed/include/private
+	PRIVATE ${XED_SOURCE_DIR}/include/public/xed
+	PRIVATE ${XED_SOURCE_DIR}/include/private
 	PRIVATE ${PROJECT_BINARY_DIR}/obj
 	PRIVATE ${PROJECT_BINARY_DIR}/obj/include-private)
 

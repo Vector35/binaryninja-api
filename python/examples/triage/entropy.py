@@ -1,10 +1,10 @@
 import math
 import threading
-from PySide6.QtWidgets import QWidget
-from PySide6.QtGui import QImage, QColor, QPainter
-from PySide6.QtCore import Qt, QSize, QTimer, Signal
 import binaryninjaui
 from binaryninjaui import ViewFrame, UIContext
+from PySide6.QtCore import Qt, QSize, QTimer, Signal
+from PySide6.QtGui import QImage, QColor, QPainter
+from PySide6.QtWidgets import QWidget
 from binaryninja.enums import ThemeColor
 
 class EntropyThread(threading.Thread):

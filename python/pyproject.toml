@@ -1,0 +1,57 @@
+[project]
+name = "binaryninja-api"
+version = "6.0.10507"
+description = "Python bindings for the Binary Ninja API"
+readme = "README.md"
+requires-python = ">=3.10,<4"
+license = "MIT"
+license-files = ["LICENSE.txt"]
+authors = [
+    { name = "Vector 35 Inc" },
+]
+dependencies = [
+    "packaging>=23",
+    "requests>=2.28",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Typing :: Typed",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "ruff>=0.12",
+    "uv-build>=0.12.3,<0.13",
+]
+examples = [
+    "pillow>=10",
+]
+examples-angr = [
+    "angr>=9.2",
+]
+
+[project.urls]
+Documentation = "https://docs.binary.ninja"
+Repository = "https://github.com/Vector35/binaryninja-api"
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13"]
+build-backend = "_build_backend"
+backend-path = ["."]
+
+[tool.uv.build-backend]
+module-name = "binaryninja"
+module-root = ""
+source-include = [
+    "_build_backend.py",
+    "examples/**",
+    "scripts/**",
+    "tests/**",
+]
+
+[tool.uv.dependency-groups]
+examples-angr = { requires-python = ">=3.10,<3.14" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

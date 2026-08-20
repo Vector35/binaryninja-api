@@ -1,0 +1,61 @@
+name: Python API
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/python.yml"
+      - "binaryninjacore.h"
+      - "cmake/PythonBindings.cmake"
+      - "python/**"
+      - "ruff.toml"
+  pull_request:
+    paths:
+      - ".github/workflows/python.yml"
+      - "binaryninjacore.h"
+      - "cmake/PythonBindings.cmake"
+      - "python/**"
+      - "ruff.toml"
+
+jobs:
+  validate:
+    name: ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+      - run: uv lock --check
+      - run: uv sync --locked --only-group dev --no-install-project
+      - run: uv run --no-sync ruff check _build_backend.py binaryninja/_binaryninjacore_loader.py examples scripts tests ../scripts/install_api.py
+      - run: uv run --no-sync pytest
+
+  distributions:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+          enable-cache: true
+      - run: uv lock --check
+      - run: uv sync --locked --only-group dev --no-install-project
+      - run: uv run --no-sync python scripts/set_version.py --check
+      - run: uv build --no-sources
+      - run: uv run --no-sync python scripts/validate_dist.py dist

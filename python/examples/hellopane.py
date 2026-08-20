@@ -21,7 +21,7 @@
 # This is an example UI plugin which demonstrates how to add panes to Binary Ninja.
 # See .../api/ui/pane.h for interface details.
 
-from binaryninjaui import Pane, WidgetPane, UIActionHandler, UIActionHandler, UIAction, Menu, UIContext, UIContextNotification
+from binaryninjaui import Pane, WidgetPane, UIActionHandler, UIAction, Menu, UIContext, UIContextNotification
 from PySide6 import QtCore
 from PySide6.QtCore import Qt, QRectF
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QVBoxLayout, QLabel, QWidget

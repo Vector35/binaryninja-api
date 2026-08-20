@@ -24,7 +24,6 @@ import sys
 from binaryninja.update import UpdateChannel, are_auto_updates_enabled, set_auto_updates_enabled, is_update_installation_pending, install_pending_update
 from binaryninja import core_version_info, get_install_directory, user_directory
 import datetime
-from six.moves import input
 
 chandefault = list(UpdateChannel)[0].name
 channel = None

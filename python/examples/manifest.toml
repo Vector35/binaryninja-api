@@ -1,0 +1,71 @@
+# Keep every Python file under examples classified exactly once. Tests enforce coverage.
+
+standalone = [
+    "bin_info.py",
+    "bindiff.py",
+    "cli_dis.py",
+    "cli_lift.py",
+    "feature_map.py",
+    "instruction_iterator.py",
+    "mock_extension_server.py",
+    "pe_stat.py",
+    "print_syscalls.py",
+    "raw_binary_base_detection.py",
+    "typelib_create.py",
+    "typelib_dump.py",
+    "version_switcher.py",
+]
+
+core_plugins = [
+    "angr_plugin.py",
+    "arch_hook.py",
+    "args_render_layer.py",
+    "bid64_constant.py",
+    "breakpoint.py",
+    "custom_graph_layout.py",
+    "encoded_strings.py",
+    "jump_table.py",
+    "mappedview.py",
+    "nds.py",
+    "nes.py",
+    "newline_render_layer.py",
+    "notification_callbacks.py",
+    "nsf.py",
+    "pseudo_python.py",
+    "rust_string.py",
+    "update_analysis.py",
+    "wf_module_helloworld.py",
+    "wf_rewrite_push_pop.py",
+    "wf_test_copy_expr.py",
+    "wf_unflatten.py",
+]
+
+ui_plugins = [
+    "asm_to_llil_view.py",
+    "custom_tooltip.py",
+    "export_svg.py",
+    "follow_reg_render_layer.py",
+    "helloglobalarea.py",
+    "hellopane.py",
+    "hellosidebar.py",
+    "highlight_returns_render_layer.py",
+    "linear_mlil.py",
+    "list_keybindings.py",
+    "make_code.py",
+    "triage/__init__.py",
+    "triage/byte.py",
+    "triage/entropy.py",
+    "triage/exports.py",
+    "triage/file_info.py",
+    "triage/files.py",
+    "triage/headers.py",
+    "triage/imports.py",
+    "triage/sections.py",
+    "triage/view.py",
+    "typelibexplorer.py",
+    "ui_notifications.py",
+]
+
+[optional_dependencies]
+"angr_plugin.py" = ["angr"]
+"feature_map.py" = ["Pillow"]

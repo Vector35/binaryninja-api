@@ -27,10 +27,16 @@ from time import gmtime, struct_time
 import os
 from typing import List, Mapping, Optional
 import functools
+from importlib.metadata import PackageNotFoundError, version as distribution_version
 
 # Binary Ninja components
 import binaryninja._binaryninjacore as core
 __version__ = core.BNGetVersionString()
+try:
+	__distribution_version__ = distribution_version("binaryninja-api")
+except PackageNotFoundError:
+	# Product-bundled source trees are intentionally usable without distribution metadata.
+	__distribution_version__ = "0+product"
 import binaryninja
 from .enums import *
 from .databuffer import *

@@ -1,6 +1,7 @@
-from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout, QApplication, QMainWindow
-from PySide6.QtCore import Qt, QPoint
 import binaryninjaui
+from binaryninja import execute_on_main_thread
+from PySide6.QtCore import Qt, QPoint
+from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout
 
 class TooltipPopup(QWidget):
     def __init__(self, parent=None):

@@ -20,8 +20,8 @@
 
 import json
 
-from PySide6.QtGui import QKeySequence
 from binaryninjaui import UIAction, UIActionHandler, Menu
+from PySide6.QtGui import QKeySequence
 
 
 def _seq_to_str(seq_list):

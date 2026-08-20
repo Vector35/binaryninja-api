@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 # binja type library info utility
 
-import os, sys, re, random
+import os
+import random
+import re
+import sys
 import binaryninja
 from binaryninja.enums import *
 from binaryninja import typelibrary
@@ -23,25 +26,25 @@ def obj2str(t, depth=0):
 	indent = '  ' * depth
 	result = ''
 
-	if type(t) == binaryninja.types.StructureType:
+	if isinstance(t, binaryninja.types.StructureType):
 		result = '%sStructure\n' % (indent)
 		for m in t.members:
 			result += obj2str(m, depth + 1)
-	elif type(t) == binaryninja.types.StructureMember:
+	elif isinstance(t, binaryninja.types.StructureMember):
 		result = '%sStructureMember "%s"\n' % (indent, t._name)
 		result += type2str(t.type, depth + 1)
-	elif type(t) == binaryninja.types.FunctionParameter:
+	elif isinstance(t, binaryninja.types.FunctionParameter):
 		result = '%sFunctionParameter "%s"\n' % (indent, t.name)
 		result += type2str(t.type, depth + 1)
-	elif type(t) == binaryninja.types.NamedTypeReferenceType:
+	elif isinstance(t, binaryninja.types.NamedTypeReferenceType):
 		result = '%sNamedTypeReference %s\n' % (indent, repr(t))
-	elif type(t) == binaryninja.types.EnumerationType:
+	elif isinstance(t, binaryninja.types.EnumerationType):
 		result = '%sEnumeration\n' % indent
 		for m in t.members:
 			result += obj2str(m, depth + 1)
-	elif type(t) == binaryninja.types.EnumerationMember:
+	elif isinstance(t, binaryninja.types.EnumerationMember):
 		result = '%sEnumerationMember %s==%d\n' % (indent, t.name, t.value)
-	elif t == None:
+	elif t is None:
 		result = 'unimplemented'
 
 	return result

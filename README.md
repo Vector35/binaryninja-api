@@ -16,6 +16,10 @@ Online documentation is available for the following APIs:
 
 ## Usage and Build Instructions
 
+Python package development, installation, release, and example usage are documented together in
+[`python/README.md`](python/README.md). The Python project is uv-native and has its own lockfile, independently of the
+documentation and parent Binary Ninja build/test projects.
+
 **In order to build the Binary Ninja API, you will need to use the specific revision that matches the hash from the file `api_REVISION.txt`.** This file should be located in the root install folder for Linux and Windows or the `Contents/Resources` sub-folder of the app on macOS. The easiest way to do this is by cloning this repository (or adding it as a submodule) and doing something like `git checkout $(cat api_REVISION.txt | awk -F/ '{print $NF}')`. Documentation for how to set this up with something like `cmake` can be found [here](https://docs.binary.ninja/dev/plugins.html?h=api_#cmake-setup).
 
 To write Binary Ninja plugins using C++, you'll need to build the C++ API. Building the API library is done similarly to most CMake-based projects; the basic steps are outlined as follows:

@@ -23,30 +23,38 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import sys
-import binaryninja
+import argparse
 from collections import defaultdict
 
-opc2count = defaultdict(lambda: 0)
-target = sys.argv[1]
+import binaryninja
 
-print('opening %s' % target)
-bv = binaryninja.load(target)
-print('analyzing')
-bv.update_analysis_and_wait()
 
-print('looping over functions')
-for func in bv.functions:
-	print('disassembling %s()' % func.symbol.full_name)
-	for block in func:
-		for (toks, length) in block:
-			opc = toks[0].text
-			opc2count[opc] += 1
-			#print('incremented %s, is now: %d' % (opc, opc2count[opc]))
+def main() -> int:
+	parser = argparse.ArgumentParser(description="Report opcode frequencies for a binary")
+	parser.add_argument("path", help="binary to analyze")
+	args = parser.parse_args()
 
-total = sum([x[1] for x in opc2count.items()])
+	opcode_counts = defaultdict(int)
+	print(f"opening {args.path}")
+	with binaryninja.load(args.path) as view:
+		print("analyzing")
+		view.update_analysis_and_wait()
+		print("looping over functions")
+		for function in view.functions:
+			print(f"disassembling {function.symbol.full_name}()")
+			for block in function:
+				for tokens, _length in block:
+					if tokens:
+						opcode_counts[tokens[0].text] += 1
 
-print('op       frequency        %')
-print('--       ---------        -')
-for opc in sorted(opc2count.keys(), key=lambda x: opc2count[x], reverse=True):
-	print(opc.ljust(8), str(opc2count[opc]).ljust(16), '%.1f%%' % (100.0 * opc2count[opc] / total))
+	total = sum(opcode_counts.values())
+	print("op       frequency        %")
+	print("--       ---------        -")
+	for opcode in sorted(opcode_counts, key=opcode_counts.get, reverse=True):
+		percentage = 100.0 * opcode_counts[opcode] / total if total else 0.0
+		print(opcode.ljust(8), str(opcode_counts[opcode]).ljust(16), f"{percentage:.1f}%")
+	return 0
+
+
+if __name__ == "__main__":
+	raise SystemExit(main())

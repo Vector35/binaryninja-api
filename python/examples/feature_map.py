@@ -2,8 +2,12 @@
 
 # headlessly draw the feature map of a given binary
 
-import os, sys, binaryninja
+import argparse
+import struct
+
+import binaryninja
 from binaryninja.enums import SymbolType, StringType
+from PIL import Image
 
 WIDTH, HEIGHT = 100, 800
 
@@ -18,61 +22,72 @@ FeatureMapImportColor = (237, 189, 129)
 FeatureMapExternColor = (237, 189, 129)
 FeatureMapLibraryColor = (237, 189, 129)
 
-bv = binaryninja.load(sys.argv[1], update_analysis=True)
+def main() -> int:
+	parser = argparse.ArgumentParser(description="Render Binary Ninja's feature-map data for a binary")
+	parser.add_argument("path", help="binary to analyze")
+	parser.add_argument("-o", "--output", default="feature-map.png", help="output PNG path")
+	args = parser.parse_args()
 
-imgdata = [FeatureMapBaseColor]*(WIDTH*HEIGHT)
+	with binaryninja.load(args.path, update_analysis=True) as view:
+		segments = list(view.segments)
+		data_length = sum(segment.end - segment.start for segment in segments)
+		if data_length == 0:
+			parser.error("the input has no mapped segments")
+		factor = (WIDTH * HEIGHT) / data_length
+		image_data = [FeatureMapBaseColor] * (WIDTH * HEIGHT)
 
-data_len = sum([s.end - s.start for s in bv.segments])
-image_len = WIDTH*HEIGHT
-factor = image_len / data_len
+		def address_to_offset(address):
+			mapped_before = 0
+			for segment in segments:
+				if segment.start <= address < segment.end:
+					return min(int(factor * (mapped_before + address - segment.start)), len(image_data) - 1)
+				mapped_before += segment.end - segment.start
+			raise ValueError(f"address {address:#x} is not in a mapped segment")
 
-def addr_to_fmap_offset(addr):
-	for (i,seg) in enumerate(bv.segments):
-		#print(f'segment {i}: [{seg.start:08X}, {seg.end:08X})')
-		if addr >= seg.start and addr < seg.end:
-			a = sum([s.end - s.start for s in bv.segments[0:i]]) + (addr - seg.start)
-			return int(factor * a)
-	assert False, f'address {addr:08X} was not in any segment'
+		def highlight(start, end, color):
+			for offset in range(address_to_offset(start), address_to_offset(end - 1) + 1):
+				image_data[offset] = color
 
-for seg in bv.segments:
-	print(f'segment [{seg.start:08X}, {seg.end:08X}) -draw-> ' + \
-		f'[{addr_to_fmap_offset(seg.start):08X}, {addr_to_fmap_offset(seg.end-1):08X}]')
+		for segment in segments:
+			print(
+				f"segment [{segment.start:08X}, {segment.end:08X}) -draw-> "
+				f"[{address_to_offset(segment.start):08X}, {address_to_offset(segment.end - 1):08X}]"
+			)
 
-def highlight(a0, a1, color):
-	for i in range(addr_to_fmap_offset(a0), addr_to_fmap_offset(a1)):
-		imgdata[i] = color
+		for address, variable in view.data_vars.items():
+			symbol = view.get_symbol_at(address)
+			if symbol and symbol.type in {
+				SymbolType.ImportAddressSymbol,
+				SymbolType.ImportedFunctionSymbol,
+				SymbolType.ImportedDataSymbol,
+			}:
+				color = FeatureMapImportColor
+			elif symbol and symbol.type == SymbolType.ExternalSymbol:
+				color = FeatureMapExternColor
+			else:
+				color = FeatureMapDataVariableColor
+			highlight(address, address + len(variable), color)
 
-# data variables
-for (addr, var) in bv.data_vars.items():
-	sym = bv.get_symbol_at(addr)
-	if sym and sym.type in [SymbolType.ImportAddressSymbol, SymbolType.ImportedFunctionSymbol, SymbolType.ImportedDataSymbol]:
-		color = FeatureMapImportColor
-	elif sym and sym.type in [SymbolType.ExternalSymbol]:
-		color = FeatureMapExternColor
-	else:
-		color = FeatureMapDataVariableColor
-	highlight(addr, addr + len(var), color)
+		for string in view.strings:
+			color = FeatureMapAsciiStringColor if string.type == StringType.AsciiString else FeatureMapUnicodeStringColor
+			highlight(string.start, string.start + len(string), color)
 
-# strings
-for s in bv.strings:
-	color = FeatureMapAsciiStringColor if s.type == StringType.AsciiString else FeatureMapUnicodeStringColor
-	highlight(s.start, s.start + len(s), color)
+		for function in view.functions:
+			symbol = function.symbol
+			if symbol and symbol.type == SymbolType.ImportedFunctionSymbol:
+				color = FeatureMapImportColor
+			elif symbol and symbol.type == SymbolType.LibraryFunctionSymbol:
+				color = FeatureMapLibraryColor
+			else:
+				color = FeatureMapFunctionColor
+			for block in function.basic_blocks:
+				highlight(block.start, block.end, color)
 
-# functions
-for f in bv.functions:
-	sym = f.symbol
-	if sym and sym.type == SymbolType.ImportedFunctionSymbol:
-		color = FeatureMapImportColor
-	elif sym and sym.type == SymbolType.LibraryFunctionSymbol:
-		color = FeatureMapLibraryColor
-	else:
-		color = FeatureMapFunctionColor
+	data = b"".join(struct.pack("BBB", *rgb) for rgb in image_data)
+	Image.frombytes("RGB", (WIDTH, HEIGHT), data).save(args.output)
+	print(f"wrote {args.output}")
+	return 0
 
-	for bb in f.basic_blocks:
-		highlight(bb.start, bb.end, color)
 
-# export image
-import struct
-from PIL import Image
-data = b''.join([struct.pack('BBB', *rgb) for rgb in imgdata])
-Image.frombytes('RGB', (WIDTH,HEIGHT), data).save('feature-map.png')
+if __name__ == "__main__":
+	raise SystemExit(main())

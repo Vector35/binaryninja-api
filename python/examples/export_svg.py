@@ -96,15 +96,15 @@ def instruction_data_flow(function, address):
 def rgbStr(tokenType):
 	'''Given a token string name, look up the theme color for it and return as rbg(x,y,z) str'''
 	try:
-		color = eval(f'getThemeColor(ThemeColor.{tokenType})')
-	except Exception:
+		color = getThemeColor(getattr(ThemeColor, tokenType))
+	except (AttributeError, TypeError):
 		color = None
 	if (not color):
 		try:
 			ctx = UIContext.activeContext()
 			view_frame = ctx.getCurrentViewFrame()
-			color = eval(f'getTokenColor(view_frame, InstructionTextTokenType.{tokenType})')
-		except Exception:
+			color = getTokenColor(view_frame, getattr(InstructionTextTokenType, tokenType))
+		except (AttributeError, TypeError):
 			return 'rgb(224, 224, 224)'
 	r = color.getRgb()[0]
 	g = color.getRgb()[1]

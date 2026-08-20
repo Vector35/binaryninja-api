@@ -12,7 +12,7 @@ list(REMOVE_ITEM PYTHON_SOURCES ${PYTHON_PACKAGE_DIR}/_binaryninjacore.py)
 list(REMOVE_ITEM PYTHON_SOURCES ${PYTHON_PACKAGE_DIR}/enums.py)
 
 if(NOT ULTIMATE)
-	list(REMOVE_ITEM PYTHON_SOURCES ${PROJECT_SOURCE_DIR}/enterprise.py)
+	list(REMOVE_ITEM PYTHON_SOURCES ${PYTHON_PACKAGE_DIR}/enterprise.py)
 	list(FILTER PYTHON_SOURCES EXCLUDE REGEX ".*/collaboration/.*$")
 endif()
 
@@ -40,6 +40,21 @@ if(BN_INTERNAL_BUILD)
 		OUTPUT_DIRECTORY ${BN_RESOURCE_DIR}/python/binaryninja
 		CORE_OUTPUT_FILE _binaryninjacore.py
 		ENUMS_OUTPUT_FILE enums.py
+		SOURCE_BASE_DIRECTORY ${PYTHON_PACKAGE_DIR}
+		GENERATED_SOURCE_DIRECTORY ${PYTHON_PACKAGE_DIR}
 		PYTHON_SOURCES ${PYTHON_SOURCES}
+	)
+
+	find_program(BN_UV_EXECUTABLE uv)
+	if(NOT BN_UV_EXECUTABLE)
+		set(BN_UV_EXECUTABLE uv)
+		message(STATUS "uv not found during configuration; python_package will require uv on PATH when built")
+	endif()
+	add_custom_target(python_package
+		COMMAND ${BN_UV_EXECUTABLE} build --no-sources
+		DEPENDS generator_copy
+		WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+		COMMENT "Building Binary Ninja Python distributions with uv"
+		VERBATIM
 	)
 endif()

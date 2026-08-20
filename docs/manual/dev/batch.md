@@ -23,7 +23,10 @@ Note
 !!! Tip "Tip"
     If you have multiple python copies installed, you'll want to make sure to specify the full path to the correct python when running as shown above.
 
-This script adds appropriate `.pth` files so that your Python can find the Binary Ninja libraries.
+The script prefers a matching bundled wheel when one is available and otherwise installs a `.pth` compatibility file
+that points at the product's Python API and UI bindings. Use `--status` to see the independently detected API
+distribution, `binaryninja` module, and `binaryninjaui` module. Advanced users can select the behavior explicitly with
+`--method wheel` or `--method pth`, or provide a built package with `--wheel /path/to/binaryninja_api-*.whl`.
 
 ## Our First Script
 

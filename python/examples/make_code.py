@@ -6,9 +6,8 @@ from binaryninja.architecture import InstructionTextToken
 from binaryninja.types import Type
 from typing import List
 
-import sys
-from PySide6.QtGui import QKeySequence
 from binaryninjaui import UIActionHandler, UIAction, UIActionContext
+from PySide6.QtGui import QKeySequence
 
 class CodeDataRenderer(DataRenderer):
 	def __init__(self):

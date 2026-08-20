@@ -1,11 +1,11 @@
 # coding: utf8
 
 import sys
-from PySide6.QtWidgets import QAbstractScrollArea, QAbstractSlider
-from PySide6.QtGui import QPainter, QPalette, QFont
-from PySide6.QtCore import Qt, QTimer, QRect
 import binaryninjaui
 from binaryninjaui import View, ViewType, RenderContext, UIContext, UIAction
+from PySide6.QtCore import Qt, QTimer, QRect
+from PySide6.QtGui import QPainter, QPalette, QFont
+from PySide6.QtWidgets import QAbstractScrollArea, QAbstractSlider
 from binaryninja.enums import LinearDisassemblyLineType, ThemeColor
 try:
     from binaryninja.binaryview import AddressRange

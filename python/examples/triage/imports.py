@@ -1,5 +1,3 @@
-from PySide6.QtWidgets import QTreeView, QVBoxLayout, QWidget, QPushButton
-from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex, QSize
 from binaryninja.mediumlevelil import MediumLevelILOperation
 from binaryninja.function import RegisterValueType
 from binaryninja.enums import SymbolType, FunctionAnalysisSkipOverride
@@ -7,6 +5,8 @@ from binaryninja.types import Symbol, Type
 from binaryninja.plugin import PluginCommand
 import binaryninjaui
 from binaryninjaui import ViewFrame, ViewType, FilterTarget, FilteredView, UIContext, UIActionHandler
+from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex, QSize
+from PySide6.QtWidgets import QTreeView, QVBoxLayout, QWidget, QPushButton
 import time
 
 platform_info = [

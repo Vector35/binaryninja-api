@@ -1,8 +1,8 @@
 import os
-from PySide6.QtWidgets import QWidget, QTreeView, QFileSystemModel, QVBoxLayout, QMessageBox, QAbstractItemView
-from PySide6.QtGui import QKeySequence
-from PySide6.QtCore import QSettings, QDir
 from binaryninjaui import UIActionHandler, UIAction, Menu, FileContext, ContextMenuManager, UIContext
+from PySide6.QtCore import QSettings, QDir
+from PySide6.QtGui import QKeySequence
+from PySide6.QtWidgets import QWidget, QTreeView, QFileSystemModel, QVBoxLayout, QMessageBox, QAbstractItemView
 from binaryninja.settings import Settings
 
 

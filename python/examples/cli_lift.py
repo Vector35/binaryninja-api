@@ -22,9 +22,9 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import sys
+import argparse
+
 import binaryninja
-from binaryninja import core
 from binaryninja import binaryview
 from binaryninja import lowlevelil
 
@@ -43,46 +43,37 @@ def traverse_IL(il, indent):
 		print('\t'*indent + str(il))
 
 
-if __name__ == '__main__':
+def main() -> int:
+	parser = argparse.ArgumentParser(description="Lift instruction bytes to Binary Ninja Low Level IL")
+	parser.add_argument("platform", help="registered platform name, such as linux-x86")
+	parser.add_argument("bytes", nargs="+", metavar="BYTE", help="instruction bytes in hexadecimal")
+	args = parser.parse_args()
 
-	if not sys.argv[2:]:
-		print('usage: %s <platform> <bytes>' % sys.argv[0])
-		print('')
-		print('examples:')
-		print('   eg: %s linux-armv7 14 d0 4d e2 01 20 a0 e1 00 30 a0 e1 00 c0 a0 e3' % sys.argv[0])
-		print('')
-		print('platforms:')
-		print('\t' + '\n\t'.join(map(str, list(binaryninja.Platform))))
+	try:
+		data = bytes(int(value, 16) for value in args.bytes)
+	except ValueError as error:
+		parser.error(f"invalid hexadecimal byte: {error}")
 
-		sys.exit(-1)
+	try:
+		platform = binaryninja.Platform[args.platform]
+	except KeyError:
+		parser.error(
+			f"unknown platform {args.platform!r}; available platforms: "
+			+ ", ".join(str(platform) for platform in binaryninja.Platform)
+		)
 
-	# divide arguments
-	platName = sys.argv[1]
-	archName = platName.split('-')[1]
-	bytesList = sys.argv[2:]
+	with binaryview.BinaryView.new(data) as view:
+		view.platform = platform
+		view.add_function(0, plat=platform)
 
-	# parse byte arguments
-	data = b''.join(list(map(lambda x: int(x, 16).to_bytes(1, 'big'), bytesList)))
+		print(RED)
+		for function in view.functions:
+			for block in function.low_level_il:
+				for instruction in block:
+					traverse_IL(instruction, 0)
+		print(NORMAL)
+	return 0
 
-	plat = binaryninja.Platform[platName]
-	bv = binaryview.BinaryView.new(data)
-	bv.platform = plat
 
-	bv.add_function(0, plat=plat)
-
-	#	print('print all the functions, their basic blocks, and their mc instructions')
-	#	for func in bv.functions:
-	#		print(repr(func))
-	#		for block in func:
-	#			print("\t{0}".format(block))
-	#			for insn in block:
-	#				print("\t\t{0}".format(insn))
-
-	print(RED)
-	for func in bv.functions:
-		#print(repr(func))
-		for block in func.low_level_il:
-			#print("\t{0}".format(block))
-			for insn in block:
-				traverse_IL(insn, 0)
-	print(NORMAL)
+if __name__ == "__main__":
+	raise SystemExit(main())

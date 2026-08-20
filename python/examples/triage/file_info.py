@@ -1,11 +1,11 @@
 import os
 import hashlib
 import threading
-from PySide6.QtWidgets import QWidget, QLabel, QGridLayout
-from PySide6.QtCore import Qt
-from binaryninjaui import UIContext
-from binaryninja.enums import ThemeColor
 import binaryninjaui
+from binaryninjaui import UIContext
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QWidget, QLabel, QGridLayout
+from binaryninja.enums import ThemeColor
 
 
 class CopyableLabel(QLabel):

@@ -27,13 +27,12 @@ plugins/triage/triage.lib
 libbinaryninja*
 python/_binaryninjacore.py
 python/enums.py
-python/binaryninja/_binaryninjacore.py
-python/binaryninja/enums.py
 python/generator
 python/generator.*.log
 python/generator.exe
 python/generator.log
 python/generator.tlog
+python/dist/
 .cache/
 target/
 plugins/sharedcache_view/api/python/_sharedcachecore.py

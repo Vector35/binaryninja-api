@@ -222,7 +222,7 @@ class NewlineSplitRenderLayer(RenderLayer):
 
                 for i, token in enumerate(line.tokens):
                     if token.type == InstructionTextTokenType.StringToken:
-                        log_info(f"[NewlineSplitRenderLayer] Found StringToken in flow graph node")
+                        log_info("[NewlineSplitRenderLayer] Found StringToken in flow graph node")
                         split_tokens = self.split_string_token(token)
                         if len(split_tokens) > 1:
                             has_split = True

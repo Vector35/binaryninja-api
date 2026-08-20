@@ -1,11 +1,11 @@
 from typing import List
 
+from binaryninjaui import UIContext, UIActionHandler, UIAction, UIActionContext
 from PySide6.QtCore import QSettings
 from binaryninja import DisassemblyTextLine, LowLevelILOperation, DisassemblyTextRenderer, \
     MediumLevelILOperation, \
     RenderLayer, BasicBlock, InstructionTextTokenType, RenderLayerDefaultEnableState, \
     PluginCommand, BinaryView, interaction, InstructionTextToken, RegisterValueType
-from binaryninjaui import UIContext, UIActionHandler, UIAction, UIActionContext
 
 
 """

@@ -149,7 +149,7 @@ class RustStrDataRenderer(DataRenderer):
 		text = bytes(derived.value).decode("utf-8", "replace")
 		escaped = text.encode("unicode_escape").decode("ascii").replace('"', '\\"')
 		# `prefix` already carries the `<type> <name> = ` tokens, just append the literal.
-		tokens.append(InstructionTextToken(InstructionTextTokenType.BraceToken, f'rs"'))
+		tokens.append(InstructionTextToken(InstructionTextTokenType.BraceToken, 'rs"'))
 		tokens.append(InstructionTextToken(InstructionTextTokenType.StringToken, escaped))
 		tokens.append(InstructionTextToken(InstructionTextTokenType.BraceToken, '"'))
 		return [DisassemblyTextLine(tokens, addr)]

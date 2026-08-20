@@ -285,26 +285,15 @@ int main(int argc, char* argv[])
 
 	fprintf(out, "import ctypes, os\n\n");
 	fprintf(out, "from typing import Optional, AnyStr\n");
-	fprintf(out, "from .enums import *");
+	fprintf(out, "from .enums import *\n");
+	fprintf(out, "from ._binaryninjacore_loader import check_core_abi, load_core\n\n");
 
 	fprintf(enums, "import enum\n");
 
 	fprintf(out, "# Load core module\n");
-	fprintf(out, "import platform\n");
-	fprintf(out, "core = None\n");
-	fprintf(out, "_base_path = None\n");
-	fprintf(out, "core_platform = platform.system()\n");
-	fprintf(out, "if core_platform == \"Darwin\":\n");
-	fprintf(out, "\t_base_path = os.path.join(os.path.dirname(__file__), \"..\", \"..\", \"..\", \"MacOS\")\n");
-	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"libbinaryninjacore.dylib\"))\n\n");
-	fprintf(out, "elif core_platform == \"Linux\":\n");
-	fprintf(out, "\t_base_path = os.path.join(os.path.dirname(__file__), \"..\", \"..\")\n");
-	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"libbinaryninjacore.so.1\"))\n\n");
-	fprintf(out, "elif (core_platform == \"Windows\") or (core_platform.find(\"CYGWIN_NT\") == 0):\n");
-	fprintf(out, "\t_base_path = os.path.join(os.path.dirname(__file__), \"..\", \"..\")\n");
-	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"binaryninjacore.dll\"))\n");
-	fprintf(out, "else:\n");
-	fprintf(out, "\traise Exception(\"OS not supported\")\n\n\n");
+	fprintf(out, "core, _base_path = load_core()\n");
+	fprintf(out, "BN_EXPECTED_CORE_ABI_VERSION = %u\n\n", BN_CURRENT_CORE_ABI_VERSION);
+	fprintf(out, "check_core_abi(core, BN_EXPECTED_CORE_ABI_VERSION)\n\n\n");
 
 	fprintf(out, "def cstr(var: Optional[AnyStr]) -> Optional[bytes]:\n");
 	fprintf(out, "	if var is None:\n");

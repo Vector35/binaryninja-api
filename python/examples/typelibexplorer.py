@@ -21,6 +21,7 @@
 # This is an example UI plugin which demonstrates how to add sidebar widgets to Binary Ninja.
 # See .../api/ui/sidebar.h for interface details.
 
+import binaryninjaui
 from binaryninjaui import SidebarWidget, SidebarWidgetType, Sidebar, UIActionHandler, FilterEdit, FilteredView, \
 	FilterTarget, DockableTabWidget, GlobalAreaTabStyle, DockableTabCollection, View, ViewType, ViewFrame, ViewPane
 from PySide6.QtCore import Qt, QRectF, QModelIndex
@@ -91,7 +92,7 @@ class TypelibTypeTableWidget(QTableWidget, FilterTarget):
 				self.setItem(i, 2, QTableWidgetItem(str(type)))
 			else:
 				lines = type.get_lines(data, str(name))
-				self.setItem(i, 2, QTableWidgetItem("".join([str(l) for l in lines])))
+				self.setItem(i, 2, QTableWidgetItem("".join(str(line) for line in lines)))
 
 
 class TypelibObjectTableWidget(QTableWidget, FilterTarget):
@@ -388,7 +389,8 @@ class TypelibExplorerWidget(SidebarWidget, FilterTarget):
 			return
 
 		loaded_names = []
-		tl_name = lambda tl: tl.name if tl.name is not None else ""
+		def tl_name(tl):
+			return tl.name if tl.name is not None else ""
 		if typelib is None:
 			if self.data is not None and len(self.data.type_libraries) > 0 and self.data.platform == self.platform:
 				# if we're on the same platform as the binary show loaded typelibs first

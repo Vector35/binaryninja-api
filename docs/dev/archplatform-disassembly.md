@@ -53,7 +53,7 @@ BinaryViewType['ELF'].register_arch(4242, Endianness.LittleEndian, Architecture[
 </figure>
 
 
-It might not look like much yet, but thanks to Binary Ninja's [existing ELF parser](https://github.com/Vector35/binaryninja-api/tree/dev/view/elf), we get to skip a significant amount of work parsing binary files, and we can skip directly to decoding bytes.
+It might not look like much yet, but thanks to Binary Ninja's [existing ELF parser](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/elf_view), we get to skip a significant amount of work parsing binary files, and we can skip directly to decoding bytes.
 
 # Disassembly
 
@@ -354,7 +354,7 @@ Additionally, Quark instructions' dataflow is all specified within each instruct
 
 Other topics not covered here, but you may need to support in your architecture:
 
-* Register Stacks: Certain architectures (like x86's x87 FPU) have a "stack" of registers which can have values pushed and popped (but are still backed by a fixed count of registers). These are moderately well-supported by Binary Ninja, but so infrequently used that their documentation is sparse. Look at the [x86 architecture plugin](https://github.com/Vector35/binaryninja-api/tree/dev/arch/x86) as a reference if you need these.
+* Register Stacks: Certain architectures (like x86's x87 FPU) have a "stack" of registers which can have values pushed and popped (but are still backed by a fixed count of registers). These are moderately well-supported by Binary Ninja, but so infrequently used that their documentation is sparse. Look at the [x86 architecture plugin](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/x86_arch) as a reference if you need these.
 * System Registers: Registers set by the system, they are assumed to be volatile. Reads from them and writes to them will never be dead code eliminated.
 * Global Registers: Certain platforms have registers that are referenced by functions but set by the operating system, and they should not be considered as parameters to functions. These can also be defined by a Platform, see [Platform Support](archplatform-platform.md#platform-support) for more information on those.
 

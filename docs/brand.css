@@ -3,7 +3,7 @@
  * Each documentation surface loads this file at build time:
  *   - Zensical user docs  -> loaded directly (first entry in zensical.toml
  *                            `extra_css`); docs.css maps onto --md-* variables
- *   - Sphinx Python API   -> api-docs/source/conf.py copies it into _static/css/
+ *   - Sphinx Python API   -> docs/reference/python/source/conf.py copies it into _static/css/
  *                            (gitignored) and registers it before other.css
  *   - Doxygen C++ API     -> Doxyfile HTML_EXTRA_STYLESHEET references
  *                            ../../docs/brand.css

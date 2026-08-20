@@ -6,11 +6,11 @@
 resolver = "2"
 members = [
     "rust",
-    "arch/riscv",
-    "arch/msp430",
+    "plugins/riscv_arch",
+    "plugins/msp430_arch",
     "rust/plugin_examples/data_renderer",
     "rust/plugin_examples/flowgraph_layout",
-    "view/minidump",
+    "plugins/minidump_view",
     "plugins/dwarf/dwarf_import",
     "plugins/dwarf/dwarf_import/demo",
     "plugins/dwarf/dwarf_export",

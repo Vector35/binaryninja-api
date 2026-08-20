@@ -1,20 +1,20 @@
 [submodule "examples/x86_extension/src/asmx86"]
-	path = examples/x86_extension/src/asmx86
+	path = cpp/examples/x86_extension/src/asmx86
 	url = https://github.com/Vector35/asmx86.git
 [submodule "vendor/fmt"]
 	path = vendor/fmt
 	url = https://github.com/fmtlib/fmt.git
 [submodule "arch/powerpc/capstone"]
-	path = arch/powerpc/capstone
+	path = plugins/powerpc_arch/capstone
 	url = https://github.com/capstone-engine/capstone.git
 [submodule "arch/x86/yasm"]
-	path = arch/x86/yasm
+	path = plugins/x86_arch/yasm
 	url = https://github.com/Vector35/yasm.git
 [submodule "arch/x86/xed"]
-	path = arch/x86/xed
+	path = plugins/x86_arch/xed
 	url = https://github.com/intelxed/xed.git
 [submodule "arch/x86/mbuild"]
-	path = arch/x86/mbuild
+	path = plugins/x86_arch/mbuild
 	url = https://github.com/intelxed/mbuild.git
 [submodule "plugins/snippets"]
 	path = plugins/snippets

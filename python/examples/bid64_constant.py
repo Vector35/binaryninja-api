@@ -1,5 +1,5 @@
 # This plugin renders 64-bit binary integer decimal floating point constants directly in the
-# decompilation. See the sample binary at `examples/bid64_constant/sample_binary` for an
+# decompilation. See the sample binary at `cpp/examples/bid64_constant/sample_binary` for an
 # example of a binary that uses this unusual format.
 
 from binaryninja import (ConstantRenderer, InstructionTextToken, InstructionTextTokenType, IntegerType)

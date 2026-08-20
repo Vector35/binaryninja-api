@@ -5,7 +5,7 @@ WARNING: This example can seriously slow down analysis. `recognize_constant_poin
 binary a byte at a time from Python, and the recognizer callbacks run on every constant in every
 function. `is_valid_for_type` keeps it off the hot path for types without one of our attributes,
 but expect a noticeable slowdown on large binaries. If that matters, port it to C++; see the version
-in `examples/encoded_strings`.
+in `cpp/examples/encoded_strings`.
 
 See https://docs.binary.ninja/dev/customstrings.html for details.
 """

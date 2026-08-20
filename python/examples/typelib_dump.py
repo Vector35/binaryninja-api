@@ -6,7 +6,7 @@ import binaryninja
 from binaryninja.enums import *
 from binaryninja import typelibrary
 
-# The class Type as defined in api/python/types.py is nearly a discriminated union.
+# The class Type as defined in api/python/binaryninja/types.py is nearly a discriminated union.
 # By examining the .type_class member you can decide which properties make sense to access.
 #
 # For example, if .type_class == FunctionTypeClass then you can access:

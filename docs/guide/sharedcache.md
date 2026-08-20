@@ -2,7 +2,7 @@
 
 Shared cache support in Binary Ninja provides you with tools to selectively load specific images, search for specific symbols, and follow analysis references between any images loaded from a `dyld_shared_cache` in one view.
 
-Our support for `dyld_shared_cache` is largely open source. The supporting code can be found in our public API repository [here](https://github.com/Vector35/binaryninja-api/tree/dev/view/sharedcache). Instructions for setting up your development environment and building plugins like this yourself can be found in our [Developer Guide](../dev/plugins.md#writing-native-plugins). Contributions are welcome!
+Our support for `dyld_shared_cache` is largely open source. The supporting code can be found in our public API repository [here](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/sharedcache_view). Instructions for setting up your development environment and building plugins like this yourself can be found in our [Developer Guide](../dev/plugins.md#writing-native-plugins). Contributions are welcome!
 
 ## Support Matrix
 
@@ -120,7 +120,7 @@ opening a `dyld_shared_cache` and is how you add images to the actual binary vie
 
 ### Scripting
 
-Another way to interact with the shared cache information is through the provided Python API, available in the [`binaryninja.sharedcache`](https://github.com/Vector35/binaryninja-api/blob/dev/view/sharedcache/api/python/sharedcache.py) module.
+Another way to interact with the shared cache information is through the provided Python API, available in the [`binaryninja.sharedcache`](https://github.com/Vector35/binaryninja-api/blob/dev/plugins/sharedcache_view/api/python/sharedcache.py) module.
 
 Additionally, the `dsc` (or `shared_cache`) magic variable is available in the scripting console whenever a shared cache is opened.
 

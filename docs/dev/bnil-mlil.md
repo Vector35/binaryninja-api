@@ -245,7 +245,7 @@ There are a number of properties that can be queried on the [`MediumLevelILInstr
 <MediumLevelILOperation.MLIL_CALL: 51>
 ```
 
-From the code in [`mediumlevelil.py`](https://github.com/Vector35/binaryninja-api/blob/dev/python/mediumlevelil.py#L175) we can see that the `MLIL_CALL` operation has three properties in addition to the operations available to all `MediumLevelILInstruction` objects
+From the code in [`mediumlevelil.py`](https://github.com/Vector35/binaryninja-api/blob/dev/python/binaryninja/mediumlevelil.py#L175) we can see that the `MLIL_CALL` operation has three properties in addition to the operations available to all `MediumLevelILInstruction` objects
 
 ```text
 MediumLevelILOperation.MLIL_CALL: [("output", "var_list"), ("dest", "expr"), ("params", "expr_list")],

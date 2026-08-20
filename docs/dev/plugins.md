@@ -412,7 +412,7 @@ While native plugins are not fully supported in the extension manager at this ti
 
 Several native plugin examples exist:
 
- - [Triage](https://github.com/Vector35/binaryninja-api/tree/dev/examples/triage)
+ - [Triage](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/triage)
  - [Debugger](https://github.com/Vector35/debugger)
  - [ObjectiveNinja](https://github.com/jonpalmisc/ObjectiveNinja)
  - [BinExport](https://github.com/vector35/binexport#binary-ninja) (Used with BinDiff)

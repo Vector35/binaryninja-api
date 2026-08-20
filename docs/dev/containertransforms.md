@@ -107,7 +107,7 @@ def perform_decode_with_context(self, context, params):
 
 ## Complete Example: ZipPython
 
-Binary Ninja includes a reference implementation of a ZIP container transform in `api/python/transform.py`.
+Binary Ninja includes a reference implementation of a ZIP container transform in `api/python/binaryninja/transform.py`.
 
 
 

@@ -46,18 +46,18 @@ In addition to the default build setup, you may want to:
 
 ## Examples
 
-There are many examples available. The [Python examples folder](https://github.com/Vector35/binaryninja-api/tree/dev/python/examples) demonstrates many different applications of the Python API, while C++ examples include:
+There are many examples available. The [Python examples folder](https://github.com/Vector35/binaryninja-api/tree/dev/python/examples) demonstrates many different applications of the Python API, while C++ examples live under [`cpp/examples`](cpp/examples) and include:
 
-- [background_task](https://github.com/Vector35/binaryninja-api/tree/dev/examples/background_task) is a plugin that demonstrates managing a background task.\*
-- [bin-info](https://github.com/Vector35/binaryninja-api/tree/dev/examples/bin-info) is a standalone executable that prints some information about a given binary to the terminal.\*
-- [breakpoint](https://github.com/Vector35/binaryninja-api/tree/dev/examples/breakpoint) is a plugin that allows you to select a region within an x86 binary and use the context menu to fill it with breakpoint bytes.
-- [command-line disassm](https://github.com/Vector35/binaryninja-api/tree/dev/examples/cmdline_disasm) demonstrates how to dump disassembly to the command line.\*
-- [llil-parser](https://github.com/Vector35/binaryninja-api/tree/dev/examples/llil_parser) parses Low-Level IL, demonstrating how to match types and use a visitor class.\*
-- [mlil-parser](https://github.com/Vector35/binaryninja-api/tree/dev/examples/mlil_parser) parses Medium-Level IL, demonstrating how to match types and use a visitor class.\*
-- [print_syscalls](https://github.com/Vector35/binaryninja-api/tree/dev/examples/print_syscalls) is a standalone executable that prints the syscalls used in a given binary.\*
-- [triage](https://github.com/Vector35/binaryninja-api/tree/dev/examples/triage) is a fully featured plugin that is shipped and enabled by default, demonstrating how to do a wide variety of tasks including extending the UI through QT.
-- [workflows](https://github.com/Vector35/binaryninja-api/tree/dev/examples/workflows) is a collection of plugins that demonstrate using Workflows to extend the analysis pipeline.
-- [x86 extension](https://github.com/Vector35/binaryninja-api/tree/dev/examples/x86_extension) creates an architecture extension which shows how to modify the behavior of the build-in architectures without creating a complete replacement.
+- [background_task](https://github.com/Vector35/binaryninja-api/tree/dev/cpp/examples/background_task) is a plugin that demonstrates managing a background task.\*
+- [bin-info](https://github.com/Vector35/binaryninja-api/tree/dev/cpp/examples/bin-info) is a standalone executable that prints some information about a given binary to the terminal.\*
+- [breakpoint](https://github.com/Vector35/binaryninja-api/tree/dev/cpp/examples/breakpoint) is a plugin that allows you to select a region within an x86 binary and use the context menu to fill it with breakpoint bytes.
+- [command-line disassm](https://github.com/Vector35/binaryninja-api/tree/dev/cpp/examples/cmdline_disasm) demonstrates how to dump disassembly to the command line.\*
+- [llil-parser](https://github.com/Vector35/binaryninja-api/tree/dev/cpp/examples/llil_parser) parses Low-Level IL, demonstrating how to match types and use a visitor class.\*
+- [mlil-parser](https://github.com/Vector35/binaryninja-api/tree/dev/cpp/examples/mlil_parser) parses Medium-Level IL, demonstrating how to match types and use a visitor class.\*
+- [print_syscalls](https://github.com/Vector35/binaryninja-api/tree/dev/cpp/examples/print_syscalls) is a standalone executable that prints the syscalls used in a given binary.\*
+- [triage](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/triage) is a fully featured plugin that is shipped and enabled by default, demonstrating how to do a wide variety of tasks including extending the UI through QT.
+- [workflows](https://github.com/Vector35/binaryninja-api/tree/dev/cpp/examples/workflows) is a collection of plugins that demonstrate using Workflows to extend the analysis pipeline.
+- [x86 extension](https://github.com/Vector35/binaryninja-api/tree/dev/cpp/examples/x86_extension) creates an architecture extension which shows how to modify the behavior of the build-in architectures without creating a complete replacement.
 
 \* Requires license supporting headless API access.
 
@@ -81,39 +81,39 @@ If you're interested in contributing when you submit your first PR, you'll recei
 
 This repository contains all of our Platform plugins available here:
 
-* [Windows](https://github.com/Vector35/binaryninja-api/tree/dev/platform/windows)
-* [Windows Kernel](https://github.com/Vector35/binaryninja-api/tree/dev/platform/windows-kernel)
-* [Linux](https://github.com/Vector35/binaryninja-api/tree/dev/platform/linux)
-* [macOS](https://github.com/Vector35/binaryninja-api/tree/dev/platform/mac)
-* [macOS Kernel](https://github.com/Vector35/binaryninja-api/tree/dev/platform/mac-kernel)
-* [FreeBSD](https://github.com/Vector35/binaryninja-api/tree/dev/platform/freebsd)
-* [Decree](https://github.com/Vector35/binaryninja-api/tree/dev/platform/decree)
-* [EFI](https://github.com/Vector35/binaryninja-api/tree/dev/platform/efi)
+* [Windows](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/windows_platform)
+* [Windows Kernel](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/windows-kernel_platform)
+* [Linux](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/linux_platform)
+* [macOS](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/mac_platform)
+* [macOS Kernel](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/mac-kernel_platform)
+* [FreeBSD](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/freebsd_platform)
+* [Decree](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/decree_platform)
+* [EFI](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/efi_platform)
 
 
 ## Architectures
 
 This repository contains all the Architecture plugins available in Personal and Commercial editions of Binary Ninja. You can find each architecture here:
 
-* [x86/x86_64](https://github.com/Vector35/binaryninja-api/tree/dev/arch/x86)
-* [ARM64](https://github.com/Vector35/binaryninja-api/tree/dev/arch/arm64)
-* [ARMv7](https://github.com/Vector35/binaryninja-api/tree/dev/arch/armv7)
-* [PPC](https://github.com/Vector35/binaryninja-api/tree/dev/arch/powerpc)
-* [MIPS](https://github.com/Vector35/binaryninja-api/tree/dev/arch/mips)
-* [RISC-V](https://github.com/Vector35/binaryninja-api/tree/dev/arch/riscv)
-* [MSP430](https://github.com/Vector35/binaryninja-api/tree/dev/arch/msp430)
+* [x86/x86_64](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/x86_arch)
+* [ARM64](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/arm64_arch)
+* [ARMv7](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/armv7_arch)
+* [PPC](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/powerpc_arch)
+* [MIPS](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/mips_arch)
+* [RISC-V](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/riscv_arch)
+* [MSP430](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/msp430_arch)
 
 
 ## BinaryViewTypes
 
 This repository contains all of our Binary View Type plugins available here:
 
-* [Mach-O](https://github.com/Vector35/binaryninja-api/tree/dev/view/macho)
-* [ELF](https://github.com/Vector35/binaryninja-api/tree/dev/view/elf)
-* [PE/COFF/TE](https://github.com/Vector35/binaryninja-api/tree/dev/view/pe)
-* [MD1Rom](https://github.com/Vector35/binaryninja-api/tree/dev/view/md1rom)
-* [Shared Cache](https://github.com/Vector35/binaryninja-api/tree/dev/view/sharedcache)
-* [Kernel Cache](https://github.com/Vector35/binaryninja-api/tree/dev/view/kernelcache)
+* [Mach-O](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/macho_view)
+* [ELF](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/elf_view)
+* [PE/COFF/TE](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/pe_view)
+* [MD1Rom](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/md1rom_view)
+* [Shared Cache](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/sharedcache_view)
+* [Kernel Cache](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/kernelcache_view)
 
 
 ## DebugInfo
@@ -128,7 +128,7 @@ This repository contains all of our Binary View Type plugins available here:
 * [RTTI Analysis](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/rtti/)
 * [Stack Render Layer](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/stack_render_layer/)
 * [SVD Loader](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/svd/)
-* [Triage View](https://github.com/Vector35/binaryninja-api/tree/dev/examples/triage/)
+* [Triage View](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/triage/)
 * [WARP Integration](https://github.com/Vector35/binaryninja-api/tree/dev/plugins/warp/)
 
 ## Related Repositories

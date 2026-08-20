@@ -135,5 +135,5 @@ This also covers constants that stand in for strings absent from the binary, suc
 * [encoded_strings.py](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/encoded_strings.py) — attribute-driven XOR/add/sub string deobfuscation
 * [rust_string.py](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/rust_string.py) — Rust `&str` recognizer plus a matching data renderer
 * [bid64_constant.py](https://github.com/Vector35/binaryninja-api/blob/dev/python/examples/bid64_constant.py) — BID64 constant renderer
-* [examples/encoded_strings](https://github.com/Vector35/binaryninja-api/tree/dev/examples/encoded_strings) — C++ port of `encoded_strings.py`
-* [examples/bid64_constant](https://github.com/Vector35/binaryninja-api/tree/dev/examples/bid64_constant) — C++ port of `bid64_constant.py`, with a sample binary
+* [cpp/examples/encoded_strings](https://github.com/Vector35/binaryninja-api/tree/dev/cpp/examples/encoded_strings) — C++ port of `encoded_strings.py`
+* [cpp/examples/bid64_constant](https://github.com/Vector35/binaryninja-api/tree/dev/cpp/examples/bid64_constant) — C++ port of `bid64_constant.py`, with a sample binary

@@ -302,8 +302,8 @@ for family, values in FAMILIES.items():
 OUTPUTS = {
     API / "docs" / "brand.css": brand_block,
     API / "docs" / "docs.css": "\n\n".join(zensical_parts),
-    API / "api-docs" / "source" / "_static" / "css" / "other.css": "\n\n".join(sphinx_parts),
-    API / "api-docs" / "cppdocs" / "binaryninja-docs.css": "\n\n".join(doxygen_parts),
+    API / "docs" / "reference" / "python" / "source" / "_static" / "css" / "other.css": "\n\n".join(sphinx_parts),
+    API / "docs" / "reference" / "cpp" / "binaryninja-docs.css": "\n\n".join(doxygen_parts),
     API / "rust" / "rustdoc-brand.css": "\n\n".join(rust_parts),
 }
 

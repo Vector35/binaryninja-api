@@ -17,13 +17,13 @@ if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     endif()
 endif()
 
-file(GLOB BN_API_SOURCES CONFIGURE_DEPENDS *.cpp *.h json/*.cpp json/*.h)
+file(GLOB BN_API_SOURCES CONFIGURE_DEPENDS cpp/src/*.cpp cpp/include/*.h vendor/json/*.cpp vendor/json/*.h)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    set_source_files_properties(json/jsoncpp.cpp PROPERTIES COMPILE_FLAGS /w)
+    set_source_files_properties(vendor/json/jsoncpp.cpp PROPERTIES COMPILE_FLAGS /w)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set_source_files_properties(json/jsoncpp.cpp PROPERTIES COMPILE_FLAGS -Wno-everything)
+    set_source_files_properties(vendor/json/jsoncpp.cpp PROPERTIES COMPILE_FLAGS -Wno-everything)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set_source_files_properties(json/jsoncpp.cpp PROPERTIES COMPILE_FLAGS -w)
+    set_source_files_properties(vendor/json/jsoncpp.cpp PROPERTIES COMPILE_FLAGS -w)
 endif()
 
 if(NOT BN_INTERNAL_BUILD)
@@ -37,7 +37,11 @@ if(COVERAGE)
 endif()
 
 target_include_directories(binaryninjaapi
-    PUBLIC ${PROJECT_SOURCE_DIR})
+    PUBLIC
+        ${PROJECT_SOURCE_DIR}/cpp/include
+        ${PROJECT_SOURCE_DIR}
+        ${PROJECT_SOURCE_DIR}/vendor
+        ${PROJECT_SOURCE_DIR}/plugins)
 
 target_link_libraries(binaryninjaapi PUBLIC binaryninjabase)
 
@@ -148,7 +152,7 @@ if(RUST_API)
 endif()
 
 if(BN_API_BUILD_EXAMPLES)
-    add_subdirectory(examples)
+    add_subdirectory(cpp/examples)
 endif()
 
 if (DEBUGGER)

@@ -67,7 +67,7 @@ Architecture plugins implement instruction lifting to IL using intrinsics. The o
 
 #### Example: x86 REP Instructions
 
-The x86 architecture plugin (`api/arch/x86/arch_x86_intrinsics.cpp`) maps REP-prefixed string instructions to intrinsics:
+The x86 architecture plugin (`api/plugins/x86_arch/arch_x86_intrinsics.cpp`) maps REP-prefixed string instructions to intrinsics:
 
 ```cpp
 // In GetIntrinsicName():
@@ -90,7 +90,7 @@ case INTRINSIC_XED_IFORM_REP_STOSQ:
     return "__memfill_u64";
 ```
 
-During IL generation (`api/arch/x86/il.cpp`), these instructions are lifted as intrinsics:
+During IL generation (`api/plugins/x86_arch/il.cpp`), these instructions are lifted as intrinsics:
 
 ```cpp
 il.AddInstruction(il.Intrinsic(

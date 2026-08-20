@@ -2,13 +2,14 @@ cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
 project(python-api)
 
+set(PYTHON_PACKAGE_DIR ${PROJECT_SOURCE_DIR}/binaryninja)
 file(GLOB PYTHON_SOURCES CONFIGURE_DEPENDS
-	${PROJECT_SOURCE_DIR}/*.py ${PROJECT_SOURCE_DIR}/*.typed
-	${PROJECT_SOURCE_DIR}/collaboration/*.py ${PROJECT_SOURCE_DIR}/collaboration/*.typed
+	${PYTHON_PACKAGE_DIR}/*.py ${PYTHON_PACKAGE_DIR}/*.typed
+	${PYTHON_PACKAGE_DIR}/collaboration/*.py ${PYTHON_PACKAGE_DIR}/collaboration/*.typed
 )
 
-list(REMOVE_ITEM PYTHON_SOURCES ${PROJECT_SOURCE_DIR}/_binaryninjacore.py)
-list(REMOVE_ITEM PYTHON_SOURCES ${PROJECT_SOURCE_DIR}/enums.py)
+list(REMOVE_ITEM PYTHON_SOURCES ${PYTHON_PACKAGE_DIR}/_binaryninjacore.py)
+list(REMOVE_ITEM PYTHON_SOURCES ${PYTHON_PACKAGE_DIR}/enums.py)
 
 if(NOT ULTIMATE)
 	list(REMOVE_ITEM PYTHON_SOURCES ${PROJECT_SOURCE_DIR}/enterprise.py)

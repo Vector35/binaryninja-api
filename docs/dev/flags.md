@@ -58,7 +58,7 @@ flag_roles = {
 }
 ```
 
-Map each flag to a role from [api/python/enum.py](https://api.binary.ninja/_modules/binaryninja/enums.html) if possible. This informs Binary Ninja to generate IL for the basic, textbook behavior of a flag. For example, the `ZeroFlagRole` will generate IL that sets the flag when an arithmetic result is zero.
+Map each flag to a role from [api/python/binaryninja/enums.py](https://api.binary.ninja/_modules/binaryninja/enums.html) if possible. This informs Binary Ninja to generate IL for the basic, textbook behavior of a flag. For example, the `ZeroFlagRole` will generate IL that sets the flag when an arithmetic result is zero.
 
 If a flag's behavior does not fit the textbook behavior, use `SpecialFlagRole` and in a future article we'll implement a callback for its custom IL. For example, `PV` here in Z80 acts as both a parity flag and an overflow flag. It's meaning at any given time depends on the last instruction that set it.
 

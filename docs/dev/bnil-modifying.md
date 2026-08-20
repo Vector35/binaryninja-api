@@ -28,7 +28,7 @@ Depending on what effects you want to have, different levels will work better.
 
 - Modifying **Lifted IL** is similar to a generic Architecture Extension, letting you change instructions directly out of the lifter.
 Note that Lifted IL has no SSA forms, dataflow, stack offsets, or even resolved flags.
-    - **You probably do not want to modify Lifted IL with a Workflow**. Instead, consider modifying the Architecture directly ([most of which are Open Source on our GitHub](https://github.com/Vector35/binaryninja-api/tree/dev/arch)) or making your Activity modify Low Level IL.
+    - **You probably do not want to modify Lifted IL with a Workflow**. Instead, consider modifying the Architecture directly ([most of which are Open Source on our GitHub](https://github.com/Vector35/binaryninja-api/tree/dev/plugins)) or making your Activity modify Low Level IL.
 - Modifying **Low Level IL** lets you affect operations on registers, which eventually affect values of variables (in MLIL).
 Depending on where in the pipeline you insert your action, stack offsets may or may not be calculated, and most dataflow information is not available.
 Notably, any `PossibleValueSet` calculations require MLIL or higher, so only `RegisterValue` dataflow results are available (and only after generating SSA form).

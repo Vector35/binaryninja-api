@@ -94,7 +94,7 @@ The setting will appear under the Quick Settings section in the Function Setting
 
 ## Load Settings
 
-The following settings are specific to Binary Views. To access these settings, you must use the "[open with options](./index.md#opening-with-options)" dialog. Most of the loaders are [open source](https://github.com/Vector35/binaryninja-api/tree/dev/view), but some are from the Ultimate edition and may not be included with all builds.
+The following settings are specific to Binary Views. To access these settings, you must use the "[open with options](./index.md#opening-with-options)" dialog. Most of the loaders are [open source](https://github.com/Vector35/binaryninja-api/tree/dev/plugins), but some are from the Ultimate edition and may not be included with all builds.
 
 ### Default Load Settings
 

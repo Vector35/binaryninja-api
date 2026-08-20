@@ -304,7 +304,7 @@ OUTPUTS = {
     API / "docs" / "manual" / "docs.css": "\n\n".join(zensical_parts),
     API / "docs" / "reference" / "python" / "source" / "_static" / "css" / "other.css": "\n\n".join(sphinx_parts),
     API / "docs" / "reference" / "cpp" / "binaryninja-docs.css": "\n\n".join(doxygen_parts),
-    API / "rust" / "rustdoc-brand.css": "\n\n".join(rust_parts),
+    API / "docs" / "reference" / "rust" / "rustdoc-brand.css": "\n\n".join(rust_parts),
 }
 
 

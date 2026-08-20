@@ -60,6 +60,7 @@ docs/reference/cpp/api
 docs/reference/cpp/xml
 docs/reference/cpp/html
 docs/reference/cpp/docset
+docs/reference/rust/build
 
 # CMake
 CMakeCache.txt

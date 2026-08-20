@@ -3,6 +3,12 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+API_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+DOC_DIR="$SCRIPT_DIR/build/doc"
+
+cd "$API_ROOT"
+
 CARGO_TOML="rust/Cargo.toml"
 CARGO_LOCK="Cargo.lock"
 BACKUP_DIR=""
@@ -51,34 +57,35 @@ if count != 1:
 path.write_text(source)
 PY
 
-echo "Cleaning target/doc directory..."
-rm -rf target/doc
+echo "Cleaning $DOC_DIR directory..."
+rm -rf "$DOC_DIR"
 
 CUSTOM_CSS="$BACKUP_DIR/binaryninja-rustdoc.css"
 cp docs/manual/brand.css "$CUSTOM_CSS"
 printf '\n' >> "$CUSTOM_CSS"
-cat rust/rustdoc-brand.css >> "$CUSTOM_CSS"
+cat docs/reference/rust/rustdoc-brand.css >> "$CUSTOM_CSS"
 
 echo "Building documentation..."
-RUSTDOCFLAGS="${RUSTDOCFLAGS:+$RUSTDOCFLAGS }--extend-css $CUSTOM_CSS" cargo doc --no-deps "$@"
+RUSTDOCFLAGS="${RUSTDOCFLAGS:+$RUSTDOCFLAGS }--extend-css $CUSTOM_CSS" \
+    cargo doc --no-deps --target-dir "$SCRIPT_DIR/build" "$@"
 
 echo "Copying brand assets..."
-mkdir -p target/doc/brand
-cp docs/manual/brand.css target/doc/brand/
-cp docs/manual/fonts/OpenSans-Regular.ttf target/doc/brand/
-cp docs/manual/fonts/OpenSans-Italic.ttf target/doc/brand/
-cp docs/manual/fonts/OpenSans-Bold.ttf target/doc/brand/
-cp docs/manual/fonts/OpenSans-BoldItalic.ttf target/doc/brand/
-cp docs/manual/fonts/roboto-mono-v22-latin-regular.woff2 target/doc/brand/
-cp docs/manual/fonts/roboto-mono-v22-latin-italic.woff2 target/doc/brand/
-cp docs/manual/fonts/roboto-mono-v22-latin-700.woff2 target/doc/brand/
-cp docs/manual/fonts/roboto-mono-v22-latin-700italic.woff2 target/doc/brand/
-cp docs/manual/img/favicon.ico docs/manual/img/favicon-32x32.png target/doc/brand/
-cp docs/manual/img/logo-vertical-light.svg docs/manual/img/logo-vertical-dark.svg target/doc/brand/
-cp docs/manual/img/wordmark-white.svg target/doc/brand/
+mkdir -p "$DOC_DIR/brand"
+cp docs/manual/brand.css "$DOC_DIR/brand/"
+cp docs/manual/fonts/OpenSans-Regular.ttf "$DOC_DIR/brand/"
+cp docs/manual/fonts/OpenSans-Italic.ttf "$DOC_DIR/brand/"
+cp docs/manual/fonts/OpenSans-Bold.ttf "$DOC_DIR/brand/"
+cp docs/manual/fonts/OpenSans-BoldItalic.ttf "$DOC_DIR/brand/"
+cp docs/manual/fonts/roboto-mono-v22-latin-regular.woff2 "$DOC_DIR/brand/"
+cp docs/manual/fonts/roboto-mono-v22-latin-italic.woff2 "$DOC_DIR/brand/"
+cp docs/manual/fonts/roboto-mono-v22-latin-700.woff2 "$DOC_DIR/brand/"
+cp docs/manual/fonts/roboto-mono-v22-latin-700italic.woff2 "$DOC_DIR/brand/"
+cp docs/manual/img/favicon.ico docs/manual/img/favicon-32x32.png "$DOC_DIR/brand/"
+cp docs/manual/img/logo-vertical-light.svg docs/manual/img/logo-vertical-dark.svg "$DOC_DIR/brand/"
+cp docs/manual/img/wordmark-white.svg "$DOC_DIR/brand/"
 
 echo "Creating redirect index.html..."
-cat > target/doc/index.html <<'EOF'
+cat > "$DOC_DIR/index.html" <<'EOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -115,4 +122,4 @@ cat > target/doc/index.html <<'EOF'
 </html>
 EOF
 
-echo "Documentation built successfully with redirect at target/doc/index.html"
+echo "Documentation built successfully with redirect at docs/reference/rust/build/doc/index.html"

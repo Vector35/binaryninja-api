@@ -8,7 +8,7 @@ on:
       - "docs/manual/docs.css"
       - "docs/reference/cpp/binaryninja-docs.css"
       - "docs/reference/python/source/_static/css/other.css"
-      - "rust/rustdoc-brand.css"
+      - "docs/reference/rust/rustdoc-brand.css"
       - "scripts/gen_admonitions.py"
       - "scripts/support-icons/**"
   pull_request:
@@ -18,7 +18,7 @@ on:
       - "docs/manual/docs.css"
       - "docs/reference/cpp/binaryninja-docs.css"
       - "docs/reference/python/source/_static/css/other.css"
-      - "rust/rustdoc-brand.css"
+      - "docs/reference/rust/rustdoc-brand.css"
       - "scripts/gen_admonitions.py"
       - "scripts/support-icons/**"
 

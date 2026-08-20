@@ -7,7 +7,7 @@
  *                            (gitignored) and registers it before other.css
  *   - Doxygen C++ API     -> Doxyfile HTML_EXTRA_STYLESHEET references
  *                            ../../docs/manual/brand.css
- *   - rustdoc Rust API    -> scripts/build-rust-docs.sh appends it through
+ *   - rustdoc Rust API    -> docs/reference/rust/build.sh appends it through
  *                            rustdoc's --extend-css option
  */
 

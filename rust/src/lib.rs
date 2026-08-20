@@ -20,7 +20,7 @@
 #![allow(clippy::needless_doctest_main)]
 #![doc(html_root_url = "https://dev-rust.binary.ninja/")]
 // Root-absolute so every page depth resolves; assets are copied to
-// target/doc/brand/ by scripts/build-rust-docs.sh (docs are hosted at the
+// docs/reference/rust/build/doc/brand/ by docs/reference/rust/build.sh (docs are hosted at the
 // domain root, matching html_root_url).
 #![doc(html_favicon_url = "/brand/favicon-32x32.png")]
 #![doc(html_logo_url = "/brand/logo-vertical-dark.svg")]

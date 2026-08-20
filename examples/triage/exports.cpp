@@ -316,6 +316,8 @@ void GenericExportsModel::OnSymbolRemoved(BinaryNinja::BinaryView* view, BinaryN
 
 ExportsTreeView::ExportsTreeView(ExportsWidget* parent, TriageView* view, BinaryViewRef data) : QTreeView(parent)
 {
+	setProperty("bn.uiTestId", "triage.exports.list");
+	setAccessibleName(tr("Exports"));
 	m_data = data;
 	m_parent = parent;
 	m_view = view;

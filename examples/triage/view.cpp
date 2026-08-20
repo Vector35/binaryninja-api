@@ -19,6 +19,9 @@
 
 TriageView::TriageView(QWidget* parent, BinaryViewRef data) : QScrollArea(parent)
 {
+	setProperty("bn.uiTestId", "view.triage");
+	setProperty("bn.uiTestScope", "view.triage");
+	setAccessibleName("Triage summary view");
 	setupView(this);
 	m_data = data;
 	m_currentOffset = m_data->GetEntryPoint();
@@ -148,6 +151,7 @@ TriageView::TriageView(QWidget* parent, BinaryViewRef data) : QScrollArea(parent
 		QHBoxLayout* buttonLayout = new QHBoxLayout();
 		buttonLayout->addStretch(1);
 		m_fullAnalysisButton = new QPushButton("Start Full Analysis");
+		m_fullAnalysisButton->setProperty("bn.uiTestId", "triage.startFullAnalysis");
 		connect(m_fullAnalysisButton, &QPushButton::clicked, this, &TriageView::startFullAnalysis);
 		buttonLayout->addWidget(m_fullAnalysisButton);
 		layout->addLayout(buttonLayout);

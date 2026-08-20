@@ -5,6 +5,9 @@
 
 WarpMatchedWidget::WarpMatchedWidget(BinaryViewRef current)
 {
+	setProperty("bn.uiTestId", "warpMatchedFunctions");
+	setProperty("bn.uiTestScope", "warpMatchedFunctions");
+	setAccessibleName("Matched WARP functions");
 	m_current = current;
 	// Create the QT stuff
 	QGridLayout* layout = new QGridLayout(this);
@@ -17,10 +20,14 @@ WarpMatchedWidget::WarpMatchedWidget(BinaryViewRef current)
 
 	// TODO: Split horizontally if the widget is displayed in a sidebar that is vertically challenged.
 	m_splitter = new QSplitter(Qt::Vertical);
+	m_splitter->setProperty("bn.uiTestId", "warpMatchedFunctions.splitter");
 	m_splitter->setContentsMargins(0, 0, 0, 0);
 
 	// Add a widget to display the matches.
 	m_tableWidget = new WarpFunctionTableWidget(this);
+	m_tableWidget->setProperty("bn.uiTestId", "warpMatchedFunctions.tableWidget");
+	m_tableWidget->setProperty("bn.uiTestScope", "warpMatchedFunctions.tableWidget");
+	m_tableWidget->setAccessibleName("Matched WARP functions");
 	m_tableWidget->setContentsMargins(0, 0, 0, 0);
 	m_splitter->addWidget(m_tableWidget);
 

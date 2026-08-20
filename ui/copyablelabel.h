@@ -3,6 +3,8 @@
 
 class BINARYNINJAUIAPI CopyableLabel: public QLabel
 {
+	Q_OBJECT
+
 	QColor m_desiredColor {};
 	QString m_hiddenText;
 	QString m_copyText;

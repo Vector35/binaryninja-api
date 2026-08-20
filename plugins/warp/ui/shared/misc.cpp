@@ -213,6 +213,9 @@ ParsedQuery::ParsedQuery(const QString& rawQuery)
 
 WarpRemoveMatchDialog::WarpRemoveMatchDialog(QWidget* parent, FunctionRef func) : QDialog(parent), m_func(func)
 {
+	setProperty("bn.uiTestId", "warpRemoveMatchDialog");
+	setProperty("bn.uiTestScope", "warpRemoveMatchDialog");
+	setAccessibleName("Remove WARP function match");
 	setWindowTitle("Remove Matching Function");
 	setModal(true);
 
@@ -223,10 +226,14 @@ WarpRemoveMatchDialog::WarpRemoveMatchDialog(QWidget* parent, FunctionRef func) 
 	vbox->addWidget(text);
 
 	m_ignoreCheck = new QCheckBox("Tag function as ignored");
+	m_ignoreCheck->setProperty("bn.uiTestId", "warpRemoveMatchDialog.ignoreFunction");
 	m_ignoreCheck->setChecked(true);
 	vbox->addWidget(m_ignoreCheck);
 
 	auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
+	buttons->setProperty("bn.uiTestId", "warpRemoveMatchDialog.buttons");
+	buttons->button(QDialogButtonBox::Ok)->setProperty("bn.uiTestId", "warpRemoveMatchDialog.remove");
+	buttons->button(QDialogButtonBox::Cancel)->setProperty("bn.uiTestId", "warpRemoveMatchDialog.cancel");
 	connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
 	connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 	vbox->addWidget(buttons);

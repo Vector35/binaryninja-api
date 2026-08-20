@@ -96,6 +96,9 @@ QVariant WarpSourcesModel::data(const QModelIndex& index, int role) const
 
 WarpSourcesView::WarpSourcesView(QWidget* parent) : QTableView(parent)
 {
+	setProperty("bn.uiTestId", "warpSourcesView");
+	setProperty("bn.uiTestScope", "warpSourcesView");
+	setAccessibleName("WARP sources");
 	m_model = new WarpSourcesModel(this);
 	QTableView::setModel(m_model);
 
@@ -130,11 +133,15 @@ WarpSourcesView::WarpSourcesView(QWidget* parent) : QTableView(parent)
 			return;
 
 		QMenu menu(this);
+		menu.setProperty("bn.uiTestId", "warpSourcesView.contextMenu");
+		menu.setProperty("bn.uiTestScope", "warpSourcesView.contextMenu");
+		menu.setAccessibleName("WARP source actions");
 		const QModelIndex index = indexAt(pos);
 
 		if (!index.isValid())
 		{
 			QAction* actAdd = menu.addAction(tr("Add Source"));
+			actAdd->setProperty("bn.uiTestId", "warpSourcesView.addSource");
 			QAction* chosen = menu.exec(viewport()->mapToGlobal(pos));
 			if (!chosen)
 				return;
@@ -154,9 +161,12 @@ WarpSourcesView::WarpSourcesView(QWidget* parent) : QTableView(parent)
 			const QString guid = m_model->data(guidIdx, Qt::DisplayRole).toString();
 
 			QAction* actReveal = menu.addAction(tr("Reveal in File Browser"));
+			actReveal->setProperty("bn.uiTestId", "warpSourcesView.reveal");
 			actReveal->setEnabled(fi.exists());
 			QAction* actCopyPath = menu.addAction(tr("Copy Path"));
+			actCopyPath->setProperty("bn.uiTestId", "warpSourcesView.copyPath");
 			QAction* actCopyGuid = menu.addAction(tr("Copy GUID"));
+			actCopyGuid->setProperty("bn.uiTestId", "warpSourcesView.copyGuid");
 
 			QAction* chosen = menu.exec(viewport()->mapToGlobal(pos));
 			if (!chosen)

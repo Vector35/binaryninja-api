@@ -165,12 +165,20 @@ void WarpSearchRunner::fetchPage(std::size_t offset, std::size_t limit)
 
 WarpSearchWidget::WarpSearchWidget(Warp::Ref<Warp::Container> container, QWidget* parent) : QWidget(parent)
 {
+	setProperty("bn.uiTestId", "warpSearch");
+	setProperty("bn.uiTestScope", "warpSearch");
+	setAccessibleName("Search WARP container");
 	m_model = new WarpSearchModel(this);
 	m_runner = new WarpSearchRunner(container, this);
 	auto* layout = new QVBoxLayout(this);
 	m_query = new QLineEdit(this);
+	m_query->setProperty("bn.uiTestId", "warpSearch.query");
+	m_query->setAccessibleName("WARP search query");
 	m_status = new QLabel(this);
+	m_status->setProperty("bn.uiTestId", "warpSearch.status");
 	m_view = new QTableView(this);
+	m_view->setProperty("bn.uiTestId", "warpSearch.results");
+	m_view->setAccessibleName("WARP search results");
 
 	// TODO: I am not necessarily a fan with how this looks.
 	m_query->setPlaceholderText("Search… (Optionally filter with source:<uuid>)");
@@ -259,10 +267,17 @@ WarpSearchWidget::WarpSearchWidget(Warp::Ref<Warp::Container> container, QWidget
 		const auto itemFunc = item->GetFunction();
 
 		QMenu menu(this);
+		menu.setProperty("bn.uiTestId", "warpSearch.contextMenu");
+		menu.setProperty("bn.uiTestScope", "warpSearch.contextMenu");
+		menu.setAccessibleName("WARP search result actions");
 		QAction* copySourceId = menu.addAction(tr("Copy Source"));
+		copySourceId->setProperty("bn.uiTestId", "warpSearch.copySource");
 		QAction* searchSource = menu.addAction(tr("Search Source"));
+		searchSource->setProperty("bn.uiTestId", "warpSearch.searchSource");
 		QAction* applyType = menu.addAction(tr("Apply Type"));
+		applyType->setProperty("bn.uiTestId", "warpSearch.applyType");
 		QAction* applyFunction = menu.addAction(tr("Apply to Current Function"));
+		applyFunction->setProperty("bn.uiTestId", "warpSearch.applyFunction");
 
 		// We let users apply the type for types and functions (assuming the function has one)
 		// if the user applies a function, we actually will set the user type for the current view location function.

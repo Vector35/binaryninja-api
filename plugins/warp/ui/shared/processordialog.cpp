@@ -18,6 +18,9 @@ using namespace BinaryNinja;
 
 ProcessorDialog::ProcessorDialog(QWidget* parent) : QDialog(parent)
 {
+	setProperty("bn.uiTestId", "warpProcessorDialog");
+	setProperty("bn.uiTestScope", "warpProcessorDialog");
+	setAccessibleName("WARP Processor");
 	setWindowModality(Qt::NonModal);
 	setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
 	setWindowTitle("WARP Processor");
@@ -25,20 +28,29 @@ ProcessorDialog::ProcessorDialog(QWidget* parent) : QDialog(parent)
 
 	auto* mainLayout = new QVBoxLayout(this);
 	m_stack = new QStackedWidget(this);
+	m_stack->setProperty("bn.uiTestId", "warpProcessorDialog.pages");
+	m_stack->setAccessibleName("WARP processor step");
 	mainLayout->addWidget(m_stack);
 
 	// Page 1: Configuration
 	auto* configPage = new QWidget(this);
+	configPage->setProperty("bn.uiTestId", "warpProcessorDialog.configuration");
+	configPage->setProperty("bn.uiTestScope", "warpProcessorDialog.configuration");
+	configPage->setAccessibleName("WARP processor configuration");
 	auto* configLayout = new QVBoxLayout(configPage);
 
 	auto* entrySearchLayout = new QHBoxLayout();
 	entrySearchLayout->setContentsMargins(0, 0, 0, 0);
 	m_entrySearch = new QLineEdit(this);
+	m_entrySearch->setProperty("bn.uiTestId", "warpProcessorDialog.configuration.entrySearch");
+	m_entrySearch->setAccessibleName("Search WARP processor entries");
 	m_entrySearch->setPlaceholderText("Search entries...");
 	connect(m_entrySearch, &QLineEdit::textChanged, this, &ProcessorDialog::onSearchItems);
 	entrySearchLayout->addWidget(m_entrySearch);
 
 	m_addButton = new QPushButton("+", this);
+	m_addButton->setProperty("bn.uiTestId", "warpProcessorDialog.configuration.addEntry");
+	m_addButton->setAccessibleName("Add WARP processor entries");
 	m_addButton->setFixedWidth(30);
 	m_addButton->setToolTip("Add entries");
 	connect(m_addButton, &QPushButton::clicked, this, &ProcessorDialog::onAddEntryMenu);
@@ -46,6 +58,8 @@ ProcessorDialog::ProcessorDialog(QWidget* parent) : QDialog(parent)
 	configLayout->addLayout(entrySearchLayout);
 
 	m_entryList = new QListWidget(this);
+	m_entryList->setProperty("bn.uiTestId", "warpProcessorDialog.configuration.entries");
+	m_entryList->setAccessibleName("WARP processor entries");
 	m_entryList->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	m_entryList->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_entryList->setTextElideMode(Qt::ElideLeft);
@@ -56,6 +70,8 @@ ProcessorDialog::ProcessorDialog(QWidget* parent) : QDialog(parent)
 
 	auto* formLayout = new QFormLayout();
 	m_includedDataCombo = new QComboBox(this);
+	m_includedDataCombo->setProperty("bn.uiTestId", "warpProcessorDialog.configuration.includedData");
+	m_includedDataCombo->setAccessibleName("Included WARP data");
 	m_includedDataCombo->addItem("Symbols", WARPProcessorIncludedDataSymbols);
 	m_includedDataCombo->addItem("Signatures", WARPProcessorIncludedDataSignatures);
 	m_includedDataCombo->addItem("Types", WARPProcessorIncludedDataTypes);
@@ -63,12 +79,16 @@ ProcessorDialog::ProcessorDialog(QWidget* parent) : QDialog(parent)
 	m_includedDataCombo->setCurrentIndex(3);
 
 	m_includedFunctionsCombo = new QComboBox(this);
+	m_includedFunctionsCombo->setProperty("bn.uiTestId", "warpProcessorDialog.configuration.includedFunctions");
+	m_includedFunctionsCombo->setAccessibleName("Included functions");
 	m_includedFunctionsCombo->addItem("Selected", WARPProcessorIncludedFunctionsSelected);
 	m_includedFunctionsCombo->addItem("Annotated", WARPProcessorIncludedFunctionsAnnotated);
 	m_includedFunctionsCombo->addItem("All", WARPProcessorIncludedFunctionsAll);
 	m_includedFunctionsCombo->setCurrentIndex(1);
 
 	m_workerCountSpinBox = new QSpinBox(this);
+	m_workerCountSpinBox->setProperty("bn.uiTestId", "warpProcessorDialog.configuration.workerCount");
+	m_workerCountSpinBox->setAccessibleName("Worker count");
 	m_workerCountSpinBox->setMinimum(2);
 	m_workerCountSpinBox->setValue(GetWorkerThreadCount());
 
@@ -78,6 +98,7 @@ ProcessorDialog::ProcessorDialog(QWidget* parent) : QDialog(parent)
 	configLayout->addLayout(formLayout);
 
 	m_processButton = new QPushButton("Process", this);
+	m_processButton->setProperty("bn.uiTestId", "warpProcessorDialog.configuration.process");
 	m_processButton->setEnabled(false);
 	connect(m_processButton, &QPushButton::clicked, this, &ProcessorDialog::onStartProcessing);
 	configLayout->addWidget(m_processButton, 0, Qt::AlignRight);
@@ -85,13 +106,21 @@ ProcessorDialog::ProcessorDialog(QWidget* parent) : QDialog(parent)
 
 	// Page 2: Processing
 	auto* processPage = new QWidget(this);
+	processPage->setProperty("bn.uiTestId", "warpProcessorDialog.processing");
+	processPage->setProperty("bn.uiTestScope", "warpProcessorDialog.processing");
+	processPage->setAccessibleName("WARP processing progress");
 	auto* processLayout = new QVBoxLayout(processPage);
 	m_processingLabel = new QLabel("Processing...", this);
+	m_processingLabel->setProperty("bn.uiTestId", "warpProcessorDialog.processing.status");
 	m_processingLabel->setAlignment(Qt::AlignCenter);
 	m_progressBar = new QProgressBar(this);
+	m_progressBar->setProperty("bn.uiTestId", "warpProcessorDialog.processing.progress");
+	m_progressBar->setAccessibleName("WARP processing progress");
 	m_progressBar->setRange(0, 0);
 
 	m_stateList = new QListWidget(this);
+	m_stateList->setProperty("bn.uiTestId", "warpProcessorDialog.processing.files");
+	m_stateList->setAccessibleName("Files being processed");
 	m_stateList->setSelectionMode(QAbstractItemView::NoSelection);
 	m_stateList->setFocusPolicy(Qt::NoFocus);
 	m_stateList->setTextElideMode(Qt::ElideLeft);
@@ -102,6 +131,7 @@ ProcessorDialog::ProcessorDialog(QWidget* parent) : QDialog(parent)
 	m_stateList->setMinimumHeight(100);
 
 	m_cancelButton = new QPushButton("Cancel", this);
+	m_cancelButton->setProperty("bn.uiTestId", "warpProcessorDialog.processing.cancel");
 	connect(m_cancelButton, &QPushButton::clicked, this, &ProcessorDialog::onCancelProcessing);
 
 	m_updateTimer = new QTimer(this);
@@ -117,15 +147,23 @@ ProcessorDialog::ProcessorDialog(QWidget* parent) : QDialog(parent)
 
 	// Page 3: Results
 	auto* resultsPage = new QWidget(this);
+	resultsPage->setProperty("bn.uiTestId", "warpProcessorDialog.results");
+	resultsPage->setProperty("bn.uiTestScope", "warpProcessorDialog.results");
+	resultsPage->setAccessibleName("WARP processor results");
 	auto* resultsLayout = new QVBoxLayout(resultsPage);
 	m_fileWidget = new FileWidget(this);
+	m_fileWidget->setProperty("bn.uiTestId", "warpProcessorDialog.results.file");
+	m_fileWidget->setProperty("bn.uiTestScope", "warpProcessorDialog.results.file");
 	resultsLayout->addWidget(m_fileWidget);
 
 	auto* buttonLayout = new QHBoxLayout();
 	m_saveButton = new QPushButton("Save to File", this);
+	m_saveButton->setProperty("bn.uiTestId", "warpProcessorDialog.results.save");
 	connect(m_saveButton, &QPushButton::clicked, this, &ProcessorDialog::onSaveToFile);
 	m_elapsedLabel = new QLabel(this);
+	m_elapsedLabel->setProperty("bn.uiTestId", "warpProcessorDialog.results.elapsed");
 	m_commitButton = new QPushButton("Commit", this);
+	m_commitButton->setProperty("bn.uiTestId", "warpProcessorDialog.results.commit");
 	connect(m_commitButton, &QPushButton::clicked, this, &ProcessorDialog::onCommit);
 	buttonLayout->addWidget(m_elapsedLabel);
 	buttonLayout->addStretch();
@@ -189,27 +227,37 @@ void ProcessorDialog::onStartProcessing()
 void ProcessorDialog::onAddEntryMenu()
 {
 	QMenu menu(nullptr);
+	menu.setProperty("bn.uiTestId", "warpProcessorDialog.addEntryMenu");
+	menu.setProperty("bn.uiTestScope", "warpProcessorDialog.addEntryMenu");
+	menu.setAccessibleName("Add WARP processor entries");
 	addAddActionsToMenu(&menu);
 	menu.exec(m_addButton->mapToGlobal(QPoint(0, m_addButton->height())));
 }
 
 void ProcessorDialog::addAddActionsToMenu(QMenu* menu)
 {
-	menu->addAction("Add Files...", this, &ProcessorDialog::onAddPath);
-	menu->addAction("Add Directory...", this, &ProcessorDialog::onAddDirectory);
-	menu->addAction("Add Project Files", this, &ProcessorDialog::onAddProjectFiles);
+	auto* addFiles = menu->addAction("Add Files...", this, &ProcessorDialog::onAddPath);
+	addFiles->setProperty("bn.uiTestId", "warpProcessorDialog.addFiles");
+	auto* addDirectory = menu->addAction("Add Directory...", this, &ProcessorDialog::onAddDirectory);
+	addDirectory->setProperty("bn.uiTestId", "warpProcessorDialog.addDirectory");
+	auto* addProjectFiles = menu->addAction("Add Project Files", this, &ProcessorDialog::onAddProjectFiles);
+	addProjectFiles->setProperty("bn.uiTestId", "warpProcessorDialog.addProjectFiles");
 }
 
 void ProcessorDialog::showContextMenu(const QPoint& pos)
 {
 	QMenu menu(nullptr);
+	menu.setProperty("bn.uiTestId", "warpProcessorDialog.entriesMenu");
+	menu.setProperty("bn.uiTestScope", "warpProcessorDialog.entriesMenu");
+	menu.setAccessibleName("WARP processor entry actions");
 	addAddActionsToMenu(&menu);
 
 	QListWidgetItem* item = m_entryList->itemAt(pos);
 	if (item)
 	{
 		menu.addSeparator();
-		menu.addAction("Remove", this, &ProcessorDialog::onRemoveItem);
+		auto* remove = menu.addAction("Remove", this, &ProcessorDialog::onRemoveItem);
+		remove->setProperty("bn.uiTestId", "warpProcessorDialog.removeEntry");
 	}
 
 	menu.exec(m_entryList->mapToGlobal(pos));

@@ -62,17 +62,24 @@ QVariant WarpConstraintItemModel::data(const QModelIndex& index, int role) const
 
 WarpConstraintTableWidget::WarpConstraintTableWidget(QWidget* parent)
 {
+	setProperty("bn.uiTestId", "warpConstraintTable");
+	setProperty("bn.uiTestScope", "warpConstraintTable");
+	setAccessibleName("WARP constraints");
 	QGridLayout* layout = new QGridLayout(this);
 	layout->setContentsMargins(2, 2, 2, 2);
 	layout->setVerticalSpacing(4);
 
 	m_table = new QTableView(this);
+	m_table->setProperty("bn.uiTestId", "warpConstraintTable.table");
+	m_table->setAccessibleName("WARP constraints");
 	m_model = new WarpConstraintItemModel({"Constraint"}, this);
 	m_proxyModel = new GenericTextFilterModel(this);
 	m_proxyModel->setSourceModel(m_model);
 	m_table->setModel(m_proxyModel);
 
 	m_filterEdit = new FilterEdit(this);
+	m_filterEdit->setProperty("bn.uiTestId", "warpConstraintTable.filter");
+	m_filterEdit->setAccessibleName("Search WARP constraints");
 	m_filterView = new FilteredView(this, m_table, this, m_filterEdit);
 	m_filterView->setFilterPlaceholderText("Search constraints");
 

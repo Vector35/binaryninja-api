@@ -1,4 +1,5 @@
 #pragma once
+#include "../../../../../ui/shared/internalaction.h"
 #include <QCheckBox>
 #include <QDialog>
 #include <qmetatype.h>
@@ -155,13 +156,14 @@ inline size_t GetBatchSizeFromView(const BinaryViewRef& view)
 	return settings->Get<uint64_t>(BATCH_SIZE_SETTING, view);
 }
 
+template <size_t N>
 inline void RegisterPluginAction(
-	std::string name, std::function<void(const UIActionContext&)> action,
-	std::function<bool(const UIActionContext&)> isValid = [](const UIActionContext&) { return true; })
+		const char (&name)[N], std::function<void(const UIActionContext&)> action,
+		std::function<bool(const UIActionContext&)> isValid = [](const UIActionContext&) { return true; })
 {
-	const QString actionName = QString("WARP\\%1").arg(QString::fromStdString(name));
+	const QString actionName = QString("WARP\\%1").arg(QString::fromUtf8(name, N - 1));
 	if (!UIAction::isActionRegistered(actionName))
-		UIAction::registerAction(actionName);
+		BinaryNinja::UIIdentity::registerBuiltInAction(actionName);
 	UIActionHandler::globalActions()->bindAction(actionName, UIAction(action, isValid));
 	Menu::mainMenu("Plugins")->addAction(actionName, "Plugins");
 }

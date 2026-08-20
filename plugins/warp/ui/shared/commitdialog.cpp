@@ -10,6 +10,9 @@
 
 CommitDialog::CommitDialog(Warp::Ref<Warp::File> file, QWidget* parent) : QDialog(parent), m_file(file)
 {
+	setProperty("bn.uiTestId", "warpCommitDialog");
+	setProperty("bn.uiTestScope", "warpCommitDialog");
+	setAccessibleName("Commit WARP data to source");
 	setWindowModality(Qt::NonModal);
 	setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
 	setWindowTitle("Commit to Source");
@@ -20,10 +23,15 @@ CommitDialog::CommitDialog(Warp::Ref<Warp::File> file, QWidget* parent) : QDialo
 	auto* commitFormLayout = new QFormLayout();
 
 	m_containerCombo = new QComboBox(this);
+	m_containerCombo->setProperty("bn.uiTestId", "warpCommitDialog.container");
+	m_containerCombo->setAccessibleName("WARP container");
 	connect(
 		m_containerCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &CommitDialog::onContainerChanged);
 
 	m_sourcesView = new WarpSourcesView(this);
+	m_sourcesView->setProperty("bn.uiTestId", "warpCommitDialog.sources");
+	m_sourcesView->setProperty("bn.uiTestScope", "warpCommitDialog.sources");
+	m_sourcesView->setAccessibleName("WARP commit sources");
 	m_proxyModel = new QSortFilterProxyModel(this);
 	m_proxyModel->setSourceModel(m_sourcesView->sourceModel());
 	m_proxyModel->setFilterKeyColumn(WarpSourcesModel::PathCol);
@@ -34,11 +42,15 @@ CommitDialog::CommitDialog(Warp::Ref<Warp::File> file, QWidget* parent) : QDialo
 
 	auto* filterLayout = new QHBoxLayout();
 	m_sourceFilter = new QLineEdit(this);
+	m_sourceFilter->setProperty("bn.uiTestId", "warpCommitDialog.sourceFilter");
+	m_sourceFilter->setAccessibleName("Filter WARP sources");
 	m_sourceFilter->setPlaceholderText("Filter sources...");
 	connect(m_sourceFilter, &QLineEdit::textChanged, m_proxyModel, &QSortFilterProxyModel::setFilterFixedString);
 	filterLayout->addWidget(m_sourceFilter);
 
 	m_addSourceButton = new QPushButton("+", this);
+	m_addSourceButton->setProperty("bn.uiTestId", "warpCommitDialog.addSource");
+	m_addSourceButton->setAccessibleName("Add WARP source");
 	m_addSourceButton->setFixedWidth(30);
 	m_addSourceButton->setToolTip("Add source");
 	connect(m_addSourceButton, &QPushButton::clicked, this, &CommitDialog::onCreateNewSource);
@@ -52,6 +64,7 @@ CommitDialog::CommitDialog(Warp::Ref<Warp::File> file, QWidget* parent) : QDialo
 
 	auto commitBtnLabel = QString("Commit %1 chunks").arg(m_file->GetChunks().size());
 	m_commitButton = new QPushButton(commitBtnLabel, this);
+	m_commitButton->setProperty("bn.uiTestId", "warpCommitDialog.commit");
 	connect(m_commitButton, &QPushButton::clicked, this, &CommitDialog::onCommit);
 
 	mainLayout->addLayout(commitFormLayout);

@@ -433,6 +433,9 @@ class BINARYNINJAUIAPI BinaryViewScopeLabel : public MenuHelper
 	Q_OBJECT
 
 	BNSettingsScope m_scope;
+	quint64 m_actionNamespace;
+	quint64 m_nextViewActionToken = 0;
+	std::map<BinaryNinja::BinaryView*, quint64> m_viewActionTokens;
 	QString m_scopeName;
 	std::vector<QString> m_actionNames;
 	std::vector<std::pair<BinaryViewRef, QString>> m_views;
@@ -443,6 +446,7 @@ class BINARYNINJAUIAPI BinaryViewScopeLabel : public MenuHelper
 
   public:
 	BinaryViewScopeLabel(QWidget* parent, const QString& name = "", BNSettingsScope scope = SettingsAutoScope);
+	~BinaryViewScopeLabel() override;
 
 	void refresh();
 	void setSelection(BinaryViewRef view, BNSettingsScope scope);

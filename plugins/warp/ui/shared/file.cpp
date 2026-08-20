@@ -4,13 +4,19 @@
 
 FileWidget::FileWidget(QWidget* parent) : QWidget(parent)
 {
+	setProperty("bn.uiTestId", "warpFile");
+	setProperty("bn.uiTestScope", "warpFile");
+	setAccessibleName("WARP file");
 	auto* layout = new QVBoxLayout(this);
 	layout->setContentsMargins(0, 0, 0, 0);
 
 	auto* splitter = new QSplitter(Qt::Horizontal, this);
+	splitter->setProperty("bn.uiTestId", "warpFile.splitter");
 
 	// Left side: List of chunks
 	m_list = new QListWidget(this);
+	m_list->setProperty("bn.uiTestId", "warpFile.chunkList");
+	m_list->setAccessibleName("WARP file chunks");
 	m_list->setSelectionMode(QAbstractItemView::SingleSelection);
 	m_list->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	m_list->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
@@ -20,6 +26,8 @@ FileWidget::FileWidget(QWidget* parent) : QWidget(parent)
 
 	// Right side: Chunk Widget
 	m_chunkWidget = new ChunkWidget(this);
+	m_chunkWidget->setProperty("bn.uiTestId", "warpFile.selectedChunk");
+	m_chunkWidget->setProperty("bn.uiTestScope", "warpFile.selectedChunk");
 	splitter->addWidget(m_chunkWidget);
 
 	splitter->setSizes({100, 900});

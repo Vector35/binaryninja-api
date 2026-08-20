@@ -228,6 +228,8 @@ void GenericImportsModel::setFilter(const std::string& filterText, FilterOptions
 
 ImportsTreeView::ImportsTreeView(ImportsWidget* parent, TriageView* view, BinaryViewRef data) : QTreeView(parent)
 {
+	setProperty("bn.uiTestId", "triage.imports.list");
+	setAccessibleName(tr("Imports"));
 	setFont(getMonospaceFont(this));
 
 	m_data = data;

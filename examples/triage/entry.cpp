@@ -158,6 +158,8 @@ void GenericEntryModel::setFilter(const std::string& filterText, FilterOptions o
 
 EntryTreeView::EntryTreeView(EntryWidget* parent, TriageView* view, BinaryViewRef data) : QTreeView(parent)
 {
+	setProperty("bn.uiTestId", "triage.entry.list");
+	setAccessibleName(tr("Entry Functions"));
 	m_data = data;
 	m_parent = parent;
 	m_view = view;

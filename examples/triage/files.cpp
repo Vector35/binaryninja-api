@@ -7,6 +7,9 @@
 
 TriageFilePicker::TriageFilePicker(UIContext* context)
 {
+	setProperty("bn.uiTestId", "triage.filePicker");
+	setProperty("bn.uiTestScope", "triage.filePicker");
+	setAccessibleName("Triage file picker");
 	m_context = context;
 	m_contextMenuManager = new ContextMenuManager(this);
 	m_actionHandler.setupActionHandler(this);
@@ -21,6 +24,8 @@ TriageFilePicker::TriageFilePicker(UIContext* context)
 	if (hiddenFiles)
 		m_model->setFilter(QDir::Hidden | QDir::AllEntries | QDir::System);
 	m_tree = new QTreeView(this);
+	m_tree->setProperty("bn.uiTestId", "triage.filePicker.files");
+	m_tree->setAccessibleName("Files");
 	m_tree->setModel(m_model);
 	m_tree->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	m_tree->setColumnWidth(0, 500);

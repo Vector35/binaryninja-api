@@ -27,10 +27,15 @@ static void AddListItem(QListWidget* list, const QString& value)
 WarpFetchDialog::WarpFetchDialog(BinaryViewRef bv, std::shared_ptr<WarpFetcher> fetcher, QWidget* parent) :
 	QDialog(parent), m_fetchProcessor(std::move(fetcher)), m_bv(std::move(bv))
 {
+	setProperty("bn.uiTestId", "warpFetchDialog");
+	setProperty("bn.uiTestScope", "warpFetchDialog");
+	setAccessibleName("WARP Fetcher");
 	setWindowTitle("WARP Fetcher");
 
 	auto form = new QFormLayout();
 	m_containerCombo = new QComboBox(this);
+	m_containerCombo->setProperty("bn.uiTestId", "warpFetchDialog.container");
+	m_containerCombo->setAccessibleName("WARP container");
 	populateContainers();
 	m_containerCombo->addItem("All Containers");  // index 0 for "all"
 	for (const auto& c : m_containers)
@@ -38,13 +43,20 @@ WarpFetchDialog::WarpFetchDialog(BinaryViewRef bv, std::shared_ptr<WarpFetcher> 
 
 	// Tags editor
 	m_tagsList = new QListWidget(this);
+	m_tagsList->setProperty("bn.uiTestId", "warpFetchDialog.tags");
+	m_tagsList->setAccessibleName("Allowed WARP source tags");
 	m_addTagBtn = new QPushButton(this);
+	m_addTagBtn->setProperty("bn.uiTestId", "warpFetchDialog.addTag");
+	m_addTagBtn->setAccessibleName("Add tag");
 	m_addTagBtn->setText("+");
 	m_addTagBtn->setToolTip("Add tag");
 	m_removeTagBtn = new QPushButton(this);
+	m_removeTagBtn->setProperty("bn.uiTestId", "warpFetchDialog.removeTag");
+	m_removeTagBtn->setAccessibleName("Remove selected tags");
 	m_removeTagBtn->setText("-");
 	m_removeTagBtn->setToolTip("Remove selected tag(s)");
 	m_resetTagBtn = new QPushButton(this);
+	m_resetTagBtn->setProperty("bn.uiTestId", "warpFetchDialog.resetTags");
 	m_resetTagBtn->setText("Reset");
 	m_resetTagBtn->setToolTip("Reset tags to: official, trusted");
 	auto tagBtnRow = new QHBoxLayout();
@@ -70,9 +82,11 @@ WarpFetchDialog::WarpFetchDialog(BinaryViewRef bv, std::shared_ptr<WarpFetcher> 
 		AddListItem(m_tagsList, QString::fromStdString(t));
 
 	m_rerunMatcher = new QCheckBox("Re-run matcher after fetch", this);
+	m_rerunMatcher->setProperty("bn.uiTestId", "warpFetchDialog.rerunMatcher");
 	m_rerunMatcher->setChecked(true);
 
 	m_clearProcessed = new QCheckBox("Refetch all functions", this);
+	m_clearProcessed->setProperty("bn.uiTestId", "warpFetchDialog.refetchAll");
 	m_clearProcessed->setToolTip(
 		"Clears the processed cache before fetching again, this will refetch all functions in the view");
 	m_clearProcessed->setChecked(false);
@@ -83,6 +97,9 @@ WarpFetchDialog::WarpFetchDialog(BinaryViewRef bv, std::shared_ptr<WarpFetcher> 
 	form->addRow(m_clearProcessed);
 
 	auto buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
+	buttons->setProperty("bn.uiTestId", "warpFetchDialog.buttons");
+	buttons->button(QDialogButtonBox::Ok)->setProperty("bn.uiTestId", "warpFetchDialog.fetch");
+	buttons->button(QDialogButtonBox::Cancel)->setProperty("bn.uiTestId", "warpFetchDialog.cancel");
 	connect(buttons, &QDialogButtonBox::accepted, this, &WarpFetchDialog::onAccept);
 	connect(buttons, &QDialogButtonBox::rejected, this, &WarpFetchDialog::onReject);
 

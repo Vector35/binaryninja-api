@@ -474,6 +474,7 @@ void HeaderWidget::rebuildLayout()
 	// Rebuild with current column count
 	int row = 0;
 	int col = 0;
+	qsizetype fieldIndex = 0;
 	for (auto& field : m_headers.GetFields())
 	{
 		m_layout->addWidget(new QLabel(field.title + ": "), row, col * 3);
@@ -487,6 +488,7 @@ void HeaderWidget::rebuildLayout()
 				copyText += "\n" + field.values[i];
 		}
 
+		qsizetype valueIndex = 0;
 		for (auto& value : field.values)
 		{
 			QWidget* label;
@@ -502,6 +504,9 @@ void HeaderWidget::rebuildLayout()
 			{
 				// Use CopyableLabel for text fields with AlphanumericHighlightColor
 				auto copyLabel = new CopyableLabel(value, getThemeColor(AlphanumericHighlightColor));
+				copyLabel->setProperty("bn.uiTestId", "view.triage.headers.copyValue");
+				copyLabel->setProperty("bn.uiTestKey",
+					QStringLiteral("schemaCell.%1.%2").arg(fieldIndex).arg(valueIndex));
 				copyLabel->setFont(getMonospaceFont(this));
 				if (field.values.size() > 1)
 					copyLabel->setCopyText(copyText);
@@ -509,6 +514,7 @@ void HeaderWidget::rebuildLayout()
 			}
 			m_layout->addWidget(label, row, col * 3 + 1);
 			row++;
+			valueIndex++;
 		}
 		if ((m_currentColumns > 1) && (row >= (int)m_headers.GetRowsPerColumn())
 		    && ((col + 1) < m_currentColumns))
@@ -516,6 +522,7 @@ void HeaderWidget::rebuildLayout()
 			row = 0;
 			col++;
 		}
+		fieldIndex++;
 	}
 
 	// Clear all column stretches and minimum widths first

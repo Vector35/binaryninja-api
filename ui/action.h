@@ -95,6 +95,28 @@ struct BINARYNINJAUIAPI UIAction
 	UIAction(const UIAction& other);
 	UIAction& operator=(const UIAction& other);
 
+  private:
+	static void registerLiteralActionIdentity(const QString& actionName);
+
+  public:
+	template <size_t N>
+	static void registerAction(const char (&name)[N], const QKeySequence& defaultKeyBinding = QKeySequence(),
+	    const QList<QString>& alias = QList<QString>())
+	{
+		const QString actionName = QString::fromUtf8(name, N - 1);
+		registerAction(actionName, defaultKeyBinding, alias);
+		registerLiteralActionIdentity(actionName);
+	}
+
+	template <size_t N>
+	static void registerAction(const char (&name)[N], const QList<QKeySequence>& defaultKeyBinding,
+	    const QList<QString>& alias = QList<QString>())
+	{
+		const QString actionName = QString::fromUtf8(name, N - 1);
+		registerAction(actionName, defaultKeyBinding, alias);
+		registerLiteralActionIdentity(actionName);
+	}
+
 	static void registerAction(const QString& name, const QKeySequence& defaultKeyBinding = QKeySequence(), const QList<QString>& alias = QList<QString>());
 	static void registerAction(const QString& name, const QList<QKeySequence>& defaultKeyBinding, const QList<QString>& alias = QList<QString>());
 	static void unregisterAction(const QString& name);
@@ -428,7 +450,7 @@ class BINARYNINJAUIAPI MenuInstance
 
 	struct Item
 	{
-		QString name, action;
+		QString name, action, identityPath;
 		uint8_t order;
 		QAction::MenuRole role;
 		QIcon icon;

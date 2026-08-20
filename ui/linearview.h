@@ -345,6 +345,7 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	std::vector<BinaryNinja::TagReference> getTagsAtCurrentLocation(bool includeBookmarks);
 	void removeTagAtCurrentLocation();
 
+	ClickableIcon* createDataButton();
 	void setDataButtonVisible(bool visible);
 	std::optional<std::pair<BinaryNinja::Variable, BinaryNinja::Variable>> getMergeVariablesAtCurrentLocation();
 

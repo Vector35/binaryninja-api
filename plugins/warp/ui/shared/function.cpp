@@ -160,17 +160,24 @@ bool WarpFunctionFilterModel::lessThan(const QModelIndex& sourceLeft, const QMod
 
 WarpFunctionTableWidget::WarpFunctionTableWidget(QWidget* parent) : QWidget(parent)
 {
+	setProperty("bn.uiTestId", "warpFunctionTable");
+	setProperty("bn.uiTestScope", "warpFunctionTable");
+	setAccessibleName("WARP functions");
 	QGridLayout* layout = new QGridLayout(this);
 	layout->setContentsMargins(0, 0, 0, 0);
 	layout->setSpacing(2);
 
 	m_table = new QTableView(this);
+	m_table->setProperty("bn.uiTestId", "warpFunctionTable.table");
+	m_table->setAccessibleName("WARP functions");
 	m_model = new WarpFunctionItemModel({"Function"}, this);
 	m_proxyModel = new WarpFunctionFilterModel(this);
 	m_proxyModel->setSourceModel(m_model);
 	m_table->setModel(m_proxyModel);
 
 	m_filterEdit = new FilterEdit(this);
+	m_filterEdit->setProperty("bn.uiTestId", "warpFunctionTable.filter");
+	m_filterEdit->setAccessibleName("Search WARP functions");
 	m_filterView = new FilteredView(this, m_table, this, m_filterEdit);
 	m_filterView->setFilterPlaceholderText("Search functions (By GUID, name or source)");
 
@@ -208,6 +215,9 @@ WarpFunctionTableWidget::WarpFunctionTableWidget(QWidget* parent) : QWidget(pare
 	// Add a dynamic context menu to the table.
 	// NOTE: This is a bit stupid, I am sure there is a better way to do this in QT.
 	m_contextMenu = new QMenu(this);
+	m_contextMenu->setProperty("bn.uiTestId", "warpFunctionTable.contextMenu");
+	m_contextMenu->setProperty("bn.uiTestScope", "warpFunctionTable.contextMenu");
+	m_contextMenu->setAccessibleName("WARP function actions");
 	RegisterContextMenuAction("Copy Name", [](WarpFunctionItem* item, std::optional<uint64_t>) {
 		QClipboard* clipboard = QGuiApplication::clipboard();
 		clipboard->setText(item->text());
@@ -253,7 +263,19 @@ WarpFunctionTableWidget::WarpFunctionTableWidget(QWidget* parent) : QWidget(pare
 void WarpFunctionTableWidget::RegisterContextMenuAction(
 	const QString& name, const std::function<void(WarpFunctionItem*, std::optional<uint64_t>)>& callback)
 {
-	m_contextMenu->addAction(name);
+	auto* action = m_contextMenu->addAction(name);
+	if (name == "Copy Name")
+		action->setProperty("bn.uiTestId", "warpFunctionTable.copyName");
+	else if (name == "Copy GUID")
+		action->setProperty("bn.uiTestId", "warpFunctionTable.copyGuid");
+	else if (name == "Apply")
+		action->setProperty("bn.uiTestId", "warpFunctionTable.apply");
+	else if (name == "Remove Match")
+		action->setProperty("bn.uiTestId", "warpFunctionTable.removeMatch");
+	else if (name == "Search for Source")
+		action->setProperty("bn.uiTestId", "warpFunctionTable.searchSource");
+	else
+		action->setProperty("bn.uiTestId", "warpFunctionTable.contextAction");
 	m_contextMenuActions[name] = callback;
 }
 
@@ -309,16 +331,25 @@ void WarpFunctionTableWidget::setFilter(const std::string& filter, FilterOptions
 
 WarpFunctionInfoWidget::WarpFunctionInfoWidget(QWidget* parent) : QWidget(parent)
 {
+	setProperty("bn.uiTestId", "warpFunctionInfo");
+	setProperty("bn.uiTestScope", "warpFunctionInfo");
+	setAccessibleName("WARP function information");
 	// Create a tab widget
 	QTabWidget* tabWidget = new QTabWidget(this);
+	tabWidget->setProperty("bn.uiTestId", "warpFunctionInfo.tabs");
+	tabWidget->setAccessibleName("WARP function information tabs");
 	tabWidget->setContentsMargins(0, 0, 0, 0);
 
 	// Create tables for the "Constraints", "Comments", and "Variables" tabs
 	m_commentsTable = new QTableView(this);
+	m_commentsTable->setProperty("bn.uiTestId", "warpFunctionInfo.comments");
+	m_commentsTable->setAccessibleName("WARP function comments");
 	// m_variablesTable = new QTableView(this);
 
 	// TODO: On click navigate to where the constraint is located.
 	m_constraintsTable = new WarpConstraintTableWidget(this);
+	m_constraintsTable->setProperty("bn.uiTestId", "warpFunctionInfo.constraints");
+	m_constraintsTable->setProperty("bn.uiTestScope", "warpFunctionInfo.constraints");
 	tabWidget->addTab(m_constraintsTable, "Constraints");
 
 	// Set up comments tab

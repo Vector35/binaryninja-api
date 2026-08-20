@@ -10,12 +10,17 @@ using namespace BinaryNinja;
 
 SelectProjectFilesDialog::SelectProjectFilesDialog(QWidget* parent) : QDialog(parent)
 {
+	setProperty("bn.uiTestId", "warpSelectProjectFilesDialog");
+	setProperty("bn.uiTestScope", "warpSelectProjectFilesDialog");
+	setAccessibleName("Select project files for WARP");
 	setWindowTitle("Select Project Files");
 	setMinimumSize(700, 400);
 	auto* layout = new QVBoxLayout(this);
 
 	auto* topLayout = new QFormLayout();
 	m_projectCombo = new QComboBox(this);
+	m_projectCombo->setProperty("bn.uiTestId", "warpSelectProjectFilesDialog.project");
+	m_projectCombo->setAccessibleName("Project");
 	auto projects = Project::GetOpenProjects();
 	for (auto& project : projects)
 	{
@@ -25,6 +30,8 @@ SelectProjectFilesDialog::SelectProjectFilesDialog(QWidget* parent) : QDialog(pa
 	layout->addLayout(topLayout);
 
 	m_searchBar = new QLineEdit(this);
+	m_searchBar->setProperty("bn.uiTestId", "warpSelectProjectFilesDialog.search");
+	m_searchBar->setAccessibleName("Search project files");
 	m_searchBar->setPlaceholderText("Search files...");
 	connect(m_searchBar, &QLineEdit::textChanged, this, &SelectProjectFilesDialog::filterLists);
 	layout->addWidget(m_searchBar);
@@ -34,6 +41,8 @@ SelectProjectFilesDialog::SelectProjectFilesDialog(QWidget* parent) : QDialog(pa
 	auto* notAddingBox = new QVBoxLayout();
 	notAddingBox->addWidget(new QLabel("Available:"));
 	m_notAddingList = new QListWidget(this);
+	m_notAddingList->setProperty("bn.uiTestId", "warpSelectProjectFilesDialog.available");
+	m_notAddingList->setAccessibleName("Available project files");
 	m_notAddingList->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	m_notAddingList->setTextElideMode(Qt::ElideLeft);
 	m_notAddingList->setStyleSheet("QListWidget::item { padding: 2px; }");
@@ -43,9 +52,13 @@ SelectProjectFilesDialog::SelectProjectFilesDialog(QWidget* parent) : QDialog(pa
 	auto* middleButtons = new QVBoxLayout();
 	middleButtons->addStretch();
 	auto* addButton = new QPushButton(">>", this);
+	addButton->setProperty("bn.uiTestId", "warpSelectProjectFilesDialog.select");
+	addButton->setAccessibleName("Select files");
 	connect(addButton, &QPushButton::clicked, [this]() { moveSelected(m_notAddingList, m_addingList); });
 	middleButtons->addWidget(addButton);
 	auto* removeButton = new QPushButton("<<", this);
+	removeButton->setProperty("bn.uiTestId", "warpSelectProjectFilesDialog.deselect");
+	removeButton->setAccessibleName("Deselect files");
 	connect(removeButton, &QPushButton::clicked, [this]() { moveSelected(m_addingList, m_notAddingList); });
 	middleButtons->addWidget(removeButton);
 	middleButtons->addStretch();
@@ -54,6 +67,8 @@ SelectProjectFilesDialog::SelectProjectFilesDialog(QWidget* parent) : QDialog(pa
 	auto* addingBox = new QVBoxLayout();
 	addingBox->addWidget(new QLabel("Selected:"));
 	m_addingList = new QListWidget(this);
+	m_addingList->setProperty("bn.uiTestId", "warpSelectProjectFilesDialog.selected");
+	m_addingList->setAccessibleName("Selected project files");
 	m_addingList->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	m_addingList->setTextElideMode(Qt::ElideLeft);
 	m_addingList->setStyleSheet("QListWidget::item { padding: 2px; }");
@@ -64,8 +79,10 @@ SelectProjectFilesDialog::SelectProjectFilesDialog(QWidget* parent) : QDialog(pa
 
 	auto* buttons = new QHBoxLayout(this);
 	auto* ok = new QPushButton("Add", this);
+	ok->setProperty("bn.uiTestId", "warpSelectProjectFilesDialog.add");
 	connect(ok, &QPushButton::clicked, this, &QDialog::accept);
 	auto* cancel = new QPushButton("Cancel", this);
+	cancel->setProperty("bn.uiTestId", "warpSelectProjectFilesDialog.cancel");
 	connect(cancel, &QPushButton::clicked, this, &QDialog::reject);
 	buttons->addStretch();
 	buttons->addWidget(ok);

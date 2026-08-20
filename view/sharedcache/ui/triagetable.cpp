@@ -163,6 +163,9 @@ void TriageTableModel::promoteSortColumn(int column, Qt::SortOrder order)
 
 TriageTableView::TriageTableView(QWidget* parent) : QTableView(parent)
 {
+	setProperty("bn.uiTestId", "triageTableView");
+	setProperty("bn.uiTestScope", "triageTableView");
+	setAccessibleName("Triage results");
 	setFont(getMonospaceFont(this));
 	setWordWrap(false);
 	verticalHeader()->setVisible(false);
@@ -192,6 +195,7 @@ void TriageTableView::setTriageModel(TriageTableModel* model, int sortColumn)
 	setSortingEnabled(true);
 
 	m_busyOverlay = new QLabel(viewport());
+	m_busyOverlay->setProperty("bn.uiTestId", "triageTableView.busyStatus");
 	m_busyOverlay->setAlignment(Qt::AlignCenter);
 	m_busyOverlay->setAutoFillBackground(true);
 	m_busyOverlay->setContentsMargins(16, 8, 16, 8);
@@ -310,13 +314,19 @@ TriageTablePanel::TriageTablePanel(QWidget* parent, TriageTableView* table,
 	const QString& filterPlaceholder, QString rowNoun)
 	: QWidget(parent), m_table(table), m_rowNoun(std::move(rowNoun))
 {
+	setProperty("bn.uiTestId", "triageTablePanel");
+	setProperty("bn.uiTestScope", "triageTablePanel");
+	setAccessibleName("Triage table");
 	m_filterEdit = new FilterEdit(table);
+	m_filterEdit->setProperty("bn.uiTestId", "triageTablePanel.filter");
+	m_filterEdit->setAccessibleName("Filter triage results");
 	m_filterEdit->setPlaceholderText(filterPlaceholder);
 	m_filterEdit->showRegexToggle(true);
 	connect(m_filterEdit, &FilterEdit::textChanged, this, &TriageTablePanel::applyFilter);
 	connect(m_filterEdit, &FilterEdit::optionsChanged, this, &TriageTablePanel::applyFilter);
 
 	m_statusLabel = new QLabel(this);
+	m_statusLabel->setProperty("bn.uiTestId", "triageTablePanel.status");
 	m_statusLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 	// Tabular numbers keep the status text from shifting as its numbers change.
 	QFont statusFont = m_statusLabel->font();
@@ -382,6 +392,8 @@ QAction* TriageTablePanel::addFilterToggle(const QString& iconPath, const QStrin
 	QPixmap onPixmap;
 	pixmapForBWMaskIcon(iconPath, &onPixmap, m_filterEdit->palette().color(QPalette::Highlight), "filterOn");
 	auto action = m_filterEdit->addAction(QIcon(offPixmap), QLineEdit::TrailingPosition);
+	action->setProperty("bn.uiTestId", "triageTablePanel.filterToggle");
+	action->setText(toolTip);
 	action->setCheckable(true);
 	action->setToolTip(toolTip);
 	connect(action, &QAction::toggled, this,
@@ -397,6 +409,7 @@ QAction* TriageTablePanel::addFilterToggle(const QString& iconPath, const QStrin
 QPushButton* TriageTablePanel::addSelectionButton(const QString& text)
 {
 	auto button = new QPushButton(text);
+	button->setProperty("bn.uiTestId", "triageTablePanel.selectionAction");
 	button->setEnabled(false);
 	const auto update = [this, button] {
 		button->setEnabled(m_table->selectionModel()->hasSelection());

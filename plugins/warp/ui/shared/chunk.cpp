@@ -11,23 +11,31 @@
 
 ChunkWidget::ChunkWidget(QWidget* parent) : QWidget(parent)
 {
+	setProperty("bn.uiTestId", "warpChunk");
+	setProperty("bn.uiTestScope", "warpChunk");
+	setAccessibleName("WARP chunk");
 	auto* layout = new QVBoxLayout(this);
 	layout->setContentsMargins(0, 0, 0, 0);
 	layout->setSpacing(4);
 
 	// Search Box
 	m_searchBox = new QLineEdit(this);
+	m_searchBox->setProperty("bn.uiTestId", "warpChunk.search");
+	m_searchBox->setAccessibleName("Search WARP chunk contents");
 	m_searchBox->setPlaceholderText("Search chunk contents...");
 	m_searchBox->setClearButtonEnabled(true);
 	connect(m_searchBox, &QLineEdit::textChanged, this, &ChunkWidget::onSearchTextChanged);
 	layout->addWidget(m_searchBox);
 
 	m_countLabel = new QLabel(this);
+	m_countLabel->setProperty("bn.uiTestId", "warpChunk.itemCount");
 	m_countLabel->setContentsMargins(4, 0, 4, 0);
 	layout->addWidget(m_countLabel);
 
 	// Table Widget (Styled as a list)
 	m_table = new QTableWidget(this);
+	m_table->setProperty("bn.uiTestId", "warpChunk.table");
+	m_table->setAccessibleName("WARP chunk contents");
 	m_table->setColumnCount(3);
 	m_table->setHorizontalHeaderLabels({"Type", "Name", "ID"});
 	m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);

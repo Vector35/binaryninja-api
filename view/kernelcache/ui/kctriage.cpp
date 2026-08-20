@@ -39,6 +39,9 @@ void KCTriageViewType::Register()
 
 KCTriageView::KCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(parent), m_data(std::move(data))
 {
+	setProperty("bn.uiTestId", "view.kernelCacheTriage");
+	setProperty("bn.uiTestScope", "view.kernelCacheTriage");
+	setAccessibleName("Kernel Cache Triage");
 	setBinaryDataNavigable(false);
 	setupView(this);
 
@@ -46,6 +49,8 @@ KCTriageView::KCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(parent
 
 	m_triageCollection = new DockableTabCollection(this);
 	m_triageTabs = new SplitTabWidget(m_triageCollection);
+	m_triageTabs->setProperty("bn.uiTestId", "view.kernelCacheTriage.tabs");
+	m_triageTabs->setAccessibleName("Kernel cache triage tabs");
 
 	auto triageTabStyle = new GlobalAreaTabStyle();
 	m_triageTabs->setTabStyle(triageTabStyle);
@@ -180,6 +185,8 @@ void KCTriageView::setImageLoaded(const uint64_t imageHeaderAddr)
 QWidget* KCTriageView::initImageTable()
 {
 	m_imageTable = new FilterableTableView(this);
+	m_imageTable->setProperty("bn.uiTestId", "kernelCacheTriage.images.table");
+	m_imageTable->setAccessibleName("Kernel cache images");
 
 	m_imageModel = new QStandardItemModel(0, 3, m_imageTable);
 	m_imageModel->setHorizontalHeaderLabels({"Address", "Loaded", "Name"});
@@ -192,6 +199,9 @@ QWidget* KCTriageView::initImageTable()
 	m_imageTable->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(m_imageTable, &QWidget::customContextMenuRequested, [this](const QPoint &pos) {
 		QMenu contextMenu(tr("Load Image Actions"), m_imageTable);
+		contextMenu.setProperty("bn.uiTestId", "kernelCacheTriage.images.contextMenu");
+		contextMenu.setProperty("bn.uiTestScope", "kernelCacheTriage.images.contextMenu");
+		contextMenu.setAccessibleName("Kernel cache image actions");
 
 		// Get number of selected images
 		auto selected = m_imageTable->selectionModel()->selectedRows();
@@ -207,7 +217,9 @@ QWidget* KCTriageView::initImageTable()
 		}
 
 		QAction noSelectionAction("No Images Selected", m_imageTable);
+		noSelectionAction.setProperty("bn.uiTestId", "kernelCacheTriage.images.noSelection");
 		QAction loadImagesAction("", m_imageTable);
+		loadImagesAction.setProperty("bn.uiTestId", "kernelCacheTriage.images.loadSelected");
 		if (selectedCount == 0)
 		{
 			noSelectionAction.setEnabled(false);
@@ -228,6 +240,7 @@ QWidget* KCTriageView::initImageTable()
 	});
 
 	auto loadImageButton = new QPushButton();
+	loadImageButton->setProperty("bn.uiTestId", "kernelCacheTriage.images.loadSelectedButton");
 	connect(loadImageButton, &QPushButton::clicked, [this](bool) {
 		// Collect only visible selected rows
 		QModelIndexList selected;
@@ -248,6 +261,7 @@ QWidget* KCTriageView::initImageTable()
 	loadImageButton->setText(" Load Selected ");
 
 	auto refreshDataButton = new QPushButton();
+	refreshDataButton->setProperty("bn.uiTestId", "kernelCacheTriage.images.refreshButton");
 	{
 		// TODO: Might want to introduce a cooldown for this button (if we even keep it)
 		connect(refreshDataButton, &QPushButton::clicked, [this](bool) { RefreshData(); });
@@ -255,6 +269,8 @@ QWidget* KCTriageView::initImageTable()
 	} // refreshDataButton
 
 	auto loadImageFilterEdit = new FilterEdit(m_imageTable);
+	loadImageFilterEdit->setProperty("bn.uiTestId", "kernelCacheTriage.images.filter");
+	loadImageFilterEdit->setAccessibleName("Filter kernel cache images");
 	loadImageFilterEdit->setPlaceholderText("Filter images");
 	connect(loadImageFilterEdit, &FilterEdit::textChanged, [this, loadImageFilterEdit](const QString& filter) {
 		m_imageTable->setFilter(filter.toStdString(), loadImageFilterEdit->getFilterOptions());
@@ -276,6 +292,9 @@ QWidget* KCTriageView::initImageTable()
 	loadImageLayout->addLayout(loadImageFooterLayout);
 
 	auto loadImageWidget = new QWidget;
+	loadImageWidget->setProperty("bn.uiTestId", "kernelCacheTriage.images");
+	loadImageWidget->setProperty("bn.uiTestScope", "kernelCacheTriage.images");
+	loadImageWidget->setAccessibleName("Kernel cache images");
 	loadImageWidget->setLayout(loadImageLayout);
 
 	m_imageTable->setModel(m_imageModel);
@@ -304,17 +323,23 @@ QWidget* KCTriageView::initImageTable()
 void KCTriageView::initSymbolTable()
 {
 	m_symbolTable = new SymbolTableView(this);
+	m_symbolTable->setProperty("bn.uiTestId", "kernelCacheTriage.symbols.table");
+	m_symbolTable->setProperty("bn.uiTestScope", "kernelCacheTriage.symbols.table");
+	m_symbolTable->setAccessibleName("Kernel cache symbols");
 
 	// Apply custom column styling
 	m_symbolTable->setItemDelegateForColumn(0, new AddressColorDelegate(m_symbolTable));
 
 	auto symbolFilterEdit = new FilterEdit(m_symbolTable);
+	symbolFilterEdit->setProperty("bn.uiTestId", "kernelCacheTriage.symbols.filter");
+	symbolFilterEdit->setAccessibleName("Filter kernel cache symbols");
 	symbolFilterEdit->setPlaceholderText("Filter symbols");
 	connect(symbolFilterEdit, &FilterEdit::textChanged, [this, symbolFilterEdit](const QString& filter) {
 		m_symbolTable->setFilter(filter.toStdString(), symbolFilterEdit->getFilterOptions());
 	});
 
 	auto loadSymbolImageButton = new QPushButton();
+	loadSymbolImageButton->setProperty("bn.uiTestId", "kernelCacheTriage.symbols.loadImage");
 	connect(loadSymbolImageButton, &QPushButton::clicked, [this](bool) {
 		auto selected = m_symbolTable->selectionModel()->selectedRows();
 		std::vector<uint64_t> addresses;
@@ -326,6 +351,7 @@ void KCTriageView::initSymbolTable()
 
 	// Shows the current selected rows image name.
 	auto currentImageLabel = new QLabel(this);
+	currentImageLabel->setProperty("bn.uiTestId", "kernelCacheTriage.symbols.currentImage");
 	currentImageLabel->setText("");
 	currentImageLabel->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 	connect(m_symbolTable->selectionModel(), &QItemSelectionModel::currentRowChanged, this, [this, currentImageLabel](const QModelIndex &current, const QModelIndex &) {
@@ -351,12 +377,18 @@ void KCTriageView::initSymbolTable()
 	symbolLayout->addLayout(symbolFooterLayout);
 
 	auto symbolWidget = new QWidget;
+	symbolWidget->setProperty("bn.uiTestId", "kernelCacheTriage.symbols");
+	symbolWidget->setProperty("bn.uiTestScope", "kernelCacheTriage.symbols");
+	symbolWidget->setAccessibleName("Kernel cache symbols");
 	symbolWidget->setLayout(symbolLayout);
 
 	connect(m_symbolTable, &SymbolTableView::activated, this, [=, this](const QModelIndex& index)
 	{
 		auto symbol = m_symbolTable->getSymbolAtRow(index.row());
 		auto dialog = new QMessageBox(this);
+		dialog->setProperty("bn.uiTestId", "kernelCacheTriage.loadImageDialog");
+		dialog->setProperty("bn.uiTestScope", "kernelCacheTriage.loadImageDialog");
+		dialog->setAccessibleName("Load kernel cache image");
 
 		auto controller = KernelCacheController::GetController(*this->m_data);
 		if (!controller)
@@ -368,6 +400,8 @@ void KCTriageView::initSymbolTable()
 
 		dialog->setText("Load " + QString::fromStdString(image->name) + "?");
 		dialog->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+		dialog->button(QMessageBox::Yes)->setProperty("bn.uiTestId", "kernelCacheTriage.loadImageDialog.load");
+		dialog->button(QMessageBox::No)->setProperty("bn.uiTestId", "kernelCacheTriage.loadImageDialog.cancel");
 
 		connect(dialog, &QMessageBox::buttonClicked, this, [=, this](QAbstractButton* button)
 			{

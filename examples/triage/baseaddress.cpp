@@ -464,24 +464,32 @@ void BaseAddressDetectionWidget::CreateAdvancedSettingsGroup()
 	m_inputs.StrlenLabel = new QLabel("Min. String Length:");
 	grid->addWidget(m_inputs.StrlenLabel, row, column, Qt::AlignLeft);
 	m_inputs.StrlenLineEdit = new QLineEdit("0n10");
+	m_inputs.StrlenLineEdit->setProperty("bn.uiTestId", "triage.baseAddress.minimumStringLength");
+	m_inputs.StrlenLineEdit->setAccessibleName("Minimum string length");
 	m_inputs.StrlenLineEdit->setFixedWidth(controlWidth);
 	grid->addWidget(m_inputs.StrlenLineEdit, row, column + 1, Qt::AlignLeft);
 
 	m_inputs.AlignmentLabel = new QLabel("Alignment:");
 	grid->addWidget(m_inputs.AlignmentLabel, row, column + 2, Qt::AlignLeft);
 	m_inputs.AlignmentLineEdit = new QLineEdit("0x1000");
+	m_inputs.AlignmentLineEdit->setProperty("bn.uiTestId", "triage.baseAddress.alignment");
+	m_inputs.AlignmentLineEdit->setAccessibleName("Base address alignment");
 	m_inputs.AlignmentLineEdit->setFixedWidth(controlWidth);
 	grid->addWidget(m_inputs.AlignmentLineEdit, row++, column + 3, Qt::AlignLeft);
 
 	m_inputs.LowerBoundaryLabel = new QLabel("Lower Boundary:");
 	grid->addWidget(m_inputs.LowerBoundaryLabel, row, column, Qt::AlignLeft);
 	m_inputs.LowerBoundary = new QLineEdit("0x0");
+	m_inputs.LowerBoundary->setProperty("bn.uiTestId", "triage.baseAddress.lowerBoundary");
+	m_inputs.LowerBoundary->setAccessibleName("Base address lower boundary");
 	m_inputs.LowerBoundary->setFixedWidth(controlWidth);
 	grid->addWidget(m_inputs.LowerBoundary, row, column + 1, Qt::AlignLeft);
 
 	m_inputs.UpperBoundaryLabel = new QLabel("Upper Boundary:");
 	grid->addWidget(m_inputs.UpperBoundaryLabel, row, column + 2, Qt::AlignLeft);
 	m_inputs.UpperBoundary = new QLineEdit("0xffffffffffffffff");
+	m_inputs.UpperBoundary->setProperty("bn.uiTestId", "triage.baseAddress.upperBoundary");
+	m_inputs.UpperBoundary->setAccessibleName("Base address upper boundary");
 	m_inputs.UpperBoundary->setFixedWidth(controlWidth);
 	grid->addWidget(m_inputs.UpperBoundary, row++, column + 3, Qt::AlignLeft);
 
@@ -489,6 +497,8 @@ void BaseAddressDetectionWidget::CreateAdvancedSettingsGroup()
 	grid->addWidget(m_inputs.POILabel, row, column, Qt::AlignLeft);
 	auto poiList = QStringList() << "All" << "Strings only" << "Functions only";
 	m_inputs.POIBox = new QComboBox(this);
+	m_inputs.POIBox->setProperty("bn.uiTestId", "triage.baseAddress.pointsOfInterest");
+	m_inputs.POIBox->setAccessibleName("Points of interest");
 	m_inputs.POIBox->addItems(poiList);
 	m_inputs.POIBox->setFixedWidth(controlWidth);
 	grid->addWidget(m_inputs.POIBox, row, column + 1, Qt::AlignLeft);
@@ -496,6 +506,8 @@ void BaseAddressDetectionWidget::CreateAdvancedSettingsGroup()
 	m_inputs.MaxPointersPerClusterLabel = new QLabel("Max Pointers:");
 	grid->addWidget(m_inputs.MaxPointersPerClusterLabel, row, column + 2, Qt::AlignLeft);
 	m_inputs.MaxPointersPerCluster = new QLineEdit("0n128");
+	m_inputs.MaxPointersPerCluster->setProperty("bn.uiTestId", "triage.baseAddress.maximumPointers");
+	m_inputs.MaxPointersPerCluster->setAccessibleName("Maximum pointers per cluster");
 	m_inputs.MaxPointersPerCluster->setFixedWidth(controlWidth);
 	grid->addWidget(m_inputs.MaxPointersPerCluster, row++, column + 3, Qt::AlignLeft);
 
@@ -556,6 +568,9 @@ void BaseAddressDetectionWidget::UpdateModeSpecificSettingsVisibility()
 BaseAddressDetectionWidget::BaseAddressDetectionWidget(QWidget* parent,
 	BinaryNinja::Ref<BinaryNinja::BinaryView> bv) : QWidget(parent)
 {
+	setProperty("bn.uiTestId", "triage.baseAddress");
+	setProperty("bn.uiTestScope", "triage.baseAddress");
+	setAccessibleName("Base address detection");
 	m_view = bv->GetParentView() ? bv->GetParentView() : bv;
 	m_layout = new QGridLayout();
 	int32_t row = 0;
@@ -563,6 +578,8 @@ BaseAddressDetectionWidget::BaseAddressDetectionWidget(QWidget* parent,
 
 	m_layout->addWidget(new QLabel("Architecture:"), row, column, Qt::AlignLeft);
 	m_inputs.ArchitectureBox = new QComboBox(this);
+	m_inputs.ArchitectureBox->setProperty("bn.uiTestId", "triage.baseAddress.architecture");
+	m_inputs.ArchitectureBox->setAccessibleName("Architecture");
 	auto architectures = BinaryNinja::Architecture::GetList();
 	auto archItemList = QStringList();
 	archItemList << "auto detect";
@@ -585,8 +602,10 @@ BaseAddressDetectionWidget::BaseAddressDetectionWidget(QWidget* parent,
 	modeLayout->setVerticalSpacing(2);
 	auto modeButtonGroup = new QButtonGroup(this);
 	m_inputs.SamplingModeRadio = new QRadioButton("Sampling Mode", this);
+	m_inputs.SamplingModeRadio->setProperty("bn.uiTestId", "triage.baseAddress.samplingMode");
 	m_inputs.SamplingModeRadio->setChecked(true);
 	m_inputs.InstructionAnalysisModeRadio = new QRadioButton("IL Analysis Mode", this);
+	m_inputs.InstructionAnalysisModeRadio->setProperty("bn.uiTestId", "triage.baseAddress.ilAnalysisMode");
 	modeButtonGroup->addButton(m_inputs.SamplingModeRadio);
 	modeButtonGroup->addButton(m_inputs.InstructionAnalysisModeRadio);
 
@@ -623,6 +642,8 @@ BaseAddressDetectionWidget::BaseAddressDetectionWidget(QWidget* parent,
 	m_inputs.AnalysisLabel = new QLabel("Analysis Level:");
 	m_layout->addWidget(m_inputs.AnalysisLabel, row, column, Qt::AlignLeft);
 	m_inputs.AnalysisBox = new QComboBox(this);
+	m_inputs.AnalysisBox->setProperty("bn.uiTestId", "triage.baseAddress.analysisLevel");
+	m_inputs.AnalysisBox->setAccessibleName("Analysis level");
 	auto analysisItemList = QStringList() << "full" << "basic" << "controlFlow";
 	m_inputs.AnalysisBox->addItems(analysisItemList);
 	m_layout->addWidget(m_inputs.AnalysisBox, row++, column + 1, Qt::AlignLeft);
@@ -636,10 +657,12 @@ BaseAddressDetectionWidget::BaseAddressDetectionWidget(QWidget* parent,
 	UpdateModeSpecificSettingsVisibility();
 
 	m_startButton = new QPushButton("Start");
+	m_startButton->setProperty("bn.uiTestId", "triage.baseAddress.start");
 	connect(m_startButton, &QPushButton::clicked, this, &BaseAddressDetectionWidget::DetectBaseAddress);
 	m_layout->addWidget(m_startButton, row, column, Qt::AlignLeft);
 
 	m_abortButton = new QPushButton("Abort");
+	m_abortButton->setProperty("bn.uiTestId", "triage.baseAddress.abort");
 	connect(m_abortButton, &QPushButton::clicked, this, &BaseAddressDetectionWidget::Abort);
 	m_abortButton->setHidden(true);
 	m_layout->addWidget(m_abortButton, row, column, Qt::AlignLeft);
@@ -654,6 +677,7 @@ BaseAddressDetectionWidget::BaseAddressDetectionWidget(QWidget* parent,
 	m_preferredBaseLabel = new QLabel("Preferred Base:");
 	m_layout->addWidget(m_preferredBaseLabel, row, column, Qt::AlignLeft);
 	m_preferredBase = new QLabel("Not available");
+	m_preferredBase->setProperty("bn.uiTestId", "triage.baseAddress.preferredBase");
 	m_preferredBase->setTextInteractionFlags(Qt::TextSelectableByMouse);
 	m_preferredBase->setFont(getMonospaceFont(this));
 	m_preferredBase->setPalette(palette);
@@ -667,6 +691,8 @@ BaseAddressDetectionWidget::BaseAddressDetectionWidget(QWidget* parent,
 	m_layout->addWidget(m_confidence, row++, column + 3, Qt::AlignLeft);
 
 	m_resultsTableWidget = new QTableWidget(this);
+	m_resultsTableWidget->setProperty("bn.uiTestId", "triage.baseAddress.results");
+	m_resultsTableWidget->setAccessibleName("Base address candidates");
 	ConfigureResultsTable(SamplingBaseAddressDetection);
 	m_resultsTableWidget->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 	m_resultsTableWidget->horizontalHeader()->setStretchLastSection(true);
@@ -679,9 +705,12 @@ BaseAddressDetectionWidget::BaseAddressDetectionWidget(QWidget* parent,
 	connect(m_resultsTableWidget, &QTableWidget::clicked, this, &BaseAddressDetectionWidget::GetClickedBaseAddress);
 
 	m_reloadBase = new QLineEdit("0x0");
+	m_reloadBase->setProperty("bn.uiTestId", "triage.baseAddress.rebaseAddress");
+	m_reloadBase->setAccessibleName("Image base address");
 	m_layout->addWidget(m_reloadBase, row, column, Qt::AlignLeft);
 
 	m_rebaseButton = new QPushButton("Start Full Analysis");
+	m_rebaseButton->setProperty("bn.uiTestId", "triage.baseAddress.rebase");
 	connect(m_rebaseButton, &QPushButton::clicked, this, &BaseAddressDetectionWidget::RebaseWithFullAnalysis);
 	m_layout->addWidget(m_rebaseButton, row, column + 1, Qt::AlignLeft);
 

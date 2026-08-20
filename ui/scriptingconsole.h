@@ -191,9 +191,11 @@ class BINARYNINJAUIAPI ScriptingConsoleOutput : public QPlainTextEdit
 	ContextMenuManager* m_contextMenuManager;
 	BinaryViewRef m_data;
 	Menu* m_menu;
+	QString m_clearActionName;
 
   public:
 	ScriptingConsoleOutput(ScriptingConsole* parent, Menu* menu);
+	~ScriptingConsoleOutput() override;
 	bool IsNavigable(const QString& str, const std::pair<int, int>& offsetLen, uint64_t& value, bool highlight) const;
 
   protected:

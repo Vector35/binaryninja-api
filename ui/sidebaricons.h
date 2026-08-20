@@ -79,10 +79,12 @@ class BINARYNINJAUIAPI SidebarIconsWidget : public QWidget
 	QRect placeholderRect() const;
 	bool shouldBeVisible() const;
 	bool shouldContainMoreIcon() const;
+	void syncAccessibilityControls();
 
 private Q_SLOTS:
 	void containerUpdated();
 	void contentClassificationChanged();
+	void showMoreMenu();
 
 protected:
 	virtual void paintEvent(QPaintEvent* event) override;
@@ -90,6 +92,7 @@ protected:
 	virtual void mousePressEvent(QMouseEvent* event) override;
 	virtual void mouseReleaseEvent(QMouseEvent* event) override;
 	virtual void leaveEvent(QEvent* event) override;
+	virtual void resizeEvent(QResizeEvent* event) override;
 
 public:
 	SidebarIconsWidget(Sidebar* sidebar, SidebarLocation location);

@@ -18,13 +18,15 @@ void FileInfoWidget::addCopyableField(const QString& name, const QVariant& value
 	auto& [row, column] = this->m_fieldPosition;
 
 	const auto valueLabel = new CopyableLabel(value.toString(), getThemeColor(AlphanumericHighlightColor));
+	valueLabel->setProperty("bn.uiTestId", "view.triage.fileInfo.size");
 	valueLabel->setFont(getMonospaceFont(this));
 
 	this->m_layout->addWidget(new QLabel(name), row, column);
 	this->m_layout->addWidget(valueLabel, row++, column + 1);
 }
 
-void FileInfoWidget::addCopyableFieldWithElide(const QString& name, const QVariant& value, int maxWidth)
+void FileInfoWidget::addCopyableFieldWithElide(
+	const QString& name, const QVariant& value, int maxWidth, bool projectPath)
 {
 	auto& [row, column] = this->m_fieldPosition;
 
@@ -35,6 +37,10 @@ void FileInfoWidget::addCopyableFieldWithElide(const QString& name, const QVaria
 	elidedText.replace(QChar(0x2026), "...");
 
 	const auto valueLabel = new CopyableLabel(elidedText, getThemeColor(AlphanumericHighlightColor));
+	if (projectPath)
+		valueLabel->setProperty("bn.uiTestId", "view.triage.fileInfo.projectPath");
+	else
+		valueLabel->setProperty("bn.uiTestId", "view.triage.fileInfo.diskPath");
 	valueLabel->setFont(font);
 	valueLabel->setCopyText(fullText);
 	valueLabel->setToolTip(fullText + "\n\nClick to Copy");
@@ -64,6 +70,9 @@ void FileInfoWidget::addHashFields(BinaryViewRef view)
 	auto md5Label = new CopyableLabel("Calculating...", hashFieldColor);
 	auto sha1Label = new CopyableLabel("Calculating...", hashFieldColor);
 	auto sha256Label = new CopyableLabel("Calculating...", hashFieldColor);
+	md5Label->setProperty("bn.uiTestId", "view.triage.fileInfo.md5");
+	sha1Label->setProperty("bn.uiTestId", "view.triage.fileInfo.sha1");
+	sha256Label->setProperty("bn.uiTestId", "view.triage.fileInfo.sha256");
 	md5Label->setFont(getMonospaceFont(this));
 	sha1Label->setFont(getMonospaceFont(this));
 	sha256Label->setFont(getMonospaceFont(this));
@@ -143,13 +152,13 @@ FileInfoWidget::FileInfoWidget(QWidget* parent, BinaryViewRef bv, EntropyWidget*
 	const QFontMetrics monoMetrics(getMonospaceFont(this));
 	const int maxPathWidth = monoMetrics.horizontalAdvance(QString(64, '0'));
 
-	this->addCopyableFieldWithElide("Path on disk: ", filePath.c_str(), maxPathWidth);
+	this->addCopyableFieldWithElide("Path on disk: ", filePath.c_str(), maxPathWidth, false);
 
 	// If triage view is opened from a project, show both actual filepath and path relative to project
 	if (const auto fileProjectRef = file->GetProjectFile())
 	{
 		const auto projectFilePath = file->GetProjectFile()->GetPathInProject();
-		this->addCopyableFieldWithElide("Path in project: ", projectFilePath.c_str(), maxPathWidth);
+		this->addCopyableFieldWithElide("Path in project: ", projectFilePath.c_str(), maxPathWidth, true);
 	}
 
 	const auto fileSize = QString::number(view->GetLength(), 16).prepend("0x");
@@ -160,6 +169,7 @@ FileInfoWidget::FileInfoWidget(QWidget* parent, BinaryViewRef bv, EntropyWidget*
 	{
 		auto& [row, column] = this->m_fieldPosition;
 		m_entropyLabel = new CopyableLabel("Calculating...", getThemeColor(AlphanumericHighlightColor));
+		m_entropyLabel->setProperty("bn.uiTestId", "view.triage.fileInfo.entropy");
 		m_entropyLabel->setFont(getMonospaceFont(this));
 		this->m_layout->addWidget(new QLabel("Entropy: "), row, column);
 		this->m_layout->addWidget(m_entropyLabel, row++, column + 1);

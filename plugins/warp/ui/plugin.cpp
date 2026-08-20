@@ -67,6 +67,9 @@ void ShowNetworkNotice()
 
 WarpSidebarWidget::WarpSidebarWidget(BinaryViewRef data) : SidebarWidget("WARP"), m_data(std::move(data))
 {
+	setProperty("bn.uiTestId", "warpSidebar");
+	setProperty("bn.uiTestScope", "warpSidebar");
+	setAccessibleName("WARP");
 	m_logger = LogRegistry::CreateLogger("WARP UI");
 	m_currentFrame = nullptr;
 
@@ -74,11 +77,14 @@ WarpSidebarWidget::WarpSidebarWidget(BinaryViewRef data) : SidebarWidget("WARP")
 	ShowNetworkNotice();
 
 	m_headerWidget = new QWidget();
+	m_headerWidget->setProperty("bn.uiTestId", "warpSidebar.header");
 	QHBoxLayout* headerLayout = new QHBoxLayout();
 	headerLayout->setContentsMargins(0, 0, 0, 0);
 	headerLayout->setSpacing(0);
 
 	QToolBar* headerToolbar = new QToolBar(this);
+	headerToolbar->setProperty("bn.uiTestId", "warpSidebar.toolbar");
+	headerToolbar->setAccessibleName("WARP actions");
 	headerToolbar->setContentsMargins(0, 0, 0, 0);
 	headerToolbar->setIconSize(QSize(20, 20));
 
@@ -88,6 +94,7 @@ WarpSidebarWidget::WarpSidebarWidget(BinaryViewRef data) : SidebarWidget("WARP")
 		handler->executeAction("WARP\\Fetch");
 	});
 	fetchAction->setToolTip("Fetch data from WARP containers");
+	fetchAction->setProperty("bn.uiTestId", "warpSidebar.fetch");
 
 	auto processIcon = GetColoredIcon(":/icons/images/plus.png", getThemeColor(BlueStandardHighlightColor));
 	auto processAction = headerToolbar->addAction(processIcon, "Process files or views for WARP", [this]() {
@@ -97,6 +104,7 @@ WarpSidebarWidget::WarpSidebarWidget(BinaryViewRef data) : SidebarWidget("WARP")
 		dialog->show();
 	});
 	processAction->setToolTip("Process files or views for WARP");
+	processAction->setProperty("bn.uiTestId", "warpSidebar.process");
 
 	// We want to make it clear that the container actions for fetching and pushing are seperate.
 	headerToolbar->addSeparator();
@@ -107,6 +115,7 @@ WarpSidebarWidget::WarpSidebarWidget(BinaryViewRef data) : SidebarWidget("WARP")
 		handler->executeAction("WARP\\Load File");
 	});
 	loadAction->setToolTip("Load a signature file to match against");
+	loadAction->setProperty("bn.uiTestId", "warpSidebar.loadSignatureFile");
 
 	headerToolbar->addSeparator();
 
@@ -124,10 +133,12 @@ WarpSidebarWidget::WarpSidebarWidget(BinaryViewRef data) : SidebarWidget("WARP")
 		}
 	});
 	m_matcherAction->setToolTip("Run the matcher on all functions");
+	m_matcherAction->setProperty("bn.uiTestId", "warpSidebar.matcher");
 
 	auto refreshIcon = GetColoredIcon(":/icons/images/refresh.png", getThemeColor(BlueStandardHighlightColor));
 	auto refreshAction = headerToolbar->addAction(refreshIcon, "Refresh the view data", [this]() { Update(); });
 	refreshAction->setToolTip("Refresh the sidebar data");
+	refreshAction->setProperty("bn.uiTestId", "warpSidebar.refresh");
 
 	// Push the toolbar to the right using a stretch space.
 	headerLayout->addStretch();
@@ -163,6 +174,8 @@ WarpSidebarWidget::WarpSidebarWidget(BinaryViewRef data) : SidebarWidget("WARP")
 	layout->setSpacing(0);
 
 	auto tabWidget = new QTabWidget(this);
+	tabWidget->setProperty("bn.uiTestId", "warpSidebar.tabs");
+	tabWidget->setAccessibleName("WARP sidebar tabs");
 	tabWidget->addTab(currentFunctionFrame, "Current Function");
 	tabWidget->addTab(matchedFrame, "Matched Functions");
 	tabWidget->addTab(containerFrame, "Containers");
@@ -278,12 +291,17 @@ void RegisterCommands()
 			return;
 
 		auto* dlg = new QDialog(context.widget);
+		dlg->setProperty("bn.uiTestId", "warpFileDialog");
+		dlg->setProperty("bn.uiTestScope", "warpFileDialog");
+		dlg->setAccessibleName("WARP file");
 		dlg->setWindowTitle(QString::fromStdString("WARP File: " + path));
 		dlg->setAttribute(Qt::WA_DeleteOnClose);
 
 		auto* layout = new QVBoxLayout(dlg);
 		layout->setContentsMargins(10, 10, 10, 10);
 		auto* fileWidget = new FileWidget(dlg);
+		fileWidget->setProperty("bn.uiTestId", "warpFileDialog.file");
+		fileWidget->setProperty("bn.uiTestScope", "warpFileDialog.file");
 		fileWidget->setFile(file);
 		layout->addWidget(fileWidget);
 

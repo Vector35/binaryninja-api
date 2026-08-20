@@ -2,17 +2,28 @@
 
 WarpContainerWidget::WarpContainerWidget(Warp::Ref<Warp::Container> container, QWidget* parent) : QWidget(parent)
 {
+	setProperty("bn.uiTestId", "warpContainer");
+	setProperty("bn.uiTestScope", "warpContainer");
+	setAccessibleName("WARP container");
 	m_container = std::move(container);
 	auto* layout = new QVBoxLayout(this);
 	layout->setContentsMargins(0, 0, 0, 0);
 	m_tabs = new QTabWidget(this);
+	m_tabs->setProperty("bn.uiTestId", "warpContainer.tabs");
+	m_tabs->setAccessibleName("WARP container tabs");
 	layout->addWidget(m_tabs);
 
 	// Sources tab
 	m_sourcesPage = new QWidget(this);
+	m_sourcesPage->setProperty("bn.uiTestId", "warpContainer.sources");
+	m_sourcesPage->setProperty("bn.uiTestScope", "warpContainer.sources");
+	m_sourcesPage->setAccessibleName("WARP sources");
 	auto* sourcesLayout = new QVBoxLayout(m_sourcesPage);
 
 	m_sourcesView = new WarpSourcesView(m_sourcesPage);
+	m_sourcesView->setProperty("bn.uiTestId", "warpContainer.sources.table");
+	m_sourcesView->setProperty("bn.uiTestScope", "warpContainer.sources.table");
+	m_sourcesView->setAccessibleName("WARP sources");
 	m_sourcesView->setContainer(m_container);
 
 	sourcesLayout->addWidget(m_sourcesView);
@@ -64,7 +75,11 @@ WarpContainerWidget::WarpContainerWidget(Warp::Ref<Warp::Container> container, Q
 
 WarpContainersPane::WarpContainersPane(QWidget* parent) : QWidget(parent)
 {
+	setProperty("bn.uiTestId", "warpContainersPane");
+	setProperty("bn.uiTestScope", "warpContainersPane");
+	setAccessibleName("WARP containers");
 	auto* splitter = new QSplitter(Qt::Vertical, this);
+	splitter->setProperty("bn.uiTestId", "warpContainersPane.splitter");
 	splitter->setContentsMargins(0, 0, 0, 0);
 	auto* mainLayout = new QVBoxLayout(this);
 	mainLayout->setContentsMargins(0, 0, 0, 0);
@@ -77,6 +92,8 @@ WarpContainersPane::WarpContainersPane(QWidget* parent) : QWidget(parent)
 
 	// List on top
 	m_list = new QListWidget(splitter);
+	m_list->setProperty("bn.uiTestId", "warpContainersPane.containerList");
+	m_list->setAccessibleName("WARP containers");
 	m_list->setSelectionMode(QAbstractItemView::SingleSelection);
 	m_list->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	m_list->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
@@ -92,6 +109,8 @@ WarpContainersPane::WarpContainersPane(QWidget* parent) : QWidget(parent)
 
 	// Container view (tabs) below
 	m_stack = new QStackedWidget(splitter);
+	m_stack->setProperty("bn.uiTestId", "warpContainersPane.containerStack");
+	m_stack->setAccessibleName("Selected WARP container");
 	m_stack->setContentsMargins(0, 0, 0, 0);
 
 	splitter->setStretchFactor(0, 0);  // list: minimal growth

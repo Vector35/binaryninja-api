@@ -311,6 +311,8 @@ void GenericStringsModel::OnDerivedStringRemoved(BinaryNinja::BinaryView* view, 
 
 StringsTreeView::StringsTreeView(StringsWidget* parent, TriageView* view, BinaryViewRef data) : QTreeView(parent)
 {
+	setProperty("bn.uiTestId", "triage.strings.list");
+	setAccessibleName(tr("Strings"));
 	m_data = data;
 	m_parent = parent;
 	m_view = view;

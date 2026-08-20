@@ -21,6 +21,9 @@ static const char* g_byteMapping[] = {" ", "☺", "☻", "♥", "♦", "♣", "�
 
 ByteView::ByteView(QWidget* parent, BinaryViewRef data) : QAbstractScrollArea(parent), m_render(this)
 {
+	setProperty("bn.uiTestId", "view.bytes");
+	setProperty("bn.uiTestScope", "view.bytes");
+	setAccessibleName("Byte Overview");
 	setBinaryDataNavigable(true);
 	setupView(this);
 	m_data = data;

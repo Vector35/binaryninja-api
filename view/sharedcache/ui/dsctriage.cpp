@@ -44,6 +44,9 @@ void DSCTriageViewType::Register()
 
 DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(parent), m_data(std::move(data))
 {
+	setProperty("bn.uiTestId", "view.sharedCacheTriage");
+	setProperty("bn.uiTestScope", "view.sharedCacheTriage");
+	setAccessibleName("Dyld Shared Cache Triage");
 	setBinaryDataNavigable(false);
 	setupView(this);
 
@@ -51,6 +54,8 @@ DSCTriageView::DSCTriageView(QWidget* parent, BinaryViewRef data) : QWidget(pare
 
 	m_triageCollection = new DockableTabCollection(this);
 	m_triageTabs = new SplitTabWidget(m_triageCollection);
+	m_triageTabs->setProperty("bn.uiTestId", "view.sharedCacheTriage.tabs");
+	m_triageTabs->setAccessibleName("Shared cache triage tabs");
 
 	auto triageTabStyle = new GlobalAreaTabStyle();
 	m_triageTabs->setTabStyle(triageTabStyle);
@@ -201,6 +206,8 @@ void DSCTriageView::setImageLoaded(const uint64_t imageHeaderAddr)
 QWidget* DSCTriageView::initImageTable()
 {
 	m_imageTable = new FilterableTableView(this);
+	m_imageTable->setProperty("bn.uiTestId", "sharedCacheTriage.images.table");
+	m_imageTable->setAccessibleName("Shared cache images");
 
 	m_imageModel = new QStandardItemModel(0, 3, m_imageTable);
 	m_imageModel->setHorizontalHeaderLabels({"Address", "Loaded", "Name"});
@@ -213,6 +220,9 @@ QWidget* DSCTriageView::initImageTable()
 	m_imageTable->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(m_imageTable, &QWidget::customContextMenuRequested, [this](const QPoint &pos) {
 		QMenu contextMenu(tr("Load Image Actions"), m_imageTable);
+		contextMenu.setProperty("bn.uiTestId", "sharedCacheTriage.images.contextMenu");
+		contextMenu.setProperty("bn.uiTestScope", "sharedCacheTriage.images.contextMenu");
+		contextMenu.setAccessibleName("Shared cache image actions");
 
 		// Get number of selected images
 		auto selected = m_imageTable->selectionModel()->selectedRows();
@@ -228,8 +238,11 @@ QWidget* DSCTriageView::initImageTable()
 		}
 
 		QAction noSelectionAction("No Images Selected", m_imageTable);
+		noSelectionAction.setProperty("bn.uiTestId", "sharedCacheTriage.images.noSelection");
 		QAction loadImagesAction("", m_imageTable);
+		loadImagesAction.setProperty("bn.uiTestId", "sharedCacheTriage.images.loadSelected");
 		QAction loadImagesWithDepsAction("", m_imageTable);
+		loadImagesWithDepsAction.setProperty("bn.uiTestId", "sharedCacheTriage.images.loadSelectedWithDependencies");
 		if (selectedCount == 0)
 		{
 			noSelectionAction.setEnabled(false);
@@ -258,6 +271,7 @@ QWidget* DSCTriageView::initImageTable()
 	});
 
 	auto loadImageButton = new QPushButton();
+	loadImageButton->setProperty("bn.uiTestId", "sharedCacheTriage.images.loadSelectedButton");
 	connect(loadImageButton, &QPushButton::clicked, [this](bool) {
 		// Collect only visible selected rows
 		QModelIndexList selected;
@@ -278,6 +292,7 @@ QWidget* DSCTriageView::initImageTable()
 	loadImageButton->setText(" Load Selected ");
 
 	auto loadImageWithDepsButton = new QPushButton();
+	loadImageWithDepsButton->setProperty("bn.uiTestId", "sharedCacheTriage.images.loadWithDependenciesButton");
 	connect(loadImageWithDepsButton, &QPushButton::clicked, [this](bool) {
 		// Collect only visible selected rows
 		QModelIndexList selected;
@@ -298,6 +313,7 @@ QWidget* DSCTriageView::initImageTable()
 	loadImageWithDepsButton->setText(" Load with Dependencies ");
 
 	auto refreshDataButton = new QPushButton();
+	refreshDataButton->setProperty("bn.uiTestId", "sharedCacheTriage.images.refreshButton");
 	{
 		// TODO: Might want to introduce a cooldown for this button (if we even keep it)
 		connect(refreshDataButton, &QPushButton::clicked, [this](bool) { RefreshData(); });
@@ -305,6 +321,8 @@ QWidget* DSCTriageView::initImageTable()
 	} // refreshDataButton
 
 	auto loadImageFilterEdit = new FilterEdit(m_imageTable);
+	loadImageFilterEdit->setProperty("bn.uiTestId", "sharedCacheTriage.images.filter");
+	loadImageFilterEdit->setAccessibleName("Filter shared cache images");
 	loadImageFilterEdit->setPlaceholderText("Filter images");
 	connect(loadImageFilterEdit, &FilterEdit::textChanged, [this, loadImageFilterEdit](const QString& filter) {
 		m_imageTable->setFilter(filter.toStdString(), loadImageFilterEdit->getFilterOptions());
@@ -330,6 +348,9 @@ QWidget* DSCTriageView::initImageTable()
 	loadImageLayout->addLayout(loadImageFooterLayout);
 
 	auto loadImageWidget = new QWidget;
+	loadImageWidget->setProperty("bn.uiTestId", "sharedCacheTriage.images");
+	loadImageWidget->setProperty("bn.uiTestScope", "sharedCacheTriage.images");
+	loadImageWidget->setAccessibleName("Shared cache images");
 	loadImageWidget->setLayout(loadImageLayout);
 
 	m_imageTable->setModel(m_imageModel);
@@ -358,7 +379,16 @@ QWidget* DSCTriageView::initImageTable()
 void DSCTriageView::initSymbolTable()
 {
 	m_symbolTable = new SymbolTableView(this);
+	m_symbolTable->setProperty("bn.uiTestId", "sharedCacheTriage.symbols.table");
+	m_symbolTable->setProperty("bn.uiTestScope", "sharedCacheTriage.symbols.table");
+	m_symbolTable->setAccessibleName("Shared cache symbols");
 	m_symbolsPanel = new TriageTablePanel(this, m_symbolTable, "Filter symbols", "symbols");
+	m_symbolsPanel->setProperty("bn.uiTestId", "sharedCacheTriage.symbols");
+	m_symbolsPanel->setProperty("bn.uiTestScope", "sharedCacheTriage.symbols");
+	m_symbolsPanel->setAccessibleName("Shared cache symbols");
+	m_symbolsPanel->filterEdit()->setProperty("bn.uiTestId", "sharedCacheTriage.symbols.filter");
+	m_symbolsPanel->filterEdit()->setAccessibleName("Filter shared cache symbols");
+	m_symbolsPanel->statusLabel()->setProperty("bn.uiTestId", "sharedCacheTriage.symbols.status");
 	m_symbolsPanel->setLoader([this] { return startSymbolLoad(); });
 	m_symbolsPanel->setClearHandler([this] {
 		// Discard an in-flight symbol fetch rather than letting its results repopulate the
@@ -370,10 +400,12 @@ void DSCTriageView::initSymbolTable()
 		}
 	});
 
-	m_symbolsPanel->addFilterToggle(":/icons/images/folder.png", "Match Image Names",
+	auto matchImageNames = m_symbolsPanel->addFilterToggle(":/icons/images/folder.png", "Match Image Names",
 		[this](bool checked) { m_symbolTable->symbolsModel()->setMatchImageNames(checked); });
+	matchImageNames->setProperty("bn.uiTestId", "sharedCacheTriage.symbols.matchImageNames");
 
 	auto loadSymbolImageButton = m_symbolsPanel->addSelectionButton("Load Image");
+	loadSymbolImageButton->setProperty("bn.uiTestId", "sharedCacheTriage.symbols.loadImage");
 	connect(loadSymbolImageButton, &QPushButton::clicked, [this](bool) {
 		auto selected = m_symbolTable->selectionModel()->selectedRows();
 		std::vector<uint64_t> addresses;
@@ -442,9 +474,14 @@ bool DSCTriageView::startSymbolLoad()
 void DSCTriageView::promptToLoadImage(const std::string& imageName, uint64_t address, uint64_t navigateTo)
 {
 	auto dialog = new QMessageBox(this);
+	dialog->setProperty("bn.uiTestId", "sharedCacheTriage.loadImageDialog");
+	dialog->setProperty("bn.uiTestScope", "sharedCacheTriage.loadImageDialog");
+	dialog->setAccessibleName("Load shared cache image");
 	dialog->setText("Load " + QString::fromStdString(imageName) + "?");
 	auto loadButton = dialog->addButton("Load Image", QMessageBox::AcceptRole);
-	dialog->addButton(QMessageBox::Cancel);
+	loadButton->setProperty("bn.uiTestId", "sharedCacheTriage.loadImageDialog.load");
+	auto cancelButton = dialog->addButton(QMessageBox::Cancel);
+	cancelButton->setProperty("bn.uiTestId", "sharedCacheTriage.loadImageDialog.cancel");
 	dialog->setDefaultButton(loadButton);
 
 	connect(dialog, &QMessageBox::buttonClicked, this, [=, this](QAbstractButton* button)
@@ -460,7 +497,16 @@ void DSCTriageView::promptToLoadImage(const std::string& imageName, uint64_t add
 void DSCTriageView::initStringsTab()
 {
 	m_stringsTable = new StringsTableView(this);
+	m_stringsTable->setProperty("bn.uiTestId", "sharedCacheTriage.strings.table");
+	m_stringsTable->setProperty("bn.uiTestScope", "sharedCacheTriage.strings.table");
+	m_stringsTable->setAccessibleName("Shared cache strings");
 	m_stringsPanel = new TriageTablePanel(this, m_stringsTable, "Filter strings", "strings");
+	m_stringsPanel->setProperty("bn.uiTestId", "sharedCacheTriage.strings");
+	m_stringsPanel->setProperty("bn.uiTestScope", "sharedCacheTriage.strings");
+	m_stringsPanel->setAccessibleName("Shared cache strings");
+	m_stringsPanel->filterEdit()->setProperty("bn.uiTestId", "sharedCacheTriage.strings.filter");
+	m_stringsPanel->filterEdit()->setAccessibleName("Filter shared cache strings");
+	m_stringsPanel->statusLabel()->setProperty("bn.uiTestId", "sharedCacheTriage.strings.status");
 	m_stringsPanel->setLoader([this] { return startStringScan(); });
 	m_stringsPanel->setClearHandler([this] {
 		m_stringsPollTimer->stop();
@@ -471,14 +517,17 @@ void DSCTriageView::initStringsTab()
 	m_stringsPanel->setBaselineCount(
 		[this] { return m_stringsTable->stringsModel()->baselineStringCount(); });
 
-	m_stringsPanel->addFilterToggle(":/icons/images/folder.png", "Match Image Names",
+	auto matchImageNames = m_stringsPanel->addFilterToggle(":/icons/images/folder.png", "Match Image Names",
 		[this](bool checked) { m_stringsTable->stringsModel()->setMatchImageNames(checked); });
+	matchImageNames->setProperty("bn.uiTestId", "sharedCacheTriage.strings.matchImageNames");
 	// Strings in regions that belong to no image (dyld data and other non-image regions) are
 	// rarely of interest, so they are hidden unless this is toggled on.
-	m_stringsPanel->addFilterToggle(":/icons/images/stack.png", "Show Non-Image Strings",
+	auto showNonImageStrings = m_stringsPanel->addFilterToggle(":/icons/images/stack.png", "Show Non-Image Strings",
 		[this](bool checked) { m_stringsTable->stringsModel()->setShowNonImageStrings(checked); });
+	showNonImageStrings->setProperty("bn.uiTestId", "sharedCacheTriage.strings.showNonImageStrings");
 
 	auto loadStringImageButton = m_stringsPanel->addSelectionButton("Load Image");
+	loadStringImageButton->setProperty("bn.uiTestId", "sharedCacheTriage.strings.loadImage");
 	connect(loadStringImageButton, &QPushButton::clicked, [this](bool) {
 		auto selected = m_stringsTable->selectionModel()->selectedRows();
 		std::vector<uint64_t> imageAddresses;
@@ -657,12 +706,17 @@ void DSCTriageView::navigateToAddress(uint64_t address)
 void DSCTriageView::initCacheInfoTables()
 {
 	auto cacheInfoWidget = new QWidget;
+	cacheInfoWidget->setProperty("bn.uiTestId", "sharedCacheTriage.cacheInfo");
+	cacheInfoWidget->setProperty("bn.uiTestScope", "sharedCacheTriage.cacheInfo");
+	cacheInfoWidget->setAccessibleName("Shared cache mappings and regions");
 
 	auto cacheInfoLayout = new QVBoxLayout(cacheInfoWidget);
 
 	auto cacheInfoSubwidget = new QWidget;
 
 	m_mappingTable = new FilterableTableView(cacheInfoSubwidget);
+	m_mappingTable->setProperty("bn.uiTestId", "sharedCacheTriage.cacheInfo.mappingsTable");
+	m_mappingTable->setAccessibleName("Shared cache mappings");
 	m_mappingModel = new QStandardItemModel(0, 5, m_mappingTable);
 	m_mappingModel->setHorizontalHeaderLabels({"Address", "Size", "File Address", "File Name", "File Path"});
 
@@ -689,6 +743,8 @@ void DSCTriageView::initCacheInfoTables()
 	m_mappingTable->verticalHeader()->setVisible(false);
 
 	m_regionTable = new FilterableTableView(cacheInfoSubwidget);
+	m_regionTable->setProperty("bn.uiTestId", "sharedCacheTriage.cacheInfo.regionsTable");
+	m_regionTable->setAccessibleName("Shared cache regions");
 	m_regionModel = new QStandardItemModel(0, 4, m_regionTable);
 	m_regionModel->setHorizontalHeaderLabels({"Address", "Size", "Type", "Name"});
 
@@ -714,6 +770,8 @@ void DSCTriageView::initCacheInfoTables()
 
 	auto mappingLabel = new QLabel("Mappings");
 	auto mappingFilterEdit = new FilterEdit(m_mappingTable);
+	mappingFilterEdit->setProperty("bn.uiTestId", "sharedCacheTriage.cacheInfo.mappingsFilter");
+	mappingFilterEdit->setAccessibleName("Filter shared cache mappings");
 	mappingFilterEdit->setPlaceholderText("Filter mappings");
 	connect(mappingFilterEdit, &FilterEdit::textChanged, [this, mappingFilterEdit](const QString& filter) {
 		m_mappingTable->setFilter(filter.toStdString(), mappingFilterEdit->getFilterOptions());
@@ -730,6 +788,8 @@ void DSCTriageView::initCacheInfoTables()
 
 	auto regionLabel = new QLabel("Regions");
 	auto regionFilterEdit = new FilterEdit(m_regionTable);
+	regionFilterEdit->setProperty("bn.uiTestId", "sharedCacheTriage.cacheInfo.regionsFilter");
+	regionFilterEdit->setAccessibleName("Filter shared cache regions");
 	regionFilterEdit->setPlaceholderText("Filter regions");
 	connect(regionFilterEdit, &FilterEdit::textChanged, [this, regionFilterEdit](const QString& filter) {
 		m_regionTable->setFilter(filter.toStdString(), regionFilterEdit->getFilterOptions());

@@ -12,6 +12,9 @@
 
 WarpCurrentFunctionWidget::WarpCurrentFunctionWidget(QWidget* parent) : QWidget(parent)
 {
+	setProperty("bn.uiTestId", "warpCurrentFunction");
+	setProperty("bn.uiTestScope", "warpCurrentFunction");
+	setAccessibleName("WARP matches for current function");
 	// We must explicitly support no current function.
 	m_current = nullptr;
 
@@ -28,6 +31,7 @@ WarpCurrentFunctionWidget::WarpCurrentFunctionWidget(QWidget* parent) : QWidget(
 
 	// TODO: Split horizontally if the widget is displayed in a sidebar that is vertically challenged.
 	m_splitter = new QSplitter(Qt::Vertical);
+	m_splitter->setProperty("bn.uiTestId", "warpCurrentFunction.splitter");
 	m_splitter->setContentsMargins(0, 0, 0, 0);
 
 	// Wrap the table and the spinner so that we can overlay the spinner on the table.
@@ -37,10 +41,15 @@ WarpCurrentFunctionWidget::WarpCurrentFunctionWidget(QWidget* parent) : QWidget(
 
 	// Add a widget to display the matches.
 	m_tableWidget = new WarpFunctionTableWidget(tableWrapper);
+	m_tableWidget->setProperty("bn.uiTestId", "warpCurrentFunction.matches");
+	m_tableWidget->setProperty("bn.uiTestScope", "warpCurrentFunction.matches");
+	m_tableWidget->setAccessibleName("WARP matches for current function");
 	m_tableWidget->setContentsMargins(0, 0, 0, 0);
 
 	// Spinner for when we are fetching functions over the network.
 	m_spinner = new QProgressBar(tableWrapper);
+	m_spinner->setProperty("bn.uiTestId", "warpCurrentFunction.fetchProgress");
+	m_spinner->setAccessibleName("Fetching WARP functions");
 	m_spinner->setRange(0, 0);
 	m_spinner->setTextVisible(false);
 	m_spinner->setFixedHeight(6);
@@ -54,6 +63,9 @@ WarpCurrentFunctionWidget::WarpCurrentFunctionWidget(QWidget* parent) : QWidget(
 
 	// Add a widget to display the info about the selected function match.
 	m_infoWidget = new WarpFunctionInfoWidget(this);
+	m_infoWidget->setProperty("bn.uiTestId", "warpCurrentFunction.functionInfo");
+	m_infoWidget->setProperty("bn.uiTestScope", "warpCurrentFunction.functionInfo");
+	m_infoWidget->setAccessibleName("Selected WARP function information");
 	m_infoWidget->setContentsMargins(0, 0, 0, 0);
 	m_splitter->addWidget(m_infoWidget);
 

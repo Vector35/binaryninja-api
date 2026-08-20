@@ -189,6 +189,9 @@ void SymbolTableModel::setFilter(const std::string& text, FilterOptions options)
 
 SymbolTableView::SymbolTableView(QWidget* parent)
 	: QTableView(parent), m_model(new SymbolTableModel(this)) {
+	setProperty("bn.uiTestId", "kernelCacheSymbolTable");
+	setProperty("bn.uiTestScope", "kernelCacheSymbolTable");
+	setAccessibleName("Kernel cache symbols");
 
 	// Set up the filter model
 	setModel(m_model);

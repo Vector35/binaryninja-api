@@ -253,6 +253,8 @@ void ResourcesModel::setFilter(const std::string& filterText, FilterOptions opti
 
 ResourcesTreeView::ResourcesTreeView(ResourcesWidget* parent, TriageView* view, BinaryViewRef data) : QTreeView(parent)
 {
+	setProperty("bn.uiTestId", "triage.resources");
+	setAccessibleName("Executable resources");
 	setFont(getMonospaceFont(this));
 
 	m_data = data;
@@ -281,10 +283,16 @@ ResourcesTreeView::ResourcesTreeView(ResourcesWidget* parent, TriageView* view, 
 		if (!entry)
 			return;
 		QMenu menu(this);
-		menu.addAction("Save Resource to File...", this, &ResourcesTreeView::saveSelectedResource);
-		menu.addAction("Save All Resources to Folder...", this, &ResourcesTreeView::saveAllResources);
+		menu.setProperty("bn.uiTestId", "triage.resources.menu");
+		menu.setProperty("bn.uiTestScope", "triage.resources.menu");
+		menu.setAccessibleName("Resource actions");
+		auto* saveResource = menu.addAction("Save Resource to File...", this, &ResourcesTreeView::saveSelectedResource);
+		auto* saveAllResources = menu.addAction("Save All Resources to Folder...", this, &ResourcesTreeView::saveAllResources);
+		saveResource->setProperty("bn.uiTestId", "triage.resources.save");
+		saveAllResources->setProperty("bn.uiTestId", "triage.resources.saveAll");
 		menu.addSeparator();
-		menu.addAction("Copy", this, &ResourcesTreeView::copySelection);
+		auto* copy = menu.addAction("Copy", this, &ResourcesTreeView::copySelection);
+		copy->setProperty("bn.uiTestId", "triage.resources.copy");
 		menu.exec(viewport()->mapToGlobal(pos));
 	});
 

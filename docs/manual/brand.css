@@ -6,7 +6,7 @@
  *   - Sphinx Python API   -> docs/reference/python/source/conf.py copies it into _static/css/
  *                            (gitignored) and registers it before other.css
  *   - Doxygen C++ API     -> Doxyfile HTML_EXTRA_STYLESHEET references
- *                            ../../docs/brand.css
+ *                            ../../docs/manual/brand.css
  *   - rustdoc Rust API    -> scripts/build-rust-docs.sh appends it through
  *                            rustdoc's --extend-css option
  */

@@ -4,4 +4,4 @@ Provides integration with [WARP](https://github.com/Vector35/warp), more specifi
 
 ## Documentation
 
-Documentation is available in the [User Guide](../../docs/guide/warp.md).
+Documentation is available in the [User Guide](../../docs/manual/guide/warp.md).

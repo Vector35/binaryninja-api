@@ -1,6 +1,6 @@
 # Makefile for C++ documentation
 
-PYTHON ?= poetry run python
+PYTHON ?= uv run python
 
 .PHONY: help
 help:

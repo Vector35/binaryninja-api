@@ -81,7 +81,7 @@ The wizard has three steps:
 
 Selecting the **Ghidra-Like** or **IDA-Like** preset replaces your keybindings and updates a handful of UI settings to match that tool. Selecting **Binary Ninja Defaults** resets those same keybindings and settings back to the Binary Ninja defaults if you have existing settings which makes it a convenient way to undo a previously-applied preset.
 
-The exact keybindings and settings each preset applies are defined by the configuration files in [`docs/files`](https://github.com/Vector35/binaryninja-api/tree/dev/docs/files) in the API repository. If you think a preset could be improved, we welcome suggestions — please open a pull request against those files.
+The exact keybindings and settings each preset applies are defined by the configuration files in [`docs/manual/files`](https://github.com/Vector35/binaryninja-api/tree/dev/docs/manual/files) in the API repository. If you think a preset could be improved, we welcome suggestions — please open a pull request against those files.
 
 If applying your selection would change any of your own settings or keybindings, the wizard backs them up first — `settings.json` and `keybindings.json` are copied to numbered backups (for example `settings.json.1` and `keybindings.json.1`) in your [user folder](#user-folder) — and a warning describes what will be backed up. To restore a backup later, simply rename it back into place.
 

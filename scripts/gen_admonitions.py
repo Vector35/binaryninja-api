@@ -11,7 +11,7 @@ import urllib.parse
 HERE = pathlib.Path(__file__).resolve().parent
 API = HERE.parent
 ICON_DIR = HERE / "support-icons"
-BRAND_CSS = API / "docs" / "brand.css"
+BRAND_CSS = API / "docs" / "manual" / "brand.css"
 
 BEGIN = "/* BEGIN GENERATED (scripts/gen_admonitions.py) — do not hand-edit */"
 END = "/* END GENERATED (scripts/gen_admonitions.py) */"
@@ -300,8 +300,8 @@ for family, values in FAMILIES.items():
         )
 
 OUTPUTS = {
-    API / "docs" / "brand.css": brand_block,
-    API / "docs" / "docs.css": "\n\n".join(zensical_parts),
+    API / "docs" / "manual" / "brand.css": brand_block,
+    API / "docs" / "manual" / "docs.css": "\n\n".join(zensical_parts),
     API / "docs" / "reference" / "python" / "source" / "_static" / "css" / "other.css": "\n\n".join(sphinx_parts),
     API / "docs" / "reference" / "cpp" / "binaryninja-docs.css": "\n\n".join(doxygen_parts),
     API / "rust" / "rustdoc-brand.css": "\n\n".join(rust_parts),

@@ -55,7 +55,7 @@ echo "Cleaning target/doc directory..."
 rm -rf target/doc
 
 CUSTOM_CSS="$BACKUP_DIR/binaryninja-rustdoc.css"
-cp docs/brand.css "$CUSTOM_CSS"
+cp docs/manual/brand.css "$CUSTOM_CSS"
 printf '\n' >> "$CUSTOM_CSS"
 cat rust/rustdoc-brand.css >> "$CUSTOM_CSS"
 
@@ -64,18 +64,18 @@ RUSTDOCFLAGS="${RUSTDOCFLAGS:+$RUSTDOCFLAGS }--extend-css $CUSTOM_CSS" cargo doc
 
 echo "Copying brand assets..."
 mkdir -p target/doc/brand
-cp docs/brand.css target/doc/brand/
-cp docs/fonts/OpenSans-Regular.ttf target/doc/brand/
-cp docs/fonts/OpenSans-Italic.ttf target/doc/brand/
-cp docs/fonts/OpenSans-Bold.ttf target/doc/brand/
-cp docs/fonts/OpenSans-BoldItalic.ttf target/doc/brand/
-cp docs/fonts/roboto-mono-v22-latin-regular.woff2 target/doc/brand/
-cp docs/fonts/roboto-mono-v22-latin-italic.woff2 target/doc/brand/
-cp docs/fonts/roboto-mono-v22-latin-700.woff2 target/doc/brand/
-cp docs/fonts/roboto-mono-v22-latin-700italic.woff2 target/doc/brand/
-cp docs/img/favicon.ico docs/img/favicon-32x32.png target/doc/brand/
-cp docs/img/logo-vertical-light.svg docs/img/logo-vertical-dark.svg target/doc/brand/
-cp docs/img/wordmark-white.svg target/doc/brand/
+cp docs/manual/brand.css target/doc/brand/
+cp docs/manual/fonts/OpenSans-Regular.ttf target/doc/brand/
+cp docs/manual/fonts/OpenSans-Italic.ttf target/doc/brand/
+cp docs/manual/fonts/OpenSans-Bold.ttf target/doc/brand/
+cp docs/manual/fonts/OpenSans-BoldItalic.ttf target/doc/brand/
+cp docs/manual/fonts/roboto-mono-v22-latin-regular.woff2 target/doc/brand/
+cp docs/manual/fonts/roboto-mono-v22-latin-italic.woff2 target/doc/brand/
+cp docs/manual/fonts/roboto-mono-v22-latin-700.woff2 target/doc/brand/
+cp docs/manual/fonts/roboto-mono-v22-latin-700italic.woff2 target/doc/brand/
+cp docs/manual/img/favicon.ico docs/manual/img/favicon-32x32.png target/doc/brand/
+cp docs/manual/img/logo-vertical-light.svg docs/manual/img/logo-vertical-dark.svg target/doc/brand/
+cp docs/manual/img/wordmark-white.svg target/doc/brand/
 
 echo "Creating redirect index.html..."
 cat > target/doc/index.html <<'EOF'

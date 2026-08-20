@@ -37,7 +37,7 @@ stats = '''
 
 '''
 
-api_root = next(parent for parent in Path(__file__).resolve().parents if (parent / "pyproject.toml").exists())
+api_root = next(parent for parent in Path(__file__).resolve().parents if (parent / "binaryninjacore.h").is_file())
 checkout_root = api_root.parent
 
 if platform.system() == "Darwin":
@@ -222,7 +222,7 @@ def setup(app):
 	app.connect('autodoc-process-docstring', strip_dataclass_signature_docstring)
 
 	# Copy canonical brand assets into Sphinx's static tree.
-	shutil.copyfile(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'brand.css'),
+	shutil.copyfile(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'manual', 'brand.css'),
 	                os.path.join(os.path.dirname(__file__), '_static', 'css', 'brand.css'))
 	os.makedirs(os.path.join(os.path.dirname(__file__), '_static', 'fonts'), exist_ok=True)
 	for font in (

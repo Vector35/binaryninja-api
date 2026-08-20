@@ -8,6 +8,8 @@ repo_url = "https://binary.ninja/"
 repo_name = "binary.ninja"
 dev_addr = "0.0.0.0:8000"
 use_directory_urls = false
+docs_dir = "manual"
+site_dir = "site"
 extra_css = ["brand.css", "docs.css", "highlight-theme.css", "juxtapose.min.css"]
 extra_javascript = ["juxtapose.min.js", "tabsync.js"]
 
@@ -117,7 +119,7 @@ nav = [
 ]
 
 [project.theme]
-custom_dir = "docs/overrides"
+custom_dir = "manual/overrides"
 favicon = "img/favicon.ico"
 logo = "img/wordmark-two-color.svg"
 font = false

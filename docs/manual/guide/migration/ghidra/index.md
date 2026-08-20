@@ -58,8 +58,8 @@ These settings can be changed at any time through Binary Ninja's settings menu (
 
 The Ghidra preset keybindings and settings are stored in JSON configuration files that are easy to review and contribute to:
 
-- **Keybindings**: [`api/docs/files/ghidra-keybindings.json`](https://github.com/Vector35/binaryninja-api/blob/dev/docs/files/ghidra-keybindings.json)
-- **Settings**: [`api/docs/files/ghidra-settings.json`](https://github.com/Vector35/binaryninja-api/blob/dev/docs/files/ghidra-settings.json)
+- **Keybindings**: [`api/docs/manual/files/ghidra-keybindings.json`](https://github.com/Vector35/binaryninja-api/blob/dev/docs/manual/files/ghidra-keybindings.json)
+- **Settings**: [`api/docs/manual/files/ghidra-settings.json`](https://github.com/Vector35/binaryninja-api/blob/dev/docs/manual/files/ghidra-settings.json)
 
 If you notice a missing keybinding or a setting that would make the Ghidra experience more familiar, we welcome contributions via pull requests to the [binaryninja-api](https://github.com/Vector35/binaryninja-api) repository.
 

@@ -1,0 +1,17 @@
+[project]
+name = "binaryninja-api-docs"
+version = "0.1.0"
+description = "Documentation build environment for the Binary Ninja API"
+authors = [{ name = "Vector 35", email = "dev@vector35.com" }]
+requires-python = ">=3.10,<4"
+dependencies = [
+	"breathe>=4.35,<5",
+	"doc2dash>=3.1,<4",
+	"sphinx>=7.2.6,<8",
+	"sphinxcontrib-jquery>=4.1,<5",
+	"zensical>=0.0.50,<0.0.51",
+]
+
+# Keep this documentation environment independent from enclosing Python projects.
+[tool.uv.workspace]
+members = []

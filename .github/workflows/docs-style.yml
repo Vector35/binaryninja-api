@@ -4,20 +4,20 @@ on:
   push:
     paths:
       - ".github/workflows/docs-style.yml"
-      - "docs/brand.css"
-      - "docs/docs.css"
-      - "api-docs/cppdocs/binaryninja-docs.css"
-      - "api-docs/source/_static/css/other.css"
+      - "docs/manual/brand.css"
+      - "docs/manual/docs.css"
+      - "docs/reference/cpp/binaryninja-docs.css"
+      - "docs/reference/python/source/_static/css/other.css"
       - "rust/rustdoc-brand.css"
       - "scripts/gen_admonitions.py"
       - "scripts/support-icons/**"
   pull_request:
     paths:
       - ".github/workflows/docs-style.yml"
-      - "docs/brand.css"
-      - "docs/docs.css"
-      - "api-docs/cppdocs/binaryninja-docs.css"
-      - "api-docs/source/_static/css/other.css"
+      - "docs/manual/brand.css"
+      - "docs/manual/docs.css"
+      - "docs/reference/cpp/binaryninja-docs.css"
+      - "docs/reference/python/source/_static/css/other.css"
       - "rust/rustdoc-brand.css"
       - "scripts/gen_admonitions.py"
       - "scripts/support-icons/**"

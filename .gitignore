@@ -50,6 +50,7 @@ suite/unit.py
 
 # Docs
 site/*
+docs/site/*
 docs/reference/python/build
 docs/reference/python/source/binaryninja.*
 docs/reference/python/source/python.rst
@@ -83,7 +84,7 @@ suite/binaryninja/
 build
 generator
 types/
-!/docs/guide/types/
+!/docs/manual/guide/types/
 
 # Rust
 rust/**/*.swp
@@ -97,8 +98,8 @@ rust/examples/dwarf/*/target/
 !/rust/src/types
 
 # Debugger docs
-docs/img/debugger
-docs/guide/debugger
+docs/manual/img/debugger
+docs/manual/guide/debugger
 
 # AI
 .claude

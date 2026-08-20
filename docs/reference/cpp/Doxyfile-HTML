@@ -1188,7 +1188,7 @@ HTML_STYLESHEET        = binaryninja-docs.css
 # list). For an example see the documentation.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_EXTRA_STYLESHEET  = ../../brand.css
+HTML_EXTRA_STYLESHEET  = ../../manual/brand.css
 
 # The HTML_EXTRA_FILES tag can be used to specify one or more extra images or
 # other source files which should be copied to the HTML output directory. Note
@@ -1199,14 +1199,14 @@ HTML_EXTRA_STYLESHEET  = ../../brand.css
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
 HTML_EXTRA_FILES       = binaryninja-darkmode.js \
-                         ../../fonts/OpenSans-Regular.ttf \
-                         ../../fonts/OpenSans-Italic.ttf \
-                         ../../fonts/OpenSans-Bold.ttf \
-                         ../../fonts/OpenSans-BoldItalic.ttf \
-                         ../../fonts/roboto-mono-v22-latin-regular.woff2 \
-                         ../../fonts/roboto-mono-v22-latin-italic.woff2 \
-                         ../../fonts/roboto-mono-v22-latin-700.woff2 \
-                         ../../fonts/roboto-mono-v22-latin-700italic.woff2
+                         ../../manual/fonts/OpenSans-Regular.ttf \
+                         ../../manual/fonts/OpenSans-Italic.ttf \
+                         ../../manual/fonts/OpenSans-Bold.ttf \
+                         ../../manual/fonts/OpenSans-BoldItalic.ttf \
+                         ../../manual/fonts/roboto-mono-v22-latin-regular.woff2 \
+                         ../../manual/fonts/roboto-mono-v22-latin-italic.woff2 \
+                         ../../manual/fonts/roboto-mono-v22-latin-700.woff2 \
+                         ../../manual/fonts/roboto-mono-v22-latin-700italic.woff2
 
 # The HTML_COLORSTYLE_HUE tag controls the color of the HTML output. Doxygen
 # will adjust the colors in the style sheet and background images according to

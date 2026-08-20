@@ -1,4 +1,4 @@
-POETRY ?= poetry
+PYTHON ?= python
 
 .PHONY: help all manual reference python-reference cpp-reference clean
 
@@ -14,17 +14,17 @@ help:
 all: manual reference
 
 manual:
-	cd .. && $(POETRY) run python scripts/zensical_build.py
+	$(PYTHON) ../scripts/zensical_build.py
 
 reference: python-reference cpp-reference
 
 python-reference:
-	cd .. && $(POETRY) run $(MAKE) -C docs/reference/python html
+	$(MAKE) -C reference/python html
 
 cpp-reference:
-	cd .. && $(POETRY) run $(MAKE) -C docs/reference/cpp html PYTHON=python
+	$(MAKE) -C reference/cpp html PYTHON=$(PYTHON)
 
 clean:
-	cd .. && $(POETRY) run python scripts/zensical_build.py -c
+	$(PYTHON) ../scripts/zensical_build.py -c
 	$(MAKE) -C reference/python clean
 	$(MAKE) -C reference/cpp clean

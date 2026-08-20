@@ -1,5 +1,5 @@
 @echo off
-set PYTHON=poetry run python
+set PYTHON=uv run python
 
 if "%1" == "help" (
     echo Please use `make <target>` where <target> is one of
@@ -28,4 +28,3 @@ if "%1" == "docset" (
 
 echo Unknown target: %1
 exit /b 1
-

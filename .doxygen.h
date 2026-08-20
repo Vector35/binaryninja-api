@@ -4,7 +4,7 @@
 	This file includes group and page definitions for Doxygen.
 
 	See https://api.binary.ninja/cpp/ & https://dev-api.binary.ninja/cpp/ for built docs,
-		or see binaryninja-api/api-docs/cppdocs/README.md for information on building them yourself.
+		or see binaryninja-api/docs/reference/cpp/README.md for information on building them yourself.
 
 */
 

@@ -57,6 +57,13 @@ target_link_libraries(${PROJECT_NAME}
         bindiff_shared
 )
 
+if (WIN32 AND NOT DEMO)
+    # Abseil's symbolizer imports dbghelp.dll. A static import maps System32's copy at plugin init,
+    # which then wins name-based resolution and breaks the debugger's WinDbg dbgeng.
+    target_link_libraries(${PROJECT_NAME} PRIVATE delayimp.lib)  # Helper for /DELAYLOAD
+    target_link_options(${PROJECT_NAME} PRIVATE /DELAYLOAD:dbghelp.dll)
+endif ()
+
 if (APPLE)
     target_link_options(${PROJECT_NAME} PRIVATE
             "LINKER:-exported_symbol,_CorePluginABIVersion"

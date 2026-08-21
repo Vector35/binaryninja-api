@@ -50,13 +50,26 @@ struct BaseAddressDetectionQtResults
 class BaseAddressDetectionThread : public QThread
 {
 	Q_OBJECT
+	struct Inputs
+	{
+		QString Architecture;
+		QString Analysis;
+		QString Strlen;
+		QString Alignment;
+		QString LowerBoundary;
+		QString UpperBoundary;
+		QString POI;
+		QString MaxPointersPerCluster;
+		BNBaseAddressDetectionAnalysisMode AnalysisMode = SamplingBaseAddressDetection;
+	};
+
 	BinaryNinja::Ref<BinaryNinja::BinaryView> m_view;
 	BinaryNinja::BaseAddressDetection* m_baseDetection = nullptr;
-	BaseAddressDetectionQtInputs* m_inputs {};
+	Inputs m_inputs;
 	void run() override;
 
 public:
-	BaseAddressDetectionThread(BaseAddressDetectionQtInputs* widgetInputs,
+	BaseAddressDetectionThread(const BaseAddressDetectionQtInputs* widgetInputs,
 		BinaryNinja::Ref<BinaryNinja::BinaryView> bv);
 	~BaseAddressDetectionThread();
 	void Abort() { m_baseDetection->Abort(); }

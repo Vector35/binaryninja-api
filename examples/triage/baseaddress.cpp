@@ -40,11 +40,22 @@ string BaseAddressDetectionConfidenceToString(BNBaseAddressDetectionConfidence l
 }
 
 
-BaseAddressDetectionThread::BaseAddressDetectionThread(BaseAddressDetectionQtInputs* widgetInputs,
+BaseAddressDetectionThread::BaseAddressDetectionThread(const BaseAddressDetectionQtInputs* widgetInputs,
 	BinaryNinja::Ref<BinaryNinja::BinaryView> bv)
 {
-	m_inputs = widgetInputs;
 	m_view = bv;
+	// The UI can be closed as soon as Abort is requested. Snapshot every input while
+	// constructing the worker so run() never dereferences widgets from its thread or
+	// after their owning Triage view has been destroyed.
+	m_inputs.Architecture = widgetInputs->ArchitectureBox->currentText();
+	m_inputs.Analysis = widgetInputs->AnalysisBox->currentText();
+	m_inputs.Strlen = widgetInputs->StrlenLineEdit->text();
+	m_inputs.Alignment = widgetInputs->AlignmentLineEdit->text();
+	m_inputs.LowerBoundary = widgetInputs->LowerBoundary->text();
+	m_inputs.UpperBoundary = widgetInputs->UpperBoundary->text();
+	m_inputs.POI = widgetInputs->POIBox->currentText();
+	m_inputs.MaxPointersPerCluster = widgetInputs->MaxPointersPerCluster->text();
+	m_inputs.AnalysisMode = SelectedBaseAddressDetectionAnalysisMode(widgetInputs);
 	m_baseDetection = new BinaryNinja::BaseAddressDetection(m_view);
 }
 
@@ -63,7 +74,7 @@ void BaseAddressDetectionThread::run()
 	string errorStr;
 
 	if (!BinaryNinja::BinaryView::ParseExpression(
-		m_view, m_inputs->StrlenLineEdit->text().toStdString(), value, 0, errorStr))
+		m_view, m_inputs.Strlen.toStdString(), value, 0, errorStr))
 	{
 		results.Status = "Invalid minimum string length (" + errorStr + ")";
 		emit ResultReady(results);
@@ -73,7 +84,7 @@ void BaseAddressDetectionThread::run()
 
 	uint64_t upperBoundary;
 	if (!BinaryNinja::BinaryView::ParseExpression(
-		m_view, m_inputs->UpperBoundary->text().toStdString(), upperBoundary, 0, errorStr))
+		m_view, m_inputs.UpperBoundary.toStdString(), upperBoundary, 0, errorStr))
 	{
 		results.Status = "Invalid upper boundary address (" + errorStr + ")";
 		emit ResultReady(results);
@@ -82,7 +93,7 @@ void BaseAddressDetectionThread::run()
 
 	uint64_t lowerBoundary;
 	if (!BinaryNinja::BinaryView::ParseExpression(
-		m_view, m_inputs->LowerBoundary->text().toStdString(), lowerBoundary, 0, errorStr))
+		m_view, m_inputs.LowerBoundary.toStdString(), lowerBoundary, 0, errorStr))
 	{
 		results.Status = "Invalid lower boundary address (" + errorStr + ")";
 		emit ResultReady(results);
@@ -97,7 +108,7 @@ void BaseAddressDetectionThread::run()
 	}
 
 	if (!BinaryNinja::BinaryView::ParseExpression(
-		m_view, m_inputs->AlignmentLineEdit->text().toStdString(), value, 0, errorStr))
+		m_view, m_inputs.Alignment.toStdString(), value, 0, errorStr))
 	{
 		results.Status = "Invalid alignment value (" + errorStr + ")";
 		emit ResultReady(results);
@@ -111,13 +122,13 @@ void BaseAddressDetectionThread::run()
 		return;
 	}
 
-	auto analysisMode = SelectedBaseAddressDetectionAnalysisMode(m_inputs);
+	auto analysisMode = m_inputs.AnalysisMode;
 	bool detectionCompleted = false;
 	if (analysisMode == SamplingBaseAddressDetection)
 	{
 		results.AnalysisMode = SamplingBaseAddressDetection;
 		BinaryNinja::BaseAddressDetectionSamplingSettings settings;
-		settings.Architecture = m_inputs->ArchitectureBox->currentText().toStdString();
+		settings.Architecture = m_inputs.Architecture.toStdString();
 		settings.MinStrlen = minStrlen;
 		settings.LowerBoundary = lowerBoundary;
 		settings.UpperBoundary = upperBoundary;
@@ -128,7 +139,7 @@ void BaseAddressDetectionThread::run()
 	{
 		results.AnalysisMode = InstructionAnalysisBaseAddressDetection;
 		if (!BinaryNinja::BinaryView::ParseExpression(
-			m_view, m_inputs->MaxPointersPerCluster->text().toStdString(), value, 0, errorStr))
+			m_view, m_inputs.MaxPointersPerCluster.toStdString(), value, 0, errorStr))
 		{
 			results.Status = "Invalid max pointers (" + errorStr + ")";
 			emit ResultReady(results);
@@ -144,13 +155,13 @@ void BaseAddressDetectionThread::run()
 		}
 
 		BNBaseAddressDetectionPOISetting poiSetting = BaseAddressDetectionPOISettingFromString(
-			m_inputs->POIBox->currentText().toStdString());
+			m_inputs.POI.toStdString());
 		BinaryNinja::BaseAddressDetectionInstructionAnalysisSettings settings;
-		settings.Architecture = m_inputs->ArchitectureBox->currentText().toStdString();
+		settings.Architecture = m_inputs.Architecture.toStdString();
 		settings.MinStrlen = minStrlen;
 		settings.LowerBoundary = lowerBoundary;
 		settings.UpperBoundary = upperBoundary;
-		settings.Analysis = m_inputs->AnalysisBox->currentText().toStdString();
+		settings.Analysis = m_inputs.Analysis.toStdString();
 		settings.Alignment = alignment;
 		settings.POIAnalysis = poiSetting;
 		settings.MaxPointersPerCluster = maxPointersPerCluster;

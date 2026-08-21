@@ -286,6 +286,8 @@ class BINARYNINJAUIAPI ScriptingConsole : public SidebarWidget, BinaryNinja::Scr
 	void moveDownInHistory();
 	void stopMovingInHistory();
 	std::vector<std::string> reverseSearch(const QString& text);
+	QStringList history() const { return m_history; }
+	void setHistory(const QStringList& history);
 
 	void closing() override;
 	void runScriptFromFile(const std::string& filename);

@@ -7,7 +7,10 @@
 #include "sidebaricons.h"
 #include "splitter.h"
 
+#include <memory>
+
 class ViewFrame;
+class SidebarRuntimeState;
 
 /*!
     \ingroup sidebar
@@ -141,6 +144,8 @@ public:
 	QVariant saveActiveState();
 	void restoreState(const QSettings& settings, const QString& windowStateName, bool globalStateOnly = false);
 	bool restoreActiveState(const QVariant& state);
+	std::shared_ptr<SidebarRuntimeState> saveRuntimeState();
+	void restoreRuntimeState(const std::shared_ptr<SidebarRuntimeState>& state);
 
 	void focusChanged(SidebarWidgetAndHeader* widget);
 

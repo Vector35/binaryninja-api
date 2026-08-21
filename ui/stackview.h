@@ -47,7 +47,7 @@ class BINARYNINJAUIAPI CreateStackVariableDialog : public QDialog
 
     \ingroup stackview
 */
-class StackViewLine
+class BINARYNINJAUIAPI StackViewLine
 {
   public:
 	enum class Type

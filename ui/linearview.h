@@ -71,6 +71,20 @@ struct BINARYNINJAUIAPI LinearViewCursorPosition
 	LinearViewCursorPosition AsLine() const;
 };
 
+struct BINARYNINJAUIAPI LinearCollapseIndicatorInfo
+{
+	QPoint position;
+	FunctionRef function;
+	uint64_t region = 0;
+	bool collapsed = false;
+};
+
+struct BINARYNINJAUIAPI LinearBraceTokenInfo
+{
+	QPoint position;
+	uint64_t value = 0;
+};
+
 /*!
 
     \ingroup linearview
@@ -555,6 +569,9 @@ public:
 
 	bool singleFunctionView() const { return m_singleFunctionView; }
 	void setSingleFunctionView(bool singleFunctionView);
+	std::optional<LinearCollapseIndicatorInfo> firstVisibleCollapseIndicator() const;
+	std::optional<LinearBraceTokenInfo> firstVisibleBraceToken(const std::string& text) const;
+	bool collapseIndicatorsDisplayed() const { return m_displayCollapseIndicators; }
 
 	static void registerActions();
 

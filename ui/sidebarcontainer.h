@@ -75,6 +75,7 @@ struct BINARYNINJAUIAPI SidebarFloatingWidgetState
 class BINARYNINJAUIAPI SidebarWidgetContainer : public QWidget
 {
 	Q_OBJECT
+	friend class Sidebar;
 
 	Sidebar* m_sidebar;
 	SidebarContainerLocation m_location;

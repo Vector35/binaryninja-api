@@ -33,7 +33,7 @@ enum class VariableListItemType
 
 	\ingroup variablelist
 */
-class VariableListItem
+class BINARYNINJAUIAPI VariableListItem
 {
 	FunctionRef m_func;
 	VariableListItemType m_type;

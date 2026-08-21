@@ -102,6 +102,8 @@ public:
 	SidebarWidgetContainer* containerForLocation(SidebarWidgetLocation location) const;
 	SidebarIconsWidget* other() const;
 	void setContainers(SidebarWidgetContainer* sideContainer, SidebarWidgetContainer* bottomContainer);
+	std::optional<SidebarIconInfo> iconInfoForType(SidebarWidgetType* type) const;
+	QPoint dropPointForLocation(SidebarWidgetLocation location) const;
 
 	void updateTheme();
 	void updateVisibility();

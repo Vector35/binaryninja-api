@@ -45,6 +45,8 @@ class BINARYNINJAUIAPI MiniGraph : public SidebarWidget, public UIContextNotific
 	virtual QSize sizeHint() const override { return QSize(200, 200); }
 
 	void setSource(ViewFrame* frame, FlowGraphWidget* graphView);
+	FlowGraphWidget* sourceGraph() const { return m_flowGraphWidget; }
+	QRect miniRenderRect() const { return m_miniRenderRect; }
 
   protected:
 	virtual void contextMenuEvent(QContextMenuEvent* event) override;

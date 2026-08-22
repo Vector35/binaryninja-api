@@ -55,6 +55,17 @@ struct BINARYNINJAUIAPI HexEditorHighlightState
 };
 
 /*!
+	A piece of text together with the character cell it starts at.
+
+	\ingroup render
+*/
+struct BINARYNINJAUIAPI CellAlignedText
+{
+	QString text;
+	size_t cell;
+};
+
+/*!
 	\ingroup render
 */
 class BINARYNINJAUIAPI FontParameters
@@ -115,6 +126,9 @@ class BINARYNINJAUIAPI RenderContext
 	HighlightTokenState getHighlightTokenForTextToken(const BinaryNinja::InstructionTextToken& token);
 
 	void drawText(QPainter& p, int x, int y, QColor color, const QString& text) const;
+	/*! Draws text positioned on the character cell grid, so that wide code points occupy the cells
+	    their token width accounted for. ASCII text is drawn in a single call as a fast path. */
+	void drawCellAlignedText(QPainter& p, int x, int y, QColor color, const std::string& text) const;
 	void drawUnderlinedText(QPainter& p, int x, int y, QColor color, const QString& text);
 
 	void drawSeparatorLine(QPainter& p, QColor top, QColor bottom, QColor line, const QRect& rect);
@@ -132,4 +146,19 @@ class BINARYNINJAUIAPI RenderContext
 	QFont getFont() const { return m_fontParams.getFont(); }
 	QFont getEmojiFont() const { return m_fontParams.getEmojiFont(); }
 	void setFont(const QFont& font);
+
+	/*! Splits text into the pieces needed to draw it on the character cell grid.
+
+		Text is broken at grapheme cluster boundaries, since a cluster is what the user sees as a single
+		character and what the width accounting measured; a cluster can span many code points, as combining
+		marks, emoji modifiers, and ZWJ sequences all join into one. Runs of plain ASCII are kept together
+		so the font can still shape and apply ligatures across them.
+
+		The returned cell offsets always total the string's width as reported by
+		BinaryNinja::Unicode::GetDisplayWidth, so drawing stays aligned with the layout that width produced.
+
+		\param text Text to lay out
+		\return The pieces to draw, in order, each with the cell offset to draw it at
+	*/
+	static std::vector<CellAlignedText> layOutTextInCells(const std::string& text);
 };

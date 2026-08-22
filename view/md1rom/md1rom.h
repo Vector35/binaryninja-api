@@ -62,8 +62,6 @@ namespace BinaryNinja
 		bool m_mainRomFound = false, m_dbgInfoFound = false, m_dbgDbFound = false;
 		Md1romSegment m_mainRom, m_dbgInfoSeg, m_dbgDatabaseSeg;
 
-		SymbolQueue* m_symbolQueue = nullptr;
-
 		virtual uint64_t PerformGetEntryPoint() const override;
 
 		virtual bool PerformIsExecutable() const override { return true; }

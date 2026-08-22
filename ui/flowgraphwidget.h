@@ -93,7 +93,9 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 		bool operator<=(const CursorPosition& other) const;
 	};
 
+	BinaryViewRef m_defaultData;
 	BinaryViewRef m_data;
+	bool m_dataNotificationRegistered = false;
 	FlowGraphRef m_graph;
 	FlowGraphRef m_updateGraph;
 	FlowGraphLayoutRequestRef m_graphLayoutRequest;
@@ -101,6 +103,8 @@ class BINARYNINJAUIAPI FlowGraphWidget :
 	FunctionRef m_func;
 	BinaryNinja::AdvancedFunctionAnalysisDataRequestor m_advancedAnalysisData;
 	View* m_navigationTarget;
+
+	void setFunctionAndData(FunctionRef func, BinaryViewRef data, bool notify);
 
 	bool m_ready;
 	QTimer* m_loadingTimer;

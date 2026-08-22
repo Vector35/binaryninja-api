@@ -170,6 +170,11 @@ class StringRecognizer(metaclass=_StringRecognizerMetaClass):
 	containing the string information if a custom string is found for the expression. The
 	:py:func:`is_valid_for_type` method can be optionally overridden to call the recognizer methods
 	only when the expression type matches a custom filter.
+
+	.. warning:: Python string recognizers can be slow. The callbacks run on every constant in every \
+	function, and each call crosses the FFI boundary, builds wrapper objects, and takes the GIL, \
+	serializing analysis threads. Always override :py:func:`is_valid_for_type` to reject types you \
+	do not handle. For large binaries, write the recognizer in C++ instead.
 	"""
 	_registered_recognizers = []
 	recognizer_name = None

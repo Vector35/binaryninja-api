@@ -272,6 +272,29 @@ string BinaryNinja::GetSerialNumber()
 }
 
 
+vector<LicenseAddon> BinaryNinja::GetLicenseAddons()
+{
+	size_t count = 0;
+	BNLicenseAddon* addons = BNGetLicenseAddons(&count);
+	vector<LicenseAddon> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		result.push_back({
+			addons[i].id,
+			addons[i].licenseSerial,
+			addons[i].product,
+			addons[i].created,
+			addons[i].createdTimestamp,
+			addons[i].expiration,
+			addons[i].expirationTimestamp,
+			addons[i].signature});
+	}
+	BNFreeLicenseAddons(addons, count);
+	return result;
+}
+
+
 int BinaryNinja::GetLicenseCount()
 {
 	return BNGetLicenseCount();
@@ -412,6 +435,25 @@ map<string, uint64_t> BinaryNinja::GetMemoryUsageInfo()
 	for (size_t i = 0; i < count; i++)
 		result[info[i].name] = info[i].value;
 	BNFreeMemoryUsageInfo(info, count);
+	return result;
+}
+
+
+map<string, BinaryNinja::StatHistogram> BinaryNinja::GetStatHistograms()
+{
+	size_t count;
+	BNStatHistogram* info = BNGetStatHistograms(&count);
+
+	map<string, StatHistogram> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		StatHistogram h;
+		h.total = info[i].total;
+		for (size_t k = 0; k < BN_STAT_HISTOGRAM_BUCKET_COUNT; k++)
+			h.buckets[k] = info[i].buckets[k];
+		result[info[i].name] = h;
+	}
+	BNFreeStatHistograms(info, count);
 	return result;
 }
 

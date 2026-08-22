@@ -32,7 +32,9 @@ use crate::data_buffer::DataBuffer;
 use crate::debuginfo::DebugInfo;
 use crate::disassembly::DisassemblySettings;
 use crate::external_library::{ExternalLibrary, ExternalLocation};
-use crate::file_accessor::{Accessor, FileAccessor};
+use crate::file_accessor::{
+    raw_mut as raw_file_accessor, Accessor, BorrowedFileAccessor, FileAccessor, FileAccessorHandle,
+};
 use crate::file_metadata::FileMetadata;
 use crate::flowgraph::FlowGraph;
 use crate::function::{Function, FunctionViewType, Location, NativeBlock};
@@ -450,6 +452,56 @@ struct CustomBinaryViewContext<C: CustomBinaryView> {
     view: C,
 }
 
+/// Controls how a metadata write behaves on a [`BinaryView`] or [`crate::function::Function`].
+///
+/// `persistent` serializes the value into the BNDB snapshot so it survives reload. Without it
+/// the value is kept in memory for this session only.
+/// `marks_analysis_changed` marks the file as analysis-changed (drives the "dirty" indicator).
+/// Set this for genuine user-visible edits and leave it clear when caching re-derivable data.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub struct MetadataStoreFlags {
+    pub persistent: bool,
+    pub marks_analysis_changed: bool,
+}
+
+impl MetadataStoreFlags {
+    /// Neither persisted nor dirties the view. Equivalent to the legacy
+    /// `BinaryView::store_metadata`/`Function::store_metadata` `is_auto = true`.
+    pub const EPHEMERAL: Self = Self {
+        persistent: false,
+        marks_analysis_changed: false,
+    };
+
+    /// Persisted without dirtying the view. Equivalent to the legacy `Function::store_metadata`
+    /// `is_auto = false` (where Function metadata writes never affected the file's modified
+    /// state). For BinaryView writes that should also dirty the view, chain `.marks_analysis_changed(true)`.
+    pub const PERSISTENT: Self = Self {
+        persistent: true,
+        marks_analysis_changed: false,
+    };
+
+    pub fn persistent(mut self, persistent: bool) -> Self {
+        self.persistent = persistent;
+        self
+    }
+
+    pub fn marks_analysis_changed(mut self, marks_analysis_changed: bool) -> Self {
+        self.marks_analysis_changed = marks_analysis_changed;
+        self
+    }
+
+    pub(crate) fn into_raw(self) -> BNMetadataStoreFlag {
+        let mut raw = BNMetadataStoreFlag::MetadataStoreEphemeral;
+        if self.persistent {
+            raw |= BNMetadataStoreFlag::MetadataStorePersistent;
+        }
+        if self.marks_analysis_changed {
+            raw |= BNMetadataStoreFlag::MetadataStoreMarksAnalysisChanged;
+        }
+        raw
+    }
+}
+
 #[allow(clippy::len_without_is_empty)]
 pub trait BinaryViewBase {
     fn read(&self, _buf: &mut [u8], _offset: u64) -> usize {
@@ -536,9 +588,17 @@ pub trait BinaryViewBase {
 
     fn address_size(&self) -> usize;
 
-    // TODO: Needs to take file accessor?
-    fn save(&self) -> bool {
-        false
+    /// Save the view to `file`.
+    ///
+    /// The default implementation saves the parent view, which typically surfaces as saving the
+    /// raw contents of the file (via the "Raw" root view).
+    fn save(&self, view: &BinaryView, file: &mut BorrowedFileAccessor<'_>) -> bool {
+        view.parent_view().is_some_and(|parent| {
+            // SAFETY: This callback is invoked synchronously from an outer save whose caller is responsible for
+            // satisfying the save preconditions. Those preconditions remain valid for this nested parent save, which
+            // must call into core directly rather than dispatching another main thread action from inside the callback.
+            unsafe { parent.save_to_accessor(file) }
+        })
     }
 }
 
@@ -775,7 +835,7 @@ impl BinaryView {
     ///
     /// To avoid the above issue, use [`crate::main_thread::execute_on_main_thread_and_wait`] to verify there
     /// are no queued up main thread actions.
-    pub fn save_to_path(&self, file_path: impl AsRef<Path>) -> bool {
+    pub unsafe fn save_to_path(&self, file_path: impl AsRef<Path>) -> bool {
         let file = file_path.as_ref().to_cstr();
         unsafe { BNSaveToFilename(self.handle, file.as_ptr() as *mut _) }
     }
@@ -788,8 +848,8 @@ impl BinaryView {
     ///
     /// To avoid the above issue, use [`crate::main_thread::execute_on_main_thread_and_wait`] to verify there
     /// are no queued up main thread actions.
-    pub fn save_to_accessor<A: Accessor>(&self, file: &mut FileAccessor<A>) -> bool {
-        unsafe { BNSaveToFile(self.handle, &mut file.raw) }
+    pub unsafe fn save_to_accessor<A: FileAccessorHandle + ?Sized>(&self, file: &mut A) -> bool {
+        unsafe { BNSaveToFile(self.handle, raw_file_accessor(file)) }
     }
 
     pub fn file(&self) -> Ref<FileMetadata> {
@@ -1468,7 +1528,10 @@ impl BinaryView {
         let name_handle = unsafe {
             let id_str =
                 BNGenerateAutoTypeId(source_str.as_ref().as_ptr() as *const _, &mut raw_name);
-            BNDefineAnalysisType(self.handle, id_str, &mut raw_name, type_obj.handle)
+            let name_handle =
+                BNDefineAnalysisType(self.handle, id_str, &mut raw_name, type_obj.handle);
+            BNFreeString(id_str);
+            name_handle
         };
         QualifiedName::free_raw(raw_name);
         QualifiedName::from_owned_raw(name_handle)
@@ -2374,14 +2437,19 @@ impl BinaryView {
             .and_then(|md| T::try_from(md.as_ref()).ok())
     }
 
-    pub fn store_metadata<V>(&self, key: &str, value: V, is_auto: bool)
+    pub fn store_metadata<V>(&self, key: &str, value: V, flags: MetadataStoreFlags)
     where
         V: Into<Ref<Metadata>>,
     {
         let md = value.into();
         let key = key.to_cstr();
         unsafe {
-            BNBinaryViewStoreMetadata(self.handle, key.as_ptr(), md.as_ref().handle, is_auto)
+            BNBinaryViewStoreMetadata(
+                self.handle,
+                key.as_ptr(),
+                md.as_ref().handle,
+                flags.into_raw(),
+            )
         };
     }
 
@@ -3616,14 +3684,17 @@ where
     })
 }
 
-extern "C" fn cb_save<C>(ctxt: *mut c_void, _file: *mut BNFileAccessor) -> bool
+extern "C" fn cb_save<C>(ctxt: *mut c_void, file: *mut BNFileAccessor) -> bool
 where
     C: CustomBinaryView,
 {
     ffi_wrap!("BinaryViewBase::save", unsafe {
         let context = &*(ctxt as *mut CustomBinaryViewContext<C>);
-        // TODO: Need to pass file accessor to save to.
-        // let file = FileAccessor::from_raw(file);
-        context.view.save()
+        let mut file = BorrowedFileAccessor::from_raw(file);
+        // SAFETY: The core view has been initialized by [`BinaryView::from_custom`], and saving can
+        // only occur after the custom view has been created.
+        context
+            .view
+            .save(context.core_view.assume_init_ref(), &mut file)
     })
 }

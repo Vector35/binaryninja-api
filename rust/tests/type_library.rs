@@ -69,6 +69,8 @@ fn test_create_type_library() {
     // Create the new type library.
     let my_library = TypeLibrary::new(arch, "test_type_lib");
     my_library.add_alternate_name("alternate_test");
+    my_library.add_alternate_name("alternate_to_be_removed");
+    my_library.remove_alternate_name("alternate_to_be_removed");
     my_library.add_platform(&platform);
     my_library.add_named_type("test_type".into(), &Type::int(7, true));
 

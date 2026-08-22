@@ -233,6 +233,7 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	BinaryNinja::FunctionViewType m_ilViewType, m_prevILViewType = InvalidILViewType;
 	HexEditorHighlightState m_highlightState;
 	bool m_singleFunctionView = false;
+	bool m_simplifyTemplates = false;
 
 	InstructionEdit* m_instrEdit = nullptr;
 
@@ -311,7 +312,7 @@ class BINARYNINJAUIAPI LinearView : public QAbstractScrollArea, public View, pub
 	StructureRef defineInnerName(TypeRef type, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
 	StructureRef defineInnerIntegerSize(TypeRef type, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
 	StructureRef defineInnerSign(TypeRef type, uint64_t offset, uint64_t size, std::set<TypeRef>& seen);
-	TypeRef getPointerTypeAndName(ArchitectureRef arch, uint64_t addr, std::string& name);
+	TypeRef getPointerTypeAndName(uint64_t addr, std::string& name);
 	std::string getVariableName(uint64_t addr);
 
 	BinaryNinja::Ref<BinaryNinja::LinearViewObject> createLinearViewObject();

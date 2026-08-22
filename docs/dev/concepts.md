@@ -298,4 +298,4 @@ Several settings under analysis limits are relevant to identifying these strings
 
 ### Custom String Formats
 
-There is currently no support for custom types with different encoding mechanisms. Follow [#1334](https://github.com/Vector35/binaryninja-api/issues/1334) for more updates on when that feature is added. That said, it is possible to use a custom [DataRenderer](https://api.binary.ninja/binaryninja.datarender-module.html#binaryninja.datarender.DataRenderer) to improve the rendering using a custom type, but those strings will still not show up in the strings list or when included as variables in decompilation, only in linear view.
+See [Custom Strings and Constants](customstrings.md).

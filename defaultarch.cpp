@@ -777,7 +777,7 @@ static void ApplyExternPointerForRelocation(
 
 	if (id == (ExprId)-1)
 	{
-		logger->LogWarn("Unable to find const or const_ptr in expresssion @ %08x:%d", il.GetCurrentAddress(), start);
+		logger->LogWarn("Unable to find const or const_ptr in expresssion @ %08" PRIx64 ":%zu", il.GetCurrentAddress(), start);
 		return;
 	}
 	offset = offset - relocation->GetTarget();

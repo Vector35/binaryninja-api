@@ -198,10 +198,9 @@ impl Database {
         unsafe { KeyValueStore::ref_from_raw(NonNull::new(result).unwrap()) }
     }
 
+    #[deprecated(note = "Use crate::file_metadata::FileMetadata::reopen_moved_database instead")]
     /// Closes then reopens the database.
-    pub fn reload_connection(&self) {
-        unsafe { BNDatabaseReloadConnection(self.handle.as_ptr()) }
-    }
+    pub fn reload_connection(&self) {}
 
     pub fn write_analysis_cache(&self, val: &KeyValueStore) -> Result<(), ()> {
         if unsafe { BNWriteDatabaseAnalysisCache(self.handle.as_ptr(), val.handle.as_ptr()) } {

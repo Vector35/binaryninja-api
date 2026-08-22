@@ -49,8 +49,9 @@ from . import binaryview
 from . import basicblock
 from . import function
 from . import log
-from .pluginmanager import RepositoryManager
-from .requirementcheck import pip_requirements_from_dependency_metadata, pip_requirements_satisfied
+from .extensionmanager import RepositoryManager
+from .requirementcheck import (pip_dependency_conflicts, pip_requirements_excluding_packages,
+	pip_requirements_from_dependency_metadata, pip_requirements_satisfied)
 from .enums import ScriptingProviderExecuteResult, ScriptingProviderInputReadyState
 from .settings import Settings
 from .enums import SettingsScope
@@ -59,6 +60,7 @@ import json
 _WARNING_REGEX = re.compile(r'^\S+:\d+: \w+Warning: ')
 
 logger = log.Logger(0, "ScriptingProvider")
+dependency_installer_logger = log.Logger(0, "DependencyInstaller")
 
 class _ThreadActionContext:
 	_actions = []
@@ -476,12 +478,23 @@ class ScriptingProvider(metaclass=_ScriptingProviderMetaclass):
 		self._cb.context = 0
 		self._cb.createInstance = self._cb.createInstance.__class__(self._create_instance)
 		self._cb.loadModule = self._cb.loadModule.__class__(self._load_module)
-		self._cb.installModules = self._cb.installModules.__class__(self._install_modules)
+		self._cb.installModules = self._cb.installModules.__class__(self._install_modules_for_callback)
 		self.handle = core.BNRegisterScriptingProvider(self.__class__.name, self.__class__.apiName, self._cb)
 		self._module_installed_cb = core.BNScriptingProviderModuleInstalledCallbacks()
 		self._module_installed_cb.context = None
 		self._module_installed_cb.moduleInstalled = self._module_installed_cb.moduleInstalled.__class__(self._module_installed)
 		core.BNSetScriptingProviderModuleInstalledCallback(self.handle, self._module_installed_cb)
+		self._install_modules_with_exclusions_cb = core.BNScriptingProviderInstallModulesWithExclusionsCallbacks()
+		self._install_modules_with_exclusions_cb.context = None
+		self._install_modules_with_exclusions_cb.installModulesWithExclusions = \
+			self._install_modules_with_exclusions_cb.installModulesWithExclusions.__class__(
+				self._install_modules_with_exclusions_for_callback)
+		core.BNSetScriptingProviderInstallModulesWithExclusionsCallback(
+			self.handle, self._install_modules_with_exclusions_cb)
+		self._dependency_conflict_cb = core.BNScriptingProviderDependencyConflictCallbacks()
+		self._dependency_conflict_cb.context = None
+		self._dependency_conflict_cb.getDependencyConflicts = self._dependency_conflict_cb.getDependencyConflicts.__class__(self._dependency_conflicts)
+		core.BNSetScriptingProviderDependencyConflictCallback(self.handle, self._dependency_conflict_cb)
 		self.__class__._registered_providers.append(self)
 
 	def _create_instance(self, ctxt):
@@ -509,8 +522,33 @@ class ScriptingProvider(metaclass=_ScriptingProviderMetaclass):
 	def _install_modules(self, ctx, modules: bytes) -> bool:
 		return False
 
+	def _install_modules_with_exclusions(self, ctx, modules: bytes, excluded_package_names, excluded_package_name_count: int) -> bool:
+		exclusions = {
+			excluded_package_names[i].decode("utf-8") for i in range(excluded_package_name_count)
+			if excluded_package_names[i] is not None
+		}
+		filtered_modules = pip_requirements_excluding_packages(modules, exclusions)
+		return self._install_modules(ctx, "\n".join(filtered_modules).encode("utf-8"))
+
+	def _install_modules_with_exclusions_for_callback(
+			self, ctx, modules: bytes, excluded_package_names, excluded_package_name_count: int) -> bool:
+		try:
+			return self._install_modules_with_exclusions(
+				ctx, modules, excluded_package_names, excluded_package_name_count)
+		except Exception:
+			dependency_installer_logger.log_error_for_exception("Dependency installation failed")
+			return False
+
 	def _module_installed(self, ctx, modules: bytes) -> bool:
 		return False
+
+	def _dependency_conflicts(self, ctx, candidate, installed_plugins, installed_plugin_count):
+		return core.BNAllocString(json.dumps([{
+			"status": "unknown_compatibility",
+			"package_name": "<unknown>",
+			"candidate_requirements": [],
+			"installed_requirements": [],
+		}]))
 
 
 class _PythonScriptingInstanceOutput:
@@ -1174,14 +1212,37 @@ class PythonScriptingProvider(ScriptingProvider):
 			logger.log_info(f"Ignored python UI plugin: {repo_path}/{module}")
 		return False
 
-	# This function can only be used to execute commands that return ASCII-only output, otherwise the decoding will fail
-	def _run_args(self, args, env: Optional[Dict]=None):
+	def _run_args(self, args, env: Optional[Dict]=None, output_logger=None):
 		si = None
 		if sys.platform == "win32":
 			si = subprocess.STARTUPINFO()
 			si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
 		try:
+			if output_logger is not None:
+				with subprocess.Popen(
+				    args,
+				    startupinfo=si,
+				    stdout=subprocess.PIPE,
+				    stderr=subprocess.STDOUT,
+				    env=env,
+				    text=True,
+				    encoding="utf-8",
+				    errors="replace",
+				    bufsize=1,
+				) as process:
+					output_lines = []
+					assert process.stdout is not None
+					for line in process.stdout:
+						output_lines.append(line)
+						output_logger.log_debug(line.rstrip("\r\n"))
+					result = "".join(output_lines)
+					return_code = process.wait()
+					if return_code == 0:
+						return (True, result)
+					error = subprocess.CalledProcessError(return_code, args)
+					output_logger.log_debug(str(error))
+					return (False, f"{error}\n{result}" if result else str(error))
 			return (True, subprocess.check_output(args, startupinfo=si, stderr=subprocess.STDOUT, env=env).decode("utf-8"))
 		except subprocess.CalledProcessError as se:
 			output = se.output.decode("utf-8", errors="replace") if se.output else ""
@@ -1293,6 +1354,13 @@ class PythonScriptingProvider(ScriptingProvider):
 
 		return env
 
+	def _install_modules_for_callback(self, ctx, modules: bytes) -> bool:
+		try:
+			return self._install_modules(ctx, modules)
+		except Exception:
+			dependency_installer_logger.log_error_for_exception("Dependency installation failed")
+			return False
+
 	def _install_modules(self, ctx, _modules: bytes) -> bool:
 		# This callback should not be called directly
 		modules = pip_requirements_from_dependency_metadata(_modules)
@@ -1303,13 +1371,13 @@ class PythonScriptingProvider(ScriptingProvider):
 		python_env = self._get_python_environment(using_bundled_python=not python_lib)
 		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override, python_env=python_env)
 		if python_bin is not None and not self._pip_exists(str(python_bin), python_env=python_env):
-			logger.log_error(
+			dependency_installer_logger.log_error(
 			    f"Pip not installed for configured python: {python_bin}.\n"
 			    "Please install pip or switch python versions."
 			)
 			return False
 		if python_bin is None:
-			logger.log_error(
+			dependency_installer_logger.log_error(
 			    f"Unable to discover python executable required for installing python modules: {status}\n"
 			    "Please specify a path to a python binary in the 'Python Path Override'"
 			)
@@ -1320,7 +1388,7 @@ class PythonScriptingProvider(ScriptingProvider):
 		], env=python_env).decode("utf-8")
 		python_lib_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 		if (python_bin_version != python_lib_version):
-			logger.log_error(
+			dependency_installer_logger.log_error(
 			    f"Python Binary Setting {python_bin_version} incompatible with python library {python_lib_version}"
 			)
 			return False
@@ -1332,8 +1400,9 @@ class PythonScriptingProvider(ScriptingProvider):
 
 		args.extend(["install", "--upgrade", "--upgrade-strategy", "only-if-needed"])
 		venv = settings.Settings().get_string("python.virtualenv")
+		venv_path = Path(os.path.normpath(venv)) if venv is not None else None
 		in_virtual_env = 'VIRTUAL_ENV' in os.environ
-		if venv is not None and venv.endswith("site-packages") and Path(venv).is_dir() and not in_virtual_env:
+		if venv_path is not None and venv_path.name == "site-packages" and venv_path.is_dir() and not in_virtual_env:
 			args.extend(["--target", venv])
 		else:
 			user_dir = binaryninja.user_directory()
@@ -1346,7 +1415,7 @@ class PythonScriptingProvider(ScriptingProvider):
 			args.extend(["--target", str(site_package_dir)])
 		args.extend(list(filter(len, modules)))
 		logger.log_info(f"Running pip {args}")
-		status, result = self._run_args(args, env=python_env)
+		status, result = self._run_args(args, env=python_env, output_logger=dependency_installer_logger)
 		if status:
 			logger.log_debug(f"pip output: {result}")
 			importlib.invalidate_caches()
@@ -1372,6 +1441,29 @@ class PythonScriptingProvider(ScriptingProvider):
 		except Exception:
 			logger.log_error_for_exception("Failed to check plugin dependency requirements")
 			return False
+
+	def _dependency_conflicts(self, ctx, candidate, installed_plugins, installed_plugin_count):
+		try:
+			candidate_info = candidate.contents
+			installed = [(installed_plugins[i].name, installed_plugins[i].dependencies.encode("utf-8"))
+				for i in range(installed_plugin_count)]
+			result = pip_dependency_conflicts(
+				candidate_info.name, candidate_info.dependencies.encode("utf-8"), installed)
+			serialized = [{
+				"status": conflict.status,
+				"package_name": conflict.package_name,
+				"candidate_requirements": [requirement.__dict__ for requirement in conflict.candidate_requirements],
+				"installed_requirements": [requirement.__dict__ for requirement in conflict.installed_requirements],
+			} for conflict in result]
+			return core.BNAllocString(json.dumps(serialized))
+		except Exception:
+			logger.log_error_for_exception("Failed to check plugin dependency conflicts")
+			return core.BNAllocString(json.dumps([{
+				"status": "unknown_compatibility",
+				"package_name": "<unknown>",
+				"candidate_requirements": [],
+				"installed_requirements": [],
+			}]))
 
 	@classmethod
 	def register_magic_variable(
@@ -1781,6 +1873,19 @@ def _get_current_ui_context(instance: PythonScriptingInstance):
 
 
 PythonScriptingProvider.register_magic_variable("current_ui_context", _get_current_ui_context)
+
+
+def _get_current_similarity_session(instance: PythonScriptingInstance):
+	if instance.interpreter.locals["current_ui_context"] is not None:
+		return instance.interpreter.locals["current_ui_context"].getCurrentSimilaritySession()
+	return None
+
+
+PythonScriptingProvider.register_magic_variable(
+	"current_similarity_session",
+	_get_current_similarity_session,
+	depends_on=["current_ui_context"],
+)
 
 
 def _get_current_ui_action_handler(instance: PythonScriptingInstance):

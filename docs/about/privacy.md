@@ -41,9 +41,9 @@ All three of the settings below use the same update server endpoint and send the
 | `network.enableUpdateChannelList` | `true` | Fetch available update channels (used in preferences) |
 | `network.enableReleaseNotes` | `true` | Fetch release notes for display on the new tab page |
 
-## Plugin Manager
+## Extension Manager
 
-The plugin manager contacts `extensions.binary.ninja` to fetch plugin metadata and download plugins.
+The extension manager contacts `extensions.binary.ninja` to fetch plugin metadata and download plugins.
 
 **Data sent:**
 
@@ -56,11 +56,11 @@ No personal data or information about your analysis is transmitted.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `network.enablePluginManager` | `true` | Master switch for all plugin manager networking |
-| `pluginManager.officialRepo` | `true` | Enable official plugin repository |
-| `pluginManager.communityRepo` | `true` | Enable community plugin repository |
+| `network.enableExtensionManager` | `true` | Master switch for all extension manager networking |
+| `extensionManager.officialRepo` | `true` | Enable official plugin repository |
+| `extensionManager.communityRepo` | `true` | Enable community plugin repository |
 
-Setting `network.enablePluginManager` to `false` disables all plugin manager network requests.
+Setting `network.enableExtensionManager` to `false` disables all extension manager network requests.
 
 ## PDB Symbol Downloads
 
@@ -165,7 +165,7 @@ To completely prevent Binary Ninja from making any network requests, set the fol
     "network.enableUpdates": false,
     "network.enableUpdateChannelList": false,
     "network.enableReleaseNotes": false,
-    "network.enablePluginManager": false,
+    "network.enableExtensionManager": false,
     "network.pdbAutoDownload": false,
     "network.enableExternalUrls": false,
     "network.enableWARP": false,

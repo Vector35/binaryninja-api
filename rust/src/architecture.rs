@@ -68,6 +68,7 @@ pub mod register;
 // Re-export all the submodules to keep from breaking everyone's code.
 // We split these out just to clarify each part, not necessarily to enforce an extra namespace.
 pub use basic_block::*;
+pub use binaryninjacore_sys::BNLinearSweepAnalysisCapability as LinearSweepAnalysisCapability;
 pub use branches::*;
 pub use flag::*;
 pub use instruction::*;
@@ -151,6 +152,17 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
     fn address_size(&self) -> usize;
     fn default_integer_size(&self) -> usize;
     fn instruction_alignment(&self) -> usize;
+
+    /// Alignment at which an independent linear sweep of an unknown region should begin.
+    fn linear_sweep_initial_alignment(&self) -> usize {
+        self.instruction_alignment()
+    }
+
+    /// Generic linear sweep algorithms that are valid for this architecture.
+    fn linear_sweep_analysis_capabilities(&self) -> u32 {
+        LinearSweepAnalysisCapability::BNLinearSweepCallTargetAnalysis as u32
+            | LinearSweepAnalysisCapability::BNLinearSweepGenericControlFlowAnalysis as u32
+    }
 
     /// The maximum length of an instruction in bytes. This is used to determine the size of the buffer
     /// given to callbacks such as [`Architecture::instruction_info`], [`Architecture::instruction_text`]
@@ -863,6 +875,14 @@ impl Architecture for CoreArchitecture {
 
     fn instruction_alignment(&self) -> usize {
         unsafe { BNGetArchitectureInstructionAlignment(self.handle) }
+    }
+
+    fn linear_sweep_initial_alignment(&self) -> usize {
+        unsafe { BNGetArchitectureLinearSweepInitialAlignment(self.handle) }
+    }
+
+    fn linear_sweep_analysis_capabilities(&self) -> u32 {
+        unsafe { BNGetArchitectureLinearSweepAnalysisCapabilities(self.handle) }
     }
 
     fn max_instr_len(&self) -> usize {
@@ -1600,6 +1620,22 @@ where
     {
         let custom_arch = unsafe { &*(ctxt as *mut A) };
         custom_arch.instruction_alignment()
+    }
+
+    extern "C" fn cb_linear_sweep_initial_alignment<A>(ctxt: *mut c_void) -> usize
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        custom_arch.linear_sweep_initial_alignment()
+    }
+
+    extern "C" fn cb_linear_sweep_analysis_capabilities<A>(ctxt: *mut c_void) -> u32
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        custom_arch.linear_sweep_analysis_capabilities()
     }
 
     extern "C" fn cb_max_instr_len<A>(ctxt: *mut c_void) -> usize
@@ -2782,6 +2818,8 @@ where
         alwaysBranch: Some(cb_always_branch::<A>),
         invertBranch: Some(cb_invert_branch::<A>),
         skipAndReturnValue: Some(cb_skip_and_return_value::<A>),
+        getLinearSweepInitialAlignment: Some(cb_linear_sweep_initial_alignment::<A>),
+        getLinearSweepAnalysisCapabilities: Some(cb_linear_sweep_analysis_capabilities::<A>),
     };
 
     customize(&mut custom_arch);

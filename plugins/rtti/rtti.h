@@ -8,7 +8,8 @@ constexpr int RTTI_CONFIDENCE = 100;
 namespace BinaryNinja::RTTI {
 	Ref<Symbol> GetRealSymbol(BinaryView *view, uint64_t relocAddr, uint64_t symAddr);
 
-	std::optional<std::string> DemangleNameMS(BinaryView* view, bool allowMangled, const std::string &mangledName);
+	std::optional<std::string> DemangleNameMS(
+		BinaryView* view, bool allowMangled, const std::string &mangledName, bool simplifyTemplates);
 
 	std::optional<std::string> DemangleNameGNU3(BinaryView* view, bool allowMangled, const std::string &mangledName);
 
@@ -81,6 +82,7 @@ namespace BinaryNinja::RTTI {
 
 		Ref<BinaryView> m_view;
 		Ref<Logger> m_logger;
+		bool m_simplifyTemplates = false;
 
 		std::map<uint64_t, ClassInfo> m_classInfo;
 		std::map<uint64_t, ClassInfo> m_unhandledClassInfo;

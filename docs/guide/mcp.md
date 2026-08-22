@@ -6,8 +6,8 @@ Binary Ninja provides two MCP server variants:
 
 | Variant | Binary | Transport | Availability |
 | --- | --- | --- | --- |
-| GUI MCP server | `binaryninja` | HTTP only | Runs inside the Binary Ninja GUI. Included with Binary Ninja Free or Personal. |
-| Headless MCP server | `binaryninja_mcp` | stdio only | Runs as a standalone command-line server. Included with Binary Ninja Commercial or Ultimate. |
+| GUI MCP server | `binaryninja` | HTTP only | Runs inside the Binary Ninja GUI. Included with every GUI edition and supported on native Windows. |
+| Headless MCP server | `binaryninja_mcp` | stdio only | Runs as a standalone command-line server. Included with Binary Ninja Commercial or Ultimate on macOS and Linux. Native Windows packages do not yet include `binaryninja_mcp.exe`. |
 
 ## Tool Overview
 
@@ -99,12 +99,13 @@ Addresses in tool output are formatted as hexadecimal strings so clients do not 
 
 The GUI MCP server is hosted inside the Binary Ninja application. It uses HTTP only and must be both enabled and started before a client can connect. Some MCP clients refer to this as an HTTP or streamable HTTP server.
 
+On Windows, use this built-in HTTP server for native MCP clients. Binary Ninja does not yet ship a standalone `binaryninja_mcp.exe` in Windows packages.
+
 ### Enable and Start
 
 1. Open Settings with `[CMD/CTRL] ,`.
 2. Enable `ui.mcp.enabled`. This setting requires a restart.
 3. Optionally configure the HTTP settings:
-    - `ui.mcp.host`: Local interface to bind. Default: `127.0.0.1`
     - `ui.mcp.port`: HTTP port. Default: `24642`; use `0` for an OS-assigned port
     - `ui.mcp.endpoint`: HTTP endpoint path. Default: `/mcp`
     - `ui.mcp.token`: Optional bearer token. Leave blank to disable HTTP authorization
@@ -140,18 +141,22 @@ If `ui.mcp.port` is `0`, the operating system chooses a port when the server sta
 
 The standalone `binaryninja_mcp` server is for headless operation and uses stdio only. Configure your MCP client to launch `binaryninja_mcp` as a local command-line MCP server.
 
-The headless server opens and analyzes files without the GUI and exposes the same file manager and read-only BinaryView inspection tools as the GUI server. The `binaryninja_mcp` binary is not included with Binary Ninja Free or Personal.
+The headless server opens and analyzes files without the GUI and exposes the same file manager and read-only BinaryView inspection tools as the GUI server.
+
+Native Windows packages do not yet include `binaryninja_mcp.exe`. On Windows, connect to the built-in GUI MCP HTTP server instead. If you require the headless stdio server, install and run the Linux build of Binary Ninja under WSL and use the Linux `binaryninja_mcp` executable from that environment.
 
 Use the full path to `binaryninja_mcp` in client configuration unless it is already on your `PATH`.
 
-By default, `binaryninja_mcp` loads plugins the same way as the main Binary Ninja executable. Launch it with `-p`, or set `BN_DISABLE_USER_PLUGINS`, to disable user and Plugin Manager plugins for that server process.
+By default, `binaryninja_mcp` loads plugins the same way as the main Binary Ninja executable. Launch it with `-p`, or set `BN_DISABLE_USER_PLUGINS`, to disable user and Extension Manager plugins for that server process.
 
 !!! warning "Headless Server Availability"
-    The `binaryninja_mcp` headless server is not available in Binary Ninja Free or Personal. The headless stdio examples below require an edition that includes the headless server.
+    The `binaryninja_mcp` headless server is not available in Binary Ninja Free or Personal and is not yet available in native Windows packages. The headless stdio examples below require an edition and platform that include the headless server, or a Linux installation running under WSL.
 
 ## Client Configuration Examples
 
 MCP client configuration formats change over time. Use these examples as starting points, and check each client's own documentation for the latest supported fields.
+
+On native Windows, use the GUI HTTP examples below. The headless stdio examples apply to macOS, Linux, or a Linux Binary Ninja installation running under WSL.
 
 ### Claude Desktop
 
@@ -263,11 +268,12 @@ If an MCP client cannot connect to the GUI server:
 - Confirm `ui.mcp.enabled` is enabled.
 - Confirm the server has been started with `Plugins > MCP > Start Server`.
 - Use `Plugins > MCP > Copy Connection Info` and copy the exact URL and token header into the client configuration.
-- If you changed `ui.mcp.host`, `ui.mcp.port`, or `ui.mcp.endpoint`, restart the GUI MCP server.
+- If you changed `ui.mcp.port` or `ui.mcp.endpoint`, restart the GUI MCP server.
 - Check the Binary Ninja log for MCP startup errors.
 
 If a headless client cannot start `binaryninja_mcp`:
 
+- On native Windows, use the GUI HTTP server or run the Linux headless server under WSL; `binaryninja_mcp.exe` is not yet shipped.
 - Use an absolute path to `binaryninja_mcp`.
 - Confirm the installed product includes the headless MCP server.
 - Run the same command manually in a terminal to check for startup errors.

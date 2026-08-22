@@ -87,7 +87,7 @@ ElfView::ElfView(BinaryView* data, bool parseOnly): BinaryView("ELF", data->GetF
 	if (m_elf32 && (header.sectionHeaderSize != sizeof(Elf32SectionHeader)))
 	{
 		m_logger->LogWarn(
-			"The section header size reported by e_shentsize (0x%lx) is different from the size of Elf32_Shdr (0x%lx). "
+			"The section header size reported by e_shentsize (0x%x) is different from the size of Elf32_Shdr (0x%lx). "
 			"The parsing proceeds with the size of Elf32_Shdr.",
 			header.sectionHeaderSize, sizeof(Elf32SectionHeader));
 		header.sectionHeaderSize = sizeof(Elf32SectionHeader);
@@ -95,7 +95,7 @@ ElfView::ElfView(BinaryView* data, bool parseOnly): BinaryView("ELF", data->GetF
 	else if (!m_elf32 && (header.sectionHeaderSize != sizeof(Elf64SectionHeader)))
 	{
 		m_logger->LogWarn(
-			"The section header size reported by e_shentsize (0x%lx) is different from the size of Elf64_Shdr (0x%lx). "
+			"The section header size reported by e_shentsize (0x%x) is different from the size of Elf64_Shdr (0x%lx). "
 			"The parsing proceeds with the size of Elf64_Shdr.",
 			header.sectionHeaderSize, sizeof(Elf64SectionHeader));
 		header.sectionHeaderSize = sizeof(Elf64SectionHeader);
@@ -104,7 +104,7 @@ ElfView::ElfView(BinaryView* data, bool parseOnly): BinaryView("ELF", data->GetF
 	if (m_elf32 && (header.programHeaderSize != sizeof(Elf32ProgramHeader)))
 	{
 		m_logger->LogWarn(
-			"The program header size reported by e_phentsize (0x%lx) is different from the size of Elf32_Phdr (0x%lx). "
+			"The program header size reported by e_phentsize (0x%x) is different from the size of Elf32_Phdr (0x%lx). "
 			"The parsing proceeds with the size of Elf32_Phdr.",
 			header.programHeaderSize, sizeof(Elf32ProgramHeader));
 		header.programHeaderSize = sizeof(Elf32ProgramHeader);
@@ -112,7 +112,7 @@ ElfView::ElfView(BinaryView* data, bool parseOnly): BinaryView("ELF", data->GetF
 	else if (!m_elf32 && (header.programHeaderSize != sizeof(Elf64ProgramHeader)))
 	{
 		m_logger->LogWarn(
-			"The program header size reported by e_phentsize (0x%lx) is different from the size of Elf64_Phdr (0x%lx). "
+			"The program header size reported by e_phentsize (0x%x) is different from the size of Elf64_Phdr (0x%lx). "
 			"The parsing proceeds with the size of Elf64_Phdr.",
 			header.programHeaderSize, sizeof(Elf64ProgramHeader));
 		header.programHeaderSize = sizeof(Elf64ProgramHeader);
@@ -128,10 +128,10 @@ ElfView::ElfView(BinaryView* data, bool parseOnly): BinaryView("ELF", data->GetF
 
 	m_logger->LogDebug(
 		"ELF Header\n"
-		"\t%d bits\n"
-		"\theader.entry               %016x\n"
-		"\theader.programHeaderOffset %016x\n"
-		"\theader.sectionHeaderOffset %016x\n"
+		"\t%zu bits\n"
+		"\theader.entry               %016" PRIx64 "\n"
+		"\theader.programHeaderOffset %016" PRIx64 "\n"
+		"\theader.sectionHeaderOffset %016" PRIx64 "\n"
 		"\theader.flags               %016x\n"
 		"\theader.headerSize          %016x\n"
 		"\theader.programHeaderSize   %016x\n"
@@ -175,15 +175,15 @@ ElfView::ElfView(BinaryView* data, bool parseOnly): BinaryView("ELF", data->GetF
 		}
 
 		m_logger->LogDebug(
-			"\tSegment: %d\n"
+			"\tSegment: %zu\n"
 			"\t\tprogHeader.type            %08x\n"
-			"\t\tprogHeader.offset          %08x\n"
-			"\t\tprogHeader.virtualAddress  %016x\n"
-			"\t\tprogHeader.physicalAddress %016x\n"
-			"\t\tprogHeader.fileSize        %016x\n"
-			"\t\tprogHeader.memorySize      %016x\n"
+			"\t\tprogHeader.offset          %08" PRIx64 "\n"
+			"\t\tprogHeader.virtualAddress  %016" PRIx64 "\n"
+			"\t\tprogHeader.physicalAddress %016" PRIx64 "\n"
+			"\t\tprogHeader.fileSize        %016" PRIx64 "\n"
+			"\t\tprogHeader.memorySize      %016" PRIx64 "\n"
 			"\t\tprogHeader.flags           %016x\n"
-			"\t\tprogHeader.align           %016x\n",
+			"\t\tprogHeader.align           %016" PRIx64 "\n",
 			i, progHeader.type, progHeader.offset, progHeader.virtualAddress, progHeader.physicalAddress,
 			progHeader.fileSize, progHeader.memorySize, progHeader.flags, progHeader.align);
 
@@ -243,7 +243,7 @@ ElfView::ElfView(BinaryView* data, bool parseOnly): BinaryView("ELF", data->GetF
 
 			if (section.size > m_fileSize)
 			{
-				m_logger->LogWarn("Section %lu has a size (0x%lx) larger than file size (0x%lx), skipping creation", i,
+				m_logger->LogWarn("Section %lu has a size (0x%" PRIx64 ") larger than file size (0x%" PRIx64 "), skipping creation", i,
 					section.size, m_fileSize);
 				continue;
 			}
@@ -275,17 +275,17 @@ ElfView::ElfView(BinaryView* data, bool parseOnly): BinaryView("ELF", data->GetF
 	for (size_t i = 0; i < m_elfSections.size(); i++)
 	{
 		const string scnNameString = ReadStringTable(reader, m_sectionStringTable, m_elfSections[i].name);
-		m_logger->LogDebug("\tSection: %d\n"
+		m_logger->LogDebug("\tSection: %zu\n"
 				"\t\tsection.name      %08x (%s)\n"
 				"\t\tsection.type      %08x\n"
-				"\t\tsection.flags     %016x\n"
-				"\t\tsection.address   %016x\n"
-				"\t\tsection.offset    %016x\n"
-				"\t\tsection.size      %016x\n"
+				"\t\tsection.flags     %016" PRIx64 "\n"
+				"\t\tsection.address   %016" PRIx64 "\n"
+				"\t\tsection.offset    %016" PRIx64 "\n"
+				"\t\tsection.size      %016" PRIx64 "\n"
 				"\t\tsection.link      %08x\n"
 				"\t\tsection.info      %016x\n"
-				"\t\tsection.align     %016x\n"
-				"\t\tsection.entrySize %016x",
+				"\t\tsection.align     %016" PRIx64 "\n"
+				"\t\tsection.entrySize %016" PRIx64,
 				i,
 				m_elfSections[i].name, scnNameString.c_str(),
 				m_elfSections[i].type,
@@ -309,12 +309,12 @@ ElfView::ElfView(BinaryView* data, bool parseOnly): BinaryView("ELF", data->GetF
 		uint64_t entry;
 		if (DerefPpc64Descriptor(reader, m_entryPoint, entry))
 		{
-			m_logger->LogDebug("PPC64 dereference m_entryPoint=%016x to %016x\n", m_entryPoint, entry);
+			m_logger->LogDebug("PPC64 dereference m_entryPoint=%016" PRIx64 " to %016" PRIx64 "\n", m_entryPoint, entry);
 			m_entryPoint = entry;
 		}
 		else
 		{
-			m_logger->LogDebug("PPC64 unable to dereference m_entryPoint=%016x\n", m_entryPoint);
+			m_logger->LogDebug("PPC64 unable to dereference m_entryPoint=%016" PRIx64 "\n", m_entryPoint);
 		}
 	}
 }
@@ -397,15 +397,15 @@ bool ElfView::ParseSymbolTableEntry(BinaryReader& reader, ElfSymbolTableEntry& e
 	}
 
 	m_logger->LogDebug(
-		"Symbol: %d - symbolSection.offset: %lx - stringSection.offset: %lx\n"
-		"\tnameOffset = %#08lx\n"
+		"Symbol: %" PRIu64 " - symbolSection.offset: %" PRIx64 " - stringSection.offset: %" PRIx64 "\n"
+		"\tnameOffset = %#08x\n"
 		"\ttype       = %#02x\n"
 		"\tbinding    = %#02x\n"
 		"\tother      = %#02x\n"
 		"\tsection    = %#04x\n"
-		"\tvalue      = %#012lx\n"
-		"\tsize       = %#012lx\n"
-		"\tname       = %#s",
+		"\tvalue      = %#012" PRIx64 "\n"
+		"\tsize       = %#012" PRIx64 "\n"
+		"\tname       = %s",
 		sym, symbolTable.offset, stringTable.offset,
 		entry.nameOffset,
 		entry.type,
@@ -497,7 +497,6 @@ bool ElfView::Init()
 	uint64_t preferredImageBase = initialImageBase;
 	Ref<Settings> viewSettings = Settings::Instance();
 	m_extractMangledTypes = viewSettings->Get<bool>("analysis.extractTypesFromMangledNames", this);
-	m_simplifyTemplates = viewSettings->Get<bool>("analysis.types.templateSimplifier", this);
 
 	bool platformSetByUser = false;
 	Ref<Settings> settings = GetLoadSettings(GetTypeName());
@@ -808,8 +807,10 @@ bool ElfView::Init()
 	if (!platform)
 		platform = entryPointArch->GetStandalonePlatform();
 
+	m_plat = platform;
 	SetDefaultPlatform(platform);
 	GetParentView()->SetDefaultPlatform(platform);
+	m_simplifyTemplates = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", this);
 
 	// Finished for parse only mode
 	if (m_parseOnly)
@@ -986,8 +987,8 @@ bool ElfView::Init()
 				else
 					libraryFound.push_back(new Metadata(string("")));
 			}
-			StoreMetadata("Libraries", new Metadata(libraries), true);
-			StoreMetadata("LibraryFound", new Metadata(libraryFound), true);
+			StoreMetadata("Libraries", new Metadata(libraries), MetadataStoreEphemeral);
+			StoreMetadata("LibraryFound", new Metadata(libraryFound), MetadataStoreEphemeral);
 
 			if (m_relocaSection.size > 0)
 			{
@@ -2617,19 +2618,17 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 		string shortName = rawName;
 		string fullName = rawName;
 		Confidence<Ref<Type>> typeRef = symbolTypeRef;
-		if (m_arch)
+
+		DemanglerConfig demanglerConfig(GetDefaultPlatform(), this, m_simplifyTemplates);
+		if (auto result = Demangler::DemangleAny(rawName, demanglerConfig))
 		{
-			QualifiedName demangledName;
-			Ref<Type> demangledType;
-			if (DemangleGeneric(m_arch, rawName, demangledType, demangledName, this, m_simplifyTemplates))
-			{
-				shortName = demangledName.GetString();
-				fullName = shortName;
-				if (demangledType)
-					fullName += demangledType->GetStringAfterName();
-				if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
-					typeRef = demangledType;
-			}
+			auto demangledType = result->type;
+			shortName = result->name.GetString();
+			fullName = shortName;
+			if (demangledType)
+				fullName += demangledType->GetStringAfterName();
+			if (!typeRef && m_extractMangledTypes && !m_plat->GetFunctionByName(rawName))
+				typeRef = demangledType;
 		}
 
 		if (!typeRef && m_arch && (m_arch->GetName() == "hexagon" || m_arch->GetName() == "tms320c6x"))
@@ -2664,7 +2663,7 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 
 void ElfView::ApplyTypesToParentStringTable(const Elf64SectionHeader& section, const bool offset)
 {
-	m_logger->LogInfo("Found string table of size %p at offset %p", section.size, section.offset);
+	m_logger->LogInfo("Found string table of size %#" PRIx64 " at offset %#" PRIx64, section.size, section.offset);
 	DataBuffer buffer = GetParentView()->ReadBuffer(section.offset, section.size);
 	if (buffer.GetLength() != section.size)
 		return;
@@ -2704,7 +2703,7 @@ void ElfView::ApplyTypesToParentStringTable(const Elf64SectionHeader& section, c
 
 void ElfView::ApplyTypesToStringTable(const Elf64SectionHeader& section, const int64_t imageBaseAdjustment, const bool offset)
 {
-	m_logger->LogInfo("Found string table of size %p at address %p", section.size, section.address);
+	m_logger->LogInfo("Found string table of size %#" PRIx64 " at address %#" PRIx64, section.size, section.address);
 	DataVariable existing_var;
 	unordered_map<uint64_t, Ref<Type>> cachedTypes;
 	for (size_t start_address = section.offset + (offset ? 1 : 0); start_address < section.offset + section.size;)
@@ -2861,7 +2860,7 @@ vector<ElfSymbolTableEntry> ElfView::ParseSymbolTable(BinaryReader& reader, cons
 					entry2.value = func_start;
 					result.push_back(entry2);
 
-					m_logger->LogDebug("PPC64 symbol %s=%016x to %s=%016x\n", entry.name.c_str(), entry.value,
+					m_logger->LogDebug("PPC64 symbol %s=%016" PRIx64 " to %s=%016" PRIx64 "\n", entry.name.c_str(), entry.value,
 						entry2.name.c_str(), entry2.value);
 
 					/* force the descriptor to a data symbol */
@@ -3071,7 +3070,7 @@ uint64_t ElfView::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonHeade
 	if (is32bit && (sectionHeaderSize != sizeof(Elf32SectionHeader)))
 	{
 		m_logger->LogWarn(
-			"The section header size reported by e_shentsize (0x%lx) is different from the size of Elf32_Shdr (0x%lx). "
+			"The section header size reported by e_shentsize (0x%x) is different from the size of Elf32_Shdr (0x%lx). "
 			"Won't do first pass section header parsing.",
 			sectionHeaderSize, sizeof(Elf32SectionHeader));
 		sectionCount = 0;
@@ -3079,7 +3078,7 @@ uint64_t ElfView::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonHeade
 	else if (!is32bit && (sectionHeaderSize != sizeof(Elf64SectionHeader)))
 	{
 		m_logger->LogWarn(
-			"The section header size reported by e_shentsize (0x%lx) is different from the size of Elf64_Shdr (0x%lx). "
+			"The section header size reported by e_shentsize (0x%x) is different from the size of Elf64_Shdr (0x%lx). "
 			"Won't do first pass section header parsing.",
 			sectionHeaderSize, sizeof(Elf64SectionHeader));
 		sectionCount = 0;

@@ -27,8 +27,8 @@ nav = [
             { "Shared Cache" = "guide/sharedcache.md" },
             { "Kernel Cache" = "guide/kernelcache.md" },
             { "EFI Resolver" = "guide/efiresolver.md" },
+            { "Binary Similarity" = "guide/similarity.md" },
             { "WARP" = "guide/warp.md" },
-            { "BinExport / BinDiff" = "guide/binexport.md" },
             { "Guided Analysis" = "guide/guided_analysis.md" },
         ] },
         { "Debugger" = [
@@ -52,6 +52,7 @@ nav = [
             "guide/types/index.md",
             { "Basic Types" = "guide/types/basictypes.md" },
             { "Working With Types" = "guide/types/type.md" },
+            { "Type Fragments" = "guide/types/fragments.md" },
             { "Type Attributes and Annotations" = "guide/types/attributes.md" },
             { "Importing/Exporting Types" = "guide/types/typeimportexport.md" },
             { "Type Archives" = "guide/types/typearchives.md" },
@@ -72,6 +73,7 @@ nav = [
             { "Part 2: Lifting" = "dev/archplatform-lifting.md" },
             { "Part 3: Platform Support" = "dev/archplatform-platform.md" },
             { "Flag Guide" = "dev/flags.md" },
+            { "Context-Aware Analysis" = "dev/archplatform-contextual-analysis.md" },
         ] },
         { "BNIL" = [
             { "BNIL Guide: Overview" = "dev/bnil-overview.md" },
@@ -86,6 +88,7 @@ nav = [
         ] },
         { "Important Concepts" = [
             "dev/concepts.md",
+            { "Custom Strings and Constants" = "dev/customstrings.md" },
             { "Outlining" = "dev/outlining.md" },
             { "User Informed Data Flow" = "dev/uidf.md" },
             { "Workflows" = "dev/workflows.md" },
@@ -95,6 +98,7 @@ nav = [
     ] },
     { "About" = [
         "about/index.md",
+        { "Requirements" = "about/requirements.md" },
         { "License" = [
             "about/license.md",
             { "Non-commercial (Named)" = "about/license/noncommercial-named.md" },
@@ -178,3 +182,13 @@ permalink = true
 
 [project.extra]
 disablesearch = true
+
+# Self-host the iframe-worker shim required by the offline plugin for search
+# under file://. Without this Zensical fetches it from unpkg.com, which fails
+# in the offline docs shipped inside the application bundle. The filename must
+# contain "iframe-worker" or Zensical appends the unpkg fallback anyway.
+[[project.extra.polyfills]]
+path = "iframe-worker-shim.js"
+type = "text/javascript"
+async = false
+defer = false

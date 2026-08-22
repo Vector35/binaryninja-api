@@ -2208,12 +2208,12 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 		case ARMV7_BFC:
 			ConditionExecute(il, instr.cond, SetRegisterOrBranch(il, op1.reg,
 				il.And(get_register_size(op1.reg), ReadRegisterOrPointer(il, op1, addr),
-					il.Const(get_register_size(op1.reg), ~(((1<<op3.imm) - 1) << op2.imm)))));
+					il.Const(get_register_size(op1.reg), ~(((1ULL << op3.imm) - 1) << op2.imm)))));
 			break;
 		case ARMV7_BFI:
 		{
 			uint32_t lsb = op3.imm;
-			uint32_t width_mask = (1<<op4.imm) - 1;
+			uint32_t width_mask = (1ULL << op4.imm) - 1;
 			uint32_t mask = width_mask << lsb;
 
 			//bit field insert: op1 = (op1 & (~(<width_mask> << lsb))) | ((op2 & <width_mask>) << lsb)
@@ -4542,64 +4542,76 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 			if (op3.cls == IMM)
 			{
 				size_t destSize = get_register_size(op1.reg);
-				size_t fixedSize = GetDataTypeSize(instr.dataType);
-				if (!fixedSize)
-					fixedSize = destSize;
-				size_t sourceSize = GetDataTypeSize(instr.dataType2);
-				if (!sourceSize)
-					sourceSize = get_register_size(op2.reg);
-				auto source = [&]() {
-					ExprId value = il.Register(get_register_size(op2.reg), op2.reg);
-					if (sourceSize < get_register_size(op2.reg))
-						value = il.LowPart(sourceSize, value);
-					return value;
-				};
-				switch (instr.dataType)
+				size_t sourceRegisterSize = get_register_size(op2.reg);
+				bool destIsFloat = instr.dataType == DT_F32 || instr.dataType == DT_F64;
+				bool sourceIsFloat = instr.dataType2 == DT_F32 || instr.dataType2 == DT_F64;
+				bool toFixed = !destIsFloat && sourceIsFloat;
+				bool fromFixed = destIsFloat && !sourceIsFloat;
+				DataType fixedType = toFixed ? instr.dataType : instr.dataType2;
+				DataType floatType = toFixed ? instr.dataType2 : instr.dataType;
+				size_t fixedSize = GetDataTypeSize(fixedType);
+				size_t floatSize = GetDataTypeSize(floatType);
+				bool validFixedType = fixedType == DT_S16 || fixedType == DT_U16
+					|| fixedType == DT_S32 || fixedType == DT_U32;
+				bool isUnsigned = fixedType == DT_U16 || fixedType == DT_U32;
+
+				if ((!toFixed && !fromFixed) || !validFixedType || fixedSize == 0 || floatSize == 0
+					|| destSize == 0 || sourceRegisterSize == 0 || destSize != sourceRegisterSize)
 				{
-				case DT_S16:
-				case DT_S32:
-					ConditionExecute(il, instr.cond, il.SetRegister(destSize, op1.reg,
-						il.SignExtend(destSize,
-							il.FloatToInt(fixedSize,
-								il.RoundToInt(sourceSize,
-									il.FloatMult(sourceSize,
-										source(),
-										FixedPointScale(il, sourceSize, op3.imm)))))));
+					ConditionExecute(il, instr.cond, il.Unimplemented());
 					break;
-				case DT_U16:
-				case DT_U32:
-					ConditionExecute(il, instr.cond, il.SetRegister(destSize, op1.reg,
-						il.ZeroExtend(destSize,
-							il.FloatToInt(fixedSize,
-								il.RoundToInt(sourceSize,
-									il.FloatMult(sourceSize,
-										source(),
-										FixedPointScale(il, sourceSize, op3.imm)))))));
-					break;
-				case DT_F32:
-				case DT_F64:
-					switch (instr.dataType2)
+				}
+
+				if (destSize != floatSize)
+				{
+					if (floatSize != 4 || fixedSize != 4 || (destSize != 8 && destSize != 16))
 					{
-					case DT_S16:
-					case DT_S32:
-						ConditionExecute(il, instr.cond, il.SetRegister(destSize, op1.reg,
-							il.FloatDiv(destSize,
-								il.IntToFloat(destSize, il.SignExtend(destSize, source())),
-								FixedPointScale(il, destSize, op3.imm))));
-						break;
-					case DT_U16:
-					case DT_U32:
-						ConditionExecute(il, instr.cond, il.SetRegister(destSize, op1.reg,
-							il.FloatDiv(destSize,
-								il.IntToFloat(destSize, il.ZeroExtend(destSize, source())),
-								FixedPointScale(il, destSize, op3.imm))));
-						break;
-					default:
+						ConditionExecute(il, instr.cond, il.Unimplemented());
 						break;
 					}
+
+					ConditionExecute(il, instr.cond,
+						il.Intrinsic(
+							{ RegisterOrFlag::Register(op1.reg) },
+							destSize == 16 ? ARMV7_INTRIN_VCVT_FIXED_Q : ARMV7_INTRIN_VCVT_FIXED,
+							{
+								il.Const(1, floatSize * 8),
+								il.Const(1, op3.imm),
+								il.Const(1, toFixed ? 1 : 0),
+								il.Const(1, isUnsigned ? 1 : 0),
+								il.Register(sourceRegisterSize, op2.reg),
+							}));
 					break;
-				default:
-					break;
+				}
+
+				if (toFixed)
+				{
+					ExprId scaled = il.FloatMult(floatSize,
+						il.Register(sourceRegisterSize, op2.reg),
+						FixedPointScale(il, floatSize, op3.imm));
+					// LLIL_FLOAT_TO_INT is signed. Use the next wider integer size for unsigned
+					// conversions so values in the upper half of the fixed-point range do not
+					// overflow before they are zero-extended.
+					size_t conversionSize = isUnsigned ? fixedSize * 2 : fixedSize;
+					ExprId converted = il.FloatToInt(conversionSize, il.FloatTrunc(floatSize, scaled));
+					if (conversionSize > fixedSize)
+						converted = il.LowPart(fixedSize, converted);
+					converted = isUnsigned
+						? il.ZeroExtend(destSize, converted)
+						: il.SignExtend(destSize, converted);
+					ConditionExecute(il, instr.cond, il.SetRegister(destSize, op1.reg, converted));
+				}
+				else
+				{
+					ExprId source = il.Register(sourceRegisterSize, op2.reg);
+					if (fixedSize < sourceRegisterSize)
+						source = il.LowPart(fixedSize, source);
+					ExprId converted = isUnsigned
+						? il.IntToFloat(floatSize, il.ZeroExtend(floatSize, source))
+						: il.IntToFloat(floatSize, il.SignExtend(floatSize, source));
+					ConditionExecute(il, instr.cond,
+						il.SetRegister(destSize, op1.reg,
+							il.FloatDiv(floatSize, converted, FixedPointScale(il, floatSize, op3.imm))));
 				}
 				break;
 			}
@@ -4651,12 +4663,56 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 							il.ZeroExtend(get_register_size(op1.reg),
 								il.Register(get_register_size(op2.reg), op2.reg)))));
 					break;
+				case DT_F32:
+				case DT_F64:
+					ConditionExecute(il, instr.cond, il.SetRegister(get_register_size(op1.reg), op1.reg,
+						il.FloatConvert(get_register_size(op1.reg),
+							il.Register(get_register_size(op2.reg), op2.reg))));
+					break;
 				default:
 					break;
 				}
 				break;
 			default:
 				break;
+			}
+			break;
+		case ARMV7_VABS:
+			if (op1.cls != REG || op2.cls != REG || op3.cls != NONE)
+			{
+				ConditionExecute(il, instr.cond, il.Unimplemented());
+				break;
+			}
+
+			{
+				size_t elementSize = GetDataTypeSize(instr.dataType);
+				size_t destSize = get_register_size(op1.reg);
+				size_t sourceSize = get_register_size(op2.reg);
+				bool isFloat = (instr.dataType == DT_F32) || (instr.dataType == DT_F64);
+				if (elementSize == 0 || destSize == 0 || sourceSize == 0 || destSize != sourceSize)
+				{
+					ConditionExecute(il, instr.cond, il.Unimplemented());
+					break;
+				}
+
+				if (isFloat && elementSize == destSize)
+				{
+					ConditionExecute(il, instr.cond,
+						il.SetRegister(destSize, op1.reg,
+							il.FloatAbs(destSize, il.Register(sourceSize, op2.reg))));
+				}
+				else
+				{
+					ConditionExecute(il, instr.cond,
+						il.Intrinsic(
+							{ RegisterOrFlag::Register(op1.reg) },
+							destSize == 16 ? ARMV7_INTRIN_VABS_Q : ARMV7_INTRIN_VABS,
+							{
+								il.Const(1, elementSize * 8),
+								il.Const(1, isFloat ? 1 : 0),
+								il.Register(sourceSize, op2.reg),
+							}));
+				}
 			}
 			break;
 		case ARMV7_VADD:

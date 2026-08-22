@@ -585,6 +585,7 @@ bool CoreTypeParser::ParseTypeString(const std::string& source, Ref<Platform> pl
 
 	if (!success)
 	{
+		BNFreeQualifiedNameAndType(&apiResult);
 		return false;
 	}
 

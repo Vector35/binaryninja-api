@@ -3405,11 +3405,11 @@ void Function::ExpandAll()
 }
 
 
-void Function::StoreMetadata(const std::string& key, Ref<Metadata> value, bool isAuto)
+void Function::StoreMetadata(const std::string& key, Ref<Metadata> value, BNMetadataStoreFlag flags)
 {
 	if (!value)
 		return;
-	BNFunctionStoreMetadata(m_object, key.c_str(), value->GetObject(), isAuto);
+	BNFunctionStoreMetadata(m_object, key.c_str(), value->GetObject(), flags);
 }
 
 

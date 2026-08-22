@@ -34,21 +34,18 @@ Ref<Symbol> RTTI::GetRealSymbol(BinaryView *view, uint64_t relocAddr, uint64_t s
 }
 
 
-std::optional<std::string> RTTI::DemangleNameMS(BinaryView* view, bool allowMangled, const std::string &mangledName)
+std::optional<std::string> RTTI::DemangleNameMS(
+    BinaryView* view, bool allowMangled, const std::string &mangledName, bool simplifyTemplates)
 {
-    QualifiedName demangledName = {};
-    Ref<Type> outType = {};
-    if (!DemangleMS(view->GetDefaultArchitecture(), mangledName, outType, demangledName, view))
+    auto result = DemangleMS(view->GetDefaultPlatform(), mangledName, simplifyTemplates);
+    if (!result)
         return DemangleNameLLVM(allowMangled, mangledName);
-    return NormalizeRTTIClassName(demangledName.GetString());
+    return NormalizeRTTIClassName(result->name.GetString());
 }
 
 
 std::optional<std::string> RTTI::DemangleNameGNU3(BinaryView* view, bool allowMangled, const std::string &mangledName)
 {
-    QualifiedName demangledName = {};
-    Ref<Type> outType = {};
-
     std::string adjustedMangledName = mangledName;
     // For some reason some of the names that start with ZN are not prefixed by `_`.
     if (adjustedMangledName.rfind("ZN", 0) == 0)
@@ -62,7 +59,8 @@ std::optional<std::string> RTTI::DemangleNameGNU3(BinaryView* view, bool allowMa
     if (adjustedMangledName.rfind("_Z", 0) != 0)
         adjustedMangledName = "_Z" + adjustedMangledName;
 
-    if (!DemangleGNU3(view->GetDefaultArchitecture(), adjustedMangledName, outType, demangledName, true))
+    auto result = DemangleGNU3(view->GetDefaultPlatform(), adjustedMangledName, true);
+    if (!result)
         return allowMangled ? std::optional(mangledName) : std::nullopt;
 
     // Because we might have a generic name such as "PackageListGui::PackageListGui" returned, we must attempt to
@@ -71,10 +69,10 @@ std::optional<std::string> RTTI::DemangleNameGNU3(BinaryView* view, bool allowMa
     // MANGLED: ZN14PackageListGuiC1EON10Filesystem4PathENS_14UnderSubheaderEbE3$_1
     // GENERIC DEMANGLED: PackageListGui::PackageListGui
     // UPDATED DEMANGLED: PackageListGui::PackageListGui(Filesystem::Path&&, PackageListGui::UnderSubheader, bool)
-    if (outType && outType->IsFunction())
-        demangledName.push_back(outType->GetStringAfterName(view->GetDefaultPlatform()));
+    if (result->type && result->type->IsFunction())
+        result->name.push_back(result->type->GetStringAfterName(view->GetDefaultPlatform()));
 
-    return demangledName.GetString();
+    return result->name.GetString();
 }
 
 
@@ -100,11 +98,10 @@ std::optional<std::string> RTTI::DemangleNameItanium(BinaryView* view, bool allo
 
 std::optional<std::string> RTTI::DemangleNameLLVM(bool allowMangled, const std::string &mangledName)
 {
-    QualifiedName demangledName = {};
-    Ref<Type> outType = {};
-    if (!DemangleLLVM(mangledName, demangledName, true))
+    auto result = DemangleLLVM(mangledName, true);
+    if (!result)
         return allowMangled ? std::optional(mangledName) : std::nullopt;
-    return NormalizeRTTIClassName(demangledName.GetString());
+    return NormalizeRTTIClassName(result->name.GetString());
 }
 
 

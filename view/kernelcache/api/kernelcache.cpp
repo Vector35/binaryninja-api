@@ -34,22 +34,6 @@ CacheSymbol SymbolFromApi(BNKernelCacheSymbol apiSymbol)
 	return symbol;
 }
 
-std::pair<std::string, Ref<Type>> CacheSymbol::DemangledName(BinaryView &view) const
-{
-	QualifiedName qname;
-	Ref<Type> outType = nullptr;
-	std::string shortName = name;
-	if (DemangleGeneric(view.GetDefaultArchitecture(), name, outType, qname, &view, true))
-		shortName = qname.GetString();
-	return {shortName, outType};
-}
-
-Ref<Symbol> CacheSymbol::GetBNSymbol(BinaryView &view) const
-{
-	auto [shortName, _] = DemangledName(view);
-	return new Symbol(type, shortName, shortName, name, address, nullptr);
-}
-
 std::string KernelCacheAPI::GetSymbolTypeAsString(const BNSymbolType &type)
 {
 	// NOTE: We currently only use the function and data symbol for cache symbols.

@@ -21,9 +21,11 @@
 import atexit
 import sys
 import ctypes
+import inspect
+from dataclasses import dataclass
 from time import gmtime, struct_time
 import os
-from typing import Mapping, Optional
+from typing import List, Mapping, Optional
 import functools
 
 # Binary Ninja components
@@ -56,7 +58,7 @@ from .lineardisassembly import *
 from .highlight import *
 from .scriptingprovider import *
 from .downloadprovider import *
-from .pluginmanager import *
+from .extensionmanager import *
 from .settings import *
 from .metadata import *
 from .flowgraph import *
@@ -84,6 +86,8 @@ from .lineformatter import *
 from .renderlayer import *
 from .constantrenderer import *
 from .stringrecognizer import *
+from .unicode import *
+from .similarity import *
 # We import each of these by name to prevent conflicts between
 # log.py and the function 'log' which we don't import below
 from .log import (
@@ -101,6 +105,13 @@ warnings.filterwarnings('once', '', DeprecatedWarning)
 if core.BNGetProduct() == "Binary Ninja Enterprise Client" or core.BNGetProduct() == "Binary Ninja Ultimate":
 	from .enterprise import *
 	from .firmwareninja import *
+
+
+def _get_parameter_count(callback):
+	if sys.version_info >= (3, 14):
+		import annotationlib
+		return len(inspect.signature(callback, annotation_format=annotationlib.Format.STRING).parameters)
+	return len(inspect.signature(callback).parameters)
 
 
 def shutdown():
@@ -373,6 +384,41 @@ def core_license_count() -> int:
 	return core.BNGetLicenseCount()
 
 
+@dataclass(frozen=True)
+class LicenseAddon:
+	'''A verified add-on attached to the active license.'''
+	id: str
+	license_serial: str
+	product: str
+	created: str
+	created_timestamp: int
+	expiration: str
+	expiration_timestamp: int
+	signature: str
+
+
+def core_license_addons() -> List[LicenseAddon]:
+	'''License addons from the license file'''
+	_init_plugins()
+	count = ctypes.c_ulonglong()
+	addons = core.BNGetLicenseAddons(ctypes.byref(count))
+	if not addons:
+		return []
+	try:
+		return [LicenseAddon(
+			id=addons[i].id,
+			license_serial=addons[i].licenseSerial,
+			product=addons[i].product,
+			created=addons[i].created,
+			created_timestamp=addons[i].createdTimestamp,
+			expiration=addons[i].expiration,
+			expiration_timestamp=addons[i].expirationTimestamp,
+			signature=addons[i].signature,
+		) for i in range(count.value)]
+	finally:
+		core.BNFreeLicenseAddons(addons, count.value)
+
+
 def core_ui_enabled() -> bool:
 	'''Indicates that a UI exists and the UI has invoked BNInitUI'''
 	return core.BNIsUIEnabled()
@@ -408,6 +454,30 @@ def get_memory_usage_info() -> Mapping[str, int]:
 	for i in range(0, count.value):
 		result[info[i].name] = info[i].value
 	core.BNFreeMemoryUsageInfo(info, count.value)
+	return result
+
+
+def get_stat_histograms() -> Mapping[str, dict]:
+	"""
+	Get per-tag bit-length histograms gathered by StatCollector instrumentation.
+
+	Each entry maps a tag name to ``{"total": int, "buckets": [int; 65]}`` where
+	``buckets[k]`` counts samples whose value has ``bit_width == k`` (k in 0..64) and
+	``total`` is the sum of the sampled values. Empty unless a ``StatCollector`` was
+	instantiated somewhere in the core during analysis.
+
+	:return: Dictionary of {tag name: {"total": int, "buckets": list[int]}}
+	"""
+	count = ctypes.c_ulonglong()
+	info = core.BNGetStatHistograms(count)
+	assert info is not None, "core.BNGetStatHistograms returned None"
+	result = {}
+	for i in range(0, count.value):
+		result[info[i].name] = {
+			"total": info[i].total,
+			"buckets": list(info[i].buckets),
+		}
+	core.BNFreeStatHistograms(info, count.value)
 	return result
 
 

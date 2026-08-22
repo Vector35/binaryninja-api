@@ -9,7 +9,7 @@
 
 We recommend the following steps to produce the best bug-reports:
 
-1. Try to reproduce your issue with both the latest stable release and [the latest development release](index.md#updates).
+1. Try to reproduce your issue with both the latest stable release and [the latest development release](index.md#updates). See [Side-by-Side Installations](#side-by-side-installations) to run both at once.
 2. Try temporarily [disabling plugins](#disabling-plugins)
 3. Try temporarily [disabling user settings](#disabling-user-settings)
 4. Try temporarily [resetting QSettings](#resetting-qsettings)
@@ -45,13 +45,31 @@ Alternatively, it might be easier to save debug logs to a file instead:
 
 (note that both long and short-form of the command-line arguments are demonstrated in the above examples)
 
+## Side-by-Side Installations
+
+When investigating bugs it can be useful to keep a stable and a development build installed simultaneously.
+
+Each installation updates only itself and the update setting and [update channels](index.md#updates) are settings that are saved per-install. Othewise however they share the same [user folder](index.md#user-folder), sharing settings, plugins, license, and the `lastrun` file that records the most recently launched install path. If you want to keep separate profiles, use the `BN_USER_DIRECTORY` environment variable along with the [`BN_QSETTINGS_POSTFIX`](#resetting-qsettings) variable to also separate window layout, recent files, and dialog history.
+
+### Installing
+
+Install the second copy to a path of its own:
+
+- macOS: rename the bundle, for example `/Applications/Binary Ninja Dev.app`
+- Linux: extract to a separate directory
+- Windows: combine a user install (`%LOCALAPPDATA%\Vector35\BinaryNinja`) with a global one (`C:\Program Files\Vector35\BinaryNinja`), or point the installer at a different directory
+
+### URL Handler
+
+Only one installation can own the [`binaryninja:` URL handler](index.md#loading-files), and the registration is global rather than per-install: macOS registers the scheme from each bundle's `Info.plist`, Windows writes the handler command during installation, and Linux registers `x-scheme-handler/binaryninja` from `linux-setup.sh`. Whichever copy registered most recently generally wins, so expect URLs to open in only one of the two. On Linux, re-run [`linux-setup.sh`](https://github.com/Vector35/binaryninja-api/blob/dev/scripts/linux-setup.sh) from the install you want to handle URLs.
+
 ## Troubleshooting Plugins
 
 While third party plugins are not officially supported, there are a number of troubleshooting tips that can help identify the cause. The most important is to enable debug logging as suggested in the previous section. This will often highlight problems with python paths or any other issues that prevent plugins from running.
 
 Additionally, if you're having trouble running a plugin in headless mode (without a GUI calling directly into the core), make sure you're running the Commercial or Ultimate edition of Binary Ninja as the Non-Commercial edition does not support headless processing.
 
-Next, if running a python plugin, make sure the python requirements are met by the bundled Python runtime or your configured custom interpreter. Plugin requirements can be installed by the plugin manager, by manually copying modules to the `plugins` [folder](./index.md#directories), or by switching to a different interpreter in the settings.
+Next, if running a python plugin, make sure the python requirements are met by the bundled Python runtime or your configured custom interpreter. Plugin requirements can be installed by the extension manager, by manually copying modules to the `plugins` [folder](./index.md#directories), or by switching to a different interpreter in the settings.
 
 ## License Problems
 
@@ -80,7 +98,7 @@ Analysis databases (`.bndb`) may grow in size after repeated saving/loading due 
 
 ## Platforms
 
-The below steps are specific to different platforms that Binary Ninja runs on.  See the [FAQ] for currently supported versions.
+The below steps are specific to different platforms that Binary Ninja runs on.  See the [requirements](../about/requirements.md#supported-platforms) page for currently supported versions.
 
 ### Windows
 
@@ -114,7 +132,7 @@ Without these paths set, Binary Ninja will not be able to locate the Python inte
 
 If you're using Windows virtual machines within virtualbox or VMWare, you may have trouble with the 3d acceleration drivers. If so, disabling the 3d acceleration is the easiest way to get BN working.
 
-You may also manually create a `settings.json` file in your [user folder](./index.md#user-folder) with the contents though using the [plugin manager](plugins.md#plugin-manager) may also have problems:
+You may also manually create a `settings.json` file in your [user folder](./index.md#user-folder) with the contents though using the [extension manager](plugins.md#extension-manager) may also have problems:
 
 ``` js
 {
@@ -134,7 +152,7 @@ rm -rf /Applications/Binary\ Ninja.app/Contents/Frameworks/Python.framework/Vers
 
 ### Linux
 
-Given the diversity of Linux distributions, some workarounds are required to run Binary Ninja on platforms that are not [officially supported][FAQ].
+Given the diversity of Linux distributions, some workarounds are required to run Binary Ninja on platforms that are not [officially supported](../about/requirements.md#supported-platforms).
 
 #### Common Problems
 
@@ -252,7 +270,6 @@ stdenv.mkDerivation rec {
 [archrepo]: https://wiki.archlinux.org/index.php/Official_repositories
 [recover]: https://binary.ninja/recover.html
 [support]: https://binary.ninja/support.html
-[FAQ]: https://binary.ninja/faq.html
 [purchase]: https://binary.ninja/purchase.html
 [unofficial script]: https://gist.github.com/0x1F9F1/64725fbe9acdeafaf39e048e03f4dd9d
 [slack]: https://slack.binary.ninja
@@ -271,7 +288,7 @@ The following environment variables may be helpful when troubleshooting issues:
 | BN_LICENSE | File Contents (String) | This variable is useful for using Binary Ninja with a license passed from outside a docker image without storing the raw license file inside. [Must contain](https://github.com/Vector35/debugger/blob/dev/scripts/build.py#L195-L196) the full contents of the license file.  |
 | BN_USER_DIRECTORY | Path (String) | This variable overrides the [default user folder](https://docs.binary.ninja/guide/index.html#user-folder) path. |
 | BN_QSETTINGS_POSTFIX | Postfix (String) | This environment variable is treated as a string postfix that can be used to separate saved QSettings for testing purposes. |
-| BN_DISABLE_REPOSITORY_PLUGINS | Flag (True if exists) | This setting will only disable plugins installed via the plugin manager. |
+| BN_DISABLE_REPOSITORY_PLUGINS | Flag (True if exists) | This setting will only disable plugins installed via the extension manager. |
 | BN_DISABLE_USER_PLUGINS | Flag (True if exists) | This environment variable will disable all plugins loaded from the [plugins user folder](https://docs.binary.ninja/guide/index.html#user-folder). |
 | BN_DISABLE_USER_SETTINGS | Flag (True if exists) | This flag will cause Binary Ninja to ignore any [`settings.json`](https://docs.binary.ninja/guide/settings.html).|
 | BN_SCREENSHOT | Flag (True if exists) | This flag removes some small UI clutter to enable cleaner screenshots. |
@@ -317,6 +334,7 @@ By default, Binary Ninja does full analysis of the binary and decompiles every f
 
 Other [analysis settings](settings.md#settings-reference) can also help. Check the descriptions to see what they do.
 
+One workflow we recommend is to use an [initial analysis hold](settings.md#analysis.initialAnalysisHold) specified in [Open With Options](index.md#opening-with-options) as well as disabling [linear sweep](settings.md#analysis.linearSweep.autorun), then manually using [memory map permissions](index.md#memory-map) to control where functions will be automatically created. You can add or remove execute permissions to a segment or section and then either manually run linear sweep, or create functions via a script or by hand. In cases of firmware blobs where large parts of a file are data, this can prevent Binary Ninja from trying to automatically create code in regions that are known to be data-only.
 
 ## Collaboration Issues
 

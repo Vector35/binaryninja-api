@@ -38,6 +38,7 @@ use crate::{
     architecture::{Architecture, Register, RegisterId},
     binary_view::BinaryView,
     calling_convention::CoreCallingConvention,
+    platform::Platform,
     rc::*,
     string::{BnString, IntoCStr},
 };
@@ -1079,6 +1080,19 @@ impl Type {
 
     pub fn deref_named_type_reference(&self, view: &BinaryView) -> Ref<Type> {
         unsafe { Self::ref_from_raw(BNDerefNamedTypeReference(view.handle, self.handle)) }
+    }
+
+    pub fn get_string_after_name(&self, platform: Option<&Platform>) -> String {
+        let platform = platform
+            .map(|platform| platform.handle)
+            .unwrap_or(std::ptr::null_mut());
+        unsafe {
+            BnString::into_string(BNGetTypeStringAfterName(
+                self.handle,
+                platform,
+                BNTokenEscapingType::NoTokenEscapingType,
+            ))
+        }
     }
 }
 

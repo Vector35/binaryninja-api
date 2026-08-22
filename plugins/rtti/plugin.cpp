@@ -25,7 +25,7 @@ void RTTIAnalysis(const Ref<AnalysisContext>& analysisContext)
 		{
 			auto processor = RTTI::Microsoft::MicrosoftRTTIProcessor(view);
 			processor.ProcessRTTI();
-			view->StoreMetadata(VIEW_METADATA_RTTI, processor.SerializedMetadata(), true);
+			view->StoreMetadata(VIEW_METADATA_RTTI, processor.SerializedMetadata(), MetadataStoreEphemeral);
 		}
 		catch (std::exception& e)
 		{
@@ -37,7 +37,7 @@ void RTTIAnalysis(const Ref<AnalysisContext>& analysisContext)
 	{
 		auto processor = RTTI::Itanium::ItaniumRTTIProcessor(view);
 		processor.ProcessRTTI();
-		view->StoreMetadata(VIEW_METADATA_RTTI, processor.SerializedMetadata(), true);
+		view->StoreMetadata(VIEW_METADATA_RTTI, processor.SerializedMetadata(), MetadataStoreEphemeral);
 	}
 	catch (std::exception& e)
 	{
@@ -56,7 +56,7 @@ void VFTAnalysis(const Ref<AnalysisContext>& analysisContext)
 		auto microsoftProcessor = RTTI::Microsoft::MicrosoftRTTIProcessor(view);
 		microsoftProcessor.ProcessVFT();
 		// TODO: We have to store the data for the second processor to pick up the info.
-		view->StoreMetadata(VIEW_METADATA_RTTI, microsoftProcessor.SerializedMetadata(), true);
+		view->StoreMetadata(VIEW_METADATA_RTTI, microsoftProcessor.SerializedMetadata(), MetadataStoreEphemeral);
 	}
 	catch (std::exception& e)
 	{
@@ -67,7 +67,7 @@ void VFTAnalysis(const Ref<AnalysisContext>& analysisContext)
 	{
 		auto itaniumProcessor = RTTI::Itanium::ItaniumRTTIProcessor(view);
 		itaniumProcessor.ProcessVFT();
-		view->StoreMetadata(VIEW_METADATA_RTTI, itaniumProcessor.SerializedMetadata(), true);
+		view->StoreMetadata(VIEW_METADATA_RTTI, itaniumProcessor.SerializedMetadata(), MetadataStoreEphemeral);
 	}
 	catch (std::exception& e)
 	{

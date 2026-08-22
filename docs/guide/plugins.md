@@ -1,6 +1,6 @@
 # Using Plugins
 
-The most common Binary Ninja plugins are written in Python which we are covering here. That said, there are some C++ plugins which must be built for the appropriate native architecture and will usually include build instructions for each platform. Several [C++ examples](https://github.com/Vector35/binaryninja-api/tree/dev/examples) are included in the API repository, and the [binexport](https://github.com/google/binexport) utility (used with [bindiff](https://www.zynamics.com/bindiff.html)) is also a native plugin that must be built and installed manually. Finally, there is preliminary support for [Rust plugins](https://github.com/Vector35/binaryninja-api/tree/dev/rust), but the Rust API is still in the early stages of development, and should be considered a moving target, so proceed with caution and develop at your own risk.
+The most common Binary Ninja plugins are written in Python which we are covering here. That said, there are some C++ plugins which must be built for the appropriate native architecture and will usually include build instructions for each platform. Several [C++ examples](https://github.com/Vector35/binaryninja-api/tree/dev/examples) are included in the API repository. Binary Ninja also bundles native plugins such as the [Google BinDiff similarity and BinExport integration](./similarity.md#binexport). Finally, there is preliminary support for [Rust plugins](https://github.com/Vector35/binaryninja-api/tree/dev/rust), but the Rust API is still in the early stages of development, and should be considered a moving target, so proceed with caution and develop at your own risk.
 
 Plugins are loaded from the user's plugin folder:
 
@@ -8,31 +8,31 @@ Plugins are loaded from the user's plugin folder:
 - Linux: `~/.binaryninja/plugins/`
 - Windows: `%APPDATA%\Binary Ninja\plugins`
 
-Note that plugins installed via the [PluginManager API](https://api.binary.ninja/binaryninja.pluginmanager-module.html) are installed in the `repositories` folder in the same path as the previous `plugin` folder listed above.  You should not need to manually adjust anything in that folder, but should access them via the API instead.
+Note that plugins installed via the [Extension Manager API](https://api.binary.ninja/binaryninja.extensionmanager-module.html) are installed in the `repositories` folder in the same path as the previous `plugin` folder listed above.  You should not need to manually adjust anything in that folder, but should access them via the API instead.
 
-## Plugin Manager
+## Extension Manager
 
-![Plugin Manager](../img/plugin-manager.png "Plugin Manager"){ width="1000" }
+![Extension Manager](../img/plugin-manager.png "Extension Manager"){ width="1000" }
 
-Plugins can be installed directly via the GUI from Binary Ninja. You can launch the plugin manager via any of the following methods:
+Plugins can be installed directly via the GUI from Binary Ninja. You can launch the extension manager via any of the following methods:
 
  - (Linux/Windows) `[CTRL-SHIFT-M]`
  - (macOS) `[CMD-SHIFT-M]`
 
  Or:
 
- - `Plugins` / `Manage Plugins`
+ - `Plugins` / `Manage Extensions`
 
  Or:
 
- - (Linux/Windows) `[CTRL-P]` / `Plugin Manager` / `[ENTER]`
- - (macOS) `[CMD-P]` / `Plugin Manager` / `[ENTER]`
+ - (Linux/Windows) `[CTRL-P]` / `Manage Extensions` / `[ENTER]`
+ - (macOS) `[CMD-P]` / `Manage Extensions` / `[ENTER]`
 
 Note that some plugins may show `Force Install` instead of the normal `Install` button. If that's the case, it means the plugin does not specifically advertise support for your platform or version of python. Often times the plugin will still work, but you must override a warning to confirm installation and be aware that the plugin may not be compatible.
 
-### Plugin Manager Searching
+### Extension Manager Searching
 
-In addition to finding plugins by name or description content, the search box in the plugin manager also supports a number of helpful search keywords to filter through the list of plugins as it continues to grow:
+In addition to finding plugins by name or description content, the search box in the extension manager also supports a number of helpful search keywords to filter through the list of plugins as it continues to grow:
 
  - `@installed` to only show installed plugins
  - `@enabled` to only show enabled plugins
@@ -62,7 +62,7 @@ after cloning or else the necessary submodules will not actually be downloaded.
 
 ### Installing via the API
 
-Binary Ninja includes a [PluginManager API](https://api.binary.ninja/binaryninja.pluginmanager-module.html) which can simplify the process of finding and installing plugins. From the console:
+Binary Ninja includes an [Extension Manager API](https://api.binary.ninja/binaryninja.extensionmanager-module.html) which can simplify the process of finding and installing plugins. From the console:
 
 ```python
 >>> mgr = RepositoryManager()
@@ -87,7 +87,7 @@ Then just restart and the newly-enabled plugin will be loaded.
 
 ### Installing Prerequisites
 
-Binary Ninja can automatically install pip requirements for python plugins  installed using the plugin manager. If the plugin author has included a `requirements.txt` file, the plugin manager will automatically install those dependencies.
+Binary Ninja can automatically install pip requirements for python plugins installed using the extension manager. If the plugin author has included a `requirements.txt` file, the extension manager will automatically install those dependencies.
 
 The `Install python3 module` action (available from the [command palette](index.md#command-palette)) can be used to install python3 modules to the local [python folder](index.md#user-folder).
 

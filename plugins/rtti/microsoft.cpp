@@ -368,7 +368,8 @@ std::vector<BaseClassInfo> MicrosoftRTTIProcessor::ProcessClassHierarchyDescript
             continue;
         }
         auto baseClassTypeDesc = TypeDescriptor(m_view, baseClassTypeDescAddr);
-        auto baseClassName = DemangleNameMS(m_view, allowMangledClassNames, baseClassTypeDesc.name);
+        auto baseClassName = DemangleNameMS(
+            m_view, allowMangledClassNames, baseClassTypeDesc.name, m_simplifyTemplates);
         if (!baseClassName.has_value())
         {
             m_logger->LogWarnF("Skipping BaseClassDescriptor with mangled name {:#x}", baseClassTypeDescAddr);
@@ -415,7 +416,7 @@ std::optional<ClassInfo> MicrosoftRTTIProcessor::ProcessRTTI(uint64_t coLocatorA
     // Get type descriptor then check to see if the class name was demangled.
     auto typeDescAddr = resolveAddr(coLocator->pTypeDescriptor);
     auto typeDesc = TypeDescriptor(m_view, typeDescAddr);
-    auto className = DemangleNameMS(m_view, allowMangledClassNames, typeDesc.name);
+    auto className = DemangleNameMS(m_view, allowMangledClassNames, typeDesc.name, m_simplifyTemplates);
     if (!className.has_value())
         return std::nullopt;
 
@@ -607,6 +608,7 @@ MicrosoftRTTIProcessor::MicrosoftRTTIProcessor(const Ref<BinaryView> &view, bool
 {
     m_view = view;
     m_logger = view->CreateLogger("Microsoft RTTI");
+    m_simplifyTemplates = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", view);
     allowMangledClassNames = useMangled;
     allowAnonymousClassNames = allowAnonymous;
     checkWritableRData = checkRData;

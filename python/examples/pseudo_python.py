@@ -24,7 +24,7 @@ from binaryninja import (Architecture, BraceRequirement, DisassemblySettings, Di
                          HighLevelILTokenEmitter, HighLevelILOperation, OperatorPrecedence, ScopeType,
                          SymbolDisplayType, SymbolDisplayResult, SymbolType, BoolType, VoidType, PointerType,
                          NamedTypeReferenceType, StructureType, InstructionTextTokenContext, StructureMember,
-                         BinaryView, BuiltinType, DataBuffer)
+                         BinaryView, BuiltinType, escape_unicode_string)
 from typing import Optional
 import struct
 
@@ -1173,7 +1173,7 @@ class PseudoPythonFunction(LanguageRepresentationFunction):
                     postfix = derived_string.custom_type.string_postfix
                     tokens.append(InstructionTextToken(InstructionTextTokenType.BraceToken, f'{prefix}"'))
                     tokens.append(InstructionTextToken(InstructionTextTokenType.StringToken,
-                        DataBuffer(bytes(derived_string.value)).escape(),
+                        escape_unicode_string(bytes(derived_string.value), self.function.view),
                         address=instr.address, value=instr.expr_index,
                         context=InstructionTextTokenContext.DerivedStringReferenceTokenContext))
                     tokens.append(InstructionTextToken(InstructionTextTokenType.BraceToken, f'"{postfix}'))

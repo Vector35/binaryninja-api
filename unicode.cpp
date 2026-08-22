@@ -185,3 +185,29 @@ std::string BinaryNinja::Unicode::ToEscapedString(
 	return result;
 }
 
+
+std::string BinaryNinja::Unicode::ToEscapedString(BinaryView* view, const void* data, size_t dataLen)
+{
+	char* value = BNUnicodeToEscapedStringForView(view ? view->GetObject() : nullptr, data, dataLen);
+	std::string result(value);
+	BNFreeString(value);
+	return result;
+}
+
+
+std::string BinaryNinja::Unicode::ToEscapedString(BinaryView* view, std::string_view str)
+{
+	return ToEscapedString(view, str.data(), str.size());
+}
+
+
+size_t BinaryNinja::Unicode::GetDisplayWidth(const std::string& str)
+{
+	return BNUnicodeGetDisplayWidth(str.c_str());
+}
+
+
+size_t BinaryNinja::Unicode::GetNextGraphemeClusterBoundary(const std::string& str, size_t offset)
+{
+	return BNUnicodeGetNextGraphemeClusterBoundary(str.data(), str.size(), offset);
+}

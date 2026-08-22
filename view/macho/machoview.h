@@ -1487,7 +1487,7 @@ namespace BinaryNinja
 		bool m_relocatable = false;
 
 		bool m_extractMangledTypes;
-		bool m_simplifyTemplates;
+		bool m_simplifyTemplates = false;
 
 		SymbolQueue* m_symbolQueue = nullptr;
 		Ref<Logger> m_logger;
@@ -1533,6 +1533,7 @@ namespace BinaryNinja
 		MachoView(const std::string& typeName, BinaryView* data, bool parseOnly = false);
 
 		virtual bool Init() override;
+		void OnAfterSnapshotDataApplied() override;
 	};
 
 	class MachoViewType: public BinaryViewType

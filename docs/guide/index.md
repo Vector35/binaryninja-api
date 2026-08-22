@@ -34,7 +34,7 @@ The contents of the user folder includes:
 - `lastrun`: A text file containing the directory of the last Binary Ninja binary path -- very useful for plugins to resolve the installation locations in non-default settings or on Linux
 - `license.dat`: License file
 - `plugins/`: Folder containing all manually installed user plugins
-- `repositories/`: Folder containing files and plugins managed by the [Plugin Manager API](https://api.binary.ninja/binaryninja.pluginmanager-module.html)
+- `repositories/`: Folder containing files and plugins managed by the [Extension Manager API](https://api.binary.ninja/binaryninja.extensionmanager-module.html)
 - `settings.json`: User settings file (see [settings](settings.md))
 
 The following files and folders may be created in the user folder but are not created by default without some additional action:
@@ -42,7 +42,7 @@ The following files and folders may be created in the user folder but are not cr
 - `keybindings.json`: Custom key bindings (see [key bindings](#custom-hotkeys))
 - `startup.py`: Default Python commands run once the UI is loaded in the context of the scripting console
 - `signatures/`: Any user-created signatures can be stored in platform-specific sub-folders in this location
-- `pythonVER/`: Any pip dependencies from plugin manager plugins are installed to the appropriate Python version subfolder such as `python313`
+- `pythonVER/`: Any pip dependencies from extension manager plugins are installed to the appropriate Python version subfolder such as `python313`
 - `symbols/`: Used to store automatically downloaded PDBs
 - `update/`: Used to store update caches for pending updates
 - `snippets/`: Used to store snippets created using the official Snippet plugin
@@ -64,6 +64,30 @@ If you ever have the need to flush these, you can find the installation location
 When you first run Binary Ninja, it will prompt you for your license key. You should have received your license key via email after your purchase. If not, please contact [support](https://binary.ninja/support).
 
 Once the license key is installed, you can change it, back it up, or otherwise inspect it simply by looking inside the base of the user folder for `license.dat`.
+
+## First Run Wizard
+
+![First Run Wizard ><](../img/first-bn.png "First Run Wizard"){ width="600" }
+
+The first time you launch Binary Ninja, a short setup wizard helps tailor the interface to your preferences. You can revisit it at any time from `Help / First Run Wizard...`.
+
+The wizard has three steps:
+
+1. **Light or dark?** — Pick a starting theme. Many more are available in the [settings](settings.md) and from the [community themes](https://github.com/vector35/community-themes) collection, and the Theme Manager plugin offers a live preview.
+2. **Choose your style** — Select a starting workflow preset. **Binary Ninja Defaults** is recommended for new users, while the **Ghidra-Like** and **IDA-Like** presets adjust keybindings and UI layout to feel more familiar if you are coming from those tools. See the [migration guides](migration/index.md) — [Migrating from IDA](migration/migrationguideida.md) and [Migrating from Ghidra](migration/ghidra/index.md) — for a detailed description of exactly what each preset changes.
+3. **Important Settings** — Toggle a few privacy and network-related options (automatic crash reporting, automatic update checks, and WARP network features). These, like every other setting, can be changed later in [settings](settings.md).
+
+### Applying a Preset
+
+Selecting the **Ghidra-Like** or **IDA-Like** preset replaces your keybindings and updates a handful of UI settings to match that tool. Selecting **Binary Ninja Defaults** resets those same keybindings and settings back to the Binary Ninja defaults if you have existing settings which makes it a convenient way to undo a previously-applied preset.
+
+The exact keybindings and settings each preset applies are defined by the configuration files in [`docs/files`](https://github.com/Vector35/binaryninja-api/tree/dev/docs/files) in the API repository. If you think a preset could be improved, we welcome suggestions — please open a pull request against those files.
+
+If applying your selection would change any of your own settings or keybindings, the wizard backs them up first — `settings.json` and `keybindings.json` are copied to numbered backups (for example `settings.json.1` and `keybindings.json.1`) in your [user folder](#user-folder) — and a warning describes what will be backed up. To restore a backup later, simply rename it back into place.
+
+Presets also change some window state that is stored outside `settings.json`, including the default pane layout and a few view options such as linear view's single-function mode, the feature map size, and the types sidebar detail toggle. That state is reset to match the preset rather than backed up, so it cannot be directly recovered by renaming a file.
+
+Choosing **Cancel** leaves the wizard without touching anything; no changes are applied until you press **Accept**.
 
 ## Linux Setup
 
@@ -237,19 +261,35 @@ The Recent files list can be cleared via using the Command Palette (`[CTRL] + P`
 
 Hotkeys (macOS: `[CMD] + 0` - `[CMD] + 9`, Windows/Linux: `[CTRL] + 0` - `[CTRL] + 9`) can also be used to quickly open a file. The hotkey for a given entry will be shown on the right.
 
+#### Recent Files Context Menu
+
+Right-clicking an entry in the recent files list offers:
+
+| Action | Description |
+| --- | --- |
+| Copy Path | Copy the full path of the selected entry to the clipboard |
+| Open Selection with Options... | Open using the [Open with Options](#opening-with-options) dialog |
+| Open Selection with Container Browser... | Open using the [Container Browser](#container-browser) |
+| Open File Location... | Reveal the containing folder in your system file manager |
+| Remove from Recent Files | Drop the entry from the list, leaving its saved state intact |
+| Forget This File | Drop the entry *and* purge the state saved for that file: the view state restored by [`ui.files.restore.viewState`](settings.md#ui.files.restore.viewState) (window layout, pane splits, sidebar, and location) and the load settings restored by [`ui.files.restore.viewOptions`](settings.md#ui.files.restore.viewOptions). |
+| Clear All Recent Files | Empty the whole list |
+| Clear All Recent Projects | Empty the Recent Projects list (Commercial and Ultimate only) |
+| Compact Mode | Toggle the compact display described above |
+
 ### Plugins
 
 The status of currently installed plugins will be displayed in the bottom right.
 
 ![plugin status ><](../img/plugin-status-widget.png "Plugin Status Widget"){ width="400" }
 
-Pressing each of the icons will navigate you to the Plugin Manager with the corresponding filter:
+Pressing each of the icons will navigate you to the Extension Manager with the corresponding filter:
 
 - Green Circle: `@installed`
 - Error Symbol: `@failed_to_load`
 - Update Icon: `@update_available`
 
-Pressing the gear or using the hotkeys (macOS: `[CMD+SHIFT] + M`, Windows/Linux: `[CTRL+SHIFT] + M`) will open the plugin manager with no filters, so you can browse available plugins.
+Pressing the gear or using the hotkeys (macOS: `[CMD+SHIFT] + M`, Windows/Linux: `[CTRL+SHIFT] + M`) will open the extension manager with no filters, so you can browse available plugins.
 
 ### Commercial/Ultimate Features
 
@@ -302,14 +342,6 @@ Navigating code in Binary Ninja is usually a case of just double-clicking where 
 Additionally, middle-clicking (scroll-wheel clicking) items that can be double-clicked can be used to navigate to that location in a new Split Pane. Shift + middle-click can also be used to navigate to that location in a new Tab. These bindings can be configured in the Settings ([`ui.middleClickNavigationAction`](settings.md#ui.middleClickNavigationAction), [`ui.middleClickShiftNavigationAction`](settings.md#ui.middleClickShiftNavigationAction)). These "Split and Navigate" actions can also be accessed in the Context (right-click) menu, and can be separately bound to keys in the Keybindings view.
 
 There's also [many](#using-the-keyboard) keyboard-based navigation options.
-
-### Switching Views
-![graph view](../img/view-choices.png "Different Views")
-
-Switching views happens multiple ways. In some instances, it is automatic, such as clicking a data reference from graph view. This will navigate to linear view as data is not shown in the graph view. While navigating, you can use the [view hotkeys](#default-hotkeys) to switch to a specific view at the same location as the current selection. Next you can use the [command palette](#command-palette). Additionally, the view menu in the header at the top of each pane can be used to change views without navigating to any given location. Finally, you can also use the `View` application menu.
-
-!!! Tip "Tip"
-    Any loaded `BinaryView` will show up in the upper-left of the main pane. You can switch between (for example), `ELF` and `Raw` to switch between multiple loaded [`BinaryView`s](../dev/concepts.md#binary-views).
 
 ## The Sidebar
 
@@ -386,19 +418,62 @@ The Tags panel allows you to change existing tag categories, add your own catego
 
 ![memory map ><](../img/memory-map.png "Memory Map"){ width="600" }
 
-The "Memory Map" pane and sidebar widget show segments and sections currently present in the binary, allows some modification of automatically added sections, and allows adding, modifying, and deleting user segments and sections.
-
-Double-clicking an address in the "start" or "end" column will navigate in the address in the current view. If an address in the "Data Offset" column is double-clicked, that address will always be navigated to in the `Raw` view which may be confusing at first.
+The "Memory Map" pane and sidebar widget show the segments and sections currently present in the binary and allow adding, editing, and removing your own. Segments map bytes into the address space and carry read/write/execute permissions, while sections annotate ranges of that address space with a name and [semantics](https://api.binary.ninja/binaryninja.enums-module.html#binaryninja.enums.SectionSemantics).
 
 ![memory map icon <](../img/memory-map-icon.png "Memory Map Icon")
 
-To access it, use either the icon in the sidebar to open the panel, or use the view drop-down in the main pane, or use the Command Palette!
+To access it, use either the icon in the sidebar to open the panel, the view drop-down in the main pane, or the Command Palette!
 
-When a segment is selected (highlighted in blue) related sections will be outlined (white border).
+#### Reading the Tables
 
-Likewise, when a section is selected, related segments will be outlined.
+Double-clicking an address in the "Start" or "End" column will navigate to that address in the current view. If an address in the "Data Offset" column is double-clicked, that address will always be navigated to in the `Raw` view which may be confusing at first.
 
-The sorting order of segments and sections can be changed by clicking on any column header.
+When a segment is selected (highlighted in blue) related sections will be outlined (white border), and likewise when a section is selected.
+
+The sorting order of segments and sections can be changed by clicking on any column header. The segment table's "Data Offset" and "Data Length" columns are hidden by default; right-click the segment header to toggle columns or restore the defaults.
+
+Two segment columns describe where a segment's bytes come from:
+
+- `Region`: the name of the memory region backing the segment
+- `Source`: `Mapped Load Region` for bytes mapped from the analyzed file, `Backed Region` for bytes supplied by a memory region, or `Unbacked Region` for a range with no backing bytes
+
+#### Working with Segments
+
+Right-clicking in the segment table shows:
+
+- **Add Segment...**: maps a range of the analyzed file into the address space given a start, length, offset and length within the file, along with r/w/x flags.
+- **Edit Segment...**: automatically-created segments only allow their flags to be changed; user segments allow every field to be edited.
+- **Disable Segment...**: takes the segment's backing memory region out of the map without deleting it.
+- **Re-enable Segment**: only shown when disabled regions exist, and lists each of them for restoration.
+- **Remove Segment...**: only available for user segments and user memory regions.
+- **Add Memory Region...**: see below.
+
+All address and length fields accept full [expressions](#navigating), not just hexadecimal values, and all changes can be undone.
+
+The segment table shows the *resolved* memory map, where overlapping memory regions have been flattened into non-overlapping rows and the most recently added region takes precedence. Adding a region that only partially covers an existing segment therefore splits that segment into several rows, each showing the flags and `Region` of whichever region wins over that range. Disabling a region doesn't leave a hole, it just makes whatever was beneath it visible again.
+
+#### Adding a Memory Region
+
+Memory regions supply bytes for addresses the file itself doesn't provide. This is useful for firmware, memory dumps, or any address range that only exists at runtime. The dialog is available from the segment table's context menu, from `Analysis` → `Add Memory Region...`, and automatically when writing in the hex editor at an address with no backing bytes. Choose one of four sources:
+
+- **File Backed Region**: the contents of a file on disk. The length and default name come from the selected file.
+- **Pattern Backed Region**: a repeating hexadecimal pattern (such as `FF`, `A5A5`, or `DEADBEEF`) filling the given length.
+- **Unbacked Region**: a range filled with a single byte, `0x00` by default.
+- **Mapped Load Region**: bytes mapped from the analyzed file at a given data offset and length. This is the same as adding a segment, but allows naming the result.
+
+When invoked on an existing segment, the dialog is pre-filled with that segment's bounds and flags.
+
+#### Working with Sections
+
+Right-clicking in the section table shows:
+
+- **Add Section...**: takes a name, start, length, and semantics (`Default`, `Read-only code`, `Read-only data`, `Writable data`, or `External`).
+- **Edit Section...**: automatically-created sections can be edited but not renamed, and doing so creates a user section that overrides the original. Removing that user section restores the original.
+- **Remove Section...**: only available for user sections.
+
+Unlike segments, sections are never split. Sections that overlap each other all remain listed, and their semantics are combined.
+
+Because section semantics have precedence over segment permissions, adding a section is usually the way to correct analysis over a range that was mapped with the wrong permissions.
 
 ### External Links
 
@@ -662,68 +737,6 @@ To search in the keybindings list, just click to make sure it's focused and star
  - `[CTRL-SHIFT] -` (Windows/Linux) : Graph view zoom out
  - Other hotkeys specifically for working with types are listed in the [type guide](types/type.md#direct-ui-manipulation)
 
-## Graph View
-
-![graph view](../img/graphview.png "Graph View"){ width="800" }
-
-Binary Ninja offers a graph view that groups the basic blocks of disassembly into visually distinct blocks with edges showing control flow between them.
-
-Features of the graph view include:
-
-- Ability to double-click edges to quickly jump between locations
-- Zoom (CTRL-mouse wheel)
-- Zoom to Fit - Zooms out until the whole graph is visible (`w`)
-- Zoom to Cursor - Zooms to 100% at the position of the cursor (`z`)
-- Vertical Scrolling (Side scroll bar as well as mouse wheel)
-- Horizontal Scrolling (Bottom scroll bar as well as SHIFT-mouse wheel)
-- Individual highlighting of arguments, addresses, immediate values, types, etc.
-- Full type signature of current function shown in an interactive header:
-    - Selecting elements in the header highlights them in the graph view
-    - Change type (`y`) and Rename (`n`) shortcuts work on elements in the header
-    - Reanalyze function button on left edge of the header
-- Edge colors indicate whether the path is the true (green) or false (red) case of a conditional jump (a color-blind option in the preferences is useful for those with red-green color blindness) and blue for unconditional branches
-- Context menu that can trigger some function-wide actions as well as some specific to the highlighted instruction (such as inverting branch logic or replacing a specific function with a NOP)
-
-## View Options
-
-![options >](../img/options.png "View options"){ width="400" }
-
-Each of the views (Hex, Graph, Linear) have a variety of options configurable from the ☰ menu on the top right of the view pane.
-
-Current options include:
-
-- Hex (and Linear View where hex values are shown)
-    - Background highlight
-        - None
-        - Column
-        - Byte value
-    - Color highlight
-        - None
-        - ASCII and printable
-        - Modification
-    - Contrast
-        - Normal
-        - Medium
-        - Highlight
-- Graph & Linear Views
-    - Expand Long Opcode
-    - Indent HLIL Function Body (HLIL only)
-    - Show Address
-    - Show Call Parameter Names (MLIL/HLIL only)
-    - Show Function Address
-    - Show Opcode Bytes
-    - Show Register Set Highlighting
-    - Show Type Casts (`[SHIFT+CMD/CTRL] + C`)
-    - Show Variable Types
-        - At Assignment (MLIL graph only)
-        - At Top of Function
-    - Single Function View
-    - Advanced
-        - Show All Expression Types (MLIL/HLIL only)
-        - Show IL Flag Usage (Lifted IL only)
-        - Show IL Opcodes
-        - Show Stack Pointer Value (LLIL only)
-
 ## Triage Summary
 
 ![triage summary](../img/triagesummary.png "Triage Summary"){ width="800" }
@@ -760,30 +773,31 @@ exist in the virtual memory space of the file can be clicked to navigate to that
 
 ![BASE](../img/base.png "BASE Address Detection"){ width="800" }
 
-The Base Address Scan Engine (or BASE) is used to automatically identify load addresses for embedded files or
-other formats where the load address isn't known and the file isn't relocatable. BASE is only visible in the triage
-summary when the file doesn't specify a load address such as a raw or mapped file. For `BinaryView`s like PE or Mach-O,
-switching the view in the upper-left from the `BinaryView` name to `raw` will force the BASE UI to show up in the
-Triage Summary.
+The Base Address Scan Engine (BASE) automatically identifies load addresses for raw binaries and other non-relocatable
+file formats whose load address is unknown. BASE appears in the Triage Summary when the file is displayed in the
+`Mapped` or `Raw` Binary View.
 
-See our [blog
-post](https://binary.ninja/2024/05/21/automatically-identifying-base-addresses.html) for more information on how
-BASE works. The following settings describe the advanced settings and how they influence the process.
+BASE provides two analysis modes: Sampling Mode and IL Analysis Mode. Sampling Mode is the faster default. IL Analysis
+Mode takes longer but may produce more accurate results for binaries that contain relatively few global pointers and
+strings. Each mode provides advanced settings for balancing analysis speed and accuracy; the defaults are suitable for
+most binaries.
 
-Note that you can cancel the analysis at any time and the current results will be displayed which may be useful for
-large files or files with many pointers being analyzed.
+The available settings are:
 
-If the file format has a header that can be identified before analysis that may help BASE identify the proper load
-address, otherwise the alignment would need to account for the header.
+|Setting|Description|Default|Mode(s)|
+|--- |--- |--- |--- |
+|Analysis Level|Binary Ninja analysis level used to analyze the file (`full`, `basic`, or `controlFlow`)|`full`|IL Analysis Mode|
+|Min. String Length|Minimum string length to treat as a point of interest|`0n10`|All|
+|Alignment|Alignment, in bytes, applied to candidate base addresses|`0n1024`|All|
+|Lower Boundary|Lowest candidate base address to consider|`0x0`|All|
+|Upper Boundary|Highest candidate base address to consider|`0xffffffffffffffff`|All|
+|Points of Interest|Types of points of interest to include (`all`, `strings only`, or `functions only`)|All|IL Analysis Mode|
+|Max Pointers|Maximum number of pointers allowed in each pointer cluster|`0n128`|IL Analysis Mode|
 
-|Setting|Description|Default|
-|--- |--- |--- |
-|Min. String Length|Minimum length of string to be considered a point-of-interest|0n10|
-|Alignment|Byte boundary to align the base address while scanning|0n1024|
-|Lower Boundary|Lowest address to begin search for candidate base address|0x0|
-|Upper Boundary|Highest address to end search for candidate base address|0xffffffffffffffff|
-|Points of Interest|Specifies types of points-of-interest to use for analysis (all, strings only, functions only)|All|
-|Max Pointers|Maximum amount of pointers to allow in each pointer cluster|0n128|
+!!! Note "Note"
+    BASE must analyze the raw binary that contains the runtime code. For container formats such as FIT or uImage,
+    extract the embedded raw binary before running BASE. Analyzing the container directly may reduce the accuracy of
+    the results.
 
 ### 5. Libraries
 
@@ -805,7 +819,137 @@ clickable to navigate to the virtual address.
 Strings can be double-clicked to navigate to them, and the table can be sorted or the list filtered by
 typing in the search box.
 
-## Byte Overview
+## Views
+
+![views](../img/views.png "Views"){ width="400" }
+
+Switching views happens multiple ways. In some instances, it is automatic, such as clicking a data reference from graph view. This will navigate to linear view as data is not shown in the graph view. While navigating, you can use the [view hotkeys](#default-hotkeys) to switch to a specific view at the same location as the current selection. Next you can use the [command palette](#command-palette). Additionally, the view menu in the header at the top of each pane can be used to change views without navigating to any given location. Finally, you can also use the `View` application menu.
+
+!!! Tip "Tip"
+    Any loaded `BinaryView` will show up in the upper-left of the main pane. You can switch between (for example), `ELF` and `Raw` to switch between multiple loaded [`BinaryView`s](../dev/concepts.md#binary-views).
+
+### View Options
+
+![options >](../img/options.png "View options"){ width="400" }
+
+Each view provides options for customizing how information is displayed. View options can be accessed from the ☰ menu in the top-right corner of the view pane.
+
+#### Hex View Options
+
+These options control the appearance of bytes and data displayed in Hex View. Some options are also available in Linear View when hex values are shown.
+
+* **Background Highlight** - Controls the background highlighting applied to displayed bytes:
+    * **None** - Disables background highlighting.
+    * **Column** - Highlights the column containing the selected byte.
+    * **Byte Value** - Highlights bytes based on their value.
+* **Color Highlight** - Controls additional color highlighting applied to displayed bytes:
+    * **None** - Disables color highlighting.
+    * **ASCII and Printable** - Highlights printable ASCII characters.
+    * **Modification** - Highlights modified bytes.
+* **Contrast** - Controls the contrast level used for highlighted bytes:
+    * **Normal** - Uses the default contrast level.
+    * **Medium** - Applies increased contrast.
+    * **High** - Applies the highest contrast level.
+
+#### Linear and Graph View Options
+
+These options control how information is displayed in Linear and Graph Views.
+
+* **Show Address** - Displays the memory address of each instruction in the view.
+* **Show Function Address** - Displays the starting address next to a function's name in its header.
+* **Show Opcode Bytes** - Displays each instruction's raw encoded bytes next to its disassembly.
+* **Expand Long Opcode** - Opcode bytes longer than the architecture's display length (eight bytes on x86) are truncated unless this is enabled.
+* **Show Register Set Highlighting** - When checked, clicking a register highlights every other instruction that reads or writes that same value of the register, so you can visually trace where it's used and where it's eventually overwritten.
+* **Indent HLIL Function Body** (Linear view, HLIL only) - Indents the body of the function one level under its declaration.
+* **Show Type Casts** - Displays explicit type casts in MLIL and HLIL views.
+* **Single Function View** (Linear view only) - Restricts the view to the currently selected function.
+* **Show Variable Types** - Variable types can be displayed in one of two locations:
+    * **At Top of Function** - Displays variable types at the beginning of the function.
+    * **At Assignment** (Graph view only) - Displays variable types at the point where they are assigned.
+* **Address Display** - Controls the base the address is displayed relative to (absolute, or an offset from the file start, image base, segment, section, function, or a fixed base address you set), whether it's shown in decimal or hexadecimal, and whether a name is included alongside it.
+* **Call Parameter Hints** - When a call target's parameter names are known, annotates each argument at the call site with that name:
+    * **Never Show Matching** - Only displays the name when it adds information beyond the default.
+    * **Always Show** - Displays the name on every call.
+    * **Never Show** - Turns parameter hints off entirely.
+* **Block Labels** - Controls when a basic block's label is shown:
+    * **Never Show Default** - Hides the auto-generated default label but still displays any label you've manually renamed.
+    * **Always Show** - Shows every block's label.
+    * **Never Show** - Hides all block labels.
+* **Render Layers** - Toggles independent visual overlays on the disassembly; more than one can be active at once, and which layers are available depends on context (e.g. an active debug session, WARP signatures loaded):
+    * Annotate Stack Offset - Adds a column showing the cumulative stack frame size at each instruction, marking (with \*) the instruction that changed it.
+    * TTD Coverage - Highlights instructions that were executed during a Time Travel Debugging trace.
+    * WARP Highlight Layer - Highlights bytes/instructions matched against a WARP function signature.
+* **Advanced** - These options expose additional Intermediate Language information useful during advanced analysis.
+    * **Show IL Flag Usage** (Lifted IL only) - Displays flag usage in Lifted IL.
+    * **Show Stack Pointer Value** (LLIL only) - Displays the stack pointer value for each Low Level IL instruction.
+    * **Show All Expression Types** (MLIL/HLIL only) - Displays all available expression type information.
+    * **Show IL Opcodes** - Displays Intermediate Language opcode names.
+
+### Linear View
+
+![linear](../img/linear.png "Linear View"){ width="1000" }
+
+Linear view is a hybrid view between a graph-based disassembly window and the raw hex view. It lists the entire binary's memory in a linear fashion and is especially useful when trying to find sections of a binary that were not properly identified as code or even just examining data.
+
+Linear view is commonly used for identifying and adding type information for unknown data. To this end, as you scroll, you'll see data and code interspersed. Much like the graph view, you can turn on and off addresses via the command palette `Show Address` or the ☰ menu on the top right of the linear view pane. Many other [options](#view-options) are also available.
+
+For HLIL and pseudo-C, linear view renders the AST form: the body of an `if`, `while`, `for`, or `switch` is indented under the statement that contains it. [Graph view](#graph-view) renders the non-AST form, expressing that nesting through the edges between basic blocks instead. See [AST and Non-AST Forms](../dev/bnil-hlil.md#ast-and-non-ast-forms) for the API implications.
+
+#### High Level IL
+
+Binary Ninja features a decompiler that produces High Level IL (HLIL) as output. HLIL is not intended to be a representation of the code in C, but some users prefer to have a more C-like scoping style.
+
+You can control the way HLIL appears with the [`rendering.format.scopingStyle`](settings.md#rendering.format.scopingStyle) setting.
+
+The different options are shown below:
+
+![HLIL Scoping Display](../img/hlil-braces.png "HLIL Scoping Display"){ width="500" }
+
+#### Pseudo C
+
+![Pseudo C](../img/pseudo-c.png "Pseudo C View"){ width="800" }
+
+Binary Ninja offers an option to render the HLIL as a decompilation to "Pseudo C". This decompilation is intended to be more familiar to the user than the HLIL. It is not necessarily intended to be "compliant" C or even recompilable. In some cases, it may be possible to edit it into a form that a C compiler will accept, but the amount of effort required will vary widely, and no guarantee is made that it will be possible in all cases.
+
+### Graph View
+
+![graph view](../img/graphview.png "Graph View"){ width="800" }
+
+Binary Ninja offers a graph view that groups the basic blocks of disassembly into visually distinct blocks with edges showing control flow between them.
+
+Features of the graph view include:
+
+- Ability to double-click edges to quickly jump between locations
+- Zoom (CTRL-mouse wheel)
+- Zoom to Fit - Zooms out until the whole graph is visible (`w`)
+- Zoom to Cursor - Zooms to 100% at the position of the cursor (`z`)
+- Vertical Scrolling (Side scroll bar as well as mouse wheel)
+- Horizontal Scrolling (Bottom scroll bar as well as SHIFT-mouse wheel)
+- Individual highlighting of arguments, addresses, immediate values, types, etc.
+- Full type signature of current function shown in an interactive header:
+    - Selecting elements in the header highlights them in the graph view
+    - Change type (`y`) and Rename (`n`) shortcuts work on elements in the header
+    - Reanalyze function button on left edge of the header
+- Edge colors indicate whether the path is the true (green) or false (red) case of a conditional jump (a color-blind option in the preferences is useful for those with red-green color blindness) and blue for unconditional branches
+- Context menu that can trigger some function-wide actions as well as some specific to the highlighted instruction (such as inverting branch logic or replacing a specific function with a NOP)
+
+For HLIL and pseudo-C, graph view renders the non-AST form: an `if` shows its condition alone, with the body in a separate block. [Linear view](#linear-view) renders the AST form, nesting bodies under the statement that contains them. See [AST and Non-AST Forms](../dev/bnil-hlil.md#ast-and-non-ast-forms) for the API implications.
+
+### Hex View
+
+![hex](../img/hex.png "hex view"){ width="800" }
+
+The hexadecimal view is useful for viewing raw binary files that may or may not even be executable binaries and allows direct editing of the binary contents in place, regardless of the type of the binary. Any changes made in hex view will be reflected in all other [open views](#tiling-panes) of the same binary. The lock button on the right edge of the bottom status bar must be toggled off (🔓) to perform any direct editing in hex view -- this is to prevent unintended modification of the binary by accidental pasting or typing.
+
+The hex view is particularly good for transforming data in various ways via the `Copy as`, `Transform`, and `Paste from` menus. Note that like any other edits, `Transform` menu options will transform the data in-place, but unlike other means of editing the binary, the transformation dialog will work even when the lock button is toggled on (🔒).
+
+If you're using the hex view for a Binary View like ELF, Mach-O or PE, you probably want to make sure you're also in the `Raw` view if you want to see the file as it exists on disk in hex view.
+
+#### Live Preview
+
+Any changes made in the Hex view will take effect immediately in any other views open into the same file (new views can be created via the `Split to new tab`, or `Split to new window` options under `View`, or via [splitting panes](#tiling-panes)). This can, however, cause large amounts of re-analysis so be warned before making large edits or transformations in a large binary file.
+
+### Byte Overview
 
 ![byte overview](../img/byteoverview.png "Byte Overview"){ width="800" }
 
@@ -817,31 +961,9 @@ While this view is less feature-rich than the Hex view, it allows for a much hig
 represented by one character as opposed to four total characters when in Hex view (including the space between hex
 digits and the ASCII representation).
 
-## Hex View
-
-![hex](../img/hex.png "hex view"){ width="800" }
-
-The hexadecimal view is useful for viewing raw binary files that may or may not even be executable binaries and allows direct editing of the binary contents in place, regardless of the type of the binary. Any changes made in hex view will be reflected in all other [open views](#tiling-panes) of the same binary. The lock button on the right edge of the bottom status bar must be toggled off (🔓) to perform any direct editing in hex view -- this is to prevent unintended modification of the binary by accidental pasting or typing.
-
-The hex view is particularly good for transforming data in various ways via the `Copy as`, `Transform`, and `Paste from` menus. Note that like any other edits, `Transform` menu options will transform the data in-place, but unlike other means of editing the binary, the transformation dialog will work even when the lock button is toggled on (🔒).
-
-If you're using the hex view for a Binary View like ELF, Mach-O or PE, you probably want to make sure you're also in the `Raw` view if you want to see the file as it exists on disk in hex view.
-
-### Live Preview
-
-Any changes made in the Hex view will take effect immediately in any other views open into the same file (new views can be created via the `Split to new tab`, or `Split to new window` options under `View`, or via [splitting panes](#tiling-panes)). This can, however, cause large amounts of re-analysis so be warned before making large edits or transformations in a large binary file.
-
-## Linear View
-
-![linear](../img/linear.png "Linear View"){ width="1000" }
-
-Linear view is a hybrid view between a graph-based disassembly window and the raw hex view. It lists the entire binary's memory in a linear fashion and is especially useful when trying to find sections of a binary that were not properly identified as code or even just examining data.
-
-Linear view is commonly used for identifying and adding type information for unknown data. To this end, as you scroll, you'll see data and code interspersed. Much like the graph view, you can turn on and off addresses via the command palette `Show Address` or the ☰ menu on the top right of the linear view pane. Many other [options](#view-options) are also available.
-
 ## Edit Function Properties Dialog
 
-![Edit Function Properties Dialog >](../img/efp-dialog-diagram.png "Edit Function Properties Dialog"){ width="600" }
+![Edit Function Properties Dialog ><](../img/efp-dialog-diagram.png "Edit Function Properties Dialog"){ width="600" }
 
 The “Edit Function Properties” dialog provides the ability to easily configure some of a function’s more advanced properties. It can be opened via the context menu when a function is focused in the graph or linear views, or via the command palette. An overview of the UI is as follows:
 
@@ -853,15 +975,17 @@ The function prototype section contains the function’s prototype. If the proto
 
 This section contains a list of conditionally-shown tags offering information about the function. Possible tags are as follows:
 
-    - **Function architecture/platform**: The function's architecture/platform (e.g. `windows-x86_64`)
-    - **Analysis skipped (too large)**: Analysis was skipped for this function because it was too large ([`analysis.limits.maxFunctionSize`](settings.md#analysis.limits.maxFunctionSize))
-    - **Analysis timed out**: Analysis for this function was skipped because it exceeded the maximum allowed time ([`analysis.limits.maxFunctionAnalysisTime`](settings.md#analysis.limits.maxFunctionAnalysisTime))
-    - **Analysis was skipped (too many updates)**: Analysis was skipped for this function because it caused too many updates ([`analysis.limits.maxFunctionUpdateCount`](settings.md#analysis.limits.maxFunctionUpdateCount))
-    - **Analysis suppressed**: Analysis was suppressed for this function because analysis of auto-discovered functions was disabled ([`analysis.suppressNewAutoFunctionAnalysis`](settings.md#analysis.suppressNewAutoFunctionAnalysis))
-    - **Basic analysis only**: This function only received basic analysis ([`analysis.mode`](settings.md#analysis.mode) was 'basic')
-    - **Intermediate analysis only**: This function only received intermediate analysis ([`analysis.mode`](settings.md#analysis.mode) was 'intermediate')
-    - **Unresolved stack usage**: The function has unresolved stack usage
-    - **GP = 0xABCD1234**: The global pointer value is 0xABCD1234
+| Tag | Meaning | Related Setting |
+|-----|---------|-----------------|
+| Function architecture/platform | The function's architecture/platform (e.g. `windows-x86_64`) | |
+| Analysis skipped (too large) | Analysis was skipped for this function because it was too large | [`analysis.limits.maxFunctionSize`](settings.md#analysis.limits.maxFunctionSize) |
+| Analysis timed out | Analysis for this function was skipped because it exceeded the maximum allowed time | [`analysis.limits.maxFunctionAnalysisTime`](settings.md#analysis.limits.maxFunctionAnalysisTime) |
+| Analysis was skipped (too many updates) | Analysis was skipped for this function because it caused too many updates | [`analysis.limits.maxFunctionUpdateCount`](settings.md#analysis.limits.maxFunctionUpdateCount) |
+| Analysis suppressed | Analysis was suppressed for this function because analysis of auto-discovered functions was disabled | [`analysis.suppressNewAutoFunctionAnalysis`](settings.md#analysis.suppressNewAutoFunctionAnalysis) |
+| Basic analysis only | This function only received basic analysis | [`analysis.mode`](settings.md#analysis.mode) was 'basic' |
+| Intermediate analysis only | This function only received intermediate analysis | [`analysis.mode`](settings.md#analysis.mode) was 'intermediate' |
+| Unresolved stack usage | The function has unresolved stack usage | |
+| GP = 0xABCD1234 | The global pointer value is 0xABCD1234 | |
 
 ### 3. Calling Convention
 
@@ -889,7 +1013,7 @@ When Inline During Analysis is checked, it causes the function to be [inlined](h
 
 ### 9. Signature Table
 
-This section contains the function's return value and parameters as an editable table with columns for index, type, name, source, and location.
+This section contains the function's return value and parameters as an editable table with columns for index, type, name, source, and location. The location column accepts the value-location syntax described in [Custom Parameter and Return Value Locations](types/attributes.md#custom-parameter-and-return-value-locations).
 
 ### 10. Clobbered Registers
 
@@ -903,23 +1027,17 @@ This element is a table containing a row for each register stack (e.g. x87) in t
 
 This dropdown selects the [function-level workflow](https://docs.binary.ninja/dev/workflows.html#workflow) which is used to analyze this function.
 
-## High Level IL
+### Global Pointer Registers
 
-![HLIL Scoping Options >](../img/hlil-scope.png "HLIL Scoping Options"){ width="400" }
+Some architectures use one or more registers as global pointers for accessing global data. Examples include TriCore,
+TMS320C6x, MIPS, and Qualcomm Hexagon. Depending on the program, these registers may be initialized once at startup
+and remain constant, or their values may change throughout execution.
 
-Binary Ninja features a decompiler that produces High Level IL (HLIL) as output. HLIL is not intended to be a representation of the code in C, but some users prefer to have a more C-like scoping style.
+Binary Ninja attempts to determine the initial values of global pointer registers automatically. You can override
+these values by opening the Command Palette and running `Global Pointer Values - Set User Values`. The resulting dialog
+lets you specify a value for any global pointer register or mark its value as `undetermined`.
 
-You can control the way HLIL appears in the settings.
-
-The different options are shown below:
-
-![HLIL Scoping Display](../img/hlil-braces.png "HLIL Scoping Display"){ width="500" }
-
-## Pseudo C
-
-![Pseudo C](../img/pseudo-c.png "Pseudo C View"){ width="800" }
-
-Binary Ninja offers an option to render the HLIL as a decompilation to "Pseudo C". This decompilation is intended to be more familiar to the user than the HLIL. It is not necessarily intended to be "compliant" C or even recompilable. In some cases, it may be possible to edit it into a form that a C compiler will accept, but the amount of effort required will vary widely, and no guarantee is made that it will be possible in all cases.
+![Global Pointer Registers](../img/global-pointers.png){ width="400" }
 
 ## Dead Store Elimination
 
@@ -1015,6 +1133,31 @@ definitions will be automatically resolved into one or more other variables. If 
 have been included as part of the same variable, use "Merge Variables..." from the context menu after splitting
 to select which of the other definitions should be merged.
 
+
+## Forcing Variable Versions
+
+Binary Ninja supports forcibly inserting synthetic definition sites for a variable in order to create additional opportunities for markup, such as changing a variable's name or type down paths where it is used but not modified within the function. This is useful in situations where a union might be annoying to reach for, or where optimizers have eliminated copies or moves from source code that cast a pointer to different types along different paths. Synthetic definitions are inserted during LLIL generation for non-stack variables and during MLIL generation for stack variables.
+
+Taking this `raw_ioctl_helper` function as an example, `arg2` could be pointing to any of several different structures.
+
+![Forcing Variable Versions](../img/force-ver-before.png "Example Function raw_ioctl_helper (no markup)"){ width="400" }
+
+### Inserting Forced Versions
+
+By selecting a variable and using the "Force New Variable Version..." action from the context menu the synthetic definitions will be inserted just prior to the variable use. The action is available from MLIL and higher views when variables that are not in destination position are selected:
+
+![Forcing Variable Versions Menu](../img/force-ver-mlil-and-menu.png "Force New Variable Version..."){ width="500" }
+
+After applying extra variable versions and applying some markup, we get the following result:
+
+![Forcing Variable Versions After](../img/force-ver-after.png "Example Function raw_ioctl_helper (marked up)"){ width="500" }
+
+In HLIL these synthetic definition sites are represented as normal variable definitions, but in LLIL and MLIL they appear as `FORCE_VER` instructions. These instructions are broadly semantically equivalent to a simple variable assignment, but are explicitly kept separate from such in order to avoid misleading analysis scripts that intend to act on the behavior of the program being analyzed only.
+
+### Clearing Forced Versions
+
+The "Clear Forced Variable Version" action is provided in the context menu for removing forced version markup. It is available on variables with forced versions applied in MLIL and above.
+
 ## Tooltips
 
 ![tooltip](../img/tooltip.png "Tooltip"){ width="800" }
@@ -1064,17 +1207,27 @@ The interactive Python prompt also has several built-in "magic" functions and va
 - `current_selection`: a tuple of the start and end addresses of the current selection. It's settable and will change the current selection
 - `current_raw_offset`: the file offset that corresponds to the current address. It's settable and will navigate to the corresponding file offset
 - `bv` / `current_view` / : the current [`BinaryView`](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.BinaryView)
+- `current_similarity_session`: the [`SimilaritySession`](https://api.binary.ninja/binaryninja.similarity-module.html#binaryninja.similarity.SimilaritySession) in the active Binary Similarity tab, or the current sidebar session when another main tab is active
 - `current_function`: the current [`Function`](https://api.binary.ninja/binaryninja.function-module.html#binaryninja.function.Function)
 - `current_basic_block`: the current [`BasicBlock`](https://api.binary.ninja/binaryninja.basicblock-module.html#binaryninja.basicblock.BasicBlock)
 - `current_llil`: the current [`LowLevelILFunction`](https://api.binary.ninja/binaryninja.lowlevelil-module.html#binaryninja.lowlevelil.LowLevelILFunction)
+- `current_llil_ssa`: the SSA form of `current_llil`
+- `current_lifted_il`: the current function's Lifted IL
 - `current_mlil`: the current [`MediumLevelILFunction`](https://api.binary.ninja/binaryninja.mediumlevelil-module.html#binaryninja.mediumlevelil.MediumLevelILFunction)
+- `current_mlil_ssa`: the SSA form of `current_mlil`
+- `current_mapped_mlil`: the current function's mapped Medium Level IL
+- `current_mapped_mlil_ssa`: the SSA form of `current_mapped_mlil`
 - `current_hlil`: the current [`HighLevelILFunction`](https://api.binary.ninja/binaryninja.highlevelil-module.html#binaryninja.highlevelil.HighLevelILFunction)
+- `current_hlil_ssa`: the SSA form of `current_hlil`
 - `write_at_cursor(data)`: function that writes data to the start of the current selection
 - `get_selected_data()`: function that returns the data in the current selection
 - `current_il_index`: the current index of the IL instruction. It can be LLIL/MLIL/HLIL depending on which one is shown in the UI
 - `current_il_instruction`: the current IL instruction. It can be LLIL/MLIL/HLIL depending on which one is shown in the UI
+- `current_il_instructions`: a generator over the IL instructions covered by the current selection (`None` if there is no valid selection)
 - `current_il_function`: the current IL function. It can be LLIL/MLIL/HLIL depending on which one is shown in the UI
 - `current_il_basic_block`: the current IL basic block. It can be LLIL/MLIL/HLIL depending on which one is shown in the UI
+- `current_il_expr_index`: the expression index of the currently selected token (`None` if no token is selected)
+- `current_il_expr`: the IL expression at `current_il_expr_index`
 - `current_token`: the current selected [`InstructionTextToken`](https://api.binary.ninja/binaryninja.architecture-module.html#binaryninja.architecture.InstructionTextToken) (`None` if no token is selected)
 - `current_data_var`: the current selected [`DataVariable`](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.DataVariable) (`None` if no data variable is selected)
 - `current_sections`: the list of [`Section`](https://api.binary.ninja/binaryninja.binaryview-module.html#binaryninja.binaryview.Section)s that the current address is in (This list can be empty)
@@ -1082,13 +1235,16 @@ The interactive Python prompt also has several built-in "magic" functions and va
 - `current_comment`: the comment at the current address. Writing to it sets comment at the current address
 - `current_symbol`: the [`Symbol`](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.Symbol) at the current address (`None` if there is no symbol)
 - `current_symbols`: the list of [`Symbol`](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.Symbol)s at the current address
-- `current_var`: the current selected [`Variable`](https://api.binary.ninja/binaryninja.variable-module.html?highlight=variable#binaryninja.variable.Variable) in a function (Not to be confused with `current_data_var`)
+- `current_variable`: the current selected [`Variable`](https://api.binary.ninja/binaryninja.variable-module.html?highlight=variable#binaryninja.variable.Variable) in a function (Not to be confused with `current_data_var`)
+- `current_project`: the [`Project`](https://api.binary.ninja/binaryninja.project-module.html#binaryninja.project.Project) the current view belongs to (`None` if the file is not in a project)
+- `current_thread`: the [`code.InteractiveConsole`](https://docs.python.org/3/library/code.html#code.InteractiveConsole) backing the scripting console
 - `current_ui_context`: the current [`UIContext`](https://api.binary.ninja/cpp/class_u_i_context.html)
 - `current_ui_view_frame`: the current [`ViewFrame`](https://api.binary.ninja/cpp/class_view_frame.html)
 - `current_ui_view`: the current [`View`](https://api.binary.ninja/cpp/class_view.html)
 - `current_ui_action_handler`: the current [`UIActionHandler`](https://api.binary.ninja/cpp/class_u_i_action_handler.html)
 - `current_ui_view_location`: the current [`ViewLocation`](https://api.binary.ninja/cpp/class_view_location.html)
 - `current_ui_action_context`: the current [`UIActionContext`](https://api.binary.ninja/cpp/struct_u_i_action_context.html)
+- `current_ui_token_state`: the current token state from the UI action context, which backs `current_token` and `current_variable`
 
 ### startup.py
 
@@ -1126,9 +1282,9 @@ See the [plugin development guide](../dev/plugins.md#debugging-using-other-ides)
 
 ## Using Plugins
 
-Plugins can be installed by one of two methods. First, they can be installed via the Plugin Manager accessed via the `Plugins` / `Manage Plugins` menu or `[CMD/CTRL] m` hotkey.
+Plugins can be installed by one of two methods. First, they can be installed via the Extension Manager accessed via the `Plugins` / `Manage Extensions` menu or `[CMD/CTRL+SHIFT] m` hotkey.
 
-![plugin manager](../img/plugin-manager.png "Plugin Manager"){ width="1000" }
+![extension manager](../img/plugin-manager.png "Extension Manager"){ width="1000" }
 
 Second, they can be manually installed by adding the plugin (either a `.py` file or a folder implementing a Python module with a `__init__.py` file) to the appropriate path:
 

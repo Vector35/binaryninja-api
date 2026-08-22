@@ -2,12 +2,10 @@ mod function_type;
 mod name;
 mod type_reconstruction;
 
-use binaryninja::architecture::CoreArchitecture;
 use binaryninja::binary_view::BinaryView;
-use binaryninja::demangle::CustomDemangler;
-use binaryninja::rc::Ref;
+use binaryninja::demangle::{CustomDemangler, DemanglerConfig, DemanglerResult};
 use binaryninja::settings::{QueryOptions, Settings};
-use binaryninja::types::{QualifiedName, Type};
+use binaryninja::types::QualifiedName;
 
 fn should_extract_types(view: Option<&BinaryView>) -> bool {
     let mut opts = match view {
@@ -30,27 +28,25 @@ impl CustomDemangler for SwiftDemangler {
             || name.starts_with("_T")
     }
 
-    fn demangle(
-        &self,
-        arch: &CoreArchitecture,
-        name: &str,
-        view: Option<Ref<BinaryView>>,
-    ) -> Option<(QualifiedName, Option<Ref<Type>>)> {
+    fn demangle(&self, name: &str, config: &DemanglerConfig) -> Option<DemanglerResult> {
         let ctx = swift_demangler::Context::new();
         let symbol = swift_demangler::Symbol::parse(&ctx, name)?;
 
-        if should_extract_types(view.as_deref()) {
-            let ty = function_type::build_function_type(&symbol, arch);
+        if should_extract_types(config.view.as_deref()) {
+            let ty = config
+                .platform
+                .as_ref()
+                .and_then(|platform| function_type::build_function_type(&symbol, &platform.arch()));
             let qname = if ty.is_some() {
                 name::build_short_name(&symbol)
             } else {
                 None
             }
             .unwrap_or_else(|| QualifiedName::from(symbol.display()));
-            Some((qname, ty))
+            Some(DemanglerResult::new(qname, ty))
         } else {
             let qname = QualifiedName::from(symbol.display());
-            Some((qname, None))
+            Some(DemanglerResult::new(qname, None))
         }
     }
 }

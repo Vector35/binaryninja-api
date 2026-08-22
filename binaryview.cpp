@@ -5546,11 +5546,11 @@ void BinaryView::SetCommentForAddress(uint64_t addr, const string& comment)
 }
 
 
-void BinaryView::StoreMetadata(const std::string& key, Ref<Metadata> inValue, bool isAuto)
+void BinaryView::StoreMetadata(const std::string& key, Ref<Metadata> inValue, BNMetadataStoreFlag flags)
 {
 	if (!inValue)
 		return;
-	BNBinaryViewStoreMetadata(m_object, key.c_str(), inValue->GetObject(), isAuto);
+	BNBinaryViewStoreMetadata(m_object, key.c_str(), inValue->GetObject(), flags);
 }
 
 

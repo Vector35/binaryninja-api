@@ -3,6 +3,7 @@
 #include "chained_fixups.h"
 #include "fatmachoview.h"
 #include "lowlevelilinstruction.h"
+#include "objectivec/objc.h"
 #include "rapidjsonwrapper.h"
 #include "universaltransform.h"
 #include "universalview.h"
@@ -31,6 +32,23 @@ namespace {
 constexpr std::string_view kPseudoLibraryMainExecutable = "<main executable>";
 constexpr std::string_view kPseudoLibraryFlatLookup = "<flat lookup>";
 constexpr std::string_view kPseudoLibraryWeakLookup = "<weak lookup>";
+
+ObjCProcessor::Tasks ObjCTasksFromLoadSettings(MachoView* view)
+{
+	Ref<Settings> settings = view->GetLoadSettings(view->GetTypeName());
+	auto settingEnabled = [&](const char* key) {
+		return !settings || !settings->Contains(key) || settings->Get<bool>(key, view);
+	};
+
+	ObjCProcessor::Tasks requested = ObjCProcessor::Tasks::None;
+	if (settingEnabled("loader.macho.processObjectiveC") && MachoObjCProcessor::ViewHasObjCMetadata(view))
+		requested |= ObjCProcessor::Tasks::Metadata;
+
+	if (settingEnabled("loader.macho.processCFStrings") && view->GetSectionByName("__cfstring"))
+		requested |= ObjCProcessor::Tasks::Literals;
+
+	return ObjCProcessor::NeededTasks(view, requested);
+}
 
 string CommandToString(uint32_t lcCommand)
 {
@@ -1270,7 +1288,6 @@ bool MachoView::Init()
 	uint64_t preferredImageBase = initialImageBase;
 	Ref<Settings> viewSettings = Settings::Instance();
 	m_extractMangledTypes = viewSettings->Get<bool>("analysis.extractTypesFromMangledNames", this);
-	m_simplifyTemplates = viewSettings->Get<bool>("analysis.types.templateSimplifier", this);
 
 	bool platformSetByUser = false;
 	if (settings)
@@ -2071,6 +2088,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		if (header.m_entryPoints.size() > 0 && !platformSetByUser)
 			platform = platform->GetAssociatedPlatformByAddress(header.m_entryPoints[0]);
 
+		m_plat = platform;
 		SetDefaultPlatform(platform);
 		SetDefaultArchitecture(platform->GetArchitecture());
 
@@ -2099,19 +2117,10 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 			analysisSettings->Set("analysis.workflows.functionWorkflow", "core.function.metaAnalysis", this);
 	}
 
-	bool parseObjCStructs = true;
-	bool parseCFStrings = true;
-	if (settings && settings->Contains("loader.macho.processObjectiveC"))
-		parseObjCStructs = settings->Get<bool>("loader.macho.processObjectiveC", this);
-	if (settings && settings->Contains("loader.macho.processCFStrings"))
-		parseCFStrings = settings->Get<bool>("loader.macho.processCFStrings", this);
-	if (!MachoObjCProcessor::ViewHasObjCMetadata(this))
-		parseObjCStructs = false;
-	if (!GetSectionByName("__cfstring"))
-		parseCFStrings = false;
+	ObjCProcessor::Tasks objcTasks = ObjCTasksFromLoadSettings(this);
 
 	std::unique_ptr<MachoObjCProcessor> objcProcessor;
-	if (parseObjCStructs || parseCFStrings)
+	if (objcTasks != ObjCProcessor::Tasks::None)
 	{
 		objcProcessor = std::make_unique<MachoObjCProcessor>(this);
 	}
@@ -2244,8 +2253,8 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 			else
 				libraryFound.push_back(new Metadata(string("")));
 		}
-		StoreMetadata("Libraries", new Metadata(libraries), true);
-		StoreMetadata("LibraryFound", new Metadata(libraryFound), true);
+		StoreMetadata("Libraries", new Metadata(libraries), MetadataStoreEphemeral);
+		StoreMetadata("LibraryFound", new Metadata(libraryFound), MetadataStoreEphemeral);
 	}
 
 	bool first = true;
@@ -2314,6 +2323,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 
 	BulkSymbolModification bulkSymbolModification(this);
 	m_symbolQueue = new SymbolQueue();
+	m_simplifyTemplates = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", this);
 
 	std::unordered_map<std::string, std::string> symbolLibraryMapping;
 
@@ -2379,7 +2389,7 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 	Ref<Metadata> symbolToLibraryMapping = new Metadata(KeyValueDataType);
 	for (const auto& [name, libName] : symbolLibraryMapping)
 		symbolToLibraryMapping->SetValueForKey(name, new Metadata(libName));
-	StoreMetadata("SymbolExternalLibraryMapping", std::move(symbolToLibraryMapping), true);
+	StoreMetadata("SymbolExternalLibraryMapping", std::move(symbolToLibraryMapping), MetadataStoreEphemeral);
 
 	auto relocationHandler = m_arch->GetRelocationHandler("Mach-O");
 	if (relocationHandler)
@@ -2650,32 +2660,20 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 		}
 	}
 
-	if (parseCFStrings)
-	{
-		try {
-			objcProcessor->ProcessObjCLiterals();
-		}
-		catch (std::exception& ex)
-		{
-			m_logger->LogError("Failed to process CFStrings. Binary may be malformed");
-			m_logger->LogErrorF("Error: {:?}", ex.what());
-		}
-	}
-
-	if (parseObjCStructs)
-	{
-		try {
-			objcProcessor->ProcessObjCData();
-		}
-		catch (std::exception& ex)
-		{
-			m_logger->LogError("Failed to process Objective-C Metadata. Binary may be malformed");
-			m_logger->LogErrorF("Error: {:?}", ex.what());
-		}
-	}
-
+	// Process Objective-C metadata when loading a new binary. When loading from a database,
+	// types and symbols have already been applied. Objective-C metadata may be re-processed
+	// in OnAfterSnapshotDataApplied if the database version is too old.
+	if (!m_backedByDatabase && objcProcessor)
+		objcProcessor->Process(objcTasks);
 
 	return true;
+}
+
+
+void MachoView::OnAfterSnapshotDataApplied()
+{
+	if (ObjCProcessor::Tasks objcTasks = ObjCTasksFromLoadSettings(this); objcTasks != ObjCProcessor::Tasks::None)
+		MachoObjCProcessor(this).Process(objcTasks);
 }
 
 
@@ -2744,19 +2742,16 @@ Ref<Symbol> MachoView::DefineMachoSymbol(
 		string fullName = rawName;
 		Ref<Type> typeRef = symbolTypeRef;
 
-		if (m_arch)
+		DemanglerConfig demanglerConfig(GetDefaultPlatform(), this, m_simplifyTemplates);
+		if (auto result = Demangler::DemangleAny(rawName, demanglerConfig))
 		{
-			QualifiedName demangledName;
-			Ref<Type> demangledType;
-			if (DemangleGeneric(m_arch, rawName, demangledType, demangledName, nullptr, m_simplifyTemplates))
-			{
-				shortName = demangledName.GetString();
-				fullName = shortName;
-				if (demangledType)
-					fullName += demangledType->GetStringAfterName();
-				if (!typeRef && m_extractMangledTypes && !GetDefaultPlatform()->GetFunctionByName(rawName))
-					typeRef = demangledType;
-			}
+			auto demangledType = result->type;
+			shortName = result->name.GetString();
+			fullName = shortName;
+			if (demangledType)
+				fullName += demangledType->GetStringAfterName();
+			if (!typeRef && m_extractMangledTypes && !m_plat->GetFunctionByName(rawName))
+				typeRef = demangledType;
 		}
 
 		if ((type == ExternalSymbol || type == ImportAddressSymbol)

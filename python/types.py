@@ -202,7 +202,6 @@ class QualifiedName:
 	def unescape(name: QualifiedNameType, escaping: TokenEscapingType) -> str:
 		return core.BNUnescapeTypeName(str(QualifiedName(name)), escaping)
 
-
 @dataclass(frozen=True)
 class TypeReferenceSource:
 	name: QualifiedName
@@ -1347,12 +1346,30 @@ class PointerBuilder(TypeBuilder):
 		self.set_pointer_base(self.pointer_base_type, value)
 
 class FragmentBuilder(TypeBuilder):
+	"""Mutable builder for a bitwise slice, with live size and container placement measured in bits."""
+
 	@classmethod
 	def create(
 	    cls, type: SomeType, width: int,
 	    offset: int, endianness: Endianness = Endianness.LittleEndian,
 	    confidence: int = core.max_confidence
 	) -> 'FragmentBuilder':
+		"""
+		Create a mutable fragment whose live bits initially fill a container whose width is measured in bytes.
+
+		:param Type type: larger source type of which the fragment is a slice
+		:param int width: container width in bytes; the initial live fragment size is ``width * 8`` bits
+		:param int offset: original source byte offset within ``type``
+		:param Endianness endianness: byte order used to map source-layout bytes to container bits
+		:param int confidence: confidence in the resulting type
+		:return: Mutable fragment type builder
+		:rtype: FragmentBuilder
+		:Example:
+			>>> source = Type.array(Type.int(1, False), 16)
+			>>> fragment = FragmentBuilder.create(source, 8, 4, Endianness.BigEndian)
+			>>> fragment.offset, fragment.fragment_width_bits
+			(4, 64)
+		"""
 		ic = type.immutable_copy()
 		handle = core.BNCreateFragmentTypeBuilder(width, ic._to_core_struct(), offset, endianness)
 		assert handle is not None, "BNCreateFragmentTypeBuilder returned None"
@@ -1360,6 +1377,7 @@ class FragmentBuilder(TypeBuilder):
 
 	@property
 	def offset(self) -> int:
+		"""Original source byte offset, not the live fragment's placement within the container."""
 		return core.BNGetTypeBuilderFragmentOriginalOffsetBytes(self._handle)
 
 	@offset.setter
@@ -1368,6 +1386,7 @@ class FragmentBuilder(TypeBuilder):
 
 	@property
 	def fragment_original_width(self) -> int:
+		"""Width in bytes of the original source window, not the live fragment's bit size."""
 		return core.BNGetTypeBuilderFragmentOriginalWidthBytes(self._handle)
 
 	@fragment_original_width.setter
@@ -1376,6 +1395,7 @@ class FragmentBuilder(TypeBuilder):
 
 	@property
 	def fragment_start_bit(self) -> int:
+		"""Bit offset of the live fragment in the current container, where the least-significant bit is zero."""
 		return core.BNGetTypeBuilderFragmentStartBit(self._handle)
 
 	@fragment_start_bit.setter
@@ -1384,6 +1404,7 @@ class FragmentBuilder(TypeBuilder):
 
 	@property
 	def fragment_width_bits(self) -> int:
+		"""Size in bits of the live fragment represented in the current container."""
 		return core.BNGetTypeBuilderFragmentWidthBits(self._handle)
 
 	@fragment_width_bits.setter
@@ -1392,6 +1413,7 @@ class FragmentBuilder(TypeBuilder):
 
 	@property
 	def fragment_truncated_start_bits(self) -> int:
+		"""Number of original low-order logical fragment bits no longer represented."""
 		return core.BNGetTypeBuilderFragmentTruncatedStartBits(self._handle)
 
 	@fragment_truncated_start_bits.setter
@@ -1400,6 +1422,7 @@ class FragmentBuilder(TypeBuilder):
 
 	@property
 	def fragment_wrap_bit(self) -> int:
+		"""Saved historical wrap boundary; zero means the current container width is used."""
 		return core.BNGetTypeBuilderFragmentWrapBit(self._handle)
 
 	@fragment_wrap_bit.setter
@@ -1408,6 +1431,7 @@ class FragmentBuilder(TypeBuilder):
 
 	@property
 	def endianness(self) -> Endianness:
+		"""Byte order used to map source-layout bytes to bit positions in the current container."""
 		return Endianness(core.BNGetTypeBuilderFragmentEndianness(self._handle))
 
 	@endianness.setter
@@ -2778,6 +2802,30 @@ class Type:
 		return PointerType.create_with_width(width, type, const, volatile, ref_type)
 
 	@staticmethod
+	def fragment(
+	    type: SomeType, width: _int, offset: _int,
+	    endianness: Endianness = Endianness.LittleEndian
+	) -> 'FragmentType':
+		"""
+		Create a fresh fragment whose live bits initially fill a container whose width is measured in bytes.
+
+		:param Type type: larger source type of which the fragment is a slice
+		:param int width: container width in bytes; the initial live fragment size is ``width * 8`` bits
+		:param int offset: original source byte offset within ``type``
+		:param Endianness endianness: byte order used to map source-layout bytes to container bits
+		:return: Immutable fragment type
+		:rtype: FragmentType
+		:Example:
+			>>> source = Type.array(Type.int(1, False), 16)
+			>>> fragment = Type.fragment(source, 8, 4, Endianness.BigEndian)
+			>>> fragment.target == source
+			True
+			>>> fragment.width, fragment.offset
+			(8, 4)
+		"""
+		return FragmentType.create(type, width, offset, endianness)
+
+	@staticmethod
 	def array(type: 'Type', count: _int) -> 'ArrayType':
 		return ArrayType.create(type, count)
 
@@ -3794,39 +3842,89 @@ class WideCharType(Type):
 		return cls(core_type, platform, confidence)
 
 class FragmentType(Type):
+	"""
+	A bitwise slice of a larger source type carried in an integer-like container. Its live size
+	and placement within the container are measured in bits.
+
+	Fragments are generally transient analysis types. They commonly arise when a calling
+	convention moves part of a structure through a register or when optimized code performs an
+	inline ``memcpy`` using register-sized moves. Retaining a byte-aligned source window, the
+	source-to-container byte-order mapping, and subsequent bit transformations lets analysis
+	preserve source and member types through those partial moves. Advanced bit state is normally
+	produced by analysis; use :py:meth:`create` or :py:meth:`Type.fragment` to create a fresh
+	fragment.
+	"""
+
+	@classmethod
+	def create(
+	    cls, type: SomeType, width: int, offset: int,
+	    endianness: Endianness = Endianness.LittleEndian,
+	    platform: Optional['_platform.Platform'] = None, confidence: int = core.max_confidence
+	) -> 'FragmentType':
+		"""
+		Create a fresh fragment whose live bits initially fill a container whose width is measured in bytes.
+
+		:param Type type: larger source type of which the fragment is a slice
+		:param int width: container width in bytes; the initial live fragment size is ``width * 8`` bits
+		:param int offset: original source byte offset within ``type``
+		:param Endianness endianness: byte order used to map source-layout bytes to container bits
+		:param Platform platform: optional platform associated with the type
+		:param int confidence: confidence in the resulting type
+		:return: Immutable fragment type
+		:rtype: FragmentType
+		:Example:
+			>>> source = Type.array(Type.int(1, False), 16)
+			>>> fragment = FragmentType.create(source, 8, 4, Endianness.BigEndian)
+			>>> fragment.fragment_original_width_bytes
+			8
+			>>> fragment.fragment_endianness == Endianness.BigEndian
+			True
+		"""
+		immutable_type = type.immutable_copy()
+		handle = core.BNCreateFragmentType(width, immutable_type._to_core_struct(), offset, endianness)
+		assert handle is not None, "core.BNCreateFragmentType returned None"
+		return cls(handle, platform, confidence)
+
 	@property
 	def target(self) -> Type:
-		"""Target (read-only)"""
+		"""Larger source type of which this fragment is a slice (read-only)."""
 		result = core.BNGetChildType(self._handle)
 		assert result is not None, "core.BNGetChildType returned None"
 		return Type.create(result.type, self._platform, result.confidence)
 
 	@property
 	def offset(self) -> int:
+		"""Original source byte offset, not the live fragment's placement within the container (read-only)."""
 		return core.BNGetTypeFragmentOriginalOffsetBytes(self._handle)
 
 	@property
 	def fragment_original_width_bytes(self) -> int:
+		"""Width in bytes of the original source window, not the live fragment's bit size (read-only)."""
 		return core.BNGetTypeFragmentOriginalWidthBytes(self._handle)
 
 	@property
 	def fragment_start_bit(self) -> int:
+		"""Bit offset of the live fragment in the current container, where the least-significant bit is zero (read-only)."""
 		return core.BNGetTypeFragmentStartBit(self._handle)
 
 	@property
 	def fragment_width_bits(self) -> int:
+		"""Size in bits of the live fragment represented in the current container (read-only)."""
 		return core.BNGetTypeFragmentWidthBits(self._handle)
 
 	@property
 	def fragment_truncated_start_bits(self) -> int:
+		"""Number of original low-order logical fragment bits no longer represented (read-only)."""
 		return core.BNGetTypeFragmentTruncatedStartBits(self._handle)
 
 	@property
 	def fragment_wrap_bit(self) -> int:
+		"""Saved historical wrap boundary; zero means the current container width is used (read-only)."""
 		return core.BNGetTypeFragmentWrapBit(self._handle)
 
 	@property
 	def fragment_endianness(self) -> Endianness:
+		"""Byte order used to map source-layout bytes to bit positions in the current container (read-only)."""
 		return Endianness(core.BNGetTypeFragmentEndianness(self._handle))
 
 

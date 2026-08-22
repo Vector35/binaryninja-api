@@ -218,7 +218,6 @@ bool COFFView::Init()
 
 		Ref<Settings> viewSettings = Settings::Instance();
 		m_extractMangledTypes = viewSettings->Get<bool>("analysis.extractTypesFromMangledNames", this);
-		m_simplifyTemplates = viewSettings->Get<bool>("analysis.types.templateSimplifier", this);
 
 		// Add extra segment to hold header so that it can be viewed.  This must be first so
 		// that real sections take priority.
@@ -499,6 +498,8 @@ bool COFFView::Init()
 		// Finished for parse only mode
 		if (m_parseOnly)
 			return true;
+
+		m_simplifyTemplates = Settings::Instance()->Get<bool>("analysis.types.templateSimplifier", this);
 
 		// Create various COFF header yypes
 
@@ -1463,7 +1464,7 @@ uint64_t COFFView::Read64(uint64_t rva)
 
 
 void COFFView::AddCOFFSymbol(BNSymbolType type, const string& dll, const string& name, uint64_t addr,
-		BNSymbolBinding binding, uint64_t ordinal, TypeLibrary* lib)
+	BNSymbolBinding binding, uint64_t ordinal, TypeLibrary* lib)
 {
 	// If name is empty, symbol is not valid
 	if (name.size() == 0)
@@ -1529,11 +1530,11 @@ void COFFView::AddCOFFSymbol(BNSymbolType type, const string& dll, const string&
 
 	if (m_arch && name.size() > 0)
 	{
-		QualifiedName demangledName;
-		Ref<Type> demangledType;
-		if (DemangleGeneric(m_arch, rawName, demangledType, demangledName, this, m_simplifyTemplates))
+		DemanglerConfig demanglerConfig(GetDefaultPlatform(), this, m_simplifyTemplates);
+		if (auto result = Demangler::DemangleAny(rawName, demanglerConfig))
 		{
-			shortName = demangledName.GetString();
+			auto demangledType = result->type;
+			shortName = result->name.GetString();
 			fullName = shortName;
 			if (demangledType)
 				fullName += demangledType->GetStringAfterName();

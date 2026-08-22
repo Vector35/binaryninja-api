@@ -1,5 +1,7 @@
 #include "fetchdialog.h"
 
+#include <inttypes.h>
+
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QInputDialog>
@@ -196,7 +198,7 @@ void WarpFetchDialog::runBatchedFetch(
 		}
 
 		task->Finish();
-		Logger("WARP Fetcher").LogInfo("Finished fetching WARP functions in %d seconds...", task->GetRuntimeSeconds());
+		Logger("WARP Fetcher").LogInfo("Finished fetching WARP functions in %" PRIu64 " seconds...", task->GetRuntimeSeconds());
 
 		if (rerunMatcher && bv)
 			Warp::RunMatcher(*bv);

@@ -4,6 +4,7 @@ use binaryninja::binary_view::{
     CustomBinaryViewType, StringType,
 };
 use binaryninja::data_buffer::DataBuffer;
+use binaryninja::file_accessor::FileAccessor;
 use binaryninja::file_metadata::{FileMetadata, SaveSettings};
 use binaryninja::function::{Function, FunctionViewType};
 use binaryninja::headless::Session;
@@ -14,6 +15,7 @@ use binaryninja::segment::SegmentBuilder;
 use binaryninja::symbol::{Symbol, SymbolBuilder, SymbolType};
 use binaryninja::Endianness;
 use std::collections::{BTreeMap, HashSet};
+use std::io::Cursor;
 use std::path::PathBuf;
 
 #[test]
@@ -41,13 +43,16 @@ fn test_binary_saving() {
     let modified_contents = view.read_vec(contents_addr, 4);
     assert_eq!(modified_contents, [0xff, 0xff, 0xff, 0xff]);
 
-    // HACK: To prevent us from deadlocking in save_to_path, we wait for all main thread actions to finish.
-    execute_on_main_thread_and_wait(|| {});
-
     let temp_dir = tempfile::tempdir().expect("Failed to create temporary directory");
     let temp_path = temp_dir.path().join("atox.obj.new");
     // Save the modified file
-    assert!(view.save_to_path(&temp_path));
+    let save_view = view.clone();
+    let save_path = temp_path.clone();
+    execute_on_main_thread_and_wait(move || {
+        // SAFETY: Running the save on the main thread ensures any previously queued main thread actions have
+        // completed and no main thread action can run concurrently with the save.
+        assert!(unsafe { save_view.save_to_path(&save_path) });
+    });
     // Verify that the file exists and is modified.
     let new_view = binaryninja::load(temp_path).expect("Failed to load new view");
     assert_eq!(
@@ -284,4 +289,37 @@ fn test_custom_view() {
         vec![0x42, 0x42, 0x42, 0x42],
         "View not backed by the parent data"
     );
+
+    let temp_dir = tempfile::tempdir().expect("Failed to create temporary directory");
+    let temp_path = temp_dir.path().join("custom_view.bin");
+    let save_view = created_view.clone();
+    let save_path = temp_path.clone();
+    execute_on_main_thread_and_wait(move || {
+        // SAFETY: Running the save on the main thread ensures any previously queued main thread actions have
+        // completed and no main thread action can run concurrently with the save.
+        assert!(
+            unsafe { save_view.save_to_path(&save_path) },
+            "Custom view did not save to path"
+        );
+    });
+    assert_eq!(
+        std::fs::read(temp_path).expect("Failed to read saved custom view"),
+        [0x42, 0x42, 0x42, 0x42]
+    );
+
+    // Verify that the custom view can be written to and the default save impl has handled it
+    assert_eq!(created_view.write(1, &[0x10, 0x20]), 2);
+    let save_view = created_view.clone();
+    execute_on_main_thread_and_wait(move || {
+        let mut saved_data = Cursor::new(Vec::new());
+        let mut accessor = FileAccessor::new(&mut saved_data);
+        // SAFETY: Running the save on the main thread ensures any previously queued main thread actions have
+        // completed and no main thread action can run concurrently with the save.
+        assert!(
+            unsafe { save_view.save_to_accessor(&mut accessor) },
+            "Custom view did not save to accessor"
+        );
+        drop(accessor);
+        assert_eq!(saved_data.into_inner(), vec![0x42, 0x10, 0x20, 0x42]);
+    });
 }

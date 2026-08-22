@@ -55,6 +55,13 @@ struct BINARYNINJAUIAPI LogListItem
 	QString logger;
 	size_t threadId{0};
 
+	// Cached size hint, computed lazily by LogItemDelegate. Keyed on viewport width and
+	// whether wrapping is enabled so it can be invalidated when either setting changes.
+	mutable QSize cachedSize;
+	mutable int cachedSizeViewportWidth = 0;
+	mutable bool cachedSizeWrapped = false;
+	mutable bool cachedSizeValid = false;
+
 	LogListItem(size_t sessionId, BNLogLevel level, const QString& text, const QString& logger_name = QString(), size_t tid = 0);
 };
 
@@ -84,7 +91,6 @@ class BINARYNINJAUIAPI LogListFilterProxyModel : public QSortFilterProxyModel
 	public:
 		LogListFilterProxyModel(QObject* parent);
 		virtual bool filterAcceptsRow(int source_row, const QModelIndex& source_parent) const override;
-		virtual QVariant data(const QModelIndex& idx, int role) const override;
 		void setScope(LoggingScope scope);
 		LoggingScope getScope() const { return m_scope; }
 	public Q_SLOTS:
@@ -138,6 +144,8 @@ class BINARYNINJAUIAPI LogListModel : public QAbstractItemModel, BinaryNinja::Lo
 
 		QString getFormattedMessage(const LogListItem& item) const;
 		void updateTokens();
+		const LogListItem* itemForRow(int row) const;
+		void invalidateSizeCache();
 
 		virtual QModelIndex index(int row, int col, const QModelIndex& parent) const override;
 		virtual QModelIndex parent(const QModelIndex& i) const override;
@@ -182,6 +190,7 @@ class BINARYNINJAUIAPI LogItemDelegate : public QStyledItemDelegate, public Bina
 	bool isNavigable(const QString& str, const std::pair<int, int>& offsetLen, uint64_t& value, bool highlight) const;
 	void cacheValidRanges();
 	bool isAddressValid(uint64_t addr) const;
+	const LogListModel* sourceModelForIndex(const QModelIndex& idx, int& sourceRow) const;
 
 
 	public:

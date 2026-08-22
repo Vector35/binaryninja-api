@@ -81,12 +81,13 @@ pub mod secrets_provider;
 pub mod section;
 pub mod segment;
 pub mod settings;
+pub mod similarity;
 pub mod string;
 pub mod string_detection;
 pub mod symbol;
 pub mod tags;
-pub mod template_simplifier;
 pub mod tracing;
+pub mod transform;
 pub mod types;
 pub mod update;
 pub mod variable;
@@ -542,6 +543,54 @@ pub fn license_path() -> PathBuf {
 
 pub fn license_count() -> i32 {
     unsafe { BNGetLicenseCount() }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LicenseAddon {
+    pub id: String,
+    pub license_serial: String,
+    pub product: String,
+    pub created: String,
+    pub created_timestamp: u64,
+    pub expiration: String,
+    pub expiration_timestamp: u64,
+    pub signature: String,
+}
+
+pub fn license_addons() -> Vec<LicenseAddon> {
+    let mut count = 0;
+    let addons = unsafe { BNGetLicenseAddons(&mut count) };
+    if addons.is_null() {
+        return Vec::new();
+    }
+
+    let result = unsafe { std::slice::from_raw_parts(addons, count) }
+        .iter()
+        .map(|addon| LicenseAddon {
+            id: unsafe { CStr::from_ptr(addon.id).to_string_lossy().into_owned() },
+            license_serial: unsafe {
+                CStr::from_ptr(addon.licenseSerial)
+                    .to_string_lossy()
+                    .into_owned()
+            },
+            product: unsafe { CStr::from_ptr(addon.product).to_string_lossy().into_owned() },
+            created: unsafe { CStr::from_ptr(addon.created).to_string_lossy().into_owned() },
+            created_timestamp: addon.createdTimestamp,
+            expiration: unsafe {
+                CStr::from_ptr(addon.expiration)
+                    .to_string_lossy()
+                    .into_owned()
+            },
+            expiration_timestamp: addon.expirationTimestamp,
+            signature: unsafe {
+                CStr::from_ptr(addon.signature)
+                    .to_string_lossy()
+                    .into_owned()
+            },
+        })
+        .collect();
+    unsafe { BNFreeLicenseAddons(addons, count) };
+    result
 }
 
 /// Set the license that will be used once the core initializes. You can reset the license by passing `None`.

@@ -32,9 +32,60 @@ string Extension::GetDependencies() const
 	RETURN_STRING(BNPluginGetDependencies(m_object));
 }
 
+
+string Extension::GetDependencies(const std::string& versionID) const
+{
+	RETURN_STRING(BNPluginGetDependenciesForVersion(m_object, versionID.c_str()));
+}
+
+
+vector<DependencyConflict> Extension::GetDependencyConflicts() const
+{
+	return GetDependencyConflicts("");
+}
+
+
+vector<DependencyConflict> Extension::GetDependencyConflicts(const std::string& versionID) const
+{
+	vector<DependencyConflict> result;
+	size_t count = 0;
+	BNPluginDependencyConflict* conflicts = BNPluginGetDependencyConflictsForVersion(m_object, versionID.c_str(), &count);
+	if (!conflicts)
+		return result;
+
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+	{
+		DependencyConflict conflict;
+		conflict.status = conflicts[i].status;
+		conflict.packageName = conflicts[i].packageName ? conflicts[i].packageName : "";
+		for (size_t j = 0; j < conflicts[i].candidateRequirementCount; j++)
+			conflict.candidateRequirements.push_back({conflicts[i].candidateRequirements[j].pluginName ? conflicts[i].candidateRequirements[j].pluginName : "",
+				conflicts[i].candidateRequirements[j].requirement ? conflicts[i].candidateRequirements[j].requirement : ""});
+		for (size_t j = 0; j < conflicts[i].installedRequirementCount; j++)
+			conflict.installedRequirements.push_back({conflicts[i].installedRequirements[j].pluginName ? conflicts[i].installedRequirements[j].pluginName : "",
+				conflicts[i].installedRequirements[j].requirement ? conflicts[i].installedRequirements[j].requirement : ""});
+		result.push_back(std::move(conflict));
+	}
+	BNFreePluginDependencyConflicts(conflicts, count);
+	return result;
+}
+
 bool Extension::IsInstalled() const
 {
 	return BNPluginIsInstalled(m_object);
+}
+
+
+bool Extension::IsListed() const
+{
+	return BNPluginIsListed(m_object);
+}
+
+
+bool Extension::IsDeprecated() const
+{
+	return BNPluginIsDeprecated(m_object);
 }
 
 bool Extension::IsEnabled() const
@@ -309,6 +360,12 @@ bool Extension::Uninstall()
 }
 
 
+bool Extension::CancelUninstall()
+{
+	return BNPluginCancelUninstall(m_object);
+}
+
+
 bool Extension::Install(std::string versionID)
 {
 	char* versionIDStr = BNAllocString(versionID.c_str());
@@ -320,7 +377,30 @@ bool Extension::Install(std::string versionID)
 
 bool Extension::InstallDependencies()
 {
-	return BNPluginInstallDependencies(m_object);
+	return InstallDependencies("");
+}
+
+
+bool Extension::InstallDependencies(const std::string& versionID)
+{
+	return BNPluginInstallDependenciesForVersion(m_object, versionID.c_str());
+}
+
+
+bool Extension::InstallDependencies(const std::vector<std::string>& excludedPackageNames)
+{
+	return InstallDependencies("", excludedPackageNames);
+}
+
+
+bool Extension::InstallDependencies(const std::string& versionID, const std::vector<std::string>& excludedPackageNames)
+{
+	std::vector<const char*> exclusionPointers;
+	exclusionPointers.reserve(excludedPackageNames.size());
+	for (const auto& packageName : excludedPackageNames)
+		exclusionPointers.push_back(packageName.c_str());
+	return BNPluginInstallDependenciesWithExclusionsForVersion(
+		m_object, versionID.c_str(), exclusionPointers.data(), exclusionPointers.size());
 }
 
 

@@ -1,0 +1,36 @@
+{
+    "settings": {
+        "ui.view.graph.preferred": false,
+        "ui.featureMap.enable": false,
+        "ui.sidebar.defaultWidgets": ["Symbols", "Types"]
+    },
+    "qsettings": {
+        "linear/address": false,
+        "linear/opcode": false,
+        "typesSidebar/hideDetails": true,
+        "ui/sidebar/typeOrdering": {
+            "leftReference": [
+                { "type": "Mini Graph", "defaultArea": true },
+                { "type": "Cross References", "defaultArea": true },
+                { "type": "Workflow Monitor", "defaultArea": true },
+                { "type": "Types", "defaultArea": false }
+            ]
+        }
+    },
+    "qsettings_remove": [
+        "componentsView/headerState",
+        "linear/single_function"
+    ],
+    "defaultLayout": {
+        "orientation": 1,
+        "sizes": [446, 446],
+        "viewType": "Linear",
+        "viewSubtype": 8,
+        "syncGroup": 1,
+        "version": 1,
+        "children": [
+            { "orientation": 2, "sizes": [], "viewType": "Linear", "viewSubtype": 0, "syncGroup": 1, "children": [] },
+            { "orientation": 2, "sizes": [], "viewType": "Linear", "viewSubtype": 8, "syncGroup": 1, "children": [] }
+        ]
+    }
+}

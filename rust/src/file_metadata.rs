@@ -564,6 +564,12 @@ impl FileMetadata {
         }
     }
 
+    /// Reopen the database backing this file from a new path.
+    pub fn reopen_moved_database(&self, file: &Path) -> bool {
+        let file = file.to_cstr();
+        unsafe { BNReopenMovedDatabase(self.handle, file.as_ref().as_ptr() as *const _) }
+    }
+
     // TODO: How this relates to `BNLoadFilename`?
     pub fn open_database(&self, file: &Path) -> Result<Ref<BinaryView>, ()> {
         let file = file.to_cstr();

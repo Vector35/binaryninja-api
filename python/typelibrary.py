@@ -195,6 +195,12 @@ class TypeLibrary:
 			raise ValueError(f"Expected name to be str, got {type(name)}")
 		core.BNAddTypeLibraryAlternateName(self.handle, name)
 
+	def remove_alternate_name(self, name: str) -> None:
+		"""Removes an extra name from this type library instance that has not been finalized"""
+		if not isinstance(name, str):
+			raise ValueError(f"Expected name to be str, got {type(name)}")
+		core.BNRemoveTypeLibraryAlternateName(self.handle, name)
+
 	@property
 	def platform_names(self) -> List[str]:
 		"""

@@ -489,10 +489,9 @@ T BinaryReader::Read()
 template <typename T>
 vector<T> BinaryReader::ReadVector(size_t count)
 {
-	T* buff = new T[count];
-	Read((char*)buff, count * sizeof(T));
-	std::vector<T> out(buff, buff + count);
-	return out;
+	auto result = std::vector<T>(count);
+	Read(reinterpret_cast<char *>(result.data()), result.size() * sizeof(T));
+	return result;
 }
 
 

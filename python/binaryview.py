@@ -9976,24 +9976,30 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		return result.value
 
 	class QueueGenerator:
+		_done = object()
+
 		def __init__(self, t: threading.Thread, results: queue.Queue):
 			self.thread = t
 			self.results = results
+			self._finished = False
 			t.start()
 
 		def __iter__(self):
 			return self
 
 		def __next__(self):
-			while True:
-				try:
-					return self.results.get(timeout=0.1)
-				except queue.Empty:
-					if not self.thread.is_alive():
-						try:
-							return self.results.get_nowait()
-						except queue.Empty:
-							raise StopIteration
+			if self._finished:
+				raise StopIteration
+			result = self.results.get()
+			if result is self._done:
+				# Mark exhausted and re-post the sentinel so that any
+				# subsequent __next__ call (including one already blocked in
+				# another thread) also observes completion instead of blocking
+				# forever waiting on a queue the worker will never write to again.
+				self._finished = True
+				self.results.put(self._done)
+				raise StopIteration
+			return result
 
 	@overload
 	def find_all_data(
@@ -10067,11 +10073,15 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			    ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.POINTER(core.BNDataBuffer)
 			)(lambda ctxt, addr, match: results.put((addr, databuffer.DataBuffer(handle=match))) or True)
 
-			t = threading.Thread(
-			    target=lambda: core.BNFindAllDataWithProgress(
-			        self.handle, start, end, buf.handle, flags, None, progress_func_obj, None, match_callback_obj
-			    )
-			)
+			def worker():
+				try:
+					core.BNFindAllDataWithProgress(
+					    self.handle, start, end, buf.handle, flags, None, progress_func_obj, None, match_callback_obj
+					)
+				finally:
+					results.put(self.QueueGenerator._done)
+
+			t = threading.Thread(target=worker)
 
 			return self.QueueGenerator(t, results)
 
@@ -10182,12 +10192,16 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			    or True
 			)
 
-			t = threading.Thread(
-			    target=lambda: core.BNFindAllTextWithProgress(
-			        self.handle, start, end, text, settings.handle, flags, graph_type, None, progress_func_obj, None,
-			        match_callback_obj
-			    )
-			)
+			def worker():
+				try:
+					core.BNFindAllTextWithProgress(
+					    self.handle, start, end, text, settings.handle, flags, graph_type, None, progress_func_obj, None,
+					    match_callback_obj
+					)
+				finally:
+					results.put(self.QueueGenerator._done)
+
+			t = threading.Thread(target=worker)
 
 			return self.QueueGenerator(t, results)
 
@@ -10273,12 +10287,16 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			    ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.POINTER(core.BNLinearDisassemblyLine)
 			)(lambda ctxt, addr, line: results.put((addr, self._LinearDisassemblyLine_convertor(line))) or True)
 
-			t = threading.Thread(
-			    target=lambda: core.BNFindAllConstantWithProgress(
-			        self.handle, start, end, constant, settings.handle, graph_type, None, progress_func_obj, None,
-			        match_callback_obj
-			    )
-			)
+			def worker():
+				try:
+					core.BNFindAllConstantWithProgress(
+					    self.handle, start, end, constant, settings.handle, graph_type, None, progress_func_obj, None,
+					    match_callback_obj
+					)
+				finally:
+					results.put(self.QueueGenerator._done)
+
+			t = threading.Thread(target=worker)
 
 			return self.QueueGenerator(t, results)
 
@@ -10378,7 +10396,14 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 
 		match_callback_obj = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.POINTER(core.BNDataBuffer))(internal_match_callback)
 		results = queue.Queue()
-		t = threading.Thread(target=lambda: core.BNSearch(self.handle, json.dumps(query), None, progress_callback_obj, None, match_callback_obj))
+
+		def worker():
+			try:
+				core.BNSearch(self.handle, json.dumps(query), None, progress_callback_obj, None, match_callback_obj)
+			finally:
+				results.put(self.QueueGenerator._done)
+
+		t = threading.Thread(target=worker)
 		return self.QueueGenerator(t, results)
 
 	@staticmethod

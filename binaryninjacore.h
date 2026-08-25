@@ -2325,6 +2325,7 @@ extern "C"
 
 		size_t (*getLinearSweepInitialAlignment)(void* ctxt);
 		uint32_t (*getLinearSweepAnalysisCapabilities)(void* ctxt);
+		bool (*supportsStandaloneInstructionDecoding)(void* ctxt);
 	} BNCustomArchitecture;
 
 	typedef struct BNCustomPlatform
@@ -5835,6 +5836,7 @@ extern "C"
 	BINARYNINJACOREAPI size_t BNGetArchitectureInstructionAlignment(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureLinearSweepInitialAlignment(BNArchitecture* arch);
 	BINARYNINJACOREAPI uint32_t BNGetArchitectureLinearSweepAnalysisCapabilities(BNArchitecture* arch);
+	BINARYNINJACOREAPI bool BNArchitectureSupportsStandaloneInstructionDecoding(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureMaxInstructionLength(BNArchitecture* arch);
 	BINARYNINJACOREAPI size_t BNGetArchitectureOpcodeDisplayLength(BNArchitecture* arch);
 	BINARYNINJACOREAPI BNArchitecture* BNGetAssociatedArchitectureByAddress(BNArchitecture* arch, uint64_t* addr);

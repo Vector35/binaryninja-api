@@ -1574,10 +1574,12 @@ int decode_scratchpad(context* ctx, Instruction* instr)
 
 	switch (instr->encoding)
 	{
-	/* instrucitons with no operands */
+	/* instructions with no operands */
+	case ENC_AUTIA171615_64LR_DP_1SRC:
 	case ENC_AUTIA1716_HI_HINTS:
 	case ENC_AUTIASP_HI_HINTS:
 	case ENC_AUTIAZ_HI_HINTS:
+	case ENC_AUTIB171615_64LR_DP_1SRC:
 	case ENC_AUTIB1716_HI_HINTS:
 	case ENC_AUTIBSP_HI_HINTS:
 	case ENC_AUTIBZ_HI_HINTS:
@@ -1591,12 +1593,19 @@ int decode_scratchpad(context* ctx, Instruction* instr)
 	case ENC_ERET_64E_BRANCH_REG:
 	case ENC_ESB_HI_HINTS:
 	case ENC_NOP_HI_HINTS:
+	case ENC_PACIA171615_64LR_DP_1SRC:
 	case ENC_PACIA1716_HI_HINTS:
 	case ENC_PACIASP_HI_HINTS:
+	case ENC_PACIASPPC_64LR_DP_1SRC:
 	case ENC_PACIAZ_HI_HINTS:
+	case ENC_PACIB171615_64LR_DP_1SRC:
 	case ENC_PACIB1716_HI_HINTS:
 	case ENC_PACIBSP_HI_HINTS:
+	case ENC_PACIBSPPC_64LR_DP_1SRC:
 	case ENC_PACIBZ_HI_HINTS:
+	case ENC_PACM_HI_HINTS:
+	case ENC_PACNBIASPPC_64LR_DP_1SRC:
+	case ENC_PACNBIBSPPC_64LR_DP_1SRC:
 	case ENC_RETAA_64E_BRANCH_REG:
 	case ENC_RETAB_64E_BRANCH_REG:
 	case ENC_SEVL_HI_HINTS:
@@ -6037,6 +6046,8 @@ int decode_scratchpad(context* ctx, Instruction* instr)
 		}
 		break;
 	}
+	case ENC_AUTIASPPCR_64LRR_DP_1SRC:
+	case ENC_AUTIBSPPCR_64LRR_DP_1SRC:
 	case ENC_BLRAAZ_64_BRANCH_REG:
 	case ENC_BLRABZ_64_BRANCH_REG:
 	case ENC_BLR_64_BRANCH_REG:
@@ -7766,6 +7777,24 @@ int decode_scratchpad(context* ctx, Instruction* instr)
 	case ENC_B_ONLY_BRANCH_IMM:
 	{
 		uint64_t eaddr = ctx->address + ctx->offset;
+		// <label>
+		ADD_OPERAND_LABEL;
+		break;
+	}
+	case ENC_RETAASPPCR_64M_BRANCH_REG:
+	case ENC_RETABSPPCR_64M_BRANCH_REG:
+	{
+		// <Xm>
+		ADD_OPERAND_XM;
+		break;
+	}
+	case ENC_AUTIASPPC_ONLY_DP_1SRC_IMM:
+	case ENC_AUTIBSPPC_ONLY_DP_1SRC_IMM:
+	case ENC_RETAASPPC_ONLY_MISCBRANCH:
+	case ENC_RETABSPPC_ONLY_MISCBRANCH:
+	{
+		/* these encode a negative offset: the modifier is PC minus <offset> */
+		uint64_t eaddr = ctx->address - ctx->offset;
 		// <label>
 		ADD_OPERAND_LABEL;
 		break;

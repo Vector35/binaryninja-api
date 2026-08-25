@@ -444,6 +444,10 @@ class Arm64Architecture : public Architecture
 		case ARM64_RET:
 		case ARM64_RETAA:
 		case ARM64_RETAB:
+		case ARM64_RETAASPPC:
+		case ARM64_RETABSPPC:
+		case ARM64_RETAASPPCR:
+		case ARM64_RETABSPPCR:
 			result.AddBranch(FunctionReturn);
 			break;
 		case ARM64_SVC:
@@ -1006,6 +1010,14 @@ class Arm64Architecture : public Architecture
 			return "__autia";
 		case ARM64_INTRIN_AUTIB:
 			return "__autib";
+		case ARM64_INTRIN_AUTIA2:
+			return "__autia2";
+		case ARM64_INTRIN_AUTIB2:
+			return "__autib2";
+		case ARM64_INTRIN_PACIA2:
+			return "__pacia2";
+		case ARM64_INTRIN_PACIB2:
+			return "__pacib2";
 		case ARM64_INTRIN_ISB:
 			return "__isb";
 		case ARM64_INTRIN_WFE:
@@ -1038,6 +1050,8 @@ class Arm64Architecture : public Architecture
 			return "SystemHintOp_CSDB";
 		case ARM64_INTRIN_HINT_BTI:
 			return "SystemHintOp_BTI";
+		case ARM64_INTRIN_HINT_PACM:
+			return "SystemHintOp_PACM";
 		case ARM64_INTRIN_SEV:
 			return "__sev";
 		case ARM64_INTRIN_SEVL:
@@ -1202,6 +1216,12 @@ class Arm64Architecture : public Architecture
 		case ARM64_INTRIN_PACIA:      // reads <Xd>, <Xn>
 		case ARM64_INTRIN_PACIB:      // reads <Xd>, <Xn>
 			return {NameAndType(Type::IntegerType(8, false)), NameAndType(Type::IntegerType(8, false))};
+		case ARM64_INTRIN_AUTIA2:     // reads <Xd>, modifier, modifier2
+		case ARM64_INTRIN_AUTIB2:     // reads <Xd>, modifier, modifier2
+		case ARM64_INTRIN_PACIA2:     // reads <Xd>, modifier, modifier2
+		case ARM64_INTRIN_PACIB2:     // reads <Xd>, modifier, modifier2
+			return {NameAndType(Type::IntegerType(8, false)), NameAndType(Type::IntegerType(8, false)),
+				NameAndType(Type::IntegerType(8, false))};
 		case ARM64_INTRIN_TLBI:      // reads <tlbi_op>, <Xn>
 			return {
 				NameAndType("tlbi_op", Confidence<Ref<Type>>(Type::EnumerationType(this, get_tlbi_op_enum(), 4, false), BN_FULL_CONFIDENCE))
@@ -1251,6 +1271,10 @@ class Arm64Architecture : public Architecture
 		case ARM64_INTRIN_PACIA:      // writes <Xd>
 		case ARM64_INTRIN_PACGA:      // writes <Xd>
 		case ARM64_INTRIN_PACIB:      // writes <Xd>
+		case ARM64_INTRIN_AUTIA2:     // writes <Xd>
+		case ARM64_INTRIN_AUTIB2:     // writes <Xd>
+		case ARM64_INTRIN_PACIA2:     // writes <Xd>
+		case ARM64_INTRIN_PACIB2:     // writes <Xd>
 		case ARM64_INTRIN_XPACD:      // writes <Xd>
 		case ARM64_INTRIN_XPACI:      // writes <Xd>
 		case ARM64_INTRIN_CNT:        // writes <Xd>

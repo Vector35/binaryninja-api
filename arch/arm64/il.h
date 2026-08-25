@@ -112,6 +112,12 @@ enum Arm64Intrinsic : uint32_t
 	ARM64_INTRIN_SUBG,
 	ARM64_INTRIN_SUBP,
 	ARM64_INTRIN_SUBPS,
+	/* FEAT_PAuth_LR: sign/authenticate against two modifiers (AddPAC*2 / Auth*2) */
+	ARM64_INTRIN_HINT_PACM,
+	ARM64_INTRIN_AUTIA2,
+	ARM64_INTRIN_AUTIB2,
+	ARM64_INTRIN_PACIA2,
+	ARM64_INTRIN_PACIB2,
 	ARM64_INTRIN_NORMAL_END, /* needed so intrinsics can be extended by other lists, like neon
 	                            intrinsics */
 	ARM64_INTRIN_INVALID = 0xFFFFFFFF,

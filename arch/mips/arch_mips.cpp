@@ -3503,10 +3503,8 @@ public:
 				uint32_t ahl = ((inst & 0xffff) << 16) + immediate;
 
 				// ((AHL + S) – (short)(AHL + S)) >> 16
-				dest32[0] = swap((uint32_t)(
-					(inst & ~0xffff) |
-					(((ahl + target) - (short)(ahl + target)) >> 16)
-				));
+				uint32_t hi = ((ahl + target) - (short)(ahl + target)) >> 16;
+				dest32[0] = swap((inst & ~0xffff) | (hi & 0xffff));
 			}
 			else
 			{

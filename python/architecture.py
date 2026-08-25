@@ -739,6 +739,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 	    LinearSweepAnalysisCapability.BNLinearSweepCallTargetAnalysis
 	    | LinearSweepAnalysisCapability.BNLinearSweepGenericControlFlowAnalysis
 	)
+	supports_standalone_instruction_decoding = True
 	max_instr_length = 16
 	opcode_display_length = 8
 	regs: Dict[RegisterName, RegisterInfo] = {}
@@ -879,6 +880,9 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		self._cb.getLinearSweepAnalysisCapabilities = self._cb.getLinearSweepAnalysisCapabilities.__class__(
 		    self._get_linear_sweep_analysis_capabilities
 		)
+		self._cb.supportsStandaloneInstructionDecoding = self._cb.supportsStandaloneInstructionDecoding.__class__(
+		    self._supports_standalone_instruction_decoding
+		)
 
 		self.__dict__['endianness'] = self.__class__.endianness
 		self.__dict__['address_size'] = self.__class__.address_size
@@ -886,6 +890,7 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		self.__dict__['instr_alignment'] = self.__class__.instr_alignment
 		self.__dict__['linear_sweep_initial_alignment'] = self.__class__.linear_sweep_initial_alignment
 		self.__dict__['linear_sweep_analysis_capabilities'] = self.__class__.linear_sweep_analysis_capabilities
+		self.__dict__['supports_standalone_instruction_decoding'] = self.__class__.supports_standalone_instruction_decoding
 		self.__dict__['max_instr_length'] = self.__class__.max_instr_length
 		self.__dict__['opcode_display_length'] = self.__class__.opcode_display_length
 		self.__dict__['stack_pointer'] = self.__class__.stack_pointer
@@ -1192,6 +1197,13 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 			    LinearSweepAnalysisCapability.BNLinearSweepCallTargetAnalysis
 			    | LinearSweepAnalysisCapability.BNLinearSweepGenericControlFlowAnalysis
 			)
+
+	def _supports_standalone_instruction_decoding(self, ctxt):
+		try:
+			return self.supports_standalone_instruction_decoding
+		except Exception:
+			log_error_for_exception("Unhandled Python exception in Architecture._supports_standalone_instruction_decoding")
+			return True
 
 	def _get_max_instruction_length(self, ctxt):
 		try:
@@ -2777,6 +2789,7 @@ class CoreArchitecture(Architecture):
 		self.instr_alignment = core.BNGetArchitectureInstructionAlignment(self.handle)
 		self.linear_sweep_initial_alignment = core.BNGetArchitectureLinearSweepInitialAlignment(self.handle)
 		self.linear_sweep_analysis_capabilities = core.BNGetArchitectureLinearSweepAnalysisCapabilities(self.handle)
+		self.supports_standalone_instruction_decoding = core.BNArchitectureSupportsStandaloneInstructionDecoding(self.handle)
 		self.max_instr_length = core.BNGetArchitectureMaxInstructionLength(self.handle)
 		self.opcode_display_length = core.BNGetArchitectureOpcodeDisplayLength(self.handle)
 		self.stack_pointer: str = core.BNGetArchitectureRegisterName(

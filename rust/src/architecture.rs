@@ -164,6 +164,12 @@ pub trait Architecture: 'static + Sized + AsRef<CoreArchitecture> {
             | LinearSweepAnalysisCapability::BNLinearSweepGenericControlFlowAnalysis as u32
     }
 
+    /// Whether instruction decoding, disassembly, and lifting are valid without function-level
+    /// context.
+    fn supports_standalone_instruction_decoding(&self) -> bool {
+        true
+    }
+
     /// The maximum length of an instruction in bytes. This is used to determine the size of the buffer
     /// given to callbacks such as [`Architecture::instruction_info`], [`Architecture::instruction_text`]
     /// and [`Architecture::instruction_llil`].
@@ -883,6 +889,10 @@ impl Architecture for CoreArchitecture {
 
     fn linear_sweep_analysis_capabilities(&self) -> u32 {
         unsafe { BNGetArchitectureLinearSweepAnalysisCapabilities(self.handle) }
+    }
+
+    fn supports_standalone_instruction_decoding(&self) -> bool {
+        unsafe { BNArchitectureSupportsStandaloneInstructionDecoding(self.handle) }
     }
 
     fn max_instr_len(&self) -> usize {
@@ -1793,6 +1803,14 @@ where
             }
             None => false,
         }
+    }
+
+    extern "C" fn cb_supports_standalone_instruction_decoding<A>(ctxt: *mut c_void) -> bool
+    where
+        A: 'static + Architecture<Handle = CustomArchitectureHandle<A>> + Send + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        custom_arch.supports_standalone_instruction_decoding()
     }
 
     extern "C" fn cb_analyze_basic_blocks<A>(
@@ -2820,6 +2838,9 @@ where
         skipAndReturnValue: Some(cb_skip_and_return_value::<A>),
         getLinearSweepInitialAlignment: Some(cb_linear_sweep_initial_alignment::<A>),
         getLinearSweepAnalysisCapabilities: Some(cb_linear_sweep_analysis_capabilities::<A>),
+        supportsStandaloneInstructionDecoding: Some(
+            cb_supports_standalone_instruction_decoding::<A>,
+        ),
     };
 
     customize(&mut custom_arch);

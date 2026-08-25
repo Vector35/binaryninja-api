@@ -741,6 +741,13 @@ uint32_t Architecture::GetLinearSweepAnalysisCapabilitiesCallback(void* ctxt)
 }
 
 
+bool Architecture::SupportsStandaloneInstructionDecodingCallback(void* ctxt)
+{
+	CallbackRef<Architecture> arch(ctxt);
+	return arch->SupportsStandaloneInstructionDecoding();
+}
+
+
 size_t Architecture::GetMaxInstructionLengthCallback(void* ctxt)
 {
 	CallbackRef<Architecture> arch(ctxt);
@@ -1408,6 +1415,7 @@ void Architecture::Register(Architecture* arch)
 	callbacks.skipAndReturnValue = SkipAndReturnValueCallback;
 	callbacks.getLinearSweepInitialAlignment = GetLinearSweepInitialAlignmentCallback;
 	callbacks.getLinearSweepAnalysisCapabilities = GetLinearSweepAnalysisCapabilitiesCallback;
+	callbacks.supportsStandaloneInstructionDecoding = SupportsStandaloneInstructionDecodingCallback;
 	arch->Register(&callbacks);
 }
 
@@ -1469,6 +1477,12 @@ size_t Architecture::GetLinearSweepInitialAlignment() const
 uint32_t Architecture::GetLinearSweepAnalysisCapabilities() const
 {
 	return BNLinearSweepCallTargetAnalysis | BNLinearSweepGenericControlFlowAnalysis;
+}
+
+
+bool Architecture::SupportsStandaloneInstructionDecoding() const
+{
+	return true;
 }
 
 
@@ -2052,6 +2066,12 @@ uint32_t CoreArchitecture::GetLinearSweepAnalysisCapabilities() const
 }
 
 
+bool CoreArchitecture::SupportsStandaloneInstructionDecoding() const
+{
+	return BNArchitectureSupportsStandaloneInstructionDecoding(m_object);
+}
+
+
 size_t CoreArchitecture::GetMaxInstructionLength() const
 {
 	return BNGetArchitectureMaxInstructionLength(m_object);
@@ -2610,6 +2630,12 @@ size_t ArchitectureExtension::GetLinearSweepInitialAlignment() const
 uint32_t ArchitectureExtension::GetLinearSweepAnalysisCapabilities() const
 {
 	return m_base->GetLinearSweepAnalysisCapabilities();
+}
+
+
+bool ArchitectureExtension::SupportsStandaloneInstructionDecoding() const
+{
+	return m_base->SupportsStandaloneInstructionDecoding();
 }
 
 

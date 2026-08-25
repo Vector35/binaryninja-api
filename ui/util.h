@@ -33,6 +33,8 @@ std::string BINARYNINJAUIAPI getStringForPossibleValueSet(ArchitectureRef arch, 
 std::string BINARYNINJAUIAPI getStringForInstructionDataflowDetails(BinaryViewRef data, ArchitectureRef arch, FunctionRef func, uint64_t address);
 std::optional<BinaryNinja::PossibleValueSet> BINARYNINJAUIAPI getPossibleValueSetForToken(View* view, BinaryViewRef data, ArchitectureRef arch,
     FunctionRef func, HighlightTokenState token, size_t instrIdx);
+std::optional<BinaryNinja::PossibleValueSet> BINARYNINJAUIAPI getPossibleValueSetForToken(View* view, BinaryViewRef data, ArchitectureRef arch,
+    FunctionRef func, HighlightTokenState token, uint64_t lineAddr, size_t instrIdx);
 
 std::optional<BinaryNinja::PossibleValueSet> BINARYNINJAUIAPI getPossibleValueSetForILToken(View* view, HighlightTokenState token);
 std::optional<uint64_t> BINARYNINJAUIAPI getAddressOfILTokenExpr(View* view, HighlightTokenState token);

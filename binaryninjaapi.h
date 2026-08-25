@@ -9841,6 +9841,7 @@ namespace BinaryNinja {
 		static size_t GetInstructionAlignmentCallback(void* ctxt);
 		static size_t GetLinearSweepInitialAlignmentCallback(void* ctxt);
 		static uint32_t GetLinearSweepAnalysisCapabilitiesCallback(void* ctxt);
+		static bool SupportsStandaloneInstructionDecodingCallback(void* ctxt);
 		static size_t GetMaxInstructionLengthCallback(void* ctxt);
 		static size_t GetOpcodeDisplayLengthCallback(void* ctxt);
 		static BNArchitecture* GetAssociatedArchitectureByAddressCallback(void* ctxt, uint64_t* addr);
@@ -9999,6 +10000,13 @@ namespace BinaryNinja {
 			\return Bit mask of BNLinearSweepAnalysisCapability values
 		*/
 		virtual uint32_t GetLinearSweepAnalysisCapabilities() const;
+
+		/*! Determine whether instruction decoding operations are valid without function-level context.
+
+			\return Whether GetInstructionInfo, GetInstructionText, and GetInstructionLowLevelIL support
+			        standalone instruction decoding
+		*/
+		virtual bool SupportsStandaloneInstructionDecoding() const;
 
 		/*! Get the maximum instruction length
 
@@ -10535,6 +10543,7 @@ namespace BinaryNinja {
 		virtual size_t GetInstructionAlignment() const override;
 		virtual size_t GetLinearSweepInitialAlignment() const override;
 		virtual uint32_t GetLinearSweepAnalysisCapabilities() const override;
+		virtual bool SupportsStandaloneInstructionDecoding() const override;
 		virtual size_t GetMaxInstructionLength() const override;
 		virtual size_t GetOpcodeDisplayLength() const override;
 		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr) override;
@@ -10627,6 +10636,7 @@ namespace BinaryNinja {
 		virtual size_t GetInstructionAlignment() const override;
 		virtual size_t GetLinearSweepInitialAlignment() const override;
 		virtual uint32_t GetLinearSweepAnalysisCapabilities() const override;
+		virtual bool SupportsStandaloneInstructionDecoding() const override;
 		virtual size_t GetMaxInstructionLength() const override;
 		virtual size_t GetOpcodeDisplayLength() const override;
 		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr) override;

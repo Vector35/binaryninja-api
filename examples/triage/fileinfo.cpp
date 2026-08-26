@@ -138,7 +138,7 @@ FileInfoWidget::FileInfoWidget(QWidget* parent, BinaryViewRef bv, EntropyWidget*
 	const auto view = bv->GetParentView() ? bv->GetParentView() : bv;
 
 	const auto file = bv->GetFile();
-	const auto filePath = file->GetOriginalFilename();
+	const auto filePath = file->GetFilename();
 
 	const QFontMetrics monoMetrics(getMonospaceFont(this));
 	const int maxPathWidth = monoMetrics.horizontalAdvance(QString(64, '0'));

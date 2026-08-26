@@ -72,10 +72,6 @@ public:
 			RegisterFastcallCallingConvention(cc);
 			RegisterStdcallCallingConvention(cc);
 		}
-
-		// Linux-style calling convention is sometimes used internally by WindowsKernel applications
-		cc = arch->GetCallingConventionByName("sysv");
-		RegisterCallingConvention(cc);
 	}
 
 	virtual bool GetFallbackEnabled() override

@@ -1072,6 +1072,8 @@ public:
 				return "moveToCoprocessor2";
 			case MIPS_INTRIN_MTC_UNIMPLEMENTED:
 				return "moveToCoprocessorUnimplemented";
+			case MIPS_INTRIN_MTC1_UNPREDICTABLE_HIGH_WORD:
+				return "_mtc1UnpredictableHighWord";
 			case MIPS_INTRIN_DMFC0:
 				return "moveDwordFromCoprocessor0";
 			case MIPS_INTRIN_DMFC2:
@@ -1193,6 +1195,7 @@ public:
 			MIPS_INTRIN_MFC_UNIMPLEMENTED,
 			MIPS_INTRIN_MTC0,
 			MIPS_INTRIN_MTC_UNIMPLEMENTED,
+			MIPS_INTRIN_MTC1_UNPREDICTABLE_HIGH_WORD,
 			MIPS_INTRIN_DMFC0,
 			MIPS_INTRIN_DMFC_UNIMPLEMENTED,
 			MIPS_INTRIN_DMTC0,
@@ -1446,6 +1449,7 @@ public:
 				return {Type::IntegerType(8, false)};
 			case MIPS_INTRIN_MFC0:
 			case MIPS_INTRIN_MFC_UNIMPLEMENTED:
+			case MIPS_INTRIN_MTC1_UNPREDICTABLE_HIGH_WORD:
 				return {Type::IntegerType(4, false)};
 			case MIPS_INTRIN_DMFC0:
 			case MIPS_INTRIN_DMFC_UNIMPLEMENTED:

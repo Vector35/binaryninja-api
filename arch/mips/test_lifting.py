@@ -39,6 +39,50 @@ test_cases = [
     ('mips32', b'\xd5\x9f\x00\x10', 'LLIL_UNKNOWN()'),
     # sdc1 $f31, 0x10($t4) -- odd FPR pair roots are architecturally unpredictable in MIPS32 FR=0 mode
     ('mips32', b'\xf5\x9f\x00\x10', 'LLIL_UNKNOWN()'),
+    # mtc1 $t0, $f20 -- MIPS32 Release 6.06 MTC1 (p. 292): StoreFPR writes GPR[rt][31:0]
+    ('mips32', b'\x44\x88\xa0\x00', 'LLIL_SET_REG.d($f20,LLIL_REG.d($t0))'),
+    # mtc1 $t0, $f20 -- little-endian encoding of the same MIPS32 operation
+    ('mipsel32', b'\x00\xa0\x88\x44', 'LLIL_SET_REG.d($f20,LLIL_REG.d($t0))'),
+    # mtc1 $zero, $f31 -- the architectural zero register transfers a zero word
+    ('mipsel32', b'\x00\xf8\x80\x44', 'LLIL_SET_REG.d($f31,LLIL_CONST.d(0x0))'),
+    # mtc1 $t0, $f20 -- this MIPS III architecture models its FPRs as 32-bit registers
+    ('mips3', b'\x44\x88\xa0\x00', 'LLIL_SET_REG.d($f20,LLIL_REG.d($t0))'),
+    # mtc1 $t0, $f20 -- little-endian MIPS III uses the same modeled 32-bit FPR write
+    ('mipsel3', b'\x00\xa0\x88\x44', 'LLIL_SET_REG.d($f20,LLIL_REG.d($t0))'),
+    # mtc1 $t0, $f20 -- R5900 EE Core Instruction Set Manual MTC1 (p. 371)
+    ('r5900l', b'\x00\xa0\x88\x44', 'LLIL_SET_REG.d($f20,LLIL_REG.d($t0))'),
+    # mtc1 $t0, $f20 -- MIPS64 Release 6.06 MTC1 (p. 385): high word is UNPREDICTABLE
+    ('mips64', b'\x44\x88\xa0\x00', 'LLIL_INTRINSIC([temp0],_mtc1UnpredictableHighWord,[]); LLIL_SET_REG.q($f20,LLIL_OR.q(LLIL_LSL.q(LLIL_ZX.q(LLIL_REG.d(temp0)),LLIL_CONST.b(0x20)),LLIL_ZX.q(LLIL_REG.d($t0))))'),
+    # mtc1 $t0, $f20 -- little-endian MIPS64 has identical register-transfer semantics
+    ('mipsel64', b'\x00\xa0\x88\x44', 'LLIL_INTRINSIC([temp0],_mtc1UnpredictableHighWord,[]); LLIL_SET_REG.q($f20,LLIL_OR.q(LLIL_LSL.q(LLIL_ZX.q(LLIL_REG.d(temp0)),LLIL_CONST.b(0x20)),LLIL_ZX.q(LLIL_REG.d($t0))))'),
+    # mtc1 $t0, $f20 -- Cavium uses the same modeled 64-bit MIPS FPR semantics
+    ('cavium-mips64', b'\x44\x88\xa0\x00', 'LLIL_INTRINSIC([temp0],_mtc1UnpredictableHighWord,[]); LLIL_SET_REG.q($f20,LLIL_OR.q(LLIL_LSL.q(LLIL_ZX.q(LLIL_REG.d(temp0)),LLIL_CONST.b(0x20)),LLIL_ZX.q(LLIL_REG.d($t0))))'),
+    # mfc1 $t0, $f20 -- MIPS32 Release 6.06 MFC1 (p. 267): copy FPR[fs][31:0]
+    ('mips32', b'\x44\x08\xa0\x00', 'LLIL_SET_REG.d($t0,LLIL_REG.d($f20))'),
+    # mfc1 $t0, $f20 -- little-endian encoding of the same MIPS32 operation
+    ('mipsel32', b'\x00\xa0\x08\x44', 'LLIL_SET_REG.d($t0,LLIL_REG.d($f20))'),
+    # mfc1 $t0, $f20 -- MIPS64 Release 6.06 MFC1 (p. 357): sign-extend the FPR word
+    ('mips64', b'\x44\x08\xa0\x00', 'LLIL_SET_REG.q($t0,LLIL_SX.q(LLIL_REG.d($f20)))'),
+    # mfc1 $t0, $f20 -- R5900 EE Core Instruction Set Manual MFC1 (p. 364)
+    ('r5900l', b'\x00\xa0\x08\x44', 'LLIL_SET_REG.q($t0,LLIL_SX.q(LLIL_REG.d($f20)))'),
+    # dmfc1 $t0, $f20 -- MIPS64 Release 6.06 DMFC1 (p. 217): copy all 64 FPR bits
+    ('mips64', b'\x44\x28\xa0\x00', 'LLIL_SET_REG.q($t0,LLIL_REG.q($f20))'),
+    # dmfc1 $t0, $f20 -- little-endian encoding of the same MIPS64 operation
+    ('mipsel64', b'\x00\xa0\x28\x44', 'LLIL_SET_REG.q($t0,LLIL_REG.q($f20))'),
+    # mfhc1 $t0, $f20 -- MIPS32 Release 6.06 MFHC1 (p. 271): read the odd FPR in FR=0
+    ('mips32', b'\x44\x68\xa0\x00', 'LLIL_SET_REG.d($t0,LLIL_REG.d($f21))'),
+    # mfhc1 $t0, $f21 -- odd FR=0 pair roots are architecturally unpredictable
+    ('mips32', b'\x44\x68\xa8\x00', 'LLIL_UNKNOWN()'),
+    # mfhc1 $t0, $f20 -- MIPS64 Release 6.06 MFHC1 (p. 361): sign-extend bits 63:32
+    ('mips64', b'\x44\x68\xa0\x00', 'LLIL_SET_REG.q($t0,LLIL_SX.q(LLIL_LOW_PART.d(LLIL_LSR.q(LLIL_REG.q($f20),LLIL_CONST.b(0x20)))))'),
+    # dmtc1 $t0, $f20 -- MIPS64 Release 6.06 DMTC1 (p. 220): copy all 64 GPR bits
+    ('mipsel64', b'\x00\xa0\xa8\x44', 'LLIL_SET_REG.q($f20,LLIL_REG.q($t0))'),
+    # mthc1 $t0, $f20 -- MIPS32 Release 6.06 MTHC1 (p. 295): write the odd FPR in FR=0
+    ('mips32', b'\x44\xe8\xa0\x00', 'LLIL_SET_REG.d($f21,LLIL_REG.d($t0))'),
+    # mthc1 $t0, $f21 -- odd FR=0 pair roots are architecturally unpredictable
+    ('mips32', b'\x44\xe8\xa8\x00', 'LLIL_UNKNOWN()'),
+    # mthc1 $t0, $f20 -- MIPS64 Release 6.06 MTHC1 (p. 389): preserve low, replace high
+    ('mipsel64', b'\x00\xa0\xe8\x44', 'LLIL_SET_REG.q($f20,LLIL_OR.q(LLIL_AND.q(LLIL_REG.q($f20),LLIL_CONST.q(0xFFFFFFFF)),LLIL_LSL.q(LLIL_ZX.q(LLIL_REG.d($t0)),LLIL_CONST.b(0x20))))'),
 ]
 
 import sys

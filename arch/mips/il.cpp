@@ -1484,14 +1484,40 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		il.AddInstruction(MoveFromCoprocessor(0, il, 4, op1.reg, op2.immediate, op3.immediate, decomposeFlags));
 		break;
 	case MIPS_MFC1:
+		// MIPS32 Release 6.06, MFC1 (p. 267), reads FPR[fs][31:0].
+		// MIPS64 Release 6.06, MFC1 (p. 357), sign-extends that word.
 		if (version == MIPS_R5900)
 		{
+			// R5900 EE Core Instruction Set Manual, MFC1 (p. 364),
+			// sign-extends the FPR word to the low 64 bits of the GPR.
 			il.AddInstruction(
 				SetRegisterOrNop(il, 4, 8, op1.reg, il.Register(4, op2.reg)));
-			break;
 		}
 		else
-			il.AddInstruction(MoveFromCoprocessor(1, il, 4, op1.reg, op2.immediate, op3.immediate, decomposeFlags));
+			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg,
+				il.Register(4, op2.reg)));
+		break;
+	case MIPS_DMFC1:
+		// MIPS64 Release 6.06, DMFC1 (p. 217), transfers all 64 FPR bits.
+		if (arch->GetRegisterInfo(op2.reg).size == 8 && registerSize(op1) >= 8)
+			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg,
+				il.Register(8, op2.reg)));
+		else
+			il.AddInstruction(il.Unknown());
+		break;
+	case MIPS_MFHC1:
+		// MIPS32 Release 6.06, MFHC1 (p. 271), and MIPS64 Release
+		// 6.06, MFHC1 (p. 361), read bits 63:32 of ValueFPR(fs).
+		if (version == MIPS_R5900)
+			il.AddInstruction(il.Unknown());
+		else if (arch->GetRegisterInfo(op2.reg).size == 8)
+			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg,
+				il.LowPart(4, il.LogicalShiftRight(8, il.Register(8, op2.reg), il.Const(1, 32)))));
+		else if ((op2.reg - FPREG_F0) & 1)
+			il.AddInstruction(il.Unknown());
+		else
+			il.AddInstruction(SetRegisterOrNop(il, 4, registerSize(op1), op1.reg,
+				il.Register(4, op2.reg + 1)));
 		break;
 	case MIPS_DMFC2:
 		il.AddInstruction(MoveFromCoprocessor(2, il, 8, op1.reg, op2.immediate, 0, decomposeFlags));
@@ -1506,16 +1532,59 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		il.AddInstruction(MoveToCoprocessor(0, il, 4, op2.immediate, op3.immediate, ReadILOperand(il, instr, 1, registerSize(op1)), decomposeFlags));
 		break;
 	case MIPS_MTC1:
-		if (version == MIPS_R5900)
+	{
+		auto value = ReadILOperand(il, instr, 1, registerSize(op1), 4);
+		if (arch->GetRegisterInfo(op2.reg).size == 4)
 		{
-			il.AddInstruction(
-				il.SetRegister(4, op2.reg,
-					op1.reg == REG_ZERO ? il.Const(4, 0) : il.Register(4, op1.reg)));
-			break;
+			// MIPS32 Release 6.06, MTC1 (p. 292), specifies a 32-bit
+			// StoreFPR. This is a complete write for modeled 32-bit FPRs.
+			il.AddInstruction(il.SetRegister(4, op2.reg, value));
 		}
 		else
-			il.AddInstruction(MoveToCoprocessor(1, il, 4, op2.immediate, op3.immediate, ReadILOperand(il, instr, 1, registerSize(op1)), decomposeFlags));
+		{
+			// MIPS64 Release 6.06, MTC1 (p. 385), defines FPR[fs][31:0]
+			// from GPR[rt][31:0], while FPR[fs][63:32] is UNPREDICTABLE.
+			il.AddInstruction(il.Intrinsic(
+				{RegisterOrFlag::Register(LLIL_TEMP(0))},
+				MIPS_INTRIN_MTC1_UNPREDICTABLE_HIGH_WORD, {}));
+			il.AddInstruction(il.SetRegister(8, op2.reg,
+				il.Or(8,
+					il.ShiftLeft(8,
+						il.ZeroExtend(8, il.Register(4, LLIL_TEMP(0))),
+						il.Const(1, 32)),
+					il.ZeroExtend(8, value))));
+		}
 		break;
+	}
+	case MIPS_DMTC1:
+		// MIPS64 Release 6.06, DMTC1 (p. 220), transfers all 64 GPR bits.
+		if (arch->GetRegisterInfo(op2.reg).size == 8 && registerSize(op1) >= 8)
+			il.AddInstruction(il.SetRegister(8, op2.reg,
+				ReadILOperand(il, instr, 1, registerSize(op1), 8)));
+		else
+			il.AddInstruction(il.Unknown());
+		break;
+	case MIPS_MTHC1:
+	{
+		// MIPS32 Release 6.06, MTHC1 (p. 295), and MIPS64 Release
+		// 6.06, MTHC1 (p. 389), replace bits 63:32 of ValueFPR(fs).
+		if (version == MIPS_R5900)
+			il.AddInstruction(il.Unknown());
+		else if (arch->GetRegisterInfo(op2.reg).size == 8)
+		{
+			auto value = ReadILOperand(il, instr, 1, registerSize(op1), 4);
+			il.AddInstruction(il.SetRegister(8, op2.reg,
+				il.Or(8,
+					il.And(8, il.Register(8, op2.reg), il.Const(8, 0xffffffff)),
+					il.ShiftLeft(8, il.ZeroExtend(8, value), il.Const(1, 32)))));
+		}
+		else if ((op2.reg - FPREG_F0) & 1)
+			il.AddInstruction(il.Unknown());
+		else
+			il.AddInstruction(il.SetRegister(4, op2.reg + 1,
+				ReadILOperand(il, instr, 1, registerSize(op1), 4)));
+		break;
+	}
 	case MIPS_DMTC2:
 		il.AddInstruction(MoveToCoprocessor(2, il, 8, op2.immediate, 0, ReadILOperand(il, instr, 1, registerSize(op1)), decomposeFlags));
 		break;
@@ -3781,7 +3850,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 				break;
 			}
 
-		case MIPS_MFHC1:
 		case MIPS_MFHC2:
 		case MIPS_MOVT:
 		case MIPS_MULR:
@@ -3795,7 +3863,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_DERET:
 		case MIPS_DRET:
 		case MIPS_JALX: //Special instruction for switching to MIPS32/microMIPS32/MIPS16e
-		case MIPS_MTHC1:
 		case MIPS_MTHC2:
 		case MIPS_PREFX:
 		case MIPS_WRPGPR:

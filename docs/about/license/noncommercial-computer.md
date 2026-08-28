@@ -1,5 +1,10 @@
 # Non-commercial / Student License (COMPUTER)
 
+!!! Warning "Deprecated"
+    This license is no longer offered and is retained for reference by existing
+    license holders. See the [current licenses](../license.md) for the options
+    available today.
+
 BINARY NINJA SOFTWARE LICENSE AGREEMENT
 
 (Non-commercial Computer License)

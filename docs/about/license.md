@@ -6,7 +6,8 @@ Binary Ninja comes in different versions. Depending on the terms under which you
 - [Non-commercial / Student License (Named)](license/noncommercial-named.md)
 - [Commercial License (Named)](license/commercial-named.md)
 - [Commercial License (Computer)](license/commercial-computer.md)
-- [Ultimate License](license/ultimate.md)
+- [Ultimate License (Named)](license/ultimate-named.md)
+- [Ultimate License (Computer)](license/ultimate-computer.md)
 - [Ultimate Floating License (Enterprise Client)](license/ultimate-floating.md)
   
 - [Enterprise Server License](license/enterprise-server.md)

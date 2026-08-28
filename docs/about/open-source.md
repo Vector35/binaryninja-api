@@ -194,7 +194,7 @@ Please note that we offer no support for running Binary Ninja with modified Qt l
 [Noto Color Emoji]: https://github.com/googlefonts/noto-emoji
 [sphinx license]: https://github.com/sphinx-doc/sphinx/blob/master/LICENSE.rst
 [zensical]: https://zensical.org/
-[zensical license]: https://github.com/zensical/zensical/blob/main/LICENSE
+[zensical license]: https://github.com/zensical/zensical/blob/master/LICENSE.md
 [sphinx]: https://www.sphinx-doc.org/en/master/
 [sqlite license]: https://www.sqlite.org/copyright.html
 [sqlite]: https://www.sqlite.org/index.html

@@ -266,12 +266,9 @@ stdenv.mkDerivation rec {
 ```
 
 [known issues]: https://github.com/Vector35/binaryninja-api/issues
-[libcurl-compat]: https://www.archlinux.org/packages/community/x86_64/libcurl-compat/
-[archrepo]: https://wiki.archlinux.org/index.php/Official_repositories
 [recover]: https://binary.ninja/recover.html
 [support]: https://binary.ninja/support.html
 [purchase]: https://binary.ninja/purchase.html
-[unofficial script]: https://gist.github.com/0x1F9F1/64725fbe9acdeafaf39e048e03f4dd9d
 [slack]: https://slack.binary.ninja
 [hashes]: https://binary.ninja/js/hashes.js
 

@@ -141,12 +141,11 @@
           {%- endif %}
 
           {%- if not (logo_url and theme_logo_only) %}
-            {%- set nav_version = version %}
+            {%- set nav_version = release %}
             {%- if READTHEDOCS and current_version %}
               {%- set nav_version = current_version %}
             {%- endif %}
-            {#- The version string can carry the edition (e.g. "5.4 Ultimate"); show only the number #}
-            <a href="{{ pathto(master_doc) }}" class="bn-home-line">Python API {% if theme_display_version and nav_version %} ({{ nav_version.split(' ') | first }}){% endif %}</a>
+            <a href="{{ pathto(master_doc) }}" class="bn-home-line">Python API{% if theme_display_version and nav_version %} ({{ nav_version }}){% endif %}</a>
           {%- endif %}
 
           {%- include "searchbox.html" %}

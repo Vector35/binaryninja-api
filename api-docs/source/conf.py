@@ -445,8 +445,10 @@ author = u'Vector 35 Inc'
 #
 # The short X.Y version.
 version = u'.'.join(str(binaryninja.core_version()).split('.')[0:2])
-# The longer X.Y.Z-channel version. (We intentionally strip the edition.)
-release = str(binaryninja.core_version().split(' ')[0])
+# The longer X.Y.Z version. We keep the [branch] marker test builds carry, but
+# intentionally strip the edition (Personal/Ultimate/Headless/free).
+_version_parts = str(binaryninja.core_version()).split()
+release = ' '.join([_version_parts[0]] + [p for p in _version_parts[1:] if p.startswith('[')])
 
 language = 'en'
 
@@ -501,7 +503,7 @@ html_theme_options = {
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.
 #
-html_title = u'Binary Ninja API Documentation v' + version
+html_title = u'Binary Ninja API Documentation v' + release
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #

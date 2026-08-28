@@ -39,7 +39,7 @@ steps:
 
     !!! Important "GUID Database"
         An excellent source of proprietary EFI GUIDs is Binarly's
-        [GUID DB](https://github.com/binarly-io/guiddb/blob/main/guids.json). This file is in the expected format for
+        [GUID DB](https://github.com/REhints/guiddb/blob/main/guids.json). This file is in the expected format for
         EFI Resolver's `efi-guids.json`, and can be copied directly to your user folder as a starting point.
 
 2. Define a GUID in the following format:

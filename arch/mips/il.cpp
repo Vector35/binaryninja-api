@@ -1078,6 +1078,130 @@ static void SignExtendHiLo(LowLevelILFunction& il, size_t registerSize)
 	}
 }
 
+static ExprId GetFloatingComparePredicate(LowLevelILFunction& il, Operation operation,
+		size_t size, ExprId lhs, ExprId rhs)
+{
+	// MIPS32 Release 6.06, pp. 110-113, and MIPS64 Release 6.06,
+	// pp. 129-132: cond[2:0] select less, equal, and unordered. cond[3]
+	// only controls QNaN exception signaling, which LLIL does not model.
+	switch (operation)
+	{
+	case MIPS_C_F_S:
+	case MIPS_C_F_D:
+	case MIPS_C_F_PS:
+	case MIPS_C_SF_S:
+	case MIPS_C_SF_D:
+	case MIPS_C_SF_PS:
+		return il.Const(0, 0);
+	case MIPS_C_UN_S:
+	case MIPS_C_UN_D:
+	case MIPS_C_UN_PS:
+	case MIPS_C_NGLE_S:
+	case MIPS_C_NGLE_D:
+	case MIPS_C_NGLE_PS:
+		return il.FloatCompareUnordered(size, lhs, rhs);
+	case MIPS_C_EQ_S:
+	case MIPS_C_EQ_D:
+	case MIPS_C_EQ_PS:
+	case MIPS_C_SEQ_S:
+	case MIPS_C_SEQ_D:
+	case MIPS_C_SEQ_PS:
+		return il.FloatCompareEqual(size, lhs, rhs);
+	case MIPS_C_UEQ_S:
+	case MIPS_C_UEQ_D:
+	case MIPS_C_UEQ_PS:
+	case MIPS_C_NGL_S:
+	case MIPS_C_NGL_D:
+	case MIPS_C_NGL_PS:
+		return il.Or(0, il.FloatCompareUnordered(size, lhs, rhs),
+			il.FloatCompareEqual(size, lhs, rhs));
+	case MIPS_C_OLT_S:
+	case MIPS_C_OLT_D:
+	case MIPS_C_OLT_PS:
+	case MIPS_C_LT_S:
+	case MIPS_C_LT_D:
+	case MIPS_C_LT_PS:
+		return il.FloatCompareLessThan(size, lhs, rhs);
+	case MIPS_C_ULT_S:
+	case MIPS_C_ULT_D:
+	case MIPS_C_ULT_PS:
+	case MIPS_C_NGE_S:
+	case MIPS_C_NGE_D:
+	case MIPS_C_NGE_PS:
+		return il.Or(0, il.FloatCompareUnordered(size, lhs, rhs),
+			il.FloatCompareLessThan(size, lhs, rhs));
+	case MIPS_C_OLE_S:
+	case MIPS_C_OLE_D:
+	case MIPS_C_OLE_PS:
+	case MIPS_C_LE_S:
+	case MIPS_C_LE_D:
+	case MIPS_C_LE_PS:
+		return il.FloatCompareLessEqual(size, lhs, rhs);
+	case MIPS_C_ULE_S:
+	case MIPS_C_ULE_D:
+	case MIPS_C_ULE_PS:
+	case MIPS_C_NGT_S:
+	case MIPS_C_NGT_D:
+	case MIPS_C_NGT_PS:
+		return il.Or(0, il.FloatCompareUnordered(size, lhs, rhs),
+			il.FloatCompareLessEqual(size, lhs, rhs));
+	default:
+		return il.Undefined();
+	}
+}
+
+static bool IsDoubleFloatingCompare(Operation operation)
+{
+	switch (operation)
+	{
+	case MIPS_C_F_D:
+	case MIPS_C_UN_D:
+	case MIPS_C_EQ_D:
+	case MIPS_C_UEQ_D:
+	case MIPS_C_OLT_D:
+	case MIPS_C_ULT_D:
+	case MIPS_C_OLE_D:
+	case MIPS_C_ULE_D:
+	case MIPS_C_SF_D:
+	case MIPS_C_NGLE_D:
+	case MIPS_C_SEQ_D:
+	case MIPS_C_NGL_D:
+	case MIPS_C_LT_D:
+	case MIPS_C_NGE_D:
+	case MIPS_C_LE_D:
+	case MIPS_C_NGT_D:
+		return true;
+	default:
+		return false;
+	}
+}
+
+static bool IsPairedSingleFloatingCompare(Operation operation)
+{
+	switch (operation)
+	{
+	case MIPS_C_F_PS:
+	case MIPS_C_UN_PS:
+	case MIPS_C_EQ_PS:
+	case MIPS_C_UEQ_PS:
+	case MIPS_C_OLT_PS:
+	case MIPS_C_ULT_PS:
+	case MIPS_C_OLE_PS:
+	case MIPS_C_ULE_PS:
+	case MIPS_C_SF_PS:
+	case MIPS_C_NGLE_PS:
+	case MIPS_C_SEQ_PS:
+	case MIPS_C_NGL_PS:
+	case MIPS_C_LT_PS:
+	case MIPS_C_NGE_PS:
+	case MIPS_C_LE_PS:
+	case MIPS_C_NGT_PS:
+		return true;
+	default:
+		return false;
+	}
+}
+
 #define DEFINE_HILO1(op) \
 	auto hi = REG_HI; \
 	auto lo = REG_LO; \
@@ -2374,6 +2498,101 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		else
 			il.AddInstruction(SetRegisterOrNop(il, 8, registerSize(op1), op1.reg, il.FloatConvert(4, il.Register(registerSize(op2), op2.reg))));
 		break;
+	case MIPS_C_UEQ_S:
+	case MIPS_C_UEQ_D:
+	case MIPS_C_OLT_S:
+	case MIPS_C_OLT_D:
+	case MIPS_C_ULT_S:
+	case MIPS_C_ULT_D:
+	case MIPS_C_OLE_S:
+	case MIPS_C_OLE_D:
+	case MIPS_C_ULE_S:
+	case MIPS_C_ULE_D:
+	case MIPS_C_NGLE_S:
+	case MIPS_C_NGLE_D:
+	case MIPS_C_NGL_S:
+	case MIPS_C_NGL_D:
+	case MIPS_C_NGE_S:
+	case MIPS_C_NGE_D:
+	case MIPS_C_NGT_S:
+	case MIPS_C_NGT_D:
+	case MIPS_C_F_PS:
+	case MIPS_C_UN_PS:
+	case MIPS_C_EQ_PS:
+	case MIPS_C_UEQ_PS:
+	case MIPS_C_OLT_PS:
+	case MIPS_C_ULT_PS:
+	case MIPS_C_OLE_PS:
+	case MIPS_C_ULE_PS:
+	case MIPS_C_SF_PS:
+	case MIPS_C_NGLE_PS:
+	case MIPS_C_SEQ_PS:
+	case MIPS_C_NGL_PS:
+	case MIPS_C_LT_PS:
+	case MIPS_C_NGE_PS:
+	case MIPS_C_LE_PS:
+	case MIPS_C_NGT_PS:
+	{
+		uint32_t destinationFlag = op1.operandClass == FLAG ? op1.reg : FPCCREG_FCC0;
+		auto& lhsOperand = op1.operandClass == FLAG ? op2 : op1;
+		auto& rhsOperand = op1.operandClass == FLAG ? op3 : op2;
+
+		if (IsPairedSingleFloatingCompare(instr.operation))
+		{
+			// C.cond.PS writes the low-lane result to FCC[cc] and the
+			// high-lane result to FCC[cc+1]. MIPS32/64 Release 6.06,
+			// pp. 110-113/129-132, requires FR=1 and an even cc.
+			if (arch->GetRegisterInfo(lhsOperand.reg).size != 8 ||
+				((destinationFlag - FPCCREG_FCC0) & 1))
+			{
+				il.AddInstruction(il.Unknown());
+				break;
+			}
+
+			auto lhs = il.Register(8, lhsOperand.reg);
+			auto rhs = il.Register(8, rhsOperand.reg);
+			il.AddInstruction(il.SetFlag(destinationFlag,
+				GetFloatingComparePredicate(il, instr.operation, 4,
+					il.LowPart(4, lhs), il.LowPart(4, rhs))));
+			il.AddInstruction(il.SetFlag(destinationFlag + 1,
+				GetFloatingComparePredicate(il, instr.operation, 4,
+					il.LowPart(4, il.LogicalShiftRight(8, lhs, il.Const(1, 32))),
+					il.LowPart(4, il.LogicalShiftRight(8, rhs, il.Const(1, 32))))));
+			break;
+		}
+
+		if (IsDoubleFloatingCompare(instr.operation))
+		{
+			ExprId lhs;
+			ExprId rhs;
+			if (arch->GetRegisterInfo(lhsOperand.reg).size == 8)
+			{
+				lhs = il.Register(8, lhsOperand.reg);
+				rhs = il.Register(8, rhsOperand.reg);
+			}
+			else
+			{
+				// In FR=0, fmt=D uses an even/odd FPR pair. Odd roots are
+				// UNPREDICTABLE (MIPS32 Release 6.06, p. 112).
+				if (((lhsOperand.reg - FPREG_F0) & 1) || ((rhsOperand.reg - FPREG_F0) & 1))
+				{
+					il.AddInstruction(il.Unknown());
+					break;
+				}
+				lhs = il.RegisterSplit(4, lhsOperand.reg + 1, lhsOperand.reg);
+				rhs = il.RegisterSplit(4, rhsOperand.reg + 1, rhsOperand.reg);
+			}
+			il.AddInstruction(il.SetFlag(destinationFlag,
+				GetFloatingComparePredicate(il, instr.operation, 8, lhs, rhs)));
+		}
+		else
+		{
+			il.AddInstruction(il.SetFlag(destinationFlag,
+				GetFloatingComparePredicate(il, instr.operation, 4,
+					il.Register(4, lhsOperand.reg), il.Register(4, rhsOperand.reg))));
+		}
+		break;
+	}
 	case MIPS_C_F_S:
 	case MIPS_C_F_D:
 	case MIPS_C_SF_S:
@@ -2523,74 +2742,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 				else
 					il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.FloatCompareUnordered(8,
 						il.Register(8, op1.reg), il.Register(8, op2.reg))));
-			}
-			break;
-		case MIPS_C_NGE_S:
-			if (op1.operandClass == FLAG)
-			{
-				il.AddInstruction(il.SetFlag(op1.reg, il.Not(4, il.FloatCompareGreaterEqual(4,
-					il.Register(4, op2.reg), il.Register(4, op3.reg)))));
-			}
-			else
-			{
-				il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.Not(4, il.FloatCompareGreaterEqual(4,
-					il.Register(4, op1.reg), il.Register(4, op2.reg)))));
-			}
-			break;
-		case MIPS_C_NGE_D:
-			if (op1.operandClass == FLAG)
-			{
-				if (registerSize(op2) < 8)
-					il.AddInstruction(il.SetFlag(op1.reg, il.Not(8, il.FloatCompareGreaterEqual(8,
-						il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)),
-						il.RegisterSplit(4, op3.reg | 1, op3.reg & (~1))))));
-				else
-					il.AddInstruction(il.SetFlag(op1.reg, il.Not(8, il.FloatCompareGreaterEqual(8,
-						il.Register(8, op2.reg), il.Register(8, op3.reg)))));
-			}
-			else
-			{
-				if (registerSize(op2) < 8)
-					il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.Not(8, il.FloatCompareGreaterEqual(8,
-						il.RegisterSplit(4, op1.reg | 1, op1.reg & (~1)),
-						il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1))))));
-				else
-					il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.Not(8, il.FloatCompareGreaterEqual(8,
-						il.Register(8, op1.reg), il.Register(8, op2.reg)))));
-			}
-			break;
-		case MIPS_C_NGT_S:
-			if (op1.operandClass == FLAG)
-			{
-				il.AddInstruction(il.SetFlag(op1.reg, il.Not(4, il.FloatCompareGreaterThan(4,
-					il.Register(4, op2.reg), il.Register(4, op3.reg)))));
-			}
-			else
-			{
-				il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.Not(4, il.FloatCompareGreaterThan(4,
-					il.Register(4, op1.reg), il.Register(4, op2.reg)))));
-			}
-			break;
-		case MIPS_C_NGT_D:
-			if (op1.operandClass == FLAG)
-			{
-				if (registerSize(op2) < 8)
-					il.AddInstruction(il.SetFlag(op1.reg, il.Not(8, il.FloatCompareGreaterThan(8,
-						il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1)),
-						il.RegisterSplit(4, op3.reg | 1, op3.reg & (~1))))));
-				else
-					il.AddInstruction(il.SetFlag(op1.reg, il.Not(8, il.FloatCompareGreaterThan(8,
-						il.Register(8, op2.reg), il.Register(8, op3.reg)))));
-			}
-			else
-			{
-				if (registerSize(op2) < 8)
-					il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.Not(8, il.FloatCompareGreaterEqual(8,
-						il.RegisterSplit(4, op1.reg | 1, op1.reg & (~1)),
-						il.RegisterSplit(4, op2.reg | 1, op2.reg & (~1))))));
-				else
-					il.AddInstruction(il.SetFlag(FPCCREG_FCC0, il.Not(8, il.FloatCompareGreaterEqual(8,
-						il.Register(8, op1.reg), il.Register(8, op2.reg)))));
 			}
 			break;
 		case MIPS_SYNC:

@@ -83,6 +83,38 @@ test_cases = [
     ('mips32', b'\x44\xe8\xa8\x00', 'LLIL_UNKNOWN()'),
     # mthc1 $t0, $f20 -- MIPS64 Release 6.06 MTHC1 (p. 389): preserve low, replace high
     ('mipsel64', b'\x00\xa0\xe8\x44', 'LLIL_SET_REG.q($f20,LLIL_OR.q(LLIL_AND.q(LLIL_REG.q($f20),LLIL_CONST.q(0xFFFFFFFF)),LLIL_LSL.q(LLIL_ZX.q(LLIL_REG.d($t0)),LLIL_CONST.b(0x20))))'),
+    # c.ole.s $f12, $f0 -- MIPS32 Release 6.06 pp. 110-113: ordered less-or-equal
+    ('mipsel32', b'\x36\x60\x00\x46', 'LLIL_SET_FLAG($fcc0,LLIL_FCMP_LE.d(LLIL_REG.d($f12),LLIL_REG.d($f0)))'),
+    # c.ule.s $f21, $f20 -- unordered or less-or-equal
+    ('mipsel32', b'\x37\xa8\x14\x46', 'LLIL_SET_FLAG($fcc0,LLIL_OR(LLIL_FCMP_UO.d(LLIL_REG.d($f21),LLIL_REG.d($f20)),LLIL_FCMP_LE.d(LLIL_REG.d($f21),LLIL_REG.d($f20))))'),
+    # c.olt.s $f12, $f0 -- ordered less-than
+    ('mips32', b'\x46\x00\x60\x34', 'LLIL_SET_FLAG($fcc0,LLIL_FCMP_LT.d(LLIL_REG.d($f12),LLIL_REG.d($f0)))'),
+    # c.ult.s $f12, $f0 -- unordered or less-than
+    ('mipsel32', b'\x35\x60\x00\x46', 'LLIL_SET_FLAG($fcc0,LLIL_OR(LLIL_FCMP_UO.d(LLIL_REG.d($f12),LLIL_REG.d($f0)),LLIL_FCMP_LT.d(LLIL_REG.d($f12),LLIL_REG.d($f0))))'),
+    # c.ueq.s $f12, $f0 -- unordered or equal
+    ('mipsel32', b'\x33\x60\x00\x46', 'LLIL_SET_FLAG($fcc0,LLIL_OR(LLIL_FCMP_UO.d(LLIL_REG.d($f12),LLIL_REG.d($f0)),LLIL_FCMP_E.d(LLIL_REG.d($f12),LLIL_REG.d($f0))))'),
+    # c.ngle.s $f12, $f0 -- signaling unordered predicate
+    ('mipsel32', b'\x39\x60\x00\x46', 'LLIL_SET_FLAG($fcc0,LLIL_FCMP_UO.d(LLIL_REG.d($f12),LLIL_REG.d($f0)))'),
+    # c.ngl.s $f12, $f0 -- signaling unordered-or-equal predicate
+    ('mipsel32', b'\x3b\x60\x00\x46', 'LLIL_SET_FLAG($fcc0,LLIL_OR(LLIL_FCMP_UO.d(LLIL_REG.d($f12),LLIL_REG.d($f0)),LLIL_FCMP_E.d(LLIL_REG.d($f12),LLIL_REG.d($f0))))'),
+    # c.ole.d $f12, $f0 -- FR=0 doubles use even/odd FPR pairs
+    ('mipsel32', b'\x36\x60\x20\x46', 'LLIL_SET_FLAG($fcc0,LLIL_FCMP_LE.q(LLIL_REG_SPLIT.d($f13,$f12),LLIL_REG_SPLIT.d($f1,$f0)))'),
+    # c.ole.d $f13, $f0 -- odd FR=0 double roots are architecturally unpredictable
+    ('mipsel32', b'\x36\x68\x20\x46', 'LLIL_UNKNOWN()'),
+    # c.nge.d $f12, $f0 -- unordered or less-than
+    ('mipsel32', b'\x3d\x60\x20\x46', 'LLIL_SET_FLAG($fcc0,LLIL_OR(LLIL_FCMP_UO.q(LLIL_REG_SPLIT.d($f13,$f12),LLIL_REG_SPLIT.d($f1,$f0)),LLIL_FCMP_LT.q(LLIL_REG_SPLIT.d($f13,$f12),LLIL_REG_SPLIT.d($f1,$f0))))'),
+    # c.ngt.d $f12, $f0 -- unordered or less-than-or-equal
+    ('mipsel32', b'\x3f\x60\x20\x46', 'LLIL_SET_FLAG($fcc0,LLIL_OR(LLIL_FCMP_UO.q(LLIL_REG_SPLIT.d($f13,$f12),LLIL_REG_SPLIT.d($f1,$f0)),LLIL_FCMP_LE.q(LLIL_REG_SPLIT.d($f13,$f12),LLIL_REG_SPLIT.d($f1,$f0))))'),
+    # c.ole.s $fcc3, $f12, $f0 -- only the selected condition code is written
+    ('mipsel32', b'\x36\x63\x00\x46', 'LLIL_SET_FLAG($fcc3,LLIL_FCMP_LE.d(LLIL_REG.d($f12),LLIL_REG.d($f0)))'),
+    # c.ole.d $fcc3, $f12, $f0 -- explicit condition codes also apply to doubles
+    ('mipsel32', b'\x36\x63\x20\x46', 'LLIL_SET_FLAG($fcc3,LLIL_FCMP_LE.q(LLIL_REG_SPLIT.d($f13,$f12),LLIL_REG_SPLIT.d($f1,$f0)))'),
+    # c.ole.ps $f12, $f0 -- paired lanes write FCC0 and FCC1 in FR=1
+    ('mipsel64', b'\x36\x60\xc0\x46', 'LLIL_SET_FLAG($fcc0,LLIL_FCMP_LE.d(LLIL_LOW_PART.d(LLIL_REG.q($f12)),LLIL_LOW_PART.d(LLIL_REG.q($f0)))); LLIL_SET_FLAG($fcc1,LLIL_FCMP_LE.d(LLIL_LOW_PART.d(LLIL_LSR.q(LLIL_REG.q($f12),LLIL_CONST.b(0x20))),LLIL_LOW_PART.d(LLIL_LSR.q(LLIL_REG.q($f0),LLIL_CONST.b(0x20)))))'),
+    # c.ule.ps $fcc2, $f12, $f0 -- unordered-inclusive predicates are applied independently per lane
+    ('mipsel64', b'\x37\x62\xc0\x46', 'LLIL_SET_FLAG($fcc2,LLIL_OR(LLIL_FCMP_UO.d(LLIL_LOW_PART.d(LLIL_REG.q($f12)),LLIL_LOW_PART.d(LLIL_REG.q($f0))),LLIL_FCMP_LE.d(LLIL_LOW_PART.d(LLIL_REG.q($f12)),LLIL_LOW_PART.d(LLIL_REG.q($f0))))); LLIL_SET_FLAG($fcc3,LLIL_OR(LLIL_FCMP_UO.d(LLIL_LOW_PART.d(LLIL_LSR.q(LLIL_REG.q($f12),LLIL_CONST.b(0x20))),LLIL_LOW_PART.d(LLIL_LSR.q(LLIL_REG.q($f0),LLIL_CONST.b(0x20)))),LLIL_FCMP_LE.d(LLIL_LOW_PART.d(LLIL_LSR.q(LLIL_REG.q($f12),LLIL_CONST.b(0x20))),LLIL_LOW_PART.d(LLIL_LSR.q(LLIL_REG.q($f0),LLIL_CONST.b(0x20))))))'),
+    # c.ole.ps $fcc1, $f12, $f0 -- paired-single requires an even condition code
+    ('mipsel64', b'\x36\x61\xc0\x46', 'LLIL_UNKNOWN()'),
 ]
 
 import sys

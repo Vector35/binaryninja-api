@@ -103,10 +103,11 @@ nav = [
             "about/license.md",
             { "Non-commercial (Named)" = "about/license/noncommercial-named.md" },
             { "Commercial (Named)" = "about/license/commercial-named.md" },
-            { "Non-commercial (Computer)" = "about/license/noncommercial-computer.md" },
+            { "Non-commercial (Computer, Deprecated)" = "about/license/noncommercial-computer.md" },
             { "Commercial (Computer)" = "about/license/commercial-computer.md" },
             { "Free" = "about/license/free.md" },
-            { "Ultimate" = "about/license/ultimate.md" },
+            { "Ultimate (Named)" = "about/license/ultimate-named.md" },
+            { "Ultimate (Computer)" = "about/license/ultimate-computer.md" },
             { "Ultimate Floating" = "about/license/ultimate-floating.md" },
             { "Enterprise Server" = "about/license/enterprise-server.md" },
         ] },
@@ -163,6 +164,7 @@ separator = '[\s\-,:!=\[\]()"/]+|\.(?!\d)|&[lg]t;'
 "guide/debugger.md" = "guide/debugger/index.md"
 "guide/remote-debugging.md" = "guide/debugger/remote-debugging.md"
 "guide/dbgeng-ttd.md" = "guide/debugger/dbgeng-ttd.md"
+"about/license/ultimate.md" = "about/license/ultimate-named.md"
 
 [project.markdown_extensions.attr_list]
 [project.markdown_extensions.md_in_html]

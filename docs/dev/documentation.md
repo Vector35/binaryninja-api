@@ -32,6 +32,16 @@ echo C++ API documentation available in html/
 
 `scripts/zensical_build.py` runs `zensical build` and then writes the redirect stubs described by `[project.plugins.redirects.redirect_maps]` in `zensical.toml`.
 
+## Validating
+
+Every build runs `zensical build --strict`, which fails on links to pages or anchors that do not exist. That covers internal references only. External URLs are checked separately by `scripts/check_links.py`, which requests every external URL in `docs/` and reports the file and line of any that fail:
+
+```bash
+poetry run python scripts/check_links.py
+```
+
+It is slow and depends on the network, so run it out of band rather than as part of a build. Sites that block automated requests are reported separately from broken links and do not affect the exit code unless `--strict` is passed.
+
 ## Changing
 Changing documentation for the API itself is fairly straightforward. Use [doxygen style comment blocks](https://www.doxygen.nl/manual/docblocks.html) in C++ and C, and [restructured text blocks](https://sphinx-tutorial.readthedocs.io/step-1/) for python for the source. The user documentation is located in the `docs/` folder and the API documentation is generated from the config in the `api-docs` folder.
 
@@ -44,4 +54,3 @@ Changing documentation for the API itself is fairly straightforward. Use [doxyge
 [zensical]: https://zensical.org/
 [breathe]: https://github.com/michaeljones/breathe
 [sphinx]:  https://www.sphinx-doc.org/en/master/
-[doxygen]: https://www.doxygen.nl

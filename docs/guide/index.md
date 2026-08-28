@@ -1238,12 +1238,12 @@ The interactive Python prompt also has several built-in "magic" functions and va
 - `current_variable`: the current selected [`Variable`](https://api.binary.ninja/binaryninja.variable-module.html?highlight=variable#binaryninja.variable.Variable) in a function (Not to be confused with `current_data_var`)
 - `current_project`: the [`Project`](https://api.binary.ninja/binaryninja.project-module.html#binaryninja.project.Project) the current view belongs to (`None` if the file is not in a project)
 - `current_thread`: the [`code.InteractiveConsole`](https://docs.python.org/3/library/code.html#code.InteractiveConsole) backing the scripting console
-- `current_ui_context`: the current [`UIContext`](https://api.binary.ninja/cpp/class_u_i_context.html)
-- `current_ui_view_frame`: the current [`ViewFrame`](https://api.binary.ninja/cpp/class_view_frame.html)
-- `current_ui_view`: the current [`View`](https://api.binary.ninja/cpp/class_view.html)
-- `current_ui_action_handler`: the current [`UIActionHandler`](https://api.binary.ninja/cpp/class_u_i_action_handler.html)
-- `current_ui_view_location`: the current [`ViewLocation`](https://api.binary.ninja/cpp/class_view_location.html)
-- `current_ui_action_context`: the current [`UIActionContext`](https://api.binary.ninja/cpp/struct_u_i_action_context.html)
+- `current_ui_context`: the current [`UIContext`](https://api.binary.ninja/cpp/group__uicontext.html#class_u_i_context)
+- `current_ui_view_frame`: the current [`ViewFrame`](https://api.binary.ninja/cpp/group__viewframe.html#class_view_frame)
+- `current_ui_view`: the current [`View`](https://api.binary.ninja/cpp/group__viewframe.html#class_view)
+- `current_ui_action_handler`: the current [`UIActionHandler`](https://api.binary.ninja/cpp/group__action.html#class_u_i_action_handler)
+- `current_ui_view_location`: the current [`ViewLocation`](https://api.binary.ninja/cpp/group__viewframe.html#class_view_location)
+- `current_ui_action_context`: the current [`UIActionContext`](https://api.binary.ninja/cpp/group__action.html#struct_u_i_action_context)
 - `current_ui_token_state`: the current token state from the UI action context, which backs `current_token` and `current_variable`
 
 ### startup.py

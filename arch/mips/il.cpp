@@ -1772,25 +1772,24 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		break;
 	}
 	case MIPS_SWC1:
-		if (version == MIPS_R5900)
+		il.AddInstruction(il.Store(4, GetILOperandMemoryAddress(il, op2, addrSize),
+			il.Register(4, op1.reg)));
+		break;
+	case MIPS_SDC1:
+		if (version == MIPS_32)
 		{
-			il.AddInstruction(
-				il.Store(4, GetILOperandMemoryAddress(il, op2, addrSize),
-					il.Register(4, op1.reg)));
+			// In FR=0 mode, an even FPR holds the low half and the following odd FPR holds the high half.
+			if ((op1.reg - FPREG_F0) & 1)
+				il.AddInstruction(il.Unknown());
+			else
+				il.AddInstruction(il.Store(8, GetILOperandMemoryAddress(il, op2, addrSize),
+					il.RegisterSplit(4, op1.reg + 1, op1.reg)));
 		}
 		else
 		{
-			il.AddInstruction(MoveFromCoprocessor(1, il, 4, LLIL_TEMP(0), op1.immediate, 0, decomposeFlags));
-			il.AddInstruction(WriteILOperand(il, instr, 1, addrSize, il.Register(4, LLIL_TEMP(0))));
+			il.AddInstruction(il.Store(8, GetILOperandMemoryAddress(il, op2, addrSize),
+				il.Register(8, op1.reg)));
 		}
-		break;
-	case MIPS_SDC1:
-		il.AddInstruction(
-			il.Store(4, GetILOperandMemoryAddress(il, op2, addrSize),
-				il.LowPart(4, il.Register(8, op1.reg))));
-		il.AddInstruction(
-			il.Store(4, GetILOperandMemoryAddress(il, op2, addrSize, 4),
-				il.LogicalShiftRight(4, il.Register(8, op1.reg), il.Const(4, 32))));
 		break;
 	case MIPS_SDXC1:
 		il.AddInstruction(
@@ -3173,25 +3172,27 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 				ReadILOperand(il, instr, 2, registerSize(op2)), decomposeFlags));
 			break;
 		case MIPS_LDC1:
+			if (version == MIPS_32)
+			{
+				// Odd FPR pair roots are architecturally unpredictable in FR=0 mode.
+				if ((op1.reg - FPREG_F0) & 1)
+					il.AddInstruction(il.Unknown());
+				else
+					il.AddInstruction(il.SetRegisterSplit(4, op1.reg + 1, op1.reg,
+						il.Load(8, GetILOperandMemoryAddress(il, op2, addrSize))));
+			}
+			else
+			{
+				il.AddInstruction(il.SetRegister(8, op1.reg,
+					il.Load(8, GetILOperandMemoryAddress(il, op2, addrSize))));
+			}
+			break;
 		case MIPS_LDC2:
 		case MIPS_LDC3:
 		{
-			unsigned cop = 0;
-			switch (instr.operation)
-			{
-				case MIPS_LDC1: cop = 1; break;
-				case MIPS_LDC2: cop = 2; break;
-				case MIPS_LDC3: cop = 3; break;
-				// default: il.Fail("Unhandled LDC1/2/3 instruction");
-				default: break;
-			}
-			if (version == MIPS_R5900 && instr.operation == MIPS_LDC1)
-				il.AddInstruction(
-					il.SetRegister(8, op1.reg,
-					il.Load(8, GetILOperandMemoryAddress(il, op2, addrSize))));
-			else
-				il.AddInstruction(MoveToCoprocessor(cop, il, 8, op1.reg, op1.immediate,
-					ReadILOperand(il, instr, 2, registerSize(op2)), decomposeFlags));
+			unsigned cop = instr.operation == MIPS_LDC2 ? 2 : 3;
+			il.AddInstruction(MoveToCoprocessor(cop, il, 8, op1.reg, op1.immediate,
+				ReadILOperand(il, instr, 2, registerSize(op2)), decomposeFlags));
 			break;
 		}
 		case MIPS_MFSA:

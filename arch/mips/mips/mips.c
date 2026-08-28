@@ -2760,21 +2760,16 @@ uint32_t mips_decompose_instruction(
 			instruction->operands[1].immediate = ins.f.ft;
 			instruction->operands[1].reg = ins.f.fr;
 			break;
-		case MIPS_LWC1:
-		case MIPS_SWC1:
 		case MIPS_LDC1:
 		case MIPS_SDC1:
-			// This special case for the R5900 seems wrong: it's trying to use a FP register for the base register
-			// instruction->operands[1].reg = version != MIPS_R5900 ? ins.i.rs : (FPREG_F0 + ins.f.fr);
-			if (version == MIPS_R5900)
-			{
-				instruction->operands[0].reg = FPREG_F0 + ins.f.ft;
-				instruction->operands[0].operandClass = REG;
-				instruction->operands[1].operandClass = MEM_IMM;
-				instruction->operands[1].reg = ins.i.rs;
-				instruction->operands[1].immediate = ins.i.immediate;
-				break;
-			}
+		case MIPS_LWC1:
+		case MIPS_SWC1:
+			instruction->operands[0].reg = FPREG_F0 + ins.i.rt;
+			instruction->operands[0].operandClass = REG;
+			instruction->operands[1].operandClass = MEM_IMM;
+			instruction->operands[1].reg = ins.i.rs;
+			instruction->operands[1].immediate = ins.i.immediate;
+			break;
 		case MIPS_QMFC2:
 		case MIPS_QMTC2:
 			if (version == MIPS_R5900)

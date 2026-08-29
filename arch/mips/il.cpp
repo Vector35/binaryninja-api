@@ -1718,6 +1718,58 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 	case MIPS_MOVE:
 		il.AddInstruction(SetRegisterOrNop(il, registerSize(op1), registerSize(op1), op1.reg, ReadILOperand(il, instr, 2, registerSize(op2))));
 		break;
+	case MIPS_MOVF:
+	case MIPS_MOVT:
+	{
+		// MIPS32 Release 6.06, MOVF (p. 276) and MOVT (p. 281), and
+		// MIPS64 Release 6.06 (pp. 367 and 373): conditionally copy rs
+		// according to FCC[cc], preserving rd when the condition is false.
+		auto condition = instr.operation == MIPS_MOVT ?
+			il.Flag(op3.reg) : il.Not(0, il.Flag(op3.reg));
+		il.AddInstruction(il.If(condition, trueCode, falseCode));
+		il.MarkLabel(trueCode);
+		il.AddInstruction(SetRegisterOrNop(il, registerSize(op2), registerSize(op1),
+			op1.reg, ReadILOperand(il, instr, 2, registerSize(op2))));
+		il.MarkLabel(falseCode);
+		break;
+	}
+	case MIPS_MOVF_S:
+	case MIPS_MOVT_S:
+	{
+		// MIPS32 Release 6.06, MOVF.fmt (pp. 277-278) and MOVT.fmt
+		// (pp. 282-283), and MIPS64 Release 6.06 (pp. 368-369 and
+		// 374-375): copy fs only when FCC[cc] has the selected polarity.
+		auto condition = instr.operation == MIPS_MOVT_S ?
+			il.Flag(op3.reg) : il.Not(0, il.Flag(op3.reg));
+		il.AddInstruction(il.If(condition, trueCode, falseCode));
+		il.MarkLabel(trueCode);
+		il.AddInstruction(il.SetRegister(4, op1.reg, il.Register(4, op2.reg)));
+		il.MarkLabel(falseCode);
+		break;
+	}
+	case MIPS_MOVF_D:
+	case MIPS_MOVT_D:
+	{
+		if (arch->GetRegisterInfo(op1.reg).size != 8 &&
+			(((op1.reg - FPREG_F0) & 1) || ((op2.reg - FPREG_F0) & 1)))
+		{
+			// In FR=0, fmt=D requires even-numbered FPR pair roots.
+			il.AddInstruction(il.Unknown());
+			break;
+		}
+
+		auto condition = instr.operation == MIPS_MOVT_D ?
+			il.Flag(op3.reg) : il.Not(0, il.Flag(op3.reg));
+		il.AddInstruction(il.If(condition, trueCode, falseCode));
+		il.MarkLabel(trueCode);
+		if (arch->GetRegisterInfo(op1.reg).size == 8)
+			il.AddInstruction(il.SetRegister(8, op1.reg, il.Register(8, op2.reg)));
+		else
+			il.AddInstruction(il.SetRegisterSplit(4, op1.reg + 1, op1.reg,
+				il.RegisterSplit(4, op2.reg + 1, op2.reg)));
+		il.MarkLabel(falseCode);
+		break;
+	}
 	case MIPS_MOVN:
 		il.AddInstruction(il.If(il.CompareNotEqual(registerSize(op3), ReadILOperand(il, instr, 3, registerSize(op3)), il.Const(registerSize(op3), 0)), trueCode, falseCode));
 		il.MarkLabel(trueCode);
@@ -3464,6 +3516,57 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 						il.FloatMult(4, il.Register(4, op2.reg), il.Register(4, op3.reg)))));
 				break;
 			}
+			// MIPS32 Release 6.06, MADD.fmt (pp. 256-257), and MIPS64
+			// Release 6.06 (pp. 347-348) specify two rounding steps:
+			// fd = round(round(fs * ft) + fr). Nested LLIL operations retain
+			// the required non-fused behavior.
+			il.AddInstruction(il.SetRegister(4, op1.reg,
+				il.FloatAdd(4,
+					il.FloatMult(4, il.Register(4, op3.reg), il.Register(4, op4.reg)),
+					il.Register(4, op2.reg))));
+			break;
+		case MIPS_MADD_D:
+		{
+			if (arch->GetRegisterInfo(op1.reg).size == 8)
+			{
+				il.AddInstruction(il.SetRegister(8, op1.reg,
+					il.FloatAdd(8,
+						il.FloatMult(8, il.Register(8, op3.reg), il.Register(8, op4.reg)),
+						il.Register(8, op2.reg))));
+			}
+			else
+			{
+				// In FR=0, every fmt=D operand names an even/odd FPR pair.
+				if (((op1.reg - FPREG_F0) & 1) || ((op2.reg - FPREG_F0) & 1) ||
+					((op3.reg - FPREG_F0) & 1) || ((op4.reg - FPREG_F0) & 1))
+				{
+					il.AddInstruction(il.Unknown());
+					break;
+				}
+				il.AddInstruction(il.SetRegisterSplit(4, op1.reg + 1, op1.reg,
+					il.FloatAdd(8,
+						il.FloatMult(8,
+							il.RegisterSplit(4, op3.reg + 1, op3.reg),
+							il.RegisterSplit(4, op4.reg + 1, op4.reg)),
+						il.RegisterSplit(4, op2.reg + 1, op2.reg))));
+			}
+			break;
+		}
+		case MIPS_MADD_PS:
+		{
+			// Paired-single is defined only for 64-bit FPRs in FR=1. Keep
+			// the two independently rounded lane operations in an intrinsic
+			// so packed arithmetic remains concise in higher-level IL.
+			if (arch->GetRegisterInfo(op1.reg).size != 8)
+			{
+				il.AddInstruction(il.Unknown());
+				break;
+			}
+			il.AddInstruction(il.Intrinsic(
+				{RegisterOrFlag::Register(op1.reg)}, MIPS_INTRIN_MADD_PS,
+				{il.Register(8, op2.reg), il.Register(8, op3.reg), il.Register(8, op4.reg)}));
+			break;
+		}
 		case MIPS_MSUB_S:
 			if (version == MIPS_R5900)
 			{
@@ -4002,7 +4105,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 			}
 
 		case MIPS_MFHC2:
-		case MIPS_MOVT:
 		case MIPS_MULR:
 
 		//unimplemented system functions
@@ -4039,8 +4141,6 @@ bool GetLowLevelILForInstruction(Architecture* arch, uint64_t addr, LowLevelILFu
 		case MIPS_NMSUB_D:
 		case MIPS_NMSUB_PS:
 		case MIPS_NMSUB_S:
-		case MIPS_MADD_D:
-		case MIPS_MADD_PS:
 		case MIPS_MADDF_D:
 		case MIPS_MADDF_S:
 		// Unimplemented R5900 instructions

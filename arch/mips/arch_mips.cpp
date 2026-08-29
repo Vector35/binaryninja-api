@@ -1074,6 +1074,8 @@ public:
 				return "moveToCoprocessorUnimplemented";
 			case MIPS_INTRIN_MTC1_UNPREDICTABLE_HIGH_WORD:
 				return "_mtc1UnpredictableHighWord";
+			case MIPS_INTRIN_MADD_PS:
+				return "_madd_ps";
 			case MIPS_INTRIN_DMFC0:
 				return "moveDwordFromCoprocessor0";
 			case MIPS_INTRIN_DMFC2:
@@ -1196,6 +1198,7 @@ public:
 			MIPS_INTRIN_MTC0,
 			MIPS_INTRIN_MTC_UNIMPLEMENTED,
 			MIPS_INTRIN_MTC1_UNPREDICTABLE_HIGH_WORD,
+			MIPS_INTRIN_MADD_PS,
 			MIPS_INTRIN_DMFC0,
 			MIPS_INTRIN_DMFC_UNIMPLEMENTED,
 			MIPS_INTRIN_DMTC0,
@@ -1306,6 +1309,12 @@ public:
 					NameAndType("register", Type::IntegerType(4, false)),
 					NameAndType("selector", Type::IntegerType(4, false)),
 					NameAndType("value", Type::IntegerType(8, false)),
+				};
+			case MIPS_INTRIN_MADD_PS:
+				return {
+					NameAndType("fr", Type::IntegerType(8, false)),
+					NameAndType("fs", Type::IntegerType(8, false)),
+					NameAndType("ft", Type::IntegerType(8, false)),
 				};
 			case MIPS_INTRIN_SYNC:
 				return {
@@ -1453,6 +1462,7 @@ public:
 				return {Type::IntegerType(4, false)};
 			case MIPS_INTRIN_DMFC0:
 			case MIPS_INTRIN_DMFC_UNIMPLEMENTED:
+			case MIPS_INTRIN_MADD_PS:
 				return {Type::IntegerType(8, false)};
 			case MIPS_INTRIN_HWR0:
 			case MIPS_INTRIN_HWR1:

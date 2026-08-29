@@ -115,6 +115,42 @@ test_cases = [
     ('mipsel64', b'\x37\x62\xc0\x46', 'LLIL_SET_FLAG($fcc2,LLIL_OR(LLIL_FCMP_UO.d(LLIL_LOW_PART.d(LLIL_REG.q($f12)),LLIL_LOW_PART.d(LLIL_REG.q($f0))),LLIL_FCMP_LE.d(LLIL_LOW_PART.d(LLIL_REG.q($f12)),LLIL_LOW_PART.d(LLIL_REG.q($f0))))); LLIL_SET_FLAG($fcc3,LLIL_OR(LLIL_FCMP_UO.d(LLIL_LOW_PART.d(LLIL_LSR.q(LLIL_REG.q($f12),LLIL_CONST.b(0x20))),LLIL_LOW_PART.d(LLIL_LSR.q(LLIL_REG.q($f0),LLIL_CONST.b(0x20)))),LLIL_FCMP_LE.d(LLIL_LOW_PART.d(LLIL_LSR.q(LLIL_REG.q($f12),LLIL_CONST.b(0x20))),LLIL_LOW_PART.d(LLIL_LSR.q(LLIL_REG.q($f0),LLIL_CONST.b(0x20))))))'),
     # c.ole.ps $fcc1, $f12, $f0 -- paired-single requires an even condition code
     ('mipsel64', b'\x36\x61\xc0\x46', 'LLIL_UNKNOWN()'),
+    # madd.s $f0, $f0, $f12, $f12 -- reported little-endian encoding
+    ('mipsel32', b'\x20\x60\x0c\x4c', 'LLIL_SET_REG.d($f0,LLIL_FADD.d(LLIL_FMUL.d(LLIL_REG.d($f12),LLIL_REG.d($f12)),LLIL_REG.d($f0)))'),
+    # madd.s $f2, $f4, $f6, $f8 -- MIPS32 Release 6.06 pp. 256-257: round(fs*ft), then add fr
+    ('mips32', b'\x4c\x88\x30\xa0', 'LLIL_SET_REG.d($f2,LLIL_FADD.d(LLIL_FMUL.d(LLIL_REG.d($f6),LLIL_REG.d($f8)),LLIL_REG.d($f4)))'),
+    # madd.d $f2, $f4, $f6, $f8 -- FR=0 doubles use even/odd FPR pairs
+    ('mipsel32', b'\xa1\x30\x88\x4c', 'LLIL_SET_REG_SPLIT.d($f3,$f2,LLIL_FADD.q(LLIL_FMUL.q(LLIL_REG_SPLIT.d($f7,$f6),LLIL_REG_SPLIT.d($f9,$f8)),LLIL_REG_SPLIT.d($f5,$f4)))'),
+    # madd.d $f3, $f4, $f6, $f8 -- odd FR=0 operands are architecturally unpredictable
+    ('mipsel32', b'\xe1\x30\x88\x4c', 'LLIL_UNKNOWN()'),
+    # madd.d $f3, $f4, $f6, $f8 -- odd FPRs are valid in the modeled FR=1 register file
+    ('mipsel64', b'\xe1\x30\x88\x4c', 'LLIL_SET_REG.q($f3,LLIL_FADD.q(LLIL_FMUL.q(LLIL_REG.q($f6),LLIL_REG.q($f8)),LLIL_REG.q($f4)))'),
+    # madd.ps $f2, $f4, $f6, $f8 -- paired-single operates independently on both FR=1 lanes
+    ('mipsel64', b'\xa6\x30\x88\x4c', 'LLIL_INTRINSIC([$f2],_madd_ps,[LLIL_REG.q($f4),LLIL_REG.q($f6),LLIL_REG.q($f8)])'),
+    # madd.ps $f2, $f4, $f6, $f8 -- paired-single is unpredictable with modeled 32-bit FPRs
+    ('mipsel32', b'\xa6\x30\x88\x4c', 'LLIL_UNKNOWN()'),
+    # movt.s $f0, $f1, $fcc0 -- MIPS32 Release 6.06 pp. 282-283
+    ('mipsel32', b'\x11\x08\x01\x46', 'LLIL_IF(LLIL_FLAG($fcc0),1,3); LLIL_SET_REG.d($f0,LLIL_REG.d($f1)); LLIL_GOTO(3)'),
+    # movf.s $f0, $f12, $fcc0 -- MIPS32 Release 6.06 pp. 277-278
+    ('mipsel32', b'\x11\x60\x00\x46', 'LLIL_IF(LLIL_NOT(LLIL_FLAG($fcc0)),1,3); LLIL_SET_REG.d($f0,LLIL_REG.d($f12)); LLIL_GOTO(3)'),
+    # movt.s $f0, $f1, $fcc0 -- big-endian encoding
+    ('mips32', b'\x46\x01\x08\x11', 'LLIL_IF(LLIL_FLAG($fcc0),1,3); LLIL_SET_REG.d($f0,LLIL_REG.d($f1)); LLIL_GOTO(3)'),
+    # movt.s $f0, $f1, $fcc3 -- the encoded condition-code selector is honored
+    ('mipsel32', b'\x11\x08\x0d\x46', 'LLIL_IF(LLIL_FLAG($fcc3),1,3); LLIL_SET_REG.d($f0,LLIL_REG.d($f1)); LLIL_GOTO(3)'),
+    # movf.d $f2, $f4, $fcc0 -- FR=0 doubles move an even/odd FPR pair
+    ('mipsel32', b'\x91\x20\x20\x46', 'LLIL_IF(LLIL_NOT(LLIL_FLAG($fcc0)),1,3); LLIL_SET_REG_SPLIT.d($f3,$f2,LLIL_REG_SPLIT.d($f5,$f4)); LLIL_GOTO(3)'),
+    # movt.d $f1, $f3, $fcc0 -- odd FR=0 double roots are architecturally unpredictable
+    ('mipsel32', b'\x51\x18\x21\x46', 'LLIL_UNKNOWN()'),
+    # movt.d $f1, $f3, $fcc0 -- odd FPRs are valid in the modeled FR=1 register file
+    ('mipsel64', b'\x51\x18\x21\x46', 'LLIL_IF(LLIL_FLAG($fcc0),1,3); LLIL_SET_REG.q($f1,LLIL_REG.q($f3)); LLIL_GOTO(3)'),
+    # movf $at, $zero, $fcc0 -- MIPS32 Release 6.06 p. 276
+    ('mipsel32', b'\x01\x08\x00\x00', 'LLIL_IF(LLIL_NOT(LLIL_FLAG($fcc0)),1,3); LLIL_SET_REG.d($at,LLIL_CONST.d(0x0)); LLIL_GOTO(3)'),
+    # movf $at, $zero, $fcc0 -- big-endian encoding
+    ('mips32', b'\x00\x00\x08\x01', 'LLIL_IF(LLIL_NOT(LLIL_FLAG($fcc0)),1,3); LLIL_SET_REG.d($at,LLIL_CONST.d(0x0)); LLIL_GOTO(3)'),
+    # movt $at, $t0, $fcc3 -- MIPS32 Release 6.06 p. 281 and explicit FCC selection
+    ('mipsel32', b'\x01\x08\x0d\x01', 'LLIL_IF(LLIL_FLAG($fcc3),1,3); LLIL_SET_REG.d($at,LLIL_REG.d($t0)); LLIL_GOTO(3)'),
+    # movt $at, $t0, $fcc0 -- MIPS64 Release 6.06 p. 373 uses full-width GPRs
+    ('mipsel64', b'\x01\x08\x01\x01', 'LLIL_IF(LLIL_FLAG($fcc0),1,3); LLIL_SET_REG.q($at,LLIL_REG.q($t0)); LLIL_GOTO(3)'),
 ]
 
 import sys

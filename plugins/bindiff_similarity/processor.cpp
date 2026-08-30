@@ -339,6 +339,17 @@ bool BinDiffProcessor::Process(const std::string& exportFilePath, std::function<
 			}
 		}
 
+		// BinExport requires every edge to leave the last instruction of its source block and enter the first
+		// instruction of its target block. We emit edges that belong to the block but not always from the last and first.
+		// TODO: Move this into Function::FixEdges? Or find out what edges are breaking this invariant. For now this fix is fine.
+		function->SortGraph();
+		std::erase_if(edges, [&function](const FlowGraphEdge& edge) {
+			const BasicBlock* sourceBlock = function->GetBasicBlockForAddress(edge.source);
+			const BasicBlock* targetBlock = function->GetBasicBlockForAddress(edge.target);
+			return !sourceBlock || sourceBlock->GetLastAddress() != edge.source || !targetBlock
+				|| targetBlock->GetEntryPoint() != edge.target;
+		});
+
 		std::sort(edges.begin(), edges.end());
 		edges.erase(std::unique(edges.begin(), edges.end()), edges.end());
 		for (const auto& edge : edges)

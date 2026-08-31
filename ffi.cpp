@@ -1,32 +1,27 @@
 
 #include "ffi.h"
-#include "binaryninjaapi.h"
+
+#include "binaryninjacore.h"
+
+#include <stdlib.h>
+#include <string.h>
 
 using namespace BinaryNinja;
 using namespace std;
 
 
-char BN_API_PTR* BinaryNinja::AllocApiString(const char* string)
+char BN_API_PTR* BinaryNinja::AllocApiString(std::string_view string)
 {
-	return strdup(string);
+	char* result = static_cast<char*>(malloc(string.size() + 1));
+	memcpy(result, string.data(), string.size());
+	result[string.size()] = '\0';
+	return result;
 }
 
 
-void BinaryNinja::AllocApiString(const char* string, char BN_API_PTR** output)
+void BinaryNinja::AllocApiString(std::string_view string, char BN_API_PTR** output)
 {
 	*output = AllocApiString(string);
-}
-
-
-char BN_API_PTR* BinaryNinja::AllocApiString(const string& string)
-{
-	return AllocApiString(string.c_str());
-}
-
-
-void BinaryNinja::AllocApiString(const string& string, char BN_API_PTR** output)
-{
-	AllocApiString(string.c_str(), output);
 }
 
 
@@ -47,135 +42,6 @@ void BinaryNinja::AllocApiStringList(const char* const* stringList, size_t count
 }
 
 
-char BN_API_PTR* BN_API_PTR* BinaryNinja::AllocApiStringList(const vector<string>& stringList, size_t* count)
-{
-	*count = stringList.size();
-	vector<const char*> intermediate;
-	intermediate.reserve(*count);
-	for (const auto& string: stringList)
-	{
-		intermediate.push_back(string.c_str());
-	}
-	return AllocApiStringList(intermediate.data(), *count);
-}
-
-
-void BinaryNinja::AllocApiStringList(const vector<string>& stringList, char BN_API_PTR* BN_API_PTR** output, size_t* count)
-{
-	*count = stringList.size();
-	vector<const char*> intermediate;
-	intermediate.reserve(*count);
-	for (const auto& string: stringList)
-	{
-		intermediate.push_back(string.c_str());
-	}
-	AllocApiStringList(intermediate.data(), *count, output);
-}
-
-
-char BN_API_PTR* BN_API_PTR* BinaryNinja::AllocApiStringList(const set<string>& stringList, size_t* count)
-{
-	*count = stringList.size();
-	vector<const char*> intermediate;
-	intermediate.reserve(*count);
-	for (const auto& string: stringList)
-	{
-		intermediate.push_back(string.c_str());
-	}
-	return AllocApiStringList(intermediate.data(), *count);
-}
-
-
-void BinaryNinja::AllocApiStringList(const set<string>& stringList, char BN_API_PTR* BN_API_PTR** output, size_t* count)
-{
-	*count = stringList.size();
-	vector<const char*> intermediate;
-	intermediate.reserve(*count);
-	for (const auto& string: stringList)
-	{
-		intermediate.push_back(string.c_str());
-	}
-	AllocApiStringList(intermediate.data(), *count, output);
-}
-
-
-char BN_API_PTR* BN_API_PTR* BinaryNinja::AllocApiStringList(const unordered_set<string>& stringList, size_t* count)
-{
-	*count = stringList.size();
-	vector<const char*> intermediate;
-	intermediate.reserve(*count);
-	for (const auto& string: stringList)
-	{
-		intermediate.push_back(string.c_str());
-	}
-	return AllocApiStringList(intermediate.data(), *count);
-}
-
-
-void BinaryNinja::AllocApiStringList(const unordered_set<string>& stringList, char BN_API_PTR* BN_API_PTR** output, size_t* count)
-{
-	*count = stringList.size();
-	vector<const char*> intermediate;
-	intermediate.reserve(*count);
-	for (const auto& string: stringList)
-	{
-		intermediate.push_back(string.c_str());
-	}
-	AllocApiStringList(intermediate.data(), *count, output);
-}
-
-
-void BinaryNinja::AllocApiStringPairList(const vector<pair<string, string>>& stringPairList, char BN_API_PTR* BN_API_PTR** outputKeys, char BN_API_PTR* BN_API_PTR** outputValues, size_t* count)
-{
-	*count = stringPairList.size();
-	vector<const char*> intermediateKeys;
-	vector<const char*> intermediateValues;
-	intermediateKeys.reserve(*count);
-	intermediateValues.reserve(*count);
-	for (const auto& pair: stringPairList)
-	{
-		intermediateKeys.push_back(pair.first.c_str());
-		intermediateValues.push_back(pair.second.c_str());
-	}
-	AllocApiStringList(intermediateKeys.data(), *count, outputKeys);
-	AllocApiStringList(intermediateValues.data(), *count, outputValues);
-}
-
-
-void BinaryNinja::AllocApiStringPairList(const map<string, string>& stringPairList, char BN_API_PTR* BN_API_PTR** outputKeys, char BN_API_PTR* BN_API_PTR** outputValues, size_t* count)
-{
-	*count = stringPairList.size();
-	vector<const char*> intermediateKeys;
-	vector<const char*> intermediateValues;
-	intermediateKeys.reserve(*count);
-	intermediateValues.reserve(*count);
-	for (const auto& pair: stringPairList)
-	{
-		intermediateKeys.push_back(pair.first.c_str());
-		intermediateValues.push_back(pair.second.c_str());
-	}
-	AllocApiStringList(intermediateKeys.data(), *count, outputKeys);
-	AllocApiStringList(intermediateValues.data(), *count, outputValues);
-}
-
-
-void BinaryNinja::AllocApiStringPairList(const unordered_map<string, string>& stringPairList, char BN_API_PTR* BN_API_PTR** outputKeys, char BN_API_PTR* BN_API_PTR** outputValues, size_t* count)
-{
-	*count = stringPairList.size();
-	vector<const char*> intermediateKeys;
-	vector<const char*> intermediateValues;
-	intermediateKeys.reserve(*count);
-	intermediateValues.reserve(*count);
-	for (const auto& pair: stringPairList)
-	{
-		intermediateKeys.push_back(pair.first.c_str());
-		intermediateValues.push_back(pair.second.c_str());
-	}
-	AllocApiStringList(intermediateKeys.data(), *count, outputKeys);
-	AllocApiStringList(intermediateValues.data(), *count, outputValues);
-}
-
-
 string BinaryNinja::ParseString(const char* string)
 {
 	return string;
@@ -184,77 +50,43 @@ string BinaryNinja::ParseString(const char* string)
 
 vector<string> BinaryNinja::ParseStringList(const char* const* stringList, size_t count)
 {
-	vector<string> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i ++)
-	{
-		result.push_back(stringList[i]);
-	}
-	return result;
+	return bn::base::capi::ParseList<vector<string>>(stringList, count);
 }
 
 
 set<string> BinaryNinja::ParseStringSet(const char* const* stringList, size_t count)
 {
-	set<string> result;
-	for (size_t i = 0; i < count; i ++)
-	{
-		result.insert(stringList[i]);
-	}
-	return result;
+	return bn::base::capi::ParseList<set<string>>(stringList, count);
 }
 
 
 unordered_set<string> BinaryNinja::ParseStringUnorderedSet(const char* const* stringList, size_t count)
 {
-	unordered_set<string> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i ++)
-	{
-		result.insert(stringList[i]);
-	}
-	return result;
+	return bn::base::capi::ParseList<unordered_set<string>>(stringList, count);
 }
 
 
 vector<pair<string, string>> BinaryNinja::ParseStringPairList(const char* const* keys, const char* const* values, size_t count)
 {
-	vector<pair<string, string>> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i ++)
-	{
-		result.push_back({keys[i], values[i]});
-	}
-	return result;
+	return bn::base::capi::ParsePairList<vector<pair<string, string>>>(keys, values, count);
 }
 
 
 map<string, string> BinaryNinja::ParseStringMap(const char* const* keys, const char* const* values, size_t count)
 {
-	map<string, string> result;
-	for (size_t i = 0; i < count; i ++)
-	{
-		result.insert({keys[i], values[i]});
-	}
-	return result;
+	return bn::base::capi::ParsePairList<map<string, string>>(keys, values, count);
 }
 
 
 unordered_map<string, string> BinaryNinja::ParseStringUnorderedMap(const char* const* keys, const char* const* values, size_t count)
 {
-	unordered_map<string, string> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i ++)
-	{
-		result.insert({keys[i], values[i]});
-	}
-	return result;
+	return bn::base::capi::ParsePairList<unordered_map<string, string>>(keys, values, count);
 }
 
 
 void BinaryNinja::FreeApiString(char BN_API_PTR* string)
 {
-	// Allocated with strdup()
+	// Allocated with malloc()
 	free(string);
 }
 

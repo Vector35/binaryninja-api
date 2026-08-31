@@ -156,7 +156,7 @@ void DisassemblySettings::SetBlockLabels(BNDisassemblyBlockLabels labels)
 }
 
 
-BNDisassemblyTextLineTypeInfo DisassemblyTextLineTypeInfo::GetAPIObject() const
+BNDisassemblyTextLineTypeInfo DisassemblyTextLineTypeInfo::ToAPIStruct() const
 {
 	BNDisassemblyTextLineTypeInfo result;
 	result.hasTypeInfo = this->hasTypeInfo;
@@ -167,13 +167,13 @@ BNDisassemblyTextLineTypeInfo DisassemblyTextLineTypeInfo::GetAPIObject() const
 }
 
 
-void DisassemblyTextLineTypeInfo::FreeAPIObject(BNDisassemblyTextLineTypeInfo *value)
+void DisassemblyTextLineTypeInfo::FreeAPIStruct(BNDisassemblyTextLineTypeInfo *value)
 {
 	BNFreeType(value->parentType);
 }
 
 
-DisassemblyTextLineTypeInfo DisassemblyTextLineTypeInfo::FromAPIObject(const BNDisassemblyTextLineTypeInfo *value)
+DisassemblyTextLineTypeInfo DisassemblyTextLineTypeInfo::FromAPIStruct(const BNDisassemblyTextLineTypeInfo *value)
 {
 	DisassemblyTextLineTypeInfo result;
 	result.hasTypeInfo = value->hasTypeInfo;
@@ -203,7 +203,7 @@ DisassemblyTextLine::DisassemblyTextLine()
 }
 
 
-BNDisassemblyTextLine DisassemblyTextLine::GetAPIObject() const
+BNDisassemblyTextLine DisassemblyTextLine::ToAPIStruct() const
 {
 	BNDisassemblyTextLine result;
 	result.addr = this->addr;
@@ -212,20 +212,20 @@ BNDisassemblyTextLine DisassemblyTextLine::GetAPIObject() const
 	result.tokens = InstructionTextToken::CreateInstructionTextTokenList(this->tokens);
 	result.count = this->tokens.size();
 	result.tags = Tag::CreateTagList(this->tags, &(result.tagCount));
-	result.typeInfo = this->typeInfo.GetAPIObject();
+	result.typeInfo = this->typeInfo.ToAPIStruct();
 	return result;
 }
 
 
-void DisassemblyTextLine::FreeAPIObject(BNDisassemblyTextLine *value)
+void DisassemblyTextLine::FreeAPIStruct(BNDisassemblyTextLine *value)
 {
 	InstructionTextToken::FreeInstructionTextTokenList(value->tokens, value->count);
 	Tag::FreeTagList(value->tags, value->tagCount);
-	DisassemblyTextLineTypeInfo::FreeAPIObject(&value->typeInfo);
+	DisassemblyTextLineTypeInfo::FreeAPIStruct(&value->typeInfo);
 }
 
 
-DisassemblyTextLine DisassemblyTextLine::FromAPIObject(const BNDisassemblyTextLine *value)
+DisassemblyTextLine DisassemblyTextLine::FromAPIStruct(const BNDisassemblyTextLine *value)
 {
 	DisassemblyTextLine result;
 	result.addr = value->addr;
@@ -233,7 +233,7 @@ DisassemblyTextLine DisassemblyTextLine::FromAPIObject(const BNDisassemblyTextLi
 	result.highlight = value->highlight;
 	result.tokens = InstructionTextToken::ConvertInstructionTextTokenList(value->tokens, value->count);
 	result.tags = Tag::ConvertTagList(value->tags, value->tagCount);
-	result.typeInfo = DisassemblyTextLineTypeInfo::FromAPIObject(&value->typeInfo);
+	result.typeInfo = DisassemblyTextLineTypeInfo::FromAPIStruct(&value->typeInfo);
 	return result;
 }
 
@@ -586,7 +586,7 @@ vector<DisassemblyTextLine> BasicBlock::GetDisassemblyText(DisassemblySettings* 
 	size_t count;
 	BNDisassemblyTextLine* lines = BNGetBasicBlockDisassemblyText(m_object, settings->GetObject(), &count);
 
-	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);;
+	vector<DisassemblyTextLine> result = ParseAPIStructList<DisassemblyTextLine>(lines, count);;
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }

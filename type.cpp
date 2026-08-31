@@ -266,7 +266,7 @@ std::string NameList::UnescapeTypeName(const std::string& name, BNTokenEscapingT
 }
 
 
-BNNameList NameList::GetAPIObject() const
+BNNameList NameList::ToAPIStruct() const
 {
 	BNNameList result;
 	result.nameCount = m_name.size();
@@ -278,7 +278,7 @@ BNNameList NameList::GetAPIObject() const
 }
 
 
-void NameList::FreeAPIObject(BNNameList* name)
+void NameList::FreeAPIStruct(BNNameList* name)
 {
 	for (size_t i = 0; i < name->nameCount; i++)
 		BNFreeString(name->name[i]);
@@ -287,7 +287,7 @@ void NameList::FreeAPIObject(BNNameList* name)
 }
 
 
-NameList NameList::FromAPIObject(BNNameList* name)
+NameList NameList::FromAPIStruct(BNNameList* name)
 {
 	NameList result(name->join);
 	for (size_t i = 0; i < name->nameCount; i++)
@@ -347,7 +347,7 @@ QualifiedName QualifiedName::operator+(const QualifiedName& other) const
 }
 
 
-BNQualifiedName QualifiedName::GetAPIObject() const
+BNQualifiedName QualifiedName::ToAPIStruct() const
 {
 	BNQualifiedName result;
 	result.join = AllocApiString(m_join);
@@ -356,14 +356,14 @@ BNQualifiedName QualifiedName::GetAPIObject() const
 }
 
 
-void QualifiedName::FreeAPIObject(BNQualifiedName* name)
+void QualifiedName::FreeAPIStruct(BNQualifiedName* name)
 {
 	FreeApiStringList(name->name, name->nameCount);
 	FreeApiString(name->join);
 }
 
 
-QualifiedName QualifiedName::FromAPIObject(const BNQualifiedName* name)
+QualifiedName QualifiedName::FromAPIStruct(const BNQualifiedName* name)
 {
 	return QualifiedName(name);
 }
@@ -423,7 +423,7 @@ bool NameSpace::IsDefaultNameSpace() const
 }
 
 
-BNNameSpace NameSpace::GetAPIObject() const
+BNNameSpace NameSpace::ToAPIStruct() const
 {
 	BNNameSpace result;
 	result.nameCount = m_name.size();
@@ -435,7 +435,7 @@ BNNameSpace NameSpace::GetAPIObject() const
 }
 
 
-void NameSpace::FreeAPIObject(BNNameSpace* name)
+void NameSpace::FreeAPIStruct(BNNameSpace* name)
 {
 	if (!name)
 		return;
@@ -446,7 +446,7 @@ void NameSpace::FreeAPIObject(BNNameSpace* name)
 }
 
 
-NameSpace NameSpace::FromAPIObject(const BNNameSpace* name)
+NameSpace NameSpace::FromAPIStruct(const BNNameSpace* name)
 {
 	NameSpace result;
 	if (!name)
@@ -457,7 +457,7 @@ NameSpace NameSpace::FromAPIObject(const BNNameSpace* name)
 }
 
 
-TypeDefinitionLine TypeDefinitionLine::FromAPIObject(BNTypeDefinitionLine* line)
+TypeDefinitionLine TypeDefinitionLine::FromAPIStruct(BNTypeDefinitionLine* line)
 {
 	TypeDefinitionLine result;
 	result.lineType = line->lineType;
@@ -548,14 +548,14 @@ bool ValueLocationComponent::operator!=(const ValueLocationComponent& component)
 }
 
 
-ValueLocationComponent ValueLocationComponent::FromAPIObject(const BNValueLocationComponent* loc)
+ValueLocationComponent ValueLocationComponent::FromAPIStruct(const BNValueLocationComponent* loc)
 {
 	return {Variable(loc->variable.type, loc->variable.index, loc->variable.storage), loc->offset,
 		loc->sizeValid ? std::optional<uint64_t>(loc->size) : std::nullopt};
 }
 
 
-BNValueLocationComponent ValueLocationComponent::ToAPIObject() const
+BNValueLocationComponent ValueLocationComponent::ToAPIStruct() const
 {
 	BNValueLocationComponent result;
 	result.variable.type = variable.type;
@@ -570,7 +570,7 @@ BNValueLocationComponent ValueLocationComponent::ToAPIObject() const
 
 std::string ValueLocationComponent::ToString(Architecture* arch) const
 {
-	auto componentRaw = ToAPIObject();
+	auto componentRaw = ToAPIStruct();
 	char* str = BNValueLocationComponentToString(&componentRaw, arch->GetObject());
 	string result = str;
 	BNFreeString(str);
@@ -580,10 +580,10 @@ std::string ValueLocationComponent::ToString(Architecture* arch) const
 
 std::optional<Variable> ValueLocation::GetVariableForReturnValue() const
 {
-	BNValueLocation loc = ToAPIObject();
+	BNValueLocation loc = ToAPIStruct();
 	BNVariable var;
 	bool valid = BNGetValueLocationVariableForReturnValue(&loc, &var);
-	FreeAPIObject(&loc);
+	FreeAPIStruct(&loc);
 	if (valid)
 		return var;
 	return std::nullopt;
@@ -592,10 +592,10 @@ std::optional<Variable> ValueLocation::GetVariableForReturnValue() const
 
 std::optional<Variable> ValueLocation::GetVariableForParameter(size_t idx) const
 {
-	BNValueLocation loc = ToAPIObject();
+	BNValueLocation loc = ToAPIStruct();
 	BNVariable var;
 	bool valid = BNGetValueLocationVariableForParameter(&loc, &var, idx);
-	FreeAPIObject(&loc);
+	FreeAPIStruct(&loc);
 	if (valid)
 		return var;
 	return std::nullopt;
@@ -643,12 +643,12 @@ bool ValueLocation::operator!=(const ValueLocation& loc) const
 }
 
 
-ValueLocation ValueLocation::FromAPIObject(const BNValueLocation* loc)
+ValueLocation ValueLocation::FromAPIStruct(const BNValueLocation* loc)
 {
 	ValueLocation result;
 	result.components.reserve(loc->count);
 	for (size_t i = 0; i < loc->count; i++)
-		result.components.push_back(ValueLocationComponent::FromAPIObject(&loc->components[i]));
+		result.components.push_back(ValueLocationComponent::FromAPIStruct(&loc->components[i]));
 	result.indirect = loc->indirect;
 	if (loc->returnedPointerValid)
 	{
@@ -659,13 +659,13 @@ ValueLocation ValueLocation::FromAPIObject(const BNValueLocation* loc)
 }
 
 
-BNValueLocation ValueLocation::ToAPIObject() const
+BNValueLocation ValueLocation::ToAPIStruct() const
 {
 	BNValueLocation result;
 	result.count = components.size();
 	result.components = new BNValueLocationComponent[components.size()];
 	for (size_t i = 0; i < components.size(); i++)
-		result.components[i] = components[i].ToAPIObject();
+		result.components[i] = components[i].ToAPIStruct();
 	result.indirect = indirect;
 	result.returnedPointerValid = returnedPointer.has_value();
 	if (returnedPointer.has_value())
@@ -684,7 +684,7 @@ BNValueLocation ValueLocation::ToAPIObject() const
 }
 
 
-void ValueLocation::FreeAPIObject(BNValueLocation* loc)
+void ValueLocation::FreeAPIStruct(BNValueLocation* loc)
 {
 	delete[] loc->components;
 }
@@ -696,7 +696,7 @@ std::optional<ValueLocation> ValueLocation::Parse(const std::string& str, Archit
 	char* errorRaw;
 	if (BNParseValueLocation(str.c_str(), arch->GetObject(), &locationRaw, &errorRaw))
 	{
-		auto location = FromAPIObject(&locationRaw);
+		auto location = FromAPIStruct(&locationRaw);
 		BNFreeValueLocation(&locationRaw);
 		return location;
 	}
@@ -709,9 +709,9 @@ std::optional<ValueLocation> ValueLocation::Parse(const std::string& str, Archit
 
 std::string ValueLocation::ToString(Architecture* arch) const
 {
-	auto locationRaw = ToAPIObject();
+	auto locationRaw = ToAPIStruct();
 	char* str = BNValueLocationToString(&locationRaw, arch->GetObject());
-	FreeAPIObject(&locationRaw);
+	FreeAPIStruct(&locationRaw);
 	string result = str;
 	BNFreeString(str);
 	return result;
@@ -736,63 +736,63 @@ bool ReturnValue::operator!=(const ReturnValue& nt) const
 }
 
 
-ReturnValue ReturnValue::FromAPIObject(const BNReturnValue* returnValue)
+ReturnValue ReturnValue::FromAPIStruct(const BNReturnValue* returnValue)
 {
 	ReturnValue result;
 	result.type = Confidence<Ref<Type>>(
 		returnValue->type ? new Type(BNNewTypeReference(returnValue->type)) : nullptr, returnValue->typeConfidence);
 	result.defaultLocation = returnValue->defaultLocation;
 	result.location = Confidence<ValueLocation>(
-		ValueLocation::FromAPIObject(&returnValue->location), returnValue->locationConfidence);
+		ValueLocation::FromAPIStruct(&returnValue->location), returnValue->locationConfidence);
 	return result;
 }
 
 
-BNReturnValue ReturnValue::ToAPIObject() const
+BNReturnValue ReturnValue::ToAPIStruct() const
 {
 	BNReturnValue result;
 	result.type = type.GetValue() ? type.GetValue()->GetObject() : nullptr;
 	result.typeConfidence = type.GetConfidence();
 	result.defaultLocation = defaultLocation;
-	result.location = location->ToAPIObject();
+	result.location = location->ToAPIStruct();
 	result.locationConfidence = location.GetConfidence();
 	return result;
 }
 
 
-void ReturnValue::FreeAPIObject(BNReturnValue* returnValue)
+void ReturnValue::FreeAPIStruct(BNReturnValue* returnValue)
 {
-	ValueLocation::FreeAPIObject(&returnValue->location);
+	ValueLocation::FreeAPIStruct(&returnValue->location);
 }
 
 
-FunctionParameter FunctionParameter::FromAPIObject(const BNFunctionParameter* param)
+FunctionParameter FunctionParameter::FromAPIStruct(const BNFunctionParameter* param)
 {
 	FunctionParameter result;
 	result.name = param->name;
 	result.type =
 		Confidence<Ref<Type>>(param->type ? new Type(BNNewTypeReference(param->type)) : nullptr, param->typeConfidence);
 	result.locationSource = param->locationSource;
-	result.location = ValueLocation::FromAPIObject(&param->location);
+	result.location = ValueLocation::FromAPIStruct(&param->location);
 	return result;
 }
 
 
-BNFunctionParameter FunctionParameter::ToAPIObject() const
+BNFunctionParameter FunctionParameter::ToAPIStruct() const
 {
 	BNFunctionParameter result;
 	result.name = (char*)name.c_str();
 	result.type = type->GetObject();
 	result.typeConfidence = type.GetConfidence();
 	result.locationSource = locationSource;
-	result.location = location.ToAPIObject();
+	result.location = location.ToAPIStruct();
 	return result;
 }
 
 
-void FunctionParameter::FreeAPIObject(BNFunctionParameter* param)
+void FunctionParameter::FreeAPIStruct(BNFunctionParameter* param)
 {
-	ValueLocation::FreeAPIObject(&param->location);
+	ValueLocation::FreeAPIStruct(&param->location);
 }
 
 
@@ -864,7 +864,7 @@ Confidence<Ref<Type>> Type::GetChildType() const
 ReturnValue Type::GetReturnValue() const
 {
 	BNReturnValue ret = BNGetTypeReturnValue(m_object);
-	ReturnValue result = ReturnValue::FromAPIObject(&ret);
+	ReturnValue result = ReturnValue::FromAPIStruct(&ret);
 	BNFreeReturnValue(&ret);
 	return result;
 }
@@ -879,7 +879,7 @@ bool Type::IsReturnValueDefaultLocation() const
 Confidence<ValueLocation> Type::GetReturnValueLocation() const
 {
 	BNValueLocationWithConfidence location = BNGetTypeReturnValueLocation(m_object);
-	Confidence<ValueLocation> result(ValueLocation::FromAPIObject(&location.location), location.confidence);
+	Confidence<ValueLocation> result(ValueLocation::FromAPIStruct(&location.location), location.confidence);
 	BNFreeValueLocation(&location.location);
 	return result;
 }
@@ -908,7 +908,7 @@ vector<FunctionParameter> Type::GetParameters() const
 	vector<FunctionParameter> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
-		result.push_back(FunctionParameter::FromAPIObject(&types[i]));
+		result.push_back(FunctionParameter::FromAPIStruct(&types[i]));
 
 	BNFreeTypeParameterList(types, count);
 	return result;
@@ -1107,9 +1107,9 @@ string Type::GetString(Platform* platform, BNTokenEscapingType escaping) const
 
 string Type::GetTypeAndName(const QualifiedName& nameList, BNTokenEscapingType escaping) const
 {
-	BNQualifiedName name = nameList.GetAPIObject();
+	BNQualifiedName name = nameList.ToAPIStruct();
 	char* outName = BNGetTypeAndName(m_object, &name, escaping);
-	QualifiedName::FreeAPIObject(&name);
+	QualifiedName::FreeAPIStruct(&name);
 	return outName;
 }
 
@@ -1237,18 +1237,18 @@ Ref<Type> Type::NamedType(const QualifiedName& name, Type* type)
 
 Ref<Type> Type::NamedType(const string& id, const QualifiedName& name, Type* type)
 {
-	BNQualifiedName nameObj = name.GetAPIObject();
+	BNQualifiedName nameObj = name.ToAPIStruct();
 	BNType* coreObj = BNCreateNamedTypeReferenceFromTypeAndId(id.c_str(), &nameObj, type ? type->GetObject() : nullptr);
-	QualifiedName::FreeAPIObject(&nameObj);
+	QualifiedName::FreeAPIStruct(&nameObj);
 	return coreObj ? new Type(coreObj) : nullptr;
 }
 
 
 Ref<Type> Type::NamedType(BinaryView* view, const QualifiedName& name)
 {
-	BNQualifiedName nameObj = name.GetAPIObject();
+	BNQualifiedName nameObj = name.ToAPIStruct();
 	BNType* coreObj = BNCreateNamedTypeReferenceFromType(view->GetObject(), &nameObj);
-	QualifiedName::FreeAPIObject(&nameObj);
+	QualifiedName::FreeAPIStruct(&nameObj);
 	return coreObj ? new Type(coreObj) : nullptr;
 }
 
@@ -1348,7 +1348,7 @@ Ref<Type> Type::FunctionType(const ReturnValue& returnValue,
 	const Confidence<Ref<CallingConvention>>& callingConvention, const std::vector<FunctionParameter>& params,
 	const Confidence<bool>& varArg, const Confidence<int64_t>& stackAdjust)
 {
-	BNReturnValue ret = returnValue.ToAPIObject();
+	BNReturnValue ret = returnValue.ToAPIStruct();
 
 	BNCallingConventionWithConfidence callingConventionConf;
 	callingConventionConf.convention = callingConvention.GetValue() ? callingConvention->GetObject() : nullptr;
@@ -1356,7 +1356,7 @@ Ref<Type> Type::FunctionType(const ReturnValue& returnValue,
 
 	BNFunctionParameter* paramArray = new BNFunctionParameter[params.size()];
 	for (size_t i = 0; i < params.size(); i++)
-		paramArray[i] = params[i].ToAPIObject();
+		paramArray[i] = params[i].ToAPIStruct();
 
 	BNBoolWithConfidence varArgConf;
 	varArgConf.value = varArg.GetValue();
@@ -1378,9 +1378,9 @@ Ref<Type> Type::FunctionType(const ReturnValue& returnValue,
 		&ret, &callingConventionConf, paramArray, params.size(), &varArgConf,
 		&canReturnConf, &stackAdjustConf, nullptr, nullptr, 0, NoNameType, &pureConf));
 
-	ReturnValue::FreeAPIObject(&ret);
+	ReturnValue::FreeAPIStruct(&ret);
 	for (size_t i = 0; i < params.size(); i++)
-		FunctionParameter::FreeAPIObject(&paramArray[i]);
+		FunctionParameter::FreeAPIStruct(&paramArray[i]);
 	delete[] paramArray;
 	return type;
 }
@@ -1396,7 +1396,7 @@ Ref<Type> Type::FunctionType(const ReturnValue& returnValue,
     BNNameType ft,
     const Confidence<bool>& pure)
 {
-	BNReturnValue ret = returnValue.ToAPIObject();
+	BNReturnValue ret = returnValue.ToAPIStruct();
 
 	BNCallingConventionWithConfidence callingConventionConf;
 	callingConventionConf.convention = callingConvention.GetValue() ? callingConvention->GetObject() : nullptr;
@@ -1404,7 +1404,7 @@ Ref<Type> Type::FunctionType(const ReturnValue& returnValue,
 
 	BNFunctionParameter* paramArray = new BNFunctionParameter[params.size()];
 	for (size_t i = 0; i < params.size(); i++)
-		paramArray[i] = params[i].ToAPIObject();
+		paramArray[i] = params[i].ToAPIStruct();
 
 	BNBoolWithConfidence varArgConf;
 	varArgConf.value = hasVariableArguments.GetValue();
@@ -1438,9 +1438,9 @@ Ref<Type> Type::FunctionType(const ReturnValue& returnValue,
 	    &canReturnConf, &stackAdjustConf, regStackAdjustRegs.data(),
 	    regStackAdjustValues.data(), regStackAdjust.size(), NoNameType, &pureConf));
 
-	ReturnValue::FreeAPIObject(&ret);
+	ReturnValue::FreeAPIStruct(&ret);
 	for (i = 0; i < params.size(); i++)
-		FunctionParameter::FreeAPIObject(&paramArray[i]);
+		FunctionParameter::FreeAPIStruct(&paramArray[i]);
 	delete[] paramArray;
 	return type;
 }
@@ -1489,10 +1489,10 @@ bool Type::ShouldDisplayReturnType() const
 
 string Type::GenerateAutoTypeId(const string& source, const QualifiedName& name)
 {
-	BNQualifiedName nameObj = name.GetAPIObject();
+	BNQualifiedName nameObj = name.ToAPIStruct();
 	char* str = BNGenerateAutoTypeId(source.c_str(), &nameObj);
 	string result = str;
-	QualifiedName::FreeAPIObject(&nameObj);
+	QualifiedName::FreeAPIStruct(&nameObj);
 	BNFreeString(str);
 	return result;
 }
@@ -1500,10 +1500,10 @@ string Type::GenerateAutoTypeId(const string& source, const QualifiedName& name)
 
 string Type::GenerateAutoDemangledTypeId(const QualifiedName& name)
 {
-	BNQualifiedName nameObj = name.GetAPIObject();
+	BNQualifiedName nameObj = name.ToAPIStruct();
 	char* str = BNGenerateAutoDemangledTypeId(&nameObj);
 	string result = str;
-	QualifiedName::FreeAPIObject(&nameObj);
+	QualifiedName::FreeAPIStruct(&nameObj);
 	BNFreeString(str);
 	return result;
 }
@@ -1520,10 +1520,10 @@ string Type::GetAutoDemangledTypeIdSource()
 
 string Type::GenerateAutoDebugTypeId(const QualifiedName& name)
 {
-	BNQualifiedName nameObj = name.GetAPIObject();
+	BNQualifiedName nameObj = name.ToAPIStruct();
 	char* str = BNGenerateAutoDebugTypeId(&nameObj);
 	string result = str;
-	QualifiedName::FreeAPIObject(&nameObj);
+	QualifiedName::FreeAPIStruct(&nameObj);
 	BNFreeString(str);
 	return result;
 }
@@ -1541,7 +1541,7 @@ string Type::GetAutoDebugTypeIdSource()
 QualifiedName Type::GetTypeName() const
 {
 	BNQualifiedName name = BNTypeGetTypeName(m_object);
-	QualifiedName result = QualifiedName::FromAPIObject(&name);
+	QualifiedName result = QualifiedName::FromAPIStruct(&name);
 	BNFreeQualifiedName(&name);
 	return result;
 }
@@ -1560,7 +1560,7 @@ bool Type::IsReferenceOfType(BNNamedTypeReferenceClass refType)
 QualifiedName Type::GetStructureName() const
 {
 	BNQualifiedName name = BNTypeGetStructureName(m_object);
-	QualifiedName result = QualifiedName::FromAPIObject(&name);
+	QualifiedName result = QualifiedName::FromAPIStruct(&name);
 	BNFreeQualifiedName(&name);
 	return result;
 }
@@ -1921,7 +1921,7 @@ Confidence<Ref<Type>> TypeBuilder::GetChildType() const
 ReturnValue TypeBuilder::GetReturnValue() const
 {
 	BNReturnValue ret = BNGetTypeBuilderReturnValue(m_object);
-	ReturnValue result = ReturnValue::FromAPIObject(&ret);
+	ReturnValue result = ReturnValue::FromAPIStruct(&ret);
 	BNFreeReturnValue(&ret);
 	return result;
 }
@@ -1936,7 +1936,7 @@ bool TypeBuilder::IsReturnValueDefaultLocation() const
 Confidence<ValueLocation> TypeBuilder::GetReturnValueLocation() const
 {
 	BNValueLocationWithConfidence location = BNGetTypeBuilderReturnValueLocation(m_object);
-	Confidence<ValueLocation> result(ValueLocation::FromAPIObject(&location.location), location.confidence);
+	Confidence<ValueLocation> result(ValueLocation::FromAPIStruct(&location.location), location.confidence);
 	BNFreeValueLocation(&location.location);
 	return result;
 }
@@ -1954,9 +1954,9 @@ TypeBuilder& TypeBuilder::SetChildType(const Confidence<Ref<Type>>& child)
 
 TypeBuilder& TypeBuilder::SetReturnValue(const ReturnValue& rv)
 {
-	BNReturnValue ret = rv.ToAPIObject();
+	BNReturnValue ret = rv.ToAPIStruct();
 	BNTypeBuilderSetReturnValue(m_object, &ret);
-	ReturnValue::FreeAPIObject(&ret);
+	ReturnValue::FreeAPIStruct(&ret);
 	return *this;
 }
 
@@ -1971,7 +1971,7 @@ TypeBuilder& TypeBuilder::SetIsReturnValueDefaultLocation(bool defaultLocation)
 TypeBuilder& TypeBuilder::SetReturnValueLocation(const Confidence<ValueLocation>& location)
 {
 	BNValueLocationWithConfidence loc;
-	loc.location = location->ToAPIObject();
+	loc.location = location->ToAPIStruct();
 	loc.confidence = location.GetConfidence();
 	BNTypeBuilderSetReturnValueLocation(m_object, &loc);
 	return *this;
@@ -2018,7 +2018,7 @@ vector<FunctionParameter> TypeBuilder::GetParameters() const
 	vector<FunctionParameter> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
-		result.push_back(FunctionParameter::FromAPIObject(&types[i]));
+		result.push_back(FunctionParameter::FromAPIStruct(&types[i]));
 
 	BNFreeTypeParameterList(types, count);
 	return result;
@@ -2143,9 +2143,9 @@ string TypeBuilder::GetString(Platform* platform) const
 
 string TypeBuilder::GetTypeAndName(const QualifiedName& nameList) const
 {
-	BNQualifiedName name = nameList.GetAPIObject();
+	BNQualifiedName name = nameList.ToAPIStruct();
 	char* outName = BNGetTypeBuilderTypeAndName(m_object, &name);
-	QualifiedName::FreeAPIObject(&name);
+	QualifiedName::FreeAPIStruct(&name);
 	return outName;
 }
 
@@ -2278,19 +2278,19 @@ TypeBuilder TypeBuilder::NamedType(const QualifiedName& name, Type* type)
 
 TypeBuilder TypeBuilder::NamedType(const string& id, const QualifiedName& name, Type* type)
 {
-	BNQualifiedName nameObj = name.GetAPIObject();
+	BNQualifiedName nameObj = name.ToAPIStruct();
 	BNTypeBuilder* coreObj =
 	    BNCreateNamedTypeReferenceBuilderFromTypeAndId(id.c_str(), &nameObj, type ? type->GetObject() : nullptr);
-	QualifiedName::FreeAPIObject(&nameObj);
+	QualifiedName::FreeAPIStruct(&nameObj);
 	return coreObj ? TypeBuilder(coreObj) : VoidType();
 }
 
 
 TypeBuilder TypeBuilder::NamedType(BinaryView* view, const QualifiedName& name)
 {
-	BNQualifiedName nameObj = name.GetAPIObject();
+	BNQualifiedName nameObj = name.ToAPIStruct();
 	BNTypeBuilder* coreObj = BNCreateNamedTypeReferenceBuilderFromType(view->GetObject(), &nameObj);
-	QualifiedName::FreeAPIObject(&nameObj);
+	QualifiedName::FreeAPIStruct(&nameObj);
 	return coreObj ? TypeBuilder(coreObj) : VoidType();
 }
 
@@ -2392,7 +2392,7 @@ static BNFunctionParameter* GetParamArray(const std::vector<FunctionParameter>& 
 {
 	BNFunctionParameter* paramArray = new BNFunctionParameter[params.size()];
 	for (size_t i = 0; i < params.size(); i++)
-		paramArray[i] = params[i].ToAPIObject();
+		paramArray[i] = params[i].ToAPIStruct();
 	count = params.size();
 	return paramArray;
 }
@@ -2401,7 +2401,7 @@ static BNFunctionParameter* GetParamArray(const std::vector<FunctionParameter>& 
 static void FreeParamArray(BNFunctionParameter* params, size_t count)
 {
 	for (size_t i = 0; i < count; i++)
-		FunctionParameter::FreeAPIObject(&params[i]);
+		FunctionParameter::FreeAPIStruct(&params[i]);
 	delete[] params;
 }
 
@@ -2410,7 +2410,7 @@ TypeBuilder TypeBuilder::FunctionType(const ReturnValue& returnValue,
     const Confidence<Ref<CallingConvention>>& callingConvention, const std::vector<FunctionParameter>& params,
     const Confidence<bool>& varArg, const Confidence<int64_t>& stackAdjust)
 {
-	BNReturnValue ret = returnValue.ToAPIObject();
+	BNReturnValue ret = returnValue.ToAPIStruct();
 
 	BNCallingConventionWithConfidence callingConventionConf;
 	callingConventionConf.convention = callingConvention.GetValue() ? callingConvention->GetObject() : nullptr;
@@ -2437,7 +2437,7 @@ TypeBuilder TypeBuilder::FunctionType(const ReturnValue& returnValue,
 
 	TypeBuilder type(BNCreateFunctionTypeBuilder(&ret, &callingConventionConf, paramArray, paramCount, &varArgConf,
 		&canReturnConf, &stackAdjustConf, nullptr, nullptr, 0, NoNameType, &pureConf));
-	ReturnValue::FreeAPIObject(&ret);
+	ReturnValue::FreeAPIStruct(&ret);
 	FreeParamArray(paramArray, paramCount);
 	return type;
 }
@@ -2453,7 +2453,7 @@ TypeBuilder TypeBuilder::FunctionType(const ReturnValue& returnValue,
 	BNNameType ft,
 	const Confidence<bool>& pure)
 {
-	BNReturnValue ret = returnValue.ToAPIObject();
+	BNReturnValue ret = returnValue.ToAPIStruct();
 
 	BNCallingConventionWithConfidence callingConventionConf;
 	callingConventionConf.convention = callingConvention.GetValue() ? callingConvention->GetObject() : nullptr;
@@ -2493,7 +2493,7 @@ TypeBuilder TypeBuilder::FunctionType(const ReturnValue& returnValue,
 		&ret, &callingConventionConf, paramArray, paramCount, &varArgConf,
 		&canReturnConf, &stackAdjustConf, regStackAdjustRegs.data(),
 		regStackAdjustValues.data(), regStackAdjust.size(), NoNameType, &pureConf));
-	ReturnValue::FreeAPIObject(&ret);
+	ReturnValue::FreeAPIStruct(&ret);
 	FreeParamArray(paramArray, paramCount);
 	return type;
 }
@@ -2701,7 +2701,7 @@ std::optional<std::string> TypeBuilder::GetAttribute(const std::string& name) co
 QualifiedName TypeBuilder::GetTypeName() const
 {
 	BNQualifiedName name = BNTypeBuilderGetTypeName(m_object);
-	QualifiedName result = QualifiedName::FromAPIObject(&name);
+	QualifiedName result = QualifiedName::FromAPIStruct(&name);
 	BNFreeQualifiedName(&name);
 	return result;
 }
@@ -2709,9 +2709,9 @@ QualifiedName TypeBuilder::GetTypeName() const
 
 TypeBuilder& TypeBuilder::SetTypeName(const QualifiedName& names)
 {
-	BNQualifiedName nameObj = names.GetAPIObject();
+	BNQualifiedName nameObj = names.ToAPIStruct();
 	BNTypeBuilderSetTypeName(m_object, &nameObj);
-	QualifiedName::FreeAPIObject(&nameObj);
+	QualifiedName::FreeAPIStruct(&nameObj);
 	return *this;
 }
 
@@ -2799,7 +2799,7 @@ BNEndianness TypeBuilder::GetFragmentEndianness() const
 QualifiedName TypeBuilder::GetStructureName() const
 {
 	BNQualifiedName name = BNTypeBuilderGetStructureName(m_object);
-	QualifiedName result = QualifiedName::FromAPIObject(&name);
+	QualifiedName result = QualifiedName::FromAPIStruct(&name);
 	BNFreeQualifiedName(&name);
 	return result;
 }
@@ -2813,9 +2813,9 @@ NamedTypeReference::NamedTypeReference(BNNamedTypeReference* nt)
 
 NamedTypeReference::NamedTypeReference(BNNamedTypeReferenceClass cls, const string& id, const QualifiedName& names)
 {
-	BNQualifiedName nameObj = names.GetAPIObject();
+	BNQualifiedName nameObj = names.ToAPIStruct();
 	m_object = BNCreateNamedType(cls, id.c_str(), &nameObj);
-	QualifiedName::FreeAPIObject(&nameObj);
+	QualifiedName::FreeAPIStruct(&nameObj);
 }
 
 
@@ -2837,7 +2837,7 @@ string NamedTypeReference::GetTypeId() const
 QualifiedName NamedTypeReference::GetName() const
 {
 	BNQualifiedName name = BNGetTypeReferenceName(m_object);
-	QualifiedName result = QualifiedName::FromAPIObject(&name);
+	QualifiedName result = QualifiedName::FromAPIStruct(&name);
 	BNFreeQualifiedName(&name);
 	return result;
 }
@@ -2876,9 +2876,9 @@ NamedTypeReferenceBuilder::NamedTypeReferenceBuilder(BNNamedTypeReferenceBuilder
 NamedTypeReferenceBuilder::NamedTypeReferenceBuilder(
     BNNamedTypeReferenceClass cls, const std::string& id, const QualifiedName& name)
 {
-	BNQualifiedName n = name.GetAPIObject();
+	BNQualifiedName n = name.ToAPIStruct();
 	m_object = BNCreateNamedTypeBuilder(cls, id.c_str(), &n);
-	QualifiedName::FreeAPIObject(&n);
+	QualifiedName::FreeAPIStruct(&n);
 }
 
 NamedTypeReferenceBuilder::~NamedTypeReferenceBuilder()
@@ -2905,7 +2905,7 @@ std::string NamedTypeReferenceBuilder::GetTypeId() const
 QualifiedName NamedTypeReferenceBuilder::GetName() const
 {
 	BNQualifiedName name = BNGetTypeReferenceBuilderName(m_object);
-	QualifiedName result = QualifiedName::FromAPIObject(&name);
+	QualifiedName result = QualifiedName::FromAPIStruct(&name);
 	BNFreeQualifiedName(&name);
 	return result;
 }
@@ -2925,9 +2925,9 @@ void NamedTypeReferenceBuilder::SetTypeId(const string& id)
 
 void NamedTypeReferenceBuilder::SetName(const QualifiedName& name)
 {
-	BNQualifiedName n = name.GetAPIObject();
+	BNQualifiedName n = name.ToAPIStruct();
 	BNSetNamedTypeReferenceBuilderName(m_object, &n);
-	QualifiedName::FreeAPIObject(&n);
+	QualifiedName::FreeAPIStruct(&n);
 }
 
 

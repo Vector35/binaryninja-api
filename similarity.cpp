@@ -98,7 +98,7 @@ SimilarityRenderContext::SimilarityRenderContext(BNSimilarityRenderContext* cont
 
 void SimilarityRenderContext::SetPreferredViewType(const FunctionViewType& type)
 {
-	BNSimilarityRenderContextSetPreferredViewType(m_object, type.ToAPIObject());
+	BNSimilarityRenderContextSetPreferredViewType(m_object, type.ToAPIStruct());
 }
 
 FunctionViewType SimilarityRenderContext::GetPreferredViewType() const

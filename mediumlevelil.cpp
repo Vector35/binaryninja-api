@@ -286,7 +286,7 @@ BNMediumLevelILLabel* MediumLevelILFunction::GetLabelForSourceInstruction(size_t
 
 size_t MediumLevelILFunction::CachePossibleValueSet(const PossibleValueSet& pvs)
 {
-	BNPossibleValueSet ugh = pvs.ToAPIObject();
+	BNPossibleValueSet ugh = pvs.ToAPIStruct();
 	return BNCacheMediumLevelILPossibleValueSet(m_object, &ugh);
 }
 
@@ -294,7 +294,7 @@ size_t MediumLevelILFunction::CachePossibleValueSet(const PossibleValueSet& pvs)
 PossibleValueSet MediumLevelILFunction::GetCachedPossibleValueSet(size_t idx)
 {
 	BNPossibleValueSet api = BNGetCachedMediumLevelILPossibleValueSet(m_object, idx);
-	return PossibleValueSet::FromAPIObject(api);
+	return PossibleValueSet::FromAPIStruct(api);
 }
 
 
@@ -786,14 +786,14 @@ set<size_t> MediumLevelILFunction::GetVariableUses(const Variable& var) const
 RegisterValue MediumLevelILFunction::GetSSAVarValue(const SSAVariable& var)
 {
 	BNRegisterValue value = BNGetMediumLevelILSSAVarValue(m_object, &var.var, var.version);
-	return RegisterValue::FromAPIObject(value);
+	return RegisterValue::FromAPIStruct(value);
 }
 
 
 RegisterValue MediumLevelILFunction::GetExprValue(size_t expr)
 {
 	BNRegisterValue value = BNGetMediumLevelILExprValue(m_object, expr);
-	return RegisterValue::FromAPIObject(value);
+	return RegisterValue::FromAPIStruct(value);
 }
 
 
@@ -813,7 +813,7 @@ PossibleValueSet MediumLevelILFunction::GetPossibleSSAVarValues(
 	BNPossibleValueSet value =
 	    BNGetMediumLevelILPossibleSSAVarValues(m_object, &var.var, var.version, instr, optionArray, options.size());
 	delete[] optionArray;
-	return PossibleValueSet::FromAPIObject(value);
+	return PossibleValueSet::FromAPIStruct(value);
 }
 
 
@@ -825,7 +825,7 @@ PossibleValueSet MediumLevelILFunction::GetPossibleExprValues(size_t expr, const
 		optionArray[idx++] = i;
 	BNPossibleValueSet value = BNGetMediumLevelILPossibleExprValues(m_object, expr, optionArray, options.size());
 	delete[] optionArray;
-	return PossibleValueSet::FromAPIObject(value);
+	return PossibleValueSet::FromAPIStruct(value);
 }
 
 
@@ -899,14 +899,14 @@ Variable MediumLevelILFunction::GetVariableForStackLocationAfterInstruction(int6
 RegisterValue MediumLevelILFunction::GetRegisterValueAtInstruction(uint32_t reg, size_t instr)
 {
 	BNRegisterValue value = BNGetMediumLevelILRegisterValueAtInstruction(m_object, reg, instr);
-	return RegisterValue::FromAPIObject(value);
+	return RegisterValue::FromAPIStruct(value);
 }
 
 
 RegisterValue MediumLevelILFunction::GetRegisterValueAfterInstruction(uint32_t reg, size_t instr)
 {
 	BNRegisterValue value = BNGetMediumLevelILRegisterValueAfterInstruction(m_object, reg, instr);
-	return RegisterValue::FromAPIObject(value);
+	return RegisterValue::FromAPIStruct(value);
 }
 
 
@@ -920,7 +920,7 @@ PossibleValueSet MediumLevelILFunction::GetPossibleRegisterValuesAtInstruction(
 	BNPossibleValueSet value =
 	    BNGetMediumLevelILPossibleRegisterValuesAtInstruction(m_object, reg, instr, optionArray, options.size());
 	delete[] optionArray;
-	return PossibleValueSet::FromAPIObject(value);
+	return PossibleValueSet::FromAPIStruct(value);
 }
 
 
@@ -934,21 +934,21 @@ PossibleValueSet MediumLevelILFunction::GetPossibleRegisterValuesAfterInstructio
 	BNPossibleValueSet value =
 	    BNGetMediumLevelILPossibleRegisterValuesAfterInstruction(m_object, reg, instr, optionArray, options.size());
 	delete[] optionArray;
-	return PossibleValueSet::FromAPIObject(value);
+	return PossibleValueSet::FromAPIStruct(value);
 }
 
 
 RegisterValue MediumLevelILFunction::GetFlagValueAtInstruction(uint32_t flag, size_t instr)
 {
 	BNRegisterValue value = BNGetMediumLevelILFlagValueAtInstruction(m_object, flag, instr);
-	return RegisterValue::FromAPIObject(value);
+	return RegisterValue::FromAPIStruct(value);
 }
 
 
 RegisterValue MediumLevelILFunction::GetFlagValueAfterInstruction(uint32_t flag, size_t instr)
 {
 	BNRegisterValue value = BNGetMediumLevelILFlagValueAfterInstruction(m_object, flag, instr);
-	return RegisterValue::FromAPIObject(value);
+	return RegisterValue::FromAPIStruct(value);
 }
 
 
@@ -962,7 +962,7 @@ PossibleValueSet MediumLevelILFunction::GetPossibleFlagValuesAtInstruction(
 	BNPossibleValueSet value =
 	    BNGetMediumLevelILPossibleFlagValuesAtInstruction(m_object, flag, instr, optionArray, options.size());
 	delete[] optionArray;
-	return PossibleValueSet::FromAPIObject(value);
+	return PossibleValueSet::FromAPIStruct(value);
 }
 
 
@@ -976,21 +976,21 @@ PossibleValueSet MediumLevelILFunction::GetPossibleFlagValuesAfterInstruction(
 	BNPossibleValueSet value =
 	    BNGetMediumLevelILPossibleFlagValuesAfterInstruction(m_object, flag, instr, optionArray, options.size());
 	delete[] optionArray;
-	return PossibleValueSet::FromAPIObject(value);
+	return PossibleValueSet::FromAPIStruct(value);
 }
 
 
 RegisterValue MediumLevelILFunction::GetStackContentsAtInstruction(int32_t offset, size_t len, size_t instr)
 {
 	BNRegisterValue value = BNGetMediumLevelILStackContentsAtInstruction(m_object, offset, len, instr);
-	return RegisterValue::FromAPIObject(value);
+	return RegisterValue::FromAPIStruct(value);
 }
 
 
 RegisterValue MediumLevelILFunction::GetStackContentsAfterInstruction(int32_t offset, size_t len, size_t instr)
 {
 	BNRegisterValue value = BNGetMediumLevelILStackContentsAfterInstruction(m_object, offset, len, instr);
-	return RegisterValue::FromAPIObject(value);
+	return RegisterValue::FromAPIStruct(value);
 }
 
 
@@ -1004,7 +1004,7 @@ PossibleValueSet MediumLevelILFunction::GetPossibleStackContentsAtInstruction(
 	BNPossibleValueSet value =
 	    BNGetMediumLevelILPossibleStackContentsAtInstruction(m_object, offset, len, instr, optionArray, options.size());
 	delete[] optionArray;
-	return PossibleValueSet::FromAPIObject(value);
+	return PossibleValueSet::FromAPIStruct(value);
 }
 
 
@@ -1018,7 +1018,7 @@ PossibleValueSet MediumLevelILFunction::GetPossibleStackContentsAfterInstruction
 	BNPossibleValueSet value = BNGetMediumLevelILPossibleStackContentsAfterInstruction(
 	    m_object, offset, len, instr, optionArray, options.size());
 	delete[] optionArray;
-	return PossibleValueSet::FromAPIObject(value);
+	return PossibleValueSet::FromAPIStruct(value);
 }
 
 

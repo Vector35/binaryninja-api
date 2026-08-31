@@ -422,8 +422,8 @@ struct Formattable
 };
 
 // Enables implicit conversion to and from a single-member C API structure. Also provides
-// the GetAPIObject, FromAPIObject, and FreeAPIObject interface expected by APIAble.
-// Conversion to the underlying type itself remains explicit.
+// the ToAPIStruct, FromAPIStruct, and FreeAPIStruct interface expected by the APIStruct
+// concept. Conversion to the underlying type itself remains explicit.
 template <typename API>
 struct APIStruct
 {
@@ -433,20 +433,20 @@ struct APIStruct
 		requires requires(const T& value) { TAPI {value}; }
 	struct Apply
 	{
-		[[nodiscard]] constexpr TAPI GetAPIObject() const
+		[[nodiscard]] constexpr TAPI ToAPIStruct() const
 		{
 			return TAPI {detail::Access::Get(static_cast<const Self&>(*this))};
 		}
 
-		static constexpr Self FromAPIObject(const TAPI* object)
+		static constexpr Self FromAPIStruct(const TAPI* object)
 		{
 			const auto& [value] = *object;
 			return Self(value);
 		}
 
-		static constexpr void FreeAPIObject(TAPI*) {}
+		static constexpr void FreeAPIStruct(TAPI*) {}
 
-		constexpr operator TAPI() const { return GetAPIObject(); }
+		constexpr operator TAPI() const { return ToAPIStruct(); }
 	};
 };
 
@@ -481,7 +481,7 @@ public:
 	template <typename API>
 		requires detail::HasAPIObject<std::remove_cvref_t<API>, Mods...>
 	constexpr StrongTypedef(API&& object)
-		: StrongTypedef(StrongTypedef::FromAPIObject(&object))
+		: StrongTypedef(StrongTypedef::FromAPIStruct(&object))
 	{
 	}
 

@@ -297,7 +297,7 @@ namespace Warp {
 
 		Constraint(ConstraintGUID guid, std::optional<int64_t> offset);
 
-		static Constraint FromAPIObject(BNWARPConstraint *constraint);
+		static Constraint FromAPIStruct(BNWARPConstraint *constraint);
 	};
 
 	struct FunctionComment
@@ -307,7 +307,7 @@ namespace Warp {
 
 		FunctionComment(std::string text, int64_t offset);
 
-		static FunctionComment FromAPIObject(BNWARPFunctionComment *comment);
+		static FunctionComment FromAPIStruct(BNWARPFunctionComment *comment);
 	};
 
 	class Function : public WarpRefCountObject<BNWARPFunction, BNWARPNewFunctionReference, BNWARPFreeFunctionReference>
@@ -383,7 +383,7 @@ namespace Warp {
 
 		ContainerSearchResponse(std::vector<Ref<ContainerSearchItem> > &&items, size_t offset, size_t total);
 
-		static ContainerSearchResponse FromAPIObject(BNWARPContainerSearchResponse *response);
+		static ContainerSearchResponse FromAPIStruct(BNWARPContainerSearchResponse *response);
 	};
 
 	class Container : public WarpRefCountObject<BNWARPContainer, BNWARPNewContainerReference,
@@ -473,7 +473,7 @@ namespace Warp {
 
 		ProcessorState() = default;
 
-		static ProcessorState FromAPIObject(BNWARPProcessorState *state);
+		static ProcessorState FromAPIStruct(BNWARPProcessorState *state);
 	};
 
 	class Processor

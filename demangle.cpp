@@ -11,12 +11,12 @@ namespace {
 		if (!demangler)
 			return std::nullopt;
 
-		BNDemanglerConfig apiConfig = config.ToAPIObject();
+		BNDemanglerConfig apiConfig = config.ToAPIStruct();
 		BNDemanglerResult apiResult = {};
 		if (!BNDemangleWithDemangler(demangler, mangledName.c_str(), &apiConfig, &apiResult))
 			return std::nullopt;
 
-		DemanglerResult result = DemanglerResult::FromAPIObject(&apiResult);
+		DemanglerResult result = DemanglerResult::FromAPIStruct(&apiResult);
 		BNFreeDemanglerResult(&apiResult);
 		return result;
 	}
@@ -40,7 +40,7 @@ namespace BinaryNinja
 	{}
 
 
-	DemanglerConfig DemanglerConfig::FromAPIObject(const BNDemanglerConfig* config)
+	DemanglerConfig DemanglerConfig::FromAPIStruct(const BNDemanglerConfig* config)
 	{
 		if (!config)
 			return Default();
@@ -58,7 +58,7 @@ namespace BinaryNinja
 	{
 		static const DemanglerConfig cfg = []() {
 			BNDemanglerConfig config = BNGetDefaultDemanglerConfig();
-			return FromAPIObject(&config);
+			return FromAPIStruct(&config);
 		}();
 		return cfg;
 	}
@@ -96,7 +96,7 @@ namespace BinaryNinja
 		return *Default().platform;
 	}
 
-	BNDemanglerConfig DemanglerConfig::ToAPIObject() const
+	BNDemanglerConfig DemanglerConfig::ToAPIStruct() const
 	{
 		return {
 			GetPlatform().GetObject(),
@@ -105,13 +105,13 @@ namespace BinaryNinja
 		};
 	}
 
-	DemanglerResult DemanglerResult::FromAPIObject(const BNDemanglerResult* apiResult)
+	DemanglerResult DemanglerResult::FromAPIStruct(const BNDemanglerResult* apiResult)
 	{
 		DemanglerResult result;
 		if (!apiResult)
 			return result;
 
-		result.name = QualifiedName::FromAPIObject(&apiResult->name);
+		result.name = QualifiedName::FromAPIStruct(&apiResult->name);
 		if (apiResult->type)
 			result.type = new Type(BNNewTypeReference(apiResult->type));
 		else
@@ -119,20 +119,20 @@ namespace BinaryNinja
 		return result;
 	}
 
-	void DemanglerResult::FreeAPIObject(BNDemanglerResult* apiResult)
+	void DemanglerResult::FreeAPIStruct(BNDemanglerResult* apiResult)
 	{
 		if (!apiResult)
 			return;
-		QualifiedName::FreeAPIObject(&apiResult->name);
+		QualifiedName::FreeAPIStruct(&apiResult->name);
 		if (apiResult->type)
 			BNFreeType(apiResult->type);
 		*apiResult = {};
 	}
 
-	BNDemanglerResult DemanglerResult::ToAPIObject() const
+	BNDemanglerResult DemanglerResult::ToAPIStruct() const
 	{
 		return {
-			name.GetAPIObject(),
+			name.ToAPIStruct(),
 			type ? BNNewTypeReference(type->m_object) : nullptr,
 		};
 	}
@@ -248,16 +248,16 @@ namespace BinaryNinja
 
 	QualifiedName SimplifyDemangledTemplateName(const QualifiedName& name)
 	{
-		BNQualifiedName apiName = name.GetAPIObject();
+		BNQualifiedName apiName = name.ToAPIStruct();
 		BNQualifiedName apiResult = {};
 		if (!BNSimplifyDemangledTemplateName(&apiName, &apiResult))
 		{
-			QualifiedName::FreeAPIObject(&apiName);
+			QualifiedName::FreeAPIStruct(&apiName);
 			return name;
 		}
 
-		QualifiedName result = QualifiedName::FromAPIObject(&apiResult);
-		QualifiedName::FreeAPIObject(&apiName);
+		QualifiedName result = QualifiedName::FromAPIStruct(&apiResult);
+		QualifiedName::FreeAPIStruct(&apiName);
 		BNFreeQualifiedName(&apiResult);
 		return result;
 	}
@@ -310,17 +310,17 @@ namespace BinaryNinja
 		if (!mangledName || !result)
 			return false;
 
-		auto demangleResult = demangler->Demangle(mangledName, DemanglerConfig::FromAPIObject(config));
+		auto demangleResult = demangler->Demangle(mangledName, DemanglerConfig::FromAPIStruct(config));
 		if (!demangleResult)
 			return false;
 
-		*result = demangleResult->ToAPIObject();
+		*result = demangleResult->ToAPIStruct();
 		return true;
 	}
 
 	void Demangler::FreeResultCallback(void* ctxt, BNDemanglerResult* result)
 	{
-		DemanglerResult::FreeAPIObject(result);
+		DemanglerResult::FreeAPIStruct(result);
 	}
 
 	bool Demangler::Register(Demangler* demangler)
@@ -370,12 +370,12 @@ namespace BinaryNinja
 
 	std::optional<Demangler::Result> Demangler::DemangleAny(const std::string& mangledName, const Config& config)
 	{
-		BNDemanglerConfig apiConfig = config.ToAPIObject();
+		BNDemanglerConfig apiConfig = config.ToAPIStruct();
 		BNDemanglerResult apiResult = {};
 		if (!BNDemangle(mangledName.c_str(), &apiConfig, &apiResult))
 			return std::nullopt;
 
-		Result result = Result::FromAPIObject(&apiResult);
+		Result result = Result::FromAPIStruct(&apiResult);
 		BNFreeDemanglerResult(&apiResult);
 		return result;
 	}
@@ -399,14 +399,14 @@ namespace BinaryNinja
 
 	std::optional<Demangler::Result> CoreDemangler::Demangle(const std::string& name, const Config& config)
 	{
-		BNDemanglerConfig apiConfig = config.ToAPIObject();
+		BNDemanglerConfig apiConfig = config.ToAPIStruct();
 		BNDemanglerResult apiResult = {};
 		bool success = BNDemangleWithDemangler(m_object, name.c_str(), &apiConfig, &apiResult);
 
 		if (!success)
 			return std::nullopt;
 
-		Result result = Result::FromAPIObject(&apiResult);
+		Result result = Result::FromAPIStruct(&apiResult);
 		BNFreeDemanglerResult(&apiResult);
 		return result;
 	}

@@ -129,7 +129,7 @@ bool RegisterValue::IsConstantData() const
 }
 
 
-BNRegisterValue RegisterValue::ToAPIObject()
+BNRegisterValue RegisterValue::ToAPIStruct()
 {
 	BNRegisterValue result;
 	result.state = state;
@@ -381,35 +381,35 @@ void Function::RemoveUserCodeReference(Architecture* fromArch, uint64_t fromAddr
 
 void Function::AddUserTypeReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name)
 {
-	BNQualifiedName nameObj = name.GetAPIObject();
+	BNQualifiedName nameObj = name.ToAPIStruct();
 	BNAddUserTypeReference(m_object, fromArch->GetObject(), fromAddr, &nameObj);
-	QualifiedName::FreeAPIObject(&nameObj);
+	QualifiedName::FreeAPIStruct(&nameObj);
 }
 
 
 void Function::RemoveUserTypeReference(Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name)
 {
-	BNQualifiedName nameObj = name.GetAPIObject();
+	BNQualifiedName nameObj = name.ToAPIStruct();
 	BNRemoveUserTypeReference(m_object, fromArch->GetObject(), fromAddr, &nameObj);
-	QualifiedName::FreeAPIObject(&nameObj);
+	QualifiedName::FreeAPIStruct(&nameObj);
 }
 
 
 void Function::AddUserTypeFieldReference(
     Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name, uint64_t offset, size_t size)
 {
-	BNQualifiedName nameObj = name.GetAPIObject();
+	BNQualifiedName nameObj = name.ToAPIStruct();
 	BNAddUserTypeFieldReference(m_object, fromArch->GetObject(), fromAddr, &nameObj, offset, size);
-	QualifiedName::FreeAPIObject(&nameObj);
+	QualifiedName::FreeAPIStruct(&nameObj);
 }
 
 
 void Function::RemoveUserTypeFieldReference(
     Architecture* fromArch, uint64_t fromAddr, const QualifiedName& name, uint64_t offset, size_t size)
 {
-	BNQualifiedName nameObj = name.GetAPIObject();
+	BNQualifiedName nameObj = name.ToAPIStruct();
 	BNRemoveUserTypeFieldReference(m_object, fromArch->GetObject(), fromAddr, &nameObj, offset, size);
-	QualifiedName::FreeAPIObject(&nameObj);
+	QualifiedName::FreeAPIStruct(&nameObj);
 }
 
 
@@ -431,7 +431,7 @@ Ref<LowLevelILFunction> Function::GetLowLevelILIfAvailable() const
 }
 
 
-RegisterValue RegisterValue::FromAPIObject(const BNRegisterValue& value)
+RegisterValue RegisterValue::FromAPIStruct(const BNRegisterValue& value)
 {
 	RegisterValue result;
 	result.state = value.state;
@@ -453,28 +453,28 @@ pair<DataBuffer, BNBuiltinType> Function::GetConstantData(BNRegisterValueType st
 RegisterValue Function::GetRegisterValueAtInstruction(Architecture* arch, uint64_t addr, uint32_t reg)
 {
 	BNRegisterValue value = BNGetRegisterValueAtInstruction(m_object, arch->GetObject(), addr, reg);
-	return RegisterValue::FromAPIObject(value);
+	return RegisterValue::FromAPIStruct(value);
 }
 
 
 RegisterValue Function::GetRegisterValueAfterInstruction(Architecture* arch, uint64_t addr, uint32_t reg)
 {
 	BNRegisterValue value = BNGetRegisterValueAfterInstruction(m_object, arch->GetObject(), addr, reg);
-	return RegisterValue::FromAPIObject(value);
+	return RegisterValue::FromAPIStruct(value);
 }
 
 
 RegisterValue Function::GetStackContentsAtInstruction(Architecture* arch, uint64_t addr, int64_t offset, size_t size)
 {
 	BNRegisterValue value = BNGetStackContentsAtInstruction(m_object, arch->GetObject(), addr, offset, size);
-	return RegisterValue::FromAPIObject(value);
+	return RegisterValue::FromAPIStruct(value);
 }
 
 
 RegisterValue Function::GetStackContentsAfterInstruction(Architecture* arch, uint64_t addr, int64_t offset, size_t size)
 {
 	BNRegisterValue value = BNGetStackContentsAfterInstruction(m_object, arch->GetObject(), addr, offset, size);
-	return RegisterValue::FromAPIObject(value);
+	return RegisterValue::FromAPIStruct(value);
 }
 
 
@@ -482,7 +482,7 @@ RegisterValue Function::GetParameterValueAtInstruction(Architecture* arch, uint6
 {
 	BNRegisterValue value = BNGetParameterValueAtInstruction(
 	    m_object, arch->GetObject(), addr, functionType ? functionType->GetObject() : nullptr, i);
-	return RegisterValue::FromAPIObject(value);
+	return RegisterValue::FromAPIStruct(value);
 }
 
 
@@ -490,7 +490,7 @@ RegisterValue Function::GetParameterValueAtLowLevelILInstruction(size_t instr, T
 {
 	BNRegisterValue value = BNGetParameterValueAtLowLevelILInstruction(
 	    m_object, instr, functionType ? functionType->GetObject() : nullptr, i);
-	return RegisterValue::FromAPIObject(value);
+	return RegisterValue::FromAPIStruct(value);
 }
 
 
@@ -756,7 +756,7 @@ Confidence<Ref<Type>> Function::GetReturnType() const
 ReturnValue Function::GetReturnValue() const
 {
 	BNReturnValue ret = BNGetFunctionReturnValue(m_object);
-	ReturnValue result = ReturnValue::FromAPIObject(&ret);
+	ReturnValue result = ReturnValue::FromAPIStruct(&ret);
 	BNFreeReturnValue(&ret);
 	return result;
 }
@@ -771,7 +771,7 @@ bool Function::IsReturnValueDefaultLocation() const
 Confidence<ValueLocation> Function::GetReturnValueLocation() const
 {
 	auto location = BNGetFunctionReturnValueLocation(m_object);
-	Confidence<ValueLocation> result(ValueLocation::FromAPIObject(&location.location), location.confidence);
+	Confidence<ValueLocation> result(ValueLocation::FromAPIStruct(&location.location), location.confidence);
 	BNFreeValueLocation(&location.location);
 	return result;
 }
@@ -817,7 +817,7 @@ Confidence<vector<ValueLocation>> Function::GetParameterLocations() const
 	vector<ValueLocation> locationList;
 	locationList.reserve(locations.count);
 	for (size_t i = 0; i < locations.count; i++)
-		locationList.push_back(ValueLocation::FromAPIObject(&locations.locations[i]));
+		locationList.push_back(ValueLocation::FromAPIStruct(&locations.locations[i]));
 	Confidence<vector<ValueLocation>> result(locationList, locations.confidence);
 	BNFreeParameterLocations(&locations);
 	return result;
@@ -880,9 +880,9 @@ void Function::SetAutoReturnType(const Confidence<Ref<Type>>& type)
 
 void Function::SetAutoReturnValue(const ReturnValue& rv)
 {
-	BNReturnValue ret = rv.ToAPIObject();
+	BNReturnValue ret = rv.ToAPIStruct();
 	BNSetAutoFunctionReturnValue(m_object, &ret);
-	ReturnValue::FreeAPIObject(&ret);
+	ReturnValue::FreeAPIStruct(&ret);
 }
 
 
@@ -895,10 +895,10 @@ void Function::SetAutoIsReturnValueDefaultLocation(bool defaultLocation)
 void Function::SetAutoReturnValueLocation(const Confidence<ValueLocation>& location)
 {
 	BNValueLocationWithConfidence loc;
-	loc.location = location->ToAPIObject();
+	loc.location = location->ToAPIStruct();
 	loc.confidence = location.GetConfidence();
 	BNSetAutoFunctionReturnValueLocation(m_object, &loc);
-	ValueLocation::FreeAPIObject(&loc.location);
+	ValueLocation::FreeAPIStruct(&loc.location);
 }
 
 
@@ -918,13 +918,13 @@ void Function::SetAutoParameterLocations(const Confidence<std::vector<ValueLocat
 	varConf.count = locations->size();
 	size_t i = 0;
 	for (auto it = locations->begin(); it != locations->end(); ++it, ++i)
-		varConf.locations[i] = it->ToAPIObject();
+		varConf.locations[i] = it->ToAPIStruct();
 	varConf.confidence = locations.GetConfidence();
 
 	BNSetAutoFunctionParameterLocations(m_object, &varConf);
 
 	for (i = 0; i < locations->size(); i++)
-		ValueLocation::FreeAPIObject(&varConf.locations[i]);
+		ValueLocation::FreeAPIStruct(&varConf.locations[i]);
 	delete[] varConf.locations;
 }
 
@@ -1019,9 +1019,9 @@ void Function::SetReturnType(const Confidence<Ref<Type>>& type)
 
 void Function::SetReturnValue(const ReturnValue& rv)
 {
-	BNReturnValue ret = rv.ToAPIObject();
+	BNReturnValue ret = rv.ToAPIStruct();
 	BNSetUserFunctionReturnValue(m_object, &ret);
-	ReturnValue::FreeAPIObject(&ret);
+	ReturnValue::FreeAPIStruct(&ret);
 }
 
 
@@ -1034,10 +1034,10 @@ void Function::SetIsReturnValueDefaultLocation(bool defaultLocation)
 void Function::SetReturnValueLocation(const Confidence<ValueLocation>& location)
 {
 	BNValueLocationWithConfidence loc;
-	loc.location = location->ToAPIObject();
+	loc.location = location->ToAPIStruct();
 	loc.confidence = location.GetConfidence();
 	BNSetUserFunctionReturnValueLocation(m_object, &loc);
-	ValueLocation::FreeAPIObject(&loc.location);
+	ValueLocation::FreeAPIStruct(&loc.location);
 }
 
 
@@ -1057,13 +1057,13 @@ void Function::SetParameterLocations(const Confidence<std::vector<ValueLocation>
 	varConf.count = locations->size();
 	size_t i = 0;
 	for (auto it = locations->begin(); it != locations->end(); ++it, ++i)
-		varConf.locations[i] = it->ToAPIObject();
+		varConf.locations[i] = it->ToAPIStruct();
 	varConf.confidence = locations.GetConfidence();
 
 	BNSetUserFunctionParameterLocations(m_object, &varConf);
 
 	for (i = 0; i < locations->size(); i++)
-		ValueLocation::FreeAPIObject(&varConf.locations[i]);
+		ValueLocation::FreeAPIStruct(&varConf.locations[i]);
 	delete[] varConf.locations;
 }
 
@@ -1148,14 +1148,14 @@ void Function::ApplyAutoDiscoveredType(Type* type)
 
 Ref<FlowGraph> Function::CreateFunctionGraph(const FunctionViewType& type, DisassemblySettings* settings)
 {
-	BNFlowGraph* graph = BNCreateFunctionGraph(m_object, type.ToAPIObject(), settings ? settings->GetObject() : nullptr);
+	BNFlowGraph* graph = BNCreateFunctionGraph(m_object, type.ToAPIStruct(), settings ? settings->GetObject() : nullptr);
 	return new CoreFlowGraph(graph);
 }
 
 
 Ref<FlowGraph> Function::CreateFunctionGraphImmediate(const FunctionViewType& type, DisassemblySettings* settings)
 {
-	BNFlowGraph* graph = BNCreateImmediateFunctionGraph(m_object, type.ToAPIObject(), settings ? settings->GetObject() : nullptr);
+	BNFlowGraph* graph = BNCreateImmediateFunctionGraph(m_object, type.ToAPIStruct(), settings ? settings->GetObject() : nullptr);
 	return new CoreFlowGraph(graph);
 }
 
@@ -2443,7 +2443,7 @@ vector<pair<uint32_t, Confidence<RegisterValue>>> Function::GetGlobalPointerValu
 	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
 		result.emplace_back(values[i].reg,
-			Confidence<RegisterValue>(RegisterValue::FromAPIObject(values[i].value.value), values[i].value.confidence));
+			Confidence<RegisterValue>(RegisterValue::FromAPIStruct(values[i].value.value), values[i].value.confidence));
 	BNFreeRegisterValueWithConfidenceAndRegisterList(values);
 	return result;
 }
@@ -2458,7 +2458,7 @@ bool Function::UsesIncomingGlobalPointer() const
 Confidence<RegisterValue> Function::GetRegisterValueAtExit(uint32_t reg) const
 {
 	BNRegisterValueWithConfidence value = BNGetFunctionRegisterValueAtExit(m_object, reg);
-	return Confidence<RegisterValue>(RegisterValue::FromAPIObject(value.value), value.confidence);
+	return Confidence<RegisterValue>(RegisterValue::FromAPIStruct(value.value), value.confidence);
 }
 
 
@@ -2536,7 +2536,7 @@ vector<DisassemblyTextLine> Function::GetTypeTokens(DisassemblySettings* setting
 	BNDisassemblyTextLine* lines =
 	    BNGetFunctionTypeTokens(m_object, settings ? settings->GetObject() : nullptr, &count);
 
-	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);
+	vector<DisassemblyTextLine> result = ParseAPIStructList<DisassemblyTextLine>(lines, count);
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }
@@ -2592,11 +2592,11 @@ void Function::SetUserVariableValue(const Variable& var, const ArchAndAddr& defA
 	var_data.index = var.index;
 	var_data.storage = var.storage;
 
-	auto valueObj = value.ToAPIObject();
+	auto valueObj = value.ToAPIStruct();
 
 	BNSetUserVariableValue(m_object, &var_data, &defSite, after, &valueObj);
 
-	PossibleValueSet::FreeAPIObject(&valueObj);
+	PossibleValueSet::FreeAPIStruct(&valueObj);
 }
 
 
@@ -2627,7 +2627,7 @@ map<Variable, map<pair<ArchAndAddr, bool>, PossibleValueSet>> Function::GetAllUs
 		Architecture* arch = new CoreArchitecture(var_values[i].defSite.arch);
 		uint64_t address = var_values[i].defSite.address;
 		ArchAndAddr defSite(arch, address);
-		PossibleValueSet value = PossibleValueSet::FromAPIObject(var_values[i].value);
+		PossibleValueSet value = PossibleValueSet::FromAPIStruct(var_values[i].value);
 		result[var][{defSite, var_values[i].after}] = value;
 	}
 

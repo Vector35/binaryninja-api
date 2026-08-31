@@ -3205,9 +3205,9 @@ namespace BinaryNinja {
 		InstructionTextToken(const BNInstructionTextToken& token);
 
 		InstructionTextToken WithConfidence(uint8_t conf);
-		BNInstructionTextToken GetAPIObject() const;
-		static InstructionTextToken FromAPIObject(const BNInstructionTextToken* token);
-		static void FreeAPIObject(BNInstructionTextToken* token);
+		BNInstructionTextToken ToAPIStruct() const;
+		static InstructionTextToken FromAPIStruct(const BNInstructionTextToken* token);
+		static void FreeAPIStruct(BNInstructionTextToken* token);
 		static void ConvertInstructionTextToken(const InstructionTextToken& token, BNInstructionTextToken* result);
 		static BNInstructionTextToken* CreateInstructionTextTokenList(const std::vector<InstructionTextToken>& tokens);
 		static void FreeInstructionTextToken(BNInstructionTextToken* token);
@@ -4724,9 +4724,9 @@ namespace BinaryNinja {
 		static std::string EscapeTypeName(const std::string& name, BNTokenEscapingType escaping);
 		static std::string UnescapeTypeName(const std::string& name, BNTokenEscapingType escaping);
 
-		BNNameList GetAPIObject() const;
-		static void FreeAPIObject(BNNameList* name);
-		static NameList FromAPIObject(BNNameList* name);
+		BNNameList ToAPIStruct() const;
+		static void FreeAPIStruct(BNNameList* name);
+		static NameList FromAPIStruct(BNNameList* name);
 	};
 
 	/*!
@@ -4751,9 +4751,9 @@ namespace BinaryNinja {
 		virtual QualifiedName& operator=(const QualifiedName& name);
 		virtual QualifiedName operator+(const QualifiedName& other) const;
 
-		BNQualifiedName GetAPIObject() const;
-		static void FreeAPIObject(BNQualifiedName* name);
-		static QualifiedName FromAPIObject(const BNQualifiedName* name);
+		BNQualifiedName ToAPIStruct() const;
+		static void FreeAPIStruct(BNQualifiedName* name);
+		static QualifiedName FromAPIStruct(const BNQualifiedName* name);
 	};
 
 	struct DemanglerConfig
@@ -4767,10 +4767,10 @@ namespace BinaryNinja {
 		static DemanglerConfig Default();
 		static DemanglerConfig ForPlatform(Platform* platform, bool simplifyTemplates = false);
 		static DemanglerConfig ForBinaryView(BinaryView* view);
-		static DemanglerConfig FromAPIObject(const BNDemanglerConfig* config);
+		static DemanglerConfig FromAPIStruct(const BNDemanglerConfig* config);
 
 		Platform& GetPlatform() const;
-		BNDemanglerConfig ToAPIObject() const;
+		BNDemanglerConfig ToAPIStruct() const;
 	};
 
 	struct DemanglerResult
@@ -4778,9 +4778,9 @@ namespace BinaryNinja {
 		QualifiedName name;
 		Ref<Type> type;
 
-		static DemanglerResult FromAPIObject(const BNDemanglerResult* result);
-		BNDemanglerResult ToAPIObject() const;
-		static void FreeAPIObject(BNDemanglerResult* result);
+		static DemanglerResult FromAPIStruct(const BNDemanglerResult* result);
+		BNDemanglerResult ToAPIStruct() const;
+		static void FreeAPIStruct(BNDemanglerResult* result);
 	};
 
 	QualifiedName SimplifyDemangledTemplateName(const QualifiedName& name);
@@ -4900,9 +4900,9 @@ namespace BinaryNinja {
 		virtual NameSpace operator+(const NameSpace& other) const;
 
 		virtual bool IsDefaultNameSpace() const;
-		BNNameSpace GetAPIObject() const;
-		static void FreeAPIObject(BNNameSpace* name);
-		static NameSpace FromAPIObject(const BNNameSpace* name);
+		BNNameSpace ToAPIStruct() const;
+		static void FreeAPIStruct(BNNameSpace* name);
+		static NameSpace FromAPIStruct(const BNNameSpace* name);
 	};
 
 	class StringRef
@@ -5042,7 +5042,7 @@ namespace BinaryNinja {
 		{}
 		FunctionViewType(const BNFunctionViewType& viewType);
 
-		BNFunctionViewType ToAPIObject() const;
+		BNFunctionViewType ToAPIStruct() const;
 
 		BNFunctionGraphType GetBackingILType() const;
 
@@ -5114,9 +5114,9 @@ namespace BinaryNinja {
 		size_t fieldIndex;
 		uint64_t offset;
 
-		BNDisassemblyTextLineTypeInfo GetAPIObject() const;
-		static void FreeAPIObject(BNDisassemblyTextLineTypeInfo* value);
-		static DisassemblyTextLineTypeInfo FromAPIObject(const BNDisassemblyTextLineTypeInfo* value);
+		BNDisassemblyTextLineTypeInfo ToAPIStruct() const;
+		static void FreeAPIStruct(BNDisassemblyTextLineTypeInfo* value);
+		static DisassemblyTextLineTypeInfo FromAPIStruct(const BNDisassemblyTextLineTypeInfo* value);
 
 		DisassemblyTextLineTypeInfo() : hasTypeInfo(false), parentType(nullptr), fieldIndex(-1), offset(0) {}
 	};
@@ -5132,9 +5132,9 @@ namespace BinaryNinja {
 
 		DisassemblyTextLine();
 
-		BNDisassemblyTextLine GetAPIObject() const;
-		static void FreeAPIObject(BNDisassemblyTextLine* value);
-		static DisassemblyTextLine FromAPIObject(const BNDisassemblyTextLine* value);
+		BNDisassemblyTextLine ToAPIStruct() const;
+		static void FreeAPIStruct(BNDisassemblyTextLine* value);
+		static DisassemblyTextLine FromAPIStruct(const BNDisassemblyTextLine* value);
 
 		size_t GetTotalWidth() const;
 		size_t GetAddressAndIndentationWidth() const;
@@ -5152,9 +5152,9 @@ namespace BinaryNinja {
 		Ref<BasicBlock> block;
 		DisassemblyTextLine contents;
 
-		BNLinearDisassemblyLine GetAPIObject() const;
-		static LinearDisassemblyLine FromAPIObject(const BNLinearDisassemblyLine* line);
-		static void FreeAPIObject(BNLinearDisassemblyLine* line);
+		BNLinearDisassemblyLine ToAPIStruct() const;
+		static LinearDisassemblyLine FromAPIStruct(const BNLinearDisassemblyLine* line);
+		static void FreeAPIStruct(BNLinearDisassemblyLine* line);
 	};
 
 	class NamedTypeReference;
@@ -5170,7 +5170,7 @@ namespace BinaryNinja {
 		uint64_t offset;
 		size_t fieldIndex;
 
-		static TypeDefinitionLine FromAPIObject(BNTypeDefinitionLine* line);
+		static TypeDefinitionLine FromAPIStruct(BNTypeDefinitionLine* line);
 		static BNTypeDefinitionLine* CreateTypeDefinitionLineList(
 		    const std::vector<TypeDefinitionLine>& lines);
 		static void FreeTypeDefinitionLineList(
@@ -5439,8 +5439,8 @@ namespace BinaryNinja {
 		bool IsConstant() const;
 		bool IsConstantData() const;
 
-		static RegisterValue FromAPIObject(const BNRegisterValue& value);
-		BNRegisterValue ToAPIObject();
+		static RegisterValue FromAPIStruct(const BNRegisterValue& value);
+		BNRegisterValue ToAPIStruct();
 	};
 
 	struct AllTypeReferences
@@ -5552,8 +5552,8 @@ namespace BinaryNinja {
 			return customType < other.customType;
 		}
 
-		BNDerivedString ToAPIObject(bool owned) const;
-		static DerivedString FromAPIObject(BNDerivedString* str, bool owned);
+		BNDerivedString ToAPIStruct(bool owned) const;
+		static DerivedString FromAPIStruct(BNDerivedString* str, bool owned);
 	};
 
 	/*! Parameters controlling raw string detection, as used by the core strings analysis.
@@ -10780,8 +10780,8 @@ namespace BinaryNinja {
 		bool operator==(const ValueLocationComponent& component) const;
 		bool operator!=(const ValueLocationComponent& component) const;
 
-		static ValueLocationComponent FromAPIObject(const BNValueLocationComponent* loc);
-		BNValueLocationComponent ToAPIObject() const;
+		static ValueLocationComponent FromAPIStruct(const BNValueLocationComponent* loc);
+		BNValueLocationComponent ToAPIStruct() const;
 
 		std::string ToString(Architecture* arch) const;
 	};
@@ -10815,9 +10815,9 @@ namespace BinaryNinja {
 		bool operator==(const ValueLocation& loc) const;
 		bool operator!=(const ValueLocation& loc) const;
 
-		static ValueLocation FromAPIObject(const BNValueLocation* loc);
-		BNValueLocation ToAPIObject() const;
-		static void FreeAPIObject(BNValueLocation* loc);
+		static ValueLocation FromAPIStruct(const BNValueLocation* loc);
+		BNValueLocation ToAPIStruct() const;
+		static void FreeAPIStruct(BNValueLocation* loc);
 
 		static std::optional<ValueLocation> Parse(const std::string& str, Architecture* arch, std::string& error);
 		std::string ToString(Architecture* arch) const;
@@ -10839,9 +10839,9 @@ namespace BinaryNinja {
 		    name(name), type(type), locationSource(source), location(location)
 		{}
 
-		static FunctionParameter FromAPIObject(const BNFunctionParameter* param);
-		BNFunctionParameter ToAPIObject() const;
-		static void FreeAPIObject(BNFunctionParameter* param);
+		static FunctionParameter FromAPIStruct(const BNFunctionParameter* param);
+		BNFunctionParameter ToAPIStruct() const;
+		static void FreeAPIStruct(BNFunctionParameter* param);
 	};
 
 	struct ReturnValue
@@ -10860,9 +10860,9 @@ namespace BinaryNinja {
 		bool operator==(const ReturnValue& nt) const;
 		bool operator!=(const ReturnValue& nt) const;
 
-		static ReturnValue FromAPIObject(const BNReturnValue* returnValue);
-		BNReturnValue ToAPIObject() const;
-		static void FreeAPIObject(BNReturnValue* returnValue);
+		static ReturnValue FromAPIStruct(const BNReturnValue* returnValue);
+		BNReturnValue ToAPIStruct() const;
+		static void FreeAPIStruct(BNReturnValue* returnValue);
 	};
 
 	class FieldResolutionInfo : public CoreRefCountObject<BNFieldResolutionInfo, BNNewFieldResolutionInfoReference, BNFreeFieldResolutionInfo>
@@ -13170,9 +13170,9 @@ namespace BinaryNinja {
 		std::vector<LookupTableEntry> table;
 		size_t count;
 
-		static PossibleValueSet FromAPIObject(BNPossibleValueSet& value);
-		BNPossibleValueSet ToAPIObject() const;
-		static void FreeAPIObject(BNPossibleValueSet* value);
+		static PossibleValueSet FromAPIStruct(BNPossibleValueSet& value);
+		BNPossibleValueSet ToAPIStruct() const;
+		static void FreeAPIStruct(BNPossibleValueSet* value);
 
 		PossibleValueSet Add(const PossibleValueSet& other, size_t size) const;
 		PossibleValueSet Subtract(const PossibleValueSet& other, size_t size) const;
@@ -17493,8 +17493,8 @@ namespace BinaryNinja {
 		static LineFormatterSettings GetLanguageRepresentationSettings(
 			DisassemblySettings* settings, LanguageRepresentationFunction* func);
 
-		static LineFormatterSettings FromAPIObject(const BNLineFormatterSettings* settings);
-		BNLineFormatterSettings ToAPIObject() const;
+		static LineFormatterSettings FromAPIStruct(const BNLineFormatterSettings* settings);
+		BNLineFormatterSettings ToAPIStruct() const;
 	};
 
 	class LineFormatter : public StaticCoreRefCountObject<BNLineFormatter>
@@ -18967,9 +18967,9 @@ namespace BinaryNinja {
 		int64_t stackAdjustment = 0;
 		std::map<uint32_t, int32_t> registerStackAdjustments;
 
-		static CallLayout FromAPIObject(BNCallLayout* layout);
-		BNCallLayout ToAPIObject() const;
-		static void FreeAPIObject(BNCallLayout* layout);
+		static CallLayout FromAPIStruct(BNCallLayout* layout);
+		BNCallLayout ToAPIStruct() const;
+		static void FreeAPIStruct(BNCallLayout* layout);
 	};
 
 	/*!

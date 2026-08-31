@@ -25,7 +25,7 @@ using namespace BinaryNinja;
 using namespace std;
 
 
-PossibleValueSet PossibleValueSet::FromAPIObject(BNPossibleValueSet& value)
+PossibleValueSet PossibleValueSet::FromAPIStruct(BNPossibleValueSet& value)
 {
 	PossibleValueSet result;
 	result.state = value.state;
@@ -62,7 +62,7 @@ PossibleValueSet PossibleValueSet::FromAPIObject(BNPossibleValueSet& value)
 }
 
 
-BNPossibleValueSet PossibleValueSet::ToAPIObject() const
+BNPossibleValueSet PossibleValueSet::ToAPIStruct() const
 {
 	BNPossibleValueSet result;
 	result.state = state;
@@ -117,7 +117,7 @@ BNPossibleValueSet PossibleValueSet::ToAPIObject() const
 }
 
 
-void PossibleValueSet::FreeAPIObject(BNPossibleValueSet* value)
+void PossibleValueSet::FreeAPIStruct(BNPossibleValueSet* value)
 {
 	switch (value->state)
 	{
@@ -144,12 +144,12 @@ void PossibleValueSet::FreeAPIObject(BNPossibleValueSet* value)
 
 PossibleValueSet PossibleValueSet::Add(const PossibleValueSet& other, size_t size) const
 {
-	BNPossibleValueSet apiObj = ToAPIObject();
-	BNPossibleValueSet otherObj = other.ToAPIObject();
+	BNPossibleValueSet apiObj = ToAPIStruct();
+	BNPossibleValueSet otherObj = other.ToAPIStruct();
 	BNPossibleValueSet resultObj = BNPossibleValueSetAdd(&apiObj, &otherObj, size);
-	PossibleValueSet::FreeAPIObject(&apiObj);
-	PossibleValueSet::FreeAPIObject(&otherObj);
-	PossibleValueSet result = PossibleValueSet::FromAPIObject(resultObj);
+	PossibleValueSet::FreeAPIStruct(&apiObj);
+	PossibleValueSet::FreeAPIStruct(&otherObj);
+	PossibleValueSet result = PossibleValueSet::FromAPIStruct(resultObj);
 	BNFreePossibleValueSet(&resultObj);
 	return result;
 }
@@ -157,12 +157,12 @@ PossibleValueSet PossibleValueSet::Add(const PossibleValueSet& other, size_t siz
 
 PossibleValueSet PossibleValueSet::Subtract(const PossibleValueSet& other, size_t size) const
 {
-	BNPossibleValueSet apiObj = ToAPIObject();
-	BNPossibleValueSet otherObj = other.ToAPIObject();
+	BNPossibleValueSet apiObj = ToAPIStruct();
+	BNPossibleValueSet otherObj = other.ToAPIStruct();
 	BNPossibleValueSet resultObj = BNPossibleValueSetSubtract(&apiObj, &otherObj, size);
-	PossibleValueSet::FreeAPIObject(&apiObj);
-	PossibleValueSet::FreeAPIObject(&otherObj);
-	PossibleValueSet result = PossibleValueSet::FromAPIObject(resultObj);
+	PossibleValueSet::FreeAPIStruct(&apiObj);
+	PossibleValueSet::FreeAPIStruct(&otherObj);
+	PossibleValueSet result = PossibleValueSet::FromAPIStruct(resultObj);
 	BNFreePossibleValueSet(&resultObj);
 	return result;
 }
@@ -170,12 +170,12 @@ PossibleValueSet PossibleValueSet::Subtract(const PossibleValueSet& other, size_
 
 PossibleValueSet PossibleValueSet::Multiply(const PossibleValueSet& other, size_t size) const
 {
-	BNPossibleValueSet apiObj = ToAPIObject();
-	BNPossibleValueSet otherObj = other.ToAPIObject();
+	BNPossibleValueSet apiObj = ToAPIStruct();
+	BNPossibleValueSet otherObj = other.ToAPIStruct();
 	BNPossibleValueSet resultObj = BNPossibleValueSetMultiply(&apiObj, &otherObj, size);
-	PossibleValueSet::FreeAPIObject(&apiObj);
-	PossibleValueSet::FreeAPIObject(&otherObj);
-	PossibleValueSet result = PossibleValueSet::FromAPIObject(resultObj);
+	PossibleValueSet::FreeAPIStruct(&apiObj);
+	PossibleValueSet::FreeAPIStruct(&otherObj);
+	PossibleValueSet result = PossibleValueSet::FromAPIStruct(resultObj);
 	BNFreePossibleValueSet(&resultObj);
 	return result;
 }
@@ -183,12 +183,12 @@ PossibleValueSet PossibleValueSet::Multiply(const PossibleValueSet& other, size_
 
 PossibleValueSet PossibleValueSet::SignedDivide(const PossibleValueSet& other, size_t size) const
 {
-	BNPossibleValueSet apiObj = ToAPIObject();
-	BNPossibleValueSet otherObj = other.ToAPIObject();
+	BNPossibleValueSet apiObj = ToAPIStruct();
+	BNPossibleValueSet otherObj = other.ToAPIStruct();
 	BNPossibleValueSet resultObj = BNPossibleValueSetSignedDivide(&apiObj, &otherObj, size);
-	PossibleValueSet::FreeAPIObject(&apiObj);
-	PossibleValueSet::FreeAPIObject(&otherObj);
-	PossibleValueSet result = PossibleValueSet::FromAPIObject(resultObj);
+	PossibleValueSet::FreeAPIStruct(&apiObj);
+	PossibleValueSet::FreeAPIStruct(&otherObj);
+	PossibleValueSet result = PossibleValueSet::FromAPIStruct(resultObj);
 	BNFreePossibleValueSet(&resultObj);
 	return result;
 }
@@ -196,12 +196,12 @@ PossibleValueSet PossibleValueSet::SignedDivide(const PossibleValueSet& other, s
 
 PossibleValueSet PossibleValueSet::UnsignedDivide(const PossibleValueSet& other, size_t size) const
 {
-	BNPossibleValueSet apiObj = ToAPIObject();
-	BNPossibleValueSet otherObj = other.ToAPIObject();
+	BNPossibleValueSet apiObj = ToAPIStruct();
+	BNPossibleValueSet otherObj = other.ToAPIStruct();
 	BNPossibleValueSet resultObj = BNPossibleValueSetUnsignedDivide(&apiObj, &otherObj, size);
-	PossibleValueSet::FreeAPIObject(&apiObj);
-	PossibleValueSet::FreeAPIObject(&otherObj);
-	PossibleValueSet result = PossibleValueSet::FromAPIObject(resultObj);
+	PossibleValueSet::FreeAPIStruct(&apiObj);
+	PossibleValueSet::FreeAPIStruct(&otherObj);
+	PossibleValueSet result = PossibleValueSet::FromAPIStruct(resultObj);
 	BNFreePossibleValueSet(&resultObj);
 	return result;
 }
@@ -209,12 +209,12 @@ PossibleValueSet PossibleValueSet::UnsignedDivide(const PossibleValueSet& other,
 
 PossibleValueSet PossibleValueSet::SignedMod(const PossibleValueSet& other, size_t size) const
 {
-	BNPossibleValueSet apiObj = ToAPIObject();
-	BNPossibleValueSet otherObj = other.ToAPIObject();
+	BNPossibleValueSet apiObj = ToAPIStruct();
+	BNPossibleValueSet otherObj = other.ToAPIStruct();
 	BNPossibleValueSet resultObj = BNPossibleValueSetSignedMod(&apiObj, &otherObj, size);
-	PossibleValueSet::FreeAPIObject(&apiObj);
-	PossibleValueSet::FreeAPIObject(&otherObj);
-	PossibleValueSet result = PossibleValueSet::FromAPIObject(resultObj);
+	PossibleValueSet::FreeAPIStruct(&apiObj);
+	PossibleValueSet::FreeAPIStruct(&otherObj);
+	PossibleValueSet result = PossibleValueSet::FromAPIStruct(resultObj);
 	BNFreePossibleValueSet(&resultObj);
 	return result;
 }
@@ -222,12 +222,12 @@ PossibleValueSet PossibleValueSet::SignedMod(const PossibleValueSet& other, size
 
 PossibleValueSet PossibleValueSet::UnsignedMod(const PossibleValueSet& other, size_t size) const
 {
-	BNPossibleValueSet apiObj = ToAPIObject();
-	BNPossibleValueSet otherObj = other.ToAPIObject();
+	BNPossibleValueSet apiObj = ToAPIStruct();
+	BNPossibleValueSet otherObj = other.ToAPIStruct();
 	BNPossibleValueSet resultObj = BNPossibleValueSetUnsignedMod(&apiObj, &otherObj, size);
-	PossibleValueSet::FreeAPIObject(&apiObj);
-	PossibleValueSet::FreeAPIObject(&otherObj);
-	PossibleValueSet result = PossibleValueSet::FromAPIObject(resultObj);
+	PossibleValueSet::FreeAPIStruct(&apiObj);
+	PossibleValueSet::FreeAPIStruct(&otherObj);
+	PossibleValueSet result = PossibleValueSet::FromAPIStruct(resultObj);
 	BNFreePossibleValueSet(&resultObj);
 	return result;
 }
@@ -235,12 +235,12 @@ PossibleValueSet PossibleValueSet::UnsignedMod(const PossibleValueSet& other, si
 
 PossibleValueSet PossibleValueSet::And(const PossibleValueSet& other, size_t size) const
 {
-	BNPossibleValueSet apiObj = ToAPIObject();
-	BNPossibleValueSet otherObj = other.ToAPIObject();
+	BNPossibleValueSet apiObj = ToAPIStruct();
+	BNPossibleValueSet otherObj = other.ToAPIStruct();
 	BNPossibleValueSet resultObj = BNPossibleValueSetAnd(&apiObj, &otherObj, size);
-	PossibleValueSet::FreeAPIObject(&apiObj);
-	PossibleValueSet::FreeAPIObject(&otherObj);
-	PossibleValueSet result = PossibleValueSet::FromAPIObject(resultObj);
+	PossibleValueSet::FreeAPIStruct(&apiObj);
+	PossibleValueSet::FreeAPIStruct(&otherObj);
+	PossibleValueSet result = PossibleValueSet::FromAPIStruct(resultObj);
 	BNFreePossibleValueSet(&resultObj);
 	return result;
 }
@@ -248,12 +248,12 @@ PossibleValueSet PossibleValueSet::And(const PossibleValueSet& other, size_t siz
 
 PossibleValueSet PossibleValueSet::Or(const PossibleValueSet& other, size_t size) const
 {
-	BNPossibleValueSet apiObj = ToAPIObject();
-	BNPossibleValueSet otherObj = other.ToAPIObject();
+	BNPossibleValueSet apiObj = ToAPIStruct();
+	BNPossibleValueSet otherObj = other.ToAPIStruct();
 	BNPossibleValueSet resultObj = BNPossibleValueSetOr(&apiObj, &otherObj, size);
-	PossibleValueSet::FreeAPIObject(&apiObj);
-	PossibleValueSet::FreeAPIObject(&otherObj);
-	PossibleValueSet result = PossibleValueSet::FromAPIObject(resultObj);
+	PossibleValueSet::FreeAPIStruct(&apiObj);
+	PossibleValueSet::FreeAPIStruct(&otherObj);
+	PossibleValueSet result = PossibleValueSet::FromAPIStruct(resultObj);
 	BNFreePossibleValueSet(&resultObj);
 	return result;
 }
@@ -261,12 +261,12 @@ PossibleValueSet PossibleValueSet::Or(const PossibleValueSet& other, size_t size
 
 PossibleValueSet PossibleValueSet::Xor(const PossibleValueSet& other, size_t size) const
 {
-	BNPossibleValueSet apiObj = ToAPIObject();
-	BNPossibleValueSet otherObj = other.ToAPIObject();
+	BNPossibleValueSet apiObj = ToAPIStruct();
+	BNPossibleValueSet otherObj = other.ToAPIStruct();
 	BNPossibleValueSet resultObj = BNPossibleValueSetXor(&apiObj, &otherObj, size);
-	PossibleValueSet::FreeAPIObject(&apiObj);
-	PossibleValueSet::FreeAPIObject(&otherObj);
-	PossibleValueSet result = PossibleValueSet::FromAPIObject(resultObj);
+	PossibleValueSet::FreeAPIStruct(&apiObj);
+	PossibleValueSet::FreeAPIStruct(&otherObj);
+	PossibleValueSet result = PossibleValueSet::FromAPIStruct(resultObj);
 	BNFreePossibleValueSet(&resultObj);
 	return result;
 }
@@ -274,12 +274,12 @@ PossibleValueSet PossibleValueSet::Xor(const PossibleValueSet& other, size_t siz
 
 PossibleValueSet PossibleValueSet::ShiftLeft(const PossibleValueSet& other, size_t size) const
 {
-	BNPossibleValueSet apiObj = ToAPIObject();
-	BNPossibleValueSet otherObj = other.ToAPIObject();
+	BNPossibleValueSet apiObj = ToAPIStruct();
+	BNPossibleValueSet otherObj = other.ToAPIStruct();
 	BNPossibleValueSet resultObj = BNPossibleValueSetShiftLeft(&apiObj, &otherObj, size);
-	PossibleValueSet::FreeAPIObject(&apiObj);
-	PossibleValueSet::FreeAPIObject(&otherObj);
-	PossibleValueSet result = PossibleValueSet::FromAPIObject(resultObj);
+	PossibleValueSet::FreeAPIStruct(&apiObj);
+	PossibleValueSet::FreeAPIStruct(&otherObj);
+	PossibleValueSet result = PossibleValueSet::FromAPIStruct(resultObj);
 	BNFreePossibleValueSet(&resultObj);
 	return result;
 }
@@ -287,12 +287,12 @@ PossibleValueSet PossibleValueSet::ShiftLeft(const PossibleValueSet& other, size
 
 PossibleValueSet PossibleValueSet::LogicalShiftRight(const PossibleValueSet& other, size_t size) const
 {
-	BNPossibleValueSet apiObj = ToAPIObject();
-	BNPossibleValueSet otherObj = other.ToAPIObject();
+	BNPossibleValueSet apiObj = ToAPIStruct();
+	BNPossibleValueSet otherObj = other.ToAPIStruct();
 	BNPossibleValueSet resultObj = BNPossibleValueSetLogicalShiftRight(&apiObj, &otherObj, size);
-	PossibleValueSet::FreeAPIObject(&apiObj);
-	PossibleValueSet::FreeAPIObject(&otherObj);
-	PossibleValueSet result = PossibleValueSet::FromAPIObject(resultObj);
+	PossibleValueSet::FreeAPIStruct(&apiObj);
+	PossibleValueSet::FreeAPIStruct(&otherObj);
+	PossibleValueSet result = PossibleValueSet::FromAPIStruct(resultObj);
 	BNFreePossibleValueSet(&resultObj);
 	return result;
 }
@@ -300,12 +300,12 @@ PossibleValueSet PossibleValueSet::LogicalShiftRight(const PossibleValueSet& oth
 
 PossibleValueSet PossibleValueSet::ArithShiftRight(const PossibleValueSet& other, size_t size) const
 {
-	BNPossibleValueSet apiObj = ToAPIObject();
-	BNPossibleValueSet otherObj = other.ToAPIObject();
+	BNPossibleValueSet apiObj = ToAPIStruct();
+	BNPossibleValueSet otherObj = other.ToAPIStruct();
 	BNPossibleValueSet resultObj = BNPossibleValueSetArithShiftRight(&apiObj, &otherObj, size);
-	PossibleValueSet::FreeAPIObject(&apiObj);
-	PossibleValueSet::FreeAPIObject(&otherObj);
-	PossibleValueSet result = PossibleValueSet::FromAPIObject(resultObj);
+	PossibleValueSet::FreeAPIStruct(&apiObj);
+	PossibleValueSet::FreeAPIStruct(&otherObj);
+	PossibleValueSet result = PossibleValueSet::FromAPIStruct(resultObj);
 	BNFreePossibleValueSet(&resultObj);
 	return result;
 }
@@ -313,12 +313,12 @@ PossibleValueSet PossibleValueSet::ArithShiftRight(const PossibleValueSet& other
 
 PossibleValueSet PossibleValueSet::RotateLeft(const PossibleValueSet& other, size_t size) const
 {
-	BNPossibleValueSet apiObj = ToAPIObject();
-	BNPossibleValueSet otherObj = other.ToAPIObject();
+	BNPossibleValueSet apiObj = ToAPIStruct();
+	BNPossibleValueSet otherObj = other.ToAPIStruct();
 	BNPossibleValueSet resultObj = BNPossibleValueSetRotateLeft(&apiObj, &otherObj, size);
-	PossibleValueSet::FreeAPIObject(&apiObj);
-	PossibleValueSet::FreeAPIObject(&otherObj);
-	PossibleValueSet result = PossibleValueSet::FromAPIObject(resultObj);
+	PossibleValueSet::FreeAPIStruct(&apiObj);
+	PossibleValueSet::FreeAPIStruct(&otherObj);
+	PossibleValueSet result = PossibleValueSet::FromAPIStruct(resultObj);
 	BNFreePossibleValueSet(&resultObj);
 	return result;
 }
@@ -326,12 +326,12 @@ PossibleValueSet PossibleValueSet::RotateLeft(const PossibleValueSet& other, siz
 
 PossibleValueSet PossibleValueSet::RotateRight(const PossibleValueSet& other, size_t size) const
 {
-	BNPossibleValueSet apiObj = ToAPIObject();
-	BNPossibleValueSet otherObj = other.ToAPIObject();
+	BNPossibleValueSet apiObj = ToAPIStruct();
+	BNPossibleValueSet otherObj = other.ToAPIStruct();
 	BNPossibleValueSet resultObj = BNPossibleValueSetRotateRight(&apiObj, &otherObj, size);
-	PossibleValueSet::FreeAPIObject(&apiObj);
-	PossibleValueSet::FreeAPIObject(&otherObj);
-	PossibleValueSet result = PossibleValueSet::FromAPIObject(resultObj);
+	PossibleValueSet::FreeAPIStruct(&apiObj);
+	PossibleValueSet::FreeAPIStruct(&otherObj);
+	PossibleValueSet result = PossibleValueSet::FromAPIStruct(resultObj);
 	BNFreePossibleValueSet(&resultObj);
 	return result;
 }
@@ -339,12 +339,12 @@ PossibleValueSet PossibleValueSet::RotateRight(const PossibleValueSet& other, si
 
 PossibleValueSet PossibleValueSet::Union(const PossibleValueSet& other, size_t size) const
 {
-	BNPossibleValueSet apiObj = ToAPIObject();
-	BNPossibleValueSet otherObj = other.ToAPIObject();
+	BNPossibleValueSet apiObj = ToAPIStruct();
+	BNPossibleValueSet otherObj = other.ToAPIStruct();
 	BNPossibleValueSet resultObj = BNPossibleValueSetUnion(&apiObj, &otherObj, size);
-	PossibleValueSet::FreeAPIObject(&apiObj);
-	PossibleValueSet::FreeAPIObject(&otherObj);
-	PossibleValueSet result = PossibleValueSet::FromAPIObject(resultObj);
+	PossibleValueSet::FreeAPIStruct(&apiObj);
+	PossibleValueSet::FreeAPIStruct(&otherObj);
+	PossibleValueSet result = PossibleValueSet::FromAPIStruct(resultObj);
 	BNFreePossibleValueSet(&resultObj);
 	return result;
 }
@@ -352,12 +352,12 @@ PossibleValueSet PossibleValueSet::Union(const PossibleValueSet& other, size_t s
 
 PossibleValueSet PossibleValueSet::Intersection(const PossibleValueSet& other, size_t size) const
 {
-	BNPossibleValueSet apiObj = ToAPIObject();
-	BNPossibleValueSet otherObj = other.ToAPIObject();
+	BNPossibleValueSet apiObj = ToAPIStruct();
+	BNPossibleValueSet otherObj = other.ToAPIStruct();
 	BNPossibleValueSet resultObj = BNPossibleValueSetIntersection(&apiObj, &otherObj, size);
-	PossibleValueSet::FreeAPIObject(&apiObj);
-	PossibleValueSet::FreeAPIObject(&otherObj);
-	PossibleValueSet result = PossibleValueSet::FromAPIObject(resultObj);
+	PossibleValueSet::FreeAPIStruct(&apiObj);
+	PossibleValueSet::FreeAPIStruct(&otherObj);
+	PossibleValueSet result = PossibleValueSet::FromAPIStruct(resultObj);
 	BNFreePossibleValueSet(&resultObj);
 	return result;
 }
@@ -366,10 +366,10 @@ PossibleValueSet PossibleValueSet::Intersection(const PossibleValueSet& other, s
 
 PossibleValueSet PossibleValueSet::Negate(size_t size) const
 {
-	BNPossibleValueSet apiObj = ToAPIObject();
+	BNPossibleValueSet apiObj = ToAPIStruct();
 	BNPossibleValueSet resultObj = BNPossibleValueSetNegate(&apiObj, size);
-	PossibleValueSet::FreeAPIObject(&apiObj);
-	PossibleValueSet result = PossibleValueSet::FromAPIObject(resultObj);
+	PossibleValueSet::FreeAPIStruct(&apiObj);
+	PossibleValueSet result = PossibleValueSet::FromAPIStruct(resultObj);
 	BNFreePossibleValueSet(&resultObj);
 	return result;
 }
@@ -377,10 +377,10 @@ PossibleValueSet PossibleValueSet::Negate(size_t size) const
 
 PossibleValueSet PossibleValueSet::Not(size_t size) const
 {
-	BNPossibleValueSet apiObj = ToAPIObject();
+	BNPossibleValueSet apiObj = ToAPIStruct();
 	BNPossibleValueSet resultObj = BNPossibleValueSetNot(&apiObj, size);
-	PossibleValueSet::FreeAPIObject(&apiObj);
-	PossibleValueSet result = PossibleValueSet::FromAPIObject(resultObj);
+	PossibleValueSet::FreeAPIStruct(&apiObj);
+	PossibleValueSet result = PossibleValueSet::FromAPIStruct(resultObj);
 	BNFreePossibleValueSet(&resultObj);
 	return result;
 }

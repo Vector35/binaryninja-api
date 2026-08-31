@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -10,6 +11,7 @@
 #include <unordered_map>
 #include <type_traits>
 #include "base/capi.h"
+#include "binaryninjacore.h"
 
 // FFI Helpers
 
@@ -63,34 +65,35 @@ namespace BinaryNinja
 
 	//endregion
 
-	//region Generic API Objects
+	//region Generic API Structs
 
-	using bn::base::capi::APIAble;
-	using bn::base::capi::AllocAPIObject;
-	using bn::base::capi::ParseAPIObject;
+	using bn::base::capi::APIStruct;
+	using bn::base::capi::APIStructType;
+	using bn::base::capi::AllocAPIStruct;
+	using bn::base::capi::ParseAPIStruct;
 
-	template<typename T, typename _ = std::enable_if_t<APIAble<T>::value, void>>
-	void AllocAPIObjectList(const std::vector<T>& objects, typename APIAble<T>::TAPI BN_API_PTR** output, size_t* count)
+	template<APIStruct T>
+	void AllocAPIStructList(const std::vector<T>& objects, APIStructType<T> BN_API_PTR** output, size_t* count)
 	{
-		bn::base::capi::AllocAPIObjectList<T>(objects, output, count);
+		bn::base::capi::AllocAPIStructList<T>(objects, output, count);
 	}
 
-	template<typename T, typename _ = std::enable_if_t<APIAble<T>::value, void>>
-	typename APIAble<T>::TAPI BN_API_PTR* AllocAPIObjectList(const std::vector<T>& objects, size_t* count)
+	template<APIStruct T>
+	APIStructType<T> BN_API_PTR* AllocAPIStructList(const std::vector<T>& objects, size_t* count)
 	{
-		return bn::base::capi::AllocAPIObjectList<T>(objects, count);
+		return bn::base::capi::AllocAPIStructList<T>(objects, count);
 	}
 
-	template<typename T, typename _ = std::enable_if_t<APIAble<T>::value, void>>
-	std::vector<T> ParseAPIObjectList(const typename APIAble<T>::TAPI* objects, size_t count)
+	template<APIStruct T>
+	std::vector<T> ParseAPIStructList(const APIStructType<T>* objects, size_t count)
 	{
-		return bn::base::capi::ParseAPIObjectList<T>(objects, count);
+		return bn::base::capi::ParseAPIStructList<T>(objects, count);
 	}
 
-	template<typename T, typename _ = std::enable_if_t<APIAble<T>::value, void>>
-	void FreeAPIObjectList(typename APIAble<T>::TAPI BN_API_PTR* objects, size_t count)
+	template<APIStruct T>
+	void FreeAPIStructList(APIStructType<T> BN_API_PTR* objects, size_t count)
 	{
-		bn::base::capi::FreeAPIObjectList<T>(objects, count);
+		bn::base::capi::FreeAPIStructList<T>(objects, count);
 	}
 
 	//endregion

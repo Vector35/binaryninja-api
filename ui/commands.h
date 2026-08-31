@@ -21,6 +21,13 @@ bool BINARYNINJAUIAPI inputNameForLocalVariable(
 bool BINARYNINJAUIAPI inputNameForType(
     QWidget* parent, std::string& name, const QString& title = "Set Name", const QString& msg = "Enter name:");
 
+
+std::optional<BinaryNinja::QualifiedNameAndType> BINARYNINJAUIAPI getNameAndTypeForDisplayName(
+    BinaryViewRef data, const std::string& displayName);
+std::optional<BinaryNinja::QualifiedNameAndType> BINARYNINJAUIAPI getNameAndTypeForDisplayName(
+    const BinaryNinja::TypeContainer& container, const std::string& displayName);
+bool BINARYNINJAUIAPI renameTypeForToken(QWidget* parent, BinaryViewRef data, const std::string& displayName);
+
 bool BINARYNINJAUIAPI InferArraySize(TypeRef& type, size_t selectionSize);
 bool BINARYNINJAUIAPI askForNewType(QWidget* parent, std::optional<BinaryNinja::TypeContainer> container, const std::string& title,
     bool allowZeroSize, TypeRef& type, BinaryNinja::QualifiedName& name);
@@ -68,9 +75,10 @@ bool BINARYNINJAUIAPI overwriteCode(
 
 StructureRef BINARYNINJAUIAPI getInnerMostStructureContaining(BinaryViewRef data, StructureRef structure,
     size_t& memberIndex, const std::vector<std::string>& nameList, size_t nameIndex, TypeRef& type,
-    std::string& typeName);
+    BinaryNinja::QualifiedName& typeName);
 StructureRef BINARYNINJAUIAPI getInnerMostStructureContainingOffset(BinaryViewRef data, StructureRef structure,
-    const std::vector<std::string>& nameList, size_t nameIndex, size_t offset, TypeRef& type, std::string& typeName);
+    const std::vector<std::string>& nameList, size_t nameIndex, size_t offset, TypeRef& type,
+    BinaryNinja::QualifiedName& typeName);
 // Get the offset of the inner most structure, ralative to the supplied outer most structure
 uint64_t BINARYNINJAUIAPI getInnerMostStructureOffset(
     BinaryViewRef data, StructureRef structure, const std::vector<std::string>& nameList, size_t nameIndex);

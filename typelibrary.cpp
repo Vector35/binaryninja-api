@@ -129,9 +129,9 @@ void TypeLibrary::SetGuid(const std::string& guid)
 
 Ref<Type> TypeLibrary::GetNamedObject(const QualifiedName& name)
 {
-	BNQualifiedName qname = name.GetAPIObject();
+	BNQualifiedName qname = name.ToAPIStruct();
 	BNType* result = BNGetTypeLibraryNamedObject(m_object, &qname);
-	QualifiedName::FreeAPIObject(&qname);
+	QualifiedName::FreeAPIStruct(&qname);
 	if (!result)
 		return nullptr;
 	return new Type(result);
@@ -140,9 +140,9 @@ Ref<Type> TypeLibrary::GetNamedObject(const QualifiedName& name)
 
 Ref<Type> TypeLibrary::GetNamedType(const QualifiedName& name)
 {
-	BNQualifiedName qname = name.GetAPIObject();
+	BNQualifiedName qname = name.ToAPIStruct();
 	BNType* result = BNGetTypeLibraryNamedType(m_object, &qname);
-	QualifiedName::FreeAPIObject(&qname);
+	QualifiedName::FreeAPIStruct(&qname);
 	if (!result)
 		return nullptr;
 	return new Type(result);
@@ -157,7 +157,7 @@ std::vector<QualifiedNameAndType> TypeLibrary::GetNamedObjects()
 	for (size_t i = 0; i < count; i ++)
 	{
 		QualifiedNameAndType qnat;
-		qnat.name = QualifiedName::FromAPIObject(&objects[i].name);
+		qnat.name = QualifiedName::FromAPIStruct(&objects[i].name);
 		qnat.type = new Type(BNNewTypeReference(objects[i].type));
 		result.push_back(std::move(qnat));
 	}
@@ -174,7 +174,7 @@ std::vector<QualifiedNameAndType> TypeLibrary::GetNamedTypes()
 	for (size_t i = 0; i < count; i ++)
 	{
 		QualifiedNameAndType qnat;
-		qnat.name = QualifiedName::FromAPIObject(&types[i].name);
+		qnat.name = QualifiedName::FromAPIStruct(&types[i].name);
 		qnat.type = new Type(BNNewTypeReference(types[i].type));
 		result.push_back(std::move(qnat));
 	}
@@ -239,25 +239,25 @@ Ref<Metadata> TypeLibrary::GetMetadata()
 
 void TypeLibrary::AddNamedObject(const QualifiedName& name, Ref<Type> type)
 {
-	BNQualifiedName qname = name.GetAPIObject();
+	BNQualifiedName qname = name.ToAPIStruct();
 	BNAddTypeLibraryNamedObject(m_object, &qname, type->m_object);
-	QualifiedName::FreeAPIObject(&qname);
+	QualifiedName::FreeAPIStruct(&qname);
 }
 
 
 void TypeLibrary::AddNamedType(const QualifiedName& name, Ref<Type> type)
 {
-	BNQualifiedName qname = name.GetAPIObject();
+	BNQualifiedName qname = name.ToAPIStruct();
 	BNAddTypeLibraryNamedType(m_object, &qname, type->m_object);
-	QualifiedName::FreeAPIObject(&qname);
+	QualifiedName::FreeAPIStruct(&qname);
 }
 
 
 void TypeLibrary::AddNamedTypeSource(const QualifiedName& name, const std::string& source)
 {
-	BNQualifiedName qname = name.GetAPIObject();
+	BNQualifiedName qname = name.ToAPIStruct();
 	BNAddTypeLibraryNamedTypeSource(m_object, &qname, source.c_str());
-	QualifiedName::FreeAPIObject(&qname);
+	QualifiedName::FreeAPIStruct(&qname);
 }
 
 

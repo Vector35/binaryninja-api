@@ -243,7 +243,7 @@ bool TypeParser::ParseTypesFromSourceCallback(void* ctxt,
 	size_t n = 0;
 	for (auto& i : resultCpp.types)
 	{
-		result->types[n].name = i.name.GetAPIObject();
+		result->types[n].name = i.name.ToAPIStruct();
 		result->types[n].type = BNNewTypeReference(i.type->GetObject());
 		result->types[n].isUser = i.isUser;
 		n++;
@@ -252,7 +252,7 @@ bool TypeParser::ParseTypesFromSourceCallback(void* ctxt,
 	n = 0;
 	for (auto& i : resultCpp.variables)
 	{
-		result->variables[n].name = i.name.GetAPIObject();
+		result->variables[n].name = i.name.ToAPIStruct();
 		result->variables[n].type = BNNewTypeReference(i.type->GetObject());
 		result->variables[n].isUser = i.isUser;
 		n++;
@@ -261,7 +261,7 @@ bool TypeParser::ParseTypesFromSourceCallback(void* ctxt,
 	n = 0;
 	for (auto& i : resultCpp.functions)
 	{
-		result->functions[n].name = i.name.GetAPIObject();
+		result->functions[n].name = i.name.ToAPIStruct();
 		result->functions[n].type = BNNewTypeReference(i.type->GetObject());
 		result->functions[n].isUser = i.isUser;
 		n++;
@@ -301,7 +301,7 @@ bool TypeParser::ParseTypeStringCallback(void* ctxt,
 		errorsCpp
 	);
 
-	result->name = resultCpp.name.GetAPIObject();
+	result->name = resultCpp.name.ToAPIStruct();
 	result->type = BNNewTypeReference(resultCpp.type->GetObject());
 
 	*errorCount = errorsCpp.size();
@@ -329,17 +329,17 @@ void TypeParser::FreeResultCallback(void* ctxt, BNTypeParserResult* result)
 {
 	for (size_t i = 0; i < result->typeCount; i++)
 	{
-		QualifiedName::FreeAPIObject(&result->types[i].name);
+		QualifiedName::FreeAPIStruct(&result->types[i].name);
 		BNFreeType(result->types[i].type);
 	}
 	for (size_t i = 0; i < result->variableCount; i++)
 	{
-		QualifiedName::FreeAPIObject(&result->variables[i].name);
+		QualifiedName::FreeAPIStruct(&result->variables[i].name);
 		BNFreeType(result->variables[i].type);
 	}
 	for (size_t i = 0; i < result->functionCount; i++)
 	{
-		QualifiedName::FreeAPIObject(&result->functions[i].name);
+		QualifiedName::FreeAPIStruct(&result->functions[i].name);
 		BNFreeType(result->functions[i].type);
 	}
 	delete[] result->types;
@@ -526,7 +526,7 @@ bool CoreTypeParser::ParseTypesFromSource(const std::string& source, const std::
 	for (size_t j = 0; j < apiResult.typeCount; ++j)
 	{
 		result.types.push_back({
-			QualifiedName::FromAPIObject(&apiResult.types[j].name),
+			QualifiedName::FromAPIStruct(&apiResult.types[j].name),
 			new Type(BNNewTypeReference(apiResult.types[j].type)),
 			apiResult.types[j].isUser
 		});
@@ -536,7 +536,7 @@ bool CoreTypeParser::ParseTypesFromSource(const std::string& source, const std::
 	for (size_t j = 0; j < apiResult.variableCount; ++j)
 	{
 		result.variables.push_back({
-			QualifiedName::FromAPIObject(&apiResult.variables[j].name),
+			QualifiedName::FromAPIStruct(&apiResult.variables[j].name),
 			new Type(BNNewTypeReference(apiResult.variables[j].type)),
 			apiResult.variables[j].isUser
 		});
@@ -546,7 +546,7 @@ bool CoreTypeParser::ParseTypesFromSource(const std::string& source, const std::
 	for (size_t j = 0; j < apiResult.functionCount; ++j)
 	{
 		result.functions.push_back({
-			QualifiedName::FromAPIObject(&apiResult.functions[j].name),
+			QualifiedName::FromAPIStruct(&apiResult.functions[j].name),
 			new Type(BNNewTypeReference(apiResult.functions[j].type)),
 			apiResult.functions[j].isUser
 		});
@@ -589,7 +589,7 @@ bool CoreTypeParser::ParseTypeString(const std::string& source, Ref<Platform> pl
 		return false;
 	}
 
-	result.name = QualifiedName::FromAPIObject(&apiResult.name);
+	result.name = QualifiedName::FromAPIStruct(&apiResult.name);
 	result.type = new Type(BNNewTypeReference(apiResult.type));
 	BNFreeQualifiedNameAndType(&apiResult);
 

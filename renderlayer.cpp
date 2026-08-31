@@ -58,7 +58,7 @@ void RenderLayer::ApplyToLinearViewObjectCallback(
 )
 {
 	RenderLayer* layer = (RenderLayer*)ctxt;
-	vector<LinearDisassemblyLine> lines = ParseAPIObjectList<LinearDisassemblyLine>(inLines, inLineCount);
+	vector<LinearDisassemblyLine> lines = ParseAPIStructList<LinearDisassemblyLine>(inLines, inLineCount);
 
 	layer->ApplyToLinearViewObject(
 		new LinearViewObject(BNNewLinearViewObjectReference(obj)),
@@ -67,13 +67,13 @@ void RenderLayer::ApplyToLinearViewObjectCallback(
 		lines
 	);
 
-	AllocAPIObjectList<LinearDisassemblyLine>(lines, outLines, outLineCount);
+	AllocAPIStructList<LinearDisassemblyLine>(lines, outLines, outLineCount);
 }
 
 
 void RenderLayer::FreeLinesCallback(void* ctxt, BNLinearDisassemblyLine* lines, size_t count)
 {
-	FreeAPIObjectList<LinearDisassemblyLine>(lines, count);
+	FreeAPIStructList<LinearDisassemblyLine>(lines, count);
 }
 
 
@@ -311,7 +311,7 @@ void CoreRenderLayer::ApplyToLinearViewObject(
 {
 	BNLinearDisassemblyLine* inLines;
 	size_t inLineCount;
-	AllocAPIObjectList<LinearDisassemblyLine>(lines, &inLines, &inLineCount);
+	AllocAPIStructList<LinearDisassemblyLine>(lines, &inLines, &inLineCount);
 
 	BNLinearDisassemblyLine* outLines;
 	size_t outLineCount;
@@ -327,7 +327,7 @@ void CoreRenderLayer::ApplyToLinearViewObject(
 		&outLineCount
 	);
 
-	lines = ParseAPIObjectList<LinearDisassemblyLine>(outLines, outLineCount);
-	FreeAPIObjectList<LinearDisassemblyLine>(inLines, inLineCount);
+	lines = ParseAPIStructList<LinearDisassemblyLine>(outLines, outLineCount);
+	FreeAPIStructList<LinearDisassemblyLine>(inLines, inLineCount);
 	BNFreeLinearDisassemblyLines(outLines, outLineCount);
 }

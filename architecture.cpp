@@ -120,7 +120,7 @@ InstructionTextToken InstructionTextToken::WithConfidence(uint8_t conf)
 }
 
 
-BNInstructionTextToken InstructionTextToken::GetAPIObject() const
+BNInstructionTextToken InstructionTextToken::ToAPIStruct() const
 {
 	BNInstructionTextToken result;
 	ConvertInstructionTextToken(*this, &result);
@@ -128,13 +128,13 @@ BNInstructionTextToken InstructionTextToken::GetAPIObject() const
 }
 
 
-InstructionTextToken InstructionTextToken::FromAPIObject(const BNInstructionTextToken* token)
+InstructionTextToken InstructionTextToken::FromAPIStruct(const BNInstructionTextToken* token)
 {
 	return InstructionTextToken(*token);
 }
 
 
-void InstructionTextToken::FreeAPIObject(BNInstructionTextToken* token)
+void InstructionTextToken::FreeAPIStruct(BNInstructionTextToken* token)
 {
 	FreeInstructionTextToken(token);
 }
@@ -3109,7 +3109,7 @@ bool DisassemblyTextRenderer::GetInstructionText(uint64_t addr, size_t& len, vec
 	if (!BNGetDisassemblyTextRendererInstructionText(m_object, addr, &len, &result, &count))
 		return false;
 
-	lines = ParseAPIObjectList<DisassemblyTextLine>(result, count);
+	lines = ParseAPIStructList<DisassemblyTextLine>(result, count);
 	BNFreeDisassemblyTextLines(result, count);
 	return true;
 }
@@ -3119,14 +3119,14 @@ vector<DisassemblyTextLine> DisassemblyTextRenderer::PostProcessInstructionTextL
     uint64_t addr, size_t len, const vector<DisassemblyTextLine>& lines, const string& indentSpaces)
 {
 	size_t inCount = 0;
-	BNDisassemblyTextLine* inLines = AllocAPIObjectList<DisassemblyTextLine>(lines, &inCount);
+	BNDisassemblyTextLine* inLines = AllocAPIStructList<DisassemblyTextLine>(lines, &inCount);
 	BNDisassemblyTextLine* result = nullptr;
 	size_t count = 0;
 	result = BNPostProcessDisassemblyTextRendererLines(
 	    m_object, addr, len, inLines, inCount, &count, indentSpaces.c_str());
 
-	vector<DisassemblyTextLine> outLines = ParseAPIObjectList<DisassemblyTextLine>(result, count);
-	FreeAPIObjectList<DisassemblyTextLine>(inLines, inCount);
+	vector<DisassemblyTextLine> outLines = ParseAPIStructList<DisassemblyTextLine>(result, count);
+	FreeAPIStructList<DisassemblyTextLine>(inLines, inCount);
 	BNFreeDisassemblyTextLines(result, count);
 	return outLines;
 }
@@ -3139,7 +3139,7 @@ bool DisassemblyTextRenderer::GetDisassemblyText(uint64_t addr, size_t& len, vec
 	if (!BNGetDisassemblyTextRendererLines(m_object, addr, &len, &result, &count))
 		return false;
 
-	lines = ParseAPIObjectList<DisassemblyTextLine>(result, count);
+	lines = ParseAPIStructList<DisassemblyTextLine>(result, count);
 	BNFreeDisassemblyTextLines(result, count);
 	return true;
 }
@@ -3236,14 +3236,14 @@ void DisassemblyTextRenderer::AddIntegerToken(
 void DisassemblyTextRenderer::WrapComment(DisassemblyTextLine& line, vector<DisassemblyTextLine>& lines,
     const string& comment, bool hasAutoAnnotations, const string& leadingSpaces, const string& indentSpaces)
 {
-	BNDisassemblyTextLine inLine = line.GetAPIObject();
+	BNDisassemblyTextLine inLine = line.ToAPIStruct();
 	size_t count = 0;
 	BNDisassemblyTextLine* result = BNDisassemblyTextRendererWrapComment(
 	    m_object, &inLine, &count, comment.c_str(), hasAutoAnnotations, leadingSpaces.c_str(), indentSpaces.c_str());
 
-	lines = ParseAPIObjectList<DisassemblyTextLine>(result, count);
+	lines = ParseAPIStructList<DisassemblyTextLine>(result, count);
 	BNFreeDisassemblyTextLines(result, count);
-	DisassemblyTextLine::FreeAPIObject(&inLine);
+	DisassemblyTextLine::FreeAPIStruct(&inLine);
 }
 
 
@@ -3275,7 +3275,7 @@ FunctionViewType::FunctionViewType(const BNFunctionViewType& viewType) : type(vi
 }
 
 
-BNFunctionViewType FunctionViewType::ToAPIObject() const
+BNFunctionViewType FunctionViewType::ToAPIStruct() const
 {
 	BNFunctionViewType result;
 	result.type = type;

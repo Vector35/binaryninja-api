@@ -83,7 +83,7 @@ BNDisassemblyTextLine* DataRenderer::GetLinesForDataCallback(void* ctxt, BNBinar
 	}
 	auto lines = renderer->GetLinesForData(viewObj, addr, typeObj, prefixes, width, context,
 		language ? language : string());
-	BNDisassemblyTextLine* result = AllocAPIObjectList(lines, count);
+	BNDisassemblyTextLine* result = AllocAPIStructList(lines, count);
 	for (size_t i = 0; i < ctxCount; i++)
 		context[i].first->Release();
 	return result;
@@ -99,7 +99,7 @@ void DataRenderer::FreeCallback(void* ctxt)
 
 void DataRenderer::FreeLinesCallback(void* ctxt, BNDisassemblyTextLine* lines, size_t count)
 {
-	FreeAPIObjectList<DisassemblyTextLine>(lines, count);
+	FreeAPIStructList<DisassemblyTextLine>(lines, count);
 }
 
 
@@ -141,7 +141,7 @@ vector<DisassemblyTextLine> DataRenderer::GetLinesForData(BinaryView* data, uint
 	}
 	delete[] prefixes;
 
-	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);
+	vector<DisassemblyTextLine> result = ParseAPIStructList<DisassemblyTextLine>(lines, count);
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }
@@ -191,7 +191,7 @@ vector<DisassemblyTextLine> DataRendererContainer::RenderLinesForData(BinaryView
 	}
 	delete[] prefixes;
 
-	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);
+	vector<DisassemblyTextLine> result = ParseAPIStructList<DisassemblyTextLine>(lines, count);
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }

@@ -200,7 +200,7 @@ vector<LinearDisassemblyLine> LinearViewCursor::GetLines()
 	vector<LinearDisassemblyLine> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; i++)
-		result.push_back(LinearDisassemblyLine::FromAPIObject(&lines[i]));
+		result.push_back(LinearDisassemblyLine::FromAPIStruct(&lines[i]));
 
 	BNFreeLinearDisassemblyLines(lines, count);
 	return result;

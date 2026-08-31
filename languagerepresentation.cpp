@@ -40,7 +40,7 @@ vector<DisassemblyTextLine> LanguageRepresentationFunction::GetExprText(
 	BNDisassemblyTextLine* lines = BNGetLanguageRepresentationFunctionExprText(m_object, instr.function->GetObject(),
 		instr.exprIndex, settings ? settings->GetObject() : nullptr, instr.ast, precedence, statement, &count);
 
-	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);
+	vector<DisassemblyTextLine> result = ParseAPIStructList<DisassemblyTextLine>(lines, count);
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }
@@ -53,7 +53,7 @@ vector<DisassemblyTextLine> LanguageRepresentationFunction::GetLinearLines(
 	BNDisassemblyTextLine* lines = BNGetLanguageRepresentationFunctionLinearLines(m_object, instr.function->GetObject(),
 		instr.exprIndex, settings ? settings->GetObject() : nullptr, instr.ast, &count);
 
-	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);
+	vector<DisassemblyTextLine> result = ParseAPIStructList<DisassemblyTextLine>(lines, count);
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }
@@ -66,7 +66,7 @@ vector<DisassemblyTextLine> LanguageRepresentationFunction::GetBlockLines(
 	BNDisassemblyTextLine* lines = BNGetLanguageRepresentationFunctionBlockLines(
 		m_object, block->GetObject(), settings ? settings->GetObject() : nullptr, &count);
 
-	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);
+	vector<DisassemblyTextLine> result = ParseAPIStructList<DisassemblyTextLine>(lines, count);
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }
@@ -353,13 +353,13 @@ BNDisassemblyTextLine* LanguageRepresentationFunctionType::GetFunctionTypeTokens
 	Ref<Function> funcObj = new Function(BNNewFunctionReference(func));
 	Ref<DisassemblySettings> settingsObj = settings ? new DisassemblySettings(BNNewDisassemblySettingsReference(settings)) : nullptr;
 	auto lines = type->GetFunctionTypeTokens(funcObj, settingsObj);
-	return AllocAPIObjectList<DisassemblyTextLine>(lines, count);
+	return AllocAPIStructList<DisassemblyTextLine>(lines, count);
 }
 
 
 void LanguageRepresentationFunctionType::FreeLinesCallback(void*, BNDisassemblyTextLine* lines, size_t count)
 {
-	FreeAPIObjectList<DisassemblyTextLine>(lines, count);
+	FreeAPIStructList<DisassemblyTextLine>(lines, count);
 }
 
 
@@ -453,7 +453,7 @@ vector<DisassemblyTextLine> CoreLanguageRepresentationFunctionType::GetFunctionT
 	BNDisassemblyTextLine* lines = BNGetLanguageRepresentationFunctionTypeFunctionTypeTokens(m_object,
 		func->GetObject(), settings ? settings->GetObject() : nullptr, &count);
 
-	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);
+	vector<DisassemblyTextLine> result = ParseAPIStructList<DisassemblyTextLine>(lines, count);
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }

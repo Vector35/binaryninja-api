@@ -29,7 +29,7 @@ LineFormatterSettings LineFormatterSettings::GetDefault(DisassemblySettings* set
 {
 	BNLineFormatterSettings* apiObj =
 		BNGetDefaultLineFormatterSettings(settings ? settings->GetObject() : nullptr, func->GetObject());
-	LineFormatterSettings result = FromAPIObject(apiObj);
+	LineFormatterSettings result = FromAPIStruct(apiObj);
 	BNFreeLineFormatterSettings(apiObj);
 	return result;
 }
@@ -40,13 +40,13 @@ LineFormatterSettings LineFormatterSettings::GetLanguageRepresentationSettings(
 {
 	BNLineFormatterSettings* apiObj =
 		BNGetLanguageRepresentationLineFormatterSettings(settings ? settings->GetObject() : nullptr, func->GetObject());
-	LineFormatterSettings result = FromAPIObject(apiObj);
+	LineFormatterSettings result = FromAPIStruct(apiObj);
 	BNFreeLineFormatterSettings(apiObj);
 	return result;
 }
 
 
-LineFormatterSettings LineFormatterSettings::FromAPIObject(const BNLineFormatterSettings* settings)
+LineFormatterSettings LineFormatterSettings::FromAPIStruct(const BNLineFormatterSettings* settings)
 {
 	LineFormatterSettings result;
 	result.highLevelIL = new HighLevelILFunction(BNNewHighLevelILFunctionReference(settings->highLevelIL));
@@ -64,7 +64,7 @@ LineFormatterSettings LineFormatterSettings::FromAPIObject(const BNLineFormatter
 }
 
 
-BNLineFormatterSettings LineFormatterSettings::ToAPIObject() const
+BNLineFormatterSettings LineFormatterSettings::ToAPIStruct() const
 {
 	BNLineFormatterSettings result;
 	result.highLevelIL = highLevelIL->GetObject();
@@ -108,16 +108,16 @@ BNDisassemblyTextLine* LineFormatter::FormatLinesCallback(void* ctxt, BNDisassem
 {
 	LineFormatter* formatter = (LineFormatter*)ctxt;
 
-	vector<DisassemblyTextLine> input = ParseAPIObjectList<DisassemblyTextLine>(inLines, inCount);
+	vector<DisassemblyTextLine> input = ParseAPIStructList<DisassemblyTextLine>(inLines, inCount);
 	vector<DisassemblyTextLine> outLines =
-		formatter->FormatLines(input, LineFormatterSettings::FromAPIObject(settings));
-	return AllocAPIObjectList<DisassemblyTextLine>(outLines, outCount);
+		formatter->FormatLines(input, LineFormatterSettings::FromAPIStruct(settings));
+	return AllocAPIStructList<DisassemblyTextLine>(outLines, outCount);
 }
 
 
 void LineFormatter::FreeLinesCallback(void*, BNDisassemblyTextLine* lines, size_t count)
 {
-	FreeAPIObjectList<DisassemblyTextLine>(lines, count);
+	FreeAPIStructList<DisassemblyTextLine>(lines, count);
 }
 
 
@@ -159,13 +159,13 @@ vector<DisassemblyTextLine> CoreLineFormatter::FormatLines(
 	const vector<DisassemblyTextLine>& lines, const LineFormatterSettings& settings)
 {
 	size_t inCount = 0;
-	BNDisassemblyTextLine* inLines = AllocAPIObjectList<DisassemblyTextLine>(lines, &inCount);
+	BNDisassemblyTextLine* inLines = AllocAPIStructList<DisassemblyTextLine>(lines, &inCount);
 	size_t outCount = 0;
-	BNLineFormatterSettings apiSettings = settings.ToAPIObject();
+	BNLineFormatterSettings apiSettings = settings.ToAPIStruct();
 	BNDisassemblyTextLine* outLines = BNFormatLines(m_object, inLines, inCount, &apiSettings, &outCount);
 
-	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(outLines, outCount);
-	FreeAPIObjectList<DisassemblyTextLine>(inLines, inCount);
+	vector<DisassemblyTextLine> result = ParseAPIStructList<DisassemblyTextLine>(outLines, outCount);
+	FreeAPIStructList<DisassemblyTextLine>(inLines, inCount);
 	BNFreeDisassemblyTextLines(outLines, outCount);
 	return result;
 }

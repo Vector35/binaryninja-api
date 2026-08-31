@@ -150,93 +150,82 @@ Container ParsePairList(const K* keys, const V* values, size_t count)
 		[](const V& value) -> const V& { return value; });
 }
 
-// API objects
+// API structs
 
-/*! Helper class to determine if a type is "API-able" aka has the following interface:
+/*! An API struct is a value type convertible to and from its C API structure:
 
 		struct Foo
 		{
-			BNFoo GetAPIObject() const;
-			static Foo FromAPIObject(const BNFoo* obj);
-			static void FreeAPIObject(BNFoo* obj);
+			BNFoo ToAPIStruct() const;
+			static Foo FromAPIStruct(const BNFoo* obj);
+			static void FreeAPIStruct(BNFoo* obj);
 		};
 
 	If you get weird compiler errors around here, make sure you've implemented
 	the above interface correctly (with the `const`s too!).
  */
-template<
-	typename T,
-	// Grab the type for TAPI from the return type of GetAPIObject()
-	// Store into template argument for easier lookup
-	typename TAPI_ = decltype(std::declval<T>().GetAPIObject())
->
-// Subtype of bool_constant to allow std::enable_if usage
-struct APIAble : std::bool_constant<
-	// Make sure T::FromAPIObject(const TAPI*) actually works
-	std::is_invocable_v<decltype(T::FromAPIObject), const TAPI_*>
-	// Make sure T::FromAPIObject(const TAPI*) returns T
-	&& std::is_same_v<T, decltype(T::FromAPIObject(std::declval<const TAPI_*>()))>
-	// Make sure T::FreeAPIObject(TAPI*) actually works
-	&& std::is_invocable_v<decltype(T::FreeAPIObject), TAPI_*>
->
-{
-	// For reference by users of APIAble
-	typedef TAPI_ TAPI;
+template <typename T>
+using APIStructType = decltype(std::declval<const T&>().ToAPIStruct());
+
+template <typename T>
+concept APIStruct = requires(APIStructType<T>* api, const APIStructType<T>* constApi) {
+	{ T::FromAPIStruct(constApi) } -> std::same_as<T>;
+	T::FreeAPIStruct(api);
 };
 
-template<typename T, typename _ = std::enable_if_t<APIAble<T>::value, void>>
-void AllocAPIObject(const T& object, typename APIAble<T>::TAPI* output)
+template <APIStruct T>
+void AllocAPIStruct(const T& object, APIStructType<T>* output)
 {
-	*output = object.GetAPIObject();
+	*output = object.ToAPIStruct();
 }
 
-template<typename T, typename _ = std::enable_if_t<APIAble<T>::value, void>>
-typename APIAble<T>::TAPI AllocAPIObject(const T& object)
+template <APIStruct T>
+APIStructType<T> AllocAPIStruct(const T& object)
 {
-	return object.GetAPIObject();
+	return object.ToAPIStruct();
 }
 
-template<typename T, std::ranges::sized_range R, typename _ = std::enable_if_t<APIAble<T>::value, void>>
-void AllocAPIObjectList(const R& objects, typename APIAble<T>::TAPI** output, size_t* count)
+template <APIStruct T, std::ranges::sized_range R>
+void AllocAPIStructList(const R& objects, APIStructType<T>** output, size_t* count)
 {
 	*count = std::ranges::size(objects);
-	*output = new typename APIAble<T>::TAPI[*count];
-	FillList(*output, objects, [](const T& object) { return object.GetAPIObject(); });
+	*output = new APIStructType<T>[*count];
+	FillList(*output, objects, [](const T& object) { return object.ToAPIStruct(); });
 }
 
-template<typename T, std::ranges::sized_range R, typename _ = std::enable_if_t<APIAble<T>::value, void>>
-typename APIAble<T>::TAPI* AllocAPIObjectList(const R& objects, size_t* count)
+template <APIStruct T, std::ranges::sized_range R>
+APIStructType<T>* AllocAPIStructList(const R& objects, size_t* count)
 {
-	typename APIAble<T>::TAPI* result;
-	bn::base::capi::AllocAPIObjectList<T>(objects, &result, count);
+	APIStructType<T>* result;
+	bn::base::capi::AllocAPIStructList<T>(objects, &result, count);
 	return result;
 }
 
-template<typename T, typename _ = std::enable_if_t<APIAble<T>::value, void>>
-T ParseAPIObject(const typename APIAble<T>::TAPI& object)
+template <APIStruct T>
+T ParseAPIStruct(const APIStructType<T>& object)
 {
-	return T::FromAPIObject(&object);
+	return T::FromAPIStruct(&object);
 }
 
-template<typename T, typename _ = std::enable_if_t<APIAble<T>::value, void>>
-T ParseAPIObject(const typename APIAble<T>::TAPI* object)
+template <APIStruct T>
+T ParseAPIStruct(const APIStructType<T>* object)
 {
-	return T::FromAPIObject(object);
+	return T::FromAPIStruct(object);
 }
 
-template<typename T, typename List = std::vector<T>, typename _ = std::enable_if_t<APIAble<T>::value, void>>
-List ParseAPIObjectList(const typename APIAble<T>::TAPI* objects, size_t count)
+template <APIStruct T, typename List = std::vector<T>>
+List ParseAPIStructList(const APIStructType<T>* objects, size_t count)
 {
 	return ParseList<List>(objects, count,
-		[](const typename APIAble<T>::TAPI& object) { return T::FromAPIObject(&object); });
+		[](const APIStructType<T>& object) { return T::FromAPIStruct(&object); });
 }
 
-template<typename T, typename _ = std::enable_if_t<APIAble<T>::value, void>>
-void FreeAPIObjectList(typename APIAble<T>::TAPI* objects, size_t count)
+template <APIStruct T>
+void FreeAPIStructList(APIStructType<T>* objects, size_t count)
 {
 	for (size_t i = 0; i <  count; i ++)
 	{
-		T::FreeAPIObject(&objects[i]);
+		T::FreeAPIStruct(&objects[i]);
 	}
 	delete[] objects;
 }

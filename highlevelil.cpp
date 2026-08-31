@@ -94,7 +94,7 @@ void HighLevelILFunction::SetRootExpr(const HighLevelILInstruction& expr)
 
 size_t HighLevelILFunction::CachePossibleValueSet(const PossibleValueSet& pvs)
 {
-	BNPossibleValueSet ugh = pvs.ToAPIObject();
+	BNPossibleValueSet ugh = pvs.ToAPIStruct();
 	return BNCacheHighLevelILPossibleValueSet(m_object, &ugh);
 }
 
@@ -102,7 +102,7 @@ size_t HighLevelILFunction::CachePossibleValueSet(const PossibleValueSet& pvs)
 PossibleValueSet HighLevelILFunction::GetCachedPossibleValueSet(size_t idx)
 {
 	BNPossibleValueSet api = BNGetCachedHighLevelILPossibleValueSet(m_object, idx);
-	return PossibleValueSet::FromAPIObject(api);
+	return PossibleValueSet::FromAPIStruct(api);
 }
 
 
@@ -506,7 +506,7 @@ vector<DisassemblyTextLine> HighLevelILFunction::GetExprText(ExprId expr, bool a
 	BNDisassemblyTextLine* lines =
 	    BNGetHighLevelILExprText(m_object, expr, asFullAst, &count, settings ? settings->GetObject() : nullptr);
 
-	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);
+	vector<DisassemblyTextLine> result = ParseAPIStructList<DisassemblyTextLine>(lines, count);
 	BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }
@@ -647,7 +647,7 @@ set<SSAVariable> HighLevelILFunction::GetSSAVariables()
 
 void HighLevelILFunction::SetDerivedStringReferenceForExpr(size_t expr, const DerivedString& str)
 {
-	BNDerivedString strObj = str.ToAPIObject(false);
+	BNDerivedString strObj = str.ToAPIStruct(false);
 	BNSetHighLevelILDerivedStringReferenceForExpr(m_object, expr, &strObj);
 }
 
@@ -663,7 +663,7 @@ optional<DerivedString> HighLevelILFunction::GetDerivedStringReferenceForExpr(si
 	BNDerivedString str;
 	if (!BNGetHighLevelILDerivedStringReferenceForExpr(m_object, expr, &str))
 		return std::nullopt;
-	return DerivedString::FromAPIObject(&str, true);
+	return DerivedString::FromAPIStruct(&str, true);
 }
 
 
@@ -859,9 +859,9 @@ vector<InstructionTextToken> HighLevelILTokenEmitter::GetCurrentTokens() const
 void HighLevelILTokenEmitter::SetCurrentTokens(const std::vector<InstructionTextToken>& newTokens)
 {
 	size_t count;
-	auto* tokens = AllocAPIObjectList<InstructionTextToken>(newTokens, &count);
+	auto* tokens = AllocAPIStructList<InstructionTextToken>(newTokens, &count);
 	BNHighLevelILTokenEmitterSetCurrentTokens(m_object, tokens, count);
-	FreeAPIObjectList<InstructionTextToken>(tokens, count);
+	FreeAPIStructList<InstructionTextToken>(tokens, count);
 }
 
 
@@ -923,7 +923,7 @@ vector<DisassemblyTextLine> HighLevelILTokenEmitter::GetLines() const
     size_t count = 0;
     BNDisassemblyTextLine* lines = BNHighLevelILTokenEmitterGetLines(m_object, &count);
 
-	vector<DisassemblyTextLine> result = ParseAPIObjectList<DisassemblyTextLine>(lines, count);
+	vector<DisassemblyTextLine> result = ParseAPIStructList<DisassemblyTextLine>(lines, count);
     BNFreeDisassemblyTextLines(lines, count);
 	return result;
 }

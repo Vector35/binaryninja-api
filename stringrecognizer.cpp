@@ -6,7 +6,7 @@ using namespace BinaryNinja;
 using namespace std;
 
 
-BNDerivedString DerivedString::ToAPIObject(bool owned) const
+BNDerivedString DerivedString::ToAPIStruct(bool owned) const
 {
 	BNDerivedString result;
 	result.value = owned ? BNDuplicateStringRef(value.GetObject()) : value.GetObject();
@@ -28,7 +28,7 @@ BNDerivedString DerivedString::ToAPIObject(bool owned) const
 }
 
 
-DerivedString DerivedString::FromAPIObject(BNDerivedString* str, bool owned)
+DerivedString DerivedString::FromAPIStruct(BNDerivedString* str, bool owned)
 {
 	DerivedString result;
 	result.value = StringRef(owned ? str->value : BNDuplicateStringRef(str->value));
@@ -185,7 +185,7 @@ bool StringRecognizer::RecognizeConstantCallback(
 	auto str = recognizer->RecognizeConstant(instr, typeObj, val);
 	if (!str.has_value())
 		return false;
-	*result = str->ToAPIObject(true);
+	*result = str->ToAPIStruct(true);
 	return true;
 }
 
@@ -200,7 +200,7 @@ bool StringRecognizer::RecognizeConstantPointerCallback(
 	auto str = recognizer->RecognizeConstantPointer(instr, typeObj, val);
 	if (!str.has_value())
 		return false;
-	*result = str->ToAPIObject(true);
+	*result = str->ToAPIStruct(true);
 	return true;
 }
 
@@ -215,7 +215,7 @@ bool StringRecognizer::RecognizeExternPointerCallback(void* ctxt, BNHighLevelILF
 	auto str = recognizer->RecognizeExternPointer(instr, typeObj, val, offset);
 	if (!str.has_value())
 		return false;
-	*result = str->ToAPIObject(true);
+	*result = str->ToAPIStruct(true);
 	return true;
 }
 
@@ -230,7 +230,7 @@ bool StringRecognizer::RecognizeImportCallback(
 	auto str = recognizer->RecognizeImport(instr, typeObj, val);
 	if (!str.has_value())
 		return false;
-	*result = str->ToAPIObject(true);
+	*result = str->ToAPIStruct(true);
 	return true;
 }
 
@@ -244,7 +244,7 @@ bool StringRecognizer::RecognizeConstantDataCallback(
 	auto str = recognizer->RecognizeConstantData(instr);
 	if (!str.has_value())
 		return false;
-	*result = str->ToAPIObject(true);
+	*result = str->ToAPIStruct(true);
 	return true;
 }
 
@@ -262,7 +262,7 @@ bool StringRecognizer::RecognizeStructInitCallback(void* ctxt, BNHighLevelILFunc
 	auto str = recognizer->RecognizeStructInit(instr, typeObj, values);
 	if (!str.has_value())
 		return false;
-	*result = str->ToAPIObject(true);
+	*result = str->ToAPIStruct(true);
 	return true;
 }
 
@@ -310,7 +310,7 @@ std::optional<DerivedString> CoreStringRecognizer::RecognizeConstant(
 	if (!BNStringRecognizerRecognizeConstant(m_object, instr.function->GetObject(), instr.exprIndex,
 		type->GetObject(), val, &str))
 		return std::nullopt;
-	return DerivedString::FromAPIObject(&str, true);
+	return DerivedString::FromAPIStruct(&str, true);
 }
 
 
@@ -321,7 +321,7 @@ std::optional<DerivedString> CoreStringRecognizer::RecognizeConstantPointer(
 	if (!BNStringRecognizerRecognizeConstantPointer(m_object, instr.function->GetObject(), instr.exprIndex,
 		type->GetObject(), val, &str))
 		return std::nullopt;
-	return DerivedString::FromAPIObject(&str, true);
+	return DerivedString::FromAPIStruct(&str, true);
 }
 
 
@@ -332,7 +332,7 @@ std::optional<DerivedString> CoreStringRecognizer::RecognizeExternPointer(
 	if (!BNStringRecognizerRecognizeExternPointer(m_object, instr.function->GetObject(), instr.exprIndex,
 		type->GetObject(), val, offset, &str))
 		return std::nullopt;
-	return DerivedString::FromAPIObject(&str, true);
+	return DerivedString::FromAPIStruct(&str, true);
 }
 
 
@@ -343,7 +343,7 @@ std::optional<DerivedString> CoreStringRecognizer::RecognizeImport(
 	if (!BNStringRecognizerRecognizeImport(m_object, instr.function->GetObject(), instr.exprIndex,
 		type->GetObject(), val, &str))
 		return std::nullopt;
-	return DerivedString::FromAPIObject(&str, true);
+	return DerivedString::FromAPIStruct(&str, true);
 }
 
 
@@ -353,7 +353,7 @@ std::optional<DerivedString> CoreStringRecognizer::RecognizeConstantData(
 	BNDerivedString str;
 	if (!BNStringRecognizerRecognizeConstantData(m_object, instr.function->GetObject(), instr.exprIndex, &str))
 		return std::nullopt;
-	return DerivedString::FromAPIObject(&str, true);
+	return DerivedString::FromAPIStruct(&str, true);
 }
 
 
@@ -374,5 +374,5 @@ std::optional<DerivedString> CoreStringRecognizer::RecognizeStructInit(
 	if (!BNStringRecognizerRecognizeStructInit(m_object, instr.function->GetObject(), instr.exprIndex,
 		type->GetObject(), fieldOffsets.data(), fieldValues.data(), values.size(), &str))
 		return std::nullopt;
-	return DerivedString::FromAPIObject(&str, true);
+	return DerivedString::FromAPIStruct(&str, true);
 }

@@ -75,7 +75,7 @@ Constraint::Constraint(ConstraintGUID guid, std::optional<int64_t> offset)
     this->offset = offset;
 }
 
-Constraint Constraint::FromAPIObject(BNWARPConstraint *constraint)
+Constraint Constraint::FromAPIStruct(BNWARPConstraint *constraint)
 {
     auto offset = constraint->offset == INT64_MAX ? std::nullopt : std::optional(constraint->offset);
     return {constraint->guid, offset};
@@ -87,7 +87,7 @@ FunctionComment::FunctionComment(std::string text, int64_t offset)
     this->offset = offset;
 }
 
-FunctionComment FunctionComment::FromAPIObject(BNWARPFunctionComment *comment)
+FunctionComment FunctionComment::FromAPIStruct(BNWARPFunctionComment *comment)
 {
     return {comment->text, comment->offset};
 }
@@ -133,7 +133,7 @@ std::vector<Constraint> Function::GetConstraints() const
     std::vector<Constraint> result;
     result.reserve(count);
     for (int i = 0; i < count; i++)
-        result.push_back(Constraint::FromAPIObject(&constraints[i]));
+        result.push_back(Constraint::FromAPIStruct(&constraints[i]));
     BNWARPFreeConstraintList(constraints, count);
     return result;
 }
@@ -145,7 +145,7 @@ std::vector<FunctionComment> Function::GetComments() const
     std::vector<FunctionComment> result;
     result.reserve(count);
     for (int i = 0; i < count; i++)
-        result.push_back(FunctionComment::FromAPIObject(&comments[i]));
+        result.push_back(FunctionComment::FromAPIStruct(&comments[i]));
     BNWARPFreeFunctionCommentList(comments, count);
     return result;
 }
@@ -253,7 +253,7 @@ ContainerSearchResponse::ContainerSearchResponse(std::vector<Ref<ContainerSearch
     this->total = total;
 }
 
-ContainerSearchResponse ContainerSearchResponse::FromAPIObject(BNWARPContainerSearchResponse *response)
+ContainerSearchResponse ContainerSearchResponse::FromAPIStruct(BNWARPContainerSearchResponse *response)
 {
     std::vector<Ref<ContainerSearchItem>> items;
     items.reserve(response->count);
@@ -466,7 +466,7 @@ std::optional<ContainerSearchResponse> Container::Search(const ContainerSearchQu
     BNWARPContainerSearchResponse *response = BNWARPContainerSearch(m_object, query.m_object);
     if (!response)
         return std::nullopt;
-    return ContainerSearchResponse::FromAPIObject(response);
+    return ContainerSearchResponse::FromAPIStruct(response);
 }
 
 Chunk::Chunk(BNWARPChunk *chunk)
@@ -536,7 +536,7 @@ BinaryNinja::DataBuffer File::ToDataBuffer() const
     return BinaryNinja::DataBuffer(BNWARPFileToDataBuffer(m_object));
 }
 
-ProcessorState ProcessorState::FromAPIObject(BNWARPProcessorState *state)
+ProcessorState ProcessorState::FromAPIStruct(BNWARPProcessorState *state)
 {
     ProcessorState result;
     result.cancelled = state->cancelled;
@@ -597,7 +597,7 @@ void Processor::Cancel() const
 ProcessorState Processor::GetState() const
 {
     BNWARPProcessorState stateRaw = BNWARPProcessorGetState(m_object);
-    ProcessorState state = ProcessorState::FromAPIObject(&stateRaw);
+    ProcessorState state = ProcessorState::FromAPIStruct(&stateRaw);
     BNWARPFreeProcessorState(stateRaw);
     return state;
 }

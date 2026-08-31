@@ -44,9 +44,7 @@ pub struct DeviceMapper {
 }
 
 impl DeviceMapper {
-    pub fn new(settings: LoadSettings, address_size: usize, mut device: Device) -> Self {
-        svd_parser::expand_properties(&mut device);
-
+    pub fn new(settings: LoadSettings, address_size: usize, device: Device) -> Self {
         // TODO: Until https://github.com/rust-embedded/svd/issues/288 is fixed
         let mut new_device = device.clone();
         new_device.peripherals.clear();
@@ -69,7 +67,11 @@ impl DeviceMapper {
         }
 
         // TODO: Return error instead.
-        let expanded_device = svd_parser::expand(&new_device).expect("Failed to expand device!");
+        let mut expanded_device =
+            svd_parser::expand(&new_device).expect("Failed to expand device!");
+        // Property expansion skips derived peripherals. Resolve derivedFrom first so registers
+        // supplied by a derived peripheral still inherit its or the device's default properties.
+        svd_parser::expand_properties(&mut expanded_device);
         Self {
             settings,
             device: expanded_device,

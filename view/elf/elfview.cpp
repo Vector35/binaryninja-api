@@ -777,12 +777,7 @@ bool ElfView::Init()
 			m_logger->LogError("Support for ELF architecture 'x86_64' is not present");
 			break;
 		case 183:
-			#ifndef DEMO_EDITION
 			m_logger->LogError("Support for ELF architecture 'arm64' is not present");
-			#else
-			m_logger->LogError("Binary Ninja free does not support ELF architecture 'arm64'. "
-							   "Purchase Binary Ninja to unlock all features.");
-			#endif
 			break;
 		default:
 			m_logger->LogError("ELF architecture %d is not supported", m_commonHeader.arch);

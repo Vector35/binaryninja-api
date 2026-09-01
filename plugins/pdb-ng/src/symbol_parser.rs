@@ -1702,10 +1702,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
         let mut locals = vec![];
         let mut seen_offsets = HashSet::new();
 
-        for child in self.walk_children(index) {
-            if child == index {
-                continue;
-            }
+        for child in self.symbol_children(index) {
             match self.lookup_symbol(&child) {
                 Some(ParsedSymbol::LocalVariable(ParsedVariable {
                     name,

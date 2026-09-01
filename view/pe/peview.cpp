@@ -672,12 +672,7 @@ bool PEView::Init()
 				m_logger->LogError("Support for PE architecture 'x86_64' is not present");
 				break;
 			case 0xaa64:
-				#ifndef DEMO_EDITION
 				m_logger->LogError("Support for PE architecture 'arm64' is not present");
-				#else
-				m_logger->LogError("Binary Ninja free does not support PE architecture 'arm64'. "
-								   "Purchase Binary Ninja to unlock all features.");
-				#endif
 				break;
 			default:
 				m_logger->LogError("PE architecture '0x%x' is not supported", header.machine);

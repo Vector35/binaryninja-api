@@ -34,7 +34,7 @@ use binaryninja::types::{
     EnumerationBuilder, NamedTypeReference, NamedTypeReferenceClass, StructureBuilder,
     StructureType, Type, TypeClass,
 };
-use binaryninja::variable::{NamedDataVariableWithType, NamedVariableWithType};
+use binaryninja::variable::NamedDataVariableWithType;
 
 /// Megastruct for all the parsing
 /// Certain fields are only used by specific files, as marked below.
@@ -252,7 +252,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                         address,
                         name,
                         type_,
-                        locals,
+                        locals: _,
                         ..
                     }) => {
                         self.log(|| {
@@ -276,29 +276,7 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                             Some(address),
                             Some(self.platform.clone()),
                             vec![], // TODO : Components
-                            locals
-                                .iter()
-                                .filter_map(|v| {
-                                    let Some(var_type) = &v.type_ else {
-                                        return None;
-                                    };
-                                    if v.storage.len() != 1 {
-                                        // TODO: how should we handle variables with multiple storage locations?
-                                        return None;
-                                    }
-
-                                    let mut var_loc = v.storage[0].location;
-                                    if v.storage[0].base_relative {
-                                        var_loc.storage -= self.arch.address_size() as i64;
-                                    }
-                                    Some(NamedVariableWithType {
-                                        variable: var_loc,
-                                        ty: var_type.clone(),
-                                        name: v.name.clone(),
-                                        auto_defined: false,
-                                    })
-                                })
-                                .collect::<Vec<_>>(),
+                            vec![], //TODO: local variables
                         ));
                     }
                     _ => {}

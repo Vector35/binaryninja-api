@@ -69,6 +69,7 @@ pub mod medium_level_il;
 pub mod metadata;
 pub mod object_destructor;
 pub mod platform;
+pub mod plugin_command;
 pub mod progress;
 pub mod project;
 pub mod qualified_name;

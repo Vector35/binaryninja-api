@@ -1714,21 +1714,15 @@ impl<'a, S: Source<'a> + 'a> PDBParserInstance<'a, S> {
                     is_param,
                     ..
                 })) => {
-                    // Adjust RSP-relative locations to RSP_entry-relative before param detection.
-                    // Only for x86_64, because REGREL32 RSP offsets are measured after the prolog >:(
-                    // On x86, offsets are already relative to the entry stack pointer
-                    let frame_adjustment = if self.arch.address_size() == 8 {
-                        data.frame_byte_count as i64
-                    } else {
-                        0
-                    };
+                    // Adjust RSP-relative locations to RSP_entry-relative before param detection
                     let adjusted_storage: Vec<ParsedLocation> = storage
                         .iter()
                         .map(|loc| {
                             if loc.stack_relative {
                                 ParsedLocation {
                                     location: Variable {
-                                        storage: loc.location.storage - frame_adjustment,
+                                        storage: loc.location.storage
+                                            - data.frame_byte_count as i64,
                                         ..loc.location
                                     },
                                     stack_relative: false,

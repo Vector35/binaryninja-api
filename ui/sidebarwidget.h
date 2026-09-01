@@ -105,6 +105,7 @@ class BINARYNINJAUIAPI SidebarWidgetAndHeader : public QWidget
 	std::map<QWidget*, SidebarHeader*> m_headerWidgets;
 	std::set<SidebarWidget*> m_activeWidgets;
 	QLabel* m_noWidgetLabel = nullptr;
+	void finishRemovingWidget(SidebarWidget* widget, bool deactivateOnEmpty);
 
 private Q_SLOTS:
 	void tabChanged(QWidget* widget);

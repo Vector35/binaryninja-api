@@ -1990,19 +1990,19 @@ Ref<Platform> Architecture::GetStandalonePlatform()
 }
 
 
-vector<Ref<TypeLibrary>> Architecture::GetTypeLibraries()
+vector<Ref<ImportLibrary>> Architecture::GetImportLibraries()
 {
 	size_t count;
-	BNTypeLibrary** libs = BNGetArchitectureTypeLibraries(m_object, &count);
+	BNImportLibrary** libs = BNGetArchitectureImportLibraries(m_object, &count);
 
-	vector<Ref<TypeLibrary>> result;
+	vector<Ref<ImportLibrary>> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; ++i)
 	{
-		result.push_back(new TypeLibrary(BNNewTypeLibraryReference(libs[i])));
+		result.push_back(new ImportLibrary(BNNewImportLibraryReference(libs[i])));
 	}
 
-	BNFreeTypeLibraryList(libs, count);
+	BNFreeImportLibraryList(libs, count);
 	return result;
 }
 

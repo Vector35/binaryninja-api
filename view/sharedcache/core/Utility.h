@@ -33,7 +33,7 @@ uint64_t readLEB128(const uint8_t*& current, const uint8_t* end);
 
 uint64_t readValidULEB128(const uint8_t*& current, const uint8_t* end);
 
-void ApplySymbol(BinaryNinja::Ref<BinaryNinja::BinaryView> view, BinaryNinja::Ref<BinaryNinja::TypeLibrary> typeLib,
+void ApplySymbol(BinaryNinja::Ref<BinaryNinja::BinaryView> view, BinaryNinja::Ref<BinaryNinja::ImportLibrary> importLib,
 	BinaryNinja::Ref<BinaryNinja::Symbol> symbol, BinaryNinja::Ref<BinaryNinja::Type> type = nullptr);
 
 // Returns the "image name" for a given path.

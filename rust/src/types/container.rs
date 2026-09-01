@@ -5,7 +5,7 @@
 // * [BinaryView::auto_type_container]
 // * [BinaryView::user_type_container]
 // * [Platform::type_container]
-// * [TypeLibrary::type_container]
+// * [ImportLibrary::type_container]
 // * [DebugInfo::get_type_container]
 
 use crate::platform::Platform;
@@ -73,7 +73,7 @@ impl TypeContainer {
     }
 
     /// Get the Platform object associated with this Type Container. All Type Containers
-    /// have exactly one associated Platform (as opposed to, e.g. Type Libraries).
+    /// have exactly one associated Platform (as opposed to, e.g. Import Libraries).
     pub fn platform(&self) -> Ref<Platform> {
         let result = unsafe { BNTypeContainerGetPlatform(self.handle.as_ptr()) };
         assert!(!result.is_null());
@@ -287,7 +287,7 @@ impl TypeContainer {
     /// knowledge of the types in the Type Container.
     ///
     /// * `source` - Source code to parse
-    /// * `import_dependencies` - If Type Library / Type Archive types should be imported during parsing
+    /// * `import_dependencies` - If Import Library / Type Archive types should be imported during parsing
     pub fn parse_type_string(
         &self,
         source: &str,
@@ -324,7 +324,7 @@ impl TypeContainer {
     /// * `options` - String arguments to pass as options, e.g. command line arguments
     /// * `include_dirs` - List of directories to include in the header search path
     /// * `auto_type_source` - Source of types if used for automatically generated types
-    /// * `import_dependencies` - If Type Library / Type Archive types should be imported during parsing
+    /// * `import_dependencies` - If Import Library / Type Archive types should be imported during parsing
     pub fn parse_types_from_source<O, I>(
         &self,
         source: &str,

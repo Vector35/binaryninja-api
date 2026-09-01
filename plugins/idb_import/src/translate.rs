@@ -86,7 +86,7 @@ pub struct TILTranslator {
     pub reference_types_by_name: HashMap<String, ReferencedType>,
     /// The types that have been used in the translation process.
     ///
-    /// For a complete analysis, we will take these used types, attempt to find them in type libraries,
+    /// For a complete analysis, we will take these used types, attempt to find them in import libraries,
     /// then add them to the binary view.
     ///
     /// NOTE: Not to be confused with `reference_types_by_ord`, which is a map of ordinal to reference types.

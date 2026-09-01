@@ -1,23 +1,24 @@
-// Usage: cargo run --example dump_type_library <type_library_path>
+// Usage: cargo run --example dump_import_library <import_library_path>
 
 use binaryninja::binary_view::BinaryView;
 use binaryninja::file_metadata::FileMetadata;
 use binaryninja::tracing::TracingLogListener;
-use binaryninja::types::library::TypeLibrary;
+use binaryninja::types::library::ImportLibrary;
 use binaryninja::types::printer::{CoreTypePrinter, TokenEscapingType};
 
 fn main() {
     tracing_subscriber::fmt::init();
     let _listener = TracingLogListener::new().register();
 
-    let type_lib_str = std::env::args().nth(1).expect("No type library provided");
+    let type_lib_str = std::env::args().nth(1).expect("No import library provided");
     let type_lib_path = std::path::Path::new(&type_lib_str);
 
     // This loads all the core architecture, platform, etc plugins
     let _headless_session =
         binaryninja::headless::Session::new().expect("Failed to initialize session");
 
-    let type_lib = TypeLibrary::load_from_file(type_lib_path).expect("Failed to load type library");
+    let type_lib =
+        ImportLibrary::load_from_file(type_lib_path).expect("Failed to load import library");
     tracing::info!("Name: `{}`", type_lib.name());
     tracing::info!("GUID: `{}`", type_lib.guid());
 
@@ -48,5 +49,5 @@ fn main() {
 
     // Write the header to disk.
     std::fs::write(type_lib_header_path, printed_types)
-        .expect("Failed to write type library header");
+        .expect("Failed to write import library header");
 }

@@ -10,7 +10,7 @@ mod dump;
 mod input;
 mod validate;
 
-/// Generate, inspect, and validate Binary Ninja type libraries (BNTL)
+/// Generate, inspect, and validate Binary Ninja import libraries (.bntl)
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Cli {
@@ -20,13 +20,13 @@ struct Cli {
 
 #[derive(Parser, Debug)]
 pub enum Command {
-    /// Create a new type library from a set of files.
+    /// Create a new import library from a set of files.
     Create(create::CreateArgs),
-    /// Dump the type library to a C header file.
+    /// Dump the import library to a C header file.
     Dump(dump::DumpArgs),
-    /// Generate a diff between two type libraries.
+    /// Generate a diff between two import libraries.
     Diff(diff::DiffArgs),
-    /// Validate the type libraries for common errors.
+    /// Validate the import libraries for common errors.
     Validate(validate::ValidateArgs),
 }
 

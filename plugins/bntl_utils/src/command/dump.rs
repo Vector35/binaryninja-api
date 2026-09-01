@@ -1,6 +1,6 @@
 use crate::command::{InputDirectoryField, OutputDirectoryField};
 use crate::dump::TILDump;
-use crate::helper::path_to_type_libraries;
+use crate::helper::path_to_import_libraries;
 use binaryninja::background_task::BackgroundTask;
 use binaryninja::command::GlobalCommand;
 use binaryninja::interaction::Form;
@@ -19,21 +19,21 @@ impl Dump {
         let output_dir = OutputDirectoryField::from_form(&form).unwrap();
         let input_path = InputDirectoryField::from_form(&form).unwrap();
 
-        let bg_task = BackgroundTask::new("Dumping type libraries...", true).enter();
+        let bg_task = BackgroundTask::new("Dumping import libraries...", true).enter();
 
-        let type_libraries = path_to_type_libraries(&input_path);
-        for type_lib in &type_libraries {
+        let import_libraries = path_to_import_libraries(&input_path);
+        for type_lib in &import_libraries {
             if bg_task.is_cancelled() {
                 return;
             }
             bg_task.set_progress_text(&format!("Dumping '{}'...", type_lib.name()));
             let dump = match TILDump::new()
-                .with_type_libs(type_libraries.clone())
+                .with_import_libs(import_libraries.clone())
                 .dump(&type_lib)
             {
                 Ok(dump) => dump,
                 Err(err) => {
-                    tracing::error!("Failed to dump type library: {}", err);
+                    tracing::error!("Failed to dump import library: {}", err);
                     return;
                 }
             };

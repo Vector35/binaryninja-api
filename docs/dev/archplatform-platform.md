@@ -115,7 +115,7 @@ qlinuxplatform.register_calling_convention(qsyscall)
 qlinuxplatform.system_call_convention = qsyscall
 ```
 
-After defining a system call calling convention, we can now see syscall numbers and arguments being passed to syscalls, but they don't have names yet. We will handle that in the sections on [Platform Types](#platform-types) and [Type Libraries](#type-libraries). But for now, at least we can see which ones are being used:
+After defining a system call calling convention, we can now see syscall numbers and arguments being passed to syscalls, but they don't have names yet. We will handle that in the sections on [Platform Types](#platform-types) and [Import Libraries](#import-libraries). But for now, at least we can see which ones are being used:
 
 <figure markdown="span">
   ![Now we can see it's doing syscall number 4](../img/quark/syscall-number.png){ width="800" }
@@ -125,7 +125,7 @@ After defining a system call calling convention, we can now see syscall numbers 
 
 ## Platform Types
 
-Platform Types are types included by all binaries using the platform. These are often used for common library functions and system calls. While it can be tempting to put an entire standard library's worth of types into Platform Types, you should try to keep them relatively short and only include what you expect to be used by all binaries. For the rest, consider using [Type Libraries](#type-libraries), whose types are only included in analyses if they are actually used. Usually, Platform Types only include what is necessary for the `noreturn` functions/system calls on the platform, and everything else goes in a Type Library.
+Platform Types are types included by all binaries using the platform. These are often used for common library functions and system calls. While it can be tempting to put an entire standard library's worth of types into Platform Types, you should try to keep them relatively short and only include what you expect to be used by all binaries. For the rest, consider using [Import Libraries](#import-libraries), whose types are only included in analyses if they are actually used. Usually, Platform Types only include what is necessary for the `noreturn` functions/system calls on the platform, and everything else goes in an Import Library.
 
 Here is all we need to specify for Quark's Platform Types:
 
@@ -156,7 +156,7 @@ class LinuxQuarkPlatform(Platform):
     type_file_path = str(Path(__file__).parent / "types" / "linux-quark.c")
 ```
 
-Now we can see that the exit system call gets resolved and annotated with its name and parameters. Other system calls are still unresolved; we will address those in the section on [Type Libraries](#type-libraries).
+Now we can see that the exit system call gets resolved and annotated with its name and parameters. Other system calls are still unresolved; we will address those in the section on [Import Libraries](#import-libraries).
 
 <figure markdown="span">
   ![sys_exit now gets its name and type](../img/quark/sys-exit-resolved.png){ width="800" }
@@ -164,15 +164,15 @@ Now we can see that the exit system call gets resolved and annotated with its na
 </figure>
 
 
-Note: While not recommended, you _can_ put the rest of the system call types and/or OS-defined standard library types into this file, and that _will_ get you good results where they get resolved as expected. The problem with this is that they will clutter up every analysis's System Types list and may cause conflicts between versions if you need to update them in the future. Binary Ninja's first-party plugins generally choose to use Type Libraries instead for this reason. Thus, for this guide, we're going to follow our recommended design and only put the `noreturn` library functions and system calls into the Platform Types. The rest will be defined by Type Libraries.
+Note: While not recommended, you _can_ put the rest of the system call types and/or OS-defined standard library types into this file, and that _will_ get you good results where they get resolved as expected. The problem with this is that they will clutter up every analysis's System Types list and may cause conflicts between versions if you need to update them in the future. Binary Ninja's first-party plugins generally choose to use Import Libraries instead for this reason. Thus, for this guide, we're going to follow our recommended design and only put the `noreturn` library functions and system calls into the Platform Types. The rest will be defined by Import Libraries.
 
-## Type Libraries
+## Import Libraries
 
-Type Libraries are where Platforms store the bulk of standard library and system call types. They have the benefit of only importing types to your analyses when they are used, so you aren't cluttering up your System Types. Usually, Type Libraries represent an individual, dynamically linkable shared library in your platform, such as `libc` or `libpthread`. There is also a special case Type Library used for system calls, which we will be covering as well.
+Import Libraries are where Platforms store the bulk of standard library and system call types. They have the benefit of only importing types to your analyses when they are used, so you aren't cluttering up your System Types. Usually, Import Libraries represent an individual, dynamically linkable shared library in your platform, such as `libc` or `libpthread`. There is also a special case Import Library used for system calls, which we will be covering as well.
 
 ## Standard Library
 
-Quark's standard library is defined by a bunch of C headers, which we can parse using Binary Ninja's type parser APIs to create Type Libraries. Generally speaking, it is recommended to create Type Libraries in an automated manner, since they are not possible to modify after-the-fact. This ends up being straightforward: we just need to specify a list of headers and what arguments to pass to the type parser, then we can parse the headers and add the parsed types to a new Type Library.
+Quark's standard library is defined by a bunch of C headers, which we can parse using Binary Ninja's type parser APIs to create Import Libraries. Generally speaking, it is recommended to create Import Libraries in an automated manner, since they are not possible to modify after-the-fact. This ends up being straightforward: we just need to specify a list of headers and what arguments to pass to the type parser, then we can parse the headers and add the parsed types to a new Import Library.
 
 First, we specify the headers we are going to parse with the arguments they need:
 
@@ -194,13 +194,13 @@ HEADERS = [
 ]
 ```
 
-Then, we construct a new Type Library for our Platform:
+Then, we construct a new Import Library for our Platform:
 
 ```python
 p = Platform["linux-quark"]
 
-tl = TypeLibrary.new(p.arch, "stdlib")
-tl.add_platform(p)  # critical: mark the Type Library as supporting this Platform
+tl = ImportLibrary.new(p.arch, "stdlib")
+tl.add_platform(p)  # critical: mark the Import Library as supporting this Platform
 ```
 
 Then, we parse all the headers:
@@ -224,7 +224,7 @@ for group in HEADERS:
             # ...
 ```
 
-Then, we take the parsed types from the file and add them to our Type Library:
+Then, we take the parsed types from the file and add them to our Import Library:
 
 ```python
             for ty in parse.types:
@@ -235,34 +235,34 @@ Then, we take the parsed types from the file and add them to our Type Library:
                 tl.add_named_object(func.name, func.type)
 ```
 
-Finally, we write the Type Library to a file:
+Finally, we write the Import Library to a file:
 
 ```python
     tl.write_to_file(str(Path(__file__).parent / f"{tl.name}.bntl"))
 ```
 
-After [registering the Type Library](#registration), any time an executable dynamically links against the shared library with the same name as our Type Library, Binary Ninja will automatically include the Type Library in the analysis and import types from it as needed.
+After [registering the Import Library](#registration), any time an executable dynamically links against the shared library with the same name as our Import Library, Binary Ninja will automatically include the Import Library in the analysis and import types from it as needed.
 
 ## Alternate Names
 
-Some operating systems are tricky, and their linker will resolve multiple different names to the same dynamic library. Since they all reference the same library, their types and definitions should all be the same. Instead of requiring you to make multiple identical copies of these libraries, Binary Ninja's Type Library system allows you to specify alternate names for a Type Library. While Quark does not need to do this (it has no dynamic linker), Windows uses this extensively. Using the Type Library Explorer, which you can enable via the `ui.experimental.typelibExplorer` setting, we can observe this:
+Some operating systems are tricky, and their linker will resolve multiple different names to the same dynamic library. Since they all reference the same library, their types and definitions should all be the same. Instead of requiring you to make multiple identical copies of these libraries, Binary Ninja's Import Library system allows you to specify alternate names for an Import Library. While Quark does not need to do this (it has no dynamic linker), Windows uses this extensively. Using the Import Library Explorer, which you can enable via the `ui.experimental.importlibExplorer` setting, we can observe this:
 
 <figure markdown="span">
-  ![Windows's ntdll.dll Type Library will be loaded if an executable links against api-ms-win-core-crt-l1-1-0.dll, among other names](../img/quark/windows-type-lib-alt-name.png){ width="800" }
-  <figcaption>Windows's `ntdll.dll` Type Library will be loaded if an executable links against `api-ms-win-core-crt-l1-1-0.dll`, among other names</figcaption>
+  ![Windows's ntdll.dll Import Library will be loaded if an executable links against api-ms-win-core-crt-l1-1-0.dll, among other names](../img/quark/windows-import-lib-alt-name.png){ width="800" }
+  <figcaption>Windows's `ntdll.dll` Import Library will be loaded if an executable links against `api-ms-win-core-crt-l1-1-0.dll`, among other names</figcaption>
 </figure>
 
 
-There is an API to add alternative names to your Type Libraries. You must use it when creating the Type Library:
+There is an API to add alternative names to your Import Libraries. You must use it when creating the Import Library:
 
 ```python
-# ... tl = TypeLibrary.new(...)
+# ... tl = ImportLibrary.new(...)
 tl.add_alternate_name("api-ms-win-core-crt-l1-1-0.dll")
 ```
 
 ## System Calls
 
-Binary Ninja will automatically load the `SYSCALLS` Type Library for every binary that uses system calls. We can generate one of those ourselves, then system calls will be resolved using their number. This will allow Binary Ninja to annotate them with their name and type. Using the same mechanism as for the standard library, put all the structure and enumeration types used by the system calls into a C source file. Then, add the system call definitions to the file as functions with the `__syscall(N)` attribute applied, specifying their system call numbers. Finally, use the script from above to create a Type Library named `SYSCALLS` from that source file. Your source should look something like this:
+Binary Ninja will automatically load the `SYSCALLS` Import Library for every binary that uses system calls. We can generate one of those ourselves, then system calls will be resolved using their number. This will allow Binary Ninja to annotate them with their name and type. Using the same mechanism as for the standard library, put all the structure and enumeration types used by the system calls into a C source file. Then, add the system call definitions to the file as functions with the `__syscall(N)` attribute applied, specifying their system call numbers. Finally, use the script from above to create an Import Library named `SYSCALLS` from that source file. Your source should look something like this:
 
 ```c
 // Types used by the syscalls
@@ -290,21 +290,21 @@ int32_t sys_fstat(int32_t fd, struct stat* statbuf) __syscall(108);
 // ...
 ```
 
-Be sure to call the Type Library generated for system calls, `SYSCALLS`, so it will get loaded automatically once we [register it](#registration).
+Be sure to call the Import Library generated for system calls, `SYSCALLS`, so it will get loaded automatically once we [register it](#registration).
 
 ##### Copying Existing Syscalls
 
-Because Quark inherits the system calls from the platform executing its VM, we can create a Type Library with the contents of the `SYSCALLS` library from `linux_x86`. If you're implementing the Linux platform and your architecture is identical to x86, you might be able to do the same. This is pretty easy with the API:
+Because Quark inherits the system calls from the platform executing its VM, we can create an Import Library with the contents of the `SYSCALLS` library from `linux_x86`. If you're implementing the Linux platform and your architecture is identical to x86, you might be able to do the same. This is pretty easy with the API:
 
 ```python
 from pathlib import Path
-from binaryninja import Platform, TypeLibrary, Architecture
+from binaryninja import Platform, ImportLibrary, Architecture
 
-tl = TypeLibrary.new(Architecture["Quark"], "SYSCALLS")
+tl = ImportLibrary.new(Architecture["Quark"], "SYSCALLS")
 tl.add_platform(Platform["linux-quark"])
 
-# linux_x86's SYSCALLS Type Library
-xtl = Platform["linux-x86"].get_type_libraries_by_name("SYSCALLS")[0]
+# linux_x86's SYSCALLS Import Library
+xtl = Platform["linux-x86"].get_import_libraries_by_name("SYSCALLS")[0]
 
 # Copy types and functions
 for name, ty in xtl.named_types.items():
@@ -318,10 +318,10 @@ tl.write_to_file(str(Path(__file__).parent / f"syscalls_linux_x86.bntl"))
 This will work if you know that all of your Linux syscall structures are exactly the same on your architecture as on x86, which is usually not the case. It may be helpful to instead print the syscall details to a source file and correct it by hand:
 
 ```python
-from binaryninja import TypeLibrary, Architecture
+from binaryninja import ImportLibrary, Architecture
 
-# linux_x86's SYSCALLS Type Library
-xtl = Platform["linux-x86"].get_type_libraries_by_name("SYSCALLS")[0]
+# linux_x86's SYSCALLS Import Library
+xtl = Platform["linux-x86"].get_import_libraries_by_name("SYSCALLS")[0]
 # Print types and functions
 for name, ty in xtl.named_types.items():
     for line in ty.get_lines(xtl.type_container, name):
@@ -335,16 +335,16 @@ for name, ty in xtl.named_objects.items():
         print()
 ```
 
-Even if your system call structures are different, this can be a fast way to get started writing a system calls Type Library source file.
+Even if your system call structures are different, this can be a fast way to get started writing a system calls Import Library source file.
 
 ## Registration
 
-After creating our Type Libraries, before they can be loaded, we need to register them with Binary Ninja. This can either be done by having you (and all of your plugin's users) copy the Type Libraries into `$BN_USER_DIRECTORY/typelib/Quark`, or you can do it from your plugin's script with a few lines:
+After creating our Import Libraries, before they can be loaded, we need to register them with Binary Ninja. This can either be done by having you (and all of your plugin's users) copy the Import Libraries into `$BN_USER_DIRECTORY/importlib/Quark`, or you can do it from your plugin's script with a few lines:
 
 ```python
-# Load all Type Libraries in plugin's typelib subdirectory
-for file in (Path(__file__).parent / "typelib").glob("*.bntl"):
-    tl = TypeLibrary.load_from_file(str(file))
+# Load all Import Libraries in plugin's importlib subdirectory
+for file in (Path(__file__).parent / "importlib").glob("*.bntl"):
+    tl = ImportLibrary.load_from_file(str(file))
     if hasattr(tl, 'register'):  # >= 5.3 need to register separately
         tl.register()
 ```
@@ -352,14 +352,14 @@ for file in (Path(__file__).parent / "typelib").glob("*.bntl"):
 After all of this, we can now get names and types for the rest of the system calls:
 
 <figure markdown="span">
-  ![System calls now have their names and types annotated](../img/quark/syscall-type-library.png){ width="800" }
+  ![System calls now have their names and types annotated](../img/quark/syscall-import-library.png){ width="800" }
   <figcaption>System calls now have their names and types annotated</figcaption>
 </figure>
 
 
 ## Statically Linked Standard Library
 
-You may ask: What if your standard library is fully statically linked and your targets never dynamically link any libraries? You could use WARP to match all the statically linked functions and assign them types ([see below](#function-signatures)), but if any fail to match, you likely will want to have a Type Library so you can set their type yourself. You would have to import that Type Library into your analysis and pull types manually. Instead, you can add it to every binary automatically by using the Platform's `view_init` callback. That is relatively easy to do:
+You may ask: What if your standard library is fully statically linked and your targets never dynamically link any libraries? You could use WARP to match all the statically linked functions and assign them types ([see below](#function-signatures)), but if any fail to match, you likely will want to have an Import Library so you can set their type yourself. You would have to import that Import Library into your analysis and pull types manually. Instead, you can add it to every binary automatically by using the Platform's `view_init` callback. That is relatively easy to do:
 
 ```python
 class LinuxQuarkPlatform(Platform):
@@ -371,52 +371,52 @@ class LinuxQuarkPlatform(Platform):
         if not isinstance(view, BinaryView):
             view = BinaryView(handle=binaryninja.core.BNNewViewReference(view))
 
-        # Add the Type Library
-        view.add_type_library(TypeLibrary.from_name(self.arch, "stdlib"))
+        # Add the Import Library
+        view.add_import_library(ImportLibrary.from_name(self.arch, "stdlib"))
 ```
 
 And that's it! Now every binary will have the standard library's types available:
 
 <figure markdown="span">
-  ![The standard library's Type Library is available, and we can use its types](../img/quark/type-library-types.png){ width="800" }
-  <figcaption>The standard library's Type Library is available, and we can use its types</figcaption>
+  ![The standard library's Import Library is available, and we can use its types](../img/quark/import-library-types.png){ width="800" }
+  <figcaption>The standard library's Import Library is available, and we can use its types</figcaption>
 </figure>
 
 
-If your platform supports dynamic linking, you should not need to do this. Simply name the Type Libraries the same name as for what the dynamic linker would search for each library, and Binary Ninja should load the relevant ones automatically. Also, this is not necessary for the `SYSCALLS` Type Library, which will get loaded automatically.
+If your platform supports dynamic linking, you should not need to do this. Simply name the Import Libraries the same name as for what the dynamic linker would search for each library, and Binary Ninja should load the relevant ones automatically. Also, this is not necessary for the `SYSCALLS` Import Library, which will get loaded automatically.
 
 ## Ordinals
 
-Some libraries have the dynamic linker resolve their functions not by name but by ordinal. These ordinals are unique numbers, assigned to the functions when the library was linked, which need to be included for our Type Library to resolve them.
+Some libraries have the dynamic linker resolve their functions not by name but by ordinal. These ordinals are unique numbers, assigned to the functions when the library was linked, which need to be included for our Import Library to resolve them.
 
 <figure markdown="span">
-  ![Windows's mfc42.dll references all of its imported functions by ordinals, which can be seen in the Type Library Explorer](../img/quark/windows-type-lib-ordinals.png){ width="800" }
-  <figcaption>Windows's mfc42.dll references all of its imported functions by ordinals, which can be seen in the Type Library Explorer</figcaption>
+  ![Windows's mfc42.dll references all of its imported functions by ordinals, which can be seen in the Import Library Explorer](../img/quark/windows-import-lib-ordinals.png){ width="800" }
+  <figcaption>Windows's mfc42.dll references all of its imported functions by ordinals, which can be seen in the Import Library Explorer</figcaption>
 </figure>
 
 
-The process for mapping these ordinals to names is not well-specified, and neither is their API. Since these are highly platform-specific, the ordinal data is stored in a Metadata key on the Type Library, which is later read by the Binary View when it is loading binaries. This is only implemented on PE binaries in first-party plugins, but if you write a custom Binary View implementation, you can do the same.
+The process for mapping these ordinals to names is not well-specified, and neither is their API. Since these are highly platform-specific, the ordinal data is stored in a Metadata key on the Import Library, which is later read by the Binary View when it is loading binaries. This is only implemented on PE binaries in first-party plugins, but if you write a custom Binary View implementation, you can do the same.
 
-Here's how PEView does it. First, when resolving library imports, it loads the ordinals from the appropriate Type Libraries:
+Here's how PEView does it. First, when resolving library imports, it loads the ordinals from the appropriate Import Libraries:
 
 ```c++
 bool PEView::Init()
 {
     // ...
 
-    // Find type libraries using name of an imported library
-    vector<Ref<TypeLibrary>> typeLibs = platform->GetTypeLibrariesByName(libName);
-    for (const auto& typeLib : typeLibs)
+    // Find import libraries using name of an imported library
+    vector<Ref<ImportLibrary>> importLibs = platform->GetImportLibrariesByName(libName);
+    for (const auto& importLib : importLibs)
     {
-        if (GetTypeLibrary(typeLib->GetName())) // Don't load libraries twice
+        if (GetImportLibrary(importLib->GetName())) // Don't load libraries twice
             continue;
-        AddTypeLibrary(typeLib);
+        AddImportLibrary(importLib);
     }
 
     // Read ordinals from the libraries
     Ref<Metadata> ordinals;
-    for (const auto& typeLib : typeLibs) // Account for there possibly being zero libraries
-        ordinals = typeLib->QueryMetadata("ordinals");
+    for (const auto& importLib : importLibs) // Account for there possibly being zero libraries
+        ordinals = importLib->QueryMetadata("ordinals");
     if (ordinals && !ordinals->IsKeyValueStore()) // Sanity check in case the library's ordinals is not a dictionary
         ordinals = nullptr;
 ```
@@ -436,19 +436,19 @@ Then, when resolving imported functions from that library, it consults the ordin
     }
 ```
 
-Given this behavior, we can see that the ordinals in the Type Library are a dictionary, mapping ordinal number to function name, stored in the "ordinals" metadata key of the Type Library. We can query this from Python:
+Given this behavior, we can see that the ordinals in the Import Library are a dictionary, mapping ordinal number to function name, stored in the "ordinals" metadata key of the Import Library. We can query this from Python:
 
 ```python
-tl = Platform["windows-x86_64"].get_type_libraries_by_name("mfc42.dll")[0]
+tl = Platform["windows-x86_64"].get_import_libraries_by_name("mfc42.dll")[0]
 tl.query_metadata("ordinals")
 # [('1000', '??1CPropertyPageEx@@UEAA@XZ'), ('1001', '??1CPropertySection@@QEAA@XZ'), ('1002', '??1CPropertySet@@QEAA@XZ'), ('1003', '??1CPropertySheet@@UEAA@XZ'), ('1004', '??1CPropertySheetEx@@UEAA@XZ'), ('1005', '??1CPtrArray@@UEAA@XZ'), ('1006', '??1CPtrList@@UEAA@XZ'), ('1007', '??1CPushRoutingFrame@@QEAA@XZ'), ('1008', '??1CPushRoutingView@@QEAA@XZ'), ('1009', '??1CReBar@@UEAA@XZ'), ...]
 ```
 
-We can make our own Type Libraries include ordinal information by setting that key in their metadata when creating them:
+We can make our own Import Libraries include ordinal information by setting that key in their metadata when creating them:
 
 ```python
 # ...
-# tl = TypeLibrary.new(...)
+# tl = ImportLibrary.new(...)
 ordinals = {"0": "something", "1": "another thing", ...}
 tl.store_metadata("ordinals", ordinals)
 ```

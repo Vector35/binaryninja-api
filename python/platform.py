@@ -30,7 +30,8 @@ from . import _binaryninjacore as core
 from . import types
 from . import typeparser
 from . import callingconvention
-from . import typelibrary
+from . import importlibrary
+from . import deprecation
 from . import architecture
 from . import typecontainer
 from . import binaryview
@@ -558,24 +559,35 @@ class Platform(metaclass=_PlatformMetaClass):
 		return result
 
 	@property
-	def type_libraries(self) -> List['typelibrary.TypeLibrary']:
+	@deprecation.deprecated(deprecated_in="6.1", details="Use :py:attr:`import_libraries` instead.")
+	def type_libraries(self) -> List['importlibrary.ImportLibrary']:
+		"""Deprecated alias for :py:attr:`import_libraries`."""
+		return self.import_libraries
+
+	@property
+	def import_libraries(self) -> List['importlibrary.ImportLibrary']:
 		count = ctypes.c_ulonglong(0)
-		libs = core.BNGetPlatformTypeLibraries(self.handle, count)
-		assert libs is not None, "core.BNGetPlatformTypeLibraries returned None"
+		libs = core.BNGetPlatformImportLibraries(self.handle, count)
+		assert libs is not None, "core.BNGetPlatformImportLibraries returned None"
 		result = []
 		for i in range(0, count.value):
-			result.append(typelibrary.TypeLibrary(core.BNNewTypeLibraryReference(libs[i])))
-		core.BNFreeTypeLibraryList(libs, count.value)
+			result.append(importlibrary.ImportLibrary(core.BNNewImportLibraryReference(libs[i])))
+		core.BNFreeImportLibraryList(libs, count.value)
 		return result
 
-	def get_type_libraries_by_name(self, name) -> List['typelibrary.TypeLibrary']:
+	@deprecation.deprecated(deprecated_in="6.1", details="Use :py:func:`get_import_libraries_by_name` instead.")
+	def get_type_libraries_by_name(self, name) -> List['importlibrary.ImportLibrary']:
+		"""Deprecated alias for :py:func:`get_import_libraries_by_name`."""
+		return self.get_import_libraries_by_name(name)
+
+	def get_import_libraries_by_name(self, name) -> List['importlibrary.ImportLibrary']:
 		count = ctypes.c_ulonglong(0)
-		libs = core.BNGetPlatformTypeLibrariesByName(self.handle, name, count)
-		assert libs is not None, "core.BNGetPlatformTypeLibrariesByName returned None"
+		libs = core.BNGetPlatformImportLibrariesByName(self.handle, name, count)
+		assert libs is not None, "core.BNGetPlatformImportLibrariesByName returned None"
 		result = []
 		for i in range(0, count.value):
-			result.append(typelibrary.TypeLibrary(core.BNNewTypeLibraryReference(libs[i])))
-		core.BNFreeTypeLibraryList(libs, count.value)
+			result.append(importlibrary.ImportLibrary(core.BNNewImportLibraryReference(libs[i])))
+		core.BNFreeImportLibraryList(libs, count.value)
 		return result
 
 	def register(self, os):

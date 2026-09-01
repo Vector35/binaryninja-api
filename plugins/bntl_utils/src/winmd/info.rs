@@ -13,7 +13,7 @@ pub struct MetadataInfo {
 
 impl MetadataInfo {
     /// Partitions the metadata into a map of libraries, where each library contains types and functions
-    /// that belong to that library. This is used when mapping metadata info to type libraries.
+    /// that belong to that library. This is used when mapping metadata info to import libraries.
     pub fn partitioned(&self) -> PartitionedMetadataInfo {
         let mut result_map: HashMap<LibraryName, LibraryInfo> = HashMap::new();
 
@@ -207,7 +207,7 @@ pub struct PartitionedMetadataInfo {
 #[derive(Debug, Clone)]
 pub struct MetadataModuleInfo {
     /// The modules name on disk, this is used to determine the imported
-    /// function name when loading type information from a type library.
+    /// function name when loading type information from an import library.
     pub name: String,
 }
 
@@ -221,9 +221,9 @@ pub struct MetadataTypeInfo {
     /// this information (along with others), we will build a tree of information where each node
     /// corresponds to the namespace, and each child node corresponds to a sub-namespace. Then import
     /// info will be enumerated to determine if the type can only ever belong to a single import module
-    /// if the type is only used in a single module, we will place it in that type library. If the namespace
-    /// can reference more than one module, we will place it in a common type library named after
-    /// the namespace itself, it can only ever be referenced by another type library and as such should
+    /// if the type is only used in a single module, we will place it in that import library. If the namespace
+    /// can reference more than one module, we will place it in a common import library named after
+    /// the namespace itself, it can only ever be referenced by another import library and as such should
     /// only contain types and no functions.
     ///
     /// For more information see [`PartitionedMetadataInfo`].

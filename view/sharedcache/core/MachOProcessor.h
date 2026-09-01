@@ -22,5 +22,5 @@ public:
 
 	void ApplyHeaderDataVariables(SharedCacheMachOHeader& header);
 
-	void ApplyUnmappedLocalSymbols(const SharedCache& cache, const SharedCacheMachOHeader& header, BinaryNinja::Ref<BinaryNinja::TypeLibrary> typeLib);
+	void ApplyUnmappedLocalSymbols(const SharedCache& cache, const SharedCacheMachOHeader& header, BinaryNinja::Ref<BinaryNinja::ImportLibrary> importLib);
 };

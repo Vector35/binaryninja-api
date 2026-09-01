@@ -1,12 +1,12 @@
 use crate::input::{Input, ResolvedInput};
 use binaryninja::platform::Platform;
-use bntl_utils::process::TypeLibProcessor;
+use bntl_utils::process::ImportLibProcessor;
 use clap::Args;
 use std::path::PathBuf;
 
 #[derive(Debug, Args)]
 pub struct CreateArgs {
-    /// The name of the type library to create.
+    /// The name of the import library to create.
     ///
     /// TODO: Note that this wont be used for inputs which provide a name
     pub name: String,
@@ -43,7 +43,7 @@ impl CreateArgs {
         }
         std::fs::create_dir_all(&output_path).expect("Failed to create output directory");
 
-        let processor = TypeLibProcessor::new(&self.name, &self.platform)
+        let processor = ImportLibProcessor::new(&self.name, &self.platform)
             .with_include_directories(self.include_directories.clone())
             .with_compiler_options(self.compiler_options.clone());
         // TODO: Need progress indicator here, when downloading files.
@@ -62,25 +62,28 @@ impl CreateArgs {
         .expect("Failed to process input");
 
         if self.dry_run {
-            tracing::info!("Dry run enabled, skipping actual type library creation");
+            tracing::info!("Dry run enabled, skipping actual import library creation");
             return;
         }
 
-        for type_library in data.type_libraries {
-            // Place the type libraries in a folder with the architecture name, as that is necessary
-            // information for the user to correctly place the following type libraries in the user directory.
-            let arch_output_path = output_path.join(type_library.arch().name());
+        for import_library in data.import_libraries {
+            // Place the import libraries in a folder with the architecture name, as that is necessary
+            // information for the user to correctly place the following import libraries in the user directory.
+            let arch_output_path = output_path.join(import_library.arch().name());
             std::fs::create_dir_all(&arch_output_path)
                 .expect("Failed to create architecture directory");
-            let output_path = arch_output_path.join(format!("{}.bntl", type_library.name()));
-            if type_library.write_to_file(&output_path) {
+            let output_path = arch_output_path.join(format!("{}.bntl", import_library.name()));
+            if import_library.write_to_file(&output_path) {
                 tracing::info!(
-                    "Created type library '{}': {}",
-                    type_library.name(),
+                    "Created import library '{}': {}",
+                    import_library.name(),
                     output_path.display()
                 );
             } else {
-                tracing::error!("Failed to write type library to {}", output_path.display());
+                tracing::error!(
+                    "Failed to write import library to {}",
+                    output_path.display()
+                );
             }
         }
     }

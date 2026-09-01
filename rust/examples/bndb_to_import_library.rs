@@ -1,7 +1,7 @@
-// Usage: cargo run --example bndb_to_type_library <bndb_path> <type_library_path>
+// Usage: cargo run --example bndb_to_import_library <bndb_path> <import_library_path>
 
 use binaryninja::tracing::TracingLogListener;
-use binaryninja::types::{QualifiedName, TypeLibrary};
+use binaryninja::types::{ImportLibrary, QualifiedName};
 use tracing_indicatif::span_ext::IndicatifSpanExt;
 use tracing_indicatif::style::ProgressStyle;
 use tracing_subscriber::layer::SubscriberExt;
@@ -18,7 +18,7 @@ fn main() {
     let bndb_path_str = std::env::args().nth(1).expect("No header provided");
     let bndb_path = std::path::Path::new(&bndb_path_str);
 
-    let type_lib_path_str = std::env::args().nth(2).expect("No type library provided");
+    let type_lib_path_str = std::env::args().nth(2).expect("No import library provided");
     let type_lib_path = std::path::Path::new(&type_lib_path_str);
     let type_lib_name = type_lib_path.file_stem().unwrap().to_str().unwrap();
 
@@ -43,7 +43,7 @@ fn main() {
         })
     };
 
-    let type_lib = TypeLibrary::new(file.default_arch().unwrap(), type_lib_name);
+    let type_lib = ImportLibrary::new(file.default_arch().unwrap(), type_lib_name);
 
     let types = file.types();
     tracing::info!("Adding {} types", types.len());

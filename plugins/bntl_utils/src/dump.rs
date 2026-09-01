@@ -4,7 +4,7 @@ use binaryninja::metadata::{Metadata, MetadataType};
 use binaryninja::platform::Platform;
 use binaryninja::rc::Ref;
 use binaryninja::types::printer::TokenEscapingType;
-use binaryninja::types::{CoreTypePrinter, TypeLibrary};
+use binaryninja::types::{CoreTypePrinter, ImportLibrary};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -12,7 +12,7 @@ pub enum TILDumpError {
     #[error("Failed to create empty BinaryView")]
     ViewCreationFailed,
 
-    #[error("Type library has no associated platforms")]
+    #[error("Import library has no associated platforms")]
     NoPlatformFound,
 
     #[error("Platform '{0}' not found in Binary Ninja")]
@@ -29,23 +29,23 @@ pub enum TILDumpError {
 }
 
 pub struct TILDump {
-    /// The type libraries that are accessible to the type printer.
-    available_type_libs: Vec<Ref<TypeLibrary>>,
+    /// The import libraries that are accessible to the type printer.
+    available_import_libs: Vec<Ref<ImportLibrary>>,
 }
 
 impl TILDump {
     pub fn new() -> Self {
         Self {
-            available_type_libs: Vec::new(),
+            available_import_libs: Vec::new(),
         }
     }
 
-    pub fn with_type_libs(mut self, type_libs: Vec<Ref<TypeLibrary>>) -> Self {
-        self.available_type_libs = type_libs;
+    pub fn with_import_libs(mut self, import_libs: Vec<Ref<ImportLibrary>>) -> Self {
+        self.available_import_libs = import_libs;
         self
     }
 
-    pub fn dump(&self, type_lib: &TypeLibrary) -> Result<String, TILDumpError> {
+    pub fn dump(&self, type_lib: &ImportLibrary) -> Result<String, TILDumpError> {
         let empty_file = FileMetadata::new();
         let empty_bv = BinaryView::from_data(&empty_file, &[]);
 
@@ -61,16 +61,16 @@ impl TILDump {
 
         empty_bv.set_default_platform(&platform);
 
-        for dependency in &self.available_type_libs {
-            empty_bv.add_type_library(dependency);
+        for dependency in &self.available_import_libs {
+            empty_bv.add_import_library(dependency);
         }
-        empty_bv.add_type_library(type_lib);
+        empty_bv.add_import_library(type_lib);
 
         for ty in &type_lib.named_types() {
-            empty_bv.import_type_library_type(ty.name, None);
+            empty_bv.import_type_from_library(ty.name, None);
         }
         for obj in &type_lib.named_objects() {
-            empty_bv.import_type_library_object(obj.name, None);
+            empty_bv.import_object_from_library(obj.name, None);
         }
 
         let dep_sorted_types = empty_bv.dependency_sorted_types();
@@ -92,9 +92,9 @@ impl TILDump {
             .ok_or(TILDumpError::PrinterError)?;
 
         let mut printed_types_str = printed_types.to_string_lossy().to_string();
-        printed_types_str.push_str("\n// TYPE LIBRARY INFORMATION\n");
+        printed_types_str.push_str("\n// IMPORT LIBRARY INFORMATION\n");
 
-        let metadata_lines = type_library_metadata_to_string(type_lib)?;
+        let metadata_lines = import_library_metadata_to_string(type_lib)?;
         printed_types_str.push_str(&metadata_lines.join("\n"));
 
         empty_file.close();
@@ -102,7 +102,9 @@ impl TILDump {
     }
 }
 
-fn type_library_metadata_to_string(type_lib: &TypeLibrary) -> Result<Vec<String>, TILDumpError> {
+fn import_library_metadata_to_string(
+    type_lib: &ImportLibrary,
+) -> Result<Vec<String>, TILDumpError> {
     let mut result = Vec::new();
     for alt_name in &type_lib.alternate_names() {
         result.push(format!("// ALTERNATE NAME: {}", alt_name));

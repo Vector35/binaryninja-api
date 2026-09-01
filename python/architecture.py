@@ -34,9 +34,10 @@ from .log import log_error_for_exception, log_debug_for_exception
 from . import lowlevelil
 from . import types
 from . import databuffer
+from . import deprecation
 from . import platform
 from . import callingconvention
-from . import typelibrary
+from . import importlibrary
 from . import function
 from . import binaryview
 from . import variable
@@ -1127,15 +1128,21 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		return platform.CorePlatform._from_cache(pl)
 
 	@property
-	def type_libraries(self) -> List['typelibrary.TypeLibrary']:
-		"""Architecture type libraries"""
+	@deprecation.deprecated(deprecated_in="6.1", details="Use :py:attr:`import_libraries` instead.")
+	def type_libraries(self) -> List['importlibrary.ImportLibrary']:
+		"""Deprecated alias for :py:attr:`import_libraries`."""
+		return self.import_libraries
+
+	@property
+	def import_libraries(self) -> List['importlibrary.ImportLibrary']:
+		"""Architecture import libraries"""
 		count = ctypes.c_ulonglong(0)
 		result = []
-		handles = core.BNGetArchitectureTypeLibraries(self.handle, count)
-		assert handles is not None, "core.BNGetArchitectureTypeLibraries returned None"
+		handles = core.BNGetArchitectureImportLibraries(self.handle, count)
+		assert handles is not None, "core.BNGetArchitectureImportLibraries returned None"
 		for i in range(0, count.value):
-			result.append(typelibrary.TypeLibrary(core.BNNewTypeLibraryReference(handles[i])))
-		core.BNFreeTypeLibraryList(handles, count.value)
+			result.append(importlibrary.ImportLibrary(core.BNNewImportLibraryReference(handles[i])))
+		core.BNFreeImportLibraryList(handles, count.value)
 		return result
 
 	@property

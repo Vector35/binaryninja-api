@@ -1,15 +1,15 @@
 use binaryninja::rc::Ref;
-use binaryninja::types::{NamedTypeReference, Type, TypeClass, TypeLibrary};
+use binaryninja::types::{ImportLibrary, NamedTypeReference, Type, TypeClass};
 use std::path::Path;
 use walkdir::WalkDir;
 
-pub fn path_to_type_libraries(path: &Path) -> Vec<Ref<TypeLibrary>> {
+pub fn path_to_import_libraries(path: &Path) -> Vec<Ref<ImportLibrary>> {
     WalkDir::new(path)
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())
         .filter(|e| e.path().extension().is_some_and(|ext| ext == "bntl"))
-        .filter_map(|e| TypeLibrary::load_from_file(e.path()))
+        .filter_map(|e| ImportLibrary::load_from_file(e.path()))
         .collect::<Vec<_>>()
 }
 

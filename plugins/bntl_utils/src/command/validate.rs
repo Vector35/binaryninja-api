@@ -1,6 +1,6 @@
 use crate::command::{InputDirectoryField, OutputDirectoryField};
-use crate::helper::path_to_type_libraries;
-use crate::validate::TypeLibValidater;
+use crate::helper::path_to_import_libraries;
+use crate::validate::ImportLibValidater;
 use binaryninja::command::GlobalCommand;
 use binaryninja::interaction::Form;
 use binaryninja::platform::Platform;
@@ -9,7 +9,7 @@ pub struct Validate;
 
 impl Validate {
     pub fn execute() {
-        let mut form = Form::new("Validate Type Libraries");
+        let mut form = Form::new("Validate Import Libraries");
         form.add_field(InputDirectoryField::field());
         form.add_field(OutputDirectoryField::field());
         if !form.prompt() {
@@ -18,17 +18,18 @@ impl Validate {
         let output_dir = OutputDirectoryField::from_form(&form).unwrap();
         let input_path = InputDirectoryField::from_form(&form).unwrap();
 
-        let type_libraries = path_to_type_libraries(&input_path);
+        let import_libraries = path_to_import_libraries(&input_path);
         // TODO: Run this in parallel.
-        for type_lib in &type_libraries {
-            // Type libraries should always have at least one platform associated with them.
+        for type_lib in &import_libraries {
+            // Import libraries should always have at least one platform associated with them.
             if type_lib.platform_names().is_empty() {
-                tracing::error!("Type library {} has no platforms!", input_path.display());
+                tracing::error!("Import library {} has no platforms!", input_path.display());
                 continue;
             }
 
             // TODO: Currently we collect input path dependencies from the platform and the parent directory.
-            let validator = TypeLibValidater::new().with_type_libraries(type_libraries.clone());
+            let validator =
+                ImportLibValidater::new().with_import_libraries(import_libraries.clone());
             // Validate for every platform so that we can find issues in lesser used platforms.
             for platform_name in &type_lib.platform_names() {
                 let Some(platform) = Platform::by_name(platform_name) else {
@@ -41,7 +42,7 @@ impl Validate {
                     .validate(&type_lib);
                 if results.issues.is_empty() {
                     tracing::info!(
-                        "No issues found for type library {} on platform {}",
+                        "No issues found for import library {} on platform {}",
                         type_lib.name(),
                         platform_name
                     );

@@ -61,16 +61,16 @@ std::shared_ptr<WorkflowState> GetWorkflowState(Ref<BinaryView> view)
 	return workflowState;
 }
 
-// TODO: Add a type library cache to this workflow. (so we dont take global file lock)
-Ref<TypeLibrary> TypeLibraryFromName(BinaryView& view, const std::string& name) {
-	// Check to see if we have already loaded the type library.
-	if (auto typeLib = view.GetTypeLibrary(name))
-		return typeLib;
+// TODO: Add an import library cache to this workflow. (so we dont take global file lock)
+Ref<ImportLibrary> ImportLibraryFromName(BinaryView& view, const std::string& name) {
+	// Check to see if we have already loaded the import library.
+	if (auto importLib = view.GetImportLibrary(name))
+		return importLib;
 
 	// TODO: Use the functions platform instead.
-	auto typeLibs = view.GetDefaultPlatform()->GetTypeLibrariesByName(name);
-	if (!typeLibs.empty())
-		return typeLibs.front();
+	auto importLibs = view.GetDefaultPlatform()->GetImportLibrariesByName(name);
+	if (!importLibs.empty())
+		return importLibs.front();
 	return nullptr;
 }
 
@@ -101,24 +101,24 @@ void IdentifyStub(BinaryView& view, const SharedCacheController& controller, con
 	auto rawName = STUB_PREFIX + symbol->name;
 	auto shortName = STUB_PREFIX + demangledName;
 
-	// Try and retrieve a type for the stub function using type libraries.
+	// Try and retrieve a type for the stub function using import libraries.
 	if (const auto targetFunc = view.GetAnalysisFunction(view.GetDefaultPlatform(), stubFuncAddr))
 	{
-		// NOTE: The type library name is expected to be the image name currently.
-		// Try and pull the type from the associated type library (if there is one)
+		// NOTE: The import library name is expected to be the image name currently.
+		// Try and pull the type from the associated import library (if there is one)
 		// TODO: The demangled type here is missing a param.
 		// Ref<Type> selectedType = demangledType;
 		Ref<Type> selectedType = nullptr;
 		if (const auto image = controller.GetImageContaining(symbolAddr))
 		{
-			// The objc_msgSend trampolines live in their own libobjcMsgSend* dylibs which have no type
+			// The objc_msgSend trampolines live in their own libobjcMsgSend* dylibs which have no import
 			// library. Look in libobjc.A.dylib instead.
-			std::string typeLibName = image->name;
-			if (typeLibName.rfind("/usr/lib/objc/libobjcMsgSend", 0) == 0)
-				typeLibName = "/usr/lib/libobjc.A.dylib";
+			std::string importLibName = image->name;
+			if (importLibName.rfind("/usr/lib/objc/libobjcMsgSend", 0) == 0)
+				importLibName = "/usr/lib/libobjc.A.dylib";
 
-			if (auto typeLib = TypeLibraryFromName(view, typeLibName))
-				if (Ref<Type> libraryType = view.ImportTypeLibraryObject(typeLib, {symbol->name}); libraryType)
+			if (auto importLib = ImportLibraryFromName(view, importLibName))
+				if (Ref<Type> libraryType = view.ImportObjectFromLibrary(importLib, {symbol->name}); libraryType)
 					selectedType = libraryType;
 		}
 

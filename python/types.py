@@ -42,7 +42,7 @@ from . import binaryview
 from . import function
 from . import platform as _platform
 from . import typecontainer
-from . import typelibrary
+from . import importlibrary
 from . import typeparser
 
 QualifiedNameType = Union[Iterable[Union[str, bytes]], str, 'QualifiedName']
@@ -53,7 +53,7 @@ MembersType = Union[List['StructureMember'], List['Type'], List[Tuple['Type', st
 EnumMembersType = Union[List[Tuple[str, int]], List[str], List['EnumerationMember']]
 SomeType = Union['TypeBuilder', 'Type']
 ReturnValueOrType = Union['TypeBuilder', 'Type', 'ReturnValue']
-TypeContainerType = Union['binaryview.BinaryView', 'typelibrary.TypeLibrary']
+TypeContainerType = Union['binaryview.BinaryView', 'importlibrary.ImportLibrary']
 NameSpaceType = Optional[Union[str, List[str], 'NameSpace']]
 TypeParserResult = typeparser.TypeParserResult
 BasicTypeParserResult = typeparser.BasicTypeParserResult

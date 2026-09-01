@@ -49,7 +49,7 @@ uint64_t readValidULEB128(const uint8_t*& current, const uint8_t* end)
 	return value;
 }
 
-void ApplySymbol(Ref<BinaryView> view, Ref<TypeLibrary> typeLib, Ref<Symbol> symbol, Ref<Type> type)
+void ApplySymbol(Ref<BinaryView> view, Ref<ImportLibrary> importLib, Ref<Symbol> symbol, Ref<Type> type)
 {
 	auto symbolAddress = symbol->GetAddress();
 	auto symbolName = symbol->GetFullName();
@@ -61,11 +61,11 @@ void ApplySymbol(Ref<BinaryView> view, Ref<TypeLibrary> typeLib, Ref<Symbol> sym
 	// Define the symbol!
 	view->DefineAutoSymbol(symbol);
 
-	// Try and pull a type from a type library to apply at the symbol location.
-	// The type library type will take precedence over the passed in type.
+	// Try and pull a type from an import library to apply at the symbol location.
+	// The import library type will take precedence over the passed in type.
 	Ref<Type> selectedType = type;
-	if (typeLib)
-		selectedType = view->ImportTypeLibraryObject(typeLib, {symbolName});
+	if (importLib)
+		selectedType = view->ImportObjectFromLibrary(importLib, {symbolName});
 
 	Ref<Function> func = nullptr;
 	if (symbol->GetType() == FunctionSymbol)

@@ -12,7 +12,7 @@ pub struct OutputDirectoryField;
 
 impl OutputDirectoryField {
     pub fn field() -> FormInputField {
-        let type_lib_dir = user_directory().join("typelib");
+        let type_lib_dir = user_directory().join("importlib");
         FormInputField::DirectoryName {
             prompt: "Output Directory".to_string(),
             default: Some(type_lib_dir.to_string_lossy().to_string()),

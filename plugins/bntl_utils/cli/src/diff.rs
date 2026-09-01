@@ -1,4 +1,4 @@
-use binaryninja::types::TypeLibrary;
+use binaryninja::types::ImportLibrary;
 use bntl_utils::diff::TILDiff;
 use clap::Args;
 use std::path::PathBuf;
@@ -18,15 +18,15 @@ pub struct DiffArgs {
 impl DiffArgs {
     pub fn execute(&self) {
         let type_lib_a =
-            TypeLibrary::load_from_file(&self.file_a).expect("Failed to load type library");
+            ImportLibrary::load_from_file(&self.file_a).expect("Failed to load import library");
         let type_lib_b =
-            TypeLibrary::load_from_file(&self.file_b).expect("Failed to load type library");
+            ImportLibrary::load_from_file(&self.file_b).expect("Failed to load import library");
 
         let diff_result =
             match TILDiff::new().diff((&self.file_a, &type_lib_a), (&self.file_b, &type_lib_b)) {
                 Ok(diff_result) => diff_result,
                 Err(err) => {
-                    tracing::error!("Failed to diff type libraries: {}", err);
+                    tracing::error!("Failed to diff import libraries: {}", err);
                     return;
                 }
             };

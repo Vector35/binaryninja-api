@@ -348,7 +348,7 @@ namespace BinaryNinja
 		uint32_t Read32(uint64_t rva);
 		uint64_t Read64(uint64_t rva);
 		void AddCOFFSymbol(BNSymbolType type, const std::string& dll, const std::string& name, uint64_t addr,
-			BNSymbolBinding binding = NoBinding, uint64_t ordinal = 0, TypeLibrary* lib = nullptr);
+			BNSymbolBinding binding = NoBinding, uint64_t ordinal = 0, ImportLibrary* lib = nullptr);
 		// void COFFView::GetRelocs(BinaryReader& reader, const vector<COFFSection>& sections, vector<COFFRelocation>& result, const QualifiedName& coffRelocTypeName, const map<uint64_t, string>& symbolNames);
 
 	public:

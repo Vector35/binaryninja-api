@@ -5621,7 +5621,7 @@ namespace BinaryNinja {
 	struct TypeParserResult;
 	class Component;
 	class DebugInfo;
-	class TypeLibrary;
+	class ImportLibrary;
 	class TypeArchive;
 	class MemoryMap;
 	struct HighLevelILInstruction;
@@ -7518,7 +7518,7 @@ namespace BinaryNinja {
 			\param[out] result Reference into which the resulting type and name will be written
 			\param[out] errors Reference to a list into which any parse errors will be written
 			\param[in] typesAllowRedefinition List of types whose names are allowed to be overwritten (legacy cruft?)
-			\param[in] importDependencies If Type Library / Type Archive types should be imported during parsing
+			\param[in] importDependencies If Import Library / Type Archive types should be imported during parsing
 			\return Whether parsing was successful
 		*/
 		bool ParseTypeString(const std::string& text, QualifiedNameAndType& result, std::string& errors,
@@ -7532,7 +7532,7 @@ namespace BinaryNinja {
 			\param[out] functions Reference to a list of QualifiedNames and Types the parsed functions will be writen to
 			\param[out] errors Reference to a list into which any parse errors will be written
 			\param[in] typesAllowRedefinition List of types whose names are allowed to be overwritten (legacy cruft?)
-			\param[in] importDependencies If Type Library / Type Archive types should be imported during parsing
+			\param[in] importDependencies If Import Library / Type Archive types should be imported during parsing
 			\return Whether parsing was successful
 		*/
 		bool ParseTypeString(const std::string& text, std::map<QualifiedName, Ref<Type>>& types,
@@ -7545,7 +7545,7 @@ namespace BinaryNinja {
 			\param[out] result Reference to a TypeParserResult structure into which types, variables, and functions will be written
 			\param[out] errors Reference to a list into which any parse errors will be written
 			\param[in] typesAllowRedefinition List of types whose names are allowed to be overwritten (legacy cruft?)
-			\param[in] importDependencies If Type Library / Type Archive types should be imported during parsing
+			\param[in] importDependencies If Import Library / Type Archive types should be imported during parsing
 			\return Whether parsing was successful
 		*/
 		bool ParseTypesFromSource(const std::string& text, const std::vector<std::string>& options, const std::vector<std::string>& includeDirs, TypeParserResult& result,
@@ -7608,30 +7608,30 @@ namespace BinaryNinja {
 		*/
 		std::optional<std::pair<Ref<Platform>, QualifiedName>> LookupImportedTypePlatform(const QualifiedName& name);
 
-		/*! Make the contents of a type library available for type/import resolution
+		/*! Make the contents of an import library available for type/import resolution
 
 			\param lib library to register with the view
 		*/
-		void AddTypeLibrary(TypeLibrary* lib);
-		/*! Get the type library with the given name
+		void AddImportLibrary(ImportLibrary* lib);
+		/*! Get the import library with the given name
 
 			\param name Library name to lookup
-			\return The Type Library object, or nullptr if one has not been added with this name
+			\return The Import Library object, or nullptr if one has not been added with this name
 		*/
-		Ref<TypeLibrary> GetTypeLibrary(const std::string& name);
-		/*! Get the list of imported type libraries
+		Ref<ImportLibrary> GetImportLibrary(const std::string& name);
+		/*! Get the list of import libraries
 
-			\return All imported type libraries
+			\return All import libraries
 		*/
-		std::vector<Ref<TypeLibrary>> GetTypeLibraries();
+		std::vector<Ref<ImportLibrary>> GetImportLibraries();
 
-		/*! Recursively imports a type from the specified type library, or, if no library was explicitly provided,
-			the first type library associated with the current \c BinaryView that provides the name requested.
+		/*! Recursively imports a type from the specified import library, or, if no library was explicitly provided,
+			the first import library associated with the current \c BinaryView that provides the name requested.
 
-			This may have the impact of loading other type libraries as dependencies on other type libraries are lazily resolved
+			This may have the impact of loading other import libraries as dependencies on other import libraries are lazily resolved
 			when references to types provided by them are first encountered.
 
-			Note that the name actually inserted into the view may not match the name as it exists in the type library in
+			Note that the name actually inserted into the view may not match the name as it exists in the import library in
 			the event of a name conflict. To aid in this, the \c Type object returned is a \c NamedTypeReference to
 			the deconflicted name used.
 
@@ -7639,26 +7639,26 @@ namespace BinaryNinja {
 			\param name
 			\return A \c NamedTypeReference to the type, taking into account any renaming performed
 		*/
-		Ref<Type> ImportTypeLibraryType(Ref<TypeLibrary>& lib, const QualifiedName& name);
-		/*! Recursively imports an object from the specified type library, or, if no library was explicitly provided,
-			the first type library associated with the current \c BinaryView that provides the name requested.
+		Ref<Type> ImportTypeFromLibrary(Ref<ImportLibrary>& lib, const QualifiedName& name);
+		/*! Recursively imports an object from the specified import library, or, if no library was explicitly provided,
+			the first import library associated with the current \c BinaryView that provides the name requested.
 
-			This may have the impact of loading other type libraries as dependencies on other type libraries are lazily resolved
+			This may have the impact of loading other import libraries as dependencies on other import libraries are lazily resolved
 			when references to types provided by them are first encountered.
 
 			.. note:: If you are implementing a custom BinaryView and use this method to import object types,
-			you should then call \c RecordImportedObjectLibrary with the details of where the object is located.
+			you should then call \c RecordImportLibraryForObject with the details of where the object is located.
 
 			\param lib
 			\param name
 			\return The object type, with any interior \c NamedTypeReferences renamed as necessary to be appropriate for the current view
 		*/
-		Ref<Type> ImportTypeLibraryObject(Ref<TypeLibrary>& lib, const QualifiedName& name);
+		Ref<Type> ImportObjectFromLibrary(Ref<ImportLibrary>& lib, const QualifiedName& name);
 
 
-		/*! Recursively imports a type by guid from the current BinaryView's set of type libraries
+		/*! Recursively imports a type by guid from the current BinaryView's set of import libraries
 
-			This API is dependent on the set of TypeLibraries for the current BinaryView's Platform,
+			This API is dependent on the set of ImportLibraries for the current BinaryView's Platform,
 			having appropriate metadata to resolve the type by guid. The key "type_guids" must contain
 			a map(string(guid), string(type_name)) or
 			  map(string(guid), tuple(sting(type_name), string(library_name))).
@@ -7667,10 +7667,10 @@ namespace BinaryNinja {
 			\return The type, or nullptr if it was not found
 
 		*/
-		Ref<Type> ImportTypeLibraryTypeByGuid(const std::string& guid);
+		Ref<Type> ImportTypeFromLibraryByGuid(const std::string& guid);
 
 
-		/* Looks up the name of a type by its guid in the current BinaryView's set of type libraries
+		/* Looks up the name of a type by its guid in the current BinaryView's set of import libraries
 
 			\param guid
 			\return The QualifedName of the type or std::nullopt if it was not found
@@ -7679,49 +7679,49 @@ namespace BinaryNinja {
 
 		/*! Recursively exports \c type into \c lib as a type with name \c name
 
-			As other referenced types are encountered, they are either copied into the destination type library or
-			else the type library that provided the referenced type is added as a dependency for the destination library.
+			As other referenced types are encountered, they are either copied into the destination import library or
+			else the import library that provided the referenced type is added as a dependency for the destination library.
 
 			\param lib
 			\param name
 			\param type
 		*/
-		void ExportTypeToTypeLibrary(TypeLibrary* lib, const QualifiedName& name, Type* type);
+		void ExportTypeToImportLibrary(ImportLibrary* lib, const QualifiedName& name, Type* type);
 		/*! Recursively exports \c type into \c lib as an object with name \c name
 
-			As other referenced types are encountered, they are either copied into the destination type library or
-			else the type library that provided the referenced type is added as a dependency for the destination library.
+			As other referenced types are encountered, they are either copied into the destination import library or
+			else the import library that provided the referenced type is added as a dependency for the destination library.
 
 			\param lib
 			\param name
 			\param type
 		*/
-		void ExportObjectToTypeLibrary(TypeLibrary* lib, const QualifiedName& name, Type* type);
+		void ExportObjectToImportLibrary(ImportLibrary* lib, const QualifiedName& name, Type* type);
 
 		/*! Should be called by custom \c BinaryView implementations when they have successfully imported an object
-			from a type library (eg a symbol's type). Values recorded with this function will then be queryable via <code>LookupImportedObjectLibrary</code>.
+			from an import library (eg a symbol's type). Values recorded with this function will then be queryable via <code>LookupImportLibraryForObject</code>.
 
 			\param tgtPlatform Platform of symbol at import site
 			\param tgtAddr Address of symbol at import site
-			\param lib Type Library containing the imported type
-			\param name Name of the object in the type library
+			\param lib Import Library containing the imported type
+			\param name Name of the object in the import library
 		*/
-		void RecordImportedObjectLibrary(Platform* tgtPlatform, uint64_t tgtAddr, TypeLibrary* lib, const QualifiedName& name);
-		/*! Gives you details of which type library and name was used to determine the type of a symbol at a given address.
+		void RecordImportLibraryForObject(Platform* tgtPlatform, uint64_t tgtAddr, ImportLibrary* lib, const QualifiedName& name);
+		/*! Gives you details of which import library and name was used to determine the type of a symbol at a given address.
 
 			\param tgtPlatform Platform of symbol at import site
 			\param tgtAddr Address of symbol at import site
 			\return A pair with the library and name used, or std::nullopt if it was not imported
 		*/
-		std::optional<std::pair<Ref<TypeLibrary>, QualifiedName>> LookupImportedObjectLibrary(Platform* tgtPlatform, uint64_t tgtAddr);
+		std::optional<std::pair<Ref<ImportLibrary>, QualifiedName>> LookupImportLibraryForObject(Platform* tgtPlatform, uint64_t tgtAddr);
 
-		/*! Gives you details of which type library and name was imported to result in the given type name.
+		/*! Gives you details of which import library and name was imported to result in the given type name.
 
 			\param name Name of type in the binary view
 			\return A pair with the library and the name of the type in the library,
 			        or std::nullopt if it was not imported
 		 */
-		std::optional<std::pair<Ref<TypeLibrary>, QualifiedName>> LookupImportedTypeLibrary(const QualifiedName& name);
+		std::optional<std::pair<Ref<ImportLibrary>, QualifiedName>> LookupImportLibraryForType(const QualifiedName& name);
 		/*! Attach a given type archive to the binary view. No types will actually be associated by calling this, just they
 			will become available.
 
@@ -10451,7 +10451,7 @@ namespace BinaryNinja {
 		*/
 		Ref<Platform> GetStandalonePlatform();
 
-		std::vector<Ref<TypeLibrary>> GetTypeLibraries();
+		std::vector<Ref<ImportLibrary>> GetImportLibraries();
 
 		void AddArchitectureRedirection(Architecture* from, Architecture* to);
 	};
@@ -19744,7 +19744,7 @@ namespace BinaryNinja {
 		);
 
 		/*! Provide an option for platforms to decide whether to use
-		 * the fallback type library.
+		 * the fallback import library.
 		 *
 		 * Allows the Platform to override it to false.
 		 */
@@ -19783,9 +19783,9 @@ namespace BinaryNinja {
 		*/
 		std::map<uint32_t, QualifiedNameAndType> GetSystemCalls();
 
-		std::vector<Ref<TypeLibrary>> GetTypeLibraries();
+		std::vector<Ref<ImportLibrary>> GetImportLibraries();
 
-		std::vector<Ref<TypeLibrary>> GetTypeLibrariesByName(const std::string& name);
+		std::vector<Ref<ImportLibrary>> GetImportLibrariesByName(const std::string& name);
 
 		/*! Type Container for all registered types in the Platform.
 			\return Platform types Type Container
@@ -21886,83 +21886,83 @@ namespace BinaryNinja {
 		std::vector<DataVariable> GetReferencedDataVariables();
 	};
 
-	class TypeLibrary: public CoreRefCountObject<BNTypeLibrary, BNNewTypeLibraryReference, BNFreeTypeLibrary>
+	class ImportLibrary: public CoreRefCountObject<BNImportLibrary, BNNewImportLibraryReference, BNFreeImportLibrary>
 	{
 	public:
-		TypeLibrary(BNTypeLibrary* handle);
+		ImportLibrary(BNImportLibrary* handle);
 
-		/*! Creates an empty type library object with a random GUID and the provided name.
+		/*! Creates an empty import library object with a random GUID and the provided name.
 
 			\param arch
 			\param name
 		*/
-		TypeLibrary(Ref<Architecture> arch, const std::string& name);
+		ImportLibrary(Ref<Architecture> arch, const std::string& name);
 
-		/*! Loads a finalized type library instance from file
+		/*! Loads a finalized import library instance from file
 
 			\param path
-			\return True if the type library was successfully loaded
+			\return True if the import library was successfully loaded
 		*/
-		static Ref<TypeLibrary> LoadFromFile(const std::string& path);
+		static Ref<ImportLibrary> LoadFromFile(const std::string& path);
 
-		/*! Looks up the first type library found with a matching name. Keep in mind that names are
+		/*! Looks up the first import library found with a matching name. Keep in mind that names are
 			not necessarily unique.
 
 			\param arch
 			\param name
 			\return
 		*/
-		static Ref<TypeLibrary> LookupByName(Ref<Architecture> arch, const std::string& name);
+		static Ref<ImportLibrary> LookupByName(Ref<Architecture> arch, const std::string& name);
 
-		/*! Attempts to grab a type library associated with the provided Architecture and GUID pair
+		/*! Attempts to grab an import library associated with the provided Architecture and GUID pair
 
 			\param arch
 			\param guid
 			\return
 		*/
-		static Ref<TypeLibrary> LookupByGuid(Ref<Architecture> arch, const std::string& guid);
+		static Ref<ImportLibrary> LookupByGuid(Ref<Architecture> arch, const std::string& guid);
 
-		/*! Saves a finalized type library instance to file
+		/*! Saves a finalized import library instance to file
 
 			\param path
-			\return True if the type library was successfully written to the file
+			\return True if the import library was successfully written to the file
 		*/
 		bool WriteToFile(const std::string& path);
 
-		/*! Decompresses the type library to a JSON file
+		/*! Decompresses the import library to a JSON file
 
 			\param path
-			\return True if the type library was successfully decompressed
+			\return True if the import library was successfully decompressed
 		*/
 		bool DecompressToFile(const std::string& path);
 
-		/*! The Architecture this type library is associated with
+		/*! The Architecture this import library is associated with
 
 			\return
 		*/
 		Ref<Architecture> GetArchitecture();
 
-		/*! Returns the GUID associated with the type library
+		/*! Returns the GUID associated with the import library
 
 			\return
 		*/
 		std::string GetGuid();
 
-		/*! The primary name associated with this type library
+		/*! The primary name associated with this import library
 
 			\return
 		*/
 		std::string GetName();
 
-		/*! A list of extra names that will be considered a match by \c Platform::GetTypeLibrariesByName
+		/*! A list of extra names that will be considered a match by \c Platform::GetImportLibrariesByName
 
 			\return
 		*/
 		std::set<std::string> GetAlternateNames();
 
 		/*! The dependency name of a library is the name used to record dependencies across
-			type libraries. This allows, for example, a library with the name "musl_libc" to have
-			dependencies on it recorded as "libc_generic", allowing a type library to be used across
+			import libraries. This allows, for example, a library with the name "musl_libc" to have
+			dependencies on it recorded as "libc_generic", allowing an import library to be used across
 			multiple platforms where each has a specific libc that also provides the name "libc_generic"
 			as an \c alternate_name.
 
@@ -21970,37 +21970,37 @@ namespace BinaryNinja {
 		*/
 		std::string GetDependencyName();
 
-		/*! Returns a list of all platform names that this type library will register with during platform
+		/*! Returns a list of all platform names that this import library will register with during platform
 			type registration.
 
-			This returns strings, not Platform objects, as type libraries can be distributed with support for
+			This returns strings, not Platform objects, as import libraries can be distributed with support for
 			Platforms that may not be present.
 
 			\return
 		*/
 		std::set<std::string> GetPlatformNames();
 
-		/*! Retrieves a metadata associated with the given key stored in the type library
+		/*! Retrieves a metadata associated with the given key stored in the import library
 
 			\param key Key to query
 			\return Metadata associated with the key
 		*/
 		Ref<Metadata> QueryMetadata(const std::string& key);
 
-		/*! Sets the GUID of a type library instance that has not been finalized
+		/*! Sets the GUID of an import library instance that has not been finalized
 
 			\param guid
 		*/
 		void SetGuid(const std::string& guid);
 
-		/*! Type Container for all TYPES within the Type Library. Objects are not included.
-			The Type Container's Platform will be the first platform associated with the Type Library.
-			\return Type Library Type Container
+		/*! Type Container for all TYPES within the Import Library. Objects are not included.
+			The Type Container's Platform will be the first platform associated with the Import Library.
+			\return Import Library Type Container
 		 */
 		TypeContainer GetTypeContainer();
 
 		/*! Direct extracts a reference to a contained object -- when attempting to extract types from a library
-			into a BinaryView, consider using BinaryView::ImportTypeLibraryObject instead.
+			into a BinaryView, consider using BinaryView::ImportObjectFromLibrary instead.
 
 			\param name
 			\return
@@ -22008,88 +22008,88 @@ namespace BinaryNinja {
 		Ref<Type> GetNamedObject(const QualifiedName& name);
 
 		/*! Direct extracts a reference to a contained type -- when attempting to extract types from a library
-			into a BinaryView, consider using BinaryView::ImportTypeLibraryType() instead.
+			into a BinaryView, consider using BinaryView::ImportTypeFromLibrary() instead.
 
 			\param name
 			\return
 		*/
 		Ref<Type> GetNamedType(const QualifiedName& name);
 
-		/*! A list containing all named objects (functions, exported variables) provided by a type library
+		/*! A list containing all named objects (functions, exported variables) provided by an import library
 
 			\return
 		*/
 		std::vector<QualifiedNameAndType> GetNamedObjects();
 
-		/*! A list containing all named types provided by a type library
+		/*! A list containing all named types provided by an import library
 
 			\return
 		*/
 		std::vector<QualifiedNameAndType> GetNamedTypes();
 
-		/*! Sets the name of a type library instance that has not been finalized
+		/*! Sets the name of an import library instance that has not been finalized
 
 			\param name
 		*/
 		void SetName(const std::string& name);
 
-		/*! Adds an extra name to this type library used during library lookups and dependency resolution
+		/*! Adds an extra name to this import library used during library lookups and dependency resolution
 
 			\param alternate
 		*/
 		void AddAlternateName(const std::string& alternate);
 
-		/*! Removes an extra name from this type library used during library lookups and dependency resolution
+		/*! Removes an extra name from this import library used during library lookups and dependency resolution
 
 			\param alternate
 		*/
 		void RemoveAlternateName(const std::string& alternate);
 
-		/*! Sets the dependency name of a type library instance that has not been finalized
+		/*! Sets the dependency name of an import library instance that has not been finalized
 
 			\param depName
 		*/
 		void SetDependencyName(const std::string& depName);
 
-		/*! Clears the list of platforms associated with a type library instance that has not been finalized
+		/*! Clears the list of platforms associated with an import library instance that has not been finalized
 
 		*/
 		void ClearPlatforms();
 
-		/*! Associate a platform with a type library instance that has not been finalized.
+		/*! Associate a platform with an import library instance that has not been finalized.
 
-			This will cause the library to be searchable by Platform::GetTypeLibrariesByName when loaded.
+			This will cause the library to be searchable by Platform::GetImportLibrariesByName when loaded.
 
-			This does not have side affects until finalization of the type library.
+			This does not have side affects until finalization of the import library.
 
 			\param platform
 		*/
 		void AddPlatform(Ref<Platform> platform);
 
-		/*! Stores an object for the given key in the current type library. Objects stored using StoreMetadata can be
+		/*! Stores an object for the given key in the current import library. Objects stored using StoreMetadata can be
 			retrieved from any reference to the library.
 
 			This is primarily intended as a way to store Platform specific information relevant to BinaryView implementations;
-			for example the PE BinaryViewType uses type library metadata to retrieve ordinal information, when available.
+			for example the PE BinaryViewType uses import library metadata to retrieve ordinal information, when available.
 
 			\param key Key value to associate the Metadata object with
 			\param value Object to store.
 		*/
 		void StoreMetadata(const std::string& key, Ref<Metadata> value);
 
-		/*! Removes the metadata associated with key from the current type library.
+		/*! Removes the metadata associated with key from the current import library.
 
 			\param key Key associated with metadata
 		*/
 		void RemoveMetadata(const std::string& key);
 
-		/*! Returns a base Metadata object associated with the current type library.
+		/*! Returns a base Metadata object associated with the current import library.
 
-			\return Metadata object associated with the type library
+			\return Metadata object associated with the import library
 		*/
 		Ref<Metadata> GetMetadata();
 
-		/*! Directly inserts a named object into the type library's object store.
+		/*! Directly inserts a named object into the import library's object store.
 			This is not done recursively, so care should be taken that types referring to other types
 			through NamedTypeReferences are already appropriately prepared.
 
@@ -22102,7 +22102,7 @@ namespace BinaryNinja {
 		*/
 		void AddNamedObject(const QualifiedName& name, Ref<Type> type);
 
-		/*! Directly inserts a named object into the type library's object store.
+		/*! Directly inserts a named object into the import library's object store.
 			This is not done recursively, so care should be taken that types referring to other types
 			through NamedTypeReferences are already appropriately prepared.
 
@@ -22116,7 +22116,7 @@ namespace BinaryNinja {
 		void AddNamedType(const QualifiedName& name, Ref<Type> type);
 
 		/*! Manually flag NamedTypeReferences to the given QualifiedName as originating from another source
-			TypeLibrary with the given dependency name.
+			ImportLibrary with the given dependency name.
 
 			\warning Use this api with extreme caution.
 
@@ -22125,13 +22125,13 @@ namespace BinaryNinja {
 		*/
 		void AddNamedTypeSource(const QualifiedName& name, const std::string& source);
 
-		/*! Flags a newly created type library instance as finalized and makes it available for Platform and Architecture
-			type library searches
+		/*! Flags a newly created import library instance as finalized and makes it available for Platform and Architecture
+			import library searches
 
 		*/
 		void Finalize();
 
-		/*! Make a created or loaded Type Library available for Platforms to use when loading binaries.
+		/*! Make a created or loaded Import Library available for Platforms to use when loading binaries.
 
 		*/
 		void Register();
@@ -22548,13 +22548,13 @@ namespace BinaryNinja {
 		 */
 		TypeContainer(Ref<BinaryView> data);
 
-		/*! Get the Type Container for a Type Library
+		/*! Get the Type Container for an Import Library
 
 			\note The Platform for the Type Container will be the first Platform
-			      associated with the Type Library
-			\param library TypeLibrary source
+			      associated with the Import Library
+			\param library ImportLibrary source
 		 */
-		TypeContainer(Ref<TypeLibrary> library);
+		TypeContainer(Ref<ImportLibrary> library);
 
 
 		/*! Get the Type Container for a Type Archive
@@ -22611,7 +22611,7 @@ namespace BinaryNinja {
 		bool IsMutable() const;
 
 		/*! Get the Platform object associated with this Type Container. All Type Containers
-			have exactly one associated Platform (as opposed to, e.g. Type Libraries).
+			have exactly one associated Platform (as opposed to, e.g. Import Libraries).
 
 			\return Associated Platform object
 		 */
@@ -22730,7 +22730,7 @@ namespace BinaryNinja {
 			with knowledge of the types in the Type Container.
 
 			\param source Source code to parse
-			\param importDependencies If Type Library / Type Archive types should be imported during parsing
+			\param importDependencies If Import Library / Type Archive types should be imported during parsing
 			\param result Reference into which the resulting type and name will be written
 			\param errors Reference to a list into which any parse errors will be written
 			\return True if parsing was successful
@@ -22760,7 +22760,7 @@ namespace BinaryNinja {
 			\param options Optional string arguments to pass as options, e.g. command line arguments
 			\param includeDirs Optional list of directories to include in the header search path
 			\param autoTypeSource Optional source of types if used for automatically generated types
-			\param importDependencies If Type Library / Type Archive types should be imported during parsing
+			\param importDependencies If Import Library / Type Archive types should be imported during parsing
 			\param result Reference to structure into which the results will be written
 			\param errors Reference to a list into which any parse errors will be written
 			\return True if successful

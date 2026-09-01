@@ -4746,44 +4746,44 @@ std::optional<std::pair<Ref<Platform>, QualifiedName>> BinaryView::LookupImporte
 }
 
 
-void BinaryView::AddTypeLibrary(TypeLibrary* lib)
+void BinaryView::AddImportLibrary(ImportLibrary* lib)
 {
-	BNAddBinaryViewTypeLibrary(m_object, lib->GetObject());
+	BNAddBinaryViewImportLibrary(m_object, lib->GetObject());
 }
 
 
-Ref<TypeLibrary> BinaryView::GetTypeLibrary(const std::string& name)
+Ref<ImportLibrary> BinaryView::GetImportLibrary(const std::string& name)
 {
-	BNTypeLibrary* lib = BNGetBinaryViewTypeLibrary(m_object, name.c_str());
+	BNImportLibrary* lib = BNGetBinaryViewImportLibrary(m_object, name.c_str());
 	if (!lib)
 		return nullptr;
-	return new TypeLibrary(lib);
+	return new ImportLibrary(lib);
 }
 
 
-std::vector<Ref<TypeLibrary>> BinaryView::GetTypeLibraries()
+std::vector<Ref<ImportLibrary>> BinaryView::GetImportLibraries()
 {
 	size_t count;
-	BNTypeLibrary** libs = BNGetBinaryViewTypeLibraries(m_object, &count);
+	BNImportLibrary** libs = BNGetBinaryViewImportLibraries(m_object, &count);
 
-	vector<Ref<TypeLibrary>> result;
+	vector<Ref<ImportLibrary>> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; ++i)
 	{
-		result.push_back(new TypeLibrary(BNNewTypeLibraryReference(libs[i])));
+		result.push_back(new ImportLibrary(BNNewImportLibraryReference(libs[i])));
 	}
 
-	BNFreeTypeLibraryList(libs, count);
+	BNFreeImportLibraryList(libs, count);
 	return result;
 }
 
 
-Ref<Type> BinaryView::ImportTypeLibraryType(Ref<TypeLibrary>& lib, const QualifiedName& name)
+Ref<Type> BinaryView::ImportTypeFromLibrary(Ref<ImportLibrary>& lib, const QualifiedName& name)
 {
 	BNQualifiedName apiName = name.GetAPIObject();
-	BNTypeLibrary* apiLib = lib ? lib->GetObject() : nullptr;
-	BNType* result = BNBinaryViewImportTypeLibraryType(m_object, &apiLib, &apiName);
-	lib = apiLib ? new TypeLibrary(apiLib) : nullptr;
+	BNImportLibrary* apiLib = lib ? lib->GetObject() : nullptr;
+	BNType* result = BNBinaryViewImportTypeFromLibrary(m_object, &apiLib, &apiName);
+	lib = apiLib ? new ImportLibrary(apiLib) : nullptr;
 	QualifiedName::FreeAPIObject(&apiName);
 	if (!result)
 		return nullptr;
@@ -4791,12 +4791,12 @@ Ref<Type> BinaryView::ImportTypeLibraryType(Ref<TypeLibrary>& lib, const Qualifi
 }
 
 
-Ref<Type> BinaryView::ImportTypeLibraryObject(Ref<TypeLibrary>& lib, const QualifiedName& name)
+Ref<Type> BinaryView::ImportObjectFromLibrary(Ref<ImportLibrary>& lib, const QualifiedName& name)
 {
 	BNQualifiedName apiName = name.GetAPIObject();
-	BNTypeLibrary* apiLib = lib ? lib->GetObject() : nullptr;
-	BNType* result = BNBinaryViewImportTypeLibraryObject(m_object, &apiLib, &apiName);
-	lib = apiLib ? new TypeLibrary(apiLib) : nullptr;
+	BNImportLibrary* apiLib = lib ? lib->GetObject() : nullptr;
+	BNType* result = BNBinaryViewImportObjectFromLibrary(m_object, &apiLib, &apiName);
+	lib = apiLib ? new ImportLibrary(apiLib) : nullptr;
 	QualifiedName::FreeAPIObject(&apiName);
 	if (!result)
 		return nullptr;
@@ -4804,9 +4804,9 @@ Ref<Type> BinaryView::ImportTypeLibraryObject(Ref<TypeLibrary>& lib, const Quali
 }
 
 
-Ref<Type> BinaryView::ImportTypeLibraryTypeByGuid(const string& guid)
+Ref<Type> BinaryView::ImportTypeFromLibraryByGuid(const string& guid)
 {
-	BNType* result = BNBinaryViewImportTypeLibraryTypeByGuid(m_object, guid.c_str());
+	BNType* result = BNBinaryViewImportTypeFromLibraryByGuid(m_object, guid.c_str());
 	if (!result)
 		return nullptr;
 	return new Type(result);
@@ -4825,54 +4825,54 @@ std::optional<QualifiedName> BinaryView::GetTypeNameByGuid(const std::string& gu
 }
 
 
-void BinaryView::ExportTypeToTypeLibrary(TypeLibrary* lib, const QualifiedName& name, Type* type)
+void BinaryView::ExportTypeToImportLibrary(ImportLibrary* lib, const QualifiedName& name, Type* type)
 {
 	BNQualifiedName apiName = name.GetAPIObject();
-	BNBinaryViewExportTypeToTypeLibrary(m_object, lib->GetObject(), &apiName, type->GetObject());
+	BNBinaryViewExportTypeToImportLibrary(m_object, lib->GetObject(), &apiName, type->GetObject());
 	QualifiedName::FreeAPIObject(&apiName);
 }
 
 
-void BinaryView::ExportObjectToTypeLibrary(TypeLibrary* lib, const QualifiedName& name, Type* type)
+void BinaryView::ExportObjectToImportLibrary(ImportLibrary* lib, const QualifiedName& name, Type* type)
 {
 	BNQualifiedName apiName = name.GetAPIObject();
-	BNBinaryViewExportObjectToTypeLibrary(m_object, lib->GetObject(), &apiName, type->GetObject());
+	BNBinaryViewExportObjectToImportLibrary(m_object, lib->GetObject(), &apiName, type->GetObject());
 	QualifiedName::FreeAPIObject(&apiName);
 }
 
 
-void BinaryView::RecordImportedObjectLibrary(Platform* tgtPlatform, uint64_t tgtAddr, TypeLibrary* lib, const QualifiedName& name)
+void BinaryView::RecordImportLibraryForObject(Platform* tgtPlatform, uint64_t tgtAddr, ImportLibrary* lib, const QualifiedName& name)
 {
 	BNQualifiedName apiName = name.GetAPIObject();
-	BNBinaryViewRecordImportedObjectLibrary(m_object, tgtPlatform->m_object, tgtAddr, lib->GetObject(), &apiName);
+	BNBinaryViewRecordImportLibraryForObject(m_object, tgtPlatform->m_object, tgtAddr, lib->GetObject(), &apiName);
 	QualifiedName::FreeAPIObject(&apiName);
 }
 
 
-std::optional<std::pair<Ref<TypeLibrary>, QualifiedName>> BinaryView::LookupImportedObjectLibrary(Platform* tgtPlatform, uint64_t tgtAddr)
+std::optional<std::pair<Ref<ImportLibrary>, QualifiedName>> BinaryView::LookupImportLibraryForObject(Platform* tgtPlatform, uint64_t tgtAddr)
 {
-	BNTypeLibrary* resultLib;
+	BNImportLibrary* resultLib;
 	BNQualifiedName resultName;
-	if (!BNBinaryViewLookupImportedObjectLibrary(m_object, tgtPlatform->m_object, tgtAddr, &resultLib, &resultName))
+	if (!BNBinaryViewLookupImportLibraryForObject(m_object, tgtPlatform->m_object, tgtAddr, &resultLib, &resultName))
 		return std::nullopt;
 	QualifiedName name = QualifiedName::FromAPIObject(&resultName);
 	BNFreeQualifiedName(&resultName);
-	return std::make_pair(new TypeLibrary(resultLib), name);
+	return std::make_pair(new ImportLibrary(resultLib), name);
 }
 
 
-std::optional<std::pair<Ref<TypeLibrary>, QualifiedName>> BinaryView::LookupImportedTypeLibrary(const QualifiedName& name)
+std::optional<std::pair<Ref<ImportLibrary>, QualifiedName>> BinaryView::LookupImportLibraryForType(const QualifiedName& name)
 {
-	BNTypeLibrary* resultLib;
+	BNImportLibrary* resultLib;
 	BNQualifiedName resultName;
 	BNQualifiedName sourceName = name.GetAPIObject();
-	bool result = BNBinaryViewLookupImportedTypeLibrary(m_object, &sourceName, &resultLib, &resultName);
+	bool result = BNBinaryViewLookupImportLibraryForType(m_object, &sourceName, &resultLib, &resultName);
 	QualifiedName::FreeAPIObject(&sourceName);
 	if (!result)
 		return std::nullopt;
 	QualifiedName targetName = QualifiedName::FromAPIObject(&resultName);
 	BNFreeQualifiedName(&resultName);
-	return std::make_pair(new TypeLibrary(resultLib), targetName);
+	return std::make_pair(new ImportLibrary(resultLib), targetName);
 }
 
 

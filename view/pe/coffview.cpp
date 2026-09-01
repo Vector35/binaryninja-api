@@ -1464,7 +1464,7 @@ uint64_t COFFView::Read64(uint64_t rva)
 
 
 void COFFView::AddCOFFSymbol(BNSymbolType type, const string& dll, const string& name, uint64_t addr,
-	BNSymbolBinding binding, uint64_t ordinal, TypeLibrary* lib)
+	BNSymbolBinding binding, uint64_t ordinal, ImportLibrary* lib)
 {
 	// If name is empty, symbol is not valid
 	if (name.size() == 0)
@@ -1509,12 +1509,12 @@ void COFFView::AddCOFFSymbol(BNSymbolType type, const string& dll, const string&
 	if (lib && ((type == ImportAddressSymbol) || (type == ImportedDataSymbol)))
 	{
 		QualifiedName n(name);
-		Ref<TypeLibrary> appliedLib = lib;
-		symbolTypeRef = ImportTypeLibraryObject(appliedLib, n);
+		Ref<ImportLibrary> appliedLib = lib;
+		symbolTypeRef = ImportObjectFromLibrary(appliedLib, n);
 		if (symbolTypeRef && type != ExternalSymbol)
 		{
-			m_logger->LogDebug("COFF: type library '%s' found hit for '%s'", lib->GetGuid().c_str(), name.c_str());
-			RecordImportedObjectLibrary(GetDefaultPlatform(), m_imageBase + addr, appliedLib, n);
+			m_logger->LogDebug("COFF: import library '%s' found hit for '%s'", lib->GetGuid().c_str(), name.c_str());
+			RecordImportLibraryForObject(GetDefaultPlatform(), m_imageBase + addr, appliedLib, n);
 		}
 	}
 

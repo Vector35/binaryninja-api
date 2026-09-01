@@ -12,22 +12,22 @@ LibrariesWidget::LibrariesWidget(QWidget* parent, BinaryViewRef bv)
 	if (libMetadata && libFoundMetadata && libMetadata->IsStringList() && libFoundMetadata->IsStringList() && libMetadata->Size() == libFoundMetadata->Size())
 	{
 		const auto libNames = libMetadata->GetStringList();
-		const auto typeLibPaths = libFoundMetadata->GetStringList();
+		const auto importLibPaths = libFoundMetadata->GetStringList();
 		for (size_t i = 0; i < libNames.size(); ++i)
 		{
 			auto lib = libNames[i];
-			auto typeLib = typeLibPaths[i];
+			auto importLib = importLibPaths[i];
 			auto libWidget = new QLabel(QString::fromStdString("  " + lib));
 			QString toolTip;
 			auto style = QPalette(palette());
-			if (typeLib.empty())
+			if (importLib.empty())
 			{
-				toolTip = "Type library: not found";
+				toolTip = "Import library: not found";
 				style.setColor(QPalette::WindowText, getThemeColor(NotPresentColor));
 			}
 			else
 			{
-				toolTip = QString::fromStdString("Type library: " + typeLib);
+				toolTip = QString::fromStdString("Import library: " + importLib);
 			}
 			libWidget->setToolTip(toolTip);
 			libWidget->setPalette(style);

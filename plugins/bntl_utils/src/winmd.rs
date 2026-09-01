@@ -1,4 +1,4 @@
-//! Import windows metadata types into a Binary Ninja type library.
+//! Import windows metadata types into a Binary Ninja import library.
 
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
@@ -10,8 +10,9 @@ use binaryninja::platform::Platform;
 use binaryninja::qualified_name::QualifiedName;
 use binaryninja::rc::Ref;
 use binaryninja::types::{
-    EnumerationBuilder, FunctionParameter, MemberAccess, MemberScope, NamedTypeReference,
-    NamedTypeReferenceClass, StructureBuilder, StructureType, Type, TypeBuilder, TypeLibrary,
+    EnumerationBuilder, FunctionParameter, ImportLibrary, MemberAccess, MemberScope,
+    NamedTypeReference, NamedTypeReferenceClass, StructureBuilder, StructureType, Type,
+    TypeBuilder,
 };
 
 use info::{LibraryName, MetadataFunctionInfo, MetadataInfo, MetadataTypeInfo, MetadataTypeKind};
@@ -34,7 +35,7 @@ pub enum ImportError {
 #[derive(Debug)]
 pub struct WindowsMetadataImporter {
     info: MetadataInfo,
-    // TODO: If we can replace / add this with type libraries we can make multi-pass importer.
+    // TODO: If we can replace / add this with import libraries we can make multi-pass importer.
     type_lookup: HashMap<(String, String), MetadataTypeInfo>,
     address_size: usize,
     integer_size: usize,
@@ -95,7 +96,7 @@ impl WindowsMetadataImporter {
         }
     }
 
-    pub fn import(&self, platform: &Platform) -> Result<Vec<Ref<TypeLibrary>>, ImportError> {
+    pub fn import(&self, platform: &Platform) -> Result<Vec<Ref<ImportLibrary>>, ImportError> {
         // TODO: We need to take all of these enums and figure out where to put them.
         let mut test = self.info.clone();
         let constant_enums = test.create_constant_enums();
@@ -108,11 +109,11 @@ impl WindowsMetadataImporter {
             let type_lib_name = match name {
                 LibraryName::Module(module_name) => module_name.clone(),
                 LibraryName::Namespace(ns_name) => {
-                    // TODO: We might need to do something different for namespaced type libraries in the future.
+                    // TODO: We might need to do something different for namespaced import libraries in the future.
                     ns_name.clone()
                 }
             };
-            let til = TypeLibrary::new(platform.arch(), &type_lib_name);
+            let til = ImportLibrary::new(platform.arch(), &type_lib_name);
             til.add_platform(platform);
             til.set_dependency_name(&type_lib_name);
             for ty in &info.metadata.types {
@@ -125,7 +126,7 @@ impl WindowsMetadataImporter {
                 let qualified_name = QualifiedName::from(name.clone());
                 match library_name {
                     LibraryName::Namespace(source) => {
-                        // TODO: We might need to do something different for namespaced type libraries in the future.
+                        // TODO: We might need to do something different for namespaced import libraries in the future.
                         til.add_type_source(qualified_name, source);
                     }
                     LibraryName::Module(source) => {
@@ -142,7 +143,7 @@ impl WindowsMetadataImporter {
 
     pub fn import_function(
         &self,
-        til: &TypeLibrary,
+        til: &ImportLibrary,
         func: &MetadataFunctionInfo,
     ) -> Result<(), ImportError> {
         // TODO: Handle ordinals? Ordinals exist in binaries that need to be parsed, maybe we
@@ -155,7 +156,7 @@ impl WindowsMetadataImporter {
 
     pub fn import_type(
         &self,
-        til: &TypeLibrary,
+        til: &ImportLibrary,
         type_info: &MetadataTypeInfo,
     ) -> Result<(), ImportError> {
         let qualified_name = QualifiedName::from(type_info.name.clone());
@@ -294,7 +295,7 @@ impl WindowsMetadataImporter {
                 Ok(Type::function(&return_ty, bn_params, *is_vararg))
             }
             MetadataTypeKind::Reference { name, namespace } => {
-                // We are required to set the ID here since type libraries seem to only look up through
+                // We are required to set the ID here since import libraries seem to only look up through
                 // the ID, and never fall back to name lookup. This is strange considering you must also
                 // set the types source to the given library, which seems counterintuitive.
                 // TODO: Add kind to ntr.
@@ -428,7 +429,7 @@ impl WindowsMetadataImporter {
             }
             MetadataTypeKind::Reference { name, namespace } => {
                 let Some(ty_info) = self.type_lookup.get(&(namespace.clone(), name.clone())) else {
-                    // TODO: Failed to find it in local type lookup, try type libraries?
+                    // TODO: Failed to find it in local type lookup, try import libraries?
                     // tracing::error!(
                     //     "Failed to find type '{}' when looking up type alignment for reference",
                     //     name
@@ -553,9 +554,9 @@ mod tests {
         let importer = WindowsMetadataImporter::new_with_info(info);
         let x86 = CoreArchitecture::by_name("x86").expect("No x86 architecture");
         let platform = Platform::by_name("windows-x86").expect("No windows-x86 platform");
-        let type_libraries = importer.import(&platform).expect("Failed to import types");
-        assert_eq!(type_libraries.len(), 1);
-        let til = type_libraries.first().expect("No type libraries");
+        let import_libraries = importer.import(&platform).expect("Failed to import types");
+        assert_eq!(import_libraries.len(), 1);
+        let til = import_libraries.first().expect("No import libraries");
         assert_eq!(til.named_types().len(), 1);
         let first_ty = til
             .named_types()

@@ -1,6 +1,6 @@
 use crate::command::OutputDirectoryField;
 use crate::diff::TILDiff;
-use crate::helper::path_to_type_libraries;
+use crate::helper::path_to_import_libraries;
 use binaryninja::background_task::BackgroundTask;
 use binaryninja::command::GlobalCommand;
 use binaryninja::interaction::{Form, FormInputField};
@@ -47,7 +47,7 @@ pub struct Diff;
 
 impl Diff {
     pub fn execute() {
-        let mut form = Form::new("Diff type libraries");
+        let mut form = Form::new("Diff import libraries");
         form.add_field(InputFileAField::field());
         form.add_field(InputFileBField::field());
         form.add_field(OutputDirectoryField::field());
@@ -58,10 +58,10 @@ impl Diff {
         let b_path = InputFileBField::from_form(&form).unwrap();
         let output_dir = OutputDirectoryField::from_form(&form).unwrap();
 
-        let bg_task = BackgroundTask::new("Diffing type libraries...", true).enter();
+        let bg_task = BackgroundTask::new("Diffing import libraries...", true).enter();
 
-        let b_libraries = path_to_type_libraries(&a_path);
-        let a_libraries = path_to_type_libraries(&b_path);
+        let b_libraries = path_to_import_libraries(&a_path);
+        let a_libraries = path_to_import_libraries(&b_path);
         // TODO: Make this parallel
         for a_lib in &a_libraries {
             for b_lib in &b_libraries {
@@ -80,7 +80,7 @@ impl Diff {
                 ) {
                     Ok(diff_result) => diff_result,
                     Err(err) => {
-                        tracing::error!("Failed to diff type libraries: {}", err);
+                        tracing::error!("Failed to diff import libraries: {}", err);
                         continue;
                     }
                 };

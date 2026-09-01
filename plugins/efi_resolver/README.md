@@ -90,7 +90,7 @@ to a top-level `efi.c` file and `#include` the file in the platform-specific `*.
 
 To test that C source files containing custom EFI platform types are in the correct format, use the `bv.platform.parse_types_from_source_file` API.
 
-Alternatively, user types can be supplied manually from type libraries, header files, or any other mechanism supported
+Alternatively, user types can be supplied manually from import libraries, header files, or any other mechanism supported
 by Binary Ninja. Just ensure that the name for types associated with GUIDs match what is in `efi-guids.json`. Protocol
 GUID names in `efi-guids.json` should end with `_PROTOCOL_GUID` and the prefix must be identical to the associated
 protocol type name. For example, if the GUID is named `EFI_EXAMPLE_PROTOCOL_GUID`, EFI Resolver will attempt to

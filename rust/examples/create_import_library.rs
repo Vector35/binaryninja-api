@@ -1,8 +1,8 @@
-// Usage: cargo run --example create_type_library <header_file_path> <platform> <type_library_path>
+// Usage: cargo run --example create_import_library <header_file_path> <platform> <import_library_path>
 
 use binaryninja::platform::Platform;
 use binaryninja::tracing::TracingLogListener;
-use binaryninja::types::{CoreTypeParser, TypeLibrary, TypeParser};
+use binaryninja::types::{CoreTypeParser, ImportLibrary, TypeParser};
 
 fn main() {
     tracing_subscriber::fmt::init();
@@ -11,8 +11,8 @@ fn main() {
     let header_path_str = std::env::args().nth(1).expect("No header provided");
     let header_path = std::path::Path::new(&header_path_str);
     let header_name = header_path.file_stem().unwrap().to_str().unwrap();
-    let type_lib_plat_str = std::env::args().nth(2).expect("No type library provided");
-    let type_lib_path_str = std::env::args().nth(3).expect("No type library provided");
+    let type_lib_plat_str = std::env::args().nth(2).expect("No import library provided");
+    let type_lib_path_str = std::env::args().nth(3).expect("No import library provided");
     let type_lib_path = std::path::Path::new(&type_lib_path_str);
     let type_lib_name = type_lib_path.file_stem().unwrap().to_str().unwrap();
 
@@ -24,7 +24,7 @@ fn main() {
 
     let type_lib_plat = Platform::by_name(&type_lib_plat_str).expect("Invalid platform");
 
-    let type_lib = TypeLibrary::new(type_lib_plat.arch(), type_lib_name);
+    let type_lib = ImportLibrary::new(type_lib_plat.arch(), type_lib_name);
 
     let plat_type_container = type_lib_plat.type_container();
     let parser = CoreTypeParser::default();
@@ -51,7 +51,7 @@ fn main() {
     }
 
     tracing::info!(
-        "Created type library with {} types and {} functions",
+        "Created import library with {} types and {} functions",
         type_lib.named_types().len(),
         type_lib.named_objects().len()
     );

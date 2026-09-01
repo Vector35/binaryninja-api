@@ -1,5 +1,5 @@
 use binaryninja::platform::Platform;
-use bntl_utils::validate::{TypeLibValidater, ValidateIssue};
+use bntl_utils::validate::{ImportLibValidater, ValidateIssue};
 use clap::Args;
 use rayon::prelude::*;
 use std::collections::HashMap;
@@ -7,9 +7,9 @@ use std::path::PathBuf;
 
 #[derive(Debug, Args)]
 pub struct ValidateArgs {
-    /// Path to the directory containing the type libraries to validate.
+    /// Path to the directory containing the import libraries to validate.
     ///
-    /// This must contain all the type libraries referencable.
+    /// This must contain all the import libraries referencable.
     pub input: PathBuf,
     /// Dump validation results to the directory specified.
     #[clap(short, long)]
@@ -22,8 +22,8 @@ impl ValidateArgs {
             std::fs::create_dir_all(output_dir).expect("Failed to create output directory");
         }
 
-        // TODO: For now we just pass all the type libraries in the containing input directory.
-        let type_libs = bntl_utils::helper::path_to_type_libraries(&self.input);
+        // TODO: For now we just pass all the import libraries in the containing input directory.
+        let type_libs = bntl_utils::helper::path_to_import_libraries(&self.input);
         type_libs.par_iter().for_each(|type_lib| {
             // We run validation per platform. This is to make sure that if we depend on platform
             // types that they exist in each one of the specified platforms, not just one of them.
@@ -32,8 +32,8 @@ impl ValidateArgs {
 
             for platform in &available_platforms {
                 let platform = Platform::by_name(platform).expect("Failed to load platform");
-                let mut ctx = TypeLibValidater::new()
-                    .with_type_libraries(type_libs.clone())
+                let mut ctx = ImportLibValidater::new()
+                    .with_import_libraries(type_libs.clone())
                     .with_platform(&platform);
                 let result = ctx.validate(&type_lib);
                 for issue in &result.issues {

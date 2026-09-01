@@ -845,4 +845,4 @@ Other topics not covered here:
 
 ---
 
-Continue to [Part 3: Platform Support](archplatform-platform.md), where we add calling conventions, type libraries, and function signatures.
+Continue to [Part 3: Platform Support](archplatform-platform.md), where we add calling conventions, import libraries, and function signatures.

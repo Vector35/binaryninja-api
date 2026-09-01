@@ -37,14 +37,14 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 187
+#define BN_CURRENT_CORE_ABI_VERSION 188
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
 // will require rebuilding. The minimum version is increased when there are
 // incompatible changes that break binary compatibility, such as changes to
 // existing types or functions.
-#define BN_MINIMUM_CORE_ABI_VERSION 187
+#define BN_MINIMUM_CORE_ABI_VERSION 188
 
 #define BN_DEMANGLER_MSVC "MS"
 #define BN_DEMANGLER_GNU3 "GNU3"
@@ -275,8 +275,8 @@ extern "C"
 	typedef struct BNHighLevelILTokenEmitter BNHighLevelILTokenEmitter;
 	typedef struct BNType BNType;
 	typedef struct BNTypeBuilder BNTypeBuilder;
-	typedef struct BNTypeLibrary BNTypeLibrary;
-	typedef struct BNTypeLibraryMapping BNTypeLibraryMapping;
+	typedef struct BNImportLibrary BNImportLibrary;
+	typedef struct BNImportLibraryMapping BNImportLibraryMapping;
 	typedef struct BNFieldResolutionInfo BNFieldResolutionInfo;
 	typedef struct BNStructure BNStructure;
 	typedef struct BNStructureBuilder BNStructureBuilder;
@@ -3909,7 +3909,7 @@ extern "C"
 		AnalysisTypeContainerType,
 		AnalysisAutoTypeContainerType,
 		AnalysisUserTypeContainerType,
-		TypeLibraryTypeContainerType,
+		ImportLibraryTypeContainerType,
 		TypeArchiveTypeContainerType,
 		DebugInfoTypeContainerType,
 		PlatformTypeContainerType,
@@ -7718,91 +7718,91 @@ extern "C"
 	BINARYNINJACOREAPI bool BNGetHighLevelILDerivedStringReferenceForExpr(
 		BNHighLevelILFunction* func, size_t expr, BNDerivedString* out);
 
-	// Type Libraries
-	BINARYNINJACOREAPI BNTypeLibrary* BNNewTypeLibrary(BNArchitecture* arch, const char* name);
-	BINARYNINJACOREAPI BNTypeLibrary* BNNewTypeLibraryReference(BNTypeLibrary* lib);
-	BINARYNINJACOREAPI BNTypeLibrary* BNDuplicateTypeLibrary(BNTypeLibrary* lib);
-	BINARYNINJACOREAPI BNTypeLibrary* BNLoadTypeLibraryFromFile(const char* path);
-	BINARYNINJACOREAPI bool BNTypeLibraryDecompressToFile(BNTypeLibrary* lib, const char* output);
-	BINARYNINJACOREAPI void BNFreeTypeLibrary(BNTypeLibrary* lib);
+	// Import Libraries
+	BINARYNINJACOREAPI BNImportLibrary* BNNewImportLibrary(BNArchitecture* arch, const char* name);
+	BINARYNINJACOREAPI BNImportLibrary* BNNewImportLibraryReference(BNImportLibrary* lib);
+	BINARYNINJACOREAPI BNImportLibrary* BNDuplicateImportLibrary(BNImportLibrary* lib);
+	BINARYNINJACOREAPI BNImportLibrary* BNLoadImportLibraryFromFile(const char* path);
+	BINARYNINJACOREAPI bool BNImportLibraryDecompressToFile(BNImportLibrary* lib, const char* output);
+	BINARYNINJACOREAPI void BNFreeImportLibrary(BNImportLibrary* lib);
 
-	BINARYNINJACOREAPI BNTypeLibrary* BNLookupTypeLibraryByName(BNArchitecture* arch, const char* name);
-	BINARYNINJACOREAPI BNTypeLibrary* BNLookupTypeLibraryByGuid(BNArchitecture* arch, const char* guid);
+	BINARYNINJACOREAPI BNImportLibrary* BNLookupImportLibraryByName(BNArchitecture* arch, const char* name);
+	BINARYNINJACOREAPI BNImportLibrary* BNLookupImportLibraryByGuid(BNArchitecture* arch, const char* guid);
 
-	BINARYNINJACOREAPI BNTypeLibrary** BNGetArchitectureTypeLibraries(BNArchitecture* arch, size_t* count);
-	BINARYNINJACOREAPI void BNFreeTypeLibraryList(BNTypeLibrary** lib, size_t count);
+	BINARYNINJACOREAPI BNImportLibrary** BNGetArchitectureImportLibraries(BNArchitecture* arch, size_t* count);
+	BINARYNINJACOREAPI void BNFreeImportLibraryList(BNImportLibrary** lib, size_t count);
 
-	BINARYNINJACOREAPI bool BNFinalizeTypeLibrary(BNTypeLibrary* lib);
-	BINARYNINJACOREAPI void BNRegisterTypeLibrary(BNTypeLibrary* lib);
+	BINARYNINJACOREAPI bool BNFinalizeImportLibrary(BNImportLibrary* lib);
+	BINARYNINJACOREAPI void BNRegisterImportLibrary(BNImportLibrary* lib);
 
-	BINARYNINJACOREAPI BNArchitecture* BNGetTypeLibraryArchitecture(BNTypeLibrary* lib);
+	BINARYNINJACOREAPI BNArchitecture* BNGetImportLibraryArchitecture(BNImportLibrary* lib);
 
-	BINARYNINJACOREAPI void BNSetTypeLibraryName(BNTypeLibrary* lib, const char* name);
-	BINARYNINJACOREAPI char* BNGetTypeLibraryName(BNTypeLibrary* lib);
+	BINARYNINJACOREAPI void BNSetImportLibraryName(BNImportLibrary* lib, const char* name);
+	BINARYNINJACOREAPI char* BNGetImportLibraryName(BNImportLibrary* lib);
 
-	BINARYNINJACOREAPI void BNAddTypeLibraryAlternateName(BNTypeLibrary* lib, const char* name);
-	BINARYNINJACOREAPI void BNRemoveTypeLibraryAlternateName(BNTypeLibrary* lib, const char* name);
-	BINARYNINJACOREAPI char** BNGetTypeLibraryAlternateNames(BNTypeLibrary* lib, size_t* count);  // BNFreeStringList
+	BINARYNINJACOREAPI void BNAddImportLibraryAlternateName(BNImportLibrary* lib, const char* name);
+	BINARYNINJACOREAPI void BNRemoveImportLibraryAlternateName(BNImportLibrary* lib, const char* name);
+	BINARYNINJACOREAPI char** BNGetImportLibraryAlternateNames(BNImportLibrary* lib, size_t* count);  // BNFreeStringList
 
-	BINARYNINJACOREAPI void BNSetTypeLibraryDependencyName(BNTypeLibrary* lib, const char* name);
-	BINARYNINJACOREAPI char* BNGetTypeLibraryDependencyName(BNTypeLibrary* lib);
+	BINARYNINJACOREAPI void BNSetImportLibraryDependencyName(BNImportLibrary* lib, const char* name);
+	BINARYNINJACOREAPI char* BNGetImportLibraryDependencyName(BNImportLibrary* lib);
 
-	BINARYNINJACOREAPI void BNSetTypeLibraryGuid(BNTypeLibrary* lib, const char* name);
-	BINARYNINJACOREAPI char* BNGetTypeLibraryGuid(BNTypeLibrary* lib);
+	BINARYNINJACOREAPI void BNSetImportLibraryGuid(BNImportLibrary* lib, const char* name);
+	BINARYNINJACOREAPI char* BNGetImportLibraryGuid(BNImportLibrary* lib);
 
-	BINARYNINJACOREAPI void BNClearTypeLibraryPlatforms(BNTypeLibrary* lib);
-	BINARYNINJACOREAPI void BNAddTypeLibraryPlatform(BNTypeLibrary* lib, BNPlatform* platform);
-	BINARYNINJACOREAPI char** BNGetTypeLibraryPlatforms(BNTypeLibrary* lib, size_t* count);  // BNFreeStringList
+	BINARYNINJACOREAPI void BNClearImportLibraryPlatforms(BNImportLibrary* lib);
+	BINARYNINJACOREAPI void BNAddImportLibraryPlatform(BNImportLibrary* lib, BNPlatform* platform);
+	BINARYNINJACOREAPI char** BNGetImportLibraryPlatforms(BNImportLibrary* lib, size_t* count);  // BNFreeStringList
 
-	BINARYNINJACOREAPI void BNTypeLibraryStoreMetadata(BNTypeLibrary* lib, const char* key, BNMetadata* value);
-	BINARYNINJACOREAPI BNMetadata* BNTypeLibraryQueryMetadata(BNTypeLibrary* lib, const char* key);
-	BINARYNINJACOREAPI BNMetadata* BNTypeLibraryGetMetadata(BNTypeLibrary* lib);
-	BINARYNINJACOREAPI void BNTypeLibraryRemoveMetadata(BNTypeLibrary* lib, const char* key);
+	BINARYNINJACOREAPI void BNImportLibraryStoreMetadata(BNImportLibrary* lib, const char* key, BNMetadata* value);
+	BINARYNINJACOREAPI BNMetadata* BNImportLibraryQueryMetadata(BNImportLibrary* lib, const char* key);
+	BINARYNINJACOREAPI BNMetadata* BNImportLibraryGetMetadata(BNImportLibrary* lib);
+	BINARYNINJACOREAPI void BNImportLibraryRemoveMetadata(BNImportLibrary* lib, const char* key);
 
-	BINARYNINJACOREAPI BNTypeContainer* BNGetTypeLibraryTypeContainer(BNTypeLibrary* lib);
+	BINARYNINJACOREAPI BNTypeContainer* BNGetImportLibraryTypeContainer(BNImportLibrary* lib);
 
-	BINARYNINJACOREAPI void BNAddTypeLibraryNamedObject(BNTypeLibrary* lib, BNQualifiedName* name, BNType* type);
-	BINARYNINJACOREAPI void BNRemoveTypeLibraryNamedObject(BNTypeLibrary* lib, BNQualifiedName* name);
-	BINARYNINJACOREAPI void BNAddTypeLibraryNamedType(BNTypeLibrary* lib, BNQualifiedName* name, BNType* type);
-	BINARYNINJACOREAPI void BNRemoveTypeLibraryNamedType(BNTypeLibrary* lib, BNQualifiedName* name);
-	BINARYNINJACOREAPI void BNAddTypeLibraryNamedTypeSource(BNTypeLibrary* lib, BNQualifiedName* name, const char* source);
+	BINARYNINJACOREAPI void BNAddImportLibraryNamedObject(BNImportLibrary* lib, BNQualifiedName* name, BNType* type);
+	BINARYNINJACOREAPI void BNRemoveImportLibraryNamedObject(BNImportLibrary* lib, BNQualifiedName* name);
+	BINARYNINJACOREAPI void BNAddImportLibraryNamedType(BNImportLibrary* lib, BNQualifiedName* name, BNType* type);
+	BINARYNINJACOREAPI void BNRemoveImportLibraryNamedType(BNImportLibrary* lib, BNQualifiedName* name);
+	BINARYNINJACOREAPI void BNAddImportLibraryNamedTypeSource(BNImportLibrary* lib, BNQualifiedName* name, const char* source);
 
-	BINARYNINJACOREAPI BNType* BNGetTypeLibraryNamedObject(BNTypeLibrary* lib, BNQualifiedName* name);
-	BINARYNINJACOREAPI BNType* BNGetTypeLibraryNamedType(BNTypeLibrary* lib, BNQualifiedName* name);
-	BINARYNINJACOREAPI char* BNGetTypeLibraryNamedTypeSource(BNTypeLibrary* lib, BNQualifiedName* name);
+	BINARYNINJACOREAPI BNType* BNGetImportLibraryNamedObject(BNImportLibrary* lib, BNQualifiedName* name);
+	BINARYNINJACOREAPI BNType* BNGetImportLibraryNamedType(BNImportLibrary* lib, BNQualifiedName* name);
+	BINARYNINJACOREAPI char* BNGetImportLibraryNamedTypeSource(BNImportLibrary* lib, BNQualifiedName* name);
 
-	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetTypeLibraryNamedObjects(BNTypeLibrary* lib, size_t* count);
-	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetTypeLibraryNamedTypes(BNTypeLibrary* lib, size_t* count);
+	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetImportLibraryNamedObjects(BNImportLibrary* lib, size_t* count);
+	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetImportLibraryNamedTypes(BNImportLibrary* lib, size_t* count);
 
-	BINARYNINJACOREAPI bool BNWriteTypeLibraryToFile(BNTypeLibrary* lib, const char* path);
+	BINARYNINJACOREAPI bool BNWriteImportLibraryToFile(BNImportLibrary* lib, const char* path);
 
-	BINARYNINJACOREAPI void BNAddBinaryViewTypeLibrary(BNBinaryView* view, BNTypeLibrary* lib);
-	BINARYNINJACOREAPI BNTypeLibrary* BNGetBinaryViewTypeLibrary(BNBinaryView* view, const char* name);
-	BINARYNINJACOREAPI BNTypeLibrary** BNGetBinaryViewTypeLibraries(BNBinaryView* view, size_t* count);
+	BINARYNINJACOREAPI void BNAddBinaryViewImportLibrary(BNBinaryView* view, BNImportLibrary* lib);
+	BINARYNINJACOREAPI BNImportLibrary* BNGetBinaryViewImportLibrary(BNBinaryView* view, const char* name);
+	BINARYNINJACOREAPI BNImportLibrary** BNGetBinaryViewImportLibraries(BNBinaryView* view, size_t* count);
 
-	BINARYNINJACOREAPI BNType* BNBinaryViewImportTypeLibraryType(
-	    BNBinaryView* view, BNTypeLibrary** lib, BNQualifiedName* name);
-	BINARYNINJACOREAPI BNType* BNBinaryViewImportTypeLibraryObject(
-	    BNBinaryView* view, BNTypeLibrary** lib, BNQualifiedName* name);
-	BINARYNINJACOREAPI BNType* BNBinaryViewImportTypeLibraryTypeByGuid(
+	BINARYNINJACOREAPI BNType* BNBinaryViewImportTypeFromLibrary(
+	    BNBinaryView* view, BNImportLibrary** lib, BNQualifiedName* name);
+	BINARYNINJACOREAPI BNType* BNBinaryViewImportObjectFromLibrary(
+	    BNBinaryView* view, BNImportLibrary** lib, BNQualifiedName* name);
+	BINARYNINJACOREAPI BNType* BNBinaryViewImportTypeFromLibraryByGuid(
 		BNBinaryView* view, const char* guid);
 	BINARYNINJACOREAPI BNQualifiedName BNBinaryViewGetTypeNameByGuid(
 		BNBinaryView* view, const char* guid);
 
-	BINARYNINJACOREAPI void BNBinaryViewExportTypeToTypeLibrary(
-	    BNBinaryView* view, BNTypeLibrary* lib, BNQualifiedName* name, BNType* type);
-	BINARYNINJACOREAPI void BNBinaryViewExportObjectToTypeLibrary(
-	    BNBinaryView* view, BNTypeLibrary* lib, BNQualifiedName* name, BNType* type);
+	BINARYNINJACOREAPI void BNBinaryViewExportTypeToImportLibrary(
+	    BNBinaryView* view, BNImportLibrary* lib, BNQualifiedName* name, BNType* type);
+	BINARYNINJACOREAPI void BNBinaryViewExportObjectToImportLibrary(
+	    BNBinaryView* view, BNImportLibrary* lib, BNQualifiedName* name, BNType* type);
 
 	BINARYNINJACOREAPI void BNBinaryViewSetManualDependencies(BNBinaryView* view,
 			BNQualifiedName* viewTypeNames, BNQualifiedName* libTypeNames, char** libNames, size_t count);
 
-	BINARYNINJACOREAPI void BNBinaryViewRecordImportedObjectLibrary(
-		BNBinaryView* view, BNPlatform* tgtPlatform, uint64_t tgtAddr, BNTypeLibrary* lib, BNQualifiedName* name);
-	BINARYNINJACOREAPI bool BNBinaryViewLookupImportedObjectLibrary(
-		BNBinaryView* view, BNPlatform* tgtPlatform, uint64_t tgtAddr, BNTypeLibrary** lib, BNQualifiedName* name);
-	BINARYNINJACOREAPI bool BNBinaryViewLookupImportedTypeLibrary(
-		BNBinaryView* view, const BNQualifiedName* typeName, BNTypeLibrary** lib, BNQualifiedName* resultName);
+	BINARYNINJACOREAPI void BNBinaryViewRecordImportLibraryForObject(
+		BNBinaryView* view, BNPlatform* tgtPlatform, uint64_t tgtAddr, BNImportLibrary* lib, BNQualifiedName* name);
+	BINARYNINJACOREAPI bool BNBinaryViewLookupImportLibraryForObject(
+		BNBinaryView* view, BNPlatform* tgtPlatform, uint64_t tgtAddr, BNImportLibrary** lib, BNQualifiedName* name);
+	BINARYNINJACOREAPI bool BNBinaryViewLookupImportLibraryForType(
+		BNBinaryView* view, const BNQualifiedName* typeName, BNImportLibrary** lib, BNQualifiedName* resultName);
 
 	// Language Representation
 	BINARYNINJACOREAPI BNLanguageRepresentationFunctionType* BNRegisterLanguageRepresentationFunctionType(
@@ -8631,8 +8631,8 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetPlatformSystemCallName(BNPlatform* platform, uint32_t number);
 	BINARYNINJACOREAPI BNType* BNGetPlatformSystemCallType(BNPlatform* platform, uint32_t number);
 
-	BINARYNINJACOREAPI BNTypeLibrary** BNGetPlatformTypeLibraries(BNPlatform* platform, size_t* count);
-	BINARYNINJACOREAPI BNTypeLibrary** BNGetPlatformTypeLibrariesByName(
+	BINARYNINJACOREAPI BNImportLibrary** BNGetPlatformImportLibraries(BNPlatform* platform, size_t* count);
+	BINARYNINJACOREAPI BNImportLibrary** BNGetPlatformImportLibrariesByName(
 	    BNPlatform* platform, const char* depName, size_t* count);
 
 	// Download providers

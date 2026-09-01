@@ -56,7 +56,7 @@ nav = [
             { "Type Attributes and Annotations" = "guide/types/attributes.md" },
             { "Importing/Exporting Types" = "guide/types/typeimportexport.md" },
             { "Type Archives" = "guide/types/typearchives.md" },
-            { "Type Libraries" = "guide/types/typelibraries.md" },
+            { "Import Libraries" = "guide/types/importlibraries.md" },
             { "Debug Info" = "guide/types/debuginfo.md" },
             { "Platform Types" = "guide/types/platformtypes.md" },
             { "C++ Types" = "guide/types/cpp.md" },
@@ -84,7 +84,7 @@ nav = [
         ] },
         { "Types" = [
             { "Applying Annotations" = "dev/annotation.md" },
-            { "Type Libraries" = "dev/typelibraries.md" },
+            { "Import Libraries" = "dev/importlibraries.md" },
         ] },
         { "Important Concepts" = [
             "dev/concepts.md",

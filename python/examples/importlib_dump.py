@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-# binja type library info utility
+# binja import library info utility
 
 import os, sys, re, random
 import binaryninja
 from binaryninja.enums import *
-from binaryninja import typelibrary
+from binaryninja import importlibrary
 
 # The class Type as defined in api/python/types.py is nearly a discriminated union.
 # By examining the .type_class member you can decide which properties make sense to access.
@@ -95,12 +95,12 @@ if __name__ == '__main__':
 	binaryninja._init_plugins()
 
 	if len(sys.argv) <= 1:
-		raise Exception('supply typelib file')
+		raise Exception('supply importlib file')
 
 	fpath = sys.argv[-1]
 	print('        reading: %s' % fpath)
 
-	tl = typelibrary.TypeLibrary.load_from_file(fpath)
+	tl = importlibrary.ImportLibrary.load_from_file(fpath)
 	print('           name: %s' % tl.name)
 	print('           arch: %s' % tl.arch)
 	print('           guid: %s' % tl.guid)
@@ -117,7 +117,7 @@ if __name__ == '__main__':
 
 	print('    named_types: %d' % len(tl.named_types))
 	for (key, val) in tl.named_types.items():
-		line = 'typelib.named_types["%s"] =' % (str(key))
+		line = 'importlib.named_types["%s"] =' % (str(key))
 		print(line)
 		print('-' * len(line))
 		print(type2str(val))

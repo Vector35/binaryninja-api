@@ -963,22 +963,22 @@ bool ElfView::Init()
 					AddExternalLibrary(libName, {}, true);
 				}
 				libraries.push_back(new Metadata(string(libName)));
-				Ref<TypeLibrary> typeLib = GetTypeLibrary(libName);
-				if (!typeLib)
+				Ref<ImportLibrary> importLib = GetImportLibrary(libName);
+				if (!importLib)
 				{
-					vector<Ref<TypeLibrary>> typeLibs = platform->GetTypeLibrariesByName(libName);
-					if (typeLibs.size())
+					vector<Ref<ImportLibrary>> importLibs = platform->GetImportLibrariesByName(libName);
+					if (importLibs.size())
 					{
-						typeLib = typeLibs[0];
-						AddTypeLibrary(typeLib);
+						importLib = importLibs[0];
+						AddImportLibrary(importLib);
 
-						m_logger->LogDebug("elf: adding type library for '%s': %s (%s)", libName.c_str(), typeLib->GetName().c_str(),
-							typeLib->GetGuid().c_str());
+						m_logger->LogDebug("elf: adding import library for '%s': %s (%s)", libName.c_str(), importLib->GetName().c_str(),
+							importLib->GetGuid().c_str());
 					}
 				}
 
-				if (typeLib)
-					libraryFound.push_back(new Metadata(typeLib->GetName()));
+				if (importLib)
+					libraryFound.push_back(new Metadata(importLib->GetName()));
 				else
 					libraryFound.push_back(new Metadata(string("")));
 			}
@@ -2549,14 +2549,14 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 	if ((type == ExternalSymbol) || (type == ImportAddressSymbol) || (type == ImportedDataSymbol))
 	{
 		QualifiedName n(name);
-		Ref<TypeLibrary> lib = nullptr;
-		symbolTypeRef = ImportTypeLibraryObject(lib, n);
+		Ref<ImportLibrary> lib = nullptr;
+		symbolTypeRef = ImportObjectFromLibrary(lib, n);
 		if (symbolTypeRef.GetValue())
 		{
-			m_logger->LogDebug("elf: type Library '%s' found hit for '%s'", lib->GetName().c_str(), name.c_str());
+			m_logger->LogDebug("elf: import library '%s' found hit for '%s'", lib->GetName().c_str(), name.c_str());
 			if (type != ExternalSymbol || addr != 0)
 			{
-				RecordImportedObjectLibrary(GetDefaultPlatform(), addr, lib, n);
+				RecordImportLibraryForObject(GetDefaultPlatform(), addr, lib, n);
 			}
 		}
 	}

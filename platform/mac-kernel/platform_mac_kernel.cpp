@@ -207,7 +207,7 @@ public:
 			{
 				if (database->HasGlobal("original_version") && database->ReadGlobal("original_version").asInt64() < 6)
 				{
-					LogError("%s", "iOS database was saved with mac platform. Unable to upgrade. For iOS typelibs to"
+					LogError("%s", "iOS database was saved with mac platform. Unable to upgrade. For iOS import libraries to"
 						" function properly, this binary must be reopened.");
 					return nullptr;
 				}
@@ -252,7 +252,7 @@ public:
 			{
 				if (database->HasGlobal("original_version") && database->ReadGlobal("original_version").asInt64() < 6)
 				{
-					LogError("%s", "iOS database was saved with mac platform. Unable to upgrade. For iOS typelibs to"
+					LogError("%s", "iOS database was saved with mac platform. Unable to upgrade. For iOS import libraries to"
 						" function properly, this binary must be reopened.");
 					return nullptr;
 				}

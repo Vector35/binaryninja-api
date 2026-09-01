@@ -113,7 +113,7 @@ typedef BinaryNinja::Ref<BinaryNinja::TransformContext> TransformContextRef;
 typedef BinaryNinja::Ref<BinaryNinja::TransformSession> TransformSessionRef;
 typedef BinaryNinja::Ref<BinaryNinja::Type> TypeRef;
 typedef BinaryNinja::Ref<BinaryNinja::TypeArchive> TypeArchiveRef;
-typedef BinaryNinja::Ref<BinaryNinja::TypeLibrary> TypeLibraryRef;
+typedef BinaryNinja::Ref<BinaryNinja::ImportLibrary> ImportLibraryRef;
 typedef BinaryNinja::Ref<BinaryNinja::WebsocketClient> WebsocketClientRef;
 typedef BinaryNinja::Ref<BinaryNinja::WebsocketProvider> WebsocketProviderRef;
 typedef BinaryNinja::Ref<BinaryNinja::Workflow> WorkflowRef;

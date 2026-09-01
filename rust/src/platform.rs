@@ -20,7 +20,7 @@ use crate::{
     rc::*,
     string::*,
     types::{
-        QualifiedName, QualifiedNameAndType, Type, TypeContainer, TypeLibrary, TypeParserError,
+        ImportLibrary, QualifiedName, QualifiedNameAndType, Type, TypeContainer, TypeParserError,
         TypeParserErrorSeverity, TypeParserResult,
     },
 };
@@ -181,24 +181,24 @@ impl Platform {
         unsafe { TypeContainer::from_raw(type_container_ptr.unwrap()) }
     }
 
-    /// Get all the type libraries that have been registered with the name.
+    /// Get all the import libraries that have been registered with the name.
     ///
-    /// NOTE: This is a list because libraries can have `alternate_names`, use [`Platform::get_type_library_by_name`]
-    /// if you want to get _the_ type library with that name, skipping alternate names.
-    pub fn get_type_libraries_by_name(&self, name: &str) -> Array<TypeLibrary> {
+    /// NOTE: This is a list because libraries can have `alternate_names`, use [`Platform::get_import_library_by_name`]
+    /// if you want to get _the_ import library with that name, skipping alternate names.
+    pub fn get_import_libraries_by_name(&self, name: &str) -> Array<ImportLibrary> {
         let mut count = 0;
         let name = name.to_cstr();
         let result =
-            unsafe { BNGetPlatformTypeLibrariesByName(self.handle, name.as_ptr(), &mut count) };
+            unsafe { BNGetPlatformImportLibrariesByName(self.handle, name.as_ptr(), &mut count) };
         assert!(!result.is_null());
         unsafe { Array::new(result, count, ()) }
     }
 
-    /// Get the type library with the given name.
+    /// Get the import library with the given name.
     ///
-    /// NOTE: This finds the first type library that has the given name, skipping alternate names.
-    pub fn get_type_library_by_name(&self, name: &str) -> Option<Ref<TypeLibrary>> {
-        let libraries = self.get_type_libraries_by_name(name);
+    /// NOTE: This finds the first import library that has the given name, skipping alternate names.
+    pub fn get_import_library_by_name(&self, name: &str) -> Option<Ref<ImportLibrary>> {
+        let libraries = self.get_import_libraries_by_name(name);
         libraries
             .iter()
             .find(|lib| lib.name() == name)

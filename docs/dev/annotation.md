@@ -5,8 +5,8 @@ This document is organized into five sections describing how to work with variou
 1. [Symbols](#symbols) covers how to work with Symbols in a binary
 1. [Types](#types) documents creating and interacting with types through the API
 1. [Tags](#tags) describes how to create tags and bookmarks
-1. [Type Libraries](typelibraries.md) explains how to work with Type Libraries, including multiple sources of information from which Binary Ninja can automatically source for type information from and how you can add to them
-1. [Signature Libraries](#signature-libraries) explains how to work with the signature library which match statically compiled functions which are then matched with type libraries
+1. [Import Libraries](importlibraries.md) explains how to work with Import Libraries, including multiple sources of information from which Binary Ninja can automatically source for type information from and how you can add to them
+1. [Signature Libraries](#signature-libraries) explains how to work with the signature library which match statically compiled functions which are then matched with import libraries
 
 ## Symbols
 
@@ -455,7 +455,7 @@ s.append(IntegerType.create(4))
 bv.define_user_type('Foo', s)
 ```
 
-Finally, you can use the built-in context manager which automatically registers the created type with the provided `BinaryView` (`bv`) and name(`Foo`). Additionally, when creating TypeLibraries a `Type` can be passed instead of a `BinaryView`
+Finally, you can use the built-in context manager which automatically registers the created type with the provided `BinaryView` (`bv`) and name(`Foo`). Additionally, when creating Import Libraries a `Type` can be passed instead of a `BinaryView`
 
 ```python
 with StructureBuilder.builder(bv, 'Foo') as s:
@@ -579,9 +579,9 @@ Exporting a header uses the `TypePrinter.print_all_types` api, and outputs a str
 ```
 
 
-## Type Libraries
+## Import Libraries
 
-Type Library documentation has outgrown this section and now lives [in a separate file](typelibraries.md).
+Import Library documentation has outgrown this section and now lives [in a separate file](importlibraries.md).
 
 ## Signature Libraries
 

@@ -17,7 +17,7 @@ You could write this type into:
 /home/user/.binaryninja/types/platform/windows-x86.c
 ```
 
-And any time you opened a 32bit windows binary, that type would be available to use. However, please note that these are not substitutes for [Type Libraries](../../dev/annotation.md#type-libraries).  Type Libraries are used to provide a collection of types for a given library such as a libc, or common DLL.
+And any time you opened a 32bit windows binary, that type would be available to use. However, please note that these are not substitutes for [Import Libraries](../../dev/annotation.md#import-libraries).  Import Libraries are used to provide a collection of types for a given library such as a libc, or common DLL.
 
 !!! Tip "Tip"
     If you don't know the specific platform (and thus filename) you need to create for a given file, just enter `bv.platform` in the scripting console.

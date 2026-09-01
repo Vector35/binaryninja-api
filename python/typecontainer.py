@@ -45,7 +45,7 @@ class TypeContainer:
 	* :py:meth:`.BinaryView.auto_type_container`
 	* :py:meth:`.BinaryView.user_type_container`
 	* :py:meth:`.Platform.type_container`
-	* :py:meth:`.TypeLibrary.type_container`
+	* :py:meth:`.ImportLibrary.type_container`
 	* :py:meth:`.DebugInfo.get_type_container`
 
 	:param handle: Handle pointer (Internal use only.)
@@ -113,7 +113,7 @@ class TypeContainer:
 	def platform(self) -> 'platform.Platform':
 		"""
 		Get the Platform object associated with this Type Container. All Type Containers
-		have exactly one associated Platform (as opposed to, e.g. Type Libraries).
+		have exactly one associated Platform (as opposed to, e.g. Import Libraries).
 		:return: Associated Platform object
 		"""
 		handle = core.BNTypeContainerGetPlatform(self.handle)
@@ -345,7 +345,7 @@ class TypeContainer:
 		knowledge of the types in the Type Container.
 
 		:param source: Source code to parse
-		:param import_dependencies: If Type Library / Type Archive types should be imported during parsing
+		:param import_dependencies: If Import Library / Type Archive types should be imported during parsing
 		:return: A tuple of (result, errors) where result is a tuple of (type, name) or
 		         None of there was a fatal error.
 		"""
@@ -386,7 +386,7 @@ class TypeContainer:
 		:param options: Optional string arguments to pass as options, e.g. command line arguments
 		:param include_dirs: Optional list of directories to include in the header search path
 		:param auto_type_source: Optional source of types if used for automatically generated types
-		:param import_dependencies: If Type Library / Type Archive types should be imported during parsing
+		:param import_dependencies: If Import Library / Type Archive types should be imported during parsing
 		:return: A tuple of (result, errors) where the result is None if there was a fatal error
 		"""
 		if options is None:

@@ -16,7 +16,7 @@
 //! [`Type`]'s are fundamental to analysis. With types, you can influence how decompilation resolves accesses,
 //! renders data, and tell the analysis of properties such as volatility and constness.
 //!
-//! Types are typically stored within a [`BinaryView`], [`TypeArchive`] or a [`TypeLibrary`].
+//! Types are typically stored within a [`BinaryView`], [`TypeArchive`] or an [`ImportLibrary`].
 //!
 //! Types can be created using the [`TypeBuilder`] or one of the convenience functions. Another way
 //! to create a type is with a [`TypeParser`] if you have C type definitions.
@@ -57,7 +57,7 @@ use std::{
 pub use archive::{TypeArchive, TypeArchiveId, TypeArchiveSnapshotId};
 pub use container::TypeContainer;
 pub use enumeration::{Enumeration, EnumerationBuilder, EnumerationMember};
-pub use library::TypeLibrary;
+pub use library::ImportLibrary;
 pub use parser::{
     CoreTypeParser, ParsedType, TypeParser, TypeParserError, TypeParserErrorSeverity,
     TypeParserResult,

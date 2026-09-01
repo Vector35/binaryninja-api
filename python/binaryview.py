@@ -51,7 +51,7 @@ from .exceptions import RelocationWriteException, ExternalLinkException
 
 from . import associateddatastore  # required for _BinaryViewAssociatedDataStore
 from .log import log_warn, log_error_for_exception, Logger
-from . import typelibrary
+from . import importlibrary
 from . import fileaccessor
 from . import databuffer
 from . import basicblock
@@ -4206,18 +4206,24 @@ class BinaryView:
 			core.BNFreeTypeNameList(name_list, count.value)
 
 	@property
-	def type_libraries(self) -> List['typelibrary.TypeLibrary']:
-		"""List of imported type libraries (read-only)"""
+	@deprecation.deprecated(deprecated_in="6.1", details="Use :py:attr:`import_libraries` instead.")
+	def type_libraries(self) -> List['importlibrary.ImportLibrary']:
+		"""Deprecated alias for :py:attr:`import_libraries`."""
+		return self.import_libraries
+
+	@property
+	def import_libraries(self) -> List['importlibrary.ImportLibrary']:
+		"""List of import libraries (read-only)"""
 		count = ctypes.c_ulonglong(0)
-		libraries = core.BNGetBinaryViewTypeLibraries(self.handle, count)
-		assert libraries is not None, "core.BNGetBinaryViewTypeLibraries returned None"
+		libraries = core.BNGetBinaryViewImportLibraries(self.handle, count)
+		assert libraries is not None, "core.BNGetBinaryViewImportLibraries returned None"
 		result = []
 		try:
 			for i in range(0, count.value):
-				result.append(typelibrary.TypeLibrary(core.BNNewTypeLibraryReference(libraries[i])))
+				result.append(importlibrary.ImportLibrary(core.BNNewImportLibraryReference(libraries[i])))
 			return result
 		finally:
-			core.BNFreeTypeLibraryList(libraries, count.value)
+			core.BNFreeImportLibraryList(libraries, count.value)
 
 	@property
 	def attached_type_archives(self) -> Mapping['str', 'str']:
@@ -8648,7 +8654,7 @@ class BinaryView:
 		view, while those two APIs do not.
 
 		:param str text: C source code string of type to create
-		:param import_dependencies: If Type Library types should be imported during parsing
+		:param import_dependencies: If Import Library types should be imported during parsing
 		:return: A tuple of a :py:class:`Type` and type name
 		:rtype: tuple(Type, QualifiedName)
 		:Example:
@@ -8685,7 +8691,7 @@ class BinaryView:
 		:param str text: C source code string of types, variables, and function types, to create
 		:param options: Optional list of string options to be passed into the type parser
 		:param include_dirs: Optional list of header search directories
-		:param import_dependencies: If Type Library types should be imported during parsing
+		:param import_dependencies: If Import Library types should be imported during parsing
 		:return: :py:class:`~binaryninja.typeparser.BasicTypeParserResult` (a SyntaxError is thrown on parse error)
 		:rtype: BasicTypeParserResult
 		:Example:
@@ -8910,31 +8916,41 @@ class BinaryView:
 		_name = _types.QualifiedName(name)._to_core_struct()
 		return core.BNGetAnalysisTypeId(self.handle, _name)
 
-	def add_type_library(self, lib: 'typelibrary.TypeLibrary') -> None:
-		"""
-		``add_type_library`` make the contents of a type library available for type/import resolution
+	@deprecation.deprecated(deprecated_in="6.1", details="Use :py:func:`add_import_library` instead.")
+	def add_type_library(self, lib: 'importlibrary.ImportLibrary') -> None:
+		"""Deprecated alias for :py:func:`add_import_library`."""
+		return self.add_import_library(lib)
 
-		:param TypeLibrary lib: library to register with the view
+	def add_import_library(self, lib: 'importlibrary.ImportLibrary') -> None:
+		"""
+		``add_import_library`` make the contents of an import library available for type/import resolution
+
+		:param ImportLibrary lib: library to register with the view
 		:rtype: None
 		"""
-		if not isinstance(lib, typelibrary.TypeLibrary):
-			raise ValueError("must pass in a TypeLibrary object")
-		core.BNAddBinaryViewTypeLibrary(self.handle, lib.handle)
+		if not isinstance(lib, importlibrary.ImportLibrary):
+			raise ValueError("must pass in an ImportLibrary object")
+		core.BNAddBinaryViewImportLibrary(self.handle, lib.handle)
 
-	def get_type_library(self, name: str) -> Optional['typelibrary.TypeLibrary']:
+	@deprecation.deprecated(deprecated_in="6.1", details="Use :py:func:`get_import_library` instead.")
+	def get_type_library(self, name: str) -> Optional['importlibrary.ImportLibrary']:
+		"""Deprecated alias for :py:func:`get_import_library`."""
+		return self.get_import_library(name)
+
+	def get_import_library(self, name: str) -> Optional['importlibrary.ImportLibrary']:
 		"""
-		``get_type_library`` returns the TypeLibrary
+		``get_import_library`` returns the ImportLibrary
 
 		:param str name: Library name to lookup
-		:return: The Type Library object, if any
-		:rtype: TypeLibrary or None
+		:return: The Import Library object, if any
+		:rtype: ImportLibrary or None
 		:Example:
 
 		"""
-		handle = core.BNGetBinaryViewTypeLibrary(self.handle, name)
+		handle = core.BNGetBinaryViewImportLibrary(self.handle, name)
 		if handle is None:
 			return None
-		return typelibrary.TypeLibrary(handle)
+		return importlibrary.ImportLibrary(handle)
 
 	def is_type_auto_defined(self, name: '_types.QualifiedNameType') -> bool:
 		"""
@@ -9181,32 +9197,37 @@ class BinaryView:
 			return None
 		return result
 
-	def import_library_type(self, name: str, lib: Optional[typelibrary.TypeLibrary] = None) -> Optional['_types.Type']:
+	@deprecation.deprecated(deprecated_in="6.1", details="Use :py:func:`import_type_from_library` instead.")
+	def import_library_type(self, name: str, lib: Optional[importlibrary.ImportLibrary] = None) -> Optional['_types.Type']:
+		"""Deprecated alias for :py:func:`import_type_from_library`."""
+		return self.import_type_from_library(name, lib)
+
+	def import_type_from_library(self, name: str, lib: Optional[importlibrary.ImportLibrary] = None) -> Optional['_types.Type']:
 		"""
-		``import_library_type`` recursively imports a type from the specified type library, or, if
-		no library was explicitly provided, the first type library associated with the current :py:class:`BinaryView`
+		``import_type_from_library`` recursively imports a type from the specified import library, or, if
+		no library was explicitly provided, the first import library associated with the current :py:class:`BinaryView`
 		that provides the name requested.
 
-		This may have the impact of loading other type libraries as dependencies on other type libraries are lazily resolved
+		This may have the impact of loading other import libraries as dependencies on other import libraries are lazily resolved
 		when references to types provided by them are first encountered.
 
-		Note that the name actually inserted into the view may not match the name as it exists in the type library in
+		Note that the name actually inserted into the view may not match the name as it exists in the import library in
 		the event of a name conflict. To aid in this, the :py:class:`Type` object returned is a `NamedTypeReference` to
 		the deconflicted name used.
 
 		:param QualifiedName name:
-		:param TypeLibrary lib:
+		:param ImportLibrary lib:
 		:return: a `NamedTypeReference` to the type, taking into account any renaming performed
 		:rtype: Type
 		"""
 		_name = _types.QualifiedName(name)
-		_lib = ctypes.POINTER(ctypes.POINTER(core.BNTypeLibrary))()
+		_lib = ctypes.POINTER(ctypes.POINTER(core.BNImportLibrary))()
 		if lib is not None:
 			_lib.contents = lib.handle
 		else:
-			_lib.contents = ctypes.POINTER(core.BNTypeLibrary)()
+			_lib.contents = ctypes.POINTER(core.BNImportLibrary)()
 
-		handle = core.BNBinaryViewImportTypeLibraryType(
+		handle = core.BNBinaryViewImportTypeFromLibrary(
 		    self.handle, _lib, _name._to_core_struct()
 		)
 		if handle is None:
@@ -9217,10 +9238,10 @@ class BinaryView:
 		"""
 		``import_type_by_guid`` recursively imports a type interface given its GUID.
 
-		.. note:: To support this type of lookup a type library must have
+		.. note:: To support this type of lookup an import library must have
 			contain a metadata key called "type_guids" which is a map
 			Dict[string_guid, string_type_name] or
-			Dict[string_guid, Tuple[string_type_name, type_library_name]]
+			Dict[string_guid, Tuple[string_type_name, import_library_name]]
 
 		:param str guid: GUID of the COM interface to import
 		:return: the object type, with any interior `NamedTypeReferences` renamed as necessary to be appropriate for the current view
@@ -9232,43 +9253,48 @@ class BinaryView:
 		if self.arch is None:
 			return None
 
-		if type_handle := core.BNBinaryViewImportTypeLibraryTypeByGuid(self.handle, guid):
+		if type_handle := core.BNBinaryViewImportTypeFromLibraryByGuid(self.handle, guid):
 			return _types.Type.create(type_handle, platform=self.platform)
 
 		return None
 
-	def import_library_object(self, name: str, lib: Optional[typelibrary.TypeLibrary] = None) -> Optional[Tuple['typelibrary.TypeLibrary', '_types.Type']]:
+	@deprecation.deprecated(deprecated_in="6.1", details="Use :py:func:`import_object_from_library` instead.")
+	def import_library_object(self, name: str, lib: Optional[importlibrary.ImportLibrary] = None) -> Optional[Tuple['importlibrary.ImportLibrary', '_types.Type']]:
+		"""Deprecated alias for :py:func:`import_object_from_library`."""
+		return self.import_object_from_library(name, lib)
+
+	def import_object_from_library(self, name: str, lib: Optional[importlibrary.ImportLibrary] = None) -> Optional[Tuple['importlibrary.ImportLibrary', '_types.Type']]:
 		"""
-		``import_library_object`` recursively imports an object from the specified type library, or, if \
-		no library was explicitly provided, the first type library associated with the current :py:class:`BinaryView` \
+		``import_object_from_library`` recursively imports an object from the specified import library, or, if \
+		no library was explicitly provided, the first import library associated with the current :py:class:`BinaryView` \
 		that provides the name requested.
 
-		This may have the impact of loading other type libraries as dependencies on other type libraries are lazily resolved \
+		This may have the impact of loading other import libraries as dependencies on other import libraries are lazily resolved \
 		when references to types provided by them are first encountered.
 
 		.. note:: If you are implementing a custom BinaryView and use this method to import object types, \
 		you should then call ``record_imported_object`` with the details of where the object is located.
 
 		:param QualifiedName name:
-		:param TypeLibrary lib:
+		:param ImportLibrary lib:
 		:return: the object type, with any interior `NamedTypeReferences` renamed as necessary to be appropriate for the current view
 		:rtype: Type
 		"""
 		_name = _types.QualifiedName(name)
-		_lib = ctypes.POINTER(ctypes.POINTER(core.BNTypeLibrary))()
+		_lib = ctypes.POINTER(ctypes.POINTER(core.BNImportLibrary))()
 		if lib is not None:
 			_lib.contents = lib.handle
 		else:
-			_lib.contents = ctypes.POINTER(core.BNTypeLibrary)()
+			_lib.contents = ctypes.POINTER(core.BNImportLibrary)()
 
-		handle = core.BNBinaryViewImportTypeLibraryObject(
+		handle = core.BNBinaryViewImportObjectFromLibrary(
 		    self.handle, _lib, _name._to_core_struct()
 		)
 		if handle is None:
 			return None
 		return _types.Type.create(handle, platform=self.platform)
 
-	def export_type_to_library(self, lib: typelibrary.TypeLibrary, name: Optional[str], type_obj: StringOrType) -> None:
+	def export_type_to_library(self, lib: importlibrary.ImportLibrary, name: Optional[str], type_obj: StringOrType) -> None:
 		"""
 		Recursively exports ``type_obj`` into ``lib`` as a type with a ``name``.
 
@@ -9276,10 +9302,10 @@ class BinaryView:
 		of `enum {RED=0, ORANGE=1, YELLOW=2, ...}` used by this library. If you have a function, variable, or other
 		object that is exported, you probably want :py:meth:`export_object_to_library` instead.
 
-		As other referenced types are encountered, they are either copied into the destination type library or
-		else the type library that provided the referenced type is added as a dependency for the destination library.
+		As other referenced types are encountered, they are either copied into the destination import library or
+		else the import library that provided the referenced type is added as a dependency for the destination library.
 
-		:param TypeLibrary lib:
+		:param ImportLibrary lib:
 		:param QualifiedName name:
 		:param StringOrType type_obj:
 		:rtype: None
@@ -9287,8 +9313,8 @@ class BinaryView:
 		_name = None
 		if name is not None:
 			_name = _types.QualifiedName(name)
-		if not isinstance(lib, typelibrary.TypeLibrary):
-			raise TypeError("lib must be a TypeLibrary object")
+		if not isinstance(lib, importlibrary.ImportLibrary):
+			raise TypeError("lib must be an ImportLibrary object")
 		if isinstance(type_obj, str):
 			(type_obj, new_name) = self.parse_type_string(type_obj)
 			if name is None:
@@ -9298,10 +9324,10 @@ class BinaryView:
 			raise TypeError("type_obj must be a Type object")
 		if _name is None:
 			raise ValueError("name can only be None if named type is derived from string passed to type_obj")
-		core.BNBinaryViewExportTypeToTypeLibrary(self.handle, lib.handle, _name._to_core_struct(), type_obj.handle)
+		core.BNBinaryViewExportTypeToImportLibrary(self.handle, lib.handle, _name._to_core_struct(), type_obj.handle)
 
 	def export_object_to_library(
-	    self, lib: typelibrary.TypeLibrary, name: Optional[str], type_obj: StringOrType
+	    self, lib: importlibrary.ImportLibrary, name: Optional[str], type_obj: StringOrType
 	) -> None:
 		"""
 		Recursively exports ``type_obj`` into ``lib`` as an object with a ``name``.
@@ -9310,10 +9336,10 @@ class BinaryView:
 		For example, `MessageBoxA` might be the name of a function with the type `int ()(HWND, LPCSTR, LPCSTR, UINT)`.
 		If you just want to store a type definition, you probably want :py:meth:`export_type_to_library`.
 
-		As other referenced types are encountered, they are either copied into the destination type library or
-		else the type library that provided the referenced type is added as a dependency for the destination library.
+		As other referenced types are encountered, they are either copied into the destination import library or
+		else the import library that provided the referenced type is added as a dependency for the destination library.
 
-		:param TypeLibrary lib:
+		:param ImportLibrary lib:
 		:param QualifiedName name:
 		:param StringOrType type_obj:
 		:rtype: None
@@ -9322,8 +9348,8 @@ class BinaryView:
 		_name = None
 		if name is not None:
 			_name = _types.QualifiedName(name)
-		if not isinstance(lib, typelibrary.TypeLibrary):
-			raise TypeError("lib must be a TypeLibrary object")
+		if not isinstance(lib, importlibrary.ImportLibrary):
+			raise TypeError("lib must be an ImportLibrary object")
 		if isinstance(type_obj, str):
 			(type_obj, new_name) = self.parse_type_string(type_obj)
 			if name is None:
@@ -9333,18 +9359,18 @@ class BinaryView:
 			raise TypeError("type_obj must be a Type object")
 		if _name is None:
 			raise ValueError("name can only be None if named type is derived from string passed to type_obj")
-		core.BNBinaryViewExportObjectToTypeLibrary(self.handle, lib.handle, _name._to_core_struct(), type_obj.handle)
+		core.BNBinaryViewExportObjectToImportLibrary(self.handle, lib.handle, _name._to_core_struct(), type_obj.handle)
 
 	def set_manual_type_source_override(self, entries: Mapping['_types.QualifiedName', Tuple['_types.QualifiedName', str]]):
 		"""
-		This allows for fine-grained control over how types from this BinaryView are exported to a TypeLibrary
+		This allows for fine-grained control over how types from this BinaryView are exported to an ImportLibrary
 		by `export_type_to_library` and `export_object_to_library`. Types identified by the keys of the dict
-		will NOT be exported to the destination TypeLibrary, but will instead be treated as a type that had
-		come from the string component of the value tuple. This results in the destination TypeLibrary gaining
+		will NOT be exported to the destination ImportLibrary, but will instead be treated as a type that had
+		come from the string component of the value tuple. This results in the destination ImportLibrary gaining
 		a new dependency.
 
 		This is useful if a BinaryView was automatically marked up with a lot of debug information but you
-		want to export only a subset of that information into a new TypeLibrary. By creating a description of
+		want to export only a subset of that information into a new ImportLibrary. By creating a description of
 		which local types correspond to types in other already extant libraries, those types will be avoided
 		during the recursive export.
 
@@ -9363,10 +9389,10 @@ Then the following python:
 
 			overrides = {"RECT": ("tagRECT", "winX64common")}
 			bv.set_manual_type_source_override(overrides)
-			bv.export_type_to_library(dest_new_typelib, "ContrivedExample", bv.get_type_by_name("ContrivedExample"))
+			bv.export_type_to_library(dest_new_importlib, "ContrivedExample", bv.get_type_by_name("ContrivedExample"))
 
-Results in dest_new_typelib only having ContrivedExample added, and "RECT" being inserted as a dependency
-to a the type "tagRECT" found in the typelibrary "winX64common"
+Results in dest_new_importlib only having ContrivedExample added, and "RECT" being inserted as a dependency
+to a the type "tagRECT" found in the importlibrary "winX64common"
 
 		"""
 		count = len(entries)
@@ -9379,16 +9405,23 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 			lib_names[i] = lib.encode("utf-8")
 		core.BNBinaryViewSetManualDependencies(self.handle, src_names, dst_names, lib_names, count)
 
+	@deprecation.deprecated(deprecated_in="6.1", details="Use :py:func:`record_import_library_for_object` instead.")
 	def record_imported_object_library(
-		self, lib: typelibrary.TypeLibrary, name: str, addr: int, platform: Optional['_platform.Platform'] = None
+		self, lib: importlibrary.ImportLibrary, name: str, addr: int, platform: Optional['_platform.Platform'] = None
+	) -> None:
+		"""Deprecated alias for :py:func:`record_import_library_for_object`."""
+		return self.record_import_library_for_object(lib, name, addr, platform)
+
+	def record_import_library_for_object(
+		self, lib: importlibrary.ImportLibrary, name: str, addr: int, platform: Optional['_platform.Platform'] = None
 	) -> None:
 		"""
-		``record_imported_object_library`` should be called by custom py:py:class:`BinaryView` implementations
-		when they have successfully imported an object from a type library (e.g. a symbol's type).
-		Values recorded with this function will then be queryable via ``lookup_imported_object_library``.
+		``record_import_library_for_object`` should be called by custom py:py:class:`BinaryView` implementations
+		when they have successfully imported an object from an import library (e.g. a symbol's type).
+		Values recorded with this function will then be queryable via ``lookup_import_library_for_object``.
 
-		:param lib: Type Library containing the imported type
-		:param name: Name of the object in the type library
+		:param lib: Import Library containing the imported type
+		:param name: Name of the object in the import library
 		:param addr: address of symbol at import site
 		:param platform: Platform of symbol at import site
 		:rtype: None
@@ -9400,50 +9433,64 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		if platform is None:
 			raise Exception("Unable to record imported object library without a platform")
 
-		core.BNBinaryViewRecordImportedObjectLibrary(self.handle, platform.handle, addr, lib.handle, _types.QualifiedName(name)._to_core_struct())
+		core.BNBinaryViewRecordImportLibraryForObject(self.handle, platform.handle, addr, lib.handle, _types.QualifiedName(name)._to_core_struct())
 
+	@deprecation.deprecated(deprecated_in="6.1", details="Use :py:func:`lookup_import_library_for_object` instead.")
 	def lookup_imported_object_library(
 		self, addr: int, platform: Optional['_platform.Platform'] = None
-	) -> Optional[Tuple[typelibrary.TypeLibrary, '_types.QualifiedName']]:
+	) -> Optional[Tuple[importlibrary.ImportLibrary, '_types.QualifiedName']]:
+		"""Deprecated alias for :py:func:`lookup_import_library_for_object`."""
+		return self.lookup_import_library_for_object(addr, platform)
+
+	def lookup_import_library_for_object(
+		self, addr: int, platform: Optional['_platform.Platform'] = None
+	) -> Optional[Tuple[importlibrary.ImportLibrary, '_types.QualifiedName']]:
 		"""
-		``lookup_imported_object_library`` gives you details of which type library and name was used to determine
+		``lookup_import_library_for_object`` gives you details of which import library and name was used to determine
 		the type of a symbol at a given address
 
 		:param addr: address of symbol at import site
 		:param platform: Platform of symbol at import site
-		:return: A tuple of [TypeLibrary, QualifiedName] with the library and name used, or None if it was not imported
-		:rtype: Tuple[TypeLibrary, QualifiedName]
+		:return: A tuple of [ImportLibrary, QualifiedName] with the library and name used, or None if it was not imported
+		:rtype: Tuple[ImportLibrary, QualifiedName]
 		"""
 
 		if platform is None:
 			platform = self.platform
 
-		result_lib = (ctypes.POINTER(core.BNTypeLibrary) * 1)()
+		result_lib = (ctypes.POINTER(core.BNImportLibrary) * 1)()
 		result_name = (core.BNQualifiedName * 1)()
-		if not core.BNBinaryViewLookupImportedObjectLibrary(self.handle, platform.handle, addr, result_lib, result_name):
+		if not core.BNBinaryViewLookupImportLibraryForObject(self.handle, platform.handle, addr, result_lib, result_name):
 			return None
-		lib = typelibrary.TypeLibrary(result_lib[0])
+		lib = importlibrary.ImportLibrary(result_lib[0])
 		name = _types.QualifiedName._from_core_struct(result_name[0])
 		core.BNFreeQualifiedName(result_name)
 		return lib, name
 
+	@deprecation.deprecated(deprecated_in="6.1", details="Use :py:func:`lookup_import_library_for_type` instead.")
 	def lookup_imported_type_library(
 		self, name: '_types.QualifiedNameType'
-	) -> Optional[Tuple[typelibrary.TypeLibrary, '_types.QualifiedName']]:
+	) -> Optional[Tuple[importlibrary.ImportLibrary, '_types.QualifiedName']]:
+		"""Deprecated alias for :py:func:`lookup_import_library_for_type`."""
+		return self.lookup_import_library_for_type(name)
+
+	def lookup_import_library_for_type(
+		self, name: '_types.QualifiedNameType'
+	) -> Optional[Tuple[importlibrary.ImportLibrary, '_types.QualifiedName']]:
 		"""
-		``lookup_imported_type_library`` gives you details of from which type library and name
+		``lookup_import_library_for_type`` gives you details of from which import library and name
 		a given type in the analysis was imported.
 
 		:param name: Name of type in analysis
-		:return: A tuple of [TypeLibrary, QualifiedName] with the library and name used, or None if it was not imported
-		:rtype: Optional[Tuple[TypeLibrary, QualifiedName]]
+		:return: A tuple of [ImportLibrary, QualifiedName] with the library and name used, or None if it was not imported
+		:rtype: Optional[Tuple[ImportLibrary, QualifiedName]]
 		"""
 		name = _types.QualifiedName(name)
-		result_lib = (ctypes.POINTER(core.BNTypeLibrary) * 1)()
+		result_lib = (ctypes.POINTER(core.BNImportLibrary) * 1)()
 		result_name = (core.BNQualifiedName * 1)()
-		if not core.BNBinaryViewLookupImportedTypeLibrary(self.handle, name._to_core_struct(), result_lib, result_name):
+		if not core.BNBinaryViewLookupImportLibraryForType(self.handle, name._to_core_struct(), result_lib, result_name):
 			return None
-		lib = typelibrary.TypeLibrary(result_lib[0])
+		lib = importlibrary.ImportLibrary(result_lib[0])
 		name = _types.QualifiedName._from_core_struct(result_name[0])
 		core.BNFreeQualifiedName(result_name)
 		return lib, name

@@ -1,7 +1,7 @@
 use crate::dump::TILDump;
-use crate::helper::path_to_type_libraries;
+use crate::helper::path_to_import_libraries;
 use binaryninja::rc::Ref;
-use binaryninja::types::TypeLibrary;
+use binaryninja::types::ImportLibrary;
 use similar::{Algorithm, TextDiff};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -12,7 +12,7 @@ pub enum TILDiffError {
     #[error("Could not determine parent directory for path: {0}")]
     InvalidPath(PathBuf),
 
-    #[error("Failed to dump type library: {0}")]
+    #[error("Failed to dump import library: {0}")]
     DumpError(String),
 }
 
@@ -39,8 +39,8 @@ impl TILDiff {
 
     pub fn diff(
         &self,
-        (a_path, a_type_lib): (&Path, &TypeLibrary),
-        (b_path, b_type_lib): (&Path, &TypeLibrary),
+        (a_path, a_type_lib): (&Path, &ImportLibrary),
+        (b_path, b_type_lib): (&Path, &ImportLibrary),
     ) -> Result<DiffResult, TILDiffError> {
         let a_parent = a_path
             .parent()
@@ -50,23 +50,23 @@ impl TILDiff {
             .ok_or_else(|| TILDiffError::InvalidPath(b_path.to_path_buf()))?;
 
         self.diff_with_dependencies(
-            (&a_type_lib, path_to_type_libraries(a_parent)),
-            (&b_type_lib, path_to_type_libraries(b_parent)),
+            (&a_type_lib, path_to_import_libraries(a_parent)),
+            (&b_type_lib, path_to_import_libraries(b_parent)),
         )
     }
 
     pub fn diff_with_dependencies(
         &self,
-        (a_type_lib, a_dependencies): (&TypeLibrary, Vec<Ref<TypeLibrary>>),
-        (b_type_lib, b_dependencies): (&TypeLibrary, Vec<Ref<TypeLibrary>>),
+        (a_type_lib, a_dependencies): (&ImportLibrary, Vec<Ref<ImportLibrary>>),
+        (b_type_lib, b_dependencies): (&ImportLibrary, Vec<Ref<ImportLibrary>>),
     ) -> Result<DiffResult, TILDiffError> {
         let dumped_a = TILDump::new()
-            .with_type_libs(a_dependencies)
+            .with_import_libs(a_dependencies)
             .dump(a_type_lib)
             .map_err(|e| TILDiffError::DumpError(e.to_string()))?;
 
         let dumped_b = TILDump::new()
-            .with_type_libs(b_dependencies)
+            .with_import_libs(b_dependencies)
             .dump(b_type_lib)
             .map_err(|e| TILDiffError::DumpError(e.to_string()))?;
 

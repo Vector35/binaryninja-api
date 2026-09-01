@@ -656,36 +656,36 @@ map<uint32_t, QualifiedNameAndType> Platform::GetSystemCalls()
 }
 
 
-vector<Ref<TypeLibrary>> Platform::GetTypeLibraries()
+vector<Ref<ImportLibrary>> Platform::GetImportLibraries()
 {
 	size_t count;
-	BNTypeLibrary** libs = BNGetPlatformTypeLibraries(m_object, &count);
+	BNImportLibrary** libs = BNGetPlatformImportLibraries(m_object, &count);
 
-	vector<Ref<TypeLibrary>> result;
+	vector<Ref<ImportLibrary>> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; ++i)
 	{
-		result.push_back(new TypeLibrary(BNNewTypeLibraryReference(libs[i])));
+		result.push_back(new ImportLibrary(BNNewImportLibraryReference(libs[i])));
 	}
 
-	BNFreeTypeLibraryList(libs, count);
+	BNFreeImportLibraryList(libs, count);
 	return result;
 }
 
 
-vector<Ref<TypeLibrary>> Platform::GetTypeLibrariesByName(const std::string& name)
+vector<Ref<ImportLibrary>> Platform::GetImportLibrariesByName(const std::string& name)
 {
 	size_t count;
-	BNTypeLibrary** libs = BNGetPlatformTypeLibrariesByName(m_object, name.c_str(), &count);
+	BNImportLibrary** libs = BNGetPlatformImportLibrariesByName(m_object, name.c_str(), &count);
 
-	vector<Ref<TypeLibrary>> result;
+	vector<Ref<ImportLibrary>> result;
 	result.reserve(count);
 	for (size_t i = 0; i < count; ++i)
 	{
-		result.push_back(new TypeLibrary(BNNewTypeLibraryReference(libs[i])));
+		result.push_back(new ImportLibrary(BNNewImportLibraryReference(libs[i])));
 	}
 
-	BNFreeTypeLibraryList(libs, count);
+	BNFreeImportLibraryList(libs, count);
 	return result;
 }
 

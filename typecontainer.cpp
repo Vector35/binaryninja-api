@@ -43,7 +43,7 @@ TypeContainer::TypeContainer(Ref<BinaryView> data)
 }
 
 
-TypeContainer::TypeContainer(Ref<TypeLibrary> library)
+TypeContainer::TypeContainer(Ref<ImportLibrary> library)
 {
 	auto container = library->GetTypeContainer();
 	m_object = BNDuplicateTypeContainer(container.m_object);

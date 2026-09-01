@@ -24,37 +24,37 @@ fn plugin_init() -> Result<(), ()> {
     binaryninja::tracing_init!("BNTL Utils");
 
     binaryninja::command::register_command(
-        "Type Library\\Create\\From Current View",
+        "Import Library\\Create\\From Current View",
         "Create .bntl files from the current view",
         command::create::CreateFromCurrentView {},
     );
 
     binaryninja::command::register_command_for_project(
-        "Type Library\\Create\\From Project",
+        "Import Library\\Create\\From Project",
         "Create .bntl files from the given project",
         command::create::CreateFromProject {},
     );
 
     binaryninja::command::register_global_command(
-        "Type Library\\Create\\From Directory",
+        "Import Library\\Create\\From Directory",
         "Create .bntl files from the given directory",
         command::create::CreateFromDirectory {},
     );
 
     binaryninja::command::register_global_command(
-        "Type Library\\Diff",
+        "Import Library\\Diff",
         "Diff two .bntl files and output the difference to a file",
         command::diff::Diff {},
     );
 
     binaryninja::command::register_global_command(
-        "Type Library\\Dump To Header",
+        "Import Library\\Dump To Header",
         "Dump a .bntl file to a header file",
         command::dump::Dump {},
     );
 
     binaryninja::command::register_global_command(
-        "Type Library\\Validate",
+        "Import Library\\Validate",
         "Validate a .bntl file and report the issues",
         command::validate::Validate {},
     );

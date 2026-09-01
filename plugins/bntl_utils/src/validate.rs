@@ -2,7 +2,7 @@ use crate::schema::BntlSchema;
 use binaryninja::platform::Platform;
 use binaryninja::qualified_name::QualifiedName;
 use binaryninja::rc::Ref;
-use binaryninja::types::TypeLibrary;
+use binaryninja::types::ImportLibrary;
 use minijinja::{context, Environment};
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
@@ -37,10 +37,10 @@ pub enum ValidateIssue {
         name: String,
         source: String,
     },
-    UnresolvedTypeLibrary {
+    UnresolvedImportLibrary {
         name: String,
     }, // TODO: Overlapping type name of platform?
-       // TODO: E.g. a type is found in the type library, and also in the platform.
+       // TODO: E.g. a type is found in the import library, and also in the platform.
 }
 
 impl Display for ValidateIssue {
@@ -83,7 +83,7 @@ impl Display for ValidateIssue {
             ValidateIssue::NoPlatform => {
                 write!(
                     f,
-                    "Missing Platform: The type library has no target platform associated with it"
+                    "Missing Platform: The import library has no target platform associated with it"
                 )
             }
             ValidateIssue::UnresolvedExternalReference { name, container } => {
@@ -100,10 +100,10 @@ impl Display for ValidateIssue {
                     name, source
                 )
             }
-            ValidateIssue::UnresolvedTypeLibrary { name } => {
+            ValidateIssue::UnresolvedImportLibrary { name } => {
                 write!(
                     f,
-                    "Unresolved Type Library: Could not find dependency library file for '{}'",
+                    "Unresolved Import Library: Could not find dependency library file for '{}'",
                     name
                 )
             }
@@ -129,34 +129,34 @@ impl ValidateResult {
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct TypeLibValidater {
+pub struct ImportLibValidater {
     pub seen_guids: HashMap<String, String>,
     // TODO: This needs to be by platform as well.
     pub seen_dependency_names: HashMap<String, String>,
-    /// These are the type libraries that are accessible to the type library under validation.
+    /// These are the import libraries that are accessible to the import library under validation.
     ///
     /// Used to validate external references.
-    pub type_libraries: Vec<Ref<TypeLibrary>>,
-    /// Built from the available type libraries.
+    pub import_libraries: Vec<Ref<ImportLibrary>>,
+    /// Built from the available import libraries.
     pub valid_external_references: HashSet<QualifiedName>,
 }
 
-impl TypeLibValidater {
+impl ImportLibValidater {
     pub fn new() -> Self {
         Self {
             seen_guids: HashMap::new(),
             seen_dependency_names: HashMap::new(),
-            type_libraries: Vec::new(),
+            import_libraries: Vec::new(),
             valid_external_references: HashSet::new(),
         }
     }
 
-    /// These are the type libraries that are accessible to the type library under validation.
+    /// These are the import libraries that are accessible to the import library under validation.
     ///
     /// Used to validate external references.
-    pub fn with_type_libraries(mut self, type_libraries: Vec<Ref<TypeLibrary>>) -> Self {
-        self.type_libraries = type_libraries;
-        for type_lib in &self.type_libraries {
+    pub fn with_import_libraries(mut self, import_libraries: Vec<Ref<ImportLibrary>>) -> Self {
+        self.import_libraries = import_libraries;
+        for type_lib in &self.import_libraries {
             for ty in &type_lib.named_types() {
                 self.valid_external_references.insert(ty.name);
             }
@@ -167,7 +167,7 @@ impl TypeLibValidater {
         self
     }
 
-    /// The platform that is accessible to the type library under validation.
+    /// The platform that is accessible to the import library under validation.
     ///
     /// Used to validate external references.
     pub fn with_platform(mut self, platform: &Platform) -> Self {
@@ -177,7 +177,7 @@ impl TypeLibValidater {
         self
     }
 
-    pub fn validate(&mut self, type_lib: &TypeLibrary) -> ValidateResult {
+    pub fn validate(&mut self, type_lib: &ImportLibrary) -> ValidateResult {
         let mut result = ValidateResult::default();
 
         if type_lib.platform_names().is_empty() {
@@ -203,7 +203,7 @@ impl TypeLibValidater {
         result
     }
 
-    pub fn validate_guid(&mut self, type_lib: &TypeLibrary) -> Option<ValidateIssue> {
+    pub fn validate_guid(&mut self, type_lib: &ImportLibrary) -> Option<ValidateIssue> {
         match self.seen_guids.insert(type_lib.guid(), type_lib.name()) {
             None => None,
             Some(existing_library) => Some(ValidateIssue::DuplicateGUID {
@@ -213,7 +213,7 @@ impl TypeLibValidater {
         }
     }
 
-    pub fn validate_dependency_name(&mut self, type_lib: &TypeLibrary) -> Option<ValidateIssue> {
+    pub fn validate_dependency_name(&mut self, type_lib: &ImportLibrary) -> Option<ValidateIssue> {
         match self
             .seen_dependency_names
             .insert(type_lib.dependency_name(), type_lib.name())
@@ -226,20 +226,21 @@ impl TypeLibValidater {
         }
     }
 
-    pub fn validate_source_files(&self, type_lib: &TypeLibrary) -> Vec<ValidateIssue> {
+    pub fn validate_source_files(&self, type_lib: &ImportLibrary) -> Vec<ValidateIssue> {
         let mut issues = Vec::new();
         let tmp_type_lib_path = temp_dir().join(type_lib.name());
         if !type_lib.decompress_to_file(&tmp_type_lib_path) {
             tracing::error!(
-                "Failed to decompress type library to temporary file: {}",
+                "Failed to decompress import library to temporary file: {}",
                 type_lib.name()
             );
             return issues;
         }
         let schema = BntlSchema::from_path(&tmp_type_lib_path);
         for (src, types) in schema.to_source_map() {
-            let Some(dep_type_lib) = self.type_libraries.iter().find(|tl| tl.name() == src) else {
-                issues.push(ValidateIssue::UnresolvedTypeLibrary {
+            let Some(dep_type_lib) = self.import_libraries.iter().find(|tl| tl.name() == src)
+            else {
+                issues.push(ValidateIssue::UnresolvedImportLibrary {
                     name: src.to_string(),
                 });
                 continue;
@@ -262,7 +263,7 @@ impl TypeLibValidater {
         issues
     }
 
-    pub fn validate_external_references(&self, type_lib: &TypeLibrary) -> Vec<ValidateIssue> {
+    pub fn validate_external_references(&self, type_lib: &ImportLibrary) -> Vec<ValidateIssue> {
         let mut issues = Vec::new();
         for ty in &type_lib.named_types() {
             crate::helper::visit_type_reference(&ty.ty, &mut |ntr| {
@@ -287,7 +288,7 @@ impl TypeLibValidater {
         issues
     }
 
-    pub fn validate_ordinals(&self, type_lib: &TypeLibrary) -> Vec<ValidateIssue> {
+    pub fn validate_ordinals(&self, type_lib: &ImportLibrary) -> Vec<ValidateIssue> {
         let Some(metadata_key_md) = type_lib.query_metadata("metadata") else {
             return vec![];
         };

@@ -204,14 +204,14 @@ void takes_object(struct object_type __by_ref arg);
 
 `__by_value` and `__by_ref` apply per-parameter and affect only the location chosen for the parameter (the parameter's type in the signature is unchanged). If you need to override the *exact* register or stack slot, use the `@` syntax or `__location()` attribute described above instead (it implies a custom location and overrides any by-value/by-ref decision).
 
-## System Call Functions for Type Libraries
+## System Call Functions for Import Libraries
 
-[Type Libraries](typelibraries.md) can annotate system calls by adding functions with the special `__syscall()` attribute, specifying names and arguments for each syscall number. This attribute has no effect outside of [Type Libraries](typelibraries.md) and [Platform Types](platformtypes.md).
+[Import Libraries](importlibraries.md) can annotate system calls by adding functions with the special `__syscall()` attribute, specifying names and arguments for each syscall number. This attribute has no effect outside of [Import Libraries](importlibraries.md) and [Platform Types](platformtypes.md).
 
 ### Examples
 
 ``` C
-/* From linux-x86_64's SYSCALLS Type Library */
+/* From linux-x86_64's SYSCALLS Import Library */
 int64_t sys_read(int32_t fd, void* buf, uint64_t count) __syscall(0);
 int64_t sys_write(int32_t fd, void const* buf, uint64_t count) __syscall(1);
 

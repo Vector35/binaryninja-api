@@ -1,6 +1,6 @@
 use crate::command::{InputDirectoryField, OutputDirectoryField};
-use crate::process::{new_processing_state_background_thread, TypeLibProcessor};
-use crate::validate::TypeLibValidater;
+use crate::process::{new_processing_state_background_thread, ImportLibProcessor};
+use crate::validate::ImportLibValidater;
 use binaryninja::background_task::BackgroundTask;
 use binaryninja::binary_view::BinaryView;
 use binaryninja::command::{Command, GlobalCommand, ProjectCommand};
@@ -27,7 +27,7 @@ impl Command for CreateFromCurrentView {
 
         let file_path = view.file().file_path();
         let file_name = file_path.file_name().unwrap_or_default().to_string_lossy();
-        let processor = TypeLibProcessor::new(&file_name, &default_platform.name());
+        let processor = ImportLibProcessor::new(&file_name, &default_platform.name());
         let data = match processor.process_view(file_path, view) {
             Ok(data) => data,
             Err(err) => {
@@ -38,28 +38,28 @@ impl Command for CreateFromCurrentView {
         .prune();
 
         let attached_libraries = view
-            .type_libraries()
+            .import_libraries()
             .iter()
             .map(|t| t.to_owned())
-            .chain(data.type_libraries.iter().map(|t| t.to_owned()))
+            .chain(data.import_libraries.iter().map(|t| t.to_owned()))
             .collect::<Vec<_>>();
-        let mut validator = TypeLibValidater::new()
+        let mut validator = ImportLibValidater::new()
             .with_platform(&default_platform)
-            .with_type_libraries(attached_libraries);
+            .with_import_libraries(attached_libraries);
 
-        for type_library in data.type_libraries {
-            let output_path = output_dir.join(format!("{}.bntl", type_library.name()));
+        for import_library in data.import_libraries {
+            let output_path = output_dir.join(format!("{}.bntl", import_library.name()));
 
-            let validation_result = validator.validate(&type_library);
+            let validation_result = validator.validate(&import_library);
             if !validation_result.issues.is_empty() {
                 tracing::error!(
-                    "Found {} issues in type library '{}'",
+                    "Found {} issues in import library '{}'",
                     validation_result.issues.len(),
-                    type_library.name()
+                    import_library.name()
                 );
                 match validation_result.render_report() {
                     Ok(rendered) => {
-                        view.show_html_report(&type_library.name(), &rendered, "");
+                        view.show_html_report(&import_library.name(), &rendered, "");
                         if let Err(e) = std::fs::write(output_path.with_extension("html"), rendered)
                         {
                             tracing::error!(
@@ -73,14 +73,17 @@ impl Command for CreateFromCurrentView {
                 }
             }
 
-            if type_library.write_to_file(&output_path) {
+            if import_library.write_to_file(&output_path) {
                 tracing::info!(
-                    "Created type library '{}': {}",
-                    type_library.name(),
+                    "Created import library '{}': {}",
+                    import_library.name(),
                     output_path.display()
                 );
             } else {
-                tracing::error!("Failed to write type library to {}", output_path.display());
+                tracing::error!(
+                    "Failed to write import library to {}",
+                    output_path.display()
+                );
             }
         }
     }
@@ -167,7 +170,7 @@ impl CreateFromDirectory {
             return;
         };
 
-        let processor = TypeLibProcessor::new(&default_name, &default_platform.name())
+        let processor = ImportLibProcessor::new(&default_name, &default_platform.name())
             .with_compiler_options(split_args(flags.as_str()));
 
         let background_task = BackgroundTask::new("Processing started...", true);
@@ -176,7 +179,7 @@ impl CreateFromDirectory {
         background_task.finish();
 
         let pruned_data = match data {
-            // Prune off empty type libraries, no need to save them.
+            // Prune off empty import libraries, no need to save them.
             Ok(data) => data.prune(),
             Err(err) => {
                 binaryninja::interaction::show_message_box(
@@ -190,20 +193,23 @@ impl CreateFromDirectory {
             }
         };
 
-        for type_library in pruned_data.type_libraries {
-            // Place the type libraries in a folder with the architecture name, as that is necessary
-            // information for the user to correctly place the following type libraries in the user directory.
-            let arch_output_path = output_dir.join(type_library.arch().name());
+        for import_library in pruned_data.import_libraries {
+            // Place the import libraries in a folder with the architecture name, as that is necessary
+            // information for the user to correctly place the following import libraries in the user directory.
+            let arch_output_path = output_dir.join(import_library.arch().name());
             let _ = std::fs::create_dir_all(&arch_output_path);
-            let output_path = arch_output_path.join(format!("{}.bntl", type_library.name()));
-            if type_library.write_to_file(&output_path) {
+            let output_path = arch_output_path.join(format!("{}.bntl", import_library.name()));
+            if import_library.write_to_file(&output_path) {
                 tracing::info!(
-                    "Created type library '{}': {}",
-                    type_library.name(),
+                    "Created import library '{}': {}",
+                    import_library.name(),
                     output_path.display()
                 );
             } else {
-                tracing::error!("Failed to write type library to {}", output_path.display());
+                tracing::error!(
+                    "Failed to write import library to {}",
+                    output_path.display()
+                );
             }
         }
     }
@@ -242,7 +248,7 @@ impl CreateFromProject {
             return;
         };
 
-        let processor = TypeLibProcessor::new(&default_name, &default_platform.name());
+        let processor = ImportLibProcessor::new(&default_name, &default_platform.name());
 
         let background_task = BackgroundTask::new("Processing started...", true);
         new_processing_state_background_thread(background_task.clone(), processor.state());
@@ -250,7 +256,7 @@ impl CreateFromProject {
         background_task.finish();
 
         let finalized_data = match data {
-            // Prune off empty type libraries, no need to save them.
+            // Prune off empty import libraries, no need to save them.
             Ok(data) => data.finalized(&default_name),
             Err(err) => {
                 binaryninja::interaction::show_message_box(
@@ -264,20 +270,23 @@ impl CreateFromProject {
             }
         };
 
-        for type_library in finalized_data.type_libraries {
-            // Place the type libraries in a folder with the architecture name, as that is necessary
-            // information for the user to correctly place the following type libraries in the user directory.
-            let arch_output_path = output_dir.join(type_library.arch().name());
+        for import_library in finalized_data.import_libraries {
+            // Place the import libraries in a folder with the architecture name, as that is necessary
+            // information for the user to correctly place the following import libraries in the user directory.
+            let arch_output_path = output_dir.join(import_library.arch().name());
             let _ = std::fs::create_dir_all(&arch_output_path);
-            let output_path = arch_output_path.join(format!("{}.bntl", type_library.name()));
-            if type_library.write_to_file(&output_path) {
+            let output_path = arch_output_path.join(format!("{}.bntl", import_library.name()));
+            if import_library.write_to_file(&output_path) {
                 tracing::info!(
-                    "Created type library '{}': {}",
-                    type_library.name(),
+                    "Created import library '{}': {}",
+                    import_library.name(),
                     output_path.display()
                 );
             } else {
-                tracing::error!("Failed to write type library to {}", output_path.display());
+                tracing::error!(
+                    "Failed to write import library to {}",
+                    output_path.display()
+                );
             }
         }
     }

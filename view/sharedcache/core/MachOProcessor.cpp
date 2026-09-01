@@ -19,14 +19,14 @@ SharedCacheMachOProcessor::SharedCacheMachOProcessor(Ref<BinaryView> view, std::
 void SharedCacheMachOProcessor::ApplyHeader(const SharedCache& cache, SharedCacheMachOHeader& header)
 {
 	const auto demanglerConfig = DemanglerConfig::ForBinaryView(m_view);
-	auto typeLibraryFromName = [&](const std::string& name) -> Ref<TypeLibrary> {
-		// Check to see if we have already loaded the type library.
-		if (auto typeLib = m_view->GetTypeLibrary(name))
-			return typeLib;
+	auto importLibraryFromName = [&](const std::string& name) -> Ref<ImportLibrary> {
+		// Check to see if we have already loaded the import library.
+		if (auto importLib = m_view->GetImportLibrary(name))
+			return importLib;
 
-		auto typeLibs = m_view->GetDefaultPlatform()->GetTypeLibrariesByName(name);
-		if (!typeLibs.empty())
-			return typeLibs.front();
+		auto importLibs = m_view->GetDefaultPlatform()->GetImportLibrariesByName(name);
+		if (!importLibs.empty())
+			return importLibs.front();
 		return nullptr;
 	};
 
@@ -42,8 +42,8 @@ void SharedCacheMachOProcessor::ApplyHeader(const SharedCache& cache, SharedCach
 
 	ApplyHeaderDataVariables(header);
 
-	// Pull the available type library for the image we are loading, so we can apply known types.
-	auto typeLib = typeLibraryFromName(header.installName);
+	// Pull the available import library for the image we are loading, so we can apply known types.
+	auto importLib = importLibraryFromName(header.installName);
 
 	if (header.linkeditPresent && m_vm->IsAddressMapped(header.linkeditSegment.vmaddr))
 	{
@@ -68,7 +68,7 @@ void SharedCacheMachOProcessor::ApplyHeader(const SharedCache& cache, SharedCach
 			for (const auto& sym : symbols)
 			{
 				auto [symbol, symbolType] = sym.GetBNSymbolAndType(demanglerConfig);
-				ApplySymbol(m_view, typeLib, symbol, symbolType);
+				ApplySymbol(m_view, importLib, symbol, symbolType);
 			}
 		}
 
@@ -80,16 +80,16 @@ void SharedCacheMachOProcessor::ApplyHeader(const SharedCache& cache, SharedCach
 			for (const auto& sym : exportSymbols)
 			{
 				auto [symbol, symbolType] = sym.GetBNSymbolAndType(demanglerConfig);
-				ApplySymbol(m_view, typeLib, symbol, symbolType);
+				ApplySymbol(m_view, importLib, symbol, symbolType);
 			}
 		}
 	}
 
 	// Apply symbols from the .symbols cache files.
-	ApplyUnmappedLocalSymbols(cache, header, std::move(typeLib));
+	ApplyUnmappedLocalSymbols(cache, header, std::move(importLib));
 }
 
-void SharedCacheMachOProcessor::ApplyUnmappedLocalSymbols(const SharedCache& cache, const SharedCacheMachOHeader& header, Ref<TypeLibrary> typeLib)
+void SharedCacheMachOProcessor::ApplyUnmappedLocalSymbols(const SharedCache& cache, const SharedCacheMachOHeader& header, Ref<ImportLibrary> importLib)
 {
 	const auto demanglerConfig = DemanglerConfig::ForBinaryView(m_view);
 	const auto& localSymbolsCacheEntry = cache.GetLocalSymbolsEntry();
@@ -135,7 +135,7 @@ void SharedCacheMachOProcessor::ApplyUnmappedLocalSymbols(const SharedCache& cac
 		for (const auto &sym: symbols)
 		{
 			auto [symbol, symbolType] = sym.GetBNSymbolAndType(demanglerConfig);
-			ApplySymbol(m_view, typeLib, std::move(symbol), std::move(symbolType));
+			ApplySymbol(m_view, importLib, std::move(symbol), std::move(symbolType));
 		}
 		return;
 	}

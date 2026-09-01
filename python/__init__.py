@@ -45,7 +45,8 @@ from .lowlevelil import *
 from .mediumlevelil import *
 from .highlevelil import *
 from .types import *
-from .typelibrary import *
+from .importlibrary import *
+from . import typelibrary # bind for PEP 562 rename
 from .functionrecognizer import *
 from .update import *
 from .plugin import *
@@ -97,6 +98,7 @@ from .log import (
 from .log import log as log_at_level
 from .deprecation import *
 import warnings
+import typing
 # We must alter the filter settings for DeprecatedWarning. Otherwise, it will never show up.
 # https://docs.python.org/3/library/warnings.html#default-warning-filter
 warnings.filterwarnings('once', '', DeprecatedWarning)
@@ -592,3 +594,22 @@ try:
 	from . import collaboration
 except ImportError:
 	pass
+
+
+# PEP 562 support for renamed class aliases (old -> current)
+_RENAMED_ATTRS = {"TypeLibrary": "ImportLibrary"}
+
+
+def __getattr__(name):
+	target = _RENAMED_ATTRS.get(name)
+	if target is None:
+		raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+	warnings.warn(
+		DeprecatedWarning(f"binaryninja.{name}", "6.1", None, f"Use binaryninja.{target} instead."), stacklevel=2
+	)
+	return globals()[target]
+
+
+if typing.TYPE_CHECKING:
+	# give type checkers the alias
+	TypeLibrary = ImportLibrary

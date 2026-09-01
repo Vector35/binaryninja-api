@@ -25,7 +25,7 @@ If you're working with version 1 of a file which has symbols, and you now want t
 
 ### Quickly Defining Externs
 
-If you have a binary with externs which don't have TypeLibraries this can allow you to quickly import them (and their types) from another source, this is especially effective when you have debug information for the dependent libraries
+If you have a binary with externs which don't have Import Libraries this can allow you to quickly import them (and their types) from another source, this is especially effective when you have debug information for the dependent libraries
 
 ## Import Header File
 
@@ -177,7 +177,7 @@ You could write this type into:
 /home/user/.binaryninja/types/platform/windows-x86.c
 ```
 
-And any time you opened a 32bit Windows binary, that type would be available to use. However, please note that these are not substitutes for [Type Libraries](../../dev/annotation.md#type-libraries).  Type Libraries are used to provide a collection of types for a given library such as a libc, or common DLL.
+And any time you opened a 32bit Windows binary, that type would be available to use. However, please note that these are not substitutes for [Import Libraries](../../dev/annotation.md#import-libraries).  Import Libraries are used to provide a collection of types for a given library such as a libc, or common DLL.
 
 !!! Tip "Tip"
     If you don't know the specific platform (and thus filename) you need to create for a given file, just enter `bv.platform` in the scripting console.

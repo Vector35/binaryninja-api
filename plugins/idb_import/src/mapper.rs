@@ -240,9 +240,9 @@ impl IDBMapper {
                 continue 'found;
             }
 
-            // 1. Check in BN type libraries.
-            if let Some(found_ty) = view.import_type_library_type(&used_ty.name, None) {
-                tracing::debug!("Found type in type library: {:?}", found_ty);
+            // 1. Check in BN import libraries.
+            if let Some(found_ty) = view.import_type_from_library(&used_ty.name, None) {
+                tracing::debug!("Found type in import library: {:?}", found_ty);
                 continue 'found;
             }
 

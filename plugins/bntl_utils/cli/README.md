@@ -1,6 +1,6 @@
 # Headless BNTL Processor
 
-Provides headless support for generating, inspecting, and validating Binary Ninja type libraries (BNTL).
+Provides headless support for generating, inspecting, and validating Binary Ninja import libraries (.bntl).
 
 ### Building
 
@@ -24,7 +24,7 @@ Once it finishes you now will have a `bntl_cli` binary in `target/release` for u
 
 #### Create
 
-Generate a new type library from local files or remote projects.
+Generate a new import library from local files or remote projects.
 
 Examples:
 
@@ -39,7 +39,7 @@ Examples:
 
 #### Dump
 
-Export a type library back into a C header file for inspection.
+Export an import library back into a C header file for inspection.
 
 Examples:
 
@@ -47,7 +47,7 @@ Examples:
 
 #### Diff
 
-Compare two type libraries and generate a .diff file.
+Compare two import libraries and generate a .diff file.
 
 Examples:
 
@@ -55,9 +55,9 @@ Examples:
 
 #### Validate
 
-Check type libraries for common errors, ensuring all referenced types exist across specified platforms.
+Check import libraries for common errors, ensuring all referenced types exist across specified platforms.
 
 Examples:
 
-- `./bntl_cli validate ./typelibs/ ./output/`
-  - Pass in a directory containing `.bntl` files to validate, outputting a JSON file for each type library containing any errors.
+- `./bntl_cli validate ./importlibs/ ./output/`
+  - Pass in a directory containing `.bntl` files to validate, outputting a JSON file for each import library containing any errors.

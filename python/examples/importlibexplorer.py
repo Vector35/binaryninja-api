@@ -27,20 +27,20 @@ from PySide6.QtCore import Qt, QRectF, QModelIndex
 from PySide6.QtWidgets import QVBoxLayout, QLabel, QComboBox, QTableWidget, QTableWidgetItem, QTextEdit, QApplication, \
 	QLineEdit, QHBoxLayout, QWidget, QAbstractItemView, QFrame
 from PySide6.QtGui import QImage, QPainter, QFont, QColor, QPalette
-from binaryninja import Platform, BinaryView, TypeLibrary, log, QualifiedName
+from binaryninja import Platform, BinaryView, ImportLibrary, log, QualifiedName
 from typing import Optional
 from re import search
 
 instance_id = 0
 
-g_typelib_explorer_viewtype = None
+g_importlib_explorer_viewtype = None
 
 
-class TypelibTypeTableWidget(QTableWidget, FilterTarget):
+class ImportlibTypeTableWidget(QTableWidget, FilterTarget):
 	def __init__(self, parent):
 		QTableWidget.__init__(self, parent)
 		FilterTarget.__init__(self)
-		self.typelib = None
+		self.importlib = None
 
 	def setFilter(self, filter_text: str):
 		self.setFilterRegExp(filter_text)
@@ -76,15 +76,15 @@ class TypelibTypeTableWidget(QTableWidget, FilterTarget):
 					break
 			self.setRowHidden(i, not match)
 
-	def set_type_library(self, typelib, data=None):
-		self.typelib = typelib
+	def set_import_library(self, importlib, data=None):
+		self.importlib = importlib
 		self.setColumnCount(3)
 		self.setHorizontalHeaderLabels(["Size", "Name", "Type"])
 		self.setColumnWidth(0, 32)
 		self.setColumnWidth(1, 192)
 		self.setColumnWidth(2, 256)
-		self.setRowCount(len(typelib.named_types))
-		for i, (name, type) in enumerate(typelib.named_types.items()):
+		self.setRowCount(len(importlib.named_types))
+		for i, (name, type) in enumerate(importlib.named_types.items()):
 			self.setItem(i, 0, QTableWidgetItem(str(len(type))))
 			self.setItem(i, 1, QTableWidgetItem(str(name)))
 			if data is None:
@@ -94,11 +94,11 @@ class TypelibTypeTableWidget(QTableWidget, FilterTarget):
 				self.setItem(i, 2, QTableWidgetItem("".join([str(l) for l in lines])))
 
 
-class TypelibObjectTableWidget(QTableWidget, FilterTarget):
+class ImportlibObjectTableWidget(QTableWidget, FilterTarget):
 	def __init__(self, parent):
 		QTableWidget.__init__(self, parent)
 		FilterTarget.__init__(self)
-		self.typelib = None
+		self.importlib = None
 		self.ordinals = None
 
 	def setFilter(self, filterText):
@@ -121,10 +121,10 @@ class TypelibObjectTableWidget(QTableWidget, FilterTarget):
 		self.setFocus(Qt.OtherFocusReason)
 
 	def lookup_ordinal(self, name: str) -> str:
-		assert self.typelib is not None
-		if md := self.typelib.query_metadata("ordinals"):
+		assert self.importlib is not None
+		if md := self.importlib.query_metadata("ordinals"):
 			if isinstance(md, str):
-				md = self.typelib.query_metadata(md)
+				md = self.importlib.query_metadata(md)
 			assert isinstance(md, dict)
 			for key, value in md.items():
 				if name == value:
@@ -133,16 +133,16 @@ class TypelibObjectTableWidget(QTableWidget, FilterTarget):
 		return "0"
 
 	def ordinals_exist(self) -> bool:
-		assert self.typelib is not None
-		return self.typelib.query_metadata("ordinals") is not None
+		assert self.importlib is not None
+		return self.importlib.query_metadata("ordinals") is not None
 
-	def set_type_library(self, typelib):
-		self.typelib = typelib
+	def set_import_library(self, importlib):
+		self.importlib = importlib
 		ordinals = self.ordinals_exist()
 		columns = ["Ord", "Name", "Type"] if ordinals else ["Name", "Type"]
 		self.setColumnCount(len(columns))
 		self.setHorizontalHeaderLabels(columns)
-		self.setRowCount(len(self.typelib.named_objects))
+		self.setRowCount(len(self.importlib.named_objects))
 		column = 0
 		if ordinals:
 			self.setColumnWidth(column, 32)
@@ -169,7 +169,7 @@ class TypelibObjectTableWidget(QTableWidget, FilterTarget):
 
 	def populate_table(self):
 		ordinals = self.ordinals_exist()
-		for i, (name, type) in enumerate(self.typelib.named_objects.items()):
+		for i, (name, type) in enumerate(self.importlib.named_objects.items()):
 			name = str(name)
 			column = 0
 			if ordinals:
@@ -182,23 +182,23 @@ class TypelibObjectTableWidget(QTableWidget, FilterTarget):
 
 # Sidebar widgets must derive from SidebarWidget, not QWidget. SidebarWidget is a QWidget but
 # provides callbacks for sidebar events, and must be created with a title.
-class TypelibExplorerWidget(SidebarWidget, FilterTarget):
+class ImportlibExplorerWidget(SidebarWidget, FilterTarget):
 	def __init__(self, name, frame, data):
 		SidebarWidget.__init__(self, name)
 		FilterTarget.__init__(self)
 		self.setBackgroundRole(QPalette.ColorRole.Window)
 		self.setAutoFillBackground(True)
-		self.setObjectName("TypelibExplorerWidget")
+		self.setObjectName("ImportlibExplorerWidget")
 
 		self.actionHandler = UIActionHandler()
 		self.actionHandler.setupActionHandler(self)
 
-		self.previous_typelib_index = -1
+		self.previous_importlib_index = -1
 		self.previous_platform_index = -1
 		self.orientation = None
 		self.data = None
 		self.platform = None
-		self.typelib = None
+		self.importlib = None
 
 		self.setLayout(QVBoxLayout())
 		self.layout().setContentsMargins(0, 0, 0, 0)
@@ -218,10 +218,10 @@ class TypelibExplorerWidget(SidebarWidget, FilterTarget):
 		if data is not None:
 			self.platform_selector.setCurrentIndex(self.platform_selector.findText(data.platform.name))
 
-		# typelib selector
-		self.typelib_selector = QComboBox(self)
-		self.typelib_selector.setEditable(True)
-		self.typelib_selector.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+		# importlib selector
+		self.importlib_selector = QComboBox(self)
+		self.importlib_selector.setEditable(True)
+		self.importlib_selector.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
 
 		# guid
 		self.guid = QLineEdit(self)
@@ -232,7 +232,7 @@ class TypelibExplorerWidget(SidebarWidget, FilterTarget):
 		self.alternate_names.setReadOnly(True)
 
 		# title and table of objects
-		self.object_table = TypelibObjectTableWidget(self)
+		self.object_table = ImportlibObjectTableWidget(self)
 		self.object_table.verticalHeader().hide()
 		self.object_table.horizontalHeader().setStretchLastSection(True)
 		self.object_table.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
@@ -250,7 +250,7 @@ class TypelibExplorerWidget(SidebarWidget, FilterTarget):
 
 		# title and table of types
 		self.table_label = QLabel("Types", self)
-		self.type_table = TypelibTypeTableWidget(self)
+		self.type_table = ImportlibTypeTableWidget(self)
 		self.type_table.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
 		self.type_table.verticalHeader().hide()
 		self.type_table.setSortingEnabled(True)
@@ -263,7 +263,7 @@ class TypelibExplorerWidget(SidebarWidget, FilterTarget):
 		self.type_layout.addWidget(self.types_filter)
 		self.type_layout_widget = QWidget()
 		self.type_layout_widget.setLayout(self.type_layout)
-		self.typelib_selector.currentIndexChanged.connect(self.on_typelib_selector_changed)
+		self.importlib_selector.currentIndexChanged.connect(self.on_importlib_selector_changed)
 		self.platform_selector.currentIndexChanged.connect(self.on_platform_selector_changed)
 		self.object_filter.textChanged.connect(self.object_table.setFilterRegExp)
 
@@ -356,16 +356,16 @@ class TypelibExplorerWidget(SidebarWidget, FilterTarget):
 			self.type_table.closeFilter()
 
 	def setDisabled(self, disabled):
-		self.typelib_selector.setDisabled(disabled)
+		self.importlib_selector.setDisabled(disabled)
 		self.object_table.setDisabled(disabled)
 		self.type_table.setDisabled(disabled)
 
 	def initialize_data(self, data: Optional[BinaryView], platform: Optional[Platform] = None,
-						typelib: Optional[TypeLibrary] = None):
-		# first ensure we have valid platform and typelib
+						importlib: Optional[ImportLibrary] = None):
+		# first ensure we have valid platform and importlib
 		data_changed = data != self.data
 		platform_changed = platform != self.platform
-		if (typelib is None or typelib == self.typelib) and not data_changed and not platform_changed:
+		if (importlib is None or importlib == self.importlib) and not data_changed and not platform_changed:
 			return
 
 		if data is not None and platform is None:
@@ -376,32 +376,32 @@ class TypelibExplorerWidget(SidebarWidget, FilterTarget):
 		self.data = data
 		self.platform = platform
 
-		if len(self.platform.type_libraries) == 0:
-			self.typelib_selector.clear()
+		if len(self.platform.import_libraries) == 0:
+			self.importlib_selector.clear()
 			self.type_table.clear()
 			self.object_table.clear()
 			self.guid.clear()
 			self.alternate_names.clear()
 			self.object_label.setText("Objects")
 			self.table_label.setText("Types")
-			log.log_info(f"No typelibs available for the selected platform {self.platform.name}")
+			log.log_info(f"No importlibs available for the selected platform {self.platform.name}")
 			return
 
 		loaded_names = []
 		tl_name = lambda tl: tl.name if tl.name is not None else ""
-		if typelib is None:
-			if self.data is not None and len(self.data.type_libraries) > 0 and self.data.platform == self.platform:
-				# if we're on the same platform as the binary show loaded typelibs first
-				loaded_typelibs = self.data.type_libraries
-				loaded_typelibs = sorted([tl for tl in loaded_typelibs], key=lambda tl: tl_name(tl))
-				loaded_names = [tl.name for tl in loaded_typelibs]
-				typelib = loaded_typelibs[0]
+		if importlib is None:
+			if self.data is not None and len(self.data.import_libraries) > 0 and self.data.platform == self.platform:
+				# if we're on the same platform as the binary show loaded importlibs first
+				loaded_importlibs = self.data.import_libraries
+				loaded_importlibs = sorted([tl for tl in loaded_importlibs], key=lambda tl: tl_name(tl))
+				loaded_names = [tl.name for tl in loaded_importlibs]
+				importlib = loaded_importlibs[0]
 			else:
-				typelib = sorted([tl for tl in self.platform.type_libraries], key=lambda tl: tl_name(tl))[0]
+				importlib = sorted([tl for tl in self.platform.import_libraries], key=lambda tl: tl_name(tl))[0]
 
-		assert typelib is not None, "typelib must be specified"
-		self.typelib = typelib
-		# platform and typelib are now guaranteed to be valid
+		assert importlib is not None, "importlib must be specified"
+		self.importlib = importlib
+		# platform and importlib are now guaranteed to be valid
 
 		# clear all the old data
 		self.type_table.clear()
@@ -410,29 +410,29 @@ class TypelibExplorerWidget(SidebarWidget, FilterTarget):
 		self.alternate_names.clear()
 		self.setDisabled(False)
 
-		# populate the typelib selector
+		# populate the importlib selector
 		if platform_changed or data_changed:
-			self.typelib_selector.currentIndexChanged.disconnect(self.on_typelib_selector_changed)
-			self.typelib_selector.clear()
+			self.importlib_selector.currentIndexChanged.disconnect(self.on_importlib_selector_changed)
+			self.importlib_selector.clear()
 			for name in loaded_names:
-				self.typelib_selector.addItem(f"{name} - loaded", name)
-			for name in sorted([tl_name(tl) for tl in self.platform.type_libraries]):
+				self.importlib_selector.addItem(f"{name} - loaded", name)
+			for name in sorted([tl_name(tl) for tl in self.platform.import_libraries]):
 				if name not in loaded_names:
-					self.typelib_selector.addItem(name, name)
-			self.previous_typelib_index = self.typelib_selector.findData(tl_name(typelib))
-			self.typelib_selector.setCurrentIndex(self.previous_typelib_index)
-			self.typelib_selector.currentIndexChanged.connect(self.on_typelib_selector_changed)
+					self.importlib_selector.addItem(name, name)
+			self.previous_importlib_index = self.importlib_selector.findData(tl_name(importlib))
+			self.importlib_selector.setCurrentIndex(self.previous_importlib_index)
+			self.importlib_selector.currentIndexChanged.connect(self.on_importlib_selector_changed)
 
 		if platform_changed:
 			self.platform_selector.setCurrentIndex(self.platform_selector.findText(self.platform.name))
 
-		# populate the typelib data
-		self.guid.setText(str(self.typelib.guid))
-		self.alternate_names.setText("\n".join(self.typelib.alternate_names))
-		self.object_label.setText(f"Objects ({len(self.typelib.named_objects)})")
-		self.object_table.set_type_library(self.typelib)
-		self.table_label.setText(f"Types ({len(self.typelib.named_types)})")
-		self.type_table.set_type_library(self.typelib, self.data)
+		# populate the importlib data
+		self.guid.setText(str(self.importlib.guid))
+		self.alternate_names.setText("\n".join(self.importlib.alternate_names))
+		self.object_label.setText(f"Objects ({len(self.importlib.named_objects)})")
+		self.object_table.set_import_library(self.importlib)
+		self.table_label.setText(f"Types ({len(self.importlib.named_types)})")
+		self.type_table.set_import_library(self.importlib, self.data)
 
 	def on_platform_selector_changed(self, index):
 		if index == -1 or index == self.previous_platform_index:
@@ -442,19 +442,19 @@ class TypelibExplorerWidget(SidebarWidget, FilterTarget):
 		platform = self.platform_selector.itemData(index)
 		self.initialize_data(self.data, platform)
 
-	def on_typelib_selector_changed(self, index):
-		if index == -1 or index == self.previous_typelib_index:
+	def on_importlib_selector_changed(self, index):
+		if index == -1 or index == self.previous_importlib_index:
 			return
-		self.previous_typelib_index = index
+		self.previous_importlib_index = index
 		assert self.platform is not None
-		typelib_name = self.typelib_selector.itemData(index)
-		typelibs = self.platform.get_type_libraries_by_name(typelib_name)
-		# get the typelib that has the same name as the one we selected
-		typelib = next((tl for tl in typelibs if tl.name == typelib_name), None)
-		if typelib is None:
+		importlib_name = self.importlib_selector.itemData(index)
+		importlibs = self.platform.get_import_libraries_by_name(importlib_name)
+		# get the importlib that has the same name as the one we selected
+		importlib = next((tl for tl in importlibs if tl.name == importlib_name), None)
+		if importlib is None:
 			return
 
-		self.initialize_data(self.data, self.platform, typelib)
+		self.initialize_data(self.data, self.platform, importlib)
 
 	def on_binaryview_changed(self, data):
 		self.initialize_data(data, data.platform)
@@ -475,7 +475,7 @@ class TypelibExplorerWidget(SidebarWidget, FilterTarget):
 		# and we can reparent them to a new wrapper.
 		self.horizontal_tabs.setParent(None)
 		self.platform_selector.setParent(None)
-		self.typelib_selector.setParent(None)
+		self.importlib_selector.setParent(None)
 		self.guid.setParent(None)
 		self.alternate_names.setParent(None)
 		self.object_layout_widget.setParent(None)
@@ -495,7 +495,7 @@ class TypelibExplorerWidget(SidebarWidget, FilterTarget):
 			layout = QVBoxLayout()
 			layout.setContentsMargins(0, 0, 0, 0)
 			layout.addWidget(self.platform_selector)
-			layout.addWidget(self.typelib_selector)
+			layout.addWidget(self.importlib_selector)
 			layout.addWidget(QLabel("GUID", self))
 			layout.addWidget(self.guid)
 			layout.addWidget(QLabel("Alternate Names", self))
@@ -511,7 +511,7 @@ class TypelibExplorerWidget(SidebarWidget, FilterTarget):
 			left_hand_layout = QVBoxLayout()
 			left_hand_layout.setContentsMargins(0, 0, 0, 0)
 			left_hand_layout.addWidget(self.platform_selector)
-			left_hand_layout.addWidget(self.typelib_selector)
+			left_hand_layout.addWidget(self.importlib_selector)
 			left_hand_layout.addWidget(QLabel("GUID", self))
 			left_hand_layout.addWidget(self.guid)
 			left_hand_layout.addWidget(QLabel("Alternate Names", self))
@@ -537,7 +537,7 @@ class TypelibExplorerWidget(SidebarWidget, FilterTarget):
 		self.updateLayout()
 
 
-class TypelibExplorerView(QFrame, View):
+class ImportlibExplorerView(QFrame, View):
 	def __init__(self, parent, data):
 		self.data = data
 		QFrame.__init__(self)
@@ -546,13 +546,13 @@ class TypelibExplorerView(QFrame, View):
 		self.setupView(self)
 
 		self.setParent(parent)
-		self.setObjectName("TypelibExplorerView")
+		self.setObjectName("ImportlibExplorerView")
 
-		self.typelib_explorer_widget = TypelibExplorerWidget("Typelib Explorer", self, data)
-		self.typelib_explorer_widget.initialize_data(data, data.platform)
-		self.typelib_explorer_widget.setPrimaryOrientation(Qt.Orientation.Vertical)
+		self.importlib_explorer_widget = ImportlibExplorerWidget("Importlib Explorer", self, data)
+		self.importlib_explorer_widget.initialize_data(data, data.platform)
+		self.importlib_explorer_widget.setPrimaryOrientation(Qt.Orientation.Vertical)
 		self.setLayout(QVBoxLayout())
-		self.layout().addWidget(self.typelib_explorer_widget)
+		self.layout().addWidget(self.importlib_explorer_widget)
 
 	def getData(self):
 		try:
@@ -567,28 +567,28 @@ class TypelibExplorerView(QFrame, View):
 		return False
 
 	def resizeEvent(self, event) -> None:
-		self.typelib_explorer_widget.setPrimaryOrientation(Qt.Orientation.Horizontal if self.width() > self.height() else Qt.Orientation.Vertical)
+		self.importlib_explorer_widget.setPrimaryOrientation(Qt.Orientation.Horizontal if self.width() > self.height() else Qt.Orientation.Vertical)
 		QFrame.resizeEvent(self, event)
 
 
-class TypelibExplorerViewType(ViewType):
+class ImportlibExplorerViewType(ViewType):
 	def __init__(self):
-		ViewType.__init__(self, "Typelib Explorer", "Typelib Explorer")
+		ViewType.__init__(self, "Importlib Explorer", "Importlib Explorer")
 
 	def getPriority(self, data, filename):
 		return 1
 
 	def create(self, data: 'BinaryView', view_frame: ViewFrame):
-		return TypelibExplorerView(view_frame, data)
+		return ImportlibExplorerView(view_frame, data)
 
 	@classmethod
 	def init(cls):
-		global g_typelib_explorer_viewtype
-		g_typelib_explorer_viewtype = cls()
-		ViewType.registerViewType(g_typelib_explorer_viewtype)
+		global g_importlib_explorer_viewtype
+		g_importlib_explorer_viewtype = cls()
+		ViewType.registerViewType(g_importlib_explorer_viewtype)
 
 
-class TypelibExplorerWidgetType(SidebarWidgetType):
+class ImportlibExplorerWidgetType(SidebarWidgetType):
 	def __init__(self):
 		# Sidebar icons are 28x28 points. Should be at least 56x56 pixels for
 		# HiDPI display compatibility. They will be automatically made theme
@@ -604,20 +604,20 @@ class TypelibExplorerWidgetType(SidebarWidgetType):
 		p.drawText(QRectF(0, 0, 56, 56), Qt.AlignCenter, "T")
 		p.end()
 
-		SidebarWidgetType.__init__(self, icon, "Typelib Explorer")
+		SidebarWidgetType.__init__(self, icon, "Importlib Explorer")
 
 	def createWidget(self, frame, data):
 		# This callback is called when a widget needs to be created for a given context. Different
 		# widgets are created for each unique BinaryView. They are created on demand when the sidebar
 		# widget is visible and the BinaryView becomes active.
-		return TypelibExplorerWidget("Typelib Explorer", frame, data)
+		return ImportlibExplorerWidget("Importlib Explorer", frame, data)
 
 	def canUseAsPane(self, split_pane_widget: 'binaryninjaui.SplitPaneWidget', data: 'BinaryView'):
 		return True
 
 	def createPane(self, split_pane_widget: 'binaryninjaui.SplitPaneWidget', data: 'BinaryView') -> 'binaryninjaui.Pane':
 		# We've already registered the View Type, so we request that here by name.
-		_type = "Typelib Explorer:" + data.view_type
+		_type = "Importlib Explorer:" + data.view_type
 		frame = ViewFrame(split_pane_widget, split_pane_widget.fileContext(), _type)
 		if not frame.getCurrentBinaryView():
 			del frame
@@ -627,5 +627,5 @@ class TypelibExplorerWidgetType(SidebarWidgetType):
 
 # Register the sidebar widget type with Binary Ninja. This will make it appear as an icon in the
 # sidebar and the `createWidget` method will be called when a widget is required.
-Sidebar.addSidebarWidgetType(TypelibExplorerWidgetType())
-TypelibExplorerViewType.init()
+Sidebar.addSidebarWidgetType(ImportlibExplorerWidgetType())
+ImportlibExplorerViewType.init()

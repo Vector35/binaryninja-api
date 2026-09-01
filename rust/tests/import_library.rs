@@ -1,14 +1,14 @@
 use binaryninja::headless::Session;
 use binaryninja::platform::Platform;
-use binaryninja::types::{Type, TypeClass, TypeLibrary};
+use binaryninja::types::{ImportLibrary, Type, TypeClass};
 use std::path::PathBuf;
 
 #[test]
-fn test_type_library() {
+fn test_import_library() {
     let _session = Session::new().expect("Failed to initialize session");
     let platform = Platform::by_name("windows-x86").expect("windows-x86 exists");
     let library = platform
-        .get_type_library_by_name("crypt32.dll")
+        .get_import_library_by_name("crypt32.dll")
         .expect("crypt32.dll exists");
 
     println!("{:#?}", library);
@@ -27,26 +27,26 @@ fn test_type_library() {
 }
 
 #[test]
-fn test_applying_type_library() {
+fn test_applying_import_library() {
     let _session = Session::new().expect("Failed to initialize session");
     let platform = Platform::by_name("windows-x86").expect("windows-x86 exists");
     let library = platform
-        .get_type_library_by_name("crypt32.dll")
+        .get_import_library_by_name("crypt32.dll")
         .expect("crypt32.dll exists");
 
     let out_dir = env!("OUT_DIR").parse::<PathBuf>().unwrap();
     let view = binaryninja::load(out_dir.join("atox.obj")).expect("Failed to create view");
-    view.add_type_library(&library);
+    view.add_import_library(&library);
 
     let view_library = view
-        .type_library_by_name("crypt32.dll")
+        .import_library_by_name("crypt32.dll")
         .expect("crypt32.dll exists");
     assert_eq!(view_library.name(), "crypt32.dll");
 
-    // Type library types don't exist in the view until they are imported.
-    // Adding the type library to the view will let you import types from it without necessarily knowing "where" they came from.
+    // Import library types don't exist in the view until they are imported.
+    // Adding the import library to the view will let you import types from it without necessarily knowing "where" they came from.
     let found_lib_type = view
-        .import_type_library_type("SIP_ADD_NEWPROVIDER", None)
+        .import_type_from_library("SIP_ADD_NEWPROVIDER", None)
         .expect("SIP_ADD_NEWPROVIDER exists");
     assert_eq!(found_lib_type.width(), 48);
     // Per docs type is returned as a NamedTypeReferenceClass.
@@ -61,13 +61,13 @@ fn test_applying_type_library() {
 }
 
 #[test]
-fn test_create_type_library() {
+fn test_create_import_library() {
     let _session = Session::new().expect("Failed to initialize session");
     let platform = Platform::by_name("windows-x86").expect("windows-x86 exists");
     let arch = platform.arch();
 
-    // Create the new type library.
-    let my_library = TypeLibrary::new(arch, "test_type_lib");
+    // Create the new import library.
+    let my_library = ImportLibrary::new(arch, "test_type_lib");
     my_library.add_alternate_name("alternate_test");
     my_library.add_alternate_name("alternate_to_be_removed");
     my_library.remove_alternate_name("alternate_to_be_removed");
@@ -81,7 +81,7 @@ fn test_create_type_library() {
 
     // Verify the contents of the created file.
     let loaded_library =
-        TypeLibrary::load_from_file(&my_library_path).expect("Failed to load type library");
+        ImportLibrary::load_from_file(&my_library_path).expect("Failed to load import library");
     assert_eq!(loaded_library.name(), "test_type_lib");
     assert_eq!(
         loaded_library.alternate_names().to_vec(),

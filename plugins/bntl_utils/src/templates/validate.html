@@ -55,7 +55,7 @@
 <body>
 
 <div class="header">
-    <h1>Type Library Validation Report</h1>
+    <h1>Import Library Validation Report</h1>
 </div>
 
 {% for issue in issues %}
@@ -79,7 +79,7 @@
 
     {% elif issue.NoPlatform %}
     <span class="issue-title">Missing Platform</span>
-    <span>The type library has no target platform associated with it.</span>
+    <span>The import library has no target platform associated with it.</span>
 
     {% elif issue.UnresolvedExternalReference %}
     <span class="issue-title">Unresolved External Reference</span>
@@ -89,9 +89,9 @@
     <span class="issue-title">Unresolved Source Reference</span>
     <span>Type <span class="issue-detail">{{ issue.UnresolvedSourceReference.name }}</span> was not found in expected source <span class="issue-detail">{{ issue.UnresolvedSourceReference.source }}</span>.</span>
 
-    {% elif issue.UnresolvedTypeLibrary %}
-    <span class="issue-title">Unresolved Type Library</span>
-    <span>Could not find dependency library file for <span class="issue-detail">{{ issue.UnresolvedTypeLibrary.name }}</span>.</span>
+    {% elif issue.UnresolvedImportLibrary %}
+    <span class="issue-title">Unresolved Import Library</span>
+    <span>Could not find dependency library file for <span class="issue-detail">{{ issue.UnresolvedImportLibrary.name }}</span>.</span>
     {% endif %}
 
 </div>

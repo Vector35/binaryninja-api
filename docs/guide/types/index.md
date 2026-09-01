@@ -11,7 +11,7 @@ There are so many things to learn about working with Types in Binary Ninja that 
 Additionally, several types of containers for type information are documented here:
 
 - [Debug Info](debuginfo.md): Debug Info can provide additional type information (examples include DWARF and PDB files)
-- [Type Libraries](typelibraries.md): Type Libraries contain types from commonly-used dynamic libraries
+- [Import Libraries](importlibraries.md): Import Libraries contain types from commonly-used dynamic libraries
 - [Platform Types](platformtypes.md): Types that automatically apply to a platform
 - [Type Archives](typearchives.md): How you can use type archives to share types between analysis databases
 - [Signature Libraries](../../dev/annotation.md#signature-libraries): Signature libraries are used to match names of functions with signatures for code that is statically compiled

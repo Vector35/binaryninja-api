@@ -110,7 +110,7 @@ public:
 	enum SourceType
 	{
 		None,
-		TypeLibrary,
+		ImportLibrary,
 		TypeArchive,
 		DebugInfo,
 		Platform,
@@ -124,7 +124,7 @@ private:
 	std::string m_sortName;
 
 	SourceType m_sourceType;
-	std::optional<TypeLibraryRef> m_sourceLibrary;
+	std::optional<ImportLibraryRef> m_sourceLibrary;
 	std::optional<TypeArchiveRef> m_sourceArchive;
 	std::optional<std::string> m_sourceDebugInfoParser;
 	std::optional<PlatformRef> m_sourcePlatform;
@@ -203,7 +203,7 @@ class TypeBrowserModelData: public std::enable_shared_from_this<TypeBrowserModel
 	std::map<std::string, BinaryViewRef> m_containerViews;
 	std::map<std::string, TypeArchiveRef> m_containerArchives;
 	std::map<std::string, std::string> m_containerArchiveIds;
-	std::map<std::string, TypeLibraryRef> m_containerLibraries;
+	std::map<std::string, ImportLibraryRef> m_containerLibraries;
 	std::map<std::string, DebugInfoRef> m_containerDebugInfos;
 	std::map<std::string, PlatformRef> m_containerPlatforms;
 
@@ -230,7 +230,7 @@ public:
 	std::optional<BinaryViewRef> viewForContainerId(const std::string& id) const;
 	std::optional<TypeArchiveRef> archiveForContainerId(const std::string& id) const;
 	std::optional<std::string> archiveIdForContainerId(const std::string& id) const;
-	std::optional<TypeLibraryRef> libraryForContainerId(const std::string& id) const;
+	std::optional<ImportLibraryRef> libraryForContainerId(const std::string& id) const;
 	std::optional<DebugInfoRef> debugInfoForContainerId(const std::string& id) const;
 	std::optional<PlatformRef> platformForContainerId(const std::string& id) const;
 
@@ -241,7 +241,7 @@ public:
 	void addAutoContainerForView(BinaryViewRef view);
 	void addContainerForArchive(TypeArchiveRef archive);
 	void addContainerForArchiveId(const std::string& archiveId, const std::string& path);
-	void addContainerForLibrary(TypeLibraryRef library);
+	void addContainerForLibrary(ImportLibraryRef library);
 	void addContainerForDebugInfo(DebugInfoRef debugInfo, const std::string& parser);
 	void addContainerForPlatform(PlatformRef platform);
 	void clearContainers();
@@ -276,7 +276,7 @@ public:
 	std::optional<BinaryViewRef> viewForContainerId(const std::string& id) const;
 	std::optional<TypeArchiveRef> archiveForContainerId(const std::string& id) const;
 	std::optional<std::string> archiveIdForContainerId(const std::string& id) const;
-	std::optional<TypeLibraryRef> libraryForContainerId(const std::string& id) const;
+	std::optional<ImportLibraryRef> libraryForContainerId(const std::string& id) const;
 	std::optional<DebugInfoRef> debugInfoForContainerId(const std::string& id) const;
 	std::optional<PlatformRef> platformForContainerId(const std::string& id) const;
 
@@ -557,8 +557,8 @@ public:
 	void importType();
 	bool canImportTypeByGUID(BinaryViewRef view);
 	void importTypeByGUID();
-	bool canAddTypeLibrary();
-	void addTypeLibrary();
+	bool canAddImportLibrary();
+	void addImportLibrary();
 	bool canExpandAll();
 	void expandAll();
 	bool canCollapseAll();

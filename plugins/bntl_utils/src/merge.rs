@@ -1,4 +1,4 @@
-//! Merge multiple similar types into one, useful when deduplicating types across different type libraries.
+//! Merge multiple similar types into one, useful when deduplicating types across different import libraries.
 
 use binaryninja::rc::Ref;
 use binaryninja::types::{

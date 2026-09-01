@@ -2220,36 +2220,36 @@ bool MachoView::InitializeHeader(MachOHeader& header, bool isMainHeader, uint64_
 			libraries.push_back(new Metadata(string(libName)));
 			// Compose exact name with {install_name}.{platform}.{version}
 			std::string libNameExact = fmt::format("{}.{}.{}", libName, GetDefaultPlatform()->GetName(), libVersion);
-			Ref<TypeLibrary> typeLib = GetTypeLibrary(libNameExact);
-			if (!typeLib)
+			Ref<ImportLibrary> importLib = GetImportLibrary(libNameExact);
+			if (!importLib)
 			{
-				vector<Ref<TypeLibrary>> typeLibs = GetDefaultPlatform()->GetTypeLibrariesByName(libNameExact);
-				if (typeLibs.size())
+				vector<Ref<ImportLibrary>> importLibs = GetDefaultPlatform()->GetImportLibrariesByName(libNameExact);
+				if (importLibs.size())
 				{
-					typeLib = typeLibs[0];
-					AddTypeLibrary(typeLib);
+					importLib = importLibs[0];
+					AddImportLibrary(importLib);
 
-					m_logger->LogDebugF("mach-o: adding type library for {:?}: {} ({})", libName, typeLib->GetName(), typeLib->GetGuid());
+					m_logger->LogDebugF("mach-o: adding import library for {:?}: {} ({})", libName, importLib->GetName(), importLib->GetGuid());
 				}
 			}
-			if (!typeLib)
+			if (!importLib)
 			{
-				typeLib = GetTypeLibrary(libName);
-				if (!typeLib)
+				importLib = GetImportLibrary(libName);
+				if (!importLib)
 				{
-					vector<Ref<TypeLibrary>> typeLibs = GetDefaultPlatform()->GetTypeLibrariesByName(libName);
-					if (typeLibs.size())
+					vector<Ref<ImportLibrary>> importLibs = GetDefaultPlatform()->GetImportLibrariesByName(libName);
+					if (importLibs.size())
 					{
-						typeLib = typeLibs[0];
-						AddTypeLibrary(typeLib);
+						importLib = importLibs[0];
+						AddImportLibrary(importLib);
 
-						m_logger->LogDebugF("mach-o: adding type library for {}: {} ({})", libName, typeLib->GetName(), typeLib->GetGuid());
+						m_logger->LogDebugF("mach-o: adding import library for {}: {} ({})", libName, importLib->GetName(), importLib->GetGuid());
 					}
 				}
 			}
 
-			if (typeLib)
-				libraryFound.push_back(new Metadata(typeLib->GetName()));
+			if (importLib)
+				libraryFound.push_back(new Metadata(importLib->GetName()));
 			else
 				libraryFound.push_back(new Metadata(string("")));
 		}
@@ -2714,12 +2714,12 @@ Ref<Symbol> MachoView::DefineMachoSymbol(
 	if ((type == ExternalSymbol) || (type == ImportAddressSymbol) || (type == ImportedDataSymbol))
 	{
 		QualifiedName n(name);
-		Ref<TypeLibrary> appliedLib;
-		symbolTypeRef = ImportTypeLibraryObject(appliedLib, n);
+		Ref<ImportLibrary> appliedLib;
+		symbolTypeRef = ImportObjectFromLibrary(appliedLib, n);
 		if (symbolTypeRef)
 		{
-			m_logger->LogDebugF("mach-o: type Library {:?} found hit for {:?}", appliedLib->GetName(), name);
-			RecordImportedObjectLibrary(GetDefaultPlatform(), addr, appliedLib, n);
+			m_logger->LogDebugF("mach-o: import library {:?} found hit for {:?}", appliedLib->GetName(), name);
+			RecordImportLibraryForObject(GetDefaultPlatform(), addr, appliedLib, n);
 		}
 
 	}

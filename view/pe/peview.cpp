@@ -1555,29 +1555,29 @@ bool PEView::Init()
 				std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(),
 						[](unsigned char c){ return std::tolower(c); });
 
-				vector<Ref<TypeLibrary>> typeLibs = platform->GetTypeLibrariesByName(lowerName);
-				for (const auto& typeLib : typeLibs)
+				vector<Ref<ImportLibrary>> importLibs = platform->GetImportLibrariesByName(lowerName);
+				for (const auto& importLib : importLibs)
 				{
-					// Check if the type library is already added
-					if (GetTypeLibrary(typeLib->GetName()))
+					// Check if the import library is already added
+					if (GetImportLibrary(importLib->GetName()))
 						continue;
-					AddTypeLibrary(typeLib);
+					AddImportLibrary(importLib);
 
-					m_logger->LogDebug("pe: adding type library for '%s': %s (%s)", lowerName.c_str(),
-						typeLib->GetName().c_str(), typeLib->GetGuid().c_str());
+					m_logger->LogDebug("pe: adding import library for '%s': %s (%s)", lowerName.c_str(),
+						importLib->GetName().c_str(), importLib->GetGuid().c_str());
 				}
 
 				Ref<Metadata> ordinals;
-				if (typeLibs.size())
+				if (importLibs.size())
 				{
-					for (const auto& typeLib : typeLibs)
+					for (const auto& importLib : importLibs)
 					{
 						char ordinal_subsystem[64];
 						snprintf(ordinal_subsystem, sizeof(ordinal_subsystem), "ordinals_%hu_%hu", opt.majorOSVersion, opt.minorOSVersion);
-						ordinals = typeLib->QueryMetadata("ordinals");
-						libraryFound.push_back(new Metadata(string(typeLib->GetName())));
+						ordinals = importLib->QueryMetadata("ordinals");
+						libraryFound.push_back(new Metadata(string(importLib->GetName())));
 						if (ordinals && ordinals->IsString())
-							ordinals = typeLib->QueryMetadata(ordinals->GetString());
+							ordinals = importLib->QueryMetadata(ordinals->GetString());
 
 						if (ordinals && !ordinals->IsKeyValueStore())
 							ordinals = nullptr;
@@ -1659,8 +1659,8 @@ bool PEView::Init()
 						DefineAutoSymbol(new Symbol(DataSymbol, "__import_lookup_table_" + to_string(numImportEntries) + "(" + dllName + ":" + func + ")", m_imageBase + entryOffset, NoBinding));
 					}
 					m_logger->LogDebug("FuncString: %s\n", func.c_str());
-					AddPESymbol(ImportAddressSymbol, dllName, func, iatOffset, NoBinding, ordinal, typeLibs);
-					AddPESymbol(ExternalSymbol, dllName, func, 0, NoBinding, ordinal, typeLibs);
+					AddPESymbol(ImportAddressSymbol, dllName, func, iatOffset, NoBinding, ordinal, importLibs);
+					AddPESymbol(ExternalSymbol, dllName, func, 0, NoBinding, ordinal, importLibs);
 
 					if (externLib)
 						m_symExternMappingMetadata->SetValueForKey(func, new Metadata(externLib->GetName()));
@@ -2137,21 +2137,21 @@ bool PEView::Init()
 						[](unsigned char c){ return std::tolower(c); });
 
 
-				vector<Ref<TypeLibrary>> typeLibs = platform->GetTypeLibrariesByName(lowerName);
-				for (const auto& typeLib : typeLibs)
+				vector<Ref<ImportLibrary>> importLibs = platform->GetImportLibrariesByName(lowerName);
+				for (const auto& importLib : importLibs)
 				{
-					// Check if the type library is already added
-					if (GetTypeLibrary(typeLib->GetName()))
+					// Check if the import library is already added
+					if (GetImportLibrary(importLib->GetName()))
 						continue;
-					AddTypeLibrary(typeLib);
+					AddImportLibrary(importLib);
 
-					m_logger->LogDebug("pe: adding type library for '%s': %s (%s)", lowerName.c_str(),
-						typeLib->GetName().c_str(), typeLib->GetGuid().c_str());
+					m_logger->LogDebug("pe: adding import library for '%s': %s (%s)", lowerName.c_str(),
+						importLib->GetName().c_str(), importLib->GetGuid().c_str());
 				}
 
 				Ref<Metadata> ordinals;
-				for (const auto& typeLib : typeLibs)
-					ordinals = typeLib->QueryMetadata("ordinals");
+				for (const auto& importLib : importLibs)
+					ordinals = importLib->QueryMetadata("ordinals");
 				if (ordinals && !ordinals->IsKeyValueStore())
 					ordinals = nullptr;
 
@@ -2222,8 +2222,8 @@ bool PEView::Init()
 						DefineAutoSymbol(new Symbol(DataSymbol, "__delay_import_lookup_table_" + to_string(numImportDelayEntries) + "(" + dllName + ":" + func + ")", m_imageBase + entryOffset, NoBinding));
 					}
 					m_logger->LogDebug("FuncString: %s\n", func.c_str());
-					AddPESymbol(ImportAddressSymbol, dllName, func, iatOffset, NoBinding, ordinal, typeLibs);
-					AddPESymbol(ExternalSymbol, dllName, func, 0, NoBinding, ordinal, typeLibs);
+					AddPESymbol(ImportAddressSymbol, dllName, func, iatOffset, NoBinding, ordinal, importLibs);
+					AddPESymbol(ExternalSymbol, dllName, func, 0, NoBinding, ordinal, importLibs);
 					BNRelocationInfo reloc;
 					memset(&reloc, 0, sizeof(reloc));
 					reloc.nativeType = -1;
@@ -3608,7 +3608,7 @@ uint64_t PEView::Read64(uint64_t rva)
 
 // The addr is RVA
 void PEView::AddPESymbol(BNSymbolType type, const string& dll, const string& name, uint64_t addr,
-	BNSymbolBinding binding, uint64_t ordinal, vector<Ref<TypeLibrary>> libs)
+	BNSymbolBinding binding, uint64_t ordinal, vector<Ref<ImportLibrary>> libs)
 {
 	// Don't create symbols that are present in the database snapshot now
 	if (type != ExternalSymbol && m_backedByDatabase)
@@ -3642,12 +3642,12 @@ void PEView::AddPESymbol(BNSymbolType type, const string& dll, const string& nam
 		QualifiedName n(name);
 		for (auto lib : libs)
 		{
-			Ref<TypeLibrary> appliedLib = lib;
-			symbolTypeRef = ImportTypeLibraryObject(appliedLib, n);
+			Ref<ImportLibrary> appliedLib = lib;
+			symbolTypeRef = ImportObjectFromLibrary(appliedLib, n);
 			if (symbolTypeRef)
 			{
-				m_logger->LogDebug("pe: type library '%s' found hit for '%s'", lib->GetGuid().c_str(), name.c_str());
-				RecordImportedObjectLibrary(GetDefaultPlatform(), address, appliedLib, n);
+				m_logger->LogDebug("pe: import library '%s' found hit for '%s'", lib->GetGuid().c_str(), name.c_str());
+				RecordImportLibraryForObject(GetDefaultPlatform(), address, appliedLib, n);
 			}
 		}
 	}

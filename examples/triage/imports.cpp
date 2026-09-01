@@ -11,7 +11,7 @@
 GenericImportsModel::GenericImportsModel(QWidget* parent, BinaryViewRef data) : QAbstractItemModel(parent)
 {
 	m_data = data;
-	m_typeLibCol = 1;
+	m_importLibCol = 1;
 	m_nameCol = 2;
 	m_moduleCol = -1;
 	m_ordinalCol = -1;
@@ -32,7 +32,7 @@ GenericImportsModel::GenericImportsModel(QWidget* parent, BinaryViewRef data) : 
 		m_nameCol = 4;
 		m_moduleCol = 1;
 		m_ordinalCol = 2;
-		m_typeLibCol = 3;
+		m_importLibCol = 3;
 		m_totalCols = 5;
 	}
 	m_entries = m_allEntries;
@@ -68,7 +68,7 @@ QVariant GenericImportsModel::data(const QModelIndex& index, int role) const
 			return getNamespace(m_entries[index.row()]);
 		if (index.column() == m_ordinalCol)
 			return QString::number(m_entries[index.row()]->GetOrdinal());
-		if (index.column() == m_typeLibCol)
+		if (index.column() == m_importLibCol)
 			return getLibrarySource(m_entries[index.row()]);
 		break;
 	case Qt::ForegroundRole:
@@ -99,8 +99,8 @@ QVariant GenericImportsModel::headerData(int section, Qt::Orientation orientatio
 		return QString("Module");
 	if (section == m_ordinalCol)
 		return QString("Ordinal");
-	if (section == m_typeLibCol)
-		return QString("Type Library");
+	if (section == m_importLibCol)
+		return QString("Import Library");
 	return QVariant();
 }
 
@@ -144,7 +144,7 @@ QString GenericImportsModel::getLibrarySource(SymbolRef sym) const
 {
 	if (!m_data->GetDefaultPlatform())
 		return QString("No Library");
-	auto imported = m_data->LookupImportedObjectLibrary(m_data->GetDefaultPlatform(), sym->GetAddress());
+	auto imported = m_data->LookupImportLibraryForObject(m_data->GetDefaultPlatform(), sym->GetAddress());
 	if (!imported.has_value())
 		return QString("No Library");
 
@@ -183,7 +183,7 @@ void GenericImportsModel::performSort(int col, Qt::SortOrder order)
 			else
 				return a->GetOrdinal() > b->GetOrdinal();
 		}
-		else if (col == m_typeLibCol)
+		else if (col == m_importLibCol)
 		{
 			if (order == Qt::AscendingOrder)
 				return getLibrarySource(a) < getLibrarySource(b);
@@ -249,7 +249,7 @@ ImportsTreeView::ImportsTreeView(ImportsWidget* parent, TriageView* view, Binary
 	sortByColumn(0, Qt::AscendingOrder);
 	if (m_model->HasOrdinalCol())
 		setColumnWidth(m_model->GetOrdinalCol(), 55);
-	setColumnWidth(m_model->GetTypeLibCol(), 90);
+	setColumnWidth(m_model->GetImportLibCol(), 90);
 	resizeColumnToContents(m_model->GetNameCol());
 
 	connect(selectionModel(), &QItemSelectionModel::currentChanged, this, &ImportsTreeView::importSelected);

@@ -67,10 +67,10 @@ Types in the list have their class indicated by icons:
 	* **Push Types to Archive** - Push the selected types to a [Type Archive](typearchives.md)
 	* **Pull Types from Archive** - Pull the selected types from a [Type Archive](typearchives.md)
 	* **Disassociate Types from Archive** - Disassociate, or break connections between, the selected types and their associated [Type Archive](typearchives.md)
-* Type Libraries
-	* **Import Type** - Import a type from a [Type Library](../../dev/annotation.md#type-libraries) into your analysis
+* Import Libraries
+	* **Import Type** - Import a type from an [Import Library](../../dev/annotation.md#import-libraries) into your analysis
 	* **Import Type by GUID** - (Windows binary analyses only) Import a COM type by its GUID
-	* **Add Type Library** - Add an existing [Type Library](../../dev/annotation.md#type-libraries) to your analysis
+	* **Add Import Library** - Add an existing [Import Library](../../dev/annotation.md#import-libraries) to your analysis
 * Settings
 	* **Search** - Change how the search box filters types
 	* **Type Names** - Search only filters by names of types (default)
@@ -84,7 +84,7 @@ All the type containers described in the [type introduction](index.md) are avail
 * **User Types**: In your analysis: Types created by you, either manually or through actions/plugins
 * **System Types**: In your analysis: Types created by analysis or imported during analysis, such as from Libraries or Debug Info
 * **Archive**: Types in an attached [Type Archive](typearchives.md). You can edit and delete them, without affecting the types in your analysis, and you can push/pull them into your analysis.
-* **Library**: Types in a [Type Library](../../dev/annotation.md#type-libraries). You cannot edit them, but you can import them into your analysis.
+* **Library**: Types in an [Import Library](../../dev/annotation.md#import-libraries). You cannot edit them, but you can import them into your analysis.
 * **Debug Info**: Types found in [Debug Info](debuginfo.md). You cannot edit them here, but they are copied into the System Types where you can edit them.
 * **Platform**: Types from the analyzed binary's [Platform](platformtypes.md). You cannot edit them here, but they are copied into the System Types where you can edit them.
 

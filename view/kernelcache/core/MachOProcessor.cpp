@@ -19,14 +19,14 @@ KernelCacheMachOProcessor::KernelCacheMachOProcessor(Ref<BinaryView> view) :
 void KernelCacheMachOProcessor::ApplyHeader(const KernelCache& cache, KernelCacheMachOHeader& header)
 {
 	const auto demanglerConfig = DemanglerConfig::ForBinaryView(m_view);
-	auto typeLibraryFromName = [&](const std::string& name) -> Ref<TypeLibrary> {
-		// Check to see if we have already loaded the type library.
-		if (auto typeLib = m_view->GetTypeLibrary(name))
-			return typeLib;
+	auto importLibraryFromName = [&](const std::string& name) -> Ref<ImportLibrary> {
+		// Check to see if we have already loaded the import library.
+		if (auto importLib = m_view->GetImportLibrary(name))
+			return importLib;
 
-		auto typeLibs = m_view->GetDefaultPlatform()->GetTypeLibrariesByName(name);
-		if (!typeLibs.empty())
-			return typeLibs.front();
+		auto importLibs = m_view->GetDefaultPlatform()->GetImportLibrariesByName(name);
+		if (!importLibs.empty())
+			return importLibs.front();
 		return nullptr;
 	};
 
@@ -42,8 +42,8 @@ void KernelCacheMachOProcessor::ApplyHeader(const KernelCache& cache, KernelCach
 
 	ApplyHeaderDataVariables(header);
 
-	// Pull the available type library for the image we are loading, so we can apply known types.
-	auto typeLib = typeLibraryFromName(header.installName);
+	// Pull the available import library for the image we are loading, so we can apply known types.
+	auto importLib = importLibraryFromName(header.installName);
 
 	if (m_applyFunctions && header.functionStartsPresent)
 	{
@@ -66,7 +66,7 @@ void KernelCacheMachOProcessor::ApplyHeader(const KernelCache& cache, KernelCach
 		for (const auto& sym : symbols)
 		{
 			auto [symbol, symbolType] = sym.GetBNSymbolAndType(demanglerConfig);
-			ApplySymbol(m_view, typeLib, symbol, symbolType);
+			ApplySymbol(m_view, importLib, symbol, symbolType);
 		}
 	}
 
@@ -78,7 +78,7 @@ void KernelCacheMachOProcessor::ApplyHeader(const KernelCache& cache, KernelCach
 		for (const auto& sym : exportSymbols)
 		{
 			auto [symbol, symbolType] = sym.GetBNSymbolAndType(demanglerConfig);
-			ApplySymbol(m_view, typeLib, symbol, symbolType);
+			ApplySymbol(m_view, importLib, symbol, symbolType);
 		}
 	}
 }

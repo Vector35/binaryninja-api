@@ -336,7 +336,7 @@ One workflow we recommend is to use an [initial analysis hold](settings.md#analy
 ## Collaboration Issues
 
 !!! note
-    This section only applies to the Binary Ninja Ultimate edition when being used with the Enterprise server.
+    This section only applies when using the collaboration add-on with an Enterprise Server.
 
 ### Cannot Connect to Server
 There are a number of reasons why you might not be able to connect to a server, including:

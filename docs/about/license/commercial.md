@@ -1,14 +1,20 @@
-# Commercial License (NAMED)
+# Commercial License
 
-BINARY NINJA SOFTWARE LICENSE AGREEMENT
+BINARY NINJA (TM) SOFTWARE LICENSE AGREEMENT
 
 IMPORTANT! BE SURE TO CAREFULLY READ AND UNDERSTAND ALL OF THE TERMS SET FORTH IN THIS LICENSE AGREEMENT ("LICENSE"). BY CLICKING THE "I ACCEPT" BUTTON OR OTHERWISE ACCEPTING THIS LICENSE THROUGH AN ORDERING DOCUMENT THAT INCORPORATES THIS LICENSE, YOU AGREE TO FOLLOW AND BE BOUND BY THE TERMS AND CONDITIONS OF THIS LICENSE. IF YOU ARE ENTERING INTO THIS LICENSE ON BEHALF OF A COMPANY OR OTHER LEGAL ENTITY, YOU REPRESENT THAT YOU HAVE THE AUTHORITY TO BIND SUCH ENTITY TO THE TERMS AND CONDITIONS OF THIS LICENSE AND, IN SUCH EVENT, "YOU" AND "YOUR" AS USED IN THIS LICENSE SHALL REFER TO SUCH ENTITY, IF YOU DO NOT HAVE SUCH AUTHORITY, OR IF YOU DO NOT AGREE TO ALL THE TERMS AND CONDITIONS IN THIS LICENSE, YOU MUST SELECT THE "I DECLINE" BUTTON AND MAY NOT USE THE SOFTWARE.
 
 This License is entered into by and between you ("you" or "your") and Vector 35 Inc, a Delaware corporation ("us", "we" or "our").
 
-We will license Binary Ninja™, a software application (the "Software"), to you under the mutual terms and conditions in this License. By installing the Software, you agree to be bound by the terms of this License. If you do not agree to the terms of this License, please do not install or attempt to use the Software.
+We will license Binary Ninja (TM), a software application (the "Software"), to you under the mutual terms and conditions in this License. By installing the Software, you agree to be bound by the terms of this License. If you do not agree to the terms of this License, please do not install or attempt to use the Software.
 
-1. Non-Exclusive License Grant. Under the terms of this License, the Software is licensed on a non-exclusive basis and is not sold. You receive no title to or ownership of the Software itself. This License grants you the rights a single user license that allows a copy of the Software to be installed and used by you on other computers you own as a single designated person. In other words, you may install the Software on more than one computer owned by you as long as there is only one physical computer running the Software at any time and as long as it is only used by you. This License does not permit any concurrent use. If other users will use the Software on any of the computers that the application will be installed on, then you are required to obtain additional licenses for each user who plans to use the Software. If your needs require concurrent use, please contact us for alternative licensing arrangements. If other users will use the Software, then you are required to obtain additional licenses for each user who plans to use the Software.  All rights not expressly granted herein reserved by us.
+1. Non-Exclusive License Grant. Under the terms of this License, the Software is licensed on a non-exclusive basis and is not sold. You receive no title to or ownership of the Software itself. This License grants you the rights corresponding to the license type you purchased. Each license is of a single type: named or computer. Unless you purchased otherwise, this License is a named license. Your license type determines which of the following grants applies to you:
+
+    a) Named license (the default). You may install and use the Software on other computers you own, provided that only one of those computers is running the Software at any time and that the Software is used only by you, as the single designated person for whom the license was purchased.
+
+    b) Computer license. You may install the Software on a single computer you own (the "Designated Computer"), which may be used by any member of your organization with access to it, provided that no more than one user is running the Software on that Designated Computer at any time.
+
+    In no case does this License permit more than one instance of the Software to be running at any one time for each license you have purchased. If your needs require more concurrent use than the licenses you have purchased allow, then you are required to obtain additional licenses for each additional user or concurrent instance. All rights not expressly granted herein are reserved by us.
 
 2. License Fee. Prices are subject to change without prior notice and the price of a License today does not guarantee a similar price in the future.
 

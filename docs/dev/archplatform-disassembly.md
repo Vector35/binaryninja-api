@@ -2,7 +2,7 @@
 
 From the beginning, the most important feature of Binary Ninja has been our API. The goal is simple: your plugins should be capable of producing the same high-quality decompilation as our official architectures. In this guide, we will implement a complete architecture and platform using some lesser-known features in Binary Ninja. From disassembly and lifting, to calling conventions, Type Libraries, and function signatures, we will explore the many steps involved in getting and refining decompilation results. The guide is intended to be used both as a roadmap for how to build your own architecture plugin and as ideas for how to improve an existing one you might already have.
 
-Third-party plugins are a paid feature of Binary Ninja, so [you will need a license to the Personal edition or higher](https://binary.ninja/purchase) to write an architecture of your own. Apart from that, plugins are compatible with all paid editions and even with [collaboration support on the Enterprise edition](https://binary.ninja/enterprise/).
+Third-party plugins are a paid feature of Binary Ninja, so [you will need a license to the Personal edition or higher](https://binary.ninja/purchase) to write an architecture of your own. Apart from that, plugins are compatible with all paid editions.
 
 The complete source code for the architecture plugin built in this guide is available at [arch_quark on GitHub](https://github.com/Vector35/arch_quark).
 

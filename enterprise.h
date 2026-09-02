@@ -28,8 +28,8 @@
 namespace BinaryNinja
 {
 	/*!
-	    API for interacting with Enterprise features, such as communicating with the Enterprise server.
-	    These methods will only do anything on Enterprise editions of Binary Ninja.
+	    API for interacting with Enterprise features, such as communicating with an Enterprise Server.
+	    These methods will only do anything on the Ultimate edition of Binary Ninja.
 	 */
 	namespace Enterprise
 	{

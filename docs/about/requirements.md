@@ -36,6 +36,6 @@ Binary Ninja includes varying levels of support for different CPU architectures 
 
 ## Enterprise Server
 
-Any licensed copy of Binary Ninja Ultimate (named, computer, or floating) can connect to an Enterprise server, on any of the platforms listed above.
+Any edition of Binary Ninja with a floating license or the collaboration add-on can connect to an Enterprise Server, on any of the platforms listed above.
 
-Requirements for the Enterprise server itself are documented separately in the [Enterprise documentation](https://docs.enterprise.binary.ninja/#requirements).
+Requirements for the Enterprise Server itself are documented separately in the [Enterprise documentation](https://docs.enterprise.binary.ninja/#requirements).

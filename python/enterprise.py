@@ -1,5 +1,5 @@
 """
-.. note: This module is only available in the Ultimate edition of Binary Ninja.
+.. note:: This module is only available in the Ultimate edition of Binary Ninja.
 """
 
 import ctypes

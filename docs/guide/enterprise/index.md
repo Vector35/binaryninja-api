@@ -1,18 +1,18 @@
 # Binary Ninja Enterprise
 
 !!! note
-    This section only applies to the Ultimate edition of Binary Ninja.
+    This section applies to Binary Ninja with a floating license or the collaboration add-on.
 
-The Ultimate edition of Binary Ninja seamlessly integrates remote collaboration functionality, provided by the Binary Ninja Enterprise server, within the client. This includes remote project management, push/pull of analysis database and type archive snapshots, real-time chat, and more.
+The collaboration add-on seamlessly integrates remote collaboration functionality, provided by a Binary Ninja Enterprise Server, within the client. This includes remote project management, push/pull of analysis database and type archive snapshots, real-time chat, and more.
 
 
 ## Licensing
 
-Starting Ultimate for the first time, you will be greeted by the following dialog:
+Starting Binary Ninja for the first time with a floating license, you will be greeted by the following dialog:
 
 ![License Dialog](../../img/enterprise/license-dialog.png){: style="max-width:500px; display: block; margin: auto;"}
 
-If you have a *named* license, your experience should be identical to that of a Commercial edition build, but with the additional features of Ultimate. Click the "Used Named License..." button and select the `license.dat` that was provided when you purchased your license. This will be placed in your [user folder](../index.md#user-folder).
+If you have a *named* license, your experience should be identical to that of a Commercial edition build, but with the additional features of Ultimate and any add-ons on your license. Click the "Used Named License..." button and select the `license.dat` that was provided when you purchased your license. This will be placed in your [user folder](../index.md#user-folder).
 
 Otherwise, you will need to check out a *floating* license from your Enterprise server. Enter your server location into the box and click "Connect". (All connections should happen over HTTPS and the default port is 3535.)
 
@@ -37,7 +37,7 @@ Binary Ninja has a number of settings that let you change how it connects to and
 
 ## User Interface
 
-The Ultimate edition of Binary Ninja adds a few extra items in the user interface. These include:
+The collaboration add-on adds a few extra items in the user interface. These include:
 
 * An extra [status indicator](#status-indicator) in the status bar
 * The [Remote Dialog](#remote-dialog)
@@ -169,7 +169,7 @@ The left-hand side of the dialog will show the conflicts in a list. The right-ha
 
 ## API Examples
 
-Examples of using the `collaboration` and `enterprise` APIs (which are unique to the Ultimate edition) can be found bundled with your installation:
+Examples of using the `collaboration` and `enterprise` APIs (which require the collaboration add-on) can be found bundled with your installation:
 
 * **macOS**: `Binary\ Ninja.app/Contents/Resources/python/binaryninja/collaboration/examples`
 * **Linux**: `binaryninja/python/binaryninja/collaboration/examples`

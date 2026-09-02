@@ -101,15 +101,11 @@ nav = [
         { "Requirements" = "about/requirements.md" },
         { "License" = [
             "about/license.md",
-            { "Non-commercial (Named)" = "about/license/noncommercial-named.md" },
-            { "Commercial (Named)" = "about/license/commercial-named.md" },
-            { "Non-commercial (Computer, Deprecated)" = "about/license/noncommercial-computer.md" },
-            { "Commercial (Computer)" = "about/license/commercial-computer.md" },
             { "Free" = "about/license/free.md" },
-            { "Ultimate (Named)" = "about/license/ultimate-named.md" },
-            { "Ultimate (Computer)" = "about/license/ultimate-computer.md" },
-            { "Ultimate Floating" = "about/license/ultimate-floating.md" },
-            { "Enterprise Server" = "about/license/enterprise-server.md" },
+            { "Non-commercial" = "about/license/noncommercial.md" },
+            { "Commercial" = "about/license/commercial.md" },
+            { "Ultimate" = "about/license/ultimate.md" },
+            { "Enterprise Server" = "about/license/servers.md" },
         ] },
         { "Open Source" = "about/open-source.md" },
         { "Privacy" = "about/privacy.md" },
@@ -164,7 +160,14 @@ separator = '[\s\-,:!=\[\]()"/]+|\.(?!\d)|&[lg]t;'
 "guide/debugger.md" = "guide/debugger/index.md"
 "guide/remote-debugging.md" = "guide/debugger/remote-debugging.md"
 "guide/dbgeng-ttd.md" = "guide/debugger/dbgeng-ttd.md"
-"about/license/ultimate.md" = "about/license/ultimate-named.md"
+"about/license/ultimate-named.md" = "about/license/ultimate.md"
+"about/license/ultimate-computer.md" = "about/license/ultimate.md"
+"about/license/ultimate-floating.md" = "about/license/ultimate.md"
+"about/license/commercial-named.md" = "about/license/commercial.md"
+"about/license/commercial-computer.md" = "about/license/commercial.md"
+"about/license/noncommercial-computer.md" = "about/license/noncommercial.md"
+"about/license/noncommercial-named.md" = "about/license/noncommercial.md"
+"about/license/enterprise-server.md" = "about/license/servers.md"
 
 [project.markdown_extensions.attr_list]
 [project.markdown_extensions.md_in_html]

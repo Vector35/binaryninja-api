@@ -290,10 +290,12 @@ impl Transform {
                 param_list.len(),
             )
         };
-        match result {
-            true => true,
-            false => false,
+        // Free the parameter name strings we allocated with `into_raw` above,
+        // matching `decode`/`encode` (this was previously leaked).
+        for param in param_list {
+            unsafe { BnString::free_raw(param.name as *mut c_char) };
         }
+        result
     }
 }
 
@@ -992,6 +994,6 @@ unsafe extern "C" fn cb_can_decode<C: CustomTransform + DetectionTransform>(
 ) -> bool {
     let ctxt = ctxt as *mut C;
     let input = BinaryView::from_raw(input);
-    let mut reader = BinaryReader::new(input.as_ref());
+    let mut reader = BinaryReader::new(&input);
     (*ctxt).can_decode(&mut reader)
 }

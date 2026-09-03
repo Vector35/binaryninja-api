@@ -301,7 +301,6 @@ The following settings are specific to Binary Views. To access these settings, y
 |core.module|Load Debug Info|This analysis step attempts to parse and load debug information from internal and external sources.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='core.module.loadDebugInfo'>core.module.loadDebugInfo</a>|
 |core.module|Strings Analysis|Enable automatic detection and analysis of strings within the binary.|`boolean`|`True`|[`SettingsProjectScope`, `SettingsResourceScope`, `SettingsUserScope`]|<a id='core.module.stringsAnalysis'>core.module.stringsAnalysis</a>|
 |corePlugins|RTTI Plugin|Enable the built-in RTTI plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.RTTI'>corePlugins.RTTI</a>|
-|corePlugins|BinExport Plugin|Enable the BinExport plugin for exporting to BinDiff and other tools. (Non-Ultimate)|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.binexport'>corePlugins.binexport</a>|
 |corePlugins|BinDiff Similarity Plugin|Enable the built-in Google BinDiff similarity provider and BinExport command (Ultimate Only).|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.bindiffSimilarity'>corePlugins.bindiffSimilarity</a>|
 |corePlugins|BNTL Utils Plugin|Enable the built-in BNTL Utils plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.bntlUtils'>corePlugins.bntlUtils</a>|
 |corePlugins|Crypto Plugin|Enable the built-in crypto plugin.|`boolean`|`True`|[`SettingsUserScope`]|<a id='corePlugins.crypto'>corePlugins.crypto</a>|

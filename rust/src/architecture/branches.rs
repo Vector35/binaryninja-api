@@ -5,6 +5,19 @@ use binaryninjacore_sys::*;
 
 pub use binaryninjacore_sys::BNBranchType as BranchType;
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct BranchOverride {
+    pub type_: BranchType,
+    pub target: Option<Location>,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct OverridableBranchInfo {
+    pub type_: BranchType,
+    pub target: u64,
+    pub arch: Option<CoreArchitecture>,
+}
+
 #[derive(Default, Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum BranchKind {
     #[default]
@@ -50,6 +63,28 @@ impl BranchInfo {
             BranchKind::True(target) => Some(target),
             BranchKind::Call(target) => Some(target),
             _ => None,
+        }
+    }
+}
+
+impl From<BNOverridableBranchInfo> for OverridableBranchInfo {
+    fn from(value: BNOverridableBranchInfo) -> Self {
+        let arch =
+            (!value.arch.is_null()).then(|| unsafe { CoreArchitecture::from_raw(value.arch) });
+        Self {
+            type_: value.type_,
+            target: value.target,
+            arch,
+        }
+    }
+}
+
+impl From<OverridableBranchInfo> for BNOverridableBranchInfo {
+    fn from(value: OverridableBranchInfo) -> Self {
+        Self {
+            type_: value.type_,
+            target: value.target,
+            arch: value.arch.map_or(std::ptr::null_mut(), |arch| arch.handle),
         }
     }
 }

@@ -1602,6 +1602,21 @@ void Function::SetUserIndirectBranches(
 }
 
 
+void Function::SetUserBranchOverride(Architecture* arch, uint64_t addr, BNBranchType originalBranchType,
+	BNBranchType replacementBranchType, std::optional<uint64_t> replacementTarget, Architecture* replacementTargetArch)
+{
+	BNSetUserBranchOverride(m_object, arch->GetObject(), addr, originalBranchType, replacementBranchType,
+		replacementTarget.has_value(), replacementTarget && replacementTargetArch ? replacementTargetArch->GetObject() : nullptr,
+		replacementTarget.value_or(0));
+}
+
+
+bool Function::IsValidBranchOverrideLocation(Architecture* arch, uint64_t addr)
+{
+	return BNIsValidBranchOverrideLocation(m_object, arch->GetObject(), addr);
+}
+
+
 void Function::SetGuidedSourceBlocks(const std::vector<ArchAndAddr>& addresses)
 {
 	BNArchitectureAndAddress* addressList = new BNArchitectureAndAddress[addresses.size()];

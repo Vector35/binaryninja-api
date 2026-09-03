@@ -1,4 +1,7 @@
-use crate::architecture::{ArchitectureWithFunctionContext, CoreArchitecture, IndirectBranchInfo};
+use crate::architecture::{
+    ArchitectureWithFunctionContext, BranchOverride, BranchType, CoreArchitecture,
+    IndirectBranchInfo,
+};
 use crate::basic_block::BasicBlock;
 use crate::function::{Function, Location, NativeBlock};
 use crate::rc::Ref;
@@ -13,6 +16,7 @@ pub struct BasicBlockAnalysisContext {
     // In
     pub indirect_branches: Vec<IndirectBranchInfo>,
     pub indirect_no_return_calls: HashSet<Location>,
+    pub branch_overrides: HashMap<Location, HashMap<BranchType, BranchOverride>>,
     pub analysis_skip_override: BNFunctionAnalysisSkipOverride,
     pub guided_analysis_mode: bool,
     pub trigger_guided_on_invalid_instruction: bool,
@@ -29,6 +33,7 @@ pub struct BasicBlockAnalysisContext {
     direct_no_return_calls: HashSet<Location>,
     halted_disassembly_addresses: HashSet<Location>,
     inlined_unresolved_indirect_branches: HashSet<Location>,
+    pub valid_branch_override_locations: HashSet<Location>,
 }
 
 /// Per-function store of basic block instruction bytes, populated during basic block analysis and
@@ -100,6 +105,31 @@ impl BasicBlockAnalysisContext {
             .iter()
             .map(Location::from)
             .collect();
+
+        let raw_branch_overrides: &[BNBranchOverride] =
+            std::slice::from_raw_parts(ctx_ref.branchOverrides, ctx_ref.branchOverrideCount);
+        let mut branch_overrides: HashMap<Location, HashMap<BranchType, BranchOverride>> =
+            HashMap::new();
+        for entry in raw_branch_overrides {
+            let target = entry.hasReplacementTarget.then(|| {
+                let arch = (!entry.replacementTargetArch.is_null())
+                    .then(|| CoreArchitecture::from_raw(entry.replacementTargetArch));
+                Location::new(arch, entry.replacementTarget)
+            });
+            branch_overrides
+                .entry(Location::new(
+                    Some(CoreArchitecture::from_raw(entry.arch)),
+                    entry.address,
+                ))
+                .or_default()
+                .insert(
+                    entry.originalBranchType,
+                    BranchOverride {
+                        type_: entry.replacementBranchType,
+                        target,
+                    },
+                );
+        }
 
         let raw_contextual_return_locs: &[BNArchitectureAndAddress] = unsafe {
             std::slice::from_raw_parts(
@@ -182,6 +212,7 @@ impl BasicBlockAnalysisContext {
             contextual_returns_dirty: false,
             indirect_branches,
             indirect_no_return_calls,
+            branch_overrides,
             analysis_skip_override: ctx_ref.analysisSkipOverride,
             guided_analysis_mode: ctx_ref.guidedAnalysisMode,
             trigger_guided_on_invalid_instruction: ctx_ref.triggerGuidedOnInvalidInstruction,
@@ -194,6 +225,7 @@ impl BasicBlockAnalysisContext {
             direct_no_return_calls,
             halted_disassembly_addresses,
             inlined_unresolved_indirect_branches,
+            valid_branch_override_locations: HashSet::new(),
         }
     }
 
@@ -371,6 +403,21 @@ impl BasicBlockAnalysisContext {
         }
     }
 
+    fn update_valid_branch_override_locations(&mut self) {
+        let mut raw_locations: Vec<_> = self
+            .valid_branch_override_locations
+            .iter()
+            .map(BNArchitectureAndAddress::from)
+            .collect();
+        unsafe {
+            BNAnalyzeBasicBlocksContextSetValidBranchOverrideLocations(
+                self.handle,
+                raw_locations.as_mut_ptr(),
+                raw_locations.len(),
+            );
+        }
+    }
+
     /// To be called before finalizing the basic block analysis.
     fn update_contextual_returns(&mut self) {
         let total = self.contextual_returns.len();
@@ -408,6 +455,10 @@ impl BasicBlockAnalysisContext {
             self.update_inlined_unresolved_indirect_branches();
         }
 
+        if !self.valid_branch_override_locations.is_empty() {
+            self.update_valid_branch_override_locations();
+        }
+
         unsafe {
             (*self.handle).maxSizeReached = self.max_size_reached;
         }
@@ -436,6 +487,10 @@ impl Debug for BasicBlockAnalysisContext {
             .field("contextual_returns", &self.contextual_returns)
             .field("direct_code_references", &self.direct_code_references)
             .field("direct_no_return_calls", &self.direct_no_return_calls)
+            .field(
+                "valid_branch_override_locations",
+                &self.valid_branch_override_locations,
+            )
             .field(
                 "halted_disassembly_addresses",
                 &self.halted_disassembly_addresses,

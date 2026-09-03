@@ -2396,6 +2396,31 @@ class Function:
 			branch_list[i].address = branches[i][1]
 		core.BNSetUserIndirectBranches(self.handle, source_arch.handle, source, branch_list, len(branches))
 
+	def set_user_branch_override(
+	    self, address: int, original_branch_type: 'architecture.BranchType',
+	    replacement_branch_type: 'architecture.BranchType',
+	    replacement_target: Optional[int] = None,
+	    replacement_target_arch: Optional['architecture.Architecture'] = None,
+	    arch: Optional['architecture.Architecture'] = None
+	) -> None:
+		"""Replace a branch type and optionally its destination at ``address``."""
+		if arch is None:
+			arch = self.arch
+		core.BNSetUserBranchOverride(
+		    self.handle, arch.handle, address, original_branch_type, replacement_branch_type,
+		    replacement_target is not None,
+		    replacement_target_arch.handle if replacement_target is not None and replacement_target_arch else None,
+		    replacement_target or 0,
+		)
+
+	def is_valid_branch_override_location(
+	    self, address: int, arch: Optional['architecture.Architecture'] = None
+	) -> bool:
+		"""Whether ``address`` is valid for a user branch type override in this function."""
+		if arch is None:
+			arch = self.arch
+		return core.BNIsValidBranchOverrideLocation(self.handle, arch.handle, address)
+
 	def set_guided_source_blocks(
 	    self, addresses: List[Tuple['architecture.Architecture', int]]
 	) -> None:

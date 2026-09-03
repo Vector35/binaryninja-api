@@ -15,7 +15,7 @@
 use binaryninjacore_sys::*;
 
 use crate::{
-    architecture::{Architecture, CoreArchitecture, CoreRegister, Register},
+    architecture::{Architecture, BranchType, CoreArchitecture, CoreRegister, Register},
     basic_block::{BasicBlock, BlockContext},
     binary_view::BinaryView,
     calling_convention::CoreCallingConvention,
@@ -1709,6 +1709,40 @@ impl Function {
                 branches.len(),
             )
         }
+    }
+
+    pub fn set_user_branch_override(
+        &self,
+        address: u64,
+        original_branch_type: BranchType,
+        replacement_branch_type: BranchType,
+        replacement_target: Option<Location>,
+        arch: Option<CoreArchitecture>,
+    ) {
+        let arch = arch.unwrap_or_else(|| self.arch());
+        unsafe {
+            BNSetUserBranchOverride(
+                self.handle,
+                arch.handle,
+                address,
+                original_branch_type,
+                replacement_branch_type,
+                replacement_target.is_some(),
+                replacement_target
+                    .and_then(|target| target.arch)
+                    .map_or(std::ptr::null_mut(), |arch| arch.handle),
+                replacement_target.map_or(0, |target| target.addr),
+            )
+        }
+    }
+
+    pub fn is_valid_branch_override_location(
+        &self,
+        address: u64,
+        arch: Option<CoreArchitecture>,
+    ) -> bool {
+        let arch = arch.unwrap_or_else(|| self.arch());
+        unsafe { BNIsValidBranchOverrideLocation(self.handle, arch.handle, address) }
     }
 
     pub fn set_auto_indirect_branches<I>(

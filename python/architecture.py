@@ -98,6 +98,14 @@ class LifterInstructionData:
 
 
 @dataclass
+class BranchOverride:
+	"""A replacement branch type and optional explicit destination."""
+	type: BranchType
+	target: Optional[int] = None
+	target_arch: Optional['Architecture'] = None
+
+
+@dataclass
 class BasicBlockAnalysisContext:
 	"""Used by ``analyze_basic_blocks`` and contains analysis settings and other contextual information.
 
@@ -111,6 +119,7 @@ class BasicBlockAnalysisContext:
 	# In
 	_indirect_branches: List["variable.IndirectBranchInfo"]
 	_indirect_no_return_calls: Set["function.ArchAndAddr"]
+	_branch_overrides: Dict["function.ArchAndAddr", Dict[BranchType, BranchOverride]]
 	_analysis_skip_override: core.FunctionAnalysisSkipOverride
 	_guided_analysis_mode: bool
 	_trigger_guided_on_invalid_instruction: bool
@@ -126,6 +135,7 @@ class BasicBlockAnalysisContext:
 	_direct_code_references: Dict[int, "function.ArchAndAddr"]
 	_direct_no_return_calls: Set["function.ArchAndAddr"]
 	_halted_disassembly_addresses: Set["function.ArchAndAddr"]
+	_valid_branch_override_locations: Set["function.ArchAndAddr"]
 
 	@staticmethod
 	def from_core_struct(bn_bb_context: core.BNBasicBlockAnalysisContext) -> "BasicBlockAnalysisContext":
@@ -149,6 +159,21 @@ class BasicBlockAnalysisContext:
 			    bn_bb_context.indirectNoReturnCalls[i].address,
 			)
 			indirect_no_return_calls.add(loc)
+
+		branch_overrides = {}
+		for i in range(0, bn_bb_context.branchOverrideCount):
+			loc = function.ArchAndAddr(
+			    CoreArchitecture._from_cache(bn_bb_context.branchOverrides[i].arch),
+			    bn_bb_context.branchOverrides[i].address,
+			)
+			raw_override = bn_bb_context.branchOverrides[i]
+			target = raw_override.replacementTarget if raw_override.hasReplacementTarget else None
+			target_arch = None
+			if raw_override.replacementTargetArch:
+				target_arch = CoreArchitecture._from_cache(raw_override.replacementTargetArch)
+			branch_overrides.setdefault(loc, {})[BranchType(raw_override.originalBranchType)] = BranchOverride(
+			    BranchType(raw_override.replacementBranchType), target, target_arch
+			)
 
 		contextual_returns = {}
 		for i in range(0, bn_bb_context.contextualFunctionReturnCount):
@@ -187,6 +212,7 @@ class BasicBlockAnalysisContext:
 		    _handle=bn_bb_context,
 		    _function=function.Function(view, core.BNNewFunctionReference(bn_bb_context.function)),
 		    _indirect_branches=indirect_branches, _indirect_no_return_calls=indirect_no_return_calls,
+		    _branch_overrides=branch_overrides,
 		    _analysis_skip_override=bn_bb_context.analysisSkipOverride,
 		    _guided_analysis_mode=bn_bb_context.guidedAnalysisMode,
 		    _trigger_guided_on_invalid_instruction=bn_bb_context.triggerGuidedOnInvalidInstruction,
@@ -196,6 +222,7 @@ class BasicBlockAnalysisContext:
 		    _contextual_returns=contextual_returns, _contextual_returns_dirty=False,
 		    _direct_code_references=direct_code_references, _direct_no_return_calls=direct_no_return_calls,
 		    _halted_disassembly_addresses=halted_disassembly_addresses,
+		    _valid_branch_override_locations=set(),
 		)
 
 	@property
@@ -209,6 +236,17 @@ class BasicBlockAnalysisContext:
 		"""Get the set of indirect no-return calls in this context."""
 
 		return self._indirect_no_return_calls
+
+	@property
+	def branch_overrides(self) -> Dict["function.ArchAndAddr", Dict[BranchType, BranchOverride]]:
+		"""Get the mapping of branch locations to their user-specified branch types."""
+
+		return self._branch_overrides
+
+	@property
+	def valid_branch_override_locations(self) -> Set["function.ArchAndAddr"]:
+		"""Locations at which the function supports user branch type overrides."""
+		return self._valid_branch_override_locations
 
 	@property
 	def analysis_skip_override(self) -> core.FunctionAnalysisSkipOverride:
@@ -453,6 +491,14 @@ class BasicBlockAnalysisContext:
 				halted_addresses[i].address = loc.addr
 			core.BNAnalyzeBasicBlocksContextSetHaltedDisassemblyAddresses(self._handle, halted_addresses, total)
 
+		if self._valid_branch_override_locations:
+			total = len(self._valid_branch_override_locations)
+			locations = (core.BNArchitectureAndAddress * total)()
+			for i, loc in enumerate(self._valid_branch_override_locations):
+				locations[i].arch = loc.arch.handle
+				locations[i].address = loc.addr
+			core.BNAnalyzeBasicBlocksContextSetValidBranchOverrideLocations(self._handle, locations, total)
+
 		self._handle.maxSizeReached = ctypes.c_bool(self._max_size_reached)
 		if self._contextual_returns_dirty:
 			total = len(self._contextual_returns)
@@ -481,6 +527,7 @@ class FunctionLifterContext:
 	_inline_remapping: Dict["function.ArchAndAddr", "function.ArchAndAddr"]
 	_user_indirect_branches: Dict["function.ArchAndAddr", Set["function.ArchAndAddr"]]
 	_auto_indirect_branches: Dict["function.ArchAndAddr", Set["function.ArchAndAddr"]]
+	_branch_overrides: Dict["function.ArchAndAddr", Dict[BranchType, BranchOverride]]
 	_inlined_calls: Set[int]
 	_function_arch_context_token: int
 
@@ -542,6 +589,21 @@ class FunctionLifterContext:
 					user_indirect_branches[src] = set()
 				user_indirect_branches[src].add(dest)
 
+		branch_overrides = {}
+		for i in range(0, bn_fl_context.branchOverrideCount):
+			loc = function.ArchAndAddr(
+			    CoreArchitecture._from_cache(bn_fl_context.branchOverrides[i].arch),
+			    bn_fl_context.branchOverrides[i].address,
+			)
+			raw_override = bn_fl_context.branchOverrides[i]
+			target = raw_override.replacementTarget if raw_override.hasReplacementTarget else None
+			target_arch = None
+			if raw_override.replacementTargetArch:
+				target_arch = CoreArchitecture._from_cache(raw_override.replacementTargetArch)
+			branch_overrides.setdefault(loc, {})[BranchType(raw_override.originalBranchType)] = BranchOverride(
+			    BranchType(raw_override.replacementBranchType), target, target_arch
+			)
+
 		inlined_calls = set()
 		for i in range(0, bn_fl_context.inlinedCallsCount):
 			inlined_calls.add(bn_fl_context.inlinedCalls[i])
@@ -552,6 +614,7 @@ class FunctionLifterContext:
 		                                            core.BNNewLowLevelILFunctionReference(func)), _platform=plat,
 		    _logger=logger, _blocks=blocks, _contextual_returns=contextual_returns, _inline_remapping=inline_remapping,
 		    _user_indirect_branches=user_indirect_branches, _auto_indirect_branches=auto_indirect_branches,
+		    _branch_overrides=branch_overrides,
 		    _inlined_calls=inlined_calls, _function_arch_context_token=bn_fl_context.functionArchContext,
 		)
 
@@ -565,6 +628,12 @@ class FunctionLifterContext:
 		"""Get the list of basic blocks in this context"""
 
 		return self._blocks
+
+	@property
+	def branch_overrides(self) -> Dict["function.ArchAndAddr", Dict[BranchType, BranchOverride]]:
+		"""Get the mapping of branch locations to their user-specified branch types."""
+
+		return self._branch_overrides
 
 	@property
 	def function_arch_context(self) -> Any:
@@ -641,6 +710,13 @@ class InstructionBranch:
 		if self.arch is not None:
 			return f"<{self.type.name}: {self.arch.name}@{self.target:#x}>"
 		return f"<{self.type}: {self.target:#x}>"
+
+
+@dataclass(frozen=True)
+class OverridableBranchInfo:
+	type: BranchType
+	target: int
+	arch: Optional['Architecture'] = None
 
 
 @dataclass(frozen=False)
@@ -780,6 +856,9 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		    self._get_associated_arch_by_address
 		)
 		self._cb.getInstructionInfo = self._cb.getInstructionInfo.__class__(self._get_instruction_info)
+		self._cb.getBranchTypesWithContext = self._cb.getBranchTypesWithContext.__class__(
+		    self._get_branch_types_with_context
+		)
 		self._cb.getInstructionText = self._cb.getInstructionText.__class__(self._get_instruction_text)
 		self._cb.getInstructionTextWithContext = self._cb.getInstructionTextWithContext.__class__(
 		    self._get_instruction_text_with_context
@@ -1242,6 +1321,21 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in Architecture._get_instruction_info")
 			return False
+
+	def _get_branch_types_with_context(self, ctxt, func, addr, branches, max_branches, context_token):
+		try:
+			func_obj = function.Function(handle=core.BNNewFunctionReference(func))
+			context = self.function_arch_contexts.get(int(context_token or 0), None)
+			result = self.get_branch_types_with_context(func_obj, addr, context)
+			count = min(len(result), max_branches)
+			for i in range(count):
+				branches[i].type = result[i].type
+				branches[i].target = result[i].target
+				branches[i].arch = result[i].arch.handle if result[i].arch else None
+			return count
+		except Exception:
+			log_error_for_exception("Unhandled Python exception in Architecture._get_branch_types_with_context")
+			return 0
 
 	def _get_instruction_text(self, ctxt, data, addr, length, result, count):
 		try:
@@ -2016,6 +2110,12 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 		:rtype: InstructionInfo
 		"""
 		raise NotImplementedError
+
+	def get_branch_types_with_context(
+	    self, func: 'function.Function', addr: int, function_arch_context: Any = None
+	) -> List[OverridableBranchInfo]:
+		"""Return branches at ``addr`` using the function architecture context."""
+		return []
 
 	def get_instruction_text(self, data: bytes, addr: int) -> Optional[Tuple[List['function.InstructionTextToken'], int]]:
 		"""
@@ -3072,6 +3172,18 @@ class CoreArchitecture(Architecture):
 			result.add_branch(BranchType(info.branchType[i]), target, arch)
 		return result
 
+	def get_branch_types_with_context(
+	    self, func: 'function.Function', addr: int, function_arch_context: Any = None
+	) -> List[OverridableBranchInfo]:
+		count = ctypes.c_ulonglong()
+		branches = core.BNGetArchitectureBranchTypesWithContext(self.handle, func.handle, addr, count)
+		result = []
+		for i in range(count.value):
+			arch = CoreArchitecture._from_cache(branches[i].arch) if branches[i].arch else None
+			result.append(OverridableBranchInfo(BranchType(branches[i].type), branches[i].target, arch))
+		core.BNFreeOverridableBranchInfoList(branches)
+		return result
+
 	def get_instruction_text(self, data: bytes, addr: int) -> Optional[Tuple[List['function.InstructionTextToken'], int]]:
 		"""
 		``get_instruction_text`` returns a list of InstructionTextToken objects for the instruction at the given virtual
@@ -3450,6 +3562,8 @@ class ArchitectureHook(CoreArchitecture):
 			self._cb.getAssociatedArchitectureByAddress = self._cb.getAssociatedArchitectureByAddress.__class__()
 		if self.get_instruction_info.__code__ == CoreArchitecture.get_instruction_info.__code__:
 			self._cb.getInstructionInfo = self._cb.getInstructionInfo.__class__()
+		if self.get_branch_types_with_context.__code__ == CoreArchitecture.get_branch_types_with_context.__code__:
+			self._cb.getBranchTypesWithContext = self._cb.getBranchTypesWithContext.__class__()
 		if self.get_instruction_text.__code__ == CoreArchitecture.get_instruction_text.__code__:
 			self._cb.getInstructionText = self._cb.getInstructionText.__class__()
 		if self.get_instruction_text_with_context.__code__ == CoreArchitecture.get_instruction_text_with_context.__code__:

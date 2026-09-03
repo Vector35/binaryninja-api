@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QtWidgets/QWidget>
-#include <QtWidgets/QRubberBand>
 
 class Sidebar;
 class SidebarWidgetType;
@@ -30,30 +29,6 @@ struct BINARYNINJAUIAPI SidebarIconInfo
 /*!
     \ingroup sidebar
 */
-class BINARYNINJAUIAPI SidebarIconDragIndicator : public QWidget
-{
-	Q_OBJECT
-
-	QImage m_image;
-	QSize m_size;
-	QPoint m_offset;
-
-public:
-	SidebarIconDragIndicator(QImage image, QSize size, QPoint pt, QPoint offset);
-	void moveToMouse(QPoint pt);
-
-	QSize size() const { return m_size; }
-	QPoint offset() const { return m_offset; }
-
-protected:
-	virtual QSize sizeHint() const override;
-	virtual QSize minimumSizeHint() const override;
-	virtual void paintEvent(QPaintEvent* event) override;
-};
-
-/*!
-    \ingroup sidebar
-*/
 class BINARYNINJAUIAPI SidebarIconsWidget : public QWidget
 {
 	Q_OBJECT
@@ -67,11 +42,16 @@ class BINARYNINJAUIAPI SidebarIconsWidget : public QWidget
 	std::optional<QPoint> m_dragStart;
 	std::optional<SidebarIconInfo> m_dragItem;
 	bool m_dragItemAsPlaceholder = false;
+	bool m_dragActive = false;
 	SidebarIconsWidget* m_dragTargetSidebar = nullptr;
 	Pane* m_dragTargetPane = nullptr;
 	Qt::Edge m_dragTargetPaneEdge = Qt::LeftEdge;
-	SidebarIconDragIndicator* m_dragIndicator = nullptr;
-	QRubberBand* m_dropIndicator = nullptr;
+
+	void startIconDrag(const QPoint& pos);
+	bool dragUpdateTarget(QWidget* window, const QPoint& pos);
+	void dragClearTarget();
+
+	friend class SidebarIconDragSession;
 
 	std::vector<SidebarWidgetType*> filterTypesForPlaceholder(const std::vector<SidebarWidgetType*>& types) const;
 	std::optional<SidebarIconInfo> itemForY(int y) const;

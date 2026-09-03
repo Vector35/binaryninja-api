@@ -3,7 +3,6 @@
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QStackedWidget>
 #include <QtWidgets/QVBoxLayout>
-#include <QtWidgets/QRubberBand>
 #include "uicontext.h"
 #include "clickablelabel.h"
 #include "splitter.h"
@@ -14,7 +13,6 @@ class PaneHeader;
 class PaneHeaderContainer;
 class PaneHeaderFade;
 class CloseButton;
-class TabDragIndicator;
 class SyncGroup;
 
 /*!
@@ -125,11 +123,17 @@ class BINARYNINJAUIAPI PaneHeader : public QWidget
 
 	Pane* m_owner = nullptr;
 	std::optional<QPoint> m_dragStart;
-	TabDragIndicator* m_dragIndicator = nullptr;
-	bool m_dragNewWindow = false;
+	bool m_dragActive = false;
 	Pane* m_dropTarget = nullptr;
 	Qt::Edge m_dropEdge = Qt::RightEdge;
-	QRubberBand* m_dropIndicator = nullptr;
+	bool m_overPaneContainer = false;
+
+	void startPaneDrag(const QPoint& pos);
+	void newWindowForDroppedPane(const QPoint& hotSpot);
+	bool dragUpdateTarget(QWidget* window, const QPoint& pos);
+	void dragClearTarget();
+
+	friend class PaneDragSession;
 
   public:
 	PaneHeader();

@@ -6,7 +6,6 @@
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QAbstractScrollArea>
 #include <QtWidgets/QStylePainter>
-#include <QtWidgets/QRubberBand>
 #include <QtWidgets/QSplitter>
 #include <QtGui/QMouseEvent>
 #include "uitypes.h"
@@ -37,34 +36,6 @@ public:
 	void unregisterContainer(DockableTabWidget* widget);
 
 	const std::set<DockableTabWidget*>& containers() const { return m_containers; }
-};
-
-/*!
-
-    \ingroup tabwidget
-*/
-class BINARYNINJAUIAPI TabDragIndicator : public QWidget
-{
-	Q_OBJECT
-
-	QPixmap m_pixmap;
-	QImage m_newWindowImage;
-	QSize m_size, m_currentSize;
-	QPoint m_offset;
-	bool m_newWindow;
-
-  public:
-	TabDragIndicator(QPixmap pixmap, QSize size, QPoint pt, QPoint offset, bool newWindow);
-	void moveToMouse(QPoint pt);
-
-	QPixmap pixmap() const { return m_pixmap; }
-	QSize size() const { return m_size; }
-	QPoint offset() const { return m_offset; }
-
-  protected:
-	virtual QSize sizeHint() const override;
-	virtual QSize minimumSizeHint() const override;
-	virtual void paintEvent(QPaintEvent* event) override;
 };
 
 /*!
@@ -158,13 +129,11 @@ class BINARYNINJAUIAPI DockableTabBar : public QAbstractScrollArea
 	int m_closeButtonDown = -1;
 
 	std::optional<QPoint> m_tabDragStart;
-	TabDragIndicator* m_tabDragIndicator = nullptr;
+	bool m_tabDragActive = false;
 	DockableTabBar* m_tabDragTarget = nullptr;
 	int m_tabDragWidth;
 	int m_tabDragTargetIndex = -1;
 	std::optional<Qt::Edge> m_tabDragSplitEdge;
-	bool m_tabDragNewWindow = false;
-	QRubberBand* m_tabDropIndicator = nullptr;
 
 	int m_placeholderIndex = -1;
 	int m_placeholderWidth;
@@ -174,6 +143,13 @@ class BINARYNINJAUIAPI DockableTabBar : public QAbstractScrollArea
 	QTimer* m_hoverTimer;
 
 	void updateLayout();
+
+	void startTabDrag(const QPoint& pos);
+	void setDragPlaceholder(DockableTabBar* target, int index);
+	bool dragUpdateTarget(QWidget* window, const QPoint& pos);
+	void dragClearTarget();
+
+	friend class TabDragSession;
 
   public:
 	DockableTabBar(DockableTabCollection* collection);

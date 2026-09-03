@@ -603,6 +603,15 @@ pub trait ArchitectureWithFunctionContext: Architecture {
     ) -> Option<(usize, Vec<InstructionTextToken>)> {
         self.instruction_text(data, addr)
     }
+
+    fn branch_types_with_typed_context(
+        &self,
+        _function: &Function,
+        _addr: u64,
+        _context: Option<&Self::FunctionArchContext>,
+    ) -> Vec<OverridableBranchInfo> {
+        Vec::new()
+    }
 }
 
 pub struct FunctionLifterContext {
@@ -616,6 +625,7 @@ pub struct FunctionLifterContext {
     pub inlined_remapping: HashMap<Location, Location>,
     pub user_indirect_branches: HashMap<Location, HashSet<Location>>,
     pub auto_indirect_branches: HashMap<Location, HashSet<Location>>,
+    pub branch_overrides: HashMap<Location, HashMap<BranchType, BranchOverride>>,
     pub inlined_calls: HashSet<u64>,
 }
 
@@ -719,6 +729,29 @@ impl FunctionLifterContext {
             }
         }
 
+        let mut branch_overrides: HashMap<Location, HashMap<BranchType, BranchOverride>> =
+            HashMap::new();
+        for entry in lifter_context_slice(flc_ref.branchOverrides, flc_ref.branchOverrideCount) {
+            let target = entry.hasReplacementTarget.then(|| {
+                let arch = (!entry.replacementTargetArch.is_null())
+                    .then(|| CoreArchitecture::from_raw(entry.replacementTargetArch));
+                Location::new(arch, entry.replacementTarget)
+            });
+            branch_overrides
+                .entry(Location::new(
+                    Some(CoreArchitecture::from_raw(entry.arch)),
+                    entry.address,
+                ))
+                .or_default()
+                .insert(
+                    entry.originalBranchType,
+                    BranchOverride {
+                        type_: entry.replacementBranchType,
+                        target,
+                    },
+                );
+        }
+
         let inlined_calls: HashSet<u64> =
             lifter_context_slice(flc_ref.inlinedCalls, flc_ref.inlinedCallsCount)
                 .iter()
@@ -739,6 +772,7 @@ impl FunctionLifterContext {
             inlined_remapping,
             user_indirect_branches,
             auto_indirect_branches,
+            branch_overrides,
             inlined_calls,
         }
     }
@@ -836,6 +870,28 @@ impl CoreArchitecture {
             INVALID_REGISTER => None,
             reg_stack => CoreRegisterStack::new(*self, RegisterStackId::from(reg_stack)),
         }
+    }
+
+    pub fn branch_types_with_context(
+        &self,
+        function: &Function,
+        addr: u64,
+    ) -> Vec<OverridableBranchInfo> {
+        let mut count = 0;
+        let branches = unsafe {
+            BNGetArchitectureBranchTypesWithContext(self.handle, function.handle, addr, &mut count)
+        };
+        let result = if branches.is_null() {
+            Vec::new()
+        } else {
+            unsafe { std::slice::from_raw_parts(branches, count) }
+                .iter()
+                .copied()
+                .map(OverridableBranchInfo::from)
+                .collect()
+        };
+        unsafe { BNFreeOverridableBranchInfoList(branches) };
+        result
     }
 }
 
@@ -2820,6 +2876,7 @@ where
         skipAndReturnValue: Some(cb_skip_and_return_value::<A>),
         getLinearSweepInitialAlignment: Some(cb_linear_sweep_initial_alignment::<A>),
         getLinearSweepAnalysisCapabilities: Some(cb_linear_sweep_analysis_capabilities::<A>),
+        getBranchTypesWithContext: None,
     };
 
     customize(&mut custom_arch);
@@ -2901,10 +2958,41 @@ where
         true
     }
 
+    unsafe extern "C" fn cb_branch_types_with_context_typed<A>(
+        ctxt: *mut c_void,
+        function: *mut BNFunction,
+        addr: u64,
+        branches: *mut BNOverridableBranchInfo,
+        max_branches: usize,
+        context: *mut c_void,
+    ) -> usize
+    where
+        A: 'static
+            + ArchitectureWithFunctionContext<Handle = CustomArchitectureHandle<A>>
+            + Send
+            + Sync,
+    {
+        let custom_arch = unsafe { &*(ctxt as *mut A) };
+        let function = unsafe { Function::from_raw(function) };
+        let typed_context = if context.is_null() {
+            None
+        } else {
+            Some(unsafe { &*(context as *const A::FunctionArchContext) })
+        };
+
+        let result = custom_arch.branch_types_with_typed_context(&function, addr, typed_context);
+        let count = result.len().min(max_branches);
+        for (i, branch) in result.into_iter().take(count).enumerate() {
+            unsafe { branches.add(i).write(branch.into()) };
+        }
+        count
+    }
+
     register_architecture_impl(name, func, |custom_arch| {
         custom_arch.freeFunctionArchContext = Some(cb_free_function_arch_context_typed::<A>);
         custom_arch.getInstructionTextWithContext =
             Some(cb_get_instruction_text_with_context_typed::<A>);
+        custom_arch.getBranchTypesWithContext = Some(cb_branch_types_with_context_typed::<A>);
     })
 }
 

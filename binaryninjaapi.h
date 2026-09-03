@@ -9673,6 +9673,20 @@ namespace BinaryNinja {
 		void AddBranch(BNBranchType type, uint64_t target = 0, Architecture* arch = nullptr, uint8_t delaySlots = 0);
 	};
 
+	struct OverridableBranchInfo
+	{
+		BNBranchType type;
+		uint64_t target;
+		Ref<Architecture> arch;
+	};
+
+	struct BranchOverride
+	{
+		BNBranchType type;
+		std::optional<uint64_t> target;
+		Ref<Architecture> targetArch;
+	};
+
 	struct NameAndType
 	{
 		std::string name;
@@ -9713,6 +9727,7 @@ namespace BinaryNinja {
 		// in
 		std::optional<std::map<ArchAndAddr, std::set<ArchAndAddr>>> m_indirectBranches;
 		std::optional<std::set<ArchAndAddr>> m_indirectNoReturnCalls;
+		std::optional<std::map<ArchAndAddr, std::map<BNBranchType, BranchOverride>>> m_branchOverrides;
 
 		// in/out
 		std::optional<std::map<ArchAndAddr, bool>> m_contextualReturns;
@@ -9722,6 +9737,7 @@ namespace BinaryNinja {
 		std::optional<std::set<ArchAndAddr>> m_directNoReturnCalls;
 		std::optional<std::set<ArchAndAddr>> m_haltedDisassemblyAddresses;
 		std::optional<std::map<ArchAndAddr, ArchAndAddr>> m_inlinedUnresolvedIndirectBranches;
+		std::optional<std::set<ArchAndAddr>> m_validBranchOverrideLocations;
 
 		Ref<LifterInstructionData> m_lifterInstructionData;
 
@@ -9742,6 +9758,7 @@ namespace BinaryNinja {
 
 		const std::map<ArchAndAddr, std::set<ArchAndAddr>> GetIndirectBranches();
 		const std::set<ArchAndAddr>& GetIndirectNoReturnCalls();
+		const std::map<ArchAndAddr, std::map<BNBranchType, BranchOverride>>& GetBranchOverrides();
 
 		std::map<ArchAndAddr, bool>& GetContextualReturns();
 
@@ -9749,6 +9766,7 @@ namespace BinaryNinja {
 		std::set<ArchAndAddr>& GetDirectNoReturnCalls();
 		std::set<ArchAndAddr>& GetHaltedDisassemblyAddresses();
 		std::map<ArchAndAddr, ArchAndAddr>& GetInlinedUnresolvedIndirectBranches();
+		std::set<ArchAndAddr>& GetValidBranchOverrideLocations();
 
 		bool SetFunctionArchContextRaw(void* p);
 		void* GetFunctionArchContextRaw() const { return m_context->functionArchContext; }
@@ -9787,6 +9805,7 @@ namespace BinaryNinja {
 		std::map<ArchAndAddr, ArchAndAddr> m_inlinedRemapping;
 		std::map<ArchAndAddr, std::set<ArchAndAddr>> m_userIndirectBranches;
 		std::map<ArchAndAddr, std::set<ArchAndAddr>> m_autoIndirectBranches;
+		std::map<ArchAndAddr, std::map<BNBranchType, BranchOverride>> m_branchOverrides;
 		std::set<uint64_t> m_inlinedCalls;
 		bool* m_containsInlinedFunctions;
 		void* m_functionArchContext;
@@ -9804,6 +9823,7 @@ namespace BinaryNinja {
 		std::map<ArchAndAddr, ArchAndAddr>& GetInlinedRemapping();
 		std::map<ArchAndAddr, std::set<ArchAndAddr>>& GetUserIndirectBranches();
 		std::map<ArchAndAddr, std::set<ArchAndAddr>>& GetAutoIndirectBranches();
+		const std::map<ArchAndAddr, std::map<BNBranchType, BranchOverride>>& GetBranchOverrides() const;
 		std::set<uint64_t>& GetInlinedCalls();
 		void SetContainsInlinedFunctions(bool value);
 		void* GetFunctionArchContextRaw() const { return m_functionArchContext; }
@@ -9846,6 +9866,8 @@ namespace BinaryNinja {
 		static BNArchitecture* GetAssociatedArchitectureByAddressCallback(void* ctxt, uint64_t* addr);
 		static bool GetInstructionInfoCallback(
 		    void* ctxt, const uint8_t* data, uint64_t addr, size_t maxLen, BNInstructionInfo* result);
+		static size_t GetBranchTypesWithContextCallback(void* ctxt, BNFunction* function, uint64_t addr,
+			BNOverridableBranchInfo* branches, size_t maxBranches, void* functionArchContext);
 		static bool GetInstructionTextCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t* len,
 		    BNInstructionTextToken** result, size_t* count);
 		static bool GetInstructionTextWithContextCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t* len,
@@ -10036,6 +10058,8 @@ namespace BinaryNinja {
 			\return Whether instruction info was successfully retrieved.
 		*/
 		virtual bool GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) = 0;
+		virtual std::vector<OverridableBranchInfo> GetBranchTypesWithContext(
+			Function* function, uint64_t addr, void* functionArchContext);
 
 		/*! Retrieves a list of InstructionTextTokens
 
@@ -10519,6 +10543,18 @@ namespace BinaryNinja {
 		{
 			return GetInstructionTextWithContext(data, addr, len, static_cast<FnCtxT*>(context), result);
 		}
+
+		virtual std::vector<OverridableBranchInfo> GetBranchTypesWithContext(
+			Function* function, uint64_t addr, FnCtxT* context)
+		{
+			return Architecture::GetBranchTypesWithContext(function, addr, static_cast<void*>(context));
+		}
+
+		std::vector<OverridableBranchInfo> GetBranchTypesWithContext(
+			Function* function, uint64_t addr, void* context) override final
+		{
+			return GetBranchTypesWithContext(function, addr, static_cast<FnCtxT*>(context));
+		}
 	};
 
 	/*!
@@ -10540,6 +10576,8 @@ namespace BinaryNinja {
 		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr) override;
 		virtual bool GetInstructionInfo(
 		    const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
+		virtual std::vector<OverridableBranchInfo> GetBranchTypesWithContext(
+			Function* function, uint64_t addr, void* functionArchContext) override;
 		virtual bool GetInstructionText(
 		    const uint8_t* data, uint64_t addr, size_t& len, std::vector<InstructionTextToken>& result) override;
 		virtual bool GetInstructionTextWithContext(const uint8_t* data, uint64_t addr, size_t& len, void* context,
@@ -10632,6 +10670,8 @@ namespace BinaryNinja {
 		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr) override;
 		virtual bool GetInstructionInfo(
 		    const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
+		virtual std::vector<OverridableBranchInfo> GetBranchTypesWithContext(
+			Function* function, uint64_t addr, void* functionArchContext) override;
 		virtual bool GetInstructionText(
 		    const uint8_t* data, uint64_t addr, size_t& len, std::vector<InstructionTextToken>& result) override;
 		virtual bool GetInstructionTextWithContext(const uint8_t* data, uint64_t addr, size_t& len, void* context,
@@ -13614,6 +13654,10 @@ namespace BinaryNinja {
 		    Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches);
 		void SetUserIndirectBranches(
 		    Architecture* sourceArch, uint64_t source, const std::vector<ArchAndAddr>& branches);
+		void SetUserBranchOverride(Architecture* arch, uint64_t addr, BNBranchType originalBranchType,
+			BNBranchType replacementBranchType, std::optional<uint64_t> replacementTarget = std::nullopt,
+			Architecture* replacementTargetArch = nullptr);
+		bool IsValidBranchOverrideLocation(Architecture* arch, uint64_t addr);
 
 		// Guided Analysis Support
 		void SetGuidedSourceBlocks(const std::vector<ArchAndAddr>& addresses);

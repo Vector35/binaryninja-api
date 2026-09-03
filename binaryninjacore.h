@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 187
+#define BN_CURRENT_CORE_ABI_VERSION 188
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -2043,6 +2043,13 @@ extern "C"
 		BNArchitecture* branchArch[BN_MAX_INSTRUCTION_BRANCHES];  // If null, same architecture as instruction
 	} BNInstructionInfo;
 
+	typedef struct BNOverridableBranchInfo
+	{
+		BNBranchType type;
+		uint64_t target;
+		BNArchitecture* arch;  // If null, same architecture as instruction
+	} BNOverridableBranchInfo;
+
 	BN_ENUM(uint32_t, BNLinearSweepAnalysisCapability)
 	{
 		BNLinearSweepCallTargetAnalysis = 1 << 0,
@@ -2161,6 +2168,17 @@ extern "C"
 		AlwaysSkipFunctionAnalysis
 	};
 
+	typedef struct BNBranchOverride
+	{
+		BNArchitecture* arch;
+		uint64_t address;
+		BNBranchType originalBranchType;
+		BNBranchType replacementBranchType;
+		bool hasReplacementTarget;
+		BNArchitecture* replacementTargetArch;
+		uint64_t replacementTarget;
+	} BNBranchOverride;
+
 	typedef struct BNBasicBlockAnalysisContext
 	{
 		BNFunction* function;
@@ -2206,6 +2224,14 @@ extern "C"
 
 		void* functionArchContext;
 		BNLifterInstructionData* lifterInstructionData;
+
+		// IN
+		size_t branchOverrideCount;
+		BNBranchOverride* branchOverrides;
+
+		// OUT
+		size_t validBranchOverrideLocationCount;
+		BNArchitectureAndAddress* validBranchOverrideLocations;
 	} BNBasicBlockAnalysisContext;
 
 	typedef struct BNFunctionLifterContext {
@@ -2237,6 +2263,10 @@ extern "C"
 
 		// OUT
 		bool* containsInlinedFunctions;
+
+		// IN
+		size_t branchOverrideCount;
+		BNBranchOverride* branchOverrides;
 	} BNFunctionLifterContext;
 
 	typedef struct BNCustomArchitecture
@@ -2322,6 +2352,9 @@ extern "C"
 
 		size_t (*getLinearSweepInitialAlignment)(void* ctxt);
 		uint32_t (*getLinearSweepAnalysisCapabilities)(void* ctxt);
+
+		size_t (*getBranchTypesWithContext)(void* ctxt, BNFunction* function, uint64_t addr,
+			BNOverridableBranchInfo* branches, size_t maxBranches, void* functionArchContext);
 	} BNCustomArchitecture;
 
 	typedef struct BNCustomPlatform
@@ -5794,6 +5827,9 @@ extern "C"
 	BINARYNINJACOREAPI BNArchitecture* BNGetAssociatedArchitectureByAddress(BNArchitecture* arch, uint64_t* addr);
 	BINARYNINJACOREAPI bool BNGetInstructionInfo(
 	    BNArchitecture* arch, const uint8_t* data, uint64_t addr, size_t maxLen, BNInstructionInfo* result);
+	BINARYNINJACOREAPI BNOverridableBranchInfo* BNGetArchitectureBranchTypesWithContext(
+		BNArchitecture* arch, BNFunction* function, uint64_t addr, size_t* count);
+	BINARYNINJACOREAPI void BNFreeOverridableBranchInfoList(BNOverridableBranchInfo* branches);
 	BINARYNINJACOREAPI bool BNGetInstructionText(BNArchitecture* arch, const uint8_t* data, uint64_t addr, size_t* len,
 	    BNInstructionTextToken** result, size_t* count);
 	BINARYNINJACOREAPI bool BNGetInstructionTextWithContext(BNArchitecture* arch, const uint8_t* data, uint64_t addr, size_t* len,
@@ -6424,6 +6460,12 @@ extern "C"
 	    BNArchitectureAndAddress* branches, size_t count);
 	BINARYNINJACOREAPI void BNSetUserIndirectBranches(BNFunction* func, BNArchitecture* sourceArch, uint64_t source,
 	    BNArchitectureAndAddress* branches, size_t count);
+	BINARYNINJACOREAPI void BNSetUserBranchOverride(
+		BNFunction* func, BNArchitecture* arch, uint64_t addr, BNBranchType originalBranchType,
+		BNBranchType replacementBranchType, bool hasReplacementTarget, BNArchitecture* replacementTargetArch,
+		uint64_t replacementTarget);
+	BINARYNINJACOREAPI bool BNIsValidBranchOverrideLocation(
+		BNFunction* func, BNArchitecture* arch, uint64_t addr);
 
 	BINARYNINJACOREAPI void BNSetGuidedSourceBlocks(BNFunction* func, BNArchitectureAndAddress* addresses, size_t count);
 	BINARYNINJACOREAPI void BNAddGuidedSourceBlocks(BNFunction* func, BNArchitectureAndAddress* addresses, size_t count);
@@ -6515,6 +6557,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextSetContextualFunctionReturns(BNBasicBlockAnalysisContext* abb, BNArchitectureAndAddress* sources, bool* values, size_t count);
 	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextSetHaltedDisassemblyAddresses(BNBasicBlockAnalysisContext* abb, BNArchitectureAndAddress* sources, size_t count);
 	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextSetInlinedUnresolvedIndirectBranches(BNBasicBlockAnalysisContext* abb, BNArchitectureAndAddress* locations, size_t count);
+	BINARYNINJACOREAPI void BNAnalyzeBasicBlocksContextSetValidBranchOverrideLocations(
+		BNBasicBlockAnalysisContext* abb, BNArchitectureAndAddress* locations, size_t count);
 
 	BINARYNINJACOREAPI BNAnalysisParameters BNGetParametersForAnalysis(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNSetParametersForAnalysis(BNBinaryView* view, BNAnalysisParameters params);

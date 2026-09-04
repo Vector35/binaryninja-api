@@ -2752,7 +2752,7 @@ public:
 class MipsO32CallingConvention: public CallingConvention
 {
 public:
-	MipsO32CallingConvention(Architecture* arch): CallingConvention(arch, "o32")
+	MipsO32CallingConvention(Architecture* arch, const std::string& name = "o32"): CallingConvention(arch, name)
 	{
 	}
 
@@ -2764,6 +2764,11 @@ public:
 	virtual uint32_t GetHighIntegerReturnValueRegister() override
 	{
 		return REG_V1;
+	}
+
+	virtual std::optional<Variable> GetReturnedIndirectReturnValuePointer() override
+	{
+		return Variable::Register(REG_V0);
 	}
 
 	virtual vector<uint32_t> GetIntegerArgumentRegisters() override
@@ -2809,6 +2814,224 @@ public:
 		return result;
 	}
 };
+
+// o32 maps arguments through a shared, naturally aligned four-word argument area. Only the first two
+// leading floating-point arguments use FPRs, so the default independent register allocators cannot model it.
+class MipsO32HardFloatCallingConvention: public MipsO32CallingConvention
+{
+public:
+	MipsO32HardFloatCallingConvention(Architecture* arch): MipsO32CallingConvention(arch, "o32-hard-float")
+	{
+	}
+
+	virtual vector<uint32_t> GetFloatArgumentRegisters() override
+	{
+		return vector<uint32_t>{ FPREG_F12, FPREG_F14 };
+	}
+
+	virtual bool AreArgumentRegistersSharedIndex() override
+	{
+		return true;
+	}
+
+	virtual uint32_t GetFloatReturnValueRegister() override
+	{
+		return FPREG_F0;
+	}
+
+	virtual vector<uint32_t> GetCallerSavedRegisters() override
+	{
+		vector<uint32_t> result = MipsO32CallingConvention::GetCallerSavedRegisters();
+		const uint32_t floatRegisters[] = {
+			FPREG_F0, FPREG_F1, FPREG_F2, FPREG_F3, FPREG_F4, FPREG_F5, FPREG_F6, FPREG_F7,
+			FPREG_F8, FPREG_F9, FPREG_F10, FPREG_F11, FPREG_F12, FPREG_F13, FPREG_F14, FPREG_F15,
+			FPREG_F16, FPREG_F17, FPREG_F18, FPREG_F19
+		};
+		result.insert(result.end(), std::begin(floatRegisters), std::end(floatRegisters));
+		return result;
+	}
+
+	virtual vector<uint32_t> GetCalleeSavedRegisters() override
+	{
+		vector<uint32_t> result = MipsO32CallingConvention::GetCalleeSavedRegisters();
+		const uint32_t floatRegisters[] = {
+			FPREG_F20, FPREG_F21, FPREG_F22, FPREG_F23, FPREG_F24, FPREG_F25,
+			FPREG_F26, FPREG_F27, FPREG_F28, FPREG_F29, FPREG_F30, FPREG_F31
+		};
+		result.insert(result.end(), std::begin(floatRegisters), std::end(floatRegisters));
+		return result;
+	}
+
+	virtual bool IsReturnTypeRegisterCompatible(BinaryView*, Type* type) override
+	{
+		if (type && type->IsFloat())
+			return type->GetWidth() == 4 || type->GetWidth() == 8;
+		return DefaultIsReturnTypeRegisterCompatible(type);
+	}
+
+	virtual ValueLocation GetReturnValueLocation(BinaryView* view, const ReturnValue& returnValue) override
+	{
+		Ref<Type> type = returnValue.type.GetValue();
+		if (!type || type->IsVoid())
+			return ValueLocation();
+
+		if (type->GetClass() == NamedTypeReferenceClass)
+		{
+			if (!view)
+				return GetDefaultReturnValueLocation(view, returnValue);
+
+			type = type->DerefNamedTypeReference(view);
+			if (!type || type->GetClass() == NamedTypeReferenceClass)
+				return GetDefaultReturnValueLocation(view, returnValue);
+		}
+
+		if (type->IsFloat())
+		{
+			if (type->GetWidth() == 4)
+				return ValueLocation(Variable::Register(FPREG_F0));
+			if (type->GetWidth() == 8)
+			{
+				return ValueLocation({
+					{Variable::Register(FPREG_F0), 0, 4},
+					{Variable::Register(FPREG_F1), 4, 4}
+				});
+			}
+		}
+
+		return GetDefaultReturnValueLocation(view, returnValue);
+	}
+
+	virtual vector<ValueLocation> GetParameterLocations(BinaryView*, const std::optional<ValueLocation>& returnValue,
+		const vector<FunctionParameter>& params,
+		const std::optional<std::set<uint32_t>>& permittedRegs = std::nullopt) override
+	{
+		const uint32_t integerRegisters[] = { REG_A0, REG_A1, REG_A2, REG_A3 };
+		const uint32_t floatRegisters[][2] = {
+			{ FPREG_F12, FPREG_F13 },
+			{ FPREG_F14, FPREG_F15 }
+		};
+
+		vector<ValueLocation> result;
+		result.reserve(params.size());
+
+		uint64_t argumentOffset = 0;
+		uint64_t stackOffset = 16;
+		bool argumentRegistersAvailable = true;
+		bool leadingFloatArguments = true;
+		size_t leadingFloatCount = 0;
+
+		if (returnValue.has_value() && returnValue->indirect)
+		{
+			argumentOffset = 4;
+			leadingFloatArguments = false;
+		}
+
+		for (const auto& param : params)
+		{
+			Ref<Type> type = param.type.GetValue();
+			uint64_t width = type ? type->GetWidth() : 4;
+			bool indirect = param.locationSource == PassByReferenceLocationSource;
+			if (indirect)
+				width = 4;
+
+			uint64_t alignment = indirect ? 4 : (type ? type->GetAlignment() : 4);
+			if (alignment < 4)
+				alignment = 4;
+			if (alignment > 8)
+				alignment = 8;
+			if (argumentOffset % alignment != 0)
+				argumentOffset += alignment - (argumentOffset % alignment);
+
+			uint64_t passedWidth = std::max<uint64_t>(width, 4);
+			if (passedWidth % 4 != 0)
+				passedWidth += 4 - (passedWidth % 4);
+
+			bool isFloat = type && type->IsFloat() && !indirect;
+			bool useFloatRegister = leadingFloatArguments && leadingFloatCount < 2 && isFloat
+				&& (width == 4 || width == 8);
+
+			if (param.locationSource == CustomLocationSource)
+			{
+				result.push_back(param.location);
+			}
+			else if (useFloatRegister)
+			{
+				const size_t registerCount = width / 4;
+				bool registersPermitted = argumentRegistersAvailable;
+				for (size_t i = 0; i < registerCount; i++)
+				{
+					if (permittedRegs.has_value() && !permittedRegs->contains(floatRegisters[leadingFloatCount][i]))
+						registersPermitted = false;
+				}
+
+				if (registersPermitted)
+				{
+					if (registerCount == 1)
+						result.emplace_back(Variable::Register(floatRegisters[leadingFloatCount][0]));
+					else
+					{
+						result.emplace_back(ValueLocation({
+							{Variable::Register(floatRegisters[leadingFloatCount][0]), 0, 4},
+							{Variable::Register(floatRegisters[leadingFloatCount][1]), 4, 4}
+						}));
+					}
+				}
+				else
+				{
+					if (stackOffset % alignment != 0)
+						stackOffset += alignment - (stackOffset % alignment);
+					result.emplace_back(Variable::StackOffset(stackOffset));
+					stackOffset += passedWidth;
+					argumentRegistersAvailable = false;
+				}
+			}
+			else
+			{
+				vector<ValueLocationComponent> components;
+				bool registersPermitted = argumentRegistersAvailable;
+				for (uint64_t offset = 0; offset < passedWidth; offset += 4)
+				{
+					uint64_t componentOffset = argumentOffset + offset;
+					uint64_t componentSize = std::min<uint64_t>(4, width > offset ? width - offset : 4);
+					if (componentOffset < 16)
+					{
+						uint32_t reg = integerRegisters[componentOffset / 4];
+						if (permittedRegs.has_value() && !permittedRegs->contains(reg))
+							registersPermitted = false;
+						components.emplace_back(Variable::Register(reg), offset, componentSize);
+					}
+					else
+					{
+						components.emplace_back(Variable::StackOffset(componentOffset), offset, componentSize);
+					}
+				}
+
+				if (!registersPermitted)
+				{
+					if (stackOffset % alignment != 0)
+						stackOffset += alignment - (stackOffset % alignment);
+					result.emplace_back(Variable::StackOffset(stackOffset), indirect);
+					stackOffset += passedWidth;
+					argumentRegistersAvailable = false;
+				}
+				else if (components.size() == 1)
+					result.emplace_back(components[0].variable, indirect);
+				else
+					result.emplace_back(std::move(components), indirect);
+			}
+
+			argumentOffset += passedWidth;
+			stackOffset = std::max(stackOffset, argumentOffset);
+			if (useFloatRegister)
+				leadingFloatCount++;
+			else
+				leadingFloatArguments = false;
+		}
+
+		return result;
+	}
+};
+
 
 class MipsPS2CallingConvention: public CallingConvention
 {
@@ -2886,8 +3109,15 @@ public:
 		if (!type || type->IsVoid())
 			return ValueLocation();
 
-		if (type->GetClass() == NamedTypeReferenceClass && type->GetWidth() == 0)
-			return GetDefaultReturnValueLocation(view, returnValue);
+		if (type->GetClass() == NamedTypeReferenceClass)
+		{
+			if (!view)
+				return GetDefaultReturnValueLocation(view, returnValue);
+
+			type = type->DerefNamedTypeReference(view);
+			if (!type || type->GetClass() == NamedTypeReferenceClass)
+				return GetDefaultReturnValueLocation(view, returnValue);
+		}
 
 		const size_t width = type->GetWidth();
 
@@ -3767,7 +3997,6 @@ static Ref<Platform> ElfFlagsRecognize(BinaryView* view, Metadata* metadata)
     // This needs to be after the R5900 check above or all R5900 binaries will load as MIPS III
 	if ((flagsValue & EF_MIPS_ARCH) == EF_MIPS_ARCH_3)
 		return Platform::GetByName(endianness == BigEndian ? "linux-mips3" : "linux-mipsel3");
-
 	return nullptr;
 }
 
@@ -3813,6 +4042,8 @@ extern "C"
 		/* calling conventions */
 		MipsO32CallingConvention* o32LE = new MipsO32CallingConvention(mipsel);
 		MipsO32CallingConvention* o32BE = new MipsO32CallingConvention(mipseb);
+		MipsO32HardFloatCallingConvention* o32HardFloatLE = new MipsO32HardFloatCallingConvention(mipsel);
+		MipsO32HardFloatCallingConvention* o32HardFloatBE = new MipsO32HardFloatCallingConvention(mipseb);
 		MipsN64CallingConvention* n32LE = new MipsN64CallingConvention(mips64el, "n32");
 		MipsN64CallingConvention* n32BE = new MipsN64CallingConvention(mips64eb, "n32");
 		MipsN64CallingConvention* n64LE = new MipsN64CallingConvention(mips64el);
@@ -3826,6 +4057,8 @@ extern "C"
 		mipseb->SetDefaultCallingConvention(o32BE);
 		mipsel->RegisterCallingConvention(o32LE);
 		mipsel->SetDefaultCallingConvention(o32LE);
+		mipseb->RegisterCallingConvention(o32HardFloatBE);
+		mipsel->RegisterCallingConvention(o32HardFloatLE);
 		mips3->RegisterCallingConvention(o32BE);
 		mips3->SetDefaultCallingConvention(o32BE);
 		mips3el->RegisterCallingConvention(o32LE);

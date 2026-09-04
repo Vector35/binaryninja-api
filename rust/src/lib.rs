@@ -77,6 +77,7 @@ pub mod references;
 pub mod relocation;
 pub mod render_layer;
 pub mod repository;
+pub mod scripting_provider;
 pub mod secrets_provider;
 pub mod section;
 pub mod segment;

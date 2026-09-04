@@ -1,0 +1,28 @@
+[package]
+name = "pdb"
+version = "0.8.0"
+description = "A parser for Microsoft PDB (Program Database) debugging information"
+repository = "https://github.com/willglynn/pdb"
+authors = ["Jan Michael Auer <mail@jauer.org>", "Will Glynn <will@willglynn.com>"]
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+edition = "2018"
+exclude = [
+    "fixtures/*",
+    "scripts/*",
+]
+
+[dependencies]
+fallible-iterator = "0.2.0"
+scroll = "0.11.0"
+uuid = "1.0.0"
+
+[dev-dependencies]
+# for examples/
+getopts = "0.2.21"
+
+[package.metadata.release]
+pre-release-commit-message = "Release {{version}}"
+tag-name = "{{version}}"
+tag-message = "Release {{version}}"
+dev-version = false

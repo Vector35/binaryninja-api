@@ -4,7 +4,10 @@ project(pdb_import_plugin)
 
 file(GLOB PLUGIN_SOURCES CONFIGURE_DEPENDS
 	${PROJECT_SOURCE_DIR}/Cargo.toml
-	${PROJECT_SOURCE_DIR}/src/*.rs)
+	${PROJECT_SOURCE_DIR}/src/*.rs
+	${PROJECT_SOURCE_DIR}/vendor/pdb-rs/Cargo.toml
+	${PROJECT_SOURCE_DIR}/vendor/pdb-rs/src/*.rs
+	${PROJECT_SOURCE_DIR}/vendor/pdb-rs/src/*/*.rs)
 
 if(CMAKE_BUILD_TYPE MATCHES Debug)
 	if(DEMO)

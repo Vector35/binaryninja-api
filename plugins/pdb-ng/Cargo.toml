@@ -13,7 +13,7 @@ anyhow = "^1.0"
 binaryninja.workspace = true
 binaryninjacore-sys.workspace = true
 itertools = "0.14"
-pdb = { git = "https://github.com/Vector35/pdb-rs", rev = "6016177" }
+pdb = { path = "vendor/pdb-rs" }
 regex = "1"
 tracing = "0.1"
 

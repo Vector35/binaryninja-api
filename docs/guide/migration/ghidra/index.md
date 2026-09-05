@@ -20,7 +20,7 @@ See [the Ghidra import documentation](./ghidraimport.md)
 
 ## Exporting Data To Ghidra
 
-See [the Ghidra export documentation](./ghidraexport.md)
+See [the Ghidra export documentation](./ghidraexport.md). Note that export requires the Ultimate edition.
 
 ## Keybindings
 

@@ -1,5 +1,8 @@
 # Ghidra Export
 
+!!! Important "Supported Editions"
+    Ghidra export is only available in the [Ultimate edition](https://binary.ninja/purchase/#commercial) of Binary Ninja. Ghidra [import](./ghidraimport.md) is available in all editions.
+
 Currently, the following categories of analysis information can be exported to Ghidra:
 
 - Bookmarks

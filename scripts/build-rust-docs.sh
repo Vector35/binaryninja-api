@@ -77,6 +77,23 @@ cp docs/img/favicon.ico docs/img/favicon-32x32.png target/doc/brand/
 cp docs/img/logo-vertical-light.svg docs/img/logo-vertical-dark.svg target/doc/brand/
 cp docs/img/wordmark-white.svg target/doc/brand/
 
+# rustdoc emits html_favicon_url/html_logo_url verbatim, so they must be
+# root-absolute to survive every page depth. Rewrite them to depth-relative
+# paths so the docs also work over file:// and when hosted below a domain root.
+echo "Rewriting brand asset paths..."
+python3 - target/doc <<'PY'
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+for html in root.rglob("*.html"):
+    source = html.read_text(encoding="utf-8")
+    if '"/brand/' not in source:
+        continue
+    prefix = "../" * (len(html.relative_to(root).parts) - 1)
+    html.write_text(source.replace('"/brand/', f'"{prefix}brand/'), encoding="utf-8")
+PY
+
 echo "Creating redirect index.html..."
 cat > target/doc/index.html <<'EOF'
 <!DOCTYPE html>

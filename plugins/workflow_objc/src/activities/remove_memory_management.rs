@@ -29,6 +29,7 @@ const IGNORABLE_MEMORY_MANAGEMENT_FUNCTIONS: &[&[u8]] = &[
     b"_objc_retainAutoreleasedReturnValue",
     b"_objc_retainBlock",
     b"_objc_unsafeClaimAutoreleasedReturnValue",
+    b"_objc_claimAutoreleasedReturnValue",
 ];
 
 fn is_call_to_ignorable_memory_management_function<'func>(

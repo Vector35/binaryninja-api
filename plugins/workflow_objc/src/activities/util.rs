@@ -138,3 +138,16 @@ pub fn adjust_return_type_of_call(call: &Call<'_>, return_type: &Type, confidenc
         None,
     );
 }
+
+pub fn strip_arc_reg_suffix(fname: &[u8]) -> &[u8] {
+    let Some(pos) = fname.windows(2).rposition(|p| p == b"_x") else {
+        return fname;
+    };
+
+    let reg_num = &fname[pos + 2..];
+    if !reg_num.is_empty() && reg_num.iter().all(u8::is_ascii_digit) {
+        &fname[..pos]
+    } else {
+        fname
+    }
+}

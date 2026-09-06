@@ -1,3 +1,5 @@
+use crate::activities::util;
+use crate::{error::ILLevel, metadata::GlobalState, Error};
 use binaryninja::{
     architecture::{Architecture as _, CoreRegister, Register as _, RegisterInfo as _},
     binary_view::BinaryView,
@@ -11,11 +13,10 @@ use binaryninja::{
         lifting::LowLevelILLabel,
         LowLevelILRegisterKind,
     },
+    symbol::Symbol,
     variable::PossibleValueSet,
     workflow::AnalysisContext,
 };
-
-use crate::{error::ILLevel, metadata::GlobalState, Error};
 
 // TODO: We should also handle `objc_retain_x` / `objc_release_x` variants
 // that use a custom calling convention.
@@ -31,6 +32,48 @@ const IGNORABLE_MEMORY_MANAGEMENT_FUNCTIONS: &[&[u8]] = &[
     b"_objc_unsafeClaimAutoreleasedReturnValue",
     b"_objc_claimAutoreleasedReturnValue",
 ];
+
+fn is_objc_rt_symbol_dscview(view: &BinaryView, symbol: &Symbol) -> bool {
+    if view.view_type() != "DSCView" {
+        return false;
+    }
+
+    let addr = symbol.address();
+
+    let Some(view_section_name) = view.sections().iter().find_map(|sect| {
+        (sect.start()..sect.end())
+            .contains(&addr)
+            .then(|| sect.name())
+    }) else {
+        return false;
+    };
+
+    let Ok(view_section_name) = view_section_name.to_str() else {
+        return false;
+    };
+
+    // Ensure that the symbol lies within the text segment and section of libobjc._.dylib by
+    //  parsing the view section name:
+
+    let Some((image, mem_fqid)) = view_section_name.split_once("::") else {
+        return false;
+    };
+
+    if mem_fqid != "__TEXT.__text" {
+        return false;
+    }
+
+    let mut imgparts = image.split(".");
+    matches!(
+        (
+            imgparts.next(),
+            imgparts.next(),
+            imgparts.next(),
+            imgparts.next()
+        ),
+        (Some("libobjc"), Some(_), Some("dylib"), None)
+    )
+}
 
 fn is_call_to_ignorable_memory_management_function<'func>(
     view: &binaryninja::binary_view::BinaryView,
@@ -58,7 +101,17 @@ fn is_call_to_ignorable_memory_management_function<'func>(
     // Remove any j_ prefix that the shared cache workflow adds to stub functions.
     let symbol_name = symbol_name.strip_prefix(b"j_").unwrap_or(symbol_name);
 
-    IGNORABLE_MEMORY_MANAGEMENT_FUNCTIONS.contains(&symbol_name)
+    // Normalize the name to also include register-specific functions (e.g. _objc_release_x19).
+    let symbol_name = util::strip_arc_reg_suffix(symbol_name);
+
+    let name_test = IGNORABLE_MEMORY_MANAGEMENT_FUNCTIONS.contains(&symbol_name);
+
+    if view.view_type() == "DSCView" {
+        // verify that the section of the symbol in question lies within the memory of the runtime image
+        name_test && is_objc_rt_symbol_dscview(view, &symbol)
+    } else {
+        name_test
+    }
 }
 
 fn process_instruction(

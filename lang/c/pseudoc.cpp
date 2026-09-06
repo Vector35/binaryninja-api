@@ -751,6 +751,161 @@ void PseudoCFunction::GetExprText(const HighLevelILInstruction& instr, HighLevel
 }
 
 
+void PseudoCFunction::GetExpr_VAR_INIT(
+	const HighLevelILInstruction& instr, HighLevelILTokenEmitter& tokens, DisassemblySettings* settings, bool statement)
+{
+	const auto srcExpr = instr.GetSourceExpr<HLIL_VAR_INIT>();
+	const auto destExpr = instr.GetDestVariable<HLIL_VAR_INIT>();
+
+	const auto variableType = GetHighLevelILFunction()->GetFunction()->GetVariableType(destExpr);
+	const auto platform = GetHighLevelILFunction()->GetFunction()->GetPlatform();
+	const auto prevTypeTokens = variableType.GetValue() ?
+		GetTypePrinter()->GetTypeTokensBeforeName(variableType.GetValue(), platform, variableType.GetConfidence()) :
+		vector<InstructionTextToken> {};
+	const auto postTypeTokens = variableType.GetValue() ?
+		GetTypePrinter()->GetTypeTokensAfterName(variableType.GetValue(), platform, variableType.GetConfidence()) :
+		vector<InstructionTextToken> {};
+
+	// Check to see if the variable appears live
+	bool appearsDead = false;
+	if (const auto ssaForm = instr.GetSSAForm(); ssaForm.operation == HLIL_VAR_INIT_SSA)
+	{
+		const auto ssaDest = ssaForm.GetDestSSAVariable<HLIL_VAR_INIT_SSA>();
+		appearsDead = !GetHighLevelILFunction()->IsSSAVarLive(ssaDest);
+	}
+
+	// If the variable does not appear live, show the assignment as zero confidence (grayed out)
+	if (appearsDead)
+		tokens.BeginForceZeroConfidence();
+
+	if (variableType.GetValue())
+	{
+		for (auto typeToken : prevTypeTokens)
+		{
+			typeToken.context = LocalVariableTokenContext;
+			typeToken.address = destExpr.ToIdentifier();
+			tokens.Append(typeToken);
+		}
+		tokens.Append(TextToken, " ");
+	}
+	tokens.AppendVarTextToken(destExpr, instr, instr.size);
+	if (variableType.GetValue())
+	{
+		for (auto typeToken : postTypeTokens)
+		{
+			typeToken.context = LocalVariableTokenContext;
+			typeToken.address = destExpr.ToIdentifier();
+			tokens.Append(typeToken);
+		}
+	}
+	tokens.Append(OperationToken, " = ");
+
+	// For the right side of the assignment, only use zero confidence if the instruction does
+	// not have any side effects
+	if (appearsDead && GetHighLevelILFunction()->HasSideEffects(srcExpr))
+	{
+		tokens.EndForceZeroConfidence();
+		appearsDead = false;
+	}
+
+	GetExprTextInternal(srcExpr, tokens, settings, AssignmentOperatorPrecedence);
+
+	if (appearsDead)
+		tokens.EndForceZeroConfidence();
+	if (statement)
+		tokens.AppendSemicolon();
+}
+
+
+void PseudoCFunction::EmitStandardBlockStatement(const HighLevelILInstruction& statement, bool isFirst,
+	bool& out_needsSeparator, HighLevelILTokenEmitter& tokens, DisassemblySettings* settings)
+{
+	// If the statement is one that contains additional blocks of code, insert a scope separator
+	// to visually separate the logic.
+	bool hasBlocks = false;
+	switch (statement.operation)
+	{
+	case HLIL_IF:
+	case HLIL_WHILE:
+	case HLIL_WHILE_SSA:
+	case HLIL_DO_WHILE:
+	case HLIL_DO_WHILE_SSA:
+	case HLIL_FOR:
+	case HLIL_FOR_SSA:
+	case HLIL_SWITCH:
+		hasBlocks = true;
+		break;
+	default:
+		hasBlocks = false;
+		break;
+	}
+
+	if (out_needsSeparator || (!isFirst && hasBlocks))
+	{
+		tokens.ScopeSeparator();
+	}
+
+	out_needsSeparator = hasBlocks;
+
+	// Emit the lines for the statement itself
+	if (!ShouldSkipStatement(statement))
+	{
+		GetExprTextInternal(statement, tokens, settings, TopLevelOperatorPrecedence, true);
+		tokens.NewLine();
+	}
+}
+
+size_t PseudoCFunction::TryEmitNewBlockRegion(std::span<const HighLevelILInstruction> statements, size_t index,
+	HighLevelILTokenEmitter& tokens, DisassemblySettings* settings)
+{
+	// This method can be overridden by subclasses to handle creation of new block-like syntax elements.
+	// Returns the number of statements consumed.
+	return 0;
+}
+
+void PseudoCFunction::EmitBlockStatements(std::span<const HighLevelILInstruction> exprs, bool isBlockRoot,
+	HighLevelILTokenEmitter& tokens, DisassemblySettings* settings)
+{
+	bool needSeparator = false;
+	for (size_t i = 0; i < exprs.size();)
+	{
+		bool isFirst = i == 0;
+		const auto& statement = exprs[i];
+
+		const size_t consumedStmts = TryEmitNewBlockRegion(exprs, i, tokens, settings);
+		if (consumedStmts != 0)
+		{
+			i += consumedStmts;
+			needSeparator = true;
+			continue;
+		}
+
+		// Don't show void returns at the very end of the function when printing
+		// the root of an AST, as it is implicit and almost always omitted in
+		// normal source code.
+		const bool isVoidReturnAtFuncRootEnd = isBlockRoot
+			&& exprs.size() > 1
+			&& i+1 == exprs.size()
+			&& statement.operation == HLIL_RET
+			&& statement.GetSourceExprs<HLIL_RET>().size() == 0;
+
+		if (!isVoidReturnAtFuncRootEnd)
+		{
+			EmitStandardBlockStatement(statement, isFirst, needSeparator, tokens, settings);
+		}
+		++i;
+	}
+}
+
+void PseudoCFunction::GetExpr_BLOCK(
+	const HighLevelILInstruction& instr, HighLevelILTokenEmitter& tokens, DisassemblySettings* settings)
+{
+	const std::vector<HighLevelILInstruction> exprs = instr.GetBlockExprs<HLIL_BLOCK>();
+	const bool isBlockRoot = instr.ast &&
+		instr.exprIndex == GetHighLevelILFunction()->GetRootExpr().exprIndex;
+	EmitBlockStatements(exprs, isBlockRoot, tokens, settings);
+}
+
 void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, HighLevelILTokenEmitter& tokens,
 	DisassemblySettings* settings, BNOperatorPrecedence precedence, bool statement, optional<bool> signedHint)
 {
@@ -790,54 +945,7 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 	switch (instr.operation)
 	{
 	case HLIL_BLOCK:
-		[&]() {
-			const auto exprs = instr.GetBlockExprs<HLIL_BLOCK>();
-			bool needSeparator = false;
-			for (auto i = exprs.begin(); i != exprs.end(); ++i)
-			{
-				// Don't show void returns at the very end of the function when printing
-				// the root of an AST, as it is implicit and almost always omitted in
-				// normal source code.
-				auto next = i;
-				++next;
-				if (instr.ast && (instr.exprIndex == GetHighLevelILFunction()->GetRootExpr().exprIndex)
-					&& (exprs.size() > 1) && (next == exprs.end()) && ((*i).operation == HLIL_RET)
-					&& ((*i).GetSourceExprs<HLIL_RET>().size() == 0))
-					continue;
-
-				// If the statement is one that contains additional blocks of code, insert a scope separator
-				// to visually separate the logic.
-				bool hasBlocks = false;
-				switch ((*i).operation)
-				{
-				case HLIL_IF:
-				case HLIL_WHILE:
-				case HLIL_WHILE_SSA:
-				case HLIL_DO_WHILE:
-				case HLIL_DO_WHILE_SSA:
-				case HLIL_FOR:
-				case HLIL_FOR_SSA:
-				case HLIL_SWITCH:
-					hasBlocks = true;
-					break;
-				default:
-					hasBlocks = false;
-					break;
-				}
-				if (needSeparator || (i != exprs.begin() && hasBlocks))
-				{
-					tokens.ScopeSeparator();
-				}
-				needSeparator = hasBlocks;
-
-				// Emit the lines for the statement itself
-				if (!ShouldSkipStatement(*i))
-				{
-					GetExprTextInternal(*i, tokens, settings, TopLevelOperatorPrecedence, true);
-					tokens.NewLine();
-				}
-			}
-		}();
+		GetExpr_BLOCK(instr, tokens, settings);
 		break;
 
 	case HLIL_FOR:
@@ -1217,70 +1325,7 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 		break;
 
 	case HLIL_VAR_INIT:
-		[&]() {
-			const auto srcExpr = instr.GetSourceExpr<HLIL_VAR_INIT>();
-			const auto destExpr = instr.GetDestVariable<HLIL_VAR_INIT>();
-
-			const auto variableType = GetHighLevelILFunction()->GetFunction()->GetVariableType(destExpr);
-			const auto platform = GetHighLevelILFunction()->GetFunction()->GetPlatform();
-			const auto prevTypeTokens = variableType.GetValue() ?
-				GetTypePrinter()->GetTypeTokensBeforeName(
-					variableType.GetValue(), platform, variableType.GetConfidence()) :
-				vector<InstructionTextToken> {};
-			const auto postTypeTokens = variableType.GetValue() ?
-				GetTypePrinter()->GetTypeTokensAfterName(
-					variableType.GetValue(), platform, variableType.GetConfidence()) :
-				vector<InstructionTextToken> {};
-
-			// Check to see if the variable appears live
-			bool appearsDead = false;
-			if (const auto ssaForm = instr.GetSSAForm(); ssaForm.operation == HLIL_VAR_INIT_SSA)
-			{
-				const auto ssaDest = ssaForm.GetDestSSAVariable<HLIL_VAR_INIT_SSA>();
-				appearsDead = !GetHighLevelILFunction()->IsSSAVarLive(ssaDest);
-			}
-
-			// If the variable does not appear live, show the assignment as zero confidence (grayed out)
-			if (appearsDead)
-				tokens.BeginForceZeroConfidence();
-
-			if (variableType.GetValue())
-			{
-				for (auto typeToken: prevTypeTokens)
-				{
-					typeToken.context = LocalVariableTokenContext;
-					typeToken.address = destExpr.ToIdentifier();
-					tokens.Append(typeToken);
-				}
-				tokens.Append(TextToken, " ");
-			}
-			tokens.AppendVarTextToken(destExpr, instr, instr.size);
-			if (variableType.GetValue())
-			{
-				for (auto typeToken: postTypeTokens)
-				{
-					typeToken.context = LocalVariableTokenContext;
-					typeToken.address = destExpr.ToIdentifier();
-					tokens.Append(typeToken);
-				}
-			}
-			tokens.Append(OperationToken, " = ");
-
-			// For the right side of the assignment, only use zero confidence if the instruction does
-			// not have any side effects
-			if (appearsDead && GetHighLevelILFunction()->HasSideEffects(srcExpr))
-			{
-				tokens.EndForceZeroConfidence();
-				appearsDead = false;
-			}
-
-			GetExprTextInternal(srcExpr, tokens, settings, AssignmentOperatorPrecedence);
-
-			if (appearsDead)
-				tokens.EndForceZeroConfidence();
-			if (statement)
-				tokens.AppendSemicolon();
-		}();
+		GetExpr_VAR_INIT(instr, tokens, settings, statement);
 		break;
 
 	case HLIL_VAR_DECLARE:

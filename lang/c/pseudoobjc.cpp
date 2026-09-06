@@ -122,6 +122,8 @@ struct RuntimeCall
 		Retain,
 		Release,
 		Autorelease,
+		AutoreleasePoolPush,
+		AutoreleasePoolPop,
 		RetainAutorelease,
 		Class,
 		Self,
@@ -139,6 +141,8 @@ constexpr std::array RUNTIME_CALLS = {
 	std::make_pair("_objc_alloc_init", RuntimeCall::AllocInit),
 	std::make_pair("_objc_alloc", RuntimeCall::Alloc),
 	std::make_pair("_objc_autorelease", RuntimeCall::Autorelease),
+	std::make_pair("_objc_autoreleasePoolPush", RuntimeCall::AutoreleasePoolPush),
+	std::make_pair("_objc_autoreleasePoolPop", RuntimeCall::AutoreleasePoolPop),
 	std::make_pair("_objc_autoreleaseReturnValue", RuntimeCall::Autorelease),
 	std::make_pair("_objc_msgSend", RuntimeCall::MessageSend),
 	std::make_pair("_objc_msgSendSuper", RuntimeCall::MessageSendSuper),
@@ -154,9 +158,13 @@ constexpr std::array RUNTIME_CALLS = {
 	std::make_pair("_objc_retainAutoreleaseReturnValue", RuntimeCall::RetainAutorelease),
 	std::make_pair("_objc_retainBlock", RuntimeCall::Retain),
 	std::make_pair("_objc_exception_throw", RuntimeCall::ExceptionThrow),
+	std::make_pair("__objc_autoreleasePoolPush", RuntimeCall::AutoreleasePoolPush),
+	std::make_pair("__objc_autoreleasePoolPop", RuntimeCall::AutoreleasePoolPop),
 	std::make_pair("j__objc_alloc_init", RuntimeCall::AllocInit),
 	std::make_pair("j__objc_alloc", RuntimeCall::Alloc),
 	std::make_pair("j__objc_autorelease", RuntimeCall::Autorelease),
+	std::make_pair("j__objc_autoreleasePoolPush", RuntimeCall::AutoreleasePoolPush),
+	std::make_pair("j__objc_autoreleasePoolPop", RuntimeCall::AutoreleasePoolPop),
 	std::make_pair("j__objc_autoreleaseReturnValue", RuntimeCall::Autorelease),
 	std::make_pair("j__objc_msgSend", RuntimeCall::MessageSend),
 	std::make_pair("j__objc_msgSendSuper", RuntimeCall::MessageSendSuper),
@@ -246,6 +254,53 @@ bool IsAssignmentToObjCSuperStructField(const HighLevelILInstruction& assignInst
 
 	auto variable = sourceExpr.GetVariable<HLIL_VAR>();
 	return VariableIsObjCSuperStruct(variable, function);
+}
+
+bool DoesVarInitBeginAutoreleasepool(const HighLevelILInstruction& varInit, const Function& function, Variable& out_poolHandle)
+{
+	if (varInit.operation != HLIL_VAR_INIT)
+		return false;
+
+	// we're matching for variable initializations with a value of an autoreleasePoolPush runtime call.
+	// example: void* context = _objc_autoreleasePoolPush()
+	const auto initCall = varInit.GetSourceExpr<HLIL_VAR_INIT>();
+	if (initCall.operation != HLIL_CALL)
+		return false;
+
+	const auto callee = initCall.GetDestExpr<HLIL_CALL>();
+	const auto params = initCall.GetParameterExprs();  // this doesn't seem like it's used meaningfully.
+	const auto rtCall = DetectObjCRuntimeCall(callee, params, function);
+	if (!rtCall)
+		return false;
+
+	if (rtCall.value().type == RuntimeCall::AutoreleasePoolPush)
+	{
+		out_poolHandle = varInit.GetDestVariable<HLIL_VAR_INIT>();
+		return true;
+	}
+
+	return false;
+}
+
+bool DoesCallTerminateAutoreleasePool(const HighLevelILInstruction& call, const Function& function, Variable& out_variable)
+{
+	if (call.operation != HLIL_CALL)
+		return false;
+
+	const auto callee = call.GetDestExpr<HLIL_CALL>();
+	const auto params = call.GetParameterExprs();
+
+	const auto rtCall = DetectObjCRuntimeCall(callee, params, function);
+	const bool isPoolPop = rtCall && rtCall.value().type == RuntimeCall::AutoreleasePoolPop;
+
+	// ensure that the first parameter of the call is a variable reference.
+	if (params.size() != 1 || params[0].operation != HLIL_VAR)
+		return false;
+
+	const auto paramVar = params[0].GetVariable();
+	out_variable = paramVar;
+
+	return isPoolPop;
 }
 
 }  // unnamed namespace
@@ -342,6 +397,78 @@ void PseudoObjCFunction::GetExpr_CALL_OR_TAILCALL(const BinaryNinja::HighLevelIL
 	}
 
 	return PseudoCFunction::GetExpr_CALL_OR_TAILCALL(instr, tokens, settings, precedence, statement);
+}
+
+size_t PseudoObjCFunction::TryEmitNewBlockRegion(std::span<const HighLevelILInstruction> statements, size_t index,
+	HighLevelILTokenEmitter& tokens, DisassemblySettings* settings)
+{
+	const auto& statement = statements[index];
+	auto function = GetFunction();
+
+	if (Variable poolHandle; DoesVarInitBeginAutoreleasepool(statement, *function, poolHandle))
+	{
+		const size_t start = index;
+		size_t end = index;
+
+		// Find the call that pops poolHandle in the current block.
+		for (auto i = index + 1; i < statements.size(); i++)
+		{
+			if (Variable popped;
+				DoesCallTerminateAutoreleasePool(statements[i], *function, popped)
+				&& popped == poolHandle)
+			{
+				end = i;
+				break;
+			}
+		}
+
+		if (start == end)
+			// Function is either compiled oddly somehow, or we're in a stub/trampoline;
+			//  render normally.
+			return 0;
+
+		// Emit the autoreleasepool block once we have a valid span.
+		const auto& poolStart = statements[start];
+		auto guard = tokens.SetCurrentExpr(poolStart);
+		const auto collapsed = function->IsInstructionCollapsed(poolStart);
+
+		if (index != 0)
+			tokens.ScopeSeparator();
+
+		tokens.PrependCollapseIndicator(
+			collapsed ? ContentCollapsedContext : ContentExpandedContext,
+			poolStart.GetInstructionHash()
+		);
+
+		tokens.InitLine();
+
+		if (collapsed)
+		{
+			tokens.Append(KeywordToken, "@autoreleasepool");
+			tokens.Append(CollapsedInformationToken, " {...}");
+		} else
+		{
+			tokens.Append(KeywordToken, "@autoreleasepool");
+			tokens.BeginScope(BlockScopeType);
+
+			// Push the handle to the active handle stack during emission so that ShouldSkipStatement
+			//  knows when to elide calls.
+			activePoolHandles.push_back(poolHandle);
+			EmitBlockStatements(statements.subspan(start + 1, end - start - 1), false, tokens, settings);
+			activePoolHandles.pop_back();
+
+			tokens.EndScope(BlockScopeType);
+			tokens.FinalizeScope();
+		}
+
+		// insert a line break if at `end` we're not the last statement in the block.
+		if (end + 1 != statements.size())
+			tokens.NewLine();
+
+		return end - start + 1;
+	}
+
+	return 0;
 }
 
 bool PseudoObjCFunction::GetExpr_ObjCMsgSend(uint64_t msgSendAddress, bool isSuper, bool isRewritten,
@@ -579,6 +706,13 @@ bool PseudoObjCFunction::ShouldSkipStatement(const BinaryNinja::HighLevelILInstr
 	// used for `objc_msgSendSuper` calls.
 	switch (instr.operation)
 	{
+	case HLIL_CALL:
+	{
+		if (Variable popped; DoesCallTerminateAutoreleasePool(instr, *GetFunction(), popped) &&
+			std::find(activePoolHandles.begin(), activePoolHandles.end(), popped) != activePoolHandles.end())
+			return true;
+		break;
+	}
 	case HLIL_VAR_DECLARE:
 		if (VariableIsObjCSuperStruct(instr.GetVariable<HLIL_VAR_DECLARE>(), *GetFunction()))
 			return true;
@@ -593,7 +727,6 @@ bool PseudoObjCFunction::ShouldSkipStatement(const BinaryNinja::HighLevelILInstr
 
 	return PseudoCFunction::ShouldSkipStatement(instr);
 }
-
 
 PseudoObjCFunctionType::PseudoObjCFunctionType() : PseudoCFunctionType("Pseudo Objective-C") {}
 

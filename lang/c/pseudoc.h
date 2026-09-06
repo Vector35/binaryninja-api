@@ -62,6 +62,10 @@ class PseudoCFunction: public BinaryNinja::LanguageRepresentationFunction
 		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
 		BNOperatorPrecedence precedence = TopLevelOperatorPrecedence, bool statement = false,
 		std::optional<bool> signedHint = std::nullopt);
+	void GetExpr_VAR_INIT(const BinaryNinja::HighLevelILInstruction& instr,
+		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings, bool statement);
+	void GetExpr_BLOCK(const BinaryNinja::HighLevelILInstruction& instr, BinaryNinja::HighLevelILTokenEmitter& tokens,
+		BinaryNinja::DisassemblySettings* settings);
 
 protected:
 	void InitTokenEmitter(BinaryNinja::HighLevelILTokenEmitter& tokens) override;
@@ -70,12 +74,20 @@ protected:
 		bool statement = false) override;
 	void BeginLines(
 		const BinaryNinja::HighLevelILInstruction& instr, BinaryNinja::HighLevelILTokenEmitter& tokens) override;
+	void EmitBlockStatements(std::span<const BinaryNinja::HighLevelILInstruction> exprs, bool isBlockRoot,
+		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings);
+	void EmitStandardBlockStatement(const BinaryNinja::HighLevelILInstruction& statement, bool isFirst,
+		bool& out_needsSeparator, BinaryNinja::HighLevelILTokenEmitter& tokens,
+		BinaryNinja::DisassemblySettings* settings);
 	void EndLines(
 		const BinaryNinja::HighLevelILInstruction& instr, BinaryNinja::HighLevelILTokenEmitter& tokens) override;
 
 	BinaryNinja::TypePrinter* GetTypePrinter() const;
 
 	virtual bool ShouldSkipStatement(const BinaryNinja::HighLevelILInstruction& instr);
+
+	virtual size_t TryEmitNewBlockRegion(std::span<const BinaryNinja::HighLevelILInstruction> statements, size_t index,
+		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings);
 	virtual void GetExpr_CALL_OR_TAILCALL(const BinaryNinja::HighLevelILInstruction& instr,
 		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
 		BNOperatorPrecedence precedence, bool statement);

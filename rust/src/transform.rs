@@ -290,10 +290,10 @@ impl Transform {
                 param_list.len(),
             )
         };
-        match result {
-            true => true,
-            false => false,
+        for param in param_list {
+            unsafe { BnString::free_raw(param.name as *mut c_char) };
         }
+        result
     }
 }
 

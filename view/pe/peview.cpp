@@ -697,6 +697,13 @@ bool PEView::Init()
 		uint32_t resolvedFileAlignment = fileAlignmentValid ? opt.fileAlign : 0x200;
 		if (!fileAlignmentValid)
 			m_logger->LogWarn("PE has invalid FileAlignment with value: 0x%x", opt.fileAlign);
+		// Per the PE spec, when SectionAlignment is less than the architecture's page size,
+		// FileAlignment must equal SectionAlignment (both can legitimately be below the usual
+		// 0x200 sector size), and section raw data is mapped as declared rather than padded to
+		// sector boundaries. Detect that case so the section-level rounding below, which only
+		// applies to normally-aligned images, doesn't corrupt these low-alignment layouts.
+		uint32_t pageSize = (header.machine == IMAGE_FILE_MACHINE_IA64) ? 0x2000 : 0x1000;
+		bool lowAlignmentImage = opt.sectionAlign && (opt.sectionAlign < pageSize) && (opt.sectionAlign == opt.fileAlign);
 		m_sizeOfHeaders = opt.sizeOfHeaders;
 		if (opt.sizeOfHeaders % resolvedFileAlignment)
 			m_sizeOfHeaders = (opt.sizeOfHeaders + resolvedFileAlignment) & ~(resolvedFileAlignment - 1);
@@ -839,8 +846,10 @@ bool PEView::Init()
 			section.pointerToRawData = reader.Read32();
 			// Windows always rounds PointerToRawData down to a 0x200 boundary for PE32/PE32+,
 			// regardless of the FileAlignment field value. Apply the same behavior here so that
-			// our view matches what the Windows loader actually maps into memory.
-			if ((opt.magic == 0x10b || opt.magic == 0x20b) && (section.pointerToRawData & (PE_SECTION_RAW_DATA_ALIGNMENT - 1)))
+			// our view matches what the Windows loader actually maps into memory. Low-alignment
+			// images are the documented exception: skip the rounding so file offsets keep
+			// matching RVAs as declared.
+			if (!lowAlignmentImage && (opt.magic == 0x10b || opt.magic == 0x20b) && (section.pointerToRawData & (PE_SECTION_RAW_DATA_ALIGNMENT - 1)))
 			{
 				m_logger->LogWarn("PE section[%u]: pointerToRawData 0x%x is not 0x200-aligned, "
 					"rounding down to 0x%x per Windows loader behavior.",
@@ -849,9 +858,11 @@ bool PEView::Init()
 			}
 			// Windows rounds SizeOfRawData up to the nearest FileAlignment multiple for PE32/PE32+.
 			// Without this, bytes between the raw value and the rounded value are invisible to
-			// analysis even though the Windows loader maps them.
+			// analysis even though the Windows loader maps them. Skip this for low-alignment
+			// images for the same reason as the PointerToRawData rounding above.
 			// Cap at the remaining file bytes to avoid mapping data past the end of the file.
-			if ((opt.magic == 0x10b || opt.magic == 0x20b)
+			if (!lowAlignmentImage
+				&& (opt.magic == 0x10b || opt.magic == 0x20b)
 				&& section.sizeOfRawData
 				&& (section.sizeOfRawData % resolvedFileAlignment))
 			{

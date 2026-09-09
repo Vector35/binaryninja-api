@@ -114,14 +114,14 @@ bool Transform::DecodeWithContextCallback(void* ctxt, BNTransformContext* contex
 		paramMap[params[i].name] = DataBuffer(BNDuplicateDataBuffer(params[i].value));
 
 	CallbackRef<Transform> xform(ctxt);
-	return xform->DecodeWithContext(new TransformContext(context), paramMap);
+	return xform->DecodeWithContext(new TransformContext(BNNewTransformContextReference(context)), paramMap);
 }
 
 
 bool Transform::CanDecodeCallback(void* ctxt, BNBinaryView* input)
 {
 	CallbackRef<Transform> xform(ctxt);
-	return xform->CanDecode(new BinaryView(input));
+	return xform->CanDecode(new BinaryView(BNNewViewReference(input)));
 }
 
 

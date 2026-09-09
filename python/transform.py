@@ -262,7 +262,7 @@ class Transform(metaclass=_TransformMetaClass):
 
 	def _decode_with_context(self, ctxt, context, params, count):
 		try:
-			context_obj = TransformContext(context)
+			context_obj = TransformContext(core.BNNewTransformContextReference(context))
 			param_map = {}
 			for i in range(0, count):
 				data = databuffer.DataBuffer(handle=core.BNDuplicateDataBuffer(params[i].value))
@@ -275,7 +275,7 @@ class Transform(metaclass=_TransformMetaClass):
 
 	def _can_decode(self, ctxt, input):
 		try:
-			input_obj = binaryview.BinaryView(handle=input)
+			input_obj = binaryview.BinaryView(handle=core.BNNewViewReference(input))
 			return self.can_decode(input_obj)
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in Transform._can_decode")

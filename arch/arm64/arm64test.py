@@ -12846,6 +12846,41 @@ tests_cssc = [
     (b'\x20\xb8\xe0\x4e', 'LLIL_UNIMPL()'),
 ]
 
+# FEAT_CPA (Checked Pointer Arithmetic). The pointer check these perform only rewrites bits 63:54 of
+# the result, and only when the arithmetic escapes the address bits with SCTLR2_ELx.CPTA/CPTM
+# enabled, so we lift the integer forms as plain arithmetic -- as we do for PAC above. The SVE forms
+# are unlifted, like every other SVE encoding.
+tests_cpa = [
+    # addpt x8, x27, x21, lsl #4                                       ADDPT_64_addsub_pt
+    (b'\x68\x33\x15\x9a',
+     'LLIL_SET_REG.q(x8,LLIL_ADD.q(LLIL_REG.q(x27),LLIL_LSL.q(LLIL_REG.q(x21),LLIL_CONST.b(0x4))))'),
+    # addpt x8, x27, x21                                               ADDPT_64_addsub_pt
+    (b'\x68\x23\x15\x9a', 'LLIL_SET_REG.q(x8,LLIL_ADD.q(LLIL_REG.q(x27),LLIL_REG.q(x21)))'),
+    # addpt x8, sp, x5 (Rn==31 is SP, not XZR)                         ADDPT_64_addsub_pt
+    (b'\xe8\x23\x05\x9a', 'LLIL_SET_REG.q(x8,LLIL_ADD.q(LLIL_REG.q(sp),LLIL_REG.q(x5)))'),
+    # addpt x1, x2, xzr (Rm==31 is XZR, not SP)                        ADDPT_64_addsub_pt
+    (b'\x41\x20\x1f\x9a', 'LLIL_SET_REG.q(x1,LLIL_ADD.q(LLIL_REG.q(x2),LLIL_CONST.q(0x0)))'),
+    # subpt x17, x13, x3, lsl #7                                       SUBPT_64_addsub_pt
+    (b'\xb1\x3d\x03\xda',
+     'LLIL_SET_REG.q(x17,LLIL_SUB.q(LLIL_REG.q(x13),LLIL_LSL.q(LLIL_REG.q(x3),LLIL_CONST.b(0x7))))'),
+    # subpt sp, sp, x5                                                 SUBPT_64_addsub_pt
+    (b'\xff\x23\x05\xda', 'LLIL_SET_REG.q(sp,LLIL_SUB.q(LLIL_REG.q(sp),LLIL_REG.q(x5)))'),
+    # maddpt x3, x2, x1, x4                                            MADDPT_64A_dp_3src
+    (b'\x43\x10\x61\x9b',
+     'LLIL_SET_REG.q(x3,LLIL_ADD.q(LLIL_REG.q(x4),LLIL_MUL.q(LLIL_REG.q(x2),LLIL_REG.q(x1))))'),
+    # msubpt x3, x2, x1, x4                                            MSUBPT_64A_dp_3src
+    (b'\x43\x90\x61\x9b',
+     'LLIL_SET_REG.q(x3,LLIL_SUB.q(LLIL_REG.q(x4),LLIL_MUL.q(LLIL_REG.q(x2),LLIL_REG.q(x1))))'),
+    # addpt z3.d, z2.d, z1.d                                           addpt_z_zz_
+    (b'\x43\x08\xe1\x04', 'LLIL_UNIMPL()'),
+    # subpt z3.d, p1/m, z3.d, z2.d                                     subpt_z_p_zz_
+    (b'\x43\x04\xc5\x04', 'LLIL_UNIMPL()'),
+    # madpt z3.d, z2.d, z4.d                                           madpt_z_zzz_
+    (b'\x83\xd8\xc2\x44', 'LLIL_UNIMPL()'),
+    # mlapt z3.d, z2.d, z1.d                                           mlapt_z_zzz_
+    (b'\x43\xd0\xc1\x44', 'LLIL_UNIMPL()'),
+]
+
 # Apple's vendor-specific instructions, which occupy encoding space that ARM leaves unallocated.
 # See arch/arm64/apple_vendor.cpp.
 tests_apple_vendor = [
@@ -12981,6 +13016,7 @@ disasm_test_cases = [
 
 test_cases = \
 	tests_apple_vendor + \
+	tests_cpa + \
 	tests_cssc + \
 	tests_shll + \
 	tests_udf + \

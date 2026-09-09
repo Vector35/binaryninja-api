@@ -1378,6 +1378,21 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_ADDG,
 			{ILREG_O(operand2), il.Const(REGSZ_O(operand2), IMM_O(operand3)), il.Const(1, IMM_O(operand4))}));
 		break;
+	case ARM64_ADDPT:
+		switch (instr.encoding)
+		{
+		case ENC_ADDPT_Z_P_ZZ_:
+		case ENC_ADDPT_Z_ZZ_:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
+		default: break;
+		}
+		// FEAT_CPA checked pointer addition, lifted as if checking is disabled
+		il.AddInstruction(ILSETREG_O(operand1,
+		    il.Add(REGSZ_O(operand1), ILREG_O(operand2),
+		        ReadILOperand(il, operand3, REGSZ_O(operand1)))));
+		break;
 	case ARM64_ADC:
 	case ARM64_ADCS:
 		il.AddInstruction(ILSETREG_O(operand1,
@@ -2927,6 +2942,7 @@ bool GetLowLevelILForInstruction(
 		}
 		break;
 	case ARM64_MADD:
+	case ARM64_MADDPT:  // FEAT_CPA checked multiply-add, lifted as if checking is disabled
 		il.AddInstruction(ILSETREG_O(operand1,
 		    ILADDREG_O(operand4, il.Mult(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3)))));
 		break;
@@ -2953,6 +2969,7 @@ bool GetLowLevelILForInstruction(
 		break;
 	}
 	case ARM64_MSUB:
+	case ARM64_MSUBPT:  // FEAT_CPA checked multiply-subtract, lifted as if checking is disabled
 		il.AddInstruction(ILSETREG_O(
 		    operand1, il.Sub(REGSZ_O(operand1), ILREG_O(operand4),
 		                  il.Mult(REGSZ_O(operand1), ILREG_O(operand2), ILREG_O(operand3)))));
@@ -3754,6 +3771,21 @@ bool GetLowLevelILForInstruction(
 	case ARM64_SUBG:
 		il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_SUBG,
 			{ILREG_O(operand2), il.Const(REGSZ_O(operand2), IMM_O(operand3)), il.Const(1, IMM_O(operand4))}));
+		break;
+	case ARM64_SUBPT:
+		switch (instr.encoding)
+		{
+		case ENC_SUBPT_Z_P_ZZ_:
+		case ENC_SUBPT_Z_ZZ_:
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
+		default: break;
+		}
+		// FEAT_CPA checked pointer subtraction, lifted as if checking is disabled
+		il.AddInstruction(ILSETREG_O(operand1,
+		    il.Sub(REGSZ_O(operand1), ILREG_O(operand2),
+		        ReadILOperand(il, operand3, REGSZ_O(operand1)))));
 		break;
 	case ARM64_SUBP:
 		il.AddInstruction(il.Intrinsic(

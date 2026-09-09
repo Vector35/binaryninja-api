@@ -1536,6 +1536,16 @@ static unsigned rhsdr_0123x_reg(int v)
 
 #define LAST_OPERAND_LSL_12 LAST_OPERAND_SHIFT(ShiftType_LSL, 12)
 
+#define OPTIONAL_LSL_AMOUNT(AMOUNT) \
+	if (AMOUNT) \
+	{ \
+		LAST_OPERAND_SHIFT(ShiftType_LSL, AMOUNT); \
+	} \
+	else \
+	{ \
+		instr->operands[i - 1].shiftValueUsed = 0; \
+	}
+
 #define ADD_OPERAND_OPTIONAL_PATTERN_MUL \
 	{ \
 		bool print_mul = ctx->imm != 1; \
@@ -5731,6 +5741,7 @@ int decode_scratchpad(context* ctx, Instruction* instr)
 	case ENC_MADD_64A_DP_3SRC:
 	case ENC_MSUB_64A_DP_3SRC:
 	case ENC_MADDPT_64A_DP_3SRC:
+	case ENC_MSUBPT_64A_DP_3SRC:
 	{
 		// <Xd>,<Xn>,<Xm>,<Xa>
 		ADD_OPERAND_XD;
@@ -6033,6 +6044,16 @@ int decode_scratchpad(context* ctx, Instruction* instr)
 		ADD_OPERAND_XN_SP;
 		ADD_OPERAND_REG(REGSET_ZR, rm_base, ctx->m);
 		OPTIONAL_EXTEND_AMOUNT_64_BEHAVIOR1;
+		break;
+	}
+	case ENC_ADDPT_64_ADDSUB_PT:
+	case ENC_SUBPT_64_ADDSUB_PT:
+	{
+		// <Xd|SP>,<Xn|SP>,<Xm>{, LSL #<amount>}
+		ADD_OPERAND_XD_SP;
+		ADD_OPERAND_XN_SP;
+		ADD_OPERAND_XM;
+		OPTIONAL_LSL_AMOUNT(ctx->shift);
 		break;
 	}
 	case ENC_IRG_64I_DP_2SRC:
@@ -6842,6 +6863,31 @@ int decode_scratchpad(context* ctx, Instruction* instr)
 		ADD_OPERAND_CONST;
 		break;
 	}
+	case ENC_ADDPT_Z_ZZ_:
+	case ENC_SUBPT_Z_ZZ_:
+	{
+		// <Zd>.D,<Zn>.D,<Zm>.D
+		ADD_OPERAND_ZREG_T(ctx->d, _1D)
+		ADD_OPERAND_ZREG_T(ctx->n, _1D)
+		ADD_OPERAND_ZREG_T(ctx->m, _1D)
+		break;
+	}
+	case ENC_MLAPT_Z_ZZZ_:
+	{
+		// <Zda>.D,<Zn>.D,<Zm>.D
+		ADD_OPERAND_ZREG_T(ctx->da, _1D)
+		ADD_OPERAND_ZREG_T(ctx->n, _1D)
+		ADD_OPERAND_ZREG_T(ctx->m, _1D)
+		break;
+	}
+	case ENC_MADPT_Z_ZZZ_:
+	{
+		// <Zdn>.D,<Zm>.D,<Za>.D
+		ADD_OPERAND_ZREG_T(ctx->dn, _1D)
+		ADD_OPERAND_ZREG_T(ctx->m, _1D)
+		ADD_OPERAND_ZREG_T(ctx->a, _1D)
+		break;
+	}
 	case ENC_ADD_Z_ZZ_:
 	case ENC_FADD_Z_ZZ_:
 	case ENC_FMUL_Z_ZZ_:
@@ -7301,6 +7347,16 @@ int decode_scratchpad(context* ctx, Instruction* instr)
 		ADD_OPERAND_PRED_REG_QUAL(ctx->g, 'm');
 		ADD_OPERAND_ZREG_T(ctx->dn, T)
 		ADD_OPERAND_CONST;
+		break;
+	}
+	case ENC_ADDPT_Z_P_ZZ_:
+	case ENC_SUBPT_Z_P_ZZ_:
+	{
+		// <Zdn>.D,<Pg>/M,<Zdn>.D,<Zm>.D
+		ADD_OPERAND_ZREG_T(ctx->dn, _1D)
+		ADD_OPERAND_PRED_REG_QUAL(ctx->g, 'm');
+		ADD_OPERAND_ZREG_T(ctx->dn, _1D)
+		ADD_OPERAND_ZREG_T(ctx->m, _1D)
 		break;
 	}
 	case ENC_ADD_Z_P_ZZ_:

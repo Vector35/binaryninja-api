@@ -139,6 +139,11 @@ bool KernelCacheView::Init()
 	reader.Seek(0x10);
 	uint64_t ncmds = reader.Read32();
 	uint64_t sizeofcmds = reader.Read32();
+	const uint64_t inputLength = GetParentView()->GetLength();
+	auto validLoadCommand = [inputLength](uint64_t commandOffset, uint64_t commandSize) {
+		return commandOffset <= inputLength && commandSize >= sizeof(load_command)
+			&& commandSize <= (inputLength - commandOffset);
+	};
 
 	// get __TEXT seg offset
 	uint64_t textSegOffset = 0;
@@ -149,6 +154,12 @@ bool KernelCacheView::Init()
 		reader.Seek(offset);
 		uint64_t cmd = reader.Read32();
 		uint64_t cmdsize = reader.Read32();
+		if (!validLoadCommand(offset, cmdsize))
+		{
+			m_logger->LogWarn("Invalid kernel-cache load command size 0x%" PRIx64 " at file offset 0x%" PRIx64,
+				cmdsize, offset);
+			return false;
+		}
 		if (textSegOffset == 0 && cmd == LC_SEGMENT_64)
 		{
 			uint64_t segname = reader.Read64();
@@ -189,6 +200,13 @@ bool KernelCacheView::Init()
 			reader.Seek(offset);
 			uint64_t cmd = reader.Read32();
 			uint64_t cmdsize = reader.Read32();
+			const uint64_t parentLength = GetParentView()->GetLength();
+			if (offset > parentLength || cmdsize < sizeof(load_command) || cmdsize > (parentLength - offset))
+			{
+				m_logger->LogWarn("Invalid fileset load command size 0x%" PRIx64 " at file offset 0x%" PRIx64,
+					cmdsize, offset);
+				return false;
+			}
 			if (cmd == LC_BUILD_VERSION)
 			{
 				uint32_t platformID = reader.Read32();
@@ -667,6 +685,12 @@ bool KernelCacheView::Init()
 			uint64_t curOffset = reader.GetOffset();
 			load.cmd = reader.Read32();
 			load.cmdsize = reader.Read32();
+			if (!validLoadCommand(curOffset, load.cmdsize))
+			{
+				m_logger->LogWarn("Invalid kernel-cache load command size 0x%x at file offset 0x%" PRIx64,
+					load.cmdsize, curOffset);
+				return false;
+			}
 			uint64_t nextOffset = curOffset + load.cmdsize;
 			switch (load.cmd)
 			{
@@ -793,6 +817,13 @@ bool KernelCacheView::InitController()
 			reader.Seek(offset);
 			uint64_t cmd = reader.Read32();
 			uint64_t cmdsize = reader.Read32();
+			const uint64_t parentLength = GetParentView()->GetLength();
+			if (offset > parentLength || cmdsize < sizeof(load_command) || cmdsize > (parentLength - offset))
+			{
+				m_logger->LogWarn("Invalid kernel-cache load command size 0x%" PRIx64 " at file offset 0x%" PRIx64,
+					cmdsize, offset);
+				return false;
+			}
 
 			if (cmd == LC_FILESET_ENTRY)
 			{

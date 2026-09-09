@@ -1,5 +1,7 @@
 #include "md1rom.h"
 
+#include <cstring>
+
 using namespace std;
 using namespace BinaryNinja;
 
@@ -33,9 +35,12 @@ Md1romView::Md1romView(BinaryNinja::BinaryView* data, bool parseOnly): BinaryVie
 			seg.magic = reader.Read32();
 			seg.length = reader.Read32();
 			DataBuffer name = reader.Read(0x20);
-			size_t nameLen = name.GetData() ? strlen((char*)name.GetData()) : 0;
-			if (nameLen)
-				seg.name = std::string((char*)name.GetData(), nameLen);
+			if (const auto* nameData = reinterpret_cast<const char*>(name.GetData()))
+			{
+				const auto* terminator = static_cast<const char*>(memchr(nameData, '\0', name.GetLength()));
+				const size_t nameLen = terminator ? static_cast<size_t>(terminator - nameData) : name.GetLength();
+				seg.name.assign(nameData, nameLen);
+			}
 
 			seg.addr = reader.Read32();
 			seg.mode = reader.Read32();

@@ -647,6 +647,15 @@ std::optional<VirtualFunctionTableInfo> ItaniumRTTIProcessor::ProcessVFT(uint64_
             if (pos != std::string::npos)
                 vFuncName = vFuncName.substr(pos + 2);
 
+            // A pure-virtual vtable slot may point to __cxa_pure_virtual, whose analyzed type is
+            // parameterless and no-return. That is the type of the placeholder target, not the virtual
+            // method the slot represents: a slot should describe the polymorphic operation, not the
+            // concrete function currently occupying it. Propagating that type into the vtable would
+            // wrongly make dispatch through the slot no-return. This heuristically recognizes the
+            // characteristic __cxa_pure_virtual shape (empty parameters, no-return) and treats it as
+            // unknown; it does not prove the target is __cxa_pure_virtual.
+            if (vFuncType && vFuncType->GetClass() == FunctionTypeClass && vFuncType->GetParameters().empty() && !vFuncType->CanReturn().GetValue())
+                vFuncType = Type::VoidType();
             auto vFuncOffset = vFuncIdx * addrSize;
             vftBuilder.AddMemberAtOffset(
                 Type::PointerType(addrSize, vFuncType, true), vFuncName, vFuncOffset);

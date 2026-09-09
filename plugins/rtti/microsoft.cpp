@@ -528,7 +528,7 @@ std::optional<VirtualFunctionTableInfo> MicrosoftRTTIProcessor::ProcessVFT(uint6
         // Until https://github.com/Vector35/binaryninja-api/issues/5982 is fixed
         auto vftSize = virtualFunctions.size() * addrSize;
         vftBuilder.SetWidth(vftSize);
-        
+
         if (baseClassInfo.has_value() && baseClassInfo->vft.has_value())
         {
             if (baseClassInfo->vft->virtualFunctions.size() <= virtualFunctions.size())
@@ -572,6 +572,15 @@ std::optional<VirtualFunctionTableInfo> MicrosoftRTTIProcessor::ProcessVFT(uint6
             auto vFuncOffset = vFuncIdx * addrSize;
             // We have access to a backing function type, use it, otherwise void!
             auto vFuncType = vFunc.has_value() ? vFunc.value()->GetType() : Type::VoidType();
+            // A pure-virtual vtable slot may point to _purecall, whose analyzed type is parameterless and
+            // no-return. That is the type of the placeholder target, not the virtual method the slot
+            // represents: a slot should describe the polymorphic operation, not the concrete function
+            // currently occupying it. Propagating that type into the vtable would wrongly make dispatch
+            // through the slot no-return. This heuristically recognizes the characteristic _purecall shape
+            // (empty parameters, no-return) and treats it as unknown; it does not prove the target is
+            // _purecall.
+            if (vFuncType && vFuncType->GetClass() == FunctionTypeClass && vFuncType->GetParameters().empty() && !vFuncType->CanReturn().GetValue())
+                vFuncType = Type::VoidType();
             vftBuilder.AddMemberAtOffset(
                 Type::PointerType(addrSize, vFuncType, true), vFuncName, vFuncOffset);
             vFuncIdx++;

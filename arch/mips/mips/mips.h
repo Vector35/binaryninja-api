@@ -206,6 +206,8 @@ namespace mips
 		MIPS_DADDI,
 		MIPS_DADDIU,
 		MIPS_DADDU,
+		MIPS_DALIGN,
+		MIPS_DBITSWAP,
 		MIPS_DBSHFL,
 		MIPS_DCLO,
 		MIPS_DCLZ,
@@ -766,6 +768,8 @@ namespace mips
 
 		MIPS_LQC2,
 		MIPS_SQC2,
+		MIPS_MFHC0,
+		MIPS_MTHC0,
 
 		MIPS_OPERATION_END
 	};
@@ -1532,4 +1536,3 @@ namespace mips
 	}
 }//end namespace
 #endif
-

@@ -621,6 +621,8 @@ static const char* const OperationStrings[] = {
 	"daddi",
 	"daddiu",
 	"daddu",
+	"dalign",
+	"dbitswap",
 	"dbshfl",
 	"dclo",
 	"dclz",
@@ -1176,6 +1178,8 @@ static const char* const OperationStrings[] = {
 	"mmi3",
 	"lqc2",
 	"sqc2",
+	"mfhc0",
+	"mthc0",
 };
 
 static const char * const RegisterStrings[] = {
@@ -1838,8 +1842,18 @@ uint32_t mips_decompose_instruction(
 			case MIPS_DBSHFL:
 				switch (ins.r.sa)
 				{
+					// Release 6 additions to the MIPS64-only DBSHFL group.
+					case 0x00: instruction->operation = MIPS_DBITSWAP; break;
 					case 0x02: instruction->operation = MIPS_DSBH; break;
 					case 0x05: instruction->operation = MIPS_DSHD; break;
+					case 0x08:
+					case 0x09:
+					case 0x0a:
+					case 0x0b:
+					case 0x0c:
+					case 0x0d:
+					case 0x0e:
+					case 0x0f: instruction->operation = MIPS_DALIGN; break;
 					default:
 						return 1;
 				}
@@ -1888,14 +1902,34 @@ uint32_t mips_decompose_instruction(
 							return 1;
 						instruction->operation = MIPS_DMFC0;
 						break;
-					case 2:  instruction->operation = MIPS_CFC0;   break;
+					case 2:
+						// MIPS32/64 Release 5 repurposed the legacy CFC0 encoding as MFHC0.
+						if (version == MIPS_32 || version == MIPS_64)
+						{
+							if (((ins.value >> 3) & 0xff) != 0)
+								return 1;
+							instruction->operation = MIPS_MFHC0;
+						}
+						else
+							instruction->operation = MIPS_CFC0;
+						break;
 					case 4:  instruction->operation = MIPS_MTC0;   break;
 					case 5:
 						if (((ins.value >> 3) & 0xff) != 0)
 							return 1;
 						instruction->operation = MIPS_DMTC0;
 						break;
-					case 6:  instruction->operation = MIPS_CTC0;    break;
+					case 6:
+						// MIPS32/64 Release 5 repurposed the legacy CTC0 encoding as MTHC0.
+						if (version == MIPS_32 || version == MIPS_64)
+						{
+							if (((ins.value >> 3) & 0xff) != 0)
+								return 1;
+							instruction->operation = MIPS_MTHC0;
+						}
+						else
+							instruction->operation = MIPS_CTC0;
+						break;
 				    case 8:
 				    {
 				        if (version != MIPS_R5900)
@@ -1975,14 +2009,9 @@ uint32_t mips_decompose_instruction(
 						case 3: instruction->operation = MIPS_BC1TL; break;
 						}
 						break;
-					case 9:
-						instruction->operation = MIPS_BC1ANY2;
-						if (ins.r.rs == 9)
-							instruction->operation = MIPS_BC1EQZ;
-						else if (ins.r.rs == 13)
-							instruction->operation = MIPS_BC1NEZ;
-						break;
+					case 9:  instruction->operation = MIPS_BC1EQZ;  break;
 					case 10: instruction->operation = MIPS_BC1ANY4; break;
+					case 13: instruction->operation = MIPS_BC1NEZ;  break;
 					case 16: //S
 				        if (version == MIPS_R5900)
 				            instruction->operation = mips_r5900_cop1_S_table[ins.decode.func_hi][ins.decode.func_lo];
@@ -2264,7 +2293,7 @@ uint32_t mips_decompose_instruction(
 			INS_1(IMM, ((ins.value >> 6) & 0xfffff))
 			break;
 		case MIPS_JALX:
-			INS_1(LABEL, (ins.j.immediate<<2));
+			INS_1(LABEL, ((address + 4) & 0xfffffffff0000000) + (((uint32_t)ins.j.immediate)<<2));
 			break;
 		case MIPS_DI:
 		case MIPS_EI:
@@ -2547,6 +2576,7 @@ uint32_t mips_decompose_instruction(
 		case MIPS_PABSW:
 			INS_2(REG, ins.r.rd, REG, ins.r.rt)
 			break;
+		case MIPS_DBITSWAP:
 		case MIPS_PCPYH:
 		case MIPS_PEXCH:
 		case MIPS_PEXCW:
@@ -2730,13 +2760,21 @@ uint32_t mips_decompose_instruction(
 			// 	instruction->operands[1].immediate = MIPS_SQ;
 			break;
 		case MIPS_PREF:
-		case MIPS_PREFX:
 		case MIPS_CACHE:
 			instruction->operands[0].operandClass = HINT;
 			instruction->operands[1].operandClass = MEM_IMM;
 			instruction->operands[0].immediate = ins.i.rt;
 			instruction->operands[1].reg = ins.i.rs;
 			instruction->operands[1].immediate = ins.i.immediate;
+			break;
+		case MIPS_PREFX:
+			if (ins.f.fd != 0)
+				return 1;
+			instruction->operands[0].operandClass = HINT;
+			instruction->operands[1].operandClass = MEM_REG;
+			instruction->operands[0].immediate = ins.f.fs;
+			instruction->operands[1].reg = ins.f.fr;
+			instruction->operands[1].immediate = ins.f.ft;
 			break;
 		case MIPS_SUXC1:
 		case MIPS_SWXC1:
@@ -3034,6 +3072,8 @@ uint32_t mips_decompose_instruction(
 		case MIPS_DMTC0:
 			INS_3(REG, ins.r.rt, IMM, ins.r.rd, IMM, (ins.r.function & 7))
 			break;
+		case MIPS_MFHC0:
+		case MIPS_MTHC0:
 		case MIPS_MFC0:
 		case MIPS_MTC0:
 			if (version == MIPS_R5900)
@@ -3088,6 +3128,9 @@ uint32_t mips_decompose_instruction(
 			break;
 		case MIPS_ALIGN:
 			INS_4(REG, ins.r.rd, REG, ins.r.rs, REG, ins.r.rt, IMM, (ins.r.sa & 3));
+			break;
+		case MIPS_DALIGN:
+			INS_4(REG, ins.r.rd, REG, ins.r.rs, REG, ins.r.rt, IMM, (ins.r.sa & 7));
 			break;
 
 		case CNMIPS_BADDU:

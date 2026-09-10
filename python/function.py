@@ -2413,6 +2413,39 @@ class Function:
 		    replacement_target or 0,
 		)
 
+	def clear_user_branch_override(
+	    self, address: int, original_branch_type: 'architecture.BranchType',
+	    arch: Optional['architecture.Architecture'] = None
+	) -> None:
+		"""Clear the branch override for ``original_branch_type`` at ``address``."""
+		if arch is None:
+			arch = self.arch
+		core.BNClearUserBranchOverride(self.handle, arch.handle, address, original_branch_type)
+
+	def get_user_branch_overrides(
+	    self, address: int, arch: Optional['architecture.Architecture'] = None
+	) -> Dict['architecture.BranchType', 'architecture.BranchOverride']:
+		"""Get user branch overrides at ``address``, keyed by the original branch type."""
+		if arch is None:
+			arch = self.arch
+		count = ctypes.c_ulonglong()
+		overrides = core.BNGetUserBranchOverrides(self.handle, arch.handle, address, count)
+		try:
+			result = {}
+			for i in range(count.value):
+				raw_override = overrides[i]
+				target = raw_override.replacementTarget if raw_override.hasReplacementTarget else None
+				target_arch = None
+				if raw_override.hasReplacementTarget and raw_override.replacementTargetArch:
+					target_arch = architecture.CoreArchitecture._from_cache(raw_override.replacementTargetArch)
+				result[architecture.BranchType(raw_override.originalBranchType)] = architecture.BranchOverride(
+				    architecture.BranchType(raw_override.replacementBranchType), target, target_arch
+				)
+			return result
+		finally:
+			if overrides is not None:
+				core.BNFreeBranchOverrideList(overrides)
+
 	def is_valid_branch_override_location(
 	    self, address: int, arch: Optional['architecture.Architecture'] = None
 	) -> bool:

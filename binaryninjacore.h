@@ -6510,6 +6510,11 @@ extern "C"
 		BNFunction* func, BNArchitecture* arch, uint64_t addr, BNBranchType originalBranchType,
 		BNBranchType replacementBranchType, bool hasReplacementTarget, BNArchitecture* replacementTargetArch,
 		uint64_t replacementTarget);
+	BINARYNINJACOREAPI void BNClearUserBranchOverride(
+		BNFunction* func, BNArchitecture* arch, uint64_t addr, BNBranchType originalBranchType);
+	BINARYNINJACOREAPI BNBranchOverride* BNGetUserBranchOverrides(
+		BNFunction* func, BNArchitecture* arch, uint64_t addr, size_t* count);
+	BINARYNINJACOREAPI void BNFreeBranchOverrideList(BNBranchOverride* overrides);
 	BINARYNINJACOREAPI bool BNIsValidBranchOverrideLocation(
 		BNFunction* func, BNArchitecture* arch, uint64_t addr);
 

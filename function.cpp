@@ -1611,6 +1611,33 @@ void Function::SetUserBranchOverride(Architecture* arch, uint64_t addr, BNBranch
 }
 
 
+void Function::ClearUserBranchOverride(Architecture* arch, uint64_t addr, BNBranchType originalBranchType)
+{
+	BNClearUserBranchOverride(m_object, arch->GetObject(), addr, originalBranchType);
+}
+
+
+std::map<BNBranchType, BranchOverride> Function::GetUserBranchOverrides(Architecture* arch, uint64_t addr)
+{
+	size_t count;
+	BNBranchOverride* overrides = BNGetUserBranchOverrides(m_object, arch->GetObject(), addr, &count);
+	std::map<BNBranchType, BranchOverride> result;
+	for (size_t i = 0; i < count; i++)
+	{
+		BranchOverride replacement {overrides[i].replacementBranchType};
+		if (overrides[i].hasReplacementTarget)
+		{
+			replacement.target = overrides[i].replacementTarget;
+			if (overrides[i].replacementTargetArch)
+				replacement.targetArch = new CoreArchitecture(overrides[i].replacementTargetArch);
+		}
+		result[overrides[i].originalBranchType] = replacement;
+	}
+	BNFreeBranchOverrideList(overrides);
+	return result;
+}
+
+
 bool Function::IsValidBranchOverrideLocation(Architecture* arch, uint64_t addr)
 {
 	return BNIsValidBranchOverrideLocation(m_object, arch->GetObject(), addr);

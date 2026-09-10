@@ -1573,9 +1573,23 @@ size_t Architecture::GetOpcodeDisplayLength() const
 }
 
 
-std::vector<OverridableBranchInfo> Architecture::GetBranchTypesWithContext(Function*, uint64_t, void*)
+std::vector<OverridableBranchInfo> Architecture::GetBranchTypesWithContext(Function* function, uint64_t addr, void*)
 {
-	return {};
+	auto data = function->GetView()->ReadBuffer(addr, GetMaxInstructionLength());
+	InstructionInfo info;
+	if (!GetInstructionInfo(static_cast<uint8_t*>(data.GetData()), addr, data.GetLength(), info))
+		return {};
+
+	std::vector<OverridableBranchInfo> result;
+	result.reserve(info.branchCount);
+	for (size_t i = 0; i < info.branchCount; i++)
+	{
+		if (info.branchType[i] == SystemCall)
+			continue;
+		result.push_back({info.branchType[i], info.branchTarget[i],
+			info.branchArch[i] ? new CoreArchitecture(info.branchArch[i]) : nullptr});
+	}
+	return result;
 }
 
 

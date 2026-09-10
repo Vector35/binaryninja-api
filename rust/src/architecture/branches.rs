@@ -12,6 +12,39 @@ pub struct BranchOverride {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub(crate) struct UserBranchOverride {
+    pub original_type: BranchType,
+    pub replacement: BranchOverride,
+}
+
+impl CoreArrayProvider for UserBranchOverride {
+    type Raw = BNBranchOverride;
+    type Context = ();
+    type Wrapped<'a> = Self;
+}
+
+unsafe impl CoreArrayProviderInner for UserBranchOverride {
+    unsafe fn free(raw: *mut Self::Raw, _count: usize, _context: &Self::Context) {
+        unsafe { BNFreeBranchOverrideList(raw) }
+    }
+
+    unsafe fn wrap_raw<'a>(raw: &'a Self::Raw, _context: &'a Self::Context) -> Self::Wrapped<'a> {
+        let target = raw.hasReplacementTarget.then(|| {
+            let arch = (!raw.replacementTargetArch.is_null())
+                .then(|| unsafe { CoreArchitecture::from_raw(raw.replacementTargetArch) });
+            Location::new(arch, raw.replacementTarget)
+        });
+        Self {
+            original_type: raw.originalBranchType,
+            replacement: BranchOverride {
+                type_: raw.replacementBranchType,
+                target,
+            },
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct OverridableBranchInfo {
     pub type_: BranchType,
     pub target: u64,

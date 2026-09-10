@@ -108,17 +108,25 @@ void UINotifications::OnViewChange(UIContext* context, ViewFrame* frame, const Q
 		uint64_t addr = 0;
 		if (GetAddressInput(addr, "Address", "Address"))
 		{
-			BackgroundThread::create(ctx.context->mainWindow())
-				->thenBackground([ctx, addr]() {
-					loadImageAtAddr(*ctx.binaryView, addr);
+			auto view = ctx.binaryView;
+			if (!view)
+				return;
+			auto owner = ctx.context ? ctx.context->mainWindow() : nullptr;
+			BackgroundThread::create(owner)
+				->thenBackground([view, addr]() {
+					loadImageAtAddr(*view, addr);
 				})->start();
 		}
 	};
 
 	auto loadImageTokenAction = [](const UIActionContext& ctx) {
+		auto view = ctx.binaryView;
+		if (!view)
+			return;
 		uint64_t addr = TokenAddress(ctx);
-		BackgroundThread::create(ctx.context->mainWindow())
-			->thenBackground([ctx, addr](){ loadImageAtAddr(*ctx.binaryView, addr); })
+		auto owner = ctx.context ? ctx.context->mainWindow() : nullptr;
+		BackgroundThread::create(owner)
+			->thenBackground([view, addr](){ loadImageAtAddr(*view, addr); })
 			->start();
 	};
 

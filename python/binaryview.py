@@ -10289,8 +10289,9 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		This is the API used by the advanced binary search UI option. The pattern is interpreted as one of:
 
 			- ``"FlexHex"``: a sequence of byte tokens drawn from ``[0-9a-fA-F?]``, where ``??`` (or a whitespace-separated lone ``?``) is a full-byte wildcard and ``?X`` / ``X?`` matches a single nibble. Whitespace between byte tokens is optional, but a lone ``?`` must be whitespace-separated (so ``c3 ? 55`` is valid; ``c3?55`` is not).
+			- ``"YARA Hex"``: a superset of FlexHex that accepts YARA-style hex strings — fixed jumps ``[n]``, bounded jumps ``[n-m]`` (both capped at 1024 bytes), alternation ``( a | b | c )``, byte/nibble negation ``~aa`` / ``~?a`` / ``~a?``, and an optional outer ``{ ... }``. Tried when the pattern contains a YARA structural character (``[``, ``(``, ``~``, or wrapping braces) *and* parses as a valid YARA hex string. Those characters are not exclusive to YARA — a pattern that contains one but is not valid YARA (for example the regex character class ``[0-9]+``) falls through to Regex. Unbounded jumps ``[-]`` / ``[n-]`` are not supported — use Regex mode for open-ended matching.
 			- ``"Regex"``: a byte-level regular expression.
-			- ``"Raw String"``: a literal string match. Used when ``raw=True``, or as a fallback when the pattern is neither valid FlexHex nor a valid regex.
+			- ``"Raw String"``: a literal string match. Used when ``raw=True``, or as a fallback when the pattern is neither valid FlexHex, YARA Hex, nor a valid regex.
 
 		Use :py:meth:`detect_search_mode` to check which mode would be selected for a given pattern.
 
@@ -10379,12 +10380,13 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		The mode is one of:
 
 			- ``"FlexHex"``: a sequence of byte tokens drawn from ``[0-9a-fA-F?]``, where ``??`` (or a whitespace-separated lone ``?``) is a full-byte wildcard and ``?X`` / ``X?`` matches a single nibble. Whitespace between byte tokens is optional, but a lone ``?`` must be whitespace-separated (so ``c3 ? 55`` is valid; ``c3?55`` is not).
+			- ``"YARA Hex"``: a superset of FlexHex that accepts YARA-style hex strings — fixed jumps ``[n]``, bounded jumps ``[n-m]`` (both capped at 1024 bytes), alternation ``( a | b | c )``, byte/nibble negation ``~aa`` / ``~?a`` / ``~a?``, and an optional outer ``{ ... }``. Tried when the pattern contains a YARA structural character (``[``, ``(``, ``~``, or wrapping braces) *and* parses as a valid YARA hex string. Those characters are not exclusive to YARA — a pattern that contains one but is not valid YARA (for example the regex character class ``[0-9]+``) falls through to Regex. Unbounded jumps ``[-]`` / ``[n-]`` are not supported — use Regex mode for open-ended matching.
 			- ``"Regex"``: a byte-level regular expression.
-			- ``"Raw String"``: a literal string match. Returned when ``raw=True``, or as a fallback when the pattern is neither valid FlexHex nor a valid regex.
+			- ``"Raw String"``: a literal string match. Returned when ``raw=True``, or as a fallback when the pattern is neither valid FlexHex, YARA Hex, nor a valid regex.
 
 		:param str pattern: The search pattern to analyze.
 		:param bool raw: Whether to interpret the pattern as a raw string (default: False).
-		:return: The detected search mode: ``"FlexHex"``, ``"Regex"``, or ``"Raw String"``.
+		:return: The detected search mode: ``"FlexHex"``, ``"YARA Hex"``, ``"Regex"``, or ``"Raw String"``.
 		:rtype: str
 		"""
 		query = json.dumps({"pattern": pattern, "raw": raw})

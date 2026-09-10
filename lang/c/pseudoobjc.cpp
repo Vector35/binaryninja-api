@@ -126,7 +126,8 @@ struct RuntimeCall
 		Class,
 		Self,
 		RespondsToSelector,
-		IsKindOfClass
+		IsKindOfClass,
+		ExceptionThrow,
 	};
 
 	Type type;
@@ -152,6 +153,7 @@ constexpr std::array RUNTIME_CALLS = {
 	std::make_pair("_objc_retainAutoreleasedReturnValue", RuntimeCall::Retain),
 	std::make_pair("_objc_retainAutoreleaseReturnValue", RuntimeCall::RetainAutorelease),
 	std::make_pair("_objc_retainBlock", RuntimeCall::Retain),
+	std::make_pair("_objc_exception_throw", RuntimeCall::ExceptionThrow),
 	std::make_pair("j__objc_alloc_init", RuntimeCall::AllocInit),
 	std::make_pair("j__objc_alloc", RuntimeCall::Alloc),
 	std::make_pair("j__objc_autorelease", RuntimeCall::Autorelease),
@@ -169,6 +171,7 @@ constexpr std::array RUNTIME_CALLS = {
 	std::make_pair("j__objc_retainAutoreleasedReturnValue", RuntimeCall::Retain),
 	std::make_pair("j__objc_retainAutoreleaseReturnValue", RuntimeCall::RetainAutorelease),
 	std::make_pair("j__objc_retainBlock", RuntimeCall::Retain),
+	std::make_pair("j__objc_exception_throw", RuntimeCall::ExceptionThrow),
 };
 
 std::optional<RuntimeCall> DetectObjCRuntimeCall(const HighLevelILInstruction& callTarget,
@@ -275,6 +278,16 @@ void PseudoObjCFunction::GetExpr_CALL_OR_TAILCALL(const BinaryNinja::HighLevelIL
 		{
 			if (statement)
 				tokens.AppendSemicolon();
+			return;
+		}
+		break;
+	case RuntimeCall::ExceptionThrow:
+		// https://developer.apple.com/documentation/objectivec/objc_exception_throw(_:)
+		if (parameterExprs.size() == 1 && statement)
+		{
+			tokens.Append(KeywordToken, "@throw ");
+			GetExprText(parameterExprs[0], tokens, settings);
+			tokens.AppendSemicolon();
 			return;
 		}
 		break;

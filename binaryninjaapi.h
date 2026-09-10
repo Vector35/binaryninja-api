@@ -13657,6 +13657,8 @@ namespace BinaryNinja {
 		void SetUserBranchOverride(Architecture* arch, uint64_t addr, BNBranchType originalBranchType,
 			BNBranchType replacementBranchType, std::optional<uint64_t> replacementTarget = std::nullopt,
 			Architecture* replacementTargetArch = nullptr);
+		void ClearUserBranchOverride(Architecture* arch, uint64_t addr, BNBranchType originalBranchType);
+		std::map<BNBranchType, BranchOverride> GetUserBranchOverrides(Architecture* arch, uint64_t addr);
 		bool IsValidBranchOverrideLocation(Architecture* arch, uint64_t addr);
 
 		// Guided Analysis Support

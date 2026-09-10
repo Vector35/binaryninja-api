@@ -2115,7 +2115,13 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 	    self, func: 'function.Function', addr: int, function_arch_context: Any = None
 	) -> List[OverridableBranchInfo]:
 		"""Return branches at ``addr`` using the function architecture context."""
-		return []
+		info = self.get_instruction_info(func.view.read(addr, self.max_instr_length), addr)
+		if info is None:
+			return []
+		return [
+			OverridableBranchInfo(branch.type, branch.target, branch.arch)
+			for branch in info.branches if branch.type != BranchType.SystemCall
+		]
 
 	def get_instruction_text(self, data: bytes, addr: int) -> Optional[Tuple[List['function.InstructionTextToken'], int]]:
 		"""

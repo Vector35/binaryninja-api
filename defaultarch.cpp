@@ -93,6 +93,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 
 	auto& indirectBranches = context.GetIndirectBranches();
 	auto& indirectNoReturnCalls = context.GetIndirectNoReturnCalls();
+	auto& branchOverrides = context.GetBranchOverrides();
 
 	auto& contextualFunctionReturns = context.GetContextualReturns();
 
@@ -330,12 +331,32 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 				for (size_t i = 0; i < info.branchCount; i++)
 				{
 					bool fastPath;
+					auto branchType = info.branchType[i];
+					auto branchTarget = info.branchTarget[i];
+					Ref<Architecture> branchTargetArch =
+						info.branchArch[i] ? new CoreArchitecture(info.branchArch[i]) : nullptr;
+					bool branchOverridden = false;
+					if (auto locationOverrides = branchOverrides.find(location);
+						locationOverrides != branchOverrides.end())
+					{
+						if (auto branchOverride = locationOverrides->second.find(branchType);
+							branchOverride != locationOverrides->second.end())
+						{
+							branchType = branchOverride->second.type;
+							branchOverridden = true;
+							if (branchOverride->second.target)
+							{
+								branchTarget = *branchOverride->second.target;
+								branchTargetArch = branchOverride->second.targetArch;
+							}
+						}
+					}
 
 					auto handleAsFallback = [&]() {
 						// Undefined type or target, check for targets from analysis and stop disassembling this block
 						endsBlock = true;
 
-						if (info.branchType[i] == IndirectBranch)
+						if (branchType == IndirectBranch)
 						{
 							// Indirect calls need not end the block early.
 							Ref<LowLevelILFunction> ilFunc = new LowLevelILFunction(location.arch, nullptr);
@@ -352,7 +373,8 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 
 						indirectBranchIter = indirectBranches.find(location);
 						endIter = indirectBranches.end();
-						if (indirectBranchIter != endIter)
+						if (indirectBranchIter != endIter && (!branchOverridden
+							|| ((branchType != ExceptionBranch) && (branchType != FunctionReturn))))
 						{
 							for (auto& branch : indirectBranchIter->second)
 							{
@@ -376,11 +398,16 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 								}
 							}
 						}
-						else if (info.branchType[i] == ExceptionBranch)
+						else if (branchType == ExceptionBranch)
 						{
 							block->SetCanExit(false);
 						}
-						else if (info.branchType[i] == FunctionReturn && function->CanReturn().GetValue())
+						else if (branchOverridden && (branchType == FunctionReturn))
+						{
+							// An explicit return override takes precedence over contextual return detection.
+							return;
+						}
+						else if (branchType == FunctionReturn && function->CanReturn().GetValue())
 						{
 							// Support for contextual function returns. This is mainly used for ARM/Thumb with 'blx lr'. It's most common for this to be treated
 							// as a function return, however it can also be a function call. For now this transform is described as follows:
@@ -406,7 +433,10 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 						}
 					};
 
-					switch (info.branchType[i])
+					if (info.branchType[i] != SystemCall)
+						context.GetValidBranchOverrideLocations().insert(location);
+
+					switch (branchType)
 					{
 					case UnconditionalBranch:
 					case TrueBranch:
@@ -414,15 +444,15 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 						// Normal branch, resume disassembly at targets
 						endsBlock = true;
 						// Target of a call instruction, add the function to the analysis
-						if (data->IsOffsetExternSemantics(info.branchTarget[i]))
+						if (data->IsOffsetExternSemantics(branchTarget))
 						{
 							// Deal with direct pointers into the extern section
 							DataVariable dataVar;
-							if (data->GetDataVariableAtAddress(info.branchTarget[i], dataVar)
-								&& (dataVar.address == info.branchTarget[i]) && dataVar.type.GetValue()
+							if (data->GetDataVariableAtAddress(branchTarget, dataVar)
+								&& (dataVar.address == branchTarget) && dataVar.type.GetValue()
 								&& (dataVar.type->GetClass() == FunctionTypeClass))
 							{
-								directRefs[info.branchTarget[i]].emplace(location);
+								directRefs[branchTarget].emplace(location);
 								if (!dataVar.type->CanReturn())
 								{
 									directNoReturnCalls.insert(location);
@@ -433,12 +463,12 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 							break;
 						}
 
-						fastPath = fastValidate && (info.branchTarget[i] >= fastStartAddr) && (info.branchTarget[i] <= fastEndAddr);
-						if (fastPath || (data->IsValidOffset(info.branchTarget[i]) &&
-							data->IsOffsetBackedByFile(info.branchTarget[i]) &&
-							((!validateExecutable) || data->IsOffsetExecutable(info.branchTarget[i]))))
+						fastPath = fastValidate && (branchTarget >= fastStartAddr) && (branchTarget <= fastEndAddr);
+						if (fastPath || (data->IsValidOffset(branchTarget) &&
+							data->IsOffsetBackedByFile(branchTarget) &&
+							((!validateExecutable) || data->IsOffsetExecutable(branchTarget))))
 						{
-							target = ArchAndAddr(info.branchArch[i] ? new CoreArchitecture(info.branchArch[i]) : location.arch, info.branchTarget[i]);
+							target = ArchAndAddr(branchTargetArch ? branchTargetArch : location.arch, branchTarget);
 
 							// Check if valid target
 							if (data->ShouldSkipTargetAnalysis(location, function, instrEnd, target))
@@ -448,13 +478,14 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 							if (target.arch != funcPlatform->GetArchitecture())
 								targetPlatform = funcPlatform->GetRelatedPlatform(target.arch);
 
-							directRefs[info.branchTarget[i]].insert(location);
+							directRefs[branchTarget].insert(location);
 
 							auto otherFunc = function->GetCalleeForAnalysis(targetPlatform, target.address, true);
-							if (translateTailCalls && targetPlatform && otherFunc && (otherFunc->GetStart() != function->GetStart()))
+							if (!branchOverridden && translateTailCalls && targetPlatform && otherFunc
+								&& (otherFunc->GetStart() != function->GetStart()))
 							{
 								calledFunctions.insert(otherFunc);
-								if (info.branchType[i] == UnconditionalBranch)
+								if (branchType == UnconditionalBranch)
 								{
 									if (!otherFunc->CanReturn() && !otherFunc->IsInlinedDuringAnalysis().GetValue())
 									{
@@ -478,7 +509,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 								if (isGuidedSourceBlock)
 									guidedSourceBlockTargets.insert(target);
 
-								block->AddPendingOutgoingEdge(info.branchType[i], target.address, target.arch);
+								block->AddPendingOutgoingEdge(branchType, target.address, target.arch);
 								// Add the block to the list of blocks to process if it is not already processed
 								if (seenBlocks.count(target) == 0)
 								{
@@ -491,15 +522,15 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 
 					case CallDestination:
 						// Target of a call instruction, add the function to the analysis
-						if (data->IsOffsetExternSemantics(info.branchTarget[i]))
+						if (data->IsOffsetExternSemantics(branchTarget))
 						{
 							// Deal with direct pointers into the extern section
 							DataVariable dataVar;
-							if (data->GetDataVariableAtAddress(info.branchTarget[i], dataVar)
-								&& (dataVar.address == info.branchTarget[i]) && dataVar.type.GetValue()
+							if (data->GetDataVariableAtAddress(branchTarget, dataVar)
+								&& (dataVar.address == branchTarget) && dataVar.type.GetValue()
 								&& (dataVar.type->GetClass() == FunctionTypeClass))
 							{
-								directRefs[info.branchTarget[i]].emplace(location);
+								directRefs[branchTarget].emplace(location);
 								if (!dataVar.type->CanReturn())
 								{
 									directNoReturnCalls.insert(location);
@@ -512,11 +543,11 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 							break;
 						}
 
-						fastPath = fastValidate && (info.branchTarget[i] >= fastStartAddr) && (info.branchTarget[i] <= fastEndAddr);
-						if (fastPath || (data->IsValidOffset(info.branchTarget[i]) && data->IsOffsetBackedByFile(info.branchTarget[i]) &&
-							((!validateExecutable) || data->IsOffsetExecutable(info.branchTarget[i]))))
+						fastPath = fastValidate && (branchTarget >= fastStartAddr) && (branchTarget <= fastEndAddr);
+						if (fastPath || (data->IsValidOffset(branchTarget) && data->IsOffsetBackedByFile(branchTarget) &&
+							((!validateExecutable) || data->IsOffsetExecutable(branchTarget))))
 						{
-							target = ArchAndAddr(info.branchArch[i] ? new CoreArchitecture(info.branchArch[i]) : location.arch, info.branchTarget[i]);
+							target = ArchAndAddr(branchTargetArch ? branchTargetArch : location.arch, branchTarget);
 
 							if (!fastPath && !data->IsOffsetCodeSemantics(target.address) && data->IsOffsetCodeSemantics(location.address))
 							{

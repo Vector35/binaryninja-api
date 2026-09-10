@@ -1436,13 +1436,17 @@ bool PEView::Init()
 			uint64_t stringTableBase = header.coffSymbolTable + ((uint64_t)originalCoffSymbolCount * 18);
 			stringReader.Seek(stringTableBase);
 			uint32_t stringTableLen;
-			if (!stringReader.TryRead32(stringTableLen) || (stringTableBase + stringTableLen) > GetParentView()->GetEnd())
+			// The first 4 bytes of the string table are the length field itself, so a table
+			// shorter than that can't hold even its own header; the rest must fit in the file.
+			if (!stringReader.TryRead32(stringTableLen) || stringTableLen < 4
+				|| (stringTableBase + stringTableLen) > GetParentView()->GetEnd())
 			{
 				throw PEFormatException("invalid COFF string table size");
 			}
 
 			// Symbol names are looked up by string table offset before being read, so entries
-			// that share an offset only pay for one read and count once toward the name budget.
+			// that share an offset only pay for one read; every symbol that retains a
+			// reference to a name still counts toward the budget, cached or not.
 			std::unordered_map<uint32_t, string> symbolNameCache;
 			uint64_t totalSymNameBytesRead = 0;
 			for (size_t i = 0; i < header.coffSymbolCount; i++)
@@ -1478,29 +1482,42 @@ bool PEView::Init()
 						stringReader.Seek(header.coffSymbolTable + (i * 18));
 						symbolName = stringReader.ReadCString(8);
 					}
-					else if (e_offset < stringTableLen)
+					// Payload offsets start after the 4-byte length field; offsets inside it don't
+					// name a string.
+					else if (e_offset >= 4 && e_offset < stringTableLen)
 					{
 						auto cached = symbolNameCache.find(e_offset);
+						string candidate;
 						if (cached != symbolNameCache.end())
 						{
-							symbolName = cached->second;
-						}
-						else if (!maxTotalSymNameBytes || totalSymNameBytesRead < maxTotalSymNameBytes)
-						{
-							stringReader.Seek(stringTableBase + e_offset);
-							symbolName = stringReader.ReadCString(maxSymNameLen);
-							// Each name ends up retained in more than one copy once a symbol is
-							// created for it (raw, short, and full demangled forms), so weight
-							// the budget accordingly rather than counting only the bytes read here.
-							totalSymNameBytesRead += (uint64_t)symbolName.size() * 4;
-							symbolNameCache.emplace(e_offset, symbolName);
+							candidate = cached->second;
 						}
 						else
+						{
+							// Cap the read to what's left in the table so a name lacking a null
+							// terminator can't run past the table's declared end.
+							uint64_t remaining = stringTableLen - e_offset;
+							uint64_t cap = std::min<uint64_t>(maxSymNameLen, remaining);
+							stringReader.Seek(stringTableBase + e_offset);
+							candidate = stringReader.ReadCString(cap);
+						}
+
+						// Each name ends up retained in more than one copy once a symbol is
+						// created for it (raw, short, and full demangled forms), so weight the
+						// budget accordingly. Every symbol that retains a reference counts toward
+						// it, including ones that hit the cache above, since each still gets its
+						// own retained copies downstream — only the read itself is deduplicated.
+						uint64_t projected = totalSymNameBytesRead + (uint64_t)candidate.size() * 4;
+						if (maxTotalSymNameBytes && projected > maxTotalSymNameBytes)
 						{
 							m_logger->LogWarn("Total COFF symbol name bytes exceeded limit %" PRIu64
 								", stopping symbol processing at index %zu.", maxTotalSymNameBytes, i);
 							break;
 						}
+						totalSymNameBytesRead = projected;
+						symbolName = candidate;
+						if (cached == symbolNameCache.end())
+							symbolNameCache.emplace(e_offset, candidate);
 					}
 				}
 
@@ -3627,15 +3644,24 @@ bool PEView::Init()
 
 uint64_t PEView::RVAToFileOffset(uint64_t offset, bool except)
 {
+	// Sections can overlap (declared that way in the file, or made to by sector rounding
+	// above), in which case the most recently added one wins for the bytes the BinaryView
+	// actually maps. Scan the whole list rather than stopping at the first match so this
+	// picks the same section core does, instead of always favoring the earliest one.
+	bool found = false;
+	uint64_t result = 0;
 	for (auto& i : m_sections)
 	{
 		if ((offset >= i.virtualAddress) &&
 			(offset < (i.virtualAddress + i.sizeOfRawData)) && (i.virtualSize != 0))
 		{
-			uint64_t progOfs = offset - i.virtualAddress;
-			return i.pointerToRawData + progOfs;
+			result = i.pointerToRawData + (offset - i.virtualAddress);
+			found = true;
 		}
 	}
+
+	if (found)
+		return result;
 
 	if (!except)
 		return offset;
@@ -3646,12 +3672,15 @@ uint64_t PEView::RVAToFileOffset(uint64_t offset, bool except)
 
 uint32_t PEView::GetRVACharacteristics(uint64_t offset)
 {
+	// See the matching comment in RVAToFileOffset: keep the last match, not the first, so
+	// this agrees with which section's bytes are actually mapped when sections overlap.
+	uint32_t result = 0;
 	for (auto& i : m_sections)
 	{
 		if ((offset >= i.virtualAddress) && (offset < (i.virtualAddress + i.virtualSize)) && (i.virtualSize != 0))
-			return i.characteristics;
+			result = i.characteristics;
 	}
-	return 0;
+	return result;
 }
 
 

@@ -264,16 +264,22 @@ bool COFFView::Init()
 					uint64_t stringTableBase = header.coffSymbolTable + ((uint64_t)header.coffSymbolCount * sizeofCOFFSymbol);
 					stringReader.Seek(stringTableBase);
 					uint32_t stringTableLen = stringReader.Read32();
-					if ((stringTableBase + stringTableLen) > GetParentView()->GetEnd())
+					// The first 4 bytes of the string table are the length field itself, so a table
+					// shorter than that can't hold even its own header; the rest must fit in the file.
+					if (stringTableLen < 4 || (stringTableBase + stringTableLen) > GetParentView()->GetEnd())
 					{
 						m_logger->LogError("Cannot resolve section name \"%s\": String table is invalid length", name);
 					}
-					else if (offset < stringTableLen)
+					// Payload offsets start after the 4-byte length field; offsets inside it don't
+					// name a string.
+					else if (offset >= 4 && offset < stringTableLen)
 					{
 						sectionNameReader.Seek(stringTableBase + offset);
-						// Section names longer than 1024 bytes are not meaningful; cap the read
-						// to bound the allocation.
-						resolvedName = sectionNameReader.ReadCString(1024);
+						// Section names longer than 1024 bytes are not meaningful; cap the read to
+						// bound the allocation, and to what's left in the table so a name lacking a
+						// null terminator can't run past the table's declared end.
+						uint64_t remaining = stringTableLen - offset;
+						resolvedName = sectionNameReader.ReadCString(std::min<uint64_t>(1024, remaining));
 					}
 					else
 					{
@@ -695,6 +701,77 @@ bool COFFView::Init()
 	// The offset of the symbol table after adjusting for the alignment of the sections that precede it
 	uint64_t symbolTableAdjustedOffset = 0;
 
+	// Symbol-name resolution and its retained-bytes budget are shared between the initial
+	// pass over the symbol table below and the relocation pass further down, which needs to
+	// resolve a name on demand for an entry whose annotation was skipped the first time
+	// through -- both must respect the same budget so the lazy path can't bypass it.
+	BinaryReader stringReader(GetParentView(), LittleEndian);
+	std::unordered_map<uint32_t, string> symbolNameCache;
+	uint64_t totalSymNameBytesRead = 0;
+	bool nameBudgetExceeded = false;
+	uint64_t maxSymNameLen = PE_DEFAULT_MAX_COFF_SYMBOL_NAME_LENGTH;
+	uint64_t maxTotalSymNameBytes = PE_DEFAULT_MAX_TOTAL_COFF_SYMBOL_NAME_MB * 1024 * 1024;
+	uint64_t stringTableBaseRaw = 0;
+	uint32_t stringTableSize = 0;
+	// Tracks undefined external symbols resolved lazily by the relocation pass (see
+	// below), keyed by symbol-table index, so relocations sharing an index only pay for
+	// the resolution and symbol creation once.
+	std::unordered_map<uint32_t, string> lazyExternalSymbolNames;
+
+	// Resolves a symbol's name from its short (embedded) or long (string-table) form.
+	// Shared by the initial pass over the symbol table below and by the relocation pass
+	// further down, which needs to resolve a name on demand for an entry whose annotation
+	// was skipped the first time through. Every returned name counts against the budget,
+	// including cache hits, since each caller retains its own copy of it.
+	auto resolveSymbolName = [&](size_t idx, uint32_t zeroes, uint32_t offset) -> string
+	{
+		if (zeroes)
+		{
+			stringReader.Seek(header.coffSymbolTable + (idx * sizeofCOFFSymbol));
+			string name = stringReader.ReadCString(8);
+			return name.substr(0, strlen(name.c_str()));
+		}
+		// Payload offsets start after the 4-byte length field; offsets inside it don't
+		// name a string.
+		if (nameBudgetExceeded || offset < 4 || offset >= stringTableSize)
+			return string();
+		auto cached = symbolNameCache.find(offset);
+		if (cached != symbolNameCache.end())
+		{
+			uint64_t projected = totalSymNameBytesRead + (uint64_t)cached->second.size() * 4;
+			if (maxTotalSymNameBytes && projected > maxTotalSymNameBytes)
+			{
+				m_logger->LogWarn("Total COFF symbol name bytes exceeded limit %" PRIu64
+					", limiting further symbol name resolution.", maxTotalSymNameBytes);
+				nameBudgetExceeded = true;
+				return string();
+			}
+			totalSymNameBytesRead = projected;
+			return cached->second;
+		}
+		// Cap the read to what's left in the table so a name lacking a null terminator
+		// can't run past the table's declared end.
+		uint64_t remaining = stringTableSize - offset;
+		uint64_t cap = std::min<uint64_t>(maxSymNameLen, remaining);
+		stringReader.Seek(stringTableBaseRaw + offset);
+		string name = stringReader.ReadCString(cap);
+		// Each name ends up retained in more than one copy once a symbol is created for
+		// it, so weight the budget accordingly. Every symbol that retains a reference
+		// counts toward it, including ones that hit the cache above, since each still
+		// gets its own retained copies downstream — only the read itself is deduplicated.
+		uint64_t projected = totalSymNameBytesRead + (uint64_t)name.size() * 4;
+		if (maxTotalSymNameBytes && projected > maxTotalSymNameBytes)
+		{
+			m_logger->LogWarn("Total COFF symbol name bytes exceeded limit %" PRIu64
+				", limiting further symbol name resolution.", maxTotalSymNameBytes);
+			nameBudgetExceeded = true;
+			return string();
+		}
+		totalSymNameBytesRead = projected;
+		symbolNameCache.emplace(offset, name);
+		return name;
+	};
+
 	try
 	{
 		// Process COFF symbol table
@@ -873,8 +950,6 @@ bool COFFView::Init()
 
 			// A limit of 0 disables the corresponding check.
 			uint64_t maxSymCount = PE_DEFAULT_MAX_COFF_SYMBOL_COUNT;
-			uint64_t maxSymNameLen = PE_DEFAULT_MAX_COFF_SYMBOL_NAME_LENGTH;
-			uint64_t maxTotalSymNameBytes = PE_DEFAULT_MAX_TOTAL_COFF_SYMBOL_NAME_MB * 1024 * 1024;
 			if (settings && settings->Contains("loader.coff.maxCoffSymbolCount"))
 				maxSymCount = settings->Get<uint64_t>("loader.coff.maxCoffSymbolCount", this);
 			if (settings && settings->Contains("loader.coff.maxCoffSymbolNameLength"))
@@ -914,12 +989,13 @@ bool COFFView::Init()
 			DefineDataVariable(coffSymbolTableBase, Type::ArrayType(Type::NamedType(this, coffSymbolName), header.coffSymbolCount));
 			DefineAutoSymbol(new Symbol(DataSymbol, "__symtab", coffSymbolTableBase, NoBinding));
 
-			BinaryReader stringReader(GetParentView(), LittleEndian);
-			uint64_t stringTableBaseRaw = header.coffSymbolTable + ((uint64_t)header.coffSymbolCount * sizeofCOFFSymbol);
+			stringTableBaseRaw = header.coffSymbolTable + ((uint64_t)header.coffSymbolCount * sizeofCOFFSymbol);
 
 			stringReader.Seek(stringTableBaseRaw);
-			uint32_t stringTableSize;
-			if (!stringReader.TryRead32(stringTableSize) || (stringTableBaseRaw + stringTableSize) > GetParentView()->GetEnd())
+			// The first 4 bytes of the string table are the length field itself, so a table
+			// shorter than that can't hold even its own header; the rest must fit in the file.
+			if (!stringReader.TryRead32(stringTableSize) || stringTableSize < 4
+				|| (stringTableBaseRaw + stringTableSize) > GetParentView()->GetEnd())
 			{
 				throw COFFFormatException("invalid COFF string table size");
 			}
@@ -942,11 +1018,6 @@ bool COFFView::Init()
 
 			DefineAutoSymbol(new Symbol(DataSymbol, "__strtab", m_imageBase + stringTableBase + 4, NoBinding));
 
-			// Symbol names are looked up by string table offset before being read, so entries
-			// that share an offset only pay for one read and count once toward the name budget.
-			std::unordered_map<uint32_t, string> symbolNameCache;
-			uint64_t totalSymNameBytesRead = 0;
-			bool nameBudgetExceeded = false;
 			for (size_t i = 0; i < header.coffSymbolCount; i++)
 			{
 				// Every slot still gets the marker symbol below regardless of this limit, so
@@ -976,38 +1047,12 @@ bool COFFView::Init()
 						break;
 				}
 
-				// read symbol name
+				// read symbol name. The short (embedded) form is always resolved — it's a
+				// fixed-size read straight out of the symbol record, not string-table I/O —
+				// while the long form is bounded by the annotation limit.
 				string symbolName;
-				if (e_zeroes)
-				{
-					stringReader.Seek(header.coffSymbolTable + (i * sizeofCOFFSymbol));
-					symbolName = stringReader.ReadCString(8);
-					symbolName = symbolName.substr(0, strlen(symbolName.c_str()));
-				}
-				else if (annotate && e_offset < stringTableSize)
-				{
-					auto cached = symbolNameCache.find(e_offset);
-					if (cached != symbolNameCache.end())
-					{
-						symbolName = cached->second;
-					}
-					else if (!maxTotalSymNameBytes || totalSymNameBytesRead < maxTotalSymNameBytes)
-					{
-						stringReader.Seek(stringTableBaseRaw + e_offset);
-						symbolName = stringReader.ReadCString(maxSymNameLen);
-						// Each name ends up retained in more than one copy once a symbol is
-						// created for it, so weight the budget accordingly rather than counting
-						// only the bytes read here.
-						totalSymNameBytesRead += (uint64_t)symbolName.size() * 4;
-						symbolNameCache.emplace(e_offset, symbolName);
-					}
-					else
-					{
-						m_logger->LogWarn("Total COFF symbol name bytes exceeded limit %" PRIu64
-							", limiting further symbol name resolution.", maxTotalSymNameBytes);
-						nameBudgetExceeded = true;
-					}
-				}
+				if (e_zeroes || annotate)
+					symbolName = resolveSymbolName(i, e_zeroes, e_offset);
 
 				BNSymbolBinding binding;
 				bool clrFunction = false;
@@ -1082,7 +1127,10 @@ bool COFFView::Init()
 				string symbolStructName = "__symbol(" + symbolName + ")";
 				DefineAutoSymbol(new Symbol(DataSymbol, symbolStructName, m_imageBase + symbolVirtualAddress, NoBinding));
 
-				if (annotate && e_zeroes == 0 && e_offset < stringTableSize)
+				// Tie this to whether a name was actually resolved (empty when the offset
+				// was invalid or the budget was already exceeded) rather than re-deriving
+				// the same bounds check independently.
+				if (annotate && e_zeroes == 0 && !symbolName.empty())
 				{
 					DefineDataVariable(m_imageBase + stringTableBase + e_offset, Type::ArrayType(Type::IntegerType(1, true, "char"), symbolName.length() + 1));
 					string symbolStringName = "__symbol_name(" + symbolName + ")";
@@ -1411,6 +1459,49 @@ bool COFFView::Init()
 									}
 									if (targetSymbol)
 										break;
+								}
+								// The marker's embedded name is only populated when this slot was
+								// within the annotation limit during the initial pass; entries
+								// beyond it never got an ExternalSymbol, so the lookup above finds
+								// nothing even though the underlying symbol is real. A relocation
+								// actually needing this symbol is reason enough to resolve it now
+								// and create it on demand. Resolved once per symbol-table index and
+								// cached, so relocations sharing an index don't repeat the creation
+								// work — the added cost is bounded by how many *distinct* undefined
+								// external symbols relocations reference, not by relocation count or
+								// the file's declared symbol count.
+								if (!targetSymbol && coffSymbol.value == 0
+									&& (!isBigCOFF ? coffSymbol.sectionNumber.i16 : coffSymbol.sectionNumber.i32) == IMAGE_SYM_UNDEFINED)
+								{
+									string lazyName;
+									auto lazyCached = lazyExternalSymbolNames.find(symbolTableIndex);
+									if (lazyCached != lazyExternalSymbolNames.end())
+									{
+										lazyName = lazyCached->second;
+									}
+									else
+									{
+										reader.Seek(header.coffSymbolTable + (symbolTableIndex * sizeofCOFFSymbol));
+										uint32_t lazyZeroes = reader.Read32();
+										uint32_t lazyOffset = reader.Read32();
+										lazyName = resolveSymbolName(symbolTableIndex, lazyZeroes, lazyOffset);
+										if (!lazyName.empty())
+											AddCOFFSymbol(ExternalSymbol, "", lazyName, symbolOffset);
+										lazyExternalSymbolNames.emplace(symbolTableIndex, lazyName);
+									}
+									if (!lazyName.empty())
+									{
+										for (const auto& externSymbol : GetSymbolsByName(lazyName))
+										{
+											auto type = externSymbol->GetType();
+											if (type == ExternalSymbol || type == ImportedFunctionSymbol || type == ImportedDataSymbol || type == ImportAddressSymbol)
+											{
+												targetSymbol = externSymbol;
+												DefineRelocation(m_arch, reloc, targetSymbol, m_imageBase + reloc.address);
+												break;
+											}
+										}
+									}
 								}
 								if (! targetSymbol)
 								{

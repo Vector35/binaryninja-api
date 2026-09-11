@@ -2897,7 +2897,7 @@ class AppleArm64SystemCallConvention : public CallingConvention
 	}
 
 
-	virtual vector<uint32_t> GetCallerSavedRegisters() override { return vector<uint32_t> {REG_X0}; }
+	virtual vector<uint32_t> GetCallerSavedRegisters() override { return vector<uint32_t> {REG_X0, REG_X1}; }
 
 
 	virtual vector<uint32_t> GetCalleeSavedRegisters() override
@@ -2908,6 +2908,8 @@ class AppleArm64SystemCallConvention : public CallingConvention
 
 
 	virtual uint32_t GetIntegerReturnValueRegister() override { return REG_X0; }
+
+	virtual uint32_t GetHighIntegerReturnValueRegister() override { return REG_X1; }
 
 
 	virtual bool IsEligibleForHeuristics() override { return false; }

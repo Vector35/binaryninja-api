@@ -4754,13 +4754,16 @@ class LowLevelILFunction:
 	    self, size: int, flag: 'architecture.FlagType', bit: int, loc: Optional['ILSourceLocation'] = None
 	) -> ExpressionIndex:
 		"""
-		``flag_bit`` sets the flag named ``flag`` and size ``size`` to the constant integer value ``bit``
+		``flag_bit`` reads the flag named ``flag`` and positions it at bit ``bit`` of a
+		``size``-byte integer: the result is ``1 << bit`` if the flag is set and ``0``
+		otherwise. Used to materialize flags into status registers (e.g. x86 ``lahf``,
+		PowerPC ``mfcr``).
 
-		:param int size: the size of the flag
-		:param str flag: flag value
-		:param int bit: integer value to set the bit to
+		:param int size: the size of the result in bytes
+		:param str flag: the flag to read
+		:param int bit: the bit position the flag value is shifted to
 		:param ILSourceLocation loc: location of returned expression
-		:return: A constant expression of given value and size ``FLAG.flag = bit``
+		:return: The expression ``bool_to_int.size(FLAG.flag) << bit``
 		:rtype: ExpressionIndex
 		"""
 		if isinstance(flag, str):

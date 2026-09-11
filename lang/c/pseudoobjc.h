@@ -20,10 +20,14 @@ protected:
 	void GetExpr_IMPORT(const BinaryNinja::HighLevelILInstruction& instr,
 		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
 		BNOperatorPrecedence precedence, bool statement) override;
+	size_t TryEmitNewBlockRegion(std::span<const BinaryNinja::HighLevelILInstruction> statements, size_t index,
+		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings) override;
 
 	bool ShouldSkipStatement(const BinaryNinja::HighLevelILInstruction& instr) override;
 
 private:
+	std::vector<BinaryNinja::Variable> activePoolHandles;
+
 	bool GetExpr_ObjCMsgSend(uint64_t msgSendAddress, bool isSuper, bool isRewritten, const BinaryNinja::HighLevelILInstruction& expr,
 		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
 		const std::vector<BinaryNinja::HighLevelILInstruction>& parameterExprs);

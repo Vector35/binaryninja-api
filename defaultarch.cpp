@@ -79,6 +79,26 @@ static bool IsReturnAddressRegisterJumpOrReturn(LowLevelILInstruction instr, con
 }
 
 
+// Returning overrides need a continuation even when another branch ends the block.
+static void AddBranchOverrideContinuations(const set<BNBranchType>& overrideContinuations, BasicBlock* block,
+	const ArchAndAddr& location, set<ArchAndAddr>& seenBlocks, queue<ArchAndAddr>& blocksToProcess)
+{
+	block->SetCanExit(true);
+	for (auto type : overrideContinuations)
+	{
+		if ((type != TrueBranch) && (type != FalseBranch))
+			type = UnconditionalBranch;
+		const auto& edges = block->GetPendingOutgoingEdges();
+		if (none_of(edges.begin(), edges.end(), [&](const auto& edge) {
+			return (edge.type == type) && (edge.target == location.address);
+		}))
+			block->AddPendingOutgoingEdge(type, location.address, location.arch, true);
+	}
+	if (seenBlocks.insert(location).second)
+		blocksToProcess.push(location);
+}
+
+
 void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnalysisContext& context)
 {
 	auto data = function->GetView();
@@ -189,6 +209,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 		// we decrement. the architecture can change this value arbitrarily during callbacks.
 		uint8_t delaySlotCount = 0;
 		bool delayInstructionEndsBlock = false;
+		set<BNBranchType> overrideContinuations;
 
 		// Disassemble the instructions in the block
 		while (true)
@@ -326,6 +347,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 				// Keep track of where the current 'group' of instructions started. A 'group'
 				// is an instruction and all of its delay slot instructions.
 				instructionGroupStart = location;
+				overrideContinuations.clear();
 
 				// Don't process branches in delay slots
 				for (size_t i = 0; i < info.branchCount; i++)
@@ -439,6 +461,8 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 					if (info.branchType[i] != SystemCall)
 						context.GetValidBranchOverrideLocations().insert(location);
 
+					bool returningOverride = branchOverridden
+						&& ((branchType == CallDestination) || (branchType == SystemCall));
 					switch (branchType)
 					{
 					case UnconditionalBranch:
@@ -536,6 +560,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 								directRefs[branchTarget].emplace(location);
 								if (!dataVar.type->CanReturn())
 								{
+									returningOverride = false;
 									directNoReturnCalls.insert(location);
 									endsBlock = true;
 									block->SetCanExit(false);
@@ -589,6 +614,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 							directRefs[target.address].emplace(location);
 							if (!func->CanReturn())
 							{
+								returningOverride = false;
 								if (func->IsInlinedDuringAnalysis().GetValue() && func->HasUnresolvedIndirectBranches())
 								{
 									auto unresolved = func->GetUnresolvedIndirectBranches();
@@ -614,6 +640,8 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 						handleAsFallback();
 						break;
 					}
+					if (returningOverride)
+						overrideContinuations.insert(info.branchType[i]);
 				}
 			}
 
@@ -638,7 +666,11 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 				instrData->Append(block, std::span<const uint8_t>(opcode, info.length));
 
 			if (endsBlock && !info.delaySlots)
+			{
+				if (!overrideContinuations.empty())
+					AddBranchOverrideContinuations(overrideContinuations, block, location, seenBlocks, blocksToProcess);
 				break;
+			}
 
 			// Respect the 'analysis.limits.maxFunctionSize' setting while allowing for overridable behavior as well.
 			// We prefer to allow disassembly when function analysis is disabled, but only up to the maximum size.
@@ -660,7 +692,11 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 			{
 				delaySlotCount--;
 				if (!delaySlotCount && delayInstructionEndsBlock)
+				{
+					if (!overrideContinuations.empty())
+						AddBranchOverrideContinuations(overrideContinuations, block, location, seenBlocks, blocksToProcess);
 					break;
+				}
 			}
 			else
 			{
@@ -819,8 +855,464 @@ static void ApplyExternPointerForRelocation(
 }
 
 
+// An isolated lift has only local labels: native destinations remain address expressions.
+// Plan every replacement before copying anything into the real function, then re-emit local
+// branches with fresh labels. Replacing expressions in place would invalidate label fixups.
+static bool ApplyLiftedBranchOverrides(LowLevelILFunction& dest, LowLevelILFunction& source,
+	FunctionLifterContext& context, const ArchAndAddr& location, uint64_t continuationAddress,
+	const vector<OverridableBranchInfo>& branches, const map<BNBranchType, BranchOverride>& overrides)
+{
+	struct Exit
+	{
+		size_t index;
+		BNLowLevelILOperation operation;
+		optional<LowLevelILInstruction> target;
+	};
+	const size_t count = source.GetInstructionCount();
+	vector<Exit> exits;
+	set<size_t> visited, labelTargets;
+	queue<size_t> pending;
+	pending.push(0);
+	while (!pending.empty())
+	{
+		size_t index = pending.front();
+		pending.pop();
+		if (index > count)
+			return false;
+		if (!visited.insert(index).second)
+			continue;
+		if (index == count)
+		{
+			exits.push_back({index, LLIL_NOP,
+				source.GetExpr(source.ConstPointer(location.arch->GetAddressSize(), continuationAddress))});
+			continue;
+		}
+		auto instr = source.GetInstruction(index);
+		auto follow = [&](size_t target) {
+			labelTargets.insert(target);
+			pending.push(target);
+		};
+		switch (instr.operation)
+		{
+		case LLIL_IF:
+			follow(instr.GetTrueTarget<LLIL_IF>());
+			follow(instr.GetFalseTarget<LLIL_IF>());
+			break;
+		case LLIL_GOTO:
+			follow(instr.GetTarget<LLIL_GOTO>());
+			break;
+		case LLIL_CALL:
+		case LLIL_CALL_STACK_ADJUST:
+			exits.push_back({index, instr.operation, instr.GetDestExpr()});
+			pending.push(index + 1);
+			break;
+		case LLIL_JUMP:
+		case LLIL_RET:
+		case LLIL_TAILCALL:
+			exits.push_back({index, instr.operation, instr.GetDestExpr()});
+			break;
+		case LLIL_JUMP_TO:
+			exits.push_back({index, instr.operation, instr.GetDestExpr()});
+			for (const auto& target : instr.GetTargets<LLIL_JUMP_TO>())
+				follow(target.second);
+			break;
+		case LLIL_SYSCALL:
+			exits.push_back({index, instr.operation, nullopt});
+			pending.push(index + 1);
+			break;
+		case LLIL_TRAP:
+		case LLIL_NORET:
+		case LLIL_UNDEF:
+			exits.push_back({index, instr.operation, nullopt});
+			break;
+		default:
+			pending.push(index + 1);
+			break;
+		}
+	}
+
+	map<size_t, pair<const BranchOverride*, Ref<Architecture>>> replacements;
+	for (const auto& branch : branches)
+	{
+		auto replacement = overrides.find(branch.type);
+		if (replacement == overrides.end())
+			continue;
+		vector<const Exit*> matches;
+		for (const auto& exit : exits)
+		{
+			bool match = false;
+			switch (branch.type)
+			{
+			case UnconditionalBranch:
+			case TrueBranch:
+			case FalseBranch:
+				match = exit.target && ConstantCompare(*exit.target, branch.target);
+				break;
+			case CallDestination:
+				match = ((exit.operation == LLIL_CALL) || (exit.operation == LLIL_CALL_STACK_ADJUST))
+					&& exit.target && ConstantCompare(*exit.target, branch.target);
+				break;
+			case FunctionReturn:
+				match = exit.operation == LLIL_RET;
+				break;
+			case IndirectBranch:
+			case UnresolvedBranch:
+				match = (exit.operation == LLIL_JUMP) || (exit.operation == LLIL_JUMP_TO);
+				break;
+			case ExceptionBranch:
+				match = (exit.operation == LLIL_TRAP) || (exit.operation == LLIL_NORET);
+				break;
+			default:
+				break;
+			}
+			if (match)
+				matches.push_back(&exit);
+		}
+		// Contextual returns may lift as calls or jumps; indirect calls have no constant target.
+		if (matches.empty() && ((branch.type == FunctionReturn) || (branch.type == CallDestination)))
+		{
+			for (const auto& exit : exits)
+			{
+				if ((exit.operation == LLIL_CALL) || (exit.operation == LLIL_CALL_STACK_ADJUST)
+					|| ((branch.type == FunctionReturn)
+						&& ((exit.operation == LLIL_JUMP) || (exit.operation == LLIL_TAILCALL))))
+					matches.push_back(&exit);
+			}
+		}
+		if ((matches.size() != 1) || replacements.count(matches.front()->index))
+			return false;
+		auto& value = replacement->second;
+		switch (value.type)
+		{
+		case UnconditionalBranch:
+		case TrueBranch:
+		case FalseBranch:
+		case CallDestination:
+		case FunctionReturn:
+		case IndirectBranch:
+		case UnresolvedBranch:
+			if (!value.target && !matches.front()->target)
+				return false;
+			break;
+		case ExceptionBranch:
+		case SystemCall:
+			break;
+		default:
+			return false;
+		}
+		replacements.emplace(matches.front()->index, make_pair(&value, branch.arch));
+	}
+
+	vector<LowLevelILLabel> labels(count + 1);
+	LowLevelILLabel continuation;
+	bool needsContinuation = false;
+	vector<ArchAndAddr> indirectTargets;
+	if (dest.HasIndirectBranches())
+	{
+		const auto& userTargets = context.GetUserIndirectBranches();
+		const auto& autoTargets = context.GetAutoIndirectBranches();
+		if (auto it = userTargets.find(location); it != userTargets.end())
+			indirectTargets.assign(it->second.begin(), it->second.end());
+		else if (auto it = autoTargets.find(location); it != autoTargets.end())
+			indirectTargets.assign(it->second.begin(), it->second.end());
+	}
+	function<ExprId(const LowLevelILInstruction&)> copyExpr = [&](const LowLevelILInstruction& expr) {
+		auto result = expr.CopyTo(&dest, copyExpr);
+		dest.SetExprAttributes(result, expr.attributes);
+		return result;
+	};
+	auto emitJump = [&](ExprId target, Architecture* arch, const ILSourceLocation& loc) {
+		auto expr = dest.GetExpr(target);
+		if ((expr.operation == LLIL_CONST) || (expr.operation == LLIL_CONST_PTR))
+		{
+			if (auto label = dest.GetLabelForAddress(arch, expr.GetConstant()))
+				return dest.Goto(*label, loc);
+		}
+		return dest.Jump(target, loc);
+	};
+	optional<uint32_t> temporary;
+	auto allocateTemporary = [&]() {
+		// Counting temporaries scans the IL. Constant branch replacements need none.
+		if (!temporary)
+			temporary = max(dest.GetTemporaryRegisterCount(), source.GetTemporaryRegisterCount());
+		return LLIL_TEMP((*temporary)++);
+	};
+	for (size_t index = 0; index <= count; index++)
+	{
+		if (!visited.count(index))
+			continue;
+		if (labelTargets.count(index))
+			dest.MarkLabel(labels[index]);
+		auto replacement = replacements.find(index);
+		if (replacement != replacements.end())
+		{
+			const auto& value = *replacement->second.first;
+			auto exit = find_if(exits.begin(), exits.end(), [&](const Exit& exit) { return exit.index == index; });
+			ILSourceLocation loc = index < count ? ILSourceLocation(source.GetInstruction(index))
+				: ILSourceLocation(location.address, BN_INVALID_OPERAND);
+			dest.SetCurrentAddress(location.arch, loc.address);
+			bool needsTarget = (value.type != ExceptionBranch) && (value.type != SystemCall);
+			// A discarded target can contain effects, e.g. x86 RET(POP()). Evaluate it once
+			// before replacing the transfer; ordinary dead-store elimination removes pure values.
+			if (exit->target && (value.target || !needsTarget))
+			{
+				auto oldTarget = *exit->target;
+				if ((oldTarget.operation != LLIL_CONST) && (oldTarget.operation != LLIL_CONST_PTR))
+					dest.AddInstruction(dest.SetRegister(oldTarget.size, allocateTemporary(), copyExpr(oldTarget), 0, loc));
+			}
+			ExprId target = BN_INVALID_EXPR;
+			if (needsTarget)
+				target = value.target ? dest.ConstPointer(location.arch->GetAddressSize(), *value.target, loc)
+					: copyExpr(*exit->target);
+			if (((exit->operation == LLIL_CALL) || (exit->operation == LLIL_CALL_STACK_ADJUST))
+				&& (value.type != CallDestination))
+			{
+				// CALL includes implicit return-address setup. Materialize it when removing
+				// the call, evaluating its destination before changing SP or the link register.
+				if (needsTarget && !value.target && (exit->target->operation != LLIL_CONST)
+					&& (exit->target->operation != LLIL_CONST_PTR))
+				{
+					uint32_t reg = allocateTemporary();
+					dest.AddInstruction(dest.SetRegister(exit->target->size, reg, target, 0, loc));
+					target = dest.Register(exit->target->size, reg, loc);
+				}
+				uint32_t linkReg = location.arch->GetLinkRegister();
+				ExprId setup;
+				if (linkReg == BN_INVALID_REGISTER)
+				{
+					size_t size = location.arch->GetAddressSize();
+					setup = dest.Push(size, dest.ConstPointer(size, continuationAddress, loc), 0, loc);
+				}
+				else
+				{
+					size_t size = location.arch->GetRegisterInfo(linkReg).size;
+					uint64_t returnAddress = continuationAddress;
+					if ((location.arch->GetName() == "thumb2") || (location.arch->GetName() == "thumb2eb"))
+						returnAddress |= 1;
+					setup = dest.SetRegister(size, linkReg, dest.ConstPointer(size, returnAddress, loc), 0, loc);
+				}
+				dest.SetExprAttributes(setup, ILAllowDeadStoreElimination);
+				dest.AddInstruction(setup);
+			}
+			Ref<Architecture> targetArch = value.target
+				? (value.targetArch ? value.targetArch : location.arch)
+				: (replacement->second.second ? replacement->second.second : location.arch);
+			ExprId transfer;
+			switch (value.type)
+			{
+			case CallDestination:
+				if (exit->operation == LLIL_CALL_STACK_ADJUST)
+				{
+					auto original = source.GetInstruction(index);
+					transfer = dest.CallStackAdjust(target, original.GetStackAdjustment<LLIL_CALL_STACK_ADJUST>(),
+						original.GetRegisterStackAdjustments<LLIL_CALL_STACK_ADJUST>(), loc);
+				}
+				else
+					transfer = dest.Call(target, loc);
+				break;
+			case FunctionReturn:
+				transfer = dest.Return(target, loc);
+				break;
+			case ExceptionBranch:
+				transfer = dest.NoReturn(loc);
+				break;
+			case SystemCall:
+				transfer = dest.SystemCall(loc);
+				break;
+			default:
+				transfer = emitJump(target, targetArch, loc);
+				break;
+			}
+			dest.SetExprAttributes(transfer, ILBranchOverride
+				| (index < count ? source.GetInstruction(index).attributes : 0));
+			bool hadIndirectTargets = dest.HasIndirectBranches();
+			bool retainIndirectTargets = !value.target
+				&& ((value.type == IndirectBranch) || (value.type == UnresolvedBranch));
+			if (!retainIndirectTargets)
+				dest.ClearIndirectBranches();
+			dest.AddInstruction(transfer);
+			if (hadIndirectTargets && !retainIndirectTargets)
+				dest.SetIndirectBranches(indirectTargets);
+			if (value.type == CallDestination)
+			{
+				bool noReturn = false;
+				auto targetExpr = dest.GetExpr(target);
+				if ((targetExpr.operation == LLIL_CONST) || (targetExpr.operation == LLIL_CONST_PTR))
+				{
+					for (auto& callee : context.GetView()->GetAnalysisFunctionsForAddress(targetExpr.GetConstant()))
+						if ((callee->GetArchitecture() == targetArch) && !callee->CanReturn().GetValue())
+							noReturn = true;
+				}
+				else if (!value.target && ((exit->operation == LLIL_CALL) || (exit->operation == LLIL_CALL_STACK_ADJUST)))
+					noReturn = context.GetNoReturnCalls().count(location);
+				if (noReturn)
+					dest.AddInstruction(dest.NoReturn(loc));
+				else if ((exit->operation != LLIL_CALL) && (exit->operation != LLIL_CALL_STACK_ADJUST)
+					&& ((index + 1 < count) || replacements.count(count)))
+				{
+					dest.AddInstruction(dest.Goto(continuation, loc));
+					needsContinuation = true;
+				}
+			}
+			else if (value.type == SystemCall)
+			{
+				dest.AddInstruction(dest.Goto(continuation, loc));
+				needsContinuation = true;
+			}
+			continue;
+		}
+		if (index == count)
+			continue;
+		auto instr = source.GetInstruction(index);
+		dest.SetCurrentAddress(location.arch, instr.address);
+		ExprId copied;
+		switch (instr.operation)
+		{
+		case LLIL_IF:
+			copied = dest.If(copyExpr(instr.GetConditionExpr<LLIL_IF>()), labels[instr.GetTrueTarget<LLIL_IF>()],
+				labels[instr.GetFalseTarget<LLIL_IF>()], instr);
+			break;
+		case LLIL_GOTO:
+			copied = dest.Goto(labels[instr.GetTarget<LLIL_GOTO>()], instr);
+			break;
+		case LLIL_JUMP:
+		{
+			Ref<Architecture> targetArch = location.arch;
+			for (const auto& branch : branches)
+				if (branch.arch && ConstantCompare(instr.GetDestExpr(), branch.target))
+					targetArch = branch.arch;
+			copied = emitJump(copyExpr(instr.GetDestExpr()), targetArch, instr);
+			break;
+		}
+		case LLIL_JUMP_TO:
+		{
+			map<uint64_t, BNLowLevelILLabel*> targets;
+			for (const auto& target : instr.GetTargets<LLIL_JUMP_TO>())
+				targets[target.first] = &labels[target.second];
+			copied = dest.JumpTo(copyExpr(instr.GetDestExpr<LLIL_JUMP_TO>()), targets, instr);
+			break;
+		}
+		default:
+			copied = copyExpr(instr);
+			break;
+		}
+		dest.SetExprAttributes(copied, instr.attributes);
+		dest.AddInstruction(copied);
+	}
+	if (needsContinuation)
+		dest.MarkLabel(continuation);
+	return true;
+}
+
+
+namespace
+{
+	// Created only for functions with user branch overrides. Ordinary instructions still
+	// lift directly into the function; temporary IL exists only at matching override sites.
+	class BranchOverrideLifter
+	{
+		LowLevelILFunction* m_function;
+		FunctionLifterContext& m_context;
+		const map<ArchAndAddr, map<BNBranchType, BranchOverride>>& m_overrides;
+		const map<BNBranchType, BranchOverride>* m_currentOverrides = nullptr;
+		vector<OverridableBranchInfo> m_originalBranches;
+		Ref<LowLevelILFunction> m_staged;
+
+		void limitCoalescing(const ArchAndAddr& location, size_t& len)
+		{
+			// A lifter must not consume a later override site while lifting an earlier instruction.
+			for (auto next = m_overrides.upper_bound(location);
+				next != m_overrides.end() && next->first.arch == location.arch
+					&& (next->first.address - location.address < len); ++next)
+			{
+				if (m_function->GetFunction()->IsValidBranchOverrideLocation(location.arch, next->first.address))
+				{
+					len = next->first.address - location.address;
+					break;
+				}
+			}
+		}
+
+		void limitToInstructionGroup(const ArchAndAddr& location, const uint8_t* opcode, size_t& len)
+		{
+			// Preserve delay slots, but exclude following instructions: a returning override
+			// resumes immediately after this group.
+			size_t groupLength = 0;
+			unsigned remaining = 1;
+			while (remaining && (groupLength < len))
+			{
+				InstructionInfo info;
+				if (!location.arch->GetInstructionInfo(opcode + groupLength, location.address + groupLength,
+					len - groupLength, info) || !info.length || (info.length > len - groupLength))
+					break;
+				remaining = groupLength ? remaining - 1 : info.delaySlots;
+				groupLength += info.length;
+			}
+			if (!remaining)
+				len = groupLength;
+		}
+
+	public:
+		BranchOverrideLifter(LowLevelILFunction* function, FunctionLifterContext& context) :
+			m_function(function), m_context(context), m_overrides(context.GetBranchOverrides())
+		{}
+
+		LowLevelILFunction* PrepareInstruction(BasicBlock* block, const ArchAndAddr& location,
+			const uint8_t* opcode, size_t& len)
+		{
+			limitCoalescing(location, len);
+			auto overrides = m_overrides.find(location);
+			if (overrides == m_overrides.end())
+				return m_function;
+
+			m_originalBranches = location.arch->GetBranchTypesWithContext(m_function->GetFunction(), location.address,
+				m_context.GetFunctionArchContextRaw());
+			if (none_of(m_originalBranches.begin(), m_originalBranches.end(), [&](const auto& branch) {
+				return overrides->second.count(branch.type);
+			}))
+				return m_function;
+
+			m_currentOverrides = &overrides->second;
+			m_staged = new LowLevelILFunction(location.arch, m_function->GetFunction());
+			m_staged->SetCurrentSourceBlock(block);
+			m_staged->SetCurrentAddress(location.arch, location.address);
+			limitToInstructionGroup(location, opcode, len);
+			return m_staged.GetPtr();
+		}
+
+		bool FinishInstruction(const ArchAndAddr& location, uint64_t continuationAddress,
+			bool& status, size_t& instrCountAfter)
+		{
+			if (!m_staged)
+				return true;
+
+			bool applied = ApplyLiftedBranchOverrides(*m_function, *m_staged, m_context, location,
+				continuationAddress, m_originalBranches, *m_currentOverrides);
+			m_staged = nullptr;
+			if (!applied)
+			{
+				m_context.GetLogger()->LogWarn("Unable to match branch overrides to lifted control flow at %#" PRIx64
+					" (%s); this instruction requires architecture-specific lifting support.",
+					location.address, location.arch->GetName().c_str());
+				return false;
+			}
+
+			// Lifters can return false for a valid terminator. An overridden call may now
+			// continue, so use the analyzed block boundary after a successful rewrite.
+			status = true;
+			instrCountAfter = m_function->GetInstructionCount();
+			return true;
+		}
+	};
+}
+
+
 bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLifterContext& context)
 {
+	unique_ptr<BranchOverrideLifter> overrideLifter;
+	if (!context.GetBranchOverrides().empty())
+		overrideLifter = make_unique<BranchOverrideLifter>(function, context);
+
 	Ref<BinaryView> data = context.GetView();
 	Ref<Logger> logger = context.GetLogger();
 	Ref<Platform> platform = context.GetPlatform();
@@ -915,22 +1407,26 @@ bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLif
 			}
 
 			size_t instrCountBefore = function->GetInstructionCount();
-			bool status = i->GetArchitecture()->GetInstructionLowLevelIL(opcode, addr, len, *function);
-			size_t instrCountAfter = function->GetInstructionCount();
+			auto liftTarget = overrideLifter ? overrideLifter->PrepareInstruction(i, cur, opcode, len) : function;
+			bool status = i->GetArchitecture()->GetInstructionLowLevelIL(opcode, addr, len, *liftTarget);
+			size_t instrCountAfter = liftTarget->GetInstructionCount();
 			while (nextRelocation && nextRelocation->GetAddress() >= addr && nextRelocation->GetAddress() < addr + len)
 			{
 				if (data->IsOffsetExternSemantics(nextRelocation->GetTarget()))
 				{
 					int64_t operand = relocationHandler->GetOperandForExternalRelocation(
-						opcode, addr, len, function, nextRelocation);
+						opcode, addr, len, liftTarget, nextRelocation);
 					if (operand != BN_NOCOERCE_EXTERN_PTR)
 					{
 						ApplyExternPointerForRelocation(
-							operand, *function, instrCountBefore, instrCountAfter, nextRelocation, logger);
+							operand, *liftTarget, liftTarget == function ? instrCountBefore : 0,
+							instrCountAfter, nextRelocation, logger);
 					}
 				}
 				nextRelocation = data->GetNextRelocation(nextRelocation->GetAddress() + 1, i->GetEnd());
 			}
+			if (overrideLifter && !overrideLifter->FinishInstruction(cur, addr + len, status, instrCountAfter))
+				return false;
 
 			// Conditional Call Support (Part 2)
 			// Replace the emitted GOTO with a noreturn expression
@@ -939,7 +1435,8 @@ bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLif
 			{
 				for (size_t instrIndex = instrCountBefore; instrIndex < (instrCountAfter - 1); instrIndex++)
 				{
-					if (function->GetInstruction(instrIndex).operation != LLIL_CALL)
+					auto call = function->GetInstruction(instrIndex);
+					if ((call.operation != LLIL_CALL) || (call.attributes & ILBranchOverride))
 						continue;
 					LowLevelILInstruction instr = function->GetInstruction(instrIndex + 1);
 					if (instr.operation == LLIL_GOTO)
@@ -953,7 +1450,8 @@ bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLif
 			context.CheckForInlinedCall(i, instrCountBefore, instrCountAfter, prevAddr, addr, opcode, len, indirectSource);
 
 			// Indirect branch information informs when to translate non-standard returns into jumps
-			if (auto lastInstr = function->GetInstruction(instrCountAfter - 1); (lastInstr.operation == LLIL_RET)
+			if (auto lastInstr = instrCountAfter ? function->GetInstruction(instrCountAfter - 1) : LowLevelILInstruction();
+					instrCountAfter && (lastInstr.operation == LLIL_RET) && !(lastInstr.attributes & ILBranchOverride)
 					&& (function->HasIndirectBranches() || !function->GetFunction()->CanReturn().GetValue()))
 			{
 				auto addressSize = platform->GetAddressSize();
@@ -979,7 +1477,8 @@ bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLif
 		// 2) By default, contextualFunctionReturns is used to translate this to a LLIL_RET (conservative)
 		// 3) Downstream analysis uses dataflow to validate the return target
 		// 4) If the target is not the ReturnAddressValue, then we avoid the translation to a return and leave the instruction as a call
-		if (LowLevelILInstruction prevInstr = function->GetInstruction(function->GetInstructionCount() - 1); prevInstr.operation == LLIL_CALL)
+		if (LowLevelILInstruction prevInstr = function->GetInstruction(function->GetInstructionCount() - 1);
+			(prevInstr.operation == LLIL_CALL) && !(prevInstr.attributes & ILBranchOverride))
 		{
 			if (auto itr = contextualReturns.find(ArchAndAddr(i->GetArchitecture(), prevInstr.address)); itr != contextualReturns.end() && itr->second)
 				prevInstr.Replace(function->Return(prevInstr.GetDestExpr().exprIndex, prevInstr));
@@ -1035,6 +1534,8 @@ void FunctionLifterContext::CheckForInlinedCall(BasicBlock* block, size_t instrC
 	if (instrCountAfter > instrCountBefore)
 	{
 		LowLevelILInstruction lastInstr = m_function->GetInstruction(instrCountAfter - 1);
+		if ((lastInstr.operation == LLIL_JUMP) && (lastInstr.attributes & ILBranchOverride))
+			return;
 		if ((lastInstr.operation == LLIL_CALL || lastInstr.operation == LLIL_JUMP)
 			&& (lastInstr.GetDestExpr().operation == LLIL_CONST || lastInstr.GetDestExpr().operation == LLIL_CONST_PTR))
 		{

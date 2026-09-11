@@ -1211,6 +1211,9 @@ extern "C"
 
 		// Function call returns its result onto the caller's stack
 		ILStackReturn = 0x4000,
+
+		// Control flow explicitly selected by a user branch override.
+		ILBranchOverride = 0x8000,
 	};
 
 	BN_ENUM(uint8_t, BNIntrinsicClass)

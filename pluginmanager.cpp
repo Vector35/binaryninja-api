@@ -375,6 +375,15 @@ bool Extension::Install(std::string versionID)
 }
 
 
+bool Extension::InstallForMigration(std::string versionID)
+{
+	char* versionIDStr = BNAllocString(versionID.c_str());
+	auto success = BNPluginInstallForMigration(m_object, versionIDStr);
+	BNFreeString(versionIDStr);
+	return success;
+}
+
+
 bool Extension::InstallDependencies()
 {
 	return InstallDependencies("");

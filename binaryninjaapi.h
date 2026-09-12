@@ -20915,6 +20915,11 @@ namespace BinaryNinja {
 		bool Uninstall();
 		bool CancelUninstall();
 		bool Install(std::string versionID);
+		// Like Install, but also permits installing a version of a plugin that has since been marked
+		// deprecated. Intended only for migrating a plugin the user already had installed under a previous
+		// extension manager: deprecation should block fresh installs, but must never strand a
+		// previously-installed plugin where it can't be registered as installed (and so can't be uninstalled).
+		bool InstallForMigration(std::string versionID);
 		bool InstallDependencies();
 		bool InstallDependencies(const std::string& versionID);
 		bool InstallDependencies(const std::vector<std::string>& excludedPackageNames);

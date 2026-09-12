@@ -8910,6 +8910,7 @@ extern "C"
 	BINARYNINJACOREAPI bool BNPluginEnable(BNPlugin* p, bool force);
 	BINARYNINJACOREAPI bool BNPluginDisable(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginInstall(BNPlugin* p, const char* versionID);
+	BINARYNINJACOREAPI bool BNPluginInstallForMigration(BNPlugin* p, const char* versionID);
 	BINARYNINJACOREAPI bool BNPluginInstallDependencies(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginInstallDependenciesForVersion(BNPlugin* p, const char* versionID);
 	BINARYNINJACOREAPI bool BNPluginInstallDependenciesWithExclusions(BNPlugin* p,

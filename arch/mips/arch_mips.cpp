@@ -1,6 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define NOMINMAX
 
+#include <algorithm>
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
@@ -233,6 +234,7 @@ protected:
 			case MIPS_JR_HB:
 			case MIPS_J:
 			case MIPS_JAL:
+			case MIPS_JALX:
 			case MIPS_JALR:
 			case MIPS_JALR_HB:
 			case MIPS_BC0F:
@@ -241,12 +243,16 @@ protected:
 			case MIPS_BC0TL:
 			case MIPS_BC1F:
 			case MIPS_BC1FL:
+			case MIPS_BC1EQZ:
+			case MIPS_BC1NEZ:
 			case MIPS_BC1T:
 			case MIPS_BC1TL:
 			case MIPS_BC2FL:
 			case MIPS_BC2TL:
 			case MIPS_BC2F:
 			case MIPS_BC2T:
+			case MIPS_BC2EQZ:
+			case MIPS_BC2NEZ:
 			case CNMIPS_BBIT0:
 			case CNMIPS_BBIT032:
 			case CNMIPS_BBIT1:
@@ -297,12 +303,16 @@ protected:
 			case MIPS_BNEL:
 			case MIPS_BC1F:
 			case MIPS_BC1FL:
+			case MIPS_BC1EQZ:
+			case MIPS_BC1NEZ:
 			case MIPS_BC1T:
 			case MIPS_BC1TL:
 			case MIPS_BC2FL:
 			case MIPS_BC2TL:
 			case MIPS_BC2F:
 			case MIPS_BC2T:
+			case MIPS_BC2EQZ:
+			case MIPS_BC2NEZ:
 			case CNMIPS_BBIT0:
 			case CNMIPS_BBIT032:
 			case CNMIPS_BBIT1:
@@ -321,8 +331,6 @@ protected:
 
 		switch (instr.operation)
 		{
-		//case MIPS_JALX: //This case jumps to a different processor mode microMIPS32/MIPS32/MIPS16e
-		//	break;
 		//Branch/jump and link immediate
 		case MIPS_BAL:
 			if (instr.operands[0].immediate != addr + 8)
@@ -332,6 +340,9 @@ protected:
 			break;
 
 		case MIPS_JAL:
+		case MIPS_JALX:
+			// TODO: Associate JALX with the appropriate microMIPS or MIPS16e
+			// target architecture once either alternate ISA mode is supported.
 			result.AddBranch(CallDestination, instr.operands[0].immediate, nullptr, hasBranchDelay);
 			break;
 
@@ -406,6 +417,15 @@ protected:
 		case MIPS_BC2F:
 		case MIPS_BC2T:
 			result.AddBranch(TrueBranch, instr.operands[0].immediate, nullptr, hasBranchDelay);
+			//need to jump over the branch delay slot and current instruction
+			result.AddBranch(FalseBranch, addr + 8, nullptr, hasBranchDelay);
+			break;
+
+		case MIPS_BC1EQZ:
+		case MIPS_BC1NEZ:
+		case MIPS_BC2EQZ:
+		case MIPS_BC2NEZ:
+			result.AddBranch(TrueBranch, instr.operands[1].immediate, nullptr, hasBranchDelay);
 			//need to jump over the branch delay slot and current instruction
 			result.AddBranch(FalseBranch, addr + 8, nullptr, hasBranchDelay);
 			break;
@@ -582,21 +602,43 @@ public:
 				nop = il.Nop();
 				il.AddInstruction(nop);
 
+				size_t delayStart = il.GetInstructionCount();
 				GetLowLevelILForInstruction(this, addr + instr.size, il, secondInstr, GetAddressSize(), m_decomposeFlags, m_version);
 
 				LowLevelILInstruction delayed;
 				uint32_t clobbered = BN_INVALID_REGISTER;
+				uint32_t clobberedHigh = BN_INVALID_REGISTER;
 				size_t instrIdx = il.GetInstructionCount();
-				if (instrIdx != 0)
+				for (size_t i = instrIdx; i > delayStart; i--)
 				{
-					// FIXME: this assumes that the instruction in the delay slot
-					// only changed registers in the last IL instruction that it
-					// added -- strictly speaking we should be starting from the
-					// first instruction that could have been added and follow all
-					// paths to the end of that instruction.
-					delayed = il.GetInstruction(instrIdx - 1);
-					if ((delayed.operation == LLIL_SET_REG) && (delayed.address == (addr + instr.size)))
+					// Conditional moves can end in control flow after the register write.
+					// FIXME: only the last register write (or register pair) is tracked.
+					delayed = il.GetInstruction(i - 1);
+					if (delayed.address != (addr + instr.size))
+						continue;
+					if (delayed.operation == LLIL_SET_REG)
+					{
 						clobbered = delayed.GetDestRegister<LLIL_SET_REG>();
+						break;
+					}
+					if (delayed.operation == LLIL_SET_REG_SPLIT)
+					{
+						clobbered = delayed.GetLowRegister<LLIL_SET_REG_SPLIT>();
+						clobberedHigh = delayed.GetHighRegister<LLIL_SET_REG_SPLIT>();
+						break;
+					}
+					if (delayed.operation == LLIL_INTRINSIC)
+					{
+						for (auto output : delayed.GetOutputRegisterOrFlagList<LLIL_INTRINSIC>())
+						{
+							if (output.isFlag || LLIL_REG_IS_TEMP(output.index))
+								continue;
+							clobbered = output.index;
+							break;
+						}
+						if (clobbered != BN_INVALID_REGISTER)
+							break;
+					}
 				}
 
 				il.SetCurrentAddress(this, addr);
@@ -614,21 +656,36 @@ public:
 
 				if (clobbered != BN_INVALID_REGISTER)
 				{
-					// FIXME: this approach will break with any of the REG_SPLIT operations as well
-					// any use of partial registers -- this approach needs to be expanded substantially
-					// to be correct in the general case. also, it uses LLIL_TEMP(1) for the simple reason
-					// that the mips lifter only uses LLIL_TEMP(0) at the moment.
+					// FIXME: register aliases and partial writes still need general handling.
+					bool split = clobberedHigh != BN_INVALID_REGISTER;
+					// Intrinsics have no expression size. Preserve the old architectural
+					// register, even when the intrinsic returns a narrower value.
+					size_t savedSize = delayed.operation == LLIL_INTRINSIC ? GetRegisterInfo(clobbered).size :
+						delayed.size * (split ? 2 : 1);
 					LowLevelILInstruction lifted = il.GetInstruction(instrIdx);
-					if ((lifted.operation == LLIL_IF || lifted.operation == LLIL_CALL) && (lifted.address == addr))
+					if ((lifted.operation == LLIL_IF || lifted.operation == LLIL_CALL || lifted.operation == LLIL_JUMP ||
+						lifted.operation == LLIL_RET || lifted.operation == LLIL_TAILCALL) && (lifted.address == addr))
 					{
 						bool replace = false;
+						// Allocate after lifting the slot and branch to avoid their temporaries.
+						uint32_t savedReg = LLIL_TEMP(max(1u, il.GetTemporaryRegisterCount()));
 
 						lifted.VisitExprs([&](const LowLevelILInstruction& expr) -> bool {
-							if (expr.operation == LLIL_REG && expr.GetSourceRegister<LLIL_REG>() == clobbered)
+							if (expr.operation == LLIL_REG &&
+								(expr.GetSourceRegister<LLIL_REG>() == clobbered ||
+								 expr.GetSourceRegister<LLIL_REG>() == clobberedHigh))
 							{
 								// Replace all reads from the clobbered register to a temp register
 								// that we're going to set (by replacing the earlier nop we added)
-								il.ReplaceExpr(expr.exprIndex, il.Register(expr.size, LLIL_TEMP(1)));
+								ExprId saved = il.Register(expr.size, savedReg);
+								if (split)
+								{
+									saved = il.Register(savedSize, savedReg);
+									if (expr.GetSourceRegister<LLIL_REG>() == clobberedHigh)
+										saved = il.LogicalShiftRight(savedSize, saved, il.Const(1, delayed.size * 8));
+									saved = il.LowPart(expr.size, saved);
+								}
+								il.ReplaceExpr(expr.exprIndex, saved);
 								replace = true;
 							}
 							return true;
@@ -640,7 +697,9 @@ public:
 							// instruction we added at the beginning with an assignment to the temp
 							// register we rewrote in the LLIL_IF condition expression
 							il.SetCurrentAddress(this, addr + instr.size);
-							il.ReplaceExpr(nop, il.SetRegister(delayed.size, LLIL_TEMP(1), il.Register(delayed.size, delayed.GetDestRegister<LLIL_SET_REG>())));
+							ExprId original = split ? il.RegisterSplit(delayed.size, clobberedHigh, clobbered) :
+								il.Register(savedSize, clobbered);
+							il.ReplaceExpr(nop, il.SetRegister(savedSize, savedReg, original));
 							il.SetCurrentAddress(this, addr);
 						}
 					}
@@ -1066,6 +1125,58 @@ public:
 				return "moveFromCoprocessor2";
 			case MIPS_INTRIN_MFC_UNIMPLEMENTED:
 				return "moveFromCoprocessorUnimplemented";
+			case MIPS_INTRIN_CFC1:
+				return "moveControlWordFromCoprocessor1";
+			case MIPS_INTRIN_CFC2:
+				return "moveControlWordFromCoprocessor2";
+			case MIPS_INTRIN_COP2:
+				return "coprocessor2Operation";
+			case MIPS_INTRIN_CTC1:
+				return "moveControlWordToCoprocessor1";
+			case MIPS_INTRIN_CTC2:
+				return "moveControlWordToCoprocessor2";
+			case MIPS_INTRIN_MFHC0:
+				return "moveHighWordFromCoprocessor0";
+			case MIPS_INTRIN_MFHC2:
+				return "moveHighWordFromCoprocessor2";
+			case MIPS_INTRIN_MOV_PS:
+				return "_mov_ps";
+			case MIPS_INTRIN_MOVF_PS:
+				return "_movf_ps";
+			case MIPS_INTRIN_MOVT_PS:
+				return "_movt_ps";
+			case MIPS_INTRIN_MSUB_PS:
+				return "_msub_ps";
+			case MIPS_INTRIN_MTHC0:
+				return "moveHighWordToCoprocessor0";
+			case MIPS_INTRIN_MTHC2:
+				return "moveHighWordToCoprocessor2";
+			case MIPS_INTRIN_NEG_PS:
+				return "_neg_ps";
+			case MIPS_INTRIN_NMADD_PS:
+				return "_nmadd_ps";
+			case MIPS_INTRIN_NMSUB_PS:
+				return "_nmsub_ps";
+			case MIPS_INTRIN_RDPGPR:
+				return "readGPRFromPreviousShadowSet";
+			case MIPS_INTRIN_WRPGPR:
+				return "writeGPRToPreviousShadowSet";
+			case MIPS_INTRIN_SUB_PS:
+				return "_sub_ps";
+			case MIPS_INTRIN_ADD_PS:
+				return "_add_ps";
+			case MIPS_INTRIN_MUL_PS:
+				return "_mul_ps";
+			case MIPS_INTRIN_ABS_PS:
+				return "_abs_ps";
+			case MIPS_INTRIN_ROUND_W_S:
+				return "_round_w_s";
+			case MIPS_INTRIN_ROUND_W_D:
+				return "_round_w_d";
+			case MIPS_INTRIN_ROUND_L_S:
+				return "_round_l_s";
+			case MIPS_INTRIN_ROUND_L_D:
+				return "_round_l_d";
 			case MIPS_INTRIN_MTC0:
 				return "moveToCoprocessor0";
 			case MIPS_INTRIN_MTC2:
@@ -1195,6 +1306,32 @@ public:
 			MIPS_INTRIN_DSHD,
 			MIPS_INTRIN_MFC0,
 			MIPS_INTRIN_MFC_UNIMPLEMENTED,
+			MIPS_INTRIN_CFC1,
+			MIPS_INTRIN_CFC2,
+			MIPS_INTRIN_COP2,
+			MIPS_INTRIN_CTC1,
+			MIPS_INTRIN_CTC2,
+			MIPS_INTRIN_MFHC0,
+			MIPS_INTRIN_MFHC2,
+			MIPS_INTRIN_MOV_PS,
+			MIPS_INTRIN_MOVF_PS,
+			MIPS_INTRIN_MOVT_PS,
+			MIPS_INTRIN_MSUB_PS,
+			MIPS_INTRIN_MTHC0,
+			MIPS_INTRIN_MTHC2,
+			MIPS_INTRIN_NEG_PS,
+			MIPS_INTRIN_NMADD_PS,
+			MIPS_INTRIN_NMSUB_PS,
+			MIPS_INTRIN_RDPGPR,
+			MIPS_INTRIN_WRPGPR,
+			MIPS_INTRIN_SUB_PS,
+			MIPS_INTRIN_ADD_PS,
+			MIPS_INTRIN_MUL_PS,
+			MIPS_INTRIN_ABS_PS,
+			MIPS_INTRIN_ROUND_W_S,
+			MIPS_INTRIN_ROUND_W_D,
+			MIPS_INTRIN_ROUND_L_S,
+			MIPS_INTRIN_ROUND_L_D,
 			MIPS_INTRIN_MTC0,
 			MIPS_INTRIN_MTC_UNIMPLEMENTED,
 			MIPS_INTRIN_MTC1_UNPREDICTABLE_HIGH_WORD,
@@ -1270,6 +1407,100 @@ public:
 				return {
 					NameAndType("register", Type::IntegerType(4, false)),
 				};
+			case MIPS_INTRIN_CFC1:
+				return {
+					NameAndType("controlRegister", Type::IntegerType(4, false)),
+				};
+			case MIPS_INTRIN_CFC2:
+				return {
+					NameAndType("implementation", Type::IntegerType(2, false)),
+				};
+			case MIPS_INTRIN_COP2:
+				return {
+					NameAndType("cofun", Type::IntegerType(4, false)),
+				};
+			case MIPS_INTRIN_CTC1:
+				return {
+					NameAndType("controlRegister", Type::IntegerType(4, false)),
+					NameAndType("value", Type::IntegerType(4, false)),
+				};
+			case MIPS_INTRIN_CTC2:
+				return {
+					NameAndType("implementation", Type::IntegerType(2, false)),
+					NameAndType("value", Type::IntegerType(4, false)),
+				};
+			case MIPS_INTRIN_MFHC0:
+				return {
+					NameAndType("register", Type::IntegerType(4, false)),
+					NameAndType("selector", Type::IntegerType(4, false)),
+				};
+			case MIPS_INTRIN_MFHC2:
+				return {
+					NameAndType("implementation", Type::IntegerType(2, false)),
+				};
+			case MIPS_INTRIN_MOV_PS:
+				return {
+					NameAndType("value", Type::IntegerType(8, false)),
+				};
+			case MIPS_INTRIN_MOVF_PS:
+			case MIPS_INTRIN_MOVT_PS:
+				return {
+					NameAndType("oldFd", Type::IntegerType(8, false)),
+					NameAndType("fs", Type::IntegerType(8, false)),
+					NameAndType("fccLow", Type::BoolType()),
+					NameAndType("fccHigh", Type::BoolType()),
+				};
+			case MIPS_INTRIN_MSUB_PS:
+				return {
+					NameAndType("fr", Type::IntegerType(8, false)),
+					NameAndType("fs", Type::IntegerType(8, false)),
+					NameAndType("ft", Type::IntegerType(8, false)),
+				};
+			case MIPS_INTRIN_MTHC0:
+				return {
+					NameAndType("register", Type::IntegerType(4, false)),
+					NameAndType("selector", Type::IntegerType(4, false)),
+					NameAndType("value", Type::IntegerType(4, false)),
+				};
+			case MIPS_INTRIN_MTHC2:
+				return {
+					NameAndType("implementation", Type::IntegerType(2, false)),
+					NameAndType("value", Type::IntegerType(4, false)),
+				};
+			case MIPS_INTRIN_NEG_PS:
+			case MIPS_INTRIN_ABS_PS:
+				return {
+					NameAndType("value", Type::IntegerType(8, false)),
+				};
+			case MIPS_INTRIN_NMADD_PS:
+			case MIPS_INTRIN_NMSUB_PS:
+				return {
+					NameAndType("fr", Type::IntegerType(8, false)),
+					NameAndType("fs", Type::IntegerType(8, false)),
+					NameAndType("ft", Type::IntegerType(8, false)),
+				};
+			case MIPS_INTRIN_RDPGPR:
+				return {
+					NameAndType("register", Type::IntegerType(4, false)),
+				};
+			case MIPS_INTRIN_WRPGPR:
+				return {
+					NameAndType("register", Type::IntegerType(4, false)),
+					NameAndType("value", Type::IntegerType(m_bits == 64 ? 8 : 4, false)),
+				};
+			case MIPS_INTRIN_SUB_PS:
+			case MIPS_INTRIN_ADD_PS:
+			case MIPS_INTRIN_MUL_PS:
+				return {
+					NameAndType("fs", Type::IntegerType(8, false)),
+					NameAndType("ft", Type::IntegerType(8, false)),
+				};
+			case MIPS_INTRIN_ROUND_W_S:
+			case MIPS_INTRIN_ROUND_L_S:
+				return {NameAndType("fs", Type::FloatType(4))};
+			case MIPS_INTRIN_ROUND_W_D:
+			case MIPS_INTRIN_ROUND_L_D:
+				return {NameAndType("fs", Type::FloatType(8))};
 			case MIPS_INTRIN_MFC_UNIMPLEMENTED:
 				return {
 					NameAndType("coprocessor", Type::IntegerType(4, false)),
@@ -1458,12 +1689,35 @@ public:
 				return {Type::IntegerType(8, false)};
 			case MIPS_INTRIN_MFC0:
 			case MIPS_INTRIN_MFC_UNIMPLEMENTED:
+			case MIPS_INTRIN_CFC1:
+			case MIPS_INTRIN_CFC2:
+			case MIPS_INTRIN_MFHC0:
+			case MIPS_INTRIN_MFHC2:
 			case MIPS_INTRIN_MTC1_UNPREDICTABLE_HIGH_WORD:
 				return {Type::IntegerType(4, false)};
 			case MIPS_INTRIN_DMFC0:
 			case MIPS_INTRIN_DMFC_UNIMPLEMENTED:
 			case MIPS_INTRIN_MADD_PS:
+			case MIPS_INTRIN_MOV_PS:
+			case MIPS_INTRIN_MOVF_PS:
+			case MIPS_INTRIN_MOVT_PS:
+			case MIPS_INTRIN_MSUB_PS:
+			case MIPS_INTRIN_NEG_PS:
+			case MIPS_INTRIN_NMADD_PS:
+			case MIPS_INTRIN_NMSUB_PS:
+			case MIPS_INTRIN_SUB_PS:
+			case MIPS_INTRIN_ADD_PS:
+			case MIPS_INTRIN_MUL_PS:
+			case MIPS_INTRIN_ABS_PS:
 				return {Type::IntegerType(8, false)};
+			case MIPS_INTRIN_ROUND_W_S:
+			case MIPS_INTRIN_ROUND_W_D:
+				return {Type::IntegerType(4, true)};
+			case MIPS_INTRIN_ROUND_L_S:
+			case MIPS_INTRIN_ROUND_L_D:
+				return {Type::IntegerType(8, true)};
+			case MIPS_INTRIN_RDPGPR:
+				return {Type::IntegerType(m_bits == 64 ? 8 : 4, false)};
 			case MIPS_INTRIN_HWR0:
 			case MIPS_INTRIN_HWR1:
 			case MIPS_INTRIN_HWR2:

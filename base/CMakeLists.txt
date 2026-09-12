@@ -7,6 +7,7 @@ set_target_properties(binaryninjabase PROPERTIES LINKER_LANGUAGE CXX)
 
 get_filename_component(BN_API_DIR "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 target_include_directories(binaryninjabase PUBLIC ${BN_API_DIR})
+target_link_libraries(binaryninjabase PUBLIC ${CMAKE_DL_LIBS})
 
 set_target_properties(binaryninjabase PROPERTIES
     CXX_STANDARD 20

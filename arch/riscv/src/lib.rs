@@ -834,6 +834,14 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
             Op::Uret | Op::Sret | Op::Mret => {
                 res.add_branch(BranchKind::FunctionReturn);
             }
+            Op::Bbc(ref a) | Op::Bbs(ref a) => {
+                res.add_branch(BranchKind::False(addr.wrapping_add(inst_len as u64)));
+                res.add_branch(BranchKind::True(addr.wrapping_add(a.imm() as u64)));
+            }
+            Op::Beqc(ref a) | Op::Bnec(ref a) => {
+                res.add_branch(BranchKind::False(addr.wrapping_add(inst_len as u64)));
+                res.add_branch(BranchKind::True(addr.wrapping_add(a.imm() as u64)));
+            }
             _ => {}
         }
 
@@ -1097,6 +1105,8 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                 res.push(InstructionTextToken::new(" ", Text));
             }
 
+            let idx = i;
+
             match *oper {
                 Operand::R(r) => {
                     let reg = self::Register::from(r);
@@ -1117,6 +1127,19 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                         | Op::BltU(..)
                         | Op::BgeU(..)
                         | Op::Jal(..) => {
+                            // BRANCH or JAL
+                            let target = addr.wrapping_add(i as i64 as u64);
+
+                            res.push(InstructionTextToken::new(
+                                format!("0x{:x}", target),
+                                CodeRelativeAddress {
+                                    value: target,
+                                    size: Some(self.address_size()),
+                                    operand: None,
+                                },
+                            ));
+                        }
+                        Op::Bbc(..) | Op::Bbs(..) | Op::Beqc(..) | Op::Bnec(..) if idx == 2 => {
                             // BRANCH or JAL
                             let target = addr.wrapping_add(i as i64 as u64);
 
@@ -2226,6 +2249,81 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                     [il.reg(width, rs1)],
                 )
                 .append();
+            }
+            Op::Bbc(a) | Op::Bbs(a) => {
+                let rs1 = Register::from(a.rs1());
+                let bit_idx = a.cimm();
+                let bit = il.test_bit(rs1.size(), rs1, bit_idx);
+
+                let cond_expr = match op {
+                    Op::Bbc(..) => il.cmp_e(max_width, bit, 0),
+                    Op::Bbs(..) => il.cmp_ne(max_width, bit, 0),
+                    _ => unreachable!(),
+                };
+
+                let mut new_false = false;
+                let mut new_true = false;
+
+                let ft = addr.wrapping_add(inst_len);
+                let tt = addr.wrapping_add(a.imm() as i64 as u64);
+
+                let mut f = il.label_for_address(ft).unwrap_or_else(|| {
+                    new_false = true;
+                    LowLevelILLabel::new()
+                });
+
+                let mut t = il.label_for_address(tt).unwrap_or_else(|| {
+                    new_true = true;
+                    LowLevelILLabel::new()
+                });
+
+                il.if_expr(cond_expr, &mut t, &mut f).append();
+
+                if new_true {
+                    il.mark_label(&mut t);
+                    il.jump(il.const_ptr(tt)).append();
+                }
+
+                if new_false {
+                    il.mark_label(&mut f);
+                }
+            }
+            Op::Beqc(a) | Op::Bnec(a) => {
+                let rs1 = Register::from(a.rs1());
+                let cimm = a.cimm();
+
+                let cond_expr = match op {
+                    Op::Beqc(..) => il.cmp_e(max_width, rs1, cimm),
+                    Op::Bnec(..) => il.cmp_ne(max_width, rs1, cimm),
+                    _ => unreachable!(),
+                };
+
+                let mut new_false = false;
+                let mut new_true = false;
+
+                let ft = addr.wrapping_add(inst_len);
+                let tt = addr.wrapping_add(a.imm() as i64 as u64);
+
+                let mut f = il.label_for_address(ft).unwrap_or_else(|| {
+                    new_false = true;
+                    LowLevelILLabel::new()
+                });
+
+                let mut t = il.label_for_address(tt).unwrap_or_else(|| {
+                    new_true = true;
+                    LowLevelILLabel::new()
+                });
+
+                il.if_expr(cond_expr, &mut t, &mut f).append();
+
+                if new_true {
+                    il.mark_label(&mut t);
+                    il.jump(il.const_ptr(tt)).append();
+                }
+
+                if new_false {
+                    il.mark_label(&mut f);
+                }
             }
 
             _ => il.unimplemented().append(),

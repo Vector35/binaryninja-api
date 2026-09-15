@@ -236,6 +236,16 @@ pub enum Op<D: RiscVDisassembler> {
 
     // WCH
     WchMcpy(RTypeIntInst<D>), // does not use R-format, but uses three registers
+
+    //
+    // XAndesPerf
+    //
+
+    // BRANCH
+    Bbc(NdsBranchBit<D>),
+    Bbs(NdsBranchBit<D>),
+    Beqc(NdsBranchConst<D>),
+    Bnec(NdsBranchConst<D>),
 }
 
 pub trait Register {
@@ -1753,6 +1763,99 @@ impl<D: RiscVDisassembler> FpClassInst<D> {
 }
 
 #[derive(Copy, Clone, Debug)]
+pub struct NdsBranchBit<D: RiscVDisassembler> {
+    rs1: IntReg<D>,
+    cimm: u8,
+    imm: i16,
+}
+
+impl<D: RiscVDisassembler> NdsBranchBit<D> {
+    #[inline(always)]
+    fn from_instr32(instr: Instr32) -> DisResult<Self> {
+        let rs1 = IntReg::new(instr.rs1());
+
+        // Propagate sign, clear out bits 0 through 9, then insert the missing bits
+        let imm = (instr.0 as i32 >> 31) & !((1 << 10) - 1)
+            | (instr.extract_bits(25, 5) << 5) as i32
+            | (instr.extract_bits(8, 4) << 1) as i32;
+
+        // cimm has an additional bit in RV64
+        let cimm = instr.extract_bits(20, 5)
+            | if <D::RegFile as RegFile>::Int::width() == 8 {
+                instr.extract_bits(7, 1) << 5
+            } else {
+                0
+            };
+
+        Ok(Self {
+            rs1: rs1,
+            cimm: cimm as u8,
+            imm: imm as i16,
+        })
+    }
+
+    #[inline(always)]
+    pub fn rs1(&self) -> IntReg<D> {
+        self.rs1
+    }
+
+    #[inline(always)]
+    pub fn cimm(&self) -> u8 {
+        self.cimm
+    }
+
+    #[inline(always)]
+    pub fn imm(&self) -> i16 {
+        self.imm
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct NdsBranchConst<D: RiscVDisassembler> {
+    rs1: IntReg<D>,
+    cimm: u8,
+    imm: i16,
+}
+
+impl<D: RiscVDisassembler> NdsBranchConst<D> {
+    #[inline(always)]
+    fn from_instr32(instr: Instr32) -> DisResult<Self> {
+        let rs1 = IntReg::new(instr.rs1());
+
+        // Propagate sign, clear out bits 0 through 9, then insert the missing bits
+        let imm = (instr.0 as i32 >> 31) & !((1 << 10) - 1)
+            | (instr.extract_bits(25, 5) << 5) as i32
+            | (instr.extract_bits(8, 4) << 1) as i32;
+
+        // cimm has an additional bit in RV64
+        let cimm = instr.extract_bits(20, 5)
+            | (instr.extract_bits(7, 1) << 5)
+            | (instr.extract_bits(30, 1) << 6);
+
+        Ok(Self {
+            rs1: rs1,
+            cimm: cimm as u8,
+            imm: imm as i16,
+        })
+    }
+
+    #[inline(always)]
+    pub fn rs1(&self) -> IntReg<D> {
+        self.rs1
+    }
+
+    #[inline(always)]
+    pub fn cimm(&self) -> u8 {
+        self.cimm
+    }
+
+    #[inline(always)]
+    pub fn imm(&self) -> i16 {
+        self.imm
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
 pub struct Instr16(u16);
 impl Instr16 {
     #[inline(always)]
@@ -2107,6 +2210,26 @@ impl<D: RiscVDisassembler> Instr<D> {
                     ops.push(Operand::R(f.rd()));
                     ops.push(Operand::F(f.rs1()));
                 }
+                Op::Bbc(ref a) => {
+                    ops.push(Operand::R(a.rs1()));
+                    ops.push(Operand::I(a.cimm() as i32));
+                    ops.push(Operand::I(a.imm() as i32));
+                }
+                Op::Bbs(ref a) => {
+                    ops.push(Operand::R(a.rs1()));
+                    ops.push(Operand::I(a.cimm() as i32));
+                    ops.push(Operand::I(a.imm() as i32));
+                }
+                Op::Beqc(ref a) => {
+                    ops.push(Operand::R(a.rs1()));
+                    ops.push(Operand::I(a.cimm() as i32));
+                    ops.push(Operand::I(a.imm() as i32));
+                }
+                Op::Bnec(ref a) => {
+                    ops.push(Operand::R(a.rs1()));
+                    ops.push(Operand::I(a.cimm() as i32));
+                    ops.push(Operand::I(a.imm() as i32));
+                }
             },
         }
 
@@ -2286,6 +2409,11 @@ impl<'a, D: RiscVDisassembler + 'a> Mnem<'a, D> {
                 Op::Rev8(..) => "rev8",
 
                 Op::WchMcpy(..) => "qk.mcpy",
+
+                Op::Bbc(..) => "nds.bbc",
+                Op::Bbs(..) => "nds.bbs",
+                Op::Beqc(..) => "nds.beqc",
+                Op::Bnec(..) => "nds.bnec",
             },
         }
     }
@@ -3557,6 +3685,18 @@ pub trait RiscVDisassembler: 'static + Debug + Sized + Copy + Clone + Send + Syn
                             _ => return Err(InvalidSubop),
                         }
                     }
+                    0b10110 => match inst.funct3() {
+                        0b111 => {
+                            if inst.extract_bits(30, 1) == 0 {
+                                Op::Bbc(NdsBranchBit::from_instr32(inst)?)
+                            } else {
+                                Op::Bbs(NdsBranchBit::from_instr32(inst)?)
+                            }
+                        }
+                        0b101 => Op::Beqc(NdsBranchConst::from_instr32(inst)?),
+                        0b110 => Op::Bnec(NdsBranchConst::from_instr32(inst)?),
+                        _ => return Err(InvalidSubop),
+                    },
                     // TODO CUSTOM_2
                     0b11000 => {
                         // BRANCH

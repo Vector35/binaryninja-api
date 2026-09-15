@@ -8749,6 +8749,7 @@ extern "C"
 	BINARYNINJACOREAPI char* BNScriptingInstanceCompleteArguments(BNScriptingInstance* instance, const char* text, uint64_t* argumentStart);
 	BINARYNINJACOREAPI void BNStopScriptingInstance(BNScriptingInstance* instance);
 	BINARYNINJACOREAPI size_t BNFuzzyMatchSingle(const char* target, const char* query);
+	BINARYNINJACOREAPI size_t BNFuzzyMatchContextual(const char* target, const char* query);
 
 	// Main thread actions
 	BINARYNINJACOREAPI void BNRegisterMainThread(BNMainThreadCallbacks* callbacks);

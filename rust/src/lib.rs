@@ -114,6 +114,26 @@ pub use binaryninjacore_sys::BNILBranchDependence as ILBranchDependence;
 pub const BN_FULL_CONFIDENCE: u8 = u8::MAX;
 pub const BN_INVALID_EXPR: usize = usize::MAX;
 
+/// Fuzzy match a string against a query string. Returns a score that is higher for
+/// a more confident match, or `None` if the query does not match the target string.
+pub fn fuzzy_match_single(target: &str, query: &str) -> Option<usize> {
+    let target = target.to_cstr();
+    let query = query.to_cstr();
+    let score = unsafe { BNFuzzyMatchSingle(target.as_ptr(), query.as_ptr()) };
+    (score != 0).then_some(score)
+}
+
+/// Fuzzy match a string against a query string. Returns a score that is higher for
+/// a more confident match, or None if the query does not match the target string.
+/// Same algorithm as [`fuzzy_match_single`] but with extra heuristics based on
+/// word boundaries and match offsets.
+pub fn fuzzy_match_contextual(target: &str, query: &str) -> Option<usize> {
+    let target = target.to_cstr();
+    let query = query.to_cstr();
+    let score = unsafe { BNFuzzyMatchContextual(target.as_ptr(), query.as_ptr()) };
+    (score != 0).then_some(score)
+}
+
 /// The main way to open and load files into Binary Ninja. Make sure you've properly initialized the core before calling this function. See [`crate::headless::init()`]
 pub fn load(file_path: impl AsRef<Path>) -> Option<Ref<BinaryView>> {
     load_with_progress(file_path, NoProgressCallback)

@@ -138,7 +138,7 @@ public:
 	);
 	virtual ~CommandListScoreWorker();
 
-	static int scoreItem(const CommandListItem* item, const QString& lowerFilter, const std::string& strippedFilter);
+	static int scoreItem(const CommandListItem* item, const std::string& strippedFilter);
 
 Q_SIGNALS:
 	void dataFetched(int request, const std::vector<std::pair<CommandListItem*, int>>& items);

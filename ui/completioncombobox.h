@@ -4,6 +4,8 @@
 #include <QtGui/QKeyEvent>
 #include <QtWidgets/QComboBox>
 
+class CompletionComboBoxSortModel;
+
 //! CompletionComboBox is a subclass of QComboBox intended to have a more
 //! familiar user experience when working with auto-completion.
 //!
@@ -17,6 +19,7 @@ class BINARYNINJAUIAPI CompletionComboBox : public QComboBox {
     Q_OBJECT
 
 	bool m_forwardReturnEvents = true;
+	CompletionComboBoxSortModel* m_fuzzySortModel = nullptr;
 
     //! Manually cycle the selected completion suggestion, forward by default.
     bool cycleCompletion(bool forward = true);
@@ -28,6 +31,11 @@ public:
     CompletionComboBox(QWidget* parent = nullptr);
 
 	void setForwardReturnEvents(bool forward) { m_forwardReturnEvents = forward; }
+
+	//! Filter and sort completion results by FuzzyMatchContextual score, highest first. Disabled by default.
+	//! Matches need not be prefixes; equal scores and empty input preserve the source model's order.
+	void setFuzzySortingEnabled(bool enabled);
+	bool isFuzzySortingEnabled() const { return m_fuzzySortModel != nullptr; }
 
 Q_SIGNALS:
     void enterPressed();

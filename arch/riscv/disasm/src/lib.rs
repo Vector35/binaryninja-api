@@ -246,6 +246,13 @@ pub enum Op<D: RiscVDisassembler> {
     Bbs(NdsBranchBit<D>),
     Beqc(NdsBranchConst<D>),
     Bnec(NdsBranchConst<D>),
+
+    // BIT FIELD OPERATIONS
+    Bfos(NdsBitfieldInst<D>),
+    Bfoz(NdsBitfieldInst<D>),
+
+    // LOAD EFFECTIVE ADDRESS
+    Lea(NdsLeaInst<D>),
 }
 
 pub trait Register {
@@ -1856,6 +1863,127 @@ impl<D: RiscVDisassembler> NdsBranchConst<D> {
 }
 
 #[derive(Copy, Clone, Debug)]
+pub struct NdsBitfieldInst<D: RiscVDisassembler> {
+    rs1: IntReg<D>,
+    rd: IntReg<D>,
+    msb: u8,
+    lsb: u8,
+}
+
+impl<D: RiscVDisassembler> NdsBitfieldInst<D> {
+    #[inline(always)]
+    fn from_instr32(instr: Instr32) -> DisResult<Self> {
+        let rs1 = IntReg::new(instr.rs1());
+        let rd = IntReg::new(instr.rd());
+
+        let is_rv64 = <D::RegFile as RegFile>::Int::width() == 8;
+
+        let msb_5 = instr.extract_bits(31, 1);
+        if !is_rv64 && msb_5 != 0 {
+            return Err(Error::InvalidSubop);
+        }
+
+        let msb = instr.extract_bits(26, 5) | (msb_5 << 5);
+
+        let lsb_5 = instr.extract_bits(25, 1);
+        if !is_rv64 && lsb_5 != 0 {
+            return Err(Error::InvalidSubop);
+        }
+
+        let lsb = instr.extract_bits(20, 5) | (lsb_5 << 5);
+
+        Ok(Self {
+            rs1: rs1,
+            rd: rd,
+            msb: msb as u8,
+            lsb: lsb as u8,
+        })
+    }
+
+    #[inline(always)]
+    pub fn rs1(&self) -> IntReg<D> {
+        self.rs1
+    }
+
+    #[inline(always)]
+    pub fn rd(&self) -> IntReg<D> {
+        self.rd
+    }
+
+    #[inline(always)]
+    pub fn msb(&self) -> u8 {
+        self.msb
+    }
+
+    #[inline(always)]
+    pub fn lsb(&self) -> u8 {
+        self.lsb
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct NdsLeaInst<D: RiscVDisassembler> {
+    rs1: IntReg<D>,
+    rs2: IntReg<D>,
+    rd: IntReg<D>,
+    width: u8,
+    zero_extend: bool,
+}
+
+impl<D: RiscVDisassembler> NdsLeaInst<D> {
+    #[inline(always)]
+    fn from_ops(
+        rs1: IntReg<D>,
+        rs2: IntReg<D>,
+        rd: IntReg<D>,
+        width: u8,
+        zero_extend: bool,
+    ) -> DisResult<Self> {
+        if width == 1 && !zero_extend {
+            return Err(Error::InvalidSubop);
+        }
+
+        let is_rv64 = <D::RegFile as RegFile>::Int::width() == 8;
+        if !is_rv64 && (zero_extend || width == 1) {
+            return Err(Error::InvalidSubop);
+        }
+
+        Ok(Self {
+            rs1: rs1,
+            rs2: rs2,
+            rd: rd,
+            width: width,
+            zero_extend: zero_extend,
+        })
+    }
+
+    #[inline(always)]
+    pub fn rs1(&self) -> IntReg<D> {
+        self.rs1
+    }
+
+    #[inline(always)]
+    pub fn rs2(&self) -> IntReg<D> {
+        self.rs2
+    }
+
+    #[inline(always)]
+    pub fn rd(&self) -> IntReg<D> {
+        self.rd
+    }
+
+    #[inline(always)]
+    pub fn width(&self) -> u8 {
+        self.width
+    }
+
+    #[inline(always)]
+    pub fn zero_extend(&self) -> bool {
+        self.zero_extend
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
 pub struct Instr16(u16);
 impl Instr16 {
     #[inline(always)]
@@ -2230,6 +2358,17 @@ impl<D: RiscVDisassembler> Instr<D> {
                     ops.push(Operand::I(a.cimm() as i32));
                     ops.push(Operand::I(a.imm() as i32));
                 }
+                Op::Bfos(ref a) | Op::Bfoz(ref a) => {
+                    ops.push(Operand::R(a.rd()));
+                    ops.push(Operand::R(a.rs1()));
+                    ops.push(Operand::I(a.msb() as i32));
+                    ops.push(Operand::I(a.lsb() as i32));
+                }
+                Op::Lea(ref a) => {
+                    ops.push(Operand::R(a.rs1()));
+                    ops.push(Operand::R(a.rs2()));
+                    ops.push(Operand::R(a.rd()));
+                }
             },
         }
 
@@ -2414,6 +2553,11 @@ impl<'a, D: RiscVDisassembler + 'a> Mnem<'a, D> {
                 Op::Bbs(..) => "nds.bbs",
                 Op::Beqc(..) => "nds.beqc",
                 Op::Bnec(..) => "nds.bnec",
+
+                Op::Bfos(..) => "nds.bfos",
+                Op::Bfoz(..) => "nds.bfoz",
+
+                Op::Lea(..) => "nds.lea",
             },
         }
     }
@@ -2594,6 +2738,20 @@ impl<'a, D: RiscVDisassembler + 'a> Mnem<'a, D> {
                     };
 
                     Some(suf.into())
+                }
+                Op::Lea(ref a) => {
+                    let width_suf = match a.width() {
+                        1 => ".b",
+                        2 => ".h",
+                        4 => ".w",
+                        8 => ".d",
+                        _ => unreachable!(),
+                    };
+
+                    let full_suf =
+                        String::from(width_suf) + if a.zero_extend() { ".ze" } else { "" };
+
+                    Some(full_suf.into())
                 }
                 _ => None,
             },
@@ -3695,6 +3853,61 @@ pub trait RiscVDisassembler: 'static + Debug + Sized + Copy + Clone + Send + Syn
                         }
                         0b101 => Op::Beqc(NdsBranchConst::from_instr32(inst)?),
                         0b110 => Op::Bnec(NdsBranchConst::from_instr32(inst)?),
+                        0b011 => Op::Bfos(NdsBitfieldInst::from_instr32(inst)?),
+                        0b010 => Op::Bfoz(NdsBitfieldInst::from_instr32(inst)?),
+
+                        0b000 => match inst.funct7() {
+                            0b0000101 => Op::Lea(NdsLeaInst::from_ops(
+                                IntReg::new(inst.rs1()),
+                                IntReg::new(inst.rs2()),
+                                IntReg::new(inst.rd()),
+                                2,
+                                false,
+                            )?),
+                            0b0000110 => Op::Lea(NdsLeaInst::from_ops(
+                                IntReg::new(inst.rs1()),
+                                IntReg::new(inst.rs2()),
+                                IntReg::new(inst.rd()),
+                                4,
+                                false,
+                            )?),
+                            0b0000111 => Op::Lea(NdsLeaInst::from_ops(
+                                IntReg::new(inst.rs1()),
+                                IntReg::new(inst.rs2()),
+                                IntReg::new(inst.rd()),
+                                8,
+                                false,
+                            )?),
+                            0b0001000 => Op::Lea(NdsLeaInst::from_ops(
+                                IntReg::new(inst.rs1()),
+                                IntReg::new(inst.rs2()),
+                                IntReg::new(inst.rd()),
+                                1,
+                                true,
+                            )?),
+                            0b0001001 => Op::Lea(NdsLeaInst::from_ops(
+                                IntReg::new(inst.rs1()),
+                                IntReg::new(inst.rs2()),
+                                IntReg::new(inst.rd()),
+                                2,
+                                true,
+                            )?),
+                            0b0001010 => Op::Lea(NdsLeaInst::from_ops(
+                                IntReg::new(inst.rs1()),
+                                IntReg::new(inst.rs2()),
+                                IntReg::new(inst.rd()),
+                                4,
+                                true,
+                            )?),
+                            0b0001011 => Op::Lea(NdsLeaInst::from_ops(
+                                IntReg::new(inst.rs1()),
+                                IntReg::new(inst.rs2()),
+                                IntReg::new(inst.rd()),
+                                8,
+                                true,
+                            )?),
+                            _ => return Err(InvalidSubop),
+                        },
                         _ => return Err(InvalidSubop),
                     },
                     // TODO CUSTOM_2

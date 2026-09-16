@@ -1779,6 +1779,8 @@ pub struct NdsBranchBit<D: RiscVDisassembler> {
 impl<D: RiscVDisassembler> NdsBranchBit<D> {
     #[inline(always)]
     fn from_instr32(instr: Instr32) -> DisResult<Self> {
+        let is_rv64 = <D::RegFile as RegFile>::Int::width() == 8;
+
         let rs1 = IntReg::new(instr.rs1());
 
         // Propagate sign, clear out bits 0 through 9, then insert the missing bits
@@ -1786,13 +1788,12 @@ impl<D: RiscVDisassembler> NdsBranchBit<D> {
             | (instr.extract_bits(25, 5) << 5) as i32
             | (instr.extract_bits(8, 4) << 1) as i32;
 
-        // cimm has an additional bit in RV64
-        let cimm = instr.extract_bits(20, 5)
-            | if <D::RegFile as RegFile>::Int::width() == 8 {
-                instr.extract_bits(7, 1) << 5
-            } else {
-                0
-            };
+        let cimm_5 = instr.extract_bits(7, 1);
+        if !is_rv64 && cimm_5 != 0 {
+            return Err(Error::InvalidSubop);
+        }
+
+        let cimm = instr.extract_bits(20, 5) | cimm_5 << 5;
 
         Ok(Self {
             rs1: rs1,
@@ -2338,22 +2339,12 @@ impl<D: RiscVDisassembler> Instr<D> {
                     ops.push(Operand::R(f.rd()));
                     ops.push(Operand::F(f.rs1()));
                 }
-                Op::Bbc(ref a) => {
+                Op::Bbc(ref a) | Op::Bbs(ref a) => {
                     ops.push(Operand::R(a.rs1()));
                     ops.push(Operand::I(a.cimm() as i32));
                     ops.push(Operand::I(a.imm() as i32));
                 }
-                Op::Bbs(ref a) => {
-                    ops.push(Operand::R(a.rs1()));
-                    ops.push(Operand::I(a.cimm() as i32));
-                    ops.push(Operand::I(a.imm() as i32));
-                }
-                Op::Beqc(ref a) => {
-                    ops.push(Operand::R(a.rs1()));
-                    ops.push(Operand::I(a.cimm() as i32));
-                    ops.push(Operand::I(a.imm() as i32));
-                }
-                Op::Bnec(ref a) => {
+                Op::Beqc(ref a) | Op::Bnec(ref a) => {
                     ops.push(Operand::R(a.rs1()));
                     ops.push(Operand::I(a.cimm() as i32));
                     ops.push(Operand::I(a.imm() as i32));

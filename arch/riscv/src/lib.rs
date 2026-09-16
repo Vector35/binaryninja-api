@@ -2325,6 +2325,45 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                     il.mark_label(&mut f);
                 }
             }
+            Op::Bfos(a) | Op::Bfoz(a) => {
+                let bytes = <D::RegFile as RegFile>::Int::width();
+                let bits = 8 * bytes as u8;
+
+                let rs1 = Register::from(a.rs1());
+                let rd = Register::from(a.rd());
+
+                let (left_shift, right_shift) = if a.msb() == 0 {
+                    (bits - 1, bits - 1 - a.lsb())
+                } else if a.msb() < a.lsb() {
+                    (bits - 1 - (a.lsb() - a.msb()), bits - 1 - a.lsb())
+                } else {
+                    (bits - 1 - a.msb(), bits - 1 - (a.msb() - a.lsb()))
+                };
+
+                let shifted = il.lsl(bytes, rs1, left_shift);
+                let res = match op {
+                    Op::Bfos(..) => il.asr(bytes, shifted, right_shift),
+                    Op::Bfoz(..) => il.lsr(bytes, shifted, right_shift),
+                    _ => unreachable!(),
+                };
+                il.set_reg(bytes, rd, res).append();
+            }
+            Op::Lea(a) => {
+                let bytes = <D::RegFile as RegFile>::Int::width();
+
+                let rs1 = Register::from(a.rs1());
+                let rs2 = Register::from(a.rs2());
+                let rd = Register::from(a.rd());
+
+                let offset = if a.zero_extend() {
+                    il.mul(bytes, il.zx(8, il.low_part(4, rs2)), a.width())
+                } else {
+                    il.mul(bytes, rs2, a.width())
+                };
+
+                il.set_reg(bytes, rd, il.add_overflow(bytes, rs1, offset))
+                    .append();
+            }
 
             _ => il.unimplemented().append(),
         };

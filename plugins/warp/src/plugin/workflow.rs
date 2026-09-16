@@ -205,6 +205,18 @@ pub fn run_matcher(view: &BinaryView) {
                 // match if we have not already done so in a previous round.
                 // TODO: What if the new round changes the matched function metadata? Unlikely but possible.
                 if matcher_results.insert(function.start()) {
+                    // Add the referenced types to the view.
+                    // TODO: This should ideally be within insert_cached_function_match, right now
+                    // TODO: we have this code here that needs to be duplicated when applying a function
+                    // TODO: manually from the C++ UI code.
+                    matcher.add_function_types_to_view(
+                        container,
+                        &sources,
+                        view,
+                        function.arch(),
+                        matched_function,
+                    );
+
                     // We were able to find a match, add it to the match cache and then mark the function
                     // as requiring updates; this is so that we know about it in the applier activity.
                     insert_cached_function_match(function, Some(matched_function));
@@ -328,71 +340,83 @@ pub fn run_fetcher(view: &BinaryView) {
     background_task.finish();
 }
 
-pub fn insert_workflow() -> Result<(), ()> {
-    // TODO: Note: because of symbol persistence function symbol is applied in `insert_cached_function_match`.
-    // TODO: Comments are also applied there, they are "user" like, persisted and make undo actions.
-    // "Hey look, it's a plier" ~ Josh 2025
-    let apply_activity = |ctx: &AnalysisContext| {
-        let view = ctx.view();
-        let function = ctx.function();
-        if let Some(matched_function) = try_cached_function_match(&function) {
-            // core.function.propagateAnalysis will assign user type info to auto, so we must not apply
-            // otherwise we will wipe over user type info.
-            if !function.has_user_type() {
-                if let Some(func_ty) = &matched_function.ty {
-                    function.set_auto_type(&to_bn_type(Some(function.arch()), func_ty));
-                } else if !function.has_explicitly_defined_type() {
-                    // Attempt to retrieve the type information from the named platform functions.
-                    // NOTE: We check `has_explicitly_defined_type` because after applying imported type
-                    // information, that flag will be set, allowing us to avoid applying it again.
-                    let bn_symbol =
-                        to_bn_symbol_at_address(&view, &matched_function.symbol, function.start());
-                    function.apply_imported_types(&bn_symbol, None);
-                }
+// TODO: Note: because of symbol persistence function symbol is applied in `insert_cached_function_match`.
+// TODO: Comments are also applied there, they are "user" like, persisted and make undo actions.
+pub fn run_applier(ctx: &AnalysisContext) {
+    let view = ctx.view();
+    let function = ctx.function();
+    let func_start = function.start();
+    if let Some(matched_function) = try_cached_function_match(&function) {
+        // core.function.propagateAnalysis will assign user type info to auto, so we must not apply
+        // otherwise we will wipe over user type info.
+        if !function.has_user_type() {
+            if let Some(func_ty) = &matched_function.ty {
+                function.set_auto_type(&to_bn_type(Some(function.arch()), func_ty));
+            } else if !function.has_explicitly_defined_type() {
+                // Attempt to retrieve the type information from the named platform functions.
+                // NOTE: We check `has_explicitly_defined_type` because after applying imported type
+                // information, that flag will be set, allowing us to avoid applying it again.
+                let bn_symbol =
+                    to_bn_symbol_at_address(&view, &matched_function.symbol, func_start);
+                function.apply_imported_types(&bn_symbol, None);
             }
-            if let Some(mlil) = ctx.mlil_function() {
-                for variable in matched_function.variables {
-                    let decl_addr = ((function.start() as i64) + variable.offset) as u64;
-                    if let Some(decl_instr) = mlil.instruction_at(decl_addr) {
-                        let decl_var = match variable.location {
-                            Location::Register(RegisterLocation { id, .. }) => {
-                                decl_instr.variable_for_register_after(RegisterId(id as u32))
-                            }
-                            Location::Stack(StackLocation { offset, .. }) => {
-                                decl_instr.variable_for_stack_location_after(offset)
-                            }
-                        };
-                        if function.is_var_user_defined(&decl_var) {
-                            // Internally, analysis will just assign user vars to auto vars and consult only that.
-                            // So we must skip if there is a user-defined var at the decl.
-                            continue;
-                        }
-                        let decl_ty = match variable.ty {
-                            Some(decl_ty) => to_bn_type(Some(function.arch()), &decl_ty),
-                            None => {
-                                let Some(existing_var) = function.variable_type(&decl_var) else {
-                                    continue;
-                                };
-                                existing_var.contents
-                            }
-                        };
-                        let decl_name = variable
-                            .name
-                            .unwrap_or_else(|| function.variable_name(&decl_var));
-                        function.create_auto_var(&decl_var, &decl_ty, &decl_name, false)
-                    }
-                }
-            }
-            function.add_tag(
-                &get_warp_tag_type(&view),
-                &matched_function.guid.to_string(),
-                None,
-                false,
-                None,
-            );
         }
-    };
 
+        if let Some(mlil) = ctx.mlil_function() {
+            // Apply variable information to the function.
+            for var in matched_function.variables {
+                let Some(decl_addr) = func_start.checked_add_signed(var.offset) else {
+                    tracing::warn!(
+                        "Variable offset {} overflowed for function {:#x}",
+                        var.offset,
+                        func_start
+                    );
+                    continue;
+                };
+                let Some(decl_instr) = mlil.instruction_at(decl_addr) else {
+                    tracing::warn!("Failed to find instruction at {:#x}", decl_addr);
+                    continue;
+                };
+                let decl_var = match var.location {
+                    Location::Register(RegisterLocation { id, .. }) => {
+                        decl_instr.variable_for_register_after(RegisterId(id as u32))
+                    }
+                    Location::Stack(StackLocation { offset, .. }) => {
+                        decl_instr.variable_for_stack_location_after(offset)
+                    }
+                };
+                if function.is_var_user_defined(&decl_var) {
+                    // Internally, analysis will just assign user vars to auto vars and consult only that.
+                    // So we must skip if there is a user-defined var at the decl.
+                    continue;
+                }
+                let decl_ty = match var.ty {
+                    Some(decl_ty) => to_bn_type(Some(function.arch()), &decl_ty),
+                    None => {
+                        let Some(existing_var) = function.variable_type(&decl_var) else {
+                            continue;
+                        };
+                        existing_var.contents
+                    }
+                };
+                let decl_name = var
+                    .name
+                    .unwrap_or_else(|| function.variable_name(&decl_var));
+                function.create_auto_var(&decl_var, &decl_ty, &decl_name, false)
+            }
+        }
+
+        function.add_tag(
+            &get_warp_tag_type(&view),
+            &matched_function.guid.to_string(),
+            None,
+            false,
+            None,
+        );
+    }
+}
+
+pub fn insert_workflow() -> Result<(), ()> {
     let matcher_activity = |ctx: &AnalysisContext| {
         let view = ctx.view();
         run_matcher(&view);
@@ -422,7 +446,7 @@ pub fn insert_workflow() -> Result<(), ()> {
         "This analysis step applies WARP info to matched functions...",
     )
     .eligibility(activity::Eligibility::auto().run_once(false));
-    let apply_activity = Activity::new_with_action(&apply_config, apply_activity);
+    let apply_activity = Activity::new_with_action(&apply_config, run_applier);
 
     let add_function_activities = |workflow: Option<WorkflowBuilder>| -> Result<(), ()> {
         let Some(workflow) = workflow else {

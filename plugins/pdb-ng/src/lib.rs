@@ -593,6 +593,7 @@ impl CustomDebugInfoParser for PDBParser {
             }
 
             // Does the raw path just exist?
+            tracing::info!("Try read local: {}", info.path);
             if PathBuf::from(&info.path).exists() {
                 match fs::read(&info.path) {
                     Ok(conts) => match self
@@ -607,30 +608,52 @@ impl CustomDebugInfoParser for PDBParser {
                 }
             }
 
-            // Try in the same directory as the file
-            let mut potential_path = view.file().file_path();
+            // Try both the embedded PDB name and the binary's current name beside the file.
+            let binary_path = view.file().file_path();
+            let mut potential_path = binary_path.clone();
             potential_path.pop();
             potential_path.push(&info.file_name);
-            if potential_path.exists() {
-                match fs::read(potential_path) {
-                    Ok(conts) => match self
-                        .load_from_file(&conts, debug_info, view, &progress, true, false)
-                    {
-                        Ok(_) => return true,
+            let mut potential_paths = vec![potential_path];
+            let renamed_path = binary_path.with_extension("pdb");
+            if !potential_paths.contains(&renamed_path) {
+                potential_paths.push(renamed_path);
+            }
+            for potential_path in potential_paths {
+                tracing::info!("Try read local: {}", potential_path.display());
+                if potential_path.exists() {
+                    match fs::read(potential_path) {
+                        Ok(conts) => match self
+                            .load_from_file(&conts, debug_info, view, &progress, true, false)
+                        {
+                            Ok(_) => return true,
+                            Err(e) if e.to_string() == "Cancelled" => return false,
+                            Err(e) => tracing::debug!("Skipping, {}", e.to_string()),
+                        },
                         Err(e) if e.to_string() == "Cancelled" => return false,
-                        Err(e) => tracing::debug!("Skipping, {}", e.to_string()),
-                    },
-                    Err(e) if e.to_string() == "Cancelled" => return false,
-                    Err(e) => tracing::debug!("Could not read pdb: {}", e.to_string()),
+                        Err(e) => tracing::debug!("Could not read pdb: {}", e.to_string()),
+                    }
                 }
             }
 
-            // Try in the same folder in the project
+            // Try both names in the same project folder, using the project's name for the binary.
             if let Some(project_file) = view.file().project_file() {
                 let project_file_folder_id = project_file.folder().map(|x| x.id());
-                for file in project_file.project().files().iter() {
-                    let file_folder_id = file.folder().map(|x| x.id());
-                    if file.name() == info.file_name && file_folder_id == project_file_folder_id {
+                let mut potential_names = vec![info.file_name.clone()];
+                let renamed_name = PathBuf::from(project_file.name())
+                    .with_extension("pdb")
+                    .to_string_lossy()
+                    .into_owned();
+                if !potential_names.contains(&renamed_name) {
+                    potential_names.push(renamed_name);
+                }
+                let files = project_file.project().files();
+                for potential_name in potential_names {
+                    for file in files.iter() {
+                        let file_folder_id = file.folder().map(|x| x.id());
+                        if file.name() != potential_name || file_folder_id != project_file_folder_id
+                        {
+                            continue;
+                        }
                         if !file.exists_on_disk() {
                             // If the file doesn't exist, don't consider it
                             // TODO: if we're connected to a remote project, offer to download the file
@@ -638,6 +661,12 @@ impl CustomDebugInfoParser for PDBParser {
                         }
 
                         if let Some(path_on_disk) = file.path_on_disk() {
+                            tracing::info!(
+                                "Try project file: {} / {}",
+                                file.path_in_project().display(),
+                                path_on_disk.display()
+                            );
+
                             match fs::read(path_on_disk) {
                                 Ok(conts) => match self.load_from_file(
                                     &conts, debug_info, view, &progress, true, false,

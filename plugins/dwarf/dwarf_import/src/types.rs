@@ -353,7 +353,7 @@ fn do_structure_parse<R: ReaderType>(
     let finalized_structure = Type::structure(&structure_builder.finalize());
     if let Some(full_name) = full_name {
         debug_info_builder.add_type(
-            get_uid(dwarf, unit, entry) + 1, // TODO : This is super broke (uid + 1 is not guaranteed to be unique)
+            get_uid(dwarf, unit, entry),
             full_name,
             finalized_structure,
             true,

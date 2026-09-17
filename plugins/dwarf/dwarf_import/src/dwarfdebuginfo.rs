@@ -31,7 +31,7 @@ use binaryninja::{
 
 use gimli::{DebuggingInformationEntry, Dwarf, Unit};
 
-use binaryninja::confidence::Conf;
+use binaryninja::confidence::{Conf, MAX_CONFIDENCE};
 use binaryninja::variable::{Variable, VariableSourceType};
 use indexmap::{map::Values, IndexMap};
 use std::{cmp::Ordering, collections::HashMap, hash::Hash};
@@ -762,7 +762,8 @@ impl DebugInfoBuilder {
         let return_type = function
             .return_type
             .and_then(|return_type_id| self.get_type(return_type_id))
-            .map(|t| Conf::new(t.ty.clone(), 128))
+            // Have to bump to max confidence or (wrong) auto analysis will take precedence
+            .map(|t| Conf::new(t.ty.clone(), MAX_CONFIDENCE))
             .unwrap_or_else(|| Conf::new(Type::void(), 0));
 
         let parameters: Vec<FunctionParameter> = function

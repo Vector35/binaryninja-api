@@ -227,6 +227,7 @@ pub(crate) struct DebugInfoBuilder {
     typedef_placeholders:
         HashMap<(String, TypeClass, Option<StructureType>, u64, usize), Ref<Type>>,
     unnamed_function_placeholder: Option<Ref<Type>>,
+    definition_uids_by_name: HashMap<String, TypeUID>,
 }
 
 impl DebugInfoBuilder {
@@ -241,6 +242,7 @@ impl DebugInfoBuilder {
             structure_placeholders: HashMap::new(),
             typedef_placeholders: HashMap::new(),
             unnamed_function_placeholder: None,
+            definition_uids_by_name: HashMap::new(),
         }
     }
 
@@ -435,6 +437,26 @@ impl DebugInfoBuilder {
         self.types.values()
     }
 
+    fn definition_name(&mut self, type_uid: TypeUID, name: String, t: &Ref<Type>) -> String {
+        let mut candidate = name.clone();
+        let mut i = 1;
+        while let Some(&existing_uid) = self.definition_uids_by_name.get(&candidate) {
+            let same_definition = existing_uid == type_uid
+                || self
+                    .types
+                    .get(&existing_uid)
+                    .is_some_and(|existing| existing.ty == *t);
+            if same_definition {
+                return candidate;
+            }
+            candidate = format!("{}_{}", name, i);
+            i += 1;
+        }
+        self.definition_uids_by_name
+            .insert(candidate.clone(), type_uid);
+        candidate
+    }
+
     pub(crate) fn add_type(
         &mut self,
         type_uid: TypeUID,
@@ -443,26 +465,25 @@ impl DebugInfoBuilder {
         commit: bool,
         target_type_uid: Option<TypeUID>,
     ) {
-        let reference = if commit
+        let (name, reference) = if commit
             && matches!(
                 t.type_class(),
                 TypeClass::EnumerationTypeClass | TypeClass::StructureTypeClass
-            )
-        {
-            Some(self.typedef_placeholder(&name, &t))
+            ) {
+            let name = self.definition_name(type_uid, name, &t);
+            let reference = self.typedef_placeholder(&name, &t);
+            (name, Some(reference))
         } else {
-            None
+            (name, None)
         };
 
-        if let Some(
-            DebugType {
-                name: existing_name,
-                ty: existing_type,
-                reference: _,
-                commit: existing_commit,
-                target_type_uid: _,
-            }
-        ) = self.types.insert(
+        if let Some(DebugType {
+            name: existing_name,
+            ty: existing_type,
+            reference: _,
+            commit: existing_commit,
+            target_type_uid: _,
+        }) = self.types.insert(
             type_uid,
             DebugType {
                 name: name.clone(),

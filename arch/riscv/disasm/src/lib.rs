@@ -253,6 +253,20 @@ pub enum Op<D: RiscVDisassembler> {
 
     // LOAD EFFECTIVE ADDRESS
     Lea(NdsLeaInst<D>),
+
+    // GP-RELATIVE INSTRUCTIONS
+    Addigp(NdsGPRelativeAddInst<D>),
+    Lbgp(NdsGPRelativeLoadInst<D>),
+    Lbugp(NdsGPRelativeLoadInst<D>),
+    Lhgp(NdsGPRelativeLoadInst<D>),
+    Lhugp(NdsGPRelativeLoadInst<D>),
+    Lwgp(NdsGPRelativeLoadInst<D>),
+    Lwugp(NdsGPRelativeLoadInst<D>),
+    Ldgp(NdsGPRelativeLoadInst<D>),
+    Sbgp(NdsGPRelativeStoreInst<D>),
+    Shgp(NdsGPRelativeStoreInst<D>),
+    Swgp(NdsGPRelativeStoreInst<D>),
+    Sdgp(NdsGPRelativeStoreInst<D>),
 }
 
 pub trait Register {
@@ -1985,6 +1999,75 @@ impl<D: RiscVDisassembler> NdsLeaInst<D> {
 }
 
 #[derive(Copy, Clone, Debug)]
+pub struct NdsGPRelativeAddInst<D: RiscVDisassembler> {
+    rd: IntReg<D>,
+    imm: i32,
+}
+
+impl<D: RiscVDisassembler> NdsGPRelativeAddInst<D> {
+    #[inline(always)]
+    fn from_ops(rd: IntReg<D>, imm: i32) -> DisResult<Self> {
+        Ok(Self { rd: rd, imm: imm })
+    }
+
+    #[inline(always)]
+    pub fn rd(&self) -> IntReg<D> {
+        self.rd
+    }
+
+    #[inline(always)]
+    pub fn imm(&self) -> i32 {
+        self.imm
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct NdsGPRelativeLoadInst<D: RiscVDisassembler> {
+    rd: IntReg<D>,
+    imm: i32,
+}
+
+impl<D: RiscVDisassembler> NdsGPRelativeLoadInst<D> {
+    #[inline(always)]
+    fn from_ops(rd: IntReg<D>, imm: i32) -> DisResult<Self> {
+        Ok(Self { rd: rd, imm: imm })
+    }
+
+    #[inline(always)]
+    pub fn rd(&self) -> IntReg<D> {
+        self.rd
+    }
+
+    #[inline(always)]
+    pub fn imm(&self) -> i32 {
+        self.imm
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct NdsGPRelativeStoreInst<D: RiscVDisassembler> {
+    rs2: IntReg<D>,
+    imm: i32,
+}
+
+impl<D: RiscVDisassembler> NdsGPRelativeStoreInst<D> {
+    #[inline(always)]
+    fn from_ops(rs2: IntReg<D>, imm: i32) -> DisResult<Self> {
+        Ok(Self { rs2: rs2, imm: imm })
+    }
+
+    #[inline(always)]
+    pub fn rs2(&self) -> IntReg<D> {
+        self.rs2
+    }
+
+    #[inline(always)]
+    pub fn imm(&self) -> i32 {
+        self.imm
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
 pub struct Instr16(u16);
 impl Instr16 {
     #[inline(always)]
@@ -2360,6 +2443,24 @@ impl<D: RiscVDisassembler> Instr<D> {
                     ops.push(Operand::R(a.rs2()));
                     ops.push(Operand::R(a.rd()));
                 }
+                Op::Addigp(ref a) => {
+                    ops.push(Operand::R(a.rd()));
+                    ops.push(Operand::M(a.imm() as i32, IntReg::new(3)));
+                }
+                Op::Lbgp(ref a)
+                | Op::Lbugp(ref a)
+                | Op::Lhgp(ref a)
+                | Op::Lhugp(ref a)
+                | Op::Lwgp(ref a)
+                | Op::Lwugp(ref a)
+                | Op::Ldgp(ref a) => {
+                    ops.push(Operand::R(a.rd()));
+                    ops.push(Operand::M(a.imm() as i32, IntReg::new(3)));
+                }
+                Op::Sbgp(ref a) | Op::Shgp(ref a) | Op::Swgp(ref a) | Op::Sdgp(ref a) => {
+                    ops.push(Operand::R(a.rs2()));
+                    ops.push(Operand::M(a.imm() as i32, IntReg::new(3)));
+                }
             },
         }
 
@@ -2549,6 +2650,19 @@ impl<'a, D: RiscVDisassembler + 'a> Mnem<'a, D> {
                 Op::Bfoz(..) => "nds.bfoz",
 
                 Op::Lea(..) => "nds.lea",
+
+                Op::Addigp(..) => "nds.addigp",
+                Op::Lbgp(..) => "nds.lbgp",
+                Op::Lbugp(..) => "nds.lbugp",
+                Op::Lhgp(..) => "nds.lhgp",
+                Op::Lhugp(..) => "nds.lhugp",
+                Op::Lwgp(..) => "nds.lwgp",
+                Op::Lwugp(..) => "nds.lwugp",
+                Op::Ldgp(..) => "nds.ldgp",
+                Op::Sbgp(..) => "nds.sbgp",
+                Op::Shgp(..) => "nds.shgp",
+                Op::Swgp(..) => "nds.swgp",
+                Op::Sdgp(..) => "nds.sdgp",
             },
         }
     }
@@ -3313,7 +3427,37 @@ pub trait RiscVDisassembler: 'static + Debug + Sized + Copy + Clone + Send + Syn
 
                         Op::LoadFp(FpMemInst::new(width, fr, rs1, imm)?)
                     }
-                    // TODO CUSTOM_0
+                    0b00010 => match inst.funct3() & 0b11 {
+                        0b00..0b11 => {
+                            let rd = IntReg::new(inst.rd());
+                            let imm = ((inst.0 & (1 << 31)) as i32 >> (31 - 17))
+                                | (inst.extract_bits(15, 2) << 15) as i32
+                                | (inst.extract_bits(17, 3) << 12) as i32
+                                | (inst.extract_bits(20, 1) << 11) as i32
+                                | (inst.extract_bits(21, 10) << 1) as i32
+                                | inst.extract_bits(14, 1) as i32;
+                            match inst.funct3() & 0b11 {
+                                0b01 => Op::Addigp(NdsGPRelativeAddInst::from_ops(rd, imm)?),
+                                0b00 => Op::Lbgp(NdsGPRelativeLoadInst::from_ops(rd, imm)?),
+                                0b10 => Op::Lbugp(NdsGPRelativeLoadInst::from_ops(rd, imm)?),
+
+                                _ => unreachable!(),
+                            }
+                        }
+                        0b11 => {
+                            let rs2 = IntReg::new(inst.rs2());
+                            let imm = ((inst.0 & (1 << 31)) as i32 >> (31 - 17))
+                                | (inst.extract_bits(15, 2) << 15) as i32
+                                | (inst.extract_bits(17, 3) << 12) as i32
+                                | (inst.extract_bits(7, 1) << 11) as i32
+                                | (inst.extract_bits(25, 6) << 5) as i32
+                                | (inst.extract_bits(8, 4) << 1) as i32
+                                | inst.extract_bits(14, 1) as i32;
+
+                            Op::Sbgp(NdsGPRelativeStoreInst::from_ops(rs2, imm)?)
+                        }
+                        _ => unreachable!(),
+                    },
                     0b00011 => {
                         // MISC-MEM
                         if Self::WCHExtension::supported()
@@ -3483,7 +3627,92 @@ pub trait RiscVDisassembler: 'static + Debug + Sized + Copy + Clone + Send + Syn
 
                         Op::StoreFp(FpMemInst::new(width, fr, rs1, imm)?)
                     }
-                    // TODO CUSTOM_1
+                    0b01010 => match inst.funct3() {
+                        0b001 | 0b101 => {
+                            let rd = IntReg::new(inst.rd());
+                            let imm = ((inst.0 & (1 << 31)) as i32 >> (31 - 17))
+                                | (inst.extract_bits(15, 2) << 15) as i32
+                                | (inst.extract_bits(17, 3) << 12) as i32
+                                | (inst.extract_bits(20, 1) << 11) as i32
+                                | (inst.extract_bits(21, 10) << 1) as i32;
+
+                            match inst.funct3() {
+                                0b001 => Op::Lhgp(NdsGPRelativeLoadInst::from_ops(rd, imm)?),
+                                0b101 => Op::Lhugp(NdsGPRelativeLoadInst::from_ops(rd, imm)?),
+                                _ => unreachable!(),
+                            }
+                        }
+                        0b010 | 0b110 => {
+                            let rd = IntReg::new(inst.rd());
+                            let imm = ((inst.0 & (1 << 31)) as i32 >> (31 - 18))
+                                | (inst.extract_bits(21, 1) << 17) as i32
+                                | (inst.extract_bits(15, 2) << 15) as i32
+                                | (inst.extract_bits(17, 3) << 12) as i32
+                                | (inst.extract_bits(20, 1) << 11) as i32
+                                | (inst.extract_bits(22, 9) << 2) as i32;
+
+                            match inst.funct3() {
+                                0b010 => Op::Lwgp(NdsGPRelativeLoadInst::from_ops(rd, imm)?),
+                                0b110 if int_width == 8 => {
+                                    Op::Lwugp(NdsGPRelativeLoadInst::from_ops(rd, imm)?)
+                                }
+                                _ => return Err(InvalidSubop),
+                            }
+                        }
+                        0b011 if int_width == 8 => {
+                            let rd = IntReg::new(inst.rd());
+                            let imm = ((inst.0 & (1 << 31)) as i32 >> (31 - 19))
+                                | (inst.extract_bits(21, 2) << 17) as i32
+                                | (inst.extract_bits(15, 2) << 15) as i32
+                                | (inst.extract_bits(17, 3) << 12) as i32
+                                | (inst.extract_bits(20, 1) << 11) as i32
+                                | (inst.extract_bits(23, 8) << 3) as i32;
+
+                            Op::Ldgp(NdsGPRelativeLoadInst::from_ops(rd, imm)?)
+                        }
+                        0b000 => {
+                            let imm = ((inst.0 & (1 << 31)) as i32 >> (31 - 17))
+                                | (inst.extract_bits(15, 2) << 15) as i32
+                                | (inst.extract_bits(17, 3) << 12) as i32
+                                | (inst.extract_bits(7, 1) << 11) as i32
+                                | (inst.extract_bits(25, 6) << 5) as i32
+                                | (inst.extract_bits(8, 4) << 1) as i32;
+
+                            Op::Shgp(NdsGPRelativeStoreInst::from_ops(
+                                IntReg::new(inst.rs2()),
+                                imm,
+                            )?)
+                        }
+                        0b100 => {
+                            let imm = ((inst.0 & (1 << 31)) as i32 >> (31 - 18))
+                                | (inst.extract_bits(8, 1) << 17) as i32
+                                | (inst.extract_bits(15, 2) << 15) as i32
+                                | (inst.extract_bits(17, 3) << 12) as i32
+                                | (inst.extract_bits(7, 1) << 11) as i32
+                                | (inst.extract_bits(25, 6) << 5) as i32
+                                | (inst.extract_bits(9, 3) << 2) as i32;
+
+                            Op::Swgp(NdsGPRelativeStoreInst::from_ops(
+                                IntReg::new(inst.rs2()),
+                                imm,
+                            )?)
+                        }
+                        0b111 if int_width == 8 => {
+                            let imm = ((inst.0 & (1 << 31)) as i32 >> (31 - 19))
+                                | (inst.extract_bits(8, 2) << 17) as i32
+                                | (inst.extract_bits(15, 2) << 15) as i32
+                                | (inst.extract_bits(17, 3) << 12) as i32
+                                | (inst.extract_bits(7, 1) << 11) as i32
+                                | (inst.extract_bits(25, 6) << 5) as i32
+                                | (inst.extract_bits(10, 2) << 3) as i32;
+
+                            Op::Sdgp(NdsGPRelativeStoreInst::from_ops(
+                                IntReg::new(inst.rs2()),
+                                imm,
+                            )?)
+                        }
+                        _ => return Err(InvalidSubop),
+                    },
                     0b01011 if Self::AtomicExtension::supported() => {
                         // AMO
                         let atomic = AtomicInst::new(inst)?;

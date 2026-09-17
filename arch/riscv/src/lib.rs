@@ -2364,6 +2364,94 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                 il.set_reg(bytes, rd, il.add_overflow(bytes, rs1, offset))
                     .append();
             }
+            Op::Addigp(a) => {
+                let rd = Register::from(a.rd());
+                let imm = a.imm();
+
+                let bytes = <D::RegFile as RegFile>::Int::width();
+                let address = il.add(max_width, Register::<D>::new(3.into()), imm);
+
+                il.set_reg(
+                    bytes,
+                    rd,
+                    if max_width > bytes {
+                        il.low_part(bytes, address)
+                    } else {
+                        address
+                    }
+                    .with_source_operand(1),
+                )
+                .append();
+            }
+            Op::Lbgp(a)
+            | Op::Lbugp(a)
+            | Op::Lhgp(a)
+            | Op::Lhugp(a)
+            | Op::Lwgp(a)
+            | Op::Lwugp(a)
+            | Op::Ldgp(a) => {
+                let rd = Register::from(a.rd());
+                let imm = a.imm();
+
+                let bytes = <D::RegFile as RegFile>::Int::width();
+                let load_bytes = match op {
+                    Op::Lbgp(..) | Op::Lbugp(..) => 1,
+                    Op::Lhgp(..) | Op::Lhugp(..) => 2,
+                    Op::Lwgp(..) | Op::Lwugp(..) => 4,
+                    Op::Ldgp(..) => 8,
+                    _ => unreachable!(),
+                };
+
+                let val = il.load(
+                    load_bytes,
+                    il.add(max_width, Register::<D>::new(3.into()), imm)
+                        .with_source_operand(1),
+                );
+
+                il.set_reg(
+                    bytes,
+                    rd,
+                    if bytes > load_bytes {
+                        match op {
+                            Op::Lbgp(..) | Op::Lhgp(..) | Op::Lwgp(..) | Op::Ldgp(..) => {
+                                il.sx(bytes, val)
+                            }
+                            Op::Lbugp(..) | Op::Lhugp(..) | Op::Lwugp(..) => il.zx(bytes, val),
+                            _ => unreachable!(),
+                        }
+                    } else {
+                        val
+                    },
+                )
+                .append();
+            }
+            Op::Sbgp(a) | Op::Shgp(a) | Op::Swgp(a) | Op::Sdgp(a) => {
+                let rs2 = Register::from(a.rs2());
+                let imm = a.imm();
+
+                let bytes = <D::RegFile as RegFile>::Int::width();
+
+                let dest_bytes = match op {
+                    Op::Sbgp(..) => 1,
+                    Op::Shgp(..) => 2,
+                    Op::Swgp(..) => 4,
+                    Op::Sdgp(..) => 8,
+                    _ => unreachable!(),
+                };
+
+                let val = if dest_bytes < bytes {
+                    il.low_part(dest_bytes, rs2).build()
+                } else {
+                    il.expression(rs2)
+                }
+                .with_source_operand(0);
+
+                let dest_addr = il
+                    .add(max_width, Register::<D>::new(3.into()), imm)
+                    .with_source_operand(1);
+
+                il.store(dest_bytes, dest_addr, val).append();
+            }
 
             _ => il.unimplemented().append(),
         };

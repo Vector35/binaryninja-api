@@ -30,6 +30,7 @@ nav = [
             { "Binary Similarity" = "guide/similarity.md" },
             { "WARP" = "guide/warp.md" },
             { "Guided Analysis" = "guide/guided_analysis.md" },
+            { "BNIL Emulator" = "guide/emulator.md" },
         ] },
         { "Debugger" = [
             { "Overview" = "guide/debugger/index.md" },

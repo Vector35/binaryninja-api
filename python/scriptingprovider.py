@@ -1011,6 +1011,14 @@ from binaryninja import *
 				(os.environ.get('BN_DISABLE_CORE_DEBUGGER') is None):
 				from .debugger import DebuggerController
 				self.DebuggerController = DebuggerController
+		if os.environ.get('BN_STANDALONE_EMULATOR'):
+			from emulator import LLILEmulator
+			self.LLILEmulator = LLILEmulator
+		else:
+			if settings.contains('corePlugins.emulator') and settings.get_bool('corePlugins.emulator') and \
+				(os.environ.get('BN_DISABLE_CORE_EMULATOR') is None):
+				from .emulator import LLILEmulator
+				self.LLILEmulator = LLILEmulator
 
 	@abc.abstractmethod
 	def perform_stop(self):

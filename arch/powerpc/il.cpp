@@ -359,6 +359,15 @@ static bool LiftBranches(Architecture* arch, LowLevelILFunction &il, const Instr
 
 			if (instruction->flags.lk)
 			{
+				if (blr && !wasConditionalBranch)
+				{
+					// BLRL branches through the old LR while setting LR to the next
+					// instruction. Preserve that write if analysis turns the call into a return.
+					il.AddInstruction(il.SetRegister(addressSize_l, LLIL_TEMP(0), expr));
+					il.AddInstruction(il.SetRegister(addressSize_l, PPC_REG_LR,
+						il.ConstPointer(addressSize_l, addr + instruction->numBytes)));
+					expr = il.Register(addressSize_l, LLIL_TEMP(0));
+				}
 				il.AddInstruction(il.Call(expr));
 				if (wasConditionalBranch)
 					il.AddInstruction(il.Goto(*falseLabel));
@@ -497,6 +506,94 @@ static void load_float(LowLevelILFunction& il,
 	{
 		tmp = il.SetRegister(4, operand2->reg, tmp);
 		il.AddInstruction(tmp);
+	}
+}
+
+bool GetLowLevelILForPPCStringCopy(Architecture* arch, LowLevelILFunction& il, Instruction* load, Instruction* store)
+{
+	if (load->id != PPC_ID_LSWI || store->id != PPC_ID_STSWI
+		|| load->numOperands != 3 || store->numOperands != 3
+		|| load->operands[0].reg != store->operands[0].reg
+		|| load->operands[2].uimm != store->operands[2].uimm)
+		return false;
+
+	const uint32_t firstReg = load->operands[0].reg;
+	const uint32_t sourceReg = load->operands[1].reg;
+	const uint32_t destReg = store->operands[1].reg;
+	const uint32_t count = load->operands[2].uimm ? load->operands[2].uimm : 32;
+	if (firstReg == PPC_REG_GPR0 && sourceReg == PPC_REG_GPR0)
+		return false; // Invalid lswi form.
+
+	vector<RegisterOrFlag> outputs;
+	for (uint32_t offset = 0; offset < count; offset += 4)
+	{
+		const uint32_t reg = PPC_REG_GPR0 + ((firstReg - PPC_REG_GPR0 + offset / 4) % 32);
+		// Reject invalid loads and stores whose destination address is changed by the load.
+		if ((sourceReg != PPC_REG_GPR0 && reg == sourceReg) || (destReg != PPC_REG_GPR0 && reg == destReg))
+			return false;
+		outputs.push_back(RegisterOrFlag::Register(reg));
+	}
+
+	// Snapshot all source bytes before writing the destination, including when the
+	// ranges overlap. Outputs retain the loaded words (zero-padded and zero-extended)
+	// for later register uses, exactly as with the separate lswi and stswi.
+	const size_t addressSize = arch->GetAddressSize();
+	il.AddInstruction(il.Intrinsic(outputs, PPC_INTRIN_COPY_STRING_WORDS, {
+		operToIL(il, &store->operands[1], OTI_GPR0_ZERO, 0, addressSize),
+		operToIL(il, &load->operands[1], OTI_GPR0_ZERO, 0, addressSize), il.Const(4, count)}));
+	return true;
+}
+
+static void LiftStringWord(Architecture* arch, LowLevelILFunction& il, Instruction* instruction)
+{
+	const size_t addressSize = arch->GetAddressSize();
+	const bool littleEndian = arch->GetEndianness() == LittleEndian;
+	const bool load = instruction->id == PPC_ID_LSWI;
+	const uint32_t count = instruction->operands[2].uimm ? instruction->operands[2].uimm : 32;
+	const uint32_t firstReg = instruction->operands[0].reg;
+	const ExprId base = operToIL(il, &instruction->operands[1], OTI_GPR0_ZERO, 0, addressSize);
+	auto address = [&](uint32_t offset) {
+		return offset ? il.Add(addressSize, base, il.Const(addressSize, offset)) : base;
+	};
+	// String instructions place bytes left to right in the low word of each GPR.
+	auto loadBytes = [&](size_t size, uint32_t offset) {
+		ExprId value = il.Load(size, address(offset));
+		return littleEndian && size > 1 ? il.ByteSwap(size, value) : value;
+	};
+	auto storeBytes = [&](size_t size, uint32_t offset, ExprId value) {
+		if (littleEndian && size > 1)
+			value = il.ByteSwap(size, value);
+		il.AddInstruction(il.Store(size, address(offset), value));
+	};
+
+	for (uint32_t offset = 0; offset < count; offset += 4)
+	{
+		const uint32_t reg = PPC_REG_GPR0 + ((firstReg - PPC_REG_GPR0 + offset / 4) % 32);
+		const uint32_t remaining = count - offset;
+		const size_t size = remaining >= 4 ? 4 : remaining >= 2 ? 2 : 1;
+		if (load)
+		{
+			ExprId value = loadBytes(size, offset);
+			if (size < 4)
+				value = il.ShiftLeft(4, il.ZeroExtend(4, value), il.Const(1, (4 - size) * 8));
+			// A three-byte tail uses a halfword and a byte, without reading past the string.
+			if (remaining == 3)
+				value = il.Or(4, value, il.ShiftLeft(4, il.ZeroExtend(4, loadBytes(1, offset + 2)),
+					il.Const(1, 8)));
+			if (addressSize == 8)
+				value = il.ZeroExtend(8, value);
+			il.AddInstruction(il.SetRegister(addressSize, reg, value));
+		}
+		else
+		{
+			ExprId value = il.Register(4, reg);
+			if (size < 4)
+				value = il.LowPart(size, il.LogicalShiftRight(4, value, il.Const(1, (4 - size) * 8)));
+			storeBytes(size, offset, value);
+			if (remaining == 3)
+				storeBytes(1, offset + 2,
+					il.LowPart(1, il.LogicalShiftRight(4, il.Register(4, reg), il.Const(1, 8))));
+		}
 	}
 }
 
@@ -937,6 +1034,11 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			}
 			break;
 
+		case PPC_ID_LSWI:
+			REQUIRE3OPS
+			LiftStringWord(arch, il, instruction);
+			break;
+
 		case PPC_ID_LMW:
 			REQUIRE2OPS
 			for (i = oper0->reg; i <= PPC_REG_GPR31; ++i)
@@ -1316,6 +1418,11 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 				instruction->flags.rc ? IL_FLAGWRITE_CR0_S : 0
 			);
 			il.AddInstruction(ei0);
+			break;
+
+		case PPC_ID_STSWI:
+			REQUIRE3OPS
+			LiftStringWord(arch, il, instruction);
 			break;
 
 		case PPC_ID_STMW:

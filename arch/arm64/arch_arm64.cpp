@@ -1767,6 +1767,11 @@ class Arm64Architecture : public Architecture
 	{
 		switch (op)
 		{
+		case LLIL_AND:
+			// ANDS, BICS and TST clear C and V
+			if ((flag == IL_FLAG_C) || (flag == IL_FLAG_V))
+				return il.Const(0, 0);
+			break;
 		case LLIL_SBB:
 			switch (flag)
 			{

@@ -3009,6 +3009,7 @@ group NEON
 Encoding T1 VFPv2, VFPv3, ADVSIMD
 fmt VPUSH<c> <registers>
 extract32 cond.4,110,1,0,D.1,1,0,1101,Vd.4,1011,imm8.8
+pcode if imm8<0> == '1' then SEE fstmx;
 pcode single_regs = FALSE; d = UInt(D:Vd); imm32 = ZeroExtend(imm8:'00', 32); regs = UInt(imm8) / 2; if regs == 0 || regs > 16 || (d+regs) > 32 then UNPREDICTABLE;
 Encoding T2 VFPv2, VFPv3
 fmt VPUSH<c> <registers>
@@ -3020,6 +3021,7 @@ group NEON
 Encoding T1 VFPv2, VFPv3, ADVSIMD
 fmt VPOP<c> <registers>
 extract32 cond.4,110,0,1,D.1,1,1,1101,Vd.4,1011,imm8.8
+pcode if imm8<0> == '1' then SEE fldmx;
 pcode single_regs = FALSE; d = UInt(D:Vd); imm32 = ZeroExtend(imm8:'00', 32); regs = UInt(imm8) / 2; if regs == 0 || regs > 16 || (d+regs) > 32 then UNPREDICTABLE;
 Encoding T2 VFPv2, VFPv3
 fmt VPOP<c> <registers>
@@ -3353,7 +3355,7 @@ imm64h = AdvSIMDExpandImm('0', cmode, i:imm3:imm4, 0);
 d = UInt(D:Vd);  regs = if Q == '0' then 1 else 2;
 iword = TRUE;
 fmt_idx = (Q == '1');
-dt = 1;
+dt = if cmode<3> == '1' then 1 else 2;
 pcode_end
 
 vbic_register:
@@ -3380,7 +3382,7 @@ imm64h = AdvSIMDExpandImm('1', cmode, i:imm3:imm4, 0);
 d = UInt(D:Vd);  regs = if Q == '0' then 1 else 2;
 iword = TRUE;
 fmt_idx = (Q == '1');
-dt = (D == '1') + 1;
+dt = if cmode<3> == '1' then 1 else 2;
 pcode_end
 
 vorn_register:
@@ -3594,7 +3596,6 @@ if Vd<0> == '1' then UNDEFINED;
 esize = 8 * UInt(imm3);
 unsigned = (U == '1');  elements = 64 DIV esize;
 d = UInt(D:Vd);  m = UInt(M:Vm);
-unsigned = TRUE;
 dt = UInt(U:imm3)
 dt = dt DIV 2
 pcode_end
@@ -3612,7 +3613,8 @@ imm64l = AdvSIMDExpandImm('1', cmode, i:imm3:imm4, 1);
 imm64h = AdvSIMDExpandImm('1', cmode, i:imm3:imm4, 0);
 d = UInt(D:Vd);  regs = if Q == '0' then 1 else 2;
 fmt_idx = (Q == '1');
-dt = UInt(imm3:i);
+iword = TRUE;
+dt = if cmode<3:2> == '10' then 1 else 2;
 pcode_end
 
 vmovn:
@@ -4668,7 +4670,7 @@ if (Q == '1' && (Vd<0> == '1' || Vm<0> == '1')) then UNDEFINED;
 esize = 8 << UInt(size);  elements = 64 DIV esize;
 d = UInt(D:Vd);  m = UInt(M:Vm);  regs = if Q == '0' then 1 else 2;
 fmt_idx = (Q == '1');
-dt = size;
+dt = size + F;
 pcode_end
 
 vcge_register:
@@ -5161,15 +5163,20 @@ pcode_end
 Encoding T2 ADVSIMD
 fmt VMULL<c>.<dt> <Qd>,<Dn>,<Dm>
 fmt VMULL<c>.P8 <Qd>,<Dn>,<Dm>
+fmt VMULL<c>.P64 <Qd>,<Dn>,<Dm>
 extract32 111,U.1,1111,1,D.1,size.2,Vn.4,Vd.4,11,op.1,0,N.1,0,M.1,0,Vm.4
 pcode_start
 if size == '11' then SEE advanced_simd_data_proc;
-if (op == '1' && (U != '0' || size != '00')) then UNDEFINED;
+if (op == '1' && (U != '0' || size == '01')) then UNDEFINED;
 if Vd<0> == '1' then UNDEFINED;
 long_destination = TRUE;  unsigned = (U == '1');
 esize = 8 << UInt(size);  elements = 64 DIV esize;
 d = UInt(D:Vd);  n = UInt(N:Vn);  m = UInt(M:Vm);  regs = 1;
 fmt_idx = (op == '1');
+if (op == '1' && size == '10' && InITBlock()) then UNPREDICTABLE;
+if (op == '1' && size == '10') then esize = 64;
+if (op == '1' && size == '10') then elements = 1;
+if (op == '1' && size == '10') then fmt_idx = 2;
 dt = UInt(U:size);
 pcode_end
 Encoding T1 ADVSIMD
@@ -6144,6 +6151,24 @@ if size == 3 then size = 2;
 if d4 > 31 then UNPREDICTABLE;
 pcode_end
 
+fldmx:
+group NEON
+Encoding T1 VFPv2, VFPv3, ADVSIMD
+fmt FLDMDBX<c> <Rn>!,<registers>
+fmt FLDMIAX<c> <Rn>{!},<registers>
+extract32 1110,110,P.1,U.1,D.1,W.1,1,Rn.4,Vd.4,1011,imm8.8
+pcode_start
+if (P == '0' && U == '0' && W == '0') then SEE xfer_64_core_ext_regs;
+if (P == '1' && W == '0') then SEE vldr;
+if (P == U && W == '1') then UNDEFINED;
+single_regs = FALSE; add = (U == '1'); wback = (W == '1');
+d = UInt(D:Vd); n = UInt(Rn); imm32 = ZeroExtend(imm8:'00', 32);
+regs = UInt(imm8) DIV 2;
+if n == 15 then UNPREDICTABLE;
+if (regs == 0 || regs > 16 || (d+regs) > 16) then UNPREDICTABLE;
+fmt_idx = U;
+pcode_end
+
 vldm:
 group NEON
 Encoding T2 VFPv2, VFPv3
@@ -6167,9 +6192,9 @@ fmt VLDMIA<c> <Rn>{!},<registers>
 extract32 1110,110,P.1,U.1,D.1,W.1,1,Rn.4,Vd.4,1011,imm8.8
 pcode_start
 if (P == '0' && U == '0' && W == '0') then SEE xfer_64_core_ext_regs;
-if (P == '0' && U == '1' && W == '1' && Rn == '1101') then SEE vpop;
 if (P == '1' && W == '0') then SEE vldr;
-if (imm8<0> == '1') then UNDEFINED;
+if (imm8<0> == '1') then SEE fldmx;
+if (P == '0' && U == '1' && W == '1' && Rn == '1101') then SEE vpop;
 if (P == U && W == '1') then UNDEFINED;
 single_regs = FALSE;  add = (U == '1');  wback = (W == '1');
 d = UInt(D:Vd);  n = UInt(Rn);  imm32 = ZeroExtend(imm8:'00', 32);
@@ -6177,6 +6202,24 @@ regs = UInt(imm8) DIV 2;
 if n == 15 then UNPREDICTABLE;
 if (regs == 0 || regs > 16 || (d+regs) > 32) then UNPREDICTABLE;
 if (d+regs) > 16 then UNPREDICTABLE;
+fmt_idx = U;
+pcode_end
+
+fstmx:
+group NEON
+Encoding T1 VFPv2, VFPv3, ADVSIMD
+fmt FSTMDBX<c> <Rn>!,<registers>
+fmt FSTMIAX<c> <Rn>{!},<registers>
+extract32 1110,110,P.1,U.1,D.1,W.1,0,Rn.4,Vd.4,1011,imm8.8
+pcode_start
+if (P == '0' && U == '0' && W == '0') then SEE xfer_64_core_ext_regs;
+if (P == '1' && W == '0') then SEE vstr;
+if (P == U && W == '1') then UNDEFINED;
+single_regs = FALSE; add = (U == '1'); wback = (W == '1');
+d = UInt(D:Vd); n = UInt(Rn); imm32 = ZeroExtend(imm8:'00', 32);
+regs = UInt(imm8) DIV 2;
+if n == 15 then UNPREDICTABLE;
+if (regs == 0 || regs > 16 || (d+regs) > 16) then UNPREDICTABLE;
 fmt_idx = U;
 pcode_end
 
@@ -6203,8 +6246,9 @@ fmt VSTMIA<c> <Rn>{!},<registers>
 extract32 1110,110,P.1,U.1,D.1,W.1,0,Rn.4,Vd.4,1011,imm8.8
 pcode_start
 if P == '0' && U == '0' && W == '0' then SEE xfer_64_core_ext_regs;
-if P == '1' && U == '0' && W == '1' && Rn == '1101' then SEE vpush;
 if P == '1' && W == '0' then SEE vstr;
+if imm8<0> == '1' then SEE fstmx;
+if P == '1' && U == '0' && W == '1' && Rn == '1101' then SEE vpush;
 if P == U && W == '1' then UNDEFINED;
 single_regs = FALSE;  add = (U == '1');  wback = (W == '1');
 d = UInt(D:Vd);  n = UInt(Rn);  imm32 = ZeroExtend(imm8:'00', 32);
@@ -6534,4 +6578,3 @@ Encoding T1 ARMv4T, ARMv5T, ARMv6, ARMv7
 fmt UNPREDICTABLE
 extract32 (0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)(0)
 pcode UNPREDICTABLE;
-

@@ -2950,14 +2950,7 @@ size_t ArmCommonArchitecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, s
 							il.GetExprForRegisterOrConstantOperation(op, size, operands, operandCount),
 							il.GetExprForRegisterOrConstant(operands[0], size)),
 						il.Flag(IL_FLAG_C)));
-		case IL_FLAG_V:
-			return il.CompareEqual(0,
-					il.CompareSignedLessThan(size,
-						il.GetExprForRegisterOrConstantOperation(op, size, operands, operandCount),
-						il.GetExprForRegisterOrConstant(operands[0], size)),
-					il.CompareEqual(size,
-						il.GetExprForRegisterOrConstant(operands[0], size),
-						il.Const(size, 0)));
+		// V falls through to the default subtract-with-borrow overflow
 		}
 		break;
 	case LLIL_LSR:

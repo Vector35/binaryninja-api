@@ -518,6 +518,15 @@ static void CMovFlagCond(const int64_t addr, const xed_decoded_inst_t* xedd, Low
 					ReadILOperand(il, xedd, addr, 1, 1)));
 		}
 	}
+	else if ((xed_decoded_inst_get_machine_mode_bits(xedd) == 64) &&
+		(xed_decoded_inst_operand_length_bits(xedd, 0) == 32))
+	{
+		// A 32-bit cmov always writes its destination in 64-bit mode, clearing the upper half
+		// even when the condition is false
+		il.AddInstruction(
+			WriteILOperand(il, xedd, addr, 0, 0,
+				ReadILOperand(il, xedd, addr, 0, 0)));
+	}
 
 	il.MarkLabel(doneLabel);
 }
@@ -556,7 +565,7 @@ static void CMovFlagGroup(const int64_t addr, const xed_decoded_inst_t* xedd, Lo
 	il.AddInstruction(
 		il.If(
 			il.FlagGroup(flag),
-			trueLabel, doneLabel
+			trueLabel, falseLabel
 		)
 	);
 
@@ -593,6 +602,15 @@ static void CMovFlagGroup(const int64_t addr, const xed_decoded_inst_t* xedd, Lo
 				WriteILOperand(il, xedd, addr, 0, 0,
 					ReadILOperand(il, xedd, addr, 1, 1)));
 		}
+	}
+	else if ((xed_decoded_inst_get_machine_mode_bits(xedd) == 64) &&
+		(xed_decoded_inst_operand_length_bits(xedd, 0) == 32))
+	{
+		// A 32-bit cmov always writes its destination in 64-bit mode, clearing the upper half
+		// even when the condition is false
+		il.AddInstruction(
+			WriteILOperand(il, xedd, addr, 0, 0,
+				ReadILOperand(il, xedd, addr, 0, 0)));
 	}
 
 	il.MarkLabel(doneLabel);

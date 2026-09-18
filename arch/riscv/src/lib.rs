@@ -90,6 +90,11 @@ enum Intrinsic {
     OrCombine,
     Rev8,
     WchMcpy,
+
+    Ffb,
+    Ffzmism,
+    Ffmism,
+    Flmism,
 }
 
 #[derive(Copy, Clone)]
@@ -353,6 +358,10 @@ impl<D: RiscVDisassembler> RiscVIntrinsic<D> {
             Some((29, _, _, _)) => Some(Intrinsic::OrCombine.into()),
             Some((30, _, _, _)) => Some(Intrinsic::Rev8.into()),
             Some((31, _, _, _)) => Some(Intrinsic::WchMcpy.into()),
+            Some((32, _, _, _)) => Some(Intrinsic::Ffb.into()),
+            Some((33, _, _, _)) => Some(Intrinsic::Ffzmism.into()),
+            Some((34, _, _, _)) => Some(Intrinsic::Ffmism.into()),
+            Some((35, _, _, _)) => Some(Intrinsic::Flmism.into()),
             _ => None,
         }
     }
@@ -493,6 +502,10 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             Intrinsic::OrCombine => "_orc_b".into(),
             Intrinsic::Rev8 => "_rev8".into(),
             Intrinsic::WchMcpy => "_wch_mcpy".into(),
+            Intrinsic::Ffb => "_nds_ffb".into(),
+            Intrinsic::Ffzmism => "_nds_ffzmism".into(),
+            Intrinsic::Ffmism => "_nds_ffmism".into(),
+            Intrinsic::Flmism => "_nds_flmism".into(),
         }
     }
 
@@ -540,6 +553,10 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             Intrinsic::OrCombine => Self::id_from_parts(29, None, None, None),
             Intrinsic::Rev8 => Self::id_from_parts(30, None, None, None),
             Intrinsic::WchMcpy => Self::id_from_parts(31, None, None, None),
+            Intrinsic::Ffb => Self::id_from_parts(32, None, None, None),
+            Intrinsic::Ffzmism => Self::id_from_parts(33, None, None, None),
+            Intrinsic::Ffmism => Self::id_from_parts(34, None, None, None),
+            Intrinsic::Flmism => Self::id_from_parts(35, None, None, None),
         }
     }
 
@@ -646,6 +663,36 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
                     ),
                 ]
             }
+            Intrinsic::Ffb => {
+                vec![
+                    NameAndType::new(
+                        "",
+                        Conf::new(
+                            Type::int(<D::RegFile as RegFile>::Int::width(), false),
+                            MIN_CONFIDENCE,
+                        ),
+                    ),
+                    NameAndType::new("", Conf::new(Type::int(1, false), MAX_CONFIDENCE)),
+                ]
+            }
+            Intrinsic::Ffzmism | Intrinsic::Ffmism | Intrinsic::Flmism => {
+                vec![
+                    NameAndType::new(
+                        "",
+                        Conf::new(
+                            Type::int(<D::RegFile as RegFile>::Int::width(), false),
+                            MIN_CONFIDENCE,
+                        ),
+                    ),
+                    NameAndType::new(
+                        "",
+                        Conf::new(
+                            Type::int(<D::RegFile as RegFile>::Int::width(), false),
+                            MIN_CONFIDENCE,
+                        ),
+                    ),
+                ]
+            }
         }
     }
 
@@ -697,6 +744,12 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             | Intrinsic::Rev8 => {
                 vec![Conf::new(
                     Type::int(<D::RegFile as RegFile>::Int::width(), false),
+                    MIN_CONFIDENCE,
+                )]
+            }
+            Intrinsic::Ffb | Intrinsic::Ffzmism | Intrinsic::Ffmism | Intrinsic::Flmism => {
+                vec![Conf::new(
+                    Type::int(<D::RegFile as RegFile>::Int::width(), true),
                     MIN_CONFIDENCE,
                 )]
             }
@@ -2451,6 +2504,21 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                     .with_source_operand(1);
 
                 il.store(dest_bytes, dest_addr, val).append();
+            }
+            Op::Ffb(a) | Op::Ffzmism(a) | Op::Ffmism(a) | Op::Flmism(a) => {
+                let rs1 = Register::from(a.rs1());
+                let rs2 = Register::from(a.rs2());
+                let rd = Register::from(a.rd());
+
+                let intrinsic = match op {
+                    Op::Ffb(..) => RiscVIntrinsic::<D>::from(Intrinsic::Ffb),
+                    Op::Ffzmism(..) => RiscVIntrinsic::<D>::from(Intrinsic::Ffzmism),
+                    Op::Ffmism(..) => RiscVIntrinsic::<D>::from(Intrinsic::Ffmism),
+                    Op::Flmism(..) => RiscVIntrinsic::<D>::from(Intrinsic::Flmism),
+                    _ => unreachable!(),
+                };
+
+                il.intrinsic([rd], intrinsic, [rs1, rs2]).append();
             }
 
             _ => il.unimplemented().append(),

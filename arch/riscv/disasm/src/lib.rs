@@ -267,6 +267,12 @@ pub enum Op<D: RiscVDisassembler> {
     Shgp(NdsGPRelativeStoreInst<D>),
     Swgp(NdsGPRelativeStoreInst<D>),
     Sdgp(NdsGPRelativeStoreInst<D>),
+
+    // STRING PROCESSING
+    Ffb(RTypeIntInst<D>),
+    Ffzmism(RTypeIntInst<D>),
+    Ffmism(RTypeIntInst<D>),
+    Flmism(RTypeIntInst<D>),
 }
 
 pub trait Register {
@@ -2461,6 +2467,11 @@ impl<D: RiscVDisassembler> Instr<D> {
                     ops.push(Operand::R(a.rs2()));
                     ops.push(Operand::M(a.imm() as i32, IntReg::new(3)));
                 }
+                Op::Ffb(ref a) | Op::Ffzmism(ref a) | Op::Ffmism(ref a) | Op::Flmism(ref a) => {
+                    ops.push(Operand::R(a.rd()));
+                    ops.push(Operand::R(a.rs1()));
+                    ops.push(Operand::R(a.rs2()));
+                }
             },
         }
 
@@ -2663,6 +2674,11 @@ impl<'a, D: RiscVDisassembler + 'a> Mnem<'a, D> {
                 Op::Shgp(..) => "nds.shgp",
                 Op::Swgp(..) => "nds.swgp",
                 Op::Sdgp(..) => "nds.sdgp",
+
+                Op::Ffb(..) => "nds.ffb",
+                Op::Ffzmism(..) => "nds.ffzmism",
+                Op::Ffmism(..) => "nds.ffmism",
+                Op::Flmism(..) => "nds.flmism",
             },
         }
     }
@@ -4126,6 +4142,10 @@ pub trait RiscVDisassembler: 'static + Debug + Sized + Copy + Clone + Send + Syn
                                 8,
                                 true,
                             )?),
+                            0b0010000 => Op::Ffb(RTypeIntInst::new(inst)?),
+                            0b0010001 => Op::Ffzmism(RTypeIntInst::new(inst)?),
+                            0b0010010 => Op::Ffmism(RTypeIntInst::new(inst)?),
+                            0b0010011 => Op::Flmism(RTypeIntInst::new(inst)?),
                             _ => return Err(InvalidSubop),
                         },
                         _ => return Err(InvalidSubop),

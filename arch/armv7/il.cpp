@@ -3168,8 +3168,14 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 				[&](size_t addrSize, Instruction& instr, LowLevelILFunction& il)
 				{
 					(void) addrSize;
-					(void) instr;
 
+					if (instr.setsFlags)
+					{
+						il.AddInstruction(il.SetRegister(4, op1.reg,
+							il.RotateRightCarry(4, ReadILOperand(il, op2, addr), il.Const(1, 1), il.Flag(IL_FLAG_C),
+								IL_FLAGWRITE_CNZ)));
+						return;
+					}
 					il.AddInstruction(il.SetRegister(4, op1.reg,
 						il.Or(4,
 							il.ShiftLeft(4, il.Flag(IL_FLAG_C), il.Const(1,31)),

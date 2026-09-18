@@ -3920,7 +3920,11 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		il.AddInstruction(il.Intrinsic({}, ARMV7_INTRIN_WFI, {}));
 		break;
 	case ARMV7_RRX:
-		il.AddInstruction(WriteILOperand(il, instr, 0, ReadShiftedOperand(il, instr, 1)));
+		if (WritesToStatus(instr, ifThenBlock))
+			il.AddInstruction(WriteILOperand(il, instr, 0, il.RotateRightCarry(4, ReadILOperand(il, instr, 1),
+				il.Const(4, 1), il.Flag(IL_FLAG_C), IL_FLAGWRITE_CNZ)));
+		else
+			il.AddInstruction(WriteILOperand(il, instr, 0, ReadShiftedOperand(il, instr, 1)));
 		break;
 	case ARMV7_SEL:
 		il.AddInstruction(il.Intrinsic(

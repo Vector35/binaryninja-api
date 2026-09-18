@@ -2953,6 +2953,11 @@ size_t ArmCommonArchitecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, s
 		// V falls through to the default subtract-with-borrow overflow
 		}
 		break;
+	case LLIL_RRC:
+		// RRX rotates right by one through the carry, so the carry out is the source's bit 0
+		if ((flag == IL_FLAG_C) && (operandCount >= 1))
+			return il.TestBit(0, il.GetExprForRegisterOrConstant(operands[0], size), il.Const(size, 0));
+		break;
 	case LLIL_LSR:
 		switch (flag)
 		{

@@ -466,6 +466,7 @@ namespace BinaryNinja
 		Ref<Metadata> m_symExternMappingMetadata;
 
 		uint64_t RVAToFileOffset(uint64_t rva, bool except = true);
+		bool CoffSymbolValuesAreRvas(const PEHeader& header);
 		uint32_t GetRVACharacteristics(uint64_t rva);
 		std::string ReadString(uint64_t rva);
 		uint16_t Read16(uint64_t rva);

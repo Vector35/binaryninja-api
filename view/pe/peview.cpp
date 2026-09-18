@@ -1353,6 +1353,7 @@ bool PEView::Init()
 		// Process COFF symbol table
 		if (header.coffSymbolCount)
 		{
+			const bool coffSymbolValuesAreRvas = CoffSymbolValuesAreRvas(header);
 			BinaryReader stringReader(GetParentView(), LittleEndian);
 			uint64_t stringTableBase = header.coffSymbolTable + (header.coffSymbolCount * 18);
 			stringReader.Seek(stringTableBase);
@@ -1381,7 +1382,8 @@ bool PEView::Init()
 						break;
 					default:
 						if (size_t(e_scnum - 1) < m_sections.size())
-							virtualAddress = m_sections[size_t(e_scnum - 1)].virtualAddress + e_value;
+							virtualAddress = coffSymbolValuesAreRvas ? e_value :
+								m_sections[size_t(e_scnum - 1)].virtualAddress + e_value;
 						break;
 				}
 
@@ -3538,6 +3540,91 @@ uint64_t PEView::RVAToFileOffset(uint64_t offset, bool except)
 		return offset;
 
 	throw PEFormatException("encountered invalid offset");
+}
+
+
+bool PEView::CoffSymbolValuesAreRvas(const PEHeader& header)
+{
+	/*
+	 * A normal PE COFF symbol table stores section-relative symbol values. Legacy
+	 * link.exe /DEBUGTYPE:COFF output instead wraps the table in an
+	 * IMAGE_COFF_SYMBOLS_HEADER and stores image-relative values. Keep the normal
+	 * interpretation used for https://github.com/Vector35/binaryninja-api/issues/1956,
+	 * and select the legacy interpretation only when the wrapper exactly identifies
+	 * the PE header's table. See:
+	 *
+	 * https://github.com/Vector35/binaryninja-api/issues/4308
+	 * https://learn.microsoft.com/en-us/archive/msdn-magazine/2002/march/inside-windows-an-in-depth-look-into-the-win32-portable-executable-file-format-part-2
+	 * https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-image_coff_symbols_header
+	 * https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#debug-directory-image-only
+	 *
+	 * AddressOfRawData is allowed to be zero for debug data outside an image
+	 * section, so this check deliberately uses PointerToRawData.
+	 */
+	if (!header.coffSymbolTable || !header.coffSymbolCount ||
+		(m_dataDirs.size() <= IMAGE_DIRECTORY_ENTRY_DEBUG))
+		return false;
+
+	const PEDataDirectory& dir = m_dataDirs[IMAGE_DIRECTORY_ENTRY_DEBUG];
+	if (!dir.virtualAddress || (dir.size < sizeof(DebugDirectory)))
+		return false;
+
+	const uint64_t fileEnd = GetParentView()->GetEnd();
+	uint64_t debugDirectoryOffset;
+	try
+	{
+		debugDirectoryOffset = RVAToFileOffset(dir.virtualAddress);
+	}
+	catch (const std::exception&)
+	{
+		return false;
+	}
+
+	const uint64_t debugDirectorySize = dir.size - (dir.size % sizeof(DebugDirectory));
+	if ((debugDirectoryOffset > fileEnd) || (debugDirectorySize > fileEnd - debugDirectoryOffset))
+		return false;
+
+	BinaryReader reader(GetParentView(), LittleEndian);
+	for (uint64_t offset = 0; offset < debugDirectorySize; offset += sizeof(DebugDirectory))
+	{
+		reader.Seek(debugDirectoryOffset + offset);
+		reader.Read32();  // Characteristics
+		reader.Read32();  // TimeDateStamp
+		reader.Read16();  // MajorVersion
+		reader.Read16();  // MinorVersion
+		const uint32_t type = reader.Read32();
+		const uint32_t sizeOfData = reader.Read32();
+		reader.Read32();  // AddressOfRawData
+		const uint32_t pointerToRawData = reader.Read32();
+
+		constexpr uint64_t coffSymbolsHeaderSize = 8 * sizeof(uint32_t);
+		if ((type != IMAGE_DEBUG_TYPE_COFF) || !pointerToRawData ||
+			(sizeOfData < coffSymbolsHeaderSize) || (pointerToRawData > fileEnd) ||
+			(sizeOfData > fileEnd - pointerToRawData))
+			continue;
+
+		reader.Seek(pointerToRawData);
+		const uint32_t numberOfSymbols = reader.Read32();
+		const uint32_t lvaToFirstSymbol = reader.Read32();
+		reader.Read32();  // NumberOfLinenumbers
+		reader.Read32();  // LvaToFirstLinenumber
+		reader.Read32();  // RvaToFirstByteOfCode
+		reader.Read32();  // RvaToLastByteOfCode
+		reader.Read32();  // RvaToFirstByteOfData
+		reader.Read32();  // RvaToLastByteOfData
+
+		const uint64_t symbolBytes = uint64_t(numberOfSymbols) * 18;
+		if ((numberOfSymbols != header.coffSymbolCount) ||
+			(uint64_t(pointerToRawData) + lvaToFirstSymbol != header.coffSymbolTable) ||
+			(lvaToFirstSymbol < coffSymbolsHeaderSize) || (lvaToFirstSymbol > sizeOfData) ||
+			(symbolBytes > sizeOfData - lvaToFirstSymbol))
+			continue;
+
+		m_logger->LogDebug("Using image-relative values from legacy COFF debug symbol table");
+		return true;
+	}
+
+	return false;
 }
 
 

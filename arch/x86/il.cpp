@@ -1519,7 +1519,8 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		break;
 
 	case XED_ICLASS_CDQ:
-		il.AddInstruction(il.SetRegisterSplit(4, XED_REG_EDX, XED_REG_EAX, il.SignExtend(8, il.Register(4, XED_REG_EAX))));
+		// Only edx is written; writing eax back would clear the upper half of rax in 64-bit mode
+		il.AddInstruction(il.SetRegister(4, XED_REG_EDX, il.ArithShiftRight(4, il.Register(4, XED_REG_EAX), il.Const(1, 31))));
 		break;
 
 	case XED_ICLASS_CLC:

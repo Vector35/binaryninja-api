@@ -130,6 +130,8 @@ struct RuntimeCall
 		RespondsToSelector,
 		IsKindOfClass,
 		ExceptionThrow,
+		SyncEnter,
+		SyncExit,
 	};
 
 	Type type;
@@ -158,6 +160,8 @@ constexpr std::array RUNTIME_CALLS = {
 	std::make_pair("_objc_retainAutoreleaseReturnValue", RuntimeCall::RetainAutorelease),
 	std::make_pair("_objc_retainBlock", RuntimeCall::Retain),
 	std::make_pair("_objc_exception_throw", RuntimeCall::ExceptionThrow),
+	std::make_pair("_objc_sync_enter", RuntimeCall::SyncEnter),
+	std::make_pair("_objc_sync_exit", RuntimeCall::SyncExit),
 	std::make_pair("__objc_autoreleasePoolPush", RuntimeCall::AutoreleasePoolPush),
 	std::make_pair("__objc_autoreleasePoolPop", RuntimeCall::AutoreleasePoolPop),
 	std::make_pair("j__objc_alloc_init", RuntimeCall::AllocInit),
@@ -180,6 +184,8 @@ constexpr std::array RUNTIME_CALLS = {
 	std::make_pair("j__objc_retainAutoreleaseReturnValue", RuntimeCall::RetainAutorelease),
 	std::make_pair("j__objc_retainBlock", RuntimeCall::Retain),
 	std::make_pair("j__objc_exception_throw", RuntimeCall::ExceptionThrow),
+	std::make_pair("j__objc_sync_enter", RuntimeCall::SyncEnter),
+	std::make_pair("j__objc_sync_exit", RuntimeCall::SyncExit),
 };
 
 std::optional<RuntimeCall> DetectObjCRuntimeCall(const HighLevelILInstruction& callTarget,
@@ -303,6 +309,32 @@ bool DoesCallTerminateAutoreleasePool(const HighLevelILInstruction& call, const 
 	return isPoolPop;
 }
 
+bool IsSyncCall(const HighLevelILInstruction& call, const Function& function, Variable& out_lockVariable, bool& out_isLock)
+{
+	if (call.operation != HLIL_CALL)
+		return false;
+
+	const auto callee = call.GetDestExpr<HLIL_CALL>();
+	const auto params = call.GetParameterExprs<HLIL_CALL>();
+
+	const auto rtCall = DetectObjCRuntimeCall(callee, params, function);
+
+	// Verify it has a sync call type and a singular variable argument:
+
+	if (!rtCall || (rtCall.value().type != RuntimeCall::SyncEnter && rtCall.value().type != RuntimeCall::SyncExit))
+		return false;
+
+	const auto callType = rtCall.value().type;
+
+	if (params.size() != 1 || params[0].operation != HLIL_VAR)
+		return false;
+
+	out_lockVariable = params[0].GetVariable<HLIL_VAR>();
+	out_isLock = callType == RuntimeCall::SyncEnter;
+
+	return true;
+}
+
 }  // unnamed namespace
 
 PseudoObjCFunction::PseudoObjCFunction(LanguageRepresentationFunctionType* type, Architecture* arch, Function* owner,
@@ -399,13 +431,13 @@ void PseudoObjCFunction::GetExpr_CALL_OR_TAILCALL(const BinaryNinja::HighLevelIL
 	return PseudoCFunction::GetExpr_CALL_OR_TAILCALL(instr, tokens, settings, precedence, statement);
 }
 
-size_t PseudoObjCFunction::TryEmitNewBlockRegion(std::span<const HighLevelILInstruction> statements, size_t index,
-	HighLevelILTokenEmitter& tokens, DisassemblySettings* settings)
+bool PseudoObjCFunction::TryEmitAutoreleasepoolBlock(const Function& function,
+	std::span<const HighLevelILInstruction> statements, size_t index, HighLevelILTokenEmitter& tokens,
+	DisassemblySettings* settings, size_t& out_consumed)
 {
 	const auto& statement = statements[index];
-	auto function = GetFunction();
 
-	if (Variable poolHandle; DoesVarInitBeginAutoreleasepool(statement, *function, poolHandle))
+	if (Variable poolHandle; DoesVarInitBeginAutoreleasepool(statement, function, poolHandle))
 	{
 		const size_t start = index;
 		size_t end = index;
@@ -414,8 +446,7 @@ size_t PseudoObjCFunction::TryEmitNewBlockRegion(std::span<const HighLevelILInst
 		for (auto i = index + 1; i < statements.size(); i++)
 		{
 			if (Variable popped;
-				DoesCallTerminateAutoreleasePool(statements[i], *function, popped)
-				&& popped == poolHandle)
+				DoesCallTerminateAutoreleasePool(statements[i], function, popped) && popped == poolHandle)
 			{
 				end = i;
 				break;
@@ -423,32 +454,33 @@ size_t PseudoObjCFunction::TryEmitNewBlockRegion(std::span<const HighLevelILInst
 		}
 
 		if (start == end)
-			// Function is either compiled oddly somehow, or we're in a stub/trampoline;
-			//  render normally.
-			return 0;
+		// Function is either compiled oddly somehow, or we're in a stub/trampoline;
+		//  render normally.
+		{
+			out_consumed = 0;
+			return true;
+		}
 
 		// Emit the autoreleasepool block once we have a valid span.
 		const auto& poolStart = statements[start];
 		auto guard = tokens.SetCurrentExpr(poolStart);
-		const auto collapsed = function->IsInstructionCollapsed(poolStart);
+		const auto collapsed = function.IsInstructionCollapsed(poolStart);
 
 		if (index != 0)
 			tokens.ScopeSeparator();
 
 		tokens.PrependCollapseIndicator(
-			collapsed ? ContentCollapsedContext : ContentExpandedContext,
-			poolStart.GetInstructionHash()
-		);
+			collapsed ? ContentCollapsedContext : ContentExpandedContext, poolStart.GetInstructionHash());
 
 		tokens.InitLine();
+		tokens.Append(KeywordToken, "@autoreleasepool");
 
 		if (collapsed)
 		{
-			tokens.Append(KeywordToken, "@autoreleasepool");
 			tokens.Append(CollapsedInformationToken, " {...}");
-		} else
+		}
+		else
 		{
-			tokens.Append(KeywordToken, "@autoreleasepool");
 			tokens.BeginScope(BlockScopeType);
 
 			// Push the handle to the active handle stack during emission so that ShouldSkipStatement
@@ -465,8 +497,101 @@ size_t PseudoObjCFunction::TryEmitNewBlockRegion(std::span<const HighLevelILInst
 		if (end + 1 != statements.size())
 			tokens.NewLine();
 
-		return end - start + 1;
+		out_consumed = end - start + 1;
+		return true;
 	}
+	return false;
+}
+
+bool PseudoObjCFunction::TryEmitSynchronizedBlock(const Function& function,
+	std::span<const HighLevelILInstruction> statements, size_t index, HighLevelILTokenEmitter& tokens,
+	DisassemblySettings* settings, size_t& out_consumed)
+{
+	const auto& statement = statements[index];
+
+	Variable lockVar;
+	bool isLock;
+	if (IsSyncCall(statement, function, lockVar, isLock))
+	{
+		// start of new synchronized block should always be a sync_enter
+		if (!isLock)
+			return false;
+
+		// find the corresponding unlock.
+		const size_t start = index;
+		size_t end = index;
+		for (auto i = start + 1; i < statements.size(); i++)
+		{
+			Variable other;
+			bool otherIsLock;
+			if (IsSyncCall(statements[i], function, other, otherIsLock)
+				&& !otherIsLock && lockVar == other)
+			{
+				// stop scanning if it's a call to objc_sync_exit(x) where x == lockVar
+				end = i;
+				break;
+			}
+		}
+
+		if (start == end)
+			return false;
+
+		const auto& syncStart = statements[start];
+		auto guard = tokens.SetCurrentExpr(syncStart);
+		const bool collapsed = function.IsInstructionCollapsed(syncStart);
+
+		if (index != 0)
+			tokens.ScopeSeparator();
+
+		tokens.PrependCollapseIndicator(
+			collapsed ? ContentCollapsedContext : ContentExpandedContext, syncStart.GetInstructionHash());
+
+		const auto varName = GetHighLevelILFunction()->GetFunction()->GetVariableNameOrDefault(lockVar);
+		const auto varExpr = statement.GetParameterExprs<HLIL_CALL>()[0];
+
+		// @synchronized(var) {...}
+		tokens.Append(KeywordToken, "@synchronized");
+		tokens.AppendOpenParen();
+		tokens.Append(LocalVariableToken, LocalVariableTokenContext, varName,
+			varExpr.exprIndex, lockVar.ToIdentifier(), varExpr.size);
+		tokens.AppendCloseParen();
+
+		// mostly the same routine here as autoreleasepool block emission.
+		if (collapsed)
+		{
+			tokens.Append(CollapsedInformationToken, " {...}");
+		} else
+		{
+			tokens.BeginScope(BlockScopeType);
+
+			activeSyncVars.push_back(lockVar);
+			EmitBlockStatements(statements.subspan(start + 1, end - start - 1), false, tokens, settings);
+			activeSyncVars.pop_back();
+
+			tokens.EndScope(BlockScopeType);
+			tokens.FinalizeScope();
+		}
+
+		if (end + 1 != statements.size())
+			tokens.NewLine();
+
+		out_consumed = end - start + 1;
+
+		return true;
+	}
+	return false;
+}
+
+size_t PseudoObjCFunction::TryEmitNewBlockRegion(std::span<const HighLevelILInstruction> statements, size_t index,
+	HighLevelILTokenEmitter& tokens, DisassemblySettings* settings)
+{
+	auto function = GetFunction();
+
+	size_t size;
+	if (TryEmitAutoreleasepoolBlock(*function, statements, index, tokens, settings, size))
+		return size;
+	if (TryEmitSynchronizedBlock(*function, statements, index, tokens, settings, size))
+		return size;
 
 	return 0;
 }
@@ -711,6 +836,13 @@ bool PseudoObjCFunction::ShouldSkipStatement(const BinaryNinja::HighLevelILInstr
 		if (Variable popped; DoesCallTerminateAutoreleasePool(instr, *GetFunction(), popped) &&
 			std::find(activePoolHandles.begin(), activePoolHandles.end(), popped) != activePoolHandles.end())
 			return true;
+
+		Variable lockVar;
+		bool isLock;
+		if (IsSyncCall(instr, *GetFunction(), lockVar, isLock)
+			&& !isLock && std::find(activeSyncVars.begin(), activeSyncVars.end(), lockVar) != activeSyncVars.end())
+			return true;
+
 		break;
 	}
 	case HLIL_VAR_DECLARE:

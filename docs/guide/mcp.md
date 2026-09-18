@@ -19,13 +19,19 @@ The exact tool list may change as the MCP server develops, but both server varia
 - **Program structure**: list entry points, segments, sections, symbols, imports, exports, relocations, data variables, and strings.
 - **Memory inspection**: read bytes from the active BinaryView and receive the result as hex and base64.
 - **Function inspection**: list and search functions, request function metadata, render disassembly, render decompiled Pseudo C, render IL, inspect basic blocks, callers, callees, cross-references, stack layout, and complexity metrics.
-- **Binary Similarity (Ultimate, GUI server)**: create a comparison from two MCP BinaryView handles, inspect its matches, render provider-annotated diffs, and explicitly apply a match to port function metadata.
+- **Binary Similarity (Ultimate, GUI server)**: configure and run comparisons across two or more MCP BinaryView handles, select providers and automatic resolvers, monitor or stop runs, identify added and removed functions, render provider-annotated diffs, and port function metadata.
 
 Use your MCP client's tool listing UI or command to see the complete set of tools available in your installed Binary Ninja version.
 
-To run Binary Similarity entirely through MCP, open both binaries with `bn_open_item_open`, choose their analyzed BinaryView handles, and pass those handles to `bn_similarity_session_compare`. The tool creates an MCP-owned review session, enables every available similarity provider, and can wait for the comparison to finish. Use `bn_similarity_session_info`, `bn_similarity_result_list`, and `bn_similarity_result_diff` to inspect it. The same inspection tools also work with the current Binary Similarity tab or sidebar session when no MCP-owned session exists.
+To run Binary Similarity entirely through MCP, open the related binaries with `bn_open_item_open` and choose their analyzed BinaryView handles. `bn_similarity_component_list` reports the installed provider and resolver names, descriptions, settings schemas, and defaults. Pass two or more handles to `bn_similarity_session_compare` in oldest-to-newest order. By default the tool creates a chain of comparison edges, enables every available provider, starts immediately, and waits for completion. Use the `edges` option for another acyclic graph, `providers` for provider selection, or `start: false` to inspect the configured session before calling `bn_similarity_session_run`.
 
-Both binaries remain loaded in an MCP-created session so results can be rendered or applied. `bn_similarity_result_apply` ports available function names, types, variable information, and comments into the compared binary's analysis. Applying a result mutates the destination analysis; save its database afterward to persist the changes.
+Comparisons are review-only unless `resolvers` are selected. Adding `Metric Similarity Resolver` makes the run automatically select sufficiently strong matches and ask the provider that produced each selected result to apply it. Configure its `metrics.similarityThreshold` and `metrics.confidenceThreshold` values through `resolverSettings`. Provider-specific values can similarly be supplied through `providerSettings`.
+
+Use `bn_similarity_session_progress` for overall and per-binary, provider, and resolver progress and timing. `bn_similarity_session_stop` requests a cooperative stop; a provider or resolver may take a moment to observe it. Graph and component configuration are fixed while a run is active.
+
+Use `bn_similarity_session_info` to inspect nodes and components, `bn_similarity_function_changes` to list added and removed functions across an edge, `bn_similarity_result_list` to inspect matches and resolver selections, and `bn_similarity_result_diff` to render changed functions. The inspection tools also work with the current Binary Similarity tab or sidebar session when no MCP-owned session exists.
+
+MCP-created session nodes keep their BinaryViews loaded so results can be rendered or applied. `bn_similarity_result_apply` explicitly ports the selected provider result's available function names, types, variable information, and comments into the compared binary. Resolver-based automatic application and explicit application both mutate destination analysis; save its database afterward to persist the changes.
 
 ## Tool Calling Conventions
 

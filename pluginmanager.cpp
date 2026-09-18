@@ -375,14 +375,16 @@ bool Extension::Install(std::string versionID)
 }
 
 
-/* Like Install, but also allows you to install previously installed deprecated plugin. 
-   Intended only for plugin migration: deprecation should block fresh installs, but must never strand a
-   previously-installed plugin where it can't be registered as installed (and so can't be uninstalled). 
+/* Registers a plugin as installed without downloading anything, for legacy extension migration: that path
+   adopts a plugin whose files are already on disk from the old extension manager. A real Install() there
+   would first delete those files and then need the network to fetch a replacement -- for a plugin that has
+   since been deprecated, that download is exactly the one most likely to be unavailable, which would destroy
+   a working install and leave nothing in its place. This never touches the filesystem or the network.
    UNNECESSARY FOR USERS. */
-bool Extension::InstallForMigration(std::string versionID)
+bool Extension::MarkInstalledForMigration(std::string versionID)
 {
 	char* versionIDStr = BNAllocString(versionID.c_str());
-	auto success = BNPluginInstallForMigration(m_object, versionIDStr);
+	auto success = BNPluginMarkInstalledForMigration(m_object, versionIDStr);
 	BNFreeString(versionIDStr);
 	return success;
 }

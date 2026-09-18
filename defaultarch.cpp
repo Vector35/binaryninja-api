@@ -394,7 +394,10 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 							{
 								Ref<LowLevelILFunction> ilFunc = new LowLevelILFunction(location.arch, nullptr);
 								location.arch->GetInstructionLowLevelIL(opcode, location.address, maxLen, *ilFunc);
-								if (ilFunc->GetInstructionCount() && ((*ilFunc)[0].operation == LLIL_CALL))
+								// A linked return may save its target and update the link register before the call.
+								// Match the final call, which is the instruction translated to LLIL_RET during lifting.
+								if (ilFunc->GetInstructionCount()
+									&& ((*ilFunc)[ilFunc->GetInstructionCount() - 1].operation == LLIL_CALL))
 									contextualFunctionReturns[location] = true;
 							}
 						}

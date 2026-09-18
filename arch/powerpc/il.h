@@ -217,8 +217,10 @@ enum PPCIntrinsic : uint32_t
     PPC_PS_INTRIN_QUANTIZE,
     PPC_PS_INTRIN_DEQUANTIZE,
     PPC_PS_INTRIN_END,
+    PPC_INTRIN_COPY_STRING_WORDS,
 	PPC_INTRIN_INVALID = 0xFFFFFFFF,
 };
 
 
 bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction& il, Instruction* instruction, uint64_t addr);
+bool GetLowLevelILForPPCStringCopy(Architecture* arch, LowLevelILFunction& il, Instruction* load, Instruction* store);

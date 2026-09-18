@@ -1032,7 +1032,12 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		il.AddInstruction(il.SetFlag(IL_FLAG_C,
 			il.TestBit(opOneLen,
 				ReadILOperand(il, xedd, addr, 0, 0),
-				ReadILOperand(il, xedd, addr, 1, 1))));
+				// A register bit offset is taken modulo the operand size
+				(opTwo_name == XED_OPERAND_IMM0) ?
+					ReadILOperand(il, xedd, addr, 1, 1) :
+					il.ModUnsigned(opTwoLen,
+						ReadILOperand(il, xedd, addr, 1, 1),
+						il.Const(1, opOneLen * 8)))));
 		break;
 
 	case XED_ICLASS_BTC_LOCK:
@@ -1041,7 +1046,12 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		il.AddInstruction(il.SetFlag(IL_FLAG_C,
 			il.TestBit(opOneLen,
 				ReadILOperand(il, xedd, addr, 0, 0),
-				ReadILOperand(il, xedd, addr, 1, 1))));
+				// A register bit offset is taken modulo the operand size
+				(opTwo_name == XED_OPERAND_IMM0) ?
+					ReadILOperand(il, xedd, addr, 1, 1) :
+					il.ModUnsigned(opTwoLen,
+						ReadILOperand(il, xedd, addr, 1, 1),
+						il.Const(1, opOneLen * 8)))));
 
 		// Complement the bit specified by operand[1] in operand[0]
 		// operand[0] = operand[0] ^ (1 << operand[1])
@@ -1077,7 +1087,12 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		il.AddInstruction(il.SetFlag(IL_FLAG_C,
 			il.TestBit(opOneLen,
 				ReadILOperand(il, xedd, addr, 0, 0),
-				ReadILOperand(il, xedd, addr, 1, 1))));
+				// A register bit offset is taken modulo the operand size
+				(opTwo_name == XED_OPERAND_IMM0) ?
+					ReadILOperand(il, xedd, addr, 1, 1) :
+					il.ModUnsigned(opTwoLen,
+						ReadILOperand(il, xedd, addr, 1, 1),
+						il.Const(1, opOneLen * 8)))));
 
 		// Reset the bit specified by operand[1] in operand[0]
 		// operand[0] = operand[0] & ~(1 << operand[1])
@@ -1102,7 +1117,12 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		il.AddInstruction(il.SetFlag(IL_FLAG_C,
 			il.TestBit(opOneLen,
 				ReadILOperand(il, xedd, addr, 0, 0),
-				ReadILOperand(il, xedd, addr, 1, 1))));
+				// A register bit offset is taken modulo the operand size
+				(opTwo_name == XED_OPERAND_IMM0) ?
+					ReadILOperand(il, xedd, addr, 1, 1) :
+					il.ModUnsigned(opTwoLen,
+						ReadILOperand(il, xedd, addr, 1, 1),
+						il.Const(1, opOneLen * 8)))));
 
 		// Complement the bit specified by operand[1] in operand[0]
 		// operand[0] = operand[0] | (1 << operand[1])

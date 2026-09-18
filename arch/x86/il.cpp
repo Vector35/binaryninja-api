@@ -2352,11 +2352,13 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 		return false;
 
 	case XED_ICLASS_LAHF:
+		// Bit 1 of EFLAGS is reserved and always set
 		il.AddInstruction(il.SetRegister(1, XED_REG_AH,
 			il.Or(1, il.FlagBit(1, IL_FLAG_S, 7),
 			il.Or(1, il.FlagBit(1, IL_FLAG_Z, 6),
 			il.Or(1, il.FlagBit(1, IL_FLAG_A, 4),
-			il.Or(1, il.FlagBit(1, IL_FLAG_P, 2), il.FlagBit(1, IL_FLAG_C, 0)))))));
+			il.Or(1, il.FlagBit(1, IL_FLAG_P, 2),
+			il.Or(1, il.Const(1, 2), il.FlagBit(1, IL_FLAG_C, 0))))))));
 		break;
 
 	case XED_ICLASS_LEAVE:

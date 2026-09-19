@@ -1034,7 +1034,9 @@ uint32_t DecodeImmShift(uint32_t type, uint32_t imm, Shift* shift)
 uint32_t ExpandImm(uint32_t imm)
 {
 	uint32_t base = imm & 0xff;
-	uint32_t rot = 2 * (imm >> 8);
+	uint32_t rot = 2 * ((imm >> 8) & 0xf);
+	if (rot == 0)
+		return base;
 	return (base >> rot) | (base << (32-rot));
 }
 
@@ -1590,6 +1592,8 @@ uint32_t armv7_data_processing_imm(uint32_t instructionValue, Instruction* restr
 	}
 	instruction->operands[i].cls = IMM;
 	instruction->operands[i].imm = ExpandImm(decode.imm);
+	// The same value can have more than one encoding, and only a rotated one sets the carry
+	instruction->operands[i].flags.immRotation = 2 * ((decode.imm >> 8) & 0xf);
 	return 0;
 }
 

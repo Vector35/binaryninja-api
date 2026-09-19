@@ -874,6 +874,7 @@ struct InstructionOperand {
 		uint32_t hasElements:1; //does the register have an array index
 		uint32_t emptyElement:1;
 		uint32_t offsetRegUsed:1; //Is the offset register being used
+		uint32_t immRotation:5; //Rotation of a data-processing immediate; nonzero also sets the carry to bit 31
 	} flags;
 	union {
 		enum Register reg;

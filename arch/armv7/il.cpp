@@ -1118,39 +1118,129 @@ static ExprId VectorCompareGreaterThan(LowLevelILFunction& il, Instruction& inst
 		});
 }
 
-static ExprId GetShifted(LowLevelILFunction& il, Register reg, uint32_t ShiftAmount, Shift shift)
+// Barrel shifter semantics (Shift_C):
+//   count          result              carry
+//   0              x                   C (unchanged)
+//   LSL 1..31      x << n              x[32-n]
+//   LSL 32 / >32   0                   x[0] / 0
+//   LSR 1..31      x >> n              x[n-1]
+//   LSR 32 / >32   0                   x[31] / 0
+//   ASR 1..31      x s>> n             x[n-1]
+//   ASR >=32       x s>> 31            x[31]
+//   ROR n          ror(x, n % 32)      x[(n-1) % 32]
+//   RRX            C:x[31:1]           x[0]
+// The register forms must hold for any runtime count, so every bit index is reduced to 0..31 even where a
+// guard makes it irrelevant; no subexpression is out of range for any count.
+ExprId GetShifterValueByImmediate(LowLevelILFunction& il, Shift shift, const std::function<ExprId()>& source,
+	uint32_t count)
 {
-	if (ShiftAmount == 0)
-		return il.Register(get_register_size(reg), reg);
-
+	if (shift == SHIFT_RRX)
+		return il.RotateRightCarry(4, source(), il.Const(1, 1), il.Flag(IL_FLAG_C));
+	if (count == 0 || shift == SHIFT_NONE)
+		return source();
 	switch (shift)
 	{
-		case SHIFT_NONE:
-			return il.Register(get_register_size(reg), reg);
-		case SHIFT_LSR:
-			return il.LogicalShiftRight(get_register_size(reg),
-					il.Register(get_register_size(reg), reg),
-					il.Const(1, ShiftAmount));
-		case SHIFT_LSL:
-			return il.ShiftLeft(get_register_size(reg),
-					il.Register(get_register_size(reg), reg),
-					il.Const(1, ShiftAmount));
-		case SHIFT_ASR:
-			return il.ArithShiftRight(get_register_size(reg),
-					il.Register(get_register_size(reg), reg),
-					il.Const(1, ShiftAmount));
-		case SHIFT_ROR:
-			return il.RotateRight(get_register_size(reg),
-					il.Register(get_register_size(reg), reg),
-					il.Const(1, ShiftAmount));
-		case SHIFT_RRX:
-			//RRX can only shift 1 at a time
-			return il.RotateRightCarry(get_register_size(reg),
-					il.Register(get_register_size(reg), reg),
-					il.Const(1, 1), il.Flag(IL_FLAG_C));
-		default:
-			return 0;
+	case SHIFT_LSL:
+		return (count < 32) ? il.ShiftLeft(4, source(), il.Const(1, count)) : il.Const(4, 0);
+	case SHIFT_LSR:
+		return (count < 32) ? il.LogicalShiftRight(4, source(), il.Const(1, count)) : il.Const(4, 0);
+	case SHIFT_ASR:
+		return il.ArithShiftRight(4, source(), il.Const(1, (count < 32) ? count : 31));
+	case SHIFT_ROR:
+		return il.RotateRight(4, source(), il.Const(1, count % 32));
+	default:
+		return il.Unimplemented();
 	}
+}
+
+
+ExprId GetShifterCarryByImmediate(LowLevelILFunction& il, Shift shift, const std::function<ExprId()>& source,
+	uint32_t count)
+{
+	if (shift == SHIFT_RRX)
+		return il.TestBit(0, source(), il.Const(4, 0));
+	if (count == 0 || shift == SHIFT_NONE)
+		return BN_INVALID_EXPR;
+	switch (shift)
+	{
+	case SHIFT_LSL:
+		return (count <= 32) ? il.TestBit(0, source(), il.Const(4, 32 - count)) : il.Const(0, 0);
+	case SHIFT_LSR:
+		return (count <= 32) ? il.TestBit(0, source(), il.Const(4, count - 1)) : il.Const(0, 0);
+	case SHIFT_ASR:
+		return il.TestBit(0, source(), il.Const(4, (count < 32) ? count - 1 : 31));
+	case SHIFT_ROR:
+		return il.TestBit(0, source(), il.Const(4, (count - 1) % 32));
+	default:
+		return il.Unimplemented();
+	}
+}
+
+
+ExprId GetShifterValueByRegister(LowLevelILFunction& il, Shift shift, const std::function<ExprId()>& source,
+	const std::function<ExprId()>& count)
+{
+	auto amount = [&]() { return il.And(4, count(), il.Const(4, 0xff)); };
+	auto below32 = [&]() { return il.CompareUnsignedLessThan(4, amount(), il.Const(4, 32)); };
+	auto low5 = [&]() { return il.And(4, amount(), il.Const(4, 0x1f)); };
+	// All ones when the amount is below 32, zero otherwise
+	auto keepMask = [&]() { return il.Neg(4, il.BoolToInt(4, below32())); };
+	switch (shift)
+	{
+	case SHIFT_LSL:
+		return il.And(4, il.ShiftLeft(4, source(), low5()), keepMask());
+	case SHIFT_LSR:
+		return il.And(4, il.LogicalShiftRight(4, source(), low5()), keepMask());
+	case SHIFT_ASR:
+		// From 32 up every bit is the sign, which a shift by 31 produces
+		return il.ArithShiftRight(4, source(),
+			il.Or(4, low5(), il.And(4, il.Not(4, keepMask()), il.Const(4, 0x1f))));
+	case SHIFT_ROR:
+		return il.RotateRight(4, source(), low5());
+	default:
+		return il.Unimplemented();
+	}
+}
+
+
+ExprId GetShifterCarryByRegister(LowLevelILFunction& il, Shift shift, const std::function<ExprId()>& source,
+	const std::function<ExprId()>& count)
+{
+	auto amount = [&]() { return il.And(4, count(), il.Const(4, 0xff)); };
+	auto bit = [&](ExprId index) { return il.TestBit(0, source(), il.And(4, index, il.Const(4, 0x1f))); };
+	auto shifted = [&]() { return il.CompareNotEqual(4, amount(), il.Const(4, 0)); };
+	auto upTo32 = [&]() { return il.CompareUnsignedLessEqual(4, amount(), il.Const(4, 32)); };
+	ExprId out;
+	switch (shift)
+	{
+	case SHIFT_LSL:
+		out = il.And(0, il.And(0, shifted(), upTo32()), bit(il.Sub(4, il.Const(4, 32), amount())));
+		break;
+	case SHIFT_LSR:
+		out = il.And(0, il.And(0, shifted(), upTo32()), bit(il.Sub(4, amount(), il.Const(4, 1))));
+		break;
+	case SHIFT_ASR:
+		out = il.Or(0,
+			il.And(0, il.And(0, shifted(), il.CompareUnsignedLessThan(4, amount(), il.Const(4, 32))),
+				bit(il.Sub(4, amount(), il.Const(4, 1)))),
+			il.And(0, il.CompareUnsignedGreaterEqual(4, amount(), il.Const(4, 32)), bit(il.Const(4, 31))));
+		break;
+	case SHIFT_ROR:
+		out = il.And(0, shifted(), bit(il.Sub(4, amount(), il.Const(4, 1))));
+		break;
+	default:
+		return il.Unimplemented();
+	}
+	return il.Or(0, il.And(0, il.CompareEqual(4, amount(), il.Const(4, 0)), il.Flag(IL_FLAG_C)), out);
+}
+
+
+static ExprId GetShifted(LowLevelILFunction& il, Register reg, uint32_t ShiftAmount, Shift shift)
+{
+	if (shift == SHIFT_NONE)
+		return il.Register(get_register_size(reg), reg);
+	return GetShifterValueByImmediate(il, shift, [&]() { return il.Register(get_register_size(reg), reg); },
+		ShiftAmount);
 }
 
 
@@ -1164,58 +1254,8 @@ static ExprId GetRegisterShiftedRegister(LowLevelILFunction& il, Register reg, R
 {
 	if (shiftType == SHIFT_NONE)
 		return il.Register(get_register_size(reg), reg);
-
-	uint32_t regSize = get_register_size(reg);
-	uint32_t shiftRegSize = get_register_size(shiftReg);
-	switch (shiftType)
-	{
-		case SHIFT_ASR:
-			return il.ArithShiftRight(
-				regSize,
-				il.Register(regSize, reg),
-				il.And(
-					shiftRegSize,
-					il.Register(shiftRegSize, shiftReg),
-					il.Const(shiftRegSize, 0xff)
-				));
-		case SHIFT_LSL:
-			return il.ShiftLeft(
-				regSize,
-				il.Register(regSize, reg),
-				il.And(
-					shiftRegSize,
-					il.Register(shiftRegSize, shiftReg),
-					il.Const(shiftRegSize, 0xff)
-				));
-		case SHIFT_LSR:
-			return il.LogicalShiftRight(
-				regSize,
-				il.Register(regSize, reg),
-				il.And(
-					shiftRegSize,
-					il.Register(shiftRegSize, shiftReg),
-					il.Const(shiftRegSize, 0xff)
-				));
-		case SHIFT_ROR:
-			return il.RotateRight(
-				regSize,
-				il.Register(regSize, reg),
-				il.And(
-					shiftRegSize,
-					il.Register(shiftRegSize, shiftReg),
-					il.Const(shiftRegSize, 0xff)
-				));
-		case SHIFT_RRX:
-			//RRX can only shift 1 at a time
-			return il.RotateRightCarry(
-				regSize,
-				il.Register(regSize, reg),
-				il.Const(1, 1),
-				il.Flag(IL_FLAG_C)
-			);
-		default:
-			return 0;
-	}
+	return GetShifterValueByRegister(il, shiftType, [&]() { return il.Register(get_register_size(reg), reg); },
+		[&]() { return il.Register(get_register_size(shiftReg), shiftReg); });
 }
 
 
@@ -1324,17 +1364,60 @@ static ExprId ReadILOperand(LowLevelILFunction& il, InstructionOperand& op, size
 	return 0;
 }
 
+// The barrel shifter's carry out for a data-processing operand: a shifted register's, or bit 31 of an immediate
+// whose encoding rotates it (ARMExpandImm_C). BN_INVALID_EXPR when the operand leaves C unchanged.
+static ExprId GetShifterOperandCarry(LowLevelILFunction& il, InstructionOperand& op, size_t addr)
+{
+	if (op.cls == IMM)
+		return op.flags.immRotation ? il.Const(0, op.imm >> 31) : BN_INVALID_EXPR;
+	if ((op.cls != REG) || (op.shift == SHIFT_NONE))
+		return BN_INVALID_EXPR;
+	auto source = [&]() { return ReadRegisterOrPointer(il, op, addr); };
+	if (op.flags.offsetRegUsed)
+		return GetShifterCarryByRegister(il, op.shift, source,
+			[&]() { return il.Register(get_register_size(op.offset), op.offset); });
+	return GetShifterCarryByImmediate(il, op.shift, source, op.imm);
+}
+
+
+// Reads the shifter operand of a flag-setting logical op, after setting C to its carry out. C is set first because
+// the result may overwrite the operand's registers; an RRX operand reads the old carry, so its value is taken into
+// a temporary before C changes.
+static ExprId ReadShifterOperandSettingCarry(LowLevelILFunction& il, InstructionOperand& op, size_t addr)
+{
+	ExprId carry = GetShifterOperandCarry(il, op, addr);
+	if (carry == BN_INVALID_EXPR)
+		return ReadILOperand(il, op, addr);
+	if ((op.cls == REG) && (op.shift == SHIFT_RRX))
+	{
+		il.AddInstruction(il.SetRegister(4, LLIL_TEMP(0), ReadILOperand(il, op, addr)));
+		il.AddInstruction(il.SetFlag(IL_FLAG_C, carry));
+		return il.Register(4, LLIL_TEMP(0));
+	}
+	il.AddInstruction(il.SetFlag(IL_FLAG_C, carry));
+	return ReadILOperand(il, op, addr);
+}
+
+
+// The shifter operand of a logical op. When the op sets flags, C is first set from the barrel shifter; the op
+// itself then writes only N and Z, and V is left alone.
+static ExprId ReadLogicalOperand(LowLevelILFunction& il, InstructionOperand& op, bool writeFlags, size_t addr)
+{
+	return writeFlags ? ReadShifterOperandSettingCarry(il, op, addr) : ReadILOperand(il, op, addr);
+}
+
+
 static void LogicalOperand(LowLevelILFunction& il, Instruction& instr, bool writeFlags, bool exclusiveOr, size_t addr)
 {
 	InstructionOperand& dst = instr.operands[0];
 	InstructionOperand& src1 = instr.operands[1];
 	InstructionOperand& src2 = instr.operands[2];
 	size_t size = get_register_size(dst.reg);
-	uint32_t flags = writeFlags ? IL_FLAGWRITE_ALL : IL_FLAGWRITE_NONE;
+	uint32_t flags = writeFlags ? IL_FLAGWRITE_NZ : IL_FLAGWRITE_NONE;
+	ExprId operand = ReadLogicalOperand(il, src2, writeFlags, addr);
+	ExprId source = ReadRegisterOrPointer(il, src1, addr);
 	il.AddInstruction(SetRegisterOrBranch(il, dst.reg,
-		exclusiveOr
-			? il.Xor(size, ReadRegisterOrPointer(il, src1, addr), ReadILOperand(il, src2, addr), flags)
-			: il.And(size, ReadRegisterOrPointer(il, src1, addr), ReadILOperand(il, src2, addr), flags)));
+		exclusiveOr ? il.Xor(size, source, operand, flags) : il.And(size, source, operand, flags)));
 }
 
 static void TestOperand(LowLevelILFunction& il, Instruction& instr, size_t addr)
@@ -1343,8 +1426,8 @@ static void TestOperand(LowLevelILFunction& il, Instruction& instr, size_t addr)
 	InstructionOperand& src2 = instr.operands[1];
 	size_t size = get_register_size(src1.reg);
 
-	il.AddInstruction(il.And(size, ReadRegisterOrPointer(il, src1, addr), ReadILOperand(il, src2, addr),
-		IL_FLAGWRITE_ALL));
+	ExprId operand = ReadShifterOperandSettingCarry(il, src2, addr);
+	il.AddInstruction(il.And(size, ReadRegisterOrPointer(il, src1, addr), operand, IL_FLAGWRITE_NZ));
 }
 
 static void TestEquivalenceOperand(LowLevelILFunction& il, Instruction& instr, size_t addr)
@@ -1353,8 +1436,8 @@ static void TestEquivalenceOperand(LowLevelILFunction& il, Instruction& instr, s
 	InstructionOperand& src2 = instr.operands[1];
 	size_t size = get_register_size(src1.reg);
 
-	il.AddInstruction(il.Xor(size, ReadRegisterOrPointer(il, src1, addr), ReadILOperand(il, src2, addr),
-		IL_FLAGWRITE_CNZ));
+	ExprId operand = ReadShifterOperandSettingCarry(il, src2, addr);
+	il.AddInstruction(il.Xor(size, ReadRegisterOrPointer(il, src1, addr), operand, IL_FLAGWRITE_NZ));
 }
 
 static void BitClearOperand(LowLevelILFunction& il, Instruction& instr, bool writeFlags, size_t addr)
@@ -1363,11 +1446,12 @@ static void BitClearOperand(LowLevelILFunction& il, Instruction& instr, bool wri
 	InstructionOperand& src1 = instr.operands[1];
 	InstructionOperand& src2 = instr.operands[2];
 	size_t size = get_register_size(dst.reg);
+	ExprId operand = ReadLogicalOperand(il, src2, writeFlags, addr);
 	il.AddInstruction(SetRegisterOrBranch(il, dst.reg,
 		il.And(size,
 			ReadRegisterOrPointer(il, src1, addr),
-			il.Not(size, ReadILOperand(il, src2, addr)),
-			writeFlags ? IL_FLAGWRITE_ALL : IL_FLAGWRITE_NONE)));
+			il.Not(size, operand),
+			writeFlags ? IL_FLAGWRITE_NZ : IL_FLAGWRITE_NONE)));
 }
 
 static void MoveNotOperand(LowLevelILFunction& il, Instruction& instr, bool writeFlags, size_t addr)
@@ -1375,20 +1459,32 @@ static void MoveNotOperand(LowLevelILFunction& il, Instruction& instr, bool writ
 	InstructionOperand& dst = instr.operands[0];
 	InstructionOperand& src = instr.operands[1];
 	size_t size = get_register_size(dst.reg);
+	ExprId operand = ReadLogicalOperand(il, src, writeFlags, addr);
 	il.AddInstruction(SetRegisterOrBranch(il, dst.reg,
-		il.Not(size, ReadILOperand(il, src, addr), writeFlags ? IL_FLAGWRITE_ALL : IL_FLAGWRITE_NONE)));
+		il.Not(size, operand, writeFlags ? IL_FLAGWRITE_NZ : IL_FLAGWRITE_NONE)));
 }
 
-static void RotateRightOperand(LowLevelILFunction& il, Instruction& instr, bool writeFlags, size_t addr)
+// LSL/LSR/ASR/ROR as instructions. The flag-setting forms take N and Z from the result and C from the barrel
+// shifter, and leave V alone. C is set first, since it depends on the operands the result may overwrite.
+static void ShiftOperand(LowLevelILFunction& il, Instruction& instr, Shift shift, bool writeFlags, size_t addr)
 {
 	InstructionOperand& dst = instr.operands[0];
 	InstructionOperand& src = instr.operands[1];
-	InstructionOperand& shift = instr.operands[2];
-	size_t size = get_register_size(dst.reg);
-	ExprId source = ReadRegisterOrPointer(il, src, addr);
-	ExprId shiftValue = il.And(4, ReadILOperand(il, shift, addr), il.Const(4, 0xff));
-	il.AddInstruction(SetRegisterOrBranch(il, dst.reg,
-		il.RotateRight(size, source, shiftValue, writeFlags ? IL_FLAGWRITE_CNZ : IL_FLAGWRITE_NONE)));
+	InstructionOperand& amount = instr.operands[2];
+	auto source = [&]() { return ReadRegisterOrPointer(il, src, addr); };
+	auto count = [&]() { return ReadILOperand(il, amount, addr); };
+	if (writeFlags)
+	{
+		ExprId carry = (amount.cls == IMM) ? GetShifterCarryByImmediate(il, shift, source, amount.imm) :
+			GetShifterCarryByRegister(il, shift, source, count);
+		if (carry != BN_INVALID_EXPR)
+			il.AddInstruction(il.SetFlag(IL_FLAG_C, carry));
+	}
+
+	ExprId value = (amount.cls == IMM) ? GetShifterValueByImmediate(il, shift, source, amount.imm) :
+		GetShifterValueByRegister(il, shift, source, count);
+	il.AddInstruction(SetRegisterOrBranch(il, dst.reg, value,
+		writeFlags ? IL_FLAGWRITE_NZ : IL_FLAGWRITE_NONE));
 }
 
 
@@ -2196,11 +2292,11 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 				});
 			break;
 		case ARMV7_ASR:
-			ConditionExecute(il, instr.cond,
-				SetRegisterOrBranch(il, op1.reg,
-					il.ArithShiftRight(get_register_size(op2.reg),
-						ReadRegisterOrPointer(il, op2, addr),
-						ReadILOperand(il, op3, addr), flagOperation[instr.setsFlags])));
+			ConditionExecute(addrSize, instr.cond, instr, il,
+				[&](size_t, Instruction& instr, LowLevelILFunction& il)
+				{
+					ShiftOperand(il, instr, SHIFT_ASR, instr.setsFlags, addr);
+				});
 			break;
 		case ARMV7_B:
 			ConditionalJump(arch, il, instr.cond, addrSize, op1.imm, addr + 4);
@@ -2590,16 +2686,13 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 					});
 			break;
 		case ARMV7_LSL:
-			ConditionExecute(il, instr.cond, SetRegisterOrBranch(il, op1.reg,
-				il.ShiftLeft(get_register_size(op2.reg),
-					ReadRegisterOrPointer(il, op2, addr),
-					ReadILOperand(il, op3, addr), flagOperation[instr.setsFlags])));
-			break;
 		case ARMV7_LSR:
-			ConditionExecute(il, instr.cond, SetRegisterOrBranch(il, op1.reg,
-				il.LogicalShiftRight(get_register_size(op2.reg),
-					ReadRegisterOrPointer(il, op2, addr),
-					ReadILOperand(il, op3, addr), flagOperation[instr.setsFlags])));
+			ConditionExecute(addrSize, instr.cond, instr, il,
+				[&](size_t, Instruction& instr, LowLevelILFunction& il)
+				{
+					ShiftOperand(il, instr, (instr.operation == ARMV7_LSL) ? SHIFT_LSL : SHIFT_LSR, instr.setsFlags,
+						addr);
+				});
 			break;
 		case ARMV7_STC:
 		case ARMV7_STC2:
@@ -2693,10 +2786,13 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 					flagOperation[instr.setsFlags])));
 			break;
 		case ARMV7_MOV:
-			ConditionExecute(il, instr.cond,
-				SetRegisterOrBranch(il, op1.reg,
-					ReadILOperand(il, op2, addr),
-					instr.setsFlags ? IL_FLAGWRITE_NZ : IL_FLAGWRITE_NONE));
+			ConditionExecute(addrSize, instr.cond, instr, il,
+				[&](size_t, Instruction& instr, LowLevelILFunction& il)
+				{
+					il.AddInstruction(SetRegisterOrBranch(il, op1.reg,
+						ReadLogicalOperand(il, op2, instr.setsFlags, addr),
+						instr.setsFlags ? IL_FLAGWRITE_NZ : IL_FLAGWRITE_NONE));
+				});
 			break;
 		case ARMV7_MOVT:
 			// op1.reg = (op2.imm << 16) | (op1 & 0x0000ffff)
@@ -2888,10 +2984,14 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 			ConditionExecute(il, instr.cond, il.Intrinsic({}, ARMV7_INTRIN_ISB, {}));
 			break;
 		case ARMV7_ORR:
-			ConditionExecute(il, instr.cond, SetRegisterOrBranch(il, op1.reg,
-				il.Or(get_register_size(op1.reg),
-					ReadRegisterOrPointer(il, op2, addr),
-					ReadILOperand(il, op3, addr), instr.setsFlags ? IL_FLAGWRITE_CNZ : IL_FLAGWRITE_NONE)));
+			ConditionExecute(addrSize, instr.cond, instr, il,
+				[&](size_t, Instruction& instr, LowLevelILFunction& il)
+				{
+					ExprId operand = ReadLogicalOperand(il, op3, instr.setsFlags, addr);
+					il.AddInstruction(SetRegisterOrBranch(il, op1.reg,
+						il.Or(get_register_size(op1.reg), ReadRegisterOrPointer(il, op2, addr), operand,
+							instr.setsFlags ? IL_FLAGWRITE_NZ : IL_FLAGWRITE_NONE)));
+				});
 			break;
 		case ARMV7_PKHBT:
 			ConditionExecute(il, instr.cond, SetRegisterOrBranch(il, op1.reg,
@@ -3160,7 +3260,7 @@ bool GetLowLevelILForArmInstruction(Architecture* arch, uint64_t addr, LowLevelI
 				[&](size_t addrSize, Instruction& instr, LowLevelILFunction& il)
 				{
 					(void) addrSize;
-					RotateRightOperand(il, instr, instr.operation == ARMV7_RORS || instr.setsFlags, addr);
+					ShiftOperand(il, instr, SHIFT_ROR, instr.operation == ARMV7_RORS || instr.setsFlags, addr);
 				});
 			break;
 		case ARMV7_RRX:

@@ -13,7 +13,7 @@ using namespace armv7;
 
 bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il, decomp_result* instr, bool ifThenBlock);
 static void WriteAddCarryOperand(LowLevelILFunction& il, decomp_result* instr, bool writeFlags);
-static void WriteAsrOperand(LowLevelILFunction& il, decomp_result* instr, bool writeFlags);
+static void WriteShiftOperand(LowLevelILFunction& il, decomp_result* instr, Shift shift, bool writeFlags);
 static ExprId GetMemoryAddress(LowLevelILFunction& il, decomp_result* instr, size_t operand, uint32_t size,
 	bool canWriteback = true, uint32_t align = 0);
 
@@ -345,26 +345,12 @@ static ExprId ReadShiftedOperand(LowLevelILFunction& il, decomp_result* instr, s
 {
 	uint32_t shift_t = instr->fields[FIELD_shift_t];
 	uint32_t shift_n = instr->fields[FIELD_shift_n];
-	ExprId value = ReadILOperand(il, instr, operand, size);
 
-	if (shift_n == 0)
-		return value;
-
-	switch (shift_t)
-	{
-	case SRType_LSL:
-		return il.ShiftLeft(size, value, il.Const(4, shift_n));
-	case SRType_LSR:
-		return il.LogicalShiftRight(size, value, il.Const(4, shift_n));
-	case SRType_ASR:
-		return il.ArithShiftRight(size, value, il.Const(4, shift_n));
-	case SRType_RRX:
-		return il.RotateRightCarry(size, value, il.Const(4, 1), il.Flag(IL_FLAG_C));
-	case SRType_ROR:
-		return il.RotateRight(size, value, il.Const(4, shift_n));
-	default:
-		return value;
-	}
+	static const Shift shifts[] = {SHIFT_LSL, SHIFT_LSR, SHIFT_ASR, SHIFT_ROR, SHIFT_RRX};
+	if (shift_t > (uint32_t)SRType_RRX)
+		return ReadILOperand(il, instr, operand, size);
+	return GetShifterValueByImmediate(il, shifts[shift_t],
+		[&]() { return ReadILOperand(il, instr, operand, size); }, shift_n);
 }
 
 static ExprId ReadRotatedOperand(LowLevelILFunction& il, decomp_result* instr, size_t operand, size_t size = 4)
@@ -496,46 +482,117 @@ static ExprId WriteArithOperand(LowLevelILFunction& il, decomp_result* instr, Ex
 	return WriteILOperand(il, instr, 0, value, size, flags);
 }
 
+// The barrel shifter's carry out for the operand ReadArithOperand(il, instr, 1) reads: a shifted register's, or bit
+// 31 of a modified immediate that ThumbExpandImm rotates. BN_INVALID_EXPR when the operand leaves C unchanged (a
+// plain register, an 8-bit immediate, or an unrotated/replicated modified immediate).
+static ExprId GetShifterOperandCarry(LowLevelILFunction& il, decomp_result* instr, bool& readsCarry)
+{
+	readsCarry = false;
+	size_t operand = 2;
+	bool shifted = true;
+	if (instr->format->operandCount == 2)
+	{
+		operand = 1;
+		shifted = false;
+	}
+	else if (instr->format->operandCount == 3)
+	{
+		shifted = instr->format->operands[2].type == OPERAND_FORMAT_SHIFT;
+		operand = shifted ? 1 : 2;
+	}
+
+	auto type = instr->format->operands[operand].type;
+	if ((type == OPERAND_FORMAT_IMM) || (type == OPERAND_FORMAT_OPTIONAL_IMM))
+	{
+		if (!IS_FIELD_PRESENT(instr, FIELD_i) || !IS_FIELD_PRESENT(instr, FIELD_imm3))
+			return BN_INVALID_EXPR;
+		uint32_t imm12 = (instr->fields[FIELD_i] << 11) | (instr->fields[FIELD_imm3] << 8);
+		if ((imm12 >> 10) == 0)
+			return BN_INVALID_EXPR;
+		return il.Const(0, (instr->fields[instr->format->operands[operand].field0] >> 31) & 1);
+	}
+	if (!shifted)
+		return BN_INVALID_EXPR;
+
+	static const Shift shifts[] = {SHIFT_LSL, SHIFT_LSR, SHIFT_ASR, SHIFT_ROR, SHIFT_RRX};
+	uint32_t shiftType = instr->fields[FIELD_shift_t];
+	if (shiftType > (uint32_t)SRType_RRX)
+		return il.Unimplemented();
+	readsCarry = shiftType == SRType_RRX;
+	return GetShifterCarryByImmediate(il, shifts[shiftType], [&]() { return ReadILOperand(il, instr, operand); },
+		instr->fields[FIELD_shift_n]);
+}
+
+
+// Reads the shifter operand of a flag-setting logical op, after setting C to its carry out. C is set first because
+// the result may overwrite the operand's registers; an RRX operand reads the old carry, so its value is taken into
+// a temporary before C changes.
+static ExprId ReadShifterOperandSettingCarry(LowLevelILFunction& il, decomp_result* instr)
+{
+	bool readsCarry;
+	ExprId carry = GetShifterOperandCarry(il, instr, readsCarry);
+	if (carry == BN_INVALID_EXPR)
+		return ReadArithOperand(il, instr, 1);
+	if (readsCarry)
+	{
+		il.AddInstruction(il.SetRegister(4, LLIL_TEMP(0), ReadArithOperand(il, instr, 1)));
+		il.AddInstruction(il.SetFlag(IL_FLAG_C, carry));
+		return il.Register(4, LLIL_TEMP(0));
+	}
+	il.AddInstruction(il.SetFlag(IL_FLAG_C, carry));
+	return ReadArithOperand(il, instr, 1);
+}
+
+
+// The shifter operand of a logical op. When the op sets flags, C is first set from the barrel shifter; the op
+// itself then writes only N and Z, and V is left alone.
+static ExprId ReadLogicalOperand(LowLevelILFunction& il, decomp_result* instr, bool writeFlags)
+{
+	return writeFlags ? ReadShifterOperandSettingCarry(il, instr) : ReadArithOperand(il, instr, 1);
+}
+
 static void WriteLogicalOperand(LowLevelILFunction& il, decomp_result* instr, bool writeFlags, bool exclusiveOr)
 {
-	uint32_t flags = writeFlags ? IL_FLAGWRITE_ALL : IL_FLAGWRITE_NONE;
+	uint32_t flags = writeFlags ? IL_FLAGWRITE_NZ : IL_FLAGWRITE_NONE;
+	ExprId operand = ReadLogicalOperand(il, instr, writeFlags);
+	ExprId source = ReadArithOperand(il, instr, 0);
 	il.AddInstruction(WriteArithOperand(il, instr,
-		exclusiveOr
-			? il.Xor(4, ReadArithOperand(il, instr, 0), ReadArithOperand(il, instr, 1), flags)
-			: il.And(4, ReadArithOperand(il, instr, 0), ReadArithOperand(il, instr, 1), flags)));
+		exclusiveOr ? il.Xor(4, source, operand, flags) : il.And(4, source, operand, flags)));
 }
 
 static void WriteTestOperand(LowLevelILFunction& il, decomp_result* instr)
 {
-	il.AddInstruction(il.And(4, ReadILOperand(il, instr, 0), ReadArithOperand(il, instr, 1),
-		IL_FLAGWRITE_CNZ));
+	ExprId operand = ReadShifterOperandSettingCarry(il, instr);
+	il.AddInstruction(il.And(4, ReadILOperand(il, instr, 0), operand, IL_FLAGWRITE_NZ));
 }
 
 static void WriteTestEquivalenceOperand(LowLevelILFunction& il, decomp_result* instr)
 {
-	il.AddInstruction(il.Xor(4, ReadILOperand(il, instr, 0), ReadArithOperand(il, instr, 1),
-		IL_FLAGWRITE_CNZ));
+	ExprId operand = ReadShifterOperandSettingCarry(il, instr);
+	il.AddInstruction(il.Xor(4, ReadILOperand(il, instr, 0), operand, IL_FLAGWRITE_NZ));
 }
 
 static void WriteBitClearOperand(LowLevelILFunction& il, decomp_result* instr, bool writeFlags)
 {
+	ExprId operand = ReadLogicalOperand(il, instr, writeFlags);
 	il.AddInstruction(WriteArithOperand(il, instr,
-		il.And(4, ReadArithOperand(il, instr, 0),
-			il.Not(4, ReadArithOperand(il, instr, 1)),
-			writeFlags ? IL_FLAGWRITE_ALL : IL_FLAGWRITE_NONE)));
+		il.And(4, ReadArithOperand(il, instr, 0), il.Not(4, operand),
+			writeFlags ? IL_FLAGWRITE_NZ : IL_FLAGWRITE_NONE)));
 }
 
 static void WriteMoveNotOperand(LowLevelILFunction& il, decomp_result* instr, bool writeFlags)
 {
+	ExprId operand = ReadLogicalOperand(il, instr, writeFlags);
 	il.AddInstruction(WriteILOperand(il, instr, 0,
-		il.Not(4, ReadArithOperand(il, instr, 1), writeFlags ? IL_FLAGWRITE_ALL : IL_FLAGWRITE_NONE)));
+		il.Not(4, operand, writeFlags ? IL_FLAGWRITE_NZ : IL_FLAGWRITE_NONE)));
 }
 
-static void WriteOrOperand(LowLevelILFunction& il, decomp_result* instr, bool writeFlags)
+static void WriteOrOperand(LowLevelILFunction& il, decomp_result* instr, bool writeFlags, bool complement = false)
 {
+	ExprId operand = ReadLogicalOperand(il, instr, writeFlags);
 	il.AddInstruction(WriteArithOperand(il, instr,
-		il.Or(4, ReadArithOperand(il, instr, 0), ReadArithOperand(il, instr, 1),
-			writeFlags ? IL_FLAGWRITE_ALL : IL_FLAGWRITE_NONE)));
+		il.Or(4, ReadArithOperand(il, instr, 0), complement ? il.Not(4, operand) : operand,
+			writeFlags ? IL_FLAGWRITE_NZ : IL_FLAGWRITE_NONE)));
 }
 
 static void WritePackHalfwordOperand(LowLevelILFunction& il, decomp_result* instr, bool shiftedRmTop)
@@ -618,21 +675,29 @@ static void WriteAddCarryOperand(LowLevelILFunction& il, decomp_result* instr, b
 		il.AddCarry(4, lhs, rhs, carry, writeFlags ? IL_FLAGWRITE_ALL : IL_FLAGWRITE_NONE)));
 }
 
-static void WriteAsrOperand(LowLevelILFunction& il, decomp_result* instr, bool writeFlags)
+// LSL/LSR/ASR/ROR as instructions. The flag-setting forms take N and Z from the result and C from the barrel
+// shifter, and leave V alone. C is set first, since it depends on the operands the result may overwrite.
+static void WriteShiftOperand(LowLevelILFunction& il, decomp_result* instr, Shift shift, bool writeFlags)
 {
-	ExprId source = ReadArithOperand(il, instr, 0);
-	ExprId shift = ReadArithOperand(il, instr, 1);
-	il.AddInstruction(WriteArithOperand(il, instr,
-		il.ArithShiftRight(4, source, shift, writeFlags ? IL_FLAGWRITE_CNZ : IL_FLAGWRITE_NONE)));
-}
+	if (writeFlags)
+	{
+		size_t countOperand = (instr->format->operandCount == 2) ? 1 : 2;
+		auto type = instr->format->operands[countOperand].type;
+		auto source = [&]() { return ReadArithOperand(il, instr, 0); };
+		ExprId carry = ((type == OPERAND_FORMAT_IMM) || (type == OPERAND_FORMAT_OPTIONAL_IMM)) ?
+			GetShifterCarryByImmediate(il, shift, source, instr->fields[instr->format->operands[countOperand].field0]) :
+			GetShifterCarryByRegister(il, shift, source, [&]() { return ReadArithOperand(il, instr, 1); });
+		if (carry != BN_INVALID_EXPR)
+			il.AddInstruction(il.SetFlag(IL_FLAG_C, carry));
+	}
 
-static void WriteRorOperand(LowLevelILFunction& il, decomp_result* instr, bool writeFlags)
-{
-	ExprId source = ReadArithOperand(il, instr, 0);
-	ExprId shift = ReadArithOperand(il, instr, 1);
-	ExprId shiftAmount = il.And(4, shift, il.Const(4, 0xff));
-	il.AddInstruction(WriteArithOperand(il, instr,
-		il.RotateRight(4, source, shiftAmount, writeFlags ? IL_FLAGWRITE_CNZ : IL_FLAGWRITE_NONE)));
+	size_t countOperand = (instr->format->operandCount == 2) ? 1 : 2;
+	auto type = instr->format->operands[countOperand].type;
+	auto source = [&]() { return ReadArithOperand(il, instr, 0); };
+	ExprId value = ((type == OPERAND_FORMAT_IMM) || (type == OPERAND_FORMAT_OPTIONAL_IMM)) ?
+		GetShifterValueByImmediate(il, shift, source, instr->fields[instr->format->operands[countOperand].field0]) :
+		GetShifterValueByRegister(il, shift, source, [&]() { return ReadArithOperand(il, instr, 1); });
+	il.AddInstruction(WriteArithOperand(il, instr, value, 4, writeFlags ? IL_FLAGWRITE_NZ : IL_FLAGWRITE_NONE));
 }
 
 static bool VectorMultiplyAccumulateIntrinsic(LowLevelILFunction& il, decomp_result* instr, uint32_t intrinsic)
@@ -2378,10 +2443,10 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		WriteLogicalOperand(il, instr, !ifThenBlock, false);
 		break;
 	case armv7::ARMV7_ASR:
-		WriteAsrOperand(il, instr, WritesToStatus(instr, ifThenBlock));
+		WriteShiftOperand(il, instr, SHIFT_ASR, WritesToStatus(instr, ifThenBlock));
 		break;
 	case armv7::ARMV7_ASRS:
-		WriteAsrOperand(il, instr, !ifThenBlock);
+		WriteShiftOperand(il, instr, SHIFT_ASR, !ifThenBlock);
 		break;
 	case armv7::ARMV7_B:
 		if ((!(instr->format->operationFlags & INSTR_FORMAT_FLAG_CONDITIONAL)) ||
@@ -2804,20 +2869,16 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		}
 		break;
 	case armv7::ARMV7_LSL:
-		il.AddInstruction(WriteArithOperand(il, instr, il.ShiftLeft(4, ReadArithOperand(il, instr, 0),
-			ReadArithOperand(il, instr, 1), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_CNZ : 0)));
+		WriteShiftOperand(il, instr, SHIFT_LSL, WritesToStatus(instr, ifThenBlock));
 		break;
 	case armv7::ARMV7_LSLS:
-		il.AddInstruction(WriteArithOperand(il, instr, il.ShiftLeft(4, ReadArithOperand(il, instr, 0),
-			ReadArithOperand(il, instr, 1), ifThenBlock ? 0 : IL_FLAGWRITE_CNZ)));
+		WriteShiftOperand(il, instr, SHIFT_LSL, !ifThenBlock);
 		break;
 	case armv7::ARMV7_LSR:
-		il.AddInstruction(WriteArithOperand(il, instr, il.LogicalShiftRight(4, ReadArithOperand(il, instr, 0),
-			ReadArithOperand(il, instr, 1), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_CNZ : 0)));
+		WriteShiftOperand(il, instr, SHIFT_LSR, WritesToStatus(instr, ifThenBlock));
 		break;
 	case armv7::ARMV7_LSRS:
-		il.AddInstruction(WriteArithOperand(il, instr, il.LogicalShiftRight(4, ReadArithOperand(il, instr, 0),
-			ReadArithOperand(il, instr, 1), ifThenBlock ? 0 : IL_FLAGWRITE_CNZ)));
+		WriteShiftOperand(il, instr, SHIFT_LSR, !ifThenBlock);
 		break;
 	case armv7::ARMV7_STC:
 	case armv7::ARMV7_STC2:
@@ -2891,13 +2952,13 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		break;
 	case armv7::ARMV7_MOV:
 	case armv7::ARMV7_MOVW:
-		il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 1), 4,
-			WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_NZ : 0));
-		break;
 	case armv7::ARMV7_MOVS:
-		il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 1), 4,
-			ifThenBlock ? 0 : IL_FLAGWRITE_NZ));
+	{
+		bool writeFlags = (instr->mnem == armv7::ARMV7_MOVS) ? !ifThenBlock : WritesToStatus(instr, ifThenBlock);
+		ExprId operand = writeFlags ? ReadShifterOperandSettingCarry(il, instr) : ReadILOperand(il, instr, 1);
+		il.AddInstruction(WriteILOperand(il, instr, 0, operand, 4, writeFlags ? IL_FLAGWRITE_NZ : 0));
 		break;
+	}
 	case armv7::ARMV7_MOVT:
 		il.AddInstruction(WriteILOperand(il, instr, 0, il.Or(4,
 			il.ShiftLeft(4, il.Const(2, instr->fields[instr->format->operands[1].field0]), il.Const(1, 16)),
@@ -3054,8 +3115,7 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 		il.AddInstruction(il.Nop());
 		break;
 	case ARMV7_ORN:
-		il.AddInstruction(WriteArithOperand(il, instr, il.Or(4, ReadArithOperand(il, instr, 0),
-			il.Not(4, ReadArithOperand(il, instr, 1)), WritesToStatus(instr, ifThenBlock) ? IL_FLAGWRITE_ALL : 0)));
+		WriteOrOperand(il, instr, WritesToStatus(instr, ifThenBlock), true);
 		break;
 	case armv7::ARMV7_ORR:
 		WriteOrOperand(il, instr, WritesToStatus(instr, ifThenBlock));
@@ -3121,10 +3181,10 @@ bool GetLowLevelILForThumbInstruction(Architecture* arch, LowLevelILFunction& il
 			il.SignExtend(4, il.ByteSwap(2, il.LowPart(2, ReadILOperand(il, instr, 1))))));
 		break;
 	case armv7::ARMV7_ROR:
-		WriteRorOperand(il, instr, WritesToStatus(instr, ifThenBlock));
+		WriteShiftOperand(il, instr, SHIFT_ROR, WritesToStatus(instr, ifThenBlock));
 		break;
 	case armv7::ARMV7_RORS:
-		WriteRorOperand(il, instr, !ifThenBlock);
+		WriteShiftOperand(il, instr, SHIFT_ROR, !ifThenBlock);
 		break;
 	case armv7::ARMV7_RSB:
 		il.AddInstruction(WriteArithOperand(il, instr, il.Sub(4, ReadArithOperand(il, instr, 1),

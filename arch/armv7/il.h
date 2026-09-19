@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include "binaryninjaapi.h"
 #include "armv7.h"
 
@@ -211,6 +212,19 @@ enum ArmFakeRegister: uint32_t
 {
 	FAKEREG_SYSCALL_INFO = armv7::REG_INVALID+1
 };
+
+// The ARM32 barrel shifter (Shift_C, ARM ARM A2.2.1), shared by the ARM and Thumb lifters. Both the value and the
+// carry are exact for every count: a register count is Rs[7:0], and from 32 up LSL and LSR give 0 and ASR the sign
+// fill. An immediate count is already decoded (LSR/ASR #32 is 32, ROR #0 is RRX). `source` and `count` build a new
+// expression on each call, since an expression can't be shared. A carry of BN_INVALID_EXPR means C is unchanged.
+BinaryNinja::ExprId GetShifterValueByImmediate(BinaryNinja::LowLevelILFunction& il, armv7::Shift shift,
+	const std::function<BinaryNinja::ExprId()>& source, uint32_t count);
+BinaryNinja::ExprId GetShifterCarryByImmediate(BinaryNinja::LowLevelILFunction& il, armv7::Shift shift,
+	const std::function<BinaryNinja::ExprId()>& source, uint32_t count);
+BinaryNinja::ExprId GetShifterValueByRegister(BinaryNinja::LowLevelILFunction& il, armv7::Shift shift,
+	const std::function<BinaryNinja::ExprId()>& source, const std::function<BinaryNinja::ExprId()>& count);
+BinaryNinja::ExprId GetShifterCarryByRegister(BinaryNinja::LowLevelILFunction& il, armv7::Shift shift,
+	const std::function<BinaryNinja::ExprId()>& source, const std::function<BinaryNinja::ExprId()>& count);
 
 bool GetLowLevelILForArmInstruction(BinaryNinja::Architecture* arch, uint64_t addr,
     BinaryNinja::LowLevelILFunction& il, armv7::Instruction& instr, size_t addrSize);

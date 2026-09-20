@@ -680,6 +680,17 @@ std::optional<size_t> BinaryNinja::FuzzyMatchSingle(const std::string& target, c
 }
 
 
+std::optional<size_t> BinaryNinja::FuzzyMatchContextual(const std::string& target, const std::string& query)
+{
+	size_t result = BNFuzzyMatchContextual(target.c_str(), query.c_str());
+	if (result == 0)
+	{
+		return std::nullopt;
+	}
+	return result;
+}
+
+
 void BinaryNinja::SetThreadName(const std::string& name)
 {
 	BNSetThreadName(name.c_str());

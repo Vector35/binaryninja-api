@@ -205,6 +205,54 @@ enum Armv7Intrinsic : uint32_t
 	ARMV7_INTRIN_VCVT_FIXED,
 	ARMV7_INTRIN_VABS_Q,
 	ARMV7_INTRIN_VCVT_FIXED_Q,
+	// Lane-wise >=; matching lanes produce all ones, otherwise all zeros.
+	ARMV7_INTRIN_VCGE,
+	ARMV7_INTRIN_VCGE_Q,
+	ARMV7_INTRIN_VCGT_Q,
+	// Lane-wise < comparison, with the original source operand order.
+	ARMV7_INTRIN_VCLT,
+	ARMV7_INTRIN_VCLT_Q,
+	// Widen each D-register lane to twice its size in a Q register.
+	ARMV7_INTRIN_VMOVL,
+	// Keep the low half of each Q-register lane in a D register.
+	ARMV7_INTRIN_VMOVN,
+	// Widening products from D sources to Q; index 0xff selects vector-by-vector multiplication.
+	// Polynomial size=64 is ARMv8 VMULL.P64: one carryless 64x64 product with a 128-bit result.
+	ARMV7_INTRIN_VMULL,
+	// Lane-wise negation; integer results wrap to the element size without saturation.
+	ARMV7_INTRIN_VNEG,
+	ARMV7_INTRIN_VNEG_Q,
+	// Adjacent pair sums from source1 fill the low half, then source2 the high half.
+	// Integer sums wrap to the element size; floating sums use standard SIMD FP behavior.
+	ARMV7_INTRIN_VPADD,
+	// Register VSHL uses the signed low byte of each count lane: negative shifts right.
+	// Signedness controls right-shift fill; large counts zero or sign-fill each lane.
+	ARMV7_INTRIN_VSHL_Q,
+	// Immediate VSHL applies one count to every lane, without saturation.
+	ARMV7_INTRIN_VSHL_IMM,
+	ARMV7_INTRIN_VSHL_IMM_Q,
+	ARMV7_INTRIN_VSHR_Q,
+	// Logical right shift of Q source lanes, then truncate each to half its width in D.
+	// The size parameter is the source lane width (16, 32, or 64 bits).
+	ARMV7_INTRIN_VSHRN,
+	// Transpose adjacent lane pairs, reading both sources before writing either result.
+	// Result 1 interleaves even lanes of source1/source2; result 2 interleaves odd lanes.
+	// The size parameter is the lane width in bits (8, 16, or 32).
+	ARMV7_INTRIN_VTRN,
+	ARMV7_INTRIN_VTRN_Q,
+	// For each 8/16/32-bit lane, return all ones if (source1 & source2) != 0, else zero.
+	ARMV7_INTRIN_VTST,
+	ARMV7_INTRIN_VTST_Q,
+	// De-interleave the concatenation of source1 (low) and source2 (high).
+	// Result 1 contains even lanes, result 2 odd lanes, in their original order.
+	// Lane width is 8/16 bits for D and 8/16/32 bits for Q; both inputs are read before either write.
+	ARMV7_INTRIN_VUZP,
+	ARMV7_INTRIN_VUZP_Q,
+	// Interleave source1/source2 lanes, preserving their order, then split the result.
+	// Result 1 is the low half, result 2 the high half; read both inputs before either write.
+	// Lane width is 8/16 bits for D and 8/16/32 bits for Q.
+	ARMV7_INTRIN_VZIP,
+	ARMV7_INTRIN_VZIP_Q,
 };
 
 enum ArmFakeRegister: uint32_t

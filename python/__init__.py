@@ -587,6 +587,24 @@ def fuzzy_match_single(target, query) -> Optional[int]:
 	return result
 
 
+def fuzzy_match_contextual(target, query) -> Optional[int]:
+	"""
+	Fuzzy match a string against a query string. Returns a score that is higher for
+	a more confident match, or None if the query does not match the target string.
+
+	Same algorithm as `fuzzy_match_single` but with extra heuristics based on
+	word boundaries and match offsets.
+
+	:param target: Target (larger) string
+	:param query: Query (smaller) string
+	:return: Confidence of match, or None if the string doesn't match
+	"""
+	result = core.BNFuzzyMatchContextual(target, query)
+	if result == 0:
+		return None
+	return result
+
+
 # Load Collaboration scripts from Ultimate (they are bundled in shipping builds)
 try:
 	from . import collaboration

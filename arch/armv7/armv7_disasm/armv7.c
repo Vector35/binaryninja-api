@@ -4670,8 +4670,9 @@ uint32_t armv7_three_register_same(uint32_t instructionValue, Instruction* restr
 				instruction->operation = operation[decode.com.b][decode.com.u];
 				if (instruction->operation == ARMV7_VTST)
 				{
+					if (decode.vh.size == 3 || (decode.vh.q && ((decode.vh.vd | decode.vh.vn | decode.vh.vm) & 1)))
+						return 1;
 					instruction->dataType = (DataType)(DT_8 + decode.vh.size);
-					// checkV0 = decode.vh.q;
 				}
 				else
 				{
@@ -4791,6 +4792,14 @@ uint32_t armv7_three_register_same(uint32_t instructionValue, Instruction* restr
 				break;
 			}
 	}
+
+	if (instruction->operation == ARMV7_VSHL && decode.vh.q
+		&& ((decode.vh.vd | decode.vh.vn | decode.vh.vm) & 1))
+		return 1;
+
+	if (instruction->operation == ARMV7_VPADD
+		&& (decode.vh.q || (instruction->dataType == DT_F32 ? (decode.vh.size & 1) : decode.vh.size == 3)))
+		return 1;
 
 	instruction->operands[0].cls = REG;
 	instruction->operands[0].reg = (Register)(regMap[decode.vh.q] + ((decode.vh.d << 4 | decode.vh.vd) >> decode.vh.q));
@@ -4997,6 +5006,8 @@ uint32_t armv7_three_register_different(uint32_t instructionValue, Instruction* 
 			break;
 		case 12: //op = 0
 			{
+				if (decode.vcom.vd & 1)
+					return 1;
 				static DataType dataType[2][4] = {
 					{DT_S8, DT_S16, DT_S32, DT_NONE},
 					{DT_U8, DT_U16, DT_U32, DT_NONE}
@@ -5027,9 +5038,11 @@ uint32_t armv7_three_register_different(uint32_t instructionValue, Instruction* 
 			break;
 		case 14: //op = 1
 			{
-				static DataType dataType[4] = {DT_P8, DT_P16, DT_P32, DT_NONE};
+				// ARMv8 crypto uses size=2 for a single 64x64 polynomial product.
+				if (decode.vcom.u != 0 || (decode.vcom.size != 0 && decode.vcom.size != 2) || (decode.vcom.vd & 1))
+					return 1;
 				instruction->operation = ARMV7_VMULL;
-				instruction->dataType = dataType[decode.vcom.size];
+				instruction->dataType = decode.vcom.size == 2 ? DT_P64 : DT_P8;
 				instruction->operands[0].cls = REG;
 				instruction->operands[0].reg = (Register)(REG_Q0 + (((decode.vcom.d << 4) | decode.vcom.vd) >> 1));
 				instruction->operands[1].cls = REG;
@@ -5199,13 +5212,18 @@ uint32_t armv7_two_register_scalar(uint32_t instructionValue, Instruction* restr
 			break;
 		case 10:
 			{
-				static DataType dtMap[4] = {DT_NONE, DT_S16, DT_S32, DT_NONE};
+				static DataType dtMap[2][4] = {
+					{DT_NONE, DT_S16, DT_S32, DT_NONE},
+					{DT_NONE, DT_U16, DT_U32, DT_NONE}
+				};
+				if (decode.vcom.vd & 1)
+					return 1;
 				instruction->operation = ARMV7_VMULL;
-				instruction->dataType = dtMap[decode.vcom.size];
+				instruction->dataType = dtMap[decode.com.u][decode.vcom.size];
 				instruction->operands[0].cls = REG;
 				instruction->operands[0].reg = (Register)(REG_Q0 + (((decode.vcom.d << 4) | decode.vcom.vd) >> 1));
 				instruction->operands[1].cls = REG;
-				instruction->operands[1].reg = (Register)(REG_D0 + (((decode.vcom.n << 4) | decode.vcom.vn) >> decode.vcom.q));
+				instruction->operands[1].reg = (Register)(REG_D0 + ((decode.vcom.n << 4) | decode.vcom.vn));
 				instruction->operands[2].cls = REG;
 				instruction->operands[2].flags.hasElements = 1;
 				if (decode.vcom.size == 1)
@@ -5678,6 +5696,12 @@ uint32_t armv7_two_register_and_shift(uint32_t instructionValue, Instruction* re
 			}
 			break;
 	}
+	if ((instruction->operation == ARMV7_VSHL || instruction->operation == ARMV7_VSHR)
+		&& decode.vshr.q && ((decode.vshr.vd | decode.vshr.vm) & 1))
+		return 1;
+	if (instruction->operation == ARMV7_VSHRN && (decode.vshr.vm & 1))
+		return 1;
+
 	return instruction->operation == ARMV7_UNDEFINED;
 }
 
@@ -5993,8 +6017,8 @@ uint32_t armv7_two_register_misc(uint32_t instructionValue, Instruction* restric
 				{
 					case 0:
 					case 1:
-						if (decode.vcgt.size == 3 ||
-							(decode.vcgt.q == 0 && decode.vcgt.size == 2))
+						if (decode.vcgt.size != 0 ||
+							(decode.vcgt.q && ((decode.vcgt.vd | decode.vcgt.vm) & 1)))
 							return 1;
 						instruction->operation = ARMV7_VSWP;
 						break;
@@ -6009,7 +6033,7 @@ uint32_t armv7_two_register_misc(uint32_t instructionValue, Instruction* restric
 						break;
 					case 4:
 					case 5:
-						if (decode.vcgt.size == 3 ||
+						if (decode.vcgt.size == 3 || (decode.vcgt.q == 0 && decode.vcgt.size == 2) ||
 							(decode.vcgt.q == 1 &&
 							((decode.vcgt.vd & 1) == 1 || (decode.vcgt.vm & 1) == 1)))
 							return 1;
@@ -6018,7 +6042,7 @@ uint32_t armv7_two_register_misc(uint32_t instructionValue, Instruction* restric
 						break;
 					case 6:
 					case 7:
-						if (decode.vcgt.size == 3 ||
+						if (decode.vcgt.size == 3 || (decode.vcgt.q == 0 && decode.vcgt.size == 2) ||
 							(decode.vcgt.q == 1 &&
 							((decode.vcgt.vd & 1) == 1 || (decode.vcgt.vm & 1) == 1)))
 							return 1;

@@ -19,6 +19,7 @@ use crate::types::get_type;
 use crate::{helpers::*, ReaderType};
 
 use binaryninja::{
+    confidence::{Conf, MAX_CONFIDENCE},
     rc::*,
     types::{EnumerationBuilder, FunctionParameter, ReferenceType, Type, TypeBuilder},
 };
@@ -335,6 +336,16 @@ pub(crate) fn handle_function<R: ReaderType>(
             .get_type(),
         None => Type::void(),
     };
+    let return_type_confidence = if entry_type.is_some() // Real return type
+        // void and we're sure about it
+        || (matches!(entry.attr_value(constants::DW_AT_type), Ok(None))
+            && matches!(entry.attr_value(constants::DW_AT_specification), Ok(None))
+            && matches!(entry.attr_value(constants::DW_AT_abstract_origin), Ok(None)))
+    {
+        MAX_CONFIDENCE
+    } else {
+        0
+    };
 
     // Alias function type in the case that it contains itself
     let (name, ntr) = match debug_info_builder_context.get_name(dwarf, unit, entry) {
@@ -414,7 +425,7 @@ pub(crate) fn handle_function<R: ReaderType>(
     debug_info_builder.remove_type(get_uid(dwarf, unit, entry));
 
     Some(Type::function(
-        return_type.as_ref(),
+        &Conf::new(return_type, return_type_confidence),
         parameters,
         variable_arguments,
     ))

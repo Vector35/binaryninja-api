@@ -719,6 +719,50 @@ static bool VectorMultiplyIntrinsic(LowLevelILFunction& il, decomp_result* instr
 	return true;
 }
 
+static bool VectorMultiplyLong(LowLevelILFunction& il, decomp_result* instr)
+{
+	if (instr->format->operandCount != 3 || !IS_FIELD_PRESENT(instr, FIELD_esize)
+		|| !IS_FIELD_PRESENT(instr, FIELD_unsigned))
+		return false;
+
+	uint32_t dst = GetRegisterOperand(instr, 0);
+	uint32_t src1 = GetRegisterOperand(instr, 1);
+	const instruction_operand_format& src2 = instr->format->operands[2];
+	bool scalar = src2.type == OPERAND_FORMAT_REG_INDEX;
+	if (dst == REG_INVALID || src1 == REG_INVALID || GetRegisterSize(instr, 0) != 16
+		|| GetRegisterSize(instr, 1) != 8 || RegisterSizeFromPrefix(src2.prefix) != 8
+		|| (!scalar && src2.type != OPERAND_FORMAT_REG_FP) || !IS_FIELD_PRESENT(instr, src2.field0))
+		return false;
+
+	uint32_t elementSize = instr->fields[FIELD_esize];
+	bool polynomial = !scalar && IS_FIELD_PRESENT(instr, FIELD_op) && instr->fields[FIELD_op];
+	if (polynomial ? (elementSize != 8 && elementSize != 64) : (elementSize != 8 && elementSize != 16 && elementSize != 32))
+		return false;
+
+	uint32_t index = 0xff;
+	if (scalar)
+	{
+		if (elementSize == 8 || !IS_FIELD_PRESENT(instr, src2.field1))
+			return false;
+		index = instr->fields[src2.field1];
+		if (index >= 64 / elementSize)
+			return false;
+	}
+	uint32_t src2Reg = GetRegisterByIndex(instr->fields[src2.field0], src2.prefix);
+	il.AddInstruction(il.Intrinsic(
+		{ RegisterOrFlag::Register(dst) },
+		ARMV7_INTRIN_VMULL,
+		{
+			il.Const(1, elementSize),
+			il.Const(1, instr->fields[FIELD_unsigned] ? 1 : 0),
+			il.Const(1, polynomial ? 1 : 0),
+			il.Register(8, src1),
+			il.Register(8, src2Reg),
+			il.Const(1, index),
+		}));
+	return true;
+}
+
 static bool VectorSaturatingDoublingMultiplyLongIntrinsic(LowLevelILFunction& il, decomp_result* instr)
 {
 	if (!IS_FIELD_PRESENT(instr, FIELD_esize) || instr->format->operandCount < 3)
@@ -786,108 +830,85 @@ static void VectorTableLookup(LowLevelILFunction& il, decomp_result* instr)
 		inputs));
 }
 
-static void VectorShiftLeft(LowLevelILFunction& il, decomp_result* instr)
+static void VectorShift(LowLevelILFunction& il, decomp_result* instr)
 {
-	if (!IS_FIELD_PRESENT(instr, FIELD_esize))
+	bool narrow = instr->mnem == ARMV7_VSHRN;
+	bool right = instr->mnem == ARMV7_VSHR;
+	if (instr->format->operandCount != 3 || !IS_FIELD_PRESENT(instr, FIELD_esize))
 	{
 		il.AddInstruction(il.Unimplemented());
 		return;
 	}
-
 	uint32_t dest = GetRegisterOperand(instr, 0);
-	uint32_t source = GetRegisterOperand(instr, 1);
-	if (dest == armv7::REG_INVALID || source == armv7::REG_INVALID)
+	size_t size = GetRegisterSize(instr, 0);
+	// VSHRN's decoded esize is the destination width; intrinsic size is the source width.
+	uint32_t elementBits = instr->fields[FIELD_esize] * (narrow ? 2 : 1);
+	if (dest == REG_INVALID || GetRegisterOperand(instr, 1) == REG_INVALID
+		|| (size != 8 && size != 16) || GetRegisterSize(instr, 1) != (narrow ? 16 : size)
+		|| (elementBits != 8 && elementBits != 16 && elementBits != 32 && elementBits != 64)
+		|| (narrow && (size != 8 || elementBits == 8)))
 	{
 		il.AddInstruction(il.Unimplemented());
 		return;
 	}
 
-	size_t regSize = GetRegisterSize(instr, 0);
-	size_t elementSize = instr->fields[FIELD_esize] / 8;
-	if (regSize == 0 || elementSize == 0 || elementSize > regSize || instr->format->operandCount < 3)
-	{
-		il.AddInstruction(il.Unimplemented());
-		return;
-	}
-
+	uint32_t intrinsic;
+	std::vector<ExprId> inputs = { il.Const(1, elementBits) };
 	if (instr->format->operands[2].type == OPERAND_FORMAT_IMM)
 	{
-		uint64_t shift = instr->fields[instr->format->operands[2].field0];
-		if (elementSize == regSize)
+		uint32_t shift = instr->fields[instr->format->operands[2].field0];
+		if ((right || narrow) ? (shift == 0 || shift > elementBits / (narrow ? 2 : 1)) : shift >= elementBits)
 		{
-			il.AddInstruction(WriteILOperand(il, instr, 0,
-				il.ShiftLeft(regSize, il.Register(regSize, source), il.Const(1, shift)), regSize));
+			il.AddInstruction(il.Unimplemented());
 			return;
 		}
-
-		il.AddInstruction(il.Intrinsic(
-			{ RegisterOrFlag::Register(dest) },
-			ARMV7_INTRIN_VSHL,
+		if (right)
+		{
+			if (!IS_FIELD_PRESENT(instr, FIELD_type))
 			{
-				il.Const(1, instr->fields[FIELD_esize]),
-				il.Const(1, (IS_FIELD_PRESENT(instr, FIELD_unsigned) && instr->fields[FIELD_unsigned]) ? 1 : 0),
-				ReadILOperand(il, instr, 1, regSize),
-				il.Const(regSize, shift),
-			}));
-		return;
-	}
-
-	if (!IS_FIELD_PRESENT(instr, FIELD_unsigned))
-	{
-		il.AddInstruction(il.Unimplemented());
-		return;
-	}
-
-	il.AddInstruction(il.Intrinsic(
-		{ RegisterOrFlag::Register(dest) },
-		ARMV7_INTRIN_VSHL,
+				il.AddInstruction(il.Unimplemented());
+				return;
+			}
+			inputs.push_back(il.Const(1, instr->fields[FIELD_type] == 3 ? 1 : 0));
+		}
+		if (!narrow && size == 8 && elementBits == 64)
 		{
-			il.Const(1, instr->fields[FIELD_esize]),
-			il.Const(1, instr->fields[FIELD_unsigned] ? 1 : 0),
-			ReadILOperand(il, instr, 1, regSize),
-			ReadILOperand(il, instr, 2, regSize),
-		}));
+			// A single D64 lane is a scalar shift; keep it visible to constant propagation.
+			ExprId source = ReadILOperand(il, instr, 1, 8);
+			ExprId value;
+			if (!right)
+				value = il.ShiftLeft(8, source, il.Const(1, shift));
+			else if (instr->fields[FIELD_type] != 3)
+				// ASR by 64 sign-fills, but LLIL masks 64-bit shift counts.
+				value = il.ArithShiftRight(8, source, il.Const(1, shift == 64 ? 63 : shift));
+			else
+				value = shift == 64 ? il.Const(8, 0) : il.LogicalShiftRight(8, source, il.Const(1, shift));
+			il.AddInstruction(il.SetRegister(8, dest, value));
+			return;
+		}
+		inputs.push_back(ReadILOperand(il, instr, 1, narrow ? 16 : size));
+		inputs.push_back(il.Const(right ? 8 : 1, shift));
+		intrinsic = narrow ? ARMV7_INTRIN_VSHRN : right
+			? (size == 16 ? ARMV7_INTRIN_VSHR_Q : ARMV7_INTRIN_VSHR)
+			: (size == 16 ? ARMV7_INTRIN_VSHL_IMM_Q : ARMV7_INTRIN_VSHL_IMM);
+	}
+	else
+	{
+		if (right || narrow || !IS_FIELD_PRESENT(instr, FIELD_unsigned)
+			|| GetRegisterOperand(instr, 2) == REG_INVALID || GetRegisterSize(instr, 2) != size)
+		{
+			il.AddInstruction(il.Unimplemented());
+			return;
+		}
+		intrinsic = size == 16 ? ARMV7_INTRIN_VSHL_Q : ARMV7_INTRIN_VSHL;
+		inputs.push_back(il.Const(1, instr->fields[FIELD_unsigned] ? 1 : 0));
+		inputs.push_back(ReadILOperand(il, instr, 1, size));
+		inputs.push_back(ReadILOperand(il, instr, 2, size));
+	}
+	il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(dest) }, intrinsic, inputs));
 }
 
-static void VectorShiftRight(LowLevelILFunction& il, decomp_result* instr)
-{
-	if (!IS_FIELD_PRESENT(instr, FIELD_esize) || (!IS_FIELD_PRESENT(instr, FIELD_unsigned) && !IS_FIELD_PRESENT(instr, FIELD_type)))
-	{
-		il.AddInstruction(il.Unimplemented());
-		return;
-	}
-
-	uint32_t dest = GetRegisterOperand(instr, 0);
-	if (dest == armv7::REG_INVALID || GetRegisterOperand(instr, 1) == armv7::REG_INVALID)
-	{
-		il.AddInstruction(il.Unimplemented());
-		return;
-	}
-
-	size_t regSize = GetRegisterSize(instr, 0);
-	size_t elementSize = instr->fields[FIELD_esize] / 8;
-	if (regSize == 0 || elementSize == 0 || elementSize > regSize || instr->format->operandCount < 3)
-	{
-		il.AddInstruction(il.Unimplemented());
-		return;
-	}
-
-	uint64_t shift = instr->fields[instr->format->operands[2].field0];
-	bool isUnsigned = IS_FIELD_PRESENT(instr, FIELD_unsigned)
-		? instr->fields[FIELD_unsigned] != 0
-		: instr->fields[FIELD_type] != 2;
-	il.AddInstruction(il.Intrinsic(
-		{ RegisterOrFlag::Register(dest) },
-		ARMV7_INTRIN_VSHR,
-		{
-			il.Const(1, instr->fields[FIELD_esize]),
-			il.Const(1, isUnsigned ? 1 : 0),
-			ReadILOperand(il, instr, 1, regSize),
-			il.Const(regSize, shift),
-		}));
-}
-
-static void VectorBitSelect(LowLevelILFunction& il, decomp_result* instr, uint32_t intrinsic)
+static void VectorBitSelect(LowLevelILFunction& il, decomp_result* instr)
 {
 	uint32_t dest = GetRegisterOperand(instr, 0);
 	if (dest == armv7::REG_INVALID || instr->format->operandCount < 3)
@@ -897,20 +918,30 @@ static void VectorBitSelect(LowLevelILFunction& il, decomp_result* instr, uint32
 	}
 
 	size_t regSize = GetRegisterSize(instr, 0);
-	if (regSize == 0)
+	if (regSize != 8 && regSize != 16)
 	{
 		il.AddInstruction(il.Unimplemented());
 		return;
 	}
 
-	il.AddInstruction(il.Intrinsic(
-		{ RegisterOrFlag::Register(dest) },
-		intrinsic,
-		{
-			il.Register(regSize, dest),
-			ReadILOperand(il, instr, 1, regSize),
-			ReadILOperand(il, instr, 2, regSize),
-		}));
+	ExprId destination = il.Register(regSize, dest);
+	ExprId source1 = ReadILOperand(il, instr, 1, regSize);
+	ExprId source2 = ReadILOperand(il, instr, 2, regSize);
+	ExprId setValue = source1;
+	ExprId clearValue = destination;
+	ExprId mask = source2;
+	if (instr->mnem == ARMV7_VBIF)
+	{
+		setValue = destination;
+		clearValue = source1;
+	}
+	else if (instr->mnem == ARMV7_VBSL)
+	{
+		mask = destination;
+		clearValue = source2;
+	}
+	il.AddInstruction(il.SetRegister(regSize, dest,
+		il.Or(regSize, il.And(regSize, setValue, mask), il.And(regSize, clearValue, il.Not(regSize, mask)))));
 }
 
 static void RoundedVectorShift(LowLevelILFunction& il, decomp_result* instr, uint32_t intrinsic)
@@ -1354,6 +1385,63 @@ static void VectorWideningAdd(LowLevelILFunction& il, decomp_result* instr, uint
 		}));
 }
 
+static void VectorMoveLong(LowLevelILFunction& il, decomp_result* instr)
+{
+	if (instr->format->operandCount != 2 || !IS_FIELD_PRESENT(instr, FIELD_esize)
+		|| !IS_FIELD_PRESENT(instr, FIELD_unsigned))
+	{
+		il.AddInstruction(il.Unimplemented());
+		return;
+	}
+
+	uint32_t dst = GetRegisterOperand(instr, 0);
+	uint32_t src = GetRegisterOperand(instr, 1);
+	size_t elementSize = instr->fields[FIELD_esize];
+	if (dst == REG_INVALID || src == REG_INVALID || GetRegisterSize(instr, 0) != 16
+		|| GetRegisterSize(instr, 1) != 8 || (elementSize != 8 && elementSize != 16 && elementSize != 32))
+	{
+		il.AddInstruction(il.Unimplemented());
+		return;
+	}
+
+	il.AddInstruction(il.Intrinsic(
+		{ RegisterOrFlag::Register(dst) },
+		ARMV7_INTRIN_VMOVL,
+		{
+			il.Const(1, elementSize),
+			il.Const(1, instr->fields[FIELD_unsigned] ? 1 : 0),
+			il.Register(8, src),
+		}));
+}
+
+static void VectorMoveNarrow(LowLevelILFunction& il, decomp_result* instr)
+{
+	if (instr->format->operandCount != 2 || !IS_FIELD_PRESENT(instr, FIELD_esize))
+	{
+		il.AddInstruction(il.Unimplemented());
+		return;
+	}
+
+	uint32_t dst = GetRegisterOperand(instr, 0);
+	uint32_t src = GetRegisterOperand(instr, 1);
+	// The decoder's esize describes the narrowed lanes; the intrinsic takes the source lane size.
+	size_t elementSize = instr->fields[FIELD_esize] * 2;
+	if (dst == REG_INVALID || src == REG_INVALID || GetRegisterSize(instr, 0) != 8
+		|| GetRegisterSize(instr, 1) != 16 || (elementSize != 16 && elementSize != 32 && elementSize != 64))
+	{
+		il.AddInstruction(il.Unimplemented());
+		return;
+	}
+
+	il.AddInstruction(il.Intrinsic(
+		{ RegisterOrFlag::Register(dst) },
+		ARMV7_INTRIN_VMOVN,
+		{
+			il.Const(1, elementSize),
+			il.Register(16, src),
+		}));
+}
+
 static void VectorRoundingAddNarrow(LowLevelILFunction& il, decomp_result* instr)
 {
 	if (!IS_FIELD_PRESENT(instr, FIELD_esize) || instr->format->operandCount < 3)
@@ -1668,9 +1756,9 @@ static void VectorCompareEqual(LowLevelILFunction& il, decomp_result* instr)
 		}));
 }
 
-static void VectorCompareGreaterThan(LowLevelILFunction& il, decomp_result* instr)
+static void VectorCompareOrdered(LowLevelILFunction& il, decomp_result* instr, uint32_t intrinsic, uint32_t wideIntrinsic)
 {
-	if (instr->format->operandCount < 3 || !IS_FIELD_PRESENT(instr, FIELD_esize))
+	if (instr->format->operandCount != 3 || !IS_FIELD_PRESENT(instr, FIELD_esize))
 	{
 		il.AddInstruction(il.Unimplemented());
 		return;
@@ -1678,36 +1766,30 @@ static void VectorCompareGreaterThan(LowLevelILFunction& il, decomp_result* inst
 
 	size_t regSize = GetRegisterSize(instr, 0);
 	size_t elementSize = instr->fields[FIELD_esize] / 8;
-	if (regSize == 0 || elementSize == 0)
+	uint32_t dst = GetRegisterOperand(instr, 0);
+	uint32_t src1 = GetRegisterOperand(instr, 1);
+	bool compareZero = instr->format->operands[2].type == OPERAND_FORMAT_ZERO;
+	if ((regSize != 8 && regSize != 16) || (elementSize != 1 && elementSize != 2 && elementSize != 4)
+		|| dst == REG_INVALID || src1 == REG_INVALID || GetRegisterSize(instr, 1) != regSize
+		|| (!compareZero && (GetRegisterOperand(instr, 2) == REG_INVALID || GetRegisterSize(instr, 2) != regSize)))
 	{
 		il.AddInstruction(il.Unimplemented());
 		return;
 	}
 
-	ExprId rhs;
-	if (instr->format->operands[2].type == OPERAND_FORMAT_ZERO)
-	{
-		rhs = il.Const(regSize, 0);
-	}
-	else
-	{
-		size_t rhsSize = GetRegisterSize(instr, 2);
-		if (rhsSize == 0)
-		{
-			il.AddInstruction(il.Unimplemented());
-			return;
-		}
-		rhs = il.Register(rhsSize, GetRegisterOperand(instr, 2));
-	}
-
-	bool isUnsigned = IS_FIELD_PRESENT(instr, FIELD_unsigned) && instr->fields[FIELD_unsigned] != 0;
+	bool isFloat = (instr->format->operationFlags & INSTR_FORMAT_FLAG_F32)
+		|| (IS_FIELD_PRESENT(instr, FIELD_F) && instr->fields[FIELD_F]);
+	bool isUnsigned = IS_FIELD_PRESENT(instr, FIELD_unsigned) && instr->fields[FIELD_unsigned];
+	ExprId lhs = il.Register(regSize, src1);
+	ExprId rhs = compareZero ? il.Const(regSize, 0) : ReadILOperand(il, instr, 2, regSize);
 	il.AddInstruction(il.Intrinsic(
-		{ RegisterOrFlag::Register(GetRegisterOperand(instr, 0)) },
-		ARMV7_INTRIN_VCGT,
+		{ RegisterOrFlag::Register(dst) },
+		regSize == 16 ? wideIntrinsic : intrinsic,
 		{
 			il.Const(1, elementSize * 8),
 			il.Const(1, isUnsigned ? 1 : 0),
-			il.Register(GetRegisterSize(instr, 1), GetRegisterOperand(instr, 1)),
+			il.Const(1, isFloat ? 1 : 0),
+			lhs,
 			rhs,
 		}));
 }
@@ -1795,7 +1877,8 @@ static void VfpLoadStoreMultiple(LowLevelILFunction& il, decomp_result* instr, b
 	uint32_t regs = instr->fields[FIELD_regs];
 	bool increment = IS_FIELD_PRESENT(instr, FIELD_add) ? instr->fields[FIELD_add] != 0
 		: ((instr->mnem == armv7::ARMV7_VLDMIA) || (instr->mnem == armv7::ARMV7_VSTMIA));
-	size_t totalSize = regs * regSize;
+	// ARM DDI 0406C.d A8.8.51: include the unused trailing word for FLDM*X/FSTM*X.
+	size_t totalSize = instr->fields[FIELD_imm32];
 
 	ExprId base = il.Register(4, baseReg);
 	ExprId start = increment ? base : il.Sub(4, base, il.Const(4, totalSize));
@@ -3990,6 +4073,24 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 		}
 		break;
 	}
+	case armv7::ARMV7_VPADD:
+	{
+		bool isFloat = instr->format->operationFlags & INSTR_FORMAT_FLAG_F32;
+		uint32_t elementSize = IS_FIELD_PRESENT(instr, FIELD_esize) ? instr->fields[FIELD_esize] : 0;
+		if (instr->format->operandCount != 3 || GetRegisterOperand(instr, 0) == REG_INVALID
+			|| GetRegisterOperand(instr, 1) == REG_INVALID || GetRegisterOperand(instr, 2) == REG_INVALID
+			|| GetRegisterSize(instr, 0) != 8 || GetRegisterSize(instr, 1) != 8 || GetRegisterSize(instr, 2) != 8
+			|| (isFloat ? elementSize != 32 : (elementSize != 8 && elementSize != 16 && elementSize != 32)))
+		{
+			il.AddInstruction(il.Unimplemented());
+			break;
+		}
+		il.AddInstruction(il.Intrinsic(
+			{ RegisterOrFlag::Register(GetRegisterOperand(instr, 0)) }, ARMV7_INTRIN_VPADD,
+			{ il.Const(1, elementSize), il.Const(1, isFloat ? 1 : 0),
+				ReadILOperand(il, instr, 1, 8), ReadILOperand(il, instr, 2, 8) }));
+		break;
+	}
 	case armv7::ARMV7_VADD:
 		if (instr->format->operationFlags & (INSTR_FORMAT_FLAG_F32 | INSTR_FORMAT_FLAG_F64))
 		{
@@ -4002,19 +4103,21 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 		}
 		break;
 	case armv7::ARMV7_VBIF:
-		VectorBitSelect(il, instr, ARMV7_INTRIN_VBIF);
-		break;
 	case armv7::ARMV7_VBIT:
-		VectorBitSelect(il, instr, ARMV7_INTRIN_VBIT);
-		break;
 	case armv7::ARMV7_VBSL:
-		VectorBitSelect(il, instr, ARMV7_INTRIN_VBSL);
+		VectorBitSelect(il, instr);
 		break;
 	case armv7::ARMV7_VCEQ:
 		VectorCompareEqual(il, instr);
 		break;
 	case armv7::ARMV7_VCGT:
-		VectorCompareGreaterThan(il, instr);
+		VectorCompareOrdered(il, instr, ARMV7_INTRIN_VCGT, ARMV7_INTRIN_VCGT_Q);
+		break;
+	case armv7::ARMV7_VCGE:
+		VectorCompareOrdered(il, instr, ARMV7_INTRIN_VCGE, ARMV7_INTRIN_VCGE_Q);
+		break;
+	case armv7::ARMV7_VCLT:
+		VectorCompareOrdered(il, instr, ARMV7_INTRIN_VCLT, ARMV7_INTRIN_VCLT_Q);
 		break;
 	case armv7::ARMV7_VDUP:
 		VectorDuplicate(il, instr);
@@ -4023,14 +4126,209 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 		il.AddInstruction(WriteArithOperand(
 			il, instr, il.And(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1), ReadILOperand(il, instr, 2))));
 		break;
+	case armv7::ARMV7_VBIC:
+	{
+		size_t size = GetRegisterSize(instr, 0);
+		ExprId source, mask;
+		if (instr->format->operandCount == 2 && instr->format->operands[1].type == OPERAND_FORMAT_IMM64)
+		{
+			// The decoder stores the element immediate for display; replicate it across 64 bits.
+			uint64_t imm64 = instr->fields[FIELD_imm64l];
+			if (instr->fields[FIELD_dt] == VFP_DATA_SIZE_I16)
+				imm64 |= imm64 << 16;
+			imm64 |= imm64 << 32;
+			source = ReadILOperand(il, instr, 0);
+			mask = il.Const(8, imm64);
+			if (size == 16)
+			{
+				mask = il.ZeroExtend(16, mask);
+				mask = il.Or(16, mask, il.ShiftLeft(16, mask, il.Const(1, 64)));
+			}
+		}
+		else if (instr->format->operandCount == 3)
+		{
+			source = ReadILOperand(il, instr, 1);
+			mask = ReadILOperand(il, instr, 2);
+		}
+		else
+		{
+			il.AddInstruction(il.Unimplemented());
+			break;
+		}
+		il.AddInstruction(WriteILOperand(il, instr, 0, il.And(size, source, il.Not(size, mask))));
+		break;
+	}
 	case armv7::ARMV7_VEOR:
 		il.AddInstruction(WriteArithOperand(
 			il, instr, il.Xor(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1), ReadILOperand(il, instr, 2))));
 		break;
-	case armv7::ARMV7_VORR:
-		il.AddInstruction(WriteArithOperand(
-			il, instr, il.Or(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1), ReadILOperand(il, instr, 2))));
+	case armv7::ARMV7_VMVN:
+	{
+		size_t size = GetRegisterSize(instr, 0);
+		if (instr->format->operandCount != 2 || GetRegisterOperand(instr, 0) == REG_INVALID
+			|| (size != 8 && size != 16))
+		{
+			il.AddInstruction(il.Unimplemented());
+			break;
+		}
+
+		ExprId value;
+		if (instr->format->operands[1].type == OPERAND_FORMAT_IMM64)
+		{
+			// The decoder stores the element immediate for display; replicate before complementing.
+			uint64_t imm64 = instr->fields[FIELD_imm64l];
+			if (instr->fields[FIELD_dt] == VFP_DATA_SIZE_I16)
+				imm64 |= imm64 << 16;
+			imm64 |= imm64 << 32;
+			value = il.Const(8, ~imm64);
+			if (size == 16)
+			{
+				value = il.ZeroExtend(16, value);
+				value = il.Or(16, value, il.ShiftLeft(16, value, il.Const(1, 64)));
+			}
+		}
+		else if (instr->format->operands[1].type == OPERAND_FORMAT_REG_FP && GetRegisterSize(instr, 1) == size)
+		{
+			value = il.Not(size, ReadILOperand(il, instr, 1, size));
+		}
+		else
+		{
+			il.AddInstruction(il.Unimplemented());
+			break;
+		}
+		il.AddInstruction(WriteILOperand(il, instr, 0, value));
 		break;
+	}
+	case armv7::ARMV7_VTST:
+	{
+		size_t size = GetRegisterSize(instr, 0);
+		if (instr->format->operandCount != 3 || !IS_FIELD_PRESENT(instr, FIELD_esize)
+			|| (size != 8 && size != 16) || GetRegisterSize(instr, 1) != size || GetRegisterSize(instr, 2) != size
+			|| GetRegisterOperand(instr, 0) == REG_INVALID || GetRegisterOperand(instr, 1) == REG_INVALID
+			|| GetRegisterOperand(instr, 2) == REG_INVALID)
+		{
+			il.AddInstruction(il.Unimplemented());
+			break;
+		}
+		uint32_t elementBits = instr->fields[FIELD_esize];
+		if (elementBits != 8 && elementBits != 16 && elementBits != 32)
+		{
+			il.AddInstruction(il.Unimplemented());
+			break;
+		}
+		il.AddInstruction(il.Intrinsic(
+			{ RegisterOrFlag::Register(GetRegisterOperand(instr, 0)) }, size == 16 ? ARMV7_INTRIN_VTST_Q : ARMV7_INTRIN_VTST,
+			{ il.Const(1, elementBits), ReadILOperand(il, instr, 1, size), ReadILOperand(il, instr, 2, size) }));
+		break;
+	}
+	case armv7::ARMV7_VTRN:
+	case armv7::ARMV7_VUZP:
+	case armv7::ARMV7_VZIP:
+	{
+		size_t size = GetRegisterSize(instr, 0);
+		uint32_t first = GetRegisterOperand(instr, 0);
+		uint32_t second = GetRegisterOperand(instr, 1);
+		if (instr->format->operandCount != 2 || !IS_FIELD_PRESENT(instr, FIELD_esize)
+			|| (size != 8 && size != 16) || GetRegisterSize(instr, 1) != size
+			|| first == REG_INVALID || second == REG_INVALID)
+		{
+			il.AddInstruction(il.Unimplemented());
+			break;
+		}
+		uint32_t elementBits = instr->fields[FIELD_esize];
+		if ((elementBits != 8 && elementBits != 16 && elementBits != 32)
+			|| (instr->mnem != ARMV7_VTRN && size == 8 && elementBits == 32))
+		{
+			il.AddInstruction(il.Unimplemented());
+			break;
+		}
+		if (first == second)
+		{
+			// The ISA specifies UNKNOWN contents for identical operands.
+			il.AddInstruction(il.SetRegister(size, first, il.Undefined()));
+			break;
+		}
+		uint32_t intrinsic = size == 16 ? ARMV7_INTRIN_VTRN_Q : ARMV7_INTRIN_VTRN;
+		if (instr->mnem == ARMV7_VUZP)
+			intrinsic = size == 16 ? ARMV7_INTRIN_VUZP_Q : ARMV7_INTRIN_VUZP;
+		else if (instr->mnem == ARMV7_VZIP)
+			intrinsic = size == 16 ? ARMV7_INTRIN_VZIP_Q : ARMV7_INTRIN_VZIP;
+		il.AddInstruction(il.Intrinsic(
+			{ RegisterOrFlag::Register(first), RegisterOrFlag::Register(second) },
+			intrinsic,
+			{ il.Const(1, elementBits), ReadILOperand(il, instr, 0, size), ReadILOperand(il, instr, 1, size) }));
+		break;
+	}
+	case armv7::ARMV7_VSWP:
+	{
+		size_t size = GetRegisterSize(instr, 0);
+		if (instr->format->operandCount != 2 || (size != 8 && size != 16)
+			|| GetRegisterOperand(instr, 0) == REG_INVALID || GetRegisterOperand(instr, 1) == REG_INVALID
+			|| GetRegisterSize(instr, 1) != size)
+		{
+			il.AddInstruction(il.Unimplemented());
+			break;
+		}
+		il.AddInstruction(il.SetRegister(size, LLIL_TEMP(0), ReadILOperand(il, instr, 0, size)));
+		il.AddInstruction(WriteILOperand(il, instr, 0, ReadILOperand(il, instr, 1, size)));
+		il.AddInstruction(WriteILOperand(il, instr, 1, il.Register(size, LLIL_TEMP(0))));
+		break;
+	}
+	case armv7::ARMV7_VORN:
+	{
+		size_t size = GetRegisterSize(instr, 0);
+		if (instr->format->operandCount != 3 || (size != 8 && size != 16)
+			|| GetRegisterOperand(instr, 0) == REG_INVALID || GetRegisterOperand(instr, 1) == REG_INVALID
+			|| GetRegisterOperand(instr, 2) == REG_INVALID
+			|| GetRegisterSize(instr, 1) != size || GetRegisterSize(instr, 2) != size)
+		{
+			il.AddInstruction(il.Unimplemented());
+			break;
+		}
+		il.AddInstruction(WriteILOperand(il, instr, 0,
+			il.Or(size, ReadILOperand(il, instr, 1, size), il.Not(size, ReadILOperand(il, instr, 2, size)))));
+		break;
+	}
+	case armv7::ARMV7_VORR:
+	{
+		size_t size = GetRegisterSize(instr, 0);
+		if (GetRegisterOperand(instr, 0) == REG_INVALID || (size != 8 && size != 16))
+		{
+			il.AddInstruction(il.Unimplemented());
+			break;
+		}
+
+		ExprId source, mask;
+		if (instr->format->operandCount == 2 && instr->format->operands[1].type == OPERAND_FORMAT_IMM64)
+		{
+			// The decoder stores the element immediate for display; replicate across the vector.
+			uint64_t imm64 = instr->fields[FIELD_imm64l];
+			if (instr->fields[FIELD_dt] == VFP_DATA_SIZE_I16)
+				imm64 |= imm64 << 16;
+			imm64 |= imm64 << 32;
+			source = ReadILOperand(il, instr, 0, size);
+			mask = il.Const(8, imm64);
+			if (size == 16)
+			{
+				mask = il.ZeroExtend(16, mask);
+				mask = il.Or(16, mask, il.ShiftLeft(16, mask, il.Const(1, 64)));
+			}
+		}
+		else if (instr->format->operandCount == 3 && GetRegisterOperand(instr, 1) != REG_INVALID
+			&& GetRegisterOperand(instr, 2) != REG_INVALID
+			&& GetRegisterSize(instr, 1) == size && GetRegisterSize(instr, 2) == size)
+		{
+			source = ReadILOperand(il, instr, 1, size);
+			mask = ReadILOperand(il, instr, 2, size);
+		}
+		else
+		{
+			il.AddInstruction(il.Unimplemented());
+			break;
+		}
+		il.AddInstruction(WriteILOperand(il, instr, 0, il.Or(size, source, mask)));
+		break;
+	}
 	case armv7::ARMV7_VQADD:
 		SaturatingVectorAdd(il, instr);
 		break;
@@ -4051,6 +4349,12 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 		break;
 	case armv7::ARMV7_VADDW:
 		VectorWideningAdd(il, instr, ARMV7_INTRIN_VADDW);
+		break;
+	case armv7::ARMV7_VMOVL:
+		VectorMoveLong(il, instr);
+		break;
+	case armv7::ARMV7_VMOVN:
+		VectorMoveNarrow(il, instr);
 		break;
 	case armv7::ARMV7_VRADDHN:
 		VectorRoundingAddNarrow(il, instr);
@@ -4099,13 +4403,14 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 		ShiftRightAccumulateOrInsert(il, instr, ARMV7_INTRIN_VSLI);
 		break;
 	case armv7::ARMV7_VSHL:
-		VectorShiftLeft(il, instr);
+	case armv7::ARMV7_VSHRN:
+		VectorShift(il, instr);
 		break;
 	case armv7::ARMV7_VSHLL:
 		VectorShiftLeftLong(il, instr);
 		break;
 	case armv7::ARMV7_VSHR:
-		VectorShiftRight(il, instr);
+		VectorShift(il, instr);
 		break;
 	case armv7::ARMV7_VTBL:
 	case armv7::ARMV7_VTBX:
@@ -4272,6 +4577,10 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 		if (!VectorSaturatingDoublingMultiplyLongIntrinsic(il, instr))
 			il.AddInstruction(il.Unimplemented());
 		break;
+	case armv7::ARMV7_VMULL:
+		if (!VectorMultiplyLong(il, instr))
+			il.AddInstruction(il.Unimplemented());
+		break;
 	case armv7::ARMV7_VNMUL:
 		if (instr->format->operationFlags & (INSTR_FORMAT_FLAG_F32 | INSTR_FORMAT_FLAG_F64))
 		{
@@ -4306,9 +4615,23 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 			il.AddInstruction(
 				WriteArithOperand(il, instr, il.FloatNeg(GetRegisterSize(instr, 0), ReadILOperand(il, instr, 1))));
 		}
+		else if (IS_FIELD_PRESENT(instr, FIELD_esize) && IS_FIELD_PRESENT(instr, FIELD_floating_point)
+			&& (instr->fields[FIELD_esize] == 32 || (!instr->fields[FIELD_floating_point]
+				&& (instr->fields[FIELD_esize] == 8 || instr->fields[FIELD_esize] == 16)))
+			&& instr->format->operandCount == 2 && GetRegisterOperand(instr, 0) != REG_INVALID
+			&& GetRegisterOperand(instr, 1) != REG_INVALID
+			&& (GetRegisterSize(instr, 0) == 8 || GetRegisterSize(instr, 0) == 16)
+			&& GetRegisterSize(instr, 0) == GetRegisterSize(instr, 1))
+		{
+			size_t size = GetRegisterSize(instr, 0);
+			il.AddInstruction(il.Intrinsic(
+				{ RegisterOrFlag::Register(GetRegisterOperand(instr, 0)) },
+				size == 16 ? ARMV7_INTRIN_VNEG_Q : ARMV7_INTRIN_VNEG,
+				{ il.Const(1, instr->fields[FIELD_esize]), il.Const(1, instr->fields[FIELD_floating_point]),
+					ReadILOperand(il, instr, 1, size) }));
+		}
 		else
 		{
-			// Non scalar unsupported.
 			il.AddInstruction(il.Unimplemented());
 		}
 		break;
@@ -4663,6 +4986,8 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 	case armv7::ARMV7_VSTM:
 	case armv7::ARMV7_VSTMDB:
 	case armv7::ARMV7_VSTMIA:
+	case armv7::ARMV7_FSTMDBX:
+	case armv7::ARMV7_FSTMIAX:
 	{
 		VfpLoadStoreMultiple(il, instr, false);
 		break;
@@ -4811,6 +5136,8 @@ bool GetLowLevelILForNEONInstruction(Architecture* arch, LowLevelILFunction& il,
 	case armv7::ARMV7_VLDM:
 	case armv7::ARMV7_VLDMDB:
 	case armv7::ARMV7_VLDMIA:
+	case armv7::ARMV7_FLDMDBX:
+	case armv7::ARMV7_FLDMIAX:
 	{
 		VfpLoadStoreMultiple(il, instr, true);
 		break;

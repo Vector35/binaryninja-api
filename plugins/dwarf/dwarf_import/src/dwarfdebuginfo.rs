@@ -31,7 +31,7 @@ use binaryninja::{
 
 use gimli::{DebuggingInformationEntry, Dwarf, Unit};
 
-use binaryninja::confidence::Conf;
+use binaryninja::confidence::{Conf, MAX_CONFIDENCE};
 use binaryninja::variable::{Variable, VariableSourceType};
 use indexmap::{map::Values, IndexMap};
 use std::{cmp::Ordering, collections::HashMap, hash::Hash};
@@ -108,13 +108,15 @@ pub(crate) const UNNAMED_FUNCTION_NAME: &str = "_unnamed_func";
 pub(crate) struct DebugType {
     pub name: String,
     pub ty: Ref<Type>,
+    // Named structures and enums keep their definition for committing and an NTR for uses.
+    pub reference: Option<Ref<Type>>,
     pub commit: bool,
     pub target_type_uid: Option<TypeUID>,
 }
 
 impl DebugType {
     pub fn get_type(&self) -> Ref<Type> {
-        self.ty.clone()
+        self.reference.as_ref().unwrap_or(&self.ty).clone()
     }
 }
 
@@ -225,6 +227,7 @@ pub(crate) struct DebugInfoBuilder {
     typedef_placeholders:
         HashMap<(String, TypeClass, Option<StructureType>, u64, usize), Ref<Type>>,
     unnamed_function_placeholder: Option<Ref<Type>>,
+    definition_uids_by_name: HashMap<String, TypeUID>,
 }
 
 impl DebugInfoBuilder {
@@ -239,6 +242,7 @@ impl DebugInfoBuilder {
             structure_placeholders: HashMap::new(),
             typedef_placeholders: HashMap::new(),
             unnamed_function_placeholder: None,
+            definition_uids_by_name: HashMap::new(),
         }
     }
 
@@ -433,6 +437,26 @@ impl DebugInfoBuilder {
         self.types.values()
     }
 
+    fn definition_name(&mut self, type_uid: TypeUID, name: String, t: &Ref<Type>) -> String {
+        let mut candidate = name.clone();
+        let mut i = 1;
+        while let Some(&existing_uid) = self.definition_uids_by_name.get(&candidate) {
+            let same_definition = existing_uid == type_uid
+                || self
+                    .types
+                    .get(&existing_uid)
+                    .is_some_and(|existing| existing.ty == *t);
+            if same_definition {
+                return candidate;
+            }
+            candidate = format!("{}_{}", name, i);
+            i += 1;
+        }
+        self.definition_uids_by_name
+            .insert(candidate.clone(), type_uid);
+        candidate
+    }
+
     pub(crate) fn add_type(
         &mut self,
         type_uid: TypeUID,
@@ -441,21 +465,36 @@ impl DebugInfoBuilder {
         commit: bool,
         target_type_uid: Option<TypeUID>,
     ) {
+        let (name, reference) = if commit
+            && matches!(
+                t.type_class(),
+                TypeClass::EnumerationTypeClass | TypeClass::StructureTypeClass
+            ) {
+            let name = self.definition_name(type_uid, name, &t);
+            let reference = self.typedef_placeholder(&name, &t);
+            (name, Some(reference))
+        } else {
+            (name, None)
+        };
+
         if let Some(DebugType {
             name: existing_name,
             ty: existing_type,
-            commit: _,
+            reference: _,
+            commit: existing_commit,
             target_type_uid: _,
         }) = self.types.insert(
             type_uid,
             DebugType {
                 name: name.clone(),
                 ty: t.clone(),
+                reference,
                 commit,
                 target_type_uid,
             },
         ) {
-            if existing_type != t && commit {
+            // Completing a recursive type replaces its temporary, uncommitted reference.
+            if existing_commit && existing_type != t && commit {
                 tracing::warn!("DWARF info contains duplicate type definition. Overwriting type `{}` (named `{:?}`) with `{}` (named `{:?}`)",
                     existing_type,
                     existing_name,
@@ -512,7 +551,7 @@ impl DebugInfoBuilder {
         // Either get the known type or use a 0 confidence void type so we at least get the name applied
         let ty = type_uid
             .and_then(|uid| self.get_type(uid))
-            .map(|t| Conf::new(t.ty.clone(), 128))
+            .map(|t| Conf::new(t.get_type(), 128))
             .unwrap_or_else(|| Conf::new(Type::void(), 0));
 
         let function = &mut self.functions[function_index];
@@ -639,8 +678,8 @@ impl DebugInfoBuilder {
     // What committing a type actually stores. A typedef contributes its target, because its own
     // type is the self-referential placeholder that stands in for it while its children are built.
     fn committed_type(&self, debug_type: &DebugType) -> Option<Ref<Type>> {
-        if debug_type.get_type().get_named_type_reference().is_none() {
-            return Some(debug_type.get_type());
+        if debug_type.ty.get_named_type_reference().is_none() {
+            return Some(debug_type.ty.clone());
         }
 
         let target_uid = debug_type.target_type_uid?;
@@ -713,7 +752,7 @@ impl DebugInfoBuilder {
 
             // TODO : Components
             // If it's a typedef resolve one layer down since we'd technically be defining it as a typedef to itself otherwise
-            if let Some(ntr) = debug_type.get_type().get_named_type_reference() {
+            if let Some(ntr) = debug_type.ty.get_named_type_reference() {
                 if let Some(target_uid) = debug_type.target_type_uid {
                     if let Some(target_type) = self.get_type(target_uid) {
                         debug_info.add_type(&debug_type_name, &target_type.get_type(), &[]);
@@ -743,7 +782,7 @@ impl DebugInfoBuilder {
     fn commit_data_variables(&self, debug_info: &mut DebugInfo) {
         for (&address, (name, type_uid)) in &self.data_variables {
             let data_var_type = match self.get_type(*type_uid) {
-                Some(x) => &x.ty,
+                Some(x) => x.get_type(),
                 None => {
                     tracing::error!("Failed to find type for data variable at {:#x}", address);
                     continue;
@@ -751,7 +790,7 @@ impl DebugInfoBuilder {
             };
             assert!(debug_info.add_data_variable(
                 address,
-                data_var_type,
+                &data_var_type,
                 name.as_deref(),
                 &[] // TODO : Components
             ));
@@ -762,7 +801,8 @@ impl DebugInfoBuilder {
         let return_type = function
             .return_type
             .and_then(|return_type_id| self.get_type(return_type_id))
-            .map(|t| Conf::new(t.ty.clone(), 128))
+            // Have to bump to max confidence or (wrong) auto analysis will take precedence
+            .map(|t| Conf::new(t.get_type(), MAX_CONFIDENCE))
             .unwrap_or_else(|| Conf::new(Type::void(), 0));
 
         let parameters: Vec<FunctionParameter> = function
@@ -774,7 +814,7 @@ impl DebugInfoBuilder {
                         0 => Type::void(),
                         uid => self
                             .get_type(*uid)
-                            .map(|t| t.ty.clone())
+                            .map(|t| t.get_type())
                             .unwrap_or_else(Type::void),
                     };
                     FunctionParameter::new(ty, name.clone(), None)

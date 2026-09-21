@@ -173,7 +173,7 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMut
             let dest = lift_source_operand(inst.source(), size, il);
             let op = match inst.operand_width() {
                 Some(OperandWidth::Byte) => {
-                    il.sx(2, il.rrc(size, dest, src).with_flag_write(FlagWrite::All))
+                    il.zx(2, il.rrc(size, dest, src).with_flag_write(FlagWrite::All))
                 }
                 Some(OperandWidth::Word) | None => {
                     il.rrc(size, dest, src).with_flag_write(FlagWrite::All)
@@ -195,7 +195,7 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMut
             let dest = lift_source_operand(inst.source(), size, il);
             let op = match inst.operand_width() {
                 Some(OperandWidth::Byte) => {
-                    il.sx(2, il.ror(size, dest, src).with_flag_write(FlagWrite::Cnz))
+                    il.zx(2, il.ror(size, dest, src).with_flag_write(FlagWrite::Cnz))
                 }
                 Some(OperandWidth::Word) | None => {
                     il.ror(size, dest, src).with_flag_write(FlagWrite::Cnz)
@@ -291,7 +291,7 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMut
             let size = width_to_size(inst.operand_width());
             let src = match inst.operand_width() {
                 OperandWidth::Byte => il
-                    .sx(2, lift_source_operand(inst.source(), size, il))
+                    .zx(2, lift_source_operand(inst.source(), size, il))
                     .build(),
                 OperandWidth::Word => lift_source_operand(inst.source(), size, il),
             };
@@ -304,7 +304,7 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMut
             let dest = lift_source_operand(inst.destination(), size, il);
             let op = match inst.operand_width() {
                 OperandWidth::Byte => {
-                    il.sx(2, il.add(size, src, dest).with_flag_write(FlagWrite::All))
+                    il.zx(2, il.add(size, src, dest).with_flag_write(FlagWrite::All))
                 }
                 OperandWidth::Word => il.add(size, src, dest).with_flag_write(FlagWrite::All),
             };
@@ -323,7 +323,7 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMut
             let dest = lift_source_operand(inst.destination(), size, il);
             let op = match inst.operand_width() {
                 OperandWidth::Byte => {
-                    il.sx(2, il.sub(size, src, dest).with_flag_write(FlagWrite::All))
+                    il.zx(2, il.sub(size, src, dest).with_flag_write(FlagWrite::All))
                 }
                 OperandWidth::Word => il.sub(size, src, dest).with_flag_write(FlagWrite::All),
             };
@@ -358,7 +358,7 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMut
             let src = lift_source_operand(inst.source(), size, il);
             let dest = lift_source_operand(inst.destination(), size, il);
             let op = match inst.operand_width() {
-                OperandWidth::Byte => il.sx(2, il.and(size, il.not(size, src), dest)),
+                OperandWidth::Byte => il.zx(2, il.and(size, il.not(size, src), dest)),
                 OperandWidth::Word => il.and(size, il.not(size, src), dest),
             };
             two_operand!(inst.destination(), il, op);
@@ -369,7 +369,7 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMut
             let src = lift_source_operand(inst.source(), size, il);
             let dest = lift_source_operand(inst.destination(), size, il);
             let op = match inst.operand_width() {
-                OperandWidth::Byte => il.sx(2, il.or(size, src, dest)),
+                OperandWidth::Byte => il.zx(2, il.or(size, src, dest)),
                 OperandWidth::Word => il.or(size, src, dest),
             };
             two_operand!(inst.destination(), il, op);
@@ -381,7 +381,7 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMut
             let dest = lift_source_operand(inst.destination(), size, il);
             let op = match inst.operand_width() {
                 OperandWidth::Byte => {
-                    il.sx(2, il.xor(size, src, dest).with_flag_write(FlagWrite::Nvz))
+                    il.zx(2, il.xor(size, src, dest).with_flag_write(FlagWrite::Nvz))
                 }
                 OperandWidth::Word => il.xor(size, src, dest).with_flag_write(FlagWrite::Nvz),
             };
@@ -395,7 +395,7 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMut
             let dest = lift_source_operand(inst.destination(), size, il);
             let op = match inst.operand_width() {
                 OperandWidth::Byte => {
-                    il.sx(2, il.and(size, src, dest).with_flag_write(FlagWrite::Nz))
+                    il.zx(2, il.and(size, src, dest).with_flag_write(FlagWrite::Nz))
                 }
                 OperandWidth::Word => il.and(size, src, dest).with_flag_write(FlagWrite::Nz),
             };
@@ -449,7 +449,7 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMut
             };
             let dest = lift_source_operand(&inst.destination().unwrap(), size, il);
             let op = match inst.operand_width() {
-                Some(OperandWidth::Byte) => il.sx(
+                Some(OperandWidth::Byte) => il.zx(
                     2,
                     il.sub(size, dest, il.const_int(size, 1))
                         .with_flag_write(FlagWrite::All),
@@ -467,7 +467,7 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMut
             };
             let dest = lift_source_operand(&inst.destination().unwrap(), size, il);
             let op = match inst.operand_width() {
-                Some(OperandWidth::Byte) => il.sx(
+                Some(OperandWidth::Byte) => il.zx(
                     2,
                     il.sub(size, dest, il.const_int(size, 2))
                         .with_flag_write(FlagWrite::All),
@@ -491,7 +491,7 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMut
             };
             let dest = lift_source_operand(&inst.destination().unwrap(), size, il);
             let op = match inst.operand_width() {
-                Some(OperandWidth::Byte) => il.sx(
+                Some(OperandWidth::Byte) => il.zx(
                     2,
                     il.add(size, dest, il.const_int(size, 1))
                         .with_flag_write(FlagWrite::All),
@@ -509,7 +509,7 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMut
             };
             let dest = lift_source_operand(&inst.destination().unwrap(), size, il);
             let op = match inst.operand_width() {
-                Some(OperandWidth::Byte) => il.sx(
+                Some(OperandWidth::Byte) => il.zx(
                     2,
                     il.add(size, dest, il.const_int(size, 2))
                         .with_flag_write(FlagWrite::All),
@@ -528,7 +528,7 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMut
             let dest = lift_source_operand(&inst.destination().unwrap(), size, il);
             let op = match inst.operand_width() {
                 Some(OperandWidth::Byte) => {
-                    il.sx(2, il.not(size, dest).with_flag_write(FlagWrite::Nvz))
+                    il.zx(2, il.not(size, dest).with_flag_write(FlagWrite::Nvz))
                 }
                 Some(OperandWidth::Word) | None => {
                     il.not(size, dest).with_flag_write(FlagWrite::Nvz)
@@ -564,7 +564,7 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMut
             let dest = lift_source_operand(&inst.destination().unwrap(), size, il);
             let op = match inst.operand_width() {
                 Some(OperandWidth::Byte) => {
-                    il.sx(2, il.rol(size, dest, src).with_flag_write(FlagWrite::All))
+                    il.zx(2, il.rol(size, dest, src).with_flag_write(FlagWrite::All))
                 }
                 Some(OperandWidth::Word) | None => {
                     il.rol(size, dest, src).with_flag_write(FlagWrite::All)
@@ -581,7 +581,7 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMut
             let dest = lift_source_operand(&inst.destination().unwrap(), size, il);
             let op = match inst.operand_width() {
                 Some(OperandWidth::Byte) => {
-                    il.sx(2, il.rlc(size, dest, src).with_flag_write(FlagWrite::All))
+                    il.zx(2, il.rlc(size, dest, src).with_flag_write(FlagWrite::All))
                 }
                 Some(OperandWidth::Word) | None => {
                     il.rlc(size, dest, src).with_flag_write(FlagWrite::All)

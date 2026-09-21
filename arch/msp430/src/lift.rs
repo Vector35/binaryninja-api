@@ -323,9 +323,9 @@ pub(crate) fn lift_instruction(inst: &Instruction, addr: u64, il: &LowLevelILMut
             let dest = lift_source_operand(inst.destination(), size, il);
             let op = match inst.operand_width() {
                 OperandWidth::Byte => {
-                    il.zx(2, il.sub(size, src, dest).with_flag_write(FlagWrite::All))
+                    il.zx(2, il.sub(size, dest, src).with_flag_write(FlagWrite::All))
                 }
-                OperandWidth::Word => il.sub(size, src, dest).with_flag_write(FlagWrite::All),
+                OperandWidth::Word => il.sub(size, dest, src).with_flag_write(FlagWrite::All),
             };
             two_operand!(inst.destination(), il, op);
             auto_increment!(inst.source(), il);

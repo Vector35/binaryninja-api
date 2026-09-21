@@ -29,6 +29,37 @@ The settings UI supports several filter tags to help find specific settings:
 
 All settings are uniquely identified with an identifier string. Identifiers are available in the settings UI via the context menu and are useful for finding settings using the search box and for [programmatically](https://api.binary.ninja/binaryninja.settings-module.html) interacting with settings.
 
+## Ephemeral User Settings
+
+Set `BN_SETTINGS_STR` to a JSON object containing setting identifiers and values to
+provide user settings without a settings file. Set it before launching Binary
+Ninja or, for headless use, before importing `binaryninja` or loading the core
+library. For example, to select the debugger engine directory for a Windows TTD
+test:
+
+```python
+import json
+import os
+
+os.environ["BN_SETTINGS_STR"] = json.dumps({
+    "debugger.x64dbgEngPath": r"C:\debug-engines\x64",
+})
+import binaryninja
+```
+
+When present, this variable replaces `settings.json`, rather than merging with
+it. Unspecified settings use their defaults, and plugin settings are retained
+until their schemas are registered. Project and resource scopes keep their
+usual precedence. User settings remain editable through the API and Settings
+view, but changes stay in memory and are not saved to `settings.json`.
+
+`BN_SETTINGS_STR` takes precedence over `BN_DISABLE_USER_SETTINGS`. An empty
+string or `{}` starts with empty user settings. Invalid JSON or a non-object root
+logs an error and also starts with empty user settings, without falling back to
+the user settings file. The variable is read once when the core library loads;
+changing it later does not update the running instance. A new process inheriting
+the variable starts again with the supplied values, not any in-memory edits.
+
 ## Resource Settings (BinaryView)
 
 To facilitate reproducible analysis results, when opening a file for the first time, all analysis settings are automatically serialized into the BinaryView's Resource Setting scope. This prevents subsequent User and Project setting modifications from unintentionally changing existing settings which may influence analysis results.

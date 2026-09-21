@@ -288,6 +288,7 @@ The following environment variables may be helpful when troubleshooting issues:
 | BN_DISABLE_REPOSITORY_PLUGINS | Flag (True if exists) | This setting will only disable plugins installed via the extension manager. |
 | BN_DISABLE_USER_PLUGINS | Flag (True if exists) | This environment variable will disable all plugins loaded from the [plugins user folder](https://docs.binary.ninja/guide/index.html#user-folder). |
 | BN_DISABLE_USER_SETTINGS | Flag (True if exists) | This flag will cause Binary Ninja to ignore any [`settings.json`](https://docs.binary.ninja/guide/settings.html).|
+| BN_SETTINGS_STR | JSON Contents (String) | Replaces the user settings file with [ephemeral user settings](settings.md#ephemeral-user-settings), including when `BN_DISABLE_USER_SETTINGS` is set. Set before launching Binary Ninja or loading the core library. |
 | BN_SCREENSHOT | Flag (True if exists) | This flag removes some small UI clutter to enable cleaner screenshots. |
 | BN_DEBUG_HTTP | Flag (True if exists) | This flag enables additional debug logging of HTTP activity. |
 | BN_DEBUG_EXCEPTION_TRACES | Flag (Disabled by default, enabled if set to "1") | This variable includes stack traces when exceptions are handled. |

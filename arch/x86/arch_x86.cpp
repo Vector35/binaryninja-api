@@ -4911,9 +4911,54 @@ public:
 		return type && !type->IsFloat() && type->GetWidth() > 4;
 	}
 
+	bool IsStackAdjustedOnReturn() override
+	{
+		return true;
+	}
+
 	bool AreStackArgumentsPushedLeftToRight() override
 	{
 		return true;
+	}
+
+	/*! Delphi passes the hidden pointer for an indirectly returned result in the argument slot
+	    *following* the declared parameters: EAX for a parameterless function, EDX after one
+	    parameter, and the stack once EAX, EDX and ECX are taken. GetIndirectReturnValueLocation
+	    cannot express that, because the slot depends on how many parameters precede it, so the
+	    whole layout is computed here instead.
+	 */
+	CallLayout GetCallLayout(BinaryView* view, const ReturnValue& returnValue, const vector<FunctionParameter>& params,
+		const std::optional<set<uint32_t>>& permittedRegs) override
+	{
+		CallLayout result = GetDefaultCallLayout(view, returnValue, params, permittedRegs);
+		if (!result.returnValue.has_value() || !result.returnValue->indirect)
+			return result;
+
+		// A caller that has pinned the return value to an explicit location keeps it.
+		// MarkNonDefaultParameterLocations clears defaultLocation and re-runs this until the
+		// layout agrees with the location it recorded, so moving a pinned location never
+		// terminates.
+		if (!returnValue.defaultLocation)
+			return result;
+
+		// Lay the call out a second time with the hidden pointer appended as an ordinary trailing
+		// parameter and nothing returned, then split that parameter back off as the return value.
+		vector<FunctionParameter> extended = params;
+		extended.push_back(FunctionParameter("", Type::PointerType(GetArchitecture(), Type::VoidType())));
+		CallLayout appended = GetDefaultCallLayout(view, ReturnValue(Type::VoidType()), extended, permittedRegs);
+		if (appended.parameters.size() != extended.size())
+			return result;
+
+		ValueLocation hidden = appended.parameters.back();
+		hidden.indirect = true;
+		hidden.returnedPointer = result.returnValue->returnedPointer;
+		appended.parameters.pop_back();
+
+		result.parameters = appended.parameters;
+		result.returnValue = hidden;
+		result.stackAdjustment = appended.stackAdjustment;
+		result.registerStackAdjustments = appended.registerStackAdjustments;
+		return result;
 	}
 
 	std::optional<Variable> GetReturnedIndirectReturnValuePointer() override

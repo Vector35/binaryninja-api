@@ -106,6 +106,7 @@ class HeaderWidget : public QWidget
 	Q_OBJECT
 
 	Headers m_headers;
+	std::function<void()> m_detectBaseAddress;
 	QGridLayout* m_layout;
 	int m_currentColumns;
 	int m_pendingWidth;
@@ -114,7 +115,7 @@ class HeaderWidget : public QWidget
 	void rebuildLayout();
 
   public:
-	HeaderWidget(QWidget* parent, const Headers& headers);
+	HeaderWidget(QWidget* parent, const Headers& headers, const std::function<void()>& detectBaseAddress = {});
 	void updateColumns(int width);
 
   protected:

@@ -1,6 +1,8 @@
 #include <cstring>
 #include <time.h>
 #include <map>
+#include <QtWidgets/QHBoxLayout>
+#include <QtWidgets/QPushButton>
 #include "headers.h"
 #include "fontsettings.h"
 #include "theme.h"
@@ -102,7 +104,8 @@ GenericHeaders::GenericHeaders(BinaryViewRef data)
 	else
 		AddField("Entry Point", "None");
 	if (data->IsValidOffset(data->GetStart()))
-		AddField("Current Base", QString("0x") + QString::number(data->GetStart(), 16), AddressHeaderField);
+		AddField("Current Base", QString("0x%1").arg(data->GetStart(), (int)data->GetAddressSize() * 2, 16, QChar('0')),
+			AddressHeaderField);
 	AddField("Endianness", data->GetDefaultEndianness() == BigEndian ? "Big" : "Little");
 }
 
@@ -160,7 +163,8 @@ PEHeaders::PEHeaders(BinaryViewRef data)
 	AddField("Timestamp (Hex)", QString::number(secs, 16).prepend("0x"));
 
 	uint64_t currentBase = data->GetStart();
-	AddField("Current Base", QString("0x") + QString::number(currentBase, 16), AddressHeaderField);
+	AddField("Current Base", QString("0x%1").arg(currentBase, (int)data->GetAddressSize() * 2, 16, QChar('0')),
+		AddressHeaderField);
 
 	uint64_t base = GetValueOfStructMember(data, optHeaderName, optHeaderStart, "imageBase");
 	AddField("Image Base", QString("0x") + QString::number(base, 16), AddressHeaderField);
@@ -372,7 +376,8 @@ QString PEHeaders::GetNameOfEnumerationMember(BinaryViewRef data, const std::str
 }
 
 
-HeaderWidget::HeaderWidget(QWidget* parent, const Headers& header) : QWidget(parent), m_headers(header)
+HeaderWidget::HeaderWidget(QWidget* parent, const Headers& header, const std::function<void()>& detectBaseAddress) :
+    QWidget(parent), m_headers(header), m_detectBaseAddress(detectBaseAddress)
 {
 	m_layout = new QGridLayout();
 	m_layout->setContentsMargins(0, 0, 0, 0);
@@ -506,6 +511,18 @@ void HeaderWidget::rebuildLayout()
 				if (field.values.size() > 1)
 					copyLabel->setCopyText(copyText);
 				label = copyLabel;
+			}
+			if ((field.title == "Current Base") && m_detectBaseAddress)
+			{
+				auto baseWidget = new QWidget(this);
+				auto baseLayout = new QHBoxLayout(baseWidget);
+				baseLayout->setContentsMargins(0, 0, 0, 0);
+				baseLayout->addWidget(label);
+				auto detectButton = new QPushButton("Detect", baseWidget);
+				connect(detectButton, &QPushButton::clicked, this, m_detectBaseAddress);
+				baseLayout->addWidget(detectButton);
+				baseLayout->addStretch();
+				label = baseWidget;
 			}
 			m_layout->addWidget(label, row, col * 3 + 1);
 			row++;

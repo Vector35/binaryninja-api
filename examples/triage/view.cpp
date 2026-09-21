@@ -12,7 +12,6 @@
 #include "librariesinfo.h"
 #include "headers.h"
 #include "strings.h"
-#include "baseaddress.h"
 #include "fontsettings.h"
 #include "analysisinfo.h"
 #include <binaryninjacore.h>
@@ -44,26 +43,25 @@ TriageView::TriageView(QWidget* parent, BinaryViewRef data) : QScrollArea(parent
 		hdr = new PEHeaders(m_data);
 	else if (m_data->GetTypeName() != "Raw")
 		hdr = new GenericHeaders(m_data);
+	else
+	{
+		hdr = new Headers();
+		hdr->AddField("Current Base",
+			QString("0x%1").arg(m_data->GetStart(), (int)m_data->GetAddressSize() * 2, 16, QChar('0')), AddressHeaderField);
+	}
 
 	if (hdr)
 	{
 		QGroupBox* headerGroup = new QGroupBox("Headers", container);
 		QVBoxLayout* headerLayout = new QVBoxLayout();
-		m_headerWidget = new HeaderWidget(headerGroup, *hdr);
+		std::function<void()> detectBaseAddress;
+		if ((m_data->GetTypeName() == "Mapped") || (m_data->GetTypeName() == "Raw"))
+			detectBaseAddress = [this]() { actionHandler()->executeAction("Detect Base Address..."); };
+		m_headerWidget = new HeaderWidget(headerGroup, *hdr, detectBaseAddress);
 		headerLayout->addWidget(m_headerWidget);
 		headerGroup->setLayout(headerLayout);
 		layout->addWidget(headerGroup);
 		delete hdr;
-	}
-
-	auto fileMetadata = m_data->GetFile();
-	if (m_data == fileMetadata->GetViewOfType("Raw") || m_data == fileMetadata->GetViewOfType("Mapped"))
-	{
-		QGroupBox* baseDetectionGroup = new QGroupBox("Base Address Detection", container);
-		QVBoxLayout* baseDetectionLayout = new QVBoxLayout();
-		baseDetectionLayout->addWidget(new BaseAddressDetectionWidget(this, data));
-		baseDetectionGroup->setLayout(baseDetectionLayout);
-		layout->addWidget(baseDetectionGroup);
 	}
 
 	if (m_data->IsExecutable())

@@ -31,34 +31,18 @@ All settings are uniquely identified with an identifier string. Identifiers are 
 
 ## Ephemeral User Settings
 
-Set `BN_SETTINGS_STR` to a JSON object containing setting identifiers and values to
-provide user settings without a settings file. Set it before launching Binary
-Ninja or, for headless use, before importing `binaryninja` or loading the core
-library. For example, to select the debugger engine directory for a Windows TTD
-test:
+Set `BN_SETTINGS_STR` to a JSON object before launching Binary Ninja or importing
+`binaryninja` to use temporary user settings:
 
-```python
-import json
-import os
-
-os.environ["BN_SETTINGS_STR"] = json.dumps({
-    "debugger.x64dbgEngPath": r"C:\debug-engines\x64",
-})
-import binaryninja
+```sh
+BN_SETTINGS_STR='{"analysis.mode":"basic"}' ./binaryninja
 ```
 
-When present, this variable replaces `settings.json`, rather than merging with
-it. Unspecified settings use their defaults, and plugin settings are retained
-until their schemas are registered. Project and resource scopes keep their
-usual precedence. User settings remain editable through the API and Settings
-view, but changes stay in memory and are not saved to `settings.json`.
-
-`BN_SETTINGS_STR` takes precedence over `BN_DISABLE_USER_SETTINGS`. An empty
-string or `{}` starts with empty user settings. Invalid JSON or a non-object root
-logs an error and also starts with empty user settings, without falling back to
-the user settings file. The variable is read once when the core library loads;
-changing it later does not update the running instance. A new process inheriting
-the variable starts again with the supplied values, not any in-memory edits.
+This replaces `settings.json`. Unspecified settings use their defaults, and user
+edits in the Settings view or API stay in memory without being saved to disk.
+It takes precedence over `BN_DISABLE_USER_SETTINGS`; project and resource settings
+keep their usual behavior. Empty or invalid input leaves user settings empty
+(invalid input also logs an error).
 
 ## Resource Settings (BinaryView)
 

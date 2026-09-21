@@ -49,9 +49,13 @@ static bool FindMostSpecificCpuTypeSubtype(cpu_type_t cputype, cpu_subtype_t cpu
 		}
 	}
 	// Then, any -all arch that matches
+	auto allSubtypeItr = g_allSubtypeMap.find(cputype);
+	if (allSubtypeItr == g_allSubtypeMap.end())
+		return false;
+
 	for (const auto& type : *g_recognizedFatTypes)
 	{
-		if (type.cputype == cputype && type.cpusubtype == g_allSubtypeMap.at(cputype))
+		if (type.cputype == cputype && type.cpusubtype == allSubtypeItr->second)
 		{
 			outType = type.cpusubtype;
 			return true;
@@ -136,6 +140,9 @@ static bool ExtractFatArchForCPU(BinaryView* data, fat_arch_64& arch, cpu_type_t
 		{
 			continue;
 		}
+
+		// Mask away cpu subtype capability bits
+		iarch.cpusubtype &= ~MACHO_CPU_SUBTYPE_MASK;
 
 		// Make sure the passed subtype is the most specific, otherwise two different views
 		// will try to display the same slice
@@ -227,7 +234,11 @@ void BinaryNinja::InitFatMachoViewType()
 		{"Fat Mach-O x86_64", "Fat Mach-O x86_64", MACHO_CPU_TYPE_X86_64, MACHO_CPU_SUBTYPE_X86_64_ALL},
 		{"Fat Mach-O x86", "Fat Mach-O x86", MACHO_CPU_TYPE_X86, MACHO_CPU_SUBTYPE_X86_ALL},
 
+		{"Fat Mach-O arm64e.x2", "Fat Mach-O arm64e.x2", MACHO_CPU_TYPE_ARM64, MACHO_CPU_SUBTYPE_ARM64E_X2},
+		{"Fat Mach-O arm64e.x1", "Fat Mach-O arm64e.x1", MACHO_CPU_TYPE_ARM64, MACHO_CPU_SUBTYPE_ARM64E_X1},
 		{"Fat Mach-O arm64e", "Fat Mach-O arm64e", MACHO_CPU_TYPE_ARM64, MACHO_CPU_SUBTYPE_ARM64E},
+		{"Fat Mach-O arm64.x2", "Fat Mach-O arm64.x2", MACHO_CPU_TYPE_ARM64, MACHO_CPU_SUBTYPE_ARM64_X2},
+		{"Fat Mach-O arm64.x1", "Fat Mach-O arm64.x1", MACHO_CPU_TYPE_ARM64, MACHO_CPU_SUBTYPE_ARM64_X1},
 		{"Fat Mach-O arm64v8", "Fat Mach-O arm64v8", MACHO_CPU_TYPE_ARM64, MACHO_CPU_SUBTYPE_ARM64_V8},
 		{"Fat Mach-O arm64", "Fat Mach-O arm64", MACHO_CPU_TYPE_ARM64, MACHO_CPU_SUBTYPE_ARM64_ALL},
 		{"Fat Mach-O arm64_32", "Fat Mach-O arm64_32", MACHO_CPU_TYPE_ARM64_32, MACHO_CPU_SUBTYPE_ARM64_32_V8},

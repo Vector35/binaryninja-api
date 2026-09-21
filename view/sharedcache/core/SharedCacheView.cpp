@@ -225,7 +225,7 @@ bool SharedCacheView::Init()
 	magic[16] = 0;
 
 	if (std::string(magic) == "dyld_v1   arm64" || std::string(magic) == "dyld_v1  arm64e"
-		|| std::string(magic) == "dyld_v1arm64_32")
+		|| std::string(magic) == "dyld_v1arm64ex1" || std::string(magic) == "dyld_v1arm64_32")
 	{
 		arch = "aarch64";
 	}

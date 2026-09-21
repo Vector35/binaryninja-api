@@ -204,7 +204,15 @@ pub enum TbdArchitecture {
     Armv7s,
     Armv7k,
     Arm64,
+    #[serde(rename = "arm64.x1")]
+    Arm64X1,
+    #[serde(rename = "arm64.x2")]
+    Arm64X2,
     Arm64e,
+    #[serde(rename = "arm64e.x1")]
+    Arm64eX1,
+    #[serde(rename = "arm64e.x2")]
+    Arm64eX2,
 }
 
 impl TbdArchitecture {
@@ -217,7 +225,11 @@ impl TbdArchitecture {
             TbdArchitecture::Armv7s => CoreArchitecture::by_name("armv7"),
             TbdArchitecture::Armv7k => CoreArchitecture::by_name("armv7"),
             TbdArchitecture::Arm64 => CoreArchitecture::by_name("aarch64"),
+            TbdArchitecture::Arm64X1 => CoreArchitecture::by_name("aarch64"),
+            TbdArchitecture::Arm64X2 => CoreArchitecture::by_name("aarch64"),
             TbdArchitecture::Arm64e => CoreArchitecture::by_name("aarch64"),
+            TbdArchitecture::Arm64eX1 => CoreArchitecture::by_name("aarch64"),
+            TbdArchitecture::Arm64eX2 => CoreArchitecture::by_name("aarch64"),
         }
     }
 }
@@ -234,7 +246,11 @@ impl FromStr for TbdArchitecture {
             "armv7s" => Ok(TbdArchitecture::Armv7s),
             "armv7k" => Ok(TbdArchitecture::Armv7k),
             "arm64" => Ok(TbdArchitecture::Arm64),
+            "arm64.x1" => Ok(TbdArchitecture::Arm64X1),
+            "arm64.x2" => Ok(TbdArchitecture::Arm64X2),
             "arm64e" => Ok(TbdArchitecture::Arm64e),
+            "arm64e.x1" => Ok(TbdArchitecture::Arm64eX1),
+            "arm64e.x2" => Ok(TbdArchitecture::Arm64eX2),
             _ => Err(format!("Unknown architecture: {}", s)),
         }
     }
@@ -396,6 +412,19 @@ exports:
 ...
 "#;
 
+    const V4_TBD_ARM64E_X1: &str = r#"
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ x86_64-macos, x86_64-maccatalyst, arm64e-macos, arm64e-maccatalyst,
+                   arm64e.x1-macos, arm64e.x1-maccatalyst ]
+install-name:    '/usr/lib/libz.1.dylib'
+current-version: 1.2.12
+exports:
+  - targets:         [ x86_64-macos, arm64e-macos, arm64e.x1-macos ]
+    symbols:         [ _deflate, _inflate ]
+...
+"#;
+
     #[test]
     fn test_parse_legacy_tbd() {
         let mut cursor = Cursor::new(LEGACY_TBD);
@@ -428,6 +457,25 @@ exports:
             .iter()
             .any(|t| t.arch == TbdArchitecture::Arm64 && t.platform == TbdPlatform::Macos);
         assert!(has_arm64_macos);
+    }
+
+    #[test]
+    fn test_parse_v4_tbd_arm64e_x1() {
+        let mut cursor = Cursor::new(V4_TBD_ARM64E_X1);
+        let result = parse_tbd_info(&mut cursor).expect("Should parse V4 TBD with arm64e.x1");
+
+        let info = &result[0];
+        assert_eq!(info.targets.len(), 6);
+        let has_arm64e_x1_macos = info
+            .targets
+            .iter()
+            .any(|t| t.arch == TbdArchitecture::Arm64eX1 && t.platform == TbdPlatform::Macos);
+        assert!(has_arm64e_x1_macos);
+        let export = &info.exports[0];
+        assert!(export
+            .targets
+            .iter()
+            .any(|t| t.arch == TbdArchitecture::Arm64eX1));
     }
 
     #[test]

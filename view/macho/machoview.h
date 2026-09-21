@@ -78,6 +78,10 @@ typedef int vm_prot_t;
 #define MACHO_CPU_SUBTYPE_ARM64_ALL    ((cpu_subtype_t) 0)
 #define MACHO_CPU_SUBTYPE_ARM64_V8     ((cpu_subtype_t) 1)
 #define MACHO_CPU_SUBTYPE_ARM64E       ((cpu_subtype_t) 2)
+#define MACHO_CPU_SUBTYPE_ARM64_X1     ((cpu_subtype_t) 3)
+#define MACHO_CPU_SUBTYPE_ARM64_X2     ((cpu_subtype_t) 4)
+#define MACHO_CPU_SUBTYPE_ARM64E_X1    ((cpu_subtype_t) 12)
+#define MACHO_CPU_SUBTYPE_ARM64E_X2    ((cpu_subtype_t) 13)
 
 #define MACHO_CPU_SUBTYPE_ARM64_32_ALL ((cpu_subtype_t) 0)
 #define MACHO_CPU_SUBTYPE_ARM64_32_V8  ((cpu_subtype_t) 1)

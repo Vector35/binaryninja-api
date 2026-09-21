@@ -135,7 +135,7 @@ macro_rules! conditional_jump {
     ($addr:ident, $inst:ident, $cond:ident, $il:ident) => {
         let true_addr = offset_to_absolute($addr, $inst.offset());
         let false_addr = $addr + $inst.size() as u64;
-        let mut new_true = true;
+        let mut new_true = false;
         let mut new_false = false;
 
         let mut true_label = $il.label_for_address(true_addr).unwrap_or_else(|| {

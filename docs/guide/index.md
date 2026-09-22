@@ -274,7 +274,7 @@ Right-clicking an entry in the recent files list offers:
 | Remove from Recent Files | Drop the entry from the list, leaving its saved state intact |
 | Forget This File | Drop the entry *and* purge the state saved for that file: the view state restored by [`ui.files.restore.viewState`](settings.md#ui.files.restore.viewState) (window layout, pane splits, sidebar, and location) and the load settings restored by [`ui.files.restore.viewOptions`](settings.md#ui.files.restore.viewOptions). |
 | Clear All Recent Files | Empty the whole list |
-| Clear All Recent Projects | Empty the Recent Projects list (Commercial and Ultimate only) |
+| Clear All Recent Projects | Empty the Recent Projects list (not available in the Free edition) |
 | Compact Mode | Toggle the compact display described above |
 
 ### Plugins
@@ -291,11 +291,11 @@ Pressing each of the icons will navigate you to the Extension Manager with the c
 
 Pressing the gear or using the hotkeys (macOS: `[CMD+SHIFT] + M`, Windows/Linux: `[CTRL+SHIFT] + M`) will open the extension manager with no filters, so you can browse available plugins.
 
-### Commercial/Ultimate Features
+### Projects
 
 ![new tab](../img/newtab-projects.png "New Tab Projects Version"){ width="700" }
 
-On Commercial and Ultimate, the New Tab file list also contains a separate tab for Recent Projects. These tabs can be docked, rearranged, split, or unified, and their split is adjustable. Layout changes will be saved.
+In all editions except Free, the New Tab file list also contains a separate tab for Recent Projects. These tabs can be docked, rearranged, split, or unified, and their split is adjustable. Layout changes will be saved.
 
 While Projects themselves are presented in their own tab, files opened in Projects will be located in the usual Recent Files list.
 

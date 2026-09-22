@@ -235,9 +235,9 @@ Ref<BinaryView> FileMetadata::OpenDatabaseForConfiguration(const string& path)
 }
 
 
-bool FileMetadata::ReopenMovedDatabase(const string& path)
+bool FileMetadata::ReopenMovedDatabase(const string&)
 {
-	return BNReopenMovedDatabase(m_object, path.c_str());
+	return false;
 }
 
 

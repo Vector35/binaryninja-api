@@ -3347,7 +3347,7 @@ namespace BinaryNinja {
 		DataBuffer ReadGlobalData(const std::string& key) const;
 		void WriteGlobalData(const std::string& key, const DataBuffer& val);
 
-		BN_DEPRECATED("Use FileMetadata::ReopenMovedDatabase")
+		BN_DEPRECATED("Not implemented")
 		void ReloadConnection();
 		Ref<KeyValueStore> ReadAnalysisCache() const;
 		void WriteAnalysisCache(Ref<KeyValueStore> val);
@@ -3878,7 +3878,8 @@ namespace BinaryNinja {
 		Ref<BinaryView> OpenExistingDatabase(
 		    const std::string& path, const ProgressFunction& progressCallback);
 		Ref<BinaryView> OpenDatabaseForConfiguration(const std::string& path);
-		bool ReopenMovedDatabase(const std::string& path);
+		BN_DEPRECATED("Not implemented")
+		bool ReopenMovedDatabase(const std::string&);
 
 		/*! Save the current database to the already created file.
 

@@ -24,6 +24,9 @@ using namespace std;
 #define EF_MIPS_ABI2 0x00000020
 #define EF_MIPS_ARCH 0xf0000000
 #define EF_MIPS_ARCH_3 0x20000000
+#define PT_MIPS_ABIFLAGS 0x70000003
+#define SHT_MIPS_ABIFLAGS 0x7000002a
+#define SHT_GNU_ATTRIBUTES 0x6ffffff5
 
 uint32_t bswap32(uint32_t x)
 {
@@ -3151,11 +3154,19 @@ public:
 				});
 			}
 		}
+		else if (GetArchitecture()->GetEndianness() == BigEndian && type->GetWidth() == 8
+			&& (type->IsInteger() || type->IsEnumeration()))
+		{
+			return ValueLocation({
+				{Variable::Register(REG_V0), 4, 4},
+				{Variable::Register(REG_V1), 0, 4}
+			});
+		}
 
 		return GetDefaultReturnValueLocation(view, returnValue);
 	}
 
-	virtual vector<ValueLocation> GetParameterLocations(BinaryView*, const std::optional<ValueLocation>& returnValue,
+	virtual vector<ValueLocation> GetParameterLocations(BinaryView* view, const std::optional<ValueLocation>& returnValue,
 		const vector<FunctionParameter>& params,
 		const std::optional<std::set<uint32_t>>& permittedRegs = std::nullopt) override
 	{
@@ -3243,20 +3254,29 @@ public:
 			{
 				vector<ValueLocationComponent> components;
 				bool registersPermitted = argumentRegistersAvailable;
+				Ref<Type> valueType = type;
+				if (view && valueType && valueType->IsNamedTypeRefer())
+					valueType = valueType->DerefNamedTypeReference(view);
+				// Scalar component offsets count from the least significant byte. Big-endian
+				// o32 passes the high word first in GPRs and on the stack, while aggregates
+				// retain their memory-order field offsets. FPR pairs are handled separately.
+				bool reverseScalarWords = GetArchitecture()->GetEndianness() == BigEndian && !indirect
+					&& valueType && (valueType->IsInteger() || valueType->IsFloat() || valueType->IsEnumeration());
 				for (uint64_t offset = 0; offset < passedWidth; offset += 4)
 				{
 					uint64_t componentOffset = argumentOffset + offset;
 					uint64_t componentSize = std::min<uint64_t>(4, width > offset ? width - offset : 4);
+					uint64_t valueOffset = reverseScalarWords && width > 4 ? width - offset - componentSize : offset;
 					if (componentOffset < 16)
 					{
 						uint32_t reg = integerRegisters[componentOffset / 4];
 						if (permittedRegs.has_value() && !permittedRegs->contains(reg))
 							registersPermitted = false;
-						components.emplace_back(Variable::Register(reg), offset, componentSize);
+						components.emplace_back(Variable::Register(reg), valueOffset, componentSize);
 					}
 					else
 					{
-						components.emplace_back(Variable::StackOffset(componentOffset), offset, componentSize);
+						components.emplace_back(Variable::StackOffset(componentOffset), valueOffset, componentSize);
 					}
 				}
 
@@ -4197,6 +4217,171 @@ static void InitMipsSettings()
 }
 
 
+static optional<uint64_t> ReadMipsGnuFpAbi(BinaryReader& reader, uint64_t end)
+{
+	// GNU attributes use the ARM attribute container format, with ULEB128 tags and values.
+	auto readULEB = [&](uint64_t limit) -> uint64_t {
+		uint64_t value = 0;
+		for (unsigned shift = 0; shift < 64 && reader.GetOffset() < limit; shift += 7)
+		{
+			uint8_t byte = reader.Read8();
+			if (shift == 63 && (byte & 0x7e))
+				throw ReadException();
+			value |= uint64_t(byte & 0x7f) << shift;
+			if (!(byte & 0x80))
+				return value;
+		}
+		throw ReadException();
+	};
+	auto readString = [&](uint64_t limit) -> string {
+		string value;
+		while (reader.GetOffset() < limit)
+		{
+			char ch = reader.Read8();
+			if (!ch)
+				return value;
+			value += ch;
+		}
+		throw ReadException();
+	};
+
+	if (reader.GetOffset() == end || reader.Read8() != 'A')
+		return {};
+	while (end - reader.GetOffset() >= 4)
+	{
+		uint64_t vendorStart = reader.GetOffset();
+		uint32_t size = reader.Read32();
+		if (size < 5 || size > end - vendorStart)
+			return {};
+		uint64_t vendorEnd = vendorStart + size;
+		if (readString(vendorEnd) == "gnu")
+		{
+			while (reader.GetOffset() < vendorEnd)
+			{
+				uint64_t tagStart = reader.GetOffset();
+				uint64_t tag = readULEB(vendorEnd);
+				if (vendorEnd - reader.GetOffset() < 4)
+					return {};
+				uint32_t tagSize = reader.Read32();
+				if (tagSize < reader.GetOffset() - tagStart || tagSize > vendorEnd - tagStart)
+					return {};
+				uint64_t tagEnd = tagStart + tagSize;
+				if (tag == 1) // Tag_File: section/symbol attributes do not select the file ABI.
+				{
+					while (reader.GetOffset() < tagEnd)
+					{
+						uint64_t attr = readULEB(tagEnd);
+						if (attr == 4) // Tag_GNU_MIPS_ABI_FP
+							return readULEB(tagEnd);
+						if (!(attr & 1))
+							readULEB(tagEnd);
+						if ((attr & 1) || attr == 32) // Tag_compatibility has both an integer and a string.
+							readString(tagEnd);
+					}
+				}
+				reader.Seek(tagEnd);
+			}
+		}
+		reader.Seek(vendorEnd);
+	}
+	return {};
+}
+
+
+static bool ElfMips32UsesHardFloat(BinaryView* view, BNEndianness endianness)
+{
+	BinaryReader reader(view, endianness);
+	optional<uint64_t> fpAbi;
+	try
+	{
+		// Read the ELF32 tables directly: recognition runs before an ELF view exists.
+		reader.Seek(28);
+		uint32_t programOffset = reader.Read32();
+		uint32_t sectionOffset = reader.Read32();
+		reader.Seek(42);
+		uint16_t programSize = reader.Read16();
+		uint16_t programCount = reader.Read16();
+		uint16_t sectionSize = reader.Read16();
+		uint16_t sectionCount = reader.Read16();
+		uint64_t fileSize = view->GetLength();
+		auto readAbiFlags = [&](uint64_t offset, uint64_t size) -> optional<uint64_t> {
+			if (size < 24 || offset > fileSize || size > fileSize - offset)
+				return {};
+			reader.Seek(offset);
+			if (reader.Read16() != 0) // Elf_MIPS_ABIFlags_v0
+				return {};
+			reader.Seek(offset + 7);
+			return reader.Read8(); // fp_abi
+		};
+
+		// PT_MIPS_ABIFLAGS also works for files with stripped section headers.
+		if (programSize == 32 && programOffset <= fileSize
+			&& uint64_t(programCount) * programSize <= fileSize - programOffset)
+		{
+			for (uint32_t i = 0; i < programCount; ++i)
+			{
+				uint64_t entry = programOffset + uint64_t(i) * programSize;
+				reader.Seek(entry);
+				if (reader.Read32() != PT_MIPS_ABIFLAGS)
+					continue;
+				uint32_t offset = reader.Read32();
+				reader.Seek(entry + 16);
+				uint32_t size = reader.Read32();
+				fpAbi = readAbiFlags(offset, size);
+				if (fpAbi)
+					break;
+			}
+		}
+
+		optional<uint64_t> gnuFpAbi;
+		if (!fpAbi && sectionSize == 40 && sectionOffset <= fileSize
+			&& uint64_t(sectionCount) * sectionSize <= fileSize - sectionOffset)
+		{
+			for (uint32_t i = 0; i < sectionCount; ++i)
+			{
+				uint64_t entry = sectionOffset + uint64_t(i) * sectionSize;
+				reader.Seek(entry + 4);
+				uint32_t type = reader.Read32();
+				if (type != SHT_MIPS_ABIFLAGS && type != SHT_GNU_ATTRIBUTES)
+					continue;
+				reader.Seek(entry + 16);
+				uint32_t offset = reader.Read32();
+				uint32_t size = reader.Read32();
+				if (offset > fileSize || size > fileSize - offset)
+					continue;
+				if (type == SHT_MIPS_ABIFLAGS)
+				{
+					fpAbi = readAbiFlags(offset, size);
+					if (fpAbi)
+						break;
+				}
+				else
+				{
+					reader.Seek(offset);
+					try
+					{
+						gnuFpAbi = ReadMipsGnuFpAbi(reader, uint64_t(offset) + size);
+					}
+					catch (ReadException&)
+					{
+						// A malformed GNU attribute must not hide a later ABI flags section.
+					}
+				}
+			}
+		}
+		if (!fpAbi)
+			fpAbi = gnuFpAbi;
+	}
+	catch (ReadException&)
+	{
+		return false;
+	}
+
+	// ANY (0), SOFT (3), and unknown values retain the existing soft-float default.
+	return fpAbi && (*fpAbi == 1 || *fpAbi == 2 || (*fpAbi >= 4 && *fpAbi <= 7));
+}
+
+
 static Ref<Platform> ElfFlagsRecognize(BinaryView* view, Metadata* metadata)
 {
 	Ref<Metadata> abiMetadata = metadata->Get("EI_OSABI");
@@ -4249,6 +4434,11 @@ static Ref<Platform> ElfFlagsRecognize(BinaryView* view, Metadata* metadata)
     // This needs to be after the R5900 check above or all R5900 binaries will load as MIPS III
 	if ((flagsValue & EF_MIPS_ARCH) == EF_MIPS_ARCH_3)
 		return Platform::GetByName(endianness == BigEndian ? "linux-mips3" : "linux-mipsel3");
+
+	Ref<Metadata> classMetadata = metadata->Get("EI_CLASS");
+	if (classMetadata && classMetadata->IsUnsignedInteger() && classMetadata->GetUnsignedInteger() == 1
+		&& ElfMips32UsesHardFloat(view, endianness))
+		return Platform::GetByName(endianness == BigEndian ? "linux-mips-hf" : "linux-mipsel-hf");
 	return nullptr;
 }
 

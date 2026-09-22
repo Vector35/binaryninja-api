@@ -19,6 +19,7 @@ The exact tool list may change as the MCP server develops, but both server varia
 - **Program structure**: list entry points, segments, sections, symbols, imports, exports, relocations, data variables, and strings.
 - **Memory inspection**: read bytes from the active BinaryView and receive the result as hex and base64.
 - **Function inspection**: list and search functions, request function metadata, render disassembly, render decompiled Pseudo C, render IL, inspect basic blocks, callers, callees, cross-references, stack layout, and complexity metrics.
+- **Debugger (GUI server)**: launch, attach to, or connect to a debug target; step, run to, pause, restart, detach, or quit it; inspect and set breakpoints (including hardware watchpoints), registers, memory, threads, and backtraces; list loaded modules and the memory map; read or write standard input and backend-specific properties. See [Debugger Tools](#debugger-tools).
 
 Use your MCP client's tool listing UI or command to see the complete set of tools available in your installed Binary Ninja version.
 
@@ -136,6 +137,102 @@ Authorization: Bearer <token>
 ```
 
 If `ui.mcp.port` is `0`, the operating system chooses a port when the server starts. Use `Plugins > MCP > Copy Connection Info` instead of guessing the URL.
+
+## Debugger Tools
+
+`bn_debugger_*` tools drive Binary Ninja's debugger from the GUI MCP server. They require a debugger installation and are not available from the headless `binaryninja_mcp` server.
+
+### Enable
+
+1. Enable `ui.mcp.debugger.enabled`.
+2. Start the GUI MCP server (or, if it is already running, stop and start it again with `Plugins > MCP > Stop/Start Server`; unlike `ui.mcp.enabled`, this setting does not need a full application restart, only a server restart).
+
+The debugger endpoint (`binaryninja.debugger.rpc_server`) runs inside this same process and starts automatically the first time a debugger tool is called; there is nothing else to start by hand. If the debugger is not installed, or the endpoint fails to start for any other reason, only the debugger tools fail — every other MCP tool is unaffected. The endpoint's own discovery file is `debugger-rpc-<pid>.json` in the user directory, one per running Binary Ninja process.
+
+### Sessions
+
+Debugger tools act on the debug session of the active BinaryView (see [Active BinaryView](#active-binaryview) above). Each open file has at most one debug session, created the first time it is launched, attached to, or connected to.
+
+### Tools
+
+| Tool | Purpose |
+| --- | --- |
+| `bn_debugger_status` | Session state (`state`, `ip`, `stopReason`), or, with `{"errors": true}`, the full table of error codes these tools can return and what each means. |
+| `bn_debugger_control` | `launch`, `attach`, `connect`, `go`, `step_into`, `step_over`, `step_return`, `run_to`, `pause`, `restart`, `detach`, `quit`. |
+| `bn_debugger_breakpoints` | List, add, remove, enable, disable, or set the condition of a breakpoint; `hardware` adds an execute, read, write, or access watchpoint instead. |
+| `bn_debugger_registers` / `bn_debugger_registers_write` | Read or write the active thread's registers. |
+| `bn_debugger_memory_read` / `bn_debugger_memory_write` | Read or write the live process's memory (not the static BinaryView). |
+| `bn_debugger_backtrace` | Threads and one thread's stack frames. |
+| `bn_debugger_thread` | Select, suspend, or resume a thread. |
+| `bn_debugger_trace` | Repeat `go`, `step_into`, or `step_over` up to `count` times, recording registers at every stop, as one table instead of one call per stop. |
+| `bn_debugger_modules` | Loaded modules, the memory map, address-to-module resolution, or rebasing the static BinaryView to the runtime base. |
+| `bn_debugger_processes` | Processes the debug adapter can see, to choose a pid for `attach`. |
+| `bn_debugger_input` | Write to the target's standard input, or run a raw backend command (for example an LLDB command). |
+| `bn_debugger_properties` | Read or write debug adapter (backend-specific) properties. |
+
+Address parameters on debugger tools (`address`, and the `address` inside `until`) follow the same [Address Expressions](#address-expressions) rules as the rest of the MCP server, resolved against the debugged process. Registers, hardware watchpoint sizes, and similar debugger-specific values are plain JSON integers or the debugger's own hex/decimal strings, not Binary Ninja address expressions.
+
+### Advanced Settings
+
+- `ui.mcp.debugger.endpointScript`: path to `rpc_server.py`, for a debugger build that does not yet include it, or while testing a change to it. Leave blank once the debugger you use ships it.
+- `ui.mcp.debugger.customCommandsFile`: path to a JSON file of additional `bn_debugger_*` tools; see [Custom Debugger Commands](#custom-debugger-commands). Left blank, the default, nothing is read and `tools/list` is unaffected.
+
+Both are read once, when the MCP server starts; stop and start it to pick up a change.
+
+### Custom Debugger Commands
+
+`ui.mcp.debugger.customCommandsFile` points at a JSON file of extra `bn_debugger_*` tools, each forwarding to a method the debugger endpoint already understands or one added to it (its `METHODS` table, in `rpc_server.py`) — without recompiling Binary Ninja. Leave the setting blank and this costs nothing: no file is read, no tool is registered, and `tools/list` is exactly as if the feature did not exist.
+
+The file is a JSON array of command objects:
+
+```json
+[
+  {
+    "name": "bn_debugger_list_processes_demo",
+    "title": "List Processes (demo)",
+    "description": "Lists processes the debug adapter can see, filtered by name.",
+    "method": "processes",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filter": {"type": "string", "description": "Only processes whose name contains this text."}
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "bn_debugger_peek_demo",
+    "title": "Peek Memory (demo)",
+    "description": "Reads bytes from the debugged process at an address expression.",
+    "method": "memory.read",
+    "addressFields": ["address"],
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "address": {"type": "string", "description": "Address expression to read from."},
+        "length": {"type": "integer", "description": "Number of bytes to read."}
+      },
+      "required": ["address", "length"],
+      "additionalProperties": false
+    }
+  }
+]
+```
+
+Fields:
+
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `name` | yes | The tool's name. Must start with `bn_debugger_` and must not repeat a built-in tool's name or another custom command's name in the same file. |
+| `method` | yes | The endpoint method to forward to. |
+| `description` | yes | The tool's description, as an MCP client shows it. |
+| `title` | no | Defaults to `name`. |
+| `inputSchema` | no | A JSON Schema object for the tool's arguments. Defaults to `{"type":"object"}` (any object) if omitted. The MCP server does not validate a call's arguments against this schema itself; the endpoint validates them. |
+| `addressFields` | no | Names of top-level argument fields that are address expressions. Each is resolved the same way a built-in tool's `address` parameter is — symbols, `here`, arithmetic — before being forwarded, so the endpoint always receives a plain resolved value. An address expression that does not resolve is rejected before the call reaches the endpoint. |
+
+Every field of the arguments a client sends is merged into the request alongside the `session` and `filename` every debugger tool already adds; a field named in `addressFields` is replaced with its resolved hex address first.
+
+An entry that fails validation (a bad or missing `name`, a name collision, a missing `method` or `description`, a malformed `inputSchema` or `addressFields`) is skipped and logged to Binary Ninja's log — it does not stop the other entries in the file from loading, and does not stop the MCP server from starting.
 
 ## Headless Server
 
@@ -277,3 +374,15 @@ If a headless client cannot start `binaryninja_mcp`:
 - Use an absolute path to `binaryninja_mcp`.
 - Confirm the installed product includes the headless MCP server.
 - Run the same command manually in a terminal to check for startup errors.
+
+If `bn_debugger_*` tools return `debugger_endpoint_unavailable`:
+
+- Confirm `ui.mcp.debugger.enabled` is enabled and the MCP server has been (re)started since.
+- Check the Binary Ninja log for why the endpoint failed to start. `ModuleNotFoundError` for `binaryninja.debugger.rpc_server` means this debugger build does not include the endpoint yet; set `ui.mcp.debugger.endpointScript` to its `rpc_server.py` instead.
+- The debugger tools are not available from the headless server.
+
+If a tool from `ui.mcp.debugger.customCommandsFile` does not appear in `tools/list`:
+
+- Check the Binary Ninja log for `MCP: custom debugger command entry N: ...`, which names the file entry and the problem.
+- Confirm the file is a JSON array, and that the command's `name` starts with `bn_debugger_` and does not repeat another tool's name.
+- Restart the MCP server; the file is only read when it starts.

@@ -25,27 +25,27 @@ impl MergeConflict {
     }
 
     /// Database backing all snapshots in the merge conflict
-    pub fn database(&self) -> Database {
+    pub fn database(&self) -> Ref<Database> {
         let result = unsafe { BNAnalysisMergeConflictGetDatabase(self.handle.as_ptr()) };
-        unsafe { Database::from_raw(NonNull::new(result).unwrap()) }
+        unsafe { Database::ref_from_raw(NonNull::new(result).unwrap()) }
     }
 
     /// Snapshot which is the parent of the two being merged
-    pub fn base_snapshot(&self) -> Option<Snapshot> {
+    pub fn base_snapshot(&self) -> Option<Ref<Snapshot>> {
         let result = unsafe { BNAnalysisMergeConflictGetBaseSnapshot(self.handle.as_ptr()) };
-        NonNull::new(result).map(|handle| unsafe { Snapshot::from_raw(handle) })
+        NonNull::new(result).map(|handle| unsafe { Snapshot::ref_from_raw(handle) })
     }
 
     /// First snapshot being merged
-    pub fn first_snapshot(&self) -> Option<Snapshot> {
+    pub fn first_snapshot(&self) -> Option<Ref<Snapshot>> {
         let result = unsafe { BNAnalysisMergeConflictGetFirstSnapshot(self.handle.as_ptr()) };
-        NonNull::new(result).map(|handle| unsafe { Snapshot::from_raw(handle) })
+        NonNull::new(result).map(|handle| unsafe { Snapshot::ref_from_raw(handle) })
     }
 
     /// Second snapshot being merged
-    pub fn second_snapshot(&self) -> Option<Snapshot> {
+    pub fn second_snapshot(&self) -> Option<Ref<Snapshot>> {
         let result = unsafe { BNAnalysisMergeConflictGetSecondSnapshot(self.handle.as_ptr()) };
-        NonNull::new(result).map(|handle| unsafe { Snapshot::from_raw(handle) })
+        NonNull::new(result).map(|handle| unsafe { Snapshot::ref_from_raw(handle) })
     }
 
     pub fn path_item_string(&self, path: &str) -> Result<BnString, ()> {

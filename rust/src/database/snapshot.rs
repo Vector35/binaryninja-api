@@ -34,9 +34,11 @@ impl Snapshot {
     }
 
     /// Get the owning database
-    pub fn database(&self) -> Database {
+    pub fn database(&self) -> Ref<Database> {
         unsafe {
-            Database::from_raw(NonNull::new(BNGetSnapshotDatabase(self.handle.as_ptr())).unwrap())
+            Database::ref_from_raw(
+                NonNull::new(BNGetSnapshotDatabase(self.handle.as_ptr())).unwrap(),
+            )
         }
     }
 

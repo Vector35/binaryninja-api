@@ -268,6 +268,7 @@ class BINARYNINJAUIAPI LogView : public SidebarWidget, public FilterTarget
 		static void setWordWrap(bool wrap);
 		static bool IsHexString(const QString& str, std::pair<int, int> offsetLen);
 		static bool StartsWith0x(const QString& str, std::pair<int, int> offsetLen);
+		static std::vector<std::pair<int, int>> NavigationCandidates(const QString& str, int pos);
 
 		void notifyWordWrapChanged();
 

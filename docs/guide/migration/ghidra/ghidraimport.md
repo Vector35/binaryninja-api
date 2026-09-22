@@ -19,6 +19,6 @@ Currently, the following categories of analysis information can be imported from
 
 ### Import to an existing project
 !!! note
-    Binary Ninja projects are only available in Commercial and Ultimate editions
+    Binary Ninja projects are available in the Non-Commercial, Commercial, and Ultimate editions, but not the Free edition
 
 `Plugins > Ghidra > Import Project...` allows you to import files from a Ghidra project (`.gpr`) to an open Binary Ninja project. All available analysis information will be imported for all selected files.

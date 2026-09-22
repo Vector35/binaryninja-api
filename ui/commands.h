@@ -26,6 +26,7 @@ std::optional<BinaryNinja::QualifiedNameAndType> BINARYNINJAUIAPI getNameAndType
     BinaryViewRef data, const std::string& displayName);
 std::optional<BinaryNinja::QualifiedNameAndType> BINARYNINJAUIAPI getNameAndTypeForDisplayName(
     const BinaryNinja::TypeContainer& container, const std::string& displayName);
+BinaryNinja::QualifiedName BINARYNINJAUIAPI qualifiedNameForDisplayName(BinaryViewRef data, const std::string& displayName);
 bool BINARYNINJAUIAPI renameTypeForToken(QWidget* parent, BinaryViewRef data, const std::string& displayName);
 
 bool BINARYNINJAUIAPI InferArraySize(TypeRef& type, size_t selectionSize);

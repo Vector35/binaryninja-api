@@ -13,8 +13,8 @@
 // limitations under the License.
 
 use binaryninjacore_sys::{
-    BNGetCachedLowLevelILPossibleValueSet, BNGetLowLevelILByIndex, BNLowLevelILFreeOperandList,
-    BNLowLevelILGetOperandList, BNLowLevelILInstruction,
+    BNGetCachedLowLevelILPossibleValueSet, BNLowLevelILFreeOperandList, BNLowLevelILGetOperandList,
+    BNLowLevelILInstruction,
 };
 
 use super::*;
@@ -1157,34 +1157,6 @@ where
 // LLIL_JUMP_TO
 pub struct JumpTo;
 
-struct TargetListIter<'func, M, F>
-where
-    M: FunctionMutability,
-    F: FunctionForm,
-{
-    function: &'func LowLevelILFunction<M, F>,
-    cursor: BNLowLevelILInstruction,
-    cursor_operand: usize,
-}
-
-impl<M, F> TargetListIter<'_, M, F>
-where
-    M: FunctionMutability,
-    F: FunctionForm,
-{
-    fn next(&mut self) -> u64 {
-        if self.cursor_operand >= 3 {
-            self.cursor = unsafe {
-                BNGetLowLevelILByIndex(self.function.handle, self.cursor.operands[3] as usize)
-            };
-            self.cursor_operand = 0;
-        }
-        let result = self.cursor.operands[self.cursor_operand];
-        self.cursor_operand += 1;
-        result
-    }
-}
-
 impl<'func, M, F> Operation<'func, M, F, JumpTo>
 where
     M: FunctionMutability,
@@ -1198,23 +1170,10 @@ where
     }
 
     pub fn target_list(&self) -> BTreeMap<u64, LowLevelInstructionIndex> {
-        let mut result = BTreeMap::new();
-        let count = self.op.operands[1] as usize / 2;
-        let mut list = TargetListIter {
-            function: self.function,
-            cursor: unsafe {
-                BNGetLowLevelILByIndex(self.function.handle, self.op.operands[2] as usize)
-            },
-            cursor_operand: 0,
-        };
-
-        for _ in 0..count {
-            let value = list.next();
-            let target = LowLevelInstructionIndex(list.next() as usize);
-            result.insert(value, target);
-        }
-
-        result
+        self.get_operand_list(1)
+            .chunks_exact(2)
+            .map(|pair| (pair[0], LowLevelInstructionIndex(pair[1] as usize)))
+            .collect()
     }
 }
 
@@ -2330,3 +2289,65 @@ impl OperationArguments for AssertSsa {}
 impl OperationArguments for ForceVersion {}
 impl OperationArguments for ForceVersionSsa {}
 impl OperationArguments for SeparateParamListSsa {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::headless::Session;
+    use binaryninjacore_sys::{
+        BNLowLevelILAddExpr, BNLowLevelILAddInstruction, BNLowLevelILAddOperandList,
+        BNLowLevelILOperation::LLIL_JUMP_TO,
+    };
+
+    #[test]
+    fn jump_targets_use_the_core_operand_list() {
+        let _session = Session::new().expect("Failed to initialize session");
+        let arch = crate::architecture::CoreArchitecture::by_name("x86_64").unwrap();
+        let llil = LowLevelILMutableFunction::new(arch, None);
+        let destination = llil.const_int(8, 0x1000);
+
+        for entries in [
+            vec![],
+            vec![(0x1000, 1)],
+            vec![
+                (0, 2),
+                (0x1000, 3),
+                (0x2000, 4),
+                (0x1_0000_0000, 5),
+                (u64::MAX, 6),
+            ],
+        ] {
+            let mut operands: Vec<u64> = entries
+                .iter()
+                .flat_map(|&(value, target)| [value, target])
+                .collect();
+            // Use the public core storage API so this test does not assume its layout.
+            let index = unsafe {
+                let list =
+                    BNLowLevelILAddOperandList(llil.handle, operands.as_mut_ptr(), operands.len());
+                let expr = BNLowLevelILAddExpr(
+                    llil.handle,
+                    LLIL_JUMP_TO,
+                    0,
+                    0,
+                    destination.index.0 as u64,
+                    operands.len() as u64,
+                    list as u64,
+                    0,
+                );
+                BNLowLevelILAddInstruction(llil.handle, expr)
+            };
+            let instruction = llil
+                .instruction_from_index(LowLevelInstructionIndex(index))
+                .unwrap();
+            let LowLevelILInstructionKind::JumpTo(operation) = instruction.kind() else {
+                panic!("Expected LLIL_JUMP_TO");
+            };
+            let expected = entries
+                .into_iter()
+                .map(|(value, target)| (value, LowLevelInstructionIndex(target as usize)))
+                .collect::<BTreeMap<_, _>>();
+            assert_eq!(operation.target_list(), expected);
+        }
+    }
+}

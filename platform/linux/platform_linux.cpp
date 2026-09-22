@@ -249,11 +249,12 @@ class LinuxIlp32Platform: public Platform
 class LinuxMipsPlatform: public Platform
 {
 public:
-	LinuxMipsPlatform(Architecture* arch, const std::string& name): Platform(arch, name)
+	LinuxMipsPlatform(Architecture* arch, const std::string& name, const std::string& callingConventionName = "o32"):
+		Platform(arch, name)
 	{
 		Ref<CallingConvention> cc;
 
-		cc = arch->GetCallingConventionByName("o32");
+		cc = arch->GetCallingConventionByName(callingConventionName);
 		if (cc)
 		{
 			RegisterDefaultCallingConvention(cc);
@@ -574,6 +575,9 @@ extern "C"
 			platformLE64cn = new LinuxMips64Platform(cnmips64el, "linux-cnmipsel64");
 			Platform::Register("linux", platformLE);
 			Platform::Register("linux", platformBE);
+			// The ELF recognizer selects these only when the file explicitly declares a hard-float ABI.
+			Platform::Register("linux", new LinuxMipsPlatform(mipsel, "linux-mipsel-hf", "o32-hard-float"));
+			Platform::Register("linux", new LinuxMipsPlatform(mipseb, "linux-mips-hf", "o32-hard-float"));
 			Platform::Register("linux", platform3LE);
 			Platform::Register("linux", platform3BE);
 			Platform::Register("linux", platformN32LE);

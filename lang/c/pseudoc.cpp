@@ -556,6 +556,15 @@ void PseudoCFunction::AppendFieldTextTokens(const HighLevelILInstruction& instr,
 	const auto fieldDisplayType = GetFieldDisplayType(type, fieldOffset, memberIndex, false);
 	if (type && fieldDisplayType == FieldDisplayOffset)
 	{
+		uint64_t memoryOffset = fieldOffset;
+		if (srcExpr.operation == HLIL_VAR && (type->IsInteger() || type->IsEnumeration())
+			&& GetFunction()->GetArchitecture()->GetEndianness() == BigEndian
+			&& fieldOffset <= type->GetWidth() && instr.size <= type->GetWidth() - fieldOffset)
+		{
+			// Integer variable field offsets are relative to the least significant byte,
+			// but the pointer expression below addresses bytes in memory order.
+			memoryOffset = type->GetWidth() - fieldOffset - instr.size;
+		}
 		if (!addrOf)
 			tokens.Append(OperationToken, "*");
 		if (!settings || settings->IsOptionSet(ShowTypeCasts))
@@ -576,8 +585,11 @@ void PseudoCFunction::AppendFieldTextTokens(const HighLevelILInstruction& instr,
 		tokens.Append(OperationToken, "&");
 		GetExprTextInternal(srcExpr, tokens, settings, UnaryOperatorPrecedence);
 
-		tokens.Append(OperationToken, " + ");
-		tokens.AppendIntegerTextToken(instr, fieldOffset, instr.size);
+		if (memoryOffset != 0 || fieldOffset == 0)
+		{
+			tokens.Append(OperationToken, " + ");
+			tokens.AppendIntegerTextToken(instr, memoryOffset, instr.size);
+		}
 		tokens.AppendCloseParen();
 
 		char offsetStr[64];

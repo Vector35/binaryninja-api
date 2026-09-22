@@ -32,13 +32,9 @@ impl Database {
 
     /// Open a database with the given file path
     pub fn open_existing(path: impl AsRef<Path>) -> Result<Ref<Self>, ()> {
-        let db = unsafe { Self::ref_from_raw(NonNull::new(BNCreateDatabaseInstance()).ok_or(())?) };
         let path_raw = path.as_ref().to_cstr();
-        if unsafe { BNDatabaseOpenExisting(db.handle.as_ptr(), path_raw.as_ptr()) } {
-            Ok(db)
-        } else {
-            Err(())
-        }
+        let handle = NonNull::new(unsafe { BNOpenDatabase(path_raw.as_ptr()) }).ok_or(())?;
+        Ok(unsafe { Self::ref_from_raw(handle) })
     }
 
     /// Get a [`Snapshot`] by its `id`, or `None` if no snapshot with that `id` exists.

@@ -3328,6 +3328,7 @@ namespace BinaryNinja {
 		Database(BNDatabase* database);
 
 		static Ref<Database> OpenExisting(const std::string& path);
+		void PerformTransaction(const std::function<void()> &func);
 
 		bool SnapshotHasData(int64_t id);
 		Ref<Snapshot> GetSnapshot(int64_t id);

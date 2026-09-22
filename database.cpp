@@ -391,6 +391,25 @@ Ref<Database> Database::OpenExisting(const std::string& path)
 }
 
 
+void Database::PerformTransaction(const std::function<void()>& func)
+{
+	struct Context
+	{
+		std::function<void()> func;
+	} context = {
+		.func = func
+	};
+	if (!BNDatabasePerformTransaction(m_object, &context, [](void* ctxt)
+	{
+		Context* context = static_cast<Context*>(ctxt);
+		context->func();
+	}))
+	{
+		throw DatabaseException("BNDatabasePerformTransaction");
+	}
+}
+
+
 Ref<Snapshot> Database::GetSnapshot(int64_t id)
 {
 	BNSnapshot* snap = BNGetDatabaseSnapshot(m_object, id);

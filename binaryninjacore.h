@@ -5219,6 +5219,7 @@ extern "C"
 	BINARYNINJACOREAPI BNDatabase* BNNewDatabaseReference(BNDatabase* database);
 	BINARYNINJACOREAPI void BNFreeDatabase(BNDatabase* database);
 	BINARYNINJACOREAPI BNDatabase* BNOpenDatabase(const char* path);
+	BINARYNINJACOREAPI bool BNDatabasePerformTransaction(BNDatabase* database, void* ctxt, void (*transaction)(void*));
 	BINARYNINJACOREAPI void BNSetDatabaseCurrentSnapshot(BNDatabase* database, int64_t id);
 	BINARYNINJACOREAPI BNSnapshot* BNGetDatabaseCurrentSnapshot(BNDatabase* database);
 	BINARYNINJACOREAPI BNSnapshot** BNGetDatabaseSnapshots(BNDatabase* database, size_t* count);

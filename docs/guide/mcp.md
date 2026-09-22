@@ -19,7 +19,7 @@ The exact tool list may change as the MCP server develops, but both server varia
 - **Program structure**: list entry points, segments, sections, symbols, imports, exports, relocations, data variables, and strings.
 - **Memory inspection**: read bytes from the active BinaryView and receive the result as hex and base64.
 - **Function inspection**: list and search functions, request function metadata, render disassembly, render decompiled Pseudo C, render IL, inspect basic blocks, callers, callees, cross-references, stack layout, and complexity metrics.
-- **Debugger (GUI server)**: launch, attach to, or connect to a debug target; step, run to, pause, restart, detach, or quit it; inspect and set breakpoints (including hardware watchpoints), registers, memory, threads, and backtraces; list loaded modules and the memory map; read or write standard input and backend-specific properties. See [Debugger Tools](#debugger-tools).
+- **Debugger**: launch, attach to, or connect to a debug target; step, run to, pause, restart, detach, or quit it; inspect and set breakpoints (including hardware watchpoints), registers, memory, threads, and backtraces; list loaded modules and the memory map; read or write standard input and backend-specific properties. See [Debugger Tools](#debugger-tools).
 
 Use your MCP client's tool listing UI or command to see the complete set of tools available in your installed Binary Ninja version.
 
@@ -140,18 +140,22 @@ If `ui.mcp.port` is `0`, the operating system chooses a port when the server sta
 
 ## Debugger Tools
 
-`bn_debugger_*` tools drive Binary Ninja's debugger from the GUI MCP server. They require a debugger installation and are not available from the headless `binaryninja_mcp` server.
+`bn_debugger_*` tools drive Binary Ninja's debugger, from either server variant, provided a debugger installation is present. The debugger endpoint (`binaryninja.debugger.rpc_server`) runs inside the same process as the server and starts automatically the first time a debugger tool is called; there is nothing to start by hand beyond the server itself. If the debugger is not installed, or the endpoint fails to start for any other reason, only the debugger tools fail — every other MCP tool is unaffected. The endpoint's own discovery file is `debugger-rpc-<pid>.json` in the user directory, one per running Binary Ninja process.
 
 ### Enable
+
+In the GUI server:
 
 1. Enable `ui.mcp.debugger.enabled`.
 2. Start the GUI MCP server (or, if it is already running, stop and start it again with `Plugins > MCP > Stop/Start Server`; unlike `ui.mcp.enabled`, this setting does not need a full application restart, only a server restart).
 
-The debugger endpoint (`binaryninja.debugger.rpc_server`) runs inside this same process and starts automatically the first time a debugger tool is called; there is nothing else to start by hand. If the debugger is not installed, or the endpoint fails to start for any other reason, only the debugger tools fail — every other MCP tool is unaffected. The endpoint's own discovery file is `debugger-rpc-<pid>.json` in the user directory, one per running Binary Ninja process.
+In the headless server, the debugger tools are registered unconditionally, the same as every other tool category; nothing needs enabling. Set `BN_MCP_DISABLE_DEBUGGER` (to any value) to skip registering them, for a process that should not depend on the debugger being installed at all.
 
 ### Sessions
 
 Debugger tools act on the debug session of the active BinaryView (see [Active BinaryView](#active-binaryview) above). Each open file has at most one debug session, created the first time it is launched, attached to, or connected to.
+
+In the GUI server, the endpoint discovers a session's view the same way the UI does, by scanning open tabs; no extra step is needed. The headless server has no tabs for it to scan, so the MCP server itself hands the endpoint whichever view a `bn_debugger_*` call resolves as active, the moment it resolves it.
 
 ### Tools
 
@@ -174,14 +178,18 @@ Address parameters on debugger tools (`address`, and the `address` inside `until
 
 ### Advanced Settings
 
+In the GUI server:
+
 - `ui.mcp.debugger.endpointScript`: path to `rpc_server.py`, for a debugger build that does not yet include it, or while testing a change to it. Leave blank once the debugger you use ships it.
 - `ui.mcp.debugger.customCommandsFile`: path to a JSON file of additional `bn_debugger_*` tools; see [Custom Debugger Commands](#custom-debugger-commands). Left blank, the default, nothing is read and `tools/list` is unaffected.
 
 Both are read once, when the MCP server starts; stop and start it to pick up a change.
 
+In the headless server, which has no settings UI, the same two are environment variables read once at process startup: `BN_MCP_DEBUGGER_ENDPOINT_SCRIPT` and `BN_MCP_DEBUGGER_CUSTOM_COMMANDS`.
+
 ### Custom Debugger Commands
 
-`ui.mcp.debugger.customCommandsFile` points at a JSON file of extra `bn_debugger_*` tools, each forwarding to a method the debugger endpoint already understands or one added to it (its `METHODS` table, in `rpc_server.py`) — without recompiling Binary Ninja. Leave the setting blank and this costs nothing: no file is read, no tool is registered, and `tools/list` is exactly as if the feature did not exist.
+`ui.mcp.debugger.customCommandsFile` (`BN_MCP_DEBUGGER_CUSTOM_COMMANDS` in the headless server) is an optional setting that points at a JSON file of extra `bn_debugger_*` tools, each forwarding to a method the debugger endpoint already understands or one added to it (its `METHODS` table, in `rpc_server.py`). 
 
 The file is a JSON array of command objects:
 
@@ -238,7 +246,7 @@ An entry that fails validation (a bad or missing `name`, a name collision, a mis
 
 The standalone `binaryninja_mcp` server is for headless operation and uses stdio only. Configure your MCP client to launch `binaryninja_mcp` as a local command-line MCP server.
 
-The headless server opens and analyzes files without the GUI and exposes the same file manager and read-only BinaryView inspection tools as the GUI server.
+The headless server opens and analyzes files without the GUI and exposes the same file manager, BinaryView inspection and editing, and debugger tools as the GUI server (see [Debugger Tools](#debugger-tools) for how debugger sessions work without a GUI to track them).
 
 Native Windows packages do not yet include `binaryninja_mcp.exe`. On Windows, connect to the built-in GUI MCP HTTP server instead. If you require the headless stdio server, install and run the Linux build of Binary Ninja under WSL and use the Linux `binaryninja_mcp` executable from that environment.
 
@@ -377,11 +385,13 @@ If a headless client cannot start `binaryninja_mcp`:
 
 If `bn_debugger_*` tools return `debugger_endpoint_unavailable`:
 
-- Confirm `ui.mcp.debugger.enabled` is enabled and the MCP server has been (re)started since.
-- Check the Binary Ninja log for why the endpoint failed to start. `ModuleNotFoundError` for `binaryninja.debugger.rpc_server` means this debugger build does not include the endpoint yet; set `ui.mcp.debugger.endpointScript` to its `rpc_server.py` instead.
-- The debugger tools are not available from the headless server.
+- In the GUI server, confirm `ui.mcp.debugger.enabled` is enabled and the MCP server has been (re)started since.
+- In the headless server, confirm `BN_MCP_DISABLE_DEBUGGER` is not set.
+- Check the Binary Ninja log for why the endpoint failed to start. `ModuleNotFoundError` for `binaryninja.debugger.rpc_server` means this debugger build does not include the endpoint yet; set `ui.mcp.debugger.endpointScript` (`BN_MCP_DEBUGGER_ENDPOINT_SCRIPT` headlessly) to its `rpc_server.py` instead.
 
-If a tool from `ui.mcp.debugger.customCommandsFile` does not appear in `tools/list`:
+If `bn_debugger_*` tools return `unknown_session` in the headless server specifically, check the Binary Ninja log for a "could not register this view with the debugger endpoint" warning, which names the underlying problem.
+
+If a tool from `ui.mcp.debugger.customCommandsFile` (`BN_MCP_DEBUGGER_CUSTOM_COMMANDS` headlessly) does not appear in `tools/list`:
 
 - Check the Binary Ninja log for `MCP: custom debugger command entry N: ...`, which names the file entry and the problem.
 - Confirm the file is a JSON array, and that the command's `name` starts with `bn_debugger_` and does not repeat another tool's name.

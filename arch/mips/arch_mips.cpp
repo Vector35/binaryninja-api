@@ -3006,6 +3006,9 @@ public:
 	}
 };
 
+// Both o32 ABIs use a shared argument area: four GPR words followed by the
+// stack, with 64-bit scalars aligned to even word slots. Soft-float values use
+// the GPRs too; the hard-float subclass enables FPRs for leading FP arguments.
 class MipsO32CallingConvention: public CallingConvention
 {
 public:
@@ -3070,60 +3073,33 @@ public:
 		}
 		return result;
 	}
-};
 
-// o32 maps arguments through a shared, naturally aligned four-word argument area. Only the first two
-// leading floating-point arguments use FPRs, so the default independent register allocators cannot model it.
-class MipsO32HardFloatCallingConvention: public MipsO32CallingConvention
-{
-public:
-	MipsO32HardFloatCallingConvention(Architecture* arch): MipsO32CallingConvention(arch, "o32-hard-float")
+	virtual bool IsReturnTypeRegisterCompatible(BinaryView* view, Type* type) override
 	{
+		Ref<Type> valueType = type;
+		if (view && valueType && valueType->IsNamedTypeRefer())
+			valueType = valueType->DerefNamedTypeReference(view);
+		// o32 returns even small aggregates through a hidden pointer in a0.
+		if (valueType && (valueType->IsStructure() || valueType->IsArray()))
+			return false;
+		if (valueType && valueType->IsFloat())
+			return valueType->GetWidth() == 4 || valueType->GetWidth() == 8;
+		return DefaultIsReturnTypeRegisterCompatible(valueType);
 	}
 
-	virtual vector<uint32_t> GetFloatArgumentRegisters() override
+	virtual bool IsArgumentTypeRegisterCompatible(BinaryView* view, Type* type) override
 	{
-		return vector<uint32_t>{ FPREG_F12, FPREG_F14 };
+		Ref<Type> valueType = type;
+		if (view && valueType && valueType->IsNamedTypeRefer())
+			valueType = valueType->DerefNamedTypeReference(view);
+		if (valueType && (valueType->IsFloat() || valueType->IsInteger() || valueType->IsEnumeration()))
+			return valueType->GetWidth() <= 8;
+		return DefaultIsArgumentTypeRegisterCompatible(valueType);
 	}
 
-	virtual bool AreArgumentRegistersSharedIndex() override
+	virtual bool AreStackArgumentsNaturallyAligned() override
 	{
 		return true;
-	}
-
-	virtual uint32_t GetFloatReturnValueRegister() override
-	{
-		return FPREG_F0;
-	}
-
-	virtual vector<uint32_t> GetCallerSavedRegisters() override
-	{
-		vector<uint32_t> result = MipsO32CallingConvention::GetCallerSavedRegisters();
-		const uint32_t floatRegisters[] = {
-			FPREG_F0, FPREG_F1, FPREG_F2, FPREG_F3, FPREG_F4, FPREG_F5, FPREG_F6, FPREG_F7,
-			FPREG_F8, FPREG_F9, FPREG_F10, FPREG_F11, FPREG_F12, FPREG_F13, FPREG_F14, FPREG_F15,
-			FPREG_F16, FPREG_F17, FPREG_F18, FPREG_F19
-		};
-		result.insert(result.end(), std::begin(floatRegisters), std::end(floatRegisters));
-		return result;
-	}
-
-	virtual vector<uint32_t> GetCalleeSavedRegisters() override
-	{
-		vector<uint32_t> result = MipsO32CallingConvention::GetCalleeSavedRegisters();
-		const uint32_t floatRegisters[] = {
-			FPREG_F20, FPREG_F21, FPREG_F22, FPREG_F23, FPREG_F24, FPREG_F25,
-			FPREG_F26, FPREG_F27, FPREG_F28, FPREG_F29, FPREG_F30, FPREG_F31
-		};
-		result.insert(result.end(), std::begin(floatRegisters), std::end(floatRegisters));
-		return result;
-	}
-
-	virtual bool IsReturnTypeRegisterCompatible(BinaryView*, Type* type) override
-	{
-		if (type && type->IsFloat())
-			return type->GetWidth() == 4 || type->GetWidth() == 8;
-		return DefaultIsReturnTypeRegisterCompatible(type);
 	}
 
 	virtual ValueLocation GetReturnValueLocation(BinaryView* view, const ReturnValue& returnValue) override
@@ -3142,7 +3118,7 @@ public:
 				return GetDefaultReturnValueLocation(view, returnValue);
 		}
 
-		if (type->IsFloat())
+		if (type->IsFloat() && GetFloatReturnValueRegister() != BN_INVALID_REGISTER)
 		{
 			if (type->GetWidth() == 4)
 				return ValueLocation(Variable::Register(FPREG_F0));
@@ -3155,7 +3131,7 @@ public:
 			}
 		}
 		else if (GetArchitecture()->GetEndianness() == BigEndian && type->GetWidth() == 8
-			&& (type->IsInteger() || type->IsEnumeration()))
+			&& (type->IsInteger() || type->IsEnumeration() || type->IsFloat()))
 		{
 			return ValueLocation({
 				{Variable::Register(REG_V0), 4, 4},
@@ -3182,7 +3158,7 @@ public:
 		uint64_t argumentOffset = 0;
 		uint64_t stackOffset = 16;
 		bool argumentRegistersAvailable = true;
-		bool leadingFloatArguments = true;
+		bool leadingFloatArguments = !GetFloatArgumentRegisters().empty();
 		size_t leadingFloatCount = 0;
 
 		if (returnValue.has_value() && returnValue->indirect)
@@ -3194,6 +3170,8 @@ public:
 		for (const auto& param : params)
 		{
 			Ref<Type> type = param.type.GetValue();
+			if (view && type && type->IsNamedTypeRefer())
+				type = type->DerefNamedTypeReference(view);
 			uint64_t width = type ? type->GetWidth() : 4;
 			bool indirect = param.locationSource == PassByReferenceLocationSource;
 			if (indirect)
@@ -3254,14 +3232,11 @@ public:
 			{
 				vector<ValueLocationComponent> components;
 				bool registersPermitted = argumentRegistersAvailable;
-				Ref<Type> valueType = type;
-				if (view && valueType && valueType->IsNamedTypeRefer())
-					valueType = valueType->DerefNamedTypeReference(view);
 				// Scalar component offsets count from the least significant byte. Big-endian
 				// o32 passes the high word first in GPRs and on the stack, while aggregates
 				// retain their memory-order field offsets. FPR pairs are handled separately.
 				bool reverseScalarWords = GetArchitecture()->GetEndianness() == BigEndian && !indirect
-					&& valueType && (valueType->IsInteger() || valueType->IsFloat() || valueType->IsEnumeration());
+					&& type && (type->IsInteger() || type->IsFloat() || type->IsEnumeration() || type->IsBool());
 				for (uint64_t offset = 0; offset < passedWidth; offset += 4)
 				{
 					uint64_t componentOffset = argumentOffset + offset;
@@ -3276,7 +3251,9 @@ public:
 					}
 					else
 					{
-						components.emplace_back(Variable::StackOffset(componentOffset), valueOffset, componentSize);
+						// Narrow scalar arguments occupy the low bytes of a word.
+						uint64_t padding = reverseScalarWords && width < 4 ? 4 - width : 0;
+						components.emplace_back(Variable::StackOffset(componentOffset + padding), valueOffset, componentSize);
 					}
 				}
 
@@ -3284,7 +3261,8 @@ public:
 				{
 					if (stackOffset % alignment != 0)
 						stackOffset += alignment - (stackOffset % alignment);
-					result.emplace_back(Variable::StackOffset(stackOffset), indirect);
+					uint64_t padding = reverseScalarWords && width < 4 ? 4 - width : 0;
+					result.emplace_back(Variable::StackOffset(stackOffset + padding), indirect);
 					stackOffset += passedWidth;
 					argumentRegistersAvailable = false;
 				}
@@ -3302,6 +3280,54 @@ public:
 				leadingFloatArguments = false;
 		}
 
+		return result;
+	}
+};
+
+// o32 maps arguments through a shared, naturally aligned four-word argument area. Only the first two
+// leading floating-point arguments use FPRs, so the default independent register allocators cannot model it.
+class MipsO32HardFloatCallingConvention: public MipsO32CallingConvention
+{
+public:
+	MipsO32HardFloatCallingConvention(Architecture* arch): MipsO32CallingConvention(arch, "o32-hard-float")
+	{
+	}
+
+	virtual vector<uint32_t> GetFloatArgumentRegisters() override
+	{
+		return vector<uint32_t>{ FPREG_F12, FPREG_F14 };
+	}
+
+	virtual bool AreArgumentRegistersSharedIndex() override
+	{
+		return true;
+	}
+
+	virtual uint32_t GetFloatReturnValueRegister() override
+	{
+		return FPREG_F0;
+	}
+
+	virtual vector<uint32_t> GetCallerSavedRegisters() override
+	{
+		vector<uint32_t> result = MipsO32CallingConvention::GetCallerSavedRegisters();
+		const uint32_t floatRegisters[] = {
+			FPREG_F0, FPREG_F1, FPREG_F2, FPREG_F3, FPREG_F4, FPREG_F5, FPREG_F6, FPREG_F7,
+			FPREG_F8, FPREG_F9, FPREG_F10, FPREG_F11, FPREG_F12, FPREG_F13, FPREG_F14, FPREG_F15,
+			FPREG_F16, FPREG_F17, FPREG_F18, FPREG_F19
+		};
+		result.insert(result.end(), std::begin(floatRegisters), std::end(floatRegisters));
+		return result;
+	}
+
+	virtual vector<uint32_t> GetCalleeSavedRegisters() override
+	{
+		vector<uint32_t> result = MipsO32CallingConvention::GetCalleeSavedRegisters();
+		const uint32_t floatRegisters[] = {
+			FPREG_F20, FPREG_F21, FPREG_F22, FPREG_F23, FPREG_F24, FPREG_F25,
+			FPREG_F26, FPREG_F27, FPREG_F28, FPREG_F29, FPREG_F30, FPREG_F31
+		};
+		result.insert(result.end(), std::begin(floatRegisters), std::end(floatRegisters));
 		return result;
 	}
 };

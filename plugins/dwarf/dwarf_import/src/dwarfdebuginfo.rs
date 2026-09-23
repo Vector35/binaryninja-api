@@ -218,8 +218,8 @@ impl<R: ReaderType> DebugInfoBuilderContext<R> {
 //  info and types to one DIE's UID (T) before adding the completed info to BN's debug info
 pub(crate) struct DebugInfoBuilder {
     functions: Vec<FunctionInfoBuilder>,
-    raw_function_name_indices: HashMap<String, usize>,
-    full_function_name_indices: HashMap<String, usize>,
+    raw_function_name_indices: HashMap<String, Vec<usize>>,
+    full_function_name_indices: HashMap<String, Vec<usize>>,
     types: IndexMap<TypeUID, DebugType>,
     data_variables: HashMap<u64, (Option<String>, TypeUID)>,
     range_data_offsets: iset::IntervalMap<u64, i64>,
@@ -322,86 +322,61 @@ impl DebugInfoBuilder {
         frame_base: Option<FrameBase>,
     ) -> Option<usize> {
         // Returns the index of the function
-        // Raw names should be the primary key, but if they don't exist, use the full name
-        // TODO : Consider further falling back on address/architecture
+        // Look up via raw name first, but if not given use the full name.
+        // Entries with the same name are the same function unless both have start addresses and the starts are different.
+        // A declaration and definition should merge, but e.g. two definitions of a static function in different units shouldn't.
 
-        /*
-           If it has a raw_name and we know it, update it and return
-           Else if it has a full_name and we know it, update it and return
-           Else Add a new entry if we don't know the full_name or raw_name
-        */
-
-        if let Some(ident) = &raw_name {
-            // check if we already know about this raw name's index
-            // if we do, and the full name will change, remove the known full index if it exists
-            // update the function
-            // if the full name exists, update the stored index for the full name
-            if let Some(idx) = self.raw_function_name_indices.get(ident) {
-                let function = self.functions.get_mut(*idx).or_else(|| {
-                    tracing::error!("Failed to get function with index {}", idx);
-                    None
-                })?;
-
-                if function.full_name != full_name {
-                    if let Some(existing_full_name) = &function.full_name {
-                        self.full_function_name_indices.remove(existing_full_name);
-                    }
-                }
-
-                function.update(
-                    full_name,
-                    raw_name,
-                    return_type,
-                    address,
-                    parameters,
-                    frame_base,
-                );
-
-                if let Some(existing_full_name) = &function.full_name {
-                    self.full_function_name_indices
-                        .insert(existing_full_name.clone(), *idx);
-                }
-
-                return Some(*idx);
-            }
+        let candidates = if let Some(ident) = &raw_name {
+            self.raw_function_name_indices.get(ident)
         } else if let Some(ident) = &full_name {
-            // check if we already know about this full name's index
-            // if we do, and the raw name will change, remove the known raw index if it exists
-            // update the function
-            // if the raw name exists, update the stored index for the raw name
-            if let Some(idx) = self.full_function_name_indices.get(ident) {
-                let function = self.functions.get_mut(*idx).or_else(|| {
-                    tracing::error!("Failed to get function with index {}", idx);
-                    None
-                })?;
-
-                if function.raw_name != raw_name {
-                    if let Some(existing_raw_name) = &function.raw_name {
-                        self.raw_function_name_indices.remove(existing_raw_name);
-                    }
-                }
-
-                function.update(
-                    full_name,
-                    raw_name,
-                    return_type,
-                    address,
-                    parameters,
-                    frame_base,
-                );
-
-                if let Some(existing_raw_name) = &function.raw_name {
-                    self.raw_function_name_indices
-                        .insert(existing_raw_name.clone(), *idx);
-                }
-
-                return Some(*idx);
-            }
+            self.full_function_name_indices.get(ident)
         } else {
             tracing::debug!("Function entry in DWARF without full or raw name.");
             return None;
         }
+        .map(Vec::as_slice)
+        .unwrap_or_default();
 
+        let find_matching_name_with_address = |addr: Option<u64>| {
+            candidates
+                .iter()
+                .copied()
+                .find(|&idx| self.functions[idx].address == addr)
+        };
+
+        // Try to find a same-named definition with the same address
+        let merge_target = find_matching_name_with_address(address)
+            .or_else(|| find_matching_name_with_address(None)) // Fall back to a same-named declaration
+            .or(match (address, candidates) {
+                // Finally fall back to a same-named definition if we don't have an address and there's a single candidate
+                (None, [idx]) => Some(*idx),
+                _ => None,
+            });
+
+        // A declaration matching several definitions can't be attributed to a single one of them
+        if merge_target.is_none() && address.is_none() && !candidates.is_empty() {
+            tracing::debug!(
+                "Function declaration {:?} matches {} existing definitions, ignoring it.",
+                raw_name.as_ref().or(full_name.as_ref()),
+                candidates.len()
+            );
+            return None;
+        }
+
+        if let Some(idx) = merge_target {
+            self.functions[idx].update(
+                full_name,
+                raw_name,
+                return_type,
+                address,
+                parameters,
+                frame_base,
+            );
+            self.index_function_names(idx);
+            return Some(idx);
+        }
+
+        // Nothing to merge into, make a new entry
         let function = FunctionInfoBuilder {
             full_name,
             raw_name,
@@ -414,18 +389,30 @@ impl DebugInfoBuilder {
             frame_base,
         };
 
-        if let Some(n) = &function.full_name {
-            self.full_function_name_indices
-                .insert(n.clone(), self.functions.len());
-        }
-
-        if let Some(n) = &function.raw_name {
-            self.raw_function_name_indices
-                .insert(n.clone(), self.functions.len());
-        }
-
         self.functions.push(function);
-        Some(self.functions.len() - 1)
+        let idx = self.functions.len() - 1;
+        self.index_function_names(idx);
+        Some(idx)
+    }
+
+    fn index_function_names(&mut self, idx: usize) {
+        fn store_in_map(name_indices: &mut HashMap<String, Vec<usize>>, name: &str, idx: usize) {
+            match name_indices.get_mut(name) {
+                Some(indices) if !indices.contains(&idx) => indices.push(idx),
+                Some(_) => (),
+                None => {
+                    name_indices.insert(name.to_owned(), vec![idx]);
+                }
+            }
+        }
+
+        let function = &self.functions[idx];
+        if let Some(n) = &function.full_name {
+            store_in_map(&mut self.full_function_name_indices, n, idx);
+        }
+        if let Some(n) = &function.raw_name {
+            store_in_map(&mut self.raw_function_name_indices, n, idx);
+        }
     }
 
     pub(crate) fn functions(&self) -> &[FunctionInfoBuilder] {

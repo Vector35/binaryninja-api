@@ -224,6 +224,19 @@ pub(crate) fn get_name<R: ReaderType>(
     }
 }
 
+fn get_linkage_name<R: ReaderType>(
+    dwarf: &Dwarf<R>,
+    unit: &Unit<R>,
+    entry: &DebuggingInformationEntry<R>,
+) -> Option<String> {
+    let attr_val = entry.attr_value(constants::DW_AT_linkage_name).ok()??;
+    if let Ok(attr_string) = dwarf.attr_string(unit, attr_val.clone()) {
+        return attr_string.to_string().ok().map(|s| s.to_string());
+    }
+    let attr_string = dwarf.sup.as_ref()?.attr_string(unit, attr_val).ok()?;
+    attr_string.to_string().ok().map(|s| s.to_string())
+}
+
 // Get raw name from DIE, or referenced dependencies
 pub(crate) fn get_raw_name<R: ReaderType>(
     dwarf: &Dwarf<R>,
@@ -231,6 +244,12 @@ pub(crate) fn get_raw_name<R: ReaderType>(
     entry: &DebuggingInformationEntry<R>,
     debug_info_builder_context: &DebugInfoBuilderContext<R>,
 ) -> Option<String> {
+    // A definition can carry its own linkage name that differs from its specification's
+    // (e.g. C1/C2 constructor variants both point at one in-class declaration with none)
+    if let Some(name) = get_linkage_name(dwarf, unit, entry) {
+        return Some(name);
+    }
+
     match resolve_specification(dwarf, unit, entry, debug_info_builder_context) {
         DieReference::UnitAndOffset((dwarf, entry_unit, entry_offset)) => {
             let resolved_entry = match entry_unit.entry(entry_offset) {
@@ -245,20 +264,7 @@ pub(crate) fn get_raw_name<R: ReaderType>(
                 }
             };
 
-            if let Ok(Some(attr_val)) = resolved_entry.attr_value(constants::DW_AT_linkage_name) {
-                if let Ok(attr_string) = dwarf.attr_string(entry_unit, attr_val.clone()) {
-                    if let Ok(attr_string) = attr_string.to_string() {
-                        return Some(attr_string.to_string());
-                    }
-                } else if let Some(dwarf) = &dwarf.sup {
-                    if let Ok(attr_string) = dwarf.attr_string(entry_unit, attr_val) {
-                        if let Ok(attr_string) = attr_string.to_string() {
-                            return Some(attr_string.to_string());
-                        }
-                    }
-                }
-            }
-            None
+            get_linkage_name(dwarf, entry_unit, &resolved_entry)
         }
         DieReference::Err => None,
     }

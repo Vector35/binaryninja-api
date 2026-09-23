@@ -401,3 +401,49 @@ fn test_llil_unbacked_function_creation() {
     let dest_reg = inst_operation.dest_reg();
     assert_eq!(dest_reg.name(), "ebx");
 }
+
+#[test]
+fn test_llil_jump_target_list() {
+    use binaryninja::binary_view::BinaryView;
+    use binaryninja::file_metadata::FileMetadata;
+
+    let _session = Session::new().expect("Failed to initialize session");
+    // AArch64: a bounded two-entry relative jump table at 0x24. Entries lead
+    // to mov/ret blocks at 0x2c and 0x34. Four operands cross a list chunk.
+    let code = [
+        0x1f, 0x04, 0x00, 0xf1, 0xca, 0x01, 0x00, 0x54, 0x01, 0x3c, 0x40, 0xd3, 0x3f, 0x04, 0x00,
+        0xf1, 0x68, 0x01, 0x00, 0x54, 0x82, 0x00, 0x00, 0x10, 0x43, 0x78, 0x61, 0xb8, 0x42, 0x00,
+        0x03, 0x8b, 0x40, 0x00, 0x1f, 0xd6, 0x08, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x40,
+        0x01, 0x80, 0xd2, 0xc0, 0x03, 0x5f, 0xd6, 0x80, 0x02, 0x80, 0xd2, 0xc0, 0x03, 0x5f, 0xd6,
+        0xc0, 0x03, 0x80, 0xd2, 0xc0, 0x03, 0x5f, 0xd6,
+    ];
+    let view = BinaryView::from_data(&FileMetadata::new(), &code);
+    let platform = CoreArchitecture::by_name("aarch64")
+        .unwrap()
+        .standalone_platform()
+        .unwrap();
+    view.add_entry_point_with_platform(0, &platform);
+    view.update_analysis_and_wait();
+    let function = view.function_at(&platform, 0).unwrap();
+    let llil = function.low_level_il().unwrap();
+    let mut jump_tables = 0;
+    for block in &llil.basic_blocks() {
+        for instr in block.iter() {
+            if let LowLevelILInstructionKind::JumpTo(op) = instr.kind() {
+                let targets = op.target_list();
+                assert_eq!(
+                    targets.keys().copied().collect::<Vec<_>>(),
+                    vec![0x2c, 0x34]
+                );
+                for (address, index) in targets {
+                    assert_eq!(
+                        llil.instruction_from_index(index).unwrap().address(),
+                        address
+                    );
+                }
+                jump_tables += 1;
+            }
+        }
+    }
+    assert_eq!(jump_tables, 1);
+}

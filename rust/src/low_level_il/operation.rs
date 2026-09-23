@@ -13,8 +13,8 @@
 // limitations under the License.
 
 use binaryninjacore_sys::{
-    BNGetCachedLowLevelILPossibleValueSet, BNGetLowLevelILByIndex, BNLowLevelILFreeOperandList,
-    BNLowLevelILGetOperandList, BNLowLevelILInstruction,
+    BNGetCachedLowLevelILPossibleValueSet, BNLowLevelILFreeOperandList, BNLowLevelILGetOperandList,
+    BNLowLevelILInstruction,
 };
 
 use super::*;
@@ -1157,34 +1157,6 @@ where
 // LLIL_JUMP_TO
 pub struct JumpTo;
 
-struct TargetListIter<'func, M, F>
-where
-    M: FunctionMutability,
-    F: FunctionForm,
-{
-    function: &'func LowLevelILFunction<M, F>,
-    cursor: BNLowLevelILInstruction,
-    cursor_operand: usize,
-}
-
-impl<M, F> TargetListIter<'_, M, F>
-where
-    M: FunctionMutability,
-    F: FunctionForm,
-{
-    fn next(&mut self) -> u64 {
-        if self.cursor_operand >= 3 {
-            self.cursor = unsafe {
-                BNGetLowLevelILByIndex(self.function.handle, self.cursor.operands[3] as usize)
-            };
-            self.cursor_operand = 0;
-        }
-        let result = self.cursor.operands[self.cursor_operand];
-        self.cursor_operand += 1;
-        result
-    }
-}
-
 impl<'func, M, F> Operation<'func, M, F, JumpTo>
 where
     M: FunctionMutability,
@@ -1198,23 +1170,12 @@ where
     }
 
     pub fn target_list(&self) -> BTreeMap<u64, LowLevelInstructionIndex> {
-        let mut result = BTreeMap::new();
-        let count = self.op.operands[1] as usize / 2;
-        let mut list = TargetListIter {
-            function: self.function,
-            cursor: unsafe {
-                BNGetLowLevelILByIndex(self.function.handle, self.op.operands[2] as usize)
-            },
-            cursor_operand: 0,
-        };
-
-        for _ in 0..count {
-            let value = list.next();
-            let target = LowLevelInstructionIndex(list.next() as usize);
-            result.insert(value, target);
-        }
-
-        result
+        // Operand-list storage belongs to the core. Decode the address/index
+        // pairs through its API instead of assuming a linked expression layout.
+        self.get_operand_list(1)
+            .chunks_exact(2)
+            .map(|pair| (pair[0], LowLevelInstructionIndex(pair[1] as usize)))
+            .collect()
     }
 }
 

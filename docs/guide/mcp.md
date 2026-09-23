@@ -20,8 +20,13 @@ The exact tool list may change as the MCP server develops, but both server varia
 - **Memory inspection**: read bytes from the active BinaryView and receive the result as hex and base64.
 - **Function inspection**: list and search functions, request function metadata, render disassembly, render decompiled Pseudo C, render IL, inspect basic blocks, callers, callees, cross-references, stack layout, and complexity metrics.
 - **Debugger**: launch, attach to, or connect to a debug target; step, run to, pause, restart, detach, or quit it; inspect and set breakpoints (including hardware watchpoints), registers, memory, threads, and backtraces; list loaded modules and the memory map; read or write standard input and backend-specific properties. See [Debugger Tools](#debugger-tools).
+- **Binary Similarity (Ultimate, GUI server)**: create a comparison from two MCP BinaryView handles, inspect its matches, render provider-annotated diffs, and explicitly apply a match to port function metadata.
 
 Use your MCP client's tool listing UI or command to see the complete set of tools available in your installed Binary Ninja version.
+
+To run Binary Similarity entirely through MCP, open both binaries with `bn_open_item_open`, choose their analyzed BinaryView handles, and pass those handles to `bn_similarity_session_compare`. The tool creates an MCP-owned review session, enables every available similarity provider, and can wait for the comparison to finish. Use `bn_similarity_session_info`, `bn_similarity_result_list`, and `bn_similarity_result_diff` to inspect it. The same inspection tools also work with the current Binary Similarity tab or sidebar session when no MCP-owned session exists.
+
+Both binaries remain loaded in an MCP-created session so results can be rendered or applied. `bn_similarity_result_apply` ports available function names, types, variable information, and comments into the compared binary's analysis. Applying a result mutates the destination analysis; save its database afterward to persist the changes.
 
 ## Tool Calling Conventions
 
@@ -149,7 +154,7 @@ In the GUI server:
 1. Enable `ui.mcp.debugger.enabled`.
 2. Start the GUI MCP server (or, if it is already running, stop and start it again with `Plugins > MCP > Stop/Start Server`; unlike `ui.mcp.enabled`, this setting does not need a full application restart, only a server restart).
 
-In the headless server, the debugger tools are registered unconditionally, the same as every other tool category; nothing needs enabling. Set `BN_MCP_DISABLE_DEBUGGER` (to any value) to skip registering them, for a process that should not depend on the debugger being installed at all.
+In the headless server, the debugger tools are registered unconditionally, the same as every other tool category; nothing needs enabling. Set `BN_MCP_DISABLE_DEBUGGER` (to any value) to skip registering them.
 
 ### Sessions
 

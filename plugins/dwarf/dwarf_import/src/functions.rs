@@ -131,7 +131,7 @@ pub(crate) fn parse_function_entry<R: ReaderType>(
             let abi_regex = ABI_REGEX_MEM
                 .get_or_init(|| Regex::new(r"\[abi:v\d+\]").expect("Failed to generate ABI regex"));
             if let Ok(sym) = cpp_demangle::Symbol::new(possibly_mangled_name) {
-                if let Ok(demangled) = sym.demangle(demangle_options) {
+                if let Ok(demangled) = sym.demangle_with_options(demangle_options) {
                     let cleaned = abi_regex.replace_all(&demangled, "");
                     full_name = Some(cleaned.to_string());
                 }

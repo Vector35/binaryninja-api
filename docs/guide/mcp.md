@@ -20,10 +20,15 @@ The exact tool list may change as the MCP server develops, but both server varia
 - **Memory inspection**: read bytes from the active BinaryView and receive the result as hex and base64.
 - **Function inspection**: list and search functions, request function metadata, render disassembly, render decompiled Pseudo C, render IL, inspect basic blocks, callers, callees, cross-references, stack layout, and complexity metrics.
 - **Debugger**: launch, attach to, or connect to a debug target; step, run to, pause, restart, detach, or quit it; inspect and set breakpoints (including hardware watchpoints), registers, memory, threads, and backtraces; list loaded modules and the memory map; read or write standard input and backend-specific properties. See [Debugger Tools](#debugger-tools).
+- **Binary Similarity (Ultimate, GUI server)**: create a comparison from two MCP BinaryView handles, inspect its matches, render provider-annotated diffs, and explicitly apply a match to port function metadata.
 
 Use your MCP client's tool listing UI or command to see the complete set of tools available in your installed Binary Ninja version.
 
-Plugins can add their own tools, which both server variants offer alongside the built-in ones. See [Writing MCP Tools](../dev/mcp-tools.md).
+Plugins can add their own tools, which both server variants offer alongside the built-in ones. See [Writing MCP Tools](../dev/mcp-tools.md). The Debugger plugin's `debugger_*` tools (see [Debugger Tools](#debugger-tools) below) are an example.
+
+To run Binary Similarity entirely through MCP, open both binaries with `bn_open_item_open`, choose their analyzed BinaryView handles, and pass those handles to `bn_similarity_session_compare`. The tool creates an MCP-owned review session, enables every available similarity provider, and can wait for the comparison to finish. Use `bn_similarity_session_info`, `bn_similarity_result_list`, and `bn_similarity_result_diff` to inspect it. The same inspection tools also work with the current Binary Similarity tab or sidebar session when no MCP-owned session exists.
+
+Both binaries remain loaded in an MCP-created session so results can be rendered or applied. `bn_similarity_result_apply` ports available function names, types, variable information, and comments into the compared binary's analysis. Applying a result mutates the destination analysis; save its database afterward to persist the changes.
 
 ## Tool Calling Conventions
 
@@ -142,107 +147,33 @@ If `ui.mcp.port` is `0`, the operating system chooses a port when the server sta
 
 ## Debugger Tools
 
-`bn_debugger_*` tools drive Binary Ninja's debugger, from either server variant, provided a debugger installation is present. The debugger endpoint (`binaryninja.debugger.rpc_server`) runs inside the same process as the server and starts automatically the first time a debugger tool is called; there is nothing to start by hand beyond the server itself. If the debugger is not installed, or the endpoint fails to start for any other reason, only the debugger tools fail — every other MCP tool is unaffected. The endpoint's own discovery file is `debugger-rpc-<pid>.json` in the user directory, one per running Binary Ninja process.
-
-### Enable
-
-In the GUI server:
-
-1. Enable `ui.mcp.debugger.enabled`.
-2. Start the GUI MCP server (or, if it is already running, stop and start it again with `Plugins > MCP > Stop/Start Server`; unlike `ui.mcp.enabled`, this setting does not need a full application restart, only a server restart).
-
-In the headless server, the debugger tools are registered unconditionally, the same as every other tool category; nothing needs enabling. Set `BN_MCP_DISABLE_DEBUGGER` (to any value) to skip registering them, for a process that should not depend on the debugger being installed at all.
+`debugger_*` tools drive Binary Ninja's debugger, from either server variant, when the [Debugger](https://github.com/Vector35/debugger) plugin is installed. The plugin registers them in-process through the MCP plugin API (see [Writing MCP Tools](../dev/mcp-tools.md)) the same way any other plugin would, when it loads — there is no separate server, port, or authentication token to manage, and nothing to enable. If the plugin is not installed, these tools are simply absent from `tools/list`; every other MCP tool is unaffected.
 
 ### Sessions
 
-Debugger tools act on the debug session of the active BinaryView (see [Active BinaryView](#active-binaryview) above). Each open file has at most one debug session, created the first time it is launched, attached to, or connected to.
-
-In the GUI server, the endpoint discovers a session's view the same way the UI does, by scanning open tabs; no extra step is needed. The headless server has no tabs for it to scan, so the MCP server itself hands the endpoint whichever view a `bn_debugger_*` call resolves as active, the moment it resolves it.
+Debugger tools act on the debug session of the active BinaryView (see [Active BinaryView](#active-binaryview) above). A view only has a session once a lifecycle tool (`debugger_launch`, `debugger_attach`, or `debugger_connect`) has been called for it; an inspection tool called before that returns the `no_controller` error rather than silently creating one.
 
 ### Tools
 
 | Tool | Purpose |
 | --- | --- |
-| `bn_debugger_status` | Session state (`state`, `ip`, `stopReason`), or, with `{"errors": true}`, the full table of error codes these tools can return and what each means. |
-| `bn_debugger_control` | `launch`, `attach`, `connect`, `go`, `step_into`, `step_over`, `step_return`, `run_to`, `pause`, `restart`, `detach`, `quit`. |
-| `bn_debugger_breakpoints` | List, add, remove, enable, disable, or set the condition of a breakpoint; `hardware` adds an execute, read, write, or access watchpoint instead. |
-| `bn_debugger_registers` / `bn_debugger_registers_write` | Read or write the active thread's registers. |
-| `bn_debugger_memory_read` / `bn_debugger_memory_write` | Read or write the live process's memory (not the static BinaryView). |
-| `bn_debugger_backtrace` | Threads and one thread's stack frames. |
-| `bn_debugger_thread` | Select, suspend, or resume a thread. |
-| `bn_debugger_trace` | Repeat `go`, `step_into`, or `step_over` up to `count` times, recording registers at every stop, as one table instead of one call per stop. |
-| `bn_debugger_modules` | Loaded modules, the memory map, address-to-module resolution, or rebasing the static BinaryView to the runtime base. |
-| `bn_debugger_processes` | Processes the debug adapter can see, to choose a pid for `attach`. |
-| `bn_debugger_input` | Write to the target's standard input, or run a raw backend command (for example an LLDB command). |
-| `bn_debugger_properties` | Read or write debug adapter (backend-specific) properties. |
+| `debugger_status` | Whether the view has a session, and its connected/running/stopped state. |
+| `debugger_launch` / `debugger_attach` / `debugger_connect` | Start a session by launching, attaching to, or connecting to a target. |
+| `debugger_detach` / `debugger_quit` / `debugger_restart` | End or restart the session. |
+| `debugger_go` / `debugger_step_into` / `debugger_step_over` / `debugger_step_return` / `debugger_run_to` / `debugger_pause` | Resume or single-step execution. |
+| `debugger_breakpoint_set` / `debugger_breakpoint_delete` / `debugger_breakpoint_set_enabled` / `debugger_breakpoint_condition_set` / `debugger_breakpoints_list` | Manage breakpoints, including hardware watchpoints. |
+| `debugger_registers_get` / `debugger_register_set` | Read or write the active thread's registers. |
+| `debugger_read_memory` / `debugger_write_memory` | Read or write the live process's memory (not the static BinaryView). |
+| `debugger_backtrace` | A thread's stack trace. |
+| `debugger_threads_list` / `debugger_thread_select` | List threads, or make one active. |
+| `debugger_modules_list` / `debugger_memory_map` | Loaded modules, or the process memory map. |
+| `debugger_processes_list` | Processes the debug adapter can see, to choose a pid for `debugger_attach`. |
+| `debugger_write_stdin` / `debugger_execute_backend_command` | Write to the target's standard input, or run a raw backend command (for example an LLDB command). |
+| `debugger_property_get` / `debugger_property_set` | Read or write a debug adapter (backend-specific) property. |
 
-Address parameters on debugger tools (`address`, and the `address` inside `until`) follow the same [Address Expressions](#address-expressions) rules as the rest of the MCP server, resolved against the debugged process. Registers, hardware watchpoint sizes, and similar debugger-specific values are plain JSON integers or the debugger's own hex/decimal strings, not Binary Ninja address expressions.
+Address parameters on debugger tools follow the same [Address Expressions](#address-expressions) rules as the rest of the MCP server, resolved against the active BinaryView. Registers, hardware watchpoint sizes, and similar debugger-specific values are plain JSON integers or the debugger's own hex strings, not Binary Ninja address expressions.
 
-### Advanced Settings
-
-In the GUI server:
-
-- `ui.mcp.debugger.endpointScript`: path to `rpc_server.py`, for a debugger build that does not yet include it, or while testing a change to it. Leave blank once the debugger you use ships it.
-- `ui.mcp.debugger.customCommandsFile`: path to a JSON file of additional `bn_debugger_*` tools; see [Custom Debugger Commands](#custom-debugger-commands). Left blank, the default, nothing is read and `tools/list` is unaffected.
-
-Both are read once, when the MCP server starts; stop and start it to pick up a change.
-
-In the headless server, which has no settings UI, the same two are environment variables read once at process startup: `BN_MCP_DEBUGGER_ENDPOINT_SCRIPT` and `BN_MCP_DEBUGGER_CUSTOM_COMMANDS`.
-
-### Custom Debugger Commands
-
-`ui.mcp.debugger.customCommandsFile` (`BN_MCP_DEBUGGER_CUSTOM_COMMANDS` in the headless server) is an optional setting that points at a JSON file of extra `bn_debugger_*` tools, each forwarding to a method the debugger endpoint already understands or one added to it (its `METHODS` table, in `rpc_server.py`). 
-
-The file is a JSON array of command objects:
-
-```json
-[
-  {
-    "name": "bn_debugger_list_processes_demo",
-    "title": "List Processes (demo)",
-    "description": "Lists processes the debug adapter can see, filtered by name.",
-    "method": "processes",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "filter": {"type": "string", "description": "Only processes whose name contains this text."}
-      },
-      "additionalProperties": false
-    }
-  },
-  {
-    "name": "bn_debugger_peek_demo",
-    "title": "Peek Memory (demo)",
-    "description": "Reads bytes from the debugged process at an address expression.",
-    "method": "memory.read",
-    "addressFields": ["address"],
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "address": {"type": "string", "description": "Address expression to read from."},
-        "length": {"type": "integer", "description": "Number of bytes to read."}
-      },
-      "required": ["address", "length"],
-      "additionalProperties": false
-    }
-  }
-]
-```
-
-Fields:
-
-| Field | Required | Meaning |
-| --- | --- | --- |
-| `name` | yes | The tool's name. Must start with `bn_debugger_` and must not repeat a built-in tool's name or another custom command's name in the same file. |
-| `method` | yes | The endpoint method to forward to. |
-| `description` | yes | The tool's description, as an MCP client shows it. |
-| `title` | no | Defaults to `name`. |
-| `inputSchema` | no | A JSON Schema object for the tool's arguments. Defaults to `{"type":"object"}` (any object) if omitted. The MCP server does not validate a call's arguments against this schema itself; the endpoint validates them. |
-| `addressFields` | no | Names of top-level argument fields that are address expressions. Each is resolved the same way a built-in tool's `address` parameter is — symbols, `here`, arithmetic — before being forwarded, so the endpoint always receives a plain resolved value. An address expression that does not resolve is rejected before the call reaches the endpoint. |
-
-Every field of the arguments a client sends is merged into the request alongside the `session` and `filename` every debugger tool already adds; a field named in `addressFields` is replaced with its resolved hex address first.
-
-An entry that fails validation (a bad or missing `name`, a name collision, a missing `method` or `description`, a malformed `inputSchema` or `addressFields`) is skipped and logged to Binary Ninja's log — it does not stop the other entries in the file from loading, and does not stop the MCP server from starting.
+See the Debugger plugin's own MCP Tools documentation for the full argument and error-code reference.
 
 ## Headless Server
 

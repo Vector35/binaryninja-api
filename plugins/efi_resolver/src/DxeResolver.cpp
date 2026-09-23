@@ -103,6 +103,7 @@ bool DxeResolver::resolveBootServices()
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_BOOT_SERVICES"));
 	// search reference of `EFI_BOOT_SERVICES` so that we can easily parse different services
 
+	SortCodeReferences(refs);
 	for (auto& ref : refs)
 	{
 		if (IsCancelled())
@@ -188,6 +189,7 @@ bool DxeResolver::resolveRuntimeServices()
 	SetProgressText("Resolving Runtime Services...");
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_RUNTIME_SERVICES"));
 
+	SortCodeReferences(refs);
 	for (auto& ref : refs)
 	{
 		if (IsCancelled())
@@ -230,6 +232,7 @@ bool DxeResolver::resolveSmmTables(string serviceName, string tableName)
 	SetProgressText("Defining MM tables...");
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName(serviceName));
 	// both versions use the same type, so we only need to search for this one
+	SortCodeReferences(refs);
 	for (auto& ref : refs)
 	{
 		if (IsCancelled())
@@ -289,6 +292,7 @@ bool DxeResolver::resolveSmmServices()
 	// These tables have same type information, we can just iterate once
 	refs.insert(refs.end(), refs_smm.begin(), refs_smm.end());
 
+	SortCodeReferences(refs);
 	for (auto& ref : refs)
 	{
 		if (IsCancelled())
@@ -345,6 +349,7 @@ bool DxeResolver::resolveSmiHandlers()
 	refs.insert(refs.end(), refs_smm_sx.begin(), refs_smm_sx.end());
 	refs.insert(refs.end(), refs_mm_sx.begin(), refs_mm_sx.end());
 
+	SortCodeReferences(refs);
 	for (auto& ref : refs)
 	{
 		if (IsCancelled())

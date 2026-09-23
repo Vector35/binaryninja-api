@@ -40,6 +40,44 @@ string Resolver::nonConflictingLocalName(Ref<Function> func, const string& basen
 	return name;
 }
 
+string Resolver::nonConflictingLocalName(Ref<Function> func, const Variable& target, const string& basename)
+{
+	// User names are not reflected in GetVariables until analysis completes. Overlay the names assigned in this
+	// resolver pass so multiple protocol locals cannot claim the same name before reanalysis.
+	auto& assignedNames = m_protocolLocalNames[func];
+	map<Variable, string> names;
+	for (const auto& [var, info] : func->GetVariables())
+		names[var] = info.name;
+	for (const auto& [var, name] : assignedNames)
+		names[var] = name;
+
+	set<string> usedNames;
+	for (const auto& [var, name] : names)
+	{
+		if (var != target)
+			usedNames.insert(name);
+	}
+
+	// Preserve an available name from this protocol's naming family, including a previous numeric suffix.
+	// This also keeps reruns stable if another local was deleted and a lower suffix is now available.
+	auto current = names.find(target);
+	if (current != names.end() && current->second.starts_with(basename))
+	{
+		auto suffix = current->second.substr(basename.size());
+		if (suffix.find_first_not_of("0123456789") == string::npos && !usedNames.count(current->second))
+		{
+			assignedNames[target] = current->second;
+			return current->second;
+		}
+	}
+
+	string name = basename;
+	for (size_t idx = 0; usedNames.count(name); ++idx)
+		name = basename + to_string(idx);
+	assignedNames[target] = name;
+	return name;
+}
+
 static string GetBundledEfiPath()
 {
 	string path = GetBundledPluginDirectory();
@@ -485,19 +523,19 @@ bool Resolver::applyProtocolInterface(Ref<Function> func, const HighLevelILInstr
 		if (guidName.substr(0, 19) == "UnknownProtocolGuid")
 		{
 			interfaceName.replace(0, 19, "UnknownProtocolInterface");
-			interfaceName = nonConflictingLocalName(func, interfaceName);
 		}
 		else
 		{
 			interfaceName = GetVarNameForTypeStr(protocolName);
 		}
+		interfaceName = nonConflictingLocalName(func, source.GetVariable(), interfaceName);
 		func->CreateUserVariable(source.GetVariable(), storageType, interfaceName);
 		return true;
 	}
 
 	if (interfaceParam.operation == HLIL_VAR)
 	{
-		auto interfaceName = GetVarNameForTypeStr(protocolName);
+		auto interfaceName = nonConflictingLocalName(func, interfaceParam.GetVariable(), GetVarNameForTypeStr(protocolName));
 		func->CreateUserVariable(interfaceParam.GetVariable(), argumentType, interfaceName);
 		return true;
 	}
@@ -705,6 +743,7 @@ bool Resolver::resolveGuidInterface(Ref<Function> func, uint64_t addr, int guidP
 			LogInfoF("Found EFI Protocol wrapper at {:#x}, checking reference to this function", addr);
 
 			auto refs = m_view->GetCodeReferences(func->GetStart());
+			SortCodeReferences(refs);
 			for (auto& ref : refs)
 				resolveGuidInterface(ref.func, ref.addr, incomingGuidIdx, incomingInstrIdx);
 			continue;

@@ -32,6 +32,7 @@ protected:
 	size_t m_width;
 	map<EFI_GUID, pair<string, string>> m_protocol;
 	map<EFI_GUID, string> m_user_guids;
+	map<Ref<Function>, map<Variable, string>> m_protocolLocalNames;
 
 	vector<pair<uint64_t, string>> m_service_usages;
 	vector<pair<uint64_t, string>> m_protocol_usages;
@@ -56,6 +57,7 @@ protected:
 	bool defineGuidDataVariable(uint64_t addr, const string& guidName);
 	bool applyProtocolInterface(Ref<Function> func, const HighLevelILInstruction& interfaceParam,
 		const ProtocolGuidInfo& info, bool outputInterface);
+	string nonConflictingLocalName(Ref<Function> func, const Variable& target, const string& basename);
 	void initProtocolMapping();
 
 public:

@@ -167,6 +167,7 @@ bool PeiResolver::resolvePeiIdt()
 		intrinsicName = "IDTR64";
 
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName(intrinsicName));
+	SortCodeReferences(refs);
 	for (auto ref : refs)
 	{
 		if (IsCancelled())
@@ -219,6 +220,7 @@ bool PeiResolver::resolveServicePointers()
 	// properly
 	//   here is a temporary fix, should be removed after vector35/binaryninja/#749 got fixed
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_PEI_SERVICES"));
+	SortCodeReferences(refs);
 	for (auto ref : refs)
 	{
 		if (IsCancelled())
@@ -253,6 +255,7 @@ bool PeiResolver::resolveServicePointers()
 bool PeiResolver::resolvePeiMrc()
 {
 	auto funcs = m_view->GetAnalysisFunctionList();
+	SortAnalysisFunctions(funcs);
 	for (auto func : funcs)
 	{
 		if (IsCancelled())
@@ -324,6 +327,7 @@ bool PeiResolver::resolvePeiMrs()
 	// ideally we don't need this function, but since we don't support type propagation on intrinsic instructions
 	// we have to manually propagate it
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_PEI_SERVICES"));
+	SortCodeReferences(refs);
 	for (auto ref : refs)
 	{
 		if (IsCancelled())
@@ -381,6 +385,7 @@ bool PeiResolver::resolvePeiDescriptors()
 	for (auto descriptor : descriptorNames)
 	{
 		auto refs = m_view->GetCodeReferencesForType(QualifiedName(descriptor));
+		SortCodeReferences(refs);
 		for (auto ref : refs)
 		{
 			if (IsCancelled())
@@ -541,6 +546,7 @@ bool PeiResolver::resolvePeiServices()
 	};
 
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_PEI_SERVICES"));
+	SortCodeReferences(refs);
 	for (auto ref : refs)
 	{
 		// First pass: use real type references.  These are the highest-confidence callsites because the service-table
@@ -570,7 +576,9 @@ bool PeiResolver::resolvePeiServices()
 
 	// Second pass: type references are not always present on the service-table pointer after staged analysis. Scan calls
 	// directly to recover PEI service uses, requiring receiver provenance before annotating any service outputs.
-	for (auto func : m_view->GetAnalysisFunctionList())
+	auto funcs = m_view->GetAnalysisFunctionList();
+	SortAnalysisFunctions(funcs);
+	for (auto func : funcs)
 	{
 		if (IsCancelled())
 			return false;

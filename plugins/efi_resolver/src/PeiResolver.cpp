@@ -8,6 +8,10 @@ static bool IsPeiServicesType(Ref<Type> type)
 	if (type->GetTypeName().GetString().find("EFI_PEI_SERVICES") != string::npos)
 		return true;
 
+	// Refreshed IL can carry the resolved structure instead of a named reference.
+	if (auto name = type->GetRegisteredName(); name && name->GetName() == QualifiedName("EFI_PEI_SERVICES"))
+		return true;
+
 	if (!type->IsPointer())
 		return false;
 
@@ -254,10 +258,19 @@ bool PeiResolver::resolvePeiIdt()
 		m_view->UpdateAnalysis();
 	}
 
+	return true;
+}
+
+bool PeiResolver::resolveServicePointers()
+{
+	auto archName = m_view->GetDefaultArchitecture()->GetName();
+	if (archName != "x86" && archName != "x86-64")
+		return true;
+
 	// TODO There is an issue related to structure's type propagation, binja doesn't propagate indirect structure access
 	// properly
 	//   here is a temporary fix, should be removed after vector35/binaryninja/#749 got fixed
-	refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_PEI_SERVICES"));
+	auto refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_PEI_SERVICES"));
 	for (auto ref : refs)
 	{
 		if (IsCancelled())
@@ -496,7 +509,7 @@ bool PeiResolver::resolvePeiServices()
 		if (typedServiceLoad)
 		{
 			auto sourceType = dest.GetSourceExpr<MLIL_LOAD_STRUCT_SSA>().GetType().GetValue();
-			if (!sourceType || sourceType->GetTypeName().GetString().find("EFI_PEI_SERVICES") == string::npos)
+			if (!IsPeiServicesType(sourceType))
 				return;
 			provenPeiServices = true;
 			offset = dest.GetOffset();
@@ -644,33 +657,7 @@ bool PeiResolver::resolvePeiServices()
 	return true;
 }
 
-bool PeiResolver::resolvePei()
-{
-	if (!resolvePlatformPointers())
-		return false;
-	if (m_task)
-		m_view->UpdateAnalysisAndWait();
-	else
-		m_view->UpdateAnalysis();
-
-	if (!resolvePeiDescriptors())
-		return false;
-	if (m_task)
-		m_view->UpdateAnalysisAndWait();
-	else
-		m_view->UpdateAnalysis();
-
-	if (!resolvePeiServices())
-		return false;
-	if (m_task)
-		m_view->UpdateAnalysisAndWait();
-	else
-		m_view->UpdateAnalysis();
-
-	return true;
-}
-
-PeiResolver::PeiResolver(Ref<BinaryView> view, Ref<BackgroundTask> task) : Resolver(view, task)
+PeiResolver::PeiResolver(Ref<BinaryView> view, Ref<BackgroundTask> task, TypePropagation& propagation) : Resolver(view, task, propagation)
 {
 	initProtocolMapping();
 }

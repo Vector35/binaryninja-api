@@ -414,8 +414,7 @@ bool DxeResolver::resolveSmiHandlers()
 				m_view->UpdateAnalysis();
 
 				// After setting the type, we want to propagate the parameters' type
-				TypePropagation propagator(m_view);
-				propagator.propagateFuncParamTypes(targetFunc);
+				m_propagation.QueueFunction(targetFunc);
 			}
 		}
 	}
@@ -431,20 +430,7 @@ bool DxeResolver::resolveDxe()
 	return true;
 }
 
-bool DxeResolver::resolveSmm()
-{
-	if (!resolveSmmTables("EFI_SMM_GET_SMST_LOCATION2", "EFI_SMM_SYSTEM_TABLE2*"))
-		return false;
-	if (!resolveSmmTables("EFI_MM_GET_MMST_LOCATION", "EFI_MM_SYSTEM_TABLE*"))
-		return false;
-	if (!resolveSmmServices())
-		return false;
-	if (!resolveSmiHandlers())
-		return false;
-	return true;
-}
-
-DxeResolver::DxeResolver(Ref<BinaryView> view, Ref<BackgroundTask> task) : Resolver(view, task)
+DxeResolver::DxeResolver(Ref<BinaryView> view, Ref<BackgroundTask> task, TypePropagation& propagation) : Resolver(view, task, propagation)
 {
 	initProtocolMapping();
 }

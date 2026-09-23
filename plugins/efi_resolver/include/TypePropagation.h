@@ -8,11 +8,19 @@ using namespace BinaryNinja;
 class TypePropagation
 {
 	Ref<BinaryView> m_view;
-	std::deque<uint64_t> m_queue;
-	Ref<Platform> m_platform;
+	using FunctionKey = std::pair<std::string, uint64_t>;
+	std::deque<FunctionKey> m_queue;
+	std::set<FunctionKey> m_processed;
+
+	bool propagateFuncParamTypes(Function* func);
+	bool propagateFuncParamTypes(Function* func, SSAVariable ssa_var);
 
 public:
 	TypePropagation(BinaryView* view);
-	bool propagateFuncParamTypes(Function* func);
-	bool propagateFuncParamTypes(Function* func, SSAVariable ssa_var);
+	void QueueFunction(Function* func);
+	bool HasPendingFunctions() const { return !m_queue.empty(); }
+	// The caller must complete analysis before each call, including for newly queued roots.
+	void ProcessNextFunction();
+	Ref<Metadata> SaveState() const;
+	void RestoreState(Ref<Metadata> metadata);
 };

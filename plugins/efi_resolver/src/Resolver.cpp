@@ -320,8 +320,8 @@ bool Resolver::propagateEntryTypes()
 		return false;
 	}
 
-	TypePropagation propagation = TypePropagation(m_view);
-	return propagation.propagateFuncParamTypes(entryFunc);
+	m_propagation.QueueFunction(entryFunc);
+	return true;
 }
 
 vector<HighLevelILInstruction> Resolver::HighLevelILExprsAt(Ref<Function> func, Ref<Architecture> arch, uint64_t addr)
@@ -463,14 +463,18 @@ bool Resolver::applyProtocolInterface(Ref<Function> func, const HighLevelILInstr
 	if (protocolName.empty())
 	{
 		LogWarnF("Found unknown protocol at {:#x}", interfaceParam.address);
-		protocolName = "VOID*";
+		protocolName = "VOID";
 	}
 
 	auto protocolType = GetTypeFromViewAndPlatform(protocolName);
 	if (!protocolType)
 		return false;
 
-	auto localType = outputInterface ? Type::PointerType(m_view->GetDefaultArchitecture(), protocolType) : protocolType;
+	// Input arguments point to a protocol object; output arguments point to a
+	// slot holding a protocol pointer. An address-of argument types that storage,
+	// while a directly passed variable must retain the additional pointer level.
+	auto storageType = outputInterface ? Type::PointerType(m_view->GetDefaultArchitecture(), protocolType) : protocolType;
+	auto argumentType = Type::PointerType(m_view->GetDefaultArchitecture(), storageType);
 	if (interfaceParam.operation == HLIL_ADDRESS_OF)
 	{
 		auto source = interfaceParam.GetSourceExpr<HLIL_ADDRESS_OF>();
@@ -487,21 +491,20 @@ bool Resolver::applyProtocolInterface(Ref<Function> func, const HighLevelILInstr
 		{
 			interfaceName = GetVarNameForTypeStr(protocolName);
 		}
-		func->CreateUserVariable(source.GetVariable(), localType, interfaceName);
+		func->CreateUserVariable(source.GetVariable(), storageType, interfaceName);
 		return true;
 	}
 
 	if (interfaceParam.operation == HLIL_VAR)
 	{
 		auto interfaceName = GetVarNameForTypeStr(protocolName);
-		func->CreateUserVariable(interfaceParam.GetVariable(), localType, interfaceName);
+		func->CreateUserVariable(interfaceParam.GetVariable(), argumentType, interfaceName);
 		return true;
 	}
 
 	if (auto dataVarAddr = GetConstantDataAddress(interfaceParam))
 	{
-		m_view->DefineDataVariable(*dataVarAddr,
-			outputInterface ? Type::PointerType(m_view->GetDefaultArchitecture(), protocolType) : protocolType);
+		m_view->DefineDataVariable(*dataVarAddr, storageType);
 
 		string interfaceName = guidName;
 		if (interfaceName.find("GUID") != interfaceName.npos)
@@ -848,14 +851,13 @@ bool Resolver::defineTypeAtCallsite(
 			m_view->DefineUserSymbol(new Symbol(FunctionSymbol, funcName, funcAddr));
 			m_view->UpdateAnalysis();
 
-			TypePropagation propagator(m_view);
-			propagator.propagateFuncParamTypes(notifyFunc);
+			m_propagation.QueueFunction(notifyFunc);
 		}
 	}
 	return true;
 }
 
-Resolver::Resolver(Ref<BinaryView> view, Ref<BackgroundTask> task)
+Resolver::Resolver(Ref<BinaryView> view, Ref<BackgroundTask> task, TypePropagation& propagation) : m_propagation(propagation)
 {
 	m_view = view;
 	m_task = task;

@@ -28,6 +28,7 @@ protected:
 
 	Ref<BinaryView> m_view;
 	Ref<BackgroundTask> m_task;
+	TypePropagation& m_propagation;
 	size_t m_width;
 	map<EFI_GUID, pair<string, string>> m_protocol;
 	map<EFI_GUID, string> m_user_guids;
@@ -62,7 +63,7 @@ public:
 	bool propagateEntryTypes();
 	bool resolveGuidInterface(Ref<Function> func, uint64_t addr, int guid_pos, int interface_pos);
 	bool defineOutputAtCallsite(Ref<Function> func, uint64_t addr, int paramIdx, string typeName, string name);
-	Resolver(Ref<BinaryView> view, Ref<BackgroundTask> task);
+	Resolver(Ref<BinaryView> view, Ref<BackgroundTask> task, TypePropagation& propagation);
 
 	pair<string, string> lookupGuid(EFI_GUID guidBytes);
 	pair<string, string> defineAndLookupGuid(uint64_t addr);

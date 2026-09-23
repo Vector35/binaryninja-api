@@ -723,3 +723,11 @@ pub struct BlockToExpand {
 pub struct LiftedBlockToExpand {
     pub exprs: Vec<MediumLevelILLiftedInstruction>,
 }
+
+/// A value-preserving assignment that starts a distinct analysis version.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ForceVer {
+    pub dest: Variable,
+    pub src: Variable,
+    pub reason: u64,
+}

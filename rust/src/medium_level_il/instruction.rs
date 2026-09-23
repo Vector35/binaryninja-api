@@ -121,7 +121,12 @@ impl MediumLevelILInstruction {
             MLIL_NORET => Op::Noret,
             MLIL_BP => Op::Bp,
             MLIL_UNDEF => Op::Undef,
-            MLIL_ASSERT | MLIL_ASSERT_SSA | MLIL_FORCE_VER | MLIL_FORCE_VER_SSA => Op::Undef,
+            MLIL_ASSERT | MLIL_ASSERT_SSA | MLIL_FORCE_VER_SSA => Op::Undef,
+            MLIL_FORCE_VER => Op::ForceVer(ForceVer {
+                dest: Variable::from_identifier(op.operands[0]),
+                src: Variable::from_identifier(op.operands[1]),
+                reason: op.operands[2],
+            }),
             MLIL_UNIMPL => Op::Unimpl,
             MLIL_IF => Op::If(MediumLevelILOperationIf {
                 condition: MediumLevelExpressionIndex::from(op.operands[0]),
@@ -886,6 +891,7 @@ impl MediumLevelILInstruction {
             }),
             Goto(op) => Lifted::Goto(op),
             FreeVarSlot(op) => Lifted::FreeVarSlot(op),
+            ForceVer(op) => Lifted::ForceVer(op),
             SetVarField(op) => Lifted::SetVarField(LiftedSetVarField {
                 dest: op.dest,
                 offset: op.offset,
@@ -1835,6 +1841,7 @@ pub enum MediumLevelILInstructionKind {
     FreeVarSlot(FreeVarSlot),
     SetVarField(SetVarField),
     SetVar(SetVar),
+    ForceVer(ForceVer),
     FreeVarSlotSsa(FreeVarSlotSsa),
     SetVarSsaField(SetVarSsaField),
     SetVarAliasedField(SetVarSsaField),

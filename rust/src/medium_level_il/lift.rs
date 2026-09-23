@@ -70,6 +70,7 @@ pub enum MediumLevelILLiftedInstructionKind {
     FreeVarSlot(FreeVarSlot),
     SetVarField(LiftedSetVarField),
     SetVar(LiftedSetVar),
+    ForceVer(ForceVer),
     FreeVarSlotSsa(FreeVarSlotSsa),
     SetVarSsaField(LiftedSetVarSsaField),
     SetVarAliasedField(LiftedSetVarSsaField),
@@ -237,6 +238,7 @@ impl MediumLevelILLiftedInstruction {
             FreeVarSlot(_) => "FreeVarSlot",
             SetVarField(_) => "SetVarField",
             SetVar(_) => "SetVar",
+            ForceVer(_) => "ForceVer",
             FreeVarSlotSsa(_) => "FreeVarSlotSsa",
             SetVarSsaField(_) => "SetVarSsaField",
             SetVarAliasedField(_) => "SetVarAliasedField",
@@ -423,6 +425,11 @@ impl MediumLevelILLiftedInstruction {
             ],
             Goto(op) => vec![("dest", Operand::InstructionIndex(op.dest))],
             FreeVarSlot(op) => vec![("dest", Operand::Var(op.dest))],
+            ForceVer(op) => vec![
+                ("dest", Operand::Var(op.dest)),
+                ("src", Operand::Var(op.src)),
+                ("reason", Operand::Int(op.reason)),
+            ],
             SetVarField(op) => vec![
                 ("dest", Operand::Var(op.dest)),
                 ("offset", Operand::Int(op.offset)),

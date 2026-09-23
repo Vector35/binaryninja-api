@@ -1,50 +1,37 @@
 #include "Resolver.h"
 
-string Resolver::nonConflictingName(const string& basename)
+static bool IsGeneratedName(const string& name, const string& basename)
 {
-	int idx = 0;
-	string name = basename;
-	do
-	{
-		auto sym = m_view->GetSymbolByRawName(name);
-		if (!sym)
-			return name;
-		else
-		{
-			name = basename + to_string(idx);
-			idx += 1;
-		}
-	} while (true);
+	return name.starts_with(basename) && name.find_first_not_of("0123456789", basename.size()) == string::npos;
 }
 
-string Resolver::nonConflictingLocalName(Ref<Function> func, const string& basename)
+string Resolver::nonConflictingName(const string& basename, optional<uint64_t> target)
 {
-	string name = basename;
-	int idx = 0;
-	while (true)
-	{
-		bool ok = true;
-		for (const auto& varPair : func->GetVariables())
+	auto available = [&](const string& name) {
+		for (const auto& symbol : m_view->GetSymbolsByRawName(name))
 		{
-			if (varPair.second.name == name)
-			{
-				ok = false;
-				break;
-			}
+			if (!target || symbol->GetAddress() != *target)
+				return false;
 		}
-		if (ok)
-			break;
-		name = basename + to_string(idx);
-		idx += 1;
+		return true;
+	};
+	if (target)
+	{
+		auto symbol = m_view->GetSymbolByAddress(*target);
+		if (symbol && IsGeneratedName(symbol->GetRawName(), basename) && available(symbol->GetRawName()))
+			return symbol->GetRawName();
 	}
+	string name = basename;
+	for (size_t idx = 0; !available(name); ++idx)
+		name = basename + to_string(idx);
 	return name;
 }
 
 string Resolver::nonConflictingLocalName(Ref<Function> func, const Variable& target, const string& basename)
 {
 	// User names are not reflected in GetVariables until analysis completes. Overlay the names assigned in this
-	// resolver pass so multiple protocol locals cannot claim the same name before reanalysis.
-	auto& assignedNames = m_protocolLocalNames[func];
+	// resolver pass so multiple locals cannot claim the same name before reanalysis.
+	auto& assignedNames = m_localNames[func];
 	map<Variable, string> names;
 	for (const auto& [var, info] : func->GetVariables())
 		names[var] = info.name;
@@ -58,17 +45,13 @@ string Resolver::nonConflictingLocalName(Ref<Function> func, const Variable& tar
 			usedNames.insert(name);
 	}
 
-	// Preserve an available name from this protocol's naming family, including a previous numeric suffix.
+	// Preserve an available name from this naming family, including a previous numeric suffix.
 	// This also keeps reruns stable if another local was deleted and a lower suffix is now available.
 	auto current = names.find(target);
-	if (current != names.end() && current->second.starts_with(basename))
+	if (current != names.end() && IsGeneratedName(current->second, basename) && !usedNames.count(current->second))
 	{
-		auto suffix = current->second.substr(basename.size());
-		if (suffix.find_first_not_of("0123456789") == string::npos && !usedNames.count(current->second))
-		{
-			assignedNames[target] = current->second;
-			return current->second;
-		}
+		assignedNames[target] = current->second;
+		return current->second;
 	}
 
 	string name = basename;
@@ -300,7 +283,8 @@ bool Resolver::setModuleEntry(EFIModuleType fileType)
 						continue;
 
 					auto funcType = targetFunc->GetType();
-					entryFunc->SetUserCallTypeAdjustment(m_view->GetDefaultArchitecture(), callsite.addr, funcType);
+					auto arch = m_view->GetDefaultArchitecture();
+					m_updates.Apply([&]() { entryFunc->SetUserCallTypeAdjustment(arch, callsite.addr, funcType); });
 				}
 				else
 					LogDebugF("Operation not ConstPtr: {}", constantPtr.operation);
@@ -341,8 +325,10 @@ bool Resolver::setModuleEntry(EFIModuleType fileType)
 	if (!ok)
 		return false;
 
-	entryFunc->SetUserType(result.type);
-	m_view->DefineUserSymbol(new Symbol(FunctionSymbol, "_ModuleEntry", entry));
+	m_updates.Apply([&]() {
+		entryFunc->SetUserType(result.type);
+		m_view->DefineUserSymbol(new Symbol(FunctionSymbol, "_ModuleEntry", entry));
+	});
 	m_view->UpdateAnalysis();
 
 	return true;
@@ -449,7 +435,8 @@ vector<HighLevelILInstruction> Resolver::GetCallExprs(const vector<HighLevelILIn
 	return calls;
 }
 
-Resolver::ProtocolGuidInfo Resolver::resolveProtocolGuid(const EFI_GUID& guid, uint64_t addr)
+Resolver::ProtocolGuidInfo Resolver::resolveProtocolGuid(
+	const EFI_GUID& guid, uint64_t addr, optional<uint64_t> guidDataAddr)
 {
 	auto names = lookupGuid(guid);
 	ProtocolGuidInfo info { names.first, names.second };
@@ -472,7 +459,11 @@ Resolver::ProtocolGuidInfo Resolver::resolveProtocolGuid(const EFI_GUID& guid, u
 	}
 
 	LogWarnF("Unknown EFI Protocol referenced at {:#x}", addr);
-	info.guidName = nonConflictingName("UnknownProtocolGuid");
+	// Use the GUID object's existing name before deriving interface names from it.
+	if (auto symbol = guidDataAddr ? m_view->GetSymbolByAddress(*guidDataAddr) : nullptr)
+		info.guidName = symbol->GetRawName();
+	else
+		info.guidName = nonConflictingName("UnknownProtocolGuid", guidDataAddr);
 	return info;
 }
 
@@ -488,8 +479,10 @@ bool Resolver::defineGuidDataVariable(uint64_t addr, const string& guidName)
 	if (sym)
 		guidVarName = sym->GetRawName();
 
-	m_view->DefineDataVariable(addr, result.type);
-	m_view->DefineUserSymbol(new Symbol(DataSymbol, guidVarName, addr));
+	m_updates.Apply([&]() {
+		m_view->DefineDataVariable(addr, result.type);
+		m_view->DefineUserSymbol(new Symbol(DataSymbol, guidVarName, addr));
+	});
 	return true;
 }
 
@@ -529,21 +522,19 @@ bool Resolver::applyProtocolInterface(Ref<Function> func, const HighLevelILInstr
 			interfaceName = GetVarNameForTypeStr(protocolName);
 		}
 		interfaceName = nonConflictingLocalName(func, source.GetVariable(), interfaceName);
-		func->CreateUserVariable(source.GetVariable(), storageType, interfaceName);
+		m_updates.CreateUserVariable(func, source.GetVariable(), storageType, interfaceName);
 		return true;
 	}
 
 	if (interfaceParam.operation == HLIL_VAR)
 	{
 		auto interfaceName = nonConflictingLocalName(func, interfaceParam.GetVariable(), GetVarNameForTypeStr(protocolName));
-		func->CreateUserVariable(interfaceParam.GetVariable(), argumentType, interfaceName);
+		m_updates.CreateUserVariable(func, interfaceParam.GetVariable(), argumentType, interfaceName);
 		return true;
 	}
 
 	if (auto dataVarAddr = GetConstantDataAddress(interfaceParam))
 	{
-		m_view->DefineDataVariable(*dataVarAddr, storageType);
-
 		string interfaceName = guidName;
 		if (interfaceName.find("GUID") != interfaceName.npos)
 		{
@@ -554,7 +545,10 @@ bool Resolver::applyProtocolInterface(Ref<Function> func, const HighLevelILInstr
 		{
 			interfaceName.replace(15, 4, "Interface");
 		}
-		m_view->DefineUserSymbol(new Symbol(DataSymbol, interfaceName, *dataVarAddr));
+		m_updates.Apply([&]() {
+			m_view->DefineDataVariable(*dataVarAddr, storageType);
+			m_view->DefineUserSymbol(new Symbol(DataSymbol, interfaceName, *dataVarAddr));
+		});
 		return true;
 	}
 
@@ -589,8 +583,11 @@ bool Resolver::defineOutputAtCallsite(Ref<Function> func, uint64_t addr, int par
 		auto dataVarAddr = GetConstantDataAddress(outputParam);
 		if (dataVarAddr)
 		{
-			m_view->DefineDataVariable(*dataVarAddr, outputType);
-			m_view->DefineUserSymbol(new Symbol(DataSymbol, nonConflictingName(name), *dataVarAddr));
+			auto outputName = nonConflictingName(name, *dataVarAddr);
+			m_updates.Apply([&]() {
+				m_view->DefineDataVariable(*dataVarAddr, outputType);
+				m_view->DefineUserSymbol(new Symbol(DataSymbol, outputName, *dataVarAddr));
+			});
 			m_view->UpdateAnalysis();
 			return true;
 		}
@@ -618,12 +615,14 @@ bool Resolver::resolveGuidInterface(Ref<Function> func, uint64_t addr, int guidP
 
 		auto guidAddr = params[guidPos].GetValue();
 		auto guidDataAddr = GetConstantDataAddress(params[guidPos]);
-		EFI_GUID guid;
+		EFI_GUID guid {};
+		bool guidExtracted = false;
 		if (guidDataAddr)
 		{
 			// Most calls pass a pointer to a GUID in a data segment; read the canonical bytes from the binary view.
 			if (m_view->Read(&guid, *guidDataAddr, 16) < 16)
 				continue;
+			guidExtracted = true;
 		}
 		else if (guidAddr.state == StackFrameOffset)
 		{
@@ -659,6 +658,7 @@ bool Resolver::resolveGuidInterface(Ref<Function> func, uint64_t addr, int guidP
 				continue;
 
 			memcpy(guid.data(), contentBytes.data(), 16);
+			guidExtracted = true;
 		}
 		else if (params[guidPos].operation == HLIL_VAR)
 		{
@@ -749,10 +749,11 @@ bool Resolver::resolveGuidInterface(Ref<Function> func, uint64_t addr, int guidP
 			continue;
 		}
 
-		if (guid.empty())
+		// A fixed-size GUID array is never empty. Only complete extraction supplies bytes for lookup and typing.
+		if (!guidExtracted)
 			continue;
 
-		auto info = resolveProtocolGuid(guid, addr);
+		auto info = resolveProtocolGuid(guid, addr, guidDataAddr);
 		if (guidDataAddr && !defineGuidDataVariable(*guidDataAddr, info.guidName))
 			return false;
 		applyProtocolInterface(func, params[interfacePos], info, true);
@@ -817,7 +818,7 @@ bool Resolver::defineTypeAtCallsite(
 		return false;
 	}
 
-	m_view->DefineDataVariable(varAddr, result.type);
+	m_updates.Apply([&]() { m_view->DefineDataVariable(varAddr, result.type); });
 
 	if (!followFields)
 		return true;
@@ -845,6 +846,7 @@ bool Resolver::defineTypeAtCallsite(
 
 	// we want to keep this name for renaming NotifyFunction
 	string guidName;
+	BinaryReader pointerReader(m_view, m_view->GetDefaultEndianness());
 	for (auto member : members)
 	{
 		auto memberOffset = member.offset;
@@ -860,7 +862,8 @@ bool Resolver::defineTypeAtCallsite(
 		if (memberName == "Guid")
 		{
 			uint64_t guidAddr = 0;
-			if (m_view->Read(&guidAddr, varAddr + memberOffset, m_view->GetAddressSize()) < m_view->GetAddressSize())
+			pointerReader.Seek(varAddr + memberOffset);
+			if (!pointerReader.TryReadPointer(guidAddr))
 				continue;
 			auto name = defineAndLookupGuid(guidAddr);
 			guidName = name.second;
@@ -869,8 +872,9 @@ bool Resolver::defineTypeAtCallsite(
 		{
 			// Notify has the type EFI_NOTIFY_ENTRY_POINT
 			// which is a NamedTypeRefer
-			uint64_t funcAddr;
-			if (m_view->Read(&funcAddr, varAddr + memberOffset, m_view->GetAddressSize()) < m_view->GetAddressSize())
+			uint64_t funcAddr = 0;
+			pointerReader.Seek(varAddr + memberOffset);
+			if (!pointerReader.TryReadPointer(funcAddr))
 				continue;
 			auto notifyFunc = m_view->GetAnalysisFunction(m_view->GetDefaultPlatform(), funcAddr);
 			if (!notifyFunc)
@@ -878,7 +882,7 @@ bool Resolver::defineTypeAtCallsite(
 
 			string funcName = guidName;
 			if (guidName.empty())
-				funcName = nonConflictingName("UnknownNotify");
+				funcName = nonConflictingName("UnknownNotify", funcAddr);
 			else
 				funcName = "Notify" + funcName.replace(funcName.find("GUID"), 4, "");
 
@@ -886,8 +890,10 @@ bool Resolver::defineTypeAtCallsite(
 				"EFI_STATUS Notify(EFI_PEI_SERVICES **PeiServices, EFI_PEI_NOTIFY_DESCRIPTOR* NotifyDescriptor, VOID* "
 				"Ppi)";
 			ok = m_view->ParseTypeString(notifyTypeStr, result, errors);
-			notifyFunc->SetUserType(result.type);
-			m_view->DefineUserSymbol(new Symbol(FunctionSymbol, funcName, funcAddr));
+			m_updates.Apply([&]() {
+				notifyFunc->SetUserType(result.type);
+				m_view->DefineUserSymbol(new Symbol(FunctionSymbol, funcName, funcAddr));
+			});
 			m_view->UpdateAnalysis();
 
 			m_propagation.QueueFunction(notifyFunc);
@@ -896,7 +902,8 @@ bool Resolver::defineTypeAtCallsite(
 	return true;
 }
 
-Resolver::Resolver(Ref<BinaryView> view, Ref<BackgroundTask> task, TypePropagation& propagation) : m_propagation(propagation)
+Resolver::Resolver(Ref<BinaryView> view, Ref<BackgroundTask> task, TypePropagation& propagation) :
+	m_propagation(propagation), m_updates(propagation.GetUpdates())
 {
 	m_view = view;
 	m_task = task;
@@ -956,7 +963,8 @@ pair<string, string> Resolver::defineAndLookupGuid(uint64_t addr)
 	string symbolName;
 	if (guidName.empty())
 	{
-		symbolName = nonConflictingName("UnknownGuid");
+		auto symbol = m_view->GetSymbolByAddress(addr);
+		symbolName = symbol ? symbol->GetRawName() : nonConflictingName("UnknownGuid", addr);
 		LogDebugF("Found UnknownGuid at {:#x}", addr);
 	}
 	else
@@ -964,8 +972,10 @@ pair<string, string> Resolver::defineAndLookupGuid(uint64_t addr)
 		symbolName = guidName;
 		LogDebugF("Define {} at {:#x}", guidName.c_str(), addr);
 	}
-	m_view->DefineDataVariable(addr, result.type);
-	m_view->DefineUserSymbol(new Symbol(DataSymbol, symbolName, addr));
+	m_updates.Apply([&]() {
+		m_view->DefineDataVariable(addr, result.type);
+		m_view->DefineUserSymbol(new Symbol(DataSymbol, symbolName, addr));
+	});
 
 	return namePair;
 }

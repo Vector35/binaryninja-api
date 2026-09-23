@@ -68,7 +68,7 @@ static bool IsPeiServicesExpr(Ref<Function> func, Ref<MediumLevelILFunction> mli
 	}
 }
 
-static bool DefineOutputFromMlilParam(Ref<BinaryView> view, Ref<Function> func, Ref<MediumLevelILFunction> mlilSsa,
+static bool DefineOutputFromMlilParam(Resolver& resolver, Ref<BinaryView> view, Ref<Function> func, Ref<MediumLevelILFunction> mlilSsa,
 	const MediumLevelILInstruction& instr, int paramIdx, Ref<Type> outputType, const string& name,
 	bool followAddressOfTemp = false)
 {
@@ -85,8 +85,8 @@ static bool DefineOutputFromMlilParam(Ref<BinaryView> view, Ref<Function> func, 
 	auto outputParam = params[paramIdx];
 	if (outputParam.operation == MLIL_ADDRESS_OF)
 	{
-		func->CreateUserVariable(outputParam.GetSourceVariable<MLIL_ADDRESS_OF>(), outputType,
-			Resolver::nonConflictingLocalName(func, name));
+		resolver.GetUpdates().CreateUserVariable(func, outputParam.GetSourceVariable<MLIL_ADDRESS_OF>(), outputType,
+			resolver.nonConflictingLocalName(func, outputParam.GetSourceVariable<MLIL_ADDRESS_OF>(), name));
 		view->UpdateAnalysis();
 		return true;
 	}
@@ -110,8 +110,8 @@ static bool DefineOutputFromMlilParam(Ref<BinaryView> view, Ref<Function> func, 
 				auto source = defExpr.GetSourceExpr<MLIL_SET_VAR_SSA>();
 				if (source.operation == MLIL_ADDRESS_OF)
 				{
-					func->CreateUserVariable(source.GetSourceVariable<MLIL_ADDRESS_OF>(), outputType,
-						Resolver::nonConflictingLocalName(func, name));
+					resolver.GetUpdates().CreateUserVariable(func, source.GetSourceVariable<MLIL_ADDRESS_OF>(), outputType,
+						resolver.nonConflictingLocalName(func, source.GetSourceVariable<MLIL_ADDRESS_OF>(), name));
 					view->UpdateAnalysis();
 					return true;
 				}
@@ -149,7 +149,8 @@ static bool DefineOutputFromMlilParam(Ref<BinaryView> view, Ref<Function> func, 
 
 		if (outputVar)
 		{
-			func->CreateUserVariable(*outputVar, outputType, Resolver::nonConflictingLocalName(func, name));
+			resolver.GetUpdates().CreateUserVariable(
+				func, *outputVar, outputType, resolver.nonConflictingLocalName(func, *outputVar, name));
 			view->UpdateAnalysis();
 			return true;
 		}
@@ -192,7 +193,7 @@ bool PeiResolver::resolvePeiIdt()
 				continue;
 
 			auto var = expr.GetParent().GetDestExpr<HLIL_ASSIGN>().GetSourceExpr<HLIL_STRUCT_FIELD>().GetVariable();
-			ref.func->CreateUserVariable(var, m_view->GetTypeByName(QualifiedName(intrinsicName)), intrinsicName);
+			m_updates.CreateUserVariable(ref.func, var, m_view->GetTypeByName(QualifiedName(intrinsicName)), intrinsicName);
 		}
 
 		if (instr.operation == MLIL_INTRINSIC)
@@ -201,8 +202,8 @@ bool PeiResolver::resolvePeiIdt()
 			auto output_params = instr.GetOutputVariables<MLIL_INTRINSIC>();
 			if (output_params.size() < 1)
 				continue;
-			ref.func->CreateUserVariable(
-				output_params[0], m_view->GetTypeByName(QualifiedName(intrinsicName)), intrinsicName);
+			m_updates.CreateUserVariable(
+				ref.func, output_params[0], m_view->GetTypeByName(QualifiedName(intrinsicName)), intrinsicName);
 		}
 		m_view->UpdateAnalysis();
 	}
@@ -241,11 +242,14 @@ bool PeiResolver::resolveServicePointers()
 			continue;
 
 		auto sourceType = mlil->GetExprType(instr.GetSourceExpr<MLIL_SET_VAR>()).GetValue();
-		if (!sourceType)
+		// Type references also include callback signatures containing EFI_PEI_SERVICES parameters. Only rename
+		// values that are themselves service pointers, including on reruns after those callbacks have been resolved.
+		if (!IsPeiServicesType(sourceType))
 			continue;
 
-		ref.func->CreateUserVariable(instr.GetDestVariable<MLIL_SET_VAR>(),
-									 sourceType, nonConflictingLocalName(ref.func, "EfiPeiServices"));
+		auto target = instr.GetDestVariable<MLIL_SET_VAR>();
+		m_updates.CreateUserVariable(
+			ref.func, target, sourceType, nonConflictingLocalName(ref.func, target, "EfiPeiServices"));
 		m_view->UpdateAnalysis();
 	}
 
@@ -313,7 +317,8 @@ bool PeiResolver::resolvePeiMrc()
 					auto pointerType = Type::PointerType(m_view->GetDefaultArchitecture(),
 														 Type::PointerType(m_view->GetDefaultArchitecture(),
 																		   m_view->GetTypeByName(QualifiedName("EFI_PEI_SERVICES"))));
-					func->CreateUserVariable(output[0], pointerType, nonConflictingLocalName(func, "PeiServices"));
+					m_updates.CreateUserVariable(
+						func, output[0], pointerType, nonConflictingLocalName(func, output[0], "PeiServices"));
 					m_view->UpdateAnalysis();
 				}
 			}
@@ -349,7 +354,8 @@ bool PeiResolver::resolvePeiMrs()
 			auto pointerType = Type::PointerType(m_view->GetDefaultArchitecture(),
 												 Type::PointerType(
 													 m_view->GetDefaultArchitecture(), m_view->GetTypeByName(QualifiedName("EFI_PEI_SERVICES"))));
-			ref.func->CreateUserVariable(params[0], pointerType, nonConflictingLocalName(ref.func, "EfiPeiServices"));
+			m_updates.CreateUserVariable(
+				ref.func, params[0], pointerType, nonConflictingLocalName(ref.func, params[0], "EfiPeiServices"));
 			m_view->UpdateAnalysis();
 		}
 	}
@@ -522,7 +528,7 @@ bool PeiResolver::resolvePeiServices()
 				return;
 			// GetHobList
 			if (!defineOutputAtCallsite(func, addr, 1, "VOID*", "HobList"))
-				DefineOutputFromMlilParam(m_view, func, mlilSsa, instr, 1, GetTypeFromViewAndPlatform("VOID*"), "HobList", true);
+				DefineOutputFromMlilParam(*this, m_view, func, mlilSsa, instr, 1, GetTypeFromViewAndPlatform("VOID*"), "HobList", true);
 		}
 		else if (*offset == 0x18 + m_width * 12)
 		{
@@ -532,7 +538,7 @@ bool PeiResolver::resolvePeiServices()
 				return;
 			// AllocatePages
 			if (!defineOutputAtCallsite(func, addr, 3, "EFI_PHYSICAL_ADDRESS", "Memory"))
-				DefineOutputFromMlilParam(m_view, func, mlilSsa, instr, 3, GetTypeFromViewAndPlatform("EFI_PHYSICAL_ADDRESS"), "Memory");
+				DefineOutputFromMlilParam(*this, m_view, func, mlilSsa, instr, 3, GetTypeFromViewAndPlatform("EFI_PHYSICAL_ADDRESS"), "Memory");
 		}
 		else if (*offset == 0x18 + m_width * 13)
 		{
@@ -541,7 +547,7 @@ bool PeiResolver::resolvePeiServices()
 				return;
 			// AllocatePool
 			if (!defineOutputAtCallsite(func, addr, 2, "VOID*", "Buffer"))
-				DefineOutputFromMlilParam(m_view, func, mlilSsa, instr, 2, GetTypeFromViewAndPlatform("VOID*"), "Buffer");
+				DefineOutputFromMlilParam(*this, m_view, func, mlilSsa, instr, 2, GetTypeFromViewAndPlatform("VOID*"), "Buffer");
 		}
 	};
 

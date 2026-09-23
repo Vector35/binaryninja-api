@@ -1,7 +1,7 @@
 #include "TypePropagation.h"
 #include "highlevelilinstruction.h"
 
-TypePropagation::TypePropagation(BinaryView* view) : m_view(view)
+TypePropagation::TypePropagation(BinaryView* view, bool automatic) : m_view(view), m_updates(view, automatic)
 {
 }
 
@@ -203,7 +203,7 @@ bool TypePropagation::propagateFuncParamTypes(Function* func, SSAVariable ssa_va
 						QueueFunction(subfunc);
 					break;
 				}
-				subfunc->SetUserType(newType);
+				m_updates.Apply([&]() { subfunc->SetUserType(newType); });
 				QueueFunction(subfunc);
 				update = true;
 				break;
@@ -227,8 +227,10 @@ bool TypePropagation::propagateFuncParamTypes(Function* func, SSAVariable ssa_va
 			if (it != defaultName.end())
 				typeName = it->second;
 
-			m_view->DefineDataVariable(constant, ssa_var_type);
-			m_view->DefineUserSymbol(new Symbol(DataSymbol, typeName, constant));
+			m_updates.Apply([&]() {
+				m_view->DefineDataVariable(constant, ssa_var_type);
+				m_view->DefineUserSymbol(new Symbol(DataSymbol, typeName, constant));
+			});
 
 			update = true;
 			break;
@@ -258,7 +260,7 @@ bool TypePropagation::propagateFuncParamTypes(Function* func, SSAVariable ssa_va
 
 			if (src_type.GetValue() && src_type.GetValue() != dest_type.GetValue())
 			{
-				func->CreateUserVariable(dest.var, src_type, func->GetVariableName(dest.var));
+				m_updates.CreateUserVariable(func, dest.var, src_type, func->GetVariableName(dest.var));
 				update |= propagateFuncParamTypes(func, SSAVariable(dest.var, dest.version));
 			}
 			break;

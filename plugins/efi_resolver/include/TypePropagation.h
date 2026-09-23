@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Utils.h"
+#include "AnalysisUpdates.h"
 #include "binaryninjaapi.h"
 
 using namespace BinaryNinja;
@@ -8,6 +9,7 @@ using namespace BinaryNinja;
 class TypePropagation
 {
 	Ref<BinaryView> m_view;
+	AnalysisUpdates m_updates;
 	using FunctionKey = std::pair<std::string, uint64_t>;
 	std::deque<FunctionKey> m_queue;
 	std::set<FunctionKey> m_processed;
@@ -16,7 +18,8 @@ class TypePropagation
 	bool propagateFuncParamTypes(Function* func, SSAVariable ssa_var);
 
 public:
-	TypePropagation(BinaryView* view);
+	TypePropagation(BinaryView* view, bool automatic = false);
+	const AnalysisUpdates& GetUpdates() const { return m_updates; }
 	void QueueFunction(Function* func);
 	bool HasPendingFunctions() const { return !m_queue.empty(); }
 	// The caller must complete analysis before each call, including for newly queued roots.

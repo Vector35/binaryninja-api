@@ -18,7 +18,7 @@ bool DxeResolver::resolveProtocolGuid(Ref<Function> func, uint64_t addr, size_t 
 		if (m_view->Read(&guid, *guidDataAddr, 16) < 16)
 			continue;
 
-		auto info = Resolver::resolveProtocolGuid(guid, addr);
+		auto info = Resolver::resolveProtocolGuid(guid, addr, guidDataAddr);
 		if (defineGuidDataVariable(*guidDataAddr, info.guidName))
 			changed = true;
 	}
@@ -46,7 +46,7 @@ bool DxeResolver::resolveProtocolInterfaces(
 		if (m_view->Read(&guid, *guidDataAddr, 16) < 16)
 			continue;
 
-		auto info = Resolver::resolveProtocolGuid(guid, addr);
+		auto info = Resolver::resolveProtocolGuid(guid, addr, guidDataAddr);
 		if (defineGuidDataVariable(*guidDataAddr, info.guidName))
 			changed = true;
 
@@ -83,7 +83,7 @@ bool DxeResolver::resolveProtocolInterfaceList(Ref<Function> func, uint64_t addr
 			if (m_view->Read(&guid, *guidDataAddr, 16) < 16)
 				continue;
 
-			auto info = Resolver::resolveProtocolGuid(guid, addr);
+			auto info = Resolver::resolveProtocolGuid(guid, addr, guidDataAddr);
 			if (!defineGuidDataVariable(*guidDataAddr, info.guidName))
 				continue;
 			changed = true;
@@ -277,8 +277,11 @@ bool DxeResolver::resolveSmmTables(string serviceName, string tableName)
 		bool ok = m_view->ParseTypeString(tableName, result, errors);
 		if (!ok)
 			return false;
-		m_view->DefineDataVariable(smstAddr.GetValue().value, result.type);
-		m_view->DefineUserSymbol(new Symbol(DataSymbol, "gMmst", smstAddr.GetValue().value));
+		auto address = smstAddr.GetValue().value;
+		m_updates.Apply([&]() {
+			m_view->DefineDataVariable(address, result.type);
+			m_view->DefineUserSymbol(new Symbol(DataSymbol, "gMmst", address));
+		});
 		m_view->UpdateAnalysis();
 	}
 	return true;
@@ -414,8 +417,10 @@ bool DxeResolver::resolveSmiHandlers()
 				bool ok = m_view->ParseTypeString(handleTypeStr, result, errors);
 				if (!ok)
 					return false;
-				targetFunc->SetUserType(result.type);
-				m_view->DefineUserSymbol(new Symbol(FunctionSymbol, funcName, funcAddr));
+				m_updates.Apply([&]() {
+					targetFunc->SetUserType(result.type);
+					m_view->DefineUserSymbol(new Symbol(FunctionSymbol, funcName, funcAddr));
+				});
 				m_view->UpdateAnalysis();
 
 				// After setting the type, we want to propagate the parameters' type

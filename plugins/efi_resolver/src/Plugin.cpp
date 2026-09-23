@@ -156,7 +156,9 @@ void RunWorkflow(const Ref<AnalysisContext>& analysisContext)
 {
 	auto view = analysisContext->GetBinaryView();
 	auto nextStage = EfiStage::Failed;
-	TypePropagation propagation(view);
+	// Inspect IL and discover annotations on the workflow thread. Only the
+	// resulting writes are dispatched to the main thread in short undo scopes.
+	TypePropagation propagation(view, true);
 	try
 	{
 		if (IsValid(view))
@@ -174,11 +176,16 @@ void RunWorkflow(const Ref<AnalysisContext>& analysisContext)
 		LogError("EFI resolver failed with unknown uncaught exception.");
 	}
 
+	Ref<Metadata> pending;
 	if (nextStage < EfiStage::Complete && propagation.HasPendingFunctions())
-		view->StoreMetadata(EFI_PROPAGATION_METADATA, propagation.SaveState(), MetadataStorePersistent);
-	else
-		view->RemoveMetadata(EFI_PROPAGATION_METADATA);
-	view->StoreMetadata(EFI_STAGE_METADATA, new Metadata(static_cast<uint64_t>(nextStage)), MetadataStorePersistent);
+		pending = propagation.SaveState();
+	propagation.GetUpdates().Apply([&]() {
+		if (pending)
+			view->StoreMetadata(EFI_PROPAGATION_METADATA, pending, MetadataStorePersistent);
+		else
+			view->RemoveMetadata(EFI_PROPAGATION_METADATA);
+		view->StoreMetadata(EFI_STAGE_METADATA, new Metadata(static_cast<uint64_t>(nextStage)), MetadataStorePersistent);
+	});
 	// Disable only after finishing (or failing), including when an explicit
 	// eligibility override would otherwise force the continuation to keep running.
 	if (nextStage >= EfiStage::Complete)

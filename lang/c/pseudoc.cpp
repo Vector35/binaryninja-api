@@ -1410,7 +1410,8 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 					{
 						if (auto unicode = GetFunction()->GetView()->StringifyUnicodeData(instr.function->GetArchitecture(), db, nullTerminates); unicode.has_value())
 						{
-							auto wideStringPrefix = (builtin == BuiltinWcscpy) ? "L" : "";
+							auto wideStringPrefix = (builtin == BuiltinWcscpy) ? "L" :
+								DisassemblyTextRenderer::GetStringLiteralPrefix(unicode.value().second);
 							auto tokenContext = (builtin == BuiltinWcscpy) ? ConstStringDataTokenContext : ConstDataTokenContext;
 							tokens.Append(BraceToken, wideStringPrefix + string("\""));
 							tokens.Append(StringToken, tokenContext, unicode.value().first, instr.address, data.value);

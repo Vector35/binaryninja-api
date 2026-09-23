@@ -18,45 +18,8 @@ static bool IsPeiServicesType(Ref<Type> type)
 	return IsPeiServicesType(type->GetChildType().GetValue());
 }
 
-static bool IsPeiServicesVariable(Ref<Function> func, const Variable& var)
-{
-	// Prefer actual type information when it exists, but PEI service pointers are often discovered by earlier resolver
-	// passes and only survive as user variable names after later analysis rewrites the expression shape.
-	auto varType = func->GetVariableType(var).GetValue();
-	if (IsPeiServicesType(varType))
-		return true;
-
-	auto varName = func->GetVariableName(var);
-	return varName.find("PeiServices") != string::npos || varName.find("EfiPeiServices") != string::npos;
-}
-
-static string NormalizeLocalName(const string& name)
-{
-	// BN may split the same stack slot into SSA-like local names such as var_6c, var_6c_1, var_6c_4.  For
-	// resolver-only provenance, those suffixes should still refer to the same recovered PEI services pointer.
-	auto pos = name.rfind('_');
-	if (pos == string::npos || pos + 1 >= name.size())
-		return name;
-
-	for (size_t i = pos + 1; i < name.size(); i++)
-	{
-		if (!isdigit(static_cast<unsigned char>(name[i])))
-			return name;
-	}
-	return name.substr(0, pos);
-}
-
-static optional<Variable> GetMlilSourceVariable(const MediumLevelILInstruction& expr)
-{
-	if (expr.operation == MLIL_VAR_SSA)
-		return expr.GetSourceSSAVariable<MLIL_VAR_SSA>().var;
-	if (expr.operation == MLIL_VAR)
-		return expr.GetSourceVariable<MLIL_VAR>();
-	return nullopt;
-}
-
 static bool IsPeiServicesExpr(Ref<Function> func, Ref<MediumLevelILFunction> mlilSsa, const MediumLevelILInstruction& expr,
-	const set<string>* knownPeiServicesVars = nullptr, size_t depth = 0)
+	const set<SSAVariable>* knownPeiServicesVars = nullptr, size_t depth = 0)
 {
 	// This answers "does this expression probably evaluate to EFI_PEI_SERVICES*?" for the untyped MLIL shapes that
 	// appear after indirect service-table calls have lost their original type references.  It intentionally follows
@@ -72,22 +35,21 @@ static bool IsPeiServicesExpr(Ref<Function> func, Ref<MediumLevelILFunction> mli
 	case MLIL_VAR_SSA:
 	{
 		auto ssaVar = expr.GetSourceSSAVariable<MLIL_VAR_SSA>();
-		// knownPeiServicesVars is internal provenance from earlier calls in this same function; it avoids creating extra
-		// user variables just to remember that var_6c_N came from a proven PEI services argument.
-		if (knownPeiServicesVars
-			&& knownPeiServicesVars->find(NormalizeLocalName(func->GetVariableName(ssaVar.var))) != knownPeiServicesVars->end())
+		// Only the exact SSA value used by a proven call inherits its provenance. Other lifetimes of the same
+		// variable, or variables with similar display names, must be proven through their own definitions or types.
+		if (knownPeiServicesVars && knownPeiServicesVars->find(ssaVar) != knownPeiServicesVars->end())
 			return true;
-		if (IsPeiServicesVariable(func, ssaVar.var))
+		if (IsPeiServicesType(func->GetVariableType(ssaVar.var).GetValue()))
 			return true;
 
 		if (ssaVar.version == 0 || !mlilSsa)
 			return false;
 
 		auto def = mlilSsa->GetSSAVarDefinition(ssaVar);
-		if (def >= mlilSsa->GetExprCount())
+		if (def >= mlilSsa->GetInstructionCount())
 			return false;
 
-		auto defExpr = mlilSsa->GetExpr(def);
+		auto defExpr = mlilSsa->GetInstruction(def);
 		if (defExpr.operation != MLIL_SET_VAR_SSA)
 			return false;
 
@@ -130,10 +92,9 @@ static bool DefineOutputFromMlilParam(Ref<BinaryView> view, Ref<Function> func, 
 	}
 	if (outputParam.operation == MLIL_ADDRESS_OF_FIELD)
 	{
-		func->CreateUserVariable(outputParam.GetSourceVariable<MLIL_ADDRESS_OF_FIELD>(), outputType,
-			Resolver::nonConflictingLocalName(func, name));
-		view->UpdateAnalysis();
-		return true;
+		// The output type describes the member, even at offset zero. Applying it to the source variable would
+		// overwrite the containing structure's type and name, so decline this fallback without a member annotation.
+		return false;
 	}
 	if (followAddressOfTemp && outputParam.operation == MLIL_VAR_SSA && mlilSsa)
 	{
@@ -141,9 +102,9 @@ static bool DefineOutputFromMlilParam(Ref<BinaryView> view, Ref<Function> func, 
 		// where compilers commonly materialize the out-parameter address in a temp before the service call.
 		auto ssaVar = outputParam.GetSourceSSAVariable<MLIL_VAR_SSA>();
 		auto def = mlilSsa->GetSSAVarDefinition(ssaVar);
-		if (def < mlilSsa->GetExprCount())
+		if (def < mlilSsa->GetInstructionCount())
 		{
-			auto defExpr = mlilSsa->GetExpr(def);
+			auto defExpr = mlilSsa->GetInstruction(def);
 			if (defExpr.operation == MLIL_SET_VAR_SSA)
 			{
 				auto source = defExpr.GetSourceExpr<MLIL_SET_VAR_SSA>();
@@ -194,19 +155,6 @@ static bool DefineOutputFromMlilParam(Ref<BinaryView> view, Ref<Function> func, 
 		}
 	}
 	return false;
-}
-
-static optional<EFI_GUID> GetGuidFromConstPtr(Ref<BinaryView> view, const MediumLevelILInstruction& expr)
-{
-	// Used only as a safety gate for whole-function LocatePpi scanning.  A constant pointer is not enough by itself;
-	// callers also require the bytes to map to a known protocol before annotating an unproven receiver.
-	if (expr.operation != MLIL_CONST_PTR && expr.operation != MLIL_CONST)
-		return nullopt;
-
-	EFI_GUID guid;
-	if (view->Read(&guid, expr.GetConstant(), 16) < 16)
-		return nullopt;
-	return guid;
 }
 
 bool PeiResolver::resolvePeiIdt()
@@ -493,11 +441,13 @@ bool PeiResolver::resolvePeiDescriptors()
 bool PeiResolver::resolvePeiServices()
 {
 	SetProgressText("Resolving PPIs...");
-	map<uint64_t, set<string>> knownPeiServicesVars;
+	// SSA identities are local to an IL snapshot. Keep the snapshot alive and never carry cached provenance into
+	// a different analysis revision (or a different function at the same address).
+	map<Ref<MediumLevelILFunction>, set<SSAVariable>> knownPeiServicesVars;
 
 	auto processCall = [this, &knownPeiServicesVars](
 		Ref<Function> func, Ref<MediumLevelILFunction> mlilSsa, uint64_t addr, const MediumLevelILInstruction& instr, bool fromTypeRef) {
-		auto& knownVars = knownPeiServicesVars[func->GetStart()];
+		auto& knownVars = knownPeiServicesVars[mlilSsa];
 		auto dest = instr.GetDestExpr();
 		bool typedServiceLoad = dest.operation == MLIL_LOAD_STRUCT_SSA;
 		// Typed service loads are handled from actual EFI_PEI_SERVICES type references.  The whole-function scan below is
@@ -550,26 +500,13 @@ bool PeiResolver::resolvePeiServices()
 			// EFI_PEI_SERVICES starts with three non-service pointer-sized header fields after an 0x18-byte fixed prefix in
 			// the relevant type layout.  Index 2 is LocatePpi, so the table offset is 0x18 + pointer_width * 2.
 			// LocatePpi
-			auto params = instr.GetParameterExprs();
+			// A recognized GUID identifies the requested interface, not the receiver's service table.
 			if (!provenPeiServices)
+				return;
+			auto params = instr.GetParameterExprs();
+			if (params.size() > 0 && params[0].operation == MLIL_VAR_SSA)
 			{
-				if (params.size() <= 1)
-					return;
-
-				auto guid = GetGuidFromConstPtr(m_view, params[1]);
-				if (!guid)
-					return;
-
-				// Whole-function scanning is allowed to recover known protocol calls, but not to invent unknown
-				// interfaces or seed PEI-services provenance from an unproven receiver.
-				if (lookupGuid(*guid).first.empty())
-					return;
-			}
-			else if (params.size() > 0)
-			{
-				auto var = GetMlilSourceVariable(params[0]);
-				if (var)
-					knownVars.insert(NormalizeLocalName(func->GetVariableName(*var)));
+				knownVars.insert(params[0].GetSourceSSAVariable<MLIL_VAR_SSA>());
 			}
 			resolveGuidInterface(func, addr, 1, 4);
 		}
@@ -632,8 +569,7 @@ bool PeiResolver::resolvePeiServices()
 	}
 
 	// Second pass: type references are not always present on the service-table pointer after staged analysis. Scan calls
-	// directly so GUID/output-parameter validation can still recover PEI service uses, but processCall keeps stricter
-	// provenance gates for non-GUID services and unproven LocatePpi calls.
+	// directly to recover PEI service uses, requiring receiver provenance before annotating any service outputs.
 	for (auto func : m_view->GetAnalysisFunctionList())
 	{
 		if (IsCancelled())

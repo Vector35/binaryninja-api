@@ -1381,6 +1381,15 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 				bool nullTerminates = true;
 				switch (builtin)
 				{
+					case BuiltinMemcpy:
+					{
+						// A byte copy needs the complete buffer, including embedded NULs.
+						// Unicode annotations can stop early or abbreviate long data.
+						tokens.Append(BraceToken, "\"");
+						tokens.Append(StringToken, ConstDataTokenContext, db.ToEscapedString(false, true), instr.address, data.value);
+						tokens.Append(BraceToken, "\"");
+						break;
+					}
 					case BuiltinStrcpy:
 					case BuiltinStrncpy:
 					{

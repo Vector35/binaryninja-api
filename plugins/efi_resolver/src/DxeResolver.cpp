@@ -18,7 +18,7 @@ bool DxeResolver::resolveProtocolGuid(Ref<Function> func, uint64_t addr, size_t 
 		if (m_view->Read(&guid, *guidDataAddr, 16) < 16)
 			continue;
 
-		auto info = Resolver::resolveProtocolGuid(guid, addr);
+		auto info = Resolver::resolveProtocolGuid(guid, addr, guidDataAddr);
 		if (defineGuidDataVariable(*guidDataAddr, info.guidName))
 			changed = true;
 	}
@@ -46,7 +46,7 @@ bool DxeResolver::resolveProtocolInterfaces(
 		if (m_view->Read(&guid, *guidDataAddr, 16) < 16)
 			continue;
 
-		auto info = Resolver::resolveProtocolGuid(guid, addr);
+		auto info = Resolver::resolveProtocolGuid(guid, addr, guidDataAddr);
 		if (defineGuidDataVariable(*guidDataAddr, info.guidName))
 			changed = true;
 
@@ -76,14 +76,17 @@ bool DxeResolver::resolveProtocolInterfaceList(Ref<Function> func, uint64_t addr
 		for (size_t guidParam = firstGuidParam; guidParam + 1 < params.size(); guidParam += 2)
 		{
 			auto guidDataAddr = GetConstantDataAddress(params[guidParam]);
-			if (!guidDataAddr || *guidDataAddr == 0)
+			if (!guidDataAddr)
+				continue;
+			// Only a proven null GUID terminates the list; unresolved pairs can precede known ones.
+			if (*guidDataAddr == 0)
 				break;
 
 			EFI_GUID guid;
 			if (m_view->Read(&guid, *guidDataAddr, 16) < 16)
 				continue;
 
-			auto info = Resolver::resolveProtocolGuid(guid, addr);
+			auto info = Resolver::resolveProtocolGuid(guid, addr, guidDataAddr);
 			if (!defineGuidDataVariable(*guidDataAddr, info.guidName))
 				continue;
 			changed = true;
@@ -103,6 +106,7 @@ bool DxeResolver::resolveBootServices()
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_BOOT_SERVICES"));
 	// search reference of `EFI_BOOT_SERVICES` so that we can easily parse different services
 
+	SortCodeReferences(refs);
 	for (auto& ref : refs)
 	{
 		if (IsCancelled())
@@ -188,6 +192,7 @@ bool DxeResolver::resolveRuntimeServices()
 	SetProgressText("Resolving Runtime Services...");
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_RUNTIME_SERVICES"));
 
+	SortCodeReferences(refs);
 	for (auto& ref : refs)
 	{
 		if (IsCancelled())
@@ -230,6 +235,7 @@ bool DxeResolver::resolveSmmTables(string serviceName, string tableName)
 	SetProgressText("Defining MM tables...");
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName(serviceName));
 	// both versions use the same type, so we only need to search for this one
+	SortCodeReferences(refs);
 	for (auto& ref : refs)
 	{
 		if (IsCancelled())
@@ -274,8 +280,11 @@ bool DxeResolver::resolveSmmTables(string serviceName, string tableName)
 		bool ok = m_view->ParseTypeString(tableName, result, errors);
 		if (!ok)
 			return false;
-		m_view->DefineDataVariable(smstAddr.GetValue().value, result.type);
-		m_view->DefineUserSymbol(new Symbol(DataSymbol, "gMmst", smstAddr.GetValue().value));
+		auto address = smstAddr.GetValue().value;
+		m_updates.Apply([&]() {
+			m_view->DefineDataVariable(address, result.type);
+			m_view->DefineUserSymbol(new Symbol(DataSymbol, "gMmst", address));
+		});
 		m_view->UpdateAnalysis();
 	}
 	return true;
@@ -289,6 +298,7 @@ bool DxeResolver::resolveSmmServices()
 	// These tables have same type information, we can just iterate once
 	refs.insert(refs.end(), refs_smm.begin(), refs_smm.end());
 
+	SortCodeReferences(refs);
 	for (auto& ref : refs)
 	{
 		if (IsCancelled())
@@ -345,6 +355,7 @@ bool DxeResolver::resolveSmiHandlers()
 	refs.insert(refs.end(), refs_smm_sx.begin(), refs_smm_sx.end());
 	refs.insert(refs.end(), refs_mm_sx.begin(), refs_mm_sx.end());
 
+	SortCodeReferences(refs);
 	for (auto& ref : refs)
 	{
 		if (IsCancelled())
@@ -409,13 +420,14 @@ bool DxeResolver::resolveSmiHandlers()
 				bool ok = m_view->ParseTypeString(handleTypeStr, result, errors);
 				if (!ok)
 					return false;
-				targetFunc->SetUserType(result.type);
-				m_view->DefineUserSymbol(new Symbol(FunctionSymbol, funcName, funcAddr));
+				m_updates.Apply([&]() {
+					targetFunc->SetUserType(result.type);
+					m_view->DefineUserSymbol(new Symbol(FunctionSymbol, funcName, funcAddr));
+				});
 				m_view->UpdateAnalysis();
 
 				// After setting the type, we want to propagate the parameters' type
-				TypePropagation propagator(m_view);
-				propagator.propagateFuncParamTypes(targetFunc);
+				m_propagation.QueueFunction(targetFunc);
 			}
 		}
 	}
@@ -431,20 +443,7 @@ bool DxeResolver::resolveDxe()
 	return true;
 }
 
-bool DxeResolver::resolveSmm()
-{
-	if (!resolveSmmTables("EFI_SMM_GET_SMST_LOCATION2", "EFI_SMM_SYSTEM_TABLE2*"))
-		return false;
-	if (!resolveSmmTables("EFI_MM_GET_MMST_LOCATION", "EFI_MM_SYSTEM_TABLE*"))
-		return false;
-	if (!resolveSmmServices())
-		return false;
-	if (!resolveSmiHandlers())
-		return false;
-	return true;
-}
-
-DxeResolver::DxeResolver(Ref<BinaryView> view, Ref<BackgroundTask> task) : Resolver(view, task)
+DxeResolver::DxeResolver(Ref<BinaryView> view, Ref<BackgroundTask> task, TypePropagation& propagation) : Resolver(view, task, propagation)
 {
 	initProtocolMapping();
 }

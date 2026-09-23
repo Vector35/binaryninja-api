@@ -1,8 +1,34 @@
 #pragma once
 
 #include "binaryninjaapi.h"
+#include <algorithm>
+#include <tuple>
 
 using namespace BinaryNinja;
+
+static inline auto GetFunctionSemanticKey(Ref<Function> func)
+{
+	return std::make_tuple(func ? func->GetStart() : 0,
+		func && func->GetPlatform() ? func->GetPlatform()->GetName() : std::string());
+}
+
+static inline void SortCodeReferences(std::vector<ReferenceSource>& refs)
+{
+	// Core reference ordering includes object pointers. Resolve in semantic order before allocating names or
+	// applying annotations, including when references from multiple service types have been merged.
+	auto key = [](const ReferenceSource& ref) {
+		return std::tuple_cat(GetFunctionSemanticKey(ref.func),
+			std::make_tuple(ref.arch ? ref.arch->GetName() : std::string(), ref.addr));
+	};
+	std::sort(refs.begin(), refs.end(), [&](const auto& left, const auto& right) { return key(left) < key(right); });
+}
+
+static inline void SortAnalysisFunctions(std::vector<Ref<Function>>& funcs)
+{
+	std::sort(funcs.begin(), funcs.end(), [](const auto& left, const auto& right) {
+		return GetFunctionSemanticKey(left) < GetFunctionSemanticKey(right);
+	});
+}
 
 static inline std::string GetOriginalTypeName(Ref<Type> type)
 {

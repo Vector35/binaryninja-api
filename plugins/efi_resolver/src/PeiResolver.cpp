@@ -8,51 +8,18 @@ static bool IsPeiServicesType(Ref<Type> type)
 	if (type->GetTypeName().GetString().find("EFI_PEI_SERVICES") != string::npos)
 		return true;
 
+	// Refreshed IL can carry the resolved structure instead of a named reference.
+	if (auto name = type->GetRegisteredName(); name && name->GetName() == QualifiedName("EFI_PEI_SERVICES"))
+		return true;
+
 	if (!type->IsPointer())
 		return false;
 
 	return IsPeiServicesType(type->GetChildType().GetValue());
 }
 
-static bool IsPeiServicesVariable(Ref<Function> func, const Variable& var)
-{
-	// Prefer actual type information when it exists, but PEI service pointers are often discovered by earlier resolver
-	// passes and only survive as user variable names after later analysis rewrites the expression shape.
-	auto varType = func->GetVariableType(var).GetValue();
-	if (IsPeiServicesType(varType))
-		return true;
-
-	auto varName = func->GetVariableName(var);
-	return varName.find("PeiServices") != string::npos || varName.find("EfiPeiServices") != string::npos;
-}
-
-static string NormalizeLocalName(const string& name)
-{
-	// BN may split the same stack slot into SSA-like local names such as var_6c, var_6c_1, var_6c_4.  For
-	// resolver-only provenance, those suffixes should still refer to the same recovered PEI services pointer.
-	auto pos = name.rfind('_');
-	if (pos == string::npos || pos + 1 >= name.size())
-		return name;
-
-	for (size_t i = pos + 1; i < name.size(); i++)
-	{
-		if (!isdigit(static_cast<unsigned char>(name[i])))
-			return name;
-	}
-	return name.substr(0, pos);
-}
-
-static optional<Variable> GetMlilSourceVariable(const MediumLevelILInstruction& expr)
-{
-	if (expr.operation == MLIL_VAR_SSA)
-		return expr.GetSourceSSAVariable<MLIL_VAR_SSA>().var;
-	if (expr.operation == MLIL_VAR)
-		return expr.GetSourceVariable<MLIL_VAR>();
-	return nullopt;
-}
-
 static bool IsPeiServicesExpr(Ref<Function> func, Ref<MediumLevelILFunction> mlilSsa, const MediumLevelILInstruction& expr,
-	const set<string>* knownPeiServicesVars = nullptr, size_t depth = 0)
+	const set<SSAVariable>* knownPeiServicesVars = nullptr, size_t depth = 0)
 {
 	// This answers "does this expression probably evaluate to EFI_PEI_SERVICES*?" for the untyped MLIL shapes that
 	// appear after indirect service-table calls have lost their original type references.  It intentionally follows
@@ -68,22 +35,21 @@ static bool IsPeiServicesExpr(Ref<Function> func, Ref<MediumLevelILFunction> mli
 	case MLIL_VAR_SSA:
 	{
 		auto ssaVar = expr.GetSourceSSAVariable<MLIL_VAR_SSA>();
-		// knownPeiServicesVars is internal provenance from earlier calls in this same function; it avoids creating extra
-		// user variables just to remember that var_6c_N came from a proven PEI services argument.
-		if (knownPeiServicesVars
-			&& knownPeiServicesVars->find(NormalizeLocalName(func->GetVariableName(ssaVar.var))) != knownPeiServicesVars->end())
+		// Only the exact SSA value used by a proven call inherits its provenance. Other lifetimes of the same
+		// variable, or variables with similar display names, must be proven through their own definitions or types.
+		if (knownPeiServicesVars && knownPeiServicesVars->find(ssaVar) != knownPeiServicesVars->end())
 			return true;
-		if (IsPeiServicesVariable(func, ssaVar.var))
+		if (IsPeiServicesType(func->GetVariableType(ssaVar.var).GetValue()))
 			return true;
 
 		if (ssaVar.version == 0 || !mlilSsa)
 			return false;
 
 		auto def = mlilSsa->GetSSAVarDefinition(ssaVar);
-		if (def >= mlilSsa->GetExprCount())
+		if (def >= mlilSsa->GetInstructionCount())
 			return false;
 
-		auto defExpr = mlilSsa->GetExpr(def);
+		auto defExpr = mlilSsa->GetInstruction(def);
 		if (defExpr.operation != MLIL_SET_VAR_SSA)
 			return false;
 
@@ -102,7 +68,7 @@ static bool IsPeiServicesExpr(Ref<Function> func, Ref<MediumLevelILFunction> mli
 	}
 }
 
-static bool DefineOutputFromMlilParam(Ref<BinaryView> view, Ref<Function> func, Ref<MediumLevelILFunction> mlilSsa,
+static bool DefineOutputFromMlilParam(Resolver& resolver, Ref<BinaryView> view, Ref<Function> func, Ref<MediumLevelILFunction> mlilSsa,
 	const MediumLevelILInstruction& instr, int paramIdx, Ref<Type> outputType, const string& name,
 	bool followAddressOfTemp = false)
 {
@@ -119,17 +85,16 @@ static bool DefineOutputFromMlilParam(Ref<BinaryView> view, Ref<Function> func, 
 	auto outputParam = params[paramIdx];
 	if (outputParam.operation == MLIL_ADDRESS_OF)
 	{
-		func->CreateUserVariable(outputParam.GetSourceVariable<MLIL_ADDRESS_OF>(), outputType,
-			Resolver::nonConflictingLocalName(func, name));
+		resolver.GetUpdates().CreateUserVariable(func, outputParam.GetSourceVariable<MLIL_ADDRESS_OF>(), outputType,
+			resolver.nonConflictingLocalName(func, outputParam.GetSourceVariable<MLIL_ADDRESS_OF>(), name));
 		view->UpdateAnalysis();
 		return true;
 	}
 	if (outputParam.operation == MLIL_ADDRESS_OF_FIELD)
 	{
-		func->CreateUserVariable(outputParam.GetSourceVariable<MLIL_ADDRESS_OF_FIELD>(), outputType,
-			Resolver::nonConflictingLocalName(func, name));
-		view->UpdateAnalysis();
-		return true;
+		// The output type describes the member, even at offset zero. Applying it to the source variable would
+		// overwrite the containing structure's type and name, so decline this fallback without a member annotation.
+		return false;
 	}
 	if (followAddressOfTemp && outputParam.operation == MLIL_VAR_SSA && mlilSsa)
 	{
@@ -137,72 +102,25 @@ static bool DefineOutputFromMlilParam(Ref<BinaryView> view, Ref<Function> func, 
 		// where compilers commonly materialize the out-parameter address in a temp before the service call.
 		auto ssaVar = outputParam.GetSourceSSAVariable<MLIL_VAR_SSA>();
 		auto def = mlilSsa->GetSSAVarDefinition(ssaVar);
-		if (def < mlilSsa->GetExprCount())
+		if (def < mlilSsa->GetInstructionCount())
 		{
-			auto defExpr = mlilSsa->GetExpr(def);
+			auto defExpr = mlilSsa->GetInstruction(def);
 			if (defExpr.operation == MLIL_SET_VAR_SSA)
 			{
 				auto source = defExpr.GetSourceExpr<MLIL_SET_VAR_SSA>();
 				if (source.operation == MLIL_ADDRESS_OF)
 				{
-					func->CreateUserVariable(source.GetSourceVariable<MLIL_ADDRESS_OF>(), outputType,
-						Resolver::nonConflictingLocalName(func, name));
+					resolver.GetUpdates().CreateUserVariable(func, source.GetSourceVariable<MLIL_ADDRESS_OF>(), outputType,
+						resolver.nonConflictingLocalName(func, source.GetSourceVariable<MLIL_ADDRESS_OF>(), name));
 					view->UpdateAnalysis();
 					return true;
 				}
 			}
 		}
 	}
-	if (followAddressOfTemp && (outputParam.operation == MLIL_VAR_SSA || outputParam.operation == MLIL_VAR))
-	{
-		// Fallback for cases where non-SSA MLIL has the useful temp assignment but SSA lookup did not expose it.  We scan
-		// forward to the current call and remember the last assignment to the argument temp, accepting only temp = &local.
-		auto tempVar = outputParam.operation == MLIL_VAR_SSA ? outputParam.GetSourceSSAVariable<MLIL_VAR_SSA>().var
-			: outputParam.GetSourceVariable<MLIL_VAR>();
-		auto mlil = func->GetMediumLevelIL();
-		if (!mlil)
-			return false;
-
-		optional<Variable> outputVar;
-		for (size_t i = 0; i < mlil->GetInstructionCount(); i++)
-		{
-			auto cur = mlil->GetInstruction(i);
-			if (cur.operation == MLIL_CALL || cur.operation == MLIL_TAILCALL)
-			{
-				if (cur.address == instr.address)
-					break;
-			}
-			if (cur.operation != MLIL_SET_VAR || cur.GetDestVariable<MLIL_SET_VAR>() != tempVar)
-				continue;
-
-			auto source = cur.GetSourceExpr<MLIL_SET_VAR>();
-			if (source.operation == MLIL_ADDRESS_OF)
-				outputVar = source.GetSourceVariable<MLIL_ADDRESS_OF>();
-			else
-				outputVar.reset();
-		}
-
-		if (outputVar)
-		{
-			func->CreateUserVariable(*outputVar, outputType, Resolver::nonConflictingLocalName(func, name));
-			view->UpdateAnalysis();
-			return true;
-		}
-	}
+	// A phi, an unresolved SSA definition, or a non-SSA temporary does not prove
+	// which local reaches this call. Textual assignment order cannot supply that proof.
 	return false;
-}
-
-static optional<EFI_GUID> GetGuidFromConstPtr(Ref<BinaryView> view, const MediumLevelILInstruction& expr)
-{
-	// Used only as a safety gate for whole-function LocatePpi scanning.  A constant pointer is not enough by itself;
-	// callers also require the bytes to map to a known protocol before annotating an unproven receiver.
-	if (expr.operation != MLIL_CONST_PTR && expr.operation != MLIL_CONST)
-		return nullopt;
-
-	EFI_GUID guid;
-	if (view->Read(&guid, expr.GetConstant(), 16) < 16)
-		return nullopt;
-	return guid;
 }
 
 bool PeiResolver::resolvePeiIdt()
@@ -215,6 +133,7 @@ bool PeiResolver::resolvePeiIdt()
 		intrinsicName = "IDTR64";
 
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName(intrinsicName));
+	SortCodeReferences(refs);
 	for (auto ref : refs)
 	{
 		if (IsCancelled())
@@ -239,7 +158,7 @@ bool PeiResolver::resolvePeiIdt()
 				continue;
 
 			auto var = expr.GetParent().GetDestExpr<HLIL_ASSIGN>().GetSourceExpr<HLIL_STRUCT_FIELD>().GetVariable();
-			ref.func->CreateUserVariable(var, m_view->GetTypeByName(QualifiedName(intrinsicName)), intrinsicName);
+			m_updates.CreateUserVariable(ref.func, var, m_view->GetTypeByName(QualifiedName(intrinsicName)), intrinsicName);
 		}
 
 		if (instr.operation == MLIL_INTRINSIC)
@@ -248,16 +167,26 @@ bool PeiResolver::resolvePeiIdt()
 			auto output_params = instr.GetOutputVariables<MLIL_INTRINSIC>();
 			if (output_params.size() < 1)
 				continue;
-			ref.func->CreateUserVariable(
-				output_params[0], m_view->GetTypeByName(QualifiedName(intrinsicName)), intrinsicName);
+			m_updates.CreateUserVariable(
+				ref.func, output_params[0], m_view->GetTypeByName(QualifiedName(intrinsicName)), intrinsicName);
 		}
 		m_view->UpdateAnalysis();
 	}
 
+	return true;
+}
+
+bool PeiResolver::resolveServicePointers()
+{
+	auto archName = m_view->GetDefaultArchitecture()->GetName();
+	if (archName != "x86" && archName != "x86-64")
+		return true;
+
 	// TODO There is an issue related to structure's type propagation, binja doesn't propagate indirect structure access
 	// properly
 	//   here is a temporary fix, should be removed after vector35/binaryninja/#749 got fixed
-	refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_PEI_SERVICES"));
+	auto refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_PEI_SERVICES"));
+	SortCodeReferences(refs);
 	for (auto ref : refs)
 	{
 		if (IsCancelled())
@@ -278,11 +207,14 @@ bool PeiResolver::resolvePeiIdt()
 			continue;
 
 		auto sourceType = mlil->GetExprType(instr.GetSourceExpr<MLIL_SET_VAR>()).GetValue();
-		if (!sourceType)
+		// Type references also include callback signatures containing EFI_PEI_SERVICES parameters. Only rename
+		// values that are themselves service pointers, including on reruns after those callbacks have been resolved.
+		if (!IsPeiServicesType(sourceType))
 			continue;
 
-		ref.func->CreateUserVariable(instr.GetDestVariable<MLIL_SET_VAR>(),
-									 sourceType, nonConflictingLocalName(ref.func, "EfiPeiServices"));
+		auto target = instr.GetDestVariable<MLIL_SET_VAR>();
+		m_updates.CreateUserVariable(
+			ref.func, target, sourceType, nonConflictingLocalName(ref.func, target, "EfiPeiServices"));
 		m_view->UpdateAnalysis();
 	}
 
@@ -292,6 +224,7 @@ bool PeiResolver::resolvePeiIdt()
 bool PeiResolver::resolvePeiMrc()
 {
 	auto funcs = m_view->GetAnalysisFunctionList();
+	SortAnalysisFunctions(funcs);
 	for (auto func : funcs)
 	{
 		if (IsCancelled())
@@ -349,7 +282,8 @@ bool PeiResolver::resolvePeiMrc()
 					auto pointerType = Type::PointerType(m_view->GetDefaultArchitecture(),
 														 Type::PointerType(m_view->GetDefaultArchitecture(),
 																		   m_view->GetTypeByName(QualifiedName("EFI_PEI_SERVICES"))));
-					func->CreateUserVariable(output[0], pointerType, nonConflictingLocalName(func, "PeiServices"));
+					m_updates.CreateUserVariable(
+						func, output[0], pointerType, nonConflictingLocalName(func, output[0], "PeiServices"));
 					m_view->UpdateAnalysis();
 				}
 			}
@@ -363,6 +297,7 @@ bool PeiResolver::resolvePeiMrs()
 	// ideally we don't need this function, but since we don't support type propagation on intrinsic instructions
 	// we have to manually propagate it
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_PEI_SERVICES"));
+	SortCodeReferences(refs);
 	for (auto ref : refs)
 	{
 		if (IsCancelled())
@@ -384,7 +319,8 @@ bool PeiResolver::resolvePeiMrs()
 			auto pointerType = Type::PointerType(m_view->GetDefaultArchitecture(),
 												 Type::PointerType(
 													 m_view->GetDefaultArchitecture(), m_view->GetTypeByName(QualifiedName("EFI_PEI_SERVICES"))));
-			ref.func->CreateUserVariable(params[0], pointerType, nonConflictingLocalName(ref.func, "EfiPeiServices"));
+			m_updates.CreateUserVariable(
+				ref.func, params[0], pointerType, nonConflictingLocalName(ref.func, params[0], "EfiPeiServices"));
 			m_view->UpdateAnalysis();
 		}
 	}
@@ -420,6 +356,7 @@ bool PeiResolver::resolvePeiDescriptors()
 	for (auto descriptor : descriptorNames)
 	{
 		auto refs = m_view->GetCodeReferencesForType(QualifiedName(descriptor));
+		SortCodeReferences(refs);
 		for (auto ref : refs)
 		{
 			if (IsCancelled())
@@ -480,11 +417,13 @@ bool PeiResolver::resolvePeiDescriptors()
 bool PeiResolver::resolvePeiServices()
 {
 	SetProgressText("Resolving PPIs...");
-	map<uint64_t, set<string>> knownPeiServicesVars;
+	// SSA identities are local to an IL snapshot. Keep the snapshot alive and never carry cached provenance into
+	// a different analysis revision (or a different function at the same address).
+	map<Ref<MediumLevelILFunction>, set<SSAVariable>> knownPeiServicesVars;
 
 	auto processCall = [this, &knownPeiServicesVars](
 		Ref<Function> func, Ref<MediumLevelILFunction> mlilSsa, uint64_t addr, const MediumLevelILInstruction& instr, bool fromTypeRef) {
-		auto& knownVars = knownPeiServicesVars[func->GetStart()];
+		auto& knownVars = knownPeiServicesVars[mlilSsa];
 		auto dest = instr.GetDestExpr();
 		bool typedServiceLoad = dest.operation == MLIL_LOAD_STRUCT_SSA;
 		// Typed service loads are handled from actual EFI_PEI_SERVICES type references.  The whole-function scan below is
@@ -496,7 +435,7 @@ bool PeiResolver::resolvePeiServices()
 		if (typedServiceLoad)
 		{
 			auto sourceType = dest.GetSourceExpr<MLIL_LOAD_STRUCT_SSA>().GetType().GetValue();
-			if (!sourceType || sourceType->GetTypeName().GetString().find("EFI_PEI_SERVICES") == string::npos)
+			if (!IsPeiServicesType(sourceType))
 				return;
 			provenPeiServices = true;
 			offset = dest.GetOffset();
@@ -537,26 +476,13 @@ bool PeiResolver::resolvePeiServices()
 			// EFI_PEI_SERVICES starts with three non-service pointer-sized header fields after an 0x18-byte fixed prefix in
 			// the relevant type layout.  Index 2 is LocatePpi, so the table offset is 0x18 + pointer_width * 2.
 			// LocatePpi
-			auto params = instr.GetParameterExprs();
+			// A recognized GUID identifies the requested interface, not the receiver's service table.
 			if (!provenPeiServices)
+				return;
+			auto params = instr.GetParameterExprs();
+			if (params.size() > 0 && params[0].operation == MLIL_VAR_SSA)
 			{
-				if (params.size() <= 1)
-					return;
-
-				auto guid = GetGuidFromConstPtr(m_view, params[1]);
-				if (!guid)
-					return;
-
-				// Whole-function scanning is allowed to recover known protocol calls, but not to invent unknown
-				// interfaces or seed PEI-services provenance from an unproven receiver.
-				if (lookupGuid(*guid).first.empty())
-					return;
-			}
-			else if (params.size() > 0)
-			{
-				auto var = GetMlilSourceVariable(params[0]);
-				if (var)
-					knownVars.insert(NormalizeLocalName(func->GetVariableName(*var)));
+				knownVars.insert(params[0].GetSourceSSAVariable<MLIL_VAR_SSA>());
 			}
 			resolveGuidInterface(func, addr, 1, 4);
 		}
@@ -567,7 +493,7 @@ bool PeiResolver::resolvePeiServices()
 				return;
 			// GetHobList
 			if (!defineOutputAtCallsite(func, addr, 1, "VOID*", "HobList"))
-				DefineOutputFromMlilParam(m_view, func, mlilSsa, instr, 1, GetTypeFromViewAndPlatform("VOID*"), "HobList", true);
+				DefineOutputFromMlilParam(*this, m_view, func, mlilSsa, instr, 1, GetTypeFromViewAndPlatform("VOID*"), "HobList", true);
 		}
 		else if (*offset == 0x18 + m_width * 12)
 		{
@@ -577,7 +503,7 @@ bool PeiResolver::resolvePeiServices()
 				return;
 			// AllocatePages
 			if (!defineOutputAtCallsite(func, addr, 3, "EFI_PHYSICAL_ADDRESS", "Memory"))
-				DefineOutputFromMlilParam(m_view, func, mlilSsa, instr, 3, GetTypeFromViewAndPlatform("EFI_PHYSICAL_ADDRESS"), "Memory");
+				DefineOutputFromMlilParam(*this, m_view, func, mlilSsa, instr, 3, GetTypeFromViewAndPlatform("EFI_PHYSICAL_ADDRESS"), "Memory");
 		}
 		else if (*offset == 0x18 + m_width * 13)
 		{
@@ -586,11 +512,12 @@ bool PeiResolver::resolvePeiServices()
 				return;
 			// AllocatePool
 			if (!defineOutputAtCallsite(func, addr, 2, "VOID*", "Buffer"))
-				DefineOutputFromMlilParam(m_view, func, mlilSsa, instr, 2, GetTypeFromViewAndPlatform("VOID*"), "Buffer");
+				DefineOutputFromMlilParam(*this, m_view, func, mlilSsa, instr, 2, GetTypeFromViewAndPlatform("VOID*"), "Buffer");
 		}
 	};
 
 	auto refs = m_view->GetCodeReferencesForType(QualifiedName("EFI_PEI_SERVICES"));
+	SortCodeReferences(refs);
 	for (auto ref : refs)
 	{
 		// First pass: use real type references.  These are the highest-confidence callsites because the service-table
@@ -619,9 +546,10 @@ bool PeiResolver::resolvePeiServices()
 	}
 
 	// Second pass: type references are not always present on the service-table pointer after staged analysis. Scan calls
-	// directly so GUID/output-parameter validation can still recover PEI service uses, but processCall keeps stricter
-	// provenance gates for non-GUID services and unproven LocatePpi calls.
-	for (auto func : m_view->GetAnalysisFunctionList())
+	// directly to recover PEI service uses, requiring receiver provenance before annotating any service outputs.
+	auto funcs = m_view->GetAnalysisFunctionList();
+	SortAnalysisFunctions(funcs);
+	for (auto func : funcs)
 	{
 		if (IsCancelled())
 			return false;
@@ -644,33 +572,7 @@ bool PeiResolver::resolvePeiServices()
 	return true;
 }
 
-bool PeiResolver::resolvePei()
-{
-	if (!resolvePlatformPointers())
-		return false;
-	if (m_task)
-		m_view->UpdateAnalysisAndWait();
-	else
-		m_view->UpdateAnalysis();
-
-	if (!resolvePeiDescriptors())
-		return false;
-	if (m_task)
-		m_view->UpdateAnalysisAndWait();
-	else
-		m_view->UpdateAnalysis();
-
-	if (!resolvePeiServices())
-		return false;
-	if (m_task)
-		m_view->UpdateAnalysisAndWait();
-	else
-		m_view->UpdateAnalysis();
-
-	return true;
-}
-
-PeiResolver::PeiResolver(Ref<BinaryView> view, Ref<BackgroundTask> task) : Resolver(view, task)
+PeiResolver::PeiResolver(Ref<BinaryView> view, Ref<BackgroundTask> task, TypePropagation& propagation) : Resolver(view, task, propagation)
 {
 	initProtocolMapping();
 }

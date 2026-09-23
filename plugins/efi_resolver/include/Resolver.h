@@ -25,12 +25,22 @@ protected:
 		string protocolName;
 		string guidName;
 	};
+	struct GuidInterfaceCallsite
+	{
+		Ref<Function> func;
+		uint64_t addr;
+		int guidPos;
+		int interfacePos;
+	};
 
 	Ref<BinaryView> m_view;
 	Ref<BackgroundTask> m_task;
+	TypePropagation& m_propagation;
+	const AnalysisUpdates& m_updates;
 	size_t m_width;
 	map<EFI_GUID, pair<string, string>> m_protocol;
 	map<EFI_GUID, string> m_user_guids;
+	map<Ref<Function>, map<Variable, string>> m_localNames;
 
 	vector<pair<uint64_t, string>> m_service_usages;
 	vector<pair<uint64_t, string>> m_protocol_usages;
@@ -50,25 +60,28 @@ protected:
 	*/
 	Ref<Type> GetTypeFromViewAndPlatform(string type_name);
 	optional<uint64_t> GetConstantDataAddress(const HighLevelILInstruction& expr);
-	vector<HighLevelILInstruction> GetCallExprs(const vector<HighLevelILInstruction>& exprs, uint64_t addr);
-	ProtocolGuidInfo resolveProtocolGuid(const EFI_GUID& guid, uint64_t addr);
+	static vector<HighLevelILInstruction> GetCallExprs(const vector<HighLevelILInstruction>& exprs, uint64_t addr);
+	ProtocolGuidInfo resolveProtocolGuid(const EFI_GUID& guid, uint64_t addr, optional<uint64_t> guidDataAddr);
 	bool defineGuidDataVariable(uint64_t addr, const string& guidName);
 	bool applyProtocolInterface(Ref<Function> func, const HighLevelILInstruction& interfaceParam,
 		const ProtocolGuidInfo& info, bool outputInterface);
 	void initProtocolMapping();
+	bool resolveGuidInterfaceAtCallsite(const GuidInterfaceCallsite& callsite,
+		vector<GuidInterfaceCallsite>& pending);
 
 public:
+	const AnalysisUpdates& GetUpdates() const { return m_updates; }
 	bool setModuleEntry(EFIModuleType fileType);
 	bool propagateEntryTypes();
 	bool resolveGuidInterface(Ref<Function> func, uint64_t addr, int guid_pos, int interface_pos);
 	bool defineOutputAtCallsite(Ref<Function> func, uint64_t addr, int paramIdx, string typeName, string name);
-	Resolver(Ref<BinaryView> view, Ref<BackgroundTask> task);
+	Resolver(Ref<BinaryView> view, Ref<BackgroundTask> task, TypePropagation& propagation);
 
 	pair<string, string> lookupGuid(EFI_GUID guidBytes);
 	pair<string, string> defineAndLookupGuid(uint64_t addr);
 
-	string nonConflictingName(const string& basename);
-	static string nonConflictingLocalName(Ref<Function> func, const string& basename);
+	string nonConflictingName(const string& basename, optional<uint64_t> target = nullopt);
+	string nonConflictingLocalName(Ref<Function> func, const Variable& target, const string& basename);
 
 	/*!
 	Define the structure used at the callsite with type \c typeName, propagate it to the data section. If it's a

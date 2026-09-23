@@ -156,9 +156,12 @@ struct Item
 			if (!tokens.empty())
 			{
 				InstructionTextToken token = tokens.front();
-				string trimmedText = TrimLeadingWhitespace(token.text);
-				token.width -= token.text.size() - trimmedText.size();
-				token.text = trimmedText;
+				if (token.type != StringToken)
+				{
+					string trimmedText = TrimLeadingWhitespace(token.text);
+					token.width -= token.text.size() - trimmedText.size();
+					token.text = trimmedText;
+				}
 				output.emplace_back(token);
 				output.insert(output.end(), tokens.begin() + 1, tokens.end());
 				firstTokenOfLine = false;
@@ -364,7 +367,29 @@ static vector<InstructionTextToken> ParseStringToken(
             size_t start = curEnd;
             curEnd++;  // consume '\'
             if (curEnd < tail)
-                curEnd++;  // consume escaped char
+            {
+                char escape = src[curEnd++];
+                if (escape == 'x')
+                {
+                    // A hexadecimal escape includes its digits. Splitting
+                    // after the x produces an invalid C string literal.
+                    while (curEnd < tail && isxdigit((unsigned char)src[curEnd]))
+                        curEnd++;
+                }
+                else if (escape == 'u' || escape == 'U')
+                {
+                    size_t digits = escape == 'u' ? 4 : 8;
+                    while (digits-- && curEnd < tail && isxdigit((unsigned char)src[curEnd]))
+                        curEnd++;
+                }
+                else if (escape >= '0' && escape <= '7')
+                {
+                    // The first of at most three octal digits was consumed.
+                    size_t digits = 2;
+                    while (digits-- && curEnd < tail && src[curEnd] >= '0' && src[curEnd] <= '7')
+                        curEnd++;
+                }
+            }
             ConstructToken(start, curEnd);
             curStart = curEnd;
         }
@@ -399,18 +424,11 @@ static vector<InstructionTextToken> ParseStringToken(
         // Check if we've exceeded max parsing length
         if (curEnd > maxParsingLength)
         {
-	        // Never cut in the middle of a grapheme cluster, which would leave both sides holding a piece
-	        // of a character that neither renders nor measures on its own. Walking the clusters gives the
-	        // last boundary that stays within the limit.
-	        size_t splitPos = 0;
-	        while (splitPos < src.size())
-	        {
-		        size_t next = Unicode::GetNextGraphemeClusterBoundary(unprocessedStringToken.text, splitPos);
-	        	// Always consume at least one cluster to guarantee making progress
-		        if (splitPos > 0 && next > maxParsingLength)
-			        break;
-		        splitPos = next;
-	        }
+	        // Finish the current atom/character without moving back into tokens
+	        // already emitted (in particular an escape spanning the limit).
+	        size_t splitPos = curStart;
+	        while (splitPos < curEnd)
+		        splitPos = Unicode::GetNextGraphemeClusterBoundary(unprocessedStringToken.text, splitPos);
 
 	        // Flush any pending token
 	        flushToken(curStart, splitPos);
@@ -419,7 +437,8 @@ static vector<InstructionTextToken> ParseStringToken(
 	        InstructionTextToken remainingToken = unprocessedStringToken;
 	        remainingToken.text = string(src.substr(splitPos));
 	        remainingToken.width = Unicode::GetDisplayWidth(remainingToken.text);
-	        result.emplace_back(std::move(remainingToken));
+	        if (!remainingToken.text.empty())
+		        result.emplace_back(std::move(remainingToken));
 	        return result;
         }
     }
@@ -1137,10 +1156,14 @@ vector<DisassemblyTextLine> GenericLineFormatter::FormatLines(
 		auto newLine = [&](const bool forString = false) {
 			if (!firstTokenOfLine)
 			{
-				string lastTokenText = outputLine.tokens.back().text;
-				string trimmedText = TrimTrailingWhitespace(lastTokenText);
-				outputLine.tokens.back().width -= lastTokenText.size() - trimmedText.size();
-				outputLine.tokens.back().text = trimmedText;
+				// Whitespace inside a literal is data, including at a wrap point.
+				if (outputLine.tokens.back().type != StringToken)
+				{
+					string lastTokenText = outputLine.tokens.back().text;
+					string trimmedText = TrimTrailingWhitespace(lastTokenText);
+					outputLine.tokens.back().width -= lastTokenText.size() - trimmedText.size();
+					outputLine.tokens.back().text = trimmedText;
+				}
 				if (forString && outputLine.tokens.back().type == StringToken)
 				{
 					outputLine.tokens.emplace_back(BraceToken, "\"");
@@ -1209,8 +1232,18 @@ vector<DisassemblyTextLine> GenericLineFormatter::FormatLines(
 						if (desiredContinuationWidth < settings.minimumContentLength)
 							desiredContinuationWidth = settings.minimumContentLength;
 
-						layoutStack.push({item->items, additionalContinuationIndentation, desiredWidth,
-							desiredContinuationWidth, desiredStringWidth, false});
+						if (item->tokens.empty())
+						{
+							layoutStack.push({item->items, additionalContinuationIndentation, desiredWidth,
+								desiredContinuationWidth, desiredStringWidth, false});
+						}
+						else
+						{
+							// Escape/format atoms store their text in tokens, not
+							// child items. Keep the atom that caused the wrap.
+							item->AppendAllTokens(outputLine.tokens, firstTokenOfLine);
+							currentWidth += item->width;
+						}
 						break;
 					}
 

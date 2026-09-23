@@ -2626,9 +2626,10 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 				typeRef = demangledType;
 		}
 
-		if (!typeRef && m_arch && (m_arch->GetName() == "hexagon" || m_arch->GetName() == "tms320c6x"))
+		if (!typeRef && m_arch && (m_arch->GetName() == "hexagon" || m_arch->GetName() == "tms320c6x"
+			|| (type == FunctionSymbol && (m_arch->GetName() == "mips32" || m_arch->GetName() == "mipsel32"))))
 		{
-			// Apply platform types for statically linked Hexagon and TMS320C6x binaries
+			// Apply platform types to static runtime helpers, even without a shared-library dependency.
 			typeRef = GetDefaultPlatform()->GetFunctionByName(rawName);
 		}
 

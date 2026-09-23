@@ -557,11 +557,11 @@ void PseudoCFunction::AppendFieldTextTokens(const HighLevelILInstruction& instr,
 	if (type && fieldDisplayType == FieldDisplayOffset)
 	{
 		uint64_t memoryOffset = fieldOffset;
-		if (srcExpr.operation == HLIL_VAR && (type->IsInteger() || type->IsEnumeration())
+		if (srcExpr.operation == HLIL_VAR && (type->IsInteger() || type->IsEnumeration() || type->IsFloat())
 			&& GetFunction()->GetArchitecture()->GetEndianness() == BigEndian
 			&& fieldOffset <= type->GetWidth() && instr.size <= type->GetWidth() - fieldOffset)
 		{
-			// Integer variable field offsets are relative to the least significant byte,
+			// Scalar variable field offsets are relative to the least significant byte,
 			// but the pointer expression below addresses bytes in memory order.
 			memoryOffset = type->GetWidth() - fieldOffset - instr.size;
 		}

@@ -36,15 +36,6 @@ namespace
 	constexpr bool IsAsciiDigit(char ch) { return ch >= '0' && ch <= '9'; }
 	constexpr bool IsAsciiUpper(char ch) { return ch >= 'A' && ch <= 'Z'; }
 
-	std::string_view ReadHexLiteral(DemangleReader& reader, size_t length)
-	{
-		auto value = reader.ReadStringView(length);
-		for (char ch : value)
-			if (!IsAsciiDigit(ch) && !(ch >= 'a' && ch <= 'f') && !(ch >= 'A' && ch <= 'F'))
-				throw DemangleException();
-		return value;
-	}
-
 	BNTypeClass GetFinalizedTypeClass(const Ref<Type>& type)
 	{
 #ifdef BINARYNINJACORE_LIBRARY
@@ -1247,18 +1238,18 @@ string DemangleGNU3::DemanglePrimaryExpression()
 			throw DemangleException();
 		break;
 	case 'd': //double (16 hex chars = 8 bytes)
-		out += DecodeHexFloat(ReadHexLiteral(m_reader, 16), 8);
+		out += DecodeHexFloat(m_reader.ReadHexString(16), 8);
 		break;
 	case 'e': //long double (20 hex chars = 10 bytes, platform-dependent layout)
 		out = "(long double)";
-		out.append(ReadHexLiteral(m_reader, 20));
+		out.append(m_reader.ReadHexString(20));
 		break;
 	case 'f': //float (8 hex chars = 4 bytes)
-		out += DecodeHexFloat(ReadHexLiteral(m_reader, 8), 4);
+		out += DecodeHexFloat(m_reader.ReadHexString(8), 4);
 		break;
 	case 'g': //float_128 (32 hex chars = 16 bytes)
 		out = "(__float128)";
-		out.append(ReadHexLiteral(m_reader, 32));
+		out.append(m_reader.ReadHexString(32));
 		break;
 	case 'l': out = DemangleNumberAsString() + "l"; break;  //long
 	case 'x': out = DemangleNumberAsString() + "ll"; break;  //long long

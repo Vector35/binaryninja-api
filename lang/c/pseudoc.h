@@ -40,6 +40,10 @@ class PseudoCFunction: public BinaryNinja::LanguageRepresentationFunction
 		BNSymbolDisplayType symbolDisplay, BNOperatorPrecedence precedence);
 	std::string GetSizeToken(size_t size, bool isSigned);
 	void AppendSizeToken(size_t size, bool isSigned, BinaryNinja::HighLevelILTokenEmitter& emitter);
+	BinaryNinja::Ref<BinaryNinja::Type> GetCExpressionType(const BinaryNinja::HighLevelILInstruction& instr);
+	void AppendTypedExpr(const BinaryNinja::HighLevelILInstruction& instr, BinaryNinja::Type* expectedType,
+		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
+		BNOperatorPrecedence precedence = TopLevelOperatorPrecedence);
 	void AppendSingleSizeToken(size_t size, BNInstructionTextTokenType type, BinaryNinja::HighLevelILTokenEmitter& emitter);
 	void AppendComparison(const std::string& comparison, const BinaryNinja::HighLevelILInstruction& instr,
 		BinaryNinja::HighLevelILTokenEmitter& emitter, BinaryNinja::DisassemblySettings* settings,

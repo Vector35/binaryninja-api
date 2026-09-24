@@ -194,6 +194,87 @@ void PseudoCFunction::AppendSizeToken(size_t size, bool isSigned, HighLevelILTok
 }
 
 
+Ref<Type> PseudoCFunction::GetCExpressionType(const HighLevelILInstruction& instr)
+{
+	// A use's inferred IL type can differ from the type of the expression we
+	// print. Only use types that are established by the emitted C itself.
+	switch (instr.operation)
+	{
+	case HLIL_VAR:
+		return GetFunction()->GetVariableType(instr.GetVariable<HLIL_VAR>()).GetValue();
+	case HLIL_CONST:
+	case HLIL_LOW_PART:
+	case HLIL_ZX:
+	case HLIL_SX:
+	case HLIL_FLOAT_TO_INT:
+		return Type::IntegerType(instr.size, instr.operation == HLIL_SX || instr.operation == HLIL_FLOAT_TO_INT);
+	case HLIL_FLOAT_CONST:
+		if (instr.size != 4 && instr.size != 8)
+			return nullptr;
+		[[fallthrough]];
+	case HLIL_FLOAT_CONV:
+	case HLIL_INT_TO_FLOAT:
+		return Type::FloatType(instr.size);
+	case HLIL_INTRINSIC:
+	{
+		auto outputs = GetArchitecture()->GetIntrinsicOutputs(instr.GetIntrinsic<HLIL_INTRINSIC>());
+		return outputs.size() == 1 ? outputs[0].GetValue() : nullptr;
+	}
+	case HLIL_CALL:
+	{
+		auto type = instr.GetDestExpr<HLIL_CALL>().GetType().GetValue();
+		if (type && type->GetClass() == PointerTypeClass)
+			type = type->GetChildType().GetValue();
+		if (!type || type->GetClass() != FunctionTypeClass)
+			return nullptr;
+		auto result = type->GetReturnValue().type;
+		// Unknown calls have an integer fallback, not an established C return type.
+		return result.GetConfidence() ? result.GetValue() : nullptr;
+	}
+	default:
+		return nullptr;
+	}
+}
+
+
+void PseudoCFunction::AppendTypedExpr(const HighLevelILInstruction& instr, Type* expectedType,
+	HighLevelILTokenEmitter& tokens, DisassemblySettings* settings, BNOperatorPrecedence precedence)
+{
+	auto sourceType = GetCExpressionType(instr);
+	Ref<Type> targetType = expectedType;
+	if (sourceType && sourceType->IsNamedTypeRefer())
+		sourceType = sourceType->DerefNamedTypeReference(GetFunction()->GetView());
+	if (targetType && targetType->IsNamedTypeRefer())
+		targetType = targetType->DerefNamedTypeReference(GetFunction()->GetView());
+	if (!sourceType || !targetType || sourceType->GetWidth() != targetType->GetWidth()
+		|| (sourceType->GetWidth() != 4 && sourceType->GetWidth() != 8)
+		|| (settings && !settings->IsOptionSet(ShowTypeCasts))
+		|| !((sourceType->GetClass() == FloatTypeClass && targetType->GetClass() == IntegerTypeClass)
+			|| (sourceType->GetClass() == IntegerTypeClass && targetType->GetClass() == FloatTypeClass)))
+	{
+		GetExprTextInternal(instr, tokens, settings, precedence);
+		return;
+	}
+
+	// IL copies preserve the representation. An implicit C conversion between
+	// floating and integer types would instead change the numeric value.
+	tokens.Append(OperationToken, "BIT_CAST");
+	tokens.AppendOpenParen();
+	for (const auto& token : GetTypePrinter()->GetTypeTokens(expectedType, GetFunction()->GetPlatform(), QualifiedName()))
+		tokens.Append(token);
+	tokens.Append(TextToken, ", ");
+	if (instr.operation == HLIL_CONST)
+	{
+		// C integer literals do not carry their IL width.
+		tokens.AppendOpenParen();
+		AppendSizeToken(instr.size, false, tokens);
+		tokens.AppendCloseParen();
+	}
+	GetExprTextInternal(instr, tokens, settings, AssignmentOperatorPrecedence);
+	tokens.AppendCloseParen();
+}
+
+
 void PseudoCFunction::AppendSingleSizeToken(
 	size_t size, BNInstructionTextTokenType type, HighLevelILTokenEmitter& emitter)
 {
@@ -1286,7 +1367,7 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 				appearsDead = false;
 			}
 
-			GetExprTextInternal(srcExpr, tokens, settings, AssignmentOperatorPrecedence);
+			AppendTypedExpr(srcExpr, variableType.GetValue(), tokens, settings, AssignmentOperatorPrecedence);
 
 			if (appearsDead)
 				tokens.EndForceZeroConfidence();
@@ -1687,7 +1768,10 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 			}
 			else
 			{
-				GetExprTextInternal(srcExpr, tokens, settings, AssignmentOperatorPrecedence, false, assignSignedHint);
+				if (destIsSplit)
+					GetExprTextInternal(srcExpr, tokens, settings, AssignmentOperatorPrecedence, false, assignSignedHint);
+				else
+					AppendTypedExpr(srcExpr, GetCExpressionType(destExpr), tokens, settings, AssignmentOperatorPrecedence);
 			}
 
 			if (destIsSplit)
@@ -2598,7 +2682,7 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 			tokens.AppendOpenParen();
 			tokens.Append(TypeNameToken, floatType.c_str());
 			tokens.AppendCloseParen();
-			GetExprTextInternal(srcExpr, tokens, settings, UnaryOperatorPrecedence);
+			AppendTypedExpr(srcExpr, Type::FloatType(srcExpr.size), tokens, settings, UnaryOperatorPrecedence);
 			if (parens)
 				tokens.AppendCloseParen();
 			if (statement)
@@ -2621,7 +2705,7 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 			tokens.AppendOpenParen();
 			AppendSizeToken(instr.size, true, tokens);
 			tokens.AppendCloseParen();
-			GetExprTextInternal(srcExpr, tokens, settings, UnaryOperatorPrecedence);
+			AppendTypedExpr(srcExpr, Type::FloatType(srcExpr.size), tokens, settings, UnaryOperatorPrecedence);
 			if (parens)
 				tokens.AppendCloseParen();
 			if (statement)
@@ -2668,7 +2752,7 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 			tokens.AppendOpenParen();
 			tokens.Append(TypeNameToken, floatType.c_str());
 			tokens.AppendCloseParen();
-			GetExprTextInternal(srcExpr, tokens, settings, UnaryOperatorPrecedence);
+			AppendTypedExpr(srcExpr, Type::IntegerType(srcExpr.size, true), tokens, settings, UnaryOperatorPrecedence);
 			if (parens)
 				tokens.AppendCloseParen();
 			if (statement)
@@ -2706,7 +2790,10 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 				const auto& srcExpr = srcExprs[index];
 				if (index == 0) tokens.Append(TextToken, " ");
 				if (index != 0) tokens.Append(TextToken, ", ");
-				GetExprTextInternal(srcExpr, tokens, settings);
+				if (srcExprs.size() == 1)
+					AppendTypedExpr(srcExpr, GetFunction()->GetReturnType().GetValue(), tokens, settings);
+				else
+					GetExprTextInternal(srcExpr, tokens, settings);
 			}
 			if (statement)
 				tokens.AppendSemicolon();

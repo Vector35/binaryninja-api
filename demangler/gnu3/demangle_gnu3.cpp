@@ -2236,8 +2236,39 @@ bool DemangleGNU3::AppendTemplateParamPackExpansion(ParamList& params, NodeRef e
 }
 
 
+void DemangleGNU3::DemangleTemplateParamDecl()
+{
+	NestingGuard nestingGuard(m_nestingDepth);
+	// <template-param-decl> ::= Ty                           # type parameter
+	//                       ::= Tn <type>                    # non-type parameter
+	//                       ::= Tt <template-param-decl>* E  # template parameter
+	//                       ::= Tp <template-param-decl>     # parameter pack
+	if (!m_reader.ConsumeIf('T'))
+		throw DemangleException();
+
+	switch (m_reader.Read())
+	{
+	case 'y':
+		return;
+	case 'n':
+		DemangleType();
+		return;
+	case 't':
+		while (!m_reader.ConsumeIf('E'))
+			DemangleTemplateParamDecl();
+		return;
+	case 'p':
+		DemangleTemplateParamDecl();
+		return;
+	default:
+		throw DemangleException();
+	}
+}
+
+
 bool DemangleGNU3::DemangleTemplateArg(ParamList& args, bool* hadNonTypeArg)
 {
+	NestingGuard nestingGuard(m_nestingDepth);
 	DemangledTypeNode tmp;
 	NodeRef tmpRef;
 	bool tmpValid = false;
@@ -2294,18 +2325,15 @@ bool DemangleGNU3::DemangleTemplateArg(ParamList& args, bool* hadNonTypeArg)
 		break;
 	}
 	case 'T':
-		if (m_reader.ConsumeIf('n'))
+		if (const char kind = m_reader.PeekOr(); kind == 'y' || kind == 'n' || kind == 't' || kind == 'p')
 		{
 			// <template-arg> ::= <template-param-decl> <template-arg>
-			// <template-param-decl> ::= Tn <type>  # non-type parameter
-			//
-			// The declaration names a synthetic non-type template parameter
-			// for the following argument. Binary Ninja does not print those
-			// synthetic parameter names, so consume the declaration type and
-			// keep only the actual following template argument.
+			// Only the following argument contributes to the printed name and
+			// template substitution table; the declaration describes its parameter.
+			m_reader.UnRead();
 			topLevel = m_topLevel;
 			m_topLevel = false;
-			DemangleType();
+			DemangleTemplateParamDecl();
 			m_topLevel = topLevel;
 			return DemangleTemplateArg(args, hadNonTypeArg);
 		}

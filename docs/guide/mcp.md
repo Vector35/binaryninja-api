@@ -128,6 +128,7 @@ The GUI server adds these commands under `Plugins > MCP`. They are also register
 - `MCP\Start Server`: Start the GUI MCP HTTP server. This command is available when the server is not already running.
 - `MCP\Stop Server`: Stop the GUI MCP HTTP server. This command is available while the server is running.
 - `MCP\Copy Connection Info`: Copy the current connection details to the clipboard and write them to the log. When the server is running, the copied text includes the URL and, if configured, the `Authorization` header. When the server is not running, the copied text reports that the server is not running.
+- `MCP\Restart Debugger RPC`: Restart the debugger endpoint that the debugger tools use, for example after fixing the reason it failed to start (see [Troubleshooting](#troubleshooting)). This command is available while the server is running with `ui.mcp.debugger.enabled` on. It does not end a debug session that is already running, and it reports its outcome in the Binary Ninja log.
 
 With default settings, the GUI MCP server listens at:
 
@@ -166,7 +167,7 @@ In the GUI server, the endpoint discovers a session's view the same way the UI d
 
 | Tool | Purpose |
 | --- | --- |
-| `bn_debugger_status` | Session state (`state`, `ip`, `stopReason`), or, with `{"errors": true}`, the full table of error codes these tools can return and what each means. |
+| `bn_debugger_status` | Session state (`state`, `ip`, `stopReason`); with `{"errors": true}`, the full table of error codes these tools can return and what each means; with `{"restart": true}`, restarts the debugger endpoint (see [Troubleshooting](#troubleshooting)). |
 | `bn_debugger_control` | `launch`, `attach`, `connect`, `go`, `step_into`, `step_over`, `step_return`, `run_to`, `pause`, `restart`, `detach`, `quit`. |
 | `bn_debugger_breakpoints` | List, add, remove, enable, disable, or set the condition of a breakpoint; `hardware` adds an execute, read, write, or access watchpoint instead. |
 | `bn_debugger_registers` / `bn_debugger_registers_write` | Read or write the active thread's registers. |
@@ -388,11 +389,27 @@ If a headless client cannot start `binaryninja_mcp`:
 - Confirm the installed product includes the headless MCP server.
 - Run the same command manually in a terminal to check for startup errors.
 
-If `bn_debugger_*` tools return `debugger_endpoint_unavailable`:
+If a `bn_debugger_*` tool returns `debugger_endpoint_unavailable`, `debugger_endpoint_timeout`, `debugger_endpoint_protocol_error` or `unauthorized`, the debugger endpoint is not running or is not answering. Only the debugger tools are affected. The error message says why and what to try, and the same is written to the Binary Ninja log (the GUI Log panel, or standard error for the headless server) as a warning that begins `MCP: the debugger endpoint is not working`.
 
-- In the GUI server, confirm `ui.mcp.debugger.enabled` is enabled and the MCP server has been (re)started since.
-- In the headless server, confirm `BN_MCP_DISABLE_DEBUGGER` is not set.
-- Check the Binary Ninja log for why the endpoint failed to start. `ModuleNotFoundError` for `binaryninja.debugger.rpc_server` means this debugger build does not include the endpoint yet; set `ui.mcp.debugger.endpointScript` (`BN_MCP_DEBUGGER_ENDPOINT_SCRIPT` headlessly) to its `rpc_server.py` instead.
+The debugger endpoint is otherwise quiet. The log gets one line the first time it works, one line when it breaks (not one per failing call; it is not repeated until the endpoint has worked again), one line when it works again, and one line each time it is restarted. In the headless server a failed start can also log a `could not register this view with the debugger endpoint` warning, once per distinct problem.
+
+Things to try, in order:
+
+1. Fix the cause the message names, if it names one (see below).
+2. Restart the endpoint: use `Plugins > MCP > Restart Debugger RPC` in the GUI, or call `bn_debugger_status` with `{"restart": true}` (this also works in the headless server), or stop and start the MCP server. A restart takes effect at once; without it, a failed start is not tried again for 10 seconds. It does not end a debug session that is already running. `restart` cannot be combined with `errors`.
+3. If restarting does not help, restart Binary Ninja (headless: restart `binaryninja_mcp`). This is what a hung Python interpreter needs, and the message for a failed restart says so.
+
+A `debugger_endpoint_timeout` that keeps coming back means the endpoint is stuck; a single one can just be a slow call. A repeated `internal_error` means the endpoint hit a bug: restart it and report it.
+
+Common causes, recognised by how the reason in the message begins:
+
+- `ModuleNotFoundError` for `binaryninja.debugger.rpc_server`: this debugger build does not include the endpoint, or the debugger plugin is turned off or was not loaded. Check the `corePlugins.debugger` setting, and for the headless server that plugins are not disabled with `-p` or `BN_DISABLE_USER_PLUGINS` (a debugger installed as a user plugin is disabled too). Alternatively set `ui.mcp.debugger.endpointScript` (`BN_MCP_DEBUGGER_ENDPOINT_SCRIPT` headlessly) to its `rpc_server.py`.
+- `FileNotFoundError`: the path in `endpointScript` does not exist, or Binary Ninja's user directory is missing.
+- `PermissionError` or `OSError`: Binary Ninja's user directory is not writable or is full, or a sandbox or security tool is blocking local connections. The endpoint writes its discovery file there.
+- "Python interpreter is busy" or "did not publish": Binary Ninja's Python interpreter did not take the start script within 10 seconds, or the endpoint started but did not write its discovery file within 5 seconds. Restart the endpoint; if it keeps happening, restart Binary Ninja.
+- Also check that the tools are enabled: in the GUI server `ui.mcp.debugger.enabled` is on and the MCP server has been (re)started since; in the headless server `BN_MCP_DISABLE_DEBUGGER` is not set.
+
+If a call returns `unauthorized`, another process has probably rewritten this process's discovery file (for example two processes sharing one `BN_DEBUGGER_RPC` override); restart the endpoint. If it returns `unknown_method`, the MCP server and the debugger endpoint are different versions; update them together.
 
 If `bn_debugger_*` tools return `unknown_session` in the headless server specifically, check the Binary Ninja log for a "could not register this view with the debugger endpoint" warning, which names the underlying problem.
 

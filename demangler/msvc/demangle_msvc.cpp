@@ -461,7 +461,7 @@ DemangledTypeNode Demangle::DemangleVarType(BackrefList& varList, bool isReturn,
 		if (next != '<')
 			throw DemangleException();
 
-		_STD_STRING placeholder = m_reader.ReadUntil('@');
+		_STD_STRING placeholder = EscapeDemangledName(m_reader.ReadUntil('@'));
 		m_reader.ConsumeIf('@');
 		if (placeholder == "<auto>")
 			return DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{"auto"});
@@ -995,7 +995,7 @@ void Demangle::DemangleVariableList(_STD_VECTOR<DemangledTypeNode::Param>& param
 
 void Demangle::DemangleNameTypeString(_STD_STRING& out)
 {
-	out = m_reader.ReadUntil('@');
+	out = EscapeDemangledName(m_reader.ReadUntil('@'));
 }
 
 
@@ -1236,7 +1236,7 @@ void Demangle::DemangleTypeNameLookup(_STD_STRING& out, BNNameType& functionType
 				// as `operator ""<suffix>`. The outer DemangleName loop then
 				// picks up any enclosing scope chain as a normal prefix.
 				functionType = UserDefinedLiteralOperatorNameType;
-				_STD_STRING suffix = m_reader.ReadUntil('@');
+				_STD_STRING suffix = EscapeDemangledName(m_reader.ReadUntil('@'));
 				if (suffix.empty())
 					throw DemangleException("??__K requires a non-empty literal suffix");
 				out = "operator \"\"" + suffix;
@@ -1882,7 +1882,7 @@ void Demangle::DemangleName(NameList& nameList,
 						// Also handle dynamic init/dtor wrapping ??@ (MD5 hash)
 						if (m_reader.ConsumeIf("??@"))
 						{
-							_STD_STRING hash = m_reader.ReadUntil('@');
+							_STD_STRING hash = EscapeDemangledName(m_reader.ReadUntil('@'));
 							PrependNameComponent(nameList, MakeNameSegment("??@" + hash + "@"));
 							// Consume the trailing @ (name terminator) — the ??@hash@ pattern
 							// is followed by @@ (end of scoped name) before the function type
@@ -2294,7 +2294,7 @@ Demangle::DemangleContext Demangle::DemangleDynamicInitFini(bool isDtor, Backref
 	bool isMD5Name = false;
 	if (m_reader.ConsumeIf("??@"))
 	{
-		_STD_STRING hash = m_reader.ReadUntil('@');
+		_STD_STRING hash = EscapeDemangledName(m_reader.ReadUntil('@'));
 		innerNameList.push_back(MakeNameSegment("??@" + hash + "@"));
 		isMD5Name = true;
 	}
@@ -2435,7 +2435,7 @@ Demangle::DemangleContext Demangle::DemangleSymbol(BackrefList& backrefList)
 	// MD5-hashed names: ??@<32hex>@
 	if (m_reader.ConsumeIf("?@"))
 	{
-		_STD_STRING hash = m_reader.ReadUntil('@');
+		_STD_STRING hash = EscapeDemangledName(m_reader.ReadUntil('@'));
 		NameList md5Name = { MakeNameSegment("??@" + hash + "@") };
 		return { std::move(md5Name), DemangledTypeNode::VoidType(), NoAccess, NoScope };
 	}
@@ -2590,7 +2590,8 @@ DemanglerResult Demangle::Finalize()
 {
 	DemangleContext context = DemangleSymbol();
 	if (m_reader.Length() != 0)
-		LogDebugF("Demangling Succeeded with trailing characters '{}' in '{}'", m_reader.GetRaw(), m_mangledName);
+		LogDebugF("Demangling succeeded with trailing characters {:?} in {:?}",
+			std::string_view(m_reader.GetRaw(), m_reader.Length()), m_mangledName);
 
 	if (m_config.simplifyTemplates)
 	{
@@ -2619,11 +2620,11 @@ namespace
 		}
 		catch (DemangleException& e)
 		{
-			LogDebugF("Demangling Failed '{}' '{}'", mangledName, e.what());
+			LogDebugF("Demangling failed {:?}: {}", mangledName, e.what());
 		}
 		catch (std::exception& e)
 		{
-			LogDebugF("Demangling Failed '{}' '{}'", mangledName, e.what());
+			LogDebugF("Demangling failed {:?}: {}", mangledName, e.what());
 		}
 		return std::nullopt;
 	}

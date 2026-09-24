@@ -1457,7 +1457,12 @@ void DemangledTypeNode::AppendAfterName(string& out, const DemangledTypeNode* pa
 			if (i != 0)
 				out += ", ";
 			if (payload.params[i].type)
-				payload.params[i].type->AppendString(out, platform);
+			{
+				if (payload.params[i].name.empty())
+					payload.params[i].type->AppendString(out, platform);
+				else
+					out += payload.params[i].type->GetTypeAndName(StringList{payload.params[i].name}, platform);
+			}
 		}
 		out += ')';
 		AppendModifiers(out);

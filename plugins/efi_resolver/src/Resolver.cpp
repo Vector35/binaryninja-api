@@ -1,4 +1,5 @@
 #include "Resolver.h"
+#include <tuple>
 
 static bool IsGeneratedName(const string& name, const string& basename)
 {
@@ -418,11 +419,15 @@ vector<HighLevelILInstruction> Resolver::GetCallExprs(const vector<HighLevelILIn
 {
 	vector<HighLevelILInstruction> calls;
 	vector<HighLevelILInstruction> fallbackCalls;
+	set<pair<HighLevelILFunction*, size_t>> visited;
 	for (const auto& expr : exprs)
 	{
-		expr.VisitExprs([&calls, &fallbackCalls, addr](const HighLevelILInstruction& subExpr) {
+		expr.VisitExprs([&](const HighLevelILInstruction& subExpr) {
 			if (subExpr.operation == HLIL_CALL)
 			{
+				// Overlapping IL mappings may reach the same call more than once.
+				if (!visited.emplace(subExpr.function, subExpr.exprIndex).second)
+					return false;
 				fallbackCalls.push_back(subExpr);
 				if (subExpr.address == addr)
 					calls.push_back(subExpr);
@@ -430,7 +435,9 @@ vector<HighLevelILInstruction> Resolver::GetCallExprs(const vector<HighLevelILIn
 			return true;
 		});
 	}
-	if (calls.empty())
+	// Lost source addresses are only safe to infer when there is one distinct call.
+	// Otherwise a nested helper could be mistaken for the service being resolved.
+	if (calls.empty() && fallbackCalls.size() == 1)
 		return fallbackCalls;
 	return calls;
 }
@@ -491,6 +498,26 @@ bool Resolver::applyProtocolInterface(Ref<Function> func, const HighLevelILInstr
 {
 	string protocolName = info.protocolName;
 	string guidName = info.guidName;
+	// A missing protocol definition requires a generic type, but the GUID can
+	// still provide a useful interface name. Do not derive names from VOID.
+	string localName;
+	if (!protocolName.empty())
+		localName = GetVarNameForTypeStr(protocolName);
+	else if (guidName.starts_with("UnknownProtocolGuid"))
+	{
+		localName = guidName;
+		localName.replace(0, 19, "UnknownProtocolInterface");
+	}
+	else
+	{
+		localName = guidName;
+		if (localName.ends_with("_GUID"))
+			localName.resize(localName.size() - 5);
+		localName = GetVarNameForTypeStr(localName);
+	}
+	if (localName.empty())
+		localName = "UnknownProtocolInterface";
+
 	if (protocolName.empty())
 	{
 		LogWarnF("Found unknown protocol at {:#x}", interfaceParam.address);
@@ -512,23 +539,14 @@ bool Resolver::applyProtocolInterface(Ref<Function> func, const HighLevelILInstr
 		if (source.operation != HLIL_VAR)
 			return false;
 
-		string interfaceName = guidName;
-		if (guidName.substr(0, 19) == "UnknownProtocolGuid")
-		{
-			interfaceName.replace(0, 19, "UnknownProtocolInterface");
-		}
-		else
-		{
-			interfaceName = GetVarNameForTypeStr(protocolName);
-		}
-		interfaceName = nonConflictingLocalName(func, source.GetVariable(), interfaceName);
+		auto interfaceName = nonConflictingLocalName(func, source.GetVariable(), localName);
 		m_updates.CreateUserVariable(func, source.GetVariable(), storageType, interfaceName);
 		return true;
 	}
 
 	if (interfaceParam.operation == HLIL_VAR)
 	{
-		auto interfaceName = nonConflictingLocalName(func, interfaceParam.GetVariable(), GetVarNameForTypeStr(protocolName));
+		auto interfaceName = nonConflictingLocalName(func, interfaceParam.GetVariable(), localName);
 		m_updates.CreateUserVariable(func, interfaceParam.GetVariable(), argumentType, interfaceName);
 		return true;
 	}
@@ -566,13 +584,7 @@ bool Resolver::defineOutputAtCallsite(Ref<Function> func, uint64_t addr, int par
 	auto hlils = GetCallExprs(HighLevelILExprsAt(func, m_view->GetDefaultArchitecture(), addr), addr);
 	for (auto hlil : hlils)
 	{
-		HighLevelILInstruction instr;
-		if (hlil.GetParameterExprs().size() == 1 && hlil.GetParameterExprs()[0].operation == HLIL_CALL)
-			instr = hlil.GetParameterExprs()[0];
-		else
-			instr = hlil;
-
-		auto params = instr.GetParameterExprs();
+		auto params = hlil.GetParameterExprs();
 		if (params.size() <= paramIdx)
 			continue;
 
@@ -598,16 +610,39 @@ bool Resolver::defineOutputAtCallsite(Ref<Function> func, uint64_t addr, int par
 
 bool Resolver::resolveGuidInterface(Ref<Function> func, uint64_t addr, int guidPos, int interfacePos)
 {
+	// Keep discovery off the C++ call stack, and visit each interpretation of a
+	// callsite once. A wrapper may be recursive or forward different argument pairs.
+	vector<GuidInterfaceCallsite> pending {{func, addr, guidPos, interfacePos}};
+	set<tuple<string, uint64_t, uint64_t, int, int>> visited;
+	bool success = true;
+	while (!pending.empty())
+	{
+		if (IsCancelled())
+			return false;
+		auto callsite = pending.back();
+		pending.pop_back();
+		if (!callsite.func)
+			continue;
+		if (!visited.emplace(callsite.func->GetPlatform()->GetName(), callsite.func->GetStart(),
+			callsite.addr, callsite.guidPos, callsite.interfacePos).second)
+			continue;
+		success &= resolveGuidInterfaceAtCallsite(callsite, pending);
+	}
+	return success;
+}
+
+bool Resolver::resolveGuidInterfaceAtCallsite(const GuidInterfaceCallsite& callsite,
+	vector<GuidInterfaceCallsite>& pending)
+{
 	// Resolve calls shaped like Service(..., Guid, ..., InterfaceOut).  The caller supplies the GUID and interface
 	// parameter indexes because Boot Services, Runtime Services, and PEI services place them differently.
+	const auto& [func, addr, guidPos, interfacePos] = callsite;
 	auto hlils = GetCallExprs(HighLevelILExprsAt(func, m_view->GetDefaultArchitecture(), addr), addr);
 	for (auto hlil : hlils)
 	{
-		HighLevelILInstruction instr;
-		if (hlil.GetParameterExprs().size() == 1 && hlil.GetParameterExprs()[0].operation == HLIL_CALL)
-			instr = hlil.GetParameterExprs()[0];
-		else
-			instr = hlil;
+		if (IsCancelled())
+			return false;
+		auto instr = hlil;
 
 		auto params = instr.GetParameterExprs();
 		if (params.size() <= max(guidPos, interfacePos))
@@ -663,7 +698,7 @@ bool Resolver::resolveGuidInterface(Ref<Function> func, uint64_t addr, int guidP
 		else if (params[guidPos].operation == HLIL_VAR)
 		{
 			// Wrapper functions often take (Guid, InterfaceOut) parameters and then call the real service internally.  If both
-			// arguments are pass-through function parameters, recurse into this wrapper's callers using the caller-side indexes.
+			// arguments are pass-through function parameters, visit this wrapper's callers using the caller-side indexes.
 			auto hlil = func->GetHighLevelIL();
 			if (!hlil)
 				continue;
@@ -744,8 +779,13 @@ bool Resolver::resolveGuidInterface(Ref<Function> func, uint64_t addr, int guidP
 
 			auto refs = m_view->GetCodeReferences(func->GetStart());
 			SortCodeReferences(refs);
-			for (auto& ref : refs)
-				resolveGuidInterface(ref.func, ref.addr, incomingGuidIdx, incomingInstrIdx);
+			// Reverse insertion preserves the sorted reference order when popping the worklist.
+			for (auto ref = refs.rbegin(); ref != refs.rend(); ++ref)
+			{
+				if (IsCancelled())
+					return false;
+				pending.push_back({ref->func, ref->addr, incomingGuidIdx, incomingInstrIdx});
+			}
 			continue;
 		}
 
@@ -884,12 +924,22 @@ bool Resolver::defineTypeAtCallsite(
 			if (guidName.empty())
 				funcName = nonConflictingName("UnknownNotify", funcAddr);
 			else
-				funcName = "Notify" + funcName.replace(funcName.find("GUID"), 4, "");
+			{
+				auto guidPos = funcName.find("GUID");
+				if (guidPos != string::npos)
+					funcName.erase(guidPos, 4);
+				funcName = "Notify" + funcName;
+			}
 
 			string notifyTypeStr =
 				"EFI_STATUS Notify(EFI_PEI_SERVICES **PeiServices, EFI_PEI_NOTIFY_DESCRIPTOR* NotifyDescriptor, VOID* "
 				"Ppi)";
 			ok = m_view->ParseTypeString(notifyTypeStr, result, errors);
+			if (!ok || !result.type)
+			{
+				LogErrorF("Cannot parse notify type at {:#x}: {}", funcAddr, errors);
+				continue;
+			}
 			m_updates.Apply([&]() {
 				notifyFunc->SetUserType(result.type);
 				m_view->DefineUserSymbol(new Symbol(FunctionSymbol, funcName, funcAddr));

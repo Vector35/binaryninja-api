@@ -25,6 +25,13 @@ protected:
 		string protocolName;
 		string guidName;
 	};
+	struct GuidInterfaceCallsite
+	{
+		Ref<Function> func;
+		uint64_t addr;
+		int guidPos;
+		int interfacePos;
+	};
 
 	Ref<BinaryView> m_view;
 	Ref<BackgroundTask> m_task;
@@ -53,12 +60,14 @@ protected:
 	*/
 	Ref<Type> GetTypeFromViewAndPlatform(string type_name);
 	optional<uint64_t> GetConstantDataAddress(const HighLevelILInstruction& expr);
-	vector<HighLevelILInstruction> GetCallExprs(const vector<HighLevelILInstruction>& exprs, uint64_t addr);
+	static vector<HighLevelILInstruction> GetCallExprs(const vector<HighLevelILInstruction>& exprs, uint64_t addr);
 	ProtocolGuidInfo resolveProtocolGuid(const EFI_GUID& guid, uint64_t addr, optional<uint64_t> guidDataAddr);
 	bool defineGuidDataVariable(uint64_t addr, const string& guidName);
 	bool applyProtocolInterface(Ref<Function> func, const HighLevelILInstruction& interfaceParam,
 		const ProtocolGuidInfo& info, bool outputInterface);
 	void initProtocolMapping();
+	bool resolveGuidInterfaceAtCallsite(const GuidInterfaceCallsite& callsite,
+		vector<GuidInterfaceCallsite>& pending);
 
 public:
 	const AnalysisUpdates& GetUpdates() const { return m_updates; }

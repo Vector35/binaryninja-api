@@ -64,6 +64,10 @@ bool TypePropagation::propagateFuncParamTypes(Function* func)
 {
 	LogDebugF("Propagating types from {:#x}", func->GetStart());
 	bool update = false;
+	// SetUserType schedules analysis; GetType may still return the old signature.
+	// Share accumulated callee edits across all parameters and recursive SSA uses
+	// in this pass. Analysis completes before the next worklist item is processed.
+	PendingFunctionTypes pendingTypes;
 
 	auto param_vars = func->GetParameterVariables().GetValue();
 	for (auto var : param_vars)
@@ -106,7 +110,7 @@ bool TypePropagation::propagateFuncParamTypes(Function* func)
 		if (it == aliased_vars.end())
 		{
 			// not an aliaed var, use version 0
-			update |= propagateFuncParamTypes(func, SSAVariable(var, 0));
+			update |= propagateFuncParamTypes(func, SSAVariable(var, 0), pendingTypes);
 		}
 		else
 		{
@@ -121,7 +125,7 @@ bool TypePropagation::propagateFuncParamTypes(Function* func)
 				if (hlil_instr.operation != HLIL_VAR_INIT)
 					continue;
 				SSAVariable ssa_var = hlil_instr.GetSSAForm().GetDestSSAVariable();
-				update |= propagateFuncParamTypes(func, ssa_var);
+				update |= propagateFuncParamTypes(func, ssa_var, pendingTypes);
 			}
 		}
 	}
@@ -129,7 +133,7 @@ bool TypePropagation::propagateFuncParamTypes(Function* func)
 	return update;
 }
 
-bool TypePropagation::propagateFuncParamTypes(Function* func, SSAVariable ssa_var)
+bool TypePropagation::propagateFuncParamTypes(Function* func, SSAVariable ssa_var, PendingFunctionTypes& pendingTypes)
 {
 	bool update = false;
 	auto mlil = func->GetMediumLevelIL();
@@ -168,8 +172,10 @@ bool TypePropagation::propagateFuncParamTypes(Function* func, SSAVariable ssa_va
 			if (!subfunc)
 				continue;
 
-			auto subfunc_type = subfunc->GetType();
-			auto subfunc_params = subfunc->GetType()->GetParameters();
+			FunctionKey subfuncKey {subfunc->GetPlatform()->GetName(), subfunc->GetStart()};
+			auto pending = pendingTypes.find(subfuncKey);
+			auto subfunc_type = pending != pendingTypes.end() ? pending->second : subfunc->GetType();
+			auto subfunc_params = subfunc_type->GetParameters();
 
 			auto instr_params = instr.GetParameterExprs();
 			for (int i = 0; i < instr_params.size(); i++)
@@ -199,11 +205,12 @@ bool TypePropagation::propagateFuncParamTypes(Function* func, SSAVariable ssa_va
 				if (*newType == *subfunc_type)
 				{
 					// Traverse pretyped callees once, without looping around recursive edges.
-					if (!m_processed.contains({subfunc->GetPlatform()->GetName(), subfunc->GetStart()}))
+					if (!m_processed.contains(subfuncKey))
 						QueueFunction(subfunc);
 					break;
 				}
 				m_updates.Apply([&]() { subfunc->SetUserType(newType); });
+				pendingTypes[subfuncKey] = newType;
 				QueueFunction(subfunc);
 				update = true;
 				break;
@@ -261,7 +268,7 @@ bool TypePropagation::propagateFuncParamTypes(Function* func, SSAVariable ssa_va
 			if (src_type.GetValue() && src_type.GetValue() != dest_type.GetValue())
 			{
 				m_updates.CreateUserVariable(func, dest.var, src_type, func->GetVariableName(dest.var));
-				update |= propagateFuncParamTypes(func, SSAVariable(dest.var, dest.version));
+				update |= propagateFuncParamTypes(func, SSAVariable(dest.var, dest.version), pendingTypes);
 			}
 			break;
 		}

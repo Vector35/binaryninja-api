@@ -11,11 +11,12 @@ class TypePropagation
 	Ref<BinaryView> m_view;
 	AnalysisUpdates m_updates;
 	using FunctionKey = std::pair<std::string, uint64_t>;
+	using PendingFunctionTypes = std::map<FunctionKey, Ref<Type>>;
 	std::deque<FunctionKey> m_queue;
 	std::set<FunctionKey> m_processed;
 
 	bool propagateFuncParamTypes(Function* func);
-	bool propagateFuncParamTypes(Function* func, SSAVariable ssa_var);
+	bool propagateFuncParamTypes(Function* func, SSAVariable ssa_var, PendingFunctionTypes& pendingTypes);
 
 public:
 	TypePropagation(BinaryView* view, bool automatic = false);

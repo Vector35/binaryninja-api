@@ -118,43 +118,8 @@ static bool DefineOutputFromMlilParam(Resolver& resolver, Ref<BinaryView> view, 
 			}
 		}
 	}
-	if (followAddressOfTemp && (outputParam.operation == MLIL_VAR_SSA || outputParam.operation == MLIL_VAR))
-	{
-		// Fallback for cases where non-SSA MLIL has the useful temp assignment but SSA lookup did not expose it.  We scan
-		// forward to the current call and remember the last assignment to the argument temp, accepting only temp = &local.
-		auto tempVar = outputParam.operation == MLIL_VAR_SSA ? outputParam.GetSourceSSAVariable<MLIL_VAR_SSA>().var
-			: outputParam.GetSourceVariable<MLIL_VAR>();
-		auto mlil = func->GetMediumLevelIL();
-		if (!mlil)
-			return false;
-
-		optional<Variable> outputVar;
-		for (size_t i = 0; i < mlil->GetInstructionCount(); i++)
-		{
-			auto cur = mlil->GetInstruction(i);
-			if (cur.operation == MLIL_CALL || cur.operation == MLIL_TAILCALL)
-			{
-				if (cur.address == instr.address)
-					break;
-			}
-			if (cur.operation != MLIL_SET_VAR || cur.GetDestVariable<MLIL_SET_VAR>() != tempVar)
-				continue;
-
-			auto source = cur.GetSourceExpr<MLIL_SET_VAR>();
-			if (source.operation == MLIL_ADDRESS_OF)
-				outputVar = source.GetSourceVariable<MLIL_ADDRESS_OF>();
-			else
-				outputVar.reset();
-		}
-
-		if (outputVar)
-		{
-			resolver.GetUpdates().CreateUserVariable(
-				func, *outputVar, outputType, resolver.nonConflictingLocalName(func, *outputVar, name));
-			view->UpdateAnalysis();
-			return true;
-		}
-	}
+	// A phi, an unresolved SSA definition, or a non-SSA temporary does not prove
+	// which local reaches this call. Textual assignment order cannot supply that proof.
 	return false;
 }
 

@@ -76,7 +76,10 @@ bool DxeResolver::resolveProtocolInterfaceList(Ref<Function> func, uint64_t addr
 		for (size_t guidParam = firstGuidParam; guidParam + 1 < params.size(); guidParam += 2)
 		{
 			auto guidDataAddr = GetConstantDataAddress(params[guidParam]);
-			if (!guidDataAddr || *guidDataAddr == 0)
+			if (!guidDataAddr)
+				continue;
+			// Only a proven null GUID terminates the list; unresolved pairs can precede known ones.
+			if (*guidDataAddr == 0)
 				break;
 
 			EFI_GUID guid;

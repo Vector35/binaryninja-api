@@ -1336,8 +1336,12 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 					uint32_t i;
 				} bits{};
 				bits.i = constant;
-				snprintf(valueStr, sizeof(valueStr), "%.9gf", bits.f);
-				tokens.Append(FloatingPointToken, InstructionAddressTokenContext, valueStr, instr.address);
+				snprintf(valueStr, sizeof(valueStr), "%.9g", bits.f);
+				string s = valueStr;
+				if ((s.find('.') == string::npos) && (s.find('e') == string::npos))
+					s += ".0";
+				s += "f";
+				tokens.Append(FloatingPointToken, InstructionAddressTokenContext, s, instr.address);
 			}
 			else if (instr.size == 8)
 			{

@@ -19,9 +19,24 @@
 #include <algorithm>
 #include <cstring>
 #include <exception>
+#include <fmt/format.h>
 #include <limits>
 #include <string_view>
 #include <utility>
+
+
+// Escape raw identifier bytes only, after consuming their encoded length. fmt's
+// debug string formatting preserves printable UTF-8 and escapes controls,
+// invisible Unicode, malformed UTF-8, and literal backslashes unambiguously.
+inline _STD_STRING EscapeDemangledName(std::string_view name)
+{
+	if (std::all_of(name.begin(), name.end(), [](unsigned char ch) {
+		return ch >= 0x20 && ch <= 0x7e && ch != '\\' && ch != '"';
+	}))
+		return _STD_STRING(name);
+	const auto escaped = fmt::format("{:?}", name);
+	return _STD_STRING(escaped.data() + 1, escaped.size() - 2);
+}
 
 
 class DemangleException: public std::exception
@@ -76,13 +91,6 @@ class DemangleReader
 	size_t m_maxReadStringLength = std::numeric_limits<size_t>::max();
 	bool m_throwOnPeekPastEnd = true;
 
-	void ValidatePrintableAscii() const
-	{
-		for (const char* p = m_begin; p < m_end; p++)
-			if (*p < 0x20 || *p > 0x7e)
-				throw DemangleException();
-	}
-
 public:
 	DemangleReader() = default;
 
@@ -100,7 +108,6 @@ public:
 		m_begin = data.c_str();
 		m_ptr = m_begin;
 		m_end = m_begin + data.size();
-		ValidatePrintableAscii();
 	}
 
 	[[nodiscard]] size_t Length() const { return static_cast<size_t>(m_end - m_ptr); }

@@ -134,14 +134,14 @@ private:
 	_STD_STRING DemangleTypeString();
 	_STD_STRING DemangleExpressionList();
 	DemangledTypeNode DemangleUnqualifiedName();
-	std::string_view DemangleSourceName();
+	_STD_STRING DemangleSourceName();
 	_STD_STRING DemangleNumberAsString();
 	_STD_STRING DemangleExpression(DemangledTypeNode* outNode = nullptr);
 	_STD_STRING DemanglePrimaryExpression();
 	NodeRef DemangleTemplateSubstitutionEntry(NodeRef* outTypeRef = nullptr);
 	bool TryDemangleTemplateParamExpressionPackExpansion(_STD_STRING& expr, bool& emptyPack);
-	DemangledTypeNode DemangleName(bool* mayHaveImplicitThis = nullptr);
-	DemangledTypeNode DemangleLocalName();
+	DemangledTypeNode DemangleName(bool* mayHaveImplicitThis = nullptr, bool* hasExplicitObjectParameter = nullptr);
+	DemangledTypeNode DemangleLocalName(bool* mayHaveImplicitThis, bool* hasExplicitObjectParameter);
 
 	void DemangleCVQualifiers(bool& cnst, bool& vltl, bool& rstrct);
 	DemangledTypeNode DemangleSubstitution(NodeRef* outTypeRef = nullptr);

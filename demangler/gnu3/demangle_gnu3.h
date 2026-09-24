@@ -146,6 +146,7 @@ private:
 	void DemangleCVQualifiers(bool& cnst, bool& vltl, bool& rstrct);
 	DemangledTypeNode DemangleSubstitution(NodeRef* outTypeRef = nullptr);
 	DemangledTypeNode DemangleTemplateSubstitution(NodeRef* outTypeRef = nullptr);
+	void DemangleTemplateParamDecl();
 	bool DemangleTemplateArg(ParamList& args, bool* hadNonTypeArg = nullptr);
 	void DemangleTemplateArgs(ParamList& args, bool* hadNonTypeArg = nullptr);
 	DemangledTypeNode DemangleFunction(bool cnst, bool vltl);

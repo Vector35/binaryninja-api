@@ -3304,10 +3304,10 @@ namespace
 		else
 			return std::nullopt;
 
-		thread_local ::DemangleGNU3 demangle(platform, encoding);
-		demangle.Reset(platform, encoding);
 		try
 		{
+			thread_local ::DemangleGNU3 demangle(platform, encoding);
+			demangle.Reset(platform, encoding);
 			DemanglerResult result;
 			StringList nameSegments;
 			DemangledTypeNode type = demangle.DemangleSymbol(

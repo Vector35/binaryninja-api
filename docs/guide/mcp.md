@@ -316,16 +316,6 @@ If a headless client cannot start `binaryninja_mcp`:
 - Confirm the installed product includes the headless MCP server.
 - Run the same command manually in a terminal to check for startup errors.
 
-If `bn_debugger_*` tools return `debugger_endpoint_unavailable`:
+If `debugger_*` tools are missing from `tools/list`, the Debugger plugin is not installed, or was not loaded: check the `corePlugins.debugger` setting, and for the headless server that plugins are not disabled with `-p` or `BN_DISABLE_USER_PLUGINS` (a debugger installed as a user plugin is disabled too).
 
-- In the GUI server, confirm `ui.mcp.debugger.enabled` is enabled and the MCP server has been (re)started since.
-- In the headless server, confirm `BN_MCP_DISABLE_DEBUGGER` is not set.
-- Check the Binary Ninja log for why the endpoint failed to start. `ModuleNotFoundError` for `binaryninja.debugger.rpc_server` means this debugger build does not include the endpoint yet; set `ui.mcp.debugger.endpointScript` (`BN_MCP_DEBUGGER_ENDPOINT_SCRIPT` headlessly) to its `rpc_server.py` instead.
-
-If `bn_debugger_*` tools return `unknown_session` in the headless server specifically, check the Binary Ninja log for a "could not register this view with the debugger endpoint" warning, which names the underlying problem.
-
-If a tool from `ui.mcp.debugger.customCommandsFile` (`BN_MCP_DEBUGGER_CUSTOM_COMMANDS` headlessly) does not appear in `tools/list`:
-
-- Check the Binary Ninja log for `MCP: custom debugger command entry N: ...`, which names the file entry and the problem.
-- Confirm the file is a JSON array, and that the command's `name` starts with `bn_debugger_` and does not repeat another tool's name.
-- Restart the MCP server; the file is only read when it starts.
+If a `debugger_*` call returns `no_controller`, the view has no debug session yet; call `debugger_launch`, `debugger_attach`, or `debugger_connect` first.

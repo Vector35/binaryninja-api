@@ -208,6 +208,15 @@ public:
 		return out;
 	}
 
+	std::string_view ReadHexString(size_t count)
+	{
+		auto value = ReadStringView(count);
+		for (char ch : value)
+			if (!(ch >= '0' && ch <= '9') && !(ch >= 'a' && ch <= 'f') && !(ch >= 'A' && ch <= 'F'))
+				throw DemangleException();
+		return value;
+	}
+
 	_STD_STRING ReadUntil(char sentinel)
 	{
 		const char* found = static_cast<const char*>(memchr(m_ptr, sentinel, m_end - m_ptr));

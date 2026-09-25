@@ -7,10 +7,23 @@ use swift_demangler::{TypeKind, TypeRef};
 
 pub(crate) trait TypeRefExt {
     fn to_bn_type(&self, arch: &CoreArchitecture) -> Option<Ref<Type>>;
+    fn to_bn_type_with_depth(&self, arch: &CoreArchitecture, depth: usize) -> Option<Ref<Type>>;
 }
+
+// Bound recursive conversion even when a mangled name has many nested wrappers.
+const MAX_SWIFT_TYPE_DEPTH: usize = 16;
 
 impl TypeRefExt for TypeRef<'_> {
     fn to_bn_type(&self, arch: &CoreArchitecture) -> Option<Ref<Type>> {
+        self.to_bn_type_with_depth(arch, 0)
+    }
+
+    fn to_bn_type_with_depth(&self, arch: &CoreArchitecture, depth: usize) -> Option<Ref<Type>> {
+        if depth >= MAX_SWIFT_TYPE_DEPTH {
+            return None;
+        }
+        let next_depth = depth + 1;
+
         match self.kind() {
             TypeKind::Named(named) => {
                 let name = named.name()?;
@@ -53,8 +66,8 @@ impl TypeRefExt for TypeRef<'_> {
                 let params: Vec<_> = func_type
                     .parameters()
                     .iter()
-                    .filter_map(|p| {
-                        let ty = p.type_ref.to_bn_type(arch)?;
+                    .map(|p| {
+                        let ty = p.type_ref.to_bn_type_with_depth(arch, next_depth)?;
                         let name = p.label.unwrap_or("").to_string();
                         Some(binaryninja::types::FunctionParameter {
                             ty: ty.into(),
@@ -62,12 +75,12 @@ impl TypeRefExt for TypeRef<'_> {
                             location: ValueLocationSource::Default,
                         })
                     })
-                    .collect();
+                    .collect::<Option<Vec<_>>>()?;
 
-                let ret_type = func_type
-                    .return_type()
-                    .and_then(|rt| rt.to_bn_type(arch))
-                    .unwrap_or_else(Type::void);
+                let ret_type = match func_type.return_type() {
+                    Some(rt) => rt.to_bn_type_with_depth(arch, next_depth)?,
+                    None => Type::void(),
+                };
 
                 Some(Type::function(&ret_type, params, false))
             }
@@ -101,7 +114,7 @@ impl TypeRefExt for TypeRef<'_> {
             }
 
             TypeKind::InOut(inner) => {
-                let inner_ty = inner.to_bn_type(arch)?;
+                let inner_ty = inner.to_bn_type_with_depth(arch, next_depth)?;
                 Some(Type::pointer(arch, &inner_ty))
             }
 
@@ -132,13 +145,17 @@ impl TypeRefExt for TypeRef<'_> {
             | TypeKind::Owned(inner)
             | TypeKind::Sending(inner)
             | TypeKind::Isolated(inner)
-            | TypeKind::NoDerivative(inner) => inner.to_bn_type(arch),
+            | TypeKind::NoDerivative(inner) => inner.to_bn_type_with_depth(arch, next_depth),
 
-            TypeKind::Weak(inner) | TypeKind::Unowned(inner) => inner.to_bn_type(arch),
+            TypeKind::Weak(inner) | TypeKind::Unowned(inner) => {
+                inner.to_bn_type_with_depth(arch, next_depth)
+            }
 
-            TypeKind::DynamicSelf(inner) => inner.to_bn_type(arch),
+            TypeKind::DynamicSelf(inner) => inner.to_bn_type_with_depth(arch, next_depth),
 
-            TypeKind::ConstrainedExistential(inner) => inner.to_bn_type(arch),
+            TypeKind::ConstrainedExistential(inner) => {
+                inner.to_bn_type_with_depth(arch, next_depth)
+            }
 
             TypeKind::Any => {
                 // Swift.Any is an existential container (pointer-sized at the ABI level).
@@ -147,13 +164,13 @@ impl TypeRefExt for TypeRef<'_> {
 
             TypeKind::Existential(protocols) => {
                 if protocols.len() == 1 {
-                    protocols[0].to_bn_type(arch)
+                    protocols[0].to_bn_type_with_depth(arch, next_depth)
                 } else {
                     None
                 }
             }
 
-            TypeKind::Generic { inner, .. } => inner.to_bn_type(arch),
+            TypeKind::Generic { inner, .. } => inner.to_bn_type_with_depth(arch, next_depth),
 
             // Types we can't meaningfully represent.
             TypeKind::Error
@@ -203,4 +220,79 @@ pub(crate) fn make_named_type_ref(module: Option<&str>, name: &str) -> Ref<Type>
     };
     let ntr = NamedTypeReference::new(NamedTypeReferenceClass::UnknownNamedTypeClass, qname);
     Type::named_type(&ntr)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use binaryninja::architecture::ArchitectureExt;
+    use binaryninja::demangle::{CustomDemangler, DemanglerConfig};
+    use swift_demangler::{Context, HasFunctionSignature, Symbol};
+
+    use crate::demangler::SwiftDemangler;
+
+    #[test]
+    fn deeply_nested_inout_type_is_rejected() {
+        let _session = crate::test_session();
+        let arch = CoreArchitecture::by_name("aarch64").expect("aarch64 architecture");
+
+        for (depth, expected) in [(2, true), (MAX_SWIFT_TYPE_DEPTH, false), (1_000, false)] {
+            let mangled = format!("$s4main1fyySi{}F", "z".repeat(depth));
+            let ctx = Context::new();
+            let Symbol::Function(function) = Symbol::parse(&ctx, &mangled).expect("Swift symbol")
+            else {
+                panic!("expected a function symbol");
+            };
+            let signature = function.signature().expect("function signature");
+            let parameters = signature.parameters();
+            assert_eq!(parameters.len(), 1);
+            assert_eq!(parameters[0].type_ref.to_bn_type(&arch).is_some(), expected);
+        }
+    }
+
+    #[test]
+    fn deep_parameter_does_not_produce_a_partial_function_type() {
+        let _session = crate::test_session();
+        let arch = CoreArchitecture::by_name("aarch64").expect("aarch64 architecture");
+        let platform = arch.standalone_platform().expect("aarch64 platform");
+        let config = DemanglerConfig::for_platform(&platform, false);
+        let demangler = SwiftDemangler;
+
+        let shallow = "$s4main1fyySizF";
+        let deep = format!("$s4main1fyySi{}F", "z".repeat(MAX_SWIFT_TYPE_DEPTH));
+        assert!(demangler
+            .demangle(shallow, &config)
+            .expect("shallow symbol")
+            .ty
+            .is_some());
+        assert!(demangler
+            .demangle(&deep, &config)
+            .expect("deep symbol")
+            .ty
+            .is_none());
+    }
+
+    #[test]
+    fn deep_nested_function_parameter_does_not_disappear() {
+        let _session = crate::test_session();
+        let arch = CoreArchitecture::by_name("aarch64").expect("aarch64 architecture");
+        let ctx = Context::new();
+        let shallow = Symbol::parse(&ctx, "$s4main1fyyySizXEF").expect("function symbol");
+        let Symbol::Function(function) = shallow else {
+            panic!("expected a function symbol");
+        };
+        let params = function.signature().expect("signature").parameters();
+        assert!(matches!(params[0].type_ref.kind(), TypeKind::Function(_)));
+        assert!(params[0].type_ref.to_bn_type(&arch).is_some());
+
+        let mangled = format!("$s4main1fyyySi{}XEF", "z".repeat(MAX_SWIFT_TYPE_DEPTH));
+        let deep_ctx = Context::new();
+        let Symbol::Function(function) = Symbol::parse(&deep_ctx, &mangled).expect("deep symbol")
+        else {
+            panic!("expected a function symbol");
+        };
+        let params = function.signature().expect("signature").parameters();
+        assert!(matches!(params[0].type_ref.kind(), TypeKind::Function(_)));
+        assert!(params[0].type_ref.to_bn_type(&arch).is_none());
+    }
 }

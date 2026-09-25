@@ -243,6 +243,7 @@ void Demangle::Reset(const DemanglerConfig& config, const _STD_STRING& mangledNa
 	m_config = config;
 	m_templateParamDepth = 0;
 	m_nestingDepth = 0;
+	m_totalArrayDimensions = 0;
 }
 
 
@@ -347,6 +348,12 @@ DemangledTypeNode Demangle::DemangleVarType(BackrefList& varList, bool isReturn,
 		uint64_t dimensionCount = DecodeEncodedUnsignedNumber();
 		if (dimensionCount > static_cast<uint64_t>(m_reader.Length()))
 			throw DemangleException("Array dimension count is too large");
+		// Array extents become nested type nodes even though parsing them does
+		// not recurse. Finalizing those nodes does recurse, so budget dimensions
+		// across the entire symbol (including arrays reached through backrefs).
+		if (dimensionCount > MAX_DEMANGLE_NESTING_DEPTH - m_totalArrayDimensions)
+			throw DemangleException("Array dimension count is too large");
+		m_totalArrayDimensions += static_cast<size_t>(dimensionCount);
 
 		_STD_VECTOR<uint64_t> elementList;
 		for (uint64_t i = 0; i < dimensionCount; i++)

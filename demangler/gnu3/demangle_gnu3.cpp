@@ -20,6 +20,7 @@
 #include "demangler/demangled_template_simplifier.h"
 #include <cstdarg>
 #include <algorithm>
+#include <limits>
 #include <memory>
 
 
@@ -121,8 +122,15 @@ namespace
 			{
 				size_t len = c - '0';
 				while (i < raw.size() && raw[i] >= '0' && raw[i] <= '9')
-					len = (len * 10) + (raw[i++] - '0');
-				i = std::min(raw.size(), i + len);
+				{
+					size_t digit = raw[i++] - '0';
+					if (len > (std::numeric_limits<size_t>::max() - digit) / 10)
+						return false;
+					len = (len * 10) + digit;
+				}
+				if (len > raw.size() - i)
+					return false;
+				i += len;
 			}
 		}
 		return false;

@@ -32,6 +32,10 @@ using namespace std;
 
 namespace
 {
+	// Mangling grammar uses ASCII regardless of the locale or identifier encoding.
+	constexpr bool IsAsciiDigit(char ch) { return ch >= '0' && ch <= '9'; }
+	constexpr bool IsAsciiUpper(char ch) { return ch >= 'A' && ch <= 'Z'; }
+
 	BNTypeClass GetFinalizedTypeClass(const Ref<Type>& type)
 	{
 #ifdef BINARYNINJACORE_LIBRARY
@@ -546,11 +550,11 @@ void DemangleGNU3::DemangleCVQualifiers(bool& cnst, bool& vltl, bool& rstrct)
 }
 
 
-std::string_view DemangleGNU3::DemangleSourceName()
+string DemangleGNU3::DemangleSourceName()
 {
 	LOG_INDENTATION_SCOPE;
 	LogWithIndentation("%s : %s\n", __FUNCTION__, m_reader.GetRaw());
-	std::string_view name = m_reader.ReadStringView(DemangleNumber());
+	string name = EscapeDemangledName(m_reader.ReadStringView(DemangleNumber()));
 	m_lastName = name;
 	return name;
 }
@@ -639,14 +643,14 @@ DemangleGNU3::NodeRef DemangleGNU3::DemangleTemplateSubstitutionEntry(NodeRef* o
 	{
 		number = 0;
 	}
-	else if (isdigit(elm))
+	else if (IsAsciiDigit(elm))
 	{
 		size_t n = 0;
-		while (isdigit(m_reader.PeekOr()))
+		while (IsAsciiDigit(m_reader.PeekOr()))
 			n = n * 10 + (m_reader.Read() - '0');
 		number = n + 1;
 	}
-	else if (isupper(elm))
+	else if (IsAsciiUpper(elm))
 	{
 		m_reader.Consume();
 		number = elm - 'A' + 11;
@@ -746,7 +750,7 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 	case 'S':
 	{
 		char next = m_reader.PeekOr();
-		if (isdigit(next) || next == '_' || isupper(next))
+		if (IsAsciiDigit(next) || next == '_' || IsAsciiUpper(next))
 		{
 			type = DemangleSubstitution(&typeRef);
 			if (m_reader.ConsumeIf('I'))
@@ -794,20 +798,18 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 		                      ::= Tu <name>  # dependent elaborated type specifier using 'union'
 		                      ::= Te <name>  # dependent elaborated type specifier using 'enum'
 		*/
-		if (m_reader.ConsumeIf('s'))
+		char elaboratedKind = m_reader.PeekOr();
+		if (elaboratedKind == 's' || elaboratedKind == 'u' || elaboratedKind == 'e')
 		{
-			type = DemangledTypeNode::NamedType(StructNamedTypeClass, DemangleSourceName());
-			break;
-		}
-		else if (m_reader.ConsumeIf('u'))
-		{
-			type = DemangledTypeNode::NamedType(UnionNamedTypeClass, DemangleSourceName());
-			break;
-		}
-		else if (m_reader.ConsumeIf('e'))
-		{
-			type = DemangledTypeNode::NamedType(
-				EnumNamedTypeClass, DemangleSourceName(), m_platform.get().GetArchitecture()->GetDefaultIntegerSize());
+			m_reader.Consume();
+			// The specifier prefixes a full <name>, including nested names and
+			// substitutions, rather than just a length-prefixed <source-name>.
+			auto name = DemangleName();
+			auto kind = elaboratedKind == 's' ? StructNamedTypeClass :
+				(elaboratedKind == 'u' ? UnionNamedTypeClass : EnumNamedTypeClass);
+			type = DemangledTypeNode::NamedType(kind, name.GetName(),
+				elaboratedKind == 'e' ? m_platform.get().GetArchitecture()->GetDefaultIntegerSize() : 0);
+			substitute = true;
 			break;
 		}
 
@@ -994,7 +996,7 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 	case 'A':
 		//  <array-type> ::= A <positive dimension number> _ <element type>
 		//               ::= A [<dimension expression>] _ <element type>
-		if (isdigit(m_reader.PeekOr()))
+		if (IsAsciiDigit(m_reader.PeekOr()))
 		{
 			//<positive dimension number> _ <element type>
 			uint64_t size = DemangleNumber();
@@ -1087,19 +1089,19 @@ DemangledTypeNode DemangleGNU3::DemangleSubstitution(NodeRef* outTypeRef)
 			m_reader.UnRead(1);
 			number = 0;
 		}
-		else if (isdigit(elm) || isupper(elm))
+		else if (IsAsciiDigit(elm) || IsAsciiUpper(elm))
 		{
 			// Seq-id is encoded in base 36 using 0-9 A-Z.
 			// The actual substitution index = base36_value + 1.
 			// This handles both single-char (S0_ ... SZ_) and
 			// multi-char (S10_, S11_, ...) seq-ids.
-			size_t base36 = isdigit(elm) ? static_cast<size_t>(elm - '0') : static_cast<size_t>(elm - 'A' + 10);
+			size_t base36 = IsAsciiDigit(elm) ? static_cast<size_t>(elm - '0') : static_cast<size_t>(elm - 'A' + 10);
 			while (m_reader.PeekOr() != '_')
 			{
 				char c = m_reader.Read();
-				if (isdigit(c))
+				if (IsAsciiDigit(c))
 					base36 = base36 * 36 + static_cast<size_t>(c - '0');
-				else if (isupper(c))
+				else if (IsAsciiUpper(c))
 					base36 = base36 * 36 + static_cast<size_t>(c - 'A' + 10);
 				else
 					throw DemangleException();
@@ -1156,7 +1158,7 @@ string DemangleGNU3::DemangleNumberAsString()
 	}
 
 	string number;
-	while (isdigit(m_reader.PeekOr()))
+	while (IsAsciiDigit(m_reader.PeekOr()))
 	{
 		number += m_reader.Read();
 	}
@@ -1174,14 +1176,14 @@ int64_t DemangleGNU3::DemangleNumber()
 		negative = true;
 	}
 
-	if (!isdigit(m_reader.PeekOr()))
+	if (!IsAsciiDigit(m_reader.PeekOr()))
 		throw DemangleException();
 
 	int64_t result = 0;
 	do
 	{
 		result = result * 10 + (m_reader.Read() - '0');
-	} while (isdigit(m_reader.PeekOr()));
+	} while (IsAsciiDigit(m_reader.PeekOr()));
 	return negative ? -result : result;
 }
 
@@ -1236,16 +1238,18 @@ string DemangleGNU3::DemanglePrimaryExpression()
 			throw DemangleException();
 		break;
 	case 'd': //double (16 hex chars = 8 bytes)
-		out += DecodeHexFloat(m_reader.ReadString(16), 8);
+		out += DecodeHexFloat(m_reader.ReadHexString(16), 8);
 		break;
 	case 'e': //long double (20 hex chars = 10 bytes, platform-dependent layout)
-		out += "(long double)" + m_reader.ReadString(20);
+		out = "(long double)";
+		out.append(m_reader.ReadHexString(20));
 		break;
 	case 'f': //float (8 hex chars = 4 bytes)
-		out += DecodeHexFloat(m_reader.ReadString(8), 4);
+		out += DecodeHexFloat(m_reader.ReadHexString(8), 4);
 		break;
 	case 'g': //float_128 (32 hex chars = 16 bytes)
-		out += "(__float128)" + m_reader.ReadString(32);
+		out = "(__float128)";
+		out.append(m_reader.ReadHexString(32));
 		break;
 	case 'l': out = DemangleNumberAsString() + "l"; break;  //long
 	case 'x': out = DemangleNumberAsString() + "ll"; break;  //long long
@@ -1519,7 +1523,7 @@ DemangledTypeNode DemangleGNU3::DemangleUnqualifiedName()
 		m_parsingLambdaParams = savedParsingLambdaParams;
 		m_lambdaTemplateParamBase = savedLambdaTemplateParamBase;
 
-		if (isdigit(m_reader.PeekOr()))
+		if (IsAsciiDigit(m_reader.PeekOr()))
 		{
 			name += DemangleNumberAsString();
 		}
@@ -1539,12 +1543,24 @@ DemangledTypeNode DemangleGNU3::DemangleUnqualifiedName()
 		PushType(outType);
 		break;
 	}
+	case hash('U','b'): // Apple's block-literal extension: Ub [<number>] _
+	{
+		string name = "'block-literal";
+		if (IsAsciiDigit(m_reader.PeekOr()))
+			name += DemangleNumberAsString();
+		if (!m_reader.ConsumeIf('_'))
+			throw DemangleException();
+		name += "'";
+		m_lastName = name;
+		outType = DemangledTypeNode::NamedType(name);
+		break;
+	}
 	case hash('U','t'):
 	{
 		string name;
 		name = "'unnamed";
 
-		if (isdigit(m_reader.PeekOr()))
+		if (IsAsciiDigit(m_reader.PeekOr()))
 		{
 			name += DemangleNumberAsString();
 		}
@@ -1577,7 +1593,7 @@ DemangledTypeNode DemangleGNU3::DemangleUnqualifiedName()
 	}
 	default:
 		m_reader.UnRead(2);
-		if (isdigit(m_reader.PeekOr()) || m_reader.ConsumeIf('L'))
+		if (IsAsciiDigit(m_reader.PeekOr()) || m_reader.ConsumeIf('L'))
 		{
 			string name(DemangleSourceName());
 			if (name.size() > 11 && name.substr(0, 11) == "_GLOBAL__N_")
@@ -1965,7 +1981,7 @@ string DemangleGNU3::DemangleExpression(DemangledTypeNode* outNode)
 				throw DemangleException();
 			type = *m_functionSubstitute[listNumber][elementNum];
 		}
-		else if (isdigit(elm) || isupper(elm))
+		else if (IsAsciiDigit(elm) || IsAsciiUpper(elm))
 		{
 			elementNum = DemangleNumber() + 1;
 			if (!m_reader.ConsumeIf('_'))
@@ -2020,7 +2036,7 @@ string DemangleGNU3::DemangleExpression(DemangledTypeNode* outNode)
 			// GCC extension: N <source-name-qualifier>+ E <base>
 			// When the first component is a digit (source name), skip the
 			// unresolved-type and let the loop below handle all qualifiers.
-			if (!isdigit(m_reader.PeekOr()))
+			if (!IsAsciiDigit(m_reader.PeekOr()))
 			{
 				DemangledTypeNode unresolvedType = DemangleUnresolvedType();
 				out += unresolvedType.GetString() + "::";
@@ -2028,7 +2044,7 @@ string DemangleGNU3::DemangleExpression(DemangledTypeNode* outNode)
 			}
 			do
 			{
-				std::string_view segName = DemangleSourceName();
+				string segName = DemangleSourceName();
 				const size_t segmentStart = out.size();
 				out.append(segName);
 				DemangledNamePart structuredSegment(segName);
@@ -2055,7 +2071,7 @@ string DemangleGNU3::DemangleExpression(DemangledTypeNode* outNode)
 			SetStructuredExpressionNode(outNode, structuredName);
 			return out;
 		}
-		if (isdigit(m_reader.PeekOr()))
+		if (IsAsciiDigit(m_reader.PeekOr()))
 		{
 			// <unresolved-qualifier-level>+ E <base-unresolved-name>
 			// GCC sometimes omits the explicit qualifier-list 'E' when the last
@@ -2071,7 +2087,7 @@ string DemangleGNU3::DemangleExpression(DemangledTypeNode* outNode)
 			do
 			{
 				hadTemplateArgs = false;
-				std::string_view segName = DemangleSourceName();
+				string segName = DemangleSourceName();
 				const size_t segmentStart = out.size();
 				out.append(segName);
 				DemangledNamePart structuredSegment(segName);
@@ -2111,15 +2127,15 @@ string DemangleGNU3::DemangleExpression(DemangledTypeNode* outNode)
 			// Process any digit-started names: if a name has template args AND
 			// another source name follows, it is an intermediate qualifier level;
 			// otherwise it is the final base-unresolved-name.
-			while (isdigit(m_reader.PeekOr()))
+			while (IsAsciiDigit(m_reader.PeekOr()))
 			{
-				std::string_view segName = DemangleSourceName();
+				string segName = DemangleSourceName();
 				if (m_reader.ConsumeIf('I'))
 				{
 					ParamList args;
 					DemangleTemplateArgs(args);
 					DemangledNamePart structuredSegment = NameSegmentWithTemplateArgs(segName, args);
-					if (isdigit(m_reader.PeekOr()))
+					if (IsAsciiDigit(m_reader.PeekOr()))
 					{
 						// Another source name follows — intermediate qualifier.
 						// Push to the substitution table, mirroring what the
@@ -2220,8 +2236,39 @@ bool DemangleGNU3::AppendTemplateParamPackExpansion(ParamList& params, NodeRef e
 }
 
 
+void DemangleGNU3::DemangleTemplateParamDecl()
+{
+	NestingGuard nestingGuard(m_nestingDepth);
+	// <template-param-decl> ::= Ty                           # type parameter
+	//                       ::= Tn <type>                    # non-type parameter
+	//                       ::= Tt <template-param-decl>* E  # template parameter
+	//                       ::= Tp <template-param-decl>     # parameter pack
+	if (!m_reader.ConsumeIf('T'))
+		throw DemangleException();
+
+	switch (m_reader.Read())
+	{
+	case 'y':
+		return;
+	case 'n':
+		DemangleType();
+		return;
+	case 't':
+		while (!m_reader.ConsumeIf('E'))
+			DemangleTemplateParamDecl();
+		return;
+	case 'p':
+		DemangleTemplateParamDecl();
+		return;
+	default:
+		throw DemangleException();
+	}
+}
+
+
 bool DemangleGNU3::DemangleTemplateArg(ParamList& args, bool* hadNonTypeArg)
 {
+	NestingGuard nestingGuard(m_nestingDepth);
 	DemangledTypeNode tmp;
 	NodeRef tmpRef;
 	bool tmpValid = false;
@@ -2278,18 +2325,15 @@ bool DemangleGNU3::DemangleTemplateArg(ParamList& args, bool* hadNonTypeArg)
 		break;
 	}
 	case 'T':
-		if (m_reader.ConsumeIf('n'))
+		if (const char kind = m_reader.PeekOr(); kind == 'y' || kind == 'n' || kind == 't' || kind == 'p')
 		{
 			// <template-arg> ::= <template-param-decl> <template-arg>
-			// <template-param-decl> ::= Tn <type>  # non-type parameter
-			//
-			// The declaration names a synthetic non-type template parameter
-			// for the following argument. Binary Ninja does not print those
-			// synthetic parameter names, so consume the declaration type and
-			// keep only the actual following template argument.
+			// Only the following argument contributes to the printed name and
+			// template substitution table; the declaration describes its parameter.
+			m_reader.UnRead();
 			topLevel = m_topLevel;
 			m_topLevel = false;
-			DemangleType();
+			DemangleTemplateParamDecl();
 			m_topLevel = topLevel;
 			return DemangleTemplateArg(args, hadNonTypeArg);
 		}
@@ -2373,18 +2417,18 @@ DemangledTypeNode DemangleGNU3::DemangleNestedName(bool* allTypeTemplateArgs, bo
 	DemangledTypeNode newType;
 	bool base = false;
 	bool isTemplate = false;
-	//[<CV-qualifiers>]
-	DemangleCVQualifiers(cnst, vltl, rstrct);
-
-	//[<ref-qualifier>]
-	if (m_reader.ConsumeIf('R'))
+	// An explicit object member uses H instead of CV/ref qualifiers. Its
+	// object type is encoded as the first parameter of the function.
+	if (!m_reader.ConsumeIf('H'))
 	{
-		ref = true;
-	}
-	else if (m_reader.ConsumeIf('O'))
-	{
-		ref = true;
-		rvalueRef = true;
+		DemangleCVQualifiers(cnst, vltl, rstrct);
+		if (m_reader.ConsumeIf('R'))
+			ref = true;
+		else if (m_reader.ConsumeIf('O'))
+		{
+			ref = true;
+			rvalueRef = true;
+		}
 	}
 
 	while (!m_reader.ConsumeIf('E'))
@@ -2483,7 +2527,7 @@ DemangledTypeNode DemangleGNU3::DemangleNestedName(bool* allTypeTemplateArgs, bo
 }
 
 
-DemangledTypeNode DemangleGNU3::DemangleLocalName()
+DemangledTypeNode DemangleGNU3::DemangleLocalName(bool* mayHaveImplicitThis, bool* hasExplicitObjectParameter)
 {
 	NestingGuard nestingGuard(m_nestingDepth);
 	LOG_INDENTATION_SCOPE;
@@ -2511,22 +2555,26 @@ DemangledTypeNode DemangleGNU3::DemangleLocalName()
 
 	if (!m_reader.ConsumeIf('s'))
 	{
+		// The entity's template parameters belong to its own signature, not
+		// the enclosing function. Keep them alive until that signature is read.
+		m_templateSubstitute.clear();
 		// Handle default argument context: d [<number>] _ <name>
 		if (m_reader.ConsumeIf('d'))
 		{
-			if (isdigit(m_reader.PeekOr()))
+			if (IsAsciiDigit(m_reader.PeekOr()))
 				DemangleNumber();
 			m_reader.ConsumeIf('_');
 		}
 		//<entity name>
-		DemangledTypeNode tmpType = DemangleName();
+		DemangledTypeNode tmpType = DemangleName(mayHaveImplicitThis, hasExplicitObjectParameter);
 		type = DemangledTypeNode::NamedType(varName);
 		AppendTypeName(type, tmpType);
 		type.SetNTRType(tmpType.GetNTRClass());
 		type.SetConst(tmpType.IsConst());
 		type.SetVolatile(tmpType.IsVolatile());
 		type.SetPointerSuffixBits(tmpType.GetPointerSuffixBits());
-		m_templateSubstitute = std::move(savedTemplateSubstitute);
+		if (!LastTypeNameSegmentHasTemplateArguments(tmpType))
+			m_templateSubstitute = std::move(savedTemplateSubstitute);
 		m_topLevel = oldTopLevel;
 	}
 	else
@@ -2554,7 +2602,7 @@ DemangledTypeNode DemangleGNU3::DemangleLocalName()
 }
 
 
-DemangledTypeNode DemangleGNU3::DemangleName(bool* mayHaveImplicitThis)
+DemangledTypeNode DemangleGNU3::DemangleName(bool* mayHaveImplicitThis, bool* hasExplicitObjectParameter)
 {
 	NestingGuard nestingGuard(m_nestingDepth);
 	LOG_INDENTATION_SCOPE;
@@ -2575,6 +2623,8 @@ DemangledTypeNode DemangleGNU3::DemangleName(bool* mayHaveImplicitThis)
 	bool substitute = false;
 	if (mayHaveImplicitThis)
 		*mayHaveImplicitThis = false;
+	if (hasExplicitObjectParameter)
+		*hasExplicitObjectParameter = false;
 	switch (m_reader.Read())
 	{
 	case 'S':
@@ -2607,8 +2657,11 @@ DemangledTypeNode DemangleGNU3::DemangleName(bool* mayHaveImplicitThis)
 		break;
 	case 'N': //<nested-name>
 	{
+		bool explicitObject = m_reader.PeekOr() == 'H';
 		if (mayHaveImplicitThis)
-			*mayHaveImplicitThis = true;
+			*mayHaveImplicitThis = !explicitObject;
+		if (hasExplicitObjectParameter)
+			*hasExplicitObjectParameter = explicitObject;
 		bool allTypeArgs = false;
 		type = DemangleNestedName(&allTypeArgs);
 		if (!m_inLocalName && allTypeArgs)
@@ -2616,9 +2669,7 @@ DemangledTypeNode DemangleGNU3::DemangleName(bool* mayHaveImplicitThis)
 		break;
 	}
 	case 'Z': //<local-name>
-		if (mayHaveImplicitThis)
-			*mayHaveImplicitThis = true;
-		type = DemangleLocalName();
+		type = DemangleLocalName(mayHaveImplicitThis, hasExplicitObjectParameter);
 		break;
 	default: //<unscoped-name> | <substitution>
 		/*
@@ -2683,7 +2734,12 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(
 			// Consume optional base-36 seq-id (digits + uppercase A-Z) before '_'.
 			string seqId;
 			while (m_reader.Length() > 0 && !m_reader.ConsumeIf('_'))
-				seqId += m_reader.Read();
+			{
+				char ch = m_reader.Read();
+				if (!IsAsciiDigit(ch) && !IsAsciiUpper(ch))
+					throw DemangleException();
+				seqId += ch;
+			}
 			string result = "reference_temporary_for_" + nameNode.GetString();
 			if (!seqId.empty())
 				result += "[" + seqId + "]";
@@ -2723,7 +2779,7 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(
 				if (ahead.size() >= 3 && (ahead[1] == 'M' || ahead[1] == 'N'))
 				{
 					size_t pos = 2;
-					while (pos < ahead.size() && isdigit(static_cast<unsigned char>(ahead[pos])))
+					while (pos < ahead.size() && IsAsciiDigit(ahead[pos]))
 						pos++;
 					if (pos > 2) // had at least one vlen digit
 					{
@@ -2734,7 +2790,7 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(
 						{
 							char c = ahead[pos];
 							if (c == 'v' || c == 'l' || c == 'u' || c == 'R' ||
-							    c == 'L' || c == 's' || isdigit(static_cast<unsigned char>(c)))
+							    c == 'L' || c == 's' || IsAsciiDigit(c))
 								pos++;
 							else
 							{
@@ -2805,10 +2861,10 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(
 			const char* maskName = (maskChar == 'M') ? "mask" : "nomask";
 
 			// Parse vlen: non-negative decimal integer
-			if (!isdigit(m_reader.PeekOr()))
+			if (!IsAsciiDigit(m_reader.PeekOr()))
 				throw DemangleException();
 			string vlenStr;
-			while (isdigit(m_reader.PeekOr()))
+			while (IsAsciiDigit(m_reader.PeekOr()))
 				vlenStr += m_reader.Read();
 
 			// Parse vparameters until '_' separator
@@ -2843,11 +2899,11 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(
 					{
 						// linear_step passed as another argument at given 0-based position
 						string argPos;
-						while (isdigit(m_reader.PeekOr()))
+						while (IsAsciiDigit(m_reader.PeekOr()))
 							argPos += m_reader.Read();
 						paramsStr += "(step=arg" + argPos + ")";
 					}
-					else if (isdigit(m_reader.PeekOr()) || m_reader.PeekOr() == 'n')
+					else if (IsAsciiDigit(m_reader.PeekOr()) || m_reader.PeekOr() == 'n')
 					{
 						// Literal stride; 'n' prefix means negative
 						string stride = DemangleNumberAsString();
@@ -2859,7 +2915,7 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(
 				// Optional alignment: 'a' <non-negative-decimal>
 				if (m_reader.ConsumeIf('a'))
 				{
-					while (isdigit(m_reader.PeekOr()))
+					while (IsAsciiDigit(m_reader.PeekOr()))
 						(void)m_reader.Read();
 				}
 			}
@@ -2869,7 +2925,7 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(
 				throw DemangleException();
 
 			// Remainder is the scalar routine name (maybe a plain C name or a _Z mangled name)
-			string routineName = m_reader.ReadString(m_reader.Length());
+			string routineName = EscapeDemangledName(m_reader.ReadStringView(m_reader.Length()));
 
 			// Build the human-readable annotation
 			string annotation = " [SIMD:";
@@ -3024,7 +3080,8 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(
 
 	//<function name> or <data name>
 	bool mayHaveImplicitThis = false;
-	type = DemangleName(&mayHaveImplicitThis);
+	bool hasExplicitObjectParameter = false;
+	type = DemangleName(&mayHaveImplicitThis, &hasExplicitObjectParameter);
 	if (m_reader.Length() == 0)
 	{
 		return type;
@@ -3088,6 +3145,8 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(
 	m_functionSubstitute.emplace_back();
 	while (m_reader.Length() > 0)
 	{
+		if (m_reader.PeekMatch("_vfpthunk_"))
+			break;
 		if (m_reader.ConsumeIf('E'))
 		{
 			break;
@@ -3095,7 +3154,7 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(
 		if (m_reader.PeekOr() == '.')
 		{
 			// Extension, consume the rest
-			string ext = m_reader.ReadString(m_reader.Length());
+			string ext = EscapeDemangledName(m_reader.ReadStringView(m_reader.Length()));
 
 			if (ext == ".eh") ext = "exception handler";
 			else if (ext == ".eh_frame") ext = "exception handler frame";
@@ -3139,6 +3198,20 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(
 
 	m_functionSubstitute.pop_back();
 	m_isParameter = false;
+	// Apple pointer-authentication thunks retain the member's signature.
+	if (m_reader.ConsumeIf("_vfpthunk_"))
+	{
+		if (m_reader.Length() != 0)
+			throw DemangleException();
+		if (!varName.empty())
+			varName.back() += " [vfpthunk]";
+	}
+	if (hasExplicitObjectParameter)
+	{
+		if (params.empty() || params.front().type->GetClass() == VarArgsTypeClass)
+			throw DemangleException();
+		params.front().name = "this";
+	}
 	if (!returnTypeRef)
 		returnTypeRef = DemangledTypeNode::CreateShared(std::move(returnType));
 	type = DemangledTypeNode::FunctionType(returnTypeRef, nullptr, std::move(params));
@@ -3242,7 +3315,7 @@ namespace
 			if (!validSuffix && (tail[0] == '.' || tail[0] == '_'))
 			{
 				size_t i = 1;
-				while (i < tail.size() && isdigit(static_cast<unsigned char>(tail[i])))
+				while (i < tail.size() && IsAsciiDigit(tail[i]))
 					i++;
 				validSuffix = (i == tail.size() && i > 1);
 			}
@@ -3296,7 +3369,7 @@ namespace
 		else if (foundHeader && !header.empty())
 		{
 			DemanglerResult result;
-			StringList nameSegments{header, encoding};
+			StringList nameSegments{header, EscapeDemangledName(encoding)};
 			result.name = QualifiedName(nameSegments);
 			result.type = DemangledTypeNode::NamedType(nameSegments).Finalize(platform);
 			return result;
@@ -3340,11 +3413,11 @@ namespace
 		}
 		catch (DemangleException& e)
 		{
-			LogDebugF("GNU3 demangling failed '{}' '{}'", name, e.what());
+			LogDebugF("GNU3 demangling failed {:?}: {}", name, e.what());
 		}
 		catch (std::exception& e)
 		{
-			LogDebugF("GNU3 demangling failed '{}' '{}'", name, e.what());
+			LogDebugF("GNU3 demangling failed {:?}: {}", name, e.what());
 		}
 		return std::nullopt;
 	}

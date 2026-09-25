@@ -665,10 +665,66 @@ class PowerpcArchitecture: public Architecture
 	{
 		switch (intrinsic)
 		{
-		case PPC_INTRIN_CNTLZW:
-			return "__builtin_clz";
 		case PPC_INTRIN_FRSP:
 			return "float_round";
+		case PPC_INTRIN_SET_RESERVATION:
+			return "__set_reservation";
+		case PPC_INTRIN_CHECK_RESERVATION:
+			return "__check_reservation";
+		case PPC_INTRIN_SYNC:
+			return "__sync";
+		case PPC_INTRIN_LWSYNC:
+			return "__lwsync";
+		case PPC_INTRIN_PTESYNC:
+			return "__ptesync";
+		case PPC_INTRIN_EIEIO:
+			return "__eieio";
+		case PPC_INTRIN_ISYNC:
+			return "__isync";
+		case PPC_INTRIN_MBAR:
+			return "__mbar";
+		case PPC_INTRIN_DCBZ:
+			return "__dcbz";
+		case PPC_INTRIN_DCBF:
+			return "__dcbf";
+		case PPC_INTRIN_DCBST:
+			return "__dcbst";
+		case PPC_INTRIN_DCBI:
+			return "__dcbi";
+		case PPC_INTRIN_ICBI:
+			return "__icbi";
+		case PPC_INTRIN_POPCNTB:
+			return "__popcntb";
+		case PPC_INTRIN_POPCNTW:
+			return "__popcntw";
+		case PPC_INTRIN_POPCNTD:
+			return "__popcntd";
+		case PPC_INTRIN_CMPB:
+			return "__cmpb";
+		case PPC_INTRIN_BPERMD:
+			return "__bpermd";
+		case PPC_INTRIN_DARN:
+			return "__darn";
+		case PPC_INTRIN_MFTB:
+			return "__mftb";
+		case PPC_INTRIN_MFTBU:
+			return "__mftbu";
+		case PPC_INTRIN_MFMSR:
+			return "__mfmsr";
+		case PPC_INTRIN_MTMSR:
+			return "__mtmsr";
+		case PPC_INTRIN_MFSPR:
+			return "__mfspr";
+		case PPC_INTRIN_MTSPR:
+			return "__mtspr";
+		case PPC_INTRIN_MFFS:
+			return "__mffs";
+		case PPC_INTRIN_MTFSF:
+			return "__mtfsf";
+		case PPC_INTRIN_MTFSB0:
+			return "__mtfsb0";
+		case PPC_INTRIN_MTFSB1:
+			return "__mtfsb1";
 		default:
 			if ((decodeFlags & DECODE_FLAGS_PS))
 			{
@@ -688,11 +744,11 @@ class PowerpcArchitecture: public Architecture
 
 		// Double check someone didn't insert a new intrinsic at the beginning of our enum since we rely
 		// on it to fill the next array.
-		static_assert(PPCIntrinsic::PPC_INTRIN_CNTLZW == 0,
+		static_assert(PPCIntrinsic::PPC_INTRIN_FRSP == 0,
 			"Invalid first PPCIntrinsic value. Please add your intrinsic further in the enum.");
 
 		// Normal intrinsics.
-		for (uint32_t id = PPC_INTRIN_CNTLZW; id < PPCIntrinsic::PPC_INTRIN_END; id++) {
+		for (uint32_t id = PPC_INTRIN_FRSP; id < PPCIntrinsic::PPC_INTRIN_END; id++) {
 			result.push_back(id);
 		}
 
@@ -724,10 +780,41 @@ class PowerpcArchitecture: public Architecture
 	{
 		switch (intrinsic)
 		{
-		case PPC_INTRIN_CNTLZW:		// rs
-			return {NameAndType(Type::IntegerType(4, false))};
 		case PPC_INTRIN_FRSP:
 			return {NameAndType(Type::FloatType(4))};
+		case PPC_INTRIN_SET_RESERVATION:
+		case PPC_INTRIN_CHECK_RESERVATION:
+		case PPC_INTRIN_DCBZ:
+		case PPC_INTRIN_DCBF:
+		case PPC_INTRIN_DCBST:
+		case PPC_INTRIN_DCBI:
+		case PPC_INTRIN_ICBI:
+			return {NameAndType("address", Type::IntegerType(addressSize, false))};
+		case PPC_INTRIN_POPCNTB:
+		case PPC_INTRIN_POPCNTW:
+		case PPC_INTRIN_POPCNTD:
+			return {NameAndType(Type::IntegerType(addressSize, false))};
+		case PPC_INTRIN_CMPB:
+			return {NameAndType(Type::IntegerType(addressSize, false)),
+				NameAndType(Type::IntegerType(addressSize, false))};
+		case PPC_INTRIN_BPERMD:
+			return {NameAndType(Type::IntegerType(8, false)),
+				NameAndType(Type::IntegerType(8, false))};
+		case PPC_INTRIN_DARN:
+			return {NameAndType("l", Type::IntegerType(4, false))};
+		case PPC_INTRIN_MTMSR:
+			return {NameAndType("msr", Type::IntegerType(addressSize, false))};
+		case PPC_INTRIN_MFSPR:
+			return {NameAndType("spr", Type::IntegerType(4, false))};
+		case PPC_INTRIN_MTSPR:
+			return {NameAndType("spr", Type::IntegerType(4, false)),
+				NameAndType("value", Type::IntegerType(addressSize, false))};
+		case PPC_INTRIN_MTFSF:
+			return {NameAndType("mask", Type::IntegerType(4, false)),
+				NameAndType("value", Type::FloatType(8))};
+		case PPC_INTRIN_MTFSB0:
+		case PPC_INTRIN_MTFSB1:
+			return {NameAndType("bit", Type::IntegerType(4, false))};
 		// for now, quantize is operating on the float in, and the gqr that holds the scale
 		default:
 			if ((decodeFlags & DECODE_FLAGS_PS))
@@ -758,10 +845,25 @@ class PowerpcArchitecture: public Architecture
 	{
 		switch (intrinsic)
 		{
-		case PPC_INTRIN_CNTLZW:		// ra
-			return {Type::IntegerType(4, false)};
 		case PPC_INTRIN_FRSP:
 			return {Type::FloatType(4)};
+		case PPC_INTRIN_CHECK_RESERVATION:
+			return {Type::IntegerType(0, false)};
+		case PPC_INTRIN_POPCNTB:
+		case PPC_INTRIN_POPCNTW:
+		case PPC_INTRIN_POPCNTD:
+		case PPC_INTRIN_CMPB:
+		case PPC_INTRIN_MFTB:
+		case PPC_INTRIN_MFMSR:
+		case PPC_INTRIN_MFSPR:
+			return {Type::IntegerType(addressSize, false)};
+		case PPC_INTRIN_BPERMD:
+		case PPC_INTRIN_DARN:
+			return {Type::IntegerType(8, false)};
+		case PPC_INTRIN_MFTBU:
+			return {Type::IntegerType(4, false)};
+		case PPC_INTRIN_MFFS:
+			return {Type::FloatType(8)};
 		default:
 			if ((decodeFlags & DECODE_FLAGS_PS))
 			{

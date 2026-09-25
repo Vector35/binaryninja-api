@@ -265,6 +265,8 @@ def _demangle_with_demangler(
 
 	try:
 		return DemangleResult._from_core_struct(result)
+	except UnicodeDecodeError:
+		return None
 	finally:
 		core.BNFreeDemanglerResult(result)
 
@@ -639,5 +641,7 @@ class CoreDemangler(Demangler):
 
 		try:
 			return DemangleResult._from_core_struct(result)
+		except UnicodeDecodeError:
+			return None
 		finally:
 			core.BNFreeDemanglerResult(result)

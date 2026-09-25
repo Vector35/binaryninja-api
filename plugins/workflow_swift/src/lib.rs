@@ -7,6 +7,14 @@ use demangler::SwiftDemangler;
 
 pub const SETTING_EXTRACT_TYPES: &str = "analysis.swift.extractTypesFromMangledNames";
 
+#[cfg(test)]
+fn test_session() -> &'static binaryninja::headless::Session {
+    use std::sync::OnceLock;
+
+    static SESSION: OnceLock<binaryninja::headless::Session> = OnceLock::new();
+    SESSION.get_or_init(|| binaryninja::headless::Session::new().expect("headless session"))
+}
+
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "C" fn CorePluginDependencies() {

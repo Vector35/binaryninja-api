@@ -232,7 +232,7 @@ pub fn build_function_type(symbol: &Symbol, arch: &CoreArchitecture) -> Option<R
         .parameters()
         .iter()
         .enumerate()
-        .filter_map(|(i, p)| {
+        .map(|(i, p)| {
             let ty = p.type_ref.to_bn_type(arch)?;
             let name = labels
                 .get(i)
@@ -247,12 +247,12 @@ pub fn build_function_type(symbol: &Symbol, arch: &CoreArchitecture) -> Option<R
                 location: ValueLocationSource::Default,
             })
         })
-        .collect();
+        .collect::<Option<Vec<_>>>()?;
 
-    let ret_type = sig
-        .return_type()
-        .and_then(|rt| rt.to_bn_type(arch))
-        .unwrap_or_else(Type::void);
+    let ret_type = match sig.return_type() {
+        Some(rt) => rt.to_bn_type(arch)?,
+        None => Type::void(),
+    };
 
     Some(cc.build_type(&ret_type, params))
 }

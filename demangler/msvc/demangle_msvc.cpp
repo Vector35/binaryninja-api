@@ -456,7 +456,9 @@ DemangledTypeNode Demangle::DemangleVarType(BackrefList& varList, bool isReturn,
 		recordTypeBackref(newType);
 		return newType;
 	}
-	case 'Z': return DemangledTypeNode::VarArgsType();
+	// The trailing varargs marker is handled by DemangleVariableList. It is
+	// never a standalone type (including data, return, and template types).
+	case 'Z': throw DemangleException("Varargs is not a standalone type");
 	case '?':
 	{
 		char next = m_reader.PeekOr();

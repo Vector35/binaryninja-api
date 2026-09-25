@@ -22,6 +22,8 @@
 [submodule "vendor/bindiff"]
 	path = vendor/bindiff
 	url = https://github.com/Vector35/google_bindiff.git
+	shallow = true
 [submodule "vendor/binexport"]
 	path = vendor/binexport
 	url = https://github.com/Vector35/binexport.git
+	shallow = true

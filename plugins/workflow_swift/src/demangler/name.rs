@@ -17,9 +17,30 @@ fn push_module(parts: &mut Vec<String>, module: Option<&str>) {
 /// Returns `None` for symbol kinds that don't benefit from shortening (e.g.
 /// variables, thunks), in which case the caller should fall back to `symbol.display()`.
 pub fn build_short_name(symbol: &swift_demangler::Symbol) -> Option<QualifiedName> {
+    let mut prefixes = Vec::new();
+    let mut suffixes = Vec::new();
+    let mut inner = symbol;
+    loop {
+        inner = match inner {
+            Symbol::Attributed(a) => {
+                prefixes.push(inner);
+                &a.inner
+            }
+            Symbol::Specialization(s) => {
+                prefixes.push(inner);
+                &s.inner
+            }
+            Symbol::Suffixed(s) => {
+                suffixes.push(s.suffix);
+                &s.inner
+            }
+            _ => break,
+        };
+    }
+
     let mut parts: Vec<String> = Vec::new();
 
-    match symbol {
+    match inner {
         Symbol::Function(f) => {
             push_module(&mut parts, f.module());
             if let Some(ct) = f.containing_type() {
@@ -58,21 +79,6 @@ pub fn build_short_name(symbol: &swift_demangler::Symbol) -> Option<QualifiedNam
             };
             parts.push(deinit_name.to_string());
         }
-        // Wrappers: combine the wrapper's display with the inner function's short name.
-        Symbol::Attributed(_) | Symbol::Specialization(_) => {
-            let inner = match symbol {
-                Symbol::Attributed(a) => &*a.inner,
-                Symbol::Specialization(s) => &*s.inner,
-                _ => unreachable!(),
-            };
-            return build_short_name(inner).map(|inner_name| {
-                QualifiedName::from(format!("{}{}", symbol.display(), inner_name))
-            });
-        }
-        Symbol::Suffixed(s) => {
-            return build_short_name(&s.inner)
-                .map(|inner_name| QualifiedName::from(format!("{} {}", inner_name, s.suffix)));
-        }
         _ => return None,
     }
 
@@ -80,5 +86,41 @@ pub fn build_short_name(symbol: &swift_demangler::Symbol) -> Option<QualifiedNam
         return None;
     }
 
-    Some(QualifiedName::from(parts.join(".")))
+    let short_name = parts.join(".");
+    if prefixes.is_empty() && suffixes.is_empty() {
+        return Some(QualifiedName::from(short_name));
+    }
+
+    // Prefixes are ordered outermost first; suffixes are ordered innermost
+    // first. Build the result once rather than copying a growing name at each
+    // wrapper level.
+    let mut combined = String::new();
+    for prefix in prefixes {
+        combined.push_str(&prefix.display());
+    }
+    combined.push_str(&short_name);
+    for suffix in suffixes.into_iter().rev() {
+        combined.push(' ');
+        combined.push_str(suffix);
+    }
+    Some(QualifiedName::from(combined))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use swift_demangler::Context;
+
+    #[test]
+    fn deeply_nested_specializations_keep_the_function_name() {
+        let mangled = format!("$s4main5helloSSyYaKF{}", "yTg5".repeat(5_000));
+        let ctx = Context::new();
+        let symbol = Symbol::parse(&ctx, &mangled).expect("Swift symbol");
+        let short = build_short_name(&symbol)
+            .expect("function name")
+            .to_string();
+
+        assert!(short.starts_with("generic specialization <> of "));
+        assert!(short.ends_with("main.hello()"));
+    }
 }

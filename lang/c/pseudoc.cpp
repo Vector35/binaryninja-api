@@ -238,7 +238,8 @@ Ref<Type> PseudoCFunction::GetCExpressionType(const HighLevelILInstruction& inst
 
 
 void PseudoCFunction::AppendTypedExpr(const HighLevelILInstruction& instr, Type* expectedType,
-	HighLevelILTokenEmitter& tokens, DisassemblySettings* settings, BNOperatorPrecedence precedence)
+	HighLevelILTokenEmitter& tokens, DisassemblySettings* settings, BNOperatorPrecedence precedence,
+	std::optional<bool> signedHint)
 {
 	auto sourceType = GetCExpressionType(instr);
 	Ref<Type> targetType = expectedType;
@@ -252,7 +253,7 @@ void PseudoCFunction::AppendTypedExpr(const HighLevelILInstruction& instr, Type*
 		|| !((sourceType->GetClass() == FloatTypeClass && targetType->GetClass() == IntegerTypeClass)
 			|| (sourceType->GetClass() == IntegerTypeClass && targetType->GetClass() == FloatTypeClass)))
 	{
-		GetExprTextInternal(instr, tokens, settings, precedence);
+		GetExprTextInternal(instr, tokens, settings, precedence, false, signedHint);
 		return;
 	}
 
@@ -316,16 +317,22 @@ void PseudoCFunction::AppendComparison(const string& comparison, const HighLevel
 {
 	const auto leftExpr = instr.GetLeftExpr();
 	const auto rightExpr = instr.GetRightExpr();
+	const bool floating = instr.operation == HLIL_FCMP_E || instr.operation == HLIL_FCMP_NE
+		|| instr.operation == HLIL_FCMP_LT || instr.operation == HLIL_FCMP_LE
+		|| instr.operation == HLIL_FCMP_GT || instr.operation == HLIL_FCMP_GE;
+	Ref<Type> operandType;
+	if (instr.size)
+		operandType = floating ? Type::FloatType(instr.size) : Type::IntegerType(instr.size, signedHint.value_or(false));
 
 	if (leftExpr.operation == HLIL_SPLIT)
 		AppendDefaultSplitExpr(leftExpr, emitter, settings, precedence);
 	else
-		GetExprTextInternal(leftExpr, emitter, settings, precedence, false, signedHint);
+		AppendTypedExpr(leftExpr, operandType, emitter, settings, precedence, signedHint);
 	emitter.Append(OperationToken, comparison);
 	if (rightExpr.operation == HLIL_SPLIT)
 		AppendDefaultSplitExpr(rightExpr, emitter, settings, precedence);
 	else
-		GetExprTextInternal(rightExpr, emitter, settings, precedence, false, signedHint);
+		AppendTypedExpr(rightExpr, operandType, emitter, settings, precedence, signedHint);
 }
 
 
@@ -336,6 +343,14 @@ void PseudoCFunction::AppendTwoOperand(const string& operand, const HighLevelILI
 	const auto& twoOperand = instr.AsTwoOperand();
 	const auto leftExpr = twoOperand.GetLeftExpr();
 	const auto rightExpr = twoOperand.GetRightExpr();
+	// An operation consumes integer bits or floating values even when a folded
+	// call returns the other C type. Preserve that interpretation on both sides.
+	const bool floating = instr.operation == HLIL_FADD || instr.operation == HLIL_FSUB
+		|| instr.operation == HLIL_FMUL || instr.operation == HLIL_FDIV;
+	Ref<Type> operandType;
+	if (instr.size)
+		operandType = floating ? Type::FloatType(instr.size)
+			: Type::IntegerType(instr.size, signedHint.value_or(instr.operation == HLIL_ASR));
 	BNOperatorPrecedence leftPrecedence = precedence;
 	switch (precedence)
 	{
@@ -374,7 +389,7 @@ void PseudoCFunction::AppendTwoOperand(const string& operand, const HighLevelILI
 		}
 	}
 
-	GetExprTextInternal(leftExpr, emitter, settings, leftPrecedence, false, signedHint);
+	AppendTypedExpr(leftExpr, operandType, emitter, settings, leftPrecedence, signedHint);
 
 	auto lessThanZero = [](uint64_t value, uint64_t width) -> bool {
 		return ((uint64_t(1) << ((width * 8) - uint64_t(1))) & value) != 0;
@@ -400,7 +415,7 @@ void PseudoCFunction::AppendTwoOperand(const string& operand, const HighLevelILI
 	}
 
 	emitter.Append(OperationToken, operand);
-	GetExprTextInternal(rightExpr, emitter, settings, precedence, false, signedHint);
+	AppendTypedExpr(rightExpr, operandType, emitter, settings, precedence, signedHint);
 }
 
 
@@ -1279,7 +1294,13 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 				AppendSizeToken(sourceType->GetWidth(), isSigned, tokens);
 				tokens.AppendCloseParen();
 			}
-			GetExprTextInternal(srcExpr, tokens, settings, UnaryOperatorPrecedence, false, isSigned);
+			if (sourceType && sourceType->IsNamedTypeRefer())
+				sourceType = sourceType->DerefNamedTypeReference(GetFunction()->GetView());
+			if (sourceType && sourceType->GetClass() == FloatTypeClass && sourceType->GetWidth() < instr.size)
+				AppendTypedExpr(srcExpr, Type::IntegerType(sourceType->GetWidth(), isSigned), tokens, settings,
+					UnaryOperatorPrecedence, isSigned);
+			else
+				GetExprTextInternal(srcExpr, tokens, settings, UnaryOperatorPrecedence, false, isSigned);
 			if (parens)
 				tokens.AppendCloseParen();
 			if (statement)
@@ -2012,7 +2033,8 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 				if (parens)
 					tokens.AppendOpenParen();
 				tokens.Append(OperationToken, "!");
-				GetExprTextInternal(instr.GetLeftExpr<HLIL_CMP_E>(), tokens, settings, UnaryOperatorPrecedence);
+				AppendTypedExpr(instr.GetLeftExpr<HLIL_CMP_E>(), Type::IntegerType(instr.size, false),
+					tokens, settings, UnaryOperatorPrecedence);
 				if (parens)
 					tokens.AppendCloseParen();
 			}
@@ -2049,7 +2071,8 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 					|| instr.GetRightExpr<HLIL_CMP_NE>().operation == HLIL_CONST_PTR)
 				&& instr.GetRightExpr<HLIL_CMP_NE>().GetConstant() == 0)
 			{
-				GetExprTextInternal(instr.GetLeftExpr<HLIL_CMP_NE>(), tokens, settings, precedence);
+				AppendTypedExpr(instr.GetLeftExpr<HLIL_CMP_NE>(), Type::IntegerType(instr.size, false),
+					tokens, settings, precedence);
 			}
 			else
 			{
@@ -3129,7 +3152,14 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 			tokens.AppendOpenParen();
 			AppendSizeToken(instr.size, signedHint.value_or(true), tokens);
 			tokens.AppendCloseParen();
-			GetExprTextInternal(srcExpr, tokens, settings, UnaryOperatorPrecedence);
+			auto sourceType = GetCExpressionType(srcExpr);
+			if (sourceType && sourceType->IsNamedTypeRefer())
+				sourceType = sourceType->DerefNamedTypeReference(GetFunction()->GetView());
+			if (sourceType && sourceType->GetClass() == FloatTypeClass)
+				AppendTypedExpr(srcExpr, Type::IntegerType(sourceType->GetWidth(), false), tokens, settings,
+					UnaryOperatorPrecedence);
+			else
+				GetExprTextInternal(srcExpr, tokens, settings, UnaryOperatorPrecedence);
 			if (parens)
 				tokens.AppendCloseParen();
 			if (statement)

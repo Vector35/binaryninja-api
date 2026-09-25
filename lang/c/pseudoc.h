@@ -43,7 +43,7 @@ class PseudoCFunction: public BinaryNinja::LanguageRepresentationFunction
 	BinaryNinja::Ref<BinaryNinja::Type> GetCExpressionType(const BinaryNinja::HighLevelILInstruction& instr);
 	void AppendTypedExpr(const BinaryNinja::HighLevelILInstruction& instr, BinaryNinja::Type* expectedType,
 		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
-		BNOperatorPrecedence precedence = TopLevelOperatorPrecedence);
+		BNOperatorPrecedence precedence = TopLevelOperatorPrecedence, std::optional<bool> signedHint = std::nullopt);
 	void AppendSingleSizeToken(size_t size, BNInstructionTextTokenType type, BinaryNinja::HighLevelILTokenEmitter& emitter);
 	void AppendComparison(const std::string& comparison, const BinaryNinja::HighLevelILInstruction& instr,
 		BinaryNinja::HighLevelILTokenEmitter& emitter, BinaryNinja::DisassemblySettings* settings,

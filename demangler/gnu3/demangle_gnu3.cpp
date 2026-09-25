@@ -1731,6 +1731,7 @@ DemangledTypeNode DemangleGNU3::DemangleUnresolvedType()
 
 string DemangleGNU3::DemangleExpression(DemangledTypeNode* outNode)
 {
+	NestingGuard nestingGuard(m_nestingDepth);
 	LogWithIndentation("%s: '%s'\n", __FUNCTION__, m_reader.GetRaw());
 	/*
 	<expression> ::= <unary operator-name> <expression>

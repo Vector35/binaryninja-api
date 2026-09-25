@@ -172,6 +172,10 @@ public:
 	void Reset(BN::Platform& platform, _STD_STRING mangledName);
 	DemangledTypeNode DemangleSymbol(
 		StringList& varName, bool simplifyTemplates = false, bool recoverImplicitThis = true);
+	[[nodiscard]] std::string_view RemainingInput() const
+	{
+		return std::string_view(m_reader.GetRaw(), m_reader.Length());
+	}
 };
 
 

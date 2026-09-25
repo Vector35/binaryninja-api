@@ -1,3 +1,4 @@
+use crate::collaboration::RemoteFile;
 use crate::project::{systime_from_bntime, Project, ProjectFolder};
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnString, IntoCStr};
@@ -7,8 +8,8 @@ use binaryninjacore_sys::{
     BNProjectFileGetCreationTimestamp, BNProjectFileGetDependencies, BNProjectFileGetDescription,
     BNProjectFileGetFolder, BNProjectFileGetId, BNProjectFileGetName,
     BNProjectFileGetPathInProject, BNProjectFileGetPathOnDisk, BNProjectFileGetProject,
-    BNProjectFileGetRequiredBy, BNProjectFileRemoveDependency, BNProjectFileSetDescription,
-    BNProjectFileSetFolder, BNProjectFileSetName,
+    BNProjectFileGetRemoteFile, BNProjectFileGetRequiredBy, BNProjectFileRemoveDependency,
+    BNProjectFileSetDescription, BNProjectFileSetFolder, BNProjectFileSetName,
 };
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -37,6 +38,12 @@ impl ProjectFile {
                 NonNull::new(BNProjectFileGetProject(self.handle.as_ptr())).unwrap(),
             )
         }
+    }
+
+    /// Get the remote file associated with this project file, if any.
+    pub fn remote_file(&self) -> Option<Ref<RemoteFile>> {
+        let result = unsafe { BNProjectFileGetRemoteFile(self.handle.as_ptr()) };
+        NonNull::new(result).map(|handle| unsafe { RemoteFile::ref_from_raw(handle) })
     }
 
     /// Get the path on disk to this file's contents

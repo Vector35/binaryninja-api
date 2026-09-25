@@ -24,6 +24,15 @@ fn temp_project_scope<T: Fn(&RemoteProject)>(remote: &Remote, project_name: &str
         .expect("Failed to create project");
     project.open().expect("Failed to open project");
     assert!(project.is_open(), "Project was not opened");
+    assert_eq!(
+        project
+            .core_project()
+            .expect("Failed to get core project")
+            .remote_project()
+            .expect("Core project is missing its remote project")
+            .id(),
+        project.id()
+    );
     // Clear out all the possible entries. This is to insure a clean slate.
     let files = project.files().expect("Failed to list files in project");
     for file in &files {
@@ -108,6 +117,15 @@ fn test_project_creation() {
             .expect("Failed to create file in project");
         let created_file_id = created_file.id();
         assert_eq!(created_file.created_by(), remote.username());
+        assert_eq!(
+            created_file
+                .core_file()
+                .expect("Failed to get core file")
+                .remote_file()
+                .expect("Core file is missing its remote file")
+                .id(),
+            created_file_id
+        );
         project
             .delete_file(&created_file)
             .expect("Failed to delete file");
@@ -125,6 +143,15 @@ fn test_project_creation() {
         let created_folder_id = created_folder.id();
         assert_eq!(created_folder.name().as_str(), "test_folder");
         assert_eq!(created_folder.description().as_str(), "test_folder_desc");
+        assert_eq!(
+            created_folder
+                .core_folder()
+                .expect("Failed to get core folder")
+                .remote_folder()
+                .expect("Core folder is missing its remote folder")
+                .id(),
+            created_folder_id
+        );
 
         // Create a file in said folder and verify it exists in it.
         let created_folder_file = project

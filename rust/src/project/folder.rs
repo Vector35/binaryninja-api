@@ -1,3 +1,4 @@
+use crate::collaboration::RemoteFolder;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::file::ProjectFile;
 use crate::project::Project;
@@ -7,8 +8,8 @@ use binaryninjacore_sys::{
     BNFreeProjectFolder, BNFreeProjectFolderList, BNNewProjectFolderReference, BNProjectFolder,
     BNProjectFolderExport, BNProjectFolderGetDescription, BNProjectFolderGetFiles,
     BNProjectFolderGetId, BNProjectFolderGetName, BNProjectFolderGetParent,
-    BNProjectFolderGetProject, BNProjectFolderSetDescription, BNProjectFolderSetName,
-    BNProjectFolderSetParent,
+    BNProjectFolderGetProject, BNProjectFolderGetRemoteFolder, BNProjectFolderSetDescription,
+    BNProjectFolderSetName, BNProjectFolderSetParent,
 };
 use std::ffi::c_void;
 use std::fmt::Debug;
@@ -36,6 +37,12 @@ impl ProjectFolder {
                 NonNull::new(BNProjectFolderGetProject(self.handle.as_ptr())).unwrap(),
             )
         }
+    }
+
+    /// Get the remote folder associated with this project folder, if any.
+    pub fn remote_folder(&self) -> Option<Ref<RemoteFolder>> {
+        let result = unsafe { BNProjectFolderGetRemoteFolder(self.handle.as_ptr()) };
+        NonNull::new(result).map(|handle| unsafe { RemoteFolder::ref_from_raw(handle) })
     }
 
     /// Get the unique id of this folder

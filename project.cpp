@@ -729,6 +729,15 @@ std::vector<Ref<ProjectFile>> ProjectFile::GetRequiredBy() const
 }
 
 
+Ref<Collaboration::RemoteFile> ProjectFile::GetRemoteFile() const
+{
+	BNRemoteFile* file = BNProjectFileGetRemoteFile(m_object);
+	if (!file)
+		return nullptr;
+	return new Collaboration::RemoteFile(file);
+}
+
+
 ProjectFolder::ProjectFolder(BNProjectFolder* folder)
 {
 	m_object = folder;
@@ -818,4 +827,13 @@ std::vector<Ref<ProjectFile>> ProjectFolder::GetFiles() const
 	}
 	BNFreeProjectFileList(files, count);
 	return out;
+}
+
+
+Ref<Collaboration::RemoteFolder> ProjectFolder::GetRemoteFolder() const
+{
+	BNRemoteFolder* folder = BNProjectFolderGetRemoteFolder(m_object);
+	if (!folder)
+		return nullptr;
+	return new Collaboration::RemoteFolder(folder);
 }

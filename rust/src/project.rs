@@ -9,6 +9,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use binaryninjacore_sys::*;
 
+use crate::collaboration::RemoteProject;
 use crate::metadata::Metadata;
 use crate::progress::{NoProgressCallback, ProgressCallback};
 use crate::project::file::ProjectFile;
@@ -86,6 +87,12 @@ impl Project {
     /// Get the unique id of this project
     pub fn id(&self) -> String {
         unsafe { BnString::into_string(BNProjectGetId(self.handle.as_ptr())) }
+    }
+
+    /// Get the remote project associated with this project, if any.
+    pub fn remote_project(&self) -> Option<Ref<RemoteProject>> {
+        let result = unsafe { BNProjectGetRemoteProject(self.handle.as_ptr()) };
+        NonNull::new(result).map(|handle| unsafe { RemoteProject::ref_from_raw(handle) })
     }
 
     /// Get the path on disk for the project

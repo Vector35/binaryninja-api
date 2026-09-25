@@ -205,6 +205,13 @@ namespace BinaryNinja {
 		void ReleaseForCallback() { ReleaseInternal(); }
 	};
 
+	namespace Collaboration
+	{
+		class RemoteProject;
+		class RemoteFile;
+		class RemoteFolder;
+	}
+
 	/*!
 		\ingroup refcount
 	*/
@@ -3576,6 +3583,7 @@ namespace BinaryNinja {
 		bool SetParent(Ref<ProjectFolder> parent);
 		bool Export(const std::string& destination, const ProgressFunction& progressCallback = {}) const;
 		std::vector<Ref<ProjectFile>> GetFiles() const;
+		Ref<Collaboration::RemoteFolder> GetRemoteFolder() const;
 	};
 
 	/*!
@@ -3604,13 +3612,9 @@ namespace BinaryNinja {
 		bool RemoveDependency(Ref<ProjectFile> file);
 		std::vector<Ref<ProjectFile>> GetDependencies() const;
 		std::vector<Ref<ProjectFile>> GetRequiredBy() const;
+		Ref<Collaboration::RemoteFile> GetRemoteFile() const;
 	};
 
-
-	namespace Collaboration
-	{
-		class RemoteProject;
-	}
 	/*!
 
 		\ingroup project

@@ -97,6 +97,20 @@ class ProjectFile:
 		return Project(handle=proj_handle)
 
 	@property
+	def remote_file(self) -> Optional['collaboration.RemoteFile']:
+		"""
+		Get the remote file associated with this project file, if any.
+
+		:return: Associated remote file, or None
+		"""
+		from .collaboration.file import RemoteFile
+
+		remote_handle = core.BNProjectFileGetRemoteFile(self._handle)
+		if remote_handle is None:
+			return None
+		return RemoteFile(handle=remote_handle)
+
+	@property
 	def path_on_disk(self) -> str:
 		"""
 		Get the path on disk to this file's contents
@@ -307,6 +321,20 @@ class ProjectFolder:
 		return Project(handle=proj_handle)
 
 	@property
+	def remote_folder(self) -> Optional['collaboration.RemoteFolder']:
+		"""
+		Get the remote folder associated with this project folder, if any.
+
+		:return: Associated remote folder, or None
+		"""
+		from .collaboration.folder import RemoteFolder
+
+		remote_handle = core.BNProjectFolderGetRemoteFolder(self._handle)
+		if remote_handle is None:
+			return None
+		return RemoteFolder(handle=remote_handle)
+
+	@property
 	def id(self) -> str:
 		"""
 		Get the unique id of this folder
@@ -488,6 +516,20 @@ class Project:
 		:return: True if the project is currently open, False otherwise
 		"""
 		return core.BNProjectIsOpen(self._handle)
+
+	@property
+	def remote_project(self) -> Optional['collaboration.RemoteProject']:
+		"""
+		Get the remote project associated with this project, if any.
+
+		:return: Associated remote project, or None
+		"""
+		from .collaboration.project import RemoteProject
+
+		remote_handle = core.BNProjectGetRemoteProject(self._handle)
+		if remote_handle is None:
+			return None
+		return RemoteProject(handle=remote_handle)
 
 	@property
 	def path(self) -> str:

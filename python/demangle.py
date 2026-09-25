@@ -443,10 +443,10 @@ class Demangler(metaclass=_DemanglerMetaclass):
 
 	name = None
 	_registered_demanglers = []
-	_cached_name = None
 
 	def __init__(self, handle=None):
 		self._uses_legacy_demangle_signature = False
+		self._pending_results: dict[int, core.BNDemanglerResult] = {}
 		if handle is not None:
 			self.handle = core.handle_of_type(handle, core.BNDemangler)
 			self.__dict__["name"] = core.BNGetDemanglerName(handle)
@@ -548,13 +548,18 @@ class Demangler(metaclass=_DemanglerMetaclass):
 			if not isinstance(var_name, types.QualifiedName):
 				var_name = types.QualifiedName(var_name)
 
-			Demangler._cached_name = core.BNDemanglerResult()
-			Demangler._cached_name.name = var_name._to_core_struct()
-			if type is not None:
-				Demangler._cached_name.type = core.BNNewTypeReference(type.handle)
-			else:
-				Demangler._cached_name.type = None
-			result[0] = Demangler._cached_name
+			cached_result = core.BNDemanglerResult()
+			cached_result.name = var_name._to_core_struct()
+			try:
+				if type is not None:
+					cached_result.type = core.BNNewTypeReference(type.handle)
+				result[0] = cached_result
+				self._pending_results[ctypes.addressof(result.contents)] = cached_result
+			except Exception:
+				if cached_result.type:
+					core.BNFreeType(cached_result.type)
+				result[0] = core.BNDemanglerResult()
+				raise
 			return True
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in Demangler._demangle")
@@ -562,9 +567,10 @@ class Demangler(metaclass=_DemanglerMetaclass):
 
 	def _free_result(self, ctxt, result):
 		try:
-			if result is not None and result.contents.type:
-				core.BNFreeType(result.contents.type)
-			Demangler._cached_name = None
+			if result is not None:
+				cached_result = self._pending_results.pop(ctypes.addressof(result.contents), None)
+				if result.contents.type:
+					core.BNFreeType(result.contents.type)
 		except Exception:
 			log_error_for_exception("Unhandled Python exception in Demangler._free_result")
 

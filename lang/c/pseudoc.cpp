@@ -202,6 +202,19 @@ Ref<Type> PseudoCFunction::GetCExpressionType(const HighLevelILInstruction& inst
 	{
 	case HLIL_VAR:
 		return GetFunction()->GetVariableType(instr.GetVariable<HLIL_VAR>()).GetValue();
+	case HLIL_STRUCT_FIELD:
+	{
+		const auto source = instr.GetSourceExpr<HLIL_STRUCT_FIELD>();
+		auto type = GetCExpressionType(source);
+		if (type && type->IsNamedTypeRefer())
+			type = type->DerefNamedTypeReference(GetFunction()->GetView());
+		// AppendFieldTextTokens prints a low scalar integer field as an explicit
+		// narrowing cast. Its C type is the field width, not the whole variable.
+		if (source.operation == HLIL_VAR && instr.GetOffset<HLIL_STRUCT_FIELD>() == 0
+			&& instr.size < source.size && type && type->GetClass() == IntegerTypeClass)
+			return Type::IntegerType(instr.size, false);
+		return nullptr;
+	}
 	case HLIL_CONST:
 	case HLIL_LOW_PART:
 	case HLIL_ZX:
@@ -255,6 +268,30 @@ void PseudoCFunction::AppendTypedExpr(const HighLevelILInstruction& instr, Type*
 	{
 		GetExprTextInternal(instr, tokens, settings, precedence, false, signedHint);
 		return;
+	}
+
+	if (targetType->GetClass() == FloatTypeClass)
+	{
+		bool isZero = instr.operation == HLIL_CONST && instr.GetConstant<HLIL_CONST>() == 0;
+		if (instr.operation == HLIL_LOW_PART)
+		{
+			const auto source = instr.GetSourceExpr<HLIL_LOW_PART>();
+			if (source.operation == HLIL_CONST_DATA)
+			{
+				const auto data = source.GetConstantData<HLIL_CONST_DATA>();
+				isZero = (data.state == ConstantDataZeroExtendValue || data.state == ConstantDataSignExtendValue)
+					&& data.value == 0;
+			}
+		}
+		if (isZero)
+		{
+			// An all-zero representation is positive floating zero. Avoid exposing
+			// the SIMD buffer initializer as BIT_CAST(double, (int64_t){0}).
+			auto exprGuard = tokens.SetCurrentExpr(instr);
+			tokens.Append(FloatingPointToken, InstructionAddressTokenContext,
+				instr.size == 4 ? "0.0f" : "0.0", instr.address);
+			return;
+		}
 	}
 
 	// IL copies preserve the representation. An implicit C conversion between
@@ -3270,9 +3307,10 @@ void PseudoCFunction::GetExpr_CALL_OR_TAILCALL(const BinaryNinja::HighLevelILIns
 
 	vector<FunctionParameter> namedParams;
 	Ref<Type> functionType = destExpr.GetType().GetValue();
-	if (functionType && (functionType->GetClass() == PointerTypeClass)
-		&& (functionType->GetChildType()->GetClass() == FunctionTypeClass))
-		namedParams = functionType->GetChildType()->GetParameters();
+	if (functionType && functionType->GetClass() == PointerTypeClass)
+		functionType = functionType->GetChildType().GetValue();
+	if (functionType && functionType->GetClass() == FunctionTypeClass)
+		namedParams = functionType->GetParameters();
 
 	GetExprTextInternal(destExpr, tokens, settings, MemberAndFunctionOperatorPrecedence);
 	tokens.AppendOpenParen();
@@ -3305,7 +3343,14 @@ void PseudoCFunction::GetExpr_CALL_OR_TAILCALL(const BinaryNinja::HighLevelILIns
 		}
 
 		if (!renderedAsString)
-			GetExprText(parameterExpr, tokens, settings);
+		{
+			// HLIL arguments carry bits. Preserve their representation when a
+			// declared parameter would otherwise introduce a numeric C conversion.
+			if (index < namedParams.size() && namedParams[index].type.GetConfidence())
+				AppendTypedExpr(parameterExpr, namedParams[index].type.GetValue(), tokens, settings);
+			else
+				GetExprText(parameterExpr, tokens, settings);
+		}
 	}
 	tokens.AppendCloseParen();
 	if (statement)

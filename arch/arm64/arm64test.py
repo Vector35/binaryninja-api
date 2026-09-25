@@ -6084,49 +6084,49 @@ tests_fmov = [
     # fmov x7, v8.d[1]
     (b'\x07\x01\xAE\x9E', 'LLIL_SET_REG.q(x7,LLIL_REG.q(v8.d[1]))'),
     # fmov d19, x0
-    (b'\x13\x00\x67\x9E', 'LLIL_SET_REG.q(d19,LLIL_INT_TO_FLOAT.q(LLIL_REG.q(x0)))'),
+    (b'\x13\x00\x67\x9E', 'LLIL_SET_REG.q(temp0,LLIL_REG.q(x0)); LLIL_SET_REG.o(v19,LLIL_CONST.o(0x0)); LLIL_SET_REG.q(d19,LLIL_REG.q(temp0))'),
     # fmov d8, x21
-    (b'\xA8\x02\x67\x9E', 'LLIL_SET_REG.q(d8,LLIL_INT_TO_FLOAT.q(LLIL_REG.q(x21)))'),
+    (b'\xA8\x02\x67\x9E', 'LLIL_SET_REG.q(temp0,LLIL_REG.q(x21)); LLIL_SET_REG.o(v8,LLIL_CONST.o(0x0)); LLIL_SET_REG.q(d8,LLIL_REG.q(temp0))'),
     # fmov d24, d27
-    (b'\x78\x43\x60\x1E', 'LLIL_SET_REG.q(d24,LLIL_REG.q(d27))'),
+    (b'\x78\x43\x60\x1E', 'LLIL_SET_REG.q(temp0,LLIL_REG.q(d27)); LLIL_SET_REG.o(v24,LLIL_CONST.o(0x0)); LLIL_SET_REG.q(d24,LLIL_REG.q(temp0))'),
     # fmov d19, d19
-    (b'\x73\x42\x60\x1E', 'LLIL_SET_REG.q(d19,LLIL_REG.q(d19))'),
+    (b'\x73\x42\x60\x1E', 'LLIL_SET_REG.q(temp0,LLIL_REG.q(d19)); LLIL_SET_REG.o(v19,LLIL_CONST.o(0x0)); LLIL_SET_REG.q(d19,LLIL_REG.q(temp0))'),
     # TODO fmov d17, #-1.9375
-    (b'\x11\xF0\x7F\x1E', 'LLIL_SET_REG.q(d17,LLIL_FLOAT_CONV.q(LLIL_FLOAT_CONST.q(-1.9375)))'),
+    (b'\x11\xF0\x7F\x1E', 'LLIL_SET_REG.q(temp0,LLIL_FLOAT_CONV.q(LLIL_FLOAT_CONST.q(-1.9375))); LLIL_SET_REG.o(v17,LLIL_CONST.o(0x0)); LLIL_SET_REG.q(d17,LLIL_REG.q(temp0))'),
     # TODO fmov d19, #-3.125
-    (b'\x13\x30\x71\x1E', 'LLIL_SET_REG.q(d19,LLIL_FLOAT_CONV.q(LLIL_FLOAT_CONST.q(-3.125)))'),
+    (b'\x13\x30\x71\x1E', 'LLIL_SET_REG.q(temp0,LLIL_FLOAT_CONV.q(LLIL_FLOAT_CONST.q(-3.125))); LLIL_SET_REG.o(v19,LLIL_CONST.o(0x0)); LLIL_SET_REG.q(d19,LLIL_REG.q(temp0))'),
     # fmov h28, w19
-    (b'\x7C\x02\xE7\x1E', 'LLIL_SET_REG.w(h28,LLIL_INT_TO_FLOAT.w(LLIL_REG.d(w19)))'),
+    (b'\x7C\x02\xE7\x1E', 'LLIL_SET_REG.w(temp0,LLIL_LOW_PART.w(LLIL_REG.d(w19))); LLIL_SET_REG.o(v28,LLIL_CONST.o(0x0)); LLIL_SET_REG.w(h28,LLIL_REG.w(temp0))'),
     # fmov h2, w5
-    (b'\xA2\x00\xE7\x1E', 'LLIL_SET_REG.w(h2,LLIL_INT_TO_FLOAT.w(LLIL_REG.d(w5)))'),
+    (b'\xA2\x00\xE7\x1E', 'LLIL_SET_REG.w(temp0,LLIL_LOW_PART.w(LLIL_REG.d(w5))); LLIL_SET_REG.o(v2,LLIL_CONST.o(0x0)); LLIL_SET_REG.w(h2,LLIL_REG.w(temp0))'),
     # fmov h10, x14
-    (b'\xCA\x01\xE7\x9E', 'LLIL_SET_REG.w(h10,LLIL_INT_TO_FLOAT.w(LLIL_REG.q(x14)))'),
+    (b'\xCA\x01\xE7\x9E', 'LLIL_SET_REG.w(temp0,LLIL_LOW_PART.w(LLIL_REG.q(x14))); LLIL_SET_REG.o(v10,LLIL_CONST.o(0x0)); LLIL_SET_REG.w(h10,LLIL_REG.w(temp0))'),
     # fmov h9, x29
-    (b'\xA9\x03\xE7\x9E', 'LLIL_SET_REG.w(h9,LLIL_INT_TO_FLOAT.w(LLIL_REG.q(fp)))'),
+    (b'\xA9\x03\xE7\x9E', 'LLIL_SET_REG.w(temp0,LLIL_LOW_PART.w(LLIL_REG.q(fp))); LLIL_SET_REG.o(v9,LLIL_CONST.o(0x0)); LLIL_SET_REG.w(h9,LLIL_REG.w(temp0))'),
     # fmov h6, h23
-    (b'\xE6\x42\xE0\x1E', 'LLIL_SET_REG.w(h6,LLIL_REG.w(h23))'),
+    (b'\xE6\x42\xE0\x1E', 'LLIL_SET_REG.w(temp0,LLIL_REG.w(h23)); LLIL_SET_REG.o(v6,LLIL_CONST.o(0x0)); LLIL_SET_REG.w(h6,LLIL_REG.w(temp0))'),
     # fmov h6, h28
-    (b'\x86\x43\xE0\x1E', 'LLIL_SET_REG.w(h6,LLIL_REG.w(h28))'),
+    (b'\x86\x43\xE0\x1E', 'LLIL_SET_REG.w(temp0,LLIL_REG.w(h28)); LLIL_SET_REG.o(v6,LLIL_CONST.o(0x0)); LLIL_SET_REG.w(h6,LLIL_REG.w(temp0))'),
     # fmov h23, #-5.25
-    (b'\x17\xB0\xF2\x1E', 'LLIL_SET_REG.w(h23,LLIL_FLOAT_CONV.w(LLIL_FLOAT_CONST.d(-5.25)))'),
+    (b'\x17\xB0\xF2\x1E', 'LLIL_SET_REG.w(temp0,LLIL_FLOAT_CONV.w(LLIL_FLOAT_CONST.d(-5.25))); LLIL_SET_REG.o(v23,LLIL_CONST.o(0x0)); LLIL_SET_REG.w(h23,LLIL_REG.w(temp0))'),
     # fmov h25, #11.0
-    (b'\x19\xD0\xE4\x1E', 'LLIL_SET_REG.w(h25,LLIL_FLOAT_CONV.w(LLIL_FLOAT_CONST.d(11.0)))'),
+    (b'\x19\xD0\xE4\x1E', 'LLIL_SET_REG.w(temp0,LLIL_FLOAT_CONV.w(LLIL_FLOAT_CONST.d(11.0))); LLIL_SET_REG.o(v25,LLIL_CONST.o(0x0)); LLIL_SET_REG.w(h25,LLIL_REG.w(temp0))'),
     # fmov s17, w2
-    (b'\x51\x00\x27\x1E', 'LLIL_SET_REG.d(s17,LLIL_INT_TO_FLOAT.d(LLIL_REG.d(w2)))'),
+    (b'\x51\x00\x27\x1E', 'LLIL_SET_REG.d(temp0,LLIL_REG.d(w2)); LLIL_SET_REG.o(v17,LLIL_CONST.o(0x0)); LLIL_SET_REG.d(s17,LLIL_REG.d(temp0))'),
     # fmov s1, wzr
-    (b'\xE1\x03\x27\x1E', 'LLIL_SET_REG.d(s1,LLIL_INT_TO_FLOAT.d(LLIL_CONST.d(0x0)))'),
+    (b'\xE1\x03\x27\x1E', 'LLIL_SET_REG.d(temp0,LLIL_CONST.d(0x0)); LLIL_SET_REG.o(v1,LLIL_CONST.o(0x0)); LLIL_SET_REG.d(s1,LLIL_REG.d(temp0))'),
     # fmov s4, s11
-    (b'\x64\x41\x20\x1E', 'LLIL_SET_REG.d(s4,LLIL_REG.d(s11))'),
+    (b'\x64\x41\x20\x1E', 'LLIL_SET_REG.d(temp0,LLIL_REG.d(s11)); LLIL_SET_REG.o(v4,LLIL_CONST.o(0x0)); LLIL_SET_REG.d(s4,LLIL_REG.d(temp0))'),
     # fmov s23, s2
-    (b'\x57\x40\x20\x1E', 'LLIL_SET_REG.d(s23,LLIL_REG.d(s2))'),
+    (b'\x57\x40\x20\x1E', 'LLIL_SET_REG.d(temp0,LLIL_REG.d(s2)); LLIL_SET_REG.o(v23,LLIL_CONST.o(0x0)); LLIL_SET_REG.d(s23,LLIL_REG.d(temp0))'),
     # fmov s17, #-1.5
-    (b'\x11\x10\x3F\x1E', 'LLIL_SET_REG.d(s17,LLIL_FLOAT_CONV.d(LLIL_FLOAT_CONST.d(-1.5)))'),
+    (b'\x11\x10\x3F\x1E', 'LLIL_SET_REG.d(temp0,LLIL_FLOAT_CONV.d(LLIL_FLOAT_CONST.d(-1.5))); LLIL_SET_REG.o(v17,LLIL_CONST.o(0x0)); LLIL_SET_REG.d(s17,LLIL_REG.d(temp0))'),
     # fmov s14, #21.0
-    (b'\x0E\xB0\x26\x1E', 'LLIL_SET_REG.d(s14,LLIL_FLOAT_CONV.d(LLIL_FLOAT_CONST.d(21.0)))'),
+    (b'\x0E\xB0\x26\x1E', 'LLIL_SET_REG.d(temp0,LLIL_FLOAT_CONV.d(LLIL_FLOAT_CONST.d(21.0))); LLIL_SET_REG.o(v14,LLIL_CONST.o(0x0)); LLIL_SET_REG.d(s14,LLIL_REG.d(temp0))'),
     # fmov v14.d[1], x26
-    (b'\x4E\x03\xAF\x9E', 'LLIL_SET_REG.q(v14.d[1],LLIL_REG.o(x26))'),
+    (b'\x4E\x03\xAF\x9E', 'LLIL_SET_REG.q(v14.d[1],LLIL_REG.q(x26))'),
     # fmov v28.d[1], x14
-    (b'\xDC\x01\xAF\x9E', 'LLIL_SET_REG.q(v28.d[1],LLIL_REG.o(x14))'),
+    (b'\xDC\x01\xAF\x9E', 'LLIL_SET_REG.q(v28.d[1],LLIL_REG.q(x14))'),
     # TODO fmov v13.2d, #-3.0 (.d in arm namespace is 64-bit, .q in binja namespce is 64-bit)
     (b'\x0D\xF5\x04\x6F', 'LLIL_SET_REG.q(v13.d[0],LLIL_FLOAT_CONV.q(LLIL_FLOAT_CONST.q(-3.0)));' + \
                          ' LLIL_SET_REG.q(v13.d[1],LLIL_FLOAT_CONV.q(LLIL_FLOAT_CONST.q(-3.0)))'),
@@ -13294,6 +13294,26 @@ def _scalar_register_state(data, initial):
 
 # The scalar forms copy representations and clear unused SIMD bits. The lane
 # forms preserve the other lane. FPCR.NEP=0 is the modeled scalar FP mode.
+fmov_register_cases = [
+    (f'fmov {dest}0, {source}0', 'from-gpr', size)
+    for dest, source, size in [('h', 'w', 2), ('h', 'x', 2), ('s', 'w', 4), ('d', 'x', 8)]
+] + [
+    (f'fmov {dest}0, {source}zr', 'zero', size)
+    for dest, source, size in [('h', 'w', 2), ('h', 'x', 2), ('s', 'w', 4), ('d', 'x', 8)]
+] + [
+    (f'fmov {reg}0, {reg}{index}', 'scalar', size)
+    for reg, size in [('h', 2), ('s', 4), ('d', 8)] for index in [0, 1]
+] + [
+    (f'fmov {dest}0, {source}1', 'to-gpr', size)
+    for dest, source, size in [('w', 'h', 2), ('x', 'h', 2), ('w', 's', 4), ('x', 'd', 8)]
+] + [
+    (f'fmov {reg}0, #{value}', 'immediate', size)
+    for reg, size in [('h', 2), ('s', 4), ('d', 8)] for value in ['-1.5', '21.0']
+] + [
+    ('fmov v0.d[1], x0', 'upper-to-simd', 8),
+    ('fmov v0.d[1], xzr', 'upper-zero', 8),
+    ('fmov x0, v1.d[1]', 'upper-to-gpr', 8),
+]
 
 fmov_test_bits = {
     2: [0, 0x8000, 1, 0x3ff, 0x400, 0x3c01, 0xbc00, 0x7bff, 0xfbff,
@@ -13307,8 +13327,66 @@ fmov_test_bits = {
         0xfff1234500000001, 0x7ff8123456789abc, 0xfff8123456789abc],
 }
 
+def fmov_register_values(case, bits):
+    assembly, kind, size = case
+    mask = (1 << (size * 8)) - 1
+    initial = {'v0': (int.from_bytes(b'\xa5' * 16, 'little') & ~mask) | bits,
+               'v1': (int.from_bytes(b'\x5a' * 16, 'little') & ~mask) | bits,
+               'x0': (0xfedcba9876543210 & ~mask) | bits}
+    # Make source and destination differ so that an omitted copy cannot pass.
+    if kind == 'from-gpr' or (kind == 'scalar' and assembly.endswith('1')):
+        initial['v0'] = int.from_bytes(b'\xa5' * 16, 'little')
+    if kind in ('to-gpr', 'upper-to-gpr'):
+        initial['x0'] = 0x0123456789abcdef
+    if kind == 'upper-to-gpr':
+        initial['v1'] = (initial['v1'] & ((1 << 64) - 1)) | (bits << 64)
+    expected = initial.copy()
+    if kind in ('from-gpr', 'scalar'):
+        expected['v0'] = bits
+    elif kind == 'zero':
+        expected['v0'] = 0
+    elif kind == 'immediate':
+        value = float(assembly.split('#')[1])
+        expected['v0'] = int.from_bytes(struct.pack({2: '<e', 4: '<f', 8: '<d'}[size], value), 'little')
+    elif kind == 'to-gpr':
+        expected['x0'] = bits
+    elif kind == 'upper-to-simd':
+        expected['v0'] = (initial['v0'] & ((1 << 64) - 1)) | (initial['x0'] << 64)
+    elif kind == 'upper-zero':
+        expected['v0'] = initial['v0'] & ((1 << 64) - 1)
+    elif kind == 'upper-to-gpr':
+        expected['x0'] = initial['v1'] >> 64
+    else:
+        raise AssertionError(kind)
+    return initial, expected
 
+def fmov_register_effects(case, bits):
+    arch = binaryninja.Architecture['aarch64']
+    data = arch.assemble(case[0] + '\nret')
+    initial, expected = fmov_register_values(case, bits)
+    actual = _scalar_register_state(data, initial)
+    # A lane transfer must not read 128 bits from a 64-bit general register.
+    il = lowlevelil.LowLevelILFunction(arch=arch)
+    assert arch.get_instruction_low_level_il(data, 0, il) == 4
+    il.append(il.no_ret())
+    il.finalize()
+    for instr in il.instructions:
+        for expr in instr.traverse(lambda e: e if e.operation == LowLevelILOperation.LLIL_REG else None):
+            if not expr.src.temp:
+                assert expr.size <= expr.src.info.size, str(expr)
+    return actual, expected
 
+def test_fmov_register_effects(no_fail=False):
+    success = True
+    for case in fmov_register_cases:
+        for bits in fmov_test_bits[case[2]]:
+            actual, expected = fmov_register_effects(case, bits)
+            if actual != expected:
+                print(f'FMOV MISMATCH: {case[0]}, bits {bits:#x}\nexpected: {expected}\nactual: {actual}')
+                success = False
+                if not no_fail:
+                    return False
+    return success
 
 # Scalar integer conversions read the complete integer, independently of the
 # floating destination width, and clear the rest of the SIMD register.
@@ -13492,8 +13570,9 @@ def run_all(no_fail=False):
     lifts_ok = test_all_lifts(no_fail)
     position_dependent_ok = test_all_position_dependent(no_fail)
     disassembly_ok = test_all_disassembly(no_fail)
+    fmov_registers_ok = test_fmov_register_effects(no_fail)
     fcvtzs_ok = test_fcvtzs_register_effects(no_fail)
-    if lifts_ok and position_dependent_ok and disassembly_ok and fcvtzs_ok:
+    if lifts_ok and position_dependent_ok and disassembly_ok and fmov_registers_ok and fcvtzs_ok:
         print('success!', file=sys.stderr)
         return True
 

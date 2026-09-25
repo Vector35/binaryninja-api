@@ -190,6 +190,19 @@ static ExprId GetFloat(LowLevelILFunction& il, InstructionOperand& operand, int 
 	return il.Unimplemented();
 }
 
+static void WriteScalarFloatResult(Architecture* arch, LowLevelILFunction& il,
+    InstructionOperand& dest, ExprId value)
+{
+	// Capture the result before clearing a destination that may also be the source.
+	size_t size = REGSZ_O(dest);
+	il.AddInstruction(il.SetRegister(size, LLIL_TEMP(0), value));
+	// In the default, non-merging FP mode, the remaining SIMD bits become zero.
+	// Keep the scalar floating write explicit so it retains its own type and width.
+	uint32_t fullReg = arch->GetRegisterInfo(REG_O(dest)).fullWidthRegister;
+	il.AddInstruction(il.SetRegister(16, fullReg, il.Const(16, 0)));
+	il.AddInstruction(ILSETREG_O(dest, il.Register(size, LLIL_TEMP(0))));
+}
+
 static ExprId GetShiftedRegister(
     LowLevelILFunction& il, InstructionOperand& operand, size_t regNum, size_t resultSize)
 {
@@ -2159,7 +2172,7 @@ bool GetLowLevelILForInstruction(
 		{
 			Register minreg = vector_reg_minimize(instr.operands[0]);
 			il.AddInstruction(il.SetRegister(aarch64_get_register_size(minreg), minreg,
-			    il.Register(REGSZ_O(operand1), instr.operands[1].reg[0])));
+			    ILREG_O(operand2)));
 			break;
 		}
 		case ENC_FMOV_32H_FLOAT2INT:
@@ -2183,10 +2196,14 @@ bool GetLowLevelILForInstruction(
 		case ENC_FMOV_H32_FLOAT2INT:
 		case ENC_FMOV_H64_FLOAT2INT:
 		case ENC_FMOV_S32_FLOAT2INT:
+		{
 			// <Vd> <- <Rn> (copy from general register to FP register, with no conversion)
-			il.AddInstruction(
-			    ILSETREG_O(operand1, il.IntToFloat(REGSZ_O(operand1), ILREG_O(instr.operands[1]))));
+			ExprId value = ILREG_O(operand2);
+			if (REGSZ_O(operand1) < REGSZ_O(operand2))
+				value = il.LowPart(REGSZ_O(operand1), value);
+			WriteScalarFloatResult(arch, il, operand1, value);
 			break;
+		}
 		case ENC_FMOV_H_FLOATIMM:
 		case ENC_FMOV_S_FLOATIMM:
 		case ENC_FMOV_D_FLOATIMM:
@@ -2197,13 +2214,14 @@ bool GetLowLevelILForInstruction(
 			if (instr.encoding == ENC_FMOV_D_FLOATIMM)
 				float_sz = 8;
 			// Technically, we should use 2 bytes to GetFloat for half-precision registers, but that causes MLIL and HLIL to lift the constant to 0
-			il.AddInstruction(ILSETREG_O(operand1, il.FloatConvert(float_sz, GetFloat(il, operand2, float_sz == 2 ? 4 : float_sz))));
+			WriteScalarFloatResult(arch, il, operand1,
+			    il.FloatConvert(float_sz, GetFloat(il, operand2, float_sz == 2 ? 4 : float_sz)));
 			break;
 		}
 		case ENC_FMOV_H_FLOATDP1:
 		case ENC_FMOV_S_FLOATDP1:
 		case ENC_FMOV_D_FLOATDP1:
-			il.AddInstruction(ILSETREG_O(operand1, ILREG_O(operand2)));
+			WriteScalarFloatResult(arch, il, operand1, ILREG_O(operand2));
 			break;
 		case ENC_FMOV_ASIMDIMM_D2_D:
 		case ENC_FMOV_ASIMDIMM_H_H:

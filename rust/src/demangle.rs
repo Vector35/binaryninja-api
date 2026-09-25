@@ -15,7 +15,7 @@
 //! Interfaces for demangling and simplifying mangled names in binaries.
 
 use binaryninjacore_sys::*;
-use std::ffi::{c_char, c_void};
+use std::ffi::{c_char, c_void, CString};
 use std::ptr;
 
 use crate::architecture::{ArchitectureExt, CoreArchitecture};
@@ -23,7 +23,7 @@ use crate::binary_view::BinaryView;
 use crate::platform::Platform;
 use crate::qualified_name::QualifiedName;
 use crate::rc::*;
-use crate::string::{raw_to_string, BnString, IntoCStr};
+use crate::string::{raw_to_string, BnString};
 use crate::types::Type;
 
 pub type Result<R> = std::result::Result<R, ()>;
@@ -189,7 +189,7 @@ fn demangle_with_demangler(
         return None;
     }
 
-    let mangled_name = mangled_name.to_cstr();
+    let mangled_name = CString::new(mangled_name).ok()?;
     let api_config = config.to_api_object();
     let mut result = BNDemanglerResult::default();
     let res = unsafe {
@@ -199,7 +199,7 @@ fn demangle_with_demangler(
 }
 
 pub fn demangle_any(mangled_name: &str, config: &DemanglerConfig) -> Option<DemanglerResult> {
-    let mangled_name = mangled_name.to_cstr();
+    let mangled_name = CString::new(mangled_name).ok()?;
     let api_config = config.to_api_object();
     let mut result = BNDemanglerResult::default();
     let res = unsafe { BNDemangle(mangled_name.as_ptr(), &api_config, &mut result) };
@@ -309,7 +309,9 @@ impl Demangler {
     }
 
     pub fn is_mangled_string(&self, name: &str) -> bool {
-        let bytes = name.to_cstr();
+        let Ok(bytes) = CString::new(name) else {
+            return false;
+        };
         unsafe { BNIsDemanglerMangledName(self.handle, bytes.as_ref().as_ptr() as *const _) }
     }
 
@@ -322,7 +324,7 @@ impl Demangler {
     }
 
     pub fn from_name(name: &str) -> Option<Self> {
-        let name_bytes = name.to_cstr();
+        let name_bytes = CString::new(name).ok()?;
         let demangler = unsafe { BNGetDemanglerByName(name_bytes.as_ref().as_ptr() as *const _) };
         if demangler.is_null() {
             None
@@ -332,6 +334,10 @@ impl Demangler {
     }
 
     pub fn register<C: CustomDemangler>(name: &str, demangler: C) -> bool {
+        let Ok(name) = CString::new(name) else {
+            return false;
+        };
+
         extern "C" fn cb_is_mangled_string<C>(ctxt: *mut c_void, name: *const c_char) -> bool
         where
             C: CustomDemangler,
@@ -385,7 +391,6 @@ impl Demangler {
             })
         }
 
-        let name = name.to_cstr();
         let name_ptr = name.as_ptr();
         let ctxt = Box::into_raw(Box::new(demangler));
 

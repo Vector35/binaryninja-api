@@ -9864,6 +9864,7 @@ namespace BinaryNinja {
 		static size_t GetMaxInstructionLengthCallback(void* ctxt);
 		static size_t GetOpcodeDisplayLengthCallback(void* ctxt);
 		static BNArchitecture* GetAssociatedArchitectureByAddressCallback(void* ctxt, uint64_t* addr);
+		static uint64_t EncodeFunctionPointerCallback(void* ctxt, uint64_t* addr);
 		static bool GetInstructionInfoCallback(
 		    void* ctxt, const uint8_t* data, uint64_t addr, size_t maxLen, BNInstructionInfo* result);
 		static bool GetInstructionTextCallback(void* ctxt, const uint8_t* data, uint64_t addr, size_t* len,
@@ -10028,6 +10029,13 @@ namespace BinaryNinja {
 		virtual size_t GetOpcodeDisplayLength() const;
 
 		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr);
+
+		/*! Encode a function pointer for this architecture, e.g. setting the LSB for Thumb functions
+
+			\param addr Address of the function
+			\return The encoded function pointer
+		*/
+		virtual uint64_t EncodeFunctionPointer(uint64_t& addr);
 
 		/*! Retrieves an InstructionInfo struct for the instruction at the given virtual address
 
@@ -10558,6 +10566,7 @@ namespace BinaryNinja {
 		virtual size_t GetMaxInstructionLength() const override;
 		virtual size_t GetOpcodeDisplayLength() const override;
 		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr) override;
+		virtual uint64_t EncodeFunctionPointer(uint64_t& addr) override;
 		virtual bool GetInstructionInfo(
 		    const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
 		virtual bool GetInstructionText(
@@ -10650,6 +10659,7 @@ namespace BinaryNinja {
 		virtual size_t GetMaxInstructionLength() const override;
 		virtual size_t GetOpcodeDisplayLength() const override;
 		virtual Ref<Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr) override;
+		virtual uint64_t EncodeFunctionPointer(uint64_t& addr) override;
 		virtual bool GetInstructionInfo(
 		    const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override;
 		virtual bool GetInstructionText(

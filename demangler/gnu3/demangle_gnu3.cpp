@@ -3284,18 +3284,11 @@ bool DemangleGNU3Static::DemangleGlobalHeader(string& name, string& header)
 	if (name.empty())
 		return false;
 
-	size_t strippedCount = 0;
-	string encoded = name;
-	while (!encoded.empty() && encoded[0] == '_')
-	{
-		encoded.erase(0, 1);
-		strippedCount ++;
-		if (encoded.empty())
-			return false;
-	}
-
-	if (strippedCount == 0)
+	size_t strippedCount = name.find_first_not_of('_');
+	if (strippedCount == 0 || strippedCount == string::npos)
 		return false;
+	std::string_view encoded(name);
+	encoded.remove_prefix(strippedCount);
 
 	static const vector<pair<string, string>> headers = {
 		{"GLOBAL__sub_I_", "(static initializer)"},
@@ -3305,9 +3298,10 @@ bool DemangleGNU3Static::DemangleGlobalHeader(string& name, string& header)
 
 	for (auto& i: headers)
 	{
-		if (encoded.size() > i.first.size() && encoded.substr(0, i.first.size()) == i.first)
+		if (encoded.size() > i.first.size() &&
+			encoded.compare(0, i.first.size(), i.first.data(), i.first.size()) == 0)
 		{
-			name = name.substr(i.first.size() + strippedCount);
+			name.erase(0, i.first.size() + strippedCount);
 			header = i.second;
 			return true;
 		}

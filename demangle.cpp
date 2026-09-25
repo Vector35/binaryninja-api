@@ -1,4 +1,5 @@
 #include "binaryninjaapi.h"
+#include <exception>
 #include <string>
 #include <utility>
 using namespace std;
@@ -299,7 +300,19 @@ namespace BinaryNinja
 	bool Demangler::IsMangledStringCallback(void* ctxt, const char* mangledName)
 	{
 		auto demangler = static_cast<Demangler*>(ctxt);
-		return demangler->IsMangledString(mangledName);
+		try
+		{
+			return mangledName && demangler->IsMangledString(mangledName);
+		}
+		catch (const std::exception& e)
+		{
+			LogErrorForException(e, "Demangler name callback failed: %s", e.what());
+		}
+		catch (...)
+		{
+			LogError("Demangler name callback failed with an unknown exception");
+		}
+		return false;
 	}
 
 	bool Demangler::DemangleCallback(void* ctxt, const char* mangledName, const BNDemanglerConfig* config,
@@ -310,12 +323,24 @@ namespace BinaryNinja
 		if (!mangledName || !result)
 			return false;
 
-		auto demangleResult = demangler->Demangle(mangledName, DemanglerConfig::FromAPIStruct(config));
-		if (!demangleResult)
-			return false;
+		try
+		{
+			auto demangleResult = demangler->Demangle(mangledName, DemanglerConfig::FromAPIStruct(config));
+			if (!demangleResult)
+				return false;
 
-		*result = demangleResult->ToAPIStruct();
-		return true;
+			*result = demangleResult->ToAPIStruct();
+			return true;
+		}
+		catch (const std::exception& e)
+		{
+			LogErrorForException(e, "Demangler callback failed: %s", e.what());
+		}
+		catch (...)
+		{
+			LogError("Demangler callback failed with an unknown exception");
+		}
+		return false;
 	}
 
 	void Demangler::FreeResultCallback(void* ctxt, BNDemanglerResult* result)

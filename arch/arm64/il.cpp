@@ -2065,6 +2065,31 @@ bool GetLowLevelILForInstruction(
 			il.AddInstruction(il.Unimplemented());
 		}
 		break;
+	case ARM64_FCVTZS:
+		switch (instr.encoding)
+		{
+		case ENC_FCVTZS_32H_FLOAT2INT:
+		case ENC_FCVTZS_32S_FLOAT2INT:
+		case ENC_FCVTZS_32D_FLOAT2INT:
+		case ENC_FCVTZS_64H_FLOAT2INT:
+		case ENC_FCVTZS_64S_FLOAT2INT:
+		case ENC_FCVTZS_64D_FLOAT2INT:
+			// As with other FLOAT_TO_INT lifts, leave NaN and overflow behavior unspecified.
+			il.AddInstruction(ILSETREG_O(operand1, il.FloatToInt(REGSZ_O(operand1), ILREG_O(operand2))));
+			break;
+		case ENC_FCVTZS_ASISDMISC_R:
+		case ENC_FCVTZS_ASISDMISCFP16_R:
+		{
+			uint32_t fullReg = arch->GetRegisterInfo(REG_O(operand1)).fullWidthRegister;
+			il.AddInstruction(il.SetRegister(16, fullReg,
+				il.ZeroExtend(16, il.FloatToInt(REGSZ_O(operand1), ILREG_O(operand2)))));
+			break;
+		}
+		default:
+			// Keep vector, fixed-point, and newer forms in the intrinsic lifter.
+			break;
+		}
+		break;
 	case ARM64_FCVT:
 	{
 		int float_sz = 0;

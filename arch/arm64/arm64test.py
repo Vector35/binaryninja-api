@@ -5135,13 +5135,13 @@ tests_fcvt = [
     # fcvtxn s22, d9                                                   FCVTXN_asisdmisc_N
     (b'\x36\x69\x61\x7E', 'LLIL_INTRINSIC([s22],vcvtxd_f32_f64,[LLIL_REG.q(d9)])'),
     # fcvtzs w5, d23                                                   FCVTZS_32D_float2int
-    (b'\xE5\x02\x78\x1E', 'LLIL_INTRINSIC([w5],vcvtd_s32_f64,[LLIL_REG.q(d23)])'),
+    (b'\xE5\x02\x78\x1E', 'LLIL_SET_REG.d(w5,LLIL_FLOAT_TO_INT.d(LLIL_REG.q(d23)))'),
     # fcvtzs w16, d31                                                  FCVTZS_32D_float2int
-    (b'\xF0\x03\x78\x1E', 'LLIL_INTRINSIC([w16],vcvtd_s32_f64,[LLIL_REG.q(d31)])'),
+    (b'\xF0\x03\x78\x1E', 'LLIL_SET_REG.d(w16,LLIL_FLOAT_TO_INT.d(LLIL_REG.q(d31)))'),
     # fcvtzs w27, s20                                                  FCVTZS_32S_float2int
-    (b'\x9B\x02\x38\x1E', 'LLIL_INTRINSIC([w27],vcvts_s32_f32,[LLIL_REG.d(s20)])'),
+    (b'\x9B\x02\x38\x1E', 'LLIL_SET_REG.d(w27,LLIL_FLOAT_TO_INT.d(LLIL_REG.d(s20)))'),
     # fcvtzs w24, s21                                                  FCVTZS_32S_float2int
-    (b'\xB8\x02\x38\x1E', 'LLIL_INTRINSIC([w24],vcvts_s32_f32,[LLIL_REG.d(s21)])'),
+    (b'\xB8\x02\x38\x1E', 'LLIL_SET_REG.d(w24,LLIL_FLOAT_TO_INT.d(LLIL_REG.d(s21)))'),
     # fcvtzs x11, d7, #0x12                                            FCVTZS_64D_float2fix
     (b'\xEB\xB8\x58\x9E', 'LLIL_INTRINSIC([x11],vcvtd_n_s64_f64,[LLIL_REG.q(d7),LLIL_CONST.q(0x12)])'),
     # fcvtzs x8, d8, #0x3e                                             FCVTZS_64D_float2fix
@@ -5151,13 +5151,13 @@ tests_fcvt = [
     # fcvtzs x26, d18, #0x8                                            FCVTZS_64D_float2fix
     (b'\x5A\xE2\x58\x9E', 'LLIL_INTRINSIC([x26],vcvtd_n_s64_f64,[LLIL_REG.q(d18),LLIL_CONST.q(0x8)])'),
     # fcvtzs x17, d10                                                  FCVTZS_64D_float2int
-    (b'\x51\x01\x78\x9E', 'LLIL_INTRINSIC([x17],vcvtd_s64_f64,[LLIL_REG.q(d10)])'),
+    (b'\x51\x01\x78\x9E', 'LLIL_SET_REG.q(x17,LLIL_FLOAT_TO_INT.q(LLIL_REG.q(d10)))'),
     # fcvtzs x17, d6                                                   FCVTZS_64D_float2int
-    (b'\xD1\x00\x78\x9E', 'LLIL_INTRINSIC([x17],vcvtd_s64_f64,[LLIL_REG.q(d6)])'),
+    (b'\xD1\x00\x78\x9E', 'LLIL_SET_REG.q(x17,LLIL_FLOAT_TO_INT.q(LLIL_REG.q(d6)))'),
     # fcvtzs x19, s1                                                   FCVTZS_64S_float2int
-    (b'\x33\x00\x38\x9E', 'LLIL_INTRINSIC([x19],vcvts_s64_f32,[LLIL_REG.d(s1)])'),
+    (b'\x33\x00\x38\x9E', 'LLIL_SET_REG.q(x19,LLIL_FLOAT_TO_INT.q(LLIL_REG.d(s1)))'),
     # fcvtzs x28, s16                                                  FCVTZS_64S_float2int
-    (b'\x1C\x02\x38\x9E', 'LLIL_INTRINSIC([x28],vcvts_s64_f32,[LLIL_REG.d(s16)])'),
+    (b'\x1C\x02\x38\x9E', 'LLIL_SET_REG.q(x28,LLIL_FLOAT_TO_INT.q(LLIL_REG.d(s16)))'),
     # fcvtzs v22.2s, v11.2s                                            FCVTZS_asimdmisc_R
     (b'\x76\xB9\xA1\x0E', 'LLIL_INTRINSIC([v22],vcvt_s32_f32,[LLIL_REG.o(v11)])'),
     # fcvtzs v16.2d, v24.2d                                            FCVTZS_asimdmisc_R
@@ -5171,9 +5171,9 @@ tests_fcvt = [
     # fcvtzs v22.4s, v8.4s, #0x1                                       FCVTZS_asimdshf_C
     (b'\x16\xFD\x3F\x4F', 'LLIL_INTRINSIC([v22],vcvtq_n_s32_f32,[LLIL_REG.o(v8),LLIL_CONST.q(0x1)])'),
     # fcvtzs d4, d1                                                    FCVTZS_asisdmisc_R
-    (b'\x24\xB8\xE1\x5E', 'LLIL_INTRINSIC([d4],vcvtd_s64_f64,[LLIL_REG.q(d1)])'),
+    (b'\x24\xB8\xE1\x5E', 'LLIL_SET_REG.o(v4,LLIL_ZX.o(LLIL_FLOAT_TO_INT.q(LLIL_REG.q(d1))))'),
     # fcvtzs s9, s0                                                    FCVTZS_asisdmisc_R
-    (b'\x09\xB8\xA1\x5E', 'LLIL_INTRINSIC([s9],vcvts_s32_f32,[LLIL_REG.d(s0)])'),
+    (b'\x09\xB8\xA1\x5E', 'LLIL_SET_REG.o(v9,LLIL_ZX.o(LLIL_FLOAT_TO_INT.d(LLIL_REG.d(s0))))'),
     # fcvtzs d21, d4, #0x4                                             FCVTZS_asisdshf_C
     (b'\x95\xFC\x7C\x5F', 'LLIL_INTRINSIC([d21],vcvtd_n_s64_f64,[LLIL_REG.q(d4),LLIL_CONST.q(0x4)])'),
     # fcvtzs d27, d5, #0x2f                                            FCVTZS_asisdshf_C
@@ -13200,6 +13200,203 @@ class BatchLift:
 
 batch_lift = None
 
+def _integer_float_bits(value, size):
+    """Round an integer directly to binary16/32/64, ties to even."""
+    precision, bias = {2: (11, 15), 4: (24, 127), 8: (53, 1023)}[size]
+    sign = (value < 0) << (size * 8 - 1)
+    value = abs(value)
+    if not value:
+        return 0
+    exponent = value.bit_length() - 1
+    shift = exponent - (precision - 1)
+    if shift > 0:
+        significand, remainder = divmod(value, 1 << shift)
+        halfway = 1 << (shift - 1)
+        if remainder > halfway or (remainder == halfway and significand & 1):
+            significand += 1
+        if significand == 1 << precision:
+            significand >>= 1
+            exponent += 1
+    else:
+        significand = value << -shift
+    if exponent > bias:
+        return sign | ((bias * 2 + 1) << (precision - 1))
+    return sign | ((exponent + bias) << (precision - 1)) | (significand - (1 << (precision - 1)))
+
+def _scalar_register_state(data, initial):
+    """Execute resolved SSA writes, retaining all bytes of the full registers."""
+    registers = initial.copy()
+    formats = {2: '<e', 4: '<f', 8: '<d'}
+
+    def mask(width):
+        return (1 << (width * 8)) - 1
+
+    def float_bits(value, size):
+        try:
+            return int.from_bytes(struct.pack(formats[size], value), 'little')
+        except OverflowError:
+            return int.from_bytes(struct.pack(formats[size], float('-inf') if value < 0 else float('inf')), 'little')
+
+    def evaluate(expr):
+        op = expr.operation
+        if op == LowLevelILOperation.LLIL_REG_SSA:
+            return registers[expr.src.reg.name] & mask(expr.size)
+        if op == LowLevelILOperation.LLIL_REG_SSA_PARTIAL:
+            return (registers[expr.full_reg.reg.name] >> (expr.src.info.offset * 8)) & mask(expr.size)
+        if op == LowLevelILOperation.LLIL_CONST:
+            return expr.constant
+        if op == LowLevelILOperation.LLIL_FLOAT_CONST:
+            return float_bits(expr.constant, expr.size)
+        if op in (LowLevelILOperation.LLIL_ZX, LowLevelILOperation.LLIL_LOW_PART):
+            return evaluate(expr.src) & mask(min(expr.size, expr.src.size))
+        if op == LowLevelILOperation.LLIL_SX:
+            value = evaluate(expr.src) & mask(expr.src.size)
+            sign = 1 << (expr.src.size * 8 - 1)
+            return ((value ^ sign) - sign) & mask(expr.size)
+        if op == LowLevelILOperation.LLIL_FLOAT_CONV:
+            value = struct.unpack(formats[expr.src.size], evaluate(expr.src).to_bytes(expr.src.size, 'little'))[0]
+            return float_bits(value, expr.size)
+        if op == LowLevelILOperation.LLIL_INT_TO_FLOAT:
+            value = evaluate(expr.src)
+            sign = 1 << (expr.src.size * 8 - 1)
+            return _integer_float_bits((value ^ sign) - sign, expr.size)
+        if op == LowLevelILOperation.LLIL_FLOAT_TO_INT:
+            value = struct.unpack(formats[expr.src.size], evaluate(expr.src).to_bytes(expr.src.size, 'little'))[0]
+            integer = int(value)
+            limit = 1 << (expr.size * 8 - 1)
+            assert -limit <= integer < limit, f'Out-of-range FLOAT_TO_INT: {value}'
+            return integer & mask(expr.size)
+        raise AssertionError(f'Unexpected register-test expression: {expr}')
+
+    with binaryview.BinaryView.new(data) as bv:
+        func = bv.create_user_function(0, platform())
+        bv.update_analysis_and_wait()
+        for instr in func.llil.ssa_form.instructions:
+            if instr.operation == LowLevelILOperation.LLIL_RET:
+                break
+            if instr.operation == LowLevelILOperation.LLIL_FLOAT_TO_INT:
+                # A conversion written to WZR/XZR leaves a discarded expression.
+                evaluate(instr)
+                continue
+            value = evaluate(instr.src)
+            if instr.operation == LowLevelILOperation.LLIL_SET_REG_SSA:
+                registers[instr.dest.reg.name] = value & mask(instr.size)
+            else:
+                assert instr.operation == LowLevelILOperation.LLIL_SET_REG_SSA_PARTIAL, str(instr)
+                name = instr.full_reg.reg.name
+                shift = instr.dest.info.offset * 8
+                registers[name] = (registers[name] & ~(mask(instr.size) << shift)) | ((value & mask(instr.size)) << shift)
+    return {name: registers[name] for name in initial}
+
+# FCVT clears its remaining SIMD bits; a vector-lane write preserves other lanes.
+# Use nonzero initial bytes to distinguish the two.
+
+
+# The scalar forms copy representations and clear unused SIMD bits. The lane
+# forms preserve the other lane. FPCR.NEP=0 is the modeled scalar FP mode.
+
+fmov_test_bits = {
+    2: [0, 0x8000, 1, 0x3ff, 0x400, 0x3c01, 0xbc00, 0x7bff, 0xfbff,
+        0x7c00, 0xfc00, 0x7c01, 0xfc55, 0x7e55, 0xfe55],
+    4: [0, 0x80000000, 1, 0x7fffff, 0x800000, 0x3f800001, 0xbf800000,
+        0x7f7fffff, 0xff7fffff, 0x7f800000, 0xff800000, 0x7f800001, 0xff812345,
+        0x7fc12345, 0xffc12345],
+    8: [0, 0x8000000000000000, 1, 0xfffffffffffff, 0x10000000000000,
+        0x3ff0000000000001, 0xbff0000000000000, 0x7fefffffffffffff, 0xffefffffffffffff,
+        0x7ff0000000000000, 0xfff0000000000000, 0x7ff0000000000001,
+        0xfff1234500000001, 0x7ff8123456789abc, 0xfff8123456789abc],
+}
+
+
+
+
+# Scalar integer conversions read the complete integer, independently of the
+# floating destination width, and clear the rest of the SIMD register.
+
+
+
+
+
+# Test FCVTZS within the defined domain of an ordinary signed C conversion.
+# The GPR W form clears upper X bits; a scalar SIMD result clears remaining V bits.
+fcvtzs_register_cases = [
+    (f'fcvtzs {dest}{register}, {src}0', 'zero' if register == 'zr' else 'gpr', source_size, size)
+    for dest, size in [('w', 4), ('x', 8)]
+    for src, source_size in [('h', 2), ('s', 4), ('d', 8)]
+    for register in ['0', 'zr']
+] + [
+    (f'fcvtzs {reg}0, {reg}{index}', f'simd{index}', size, size)
+    for reg, size in [('h', 2), ('s', 4), ('d', 8)]
+    for index in [0, 1]
+]
+
+def fcvtzs_test_bits(source_size, size):
+    fraction, bias = {2: (10, 15), 4: (23, 127), 8: (52, 1023)}[source_size]
+    sign = 1 << (source_size * 8 - 1)
+    infinity = (bias * 2 + 1) << fraction
+    values = set(fmov_test_bits[source_size])
+    # Include the original widening reproducer's -1.5 input and its positive counterpart.
+    one_and_half = (bias << fraction) | (1 << (fraction - 1))
+    values.update([one_and_half, sign | one_and_half])
+    for exponent in [-1, 0, 1, 15, 31, 63]:
+        center = (exponent + bias) << fraction
+        if center >= infinity:
+            continue
+        for delta in [-2, -1, 0, 1, 2]:
+            values.update([center + delta, sign | (center + delta)])
+    # The generic FLOAT_TO_INT lift does not model ARM's NaN/overflow results.
+    return sorted(bits for bits in values if fcvtzs_expected_bits(bits, source_size, size) is not None)
+
+def fcvtzs_expected_bits(bits, source_size, size):
+    """Decode and truncate IEEE bits; return None outside the signed C conversion domain."""
+    fraction, bias = {2: (10, 15), 4: (23, 127), 8: (52, 1023)}[source_size]
+    exponent = (bits >> fraction) & (bias * 2 + 1)
+    significand = bits & ((1 << fraction) - 1)
+    negative = bool(bits >> (source_size * 8 - 1))
+    limit = 1 << (size * 8 - 1)
+    if exponent == bias * 2 + 1:
+        return None
+    if exponent:
+        significand |= 1 << fraction
+    shift = (exponent or 1) - bias - fraction
+    value = significand << shift if shift >= 0 else significand >> -shift
+    if negative:
+        value = -value
+    if not -limit <= value < limit:
+        return None
+    return value & ((1 << (size * 8)) - 1)
+
+def fcvtzs_register_values(case, bits):
+    assembly, kind, source_size, size = case
+    mask = (1 << (source_size * 8)) - 1
+    initial = {'v0': int.from_bytes(b'\xa5' * 16, 'little'),
+               'v1': int.from_bytes(b'\x5a' * 16, 'little'), 'x0': 0xfedcba9876543210}
+    source = 'v1' if kind == 'simd1' else 'v0'
+    initial[source] = (initial[source] & ~mask) | bits
+    expected = initial.copy()
+    if kind != 'zero':
+        expected['x0' if kind == 'gpr' else 'v0'] = fcvtzs_expected_bits(bits, source_size, size)
+        assert expected['x0' if kind == 'gpr' else 'v0'] is not None
+    return initial, expected
+
+def fcvtzs_register_effects(case, bits):
+    arch = binaryninja.Architecture['aarch64']
+    initial, expected = fcvtzs_register_values(case, bits)
+    return _scalar_register_state(arch.assemble(case[0] + '\nret'), initial), expected
+
+def test_fcvtzs_register_effects(no_fail=False):
+    success = True
+    for case in fcvtzs_register_cases:
+        for bits in fcvtzs_test_bits(case[2], case[3]):
+            actual, expected = fcvtzs_register_effects(case, bits)
+            if actual != expected:
+                print(f'FCVTZS MISMATCH: {case[0]}, bits {bits:#x}\nexpected: {expected}\nactual: {actual}')
+                success = False
+                if not no_fail:
+                    return False
+    return success
+
+
 def lifted_case(index):
     """The lifted IL and attributes for test_cases[index], as produced at address 0."""
     global batch_lift
@@ -13295,7 +13492,8 @@ def run_all(no_fail=False):
     lifts_ok = test_all_lifts(no_fail)
     position_dependent_ok = test_all_position_dependent(no_fail)
     disassembly_ok = test_all_disassembly(no_fail)
-    if lifts_ok and position_dependent_ok and disassembly_ok:
+    fcvtzs_ok = test_fcvtzs_register_effects(no_fail)
+    if lifts_ok and position_dependent_ok and disassembly_ok and fcvtzs_ok:
         print('success!', file=sys.stderr)
         return True
 

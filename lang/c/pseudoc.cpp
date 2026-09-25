@@ -1151,42 +1151,54 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 		break;
 
 	case HLIL_ZX:
-		[&]() {
-			const auto srcExpr = instr.GetSourceExpr<HLIL_ZX>();
-			if (settings && !settings->IsOptionSet(ShowTypeCasts))
-			{
-				GetExprTextInternal(srcExpr, tokens, settings, precedence);
-				return;
-			}
-			bool parens = precedence > UnaryOperatorPrecedence;
-			if (parens)
-				tokens.AppendOpenParen();
-			tokens.AppendOpenParen();
-			AppendSizeToken(instr.size, false, tokens);
-			tokens.AppendCloseParen();
-			GetExprTextInternal(srcExpr, tokens, settings, UnaryOperatorPrecedence, false, false);
-			if (parens)
-				tokens.AppendCloseParen();
-			if (statement)
-				tokens.AppendSemicolon();
-		}();
-		break;
-
 	case HLIL_SX:
 		[&]() {
-			const auto srcExpr = instr.GetSourceExpr<HLIL_SX>();
+			const auto srcExpr = instr.GetSourceExpr();
+			const bool isSigned = instr.operation == HLIL_SX;
 			if (settings && !settings->IsOptionSet(ShowTypeCasts))
 			{
 				GetExprTextInternal(srcExpr, tokens, settings, precedence);
 				return;
 			}
+			// The C expression can have a different signedness from its contextual IL
+			// type. Convert at the source width before widening, e.g. a signed intrinsic
+			// result needs (uint64_t)(uint32_t), not just (uint64_t), for zero extension.
+			Ref<Type> sourceType;
+			if (srcExpr.operation == HLIL_VAR)
+				sourceType = GetFunction()->GetVariableType(srcExpr.GetVariable<HLIL_VAR>()).GetValue();
+			else if (srcExpr.operation == HLIL_INTRINSIC)
+			{
+				auto outputs = GetArchitecture()->GetIntrinsicOutputs(srcExpr.GetIntrinsic<HLIL_INTRINSIC>());
+				if (outputs.size() == 1)
+					sourceType = outputs[0].GetValue();
+			}
+			else if (srcExpr.operation == HLIL_FLOAT_TO_INT)
+				sourceType = Type::IntegerType(srcExpr.size, true);
+			else if (srcExpr.operation == HLIL_CALL)
+			{
+				auto destType = srcExpr.GetDestExpr<HLIL_CALL>().GetType().GetValue();
+				if (destType && destType->GetClass() == PointerTypeClass)
+					destType = destType->GetChildType().GetValue();
+				if (destType && destType->GetClass() == FunctionTypeClass)
+					sourceType = destType->GetReturnValue().type.GetValue();
+			}
 			bool parens = precedence > UnaryOperatorPrecedence;
 			if (parens)
 				tokens.AppendOpenParen();
 			tokens.AppendOpenParen();
-			AppendSizeToken(instr.size, true, tokens);
+			AppendSizeToken(instr.size, isSigned, tokens);
 			tokens.AppendCloseParen();
-			GetExprTextInternal(srcExpr, tokens, settings, UnaryOperatorPrecedence, false, true);
+			if (sourceType && sourceType->GetClass() == IntegerTypeClass && sourceType->GetWidth()
+				&& sourceType->GetWidth() < instr.size
+				&& (srcExpr.operation == HLIL_INTRINSIC || sourceType->IsSigned().GetValue() != isSigned))
+			{
+				// Intrinsic metadata can describe an unsigned bitvector even when the
+				// native C intrinsic returns a signed integer. Make both extensions explicit.
+				tokens.AppendOpenParen();
+				AppendSizeToken(sourceType->GetWidth(), isSigned, tokens);
+				tokens.AppendCloseParen();
+			}
+			GetExprTextInternal(srcExpr, tokens, settings, UnaryOperatorPrecedence, false, isSigned);
 			if (parens)
 				tokens.AppendCloseParen();
 			if (statement)

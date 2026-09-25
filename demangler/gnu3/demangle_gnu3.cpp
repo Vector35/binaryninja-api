@@ -562,7 +562,10 @@ string DemangleGNU3::DemangleSourceName()
 {
 	LOG_INDENTATION_SCOPE;
 	LogWithIndentation("%s : %s\n", __FUNCTION__, m_reader.GetRaw());
-	string name = EscapeDemangledName(m_reader.ReadStringView(DemangleNumber()));
+	int64_t length = DemangleNumber();
+	if (length < 0 || static_cast<uint64_t>(length) > std::numeric_limits<size_t>::max())
+		throw DemangleException();
+	string name = EscapeDemangledName(m_reader.ReadStringView(static_cast<size_t>(length)));
 	m_lastName = name;
 	return name;
 }
@@ -982,7 +985,10 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 		case 'v':
 		{
 			// vector of size
-			uint64_t size = DemangleNumber();
+			int64_t dimension = DemangleNumber();
+			if (dimension < 0)
+				throw DemangleException();
+			uint64_t size = static_cast<uint64_t>(dimension);
 			if (!m_reader.ConsumeIf('_'))
 				throw DemangleException();
 			NodeRef childRef = nullptr;
@@ -1187,12 +1193,18 @@ int64_t DemangleGNU3::DemangleNumber()
 	if (!IsAsciiDigit(m_reader.PeekOr()))
 		throw DemangleException();
 
-	int64_t result = 0;
+	uint64_t result = 0;
+	const uint64_t limit = static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) + (negative ? 1 : 0);
 	do
 	{
-		result = result * 10 + (m_reader.Read() - '0');
+		uint64_t digit = m_reader.Read() - '0';
+		if (result > (limit - digit) / 10)
+			throw DemangleException("Demangled number exceeds 64-bit signed range");
+		result = result * 10 + digit;
 	} while (IsAsciiDigit(m_reader.PeekOr()));
-	return negative ? -result : result;
+	if (negative && result == limit)
+		return std::numeric_limits<int64_t>::min();
+	return negative ? -static_cast<int64_t>(result) : static_cast<int64_t>(result);
 }
 
 
@@ -1971,9 +1983,11 @@ string DemangleGNU3::DemangleExpression(DemangledTypeNode* outNode)
 			// When listNumber is out of range (e.g. fL used inside a decltype return
 			// type before function params are known), the fallback paths below produce
 			// a placeholder string "fp" / "fpN".
-			listNumber = DemangleNumber() + 1;
-			if (listNumber < 0 || !m_reader.ConsumeIf('p'))
+			int64_t encodedListNumber = DemangleNumber();
+			if (encodedListNumber < 0 || encodedListNumber == std::numeric_limits<int64_t>::max() ||
+				!m_reader.ConsumeIf('p'))
 				throw DemangleException();
+			listNumber = encodedListNumber + 1;
 		}
 		DemangleCVQualifiers(cnst, vltl, rstrct);
 		elm = m_reader.PeekOr();
@@ -1992,7 +2006,10 @@ string DemangleGNU3::DemangleExpression(DemangledTypeNode* outNode)
 		}
 		else if (IsAsciiDigit(elm) || IsAsciiUpper(elm))
 		{
-			elementNum = DemangleNumber() + 1;
+			int64_t encodedElementNum = DemangleNumber();
+			if (encodedElementNum == std::numeric_limits<int64_t>::max())
+				throw DemangleException();
+			elementNum = encodedElementNum + 1;
 			if (!m_reader.ConsumeIf('_'))
 				throw DemangleException();
 			if (elementNum < 0 ||

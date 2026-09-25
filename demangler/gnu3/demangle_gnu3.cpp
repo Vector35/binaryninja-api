@@ -3322,53 +3322,16 @@ namespace
 		Platform& platform = config.GetPlatform();
 		bool simplifyTemplates = config.simplifyTemplates;
 
-		// Peel special suffixes before parsing. Repeated suffixes can appear in
-		// malformed symbols, so recursive calls here would exhaust the stack.
+		// LLVM recognizes a single block-invoke suffix. Allow one additional
+		// thread-local initializer layer for our existing compatibility behavior.
 		enum class SpecialSuffix { BlockInvoke, TlvInit };
-		static constexpr size_t maxSpecialSuffixes = 64;
+		static constexpr size_t maxSpecialSuffixes = 2;
 		vector<SpecialSuffix> suffixes;
 		std::string_view baseName = name;
 		bool hasBlockInvoke = false;
+		bool hasTlvInit = false;
 		static constexpr std::string_view blockInvokeSuffix = "_block_invoke";
 		static constexpr std::string_view tlvInitSuffix = "$tlv$init";
-		for (;;)
-		{
-			bool peeled = false;
-			// Clang/Apple block invocation suffixes may end in .N or _N.
-			size_t blockPos = baseName.rfind(blockInvokeSuffix);
-			if (blockPos != std::string_view::npos)
-			{
-				std::string_view tail = baseName.substr(blockPos + blockInvokeSuffix.size());
-				bool validSuffix = tail.empty();
-				if (!validSuffix && (tail[0] == '.' || tail[0] == '_'))
-				{
-					size_t i = 1;
-					while (i < tail.size() && IsAsciiDigit(tail[i]))
-						i++;
-					validSuffix = (i == tail.size() && i > 1);
-				}
-				std::string_view blockBase = baseName.substr(0, blockPos);
-				size_t zPos = blockBase.find_first_not_of('_');
-				if (validSuffix && zPos != std::string_view::npos && blockBase[zPos] == 'Z')
-				{
-					baseName = blockBase;
-					suffixes.push_back(SpecialSuffix::BlockInvoke);
-					hasBlockInvoke = true;
-					peeled = true;
-				}
-			}
-			if (!peeled && baseName.size() > tlvInitSuffix.size() &&
-				baseName.compare(baseName.size() - tlvInitSuffix.size(), tlvInitSuffix.size(), tlvInitSuffix) == 0)
-			{
-				baseName.remove_suffix(tlvInitSuffix.size());
-				suffixes.push_back(SpecialSuffix::TlvInit);
-				peeled = true;
-			}
-			if (!peeled)
-				break;
-			if (suffixes.size() > maxSpecialSuffixes)
-				return std::nullopt;
-		}
 
 		auto applySuffixes = [&](DemanglerResult& result) {
 			for (auto it = suffixes.rbegin(); it != suffixes.rend(); ++it)
@@ -3422,6 +3385,14 @@ namespace
 				StringList nameSegments;
 				DemangledTypeNode type = demangle.DemangleSymbol(
 					nameSegments, simplifyTemplates, allowImplicitThis && !foundHeader);
+				// DemangleSymbol may leave trailing text after a valid parse. Only
+				// reject a suffix marker that it did not actually consume; other
+				// trailing forms retain their existing behavior.
+				std::string_view remaining = demangle.RemainingInput();
+				if (remaining.compare(0, 2, "@@") != 0 &&
+					(remaining.find(blockInvokeSuffix) != std::string_view::npos ||
+					remaining.find(tlvInitSuffix) != std::string_view::npos))
+					return std::nullopt;
 				if (simplifyTemplates)
 					DemangledTemplateSimplifier::SimplifyTypeNodeInPlace(type);
 				result.type = type.Finalize(platform);
@@ -3461,10 +3432,56 @@ namespace
 			return std::nullopt;
 		};
 
-		auto result = parseEncoding(baseName, hasBlockInvoke, recoverImplicitThis && !hasBlockInvoke, true);
-		if (!result && !suffixes.empty())
-			return parseEncoding(name, false, recoverImplicitThis, false);
-		return result;
+		// A length-prefixed source name may itself contain suffix-looking text.
+		// Give the complete encoding precedence before trying extensions.
+		if (auto result = parseEncoding(name, false, recoverImplicitThis, false))
+			return result;
+
+		for (size_t suffixCount = 0; suffixCount < maxSpecialSuffixes; suffixCount++)
+		{
+			bool peeled = false;
+			// Clang/Apple block invocation suffixes may end in .N or _N.
+			size_t blockPos = baseName.rfind(blockInvokeSuffix);
+			if (blockPos != std::string_view::npos)
+			{
+				std::string_view tail = baseName.substr(blockPos + blockInvokeSuffix.size());
+				bool validSuffix = tail.empty();
+				if (!validSuffix && (tail[0] == '.' || tail[0] == '_'))
+				{
+					size_t i = 1;
+					while (i < tail.size() && IsAsciiDigit(tail[i]))
+						i++;
+					validSuffix = (i == tail.size() && i > 1);
+				}
+				std::string_view blockBase = baseName.substr(0, blockPos);
+				size_t zPos = blockBase.find_first_not_of('_');
+				if (validSuffix && zPos != std::string_view::npos && blockBase[zPos] == 'Z')
+				{
+					if (hasBlockInvoke)
+						return std::nullopt;
+					baseName = blockBase;
+					suffixes.push_back(SpecialSuffix::BlockInvoke);
+					hasBlockInvoke = true;
+					peeled = true;
+				}
+			}
+			if (!peeled && baseName.size() > tlvInitSuffix.size() &&
+				baseName.compare(baseName.size() - tlvInitSuffix.size(), tlvInitSuffix.size(), tlvInitSuffix) == 0)
+			{
+				if (hasTlvInit)
+					return std::nullopt;
+				baseName.remove_suffix(tlvInitSuffix.size());
+				suffixes.push_back(SpecialSuffix::TlvInit);
+				hasTlvInit = true;
+				peeled = true;
+			}
+			if (!peeled)
+				break;
+			if (auto result = parseEncoding(baseName, hasBlockInvoke,
+				recoverImplicitThis && !hasBlockInvoke, true))
+				return result;
+		}
+		return std::nullopt;
 	}
 }
 

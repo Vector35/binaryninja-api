@@ -3310,124 +3310,149 @@ namespace
 		Platform& platform = config.GetPlatform();
 		bool simplifyTemplates = config.simplifyTemplates;
 
-		// Handle _block_invoke[.N] and _block_invoke_N suffixes (Clang/Apple block invocations).
-		// E.g. ____ZN4dyld5_mainEPK12macho_headermiPPKcS5_S5_Pm_block_invoke.110
-		//   -> "invocation_function_for_block_in_dyld::_main(...)"
+		// Peel special suffixes before parsing. Repeated suffixes can appear in
+		// malformed symbols, so recursive calls here would exhaust the stack.
+		enum class SpecialSuffix { BlockInvoke, TlvInit };
+		static constexpr size_t maxSpecialSuffixes = 64;
+		vector<SpecialSuffix> suffixes;
+		std::string_view baseName = name;
+		bool hasBlockInvoke = false;
 		static constexpr std::string_view blockInvokeSuffix = "_block_invoke";
-		size_t blockPos = name.rfind(blockInvokeSuffix);
-		if (blockPos != std::string_view::npos)
+		static constexpr std::string_view tlvInitSuffix = "$tlv$init";
+		for (;;)
 		{
-			// Verify the suffix is _block_invoke optionally followed by [._]<digits> only
-			std::string_view tail = name.substr(blockPos + blockInvokeSuffix.size());
-			bool validSuffix = tail.empty();
-			if (!validSuffix && (tail[0] == '.' || tail[0] == '_'))
+			bool peeled = false;
+			// Clang/Apple block invocation suffixes may end in .N or _N.
+			size_t blockPos = baseName.rfind(blockInvokeSuffix);
+			if (blockPos != std::string_view::npos)
 			{
-				size_t i = 1;
-				while (i < tail.size() && IsAsciiDigit(tail[i]))
-					i++;
-				validSuffix = (i == tail.size() && i > 1);
-			}
-			if (validSuffix)
-			{
-				// Extract the base symbol: everything before _block_invoke
-				std::string_view base = name.substr(0, blockPos);
-				// Normalize leading underscores: find 'Z' after underscores, keep one '_' before it
-				size_t zPos = base.find_first_not_of('_');
-				if (zPos != std::string_view::npos && base[zPos] == 'Z')
+				std::string_view tail = baseName.substr(blockPos + blockInvokeSuffix.size());
+				bool validSuffix = tail.empty();
+				if (!validSuffix && (tail[0] == '.' || tail[0] == '_'))
 				{
-					string normalized = "_";
-					normalized.append(base.substr(zPos));
-					if (auto baseResult = DemangleGNU3WithConfig(config, normalized, false))
-					{
-						DemanglerResult result;
-						result.name = QualifiedName(StringList{
-							"invocation_function_for_block_in_" + JoinNameSegments(StringList(baseResult->name.begin(), baseResult->name.end()))});
-						result.type = baseResult->type;
-						return result;
-					}
+					size_t i = 1;
+					while (i < tail.size() && IsAsciiDigit(tail[i]))
+						i++;
+					validSuffix = (i == tail.size() && i > 1);
+				}
+				std::string_view blockBase = baseName.substr(0, blockPos);
+				size_t zPos = blockBase.find_first_not_of('_');
+				if (validSuffix && zPos != std::string_view::npos && blockBase[zPos] == 'Z')
+				{
+					baseName = blockBase;
+					suffixes.push_back(SpecialSuffix::BlockInvoke);
+					hasBlockInvoke = true;
+					peeled = true;
 				}
 			}
+			if (!peeled && baseName.size() > tlvInitSuffix.size() &&
+				baseName.compare(baseName.size() - tlvInitSuffix.size(), tlvInitSuffix.size(), tlvInitSuffix) == 0)
+			{
+				baseName.remove_suffix(tlvInitSuffix.size());
+				suffixes.push_back(SpecialSuffix::TlvInit);
+				peeled = true;
+			}
+			if (!peeled)
+				break;
+			if (suffixes.size() > maxSpecialSuffixes)
+				return std::nullopt;
 		}
 
-		// Handle macOS thread-local variable initializer suffix: $tlv$init
-		// E.g. __ZL9recursive$tlv$init -> demangle "__ZL9recursive" then annotate.
-		static constexpr std::string_view tlvInitSuffix = "$tlv$init";
-		if (name.size() > tlvInitSuffix.size() &&
-			name.compare(name.size() - tlvInitSuffix.size(), tlvInitSuffix.size(), tlvInitSuffix) == 0)
-		{
-			std::string_view base = name.substr(0, name.size() - tlvInitSuffix.size());
-			if (auto result = DemangleGNU3WithConfig(config, base, recoverImplicitThis))
+		auto applySuffixes = [&](DemanglerResult& result) {
+			for (auto it = suffixes.rbegin(); it != suffixes.rend(); ++it)
 			{
-				if (result->name.size() > 0)
-					result->name[result->name.size() - 1] += "$tlv$init";
+				if (*it == SpecialSuffix::BlockInvoke)
+					result.name = QualifiedName(StringList{
+						"invocation_function_for_block_in_" +
+						JoinNameSegments(StringList(result.name.begin(), result.name.end()))});
+				else if (result.name.size() > 0)
+					result.name[result.name.size() - 1] += "$tlv$init";
 				else
-					result->name = QualifiedName(StringList{"$tlv$init"});
+					result.name = QualifiedName(StringList{"$tlv$init"});
+			}
+		};
+
+		auto parseEncoding = [&](std::string_view candidate, bool normalizeBlock,
+			bool allowImplicitThis, bool annotateSuffixes) -> std::optional<DemanglerResult> {
+			string encoding(candidate);
+			if (normalizeBlock)
+			{
+				// Block symbols may have extra leading underscores. Keep one
+				// underscore before Z, as the recursive path did.
+				size_t zPos = encoding.find_first_not_of('_');
+				encoding = "_" + encoding.substr(zPos);
+			}
+			string header;
+			bool foundHeader = DemangleGNU3Static::DemangleGlobalHeader(encoding, header);
+
+			if (!encoding.compare(0, 2, "_Z"))
+				encoding = encoding.substr(2);
+			else if (!encoding.compare(0, 3, "__Z"))
+				encoding = encoding.substr(3);
+			else if (foundHeader && !header.empty())
+			{
+				DemanglerResult result;
+				StringList nameSegments{header, EscapeDemangledName(encoding)};
+				result.name = QualifiedName(nameSegments);
+				result.type = DemangledTypeNode::NamedType(nameSegments).Finalize(platform);
+				if (annotateSuffixes)
+					applySuffixes(result);
 				return result;
 			}
-		}
+			else
+				return std::nullopt;
 
-		string encoding(name);
-		string header;
-		bool foundHeader = DemangleGNU3Static::DemangleGlobalHeader(encoding, header);
-
-		if (!encoding.compare(0, 2, "_Z"))
-			encoding = encoding.substr(2);
-		else if (!encoding.compare(0, 3, "__Z"))
-			encoding = encoding.substr(3);
-		else if (foundHeader && !header.empty())
-		{
-			DemanglerResult result;
-			StringList nameSegments{header, EscapeDemangledName(encoding)};
-			result.name = QualifiedName(nameSegments);
-			result.type = DemangledTypeNode::NamedType(nameSegments).Finalize(platform);
-			return result;
-		}
-		else
-			return std::nullopt;
-
-		try
-		{
-			thread_local ::DemangleGNU3 demangle(platform, encoding);
-			demangle.Reset(platform, encoding);
-			DemanglerResult result;
-			StringList nameSegments;
-			DemangledTypeNode type = demangle.DemangleSymbol(
-				nameSegments, simplifyTemplates, recoverImplicitThis && !foundHeader);
-			if (simplifyTemplates)
-				DemangledTemplateSimplifier::SimplifyTypeNodeInPlace(type);
-			result.type = type.Finalize(platform);
-
-			if (nameSegments.empty())
+			try
 			{
-				if (GetFinalizedTypeClass(result.type) == NamedTypeReferenceClass &&
-					result.type->GetNamedTypeReference()->GetTypeReferenceClass() == UnknownNamedTypeClass)
-				{
-					const auto typeName = result.type->GetTypeName();
-					nameSegments = StringList(typeName.begin(), typeName.end());
-					result.type = nullptr;
-				}
-				else if (GetFinalizedTypeClass(result.type) == NamedTypeReferenceClass)
-				{
-					auto typeName = result.type->GetTypeName();
-					if (typeName.size() > 0)
-						nameSegments = StringList{"_" + typeName[typeName.size() - 1]};
-				}
-			}
+				thread_local ::DemangleGNU3 demangle(platform, encoding);
+				demangle.Reset(platform, encoding);
+				DemanglerResult result;
+				StringList nameSegments;
+				DemangledTypeNode type = demangle.DemangleSymbol(
+					nameSegments, simplifyTemplates, allowImplicitThis && !foundHeader);
+				if (simplifyTemplates)
+					DemangledTemplateSimplifier::SimplifyTypeNodeInPlace(type);
+				result.type = type.Finalize(platform);
 
-			if (foundHeader && !header.empty())
-				nameSegments.insert(nameSegments.begin(), header);
-			result.name = QualifiedName(nameSegments);
-			return result;
-		}
-		catch (DemangleException& e)
-		{
-			LogDebugF("GNU3 demangling failed {:?}: {}", name, e.what());
-		}
-		catch (std::exception& e)
-		{
-			LogDebugF("GNU3 demangling failed {:?}: {}", name, e.what());
-		}
-		return std::nullopt;
+				if (nameSegments.empty())
+				{
+					if (GetFinalizedTypeClass(result.type) == NamedTypeReferenceClass &&
+						result.type->GetNamedTypeReference()->GetTypeReferenceClass() == UnknownNamedTypeClass)
+					{
+						const auto typeName = result.type->GetTypeName();
+						nameSegments = StringList(typeName.begin(), typeName.end());
+						result.type = nullptr;
+					}
+					else if (GetFinalizedTypeClass(result.type) == NamedTypeReferenceClass)
+					{
+						auto typeName = result.type->GetTypeName();
+						if (typeName.size() > 0)
+							nameSegments = StringList{"_" + typeName[typeName.size() - 1]};
+					}
+				}
+
+				if (foundHeader && !header.empty())
+					nameSegments.insert(nameSegments.begin(), header);
+				result.name = QualifiedName(nameSegments);
+				if (annotateSuffixes)
+					applySuffixes(result);
+				return result;
+			}
+			catch (DemangleException& e)
+			{
+				LogDebugF("GNU3 demangling failed {:?}: {}", name, e.what());
+			}
+			catch (std::exception& e)
+			{
+				LogDebugF("GNU3 demangling failed {:?}: {}", name, e.what());
+			}
+			return std::nullopt;
+		};
+
+		auto result = parseEncoding(baseName, hasBlockInvoke, recoverImplicitThis && !hasBlockInvoke, true);
+		if (!result && !suffixes.empty())
+			return parseEncoding(name, false, recoverImplicitThis, false);
+		return result;
 	}
 }
 

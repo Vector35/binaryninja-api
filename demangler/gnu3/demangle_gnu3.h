@@ -94,7 +94,9 @@ private:
 	using NodeRefList = _STD_VECTOR<NodeRef>;
 
 	static constexpr size_t MAX_DEMANGLE_NODE_LENGTH = 8192;
-	static constexpr size_t MAX_DEMANGLE_NESTING_DEPTH = 1024;
+	// Analysis workers can have 512 KiB stacks. Each grammar level can use
+	// several parser and type-node frames, so leave room for finalization.
+	static constexpr size_t MAX_DEMANGLE_NESTING_DEPTH = 128;
 	_STD_STRING m_mangledName;
 	DemangleReader m_reader{m_mangledName, MAX_DEMANGLE_NODE_LENGTH, false};
 	std::reference_wrapper<BN::Platform> m_platform;

@@ -2245,6 +2245,9 @@ namespace
 
 	// Compatibility parser for qualified names that do not come from a demangler AST.
 	// Native GNU3/MSVC paths use the structured DemangledTypeNode overloads.
+	constexpr size_t MaxCompatibilityTemplateDepth = 128;
+	struct CompatibilityTemplateDepthExceeded {};
+
 	size_t FindTemplateOpen(std::string_view component)
 	{
 		component = TrimSpaces(component);
@@ -2321,20 +2324,22 @@ namespace
 		return out;
 	}
 
-	DemangledTypeNode ParseCompatibilityType(std::string_view s);
+	DemangledTypeNode ParseCompatibilityType(std::string_view s, size_t depth);
 
-	ParamList ParseCompatibilityArgs(std::string_view s)
+	ParamList ParseCompatibilityArgs(std::string_view s, size_t depth)
 	{
+		if (depth > MaxCompatibilityTemplateDepth)
+			throw CompatibilityTemplateDepthExceeded{};
 		ParamList args;
 		for (std::string_view arg: SplitTopLevel(s, ','))
 		{
-			DemangledTypeNode node = ParseCompatibilityType(arg);
+			DemangledTypeNode node = ParseCompatibilityType(arg, depth);
 			args.push_back({"", DemangledTypeNode::CreateShared(std::move(node))});
 		}
 		return args;
 	}
 
-	DemangledQualifiedName ParseCompatibilityName(std::string_view s)
+	DemangledQualifiedName ParseCompatibilityName(std::string_view s, size_t depth)
 	{
 		DemangledQualifiedName out;
 		for (std::string_view part: SplitTopLevel(s, ':'))
@@ -2355,20 +2360,21 @@ namespace
 
 			std::string_view base = TrimSpaces(part.substr(0, open));
 			DemangledNamePart segment{base};
-			segment.SetTemplateArguments(ParseCompatibilityArgs(part.substr(open + 1, close - open - 1)), true);
+			segment.SetTemplateArguments(
+				ParseCompatibilityArgs(part.substr(open + 1, close - open - 1), depth + 1), true);
 			out.push_back(std::move(segment));
 		}
 		return out;
 	}
 
-	DemangledTypeNode ParseCompatibilityType(std::string_view s)
+	DemangledTypeNode ParseCompatibilityType(std::string_view s, size_t depth)
 	{
 		s = StripLeadingTypeKeyword(s);
 		if (s.empty())
 			return DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{""});
 		if (s.find("::") == std::string_view::npos && FindTemplateOpen(s) == std::string_view::npos)
 			return DemangledTypeNode::NamedType(UnknownNamedTypeClass, StringList{string(s)});
-		return DemangledTypeNode::NamedType(UnknownNamedTypeClass, ParseCompatibilityName(s));
+		return DemangledTypeNode::NamedType(UnknownNamedTypeClass, ParseCompatibilityName(s, depth));
 	}
 
 	StringList RenderSegments(const DemangledQualifiedName& name)
@@ -2431,9 +2437,16 @@ BN::QualifiedName DemangledTemplateSimplifier::SimplifyQualifiedName(const BN::Q
 {
 	auto renderedName = name.GetString();
 	auto stripped = StripLeadingTypeKeyword(std::string_view(renderedName.data(), renderedName.size()));
-	DemangledQualifiedName parsed = ParseCompatibilityName(stripped);
-	SimplifyNameSegmentsInPlace(parsed);
-	return BN::QualifiedName(RenderSegments(parsed));
+	try
+	{
+		DemangledQualifiedName parsed = ParseCompatibilityName(stripped, 0);
+		SimplifyNameSegmentsInPlace(parsed);
+		return BN::QualifiedName(RenderSegments(parsed));
+	}
+	catch (const CompatibilityTemplateDepthExceeded&)
+	{
+		return name;
+	}
 }
 
 bool DemangledTemplateSimplifier::NameSegmentsHaveTemplateArguments(const DemangledQualifiedName& name)

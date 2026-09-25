@@ -183,12 +183,19 @@ impl CallingConvention {
 /// Returns `None` if the symbol does not have a function signature (e.g. metadata, variables).
 /// Thunks are intentionally excluded for now.
 pub fn build_function_type(symbol: &Symbol, arch: &CoreArchitecture) -> Option<Ref<Type>> {
+    let mut symbol = symbol;
+    loop {
+        symbol = match symbol {
+            Symbol::Attributed(a) => &a.inner,
+            Symbol::Specialization(s) => &s.inner,
+            Symbol::Suffixed(s) => &s.inner,
+            _ => break,
+        };
+    }
+
     match symbol {
         Symbol::Accessor(a) => return build_accessor_type(a, arch),
         Symbol::Metadata(m) => return build_metadata_function_type(m, arch),
-        Symbol::Attributed(a) => return build_function_type(&a.inner, arch),
-        Symbol::Specialization(s) => return build_function_type(&s.inner, arch),
-        Symbol::Suffixed(s) => return build_function_type(&s.inner, arch),
         _ => {}
     }
 
@@ -232,7 +239,7 @@ pub fn build_function_type(symbol: &Symbol, arch: &CoreArchitecture) -> Option<R
         .parameters()
         .iter()
         .enumerate()
-        .filter_map(|(i, p)| {
+        .map(|(i, p)| {
             let ty = p.type_ref.to_bn_type(arch)?;
             let name = labels
                 .get(i)
@@ -247,12 +254,12 @@ pub fn build_function_type(symbol: &Symbol, arch: &CoreArchitecture) -> Option<R
                 location: ValueLocationSource::Default,
             })
         })
-        .collect();
+        .collect::<Option<Vec<_>>>()?;
 
-    let ret_type = sig
-        .return_type()
-        .and_then(|rt| rt.to_bn_type(arch))
-        .unwrap_or_else(Type::void);
+    let ret_type = match sig.return_type() {
+        Some(rt) => rt.to_bn_type(arch)?,
+        None => Type::void(),
+    };
 
     Some(cc.build_type(&ret_type, params))
 }
@@ -325,5 +332,22 @@ fn build_metadata_function_type(metadata: &Metadata, arch: &CoreArchitecture) ->
         }
 
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use swift_demangler::Context;
+
+    #[test]
+    fn deeply_nested_specializations_keep_the_function_type() {
+        let _session = crate::test_session();
+        let arch = CoreArchitecture::by_name("aarch64").expect("aarch64 architecture");
+        let mangled = format!("$s4main5helloSSyYaKF{}", "yTg5".repeat(5_000));
+        let ctx = Context::new();
+        let symbol = Symbol::parse(&ctx, &mangled).expect("Swift symbol");
+
+        assert!(build_function_type(&symbol, &arch).is_some());
     }
 }

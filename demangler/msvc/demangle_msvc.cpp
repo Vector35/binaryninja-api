@@ -243,6 +243,7 @@ void Demangle::Reset(const DemanglerConfig& config, const _STD_STRING& mangledNa
 	m_config = config;
 	m_templateParamDepth = 0;
 	m_nestingDepth = 0;
+	m_totalArrayDimensions = 0;
 }
 
 
@@ -285,6 +286,22 @@ _STD_STRING Demangle::FormatTypeAndName(const DemangledTypeNode& type, const Nam
 Platform& Demangle::GetRenderingPlatform() const
 {
 	return m_config.GetPlatform();
+}
+
+DemangledTypeNode Demangle::CheckedArrayType(DemangledTypeNode elementType, const _STD_VECTOR<uint64_t>& extents)
+{
+	uint64_t width = elementType.Finalize(GetRenderingPlatform())->GetWidth();
+	for (uint64_t extent : std::views::reverse(extents))
+	{
+		// The core type printer interprets array counts as signed, and Type::GetWidth
+		// multiplies counts by child widths without checking for overflow.
+		if (extent > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) ||
+			(width != 0 && extent > std::numeric_limits<uint64_t>::max() / width))
+			throw DemangleException("Array extent exceeds supported range");
+		width *= extent;
+		elementType = DemangledTypeNode::ArrayType(std::move(elementType), extent);
+	}
+	return elementType;
 }
 
 DemangledTypeNode Demangle::DemangleReferencedSymbolValue(BackrefList& varList)
@@ -347,6 +364,12 @@ DemangledTypeNode Demangle::DemangleVarType(BackrefList& varList, bool isReturn,
 		uint64_t dimensionCount = DecodeEncodedUnsignedNumber();
 		if (dimensionCount > static_cast<uint64_t>(m_reader.Length()))
 			throw DemangleException("Array dimension count is too large");
+		// Array extents become nested type nodes even though parsing them does
+		// not recurse. Finalizing those nodes does recurse, so budget dimensions
+		// across the entire symbol (including arrays reached through backrefs).
+		if (dimensionCount > MAX_DEMANGLE_NESTING_DEPTH - m_totalArrayDimensions)
+			throw DemangleException("Array dimension count is too large");
+		m_totalArrayDimensions += static_cast<size_t>(dimensionCount);
 
 		_STD_VECTOR<uint64_t> elementList;
 		for (uint64_t i = 0; i < dimensionCount; i++)
@@ -429,15 +452,13 @@ DemangledTypeNode Demangle::DemangleVarType(BackrefList& varList, bool isReturn,
 	{
 		// Multi-dimensional array type: Y<ndims><dim1><dim2>...@<elemtype>
 		_STD_VECTOR<uint64_t> elementList = demangleArrayExtents();
-		newType = DemangleVarType(varList, false);
-		for (uint64_t i : std::views::reverse(elementList))
-		{
-			newType = DemangledTypeNode::ArrayType(std::move(newType), i);
-		}
+		newType = CheckedArrayType(DemangleVarType(varList, false), elementList);
 		recordTypeBackref(newType);
 		return newType;
 	}
-	case 'Z': return DemangledTypeNode::VarArgsType();
+	// The trailing varargs marker is handled by DemangleVariableList. It is
+	// never a standalone type (including data, return, and template types).
+	case 'Z': throw DemangleException("Varargs is not a standalone type");
 	case '?':
 	{
 		char next = m_reader.PeekOr();
@@ -689,12 +710,7 @@ DemangledTypeNode Demangle::DemangleVarType(BackrefList& varList, bool isReturn,
 			{
 				MSVC_TRACE("Demangle multi-dimensions array");
 				_STD_VECTOR<uint64_t> elementList = demangleArrayExtents();
-				child = DemangleVarType(varList, false);
-
-				for (uint64_t i : std::views::reverse(elementList))
-				{
-					child = DemangledTypeNode::ArrayType(std::move(child), i);
-				}
+				child = CheckedArrayType(DemangleVarType(varList, false), elementList);
 			}
 			else
 			{
@@ -1410,6 +1426,8 @@ DemangledTypeNode Demangle::DemangleString(NameList& symbolName)
 	// Length is just a number
 
 	uint64_t length = DecodeEncodedUnsignedNumber();
+	if (length > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()))
+		throw DemangleException("String literal array length exceeds supported range");
 
 	MSVC_TRACE("{}: Before CRC32 '{}'", __FUNCTION__, m_reader.GetRaw());
 

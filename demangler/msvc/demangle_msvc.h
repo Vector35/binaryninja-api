@@ -147,6 +147,7 @@ private:
 	BN::DemanglerConfig m_config;
 	size_t m_templateParamDepth = 0;
 	size_t m_nestingDepth = 0;
+	size_t m_totalArrayDimensions = 0;
 	// The largest observed depth in a real-world corpus of roughly 200k MSVC symbols was 54.
 	static constexpr size_t MAX_DEMANGLE_NESTING_DEPTH = 256;
 	using NestingGuard = DemangleNestingGuard<MAX_DEMANGLE_NESTING_DEPTH>;
@@ -163,6 +164,7 @@ private:
 	bool TryAppendLocalScopeAt(NameList& nameList, BackrefList& nameBackrefList, const char* encodedNumberStart,
 		bool typeNameContext);
 	[[nodiscard]] _STD_STRING FormatTypeAndName(const DemangledTypeNode& type, const NameList& name) const;
+	DemangledTypeNode CheckedArrayType(DemangledTypeNode elementType, const _STD_VECTOR<uint64_t>& extents);
 	enum class TypeBackrefMode
 	{
 		RecordTopLevel,

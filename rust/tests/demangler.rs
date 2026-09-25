@@ -81,6 +81,27 @@ fn test_demangler_simple() {
 }
 
 #[test]
+fn test_embedded_nul_is_a_demangle_failure() {
+    let _session = session();
+    let arch = CoreArchitecture::by_name("x86_64").expect("x86_64 exists");
+    let platform = arch.standalone_platform().expect("x86_64 platform exists");
+    let config = DemanglerConfig::for_platform(&platform, false);
+    let itanium_name = "_Z3foov\0suffix";
+
+    assert!(demangle_any(itanium_name, &config).is_none());
+    assert!(demangle_generic(&arch, itanium_name, None, false).is_none());
+    assert!(demangle_llvm(itanium_name, false).is_none());
+    assert!(demangle_gnu3(&arch, itanium_name, false).is_none());
+    assert!(demangle_ms(&arch, "?baz@@YAHH@Z\0suffix", false).is_none());
+
+    let llvm = Demangler::from_name("LLVM").expect("LLVM demangler exists");
+    assert!(!llvm.is_mangled_string(itanium_name));
+    assert!(llvm.demangle(itanium_name, &config).is_none());
+    assert!(Demangler::from_name("LLVM\0suffix").is_none());
+    assert!(!Demangler::register("test\0name", TestDemangler));
+}
+
+#[test]
 fn test_simplify_demangled_template_name() {
     let _session = session();
 

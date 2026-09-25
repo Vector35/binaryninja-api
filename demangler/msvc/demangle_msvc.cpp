@@ -288,6 +288,22 @@ Platform& Demangle::GetRenderingPlatform() const
 	return m_config.GetPlatform();
 }
 
+DemangledTypeNode Demangle::CheckedArrayType(DemangledTypeNode elementType, const _STD_VECTOR<uint64_t>& extents)
+{
+	uint64_t width = elementType.Finalize(GetRenderingPlatform())->GetWidth();
+	for (uint64_t extent : std::views::reverse(extents))
+	{
+		// The core type printer interprets array counts as signed, and Type::GetWidth
+		// multiplies counts by child widths without checking for overflow.
+		if (extent > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) ||
+			(width != 0 && extent > std::numeric_limits<uint64_t>::max() / width))
+			throw DemangleException("Array extent exceeds supported range");
+		width *= extent;
+		elementType = DemangledTypeNode::ArrayType(std::move(elementType), extent);
+	}
+	return elementType;
+}
+
 DemangledTypeNode Demangle::DemangleReferencedSymbolValue(BackrefList& varList)
 {
 	MSVC_TRACE_SCOPE;
@@ -436,11 +452,7 @@ DemangledTypeNode Demangle::DemangleVarType(BackrefList& varList, bool isReturn,
 	{
 		// Multi-dimensional array type: Y<ndims><dim1><dim2>...@<elemtype>
 		_STD_VECTOR<uint64_t> elementList = demangleArrayExtents();
-		newType = DemangleVarType(varList, false);
-		for (uint64_t i : std::views::reverse(elementList))
-		{
-			newType = DemangledTypeNode::ArrayType(std::move(newType), i);
-		}
+		newType = CheckedArrayType(DemangleVarType(varList, false), elementList);
 		recordTypeBackref(newType);
 		return newType;
 	}
@@ -696,12 +708,7 @@ DemangledTypeNode Demangle::DemangleVarType(BackrefList& varList, bool isReturn,
 			{
 				MSVC_TRACE("Demangle multi-dimensions array");
 				_STD_VECTOR<uint64_t> elementList = demangleArrayExtents();
-				child = DemangleVarType(varList, false);
-
-				for (uint64_t i : std::views::reverse(elementList))
-				{
-					child = DemangledTypeNode::ArrayType(std::move(child), i);
-				}
+				child = CheckedArrayType(DemangleVarType(varList, false), elementList);
 			}
 			else
 			{
@@ -1417,6 +1424,8 @@ DemangledTypeNode Demangle::DemangleString(NameList& symbolName)
 	// Length is just a number
 
 	uint64_t length = DecodeEncodedUnsignedNumber();
+	if (length > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()))
+		throw DemangleException("String literal array length exceeds supported range");
 
 	MSVC_TRACE("{}: Before CRC32 '{}'", __FUNCTION__, m_reader.GetRaw());
 

@@ -164,6 +164,7 @@ private:
 	bool TryAppendLocalScopeAt(NameList& nameList, BackrefList& nameBackrefList, const char* encodedNumberStart,
 		bool typeNameContext);
 	[[nodiscard]] _STD_STRING FormatTypeAndName(const DemangledTypeNode& type, const NameList& name) const;
+	DemangledTypeNode CheckedArrayType(DemangledTypeNode elementType, const _STD_VECTOR<uint64_t>& extents);
 	enum class TypeBackrefMode
 	{
 		RecordTopLevel,

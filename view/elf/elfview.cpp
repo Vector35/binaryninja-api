@@ -51,6 +51,28 @@ void BinaryNinja::InitElfViewType()
 		"ignore" : ["SettingsProjectScope", "SettingsResourceScope"]
 		})~");
 
+	settings->RegisterSetting("files.elf.maxMipsGotMB",
+		R"({
+		"title" : "Maximum MIPS GOT Data Size in MB",
+		"type" : "number",
+		"default" : 4,
+		"minValue" : 0,
+		"maxValue" : 64,
+		"description" : "Maximum total GOT data size in megabytes to process in MIPS ELF files",
+		"ignore" : ["SettingsProjectScope"]
+		})");
+
+	settings->RegisterSetting("files.elf.maxStringTableTypeSizeMB",
+		R"~({
+		"title" : "Maximum ELF String Table Size for Type Application (MB)",
+		"type" : "number",
+		"default" : 4,
+		"minValue" : 0,
+		"maxValue" : 256,
+		"description" : "Maximum string table size in megabytes when applying types from string tables",
+		"ignore" : ["SettingsProjectScope"]
+		})~");
+
 }
 
 
@@ -1145,18 +1167,51 @@ bool ElfView::Init()
 	{
 		if (mipsSymValid && (gotStart != 0))
 		{
-			for (size_t i = 2; i < localMipsSyms; i++)
+			const uint64_t entrySize = m_elf32 ? 4 : 8;
+			Ref<Settings> viewSettings = Settings::Instance();
+			const uint64_t mbBudget = viewSettings->Get<uint64_t>("files.elf.maxMipsGotMB", this);
+			const uint64_t entryBudget = (mbBudget * 1024 * 1024) / entrySize;
+
+			// Find the file-backed region containing gotStart once, so the loop needs no per-entry check.
+			uint64_t gotFileEnd = gotStart;
+			for (const auto& hdr : m_programHeaders)
 			{
-				m_gotEntryLocations.emplace(gotStart + i * (m_elf32 ? 4 : 8));
+				if (hdr.type != ELF_PT_LOAD || hdr.fileSize == 0)
+					continue;
+				const uint64_t adjustedVirtualAddress = hdr.virtualAddress + imageBaseAdjustment;
+				if (hdr.fileSize > UINT64_MAX - adjustedVirtualAddress)
+					continue;
+				const uint64_t segEnd = adjustedVirtualAddress + hdr.fileSize;
+				if (adjustedVirtualAddress > gotStart || gotStart >= segEnd)
+					continue;
+				// Only trust this segment's declared extent up to what the file actually backs.
+				if (hdr.fileSize > UINT64_MAX - hdr.offset || hdr.offset + hdr.fileSize > (uint64_t)GetParentView()->GetLength())
+					continue;
+				gotFileEnd = segEnd;
+				break;
 			}
+			const uint64_t maxFromFile = (gotFileEnd > gotStart) ? (gotFileEnd - gotStart) / entrySize : 0;
+			const uint64_t maxGotEntries = std::min(entryBudget, maxFromFile);
+			const uint64_t limit = std::min(localMipsSyms, maxGotEntries);
+			for (size_t i = 2; i < limit; i++)
+				m_gotEntryLocations.emplace(gotStart + i * entrySize);
 			for (uint64_t i = firstMipsSym; i < (m_auxSymbolTable.size / (m_elf32 ? 16 : 24)); i++)
 			{
-				uint64_t gotEntry = gotStart + ((localMipsSyms + i - firstMipsSym) * (m_elf32 ? 4 : 8));
-				if (!IsValidOffset(gotEntry))
+				const uint64_t symbolGotIndex = i - firstMipsSym;
+				if (symbolGotIndex > UINT64_MAX - localMipsSyms)
 				{
-					m_logger->LogWarn("ELF GOT entry %" PRIx64 " is invalid", gotEntry);
+					m_logger->LogWarn("ELF GOT entry index for symbol %" PRIx64 " overflows", i);
 					break;
 				}
+
+				const uint64_t gotIndex = localMipsSyms + symbolGotIndex;
+				if (gotIndex >= maxGotEntries)
+				{
+					m_logger->LogWarn("ELF GOT entry index %" PRIx64 " is outside the file-backed range", gotIndex);
+					break;
+				}
+
+				const uint64_t gotEntry = gotStart + gotIndex * entrySize;
 
 				ElfSymbolTableEntry entry;
 				if (!ParseSymbolTableEntry(virtualReader, entry, i, m_auxSymbolTable, m_dynamicStringTable, true))
@@ -1792,7 +1847,7 @@ bool ElfView::Init()
 		}
 
 		// Perform fixup processing on the local GOT entries if the view is relocatable.
-		if (m_relocatable)
+		if (m_relocatable && localMipsSyms > 0)
 		{
 			uint64_t lastLocalGotEntry = gotStart + (localMipsSyms - 1) * (m_elf32 ? 4 : 8);
 			for (auto gotEntry : m_gotEntryLocations)
@@ -2659,6 +2714,14 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 void ElfView::ApplyTypesToParentStringTable(const Elf64SectionHeader& section, const bool offset)
 {
 	m_logger->LogInfo("Found string table of size %#" PRIx64 " at offset %#" PRIx64, section.size, section.offset);
+	if (section.size == 0 ||
+	    section.size > UINT64_MAX - section.offset ||
+	    section.offset + section.size > GetParentView()->GetLength())
+		return;
+	Ref<Settings> viewSettings = Settings::Instance();
+	const uint64_t sizeBudget = viewSettings->Get<uint64_t>("files.elf.maxStringTableTypeSizeMB", this) * 1024 * 1024;
+	if (section.size > sizeBudget)
+		return;
 	DataBuffer buffer = GetParentView()->ReadBuffer(section.offset, section.size);
 	if (buffer.GetLength() != section.size)
 		return;
@@ -2728,7 +2791,7 @@ void ElfView::ApplyTypesToStringTable(const Elf64SectionHeader& section, const i
 
 string ElfView::ReadStringTable(BinaryReader& reader, const Elf64SectionHeader& section, uint64_t offset)
 {
-	if (offset == 0 || offset > section.size)
+	if (offset == 0 || offset >= section.size || section.size > GetParentView()->GetLength())
 		return "";
 
 	auto itr = m_stringTableCache.find(section.offset);
@@ -2748,7 +2811,11 @@ string ElfView::ReadStringTable(BinaryReader& reader, const Elf64SectionHeader& 
 	}
 
 	const std::vector<char>& tableCache = itr->second;
-	return std::string(&tableCache[offset], strlen(tableCache.data() + offset));
+	if (offset >= tableCache.size()) {
+		m_logger->LogError("Unable to read string from table cache offset: 0x%" PRIx64 " size: 0x%" PRIx64, section.offset, section.size);
+		return "";
+	}
+	return std::string(&tableCache[offset], strnlen(tableCache.data() + offset, tableCache.size() - offset));
 }
 
 

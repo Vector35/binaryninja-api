@@ -12390,6 +12390,11 @@ tests_grab_bag = [
     (b'\x1F\x81\x70\xB1', 'LLIL_ADD.q{*}(LLIL_REG.q(x8),LLIL_CONST.q(0xC20000))'),
     # add w22, w30, #0x7e6, with no shift written
     (b'\xD6\x9B\x1F\x11', 'LLIL_SET_REG.d(w22,LLIL_ADD.d(LLIL_REG.d(w30),LLIL_CONST.d(0x7E6)))'),
+    # b.al and b.nv both branch every time, past the epilogue's mov to its ret
+    # b.al 0x8
+    (b'\x4E\x00\x00\x54', 'LLIL_GOTO(2); LLIL_RET(LLIL_REG.q(lr))'),
+    # b.nv 0x8
+    (b'\x4F\x00\x00\x54', 'LLIL_GOTO(2); LLIL_RET(LLIL_REG.q(lr))'),
     # irg x0, x1, with no Xm written, excludes no tags
     (b'\x20\x10\xDF\x9A', 'LLIL_INTRINSIC([x0],__irg,[LLIL_REG.q(x1),LLIL_CONST.q(0x0)])'),
     # irg x0, x1, x2
@@ -12986,6 +12991,25 @@ tests_grab_bag = [
                          ' LLIL_SET_FLAG(c,LLIL_CONST(0));' + \
                          ' LLIL_SET_FLAG(v,LLIL_CONST(0));' + \
                          ' LLIL_GOTO(8)'), # ccmp w8, #30, #8, mi
+    # nv holds as al does, so each of these behaves as if the condition held
+    (b'\xC1\xF8\x52\x7A', 'LLIL_IF(LLIL_CONST(1),1,3);' + \
+                         ' LLIL_SUB.d{*}(LLIL_REG.d(w6),LLIL_CONST.d(0x12));' + \
+                         ' LLIL_GOTO(8);' + \
+                         ' LLIL_SET_FLAG(n,LLIL_CONST(0));' + \
+                         ' LLIL_SET_FLAG(z,LLIL_CONST(0));' + \
+                         ' LLIL_SET_FLAG(c,LLIL_CONST(0));' + \
+                         ' LLIL_SET_FLAG(v,LLIL_CONST(1));' + \
+                         ' LLIL_GOTO(8)'), # ccmp w6, #18, #1, nv
+    (b'\x20\xF0\x82\x9A', 'LLIL_IF(LLIL_CONST(1),1,3);' + \
+                         ' LLIL_SET_REG.q(x0,LLIL_REG.q(x1));' + \
+                         ' LLIL_GOTO(5);' + \
+                         ' LLIL_SET_REG.q(x0,LLIL_REG.q(x2));' + \
+                         ' LLIL_GOTO(5)'), # csel x0, x1, x2, nv
+    (b'\x20\xFC\x22\x1E', 'LLIL_IF(LLIL_CONST(1),1,3);' + \
+                         ' LLIL_SET_REG.d(s0,LLIL_REG.d(s1));' + \
+                         ' LLIL_GOTO(5);' + \
+                         ' LLIL_SET_REG.d(s0,LLIL_REG.d(s2));' + \
+                         ' LLIL_GOTO(5)'), # fcsel s0, s1, s2, nv
     (b'\x1F\x20\x03\xD5', 'LLIL_NOP()'), # nop, gets optimized from function
 ]
 
@@ -13231,6 +13255,21 @@ operand_test_cases = [
     (b'\x20\x04\x40\x91', ['x0', 'x1', '#0x1, lsl #0xc']),
     # ld1 {v0.16b}, [x0]
     (b'\x00\x70\x40\x4c', ['{v0.16b}', '[x0]']),
+]
+
+# The Always Branch and Invert Branch patches of each branch, or None where no branch patch is
+# offered.
+patch_test_cases = [
+    # b.eq 0x8 becomes b 0x8, or b.ne 0x8
+    (b'\x40\x00\x00\x54', b'\x02\x00\x00\x14', b'\x41\x00\x00\x54'),
+    # cbnz x3, 0x8 becomes cbz xzr, 0x8, or cbz x3, 0x8
+    (b'\x43\x00\x00\xb5', b'\x5f\x00\x00\xb4', b'\x43\x00\x00\xb4'),
+    # tbz w0, #0x0, 0x8 becomes tbz wzr, #0x0, 0x8, or tbnz w0, #0x0, 0x8
+    (b'\x40\x00\x00\x36', b'\x5f\x00\x00\x36', b'\x40\x00\x00\x37'),
+    # b.al 0x8 and b.nv 0x8 always branch, as b 0x8 does
+    (b'\x4e\x00\x00\x54', None, None),
+    (b'\x4f\x00\x00\x54', None, None),
+    (b'\x02\x00\x00\x14', None, None),
 ]
 
 test_cases = \
@@ -13529,6 +13568,28 @@ def test_all_operands(no_fail=False):
 
     return True
 
+def test_all_patches(no_fail=False):
+    arch = binaryninja.Architecture['aarch64']
+    for test_i, (data, expected_always, expected_inverted) in enumerate(patch_test_cases):
+        available = expected_always is not None
+        actual = (
+            arch.is_always_branch_patch_available(data),
+            arch.is_never_branch_patch_available(data),
+            arch.is_invert_branch_patch_available(data),
+            arch.always_branch(data) if available else None,
+            arch.invert_branch(data) if available else None,
+        )
+        expected = (available, available, available, expected_always, expected_inverted)
+        if actual != expected:
+            print('PATCH MISMATCH AT TEST %d!' % test_i)
+            print('\t   input: %s %s' % (data.hex(), disassemble(data)))
+            print('\texpected: %s' % (expected,))
+            print('\t  actual: %s' % (actual,))
+            if not no_fail:
+                return False
+
+    return True
+
 def test_all_position_dependent(no_fail=False):
     for test_i, (data, addr, expected_lift) in enumerate(tests_position_dependent):
         actual_lift, _ = lift_at(data, addr)
@@ -13547,7 +13608,8 @@ def run_all(no_fail=False):
     position_dependent_ok = test_all_position_dependent(no_fail)
     disassembly_ok = test_all_disassembly(no_fail)
     operands_ok = test_all_operands(no_fail)
-    if lifts_ok and position_dependent_ok and disassembly_ok and operands_ok:
+    patches_ok = test_all_patches(no_fail)
+    if lifts_ok and position_dependent_ok and disassembly_ok and operands_ok and patches_ok:
         print('success!', file=sys.stderr)
         return True
 

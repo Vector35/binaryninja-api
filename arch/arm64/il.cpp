@@ -23,9 +23,10 @@ static uint32_t GetFlagWriteTypeForEffect(exarmo_aarch64_flag_effect effect)
 	return effect.float_compare ? IL_FLAG_WRITE_ALL_FLOAT : IL_FLAG_WRITE_ALL;
 }
 
-static ExprId GetCondition(LowLevelILFunction& il, exarmo_aarch64_cond cond)
+// The IL expression for the condition `operand` names.
+static ExprId GetCondition(LowLevelILFunction& il, const exarmo_aarch64_operand& operand)
 {
-	switch (cond)
+	switch ((exarmo_aarch64_cond)operand.cond)
 	{
 	case EXARMO_AARCH64_COND_EQ:
 		return il.FlagGroup(IL_FLAG_GROUP_EQ);
@@ -55,11 +56,12 @@ static ExprId GetCondition(LowLevelILFunction& il, exarmo_aarch64_cond cond)
 		return il.FlagGroup(IL_FLAG_GROUP_GT);
 	case EXARMO_AARCH64_COND_LE:
 		return il.FlagGroup(IL_FLAG_GROUP_LE);
+	// In ARM's ConditionHolds pseudocode, AL and NV both evaluate true.
 	case EXARMO_AARCH64_COND_AL:
-		return il.Const(0, 1);  // Always branch
 	case EXARMO_AARCH64_COND_NV:
+		return il.Const(0, 1);
 	default:
-		return il.Const(0, 0);  // Never branch
+		return il.Const(0, 0);
 	}
 }
 
@@ -1060,25 +1062,21 @@ bool GetLowLevelILForInstruction(
 		break;
 
 	// B carries the condition as an operand, so one case covers the unconditional branch and
-	// every conditional one. b.al branches every time, and b.nv is read as never taken.
+	// every conditional one. b.al and b.nv branch every time, and jump directly so that the
+	// block does not gain an edge nothing takes.
 	case EXARMO_AARCH64_B:
 	case EXARMO_AARCH64_BC:
 	{
-		if (IS_COND_O(operand1) && operand1.cond == 0xf)
-		{
-			il.AddInstruction(DirectJump(arch, il, addr + 4, addrSize));
-			break;
-		}
-
 		exarmo_aarch64_operand& target = IS_COND_O(operand1) ? operand2 : operand1;
-		if (!IS_COND_O(operand1) || (operand1.cond & 0xe) == 0xe)
+		if (!IS_COND_O(operand1) || operand1.cond == EXARMO_AARCH64_COND_AL
+		    || operand1.cond == EXARMO_AARCH64_COND_NV)
 		{
 			il.AddInstruction(DirectJump(arch, il, LabelTarget(target, addr), addrSize));
 			break;
 		}
 
-		ConditionalJump(arch, il, GetCondition(il, (exarmo_aarch64_cond)operand1.cond), addrSize,
-		    LabelTarget(target, addr), addr + 4);
+		ConditionalJump(
+		    arch, il, GetCondition(il, operand1), addrSize, LabelTarget(target, addr), addr + 4);
 		return false;
 	}
 	case EXARMO_AARCH64_BL:
@@ -1242,7 +1240,7 @@ bool GetLowLevelILForInstruction(
 	{
 		LowLevelILLabel trueCode, falseCode, done;
 
-		il.AddInstruction(il.If(GetCondition(il, (exarmo_aarch64_cond)operand4.cond), trueCode, falseCode));
+		il.AddInstruction(il.If(GetCondition(il, operand4), trueCode, falseCode));
 
 		il.MarkLabel(trueCode);
 		il.AddInstruction(il.Add(REGSZ_O(operand1), ILREG_O(operand1),
@@ -1274,7 +1272,7 @@ bool GetLowLevelILForInstruction(
 	{
 		LowLevelILLabel trueCode, falseCode, done;
 
-		il.AddInstruction(il.If(GetCondition(il, (exarmo_aarch64_cond)operand4.cond), trueCode, falseCode));
+		il.AddInstruction(il.If(GetCondition(il, operand4), trueCode, falseCode));
 
 		il.MarkLabel(trueCode);
 		il.AddInstruction(il.Sub(REGSZ_O(operand1), ILREG_O(operand1),
@@ -1297,43 +1295,43 @@ bool GetLowLevelILForInstruction(
 		break;
 	case EXARMO_AARCH64_CSEL:
 	case EXARMO_AARCH64_FCSEL:
-		GenIfElse(il, GetCondition(il, (exarmo_aarch64_cond)operand4.cond), ILSETREG_O(operand1, ILREG_O(operand2)),
+		GenIfElse(il, GetCondition(il, operand4), ILSETREG_O(operand1, ILREG_O(operand2)),
 		    ILSETREG_O(operand1, ILREG_O(operand3)));
 		break;
 	case EXARMO_AARCH64_CSINC:
-		GenIfElse(il, GetCondition(il, (exarmo_aarch64_cond)operand4.cond), ILSETREG_O(operand1, ILREG_O(operand2)),
+		GenIfElse(il, GetCondition(il, operand4), ILSETREG_O(operand1, ILREG_O(operand2)),
 		    ILSETREG_O(operand1, ILADDREG_O(operand3, il.Const(REGSZ_O(operand1), 1))));
 		break;
 	case EXARMO_AARCH64_CSINV:
-		GenIfElse(il, GetCondition(il, (exarmo_aarch64_cond)operand4.cond), ILSETREG_O(operand1, ILREG_O(operand2)),
+		GenIfElse(il, GetCondition(il, operand4), ILSETREG_O(operand1, ILREG_O(operand2)),
 		    ILSETREG_O(operand1, il.Not(REGSZ_O(operand1), ILREG_O(operand3))));
 		break;
 	case EXARMO_AARCH64_CSNEG:
-		GenIfElse(il, GetCondition(il, (exarmo_aarch64_cond)operand4.cond), ILSETREG_O(operand1, ILREG_O(operand2)),
+		GenIfElse(il, GetCondition(il, operand4), ILSETREG_O(operand1, ILREG_O(operand2)),
 		    ILSETREG_O(operand1, il.Neg(REGSZ_O(operand1), ILREG_O(operand3))));
 		break;
 	case EXARMO_AARCH64_CSET:
 		il.AddInstruction(
 			ILSETREG_O(operand1,
-				il.BoolToInt(REGSZ_O(operand1), GetCondition(il, (exarmo_aarch64_cond)operand2.cond))));
+				il.BoolToInt(REGSZ_O(operand1), GetCondition(il, operand2))));
 		break;
 	case EXARMO_AARCH64_CSETM:
-		GenIfElse(il, GetCondition(il, (exarmo_aarch64_cond)operand2.cond),
+		GenIfElse(il, GetCondition(il, operand2),
 		    ILSETREG_O(operand1, il.Const(REGSZ_O(operand1), -1)),
 		    ILSETREG_O(operand1, il.Const(REGSZ_O(operand1), 0)));
 		break;
 	case EXARMO_AARCH64_CINC:
-		GenIfElse(il, GetCondition(il, (exarmo_aarch64_cond)operand3.cond),
+		GenIfElse(il, GetCondition(il, operand3),
 		    ILSETREG_O(operand1, ILADDREG_O(operand2, il.Const(REGSZ_O(operand1), 1))),
 		    ILSETREG_O(operand1, ILREG_O(operand2)));
 		break;
 	case EXARMO_AARCH64_CINV:
-		GenIfElse(il, GetCondition(il, (exarmo_aarch64_cond)operand3.cond),
+		GenIfElse(il, GetCondition(il, operand3),
 		    ILSETREG_O(operand1, il.Not(REGSZ_O(operand1), ILREG_O(operand2))),
 		    ILSETREG_O(operand1, ILREG_O(operand2)));
 		break;
 	case EXARMO_AARCH64_CNEG:
-		GenIfElse(il, GetCondition(il, (exarmo_aarch64_cond)operand3.cond),
+		GenIfElse(il, GetCondition(il, operand3),
 		    ILSETREG_O(operand1, il.Neg(REGSZ_O(operand1), ILREG_O(operand2))),
 		    ILSETREG_O(operand1, ILREG_O(operand2)));
 		break;
@@ -1514,7 +1512,7 @@ bool GetLowLevelILForInstruction(
 	{
 		LowLevelILLabel trueCode, falseCode, done;
 
-		il.AddInstruction(il.If(GetCondition(il, (exarmo_aarch64_cond)operand4.cond), trueCode, falseCode));
+		il.AddInstruction(il.If(GetCondition(il, operand4), trueCode, falseCode));
 
 		il.MarkLabel(trueCode);
 		il.AddInstruction(il.FloatSub(REGSZ_O(operand1), ILREG_O(operand1),

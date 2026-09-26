@@ -11,18 +11,18 @@ dependencies = [
 
 [[package]]
 name = "exarmo-aarch64"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9ef159557f010f6cd425a9053c7578084a230937f7d74d7457d00c79438189a"
+checksum = "5bc29a18904d97c4a63eb2fd2bbf0c18fc3fb9b59f964dd82094e6f4a2996280"
 dependencies = [
  "exarmo-core",
 ]
 
 [[package]]
 name = "exarmo-aarch64-capi"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "705a7b359cdfdba91f7c24a0b2cf76311ac5d2b23f6dfa7b9a33978ef566bb62"
+checksum = "3535e91107509ed4135891b30b6c6c058c7b6fb734be09f844e372aec48941a5"
 dependencies = [
  "exarmo-aarch64",
  "exarmo-core",
@@ -30,6 +30,6 @@ dependencies = [
 
 [[package]]
 name = "exarmo-core"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3848e1a04c30a61cd2e290340c7c720202783e405d86d5edd276804f6fca0005"
+checksum = "b89d4a877b325cb5f222b373c25297f562d13b2a4617ffa17ea6b6acdbcd6172"

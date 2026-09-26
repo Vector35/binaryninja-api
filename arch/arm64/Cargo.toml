@@ -12,7 +12,7 @@ crate-type = ["staticlib"]
 [dependencies]
 # Pin the exact version so that the demo umbrella, which resolves without this crate's Cargo.lock,
 # builds the same exarmo as every other build.
-exarmo-aarch64-capi = "=0.2.1"
+exarmo-aarch64-capi = "=0.3.0"
 
 # Make this crate its own workspace to keep exarmo out of the api workspace's lock file.
 [workspace]

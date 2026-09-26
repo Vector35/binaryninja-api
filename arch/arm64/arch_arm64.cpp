@@ -4,16 +4,21 @@
 #include <cstdint>
 #include <inttypes.h>
 #include <map>
-#include <array>
+#include <optional>
 #include <stdio.h>
 #include <string.h>
 
+#include "acle_intrinsics.h"
 #include "apple_vendor.h"
-#include "arm64dis.h"
+#include "base/assertions.h"
 #include "binaryninjaapi.h"
+#include "exarmo/aarch64.h"
 #include "il.h"
 #include "lowlevelilinstruction.h"
-#include "neon_intrinsics.h"
+#include "operands.h"
+#include "registers.h"
+#include "system_operations.h"
+#include "system_registers.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -307,27 +312,121 @@ static const char* GetRelocationString(ElfArm64RelocationType rel)
 }
 
 
+namespace {
+// exarmo's maximums cover every encoding, so these buffers fit any instruction.
+// EXARMO_AARCH64_MAX_TEXT excludes the NUL.
+constexpr size_t MaxTokens = EXARMO_AARCH64_MAX_TOKENS;
+constexpr size_t TextCapacity = EXARMO_AARCH64_MAX_TEXT + 1;
+}
+
+
+// Translate exarmo's tokens into Binary Ninja's. Rejoin a mnemonic that exarmo splits around a
+// condition, pad the mnemonic to column 8 in place of exarmo's tab, and add memory operand markers
+// inside a memory operand's brackets.
+static bool TokenizeInstruction(
+    const exarmo_aarch64_instruction& instr, uint64_t addr, vector<InstructionTextToken>& result)
+{
+	char text[TextCapacity];
+	exarmo_aarch64_token tokens[MaxTokens];
+	exarmo_aarch64_text_size size =
+	    exarmo_aarch64_instruction_tokens(&instr, addr, text, sizeof(text), tokens, MaxTokens);
+	if (size.tokens == 0 || size.tokens > MaxTokens || size.length >= sizeof(text))
+		return false;
+
+	exarmo_aarch64_operand operands[EXARMO_AARCH64_MAX_OPERANDS];
+	size_t operandCount =
+	    exarmo_aarch64_instruction_operands(&instr, operands, EXARMO_AARCH64_MAX_OPERANDS);
+
+	size_t index = 0;
+	string mnemonic;
+	for (; index < size.tokens && tokens[index].kind == EXARMO_AARCH64_TOKEN_MNEMONIC; index++)
+		mnemonic.append(text + tokens[index].offset, tokens[index].length);
+
+	if (mnemonic.empty())
+		return false;
+
+	result.emplace_back(InstructionToken, mnemonic);
+
+	for (; index < size.tokens; index++)
+	{
+		const exarmo_aarch64_token& token = tokens[index];
+		const char* begin = text + token.offset;
+		size_t length = token.length;
+
+		if (length && *begin == '\t')
+		{
+			result.emplace_back(
+			    TextToken, string(mnemonic.size() < 8 ? 8 - mnemonic.size() : 1, ' '));
+			begin++;
+			length--;
+			if (!length)
+				continue;
+		}
+
+		string value(begin, length);
+		switch (token.kind)
+		{
+		case EXARMO_AARCH64_TOKEN_SEPARATOR:
+			result.emplace_back(OperandSeparatorToken, value);
+			break;
+		case EXARMO_AARCH64_TOKEN_REGISTER:
+		{
+			// exarmo prints an IMPLEMENTATION DEFINED system register by its fields. Use Apple's
+			// name where there is one.
+			string_view vendor;
+			if (token.operand < operandCount
+			    && operands[token.operand].kind == EXARMO_AARCH64_OPERAND_SYSREG)
+				vendor = AppleVendorSystemRegisterName(operands[token.operand].sysreg.encoding);
+
+			result.emplace_back(RegisterToken, vendor.empty() ? value : string(vendor));
+			break;
+		}
+		case EXARMO_AARCH64_TOKEN_IMMEDIATE:
+		case EXARMO_AARCH64_TOKEN_INTEGER:
+			result.emplace_back(IntegerToken, value, token.value);
+			break;
+		case EXARMO_AARCH64_TOKEN_ADDRESS:
+			result.emplace_back(PossibleAddressToken, value, token.value);
+			break;
+		case EXARMO_AARCH64_TOKEN_FLOAT:
+			result.emplace_back(FloatingPointToken, value);
+			break;
+		case EXARMO_AARCH64_TOKEN_BRACKET:
+		{
+			// Only a memory operand's brackets get memory operand markers. A lane index's brackets
+			// and a register list's braces belong to other operand kinds.
+			bool memory = token.operand < operandCount
+			    && operands[token.operand].kind == EXARMO_AARCH64_OPERAND_MEM;
+			if (memory && *begin == '[')
+			{
+				result.emplace_back(BraceToken, value);
+				result.emplace_back(BeginMemoryOperandToken, "");
+			}
+			else if (memory && *begin == ']')
+			{
+				result.emplace_back(EndMemoryOperandToken, "");
+				result.emplace_back(BraceToken, value);
+			}
+			else
+				result.emplace_back(BraceToken, value);
+			break;
+		}
+		default:
+			result.emplace_back(TextToken, value);
+			break;
+		}
+	}
+
+	return true;
+}
+
+
 class Arm64Architecture : public Architecture
 {
  protected:
 	size_t m_bits;
 	bool m_onlyDisassembleOnAlignedAddresses;
 	bool m_preferIntrinsics;
-
-	virtual bool Disassemble(const uint8_t* data, uint64_t addr, size_t maxLen, Instruction& result)
-	{
-		(void)addr;
-		(void)maxLen;
-		memset(&result, 0, sizeof(result));
-
-		if (m_onlyDisassembleOnAlignedAddresses && (addr % 4 != 0))
-			return false;
-
-		if (aarch64_decompose(*(uint32_t*)data, &result, addr) != 0)
-			return false;
-		return true;
-	}
-
 
 	virtual size_t GetAddressSize() const override { return 8; }
 
@@ -338,424 +437,128 @@ class Arm64Architecture : public Architecture
 	virtual size_t GetMaxInstructionLength() const override { return 4; }
 
 
-	bool IsTestAndBranch(const Instruction& instr)
+	// Read the instruction word at `addr`. Returns nullopt if fewer than 4 bytes are available, or if
+	// `addr` is misaligned and only aligned addresses are disassembled.
+	std::optional<uint32_t> ReadInstructionWord(const uint8_t* data, uint64_t addr, size_t maxLen)
 	{
-		return instr.operation == ARM64_TBZ || instr.operation == ARM64_TBNZ;
+		if (maxLen < 4)
+			return std::nullopt;
+
+		if (m_onlyDisassembleOnAlignedAddresses && (addr % 4 != 0))
+			return std::nullopt;
+
+		uint32_t insn;
+		memcpy(&insn, data, sizeof(insn));
+		return insn;
 	}
 
 
-	bool IsCompareAndBranch(const Instruction& instr)
+	bool DecodeInstruction(
+	    const uint8_t* data, uint64_t addr, size_t maxLen, exarmo_aarch64_instruction& result)
 	{
-		return instr.operation == ARM64_CBZ || instr.operation == ARM64_CBNZ;
+		std::optional<uint32_t> insn = ReadInstructionWord(data, addr, maxLen);
+		return insn && exarmo_aarch64_decode(*insn, &result) == EXARMO_AARCH64_STATUS_OK;
 	}
 
 
-	bool IsConditionalBranch(const Instruction& instr)
+	bool IsTestAndBranch(const exarmo_aarch64_instruction& instr)
 	{
-		switch (instr.operation)
-		{
-		case ARM64_B_EQ:
-		case ARM64_B_NE:
-		case ARM64_B_CS:
-		case ARM64_B_CC:
-		case ARM64_B_MI:
-		case ARM64_B_PL:
-		case ARM64_B_VS:
-		case ARM64_B_VC:
-		case ARM64_B_HI:
-		case ARM64_B_LS:
-		case ARM64_B_GE:
-		case ARM64_B_LT:
-		case ARM64_B_GT:
-		case ARM64_B_LE:
-		case ARM64_B_AL:
-		case ARM64_B_NV:
-			return true;
-		default:
+		exarmo_aarch64_mnemonic mnemonic = exarmo_aarch64_instruction_mnemonic(&instr);
+		return mnemonic == EXARMO_AARCH64_TBZ || mnemonic == EXARMO_AARCH64_TBNZ;
+	}
+
+
+	bool IsCompareAndBranch(const exarmo_aarch64_instruction& instr)
+	{
+		exarmo_aarch64_mnemonic mnemonic = exarmo_aarch64_instruction_mnemonic(&instr);
+		return mnemonic == EXARMO_AARCH64_CBZ || mnemonic == EXARMO_AARCH64_CBNZ;
+	}
+
+
+	// Whether this is B.cond or BC.cond with a condition that can fail. b.al and b.nv always branch,
+	// so they are unconditional branches in a conditional encoding.
+	bool IsConditionalBranch(const exarmo_aarch64_instruction& instr)
+	{
+		exarmo_aarch64_encoding encoding = exarmo_aarch64_instruction_encoding(&instr);
+		if (encoding != EXARMO_AARCH64_ENC_BOnlyCondbranch && encoding != EXARMO_AARCH64_ENC_BcOnlyCondbranch)
 			return false;
-		}
+
+		return exarmo_aarch64_instruction_branch(&instr, 0).conditional;
 	}
 
 
-	bool IsConditionalJump(const Instruction& instr)
+	// Whether AlwaysBranch and InvertBranch can rewrite this branch. CB<cc> also branches
+	// conditionally but has a different encoding.
+	bool IsConditionalJump(const exarmo_aarch64_instruction& instr)
 	{
 		return IsConditionalBranch(instr) || IsTestAndBranch(instr) || IsCompareAndBranch(instr);
 	}
 
 
 	void SetInstructionInfoForInstruction(
-	    uint64_t addr, const Instruction& instr, InstructionInfo& result)
+	    uint64_t addr, const exarmo_aarch64_instruction& instr, InstructionInfo& result)
 	{
 		result.length = 4;
-		switch (instr.operation)
+
+		exarmo_aarch64_branch branch = exarmo_aarch64_instruction_branch(&instr, addr);
+		switch (branch.kind)
 		{
-		case ARM64_BL:
-			if (instr.operands[0].operandClass == LABEL)
-				result.AddBranch(CallDestination, instr.operands[0].immediate);
+		case EXARMO_AARCH64_BRANCH_DIRECT_CALL:
+			if (branch.has_target)
+				result.AddBranch(CallDestination, branch.target);
 			break;
 
-		case ARM64_B_AL:
-		case ARM64_B:
-			if (instr.operands[0].operandClass == LABEL)
-				result.AddBranch(UnconditionalBranch, instr.operands[0].immediate);
-			else
+		case EXARMO_AARCH64_BRANCH_DIRECT:
+			if (!branch.has_target)
+			{
 				result.AddBranch(UnresolvedBranch);
+				break;
+			}
+
+			if (!branch.conditional)
+			{
+				result.AddBranch(UnconditionalBranch, branch.target);
+				break;
+			}
+
+			result.AddBranch(TrueBranch, branch.target);
+			result.AddBranch(FalseBranch, addr + 4);
 			break;
 
-		case ARM64_B_EQ:
-		case ARM64_B_NE:
-		case ARM64_B_CS:
-		case ARM64_B_CC:
-		case ARM64_B_MI:
-		case ARM64_B_PL:
-		case ARM64_B_VS:
-		case ARM64_B_VC:
-		case ARM64_B_HI:
-		case ARM64_B_LS:
-		case ARM64_B_GE:
-		case ARM64_B_LT:
-		case ARM64_B_GT:
-		case ARM64_B_LE:
-			result.AddBranch(TrueBranch, instr.operands[0].immediate);
-		case ARM64_B_NV:
-			result.AddBranch(FalseBranch, addr + 4);
-			break;
-		case ARM64_TBZ:
-		case ARM64_TBNZ:
-			result.AddBranch(TrueBranch, instr.operands[2].immediate);
-			result.AddBranch(FalseBranch, addr + 4);
-			break;
-		case ARM64_CBZ:
-		case ARM64_CBNZ:
-			result.AddBranch(TrueBranch, instr.operands[1].immediate);
-			result.AddBranch(FalseBranch, addr + 4);
-			break;
-		case ARM64_BR:
-		case ARM64_BRAA:
-		case ARM64_BRAAZ:
-		case ARM64_BRAB:
-		case ARM64_BRABZ:
-		case ARM64_DRPS:
+		case EXARMO_AARCH64_BRANCH_INDIRECT:
 			result.AddBranch(UnresolvedBranch);
 			break;
-		case ARM64_ERET:
-		case ARM64_ERETAA:
-		case ARM64_ERETAB:
-		case ARM64_RET:
-		case ARM64_RETAA:
-		case ARM64_RETAB:
-		case ARM64_RETAASPPC:
-		case ARM64_RETABSPPC:
-		case ARM64_RETAASPPCR:
-		case ARM64_RETABSPPCR:
+
+		case EXARMO_AARCH64_BRANCH_EXCEPTION_RETURN:
+			// DRPS is UNDEFINED outside debug state, so where it goes is not known.
+			if (exarmo_aarch64_instruction_mnemonic(&instr) == EXARMO_AARCH64_DRPS)
+			{
+				result.AddBranch(UnresolvedBranch);
+				break;
+			}
+
 			result.AddBranch(FunctionReturn);
 			break;
-		case ARM64_SVC:
-		case ARM64_HVC:
-		case ARM64_SMC:
+
+		case EXARMO_AARCH64_BRANCH_RETURN:
+			result.AddBranch(FunctionReturn);
+			break;
+
+		case EXARMO_AARCH64_BRANCH_SYSTEM_CALL:
 			result.AddBranch(SystemCall);
 			break;
-		case ARM64_UDF:
+
+		// BRK, HLT and UDF all lift to a trap that ends the block.
+		case EXARMO_AARCH64_BRANCH_EXCEPTION:
+		case EXARMO_AARCH64_BRANCH_HALT:
 			result.AddBranch(ExceptionBranch);
 			break;
 
+		// An indirect call returns to the instruction after it, so it ends no block.
+		case EXARMO_AARCH64_BRANCH_INDIRECT_CALL:
 		default:
 			break;
 		}
-	}
-
-
-	uint32_t tokenize_shift(
-	    const InstructionOperand* __restrict operand, vector<InstructionTextToken>& result)
-	{
-		if (operand->shiftType != ShiftType_NONE)
-		{
-			const char* shiftStr = aarch64_get_shift(operand->shiftType);
-			if (shiftStr == NULL)
-				return FAILED_TO_DISASSEMBLE_OPERAND;
-
-			result.emplace_back(TextToken, ", ");
-			result.emplace_back(TextToken, shiftStr);
-			if (operand->shiftValueUsed != 0)
-			{
-				char buf[64] = {0};
-				snprintf(buf, sizeof(buf), "%#x", (uint32_t)operand->shiftValue);
-				result.emplace_back(OperationToken, " #");
-				result.emplace_back(IntegerToken, buf, operand->shiftValue);
-			}
-		}
-		return DISASM_SUCCESS;
-	}
-
-
-	uint32_t tokenize_shifted_immediate(
-	    const InstructionOperand* __restrict operand, vector<InstructionTextToken>& result)
-	{
-		char buf[64] = {0};
-		const char* sign = "";
-		if (operand == NULL)
-			return FAILED_TO_DISASSEMBLE_OPERAND;
-
-		uint64_t imm = operand->immediate;
-		if (operand->signedImm == 1 && ((int64_t)imm) < 0)
-		{
-			sign = "-";
-			imm = -(int64_t)imm;
-		}
-
-		switch (operand->operandClass)
-		{
-		case FIMM32:
-		{
-			union
-			{
-				uint32_t intValue;
-				float floatValue;
-			} f;
-			f.intValue = (uint32_t)operand->immediate;
-			snprintf(buf, sizeof(buf), "%.08f", f.floatValue);
-			result.emplace_back(OperationToken, "#");
-			result.emplace_back(FloatingPointToken, buf);
-			break;
-		}
-		case IMM32:
-			snprintf(buf, sizeof(buf), "%s%#x", sign, (uint32_t)imm);
-			result.emplace_back(OperationToken, "#");
-			result.emplace_back(IntegerToken, buf, operand->immediate);
-			break;
-		case IMM64:
-			snprintf(buf, sizeof(buf), "%s%#" PRIx64, sign, imm);
-			result.emplace_back(OperationToken, "#");
-			result.emplace_back(IntegerToken, buf, operand->immediate);
-			break;
-		case LABEL:
-			snprintf(buf, sizeof(buf), "%#" PRIx64, operand->immediate);
-			result.emplace_back(PossibleAddressToken, buf, operand->immediate);
-			break;
-		default:
-			return FAILED_TO_DISASSEMBLE_OPERAND;
-		}
-
-		tokenize_shift(operand, result);
-		return DISASM_SUCCESS;
-	}
-
-
-	uint32_t tokenize_shifted_register(const InstructionOperand* restrict operand,
-	    uint32_t registerNumber, vector<InstructionTextToken>& result)
-	{
-		const char* reg = aarch64_get_register_name(operand->reg[registerNumber]);
-		if (EMPTY(reg))
-			return FAILED_TO_DISASSEMBLE_REGISTER;
-
-		result.emplace_back(RegisterToken, reg);
-		tokenize_shift(operand, result);
-		return DISASM_SUCCESS;
-	}
-
-	uint32_t tokenize_register(const InstructionOperand* restrict operand, uint32_t registerNumber,
-	    vector<InstructionTextToken>& result)
-	{
-		char buf[64] = {0};
-
-		/* case: system registers */
-		if (operand->operandClass == SYS_REG)
-		{
-			auto name = get_system_register_name((SystemReg)(operand->sysreg));
-			if (name && name[0])
-			{
-				snprintf(buf, sizeof(buf), "%s", get_system_register_name((SystemReg)(operand->sysreg)));
-				result.emplace_back(RegisterToken, buf);
-				return DISASM_SUCCESS;
-			}
-			else
-			{
-				return tokenize_implementation_specific(operand, result);
-			}
-		}
-
-		if (operand->operandClass != REG && operand->operandClass != MULTI_REG)
-			return OPERAND_IS_NOT_REGISTER;
-
-		/* case: shifted registers */
-		if (operand->shiftType != ShiftType_NONE)
-		{
-			return tokenize_shifted_register(operand, registerNumber, result);
-		}
-
-		const char* reg = aarch64_get_register_name(operand->reg[registerNumber]);
-		if (EMPTY(reg))
-			return FAILED_TO_DISASSEMBLE_REGISTER;
-
-		/* case: predicate registers */
-		if (operand->pred_qual && operand->reg[registerNumber] >= REG_P0 &&
-		    operand->reg[registerNumber] <= REG_P31)
-		{
-			result.emplace_back(RegisterToken, reg);
-			result.emplace_back(TextToken, "/");
-			result.emplace_back(TextToken, string(1, operand->pred_qual));
-			return DISASM_SUCCESS;
-		}
-
-		/* case other regs */
-		result.emplace_back(RegisterToken, reg);
-		const char* arrspec = get_register_arrspec(operand->reg[registerNumber], operand);
-		if (arrspec)
-			result.emplace_back(TextToken, arrspec);
-
-		/* only use index if this is isolated REG (not, for example, MULTIREG */
-		if (operand->operandClass == REG && operand->laneUsed)
-		{
-			snprintf(buf, sizeof(buf), "%u", operand->lane);
-			result.emplace_back(BraceToken, "[");
-			result.emplace_back(IntegerToken, buf);
-			result.emplace_back(BraceToken, "]");
-		}
-
-		return DISASM_SUCCESS;
-	}
-
-
-	uint32_t tokenize_memory_operand(
-	    const InstructionOperand* restrict operand, vector<InstructionTextToken>& result)
-	{
-		char immBuff[32] = {0};
-		char paramBuff[32] = {0};
-		const char *reg0, *reg1;
-
-		reg0 = aarch64_get_register_name(operand->reg[0]);
-		if (EMPTY(reg0))
-			return FAILED_TO_DISASSEMBLE_REGISTER;
-
-		const char* sign = "";
-		int64_t imm = operand->immediate;
-		if (operand->signedImm && (int64_t)imm < 0)
-		{
-			sign = "-";
-			imm = -imm;
-		}
-		const char* startToken = "[";
-		const char* endToken = "";
-		result.emplace_back(BraceToken, startToken);
-		result.emplace_back(BeginMemoryOperandToken, "");
-		result.emplace_back(RegisterToken, reg0);
-		result.emplace_back(TextToken, get_register_arrspec(operand->reg[0], operand));
-
-		switch (operand->operandClass)
-		{
-		case MEM_REG:
-			break;
-		case MEM_PRE_IDX:
-			endToken = "!";
-			snprintf(immBuff, sizeof(immBuff), "%s%#" PRIx64, sign, (uint64_t)imm);
-			result.emplace_back(TextToken, ", ");
-			result.emplace_back(OperationToken, "#");
-			result.emplace_back(IntegerToken, immBuff, operand->immediate);
-			break;
-		case MEM_POST_IDX:  // [<reg>], <reg|imm>
-			endToken = NULL;
-			if (operand->reg[1] == REG_NONE)
-			{
-				snprintf(paramBuff, sizeof(paramBuff), "%s%#" PRIx64, sign, (uint64_t)imm);
-				result.emplace_back(EndMemoryOperandToken, "");
-				result.emplace_back(BraceToken, "]");
-				result.emplace_back(TextToken, ", ");
-				result.emplace_back(OperationToken, "#");
-				result.emplace_back(IntegerToken, paramBuff, operand->immediate);
-			}
-			else
-			{
-				reg1 = aarch64_get_register_name(operand->reg[1]);
-				if (EMPTY(reg1))
-					return FAILED_TO_DISASSEMBLE_REGISTER;
-				result.emplace_back(EndMemoryOperandToken, "");
-				result.emplace_back(BraceToken, "]");
-				result.emplace_back(TextToken, ", ");
-				result.emplace_back(RegisterToken, reg1);
-				result.emplace_back(TextToken, get_register_arrspec(operand->reg[1], operand));
-			}
-			break;
-		case MEM_OFFSET:  // [<reg> optional(imm)]
-			if (operand->immediate != 0)
-			{
-				snprintf(immBuff, sizeof(immBuff), "%s%#" PRIx64, sign, (uint64_t)imm);
-				result.emplace_back(TextToken, ", ");
-				result.emplace_back(OperationToken, "#");
-				result.emplace_back(IntegerToken, immBuff, operand->immediate);
-
-				if (operand->mul_vl)
-					result.emplace_back(TextToken, ", mul vl");
-			}
-			break;
-		case MEM_EXTENDED:  // [<reg>, <reg> optional(shift optional(imm))]
-			result.emplace_back(TextToken, ", ");
-			reg1 = aarch64_get_register_name(operand->reg[1]);
-			if (EMPTY(reg1))
-				return FAILED_TO_DISASSEMBLE_REGISTER;
-			result.emplace_back(RegisterToken, reg1);
-			result.emplace_back(TextToken, get_register_arrspec(operand->reg[1], operand));
-			tokenize_shift(operand, result);
-			break;
-		default:
-			return NOT_MEMORY_OPERAND;
-		}
-		if (endToken != NULL)
-		{
-			result.emplace_back(EndMemoryOperandToken, "");
-			result.emplace_back(BraceToken, "]");
-			result.emplace_back(TextToken, endToken);
-		}
-		return DISASM_SUCCESS;
-	}
-
-
-	uint32_t tokenize_multireg_operand(
-	    const InstructionOperand* restrict operand, vector<InstructionTextToken>& result)
-	{
-		char index[32] = {0};
-		uint32_t elementCount = 0;
-
-		result.emplace_back(TextToken, "{");
-		for (; elementCount < 4 && operand->reg[elementCount] != REG_NONE; elementCount++)
-		{
-			if (elementCount != 0)
-				result.emplace_back(TextToken, ", ");
-
-			if (tokenize_register(operand, elementCount, result) != 0)
-				return FAILED_TO_DISASSEMBLE_OPERAND;
-		}
-		result.emplace_back(TextToken, "}");
-
-		if (operand->laneUsed)
-		{
-			result.emplace_back(BraceToken, "[");
-			snprintf(index, sizeof(index), "%d", operand->lane);
-			result.emplace_back(IntegerToken, index, operand->lane);
-			result.emplace_back(BraceToken, "]");
-		}
-		return DISASM_SUCCESS;
-	}
-
-
-	uint32_t tokenize_condition(
-	    const InstructionOperand* restrict operand, vector<InstructionTextToken>& result)
-	{
-		const char* condStr = aarch64_get_condition((Condition)operand->cond);
-		if (condStr == NULL)
-			return FAILED_TO_DISASSEMBLE_OPERAND;
-
-		result.emplace_back(TextToken, condStr);
-		return DISASM_SUCCESS;
-	}
-
-
-	uint32_t tokenize_implementation_specific(
-	    const InstructionOperand* restrict operand, vector<InstructionTextToken>& result)
-	{
-		char buf[32] = {0};
-		get_implementation_specific(operand, buf, sizeof(buf));
-		result.emplace_back(RegisterToken, buf);
-		return DISASM_SUCCESS;
 	}
 
 
@@ -829,18 +632,15 @@ class Arm64Architecture : public Architecture
 	virtual bool GetInstructionInfo(
 	    const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result) override
 	{
-		if (maxLen < 4)
+		std::optional<uint32_t> insn = ReadInstructionWord(data, addr, maxLen);
+		if (!insn)
 			return false;
 
-		if (m_onlyDisassembleOnAlignedAddresses && (addr % 4 != 0))
-			return false;
-
-		uint32_t insn = *(const uint32_t*)data;
-		if (IsAppleVendorEncoding(insn) && AppleVendorGetInstructionInfo(insn, addr, result))
+		if (IsAppleVendorEncoding(*insn) && AppleVendorGetInstructionInfo(*insn, addr, result))
 			return true;
 
-		Instruction instr;
-		if (!Disassemble(data, addr, maxLen, instr))
+		exarmo_aarch64_instruction instr;
+		if (exarmo_aarch64_decode(*insn, &instr) != EXARMO_AARCH64_STATUS_OK)
 			return false;
 
 		SetInstructionInfoForInstruction(addr, instr, result);
@@ -851,152 +651,27 @@ class Arm64Architecture : public Architecture
 	virtual bool GetInstructionText(const uint8_t* data, uint64_t addr, size_t& len,
 	    vector<InstructionTextToken>& result) override
 	{
+		std::optional<uint32_t> insn = ReadInstructionWord(data, addr, len);
 		len = 4;
-
-		if (m_onlyDisassembleOnAlignedAddresses && (addr % 4 != 0))
+		if (!insn)
 			return false;
 
-		uint32_t insn = *(const uint32_t*)data;
-		if (IsAppleVendorEncoding(insn) && AppleVendorGetInstructionText(insn, result))
+		if (IsAppleVendorEncoding(*insn) && AppleVendorGetInstructionText(*insn, result))
 			return true;
 
-		Instruction instr;
-		bool tokenizeSuccess = false;
-		char buf[9];
-		if (!Disassemble(data, addr, len, instr))
+		exarmo_aarch64_instruction instr;
+		if (exarmo_aarch64_decode(*insn, &instr) != EXARMO_AARCH64_STATUS_OK)
 			return false;
 
-		memset(buf, 0x20, sizeof(buf));
-		const char* operation = aarch64_get_operation(&instr);
-		if (operation == nullptr)
-			return false;
-
-		size_t operationLen = strlen(operation);
-		if (operationLen < 8)
-		{
-			buf[8 - operationLen] = '\0';
-		}
-		else
-			buf[1] = '\0';
-
-		result.emplace_back(InstructionToken, operation);
-		result.emplace_back(TextToken, buf);
-		for (size_t i = 0; i < MAX_OPERANDS; i++)
-		{
-			if (instr.operands[i].operandClass == NONE)
-				return true;
-
-			struct InstructionOperand *operand = &(instr.operands[i]);
-
-			if (i != 0)
-				result.emplace_back(OperandSeparatorToken, ", ");
-
-			switch (instr.operands[i].operandClass)
-			{
-			case FIMM32:
-			case IMM32:
-			case IMM64:
-			case LABEL:
-				tokenizeSuccess = tokenize_shifted_immediate(&instr.operands[i], result) == 0;
-				break;
-			case MEM_REG:
-			case MEM_PRE_IDX:
-			case MEM_POST_IDX:
-			case MEM_OFFSET:
-			case MEM_EXTENDED:
-				tokenizeSuccess = tokenize_memory_operand(&instr.operands[i], result) == 0;
-				break;
-			case REG:
-			case SYS_REG:
-				tokenizeSuccess = tokenize_register(&instr.operands[i], 0, result) == 0;
-				break;
-			case MULTI_REG:
-				tokenizeSuccess = tokenize_multireg_operand(&instr.operands[i], result) == 0;
-				break;
-			case CONDITION:
-				tokenizeSuccess = tokenize_condition(&instr.operands[i], result) == 0;
-				break;
-			case IMPLEMENTATION_SPECIFIC:
-				tokenizeSuccess = tokenize_implementation_specific(&instr.operands[i], result) == 0;
-				break;
-			case NAME:
-				result.emplace_back(TextToken, instr.operands[i].name);
-				tokenizeSuccess = true;
-				break;
-			case STR_IMM: /* eg: "mul #0xe" */
-				result.emplace_back(TextToken, instr.operands[i].name);
-				result.emplace_back(OperationToken, " #");
-				snprintf(buf, sizeof(buf), "0x%" PRIx64, instr.operands[i].immediate);
-				result.emplace_back(IntegerToken, buf);
-				tokenizeSuccess = true;
-				break;
-			case ACCUM_ARRAY: /* eg: "za[w12, #0x6]" */
-				result.emplace_back(TextToken, "ZA");
-				result.emplace_back(BraceToken, "[");
-				snprintf(buf, sizeof(buf), "%s", aarch64_get_register_name(operand->reg[0]));
-				result.emplace_back(RegisterToken, buf);
-				result.emplace_back(OperandSeparatorToken, ", ");
-				result.emplace_back(OperationToken, " #");
-				snprintf(buf, sizeof(buf), "0x%" PRIx64, operand->immediate);
-				result.emplace_back(IntegerToken, buf);
-				result.emplace_back(BraceToken, "]");
-				tokenizeSuccess = true;
-				break;
-			case SME_TILE: /* eg: "z0v.b[w12, #0xb]" */
-				snprintf(buf, sizeof(buf), "Z%d", operand->tile);
-				result.emplace_back(TextToken, buf);
-				if (operand->slice == SLICE_HORIZONTAL)
-					result.emplace_back(TextToken, "h");
-				else if (operand->slice == SLICE_VERTICAL)
-					result.emplace_back(TextToken, "v");
-				result.emplace_back(TextToken, get_arrspec_str_truncated(operand->arrSpec));
-				if (operand->reg[0] != REG_NONE)
-				{
-					result.emplace_back(BraceToken, "[");
-					snprintf(buf, sizeof(buf), "%s", aarch64_get_register_name(operand->reg[0]));
-					result.emplace_back(RegisterToken, buf);
-					if (operand->arrSpec != ARRSPEC_FULL)
-					{
-						result.emplace_back(OperandSeparatorToken, ", ");
-						result.emplace_back(OperationToken, " #");
-						snprintf(buf, sizeof(buf), "0x%" PRIx64, instr.operands[i].immediate);
-						result.emplace_back(IntegerToken, buf);
-					}
-					result.emplace_back(BraceToken, "]");
-				}
-				tokenizeSuccess = true;
-				break;
-			case INDEXED_ELEMENT: /* eg: "p12.d[w15, #0xf]" */
-				result.emplace_back(RegisterToken, aarch64_get_register_name(operand->reg[0]));
-				result.emplace_back(TextToken, get_arrspec_str_truncated(operand->arrSpec));
-				result.emplace_back(BraceToken, "[");
-				result.emplace_back(RegisterToken, aarch64_get_register_name(operand->reg[1]));
-				if (operand->immediate)
-				{
-					result.emplace_back(OperandSeparatorToken, ", ");
-					result.emplace_back(OperationToken, "#");
-					snprintf(buf, sizeof(buf), "0x%" PRIx64, operand->immediate);
-					result.emplace_back(IntegerToken, buf);
-				}
-				result.emplace_back(BraceToken, "]");
-				tokenizeSuccess = true;
-				break;
-			default:
-				LogError("operandClass %x\n", instr.operands[i].operandClass);
-				return false;
-			}
-			if (!tokenizeSuccess)
-			{
-				LogError("tokenize failed operandClass %x\n", instr.operands[i].operandClass);
-				return false;
-			}
-		}
-		return true;
+		return TokenizeInstruction(instr, addr, result);
 	}
 
 
 	virtual string GetIntrinsicName(uint32_t intrinsic) override
 	{
+		if (IsSysOpIntrinsic(intrinsic))
+			return SysOpIntrinsicName(intrinsic);
+
 		if (AppleVendorIsIntrinsic(intrinsic))
 			return AppleVendorGetIntrinsicName(intrinsic);
 
@@ -1026,6 +701,8 @@ class Arm64Architecture : public Architecture
 			return "__wfi";
 		case ARM64_INTRIN_MSR:
 			return "_WriteMSR";
+		case ARM64_INTRIN_MSR_IMM:
+			return "_WritePSTATE";
 		case ARM64_INTRIN_MRS:
 			return "_ReadMSR";
 		case ARM64_INTRIN_HINT_DGH:
@@ -1056,8 +733,6 @@ class Arm64Architecture : public Architecture
 			return "__sev";
 		case ARM64_INTRIN_SEVL:
 			return "__sevl";
-		case ARM64_INTRIN_DC:
-			return "__dc";
 		case ARM64_INTRIN_DMB:
 			return "__dmb";
 		case ARM64_INTRIN_DSB:
@@ -1072,6 +747,32 @@ class Arm64Architecture : public Architecture
 			return "__xpaci";
 		case ARM64_INTRIN_ERET:
 			return "_eret";
+		case ARM64_INTRIN_FMAX:
+			return "__fmax";
+		case ARM64_INTRIN_FMIN:
+			return "__fmin";
+		case ARM64_INTRIN_FMAXNM:
+			return "__fmaxnm";
+		case ARM64_INTRIN_FMINNM:
+			return "__fminnm";
+		case ARM64_INTRIN_FRINTA:
+			return "__frinta";
+		case ARM64_INTRIN_FRINTI:
+			return "__frinti";
+		case ARM64_INTRIN_FRINTX:
+			return "__frintx";
+		case ARM64_INTRIN_FRINT32X:
+			return "__frint32x";
+		case ARM64_INTRIN_FRINT32Z:
+			return "__frint32z";
+		case ARM64_INTRIN_FRINT64X:
+			return "__frint64x";
+		case ARM64_INTRIN_FRINT64Z:
+			return "__frint64z";
+		case ARM64_INTRIN_FMADD:
+			return "__fmadd";
+		case ARM64_INTRIN_FMSUB:
+			return "__fmsub";
 		case ARM64_INTRIN_CNT:
 			return "_PopulationCount";
 		case ARM64_INTRIN_CLREX:
@@ -1114,11 +815,6 @@ class Arm64Architecture : public Architecture
 			return "__stlxrb";
 		case ARM64_INTRIN_STLXRH:
 			return "__stlxrh";
-		case ARM64_INTRIN_TLBI:
-		case ARM64_INTRIN_TLBI_REG:
-			return "__tlbi";
-		case ARM64_INTRIN_AT:
-			return "__at";
 		case ARM64_INTRIN_ADDG:
 			return "__addg";
 		case ARM64_INTRIN_CMPP:
@@ -1155,15 +851,13 @@ class Arm64Architecture : public Architecture
 			break;
 		}
 
-		return NeonGetIntrinsicName(intrinsic);
+		return AcleIntrinsicName(intrinsic);
 	}
 
 
 	virtual std::vector<uint32_t> GetAllIntrinsics() override
 	{
-		// Highest intrinsic number currently is ARM64_INTRIN_NEON_END.
-		// If new extensions are added please update this code.
-		std::vector<uint32_t> result{ARM64_INTRIN_NEON_END};
+		std::vector<uint32_t> result;
 
 		// Double check someone didn't insert a new intrinsic at the beginning of our enum since we rely
 		// on it to fill the next array.
@@ -1175,8 +869,12 @@ class Arm64Architecture : public Architecture
 			result.push_back(id);
 		}
 
-		// Finish populating our container with neon specific intrinsic IDs
-		for (uint32_t id = NeonIntrinsic::ARM64_INTRIN_VADD_S8; id < NeonIntrinsic::ARM64_INTRIN_NEON_END; id++) {
+		// The AT, DC, TLBI and other system operation intrinsics that a lift can produce.
+		const vector<uint32_t>& sysOps = SysOpLiftedIntrinsics();
+		result.insert(result.end(), sysOps.begin(), sysOps.end());
+
+		// ACLE intrinsics.
+		for (uint32_t id = AcleIntrinsicBase; id < AcleIntrinsicEnd; id++) {
 			result.push_back(id);
 		}
 
@@ -1188,24 +886,50 @@ class Arm64Architecture : public Architecture
 
 	virtual vector<NameAndType> GetIntrinsicInputs(uint32_t intrinsic) override
 	{
+		if (IsSysOpIntrinsic(intrinsic))
+			return SysOpIntrinsicInputs(this, intrinsic);
+
 		if (AppleVendorIsIntrinsic(intrinsic))
 			return AppleVendorGetIntrinsicInputs(intrinsic);
 
 		switch (intrinsic)
 		{
 		case ARM64_INTRIN_MRS:
-			return {NameAndType("SystemReg", Confidence<Ref<Type>>(Type::EnumerationType(this, get_system_register_enum(), 4, false), BN_FULL_CONFIDENCE))};
+			return {NameAndType("SystemReg", Confidence<Ref<Type>>(Type::EnumerationType(this, SystemRegisterEnumeration(), 4, false), BN_FULL_CONFIDENCE))};
 			break;
 		case ARM64_INTRIN_MSR:
 			return {
-				NameAndType("SystemReg", Confidence<Ref<Type>>(Type::EnumerationType(this, get_system_register_enum(), 4, false), BN_FULL_CONFIDENCE)),
+				NameAndType("SystemReg", Confidence<Ref<Type>>(Type::EnumerationType(this, SystemRegisterEnumeration(), 4, false), BN_FULL_CONFIDENCE)),
 				NameAndType(Type::IntegerType(8, false))
+			};
+			break;
+		case ARM64_INTRIN_MSR_IMM:
+			return {
+				NameAndType("field", Confidence<Ref<Type>>(Type::EnumerationType(this, PstateFieldEnumeration(), 4, false), BN_FULL_CONFIDENCE)),
+				NameAndType(Type::IntegerType(4, false))
 			};
 			break;
 		case ARM64_INTRIN_CNT:        // reads <Xn>
 		case ARM64_INTRIN_PRFM:
 		case ARM64_INTRIN_REV16:      // reads <Xn>
 			return {NameAndType(Type::IntegerType(8, false))};
+		case ARM64_INTRIN_FMAX:       // reads <Sn>, <Sm>
+		case ARM64_INTRIN_FMIN:       // reads <Sn>, <Sm>
+		case ARM64_INTRIN_FMAXNM:     // reads <Sn>, <Sm>
+		case ARM64_INTRIN_FMINNM:     // reads <Sn>, <Sm>
+			return {NameAndType(Type::FloatType(4)), NameAndType(Type::FloatType(4))};
+		case ARM64_INTRIN_FRINTA:     // reads <Sn>
+		case ARM64_INTRIN_FRINTI:     // reads <Sn>
+		case ARM64_INTRIN_FRINTX:     // reads <Sn>
+		case ARM64_INTRIN_FRINT32X:   // reads <Sn>
+		case ARM64_INTRIN_FRINT32Z:   // reads <Sn>
+		case ARM64_INTRIN_FRINT64X:   // reads <Sn>
+		case ARM64_INTRIN_FRINT64Z:   // reads <Sn>
+			return {NameAndType(Type::FloatType(4))};
+		case ARM64_INTRIN_FMADD:      // reads <Sa>, <Sn>, <Sm>
+		case ARM64_INTRIN_FMSUB:      // reads <Sa>, <Sn>, <Sm>
+			return {NameAndType(Type::FloatType(4)), NameAndType(Type::FloatType(4)),
+				NameAndType(Type::FloatType(4))};
 		case ARM64_INTRIN_AUTDA:      // reads <Xd>, <Xn|SP>
 		case ARM64_INTRIN_AUTDB:      // reads <Xd>, <Xn|SP>
 		case ARM64_INTRIN_AUTIA:      // reads <Xd>, <Xn|SP>
@@ -1222,25 +946,6 @@ class Arm64Architecture : public Architecture
 		case ARM64_INTRIN_PACIB2:     // reads <Xd>, modifier, modifier2
 			return {NameAndType(Type::IntegerType(8, false)), NameAndType(Type::IntegerType(8, false)),
 				NameAndType(Type::IntegerType(8, false))};
-		case ARM64_INTRIN_TLBI:      // reads <tlbi_op>, <Xn>
-			return {
-				NameAndType("tlbi_op", Confidence<Ref<Type>>(Type::EnumerationType(this, get_tlbi_op_enum(), 4, false), BN_FULL_CONFIDENCE))
-			};
-		case ARM64_INTRIN_TLBI_REG:      // reads <tlbi_op>, <Xn>
-			return {
-				NameAndType("tlbi_op", Confidence<Ref<Type>>(Type::EnumerationType(this, get_tlbi_op_enum(), 4, false), BN_FULL_CONFIDENCE)),
-				NameAndType(Type::IntegerType(8, false))
-			};
-		case ARM64_INTRIN_AT:      // reads <at_op>, <Xn>
-			return {
-				NameAndType("at_op", Confidence<Ref<Type>>(Type::EnumerationType(this, get_at_op_enum(), 4, false), BN_FULL_CONFIDENCE)),
-				NameAndType(Type::IntegerType(8, false))
-			};
-		case ARM64_INTRIN_DC:      // reads <dc_op>, <Xn>
-			return {
-				NameAndType("dc_op", Confidence<Ref<Type>>(Type::EnumerationType(this, get_dc_op_enum(), 4, false), BN_FULL_CONFIDENCE)),
-				NameAndType(Type::IntegerType(8, false))
-			};
 		case ARM64_INTRIN_AESD:
 		case ARM64_INTRIN_AESE:
 			return {NameAndType(Type::IntegerType(16, false)), NameAndType(Type::IntegerType(16, false))};
@@ -1248,18 +953,22 @@ class Arm64Architecture : public Architecture
 			break;
 		}
 
-		return NeonGetIntrinsicInputs(intrinsic);
+		return AcleIntrinsicInputs(intrinsic);
 	}
 
 
 	virtual vector<Confidence<Ref<Type>>> GetIntrinsicOutputs(uint32_t intrinsic) override
 	{
+		if (IsSysOpIntrinsic(intrinsic))
+			return SysOpIntrinsicOutputs(intrinsic);
+
 		if (AppleVendorIsIntrinsic(intrinsic))
 			return AppleVendorGetIntrinsicOutputs(intrinsic);
 
 		switch (intrinsic)
 		{
 		case ARM64_INTRIN_MSR:
+		case ARM64_INTRIN_MSR_IMM:
 			return {};
 		case ARM64_INTRIN_MRS:
 		case ARM64_INTRIN_AUTDA:      // writes <Xd>
@@ -1280,6 +989,20 @@ class Arm64Architecture : public Architecture
 		case ARM64_INTRIN_CNT:        // writes <Xd>
 		case ARM64_INTRIN_REV16:      // writes <Xd>
 			return {Type::IntegerType(8, false)};
+		case ARM64_INTRIN_FMAX:       // writes <Sd>
+		case ARM64_INTRIN_FMIN:       // writes <Sd>
+		case ARM64_INTRIN_FMAXNM:     // writes <Sd>
+		case ARM64_INTRIN_FMINNM:     // writes <Sd>
+		case ARM64_INTRIN_FRINTA:     // writes <Sd>
+		case ARM64_INTRIN_FRINTI:     // writes <Sd>
+		case ARM64_INTRIN_FRINTX:     // writes <Sd>
+		case ARM64_INTRIN_FRINT32X:   // writes <Sd>
+		case ARM64_INTRIN_FRINT32Z:   // writes <Sd>
+		case ARM64_INTRIN_FRINT64X:   // writes <Sd>
+		case ARM64_INTRIN_FRINT64Z:   // writes <Sd>
+		case ARM64_INTRIN_FMADD:      // writes <Sd>
+		case ARM64_INTRIN_FMSUB:      // writes <Sd>
+			return {Type::FloatType(4)};
 		case ARM64_INTRIN_AESD:
 		case ARM64_INTRIN_AESE:
 			return {Type::IntegerType(16, false)};
@@ -1287,7 +1010,7 @@ class Arm64Architecture : public Architecture
 			break;
 		}
 
-		return NeonGetIntrinsicOutputs(intrinsic);
+		return AcleIntrinsicOutputs(intrinsic);
 	}
 
 
@@ -1302,8 +1025,8 @@ class Arm64Architecture : public Architecture
 
 	virtual bool IsNeverBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len) override
 	{
-		Instruction instr;
-		if (!Disassemble(data, addr, len, instr))
+		exarmo_aarch64_instruction instr;
+		if (!DecodeInstruction(data, addr, len, instr))
 			return false;
 		return IsConditionalJump(instr);
 	}
@@ -1311,8 +1034,8 @@ class Arm64Architecture : public Architecture
 
 	virtual bool IsAlwaysBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len) override
 	{
-		Instruction instr;
-		if (!Disassemble(data, addr, len, instr))
+		exarmo_aarch64_instruction instr;
+		if (!DecodeInstruction(data, addr, len, instr))
 			return false;
 		return IsConditionalJump(instr);
 	}
@@ -1320,8 +1043,8 @@ class Arm64Architecture : public Architecture
 
 	virtual bool IsInvertBranchPatchAvailable(const uint8_t* data, uint64_t addr, size_t len) override
 	{
-		Instruction instr;
-		if (!Disassemble(data, addr, len, instr))
+		exarmo_aarch64_instruction instr;
+		if (!DecodeInstruction(data, addr, len, instr))
 			return false;
 		return IsConditionalJump(instr);
 	}
@@ -1330,22 +1053,24 @@ class Arm64Architecture : public Architecture
 	virtual bool IsSkipAndReturnZeroPatchAvailable(
 	    const uint8_t* data, uint64_t addr, size_t len) override
 	{
-		Instruction instr;
-		if (!Disassemble(data, addr, len, instr))
+		exarmo_aarch64_instruction instr;
+		if (!DecodeInstruction(data, addr, len, instr))
 			return false;
-		return instr.operation == ARM64_BL || instr.operation == ARM64_BR ||
-		       instr.operation == ARM64_BLR;
+		exarmo_aarch64_mnemonic mnemonic = exarmo_aarch64_instruction_mnemonic(&instr);
+		return mnemonic == EXARMO_AARCH64_BL || mnemonic == EXARMO_AARCH64_BR ||
+		       mnemonic == EXARMO_AARCH64_BLR;
 	}
 
 
 	virtual bool IsSkipAndReturnValuePatchAvailable(
 	    const uint8_t* data, uint64_t addr, size_t len) override
 	{
-		Instruction instr;
-		if (!Disassemble(data, addr, len, instr))
+		exarmo_aarch64_instruction instr;
+		if (!DecodeInstruction(data, addr, len, instr))
 			return false;
-		return instr.operation == ARM64_BL || instr.operation == ARM64_BR ||
-		       instr.operation == ARM64_BLR;
+		exarmo_aarch64_mnemonic mnemonic = exarmo_aarch64_instruction_mnemonic(&instr);
+		return mnemonic == EXARMO_AARCH64_BL || mnemonic == EXARMO_AARCH64_BR ||
+		       mnemonic == EXARMO_AARCH64_BLR;
 	}
 
 
@@ -1362,21 +1087,29 @@ class Arm64Architecture : public Architecture
 
 	virtual bool AlwaysBranch(uint8_t* data, uint64_t addr, size_t len) override
 	{
-		Instruction instr;
-		if (!Disassemble(data, addr, len, instr))
+		exarmo_aarch64_instruction instr;
+		if (!DecodeInstruction(data, addr, len, instr))
 			return false;
 
 		uint32_t* value = (uint32_t*)data;
 		if (IsConditionalBranch(instr))
 		{
-			// Combine the immediate in the first operand with the unconditional branch opcode to form
-			// an unconditional branch instruction
-			*value = (5 << 26) | (((uint32_t)((instr.operands[0].immediate - addr) >> 2)) & 0x03ffffff);
+			exarmo_aarch64_branch branch = exarmo_aarch64_instruction_branch(&instr, addr);
+			if (!branch.has_target)
+				return false;
+
+			// Combine the branch target with the unconditional branch opcode to form an
+			// unconditional branch instruction.
+			*value = (5 << 26) | (((uint32_t)((branch.target - addr) >> 2)) & 0x03ffffff);
+		}
+		else if (IsTestAndBranch(instr) || IsCompareAndBranch(instr))
+		{
+			// Force to a *BZ, then change the register to zero register (WZR or XZR, determined by bit 31)
+			*value = (*value & ~(1 << 24)) | 0x1f;
 		}
 		else
 		{
-			// Force to a *BZ, then change the register to zero register (WZR or XZR, determined by bit 31)
-			*value = (*value & ~(1 << 24)) | 0x0f;
+			return false;
 		}
 		return true;
 	}
@@ -1384,8 +1117,8 @@ class Arm64Architecture : public Architecture
 
 	virtual bool InvertBranch(uint8_t* data, uint64_t addr, size_t len) override
 	{
-		Instruction instr;
-		if (!Disassemble(data, addr, len, instr))
+		exarmo_aarch64_instruction instr;
+		if (!DecodeInstruction(data, addr, len, instr))
 			return false;
 
 		uint32_t* value = (uint32_t*)data;
@@ -1398,6 +1131,10 @@ class Arm64Architecture : public Architecture
 		{
 			// invert bit 24
 			*value ^= (1 << 24);
+		}
+		else
+		{
+			return false;
 		}
 		return true;
 	}
@@ -1420,24 +1157,24 @@ class Arm64Architecture : public Architecture
 	virtual bool GetInstructionLowLevelIL(
 	    const uint8_t* data, uint64_t addr, size_t& len, LowLevelILFunction& il) override
 	{
-		if (m_onlyDisassembleOnAlignedAddresses && (addr % 4 != 0))
+		std::optional<uint32_t> insn = ReadInstructionWord(data, addr, len);
+		if (!insn)
 		{
 			il.AddInstruction(il.Undefined());
 			return false;
 		}
 
-		uint32_t insn = *(const uint32_t*)data;
-		if (IsAppleVendorEncoding(insn))
+		if (IsAppleVendorEncoding(*insn))
 		{
-			if (optional<bool> handled = AppleVendorGetInstructionLowLevelIL(insn, il))
+			if (optional<bool> handled = AppleVendorGetInstructionLowLevelIL(*insn, il))
 			{
 				len = 4;
 				return *handled;
 			}
 		}
 
-		Instruction instr;
-		if (!Disassemble(data, addr, len, instr))
+		exarmo_aarch64_instruction instr;
+		if (exarmo_aarch64_decode(*insn, &instr) != EXARMO_AARCH64_STATUS_OK)
 		{
 			il.AddInstruction(il.Undefined());
 			return false;
@@ -1794,10 +1531,10 @@ class Arm64Architecture : public Architecture
 	virtual string GetRegisterName(uint32_t reg_) override
 	{
 		if (reg_ > REG_NONE && reg_ < REG_END)
-			return aarch64_get_register_name((enum Register)reg_);
+			return string(RegisterName((enum Register)reg_));
 
 		if (reg_ > SYSREG_NONE && reg_ < SYSREG_END)
-			return get_system_register_name((enum SystemReg)reg_);
+			return string(SystemRegisterName(SystemRegister(reg_)));
 
 		if (reg_ == FAKEREG_SYSREG_UNKNOWN)
 			return "sysreg_unknown";
@@ -1824,8 +1561,8 @@ class Arm64Architecture : public Architecture
 			// SVE
 			REG_P0,   REG_P1,  REG_P2,  REG_P3,   REG_P4,  REG_P5,  REG_P6,  REG_P7,
 			REG_P8,   REG_P9,  REG_P10,  REG_P11,   REG_P12,  REG_P13,  REG_P14,  REG_P15,
-			REG_P16,   REG_P17,  REG_P18,  REG_P19,   REG_P20,  REG_P21,  REG_P22,  REG_P23,
-			REG_P24,   REG_P25,  REG_P26,  REG_P27,   REG_P29,  REG_P29,  REG_P30,  REG_P31,
+			// SME
+			REG_ZT0,
 		};
 		return r;
 	}
@@ -1998,10 +1735,8 @@ class Arm64Architecture : public Architecture
 			REG_Z24, REG_Z25, REG_Z26, REG_Z27, REG_Z28, REG_Z29, REG_Z30, REG_Z31,
 			REG_P0,  REG_P1,  REG_P2,  REG_P3,  REG_P4,  REG_P5,  REG_P6,  REG_P7,
 			REG_P8,  REG_P9,  REG_P10, REG_P11, REG_P12, REG_P13, REG_P14, REG_P15,
-			REG_P16, REG_P17, REG_P18, REG_P19, REG_P20, REG_P21, REG_P22, REG_P23,
-			REG_P24, REG_P25, REG_P26, REG_P27, REG_P28, REG_P29, REG_P30, REG_P31,
-			/* system registers -- removed because they're not registers anymore */
-
+			// SME
+			REG_ZT0,
 			/* fake registers */
 			FAKEREG_SYSREG_UNKNOWN, /* acts as an input/output to ARM64_INTRIN_MSR,
 										ARM64_INTRIN_MRS intrinsics when the sysreg
@@ -2329,23 +2064,9 @@ class Arm64Architecture : public Architecture
 			case REG_P13:
 			case REG_P14:
 			case REG_P15:
-			case REG_P16:
-			case REG_P17:
-			case REG_P18:
-			case REG_P19:
-			case REG_P20:
-			case REG_P21:
-			case REG_P22:
-			case REG_P23:
-			case REG_P24:
-			case REG_P25:
-			case REG_P26:
-			case REG_P27:
-			case REG_P28:
-			case REG_P29:
-			case REG_P30:
-			case REG_P31:
 				return RegisterInfo(reg, 0, 32);
+			case REG_ZT0:
+				return RegisterInfo(reg, 0, 64);
 		}
 
 		if (reg >= REG_V0_B0 && reg <= REG_V31_B15) {
@@ -2388,7 +2109,7 @@ class Arm64Architecture : public Architecture
 		if (reg == FAKEREG_SYSCALL_INFO)
 			return RegisterInfo(reg, 0, 4);
 
-		if (has_system_register_name((SystemReg)reg))
+		if (!SystemRegisterName(SystemRegister(reg)).empty())
 			LogDebug("GetRegisterInfo called on sysreg %#x/%d", reg, reg);
 
 		return RegisterInfo(0, 0, 0);
@@ -2405,11 +2126,13 @@ class Arm64Architecture : public Architecture
 
 	virtual vector<uint32_t> GetSystemRegisters() override
 	{
-		static vector<uint32_t> system_regs(get_system_registers());
-		static std::once_flag once;
-		std::call_once(once, []() {
-			system_regs.push_back(FAKEREG_SYSREG_UNKNOWN);
-		});
+		static vector<uint32_t> system_regs = [] {
+			vector<uint32_t> numbers;
+			for (SystemRegister reg : SystemRegisters())
+				numbers.push_back(reg.Value());
+			numbers.push_back(FAKEREG_SYSREG_UNKNOWN);
+			return numbers;
+		}();
 		return system_regs;
 	}
 };
@@ -3039,10 +2762,6 @@ class Arm64MachoRelocationHandler : public RelocationHandler
 		uint32_t insword = *(uint32_t*)dest;
 		auto info = reloc->GetInfo();
 
-		// printf("insword: 0x%X\n", insword);
-		// printf("reloc->GetTarget(): 0x%llX\n", reloc->GetTarget());
-		// printf("reloc->GetAddress(): 0x%llX\n", reloc->GetAddress());
-
 		if (info.nativeType == BINARYNINJA_MANUAL_RELOCATION)
 		{  // Magic number defined in MachOView.cpp for chained fixups
 			*(uint64_t*)dest = info.target + info.addend;
@@ -3277,7 +2996,6 @@ class Arm64ElfRelocationHandler : public RelocationHandler
 		};
 
 		uint64_t target = reloc->GetTarget();
-		Instruction inst;
 		switch (info.nativeType)
 		{
 		case R_ARM_NONE:
@@ -3308,7 +3026,6 @@ class Arm64ElfRelocationHandler : public RelocationHandler
 		case R_AARCH64_ADD_ABS_LO12_NC:
 		{
 			ADD_SUB_IMM* decode = (ADD_SUB_IMM*)dest;
-			aarch64_decompose(*(uint32_t*)dest, &inst, reloc->GetAddress());
 			decode->imm = target + info.addend;
 			break;
 		}
@@ -3316,7 +3033,6 @@ class Arm64ElfRelocationHandler : public RelocationHandler
 		case R_AARCH64_JUMP26:
 		{
 			UNCONDITIONAL_BRANCH* decode = (UNCONDITIONAL_BRANCH*)dest;
-			aarch64_decompose(*(uint32_t*)dest, &inst, 0);
 			decode->imm = (target + info.addend - reloc->GetAddress()) >> 2;
 			break;
 		}
@@ -3739,6 +3455,33 @@ public:
 };
 
 
+// The addend already encoded in `insn`, which is a branch's label offset or otherwise its first
+// immediate, as in ADD. Zero if `insn` doesn't decode. Search by operand kind because B.cond and
+// TBZ put other operands before the label.
+static int64_t RelocationAddend(uint32_t insn)
+{
+	exarmo_aarch64_instruction instr;
+	if (exarmo_aarch64_decode(insn, &instr) != EXARMO_AARCH64_STATUS_OK)
+		return 0;
+
+	exarmo_aarch64_operand operands[EXARMO_AARCH64_MAX_OPERANDS];
+	size_t count = exarmo_aarch64_instruction_operands(&instr, operands, EXARMO_AARCH64_MAX_OPERANDS);
+	for (size_t i = 0; i < count; i++)
+	{
+		if (operands[i].kind == EXARMO_AARCH64_OPERAND_LABEL)
+			return operands[i].label.offset;
+	}
+
+	for (size_t i = 0; i < count; i++)
+	{
+		if (operands[i].kind == EXARMO_AARCH64_OPERAND_IMM)
+			return OperandImmediate(operands[i]);
+	}
+
+	return 0;
+}
+
+
 class Arm64COFFRelocationHandler: public RelocationHandler
 {
 public:
@@ -3760,7 +3503,6 @@ public:
 		(void)base;
 		(void)dest16;
 		(void)dest64;
-		Instruction inst;
 
 		Ref<Architecture> associatedArch = arch->GetAssociatedArchitectureByAddress(address);
 
@@ -3790,8 +3532,7 @@ public:
 		case PE_IMAGE_REL_ARM64_PAGEOFFSET_12A:
 		{
 			ADD_SUB_IMM* decode = (ADD_SUB_IMM*)dest;
-			aarch64_decompose(dest32[0], &inst, reloc->GetAddress());
-			decode->imm = inst.operands[2].immediate + target;
+			decode->imm = RelocationAddend(dest32[0]) + target;
 			break;
 		}
 		case PE_IMAGE_REL_ARM64_PAGEOFFSET_12L:
@@ -3803,24 +3544,21 @@ public:
 		case PE_IMAGE_REL_ARM64_BRANCH26:
 		{
 			UNCONDITIONAL_BRANCH* decode = (UNCONDITIONAL_BRANCH*)dest;
-			aarch64_decompose(dest32[0], &inst, 0);
-			decode->imm = (inst.operands[0].immediate + target - reloc->GetAddress()) >> 2;
+			decode->imm = (RelocationAddend(dest32[0]) + target - reloc->GetAddress()) >> 2;
 			break;
 		}
 		case PE_IMAGE_REL_ARM64_BRANCH19:
 		{
 			// B.cond (CONDITIONAL_BRANCH) & CBZ / CBNZ (COMPARE_AND_BRANCH)
 			CONDITIONAL_BRANCH* decode = (CONDITIONAL_BRANCH*)dest;
-			aarch64_decompose(dest32[0], &inst, 0);
-			decode->imm = (inst.operands[0].immediate + target - reloc->GetAddress()) >> 2;
+			decode->imm = (RelocationAddend(dest32[0]) + target - reloc->GetAddress()) >> 2;
 			break;
 		}
 		case PE_IMAGE_REL_ARM64_BRANCH14:
 		{
 			// TBZ / TBNZ
 			TEST_AND_BRANCH* decode = (TEST_AND_BRANCH*)dest;
-			aarch64_decompose(dest32[0], &inst, 0);
-			decode->imm = (inst.operands[0].immediate + target - reloc->GetAddress()) >> 2;
+			decode->imm = (RelocationAddend(dest32[0]) + target - reloc->GetAddress()) >> 2;
 			break;
 		}
 		case PE_IMAGE_REL_ARM64_SECTION:
@@ -3964,6 +3702,10 @@ extern "C"
 	BINARYNINJAPLUGIN bool CorePluginInit()
 #endif
 	{
+		// A decode writes into storage this plugin reserves, so the library it is
+		// linked against must agree with the header it was compiled against.
+		BN_RELEASE_ASSERT(exarmo_aarch64_instruction_size() <= sizeof(exarmo_aarch64_instruction));
+
 		InitAArch64Settings();
 
 		Architecture* arm64 = new Arm64Architecture();

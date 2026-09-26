@@ -4,6 +4,8 @@
 # binaryninja-api will result in this root workspace being picked up and used for LSP and cargo commands automatically.
 [workspace]
 resolver = "2"
+# arm64-exarmo is a workspace of its own
+exclude = ["arch/arm64"]
 members = [
     "rust",
     "arch/riscv",

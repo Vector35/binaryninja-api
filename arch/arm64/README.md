@@ -6,14 +6,16 @@ This is the AArch64 plugin that ships with Binary Ninja.
 
 - [arch_arm64.cpp](./arch_arm64.cpp) implements the Architecture class
 - [il.cpp](./il.cpp) contains the lifter, the translator from disassembly to intermediate language
-- [disassembler/*](./disassembler/) is the disassembler
+- [operands.cpp](./operands.cpp) reads the operands exarmo decodes the way the lifter needs them
+- [registers.cpp](./registers.cpp) and [system_registers.cpp](./system_registers.cpp) are the two register namespaces, and map exarmo's registers into them
+- [acle_intrinsics.cpp](./acle_intrinsics.cpp) lifts an instruction as the ACLE intrinsic exarmo says it implements
+- [system_operations.cpp](./system_operations.cpp) names the intrinsics for AT, DC, TLBI and the other SYS aliases
+- [apple_vendor.cpp](./apple_vendor.cpp) covers the Apple instructions and system registers ARM does not define
+
+Disassembly comes from [exarmo](https://crates.io/crates/exarmo-aarch64-capi), through its C API.
 
 ## Testing
 
-There are three tests:
-
-- [./disassembler/test.py](./disassembler/test.py) test of disassembler module, isolated from the architecture module or Binary Ninja
-- [./test_disasm.py](./test_disasm.py) test of disassembler, using the architecture module through the binaryninja API
 - [./arm64test.py](./arm64test.py) runs a very basic "lift to string and compare" test
 
 Personal Binary Ninja users can test via the built in console:
@@ -35,7 +37,7 @@ And, of course, you can open a test binary in Binary Ninja with this architectur
 
 1. **TEST!** If you're making an architecture or lifter change, add a test case to [arm64test.py](./arm64test.py) that fails before your change and succeeds after your change.
 
-2. **TEST!** If you're making a disassembler change, add a test case to [disassembler/test.py](./disassembler/test.py) that fails before your change and succeeds after your change.
+2. Disassembly comes from exarmo, so report disassembly bugs as issues rather than changing the plugin.
 3. Compile with warnings enabled. Do this cmake invocation: `ARM64_WARNINGS=1 cmake .`
 
 Please follow whatever formatting conventions are present in the file you edit. Pay attention to curly brackets, spacing, tabs vs. spaces, etc.
@@ -46,7 +48,10 @@ When you submit your first PR to one of Vector 35's repositories, you'll receive
 ## Building
 
 Building the architecture plugin requires `cmake` 3.9 or above. You will also need the
-[Binary Ninja API source](https://github.com/Vector35/binaryninja-api).
+[Binary Ninja API source](https://github.com/Vector35/binaryninja-api). You also need `rustup` and
+Python 3 to build exarmo. Cargo fetches exarmo from crates.io at the version [Cargo.toml](./Cargo.toml)
+pins. The build uses the Rust toolchain named by `CARGO_STABLE_VERSION` in
+[RustBuild.cmake](../../cmake/RustBuild.cmake).
 
 Run `cmake`. This can be done either from a separate build directory or from the source
 directory. Once that is complete, run `make` in the build directory to compile the plugin.

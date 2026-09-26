@@ -23,25 +23,26 @@
 #include <optional>
 #include <stdint.h>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "binaryninjaapi.h"
-#include "neon_intrinsics.h"  // for ARM64_INTRIN_NEON_END
+#include "acle_intrinsics.h"  // for AcleIntrinsicEnd
 
 // Apple vendor-specific AArch64 instructions occupy the 0x0020xxxx encoding space (bits [31:16] ==
 // 0x0020), which is unallocated in the base ARM A64 instruction set. They appear in Apple firmware
-// such as the iOS kernelcache and SPTM. This module decodes, renders, and lifts them independently
-// of the generated ARM disassembler, so no generated file or ARM spec data is touched.
+// such as the iOS kernelcache and SPTM. exarmo decodes only what ARM defines, so this module decodes,
+// renders and lifts them itself.
 //
 // Encodings follow the AsahiLinux reverse-engineering documentation
 // (https://asahilinux.org/docs/hw/cpu/apple-instructions/).
 
-// Vendor intrinsic IDs begin immediately after the base ARM64 intrinsic range (NEON included) so
+// Vendor intrinsic IDs begin immediately after the base ARM64 intrinsic range (ACLE included) so
 // they never collide with the base architecture's intrinsics. They are session-local (IL is
 // regenerated per session and intrinsic IDs are not persisted).
 enum AppleVendorIntrinsic : uint32_t
 {
-	APPLE_INTRIN_GENTER = ARM64_INTRIN_NEON_END + 1,
+	APPLE_INTRIN_GENTER = AcleIntrinsicEnd + 1,
 	APPLE_INTRIN_GEXIT,
 	APPLE_INTRIN_SDSB,
 	APPLE_INTRIN_WKDMC,
@@ -52,13 +53,12 @@ enum AppleVendorIntrinsic : uint32_t
 	APPLE_INTRIN_END,
 };
 
-// True if the instruction word might be an Apple vendor instruction. Most live in the 0x0020xxxx
-// space (bits [31:16] == 0x0020), but at least one occupies the exception-generation encoding class
-// in the opc == 0b111 slot (0xd4e0_0000) that ARM leaves unallocated.
-// This is only a cheap pre-filter. The decoder makes the precise determination.
+// True if the instruction word might be an Apple vendor instruction, all of which live in the
+// 0x0020xxxx space (bits [31:16] == 0x0020). This is only a cheap pre-filter. The decoder makes the
+// precise determination.
 inline bool IsAppleVendorEncoding(uint32_t insn)
 {
-	return (insn & 0xffff0000) == 0x00200000 || (insn & 0xffe00000) == 0xd4e00000;
+	return (insn & 0xffff0000) == 0x00200000;
 }
 
 // The info and text paths return false if the word is not a recognized Apple vendor instruction. On
@@ -69,6 +69,13 @@ bool AppleVendorGetInstructionText(uint32_t insn, std::vector<BinaryNinja::Instr
 // value is what Architecture::GetInstructionLowLevelIL should return: true if the block continues past
 // this instruction, false if it ends the block.
 std::optional<bool> AppleVendorGetInstructionLowLevelIL(uint32_t insn, BinaryNinja::LowLevelILFunction& il);
+
+// The name Apple gives a system register in the encodings ARM leaves IMPLEMENTATION DEFINED.
+// Empty for any other number.
+std::string_view AppleVendorSystemRegisterName(uint32_t reg);
+
+// Append every vendor system register number to `result`.
+void AppleVendorGetSystemRegisters(std::vector<uint32_t>& result);
 
 // Metadata for vendor intrinsics.
 bool AppleVendorIsIntrinsic(uint32_t intrinsic);

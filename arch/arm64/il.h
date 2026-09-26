@@ -1,11 +1,8 @@
 #pragma once
 
 #include "binaryninjaapi.h"
-#include "sysregs_enum.h"
-#include "disassembler/arm64dis.h"
-#include "disassembler/encodings_dec.h"
-#include "disassembler/encodings_fmt.h"
-#include "disassembler/operations.h"
+#include "exarmo/aarch64.h"
+#include "system_registers.h"
 
 /* Do we lift pointer authentication instructions as intrinsics?
    If no, the below define should be preceeded with "//"
@@ -46,7 +43,6 @@ enum Arm64Intrinsic : uint32_t
 	ARM64_INTRIN_AUTDB,
 	ARM64_INTRIN_AUTIA,
 	ARM64_INTRIN_AUTIB,
-	ARM64_INTRIN_DC,
 	ARM64_INTRIN_DMB,
 	ARM64_INTRIN_DSB,
 	ARM64_INTRIN_ESB,
@@ -57,6 +53,7 @@ enum Arm64Intrinsic : uint32_t
 	ARM64_INTRIN_ISB,
 	ARM64_INTRIN_MRS,
 	ARM64_INTRIN_MSR,
+	ARM64_INTRIN_MSR_IMM,
 	ARM64_INTRIN_PACDA,
 	ARM64_INTRIN_PACDB,
 	ARM64_INTRIN_PACGA,
@@ -72,6 +69,23 @@ enum Arm64Intrinsic : uint32_t
 	ARM64_INTRIN_XPACI,
 	ARM64_INTRIN_YIELD,
 	ARM64_INTRIN_ERET,
+	/* Single-precision FMAX, FMIN, FMAXNM and FMINNM, which have no ACLE scalar intrinsic and whose
+	   NaN handling no IL operation matches */
+	ARM64_INTRIN_FMAX,
+	ARM64_INTRIN_FMIN,
+	ARM64_INTRIN_FMAXNM,
+	ARM64_INTRIN_FMINNM,
+	/* Single-precision roundings and fused multiply-adds with no ACLE scalar intrinsic or IL
+	   equivalent */
+	ARM64_INTRIN_FRINTA,
+	ARM64_INTRIN_FRINTI,
+	ARM64_INTRIN_FRINTX,
+	ARM64_INTRIN_FRINT32X,
+	ARM64_INTRIN_FRINT32Z,
+	ARM64_INTRIN_FRINT64X,
+	ARM64_INTRIN_FRINT64Z,
+	ARM64_INTRIN_FMADD,
+	ARM64_INTRIN_FMSUB,
 	ARM64_INTRIN_CNT,
 	ARM64_INTRIN_CLREX,
 	ARM64_INTRIN_REV16,
@@ -93,9 +107,6 @@ enum Arm64Intrinsic : uint32_t
 	ARM64_INTRIN_STLXR,
 	ARM64_INTRIN_STLXRB,
 	ARM64_INTRIN_STLXRH,
-	ARM64_INTRIN_TLBI,
-	ARM64_INTRIN_TLBI_REG,
-	ARM64_INTRIN_AT,
 	ARM64_INTRIN_ADDG,
 	ARM64_INTRIN_CMPP,
 	ARM64_INTRIN_GMI,
@@ -118,20 +129,22 @@ enum Arm64Intrinsic : uint32_t
 	ARM64_INTRIN_AUTIB2,
 	ARM64_INTRIN_PACIA2,
 	ARM64_INTRIN_PACIB2,
-	ARM64_INTRIN_NORMAL_END, /* needed so intrinsics can be extended by other lists, like neon
-	                            intrinsics */
+	ARM64_INTRIN_NORMAL_END, /* The SysOp, ACLE and Apple vendor intrinsics follow, in that order */
 	ARM64_INTRIN_INVALID = 0xFFFFFFFF,
 };
 
 enum Arm64FakeRegister : uint32_t
 {
-	FAKEREG_SYSREG_UNKNOWN = SYSREG_END + 1,
-	FAKEREG_SYSCALL_INFO = SYSREG_END + 2
+	FAKEREG_SYSREG_UNKNOWN = 65533,
+	FAKEREG_SYSCALL_INFO = 65534
 };
 
+static_assert(FAKEREG_SYSREG_UNKNOWN >= SYSREG_END);
+
 bool GetLowLevelILForInstruction(BinaryNinja::Architecture* arch, uint64_t addr,
-    BinaryNinja::LowLevelILFunction& il, Instruction& instr, size_t addrSize, bool alignmentRequired, std::function<bool()> preferIntrinsics);
+    BinaryNinja::LowLevelILFunction& il, const exarmo_aarch64_instruction& instr, size_t addrSize,
+    bool alignmentRequired, std::function<bool()> preferIntrinsics);
 
 BinaryNinja::ExprId ExtractRegister(BinaryNinja::LowLevelILFunction& il,
-    InstructionOperand& operand, size_t regNum, size_t extractSize, bool signExtend,
+    exarmo_aarch64_operand& operand, size_t regNum, size_t extractSize, bool signExtend,
     size_t resultSize);

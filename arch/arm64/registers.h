@@ -1,6 +1,10 @@
 #pragma once
 
+#include "exarmo/aarch64.h"
+
 #include <stddef.h>
+#include <stdint.h>
+#include <string_view>
 
 #ifdef _MSC_VER
 	#undef REG_NONE  // collides with winnt's define
@@ -10,6 +14,8 @@
 // registers (non-system)
 //-----------------------------------------------------------------------------
 
+// Register numbers are saved in databases as part of each variable's storage. Never renumber an
+// existing register.
 enum Register
 {
 	REG_NONE,
@@ -1337,12 +1343,29 @@ enum Register
 	REG_END
 };
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-	const char* aarch64_get_register_name(enum Register);
-	size_t aarch64_get_register_size(enum Register);
-#ifdef __cplusplus
-}
-#endif
+// The name the architecture writes a register under. Empty where the number names none.
+std::string_view RegisterName(enum Register);
+
+// How many bytes a register holds. Zero where the number names none.
+size_t RegisterSize(enum Register);
+
+// Map an exarmo register to the whole register it names, so v0.s[1] gives v0. Use LaneRegister for
+// a single lane.
+Register ToRegister(exarmo_aarch64_reg reg);
+
+// How wide the whole arrangement is in bits. An element width with no lane count written names
+// one element, so `.d` and `.1d` are both 64 bits.
+uint32_t ArrangementBits(exarmo_aarch64_arrangement arrangement);
+
+// How many elements the arrangement names, which is one where it writes no count.
+uint32_t ArrangementLanes(exarmo_aarch64_arrangement arrangement);
+
+// The register covering exactly the bits an arrangement names. A 128-bit arrangement gives the
+// vector register, and a narrower one gives lane 0 of that width, so v0.2s is REG_V0_D0. Without an
+// arrangement this is the vector register.
+Register ArrangementRegister(exarmo_aarch64_arrangement arrangement, uint32_t number);
+
+// The register for one lane of vector register `number`, where `element` is the lane width. For
+// example, v3.s[2] is REG_V0_S0 + 3 * 4 + 2. Returns REG_NONE for an unsupported width or an
+// out-of-range lane.
+Register LaneRegister(uint32_t element, uint32_t number, uint32_t lane);

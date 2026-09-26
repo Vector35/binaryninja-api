@@ -116,7 +116,10 @@ ExprId ExtractImmediate(LowLevelILFunction& il, exarmo_aarch64_operand& operand,
 		}
 	}
 
-	return ILCONST(sizeof_imm, imm & ONES(sizeof_imm * 8));
+	if (sizeof_imm < 8)
+		imm &= ONES(sizeof_imm * 8);
+
+	return ILCONST(sizeof_imm, imm);
 }
 
 // extractSize can be smaller than the register, generating an LLIL_LOWPART
@@ -336,13 +339,7 @@ static size_t ReadILOperand(
 	switch (operand.kind)
 	{
 	case EXARMO_AARCH64_OPERAND_IMM:
-	{
-		exarmo_aarch64_modifier modifier = operand.imm.modifier;
-		if (modifier.present && modifier.kind == EXARMO_AARCH64_MOD_LSL && modifier.amount > 0)
-			return il.Const(resultSize, IMM_O(operand) << modifier.amount);
-
-		return il.Const(resultSize, IMM_O(operand));
-	}
+		return ExtractImmediate(il, operand, resultSize);
 	case EXARMO_AARCH64_OPERAND_LABEL:
 		return il.ConstPointer(8, LabelTarget(operand, addr));
 	case EXARMO_AARCH64_OPERAND_REG:
@@ -685,8 +682,23 @@ static void LoadStoreOperand(LowLevelILFunction& il, bool load,
 	WriteBack(il, operand2, EXARMO_AARCH64_WRITEBACK_POST);
 }
 
-// Load `reg` from, or store it to, the location operand2 names. `reg` may be an LLIL_TEMP, which a
-// lift loads into before working on the value.
+// Load `size` bytes from the location `operand` names into LLIL_TEMP(0), for a lift that works on
+// the value before writing any register.
+static void LoadTemporary(
+    LowLevelILFunction& il, size_t size, exarmo_aarch64_operand& operand, uint64_t addr)
+{
+	std::optional<ExprId> address = BeginAccess(il, operand, addr);
+	if (!address)
+	{
+		il.AddInstruction(il.Unimplemented());
+		return;
+	}
+
+	il.AddInstruction(il.SetRegister(size, LLIL_TEMP(0), il.Operand(1, il.Load(size, *address))));
+	WriteBack(il, operand, EXARMO_AARCH64_WRITEBACK_POST);
+}
+
+// Load `reg` from, or store it to, the location operand2 names, `size` bytes of it.
 static void LoadStoreOperandSize(LowLevelILFunction& il, bool load, bool sign_extend, size_t size,
     Register reg, exarmo_aarch64_operand& operand2, uint64_t addr)
 {
@@ -699,12 +711,9 @@ static void LoadStoreOperandSize(LowLevelILFunction& il, bool load, bool sign_ex
 
 	if (load)
 	{
-		// LLIL_TEMP registers will be reported to have size 0, so override with size
-		size_t extendSize = REGSZ(reg) ? REGSZ(reg) : size;
-
 		ExprId value = il.Operand(1, il.Load(size, *address));
-		if (extendSize > size)
-			value = sign_extend ? il.SignExtend(extendSize, value) : il.ZeroExtend(extendSize, value);
+		if (REGSZ(reg) > size)
+			value = sign_extend ? il.SignExtend(REGSZ(reg), value) : il.ZeroExtend(REGSZ(reg), value);
 
 		il.AddInstruction(ILSETREG(reg, value));
 	}
@@ -1970,7 +1979,7 @@ bool GetLowLevelILForInstruction(
 	{
 		// TODO: represent/annotate (model?) acquire/release memory ordering semantics for all LDADD* instructions
 
-		LoadStoreOperandSize(il, true, false, REGSZ_O(operand2), (Register)LLIL_TEMP(0), operand3, addr);
+		LoadTemporary(il, REGSZ_O(operand2), operand3, addr);
 		il.AddInstruction(il.Store(REGSZ_O(operand2), ILREG_O(operand3),
 		    il.Add(REGSZ_O(operand1),
 				ILREG_O(operand1),
@@ -1993,7 +2002,7 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_LDADDLB:
 	case EXARMO_AARCH64_LDADDALB:
 	{
-		LoadStoreOperandSize(il, true, false, 1, (Register)LLIL_TEMP(0), operand3, addr);
+		LoadTemporary(il, 1, operand3, addr);
 		il.AddInstruction(il.Store(1, ILREG_O(operand3),
 		    il.Add(1, il.LowPart(1, ILREG_O(operand1)), il.LowPart(1, il.Register(1, LLIL_TEMP(0))))));
 		if (!IS_ZERO_REG(REG_O(operand2)))
@@ -2013,7 +2022,7 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_LDADDLH:
 	case EXARMO_AARCH64_LDADDALH:
 	{
-		LoadStoreOperandSize(il, true, false, 2, (Register)LLIL_TEMP(0), operand3, addr);
+		LoadTemporary(il, 2, operand3, addr);
 		il.AddInstruction(il.Store(2, ILREG_O(operand3),
 		    il.Add(2, il.LowPart(2, ILREG_O(operand1)), il.LowPart(2, il.Register(2, LLIL_TEMP(0))))));
 		if (!IS_ZERO_REG(REG_O(operand2)))
@@ -2035,7 +2044,7 @@ bool GetLowLevelILForInstruction(
 	{
 		// TODO: represent/annotate (model?) acquire/release memory ordering semantics for all LDCLR* instructions
 
-		LoadStoreOperandSize(il, true, false, REGSZ_O(operand2), (Register)LLIL_TEMP(0), operand3, addr);
+		LoadTemporary(il, REGSZ_O(operand2), operand3, addr);
 		il.AddInstruction(il.Store(REGSZ_O(operand2), ILREG_O(operand3),
 		    il.And(REGSZ_O(operand1),
 				il.Not(REGSZ_O(operand1), ILREG_O(operand1)),
@@ -2060,7 +2069,7 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_LDCLRLB:
 	case EXARMO_AARCH64_LDCLRALB:
 	{
-		LoadStoreOperandSize(il, true, false, 1, (Register)LLIL_TEMP(0), operand3, addr);
+		LoadTemporary(il, 1, operand3, addr);
 		il.AddInstruction(il.Store(1, ILREG_O(operand3),
 		    il.And(1, il.Not(1, il.LowPart(1, ILREG_O(operand1))), il.LowPart(1, il.Register(1, LLIL_TEMP(0))))));
 		if (!IS_ZERO_REG(REG_O(operand2)))
@@ -2080,7 +2089,7 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_LDCLRLH:
 	case EXARMO_AARCH64_LDCLRALH:
 	{
-		LoadStoreOperandSize(il, true, false, 2, (Register)LLIL_TEMP(0), operand3, addr);
+		LoadTemporary(il, 2, operand3, addr);
 		il.AddInstruction(il.Store(2, ILREG_O(operand3),
 		    il.And(2, il.Not(2, il.LowPart(2, ILREG_O(operand1))), il.LowPart(2, il.Register(2, LLIL_TEMP(0))))));
 		if (!IS_ZERO_REG(REG_O(operand2)))
@@ -2102,7 +2111,7 @@ bool GetLowLevelILForInstruction(
 	{
 		// TODO: represent/annotate (model?) acquire/release memory ordering semantics for all LDEOR* instructions
 
-		LoadStoreOperandSize(il, true, false, REGSZ_O(operand2), (Register)LLIL_TEMP(0), operand3, addr);
+		LoadTemporary(il, REGSZ_O(operand2), operand3, addr);
 		il.AddInstruction(il.Store(REGSZ_O(operand2), ILREG_O(operand3),
 		    il.Xor(REGSZ_O(operand1),
 				ILREG_O(operand1),
@@ -2125,7 +2134,7 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_LDEORLB:
 	case EXARMO_AARCH64_LDEORALB:
 	{
-		LoadStoreOperandSize(il, true, false, 1, (Register)LLIL_TEMP(0), operand3, addr);
+		LoadTemporary(il, 1, operand3, addr);
 		il.AddInstruction(il.Store(1, ILREG_O(operand3),
 		    il.Xor(1, il.LowPart(1, ILREG_O(operand1)), il.LowPart(1, il.Register(1, LLIL_TEMP(0))))));
 		if (!IS_ZERO_REG(REG_O(operand2)))
@@ -2145,7 +2154,7 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_LDEORLH:
 	case EXARMO_AARCH64_LDEORALH:
 	{
-		LoadStoreOperandSize(il, true, false, 2, (Register)LLIL_TEMP(0), operand3, addr);
+		LoadTemporary(il, 2, operand3, addr);
 		il.AddInstruction(il.Store(2, ILREG_O(operand3),
 		    il.Xor(2, il.LowPart(2, ILREG_O(operand1)), il.LowPart(2, il.Register(2, LLIL_TEMP(0))))));
 		if (!IS_ZERO_REG(REG_O(operand2)))
@@ -2167,7 +2176,7 @@ bool GetLowLevelILForInstruction(
 	{
 		// TODO: represent/annotate (model?) acquire/release memory ordering semantics for all LDSET* instructions
 
-		LoadStoreOperandSize(il, true, false, REGSZ_O(operand2), (Register)LLIL_TEMP(0), operand3, addr);
+		LoadTemporary(il, REGSZ_O(operand2), operand3, addr);
 		il.AddInstruction(il.Store(REGSZ_O(operand2), ILREG_O(operand3),
 		    il.Or(REGSZ_O(operand1),
 				ILREG_O(operand1),
@@ -2190,7 +2199,7 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_LDSETLB:
 	case EXARMO_AARCH64_LDSETALB:
 	{
-		LoadStoreOperandSize(il, true, false, 1, (Register)LLIL_TEMP(0), operand3, addr);
+		LoadTemporary(il, 1, operand3, addr);
 		il.AddInstruction(il.Store(1, ILREG_O(operand3),
 		    il.Or(1, il.LowPart(1, ILREG_O(operand1)), il.LowPart(1, il.Register(1, LLIL_TEMP(0))))));
 		if (!IS_ZERO_REG(REG_O(operand2)))
@@ -2210,7 +2219,7 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_LDSETLH:
 	case EXARMO_AARCH64_LDSETALH:
 	{
-		LoadStoreOperandSize(il, true, false, 2, (Register)LLIL_TEMP(0), operand3, addr);
+		LoadTemporary(il, 2, operand3, addr);
 		il.AddInstruction(il.Store(2, ILREG_O(operand3),
 		    il.Or(2, il.LowPart(2, ILREG_O(operand1)), il.LowPart(2, il.Register(2, LLIL_TEMP(0))))));
 		if (!IS_ZERO_REG(REG_O(operand2)))
@@ -2388,8 +2397,18 @@ bool GetLowLevelILForInstruction(
 			il.AddInstruction(ILSETREG(regs[i], ILCONST_O(RegisterSize(regs[i]), operand2)));
 		break;
 	}
-	case EXARMO_AARCH64_MVN:
 	case EXARMO_AARCH64_MVNI:
+	{
+		Register regs[16];
+		int n = unpack_vector(operand1, regs);
+		for (int i = 0; i < n; ++i)
+		{
+			size_t size = RegisterSize(regs[i]);
+			il.AddInstruction(ILSETREG(regs[i], il.Not(size, ILCONST_O(size, operand2))));
+		}
+		break;
+	}
+	case EXARMO_AARCH64_MVN:
 		il.AddInstruction(ILSETREG_O(
 		    operand1, il.Not(REGSZ_O(operand1), ReadILOperand(il, operand2, REGSZ_O(operand1), addr))));
 		break;

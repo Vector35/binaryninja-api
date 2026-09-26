@@ -3,7 +3,7 @@
 # (barebones) utility to generate tests and search encodings and mnemonics
 # TODO: proper command line argument parsing, and help
 
-import re, sys, codecs
+import codecs, glob, os, re, sys
 
 N_SAMPLES = 4  # number of samples for each encoding
 
@@ -11,19 +11,6 @@ from arm64test import lift, ATTR_PTR_AUTH, path_il_h
 
 if not sys.argv[1:]:
     sys.exit(-1)
-
-arch = None
-
-
-def disassemble(addr, data):
-    global arch
-    if not arch:
-        arch = binaryninja.Architecture["aarch64"]
-    (tokens, length) = arch.get_instruction_text(data, addr)
-    if not tokens or length == 0:
-        return None
-    return disasm_test.normalize("".join([x.text for x in tokens]))
-
 
 def print_case(data, comment=""):
     ilstr, attributes = lift(data)
@@ -53,13 +40,25 @@ def print_case(data, comment=""):
 def gather_samples(mnems, encodings):
     encodings = [x.upper() for x in encodings]
 
-    global N_SAMPLES
-    fpath = "./disassembler/test_cases.txt"
-    with open(fpath, "rt") as fp:
-        lines_read = fp.read()
+    # EXARMO_CORPUS names exarmo's corpus, a file per instruction, each holding a block of sample
+    # encodings per instruction encoding, or a single one of those files.
+    corpus = os.environ.get("EXARMO_CORPUS")
+    if not corpus:
+        sys.exit("set EXARMO_CORPUS to exarmo's corpus, aarch64/tests/cases in an exarmo checkout")
+    if os.path.isdir(corpus):
+        paths = sorted(glob.glob(os.path.join(corpus, "*.txt")))
+    else:
+        paths = [corpus]
+    if not paths or not all(os.path.isfile(p) for p in paths):
+        sys.exit("no exarmo corpus at %s" % corpus)
 
     mnems = [re.compile(x, re.IGNORECASE) for x in mnems]
+    for path in paths:
+        with open(path, "rt") as fp:
+            gather_file_samples(path, fp.read(), mnems, encodings)
 
+
+def gather_file_samples(path, lines_read, mnems, encodings):
     samples = 0
     current_encoding = None
     # not_sample_line_pat = re.compile(r"^// (\w*) .*", re.IGNORECASE)
@@ -68,31 +67,8 @@ def gather_samples(mnems, encodings):
     sample_line_pat = re.compile(r"^([\dA-F]{2})([\dA-F]{2})([\dA-F]{2})([\dA-F]{2}) (.*)$", re.IGNORECASE)
     for i, line in enumerate(lines_read.splitlines()):
         _line = line.strip().upper()
-        if _line.startswith("// NOTE:"):
-            continue
-        if _line.startswith("// SYNTAX:"):
-            continue
-        if _line.startswith("// https:"):
-            continue
-        if _line.startswith("// HTTPS:"):
-            continue
-        if _line.startswith("// 1101010100|L=0|OP0=00|OP1=011|CRN=0011|CRM=0100|1|OPC=00|RT=11111"):
-            continue
-        if _line.endswith("// TCOMMIT"):
-            continue
-        if _line.endswith("// DRPS"):
-            continue
-        if _line.endswith("// ERET"):
-            continue
-        if _line.endswith("// ERETAA"):
-            continue
-        if _line.endswith("// ERETAB"):
-            continue
-        if _line.endswith("// PSSBB"):
-            continue
-        if _line.endswith("// SSBB"):
-            continue
-        if _line.endswith("// PSSBB_DSB_BO_BARRIERS"):
+        # A blank line separates one encoding's block from the next.
+        if not _line:
             continue
 
         # if re.match(r"^// .*? .*", line):
@@ -116,7 +92,8 @@ def gather_samples(mnems, encodings):
         if m:
             # example:
             # 658AB9BB bfcvt z27.h, p6/m, z13.s
-            if samples >= N_SAMPLES:
+            # A word under no encoding is one the corpus records as unallocated.
+            if current_encoding is None or samples >= N_SAMPLES:
                 continue
             (b0, b1, b2, b3, instxt) = m.group(1, 2, 3, 4, 5)
             data = codecs.decode(b3 + b2 + b1 + b0, "hex_codec")
@@ -139,7 +116,7 @@ def gather_samples(mnems, encodings):
             samples += 1
             continue
 
-        print("unable to parse line (%d): %r" % (i + 1, line))
+        print("unable to parse line (%s:%d): %r" % (path, i + 1, line))
         sys.exit(-1)
 
 

@@ -1,0 +1,22 @@
+# Build exarmo, the AArch64 disassembler, as the static library the plugin links. build.rs copies
+# the C API's headers from the exarmo-aarch64-capi this crate links.
+[package]
+name = "arm64-exarmo"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+# Pin the exact version so that the demo umbrella, which resolves without this crate's Cargo.lock,
+# builds the same exarmo as every other build.
+exarmo-aarch64-capi = "=0.1.3"
+
+# Make this crate its own workspace to keep exarmo out of the api workspace's lock file.
+[workspace]
+
+[profile.release]
+opt-level = 2
+debug = "line-tables-only"

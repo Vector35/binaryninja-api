@@ -1,10 +1,13 @@
-#include "regs.h"
+#include "registers.h"
+
+#include <algorithm>
+#include <string_view>
 
 //-----------------------------------------------------------------------------
 // registers (and related) to string
 //-----------------------------------------------------------------------------
 
-static const char* const RegisterString[] = {"NONE", "w0", "w1", "w2", "w3", "w4", "w5", "w6", "w7", "w8",
+static const std::string_view RegisterString[] = {"NONE", "w0", "w1", "w2", "w3", "w4", "w5", "w6", "w7", "w8",
     "w9", "w10", "w11", "w12", "w13", "w14", "w15", "w16", "w17", "w18", "w19", "w20", "w21", "w22",
     "w23", "w24", "w25", "w26", "w27", "w28", "w29", "w30", "wzr", "wsp", "x0", "x1", "x2", "x3",
     "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17",
@@ -166,17 +169,17 @@ static const char* const RegisterString[] = {"NONE", "w0", "w1", "w2", "w3", "w4
     "pstl1keep", "pstl1strm", "pstl2keep", "pstl2strm", "pstl3keep", "pstl3strm", "#0x16", "#0x17",
     "#0x18", "#0x19", "#0x1a", "#0x1b", "#0x1c", "#0x1d", "#0x1e", "#0x1f", "zt0", "END"};
 
-const char* aarch64_get_register_name(enum Register r)
+std::string_view RegisterName(enum Register r)
 {
 	if (r > REG_NONE && r < REG_END)
 		return RegisterString[r];
 
-	return "";
+	return {};
 }
 
-size_t aarch64_get_register_size(enum Register r)
+size_t RegisterSize(enum Register r)
 {
-	// Comparison done in order of likelyhood to occur
+	// Comparison done in order of likelihood to occur
 	if ((r >= REG_X0 && r <= REG_SP) || (r >= REG_D0 && r <= REG_D31))
 		return 8;
 	else if ((r >= REG_W0 && r <= REG_WSP) || (r >= REG_S0 && r <= REG_S31))
@@ -199,4 +202,110 @@ size_t aarch64_get_register_size(enum Register r)
 		return 64;
 
 	return 0;
+}
+
+
+Register ToRegister(exarmo_aarch64_reg reg)
+{
+	switch (reg.class_)
+	{
+	case EXARMO_AARCH64_REG_W:
+		return reg.num == 31 ? REG_WZR : (Register)(REG_W0 + reg.num);
+	case EXARMO_AARCH64_REG_W_SP:
+		return reg.num == 31 ? REG_WSP : (Register)(REG_W0 + reg.num);
+	// GP is a general register of unspecified width. Map it to X, the wider reading.
+	case EXARMO_AARCH64_REG_GP:
+	case EXARMO_AARCH64_REG_X:
+		return reg.num == 31 ? REG_XZR : (Register)(REG_X0 + reg.num);
+	case EXARMO_AARCH64_REG_X_SP:
+		return reg.num == 31 ? REG_SP : (Register)(REG_X0 + reg.num);
+	case EXARMO_AARCH64_REG_B:
+		return (Register)(REG_B0 + reg.num);
+	case EXARMO_AARCH64_REG_H:
+		return (Register)(REG_H0 + reg.num);
+	case EXARMO_AARCH64_REG_S:
+		return (Register)(REG_S0 + reg.num);
+	case EXARMO_AARCH64_REG_D:
+		return (Register)(REG_D0 + reg.num);
+	case EXARMO_AARCH64_REG_Q:
+		return (Register)(REG_Q0 + reg.num);
+	case EXARMO_AARCH64_REG_V:
+		return (Register)(REG_V0 + reg.num);
+	case EXARMO_AARCH64_REG_Z:
+		return (Register)(REG_Z0 + reg.num);
+	case EXARMO_AARCH64_REG_P:
+		return (Register)(REG_P0 + reg.num);
+	// A predicate-as-counter names the same physical register as the predicate of that number,
+	// read a different way.
+	case EXARMO_AARCH64_REG_PN:
+		return (Register)(REG_P0 + reg.num);
+	case EXARMO_AARCH64_REG_ZT0:
+		return REG_ZT0;
+	// An SME tile is not a register the architecture plugin numbers.
+	case EXARMO_AARCH64_REG_ZA_TILE:
+	default:
+		return REG_NONE;
+	}
+}
+
+
+uint32_t ArrangementLanes(exarmo_aarch64_arrangement arrangement)
+{
+	return std::max<uint32_t>(arrangement.lanes, 1);
+}
+
+
+uint32_t ArrangementBits(exarmo_aarch64_arrangement arrangement)
+{
+	return (uint32_t)arrangement.element * ArrangementLanes(arrangement);
+}
+
+
+Register ArrangementRegister(exarmo_aarch64_arrangement arrangement, uint32_t number)
+{
+	if (number > 31)
+		return REG_NONE;
+
+	uint32_t bits = ArrangementBits(arrangement);
+	if (bits == 0 || bits > 128)
+		return (Register)(REG_V0 + number);
+
+	return LaneRegister(bits, number, 0);
+}
+
+
+Register LaneRegister(uint32_t element, uint32_t number, uint32_t lane)
+{
+	Register first;
+	uint32_t lanes;
+	switch (element)
+	{
+	case EXARMO_AARCH64_ELEMENT_Q:
+		first = REG_V0;
+		lanes = 1;
+		break;
+	case EXARMO_AARCH64_ELEMENT_B:
+		first = REG_V0_B0;
+		lanes = 16;
+		break;
+	case EXARMO_AARCH64_ELEMENT_H:
+		first = REG_V0_H0;
+		lanes = 8;
+		break;
+	case EXARMO_AARCH64_ELEMENT_S:
+		first = REG_V0_S0;
+		lanes = 4;
+		break;
+	case EXARMO_AARCH64_ELEMENT_D:
+		first = REG_V0_D0;
+		lanes = 2;
+		break;
+	default:
+		return REG_NONE;
+	}
+
+	if (number > 31 || lane >= lanes)
+		return REG_NONE;
+
+	return (Register)(first + number * lanes + lane);
 }

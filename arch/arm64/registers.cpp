@@ -1,6 +1,7 @@
 #include "registers.h"
 
 #include <algorithm>
+#include <iterator>
 #include <string_view>
 
 //-----------------------------------------------------------------------------
@@ -161,13 +162,15 @@ static const std::string_view RegisterString[] = {"NONE", "w0", "w1", "w2", "w3"
     "z28", "z29", "z30", "z31",
     /* scalable predicate registers */
     "p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8", "p9", "p10", "p11", "p12", "p13", "p14",
-    "p15", "p16", "p17", "p18", "p19", "p20", "p21", "p22", "p23", "p24", "p25", "p26", "p27",
-    "p28", "p29", "p30", "p31",
-    /* prefetch operations (TODO: remove these as registers) */
-    "pldl1keep", "pldl1strm", "pldl2keep", "pldl2strm", "pldl3keep", "pldl3strm", "#0x6", "#0x7",
-    "plil1keep", "plil1strm", "plil2keep", "plil2strm", "plil3keep", "plil3strm", "#0xe", "#0xf",
-    "pstl1keep", "pstl1strm", "pstl2keep", "pstl2strm", "pstl3keep", "pstl3strm", "#0x16", "#0x17",
-    "#0x18", "#0x19", "#0x1a", "#0x1b", "#0x1c", "#0x1d", "#0x1e", "#0x1f", "zt0", "END"};
+    "p15",
+    /* Unused. These keep zt0's saved number unchanged. */
+    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+    "zt0", "END"};
+
+// Indexed by Register, whose numbers are fixed.
+static_assert(std::size(RegisterString) == REG_END + 1);
 
 std::string_view RegisterName(enum Register r)
 {

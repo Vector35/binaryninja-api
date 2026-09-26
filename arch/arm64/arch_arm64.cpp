@@ -1560,8 +1560,8 @@ class Arm64Architecture : public Architecture
 			// SVE
 			REG_P0,   REG_P1,  REG_P2,  REG_P3,   REG_P4,  REG_P5,  REG_P6,  REG_P7,
 			REG_P8,   REG_P9,  REG_P10,  REG_P11,   REG_P12,  REG_P13,  REG_P14,  REG_P15,
-			REG_P16,   REG_P17,  REG_P18,  REG_P19,   REG_P20,  REG_P21,  REG_P22,  REG_P23,
-			REG_P24,   REG_P25,  REG_P26,  REG_P27,   REG_P29,  REG_P29,  REG_P30,  REG_P31,
+			// SME
+			REG_ZT0,
 		};
 		return r;
 	}
@@ -1734,10 +1734,8 @@ class Arm64Architecture : public Architecture
 			REG_Z24, REG_Z25, REG_Z26, REG_Z27, REG_Z28, REG_Z29, REG_Z30, REG_Z31,
 			REG_P0,  REG_P1,  REG_P2,  REG_P3,  REG_P4,  REG_P5,  REG_P6,  REG_P7,
 			REG_P8,  REG_P9,  REG_P10, REG_P11, REG_P12, REG_P13, REG_P14, REG_P15,
-			REG_P16, REG_P17, REG_P18, REG_P19, REG_P20, REG_P21, REG_P22, REG_P23,
-			REG_P24, REG_P25, REG_P26, REG_P27, REG_P28, REG_P29, REG_P30, REG_P31,
-			/* system registers -- removed because they're not registers anymore */
-
+			// SME
+			REG_ZT0,
 			/* fake registers */
 			FAKEREG_SYSREG_UNKNOWN, /* acts as an input/output to ARM64_INTRIN_MSR,
 										ARM64_INTRIN_MRS intrinsics when the sysreg
@@ -2065,23 +2063,9 @@ class Arm64Architecture : public Architecture
 			case REG_P13:
 			case REG_P14:
 			case REG_P15:
-			case REG_P16:
-			case REG_P17:
-			case REG_P18:
-			case REG_P19:
-			case REG_P20:
-			case REG_P21:
-			case REG_P22:
-			case REG_P23:
-			case REG_P24:
-			case REG_P25:
-			case REG_P26:
-			case REG_P27:
-			case REG_P28:
-			case REG_P29:
-			case REG_P30:
-			case REG_P31:
 				return RegisterInfo(reg, 0, 32);
+			case REG_ZT0:
+				return RegisterInfo(reg, 0, 64);
 		}
 
 		if (reg >= REG_V0_B0 && reg <= REG_V31_B15) {

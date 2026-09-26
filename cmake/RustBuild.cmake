@@ -22,6 +22,12 @@
 #   For STATIC crates, a static variant of the Cargo.toml is auto-generated
 #   at configure time (cdylib -> rlib, workspace deps resolved, features added).
 #
+#   A STATIC crate marked STANDALONE skips both. It keeps its own Cargo.toml and
+#   gets its own cargo invocation and target directory. Use it for a crate linked
+#   into a single plugin rather than the core, since the umbrella deduplicates only
+#   within one binary. For a crate outside this repository's workspaces, WORKSPACE
+#   names the workspace to run cargo from.
+#
 # Public API:
 #   bn_add_rust_crate()          - Register a Rust crate for building
 #   bn_add_rust_crate_group()       - Create a group target (combined mode)
@@ -62,8 +68,8 @@ endif()
 # Combined builds (BN_INTERNAL_BUILD without CARGO_ARGS) share BN_RUST_TARGET_DIR
 # Every other crate builds in a per-target directory to avoid lock contention
 function(bn_get_rust_target_dir TARGET_NAME OUT_VAR)
-    cmake_parse_arguments(ARG "" "CARGO_ARGS" "" ${ARGN})
-    if(BN_INTERNAL_BUILD AND NOT ARG_CARGO_ARGS)
+    cmake_parse_arguments(ARG "STANDALONE" "CARGO_ARGS" "" ${ARGN})
+    if(BN_INTERNAL_BUILD AND NOT ARG_CARGO_ARGS AND NOT ARG_STANDALONE)
         set(${OUT_VAR} ${BN_RUST_TARGET_DIR} PARENT_SCOPE)
     else()
         set(${OUT_VAR} ${CMAKE_BINARY_DIR}/rust-target-${TARGET_NAME} PARENT_SCOPE)
@@ -79,6 +85,42 @@ if(NOT DEFINED CARGO_STABLE_VERSION)
 endif()
 
 set(BN_CARGO_COMMAND ${BN_RUSTUP_PATH} run ${CARGO_STABLE_VERSION} cargo)
+
+# Set OUT_VAR to the system libraries a Rust static library needs linked alongside it. They come
+# from std, so they depend only on the toolchain and target, and compiling an empty crate reports
+# them. Leave out the C runtime, which CMake already chooses.
+function(bn_rust_native_static_libs OUT_VAR)
+    set(CACHE_VAR BN_RUST_NATIVE_STATIC_LIBS_${CARGO_STABLE_VERSION})
+    if(NOT DEFINED CACHE{${CACHE_VAR}})
+        set(PROBE_DIR ${CMAKE_BINARY_DIR}/rust-native-static-libs)
+        file(WRITE ${PROBE_DIR}/empty.rs "")
+        execute_process(
+            COMMAND ${BN_RUSTUP_PATH} run ${CARGO_STABLE_VERSION} rustc --crate-type=staticlib
+                --crate-name=empty --print=native-static-libs --out-dir ${PROBE_DIR} ${PROBE_DIR}/empty.rs
+            RESULT_VARIABLE PROBE_RESULT
+            OUTPUT_VARIABLE PROBE_OUTPUT
+            ERROR_VARIABLE PROBE_OUTPUT)
+        if(NOT PROBE_RESULT EQUAL 0 OR NOT PROBE_OUTPUT MATCHES "native-static-libs: ([^\r\n]*)")
+            message(FATAL_ERROR "rustc did not report the native libraries std needs:\n${PROBE_OUTPUT}")
+        endif()
+
+        string(REPLACE " " ";" ITEMS "${CMAKE_MATCH_1}")
+        set(LIBS)
+        foreach(ITEM ${ITEMS})
+            # A MATCHES that fails clears CMAKE_MATCH_1, so each form needs a test of its own.
+            if(ITEM MATCHES "^-l(.+)$")
+                list(APPEND LIBS ${CMAKE_MATCH_1})
+            elseif(ITEM MATCHES "^(.+)\\.lib$")
+                list(APPEND LIBS ${CMAKE_MATCH_1})
+            elseif(NOT ITEM MATCHES "^/defaultlib:")
+                list(APPEND LIBS ${ITEM})
+            endif()
+        endforeach()
+        set(${CACHE_VAR} "${LIBS}" CACHE INTERNAL "")
+    endif()
+
+    set(${OUT_VAR} ${${CACHE_VAR}} PARENT_SCOPE)
+endfunction()
 
 # Derive api path from this file's location (api/cmake/RustBuild.cmake -> api/)
 get_filename_component(_BN_RUST_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" DIRECTORY)
@@ -635,7 +677,7 @@ function(bn_add_rust_static_umbrella UMBRELLA_TARGET)
 endfunction()
 
 function(bn_add_rust_crate)
-    cmake_parse_arguments(ARG "DEMO_STATIC" "TARGET;CRATE;WORKSPACE;OUTPUT_TYPE;OUTPUT_DIR;GROUP;CARGO_ARGS;CRATE_PATH;BN_FEATURE;CRATE_FEATURE;RPATH_KIND" "SOURCES;EXTRA_SOURCES;DEPENDS;BYPRODUCTS" ${ARGN})
+    cmake_parse_arguments(ARG "DEMO_STATIC;STANDALONE" "TARGET;CRATE;WORKSPACE;OUTPUT_TYPE;OUTPUT_DIR;GROUP;CARGO_ARGS;CRATE_PATH;BN_FEATURE;CRATE_FEATURE;RPATH_KIND" "SOURCES;EXTRA_SOURCES;DEPENDS;BYPRODUCTS" ${ARGN})
 
     if(NOT ARG_TARGET)
         message(FATAL_ERROR "bn_add_rust_crate: TARGET is required")
@@ -675,7 +717,8 @@ function(bn_add_rust_crate)
     endif()
 
     # OUTPUT_TYPE STATIC: Generate a static variant of the crate
-    if(ARG_OUTPUT_TYPE STREQUAL "STATIC")
+    # STANDALONE crates are taken as written and built on their own, so no variant is generated
+    if(ARG_OUTPUT_TYPE STREQUAL "STATIC" AND NOT ARG_STANDALONE)
         if(NOT ARG_BN_FEATURE)
             set(ARG_BN_FEATURE "no_exports")
         endif()
@@ -726,7 +769,7 @@ function(bn_add_rust_crate)
     endif()
 
     set(USE_COMBINED_BUILD FALSE)
-    if(BN_INTERNAL_BUILD AND NOT ARG_CARGO_ARGS)
+    if(BN_INTERNAL_BUILD AND NOT ARG_CARGO_ARGS AND NOT ARG_STANDALONE)
         set(USE_COMBINED_BUILD TRUE)
     endif()
 
@@ -798,7 +841,10 @@ function(bn_add_rust_crate)
         endif()
 
     else()
-        bn_get_rust_target_dir(${TARGET_NAME} STANDALONE_TARGET_DIR CARGO_ARGS ${ARG_CARGO_ARGS})
+        if(ARG_STANDALONE)
+            set(_TARGET_DIR_ARGS STANDALONE)
+        endif()
+        bn_get_rust_target_dir(${TARGET_NAME} STANDALONE_TARGET_DIR ${_TARGET_DIR_ARGS} CARGO_ARGS ${ARG_CARGO_ARGS})
         _bn_get_cargo_opts(CARGO_OPTS ${STANDALONE_TARGET_DIR})
                 _bn_compute_cargo_paths(${STANDALONE_TARGET_DIR} ${PROFILE_DIR} ${OUTPUT_FILE_NAME})
 

@@ -475,12 +475,15 @@ class Arm64Architecture : public Architecture
 	}
 
 
-	// Whether this is B.cond or BC.cond, including b.al and b.nv.
+	// Whether this is B.cond or BC.cond with a condition that can fail. b.al and b.nv always branch,
+	// so they are unconditional branches in a conditional encoding.
 	bool IsConditionalBranch(const exarmo_aarch64_instruction& instr)
 	{
 		exarmo_aarch64_encoding encoding = exarmo_aarch64_instruction_encoding(&instr);
-		return encoding == EXARMO_AARCH64_ENC_BOnlyCondbranch
-		    || encoding == EXARMO_AARCH64_ENC_BcOnlyCondbranch;
+		if (encoding != EXARMO_AARCH64_ENC_BOnlyCondbranch && encoding != EXARMO_AARCH64_ENC_BcOnlyCondbranch)
+			return false;
+
+		return exarmo_aarch64_instruction_branch(&instr, 0).conditional;
 	}
 
 
@@ -509,16 +512,6 @@ class Arm64Architecture : public Architecture
 			if (!branch.has_target)
 			{
 				result.AddBranch(UnresolvedBranch);
-				break;
-			}
-
-			// b.nv is read as never taken, so only the instruction after it follows. B.cond and
-			// BC.cond write their condition as their first operand.
-			exarmo_aarch64_operand condition;
-			if (IsConditionalBranch(instr) && exarmo_aarch64_instruction_operands(&instr, &condition, 1)
-			    && condition.cond == EXARMO_AARCH64_COND_NV)
-			{
-				result.AddBranch(FalseBranch, addr + 4);
 				break;
 			}
 
@@ -555,10 +548,10 @@ class Arm64Architecture : public Architecture
 			result.AddBranch(SystemCall);
 			break;
 
-		// Of the instructions that raise an exception, only UDF ends the block.
+		// BRK, HLT and UDF all lift to a trap that ends the block.
 		case EXARMO_AARCH64_BRANCH_EXCEPTION:
-			if (exarmo_aarch64_instruction_mnemonic(&instr) == EXARMO_AARCH64_UDF)
-				result.AddBranch(ExceptionBranch);
+		case EXARMO_AARCH64_BRANCH_HALT:
+			result.AddBranch(ExceptionBranch);
 			break;
 
 		// An indirect call returns to the instruction after it, so it ends no block.
@@ -1109,10 +1102,14 @@ class Arm64Architecture : public Architecture
 			// unconditional branch instruction.
 			*value = (5 << 26) | (((uint32_t)((branch.target - addr) >> 2)) & 0x03ffffff);
 		}
-		else
+		else if (IsTestAndBranch(instr) || IsCompareAndBranch(instr))
 		{
 			// Force to a *BZ, then change the register to zero register (WZR or XZR, determined by bit 31)
-			*value = (*value & ~(1 << 24)) | 0x0f;
+			*value = (*value & ~(1 << 24)) | 0x1f;
+		}
+		else
+		{
+			return false;
 		}
 		return true;
 	}
@@ -1134,6 +1131,10 @@ class Arm64Architecture : public Architecture
 		{
 			// invert bit 24
 			*value ^= (1 << 24);
+		}
+		else
+		{
+			return false;
 		}
 		return true;
 	}

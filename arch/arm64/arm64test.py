@@ -13292,6 +13292,54 @@ def _scalar_register_state(data, initial):
 # Use nonzero initial bytes to distinguish the two.
 
 
+scalar_register_cases = [
+    (f'fcvt {destination}0, {source}{register}', source_size, destination_size, True)
+    for source, source_size in [('h', 2), ('s', 4), ('d', 8)]
+    for destination, destination_size in [('h', 2), ('s', 4), ('d', 8)]
+    if source_size != destination_size
+    for register in [0, 1]
+] + [
+    (f'mov v0.{name}[0], {"x" if size == 8 else "w"}0', 0, size, False)
+    for name, size in [('b', 1), ('h', 2), ('s', 4), ('d', 8)]
+]
+
+
+def scalar_register_effects(case):
+    """Evaluate the generated SSA register writes, including every SIMD byte."""
+    assembly, source_size, size, clears_upper = case
+    arch = binaryninja.Architecture['aarch64']
+    data = arch.assemble(assembly + '\nret')
+
+    def mask(width):
+        return (1 << (width * 8)) - 1
+
+    formats = {2: '<e', 4: '<f', 8: '<d'}
+    initial = {'v0': int.from_bytes(b'\xa5' * 16, 'little'),
+               'v1': int.from_bytes(b'\x5a' * 16, 'little'), 'x0': 0x1234}
+    if source_size:
+        value = int.from_bytes(struct.pack(formats[source_size], 1.5), 'little')
+        for name in ('v0', 'v1'):
+            initial[name] = (initial[name] & ~mask(source_size)) | value
+        result = int.from_bytes(struct.pack(formats[size], 1.5), 'little')
+    else:
+        result = initial['x0'] & mask(size)
+    expected = initial.copy()
+    expected['v0'] = result | (0 if clears_upper else initial['v0'] & ~mask(size))
+    return _scalar_register_state(data, initial), expected
+
+
+def test_scalar_register_effects(no_fail=False):
+    success = True
+    for case in scalar_register_cases:
+        actual, expected = scalar_register_effects(case)
+        if actual != expected:
+            print(f'SCALAR REGISTER MISMATCH: {case[0]}\nexpected: {expected}\nactual: {actual}')
+            success = False
+            if not no_fail:
+                break
+    return success
+
+
 # The scalar forms copy representations and clear unused SIMD bits. The lane
 # forms preserve the other lane. FPCR.NEP=0 is the modeled scalar FP mode.
 fmov_register_cases = [
@@ -13570,9 +13618,10 @@ def run_all(no_fail=False):
     lifts_ok = test_all_lifts(no_fail)
     position_dependent_ok = test_all_position_dependent(no_fail)
     disassembly_ok = test_all_disassembly(no_fail)
+    scalar_registers_ok = test_scalar_register_effects(no_fail)
     fmov_registers_ok = test_fmov_register_effects(no_fail)
     fcvtzs_ok = test_fcvtzs_register_effects(no_fail)
-    if lifts_ok and position_dependent_ok and disassembly_ok and fmov_registers_ok and fcvtzs_ok:
+    if lifts_ok and position_dependent_ok and disassembly_ok and scalar_registers_ok and fmov_registers_ok and fcvtzs_ok:
         print('success!', file=sys.stderr)
         return True
 

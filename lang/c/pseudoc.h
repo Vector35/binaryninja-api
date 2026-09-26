@@ -41,6 +41,9 @@ class PseudoCFunction: public BinaryNinja::LanguageRepresentationFunction
 	std::string GetSizeToken(size_t size, bool isSigned);
 	void AppendSizeToken(size_t size, bool isSigned, BinaryNinja::HighLevelILTokenEmitter& emitter);
 	BinaryNinja::Ref<BinaryNinja::Type> GetCExpressionType(const BinaryNinja::HighLevelILInstruction& instr);
+	bool IsPartialFloatingField(const BinaryNinja::HighLevelILInstruction& instr);
+	std::optional<BinaryNinja::HighLevelILInstruction> GetReassembledFloatingVariable(
+		const BinaryNinja::HighLevelILInstruction& instr);
 	void AppendTypedExpr(const BinaryNinja::HighLevelILInstruction& instr, BinaryNinja::Type* expectedType,
 		BinaryNinja::HighLevelILTokenEmitter& tokens, BinaryNinja::DisassemblySettings* settings,
 		BNOperatorPrecedence precedence = TopLevelOperatorPrecedence, std::optional<bool> signedHint = std::nullopt);

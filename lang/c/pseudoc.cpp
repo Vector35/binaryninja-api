@@ -202,8 +202,14 @@ Ref<Type> PseudoCFunction::GetCExpressionType(const HighLevelILInstruction& inst
 	{
 	case HLIL_VAR:
 		return GetFunction()->GetVariableType(instr.GetVariable<HLIL_VAR>()).GetValue();
+	case HLIL_SPLIT:
+		if (auto source = GetReassembledFloatingVariable(instr))
+			return GetCExpressionType(*source);
+		return nullptr;
 	case HLIL_STRUCT_FIELD:
 	{
+		if (IsPartialFloatingField(instr))
+			return Type::IntegerType(instr.size, false);
 		const auto source = instr.GetSourceExpr<HLIL_STRUCT_FIELD>();
 		auto type = GetCExpressionType(source);
 		if (type && type->IsNamedTypeRefer())
@@ -250,6 +256,51 @@ Ref<Type> PseudoCFunction::GetCExpressionType(const HighLevelILInstruction& inst
 }
 
 
+bool PseudoCFunction::IsPartialFloatingField(const HighLevelILInstruction& instr)
+{
+	if (instr.operation != HLIL_STRUCT_FIELD || !instr.size)
+		return false;
+	const auto source = instr.GetSourceExpr<HLIL_STRUCT_FIELD>();
+	if (source.operation != HLIL_VAR)
+		return false;
+	auto type = GetCExpressionType(source);
+	if (type && type->IsNamedTypeRefer())
+		type = type->DerefNamedTypeReference(GetFunction()->GetView());
+	if (!type || type->GetClass() != FloatTypeClass || type->IsVolatile())
+		return false;
+	const auto width = type->GetWidth();
+	const auto offset = instr.GetOffset<HLIL_STRUCT_FIELD>();
+	return (width == 2 || width == 4 || width == 8) && instr.size < width
+		&& offset <= width - instr.size;
+}
+
+
+optional<HighLevelILInstruction> PseudoCFunction::GetReassembledFloatingVariable(const HighLevelILInstruction& instr)
+{
+	if (instr.operation != HLIL_SPLIT)
+		return nullopt;
+	const auto high = instr.GetHighExpr<HLIL_SPLIT>();
+	const auto low = instr.GetLowExpr<HLIL_SPLIT>();
+	if (!IsPartialFloatingField(high) || !IsPartialFloatingField(low))
+		return nullopt;
+	const auto highSource = high.GetSourceExpr<HLIL_STRUCT_FIELD>();
+	const auto lowSource = low.GetSourceExpr<HLIL_STRUCT_FIELD>();
+	if (highSource.GetVariable<HLIL_VAR>() != lowSource.GetVariable<HLIL_VAR>())
+		return nullopt;
+	auto type = GetCExpressionType(lowSource);
+	if (type->IsNamedTypeRefer())
+		type = type->DerefNamedTypeReference(GetFunction()->GetView());
+	const bool littleEndian = GetArchitecture()->GetEndianness() == LittleEndian;
+	if (instr.size != type->GetWidth() || high.size + low.size != instr.size
+		|| high.GetOffset<HLIL_STRUCT_FIELD>() != (littleEndian ? low.size : 0)
+		|| low.GetOffset<HLIL_STRUCT_FIELD>() != (littleEndian ? 0 : high.size))
+		return nullopt;
+	// The pieces cover exactly one variable. Print that value instead of
+	// reconstructing its representation with shifts and integer aliases.
+	return lowSource;
+}
+
+
 void PseudoCFunction::AppendTypedExpr(const HighLevelILInstruction& instr, Type* expectedType,
 	HighLevelILTokenEmitter& tokens, DisassemblySettings* settings, BNOperatorPrecedence precedence,
 	std::optional<bool> signedHint)
@@ -261,7 +312,7 @@ void PseudoCFunction::AppendTypedExpr(const HighLevelILInstruction& instr, Type*
 	if (targetType && targetType->IsNamedTypeRefer())
 		targetType = targetType->DerefNamedTypeReference(GetFunction()->GetView());
 	if (!sourceType || !targetType || sourceType->GetWidth() != targetType->GetWidth()
-		|| (sourceType->GetWidth() != 4 && sourceType->GetWidth() != 8)
+		|| (sourceType->GetWidth() != 2 && sourceType->GetWidth() != 4 && sourceType->GetWidth() != 8)
 		|| (settings && !settings->IsOptionSet(ShowTypeCasts))
 		|| !((sourceType->GetClass() == FloatTypeClass && targetType->GetClass() == IntegerTypeClass)
 			|| (sourceType->GetClass() == IntegerTypeClass && targetType->GetClass() == FloatTypeClass)))
@@ -361,12 +412,12 @@ void PseudoCFunction::AppendComparison(const string& comparison, const HighLevel
 	if (instr.size)
 		operandType = floating ? Type::FloatType(instr.size) : Type::IntegerType(instr.size, signedHint.value_or(false));
 
-	if (leftExpr.operation == HLIL_SPLIT)
+	if (leftExpr.operation == HLIL_SPLIT && !GetReassembledFloatingVariable(leftExpr))
 		AppendDefaultSplitExpr(leftExpr, emitter, settings, precedence);
 	else
 		AppendTypedExpr(leftExpr, operandType, emitter, settings, precedence, signedHint);
 	emitter.Append(OperationToken, comparison);
-	if (rightExpr.operation == HLIL_SPLIT)
+	if (rightExpr.operation == HLIL_SPLIT && !GetReassembledFloatingVariable(rightExpr))
 		AppendDefaultSplitExpr(rightExpr, emitter, settings, precedence);
 	else
 		AppendTypedExpr(rightExpr, operandType, emitter, settings, precedence, signedHint);
@@ -684,6 +735,37 @@ void PseudoCFunction::AppendFieldTextTokens(const HighLevelILInstruction& instr,
 	const auto srcExpr = instr.GetSourceExpr<HLIL_STRUCT_FIELD>();
 	const auto fieldOffset = instr.GetOffset<HLIL_STRUCT_FIELD>();
 	const auto memberIndex = instr.GetMemberIndex<HLIL_STRUCT_FIELD>();
+	if (IsPartialFloatingField(instr))
+	{
+		if (addrOf)
+		{
+			tokens.AppendOpenParen();
+			AppendSizeToken(instr.size, signedHint.value_or(false), tokens);
+			tokens.Append(TextToken, "*");
+			tokens.AppendCloseParen();
+			tokens.AppendOpenParen();
+			tokens.Append(TextToken, "(char*)&");
+			GetExprTextInternal(srcExpr, tokens, settings, UnaryOperatorPrecedence);
+			if (fieldOffset)
+			{
+				tokens.Append(OperationToken, " + ");
+				tokens.AppendIntegerTextToken(instr, fieldOffset, 8);
+			}
+			tokens.AppendCloseParen();
+		}
+		else
+		{
+			tokens.Append(OperationToken, "READ_PART");
+			tokens.AppendOpenParen();
+			AppendSizeToken(instr.size, signedHint.value_or(false), tokens);
+			tokens.Append(TextToken, ", ");
+			GetExprTextInternal(srcExpr, tokens, settings, AssignmentOperatorPrecedence);
+			tokens.Append(TextToken, ", ");
+			tokens.AppendIntegerTextToken(instr, fieldOffset, 8);
+			tokens.AppendCloseParen();
+		}
+		return;
+	}
 
 	const auto type = GetFieldType(srcExpr, false);
 	const auto fieldDisplayType = GetFieldDisplayType(type, fieldOffset, memberIndex, false);
@@ -1622,6 +1704,32 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 		[&]() {
 			const auto destExpr = instr.GetDestExpr<HLIL_ASSIGN>();
 			const auto srcExpr = instr.GetSourceExpr<HLIL_ASSIGN>();
+			if (IsPartialFloatingField(destExpr))
+			{
+				// Preserve the rest of the variable and copy the source representation.
+				// An integer pointer alias or an assignment to a cast is not valid C.
+				tokens.Append(OperationToken, "WRITE_PART");
+				tokens.AppendOpenParen();
+				AppendSizeToken(destExpr.size, false, tokens);
+				tokens.Append(TextToken, ", ");
+				GetExprTextInternal(destExpr.GetSourceExpr<HLIL_STRUCT_FIELD>(), tokens, settings,
+					AssignmentOperatorPrecedence);
+				tokens.Append(TextToken, ", ");
+				tokens.AppendIntegerTextToken(destExpr, destExpr.GetOffset<HLIL_STRUCT_FIELD>(), 8);
+				tokens.Append(TextToken, ", ");
+				if (srcExpr.operation == HLIL_CONST)
+				{
+					// A C literal does not necessarily have its IL width.
+					tokens.AppendOpenParen();
+					AppendSizeToken(destExpr.size, false, tokens);
+					tokens.AppendCloseParen();
+				}
+				GetExprTextInternal(srcExpr, tokens, settings, AssignmentOperatorPrecedence);
+				tokens.AppendCloseParen();
+				if (statement)
+					tokens.AppendSemicolon();
+				return;
+			}
 
 			// Check to see if the variable appears live
 			bool appearsDead = false;
@@ -1664,7 +1772,7 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 				tokens.NewLine();
 				GetExprTextInternal(low, tokens, settings, precedence);
 			}
-			else if (srcExpr.operation == HLIL_SPLIT)
+			else if (srcExpr.operation == HLIL_SPLIT && !GetReassembledFloatingVariable(srcExpr))
 			{
 				GetExprTextInternal(destExpr, tokens, settings, precedence);
 				tokens.Append(OperationToken, " = ");
@@ -3206,6 +3314,13 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 
 	case HLIL_SPLIT:
 		[&]() {
+			if (auto source = GetReassembledFloatingVariable(instr))
+			{
+				GetExprTextInternal(*source, tokens, settings, precedence);
+				if (statement)
+					tokens.AppendSemicolon();
+				return;
+			}
 			const auto low = instr.GetLowExpr();
 			const auto high = instr.GetHighExpr();
 

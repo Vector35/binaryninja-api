@@ -2120,7 +2120,7 @@ bool GetLowLevelILForInstruction(
 		case ENC_FCVT_DS_FLOATDP1:
 			if (!float_sz)
 				float_sz = 8;
-			il.AddInstruction(ILSETREG_O(operand1, GetFloat(il, operand2, float_sz)));
+			WriteScalarFloatResult(arch, il, operand1, GetFloat(il, operand2, float_sz));
 			break;
 		/* future: support SVE versions with predicated execution and z register file */
 		default:

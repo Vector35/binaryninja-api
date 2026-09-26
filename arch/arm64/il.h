@@ -135,9 +135,11 @@ enum Arm64Intrinsic : uint32_t
 
 enum Arm64FakeRegister : uint32_t
 {
-	FAKEREG_SYSREG_UNKNOWN = SYSREG_END + 1,
-	FAKEREG_SYSCALL_INFO = SYSREG_END + 2
+	FAKEREG_SYSREG_UNKNOWN = 65533,
+	FAKEREG_SYSCALL_INFO = 65534
 };
+
+static_assert(FAKEREG_SYSREG_UNKNOWN >= SYSREG_END);
 
 bool GetLowLevelILForInstruction(BinaryNinja::Architecture* arch, uint64_t addr,
     BinaryNinja::LowLevelILFunction& il, const exarmo_aarch64_instruction& instr, size_t addrSize,

@@ -20986,6 +20986,8 @@ namespace BinaryNinja {
 
 		std::string longDescription;
 		std::string changelog;
+		std::string subdir;
+		std::string dependencies;
 
 		uint64_t minimumClientVersion;
 		std::vector<PlatformInfo> platforms;
@@ -21012,10 +21014,12 @@ namespace BinaryNinja {
 		std::string GetAuthor() const;
 		std::string GetDescription() const;
 		std::string GetLicenseText() const;
+		VersionInfo GetMinimumVersionInfo() const;
+		VersionInfo GetMaximumVersionInfo() const;
 		std::string GetName() const;
 		std::vector<PluginType> GetPluginTypes() const;
-		std::string GetPackageUrl() const;
 		std::string GetProjectUrl() const;
+		std::string GetPackageUrl() const;
 		std::string GetAuthorUrl() const;
 		std::vector<ExtensionVersion> GetVersions() const;
 		ExtensionVersion GetCurrentVersion() const;
@@ -21024,10 +21028,6 @@ namespace BinaryNinja {
 		bool IsVersionIDLessThan(const std::string& smaller, const std::string& larger) const;
 		std::string GetCommit() const;
 		std::string GetRepository() const;
-		std::string GetProjectData();
-		VersionInfo GetMinimumVersionInfo() const;
-		VersionInfo GetMaximumVersionInfo() const;
-		std::string GetCreationDate();
 		bool IsViewOnly() const;
 		bool IsPaid() const;
 		bool IsBeingDeleted() const;
@@ -21042,6 +21042,8 @@ namespace BinaryNinja {
 		bool IsDeletePending() const;
 		bool IsUpdateAvailable() const;
 		bool AreDependenciesBeingInstalled() const;
+		std::string GetCreationDate();
+		std::string GetProjectData();
 
 		bool Uninstall();
 		bool CancelUninstall();
@@ -21082,8 +21084,8 @@ namespace BinaryNinja {
 		static bool CheckForUpdates();
 		static std::vector<Ref<Repository>> GetRepositories();
 		static Ref<Repository> GetRepositoryByPath(const std::string& repoName);
-		static bool AddRepository(const std::string& url,  // URL to raw plugins.json file
-		    const std::string& repoPath);           // Relative path within the repositories directory
+		static bool AddRepository(const std::string& url,  // v2 manifest extensions URL
+		    const std::string& repoPath);                  // Relative path within the channels directory
 		Ref<Repository> GetDefaultRepository();
 	};
 

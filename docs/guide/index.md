@@ -34,7 +34,7 @@ The contents of the user folder includes:
 - `lastrun`: A text file containing the directory of the last Binary Ninja binary path -- very useful for plugins to resolve the installation locations in non-default settings or on Linux
 - `license.dat`: License file
 - `plugins/`: Folder containing all manually installed user plugins
-- `repositories/`: Folder containing files and plugins managed by the [Extension Manager API](https://api.binary.ninja/binaryninja.extensionmanager-module.html)
+- `channels/`: Folder containing files and plugins managed by the [Extension Manager API](https://api.binary.ninja/binaryninja.extensionmanager-module.html)
 - `settings.json`: User settings file (see [settings](settings.md))
 
 The following files and folders may be created in the user folder but are not created by default without some additional action:

@@ -1199,8 +1199,10 @@ class PythonScriptingProvider(ScriptingProvider):
 			if plugin_full_path not in sys.path:
 				sys.path.append(plugin_full_path)
 
-			if plugin.subdir:
-				__import__(module + "." + plugin.subdir.replace("/", "."))
+			current_version = plugin.current_version
+			subdir = current_version.subdir if current_version.id else plugin.subdir
+			if subdir:
+				__import__(module + "." + subdir.replace("/", "."))
 			else:
 				__import__(module)
 			return True

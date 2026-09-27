@@ -32,7 +32,6 @@ string Extension::GetDependencies() const
 	RETURN_STRING(BNPluginGetDependencies(m_object));
 }
 
-
 string Extension::GetDependencies(const std::string& versionID) const
 {
 	RETURN_STRING(BNPluginGetDependenciesForVersion(m_object, versionID.c_str()));
@@ -69,6 +68,12 @@ vector<DependencyConflict> Extension::GetDependencyConflicts(const std::string& 
 	}
 	BNFreePluginDependencyConflicts(conflicts, count);
 	return result;
+}
+
+string Extension::GetPluginDirectory() const
+{
+	// v2 manifests do not expose a separate plugin-directory field
+	return GetPath();
 }
 
 bool Extension::IsInstalled() const
@@ -111,6 +116,18 @@ vector<string> Extension::GetApis() const
 	return result;
 }
 
+vector<string> Extension::GetInstallPlatforms() const
+{
+	vector<string> result;
+	size_t count = 0;
+	char** platforms = BNPluginGetPlatforms(m_object, &count);
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.push_back(platforms[i]);
+	BNFreePluginPlatforms(platforms, count);
+	return result;
+}
+
 string Extension::GetAuthor() const
 {
 	RETURN_STRING(BNPluginGetAuthor(m_object));
@@ -136,15 +153,6 @@ static VersionInfo ConvertVersionInfo(const BNVersionInfo& coreInfo)
 	return result;
 }
 
-static ExtensionVersion::PlatformInfo ConvertVersionPlatform(const BNPluginVersionPlatform& corePlatform)
-{
-	ExtensionVersion::PlatformInfo result;
-	result.name = corePlatform.name ? corePlatform.name : "";
-	result.downloadUrl = corePlatform.downloadUrl ? corePlatform.downloadUrl : "";
-	result.untrackedDownloadUrl = corePlatform.untrackedDownloadUrl ? corePlatform.untrackedDownloadUrl : "";
-	return result;
-}
-
 VersionInfo Extension::GetMinimumVersionInfo() const
 {
 	auto coreInfo = BNPluginGetMinimumVersionInfo(m_object);
@@ -158,6 +166,15 @@ VersionInfo Extension::GetMaximumVersionInfo() const
 	auto coreInfo = BNPluginGetMaximumVersionInfo(m_object);
 	VersionInfo result = ConvertVersionInfo(coreInfo);
 	BNFreeString(coreInfo.channel);
+	return result;
+}
+
+static ExtensionVersion::PlatformInfo ConvertVersionPlatform(const BNPluginVersionPlatform& corePlatform)
+{
+	ExtensionVersion::PlatformInfo result;
+	result.name = corePlatform.name ? corePlatform.name : "";
+	result.downloadUrl = corePlatform.downloadUrl ? corePlatform.downloadUrl : "";
+	result.untrackedDownloadUrl = corePlatform.untrackedDownloadUrl ? corePlatform.untrackedDownloadUrl : "";
 	return result;
 }
 
@@ -186,12 +203,10 @@ string Extension::GetProjectUrl() const
 	RETURN_STRING(BNPluginGetProjectUrl(m_object));
 }
 
-
 string Extension::GetPackageUrl() const
 {
 	RETURN_STRING(BNPluginGetPackageUrl(m_object));
 }
-
 
 string Extension::GetAuthorUrl() const
 {
@@ -212,6 +227,8 @@ std::vector<ExtensionVersion> Extension::GetVersions() const
 		    "";
 		version.longDescription = versionsPtr[i].longDescription ? versionsPtr[i].longDescription : "";
 		version.changelog = versionsPtr[i].changelog ? versionsPtr[i].changelog : "";
+		version.subdir = versionsPtr[i].subdir ? versionsPtr[i].subdir : "";
+		version.dependencies = versionsPtr[i].dependencies ? versionsPtr[i].dependencies : "";
 		version.minimumClientVersion = versionsPtr[i].minimumClientVersion;
 		version.platforms.reserve(versionsPtr[i].platformCount);
 		for (size_t j = 0; j < versionsPtr[i].platformCount; j++)
@@ -232,6 +249,8 @@ ExtensionVersion Extension::GetCurrentVersion() const
 	version.version = currentVersion.versionString ? currentVersion.versionString : "";
 	version.longDescription = currentVersion.longDescription ? currentVersion.longDescription : "";
 	version.changelog = currentVersion.changelog ? currentVersion.changelog : "";
+	version.subdir = currentVersion.subdir ? currentVersion.subdir : "";
+	version.dependencies = currentVersion.dependencies ? currentVersion.dependencies : "";
 	version.minimumClientVersion = currentVersion.minimumClientVersion;
 	version.platforms.reserve(currentVersion.platformCount);
 	for (size_t i = 0; i < currentVersion.platformCount; i++)
@@ -259,7 +278,6 @@ bool Extension::IsVersionIDLessThan(const std::string& smaller, const std::strin
 	return BNPluginVersionIDLessThan(m_object, smaller.c_str(), larger.c_str());
 }
 
-
 string Extension::GetCommit() const
 {
 	RETURN_STRING(BNPluginGetCommit(m_object));
@@ -281,19 +299,6 @@ bool Extension::IsPaid() const
 string Extension::GetRepository() const
 {
 	RETURN_STRING(BNPluginGetRepository(m_object));
-}
-
-
-vector<string> Extension::GetInstallPlatforms() const
-{
-	vector<string> result;
-	size_t count = 0;
-	char** platforms = BNPluginGetPlatforms(m_object, &count);
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-		result.push_back(platforms[i]);
-	BNFreeStringList(platforms, count);
-	return result;
 }
 
 
@@ -342,7 +347,6 @@ bool Extension::AreDependenciesBeingInstalled() const
 	return BNPluginAreDependenciesBeingInstalled(m_object);
 }
 
-
 string Extension::GetCreationDate()
 {
 	RETURN_STRING(BNPluginGetCurrentVersionCreationDate(m_object));
@@ -377,7 +381,7 @@ bool Extension::Install(std::string versionID)
 
 bool Extension::InstallDependencies()
 {
-	return InstallDependencies("");
+	return BNPluginInstallDependencies(m_object);
 }
 
 
@@ -402,7 +406,6 @@ bool Extension::InstallDependencies(const std::string& versionID, const std::vec
 	return BNPluginInstallDependenciesWithExclusionsForVersion(
 		m_object, versionID.c_str(), exclusionPointers.data(), exclusionPointers.size());
 }
-
 
 bool Extension::Enable(bool force)
 {
@@ -441,6 +444,18 @@ string Repository::GetRepoPath() const
 	RETURN_STRING(BNRepositoryGetRepoPath(m_object));
 }
 
+string Repository::GetLocalReference() const
+{
+	// v2 manifests do not expose legacy git references
+	return "";
+}
+
+string Repository::GetRemoteReference() const
+{
+	// v2 manifests do not expose legacy git references
+	return "";
+}
+
 
 vector<Ref<Extension>> Repository::GetPlugins() const
 {
@@ -468,6 +483,11 @@ string Repository::GetFullPath() const
 	RETURN_STRING(BNRepositoryGetPluginsPath(m_object));
 }
 
+string Repository::GetPluginDirectory() const
+{
+	return GetFullPath();
+}
+
 bool RepositoryManager::CheckForUpdates()
 {
 	return BNRepositoryManagerCheckForUpdates();
@@ -485,7 +505,7 @@ vector<Ref<Repository>> RepositoryManager::GetRepositories()
 }
 
 bool RepositoryManager::AddRepository(const std::string& url,
-    const std::string& repoPath)  // Relative path within the repositories directory
+    const std::string& repoPath)  // Relative path within the channels directory
 {
 	return BNRepositoryManagerAddRepository(url.c_str(), repoPath.c_str());
 }

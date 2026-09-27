@@ -33,6 +33,8 @@ pub struct ExtensionVersion {
     pub version: String,
     pub long_description: String,
     pub changelog: String,
+    pub subdir: String,
+    pub dependencies: String,
     pub minimum_client_version: u64,
     pub platforms: Vec<ExtensionVersionPlatform>,
     pub created: String,
@@ -54,6 +56,8 @@ impl ExtensionVersion {
             version: raw_to_string(value.versionString as *mut _).unwrap_or_default(),
             long_description: raw_to_string(value.longDescription as *mut _).unwrap_or_default(),
             changelog: raw_to_string(value.changelog as *mut _).unwrap_or_default(),
+            subdir: raw_to_string(value.subdir as *mut _).unwrap_or_default(),
+            dependencies: raw_to_string(value.dependencies as *mut _).unwrap_or_default(),
             minimum_client_version: value.minimumClientVersion,
             platforms,
             created: raw_to_string(value.created as *mut _).unwrap_or_default(),
@@ -227,7 +231,7 @@ impl Extension {
         unsafe { BnString::into_string(result as *mut c_char) }
     }
 
-    /// String URL of the plugin's git repository
+    /// String URL of the plugin's package
     pub fn package_url(&self) -> String {
         let result = unsafe { BNPluginGetPackageUrl(self.handle.as_ptr()) };
         assert!(!result.is_null());
@@ -489,6 +493,7 @@ impl Extension {
         assert!(!result.is_null());
         unsafe { BnString::into_string(result) }
     }
+
 }
 
 impl Debug for Extension {

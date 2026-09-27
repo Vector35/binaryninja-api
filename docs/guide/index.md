@@ -915,6 +915,8 @@ The different options are shown below:
 
 Binary Ninja offers an option to render the HLIL as a decompilation to "Pseudo C". This decompilation is intended to be more familiar to the user than the HLIL. It is not necessarily intended to be "compliant" C or even recompilable. In some cases, it may be possible to edit it into a form that a C compiler will accept, but the amount of effort required will vary widely, and no guarantee is made that it will be possible in all cases.
 
+For recompilation, the API repository provides a standalone [pseudoc_helpers.h](https://github.com/Vector35/binaryninja-api/blob/dev/lang/c/pseudoc_helpers.h) with definitions for scalar helpers such as `BIT_CAST`, `READ_PART`, `WRITE_PART`, rotations, and integer joins. Include it manually in the exported source; export does not insert the include automatically. The [usage guide](https://github.com/Vector35/binaryninja-api/blob/dev/lang/c/README.md) describes compiler support, examples, and remaining requirements such as external declarations and architecture-specific intrinsics.
+
 ### Graph View
 
 ![graph view](../img/graphview.png "Graph View"){ width="800" }

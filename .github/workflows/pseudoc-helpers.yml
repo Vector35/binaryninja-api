@@ -1,0 +1,57 @@
+name: Pseudo C helpers
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'lang/c/pseudoc_helpers.h'
+      - 'lang/c/tests/**'
+      - '.github/workflows/pseudoc-helpers.yml'
+  pull_request:
+    paths:
+      - 'lang/c/pseudoc_helpers.h'
+      - 'lang/c/tests/**'
+      - '.github/workflows/pseudoc-helpers.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  unix:
+    name: ${{ matrix.compiler }} ${{ matrix.optimization }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [clang, gcc]
+        optimization: [O0, O2]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile and execute C11, C++11, and C++17 checks
+        env:
+          CC: ${{ matrix.compiler }}
+          CXX: ${{ matrix.compiler == 'clang' && 'clang++' || 'g++' }}
+        run: python3 lang/c/tests/test_helpers.py --optimization ${{ matrix.optimization }}
+
+  windows:
+    name: Clang-CL ${{ matrix.standard }} ${{ matrix.optimization }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        standard: [c11, c++14, c++17]
+        optimization: [O0, O2]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile and execute against the Microsoft runtime
+        shell: cmd
+        run: |
+          for /f "usebackq delims=" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "BN_HELPERS_VS_ROOT=%%i"
+          if not defined BN_HELPERS_VS_ROOT exit /b 1
+          call "%BN_HELPERS_VS_ROOT%\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=amd64
+          if errorlevel 1 exit /b 1
+          python lang/c/tests/test_helpers.py --compiler clang-cl --standard ${{ matrix.standard }} --optimization ${{ matrix.optimization }}

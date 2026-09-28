@@ -205,6 +205,16 @@ class BINARYNINJAUIAPI VariableList : public SidebarWidget, public FilterTarget
 	void processRefresh();
 
 	void variableDoubleClicked();
+	bool canChangeSelectedVariableType(bool requireInteger = false) const;
+	TypeRef selectedVariableType() const;
+	void setSelectedVariableType(TypeRef type);
+	void cycleSelectedVariableIntegerSize();
+	void cycleSelectedVariableFloatSize();
+	void toggleSelectedVariableIntegerSignedness();
+	void makeSelectedVariableInteger(size_t width);
+	void makeSelectedVariableFloat(size_t width);
+	void makeSelectedVariablePointer();
+	void makeSelectedVariableEnum();
 
   public:
 	VariableList(ViewFrame* view, BinaryViewRef data);

@@ -34,6 +34,10 @@ TypeRef BINARYNINJAUIAPI getIntegerTypePreservingDisplay(TypeRef type, size_t wi
 TypeRef BINARYNINJAUIAPI getIntegerTypeWithWidthPreservingAttributes(TypeRef type, size_t width);
 TypeRef BINARYNINJAUIAPI getIntegerTypeWithSignPreservingAttributes(TypeRef type, BinaryNinja::Confidence<bool> isSigned);
 TypeRef BINARYNINJAUIAPI getResolvedType(BinaryViewRef view, TypeRef type);
+TypeRef BINARYNINJAUIAPI getNextIntegerType(TypeRef type);
+TypeRef BINARYNINJAUIAPI getNextFloatType(TypeRef type);
+bool BINARYNINJAUIAPI setLocalVariableType(
+	BinaryViewRef view, FunctionRef func, BinaryNinja::Variable var, TypeRef type);
 bool BINARYNINJAUIAPI canChangeLocalVariableType(FunctionRef func, const HighlightTokenState& token);
 bool BINARYNINJAUIAPI isIntegerLocalVariable(FunctionRef func, const HighlightTokenState& token);
 bool BINARYNINJAUIAPI setLocalVariableIntegerWidth(BinaryViewRef view, FunctionRef func, BinaryNinja::Variable var, size_t width);

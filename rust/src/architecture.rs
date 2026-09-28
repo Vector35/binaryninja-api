@@ -2746,6 +2746,7 @@ where
         // TODO: Make getOpcodeDisplayLength optional.
         getOpcodeDisplayLength: Some(cb_opcode_display_len::<A>),
         getAssociatedArchitectureByAddress: Some(cb_associated_arch_by_addr::<A>),
+        encodeFunctionPointer: None,
         getInstructionInfo: Some(cb_instruction_info::<A>),
         getInstructionText: Some(cb_get_instruction_text::<A>),
         getInstructionTextWithContext: Some(cb_get_instruction_text_with_context::<A>),

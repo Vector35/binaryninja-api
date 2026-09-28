@@ -762,6 +762,13 @@ BNArchitecture* Architecture::GetAssociatedArchitectureByAddressCallback(void* c
 }
 
 
+uint64_t Architecture::EncodeFunctionPointerCallback(void* ctxt, uint64_t* addr)
+{
+	CallbackRef<Architecture> arch(ctxt);
+	return arch->EncodeFunctionPointer(*addr);
+}
+
+
 bool Architecture::GetInstructionInfoCallback(
     void* ctxt, const uint8_t* data, uint64_t addr, size_t maxLen, BNInstructionInfo* result)
 {
@@ -1350,6 +1357,7 @@ void Architecture::Register(Architecture* arch)
 	callbacks.getMaxInstructionLength = GetMaxInstructionLengthCallback;
 	callbacks.getOpcodeDisplayLength = GetOpcodeDisplayLengthCallback;
 	callbacks.getAssociatedArchitectureByAddress = GetAssociatedArchitectureByAddressCallback;
+	callbacks.encodeFunctionPointer = EncodeFunctionPointerCallback;
 	callbacks.getInstructionInfo = GetInstructionInfoCallback;
 	callbacks.getInstructionText = GetInstructionTextCallback;
 	callbacks.getInstructionTextWithContext = GetInstructionTextWithContextCallback;
@@ -1490,6 +1498,12 @@ size_t Architecture::GetOpcodeDisplayLength() const
 Ref<Architecture> Architecture::GetAssociatedArchitectureByAddress(uint64_t&)
 {
 	return this;
+}
+
+
+uint64_t Architecture::EncodeFunctionPointer(uint64_t& addr)
+{
+	return addr;
 }
 
 
@@ -2070,6 +2084,12 @@ Ref<Architecture> CoreArchitecture::GetAssociatedArchitectureByAddress(uint64_t&
 }
 
 
+uint64_t CoreArchitecture::EncodeFunctionPointer(uint64_t& addr)
+{
+	return BNArchitectureEncodeFunctionPointer(m_object, &addr);
+}
+
+
 bool CoreArchitecture::GetInstructionInfo(const uint8_t* data, uint64_t addr, size_t maxLen, InstructionInfo& result)
 {
 	return BNGetInstructionInfo(m_object, data, addr, maxLen, &result);
@@ -2631,6 +2651,12 @@ Ref<Architecture> ArchitectureExtension::GetAssociatedArchitectureByAddress(uint
 	if (result == m_base)
 		return this;
 	return result;
+}
+
+
+uint64_t ArchitectureExtension::EncodeFunctionPointer(uint64_t& addr)
+{
+	return m_base->EncodeFunctionPointer(addr);
 }
 
 

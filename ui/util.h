@@ -60,8 +60,12 @@ struct BINARYNINJAUIAPI StructureMemberTypeActionContext
 	TypeRef fieldScalarType;
 	bool isBitfield = false;
 };
+bool BINARYNINJAUIAPI getStructureMemberTypeActionContext(
+	BinaryViewRef view, const HighlightTokenState& highlight, StructureMemberTypeActionContext& memberContext);
 bool BINARYNINJAUIAPI replaceStructureMemberType(
 	BinaryViewRef view, const StructureMemberTypeActionContext& memberContext, TypeRef newType);
+bool BINARYNINJAUIAPI replaceStructureMemberArrayLeafType(
+	BinaryViewRef view, const StructureMemberTypeActionContext& memberContext, TypeRef newLeafType);
 std::string BINARYNINJAUIAPI getStringForPossibleValueSet(ArchitectureRef arch, const BinaryNinja::PossibleValueSet& values, bool pretty = true);
 std::string BINARYNINJAUIAPI getStringForInstructionDataflowDetails(BinaryViewRef data, ArchitectureRef arch, FunctionRef func, uint64_t address);
 std::optional<BinaryNinja::PossibleValueSet> BINARYNINJAUIAPI getPossibleValueSetForToken(View* view, BinaryViewRef data, ArchitectureRef arch,

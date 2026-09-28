@@ -33,6 +33,7 @@ uint64_t BINARYNINJAUIAPI getIntegerConstantDisplayAddress(
 TypeRef BINARYNINJAUIAPI getIntegerTypePreservingDisplay(TypeRef type, size_t width, BinaryNinja::Confidence<bool> isSigned);
 TypeRef BINARYNINJAUIAPI getIntegerTypeWithWidthPreservingAttributes(TypeRef type, size_t width);
 TypeRef BINARYNINJAUIAPI getIntegerTypeWithSignPreservingAttributes(TypeRef type, BinaryNinja::Confidence<bool> isSigned);
+TypeRef BINARYNINJAUIAPI getResolvedType(BinaryViewRef view, TypeRef type);
 bool BINARYNINJAUIAPI canChangeLocalVariableType(FunctionRef func, const HighlightTokenState& token);
 bool BINARYNINJAUIAPI isIntegerLocalVariable(FunctionRef func, const HighlightTokenState& token);
 bool BINARYNINJAUIAPI setLocalVariableIntegerWidth(BinaryViewRef view, FunctionRef func, BinaryNinja::Variable var, size_t width);
@@ -52,6 +53,7 @@ struct BINARYNINJAUIAPI StructureMemberTypeActionContext
 	TypeRef parentType;
 	size_t fieldIndex = (size_t)-1;
 	TypeRef fieldType;
+	TypeRef fieldScalarType;
 	bool isBitfield = false;
 };
 bool BINARYNINJAUIAPI replaceStructureMemberType(

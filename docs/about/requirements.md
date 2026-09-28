@@ -28,7 +28,7 @@ Binary Ninja may work with less than the above, but this is what is officially s
 
 ## Python
 
-Binary Ninja requires Python 3.10 or above. A Python build without GPL components is shipped with Windows builds; other platforms use an existing Python install.
+Binary Ninja requires Python 3.12 or above. A Python 3.13.14 build without GPL components is shipped with Windows, macOS, and Linux builds.
 
 ## CPU Architectures and File Formats
 

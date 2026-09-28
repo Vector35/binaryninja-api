@@ -1,6 +1,8 @@
 #include "MachOProcessor.h"
 #include "SharedCache.h"
 
+#include <exception>
+
 using namespace BinaryNinja;
 
 SharedCacheMachOProcessor::SharedCacheMachOProcessor(Ref<BinaryView> view, std::shared_ptr<VirtualMemory> vm)
@@ -56,7 +58,15 @@ void SharedCacheMachOProcessor::ApplyHeader(const SharedCache& cache, SharedCach
 			{
 				uint8_t opcode[BN_MAX_INSTRUCTION_LENGTH];
 				size_t opLen = arch->GetMaxInstructionLength();
-				m_vm->Read(opcode, func, opLen);
+				try
+				{
+					m_vm->Read(opcode, func, opLen);
+				}
+				catch (const std::exception& e)
+				{
+					m_logger->LogWarnF("Failed to read function start at {:#x}: {}", func, e.what());
+					continue;
+				}
 				if (IsValidFunctionStart(arch, func, opcode, opLen))
 					m_view->AddFunctionForAnalysis(targetPlatform, func, false);
 			}

@@ -1103,7 +1103,7 @@ bool MachoView::IsValidFunctionStart(uint64_t addr)
 {
 	uint8_t opcode[BN_MAX_INSTRUCTION_LENGTH];
 	size_t opLen = Read(opcode, addr, m_arch->GetMaxInstructionLength());
-	return ::IsValidFunctionStart(m_arch, addr, opcode, opLen);
+	return BinaryNinja::IsValidFunctionStart(m_arch, addr, opcode, opLen);
 }
 
 

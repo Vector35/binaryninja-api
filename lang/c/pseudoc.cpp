@@ -182,6 +182,9 @@ BNSymbolDisplayResult PseudoCFunction::AppendPointerTextToken(const HighLevelILI
 
 string PseudoCFunction::GetSizeToken(size_t size, bool isSigned)
 {
+	// Plain char can be unsigned in C; these casts require the IL's signedness.
+	if (size == 1 && isSigned)
+		return "int8_t";
 	return GetTypePrinter()->GetTypeString(Type::IntegerType(size, isSigned), nullptr, QualifiedName());
 }
 

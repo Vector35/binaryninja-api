@@ -20,6 +20,9 @@
 
 #include <stdio.h>
 #include <inttypes.h>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 #include "binaryninjaapi.h"
 
 using namespace BinaryNinja;
@@ -63,6 +66,14 @@ map<string, string> g_pythonKeywordReplacements = {
     {"with", "with_"},
     {"yield", "yield_"},
 };
+
+
+string PythonEnumName(string name)
+{
+	if (name.size() > 2 && name.substr(0, 2) == "BN")
+		return name.substr(2);
+	return name;
+}
 
 
 void OutputType(FILE* out, Type* type, bool isReturnType = false, bool isCallback = false, bool isTypeHint = false)
@@ -110,9 +121,7 @@ void OutputType(FILE* out, Type* type, bool isReturnType = false, bool isCallbac
 	case NamedTypeReferenceClass:
 		if (type->GetNamedTypeReference()->GetTypeReferenceClass() == EnumNamedTypeClass)
 		{
-			string name = type->GetNamedTypeReference()->GetName().GetString();
-			if (name.size() > 2 && name.substr(0, 2) == "BN")
-				name = name.substr(2);
+			string name = PythonEnumName(type->GetNamedTypeReference()->GetName().GetString());
 			fprintf(out, "%sEnum", name.c_str());
 		}
 		else
@@ -195,9 +204,7 @@ void OutputSwizzledType(FILE* out, Type* type, bool isTypeHint = false)
 	case NamedTypeReferenceClass:
 		if (type->GetNamedTypeReference()->GetTypeReferenceClass() == EnumNamedTypeClass)
 		{
-			string name = type->GetNamedTypeReference()->GetName().GetString();
-			if (name.size() > 2 && name.substr(0, 2) == "BN")
-				name = name.substr(2);
+			string name = PythonEnumName(type->GetNamedTypeReference()->GetName().GetString());
 			fprintf(out, "%s", name.c_str());
 		}
 		else
@@ -257,11 +264,108 @@ void OutputSwizzledType(FILE* out, Type* type, bool isTypeHint = false)
 }
 
 
+void CollectNamedTypeReferences(Type* type, set<QualifiedName>& names)
+{
+	switch (type->GetClass())
+	{
+	case NamedTypeReferenceClass:
+		names.insert(type->GetNamedTypeReference()->GetName());
+		break;
+	case PointerTypeClass:
+	case ArrayTypeClass:
+		CollectNamedTypeReferences(type->GetChildType().GetValue(), names);
+		break;
+	case FunctionTypeClass:
+		CollectNamedTypeReferences(type->GetChildType().GetValue(), names);
+		for (auto& param : type->GetParameters())
+			CollectNamedTypeReferences(param.type.GetValue(), names);
+		break;
+	case StructureTypeClass:
+		for (auto& member : type->GetStructure()->GetMembers())
+			CollectNamedTypeReferences(member.type.GetValue(), names);
+		break;
+	default:
+		break;
+	}
+}
+
+
+// Returns the names the core bindings define for the core type `name`.
+vector<string> CoreBindingNames(const string& name, Type* type)
+{
+	switch (type->GetClass())
+	{
+	case StructureTypeClass:
+	case NamedTypeReferenceClass:
+		return {name, name + "Handle"};
+	case EnumerationTypeClass:
+		return {PythonEnumName(name) + "Enum"};
+	case BoolTypeClass:
+	case IntegerTypeClass:
+	case FloatTypeClass:
+	case ArrayTypeClass:
+		return {name};
+	case PointerTypeClass:
+		if (type->GetChildType()->GetClass() == FunctionTypeClass)
+			return {name};
+		return {};
+	default:
+		return {};
+	}
+}
+
+
+static const string g_templateBindingsMarker = "# @@GENERATED_BINDINGS@@";
+
+
+bool ReadTemplate(const char* path, string& prologue, string& epilogue)
+{
+	ifstream file(path, ios::binary);
+	if (!file)
+		return false;
+
+	string contents((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
+	size_t marker = contents.find(g_templateBindingsMarker);
+	if (marker == string::npos)
+	{
+		prologue = std::move(contents);
+		epilogue.clear();
+		return true;
+	}
+
+	size_t lineEnd = contents.find('\n', marker);
+	prologue = contents.substr(0, marker);
+	epilogue = lineEnd == string::npos ? string() : contents.substr(lineEnd + 1);
+	return true;
+}
+
+
 int main(int argc, char* argv[])
 {
-	if (argc < 4)
+	const char* usage = "Usage: generator <header> <output> <template> <output_enum> [--core-header <core_header>]\n";
+	if (argc < 5)
 	{
-		fprintf(stderr, "Usage: generator <header> <output> <output_enum>\n");
+		fprintf(stderr, "%s", usage);
+		return 1;
+	}
+
+	const char* coreHeader = nullptr;
+	for (int i = 5; i < argc; i++)
+	{
+		if (string(argv[i]) == "--core-header" && i + 1 < argc)
+		{
+			coreHeader = argv[++i];
+			continue;
+		}
+
+		fprintf(stderr, "%s", usage);
+		return 1;
+	}
+
+	string prologue, epilogue;
+	if (!ReadTemplate(argv[3], prologue, epilogue))
+	{
+		fprintf(stderr, "Failed to read template %s\n", argv[3]);
 		return 1;
 	}
 
@@ -273,61 +377,64 @@ int main(int argc, char* argv[])
 	// Enable ephemeral settings
 	Settings::Instance()->LoadSettingsFile("");
 	Settings::Instance()->Set("analysis.types.parserName", "ClangTypeParser");
-	bool ok = arch->GetStandalonePlatform()->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors);
+	Ref<Platform> platform = arch->GetStandalonePlatform();
+	vector<string> includeDirs;
+	if (coreHeader)
+		includeDirs.push_back(filesystem::path(coreHeader).parent_path().string());
+	bool ok = platform->ParseTypesFromSourceFile(argv[1], types, vars, funcs, errors, includeDirs);
 
 	if (!ok) {
 		fprintf(stderr, "Errors: %s\n", errors.c_str());
 		return 1;
 	}
 
-	FILE* out = fopen(argv[2], "w");
-	FILE* enums = fopen(argv[3], "w");
+	map<QualifiedName, Ref<Type>> coreTypes;
+	if (coreHeader)
+	{
+		map<QualifiedName, Ref<Type>> coreVars, coreFuncs;
+		if (!platform->ParseTypesFromSourceFile(coreHeader, coreTypes, coreVars, coreFuncs, errors))
+		{
+			fprintf(stderr, "Errors: %s\n", errors.c_str());
+			return 1;
+		}
 
-	fprintf(out, "import ctypes, os\n\n");
-	fprintf(out, "from typing import Optional, AnyStr\n");
-	fprintf(out, "from .enums import *");
+		erase_if(types, [&](const auto& i) { return coreTypes.count(i.first) != 0; });
+		erase_if(funcs, [&](const auto& i) { return coreFuncs.count(i.first) != 0; });
+	}
+
+	FILE* out = fopen(argv[2], "w");
+	FILE* enums = fopen(argv[4], "w");
 
 	fprintf(enums, "import enum\n");
 
-	fprintf(out, "# Load core module\n");
-	fprintf(out, "import platform\n");
-	fprintf(out, "core = None\n");
-	fprintf(out, "_base_path = None\n");
-	fprintf(out, "core_platform = platform.system()\n");
-	fprintf(out, "if core_platform == \"Darwin\":\n");
-	fprintf(out, "\t_base_path = os.path.join(os.path.dirname(__file__), \"..\", \"..\", \"..\", \"MacOS\")\n");
-	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"libbinaryninjacore.dylib\"))\n\n");
-	fprintf(out, "elif core_platform == \"Linux\":\n");
-	fprintf(out, "\t_base_path = os.path.join(os.path.dirname(__file__), \"..\", \"..\")\n");
-	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"libbinaryninjacore.so.1\"))\n\n");
-	fprintf(out, "elif (core_platform == \"Windows\") or (core_platform.find(\"CYGWIN_NT\") == 0):\n");
-	fprintf(out, "\t_base_path = os.path.join(os.path.dirname(__file__), \"..\", \"..\")\n");
-	fprintf(out, "\tcore = ctypes.CDLL(os.path.join(_base_path, \"binaryninjacore.dll\"))\n");
-	fprintf(out, "else:\n");
-	fprintf(out, "\traise Exception(\"OS not supported\")\n\n\n");
+	fputs(prologue.c_str(), out);
 
-	fprintf(out, "def cstr(var: Optional[AnyStr]) -> Optional[bytes]:\n");
-	fprintf(out, "	if var is None:\n");
-	fprintf(out, "		return None\n");
-	fprintf(out, "	if isinstance(var, bytes):\n");
-	fprintf(out, "		return var\n");
-	fprintf(out, "	return var.encode(\"utf-8\")\n\n\n");
+	if (coreHeader)
+	{
+		set<QualifiedName> referencedTypes;
+		for (auto& i : types)
+			CollectNamedTypeReferences(i.second, referencedTypes);
+		for (auto& i : funcs)
+			CollectNamedTypeReferences(i.second, referencedTypes);
 
-	fprintf(out, "def pyNativeStr(arg: Optional[AnyStr]) -> Optional[str]:\n");
-	fprintf(out, "	if arg is None or isinstance(arg, str):\n");
-	fprintf(out, "		return arg\n");
-	fprintf(out, "	else:\n");
-	fprintf(out, "		try:\n");
-	fprintf(out, "			return arg.decode('utf8')\n");
-	fprintf(out, "		except UnicodeDecodeError:\n");
-	fprintf(out, "			return arg.decode('charmap')\n\n\n");
+		fprintf(out, "# Core definitions\n");
+		fprintf(out, "from binaryninja._binaryninjacore import BNFreeString\n");
+		for (auto& name : referencedTypes)
+		{
+			auto coreType = coreTypes.find(name);
+			if (coreType == coreTypes.end() || name.size() != 1)
+				continue;
 
-	fprintf(out, "def free_string(value:ctypes.c_char_p) -> None:\n");
-	fprintf(out, "	BNFreeString(ctypes.cast(value, ctypes.POINTER(ctypes.c_byte)))\n\n");
+			for (auto& bindingName : CoreBindingNames(name[0], coreType->second))
+				fprintf(out, "from binaryninja._binaryninjacore import %s\n", bindingName.c_str());
+			if (coreType->second->GetClass() == EnumerationTypeClass)
+				fprintf(enums, "from binaryninja.enums import %s\n", PythonEnumName(name[0]).c_str());
+		}
+		fprintf(out, "\n");
+	}
 
 	// Create type objects
 	fprintf(out, "# Type definitions\n");
-	fprintf(out, "BNProgressFunction = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_ulonglong, ctypes.c_ulonglong)\n");
 	for (auto& i : types)
 	{
 		string name;
@@ -360,8 +467,7 @@ int main(int argc, char* argv[])
 		}
 		else if (i.second->GetClass() == EnumerationTypeClass)
 		{
-			if (name.size() > 2 && name.substr(0, 2) == "BN")
-				name = name.substr(2);
+			name = PythonEnumName(name);
 
 			const char* ctypesType = nullptr;
 			switch (i.second->GetWidth())
@@ -407,9 +513,31 @@ int main(int argc, char* argv[])
 		}
 	}
 
+	// Function pointer types can refer to structure handles, so they follow the structure declarations.
+	fprintf(out, "\n# Function pointer definitions\n");
+	for (auto& i : types)
+	{
+		if (i.first.size() != 1)
+			continue;
+		if (i.second->GetClass() != PointerTypeClass || i.second->GetChildType()->GetClass() != FunctionTypeClass)
+			continue;
+		fprintf(out, "%s = ", i.first[0].c_str());
+		OutputType(out, i.second);
+		fprintf(out, "\n");
+	}
+
 	fprintf(out, "\n# Structure definitions\n");
 	set<QualifiedName> structsToProcess;
 	set<QualifiedName> finishedStructs;
+	// Only structures and aliases are defined by this loop. Any other type, including a core type, is already defined.
+	auto isIncomplete = [&](const QualifiedName& name) {
+		auto type = types.find(name);
+		if (type == types.end() || finishedStructs.count(name) != 0)
+			return false;
+		if (type->second->GetClass() == NamedTypeReferenceClass)
+			return true;
+		return type->second->GetClass() == StructureTypeClass && !type->second->GetStructure()->GetMembers().empty();
+	};
 	for (auto& i : types)
 		structsToProcess.insert(i.first);
 	while (structsToProcess.size() != 0)
@@ -430,8 +558,7 @@ int main(int argc, char* argv[])
 				for (auto& j : type->GetStructure()->GetMembers())
 				{
 					if ((j.type->GetClass() == NamedTypeReferenceClass)
-					    && (types[j.type->GetNamedTypeReference()->GetName()]->GetClass() == StructureTypeClass)
-					    && (finishedStructs.count(j.type->GetNamedTypeReference()->GetName()) == 0))
+					    && isIncomplete(j.type->GetNamedTypeReference()->GetName()))
 					{
 						// This structure needs another structure that isn't fully defined yet, need to wait
 						// for the dependencies to be defined
@@ -463,6 +590,12 @@ int main(int argc, char* argv[])
 			}
 			else if (type->GetClass() == NamedTypeReferenceClass)
 			{
+				if (isIncomplete(type->GetNamedTypeReference()->GetName()))
+				{
+					structsToProcess.insert(i);
+					continue;
+				}
+
 				fprintf(out, "%s = %s\n", name.c_str(), type->GetNamedTypeReference()->GetName().GetString().c_str());
 				fprintf(out, "%sHandle = %sHandle\n", name.c_str(),
 				    type->GetNamedTypeReference()->GetName().GetString().c_str());
@@ -471,7 +604,7 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		if (!processedSome)
+		if (!processedSome && !structsToProcess.empty())
 		{
 			fprintf(stderr, "Detected dependency cycle in structures\n");
 			for (auto& i : structsToProcess)
@@ -481,8 +614,6 @@ int main(int argc, char* argv[])
 	}
 
 	fprintf(out, "\n# Function definitions\n");
-	fprintf(out, "BNCollaborationAnalysisConflictHandler = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.POINTER(ctypes.c_char_p), ctypes.POINTER(BNAnalysisMergeConflictHandle), ctypes.c_ulonglong)\n");
-	fprintf(out, "BNCollaborationNameChangesetFunction = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, BNCollaborationChangesetHandle)\n");
 	for (auto& i : funcs)
 	{
 		string name;
@@ -663,16 +794,13 @@ int main(int argc, char* argv[])
 		fprintf(out, "\n\n");
 	}
 
-	fprintf(out, "max_confidence = %d\n\n", BN_FULL_CONFIDENCE);
-
 	fprintf(out, "\n# Helper functions\n");
 	fprintf(out, "def handle_of_type(value, handle_type):\n");
 	fprintf(out, "\tif isinstance(value, ctypes.POINTER(handle_type)) or isinstance(value, ctypes.c_void_p):\n");
 	fprintf(out, "\t\treturn ctypes.cast(value, ctypes.POINTER(handle_type))\n");
 	fprintf(out, "\traise ValueError('expected pointer to %%s' %% str(handle_type))\n");
 
-	fprintf(out, "\n# Set path for core plugins\n");
-	fprintf(out, "BNSetBundledPluginDirectory(os.path.join(_base_path, \"plugins\"))\n");
+	fputs(epilogue.c_str(), out);
 
 	fclose(out);
 	fclose(enums);

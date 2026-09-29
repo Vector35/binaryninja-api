@@ -1,5 +1,6 @@
 #pragma once
 
+#include "binaryninjacore.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -29,33 +30,6 @@ extern "C"
 #endif      // __GNUC__C
 
 
-//	binaryninjacore.h is not included so we must duplicate enum types here.
-#ifdef BN_TYPE_PARSER
-typedef enum BNSegmentFlag
-{
-	SegmentExecutable = 1,
-	SegmentWritable = 2,
-	SegmentReadable = 4,
-	SegmentContainsData = 8,
-	SegmentContainsCode = 0x10,
-	SegmentDenyWrite = 0x20,
-	SegmentDenyExecute = 0x40
-} BNSegmentFlag;
-
-typedef enum BNSymbolType
-{
-	FunctionSymbol = 0,
-	ImportAddressSymbol = 1,
-	ImportedFunctionSymbol = 2,
-	DataSymbol = 3,
-	ImportedDataSymbol = 4,
-	ExternalSymbol = 5,
-	LibraryFunctionSymbol = 6,
-	SymbolicFunctionSymbol = 7,
-	LocalLabelSymbol = 8,
-} BNSymbolType;
-#endif
-
 #define CORE_ALLOCATED_STRUCT(T)
 
 #define CORE_ALLOCATED_CLASS(T) \
@@ -63,7 +37,6 @@ typedef enum BNSymbolType
 		CORE_ALLOCATED_STRUCT(T) \
 	private:
 
-	typedef struct BNBinaryView BNBinaryView;
 	typedef struct BNKernelCacheController BNKernelCacheController;
 
 	typedef enum BNKernelCacheEntryType {

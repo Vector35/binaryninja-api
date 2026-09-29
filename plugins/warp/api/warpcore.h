@@ -1,5 +1,7 @@
 #pragma once
 
+#include "binaryninjacore.h"
+
 #ifndef BN_TYPE_PARSER
 #ifdef __cplusplus
 #include <cstdint>
@@ -39,18 +41,6 @@
 extern "C"
 {
 #endif
-
-    typedef struct BNArchitecture BNArchitecture;
-    typedef struct BNBinaryView BNBinaryView;
-    typedef struct BNPlatform BNPlatform;
-    typedef struct BNBasicBlock BNBasicBlock;
-    typedef struct BNLowLevelILFunction BNLowLevelILFunction;
-    typedef struct BNFunction BNFunction;
-    typedef struct BNSymbol BNSymbol;
-    typedef struct BNType BNType;
-    typedef struct BNDataBuffer BNDataBuffer;
-    typedef struct BNProject BNProject;
-    typedef struct BNProjectFile BNProjectFile;
 
     struct BNWARPUUID
     {

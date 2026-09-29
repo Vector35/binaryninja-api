@@ -57,7 +57,7 @@ use std::{
 pub use archive::{TypeArchive, TypeArchiveId, TypeArchiveSnapshotId};
 pub use container::TypeContainer;
 pub use enumeration::{Enumeration, EnumerationBuilder, EnumerationMember};
-pub use library::TypeLibrary;
+pub use library::{NamedTypeDeclaration, TypeLibrary};
 pub use parser::{
     CoreTypeParser, ParsedType, TypeParser, TypeParserError, TypeParserErrorSeverity,
     TypeParserResult,
@@ -1627,7 +1627,7 @@ impl NamedTypeReference {
     }
 
     fn target_helper(&self, bv: &BinaryView, visited: &mut HashSet<String>) -> Option<Ref<Type>> {
-        let ty = bv.type_by_id(&self.id())?;
+        let ty = bv.type_by_ref(self)?;
         match ty.type_class() {
             TypeClass::NamedTypeReferenceClass => {
                 // Recurse into the NTR type until we get the target type.

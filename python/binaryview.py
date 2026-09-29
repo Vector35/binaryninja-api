@@ -8986,6 +8986,20 @@ class BinaryView:
 			return None
 		return _types.Type.create(obj, platform=self.platform)
 
+	def get_type_by_ref(self, ref: '_types.NamedTypeReferenceType') -> Optional['_types.Type']:
+		"""
+		``get_type_by_ref`` returns the type that ``ref`` refers to. It looks up the reference's id first,
+		then the reference's name.
+
+		:param NamedTypeReferenceType ref: Reference to resolve
+		:return: A :py:class:`Type` or None if no type is defined for the reference
+		:rtype: Type or None
+		"""
+		obj = core.BNGetAnalysisTypeByRef(self.handle, ref.ntr_handle)
+		if not obj:
+			return None
+		return _types.Type.create(obj, platform=self.platform)
+
 	def get_type_name_by_id(self, id: str) -> Optional['_types.QualifiedName']:
 		"""
 		``get_type_name_by_id`` returns the defined type name whose unique identifier corresponds with the provided ``id``

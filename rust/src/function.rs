@@ -654,6 +654,39 @@ impl Function {
         }
     }
 
+    /// Computes a code complexity score for this function using the named metric (e.g.
+    /// `"composite"`, `"cyclomatic"`, `"transitive"`, ...). See [`Function::complexity_metric_names`]
+    /// for the full, current list.
+    ///
+    /// Returns `Err` with a message listing the valid names if `metric` isn't recognized - the core
+    /// itself can't raise across the C ABI, so this validates client-side before ever calling it.
+    pub fn complexity(&self, metric: &str) -> Result<f64, String> {
+        let valid = Self::complexity_metric_names();
+        if !valid.iter().any(|m| m == metric) {
+            return Err(format!(
+                "Unknown complexity metric {metric:?}; valid options are: {}",
+                valid.join(", ")
+            ));
+        }
+
+        let raw_metric = metric.to_cstr();
+        Ok(unsafe { BNGetFunctionComplexity(self.handle, raw_metric.as_ptr()) })
+    }
+
+    /// Names accepted by [`Function::complexity`]'s `metric` parameter.
+    pub fn complexity_metric_names() -> Vec<String> {
+        unsafe {
+            let mut count = 0usize;
+            let names_ptr = BNGetFunctionComplexityMetricNames(&mut count);
+            let names = std::slice::from_raw_parts(names_ptr, count)
+                .iter()
+                .map(|&raw| CStr::from_ptr(raw).to_string_lossy().into_owned())
+                .collect();
+            BNFreeStringList(names_ptr, count);
+            names
+        }
+    }
+
     pub fn return_type(&self) -> Conf<Ref<Type>> {
         let raw_return_type = unsafe { BNGetFunctionReturnType(self.handle) };
         Conf::<Ref<Type>>::from_owned_raw(raw_return_type)

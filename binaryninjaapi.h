@@ -13537,6 +13537,32 @@ namespace BinaryNinja {
 			\return The HLIL for this Function if it's available.
 		*/
 		Ref<HighLevelILFunction> GetHighLevelILIfAvailable() const;
+
+		/*! Compute a code complexity score for this function.
+
+			Several independent metrics are available, each isolating a different factor that
+			contributes to how hard a function is to read, test, or reason about: code length,
+			the number/density of branches, the diversity of instruction types used, or the
+			nesting depth of its control flow. A weighted composite of all of them is also
+			available. Two further metrics ("fan_out", "transitive") look past the function's own
+			body at what it calls, since a thin dispatcher function can look trivial on every
+			purely intraprocedural metric while still requiring a lot of downstream code to be
+			read to understand what it actually does. See \c GetComplexityMetricNames for the
+			full list of valid names.
+
+			\param metric Name of the metric to compute. Defaults to "composite".
+			\return The computed complexity score. Higher means more complex. Scores are only
+			        meaningful to compare between functions when computed with the same metric.
+			\throws std::invalid_argument if `metric` is not a recognized metric name.
+		*/
+		double GetComplexity(const std::string& metric = "composite") const;
+
+		/*! Names accepted by \c GetComplexity
+
+			\return The list of valid complexity metric names
+		*/
+		static std::vector<std::string> GetComplexityMetricNames();
+
 		Ref<LanguageRepresentationFunction> GetLanguageRepresentation(const std::string& language = "Pseudo C") const;
 		Ref<LanguageRepresentationFunction> GetLanguageRepresentationIfAvailable(
 			const std::string& language = "Pseudo C") const;

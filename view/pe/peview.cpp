@@ -833,11 +833,17 @@ bool PEView::Init()
 			section.virtualAddress = reader.Read32();
 			section.sizeOfRawData = reader.Read32();
 			section.pointerToRawData = reader.Read32();
-			if (fileAlignmentValid && (section.pointerToRawData & (resolvedFileAlignment - 1)))
+
+			// The PE specification requires FileAlignment-aligned pointers, but Windows rounds
+			// malformed pointers down to 0x200 for page-aligned images, regardless of FileAlignment.
+			// https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#section-table-section-headers
+			bool hasRawData = section.pointerToRawData != 0;
+			uint32_t pageSize = (header.machine == IMAGE_FILE_MACHINE_IA64) ? 0x2000 : 0x1000;
+			if (fileAlignmentValid && (opt.sectionAlign >= pageSize) && (section.pointerToRawData & 0x1ff))
 			{
-				m_logger->LogWarn("PE section[%u] violates file alignment: pointerToRawData: 0x%x. Aligning to 0x%x.", i,
-					section.pointerToRawData, resolvedFileAlignment);
-				section.pointerToRawData &= ~(resolvedFileAlignment - 1);
+				m_logger->LogWarn("PE section[%u] has an unaligned pointerToRawData: 0x%x. Aligning to 0x200.", i,
+					section.pointerToRawData);
+				section.pointerToRawData &= ~0x1ffU;
 			}
 			section.pointerToRelocs = reader.Read32();
 			section.pointerToLineNumbers = reader.Read32();
@@ -849,6 +855,8 @@ bool PEView::Init()
 			{
 				section.virtualSize = section.sizeOfRawData;
 			}
+			if (!hasRawData)
+				section.sizeOfRawData = 0;
 			m_sections.push_back(section);
 
 			uint32_t flags = 0;

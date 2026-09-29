@@ -2137,6 +2137,22 @@ size_t X86CommonArchitecture::GetFlagWriteLowLevelIL(BNLowLevelILOperation op, s
 			il.Const(size, 0));
 	}
 
+	if (flagWriteType == IL_FLAGWRITE_BEXTR)
+	{
+		switch (flag)
+		{
+		case IL_FLAG_C:
+		case IL_FLAG_O:
+			return il.Const(0, 0);
+		case IL_FLAG_A:
+		case IL_FLAG_S:
+		case IL_FLAG_P:
+			return il.Unknown();
+		default:
+			break;
+		}
+	}
+
 	if (flagWriteType == IL_FLAGWRITE_PTEST)
 	{
 		switch (flag)
@@ -2935,6 +2951,10 @@ string X86CommonArchitecture::GetFlagWriteTypeName(uint32_t flags)
 		return "cuo";
 	case IL_FLAGWRITE_PTEST:
 		return "ptest";
+	case IL_FLAGWRITE_BEXTR:
+		return "bextr";
+	case IL_FLAGWRITE_Z:
+		return "z";
 	default:
 		return "";
 	}
@@ -2962,7 +2982,7 @@ vector<uint32_t> X86CommonArchitecture::GetAllFlagWriteTypes()
 	return vector<uint32_t> {IL_FLAGWRITE_ALL, IL_FLAGWRITE_NOCARRY, IL_FLAGWRITE_CO,
 		IL_FLAGWRITE_X87COM, IL_FLAGWRITE_X87COMI, IL_FLAGWRITE_X87C1Z, IL_FLAGWRITE_X87RND,
 		IL_FLAGWRITE_VCOMI, IL_FLAGWRITE_POPCNT, IL_FLAGWRITE_LZTZCNT, IL_FLAGWRITE_PAZS,
-		IL_FLAGWRITE_C, IL_FLAGWRITE_SHRD1, IL_FLAGWRITE_CUO, IL_FLAGWRITE_PTEST};
+		IL_FLAGWRITE_C, IL_FLAGWRITE_SHRD1, IL_FLAGWRITE_CUO, IL_FLAGWRITE_PTEST, IL_FLAGWRITE_BEXTR, IL_FLAGWRITE_Z};
 }
 
 BNFlagRole X86CommonArchitecture::GetFlagRole(uint32_t flag, uint32_t semClass)
@@ -3190,6 +3210,10 @@ vector<uint32_t> X86CommonArchitecture::GetFlagsWrittenByFlagWriteType(uint32_t 
 		return vector<uint32_t>{ IL_FLAG_C, IL_FLAG_O };
 	case IL_FLAGWRITE_PTEST:
 		return vector<uint32_t>{ IL_FLAG_C, IL_FLAG_P, IL_FLAG_A, IL_FLAG_Z, IL_FLAG_S, IL_FLAG_O };
+	case IL_FLAGWRITE_BEXTR:
+		return vector<uint32_t>{ IL_FLAG_C, IL_FLAG_P, IL_FLAG_A, IL_FLAG_S, IL_FLAG_O };
+	case IL_FLAGWRITE_Z:
+		return vector<uint32_t>{ IL_FLAG_Z };
 	default:
 		return vector<uint32_t>();
 	}

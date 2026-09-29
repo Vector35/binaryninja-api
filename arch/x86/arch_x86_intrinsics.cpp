@@ -37,6 +37,10 @@ string X86CommonArchitecture::GetIntrinsicName(uint32_t intrinsic)
     {
     case INTRINSIC_F2XM1:
         return "__f2xm1";
+    case INTRINSIC_BEXTR32:
+        return "__bextr32";
+    case INTRINSIC_BEXTR64:
+        return "__bextr64";
     case INTRINSIC_FBLD:
         return "__fbld";
     case INTRINSIC_FBST:
@@ -5112,7 +5116,7 @@ vector<uint32_t> X86CommonArchitecture::GetAllIntrinsics()
     vector<uint32_t> allIntrinsics = { INTRINSIC_F2XM1, INTRINSIC_FBLD, INTRINSIC_FBST , INTRINSIC_FSIN,
         INTRINSIC_FCOS, INTRINSIC_FSINCOS, INTRINSIC_FPATAN, INTRINSIC_FPREM, INTRINSIC_FPREM1,
         INTRINSIC_FPTAN, INTRINSIC_FSCALE, INTRINSIC_FXAM, INTRINSIC_FXTRACT, INTRINSIC_FYL2X,
-        INTRINSIC_FYL2XP1};
+        INTRINSIC_FYL2XP1, INTRINSIC_BEXTR32, INTRINSIC_BEXTR64};
 
     allIntrinsics.reserve(allIntrinsics.size() + INTRINSIC_LAST - INTRINSIC_XED_IFORM_INVALID + 1);
     for (uint32_t value = INTRINSIC_XED_IFORM_INVALID;
@@ -5134,6 +5138,12 @@ vector<NameAndType> X86CommonArchitecture::GetIntrinsicInputs(uint32_t intrinsic
 
     switch (intrinsic)
     {
+    case INTRINSIC_BEXTR32:
+    case INTRINSIC_BEXTR64:
+        return {
+            NameAndType("value", Type::IntegerType(intrinsic == INTRINSIC_BEXTR64 ? 8 : 4, false)),
+            NameAndType("start", Type::IntegerType(1, false)),
+            NameAndType("length", Type::IntegerType(1, false))};
     case INTRINSIC_F2XM1:
     case INTRINSIC_FBST:
     case INTRINSIC_FSIN:
@@ -5196,6 +5206,10 @@ vector<Confidence<Ref<Type>>> X86CommonArchitecture::GetIntrinsicOutputs(uint32_
 
     switch (intrinsic)
     {
+    case INTRINSIC_BEXTR32:
+        return {Type::IntegerType(4, false)};
+    case INTRINSIC_BEXTR64:
+        return {Type::IntegerType(8, false)};
     case INTRINSIC_F2XM1:
     case INTRINSIC_FBLD:
     case INTRINSIC_FPATAN:

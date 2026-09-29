@@ -27,6 +27,17 @@ fn basic_metadata() {
     let metadata_4: Ref<Metadata> = From::from(&vec![1.55f64, 2.55f64]);
     assert_eq!(metadata_4.get_type(), MetadataType::ArrayDataType);
     assert_eq!(metadata_4.get_double_list(), Some(vec![1.55f64, 2.55f64]));
+
+    let metadata_5: Ref<Metadata> = From::from(vec!["one", "two"]);
+    assert_eq!(metadata_5.get_type(), MetadataType::ArrayDataType);
+    let strings = metadata_5
+        .get_string_list()
+        .expect("Expected a string list");
+    let strings: Vec<_> = strings
+        .iter()
+        .map(|s| s.to_string_lossy().into_owned())
+        .collect();
+    assert_eq!(strings, vec!["one", "two"]);
 }
 
 #[test]

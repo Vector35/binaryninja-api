@@ -2,6 +2,7 @@ use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, Re
 use crate::string::{raw_to_string, BnString, IntoCStr, IntoJson};
 use binaryninjacore_sys::*;
 use std::collections::HashMap;
+use std::ffi::CStr;
 use std::fmt::{Debug, Display, Formatter};
 use std::os::raw::c_char;
 use std::slice;
@@ -158,7 +159,7 @@ impl Metadata {
                 let list = unsafe { slice::from_raw_parts(ptr, size) };
                 let vec = list
                     .iter()
-                    .map(|ptr| unsafe { BnString::from_raw(*ptr) })
+                    .map(|ptr| BnString::new(unsafe { CStr::from_ptr(*ptr) }))
                     .collect::<Vec<_>>();
                 unsafe { BNFreeMetadataStringList(ptr, size) };
                 Some(vec)

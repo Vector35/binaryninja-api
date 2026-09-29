@@ -319,6 +319,7 @@ namespace BinaryNinja
 	{
 		std::string name;
 		uint32_t virtualSize;
+		uint64_t mappedSize;
 		uint32_t virtualAddress;
 		uint32_t sizeOfRawData;
 		uint32_t pointerToRawData;

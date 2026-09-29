@@ -9200,15 +9200,16 @@ class BinaryView:
 		:rtype: Type
 		"""
 		_name = _types.QualifiedName(name)
-		_lib = ctypes.POINTER(ctypes.POINTER(core.BNTypeLibrary))()
+		_lib = ctypes.POINTER(core.BNTypeLibrary)()
 		if lib is not None:
-			_lib.contents = lib.handle
-		else:
-			_lib.contents = ctypes.POINTER(core.BNTypeLibrary)()
+			_lib = ctypes.cast(lib.handle, ctypes.POINTER(core.BNTypeLibrary))
 
 		handle = core.BNBinaryViewImportTypeLibraryType(
-		    self.handle, _lib, _name._to_core_struct()
+		    self.handle, ctypes.byref(_lib), _name._to_core_struct()
 		)
+		# Core stores a new reference to the library the type came from in `_lib`.
+		if _lib:
+			core.BNFreeTypeLibrary(_lib)
 		if handle is None:
 			return None
 		return _types.Type.create(handle, platform=self.platform)
@@ -9255,15 +9256,16 @@ class BinaryView:
 		:rtype: Type
 		"""
 		_name = _types.QualifiedName(name)
-		_lib = ctypes.POINTER(ctypes.POINTER(core.BNTypeLibrary))()
+		_lib = ctypes.POINTER(core.BNTypeLibrary)()
 		if lib is not None:
-			_lib.contents = lib.handle
-		else:
-			_lib.contents = ctypes.POINTER(core.BNTypeLibrary)()
+			_lib = ctypes.cast(lib.handle, ctypes.POINTER(core.BNTypeLibrary))
 
 		handle = core.BNBinaryViewImportTypeLibraryObject(
-		    self.handle, _lib, _name._to_core_struct()
+		    self.handle, ctypes.byref(_lib), _name._to_core_struct()
 		)
+		# Core stores a new reference to the library the object came from in `_lib`.
+		if _lib:
+			core.BNFreeTypeLibrary(_lib)
 		if handle is None:
 			return None
 		return _types.Type.create(handle, platform=self.platform)

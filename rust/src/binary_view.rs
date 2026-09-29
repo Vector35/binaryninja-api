@@ -2804,6 +2804,10 @@ impl BinaryView {
         let result =
             unsafe { BNBinaryViewImportTypeLibraryType(self.handle, &mut lib_ref, &mut raw_name) };
         QualifiedName::free_raw(raw_name);
+        // Core stores a new reference to the library the type came from in `lib_ref`.
+        if let Some(lib_ref) = NonNull::new(lib_ref) {
+            drop(unsafe { TypeLibrary::ref_from_raw(lib_ref) });
+        }
         (!result.is_null()).then(|| unsafe { Type::ref_from_raw(result) })
     }
 
@@ -2831,6 +2835,10 @@ impl BinaryView {
             BNBinaryViewImportTypeLibraryObject(self.handle, &mut lib_ref, &mut raw_name)
         };
         QualifiedName::free_raw(raw_name);
+        // Core stores a new reference to the library the object came from in `lib_ref`.
+        if let Some(lib_ref) = NonNull::new(lib_ref) {
+            drop(unsafe { TypeLibrary::ref_from_raw(lib_ref) });
+        }
         (!result.is_null()).then(|| unsafe { Type::ref_from_raw(result) })
     }
 

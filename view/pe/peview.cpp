@@ -433,6 +433,69 @@ static string GetDebugTypeName(int type)
 }
 
 
+// Validate optional COFF symbols before queuing any of them. Charge shared names
+// per reference: each queued symbol can retain its own copy of the name.
+static void ValidateCOFFSymbols(BinaryView* data, uint64_t table, uint32_t count,
+	int64_t maxCount, int64_t maxNameLength, int64_t maxNameBytes)
+{
+	if (maxCount >= 0 && count > (uint64_t)maxCount)
+		throw PEFormatException("record count exceeds loader.pe.maxCoffSymbolCount");
+	uint64_t strings = table + (uint64_t)count * 18;
+	uint64_t fileSize = data->GetLength();
+	if (!table || strings > fileSize || fileSize - strings < 4)
+		throw PEFormatException("invalid COFF symbol table bounds");
+	BinaryReader reader(data, LittleEndian);
+	reader.Seek(strings);
+	uint32_t stringSize = reader.Read32();
+	if (stringSize < 4 || stringSize > fileSize - strings)
+		throw PEFormatException("invalid COFF string table size");
+
+	uint64_t totalNameBytes = 0;
+	for (uint64_t i = 0; i < count;)
+	{
+		reader.Seek(table + i * 18);
+		uint32_t zeroes = reader.Read32();
+		uint32_t offset = reader.Read32();
+		reader.Seek(table + i * 18 + 17);
+		uint8_t auxCount = reader.Read8();
+		if (auxCount >= count - i)
+			throw PEFormatException("COFF auxiliary records extend past the symbol table");
+		if (!zeroes && (offset < 4 || offset >= stringSize))
+			throw PEFormatException("invalid COFF symbol name offset");
+
+		reader.Seek(zeroes ? table + i * 18 : strings + offset);
+		uint64_t readLimit = zeroes ? 8 : stringSize - offset;
+		if (maxNameLength >= 0)
+			readLimit = std::min(readLimit, (uint64_t)maxNameLength + 1);
+		if (maxNameBytes >= 0)
+			readLimit = std::min(readLimit, (uint64_t)maxNameBytes - totalNameBytes + 1);
+		uint64_t length = 0;
+		bool terminated = false;
+		while (length < readLimit)
+		{
+			char buffer[256];
+			size_t size = (size_t)std::min(readLimit - length, (uint64_t)sizeof(buffer));
+			reader.Read(buffer, size);
+			const char* end = (const char*)memchr(buffer, 0, size);
+			length += end ? (size_t)(end - buffer) : size;
+			if (end)
+			{
+				terminated = true;
+				break;
+			}
+		}
+		if (maxNameLength >= 0 && length > (uint64_t)maxNameLength)
+			throw PEFormatException("name length exceeds loader.pe.maxCoffSymbolNameLength");
+		if (maxNameBytes >= 0 && length > (uint64_t)maxNameBytes - totalNameBytes)
+			throw PEFormatException("expanded name bytes exceed loader.pe.maxCoffSymbolNameBytes");
+		if (!zeroes && !terminated)
+			throw PEFormatException("unterminated COFF symbol name");
+		totalNameBytes += length;
+		i += 1 + auxCount;
+	}
+}
+
+
 PEView::PEView(BinaryView* data, bool parseOnly) : BinaryView("PE", data->GetFile(), data), m_parseOnly(parseOnly)
 {
 	CreateLogger("BinaryView");
@@ -1380,15 +1443,18 @@ bool PEView::Init()
 		// Process COFF symbol table
 		if (header.coffSymbolCount)
 		{
-			const bool coffSymbolValuesAreRvas = CoffSymbolValuesAreRvas(header);
-			BinaryReader stringReader(GetParentView(), LittleEndian);
-			uint64_t stringTableBase = header.coffSymbolTable + (header.coffSymbolCount * 18);
-			stringReader.Seek(stringTableBase);
-			if ((stringTableBase + stringReader.Read32()) > GetParentView()->GetEnd())
-			{
-				throw PEFormatException("invalid COFF string table size");
-			}
+			auto limit = [&](const char* key, int64_t defaultValue) {
+				return settings && settings->Contains(key) ? settings->Get<int64_t>(key, this) : defaultValue;
+			};
+			ValidateCOFFSymbols(GetParentView(), header.coffSymbolTable, header.coffSymbolCount,
+				limit("loader.pe.maxCoffSymbolCount", 100000),
+				limit("loader.pe.maxCoffSymbolNameLength", 4096),
+				limit("loader.pe.maxCoffSymbolNameBytes", 4194304));
 
+			const bool coffSymbolValuesAreRvas = CoffSymbolValuesAreRvas(header);
+
+			BinaryReader stringReader(GetParentView(), LittleEndian);
+			uint64_t stringTableBase = header.coffSymbolTable + (uint64_t)header.coffSymbolCount * 18;
 			for (size_t i = 0; i < header.coffSymbolCount; i++)
 			{
 				reader.Seek(header.coffSymbolTable + (i * 18));
@@ -1529,7 +1595,7 @@ bool PEView::Init()
 	}
 	catch (std::exception& e)
 	{
-		m_logger->LogError("Failed to parse COFF symbol table: %s\n", e.what());
+		m_logger->LogWarn("Skipped optional PE COFF symbols: %s. COFF-derived names and function hints may be unavailable.", e.what());
 	}
 
 	try
@@ -3916,6 +3982,31 @@ Ref<Settings> PEViewType::GetLoadSettingsForData(BinaryView* data)
 	}
 
 	// register additional settings
+	settings->RegisterSetting("loader.pe.maxCoffSymbolCount",
+			R"({
+			"title" : "Maximum PE COFF Symbol Record Count",
+			"type" : "number",
+			"default" : 100000,
+			"minValue" : -1,
+			"description" : "Skip optional COFF symbols when the record count, including auxiliary records, exceeds this limit. Set to -1 to disable this limit."
+			})");
+	settings->RegisterSetting("loader.pe.maxCoffSymbolNameLength",
+			R"({
+			"title" : "Maximum PE COFF Symbol Name Length",
+			"type" : "number",
+			"default" : 4096,
+			"minValue" : -1,
+			"description" : "Skip optional COFF symbols when a name exceeds this many bytes, excluding the terminator. Set to -1 to disable this limit."
+			})");
+	settings->RegisterSetting("loader.pe.maxCoffSymbolNameBytes",
+			R"({
+			"title" : "Maximum PE COFF Symbol Name Bytes",
+			"type" : "number",
+			"default" : 4194304,
+			"minValue" : -1,
+			"description" : "Skip optional COFF symbols when total name bytes, excluding terminators and counting each reference to a shared name, exceed this limit. Set to -1 to disable this limit."
+			})");
+
 	settings->RegisterSetting("loader.pe.processCfgTable",
 			R"({
 			"title" : "Process PE Control Flow Guard Table",

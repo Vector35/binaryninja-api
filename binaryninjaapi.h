@@ -8197,6 +8197,11 @@ namespace BinaryNinja {
 			BNMetadataStoreFlag flags = (BNMetadataStoreFlag)(MetadataStorePersistent | MetadataStoreMarksAnalysisChanged));
 		Ref<Metadata> QueryMetadata(const std::string& key);
 		void RemoveMetadata(const std::string& key);
+		/*! Get an enum display override at a data address, if present. The result contains the enum type ID and data width. */
+		std::optional<std::pair<std::string, size_t>> GetDataEnumDisplayType(uint64_t addr);
+		/*! Display integer data at an address using an enum without changing its type.
+		    width is the integer width in bytes; pass an empty typeId to remove the override. */
+		bool SetDataEnumDisplayType(uint64_t addr, size_t width, const std::string& typeId);
 		Ref<Metadata> GetMetadata();
 		Ref<Metadata> GetAutoMetadata();
 		std::string GetStringMetadata(const std::string& key);

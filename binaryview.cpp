@@ -5569,6 +5569,24 @@ void BinaryView::RemoveMetadata(const std::string& key)
 }
 
 
+std::optional<std::pair<std::string, size_t>> BinaryView::GetDataEnumDisplayType(uint64_t addr)
+{
+	size_t width = 0;
+	char* typeId = BNGetDataEnumDisplayType(m_object, addr, &width);
+	if (!typeId)
+		return std::nullopt;
+	std::string result(typeId);
+	BNFreeString(typeId);
+	return std::make_pair(result, width);
+}
+
+
+bool BinaryView::SetDataEnumDisplayType(uint64_t addr, size_t width, const std::string& typeId)
+{
+	return BNSetDataEnumDisplayType(m_object, addr, width, typeId.c_str());
+}
+
+
 Ref<Metadata> BinaryView::GetMetadata()
 {
 	return new Metadata(BNBinaryViewGetMetadata(m_object));

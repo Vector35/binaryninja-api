@@ -9163,6 +9163,8 @@ extern "C"
 	    BNBinaryView* view, const char* key, BNMetadata* value, BNMetadataStoreFlag flags);
 	BINARYNINJACOREAPI BNMetadata* BNBinaryViewQueryMetadata(BNBinaryView* view, const char* key);
 	BINARYNINJACOREAPI void BNBinaryViewRemoveMetadata(BNBinaryView* view, const char* key);
+	BINARYNINJACOREAPI char* BNGetDataEnumDisplayType(BNBinaryView* view, uint64_t addr, size_t* width);
+	BINARYNINJACOREAPI bool BNSetDataEnumDisplayType(BNBinaryView* view, uint64_t addr, size_t width, const char* typeId);
 	BINARYNINJACOREAPI BNMetadata* BNBinaryViewGetMetadata(BNBinaryView* view);
 	BINARYNINJACOREAPI BNMetadata* BNBinaryViewGetAutoMetadata(BNBinaryView* view);
 

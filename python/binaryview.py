@@ -10996,6 +10996,22 @@ to a the type "tagRECT" found in the typelibrary "winX64common"
 		"""
 		core.BNBinaryViewRemoveMetadata(self.handle, key)
 
+	def get_data_enum_display_type(self, addr: int) -> Optional[Tuple[str, int]]:
+		"""Return the enum type ID and integer width used to render data at ``addr``, if set."""
+		width = ctypes.c_size_t()
+		type_id = core.BNGetDataEnumDisplayType(self.handle, addr, ctypes.byref(width))
+		if type_id is None:
+			return None
+		return type_id, width.value
+
+	def set_data_enum_display_type(self, addr: int, type_id: Optional[str], width: int = 0) -> bool:
+		"""Display the integer data at ``addr`` as an enum without changing its type.
+
+		``width`` is the integer width in bytes (1–8) and is required when setting an enum.
+		Pass ``None`` for ``type_id`` to clear the override. Changes are persistent and undoable.
+		"""
+		return core.BNSetDataEnumDisplayType(self.handle, addr, width, type_id or "")
+
 	@property
 	def metadata(self) -> Dict[str, 'metadata.MetadataValueType']:
 		"""

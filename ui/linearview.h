@@ -166,6 +166,7 @@ class BINARYNINJAUIAPI LinearView :
 	public BinaryNinja::BinaryDataNotification
 {
 	Q_OBJECT
+	friend class View;
 
 	class LinearViewOptionsWidget : public MenuHelper
 	{
@@ -440,6 +441,7 @@ private Q_SLOTS:
 	void changeType(const UIActionContext& context);
 	void undefineInRange();
 	BNIntegerDisplayType getCurrentDisplayAs(const UIActionContext& context) override;
+	bool canDisplayAs(const UIActionContext& context, BNIntegerDisplayType displayType) override;
 	void displayAs(const UIActionContext& context, BNIntegerDisplayType displayType) override;
 	void createStructOrInferStructureType();
 	bool autoCreateArray();

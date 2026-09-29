@@ -855,8 +855,27 @@ bool PEView::Init()
 			{
 				section.virtualSize = section.sizeOfRawData;
 			}
+			// Keep the section's declared extent for display, but map the aligned virtual extent.
+			// https://github.com/wine-mirror/wine/blob/master/dlls/ntdll/unix/virtual.c (map_image_into_view)
+			section.mappedSize = section.virtualSize;
+			if (fileAlignmentValid && opt.sectionAlign >= pageSize && !(opt.sectionAlign & (opt.sectionAlign - 1)))
+				section.mappedSize = (section.mappedSize + opt.sectionAlign - 1) & ~((uint64_t)opt.sectionAlign - 1);
 			if (!hasRawData)
 				section.sizeOfRawData = 0;
+			else if (fileAlignmentValid)
+			{
+				// Windows rounds SizeOfRawData up to FileAlignment, unlike the fixed 0x200
+				// alignment of PointerToRawData. Use 64-bit arithmetic to avoid wrapping at 4 GiB.
+				if (section.sizeOfRawData & (resolvedFileAlignment - 1))
+					m_logger->LogWarn("PE section[%u] has an unaligned sizeOfRawData: 0x%x. Aligning to 0x%x.", i,
+						section.sizeOfRawData, resolvedFileAlignment);
+				uint64_t alignedRawSize = ((uint64_t)section.sizeOfRawData + resolvedFileAlignment - 1)
+					& ~((uint64_t)resolvedFileAlignment - 1);
+				// Keep segment mapping and RVA translation within both the virtual section and the available file data
+				uint64_t fileSize = GetParentView()->GetLength();
+				uint64_t availableData = section.pointerToRawData < fileSize ? fileSize - section.pointerToRawData : 0;
+				section.sizeOfRawData = (uint32_t)std::min({alignedRawSize, section.mappedSize, availableData, (uint64_t)UINT32_MAX});
+			}
 			m_sections.push_back(section);
 
 			uint32_t flags = 0;
@@ -898,10 +917,10 @@ bool PEView::Init()
 				section.lineNumberCount,
 				section.characteristics);
 
-			m_logger->LogDebug("Segment: Vaddr: %08" PRIx64 " Vsize: %08x Offset: %08x Rawsize: %08x"
+			m_logger->LogDebug("Segment: Vaddr: %08" PRIx64 " Vsize: %08" PRIx64 " Offset: %08x Rawsize: %08x"
 				" %c%c%c %s\n",
 				section.virtualAddress + m_imageBase,
-				section.virtualSize,
+				section.mappedSize,
 				section.pointerToRawData,
 				section.sizeOfRawData,
 				(flags & SegmentExecutable) > 0 ? 'x':'-',
@@ -912,7 +931,7 @@ bool PEView::Init()
 			if (!section.virtualSize)
 				continue;
 
-			AddAutoSegment(section.virtualAddress + m_imageBase, section.virtualSize, section.pointerToRawData, section.sizeOfRawData, flags);
+			AddAutoSegment(section.virtualAddress + m_imageBase, section.mappedSize, section.pointerToRawData, section.sizeOfRawData, flags);
 
 			BNSectionSemantics semantics = DefaultSectionSemantics;
 			uint32_t pFlags = flags & 0x7;
@@ -3537,7 +3556,7 @@ uint64_t PEView::RVAToFileOffset(uint64_t offset, bool except)
 	for (auto& i : m_sections)
 	{
 		if ((offset >= i.virtualAddress) &&
-			(offset < (i.virtualAddress + i.sizeOfRawData)) && (i.virtualSize != 0))
+			(offset - i.virtualAddress < i.sizeOfRawData) && (i.mappedSize != 0))
 		{
 			uint64_t progOfs = offset - i.virtualAddress;
 			return i.pointerToRawData + progOfs;
@@ -3640,7 +3659,7 @@ uint32_t PEView::GetRVACharacteristics(uint64_t offset)
 {
 	for (auto& i : m_sections)
 	{
-		if ((offset >= i.virtualAddress) && (offset < (i.virtualAddress + i.virtualSize)) && (i.virtualSize != 0))
+		if ((offset >= i.virtualAddress) && (offset - i.virtualAddress < i.mappedSize))
 			return i.characteristics;
 	}
 	return 0;
@@ -3719,7 +3738,7 @@ void PEView::AddPESymbol(BNSymbolType type, const string& dll, const string& nam
 		bool ok = false;
 		for (auto& i : m_sections)
 		{
-			if ((addr >= i.virtualAddress) && (addr < (i.virtualAddress + i.virtualSize)))
+			if ((addr >= i.virtualAddress) && (addr - i.virtualAddress < i.mappedSize))
 			{
 				ok = true;
 				break;

@@ -982,6 +982,23 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 				0)));
 		break;
 
+	case XED_ICLASS_BEXTR:
+	{
+		// Keep extraction atomic and expose the packed control as named start/length inputs.
+		// A temporary result also preserves inputs when the destination aliases the control.
+		il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(LLIL_TEMP(0))},
+			opOneLen == 8 ? INTRINSIC_BEXTR64 : INTRINSIC_BEXTR32,
+			{ReadILOperand(il, xedd, addr, 1, 1),
+				il.LowPart(1, ReadILOperand(il, xedd, addr, 2, 2)),
+				il.LowPart(1, il.LogicalShiftRight(opTreLen, ReadILOperand(il, xedd, addr, 2, 2), il.Const(1, 8)))},
+			noFlags ? 0 : IL_FLAGWRITE_BEXTR));
+		// Only ZF depends on the result. Keep unspecified flags on the intrinsic so that
+		// semantic flag resolution cannot infer SF from the destination's sign bit.
+		il.AddInstruction(il.Operand(0, il.SetRegister(opOneLen, xed_decoded_inst_get_reg(xedd, opOne_name),
+			il.Register(opOneLen, LLIL_TEMP(0)), noFlags ? 0 : IL_FLAGWRITE_Z)));
+		break;
+	}
+
 	case XED_ICLASS_BT:
 		il.AddInstruction(il.SetFlag(IL_FLAG_C,
 			il.TestBit(opOneLen,

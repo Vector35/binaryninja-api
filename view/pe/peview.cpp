@@ -849,6 +849,13 @@ bool PEView::Init()
 		reader.Seek(optionalHeaderOffset + header.optionalHeaderSize);
 		// Read sections
 		BinaryReader sectionNameReader(GetParentView(), LittleEndian);
+		auto sectionNameLimit = [&](const char* key, int64_t defaultValue) {
+			return settings && settings->Contains(key) ? settings->Get<int64_t>(key, this) : defaultValue;
+		};
+		int64_t maxSectionNameLength = sectionNameLimit("loader.pe.maxSectionNameLength", 256);
+		int64_t maxSectionNameBytes = sectionNameLimit("loader.pe.maxSectionNameBytes", 1048576);
+		uint64_t sectionNameBytes = 0;
+		bool warnedSectionNames = false;
 		BeginBulkAddSegments();
 
 		for (uint16_t i = 0; i < header.sectionCount; i++)
@@ -861,31 +868,49 @@ bool PEView::Init()
 			string resolvedName = name;
 			if (name[0] == '/' && header.coffSymbolTable)
 			{
-				errno = 0;
-				uint32_t offset = strtoul(name+1, nullptr, 10);
-				if (errno == 0 && offset > 0)
+				try
 				{
-					BinaryReader stringReader(GetParentView(), LittleEndian);
-					uint64_t stringTableBase = header.coffSymbolTable + (header.coffSymbolCount * 18);
-					stringReader.Seek(stringTableBase);
-					uint32_t stringTableLen;
-					if (!stringReader.TryRead32(stringTableLen))
+					errno = 0;
+					char* end;
+					uint64_t offset = strtoul(name + 1, &end, 10);
+					if (errno || end == name + 1 || *end || offset < 4)
+						throw PEFormatException("invalid section name offset");
+					uint64_t stringTableBase = header.coffSymbolTable + (uint64_t)header.coffSymbolCount * 18;
+					uint64_t fileSize = GetParentView()->GetLength();
+					if (stringTableBase > fileSize || fileSize - stringTableBase < 4)
+						throw PEFormatException("invalid section name string table bounds");
+					sectionNameReader.Seek(stringTableBase);
+					uint32_t stringTableLen = sectionNameReader.Read32();
+					if (stringTableLen < 4 || stringTableLen > fileSize - stringTableBase || offset >= stringTableLen)
+						throw PEFormatException("invalid section name string table size or offset");
+
+					// Always resolve names fitting the eight-byte header field, including .reloc,
+					// even after the long-name budget is exhausted. Charge long names per reference.
+					uint64_t readLimit = stringTableLen - offset;
+					if (maxSectionNameLength >= 0)
+						readLimit = std::min(readLimit, std::max<uint64_t>(maxSectionNameLength, 8) + 1);
+					if (maxSectionNameBytes >= 0)
+						readLimit = std::min(readLimit, std::max<uint64_t>(maxSectionNameBytes - sectionNameBytes, 8) + 1);
+					sectionNameReader.Seek(stringTableBase + offset);
+					string longName = sectionNameReader.ReadCString((size_t)readLimit);
+					if (longName.size() > 8)
 					{
-						m_logger->LogError("Cannot resolve section name \"%s\": String table has invalid start", name);
+						if (maxSectionNameLength >= 0 && longName.size() > (uint64_t)maxSectionNameLength)
+							throw PEFormatException("name length exceeds loader.pe.maxSectionNameLength");
+						if (maxSectionNameBytes >= 0 && longName.size() > (uint64_t)maxSectionNameBytes - sectionNameBytes)
+							throw PEFormatException("expanded name bytes exceed loader.pe.maxSectionNameBytes");
 					}
-					else if ((stringTableBase + stringTableLen) > GetParentView()->GetEnd())
-					{
-						m_logger->LogError("Cannot resolve section name \"%s\": String table is invalid length", name);
-					}
-					else if (stringTableBase + offset < GetParentView()->GetEnd())
-					{
-						sectionNameReader.Seek(stringTableBase + offset);
-						resolvedName = sectionNameReader.ReadCString();
-					}
-					else
-					{
-						m_logger->LogError("Cannot resolve section name \"%s\": Offset is past end of string table", name);
-					}
+					if (longName.size() == readLimit)
+						throw PEFormatException("unterminated section name");
+					if (longName.size() > 8)
+						sectionNameBytes += longName.size();
+					resolvedName = std::move(longName);
+				}
+				catch (std::exception& e)
+				{
+					if (!m_parseOnly && !warnedSectionNames)
+						m_logger->LogWarn("Using PE section header names: %s. Long section names may be unavailable.", e.what());
+					warnedSectionNames = true;
 				}
 			}
 			section.name = resolvedName;
@@ -3982,12 +4007,32 @@ Ref<Settings> PEViewType::GetLoadSettingsForData(BinaryView* data)
 	}
 
 	// register additional settings
+	settings->RegisterSetting("loader.pe.maxSectionNameLength",
+			R"({
+			"title" : "Maximum PE Section Name Length",
+			"type" : "number",
+			"default" : 256,
+			"minValue" : -1,
+			"maxValue" : 2147483647,
+			"description" : "Use the section header name when a string-table name exceeds this many bytes. Names of eight bytes or fewer are always resolved. Set to -1 to disable this limit."
+			})");
+	settings->RegisterSetting("loader.pe.maxSectionNameBytes",
+			R"({
+			"title" : "Maximum PE Section Name Bytes",
+			"type" : "number",
+			"default" : 1048576,
+			"minValue" : -1,
+			"maxValue" : 2147483647,
+			"description" : "Maximum total bytes of resolved section names longer than eight bytes, excluding terminators and counting each reference to a shared name. Use section header names when exceeded. Set to -1 to disable this limit."
+			})");
+
 	settings->RegisterSetting("loader.pe.maxCoffSymbolCount",
 			R"({
 			"title" : "Maximum PE COFF Symbol Record Count",
 			"type" : "number",
 			"default" : 100000,
 			"minValue" : -1,
+			"maxValue" : 2147483647,
 			"description" : "Skip optional COFF symbols when the record count, including auxiliary records, exceeds this limit. Set to -1 to disable this limit."
 			})");
 	settings->RegisterSetting("loader.pe.maxCoffSymbolNameLength",
@@ -3996,6 +4041,7 @@ Ref<Settings> PEViewType::GetLoadSettingsForData(BinaryView* data)
 			"type" : "number",
 			"default" : 4096,
 			"minValue" : -1,
+			"maxValue" : 2147483647,
 			"description" : "Skip optional COFF symbols when a name exceeds this many bytes, excluding the terminator. Set to -1 to disable this limit."
 			})");
 	settings->RegisterSetting("loader.pe.maxCoffSymbolNameBytes",
@@ -4004,6 +4050,7 @@ Ref<Settings> PEViewType::GetLoadSettingsForData(BinaryView* data)
 			"type" : "number",
 			"default" : 4194304,
 			"minValue" : -1,
+			"maxValue" : 2147483647,
 			"description" : "Skip optional COFF symbols when total name bytes, excluding terminators and counting each reference to a shared name, exceed this limit. Set to -1 to disable this limit."
 			})");
 

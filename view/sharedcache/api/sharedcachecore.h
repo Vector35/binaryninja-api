@@ -1,5 +1,7 @@
 #pragma once
 
+#include "binaryninjacore.h"
+
 #ifdef __GNUC__
 	#ifdef SHAREDCACHE_LIBRARY
 		#define SHAREDCACHE_FFI_API __attribute__((visibility("default")))
@@ -27,51 +29,6 @@ extern "C"
 {
 #endif
 
-	// binaryninjacore.h is not included so we must duplicate enum types here.
-	// TODO: Why isn't it?!
-#ifdef BN_TYPE_PARSER
-	enum BNSegmentFlag : uint8_t
-	{
-		SegmentExecutable = 1,
-		SegmentWritable = 2,
-		SegmentReadable = 4,
-		SegmentContainsData = 8,
-		SegmentContainsCode = 0x10,
-		SegmentDenyWrite = 0x20,
-		SegmentDenyExecute = 0x40
-	};
-
-	enum BNSymbolType : uint8_t
-	{
-		FunctionSymbol = 0,
-		ImportAddressSymbol = 1,
-		ImportedFunctionSymbol = 2,
-		DataSymbol = 3,
-		ImportedDataSymbol = 4,
-		ExternalSymbol = 5,
-		LibraryFunctionSymbol = 6,
-		SymbolicFunctionSymbol = 7,
-		LocalLabelSymbol = 8,
-	};
-
-	enum BNSymbolBinding : uint8_t
-	{
-		NoBinding = 0,
-		LocalBinding = 1,
-		GlobalBinding = 2,
-		WeakBinding = 3,
-	};
-
-	enum BNStringType : uint8_t
-	{
-		AsciiString = 0,
-		Utf16String = 1,
-		Utf32String = 2,
-		Utf8String = 3,
-	};
-#endif
-
-	typedef struct BNBinaryView BNBinaryView;
 	typedef struct BNSharedCacheController BNSharedCacheController;
 	typedef struct BNSharedCacheStringScanner BNSharedCacheStringScanner;
 

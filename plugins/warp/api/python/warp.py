@@ -622,7 +622,7 @@ class WarpProcessor:
     def __init__(self, included_data: WARPProcessorIncludedData = WARPProcessorIncludedData.WARPProcessorIncludedDataAll,
                  included_functions: WARPProcessorIncludedFunctions = WARPProcessorIncludedFunctions.WARPProcessorIncludedFunctionsAnnotated,
                  worker_count: int = 1):
-        self.handle = warpcore.BNWARPNewProcessor(ctypes.c_int(included_data), ctypes.c_int(included_functions), worker_count)
+        self.handle = warpcore.BNWARPNewProcessor(included_data, included_functions, worker_count)
 
     def __del__(self):
         if self.handle is not None:

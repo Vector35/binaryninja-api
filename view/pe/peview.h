@@ -12,6 +12,15 @@
 #define PE_ATTR_UNINIT_DATA 0x80
 #define PE_ATTR_EXEC        0x20000000
 
+// The Windows loader always aligns PointerToRawData down to this boundary for PE32/PE32+.
+#define PE_SECTION_RAW_DATA_ALIGNMENT 0x200u
+
+// Default values for the COFF symbol table loader settings, shared by peview.cpp and
+// coffview.cpp. Keep these in sync with the "default" values in each RegisterSetting call.
+#define PE_DEFAULT_MAX_COFF_SYMBOL_COUNT 1000000ULL
+#define PE_DEFAULT_MAX_COFF_SYMBOL_NAME_LENGTH 32768ULL
+#define PE_DEFAULT_MAX_TOTAL_COFF_SYMBOL_NAME_MB 1024ULL
+
 // The dalay load table uses RVA, rather than VA
 #define PE_DLATTR_RVA		0x1
 

@@ -6,7 +6,7 @@ use crate::{
     platform::Platform,
     rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Ref},
     string::{BnString, IntoCStr},
-    types::{QualifiedName, QualifiedNameAndType, Type},
+    types::{NamedTypeReferenceClass, QualifiedName, QualifiedNameAndType, Type},
 };
 use binaryninjacore_sys::*;
 use std::fmt::{Debug, Formatter};
@@ -296,6 +296,50 @@ impl TypeLibrary {
         let mut raw_name = QualifiedName::into_raw(name);
         unsafe { BNRemoveTypeLibraryNamedType(self.as_raw(), &mut raw_name) }
         QualifiedName::free_raw(raw_name);
+    }
+
+    /// Declares a named type without defining it, as C does with `struct name;`.
+    ///
+    /// Use it for a type the library refers to only through pointers, such as an opaque struct
+    /// whose layout comes from the binary or another source. Importing the type does not define
+    /// it. References to it resolve to the view's type of that name and follow later renames.
+    /// Defining a declared name removes the declaration, and declaring a defined name does
+    /// nothing.
+    pub fn add_named_type_declaration(&self, name: QualifiedName, type_class: NamedTypeReferenceClass) {
+        let mut raw_name = QualifiedName::into_raw(name);
+        unsafe { BNAddTypeLibraryNamedTypeDeclaration(self.as_raw(), &mut raw_name, type_class) }
+        QualifiedName::free_raw(raw_name);
+    }
+
+    /// Removes a declaration made with [`TypeLibrary::add_named_type_declaration`].
+    pub fn remove_named_type_declaration(&self, name: QualifiedName) {
+        let mut raw_name = QualifiedName::into_raw(name);
+        unsafe { BNRemoveTypeLibraryNamedTypeDeclaration(self.as_raw(), &mut raw_name) }
+        QualifiedName::free_raw(raw_name);
+    }
+
+    /// The type class the library declares for `name`, or `None` if it does not declare `name`.
+    pub fn get_named_type_declaration(&self, name: QualifiedName) -> Option<NamedTypeReferenceClass> {
+        let mut raw_name = QualifiedName::into_raw(name);
+        let mut type_class = NamedTypeReferenceClass::UnknownNamedTypeClass;
+        let declared = unsafe {
+            BNGetTypeLibraryNamedTypeDeclaration(self.as_raw(), &mut raw_name, &mut type_class)
+        };
+        QualifiedName::free_raw(raw_name);
+        declared.then_some(type_class)
+    }
+
+    /// The named types the library declares without defining, and the type class of each.
+    pub fn named_type_declarations(&self) -> Vec<(QualifiedName, NamedTypeReferenceClass)> {
+        let mut count = 0;
+        let raw = unsafe { BNGetTypeLibraryNamedTypeDeclarations(self.as_raw(), &mut count) };
+        assert!(!raw.is_null());
+        let result = unsafe { std::slice::from_raw_parts(raw, count) }
+            .iter()
+            .map(|declaration| (QualifiedName::from_raw(&declaration.name), declaration.typeClass))
+            .collect();
+        unsafe { BNFreeTypeLibraryNamedTypeDeclarationList(raw, count) };
+        result
     }
 
     /// Flag any outgoing named type reference with the given `name` as belonging to the `source` type library.

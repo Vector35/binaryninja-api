@@ -22155,6 +22155,12 @@ namespace BinaryNinja {
 		*/
 		std::vector<QualifiedNameAndType> GetNamedTypes();
 
+		/*! The type class a type library declares for \c name, or std::nullopt if it does not declare \c name. */
+		std::optional<BNNamedTypeReferenceClass> GetNamedTypeDeclaration(const QualifiedName& name);
+
+		/*! The named types a type library declares without defining, and the type class of each. */
+		std::vector<std::pair<QualifiedName, BNNamedTypeReferenceClass>> GetNamedTypeDeclarations();
+
 		/*! Sets the name of a type library instance that has not been finalized
 
 			\param name
@@ -22242,6 +22248,23 @@ namespace BinaryNinja {
 			\param type
 		*/
 		void AddNamedType(const QualifiedName& name, Ref<Type> type);
+
+		/*! Declares a named type without defining it, as C does with <tt>struct name;</tt>. Use it for a type
+			the library refers to only through pointers, such as an opaque struct whose layout comes from
+			the binary or another source. Importing the type does not define it. References to it resolve
+			to the view's type of that name and follow later renames. Defining a declared name removes the
+			declaration, and declaring a defined name does nothing.
+
+			\param name
+			\param typeClass The kind of type the name is, e.g. StructNamedTypeClass
+		*/
+		void AddNamedTypeDeclaration(const QualifiedName& name, BNNamedTypeReferenceClass typeClass);
+
+		/*! Removes a declaration made with AddNamedTypeDeclaration
+
+			\param name
+		*/
+		void RemoveNamedTypeDeclaration(const QualifiedName& name);
 
 		/*! Manually flag NamedTypeReferences to the given QualifiedName as originating from another source
 			TypeLibrary with the given dependency name.

@@ -160,6 +160,9 @@ impl TypeLibValidater {
             for ty in &type_lib.named_types() {
                 self.valid_external_references.insert(ty.name);
             }
+            for (name, _) in type_lib.named_type_declarations() {
+                self.valid_external_references.insert(name);
+            }
             for obj in &type_lib.named_objects() {
                 self.valid_external_references.insert(obj.name);
             }
@@ -247,11 +250,14 @@ impl TypeLibValidater {
 
             for ty in &types {
                 let qualified_name = QualifiedName::from(ty);
-                let is_named_ty = dep_type_lib
+                let is_resolved = dep_type_lib
                     .get_named_type(qualified_name.clone())
-                    .is_none();
-                let is_named_obj = dep_type_lib.get_named_object(qualified_name).is_none();
-                if !is_named_ty && !is_named_obj {
+                    .is_some()
+                    || dep_type_lib
+                        .get_named_type_declaration(qualified_name.clone())
+                        .is_some()
+                    || dep_type_lib.get_named_object(qualified_name).is_some();
+                if !is_resolved {
                     issues.push(ValidateIssue::UnresolvedSourceReference {
                         name: ty.to_string(),
                         source: src.to_string(),

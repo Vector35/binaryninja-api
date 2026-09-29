@@ -30,6 +30,7 @@ from . import metadata
 from . import platform
 from . import architecture
 from . import typecontainer
+from .enums import NamedTypeReferenceClass
 
 
 class TypeLibrary:
@@ -427,6 +428,59 @@ class TypeLibrary:
 		if not isinstance(name, types.QualifiedName):
 			name = types.QualifiedName(name)
 		core.BNRemoveTypeLibraryNamedType(self.handle, name._to_core_struct())
+
+	def add_named_type_declaration(
+		self, name: Union[types.QualifiedName, str], type_class: NamedTypeReferenceClass
+	) -> None:
+		"""
+		`add_named_type_declaration` declares a named type without defining it, as C does with ``struct name;``.
+		Use it for a type the library refers to only through pointers, such as an opaque struct whose layout comes
+		from the binary or another source. Importing the type does not define it. References to it resolve to the
+		view's type of that name and follow later renames. Defining a declared name removes the declaration, and
+		declaring a defined name does nothing.
+
+		:param QualifiedName name:
+		:param NamedTypeReferenceClass type_class: the kind of type the name is, e.g. ``StructNamedTypeClass``
+		"""
+		if not isinstance(name, types.QualifiedName):
+			name = types.QualifiedName(name)
+		core.BNAddTypeLibraryNamedTypeDeclaration(self.handle, name._to_core_struct(), type_class)
+
+	def remove_named_type_declaration(self, name: Union[types.QualifiedName, str]) -> None:
+		"""
+		`remove_named_type_declaration` removes a declaration made with :py:meth:`add_named_type_declaration`.
+		"""
+		if not isinstance(name, types.QualifiedName):
+			name = types.QualifiedName(name)
+		core.BNRemoveTypeLibraryNamedTypeDeclaration(self.handle, name._to_core_struct())
+
+	def get_named_type_declaration(self, name: Union[types.QualifiedName, str]) -> Optional[NamedTypeReferenceClass]:
+		"""
+		`get_named_type_declaration` returns the type class the type library declares for ``name``, or None if it
+		does not declare ``name``.
+		"""
+		if not isinstance(name, types.QualifiedName):
+			name = types.QualifiedName(name)
+		type_class = core.NamedTypeReferenceClassEnum()
+		if not core.BNGetTypeLibraryNamedTypeDeclaration(self.handle, name._to_core_struct(), type_class):
+			return None
+		return NamedTypeReferenceClass(type_class.value)
+
+	@property
+	def named_type_declarations(self) -> Dict[types.QualifiedName, NamedTypeReferenceClass]:
+		"""
+		A dict of the named types the type library declares without defining, and the type class of each (read-only)
+		"""
+		count = ctypes.c_ulonglong(0)
+		declarations = core.BNGetTypeLibraryNamedTypeDeclarations(self.handle, count)
+		assert declarations is not None, "core.BNGetTypeLibraryNamedTypeDeclarations returned None"
+		try:
+			return {
+				types.QualifiedName._from_core_struct(declarations[i].name): NamedTypeReferenceClass(declarations[i].typeClass)
+				for i in range(count.value)
+			}
+		finally:
+			core.BNFreeTypeLibraryNamedTypeDeclarationList(declarations, count.value)
 
 	def add_type_source(self, name: Union[types.QualifiedName, str], source: str) -> None:
 		"""

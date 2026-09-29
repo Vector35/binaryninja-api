@@ -157,8 +157,11 @@ impl ProcessedData {
     ///
     /// This is useful if you intend to save the type libraries to disk in a finalized form.
     pub fn prune(self) -> Self {
-        let is_empty =
-            |tl: &TypeLibrary| tl.named_types().is_empty() && tl.named_objects().is_empty();
+        let is_empty = |tl: &TypeLibrary| {
+            tl.named_types().is_empty()
+                && tl.named_type_declarations().is_empty()
+                && tl.named_objects().is_empty()
+        };
         let pruned_type_libraries = self
             .type_libraries
             .into_iter()
@@ -204,6 +207,10 @@ impl ProcessedData {
                 // TODO: Cheap type overrides (if one type is set as void* and the other as Foo* we take Foo*)
                 for named_type in &tl.named_types() {
                     merged_type_library.add_named_type(named_type.name.clone(), &named_type.ty);
+                }
+                // A definition from any library wins over a declaration, whatever the merge order.
+                for (name, type_class) in tl.named_type_declarations() {
+                    merged_type_library.add_named_type_declaration(name, type_class);
                 }
                 for named_object in &tl.named_objects() {
                     merged_type_library
@@ -298,7 +305,10 @@ impl ProcessedData {
                             // we can relocate them as well, assuming no other type library also uses it.
                             let is_associated = default_type_library
                                 .get_named_type(ntr_name.clone())
-                                .is_some();
+                                .is_some()
+                                || default_type_library
+                                    .get_named_type_declaration(ntr_name.clone())
+                                    .is_some();
                             if is_associated {
                                 recorded_references
                                     .entry(ntr_name)
@@ -327,10 +337,14 @@ impl ProcessedData {
             if type_libraries.len() == 1 {
                 // Only one type library uses this type, so we can safely relocate it.
                 let type_library = type_libraries.iter().next().unwrap();
-                let named_ty = default_type_library
-                    .get_named_type(qualified_name.clone())
-                    .unwrap();
-                type_library.add_named_type(qualified_name, &named_ty);
+                if let Some(named_ty) = default_type_library.get_named_type(qualified_name.clone())
+                {
+                    type_library.add_named_type(qualified_name, &named_ty);
+                } else if let Some(type_class) =
+                    default_type_library.get_named_type_declaration(qualified_name.clone())
+                {
+                    type_library.add_named_type_declaration(qualified_name, type_class);
+                }
             }
         }
     }
@@ -737,6 +751,13 @@ impl TypeLibProcessor {
             let lib_name = tl.name().to_string();
             for t in tl.named_types().iter() {
                 type_name_to_library.insert(t.name.clone(), lib_name.clone());
+            }
+            // Map declared names to the declaring library so the view's definition isn't copied into
+            // the new library. A library that defines the name takes precedence.
+            for (name, _) in tl.named_type_declarations() {
+                type_name_to_library
+                    .entry(name)
+                    .or_insert_with(|| lib_name.clone());
             }
         }
 
@@ -1308,5 +1329,43 @@ mod tests {
         assert_eq!(merged_tl.dependency_name(), "foo");
         assert_eq!(merged_tl.platform_names().len(), 2);
         assert_eq!(merged_tl.named_types().len(), 2);
+    }
+
+    #[test]
+    fn test_data_merging_keeps_declarations() {
+        use binaryninja::types::NamedTypeReferenceClass;
+
+        let _session =
+            binaryninja::headless::Session::new().expect("Failed to create headless session");
+        let x86_platform = Platform::by_name("x86").expect("Failed to get x86 platform");
+        let tl1 = TypeLibrary::new(x86_platform.arch(), "foo");
+        tl1.set_dependency_name("foo");
+        tl1.add_platform(&x86_platform);
+        tl1.add_named_type_declaration(
+            "declared".into(),
+            NamedTypeReferenceClass::StructNamedTypeClass,
+        );
+        tl1.add_named_type_declaration(
+            "defined".into(),
+            NamedTypeReferenceClass::StructNamedTypeClass,
+        );
+        let tl1_data = ProcessedData::new(vec![tl1]);
+
+        let tl2 = TypeLibrary::new(x86_platform.arch(), "bar");
+        tl2.set_dependency_name("foo");
+        tl2.add_platform(&x86_platform);
+        tl2.add_named_type("defined".into(), &Type::named_int(4, false, "defined"));
+        let tl2_data = ProcessedData::new(vec![tl2]);
+
+        let merged_data = ProcessedData::merge(&[tl1_data, tl2_data]);
+        let merged_tl = &merged_data.type_libraries.iter().next().unwrap();
+        assert_eq!(
+            merged_tl.named_type_declarations(),
+            vec![(
+                "declared".into(),
+                NamedTypeReferenceClass::StructNamedTypeClass
+            )]
+        );
+        assert!(merged_tl.get_named_type("defined".into()).is_some());
     }
 }

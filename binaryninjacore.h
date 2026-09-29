@@ -2841,6 +2841,12 @@ extern "C"
 		BNType* type;
 	} BNQualifiedNameAndType;
 
+	typedef struct BNTypeLibraryNamedTypeDeclaration
+	{
+		BNQualifiedName name;
+		BNNamedTypeReferenceClass typeClass;
+	} BNTypeLibraryNamedTypeDeclaration;
+
 	typedef struct BNQualifiedNameTypeAndId
 	{
 		BNQualifiedName name;
@@ -7841,6 +7847,16 @@ extern "C"
 
 	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetTypeLibraryNamedObjects(BNTypeLibrary* lib, size_t* count);
 	BINARYNINJACOREAPI BNQualifiedNameAndType* BNGetTypeLibraryNamedTypes(BNTypeLibrary* lib, size_t* count);
+
+	BINARYNINJACOREAPI void BNAddTypeLibraryNamedTypeDeclaration(
+		BNTypeLibrary* lib, BNQualifiedName* name, BNNamedTypeReferenceClass typeClass);
+	BINARYNINJACOREAPI void BNRemoveTypeLibraryNamedTypeDeclaration(BNTypeLibrary* lib, BNQualifiedName* name);
+	BINARYNINJACOREAPI bool BNGetTypeLibraryNamedTypeDeclaration(
+		BNTypeLibrary* lib, BNQualifiedName* name, BNNamedTypeReferenceClass* typeClass);
+	BINARYNINJACOREAPI BNTypeLibraryNamedTypeDeclaration* BNGetTypeLibraryNamedTypeDeclarations(
+		BNTypeLibrary* lib, size_t* count);
+	BINARYNINJACOREAPI void BNFreeTypeLibraryNamedTypeDeclarationList(
+		BNTypeLibraryNamedTypeDeclaration* declarations, size_t count);
 
 	BINARYNINJACOREAPI bool BNWriteTypeLibraryToFile(BNTypeLibrary* lib, const char* path);
 

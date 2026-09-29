@@ -6025,6 +6025,17 @@ extern "C"
 	BINARYNINJACOREAPI BNLanguageRepresentationFunction* BNGetFunctionLanguageRepresentationIfAvailable(
 		BNFunction* func, const char* language);
 
+	// Computes a code complexity score for `func` using the named metric (e.g. "composite",
+	// "cyclomatic", "transitive", ...) - see BNGetFunctionComplexityMetricNames for the full,
+	// current list. Returns 0.0 (and logs) for an unrecognized metric name rather than raising
+	// across the C ABI boundary; callers are expected to validate `metric` against
+	// BNGetFunctionComplexityMetricNames themselves first if they want to surface that as their
+	// own idiomatic error.
+	BINARYNINJACOREAPI double BNGetFunctionComplexity(BNFunction* func, const char* metric);
+	// Names accepted by BNGetFunctionComplexity's `metric` parameter. Free the result with
+	// BNFreeStringList.
+	BINARYNINJACOREAPI char** BNGetFunctionComplexityMetricNames(size_t* count);
+
 	BINARYNINJACOREAPI BNDataBuffer* BNGetConstantData(BNFunction* func, BNRegisterValueType state, uint64_t value,
 		size_t size, BNBuiltinType* builtin);
 

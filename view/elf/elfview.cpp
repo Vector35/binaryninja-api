@@ -2612,10 +2612,10 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 		if (symbolTypeRef.GetValue())
 		{
 			m_logger->LogDebug("elf: type Library '%s' found hit for '%s'", lib->GetName().c_str(), name.c_str());
-			if (type != ExternalSymbol || addr != 0)
-			{
+			// An external symbol only gets its address when the view is finalized, which
+			// records its library then.
+			if (type != ExternalSymbol)
 				RecordImportedObjectLibrary(GetDefaultPlatform(), addr, lib, n);
-			}
 		}
 	}
 

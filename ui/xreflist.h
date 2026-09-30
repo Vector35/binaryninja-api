@@ -608,6 +608,12 @@ class BINARYNINJAUIAPI CrossReferenceTable : public QTableView, public CrossRefe
 	CrossReferenceTableModel* m_table;
 	CrossReferenceItemDelegate* m_itemDelegate;
 	CrossReferenceFilterProxyModel* m_model;
+	int m_previewContentWidth = 0;
+
+	void updatePreviewColumnWidth();
+
+  protected:
+	virtual void resizeEvent(QResizeEvent* event) override;
 
   public:
 	CrossReferenceTable(CrossReferenceWidget* parent, ViewFrame* view, BinaryViewRef data);

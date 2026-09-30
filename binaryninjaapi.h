@@ -3708,6 +3708,11 @@ namespace BinaryNinja {
 		*/
 		void Close();
 
+		bool AttachObject(const std::string& name, void* context, void (*close)(void*), void (*release)(void*));
+		// Returns an owned C attachment handle; caller must call BNFreeFileAttachment.
+		BNFileAttachment* GetAttachment(const std::string& name) const;
+		void DetachObject(const std::string& name);
+
 		void SetNavigationHandler(NavigationHandler* handler);
 
 		/*! Get the original name of the binary opened if a bndb, otherwise the current filename

@@ -84,6 +84,21 @@ FileMetadata::FileMetadata(BNFileMetadata* file)
 }
 
 
+bool FileMetadata::AttachObject(const std::string& name, void* context, void (*close)(void*), void (*release)(void*))
+{
+	return BNAttachFileObject(m_object, name.c_str(), context, close, release);
+}
+
+BNFileAttachment* FileMetadata::GetAttachment(const std::string& name) const
+{
+	return BNGetFileAttachment(m_object, name.c_str());
+}
+
+void FileMetadata::DetachObject(const std::string& name)
+{
+	BNDetachFileObject(m_object, name.c_str());
+}
+
 void FileMetadata::Close()
 {
 	BNCloseFile(m_object);

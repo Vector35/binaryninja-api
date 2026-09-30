@@ -248,6 +248,7 @@ extern "C"
 	typedef struct BNSnapshot BNSnapshot;
 	typedef struct BNDatabase BNDatabase;
 	typedef struct BNFileMetadata BNFileMetadata;
+	typedef struct BNFileAttachment BNFileAttachment;
 	typedef struct BNTransform BNTransform;
 	typedef struct BNTransformContext BNTransformContext;
 	typedef struct BNTransformSession BNTransformSession;
@@ -5051,6 +5052,20 @@ extern "C"
 	BINARYNINJACOREAPI BNFileMetadata* BNNewFileReference(BNFileMetadata* file);
 	BINARYNINJACOREAPI void BNFreeFileMetadata(BNFileMetadata* file);
 	BINARYNINJACOREAPI void BNCloseFile(BNFileMetadata* file);
+
+	// Named, runtime-only file attachments. Successful attachment transfers one context
+	// ownership to the file. Duplicate names and closed files are rejected without transfer.
+	// close runs once on detach/file close, outside the attachment lock; it must not block
+	// on the UI thread. release runs after all attachment handles are released. Callbacks
+	// must not throw and their plugin must stay loaded until release has completed.
+	BINARYNINJACOREAPI bool BNAttachFileObject(BNFileMetadata* file, const char* name, void* context,
+		void (*close)(void*), void (*release)(void*));
+	// Returns an owned handle; context remains valid until that handle is released.
+	BINARYNINJACOREAPI BNFileAttachment* BNGetFileAttachment(BNFileMetadata* file, const char* name);
+	BINARYNINJACOREAPI void BNDetachFileObject(BNFileMetadata* file, const char* name);
+	BINARYNINJACOREAPI BNFileAttachment* BNNewFileAttachmentReference(BNFileAttachment* attachment);
+	BINARYNINJACOREAPI void BNFreeFileAttachment(BNFileAttachment* attachment);
+	BINARYNINJACOREAPI void* BNGetFileAttachmentContext(BNFileAttachment* attachment);
 	BINARYNINJACOREAPI void BNSetFileMetadataNavigationHandler(BNFileMetadata* file, BNNavigationHandler* handler);
 	BINARYNINJACOREAPI bool BNIsFileModified(BNFileMetadata* file);
 	BINARYNINJACOREAPI bool BNIsAnalysisChanged(BNFileMetadata* file);

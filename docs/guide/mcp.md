@@ -22,6 +22,8 @@ The exact tool list may change as the MCP server develops, but both server varia
 
 Use your MCP client's tool listing UI or command to see the complete set of tools available in your installed Binary Ninja version.
 
+Plugins can add their own tools, which both server variants offer alongside the built-in ones. See [Writing MCP Tools](../dev/mcp-tools.md).
+
 ## Tool Calling Conventions
 
 The MCP server exposes Binary Ninja state through a small set of identifiers and conventions. These are worth understanding because they differ from many REST APIs.

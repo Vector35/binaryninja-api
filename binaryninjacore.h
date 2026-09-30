@@ -37,7 +37,7 @@
 // Current ABI version for linking to the core. This is incremented any time
 // there are changes to the API that affect linking, including new functions,
 // new types, or modifications to existing functions or types.
-#define BN_CURRENT_CORE_ABI_VERSION 188
+#define BN_CURRENT_CORE_ABI_VERSION 189
 
 // Minimum ABI version that is supported for loading of plugins. Plugins that
 // are linked to an ABI version less than this will not be able to load and
@@ -347,6 +347,9 @@ extern "C"
 	typedef struct BNUndoAction BNUndoAction;
 	typedef struct BNUndoEntry BNUndoEntry;
 	typedef struct BNDemangler BNDemangler;
+	typedef struct BNMcpTool BNMcpTool;
+	typedef struct BNMcpToolCall BNMcpToolCall;
+	typedef struct BNMcpToolResult BNMcpToolResult;
 	typedef struct BNFirmwareNinja BNFirmwareNinja;
 	typedef struct BNFirmwareNinjaReferenceNode BNFirmwareNinjaReferenceNode;
 	typedef struct BNFirmwareNinjaRelationship BNFirmwareNinjaRelationship;
@@ -4062,6 +4065,46 @@ extern "C"
 			BNDemanglerResult* result);
 		void (*freeResult)(void* ctxt, BNDemanglerResult* result);
 	} BNDemanglerCallbacks;
+
+	BN_ENUM(uint8_t, BNMcpToolScope)
+	{
+		GlobalScope,
+		BinaryViewScope
+	};
+
+	BN_OPTIONS(uint32_t, BNMcpToolAnnotation)
+	{
+		ReadOnlyHint = 1,
+		DestructiveHint = 2,
+		IdempotentHint = 4,
+		OpenWorldHint = 8
+	};
+
+	typedef struct BNMcpToolDefinition
+	{
+		const char* name;
+		const char* title;
+		const char* description;
+		const char* inputSchema;
+		const char* outputSchema;
+		BNMcpToolScope scope;
+		uint32_t annotations;
+	} BNMcpToolDefinition;
+
+	typedef struct BNMcpToolCallbacks
+	{
+		void* context;
+		void (*invoke)(void* ctxt, BNMcpToolCall* call, const char* arguments, BNMcpToolResult* result);
+		void (*freeObject)(void* ctxt);
+	} BNMcpToolCallbacks;
+
+	typedef struct BNMcpToolCallCallbacks
+	{
+		void* context;
+		BNBinaryView* (*getBinaryView)(void* ctxt);
+		bool (*isCancelled)(void* ctxt);
+		void (*reportProgress)(void* ctxt, double progress, double total, const char* message);
+	} BNMcpToolCallCallbacks;
 
 	BN_ENUM(uint8_t, BNScopeType)
 	{
@@ -8865,6 +8908,50 @@ extern "C"
 	BINARYNINJACOREAPI char* BNGetDemanglerName(const BNDemangler* demangler);
 	BINARYNINJACOREAPI bool BNPromoteDemangler(const BNDemangler* demangler);
 	BINARYNINJACOREAPI bool BNIsDemanglerMangledName(const BNDemangler* demangler, const char* name);
+
+	// MCP tools
+	BINARYNINJACOREAPI BNMcpTool* BNRegisterMcpTool(
+		const BNMcpToolDefinition* definition, const BNMcpToolCallbacks* callbacks);
+	BINARYNINJACOREAPI BNMcpTool* BNNewMcpToolReference(BNMcpTool* tool);
+	BINARYNINJACOREAPI void BNFreeMcpTool(BNMcpTool* tool);
+	BINARYNINJACOREAPI BNMcpTool** BNGetMcpToolList(size_t* count);
+	BINARYNINJACOREAPI void BNFreeMcpToolList(BNMcpTool** tools, size_t count);
+	BINARYNINJACOREAPI BNMcpTool* BNGetMcpToolByName(const char* name);
+	BINARYNINJACOREAPI char* BNGetMcpToolName(BNMcpTool* tool);
+	BINARYNINJACOREAPI char* BNGetMcpToolTitle(BNMcpTool* tool);
+	BINARYNINJACOREAPI char* BNGetMcpToolDescription(BNMcpTool* tool);
+	BINARYNINJACOREAPI char* BNGetMcpToolInputSchema(BNMcpTool* tool);
+	BINARYNINJACOREAPI char* BNGetMcpToolOutputSchema(BNMcpTool* tool);
+	BINARYNINJACOREAPI BNMcpToolScope BNGetMcpToolScope(BNMcpTool* tool);
+	BINARYNINJACOREAPI uint32_t BNGetMcpToolAnnotations(BNMcpTool* tool);
+
+	BINARYNINJACOREAPI BNMcpToolCall* BNNewMcpToolCallReference(BNMcpToolCall* call);
+	BINARYNINJACOREAPI void BNFreeMcpToolCall(BNMcpToolCall* call);
+	BINARYNINJACOREAPI BNBinaryView* BNGetMcpToolCallBinaryView(BNMcpToolCall* call);
+	BINARYNINJACOREAPI bool BNIsMcpToolCallCancelled(BNMcpToolCall* call);
+	BINARYNINJACOREAPI void BNReportMcpToolCallProgress(
+		BNMcpToolCall* call, double progress, double total, const char* message);
+	BINARYNINJACOREAPI bool BNParseMcpToolCallAddress(
+		BNMcpToolCall* call, const char* value, uint64_t* result, uint64_t here, char** errorMessage);
+	BINARYNINJACOREAPI bool BNParseMcpToolCallInteger(
+		BNMcpToolCall* call, const char* value, uint64_t* result, uint64_t here, char** errorMessage);
+
+	BINARYNINJACOREAPI BNMcpToolResult* BNNewMcpToolResultReference(BNMcpToolResult* result);
+	BINARYNINJACOREAPI void BNFreeMcpToolResult(BNMcpToolResult* result);
+	BINARYNINJACOREAPI void BNAddMcpToolResultText(BNMcpToolResult* result, const char* text);
+	BINARYNINJACOREAPI bool BNSetMcpToolResultStructuredContent(BNMcpToolResult* result, const char* json);
+	BINARYNINJACOREAPI void BNSetMcpToolResultError(
+		BNMcpToolResult* result, const char* code, const char* message, const char* detailsJson);
+	BINARYNINJACOREAPI void BNAddMcpToolResultWarning(BNMcpToolResult* result, const char* code, const char* message);
+
+	// MCP servers
+	BINARYNINJACOREAPI BNMcpTool* BNCreateMcpTool(
+		const BNMcpToolDefinition* definition, const BNMcpToolCallbacks* callbacks);
+	BINARYNINJACOREAPI BNMcpToolCall* BNCreateMcpToolCall(const BNMcpToolCallCallbacks* callbacks);
+	BINARYNINJACOREAPI BNMcpToolResult* BNCreateMcpToolResult(void);
+	BINARYNINJACOREAPI void BNInvokeMcpTool(
+		BNMcpTool* tool, BNMcpToolCall* call, const char* arguments, BNMcpToolResult* result);
+	BINARYNINJACOREAPI char* BNGetMcpToolResultJson(BNMcpToolResult* result);
 
 // Plugin repository APIs
 	BINARYNINJACOREAPI char** BNPluginGetApis(BNPlugin* p, size_t* count);

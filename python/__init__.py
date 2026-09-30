@@ -88,6 +88,8 @@ from .constantrenderer import *
 from .stringrecognizer import *
 from .unicode import *
 from .similarity import *
+# mcp is imported only as a module because names such as Tool and Address are too generic for the binaryninja namespace.
+from . import mcp
 # We import each of these by name to prevent conflicts between
 # log.py and the function 'log' which we don't import below
 from .log import (

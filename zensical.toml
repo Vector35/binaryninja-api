@@ -67,6 +67,7 @@ nav = [
         { "Cookbook" = "dev/cookbook.md" },
         { "Writing Plugins" = "dev/plugins.md" },
         { "Container Transforms" = "dev/containertransforms.md" },
+        { "Writing MCP Tools" = "dev/mcp-tools.md" },
         { "Automation" = "dev/batch.md" },
         { "Architecture / Platform" = [
             { "Part 1: Disassembly" = "dev/archplatform-disassembly.md" },

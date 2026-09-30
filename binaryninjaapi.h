@@ -2122,7 +2122,7 @@ namespace BinaryNinja {
 		size_t result;
 		if (!BNCoreEnumFromString(name.c_str(), value.c_str(), &result))
 			return std::nullopt;
-		return result;
+		return static_cast<T>(result);
 	}
 
 

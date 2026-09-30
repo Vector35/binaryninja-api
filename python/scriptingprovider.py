@@ -1702,6 +1702,62 @@ PythonScriptingProvider.register_magic_variable(
 )
 
 
+def _get_current_remote(instance: PythonScriptingInstance):
+	try:
+		from . import collaboration
+	except ImportError:
+		return None
+	return collaboration.active_remote()
+
+
+PythonScriptingProvider.register_magic_variable("current_remote", _get_current_remote)
+
+
+def _get_current_remote_project(instance: PythonScriptingInstance):
+	project = instance.interpreter.locals["current_project"]
+	remote = instance.interpreter.locals["current_remote"]
+	if project is None or remote is None:
+		return None
+	if not remote.is_connected:
+		return None
+	if project.get_metadata("collaboration.remote_id") != remote.unique_id:
+		return None
+	project_id = project.get_metadata("collaboration.project_id")
+	if project_id is None:
+		return None
+	return remote.get_project_by_id(project_id)
+
+
+PythonScriptingProvider.register_magic_variable(
+	"current_remote_project",
+	_get_current_remote_project,
+	depends_on=["current_project", "current_remote"],
+)
+
+
+def _get_current_remote_file(instance: PythonScriptingInstance):
+	view = instance.interpreter.active_view
+	if view is None:
+		return None
+	project_file = view.project_file
+	if project_file is None:
+		return None
+	remote_project = instance.interpreter.locals["current_remote_project"]
+	if remote_project is None or not remote_project.is_open:
+		return None
+	file_id = project_file.project.get_metadata(f"collaboration.collab_file_for_{project_file.id}")
+	if file_id is None:
+		return None
+	return remote_project.get_file_by_id(file_id)
+
+
+PythonScriptingProvider.register_magic_variable(
+	"current_remote_file",
+	_get_current_remote_file,
+	depends_on=["current_view", "current_remote_project"],
+)
+
+
 PythonScriptingProvider.register_magic_variable(
 	"current_view",
 	lambda instance: instance.interpreter.active_view

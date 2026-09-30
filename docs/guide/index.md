@@ -1241,6 +1241,9 @@ The interactive Python prompt also has several built-in "magic" functions and va
 - `current_symbols`: the list of [`Symbol`](https://api.binary.ninja/binaryninja.types-module.html#binaryninja.types.Symbol)s at the current address
 - `current_variable`: the current selected [`Variable`](https://api.binary.ninja/binaryninja.variable-module.html?highlight=variable#binaryninja.variable.Variable) in a function (Not to be confused with `current_data_var`)
 - `current_project`: the [`Project`](https://api.binary.ninja/binaryninja.project-module.html#binaryninja.project.Project) the current view belongs to (`None` if the file is not in a project)
+- `current_remote`: the active collaboration `Remote` (`None` if no remote is active or collaboration is unavailable)
+- `current_remote_project`: the collaboration `RemoteProject` corresponding to `current_project` on `current_remote` (`None` if no matching remote project is available)
+- `current_remote_file`: the collaboration `RemoteFile` corresponding to the current view (`None` if no matching remote file is available)
 - `current_thread`: the [`code.InteractiveConsole`](https://docs.python.org/3/library/code.html#code.InteractiveConsole) backing the scripting console
 - `current_ui_context`: the current [`UIContext`](https://api.binary.ninja/cpp/group__uicontext.html#class_u_i_context)
 - `current_ui_view_frame`: the current [`ViewFrame`](https://api.binary.ninja/cpp/group__viewframe.html#class_view_frame)

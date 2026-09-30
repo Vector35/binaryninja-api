@@ -123,6 +123,7 @@ fn main() {
         .allowlist_var("BN_MINIMUM_CORE_ABI_VERSION")
         .allowlist_var("MAX_RELOCATION_SIZE")
         .allowlist_type("BNLinearSweepAnalysisCapability")
+        .allowlist_type("BNMcpToolAnnotation")
         .raw_line(format!(
             "pub const BN_CURRENT_UI_ABI_VERSION: u32 = {};",
             current_version
@@ -135,6 +136,7 @@ fn main() {
         // Flag enums (BN_OPTIONS) must be newtypes, as combined bit values would be
         // undefined behavior for a fieldless Rust enum.
         .bitfield_enum("BNMetadataStoreFlag")
+        .bitfield_enum("BNMcpToolAnnotation")
         .generate()
         .expect("Unable to generate bindings")
         .write_to_file(PathBuf::from(out_dir).join("bindings.rs"))

@@ -12,6 +12,7 @@ The Python API is the most common third-party API and is used in many [public pl
 
  - [Writing Python Plugins](plugins.md)
  - [Container Transforms](containertransforms.md) - Creating custom container/archive decoders
+ - [Writing MCP Tools](mcp-tools.md) - Adding tools to Binary Ninja's MCP server, in Python, C++ or Rust
  - [Applying Annotations](annotation.md)
  - [Script Cookbook](cookbook.md) with common examples and concepts explained
  - [Python API Reference](https://api.binary.ninja/) (available offline via the Help menu)

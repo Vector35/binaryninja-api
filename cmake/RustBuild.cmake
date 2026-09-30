@@ -43,7 +43,7 @@
 #   bn_add_rust_static_umbrella(rust_static GROUPS plugins
 #       OUTPUT_DIR ${CMAKE_BINARY_DIR})
 
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.28)
 
 # Guard against multiple inclusion
 if(DEFINED _BN_RUST_BUILD_CMAKE_INCLUDED)

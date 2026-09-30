@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.28 FATAL_ERROR)
 
 project(warp-python-api)
 
@@ -46,4 +46,3 @@ generate_python_bindings(
         ENUMS_OUTPUT_FILE warp_enums.py
         PYTHON_SOURCES ${PYTHON_SOURCES}
 )
-

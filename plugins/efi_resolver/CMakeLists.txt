@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.28 FATAL_ERROR)
 
 project(efi_resolver)
 
@@ -46,4 +46,3 @@ if(BN_INTERNAL_BUILD)
 else()
   bn_install_plugin(${PROJECT_NAME})
 endif()
-

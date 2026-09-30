@@ -130,7 +130,7 @@ Additionally, Binary Ninja uses C++20 features, and requires a C++20 compatible 
 ### CMake Setup
 
 Binary Ninja uses the [CMake](https://cmake.org/) build system generator to compile native code, and provides
-convenient helper scripts for those making plugins. As of writing, CMake 3.13 or greater is required,
+convenient helper scripts for those making plugins. CMake 3.28 or greater is required,
 although it is recommended to use the latest version.
 
 ### Project Setup
@@ -138,8 +138,7 @@ although it is recommended to use the latest version.
 The first things to specify in your CMake file are a couple boilerplate options for building C++:
 
 ```cmake
-# Pick whatever version you have
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.28)
 
 # Name your plugin
 project(TestPlugin CXX)

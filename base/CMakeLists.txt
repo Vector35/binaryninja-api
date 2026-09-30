@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.28 FATAL_ERROR)
 
 file(GLOB BN_BASE_SOURCES CONFIGURE_DEPENDS *.cpp *.h unicode/*.h unicode/*.cpp)
 

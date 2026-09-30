@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.28 FATAL_ERROR)
 
 project(sharedcacheui)
 
@@ -94,5 +94,4 @@ get_recursive_include_dirs(sharedcacheapi INCLUDES)
 target_include_directories(sharedcacheui PRIVATE ${INCLUDES})
 
 target_link_libraries(sharedcacheui sharedcacheapi sharedcache binaryninjaui Qt6::Core Qt6::Concurrent Qt6::Gui Qt6::Widgets)
-
 

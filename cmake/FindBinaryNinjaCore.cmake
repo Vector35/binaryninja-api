@@ -12,7 +12,7 @@
 # According to Good CMake Hygiene, we should use BinaryNinjaCore_<VAR> named variables.
 # Existing plugins likely use BN_<VAR> names already, so both are provided.
 
-cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.28 FATAL_ERROR)
 
 # User plugin directory (always available, independent of build mode)
 if(WIN32)

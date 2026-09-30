@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.28 FATAL_ERROR)
 
 project(arch_armv7)
 
@@ -49,4 +49,3 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 		$<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-enum-enum-conversion>
 	)
 endif()
-

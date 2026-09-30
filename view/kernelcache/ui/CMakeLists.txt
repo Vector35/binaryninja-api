@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.28 FATAL_ERROR)
 
 project(kernelcacheui)
 
@@ -93,5 +93,4 @@ get_recursive_include_dirs(kernelcacheapi INCLUDES)
 target_include_directories(kernelcacheui PRIVATE ${INCLUDES})
 
 target_link_libraries(kernelcacheui kernelcacheapi kernelcache binaryninjaui Qt6::Core Qt6::Gui Qt6::Widgets)
-
 

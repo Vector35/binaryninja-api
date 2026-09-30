@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.19 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.28 FATAL_ERROR)
 project(binaryninjacore_stubs)
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)

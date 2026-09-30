@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.28 FATAL_ERROR)
 
 project(sharedcachecore)
 
@@ -96,5 +96,4 @@ set_target_properties(sharedcachecore PROPERTIES
         )
 
 target_compile_definitions(sharedcachecore PRIVATE SHAREDCACHE_CORE_LIBRARY)
-
 

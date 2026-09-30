@@ -75,7 +75,7 @@ find_program(BN_RUSTUP_PATH rustup REQUIRED HINTS ~/.cargo/bin)
 
 # Use CARGO_STABLE_VERSION if set, otherwise default
 if(NOT DEFINED CARGO_STABLE_VERSION)
-    set(CARGO_STABLE_VERSION 1.91.1)
+    set(CARGO_STABLE_VERSION 1.98.1)
 endif()
 
 set(BN_CARGO_COMMAND ${BN_RUSTUP_PATH} run ${CARGO_STABLE_VERSION} cargo)

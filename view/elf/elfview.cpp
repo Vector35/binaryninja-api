@@ -244,14 +244,11 @@ ElfView::ElfView(BinaryView* data, bool parseOnly): BinaryView("ELF", data->GetF
 				section.entrySize = reader.Read64();
 			}
 
-			m_elfSections.push_back(section);
+			if (section.type != ELF_SHT_NULL && section.type != ELF_SHT_NOBITS
+				&& (section.offset > m_fileSize || section.size > m_fileSize - section.offset))
+				throw ElfFormatException("section contents extend beyond end of file");
 
-			if (section.size > m_fileSize)
-			{
-				m_logger->LogWarn("Section %lu has a size (0x%" PRIx64 ") larger than file size (0x%" PRIx64 "), skipping creation", i,
-					section.size, m_fileSize);
-				continue;
-			}
+			m_elfSections.push_back(section);
 
 			if (section.type == ELF_SHT_SYMTAB)
 				m_symbolTableSection = section;

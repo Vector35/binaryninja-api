@@ -13254,6 +13254,54 @@ tests_cflt = [
     (b'\xff\xff\x3f\xd4', 'LLIL_TRAP(65535)'),
 ]
 
+# FEAT_LSUI's unprivileged accesses lift as their privileged counterparts do.
+tests_lsui = [
+    # cast x4, x9, [x2]
+    (b'\x49\x7c\x84\xc9', 'LLIL_SET_REG.q(temp0,LLIL_LOAD.q(LLIL_REG.q(x2)));' + \
+                          ' LLIL_IF(LLIL_CMP_E.q(LLIL_REG.q(x4),LLIL_REG.q(temp0)),2,4);' + \
+                          ' LLIL_STORE.q(LLIL_REG.q(x2),LLIL_REG.q(x9));' + \
+                          ' LLIL_GOTO(4);' + \
+                          ' LLIL_SET_REG.q(x4,LLIL_REG.q(temp0))'),
+    # caspt x4, x5, x10, x11, [x3]
+    (b'\x6a\x7c\x84\x49', 'LLIL_SET_REG.o(temp0,LLIL_LOAD.o(LLIL_REG.q(x3)));' + \
+                          ' LLIL_IF(LLIL_CMP_E.o(LLIL_REG_SPLIT.q(x5,x4),LLIL_REG.o(temp0)),2,4);' + \
+                          ' LLIL_STORE.o(LLIL_REG.q(x3),LLIL_REG_SPLIT.q(x11,x10));' + \
+                          ' LLIL_GOTO(4);' + \
+                          ' LLIL_SET_REG_SPLIT.o(x5,x4,LLIL_REG.o(temp0))'),
+    # swpt w7, w12, [x2]
+    (b'\x4c\x84\x27\x19', 'LLIL_SET_REG.d(temp0,LLIL_LOAD.d(LLIL_REG.q(x2)));' + \
+                          ' LLIL_STORE.d(LLIL_REG.q(x2),LLIL_REG.d(w7));' + \
+                          ' LLIL_SET_REG.d(w12,LLIL_REG.d(temp0))'),
+    # swptal w7, w7, [x2] stores w7's value from before the load
+    (b'\x47\x84\xe7\x19', 'LLIL_SET_REG.d(temp0,LLIL_LOAD.d(LLIL_REG.q(x2)));' + \
+                          ' LLIL_STORE.d(LLIL_REG.q(x2),LLIL_REG.d(w7));' + \
+                          ' LLIL_SET_REG.d(w7,LLIL_REG.d(temp0))'),
+    # ldtadd w3, w8, [x6]
+    (b'\xc8\x04\x23\x19', 'LLIL_SET_REG.d(temp0,LLIL_LOAD.d(LLIL_REG.q(x6)));' + \
+                          ' LLIL_STORE.d(LLIL_REG.q(x6),LLIL_ADD.d(LLIL_REG.d(w3),LLIL_ZX.d(LLIL_REG.d(temp0))));' + \
+                          ' LLIL_SET_REG.d(w8,LLIL_ZX.d(LLIL_REG.d(temp0)))'),
+    # ldtsetal w2, w11, [x4]
+    (b'\x8b\x34\xe2\x19', 'LLIL_SET_REG.d(temp0,LLIL_LOAD.d(LLIL_REG.q(x4)));' + \
+                          ' LLIL_STORE.d(LLIL_REG.q(x4),LLIL_OR.d(LLIL_REG.d(w2),LLIL_ZX.d(LLIL_REG.d(temp0))));' + \
+                          ' LLIL_SET_REG.d(w11,LLIL_ZX.d(LLIL_REG.d(temp0)))'),
+    # sttclr w5, [x9]
+    (b'\x3f\x15\x25\x19', 'LLIL_STORE.d(LLIL_REG.q(x9),LLIL_AND.d(LLIL_NOT.d(LLIL_REG.d(w5)),LLIL_LOAD.d(LLIL_REG.q(x9))))'),
+    # ldtp q3, q4, [x5, #0x20]
+    (b'\xa3\x10\x41\xed', 'LLIL_SET_REG.o(q3,LLIL_LOAD.o(LLIL_ADD.q(LLIL_REG.q(x5),LLIL_CONST.q(0x20))));' + \
+                          ' LLIL_SET_REG.o(q4,LLIL_LOAD.o(LLIL_ADD.q(LLIL_REG.q(x5),LLIL_CONST.q(0x30))))'),
+    # sttp x2, x3, [sp, #-0x10]!
+    (b'\xe2\x0f\xbf\xe9', 'LLIL_SET_REG.q(sp,LLIL_ADD.q(LLIL_REG.q(sp),LLIL_CONST.q(0xFFFFFFFFFFFFFFF0)));' + \
+                          ' LLIL_STORE.q(LLIL_REG.q(sp),LLIL_REG.q(x2));' + \
+                          ' LLIL_STORE.q(LLIL_ADD.q(LLIL_REG.q(sp),LLIL_CONST.q(0x8)),LLIL_REG.q(x3))'),
+    # sttnp q1, q2, [x6, #-0x20]
+    (b'\xc1\x08\x3f\xec', 'LLIL_STORE.o(LLIL_ADD.q(LLIL_REG.q(x6),LLIL_CONST.q(0xFFFFFFFFFFFFFFE0)),LLIL_REG.o(q1));' + \
+                          ' LLIL_STORE.o(LLIL_ADD.q(LLIL_REG.q(x6),LLIL_CONST.q(0xFFFFFFFFFFFFFFF0)),LLIL_REG.o(q2))'),
+    # ldtxr w2, [x7]
+    (b'\xe2\x7c\x5f\x89', 'LLIL_INTRINSIC([w2],__ldxr,[LLIL_REG.q(x7)])'),
+    # stltxr w1, x3, [x8]
+    (b'\x03\xfd\x01\xc9', 'LLIL_INTRINSIC([w1],__stlxr,[LLIL_REG.q(x3),LLIL_REG.q(x8)])'),
+]
+
 # FEAT_CMPBR's immediate is unsigned even where the comparison is signed. CBB<cc> and CBH<cc>
 # compare the low byte or halfword of each register.
 tests_cmpbr = [
@@ -13398,6 +13446,7 @@ test_cases = \
 	tests_apple_vendor + \
 	tests_tenter + \
 	tests_cflt + \
+	tests_lsui + \
 	tests_cpa + \
 	tests_cssc + \
 	tests_shll + \

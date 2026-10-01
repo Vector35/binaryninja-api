@@ -13262,6 +13262,32 @@ tests_cflt = [
     (b'\xff\xff\x3f\xd4', 'LLIL_TRAP(65535)'),
 ]
 
+# FEAT_CMPBR's immediate is unsigned even where the comparison is signed. CBB<cc> and CBH<cc>
+# compare the low byte or halfword of each register.
+tests_cmpbr = [
+    # cbgt x7, #0x2a, 0x8040
+    (b'\x07\x02\x15\xf5', 0x8000, 'LLIL_IF(LLIL_CMP_SGT.q(LLIL_REG.q(x7),LLIL_CONST.q(0x2A)),1,4);' + \
+                                  ' LLIL_JUMP(LLIL_CONST.q(0x8040))'),
+    # cblo w9, #0x11, 0x802c
+    (b'\x69\x81\x68\x75', 0x8000, 'LLIL_IF(LLIL_CMP_ULT.d(LLIL_REG.d(w9),LLIL_CONST.d(0x11)),1,4);' + \
+                                  ' LLIL_JUMP(LLIL_CONST.q(0x802C))'),
+    # cbne x2, #0x5, 0x8024
+    (b'\x22\x81\xe2\xf5', 0x8000, 'LLIL_IF(LLIL_CMP_NE.q(LLIL_REG.q(x2),LLIL_CONST.q(0x5)),1,4);' + \
+                                  ' LLIL_JUMP(LLIL_CONST.q(0x8024))'),
+    # cbge w3, w12, 0x8010
+    (b'\x83\x00\x2c\x74', 0x8000, 'LLIL_IF(LLIL_CMP_SGE.d(LLIL_REG.d(w3),LLIL_REG.d(w12)),1,4);' + \
+                                  ' LLIL_JUMP(LLIL_CONST.q(0x8010))'),
+    # cbhs x5, x11, 0x8020
+    (b'\x05\x01\x6b\xf4', 0x8000, 'LLIL_IF(LLIL_CMP_UGE.q(LLIL_REG.q(x5),LLIL_REG.q(x11)),1,4);' + \
+                                  ' LLIL_JUMP(LLIL_CONST.q(0x8020))'),
+    # cbbgt w4, w10, 0x800c
+    (b'\x64\x80\x0a\x74', 0x8000, 'LLIL_IF(LLIL_CMP_SGT.b(LLIL_LOW_PART.b(LLIL_REG.d(w4)),LLIL_LOW_PART.b(LLIL_REG.d(w10))),1,4);' + \
+                                  ' LLIL_JUMP(LLIL_CONST.q(0x800C))'),
+    # cbhhi w8, w13, 0x8018
+    (b'\xc8\xc0\x4d\x74', 0x8000, 'LLIL_IF(LLIL_CMP_UGT.w(LLIL_LOW_PART.w(LLIL_REG.d(w8)),LLIL_LOW_PART.w(LLIL_REG.d(w13))),1,4);' + \
+                                  ' LLIL_JUMP(LLIL_CONST.q(0x8018))'),
+]
+
 disasm_test_cases = [
     # genter's immediate renders like exarmo's, 0x-prefixed even for zero
     (b'\x20\x14\x20\x00', 'genter  #0x0'),
@@ -13459,7 +13485,7 @@ tests_position_dependent = [
     (b'\x06\x01\x00\x98', 0x0, 'LLIL_SET_REG.q(x6,LLIL_SX.q(LLIL_LOAD.d(LLIL_CONST.q(0x20))))'),
     (b'\x06\x01\x00\x98', 0x8000, 'LLIL_SET_REG.q(x6,LLIL_SX.q(LLIL_LOAD.d(LLIL_CONST.q(0x8020))))'),
     (b'\x06\x01\x00\x98', 0x8004, 'LLIL_SET_REG.q(x6,LLIL_SX.q(LLIL_LOAD.d(LLIL_CONST.q(0x8024))))'),
-] + tests_pac_position_dependent
+] + tests_pac_position_dependent + tests_cmpbr
 
 # The encodings above, which must not be lifted from the shared view.
 position_dependent_encodings = {data for data, _, _ in tests_position_dependent}

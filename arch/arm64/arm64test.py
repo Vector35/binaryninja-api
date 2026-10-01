@@ -5143,6 +5143,18 @@ tests_frint_fmadd = [
     (b'\x3F\x81\x1A\x1F', 'LLIL_INTRINSIC([s31],__fmsub,[LLIL_REG.d(s0),LLIL_REG.d(s9),LLIL_REG.d(s26)])'),
     # fmsub d5, d7, d25, d5                                            FMSUB_D_floatdp3
     (b'\xE5\x94\x59\x1F', 'LLIL_INTRINSIC([d5],vfms_f64,[LLIL_REG.q(d5),LLIL_REG.q(d7),LLIL_REG.q(d25)])'),
+    # fnmadd s0, s5, s4, s2                                            FNMADD_S_floatdp3
+    (b'\xA0\x08\x24\x1F', 'LLIL_INTRINSIC([s0],__fmadd,[LLIL_FNEG.d(LLIL_REG.d(s2)),LLIL_FNEG.d(LLIL_REG.d(s5)),LLIL_REG.d(s4)])'),
+    # fnmadd d0, d5, d4, d2                                            FNMADD_D_floatdp3
+    (b'\xA0\x08\x64\x1F', 'LLIL_INTRINSIC([d0],vfma_f64,[LLIL_FNEG.q(LLIL_REG.q(d2)),LLIL_FNEG.q(LLIL_REG.q(d5)),LLIL_REG.q(d4)])'),
+    # fnmadd h0, h5, h4, h2                                            FNMADD_H_floatdp3
+    (b'\xA0\x08\xE4\x1F', 'LLIL_INTRINSIC([h0],vfmah_f16,[LLIL_FNEG.w(LLIL_REG.w(h2)),LLIL_FNEG.w(LLIL_REG.w(h5)),LLIL_REG.w(h4)])'),
+    # fnmsub s0, s5, s4, s2                                            FNMSUB_S_floatdp3
+    (b'\xA0\x88\x24\x1F', 'LLIL_INTRINSIC([s0],__fmadd,[LLIL_FNEG.d(LLIL_REG.d(s2)),LLIL_REG.d(s5),LLIL_REG.d(s4)])'),
+    # fnmsub d0, d5, d4, d2                                            FNMSUB_D_floatdp3
+    (b'\xA0\x88\x64\x1F', 'LLIL_INTRINSIC([d0],vfma_f64,[LLIL_FNEG.q(LLIL_REG.q(d2)),LLIL_REG.q(d5),LLIL_REG.q(d4)])'),
+    # fnmsub h0, h5, h4, h2                                            FNMSUB_H_floatdp3
+    (b'\xA0\x88\xE4\x1F', 'LLIL_INTRINSIC([h0],vfmah_f16,[LLIL_FNEG.w(LLIL_REG.w(h2)),LLIL_REG.w(h5),LLIL_REG.w(h4)])'),
 ]
 
 tests_fcvt = [

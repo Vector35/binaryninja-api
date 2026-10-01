@@ -3180,6 +3180,24 @@ bool GetLowLevelILForInstruction(
 		}
 		break;
 	}
+	// ACLE has no intrinsic for FNMADD or FNMSUB. Arm defines them as FMADD with the addend negated,
+	// and for FNMADD the first factor too, so they lift as FMADD's intrinsic on the negated operands.
+	case EXARMO_AARCH64_FNMADD:
+	case EXARMO_AARCH64_FNMSUB:
+	{
+		size_t size = REGSZ_O(operand1);
+		uint32_t intrinsic =
+		    size == 4 ? ARM64_INTRIN_FMADD : AcleIntrinsicNamed(size == 8 ? "vfma_f64" : "vfmah_f16");
+		if (intrinsic == ARM64_INTRIN_INVALID)
+			ABORT_LIFT;
+
+		ExprId factor = ILREG_O(operand2);
+		if (mnemonic == EXARMO_AARCH64_FNMADD)
+			factor = il.FloatNeg(size, factor);
+		il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))}, intrinsic,
+		    {il.FloatNeg(size, ILREG_O(operand4)), factor, ILREG_O(operand3)}));
+		break;
+	}
 	// ACLE has no intrinsic for scalar FMAXP and friends on two halves. Lift them as the two-operand
 	// half intrinsic, such as vmaxh_f16, applied to the two lanes.
 	case EXARMO_AARCH64_FMAXP:

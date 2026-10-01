@@ -129,6 +129,14 @@ bool IsOffsetBased(int pointerFormat)
 	return false;
 }
 
+// The ARM64E bind addend occupies 19 bits and is signed, so it must be sign extended
+// out of the unsigned bitfield it is read from.
+int32_t Arm64eBindAddend(uint64_t addend)
+{
+	constexpr uint64_t signBit = 1ULL << 18;
+	return (int32_t)((addend ^ signBit) - signBit);
+}
+
 // DYLD_CHAINED_PTR_ARM64E, DYLD_CHAINED_PTR_ARM64E_USERLAND, DYLD_CHAINED_PTR_ARM64E_FIRMWARE,
 // DYLD_CHAINED_PTR_ARM64E_KERNEL, DYLD_CHAINED_PTR_ARM64E_SHARED_CACHE
 FixupInfo ParseFixup(Arm64e ptr)
@@ -136,7 +144,7 @@ FixupInfo ParseFixup(Arm64e ptr)
 	if (ptr.bind.bind)
 	{
 		if (!ptr.bind.auth)
-			return BindFixup(ptr.bind.ordinal, ptr.bind.addend, ptr.bind.next);
+			return BindFixup(ptr.bind.ordinal, Arm64eBindAddend(ptr.bind.addend), ptr.bind.next);
 
 		return AuthBindFixup(ptr.authBind.ordinal,
 			(AuthKeyType)ptr.authBind.key, ptr.authBind.addrDiv,
@@ -158,7 +166,7 @@ FixupInfo ParseFixup24(Arm64e ptr)
 	// DYLD_CHAINED_PTR_ARM64E_USERLAND24 has special handling for binds only.
 	if (ptr.bind24.bind) {
 		if (!ptr.bind24.auth)
-			return BindFixup(ptr.bind24.ordinal, 0, ptr.bind24.next);
+			return BindFixup(ptr.bind24.ordinal, Arm64eBindAddend(ptr.bind24.addend), ptr.bind24.next);
 
 		return AuthBindFixup(ptr.authBind24.ordinal,
 			(AuthKeyType)ptr.authBind24.key, ptr.authBind24.addrDiv,
@@ -455,7 +463,7 @@ void ChainedFixupProcessor::ProcessChainsInSegment(const dyld_chained_starts_in_
 
 			uint64_t positionVMAddr = position - segmentFileOffset + segment.segment_offset;
 #if DEBUG_PRINT_DYLD_INFO
-			fmt::println("  0x{:08X}:  raw: 0x{:016X}  {}", positionVMAddr, raw, fixupInfo);
+			fmt::println("  0x{:08X}:  raw: 0x{:016X}  {}", position - m_machOStartOffset, raw, fixupInfo);
 #endif
 			m_fixupHandler(positionVMAddr, fixupInfo);
 

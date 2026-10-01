@@ -3019,6 +3019,15 @@ bool GetLowLevelILForInstruction(
 		                      il.Const(1, (REGSZ_O(operand1) * 8) - IMM_O(operand4) - IMM_O(operand3))),
 		                  il.Const(1, (REGSZ_O(operand1) * 8) - IMM_O(operand4)))));
 		break;
+	// Z is set only for an exact conversion, which -0.0 and a flushed subnormal are not, so the
+	// intrinsic computes it alongside the JavaScript ToInt32 result.
+	case EXARMO_AARCH64_FJCVTZS:
+		IntrinsicToRegisters(
+		    il, {REG_O(operand1)}, ARM64_INTRIN_JCVT, {ILREG_O(operand2)}, {RegisterOrFlag::Flag(IL_FLAG_Z)});
+		il.AddInstruction(il.SetFlag(IL_FLAG_N, il.Const(0, 0)));
+		il.AddInstruction(il.SetFlag(IL_FLAG_C, il.Const(0, 0)));
+		il.AddInstruction(il.SetFlag(IL_FLAG_V, il.Const(0, 0)));
+		break;
 	// Lift the forms that write a general register directly in IL. The forms that write a vector
 	// register fall through to the ACLE lift.
 	case EXARMO_AARCH64_FCVTZS:

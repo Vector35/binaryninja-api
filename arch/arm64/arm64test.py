@@ -13339,6 +13339,24 @@ tests_gcs = [
     (b'\x62\x1d\x1f\xd9', 'LLIL_STORE.q(LLIL_REG.q(x11),LLIL_REG.q(x2))'),
 ]
 
+tests_jscvt = [
+    # fjcvtzs w8, d0
+    (b'\x08\x00\x7e\x1e', 'LLIL_INTRINSIC([w8,z],__jcvt,[LLIL_REG.q(d0)]);' + \
+                          ' LLIL_SET_FLAG(n,LLIL_CONST(0));' + \
+                          ' LLIL_SET_FLAG(c,LLIL_CONST(0));' + \
+                          ' LLIL_SET_FLAG(v,LLIL_CONST(0))'),
+    # fjcvtzs w19, d30
+    (b'\xd3\x03\x7e\x1e', 'LLIL_INTRINSIC([w19,z],__jcvt,[LLIL_REG.q(d30)]);' + \
+                          ' LLIL_SET_FLAG(n,LLIL_CONST(0));' + \
+                          ' LLIL_SET_FLAG(c,LLIL_CONST(0));' + \
+                          ' LLIL_SET_FLAG(v,LLIL_CONST(0))'),
+    # fjcvtzs wzr, d0
+    (b'\x1f\x00\x7e\x1e', 'LLIL_INTRINSIC([temp0,z],__jcvt,[LLIL_REG.q(d0)]);' + \
+                          ' LLIL_SET_FLAG(n,LLIL_CONST(0));' + \
+                          ' LLIL_SET_FLAG(c,LLIL_CONST(0));' + \
+                          ' LLIL_SET_FLAG(v,LLIL_CONST(0))'),
+]
+
 # FEAT_CMPBR's immediate is unsigned even where the comparison is signed. CBB<cc> and CBH<cc>
 # compare the low byte or halfword of each register.
 tests_cmpbr = [
@@ -13485,6 +13503,7 @@ test_cases = \
 	tests_cflt + \
 	tests_lsui + \
 	tests_gcs + \
+	tests_jscvt + \
 	tests_cpa + \
 	tests_cssc + \
 	tests_shll + \

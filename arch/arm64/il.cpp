@@ -65,26 +65,47 @@ static ExprId GetCondition(LowLevelILFunction& il, const exarmo_aarch64_operand&
 	}
 }
 
-// The comparison of `left` with `right` under which a CFLT<cc> faults.
-static ExprId FaultCondition(
+// The comparison of `left` with `right` under which a CB<cc>, CBB<cc> or CBH<cc> branches or a
+// CFLT<cc> faults.
+static ExprId CompareCondition(
     LowLevelILFunction& il, exarmo_aarch64_mnemonic mnemonic, size_t size, ExprId left, ExprId right)
 {
 	switch (mnemonic)
 	{
+	case EXARMO_AARCH64_CBEQ:
+	case EXARMO_AARCH64_CBBEQ:
+	case EXARMO_AARCH64_CBHEQ:
 	case EXARMO_AARCH64_CFLTEQ:
 		return il.CompareEqual(size, left, right);
+	case EXARMO_AARCH64_CBNE:
+	case EXARMO_AARCH64_CBBNE:
+	case EXARMO_AARCH64_CBHNE:
 	case EXARMO_AARCH64_CFLTNE:
 		return il.CompareNotEqual(size, left, right);
+	case EXARMO_AARCH64_CBGE:
+	case EXARMO_AARCH64_CBBGE:
+	case EXARMO_AARCH64_CBHGE:
 	case EXARMO_AARCH64_CFLTGE:
 		return il.CompareSignedGreaterEqual(size, left, right);
+	case EXARMO_AARCH64_CBGT:
+	case EXARMO_AARCH64_CBBGT:
+	case EXARMO_AARCH64_CBHGT:
 	case EXARMO_AARCH64_CFLTGT:
 		return il.CompareSignedGreaterThan(size, left, right);
+	case EXARMO_AARCH64_CBLT:
 	case EXARMO_AARCH64_CFLTLT:
 		return il.CompareSignedLessThan(size, left, right);
+	case EXARMO_AARCH64_CBHS:
+	case EXARMO_AARCH64_CBBHS:
+	case EXARMO_AARCH64_CBHHS:
 	case EXARMO_AARCH64_CFLTHS:
 		return il.CompareUnsignedGreaterEqual(size, left, right);
+	case EXARMO_AARCH64_CBHI:
+	case EXARMO_AARCH64_CBBHI:
+	case EXARMO_AARCH64_CBHHI:
 	case EXARMO_AARCH64_CFLTHI:
 		return il.CompareUnsignedGreaterThan(size, left, right);
+	case EXARMO_AARCH64_CBLO:
 	case EXARMO_AARCH64_CFLTLO:
 		return il.CompareUnsignedLessThan(size, left, right);
 	default:
@@ -1270,6 +1291,44 @@ bool GetLowLevelILForInstruction(
 		    il.CompareEqual(REGSZ_O(operand1), ILREG_O(operand1), il.Const(REGSZ_O(operand1), 0)),
 		    addrSize, LabelTarget(operand2, addr), addr + 4);
 		return false;
+	case EXARMO_AARCH64_CBEQ:
+	case EXARMO_AARCH64_CBNE:
+	case EXARMO_AARCH64_CBGE:
+	case EXARMO_AARCH64_CBGT:
+	case EXARMO_AARCH64_CBLT:
+	case EXARMO_AARCH64_CBHS:
+	case EXARMO_AARCH64_CBHI:
+	case EXARMO_AARCH64_CBLO:
+	{
+		size_t size = REGSZ_O(operand1);
+		ConditionalJump(arch, il,
+		    CompareCondition(il, mnemonic, size, ReadILOperand(il, operand1, size, addr),
+		        ReadILOperand(il, operand2, size, addr)),
+		    addrSize, LabelTarget(operand3, addr), addr + 4);
+		return false;
+	}
+	case EXARMO_AARCH64_CBBEQ:
+	case EXARMO_AARCH64_CBBNE:
+	case EXARMO_AARCH64_CBBGE:
+	case EXARMO_AARCH64_CBBGT:
+	case EXARMO_AARCH64_CBBHS:
+	case EXARMO_AARCH64_CBBHI:
+		ConditionalJump(arch, il,
+		    CompareCondition(il, mnemonic, 1, ExtractRegister(il, operand1, 0, 1, false, 1),
+		        ExtractRegister(il, operand2, 0, 1, false, 1)),
+		    addrSize, LabelTarget(operand3, addr), addr + 4);
+		return false;
+	case EXARMO_AARCH64_CBHEQ:
+	case EXARMO_AARCH64_CBHNE:
+	case EXARMO_AARCH64_CBHGE:
+	case EXARMO_AARCH64_CBHGT:
+	case EXARMO_AARCH64_CBHHS:
+	case EXARMO_AARCH64_CBHHI:
+		ConditionalJump(arch, il,
+		    CompareCondition(il, mnemonic, 2, ExtractRegister(il, operand1, 0, 2, false, 2),
+		        ExtractRegister(il, operand2, 0, 2, false, 2)),
+		    addrSize, LabelTarget(operand3, addr), addr + 4);
+		return false;
 	case EXARMO_AARCH64_CFLTEQ:
 	case EXARMO_AARCH64_CFLTNE:
 	case EXARMO_AARCH64_CFLTGE:
@@ -1281,7 +1340,7 @@ bool GetLowLevelILForInstruction(
 	{
 		size_t size = REGSZ_O(operand2);
 		GenIfElse(il,
-		    FaultCondition(il, mnemonic, size, ReadILOperand(il, operand2, size, addr),
+		    CompareCondition(il, mnemonic, size, ReadILOperand(il, operand2, size, addr),
 		        ReadILOperand(il, operand3, size, addr)),
 		    il.Trap(IMM_O(operand1)), 0);
 		break;

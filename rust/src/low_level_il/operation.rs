@@ -1343,7 +1343,7 @@ where
         let operand_list = self.get_operand_list(1);
 
         // The operand list contains a list of ([0: reg, 1: version], ...).
-        let paired_ssa_reg = |paired: &[u64]| {
+        let paired_ssa_reg = |paired: &[u64; 2]| {
             let raw_id = RegisterId(paired[0] as u32);
             let version = paired[1] as u32;
             let reg_kind = LowLevelILRegisterKind::from_raw(&self.function.arch(), raw_id)
@@ -1351,7 +1351,12 @@ where
             LowLevelILSSARegisterKind::new_full(reg_kind, version)
         };
 
-        operand_list.chunks_exact(2).map(paired_ssa_reg).collect()
+        operand_list
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(paired_ssa_reg)
+            .collect()
     }
 
     pub fn dest_memory_version(&self) -> u64 {
@@ -1617,7 +1622,9 @@ where
         let operand_list = self.get_operand_list(2);
         let arch = self.function.arch();
         operand_list
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|chunk| {
                 let (register, version) = (chunk[0], chunk[1]);
                 LowLevelILSSARegisterKind::new_full(
@@ -1664,7 +1671,9 @@ where
     pub fn source_flags(&self) -> Vec<LowLevelILSSAFlag<CoreFlag>> {
         let operand_list = self.get_operand_list(2);
         operand_list
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|chunk| {
                 let (flag, version) = (chunk[0], chunk[1]);
                 let flag = self

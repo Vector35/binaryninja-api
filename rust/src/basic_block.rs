@@ -37,7 +37,7 @@ impl<'a, C: 'a + Debug + BlockContext> Debug for Edge<'a, C> {
         write!(
             f,
             "{:?} ({}) {:?} -> {:?}",
-            self.branch, self.back_edge, &*self.source, &*self.target
+            self.branch, self.back_edge, self.source, self.target
         )
     }
 }

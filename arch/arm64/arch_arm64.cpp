@@ -711,6 +711,8 @@ class Arm64Architecture : public Architecture
 			return "__gcsss2";
 		case ARM64_INTRIN_HINT_GCSB:
 			return "SystemHintOp_GCSB";
+		case ARM64_INTRIN_JCVT:
+			return "__jcvt";
 		case ARM64_INTRIN_ISB:
 			return "__isb";
 		case ARM64_INTRIN_WFE:
@@ -947,6 +949,8 @@ class Arm64Architecture : public Architecture
 		case ARM64_INTRIN_FRINT64X:   // reads <Sn>
 		case ARM64_INTRIN_FRINT64Z:   // reads <Sn>
 			return {NameAndType(Type::FloatType(4))};
+		case ARM64_INTRIN_JCVT:       // reads <Dn>
+			return {NameAndType(Type::FloatType(8))};
 		case ARM64_INTRIN_FMADD:      // reads <Sa>, <Sn>, <Sm>
 		case ARM64_INTRIN_FMSUB:      // reads <Sa>, <Sn>, <Sm>
 			return {NameAndType(Type::FloatType(4)), NameAndType(Type::FloatType(4)),
@@ -1030,6 +1034,8 @@ class Arm64Architecture : public Architecture
 		case ARM64_INTRIN_AESD:
 		case ARM64_INTRIN_AESE:
 			return {Type::IntegerType(16, false)};
+		case ARM64_INTRIN_JCVT:       // writes <Wd> and whether the conversion was exact
+			return {Type::IntegerType(4, true), Type::BoolType()};
 		default:
 			break;
 		}

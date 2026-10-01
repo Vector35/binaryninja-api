@@ -1,0 +1,16 @@
+[package]
+name = "binja_go"
+version = "0.1.0"
+edition = "2024"
+license = "BSD-3-Clause"
+publish = false
+
+[dependencies]
+binaryninja = { workspace = true }
+binaryninjacore-sys.workspace = true
+anyhow = "1.0.103"
+tracing = "0.1.44"
+
+[lib]
+crate-type = ["cdylib"]
+

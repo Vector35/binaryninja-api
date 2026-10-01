@@ -6,29 +6,33 @@ To contribute to the Binary Ninja documentation, first sign the [contribution li
 
 ## Prerequisites
 
-The Python documentation tools are managed with [poetry]. Building every documentation surface requires:
+The Python documentation tools are managed with [uv]. Building every documentation surface requires:
 
-- Python 3.10 or newer and [poetry].
+- Python 3.10 or newer and [uv].
 - Doxygen 1.12 or newer available on `PATH` for the C++ API reference.
 - A matching Binary Ninja installation whose `binaryninja` Python module can be imported. The API revision must match the installation's `api_REVISION.txt`.
 
-`poetry install` installs [zensical], [sphinx], and [breathe]. It does not install Doxygen or Binary Ninja.
+`uv sync --locked` installs [zensical], [sphinx], and [breathe]. It does not install Doxygen or Binary Ninja.
 
 ## Building
 
 ```bash
 git clone https://github.com/Vector35/binaryninja-api/
 cd binaryninja-api
-poetry install
-poetry run python scripts/zensical_build.py
+uv sync --locked
+uv run --locked python scripts/zensical_build.py
 echo User documentation available in site/
 cd api-docs
-poetry run make html
+uv run --locked make html
 echo Python API documentation available in build/html
 cd cppdocs
-poetry run make html
+uv run --locked make html
 echo C++ API documentation available in html/
 ```
+
+On Windows, use `uv run --locked cmd.exe /d /c .\make.bat html` in both
+`api-docs` and `api-docs/cppdocs` in place of `uv run --locked make html`.
+Use the same command with `clean` to remove the generated output.
 
 `scripts/zensical_build.py` runs `zensical build` and then writes the redirect stubs described by `[project.plugins.redirects.redirect_maps]` in `zensical.toml`.
 
@@ -37,7 +41,7 @@ echo C++ API documentation available in html/
 Every build runs `zensical build --strict`, which fails on links to pages or anchors that do not exist. That covers internal references only. External URLs are checked separately by `scripts/check_links.py`, which requests every external URL in `docs/` and reports the file and line of any that fail:
 
 ```bash
-poetry run python scripts/check_links.py
+uv run --locked python scripts/check_links.py
 ```
 
 It is slow and depends on the network, so run it out of band rather than as part of a build. Sites that block automated requests are reported separately from broken links and do not affect the exit code unless `--strict` is passed.
@@ -46,11 +50,11 @@ It is slow and depends on the network, so run it out of band rather than as part
 Changing documentation for the API itself is fairly straightforward. Use [doxygen style comment blocks](https://www.doxygen.nl/manual/docblocks.html) in C++ and C, and [restructured text blocks](https://sphinx-tutorial.readthedocs.io/step-1/) for python for the source. The user documentation is located in the `docs/` folder and the API documentation is generated from the config in the `api-docs` folder.
 
 !!! Tip "Tip"
-    When updating user documentation, the `poetry run zensical serve` feature is particularly helpful for live previews.
+    When updating user documentation, the `uv run --locked zensical serve` feature is particularly helpful for live previews.
 
 [contribution license agreement]: https://binary.ninja/cla.pdf
 [Vector 35]: https://vector35.com/
-[poetry]: https://python-poetry.org/
+[uv]: https://docs.astral.sh/uv/
 [zensical]: https://zensical.org/
 [breathe]: https://github.com/michaeljones/breathe
 [sphinx]:  https://www.sphinx-doc.org/en/master/

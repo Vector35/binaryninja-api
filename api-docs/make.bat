@@ -48,9 +48,9 @@ if "%1" == "help" (
 )
 
 if "%1" == "clean" (
-	for /d %%i in (%BUILDDIR%\*) do rmdir /q /s %%i
-	del /q /s %BUILDDIR%\*
-	goto end
+	if exist "%BUILDDIR%" rmdir /q /s "%BUILDDIR%"
+	if exist "%BUILDDIR%" exit /b 1
+	exit /b 0
 )
 
 

@@ -1,5 +1,5 @@
 @echo off
-set PYTHON=poetry run python
+set PYTHON=uv run --locked python
 
 if "%1" == "help" (
     echo Please use `make <target>` where <target> is one of
@@ -10,10 +10,11 @@ if "%1" == "help" (
 )
 
 if "%1" == "clean" (
-    rmdir /s /q html
-    rmdir /s /q docset
-    rmdir /s /q xml
-    exit /b
+    for %%d in (html docset xml) do (
+        if exist "%%d" rmdir /s /q "%%d"
+        if exist "%%d" exit /b 1
+    )
+    exit /b 0
 )
 
 if "%1" == "html" (
@@ -28,4 +29,3 @@ if "%1" == "docset" (
 
 echo Unknown target: %1
 exit /b 1
-

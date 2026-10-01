@@ -126,6 +126,11 @@ ElfView::ElfView(BinaryView* data, bool parseOnly): BinaryView("ELF", data->GetF
 	m_headerFlags = header.flags;
 	m_fileSize = data->GetLength();
 
+	// Reject truncated section tables before parsing entries or creating annotations.
+	if (m_sectionHeaderCount && ((m_sectionHeaderOffset > m_fileSize)
+		|| (m_sectionHeaderCount > (m_fileSize - m_sectionHeaderOffset) / header.sectionHeaderSize)))
+		throw ElfFormatException("section header table extends beyond end of file");
+
 	m_logger->LogDebug(
 		"ELF Header\n"
 		"\t%zu bits\n"

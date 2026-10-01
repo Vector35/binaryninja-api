@@ -65,6 +65,33 @@ static ExprId GetCondition(LowLevelILFunction& il, const exarmo_aarch64_operand&
 	}
 }
 
+// The comparison of `left` with `right` under which a CFLT<cc> faults.
+static ExprId FaultCondition(
+    LowLevelILFunction& il, exarmo_aarch64_mnemonic mnemonic, size_t size, ExprId left, ExprId right)
+{
+	switch (mnemonic)
+	{
+	case EXARMO_AARCH64_CFLTEQ:
+		return il.CompareEqual(size, left, right);
+	case EXARMO_AARCH64_CFLTNE:
+		return il.CompareNotEqual(size, left, right);
+	case EXARMO_AARCH64_CFLTGE:
+		return il.CompareSignedGreaterEqual(size, left, right);
+	case EXARMO_AARCH64_CFLTGT:
+		return il.CompareSignedGreaterThan(size, left, right);
+	case EXARMO_AARCH64_CFLTLT:
+		return il.CompareSignedLessThan(size, left, right);
+	case EXARMO_AARCH64_CFLTHS:
+		return il.CompareUnsignedGreaterEqual(size, left, right);
+	case EXARMO_AARCH64_CFLTHI:
+		return il.CompareUnsignedGreaterThan(size, left, right);
+	case EXARMO_AARCH64_CFLTLO:
+		return il.CompareUnsignedLessThan(size, left, right);
+	default:
+		return il.Unimplemented();
+	}
+}
+
 static void GenIfElse(LowLevelILFunction& il, ExprId clause, ExprId trueCase, ExprId falseCase)
 {
 	if (falseCase)
@@ -1243,6 +1270,31 @@ bool GetLowLevelILForInstruction(
 		    il.CompareEqual(REGSZ_O(operand1), ILREG_O(operand1), il.Const(REGSZ_O(operand1), 0)),
 		    addrSize, LabelTarget(operand2, addr), addr + 4);
 		return false;
+	case EXARMO_AARCH64_CFLTEQ:
+	case EXARMO_AARCH64_CFLTNE:
+	case EXARMO_AARCH64_CFLTGE:
+	case EXARMO_AARCH64_CFLTGT:
+	case EXARMO_AARCH64_CFLTLT:
+	case EXARMO_AARCH64_CFLTHS:
+	case EXARMO_AARCH64_CFLTHI:
+	case EXARMO_AARCH64_CFLTLO:
+	{
+		size_t size = REGSZ_O(operand2);
+		GenIfElse(il,
+		    FaultCondition(il, mnemonic, size, ReadILOperand(il, operand2, size, addr),
+		        ReadILOperand(il, operand3, size, addr)),
+		    il.Trap(IMM_O(operand1)), 0);
+		break;
+	}
+	case EXARMO_AARCH64_FLT:
+		if (operand1.cond == EXARMO_AARCH64_COND_AL || operand1.cond == EXARMO_AARCH64_COND_NV)
+		{
+			il.AddInstruction(il.Trap(IMM_O(operand2)));
+			return false;
+		}
+
+		GenIfElse(il, GetCondition(il, operand1), il.Trap(IMM_O(operand2)), 0);
+		break;
 	case EXARMO_AARCH64_CMN:
 		il.AddInstruction(il.Add(REGSZ_O(operand1), ILREG_O(operand1),
 		    ReadILOperand(il, operand2, REGSZ_O(operand1), addr), SETFLAGS));
@@ -3566,6 +3618,18 @@ bool GetLowLevelILForInstruction(
 		        il.Const(REGSZ_O(operand1), 0)),
 		    addrSize, LabelTarget(operand3, addr), addr + 4);
 		return false;
+	case EXARMO_AARCH64_TFLTNZ:
+		GenIfElse(il,
+		    il.CompareNotEqual(REGSZ_O(operand2), ExtractBit(il, operand2, IMM_O(operand3)),
+		        il.Const(REGSZ_O(operand2), 0)),
+		    il.Trap(IMM_O(operand1)), 0);
+		break;
+	case EXARMO_AARCH64_TFLTZ:
+		GenIfElse(il,
+		    il.CompareEqual(REGSZ_O(operand2), ExtractBit(il, operand2, IMM_O(operand3)),
+		        il.Const(REGSZ_O(operand2), 0)),
+		    il.Trap(IMM_O(operand1)), 0);
+		break;
 	case EXARMO_AARCH64_TST:
 		il.AddInstruction(il.And(REGSZ_O(operand1), ILREG_O(operand1),
 		    ReadILOperand(il, operand2, REGSZ_O(operand1), addr), SETFLAGS));

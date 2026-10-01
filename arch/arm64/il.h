@@ -139,6 +139,8 @@ enum Arm64Intrinsic : uint32_t
 	ARM64_INTRIN_GCSSS1,
 	ARM64_INTRIN_GCSSS2,
 	ARM64_INTRIN_HINT_GCSB,
+	/* FEAT_JSCVT */
+	ARM64_INTRIN_JCVT,
 	ARM64_INTRIN_NORMAL_END, /* The SysOp, ACLE and Apple vendor intrinsics follow, in that order */
 	ARM64_INTRIN_INVALID = 0xFFFFFFFF,
 };

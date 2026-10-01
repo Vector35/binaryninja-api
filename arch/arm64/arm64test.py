@@ -13102,16 +13102,24 @@ tests_cssc = [
     (b'\x20\x1c\xc0\xda', 'LLIL_SET_REG.q(x0,LLIL_POPCNT.q(LLIL_REG.q(x1)))'),
 
     # Vector/SVE forms of these mnemonics are not FEAT_CSSC scalar ops and must not be lifted
-    # as whole-register scalar operations. The NEON cnt has a per-element intrinsic; the others
-    # have no native scalar representation and are left unimplemented.
+    # as whole-register scalar operations. The NEON forms are lifted as their per-element
+    # intrinsics.
     # cnt v0.8b, v1.8b
     (b'\x20\x58\x20\x0e', 'LLIL_INTRINSIC([v0],_PopulationCount,[LLIL_REG.o(v1)])'),
     # cnt v0.16b, v1.16b
     (b'\x20\x58\x20\x4e', 'LLIL_INTRINSIC([v0],_PopulationCount,[LLIL_REG.o(v1)])'),
     # abs v0.8b, v1.8b
-    (b'\x20\xb8\x20\x0e', 'LLIL_UNIMPL()'),
+    (b'\x20\xb8\x20\x0e', 'LLIL_INTRINSIC([v0],vabs_s8,[LLIL_REG.o(v1)])'),
     # abs v0.2d, v1.2d
-    (b'\x20\xb8\xe0\x4e', 'LLIL_UNIMPL()'),
+    (b'\x20\xb8\xe0\x4e', 'LLIL_INTRINSIC([v0],vabsq_s64,[LLIL_REG.o(v1)])'),
+    # umin v4.4s, v3.4s, v2.4s
+    (b'\x64\x6c\xa2\x6e', 'LLIL_INTRINSIC([v4],vminq_u32,[LLIL_REG.o(v3),LLIL_REG.o(v2)])'),
+    # smax v1.4s, v2.4s, v0.4s
+    (b'\x41\x64\xa0\x4e', 'LLIL_INTRINSIC([v1],vmaxq_s32,[LLIL_REG.o(v2),LLIL_REG.o(v0)])'),
+    # smin v17.8h, v18.8h, v19.8h
+    (b'\x51\x6e\x73\x4e', 'LLIL_INTRINSIC([v17],vminq_s16,[LLIL_REG.o(v18),LLIL_REG.o(v19)])'),
+    # umax v3.4s, v5.4s, v4.4s
+    (b'\xa3\x64\xa4\x6e', 'LLIL_INTRINSIC([v3],vmaxq_u32,[LLIL_REG.o(v5),LLIL_REG.o(v4)])'),
 ]
 
 # FEAT_CPA (Checked Pointer Arithmetic). The pointer check these perform only rewrites bits 63:54 of

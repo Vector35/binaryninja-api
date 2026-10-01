@@ -1216,6 +1216,10 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_CASPA:
 	case EXARMO_AARCH64_CASPAL:
 	case EXARMO_AARCH64_CASPL:
+	case EXARMO_AARCH64_CASPT:
+	case EXARMO_AARCH64_CASPAT:
+	case EXARMO_AARCH64_CASPALT:
+	case EXARMO_AARCH64_CASPLT:
 	{
 		// the ordering of the register pairing depends on the byte order (endianness) of memory
 		bool bigEndian = arch->GetEndianness() == BigEndian;
@@ -1246,6 +1250,10 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_CASA:
 	case EXARMO_AARCH64_CASAL:
 	case EXARMO_AARCH64_CASL:
+	case EXARMO_AARCH64_CAST:
+	case EXARMO_AARCH64_CASAT:
+	case EXARMO_AARCH64_CASALT:
+	case EXARMO_AARCH64_CASLT:
 		il.AddInstruction(il.SetRegister(REGSZ_O(operand1), LLIL_TEMP(0), il.Load(REGSZ_O(operand1), ILREG_O(operand3))));
 
 		GenIfElse(il,
@@ -1973,6 +1981,8 @@ bool GetLowLevelILForInstruction(
 		break;
 	case EXARMO_AARCH64_LDP:
 	case EXARMO_AARCH64_LDNP:
+	case EXARMO_AARCH64_LDTP:
+	case EXARMO_AARCH64_LDTNP:
 		LoadStoreOperandPair(il, true, operands[0], operands[1], operands[2]);
 		break;
 	case EXARMO_AARCH64_LDPSW:
@@ -2029,6 +2039,7 @@ bool GetLowLevelILForInstruction(
 		LoadStoreOperandSize(il, true, true, 4, REG_O(operands[0]), operands[1], addr);
 		break;
 	case EXARMO_AARCH64_LDXR:
+	case EXARMO_AARCH64_LDTXR:
 		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)) }, ARM64_INTRIN_LDXR, { ILREG_O(operand2) }));
 		break;
 	case EXARMO_AARCH64_LDXRB:
@@ -2042,6 +2053,7 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)), RegisterOrFlag::Register(REG_O(operand2)) }, ARM64_INTRIN_LDXP, { ILREG_O(operand3) }));
 		break;
 	case EXARMO_AARCH64_LDAXR:
+	case EXARMO_AARCH64_LDATXR:
 		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)) }, ARM64_INTRIN_LDAXR, { ILREG_O(operand2) }));
 		break;
 	case EXARMO_AARCH64_LDAXRB:
@@ -2051,6 +2063,7 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)) }, ARM64_INTRIN_LDAXRH, { ILREG_O(operand2) }));
 		break;
 	case EXARMO_AARCH64_STXR:
+	case EXARMO_AARCH64_STTXR:
 		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)) }, ARM64_INTRIN_STXR, { ILREG_O(operand2), ILREG_O(operand3) }));
 		break;
 	case EXARMO_AARCH64_STXRB:
@@ -2063,6 +2076,7 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)) }, ARM64_INTRIN_STXP, { ILREG_O(operand2), ILREG_O(operand3), ILREG_O(operand4) }));
 		break;
 	case EXARMO_AARCH64_STLXR:
+	case EXARMO_AARCH64_STLTXR:
 		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)) }, ARM64_INTRIN_STLXR, { ILREG_O(operand2), ILREG_O(operand3) }));
 		break;
 	case EXARMO_AARCH64_STLXRB:
@@ -2089,6 +2103,10 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_LDADDA:
 	case EXARMO_AARCH64_LDADDL:
 	case EXARMO_AARCH64_LDADDAL:
+	case EXARMO_AARCH64_LDTADD:
+	case EXARMO_AARCH64_LDTADDA:
+	case EXARMO_AARCH64_LDTADDL:
+	case EXARMO_AARCH64_LDTADDAL:
 	{
 		// TODO: represent/annotate (model?) acquire/release memory ordering semantics for all LDADD* instructions
 
@@ -2106,6 +2124,8 @@ bool GetLowLevelILForInstruction(
 	}
 	case EXARMO_AARCH64_STADD:
 	case EXARMO_AARCH64_STADDL:
+	case EXARMO_AARCH64_STTADD:
+	case EXARMO_AARCH64_STTADDL:
 		// STADD* are aliases of the corresponding LDADD*, so group them together
 		il.AddInstruction(il.Store(REGSZ_O(operand1), ILREG_O(operand2),
 		    il.Add(REGSZ_O(operand1), ILREG_O(operand1), il.Load(REGSZ_O(operand1), ILREG_O(operand2)))));
@@ -2154,6 +2174,10 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_LDCLRA:
 	case EXARMO_AARCH64_LDCLRL:
 	case EXARMO_AARCH64_LDCLRAL:
+	case EXARMO_AARCH64_LDTCLR:
+	case EXARMO_AARCH64_LDTCLRA:
+	case EXARMO_AARCH64_LDTCLRL:
+	case EXARMO_AARCH64_LDTCLRAL:
 	{
 		// TODO: represent/annotate (model?) acquire/release memory ordering semantics for all LDCLR* instructions
 
@@ -2171,6 +2195,8 @@ bool GetLowLevelILForInstruction(
 	}
 	case EXARMO_AARCH64_STCLR:
 	case EXARMO_AARCH64_STCLRL:
+	case EXARMO_AARCH64_STTCLR:
+	case EXARMO_AARCH64_STTCLRL:
 		// STCLR* are aliases of the corresponding LDCLR*, so group them together
 		il.AddInstruction(il.Store(REGSZ_O(operand1), ILREG_O(operand2),
 			il.And(REGSZ_O(operand1),
@@ -2286,6 +2312,10 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_LDSETA:
 	case EXARMO_AARCH64_LDSETL:
 	case EXARMO_AARCH64_LDSETAL:
+	case EXARMO_AARCH64_LDTSET:
+	case EXARMO_AARCH64_LDTSETA:
+	case EXARMO_AARCH64_LDTSETL:
+	case EXARMO_AARCH64_LDTSETAL:
 	{
 		// TODO: represent/annotate (model?) acquire/release memory ordering semantics for all LDSET* instructions
 
@@ -2303,6 +2333,8 @@ bool GetLowLevelILForInstruction(
 	}
 	case EXARMO_AARCH64_STSET:
 	case EXARMO_AARCH64_STSETL:
+	case EXARMO_AARCH64_STTSET:
+	case EXARMO_AARCH64_STTSETL:
 		// STSET* are aliases of the corresponding LDSET*, so group them together
 		il.AddInstruction(il.Store(REGSZ_O(operand1), ILREG_O(operand2),
 		    il.Or(REGSZ_O(operand1), ILREG_O(operand1), il.Load(REGSZ_O(operand1), ILREG_O(operand2)))));
@@ -3455,6 +3487,8 @@ bool GetLowLevelILForInstruction(
 		break;
 	case EXARMO_AARCH64_STP:
 	case EXARMO_AARCH64_STNP:
+	case EXARMO_AARCH64_STTP:
+	case EXARMO_AARCH64_STTNP:
 		LoadStoreOperandPair(il, false, operands[0], operands[1], operands[2]);
 		break;
 	case EXARMO_AARCH64_ST2G:
@@ -3601,6 +3635,10 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_SWPA:
 	case EXARMO_AARCH64_SWPL:
 	case EXARMO_AARCH64_SWPAL:
+	case EXARMO_AARCH64_SWPT:
+	case EXARMO_AARCH64_SWPTA:
+	case EXARMO_AARCH64_SWPTL:
+	case EXARMO_AARCH64_SWPTAL:
 		LoadTemporary(il, REGSZ_O(operand2), operand3, addr);
 		il.AddInstruction(il.Store(REGSZ_O(operand2), ILREG_O(operand3), ILREG_O(operand1)));
 		if (!IS_ZERO_REG(REG_O(operand2)))

@@ -13226,6 +13226,42 @@ tests_tenter = [
     (b'\x01\x00\xe0\xd4', 'LLIL_UNDEF()'),
 ]
 
+# FEAT_CFLT faults when its condition holds and otherwise falls through.
+tests_cflt = [
+    # cflteq #0x2, w0, #-0xf8
+    (b'\x00\x09\x90\x76', 'LLIL_IF(LLIL_CMP_E.d(LLIL_REG.d(w0),LLIL_CONST.d(0xFFFFFF08)),1,2);' + \
+                          ' LLIL_TRAP(2)'),
+    # cfltgt #0x2, x0, #-0xf8
+    (b'\x00\x09\x10\xf6', 'LLIL_IF(LLIL_CMP_SGT.q(LLIL_REG.q(x0),LLIL_CONST.q(0xFFFFFFFFFFFFFF08)),1,2);' + \
+                          ' LLIL_TRAP(2)'),
+    # cflthi #0x1, w5, #0x1ff
+    (b'\xe5\x05\x5f\x76', 'LLIL_IF(LLIL_CMP_UGT.d(LLIL_REG.d(w5),LLIL_CONST.d(0x1FF)),1,2);' + \
+                          ' LLIL_TRAP(1)'),
+    # cfltlo #0x3, x2, #0x84
+    (b'\x82\x0c\x68\xf6', 'LLIL_IF(LLIL_CMP_ULT.q(LLIL_REG.q(x2),LLIL_CONST.q(0x84)),1,2);' + \
+                          ' LLIL_TRAP(3)'),
+    # cfltge #0x1, wsp, w4
+    (b'\x1f\x06\x24\x76', 'LLIL_IF(LLIL_CMP_SGE.d(LLIL_REG.d(wsp),LLIL_REG.d(w4)),1,2);' + \
+                          ' LLIL_TRAP(1)'),
+    # cflths #0x2, x3, x9
+    (b'\x03\x0a\x69\xf6', 'LLIL_IF(LLIL_CMP_UGE.q(LLIL_REG.q(x3),LLIL_REG.q(x9)),1,2);' + \
+                          ' LLIL_TRAP(2)'),
+    # tfltz #0x3, w7, #0x8
+    (b'\x47\x0e\x40\x76', 'LLIL_IF(LLIL_CMP_E.d(LLIL_AND.d(LLIL_REG.d(w7),LLIL_CONST.d(0x100)),LLIL_CONST.d(0x0)),1,2);' + \
+                          ' LLIL_TRAP(3)'),
+    # tfltnz #0x2, x6, #0x24
+    (b'\x66\x0a\x20\xf6', 'LLIL_IF(LLIL_CMP_NE.q(LLIL_AND.q(LLIL_REG.q(x6),LLIL_CONST.q(0x1000000000)),LLIL_CONST.q(0x0)),1,2);' + \
+                          ' LLIL_TRAP(2)'),
+    # flt.eq #0x1234
+    (b'\x90\x46\x22\xd4', 'LLIL_IF(LLIL_FLAG_GROUP(eq),1,2);' + \
+                          ' LLIL_TRAP(4660)'),
+    # flt.hi #0x8000
+    (b'\x18\x00\x30\xd4', 'LLIL_IF(LLIL_FLAG_GROUP(hi),1,2);' + \
+                          ' LLIL_TRAP(32768)'),
+    # flt.nv #0xffff always faults, as flt.al does
+    (b'\xff\xff\x3f\xd4', 'LLIL_TRAP(65535)'),
+]
+
 disasm_test_cases = [
     # genter's immediate renders like exarmo's, 0x-prefixed even for zero
     (b'\x20\x14\x20\x00', 'genter  #0x0'),
@@ -13343,6 +13379,7 @@ patch_test_cases = [
 test_cases = \
 	tests_apple_vendor + \
 	tests_tenter + \
+	tests_cflt + \
 	tests_cpa + \
 	tests_cssc + \
 	tests_shll + \

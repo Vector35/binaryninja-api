@@ -926,7 +926,9 @@ bool GetLowLevelILForInstruction(
 		default:
 			// The NEON and SVE forms are per-element absolute values, which have no native scalar
 			// representation
-			il.AddInstruction(il.Unimplemented());
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
 		}
 		break;
 	case EXARMO_AARCH64_ADD:
@@ -3806,7 +3808,8 @@ bool GetLowLevelILForInstruction(
 			op3 = ILREG_O(operand3);
 			break;
 		default:
-			il.AddInstruction(il.Unimplemented());
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
 			return true;
 		}
 
@@ -3829,7 +3832,8 @@ bool GetLowLevelILForInstruction(
 			op3 = ILREG_O(operand3);
 			break;
 		default:
-			il.AddInstruction(il.Unimplemented());
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
 			return true;
 		}
 
@@ -3864,7 +3868,8 @@ bool GetLowLevelILForInstruction(
 			op3 = ILREG_O(operand3);
 			break;
 		default:
-			il.AddInstruction(il.Unimplemented());
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
 			return true;
 		}
 
@@ -3887,7 +3892,8 @@ bool GetLowLevelILForInstruction(
 			op3 = ILREG_O(operand3);
 			break;
 		default:
-			il.AddInstruction(il.Unimplemented());
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
 			return true;
 		}
 

@@ -12962,12 +12962,19 @@ tests_grab_bag = [
     (b'\x7F\x20\x03\xD5', 'LLIL_INTRINSIC([],__wfi,[])'), # "wfi" or "hint 0x3"
     (b'\x9F\x20\x03\xD5', 'LLIL_INTRINSIC([],__sev,[])'), # "hint 0x4" or "sev"
     (b'\xBF\x20\x03\xD5', 'LLIL_INTRINSIC([],__sevl,[])'), # "hint 0x5" or "sevl"
+    (b'\x3F\x24\x03\xD5', 'LLIL_NOP()'), # hint #0x21, unallocated
+    (b'\xFF\x2F\x03\xD5', 'LLIL_NOP()'), # hint #0x7f, unallocated
+    (b'\x02\x20\x00\xD5', 'LLIL_NOP()'), # hinte #0x2, unallocated
+    (b'\xE0\x2F\x21\xD5', 'LLIL_NOP()'), # hinte #0x9fe0, unallocated
     #(b'\xdf\x20\x03\xd5', 'LLIL_INTRINSIC([],SystemHintOp_DGH,[])'), # hint 0x6 - now ARM64_DGH
     #(b'\x1f\x22\x03\xd5', 'LLIL_INTRINSIC([],SystemHintOp_ESB,[])'), # hint 0x10 - now ARM64_ESB
     #(b'\x3f\x22\x03\xd5', 'LLIL_INTRINSIC([],SystemHintOp_PSB,[])'), # hint 0x11 - now ARM64_PSB
     #(b'\x5f\x22\x03\xd5', 'LLIL_INTRINSIC([],SystemHintOp_TSB,[])'), # hint 0x12 - now ARM64_TSB
     #(b'\x9f\x22\x03\xd5', 'LLIL_INTRINSIC([],SystemHintOp_CSDB,[])'), # hint 0x14 - now ARM64_CSDB
-    #(b'\x5f\x24\x03\xd5', 'LLIL_INTRINSIC([],SystemHintOp_BTI,[])'), # hint 0x22 - now ARM64_BTI
+    (b'\x1F\x24\x03\xD5', 'LLIL_INTRINSIC([],SystemHintOp_BTI,[])'), # "hint 0x20" or "bti r"
+    (b'\x5F\x24\x03\xD5', 'LLIL_INTRINSIC([],SystemHintOp_BTI,[])'), # "hint 0x22" or "bti c"
+    (b'\x9F\x24\x03\xD5', 'LLIL_INTRINSIC([],SystemHintOp_BTI,[])'), # "hint 0x24" or "bti j"
+    (b'\xDF\x24\x03\xD5', 'LLIL_INTRINSIC([],SystemHintOp_BTI,[])'), # "hint 0x26" or "bti jc"
     # (b'\x00\xC0\x1E\xD5', 'LLIL_INTRINSIC([vbar_el3],_WriteStatusReg,[LLIL_REG.q(x0)])'), # msr vbar_el3, x0
     # (b'\x00\x10\x1E\xD5', 'LLIL_INTRINSIC([sctlr_el3],_WriteStatusReg,[LLIL_REG.q(x0)])'), # msr sctlr_el3, x0
 #    (b'\xff\x44\x03\xd5', 'LLIL_INTRINSIC([daifclr],_WriteStatusReg,[LLIL_CONST.d(0x4)])'), # msr daifclr, #0x4

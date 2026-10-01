@@ -3976,8 +3976,8 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_HINT_PACM, {}));
 		break;
 	case EXARMO_AARCH64_HINT:
-		if ((IMM_O(operand1) & ~0b110) == 0b100000)
-			il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_HINT_BTI, {}));
+	case EXARMO_AARCH64_HINTE:
+		il.AddInstruction(il.Nop());
 		break;
 	case EXARMO_AARCH64_HLT:
 		il.AddInstruction(il.Trap(IMM_O(operand1)));

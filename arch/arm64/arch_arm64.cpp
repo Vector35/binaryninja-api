@@ -821,6 +821,8 @@ class Arm64Architecture : public Architecture
 			return "__ldaxrb";
 		case ARM64_INTRIN_LDAXRH:
 			return "__ldaxrh";
+		case ARM64_INTRIN_LDAXP:
+			return "__ldaxp";
 		case ARM64_INTRIN_STXR:
 			return "__stxr";
 		case ARM64_INTRIN_STXRB:
@@ -835,6 +837,8 @@ class Arm64Architecture : public Architecture
 			return "__stlxrb";
 		case ARM64_INTRIN_STLXRH:
 			return "__stlxrh";
+		case ARM64_INTRIN_STLXP:
+			return "__stlxp";
 		case ARM64_INTRIN_ADDG:
 			return "__addg";
 		case ARM64_INTRIN_CMPP:

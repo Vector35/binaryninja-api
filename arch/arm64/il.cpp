@@ -4140,6 +4140,38 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_HINTE:
 		il.AddInstruction(il.Nop());
 		break;
+	case EXARMO_AARCH64_CHKFEAT:
+		il.AddInstruction(il.Intrinsic(
+		    {RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_CHKFEAT, {ILREG_O(operand1)}));
+		break;
+	case EXARMO_AARCH64_GCSB:
+		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_HINT_GCSB, {}));
+		break;
+	case EXARMO_AARCH64_GCSPUSHM:
+		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_GCSPUSHM, {ILREG_O(operand1)}));
+		break;
+	case EXARMO_AARCH64_GCSPOPM:
+		il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_GCSPOPM, {}));
+		break;
+	case EXARMO_AARCH64_GCSSS1:
+		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_GCSSS1, {ILREG_O(operand1)}));
+		break;
+	case EXARMO_AARCH64_GCSSS2:
+		il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_GCSSS2, {}));
+		break;
+	case EXARMO_AARCH64_GCSPUSHX:
+		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_GCSPUSHX, {}));
+		break;
+	case EXARMO_AARCH64_GCSPOPX:
+		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_GCSPOPX, {}));
+		break;
+	case EXARMO_AARCH64_GCSPOPCX:
+		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_GCSPOPCX, {}));
+		break;
+	case EXARMO_AARCH64_GCSSTR:
+	case EXARMO_AARCH64_GCSSTTR:
+		LoadStoreOperand(il, false, operand1, operand2, 0, addr);
+		break;
 	case EXARMO_AARCH64_HLT:
 		il.AddInstruction(il.Trap(IMM_O(operand1)));
 		return false;

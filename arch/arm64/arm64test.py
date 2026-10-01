@@ -13302,6 +13302,33 @@ tests_lsui = [
     (b'\x03\xfd\x01\xc9', 'LLIL_INTRINSIC([w1],__stlxr,[LLIL_REG.q(x3),LLIL_REG.q(x8)])'),
 ]
 
+tests_gcs = [
+    # gcspushm x3
+    (b'\x03\x77\x0b\xd5', 'LLIL_INTRINSIC([],__gcspushm,[LLIL_REG.q(x3)])'),
+    # gcspopm x4
+    (b'\x24\x77\x2b\xd5', 'LLIL_INTRINSIC([x4],__gcspopm,[])'),
+    # gcspopm
+    (b'\x3f\x77\x2b\xd5', 'LLIL_INTRINSIC([xzr],__gcspopm,[])'),
+    # gcsss1 x5
+    (b'\x45\x77\x0b\xd5', 'LLIL_INTRINSIC([],__gcsss1,[LLIL_REG.q(x5)])'),
+    # gcsss2 x6
+    (b'\x66\x77\x2b\xd5', 'LLIL_INTRINSIC([x6],__gcsss2,[])'),
+    # gcspushx
+    (b'\x9f\x77\x08\xd5', 'LLIL_INTRINSIC([],__gcspushx,[])'),
+    # gcspopcx
+    (b'\xbf\x77\x08\xd5', 'LLIL_INTRINSIC([],__gcspopcx,[])'),
+    # gcspopx
+    (b'\xdf\x77\x08\xd5', 'LLIL_INTRINSIC([],__gcspopx,[])'),
+    # gcsb dsync
+    (b'\x7f\x22\x03\xd5', 'LLIL_INTRINSIC([],SystemHintOp_GCSB,[])'),
+    # chkfeat x16
+    (b'\x1f\x25\x03\xd5', 'LLIL_INTRINSIC([x16],__chkfeat,[LLIL_REG.q(x16)])'),
+    # gcsstr x9, [x2]
+    (b'\x49\x0c\x1f\xd9', 'LLIL_STORE.q(LLIL_REG.q(x2),LLIL_REG.q(x9))'),
+    # gcssttr x2, [x11]
+    (b'\x62\x1d\x1f\xd9', 'LLIL_STORE.q(LLIL_REG.q(x11),LLIL_REG.q(x2))'),
+]
+
 # FEAT_CMPBR's immediate is unsigned even where the comparison is signed. CBB<cc> and CBH<cc>
 # compare the low byte or halfword of each register.
 tests_cmpbr = [
@@ -13447,6 +13474,7 @@ test_cases = \
 	tests_tenter + \
 	tests_cflt + \
 	tests_lsui + \
+	tests_gcs + \
 	tests_cpa + \
 	tests_cssc + \
 	tests_shll + \

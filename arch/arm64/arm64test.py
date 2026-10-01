@@ -13351,6 +13351,75 @@ tests_gcs = [
     (b'\x62\x1d\x1f\xd9', 'LLIL_STORE.q(LLIL_REG.q(x11),LLIL_REG.q(x2))'),
 ]
 
+tests_ldtr_sttr = [
+    # ldtr w5, [x4, #-0xde]
+    (b'\x85\x28\x52\xb8', 'LLIL_SET_REG.d(w5,LLIL_LOAD.d(LLIL_ADD.q(LLIL_REG.q(x4),LLIL_CONST.q(0xFFFFFFFFFFFFFF22))))'),
+    # ldtr x27, [x15, #-0x20]
+    (b'\xfb\x09\x5e\xf8', 'LLIL_SET_REG.q(x27,LLIL_LOAD.q(LLIL_ADD.q(LLIL_REG.q(x15),LLIL_CONST.q(0xFFFFFFFFFFFFFFE0))))'),
+    # ldtrsw x26, [x14, #-0xf8]
+    (b'\xda\x89\x90\xb8', 'LLIL_SET_REG.q(x26,LLIL_SX.q(LLIL_LOAD.d(LLIL_ADD.q(LLIL_REG.q(x14),LLIL_CONST.q(0xFFFFFFFFFFFFFF08)))))'),
+    # sttr x17, [x14, #0xa5]
+    (b'\xd1\x59\x0a\xf8', 'LLIL_STORE.q(LLIL_ADD.q(LLIL_REG.q(x14),LLIL_CONST.q(0xA5)),LLIL_REG.q(x17))'),
+    # sttrb w30, [x19, #0x9e]
+    (b'\x7e\xea\x09\x38', 'LLIL_STORE.b(LLIL_ADD.q(LLIL_REG.q(x19),LLIL_CONST.q(0x9E)),LLIL_LOW_PART.b(LLIL_REG.d(w30)))'),
+]
+
+tests_lor = [
+    # ldlar w0, [x3]
+    (b'\x60\x7c\xdf\x88', 'LLIL_SET_REG.d(w0,LLIL_LOAD.d(LLIL_REG.q(x3)))'),
+    # ldlarb w26, [x16]
+    (b'\x1a\x7e\xdf\x08', 'LLIL_SET_REG.d(w26,LLIL_ZX.d(LLIL_LOAD.b(LLIL_REG.q(x16))))'),
+    # stllr x25, [x11]
+    (b'\x79\x7d\x9f\xc8', 'LLIL_STORE.q(LLIL_REG.q(x11),LLIL_REG.q(x25))'),
+    # stllrh w18, [x22]
+    (b'\xd2\x7e\x9f\x48', 'LLIL_STORE.w(LLIL_REG.q(x22),LLIL_LOW_PART.w(LLIL_REG.d(w18)))'),
+]
+
+tests_exclusive_pair = [
+    # ldaxp w7, w9, [x18]
+    (b'\x47\xa6\x7f\x88', 'LLIL_INTRINSIC([w7,w9],__ldaxp,[LLIL_REG.q(x18)])'),
+    # ldaxp x21, x26, [x6]
+    (b'\xd5\xe8\x7f\xc8', 'LLIL_INTRINSIC([x21,x26],__ldaxp,[LLIL_REG.q(x6)])'),
+    # stlxp w10, w2, w27, [x24]
+    (b'\x02\xef\x2a\x88', 'LLIL_INTRINSIC([w10],__stlxp,[LLIL_REG.d(w2),LLIL_REG.d(w27),LLIL_REG.q(x24)])'),
+    # ldaxp xzr, x1, [x0]
+    (b'\x1f\x84\x7f\xc8', 'LLIL_INTRINSIC([temp0,x1],__ldaxp,[LLIL_REG.q(x0)])'),
+    # ldaxp x1, xzr, [x0]
+    (b'\x01\xfc\x7f\xc8', 'LLIL_INTRINSIC([x1,temp1],__ldaxp,[LLIL_REG.q(x0)])'),
+    # stlxp wzr, x1, x2, [x0]
+    (b'\x01\x88\x3f\xc8', 'LLIL_INTRINSIC([temp0],__stlxp,[LLIL_REG.q(x1),LLIL_REG.q(x2),LLIL_REG.q(x0)])'),
+]
+
+tests_lse_minmax = [
+    # ldsmax w28, w19, [x14]
+    (b'\xd3\x41\x3c\xb8', 'LLIL_SET_REG.d(temp0,LLIL_LOAD.d(LLIL_REG.q(x14)));' + \
+                          ' LLIL_STORE.d(LLIL_REG.q(x14),LLIL_MAXS.d(LLIL_REG.d(w28),LLIL_REG.d(temp0)));' + \
+                          ' LLIL_SET_REG.d(w19,LLIL_REG.d(temp0))'),
+    # ldsmin x7, x8, [x27]
+    (b'\x68\x53\x27\xf8', 'LLIL_SET_REG.q(temp0,LLIL_LOAD.q(LLIL_REG.q(x27)));' + \
+                          ' LLIL_STORE.q(LLIL_REG.q(x27),LLIL_MINS.q(LLIL_REG.q(x7),LLIL_REG.q(temp0)));' + \
+                          ' LLIL_SET_REG.q(x8,LLIL_REG.q(temp0))'),
+    # ldsminab w22, w12, [x3]
+    (b'\x6c\x50\xb6\x38', 'LLIL_SET_REG.b(temp0,LLIL_LOAD.b(LLIL_REG.q(x3)));' + \
+                          ' LLIL_STORE.b(LLIL_REG.q(x3),LLIL_MINS.b(LLIL_LOW_PART.b(LLIL_REG.d(w22)),LLIL_REG.b(temp0)));' + \
+                          ' LLIL_SET_REG.d(w12,LLIL_ZX.d(LLIL_REG.b(temp0)))'),
+    # ldumaxah w30, w6, [x26]
+    (b'\x46\x63\xbe\x78', 'LLIL_SET_REG.w(temp0,LLIL_LOAD.w(LLIL_REG.q(x26)));' + \
+                          ' LLIL_STORE.w(LLIL_REG.q(x26),LLIL_MAXU.w(LLIL_LOW_PART.w(LLIL_REG.d(w30)),LLIL_REG.w(temp0)));' + \
+                          ' LLIL_SET_REG.d(w6,LLIL_ZX.d(LLIL_REG.w(temp0)))'),
+    # ldumaxal x4, xzr, [x15]
+    (b'\xff\x61\xe4\xf8', 'LLIL_SET_REG.q(temp0,LLIL_LOAD.q(LLIL_REG.q(x15)));' + \
+                          ' LLIL_STORE.q(LLIL_REG.q(x15),LLIL_MAXU.q(LLIL_REG.q(x4),LLIL_REG.q(temp0)))'),
+    # lduminl w17, w25, [x22]
+    (b'\xd9\x72\x71\xb8', 'LLIL_SET_REG.d(temp0,LLIL_LOAD.d(LLIL_REG.q(x22)));' + \
+                          ' LLIL_STORE.d(LLIL_REG.q(x22),LLIL_MINU.d(LLIL_REG.d(w17),LLIL_REG.d(temp0)));' + \
+                          ' LLIL_SET_REG.d(w25,LLIL_REG.d(temp0))'),
+    # stsmax w6, [x19]
+    (b'\x7f\x42\x26\xb8', 'LLIL_STORE.d(LLIL_REG.q(x19),LLIL_MAXS.d(LLIL_REG.d(w6),LLIL_LOAD.d(LLIL_REG.q(x19))))'),
+    # stuminb w1, [x11]
+    (b'\x7f\x71\x21\x38', 'LLIL_STORE.b(LLIL_REG.q(x11),LLIL_MINU.b(LLIL_LOW_PART.b(LLIL_REG.d(w1)),LLIL_LOAD.b(LLIL_REG.q(x11))))'),
+]
+
 tests_jscvt = [
     # fjcvtzs w8, d0
     (b'\x08\x00\x7e\x1e', 'LLIL_INTRINSIC([w8,z],__jcvt,[LLIL_REG.q(d0)]);' + \
@@ -13516,6 +13585,10 @@ test_cases = \
 	tests_lsui + \
 	tests_gcs + \
 	tests_jscvt + \
+	tests_ldtr_sttr + \
+	tests_lor + \
+	tests_exclusive_pair + \
+	tests_lse_minmax + \
 	tests_cpa + \
 	tests_cssc + \
 	tests_shll + \

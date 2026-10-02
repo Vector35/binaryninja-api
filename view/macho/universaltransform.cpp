@@ -179,9 +179,17 @@ bool UniversalTransform::Decode(const DataBuffer& input, DataBuffer& output, con
 	bool isFat64;
 	string errorMsg;
 
-	if (!ParseHeaders(rawView, fatHeader, fatArchEntries, isFat64, errorMsg))
+	try
 	{
-		LogError("Universal: %s", errorMsg.c_str());
+		if (!ParseHeaders(rawView, fatHeader, fatArchEntries, isFat64, errorMsg))
+		{
+			LogError("Universal: %s", errorMsg.c_str());
+			return false;
+		}
+	}
+	catch (std::exception& st)
+	{
+		LogError("Universal: %s", st.what());
 		return false;
 	}
 
@@ -247,9 +255,17 @@ bool UniversalTransform::DecodeWithContext(Ref<TransformContext> context, const 
 	bool isFat64;
 	string errorMsg;
 
-	if (!ParseHeaders(input, fatHeader, fatArchEntries, isFat64, errorMsg))
+	try
 	{
-		LogError("Universal: %s", errorMsg.c_str());
+		if (!ParseHeaders(input, fatHeader, fatArchEntries, isFat64, errorMsg))
+		{
+			LogError("Universal: %s", errorMsg.c_str());
+			return false;
+		}
+	}
+	catch (std::exception& st)
+	{
+		LogError("Universal: %s", st.what());
 		return false;
 	}
 

@@ -381,16 +381,6 @@ void BinaryNinja::InitMachoViewType()
 	static MachoViewType type;
 	BinaryViewType::Register(&type);
 	g_machoViewType = &type;
-
-	Settings::Instance()->RegisterSetting("loader.macho.maxRebaseBindEntriesMultiplier",
-		R"~({
-		"title" : "Mach-O Rebase/Bind Table Entry Count Limit Multiplier",
-		"type" : "number",
-		"default" : 1.0,
-		"minValue" : 0.01,
-		"maxValue" : 10.0,
-		"description" : "Multiplier applied to the maximum number of rebase/bind entries permitted per table, which is derived from the size of the Mach-O slice divided by its pointer size"
-		})~");
 }
 
 MachoView::MachoView(const string& typeName, BinaryView* data, bool parseOnly): BinaryView(typeName, data->GetFile(), data),
@@ -2994,7 +2984,10 @@ uint64_t MachoView::GetRebaseBindEntryLimit()
 		? (GetParentView()->GetLength() - m_universalImageOffset)
 		: 0;
 	uint64_t structuralLimit = sliceSize / m_addressSize;
-	double entryLimitMultiplier = Settings::Instance()->Get<double>("loader.macho.maxRebaseBindEntriesMultiplier", this);
+	double entryLimitMultiplier = 1.0;
+	Ref<Settings> settings = GetLoadSettings(GetTypeName());
+	if (settings && settings->Contains("loader.macho.maxRebaseBindEntriesMultiplier"))
+		entryLimitMultiplier = settings->Get<double>("loader.macho.maxRebaseBindEntriesMultiplier", this);
 	return (uint64_t)(structuralLimit * entryLimitMultiplier);
 }
 
@@ -4043,6 +4036,16 @@ Ref<Settings> MachoViewType::GetLoadSettingsForData(BinaryView* data)
 			"type" : "boolean",
 			"default" : true,
 			"description" : "Add function starts sourced from the Function Starts table to the core for analysis."
+			})");
+
+	settings->RegisterSetting("loader.macho.maxRebaseBindEntriesMultiplier",
+			R"({
+			"title" : "Mach-O Rebase/Bind Table Entry Count Limit Multiplier",
+			"type" : "number",
+			"default" : 1.0,
+			"minValue" : 0.01,
+			"maxValue" : 10.0,
+			"description" : "Multiplier applied to the maximum number of rebase/bind entries permitted per table, which is derived from the size of the Mach-O slice divided by its pointer size"
 			})");
 
 	if (viewRef->GetSectionByName("__thread_starts"))

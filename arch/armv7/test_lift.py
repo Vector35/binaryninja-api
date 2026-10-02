@@ -463,8 +463,8 @@ test_cases = \
     ('T', b'\x46\xb6', 'LLIL_INTRINSIC([],__setend,[LLIL_CONST.b(0x0)])'),
     # setend be (Thumb)
     ('T', b'\x49\xb6', 'LLIL_INTRINSIC([],__setend,[LLIL_CONST.b(0x1)])'),
-    # vmov.f32 d0, #2.000000
-    ('A', b'\x60\x0a\xb0\xee', 'LLIL_SET_REG.q(d0,LLIL_CONST.q(0x40000000))'),
+    # vmov.f32 s0, s1
+    ('A', b'\x60\x0a\xb0\xee', 'LLIL_SET_REG.d(s0,LLIL_REG.d(s1))'),
     # vmov d0, r0, r1
     ('A', b'\x10\x0b\x41\xec', 'LLIL_SET_REG.q(d0,LLIL_REG_SPLIT.d(r1,r0))'),
     # vst1.8 {d16, d17}, [r3:0x40]

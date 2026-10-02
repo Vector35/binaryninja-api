@@ -9,9 +9,13 @@
 #   generate_python_bindings(
 #     TARGET_NAME <target_name>
 #     DISPLAY_NAME <display_name>
-#     GENERATOR_TARGET <generator_executable_target>
+#     [GENERATOR_TARGET <generator_executable_target>]
+#       Defaults to the generator built from python/generator.cpp.
 #     HEADER_FILE <path_to_header>
-#     [TEMPLATE_FILE <path_to_template>]
+#     [CORE_HEADER <path_to_binaryninjacore.h>]
+#       Types declared by this header are imported from the core bindings rather than redefined.
+#     TEMPLATE_FILE <path_to_template>
+#       The generated definitions replace the line "# @@GENERATED_BINDINGS@@", or are appended if it is absent.
 #     OUTPUT_DIRECTORY <output_directory>
 #     CORE_OUTPUT_FILE <core_output_file>
 #     ENUMS_OUTPUT_FILE <enums_output_file>
@@ -20,22 +24,54 @@
 #
 function(generate_python_bindings)
 	set(options)
-	set(oneValueArgs TARGET_NAME DISPLAY_NAME GENERATOR_TARGET HEADER_FILE TEMPLATE_FILE OUTPUT_DIRECTORY CORE_OUTPUT_FILE ENUMS_OUTPUT_FILE)
+	set(oneValueArgs TARGET_NAME DISPLAY_NAME GENERATOR_TARGET HEADER_FILE CORE_HEADER TEMPLATE_FILE OUTPUT_DIRECTORY CORE_OUTPUT_FILE ENUMS_OUTPUT_FILE)
 	set(multiValueArgs PYTHON_SOURCES)
 	
 	cmake_parse_arguments(PARSE_ARGV 0 ARGS "${options}" "${oneValueArgs}" "${multiValueArgs}")
 	
-	foreach(required_arg TARGET_NAME DISPLAY_NAME GENERATOR_TARGET HEADER_FILE OUTPUT_DIRECTORY CORE_OUTPUT_FILE ENUMS_OUTPUT_FILE)
+	foreach(required_arg TARGET_NAME DISPLAY_NAME HEADER_FILE TEMPLATE_FILE OUTPUT_DIRECTORY CORE_OUTPUT_FILE ENUMS_OUTPUT_FILE)
 		if(NOT ARGS_${required_arg})
 			message(FATAL_ERROR "${required_arg} is required")
 		endif()
 	endforeach()
-	
+
+	if(NOT ARGS_GENERATOR_TARGET)
+		set(ARGS_GENERATOR_TARGET python_bindings_generator)
+		if(NOT TARGET python_bindings_generator)
+			add_executable(python_bindings_generator ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../python/generator.cpp)
+			target_link_libraries(python_bindings_generator binaryninjaapi)
+			set_target_properties(python_bindings_generator PROPERTIES
+				CXX_STANDARD 20
+				CXX_STANDARD_REQUIRED ON
+				BUILD_WITH_INSTALL_RPATH OFF
+				RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
+
+			if(WIN32)
+				if(BN_INTERNAL_BUILD)
+					set(CORE_DLL_DIR ${BN_CORE_OUTPUT_DIR})
+				else()
+					set(CORE_DLL_DIR ${BN_INSTALL_DIR})
+				endif()
+				add_custom_command(TARGET python_bindings_generator PRE_BUILD
+					COMMAND ${CMAKE_COMMAND} -E copy ${CORE_DLL_DIR}/binaryninjacore.dll ${PROJECT_BINARY_DIR}/)
+			endif()
+		endif()
+	endif()
+
+	# The template is an input to the generator, not part of the package.
+	list(REMOVE_ITEM ARGS_PYTHON_SOURCES ${ARGS_TEMPLATE_FILE})
+
 	set(CORE_SOURCE_PATH ${PROJECT_SOURCE_DIR}/${ARGS_CORE_OUTPUT_FILE})
 	set(ENUMS_SOURCE_PATH ${PROJECT_SOURCE_DIR}/${ARGS_ENUMS_OUTPUT_FILE})
 	
 	set(GENERATOR_DEPENDS ${ARGS_HEADER_FILE} $<TARGET_FILE:${ARGS_GENERATOR_TARGET}>)
 	list(APPEND GENERATOR_DEPENDS ${ARGS_TEMPLATE_FILE})
+
+	set(GENERATOR_OPTIONS)
+	if(ARGS_CORE_HEADER)
+		list(APPEND GENERATOR_DEPENDS ${ARGS_CORE_HEADER})
+		list(APPEND GENERATOR_OPTIONS --core-header ${ARGS_CORE_HEADER})
+	endif()
 
 	add_custom_command(
 		OUTPUT ${CORE_SOURCE_PATH} ${ENUMS_SOURCE_PATH}
@@ -46,6 +82,7 @@ function(generate_python_bindings)
 			${CORE_SOURCE_PATH}
 			${ARGS_TEMPLATE_FILE}
 			${ENUMS_SOURCE_PATH}
+			${GENERATOR_OPTIONS}
 		VERBATIM
 	)
 	

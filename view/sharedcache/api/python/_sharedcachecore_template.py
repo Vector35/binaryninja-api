@@ -2,7 +2,7 @@ import binaryninja
 import ctypes, os
 
 from typing import Optional
-from . import sharedcache_enums
+from .sharedcache_enums import *
 # Load core module
 import platform
 core = None

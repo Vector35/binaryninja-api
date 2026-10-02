@@ -6971,6 +6971,8 @@ extern "C"
 	BINARYNINJACOREAPI void BNSetHighLevelILFunction(
 	    BNAnalysisContext* analysisContext, BNHighLevelILFunction* highLevelIL);
 	BINARYNINJACOREAPI bool BNAnalysisContextInform(BNAnalysisContext* analysisContext, const char* request);
+	BINARYNINJACOREAPI bool BNAnalysisContextSetFunctionTypeHints(
+	    BNAnalysisContext* analysisContext, BNTypeWithConfidence* hints, bool parametersComplete);
 
 	// Settings cache access
 	BINARYNINJACOREAPI bool BNAnalysisContextGetSettingBool(BNAnalysisContext* analysisContext, const char* key);
@@ -7024,6 +7026,7 @@ extern "C"
 
 	BINARYNINJACOREAPI BNWorkflow* BNWorkflowClone(BNWorkflow* workflow, const char* name, const char* activity);
 	BINARYNINJACOREAPI BNActivity* BNWorkflowRegisterActivity(BNWorkflow* workflow, BNActivity* activity, const char** subactivities, size_t size);
+	BINARYNINJACOREAPI bool BNWorkflowRegisterActivityExtension(const char* anchor, BNActivity* activity);
 
 	BINARYNINJACOREAPI bool BNWorkflowContains(BNWorkflow* workflow, const char* activity);
 	BINARYNINJACOREAPI char* BNWorkflowGetConfiguration(BNWorkflow* workflow, const char* activity);

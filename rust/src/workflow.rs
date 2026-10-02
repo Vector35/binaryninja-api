@@ -6,6 +6,7 @@ use crate::binary_view::{memory_map::MemoryMap, BinaryViewBase};
 
 use crate::basic_block::BasicBlock;
 use crate::binary_view::BinaryView;
+use crate::confidence::Conf;
 use crate::flowgraph::FlowGraph;
 use crate::function::{Function, NativeBlock};
 use crate::high_level_il::HighLevelILFunction;
@@ -13,6 +14,7 @@ use crate::low_level_il::{LowLevelILMutableFunction, LowLevelILRegularFunction};
 use crate::medium_level_il::MediumLevelILFunction;
 use crate::rc::{Array, CoreArrayProvider, CoreArrayProviderInner, Guard, Ref, RefCountable};
 use crate::string::{BnString, IntoCStr};
+use crate::types::Type;
 use std::ffi::c_char;
 use std::ptr;
 use std::ptr::NonNull;
@@ -50,6 +52,34 @@ impl AnalysisContext {
         let result = unsafe { BNAnalysisContextGetFunction(self.handle.as_ptr()) };
         assert!(!result.is_null());
         unsafe { Function::ref_from_raw(result) }
+    }
+
+    /// Submit verified physical ABI signature hints for the active MLIL recovery pass.
+    /// Call from a function activity after `core.function.prepareMediumLevelIL` and
+    /// before `core.function.analyzeMediumLevelIL`. Physical bindings must come from
+    /// independent evidence, such as LLIL SSA, rather than previously inferred types.
+    /// Hints merge with other contributors while preserving explicit user and imported
+    /// types. They are not persisted and do not schedule another analysis pass.
+    /// Every hinted parameter must have an explicit physical ABI location. Unless
+    /// `parameters_complete` is true, ordinary recovery determines the parameter list.
+    /// A complete validated list can retain optimized unused arguments.
+    /// Higher-confidence evidence takes precedence; equal-confidence parameter layout
+    /// conflicts retain the earlier accepted contributor. Indirect or composite
+    /// locations can rebuild prepared MLIL from LLIL, so hint contributors should
+    /// avoid also modifying prepared MLIL.
+    /// Returns false outside the recovery phase or when the proposal is rejected.
+    pub fn set_function_type_hints<'a, C>(&self, hints: C, parameters_complete: bool) -> bool
+    where
+        C: Into<Conf<&'a Type>>,
+    {
+        let mut raw_hints = Conf::<&Type>::into_raw(hints.into());
+        unsafe {
+            BNAnalysisContextSetFunctionTypeHints(
+                self.handle.as_ptr(),
+                &mut raw_hints,
+                parameters_complete,
+            )
+        }
     }
 
     /// [`LowLevelILMutableFunction`] used to represent Lifted Level IL
@@ -164,6 +194,19 @@ impl Workflow {
 
     pub(crate) unsafe fn ref_from_raw(handle: NonNull<BNWorkflow>) -> Ref<Self> {
         Ref::new(Self { handle })
+    }
+
+    /// Register an activity before an anchor in selected analysis workflows.
+    /// Analysis uses an immutable composed snapshot without changing the selected
+    /// setting or registered graph. Extensions run in registration order with normal
+    /// eligibility and overrides. Custom workflows without the anchor are unaffected;
+    /// an existing activity with the extension's name takes precedence.
+    /// Register extensions during plugin initialization. Existing analysis contexts
+    /// retain their snapshots; registration affects subsequent analysis contexts.
+    /// Returns false for invalid or duplicate extension registrations.
+    pub fn register_activity_extension(anchor: &str, activity: &Activity) -> bool {
+        let anchor = anchor.to_cstr();
+        unsafe { BNWorkflowRegisterActivityExtension(anchor.as_ptr(), activity.handle.as_ptr()) }
     }
 
     /// Create a new unregistered [Workflow] with no activities.

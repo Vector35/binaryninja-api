@@ -12243,6 +12243,28 @@ namespace BinaryNinja {
 		*/
 		void SetHighLevelILFunction(Ref<HighLevelILFunction> highLevelIL);
 
+		/*! Submit verified function signature hints for the active MLIL recovery pass.
+
+		    Call from a function activity after core.function.prepareMediumLevelIL and
+		    before core.function.analyzeMediumLevelIL. Derive physical bindings from
+		    independent evidence, such as LLIL SSA, rather than previously inferred types.
+		    Hints are merged with other contributors while preserving explicit user and
+		    imported types. They are not persisted and do not schedule another analysis pass.
+		    Every hinted parameter must have an explicit physical ABI location.
+		    With parametersComplete=false, hints contribute names and types at those
+		    locations while ordinary recovery determines the parameter list. A complete
+		    validated list can retain optimized unused arguments, including an empty list.
+		    Higher-confidence evidence takes precedence; conflicting parameter layouts
+		    at equal confidence retain the earlier accepted contributor.
+		    Indirect or composite locations can rebuild prepared MLIL from LLIL. Hint
+		    contributors should therefore avoid also modifying prepared MLIL.
+
+		    \param hints Function type with confidence for the proposed signature
+		    \param parametersComplete Whether the parameter list is a complete validated ABI signature
+		    \return Whether the proposal was accepted; false outside the recovery phase
+		*/
+		bool SetFunctionTypeHints(const Confidence<Ref<Type>>& hints, bool parametersComplete = false);
+
 		bool Inform(const char* request);
 		bool Inform(const std::string& request);
 
@@ -12521,6 +12543,21 @@ namespace BinaryNinja {
 			\return true on success, false otherwise
 		*/
 		static bool RegisterWorkflow(Ref<Workflow> workflow, const std::string& description = "");
+
+		/*! Register an activity to run before an anchor in selected analysis workflows.
+
+		    Analysis uses an immutable composed snapshot; the registered workflow and
+		    selected setting remain unchanged. Extensions run in registration order with
+		    normal eligibility and overrides. A custom workflow without the anchor is
+		    unaffected, and an existing activity with the extension's name takes precedence.
+		    Register extensions during plugin initialization. Existing analysis contexts
+		    retain their snapshots; registration affects subsequent analysis contexts.
+
+		    \param anchor Activity before which the extension is inserted
+		    \param activity Contributor activity with a globally unique extension name
+		    \return False for invalid or duplicate extension registrations
+		*/
+		static bool RegisterActivityExtension(const std::string& anchor, Ref<Activity> activity);
 
 		/*! Clone a workflow, copying all Activities and the execution strategy
 

@@ -36,6 +36,7 @@ from . import function as _function
 from . import lowlevelil
 from . import mediumlevelil
 from . import highlevelil
+from . import types
 
 ActivityType = Union['Activity', str]
 
@@ -71,6 +72,27 @@ class AnalysisContext:
 		if not result:
 			return None
 		return _function.Function(handle=result)
+
+	def set_function_type_hints(self, hints: 'types.Type', parameters_complete: bool = False) -> bool:
+		"""
+		Submit verified physical ABI signature hints for the active MLIL recovery pass.
+		Call from a function activity after ``core.function.prepareMediumLevelIL`` and
+		before ``core.function.analyzeMediumLevelIL``. Physical bindings must come from
+		independent evidence, such as LLIL SSA, rather than previously inferred types.
+		Hints merge with other contributors while preserving explicit user and imported
+		types. They are not persisted and do not schedule another analysis pass.
+		Every hinted parameter must have an explicit physical ABI location. By default,
+		hints contribute names and types while ordinary recovery determines the parameter
+		list. A complete validated list can retain optimized unused arguments.
+		Higher-confidence evidence takes precedence; equal-confidence parameter layout
+		conflicts retain the earlier accepted contributor. Indirect or composite
+		locations can rebuild prepared MLIL from LLIL, so hint contributors should
+		avoid also modifying prepared MLIL.
+
+		:return: Whether the proposal was accepted; false outside the recovery phase
+		"""
+		return core.BNAnalysisContextSetFunctionTypeHints(
+			self.handle, hints._to_core_struct(), parameters_complete)
 
 	@property
 	def lifted_il(self) -> Optional[lowlevelil.LowLevelILFunction]:
@@ -130,6 +152,10 @@ class AnalysisContext:
 		                                  one or more MLIL expressions (first expression \
 		                                  will be the primary)
 		"""
+		if llil_ssa_to_mlil_instr_map is None and llil_ssa_to_mlil_expr_map is None and new_func == self.mlil:
+			# In-place edits retain the existing mappings; builder maps describe
+			# copying into a newly constructed MLIL function.
+			return
 		if llil_ssa_to_mlil_instr_map is None or llil_ssa_to_mlil_expr_map is None:
 			# Build up maps from existing data in the function
 			llil_ssa_to_mlil_instr_map = new_func._get_llil_ssa_to_mlil_instr_map(True)
@@ -647,6 +673,20 @@ class Workflow(metaclass=_WorkflowMetaclass):
 		self._machine = None
 		if object_handle is not None:
 			self._machine = WorkflowMachine(object_handle)
+
+	@staticmethod
+	def register_activity_extension(anchor: str, activity: Activity) -> bool:
+		"""
+		Run an activity before an anchor in selected analysis workflows without changing
+		the selected setting or registered graph. Extensions run in registration order
+		with normal eligibility and overrides. Custom workflows without the anchor are
+		unaffected; an existing activity with the extension's name takes precedence.
+		Register extensions during plugin initialization. Existing analysis contexts
+		retain their snapshots; registration affects subsequent analysis contexts.
+
+		:return: False for invalid or duplicate extension registrations
+		"""
+		return core.BNWorkflowRegisterActivityExtension(anchor, activity.handle)
 
 	def __del__(self):
 		if core is not None:

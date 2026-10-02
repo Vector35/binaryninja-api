@@ -104,6 +104,14 @@ void AnalysisContext::SetMediumLevelILFunction(
 	std::vector<BNExprMapInfo> llilSsaToMlilExprMap
 )
 {
+	if (llilSsaToMlilExprMap.empty() && llilSsaToMlilInstrMap.empty())
+	{
+		auto current = GetMediumLevelILFunction();
+		// In-place edits retain the context's existing LLIL mappings. Copy
+		// translation maps are available only on a newly constructed function.
+		if (current && current->GetObject() == mediumLevelIL->GetObject())
+			return;
+	}
 	if (llilSsaToMlilExprMap.empty() || llilSsaToMlilInstrMap.empty())
 	{
 		// Build up maps from existing data in the function
@@ -137,6 +145,15 @@ void AnalysisContext::SetMediumLevelILFunction(
 void AnalysisContext::SetHighLevelILFunction(Ref<HighLevelILFunction> highLevelIL)
 {
 	BNSetHighLevelILFunction(m_object, highLevelIL->m_object);
+}
+
+
+bool AnalysisContext::SetFunctionTypeHints(const Confidence<Ref<Type>>& hints, bool parametersComplete)
+{
+	BNTypeWithConfidence type;
+	type.type = hints.GetValue() ? hints->GetObject() : nullptr;
+	type.confidence = hints.GetConfidence();
+	return BNAnalysisContextSetFunctionTypeHints(m_object, &type, parametersComplete);
 }
 
 
@@ -672,6 +689,15 @@ Ref<Workflow> Workflow::GetOrCreate(const string& name)
 bool Workflow::RegisterWorkflow(Ref<Workflow> workflow, const string& configuration)
 {
 	return BNRegisterWorkflow(workflow->m_object, configuration.c_str());
+}
+
+
+bool Workflow::RegisterActivityExtension(const string& anchor, Ref<Activity> activity)
+{
+	if (!activity || !BNWorkflowRegisterActivityExtension(anchor.c_str(), activity->GetObject()))
+		return false;
+	activity->AddRefForRegistration();
+	return true;
 }
 
 

@@ -307,6 +307,66 @@ Please refer to the [Activity Eligibility](#activity-eligibility) section for mo
 
 ![eligibility-control-setting](../img/eligibility-control-setting.png "Eligibility Control Setting"){ width="800" }
 
+### Extending the Selected Workflow
+
+A plugin can register an activity to run before an existing anchor in each
+selected workflow that contains that anchor:
+
+```python
+activity = Activity(
+    '{"name":"example.inspectInputs","title":"Inspect Inputs",'
+    '"description":"Inspect initial MLIL before signature recovery"}',
+    action=lambda context: inspect_inputs(context)
+)
+Workflow.register_activity_extension("core.function.analyzeMediumLevelIL", activity)
+```
+
+`register_activity_extension` does not change the workflow setting or mutate
+registered workflows. Analysis resolves an immutable snapshot containing the
+applicable extensions in registration order. Existing analysis contexts keep
+their snapshot; new contexts see newly registered extensions. An activity name
+can be registered as an extension only once. A custom workflow that already
+contains that name keeps its own activity. Missing anchors and incompatible
+extensions are skipped without suppressing independent contributions.
+
+### Contributing Function Signature Evidence
+
+`core.function.generateMediumLevelIL` contains two activities:
+
+1. `core.function.prepareMediumLevelIL` translates LLIL into initial MLIL and
+   generates SSA without alias analysis.
+2. `core.function.analyzeMediumLevelIL` performs the remaining call, parameter,
+   and type recovery.
+
+An activity inserted before the second stage can inspect `context.llil` and
+`context.mlil`, including their SSA forms. It can edit or replace prepared MLIL,
+or call `context.set_function_type_hints(function_type)` with independently
+validated physical ABI locations. Each parameter must use a custom register or
+stack location. Scalar widths must fit their registers; split direct values
+require explicit piece sizes. Incomplete indirect or composite parameter lists
+are rejected because their logical variable identities depend on the complete
+ABI list.
+
+The default partial proposal annotates observed physical inputs while machine
+recovery determines the parameter list. Set `parameters_complete=True` only when
+the complete ABI list has been established, including any unused inputs. User
+and imported signature fields remain authoritative. Higher-confidence proposals
+take precedence; equal-confidence conflicting contributor layouts retain the
+earlier proposal. Validated complete lists may replace equally confident
+automatic layouts. Hints remain local to the pass and do not schedule reanalysis.
+Changing or disabling a contributor requires full function reanalysis to discard
+previous automatic results.
+
+Indirect or composite hints may rebuild prepared MLIL from LLIL. Contributors
+that submit such hints should avoid also editing prepared MLIL in that pass.
+Scalar hints preserve intervening MLIL edits.
+
+GNU3 and MSVC demanglers register separate C++ signature activities at this
+boundary. Loaders retain raw symbols and demangled display names but defer
+demangled function types to analysis. Third-party demanglers can register their
+own activities, and the built-in activities yield when a higher-priority
+demangler claims a symbol.
+
 ### Workflow Configuration
 
 When registering a workflow, provide an optional JSON configuration that defines the workflow's properties, such as its `title`, `description`, and `targetType`. The `targetType` defaults to `"function"` if not specified. Below is an example of a workflow configuration:

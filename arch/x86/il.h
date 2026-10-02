@@ -57,6 +57,8 @@ struct DISASSEMBLY_OPTIONS
 #define IL_FLAGWRITE_SHRD1   13
 #define IL_FLAGWRITE_CUO     14
 #define IL_FLAGWRITE_PTEST   15
+#define IL_FLAGWRITE_BEXTR   16
+#define IL_FLAGWRITE_Z       17
 
 #define IL_FLAG_CLASS_INT     0 // Default
 #define IL_FLAG_CLASS_X87COM  1
@@ -114,6 +116,8 @@ enum X86_INTRINSIC
     INTRINSIC_FXTRACT,
     INTRINSIC_FYL2X,
     INTRINSIC_FYL2XP1,
+    INTRINSIC_BEXTR32,
+    INTRINSIC_BEXTR64,
     // below are for vector instrinsics
     // copied from public/arch/x86/xedInc/xed-iform-enum.h
     INTRINSIC_XED_IFORM_INVALID = 1000,

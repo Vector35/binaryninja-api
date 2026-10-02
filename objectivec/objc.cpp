@@ -1301,6 +1301,15 @@ inline QualifiedName defineTypedef(Ref<BinaryView> m_data, const QualifiedName& 
 	}).first;
 }
 
+QualifiedName ObjCProcessor::DefineSingleClassStructType(Class cls, Ref<Structure> classTypeStruct)
+{
+	QualifiedName classTypeName = cls.name;
+	std::string classTypeId = Type::GenerateAutoTypeId("objc", classTypeName);
+	Ref<Type> classType = Type::StructureType(classTypeStruct);
+	QualifiedName classQualName = m_data->DefineType(classTypeId, classTypeName, classType);
+	return classTypeName;
+}
+
 void ObjCProcessor::GenerateClassTypes()
 {
 	for (auto& [_, cls] : m_classes)
@@ -1337,10 +1346,7 @@ void ObjCProcessor::GenerateClassTypes()
 		if (failedToDecodeType)
 			continue;
 		auto classTypeStruct = classTypeBuilder.Finalize();
-		QualifiedName classTypeName = cls.name;
-		std::string classTypeId = Type::GenerateAutoTypeId("objc", classTypeName);
-		Ref<Type> classType = Type::StructureType(classTypeStruct);
-		QualifiedName classQualName = m_data->DefineType(classTypeId, classTypeName, classType);
+		QualifiedName classTypeName = DefineSingleClassStructType(cls, classTypeStruct);
 		cls.associatedName = classTypeName;
 	}
 }

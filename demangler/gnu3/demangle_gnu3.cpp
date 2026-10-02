@@ -989,6 +989,7 @@ DemangledTypeNode DemangleGNU3::DemangleType()
 			type = DemangledTypeNode::UnregisteredNamedType("decltype(" + DemangleExpression() + ")");
 			if (!m_reader.ConsumeIf('E'))
 				throw DemangleException();
+			substitute = true;
 			break;
 		case 'v':
 		{
@@ -2084,10 +2085,9 @@ string DemangleGNU3::DemangleExpression(DemangledTypeNode* outNode)
 			// duty). Break out of the loop immediately after any qualifier with
 			// template-args rather than waiting for a standalone 'E'.
 			//
-			// Each qualifier level adds to the substitution table:
-			//   - the bare name (before template-args) as a substitution candidate
-			//   - the template instantiation (name + args) as another candidate
-			// This mirrors how the compiler builds the substitution table during encoding.
+			// A plain unresolved qualifier is an expression name, not a type
+			// substitution candidate. Types inside template arguments still contribute
+			// their own substitutions.
 			bool hadTemplateArgs = false;
 			do
 			{
@@ -2096,10 +2096,9 @@ string DemangleGNU3::DemangleExpression(DemangledTypeNode* outNode)
 				const size_t segmentStart = out.size();
 				out.append(segName);
 				DemangledNamePart structuredSegment(segName);
-				// Push bare name to substitution table.
-				PushType(DemangledTypeNode::NamedType(out));
 				if (m_reader.ConsumeIf('I'))
 				{
+					PushType(DemangledTypeNode::NamedType(out));
 					ParamList args;
 					DemangleTemplateArgs(args); // consumes the trailing 'E'
 					structuredSegment = NameSegmentWithTemplateArgs(segName, std::move(args));
@@ -2632,7 +2631,11 @@ DemangledTypeNode DemangleGNU3::DemangleName(bool* mayHaveImplicitThis)
 			*mayHaveImplicitThis = true;
 		bool allTypeArgs = false;
 		type = DemangleNestedName(&allTypeArgs);
-		if (!m_inLocalName && allTypeArgs)
+		// A function template's completed name is not a substitution candidate.
+		// The bare template prefix was already added by DemangleNestedName; the
+		// next candidate is the return type (for example T_ followed by S1_).
+		// Keep the completed template-id for calls that decode a type name.
+		if (!m_inLocalName && allTypeArgs && !mayHaveImplicitThis && !hasExplicitObjectParameter)
 			PushType(type);
 		break;
 	}

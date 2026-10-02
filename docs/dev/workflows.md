@@ -362,10 +362,14 @@ that submit such hints should avoid also editing prepared MLIL in that pass.
 Scalar hints preserve intervening MLIL edits.
 
 GNU3 and MSVC demanglers register separate C++ signature activities at this
-boundary. Loaders retain raw symbols and demangled display names but defer
-demangled function types to analysis. Third-party demanglers can register their
-own activities, and the built-in activities yield when a higher-priority
-demangler claims a symbol.
+boundary. The central symbol demangle queue retains raw symbols and demangled
+display names and still registers referenced named types when
+`analysis.defineTypesFromMangledNames` is enabled. It defers GNU3/MSVC function
+signatures to analysis, where `analysis.applyTypesFromMangledNames` controls the
+signature activities. Named-type registration is independent of signature
+application and preserves existing registry definitions and identities.
+Third-party demanglers can register their own activities, and the built-in
+activities yield when a higher-priority demangler claims a symbol.
 
 ### Workflow Configuration
 

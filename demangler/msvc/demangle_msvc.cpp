@@ -18,6 +18,7 @@
 #include "demangle_msvc.h"
 #include "demangler/demangled_log.h"
 #include "demangler/demangled_template_simplifier.h"
+#include "demangler/cpp_signature_recovery.h"
 #include "base/unicode.h"
 #ifdef BINARYNINJACORE_LIBRARY
 #include "unicode.h"
@@ -2195,7 +2196,7 @@ Demangle::DemangledFunction Demangle::DemangleFunction(BNNameType classFunctionT
 	newType.SetCallingConventionName(cc);
 
 	MSVC_TRACE("Successfully Created Function Type!");
-	return {std::move(newType), std::move(thunkAdjustor)};
+	return {std::move(newType), std::move(thunkAdjustor), shouldHaveReturnType};
 }
 
 
@@ -2376,7 +2377,8 @@ Demangle::DemangleContext Demangle::DemangleDynamicInitFini(bool isDtor, Backref
 	auto parseOuterFunction = [&](bool pointerSuffix, int funcClass, BNMemberAccess access, BNMemberScope scope) {
 		DemangledFunction function = DemangleFunction(classFunctionType, pointerSuffix, backrefList, funcClass);
 		ApplySymbolFunctionContext(function, descriptorName, classFunctionType, funcClass);
-		return DemangleContext{std::move(descriptorName), std::move(function.type), access, scope};
+		return DemangleContext{std::move(descriptorName), std::move(function.type), access, scope,
+			{function.returnEncoded, false}};
 	};
 
 	// Parse the outer function encoding. MSVC emits a global cdecl stub
@@ -2501,6 +2503,8 @@ Demangle::DemangleContext Demangle::DemangleSymbol(BackrefList& backrefList)
 	auto setFunctionContext = [&](bool pointerSuffix, int funcClass, BNMemberAccess access, BNMemberScope scope) {
 		DemangledFunction function = DemangleFunction(classFunctionType, pointerSuffix, backrefList, funcClass);
 		ApplySymbolFunctionContext(function, varName, classFunctionType, funcClass);
+		context.functionFacts = {function.returnEncoded,
+			classFunctionType == ConstructorNameType || classFunctionType == DestructorNameType};
 		setContext(std::move(function.type), access, scope);
 	};
 
@@ -2598,7 +2602,7 @@ Demangle::PreparedResult Demangle::Prepare()
 		DemangledTemplateSimplifier::SimplifyNameSegmentsInPlace(context.name);
 	}
 
-	return {QualifiedName(FinalizeNameList(context.name)), std::move(context.type)};
+	return {QualifiedName(FinalizeNameList(context.name)), std::move(context.type), context.functionFacts};
 }
 
 DemanglerResult Demangle::Finalize()
@@ -2640,6 +2644,44 @@ namespace
 			return std::nullopt;
 		return DemanglerResult{
 			std::move(prepared->name), prepared->type.Finalize(config.GetPlatform())};
+	}
+
+	void RecoverMSVCSignature(Ref<AnalysisContext> context)
+	{
+		if (!context->GetSetting<bool>("analysis.applyTypesFromMangledNames"))
+			return;
+		auto function = context->GetFunction();
+		if (!function || !function->GetSymbol() || !function->GetPlatform())
+			return;
+		const string name(function->GetSymbol()->GetRawName());
+		if (name.empty() || name.front() != '?')
+			return;
+		auto config = CppSignatureRecovery::Config(context);
+		auto prepared = PrepareMSWithConfig(config, name);
+		if (!prepared || !CppSignatureRecovery::IsSelectedDemangler(name, config, BN_DEMANGLER_MSVC))
+			return;
+		const auto& facts = prepared->facts;
+		Ref<Type> source = CppSignatureRecovery::Finalize(context, config, std::move(prepared->type));
+		std::optional<CppSignatureRecovery::Hints> hints;
+		if (facts.isCtorOrDtor)
+		{
+			// Constructor names omit both the physical return and, with virtual
+			// bases, an additional initialization flag. Bind
+			// only an independently observed receiver and let machine analysis
+			// recover the rest of the signature.
+			source = Type::FunctionType(ReturnValue(Type::VoidType()->WithConfidence(0)),
+				source->GetCallingConvention(), source->GetParameters());
+			hints = CppSignatureRecovery::Recover(context, source, false, true, true);
+		}
+		else if (facts.returnEncoded)
+		{
+			// MSVC encodes static/member scope, so a parser-provided receiver is required.
+			hints = CppSignatureRecovery::Recover(context, source, false);
+			if (!hints)
+				hints = CppSignatureRecovery::RecoverEncodedReturn(context, source);
+		}
+		if (hints)
+			context->SetFunctionTypeHints(Confidence<Ref<Type>>(hints->type, BN_FULL_CONFIDENCE), hints->parametersComplete);
 	}
 }
 
@@ -2688,6 +2730,9 @@ extern "C"
 #endif
 	{
 		static auto demangler = new MSDemangler();
-		return Demangler::Register(demangler);
+		if (!Demangler::Register(demangler))
+			return false;
+		return CppSignatureRecovery::Register("analysis.cpp.msvcSignatureRecovery", "MSVC C++ Signature Recovery",
+			RecoverMSVCSignature);
 	}
 }

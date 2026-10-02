@@ -106,6 +106,8 @@ private:
 	bool m_isParameter;
 	bool m_topLevel;
 	bool m_isOperatorOverload;
+	enum class ConstructorDestructorVariant { None, Complete, Base, Vendor };
+	ConstructorDestructorVariant m_constructorDestructorVariant = ConstructorDestructorVariant::None;
 	bool m_parsingLambdaParams;
 	size_t m_lambdaTemplateParamBase;
 	// Forward template reference support (for cv conversion operator types).
@@ -140,8 +142,8 @@ private:
 	_STD_STRING DemanglePrimaryExpression();
 	NodeRef DemangleTemplateSubstitutionEntry(NodeRef* outTypeRef = nullptr);
 	bool TryDemangleTemplateParamExpressionPackExpansion(_STD_STRING& expr, bool& emptyPack);
-	DemangledTypeNode DemangleName(bool* mayHaveImplicitThis = nullptr);
-	DemangledTypeNode DemangleLocalName();
+	DemangledTypeNode DemangleName(bool* mayHaveImplicitThis = nullptr, bool* hasExplicitObjectParameter = nullptr);
+	DemangledTypeNode DemangleLocalName(bool* mayHaveImplicitThis, bool* hasExplicitObjectParameter);
 
 	void DemangleCVQualifiers(bool& cnst, bool& vltl, bool& rstrct);
 	DemangledTypeNode DemangleSubstitution(NodeRef* outTypeRef = nullptr);
@@ -165,10 +167,18 @@ private:
 #endif
 
 public:
+	struct FunctionFacts
+	{
+		bool requiredThis = false;
+		bool isCtorOrDtor = false;
+		bool mayHaveHiddenVTT = false;
+		bool canBindBaseReceiver = false;
+	};
 	DemangleGNU3(BN::Platform& platform, _STD_STRING mangledName);
 	void Reset(BN::Platform& platform, _STD_STRING mangledName);
 	DemangledTypeNode DemangleSymbol(
-		StringList& varName, bool simplifyTemplates = false, bool recoverImplicitThis = true);
+		StringList& varName, bool simplifyTemplates = false, bool recoverImplicitThis = true,
+		FunctionFacts* facts = nullptr);
 };
 
 

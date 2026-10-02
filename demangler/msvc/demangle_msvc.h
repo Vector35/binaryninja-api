@@ -52,12 +52,21 @@ class Demangle
 	};
 
 public:
+	// Parser facts used by the signature workflow. They do not change the
+	// source-level type returned by the public demangler.
+	struct FunctionFacts
+	{
+		bool returnEncoded = true;
+		bool isCtorOrDtor = false;
+	};
+
 	struct DemangleContext
 	{
 		DemangledQualifiedName name;
 		DemangledTypeNode type;
 		BNMemberAccess access;
 		BNMemberScope scope;
+		FunctionFacts functionFacts;
 	};
 
 private:
@@ -192,6 +201,7 @@ private:
 	{
 		DemangledTypeNode type;
 		std::optional<ThunkAdjustor> thunkAdjustor;
+		bool returnEncoded = true;
 	};
 	static bool FunctionClassNeedsImplicitThis(int funcClass);
 	static void AppendThunkAdjustorToName(NameList& nameList, const ThunkAdjustor& adjustor);
@@ -244,6 +254,7 @@ public:
 	{
 		BN::QualifiedName name;
 		DemangledTypeNode type;
+		FunctionFacts facts;
 	};
 
 	Demangle(const BN::DemanglerConfig& config, _STD_STRING  mangledName);

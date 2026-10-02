@@ -18,6 +18,7 @@
 #include "demangle_gnu3.h"
 #include "demangler/demangled_log.h"
 #include "demangler/demangled_template_simplifier.h"
+#include "demangler/cpp_signature_recovery.h"
 #include <cstdarg>
 #include <algorithm>
 #include <memory>
@@ -466,6 +467,7 @@ void DemangleGNU3::Reset(Platform& platform, string mangledName)
 	m_isParameter = false;
 	m_topLevel = true;
 	m_isOperatorOverload = false;
+	m_constructorDestructorVariant = ConstructorDestructorVariant::None;
 	m_parsingLambdaParams = false;
 	m_lambdaTemplateParamBase = 0;
 	m_permitForwardTemplateRefs = false;
@@ -1488,6 +1490,8 @@ DemangledTypeNode DemangleGNU3::DemangleUnqualifiedName()
 	case hash('C','3'):
 	case hash('C','4'):
 	case hash('C','5'):
+		m_constructorDestructorVariant = elm2 == '1' ? ConstructorDestructorVariant::Complete :
+			(elm2 == '2' ? ConstructorDestructorVariant::Base : ConstructorDestructorVariant::Vendor);
 		outType = DemangledTypeNode::NamedType(m_lastName);
 		outType.SetNameType(ConstructorNameType);
 		break;
@@ -1500,6 +1504,8 @@ DemangledTypeNode DemangleGNU3::DemangleUnqualifiedName()
 		string savedLastName = m_lastName;
 		DemangleType();
 		m_lastName = savedLastName;
+		m_constructorDestructorVariant = kind == '1' ? ConstructorDestructorVariant::Complete :
+			ConstructorDestructorVariant::Base;
 		outType = DemangledTypeNode::NamedType(m_lastName);
 		outType.SetNameType(ConstructorNameType);
 		break;
@@ -1510,6 +1516,8 @@ DemangledTypeNode DemangleGNU3::DemangleUnqualifiedName()
 	case hash('D','3'):
 	case hash('D','4'):
 	case hash('D','5'):
+		m_constructorDestructorVariant = elm2 == '0' || elm2 == '1' ? ConstructorDestructorVariant::Complete :
+			(elm2 == '2' ? ConstructorDestructorVariant::Base : ConstructorDestructorVariant::Vendor);
 		outType = DemangledTypeNode::NamedType("~" + m_lastName);
 		outType.SetNameType(DestructorNameType);
 		break;
@@ -2393,18 +2401,18 @@ DemangledTypeNode DemangleGNU3::DemangleNestedName(bool* allTypeTemplateArgs, bo
 	DemangledTypeNode newType;
 	bool base = false;
 	bool isTemplate = false;
-	//[<CV-qualifiers>]
-	DemangleCVQualifiers(cnst, vltl, rstrct);
-
-	//[<ref-qualifier>]
-	if (m_reader.ConsumeIf('R'))
+	// An explicit object member uses H instead of CV/ref qualifiers. Its
+	// object type is encoded as the first parameter of the function.
+	if (!m_reader.ConsumeIf('H'))
 	{
-		ref = true;
-	}
-	else if (m_reader.ConsumeIf('O'))
-	{
-		ref = true;
-		rvalueRef = true;
+		DemangleCVQualifiers(cnst, vltl, rstrct);
+		if (m_reader.ConsumeIf('R'))
+			ref = true;
+		else if (m_reader.ConsumeIf('O'))
+		{
+			ref = true;
+			rvalueRef = true;
+		}
 	}
 
 	while (!m_reader.ConsumeIf('E'))
@@ -2503,7 +2511,7 @@ DemangledTypeNode DemangleGNU3::DemangleNestedName(bool* allTypeTemplateArgs, bo
 }
 
 
-DemangledTypeNode DemangleGNU3::DemangleLocalName()
+DemangledTypeNode DemangleGNU3::DemangleLocalName(bool* mayHaveImplicitThis, bool* hasExplicitObjectParameter)
 {
 	NestingGuard nestingGuard(m_nestingDepth);
 	LOG_INDENTATION_SCOPE;
@@ -2531,6 +2539,9 @@ DemangledTypeNode DemangleGNU3::DemangleLocalName()
 
 	if (!m_reader.ConsumeIf('s'))
 	{
+		// The entity's template parameters belong to its own signature, not
+		// the enclosing function. Keep them alive until that signature is read.
+		m_templateSubstitute.clear();
 		// Handle default argument context: d [<number>] _ <name>
 		if (m_reader.ConsumeIf('d'))
 		{
@@ -2539,14 +2550,15 @@ DemangledTypeNode DemangleGNU3::DemangleLocalName()
 			m_reader.ConsumeIf('_');
 		}
 		//<entity name>
-		DemangledTypeNode tmpType = DemangleName();
+		DemangledTypeNode tmpType = DemangleName(mayHaveImplicitThis, hasExplicitObjectParameter);
 		type = DemangledTypeNode::NamedType(varName);
 		AppendTypeName(type, tmpType);
 		type.SetNTRType(tmpType.GetNTRClass());
 		type.SetConst(tmpType.IsConst());
 		type.SetVolatile(tmpType.IsVolatile());
 		type.SetPointerSuffixBits(tmpType.GetPointerSuffixBits());
-		m_templateSubstitute = std::move(savedTemplateSubstitute);
+		if (!LastTypeNameSegmentHasTemplateArguments(tmpType))
+			m_templateSubstitute = std::move(savedTemplateSubstitute);
 		m_topLevel = oldTopLevel;
 	}
 	else
@@ -2574,7 +2586,7 @@ DemangledTypeNode DemangleGNU3::DemangleLocalName()
 }
 
 
-DemangledTypeNode DemangleGNU3::DemangleName(bool* mayHaveImplicitThis)
+DemangledTypeNode DemangleGNU3::DemangleName(bool* mayHaveImplicitThis, bool* hasExplicitObjectParameter)
 {
 	NestingGuard nestingGuard(m_nestingDepth);
 	LOG_INDENTATION_SCOPE;
@@ -2595,6 +2607,8 @@ DemangledTypeNode DemangleGNU3::DemangleName(bool* mayHaveImplicitThis)
 	bool substitute = false;
 	if (mayHaveImplicitThis)
 		*mayHaveImplicitThis = false;
+	if (hasExplicitObjectParameter)
+		*hasExplicitObjectParameter = false;
 	switch (m_reader.Read())
 	{
 	case 'S':
@@ -2627,8 +2641,11 @@ DemangledTypeNode DemangleGNU3::DemangleName(bool* mayHaveImplicitThis)
 		break;
 	case 'N': //<nested-name>
 	{
+		bool explicitObject = m_reader.PeekOr() == 'H';
 		if (mayHaveImplicitThis)
-			*mayHaveImplicitThis = true;
+			*mayHaveImplicitThis = !explicitObject;
+		if (hasExplicitObjectParameter)
+			*hasExplicitObjectParameter = explicitObject;
 		bool allTypeArgs = false;
 		type = DemangleNestedName(&allTypeArgs);
 		// A function template's completed name is not a substitution candidate.
@@ -2640,9 +2657,7 @@ DemangledTypeNode DemangleGNU3::DemangleName(bool* mayHaveImplicitThis)
 		break;
 	}
 	case 'Z': //<local-name>
-		if (mayHaveImplicitThis)
-			*mayHaveImplicitThis = true;
-		type = DemangleLocalName();
+		type = DemangleLocalName(mayHaveImplicitThis, hasExplicitObjectParameter);
 		break;
 	default: //<unscoped-name> | <substitution>
 		/*
@@ -2669,8 +2684,10 @@ DemangledTypeNode DemangleGNU3::DemangleName(bool* mayHaveImplicitThis)
 
 
 DemangledTypeNode DemangleGNU3::DemangleSymbol(
-	StringList& varName, bool simplifyTemplates, bool recoverImplicitThis)
+	StringList& varName, bool simplifyTemplates, bool recoverImplicitThis, FunctionFacts* facts)
 {
+	if (facts)
+		*facts = {};
 	NestingGuard nestingGuard(m_nestingDepth);
 	LOG_INDENTATION_SCOPE;
 	LogWithIndentation("%s: %s\n", __FUNCTION__, m_reader.GetRaw());
@@ -3049,7 +3066,9 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(
 	//<function name> or <data name>
 	bool mayHaveImplicitThis = false;
 	const size_t firstNameSubstitution = m_substitute.size();
-	type = DemangleName(&mayHaveImplicitThis);
+	bool hasExplicitObjectParameter = false;
+	type = DemangleName(&mayHaveImplicitThis, &hasExplicitObjectParameter);
+	const auto constructorDestructorVariant = m_constructorDestructorVariant;
 	if (m_reader.Length() == 0)
 	{
 		return type;
@@ -3178,6 +3197,37 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(
 
 	m_functionSubstitute.pop_back();
 	m_isParameter = false;
+	// Apple pointer-authentication thunks retain the member's signature.
+	if (m_reader.ConsumeIf("_vfpthunk_"))
+	{
+		if (m_reader.Length() != 0)
+			throw DemangleException();
+		if (!varName.empty())
+			varName.back() += " [vfpthunk]";
+	}
+	if (hasExplicitObjectParameter)
+	{
+		if (params.empty() || params.front().type->GetClass() == VarArgsTypeClass)
+			throw DemangleException();
+		params.front().name = "this";
+	}
+	if (facts)
+	{
+		DemangledTypeNode receiverQualifiers;
+		receiverQualifiers.AddPointerSuffix(RestrictSuffix);
+		receiverQualifiers.AddPointerSuffix(ReferenceSuffix);
+		receiverQualifiers.AddPointerSuffix(LvalueSuffix);
+		facts->requiredThis = hasExplicitObjectParameter || (mayHaveImplicitThis && (cnst || vltl
+			|| nameType == ConstructorNameType || nameType == DestructorNameType
+			|| (suffix & receiverQualifiers.GetPointerSuffixBits())));
+		if (nameType == ConstructorNameType || nameType == DestructorNameType)
+		{
+			facts->isCtorOrDtor = true;
+			facts->mayHaveHiddenVTT = constructorDestructorVariant == ConstructorDestructorVariant::Base
+				|| constructorDestructorVariant == ConstructorDestructorVariant::Vendor;
+			facts->canBindBaseReceiver = constructorDestructorVariant == ConstructorDestructorVariant::Base;
+		}
+	}
 	if (!returnTypeRef)
 		returnTypeRef = DemangledTypeNode::CreateShared(std::move(returnType));
 	type = DemangledTypeNode::FunctionType(returnTypeRef, nullptr, std::move(params));
@@ -3265,6 +3315,7 @@ namespace
 	{
 		QualifiedName name;
 		std::optional<DemangledTypeNode> type;
+		DemangleGNU3::FunctionFacts facts;
 	};
 
 	std::optional<PreparedGNU3Result> PrepareGNU3WithConfig(
@@ -3357,7 +3408,7 @@ namespace
 			PreparedGNU3Result result;
 			StringList nameSegments;
 			DemangledTypeNode type = demangle.DemangleSymbol(
-				nameSegments, simplifyTemplates, recoverImplicitThis && !foundHeader);
+				nameSegments, simplifyTemplates, recoverImplicitThis && !foundHeader, &result.facts);
 			if (simplifyTemplates)
 				DemangledTemplateSimplifier::SimplifyTypeNodeInPlace(type);
 			bool hasType = true;
@@ -3407,6 +3458,40 @@ namespace
 		if (prepared->type)
 			result.type = prepared->type->Finalize(config.GetPlatform());
 		return result;
+	}
+
+	void RecoverGNU3Signature(Ref<AnalysisContext> context)
+	{
+		if (!context->GetSetting<bool>("analysis.applyTypesFromMangledNames"))
+			return;
+		auto function = context->GetFunction();
+		if (!function || !function->GetSymbol() || !function->GetPlatform())
+			return;
+		const string name(function->GetSymbol()->GetRawName());
+		// Global initialization and block invocation wrappers have their own ABI.
+		if ((!name.starts_with("_Z") && !name.starts_with("__Z")) || name.find("_block_invoke") != string::npos)
+			return;
+		auto config = CppSignatureRecovery::Config(context);
+		auto prepared = PrepareGNU3WithConfig(config, name);
+		if (!prepared || !prepared->type || !CppSignatureRecovery::IsSelectedDemangler(name, config, BN_DEMANGLER_GNU3))
+			return;
+		// Base-object variants may insert a VTT after this. Vendor variants can
+		// have further ABI differences, so their declared argument list is deferred.
+		const auto& facts = prepared->facts;
+		if (facts.mayHaveHiddenVTT && !facts.canBindBaseReceiver)
+			return;
+		Ref<Type> source = CppSignatureRecovery::Finalize(context, config, std::move(*prepared->type));
+		if (facts.isCtorOrDtor)
+		{
+			// The source-level void result does not encode the physical ABI result:
+			// some platforms return this. Leave that result to machine analysis.
+			source = Type::FunctionType(ReturnValue(Type::VoidType()->WithConfidence(0)),
+				source->GetCallingConvention(), source->GetParameters(), source->HasVariableArguments(),
+				source->CanReturn(), source->GetStackAdjustment(), {}, NoNameType, source->IsPure());
+		}
+		if (auto hints = CppSignatureRecovery::Recover(context, source, !facts.requiredThis,
+			facts.mayHaveHiddenVTT, facts.isCtorOrDtor))
+			context->SetFunctionTypeHints(Confidence<Ref<Type>>(hints->type, BN_FULL_CONFIDENCE), hints->parametersComplete);
 	}
 }
 
@@ -3458,6 +3543,9 @@ extern "C"
 #endif
 	{
 		static auto demangler = new GNU3Demangler();
-		return Demangler::Register(demangler);
+		if (!Demangler::Register(demangler))
+			return false;
+		return CppSignatureRecovery::Register("analysis.cpp.gnu3SignatureRecovery", "GNU3 C++ Signature Recovery",
+			RecoverGNU3Signature);
 	}
 }

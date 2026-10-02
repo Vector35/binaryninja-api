@@ -26,6 +26,8 @@ serde = "1.0"
 serde_derive = "1.0"
 # Parts of the collaboration and workflow APIs consume and produce JSON.
 serde_json = "1.0"
+# Generates input schemas for MCP tools implementing mcp::TypedMcpTool.
+schemars = { version = "1.2", optional = true }
 # Used for tracing compatible logs
 tracing = { version = "0.1", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "0.3", default-features = false, features = ["std", "registry", "parking_lot"] }

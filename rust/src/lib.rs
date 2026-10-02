@@ -62,6 +62,7 @@ pub mod llvm;
 pub mod logger;
 pub mod low_level_il;
 pub mod main_thread;
+pub mod mcp;
 pub mod medium_level_il;
 pub mod metadata;
 pub mod object_destructor;

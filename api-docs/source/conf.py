@@ -172,6 +172,11 @@ def get_docstring_summary(name, ref):
 			directive_start = summary.rfind(':py:', 0, truncate_at)
 			if directive_start != -1:
 				truncate_at = directive_start
+		# Check for an unclosed ``literal``. Its backticks come in pairs, so the single-backtick check misses it.
+		if summary[:truncate_at].count('``') % 2 != 0:
+			last_literal = summary.rfind('``', 0, truncate_at)
+			if last_literal > 0:
+				truncate_at = summary.rfind(' ', 0, last_literal)
 		# Check for unclosed backticks
 		if summary[:truncate_at].count('`') % 2 != 0:
 			last_backtick = summary.rfind('`', 0, truncate_at)
@@ -344,21 +349,26 @@ Full Class List
 		module_contents.write('\n')
 
 		# Generate individual sections with proper headers
-		for (classname, classref) in members:
-			# Only include classes that actually belong to this module
-			if inspect.getmodule(classref).__name__ == module.__name__:
-				_, directive, needs_members = get_autodoc_info(classname, classref)
-				module_contents.write(f'''{classname}
-{"-" * len(classname)}
+		own_members = [(name, ref) for name, ref in members if inspect.getmodule(ref).__name__ == module.__name__]
+		# autosectionlabel lowercases section titles, so title a function whose name differs from another member's only
+		# by case with parentheses, such as tool() beside Tool.
+		lowercase_names = [name.lower() for name, _ in own_members]
+		for (classname, classref) in own_members:
+			_, directive, needs_members = get_autodoc_info(classname, classref)
+			title = classname
+			if inspect.isfunction(classref) and lowercase_names.count(classname.lower()) > 1:
+				title = f"{classname}()"
+			module_contents.write(f'''{title}
+{"-" * len(title)}
 
 .. {directive}:: {module.__name__}.{classname}
 ''')
-				if needs_members:
-					module_contents.write('''   :members:
+			if needs_members:
+				module_contents.write('''   :members:
    :undoc-members:
    :show-inheritance:
 ''')
-				module_contents.write('\n')
+			module_contents.write('\n')
 		module_contents.write(stats)
 
 		new_module_contents = module_contents.getvalue()

@@ -926,7 +926,9 @@ bool GetLowLevelILForInstruction(
 		default:
 			// The NEON and SVE forms are per-element absolute values, which have no native scalar
 			// representation
-			il.AddInstruction(il.Unimplemented());
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
+			return true;
 		}
 		break;
 	case EXARMO_AARCH64_ADD:
@@ -1994,7 +1996,7 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_STADD:
 	case EXARMO_AARCH64_STADDL:
 		// STADD* are aliases of the corresponding LDADD*, so group them together
-		il.AddInstruction(il.Store(REGSZ_O(operand2), ILREG_O(operand2),
+		il.AddInstruction(il.Store(REGSZ_O(operand1), ILREG_O(operand2),
 		    il.Add(REGSZ_O(operand1), ILREG_O(operand1), il.Load(REGSZ_O(operand1), ILREG_O(operand2)))));
 		break;
 	case EXARMO_AARCH64_LDADDB:
@@ -2059,7 +2061,7 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_STCLR:
 	case EXARMO_AARCH64_STCLRL:
 		// STCLR* are aliases of the corresponding LDCLR*, so group them together
-		il.AddInstruction(il.Store(REGSZ_O(operand2), ILREG_O(operand2),
+		il.AddInstruction(il.Store(REGSZ_O(operand1), ILREG_O(operand2),
 			il.And(REGSZ_O(operand1),
 				il.Not(REGSZ_O(operand1), ILREG_O(operand1)),
 				il.Load(REGSZ_O(operand1), ILREG_O(operand2)))));
@@ -2126,7 +2128,7 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_STEOR:
 	case EXARMO_AARCH64_STEORL:
 		// STEOR* are aliases of the corresponding LDEOR*, so group them together
-		il.AddInstruction(il.Store(REGSZ_O(operand2), ILREG_O(operand2),
+		il.AddInstruction(il.Store(REGSZ_O(operand1), ILREG_O(operand2),
 		    il.Xor(REGSZ_O(operand1), ILREG_O(operand1), il.Load(REGSZ_O(operand1), ILREG_O(operand2)))));
 		break;
 	case EXARMO_AARCH64_LDEORB:
@@ -2191,7 +2193,7 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_STSET:
 	case EXARMO_AARCH64_STSETL:
 		// STSET* are aliases of the corresponding LDSET*, so group them together
-		il.AddInstruction(il.Store(REGSZ_O(operand2), ILREG_O(operand2),
+		il.AddInstruction(il.Store(REGSZ_O(operand1), ILREG_O(operand2),
 		    il.Or(REGSZ_O(operand1), ILREG_O(operand1), il.Load(REGSZ_O(operand1), ILREG_O(operand2)))));
 		break;
 	case EXARMO_AARCH64_LDSETB:
@@ -3488,22 +3490,30 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_SWPA:
 	case EXARMO_AARCH64_SWPL:
 	case EXARMO_AARCH64_SWPAL:
-		LoadStoreOperand(il, true, operand2, operand3, 0, addr);
-		LoadStoreOperand(il, false, operand1, operand3, 0, addr);
+		LoadTemporary(il, REGSZ_O(operand2), operand3, addr);
+		il.AddInstruction(il.Store(REGSZ_O(operand2), ILREG_O(operand3), ILREG_O(operand1)));
+		if (!IS_ZERO_REG(REG_O(operand2)))
+			il.AddInstruction(ILSETREG_O(operand2, il.Register(REGSZ_O(operand2), LLIL_TEMP(0))));
 		break;
 	case EXARMO_AARCH64_SWPB: /* byte (1) */
 	case EXARMO_AARCH64_SWPAB:
 	case EXARMO_AARCH64_SWPLB:
 	case EXARMO_AARCH64_SWPALB:
-		LoadStoreOperand(il, true, operand2, operand3, 1, addr);
+		LoadTemporary(il, 1, operand3, addr);
 		il.AddInstruction(il.Store(1, ILREG_O(operand3), il.LowPart(1, ILREG_O(operand1))));
+		if (!IS_ZERO_REG(REG_O(operand2)))
+			il.AddInstruction(
+			    ILSETREG_O(operand2, il.ZeroExtend(REGSZ_O(operand2), il.Register(1, LLIL_TEMP(0)))));
 		break;
 	case EXARMO_AARCH64_SWPH: /* half-word (2) */
 	case EXARMO_AARCH64_SWPAH:
 	case EXARMO_AARCH64_SWPLH:
 	case EXARMO_AARCH64_SWPALH:
-		LoadStoreOperand(il, true, operand2, operand3, 2, addr);
+		LoadTemporary(il, 2, operand3, addr);
 		il.AddInstruction(il.Store(2, ILREG_O(operand3), il.LowPart(2, ILREG_O(operand1))));
+		if (!IS_ZERO_REG(REG_O(operand2)))
+			il.AddInstruction(
+			    ILSETREG_O(operand2, il.ZeroExtend(REGSZ_O(operand2), il.Register(2, LLIL_TEMP(0)))));
 		break;
 	case EXARMO_AARCH64_SXTB:
 		switch (encoding)
@@ -3798,7 +3808,8 @@ bool GetLowLevelILForInstruction(
 			op3 = ILREG_O(operand3);
 			break;
 		default:
-			il.AddInstruction(il.Unimplemented());
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
 			return true;
 		}
 
@@ -3821,7 +3832,8 @@ bool GetLowLevelILForInstruction(
 			op3 = ILREG_O(operand3);
 			break;
 		default:
-			il.AddInstruction(il.Unimplemented());
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
 			return true;
 		}
 
@@ -3856,7 +3868,8 @@ bool GetLowLevelILForInstruction(
 			op3 = ILREG_O(operand3);
 			break;
 		default:
-			il.AddInstruction(il.Unimplemented());
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
 			return true;
 		}
 
@@ -3879,7 +3892,8 @@ bool GetLowLevelILForInstruction(
 			op3 = ILREG_O(operand3);
 			break;
 		default:
-			il.AddInstruction(il.Unimplemented());
+			if (!preferIntrinsics())
+				il.AddInstruction(il.Unimplemented());
 			return true;
 		}
 

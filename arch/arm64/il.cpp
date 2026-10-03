@@ -65,6 +65,54 @@ static ExprId GetCondition(LowLevelILFunction& il, const exarmo_aarch64_operand&
 	}
 }
 
+// The comparison of `left` with `right` under which a CB<cc>, CBB<cc> or CBH<cc> branches or a
+// CFLT<cc> faults.
+static ExprId CompareCondition(
+    LowLevelILFunction& il, exarmo_aarch64_mnemonic mnemonic, size_t size, ExprId left, ExprId right)
+{
+	switch (mnemonic)
+	{
+	case EXARMO_AARCH64_CBEQ:
+	case EXARMO_AARCH64_CBBEQ:
+	case EXARMO_AARCH64_CBHEQ:
+	case EXARMO_AARCH64_CFLTEQ:
+		return il.CompareEqual(size, left, right);
+	case EXARMO_AARCH64_CBNE:
+	case EXARMO_AARCH64_CBBNE:
+	case EXARMO_AARCH64_CBHNE:
+	case EXARMO_AARCH64_CFLTNE:
+		return il.CompareNotEqual(size, left, right);
+	case EXARMO_AARCH64_CBGE:
+	case EXARMO_AARCH64_CBBGE:
+	case EXARMO_AARCH64_CBHGE:
+	case EXARMO_AARCH64_CFLTGE:
+		return il.CompareSignedGreaterEqual(size, left, right);
+	case EXARMO_AARCH64_CBGT:
+	case EXARMO_AARCH64_CBBGT:
+	case EXARMO_AARCH64_CBHGT:
+	case EXARMO_AARCH64_CFLTGT:
+		return il.CompareSignedGreaterThan(size, left, right);
+	case EXARMO_AARCH64_CBLT:
+	case EXARMO_AARCH64_CFLTLT:
+		return il.CompareSignedLessThan(size, left, right);
+	case EXARMO_AARCH64_CBHS:
+	case EXARMO_AARCH64_CBBHS:
+	case EXARMO_AARCH64_CBHHS:
+	case EXARMO_AARCH64_CFLTHS:
+		return il.CompareUnsignedGreaterEqual(size, left, right);
+	case EXARMO_AARCH64_CBHI:
+	case EXARMO_AARCH64_CBBHI:
+	case EXARMO_AARCH64_CBHHI:
+	case EXARMO_AARCH64_CFLTHI:
+		return il.CompareUnsignedGreaterThan(size, left, right);
+	case EXARMO_AARCH64_CBLO:
+	case EXARMO_AARCH64_CFLTLO:
+		return il.CompareUnsignedLessThan(size, left, right);
+	default:
+		return il.Unimplemented();
+	}
+}
+
 static void GenIfElse(LowLevelILFunction& il, ExprId clause, ExprId trueCase, ExprId falseCase)
 {
 	if (falseCase)
@@ -698,6 +746,36 @@ static void LoadTemporary(
 	WriteBack(il, operand, EXARMO_AARCH64_WRITEBACK_POST);
 }
 
+// Lift an LSE atomic minimum or maximum. It stores `operation` of the low `size` bytes of `source`
+// and the value in memory. An LD form also writes the old value, zero-extended, to `destination`,
+// which an ST form has none of.
+static void AtomicMinMax(LowLevelILFunction& il, BNLowLevelILOperation operation, size_t size,
+    exarmo_aarch64_operand& source, exarmo_aarch64_operand* destination, exarmo_aarch64_operand& memory,
+    uint64_t addr)
+{
+	ExprId value = ILREG_O(source);
+	if (size < REGSZ_O(source))
+		value = il.LowPart(size, value);
+
+	if (!destination)
+	{
+		il.AddInstruction(il.Store(
+		    size, ILREG_O(memory), il.AddExpr(operation, size, 0, value, il.Load(size, ILREG_O(memory)))));
+		return;
+	}
+
+	LoadTemporary(il, size, memory, addr);
+	il.AddInstruction(il.Store(
+	    size, ILREG_O(memory), il.AddExpr(operation, size, 0, value, il.Register(size, LLIL_TEMP(0)))));
+	if (IS_ZERO_REG(REG_O(*destination)))
+		return;
+
+	ExprId old = il.Register(size, LLIL_TEMP(0));
+	if (size < REGSZ_O(*destination))
+		old = il.ZeroExtend(REGSZ_O(*destination), old);
+	il.AddInstruction(ILSETREG_O(*destination, old));
+}
+
 // Load `reg` from, or store it to, the location operand2 names, `size` bytes of it.
 static void LoadStoreOperandSize(LowLevelILFunction& il, bool load, bool sign_extend, size_t size,
     Register reg, exarmo_aarch64_operand& operand2, uint64_t addr)
@@ -1168,6 +1246,10 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_CASPA:
 	case EXARMO_AARCH64_CASPAL:
 	case EXARMO_AARCH64_CASPL:
+	case EXARMO_AARCH64_CASPT:
+	case EXARMO_AARCH64_CASPAT:
+	case EXARMO_AARCH64_CASPALT:
+	case EXARMO_AARCH64_CASPLT:
 	{
 		// the ordering of the register pairing depends on the byte order (endianness) of memory
 		bool bigEndian = arch->GetEndianness() == BigEndian;
@@ -1198,6 +1280,10 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_CASA:
 	case EXARMO_AARCH64_CASAL:
 	case EXARMO_AARCH64_CASL:
+	case EXARMO_AARCH64_CAST:
+	case EXARMO_AARCH64_CASAT:
+	case EXARMO_AARCH64_CASALT:
+	case EXARMO_AARCH64_CASLT:
 		il.AddInstruction(il.SetRegister(REGSZ_O(operand1), LLIL_TEMP(0), il.Load(REGSZ_O(operand1), ILREG_O(operand3))));
 
 		GenIfElse(il,
@@ -1243,6 +1329,69 @@ bool GetLowLevelILForInstruction(
 		    il.CompareEqual(REGSZ_O(operand1), ILREG_O(operand1), il.Const(REGSZ_O(operand1), 0)),
 		    addrSize, LabelTarget(operand2, addr), addr + 4);
 		return false;
+	case EXARMO_AARCH64_CBEQ:
+	case EXARMO_AARCH64_CBNE:
+	case EXARMO_AARCH64_CBGE:
+	case EXARMO_AARCH64_CBGT:
+	case EXARMO_AARCH64_CBLT:
+	case EXARMO_AARCH64_CBHS:
+	case EXARMO_AARCH64_CBHI:
+	case EXARMO_AARCH64_CBLO:
+	{
+		size_t size = REGSZ_O(operand1);
+		ConditionalJump(arch, il,
+		    CompareCondition(il, mnemonic, size, ReadILOperand(il, operand1, size, addr),
+		        ReadILOperand(il, operand2, size, addr)),
+		    addrSize, LabelTarget(operand3, addr), addr + 4);
+		return false;
+	}
+	case EXARMO_AARCH64_CBBEQ:
+	case EXARMO_AARCH64_CBBNE:
+	case EXARMO_AARCH64_CBBGE:
+	case EXARMO_AARCH64_CBBGT:
+	case EXARMO_AARCH64_CBBHS:
+	case EXARMO_AARCH64_CBBHI:
+		ConditionalJump(arch, il,
+		    CompareCondition(il, mnemonic, 1, ExtractRegister(il, operand1, 0, 1, false, 1),
+		        ExtractRegister(il, operand2, 0, 1, false, 1)),
+		    addrSize, LabelTarget(operand3, addr), addr + 4);
+		return false;
+	case EXARMO_AARCH64_CBHEQ:
+	case EXARMO_AARCH64_CBHNE:
+	case EXARMO_AARCH64_CBHGE:
+	case EXARMO_AARCH64_CBHGT:
+	case EXARMO_AARCH64_CBHHS:
+	case EXARMO_AARCH64_CBHHI:
+		ConditionalJump(arch, il,
+		    CompareCondition(il, mnemonic, 2, ExtractRegister(il, operand1, 0, 2, false, 2),
+		        ExtractRegister(il, operand2, 0, 2, false, 2)),
+		    addrSize, LabelTarget(operand3, addr), addr + 4);
+		return false;
+	case EXARMO_AARCH64_CFLTEQ:
+	case EXARMO_AARCH64_CFLTNE:
+	case EXARMO_AARCH64_CFLTGE:
+	case EXARMO_AARCH64_CFLTGT:
+	case EXARMO_AARCH64_CFLTLT:
+	case EXARMO_AARCH64_CFLTHS:
+	case EXARMO_AARCH64_CFLTHI:
+	case EXARMO_AARCH64_CFLTLO:
+	{
+		size_t size = REGSZ_O(operand2);
+		GenIfElse(il,
+		    CompareCondition(il, mnemonic, size, ReadILOperand(il, operand2, size, addr),
+		        ReadILOperand(il, operand3, size, addr)),
+		    il.Trap(IMM_O(operand1)), 0);
+		break;
+	}
+	case EXARMO_AARCH64_FLT:
+		if (operand1.cond == EXARMO_AARCH64_COND_AL || operand1.cond == EXARMO_AARCH64_COND_NV)
+		{
+			il.AddInstruction(il.Trap(IMM_O(operand2)));
+			return false;
+		}
+
+		GenIfElse(il, GetCondition(il, operand1), il.Trap(IMM_O(operand2)), 0);
+		break;
 	case EXARMO_AARCH64_CMN:
 		il.AddInstruction(il.Add(REGSZ_O(operand1), ILREG_O(operand1),
 		    ReadILOperand(il, operand2, REGSZ_O(operand1), addr), SETFLAGS));
@@ -1848,20 +1997,25 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_LDAR:
 	case EXARMO_AARCH64_LDAPR:
 	case EXARMO_AARCH64_LDAPUR:
+	case EXARMO_AARCH64_LDLAR:
 		LoadStoreOperand(il, true, operands[0], operands[1], 0, addr);
 		break;
 	case EXARMO_AARCH64_LDARB:
 	case EXARMO_AARCH64_LDAPRB:
 	case EXARMO_AARCH64_LDAPURB:
+	case EXARMO_AARCH64_LDLARB:
 		LoadStoreOperandSize(il, true, false, 1, REG_O(operands[0]), operands[1], addr);
 		break;
 	case EXARMO_AARCH64_LDARH:
 	case EXARMO_AARCH64_LDAPRH:
 	case EXARMO_AARCH64_LDAPURH:
+	case EXARMO_AARCH64_LDLARH:
 		LoadStoreOperandSize(il, true, false, 2, REG_O(operands[0]), operands[1], addr);
 		break;
 	case EXARMO_AARCH64_LDP:
 	case EXARMO_AARCH64_LDNP:
+	case EXARMO_AARCH64_LDTP:
+	case EXARMO_AARCH64_LDTNP:
 		LoadStoreOperandPair(il, true, operands[0], operands[1], operands[2]);
 		break;
 	case EXARMO_AARCH64_LDPSW:
@@ -1882,6 +2036,7 @@ bool GetLowLevelILForInstruction(
 		default: break;
 		}
 	case EXARMO_AARCH64_LDUR:
+	case EXARMO_AARCH64_LDTR:
 		LoadStoreOperand(il, true, operands[0], operands[1], 0, addr);
 		if (SetPacAttr)
 			ApplyAttributeToLastInstruction(il, SrcInstructionUsesPointerAuth);
@@ -1896,28 +2051,34 @@ bool GetLowLevelILForInstruction(
 		break;
 	case EXARMO_AARCH64_LDRB:
 	case EXARMO_AARCH64_LDURB:
+	case EXARMO_AARCH64_LDTRB:
 		LoadStoreOperandSize(il, true, false, 1, REG_O(operands[0]), operands[1], addr);
 		break;
 	case EXARMO_AARCH64_LDRH:
 	case EXARMO_AARCH64_LDURH:
+	case EXARMO_AARCH64_LDTRH:
 		LoadStoreOperandSize(il, true, false, 2, REG_O(operands[0]), operands[1], addr);
 		break;
 	case EXARMO_AARCH64_LDRSB:
 	case EXARMO_AARCH64_LDURSB:
 	case EXARMO_AARCH64_LDAPURSB:
+	case EXARMO_AARCH64_LDTRSB:
 		LoadStoreOperandSize(il, true, true, 1, REG_O(operands[0]), operands[1], addr);
 		break;
 	case EXARMO_AARCH64_LDRSH:
 	case EXARMO_AARCH64_LDURSH:
 	case EXARMO_AARCH64_LDAPURSH:
+	case EXARMO_AARCH64_LDTRSH:
 		LoadStoreOperandSize(il, true, true, 2, REG_O(operands[0]), operands[1], addr);
 		break;
 	case EXARMO_AARCH64_LDRSW:
 	case EXARMO_AARCH64_LDURSW:
 	case EXARMO_AARCH64_LDAPURSW:
+	case EXARMO_AARCH64_LDTRSW:
 		LoadStoreOperandSize(il, true, true, 4, REG_O(operands[0]), operands[1], addr);
 		break;
 	case EXARMO_AARCH64_LDXR:
+	case EXARMO_AARCH64_LDTXR:
 		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)) }, ARM64_INTRIN_LDXR, { ILREG_O(operand2) }));
 		break;
 	case EXARMO_AARCH64_LDXRB:
@@ -1930,7 +2091,11 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_LDXP:
 		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)), RegisterOrFlag::Register(REG_O(operand2)) }, ARM64_INTRIN_LDXP, { ILREG_O(operand3) }));
 		break;
+	case EXARMO_AARCH64_LDAXP:
+		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)), RegisterOrFlag::Register(REG_O(operand2)) }, ARM64_INTRIN_LDAXP, { ILREG_O(operand3) }));
+		break;
 	case EXARMO_AARCH64_LDAXR:
+	case EXARMO_AARCH64_LDATXR:
 		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)) }, ARM64_INTRIN_LDAXR, { ILREG_O(operand2) }));
 		break;
 	case EXARMO_AARCH64_LDAXRB:
@@ -1940,6 +2105,7 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)) }, ARM64_INTRIN_LDAXRH, { ILREG_O(operand2) }));
 		break;
 	case EXARMO_AARCH64_STXR:
+	case EXARMO_AARCH64_STTXR:
 		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)) }, ARM64_INTRIN_STXR, { ILREG_O(operand2), ILREG_O(operand3) }));
 		break;
 	case EXARMO_AARCH64_STXRB:
@@ -1951,7 +2117,11 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_STXP:
 		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)) }, ARM64_INTRIN_STXP, { ILREG_O(operand2), ILREG_O(operand3), ILREG_O(operand4) }));
 		break;
+	case EXARMO_AARCH64_STLXP:
+		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)) }, ARM64_INTRIN_STLXP, { ILREG_O(operand2), ILREG_O(operand3), ILREG_O(operand4) }));
+		break;
 	case EXARMO_AARCH64_STLXR:
+	case EXARMO_AARCH64_STLTXR:
 		il.AddInstruction(il.Intrinsic({ RegisterOrFlag::Register(REG_O(operand1)) }, ARM64_INTRIN_STLXR, { ILREG_O(operand2), ILREG_O(operand3) }));
 		break;
 	case EXARMO_AARCH64_STLXRB:
@@ -1978,6 +2148,10 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_LDADDA:
 	case EXARMO_AARCH64_LDADDL:
 	case EXARMO_AARCH64_LDADDAL:
+	case EXARMO_AARCH64_LDTADD:
+	case EXARMO_AARCH64_LDTADDA:
+	case EXARMO_AARCH64_LDTADDL:
+	case EXARMO_AARCH64_LDTADDAL:
 	{
 		// TODO: represent/annotate (model?) acquire/release memory ordering semantics for all LDADD* instructions
 
@@ -1995,6 +2169,8 @@ bool GetLowLevelILForInstruction(
 	}
 	case EXARMO_AARCH64_STADD:
 	case EXARMO_AARCH64_STADDL:
+	case EXARMO_AARCH64_STTADD:
+	case EXARMO_AARCH64_STTADDL:
 		// STADD* are aliases of the corresponding LDADD*, so group them together
 		il.AddInstruction(il.Store(REGSZ_O(operand1), ILREG_O(operand2),
 		    il.Add(REGSZ_O(operand1), ILREG_O(operand1), il.Load(REGSZ_O(operand1), ILREG_O(operand2)))));
@@ -2043,6 +2219,10 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_LDCLRA:
 	case EXARMO_AARCH64_LDCLRL:
 	case EXARMO_AARCH64_LDCLRAL:
+	case EXARMO_AARCH64_LDTCLR:
+	case EXARMO_AARCH64_LDTCLRA:
+	case EXARMO_AARCH64_LDTCLRL:
+	case EXARMO_AARCH64_LDTCLRAL:
 	{
 		// TODO: represent/annotate (model?) acquire/release memory ordering semantics for all LDCLR* instructions
 
@@ -2060,6 +2240,8 @@ bool GetLowLevelILForInstruction(
 	}
 	case EXARMO_AARCH64_STCLR:
 	case EXARMO_AARCH64_STCLRL:
+	case EXARMO_AARCH64_STTCLR:
+	case EXARMO_AARCH64_STTCLRL:
 		// STCLR* are aliases of the corresponding LDCLR*, so group them together
 		il.AddInstruction(il.Store(REGSZ_O(operand1), ILREG_O(operand2),
 			il.And(REGSZ_O(operand1),
@@ -2175,6 +2357,10 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_LDSETA:
 	case EXARMO_AARCH64_LDSETL:
 	case EXARMO_AARCH64_LDSETAL:
+	case EXARMO_AARCH64_LDTSET:
+	case EXARMO_AARCH64_LDTSETA:
+	case EXARMO_AARCH64_LDTSETL:
+	case EXARMO_AARCH64_LDTSETAL:
 	{
 		// TODO: represent/annotate (model?) acquire/release memory ordering semantics for all LDSET* instructions
 
@@ -2192,6 +2378,8 @@ bool GetLowLevelILForInstruction(
 	}
 	case EXARMO_AARCH64_STSET:
 	case EXARMO_AARCH64_STSETL:
+	case EXARMO_AARCH64_STTSET:
+	case EXARMO_AARCH64_STTSETL:
 		// STSET* are aliases of the corresponding LDSET*, so group them together
 		il.AddInstruction(il.Store(REGSZ_O(operand1), ILREG_O(operand2),
 		    il.Or(REGSZ_O(operand1), ILREG_O(operand1), il.Load(REGSZ_O(operand1), ILREG_O(operand2)))));
@@ -2235,6 +2423,126 @@ bool GetLowLevelILForInstruction(
 		// STSET* are aliases of the corresponding LDSET*, so group them together
 		il.AddInstruction(il.Store(2, ILREG_O(operand2),
 		    il.Or(2, il.LowPart(2, ILREG_O(operand1)), il.Load(2, ILREG_O(operand2)))));
+		break;
+	case EXARMO_AARCH64_LDSMAX:
+	case EXARMO_AARCH64_LDSMAXA:
+	case EXARMO_AARCH64_LDSMAXL:
+	case EXARMO_AARCH64_LDSMAXAL:
+		AtomicMinMax(il, LLIL_MAXS, REGSZ_O(operand1), operand1, &operand2, operand3, addr);
+		break;
+	case EXARMO_AARCH64_LDSMAXB:
+	case EXARMO_AARCH64_LDSMAXAB:
+	case EXARMO_AARCH64_LDSMAXLB:
+	case EXARMO_AARCH64_LDSMAXALB:
+		AtomicMinMax(il, LLIL_MAXS, 1, operand1, &operand2, operand3, addr);
+		break;
+	case EXARMO_AARCH64_LDSMAXH:
+	case EXARMO_AARCH64_LDSMAXAH:
+	case EXARMO_AARCH64_LDSMAXLH:
+	case EXARMO_AARCH64_LDSMAXALH:
+		AtomicMinMax(il, LLIL_MAXS, 2, operand1, &operand2, operand3, addr);
+		break;
+	case EXARMO_AARCH64_STSMAX:
+	case EXARMO_AARCH64_STSMAXL:
+		AtomicMinMax(il, LLIL_MAXS, REGSZ_O(operand1), operand1, nullptr, operand2, addr);
+		break;
+	case EXARMO_AARCH64_STSMAXB:
+	case EXARMO_AARCH64_STSMAXLB:
+		AtomicMinMax(il, LLIL_MAXS, 1, operand1, nullptr, operand2, addr);
+		break;
+	case EXARMO_AARCH64_STSMAXH:
+	case EXARMO_AARCH64_STSMAXLH:
+		AtomicMinMax(il, LLIL_MAXS, 2, operand1, nullptr, operand2, addr);
+		break;
+	case EXARMO_AARCH64_LDSMIN:
+	case EXARMO_AARCH64_LDSMINA:
+	case EXARMO_AARCH64_LDSMINL:
+	case EXARMO_AARCH64_LDSMINAL:
+		AtomicMinMax(il, LLIL_MINS, REGSZ_O(operand1), operand1, &operand2, operand3, addr);
+		break;
+	case EXARMO_AARCH64_LDSMINB:
+	case EXARMO_AARCH64_LDSMINAB:
+	case EXARMO_AARCH64_LDSMINLB:
+	case EXARMO_AARCH64_LDSMINALB:
+		AtomicMinMax(il, LLIL_MINS, 1, operand1, &operand2, operand3, addr);
+		break;
+	case EXARMO_AARCH64_LDSMINH:
+	case EXARMO_AARCH64_LDSMINAH:
+	case EXARMO_AARCH64_LDSMINLH:
+	case EXARMO_AARCH64_LDSMINALH:
+		AtomicMinMax(il, LLIL_MINS, 2, operand1, &operand2, operand3, addr);
+		break;
+	case EXARMO_AARCH64_STSMIN:
+	case EXARMO_AARCH64_STSMINL:
+		AtomicMinMax(il, LLIL_MINS, REGSZ_O(operand1), operand1, nullptr, operand2, addr);
+		break;
+	case EXARMO_AARCH64_STSMINB:
+	case EXARMO_AARCH64_STSMINLB:
+		AtomicMinMax(il, LLIL_MINS, 1, operand1, nullptr, operand2, addr);
+		break;
+	case EXARMO_AARCH64_STSMINH:
+	case EXARMO_AARCH64_STSMINLH:
+		AtomicMinMax(il, LLIL_MINS, 2, operand1, nullptr, operand2, addr);
+		break;
+	case EXARMO_AARCH64_LDUMAX:
+	case EXARMO_AARCH64_LDUMAXA:
+	case EXARMO_AARCH64_LDUMAXL:
+	case EXARMO_AARCH64_LDUMAXAL:
+		AtomicMinMax(il, LLIL_MAXU, REGSZ_O(operand1), operand1, &operand2, operand3, addr);
+		break;
+	case EXARMO_AARCH64_LDUMAXB:
+	case EXARMO_AARCH64_LDUMAXAB:
+	case EXARMO_AARCH64_LDUMAXLB:
+	case EXARMO_AARCH64_LDUMAXALB:
+		AtomicMinMax(il, LLIL_MAXU, 1, operand1, &operand2, operand3, addr);
+		break;
+	case EXARMO_AARCH64_LDUMAXH:
+	case EXARMO_AARCH64_LDUMAXAH:
+	case EXARMO_AARCH64_LDUMAXLH:
+	case EXARMO_AARCH64_LDUMAXALH:
+		AtomicMinMax(il, LLIL_MAXU, 2, operand1, &operand2, operand3, addr);
+		break;
+	case EXARMO_AARCH64_STUMAX:
+	case EXARMO_AARCH64_STUMAXL:
+		AtomicMinMax(il, LLIL_MAXU, REGSZ_O(operand1), operand1, nullptr, operand2, addr);
+		break;
+	case EXARMO_AARCH64_STUMAXB:
+	case EXARMO_AARCH64_STUMAXLB:
+		AtomicMinMax(il, LLIL_MAXU, 1, operand1, nullptr, operand2, addr);
+		break;
+	case EXARMO_AARCH64_STUMAXH:
+	case EXARMO_AARCH64_STUMAXLH:
+		AtomicMinMax(il, LLIL_MAXU, 2, operand1, nullptr, operand2, addr);
+		break;
+	case EXARMO_AARCH64_LDUMIN:
+	case EXARMO_AARCH64_LDUMINA:
+	case EXARMO_AARCH64_LDUMINL:
+	case EXARMO_AARCH64_LDUMINAL:
+		AtomicMinMax(il, LLIL_MINU, REGSZ_O(operand1), operand1, &operand2, operand3, addr);
+		break;
+	case EXARMO_AARCH64_LDUMINB:
+	case EXARMO_AARCH64_LDUMINAB:
+	case EXARMO_AARCH64_LDUMINLB:
+	case EXARMO_AARCH64_LDUMINALB:
+		AtomicMinMax(il, LLIL_MINU, 1, operand1, &operand2, operand3, addr);
+		break;
+	case EXARMO_AARCH64_LDUMINH:
+	case EXARMO_AARCH64_LDUMINAH:
+	case EXARMO_AARCH64_LDUMINLH:
+	case EXARMO_AARCH64_LDUMINALH:
+		AtomicMinMax(il, LLIL_MINU, 2, operand1, &operand2, operand3, addr);
+		break;
+	case EXARMO_AARCH64_STUMIN:
+	case EXARMO_AARCH64_STUMINL:
+		AtomicMinMax(il, LLIL_MINU, REGSZ_O(operand1), operand1, nullptr, operand2, addr);
+		break;
+	case EXARMO_AARCH64_STUMINB:
+	case EXARMO_AARCH64_STUMINLB:
+		AtomicMinMax(il, LLIL_MINU, 1, operand1, nullptr, operand2, addr);
+		break;
+	case EXARMO_AARCH64_STUMINH:
+	case EXARMO_AARCH64_STUMINLH:
+		AtomicMinMax(il, LLIL_MINU, 2, operand1, nullptr, operand2, addr);
 		break;
 	case EXARMO_AARCH64_LSL:
 		il.AddInstruction(ILSETREG_O(operand1, il.ShiftLeft(REGSZ_O(operand2), ILREG_O(operand2),
@@ -2864,6 +3172,16 @@ bool GetLowLevelILForInstruction(
 		                      il.Const(1, (REGSZ_O(operand1) * 8) - IMM_O(operand4) - IMM_O(operand3))),
 		                  il.Const(1, (REGSZ_O(operand1) * 8) - IMM_O(operand4)))));
 		break;
+	// Z is set only for an exact conversion, which -0.0 and a flushed subnormal are not, so the
+	// intrinsic computes it alongside the JavaScript ToInt32 result.
+	case EXARMO_AARCH64_FJCVTZS:
+		il.AddInstruction(
+		    il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1)), RegisterOrFlag::Flag(IL_FLAG_Z)},
+		        ARM64_INTRIN_JCVT, {ILREG_O(operand2)}));
+		il.AddInstruction(il.SetFlag(IL_FLAG_N, il.Const(0, 0)));
+		il.AddInstruction(il.SetFlag(IL_FLAG_C, il.Const(0, 0)));
+		il.AddInstruction(il.SetFlag(IL_FLAG_V, il.Const(0, 0)));
+		break;
 	// Lift the forms that write a general register directly in IL. The forms that write a vector
 	// register fall through to the ACLE lift.
 	case EXARMO_AARCH64_FCVTZS:
@@ -3025,6 +3343,24 @@ bool GetLowLevelILForInstruction(
 			il.AddInstruction(
 			    il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))}, intrinsic, {ILREG_O(operand2)}));
 		}
+		break;
+	}
+	// ACLE has no intrinsic for FNMADD or FNMSUB. Arm defines them as FMADD with the addend negated,
+	// and for FNMADD the first factor too, so they lift as FMADD's intrinsic on the negated operands.
+	case EXARMO_AARCH64_FNMADD:
+	case EXARMO_AARCH64_FNMSUB:
+	{
+		size_t size = REGSZ_O(operand1);
+		uint32_t intrinsic =
+		    size == 4 ? ARM64_INTRIN_FMADD : AcleIntrinsicNamed(size == 8 ? "vfma_f64" : "vfmah_f16");
+		if (intrinsic == ARM64_INTRIN_INVALID)
+			ABORT_LIFT;
+
+		ExprId factor = ILREG_O(operand2);
+		if (mnemonic == EXARMO_AARCH64_FNMADD)
+			factor = il.FloatNeg(size, factor);
+		il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))}, intrinsic,
+		    {il.FloatNeg(size, ILREG_O(operand4)), factor, ILREG_O(operand3)}));
 		break;
 	}
 	// ACLE has no intrinsic for scalar FMAXP and friends on two halves. Lift them as the two-operand
@@ -3344,6 +3680,8 @@ bool GetLowLevelILForInstruction(
 		break;
 	case EXARMO_AARCH64_STP:
 	case EXARMO_AARCH64_STNP:
+	case EXARMO_AARCH64_STTP:
+	case EXARMO_AARCH64_STTNP:
 		LoadStoreOperandPair(il, false, operands[0], operands[1], operands[2]);
 		break;
 	case EXARMO_AARCH64_ST2G:
@@ -3396,18 +3734,24 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_STLR:
 	case EXARMO_AARCH64_STUR:
 	case EXARMO_AARCH64_STLUR:
+	case EXARMO_AARCH64_STTR:
+	case EXARMO_AARCH64_STLLR:
 		LoadStoreOperand(il, false, operands[0], operands[1], 0, addr);
 		break;
 	case EXARMO_AARCH64_STRB:
 	case EXARMO_AARCH64_STLRB:
 	case EXARMO_AARCH64_STURB:
 	case EXARMO_AARCH64_STLURB:
+	case EXARMO_AARCH64_STTRB:
+	case EXARMO_AARCH64_STLLRB:
 		LoadStoreOperandSize(il, false, false, 1, REG_O(operands[0]), operands[1], addr);
 		break;
 	case EXARMO_AARCH64_STRH:
 	case EXARMO_AARCH64_STLRH:
 	case EXARMO_AARCH64_STURH:
 	case EXARMO_AARCH64_STLURH:
+	case EXARMO_AARCH64_STTRH:
+	case EXARMO_AARCH64_STLLRH:
 		LoadStoreOperandSize(il, false, false, 2, REG_O(operands[0]), operands[1], addr);
 		break;
 	case EXARMO_AARCH64_SUB:
@@ -3490,6 +3834,10 @@ bool GetLowLevelILForInstruction(
 	case EXARMO_AARCH64_SWPA:
 	case EXARMO_AARCH64_SWPL:
 	case EXARMO_AARCH64_SWPAL:
+	case EXARMO_AARCH64_SWPT:
+	case EXARMO_AARCH64_SWPTA:
+	case EXARMO_AARCH64_SWPTL:
+	case EXARMO_AARCH64_SWPTAL:
 		LoadTemporary(il, REGSZ_O(operand2), operand3, addr);
 		il.AddInstruction(il.Store(REGSZ_O(operand2), ILREG_O(operand3), ILREG_O(operand1)));
 		if (!IS_ZERO_REG(REG_O(operand2)))
@@ -3566,6 +3914,18 @@ bool GetLowLevelILForInstruction(
 		        il.Const(REGSZ_O(operand1), 0)),
 		    addrSize, LabelTarget(operand3, addr), addr + 4);
 		return false;
+	case EXARMO_AARCH64_TFLTNZ:
+		GenIfElse(il,
+		    il.CompareNotEqual(REGSZ_O(operand2), ExtractBit(il, operand2, IMM_O(operand3)),
+		        il.Const(REGSZ_O(operand2), 0)),
+		    il.Trap(IMM_O(operand1)), 0);
+		break;
+	case EXARMO_AARCH64_TFLTZ:
+		GenIfElse(il,
+		    il.CompareEqual(REGSZ_O(operand2), ExtractBit(il, operand2, IMM_O(operand3)),
+		        il.Const(REGSZ_O(operand2), 0)),
+		    il.Trap(IMM_O(operand1)), 0);
+		break;
 	case EXARMO_AARCH64_TST:
 		il.AddInstruction(il.And(REGSZ_O(operand1), ILREG_O(operand1),
 		    ReadILOperand(il, operand2, REGSZ_O(operand1), addr), SETFLAGS));
@@ -3976,8 +4336,40 @@ bool GetLowLevelILForInstruction(
 		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_HINT_PACM, {}));
 		break;
 	case EXARMO_AARCH64_HINT:
-		if ((IMM_O(operand1) & ~0b110) == 0b100000)
-			il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_HINT_BTI, {}));
+	case EXARMO_AARCH64_HINTE:
+		il.AddInstruction(il.Nop());
+		break;
+	case EXARMO_AARCH64_CHKFEAT:
+		il.AddInstruction(il.Intrinsic(
+		    {RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_CHKFEAT, {ILREG_O(operand1)}));
+		break;
+	case EXARMO_AARCH64_GCSB:
+		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_HINT_GCSB, {}));
+		break;
+	case EXARMO_AARCH64_GCSPUSHM:
+		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_GCSPUSHM, {ILREG_O(operand1)}));
+		break;
+	case EXARMO_AARCH64_GCSPOPM:
+		il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_GCSPOPM, {}));
+		break;
+	case EXARMO_AARCH64_GCSSS1:
+		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_GCSSS1, {ILREG_O(operand1)}));
+		break;
+	case EXARMO_AARCH64_GCSSS2:
+		il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(REG_O(operand1))}, ARM64_INTRIN_GCSSS2, {}));
+		break;
+	case EXARMO_AARCH64_GCSPUSHX:
+		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_GCSPUSHX, {}));
+		break;
+	case EXARMO_AARCH64_GCSPOPX:
+		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_GCSPOPX, {}));
+		break;
+	case EXARMO_AARCH64_GCSPOPCX:
+		il.AddInstruction(il.Intrinsic({}, ARM64_INTRIN_GCSPOPCX, {}));
+		break;
+	case EXARMO_AARCH64_GCSSTR:
+	case EXARMO_AARCH64_GCSSTTR:
+		LoadStoreOperand(il, false, operand1, operand2, 0, addr);
 		break;
 	case EXARMO_AARCH64_HLT:
 		il.AddInstruction(il.Trap(IMM_O(operand1)));

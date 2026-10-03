@@ -20935,6 +20935,7 @@ namespace BinaryNinja {
 		bool Uninstall();
 		bool CancelUninstall();
 		bool Install(std::string versionID);
+		bool MarkInstalledForMigration(std::string versionID);
 		bool InstallDependencies();
 		bool InstallDependencies(const std::string& versionID);
 		bool InstallDependencies(const std::vector<std::string>& excludedPackageNames);

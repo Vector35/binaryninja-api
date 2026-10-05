@@ -2997,6 +2997,114 @@ bool ElfViewType::IsTypeValidForData(BinaryView* data)
 }
 
 
+static bool HasFreeBSDAbiNote(BinaryView* data, uint64_t offset, uint64_t size, BNEndianness endianness)
+{
+	const uint64_t length = data->GetLength();
+	if (offset > length || size > length - offset)
+		return false;
+
+	BinaryReader reader(data);
+	reader.SetEndianness(endianness);
+	const uint64_t end = offset + size;
+	while (end - offset >= 12)
+	{
+		reader.Seek(offset);
+		uint64_t nameSize = reader.Read32();
+		uint64_t descSize = reader.Read32();
+		uint32_t type = reader.Read32();
+		uint64_t paddedNameSize = (nameSize + 3) & ~uint64_t(3);
+		uint64_t paddedDescSize = (descSize + 3) & ~uint64_t(3);
+		offset += 12;
+		if (paddedNameSize > end - offset || paddedDescSize > end - offset - paddedNameSize)
+			return false;
+
+		// NT_FREEBSD_ABI_TAG: an eight-byte owner (including NUL), followed
+		// by a four-byte ABI version. Other FreeBSD notes are not ABI tags.
+		char name[8];
+		if (nameSize == sizeof(name) && descSize == 4 && type == 1
+			&& data->Read(name, offset, sizeof(name)) == sizeof(name)
+			&& memcmp(name, "FreeBSD\0", sizeof(name)) == 0)
+			return true;
+		offset += paddedNameSize + paddedDescSize;
+	}
+	return false;
+}
+
+
+static uint8_t RecognizeElfOSABI(BinaryView* data, const ElfIdent& ident, const Elf64Header& header,
+	BNEndianness endianness)
+{
+	// An explicit OSABI takes precedence. OSABI zero is ambiguous and is
+	// also emitted by FreeBSD toolchains (notably for RISC-V).
+	if (ident.os != 0)
+		return ident.os;
+
+	const bool is32bit = ident.fileClass == 1;
+	const uint64_t length = data->GetLength();
+	BinaryReader reader(data);
+	reader.SetEndianness(endianness);
+	bool freebsdInterpreter = false;
+	try
+	{
+		const size_t phSize = is32bit ? sizeof(Elf32ProgramHeader) : sizeof(Elf64ProgramHeader);
+		if (header.programHeaderSize == phSize && header.programHeaderOffset <= length
+			&& header.programHeaderCount <= (length - header.programHeaderOffset) / phSize)
+		{
+			for (size_t i = 0; i < header.programHeaderCount; i++)
+			{
+				uint64_t pos = header.programHeaderOffset + i * phSize;
+				reader.Seek(pos);
+				uint32_t type = reader.Read32();
+				reader.Seek(pos + (is32bit ? 4 : 8));
+				uint64_t offset = is32bit ? reader.Read32() : reader.Read64();
+				reader.Seek(pos + (is32bit ? 16 : 32));
+				uint64_t size = is32bit ? reader.Read32() : reader.Read64();
+				if (offset > length || size > length - offset)
+					continue;
+				if (type == ELF_PT_NOTE && HasFreeBSDAbiNote(data, offset, size, endianness))
+					return 9;
+				if (type == ELF_PT_INTERP && size > 0 && size <= 128)
+				{
+					char path[128];
+					if (data->Read(path, offset, size) == size && path[size - 1] == '\0')
+					{
+						string interpreter(path, size - 1);
+						freebsdInterpreter |= interpreter == "/libexec/ld-elf.so.1"
+							|| interpreter == "/libexec/ld-elf32.so.1"
+							|| interpreter == "/usr/libexec/ld-elf.so.1";
+					}
+				}
+			}
+		}
+
+		// Relocatable objects and some shared libraries have section notes
+		// without PT_NOTE. Conversely, PT_NOTE works without section headers.
+		const size_t shSize = is32bit ? sizeof(Elf32SectionHeader) : sizeof(Elf64SectionHeader);
+		if (header.sectionHeaderSize == shSize && header.sectionHeaderOffset <= length
+			&& header.sectionHeaderCount <= (length - header.sectionHeaderOffset) / shSize)
+		{
+			for (size_t i = 0; i < header.sectionHeaderCount; i++)
+			{
+				uint64_t pos = header.sectionHeaderOffset + i * shSize;
+				reader.Seek(pos + 4);
+				if (reader.Read32() != ELF_SHT_NOTE)
+					continue;
+				reader.Seek(pos + (is32bit ? 16 : 24));
+				uint64_t offset = is32bit ? reader.Read32() : reader.Read64();
+				uint64_t size = is32bit ? reader.Read32() : reader.Read64();
+				if (HasFreeBSDAbiNote(data, offset, size, endianness))
+					return 9;
+			}
+		}
+	}
+	catch (ReadException&)
+	{
+		// Optional identification data must not prevent loading the ELF.
+	}
+	return freebsdInterpreter ? 9 : ident.os;
+}
+
+
 uint64_t ElfView::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonHeader& commonHeader, Elf64Header& header, Ref<Architecture>* arch, Ref<Platform>* plat, string& errorMsg, BNEndianness& endianness)
 {
 	if (!g_elfViewType->IsTypeValidForData(data))
@@ -3129,10 +3237,11 @@ uint64_t ElfView::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonHeade
 		sectionCount = 0;
 	}
 
+	const uint8_t osABI = RecognizeElfOSABI(data, ident, header, endianness);
 	map<string, Ref<Metadata>> metadataMap = {
 		{"EI_CLASS",    new Metadata((uint64_t) ident.fileClass)},
 		{"EI_DATA",     new Metadata((uint64_t) ident.encoding)},
-		{"EI_OSABI",    new Metadata((uint64_t) ident.os)},
+		{"EI_OSABI",    new Metadata((uint64_t) osABI)},
 		{"e_type",      new Metadata((uint64_t) commonHeader.type)},
 		{"e_machine",   new Metadata((uint64_t) commonHeader.arch)},
 		{"e_flags",     new Metadata((uint64_t) header.flags)},
@@ -3217,6 +3326,12 @@ uint64_t ElfView::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonHeade
 				/* second try with the alternative architecture identifier */
 				*arch = g_elfViewType->GetArchitecture(altArchId, codeEndianness);
 			}
+
+			// We want to preserve the original ELF ident for annotations, but use
+			// the recognized OS for platform selection instead of Linux's OSABI == 0
+			// fallback. Architecture recognizers see the same effective OSABI.
+			if (plat && *arch && osABI != ident.os)
+				*plat = g_elfViewType->GetPlatform(osABI, *arch);
 		}
 	}
 

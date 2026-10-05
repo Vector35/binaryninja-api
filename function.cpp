@@ -21,6 +21,7 @@
 #include "binaryninjaapi.h"
 #include "mediumlevelilinstruction.h"
 #include "highlevelilinstruction.h"
+#include <algorithm>
 #include <cstring>
 
 #include "ffi.h"
@@ -736,6 +737,40 @@ Ref<LanguageRepresentationFunction> Function::GetLanguageRepresentationIfAvailab
 	if (!function)
 		return nullptr;
 	return new CoreLanguageRepresentationFunction(function);
+}
+
+
+double Function::GetComplexity(const string& metric) const
+{
+	// Validated here, client-side, rather than relying on the core: BNGetFunctionComplexity can't
+	// let a C++ exception cross the C ABI boundary (fatal for other language bindings, e.g. Rust),
+	// so it just logs and returns 0.0 for an unrecognized name instead of throwing - which would
+	// silently violate this method's own documented `\throws std::invalid_argument` contract if
+	// nothing here caught it first.
+	vector<string> validMetrics = GetComplexityMetricNames();
+	if (find(validMetrics.begin(), validMetrics.end(), metric) == validMetrics.end())
+	{
+		string valid;
+		for (size_t i = 0; i < validMetrics.size(); i++)
+			valid += (i == 0 ? "" : ", ") + validMetrics[i];
+		throw std::invalid_argument("Unknown complexity metric \"" + metric + "\"; valid options are: " + valid);
+	}
+
+	return BNGetFunctionComplexity(m_object, metric.c_str());
+}
+
+
+vector<string> Function::GetComplexityMetricNames()
+{
+	size_t count = 0;
+	char** names = BNGetFunctionComplexityMetricNames(&count);
+	vector<string> result;
+	result.reserve(count);
+	for (size_t i = 0; i < count; i++)
+		result.push_back(names[i]);
+
+	BNFreeStringList(names, count);
+	return result;
 }
 
 

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <string.h>
 #ifndef _MSC_VER
 #include <cxxabi.h>
@@ -477,8 +478,8 @@ bool ElfView::Init()
 {
 	std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
 	// Add segments for the program headers
-	BinaryReader reader(GetParentView());
-	BinaryReader virtualReader(this);
+	BinaryReader reader(GetParentView(), m_endian);
+	BinaryReader virtualReader(this, m_endian);
 
 	uint64_t initialImageBase = 0;
 	bool initialImageBaseSet = false;
@@ -793,6 +794,8 @@ bool ElfView::Init()
 
 	// Add the entry point as a function if the architecture is supported
 	uint64_t entryPointAddress = m_entryPoint;
+	// If the binary appears to be thumb, set the low bit on the entry point.
+	entryPointAddress |= !!ParseArmAttributesForThumb(reader, m_elfSections, sectionNames);
 	Ref<Architecture> entryPointArch = m_arch->GetAssociatedArchitectureByAddress(entryPointAddress);
 	SetDefaultArchitecture(entryPointArch);
 	GetParentView()->SetDefaultArchitecture(entryPointArch);
@@ -815,10 +818,6 @@ bool ElfView::Init()
 		m_stringTableCache.clear();
 		return true;
 	}
-
-	// Set reader endianness
-	reader.SetEndianness(m_endian);
-	virtualReader.SetEndianness(m_endian);
 
 	// FIXME: MIPS specific GOT entries should be done in the MIPS plugin, once there is a way to have
 	// ELF parsing extensions in an architecture plugin
@@ -3174,6 +3173,95 @@ uint64_t ElfView::ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonHeade
 	}
 
 	return reader.GetOffset();
+}
+
+bool ElfView::ParseArmAttributesForThumb(BinaryReader &reader, const std::vector<Elf64SectionHeader>& sections, const std::vector<std::string> &sectionNames) {
+	if (m_commonHeader.arch != EM_ARM) {
+		return false;
+	}
+
+	auto i = std::find(sectionNames.begin(), sectionNames.end(), ".ARM.attributes");
+	if (i == sectionNames.end()) {
+		return false;
+	}
+	auto attributes = sections[i - sectionNames.begin()];
+	
+	auto fail = [&]() {
+		m_logger->LogError("ARM attributes section invalid");
+		return false;
+	};
+
+	// From "Addenda to, and Errata in, the ABI for the Arm® Architecture", Section 3, ADDENDUM: Build Attributes
+	// (https://github.com/ARM-software/abi-aa/blob/main/addenda32/addenda32.rst#addendum-build-attributes)
+	try {
+		auto section = reader.Slice(attributes.offset, attributes.size);
+		if (section.Read8() != 'A') {
+			return fail();
+		}
+
+		while (!section.IsEndOfFile()) {
+			auto length = section.Read32();
+			if (length < sizeof(length)) {
+				return fail();
+			}
+			length -= sizeof(length);
+
+			auto subsection = section.Slice(section.GetOffset(), length);
+			section.SeekRelative(length);
+			if (subsection.ReadCString() != "aeabi") {
+				continue;
+			}
+
+			while (!subsection.IsEndOfFile()) {
+				auto start = subsection.GetOffset();
+				auto tag = subsection.ReadULEB128();
+				auto length = subsection.Read32();
+				auto header_length = subsection.GetOffset() - start;
+				if (length < header_length) {
+					return fail();
+				}
+				length -= header_length;
+
+				auto scope = subsection.Slice(subsection.GetOffset(), length);
+				subsection.SeekRelative(length);
+				if (tag != ARM_TAG_FILE) {
+					continue;
+				}
+
+				while (!scope.IsEndOfFile()) {
+					auto tag = scope.ReadULEB128();
+					if (tag < ARM_TAG_CPU_RAW_NAME) {
+						return fail();
+					}
+					if (tag == ARM_TAG_CPU_RAW_NAME || tag == ARM_TAG_CPU_NAME || (tag > ARM_TAG_COMPATIBILITY && (tag % 2))) {
+						scope.ReadCString();
+						continue;
+					}
+
+					auto value = scope.ReadULEB128();
+					if (tag == ARM_TAG_CPU_ARCH) {
+						switch (value) {
+						case ARM_CPU_ARCH_V6_M:
+						case ARM_CPU_ARCH_V6S_M:
+						case ARM_CPU_ARCH_V7E_M:
+						case ARM_CPU_ARCH_V8_M_BASELINE:
+						case ARM_CPU_ARCH_V8_M_MAINLINE:
+						case ARM_CPU_ARCH_V8_1_M_MAINLINE:
+							return true;
+						}
+					} else if (tag == ARM_TAG_CPU_ARCH_PROFILE && value == 'M') {
+						return true;
+					} else if (tag == ARM_TAG_COMPATIBILITY) {
+						scope.ReadCString();
+					}
+				}
+			}
+		}
+	} catch (ReadException &) {
+		return fail();
+	}
+
+	return false;
 }
 
 

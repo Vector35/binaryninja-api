@@ -3451,6 +3451,18 @@ pub extern "C" fn CorePluginInit() -> bool {
     plat32.set_syscall_convention(&syscall_cc32);
     plat64.set_syscall_convention(&syscall_cc64);
 
+    // FreeBSD uses t0 for the syscall number and, on return, the error
+    // indicator. Arguments occupy a0-a7 and a0/a1 hold the return values.
+    // See FreeBSD lib/libsys/riscv/SYS.h and cpu_set_syscall_retval.
+    ConventionBuilder::new(arch64)
+        .caller_saved_registers(&["a0", "a1", "t0"])
+        .int_arg_registers(&["t0", "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7"])
+        .return_int_reg("a0")
+        .return_hi_int_reg("a1")
+        .global_pointer_regs(&["gp"])
+        .is_eligible_for_heuristics(false)
+        .register("freebsd-syscall");
+
     true
 }
 

@@ -116,7 +116,7 @@ public:
 			RegisterStdcallCallingConvention(cc);
 		}
 
-		cc = arch->GetCallingConventionByName("syscall");
+		cc = arch->GetCallingConventionByName("freebsd-syscall");
 		if (cc)
 			SetSystemCallConvention(cc);
 	}

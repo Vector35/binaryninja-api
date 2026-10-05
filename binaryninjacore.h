@@ -5664,6 +5664,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNReadBE16(BNBinaryReader* stream, uint16_t* result);
 	BINARYNINJACOREAPI bool BNReadBE32(BNBinaryReader* stream, uint32_t* result);
 	BINARYNINJACOREAPI bool BNReadBE64(BNBinaryReader* stream, uint64_t* result);
+	BINARYNINJACOREAPI bool BNReadSLEB128(BNBinaryReader* stream, int64_t* result);
+	BINARYNINJACOREAPI bool BNReadULEB128(BNBinaryReader* stream, uint64_t* result);
 	BINARYNINJACOREAPI bool BNReadPointer(BNBinaryView* view, BNBinaryReader* stream, uint64_t* result);
 
 	BINARYNINJACOREAPI uint64_t BNGetReaderPosition(BNBinaryReader* stream);

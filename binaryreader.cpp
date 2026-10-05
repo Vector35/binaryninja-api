@@ -224,6 +224,24 @@ uint64_t BinaryReader::ReadBE64()
 }
 
 
+uint64_t BinaryReader::ReadULEB128()
+{
+	uint64_t result;
+	if (!BNReadULEB128(m_stream, &result))
+		throw ReadException();
+	return result;
+}
+
+
+int64_t BinaryReader::ReadSLEB128()
+{
+	int64_t result;
+	if (!BNReadSLEB128(m_stream, &result))
+		throw ReadException();
+	return result;
+}
+
+
 uint64_t BinaryReader::ReadBEPointer()
 {
 	uint64_t result;
@@ -314,6 +332,18 @@ bool BinaryReader::TryRead32(uint32_t& result)
 bool BinaryReader::TryRead64(uint64_t& result)
 {
 	return BNRead64(m_stream, &result);
+}
+
+
+bool BinaryReader::TryReadSLEB128(int64_t& result)
+{
+	return BNReadSLEB128(m_stream, &result);
+}
+
+
+bool BinaryReader::TryReadULEB128(uint64_t& result)
+{
+	return BNReadULEB128(m_stream, &result);
 }
 
 

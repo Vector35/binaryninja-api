@@ -9092,6 +9092,20 @@ namespace BinaryNinja {
 		*/
 		uint64_t Read64();
 
+		/*! Read a signed LEB128 from the current cursor position
+
+			\throws ReadException
+			\return The read value
+		*/
+		int64_t ReadSLEB128();
+
+		/*! Read an unsigned LEB128 from the current cursor position
+
+			\throws ReadException
+			\return The read value
+		*/
+		uint64_t ReadULEB128();
+
 		/*! Read a pointer (size of BinaryView::GetAddressSize()) from the current cursor position and advance
 		    and advance it that many bytes
 
@@ -9215,6 +9229,18 @@ namespace BinaryNinja {
 			\return Whether the read succeeded.
 		*/
 		bool TryRead64(uint64_t& result);
+
+		/*! Try reading an unsigned LEB128 value.
+
+			The cursor and result are unchanged on failure.
+		*/
+		bool TryReadULEB128(uint64_t& result);
+
+		/*! Try reading a signed LEB128 value.
+
+			The cursor and result are unchanged on failure.
+		*/
+		bool TryReadSLEB128(int64_t& result);
 
 		/*! Try reading a pointer (size of BinaryView::GetAddressSize())
 

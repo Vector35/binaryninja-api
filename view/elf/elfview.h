@@ -321,6 +321,22 @@
 
 #define EF_ARM_BE8  0x00800000 // ELF contains BE-8 code for ARMv6 processor
 
+#define ARM_TAG_FILE             1
+#define ARM_TAG_SECTION          2
+#define ARM_TAG_SYMBOL           3
+#define ARM_TAG_CPU_RAW_NAME     4
+#define ARM_TAG_CPU_NAME         5
+#define ARM_TAG_CPU_ARCH         6
+#define ARM_TAG_CPU_ARCH_PROFILE 7
+#define ARM_TAG_COMPATIBILITY    32
+
+#define ARM_CPU_ARCH_V6_M           11
+#define ARM_CPU_ARCH_V6S_M          12
+#define ARM_CPU_ARCH_V7E_M          13
+#define ARM_CPU_ARCH_V8_M_BASELINE  16
+#define ARM_CPU_ARCH_V8_M_MAINLINE  17
+#define ARM_CPU_ARCH_V8_1_M_MAINLINE 21
+
 #define PF_X        (1 << 0)    // Segment is executable
 #define PF_W        (1 << 1)    // Segment is writable
 #define PF_R        (1 << 2)    // Segment is readable
@@ -548,6 +564,7 @@ namespace BinaryNinja
 
 		void ParseMiniDebugInfo();
 		uint64_t ParseHeaders(BinaryView* data, ElfIdent& ident, ElfCommonHeader& commonHeader, Elf64Header& header, Ref<Architecture>* arch, Ref<Platform>* plat, std::string& errorMsg, BNEndianness& endianness);
+		bool ParseArmAttributesForThumb(BinaryReader &reader, const std::vector<Elf64SectionHeader>& sections, const std::vector<std::string> &sectionNames);
 	public:
 		ElfView(BinaryView* data, bool parseOnly = false);
 		~ElfView();

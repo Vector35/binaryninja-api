@@ -31,6 +31,11 @@ BinaryReader::BinaryReader(BinaryView* data, BNEndianness endian) : m_view(data)
 }
 
 
+BinaryReader::BinaryReader(Ref<BinaryView> data, BNBinaryReader* stream) : m_view(data), m_stream(stream)
+{
+}
+
+
 BinaryReader::~BinaryReader()
 {
 	BNFreeBinaryReader(m_stream);
@@ -440,6 +445,12 @@ bool BinaryReader::TryReadBEPointer(uint64_t& result)
 		}
 	}
 	return true;
+}
+
+
+BinaryReader BinaryReader::Slice(uint64_t offset, size_t length) const
+{
+	return BinaryReader(m_view, BNSliceBinaryReader(m_stream, offset, length));
 }
 
 

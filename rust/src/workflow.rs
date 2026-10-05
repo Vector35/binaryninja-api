@@ -4,6 +4,7 @@ use binaryninjacore_sys::*;
 #[allow(unused)]
 use crate::binary_view::{memory_map::MemoryMap, BinaryViewBase};
 
+use crate::architecture::CoreArchitecture;
 use crate::basic_block::BasicBlock;
 use crate::binary_view::BinaryView;
 use crate::confidence::Conf;
@@ -78,6 +79,41 @@ impl AnalysisContext {
                 self.handle.as_ptr(),
                 &mut raw_hints,
                 parameters_complete,
+            )
+        }
+    }
+
+    /// Submit a verified complete physical signature for calls through an import entry.
+    /// Call after `core.function.prepareMediumLevelIL` and before
+    /// `core.function.analyzeMediumLevelIL`. The architecture must match the current
+    /// function, and `import_address` must have an import-address or external symbol.
+    /// All parameters and the result need explicit validated ABI locations, with a
+    /// matching calling convention. Fully specified composite and indirect locations
+    /// are supported; source declarations alone are insufficient. User data declarations,
+    /// nonzero-confidence library prototypes, and explicit user or imported signatures
+    /// on a uniquely linked stub take precedence. Higher confidence
+    /// replaces earlier hints; equal confidence keeps the first contributor.
+    /// Hints affect only the current function's active MLIL pass. They do not define
+    /// data variables, persist signatures, or schedule another analysis pass.
+    /// Consumed hints register named-type dependencies so later type edits invalidate
+    /// the caller normally.
+    /// Returns false outside the recovery phase or when the proposal is rejected.
+    pub fn set_imported_function_type_hints<'a, C>(
+        &self,
+        arch: impl AsRef<CoreArchitecture>,
+        import_address: u64,
+        hints: C,
+    ) -> bool
+    where
+        C: Into<Conf<&'a Type>>,
+    {
+        let mut raw_hints = Conf::<&Type>::into_raw(hints.into());
+        unsafe {
+            BNAnalysisContextSetImportedFunctionTypeHints(
+                self.handle.as_ptr(),
+                arch.as_ref().handle,
+                import_address,
+                &mut raw_hints,
             )
         }
     }

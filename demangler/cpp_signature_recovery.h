@@ -172,6 +172,29 @@ namespace BN::CppSignatureRecovery
 		bool parametersComplete = false;
 	};
 
+	inline bool DirectResultLocationSupported(Type* type, const ValueLocation& location, Architecture* arch)
+	{
+		if (!type || !arch || location.indirect || location.returnedPointer.has_value())
+			return false;
+		const bool isVoid = TypeClass(type) == VoidTypeClass;
+		if (isVoid != location.components.empty())
+			return false;
+		const uint64_t width = type->GetWidth();
+		for (const auto& component : location.components)
+		{
+			auto storage = VariableStorage(component.variable);
+			if (VariableSource(component.variable) != RegisterVariableSourceType
+				|| LLIL_REG_IS_TEMP(storage) || component.offset < 0 || (uint64_t)component.offset >= width)
+				return false;
+			const uint64_t remainingWidth = width - (uint64_t)component.offset;
+			const uint64_t pieceWidth = component.size.value_or(remainingWidth);
+			if (pieceWidth == 0 || pieceWidth > remainingWidth
+				|| pieceWidth > arch->GetRegisterInfo((uint32_t)storage).size)
+				return false;
+		}
+		return true;
+	}
+
 	// An encoded scalar result can remain useful when the source parameter ABI
 	// is incomplete. This proposal has no parameters or argument-byte cleanup.
 	inline std::optional<Hints> RecoverEncodedReturn(const Ref<AnalysisContext>& context, Type* source)
@@ -193,27 +216,13 @@ namespace BN::CppSignatureRecovery
 		ValueLocation location;
 		if (layout.returnValue.has_value())
 			location = *layout.returnValue;
-		if (location.indirect || location.returnedPointer.has_value())
+		if (!DirectResultLocationSupported(returnValue.type.GetValue(), location, function->GetArchitecture()))
 			return std::nullopt;
-		bool isVoid = TypeClass(returnValue.type.GetValue()) == VoidTypeClass;
-		if (isVoid != location.components.empty())
-			return std::nullopt;
-		auto arch = function->GetArchitecture();
-		uint64_t width = returnValue.type->GetWidth();
-		for (const auto& component : location.components)
-		{
-			auto storage = VariableStorage(component.variable);
-			if (VariableSource(component.variable) != RegisterVariableSourceType
-				|| LLIL_REG_IS_TEMP(storage) || component.offset < 0 || (uint64_t)component.offset >= width)
-				return std::nullopt;
-			uint64_t remainingWidth = width - (uint64_t)component.offset;
-			uint64_t pieceWidth = component.size.value_or(remainingWidth);
-			if (pieceWidth == 0 || pieceWidth > remainingWidth
-				|| pieceWidth > arch->GetRegisterInfo((uint32_t)storage).size)
-				return std::nullopt;
-		}
 		returnValue.defaultLocation = false;
-		returnValue.location = Confidence<ValueLocation>(location, BN_HEURISTIC_CONFIDENCE);
+		// The encoded scalar result and its calling convention determine this
+		// physical slot independently of the incomplete parameter list. A lower
+		// confidence would let an incidental clobbered register replace the result.
+		returnValue.location = Confidence<ValueLocation>(location, BN_FULL_CONFIDENCE);
 		Ref<Type> result = Type::FunctionType(returnValue,
 			Confidence<Ref<CallingConvention>>(convention, 0), {});
 		return Hints{result, false};
@@ -261,6 +270,27 @@ namespace BN::CppSignatureRecovery
 		for (auto reg : convention->GetFloatArgumentRegisters())
 			inputRegisters.insert(reg);
 		auto indirectResult = convention->GetIndirectReturnValueLocation();
+		auto architecture = function->GetArchitecture();
+		bool dedicatedIndirectResult = false;
+		if (VariableSource(indirectResult) == RegisterVariableSourceType)
+		{
+			auto storage = VariableStorage(indirectResult);
+			if (storage >= 0 && (uint64_t)storage <= UINT32_MAX && !LLIL_REG_IS_TEMP(storage))
+			{
+				auto info = architecture->GetRegisterInfo((uint32_t)storage);
+				if (info.size >= architecture->GetAddressSize() && info.fullWidthRegister != BN_INVALID_REGISTER)
+				{
+					dedicatedIndirectResult = true;
+					for (auto reg : inputRegisters)
+						if (architecture->GetRegisterInfo(reg).fullWidthRegister == info.fullWidthRegister)
+							dedicatedIndirectResult = false;
+				}
+			}
+		}
+		// A dedicated result register does not shift the source argument slots.
+		// Keep those scalar bindings useful without claiming a complete physical
+		// list: machine recovery must still retain a possible hidden result input.
+		bool partialResultABI = false;
 		if (VariableSource(indirectResult) == RegisterVariableSourceType)
 			inputRegisters.insert((uint32_t)VariableStorage(indirectResult));
 
@@ -328,7 +358,11 @@ namespace BN::CppSignatureRecovery
 			case LLIL_TAILCALL_SSA:
 				// A forwarded unencoded result may use the incoming hidden buffer.
 				if (unencodedReturn && !knownNoIndirectResult)
-					return std::nullopt;
+				{
+					if (!dedicatedIndirectResult)
+						return std::nullopt;
+					partialResultABI = true;
+				}
 				continue;
 			case LLIL_SYSCALL_SSA:
 			case LLIL_REG_PHI:
@@ -345,13 +379,18 @@ namespace BN::CppSignatureRecovery
 		// A required receiver does not determine its slot when a hidden result
 		// pointer precedes it. Opaque output-buffer stores are ambiguous as well.
 		if (possibleIndirectResult)
-			return std::nullopt;
+		{
+			if (!dedicatedIndirectResult)
+				return std::nullopt;
+			partialResultABI = true;
+		}
 
 		struct Candidate
 		{
 			CallLayout layout;
 			bool supported = true;
 			bool contradicted = false;
+			bool hasUnexplainedInputs = false;
 		};
 		auto evaluate = [&](const auto& candidateParams) {
 			Candidate candidate;
@@ -381,8 +420,13 @@ namespace BN::CppSignatureRecovery
 					candidate.contradicted = true;
 			}
 			for (const auto& [reg, width] : observedWidths)
-				if (!receiverOnly && !explained.count(reg))
+				if (!receiverOnly && !explained.count(reg)
+					&& !(partialResultABI && architecture->GetRegisterInfo(reg).fullWidthRegister
+						== architecture->GetRegisterInfo((uint32_t)VariableStorage(indirectResult)).fullWidthRegister))
+				{
 					candidate.contradicted = true;
+					candidate.hasUnexplainedInputs = true;
+				}
 			return candidate;
 		};
 
@@ -409,7 +453,10 @@ namespace BN::CppSignatureRecovery
 			auto withoutThis = evaluate(withoutParams);
 			if (!withoutThis.supported)
 				return std::nullopt;
-			if (!withoutThis.contradicted)
+			// Argument forwarding can copy ABI extension bits of a narrower
+			// scalar. In a deferred-result path, that wider read alone cannot
+			// establish an optional receiver in the preceding register slot.
+			if (!withoutThis.contradicted || (partialResultABI && !withoutThis.hasUnexplainedInputs))
 			{
 				// Only observed slots invariant under both source interpretations are
 				// safe hints. Independent integer and floating-point banks often permit this.
@@ -428,6 +475,12 @@ namespace BN::CppSignatureRecovery
 		if (complete)
 			for (size_t i = 0; i < params.size(); ++i)
 				retained.push_back(i);
+		if (partialResultABI)
+		{
+			complete = false;
+			if (retained.empty())
+				return std::nullopt;
+		}
 
 		_STD_VECTOR<FunctionParameter> recoveredParams;
 		for (auto index : retained)
@@ -439,6 +492,14 @@ namespace BN::CppSignatureRecovery
 		}
 		if (unencodedReturn)
 			returnValue = ReturnValue(Confidence<Ref<Type>>(Type::VoidType(), 0));
+		else
+		{
+			ValueLocation location = withThis.layout.returnValue.value_or(ValueLocation());
+			if (!DirectResultLocationSupported(returnValue.type.GetValue(), location, function->GetArchitecture()))
+				return std::nullopt;
+			returnValue.defaultLocation = false;
+			returnValue.location = Confidence<ValueLocation>(location, BN_FULL_CONFIDENCE);
+		}
 		Ref<Type> result = Type::FunctionType(returnValue,
 			Confidence<Ref<CallingConvention>>(convention, BN_HEURISTIC_CONFIDENCE), recoveredParams,
 			source->HasVariableArguments(), source->CanReturn(), source->GetStackAdjustment(), {}, NoNameType, source->IsPure());

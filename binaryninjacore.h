@@ -6973,6 +6973,8 @@ extern "C"
 	BINARYNINJACOREAPI bool BNAnalysisContextInform(BNAnalysisContext* analysisContext, const char* request);
 	BINARYNINJACOREAPI bool BNAnalysisContextSetFunctionTypeHints(
 	    BNAnalysisContext* analysisContext, BNTypeWithConfidence* hints, bool parametersComplete);
+	BINARYNINJACOREAPI bool BNAnalysisContextSetImportedFunctionTypeHints(BNAnalysisContext* analysisContext,
+	    BNArchitecture* arch, uint64_t importAddress, BNTypeWithConfidence* hints);
 
 	// Settings cache access
 	BINARYNINJACOREAPI bool BNAnalysisContextGetSettingBool(BNAnalysisContext* analysisContext, const char* key);
@@ -9322,7 +9324,9 @@ extern "C"
 	BN_OPTIONS(uint8_t, BNSymbolDemangleQueueFlags)
 	{
 		NoSymbolDemangleQueueFlags = 0,
+		/* Apply recovered data types; demangled function signatures are deferred to function workflow activities. */
 		ApplyRecoveredTypes = 1,
+		/* Register referenced named types independently of signature application. */
 		DefineRecoveredTypes = 2
 	};
 

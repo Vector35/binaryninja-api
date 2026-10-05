@@ -157,6 +157,17 @@ bool AnalysisContext::SetFunctionTypeHints(const Confidence<Ref<Type>>& hints, b
 }
 
 
+bool AnalysisContext::SetImportedFunctionTypeHints(
+	Architecture* arch, uint64_t importAddress, const Confidence<Ref<Type>>& hints)
+{
+	BNTypeWithConfidence type;
+	type.type = hints.GetValue() ? hints->GetObject() : nullptr;
+	type.confidence = hints.GetConfidence();
+	return BNAnalysisContextSetImportedFunctionTypeHints(
+		m_object, arch ? arch->GetObject() : nullptr, importAddress, &type);
+}
+
+
 bool AnalysisContext::Inform(const char* request)
 {
 	return BNAnalysisContextInform(m_object, request);

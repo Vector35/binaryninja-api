@@ -12265,6 +12265,30 @@ namespace BinaryNinja {
 		*/
 		bool SetFunctionTypeHints(const Confidence<Ref<Type>>& hints, bool parametersComplete = false);
 
+		/*! Submit a verified complete physical signature for calls through an import entry.
+
+		    Call after core.function.prepareMediumLevelIL and before
+		    core.function.analyzeMediumLevelIL. The architecture must match the current
+		    function, and importAddress must have an import-address or external symbol.
+		    Every parameter and the return value must have explicit validated ABI
+		    locations, with a matching calling convention. Fully specified composite
+		    and indirect locations are supported; source declarations alone are insufficient.
+		    User data declarations, nonzero-confidence library prototypes, and explicit
+		    user or imported signatures on a uniquely linked stub take precedence.
+		    Higher-confidence proposals replace earlier hints; equal confidence keeps
+		    the first contributor. Hints affect only calls in the current function's
+		    active MLIL pass. They do not define data variables, persist signatures, or
+		    schedule another analysis pass. Consumed hints register named-type
+		    dependencies so later type edits invalidate the caller normally.
+
+		    \param arch Architecture of the import call's physical ABI
+		    \param importAddress Address of the import entry or external symbol
+		    \param hints Complete function type with explicit physical locations
+		    \return Whether the proposal was accepted; false outside the recovery phase
+		*/
+		bool SetImportedFunctionTypeHints(
+			Architecture* arch, uint64_t importAddress, const Confidence<Ref<Type>>& hints);
+
 		bool Inform(const char* request);
 		bool Inform(const std::string& request);
 
@@ -22905,6 +22929,10 @@ namespace BinaryNinja {
 
 		The SymbolResult passed to the callback and its borrowed data are valid only for the duration of the
 		callback. References returned by its accessors may be retained normally.
+
+		ApplyRecoveredTypes applies recovered data types. Demangled function signatures are deferred to function
+		workflow activities so their parameters can be checked against MLIL. Supplied types and platform function
+		types remain available to the callback. DefineRecoveredTypes independently registers referenced named types.
 
 		Drain must be called to dispatch and complete the final partially filled batch and to apply all queued symbols.
 		Destroying a queue waits for already-dispatched preparation to finish, but does not invoke the apply callback

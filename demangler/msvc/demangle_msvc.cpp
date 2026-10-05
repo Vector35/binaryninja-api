@@ -2646,10 +2646,111 @@ namespace
 			std::move(prepared->name), prepared->type.Finalize(config.GetPlatform())};
 	}
 
+	void RecoverMSVCImportSignatures(Ref<AnalysisContext> context)
+	{
+		auto function = context->GetFunction();
+		auto lowLevelIL = context->GetLowLevelILFunction();
+		if (!function || !function->GetPlatform() || !lowLevelIL || !lowLevelIL->GetSSAForm())
+			return;
+		auto il = lowLevelIL->GetSSAForm();
+		auto view = CppSignatureRecovery::View(context);
+		auto config = CppSignatureRecovery::Config(context);
+		std::set<uint64_t> visited;
+		for (size_t i = 0; i < il->GetInstructionCount(); ++i)
+		{
+			auto instruction = il->GetInstruction(i);
+			if (instruction.operation != LLIL_CALL_SSA && instruction.operation != LLIL_CALL_STACK_ADJUST
+				&& instruction.operation != LLIL_TAILCALL_SSA)
+				continue;
+			// Preparation clears mapped MLIL, so this value comes from independent
+			// LLIL data flow rather than a previous inferred call prototype.
+			auto target = instruction.GetDestExpr().GetValue();
+			if (target.state != ImportedAddressValue
+				&& !(target.state == ExternalPointerValue && target.offset == 0))
+				continue;
+			if (!visited.insert(target.value).second)
+				continue;
+			Ref<Symbol> symbol;
+			bool ambiguous = false;
+			for (const auto& candidate : view->GetSymbols(target.value, 1))
+			{
+				const auto expected = target.state == ImportedAddressValue ? ImportAddressSymbol : ExternalSymbol;
+				if (candidate->GetAddress() != target.value || candidate->GetType() != expected)
+					continue;
+				if (symbol && (symbol->GetRawName() != candidate->GetRawName()
+					|| symbol->GetNameSpace() != candidate->GetNameSpace()))
+					ambiguous = true;
+				symbol = candidate;
+			}
+			if (!symbol || ambiguous)
+				continue;
+			const string name(symbol->GetRawName());
+			if (name.empty() || name.front() != '?')
+				continue;
+			// A linked thunk is analyzed independently and can have its own user
+			// or imported prototype. Let the ordinary linked-stub lookup own it.
+			bool hasStub = false;
+			for (const auto& candidate : view->GetSymbolsByRawName(name))
+				hasStub |= candidate->GetType() == ImportedFunctionSymbol;
+			if (hasStub)
+				continue;
+			auto prepared = PrepareMSWithConfig(config, name);
+			if (!prepared || prepared->facts.isCtorOrDtor || !prepared->facts.returnEncoded
+				|| !CppSignatureRecovery::IsSelectedDemangler(name, config, BN_DEMANGLER_MSVC))
+				continue;
+			Ref<Type> source = CppSignatureRecovery::Finalize(context, config, std::move(prepared->type));
+			if (!source || CppSignatureRecovery::TypeClass(source) != FunctionTypeClass
+				|| source->HasVariableArguments().GetValue())
+				continue;
+			auto convention = source->GetCallingConvention().GetValue();
+			if (!convention)
+				convention = function->GetPlatform()->GetDefaultCallingConvention();
+			if (!convention)
+				continue;
+			ReturnValue returnValue = source->GetReturnValue();
+			auto parameters = source->GetParameters();
+			// MSVC encodes receiver identity and these scalar source widths. Their
+			// physical ABI is determined without a callee body. Opaque by-value
+			// objects and constructor flags still require machine recovery.
+			bool supported = returnValue.type.GetConfidence() > BN_MINIMUM_CONFIDENCE
+				&& CppSignatureRecovery::DirectScalar(returnValue.type.GetValue(), true)
+				&& CppSignatureRecovery::SafeCallbackTypes(returnValue.type.GetValue());
+			for (const auto& parameter : parameters)
+				supported &= CppSignatureRecovery::DirectScalar(parameter.type.GetValue())
+					&& CppSignatureRecovery::SafeCallbackTypes(parameter.type.GetValue());
+			if (!supported)
+				continue;
+			auto layout = convention->GetCallLayout(view, returnValue, parameters);
+			if (layout.parameters.size() != parameters.size())
+				continue;
+			for (size_t p = 0; p < parameters.size(); ++p)
+			{
+				const auto& location = layout.parameters[p];
+				supported &= !location.indirect && !location.returnedPointer.has_value()
+					&& location.components.size() == 1;
+				parameters[p].locationSource = CustomLocationSource;
+				parameters[p].location = location;
+			}
+			ValueLocation result = layout.returnValue.value_or(ValueLocation());
+			if (!supported || !CppSignatureRecovery::DirectResultLocationSupported(
+				returnValue.type.GetValue(), result, function->GetArchitecture()))
+				continue;
+			returnValue.defaultLocation = false;
+			returnValue.location = Confidence<ValueLocation>(result, BN_FULL_CONFIDENCE);
+			Ref<Type> physical = Type::FunctionType(returnValue,
+				Confidence<Ref<CallingConvention>>(convention, BN_FULL_CONFIDENCE), parameters,
+				source->HasVariableArguments(), source->CanReturn(), source->GetStackAdjustment(), {},
+				NoNameType, source->IsPure());
+			context->SetImportedFunctionTypeHints(function->GetArchitecture(), target.value,
+				Confidence<Ref<Type>>(physical, BN_FULL_CONFIDENCE));
+		}
+	}
+
 	void RecoverMSVCSignature(Ref<AnalysisContext> context)
 	{
 		if (!context->GetSetting<bool>("analysis.applyTypesFromMangledNames"))
 			return;
+		RecoverMSVCImportSignatures(context);
 		auto function = context->GetFunction();
 		if (!function || !function->GetSymbol() || !function->GetPlatform())
 			return;

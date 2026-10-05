@@ -37,6 +37,7 @@ from . import lowlevelil
 from . import mediumlevelil
 from . import highlevelil
 from . import types
+from . import architecture
 
 ActivityType = Union['Activity', str]
 
@@ -93,6 +94,29 @@ class AnalysisContext:
 		"""
 		return core.BNAnalysisContextSetFunctionTypeHints(
 			self.handle, hints._to_core_struct(), parameters_complete)
+
+	def set_imported_function_type_hints(self, arch: 'architecture.Architecture',
+			import_address: int, hints: 'types.Type') -> bool:
+		"""
+		Submit a verified complete physical signature for calls through an import entry.
+		Call after ``core.function.prepareMediumLevelIL`` and before
+		``core.function.analyzeMediumLevelIL``. The architecture must match the current
+		function. ``import_address`` must have an import-address or external symbol.
+		All parameters and the return value need explicit validated ABI locations,
+		with a matching calling convention. Fully specified composite and indirect
+		locations are supported; source declarations alone are insufficient.
+		User data declarations, nonzero-confidence library prototypes, and explicit
+		user or imported signatures on a uniquely linked stub take precedence.
+		Higher-confidence hints replace earlier proposals; equal confidence keeps the
+		first contributor. Hints affect only the current function's active MLIL pass.
+		They do not define data variables, persist signatures, or schedule another pass.
+		Consumed hints register named-type dependencies so later type edits invalidate
+		the caller normally.
+
+		:return: Whether the proposal was accepted; false outside the recovery phase
+		"""
+		return core.BNAnalysisContextSetImportedFunctionTypeHints(
+			self.handle, arch.handle, import_address, hints._to_core_struct())
 
 	@property
 	def lifted_il(self) -> Optional[lowlevelil.LowLevelILFunction]:

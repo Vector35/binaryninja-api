@@ -9006,6 +9006,8 @@ namespace BinaryNinja {
 		Ref<BinaryView> m_view;
 		BNBinaryReader* m_stream;
 
+		BinaryReader(Ref<BinaryView> data, BNBinaryReader* stream);
+
 	  public:
 		/*! Create a BinaryReader instance given a BinaryView and endianness.
 
@@ -9311,6 +9313,15 @@ namespace BinaryNinja {
 
 		*/
 		bool IsEndOfFile() const;
+
+		/*! Create a new reader that represents a bounded slice of this reader
+		
+			\param offset The start offset for the new slice
+			\param length The length of the new slice
+
+			\return A new reader representing this slice
+		*/
+		BinaryReader Slice(uint64_t offset, size_t length) const;
 	};
 
 	/*! Raised whenever a write is performed out of bounds.

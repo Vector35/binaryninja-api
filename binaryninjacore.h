@@ -5649,6 +5649,7 @@ extern "C"
 	// Stream reader object
 	BINARYNINJACOREAPI BNBinaryReader* BNCreateBinaryReader(BNBinaryView* view);
 	BINARYNINJACOREAPI void BNFreeBinaryReader(BNBinaryReader* stream);
+	BINARYNINJACOREAPI BNBinaryReader* BNSliceBinaryReader(BNBinaryReader* stream, uint64_t offset, size_t length);
 	BINARYNINJACOREAPI BNEndianness BNGetBinaryReaderEndianness(BNBinaryReader* stream);
 	BINARYNINJACOREAPI void BNSetBinaryReaderEndianness(BNBinaryReader* stream, BNEndianness endian);
 

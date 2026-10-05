@@ -135,6 +135,7 @@ fn main() {
         // Flag enums (BN_OPTIONS) must be newtypes, as combined bit values would be
         // undefined behavior for a fieldless Rust enum.
         .bitfield_enum("BNMetadataStoreFlag")
+        .bitfield_enum("BNSymbolDemangleQueueFlags")
         .generate()
         .expect("Unable to generate bindings")
         .write_to_file(PathBuf::from(out_dir).join("bindings.rs"))

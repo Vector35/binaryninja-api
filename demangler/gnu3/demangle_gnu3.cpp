@@ -294,13 +294,18 @@ namespace
 
 	bool IsKnownNamespace(const DemangledQualifiedName& name)
 	{
+		if (std::any_of(name.begin(), name.end(), [](const auto& part) { return part.HasTemplateArguments(); }))
+			return false;
 		if (name.size() == 1)
 			return name.front().GetBase() == "std" || name.front().GetBase() == "__gnu_cxx";
 		if (name.size() != 2 || name.front().GetBase() != "std")
 			return false;
 
 		const std::string_view inlineNamespace = name.back().GetBase();
-		return inlineNamespace.size() > 2 && inlineNamespace[0] == '_' && inlineNamespace[1] == '_';
+		// A reserved-name prefix alone does not distinguish namespaces from implementation classes.
+		return inlineNamespace == "__1" || inlineNamespace == "__2" || inlineNamespace == "__ndk1" ||
+			inlineNamespace == "__cxx11" || inlineNamespace == "__cxx1998" || inlineNamespace == "__8" ||
+			inlineNamespace == "__detail" || inlineNamespace == "__debug" || inlineNamespace == "__parallel";
 	}
 
 

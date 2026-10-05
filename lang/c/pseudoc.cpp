@@ -2820,7 +2820,8 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 			if (showTypeCasts && !skipOuterCast)
 			{
 				tokens.AppendOpenParen();
-				AppendSizeToken(hasOffset && type ? srcExpr.size : instr.size, true, tokens);
+				// Unsized field expressions still need a fallback, but sized accesses must use their own width.
+				AppendSizeToken(instr.size ? instr.size : srcExpr.size, true, tokens);
 				tokens.Append(TextToken, "*");
 				tokens.AppendCloseParen();
 			}

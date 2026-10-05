@@ -133,7 +133,7 @@ extern "C"
 		AddOptionalPluginDependency("arch_x86");
 		AddOptionalPluginDependency("arch_armv7");
 		AddOptionalPluginDependency("arch_arm64");
-		AddOptionalPluginDependency("arch_powerpc");
+		AddOptionalPluginDependency("arch_ppc");
 		AddOptionalPluginDependency("arch_riscv");
 		AddOptionalPluginDependency("view_elf");
 	}

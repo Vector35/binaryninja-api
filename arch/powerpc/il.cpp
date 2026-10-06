@@ -714,7 +714,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 				ei0 = il.Const(addressSize_l, oper2->simm);
 			ei0 = il.Add(
 				addressSize_l,
-				operToIL(il, oper1),
+				operToIL_a(il, oper1, addressSize_l),
 				ei0
 			);
 			ei0 = il.SetRegister(addressSize_l, oper0->reg, ei0);
@@ -740,10 +740,10 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_ANDCx: // and [with complement]
 		case PPC_ID_NANDx:
 			REQUIRE3OPS
-			ei0 = operToIL(il, oper2);
+			ei0 = operToIL_a(il, oper2, addressSize_l);
 			if (instruction->id == PPC_ID_ANDCx)
 				ei0 = il.Not(addressSize_l, ei0);
-			ei0 = il.And(addressSize_l, operToIL(il, oper1), ei0);
+			ei0 = il.And(addressSize_l, operToIL_a(il, oper1, addressSize_l), ei0);
 			if (instruction->id == PPC_ID_NANDx)
 				ei0 = il.Not(addressSize_l, ei0);
 			ei0 = il.SetRegister(addressSize_l, oper0->reg, ei0,
@@ -759,7 +759,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 				ei0 = il.Const(addressSize_l, oper2->uimm << 16);
 			else
 				ei0 = il.Const(addressSize_l, oper2->uimm);
-			ei0 = il.And(addressSize_l, operToIL(il, oper1), ei0);
+			ei0 = il.And(addressSize_l, operToIL_a(il, oper1, addressSize_l), ei0);
 
 			// VLE instructions that get translated to ANDIx may
 			// not have the rc bit set
@@ -1082,7 +1082,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 			// if update, rA is set to effective address (d(rA))
 			if(instruction->id == PPC_ID_LBZU) {
-				ei0 = il.SetRegister(addressSize_l, oper1->mem.reg, operToIL(il, oper1, addressSize_l));
+				ei0 = il.SetRegister(addressSize_l, oper1->mem.reg, operToIL_a(il, oper1, addressSize_l));
 				il.AddInstruction(ei0);
 			}
 
@@ -1230,14 +1230,14 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_LD:
 		case PPC_ID_LDU:
 			REQUIRE2OPS
-			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO); // d(rA) or 0
+			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, 8); // d(rA) or 0
 			ei0 = il.Load(8, ei0);                    // [d(rA)]
 			ei0 = il.SetRegister(8, oper0->reg, ei0); // rD = [d(rA)]
 			il.AddInstruction(ei0);
 
 			// if update, rA is set to effective address (d(rA))
 			if(instruction->id == PPC_ID_LWZU) {
-				ei0 = il.SetRegister(8, oper1->mem.reg, operToIL(il, oper1));
+				ei0 = il.SetRegister(8, oper1->mem.reg, operToIL_a(il, oper1, 8));
 				il.AddInstruction(ei0);
 			}
 
@@ -1249,14 +1249,14 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_LDX:
 		case PPC_ID_LDUX:
 			REQUIRE3OPS
-			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO);              // d(rA) or 0
-			ei0 = il.Load(8, il.Add(8, ei0, operToIL(il, oper2))); // [d(rA) + d(rB)]
+			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, 8);              // d(rA) or 0
+			ei0 = il.Load(8, il.Add(8, ei0, operToIL_a(il, oper2, 8))); // [d(rA) + d(rB)]
 			ei0 = il.SetRegister(8, oper0->reg, ei0);              // rD = [d(rA)]
 			il.AddInstruction(ei0);
 
 			// if update, rA is set to effective address (d(rA))
 			if(instruction->id == PPC_ID_LWZUX && oper1->reg != oper0->reg && oper1->reg != PPC_REG_GPR0) {
-				ei0 = il.SetRegister(8, oper1->reg, operToIL(il, oper1));
+				ei0 = il.SetRegister(8, oper1->reg, operToIL_a(il, oper1, 8));
 				il.AddInstruction(ei0);
 			}
 
@@ -1304,7 +1304,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 		case PPC_ID_NEGx:
 			REQUIRE2OPS
-			ei0 = il.Neg(addressSize_l, operToIL(il, oper1));
+			ei0 = il.Neg(addressSize_l, operToIL_a(il, oper1, addressSize_l));
 			il.AddInstruction(il.SetRegister(addressSize_l, oper0->reg, ei0,
 				instruction->flags.rc ? IL_FLAGWRITE_CR0_S : 0
 			));
@@ -1635,8 +1635,8 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_STDUX: /* store(size, addr, val) */
 			REQUIRE3OPS
 			ei0 = il.Store(8,
-				il.Add(8, operToIL(il, oper1, OTI_GPR0_ZERO), operToIL_a(il, oper2, addressSize_l)),
-				operToIL(il, oper0)
+				il.Add(8, operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, 8), operToIL_a(il, oper2, 8)),
+				operToIL_a(il, oper0, 8)
 			);
 			il.AddInstruction(ei0);
 

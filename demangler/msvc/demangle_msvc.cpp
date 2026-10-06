@@ -2038,7 +2038,7 @@ void Demangle::DemangleModifiers(bool& _const, bool& _volatile, bool &isMember)
 }
 
 
-bool Demangle::FunctionClassNeedsImplicitThis(int funcClass)
+bool Demangle::FunctionClassHasImplicitReceiver(int funcClass)
 {
 	return funcClass != NoneFunctionClass
 		&& (funcClass & StaticFunctionClass) != StaticFunctionClass
@@ -2066,14 +2066,14 @@ void Demangle::AppendThunkAdjustorToName(NameList& nameList, const ThunkAdjustor
 }
 
 
-void Demangle::SetImplicitThisParameter(DemangledTypeNode& type, BNNameType classFunctionType, const NameList& enclosingName)
+void Demangle::SetImplicitReceiver(DemangledTypeNode& type, BNNameType classFunctionType, const NameList& enclosingName)
 {
 	NameList thisName = enclosingName;
 	if (classFunctionType != OperatorReturnTypeNameType && !thisName.empty())
 		thisName.pop_back();
 	auto thisNamedType = DemangledTypeNode::NamedType(StructNamedTypeClass, std::move(thisName));
-	type.SetImplicitThisParameter(DemangledTypeNode::PointerType(
-		std::move(thisNamedType), false, false, PointerReferenceType));
+	type.SetImplicitReceiver(DemangledTypeNode::PointerType(
+		std::move(thisNamedType), false, false, PointerReferenceType), DemangledReceiverKind::Required);
 }
 
 
@@ -2082,8 +2082,8 @@ void Demangle::ApplySymbolFunctionContext(DemangledFunction& function, NameList&
 {
 	if (function.thunkAdjustor)
 		AppendThunkAdjustorToName(symbolName, *function.thunkAdjustor);
-	if (FunctionClassNeedsImplicitThis(funcClass))
-		SetImplicitThisParameter(function.type, classFunctionType, symbolName);
+	if (FunctionClassHasImplicitReceiver(funcClass))
+		SetImplicitReceiver(function.type, classFunctionType, symbolName);
 }
 
 
@@ -2698,6 +2698,8 @@ namespace
 			if (!prepared || prepared->facts.isCtorOrDtor || !prepared->facts.returnEncoded
 				|| !CppSignatureRecovery::IsSelectedDemangler(name, config, BN_DEMANGLER_MSVC))
 				continue;
+			const bool receiverUsed = prepared->type.GetReceiverKind() == DemangledReceiverKind::Required;
+			auto receiver = CppSignatureRecovery::Receiver(context, config, prepared->type);
 			Ref<Type> source = CppSignatureRecovery::Finalize(context, config, std::move(prepared->type));
 			if (!source || CppSignatureRecovery::TypeClass(source) != FunctionTypeClass
 				|| source->HasVariableArguments().GetValue())
@@ -2708,7 +2710,7 @@ namespace
 			if (!convention)
 				continue;
 			ReturnValue returnValue = source->GetReturnValue();
-			auto parameters = source->GetParameters();
+			auto parameters = CppSignatureRecovery::ParametersWithReceiver(source, receiver);
 			// MSVC encodes receiver identity and these scalar source widths. Their
 			// physical ABI is determined without a callee body. Opaque by-value
 			// objects and constructor flags still require machine recovery.
@@ -2737,12 +2739,23 @@ namespace
 				continue;
 			returnValue.defaultLocation = false;
 			returnValue.location = Confidence<ValueLocation>(result, BN_FULL_CONFIDENCE);
+			map<uint32_t, Confidence<int32_t>> registerStackAdjustments;
+			for (const auto& [reg, adjustment] : layout.registerStackAdjustments)
+				registerStackAdjustments.emplace(reg, Confidence<int32_t>(adjustment, BN_FULL_CONFIDENCE));
 			Ref<Type> physical = Type::FunctionType(returnValue,
 				Confidence<Ref<CallingConvention>>(convention, BN_FULL_CONFIDENCE), parameters,
-				source->HasVariableArguments(), source->CanReturn(), source->GetStackAdjustment(), {},
+				source->HasVariableArguments(), source->CanReturn(),
+				Confidence<int64_t>(layout.stackAdjustment, BN_FULL_CONFIDENCE), registerStackAdjustments,
 				NoNameType, source->IsPure());
-			context->SetImportedFunctionTypeHints(function->GetArchitecture(), target.value,
-				Confidence<Ref<Type>>(physical, BN_FULL_CONFIDENCE));
+			if (context->SetImportedFunctionTypeHints(function->GetArchitecture(), target.value,
+				Confidence<Ref<Type>>(physical, BN_FULL_CONFIDENCE)))
+			{
+				CppSignatureRecovery::Hints hints;
+				hints.type = physical;
+				hints.parametersComplete = true;
+				hints.receiverUsed = receiverUsed;
+				CppSignatureRecovery::RegisterUsedReceiver(context, config, receiver, hints);
+			}
 		}
 	}
 
@@ -2762,6 +2775,7 @@ namespace
 		if (!prepared || !CppSignatureRecovery::IsSelectedDemangler(name, config, BN_DEMANGLER_MSVC))
 			return;
 		const auto& facts = prepared->facts;
+		auto receiver = CppSignatureRecovery::Receiver(context, config, prepared->type);
 		Ref<Type> source = CppSignatureRecovery::Finalize(context, config, std::move(prepared->type));
 		std::optional<CppSignatureRecovery::Hints> hints;
 		if (facts.isCtorOrDtor)
@@ -2772,17 +2786,19 @@ namespace
 			// recover the rest of the signature.
 			source = Type::FunctionType(ReturnValue(Type::VoidType()->WithConfidence(0)),
 				source->GetCallingConvention(), source->GetParameters());
-			hints = CppSignatureRecovery::Recover(context, source, false, true, true);
+			hints = CppSignatureRecovery::Recover(context, source, receiver, true, true);
 		}
 		else if (facts.returnEncoded)
 		{
-			// MSVC encodes static/member scope, so a parser-provided receiver is required.
-			hints = CppSignatureRecovery::Recover(context, source, false);
+			// The encoded member class supplies the receiver fact independently
+			// of the finalized source signature's declared parameter list.
+			hints = CppSignatureRecovery::Recover(context, source, receiver);
 			if (!hints)
 				hints = CppSignatureRecovery::RecoverEncodedReturn(context, source);
 		}
-		if (hints)
-			context->SetFunctionTypeHints(Confidence<Ref<Type>>(hints->type, BN_FULL_CONFIDENCE), hints->parametersComplete);
+		if (hints && context->SetFunctionTypeHints(
+			Confidence<Ref<Type>>(hints->type, BN_FULL_CONFIDENCE), hints->parametersComplete))
+			CppSignatureRecovery::RegisterUsedReceiver(context, config, receiver, *hints);
 	}
 }
 

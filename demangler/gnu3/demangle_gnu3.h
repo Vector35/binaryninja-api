@@ -169,7 +169,6 @@ private:
 public:
 	struct FunctionFacts
 	{
-		bool requiredThis = false;
 		bool isCtorOrDtor = false;
 		bool mayHaveHiddenVTT = false;
 		bool canBindBaseReceiver = false;
@@ -177,8 +176,7 @@ public:
 	DemangleGNU3(BN::Platform& platform, _STD_STRING mangledName);
 	void Reset(BN::Platform& platform, _STD_STRING mangledName);
 	DemangledTypeNode DemangleSymbol(
-		StringList& varName, bool simplifyTemplates = false, bool recoverImplicitThis = true,
-		FunctionFacts* facts = nullptr);
+		StringList& varName, bool simplifyTemplates = false, FunctionFacts* facts = nullptr);
 };
 
 

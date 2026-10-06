@@ -4052,6 +4052,8 @@ extern "C"
 	typedef struct BNDemanglerResult
 	{
 		BNQualifiedName name;
+		// Built-in GNU3/MSVC function types contain declared parameters, excluding
+		// implicit receivers and hidden result parameters. Their workflows lower the physical ABI.
 		BNType* type;
 	} BNDemanglerResult;
 

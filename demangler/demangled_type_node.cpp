@@ -525,14 +525,55 @@ DemangledTypeNode DemangledTypeNode::FunctionType(NodeRef retType,
 }
 
 
-void DemangledTypeNode::SetImplicitThisParameter(DemangledTypeNode type)
+void DemangledTypeNode::SetImplicitReceiver(DemangledTypeNode type, DemangledReceiverKind kind)
 {
 	if (auto payload = std::get_if<FunctionPayload>(&m_payload))
 	{
-		payload->implicitThisParameterType = CreateShared(std::move(type));
+		BN_ASSERT(kind != DemangledReceiverKind::ExplicitObject);
+		payload->receiverKind = kind;
+		payload->receiverType = kind == DemangledReceiverKind::None ? nullptr : CreateShared(std::move(type));
+		payload->explicitObjectParameterIndex.reset();
 		return;
 	}
-	BN_ASSERT(false && "SetImplicitThisParameter called for non-function demangled type");
+	BN_ASSERT(false && "SetImplicitReceiver called for non-function demangled type");
+}
+
+
+void DemangledTypeNode::SetExplicitObjectParameter(size_t index)
+{
+	if (auto payload = std::get_if<FunctionPayload>(&m_payload))
+	{
+		BN_ASSERT(index < payload->params.size());
+		payload->receiverKind = DemangledReceiverKind::ExplicitObject;
+		payload->receiverType.reset();
+		payload->explicitObjectParameterIndex = index;
+		return;
+	}
+	BN_ASSERT(false && "SetExplicitObjectParameter called for non-function demangled type");
+}
+
+
+DemangledReceiverKind DemangledTypeNode::GetReceiverKind() const
+{
+	if (auto payload = std::get_if<FunctionPayload>(&m_payload))
+		return payload->receiverKind;
+	return DemangledReceiverKind::None;
+}
+
+
+DemangledTypeNode::NodeRef DemangledTypeNode::GetReceiverType() const
+{
+	if (auto payload = std::get_if<FunctionPayload>(&m_payload))
+		return payload->receiverType;
+	return nullptr;
+}
+
+
+std::optional<size_t> DemangledTypeNode::GetExplicitObjectParameterIndex() const
+{
+	if (auto payload = std::get_if<FunctionPayload>(&m_payload))
+		return payload->explicitObjectParameterIndex;
+	return std::nullopt;
 }
 
 
@@ -728,7 +769,7 @@ bool DemangledTypeNode::MutateChildTypes(const std::function<bool(DemangledTypeN
 	else if (auto payload = std::get_if<FunctionPayload>(&m_payload))
 	{
 		mutateRef(payload->returnType);
-		mutateRef(payload->implicitThisParameterType);
+		mutateRef(payload->receiverType);
 		for (auto& param: payload->params)
 			mutateRef(param.type);
 	}
@@ -980,7 +1021,7 @@ bool DemangledTypeNode::ContainsNodeRef(const NodeRef& target) const
 			return containsRef(payload->childType);
 		if (auto payload = std::get_if<FunctionPayload>(&node->m_payload))
 		{
-			return containsRef(payload->returnType) || containsRef(payload->implicitThisParameterType) ||
+			return containsRef(payload->returnType) || containsRef(payload->receiverType) ||
 				containsParams(payload->params);
 		}
 		if (auto payload = std::get_if<NamedTypePayload>(&node->m_payload))
@@ -1083,7 +1124,9 @@ bool DemangledTypeNode::IsStructurallyEqual(const DemangledTypeNode& other) cons
 		auto otherPayload = std::get_if<FunctionPayload>(&other.m_payload);
 		return otherPayload && payload->callingConventionName == otherPayload->callingConventionName &&
 			typePtrsEqual(payload->returnType, otherPayload->returnType) &&
-			typePtrsEqual(payload->implicitThisParameterType, otherPayload->implicitThisParameterType) &&
+			payload->receiverKind == otherPayload->receiverKind &&
+			payload->explicitObjectParameterIndex == otherPayload->explicitObjectParameterIndex &&
+			typePtrsEqual(payload->receiverType, otherPayload->receiverType) &&
 			paramsEqual(payload->params, otherPayload->params);
 	}
 	if (auto payload = std::get_if<NamedTypePayload>(&m_payload))
@@ -1720,13 +1763,11 @@ Ref<Type> DemangledTypeNode::Finalize(
 		retTypeConfidence = std::min(retTypeConfidence, m_returnTypeConfidence);
 
 		vector<FunctionParameter> finalParams;
-		finalParams.reserve(payload.params.size() + (payload.implicitThisParameterType ? 1 : 0));
-		if (payload.implicitThisParameterType)
-		{
-			Ref<Type> thisType = payload.implicitThisParameterType->Finalize(platform, resolveTypeReference);
-			finalParams.emplace_back("this", thisType->WithConfidence(payload.implicitThisParameterType->GetValueConfidence()),
-				DefaultLocationSource, Variable());
-		}
+		finalParams.reserve(payload.params.size());
+		// An encoded member still identifies its owner for queued type registration.
+		// An uncertain GNU3 owner may be a namespace; only analysis can select it.
+		if (resolveTypeReference && payload.receiverKind == DemangledReceiverKind::Required && payload.receiverType)
+			payload.receiverType->Finalize(platform, resolveTypeReference);
 		for (auto& p : payload.params)
 		{
 			Ref<Type> pType = p.type ?

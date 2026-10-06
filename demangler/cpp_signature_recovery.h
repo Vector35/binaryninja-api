@@ -170,7 +170,74 @@ namespace BN::CppSignatureRecovery
 	{
 		Ref<Type> type;
 		bool parametersComplete = false;
+		bool receiverUsed = false;
 	};
+
+	struct ReceiverInfo
+	{
+		DemangledReceiverKind kind = DemangledReceiverKind::None;
+		Ref<Type> type;
+		DemangledTypeNode::NodeRef receiverNode;
+		std::optional<size_t> explicitObjectParameterIndex;
+	};
+
+	inline ReceiverInfo Receiver(const Ref<AnalysisContext>& context, const DemanglerConfig& config,
+		const DemangledTypeNode& source)
+	{
+		ReceiverInfo result;
+		result.kind = source.GetReceiverKind();
+		result.receiverNode = source.GetReceiverType();
+		result.explicitObjectParameterIndex = source.GetExplicitObjectParameterIndex();
+		// Resolve existing identities (including renamed/user types) without
+		// registering an uncertain owner as a class before ABI validation.
+		if (result.receiverNode)
+		{
+			auto view = View(context);
+			if (view)
+			{
+				auto resolve = [&](const DemangledTypeReferenceRequest& request) -> Ref<NamedTypeReference> {
+#ifdef BINARYNINJACORE_LIBRARY
+					auto lookup = request;
+					lookup.registration = DemangledTypeReferenceRegistration::DoNotRegister;
+					return view->GetAnalysis()->ResolveDemangledTypeReference(lookup);
+#else
+					auto id = view->GetTypeId(request.name);
+					if (!id.empty() && view->GetTypeById(id))
+						return new NamedTypeReference(request.typeClass, id, request.name);
+					id = Type::GenerateAutoDemangledTypeId(request.name);
+					if (view->GetTypeById(id))
+						return new NamedTypeReference(request.typeClass, id, view->GetTypeNameById(id));
+					return NamedTypeReference::GenerateAutoDemangledTypeReference(request.typeClass, request.name);
+#endif
+				};
+				result.type = result.receiverNode->Finalize(config.GetPlatform(), resolve);
+			}
+			else
+				result.type = result.receiverNode->Finalize(config.GetPlatform());
+		}
+		return result;
+	}
+
+	inline bool HasImplicitReceiver(const ReceiverInfo& receiver)
+	{
+		return receiver.kind == DemangledReceiverKind::Candidate || receiver.kind == DemangledReceiverKind::Required;
+	}
+
+	inline _STD_VECTOR<FunctionParameter> ParametersWithReceiver(Type* source, const ReceiverInfo& receiver)
+	{
+		auto params = source->GetParameters();
+		if (HasImplicitReceiver(receiver))
+			params.insert(params.begin(), FunctionParameter("this", Confidence<Ref<Type>>(receiver.type, BN_FULL_CONFIDENCE),
+				DefaultLocationSource, ValueLocation()));
+		return params;
+	}
+
+	inline void RegisterUsedReceiver(const Ref<AnalysisContext>& context, const DemanglerConfig& config,
+		const ReceiverInfo& receiver, const Hints& hints)
+	{
+		if (hints.receiverUsed && receiver.receiverNode)
+			Finalize(context, config, *receiver.receiverNode);
+	}
 
 	inline bool DirectResultLocationSupported(Type* type, const ValueLocation& location, Architecture* arch)
 	{
@@ -228,7 +295,7 @@ namespace BN::CppSignatureRecovery
 		return Hints{result, false};
 	}
 
-	inline std::optional<Hints> Recover(const Ref<AnalysisContext>& context, Type* source, bool optionalThis,
+	inline std::optional<Hints> Recover(const Ref<AnalysisContext>& context, Type* source, const ReceiverInfo& receiver,
 		bool receiverOnly = false, bool knownNoIndirectResult = false)
 	{
 		if (!source || TypeClass(source) != FunctionTypeClass || !context->GetMediumLevelILFunction())
@@ -245,10 +312,13 @@ namespace BN::CppSignatureRecovery
 		if (!view || !convention)
 			return std::nullopt;
 
-		auto params = source->GetParameters();
+		const bool implicitReceiver = HasImplicitReceiver(receiver);
+		if (implicitReceiver && (!receiver.type || TypeClass(receiver.type) != PointerTypeClass))
+			return std::nullopt;
+		auto params = ParametersWithReceiver(source, receiver);
 		if (receiverOnly)
 		{
-			if (params.empty() || params.front().name != "this" || !params.front().type.GetValue()
+			if (!implicitReceiver || params.empty() || !params.front().type.GetValue()
 				|| TypeClass(params.front().type.GetValue()) != PointerTypeClass)
 				return std::nullopt;
 			params.resize(1);
@@ -430,8 +500,8 @@ namespace BN::CppSignatureRecovery
 			return candidate;
 		};
 
-		auto withThis = evaluate(params);
-		if (!withThis.supported || withThis.contradicted)
+		auto withReceiver = evaluate(params);
+		if (!withReceiver.supported || withReceiver.contradicted)
 			return std::nullopt;
 		bool complete = true;
 		std::vector<size_t> retained;
@@ -440,31 +510,31 @@ namespace BN::CppSignatureRecovery
 			// Receiver existence and its first slot are independently established
 			// for the base variant. Retain only an observed receiver, leaving VTT
 			// and every explicit argument to physical parameter recovery.
-			auto reg = (uint32_t)VariableStorage(withThis.layout.parameters[0].components.front().variable);
+			auto reg = (uint32_t)VariableStorage(withReceiver.layout.parameters[0].components.front().variable);
 			if (!observedWidths.count(reg))
 				return std::nullopt;
 			retained.push_back(0);
 			complete = false;
 		}
-		else if (optionalThis && !params.empty() && params.front().name == "this")
+		else if (receiver.kind == DemangledReceiverKind::Candidate)
 		{
 			auto withoutParams = params;
 			withoutParams.erase(withoutParams.begin());
-			auto withoutThis = evaluate(withoutParams);
-			if (!withoutThis.supported)
+			auto withoutReceiver = evaluate(withoutParams);
+			if (!withoutReceiver.supported)
 				return std::nullopt;
 			// Argument forwarding can copy ABI extension bits of a narrower
 			// scalar. In a deferred-result path, that wider read alone cannot
 			// establish an optional receiver in the preceding register slot.
-			if (!withoutThis.contradicted || (partialResultABI && !withoutThis.hasUnexplainedInputs))
+			if (!withoutReceiver.contradicted || (partialResultABI && !withoutReceiver.hasUnexplainedInputs))
 			{
 				// Only observed slots invariant under both source interpretations are
 				// safe hints. Independent integer and floating-point banks often permit this.
 				complete = false;
 				for (size_t i = 1; i < params.size(); ++i)
 				{
-					const auto& location = withThis.layout.parameters[i];
-					if (location == withoutThis.layout.parameters[i - 1]
+					const auto& location = withReceiver.layout.parameters[i];
+					if (location == withoutReceiver.layout.parameters[i - 1]
 						&& observedWidths.count((uint32_t)VariableStorage(location.components.front().variable)))
 						retained.push_back(i);
 				}
@@ -487,14 +557,14 @@ namespace BN::CppSignatureRecovery
 		{
 			auto param = params[index];
 			param.locationSource = CustomLocationSource;
-			param.location = withThis.layout.parameters[index];
+			param.location = withReceiver.layout.parameters[index];
 			recoveredParams.push_back(std::move(param));
 		}
 		if (unencodedReturn)
 			returnValue = ReturnValue(Confidence<Ref<Type>>(Type::VoidType(), 0));
 		else
 		{
-			ValueLocation location = withThis.layout.returnValue.value_or(ValueLocation());
+			ValueLocation location = withReceiver.layout.returnValue.value_or(ValueLocation());
 			if (!DirectResultLocationSupported(returnValue.type.GetValue(), location, function->GetArchitecture()))
 				return std::nullopt;
 			returnValue.defaultLocation = false;
@@ -503,7 +573,8 @@ namespace BN::CppSignatureRecovery
 		Ref<Type> result = Type::FunctionType(returnValue,
 			Confidence<Ref<CallingConvention>>(convention, BN_HEURISTIC_CONFIDENCE), recoveredParams,
 			source->HasVariableArguments(), source->CanReturn(), source->GetStackAdjustment(), {}, NoNameType, source->IsPure());
-		return Hints{result, complete};
+		bool receiverUsed = implicitReceiver && std::find(retained.begin(), retained.end(), 0) != retained.end();
+		return Hints{result, complete, receiverUsed};
 	}
 
 	inline bool Register(const _STD_STRING& name, const _STD_STRING& title,

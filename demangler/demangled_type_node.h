@@ -41,6 +41,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string_view>
 #include <variant>
 
@@ -57,6 +58,16 @@ using StringList = _STD_VECTOR<_STD_STRING>;
 BN::Platform& GetDemanglerFallbackPlatform();
 
 class DemangledTypeNode;
+
+// A source signature does not include an implicit object parameter. Keep the
+// mangling's receiver facts separate until a workflow chooses a physical ABI.
+enum class DemangledReceiverKind : uint8_t
+{
+	None,
+	Candidate,
+	Required,
+	ExplicitObject
+};
 
 enum class DemangledTypeReferenceRegistration : uint8_t
 {
@@ -226,7 +237,11 @@ public:
 	void SetCallingConventionName(BNCallingConventionName cc);
 	void SetNTRType(BNNamedTypeReferenceClass cls);
 	void SetTypeReferenceRegistration(DemangledTypeReferenceRegistration registration);
-	void SetImplicitThisParameter(DemangledTypeNode type);
+	void SetImplicitReceiver(DemangledTypeNode type, DemangledReceiverKind kind);
+	void SetExplicitObjectParameter(size_t index);
+	[[nodiscard]] DemangledReceiverKind GetReceiverKind() const;
+	[[nodiscard]] NodeRef GetReceiverType() const;
+	[[nodiscard]] std::optional<size_t> GetExplicitObjectParameterIndex() const;
 
 	void AppendString(_STD_STRING& out, BN::Platform& platform) const;
 	_STD_STRING GetString(BN::Platform& platform = GetDemanglerFallbackPlatform()) const;
@@ -285,7 +300,9 @@ private:
 	{
 		NodeRef returnType;
 		_STD_VECTOR<Param> params;
-		NodeRef implicitThisParameterType;
+		NodeRef receiverType;
+		DemangledReceiverKind receiverKind = DemangledReceiverKind::None;
+		std::optional<size_t> explicitObjectParameterIndex;
 		BNCallingConventionName callingConventionName = NoCallingConvention;
 	};
 

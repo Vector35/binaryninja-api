@@ -38,6 +38,9 @@ class DemangleResult(NamedTuple):
 	"""
 	Tuple-compatible demangle result. A successful result always has a QualifiedName;
 	the type may be None when the demangler can recover only a name.
+	Built-in GNU3/MSVC function types contain declared parameters without synthetic
+	implicit receivers or hidden results. Their C++ workflows lower the physical
+	ABI during analysis; explicit object parameters remain in the source signature.
 	"""
 
 	type: Optional['types.Type']
@@ -319,6 +322,10 @@ def demangle_ms(
 	"""
 	``demangle_ms`` demangles a mangled Microsoft Visual Studio C++ name to a Type object.
 
+	Function types contain declared parameters without a synthetic implicit ``this``.
+	Encoded calling conventions are retained. The C++ workflow determines physical
+	parameter locations and hidden parameters during analysis.
+
 	.. warning::
 		Passing a BinaryView through the legacy ``options`` compatibility path queries
 		its template-simplifier setting on every call. This is very slow and should not
@@ -354,6 +361,10 @@ def demangle_gnu3(
 	) -> Optional[DemangleResult]:
 	"""
 	``demangle_gnu3`` demangles a mangled name to a Type object.
+
+	Function types contain encoded source parameters without a synthetic implicit
+	``this``. Explicit object parameters remain present. The C++ workflow determines
+	physical parameter locations and hidden parameters during analysis.
 
 	.. warning::
 		Passing a BinaryView through the legacy ``options`` compatibility path queries

@@ -4797,6 +4797,8 @@ namespace BinaryNinja {
 	struct DemanglerResult
 	{
 		QualifiedName name;
+		// Built-in GNU3/MSVC function types contain declared parameters only.
+		// Implicit receivers and hidden result parameters are lowered by the C++ workflows.
 		Ref<Type> type;
 
 		static DemanglerResult FromAPIStruct(const BNDemanglerResult* result);
@@ -4819,6 +4821,9 @@ namespace BinaryNinja {
 
 	/*! Demangles a Microsoft Visual Studio C++ name.
 
+		Function types contain declared parameters without a synthetic implicit receiver.
+		Encoded calling conventions are retained; analysis determines physical parameter locations.
+
 		\param[in] platform Platform for the symbol. Required for pointer/integer sizes and calling conventions.
 		\param[in] mangledName A mangled Microsoft Visual Studio C++ name.
 		\param[in] simplify Whether to simplify demangled names.
@@ -4830,6 +4835,9 @@ namespace BinaryNinja {
 		const Platform* platform, const std::string& mangledName, bool simplify = true);
 
 	/*! Demangles a GNU3 name.
+
+		Function types contain encoded source parameters without a synthetic implicit receiver.
+		Explicit object parameters remain present. Analysis determines hidden parameters and physical locations.
 
 		\param[in] platform Platform for the symbol. Required for pointer/integer sizes and calling conventions.
 		\param[in] mangledName A mangled GNU3 name.

@@ -107,6 +107,9 @@ impl DemanglerConfig {
 }
 
 /// Demangled name and optional type recovered from a mangled name.
+/// Built-in GNU3/MSVC function types contain declared parameters without implicit
+/// receivers or hidden results. C++ workflows determine their physical ABI during
+/// analysis; explicit object parameters remain in the source signature.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DemanglerResult {
     pub name: QualifiedName,

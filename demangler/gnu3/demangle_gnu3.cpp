@@ -2684,7 +2684,7 @@ DemangledTypeNode DemangleGNU3::DemangleName(bool* mayHaveImplicitThis, bool* ha
 
 
 DemangledTypeNode DemangleGNU3::DemangleSymbol(
-	StringList& varName, bool simplifyTemplates, bool recoverImplicitThis, FunctionFacts* facts)
+	StringList& varName, bool simplifyTemplates, FunctionFacts* facts)
 {
 	if (facts)
 		*facts = {};
@@ -3116,7 +3116,7 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(
 	DemangledQualifiedName enclosingName = type.GetName();
 	varName = type.RenderTypeNameSegments(m_platform);
 	BNNameType nameType = type.GetNameType();
-	mayHaveImplicitThis = recoverImplicitThis && mayHaveImplicitThis && !IsStaticOnlyMemberFunction(nameType) &&
+	mayHaveImplicitThis = mayHaveImplicitThis && !IsStaticOnlyMemberFunction(nameType) &&
 		!IsDirectAnonymousNamespaceFunction(enclosingName) && enclosingName.size() > 1;
 	if (mayHaveImplicitThis)
 		enclosingName.pop_back();
@@ -3213,13 +3213,6 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(
 	}
 	if (facts)
 	{
-		DemangledTypeNode receiverQualifiers;
-		receiverQualifiers.AddPointerSuffix(RestrictSuffix);
-		receiverQualifiers.AddPointerSuffix(ReferenceSuffix);
-		receiverQualifiers.AddPointerSuffix(LvalueSuffix);
-		facts->requiredThis = hasExplicitObjectParameter || (mayHaveImplicitThis && (cnst || vltl
-			|| nameType == ConstructorNameType || nameType == DestructorNameType
-			|| (suffix & receiverQualifiers.GetPointerSuffixBits())));
 		if (nameType == ConstructorNameType || nameType == DestructorNameType)
 		{
 			facts->isCtorOrDtor = true;
@@ -3236,9 +3229,21 @@ DemangledTypeNode DemangleGNU3::DemangleSymbol(
 		auto thisType = DemangledTypeNode::NamedType(StructNamedTypeClass, std::move(enclosingName));
 		if (IsKnownNamespace(thisType.GetName()))
 			thisType.SetTypeReferenceRegistration(DemangledTypeReferenceRegistration::DoNotRegister);
-		type.SetImplicitThisParameter(DemangledTypeNode::PointerType(
-			std::move(thisType), false, false, PointerReferenceType));
+		DemangledTypeNode receiverQualifiers;
+		receiverQualifiers.AddPointerSuffix(RestrictSuffix);
+		receiverQualifiers.AddPointerSuffix(ReferenceSuffix);
+		receiverQualifiers.AddPointerSuffix(LvalueSuffix);
+		const bool requiredReceiver = cnst || vltl || nameType == ConstructorNameType
+			|| nameType == DestructorNameType || (suffix & receiverQualifiers.GetPointerSuffixBits());
+		// Nested names identify a possible owner, but an unqualified member
+		// encoding cannot distinguish a static method from an instance method.
+		// Keep that receiver fact separate from the encoded source parameters.
+		type.SetImplicitReceiver(DemangledTypeNode::PointerType(
+			std::move(thisType), false, false, PointerReferenceType), requiredReceiver
+			? DemangledReceiverKind::Required : DemangledReceiverKind::Candidate);
 	}
+	else if (hasExplicitObjectParameter)
+		type.SetExplicitObjectParameter(0);
 	if (isReturnTypeUnknown)
 		type.SetReturnTypeConfidence(BN_MINIMUM_CONFIDENCE);
 
@@ -3319,7 +3324,7 @@ namespace
 	};
 
 	std::optional<PreparedGNU3Result> PrepareGNU3WithConfig(
-		const DemanglerConfig& config, std::string_view name, bool recoverImplicitThis = true)
+		const DemanglerConfig& config, std::string_view name)
 	{
 		if (name.empty())
 			return std::nullopt;
@@ -3354,12 +3359,14 @@ namespace
 				{
 					string normalized = "_";
 					normalized.append(base.substr(zPos));
-					if (auto baseResult = PrepareGNU3WithConfig(config, normalized, false))
+					if (auto baseResult = PrepareGNU3WithConfig(config, normalized))
 					{
 						PreparedGNU3Result result;
 						result.name = QualifiedName(StringList{
 							"invocation_function_for_block_in_" + JoinNameSegments(StringList(baseResult->name.begin(), baseResult->name.end()))});
 						result.type = std::move(baseResult->type);
+						if (result.type && result.type->GetClass() == FunctionTypeClass)
+							result.type->SetImplicitReceiver(DemangledTypeNode(), DemangledReceiverKind::None);
 						return result;
 					}
 				}
@@ -3373,7 +3380,7 @@ namespace
 			name.compare(name.size() - tlvInitSuffix.size(), tlvInitSuffix.size(), tlvInitSuffix) == 0)
 		{
 			std::string_view base = name.substr(0, name.size() - tlvInitSuffix.size());
-			if (auto result = PrepareGNU3WithConfig(config, base, recoverImplicitThis))
+			if (auto result = PrepareGNU3WithConfig(config, base))
 			{
 				if (result->name.size() > 0)
 					result->name[result->name.size() - 1] += "$tlv$init";
@@ -3408,7 +3415,9 @@ namespace
 			PreparedGNU3Result result;
 			StringList nameSegments;
 			DemangledTypeNode type = demangle.DemangleSymbol(
-				nameSegments, simplifyTemplates, recoverImplicitThis && !foundHeader, &result.facts);
+				nameSegments, simplifyTemplates, &result.facts);
+			if (foundHeader && type.GetClass() == FunctionTypeClass)
+				type.SetImplicitReceiver(DemangledTypeNode(), DemangledReceiverKind::None);
 			if (simplifyTemplates)
 				DemangledTemplateSimplifier::SimplifyTypeNodeInPlace(type);
 			bool hasType = true;
@@ -3480,6 +3489,7 @@ namespace
 		const auto& facts = prepared->facts;
 		if (facts.mayHaveHiddenVTT && !facts.canBindBaseReceiver)
 			return;
+		auto receiver = CppSignatureRecovery::Receiver(context, config, *prepared->type);
 		Ref<Type> source = CppSignatureRecovery::Finalize(context, config, std::move(*prepared->type));
 		if (facts.isCtorOrDtor)
 		{
@@ -3489,9 +3499,11 @@ namespace
 				source->GetCallingConvention(), source->GetParameters(), source->HasVariableArguments(),
 				source->CanReturn(), source->GetStackAdjustment(), {}, NoNameType, source->IsPure());
 		}
-		if (auto hints = CppSignatureRecovery::Recover(context, source, !facts.requiredThis,
+		if (auto hints = CppSignatureRecovery::Recover(context, source, receiver,
 			facts.mayHaveHiddenVTT, facts.isCtorOrDtor))
-			context->SetFunctionTypeHints(Confidence<Ref<Type>>(hints->type, BN_FULL_CONFIDENCE), hints->parametersComplete);
+			if (context->SetFunctionTypeHints(
+				Confidence<Ref<Type>>(hints->type, BN_FULL_CONFIDENCE), hints->parametersComplete))
+				CppSignatureRecovery::RegisterUsedReceiver(context, config, receiver, *hints);
 	}
 }
 

@@ -203,9 +203,9 @@ private:
 		std::optional<ThunkAdjustor> thunkAdjustor;
 		bool returnEncoded = true;
 	};
-	static bool FunctionClassNeedsImplicitThis(int funcClass);
+	static bool FunctionClassHasImplicitReceiver(int funcClass);
 	static void AppendThunkAdjustorToName(NameList& nameList, const ThunkAdjustor& adjustor);
-	static void SetImplicitThisParameter(DemangledTypeNode& type, BNNameType classFunctionType, const NameList& enclosingName);
+	static void SetImplicitReceiver(DemangledTypeNode& type, BNNameType classFunctionType, const NameList& enclosingName);
 	static void ApplySymbolFunctionContext(DemangledFunction& function, NameList& symbolName,
 		BNNameType classFunctionType, int funcClass);
 	DemangledTypeNode DemangleReferencedSymbolValue(BackrefList& varList);

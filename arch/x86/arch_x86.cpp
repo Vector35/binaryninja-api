@@ -5,6 +5,7 @@
 #include <sstream>
 #include "binaryninjaapi.h"
 #include "il.h"
+#include "floatcompare.h"
 #include "lowlevelilinstruction.h"
 extern "C" {
     #include "xed-interface.h"
@@ -603,6 +604,18 @@ void X86CommonArchitecture::GetAddressSizeToken(const short bytes, vector<Instru
 	}
 }
 
+static string GetFloatCompareMnemonic(const xed_decoded_inst_t* xedd)
+{
+	const auto* family = X86::GetFloatCompareFamily(xedd);
+	if (!family)
+		return "";
+	const auto immediate = xed_decoded_inst_get_unsigned_immediate(xedd);
+	// Keep noncanonical immediate bytes explicit; a pseudo-op would hide them.
+	if (immediate >= family->PredicateCount())
+		return "";
+	return family->Name(immediate);
+}
+
 unsigned short X86CommonArchitecture::GetInstructionOpcode(const xed_decoded_inst_t* const xedd, const xed_operand_values_t* const ov, vector<InstructionTextToken>& result) const
 {
 	string opcode = "";
@@ -626,7 +639,10 @@ unsigned short X86CommonArchitecture::GetInstructionOpcode(const xed_decoded_ins
 	else if (xed_operand_values_branch_taken_hint(ov))
 		opcode += "HINT-TAKEN ";
 
-	switch (m_disassembly_options.df)
+	const string floatCompareMnemonic = GetFloatCompareMnemonic(xedd);
+	if (m_disassembly_options.df != DF_XED && !floatCompareMnemonic.empty())
+		opcode += floatCompareMnemonic;
+	else switch (m_disassembly_options.df)
 	{
 	case DF_INTEL:
 		opcode += string(xed_iform_to_iclass_string_intel(xed_decoded_inst_get_iform_enum(xedd)));
@@ -752,12 +768,15 @@ void X86CommonArchitecture::GetInstructionPadding(const unsigned int instruction
 void X86CommonArchitecture::GetOperandTextIntel(const xed_decoded_inst_t* const xedd, const uint64_t addr, const size_t len, const xed_operand_values_t* const ov, const xed_inst_t* const xi, vector<InstructionTextToken>& result) const
 {
 	xed_reg_enum_t extra_index_operand = XED_REG_INVALID;
+	const bool omitPredicate = !GetFloatCompareMnemonic(xedd).empty();
 
 	// Get operands
 	for (unsigned int opIndex = 0; opIndex < xed_inst_noperands(xi); ++opIndex)
 	{
 		const xed_operand_t*          op = xed_inst_operand(xi, opIndex);
 		const xed_operand_enum_t op_name = xed_operand_name(op);
+		if (omitPredicate && op_name == XED_OPERAND_IMM0)
+			continue;
 
 		// XED's suppressed operands shouln't be represented in Intel syntax
 		if (xed_operand_operand_visibility(op) == XED_OPVIS_SUPPRESSED)
@@ -1084,6 +1103,7 @@ void X86CommonArchitecture::GetOperandTextIntel(const xed_decoded_inst_t* const 
 
 		// If there is another operand and it is visable, print delimiter
 		if ((opIndex != xed_inst_noperands(xi)-1) &&
+			(!omitPredicate || xed_operand_name(xed_inst_operand(xi, opIndex+1)) != XED_OPERAND_IMM0) &&
 			((xed_operand_operand_visibility(xed_inst_operand(xi, opIndex+1)) == XED_OPVIS_EXPLICIT) ||
 			(xed_operand_operand_visibility(xed_inst_operand(xi, opIndex+1)) == XED_OPVIS_IMPLICIT)))
 				result.emplace_back(OperandSeparatorToken, m_disassembly_options.separator);
@@ -1104,12 +1124,15 @@ void X86CommonArchitecture::GetOperandTextIntel(const xed_decoded_inst_t* const 
 void X86CommonArchitecture::GetOperandTextBNIntel(const xed_decoded_inst_t* const xedd, const uint64_t addr, const size_t len, const xed_operand_values_t* const ov, const xed_inst_t* const xi, vector<InstructionTextToken>& result) const
 {
 	xed_reg_enum_t extra_index_operand = XED_REG_INVALID;
+	const bool omitPredicate = !GetFloatCompareMnemonic(xedd).empty();
 
 	// Get operands
 	for (unsigned int opIndex = 0; opIndex < xed_inst_noperands(xi); ++opIndex)
 	{
 		const xed_operand_t*          op = xed_inst_operand(xi, opIndex);
 		const xed_operand_enum_t op_name = xed_operand_name(op);
+		if (omitPredicate && op_name == XED_OPERAND_IMM0)
+			continue;
 
 		// XED's suppressed operands shouln't be represented in Intel syntax
 		if (xed_operand_operand_visibility(op) == XED_OPVIS_SUPPRESSED)
@@ -1468,6 +1491,7 @@ void X86CommonArchitecture::GetOperandTextBNIntel(const xed_decoded_inst_t* cons
 
 		// If there is another operand and it is visable, print delimiter
 		if ((opIndex != xed_inst_noperands(xi)-1) &&
+			(!omitPredicate || xed_operand_name(xed_inst_operand(xi, opIndex+1)) != XED_OPERAND_IMM0) &&
 			((xed_operand_operand_visibility(xed_inst_operand(xi, opIndex+1)) == XED_OPVIS_EXPLICIT) ||
 				(xed_operand_operand_visibility(xed_inst_operand(xi, opIndex+1)) == XED_OPVIS_IMPLICIT)))
 				result.emplace_back(OperandSeparatorToken, m_disassembly_options.separator);
@@ -1488,6 +1512,7 @@ void X86CommonArchitecture::GetOperandTextATT(const xed_decoded_inst_t* const xe
 {
 	unsigned i,j;
 	unsigned noperands = xed_inst_noperands(xi);
+	const bool omitPredicate = !GetFloatCompareMnemonic(xedd).empty();
 
 	bool intel_way = false;
 
@@ -1514,6 +1539,8 @@ void X86CommonArchitecture::GetOperandTextATT(const xed_decoded_inst_t* const xe
 
 		const xed_operand_t*          op = xed_inst_operand(xi, i);
 		const xed_operand_enum_t op_name = xed_operand_name(op);
+		if (omitPredicate && op_name == XED_OPERAND_IMM0)
+			continue;
 
 		// XED's suppressed operands shouln't be represented in Intel syntax
 		if (xed_operand_operand_visibility(op) == XED_OPVIS_SUPPRESSED)
@@ -1847,6 +1874,7 @@ void X86CommonArchitecture::GetOperandTextATT(const xed_decoded_inst_t* const xe
 		if (intel_way)
 		{
 			if ((i != (size_t)xed_inst_noperands(xi)-1) &&
+				(!omitPredicate || xed_operand_name(xed_inst_operand(xi, i+1)) != XED_OPERAND_IMM0) &&
 				((xed_operand_operand_visibility(xed_inst_operand(xi, i+1)) == XED_OPVIS_EXPLICIT) ||
 				(xed_operand_operand_visibility(xed_inst_operand(xi, i+1)) == XED_OPVIS_IMPLICIT)))
 			{

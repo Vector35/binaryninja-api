@@ -5,6 +5,7 @@
 #include <sstream>
 #include "binaryninjaapi.h"
 #include "il.h"
+#include "floatcompare.h"
 extern "C" {
     #include "xed-interface.h"
 }
@@ -33,6 +34,12 @@ BNIntrinsicClass X86CommonArchitecture::GetIntrinsicClass(uint32_t intrinsic)
 
 string X86CommonArchitecture::GetIntrinsicName(uint32_t intrinsic)
 {
+    uint32_t predicate;
+    if (const auto* family = X86::GetFloatComparePseudoIntrinsicFamily(intrinsic, &predicate))
+        return "_" + family->Name(predicate);
+    if (const auto* family = X86::GetFloatCompareIntrinsicFamily(intrinsic))
+        return string(family->vex ? "_vcmp" : "_cmp") + family->suffix;
+
     switch (intrinsic)
     {
     case INTRINSIC_F2XM1:
@@ -187,10 +194,6 @@ string X86CommonArchitecture::GetIntrinsicName(uint32_t intrinsic)
     	return "_mm_cmp_ps";
     case INTRINSIC_XED_IFORM_VCMPPS_YMMqq_YMMqq_YMMqq_IMMb:
     	return "_mm256_cmp_ps";
-    case INTRINSIC_XED_IFORM_VCMPSD_XMMdq_XMMdq_XMMq_IMMb:
-    	return "_mm_cmp_sd";
-    case INTRINSIC_XED_IFORM_VCMPSS_XMMdq_XMMdq_XMMd_IMMb:
-    	return "_mm_cmp_ss";
     case INTRINSIC_XED_IFORM_VCVTDQ2PD_YMMqq_XMMdq:
     	return "_mm256_cvtepi32_pd";
     case INTRINSIC_XED_IFORM_VCVTDQ2PS_YMMqq_YMMqq:
@@ -4447,10 +4450,6 @@ string X86CommonArchitecture::GetIntrinsicName(uint32_t intrinsic)
     	return "_mm_or_ps";
     case INTRINSIC_XED_IFORM_XORPS_XMMxud_XMMxud:
     	return "_mm_xor_ps";
-    case INTRINSIC_XED_IFORM_CMPSS_XMMss_XMMss_IMMb:
-    	return "_mm_cmpeq_ss";
-    case INTRINSIC_XED_IFORM_CMPPS_XMMps_XMMps_IMMb:
-    	return "_mm_cmpeq_ps";
     case INTRINSIC_XED_IFORM_COMISS_XMMss_XMMss:
     	return "_mm_comieq_ss";
     case INTRINSIC_XED_IFORM_UCOMISS_XMMss_XMMss:
@@ -4749,10 +4748,6 @@ string X86CommonArchitecture::GetIntrinsicName(uint32_t intrinsic)
     	return "_mm_or_pd";
     case INTRINSIC_XED_IFORM_XORPD_XMMxuq_XMMxuq:
     	return "_mm_xor_pd";
-    case INTRINSIC_XED_IFORM_CMPSD_XMM_XMMsd_XMMsd_IMMb:
-    	return "_mm_cmpeq_sd";
-    case INTRINSIC_XED_IFORM_CMPPD_XMMpd_XMMpd_IMMb:
-    	return "_mm_cmpeq_pd";
     case INTRINSIC_XED_IFORM_COMISD_XMMsd_XMMsd:
     	return "_mm_comieq_sd";
     case INTRINSIC_XED_IFORM_UCOMISD_XMMsd_XMMsd:
@@ -5118,6 +5113,10 @@ vector<uint32_t> X86CommonArchitecture::GetAllIntrinsics()
         INTRINSIC_FPTAN, INTRINSIC_FSCALE, INTRINSIC_FXAM, INTRINSIC_FXTRACT, INTRINSIC_FYL2X,
         INTRINSIC_FYL2XP1, INTRINSIC_BEXTR32, INTRINSIC_BEXTR64};
 
+    for (const auto& family : X86::FloatCompareFamilies)
+        for (uint32_t i = 0; i < family.PredicateCount(); i++)
+            allIntrinsics.emplace_back(family.pseudoIntrinsics[i]);
+
     allIntrinsics.reserve(allIntrinsics.size() + INTRINSIC_LAST - INTRINSIC_XED_IFORM_INVALID + 1);
     for (uint32_t value = INTRINSIC_XED_IFORM_INVALID;
             value <= INTRINSIC_LAST; value++)
@@ -5126,7 +5125,7 @@ vector<uint32_t> X86CommonArchitecture::GetAllIntrinsics()
     return allIntrinsics;
 }
 
-vector<NameAndType> X86CommonArchitecture::GetIntrinsicInputs(uint32_t intrinsic)
+static vector<NameAndType> GetDefaultIntrinsicInputs(uint32_t intrinsic)
 {
     static const vector<NameAndType> singleFloat10 { NameAndType(Type::FloatType(10)->SetIgnored(true)) };
     static const vector<NameAndType> singleInt10 { NameAndType(Type::IntegerType(10, false)->SetIgnored(true)) };
@@ -5191,8 +5190,39 @@ vector<NameAndType> X86CommonArchitecture::GetIntrinsicInputs(uint32_t intrinsic
     }
 }
 
+static Ref<Type> CreateFloatComparePredicateType(size_t count)
+{
+    EnumerationBuilder builder;
+    for (size_t i = 0; i < count; i++)
+        builder.AddMemberWithValue(X86::FloatComparePredicates[i].enumName, i);
+    return Type::EnumerationType(builder.Finalize(), 1, false);
+}
+
+vector<NameAndType> X86CommonArchitecture::GetIntrinsicInputs(uint32_t intrinsic)
+{
+    if (const auto* family = X86::GetFloatComparePseudoIntrinsicFamily(intrinsic))
+    {
+        auto inputs = GetDefaultIntrinsicInputs(family->registerIntrinsic);
+        inputs.pop_back();
+        return inputs;
+    }
+
+    auto inputs = GetDefaultIntrinsicInputs(intrinsic);
+    if (const auto* family = X86::GetFloatCompareIntrinsicFamily(intrinsic))
+    {
+        // Separate enums keep ignored high immediate bits explicit for legacy SSE.
+        static const Ref<Type> ssePredicate = CreateFloatComparePredicateType(8);
+        static const Ref<Type> avxPredicate = CreateFloatComparePredicateType(32);
+        inputs.back() = NameAndType("predicate", family->vex ? avxPredicate : ssePredicate);
+    }
+    return inputs;
+}
+
 vector<Confidence<Ref<Type>>> X86CommonArchitecture::GetIntrinsicOutputs(uint32_t intrinsic)
 {
+    if (const auto* family = X86::GetFloatComparePseudoIntrinsicFamily(intrinsic))
+        intrinsic = family->registerIntrinsic;
+
     static const vector<Confidence<Ref<Type>>> singleFloat10Bool { Type::FloatType(10)->SetIgnored(true), Type::BoolType()->SetIgnored(true) };
     static const vector<Confidence<Ref<Type>>> singleInt10 { Type::IntegerType(10, false)->SetIgnored(true) };
     static const vector<Confidence<Ref<Type>>> float10BoolBool { Type::FloatType(10)->SetIgnored(true), Type::BoolType()->SetIgnored(true), Type::BoolType()->SetIgnored(true) };

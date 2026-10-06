@@ -205,6 +205,12 @@ static bool LiftBranches(Architecture* arch, LowLevelILFunction &il, const Instr
 		case PPC_ID_Bx:
 		{
 			uint64_t target = instruction->operands[0].label;
+			if (instruction->flags.lk && target == addr + instruction->numBytes)
+			{
+				il.AddInstruction(il.SetRegister(addressSize_l, PPC_REG_LR,
+					il.ConstPointer(addressSize_l, target)));
+				break;
+			}
 
 			BNLowLevelILLabel* label = il.GetLabelForAddress(arch, target);
 
@@ -2477,4 +2483,3 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 	return rc;
 }
-

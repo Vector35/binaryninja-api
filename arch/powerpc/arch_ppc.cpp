@@ -414,7 +414,12 @@ class PowerpcArchitecture: public Architecture
 				uint64_t target = instruction.operands[0].label;
 
 				if (instruction.flags.lk)
-					result.AddBranch(CallDestination, target);
+				{
+					// In PIC code, bl to the following instruction puts PC in LR.
+                    // We do not want to add a branch in that case.
+					if (instruction.id != PPC_ID_Bx || target != addr + instructionLength)
+						result.AddBranch(CallDestination, target);
+				}
 				else
 					result.AddBranch(UnconditionalBranch, target);
 				break;

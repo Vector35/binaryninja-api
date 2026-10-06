@@ -81,6 +81,7 @@ enum ElfPpcRelocationType
 	R_PPC_SECTOFF_LO      = 34,
 	R_PPC_SECTOFF_HI      = 35,
 	R_PPC_SECTOFF_HA      = 36,
+	R_PPC64_ADDR64        = 38,
 	// PowerPC relocations defined for the TLS access ABI.
 	R_PPC_TLS             = 67, // none	(sym+add)@tls
 	R_PPC_DTPMOD32        = 68, // word32	(sym+add)@dtpmod
@@ -180,6 +181,7 @@ static const char* GetRelocationString(ElfPpcRelocationType relocType)
 	static map<ElfPpcRelocationType, const char*> relocTable = {
 		{R_PPC_NONE, "R_PPC_NONE"},
 		{R_PPC_ADDR32, "R_PPC_ADDR32"},
+		{R_PPC64_ADDR64, "R_PPC64_ADDR64"},
 		{R_PPC_ADDR24, "R_PPC_ADDR24"},
 		{R_PPC_ADDR16, "R_PPC_ADDR16"},
 		{R_PPC_ADDR16_LO, "R_PPC_ADDR16_LO"},
@@ -2450,12 +2452,25 @@ public:
 	virtual bool ApplyRelocation(Ref<BinaryView> view, Ref<Architecture> arch, Ref<Relocation> reloc, uint8_t* dest, size_t len) override
 	{
 		(void)view;
-		(void)len;
 		auto info = reloc->GetInfo();
+		if (len < info.size)
+			return false;
 		uint32_t* dest32 = (uint32_t*)dest;
 		uint16_t* dest16 = (uint16_t*)dest;
 		auto swap = [&arch](uint32_t x) { return (arch->GetEndianness() == LittleEndian)? x : bswap32(x); };
 		auto swap16 = [&arch](uint16_t x) { return (arch->GetEndianness() == LittleEndian)? x : bswap16(x); };
+		auto writePointer = [&arch, &info, dest](uint64_t value) {
+			if (info.size == 8)
+			{
+				uint64_t encoded = arch->GetEndianness() == LittleEndian ? ToLE64(value) : ToBE64(value);
+				memcpy(dest, &encoded, sizeof(encoded));
+			}
+			else
+			{
+				uint32_t encoded = arch->GetEndianness() == LittleEndian ? ToLE32(value) : ToBE32(value);
+				memcpy(dest, &encoded, sizeof(encoded));
+			}
+		};
 		uint64_t target = reloc->GetTarget();
 		switch (info.nativeType)
 		{
@@ -2481,7 +2496,7 @@ public:
 		case R_PPC_JMP_SLOT:
 		case R_PPC_GLOB_DAT:
 		case R_PPC_COPY:
-			dest32[0] = swap((uint32_t)target);
+			writePointer(target);
 			break;
 		case R_PPC_PLTREL24:
 			dest32[0] = swap((swap(dest32[0]) & 0xfc000003) |
@@ -2494,8 +2509,11 @@ public:
 		case R_PPC_ADDR32:
 			dest32[0] = swap((uint32_t)(target + info.addend));
 			break;
+		case R_PPC64_ADDR64:
+			writePointer(target + info.addend);
+			break;
 		case R_PPC_RELATIVE:
-			dest32[0] = swap((uint32_t)info.base);
+			writePointer(info.base);
 			break;
 		case R_PPC_REL32:
 			dest32[0] = swap((uint32_t)(target - reloc->GetAddress() + info.addend));
@@ -2522,12 +2540,15 @@ public:
 				break;
 			case R_PPC_COPY:
 				reloc.type = ELFCopyRelocationType;
+				reloc.size = arch->GetAddressSize();
 				break;
 			case R_PPC_GLOB_DAT:
 				reloc.type = ELFGlobalRelocationType;
+				reloc.size = arch->GetAddressSize();
 				break;
 			case R_PPC_JMP_SLOT:
 				reloc.type = ELFJumpSlotRelocationType;
+				reloc.size = arch->GetAddressSize();
 				break;
 			case R_PPC_ADDR16_HA:
 			case R_PPC_ADDR16_LO:
@@ -2546,8 +2567,13 @@ public:
 			case R_PPC_ADDR32:
 				reloc.dataRelocation = true;
 				break;
+			case R_PPC64_ADDR64:
+				reloc.dataRelocation = true;
+				reloc.size = 8;
+				break;
 			case R_PPC_RELATIVE:
 				reloc.dataRelocation = true;
+				reloc.size = arch->GetAddressSize();
 				reloc.baseRelative = true;
 				reloc.base += reloc.addend;
 				break;
@@ -2777,6 +2803,8 @@ extern "C"
 		ppc_le->RegisterFunctionRecognizer(new PpcImportedFunctionRecognizer());
 
 		ppc->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());
+		ppc64->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());
+		ppc64_le->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());
 		ppcvle->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());
 		ppc_qpx->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());
 		ppc_spe->RegisterRelocationHandler("ELF", new PpcElfRelocationHandler());

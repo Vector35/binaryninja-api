@@ -6277,15 +6277,15 @@ public:
 				reloc.type = ELFGlobalRelocationType;
 				reloc.pcRelative = false;
 				reloc.baseRelative = false;
-				reloc.size = 8;
-				reloc.truncateSize = 8;
+				reloc.size = view->GetAddressSize();
+				reloc.truncateSize = reloc.size;
 				break;
 			case R_X86_64_JUMP_SLOT:
 				reloc.type = ELFJumpSlotRelocationType;
 				reloc.pcRelative = false;
 				reloc.baseRelative = false;
-				reloc.size = 8;
-				reloc.truncateSize = 8;
+				reloc.size = view->GetAddressSize();
+				reloc.truncateSize = reloc.size;
 				break;
 			case R_X86_64_8:
 				reloc.pcRelative = false;
@@ -6313,7 +6313,7 @@ public:
 				reloc.pcRelative = false;
 				reloc.baseRelative = false;
 				reloc.hasSign = false;
-				reloc.size = 8;
+				reloc.size = 4;
 				reloc.truncateSize = 4;
 				break;
 			case R_X86_64_64:

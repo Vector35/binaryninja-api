@@ -4026,11 +4026,62 @@ public:
 		// Note: info.base contains preferred base address and the base where the image is actually loaded
 		(void)view;
 		(void)arch;
-		(void)len;
 		uint64_t* data64 = (uint64_t*)dest;
 		uint32_t* data32 = (uint32_t*)dest;
 		uint16_t* data16 = (uint16_t*)dest;
 		auto info = reloc->GetInfo();
+		if (len < info.size)
+			return false;
+		if (info.nativeType == PE_IMAGE_REL_BASED_ARM_MOV32 || info.nativeType == PE_IMAGE_REL_BASED_THUMB_MOV32)
+		{
+			if (len < 8)
+				return false;
+			// PE instruction bytes are little-endian. Decode explicitly so Thumb
+			// pairs need not be aligned to a host uint32_t boundary.
+			auto readWord = [](const uint8_t* bytes) -> uint32_t {
+				return (uint32_t)bytes[0] | ((uint32_t)bytes[1] << 8) |
+					((uint32_t)bytes[2] << 16) | ((uint32_t)bytes[3] << 24);
+			};
+			auto writeWord = [](uint8_t* bytes, uint32_t word) {
+				for (size_t i = 0; i < 4; i++)
+					bytes[i] = (uint8_t)(word >> (i * 8));
+			};
+			uint32_t movw = readWord(dest), movt = readWord(dest + 4);
+			uint32_t low, high, immediateMask;
+			bool thumb = info.nativeType == PE_IMAGE_REL_BASED_THUMB_MOV32;
+			if (thumb)
+			{
+				if ((movw & 0x8000fbf0) != 0xf240 || (movt & 0x8000fbf0) != 0xf2c0 ||
+					((movw ^ movt) & 0x0f000000) || ((movw >> 24) & 0xf) == 0xf)
+					return false;
+				auto decode = [](uint32_t word) -> uint32_t {
+					return ((word & 0xf) << 12) | ((word & 0x400) << 1) |
+						((word >> 20) & 0x700) | ((word >> 16) & 0xff);
+				};
+				low = decode(movw);
+				high = decode(movt);
+				immediateMask = 0x70ff040f;
+			}
+			else
+			{
+				if ((movw & 0x0ff00000) != 0x03000000 || (movt & 0x0ff00000) != 0x03400000 ||
+					((movw ^ movt) & 0xf000f000) || (movw >> 28) == 0xf || ((movw >> 12) & 0xf) == 0xf)
+					return false;
+				low = ((movw >> 4) & 0xf000) | (movw & 0xfff);
+				high = ((movt >> 4) & 0xf000) | (movt & 0xfff);
+				immediateMask = 0x000f0fff;
+			}
+			uint32_t address = (low | (high << 16)) + (uint32_t)info.base;
+			auto encode = [thumb](uint32_t immediate) -> uint32_t {
+				if (thumb)
+					return ((immediate >> 12) & 0xf) | ((immediate & 0x800) >> 1) |
+						((immediate & 0x700) << 20) | ((immediate & 0xff) << 16);
+				return ((immediate & 0xf000) << 4) | (immediate & 0xfff);
+			};
+			writeWord(dest, (movw & ~immediateMask) | encode(address & 0xffff));
+			writeWord(dest + 4, (movt & ~immediateMask) | encode(address >> 16));
+			return true;
+		}
 		if (info.size == 8)
 		{
 			data64[0] += info.base;
@@ -4069,6 +4120,11 @@ public:
 				reloc.size = 4;
 				break;
 			case PE_IMAGE_REL_BASED_DIR64:
+				reloc.size = 8;
+				break;
+			case PE_IMAGE_REL_BASED_ARM_MOV32:
+			case PE_IMAGE_REL_BASED_THUMB_MOV32:
+				reloc.type = StandardRelocationType;
 				reloc.size = 8;
 				break;
 			case PE_IMAGE_REL_BASED_HIGH:

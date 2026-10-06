@@ -1186,8 +1186,8 @@ bool ElfView::Init()
 					}
 					if (entry.section != ELF_SHN_UNDEF)
 					{
-						DefineElfSymbol(DataSymbol, entry.name, gotEntry, true, entry.binding, 4,
-							Type::PointerType(GetDefaultPlatform()->GetArchitecture(),
+						DefineElfSymbol(DataSymbol, entry.name, gotEntry, true, entry.binding, m_addressSize,
+							Type::PointerType(m_addressSize,
 								Type::VoidType())->WithConfidence(BN_FULL_CONFIDENCE));
 					}
 					else
@@ -1212,8 +1212,8 @@ bool ElfView::Init()
 					}
 					if (entry.section != ELF_SHN_UNDEF)
 					{
-						DefineElfSymbol(DataSymbol, entry.name, gotEntry, true, entry.binding, 4,
-							Type::PointerType(GetDefaultPlatform()->GetArchitecture(),
+						DefineElfSymbol(DataSymbol, entry.name, gotEntry, true, entry.binding, m_addressSize,
+							Type::PointerType(m_addressSize,
 								Type::FunctionType(Type::IntegerType(GetDefaultPlatform()->GetArchitecture()->GetAddressSize(), true),
 									GetDefaultPlatform()->GetDefaultCallingConvention(), vector<FunctionParameter>())->WithConfidence(0)));
 					}

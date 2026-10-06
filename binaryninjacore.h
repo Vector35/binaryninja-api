@@ -7453,6 +7453,11 @@ extern "C"
 	    BNMediumLevelILOperation operation, uint64_t addr, uint32_t sourceOperand, size_t size, uint64_t a, uint64_t b,
 	    uint64_t c, uint64_t d, uint64_t e);
 	BINARYNINJACOREAPI size_t BNMediumLevelILAddInstruction(BNMediumLevelILFunction* func, size_t expr);
+	// Record a reverse source association while constructing non-SSA MLIL.
+	// lowLevelSSAInstruction indexes the function's associated LLIL SSA. This
+	// does not change the LLIL forward map or select its primary instruction.
+	BINARYNINJACOREAPI bool BNMediumLevelILAddLowLevelInstructionMapping(
+		BNMediumLevelILFunction* func, size_t mediumLevelInstruction, size_t lowLevelSSAInstruction);
 	BINARYNINJACOREAPI size_t BNMediumLevelILGoto(BNMediumLevelILFunction* func, BNMediumLevelILLabel* label);
 	BINARYNINJACOREAPI size_t BNMediumLevelILGotoWithLocation(
 	    BNMediumLevelILFunction* func, BNMediumLevelILLabel* label, uint64_t addr, uint32_t sourceOperand);

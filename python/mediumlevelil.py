@@ -4215,6 +4215,9 @@ class MediumLevelILFunction:
 			if expr.operation == MediumLevelILOperation.MLIL_JUMP:
 				expr: MediumLevelILJump
 				return dest.jump(sub_expr_handler(expr.dest), loc)
+			if expr.operation == MediumLevelILOperation.MLIL_RET_HINT:
+				expr: MediumLevelILRetHint
+				return dest.expr(expr.operation, sub_expr_handler(expr.dest), size=expr.size, source_location=loc)
 			if expr.operation in [
 				MediumLevelILOperation.MLIL_NEG,
 				MediumLevelILOperation.MLIL_NOT,
@@ -4229,7 +4232,6 @@ class MediumLevelILFunction:
 				MediumLevelILOperation.MLIL_ZX,
 				MediumLevelILOperation.MLIL_LOW_PART,
 				MediumLevelILOperation.MLIL_BOOL_TO_INT,
-				MediumLevelILOperation.MLIL_RET_HINT,
 				MediumLevelILOperation.MLIL_UNIMPL_MEM,
 				MediumLevelILOperation.MLIL_FSQRT,
 				MediumLevelILOperation.MLIL_FNEG,
@@ -4461,6 +4463,16 @@ class MediumLevelILFunction:
 				if source_location.source_mlil_instruction not in self._mlil_to_mlil_instr_map:
 					self._mlil_to_mlil_instr_map[source_location.source_mlil_instruction] = []
 				self._mlil_to_mlil_instr_map[source_location.source_mlil_instruction].append((index, source_location.il_direct))
+				# Copy reverse instruction provenance independently of the primary
+				# LLIL-to-MLIL map. Auxiliary assertions and forced versions can
+				# share a source site with its ordinary translated instruction.
+				source = source_location.source_mlil_instruction
+				low_index = source.function.get_low_level_il_instruction_index(source.instr_index)
+				source_llil = source.function.low_level_il
+				dest_llil = self.low_level_il
+				if low_index is not None and source_llil is not None and dest_llil is not None:
+					if source_llil.ssa_form == dest_llil.ssa_form:
+						core.BNMediumLevelILAddLowLevelInstructionMapping(self.handle, index, low_index)
 			if source_location.source_llil_instruction is not None \
 				and source_location.source_llil_instruction.function.il_form == FunctionGraphType.LowLevelILSSAFormFunctionGraph:
 				if source_location.source_llil_instruction not in self._llil_ssa_to_mlil_instr_map:
@@ -4493,14 +4505,24 @@ class MediumLevelILFunction:
 
 				# Look up the LLIL SSA instruction for the old instr in its function
 				# And then store that mapping for the new function
+				old_llil_ssa_index = old_instr.function.get_low_level_il_instruction_index(old_instr.instr_index)
+				if old_llil_ssa_index is None:
+					continue
+				llil = old_instr.function.low_level_il
+				llil_ssa = llil.ssa_form if llil is not None else None
+				source_non_ssa = old_instr.function.non_ssa_form
+				if llil_ssa is not None and llil_ssa.medium_level_il == source_non_ssa:
+					# Auxiliary assertions/forced versions can share reverse
+					# provenance with the real instruction. Preserve the published
+					# primary association, normalizing SSA sources to non-SSA.
+					if llil_ssa.get_medium_level_il_instruction_index(old_llil_ssa_index) != old_instr.function.get_non_ssa_instruction_index(old_instr.instr_index):
+						continue
 
 				for (new_index, new_direct) in new_indices:
 					# Instructions are always mapped 1 to 1. If the map is marked indirect
 					# then just ignore it
 					if new_direct:
-						old_llil_ssa_index = old_instr.function.get_low_level_il_instruction_index(old_instr.instr_index)
-						if old_llil_ssa_index is not None:
-							llil_ssa_to_mlil_instr_map[old_llil_ssa_index] = new_index
+						llil_ssa_to_mlil_instr_map[old_llil_ssa_index] = new_index
 		else:
 			for instr in self.instructions:
 				llil_ssa_index = self.get_low_level_il_instruction_index(instr.instr_index)

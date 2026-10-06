@@ -93,6 +93,18 @@ void MediumLevelILFunction::RecordMLILToMLILInstrMap(size_t newInstrIndex, const
 			m_translationData->mlilToMlilInstrMap.insert({oldInstrIndex, {}});
 		}
 		m_translationData->mlilToMlilInstrMap[oldInstrIndex].push_back({ newInstrIndex, location.ilDirect });
+		// Reverse source associations include auxiliary instructions, such as
+		// user assertions. Keep them independently of the one-primary-per-LLIL
+		// forward map installed when a workflow replaces the function body.
+		auto sourceLow = m_translationData->copyingFunction->GetLowLevelIL();
+		auto destLow = GetLowLevelIL();
+		auto sourceSSA = sourceLow ? sourceLow->GetSSAForm() : nullptr;
+		auto destSSA = destLow ? destLow->GetSSAForm() : nullptr;
+		if (sourceSSA && destSSA && sourceSSA->GetObject() == destSSA->GetObject())
+		{
+			size_t lowIndex = m_translationData->copyingFunction->GetLowLevelILInstructionIndex(oldInstrIndex);
+			BNMediumLevelILAddLowLevelInstructionMapping(m_object, newInstrIndex, lowIndex);
+		}
 	}
 }
 
@@ -108,6 +120,13 @@ std::unordered_map<size_t /* llil ssa */, size_t /* mlil */> MediumLevelILFuncti
 
 		if (m_translationData && m_translationData->copyingFunction)
 		{
+			auto source = m_translationData->copyingFunction;
+			auto sourceNonSSA = source->GetNonSSAForm();
+			auto llil = source->GetLowLevelIL();
+			auto llilSSA = llil ? llil->GetSSAForm() : nullptr;
+			auto publishedMLIL = llilSSA ? llilSSA->GetMediumLevelIL() : nullptr;
+			bool sourcePublished = publishedMLIL && sourceNonSSA
+				&& publishedMLIL->GetObject() == sourceNonSSA->GetObject();
 			for (auto& [oldInstrIndex, newInstrIndices]: m_translationData->mlilToMlilInstrMap)
 			{
 				// Look up the LLIL SSA instruction for the old instr in its function
@@ -122,6 +141,13 @@ std::unordered_map<size_t /* llil ssa */, size_t /* mlil */> MediumLevelILFuncti
 						size_t oldLLILSSAIndex = m_translationData->copyingFunction->GetLowLevelILInstructionIndex(oldInstrIndex);
 						if (oldLLILSSAIndex != BN_INVALID_EXPR)
 						{
+							// Assertions and forced versions can share a source site
+							// with its primary instruction. Preserve that primary
+							// forward mapping rather than choosing an auxiliary
+							// instruction through unordered reverse-map iteration.
+							if (sourcePublished && llilSSA->GetMediumLevelILInstructionIndex(oldLLILSSAIndex)
+								!= source->GetNonSSAInstructionIndex(oldInstrIndex))
+								continue;
 							result[oldLLILSSAIndex] = newInstrIndex;
 						}
 					}
@@ -172,7 +198,7 @@ std::vector<BNExprMapInfo> MediumLevelILFunction::GetLLILSSAToMLILExprMap(bool f
 					info.lowerIndex = oldLLILSSAIndex;
 					info.higherIndex = newExprIndex;
 					info.lowerToHigherDirect = newDirect && oldReverseDirect == oldExprIndex;
-					info.higherToLowerDirect = newDirect && oldExprIndex == oldLLILSSADirect;
+					info.higherToLowerDirect = newDirect && oldLLILSSAIndex == oldLLILSSADirect;
 					info.mapLowerToHigher = oldReverseAll.contains(oldExprIndex);
 					info.mapHigherToLower = true;
 					result.push_back(info);

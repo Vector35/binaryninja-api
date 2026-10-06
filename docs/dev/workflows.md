@@ -347,6 +347,13 @@ require explicit piece sizes. Incomplete indirect or composite parameter lists
 are rejected because their logical variable identities depend on the complete
 ABI list.
 
+Prepared MLIL has forward and reverse LLIL instruction and expression mappings.
+Use the IL translation and copying builders with source locations when replacing
+the body so those associations survive. Assertions and forced variable versions
+can share a reverse source association with an ordinary translated instruction;
+the ordinary instruction remains the primary forward target. Final analysis
+rebuilds the mappings for its output, removing targets for eliminated operations.
+
 The default partial proposal annotates observed physical inputs while machine
 recovery determines the parameter list. Set `parameters_complete=True` only when
 the complete ABI list has been established, including any unused inputs. User

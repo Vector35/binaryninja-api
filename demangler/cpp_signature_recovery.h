@@ -363,6 +363,12 @@ namespace BN::CppSignatureRecovery
 		bool partialResultABI = false;
 		if (VariableSource(indirectResult) == RegisterVariableSourceType)
 			inputRegisters.insert((uint32_t)VariableStorage(indirectResult));
+		// Some ABIs, including AAPCS32, need not return the hidden result
+		// pointer. An empty nontrivial result can leave neither stores nor a
+		// returned pointer in the body. Its shared result slot still shifts the
+		// declared inputs, so absence of those observations cannot validate them.
+		const bool unobservedResultMayShiftParameters = unencodedReturn && !knownNoIndirectResult
+			&& !dedicatedIndirectResult && !convention->GetReturnedIndirectReturnValuePointer().has_value();
 
 		std::map<uint32_t, size_t> observedWidths;
 		auto collect = [&](auto&& self, const LowLevelILInstruction& expr, size_t widthLimit) -> void {
@@ -524,9 +530,9 @@ namespace BN::CppSignatureRecovery
 			if (!withoutReceiver.supported)
 				return std::nullopt;
 			// Argument forwarding can copy ABI extension bits of a narrower
-			// scalar. In a deferred-result path, that wider read alone cannot
-			// establish an optional receiver in the preceding register slot.
-			if (!withoutReceiver.contradicted || (partialResultABI && !withoutReceiver.hasUnexplainedInputs))
+			// scalar. A wider read alone cannot establish an optional receiver
+			// in the preceding register slot, even when the result ABI is direct.
+			if (!withoutReceiver.contradicted || !withoutReceiver.hasUnexplainedInputs)
 			{
 				// Only observed slots invariant under both source interpretations are
 				// safe hints. Independent integer and floating-point banks often permit this.
@@ -545,6 +551,25 @@ namespace BN::CppSignatureRecovery
 		if (complete)
 			for (size_t i = 0; i < params.size(); ++i)
 				retained.push_back(i);
+		if (unobservedResultMayShiftParameters)
+		{
+			// Compare physical bindings rather than guessing the unencoded
+			// result's source type or triviality. Independent floating banks can
+			// remain useful; shifted integer/stack bindings must be deferred.
+			ReturnValue indirectReturn(Type::PointerType(architecture->GetAddressSize(), Type::VoidType()), false,
+				Confidence<ValueLocation>(ValueLocation({indirectResult}, true), BN_FULL_CONFIDENCE));
+			auto indirectLayout = convention->GetCallLayout(view, indirectReturn, params);
+			if (indirectLayout.parameters.size() != params.size())
+				return std::nullopt;
+			std::erase_if(retained, [&](size_t index) {
+				const auto& location = withReceiver.layout.parameters[index];
+				return location != indirectLayout.parameters[index]
+					|| !observedWidths.count((uint32_t)VariableStorage(location.components.front().variable));
+			});
+			complete = false;
+			if (retained.empty())
+				return std::nullopt;
+		}
 		if (partialResultABI)
 		{
 			complete = false;

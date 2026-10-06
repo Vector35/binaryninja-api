@@ -1564,11 +1564,29 @@ bool ElfView::Init()
 							continue;
 
 						if (relocInfo.type == ELFGlobalRelocationType)
-							DefineElfSymbol(ImportAddressSymbol, entry.name, relocInfo.address, true, entry.binding, entry.size);
+							DefineElfSymbol(ImportAddressSymbol, entry.name, relocInfo.address, true, entry.binding, entry.size,
+								nullptr, entry.section != ELF_SHN_UNDEF && entry.type == ELF_STT_OBJECT);
 						else if (relocInfo.type == ELFCopyRelocationType)
-							DefineElfSymbol(ImportedDataSymbol, entry.name, relocInfo.address, false, entry.binding, entry.size);
+							DefineElfSymbol(ImportedDataSymbol, entry.name, relocInfo.address,
+								m_gotEntryLocations.count(relocInfo.address) != 0, entry.binding, entry.size, nullptr,
+								m_gotEntryLocations.count(relocInfo.address) != 0 && entry.section != ELF_SHN_UNDEF &&
+								entry.type == ELF_STT_OBJECT);
 						else if (relocInfo.type == ELFJumpSlotRelocationType)
 							DefineElfSymbol(ImportAddressSymbol, entry.name, relocInfo.address, true, entry.binding, entry.size);
+						else if (relocInfo.type == StandardRelocationType && entry.section != ELF_SHN_UNDEF &&
+							entry.type == ELF_STT_OBJECT && relocInfo.size == m_addressSize &&
+							!relocInfo.pcRelative && !relocInfo.implicitAddend && relocInfo.addend == 0)
+						{
+							for (auto& section : GetSectionsAt(relocInfo.address))
+							{
+								if (section->GetName() == ".got" || section->GetName() == ".toc" || section->GetName() == ".got.plt")
+								{
+									DefineElfSymbol(DataSymbol, entry.name, relocInfo.address, true, NoBinding, m_addressSize,
+										Type::PointerType(m_addressSize, Type::VoidType())->WithConfidence(BN_HEURISTIC_CONFIDENCE));
+									break;
+								}
+							}
+						}
 
 						if (entry.type == ELF_STT_SECTION)
 						{
@@ -2562,7 +2580,7 @@ bool ElfView::Init()
 
 
 void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uint64_t addr, bool gotEntry,
-	BNSymbolBinding binding, size_t size, const Confidence<Ref<Type>>& typeObj)
+	BNSymbolBinding binding, size_t size, const Confidence<Ref<Type>>& typeObj, bool definedObjectGotEntry)
 {
 	// Ensure symbol is within the executable
 	if (type != ExternalSymbol && !IsValidOffset(addr))
@@ -2661,6 +2679,13 @@ void ElfView::DefineElfSymbol(BNSymbolType type, const string& incomingName, uin
 		if (!typeRef && (size > 0 && size <= 8))
 		{
 			typeRef = Type::IntegerType(size, false)->WithConfidence(BN_HEURISTIC_CONFIDENCE);
+		}
+
+        // Distinguish the GOT entry from the thing it points to.
+		if (gotEntry && (type == DataSymbol || definedObjectGotEntry))
+		{
+			shortName = "__got_" + shortName;
+			fullName = "__got_" + fullName;
 		}
 
 		return std::pair<Ref<Symbol>, Confidence<Ref<Type>>>(

@@ -22,6 +22,14 @@ public:
 	virtual BinaryNinja::Ref<BinaryNinja::Architecture> GetAssociatedArchitectureByAddress(uint64_t& addr) override;
 	virtual std::string GetFlagName(uint32_t flag) override;
 	virtual std::string GetFlagWriteTypeName(uint32_t flags) override;
+	virtual std::vector<uint32_t> GetAllSemanticFlagClasses() override;
+	virtual std::string GetSemanticFlagClassName(uint32_t semClass) override;
+	virtual uint32_t GetSemanticClassForFlagWriteType(uint32_t writeType) override;
+	virtual std::vector<uint32_t> GetAllSemanticFlagGroups() override;
+	virtual std::string GetSemanticFlagGroupName(uint32_t semGroup) override;
+	virtual std::vector<uint32_t> GetFlagsRequiredForSemanticFlagGroup(uint32_t semGroup) override;
+	virtual std::map<uint32_t, BNLowLevelILFlagCondition> GetFlagConditionsForSemanticFlagGroup(uint32_t semGroup) override;
+	virtual size_t GetSemanticFlagGroupLowLevelIL(uint32_t semGroup, BinaryNinja::LowLevelILFunction& il) override;
 	virtual BNFlagRole GetFlagRole(uint32_t flag, uint32_t semClass = 0) override;
 	virtual std::vector<uint32_t> GetFlagsWrittenByFlagWriteType(uint32_t flags) override;
 	virtual std::vector<uint32_t> GetFlagsRequiredForFlagCondition(BNLowLevelILFlagCondition cond, uint32_t semClass) override;

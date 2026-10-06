@@ -1792,8 +1792,10 @@ bool ElfView::Init()
 			}
 		}
 
-		// Perform fixup processing on the local GOT entries if the view is relocatable.
-		if (m_relocatable)
+		// Only MIPS local GOT entries need these synthesized fixups. Other
+		// architectures already supplied real relocations, and a missing/zero
+		// local count would underflow the boundary and overwrite every GOT slot.
+		if (m_relocatable && mipsSymValid && gotStart && localMipsSyms > 2)
 		{
 			uint64_t lastLocalGotEntry = gotStart + (localMipsSyms - 1) * (m_elf32 ? 4 : 8);
 			for (auto gotEntry : m_gotEntryLocations)

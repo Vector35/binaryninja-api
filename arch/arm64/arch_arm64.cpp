@@ -50,6 +50,7 @@ enum MachoArm64RelocationType : uint32_t
 enum ElfArm64RelocationType : uint32_t
 {
 	R_ARM_NONE                    = 0,
+	R_AARCH64_P32_ABS32           = 1,
 	R_AARCH64_P32_COPY            = 180,
 	R_AARCH64_P32_GLOB_DAT        = 181,
 	R_AARCH64_P32_JUMP_SLOT       = 182,
@@ -238,6 +239,7 @@ static const char* GetRelocationString(ElfArm64RelocationType rel)
 {
 	static map<ElfArm64RelocationType, const char*> relocMap = {
 		{R_ARM_NONE,                    "R_ARM_NONE"},
+		{R_AARCH64_P32_ABS32,           "R_AARCH64_P32_ABS32"},
 		{R_AARCH64_P32_COPY,            "R_AARCH64_P32_COPY"},
 		{R_AARCH64_P32_GLOB_DAT,        "R_AARCH64_P32_GLOB_DAT"},
 		{R_AARCH64_P32_JUMP_SLOT,       "R_AARCH64_P32_JUMP_SLOT"},
@@ -3039,6 +3041,7 @@ class Arm64ElfRelocationHandler : public RelocationHandler
 		case R_AARCH64_ABS16:
 			write16((uint16_t*)dest, target + info.addend);
 			break;
+		case R_AARCH64_P32_ABS32:
 		case R_AARCH64_ABS32:
 			write32((uint32_t*)dest, target + info.addend);
 			break;
@@ -3216,6 +3219,7 @@ class Arm64ElfRelocationHandler : public RelocationHandler
 			case R_AARCH64_MOVW_UABS_G3:
 				reloc.size = 4;
 				break;
+			case R_AARCH64_P32_ABS32:
 			case R_AARCH64_ABS32:
 			case R_AARCH64_ADD_ABS_LO12_NC:
 			case R_AARCH64_LDST8_ABS_LO12_NC:

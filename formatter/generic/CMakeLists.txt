@@ -38,8 +38,5 @@ set_target_properties(formatter_generic PROPERTIES
 	POSITION_INDEPENDENT_CODE ON)
 
 if(BN_INTERNAL_BUILD)
-	plugin_rpath(formatter_generic)
-	set_target_properties(formatter_generic PROPERTIES
-		LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
-		RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
+	bn_plugin(formatter_generic)
 endif()

@@ -42,10 +42,7 @@ target_compile_definitions(sharedcacheui PRIVATE ${COMPILE_DEFS})
 
 
 if(BN_INTERNAL_BUILD)
-    set_target_properties(sharedcacheui PROPERTIES
-            LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
-            RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
-    ui_plugin_rpath(sharedcacheui)
+    bn_plugin(sharedcacheui)
 else()
     set_target_properties(sharedcacheui PROPERTIES
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/plugins

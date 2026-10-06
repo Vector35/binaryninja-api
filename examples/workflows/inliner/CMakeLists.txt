@@ -33,8 +33,5 @@ set_target_properties(workflow_inliner PROPERTIES
 	POSITION_INDEPENDENT_CODE ON)
 
 if(BN_INTERNAL_BUILD)
-	plugin_rpath(workflow_inliner)
-	set_target_properties(workflow_inliner PROPERTIES
-		LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
-		RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
+	bn_plugin(workflow_inliner)
 endif()

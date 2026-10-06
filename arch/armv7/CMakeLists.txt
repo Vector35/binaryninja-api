@@ -38,10 +38,7 @@ set_target_properties(arch_armv7 PROPERTIES
 	POSITION_INDEPENDENT_CODE ON)
 
 if(BN_INTERNAL_BUILD)
-	plugin_rpath(arch_armv7)
-	set_target_properties(arch_armv7 PROPERTIES
-		LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
-		RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
+	bn_plugin(arch_armv7)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")

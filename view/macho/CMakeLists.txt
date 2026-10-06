@@ -24,10 +24,7 @@ set_target_properties(view_macho PROPERTIES
 	POSITION_INDEPENDENT_CODE ON)
 
 if(BN_INTERNAL_BUILD)
-	plugin_rpath(view_macho)
-	set_target_properties(view_macho PROPERTIES
-		LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
-		RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
+	bn_plugin(view_macho)
 else()
 	bn_install_plugin(view_macho)
 endif()

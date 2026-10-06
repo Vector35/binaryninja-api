@@ -43,10 +43,7 @@ set_target_properties(arch_ppc PROPERTIES
 target_include_directories(arch_ppc PRIVATE ${PROJECT_SOURCE_DIR}/capstone/include)
 
 if(BN_INTERNAL_BUILD)
-	plugin_rpath(arch_ppc)
-	set_target_properties(arch_ppc PROPERTIES
-		LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
-		RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
+	bn_plugin(arch_ppc)
 endif()
 
 if (DEFINED FORCE_TEST)

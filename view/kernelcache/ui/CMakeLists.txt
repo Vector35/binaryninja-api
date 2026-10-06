@@ -42,10 +42,7 @@ target_compile_definitions(kernelcacheui PRIVATE ${COMPILE_DEFS})
 
 
 if(BN_INTERNAL_BUILD)
-    set_target_properties(kernelcacheui PROPERTIES
-            LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
-            RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
-    ui_plugin_rpath(kernelcacheui)
+    bn_plugin(kernelcacheui)
 else()
     set_target_properties(kernelcacheui PROPERTIES
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/plugins

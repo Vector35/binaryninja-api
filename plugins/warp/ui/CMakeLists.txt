@@ -54,7 +54,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
         POSITION_INDEPENDENT_CODE ON)
 
 if (BN_INTERNAL_BUILD)
-    ui_plugin_rpath(${PROJECT_NAME})
+    bn_plugin(${PROJECT_NAME})
 
     # A hack to get the ui plugin to find the warp core plugin.
     if (APPLE)
@@ -62,10 +62,6 @@ if (BN_INTERNAL_BUILD)
     elseif (UNIX)
         set_target_properties(${PROJECT_NAME} PROPERTIES BUILD_WITH_INSTALL_RPATH TRUE INSTALL_RPATH "$ORIGIN")
     endif()
-
-    set_target_properties(${PROJECT_NAME} PROPERTIES
-            LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
-            RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
 else ()
     # TODO: There is a possibility that linux will fail to load the correct core warp.
     bn_install_plugin(${PROJECT_NAME})

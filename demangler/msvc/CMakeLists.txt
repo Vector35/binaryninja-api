@@ -43,10 +43,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 	POSITION_INDEPENDENT_CODE ON)
 
 if(BN_INTERNAL_BUILD)
-	plugin_rpath(${PROJECT_NAME})
-	set_target_properties(${PROJECT_NAME} PROPERTIES
-		LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
-		RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
+	bn_plugin(${PROJECT_NAME})
 else()
 	bn_install_plugin(${PROJECT_NAME})
 endif()

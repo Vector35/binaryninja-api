@@ -30,7 +30,7 @@ set_target_properties(uinotification PROPERTIES
 	LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/bin)
 
 if(BN_INTERNAL_BUILD)
-	ui_plugin_rpath(uinotification)
+	bn_plugin(uinotification OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/bin)
 endif()
 
 bn_install_plugin(${PROJECT_NAME})

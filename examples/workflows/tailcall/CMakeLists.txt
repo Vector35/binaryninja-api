@@ -33,8 +33,5 @@ set_target_properties(workflow_tailcall PROPERTIES
 	POSITION_INDEPENDENT_CODE ON)
 
 if(BN_INTERNAL_BUILD)
-	plugin_rpath(workflow_tailcall)
-	set_target_properties(workflow_tailcall PROPERTIES
-		LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
-		RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
+	bn_plugin(workflow_tailcall)
 endif()

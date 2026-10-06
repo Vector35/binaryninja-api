@@ -38,8 +38,5 @@ set_target_properties(lang_pseudorust PROPERTIES
 	POSITION_INDEPENDENT_CODE ON)
 
 if(BN_INTERNAL_BUILD)
-	plugin_rpath(lang_pseudorust)
-	set_target_properties(lang_pseudorust PROPERTIES
-		LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
-		RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
+	bn_plugin(lang_pseudorust)
 endif()

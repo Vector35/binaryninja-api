@@ -38,8 +38,5 @@ set_target_properties(lang_pseudoc PROPERTIES
 	POSITION_INDEPENDENT_CODE ON)
 
 if(BN_INTERNAL_BUILD)
-	plugin_rpath(lang_pseudoc)
-	set_target_properties(lang_pseudoc PROPERTIES
-		LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
-		RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
+	bn_plugin(lang_pseudoc)
 endif()

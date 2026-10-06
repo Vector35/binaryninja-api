@@ -69,10 +69,7 @@ set_target_properties(arch_x86 PROPERTIES
 	POSITION_INDEPENDENT_CODE ON)
 
 if(BN_INTERNAL_BUILD)
-	plugin_rpath(arch_x86)
-	set_target_properties(arch_x86 PROPERTIES
-		LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
-		RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
+	bn_plugin(arch_x86)
 	add_custom_command(TARGET arch_x86 POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:yasm> ${BN_CORE_PLUGIN_DIR})
 endif()

@@ -85,12 +85,6 @@ endif()
 # Build exarmo first, since the plugin's sources include the headers its build script copies.
 add_dependencies(${PROJECT_NAME} exarmo_aarch64)
 
-# Keep the symbols of the static libraries linked in, exarmo and Rust's std among them, from being
-# exported alongside the plugin's own.
-if(UNIX AND NOT APPLE)
-	target_link_options(${PROJECT_NAME} PRIVATE "LINKER:--exclude-libs,ALL")
-endif()
-
 IF(DEFINED ENV{ARM64_WARNINGS})
     MESSAGE(STATUS "ARM64 WARNINGS ON")
 	target_compile_options(${PROJECT_NAME} PRIVATE -Wall)
@@ -106,10 +100,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 	POSITION_INDEPENDENT_CODE ON)
 
 if(BN_INTERNAL_BUILD)
-	plugin_rpath(${PROJECT_NAME})
-	set_target_properties(${PROJECT_NAME} PROPERTIES
-	LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
-	RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
+	bn_plugin(${PROJECT_NAME})
 else()
 	bn_install_plugin(${PROJECT_NAME})
 endif()

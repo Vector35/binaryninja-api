@@ -39,10 +39,8 @@ add_library(kernelcache SHARED
 
 
 if(BN_INTERNAL_BUILD)
-    set_target_properties(kernelcache PROPERTIES
-            LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
-            RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
-    plugin_rpath(kernelcache)
+    bn_plugin(kernelcache EXPORTS
+        BNKernelCache* BNGetKernelCache* BNNewKernelCache* BNFreeKernelCache*)
 else()
     set_target_properties(kernelcache PROPERTIES
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/plugins

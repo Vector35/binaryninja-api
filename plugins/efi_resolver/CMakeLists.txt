@@ -26,7 +26,6 @@ file(
 add_library(efi_resolver SHARED ${SOURCE_FILES})
 target_link_libraries(efi_resolver binaryninjaapi)
 
-plugin_rpath(efi_resolver)
 target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_compile_features(efi_resolver PRIVATE cxx_std_20 c_std_99)
 
@@ -40,9 +39,7 @@ endif()
 # plugin installation for public builds.
 
 if(BN_INTERNAL_BUILD)
-  set_target_properties(efi_resolver PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
-    RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
+  bn_plugin(efi_resolver)
 else()
   bn_install_plugin(${PROJECT_NAME})
 endif()

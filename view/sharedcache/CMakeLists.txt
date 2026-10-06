@@ -40,10 +40,8 @@ add_library(sharedcache SHARED
 
 
 if(BN_INTERNAL_BUILD)
-    set_target_properties(sharedcache PROPERTIES
-            LIBRARY_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR}
-            RUNTIME_OUTPUT_DIRECTORY ${BN_CORE_PLUGIN_DIR})
-    plugin_rpath(sharedcache)
+    bn_plugin(sharedcache EXPORTS
+        BNSharedCache* BNGetSharedCache* BNNewSharedCache* BNFreeSharedCache*)
 else()
     set_target_properties(sharedcache PROPERTIES
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/plugins

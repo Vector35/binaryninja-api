@@ -4,6 +4,7 @@ project(binaryninjaapi CXX C)
 # C++20 is used without modules, so don't require a module dependency scanner.
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(SymbolExports)
 
 option(BN_API_BUILD_EXAMPLES "Builds example plugins" OFF)
 option(BN_ALLOW_STUBS "Allow generating and linking against stubs if a Binary Ninja installation was not found" OFF)
@@ -69,7 +70,10 @@ if(CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
 endif()
 
 add_subdirectory(vendor/fmt EXCLUDE_FROM_ALL)
-set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
+set_target_properties(fmt PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN ON)
 target_link_libraries(binaryninjaapi PUBLIC fmt::fmt)
 
 if(APPLE)

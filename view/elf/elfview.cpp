@@ -1293,6 +1293,7 @@ bool ElfView::Init()
 
 	size_t commonSegmentOffset = 0;
 	auto allSections = GetSections();
+	map<uint64_t, uint64_t> ppc64LocalEntryOffsets;
 	for (auto entry = combinedSymbolTable.begin(); entry != combinedSymbolTable.end(); entry++)
 	{
 		if (entry->section == ELF_SHN_COMMON)
@@ -1343,6 +1344,20 @@ bool ElfView::Init()
 				break;
 			case ELF_STT_FUNC:
 				{
+					if (!m_elf32 && m_commonHeader.arch == EM_PPC64 && (m_headerFlags & 3) == 2 &&
+						(entry->binding == GlobalBinding || entry->binding == WeakBinding))
+					{
+						// ELFv2 st_other[7:5] encodes the local-entry offset. Values
+						// zero and one have no separate local entry and no r12 promise.
+						uint8_t encoding = entry->other >> 5;
+						uint64_t offset = encoding >= 2 ? uint64_t(1) << encoding : 0;
+						if (offset && ((entry->size && offset >= entry->size) ||
+							entry->value > UINT64_MAX - offset || !IsOffsetExecutable(entry->value + offset)))
+							offset = 0;
+						auto [item, inserted] = ppc64LocalEntryOffsets.emplace(entry->value, offset);
+						if (!inserted && item->second != offset)
+							item->second = 0; // Conflicting aliases do not prove the ABI input.
+					}
 					auto symbolType = FunctionSymbol;
 					if (m_plat && m_plat->GetName() == "tms320c6x" &&
 						(entry->name.find('$') != std::string::npos || entry->name == "LOOP")) {
@@ -1450,6 +1465,12 @@ bool ElfView::Init()
 	m_symbolQueue->Process();
 	delete m_symbolQueue;
 	m_symbolQueue = nullptr;
+
+	for (const auto& [address, offset] : ppc64LocalEntryOffsets)
+	{
+		if (auto function = GetAnalysisFunction(GetDefaultPlatform(), address))
+			function->StoreMetadata("__BN_elf_ppc64_local_entry_offset", new Metadata(offset));
+	}
 
 	bulkSymbolModification.End();
 

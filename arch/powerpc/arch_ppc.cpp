@@ -2332,6 +2332,49 @@ public:
 	{
 	}
 
+	RegisterValue GetIncomingRegisterValue(uint32_t reg, Function* func) override
+	{
+		// ELFv2 callers place the global entry address in r12. This is an
+		// ABI input used to establish r2/TOC, not an extra C argument.
+        // See section 2.3.2.1 in the Power Architecture 64-Bit ELF V2 ABI Specification:
+        // https://github.com/OpenPOWERFoundation/ELFv2-ABI
+		if (reg == PPC_REG_GPR12 && func && func->GetArchitecture()->GetAddressSize() == 8)
+		{
+			auto view = func->GetView();
+			if (view && view->GetTypeName() == "ELF" && view->GetParentView())
+			{
+				auto symbol = view->GetSymbolByAddress(func->GetStart());
+				if (symbol && symbol->GetType() == FunctionSymbol
+					&& (symbol->GetBinding() == GlobalBinding || symbol->GetBinding() == WeakBinding))
+				{
+					// The ABI guarantee requires a distinct local entry, not just
+					// global/weak binding. The ELF loader validates st_other's offset.
+					auto localEntry = func->QueryMetadata("__BN_elf_ppc64_local_entry_offset");
+					if (!localEntry || !localEntry->IsUnsignedInteger() || localEntry->GetUnsignedInteger() < 4)
+						return CallingConvention::GetIncomingRegisterValue(reg, func);
+					try
+					{
+						BinaryReader reader(view->GetParentView());
+						reader.SetEndianness(view->GetDefaultEndianness());
+						reader.Seek(4);
+						bool elf64 = reader.Read8() == 2;
+						reader.Seek(48); // Elf64_Ehdr.e_flags, low two bits select the ABI.
+						if (elf64 && (reader.Read32() & 3) == 2)
+						{
+							RegisterValue value;
+							value.state = ConstantPointerValue;
+							value.value = func->GetStart();
+							return value;
+						}
+					}
+					catch (ReadException&)
+					{}
+				}
+			}
+		}
+		return CallingConvention::GetIncomingRegisterValue(reg, func);
+	}
+
     virtual bool IsStackReservedForArgumentRegisters() override
     {
         return true;

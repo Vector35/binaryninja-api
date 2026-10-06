@@ -541,7 +541,8 @@ namespace BinaryNinja
 		SymbolQueue* m_symbolQueue = nullptr;
 
 		void DefineElfSymbol(BNSymbolType type, const std::string& name, uint64_t addr, bool gotEntry,
-			BNSymbolBinding binding, size_t size = 0, const Confidence<Ref<Type>>& typeObj = nullptr);
+			BNSymbolBinding binding, size_t size = 0, const Confidence<Ref<Type>>& typeObj = nullptr,
+			bool definedObjectGotEntry = false);
 
 		void ApplyTypesToParentStringTable(const Elf64SectionHeader& section, const bool offset = true);
 		void ApplyTypesToStringTable(const Elf64SectionHeader& section, const int64_t imageBaseAdjustment, const bool offset = true);

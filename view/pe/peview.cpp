@@ -2920,9 +2920,18 @@ bool PEView::Init()
 								reloc.addend = relocEntries[++i];
 								anyHighAdj = true;
 								break;
+							case 5: // IMAGE_REL_BASED_ARM_MOV32 (machine-dependent)
+								reloc.size = m_is64 ? 8 : 4;
+								if ((header.machine == IMAGE_FILE_MACHINE_ARM) ||
+									(header.machine == IMAGE_FILE_MACHINE_THUMB) || (header.machine == IMAGE_FILE_MACHINE_ARMNT))
+									reloc.size = 8;
+								else
+									reloc.type = UnhandledRelocation;
+								break;
 							case 7: // IMAGE_REL_BASED_THUMB_MOV32
 								reloc.size = 8;
-								if (header.machine != IMAGE_FILE_MACHINE_ARM64)
+								if ((header.machine != IMAGE_FILE_MACHINE_ARM64) && (header.machine != IMAGE_FILE_MACHINE_ARM) &&
+									(header.machine != IMAGE_FILE_MACHINE_THUMB) && (header.machine != IMAGE_FILE_MACHINE_ARMNT))
 									reloc.type = UnhandledRelocation;
 								break;
 							case 10: // IMAGE_REL_BASED_DIR64

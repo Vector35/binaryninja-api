@@ -44,25 +44,25 @@ ExprId GetCondition(LowLevelILFunction& il, Condition cond)
 {
 	switch(cond)
 	{
-	 	case COND_EQ: return il.FlagCondition(LLFC_E);
-	 	case COND_NE: return il.FlagCondition(LLFC_NE);
-	 	case COND_CS: return il.FlagCondition(LLFC_UGE);
-	 	case COND_CC: return il.FlagCondition(LLFC_ULT);
-	 	case COND_MI: return il.FlagCondition(LLFC_NEG);
-	 	case COND_PL: return il.FlagCondition(LLFC_POS);
-	 	case COND_VS: return il.FlagCondition(LLFC_O);
-	 	case COND_VC: return il.FlagCondition(LLFC_NO);
-	 	case COND_HI: return il.FlagCondition(LLFC_UGT);
-	 	case COND_LS: return il.FlagCondition(LLFC_ULE);
-	 	case COND_GE: return il.FlagCondition(LLFC_SGE);
-	 	case COND_LT: return il.FlagCondition(LLFC_SLT);
-	 	case COND_GT: return il.FlagCondition(LLFC_SGT);
-	 	case COND_LE: return il.FlagCondition(LLFC_SLE);
-		case COND_NONE:
-		case COND_NONE2:
-		 return il.Const(0, 1); //Always branch
-		default:
-			return il.Const(0, 0); //Never branch
+	case COND_EQ: return il.FlagGroup(IL_FLAG_GROUP_EQ);
+	case COND_NE: return il.FlagGroup(IL_FLAG_GROUP_NE);
+	case COND_CS: return il.FlagGroup(IL_FLAG_GROUP_CS);
+	case COND_CC: return il.FlagGroup(IL_FLAG_GROUP_CC);
+	case COND_MI: return il.FlagGroup(IL_FLAG_GROUP_MI);
+	case COND_PL: return il.FlagGroup(IL_FLAG_GROUP_PL);
+	case COND_VS: return il.FlagGroup(IL_FLAG_GROUP_VS);
+	case COND_VC: return il.FlagGroup(IL_FLAG_GROUP_VC);
+	case COND_HI: return il.FlagGroup(IL_FLAG_GROUP_HI);
+	case COND_LS: return il.FlagGroup(IL_FLAG_GROUP_LS);
+	case COND_GE: return il.FlagGroup(IL_FLAG_GROUP_GE);
+	case COND_LT: return il.FlagGroup(IL_FLAG_GROUP_LT);
+	case COND_GT: return il.FlagGroup(IL_FLAG_GROUP_GT);
+	case COND_LE: return il.FlagGroup(IL_FLAG_GROUP_LE);
+	case COND_NONE:
+	case COND_NONE2:
+		return il.Const(0, 1); //Always branch
+	default:
+		return il.Const(0, 0); //Never branch
 	}
 }
 

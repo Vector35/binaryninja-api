@@ -19,6 +19,7 @@
 #include "demangler/demangled_log.h"
 #include "demangler/demangled_template_simplifier.h"
 #include "demangler/cpp_signature_recovery.h"
+#include "demangler/imported_function_linkage.h"
 #include "base/unicode.h"
 #ifdef BINARYNINJACORE_LIBRARY
 #include "unicode.h"
@@ -2687,12 +2688,19 @@ namespace
 			const string name(symbol->GetRawName());
 			if (name.empty() || name.front() != '?')
 				continue;
-			// A linked thunk is analyzed independently and can have its own user
-			// or imported prototype. Let the ordinary linked-stub lookup own it.
-			bool hasStub = false;
-			for (const auto& candidate : view->GetSymbolsByRawName(name))
-				hasStub |= candidate->GetType() == ImportedFunctionSymbol;
-			if (hasStub)
+			// Resolve exactly the same loader identity as ordinary import lookup.
+			// An unrelated DLL symbol or an address without a function cannot own
+			// this import's signature. Linked thunks are analyzed independently.
+			auto linkedStubs = BN::ImportedFunctionLinkage::FindCandidates(view, symbol,
+				target.state == ExternalPointerValue, target.value,
+				[&](uint64_t address) {
+#ifdef BINARYNINJACORE_LIBRARY
+					return view->GetAnalysis()->GetFunction(function->GetPlatform(), address);
+#else
+					return view->GetAnalysisFunction(function->GetPlatform(), address);
+#endif
+				});
+			if (!linkedStubs || !linkedStubs->empty())
 				continue;
 			auto prepared = PrepareMSWithConfig(config, name);
 			if (!prepared || prepared->facts.isCtorOrDtor || !prepared->facts.returnEncoded

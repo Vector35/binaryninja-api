@@ -1,5 +1,6 @@
 #include <inttypes.h>
 #include "il.h"
+#include "floatcompare.h"
 #include "lowlevelilinstruction.h"
 #include "arch_x86_common_architecture.h"
 
@@ -792,6 +793,16 @@ bool GetLowLevelILForInstruction(Architecture* arch, const uint64_t addr, LowLev
 			}
 		}
 		X86_INTRINSIC intrinsic = (X86_INTRINSIC)(xedd_iForm + 1000);
+		if (const auto* family = X86::GetFloatCompareFamily(xedd))
+		{
+			const auto immediate = xed_decoded_inst_get_unsigned_immediate(xedd);
+			// Match disassembly; keep noncanonical bytes in the generic intrinsic.
+			if (immediate < family->PredicateCount())
+			{
+				intrinsic = family->pseudoIntrinsics[immediate];
+				parameters.pop_back();
+			}
+		}
 		il.AddInstruction(il.Intrinsic(outputs, intrinsic, parameters));
 		// Generate IL instruction for memory writes
 		for (size_t i = 0; i < memoryOperandWrites.size(); i++)

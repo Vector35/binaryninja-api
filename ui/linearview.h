@@ -250,6 +250,8 @@ class BINARYNINJAUIAPI LinearView :
 	BinaryNinja::Ref<BinaryNinja::LinearViewCursor> m_topPosition, m_bottomPosition;
 	std::vector<LinearViewLine> m_lines;
 	bool m_showBranchArrows = true;
+	size_t m_branchArrowLanes = 8;
+	bool m_branchGutterPressed = false;
 	bool m_branchRowsDirty = true;
 	struct BranchArrow
 	{
@@ -266,6 +268,7 @@ class BINARYNINJAUIAPI LinearView :
 		std::vector<size_t> hlilRows;
 	};
 	std::map<FunctionRef, BranchLayout> m_branchLayouts;
+	std::optional<std::pair<FunctionRef, BranchArrow>> m_lastNavigatedBranch;
 	size_t m_emptyPrevCursors = 0;
 	size_t m_emptyNextCursors = 0;
 	size_t m_topLine = 0;
@@ -300,12 +303,16 @@ class BINARYNINJAUIAPI LinearView :
 	void updateBranchArrows();
 	void updateHighLevelILBranchArrows();
 	void paintBranchArrows(QPainter& p, int xoffset);
+	bool isInBranchGutter(const QPointF& point) const;
+	std::optional<BranchArrow> getBranchArrowAt(const QPointF& point, FunctionRef& function) const;
+	bool navigateBranchArrow(const QPointF& point);
 	void updateBounds();
 	void updateHighlight();
 	void refreshAtCurrentLocation(bool cursorFixup = false);
 	bool navigateToAddress(uint64_t addr, bool center, bool updateHighlight, bool navByRef = false);
 	bool navigateToLine(
-		FunctionRef func, uint64_t offset, size_t instrIndex, bool center, bool updateHighlight, bool navByRef = false);
+		FunctionRef func, uint64_t offset, size_t instrIndex, bool center, bool updateHighlight, bool navByRef = false,
+		bool allowGraphSwitch = true);
 	bool navigateToGotoLabel(uint64_t label);
 	bool navigateToMatchingBrace();
 
@@ -609,6 +616,7 @@ protected:
 	virtual void wheelEvent(QWheelEvent* event) override;
 	virtual void mousePressEvent(QMouseEvent* event) override;
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
+	virtual void mouseReleaseEvent(QMouseEvent* event) override;
 	virtual void mouseDoubleClickEvent(QMouseEvent* event) override;
 
 	void up(bool selecting, size_t count = 1);

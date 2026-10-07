@@ -82,6 +82,7 @@ from . import typecontainer
 from . import externallibrary
 from . import undo
 from . import stringrecognizer
+from . import relocation
 
 
 PathType = Union[str, os.PathLike]
@@ -2266,101 +2267,6 @@ class Tag:
 		core.BNTagSetData(self.handle, value)
 
 
-@dataclass
-class RelocationInfo:
-	type: RelocationType
-	pc_relative: bool
-	base_relative: bool
-	base: int
-	size: int
-	truncate_size: int
-	native_type: int
-	addend: int
-	has_sign: bool
-	implicit_addend: bool
-	external: bool
-	symbol_index: int
-	section_index: int
-	address: int
-	target: int
-	data_relocation: bool
-
-	def __init__(self, info: core.BNRelocationInfo):
-		self.type = RelocationType(info.type)
-		self.pc_relative = info.pcRelative
-		self.base_relative = info.baseRelative
-		self.base = info.base
-		self.size = info.size
-		self.truncate_size = info.truncateSize
-		self.native_type = info.nativeType
-		self.addend = info.addend
-		self.has_sign = info.hasSign
-		self.implicit_addend = info.implicitAddend
-		self.external = info.external
-		self.symbol_index = info.symbolIndex
-		self.section_index = info.sectionIndex
-		self.address = info.address
-		self.target = info.target
-		self.data_relocation = info.dataRelocation
-
-
-class Relocation:
-	def __init__(self, handle: core.BNRelocationHandle):
-		self.handle = handle
-
-	def __del__(self):
-		if core is not None:
-			core.BNFreeRelocation(self.handle)
-
-	def __repr__(self):
-		if self.symbol is None:
-			return f"<Relocation: {self.target:#x}>"
-		try:
-			return f"<Relocation: \"{self.symbol.full_name}\" @ {self.target:#x}>"
-		except UnicodeDecodeError:
-			return f"<Relocation: \"{self.symbol.raw_bytes}\" @ {self.target:#x}>"
-
-	def __eq__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return ctypes.addressof(self.handle.contents) == ctypes.addressof(other.handle.contents)
-
-	def __ne__(self, other):
-		if not isinstance(other, self.__class__):
-			return NotImplemented
-		return not (self == other)
-
-	def __hash__(self):
-		return hash(ctypes.addressof(self.handle.contents))
-
-	@property
-	def info(self) -> RelocationInfo:
-		return RelocationInfo(core.BNRelocationGetInfo(self.handle))
-
-	@property
-	def arch(self) -> Optional['architecture.Architecture']:
-		"""The architecture associated with the :py:class:`Relocation` (read/write)"""
-		core_arch = core.BNRelocationGetArchitecture(self.handle)
-		return architecture.CoreArchitecture._from_cache(handle=core_arch)
-
-	@property
-	def target(self) -> int:
-		"""Where the reloc needs to point to"""
-		return core.BNRelocationGetTarget(self.handle)
-
-	@property
-	def reloc(self) -> int:
-		"""The actual pointer that needs to be relocated"""
-		return core.BNRelocationGetReloc(self.handle)
-
-	@property
-	def symbol(self) -> Optional['_types.CoreSymbol']:
-		core_symbol = core.BNRelocationGetSymbol(self.handle)
-		if core_symbol is None:
-			return None
-		return _types.CoreSymbol(core_symbol)
-
-
 class _BinaryViewAssociatedDataStore(associateddatastore._AssociatedDataStore):
 	_defaults = {}
 
@@ -4468,7 +4374,19 @@ class BinaryView:
 	def max_function_size_for_analysis(self, size: int) -> None:
 		core.BNSetMaxFunctionSizeForAnalysis(self.handle, size)
 
-	def relocations_at(self, addr: int) -> List[Relocation]:
+	def define_relocation(self, info: 'relocation.RelocationInfo', target: 'int | _types.CoreSymbol', reloc: int, arch: Optional['architecture.Architecture'] = None):
+		if arch is None:
+			if self.arch is None:
+				raise Exception("Can not define relocation with no Architecture specified")
+			arch = self.arch
+
+		_info = info._to_core_struct()
+		if isinstance(target, int):
+			core.BNDefineRelocation(self.handle, arch.handle, _info, target, reloc)
+		else:
+			core.BNDefineSymbolRelocation(self.handle, arch.handle, _info, target.handle, reloc)
+
+	def relocations_at(self, addr: int) -> List['relocation.Relocation']:
 		"""List of relocations for a given address"""
 		count = ctypes.c_ulonglong()
 		relocs = core.BNGetRelocationsAt(self.handle, addr, count)
@@ -4478,7 +4396,7 @@ class BinaryView:
 			for i in range(0, count.value):
 				reloc_handle = core.BNNewRelocationReference(relocs[i])
 				assert reloc_handle is not None, "core.BNNewRelocationReference is not None"
-				result.append(Relocation(reloc_handle))
+				result.append(relocation.Relocation(reloc_handle))
 			return result
 		finally:
 			core.BNFreeRelocationList(relocs, count)

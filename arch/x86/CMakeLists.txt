@@ -4,6 +4,9 @@ project(arch_x86)
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
+# Yasm uses FindPython rather than FindPython3. Share the selected interpreter.
+set(Python_EXECUTABLE "${Python3_EXECUTABLE}")
+
 OPTION(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 OPTION(YASM_BUILD_TESTS "Enable building of tests" OFF)
 add_subdirectory(yasm)

@@ -3,6 +3,7 @@
 using namespace BinaryNinja;
 using namespace std;
 
+void RegisterFreeBSDCRTRecognizer(Architecture* arch);
 
 class FreeBSDX86Platform: public Platform
 {
@@ -151,6 +152,7 @@ extern "C"
 			Ref<Platform> platform;
 
 			platform = new FreeBSDX86Platform(x86);
+			RegisterFreeBSDCRTRecognizer(x86);
 			Platform::Register("freebsd", platform);
 			BinaryViewType::RegisterPlatform("ELF", 9, platform);
 		}

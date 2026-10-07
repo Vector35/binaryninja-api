@@ -2114,10 +2114,17 @@ class Architecture(metaclass=_ArchitectureMetaClass):
 	def get_branch_types_with_context(
 	    self, func: 'function.Function', addr: int, function_arch_context: Any = None
 	) -> List[OverridableBranchInfo]:
-		"""Return branches at ``addr`` using the function architecture context."""
-		info = self.get_instruction_info(func.view.read(addr, self.max_instr_length), addr)
+		"""Return branches at ``addr``, including a targetless ``NopBranch`` for a NOP instruction."""
+		data = func.view.read(addr, self.max_instr_length)
+		info = self.get_instruction_info(data, addr)
 		if info is None:
 			return []
+		if not info.branches and not info.branch_delay and 0 < info.length <= len(data):
+			il = lowlevelil.LowLevelILFunction(self)
+			il.current_address = addr
+			length = self.get_instruction_low_level_il(data[:info.length], addr, il)
+			if length == info.length and len(il) and all(il[i].operation == LowLevelILOperation.LLIL_NOP for i in range(len(il))):
+				return [OverridableBranchInfo(BranchType.NopBranch, 0, None)]
 		return [
 			OverridableBranchInfo(branch.type, branch.target, branch.arch)
 			for branch in info.branches if branch.type != BranchType.SystemCall

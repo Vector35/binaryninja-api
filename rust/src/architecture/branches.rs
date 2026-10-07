@@ -63,6 +63,7 @@ pub enum BranchKind {
     SystemCall,
     Indirect,
     Exception,
+    Nop,
     UserDefined,
 }
 
@@ -134,6 +135,7 @@ impl From<BranchInfo> for BNBranchType {
             BranchKind::SystemCall => BNBranchType::SystemCall,
             BranchKind::Indirect => BNBranchType::IndirectBranch,
             BranchKind::Exception => BNBranchType::ExceptionBranch,
+            BranchKind::Nop => BNBranchType::NopBranch,
             BranchKind::UserDefined => BNBranchType::UserDefinedBranch,
         }
     }
@@ -160,6 +162,7 @@ impl From<BranchKind> for BranchType {
             BranchKind::SystemCall => BranchType::SystemCall,
             BranchKind::Indirect => BranchType::IndirectBranch,
             BranchKind::Exception => BranchType::ExceptionBranch,
+            BranchKind::Nop => BranchType::NopBranch,
             BranchKind::UserDefined => BranchType::UserDefinedBranch,
         }
     }

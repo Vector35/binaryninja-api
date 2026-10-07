@@ -1589,6 +1589,21 @@ std::vector<OverridableBranchInfo> Architecture::GetBranchTypesWithContext(Funct
 		result.push_back({info.branchType[i], info.branchTarget[i],
 			info.branchArch[i] ? new CoreArchitecture(info.branchArch[i]) : nullptr});
 	}
+	// Only this on-demand query lifts branchless instructions to recognize NOP sites.
+	// InstructionInfo stays unchanged, so ordinary analysis incurs no NOP bookkeeping.
+	if (!info.branchCount && !info.delaySlots && info.length && (info.length <= data.GetLength()))
+	{
+		Ref<LowLevelILFunction> il = new LowLevelILFunction(this, nullptr);
+		il->SetCurrentAddress(this, addr);
+		size_t length = info.length;
+		GetInstructionLowLevelIL(static_cast<uint8_t*>(data.GetData()), addr, length, *il);
+		bool isNop = (length == info.length) && (il->GetInstructionCount() != 0);
+		for (size_t i = 0; isNop && (i < il->GetInstructionCount()); i++)
+			isNop = il->GetInstruction(i).operation == LLIL_NOP;
+		if (isNop)
+			result.push_back({NopBranch, 0, nullptr});
+	}
+
 	return result;
 }
 

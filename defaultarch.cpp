@@ -99,6 +99,37 @@ static void AddBranchOverrideContinuations(const set<BNBranchType>& overrideCont
 }
 
 
+// NOPs have no ordinary branch metadata. Add it only at a user override site.
+// A NOP replacement suppresses the whole native instruction, including all branch arms.
+static bool ApplyNopInstructionInfoOverride(Function* function, BasicBlockAnalysisContext& context,
+	const ArchAndAddr& location, InstructionInfo& info)
+{
+	const auto& overrides = context.GetBranchOverrides();
+	auto entry = overrides.find(location);
+	if (entry == overrides.end())
+		return false;
+	if (!info.branchCount && entry->second.count(NopBranch))
+	{
+		for (const auto& branch : location.arch->GetBranchTypesWithContext(function, location.address,
+			context.GetFunctionArchContextRaw()))
+			if (branch.type == NopBranch)
+				info.AddBranch(NopBranch);
+	}
+	for (size_t i = 0; i < info.branchCount; i++)
+	{
+		auto replacement = entry->second.find(info.branchType[i]);
+		if ((replacement != entry->second.end()) && (replacement->second.type == NopBranch))
+		{
+			info.branchCount = 0;
+			info.delaySlots = 0;
+			info.AddBranch(NopBranch);
+			return true;
+		}
+	}
+	return false;
+}
+
+
 void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnalysisContext& context)
 {
 	auto data = function->GetView();
@@ -334,6 +365,8 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 				break;
 			}
 
+			bool suppressInstruction = !delaySlotCount && !branchOverrides.empty()
+				&& ApplyNopInstructionInfoOverride(function, context, location, info);
 			bool endsBlock = false;
 			ArchAndAddr target;
 			map<ArchAndAddr, set<ArchAndAddr>>::const_iterator indirectBranchIter, endIter;
@@ -634,6 +667,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 						break;
 
 					case SystemCall:
+					case NopBranch:
 						break;
 
 					default:
@@ -645,7 +679,7 @@ void Architecture::DefaultAnalyzeBasicBlocks(Function* function, BasicBlockAnaly
 				}
 			}
 
-			if (indirectNoReturnCalls.count(location))
+			if (!suppressInstruction && indirectNoReturnCalls.count(location))
 			{
 				// Conditional Call Support (Part 1)
 				// Do not halt basic block analysis if this is a conditional call to a function that is 'no return'
@@ -869,6 +903,7 @@ static bool ApplyLiftedBranchOverrides(LowLevelILFunction& dest, LowLevelILFunct
 		optional<LowLevelILInstruction> target;
 	};
 	const size_t count = source.GetInstructionCount();
+	const bool originalNop = (branches.size() == 1) && (branches.front().type == NopBranch);
 	vector<Exit> exits;
 	set<size_t> visited, labelTargets;
 	queue<size_t> pending;
@@ -954,6 +989,9 @@ static bool ApplyLiftedBranchOverrides(LowLevelILFunction& dest, LowLevelILFunct
 				break;
 			case FunctionReturn:
 				match = exit.operation == LLIL_RET;
+				break;
+			case NopBranch:
+				match = exit.index == count;
 				break;
 			case IndirectBranch:
 			case UnresolvedBranch:
@@ -1064,6 +1102,14 @@ static bool ApplyLiftedBranchOverrides(LowLevelILFunction& dest, LowLevelILFunct
 			if (needsTarget)
 				target = value.target ? dest.ConstPointer(location.arch->GetAddressSize(), *value.target, loc)
 					: copyExpr(*exit->target);
+			if (originalNop && (value.type == FunctionReturn) && !value.target)
+			{
+				// A NOP has no return destination to preserve. Use the architecture's normal
+				// return address, just as a newly introduced call uses its normal return setup.
+				uint32_t linkReg = location.arch->GetLinkRegister();
+				target = linkReg == BN_INVALID_REGISTER ? dest.Pop(location.arch->GetAddressSize(), 0, loc)
+					: dest.Register(location.arch->GetRegisterInfo(linkReg).size, linkReg, loc);
+			}
 			if (((exit->operation == LLIL_CALL) || (exit->operation == LLIL_CALL_STACK_ADJUST))
 				&& (value.type != CallDestination))
 			{
@@ -1217,6 +1263,7 @@ namespace
 		const map<BNBranchType, BranchOverride>* m_currentOverrides = nullptr;
 		vector<OverridableBranchInfo> m_originalBranches;
 		Ref<LowLevelILFunction> m_staged;
+		bool m_suppressInstruction = false;
 
 		void limitCoalescing(const ArchAndAddr& location, size_t& len)
 		{
@@ -1245,7 +1292,7 @@ namespace
 				if (!location.arch->GetInstructionInfo(opcode + groupLength, location.address + groupLength,
 					len - groupLength, info) || !info.length || (info.length > len - groupLength))
 					break;
-				remaining = groupLength ? remaining - 1 : info.delaySlots;
+				remaining = groupLength ? remaining - 1 : (m_suppressInstruction ? 0 : info.delaySlots);
 				groupLength += info.length;
 			}
 			if (!remaining)
@@ -1260,6 +1307,7 @@ namespace
 		LowLevelILFunction* PrepareInstruction(BasicBlock* block, const ArchAndAddr& location,
 			const uint8_t* opcode, size_t& len)
 		{
+			m_suppressInstruction = false;
 			limitCoalescing(location, len);
 			auto overrides = m_overrides.find(location);
 			if (overrides == m_overrides.end())
@@ -1273,11 +1321,29 @@ namespace
 				return m_function;
 
 			m_currentOverrides = &overrides->second;
+			m_suppressInstruction = any_of(m_originalBranches.begin(), m_originalBranches.end(), [&](const auto& branch) {
+				auto replacement = overrides->second.find(branch.type);
+				return (replacement != overrides->second.end()) && (replacement->second.type == NopBranch);
+			});
 			m_staged = new LowLevelILFunction(location.arch, m_function->GetFunction());
 			m_staged->SetCurrentSourceBlock(block);
 			m_staged->SetCurrentAddress(location.arch, location.address);
 			limitToInstructionGroup(location, opcode, len);
 			return m_staged.GetPtr();
+		}
+
+		bool IsNopOverride() const { return m_suppressInstruction; }
+
+		bool LiftInstruction(BasicBlock* block, const ArchAndAddr& location, const uint8_t* opcode,
+			size_t& len, LowLevelILFunction*& liftTarget)
+		{
+			liftTarget = PrepareInstruction(block, location, opcode, len);
+			if (m_suppressInstruction)
+			{
+				liftTarget->AddInstruction(liftTarget->Nop());
+				return true;
+			}
+			return location.arch->GetInstructionLowLevelIL(opcode, location.address, len, *liftTarget);
 		}
 
 		bool FinishInstruction(const ArchAndAddr& location, uint64_t continuationAddress,
@@ -1286,8 +1352,16 @@ namespace
 			if (!m_staged)
 				return true;
 
-			bool applied = ApplyLiftedBranchOverrides(*m_function, *m_staged, m_context, location,
-				continuationAddress, m_originalBranches, *m_currentOverrides);
+			bool applied = true;
+			if (m_suppressInstruction)
+			{
+				auto nop = m_function->Nop(ILSourceLocation(location.address, BN_INVALID_OPERAND));
+				m_function->SetExprAttributes(nop, ILBranchOverride);
+				m_function->AddInstruction(nop);
+			}
+			else
+				applied = ApplyLiftedBranchOverrides(*m_function, *m_staged, m_context, location,
+					continuationAddress, m_originalBranches, *m_currentOverrides);
 			m_staged = nullptr;
 			if (!applied)
 			{
@@ -1407,12 +1481,14 @@ bool Architecture::DefaultLiftFunction(LowLevelILFunction* function, FunctionLif
 			}
 
 			size_t instrCountBefore = function->GetInstructionCount();
-			auto liftTarget = overrideLifter ? overrideLifter->PrepareInstruction(i, cur, opcode, len) : function;
-			bool status = i->GetArchitecture()->GetInstructionLowLevelIL(opcode, addr, len, *liftTarget);
+			auto liftTarget = function;
+			bool status = overrideLifter ? overrideLifter->LiftInstruction(i, cur, opcode, len, liftTarget)
+				: i->GetArchitecture()->GetInstructionLowLevelIL(opcode, addr, len, *function);
 			size_t instrCountAfter = liftTarget->GetInstructionCount();
 			while (nextRelocation && nextRelocation->GetAddress() >= addr && nextRelocation->GetAddress() < addr + len)
 			{
-				if (data->IsOffsetExternSemantics(nextRelocation->GetTarget()))
+				if (data->IsOffsetExternSemantics(nextRelocation->GetTarget())
+					&& !(overrideLifter && overrideLifter->IsNopOverride()))
 				{
 					int64_t operand = relocationHandler->GetOperandForExternalRelocation(
 						opcode, addr, len, liftTarget, nextRelocation);

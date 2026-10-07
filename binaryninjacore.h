@@ -495,6 +495,8 @@ extern "C"
 		SystemCall = 5,
 		IndirectBranch = 6,
 		ExceptionBranch = 7,
+		// No control transfer. A NOP override suppresses the entire native instruction.
+		NopBranch = 8,
 		UnresolvedBranch = 127,
 		UserDefinedBranch = 128
 	};

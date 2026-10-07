@@ -2403,7 +2403,12 @@ class Function:
 	    replacement_target_arch: Optional['architecture.Architecture'] = None,
 	    arch: Optional['architecture.Architecture'] = None
 	) -> None:
-		"""Replace a branch type and optionally its destination at ``address``."""
+		"""Replace a branch type and optionally its destination at ``address``.
+
+		``NopBranch`` as the replacement suppresses the entire instruction and replaces
+		any other overrides at the same address. Setting a non-NOP override removes an
+		existing NOP override. Replacing a NOP with a jump or call requires an explicit target.
+		"""
 		if arch is None:
 			arch = self.arch
 		core.BNSetUserBranchOverride(

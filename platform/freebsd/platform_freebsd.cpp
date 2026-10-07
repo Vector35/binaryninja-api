@@ -3,6 +3,7 @@
 using namespace BinaryNinja;
 using namespace std;
 
+void RegisterFreeBSDCRTRecognizer(Architecture* arch);
 
 class FreeBSDX86Platform: public Platform
 {
@@ -151,6 +152,7 @@ extern "C"
 			Ref<Platform> platform;
 
 			platform = new FreeBSDX86Platform(x86);
+			RegisterFreeBSDCRTRecognizer(x86);
 			Platform::Register("freebsd", platform);
 			BinaryViewType::RegisterPlatform("ELF", 9, platform);
 		}
@@ -161,6 +163,7 @@ extern "C"
 			Ref<Platform> platform;
 
 			platform = new FreeBSDX64Platform(x64);
+			RegisterFreeBSDCRTRecognizer(x64);
 			Platform::Register("freebsd", platform);
 			BinaryViewType::RegisterPlatform("ELF", 9, platform);
 		}
@@ -173,6 +176,8 @@ extern "C"
 
 			armPlatform = new FreeBSDArmv7Platform(armv7, "freebsd-armv7");
 			thumbPlatform = new FreeBSDArmv7Platform(thumb2, "freebsd-thumb2");
+			RegisterFreeBSDCRTRecognizer(armv7);
+			RegisterFreeBSDCRTRecognizer(thumb2);
 			armPlatform->AddRelatedPlatform(thumb2, thumbPlatform);
 			thumbPlatform->AddRelatedPlatform(armv7, armPlatform);
 			Platform::Register("freebsd", armPlatform);
@@ -186,6 +191,7 @@ extern "C"
 			Ref<Platform> platform;
 
 			platform = new FreeBSDArm64Platform(arm64);
+			RegisterFreeBSDCRTRecognizer(arm64);
 			Platform::Register("freebsd", platform);
 			BinaryViewType::RegisterPlatform("ELF", 9, platform);
 		}
@@ -216,6 +222,7 @@ extern "C"
 			Ref<Platform> platform;
 
 			platform = new FreeBSDPpcPlatform(ppc64le, "freebsd-ppc64_le");
+			RegisterFreeBSDCRTRecognizer(ppc64le);
 			Platform::Register("freebsd", platform);
 			BinaryViewType::RegisterPlatform("ELF", 9, platform);
 		}
@@ -226,6 +233,7 @@ extern "C"
 			Ref<Platform> platform;
 
 			platform = new FreeBSDRiscVPlatform(rv64, "freebsd-rv64gc");
+			RegisterFreeBSDCRTRecognizer(rv64);
 			Platform::Register("freebsd", platform);
 			BinaryViewType::RegisterPlatform("ELF", 9, platform);
 		}

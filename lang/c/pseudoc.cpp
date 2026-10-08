@@ -2825,12 +2825,13 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 			tokens.Append(OperationToken, "*");
 
 			// Skip the outer cast if we're dereferencing a single byte and are
-			// already casting to char* for the pointer arithmetic
-			bool skipOuterCast = hasOffset && instr.size == 1;
+			// already casting to char* for the pointer arithmetic, unless an extension requires signedness.
+			bool skipOuterCast = hasOffset && instr.size == 1 && !signedHint.has_value();
 			if (showTypeCasts && !skipOuterCast)
 			{
 				tokens.AppendOpenParen();
-				AppendSizeToken(hasOffset && type ? srcExpr.size : instr.size, true, tokens);
+				// Unsized field expressions still need a fallback, but sized accesses must use their own width.
+				AppendSizeToken(instr.size ? instr.size : srcExpr.size, signedHint.value_or(true), tokens);
 				tokens.Append(TextToken, "*");
 				tokens.AppendCloseParen();
 			}

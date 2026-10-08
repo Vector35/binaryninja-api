@@ -1773,6 +1773,12 @@ class SimilaritySession:
         """
         return SimilaritySessionCompletion(handle=core.BNSimilaritySessionRun(self.handle))
 
+    @property
+    def completion(self) -> Optional[SimilaritySessionCompletion]:
+        """The most recent run's completion, or None before the first run. Does not start a run."""
+        handle = core.BNSimilaritySessionGetCompletion(self.handle)
+        return SimilaritySessionCompletion(handle=handle) if handle else None
+
     def __repr__(self):
         return (
             f"<SimilaritySession nodes={len(self.graph)}, providers={len(self.providers)}, "

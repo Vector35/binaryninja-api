@@ -1063,6 +1063,12 @@ Ref<SimilaritySessionCompletion> SimilaritySession::Run()
 	return new SimilaritySessionCompletion(BNSimilaritySessionRun(m_object));
 }
 
+Ref<SimilaritySessionCompletion> SimilaritySession::GetCompletion()
+{
+	BNSimilaritySessionCompletion* completion = BNSimilaritySessionGetCompletion(m_object);
+	return completion ? new SimilaritySessionCompletion(completion) : nullptr;
+}
+
 
 SimilaritySessionReceiver::SimilaritySessionReceiver(BNSimilaritySessionReceiver* receiver)
 {

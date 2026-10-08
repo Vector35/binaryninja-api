@@ -17517,6 +17517,10 @@ namespace BinaryNinja {
 
 		    \note Returns the active run's completion handle when already running. */
 		Ref<SimilaritySessionCompletion> Run();
+		/*! Returns the most recent run's completion, or nullptr before the first run.
+
+		    This does not start a run and can inspect runs started by another client. */
+		Ref<SimilaritySessionCompletion> GetCompletion();
 	};
 
 	struct LineFormatterSettings

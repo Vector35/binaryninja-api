@@ -4851,6 +4851,7 @@ extern "C"
 		BNSimilaritySession* session, size_t* count);
 	BINARYNINJACOREAPI BNSimilaritySessionGraph* BNSimilaritySessionGetGraph(BNSimilaritySession* session);
 	BINARYNINJACOREAPI BNSimilaritySessionCompletion* BNSimilaritySessionRun(BNSimilaritySession* session);
+	BINARYNINJACOREAPI BNSimilaritySessionCompletion* BNSimilaritySessionGetCompletion(BNSimilaritySession* session);
 	BINARYNINJACOREAPI BNSimilaritySession* BNNewSimilaritySessionReference(BNSimilaritySession* session);
 	BINARYNINJACOREAPI void BNFreeSimilaritySession(BNSimilaritySession* session);
 

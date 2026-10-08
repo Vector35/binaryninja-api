@@ -995,7 +995,9 @@ static bool ApplyLiftedBranchOverrides(LowLevelILFunction& dest, LowLevelILFunct
 				break;
 			case IndirectBranch:
 			case UnresolvedBranch:
-				match = (exit.operation == LLIL_JUMP) || (exit.operation == LLIL_JUMP_TO);
+				// Architectures may recognize an indirect jump as a tail call during the initial lift.
+				match = (exit.operation == LLIL_JUMP) || (exit.operation == LLIL_JUMP_TO)
+					|| (exit.operation == LLIL_TAILCALL);
 				break;
 			case ExceptionBranch:
 				match = (exit.operation == LLIL_TRAP) || (exit.operation == LLIL_NORET);
@@ -1098,9 +1100,12 @@ static bool ApplyLiftedBranchOverrides(LowLevelILFunction& dest, LowLevelILFunct
 				if ((oldTarget.operation != LLIL_CONST) && (oldTarget.operation != LLIL_CONST_PTR))
 					dest.AddInstruction(dest.SetRegister(oldTarget.size, allocateTemporary(), copyExpr(oldTarget), 0, loc));
 			}
+			Ref<Architecture> targetArch = value.target
+				? (value.targetArch ? value.targetArch : location.arch)
+				: (replacement->second.second ? replacement->second.second : location.arch);
 			ExprId target = BN_INVALID_EXPR;
 			if (needsTarget)
-				target = value.target ? dest.ConstPointer(location.arch->GetAddressSize(), *value.target, loc)
+				target = value.target ? dest.ConstPointer(targetArch->GetAddressSize(), *value.target, loc)
 					: copyExpr(*exit->target);
 			if (originalNop && (value.type == FunctionReturn) && !value.target)
 			{
@@ -1140,9 +1145,6 @@ static bool ApplyLiftedBranchOverrides(LowLevelILFunction& dest, LowLevelILFunct
 				dest.SetExprAttributes(setup, ILAllowDeadStoreElimination);
 				dest.AddInstruction(setup);
 			}
-			Ref<Architecture> targetArch = value.target
-				? (value.targetArch ? value.targetArch : location.arch)
-				: (replacement->second.second ? replacement->second.second : location.arch);
 			ExprId transfer;
 			switch (value.type)
 			{

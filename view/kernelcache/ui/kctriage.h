@@ -64,7 +64,7 @@ public:
 		if (index.data(Qt::DisplayRole).toString() == "1")
 		{
 			QPixmap loadedIcon;
-			pixmapForBWMaskIcon(":/icons/images/check.png", &loadedIcon, SidebarHeaderTextColor);
+			pixmapForBWMaskIcon(":/icons/check", &loadedIcon, SidebarHeaderTextColor);
 			if (!loadedIcon.isNull())
 			{
 				QSize pixmapSize(20, 20);

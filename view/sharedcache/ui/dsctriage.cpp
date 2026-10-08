@@ -370,7 +370,7 @@ void DSCTriageView::initSymbolTable()
 		}
 	});
 
-	m_symbolsPanel->addFilterToggle(":/icons/images/folder.png", "Match Image Names",
+	m_symbolsPanel->addFilterToggle(":/icons/folder", "Match Image Names",
 		[this](bool checked) { m_symbolTable->symbolsModel()->setMatchImageNames(checked); });
 
 	auto loadSymbolImageButton = m_symbolsPanel->addSelectionButton("Load Image");
@@ -471,11 +471,11 @@ void DSCTriageView::initStringsTab()
 	m_stringsPanel->setBaselineCount(
 		[this] { return m_stringsTable->stringsModel()->baselineStringCount(); });
 
-	m_stringsPanel->addFilterToggle(":/icons/images/folder.png", "Match Image Names",
+	m_stringsPanel->addFilterToggle(":/icons/folder", "Match Image Names",
 		[this](bool checked) { m_stringsTable->stringsModel()->setMatchImageNames(checked); });
 	// Strings in regions that belong to no image (dyld data and other non-image regions) are
 	// rarely of interest, so they are hidden unless this is toggled on.
-	m_stringsPanel->addFilterToggle(":/icons/images/stack.png", "Show Non-Image Strings",
+	m_stringsPanel->addFilterToggle(":/icons/stack", "Show Non-Image Strings",
 		[this](bool checked) { m_stringsTable->stringsModel()->setShowNonImageStrings(checked); });
 
 	auto loadStringImageButton = m_stringsPanel->addSelectionButton("Load Image");

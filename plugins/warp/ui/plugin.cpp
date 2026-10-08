@@ -82,14 +82,14 @@ WarpSidebarWidget::WarpSidebarWidget(BinaryViewRef data) : SidebarWidget("WARP")
 	headerToolbar->setContentsMargins(0, 0, 0, 0);
 	headerToolbar->setIconSize(QSize(20, 20));
 
-	auto fetchIcon = GetColoredIcon(":/icons/images/arrow-pull.png", getThemeColor(BlueStandardHighlightColor));
+	auto fetchIcon = GetColoredIcon(":/icons/arrow-pull", getThemeColor(BlueStandardHighlightColor));
 	auto fetchAction = headerToolbar->addAction(fetchIcon, "Fetch data from WARP containers", [this]() {
 		UIActionHandler* handler = m_currentFrame->getCurrentViewInterface()->actionHandler();
 		handler->executeAction("WARP\\Fetch");
 	});
 	fetchAction->setToolTip("Fetch data from WARP containers");
 
-	auto processIcon = GetColoredIcon(":/icons/images/plus.png", getThemeColor(BlueStandardHighlightColor));
+	auto processIcon = GetColoredIcon(":/icons/plus", getThemeColor(BlueStandardHighlightColor));
 	auto processAction = headerToolbar->addAction(processIcon, "Process files or views for WARP", [this]() {
 		auto* dialog = new ProcessorDialog(this);
 		dialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -101,7 +101,7 @@ WarpSidebarWidget::WarpSidebarWidget(BinaryViewRef data) : SidebarWidget("WARP")
 	// We want to make it clear that the container actions for fetching and pushing are seperate.
 	headerToolbar->addSeparator();
 
-	auto loadIcon = GetColoredIcon(":/icons/images/archive.png", getThemeColor(BlueStandardHighlightColor));
+	auto loadIcon = GetColoredIcon(":/icons/archive", getThemeColor(BlueStandardHighlightColor));
 	auto loadAction = headerToolbar->addAction(loadIcon, "Load Signature File", [this]() {
 		UIActionHandler* handler = m_currentFrame->getCurrentViewInterface()->actionHandler();
 		handler->executeAction("WARP\\Load File");
@@ -110,9 +110,9 @@ WarpSidebarWidget::WarpSidebarWidget(BinaryViewRef data) : SidebarWidget("WARP")
 
 	headerToolbar->addSeparator();
 
-	static auto matcherStopIcon = GetColoredIcon(":/icons/images/stop.png", getThemeColor(RedStandardHighlightColor));
+	static auto matcherStopIcon = GetColoredIcon(":/icons/stop", getThemeColor(RedStandardHighlightColor));
 	static auto matcherStartIcon =
-		GetColoredIcon(":/icons/images/start.png", getThemeColor(GreenStandardHighlightColor));
+		GetColoredIcon(":/icons/start", getThemeColor(GreenStandardHighlightColor));
 	m_matcherAction = headerToolbar->addAction(matcherStartIcon, "Run Matcher", [this]() {
 		UIActionHandler* handler = m_currentFrame->getCurrentViewInterface()->actionHandler();
 		if (Ref<BackgroundTask> matcherTask = GetMatcherTask())
@@ -125,7 +125,7 @@ WarpSidebarWidget::WarpSidebarWidget(BinaryViewRef data) : SidebarWidget("WARP")
 	});
 	m_matcherAction->setToolTip("Run the matcher on all functions");
 
-	auto refreshIcon = GetColoredIcon(":/icons/images/refresh.png", getThemeColor(BlueStandardHighlightColor));
+	auto refreshIcon = GetColoredIcon(":/icons/refresh", getThemeColor(BlueStandardHighlightColor));
 	auto refreshAction = headerToolbar->addAction(refreshIcon, "Refresh the view data", [this]() { Update(); });
 	refreshAction->setToolTip("Refresh the sidebar data");
 
@@ -207,9 +207,9 @@ void WarpSidebarWidget::Update()
 
 void WarpSidebarWidget::setMatcherActionIcon(bool running)
 {
-	static auto matcherStopIcon = GetColoredIcon(":/icons/images/stop.png", getThemeColor(RedStandardHighlightColor));
+	static auto matcherStopIcon = GetColoredIcon(":/icons/stop", getThemeColor(RedStandardHighlightColor));
 	static auto matcherStartIcon =
-		GetColoredIcon(":/icons/images/start.png", getThemeColor(GreenStandardHighlightColor));
+		GetColoredIcon(":/icons/start", getThemeColor(GreenStandardHighlightColor));
 	isMatcherRunning = running;
 	if (running)
 	{
@@ -250,7 +250,7 @@ void WarpSidebarWidget::focus()
 	SidebarWidget::focus();
 }
 
-WarpSidebarWidgetType::WarpSidebarWidgetType() : SidebarWidgetType(QImage(":/icons/images/warp.png"), "WARP") {}
+WarpSidebarWidgetType::WarpSidebarWidgetType() : SidebarWidgetType(QImage(":/icons/warp"), "WARP") {}
 
 
 void RegisterCommands()

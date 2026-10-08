@@ -481,7 +481,7 @@ public:
 		\b Example:
 		\code{.cpp}
 		// The icon we're using here is just the "add types" icon from the Types sidebar widget.
-		ClickableIcon* addIcon = new ClickableIcon(QImage(":/icons/images/add.png"), QSize(16, 16));
+		ClickableIcon* addIcon = new ClickableIcon(QImage(":/icons/plus"), QSize(16, 16));
 
 		// This assumes we're not running within a class. If you are within another widget, use normal (icon, &method, this, &method2) syntax.
 		QObject::connect(addIcon, &ClickableIcon::clicked,

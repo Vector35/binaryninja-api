@@ -1,5 +1,7 @@
 #pragma once
 
+#include <QtGui/QIcon>
+#include <QtGui/QImage>
 #include <QtGui/QPalette>
 #include <QtWidgets/QProxyStyle>
 #include <vector>
@@ -45,8 +47,10 @@ class BINARYNINJAUIAPI CustomFusionStyle : public QProxyStyle
 	    PrimitiveElement element, const QStyleOption *option, QPainter *painter, const QWidget *widget) const override;
 };
 
-void BINARYNINJAUIAPI pixmapForBWMaskIcon(const QString& url, QPixmap* pixmapOut, BNThemeColor color = SidebarActiveIconColor, const QString& cacheSuffix = "");
-void BINARYNINJAUIAPI pixmapForBWMaskIcon(const QString& url, QPixmap* pixmapOut, QColor color, const QString& cacheSuffix = "");
+QPixmap BINARYNINJAUIAPI themedPixmap(const QString& url, BNThemeColor color = SidebarActiveIconColor);
+QPixmap BINARYNINJAUIAPI themedPixmap(const QString& url, QColor color);
+QIcon BINARYNINJAUIAPI themedIcon(const QString& url, BNThemeColor color = SidebarActiveIconColor);
+QIcon BINARYNINJAUIAPI themedIcon(const QString& url, QColor color);
 
 void BINARYNINJAUIAPI initThemes();
 void BINARYNINJAUIAPI resetUserThemes();

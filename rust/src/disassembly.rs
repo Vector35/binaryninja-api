@@ -44,6 +44,8 @@ use std::fmt::{Display, Formatter};
 use std::ptr;
 use std::ptr::NonNull;
 
+const INVALID_OPERAND: usize = 0xffffffff;
+
 pub type DisassemblyOption = BNDisassemblyOption;
 pub type InstructionTextTokenType = BNInstructionTextTokenType;
 
@@ -612,7 +614,7 @@ impl InstructionTextTokenKind {
                     0 => None,
                     size => Some(size),
                 },
-                operand: Some(value.operand),
+                operand: (value.operand != INVALID_OPERAND).then_some(value.operand),
             },
             BNInstructionTextTokenType::PossibleAddressToken => Self::PossibleAddress {
                 value: value.value,
@@ -620,7 +622,7 @@ impl InstructionTextTokenKind {
                     0 => None,
                     size => Some(size),
                 },
-                operand: Some(value.operand),
+                operand: (value.operand != INVALID_OPERAND).then_some(value.operand),
             },
             BNInstructionTextTokenType::BeginMemoryOperandToken => Self::BeginMemoryOperand,
             BNInstructionTextTokenType::EndMemoryOperandToken => Self::EndMemoryOperand,
@@ -638,7 +640,7 @@ impl InstructionTextTokenKind {
                     0 => None,
                     size => Some(size),
                 },
-                operand: Some(value.operand),
+                operand: (value.operand != INVALID_OPERAND).then_some(value.operand),
             },
             BNInstructionTextTokenType::ArgumentNameToken => {
                 Self::ArgumentName { value: value.value }
@@ -677,7 +679,7 @@ impl InstructionTextTokenKind {
                 _ => Self::String { value: value.value },
             },
             BNInstructionTextTokenType::CharacterConstantToken => Self::CharacterConstant {
-                operand: Some(value.operand),
+                operand: (value.operand != INVALID_OPERAND).then_some(value.operand),
             },
             BNInstructionTextTokenType::KeywordToken => Self::Keyword { value: value.value },
             BNInstructionTextTokenType::TypeNameToken => Self::TypeName,
@@ -837,10 +839,18 @@ impl InstructionTextTokenKind {
     /// Mapping to the [`BNInstructionTextTokenType::operand`] field.
     fn try_operand(&self) -> Option<usize> {
         match self {
-            InstructionTextTokenKind::Integer { operand, .. } => *operand,
-            InstructionTextTokenKind::PossibleAddress { operand, .. } => *operand,
-            InstructionTextTokenKind::CodeRelativeAddress { operand, .. } => *operand,
-            InstructionTextTokenKind::CharacterConstant { operand, .. } => *operand,
+            InstructionTextTokenKind::Integer { operand, .. } => {
+                Some(operand.unwrap_or(INVALID_OPERAND))
+            }
+            InstructionTextTokenKind::PossibleAddress { operand, .. } => {
+                Some(operand.unwrap_or(INVALID_OPERAND))
+            }
+            InstructionTextTokenKind::CodeRelativeAddress { operand, .. } => {
+                Some(operand.unwrap_or(INVALID_OPERAND))
+            }
+            InstructionTextTokenKind::CharacterConstant { operand, .. } => {
+                Some(operand.unwrap_or(INVALID_OPERAND))
+            }
             InstructionTextTokenKind::LocalVariable { ssa_version, .. } => Some(*ssa_version),
             InstructionTextTokenKind::IndirectImport { source_operand, .. } => {
                 Some(*source_operand)
@@ -1262,7 +1272,7 @@ impl DisassemblyTextRenderer {
         size: usize,
         operand: Option<usize>,
     ) -> Option<Array<InstructionTextToken>> {
-        let operand = operand.unwrap_or(0xffffffff);
+        let operand = operand.unwrap_or(INVALID_OPERAND);
         let mut count = 0;
         let mut tokens: *mut BNInstructionTextToken = ptr::null_mut();
         let result = unsafe {

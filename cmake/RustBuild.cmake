@@ -374,7 +374,6 @@ function(_bn_create_build_command)
                     COMMAND ${CMAKE_COMMAND} -E copy_directory ${AARCH64_PATH}.dSYM ${ARG_COPY_TO}.dSYM
                     COMMAND lipo -create ${AARCH64_PATH}.dSYM/${_DSYM_DWARF} ${X86_64_PATH}.dSYM/${_DSYM_DWARF}
                         -output ${ARG_COPY_TO}.dSYM/${_DSYM_DWARF})
-                list(APPEND CMD_BYPRODUCTS ${ARG_COPY_TO}.dSYM)
             endif()
         else()
             list(GET SRC_FILES 0 SRC_PATH)
@@ -386,7 +385,6 @@ function(_bn_create_build_command)
                 list(APPEND ALL_COMMANDS
                     COMMAND ${CMAKE_COMMAND} -E rm -rf ${ARG_COPY_TO}.dSYM
                     COMMAND ${CMAKE_COMMAND} -E copy_directory ${SRC_PATH}.dSYM ${ARG_COPY_TO}.dSYM)
-                list(APPEND CMD_BYPRODUCTS ${ARG_COPY_TO}.dSYM)
             endif()
             # Replace the build tree rpath with the relative one the installed plugin needs
             if(UNIX AND NOT APPLE AND ARG_OUTPUT_TYPE STREQUAL "SHARED")
@@ -411,6 +409,13 @@ function(_bn_create_build_command)
                     COMMAND ${CMAKE_COMMAND} -E copy
                         ${SRC_DIR}/${ARG_OUTPUT_FILE_NAME}.lib ${_IMPLIB_DST})
             endif()
+        endif()
+        if(APPLE AND ARG_OUTPUT_TYPE STREQUAL "SHARED")
+            # Ninja cleans byproducts as files; dSYM bundles need recursive cleanup.
+            list(APPEND CMD_BYPRODUCTS
+                ${ARG_COPY_TO}.dSYM/Contents/Info.plist
+                ${ARG_COPY_TO}.dSYM/Contents/Resources/DWARF/${ARG_OUTPUT_FILE_NAME})
+            set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_CLEAN_FILES "${ARG_COPY_TO}.dSYM")
         endif()
         set(CMD_OUTPUT ${ARG_COPY_TO})
         if(_IMPLIB_DST)

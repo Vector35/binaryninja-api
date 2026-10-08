@@ -63,8 +63,7 @@ public:
 		// "1" is the indicator that its loaded.
 		if (index.data(Qt::DisplayRole).toString() == "1")
 		{
-			QPixmap loadedIcon;
-			pixmapForBWMaskIcon(":/icons/check", &loadedIcon, SidebarHeaderTextColor);
+			QPixmap loadedIcon = themedPixmap(":/icons/check", SidebarHeaderTextColor);
 			if (!loadedIcon.isNull())
 			{
 				QSize pixmapSize(20, 20);

@@ -377,17 +377,9 @@ void TriageTablePanel::addFooterWidget(QWidget* widget)
 QAction* TriageTablePanel::addFilterToggle(const QString& iconPath, const QString& toolTip,
 	std::function<void(bool)> onToggled)
 {
-	QPixmap offPixmap;
-	pixmapForBWMaskIcon(iconPath, &offPixmap);
-	QPixmap onPixmap;
-	pixmapForBWMaskIcon(iconPath, &onPixmap, m_filterEdit->palette().color(QPalette::Highlight), "filterOn");
-	auto action = m_filterEdit->addAction(QIcon(offPixmap), QLineEdit::TrailingPosition);
-	action->setCheckable(true);
-	action->setToolTip(toolTip);
+	auto action = m_filterEdit->addFilterAction(iconPath, toolTip, true);
 	connect(action, &QAction::toggled, this,
-		[action, offIcon = QIcon(offPixmap), onIcon = QIcon(onPixmap),
-			onToggled = std::move(onToggled)](bool checked) {
-			action->setIcon(checked ? onIcon : offIcon);
+		[onToggled = std::move(onToggled)](bool checked) {
 			onToggled(checked);
 		});
 	return action;

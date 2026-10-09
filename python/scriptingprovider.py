@@ -1176,7 +1176,7 @@ class PythonScriptingProvider(ScriptingProvider):
 	def _python_bin(self) -> Optional[str]:
 		python_lib = settings.Settings().get_string("python.interpreter")
 		python_bin_override = settings.Settings().get_string("python.binaryOverride")
-		python_env = self._get_python_environment(using_bundled_python=not python_lib)
+		python_env = self._get_python_environment()
 		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override, python_env=python_env)
 		return python_bin
 
@@ -1256,8 +1256,7 @@ class PythonScriptingProvider(ScriptingProvider):
 	def _satisfied_dependencies(self, python_bin: str) -> Generator[str, None, None]:
 		if python_bin is None:
 			return None
-		python_lib = settings.Settings().get_string("python.interpreter")
-		python_env = self._get_python_environment(using_bundled_python=not python_lib)
+		python_env = self._get_python_environment()
 		success, result = self._run_args([python_bin, "-m", "pip", "freeze"], env=python_env)
 		if not success:
 			return None
@@ -1268,6 +1267,21 @@ class PythonScriptingProvider(ScriptingProvider):
 		return self._run_args([
 		    str(python_bin), "-c", "import sys; sys.stdout.write(f'{sys.version_info.major}.{sys.version_info.minor}')"
 		], env=python_env)[1]
+
+	def _is_bundled_python_running(self) -> bool:
+		if not sys.executable:
+			return False
+		try:
+			install_dir = Path(binaryninja.get_install_directory()).resolve()
+			executable = Path(sys.executable).resolve()
+		except OSError:
+			return False
+		# On macOS the bundled python lives beside the install directory, inside the app bundle
+		roots = (install_dir, install_dir.parent) if sys.platform == "darwin" else (install_dir, )
+		return any(executable.is_relative_to(root) for root in roots)
+
+	def _should_use_bundled_python(self) -> bool:
+		return not settings.Settings().get_string("python.interpreter") and self._is_bundled_python_running()
 
 	def _get_executable_for_libpython(self, python_lib: str, python_bin: str, python_env: Optional[Dict]=None) -> Tuple[Optional[str], str]:
 		python_lib_version = f"{sys.version_info.major}.{sys.version_info.minor}"
@@ -1280,10 +1294,15 @@ class PythonScriptingProvider(ScriptingProvider):
 				)
 			return (python_bin, "Success")
 
-		using_bundled_python = not python_lib
+		use_bundled_python = self._should_use_bundled_python()
+
+		if not python_lib and not use_bundled_python:
+			if not sys.executable:
+				return (None, "Failed to find the python binary for the running interpreter")
+			return (sys.executable, "Success")
 
 		if sys.platform == "darwin":
-			if using_bundled_python:
+			if use_bundled_python:
 				python_bin = Path(binaryninja.get_install_directory()).parent / "Frameworks" / "Python.framework" / "Versions" / "Current" / "bin" / "python3"
 			else:
 				python_bin = str(Path(python_lib).parent / f"bin/python{python_lib_version}")
@@ -1305,7 +1324,7 @@ class PythonScriptingProvider(ScriptingProvider):
 					return None
 				return os.path.realpath(dlinfo.dli_fname.decode())
 
-			if using_bundled_python:
+			if use_bundled_python:
 				python_home = Path(binaryninja.get_install_directory()) / "plugins" / "python"
 				python_lib = python_home / "lib" / f"libpython{python_lib_version}.so.1.0"
 				python_bin = python_home / "bin" / f"python{python_lib_version}"
@@ -1323,7 +1342,7 @@ class PythonScriptingProvider(ScriptingProvider):
 
 					python_bin = path.parent / f"bin/python{python_lib_version}"
 		else:
-			if using_bundled_python:
+			if use_bundled_python:
 				python_bin = Path(binaryninja.get_install_directory()) / "plugins" / "python" / "python.exe"
 			else:
 				python_bin = Path(python_lib).parent / "python.exe"
@@ -1333,8 +1352,8 @@ class PythonScriptingProvider(ScriptingProvider):
 
 		return (python_bin, "Success")
 
-	def _get_python_environment(self, using_bundled_python: bool=False) -> Optional[Dict]:
-		if not using_bundled_python:
+	def _get_python_environment(self) -> Optional[Dict]:
+		if not self._should_use_bundled_python():
 			return None
 
 		env = os.environ.copy()
@@ -1368,7 +1387,7 @@ class PythonScriptingProvider(ScriptingProvider):
 			return True
 		python_lib = settings.Settings().get_string("python.interpreter")
 		python_bin_override = settings.Settings().get_string("python.binaryOverride")
-		python_env = self._get_python_environment(using_bundled_python=not python_lib)
+		python_env = self._get_python_environment()
 		python_bin, status = self._get_executable_for_libpython(python_lib, python_bin_override, python_env=python_env)
 		if python_bin is not None and not self._pip_exists(str(python_bin), python_env=python_env):
 			dependency_installer_logger.log_error(

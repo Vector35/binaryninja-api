@@ -90,6 +90,11 @@ enum Intrinsic {
     OrCombine,
     Rev8,
     WchMcpy,
+
+    Ffb,
+    Ffzmism,
+    Ffmism,
+    Flmism,
 }
 
 #[derive(Copy, Clone)]
@@ -353,6 +358,10 @@ impl<D: RiscVDisassembler> RiscVIntrinsic<D> {
             Some((29, _, _, _)) => Some(Intrinsic::OrCombine.into()),
             Some((30, _, _, _)) => Some(Intrinsic::Rev8.into()),
             Some((31, _, _, _)) => Some(Intrinsic::WchMcpy.into()),
+            Some((32, _, _, _)) => Some(Intrinsic::Ffb.into()),
+            Some((33, _, _, _)) => Some(Intrinsic::Ffzmism.into()),
+            Some((34, _, _, _)) => Some(Intrinsic::Ffmism.into()),
+            Some((35, _, _, _)) => Some(Intrinsic::Flmism.into()),
             _ => None,
         }
     }
@@ -493,6 +502,10 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             Intrinsic::OrCombine => "_orc_b".into(),
             Intrinsic::Rev8 => "_rev8".into(),
             Intrinsic::WchMcpy => "_wch_mcpy".into(),
+            Intrinsic::Ffb => "_nds_ffb".into(),
+            Intrinsic::Ffzmism => "_nds_ffzmism".into(),
+            Intrinsic::Ffmism => "_nds_ffmism".into(),
+            Intrinsic::Flmism => "_nds_flmism".into(),
         }
     }
 
@@ -540,6 +553,10 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             Intrinsic::OrCombine => Self::id_from_parts(29, None, None, None),
             Intrinsic::Rev8 => Self::id_from_parts(30, None, None, None),
             Intrinsic::WchMcpy => Self::id_from_parts(31, None, None, None),
+            Intrinsic::Ffb => Self::id_from_parts(32, None, None, None),
+            Intrinsic::Ffzmism => Self::id_from_parts(33, None, None, None),
+            Intrinsic::Ffmism => Self::id_from_parts(34, None, None, None),
+            Intrinsic::Flmism => Self::id_from_parts(35, None, None, None),
         }
     }
 
@@ -646,6 +663,36 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
                     ),
                 ]
             }
+            Intrinsic::Ffb => {
+                vec![
+                    NameAndType::new(
+                        "",
+                        Conf::new(
+                            Type::int(<D::RegFile as RegFile>::Int::width(), false),
+                            MIN_CONFIDENCE,
+                        ),
+                    ),
+                    NameAndType::new("", Conf::new(Type::int(1, false), MAX_CONFIDENCE)),
+                ]
+            }
+            Intrinsic::Ffzmism | Intrinsic::Ffmism | Intrinsic::Flmism => {
+                vec![
+                    NameAndType::new(
+                        "",
+                        Conf::new(
+                            Type::int(<D::RegFile as RegFile>::Int::width(), false),
+                            MIN_CONFIDENCE,
+                        ),
+                    ),
+                    NameAndType::new(
+                        "",
+                        Conf::new(
+                            Type::int(<D::RegFile as RegFile>::Int::width(), false),
+                            MIN_CONFIDENCE,
+                        ),
+                    ),
+                ]
+            }
         }
     }
 
@@ -697,6 +744,12 @@ impl<D: RiscVDisassembler> architecture::Intrinsic for RiscVIntrinsic<D> {
             | Intrinsic::Rev8 => {
                 vec![Conf::new(
                     Type::int(<D::RegFile as RegFile>::Int::width(), false),
+                    MIN_CONFIDENCE,
+                )]
+            }
+            Intrinsic::Ffb | Intrinsic::Ffzmism | Intrinsic::Ffmism | Intrinsic::Flmism => {
+                vec![Conf::new(
+                    Type::int(<D::RegFile as RegFile>::Int::width(), true),
                     MIN_CONFIDENCE,
                 )]
             }
@@ -833,6 +886,14 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
             }
             Op::Uret | Op::Sret | Op::Mret => {
                 res.add_branch(BranchKind::FunctionReturn);
+            }
+            Op::Bbc(ref a) | Op::Bbs(ref a) => {
+                res.add_branch(BranchKind::False(addr.wrapping_add(inst_len as u64)));
+                res.add_branch(BranchKind::True(addr.wrapping_add(a.imm() as u64)));
+            }
+            Op::Beqc(ref a) | Op::Bnec(ref a) => {
+                res.add_branch(BranchKind::False(addr.wrapping_add(inst_len as u64)));
+                res.add_branch(BranchKind::True(addr.wrapping_add(a.imm() as u64)));
             }
             _ => {}
         }
@@ -1097,6 +1158,8 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                 res.push(InstructionTextToken::new(" ", Text));
             }
 
+            let idx = i;
+
             match *oper {
                 Operand::R(r) => {
                     let reg = self::Register::from(r);
@@ -1117,6 +1180,19 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                         | Op::BltU(..)
                         | Op::BgeU(..)
                         | Op::Jal(..) => {
+                            // BRANCH or JAL
+                            let target = addr.wrapping_add(i as i64 as u64);
+
+                            res.push(InstructionTextToken::new(
+                                format!("0x{:x}", target),
+                                CodeRelativeAddress {
+                                    value: target,
+                                    size: Some(self.address_size()),
+                                    operand: None,
+                                },
+                            ));
+                        }
+                        Op::Bbc(..) | Op::Bbs(..) | Op::Beqc(..) | Op::Bnec(..) if idx == 2 => {
                             // BRANCH or JAL
                             let target = addr.wrapping_add(i as i64 as u64);
 
@@ -2226,6 +2302,223 @@ impl<D: RiscVDisassembler> Architecture for RiscVArch<D> {
                     [il.reg(width, rs1)],
                 )
                 .append();
+            }
+            Op::Bbc(a) | Op::Bbs(a) => {
+                let rs1 = Register::from(a.rs1());
+                let bit_idx = a.cimm();
+                let bit = il.test_bit(rs1.size(), rs1, bit_idx);
+
+                let cond_expr = match op {
+                    Op::Bbc(..) => il.cmp_e(max_width, bit, 0),
+                    Op::Bbs(..) => il.cmp_ne(max_width, bit, 0),
+                    _ => unreachable!(),
+                };
+
+                let mut new_false = false;
+                let mut new_true = false;
+
+                let ft = addr.wrapping_add(inst_len);
+                let tt = addr.wrapping_add(a.imm() as i64 as u64);
+
+                let mut f = il.label_for_address(ft).unwrap_or_else(|| {
+                    new_false = true;
+                    LowLevelILLabel::new()
+                });
+
+                let mut t = il.label_for_address(tt).unwrap_or_else(|| {
+                    new_true = true;
+                    LowLevelILLabel::new()
+                });
+
+                il.if_expr(cond_expr, &mut t, &mut f).append();
+
+                if new_true {
+                    il.mark_label(&mut t);
+                    il.jump(il.const_ptr(tt)).append();
+                }
+
+                if new_false {
+                    il.mark_label(&mut f);
+                }
+            }
+            Op::Beqc(a) | Op::Bnec(a) => {
+                let rs1 = Register::from(a.rs1());
+                let cimm = a.cimm();
+
+                let cond_expr = match op {
+                    Op::Beqc(..) => il.cmp_e(max_width, rs1, cimm),
+                    Op::Bnec(..) => il.cmp_ne(max_width, rs1, cimm),
+                    _ => unreachable!(),
+                };
+
+                let mut new_false = false;
+                let mut new_true = false;
+
+                let ft = addr.wrapping_add(inst_len);
+                let tt = addr.wrapping_add(a.imm() as i64 as u64);
+
+                let mut f = il.label_for_address(ft).unwrap_or_else(|| {
+                    new_false = true;
+                    LowLevelILLabel::new()
+                });
+
+                let mut t = il.label_for_address(tt).unwrap_or_else(|| {
+                    new_true = true;
+                    LowLevelILLabel::new()
+                });
+
+                il.if_expr(cond_expr, &mut t, &mut f).append();
+
+                if new_true {
+                    il.mark_label(&mut t);
+                    il.jump(il.const_ptr(tt)).append();
+                }
+
+                if new_false {
+                    il.mark_label(&mut f);
+                }
+            }
+            Op::Bfos(a) | Op::Bfoz(a) => {
+                let bytes = <D::RegFile as RegFile>::Int::width();
+                let bits = 8 * bytes as u8;
+
+                let rs1 = Register::from(a.rs1());
+                let rd = Register::from(a.rd());
+
+                let (left_shift, right_shift) = if a.msb() == 0 {
+                    (bits - 1, bits - 1 - a.lsb())
+                } else if a.msb() < a.lsb() {
+                    (bits - 1 - (a.lsb() - a.msb()), bits - 1 - a.lsb())
+                } else {
+                    (bits - 1 - a.msb(), bits - 1 - (a.msb() - a.lsb()))
+                };
+
+                let shifted = il.lsl(bytes, rs1, left_shift);
+                let res = match op {
+                    Op::Bfos(..) => il.asr(bytes, shifted, right_shift),
+                    Op::Bfoz(..) => il.lsr(bytes, shifted, right_shift),
+                    _ => unreachable!(),
+                };
+                il.set_reg(bytes, rd, res).append();
+            }
+            Op::Lea(a) => {
+                let bytes = <D::RegFile as RegFile>::Int::width();
+
+                let rs1 = Register::from(a.rs1());
+                let rs2 = Register::from(a.rs2());
+                let rd = Register::from(a.rd());
+
+                let offset = if a.zero_extend() {
+                    il.mul(bytes, il.zx(8, il.low_part(4, rs2)), a.width())
+                } else {
+                    il.mul(bytes, rs2, a.width())
+                };
+
+                il.set_reg(bytes, rd, il.add_overflow(bytes, rs1, offset))
+                    .append();
+            }
+            Op::Addigp(a) => {
+                let rd = Register::from(a.rd());
+                let imm = a.imm();
+
+                let bytes = <D::RegFile as RegFile>::Int::width();
+                let address = il.add(max_width, Register::<D>::new(3.into()), imm);
+
+                il.set_reg(
+                    bytes,
+                    rd,
+                    if max_width > bytes {
+                        il.low_part(bytes, address)
+                    } else {
+                        address
+                    }
+                    .with_source_operand(1),
+                )
+                .append();
+            }
+            Op::Lbgp(a)
+            | Op::Lbugp(a)
+            | Op::Lhgp(a)
+            | Op::Lhugp(a)
+            | Op::Lwgp(a)
+            | Op::Lwugp(a)
+            | Op::Ldgp(a) => {
+                let rd = Register::from(a.rd());
+                let imm = a.imm();
+
+                let bytes = <D::RegFile as RegFile>::Int::width();
+                let load_bytes = match op {
+                    Op::Lbgp(..) | Op::Lbugp(..) => 1,
+                    Op::Lhgp(..) | Op::Lhugp(..) => 2,
+                    Op::Lwgp(..) | Op::Lwugp(..) => 4,
+                    Op::Ldgp(..) => 8,
+                    _ => unreachable!(),
+                };
+
+                let val = il.load(
+                    load_bytes,
+                    il.add(max_width, Register::<D>::new(3.into()), imm)
+                        .with_source_operand(1),
+                );
+
+                il.set_reg(
+                    bytes,
+                    rd,
+                    if bytes > load_bytes {
+                        match op {
+                            Op::Lbgp(..) | Op::Lhgp(..) | Op::Lwgp(..) | Op::Ldgp(..) => {
+                                il.sx(bytes, val)
+                            }
+                            Op::Lbugp(..) | Op::Lhugp(..) | Op::Lwugp(..) => il.zx(bytes, val),
+                            _ => unreachable!(),
+                        }
+                    } else {
+                        val
+                    },
+                )
+                .append();
+            }
+            Op::Sbgp(a) | Op::Shgp(a) | Op::Swgp(a) | Op::Sdgp(a) => {
+                let rs2 = Register::from(a.rs2());
+                let imm = a.imm();
+
+                let bytes = <D::RegFile as RegFile>::Int::width();
+
+                let dest_bytes = match op {
+                    Op::Sbgp(..) => 1,
+                    Op::Shgp(..) => 2,
+                    Op::Swgp(..) => 4,
+                    Op::Sdgp(..) => 8,
+                    _ => unreachable!(),
+                };
+
+                let val = if dest_bytes < bytes {
+                    il.low_part(dest_bytes, rs2).build()
+                } else {
+                    il.expression(rs2)
+                }
+                .with_source_operand(0);
+
+                let dest_addr = il
+                    .add(max_width, Register::<D>::new(3.into()), imm)
+                    .with_source_operand(1);
+
+                il.store(dest_bytes, dest_addr, val).append();
+            }
+            Op::Ffb(a) | Op::Ffzmism(a) | Op::Ffmism(a) | Op::Flmism(a) => {
+                let rs1 = Register::from(a.rs1());
+                let rs2 = Register::from(a.rs2());
+                let rd = Register::from(a.rd());
+
+                let intrinsic = match op {
+                    Op::Ffb(..) => RiscVIntrinsic::<D>::from(Intrinsic::Ffb),
+                    Op::Ffzmism(..) => RiscVIntrinsic::<D>::from(Intrinsic::Ffzmism),
+                    Op::Ffmism(..) => RiscVIntrinsic::<D>::from(Intrinsic::Ffmism),
+                    Op::Flmism(..) => RiscVIntrinsic::<D>::from(Intrinsic::Flmism),
+                    _ => unreachable!(),
+                };
+
+                il.intrinsic([rd], intrinsic, [rs1, rs2]).append();
             }
 
             _ => il.unimplemented().append(),

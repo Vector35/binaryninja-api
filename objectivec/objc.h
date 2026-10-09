@@ -338,6 +338,7 @@ namespace BinaryNinja {
 		Ref<BinaryView> m_data;
 		Ref<Logger> m_logger;
 
+		virtual QualifiedName DefineSingleClassStructType(Class cls, Ref<Structure> classTypeStruct);
 		virtual uint64_t GetObjCRelativeMethodBaseAddress(ObjCReader* reader);
 		virtual void GetRelativeMethod(ObjCReader* reader, method_t& meth, bool typesAreOffsetsFromSelectorBase);
 		virtual std::shared_ptr<ObjCReader> GetReader() = 0;

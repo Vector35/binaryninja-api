@@ -85,6 +85,8 @@ namespace DSCObjC {
 
 		BinaryNinja::Ref<BinaryNinja::Section> GetSectionWithName(const char *sectionName) override;
 
+		BinaryNinja::QualifiedName DefineSingleClassStructType(BinaryNinja::Class cls, BinaryNinja::Ref<BinaryNinja::Structure> classTypeStruct) override;
+
 	public:
 		SharedCacheObjCProcessor(BinaryNinja::BinaryView* data, uint64_t imageAddress);
 

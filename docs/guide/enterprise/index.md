@@ -1,7 +1,7 @@
 # Binary Ninja Enterprise
 
-!!! note
-    This section applies to Binary Ninja with a floating license or the collaboration add-on.
+!!! Important "Supported Editions"
+    This section applies to Binary Ninja with a floating license or the collaboration add-on. Floating licenses and the collaboration add-on (remote projects, SSO, access control and auditing, and collaborative analysis) are only available with the [Ultimate edition](https://binary.ninja/purchase/#commercial) of Binary Ninja.
 
 The collaboration add-on seamlessly integrates remote collaboration functionality, provided by a Binary Ninja Enterprise Server, within the client. This includes remote project management, push/pull of analysis database and type archive snapshots, real-time chat, and more.
 

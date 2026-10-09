@@ -1244,6 +1244,16 @@ void ObjCProcessor::ReadIvarList(ObjCReader* reader, ClassBase& cls, std::string
 			DefineObjCSymbol(DataSymbol, Type::ArrayType(Type::IntegerType(1, true), ivar.type.size() + 1),
 				"ivarType_" + ivar.name, ivarStruct.type);
 
+			if (ivarStruct.offset)
+			{
+				size_t ivarOffsetSize =
+					m_data->GetDefaultArchitecture()->GetName() == "aarch64" ? 4 : addressSize;
+				TypeBuilder ivarOffsetTypeBuilder(Type::IntegerType(ivarOffsetSize, false));
+				ivarOffsetTypeBuilder.SetConst(true);
+				DefineObjCSymbol(DataSymbol, ivarOffsetTypeBuilder.Finalize(),
+					"ivarOffset_" + std::string(name) + "_" + ivar.name, ivarStruct.offset, true);
+			}
+
 			cls.ivarList[cursor] = ivar;
 		}
 		catch (...)

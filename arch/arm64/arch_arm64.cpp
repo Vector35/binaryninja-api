@@ -693,6 +693,26 @@ class Arm64Architecture : public Architecture
 			return "__pacia2";
 		case ARM64_INTRIN_PACIB2:
 			return "__pacib2";
+		case ARM64_INTRIN_CHKFEAT:
+			return "__chkfeat";
+		case ARM64_INTRIN_GCSPOPCX:
+			return "__gcspopcx";
+		case ARM64_INTRIN_GCSPOPM:
+			return "__gcspopm";
+		case ARM64_INTRIN_GCSPOPX:
+			return "__gcspopx";
+		case ARM64_INTRIN_GCSPUSHM:
+			return "__gcspushm";
+		case ARM64_INTRIN_GCSPUSHX:
+			return "__gcspushx";
+		case ARM64_INTRIN_GCSSS1:
+			return "__gcsss1";
+		case ARM64_INTRIN_GCSSS2:
+			return "__gcsss2";
+		case ARM64_INTRIN_HINT_GCSB:
+			return "SystemHintOp_GCSB";
+		case ARM64_INTRIN_JCVT:
+			return "__jcvt";
 		case ARM64_INTRIN_ISB:
 			return "__isb";
 		case ARM64_INTRIN_WFE:
@@ -801,6 +821,8 @@ class Arm64Architecture : public Architecture
 			return "__ldaxrb";
 		case ARM64_INTRIN_LDAXRH:
 			return "__ldaxrh";
+		case ARM64_INTRIN_LDAXP:
+			return "__ldaxp";
 		case ARM64_INTRIN_STXR:
 			return "__stxr";
 		case ARM64_INTRIN_STXRB:
@@ -815,6 +837,8 @@ class Arm64Architecture : public Architecture
 			return "__stlxrb";
 		case ARM64_INTRIN_STLXRH:
 			return "__stlxrh";
+		case ARM64_INTRIN_STLXP:
+			return "__stlxp";
 		case ARM64_INTRIN_ADDG:
 			return "__addg";
 		case ARM64_INTRIN_CMPP:
@@ -912,6 +936,11 @@ class Arm64Architecture : public Architecture
 		case ARM64_INTRIN_CNT:        // reads <Xn>
 		case ARM64_INTRIN_PRFM:
 		case ARM64_INTRIN_REV16:      // reads <Xn>
+		case ARM64_INTRIN_CHKFEAT:    // reads X16
+		case ARM64_INTRIN_GCSPUSHM:   // reads <Xt>
+		case ARM64_INTRIN_GCSSS1:     // reads <Xt>
+		case ARM64_INTRIN_GCSPUSHX:   // reads LR
+		case ARM64_INTRIN_GCSPOPCX:   // reads LR
 			return {NameAndType(Type::IntegerType(8, false))};
 		case ARM64_INTRIN_FMAX:       // reads <Sn>, <Sm>
 		case ARM64_INTRIN_FMIN:       // reads <Sn>, <Sm>
@@ -926,6 +955,8 @@ class Arm64Architecture : public Architecture
 		case ARM64_INTRIN_FRINT64X:   // reads <Sn>
 		case ARM64_INTRIN_FRINT64Z:   // reads <Sn>
 			return {NameAndType(Type::FloatType(4))};
+		case ARM64_INTRIN_JCVT:       // reads <Dn>
+			return {NameAndType(Type::FloatType(8))};
 		case ARM64_INTRIN_FMADD:      // reads <Sa>, <Sn>, <Sm>
 		case ARM64_INTRIN_FMSUB:      // reads <Sa>, <Sn>, <Sm>
 			return {NameAndType(Type::FloatType(4)), NameAndType(Type::FloatType(4)),
@@ -988,6 +1019,9 @@ class Arm64Architecture : public Architecture
 		case ARM64_INTRIN_XPACI:      // writes <Xd>
 		case ARM64_INTRIN_CNT:        // writes <Xd>
 		case ARM64_INTRIN_REV16:      // writes <Xd>
+		case ARM64_INTRIN_CHKFEAT:    // writes X16
+		case ARM64_INTRIN_GCSPOPM:    // writes <Xt>
+		case ARM64_INTRIN_GCSSS2:     // writes <Xt>
 			return {Type::IntegerType(8, false)};
 		case ARM64_INTRIN_FMAX:       // writes <Sd>
 		case ARM64_INTRIN_FMIN:       // writes <Sd>
@@ -1006,6 +1040,8 @@ class Arm64Architecture : public Architecture
 		case ARM64_INTRIN_AESD:
 		case ARM64_INTRIN_AESE:
 			return {Type::IntegerType(16, false)};
+		case ARM64_INTRIN_JCVT:       // writes <Wd> and whether the conversion was exact
+			return {Type::IntegerType(4, true), Type::BoolType()};
 		default:
 			break;
 		}

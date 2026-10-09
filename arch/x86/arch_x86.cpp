@@ -4935,6 +4935,11 @@ public:
 		return type && !type->IsFloat() && type->GetWidth() > 4;
 	}
 
+	bool IsStackAdjustedOnReturn() override
+	{
+		return true;
+	}
+
 	bool AreStackArgumentsPushedLeftToRight() override
 	{
 		return true;
@@ -4943,6 +4948,51 @@ public:
 	std::optional<Variable> GetReturnedIndirectReturnValuePointer() override
 	{
 		return std::nullopt;
+	}
+
+	ValueLocation GetReturnValueLocation(BinaryView* view, const ReturnValue& returnValue) override
+	{
+		if (!returnValue.type.GetValue() || returnValue.type->GetClass() == VoidTypeClass
+			|| IsReturnTypeRegisterCompatible(view, returnValue.type.GetValue()))
+			return GetDefaultReturnValueLocation(view, returnValue);
+
+		// It is not possible for this API to determine an indirect return value location at this
+		// point, return an invalid location and fall back to GetCallLayout.
+		return ValueLocation();
+	}
+
+	CallLayout GetCallLayout(BinaryView* view, const ReturnValue& returnValue, const vector<FunctionParameter>& params,
+		const std::optional<set<uint32_t>>& permittedRegs) override
+	{
+		if (!returnValue.type.GetValue() || returnValue.type->GetClass() == VoidTypeClass
+			|| !returnValue.defaultLocation
+			|| IsReturnTypeRegisterCompatible(view, returnValue.type.GetValue()))
+		{
+			// No return value, return value can be returned directly in a register, or the
+			// return value is in a non-default location. Use the default call layout.
+			return GetDefaultCallLayout(view, returnValue, params, permittedRegs);
+		}
+
+		// Return value needs to be returned in an indirect pointer. The placement of this
+		// pointer is after all of the parameters. Construct a new parameter list that
+		// contains an extra parameter for the indirect return value.
+		vector<FunctionParameter> paramsWithReturnPtr = params;
+		paramsWithReturnPtr.push_back({"", Type::PointerType(GetArchitecture(), returnValue.type)});
+		CallLayout result = GetDefaultCallLayout(view, ReturnValue(), paramsWithReturnPtr, permittedRegs);
+
+		if (result.parameters.size() != paramsWithReturnPtr.size())
+		{
+			// Indirect return value wasn't included in the result parameter list, return
+			// as-is instead of trying to post-process the list.
+			return result;
+		}
+
+		// Move the location of the indirect return value from the parameter list to the
+		// layout's return value location.
+		result.returnValue = result.parameters.back();
+		result.returnValue->indirect = true;
+		result.parameters.pop_back();
+		return result;
 	}
 };
 

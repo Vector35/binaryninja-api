@@ -511,6 +511,53 @@ class BasicBlockAnalysisContext:
 			core.BNAnalyzeBasicBlocksContextSetContextualFunctionReturns(self._handle, returns, values, total)
 
 
+class PreparedLiftedBranchOverride:
+	"""An override prepared for an architecture-defined instruction group.
+
+	Created by :py:meth:`FunctionLifterContext.prepare_lifted_branch_overrides`.
+	Owns a snapshot of its inputs and retains the destination and source block. Use only
+	during lifting. The architecture is responsible for selecting the affected instruction
+	group, including delayed effects, without suppressing unrelated packet instructions.
+	"""
+
+	def __init__(self, handle: core.BNPreparedLiftedBranchOverrideHandle, arch: 'Architecture'):
+		self._handle = handle
+		self._arch = arch
+		self._source = None
+
+	def __del__(self):
+		if core is not None:
+			core.BNFreePreparedLiftedBranchOverride(self._handle)
+
+	@property
+	def suppresses_instruction(self) -> bool:
+		"""Whether application suppresses the group; no lifting is needed in this case."""
+		return core.BNPreparedLiftedBranchOverrideSuppressesInstruction(self._handle)
+
+	@property
+	def source(self) -> "lowlevelil.LowLevelILFunction":
+		"""Isolated staging IL, allocated on first access with owner, address and source block set.
+
+		Keep native destinations as address expressions and mark all local labels. Existing
+		temporary identities are preserved; avoid collisions with destination temporaries.
+		Do not finalize the staging IL.
+		"""
+		if self._source is None:
+			self._source = lowlevelil.LowLevelILFunction(
+			    arch=self._arch, handle=core.BNGetPreparedLiftedBranchOverrideSource(self._handle))
+		return self._source
+
+	def apply(self, continuation_address: int) -> bool:
+		"""Append the rewritten group, or one attributed NOP when suppressed.
+
+		The caller supplies the address following the complete instruction group and sets
+		the destination's indirect-branch state. Application sets its address and source block.
+		False leaves the destination untouched. A failed rewrite can be retried; a successful
+		application consumes the override and subsequent calls return False.
+		"""
+		return core.BNApplyPreparedLiftedBranchOverride(self._handle, continuation_address)
+
+
 @dataclass
 class FunctionLifterContext:
 	"""Used by ``lift_function`` and contains contextual information for function-level lifting
@@ -622,6 +669,89 @@ class FunctionLifterContext:
 		"""Prepare the basic block for translation"""
 
 		core.BNPrepareBlockTranslation(function.handle, arch.handle, address)
+
+	def prepare_lifted_branch_overrides(
+	    self, dest: "lowlevelil.LowLevelILFunction", block: Optional["basicblock.BasicBlock"],
+	    location: "function.ArchAndAddr", branches: List["OverridableBranchInfo"]
+	) -> Optional[PreparedLiftedBranchOverride]:
+		"""Prepare matching overrides without changing ``dest``.
+
+		Returns None for no matching overrides or invalid inputs, without allocating staging IL.
+		Otherwise, skip lifting if ``suppresses_instruction`` is true; lift the architecture-defined
+		group into ``source`` and call ``apply`` with its continuation address. ``dest`` must have
+		an owning function. ``block``, when supplied, must belong to that function. Inputs are copied.
+		"""
+		info = self._get_lifted_branch_override_info(location, branches)
+		if info is None:
+			return None
+		handle = core.BNPrepareLiftedBranchOverrides(dest.handle, block.handle if block else None, info)
+		return PreparedLiftedBranchOverride(handle, CoreArchitecture._from_cache(info.arch)) if handle else None
+
+	def apply_lifted_branch_overrides(
+	    self, dest: "lowlevelil.LowLevelILFunction", source: "lowlevelil.LowLevelILFunction",
+	    location: "function.ArchAndAddr", continuation_address: int,
+	    branches: List["OverridableBranchInfo"]
+	) -> bool:
+		"""Append an isolated, unfinalized instruction group with this context's overrides applied.
+
+		Native targets in ``source`` must be address expressions and its local labels must be marked.
+		``dest`` and ``source`` must be distinct, and ``dest`` must have an owning function. Set its
+		current address, source block, and indirect targets before calling. Temporary-register identities
+		are preserved; the caller must avoid collisions with existing temporaries. A NOP override
+		suppresses the entire group, including side effects. ``continuation_address`` follows the whole
+		group, including delay slots.
+
+		Returns False without changing ``dest`` if no override matches or a replacement is invalid or
+		ambiguous. ``source`` may gain a fallthrough expression. Call only during lifting.
+		"""
+		info = self._get_lifted_branch_override_info(location, branches)
+		if info is None:
+			return False
+		info.continuationAddress = continuation_address
+		return core.BNApplyLiftedBranchOverrides(dest.handle, source.handle, info)
+
+	def _get_lifted_branch_override_info(self, location, branches):
+		# Context keys use CoreArchitecture even when a Python architecture passes itself.
+		location = function.ArchAndAddr(CoreArchitecture._from_cache(location.arch.handle), location.addr)
+		overrides = self._branch_overrides.get(location)
+		if not overrides:
+			return None
+		raw_branches = (core.BNOverridableBranchInfo * len(branches))()
+		for i, branch in enumerate(branches):
+			raw_branches[i].type = branch.type
+			raw_branches[i].target = branch.target
+			raw_branches[i].arch = branch.arch.handle if branch.arch else None
+		raw_overrides = (core.BNBranchOverride * len(overrides))()
+		for i, (original, value) in enumerate(overrides.items()):
+			raw_overrides[i].arch = location.arch.handle
+			raw_overrides[i].address = location.addr
+			raw_overrides[i].originalBranchType = original
+			raw_overrides[i].replacementBranchType = value.type
+			raw_overrides[i].hasReplacementTarget = value.target is not None
+			raw_overrides[i].replacementTargetArch = value.target_arch.handle if value.target_arch else None
+			raw_overrides[i].replacementTarget = value.target if value.target is not None else 0
+		targets = self._user_indirect_branches.get(location, self._auto_indirect_branches.get(location, set()))
+		raw_targets = (core.BNArchitectureAndAddress * len(targets))()
+		for i, target in enumerate(targets):
+			raw_targets[i].arch = target.arch.handle
+			raw_targets[i].address = target.addr
+		no_return_call = any(
+		    self._handle.noReturnCalls[i].address == location.addr
+		    and CoreArchitecture._from_cache(self._handle.noReturnCalls[i].arch) == location.arch
+		    for i in range(self._handle.noReturnCallsCount)
+		)
+		info = core.BNLiftedBranchOverrideInfo()
+		info.arch = location.arch.handle
+		info.address = location.addr
+		info.continuationAddress = 0
+		info.branches = raw_branches
+		info.branchCount = len(raw_branches)
+		info.overrides = raw_overrides
+		info.overrideCount = len(raw_overrides)
+		info.noReturnCall = no_return_call
+		info.indirectTargets = raw_targets
+		info.indirectTargetCount = len(raw_targets)
+		return info
 
 	@property
 	def blocks(self) -> List["basicblock.BasicBlock"]:

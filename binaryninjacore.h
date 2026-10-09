@@ -255,6 +255,7 @@ extern "C"
 	typedef struct BNFunction BNFunction;
 	typedef struct BNBasicBlock BNBasicBlock;
 	typedef struct BNLifterInstructionData BNLifterInstructionData;
+	typedef struct BNPreparedLiftedBranchOverride BNPreparedLiftedBranchOverride;
 	typedef struct BNDownloadProvider BNDownloadProvider;
 	typedef struct BNDownloadInstance BNDownloadInstance;
 	typedef struct BNWebsocketProvider BNWebsocketProvider;
@@ -2186,6 +2187,20 @@ extern "C"
 		BNArchitecture* replacementTargetArch;
 		uint64_t replacementTarget;
 	} BNBranchOverride;
+
+	typedef struct BNLiftedBranchOverrideInfo
+	{
+		BNArchitecture* arch;
+		uint64_t address;
+		uint64_t continuationAddress;
+		const BNOverridableBranchInfo* branches;
+		size_t branchCount;
+		const BNBranchOverride* overrides;
+		size_t overrideCount;
+		bool noReturnCall;
+		const BNArchitectureAndAddress* indirectTargets;
+		size_t indirectTargetCount;
+	} BNLiftedBranchOverrideInfo;
 
 	typedef struct BNBasicBlockAnalysisContext
 	{
@@ -5894,6 +5909,17 @@ extern "C"
 		BNBasicBlockAnalysisContext* context);
 	BINARYNINJACOREAPI bool BNArchitectureSetDefaultLiftFunctionCallback(void *callback);
 	BINARYNINJACOREAPI bool BNArchitectureDefaultLiftFunction(BNLowLevelILFunction* function, BNFunctionLifterContext* context);
+	BINARYNINJACOREAPI bool BNApplyLiftedBranchOverrides(BNLowLevelILFunction* dest,
+		BNLowLevelILFunction* source, const BNLiftedBranchOverrideInfo* info);
+	BINARYNINJACOREAPI BNPreparedLiftedBranchOverride* BNPrepareLiftedBranchOverrides(
+		BNLowLevelILFunction* dest, BNBasicBlock* block, const BNLiftedBranchOverrideInfo* info);
+	BINARYNINJACOREAPI void BNFreePreparedLiftedBranchOverride(BNPreparedLiftedBranchOverride* prepared);
+	BINARYNINJACOREAPI bool BNPreparedLiftedBranchOverrideSuppressesInstruction(
+		BNPreparedLiftedBranchOverride* prepared);
+	BINARYNINJACOREAPI BNLowLevelILFunction* BNGetPreparedLiftedBranchOverrideSource(
+		BNPreparedLiftedBranchOverride* prepared);
+	BINARYNINJACOREAPI bool BNApplyPreparedLiftedBranchOverride(
+		BNPreparedLiftedBranchOverride* prepared, uint64_t continuationAddress);
 	BINARYNINJACOREAPI bool BNArchitectureLiftFunction(BNArchitecture* arch, BNLowLevelILFunction* function,
 		BNFunctionLifterContext* context);
 	BINARYNINJACOREAPI void BNArchitectureFreeFunctionArchContext(BNArchitecture* arch, void* context);

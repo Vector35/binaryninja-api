@@ -9850,6 +9850,24 @@ namespace BinaryNinja {
 		void Finalize();
 	};
 
+	// A prepared override owns its inputs and staging IL. Use only while lifting.
+	// The architecture chooses the instruction group and its continuation address.
+	class PreparedLiftedBranchOverride
+	{
+		BNPreparedLiftedBranchOverride* m_object;
+		Ref<LowLevelILFunction> m_source;
+
+	public:
+		explicit PreparedLiftedBranchOverride(BNPreparedLiftedBranchOverride* object);
+		~PreparedLiftedBranchOverride();
+		PreparedLiftedBranchOverride(const PreparedLiftedBranchOverride&) = delete;
+		PreparedLiftedBranchOverride& operator=(const PreparedLiftedBranchOverride&) = delete;
+		bool SuppressesInstruction() const;
+		Ref<LowLevelILFunction> GetSource();
+		// A successful application consumes the prepared override; a second call returns false.
+		bool Apply(uint64_t continuationAddress);
+	};
+
 	class FunctionLifterContext
 	{
 		Ref<LowLevelILFunction> m_function;
@@ -9867,6 +9885,9 @@ namespace BinaryNinja {
 		bool* m_containsInlinedFunctions;
 		void* m_functionArchContext;
 		Ref<LifterInstructionData> m_lifterInstructionData;
+		struct LiftedBranchOverrideInputs;
+		LiftedBranchOverrideInputs GetLiftedBranchOverrideInputs(
+			const ArchAndAddr& location, const std::vector<OverridableBranchInfo>& branches) const;
 
 	public:
 		BNFunctionLifterContext* m_context;
@@ -9881,6 +9902,17 @@ namespace BinaryNinja {
 		std::map<ArchAndAddr, std::set<ArchAndAddr>>& GetUserIndirectBranches();
 		std::map<ArchAndAddr, std::set<ArchAndAddr>>& GetAutoIndirectBranches();
 		const std::map<ArchAndAddr, std::map<BNBranchType, BranchOverride>>& GetBranchOverrides() const;
+		// Returns null for no matching overrides or invalid inputs, without changing dest.
+		// The result owns a snapshot of the inputs; no staging IL is allocated until GetSource.
+		// See BNPrepareLiftedBranchOverrides and BNApplyLiftedBranchOverrides for requirements.
+		std::unique_ptr<PreparedLiftedBranchOverride> PrepareLiftedBranchOverrides(LowLevelILFunction& dest,
+			BasicBlock* block, const ArchAndAddr& location, const std::vector<OverridableBranchInfo>& branches) const;
+		// Append an isolated, unfinalized instruction group using this context's overrides.
+		// See BNApplyLiftedBranchOverrides for label, temporary-register, and ownership requirements.
+		// False leaves dest untouched, including when no original branch has an override.
+		bool ApplyLiftedBranchOverrides(LowLevelILFunction& dest, LowLevelILFunction& source,
+			const ArchAndAddr& location, uint64_t continuationAddress,
+			const std::vector<OverridableBranchInfo>& branches) const;
 		std::set<uint64_t>& GetInlinedCalls();
 		void SetContainsInlinedFunctions(bool value);
 		void* GetFunctionArchContextRaw() const { return m_functionArchContext; }

@@ -666,6 +666,108 @@ const std::map<ArchAndAddr, std::map<BNBranchType, BranchOverride>>& FunctionLif
 }
 
 
+PreparedLiftedBranchOverride::PreparedLiftedBranchOverride(BNPreparedLiftedBranchOverride* object) : m_object(object)
+{}
+
+
+PreparedLiftedBranchOverride::~PreparedLiftedBranchOverride()
+{
+	BNFreePreparedLiftedBranchOverride(m_object);
+}
+
+
+bool PreparedLiftedBranchOverride::SuppressesInstruction() const
+{
+	return BNPreparedLiftedBranchOverrideSuppressesInstruction(m_object);
+}
+
+
+Ref<LowLevelILFunction> PreparedLiftedBranchOverride::GetSource()
+{
+	if (!m_source)
+		m_source = new LowLevelILFunction(BNGetPreparedLiftedBranchOverrideSource(m_object));
+	return m_source;
+}
+
+
+bool PreparedLiftedBranchOverride::Apply(uint64_t continuationAddress)
+{
+	return BNApplyPreparedLiftedBranchOverride(m_object, continuationAddress);
+}
+
+
+struct FunctionLifterContext::LiftedBranchOverrideInputs
+{
+	vector<BNOverridableBranchInfo> branches;
+	vector<BNBranchOverride> overrides;
+	vector<BNArchitectureAndAddress> indirectTargets;
+	BNLiftedBranchOverrideInfo info{};
+};
+
+
+FunctionLifterContext::LiftedBranchOverrideInputs FunctionLifterContext::GetLiftedBranchOverrideInputs(
+	const ArchAndAddr& location, const vector<OverridableBranchInfo>& branches) const
+{
+	LiftedBranchOverrideInputs result;
+	auto& rawBranches = result.branches;
+	auto& rawOverrides = result.overrides;
+	auto& indirectTargets = result.indirectTargets;
+	auto it = m_branchOverrides.find(location);
+	if (!location.arch || (it == m_branchOverrides.end()))
+		return result;
+
+	rawBranches.reserve(branches.size());
+	for (const auto& branch : branches)
+		rawBranches.push_back({branch.type, branch.target, branch.arch ? branch.arch->GetObject() : nullptr});
+
+	rawOverrides.reserve(it->second.size());
+	for (const auto& [originalType, value] : it->second)
+	{
+		rawOverrides.push_back({location.arch->GetObject(), location.address, originalType, value.type,
+			value.target.has_value(), value.targetArch ? value.targetArch->GetObject() : nullptr,
+			value.target.value_or(0)});
+	}
+
+	const set<ArchAndAddr>* targets = nullptr;
+	if (auto user = m_userIndirectBranches.find(location); user != m_userIndirectBranches.end())
+		targets = &user->second;
+	else if (auto automatic = m_autoIndirectBranches.find(location); automatic != m_autoIndirectBranches.end())
+		targets = &automatic->second;
+	if (targets)
+	{
+		indirectTargets.reserve(targets->size());
+		for (const auto& target : *targets)
+			indirectTargets.push_back({target.arch->GetObject(), target.address});
+	}
+
+	result.info = {location.arch->GetObject(), location.address, 0,
+		rawBranches.data(), rawBranches.size(), rawOverrides.data(), rawOverrides.size(),
+		m_noReturnCalls.count(location) != 0, indirectTargets.data(), indirectTargets.size()};
+	return result;
+}
+
+
+unique_ptr<PreparedLiftedBranchOverride> FunctionLifterContext::PrepareLiftedBranchOverrides(
+	LowLevelILFunction& dest, BasicBlock* block, const ArchAndAddr& location,
+	const vector<OverridableBranchInfo>& branches) const
+{
+	auto inputs = GetLiftedBranchOverrideInputs(location, branches);
+	if (!inputs.info.arch)
+		return nullptr;
+	auto result = BNPrepareLiftedBranchOverrides(dest.GetObject(), block ? block->GetObject() : nullptr, &inputs.info);
+	return result ? make_unique<PreparedLiftedBranchOverride>(result) : nullptr;
+}
+
+
+bool FunctionLifterContext::ApplyLiftedBranchOverrides(LowLevelILFunction& dest, LowLevelILFunction& source,
+	const ArchAndAddr& location, uint64_t continuationAddress, const vector<OverridableBranchInfo>& branches) const
+{
+	auto inputs = GetLiftedBranchOverrideInputs(location, branches);
+	inputs.info.continuationAddress = continuationAddress;
+	return inputs.info.arch && BNApplyLiftedBranchOverrides(dest.GetObject(), source.GetObject(), &inputs.info);
+}
+
+
 Ref<Logger>& FunctionLifterContext::GetLogger()
 {
 	return m_logger;

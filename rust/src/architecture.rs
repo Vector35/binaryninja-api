@@ -65,6 +65,9 @@ pub mod instruction;
 pub mod intrinsic;
 pub mod register;
 
+#[cfg(test)]
+mod lifted_branch_override_tests;
+
 // Re-export all the submodules to keep from breaking everyone's code.
 // We split these out just to clarify each part, not necessarily to enforce an extra namespace.
 pub use basic_block::*;
@@ -638,6 +641,52 @@ unsafe fn lifter_context_slice<'a, T>(ptr: *const T, len: usize) -> &'a [T] {
     }
 }
 
+/// Prepared overrides and staging IL for one architecture-defined instruction group.
+///
+/// Owns its inputs and retains the destination/source block. Use only during lifting.
+/// Dropping this object without applying it leaves the destination untouched.
+#[derive(Debug)]
+pub struct PreparedLiftedBranchOverride {
+    handle: NonNull<BNPreparedLiftedBranchOverride>,
+    arch: CoreArchitecture,
+}
+
+impl PreparedLiftedBranchOverride {
+    /// Whether the group is suppressed. No lifting or staging IL is needed in this case.
+    pub fn suppresses_instruction(&self) -> bool {
+        unsafe { BNPreparedLiftedBranchOverrideSuppressesInstruction(self.handle.as_ptr()) }
+    }
+
+    /// Get isolated staging IL, allocated on first access with owner, address and source block set.
+    ///
+    /// Native destinations must remain address expressions and all local labels must be marked.
+    /// Temporary identities are preserved; avoid collisions with destination temporaries.
+    /// Do not finalize this IL. Repeated calls return references to the same function.
+    pub fn source(&self) -> Ref<LowLevelILMutableFunction> {
+        unsafe {
+            LowLevelILMutableFunction::ref_from_raw_with_arch(
+                BNGetPreparedLiftedBranchOverrideSource(self.handle.as_ptr()),
+                Some(self.arch),
+            )
+        }
+    }
+
+    /// Append the rewritten group, or one attributed NOP for a suppressed group.
+    ///
+    /// Set the destination's indirect-branch state before calling. Its address/source block
+    /// are set by this method. False leaves the destination untouched and permits retrying.
+    /// Once successfully applied, subsequent calls return false without emitting more IL.
+    pub fn apply(&mut self, continuation_address: u64) -> bool {
+        unsafe { BNApplyPreparedLiftedBranchOverride(self.handle.as_ptr(), continuation_address) }
+    }
+}
+
+impl Drop for PreparedLiftedBranchOverride {
+    fn drop(&mut self) {
+        unsafe { BNFreePreparedLiftedBranchOverride(self.handle.as_ptr()) }
+    }
+}
+
 impl FunctionLifterContext {
     pub unsafe fn from_raw(
         function: *mut BNLowLevelILFunction,
@@ -786,6 +835,114 @@ impl FunctionLifterContext {
         unsafe {
             BNPrepareBlockTranslation(func.handle, arch.handle, address);
         }
+    }
+
+    /// Prepare overrides for an architecture-defined instruction group without changing `dest`.
+    ///
+    /// Returns `None` for no matching overrides or invalid inputs; staging IL is not allocated.
+    /// Otherwise, skip lifting when `suppresses_instruction()` is true, or lift into `source()`.
+    /// Apply with the continuation address after the complete group, including delayed effects.
+    /// The caller must exclude unrelated packet instructions from the group. Inputs are copied.
+    /// `dest` must have an owning function; `block`, if supplied, must belong to that function.
+    pub fn prepare_lifted_branch_overrides(
+        &self,
+        dest: &LowLevelILMutableFunction,
+        block: Option<&BasicBlock<NativeBlock>>,
+        location: Location,
+        branches: &[OverridableBranchInfo],
+    ) -> Option<PreparedLiftedBranchOverride> {
+        self.with_lifted_branch_override_info(dest, location, branches, |info| {
+            let handle = unsafe {
+                BNPrepareLiftedBranchOverrides(
+                    dest.handle,
+                    block.map_or(std::ptr::null_mut(), |b| b.handle),
+                    &info,
+                )
+            };
+            NonNull::new(handle).map(|handle| PreparedLiftedBranchOverride {
+                handle,
+                arch: location.arch.unwrap_or_else(|| dest.arch()),
+            })
+        })
+        .flatten()
+    }
+
+    /// Append an isolated, unfinalized lifted instruction group with this context's overrides.
+    ///
+    /// Native destinations in `source` must remain address expressions, and all local labels
+    /// must be marked. `dest` and `source` must be distinct; `dest` must have an owning function.
+    /// Set the destination's source block, current address, and indirect targets before calling.
+    /// Temporary-register identities are preserved, so the caller must avoid collisions with
+    /// existing temporaries. A NOP override suppresses the entire group, including side effects.
+    /// `continuation_address` is the address after the complete group (including delay slots).
+    ///
+    /// Returns false without changing `dest` if no overrides match or a replacement is invalid
+    /// or ambiguous. `source` may gain a synthetic fallthrough expression. Call only during lifting.
+    pub fn apply_lifted_branch_overrides(
+        &self,
+        dest: &LowLevelILMutableFunction,
+        source: &LowLevelILMutableFunction,
+        location: Location,
+        continuation_address: u64,
+        branches: &[OverridableBranchInfo],
+    ) -> bool {
+        self.with_lifted_branch_override_info(dest, location, branches, |mut info| {
+            info.continuationAddress = continuation_address;
+            unsafe { BNApplyLiftedBranchOverrides(dest.handle, source.handle, &info) }
+        })
+        .unwrap_or(false)
+    }
+
+    fn with_lifted_branch_override_info<T>(
+        &self,
+        dest: &LowLevelILMutableFunction,
+        location: Location,
+        branches: &[OverridableBranchInfo],
+        f: impl FnOnce(BNLiftedBranchOverrideInfo) -> T,
+    ) -> Option<T> {
+        let arch = location.arch.unwrap_or_else(|| dest.arch());
+        let location = Location::new(Some(arch), location.addr);
+        let Some(overrides) = self.branch_overrides.get(&location) else {
+            return None;
+        };
+        let raw_branches: Vec<BNOverridableBranchInfo> =
+            branches.iter().copied().map(Into::into).collect();
+        let raw_overrides: Vec<BNBranchOverride> = overrides
+            .iter()
+            .map(|(original, value)| BNBranchOverride {
+                arch: arch.handle,
+                address: location.addr,
+                originalBranchType: *original,
+                replacementBranchType: value.type_,
+                hasReplacementTarget: value.target.is_some(),
+                replacementTargetArch: value
+                    .target
+                    .and_then(|t| t.arch)
+                    .map_or(std::ptr::null_mut(), |a| a.handle),
+                replacementTarget: value.target.map_or(0, |t| t.addr),
+            })
+            .collect();
+        let mut indirect_targets: Vec<BNArchitectureAndAddress> = Vec::new();
+        if let Some(targets) = self
+            .user_indirect_branches
+            .get(&location)
+            .or_else(|| self.auto_indirect_branches.get(&location))
+        {
+            indirect_targets.extend(targets.iter().map(BNArchitectureAndAddress::from));
+        }
+        let info = BNLiftedBranchOverrideInfo {
+            arch: arch.handle,
+            address: location.addr,
+            continuationAddress: 0,
+            branches: raw_branches.as_ptr(),
+            branchCount: raw_branches.len(),
+            overrides: raw_overrides.as_ptr(),
+            overrideCount: raw_overrides.len(),
+            noReturnCall: self.no_return_calls.contains(&location),
+            indirectTargets: indirect_targets.as_ptr(),
+            indirectTargetCount: indirect_targets.len(),
+        };
+        Some(f(info))
     }
 
     /// The per-function instruction byte store populated during basic block analysis. Read it here

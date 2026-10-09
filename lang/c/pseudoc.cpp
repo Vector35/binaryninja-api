@@ -545,8 +545,63 @@ void PseudoCFunction::AppendDefaultSplitExpr(const BinaryNinja::HighLevelILInstr
 }
 
 
+void PseudoCFunction::AppendDerefFieldFallbackTokens(const HighLevelILInstruction& instr,
+	const HighLevelILInstruction& srcExpr, uint64_t offset, HighLevelILTokenEmitter& tokens,
+	DisassemblySettings* settings, std::optional<bool> signedHint, bool addrOf, BNOperatorPrecedence precedence)
+{
+	// For unresolved members, render pointer arithmetic using the actual access width.
+	bool hasOffset = offset != 0;
+	bool needsOuterParens = precedence > UnaryOperatorPrecedence;
+	bool showTypeCasts = !settings || settings->IsOptionSet(ShowTypeCasts);
+
+	if (needsOuterParens)
+		tokens.AppendOpenParen();
+
+	if (!addrOf)
+		tokens.Append(OperationToken, "*");
+
+	// The char* cast already supplies a byte access unless an extension requires signedness.
+	bool skipOuterCast = hasOffset && instr.size == 1 && !signedHint.has_value();
+	if (showTypeCasts && !skipOuterCast)
+	{
+		tokens.AppendOpenParen();
+		if (instr.size)
+			AppendSizeToken(instr.size, signedHint.value_or(true), tokens);
+		else
+			tokens.Append(TypeNameToken, "void");
+		tokens.Append(TextToken, "*");
+		tokens.AppendCloseParen();
+	}
+
+	if (hasOffset)
+	{
+		tokens.AppendOpenParen();
+		if (showTypeCasts)
+		{
+			tokens.AppendOpenParen();
+			tokens.Append(TypeNameToken, "char");
+			tokens.Append(TextToken, "*");
+			tokens.AppendCloseParen();
+		}
+	}
+
+	GetExprTextInternal(srcExpr, tokens, settings,
+		hasOffset ? AddOperatorPrecedence : UnaryOperatorPrecedence);
+
+	if (hasOffset)
+	{
+		tokens.Append(OperationToken, " + ");
+		tokens.AppendIntegerTextToken(instr, offset, instr.size);
+		tokens.AppendCloseParen();
+	}
+
+	if (needsOuterParens)
+		tokens.AppendCloseParen();
+}
+
+
 void PseudoCFunction::AppendFieldTextTokens(const HighLevelILInstruction& instr, HighLevelILTokenEmitter& tokens,
-	DisassemblySettings* settings, std::optional<bool> signedHint, bool addrOf)
+	DisassemblySettings* settings, std::optional<bool> signedHint, bool addrOf, BNOperatorPrecedence precedence)
 {
 	const auto srcExpr = instr.GetSourceExpr<HLIL_STRUCT_FIELD>();
 	const auto fieldOffset = instr.GetOffset<HLIL_STRUCT_FIELD>();
@@ -554,6 +609,20 @@ void PseudoCFunction::AppendFieldTextTokens(const HighLevelILInstruction& instr,
 
 	const auto type = GetFieldType(srcExpr, false);
 	const auto fieldDisplayType = GetFieldDisplayType(type, fieldOffset, memberIndex, false);
+	if (srcExpr.operation == HLIL_DEREF_FIELD && srcExpr.size == 0 && fieldDisplayType != FieldDisplayName)
+	{
+		const auto pointerExpr = srcExpr.GetSourceExpr<HLIL_DEREF_FIELD>();
+		const auto derefOffset = srcExpr.GetOffset<HLIL_DEREF_FIELD>();
+		const auto derefMemberIndex = srcExpr.GetMemberIndex<HLIL_DEREF_FIELD>();
+		if (GetFieldDisplayType(GetFieldType(pointerExpr, true), derefOffset, derefMemberIndex, true)
+			== FieldDisplayOffset)
+		{
+			// A scalar projection supplies the width and signedness missing from the aggregate dereference.
+			AppendDerefFieldFallbackTokens(instr, pointerExpr, derefOffset + fieldOffset, tokens, settings,
+				signedHint.value_or(false), addrOf, precedence);
+			return;
+		}
+	}
 	if (type && fieldDisplayType == FieldDisplayOffset)
 	{
 		uint64_t memoryOffset = fieldOffset;
@@ -1722,7 +1791,7 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 
 	case HLIL_STRUCT_FIELD:
 		[&]() {
-			AppendFieldTextTokens(instr, tokens, settings, signedHint, false);
+			AppendFieldTextTokens(instr, tokens, settings, signedHint, false, precedence);
 			if (statement)
 				tokens.AppendSemicolon();
 		}();
@@ -1871,7 +1940,7 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 				tokens.AppendOpenParen();
 			if (srcExpr.operation == HLIL_STRUCT_FIELD)
 			{
-				AppendFieldTextTokens(srcExpr, tokens, settings, signedHint, true);
+				AppendFieldTextTokens(srcExpr, tokens, settings, signedHint, true, UnaryOperatorPrecedence);
 			}
 			else
 			{
@@ -2813,61 +2882,7 @@ void PseudoCFunction::GetExprTextInternal(const HighLevelILInstruction& instr, H
 					return;
 			}
 
-			// For non-struct types or when struct member resolution fails,
-			// render as pointer arithmetic: *[(type*)]([(char*)]expr[ + offset])
-			bool hasOffset = offset != 0;
-			bool needsOuterParens = precedence > UnaryOperatorPrecedence;
-			bool showTypeCasts = !settings || settings->IsOptionSet(ShowTypeCasts);
-
-			if (needsOuterParens)
-				tokens.AppendOpenParen();
-
-			tokens.Append(OperationToken, "*");
-
-			// Skip the outer cast if we're dereferencing a single byte and are
-			// already casting to char* for the pointer arithmetic, unless an extension requires signedness.
-			bool skipOuterCast = hasOffset && instr.size == 1 && !signedHint.has_value();
-			if (showTypeCasts && !skipOuterCast)
-			{
-				tokens.AppendOpenParen();
-				// Unsized field expressions still need a fallback, but sized accesses must use their own width.
-				AppendSizeToken(instr.size ? instr.size : srcExpr.size, signedHint.value_or(true), tokens);
-				tokens.Append(TextToken, "*");
-				tokens.AppendCloseParen();
-			}
-
-			if (hasOffset)
-			{
-				tokens.AppendOpenParen();
-				if (showTypeCasts)
-				{
-					tokens.AppendOpenParen();
-					tokens.Append(TypeNameToken, "char");
-					tokens.Append(TextToken, "*");
-					tokens.AppendCloseParen();
-				}
-			}
-
-			if (srcExpr.operation == HLIL_CONST_PTR)
-			{
-				const auto constant = srcExpr.GetConstant<HLIL_CONST_PTR>();
-				tokens.AppendPointerTextToken(srcExpr, constant, settings, DisplaySymbolOnly, precedence);
-			}
-			else
-			{
-				GetExprTextInternal(srcExpr, tokens, settings,
-					hasOffset ? AddOperatorPrecedence : UnaryOperatorPrecedence);
-			}
-
-			if (hasOffset)
-			{
-				tokens.Append(OperationToken, " + ");
-				tokens.AppendIntegerTextToken(instr, offset, instr.size);
-				tokens.AppendCloseParen();
-			}
-
-			if (needsOuterParens)
-				tokens.AppendCloseParen();
+			AppendDerefFieldFallbackTokens(instr, srcExpr, offset, tokens, settings, signedHint, false, precedence);
 
 			if (statement)
 				tokens.AppendSemicolon();

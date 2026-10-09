@@ -130,6 +130,7 @@ class StickyHeader: public QWidget
 
 	uint64_t m_gutterWidth;
 	uint64_t m_gutterWidthChars;
+	size_t m_branchGutterWidthChars = 0;
 
 	LinearViewLine m_line;
 	BinaryNinja::FunctionViewType m_viewType;
@@ -145,6 +146,7 @@ public:
 
 	void updateLine(const LinearViewLine& line);
 	void updateViewType(const BinaryNinja::FunctionViewType& viewType);
+	void setBranchGutterWidth(size_t width);
 	void updateFonts();
 	void updateTheme();
 
@@ -247,6 +249,26 @@ class BINARYNINJAUIAPI LinearView :
 	std::shared_mutex m_cacheMutex;
 	BinaryNinja::Ref<BinaryNinja::LinearViewCursor> m_topPosition, m_bottomPosition;
 	std::vector<LinearViewLine> m_lines;
+	bool m_showBranchArrows = true;
+	size_t m_branchArrowLanes = 8;
+	bool m_branchGutterPressed = false;
+	bool m_branchRowsDirty = true;
+	struct BranchArrow
+	{
+		BasicBlockRef source, target;
+		BNBranchType type;
+		bool backEdge;
+		size_t lane;
+		std::optional<int64_t> sourceLine, targetLine;
+	};
+	struct BranchLayout
+	{
+		std::map<BasicBlockRef, size_t> blockOrder;
+		std::vector<BranchArrow> arrows;
+		std::vector<size_t> hlilRows;
+	};
+	std::map<FunctionRef, BranchLayout> m_branchLayouts;
+	std::optional<std::pair<FunctionRef, BranchArrow>> m_lastNavigatedBranch;
 	size_t m_emptyPrevCursors = 0;
 	size_t m_emptyNextCursors = 0;
 	size_t m_topLine = 0;
@@ -276,12 +298,21 @@ class BINARYNINJAUIAPI LinearView :
 	bool cachePreviousLines();
 	bool cacheNextLines();
 	void updateCache();
+	size_t getBranchGutterWidth() const;
+	size_t getContentGutterWidth() const;
+	void updateBranchArrows();
+	void updateHighLevelILBranchArrows();
+	void paintBranchArrows(QPainter& p, int xoffset);
+	bool isInBranchGutter(const QPointF& point) const;
+	std::optional<BranchArrow> getBranchArrowAt(const QPointF& point, FunctionRef& function) const;
+	bool navigateBranchArrow(const QPointF& point);
 	void updateBounds();
 	void updateHighlight();
 	void refreshAtCurrentLocation(bool cursorFixup = false);
 	bool navigateToAddress(uint64_t addr, bool center, bool updateHighlight, bool navByRef = false);
 	bool navigateToLine(
-		FunctionRef func, uint64_t offset, size_t instrIndex, bool center, bool updateHighlight, bool navByRef = false);
+		FunctionRef func, uint64_t offset, size_t instrIndex, bool center, bool updateHighlight, bool navByRef = false,
+		bool allowGraphSwitch = true);
 	bool navigateToGotoLabel(uint64_t label);
 	bool navigateToMatchingBrace();
 
@@ -315,6 +346,7 @@ class BINARYNINJAUIAPI LinearView :
 	void paintHexDumpLine(QPainter& p, const LinearViewLine& line, int xoffset, int y, int tagOffset);
 	void paintAnalysisWarningLine(QPainter& p, const LinearViewLine& line, int xoffset, int y);
 	void paintTokenLine(QPainter& p, const LinearViewLine& line, int xoffset, int y, QRect eventRect, int tagOffset);
+	HighlightTokenState getTokenForLinePosition(int64_t col, const LinearViewLine& line);
 
 	void setSectionSemantics(const std::string& name, BNSectionSemantics semantics);
 
@@ -584,6 +616,7 @@ protected:
 	virtual void wheelEvent(QWheelEvent* event) override;
 	virtual void mousePressEvent(QMouseEvent* event) override;
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
+	virtual void mouseReleaseEvent(QMouseEvent* event) override;
 	virtual void mouseDoubleClickEvent(QMouseEvent* event) override;
 
 	void up(bool selecting, size_t count = 1);

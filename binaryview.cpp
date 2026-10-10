@@ -2540,6 +2540,41 @@ void ReferenceSource::FreeAPIStruct(BNReferenceSource* source)
 }
 
 
+BNCodeXref CodeXref::ToAPIStruct() const
+{
+	return {source.ToAPIStruct(), target};
+}
+
+
+CodeXref CodeXref::FromAPIStruct(const BNCodeXref* ref)
+{
+	return {ReferenceSource::FromAPIStruct(&ref->source), ref->target};
+}
+
+
+void CodeXref::FreeAPIStruct(BNCodeXref* ref)
+{
+	ReferenceSource::FreeAPIStruct(&ref->source);
+}
+
+
+BNDataXref DataXref::ToAPIStruct() const
+{
+	return {source, target};
+}
+
+
+DataXref DataXref::FromAPIStruct(const BNDataXref* ref)
+{
+	return {ref->source, ref->target};
+}
+
+
+void DataXref::FreeAPIStruct(BNDataXref*)
+{
+}
+
+
 vector<ReferenceSource> BinaryView::GetCodeReferences(uint64_t addr)
 {
 	size_t count;
@@ -2664,6 +2699,51 @@ vector<uint64_t> BinaryView::GetDataReferencesFrom(uint64_t addr, uint64_t len)
 	uint64_t* refs = BNGetDataReferencesFromInRange(m_object, addr, len, &count);
 	vector<uint64_t> result(refs, &refs[count]);
 	BNFreeDataReferences(refs);
+	return result;
+}
+
+
+vector<CodeXref> BinaryView::GetIncomingCodeReferences(uint64_t addr, uint64_t len, std::optional<size_t> maxItems)
+{
+	size_t count;
+	BNCodeXref* refs =
+		BNGetIncomingCodeReferences(m_object, addr, len, &count, maxItems.has_value(), maxItems.value_or(0));
+	vector<CodeXref> result = ParseAPIStructList<CodeXref>(refs, count);
+	BNFreeCodeXrefs(refs, count);
+	return result;
+}
+
+
+vector<DataXref> BinaryView::GetIncomingDataReferences(uint64_t addr, uint64_t len, std::optional<size_t> maxItems)
+{
+	size_t count;
+	BNDataXref* refs =
+		BNGetIncomingDataReferences(m_object, addr, len, &count, maxItems.has_value(), maxItems.value_or(0));
+	vector<DataXref> result = ParseAPIStructList<DataXref>(refs, count);
+	BNFreeDataXrefs(refs, count);
+	return result;
+}
+
+
+vector<CodeXref> BinaryView::GetOutgoingCodeReferences(
+	uint64_t addr, uint64_t len, Ref<Function> func, std::optional<size_t> maxItems)
+{
+	size_t count;
+	BNCodeXref* refs = BNGetOutgoingCodeReferences(m_object, addr, len, func ? func->GetObject() : nullptr, &count,
+		maxItems.has_value(), maxItems.value_or(0));
+	vector<CodeXref> result = ParseAPIStructList<CodeXref>(refs, count);
+	BNFreeCodeXrefs(refs, count);
+	return result;
+}
+
+
+vector<DataXref> BinaryView::GetOutgoingDataReferences(uint64_t addr, uint64_t len, std::optional<size_t> maxItems)
+{
+	size_t count;
+	BNDataXref* refs =
+		BNGetOutgoingDataReferences(m_object, addr, len, &count, maxItems.has_value(), maxItems.value_or(0));
+	vector<DataXref> result = ParseAPIStructList<DataXref>(refs, count);
+	BNFreeDataXrefs(refs, count);
 	return result;
 }
 

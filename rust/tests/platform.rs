@@ -1,3 +1,4 @@
+use binaryninja::architecture::{ArchitectureExt, CoreArchitecture};
 use binaryninja::headless::Session;
 use binaryninja::platform::Platform;
 
@@ -37,4 +38,21 @@ fn test_platform_calling_conventions() {
     let _session = Session::new().expect("Failed to initialize session");
     let platform = Platform::by_name("windows-x86_64").expect("windows-x86_64 exists");
     assert_eq!(platform.calling_conventions().len(), 1);
+}
+
+#[test]
+fn test_platform_register_calling_convention() {
+    let _session = Session::new().expect("Failed to initialize session");
+    let arch = CoreArchitecture::by_name("x86_64").expect("x86_64 exists");
+    let platform = Platform::new(&arch, "test-register-cc-x86_64");
+    assert_eq!(platform.calling_conventions().len(), 0);
+
+    let cc = arch
+        .calling_convention_by_name("win64")
+        .expect("win64 calling convention exists");
+    platform.register_calling_convention(&cc);
+
+    let calling_conventions = platform.calling_conventions();
+    assert_eq!(calling_conventions.len(), 1);
+    assert_eq!(calling_conventions.get(0).name(), "win64");
 }

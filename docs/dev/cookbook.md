@@ -86,7 +86,7 @@ for func in bv.functions:
 func = bv.get_functions_by_name(here)[0]  # Multiple functions can share the same name!
 func = bv.get_function_at(here)      # Shortcut for the next one
 func = bv.get_functions_at(here)[0]  # Binary Ninja support functions that overlap!
-func = bv.get_function_containing(here)  # Functions that contain the given address
+func = bv.get_functions_containing(here)[0]  # Functions that contain the given address
 # Just a note that using address to work with functions is fine
 # But when working with ILs, addresses are approximate and can change for any given instruction
 ```

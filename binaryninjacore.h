@@ -4749,6 +4749,7 @@ extern "C"
 		BNSimilaritySessionNode* node, BNSimilarityEntityId id);
 	BINARYNINJACOREAPI BNSimilarityEntityId* BNSimilaritySessionNodeGetScheduledEntities(
 		BNSimilaritySessionNode* node, size_t* count);
+	BINARYNINJACOREAPI bool BNSimilaritySessionNodeHasPendingWork(BNSimilaritySessionNode* node);
 	BINARYNINJACOREAPI BNFunction* BNSimilaritySessionNodeGetEntityFunction(
 		BNSimilaritySessionNode* node, BNSimilarityEntityId id);
 	BINARYNINJACOREAPI BNSimilarityResultId* BNSimilaritySessionNodeGetResults(

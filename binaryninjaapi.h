@@ -17326,6 +17326,8 @@ namespace BinaryNinja {
 		bool RemoveScheduledEntity(SimilarityEntityId id);
 		/*! Returns the entities waiting for provider processing. */
 		std::vector<SimilarityEntityId> GetScheduledEntities();
+		/*! Returns whether provider or resolver work is queued for this node. */
+		bool HasPendingWork();
 		/*! Resolves a function entity against the active view, or returns `nullptr`. */
 		Ref<Function> GetEntityFunction(SimilarityEntityId id);
 		/*! Returns the result IDs for an entity. */

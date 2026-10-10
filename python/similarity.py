@@ -1332,6 +1332,11 @@ class SimilaritySessionNode:
         core.BNFreeSimilarityEntityList(entities)
         return result
 
+    @property
+    def has_pending_work(self) -> bool:
+        """Whether provider or resolver work is queued for this node."""
+        return core.BNSimilaritySessionNodeHasPendingWork(self.handle)
+
     def get_entity_function(self, id: SimilarityEntityId) -> Optional['function.Function']:
         """Return the function represented by an entity, if available."""
         func = core.BNSimilaritySessionNodeGetEntityFunction(self.handle, _to_core_entity_id(id))

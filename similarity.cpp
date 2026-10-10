@@ -700,6 +700,11 @@ std::vector<SimilarityEntityId> SimilaritySessionNode::GetScheduledEntities()
 }
 
 
+bool SimilaritySessionNode::HasPendingWork()
+{
+	return BNSimilaritySessionNodeHasPendingWork(m_object);
+}
+
 Ref<Function> SimilaritySessionNode::GetEntityFunction(const SimilarityEntityId id)
 {
 	BNFunction* function = BNSimilaritySessionNodeGetEntityFunction(m_object, id);

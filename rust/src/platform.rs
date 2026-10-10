@@ -247,6 +247,27 @@ impl Platform {
         BNSetPlatformSystemCallConvention
     );
 
+    /// Register a calling convention with the platform, adding it to [`Platform::calling_conventions`].
+    ///
+    /// Unlike [`Platform::set_default_calling_convention`] and the other role setters, this does not
+    /// assign the calling convention to a role, it only makes it available on the platform.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the calling convention's architecture does not match the platform's architecture.
+    pub fn register_calling_convention(&self, cc: &CoreCallingConvention) {
+        let arch = self.arch();
+
+        assert!(
+            cc.arch_handle.handle == arch.handle,
+            "use of calling convention with non-matching Platform architecture!"
+        );
+
+        unsafe {
+            BNRegisterPlatformCallingConvention(self.handle, cc.handle);
+        }
+    }
+
     pub fn calling_conventions(&self) -> Array<CoreCallingConvention> {
         unsafe {
             let mut count = 0;

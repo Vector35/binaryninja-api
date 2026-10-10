@@ -259,7 +259,7 @@ impl Platform {
         let arch = self.arch();
 
         assert!(
-            cc.arch_handle.borrow().as_ref().handle == arch.handle,
+            cc.arch_handle.handle == arch.handle,
             "use of calling convention with non-matching Platform architecture!"
         );
 

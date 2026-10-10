@@ -162,6 +162,25 @@ class ReferenceSource:
 			for hlil in llil.hlils:
 				yield hlil
 
+
+@dataclass(frozen=True)
+class CodeXref:
+	"""A reference made by code, from the instruction at ``source`` to the address ``target``."""
+	source: ReferenceSource
+	target: int
+
+	@classmethod
+	def _from_core_struct(cls, view: 'BinaryView', ref: core.BNCodeXref) -> 'CodeXref':
+		return CodeXref(ReferenceSource._from_core_struct(view, ref.source), ref.target)
+
+
+@dataclass(frozen=True)
+class DataXref:
+	"""A reference made by data, from the address ``source`` to the address ``target``."""
+	source: int
+	target: int
+
+
 class NotificationType(IntFlag):
 	NotificationBarrier = 1 << 0
 	DataWritten = 1 << 1
@@ -6197,6 +6216,28 @@ class BinaryView:
 		finally:
 			core.BNFreeCodeReferences(refs, count.value)
 
+	def get_incoming_code_refs(self, addr: int, length: int, max_items: Optional[int] = None) -> List[CodeXref]:
+		"""
+		``get_incoming_code_refs`` returns the references made by code to the range ``addr``-``addr``+``length``,
+		each with its source and target.
+		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs.
+
+		:param int addr: start of the range to query
+		:param int length: length of the range to query
+		:param int max_items: optional maximum number of references to fetch
+		:return: list of CodeXref
+		:rtype: list(CodeXref)
+		"""
+		count = ctypes.c_ulonglong(0)
+		has_max_items = max_items is not None
+		max_items_value = max_items if has_max_items else 0
+		refs = core.BNGetIncomingCodeReferences(self.handle, addr, length, count, has_max_items, max_items_value)
+		assert refs is not None, "core.BNGetIncomingCodeReferences returned None"
+		try:
+			return [CodeXref._from_core_struct(self, refs[i]) for i in range(0, count.value)]
+		finally:
+			core.BNFreeCodeXrefs(refs, count.value)
+
 	def get_code_refs_from(
 	    self, addr: int, func: Optional['_function.Function'] = None,
 	    arch: Optional['architecture.Architecture'] = None, length: Optional[int] = None
@@ -6236,6 +6277,35 @@ class BinaryView:
 			core.BNFreeAddressList(refs)
 		return result
 
+	def get_outgoing_code_refs(
+	    self, addr: int, length: int, func: Optional['_function.Function'] = None, max_items: Optional[int] = None
+	) -> List[CodeXref]:
+		"""
+		``get_outgoing_code_refs`` returns the references made by code in the range ``addr``-``addr``+``length``,
+		each with its source and target. If ``func`` is specified, only references made by that function are
+		returned. Otherwise references made by every function with code in the range are returned.
+		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs.
+
+		:param int addr: start of the range to query
+		:param int length: length of the range to query
+		:param Function func: optional function whose references are returned
+		:param int max_items: optional maximum number of references to fetch
+		:return: list of CodeXref
+		:rtype: list(CodeXref)
+		"""
+		count = ctypes.c_ulonglong(0)
+		has_max_items = max_items is not None
+		max_items_value = max_items if has_max_items else 0
+		func_handle = func.handle if func is not None else None
+		refs = core.BNGetOutgoingCodeReferences(
+		    self.handle, addr, length, func_handle, count, has_max_items, max_items_value
+		)
+		assert refs is not None, "core.BNGetOutgoingCodeReferences returned None"
+		try:
+			return [CodeXref._from_core_struct(self, refs[i]) for i in range(0, count.value)]
+		finally:
+			core.BNFreeCodeXrefs(refs, count.value)
+
 	def get_data_refs(self, addr: int, length: Optional[int] = None, max_items: Optional[int] = None) -> Generator[int, None, None]:
 		"""
 		``get_data_refs`` returns a list of virtual addresses of _data_ (not code) which references ``addr``, optionally specifying
@@ -6274,6 +6344,29 @@ class BinaryView:
 		finally:
 			core.BNFreeDataReferences(refs)
 
+	def get_incoming_data_refs(self, addr: int, length: int, max_items: Optional[int] = None) -> List[DataXref]:
+		"""
+		``get_incoming_data_refs`` returns the references made by data to the range ``addr``-``addr``+``length``,
+		each with its source and target.
+		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs. To add a user-specified
+		reference, see :py:func:`add_user_data_ref`.
+
+		:param int addr: start of the range to query
+		:param int length: length of the range to query
+		:param int max_items: optional maximum number of references to fetch
+		:return: list of DataXref
+		:rtype: list(DataXref)
+		"""
+		count = ctypes.c_ulonglong(0)
+		has_max_items = max_items is not None
+		max_items_value = max_items if has_max_items else 0
+		refs = core.BNGetIncomingDataReferences(self.handle, addr, length, count, has_max_items, max_items_value)
+		assert refs is not None, "core.BNGetIncomingDataReferences returned None"
+		try:
+			return [DataXref(refs[i].source, refs[i].target) for i in range(0, count.value)]
+		finally:
+			core.BNFreeDataXrefs(refs, count.value)
+
 	def get_data_refs_from(self, addr: int, length: Optional[int] = None) -> Generator[int, None, None]:
 		"""
 		``get_data_refs_from`` returns a list of virtual addresses referenced by the address ``addr``. Optionally specifying
@@ -6305,6 +6398,29 @@ class BinaryView:
 				yield refs[i]
 		finally:
 			core.BNFreeDataReferences(refs)
+
+	def get_outgoing_data_refs(self, addr: int, length: int, max_items: Optional[int] = None) -> List[DataXref]:
+		"""
+		``get_outgoing_data_refs`` returns the references made by data in the range ``addr``-``addr``+``length``,
+		each with its source and target.
+		This function returns both autoanalysis ("auto") and user-specified ("user") xrefs. To add a user-specified
+		reference, see :py:func:`add_user_data_ref`.
+
+		:param int addr: start of the range to query
+		:param int length: length of the range to query
+		:param int max_items: optional maximum number of references to fetch
+		:return: list of DataXref
+		:rtype: list(DataXref)
+		"""
+		count = ctypes.c_ulonglong(0)
+		has_max_items = max_items is not None
+		max_items_value = max_items if has_max_items else 0
+		refs = core.BNGetOutgoingDataReferences(self.handle, addr, length, count, has_max_items, max_items_value)
+		assert refs is not None, "core.BNGetOutgoingDataReferences returned None"
+		try:
+			return [DataXref(refs[i].source, refs[i].target) for i in range(0, count.value)]
+		finally:
+			core.BNFreeDataXrefs(refs, count.value)
 
 	def get_code_refs_for_type(self, name: str, max_items: Optional[int] = None) -> Generator[ReferenceSource, None, None]:
 		"""

@@ -30,7 +30,6 @@ use binaryninja::{
 };
 
 use gimli::{DebuggingInformationEntry, Dwarf, Unit};
-use object::ObjectKind;
 
 use binaryninja::confidence::{Conf, MAX_CONFIDENCE};
 use binaryninja::variable::{Variable, VariableSourceType};
@@ -830,12 +829,7 @@ impl DebugInfoBuilder {
         }
     }
 
-    pub(crate) fn post_process(
-        &mut self,
-        bv: &BinaryView,
-        _debug_info: &mut DebugInfo,
-        debug_file_kind: ObjectKind,
-    ) -> &Self {
+    pub(crate) fn post_process(&mut self, bv: &BinaryView, _debug_info: &mut DebugInfo) -> &Self {
         //   When originally resolving names, we need to check:
         //     If there's already a name from binja that's "more correct" than what we found (has more namespaces)
         //     If there's no name for the DIE, but there's a linkage name that's resolved in binja to a usable name
@@ -889,15 +883,11 @@ impl DebugInfoBuilder {
             }
         }
 
-        // Addresses in a relocatable object are offsets into its sections, not addresses in the
-        // view, so rebasing wouldn't put its data variables on their symbols. Leave them be.
-        if debug_file_kind != ObjectKind::Relocatable {
-            if let Some(diff) = rebase_offset(bv).filter(|&diff| diff != 0) {
-                self.data_variables = std::mem::take(&mut self.data_variables)
-                    .into_iter()
-                    .map(|(address, variable)| (address.wrapping_add(diff), variable))
-                    .collect();
-            }
+        if let Some(diff) = rebase_offset(bv).filter(|&diff| diff != 0) {
+            self.data_variables = std::mem::take(&mut self.data_variables)
+                .into_iter()
+                .map(|(address, variable)| (address.wrapping_add(diff), variable))
+                .collect();
         }
 
         self

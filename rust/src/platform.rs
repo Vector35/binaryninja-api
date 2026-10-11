@@ -258,8 +258,8 @@ impl Platform {
     pub fn register_calling_convention(&self, cc: &CoreCallingConvention) {
         let arch = self.arch();
 
-        assert!(
-            cc.arch_handle.handle == arch.handle,
+        assert_eq!(
+            cc.arch_handle.handle, arch.handle,
             "use of calling convention with non-matching Platform architecture!"
         );
 

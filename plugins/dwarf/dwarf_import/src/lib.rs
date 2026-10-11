@@ -837,7 +837,9 @@ impl CustomDebugInfoParser for DWARFParser {
 
         let result = match parse_dwarf(bv, &debug_file, sup_file.as_ref(), progress) {
             Ok(mut builder) => {
-                builder.post_process(bv, debug_info).commit_info(debug_info);
+                builder
+                    .post_process(bv, debug_info, debug_file.kind())
+                    .commit_info(debug_info);
                 true
             }
             Err(e) => {

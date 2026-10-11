@@ -1,4 +1,24 @@
+use binaryninjacore_sys::BNDetectSearchMode;
 use serde_derive::{Deserialize, Serialize};
+
+use crate::string::{BnString, IntoCStr};
+
+/// The parser a [`SearchQuery`] pattern is read with.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SearchType {
+    /// Try FlexHex, then YARA hex, then regex, then a raw string.
+    #[default]
+    Auto,
+    /// Hex bytes with `??` and nibble wildcards, ex. "42 2e ?? 6?".
+    FlexHex,
+    /// A YARA hex string, with jumps, alternation and negation.
+    Yara,
+    /// A byte-level regular expression.
+    Regex,
+    /// A literal string.
+    Raw,
+}
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SearchQuery {
@@ -14,6 +34,9 @@ pub struct SearchQuery {
     overlap: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     align: Option<u64>,
+    /// Force a parser for the pattern; the core auto-detects one when unset.
+    #[serde(rename = "searchType", skip_serializing_if = "Option::is_none")]
+    search_type: Option<SearchType>,
 }
 
 impl SearchQuery {
@@ -62,9 +85,29 @@ impl SearchQuery {
         }
         self
     }
+
+    /// Force the parser the pattern is read with. With an explicit type, a
+    /// pattern that type can't parse is an error rather than falling through
+    /// to another type.
+    pub fn search_type(mut self, search_type: SearchType) -> Self {
+        self.search_type = Some(search_type);
+        self
+    }
 }
 
 impl SearchQuery {
+    /// The name of the parser the core would read the pattern with, ex.
+    /// "FlexHex" or "Regex", or the core's error message when the pattern
+    /// doesn't parse.
+    pub fn detect_mode(&self) -> Result<String, String> {
+        let query = self.to_json().to_cstr();
+        let mode = unsafe { BnString::into_string(BNDetectSearchMode(query.as_ptr())) };
+        match mode.strip_prefix("Error: ") {
+            Some(err) => Err(err.to_owned()),
+            None => Ok(mode),
+        }
+    }
+
     /// Serialize the query to a JSON string
     pub fn to_json(&self) -> String {
         serde_json::to_string(self).expect("failed to serialize search query")
@@ -105,5 +148,21 @@ mod tests {
         assert_eq!(parsed["start"], 4096);
         assert_eq!(parsed["align"], 8);
         assert!(!parsed.as_object().unwrap().contains_key("end"));
+        assert!(!parsed.as_object().unwrap().contains_key("searchType"));
+    }
+
+    #[test]
+    fn test_search_query_search_type_json() {
+        for (search_type, name) in [
+            (SearchType::Auto, "auto"),
+            (SearchType::FlexHex, "flexhex"),
+            (SearchType::Yara, "yara"),
+            (SearchType::Regex, "regex"),
+            (SearchType::Raw, "raw"),
+        ] {
+            let json = SearchQuery::new("test").search_type(search_type).to_json();
+            let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+            assert_eq!(parsed["searchType"], name);
+        }
     }
 }

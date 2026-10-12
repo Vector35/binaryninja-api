@@ -3518,7 +3518,8 @@ extern "C"
 	{
 		RemoveUndoData,
 		TrimSnapshots,
-		PurgeOriginalFilenamePath
+		PurgeOriginalFilenamePath,
+		DeferProjectNotification
 	};
 
 	BN_ENUM(uint8_t, BNMessageBoxIcon)

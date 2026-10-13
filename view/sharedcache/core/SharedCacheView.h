@@ -48,6 +48,9 @@ public:
 	// Get the path to the primary file.
 	std::optional<std::string> GetPrimaryFilePath();
 
+	// Get the names of the relevant dependency files for this view
+	std::set<std::string> GetDependencyFileNames() const;
+
 	// Get the metadata for saving the state of the shared cache.
 	BinaryNinja::Ref<BinaryNinja::Metadata> GetMetadata() const;
 

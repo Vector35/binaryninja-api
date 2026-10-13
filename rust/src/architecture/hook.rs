@@ -25,6 +25,9 @@ macro_rules! architecture_hook {
         /// hook chain. Override only the methods you need. Use the supplied `base` to delegate:
         /// looking up the hooked architecture by name inside a callback would call the hook again.
         ///
+        /// Flag-write operations that cannot be represented by [`LowLevelILFlagWriteOp`] bypass
+        /// the typed callback and forward directly to the previous implementation.
+        ///
         /// The methods have the same semantics as their counterparts in [`Architecture`].
         /// Contextual disassembly forwards to the previous contextual implementation; override
         /// [`ArchitectureHook::instruction_text_with_context`] to change contextual text.
@@ -206,6 +209,15 @@ pub fn register_architecture_hook<H: ArchitectureHook>(
             .handle
     }
 
+    unsafe extern "C" fn intrinsic_class<H: ArchitectureHook>(
+        context: *mut c_void,
+        intrinsic: u32,
+    ) -> BNIntrinsicClass {
+        let arch = unsafe { &*context.cast::<HookArchitecture<H>>() };
+        arch.hook
+            .intrinsic_class(&arch.base, IntrinsicId(intrinsic))
+    }
+
     let registered = super::register_architecture_impl(
         ArchitectureRegistration::Hook(base),
         |handle, base| HookArchitecture { hook, base, handle },
@@ -213,6 +225,9 @@ pub fn register_architecture_hook<H: ArchitectureHook>(
             // The Architecture trait takes an address by value; hooks must also preserve any
             // address normalization performed by the previous architecture in the chain.
             callbacks.getAssociatedArchitectureByAddress = Some(associated_arch::<H>);
+            // Hooks expose a class override independent of intrinsic lookup. Ordinary custom
+            // architectures continue to obtain the class from their Intrinsic implementation.
+            callbacks.getIntrinsicClass = Some(intrinsic_class::<H>);
         },
     );
     &registered.hook

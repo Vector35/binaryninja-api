@@ -11,15 +11,16 @@
 
 DECLARE_DSC_API_OBJECT(BNSharedCacheController, SharedCacheController);
 
-void RegisterSharedCacheControllerDestructor();
+class SharedCacheView;
 
 namespace BinaryNinja::DSC {
 	// Represents the view state for a given `DSCache`
-	class SharedCacheController : public DSCRefCountObject
+	class SharedCacheController : public DSCRefCountObject, public FileMetadataNotification
 	{
 		IMPLEMENT_DSC_API_OBJECT(BNSharedCacheController);
 		Ref<Logger> m_logger;
 		SharedCache m_cache;
+		SharedCacheView* m_view;
 
 		// Locks on load attempts (region or image).
 		std::shared_mutex m_loadMutex;
@@ -34,11 +35,11 @@ namespace BinaryNinja::DSC {
 		bool m_processObjC;
 		bool m_processCFStrings;
 
-		explicit SharedCacheController(SharedCache&& cache, Ref<Logger> logger);
+		explicit SharedCacheController(SharedCacheView* view, SharedCache&& cache, Ref<Logger> logger);
 
 	public:
 		// Initialize the DSCacheView, this should be called from the view initialize function only!
-		static DSCRef<SharedCacheController> Initialize(BinaryView& view, SharedCache&& cache);
+		static DSCRef<SharedCacheController> Initialize(SharedCacheView* view, SharedCache&& cache);
 
 		// NOTE: This will not create one if it does not exist. To create one for the view call `Initialize`.
 		static DSCRef<SharedCacheController> FromView(const BinaryView& view);
@@ -71,5 +72,8 @@ namespace BinaryNinja::DSC {
 		void ProcessObjCForLoadedImagesIfNeeded(BinaryView& view);
 
 		std::unique_ptr<CacheStringScanner> CreateStringScanner();
+
+		void OnBeforeFileClosed(FileMetadata*) override;
+		void OnAfterSnapshotSaved(FileMetadata*, bool) override;
 	};
 }  // namespace BinaryNinja::DSC

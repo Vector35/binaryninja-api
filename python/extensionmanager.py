@@ -19,7 +19,6 @@
 # IN THE SOFTWARE.
 
 import ctypes
-import json
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import List, Dict, Optional
@@ -260,10 +259,6 @@ class Extension:
 		return _convert_owned_version_info(core_version_info)
 
 	@property
-	def maximum_version_info(self) -> 'binaryninja.CoreVersionInfo':
-		core_version_info = core.BNPluginGetMaximumVersionInfo(self.handle)
-		return _convert_owned_version_info(core_version_info)
-	@property
 	def name(self) -> str:
 		"""String name of the plugin"""
 		result = core.BNPluginGetName(self.handle)
@@ -298,9 +293,6 @@ class Extension:
 		"""Boolean True if this plugin requires payment, False otherwise"""
 		return core.BNPluginGetIsPaid(self.handle)
 
-	@property
-	def author_url(self) -> Optional[str]:
-		return core.BNPluginGetAuthorUrl(self.handle)
 	@property
 	def author(self) -> Optional[str]:
 		"""String of the plugin author"""
@@ -433,13 +425,6 @@ class Extension:
 	def dependencies_being_installed(self) -> bool:
 		"""Boolean status indicating that the plugin's dependencies are currently being installed"""
 		return core.BNPluginAreDependenciesBeingInstalled(self.handle)
-
-	@property
-	@deprecation.deprecated(deprecated_in="5.3", details="This field will be removed.")
-	def project_data(self) -> Dict:
-		data = core.BNPluginGetProjectData(self.handle)
-		assert data is not None, "core.BNPluginGetProjectData returned None"
-		return json.loads(data)
 
 	@property
 	@deprecation.deprecated(deprecated_in="5.3", details="Use versions and current_version instead.")

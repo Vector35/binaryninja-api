@@ -350,18 +350,7 @@ vector<ReferenceSource> Function::GetCallSites() const
 {
 	size_t count;
 	BNReferenceSource* refs = BNGetFunctionCallSites(m_object, &count);
-
-	vector<ReferenceSource> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		ReferenceSource src;
-		src.func = new Function(BNNewFunctionReference(refs[i].func));
-		src.arch = new CoreArchitecture(refs[i].arch);
-		src.addr = refs[i].addr;
-		result.push_back(src);
-	}
-
+	vector<ReferenceSource> result = ParseAPIStructList<ReferenceSource>(refs, count);
 	BNFreeCodeReferences(refs, count);
 	return result;
 }

@@ -5098,6 +5098,10 @@ namespace BinaryNinja {
 		Ref<Function> func;
 		Ref<Architecture> arch;
 		uint64_t addr;
+
+		BNReferenceSource ToAPIStruct() const;
+		static ReferenceSource FromAPIStruct(const BNReferenceSource* source);
+		static void FreeAPIStruct(BNReferenceSource* source);
 	};
 
 	struct TypeFieldReference

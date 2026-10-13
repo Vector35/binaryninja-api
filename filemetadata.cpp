@@ -57,6 +57,36 @@ NavigationHandler::NavigationHandler()
 }
 
 
+FileMetadataNotification::FileMetadataNotification()
+{
+	m_callbacks.context = this;
+	m_callbacks.beforeSnapshotSaved = BeforeSnapshotSavedCallback;
+	m_callbacks.afterSnapshotSaved = AfterSnapshotSavedCallback;
+	m_callbacks.beforeFileClosed = BeforeFileClosedCallback;
+}
+
+
+void FileMetadataNotification::BeforeSnapshotSavedCallback(void* ctxt, BNFileMetadata* file)
+{
+	Ref<FileMetadata> metadata = new FileMetadata(BNNewFileReference(file));
+	static_cast<FileMetadataNotification*>(ctxt)->OnBeforeSnapshotSaved(metadata);
+}
+
+
+void FileMetadataNotification::AfterSnapshotSavedCallback(void* ctxt, BNFileMetadata* file, bool success)
+{
+	Ref<FileMetadata> metadata = new FileMetadata(BNNewFileReference(file));
+	static_cast<FileMetadataNotification*>(ctxt)->OnAfterSnapshotSaved(metadata, success);
+}
+
+
+void FileMetadataNotification::BeforeFileClosedCallback(void* ctxt, BNFileMetadata* file)
+{
+	Ref<FileMetadata> metadata = new FileMetadata(BNNewFileReference(file));
+	static_cast<FileMetadataNotification*>(ctxt)->OnBeforeFileClosed(metadata);
+}
+
+
 FileMetadata::FileMetadata()
 {
 	m_object = BNCreateFileMetadata();
@@ -87,6 +117,18 @@ FileMetadata::FileMetadata(BNFileMetadata* file)
 void FileMetadata::Close()
 {
 	BNCloseFile(m_object);
+}
+
+
+void FileMetadata::RegisterNotification(FileMetadataNotification* notify)
+{
+	BNRegisterFileMetadataNotification(m_object, notify->GetCallbacks());
+}
+
+
+void FileMetadata::UnregisterNotification(FileMetadataNotification* notify)
+{
+	BNUnregisterFileMetadataNotification(m_object, notify->GetCallbacks());
 }
 
 

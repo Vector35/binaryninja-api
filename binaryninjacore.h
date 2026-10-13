@@ -8986,21 +8986,18 @@ extern "C"
 	BINARYNINJACOREAPI const char* BNPluginGetDescription(BNPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetLicenseText(BNPlugin* p);
 	BINARYNINJACOREAPI BNVersionInfo BNPluginGetMinimumVersionInfo(BNPlugin* p);
-	BINARYNINJACOREAPI BNVersionInfo BNPluginGetMaximumVersionInfo(BNPlugin* p);
 	BINARYNINJACOREAPI BNVersionInfo BNParseVersionString(const char* v);
 	BINARYNINJACOREAPI bool BNVersionLessThan(const BNVersionInfo smaller, const BNVersionInfo larger);
 	BINARYNINJACOREAPI bool BNPluginVersionIDLessThan(BNPlugin* p, const char* smaller, const char* larger);
 	BINARYNINJACOREAPI const char* BNPluginGetName(BNPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetProjectUrl(BNPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetPackageUrl(BNPlugin* p);
-	BINARYNINJACOREAPI const char* BNPluginGetAuthorUrl(BNPlugin* p);
 	BINARYNINJACOREAPI BNPluginVersion* BNPluginGetVersions(BNPlugin* p, size_t* count);
 	BINARYNINJACOREAPI void BNFreePluginVersions(BNPluginVersion* r, size_t count);
 	BINARYNINJACOREAPI const char* BNPluginGetCurrentVersionID(BNPlugin* p);
 	BINARYNINJACOREAPI const char* BNPluginGetLatestVersionID(BNPlugin* p);
 	BINARYNINJACOREAPI BNPluginVersion BNPluginGetCurrentVersion(BNPlugin* p);
 	BINARYNINJACOREAPI void BNPluginFreeVersion(BNPluginVersion v);
-	BINARYNINJACOREAPI const char* BNPluginGetCommit(BNPlugin* p);
 	BINARYNINJACOREAPI const bool BNPluginGetViewOnly(BNPlugin* p);
 	BINARYNINJACOREAPI const bool BNPluginGetIsPaid(BNPlugin* p);
 	BINARYNINJACOREAPI void BNFreePluginTypes(BNPluginType* r);
@@ -9046,7 +9043,6 @@ extern "C"
 	BINARYNINJACOREAPI bool BNPluginIsUpdateAvailable(BNPlugin* p);
 	BINARYNINJACOREAPI bool BNPluginAreDependenciesBeingInstalled(BNPlugin* p);
 
-	BINARYNINJACOREAPI char* BNPluginGetProjectData(BNPlugin* p);
 	BINARYNINJACOREAPI char* BNPluginGetCurrentVersionCreationDate(BNPlugin* p);
 
 	BINARYNINJACOREAPI BNRepository* BNNewRepositoryReference(BNRepository* r);

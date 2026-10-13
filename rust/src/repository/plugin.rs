@@ -190,12 +190,6 @@ impl Extension {
         VersionInfo::from_owned_raw(result)
     }
 
-    /// Maximum version info the plugin will support
-    pub fn maximum_version_info(&self) -> VersionInfo {
-        let result = unsafe { BNPluginGetMaximumVersionInfo(self.handle.as_ptr()) };
-        VersionInfo::from_owned_raw(result)
-    }
-
     /// Metadata for all available versions of this plugin
     pub fn versions(&self) -> Array<ExtensionVersion> {
         let mut count = 0;
@@ -241,20 +235,6 @@ impl Extension {
     /// Boolean True if this plugin requires payment, False otherwise
     pub fn is_paid(&self) -> bool {
         unsafe { BNPluginGetIsPaid(self.handle.as_ptr()) }
-    }
-
-    /// String URL of the plugin author's url
-    pub fn author_url(&self) -> String {
-        let result = unsafe { BNPluginGetAuthorUrl(self.handle.as_ptr()) };
-        assert!(!result.is_null());
-        unsafe { BnString::into_string(result as *mut c_char) }
-    }
-
-    /// String of the commit of this plugin git repository
-    pub fn commit(&self) -> String {
-        let result = unsafe { BNPluginGetCommit(self.handle.as_ptr()) };
-        assert!(!result.is_null());
-        unsafe { BnString::into_string(result as *mut c_char) }
     }
 
     /// Relative path from the base of the repository to the actual plugin
@@ -486,14 +466,6 @@ impl Extension {
     pub fn are_dependencies_being_installed(&self) -> bool {
         unsafe { BNPluginAreDependenciesBeingInstalled(self.handle.as_ptr()) }
     }
-
-    /// Gets a json object of the project data field
-    pub fn project_data(&self) -> String {
-        let result = unsafe { BNPluginGetProjectData(self.handle.as_ptr()) };
-        assert!(!result.is_null());
-        unsafe { BnString::into_string(result) }
-    }
-
 }
 
 impl Debug for Extension {
@@ -503,7 +475,6 @@ impl Debug for Extension {
             .field("author", &self.author())
             .field("description", &self.description())
             .field("minimum_version_info", &self.minimum_version_info())
-            .field("maximum_version_info", &self.maximum_version_info())
             .field("status", &self.status())
             .finish()
     }

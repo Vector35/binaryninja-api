@@ -161,14 +161,6 @@ VersionInfo Extension::GetMinimumVersionInfo() const
 	return result;
 }
 
-VersionInfo Extension::GetMaximumVersionInfo() const
-{
-	auto coreInfo = BNPluginGetMaximumVersionInfo(m_object);
-	VersionInfo result = ConvertVersionInfo(coreInfo);
-	BNFreeString(coreInfo.channel);
-	return result;
-}
-
 static ExtensionVersion::PlatformInfo ConvertVersionPlatform(const BNPluginVersionPlatform& corePlatform)
 {
 	ExtensionVersion::PlatformInfo result;
@@ -207,12 +199,6 @@ string Extension::GetPackageUrl() const
 {
 	RETURN_STRING(BNPluginGetPackageUrl(m_object));
 }
-
-string Extension::GetAuthorUrl() const
-{
-	RETURN_STRING(BNPluginGetAuthorUrl(m_object));
-}
-
 
 std::vector<ExtensionVersion> Extension::GetVersions() const
 {
@@ -277,12 +263,6 @@ bool Extension::IsVersionIDLessThan(const std::string& smaller, const std::strin
 {
 	return BNPluginVersionIDLessThan(m_object, smaller.c_str(), larger.c_str());
 }
-
-string Extension::GetCommit() const
-{
-	RETURN_STRING(BNPluginGetCommit(m_object));
-}
-
 
 bool Extension::IsViewOnly() const
 {
@@ -351,12 +331,6 @@ string Extension::GetCreationDate()
 {
 	RETURN_STRING(BNPluginGetCurrentVersionCreationDate(m_object));
 }
-
-string Extension::GetProjectData()
-{
-	RETURN_STRING(BNPluginGetProjectData(m_object));
-}
-
 
 bool Extension::Uninstall()
 {

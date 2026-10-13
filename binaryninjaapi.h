@@ -21006,18 +21006,15 @@ namespace BinaryNinja {
 		std::string GetDescription() const;
 		std::string GetLicenseText() const;
 		VersionInfo GetMinimumVersionInfo() const;
-		VersionInfo GetMaximumVersionInfo() const;
 		std::string GetName() const;
 		std::vector<PluginType> GetPluginTypes() const;
 		std::string GetProjectUrl() const;
 		std::string GetPackageUrl() const;
-		std::string GetAuthorUrl() const;
 		std::vector<ExtensionVersion> GetVersions() const;
 		ExtensionVersion GetCurrentVersion() const;
 		std::string GetCurrentVersionID() const;
 		std::string GetLatestVersionID() const;
 		bool IsVersionIDLessThan(const std::string& smaller, const std::string& larger) const;
-		std::string GetCommit() const;
 		std::string GetRepository() const;
 		bool IsViewOnly() const;
 		bool IsPaid() const;
@@ -21034,7 +21031,6 @@ namespace BinaryNinja {
 		bool IsUpdateAvailable() const;
 		bool AreDependenciesBeingInstalled() const;
 		std::string GetCreationDate();
-		std::string GetProjectData();
 
 		bool Uninstall();
 		bool CancelUninstall();

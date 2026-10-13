@@ -22,6 +22,7 @@
 #include <iterator>
 #include <memory>
 #include "binaryninjaapi.h"
+#include "ffi.h"
 
 using namespace BinaryNinja;
 using namespace std;
@@ -2510,22 +2511,40 @@ vector<Ref<BasicBlock>> BinaryView::GetBasicBlocksStartingAtAddress(uint64_t add
 }
 
 
+BNReferenceSource ReferenceSource::ToAPIStruct() const
+{
+	BNReferenceSource result;
+	result.func = func ? BNNewFunctionReference(func->m_object) : nullptr;
+	result.arch = arch ? arch->m_object : nullptr;
+	result.addr = addr;
+	return result;
+}
+
+
+ReferenceSource ReferenceSource::FromAPIStruct(const BNReferenceSource* source)
+{
+	ReferenceSource result;
+	if (source->func)
+		result.func = new Function(BNNewFunctionReference(source->func));
+	if (source->arch)
+		result.arch = new CoreArchitecture(source->arch);
+	result.addr = source->addr;
+	return result;
+}
+
+
+void ReferenceSource::FreeAPIStruct(BNReferenceSource* source)
+{
+	if (source->func)
+		BNFreeFunction(source->func);
+}
+
+
 vector<ReferenceSource> BinaryView::GetCodeReferences(uint64_t addr)
 {
 	size_t count;
 	BNReferenceSource* refs = BNGetCodeReferences(m_object, addr, &count, false, 0);
-
-	vector<ReferenceSource> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		ReferenceSource src;
-		src.func = new Function(BNNewFunctionReference(refs[i].func));
-		src.arch = new CoreArchitecture(refs[i].arch);
-		src.addr = refs[i].addr;
-		result.push_back(src);
-	}
-
+	vector<ReferenceSource> result = ParseAPIStructList<ReferenceSource>(refs, count);
 	BNFreeCodeReferences(refs, count);
 	return result;
 }
@@ -2535,18 +2554,7 @@ vector<ReferenceSource> BinaryView::GetCodeReferences(uint64_t addr, uint64_t le
 {
 	size_t count;
 	BNReferenceSource* refs = BNGetCodeReferencesInRange(m_object, addr, len, &count, false, 0);
-
-	vector<ReferenceSource> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		ReferenceSource src;
-		src.func = new Function(BNNewFunctionReference(refs[i].func));
-		src.arch = new CoreArchitecture(refs[i].arch);
-		src.addr = refs[i].addr;
-		result.push_back(src);
-	}
-
+	vector<ReferenceSource> result = ParseAPIStructList<ReferenceSource>(refs, count);
 	BNFreeCodeReferences(refs, count);
 	return result;
 }
@@ -2556,18 +2564,7 @@ vector<ReferenceSource> BinaryView::GetCodeReferencesWithLimit(uint64_t addr, st
 {
 	size_t count;
 	BNReferenceSource* refs = BNGetCodeReferences(m_object, addr, &count, maxItems.has_value(), maxItems.value_or(0));
-
-	vector<ReferenceSource> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		ReferenceSource src;
-		src.func = new Function(BNNewFunctionReference(refs[i].func));
-		src.arch = new CoreArchitecture(refs[i].arch);
-		src.addr = refs[i].addr;
-		result.push_back(src);
-	}
-
+	vector<ReferenceSource> result = ParseAPIStructList<ReferenceSource>(refs, count);
 	BNFreeCodeReferences(refs, count);
 	return result;
 }
@@ -2579,18 +2576,7 @@ vector<ReferenceSource> BinaryView::GetCodeReferencesInRangeWithLimit(
 	size_t count;
 	BNReferenceSource* refs =
 		BNGetCodeReferencesInRange(m_object, addr, len, &count, maxItems.has_value(), maxItems.value_or(0));
-
-	vector<ReferenceSource> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		ReferenceSource src;
-		src.func = new Function(BNNewFunctionReference(refs[i].func));
-		src.arch = new CoreArchitecture(refs[i].arch);
-		src.addr = refs[i].addr;
-		result.push_back(src);
-	}
-
+	vector<ReferenceSource> result = ParseAPIStructList<ReferenceSource>(refs, count);
 	BNFreeCodeReferences(refs, count);
 	return result;
 }
@@ -2599,8 +2585,9 @@ vector<ReferenceSource> BinaryView::GetCodeReferencesInRangeWithLimit(
 vector<uint64_t> BinaryView::GetCodeReferencesFrom(ReferenceSource src)
 {
 	size_t count;
-	BNReferenceSource _src {src.func->m_object, src.arch->m_object, src.addr};
+	BNReferenceSource _src = src.ToAPIStruct();
 	uint64_t* refs = BNGetCodeReferencesFrom(m_object, &_src, &count);
+	ReferenceSource::FreeAPIStruct(&_src);
 	vector<uint64_t> result(refs, &refs[count]);
 	BNFreeAddressList(refs);
 	return result;
@@ -2610,8 +2597,9 @@ vector<uint64_t> BinaryView::GetCodeReferencesFrom(ReferenceSource src)
 vector<uint64_t> BinaryView::GetCodeReferencesFrom(ReferenceSource src, uint64_t len)
 {
 	size_t count;
-	BNReferenceSource _src {src.func->m_object, src.arch->m_object, src.addr};
+	BNReferenceSource _src = src.ToAPIStruct();
 	uint64_t* refs = BNGetCodeReferencesFromInRange(m_object, &_src, len, &count);
+	ReferenceSource::FreeAPIStruct(&_src);
 	vector<uint64_t> result(refs, &refs[count]);
 	BNFreeAddressList(refs);
 	return result;
@@ -2713,17 +2701,7 @@ vector<ReferenceSource> BinaryView::GetCodeReferencesForType(const QualifiedName
 		BNGetCodeReferencesForType(m_object, &nameObj, &count, maxItems.has_value(), maxItems.value_or(0));
 	QualifiedName::FreeAPIStruct(&nameObj);
 
-	vector<ReferenceSource> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		ReferenceSource src;
-		src.func = new Function(BNNewFunctionReference(refs[i].func));
-		src.arch = new CoreArchitecture(refs[i].arch);
-		src.addr = refs[i].addr;
-		result.push_back(src);
-	}
-
+	vector<ReferenceSource> result = ParseAPIStructList<ReferenceSource>(refs, count);
 	BNFreeCodeReferences(refs, count);
 	return result;
 }
@@ -2860,17 +2838,7 @@ AllTypeReferences BinaryView::GetAllReferencesForType(const QualifiedName& type,
 	QualifiedName::FreeAPIStruct(&nameObj);
 
 	AllTypeReferences result;
-
-	result.codeRefs.reserve(refs.codeRefCount);
-	for (size_t i = 0; i < refs.codeRefCount; i++)
-	{
-		ReferenceSource src;
-		src.func = new Function(BNNewFunctionReference(refs.codeRefs[i].func));
-		src.arch = new CoreArchitecture(refs.codeRefs[i].arch);
-		src.addr = refs.codeRefs[i].addr;
-		result.codeRefs.push_back(src);
-	}
-
+	result.codeRefs = ParseAPIStructList<ReferenceSource>(refs.codeRefs, refs.codeRefCount);
 	result.dataRefs = vector<uint64_t>(refs.dataRefs, &refs.dataRefs[refs.dataRefCount]);
 
 	result.typeRefs.reserve(refs.typeRefCount);
@@ -2933,8 +2901,9 @@ AllTypeFieldReferences BinaryView::GetAllReferencesForTypeField(
 vector<TypeReferenceSource> BinaryView::GetCodeReferencesForTypeFrom(ReferenceSource src)
 {
 	size_t count;
-	BNReferenceSource _src {src.func->m_object, src.arch->m_object, src.addr};
+	BNReferenceSource _src = src.ToAPIStruct();
 	BNTypeReferenceSource* refs = BNGetCodeReferencesForTypeFrom(m_object, &_src, &count);
+	ReferenceSource::FreeAPIStruct(&_src);
 
 	vector<TypeReferenceSource> result;
 	result.reserve(count);
@@ -2955,8 +2924,9 @@ vector<TypeReferenceSource> BinaryView::GetCodeReferencesForTypeFrom(ReferenceSo
 vector<TypeReferenceSource> BinaryView::GetCodeReferencesForTypeFrom(ReferenceSource src, uint64_t len)
 {
 	size_t count;
-	BNReferenceSource _src {src.func->m_object, src.arch->m_object, src.addr};
+	BNReferenceSource _src = src.ToAPIStruct();
 	BNTypeReferenceSource* refs = BNGetCodeReferencesForTypeFromInRange(m_object, &_src, len, &count);
+	ReferenceSource::FreeAPIStruct(&_src);
 
 	vector<TypeReferenceSource> result;
 	result.reserve(count);
@@ -2976,8 +2946,9 @@ vector<TypeReferenceSource> BinaryView::GetCodeReferencesForTypeFrom(ReferenceSo
 vector<TypeReferenceSource> BinaryView::GetCodeReferencesForTypeFieldFrom(ReferenceSource src)
 {
 	size_t count;
-	BNReferenceSource _src {src.func->m_object, src.arch->m_object, src.addr};
+	BNReferenceSource _src = src.ToAPIStruct();
 	BNTypeReferenceSource* refs = BNGetCodeReferencesForTypeFieldsFrom(m_object, &_src, &count);
+	ReferenceSource::FreeAPIStruct(&_src);
 
 	vector<TypeReferenceSource> result;
 	result.reserve(count);
@@ -2998,8 +2969,9 @@ vector<TypeReferenceSource> BinaryView::GetCodeReferencesForTypeFieldFrom(Refere
 vector<TypeReferenceSource> BinaryView::GetCodeReferencesForTypeFieldFrom(ReferenceSource src, uint64_t len)
 {
 	size_t count;
-	BNReferenceSource _src {src.func->m_object, src.arch->m_object, src.addr};
+	BNReferenceSource _src = src.ToAPIStruct();
 	BNTypeReferenceSource* refs = BNGetCodeReferencesForTypeFieldsFromInRange(m_object, &_src, len, &count);
+	ReferenceSource::FreeAPIStruct(&_src);
 
 	vector<TypeReferenceSource> result;
 	result.reserve(count);
@@ -3218,8 +3190,9 @@ unordered_set<QualifiedName> BinaryView::GetIncomingRecursiveTypeReferences(cons
 vector<uint64_t> BinaryView::GetCallees(ReferenceSource callSite)
 {
 	size_t count;
-	BNReferenceSource src {callSite.func->m_object, callSite.arch->m_object, callSite.addr};
+	BNReferenceSource src = callSite.ToAPIStruct();
 	uint64_t* refs = BNGetCallees(m_object, &src, &count);
+	ReferenceSource::FreeAPIStruct(&src);
 	vector<uint64_t> result(refs, &refs[count]);
 	BNFreeAddressList(refs);
 	return result;
@@ -3230,18 +3203,7 @@ vector<ReferenceSource> BinaryView::GetCallers(uint64_t addr)
 {
 	size_t count;
 	BNReferenceSource* refs = BNGetCallers(m_object, addr, &count);
-
-	vector<ReferenceSource> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		ReferenceSource src;
-		src.func = new Function(BNNewFunctionReference(refs[i].func));
-		src.arch = new CoreArchitecture(refs[i].arch);
-		src.addr = refs[i].addr;
-		result.push_back(src);
-	}
-
+	vector<ReferenceSource> result = ParseAPIStructList<ReferenceSource>(refs, count);
 	BNFreeCodeReferences(refs, count);
 	return result;
 }
@@ -4176,17 +4138,7 @@ vector<ReferenceSource> BinaryView::GetDerivedStringCodeReferences(
 	size_t count;
 	BNReferenceSource* refs = BNGetDerivedStringCodeReferences(
 		m_object, &derivedStr, &count, maxItems.has_value(), maxItems.value_or(0));
-	vector<ReferenceSource> result;
-	result.reserve(count);
-	for (size_t i = 0; i < count; i++)
-	{
-		ReferenceSource src;
-		src.func = new Function(BNNewFunctionReference(refs[i].func));
-		src.arch = new CoreArchitecture(refs[i].arch);
-		src.addr = refs[i].addr;
-		result.push_back(src);
-	}
-
+	vector<ReferenceSource> result = ParseAPIStructList<ReferenceSource>(refs, count);
 	BNFreeCodeReferences(refs, count);
 	return result;
 }

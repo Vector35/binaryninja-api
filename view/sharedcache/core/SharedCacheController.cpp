@@ -1,4 +1,5 @@
 #include "SharedCacheController.h"
+#include "SharedCacheView.h"
 #include "MachOProcessor.h"
 #include "ObjC.h"
 
@@ -18,14 +19,14 @@ std::map<ViewId, DSCRef<SharedCacheController>>& GlobalControllers()
 	return g_controllers;
 }
 
-ViewId GetViewIdFromFileMetadata(const FileMetadata& file)
+ViewId GetViewIdFromFileMetadata(FileMetadata* file)
 {
 	// Currently the view id is just the views session id.
 	// NOTE: If we want more than one shared cache controller per view we would need to make this more unique.
-	return file.GetSessionId();
+	return file->GetSessionId();
 }
 
-void DeleteController(const FileMetadata& file)
+void DeleteController(FileMetadata* file)
 {
 	const auto id = GetViewIdFromFileMetadata(file);
 	std::unique_lock<std::shared_mutex> lock(GlobalControllersMutex);
@@ -39,24 +40,16 @@ void DeleteController(const FileMetadata& file)
 			LogWarnF("Deleting SharedCacheController for view {:#x}, but there are still {} references", id,
 				controller->m_refs.load());
 
+		file->UnregisterNotification(controller);
 		controllers.erase(it);
-		LogDebugF("Deleted SharedCacheController for view {:?}", file.GetFilename().c_str());
+		LogDebugF("Deleted SharedCacheController for view {:?}", file->GetFilename().c_str());
 	}
 }
 
-void RegisterSharedCacheControllerDestructor()
-{
-	BNObjectDestructionCallbacks callbacks = {};
-	callbacks.destructFileMetadata = [](void* ctx, BNFileMetadata* obj) -> void {
-		const auto file = FileMetadata(obj);
-		DeleteController(file);
-	};
-	BNRegisterObjectDestructionCallbacks(&callbacks);
-}
-
-SharedCacheController::SharedCacheController(SharedCache&& cache, Ref<Logger> logger) : m_cache(std::move(cache))
+SharedCacheController::SharedCacheController(SharedCacheView* view, SharedCache&& cache, Ref<Logger> logger) : m_cache(std::move(cache))
 {
 	INIT_DSC_API_OBJECT();
+	m_view = view;
 	m_logger = std::move(logger);
 	m_loadedRegions = {};
 	m_loadedImages = {};
@@ -65,34 +58,36 @@ SharedCacheController::SharedCacheController(SharedCache&& cache, Ref<Logger> lo
 	m_regionFilter = std::regex(".*LINKEDIT.*");
 }
 
-DSCRef<SharedCacheController> SharedCacheController::Initialize(BinaryView& view, SharedCache&& cache)
+DSCRef<SharedCacheController> SharedCacheController::Initialize(SharedCacheView* view, SharedCache&& cache)
 {
-	auto id = GetViewIdFromFileMetadata(*view.GetFile());
+	auto id = GetViewIdFromFileMetadata(view->GetFile());
 	std::unique_lock<std::shared_mutex> lock(GlobalControllersMutex);
-	auto logger = new Logger("SharedCache.Controller", view.GetFile()->GetSessionId());
-	DSCRef<SharedCacheController> controller = new SharedCacheController(std::move(cache), logger);
+	auto logger = new Logger("SharedCache.Controller", view->GetFile()->GetSessionId());
+	DSCRef<SharedCacheController> controller = new SharedCacheController(view, std::move(cache), logger);
 
 	// Pull the settings from the view.
-	if (Ref<Settings> settings = view.GetLoadSettings(VIEW_NAME))
+	if (Ref<Settings> settings = view->GetLoadSettings(VIEW_NAME))
 	{
 		if (settings->Contains("loader.dsc.processObjC"))
-			controller->m_processObjC = settings->Get<bool>("loader.dsc.processObjC", &view);
+			controller->m_processObjC = settings->Get<bool>("loader.dsc.processObjC", view);
 		if (settings->Contains("loader.dsc.processCFStrings"))
-			controller->m_processCFStrings = settings->Get<bool>("loader.dsc.processCFStrings", &view);
+			controller->m_processCFStrings = settings->Get<bool>("loader.dsc.processCFStrings", view);
 		if (settings->Contains("loader.dsc.regionFilter"))
-			controller->m_regionFilter = std::regex(settings->Get<std::string>("loader.dsc.regionFilter", &view));
+			controller->m_regionFilter = std::regex(settings->Get<std::string>("loader.dsc.regionFilter", view));
 	}
 
 	// TODO: Support old shared cache metadata
 	// TODO: Not strictly necessary as the user has already loaded the information into the database, this would just
 	// TODO: prevent incidental extra work from being done when loading a region or image.
-	// const uint64_t oldStateCount = view.GetUIntMetadata(OLD_METADATA_KEY_COUNT);
+	// const uint64_t oldStateCount = view->GetUIntMetadata(OLD_METADATA_KEY_COUNT);
 
 	// Check the view auto metadata for shared cache information.
 	// This effectively restores the state of the opened database to when it was last saved.
 	// NOTE: We store on the parent view because hilariously, the metadata is not present until after view init.
-	if (const auto metadata = view.GetParentView()->QueryMetadata(METADATA_KEY))
+	if (const auto metadata = view->GetParentView()->QueryMetadata(METADATA_KEY))
 		controller->LoadMetadata(*metadata);
+
+	view->GetFile()->RegisterNotification(controller);
 
 	GlobalControllers().insert({id, controller});
 	return controller;
@@ -100,7 +95,7 @@ DSCRef<SharedCacheController> SharedCacheController::Initialize(BinaryView& view
 
 DSCRef<SharedCacheController> SharedCacheController::FromView(const BinaryView& view)
 {
-	auto id = GetViewIdFromFileMetadata(*view.GetFile());
+	auto id = GetViewIdFromFileMetadata(view.GetFile());
 	std::shared_lock<std::shared_mutex> lock(GlobalControllersMutex);
 	auto& dscViews = GlobalControllers();
 	auto dscView = dscViews.find(id);
@@ -316,3 +311,46 @@ std::unique_ptr<CacheStringScanner> SharedCacheController::CreateStringScanner()
 {
 	return std::make_unique<CacheStringScanner>(m_cache, m_regionFilter, m_logger);
 }
+
+void SharedCacheController::OnBeforeFileClosed(FileMetadata* file)
+{
+	DeleteController(file);
+}
+
+void SharedCacheController::OnAfterSnapshotSaved(FileMetadata* file, bool success)
+{
+	if (!success)
+		return;
+
+	auto projectFile = file->GetProjectFile();
+	if (!projectFile)
+		return;
+
+	auto project = projectFile->GetProject();
+	auto projectFolder = projectFile->GetFolder();
+
+	// The shared cache might be pointing as a primary file outside of our current folder
+	// In that case, the dependencies should be relative to the primary file
+	auto primaryFilePath = m_view->GetPrimaryFilePath();
+	if (primaryFilePath.has_value())
+	{
+		auto primaryFile = project->GetFileByPathOnDisk(*primaryFilePath);
+		if (primaryFile)
+		{
+			projectFolder = primaryFile->GetFolder();
+		}
+	}
+
+	std::set<std::string> dependencyFileNames = m_view->GetDependencyFileNames();
+	for (const auto& dependencyFile : project->GetFilesInFolder(projectFolder))
+	{
+		if (!dependencyFileNames.contains(dependencyFile->GetName()))
+		{
+			continue;
+		}
+
+		LogDebugF("Shared cache adding dependency {} -> {}", dependencyFile->GetName(), file->GetDisplayName());
+		projectFile->AddDependency(dependencyFile);
+	}
+}
+

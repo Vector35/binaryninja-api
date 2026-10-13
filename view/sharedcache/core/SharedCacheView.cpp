@@ -47,8 +47,6 @@ SharedCacheViewType::SharedCacheViewType() : BinaryViewType(VIEW_NAME, VIEW_NAME
 // We register all our one-shot stuff here, such as the object destructor.
 void SharedCacheViewType::Register()
 {
-	RegisterSharedCacheControllerDestructor();
-
 	static SharedCacheViewType type;
 	BinaryViewType::Register(&type);
 }
@@ -978,7 +976,7 @@ bool SharedCacheView::InitController()
 	// TODO: Here we should have all the regions and what not for the virtual memory populated, I think it might be a good idea
 	// TODO: To verify the regions are here and pointing at valid file accessor mappings, to make diagnosing issues quicker.
 
-	auto cacheController = SharedCacheController::Initialize(*this, std::move(sharedCache));
+	auto cacheController = SharedCacheController::Initialize(this, std::move(sharedCache));
 
 	{
 		auto logger = m_logger;
@@ -1336,6 +1334,14 @@ std::optional<std::string> SharedCacheView::GetPrimaryFilePath()
 	else
 		SetPrimaryFileName(BaseFileName(newPrimaryFilePath));
 	return newPrimaryFilePath;
+}
+
+std::set<std::string> SharedCacheView::GetDependencyFileNames() const
+{
+	std::set<std::string> dependencyFileNames = m_secondaryFileNames;
+	if (!m_primaryFileName.empty())
+		dependencyFileNames.insert(m_primaryFileName);
+	return dependencyFileNames;
 }
 
 Ref<Metadata> SharedCacheView::GetMetadata() const

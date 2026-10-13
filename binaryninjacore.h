@@ -1964,6 +1964,14 @@ extern "C"
 		void (*afterProjectFolderDeleted)(void* ctxt, BNProject* project, BNProjectFolder* projectFolder);
 	} BNProjectNotification;
 
+	typedef struct BNFileMetadataNotification
+	{
+		void* context;
+		void (*beforeSnapshotSaved)(void* ctxt, BNFileMetadata* file);
+		void (*afterSnapshotSaved)(void* ctxt, BNFileMetadata* file, bool success);
+		void (*beforeFileClosed)(void* ctxt, BNFileMetadata* file);
+	} BNFileMetadataNotification;
+
 	typedef struct BNFileAccessor
 	{
 		void* context;
@@ -5532,6 +5540,8 @@ extern "C"
 
 	BINARYNINJACOREAPI void BNRegisterProjectNotification(BNProject* project, BNProjectNotification* notify);
 	BINARYNINJACOREAPI void BNUnregisterProjectNotification(BNProject* project, BNProjectNotification* notify);
+	BINARYNINJACOREAPI void BNRegisterFileMetadataNotification(BNFileMetadata* file, BNFileMetadataNotification* notify);
+	BINARYNINJACOREAPI void BNUnregisterFileMetadataNotification(BNFileMetadata* file, BNFileMetadataNotification* notify);
 
 	BINARYNINJACOREAPI bool BNCanAssemble(BNBinaryView* view, BNArchitecture* arch);
 

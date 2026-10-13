@@ -117,6 +117,19 @@ class _FileMetadataAssociatedDataStore(associateddatastore._AssociatedDataStore)
 	_defaults = {}
 
 
+class FileMetadataNotification:
+	"""Override callbacks to observe saves and closing of a file."""
+
+	def on_before_snapshot_saved(self, file: 'FileMetadata') -> None:
+		pass
+
+	def on_after_snapshot_saved(self, file: 'FileMetadata', success: bool) -> None:
+		pass
+
+	def on_before_file_closed(self, file: 'FileMetadata') -> None:
+		pass
+
+
 class FileMetadata:
 	"""
 	``class FileMetadata`` represents the file being analyzed by Binary Ninja. It is responsible for opening,
@@ -138,6 +151,7 @@ class FileMetadata:
 			if filename is not None:
 				core.BNSetFilename(_handle, str(filename))
 		self._nav: Optional[NavigationHandler] = None
+		self._notifications = {}
 		assert _handle is not None
 		self.handle = _handle
 
@@ -146,9 +160,40 @@ class FileMetadata:
 
 	def __del__(self):
 		if core is not None:
+			for callback in self._notifications.values():
+				core.BNUnregisterFileMetadataNotification(self.handle, callback)
 			if self.navigation is not None:
 				core.BNSetFileMetadataNavigationHandler(self.handle, None)
 			core.BNFreeFileMetadata(self.handle)
+
+	def register_notification(self, notification: FileMetadataNotification) -> None:
+		"""Register a listener. Keep it registered until :meth:`unregister_notification` is called."""
+		if notification in self._notifications:
+			return
+		callbacks = core.BNFileMetadataNotification()
+		callbacks.context = 0
+
+		def invoke(method, handle, *args):
+			try:
+				file = FileMetadata(handle=core.BNNewFileReference(handle))
+				getattr(notification, method)(file, *args)
+			except Exception:
+				log_error_for_exception("Unhandled Python exception in FileMetadataNotification")
+
+		callbacks.beforeSnapshotSaved = callbacks.beforeSnapshotSaved.__class__(
+			lambda ctxt, handle: invoke('on_before_snapshot_saved', handle))
+		callbacks.afterSnapshotSaved = callbacks.afterSnapshotSaved.__class__(
+			lambda ctxt, handle, success: invoke('on_after_snapshot_saved', handle, success))
+		callbacks.beforeFileClosed = callbacks.beforeFileClosed.__class__(
+			lambda ctxt, handle: invoke('on_before_file_closed', handle))
+		self._notifications[notification] = callbacks
+		core.BNRegisterFileMetadataNotification(self.handle, callbacks)
+
+	def unregister_notification(self, notification: FileMetadataNotification) -> None:
+		"""Stop receiving notifications from this file."""
+		callbacks = self._notifications.pop(notification, None)
+		if callbacks is not None:
+			core.BNUnregisterFileMetadataNotification(self.handle, callbacks)
 
 	def __eq__(self, other):
 		if not isinstance(other, self.__class__):

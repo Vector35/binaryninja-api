@@ -113,6 +113,51 @@ pub struct FileMetadata {
     pub(crate) handle: *mut BNFileMetadata,
 }
 
+/// Listener for file save and close events.
+pub trait FileMetadataNotification {
+    fn before_snapshot_saved(&self, _file: &FileMetadata) {}
+    fn after_snapshot_saved(&self, _file: &FileMetadata, _success: bool) {}
+    fn before_file_closed(&self, _file: &FileMetadata) {}
+}
+
+/// Unregisters the listener when dropped. Keep this alive while notifications are needed.
+pub struct FileMetadataNotificationHandle<T: FileMetadataNotification> {
+    file: Ref<FileMetadata>,
+    callbacks: Box<BNFileMetadataNotification>,
+    _listener: Box<T>,
+}
+
+impl<T: FileMetadataNotification> Drop for FileMetadataNotificationHandle<T> {
+    fn drop(&mut self) {
+        unsafe { BNUnregisterFileMetadataNotification(self.file.handle, &mut *self.callbacks) }
+    }
+}
+
+unsafe extern "C" fn before_snapshot_saved<T: FileMetadataNotification>(
+    ctxt: *mut c_void,
+    file: *mut BNFileMetadata,
+) {
+    let listener = &*(ctxt as *const T);
+    listener.before_snapshot_saved(&FileMetadata::from_raw(file));
+}
+
+unsafe extern "C" fn after_snapshot_saved<T: FileMetadataNotification>(
+    ctxt: *mut c_void,
+    file: *mut BNFileMetadata,
+    success: bool,
+) {
+    let listener = &*(ctxt as *const T);
+    listener.after_snapshot_saved(&FileMetadata::from_raw(file), success);
+}
+
+unsafe extern "C" fn before_file_closed<T: FileMetadataNotification>(
+    ctxt: *mut c_void,
+    file: *mut BNFileMetadata,
+) {
+    let listener = &*(ctxt as *const T);
+    listener.before_file_closed(&FileMetadata::from_raw(file));
+}
+
 impl FileMetadata {
     pub(crate) fn from_raw(handle: *mut BNFileMetadata) -> Self {
         Self { handle }
@@ -140,6 +185,25 @@ impl FileMetadata {
     pub fn close(&self) {
         unsafe {
             BNCloseFile(self.handle);
+        }
+    }
+
+    pub fn register_notification<T: FileMetadataNotification>(
+        &self,
+        listener: T,
+    ) -> FileMetadataNotificationHandle<T> {
+        let mut listener = Box::new(listener);
+        let mut callbacks = Box::new(BNFileMetadataNotification {
+            context: &mut *listener as *mut T as *mut c_void,
+            beforeSnapshotSaved: Some(before_snapshot_saved::<T>),
+            afterSnapshotSaved: Some(after_snapshot_saved::<T>),
+            beforeFileClosed: Some(before_file_closed::<T>),
+        });
+        unsafe { BNRegisterFileMetadataNotification(self.handle, &mut *callbacks) }
+        FileMetadataNotificationHandle {
+            file: self.to_owned(),
+            callbacks,
+            _listener: listener,
         }
     }
 

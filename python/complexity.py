@@ -59,13 +59,11 @@ All metrics are exposed through a single entry point, :py:func:`get_code_complex
 also available as :py:meth:`Function.get_complexity() <binaryninja.function.Function.get_complexity>`.
 """
 
-import math
-from collections import Counter
 from typing import Callable, Dict, Iterable, Iterator, List, NamedTuple, Optional, Set, Tuple, TYPE_CHECKING, Union
 
+from . import _binaryninjacore as core
 from . import mediumlevelil
-from . import highlevelil
-from .enums import MediumLevelILOperation, HighLevelILOperation, SymbolType
+from .enums import MediumLevelILOperation, SymbolType
 from .log import log_warn
 
 if TYPE_CHECKING:
@@ -85,32 +83,6 @@ def function_key(func: 'function.Function') -> FunctionKey:
 		int(func.start),
 	)
 
-
-# Top-level MLIL statement operations that alter control flow. Calls are intentionally excluded:
-# they do not change the shape of the *local* control flow graph, and their cost is already
-# captured by `instruction_count` and `halstead`.
-_MLIL_BRANCH_OPERATIONS = {
-	MediumLevelILOperation.MLIL_IF,
-	MediumLevelILOperation.MLIL_GOTO,
-	MediumLevelILOperation.MLIL_JUMP,
-	MediumLevelILOperation.MLIL_JUMP_TO,
-	MediumLevelILOperation.MLIL_TAILCALL,
-	MediumLevelILOperation.MLIL_TAILCALL_UNTYPED,
-	MediumLevelILOperation.MLIL_TAILCALL_SSA,
-	MediumLevelILOperation.MLIL_TAILCALL_UNTYPED_SSA,
-}
-
-# HLIL operations that introduce a new level of structural nesting.
-_HLIL_NESTING_OPERATIONS = {
-	HighLevelILOperation.HLIL_IF,
-	HighLevelILOperation.HLIL_WHILE,
-	HighLevelILOperation.HLIL_WHILE_SSA,
-	HighLevelILOperation.HLIL_DO_WHILE,
-	HighLevelILOperation.HLIL_DO_WHILE_SSA,
-	HighLevelILOperation.HLIL_FOR,
-	HighLevelILOperation.HLIL_FOR_SSA,
-	HighLevelILOperation.HLIL_SWITCH,
-}
 
 _MLIL_CALL_OPERATIONS = {
 	MediumLevelILOperation.MLIL_CALL,
@@ -153,54 +125,23 @@ DEFAULT_COMPOSITE_WEIGHTS: Dict[str, float] = {
 }
 
 
-def _walk_mlil(instr: 'mediumlevelil.MediumLevelILInstruction') -> Iterator['mediumlevelil.MediumLevelILInstruction']:
-	"""Yield `instr` and every MLIL sub-expression it contains, depth-first."""
-	yield instr
-	for _, operand, _ in instr.detailed_operands:
-		items = operand if isinstance(operand, list) else [operand]
-		for item in items:
-			if isinstance(item, mediumlevelil.MediumLevelILInstruction):
-				yield from _walk_mlil(item)
-
-
-def _walk_hlil(instr: 'highlevelil.HighLevelILInstruction') -> Iterator['highlevelil.HighLevelILInstruction']:
-	"""Yield `instr` and every HLIL sub-expression it contains, depth-first."""
-	yield instr
-	for _, operand, _ in instr.detailed_operands:
-		items = operand if isinstance(operand, list) else [operand]
-		for item in items:
-			if isinstance(item, highlevelil.HighLevelILInstruction):
-				yield from _walk_hlil(item)
-
-
 def cyclomatic_complexity(func: 'function.Function') -> float:
 	"""
 	McCabe cyclomatic complexity: ``M = E - N + 2`` over the function's basic block graph.
 
 	Measures the number of branches in the control flow graph, independent of function size or
-	the kinds of instructions used.
+	the kinds of instructions used. Computed natively in Core - see
+	:py:meth:`~binaryninja.function.Function.get_complexity`.
 	"""
-	blocks = list(func.basic_blocks)
-	n = len(blocks)
-	if n == 0:
-		return 0.0
-	e = sum(len(bb.outgoing_edges) for bb in blocks)
-	return float(e - n + 2)
+	return core.BNGetFunctionCyclomaticComplexity(func.handle)
 
 
 def instruction_count_complexity(func: 'function.Function') -> float:
 	"""
-	Raw code length: total number of MLIL instructions, including sub-expressions.
-
-	Falls back to a count of disassembly lines if MLIL is not available for this function.
+	Raw code length: total number of MLIL instructions, including sub-expressions. 0.0 if MLIL is
+	not available for this function. Computed natively in Core.
 	"""
-	mlil = func.mlil
-	if mlil is None:
-		return float(sum(1 for _ in func.instructions))
-	count = 0
-	for stmt in mlil.instructions:
-		count += sum(1 for _ in _walk_mlil(stmt))
-	return float(count)
+	return core.BNGetFunctionInstructionCountComplexity(func.handle)
 
 
 def token_count_complexity(func: 'function.Function') -> float:
@@ -211,9 +152,10 @@ def token_count_complexity(func: 'function.Function') -> float:
 	Unlike `instruction_count`, which counts semantic MLIL nodes, this counts the literal tokens
 	of the disassembly listing you'd actually read - two functions with the same MLIL shape can
 	still differ here if one uses instructions with more operands/addressing-mode tokens per line
-	than the other. Always available, even for functions without MLIL/HLIL.
+	than the other. Always available, even for functions without MLIL/HLIL. Computed natively in
+	Core.
 	"""
-	return float(sum(len(tokens) for tokens, _length in func.instructions))
+	return core.BNGetFunctionTokenCountComplexity(func.handle)
 
 
 def branch_density_complexity(func: 'function.Function') -> float:
@@ -221,16 +163,10 @@ def branch_density_complexity(func: 'function.Function') -> float:
 	Fraction (0.0-1.0) of top-level MLIL statements that alter control flow (if/goto/jump/tailcall).
 
 	Two functions can have the same instruction count but very different "branchiness"; this
-	metric isolates that factor independent of raw length.
+	metric isolates that factor independent of raw length. 0.0 if MLIL is not available for this
+	function. Computed natively in Core.
 	"""
-	mlil = func.mlil
-	if mlil is None:
-		return 0.0
-	statements = list(mlil.instructions)
-	if not statements:
-		return 0.0
-	branches = sum(1 for stmt in statements if stmt.operation in _MLIL_BRANCH_OPERATIONS)
-	return branches / len(statements)
+	return core.BNGetFunctionBranchDensityComplexity(func.handle)
 
 
 def halstead_volume_complexity(func: 'function.Function') -> float:
@@ -242,46 +178,10 @@ def halstead_volume_complexity(func: 'function.Function') -> float:
 	* ``N`` (length) is the total number of operator and operand occurrences.
 
 	This captures how diverse the instruction "types" used by a function are, as distinct from
-	how many instructions there are in total.
+	how many instructions there are in total. 0.0 if MLIL is not available for this function.
+	Computed natively in Core.
 	"""
-	mlil = func.mlil
-	if mlil is None:
-		return 0.0
-
-	operators: Counter = Counter()
-	operands: Counter = Counter()
-	for stmt in mlil.instructions:
-		for instr in _walk_mlil(stmt):
-			operators[instr.operation] += 1
-			for _, operand, _ in instr.detailed_operands:
-				values = operand if isinstance(operand, list) else [operand]
-				for value in values:
-					if value is None or isinstance(value, mediumlevelil.MediumLevelILInstruction):
-						# Sub-expressions are counted as their own operator nodes above, not as operands.
-						continue
-					operands[repr(value)] += 1
-
-	distinct_operators = len(operators)
-	distinct_operands = len(operands)
-	total_operators = sum(operators.values())
-	total_operands = sum(operands.values())
-
-	vocabulary = distinct_operators + distinct_operands
-	length = total_operators + total_operands
-	if vocabulary <= 1:
-		return 0.0
-	return length * math.log2(vocabulary)
-
-
-def _max_nesting_depth(instr: 'highlevelil.HighLevelILInstruction', current_depth: int) -> int:
-	next_depth = current_depth + 1 if instr.operation in _HLIL_NESTING_OPERATIONS else current_depth
-	deepest = next_depth
-	for _, operand, _ in instr.detailed_operands:
-		items = operand if isinstance(operand, list) else [operand]
-		for item in items:
-			if isinstance(item, highlevelil.HighLevelILInstruction):
-				deepest = max(deepest, _max_nesting_depth(item, next_depth))
-	return deepest
+	return core.BNGetFunctionHalsteadComplexity(func.handle)
 
 
 def nesting_depth_complexity(func: 'function.Function') -> float:
@@ -290,12 +190,9 @@ def nesting_depth_complexity(func: 'function.Function') -> float:
 
 	Two functions with identical cyclomatic complexity can differ a lot in how deeply their
 	branches are nested; deeply nested code is harder to hold in your head even with the same
-	number of paths.
+	number of paths. 0.0 if HLIL is not available for this function. Computed natively in Core.
 	"""
-	hlil = func.hlil
-	if hlil is None or hlil.root is None:
-		return 0.0
-	return float(_max_nesting_depth(hlil.root, 0))
+	return core.BNGetFunctionNestingDepthComplexity(func.handle)
 
 
 def cognitive_complexity(func: 'function.Function') -> float:
@@ -304,28 +201,10 @@ def cognitive_complexity(func: 'function.Function') -> float:
 
 	Every control-flow-breaking construct (if/while/for/do-while/switch) costs 1 point, plus 1
 	additional point for every level of nesting it sits inside. Unlike cyclomatic complexity,
-	this penalizes deeply nested logic more than the same number of branches laid out flat.
+	this penalizes deeply nested logic more than the same number of branches laid out flat. 0.0 if
+	HLIL is not available for this function. Computed natively in Core.
 	"""
-	hlil = func.hlil
-	if hlil is None or hlil.root is None:
-		return 0.0
-
-	score = 0.0
-
-	def visit(instr: 'highlevelil.HighLevelILInstruction', nesting: int) -> None:
-		nonlocal score
-		next_nesting = nesting
-		if instr.operation in _HLIL_NESTING_OPERATIONS:
-			score += 1 + nesting
-			next_nesting = nesting + 1
-		for _, operand, _ in instr.detailed_operands:
-			items = operand if isinstance(operand, list) else [operand]
-			for item in items:
-				if isinstance(item, highlevelil.HighLevelILInstruction):
-					visit(item, next_nesting)
-
-	visit(hlil.root, 0)
-	return score
+	return core.BNGetFunctionCognitiveComplexity(func.handle)
 
 
 class ComplexityCache:
@@ -505,11 +384,13 @@ def _classify_call_sites(func: 'function.Function', cache: ComplexityCache = Non
 def compute_metric_bundle(
 	func: 'function.Function', cache: ComplexityCache = None
 ) -> Dict[str, float]:
-	"""Compute every non-transitive metric with one MLIL pass and one HLIL pass.
+	"""Compute every non-transitive metric for `func` in one call.
 
 	This is the fast path for table sweeps. The individual metric functions remain the public,
-	one-metric-at-a-time API, while callers that need a complete row avoid traversing the same IL
-	three or four times and avoid recomputing every composite component.
+	one-metric-at-a-time API; this just avoids recomputing every composite component and classifying
+	call sites more than once. The 7 non-interprocedural metrics are each a single native call into
+	Core, not a Python-side IL walk, so there's no separate traversal to batch here anymore - only
+	`fan_out`'s call-site classification is still Python-side work worth sharing with `cache`.
 	"""
 	if cache is None:
 		cache = ComplexityCache([func])
@@ -517,88 +398,20 @@ def compute_metric_bundle(
 		cache.remember_function(func)
 	key = function_key(func)
 
-	blocks = list(func.basic_blocks)
-	cyclomatic = 0.0 if not blocks else float(sum(len(bb.outgoing_edges) for bb in blocks) - len(blocks) + 2)
-	token_count = float(sum(len(tokens) for tokens, _length in func.instructions))
+	calls = _classify_call_sites(func, cache)
+	distinct_targets = len(set(calls.internal_callee_keys))
 
-	mlil = func.mlil
-	instruction_count = 0.0
-	branch_density = 0.0
-	halstead = 0.0
-	internal_callee_keys: List[FunctionKey] = []
-	external_count = 0
-	indirect_count = 0
-	if mlil is None:
-		instruction_count = float(sum(1 for _ in func.instructions))
-	else:
-		statements = list(mlil.instructions)
-		branches = 0
-		operators: Counter = Counter()
-		operands: Counter = Counter()
-		for stmt in statements:
-			if stmt.operation in _MLIL_BRANCH_OPERATIONS:
-				branches += 1
-			if stmt.operation in _MLIL_SYSCALL_OPERATIONS:
-				external_count += 1
-			elif stmt.operation in _MLIL_CALL_OPERATIONS:
-				dest = stmt.dest
-				if not isinstance(dest, mediumlevelil.MediumLevelILConstBase):
-					indirect_count += 1
-				else:
-					target = cache.resolve_function(func, dest.constant)
-					if target is None:
-						external_count += 1
-					else:
-						symbol = func.view.get_symbol_at(dest.constant)
-						if symbol is not None and symbol.type in _EXTERNAL_SYMBOL_TYPES:
-							external_count += 1
-						else:
-							internal_callee_keys.append(function_key(target))
-			for instr in _walk_mlil(stmt):
-				instruction_count += 1.0
-				operators[instr.operation] += 1
-				for _, operand, _ in instr.detailed_operands:
-					for value in operand if isinstance(operand, list) else [operand]:
-						if value is None or isinstance(value, mediumlevelil.MediumLevelILInstruction):
-							continue
-						operands[repr(value)] += 1
-		branch_density = branches / len(statements) if statements else 0.0
-		vocabulary = len(operators) + len(operands)
-		length = sum(operators.values()) + sum(operands.values())
-		halstead = 0.0 if vocabulary <= 1 else length * math.log2(vocabulary)
-
-	hlil = func.hlil
-	nesting_depth = 0.0
-	cognitive = 0.0
-	if hlil is not None and hlil.root is not None:
-		def visit(instr: 'highlevelil.HighLevelILInstruction', nesting: int) -> None:
-			nonlocal nesting_depth, cognitive
-			next_nesting = nesting
-			if instr.operation in _HLIL_NESTING_OPERATIONS:
-				next_nesting = nesting + 1
-				nesting_depth = max(nesting_depth, float(next_nesting))
-				cognitive += 1 + nesting
-			for _, operand, _ in instr.detailed_operands:
-				for item in operand if isinstance(operand, list) else [operand]:
-					if isinstance(item, highlevelil.HighLevelILInstruction):
-						visit(item, next_nesting)
-
-		visit(hlil.root, 0)
-
-	calls = _CallSites(internal_callee_keys, external_count, indirect_count)
-	cache.call_sites[key] = calls
-	distinct_targets = len(set(internal_callee_keys))
 	values = {
-		'cyclomatic': cyclomatic,
-		'instruction_count': instruction_count,
-		'token_count': token_count,
-		'branch_density': branch_density,
-		'halstead': halstead,
-		'nesting_depth': nesting_depth,
-		'cognitive': cognitive,
+		'cyclomatic': cyclomatic_complexity(func),
+		'instruction_count': instruction_count_complexity(func),
+		'token_count': token_count_complexity(func),
+		'branch_density': branch_density_complexity(func),
+		'halstead': halstead_volume_complexity(func),
+		'nesting_depth': nesting_depth_complexity(func),
+		'cognitive': cognitive_complexity(func),
 		'fan_out': float(
-			distinct_targets + 0.25 * (len(internal_callee_keys) - distinct_targets) +
-			1.5 * external_count + 2.5 * indirect_count
+			distinct_targets + 0.25 * (len(calls.internal_callee_keys) - distinct_targets) +
+			1.5 * calls.external_count + 2.5 * calls.indirect_count
 		),
 		'code_references': code_reference_count_complexity(func),
 	}

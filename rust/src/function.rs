@@ -45,7 +45,9 @@ use crate::confidence::Conf;
 use crate::high_level_il::HighLevelILFunction;
 use crate::language_representation::CoreLanguageRepresentationFunction;
 use crate::low_level_il::LowLevelILRegularFunction;
-use crate::medium_level_il::{MediumLevelILFunction, MediumLevelILLiftedInstruction, MediumLevelILLiftedInstructionKind};
+use crate::medium_level_il::{
+    MediumLevelILFunction, MediumLevelILLiftedInstruction, MediumLevelILLiftedInstructionKind,
+};
 use crate::metadata::Metadata;
 use crate::variable::{
     MergedVariable, NamedVariableWithType, RegisterValue, RegisterValueType,
@@ -2942,7 +2944,12 @@ fn classify_call_sites(func: &Function) -> CallSites {
 // calls, recursively, up to `depth` hops. Each function is only ever counted once (tracked by
 // start address) across the whole walk, which both breaks recursion/cycles safely and avoids
 // over-counting a shared helper reached through multiple paths.
-fn transitive_complexity_walk(func: &Function, depth: usize, decay: f64, visited: &mut HashSet<u64>) -> f64 {
+fn transitive_complexity_walk(
+    func: &Function,
+    depth: usize,
+    decay: f64,
+    visited: &mut HashSet<u64>,
+) -> f64 {
     if !visited.insert(func.start()) {
         return 0.0;
     }

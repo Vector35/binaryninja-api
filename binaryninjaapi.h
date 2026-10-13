@@ -3716,6 +3716,22 @@ namespace BinaryNinja {
 	/*!
 		\ingroup filemetadata
 	*/
+	class FileMetadataNotification
+	{
+		BNFileMetadataNotification m_callbacks;
+		static void BeforeSnapshotSavedCallback(void* ctxt, BNFileMetadata* file);
+		static void AfterSnapshotSavedCallback(void* ctxt, BNFileMetadata* file, bool success);
+		static void BeforeFileClosedCallback(void* ctxt, BNFileMetadata* file);
+
+	public:
+		FileMetadataNotification();
+		virtual ~FileMetadataNotification() = default;
+		BNFileMetadataNotification* GetCallbacks() { return &m_callbacks; }
+		virtual void OnBeforeSnapshotSaved(FileMetadata*) {}
+		virtual void OnAfterSnapshotSaved(FileMetadata*, bool) {}
+		virtual void OnBeforeFileClosed(FileMetadata*) {}
+	};
+
 	class FileMetadata : public CoreRefCountObject<BNFileMetadata, BNNewFileReference, BNFreeFileMetadata>
 	{
 	  public:
@@ -3727,6 +3743,9 @@ namespace BinaryNinja {
 		/*! Close the underlying file handle
 		*/
 		void Close();
+
+		void RegisterNotification(class FileMetadataNotification* notify);
+		void UnregisterNotification(class FileMetadataNotification* notify);
 
 		void SetNavigationHandler(NavigationHandler* handler);
 

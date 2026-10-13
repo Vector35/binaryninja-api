@@ -27,7 +27,7 @@ use crate::{
     platform::Platform,
     references::CodeReference,
     string::*,
-    symbol::{Binding, Symbol},
+    symbol::{Binding, Symbol, SymbolType},
     tags::{Tag, TagReference, TagType},
     types::{IntegerDisplayType, QualifiedName, ReturnValue, Type, ValueLocation},
 };
@@ -45,14 +45,14 @@ use crate::confidence::Conf;
 use crate::high_level_il::HighLevelILFunction;
 use crate::language_representation::CoreLanguageRepresentationFunction;
 use crate::low_level_il::LowLevelILRegularFunction;
-use crate::medium_level_il::MediumLevelILFunction;
+use crate::medium_level_il::{MediumLevelILFunction, MediumLevelILLiftedInstruction, MediumLevelILLiftedInstructionKind};
 use crate::metadata::Metadata;
 use crate::variable::{
     MergedVariable, NamedVariableWithType, RegisterValue, RegisterValueType,
     StackVariableReference, Variable,
 };
 use crate::workflow::Workflow;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::ffi::CStr;
 use std::fmt::{Debug, Formatter};
 use std::ptr::NonNull;
@@ -654,37 +654,99 @@ impl Function {
         }
     }
 
-    /// Computes a code complexity score for this function using the named metric (e.g.
-    /// `"composite"`, `"cyclomatic"`, `"transitive"`, ...). See [`Function::complexity_metric_names`]
-    /// for the full, current list.
-    ///
-    /// Returns `Err` with a message listing the valid names if `metric` isn't recognized - the core
-    /// itself can't raise across the C ABI, so this validates client-side before ever calling it.
-    pub fn complexity(&self, metric: &str) -> Result<f64, String> {
-        let valid = Self::complexity_metric_names();
-        if !valid.iter().any(|m| m == metric) {
-            return Err(format!(
-                "Unknown complexity metric {metric:?}; valid options are: {}",
-                valid.join(", ")
-            ));
-        }
-
-        let raw_metric = metric.to_cstr();
-        Ok(unsafe { BNGetFunctionComplexity(self.handle, raw_metric.as_ptr()) })
+    // Code complexity primitives - thin wrappers over the matching BNGetFunction*Complexity Core
+    // calls, each a single whole-function walk.
+    pub fn cyclomatic_complexity(&self) -> f64 {
+        unsafe { BNGetFunctionCyclomaticComplexity(self.handle) }
     }
 
-    /// Names accepted by [`Function::complexity`]'s `metric` parameter.
-    pub fn complexity_metric_names() -> Vec<String> {
-        unsafe {
-            let mut count = 0usize;
-            let names_ptr = BNGetFunctionComplexityMetricNames(&mut count);
-            let names = std::slice::from_raw_parts(names_ptr, count)
-                .iter()
-                .map(|&raw| CStr::from_ptr(raw).to_string_lossy().into_owned())
-                .collect();
-            BNFreeStringList(names_ptr, count);
-            names
+    pub fn instruction_count_complexity(&self) -> f64 {
+        unsafe { BNGetFunctionInstructionCountComplexity(self.handle) }
+    }
+
+    pub fn token_count_complexity(&self) -> f64 {
+        unsafe { BNGetFunctionTokenCountComplexity(self.handle) }
+    }
+
+    pub fn branch_density_complexity(&self) -> f64 {
+        unsafe { BNGetFunctionBranchDensityComplexity(self.handle) }
+    }
+
+    pub fn halstead_complexity(&self) -> f64 {
+        unsafe { BNGetFunctionHalsteadComplexity(self.handle) }
+    }
+
+    pub fn nesting_depth_complexity(&self) -> f64 {
+        unsafe { BNGetFunctionNestingDepthComplexity(self.handle) }
+    }
+
+    pub fn cognitive_complexity(&self) -> f64 {
+        unsafe { BNGetFunctionCognitiveComplexity(self.handle) }
+    }
+
+    /// A single weighted score blending the individual primitives above. Weights are tuned so
+    /// that a small, simple function scores in the single digits and a deeply nested, branchy
+    /// function scores in the hundreds. Callers who want different behavior should call the
+    /// primitives directly and combine them with their own weights.
+    ///
+    /// Implemented here rather than in Core: it's only a bounded number of whole-function calls,
+    /// not a per-instruction walk, so there's nothing to gain from Core doing the aggregation.
+    pub fn composite_complexity(&self) -> f64 {
+        const CYCLOMATIC_WEIGHT: f64 = 0.25;
+        const INSTRUCTION_COUNT_WEIGHT: f64 = 0.05;
+        const BRANCH_DENSITY_WEIGHT: f64 = 10.0;
+        const HALSTEAD_WEIGHT: f64 = 0.05;
+        const NESTING_DEPTH_WEIGHT: f64 = 2.0;
+        const COGNITIVE_WEIGHT: f64 = 0.5;
+
+        CYCLOMATIC_WEIGHT * self.cyclomatic_complexity()
+            + INSTRUCTION_COUNT_WEIGHT * self.instruction_count_complexity()
+            + BRANCH_DENSITY_WEIGHT * self.branch_density_complexity()
+            + HALSTEAD_WEIGHT * self.halstead_complexity()
+            + NESTING_DEPTH_WEIGHT * self.nesting_depth_complexity()
+            + COGNITIVE_WEIGHT * self.cognitive_complexity()
+    }
+
+    /// How much, and how riskily, this function fans out into other code - captures the "main()
+    /// is just a dispatcher" shape that every intraprocedural metric misses. Distinct callees
+    /// count in full; repeated calls to a callee already counted (e.g. in a loop) count for less.
+    /// Calls to external/library code count more, since we can't inspect what they do. Indirect
+    /// calls count the most, since we can't even statically know what runs.
+    pub fn fan_out_complexity(&self) -> f64 {
+        let calls = classify_call_sites(self);
+
+        let mut distinct_targets = HashSet::new();
+        for callee in &calls.internal_callees {
+            distinct_targets.insert(callee.start());
         }
+
+        let repeat_calls = calls.internal_callees.len() - distinct_targets.len();
+
+        distinct_targets.len() as f64
+            + 0.25 * repeat_calls as f64
+            + 1.5 * calls.external_count as f64
+            + 2.5 * calls.indirect_count as f64
+    }
+
+    /// How many places in this binary's code reference this function - the complement of
+    /// [`Function::fan_out_complexity`]: that measures how much this function reaches into other
+    /// code, this measures how much other code reaches into it. Not "complexity" in the same
+    /// sense as the other metrics - a heavily-referenced function isn't necessarily hard to read
+    /// on its own - but it's a direct measure of blast radius.
+    pub fn code_reference_complexity(&self) -> f64 {
+        self.view().code_refs_to_addr(self.start()).len() as f64
+    }
+
+    /// This function's own composite complexity plus the (decayed) composite complexity of
+    /// everything it calls, recursively, up to two hops. This is the metric that actually answers
+    /// "this function looks simple, but how much do I have to read to understand what it does": a
+    /// function with a low `composite` score but a high `transitive` score is exactly a thin
+    /// dispatcher over a lot of real work.
+    pub fn transitive_complexity(&self) -> f64 {
+        const MAX_DEPTH: usize = 2;
+        const DECAY: f64 = 0.5;
+        let mut visited = HashSet::new();
+        transitive_complexity_walk(self, MAX_DEPTH, DECAY, &mut visited)
     }
 
     pub fn return_type(&self) -> Conf<Ref<Type>> {
@@ -2784,6 +2846,120 @@ impl Function {
         let array: Array<Location> = unsafe { Array::new(raw, count, ()) };
         array.into_iter().collect()
     }
+}
+
+// One entry per call site that resolves to a function defined in this binary (duplicates
+// included, e.g. the same helper called twice shows up twice). Backs fan_out_complexity and
+// transitive_complexity.
+#[derive(Default)]
+struct CallSites {
+    internal_callees: Vec<Ref<Function>>,
+    external_count: usize,
+    indirect_count: usize,
+}
+
+// A call-like instruction's dest operand resolves to a target address only when it's a plain
+// constant/pointer/import - anything else (a register, a loaded value, ...) is an indirect call
+// we can't statically chase.
+fn resolve_call_dest(dest: &MediumLevelILLiftedInstruction) -> Option<u64> {
+    use MediumLevelILLiftedInstructionKind::*;
+    match &dest.kind {
+        Const(c) | ConstPtr(c) | Import(c) => Some(c.constant),
+        _ => None,
+    }
+}
+
+// Walks every call-like MLIL statement in `func` and sorts it into one of three buckets:
+//
+// * resolves to a function defined in this binary -> appended to internal_callees
+// * resolves to an address, but that address is an import/thunk/library stub, or analysis
+//   couldn't identify a function there -> external_count
+// * the target isn't a static constant at all (computed/register call, e.g. through a function
+//   pointer or vtable) -> indirect_count, since we can't know what runs there without deeper (and
+//   possibly incomplete) analysis
+//
+// Built entirely from already-public API calls (MLIL iteration, BinaryView lookups) - this used
+// to be Core-internal, but nothing here needs a per-instruction callback into Core, so there's
+// nothing to gain from Core doing it on our behalf.
+fn classify_call_sites(func: &Function) -> CallSites {
+    use MediumLevelILLiftedInstructionKind::*;
+
+    let mut result = CallSites::default();
+
+    let Ok(mlil) = func.medium_level_il() else {
+        return result;
+    };
+
+    let view = func.view();
+
+    for block in mlil.basic_blocks().iter() {
+        for instr in block.iter() {
+            let lifted = instr.lift();
+
+            let dest = match &lifted.kind {
+                Syscall(_) | SyscallUntyped(_) => {
+                    result.external_count += 1;
+                    continue;
+                }
+                Call(op) | Tailcall(op) => op.dest.as_ref(),
+                CallUntyped(op) | TailcallUntyped(op) => op.dest.as_ref(),
+                _ => continue,
+            };
+
+            let Some(target_addr) = resolve_call_dest(dest) else {
+                result.indirect_count += 1;
+                continue;
+            };
+
+            let targets = view.functions_at(target_addr);
+            if targets.is_empty() {
+                result.external_count += 1;
+                continue;
+            }
+
+            let is_external = view.symbol_by_address(target_addr).is_some_and(|symbol| {
+                matches!(
+                    symbol.sym_type(),
+                    SymbolType::ImportAddress
+                        | SymbolType::ImportedFunction
+                        | SymbolType::External
+                        | SymbolType::LibraryFunction
+                )
+            });
+
+            if is_external {
+                result.external_count += 1;
+            } else {
+                result.internal_callees.push(targets.get(0).clone());
+            }
+        }
+    }
+
+    result
+}
+
+// `func`'s own composite complexity plus the (decayed) composite complexity of everything it
+// calls, recursively, up to `depth` hops. Each function is only ever counted once (tracked by
+// start address) across the whole walk, which both breaks recursion/cycles safely and avoids
+// over-counting a shared helper reached through multiple paths.
+fn transitive_complexity_walk(func: &Function, depth: usize, decay: f64, visited: &mut HashSet<u64>) -> f64 {
+    if !visited.insert(func.start()) {
+        return 0.0;
+    }
+
+    let total = func.composite_complexity();
+    if depth == 0 {
+        return total;
+    }
+
+    let mut callees = HashMap::new();
+    for callee in classify_call_sites(func).internal_callees {
+        callees.entry(callee.start()).or_insert(callee);
+    }
+
+    callees.values().fold(total, |acc, callee| {
+        acc + decay * transitive_complexity_walk(callee, depth - 1, decay, visited)
+    })
 }
 
 impl Debug for Function {

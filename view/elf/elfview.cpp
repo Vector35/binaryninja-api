@@ -127,10 +127,13 @@ ElfView::ElfView(BinaryView* data, bool parseOnly): BinaryView("ELF", data->GetF
 	m_headerFlags = header.flags;
 	m_fileSize = data->GetLength();
 
-	// Reject truncated section tables before parsing entries or creating annotations.
+	// Skip truncated tables before parsing entries or creating annotations.
 	if (m_sectionHeaderCount && ((m_sectionHeaderOffset > m_fileSize)
 		|| (m_sectionHeaderCount > (m_fileSize - m_sectionHeaderOffset) / header.sectionHeaderSize)))
-		throw ElfFormatException("section header table extends beyond end of file");
+	{
+		m_logger->LogWarn("Section header table extends beyond end of file, skipping section headers");
+		m_sectionHeaderCount = 0;
+	}
 
 	m_logger->LogDebug(
 		"ELF Header\n"
@@ -214,7 +217,7 @@ ElfView::ElfView(BinaryView* data, bool parseOnly): BinaryView("ELF", data->GetF
 	{
 		reader.Seek(header.sectionHeaderOffset);
 		m_logger->LogDebug("Section List");
-		for (size_t i = 0; i < header.sectionHeaderCount; i++)
+		for (size_t i = 0; i < m_sectionHeaderCount; i++)
 		{
 			Elf64SectionHeader section;
 			reader.Seek(header.sectionHeaderOffset + (i * header.sectionHeaderSize));
@@ -247,7 +250,12 @@ ElfView::ElfView(BinaryView* data, bool parseOnly): BinaryView("ELF", data->GetF
 
 			if (section.type != ELF_SHT_NULL && section.type != ELF_SHT_NOBITS
 				&& (section.offset > m_fileSize || section.size > m_fileSize - section.offset))
-				throw ElfFormatException("section contents extend beyond end of file");
+			{
+				m_logger->LogWarn("Section %zu contents extend beyond end of file, skipping section", i);
+				// Preserve section indices used by symbols, relocations, and sh_link.
+				m_elfSections.push_back({});
+				continue;
+			}
 
 			m_elfSections.push_back(section);
 
@@ -3185,7 +3193,7 @@ bool ElfView::ParseArmAttributesForThumb(BinaryReader &reader, const std::vector
 		return false;
 	}
 	auto attributes = sections[i - sectionNames.begin()];
-	
+
 	auto fail = [&]() {
 		m_logger->LogError("ARM attributes section invalid");
 		return false;

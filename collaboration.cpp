@@ -19,6 +19,7 @@
 // IN THE SOFTWARE.
 
 #include "binaryninjaapi.h"
+#include "ffi.h"
 #include "binaryninjacore.h"
 #include "http.h"
 
@@ -1407,9 +1408,41 @@ void RemoteProject::PullFolders(ProgressFunction progress)
 
 Ref<RemoteFile> RemoteProject::CreateFile(const std::string& filename, std::vector<uint8_t>& contents, const std::string& name, const std::string& description, Ref<RemoteFolder> folder, BNRemoteFileType type, ProgressFunction progress, Ref<ProjectFile> coreFile)
 {
+	return CreateFile(filename, contents, name, description, folder, type, {}, coreFile, progress);
+}
+
+
+Ref<RemoteFile> RemoteProject::CreateFile(
+	const std::string& filename,
+	std::vector<uint8_t>& contents,
+	const std::string& name,
+	const std::string& description,
+	Ref<RemoteFolder> folder,
+	BNRemoteFileType type,
+	const std::set<std::string>& dependencyIds,
+	Ref<ProjectFile>,
+	ProgressFunction progress
+)
+{
 	ProgressContext pctxt;
 	pctxt.callback = progress;
-	BNRemoteFile* file = BNRemoteProjectCreateFile(m_object, filename.c_str(), contents.data(), contents.size(), name.c_str(), description.c_str(), folder ? folder->m_object : nullptr, type, ProgressCallback, &pctxt);
+	size_t dependencyCount;
+	char** dependencies = AllocApiStringList(dependencyIds, &dependencyCount);
+	BNRemoteFile* file = BNRemoteProjectCreateFile(
+		m_object,
+		filename.c_str(),
+		contents.data(),
+		contents.size(),
+		name.c_str(),
+		description.c_str(),
+		folder ? folder->m_object : nullptr,
+		type,
+		const_cast<const char**>(dependencies),
+		dependencyCount,
+		ProgressCallback,
+		&pctxt
+	);
+	FreeApiStringList(dependencies, dependencyCount);
 	if (file == nullptr)
 		return nullptr;
 	return new RemoteFile(file);

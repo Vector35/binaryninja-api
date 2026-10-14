@@ -24966,6 +24966,17 @@ namespace BinaryNinja::Collaboration
 		void PullFiles(ProgressFunction progress = {});
 		void PullFolders(ProgressFunction progress = {});
 		Ref<RemoteFile> CreateFile(const std::string& filename, std::vector<uint8_t>& contents, const std::string& name, const std::string& description, Ref<RemoteFolder> folder, BNRemoteFileType type, ProgressFunction progress = {}, Ref<ProjectFile> coreFile = nullptr);
+		Ref<RemoteFile> CreateFile(
+			const std::string& filename,
+			std::vector<uint8_t>& contents,
+			const std::string& name,
+			const std::string& description,
+			Ref<RemoteFolder> folder,
+			BNRemoteFileType type,
+			const std::set<std::string>& dependencyIds,
+			Ref<ProjectFile> coreFile,
+			ProgressFunction progress
+		);
 		Ref<RemoteFolder> CreateFolder(const std::string& name, const std::string& description, Ref<RemoteFolder> parent, ProgressFunction progress = {}, Ref<ProjectFolder> coreFolder = nullptr);
 		void PushFile(Ref<RemoteFile> file, const std::vector<std::pair<std::string, std::string>>& extraFields = {});
 		void PushFolder(Ref<RemoteFolder> folder, const std::vector<std::pair<std::string, std::string>>& extraFields = {});

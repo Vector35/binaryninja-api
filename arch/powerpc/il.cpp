@@ -612,6 +612,18 @@ static void LiftStringWord(Architecture* arch, LowLevelILFunction& il, Instructi
 	}
 }
 
+// Integer record forms compare the native-width result with zero and copy XER[SO].
+static void RecordCR0(LowLevelILFunction& il, uint32_t reg, size_t size)
+{
+	il.AddInstruction(il.SetFlag(IL_FLAG_LT,
+		il.CompareSignedLessThan(size, il.Register(size, reg), il.Const(size, 0))));
+	il.AddInstruction(il.SetFlag(IL_FLAG_GT,
+		il.CompareSignedGreaterThan(size, il.Register(size, reg), il.Const(size, 0))));
+	il.AddInstruction(il.SetFlag(IL_FLAG_EQ,
+		il.CompareEqual(size, il.Register(size, reg), il.Const(size, 0))));
+	il.AddInstruction(il.SetFlag(IL_FLAG_SO, il.Flag(IL_FLAG_XER_SO)));
+}
+
 /* returns TRUE - if this IL continues
           FALSE - if this IL terminates a block */
 bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
@@ -2409,10 +2421,23 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			break;
 
 		case PPC_ID_CNTLZWx:
-			ei0 = il.Intrinsic({RegisterOrFlag::Register(oper1->reg)}, PPC_INTRIN_CNTLZW,
-				{operToIL(il, oper0)});
-			il.AddInstruction(ei0);
+		case PPC_ID_CNTLZDx:
+		case PPC_ID_CNTTZWx:
+		case PPC_ID_CNTTZDx:
+		{
+			REQUIRE2OPS
+			const bool word = instruction->id == PPC_ID_CNTLZWx || instruction->id == PPC_ID_CNTTZWx;
+			const size_t size = word ? 4 : 8;
+			const bool trailing = instruction->id == PPC_ID_CNTTZWx || instruction->id == PPC_ID_CNTTZDx;
+			ei0 = trailing ? il.CountTrailingZeros(size, il.Register(size, oper1->reg))
+				: il.CountLeadingZeros(size, il.Register(size, oper1->reg));
+			if (size < addressSize_l)
+				ei0 = il.ZeroExtend(addressSize_l, ei0);
+			il.AddInstruction(il.SetRegister(addressSize_l, oper0->reg, ei0));
+			if (instruction->flags.rc)
+				RecordCR0(il, oper0->reg, addressSize_l);
 			break;
+		}
 
 		case PPC_ID_PAIREDSINGLE_PSQ_ST:
 			REQUIRE4OPS

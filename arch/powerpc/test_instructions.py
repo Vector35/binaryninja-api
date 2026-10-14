@@ -148,7 +148,7 @@ def test_count_zeros(arch_name, word, trailing, bits, value):
 
 
 @pytest.mark.parametrize('arch_name', ARCHES)
-@pytest.mark.parametrize('size,xo', [(4, 0x28), (8, 0xa8)])
+@pytest.mark.parametrize('size,xo', [(1, 0x68), (2, 0xe8), (4, 0x28), (8, 0xa8)])
 @pytest.mark.parametrize('dest', [4, 5, 6])
 def test_load_reserve_alias(arch_name, size, xo, dest):
     if size == 8 and not arch_name.startswith('ppc64'): pytest.skip('64-bit instruction')
@@ -160,7 +160,7 @@ def test_load_reserve_alias(arch_name, size, xo, dest):
 
 
 @pytest.mark.parametrize('arch_name', ARCHES)
-@pytest.mark.parametrize('size,xo', [(4, 0x12d), (8, 0x1ad)])
+@pytest.mark.parametrize('size,xo', [(1, 0x56d), (2, 0x5ad), (4, 0x12d), (8, 0x1ad)])
 @pytest.mark.parametrize('success', [0, 1])
 def test_store_conditional(arch_name, size, xo, success):
     if size == 8 and not arch_name.startswith('ppc64'): pytest.skip('64-bit instruction')
@@ -170,7 +170,7 @@ def test_store_conditional(arch_name, size, xo, success):
     _, flags, memory, _ = evaluate(lift(0x7c642800 | xo, arch_name),
                                    {'r3': 0x1234, 'r4': 0x1000, 'r5': 0x20},
                                    {'xer_so': 1}, {0x1020: 0x55}, check)
-    assert memory[0x1020] == (0x1234 if success else 0x55)
+    assert memory[0x1020] == (0x1234 & ((1 << (size * 8)) - 1) if success else 0x55)
     assert [flags[f] for f in ('lt', 'gt', 'eq', 'so')] == [0, 0, success, 1]
 
 
@@ -241,3 +241,40 @@ def test_single_float_load_representation(arch_name):
     base = 0x100000000 if arch_name.startswith('ppc64') else 0x1000
     regs, _, _, _ = evaluate(lift(0xc0240010, arch_name), {'r4': base}, memory={base + 16: 0x3f800000})
     assert regs['f1'] == 0x3ff0000000000000
+
+
+@pytest.mark.parametrize('arch_name', ARCHES)
+@pytest.mark.parametrize('word,single,indexed', [(0xd4240010, True, False), (0x7c242d6e, True, True),
+                                               (0xdc240010, False, False), (0x7c242dee, False, True),
+                                               (0xcc240010, False, False), (0x7c242cee, False, True)])
+def test_float_update_forms(arch_name, word, single, indexed):
+    base = 0x100000000 if arch_name.startswith('ppc64') else 0x1000
+    regs, _, memory, _ = evaluate(lift(word, arch_name),
+                                  {'f1': 0x3ff0000000000000, 'r4': base, 'r5': 16},
+                                  memory={base + 16: 0x4000000000000000})
+    assert regs['r4'] == base + 16
+    if word in (0xcc240010, 0x7c242cee): assert regs['f1'] == 0x4000000000000000
+    else: assert memory[base + 16] == (0x3f800000 if single else 0x3ff0000000000000)
+
+
+@pytest.mark.parametrize('arch_name', ARCHES)
+@pytest.mark.parametrize('word', [0x4c000024, 0x4c000224, 0x4c000066, 0x4c00004e, 0x4c00004c, 0x4c000924])
+def test_system_return_boundaries(arch_name, word):
+    arch = bn.Architecture[arch_name]
+    order = 'little' if arch_name.endswith('_le') else 'big'
+    data = word.to_bytes(4, order)
+    assert [b.type for b in arch.get_instruction_info(data, 0).branches] == [bn.BranchType.FunctionReturn]
+    with bn.BinaryView.new(data + (0x38600001).to_bytes(4, order) + (0x4e800020).to_bytes(4, order)) as bv:
+        bv.add_function(0, plat=arch.standalone_platform)
+        bv.update_analysis_and_wait()
+        assert [(b.start, b.end) for b in bv.functions[0].basic_blocks] == [(0, 4)]
+
+
+@pytest.mark.parametrize('arch_name', ('ppc64', 'ppc64_le'))
+def test_byte_reverse_and_pc_materialization(arch_name):
+    _, _, memory, _ = evaluate(lift(0x7c642d28, arch_name),
+                               {'r3': 0x0102030405060708, 'r4': 0x100000000, 'r5': 0x20})
+    assert memory[0x100000020] == 0x0807060504030201
+    for word, result in [(0x4c600004, 0x1004), (0x4c7fffc5, 0xffffffffffff1004)]:
+        regs, _, _, _ = evaluate(lift(word, arch_name))
+        assert regs['r3'] == result

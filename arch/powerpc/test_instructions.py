@@ -208,3 +208,36 @@ def test_trap_conditions(to, a, b):
                     (to & 8 and signed(a, 4) > signed(b, 4)) or
                     (to & 4 and a == b) or (to & 2 and a < b) or (to & 1 and a > b))
     assert ('trap', []) in events if expected else not events
+
+
+@pytest.mark.parametrize('arch_name', ARCHES)
+@pytest.mark.parametrize('word,size,is_signed', [(0x7ca428ee, 1, False), (0x7ca42a6e, 2, False),
+                                               (0x7ca42aee, 2, True), (0x7ca4286e, 4, False),
+                                               (0x7ca4286a, 8, False), (0x7ca42aea, 4, True)])
+def test_indexed_update_alias(arch_name, word, size, is_signed):
+    if (size == 8 or word == 0x7ca42aea) and not arch_name.startswith('ppc64'):
+        pytest.skip('64-bit instruction')
+    base = 0x100000000 if arch_name.startswith('ppc64') else 0x1000
+    value = (1 << (size * 8)) - 1
+    regs, _, _, _ = evaluate(lift(word, arch_name), {'r4': base, 'r5': 0x20}, memory={base + 0x20: value})
+    assert regs['r4'] == base + 0x20
+    assert regs['r5'] == (1 << (bn.Architecture[arch_name].address_size * 8)) - 1 if is_signed else regs['r5'] == value
+
+
+@pytest.mark.parametrize('arch_name', ('ppc64', 'ppc64_le'))
+def test_d_form_update_and_doubleword_width(arch_name):
+    regs, _, memory, _ = evaluate(lift(0xf821ffe1, arch_name), {'r1': 0x100000020})
+    assert regs['r1'] == 0x100000000 and memory[0x100000000] == 0x100000020
+    for word in (0xe8640011, 0x8c640010):  # ldu/lbzu r3,16(r4)
+        regs, _, _, _ = evaluate(lift(word, arch_name), {'r4': 0x100000000}, memory={0x100000010: 0x55})
+        assert regs['r4'] == 0x100000010 and regs['r3'] == 0x55
+    _, _, memory, _ = evaluate(lift(0x7c64292a, arch_name),  # stdx
+                               {'r3': 0x123456789abcdef0, 'r4': 0x100000000, 'r5': 0x20})
+    assert memory[0x100000020] == 0x123456789abcdef0
+
+
+@pytest.mark.parametrize('arch_name', ARCHES)
+def test_single_float_load_representation(arch_name):
+    base = 0x100000000 if arch_name.startswith('ppc64') else 0x1000
+    regs, _, _, _ = evaluate(lift(0xc0240010, arch_name), {'r4': base}, memory={base + 16: 0x3f800000})
+    assert regs['f1'] == 0x3ff0000000000000

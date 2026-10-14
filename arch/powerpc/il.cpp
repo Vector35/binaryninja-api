@@ -471,11 +471,11 @@ static void load_float(LowLevelILFunction& il,
 	Operand* operand1, /* register that gets read/written */
 	Operand* operand2, /* location the read/write occurs */
 	Operand* operand3=0,
-	bool update=false
+	bool update=false,
+	size_t addrsz=4
 	)
 {
 	ExprId tmp = BN_INVALID_EXPR;
-	const int addrsz = 4;
 	// assume single
 	if (!load_sz)
 		load_sz = 4;
@@ -483,28 +483,33 @@ static void load_float(LowLevelILFunction& il,
 	// operand1.reg = [operand2.reg + operand2.imm]
 	if (operand2->cls == PPC_OP_MEM_RA)
 	{
-		if (operand2->mem.reg == 0)
+		if (operand2->mem.reg == PPC_REG_GPR0)
 		{
 			tmp = il.Const(addrsz, operand2->mem.offset);
 		}
 		else
 		{
 			tmp = il.Add(addrsz, il.Register(addrsz, operand2->mem.reg), il.Const(addrsz, operand2->mem.offset));
-		}		
-	}
-	else if(operand2->cls == PPC_OP_REG_RA)
-	{
-		if ((operand3 != 0) && (operand3->cls == PPC_OP_REG_RB))
-		{
-			tmp = il.Add(4, il.Register(addrsz, operand2->reg), il.Register(addrsz, operand3->reg));
 		}
 	}
+	else if (operand3 && operand3->cls == PPC_OP_REG_RB)
+	{
+		tmp = il.Add(addrsz, operToIL(il, operand2, OTI_GPR0_ZERO, 0, addrsz),
+			operToIL_a(il, operand3, addrsz));
+	}
 
-	il.AddInstruction(il.SetRegister(load_sz, operand1->reg, il.FloatConvert(load_sz, il.Operand(1, il.Load(load_sz, tmp)))));
-	
+	if (tmp == BN_INVALID_EXPR)
+	{
+		il.AddInstruction(il.Unimplemented());
+		return;
+	}
+	// FPRs hold binary64 values, including single-precision loads.
+	il.AddInstruction(il.SetRegister(8, operand1->reg, il.FloatConvert(8, il.Operand(1, il.Load(load_sz, tmp)))));
+
 	if (update == true)
 	{
-		tmp = il.SetRegister(4, operand2->reg, tmp);
+		uint32_t base = operand2->cls == PPC_OP_MEM_RA ? operand2->mem.reg : operand2->reg;
+		tmp = il.SetRegister(addrsz, base, tmp);
 		il.AddInstruction(tmp);
 	}
 }
@@ -1352,7 +1357,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 			// if update, rA is set to effective address (d(rA))
 			if(instruction->id == PPC_ID_LBZU) {
-				ei0 = il.SetRegister(addressSize_l, oper1->mem.reg, operToIL(il, oper1, addressSize_l));
+				ei0 = il.SetRegister(addressSize_l, oper1->mem.reg, operToIL_a(il, oper1, addressSize_l));
 				il.AddInstruction(ei0);
 			}
 
@@ -1365,19 +1370,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_LBZX:
 		case PPC_ID_LBZUX:
 			REQUIRE3OPS
-			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l);              // d(rA) or 0
-			ei0 = il.Load(1, il.Add(addressSize_l, ei0, operToIL_a(il, oper2, addressSize_l))); // [d(rA) + d(rB)]
-			ei0 = il.ZeroExtend(addressSize_l, ei0);
-			ei0 = il.SetRegister(addressSize_l, oper0->reg, ei0);              // rD = [d(rA)]
-			il.AddInstruction(ei0);
-
-			// if update, rA is set to effective address (d(rA))
-			if (instruction->id == PPC_ID_LBZUX && oper1->reg != oper0->reg && oper1->reg != PPC_REG_GPR0)
-			{
-				ei0 = il.SetRegister(addressSize_l, oper1->reg, operToIL_a(il, oper1, addressSize_l));
-				il.AddInstruction(ei0);
-			}
-
+			LiftIndexedLoad(il, instruction, 1, addressSize_l, false, instruction->id == PPC_ID_LBZUX);
 			break;
 
 		/*
@@ -1422,21 +1415,9 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_LHAX:
 		case PPC_ID_LHAUX:
 			REQUIRE3OPS
-			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l);              // d(rA) or 0
-			ei0 = il.Load(2, il.Add(addressSize_l, ei0, operToIL_a(il, oper2, addressSize_l))); // [d(rA) + d(rB)]
-			if(instruction->id == PPC_ID_LHZX || instruction->id == PPC_ID_LHZUX)
-				ei0 = il.ZeroExtend(addressSize_l, ei0);
-			else
-				ei0 = il.SignExtend(addressSize_l, ei0);
-			ei0 = il.SetRegister(addressSize_l, oper0->reg, ei0);              // rD = [d(rA)]
-			il.AddInstruction(ei0);
-
-			// if update, rA is set to effective address (d(rA))
-			if((instruction->id == PPC_ID_LHZUX || instruction->id == PPC_ID_LHAUX) && oper1->reg != oper0->reg && oper1->reg != PPC_REG_GPR0) {
-				ei0 = il.SetRegister(addressSize_l, oper1->reg, operToIL_a(il, oper1, addressSize_l));
-				il.AddInstruction(ei0);
-			}
-
+			LiftIndexedLoad(il, instruction, 2, addressSize_l,
+				instruction->id == PPC_ID_LHAX || instruction->id == PPC_ID_LHAUX,
+				instruction->id == PPC_ID_LHZUX || instruction->id == PPC_ID_LHAUX);
 			break;
 
 		/*
@@ -1476,21 +1457,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_LWZX:
 		case PPC_ID_LWZUX:
 			REQUIRE3OPS
-			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l);              // d(rA) or 0
-			ei0 = il.Load(4, il.Add(addressSize_l, ei0, operToIL_a(il, oper2, addressSize_l))); // [d(rA) + d(rB)]
-			if(addressSize_l == 8)
-			{
-				ei0 = il.ZeroExtend(addressSize_l, ei0);
-			}
-			ei0 = il.SetRegister(addressSize_l, oper0->reg, ei0);              // rD = [d(rA)]
-			il.AddInstruction(ei0);
-
-			// if update, rA is set to effective address (d(rA))
-			if(instruction->id == PPC_ID_LWZUX && oper1->reg != oper0->reg && oper1->reg != PPC_REG_GPR0) {
-				ei0 = il.SetRegister(addressSize_l, oper1->reg, operToIL_a(il, oper1, addressSize_l));
-				il.AddInstruction(ei0);
-			}
-
+			LiftIndexedLoad(il, instruction, 4, addressSize_l, false, instruction->id == PPC_ID_LWZUX);
 			break;
 
 		case PPC_ID_LWARX:
@@ -1508,14 +1475,14 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_LD:
 		case PPC_ID_LDU:
 			REQUIRE2OPS
-			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO); // d(rA) or 0
+			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO, 0, addressSize_l); // d(rA) or 0
 			ei0 = il.Load(8, ei0);                    // [d(rA)]
 			ei0 = il.SetRegister(8, oper0->reg, ei0); // rD = [d(rA)]
 			il.AddInstruction(ei0);
 
 			// if update, rA is set to effective address (d(rA))
-			if(instruction->id == PPC_ID_LWZU) {
-				ei0 = il.SetRegister(8, oper1->mem.reg, operToIL(il, oper1));
+			if(instruction->id == PPC_ID_LDU) {
+				ei0 = il.SetRegister(addressSize_l, oper1->mem.reg, operToIL_a(il, oper1, addressSize_l));
 				il.AddInstruction(ei0);
 			}
 
@@ -1911,7 +1878,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			il.AddInstruction(ei0);
 
 			// if update, then rA gets updated address
-			if(instruction->id == PPC_ID_STWU) {
+			if(instruction->id == PPC_ID_STDU) {
 				ei0 = il.SetRegister(8, oper1->mem.reg, operToIL_a(il, oper1, 8));
 				il.AddInstruction(ei0);
 			}
@@ -1923,8 +1890,8 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_STDUX: /* store(size, addr, val) */
 			REQUIRE3OPS
 			ei0 = il.Store(8,
-				il.Add(8, operToIL(il, oper1, OTI_GPR0_ZERO), operToIL_a(il, oper2, addressSize_l)),
-				operToIL(il, oper0)
+				il.Add(addressSize_l, operToIL(il, oper1, OTI_GPR0_ZERO, 0, addressSize_l), operToIL_a(il, oper2, addressSize_l)),
+				operToIL_a(il, oper0, 8)
 			);
 			il.AddInstruction(ei0);
 
@@ -2582,7 +2549,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		    // il.AddInstruction(ei1);
 
 			// alternatively, do it the way arm64 does it
-			load_float(il, 4, oper0, oper1);
+			load_float(il, 4, oper0, oper1, 0, false, addressSize_l);
 			break;
 
 		case PPC_ID_LFSX:
@@ -2595,17 +2562,17 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			// // alternatively, do it the way arm64 does it
 			// il.AddInstruction(ei0);
 
-			load_float(il, 4, oper0, oper1, oper2);
+			load_float(il, 4, oper0, oper1, oper2, false, addressSize_l);
 			break;
 
 		case PPC_ID_LFSU:
 			REQUIRE2OPS
-			load_float(il, 4, oper0, oper1, 0, true);
+			load_float(il, 4, oper0, oper1, 0, true, addressSize_l);
 			break;
 
 		case PPC_ID_LFSUX:
 			REQUIRE3OPS
-			load_float(il, 4, oper0, oper1, oper2, true);
+			load_float(il, 4, oper0, oper1, oper2, true, addressSize_l);
 			break;
 
 		case PPC_ID_LFD:
@@ -2616,7 +2583,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		    // il.AddInstruction(ei0);
 
 			// same as lfs
-			load_float(il, 8, oper0, oper1);
+			load_float(il, 8, oper0, oper1, 0, false, addressSize_l);
 			break;
 
 		case PPC_ID_FMULx:

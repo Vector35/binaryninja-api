@@ -104,6 +104,7 @@ fn test_project_creation() {
                 "",
                 None,
                 RemoteFileType::UnknownFileType,
+                [],
             )
             .expect("Failed to create file in project");
         let created_file_id = created_file.id();
@@ -135,6 +136,7 @@ fn test_project_creation() {
                 "",
                 Some(&created_folder),
                 RemoteFileType::UnknownFileType,
+                [],
             )
             .expect("Failed to create file in project folder");
         let created_folder_file_id = created_folder_file.id();

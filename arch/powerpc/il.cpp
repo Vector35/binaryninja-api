@@ -609,6 +609,270 @@ static void RecordCR0(LowLevelILFunction& il, uint32_t reg, size_t size)
 	il.AddInstruction(il.SetFlag(IL_FLAG_SO, il.Flag(IL_FLAG_XER_SO)));
 }
 
+/* stwcx./stdcx. set CR0 = 0b00 || store_performed || XER[SO]. */
+static void SetStoreConditionalCR0(LowLevelILFunction& il, bool succeeded)
+{
+	il.AddInstruction(il.SetFlag(IL_FLAG_LT, il.Const(0, 0)));
+	il.AddInstruction(il.SetFlag(IL_FLAG_GT, il.Const(0, 0)));
+	il.AddInstruction(il.SetFlag(IL_FLAG_EQ, il.Const(0, succeeded ? 1 : 0)));
+	il.AddInstruction(il.SetFlag(IL_FLAG_SO, il.Flag(IL_FLAG_XER_SO)));
+}
+
+/* Effective address (rA|0) + rB shared by the reservation instructions. */
+static ExprId ReservationAddress(LowLevelILFunction& il, Operand* ra, Operand* rb, size_t addressSize)
+{
+	return il.Add(addressSize,
+		operToIL(il, ra, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize),
+		operToIL_a(il, rb, addressSize));
+}
+
+static void LiftLoadReserve(LowLevelILFunction& il, Instruction* instruction, size_t size, size_t addressSize)
+{
+	il.AddInstruction(il.SetRegister(addressSize, LLIL_TEMP(0),
+		ReservationAddress(il, &instruction->operands[1], &instruction->operands[2], addressSize)));
+	ExprId value = il.Load(size, il.Register(addressSize, LLIL_TEMP(0)));
+	if (size < addressSize)
+		value = il.ZeroExtend(addressSize, value);
+	il.AddInstruction(il.SetRegister(addressSize, instruction->operands[0].reg, value));
+	il.AddInstruction(il.Intrinsic({}, PPC_INTRIN_SET_RESERVATION,
+		{il.Register(addressSize, LLIL_TEMP(0)), il.Const(4, size)}));
+}
+
+static void LiftIndexedLoad(LowLevelILFunction& il, Instruction* instruction, size_t size,
+	size_t addressSize, bool isSigned, bool update)
+{
+	const auto* ops = instruction->operands;
+	if (update && (ops[1].cls != PPC_OP_REG_RA || ops[1].reg == PPC_REG_GPR0 || ops[1].reg == ops[0].reg))
+	{
+		il.AddInstruction(il.Undefined());
+		return;
+	}
+	il.AddInstruction(il.SetRegister(addressSize, LLIL_TEMP(0),
+		ReservationAddress(il, &instruction->operands[1], &instruction->operands[2], addressSize)));
+	ExprId value = il.Load(size, il.Register(addressSize, LLIL_TEMP(0)));
+	if (size < addressSize)
+		value = isSigned ? il.SignExtend(addressSize, value) : il.ZeroExtend(addressSize, value);
+	il.AddInstruction(il.SetRegister(addressSize, ops[0].reg, value));
+	if (update)
+		il.AddInstruction(il.SetRegister(addressSize, ops[1].reg, il.Register(addressSize, LLIL_TEMP(0))));
+}
+
+/* stwcx./stdcx.: the reservation status is provided by an intrinsic, and the
+   store plus its CR0 result are conditional on it.  This mirrors how the mips
+   (ll/sc) and armv7/arm64 (ldrex/strex) lifters model store-conditional. */
+static void LiftStoreConditional(LowLevelILFunction& il, Instruction* instruction, size_t size, size_t addressSize)
+{
+	Operand* rs = &instruction->operands[0];
+	Operand* ra = &instruction->operands[1];
+	Operand* rb = &instruction->operands[2];
+
+	il.AddInstruction(il.Intrinsic({RegisterOrFlag::Register(LLIL_TEMP(0))},
+		PPC_INTRIN_CHECK_RESERVATION, {ReservationAddress(il, ra, rb, addressSize), il.Const(4, size)}));
+
+	LowLevelILLabel success, fail, done;
+	il.AddInstruction(il.If(
+		il.Register(1, LLIL_TEMP(0)), success, fail));
+
+	// reservation held: perform the store and report success in CR0
+	il.MarkLabel(success);
+	ExprId value = (size < addressSize)
+		? il.LowPart(size, operToIL_a(il, rs, addressSize))
+		: operToIL_a(il, rs, size);
+	il.AddInstruction(il.Store(size, ReservationAddress(il, ra, rb, addressSize), value));
+	SetStoreConditionalCR0(il, true);
+	il.AddInstruction(il.Goto(done));
+
+	// reservation lost: no store, CR0 reports failure
+	il.MarkLabel(fail);
+	SetStoreConditionalCR0(il, false);
+
+	il.MarkLabel(done);
+}
+
+/* Map a condition-encoding trap mnemonic (e.g. "tdlgt") to its 5-bit TO field. */
+static uint32_t TrapConditionMask(uint32_t id)
+{
+	switch (id)
+	{
+		case PPC_ID_TDLGT: case PPC_ID_TDLGTI:
+		case PPC_ID_TWLGT: case PPC_ID_TWLGTI: return 0x01; // a >u b
+		case PPC_ID_TDLLT: case PPC_ID_TDLLTI:
+		case PPC_ID_TWLLT: case PPC_ID_TWLLTI: return 0x02; // a <u b
+		case PPC_ID_TDEQ:  case PPC_ID_TDEQI:
+		case PPC_ID_TWEQ:  case PPC_ID_TWEQI:  return 0x04; // a == b
+		case PPC_ID_TDGT:  case PPC_ID_TDGTI:
+		case PPC_ID_TWGT:  case PPC_ID_TWGTI:  return 0x08; // a >s b
+		case PPC_ID_TDLT:  case PPC_ID_TDLTI:
+		case PPC_ID_TWLT:  case PPC_ID_TWLTI:  return 0x10; // a <s b
+		case PPC_ID_TDNE:  case PPC_ID_TDNEI:
+		case PPC_ID_TWNE:  case PPC_ID_TWNEI:  return 0x18; // a != b
+		case PPC_ID_TDU:   case PPC_ID_TDUI:
+		case PPC_ID_TWU:   case PPC_ID_TWUI:   return 0x1f; // unconditional
+		case PPC_ID_TWGEI:                     return 0x0c; // a >=s b
+		case PPC_ID_TWLEI:                     return 0x14; // a <=s b
+		case PPC_ID_TWLLEI:                    return 0x06; // a <=u b
+		default:                               return 0x00;
+	}
+}
+
+/* Build the boolean condition for a trap from its TO field.  TO bit meanings:
+   0x10 = <s, 0x08 = >s, 0x04 = ==, 0x02 = <u, 0x01 = >u. */
+static ExprId TrapCondition(LowLevelILFunction& il, uint32_t to, Operand* aOp, Operand* bOp, size_t size)
+{
+	ExprId a = operToIL_a(il, aOp, size);
+	ExprId b = operToIL_a(il, bOp, size);
+
+	// Every trap mnemonic the decoder produces maps to a single comparison.
+	switch (to & 0x1f)
+	{
+		case 0x01: return il.CompareUnsignedGreaterThan(size, a, b);
+		case 0x02: return il.CompareUnsignedLessThan(size, a, b);
+		case 0x03: return il.CompareNotEqual(size, a, b);            // <u or >u
+		case 0x04: return il.CompareEqual(size, a, b);
+		case 0x05: return il.CompareUnsignedGreaterEqual(size, a, b);
+		case 0x06: return il.CompareUnsignedLessEqual(size, a, b);
+		case 0x08: return il.CompareSignedGreaterThan(size, a, b);
+		case 0x0c: return il.CompareSignedGreaterEqual(size, a, b);
+		case 0x10: return il.CompareSignedLessThan(size, a, b);
+		case 0x14: return il.CompareSignedLessEqual(size, a, b);
+		case 0x18: return il.CompareNotEqual(size, a, b);            // <s or >s
+		default: break;
+	}
+
+	// General case (arbitrary TO on a generic td/tw): OR the enabled comparisons.
+	static const uint32_t bits[5] = { 0x10, 0x08, 0x04, 0x02, 0x01 };
+	ExprId cond = BN_INVALID_EXPR;
+	bool first = true;
+	for (int i = 0; i < 5; i++)
+	{
+		uint32_t bit = bits[i];
+		if ((to & bit) == 0)
+			continue;
+
+		ExprId cmp;
+		switch (bit)
+		{
+			case 0x10: cmp = il.CompareSignedLessThan(size, a, b); break;
+			case 0x08: cmp = il.CompareSignedGreaterThan(size, a, b); break;
+			case 0x04: cmp = il.CompareEqual(size, a, b); break;
+			case 0x02: cmp = il.CompareUnsignedLessThan(size, a, b); break;
+			default:   cmp = il.CompareUnsignedGreaterThan(size, a, b); break;
+		}
+
+		cond = first ? cmp : il.Or(0, cond, cmp);
+		first = false;
+	}
+
+	return cond;
+}
+
+/* <op> [TO,] rA, (rB | SIMM): trap if the selected comparison of rA holds. */
+static void LiftTrap(LowLevelILFunction& il, Instruction* instruction, size_t size)
+{
+	uint32_t to;
+	Operand* aOp;
+	Operand* bOp;
+
+	switch (instruction->id)
+	{
+		// generic forms carry an explicit TO operand
+		case PPC_ID_TD:
+		case PPC_ID_TW:
+		case PPC_ID_TDI:
+		case PPC_ID_TWI:
+			if (instruction->numOperands < 3)
+			{
+				il.AddInstruction(il.Unimplemented());
+				return;
+			}
+			to = (uint32_t)instruction->operands[0].uimm;
+			aOp = &instruction->operands[1];
+			bOp = &instruction->operands[2];
+			break;
+
+		default:
+			to = TrapConditionMask(instruction->id);
+			aOp = &instruction->operands[0];
+			bOp = &instruction->operands[1];
+			break;
+	}
+
+	if ((to & 0x1f) == 0)
+	{
+		il.AddInstruction(il.Nop());
+		return;
+	}
+
+	if ((to & 0x1f) == 0x1f)
+	{
+		il.AddInstruction(il.Trap(0));
+		return;
+	}
+
+	LowLevelILLabel trapLabel, nextLabel;
+	if (instruction->numOperands < 2)
+	{
+		il.AddInstruction(il.Unimplemented());
+		return;
+	}
+	il.AddInstruction(il.If(TrapCondition(il, to, aOp, bOp, size), trapLabel, nextLabel));
+	il.MarkLabel(trapLabel);
+	il.AddInstruction(il.Trap(0));
+	il.MarkLabel(nextLabel);
+}
+
+static void WriteOverflow(LowLevelILFunction& il, ExprId overflow)
+{
+	il.AddInstruction(il.SetFlag(IL_FLAG_XER_OV, overflow));
+	il.AddInstruction(il.SetFlag(IL_FLAG_XER_SO, il.Or(0, il.Flag(IL_FLAG_XER_SO), il.Flag(IL_FLAG_XER_OV))));
+}
+
+static void LiftMultiply(LowLevelILFunction& il, Instruction* instruction, bool high, bool isSigned)
+{
+	const auto* ops = instruction->operands;
+	ExprId product = isSigned
+		? il.MultDoublePrecSigned(8, il.Register(8, ops[1].reg), il.Register(8, ops[2].reg))
+		: il.MultDoublePrecUnsigned(8, il.Register(8, ops[1].reg), il.Register(8, ops[2].reg));
+	il.AddInstruction(il.SetRegister(16, LLIL_TEMP(0), product));
+	if (!high && instruction->flags.oe)
+		WriteOverflow(il, il.CompareNotEqual(16, il.Register(16, LLIL_TEMP(0)),
+			il.SignExtend(16, il.LowPart(8, il.Register(16, LLIL_TEMP(0))))));
+	ExprId result = il.Register(16, LLIL_TEMP(0));
+	if (high)
+		result = il.LogicalShiftRight(16, result, il.Const(1, 64));
+	il.AddInstruction(il.SetRegister(8, ops[0].reg, il.LowPart(8, result)));
+	if (instruction->flags.rc)
+		RecordCR0(il, ops[0].reg, 8);
+}
+
+// Guard invalid divisors before evaluating the divide. Exceptional results are
+// architecturally undefined; OE still reports overflow and updates sticky SO.
+static void LiftDivide(LowLevelILFunction& il, Instruction* instruction, size_t size, bool isSigned)
+{
+	const auto* ops = instruction->operands;
+	ExprId invalid = il.CompareEqual(size, il.Register(size, ops[2].reg), il.Const(size, 0));
+	if (isSigned)
+		invalid = il.Or(0, invalid, il.And(0,
+			il.CompareEqual(size, il.Register(size, ops[1].reg), il.Const(size, 1ULL << (size * 8 - 1))),
+			il.CompareEqual(size, il.Register(size, ops[2].reg), il.Const(size, -1))));
+	LowLevelILLabel fail, success, done;
+	il.AddInstruction(il.If(invalid, fail, success));
+	il.MarkLabel(success);
+	il.AddInstruction(il.SetRegister(size, ops[0].reg, isSigned
+		? il.DivSigned(size, il.Register(size, ops[1].reg), il.Register(size, ops[2].reg))
+		: il.DivUnsigned(size, il.Register(size, ops[1].reg), il.Register(size, ops[2].reg))));
+	if (instruction->flags.oe)
+		WriteOverflow(il, il.Const(0, 0));
+	il.AddInstruction(il.Goto(done));
+	il.MarkLabel(fail);
+	il.AddInstruction(il.SetRegister(size, ops[0].reg, il.Undefined()));
+	if (instruction->flags.oe)
+		WriteOverflow(il, il.Const(0, 1));
+	il.MarkLabel(done);
+	if (instruction->flags.rc)
+		RecordCR0(il, ops[0].reg, size);
+}
+
 /* returns TRUE - if this IL continues
           FALSE - if this IL terminates a block */
 bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
@@ -1211,7 +1475,6 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		*/
 		case PPC_ID_LWZX:
 		case PPC_ID_LWZUX:
-        case PPC_ID_LWARX:
 			REQUIRE3OPS
 			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l);              // d(rA) or 0
 			ei0 = il.Load(4, il.Add(addressSize_l, ei0, operToIL_a(il, oper2, addressSize_l))); // [d(rA) + d(rB)]
@@ -1228,6 +1491,15 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 				il.AddInstruction(ei0);
 			}
 
+			break;
+
+		case PPC_ID_LWARX:
+			REQUIRE3OPS
+			LiftLoadReserve(il, instruction, 4, addressSize_l);
+			break;
+		case PPC_ID_LDARX:
+			REQUIRE3OPS
+			LiftLoadReserve(il, instruction, 8, addressSize_l);
 			break;
 
 		/*
@@ -1255,17 +1527,23 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 		case PPC_ID_LDX:
 		case PPC_ID_LDUX:
 			REQUIRE3OPS
-			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO);              // d(rA) or 0
-			ei0 = il.Load(8, il.Add(8, ei0, operToIL(il, oper2))); // [d(rA) + d(rB)]
-			ei0 = il.SetRegister(8, oper0->reg, ei0);              // rD = [d(rA)]
+			LiftIndexedLoad(il, instruction, 8, addressSize_l, false, instruction->id == PPC_ID_LDUX);
+			break;
+
+		/* load word algebraic: load 4 bytes and sign-extend to the register */
+		case PPC_ID_LWA:
+			REQUIRE2OPS
+			ei0 = operToIL(il, oper1, OTI_GPR0_ZERO, PPC_IL_EXTRA_DEFAULT, addressSize_l); // d(rA) or 0
+			ei0 = il.Load(4, ei0);
+			ei0 = il.SignExtend(addressSize_l, ei0);
+			ei0 = il.SetRegister(addressSize_l, oper0->reg, ei0);
 			il.AddInstruction(ei0);
+			break;
 
-			// if update, rA is set to effective address (d(rA))
-			if(instruction->id == PPC_ID_LWZUX && oper1->reg != oper0->reg && oper1->reg != PPC_REG_GPR0) {
-				ei0 = il.SetRegister(8, oper1->reg, operToIL(il, oper1));
-				il.AddInstruction(ei0);
-			}
-
+		case PPC_ID_LWAX:
+		case PPC_ID_LWAUX:
+			REQUIRE3OPS
+			LiftIndexedLoad(il, instruction, 4, addressSize_l, true, instruction->id == PPC_ID_LWAUX);
 			break;
 
 		case PPC_ID_LHBRX:
@@ -1588,7 +1866,6 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 		/* store word indexed [with update] */
 		case PPC_ID_STWX:
-        case PPC_ID_STWCX:
 		case PPC_ID_STWUX: /* store(size, addr, val) */
 			REQUIRE3OPS
 			if (addressSize_l == 8)
@@ -1618,6 +1895,11 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 			break;
 
+		case PPC_ID_STWCX: /* store word conditional */
+			REQUIRE3OPS
+			LiftStoreConditional(il, instruction, 4, addressSize_l);
+			break;
+
 		/* store double word [with update] */
 		case PPC_ID_STD:
 		case PPC_ID_STDU: /* store(size, addr, val) */
@@ -1636,7 +1918,7 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 
 			break;
 
-		/* store word indexed [with update] */
+		/* store double word indexed [with update] */
 		case PPC_ID_STDX:
 		case PPC_ID_STDUX: /* store(size, addr, val) */
 			REQUIRE3OPS
@@ -1654,6 +1936,11 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 				il.AddInstruction(ei0);
 			}
 
+			break;
+
+		case PPC_ID_STDCX: /* store double word conditional */
+			REQUIRE3OPS
+			LiftStoreConditional(il, instruction, 8, addressSize_l);
 			break;
 
 		case PPC_ID_RLWIMIx:
@@ -2094,6 +2381,59 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			));
 			break;
 
+		case PPC_ID_MULLDx:
+			REQUIRE3OPS
+			LiftMultiply(il, instruction, false, true);
+			break;
+
+		case PPC_ID_MULHDx:
+			REQUIRE3OPS
+			LiftMultiply(il, instruction, true, true);
+			break;
+
+		case PPC_ID_MULHDUx:
+			REQUIRE3OPS
+			LiftMultiply(il, instruction, true, false);
+			break;
+
+		case PPC_ID_DIVDx:
+			REQUIRE3OPS
+			LiftDivide(il, instruction, 8, true);
+			break;
+
+		case PPC_ID_DIVDUx:
+			REQUIRE3OPS
+			LiftDivide(il, instruction, 8, false);
+			break;
+
+		case PPC_ID_MODSW:
+			REQUIRE3OPS
+			ei0 = il.ModSigned(4, il.Register(4, oper1->reg), il.Register(4, oper2->reg));
+			if (addressSize_l == 8)
+				ei0 = il.SignExtend(8, ei0);
+			il.AddInstruction(il.SetRegister(addressSize_l, oper0->reg, ei0));
+			break;
+
+		case PPC_ID_MODUW:
+			REQUIRE3OPS
+			ei0 = il.ModUnsigned(4, il.Register(4, oper1->reg), il.Register(4, oper2->reg));
+			if (addressSize_l == 8)
+				ei0 = il.ZeroExtend(8, ei0);
+			il.AddInstruction(il.SetRegister(addressSize_l, oper0->reg, ei0));
+			break;
+
+		case PPC_ID_MODSD:
+			REQUIRE3OPS
+			ei0 = il.ModSigned(8, il.Register(8, oper1->reg), il.Register(8, oper2->reg));
+			il.AddInstruction(il.SetRegister(8, oper0->reg, ei0));
+			break;
+
+		case PPC_ID_MODUD:
+			REQUIRE3OPS
+			ei0 = il.ModUnsigned(8, il.Register(8, oper1->reg), il.Register(8, oper2->reg));
+			il.AddInstruction(il.SetRegister(8, oper0->reg, ei0));
+			break;
+
 		case PPC_ID_MRx: /* move register */
 			REQUIRE2OPS
 			ei0 = il.SetRegister(addressSize_l, oper0->reg, operToIL_a(il, oper1, addressSize_l),
@@ -2109,8 +2449,47 @@ bool GetLowLevelILForPPCInstruction(Architecture *arch, LowLevelILFunction &il,
 			il.AddInstruction(il.Return(il.Unimplemented()));
 			break;
 
+		// trap doubleword: trap if the TO-selected comparison of rA holds
+		case PPC_ID_TD:
+		case PPC_ID_TDI:
+		case PPC_ID_TDEQ:
+		case PPC_ID_TDEQI:
+		case PPC_ID_TDGT:
+		case PPC_ID_TDGTI:
+		case PPC_ID_TDLGT:
+		case PPC_ID_TDLGTI:
+		case PPC_ID_TDLLT:
+		case PPC_ID_TDLLTI:
+		case PPC_ID_TDLT:
+		case PPC_ID_TDLTI:
+		case PPC_ID_TDNE:
+		case PPC_ID_TDNEI:
+		case PPC_ID_TDU:
+		case PPC_ID_TDUI:
+			LiftTrap(il, instruction, 8);
+			break;
+
+		// trap word
+		case PPC_ID_TW:
+		case PPC_ID_TWI:
+		case PPC_ID_TWEQ:
+		case PPC_ID_TWEQI:
+		case PPC_ID_TWGT:
+		case PPC_ID_TWGTI:
+		case PPC_ID_TWGEI:
+		case PPC_ID_TWLEI:
+		case PPC_ID_TWLLEI:
+		case PPC_ID_TWLGT:
+		case PPC_ID_TWLGTI:
+		case PPC_ID_TWLLT:
+		case PPC_ID_TWLLTI:
+		case PPC_ID_TWLT:
+		case PPC_ID_TWLTI:
+		case PPC_ID_TWNE:
+		case PPC_ID_TWNEI:
 		case PPC_ID_TWU:
-			il.AddInstruction(il.Trap(0));
+		case PPC_ID_TWUI:
+			LiftTrap(il, instruction, 4);
 			break;
 
 		// =====================================

@@ -39,6 +39,7 @@ def evaluate(il, registers=None, flags=None, memory=None, intrinsic=None):
         mask = (1 << (e.size * 8)) - 1 if e.size else 1
         if op in ('CONST', 'CONST_PTR'): return args[0] & mask
         if op == 'REG': return registers.get(str(args[0]), 0) & mask
+        if op == 'UNDEF': return 0  # Arbitrary value; tests must not assert undefined results.
         if op == 'FLAG': return flags.get(str(args[0]), 0)
         if op == 'BOOL_TO_INT': return int(bool(expr(args[0])))
         if op == 'FLAG_BIT': return flags.get(str(args[0]), 0) << args[1]
@@ -96,11 +97,14 @@ def evaluate(il, registers=None, flags=None, memory=None, intrinsic=None):
                 assert intrinsic, f'No evaluator for {insn}'
                 outputs = intrinsic(str(insn.intrinsic), params)
                 for dest, value in zip(insn.output, outputs):
-                    (flags if dest.is_flag else registers)[str(dest)] = value
+                    (flags if isinstance(dest, bn.lowlevelil.ILFlag) else registers)[str(dest)] = value
         elif op == 'LLIL_IF': pc = insn.true if expr(insn.condition) else insn.false
         elif op == 'LLIL_GOTO': pc = insn.dest
         elif op == 'LLIL_NOP': pass
-        elif op in ('LLIL_TRAP', 'LLIL_RET', 'LLIL_UNDEF'): break
+        elif op == 'LLIL_TRAP':
+            events.append(('trap', []))
+            break
+        elif op in ('LLIL_RET', 'LLIL_UNDEF'): break
         else: raise AssertionError(f'Unsupported instruction: {insn}')
     else:
         raise AssertionError('IL did not terminate')
@@ -141,3 +145,66 @@ def test_count_zeros(arch_name, word, trailing, bits, value):
         assert regs['r3'] == expected
         if record:
             assert [flags[f] for f in ('lt', 'gt', 'eq', 'so')] == [0, int(expected > 0), int(expected == 0), 1]
+
+
+@pytest.mark.parametrize('arch_name', ARCHES)
+@pytest.mark.parametrize('size,xo', [(4, 0x28), (8, 0xa8)])
+@pytest.mark.parametrize('dest', [4, 5, 6])
+def test_load_reserve_alias(arch_name, size, xo, dest):
+    if size == 8 and not arch_name.startswith('ppc64'): pytest.skip('64-bit instruction')
+    base = 0x100000000 if arch_name.startswith('ppc64') else 0x1000
+    word = 0x7c042800 | (dest << 21) | xo
+    regs, _, _, events = evaluate(lift(word, arch_name), {'r4': base, 'r5': 0x20}, memory={base + 0x20: 0x55})
+    assert regs[f'r{dest}'] == 0x55
+    assert events == [('__set_reservation', [base + 0x20, size])]
+
+
+@pytest.mark.parametrize('arch_name', ARCHES)
+@pytest.mark.parametrize('size,xo', [(4, 0x12d), (8, 0x1ad)])
+@pytest.mark.parametrize('success', [0, 1])
+def test_store_conditional(arch_name, size, xo, success):
+    if size == 8 and not arch_name.startswith('ppc64'): pytest.skip('64-bit instruction')
+    def check(name, params):
+        assert name == '__check_reservation' and params == [0x1020, size]
+        return [success]
+    _, flags, memory, _ = evaluate(lift(0x7c642800 | xo, arch_name),
+                                   {'r3': 0x1234, 'r4': 0x1000, 'r5': 0x20},
+                                   {'xer_so': 1}, {0x1020: 0x55}, check)
+    assert memory[0x1020] == (0x1234 if success else 0x55)
+    assert [flags[f] for f in ('lt', 'gt', 'eq', 'so')] == [0, 0, success, 1]
+
+
+@pytest.mark.parametrize('word,a,b,result,overflow', [
+    (0x7c642dd3, 2, 3, 6, 0),  # mulldo.
+    (0x7c642dd3, 1 << 62, 4, 0, 1),
+    (0x7c642dd3, (1 << 64) - 1, 2, (1 << 64) - 2, 0),
+    (0x7c642fd3, 9, 3, 3, 0),  # divdo.
+    (0x7c642fd3, 1 << 63, (1 << 64) - 1, None, 1),
+    (0x7c642fd3, 1, 0, None, 1),
+])
+@pytest.mark.parametrize('old_so', [0, 1])
+def test_integer_overflow(word, a, b, result, overflow, old_so):
+    regs, flags, _, _ = evaluate(lift(word), {'r4': a, 'r5': b}, {'xer_so': old_so, 'xer_ov': 1})
+    if result is not None: assert regs['r3'] == result
+    assert flags['xer_ov'] == overflow
+    assert flags['xer_so'] == (old_so | overflow)
+    assert flags['so'] == (old_so | overflow)
+
+
+@pytest.mark.parametrize('word,a,b,expected', [(0x7c642892, -2, 3, -1),
+                                            (0x7c642812, (1 << 64) - 1, 2, 1),
+                                            (0x7c642e16, -5, 3, -2)])
+def test_high_multiply_and_signed_modulo(word, a, b, expected):
+    regs, _, _, _ = evaluate(lift(word), {'r4': a & ((1 << 64) - 1), 'r5': b})
+    assert regs['r3'] == expected & ((1 << 64) - 1)
+
+
+@pytest.mark.parametrize('to', range(32))
+@pytest.mark.parametrize('a,b', [(0, 0), (0xffffffff, 1), (1, 0xffffffff)])
+def test_trap_conditions(to, a, b):
+    word = 0x7c032008 | (to << 21)
+    _, _, _, events = evaluate(lift(word), {'r3': a, 'r4': b})
+    expected = bool((to & 16 and signed(a, 4) < signed(b, 4)) or
+                    (to & 8 and signed(a, 4) > signed(b, 4)) or
+                    (to & 4 and a == b) or (to & 2 and a < b) or (to & 1 and a > b))
+    assert ('trap', []) in events if expected else not events

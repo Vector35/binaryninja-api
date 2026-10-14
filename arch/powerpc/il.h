@@ -218,6 +218,10 @@ enum PPCIntrinsic : uint32_t
     PPC_PS_INTRIN_DEQUANTIZE,
     PPC_PS_INTRIN_END,
     PPC_INTRIN_COPY_STRING_WORDS,
+    // Append new IDs here; the preceding IDs are stored in existing databases.
+    PPC_INTRIN_SET_RESERVATION,
+    PPC_INTRIN_CHECK_RESERVATION,
+    PPC_INTRIN_ADDITIONAL_END,
 	PPC_INTRIN_INVALID = 0xFFFFFFFF,
 };
 

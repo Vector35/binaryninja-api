@@ -676,7 +676,9 @@ class PowerpcArchitecture: public Architecture
 
 	virtual BNIntrinsicClass GetIntrinsicClass(uint32_t intrinsic) override
 	{
-		return intrinsic == PPC_INTRIN_COPY_STRING_WORDS ? MemoryIntrinsicClass : GeneralIntrinsicClass;
+		// Reservation operations carry hidden state, including consumption on failure.
+		return intrinsic == PPC_INTRIN_COPY_STRING_WORDS || intrinsic == PPC_INTRIN_SET_RESERVATION
+			|| intrinsic == PPC_INTRIN_CHECK_RESERVATION ? MemoryIntrinsicClass : GeneralIntrinsicClass;
 	}
 
 	virtual string GetIntrinsicName(uint32_t intrinsic) override
@@ -689,6 +691,10 @@ class PowerpcArchitecture: public Architecture
 			return "float_round";
 		case PPC_INTRIN_COPY_STRING_WORDS:
 			return "copy_string_words";
+		case PPC_INTRIN_SET_RESERVATION:
+			return "__set_reservation";
+		case PPC_INTRIN_CHECK_RESERVATION:
+			return "__check_reservation";
 		default:
 			if ((decodeFlags & DECODE_FLAGS_PS))
 			{
@@ -703,6 +709,8 @@ class PowerpcArchitecture: public Architecture
 	virtual std::vector<uint32_t> GetAllIntrinsics() override
 	{
 		std::vector<uint32_t> result{PPC_INTRIN_COPY_STRING_WORDS};
+		for (uint32_t id = PPC_INTRIN_SET_RESERVATION; id < PPC_INTRIN_ADDITIONAL_END; id++)
+			result.push_back(id);
 
 		// Double check someone didn't insert a new intrinsic at the beginning of our enum since we rely
 		// on it to fill the next array.
@@ -750,6 +758,10 @@ class PowerpcArchitecture: public Architecture
 			return {NameAndType("dest", Type::PointerType(GetAddressSize(), Type::IntegerType(1, false))),
 				NameAndType("source", Type::PointerType(GetAddressSize(), Type::IntegerType(1, false))),
 				NameAndType("count", Type::IntegerType(4, false))};
+		case PPC_INTRIN_SET_RESERVATION:
+		case PPC_INTRIN_CHECK_RESERVATION:
+			return {NameAndType("address", Type::IntegerType(addressSize, false)),
+				NameAndType("size", Type::IntegerType(4, false))};
 		// for now, quantize is operating on the float in, and the gqr that holds the scale
 		default:
 			if ((decodeFlags & DECODE_FLAGS_PS))
@@ -787,6 +799,8 @@ class PowerpcArchitecture: public Architecture
 		case PPC_INTRIN_COPY_STRING_WORDS:
 			// Up to eight words loaded by lswi, preserved as native-width GPR values.
 			return vector<Confidence<Ref<Type>>>(8, Type::IntegerType(GetAddressSize(), false));
+		case PPC_INTRIN_CHECK_RESERVATION:
+			return {Type::BoolType()};
 		default:
 			if ((decodeFlags & DECODE_FLAGS_PS))
 			{

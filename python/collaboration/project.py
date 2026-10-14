@@ -380,7 +380,8 @@ class RemoteProject:
 			raise RuntimeError(util._last_error())
 
 	def create_file(self, filename: str, contents: bytes, name: str, description: str, parent_folder: Optional['folder.RemoteFolder'] = None,
-		file_type: enums.RemoteFileType = enums.RemoteFileType.BinaryViewAnalysisFileType, progress: 'util.ProgressFuncType' = util.nop) -> 'file.RemoteFile':
+		file_type: enums.RemoteFileType = enums.RemoteFileType.BinaryViewAnalysisFileType, progress: 'util.ProgressFuncType' = util.nop,
+		dependency_ids: Optional[List[str]] = None) -> 'file.RemoteFile':
 		"""
 		Create a new file on the remote (and pull it)
 
@@ -393,6 +394,7 @@ class RemoteProject:
 		:param parent_folder: Folder that will contain the file
 		:param file_type: Type of File to create
 		:param progress: Function to call on upload progress updates
+		:param dependency_ids: IDs of files this file depends on
 		:return: Reference to the created file
 		:raises: RuntimeError if there was an error
 		"""
@@ -403,7 +405,25 @@ class RemoteProject:
 		ctypes.memmove(buf, contents, len(contents))
 
 		folder_handle = parent_folder._handle if parent_folder is not None else None
-		value = core.BNRemoteProjectCreateFile(self._handle, filename, buf, len(contents), name, description, folder_handle, file_type.value, util.wrap_progress(progress), None)
+		if dependency_ids is None:
+			dependency_ids = []
+		dependencies = (ctypes.c_char_p * len(dependency_ids))()
+		for i, dependency_id in enumerate(dependency_ids):
+			dependencies[i] = core.cstr(dependency_id)
+		value = core.BNRemoteProjectCreateFile(
+			self._handle,
+			filename,
+			buf,
+			len(contents),
+			name,
+			description,
+			folder_handle,
+			file_type.value,
+			dependencies,
+			len(dependency_ids),
+			util.wrap_progress(progress),
+			None,
+		)
 		if value is None:
 			raise RuntimeError(util._last_error())
 		return file.RemoteFile(value)

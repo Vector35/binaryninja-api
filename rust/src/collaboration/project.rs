@@ -284,7 +284,8 @@ impl RemoteProject {
     /// * `description` - File description
     /// * `parent_folder` - Folder that will contain the file
     /// * `file_type` - Type of File to create
-    pub fn create_file(
+    /// * `dependency_ids` - IDs of files this file depends on
+    pub fn create_file<I>(
         &self,
         filename: &str,
         contents: &[u8],
@@ -292,7 +293,11 @@ impl RemoteProject {
         description: &str,
         parent_folder: Option<&RemoteFolder>,
         file_type: RemoteFileType,
-    ) -> Result<Ref<RemoteFile>, ()> {
+        dependency_ids: I,
+    ) -> Result<Ref<RemoteFile>, ()>
+    where
+        I: IntoIterator<Item = String>,
+    {
         self.create_file_with_progress(
             filename,
             contents,
@@ -300,6 +305,7 @@ impl RemoteProject {
             description,
             parent_folder,
             file_type,
+            dependency_ids,
             NoProgressCallback,
         )
     }
@@ -314,8 +320,9 @@ impl RemoteProject {
     /// * `description` - File description
     /// * `parent_folder` - Folder that will contain the file
     /// * `file_type` - Type of File to create
+    /// * `dependency_ids` - IDs of files this file depends on
     /// * `progress` - Function to call on upload progress updates
-    pub fn create_file_with_progress<P>(
+    pub fn create_file_with_progress<I, P>(
         &self,
         filename: &str,
         contents: &[u8],
@@ -323,9 +330,11 @@ impl RemoteProject {
         description: &str,
         parent_folder: Option<&RemoteFolder>,
         file_type: RemoteFileType,
+        dependency_ids: I,
         mut progress: P,
     ) -> Result<Ref<RemoteFile>, ()>
     where
+        I: IntoIterator<Item = String>,
         P: ProgressCallback,
     {
         // TODO: This sync should be removed?
@@ -335,6 +344,8 @@ impl RemoteProject {
         let name = name.to_cstr();
         let description = description.to_cstr();
         let folder_handle = parent_folder.map_or(std::ptr::null_mut(), |f| f.handle.as_ptr());
+        let dependency_ids: Vec<_> = dependency_ids.into_iter().map(|id| id.to_cstr()).collect();
+        let mut dependency_ids_raw: Vec<_> = dependency_ids.iter().map(|id| id.as_ptr()).collect();
         let file_ptr = unsafe {
             BNRemoteProjectCreateFile(
                 self.handle.as_ptr(),
@@ -345,6 +356,8 @@ impl RemoteProject {
                 description.as_ptr(),
                 folder_handle,
                 file_type,
+                dependency_ids_raw.as_mut_ptr(),
+                dependency_ids_raw.len(),
                 Some(P::cb_progress_callback),
                 &mut progress as *mut P as *mut c_void,
             )

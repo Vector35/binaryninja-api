@@ -458,10 +458,20 @@ class PowerpcArchitecture: public Architecture
 				break;
 
 			case PPC_ID_TWU:
+			case PPC_ID_TWUI:
+			case PPC_ID_TDU:
+			case PPC_ID_TDUI:
+			case PPC_ID_TRAP:
 				result.AddBranch(UnresolvedBranch);
 				break;
 
 			case PPC_ID_RFI:
+			case PPC_ID_RFID:
+			case PPC_ID_HRFID:
+			case PPC_ID_RFCI:
+			case PPC_ID_RFDI:
+			case PPC_ID_RFMCI:
+			case PPC_ID_RFEBB:
 			case PPC_ID_VLE_SE_RFI:
 				result.AddBranch(FunctionReturn);
 				break;

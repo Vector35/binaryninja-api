@@ -677,7 +677,7 @@ class PowerpcArchitecture: public Architecture
 		switch (intrinsic)
 		{
 		case PPC_INTRIN_CNTLZW:
-			return "__builtin_clz";
+			return "__builtin_clz"; // Retained for databases analyzed by older versions.
 		case PPC_INTRIN_FRSP:
 			return "float_round";
 		case PPC_INTRIN_COPY_STRING_WORDS:
@@ -735,7 +735,7 @@ class PowerpcArchitecture: public Architecture
 	{
 		switch (intrinsic)
 		{
-		case PPC_INTRIN_CNTLZW:		// rs
+		case PPC_INTRIN_CNTLZW:
 			return {NameAndType(Type::IntegerType(4, false))};
 		case PPC_INTRIN_FRSP:
 			return {NameAndType(Type::FloatType(4))};
@@ -773,7 +773,7 @@ class PowerpcArchitecture: public Architecture
 	{
 		switch (intrinsic)
 		{
-		case PPC_INTRIN_CNTLZW:		// ra
+		case PPC_INTRIN_CNTLZW:
 			return {Type::IntegerType(4, false)};
 		case PPC_INTRIN_FRSP:
 			return {Type::FloatType(4)};

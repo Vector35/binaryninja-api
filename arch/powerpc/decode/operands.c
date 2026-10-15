@@ -1030,6 +1030,7 @@ void FillOperands32(Instruction* instruction, uint32_t word32, uint64_t address)
 
 		// <op> crfS
 		case PPC_ID_MCRXRX:
+		case PPC_ID_MCRXR:
 		case PPC_ID_TCHECK:
 			PushCRFD(instruction, word32);
 			break;
